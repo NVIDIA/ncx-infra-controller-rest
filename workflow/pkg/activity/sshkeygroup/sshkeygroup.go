@@ -233,10 +233,10 @@ func (mskg ManageSSHKeyGroup) SyncSSHKeyGroupViaSiteAgent(ctx context.Context, s
 					}
 
 					// Execute the site workflow to update the SSH Key Group asynchronously (don't wait)
-					we, err = stc.ExecuteWorkflow(ctx, workflowOptions, "UpdateSSHKeyGroupV2", updateSSHKeyGroupRequest)
+					we, serr := stc.ExecuteWorkflow(ctx, workflowOptions, "UpdateSSHKeyGroupV2", updateSSHKeyGroupRequest)
 
 					statusMessage = MsgSSHKeyGroupUpdateInitiated
-					if err != nil {
+					if serr != nil {
 						status = cdbm.SSHKeyGroupSiteAssociationStatusError
 						statusMessage = "failed to initiate SSH Key Group syncing for update via Site Agent"
 					} else {
@@ -280,7 +280,9 @@ func (mskg ManageSSHKeyGroup) SyncSSHKeyGroupViaSiteAgent(ctx context.Context, s
 		return err
 	}
 
-	logger.Info().Str("Workflow ID", we.GetID()).Msg("triggered Site agent workflow SyncSSHKeyGroup")
+	if we != nil {
+		logger.Info().Str("Workflow ID", we.GetID()).Msg("triggered Site agent workflow SyncSSHKeyGroup")
+	}
 
 	logger.Info().Msg("completed activity")
 
