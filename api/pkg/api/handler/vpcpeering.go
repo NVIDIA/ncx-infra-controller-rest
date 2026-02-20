@@ -1,0 +1,939 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package handler
+
+import (
+	"context"
+	"database/sql"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"net/http"
+
+	"github.com/google/uuid"
+	"github.com/labstack/echo/v4"
+	"go.opentelemetry.io/otel/attribute"
+	tclient "go.temporal.io/sdk/client"
+	tp "go.temporal.io/sdk/temporal"
+
+	"github.com/nvidia/bare-metal-manager-rest/api/internal/config"
+	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/handler/util/common"
+	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model"
+	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/pagination"
+	sc "github.com/nvidia/bare-metal-manager-rest/api/pkg/client/site"
+	auth "github.com/nvidia/bare-metal-manager-rest/auth/pkg/authorization"
+	cutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
+	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
+	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
+	"github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
+	cdbp "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
+	swe "github.com/nvidia/bare-metal-manager-rest/site-workflow/pkg/error"
+	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/queue"
+
+	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
+)
+
+// ~~~~~ Create VPC Peering Handler ~~~~~ //
+
+// CreateVpcPeeringHandler is the API Handler for creating new VPC Peering
+type CreateVpcPeeringHandler struct {
+	dbSession  *cdb.Session
+	tc         tclient.Client
+	scp        *sc.ClientPool
+	cfg        *config.Config
+	tracerSpan *cutil.TracerSpan
+}
+
+// NewCreateVpcPeeringHandler initializes and returns a new handler for creating VPC peering
+func NewCreateVpcPeeringHandler(dbSession *cdb.Session, tc tclient.Client, sc *sc.ClientPool, cfg *config.Config) CreateVpcPeeringHandler {
+	return CreateVpcPeeringHandler{
+		dbSession:  dbSession,
+		tc:         tc,
+		scp:        sc,
+		cfg:        cfg,
+		tracerSpan: cutil.NewTracerSpan(),
+	}
+}
+
+// Handle godoc
+// @Summary Create a VPC Peering
+// @Description Create a VPC peering between two VPCs on the same site.
+// @Tags vpcpeering
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param org path string true "Name of NGC organization"
+// @Param message body model.APIVpcPeeringCreateRequest true "VPC peering create request"
+// @Success 201 {object} model.APIVpcPeering
+// @Router /v2/org/{org}/forge/vpc-peering [post]
+func (cvph CreateVpcPeeringHandler) Handle(c echo.Context) error {
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("Create", "VpcPeering", c, cvph.tracerSpan)
+	if handlerSpan != nil {
+		defer handlerSpan.End()
+	}
+
+	// Is DB user missing?
+	if dbUser == nil {
+		logger.Error().Msg("invalid User object found in request context")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	}
+
+	// Validate user belongs to org
+
+	// Validate role: either Tenant Admin (same-tenant peerings) or Provider Admin (can create multi-tenant peerings on their sites)
+	isTenantAdmin := auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
+	isProviderAdmin := auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole)
+	if !isTenantAdmin && !isProviderAdmin {
+		logger.Warn().Msg("user does not have Tenant Admin or Provider Admin role with org, access denied")
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User must have Tenant Admin or Provider Admin role with org to create VPC peerings", nil)
+	}
+
+	// Validate request
+	// Bind request data to API model
+	apiRequest := model.APIVpcPeeringCreateRequest{}
+	err := c.Bind(&apiRequest)
+	if err != nil {
+		logger.Warn().Err(err).Msg("error binding request data into API model")
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
+	}
+
+	// Validate request attributes
+	verr := apiRequest.Validate()
+	if verr != nil {
+		logger.Warn().Err(verr).Msg("error validating VPC peering creation request data")
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating VPC peering creation request data", verr)
+	}
+
+	// Retrieve the Site from the DB
+	site, err := common.GetSiteFromIDString(ctx, nil, apiRequest.SiteID, cvph.dbSession)
+	if err != nil {
+		if errors.Is(err, cdb.ErrDoesNotExist) {
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request data does not exist", nil)
+		}
+		logger.Error().Err(err).Msg("error retrieving Site from DB")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site specified in request data, DB error", nil)
+	}
+
+	// Validate that site is in Registered state
+	if site.Status != cdbm.SiteStatusRegistered {
+		logger.Warn().Msg("Site specified in request data is not in Registered state")
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request data is not in Registered state, cannot create VPC Peering", nil)
+	}
+
+	// Parse VPC IDs from the request body
+	vpc1ID, err := uuid.Parse(apiRequest.Vpc1ID)
+	if err != nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid VPC1 ID", nil)
+	}
+	vpc2ID, err := uuid.Parse(apiRequest.Vpc2ID)
+	if err != nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid VPC2 ID", nil)
+	}
+
+	// Check if trying to peer with self
+	if vpc1ID == vpc2ID {
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Cannot peer a VPC with itself", nil)
+	}
+
+	// Validate both VPCs exist and are accessible
+	vpcDAO := cdbm.NewVpcDAO(cvph.dbSession)
+
+	vpc1, err := vpcDAO.GetByID(ctx, nil, vpc1ID, nil)
+	if err != nil {
+		if err == cdb.ErrDoesNotExist {
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf("VPC %s not found", vpc1ID.String()), nil)
+		}
+		logger.Error().Err(err).Msg("error retrieving VPC 1 from DB")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to retrieve VPC 1 %s", vpc1ID.String()), nil)
+	}
+	vpc2, err := vpcDAO.GetByID(ctx, nil, vpc2ID, nil)
+	if err != nil {
+		if err == cdb.ErrDoesNotExist {
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf("VPC %s not found", vpc2ID.String()), nil)
+		}
+		logger.Error().Err(err).Msg("error retrieving VPC 2 from DB")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to retrieve VPC 2 %s", vpc2ID.String()), nil)
+	}
+
+	// Validate VPCs are both on the provided site
+	if vpc1.SiteID != site.ID {
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("VPC1 ID %s is not on the site %s", vpc1ID.String(), site.ID.String()), nil)
+	} else if vpc2.SiteID != site.ID {
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("VPC2 ID %s is not on the site %s", vpc2ID.String(), site.ID.String()), nil)
+	}
+
+	// Validate VPCs are in Ready state
+	if vpc1.Status != cdbm.VpcStatusReady || vpc2.Status != cdbm.VpcStatusReady {
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Both VPCs must be in Ready state to peer", nil)
+	}
+
+	// Check if peering already exists
+	vpcPeeringDAO := cdbm.NewVpcPeeringDAO(cvph.dbSession)
+	existingPeerings, _, err := vpcPeeringDAO.GetAll(ctx, nil, cdbm.VpcPeeringFilterInput{
+		VpcIDs: []uuid.UUID{vpc1ID},
+	}, cdbp.PageInput{}, nil)
+	if err != nil {
+		logger.Error().Err(err).Msg("error checking for existing VPC peering")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to check for existing VPC peering", nil)
+	}
+	for _, peering := range existingPeerings {
+		// One of the VPC IDs must match the VPC ID, so we only need to check if either one equals the peer VPC ID
+		if peering.Vpc1ID == vpc2ID || peering.Vpc2ID == vpc2ID {
+			return cutil.NewAPIErrorResponse(c, http.StatusConflict, "VPC peering already exists between these VPCs", nil)
+		}
+	}
+
+	isMultiTenant := vpc1.TenantID != vpc2.TenantID
+
+	// Validate site access based on role
+	if isProviderAdmin {
+		// Provider Admin: org must have an infrastructure provider, and site must belong to that provider
+		ip, err := common.GetInfrastructureProviderForOrg(ctx, nil, cvph.dbSession, org)
+		if err != nil {
+			if errors.Is(err, common.ErrOrgInstrastructureProviderNotFound) {
+				logger.Warn().Err(err).Msg("Org does not have an Infrastructure Provider associated")
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have an Infrastructure Provider associated", nil)
+			}
+			logger.Error().Err(err).Msg("unable to retrieve Infrastructure Provider for org")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Infrastructure Provider for org", nil)
+		}
+		if site.InfrastructureProviderID != ip.ID {
+			logger.Warn().Str("site_id", site.ID.String()).Str("provider_id", ip.ID.String()).Msg("Site does not belong to the Infrastructure Provider for this org")
+			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Site does not belong to the Infrastructure Provider for this org", nil)
+		}
+
+		// Provider Admin can only create vpc peerings between different tenants
+		if !isMultiTenant {
+			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Provider Admin can only create VPC peerings between different tenants", nil)
+		}
+	} else {
+		// Tenant Admin: org must have a tenant, and tenant must have access to the site
+		tenant, err := common.GetTenantForOrg(ctx, nil, cvph.dbSession, org)
+		if err != nil {
+			if err == common.ErrOrgTenantNotFound {
+				logger.Warn().Err(err).Msg("Org does not have a Tenant associated")
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
+			}
+			logger.Error().Err(err).Msg("unable to retrieve Tenant for org")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
+		}
+		tsDAO := cdbm.NewTenantSiteDAO(cvph.dbSession)
+		tenantSites, _, err := tsDAO.GetAll(
+			ctx,
+			nil,
+			cdbm.TenantSiteFilterInput{
+				TenantIDs: []uuid.UUID{tenant.ID},
+				SiteIDs:   []uuid.UUID{site.ID},
+			},
+			paginator.PageInput{Limit: cdb.GetIntPtr(1)},
+			nil,
+		)
+		if err != nil {
+			logger.Error().Err(err).Msg("error retrieving TenantSite from DB")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to validate Site access for Tenant, DB error", nil)
+		}
+		if len(tenantSites) == 0 {
+			logger.Warn().Msg("Tenant does not have access to Site specified in request")
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Tenant does not have access to Site specified in request", nil)
+		}
+
+		// Make sure both VPCs belong to the tenant
+		if vpc1.TenantID != tenant.ID {
+			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("VPC1 ID %s does not belong to Tenant ID %s", vpc1ID.String(), tenant.ID.String()), nil)
+		}
+		if vpc2.TenantID != tenant.ID {
+			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("VPC2 ID %s does not belong to Tenant ID %s", vpc2ID.String(), tenant.ID.String()), nil)
+		}
+	}
+
+	// Start a db tx
+	tx, err := cdb.BeginTx(ctx, cvph.dbSession, &sql.TxOptions{})
+	if err != nil {
+		logger.Error().Err(err).Msg("unable to start transaction")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create VPC peering", nil)
+	}
+
+	// If false, a rollback will be triggered on any early return.
+	// If all goes well, we'll set it to true later on.
+	txCommitted := false
+	defer common.RollbackTx(ctx, tx, &txCommitted)
+
+	// Create VPC peering record in the db
+	vpcPeering, err := vpcPeeringDAO.Create(
+		ctx,
+		tx,
+		cdbm.VpcPeeringCreateInput{
+			Vpc1ID:        vpc1ID,
+			Vpc2ID:        vpc2ID,
+			SiteID:        site.ID,
+			IsMultiTenant: isMultiTenant,
+			CreatedByID:   dbUser.ID,
+		},
+	)
+	if err != nil {
+		logger.Error().Err(err).Msg("error creating VPC peering in DB")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create VPC peering, DB error", nil)
+	}
+
+	// Create a status detail record for the VPC peering
+	sdDAO := cdbm.NewStatusDetailDAO(cvph.dbSession)
+	statusDetail, serr := sdDAO.CreateFromParams(ctx, tx, vpcPeering.ID.String(),
+		*cdb.GetStrPtr(cdbm.VpcPeeringStatusPending),
+		cdb.GetStrPtr("processed vpc peering creation request"))
+	if serr != nil {
+		logger.Error().Err(serr).Msg("error creating status detail for VPC peering")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for VPC peering", nil)
+	}
+	if statusDetail == nil {
+		logger.Error().Msg("Status Detail DB entry not returned from CreateFromParams")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to get new Status Detail for VPC peering", nil)
+	}
+
+	// Create the peering directly in Carbide via site agent
+	err = vpcPeeringDAO.UpdateStatusByID(ctx, tx, vpcPeering.ID, cdbm.VpcPeeringStatusConfiguring)
+	if err != nil {
+		logger.Error().Err(err).Msg("error updating VPC peering status to Configuring")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update VPC peering status to Configuring", nil)
+	}
+
+	// Create the VPC peering creation request
+	createVpcPeeringRequest := &cwssaws.VpcPeeringCreationRequest{
+		VpcId:     &cwssaws.VpcId{Value: vpcPeering.Vpc1ID.String()},
+		PeerVpcId: &cwssaws.VpcId{Value: vpcPeering.Vpc2ID.String()},
+		Id:        &cwssaws.VpcPeeringId{Value: vpcPeering.ID.String()},
+	}
+
+	logger.Info().Msg("triggering VPC peering create workflow")
+
+	// Create workflow options
+	workflowOptions := tclient.StartWorkflowOptions{
+		ID:                       "vpcpeering-create-" + vpcPeering.ID.String(),
+		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
+		TaskQueue:                queue.SiteTaskQueue,
+	}
+
+	// Get the temporal client for the site we are working with
+	stc, err := cvph.scp.GetClientByID(vpcPeering.SiteID)
+	if err != nil {
+		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Temporal client for Site", nil)
+	}
+
+	// Add context deadline
+	workflowCtx, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
+	defer cancel()
+
+	// Trigger site workflow to create VPC peering
+	workflowRun, err := stc.ExecuteWorkflow(workflowCtx, workflowOptions, "CreateVpcPeering", createVpcPeeringRequest)
+	if err != nil {
+		logger.Error().Err(err).Msg("failed to start VPC peering creation workflow")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to start VPC peering creation workflow", nil)
+	}
+
+	workflowId := workflowRun.GetID()
+
+	logger.Info().Str("Workflow ID", workflowId).Msg("started VPC peering creation workflow")
+
+	// Wait for workflow completion synchronously
+	err = workflowRun.Get(workflowCtx, nil)
+	if err != nil {
+		var applicationErr *tp.ApplicationError
+		if errors.As(err, &applicationErr) && (applicationErr.Type() == swe.ErrTypeCarbideUnimplemented || applicationErr.Type() == swe.ErrTypeCarbideDenied) {
+			logger.Error().Msg("feature not yet implemented on target Site")
+			return cutil.NewAPIErrorResponse(c, http.StatusNotImplemented, fmt.Sprintf("Feature not yet implemented on target Site: %s", err), nil)
+		}
+
+		var timeoutErr *tp.TimeoutError
+		if errors.As(err, &timeoutErr) || err == context.DeadlineExceeded || ctx.Err() != nil {
+			return common.TerminateWorkflowOnTimeOut(c, logger, stc, workflowId, err, "VpcPeering", "CreateVpcPeering")
+		}
+
+		logger.Error().Err(err).Msg("failed to synchronously execute Temporal workflow to update CreateVpcPeering")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to execute sync workflow to create VPC Peering on Site: %s", err), nil)
+	}
+
+	// Workflow completed successfully, update status to Ready in database
+	err = vpcPeeringDAO.UpdateStatusByID(ctx, tx, vpcPeering.ID, cdbm.VpcPeeringStatusReady)
+	if err != nil {
+		logger.Error().Err(err).Msg("error updating VPC peering status to Ready after successful workflow")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update VPC peering status to Ready", nil)
+	}
+
+	// Update the API model to reflect the Ready status (workflow completed successfully)
+	apiVpcPeering := model.NewAPIVpcPeering(*vpcPeering)
+	apiVpcPeering.Status = cdbm.VpcPeeringStatusReady
+	logger.Info().Str("VPC Peering ID", vpcPeering.ID.String()).Msg("successfully created VPC peering and completed creation workflow")
+
+	// Commit the transaction
+	err = tx.Commit()
+	if err != nil {
+		logger.Error().Err(err).Msg("error committing transaction")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create VPC peering", nil)
+	}
+	txCommitted = true
+
+	return c.JSON(http.StatusCreated, apiVpcPeering)
+}
+
+// ~~~~~ Get All VPC Peering Handler ~~~~~ //
+
+// GetAllVpcPeeringHandler is the API Handler for getting all VPC peerings for a VPC
+type GetAllVpcPeeringHandler struct {
+	dbSession  *cdb.Session
+	tc         tclient.Client
+	cfg        *config.Config
+	tracerSpan *cutil.TracerSpan
+}
+
+// NewGetAllVpcPeeringHandler initializes and returns a new handler for getting all VPC peerings
+func NewGetAllVpcPeeringHandler(dbSession *cdb.Session, tc tclient.Client, cfg *config.Config) GetAllVpcPeeringHandler {
+	return GetAllVpcPeeringHandler{
+		dbSession:  dbSession,
+		tc:         tc,
+		cfg:        cfg,
+		tracerSpan: cutil.NewTracerSpan(),
+	}
+}
+
+// Handle godoc
+// @Summary Get all VPC peerings
+// @Description Get all VPC peerings.
+// @Tags vpcpeering
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param org path string true "Name of NGC organization"
+// @Param siteId query string true "Site ID"
+// @Param pageNumber query integer false "Page number of results returned"
+// @Param pageSize query integer false "Number of results per page"
+// @Param orderBy query string false "Order by field"
+// @Success 200 {array} model.APIVpcPeering
+// @Router /v2/org/{org}/forge/vpc-peering [get]
+func (gavph GetAllVpcPeeringHandler) Handle(c echo.Context) error {
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("GetAll", "VpcPeering", c, gavph.tracerSpan)
+	if handlerSpan != nil {
+		defer handlerSpan.End()
+	}
+
+	// Is DB user missing?
+	if dbUser == nil {
+		logger.Error().Msg("invalid User object found in request context")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	}
+
+	isTenantAdmin := auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
+	isProviderAdmin := auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole)
+	if !isTenantAdmin && !isProviderAdmin {
+		logger.Warn().Msg("user does not have Tenant Admin or Provider Admin role with org, access denied")
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User must have Tenant Admin or Provider Admin role with org to list VPC peerings", nil)
+	}
+
+	var filterInput cdbm.VpcPeeringFilterInput
+
+	siteIDStr := c.QueryParam("siteId")
+	if siteIDStr == "" {
+		logger.Warn().Msg("siteId query parameter is required to list VPC peerings")
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "siteId query parameter is required to list VPC peerings", nil)
+	}
+
+	site, err := common.GetSiteFromIDString(ctx, nil, siteIDStr, gavph.dbSession)
+	if err != nil {
+		if errors.Is(err, cdb.ErrDoesNotExist) {
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in query does not exist", nil)
+		}
+		logger.Error().Err(err).Msg("error retrieving Site from DB")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site specified in query, DB error", nil)
+	}
+
+	filterInput = cdbm.VpcPeeringFilterInput{SiteIDs: []uuid.UUID{site.ID}}
+	gavph.tracerSpan.SetAttribute(handlerSpan, attribute.String("site_id", siteIDStr), logger)
+
+	// Validate pagination request early so defaults are initialized before any early returns.
+	pageRequest := pagination.PageRequest{}
+	err = c.Bind(&pageRequest)
+	if err != nil {
+		logger.Warn().Err(err).Msg("error binding pagination request data into API model")
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request pagination data", nil)
+	}
+
+	// Validate pagination attributes and set defaults.
+	err = pageRequest.Validate(cdbm.VpcPeeringOrderByFields)
+	if err != nil {
+		logger.Warn().Err(err).Msg("error validating pagination request data")
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate pagination request data", err)
+	}
+
+	if isProviderAdmin {
+		ip, err := common.GetInfrastructureProviderForOrg(ctx, nil, gavph.dbSession, org)
+		if err != nil {
+			if errors.Is(err, common.ErrOrgInstrastructureProviderNotFound) {
+				logger.Warn().Err(err).Msg("Org does not have an Infrastructure Provider associated")
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have an Infrastructure Provider associated", nil)
+			}
+			logger.Error().Err(err).Msg("unable to retrieve Infrastructure Provider for org")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Infrastructure Provider for org", nil)
+		}
+		if site.InfrastructureProviderID != ip.ID {
+			logger.Warn().Str("site_id", site.ID.String()).Str("provider_id", ip.ID.String()).Msg("Site does not belong to the Infrastructure Provider for this org")
+			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Site does not belong to the Infrastructure Provider for this org", nil)
+		}
+	} else {
+		tenant, err := common.GetTenantForOrg(ctx, nil, gavph.dbSession, org)
+		if err != nil {
+			if err == common.ErrOrgTenantNotFound {
+				logger.Warn().Err(err).Msg("Org does not have a Tenant associated")
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
+			}
+			logger.Error().Err(err).Msg("unable to retrieve Tenant for org")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
+		}
+		vpcFilter := cdbm.VpcFilterInput{TenantIDs: []uuid.UUID{tenant.ID}}
+		tsDAO := cdbm.NewTenantSiteDAO(gavph.dbSession)
+		tenantSites, _, err := tsDAO.GetAll(
+			ctx, nil,
+			cdbm.TenantSiteFilterInput{TenantIDs: []uuid.UUID{tenant.ID}, SiteIDs: []uuid.UUID{site.ID}},
+			paginator.PageInput{Limit: cdb.GetIntPtr(1)},
+			nil,
+		)
+		if err != nil {
+			logger.Error().Err(err).Msg("error retrieving TenantSite from DB")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to validate Site access for Tenant, DB error", nil)
+		}
+		if len(tenantSites) == 0 {
+			logger.Warn().Msg("Tenant does not have access to Site specified in query")
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Tenant does not have access to Site specified in query", nil)
+		}
+		vpcFilter.SiteIDs = []uuid.UUID{site.ID}
+		filterInput.SiteIDs = []uuid.UUID{site.ID}
+		gavph.tracerSpan.SetAttribute(handlerSpan, attribute.String("site_id", siteIDStr), logger)
+		vpcDAO := cdbm.NewVpcDAO(gavph.dbSession)
+		vpcs, _, err := vpcDAO.GetAll(ctx, nil, vpcFilter, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
+		if err != nil {
+			logger.Error().Err(err).Msg("error retrieving tenant VPCs from DB")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve VPCs for tenant", nil)
+		}
+		tenantVpcIDs := make([]uuid.UUID, 0, len(vpcs))
+		for _, v := range vpcs {
+			tenantVpcIDs = append(tenantVpcIDs, v.ID)
+		}
+		filterInput.VpcIDs = tenantVpcIDs
+
+		if len(tenantVpcIDs) == 0 {
+			pageResponse := pagination.NewPageResponse(*pageRequest.PageNumber, *pageRequest.PageSize, 0, pageRequest.OrderByStr)
+			pageHeader, _ := json.Marshal(pageResponse)
+			c.Response().Header().Set(pagination.ResponseHeaderName, string(pageHeader))
+			return c.JSON(http.StatusOK, []model.APIVpcPeering{})
+		}
+	}
+
+	vpcPeeringDAO := cdbm.NewVpcPeeringDAO(gavph.dbSession)
+	vpcPeeringPageInput := cdbp.PageInput{
+		Limit:   pageRequest.Limit,
+		Offset:  pageRequest.Offset,
+		OrderBy: pageRequest.OrderBy,
+	}
+	vpcPeerings, total, err := vpcPeeringDAO.GetAll(ctx, nil, filterInput, vpcPeeringPageInput, nil)
+	if err != nil {
+		logger.Error().Err(err).Msg("error retrieving VPC peerings from DB")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve VPC peerings", nil)
+	}
+
+	// Convert to API models
+	apiVpcPeerings := make([]model.APIVpcPeering, len(vpcPeerings))
+	for i, vpcPeering := range vpcPeerings {
+		apiVpcPeerings[i] = model.NewAPIVpcPeering(vpcPeering)
+	}
+
+	logger.Info().Int("Count", len(apiVpcPeerings)).Msg("successfully retrieved VPC peerings")
+
+	// Create pagination response header
+	pageResponse := pagination.NewPageResponse(*pageRequest.PageNumber, *pageRequest.PageSize, total, pageRequest.OrderByStr)
+	pageHeader, err := json.Marshal(pageResponse)
+	if err != nil {
+		logger.Error().Err(err).Msg("error marshaling pagination response")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to generate pagination response header", nil)
+	}
+
+	c.Response().Header().Set(pagination.ResponseHeaderName, string(pageHeader))
+
+	logger.Info().Msg("finishing GetAllVpcPeeringHandler API handler")
+
+	return c.JSON(http.StatusOK, apiVpcPeerings)
+}
+
+// ~~~~~ Get VPC Peering Handler ~~~~~ //
+
+// GetVpcPeeringHandler is the API Handler for getting a VPC peering
+type GetVpcPeeringHandler struct {
+	dbSession  *cdb.Session
+	tc         tclient.Client
+	cfg        *config.Config
+	tracerSpan *cutil.TracerSpan
+}
+
+// NewGetVpcPeeringHandler initializes and returns a new handler for getting VPC peering
+func NewGetVpcPeeringHandler(dbSession *cdb.Session, tc tclient.Client, cfg *config.Config) GetVpcPeeringHandler {
+	return GetVpcPeeringHandler{
+		dbSession:  dbSession,
+		tc:         tc,
+		cfg:        cfg,
+		tracerSpan: cutil.NewTracerSpan(),
+	}
+}
+
+// Handle godoc
+// @Summary Get a VPC peering
+// @Description Get details of a VPC peering by ID.
+// @Tags vpcpeering
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param org path string true "Name of NGC organization"
+// @Param id path string true "VPC Peering ID"
+// @Success 200 {object} model.APIVpcPeering
+// @Router /v2/org/{org}/forge/vpc-peering/{id} [get]
+func (gvph GetVpcPeeringHandler) Handle(c echo.Context) error {
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("Get", "VpcPeering", c, gvph.tracerSpan)
+	if handlerSpan != nil {
+		defer handlerSpan.End()
+	}
+
+	if dbUser == nil {
+		logger.Error().Msg("invalid User object found in request context")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	}
+
+	isTenantAdmin := auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
+	isProviderAdmin := auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole)
+	if !isTenantAdmin && !isProviderAdmin {
+		logger.Warn().Msg("user does not have Tenant Admin or Provider Admin role with org, access denied")
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User must have Tenant Admin or Provider Admin role with org to get VPC peering", nil)
+	}
+
+	peeringID := c.Param("id")
+	logger = logger.With().Str("Peering ID", peeringID).Logger()
+	gvph.tracerSpan.SetAttribute(handlerSpan, attribute.String("peering_id", peeringID), logger)
+
+	// Parse and validate peering ID
+	peeringUUID, err := uuid.Parse(peeringID)
+	if err != nil {
+		logger.Warn().Err(err).Msg("error parsing VPC peering ID in URL")
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid VPC peering ID in URL parameter", nil)
+	}
+
+	// Get VPC peering
+	vpcPeeringDAO := cdbm.NewVpcPeeringDAO(gvph.dbSession)
+	vpcPeering, err := vpcPeeringDAO.GetByID(ctx, nil, peeringUUID, nil)
+	if err != nil {
+		if err == cdb.ErrDoesNotExist {
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "VPC peering not found", nil)
+		}
+		logger.Error().Err(err).Msg("error retrieving VPC peering from DB")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve VPC peering", nil)
+	}
+
+	if isProviderAdmin {
+		// If user is a Provider Admin, validate the VPC peering is in a site provided by this org
+		ip, err := common.GetInfrastructureProviderForOrg(ctx, nil, gvph.dbSession, org)
+		if err != nil {
+			if errors.Is(err, common.ErrOrgInstrastructureProviderNotFound) {
+				logger.Warn().Err(err).Msg("Org does not have an Infrastructure Provider associated")
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have an Infrastructure Provider associated", nil)
+			}
+			logger.Error().Err(err).Msg("unable to retrieve Infrastructure Provider for org")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Infrastructure Provider for org", nil)
+		}
+		site, err := common.GetSiteFromIDString(ctx, nil, vpcPeering.SiteID.String(), gvph.dbSession)
+		if err != nil {
+			if errors.Is(err, cdb.ErrDoesNotExist) {
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "VPC peering site not found", nil)
+			}
+			logger.Error().Err(err).Msg("error retrieving site for VPC peering")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve VPC peering", nil)
+		}
+		if site.InfrastructureProviderID != ip.ID {
+			logger.Warn().Str("site_id", site.ID.String()).Str("provider_id", ip.ID.String()).Msg("VPC peering is not in a site provided by this org")
+			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "VPC peering not found", nil)
+		}
+	} else {
+		// If user is a Tenant Admin, at least one of the VPCs must belong to the tenant for them to
+		// be able to get the VPC peering
+		tenant, err := common.GetTenantForOrg(ctx, nil, gvph.dbSession, org)
+		if err != nil {
+			if err == common.ErrOrgTenantNotFound {
+				logger.Warn().Err(err).Msg("Org does not have a Tenant associated")
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
+			}
+			logger.Error().Err(err).Msg("unable to retrieve Tenant for org")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
+		}
+		vpcDAO := cdbm.NewVpcDAO(gvph.dbSession)
+		vpc1, err := vpcDAO.GetByID(ctx, nil, vpcPeering.Vpc1ID, nil)
+		if err != nil {
+			logger.Error().Err(err).Msg("error retrieving VPC1 from DB")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve VPC peering", nil)
+		}
+		vpc2, err := vpcDAO.GetByID(ctx, nil, vpcPeering.Vpc2ID, nil)
+		if err != nil {
+			logger.Error().Err(err).Msg("error retrieving VPC2 from DB")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve VPC peering", nil)
+		}
+		if vpc1.TenantID != tenant.ID && vpc2.TenantID != tenant.ID {
+			logger.Warn().Msg("VPC peering does not belong to tenant (neither VPC is owned by tenant)")
+			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "VPC peering not found", nil)
+		}
+	}
+
+	// Convert to API model
+	apiVpcPeering := model.NewAPIVpcPeering(*vpcPeering)
+
+	logger.Info().Msg("successfully retrieved VPC peering")
+
+	return c.JSON(http.StatusOK, apiVpcPeering)
+}
+
+// ~~~~~ Delete VPC Peering Handler ~~~~~ //
+
+// DeleteVpcPeeringHandler is the API Handler for deleting a VPC peering
+type DeleteVpcPeeringHandler struct {
+	dbSession  *cdb.Session
+	tc         tclient.Client
+	scp        *sc.ClientPool
+	cfg        *config.Config
+	tracerSpan *cutil.TracerSpan
+}
+
+// NewDeleteVpcPeeringHandler initializes and returns a new handler for deleting VPC peering
+func NewDeleteVpcPeeringHandler(dbSession *cdb.Session, tc tclient.Client, sc *sc.ClientPool, cfg *config.Config) DeleteVpcPeeringHandler {
+	return DeleteVpcPeeringHandler{
+		dbSession:  dbSession,
+		tc:         tc,
+		scp:        sc,
+		cfg:        cfg,
+		tracerSpan: cutil.NewTracerSpan(),
+	}
+}
+
+// Handle godoc
+// @Summary Delete a VPC peering
+// @Description Delete a VPC peering by ID.
+// @Tags vpcpeering
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param org path string true "Name of NGC organization"
+// @Param id path string true "VPC Peering ID"
+// @Success 204 "No Content"
+// @Router /v2/org/{org}/forge/vpc-peering/{id} [delete]
+func (dvph DeleteVpcPeeringHandler) Handle(c echo.Context) error {
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("Delete", "VpcPeering", c, dvph.tracerSpan)
+	if handlerSpan != nil {
+		defer handlerSpan.End()
+	}
+
+	// Is DB user missing?
+	if dbUser == nil {
+		logger.Error().Msg("invalid User object found in request context")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	}
+
+	// Validate role, only Tenant Admins and Provider Admins are allowed to delete VPC peerings
+	isTenantAdmin := auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
+	isProviderAdmin := auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole)
+	if !isTenantAdmin && !isProviderAdmin {
+		logger.Warn().Msg("user does not have Tenant Admin or Provider Admin role with org, access denied")
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User must have Tenant Admin or Provider Admin role with org to delete VPC peering", nil)
+	}
+
+	// Get VPC peering ID from URL param
+	vpcPeeringID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid VPC peering ID", nil)
+	}
+	logger = logger.With().Str("VPC Peering ID", vpcPeeringID.String()).Logger()
+
+	dvph.tracerSpan.SetAttribute(handlerSpan, attribute.String("vpc_peering_id", vpcPeeringID.String()), logger)
+
+	// Get VPC peering from DB
+	vpcPeeringDAO := cdbm.NewVpcPeeringDAO(dvph.dbSession)
+	vpcPeering, err := vpcPeeringDAO.GetByID(ctx, nil, vpcPeeringID, nil)
+	if err != nil {
+		if err == cdb.ErrDoesNotExist {
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "VPC peering not found", nil)
+		}
+		logger.Error().Err(err).Msg("error retrieving VPC peering from DB")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve VPC peering", nil)
+	}
+
+	if isProviderAdmin {
+		// If user is a Provider Admin, validate the VPC peering is in a site provided by this org
+		ip, err := common.GetInfrastructureProviderForOrg(ctx, nil, dvph.dbSession, org)
+		if err != nil {
+			if errors.Is(err, common.ErrOrgInstrastructureProviderNotFound) {
+				logger.Warn().Err(err).Msg("Org does not have an Infrastructure Provider associated")
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have an Infrastructure Provider associated", nil)
+			}
+			logger.Error().Err(err).Msg("unable to retrieve Infrastructure Provider for org")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Infrastructure Provider for org", nil)
+		}
+		site, err := common.GetSiteFromIDString(ctx, nil, vpcPeering.SiteID.String(), dvph.dbSession)
+		if err != nil {
+			if errors.Is(err, cdb.ErrDoesNotExist) {
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "VPC peering site not found", nil)
+			}
+			logger.Error().Err(err).Msg("error retrieving site for VPC peering")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve VPC peering", nil)
+		}
+		if site.InfrastructureProviderID != ip.ID {
+			logger.Warn().Str("site_id", site.ID.String()).Str("provider_id", ip.ID.String()).Msg("VPC peering is not in a site provided by this org")
+			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "VPC peering does not belong to a site provided by this org", nil)
+		}
+
+		// If user is a Provider Admin, validate the VPC peering is multi-tenant.
+		// Otherwise, only Tenant Admins are allowed to delete VPC peerings where both VPCs belong
+		// to the tenant.
+		if !vpcPeering.IsMultiTenant {
+			logger.Warn().Msg("Provider Admin can only delete multi-tenant VPC peerings")
+			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Provider Admin can only delete multi-tenant VPC peerings", nil)
+		}
+	} else {
+		tenant, err := common.GetTenantForOrg(ctx, nil, dvph.dbSession, org)
+		if err != nil {
+			if err == common.ErrOrgTenantNotFound {
+				logger.Warn().Err(err).Msg("Org does not have a Tenant associated")
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
+			}
+			logger.Error().Err(err).Msg("unable to retrieve Tenant for org")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
+		}
+
+		vpcDAO := cdbm.NewVpcDAO(dvph.dbSession)
+		vpc1, err := vpcDAO.GetByID(ctx, nil, vpcPeering.Vpc1ID, nil)
+		if err != nil {
+			if err == cdb.ErrDoesNotExist {
+				return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "VPC not found", nil)
+			}
+			logger.Error().Err(err).Msg("error retrieving VPC from DB")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve VPC", nil)
+		}
+		vpc2, err := vpcDAO.GetByID(ctx, nil, vpcPeering.Vpc2ID, nil)
+		if err != nil {
+			if err == cdb.ErrDoesNotExist {
+				return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Peer VPC not found", nil)
+			}
+			logger.Error().Err(err).Msg("error retrieving peer VPC from DB")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve peer VPC", nil)
+		}
+
+		if vpc1.TenantID != tenant.ID || vpc2.TenantID != tenant.ID {
+			logger.Warn().Msg("Tenant Admin can only delete VPC peerings where both VPCs belong to the tenant")
+			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "VPC peering does not belong to Tenant", nil)
+		}
+	}
+
+	// Start a db tx for the deletion workflow
+	tx, err := cdb.BeginTx(ctx, dvph.dbSession, &sql.TxOptions{})
+	if err != nil {
+		logger.Error().Err(err).Msg("unable to start transaction")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete VPC peering", nil)
+	}
+
+	// If false, a rollback will be trigger on any early return.
+	// If all goes well, we'll set it to true later on.
+	txCommitted := false
+	defer common.RollbackTx(ctx, tx, &txCommitted)
+
+	// Update status to Deleting first
+	err = vpcPeeringDAO.UpdateStatusByID(ctx, tx, vpcPeering.ID, cdbm.VpcPeeringStatusDeleting)
+	if err != nil {
+		logger.Error().Err(err).Msg("error updating VPC peering status to Deleting")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update VPC peering status to Deleting", nil)
+	}
+
+	// Create the VPC peering deletion request
+	deleteVpcPeeringRequest := &cwssaws.VpcPeeringDeletionRequest{
+		Id: &cwssaws.VpcPeeringId{Value: vpcPeering.ID.String()},
+	}
+
+	// Get the site temporal client
+	stc, err := dvph.scp.GetClientByID(vpcPeering.SiteID)
+	if err != nil {
+		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Temporal client for Site", nil)
+	}
+
+	// Setup workflow options
+	workflowOptions := tclient.StartWorkflowOptions{
+		ID:                       "vpcpeering-delete-" + vpcPeering.ID.String(),
+		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
+		TaskQueue:                queue.SiteTaskQueue,
+	}
+
+	logger.Info().Msg("triggering VPC peering delete workflow")
+
+	// Add context deadline
+	workflowCtx, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
+	defer cancel()
+
+	// Trigger site workflow to delete VPC peering
+	we, err := stc.ExecuteWorkflow(workflowCtx, workflowOptions, "DeleteVpcPeering", deleteVpcPeeringRequest)
+	if err != nil {
+		logger.Error().Err(err).Msg("failed to start VPC peering deletion workflow")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to start VPC peering deletion workflow", nil)
+	}
+
+	wid := we.GetID()
+	logger.Info().Str("Workflow ID", wid).Msg("started VPC peering deletion workflow")
+
+	// Wait for workflow completion synchronously
+	err = we.Get(workflowCtx, nil)
+	if err != nil {
+		var applicationErr *tp.ApplicationError
+		if errors.As(err, &applicationErr) && (applicationErr.Type() == swe.ErrTypeCarbideUnimplemented || applicationErr.Type() == swe.ErrTypeCarbideDenied) {
+			logger.Error().Msg("feature not yet implemented on target Site")
+			return cutil.NewAPIErrorResponse(c, http.StatusNotImplemented, fmt.Sprintf("Feature not yet implemented on target Site: %s", err), nil)
+		}
+
+		var timeoutErr *tp.TimeoutError
+		if errors.As(err, &timeoutErr) || err == context.DeadlineExceeded || ctx.Err() != nil {
+			return common.TerminateWorkflowOnTimeOut(c, logger, stc, wid, err, "VpcPeering", "DeleteVpcPeering")
+		}
+
+		logger.Error().Err(err).Msg("failed to synchronously execute Temporal workflow to delete VPC peering")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to execute sync workflow to delete VPC Peering on Site: %s", err), nil)
+	}
+
+	// Workflow completed successfully, delete the VPC peering from DB
+	err = vpcPeeringDAO.Delete(ctx, tx, vpcPeering.ID)
+	if err != nil {
+		logger.Error().Err(err).Msg("error deleting VPC peering from DB after successful workflow")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete VPC peering from database", nil)
+	}
+
+	// Commit the transaction
+	err = tx.Commit()
+	if err != nil {
+		logger.Error().Err(err).Msg("error committing transaction")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete VPC peering", nil)
+	}
+	txCommitted = true
+
+	logger.Info().Str("Workflow ID", wid).Msg("successfully completed VPC peering deletion workflow and removed from database")
+
+	return c.NoContent(http.StatusNoContent)
+}

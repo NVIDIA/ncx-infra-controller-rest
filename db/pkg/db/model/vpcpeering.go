@@ -92,7 +92,7 @@ type VpcPeeringCreateInput struct {
 
 type VpcPeeringFilterInput struct {
 	IDs      []uuid.UUID
-	VpcID    *uuid.UUID // Return record if either vpc1_id or vpc2_id matches VPCID
+	VpcIDs   []uuid.UUID // Return record if vpc1_id IN (VpcIDs) OR vpc2_id IN (VpcIDs)
 	SiteIDs  []uuid.UUID
 	Statuses []string
 }
@@ -219,9 +219,9 @@ func (vpsd VpcPeeringSQLDAO) setQueryWithFilter(filter VpcPeeringFilterInput, qu
 		vpsd.tracerSpan.SetAttribute(vpDAOSpan, "id", filter.IDs)
 	}
 
-	if filter.VpcID != nil {
-		query = query.Where("vp.vpc1_id = ? OR vp.vpc2_id = ?", *filter.VpcID, *filter.VpcID)
-		vpsd.tracerSpan.SetAttribute(vpDAOSpan, "vpc_id", *filter.VpcID)
+	if len(filter.VpcIDs) > 0 {
+		query = query.Where("(vp.vpc1_id IN (?) OR vp.vpc2_id IN (?))", bun.In(filter.VpcIDs), bun.In(filter.VpcIDs))
+		vpsd.tracerSpan.SetAttribute(vpDAOSpan, "vpc_ids", filter.VpcIDs)
 	}
 
 	if filter.Statuses != nil {
