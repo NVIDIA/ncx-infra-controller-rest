@@ -184,11 +184,11 @@ echo "=========================================="
 echo ""
 echo "--- Test 5: ClusterIssuer Ready ---"
 echo "Checks: The ClusterIssuer that connects cert-manager.io to our CA is working"
-ISSUER_STATUS=$(kubectl get clusterissuer carbide-ca-issuer -o jsonpath='{.status.conditions[0].status}' 2>/dev/null || echo "")
+ISSUER_STATUS=$(kubectl get clusterissuer carbide-rest-ca-issuer -o jsonpath='{.status.conditions[0].status}' 2>/dev/null || echo "")
 if [[ "$ISSUER_STATUS" == "True" ]]; then
-    pass "carbide-ca-issuer ClusterIssuer is ready"
+    pass "carbide-rest-ca-issuer ClusterIssuer is ready"
 else
-    fail "carbide-ca-issuer not ready (status: $ISSUER_STATUS)"
+    fail "carbide-rest-ca-issuer not ready (status: $ISSUER_STATUS)"
 fi
 
 echo ""
@@ -306,7 +306,7 @@ echo "=========================================="
 echo ""
 echo "--- Test 14: Keycloak Token ---"
 echo "Checks: Auth system is working (not PKI-related, but ensures full stack is up)"
-TOKEN=$(curl -sf -X POST "http://localhost:8080/realms/carbide-dev/protocol/openid-connect/token" \
+TOKEN=$(curl -sf -X POST "http://localhost:8082/realms/carbide-dev/protocol/openid-connect/token" \
     -H "Content-Type: application/x-www-form-urlencoded" \
     -d "client_id=carbide-api" \
     -d "client_secret=carbide-local-secret" \
@@ -532,7 +532,7 @@ spec:
   dnsNames:
     - e2e-test.carbide.local
   issuerRef:
-    name: carbide-ca-issuer
+    name: carbide-rest-ca-issuer
     kind: ClusterIssuer
     group: cert-manager.io
 EOF
@@ -625,7 +625,7 @@ spec:
   dnsNames:
     - rotation-test.carbide.local
   issuerRef:
-    name: carbide-ca-issuer
+    name: carbide-rest-ca-issuer
     kind: ClusterIssuer
     group: cert-manager.io
 EOF

@@ -30,9 +30,11 @@ spec:
       labels:
         app: carbide-rest-mock-core
     spec:
+      imagePullSecrets:
+        - name: image-pull-secret
       containers:
         - name: mock-core
-          image: localhost:5000/carbide-rest-mock-core:latest
+          image: carbide-rest-mock-core:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 11079

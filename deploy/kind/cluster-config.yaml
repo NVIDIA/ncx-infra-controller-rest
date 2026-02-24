@@ -26,8 +26,8 @@ nodes:
         hostPort: 8388
         protocol: TCP
       # Keycloak
-      - containerPort: 30080
-        hostPort: 8080
+      - containerPort: 30082
+        hostPort: 8082
         protocol: TCP
       # Temporal UI
       - containerPort: 30233
@@ -43,4 +43,3 @@ nodes:
         nodeRegistration:
           kubeletExtraArgs:
             node-labels: "ingress-ready=true"
-

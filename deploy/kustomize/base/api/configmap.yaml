@@ -37,7 +37,7 @@ data:
         dsn: ""
 
     db:
-      host: postgres
+      host: postgres.postgres
       port: 5432
       name: forge
       user: forge
@@ -67,12 +67,12 @@ data:
 
     tracing:
       enabled: false
-      serviceName: cloud-api
+      serviceName: carbide-rest-api
 
     keycloak:
       enabled: true
-      baseURL: http://keycloak:8080
-      externalBaseURL: http://localhost:8080
+      baseURL: http://keycloak:8082
+      externalBaseURL: http://localhost:8082
       realm: carbide-dev
       clientID: carbide-api
       clientSecretPath: /var/secrets/keycloak/client-secret
@@ -83,4 +83,3 @@ data:
       rate: 10.0
       burst: 30
       expiresIn: 180
-

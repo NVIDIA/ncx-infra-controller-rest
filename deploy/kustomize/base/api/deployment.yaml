@@ -30,9 +30,11 @@ spec:
       labels:
         app: carbide-rest-api
     spec:
+      imagePullSecrets:
+        - name: image-pull-secret
       containers:
         - name: api
-          image: localhost:5000/carbide-rest-api:latest
+          image: carbide-rest-api:latest
           ports:
             - containerPort: 8388
               name: http
@@ -79,13 +81,13 @@ spec:
             name: carbide-rest-api-config
         - name: keycloak-secret
           secret:
-            secretName: carbide-secrets
+            secretName: keycloak-client-secret
             items:
               - key: keycloak-client-secret
                 path: client-secret
         - name: temporal-encryption-key
           secret:
-            secretName: carbide-secrets
+            secretName: temporal-encryption-key
             items:
               - key: temporal-encryption-key
                 path: encryption-key

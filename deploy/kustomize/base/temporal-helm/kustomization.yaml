@@ -20,3 +20,4 @@ namespace: temporal
 
 resources:
   - certificates.yaml
+  - db-creds.yaml

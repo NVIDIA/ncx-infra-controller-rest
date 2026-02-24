@@ -31,6 +31,8 @@ spec:
       labels:
         app: postgres
     spec:
+      imagePullSecrets:
+        - name: image-pull-secret
       containers:
         - name: postgres
           image: postgres:14.4-alpine
@@ -43,8 +45,8 @@ spec:
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: carbide-secrets
-                  key: postgres-password
+                  name: admin-creds
+                  key: password
             - name: POSTGRES_DB
               value: postgres
           volumeMounts:
@@ -87,4 +89,3 @@ spec:
         resources:
           requests:
             storage: 1Gi
-

@@ -30,9 +30,11 @@ spec:
       labels:
         app: carbide-rest-site-agent
     spec:
+      imagePullSecrets:
+        - name: image-pull-secret
       containers:
         - name: site-agent
-          image: localhost:5000/carbide-rest-site-agent:latest
+          image: carbide-rest-site-agent:latest
           ports:
             - containerPort: 8080
               name: http
@@ -45,8 +47,8 @@ spec:
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: carbide-secrets
-                  key: db-password
+                  name: db-creds
+                  key: password
           volumeMounts:
             - name: site-registration
               mountPath: /etc/sitereg

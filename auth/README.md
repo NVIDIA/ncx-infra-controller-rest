@@ -43,7 +43,7 @@ issuers:
 | **C: Service Account** | `orgName` + `isServiceAccount: true` | 1 global** | M2M with admin roles |
 | **D: Dynamic-Dynamic** | `orgAttribute` + `orgDisplayAttribute` + `rolesAttribute` | 1 global | Multi-tenant IdP |
 
-\*Each `orgName` must be globally unique across all issuers  
+\*Each `orgName` must be globally unique across all issuers
 \*\*1 per issuer URL in connected mode; 1 total in disconnected mode
 
 ---
@@ -194,7 +194,7 @@ Once Keycloak configuration is finalized, the ingress controller for the Keycloa
 | Configuration | Description | Example |
 |---------------|-------------|---------|
 | `keycloak.enabled` | Enable Keycloak integration | `true` |
-| `keycloak.baseURL` | Internal Keycloak URL (cluster-internal) | `http://keycloak.keycloak.svc.cluster.local:8080` |
+| `keycloak.baseURL` | Internal Keycloak URL (cluster-internal) | `http://keycloak.keycloak.svc.cluster.local:8082` |
 | `keycloak.externalBaseURL` | External Keycloak URL (must match token issuer) | `https://auth.forge.acme.com` |
 | `keycloak.realm` | Keycloak realm name | `carbide` |
 | `keycloak.clientID` | OAuth client ID | `carbide-cloud` |
@@ -231,7 +231,7 @@ data:
     # Keycloak integration configuration
     keycloak:
       enabled: true
-      baseURL: http://keycloak.keycloak.svc.cluster.local:8080
+      baseURL: http://keycloak.keycloak.svc.cluster.local:8082
       externalBaseURL: https://auth.forge.acme.com
       realm: carbide
       clientID: carbide-cloud

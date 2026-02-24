@@ -35,9 +35,11 @@ spec:
       labels:
         app: cloud-worker
     spec:
+      imagePullSecrets:
+        - name: image-pull-secret
       containers:
         - name: cloud-worker
-          image: localhost:5000/carbide-rest-workflow:latest
+          image: carbide-rest-workflow:latest
           ports:
             - containerPort: 9360
               name: metrics
@@ -90,7 +92,7 @@ spec:
             name: carbide-rest-workflow-config
         - name: temporal-encryption-key
           secret:
-            secretName: carbide-secrets
+            secretName: temporal-encryption-key
             items:
               - key: temporal-encryption-key
                 path: encryption-key
@@ -120,9 +122,11 @@ spec:
       labels:
         app: site-worker
     spec:
+      imagePullSecrets:
+        - name: image-pull-secret
       containers:
         - name: site-worker
-          image: localhost:5000/carbide-rest-workflow:latest
+          image: carbide-rest-workflow:latest
           ports:
             - containerPort: 9360
               name: metrics
@@ -175,7 +179,7 @@ spec:
             name: carbide-rest-workflow-config
         - name: temporal-encryption-key
           secret:
-            secretName: carbide-secrets
+            secretName: temporal-encryption-key
             items:
               - key: temporal-encryption-key
                 path: encryption-key

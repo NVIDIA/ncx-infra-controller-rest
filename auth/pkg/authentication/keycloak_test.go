@@ -68,8 +68,8 @@ func isValidBearerToken(authHeader string) bool {
 
 func TestNewKeycloakAuthService(t *testing.T) {
 	keycloakConfig := &config.KeycloakConfig{
-		BaseURL:         "http://localhost:8080",
-		ExternalBaseURL: "http://localhost:8080",
+		BaseURL:         "http://localhost:8082",
+		ExternalBaseURL: "http://localhost:8082",
 		ClientID:        "test-client",
 		ClientSecret:    "test-secret",
 		Realm:           "forge",
@@ -415,7 +415,7 @@ func TestKeycloakAuthService_ExchangeCodeForTokens(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			keycloakConfig := &config.KeycloakConfig{
-				BaseURL:      "http://localhost:8080",
+				BaseURL:      "http://localhost:8082",
 				ClientID:     "test-client",
 				ClientSecret: "test-secret",
 				Realm:        "forge",
@@ -574,7 +574,7 @@ func TestKeycloakAuthService_RefreshAccessToken(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			keycloakConfig := &config.KeycloakConfig{
-				BaseURL:      "http://localhost:8080",
+				BaseURL:      "http://localhost:8082",
 				ClientID:     "test-client",
 				ClientSecret: "test-secret",
 				Realm:        "forge",
@@ -655,7 +655,7 @@ func TestKeycloakAuthService_ClientCredentialsAuth(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			keycloakConfig := &config.KeycloakConfig{
-				BaseURL: "http://localhost:8080",
+				BaseURL: "http://localhost:8082",
 				Realm:   "forge",
 			}
 
@@ -829,9 +829,9 @@ func TestKeycloakConfig_IssuerConstruction(t *testing.T) {
 		},
 		{
 			name:            "development keycloak with auth prefix",
-			externalBaseURL: "http://localhost:8080/auth",
+			externalBaseURL: "http://localhost:8082/auth",
 			realm:           "development",
-			expectedIssuer:  "http://localhost:8080/auth/realms/development",
+			expectedIssuer:  "http://localhost:8082/auth/realms/development",
 		},
 		{
 			name:            "keycloak with complex realm name",
@@ -841,16 +841,16 @@ func TestKeycloakConfig_IssuerConstruction(t *testing.T) {
 		},
 		{
 			name:            "localhost development setup",
-			externalBaseURL: "http://localhost:8080",
+			externalBaseURL: "http://localhost:8082",
 			realm:           "forge",
-			expectedIssuer:  "http://localhost:8080/realms/forge",
+			expectedIssuer:  "http://localhost:8082/realms/forge",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			kcConfig := config.NewKeycloakConfig(
-				"http://localhost:8080",
+				"http://localhost:8082",
 				tt.externalBaseURL,
 				"test-client",
 				"test-secret",
@@ -1445,14 +1445,14 @@ func TestKeycloakAuthURLConstruction(t *testing.T) {
 		},
 		{
 			name:            "development auth URL with localhost",
-			externalBaseURL: "http://localhost:8080",
+			externalBaseURL: "http://localhost:8082",
 			realm:           "development",
 			clientID:        "dev-client",
 			idpAlias:        "dev-idp",
 			email:           "dev@localhost.com",
 			redirectURI:     "http://localhost:3000/callback",
 			validateURL: func(t *testing.T, authURL string) {
-				assert.Contains(t, authURL, "http://localhost:8080/realms/development/protocol/openid-connect/auth")
+				assert.Contains(t, authURL, "http://localhost:8082/realms/development/protocol/openid-connect/auth")
 				assert.Contains(t, authURL, "client_id=dev-client")
 				assert.Contains(t, authURL, "kc_idp_hint=dev-idp")
 			},
@@ -2290,8 +2290,8 @@ func TestKeycloakConfig_IssuerMatching(t *testing.T) {
 		},
 		{
 			name:         "localhost_development_match",
-			configIssuer: "http://localhost:8080/realms/forge",
-			tokenIssuer:  "http://localhost:8080/realms/forge",
+			configIssuer: "http://localhost:8082/realms/forge",
+			tokenIssuer:  "http://localhost:8082/realms/forge",
 			shouldMatch:  true,
 		},
 	}
@@ -2300,7 +2300,7 @@ func TestKeycloakConfig_IssuerMatching(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create a config with the expected issuer
 			kcConfig := config.NewKeycloakConfig(
-				"http://localhost:8080",
+				"http://localhost:8082",
 				strings.TrimSuffix(tt.configIssuer, "/realms/forge"), // Extract base URL
 				"test-client",
 				"test-secret",
@@ -2403,7 +2403,7 @@ func TestKeycloakAuthService_ErrorEdgeCases(t *testing.T) {
 	t.Run("invalid_base_url_handling", func(t *testing.T) {
 		service := NewKeycloakAuthService(&config.KeycloakConfig{
 			BaseURL:         "invalid-url-format", // Invalid URL
-			ExternalBaseURL: "http://localhost:8080",
+			ExternalBaseURL: "http://localhost:8082",
 			ClientID:        testutil.TestClientID,
 			ClientSecret:    testutil.TestClientSecret,
 			Realm:           testutil.TestRealm,

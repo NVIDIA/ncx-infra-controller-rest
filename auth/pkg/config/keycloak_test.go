@@ -44,14 +44,14 @@ func TestNewKeycloakConfig(t *testing.T) {
 	}{
 		{
 			name:            "valid complete configuration",
-			baseURL:         "http://localhost:8080",
-			externalBaseURL: "http://external:8080",
+			baseURL:         "http://localhost:8082",
+			externalBaseURL: "http://external:8082",
 			clientID:        "test-client",
 			clientSecret:    "test-secret",
 			realm:           "test-realm",
 			want: &KeycloakConfig{
-				BaseURL:         "http://localhost:8080",
-				ExternalBaseURL: "http://external:8080",
+				BaseURL:         "http://localhost:8082",
+				ExternalBaseURL: "http://external:8082",
 				ClientID:        "test-client",
 				ClientSecret:    "test-secret",
 				Realm:           "test-realm",
@@ -59,13 +59,13 @@ func TestNewKeycloakConfig(t *testing.T) {
 		},
 		{
 			name:            "minimal configuration",
-			baseURL:         "http://localhost:8080",
+			baseURL:         "http://localhost:8082",
 			externalBaseURL: "",
 			clientID:        "client",
 			clientSecret:    "secret",
 			realm:           "realm",
 			want: &KeycloakConfig{
-				BaseURL:         "http://localhost:8080",
+				BaseURL:         "http://localhost:8082",
 				ExternalBaseURL: "",
 				ClientID:        "client",
 				ClientSecret:    "secret",
@@ -271,16 +271,16 @@ func TestKeycloakConfig_GetJwksConfig_Concurrency(t *testing.T) {
 
 func TestKeycloakConfig_Properties(t *testing.T) {
 	config := &KeycloakConfig{
-		BaseURL:         "http://localhost:8080",
-		ExternalBaseURL: "http://external:8080",
+		BaseURL:         "http://localhost:8082",
+		ExternalBaseURL: "http://external:8082",
 		ClientID:        "test-client",
 		ClientSecret:    "test-secret",
 		Realm:           "test-realm",
 	}
 
 	t.Run("verify all properties are set correctly", func(t *testing.T) {
-		assert.Equal(t, "http://localhost:8080", config.BaseURL)
-		assert.Equal(t, "http://external:8080", config.ExternalBaseURL)
+		assert.Equal(t, "http://localhost:8082", config.BaseURL)
+		assert.Equal(t, "http://external:8082", config.ExternalBaseURL)
 		assert.Equal(t, "test-client", config.ClientID)
 		assert.Equal(t, "test-secret", config.ClientSecret)
 		assert.Equal(t, "test-realm", config.Realm)
@@ -293,7 +293,7 @@ func TestKeycloakConfig_Properties(t *testing.T) {
 
 func TestKeycloakConfig_ThreadSafety(t *testing.T) {
 	config := &KeycloakConfig{
-		BaseURL: "http://localhost:8080",
+		BaseURL: "http://localhost:8082",
 		Realm:   "test-realm",
 	}
 
@@ -406,15 +406,15 @@ func TestKeycloakConfig_JwksURL(t *testing.T) {
 	}{
 		{
 			name:        "standard Keycloak URL",
-			baseURL:     "http://localhost:8080",
+			baseURL:     "http://localhost:8082",
 			realm:       "test-realm",
-			expectedURL: "http://localhost:8080/realms/test-realm/protocol/openid-connect/certs",
+			expectedURL: "http://localhost:8082/realms/test-realm/protocol/openid-connect/certs",
 		},
 		{
 			name:        "Keycloak with auth prefix",
-			baseURL:     "http://localhost:8080/auth",
+			baseURL:     "http://localhost:8082/auth",
 			realm:       "my-realm",
-			expectedURL: "http://localhost:8080/auth/realms/my-realm/protocol/openid-connect/certs",
+			expectedURL: "http://localhost:8082/auth/realms/my-realm/protocol/openid-connect/certs",
 		},
 		{
 			name:        "external Keycloak URL",

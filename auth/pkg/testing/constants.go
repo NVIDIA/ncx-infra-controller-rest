@@ -29,7 +29,7 @@ const (
 	DevDomain     = "test.com"
 
 	// Base URLs and endpoints
-	LocalKeycloakURL = "http://localhost:8080"
+	LocalKeycloakURL = "http://localhost:8082"
 	TestKeycloakURL  = "https://keycloak.test.com"
 	TestCallbackURL  = "http://localhost:3000/callback"
 

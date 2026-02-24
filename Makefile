@@ -225,6 +225,7 @@ rla-protogen:
 # =============================================================================
 
 .PHONY: kind-up kind-down kind-deploy kind-load kind-apply kind-redeploy kind-status kind-logs kind-reset kind-verify setup-site-agent
+.PHONY: deploy-overlay-api deploy-overlay-cert-manager deploy-overlay-site-manager deploy-overlay-workflow
 
 # Kind cluster configuration
 KIND_CLUSTER_NAME := carbide-rest-local
@@ -247,7 +248,7 @@ docker-build-local:
 # Create kind cluster with port mappings
 kind-up:
 	kind create cluster --name $(KIND_CLUSTER_NAME) --config deploy/kind/cluster-config.yaml
-	kubectl apply -f deploy/kustomize/base/crds/
+	#kubectl apply -f deploy/kustomize/base/crds/
 
 # Delete kind cluster
 kind-down:
@@ -279,7 +280,7 @@ kind-apply:
 	@echo "Waiting for Keycloak..."
 	kubectl -n carbide-rest wait --for=condition=ready pod -l app=keycloak --timeout=180s
 	@echo "Running database migrations..."
-	kubectl -n carbide-rest wait --for=condition=complete job/db --timeout=120s
+	kubectl -n carbide-rest wait --for=condition=complete job/carbide-rest-db-migration --timeout=120s
 	@echo "Waiting for API service..."
 	kubectl -n carbide-rest wait --for=condition=ready pod -l app=carbide-rest-api --timeout=120s || true
 	@echo "Waiting for Site Manager..."
@@ -307,17 +308,22 @@ kind-status:
 kind-logs:
 	kubectl -n carbide-rest logs -l app=carbide-rest-api -f --tail=100
 
+# Scoped overlays: deploy only one component + its deps (no duplication of yaml; requires LoadRestrictionsNone)
+deploy-overlay-api:
+	kubectl kustomize --load-restrictor LoadRestrictionsNone deploy/kustomize/overlays/api | kubectl apply -f -
+deploy-overlay-cert-manager:
+	kubectl kustomize --load-restrictor LoadRestrictionsNone deploy/kustomize/overlays/cert-manager | kubectl apply -f -
+deploy-overlay-site-manager:
+	kubectl kustomize --load-restrictor LoadRestrictionsNone deploy/kustomize/overlays/site-manager | kubectl apply -f -
+deploy-overlay-workflow:
+	kubectl kustomize --load-restrictor LoadRestrictionsNone deploy/kustomize/overlays/workflow | kubectl apply -f -
+
 # Full reset: tear down cluster, rebuild images, and redeploy everything
 kind-reset:
 	-kind delete cluster --name $(KIND_CLUSTER_NAME)
 	kind create cluster --name $(KIND_CLUSTER_NAME) --config deploy/kind/cluster-config.yaml
-	kubectl apply -f deploy/kustomize/base/crds/
-	@echo "Installing cert-manager.io..."
-	kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.14.4/cert-manager.yaml
-	@echo "Waiting for cert-manager deployments..."
-	kubectl -n cert-manager rollout status deployment/cert-manager --timeout=240s
-	kubectl -n cert-manager rollout status deployment/cert-manager-webhook --timeout=240s
-	kubectl -n cert-manager rollout status deployment/cert-manager-cainjector --timeout=240s
+
+	@echo "Building images..."
 	docker build -t $(IMAGE_REGISTRY)/carbide-rest-api:$(IMAGE_TAG) -f $(LOCAL_DOCKERFILE_DIR)/Dockerfile.carbide-rest-api .
 	docker build -t $(IMAGE_REGISTRY)/carbide-rest-workflow:$(IMAGE_TAG) -f $(LOCAL_DOCKERFILE_DIR)/Dockerfile.carbide-rest-workflow .
 	docker build -t $(IMAGE_REGISTRY)/carbide-rest-site-manager:$(IMAGE_TAG) -f $(LOCAL_DOCKERFILE_DIR)/Dockerfile.carbide-rest-site-manager .
@@ -332,26 +338,36 @@ kind-reset:
 	kind load docker-image $(IMAGE_REGISTRY)/carbide-rest-mock-core:$(IMAGE_TAG) --name $(KIND_CLUSTER_NAME)
 	kind load docker-image $(IMAGE_REGISTRY)/carbide-rest-db:$(IMAGE_TAG) --name $(KIND_CLUSTER_NAME)
 	kind load docker-image $(IMAGE_REGISTRY)/carbide-rest-cert-manager:$(IMAGE_TAG) --name $(KIND_CLUSTER_NAME)
+
+	@echo "Installing cert-manager.io..."
+	kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.14.4/cert-manager.yaml
+	@echo "Waiting for cert-manager deployments..."
+	kubectl -n cert-manager rollout status deployment/cert-manager --timeout=240s
+	kubectl -n cert-manager rollout status deployment/cert-manager-webhook --timeout=240s
+	kubectl -n cert-manager rollout status deployment/cert-manager-cainjector --timeout=240s
+
+	@echo "Creating carbide-rest namespace..."
+	kubectl create namespace carbide-rest || true
+
 	@echo "Setting up PKI secrets for cert-manager..."
 	NAMESPACE=carbide-rest ./scripts/setup-local.sh pki
-	kubectl apply -k $(KUSTOMIZE_OVERLAY)
-	kubectl -n carbide-rest wait --for=condition=ready pod -l app=postgres --timeout=240s
-	kubectl -n carbide-rest wait --for=condition=ready pod -l app=carbide-rest-cert-manager --timeout=360s
+
+	@echo "Setting up PostgreSQL..."
+	kubectl apply -k deploy/kustomize/base/postgres/
+	kubectl -n postgres wait --for=condition=ready pod -l app=postgres --timeout=240s
+
 	@echo "Configuring cert-manager.io ClusterIssuer..."
 	kubectl apply -k deploy/kustomize/base/cert-manager-io/
+
 	@echo "Creating temporal namespace..."
 	kubectl create namespace temporal || true
-	@echo "Creating Temporal certificates..."
+	@echo "Creating Temporal certificates and database credentials..."
 	kubectl apply -k deploy/kustomize/base/temporal-helm/
 	@echo "Waiting for Temporal certificates to be issued..."
 	kubectl -n temporal wait --for=condition=Ready certificate/server-interservice-cert --timeout=240s || true
 	kubectl -n temporal wait --for=condition=Ready certificate/server-cloud-cert --timeout=240s || true
 	kubectl -n temporal wait --for=condition=Ready certificate/server-site-cert --timeout=240s || true
 	kubectl -n carbide-rest wait --for=condition=Ready certificate/temporal-client-cert --timeout=240s || true
-	@echo "Creating postgres-auth secret for Temporal Helm chart..."
-	kubectl -n temporal create secret generic postgres-auth --from-literal=password=temporal || true
-	@echo "Granting temporal user CREATEDB permission..."
-	kubectl -n carbide-rest exec -it postgres-0 -- psql -U postgres -c "ALTER USER temporal CREATEDB; ALTER DATABASE temporal OWNER TO temporal; ALTER DATABASE temporal_visibility OWNER TO temporal;" || true
 	@echo "Updating Helm chart dependencies..."
 	helm dependency update temporal-helm/temporal/
 	@echo "Installing Temporal via Helm chart..."
@@ -376,15 +392,45 @@ kind-reset:
 		--tls-ca-path /var/secrets/temporal/certs/server-interservice/ca.crt \
 		--tls-server-name interservice.server.temporal.local || true
 	@echo "Temporal Helm deployment ready"
-	kubectl -n carbide-rest wait --for=condition=ready pod -l app=keycloak --timeout=360s
-	kubectl -n carbide-rest wait --for=condition=complete job/db --timeout=240s
-	-kubectl -n carbide-rest wait --for=condition=ready pod -l app=carbide-rest-api --timeout=240s
-	@echo "Waiting for workflow workers..."
-	-kubectl -n carbide-rest wait --for=condition=ready pod -l app=cloud-worker --timeout=240s
-	-kubectl -n carbide-rest wait --for=condition=ready pod -l app=site-worker --timeout=240s
-	@echo "Waiting for Site Manager..."
-	kubectl -n carbide-rest wait --for=condition=ready pod -l app=carbide-rest-site-manager --timeout=360s
+
+	@echo "Setting up Keycloak..."
+	kubectl apply -k deploy/kustomize/base/keycloak
+	kubectl -n carbide-rest wait --for=condition=ready pod -l app=keycloak --timeout=240s
+
+	@echo "Setting up Carbide REST services..."
+	kubectl apply -k deploy/kustomize/base/common
+
+	@echo "Setting up Carbide REST Cert Manager..."
+	kubectl apply -k deploy/kustomize/overlays/cert-manager
+	kubectl -n carbide-rest wait --for=condition=ready pod -l app=carbide-rest-cert-manager --timeout=240s
+
+	@echo "Waiting for Carbide REST Site Manager..."
+	kubectl apply -k deploy/kustomize/overlays/site-manager
+	kubectl -n carbide-rest wait --for=condition=ready pod -l app=carbide-rest-site-manager --timeout=240s
+
+	@echo "Setting up Carbide REST DB Migration..."
+	kubectl apply -k deploy/kustomize/overlays/db
+	kubectl -n carbide-rest wait --for=condition=complete job/carbide-rest-db-migration --timeout=240s
+	kubectl -n carbide-rest wait --for=condition=ready pod -l app=carbide-rest-api --timeout=240s
+
+	@echo "Setting up Carbide REST Cloud and Site Workers..."
+	kubectl apply -k deploy/kustomize/overlays/workflow
+	kubectl -n carbide-rest wait --for=condition=ready pod -l app=carbide-rest-workflow --timeout=240s
+	kubectl -n carbide-rest rollout status deployment/cloud-worker --timeout=240s
+	kubectl -n carbide-rest rollout status deployment/site-worker --timeout=240s
+
+	@echo "Setting up Carbide REST API..."
+	kubectl apply -k deploy/kustomize/overlays/api
+	kubectl -n carbide-rest wait --for=condition=ready pod -l app=carbide-rest-api --timeout=240s
+
+	@echo "Setting up Carbide Mock Core..."
+	kubectl apply -k deploy/kustomize/base/mock-core
+	kubectl -n carbide-rest wait --for=condition=ready pod -l app=carbide-rest-mock-core --timeout=240s
+
+	@echo "Setting up Carbide REST Site Agent..."
+	kubectl apply -k deploy/kustomize/base/site-agent
 	./scripts/setup-local.sh site-agent
+
 	@echo ""
 	@echo "================================================================================"
 	@echo "Deployment complete!"
@@ -393,12 +439,12 @@ kind-reset:
 	@echo "  - View running workflows and their execution history"
 	@echo ""
 	@echo "API: http://localhost:8388"
-	@echo "Keycloak: http://localhost:8080"
+	@echo "Keycloak: http://localhost:8082"
 	@echo "================================================================================"
 	@echo ""
 	@echo "Example: Get a token and list all sites:"
 	@echo ""
-	@echo '  TOKEN=$$(curl -s -X POST "http://localhost:8080/realms/carbide-dev/protocol/openid-connect/token" \'
+	@echo '  TOKEN=$$(curl -s -X POST "http://localhost:8082/realms/carbide-dev/protocol/openid-connect/token" \'
 	@echo '    -H "Content-Type: application/x-www-form-urlencoded" \'
 	@echo '    -d "client_id=carbide-api" \'
 	@echo '    -d "client_secret=carbide-local-secret" \'

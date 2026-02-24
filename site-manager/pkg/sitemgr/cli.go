@@ -53,7 +53,7 @@ func NewCommand() *cli.Command {
 			},
 			&cli.StringFlag{
 				Name:  "ingress-host",
-				Value: "sitemanager.forge.nvidia.com",
+				Value: "sitemgr.forge.nvidia.com",
 				Usage: "Ingress host name for self signed certs",
 			},
 			&cli.StringFlag{
@@ -73,7 +73,7 @@ func NewCommand() *cli.Command {
 			},
 			&cli.StringFlag{
 				Name:    "namespace",
-				Value:   "csm",
+				Value:   "carbide-rest",
 				EnvVars: []string{"SITE_MANAGER_NS"},
 				Usage:   "Namespace where service is deployed",
 			},

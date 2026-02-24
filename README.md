@@ -56,7 +56,7 @@ Once complete, services are available at:
 | Service | URL |
 |---------|-----|
 | API | http://localhost:8388 |
-| Keycloak | http://localhost:8080 |
+| Keycloak | http://localhost:8082 |
 | Temporal UI | http://localhost:8233 |
 | Adminer (DB UI) | http://localhost:8081 |
 
@@ -75,7 +75,7 @@ make kind-down      # Tear down cluster
 ### Get an Access Token
 
 ```bash
-TOKEN=$(curl -s -X POST "http://localhost:8080/realms/carbide-dev/protocol/openid-connect/token" \
+TOKEN=$(curl -s -X POST "http://localhost:8082/realms/carbide-dev/protocol/openid-connect/token" \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "client_id=carbide-api" \
   -d "client_secret=carbide-local-secret" \

@@ -30,6 +30,8 @@ spec:
       labels:
         app: adminer
     spec:
+      imagePullSecrets:
+        - name: image-pull-secret
       containers:
         - name: adminer
           image: adminer:4.8.1
@@ -38,7 +40,7 @@ spec:
               name: http
           env:
             - name: ADMINER_DEFAULT_SERVER
-              value: postgres
+              value: postgres.postgres
             - name: ADMINER_DESIGN
               value: nette
           resources:
@@ -58,7 +60,7 @@ metadata:
 spec:
   type: ClusterIP
   ports:
-    - port: 8080
+    - port: 8081
       targetPort: 8080
       name: http
   selector:
@@ -73,10 +75,9 @@ metadata:
 spec:
   type: NodePort
   ports:
-    - port: 8080
+    - port: 8081
       targetPort: 8080
       nodePort: 30081
       name: http
   selector:
     app: adminer
-

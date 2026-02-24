@@ -24,53 +24,52 @@ data:
   01-init-databases.sql: |
     -- Enable pg_trgm extension (required for text search)
     CREATE EXTENSION IF NOT EXISTS pg_trgm;
-    
+
     -- Create forge database and user (used by API, Workflow)
     CREATE DATABASE forge WITH ENCODING 'UTF8';
     CREATE USER forge WITH PASSWORD 'forge';
     GRANT ALL PRIVILEGES ON DATABASE forge TO forge;
-    
+
     -- Connect to forge database to set up permissions
     \c forge
     GRANT ALL ON SCHEMA public TO forge;
     CREATE EXTENSION IF NOT EXISTS pg_trgm;
-    
+
     -- Create elektratest database (used by site-agent)
     \c postgres
     CREATE DATABASE elektratest WITH ENCODING 'UTF8';
     GRANT ALL PRIVILEGES ON DATABASE elektratest TO forge;
-    
+
     -- Connect to elektratest to set up permissions
     \c elektratest
     GRANT ALL ON SCHEMA public TO forge;
     CREATE EXTENSION IF NOT EXISTS pg_trgm;
-    
+
     -- Create keycloak database
     \c postgres
     CREATE DATABASE keycloak WITH ENCODING 'UTF8';
     CREATE USER keycloak WITH PASSWORD 'keycloak';
     GRANT ALL PRIVILEGES ON DATABASE keycloak TO keycloak;
-    
+
     \c keycloak
     GRANT ALL ON SCHEMA public TO keycloak;
-    
+
     -- Create temporal databases (for Temporal workflow engine)
     \c postgres
     CREATE DATABASE temporal WITH ENCODING 'UTF8';
     CREATE USER temporal WITH PASSWORD 'temporal' CREATEDB;
     GRANT ALL PRIVILEGES ON DATABASE temporal TO temporal;
     ALTER DATABASE temporal OWNER TO temporal;
-    
+
     \c temporal
     GRANT ALL ON SCHEMA public TO temporal;
     ALTER SCHEMA public OWNER TO temporal;
-    
+
     \c postgres
     CREATE DATABASE temporal_visibility WITH ENCODING 'UTF8';
     GRANT ALL PRIVILEGES ON DATABASE temporal_visibility TO temporal;
     ALTER DATABASE temporal_visibility OWNER TO temporal;
-    
+
     \c temporal_visibility
     GRANT ALL ON SCHEMA public TO temporal;
     ALTER SCHEMA public OWNER TO temporal;
-

@@ -20,53 +20,14 @@ kind: Kustomization
 namespace: carbide-rest
 
 resources:
-  # Namespace
-  - namespace.yaml
-  
-  # CRDs (applied separately in kind-up, but included for reference)
-  # - crds/site-crd.yaml
-  
-  # Infrastructure
-  - postgres/statefulset.yaml
-  - postgres/service.yaml
-  - postgres/init-configmap.yaml
-  - postgres/adminer.yaml
-  
-  # Temporal deployed via Helm chart (see Makefile:kind-reset)
-  # Temporal certificates applied separately via temporal-helm kustomization
-  # Temporal client certificate (for services in carbide-rest namespace)
-  - temporal/temporal-client-cert.yaml
-  - keycloak/deployment.yaml
-  - keycloak/service.yaml
-  - keycloak/realm-configmap.yaml
-  
-  # Secrets
-  - secrets/secrets.yaml
-  
-  # Database migrations (Job)
-  - db/job.yaml
-  
   # Application services
-  - api/deployment.yaml
-  - api/service.yaml
-  - api/configmap.yaml
-  - workflow/deployment.yaml
-  - workflow/configmap.yaml
-  - mock-core/deployment.yaml
-  - mock-core/service.yaml
-  - site-agent/deployment.yaml
-  - site-agent/service.yaml
-  - site-agent/configmap.yaml
-  - site-agent/secret.yaml
-  - site-agent/certificate.yaml
-  - cert-manager/deployment.yaml
-  - cert-manager/service.yaml
-  - cert-manager/rbac.yaml
-  - site-manager/deployment.yaml
-  - site-manager/service.yaml
-  - site-manager/rbac.yaml
-  - site-manager/certificate.yaml
+  - common
+  - api
+  - workflow
+  - mock-core
+  - site-agent
+  - cert-manager
+  - site-manager
 
 commonLabels:
   app.kubernetes.io/part-of: carbide-rest
-

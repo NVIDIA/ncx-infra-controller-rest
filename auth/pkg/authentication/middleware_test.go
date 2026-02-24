@@ -74,7 +74,7 @@ var (
 const (
 	ssaIssuer      = "https://ytynxseffxl4u4jswpl8k6wfcbjzudh1k9dmmlfnquw.stg.ssa.nvidia.com"
 	kasIssuer      = "stg.auth.ngc.nvidia.com"
-	keycloakIssuer = "http://localhost:8080/realms/forge"
+	keycloakIssuer = "http://localhost:8082/realms/forge"
 )
 
 func TestAuthProcessor(t *testing.T) {

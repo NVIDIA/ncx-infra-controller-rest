@@ -31,6 +31,8 @@ spec:
       labels:
         app: carbide-rest-cert-manager
     spec:
+      imagePullSecrets:
+        - name: image-pull-secret
       serviceAccountName: carbide-rest-cert-manager
       terminationGracePeriodSeconds: 5
       securityContext:
@@ -39,7 +41,7 @@ spec:
         fsGroup: 65534
       containers:
         - name: cert-manager
-          image: localhost:5000/carbide-rest-cert-manager:latest
+          image: carbide-rest-cert-manager:latest
           securityContext:
             readOnlyRootFilesystem: true
             allowPrivilegeEscalation: false
@@ -73,13 +75,6 @@ spec:
             limits:
               memory: "256Mi"
               cpu: "250m"
-          lifecycle:
-            preStop:
-              exec:
-                command:
-                  - /bin/sh
-                  - -c
-                  - sleep 5
           readinessProbe:
             httpGet:
               path: /healthz

@@ -86,4 +86,3 @@ roleRef:
   kind: ClusterRole
   name: carbide-rest-site-manager
   apiGroup: rbac.authorization.k8s.io
-

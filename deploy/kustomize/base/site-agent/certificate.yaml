@@ -14,7 +14,7 @@
 # limitations under the License.
 
 # SPIFFE certificate for site-agent gRPC client connections to Carbide/Forge API
-# Issued by carbide-ca-issuer (native Go PKI CA)
+# Issued by carbide-rest-ca-issuer (native Go PKI CA)
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
@@ -40,6 +40,6 @@ spec:
   uris:
     - spiffe://carbide.local/carbide-rest/sa/carbide-rest-site-agent
   issuerRef:
-    name: carbide-ca-issuer
+    name: carbide-rest-ca-issuer
     kind: ClusterIssuer
     group: cert-manager.io

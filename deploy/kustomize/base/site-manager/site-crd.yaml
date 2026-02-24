@@ -46,7 +46,7 @@ spec:
                   description: Human-readable name of the site
                 provider:
                   type: string
-                  description: Cloud provider or infrastructure type
+                  description: Infrastructure Provider name
                 fcorg:
                   type: string
                   description: Organization identifier
@@ -87,4 +87,3 @@ spec:
     kind: Site
     shortNames:
       - st
-

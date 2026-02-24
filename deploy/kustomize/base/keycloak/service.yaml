@@ -23,7 +23,7 @@ metadata:
 spec:
   type: ClusterIP
   ports:
-    - port: 8080
+    - port: 8082
       targetPort: 8080
       name: http
   selector:
@@ -39,10 +39,9 @@ metadata:
 spec:
   type: NodePort
   ports:
-    - port: 8080
+    - port: 8082
       targetPort: 8080
-      nodePort: 30080
+      nodePort: 30082
       name: http
   selector:
     app: keycloak
-

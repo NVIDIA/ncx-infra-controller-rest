@@ -29,7 +29,7 @@ data:
       level: debug
 
     db:
-      host: postgres
+      host: postgres.postgres
       port: 5432
       name: forge
       user: forge
@@ -63,5 +63,4 @@ data:
 
     tracing:
       enabled: false
-      serviceName: cloud-workflow
-
+      serviceName: carbide-rest-workflow

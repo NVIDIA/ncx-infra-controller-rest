@@ -110,7 +110,7 @@ server:
           port: 5432
           database: "temporal"
           user: "temporal"
-          existingSecret: "postgres-auth"
+          existingSecret: "db-creds"
           maxConns: 20
           maxConnLifetime: "1h"
 
@@ -123,7 +123,7 @@ server:
           port: 5432
           database: "temporal_visibility"
           user: "temporal"
-          existingSecret: "postgres-auth"
+          existingSecret: "db-creds"
           maxConns: 20
           maxConnLifetime: "1h"
 

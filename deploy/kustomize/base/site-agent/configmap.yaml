@@ -40,7 +40,7 @@ data:
   POD_NAME: "carbide-rest-site-agent-0"
   POD_NAMESPACE: "carbide-rest"
   METRICS_PORT: "2112"
-  DB_ADDR: "postgres"
+  DB_ADDR: "postgres.postgres"
   DB_USER: "forge"
   DB_DATABASE: "elektratest"
   DB_PORT: "5432"
@@ -49,4 +49,3 @@ data:
   # Temporal TLS - disabled for local dev
   TEMPORAL_CERT_PATH: "/etc/temporal-certs"
   DISABLE_BOOTSTRAP: "true"
-
