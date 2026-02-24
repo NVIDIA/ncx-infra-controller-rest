@@ -1505,14 +1505,16 @@ func TestManageSSHKeyGroup_UpdateSSHKeyGroupsInDB(t *testing.T) {
 
 			sshKeyGroupDAO := cdbm.NewSSHKeyGroupSiteAssociationDAO(dbSession)
 			// Check that SSHKeyGroupstatus was updated in DB
+			// SyncSSHKeyGroupViaSiteAgent is synchronous: it waits for the workflow to complete.
+			// The mock workflow completes immediately with success, so status becomes Synced.
 			if tt.syncingKeyset != nil {
 				updatedKeyset, _ := sshKeyGroupDAO.GetByID(ctx, nil, tt.syncingKeyset.ID, nil)
-				assert.Equal(t, cdbm.SSHKeyGroupSiteAssociationStatusSyncing, updatedKeyset.Status)
+				assert.Equal(t, cdbm.SSHKeyGroupSiteAssociationStatusSynced, updatedKeyset.Status)
 			}
 
 			if tt.outOfSyncKeyset != nil {
 				outOfSyncKeyset, _ := sshKeyGroupDAO.GetByID(ctx, nil, tt.outOfSyncKeyset.ID, nil)
-				assert.Equal(t, cdbm.SSHKeyGroupSiteAssociationStatusSyncing, outOfSyncKeyset.Status)
+				assert.Equal(t, cdbm.SSHKeyGroupSiteAssociationStatusSynced, outOfSyncKeyset.Status)
 			}
 
 			if tt.deletingKeyset != nil {
@@ -1528,7 +1530,8 @@ func TestManageSSHKeyGroup_UpdateSSHKeyGroupsInDB(t *testing.T) {
 			if tt.missingKeyset != nil {
 				missingKeyset, _ := sshKeyGroupDAO.GetByID(ctx, nil, tt.missingKeyset.ID, nil)
 				assert.True(t, missingKeyset.IsMissingOnSite)
-				assert.Equal(t, cdbm.SSHKeyGroupSiteAssociationStatusSyncing, missingKeyset.Status)
+				// SyncSSHKeyGroupViaSiteAgent is synchronous; mock completes successfully → Synced
+				assert.Equal(t, cdbm.SSHKeyGroupSiteAssociationStatusSynced, missingKeyset.Status)
 			}
 
 			if tt.restoredKeyset != nil {
