@@ -21,7 +21,7 @@ kind: Kustomization
 namespace: carbide-rest
 
 resources:
-  - ../../base/db
+  - ../../base/site-agent
 
 images:
   - name: carbide-rest-site-agent
