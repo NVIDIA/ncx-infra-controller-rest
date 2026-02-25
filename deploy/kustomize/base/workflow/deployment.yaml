@@ -19,12 +19,12 @@ kind: Deployment
 metadata:
   name: carbide-rest-cloud-worker
   labels:
-    app: carbide-rest-cloud-worker
+    app: carbide-rest-workflow
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: carbide-rest-cloud-worker
+      app: carbide-rest-workflow
   strategy:
     type: RollingUpdate
     rollingUpdate:
@@ -33,7 +33,7 @@ spec:
   template:
     metadata:
       labels:
-        app: carbide-rest-cloud-worker
+        app: carbide-rest-workflow
     spec:
       imagePullSecrets:
         - name: image-pull-secret
@@ -107,12 +107,12 @@ kind: Deployment
 metadata:
   name: carbide-rest-site-worker
   labels:
-    app: carbide-rest-site-worker
+    app: carbide-rest-workflow
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: carbide-rest-site-worker
+      app: carbide-rest-workflow
   strategy:
     type: RollingUpdate
     rollingUpdate:
@@ -121,7 +121,7 @@ spec:
   template:
     metadata:
       labels:
-        app: carbide-rest-site-worker
+        app: carbide-rest-workflow
     spec:
       imagePullSecrets:
         - name: image-pull-secret

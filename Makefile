@@ -423,11 +423,11 @@ kind-reset:
 	kubectl -n carbide-rest wait --for=condition=ready pod -l app=carbide-rest-api --timeout=240s
 
 	@echo "Setting up Carbide Mock Core..."
-	kubectl apply -k deploy/kustomize/base/mock-core
+	kubectl apply -k deploy/kustomize/overlays/mock-core
 	kubectl -n carbide-rest wait --for=condition=ready pod -l app=carbide-rest-mock-core --timeout=240s
 
 	@echo "Setting up Carbide REST Site Agent..."
-	kubectl apply -k deploy/kustomize/base/site-agent
+	kubectl apply -k deploy/kustomize/overlays/site-agent
 	./scripts/setup-local.sh site-agent
 
 	@echo ""

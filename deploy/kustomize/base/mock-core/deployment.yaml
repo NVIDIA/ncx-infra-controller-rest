@@ -34,7 +34,7 @@ spec:
         - name: image-pull-secret
       containers:
         - name: mock-core
-          image: carbide-rest-mock-core:latest
+          image: carbide-rest-mock-core
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 11079

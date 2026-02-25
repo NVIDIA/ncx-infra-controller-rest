@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
+# you may not use it except in compliance with the License.
 # You may obtain a copy of the License at
 #
 # http://www.apache.org/licenses/LICENSE-2.0
@@ -13,12 +13,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Overlay for db (migrations) and postgres deployment customization.
+# Customize images or add patches for the db Job (migrations) and postgres here.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
+namespace: carbide-rest
+
 resources:
-  - configmap.yaml
-  - secret.yaml
-  - certificate.yaml
-  - statefulset.yaml
-  - service.yaml
+  - ../../base/mock-core
+
+images:
+  - name: carbide-rest-mock-core
+    newName: localhost:5000/carbide-rest-mock-core
+    newTag: latest
+
+patches:
+  - target:
+      kind: Deployment
+      name: carbide-rest-mock-core
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/imagePullSecrets
+        value: []
