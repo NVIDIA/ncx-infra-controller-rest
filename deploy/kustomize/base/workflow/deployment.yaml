@@ -99,7 +99,7 @@ spec:
                 path: encryption-key
         - name: temporal-tls-certs
           secret:
-            secretName: temporal-client-certs
+            secretName: temporal-client-cloud-certs
 ---
 # Site Worker Deployment
 apiVersion: apps/v1
@@ -187,4 +187,4 @@ spec:
                 path: encryption-key
         - name: temporal-tls-certs
           secret:
-            secretName: temporal-client-certs
+            secretName: temporal-client-cloud-certs

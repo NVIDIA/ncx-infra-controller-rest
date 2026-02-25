@@ -13,13 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-
-resources:
-  - configmap.yaml
-  - temporal-client-site-agent-certs.yaml
-  - site-registration-secret.yaml
-  - certificate.yaml
-  - statefulset.yaml
-  - service.yaml
+# Temporal client TLS certs for site-agent
+# Placeholder values
+apiVersion: v1
+kind: Secret
+metadata:
+  name: temporal-client-site-agent-certs
+  labels:
+    app: carbide-rest-site-agent
+type: Opaque
+stringData:
+  ca.crt: "placeholder"
+  tls.crt: "placeholder"
+  tls.key: "placeholder"

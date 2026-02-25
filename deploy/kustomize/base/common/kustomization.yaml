@@ -23,4 +23,4 @@ resources:
   - keycloak-client-secret.yaml
   - temporal-encryption-key.yaml
   - image-pull-secret.yaml
-  - temporal-client-cert.yaml
+  - temporal-client-cloud-certs.yaml

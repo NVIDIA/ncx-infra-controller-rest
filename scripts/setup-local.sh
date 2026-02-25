@@ -90,7 +90,7 @@ EOFCNF
 create_service_certs() {
     echo "Creating service secrets..."
 
-    # Note: carbide-tls-certs and site-manager-tls are now managed by
+    # Note: core-grpc-client-site-agent-certs and site-manager-tls are now managed by
     # cert-manager.io Certificate resources (see deploy/kustomize/base/site-agent/certificate.yaml
     # and deploy/kustomize/base/site-manager/certificate.yaml). They will be issued
     # automatically once the carbide-rest-ca-issuer ClusterIssuer is applied.

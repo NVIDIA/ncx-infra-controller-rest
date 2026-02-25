@@ -17,10 +17,10 @@
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: temporal-client-cert
+  name: temporal-client-cloud-certs
   namespace: carbide-rest
 spec:
-  secretName: temporal-client-certs
+  secretName: temporal-client-cloud-certs
   duration: 2160h # 90 days
   renewBefore: 360h # 15 days
   subject:

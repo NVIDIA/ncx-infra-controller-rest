@@ -18,9 +18,9 @@
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: site-agent-grpc-client-cert
+  name: core-grpc-client-site-agent-certs
 spec:
-  secretName: carbide-tls-certs
+  secretName: core-grpc-client-site-agent-certs
 
   duration: 720h # 30d
   renewBefore: 360h # 15d

@@ -73,11 +73,11 @@ spec:
             secretName: site-registration
         - name: carbide-certs
           secret:
-            secretName: carbide-tls-certs
+            secretName: core-grpc-client-site-agent-certs
             optional: true
         - name: temporal-certs
           secret:
-            secretName: temporal-client-certs
+            secretName: temporal-client-site-agent-certs
             optional: true
             items:
               - key: ca.crt
