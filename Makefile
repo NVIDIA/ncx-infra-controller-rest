@@ -381,12 +381,12 @@ kind-reset:
 	kubectl -n temporal wait --for=condition=ready pod -l app.kubernetes.io/name=temporal,app.kubernetes.io/component=matching --timeout=360s || true
 	kubectl -n temporal wait --for=condition=ready pod -l app.kubernetes.io/name=temporal,app.kubernetes.io/component=worker --timeout=360s || true
 	@echo "Creating Temporal namespaces with TLS..."
-	kubectl -n temporal exec deploy/temporal-admintools -- temporal operator namespace create cloud --address temporal-frontend:7233 \
+	kubectl -n temporal exec deploy/temporal-admintools -- temporal operator namespace create --namespace cloud --address temporal-frontend.temporal:7233 \
 		--tls-cert-path /var/secrets/temporal/certs/server-interservice/tls.crt \
 		--tls-key-path /var/secrets/temporal/certs/server-interservice/tls.key \
 		--tls-ca-path /var/secrets/temporal/certs/server-interservice/ca.crt \
 		--tls-server-name interservice.server.temporal.local || true
-	kubectl -n temporal exec deploy/temporal-admintools -- temporal operator namespace create site --address temporal-frontend:7233 \
+	kubectl -n temporal exec deploy/temporal-admintools -- temporal operator namespace create --namespace site --address temporal-frontend.temporal:7233 \
 		--tls-cert-path /var/secrets/temporal/certs/server-interservice/tls.crt \
 		--tls-key-path /var/secrets/temporal/certs/server-interservice/tls.key \
 		--tls-ca-path /var/secrets/temporal/certs/server-interservice/ca.crt \
