@@ -233,7 +233,12 @@ create_site() {
 configure_site_agent() {
     local site_id=$1
 
-    kubectl -n temporal exec deploy/temporal-admintools -- temporal operator namespace create --namespace "$site_id"
+    kubectl -n temporal exec deploy/temporal-admintools -- temporal operator namespace create --namespace "$site_id" \
+        --address temporal-frontend.temporal:7233 \
+        --tls-cert-path /var/secrets/temporal/certs/server-interservice/tls.crt \
+        --tls-key-path /var/secrets/temporal/certs/server-interservice/tls.key \
+        --tls-ca-path /var/secrets/temporal/certs/server-interservice/ca.crt \
+        --tls-server-name interservice.server.temporal.local || true
 
     kubectl -n $NAMESPACE get configmap carbide-rest-site-agent-config -o yaml | \
         sed "s/CLUSTER_ID: .*/CLUSTER_ID: \"$site_id\"/" | \
