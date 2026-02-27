@@ -31,14 +31,17 @@ import (
 
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/carbideapi"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/db"
+	"github.com/nvidia/bare-metal-manager-rest/rla/internal/nsmapi"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/psmapi"
 	svc "github.com/nvidia/bare-metal-manager-rest/rla/internal/service"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/componentmanager"
 	computecarbide "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/componentmanager/compute/carbide"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/componentmanager/mock"
 	nvlswitchcarbide "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/componentmanager/nvlswitch/carbide"
+	nvlswitchnsm "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/componentmanager/nvlswitch/nvswitchmanager"
 	powershelfpsm "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/componentmanager/powershelf/psm"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/componentmanager/providers/carbide"
+	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/componentmanager/providers/nvswitchmanager"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/componentmanager/providers/psm"
 	temporalmanager "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/executor/temporalworkflow/manager"
 )
@@ -75,6 +78,7 @@ func init() {
 type providerClients struct {
 	carbide carbideapi.Client
 	psm     psmapi.Client
+	nsm     nsmapi.Client
 }
 
 // initProviderRegistry creates and initializes the provider registry based on configuration.
@@ -111,6 +115,20 @@ func initProviderRegistry(config componentmanager.Config) (*componentmanager.Pro
 		}
 	}
 
+	// Initialize NV-Switch Manager provider if configured
+	if config.Providers.NVSwitchManager != nil {
+		nsmProvider, err := nvswitchmanager.New(*config.Providers.NVSwitchManager)
+		if err != nil {
+			log.Warn().Err(err).Msg("Unable to create NV-Switch Manager client (NVLSwitch operations may not work)")
+		} else {
+			clients.nsm = nsmProvider.Client()
+			providerRegistry.Register(nsmProvider)
+			log.Info().
+				Dur("timeout", config.Providers.NVSwitchManager.Timeout).
+				Msg("Initialized NV-Switch Manager provider")
+		}
+	}
+
 	// Log all registered providers
 	registeredProviders := providerRegistry.List()
 	log.Info().
@@ -131,6 +149,7 @@ func initComponentManagerRegistry(config componentmanager.Config, providerRegist
 	}
 	computecarbide.Register(registry, computePowerDelay)
 	nvlswitchcarbide.Register(registry)
+	nvlswitchnsm.Register(registry)
 	powershelfpsm.Register(registry)
 	mock.RegisterAll(registry)
 
