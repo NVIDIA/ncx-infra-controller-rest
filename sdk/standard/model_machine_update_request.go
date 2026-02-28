@@ -3,7 +3,7 @@ NVIDIA Bare Metal Manager REST API
 
 NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
 
-API version: 1.0.4
+API version: 1.0.5
 Contact: carbide-dev@exchange.nvidia.com
 */
 
@@ -28,7 +28,6 @@ type MachineUpdateRequest struct {
 	SetMaintenanceMode NullableBool `json:"setMaintenanceMode,omitempty"`
 	// Optional message describing the reason for moving Machine into maintenance mode. Can be updated by Provider or Privileged Tenant.
 	MaintenanceMessage NullableString `json:"maintenanceMessage,omitempty"`
-	// Machine labels will be overwritten, include existing labels to preserve them. Can be updated by Provider or Privileged Tenant.
 	Labels map[string]string `json:"labels,omitempty"`
 }
 

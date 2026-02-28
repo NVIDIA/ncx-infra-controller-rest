@@ -16,7 +16,7 @@
 openapi: 3.1.0
 info:
   title: NVIDIA Bare Metal Manager REST API
-  version: 1.0.4
+  version: 1.0.5
   summary: NVIDIA Bare Metal Manager REST API is the centralized RESTful gateway to access NVIDIA Bare Metal Manager service
   description: 'NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.'
   license:

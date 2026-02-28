@@ -3,7 +3,7 @@ NVIDIA Bare Metal Manager REST API
 
 NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
 
-API version: 1.0.4
+API version: 1.0.5
 Contact: carbide-dev@exchange.nvidia.com
 */
 
@@ -43,7 +43,6 @@ type InstanceUpdateRequest struct {
 	AlwaysBootWithCustomIpxe NullableBool `json:"alwaysBootWithCustomIpxe,omitempty"`
 	// Indicates whether the Phone Home service should be enabled or disabled for Instance
 	PhoneHomeEnabled NullableBool `json:"phoneHomeEnabled,omitempty"`
-	// Update labels of the Instance. The labels will be entirely replaced by those sent in the request. Any labels not included in the request will be removed. To retain existing labels, first fetch them and include them along with this request.
 	Labels map[string]string `json:"labels,omitempty"`
 	// Update Interfaces of the Instance
 	Interfaces []InterfaceCreateRequest `json:"interfaces,omitempty"`

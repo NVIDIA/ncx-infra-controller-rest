@@ -3,7 +3,7 @@ NVIDIA Bare Metal Manager REST API
 
 NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
 
-API version: 1.0.4
+API version: 1.0.5
 Contact: carbide-dev@exchange.nvidia.com
 */
 
@@ -39,7 +39,6 @@ type ExpectedMachine struct {
 	MachineId NullableString `json:"machineId,omitempty"`
 	// Machine information for this Expected Machine (populated when includeRelation=Machine is specified)
 	Machine *MachineSummary `json:"machine,omitempty"`
-	// User-defined key-value pairs for organizing and categorizing Expected Machines
 	Labels map[string]string `json:"labels,omitempty"`
 	// ISO 8601 datetime when the Expected Machine was created
 	Created *time.Time `json:"created,omitempty"`
