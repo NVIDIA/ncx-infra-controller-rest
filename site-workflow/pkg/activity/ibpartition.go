@@ -134,13 +134,14 @@ func (mibp *ManageInfiniBandPartition) CreateInfiniBandPartitionOnSite(ctx conte
 	if request == nil {
 		err = errors.New("received empty create InfiniBand Partition request")
 	} else if request.Id == nil || request.GetId().GetValue() == "" {
-		err = errors.New("received create InfiniBand Partition request missing ID")
-	} else if request.Config == nil {
-		err = errors.New("received create InfiniBand Partition request missing Config")
-	} else if request.Config.Name == "" {
-		err = errors.New("received create InfiniBand Partition request missing Name")
-	} else if request.Config.TenantOrganizationId == "" {
-		err = errors.New("received create InfiniBand Partition request missing TenantOrganizationId")
+		err = errors.New("received create InfiniBand Partition request without ID")
+	} else if request.GetConfig() == nil {
+		err = errors.New("received create InfiniBand Partition request without Config")
+	} else if request.GetMetadata().GetName() == "" && request.GetConfig().GetName() == "" {
+		// Backward compatibility: both Metadata.Name and Config.Name are accepted
+		err = errors.New("received create InfiniBand Partition request without Name")
+	} else if request.GetConfig().GetTenantOrganizationId() == "" {
+		err = errors.New("received create InfiniBand Partition request without TenantOrganizationId")
 	}
 
 	if err != nil {

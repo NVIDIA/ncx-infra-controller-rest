@@ -318,7 +318,7 @@ func (cibph CreateInfiniBandPartitionHandler) Handle(c echo.Context) error {
 		metadata.Labels = labels
 	}
 
-	createIBPRequest.Config.Metadata = metadata
+	createIBPRequest.Metadata = metadata
 
 	logger.Info().Msg("triggering InfiniBand Partition create workflow")
 

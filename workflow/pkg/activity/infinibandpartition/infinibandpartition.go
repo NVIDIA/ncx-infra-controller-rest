@@ -496,6 +496,7 @@ func (mibp ManageInfiniBandPartition) UpdateInfiniBandPartitionsInDB(ctx context
 				}
 			}
 		}
+
 	}
 
 	// Populate list of ibps that were not found
