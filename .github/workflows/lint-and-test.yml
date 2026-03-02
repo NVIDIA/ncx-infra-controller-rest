@@ -105,6 +105,47 @@ jobs:
         run: redocly lint ./openapi/spec.yaml --format=github-actions
 
   # ============================================================================
+  # Check Generated Files - Ensure SDK and docs are updated when spec changes
+  # ============================================================================
+  check-generated-files:
+    name: Check Generated Files
+    runs-on: ubuntu-latest
+    continue-on-error: false
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check OpenAPI generated files are up to date
+        run: |
+          BASE="origin/main"
+          if ! git rev-parse --verify "$BASE" >/dev/null 2>&1; then
+            echo "Base branch $BASE not found, skipping check."
+            exit 0
+          fi
+
+          CHANGED=$(git diff --name-only "$BASE"...HEAD)
+
+          if echo "$CHANGED" | grep -q '^openapi/spec.yaml$'; then
+            MISSING=""
+            echo "$CHANGED" | grep -q '^sdk/standard/' || MISSING="sdk/standard/"
+            echo "$CHANGED" | grep -q '^docs/index.html$' || MISSING="${MISSING:+$MISSING, }docs/index.html"
+
+            if [ -n "$MISSING" ]; then
+              echo "::error::openapi/spec.yaml was modified but generated files were not updated: $MISSING"
+              echo ""
+              echo "Please run the following commands locally and commit the results:"
+              echo "  make generate-sdk"
+              echo "  make publish-openapi"
+              exit 1
+            fi
+            echo "✓ openapi/spec.yaml changed and generated files (sdk/standard/, docs/index.html) were also updated."
+          else
+            echo "✓ openapi/spec.yaml not changed, skipping generated files check."
+          fi
+
+  # ============================================================================
   # Test Job - Unit tests per module with PostgreSQL service
   # ============================================================================
   test:
