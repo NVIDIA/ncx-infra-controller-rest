@@ -854,7 +854,7 @@ func TestBatchCreateInstanceHandler_Handle(t *testing.T) {
 		},
 		// OperatingSystemID tests - covering buildBatchInstanceCreateRequestOsConfig OS branch
 		{
-			name: "test batch instance create API endpoint succeeds with valid OperatingSystemID",
+			name: "test batch instance create API endpoint with OperatingSystemID (Image-based OS temporarily expect StatusBadRequest)",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        tc,
@@ -873,7 +873,8 @@ func TestBatchCreateInstanceHandler_Handle(t *testing.T) {
 				},
 				reqOrg:   tnOrg,
 				reqUser:  tnu1,
-				respCode: http.StatusCreated,
+				respCode: http.StatusBadRequest,
+				respMsg:  "Instance creation with Image-based Operating Systems is not supported",
 			},
 			wantErr: false,
 		},
@@ -903,7 +904,7 @@ func TestBatchCreateInstanceHandler_Handle(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "test batch instance create API endpoint fails with OperatingSystem not in VPC site",
+			name: "test batch instance create API endpoint fails with OperatingSystem not in VPC site (Image-based OS: expect not supported)",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        tc,
@@ -923,7 +924,7 @@ func TestBatchCreateInstanceHandler_Handle(t *testing.T) {
 				reqOrg:   tnOrg,
 				reqUser:  tnu1,
 				respCode: http.StatusBadRequest,
-				respMsg:  "OperatingSystem specified in request is not in VPC site",
+				respMsg:  "Instance creation with Image-based Operating Systems is not supported",
 			},
 			wantErr: false,
 		},

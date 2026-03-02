@@ -206,6 +206,11 @@ func (csh CreateOperatingSystemHandler) Handle(c echo.Context) error {
 		osType = cdbm.OperatingSystemTypeIPXE
 	}
 
+	if osType == cdbm.OperatingSystemTypeImage {
+		logger.Warn().Msg("Creation of Image-based Operating Systems is not supported")
+		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Creation of Image-based Operating Systems is not supported", nil)
+	}
+
 	// Set the phoneHomeEnabled if provided in request
 	phoneHomeEnabled := false
 	if apiRequest.PhoneHomeEnabled != nil {

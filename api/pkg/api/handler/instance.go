@@ -146,6 +146,11 @@ func (cih CreateInstanceHandler) buildInstanceCreateRequestOsConfig(c echo.Conte
 		return nil, nil, cerr.NewAPIError(http.StatusBadRequest, "OperatingSystem specified in request is not owned by Tenant", nil)
 	}
 
+	if os.Type == cdbm.OperatingSystemTypeImage {
+		logger.Warn().Str("operatingSystemId", os.ID.String()).Msg("Creation of Instance with Image-based Operating Systems is not supported")
+		return nil, nil, cerr.NewAPIError(http.StatusBadRequest, "Creation of Instance with Image-based Operating System is not supported", nil)
+	}
+
 	// Confirm match between site and OS (only for Image type).
 	if os.Type == cdbm.OperatingSystemTypeImage {
 		ossaDAO := cdbm.NewOperatingSystemSiteAssociationDAO(cih.dbSession)
@@ -1819,6 +1824,11 @@ func (uih UpdateInstanceHandler) buildInstanceUpdateRequestOsConfig(c echo.Conte
 		if os.TenantID.String() != instance.Tenant.ID.String() {
 			logger.Error().Msg("OperatingSystem in request is not owned by tenant")
 			return nil, nil, cerr.NewAPIError(http.StatusBadRequest, "Operating system specified in request is not owned by Tenant", nil)
+		}
+
+		if os.Type == cdbm.OperatingSystemTypeImage {
+			logger.Warn().Str("operatingSystemId", os.ID.String()).Msg("Instance update with Image-based Operating System is not supported")
+			return nil, nil, cerr.NewAPIError(http.StatusBadRequest, "Update of Instance with Image-based Operating System is not supported", nil)
 		}
 
 		// Confirm match between site and OS (only for Image type).

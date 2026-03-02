@@ -144,30 +144,36 @@ func (bcih BatchCreateInstanceHandler) buildBatchInstanceCreateRequestOsConfig(c
 		return nil, nil, cerr.NewAPIError(http.StatusBadRequest, "OperatingSystem specified in request is not owned by Tenant", nil)
 	}
 
-	// Confirm match between site and OS (only for Image type).
 	if os.Type == cdbm.OperatingSystemTypeImage {
-		ossaDAO := cdbm.NewOperatingSystemSiteAssociationDAO(bcih.dbSession)
-		_, ossaCount, err := ossaDAO.GetAll(
-			ctx,
-			nil,
-			cdbm.OperatingSystemSiteAssociationFilterInput{
-				OperatingSystemIDs: []uuid.UUID{id},
-				SiteIDs:            []uuid.UUID{siteID},
-			},
-			cdbp.PageInput{Limit: cdb.GetIntPtr(1)},
-			nil,
-		)
-		if err != nil {
-			logger.Error().Msgf("Error retrieving OperatingSystemAssociations for OS: %s", err)
-			return nil, nil, cerr.NewAPIError(http.StatusInternalServerError, "Failed to retrieve OperatingSystemAssociations for OS with ID specified in request data, DB error", validation.Errors{
-				"id": errors.New(osID.String()),
-			})
-		}
-		if ossaCount == 0 {
-			logger.Error().Msg("OperatingSystem does not belong to VPC site")
-			return nil, nil, cerr.NewAPIError(http.StatusBadRequest, "OperatingSystem specified in request is not in VPC site", nil)
-		}
+		logger.Warn().Str("operatingSystemId", os.ID.String()).Msg("Instance creation with Image-based Operating Systems is not supported")
+		return nil, nil, cerr.NewAPIError(http.StatusBadRequest, "Creation of Instance with Image-based Operating Systems is not supported", nil)
 	}
+
+	// Confirm match between site and OS (only for Image type).
+	/*
+		if os.Type == cdbm.OperatingSystemTypeImage {
+			ossaDAO := cdbm.NewOperatingSystemSiteAssociationDAO(bcih.dbSession)
+			_, ossaCount, err := ossaDAO.GetAll(
+				ctx,
+				nil,
+				cdbm.OperatingSystemSiteAssociationFilterInput{
+					OperatingSystemIDs: []uuid.UUID{id},
+					SiteIDs:            []uuid.UUID{siteID},
+				},
+				cdbp.PageInput{Limit: cdb.GetIntPtr(1)},
+				nil,
+			)
+			if err != nil {
+				logger.Error().Msgf("Error retrieving OperatingSystemAssociations for OS: %s", err)
+				return nil, nil, cerr.NewAPIError(http.StatusInternalServerError, "Failed to retrieve OperatingSystemAssociations for OS with ID specified in request data, DB error", validation.Errors{
+					"id": errors.New(osID.String()),
+				})
+			}
+			if ossaCount == 0 {
+				logger.Error().Msg("OperatingSystem does not belong to VPC site")
+				return nil, nil, cerr.NewAPIError(http.StatusBadRequest, "OperatingSystem specified in request is not in VPC site", nil)
+			}
+		}*/
 
 	// Validate any additional properties.
 	// `os` could still be nil here if no OS ID was sent
