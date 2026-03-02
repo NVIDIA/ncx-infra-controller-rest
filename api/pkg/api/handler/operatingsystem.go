@@ -41,6 +41,7 @@ import (
 	sc "github.com/nvidia/bare-metal-manager-rest/api/pkg/client/site"
 	auth "github.com/nvidia/bare-metal-manager-rest/auth/pkg/authorization"
 	cerr "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
+	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 	sutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 	"github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
@@ -406,14 +407,14 @@ func (csh CreateOperatingSystemHandler) Handle(c echo.Context) error {
 
 		workflowOptions := temporalClient.StartWorkflowOptions{
 			ID:                       "image-os-create-" + ossa.SiteID.String() + "-" + os.ID.String() + "-" + *ossa.Version,
-			WorkflowExecutionTimeout: common.WorkflowExecutionTimeout,
+			WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
 			TaskQueue:                queue.SiteTaskQueue,
 		}
 
 		logger.Info().Str("Site ID", ossa.SiteID.String()).Msg("triggering Image based Operating System create workflow ")
 
 		// Add context deadlines
-		ctx, cancel := context.WithTimeout(ctx, common.WorkflowContextTimeout)
+		ctx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
 		defer cancel()
 
 		// Trigger Site workflow
@@ -436,7 +437,7 @@ func (csh CreateOperatingSystemHandler) Handle(c echo.Context) error {
 				logger.Error().Err(err).Msg("failed to create Operating System, timeout occurred executing workflow on Site.")
 
 				// Create a new context deadlines
-				newctx, newcancel := context.WithTimeout(context.Background(), common.WorkflowContextNewAfterTimeout)
+				newctx, newcancel := context.WithTimeout(context.Background(), cwutil.WorkflowContextNewAfterTimeout)
 				defer newcancel()
 
 				// Initiate termination workflow
@@ -1324,14 +1325,14 @@ func (ush UpdateOperatingSystemHandler) Handle(c echo.Context) error {
 
 			workflowOptions := temporalClient.StartWorkflowOptions{
 				ID:                       "image-os-update-" + updatedOssa.SiteID.String() + "-" + uos.ID.String() + "-" + *updatedOssa.Version,
-				WorkflowExecutionTimeout: common.WorkflowExecutionTimeout,
+				WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
 				TaskQueue:                queue.SiteTaskQueue,
 			}
 
 			logger.Info().Str("Site ID", dbossa.SiteID.String()).Msg("triggering Image based Operating System update workflow ")
 
 			// Add context deadlines
-			ctx, cancel := context.WithTimeout(ctx, common.WorkflowContextTimeout)
+			ctx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
 			defer cancel()
 
 			// Trigger Site workflow
@@ -1354,7 +1355,7 @@ func (ush UpdateOperatingSystemHandler) Handle(c echo.Context) error {
 					logger.Error().Err(err).Msg("failed to update Operating System, timeout occurred executing workflow on Site.")
 
 					// Create a new context deadlines
-					newctx, newcancel := context.WithTimeout(context.Background(), common.WorkflowContextNewAfterTimeout)
+					newctx, newcancel := context.WithTimeout(context.Background(), cwutil.WorkflowContextNewAfterTimeout)
 					defer newcancel()
 
 					// Initiate termination workflow
@@ -1663,7 +1664,7 @@ func (dsh DeleteOperatingSystemHandler) Handle(c echo.Context) error {
 						logger.Error().Err(err).Msg("failed to delete Operating System, timeout occurred executing workflow on Site.")
 
 						// Create a new context deadlines
-						newctx, newcancel := context.WithTimeout(context.Background(), common.WorkflowContextNewAfterTimeout)
+						newctx, newcancel := context.WithTimeout(context.Background(), cwutil.WorkflowContextNewAfterTimeout)
 						defer newcancel()
 
 						// Initiate termination workflow

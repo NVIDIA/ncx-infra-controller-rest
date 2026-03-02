@@ -23,13 +23,13 @@ import (
 	"testing"
 	"time"
 
+	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 	"github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
 	"github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
 	sc "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/client/site"
 	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/queue"
-	cwu "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/util"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -1224,7 +1224,7 @@ func TestManageInstance_UpdateInstancesInDB(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Set created earlier than the inventory receipt interval
-	_, err = dbSession.DB.Exec("UPDATE instance SET updated = ? WHERE id = ?", time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval)*2), instance1.ID.String())
+	_, err = dbSession.DB.Exec("UPDATE instance SET updated = ? WHERE id = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval)*2), instance1.ID.String())
 	assert.NoError(t, err)
 
 	interface1 := util.TestBuildInterface(t, dbSession, &instance1.ID, &subnet1.ID, nil, true, nil, nil, nil, &tnu.ID, cdbm.InterfaceStatusPending)
@@ -1254,7 +1254,7 @@ func TestManageInstance_UpdateInstancesInDB(t *testing.T) {
 	assert.NotNil(t, nvlinkInterface3)
 
 	// Set updated earlier than the inventory receipt interval for nvlinkInterface3 so it can be deleted
-	_, err = dbSession.DB.Exec("UPDATE nvlink_interface SET updated = ? WHERE id = ?", time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval)*2), nvlinkInterface3.ID.String())
+	_, err = dbSession.DB.Exec("UPDATE nvlink_interface SET updated = ? WHERE id = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval)*2), nvlinkInterface3.ID.String())
 	assert.NoError(t, err)
 
 	nvlinkInterface4 := util.TestBuildNVLinkInterface(t, dbSession, instance1.ID, site.ID, nvllPartition1.ID, cdb.GetStrPtr(""), 3, nil, nil, cdbm.NVLinkInterfaceStatusPending)
@@ -1286,7 +1286,7 @@ func TestManageInstance_UpdateInstancesInDB(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Set created earlier than the inventory receipt interval
-	_, err = dbSession.DB.Exec("UPDATE instance SET updated = ? WHERE id = ?", time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval)*2), instance2.ID.String())
+	_, err = dbSession.DB.Exec("UPDATE instance SET updated = ? WHERE id = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval)*2), instance2.ID.String())
 	assert.NoError(t, err)
 
 	instance2Subnet := util.TestBuildInterface(t, dbSession, &instance2.ID, &subnet1.ID, nil, true, nil, nil, nil, &tnu.ID, cdbm.InterfaceStatusPending)
@@ -1324,11 +1324,11 @@ func TestManageInstance_UpdateInstancesInDB(t *testing.T) {
 	)
 	assert.Nil(t, err)
 	// Set created earlier than the inventory receipt interval
-	_, err = dbSession.DB.Exec("UPDATE instance SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval)), instance3.ID.String())
+	_, err = dbSession.DB.Exec("UPDATE instance SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval)), instance3.ID.String())
 	assert.NoError(t, err)
 
 	// Set updated earlier than the inventory receipt interval
-	_, err = dbSession.DB.Exec("UPDATE instance SET updated = ? WHERE id = ?", time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval)*2), instance3.ID.String())
+	_, err = dbSession.DB.Exec("UPDATE instance SET updated = ? WHERE id = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval)*2), instance3.ID.String())
 	assert.NoError(t, err)
 
 	instance3Subnet := util.TestBuildInterface(t, dbSession, &instance3.ID, &subnet1.ID, nil, true, nil, nil, nil, &tnu.ID, cdbm.InterfaceStatusPending)
@@ -1359,7 +1359,7 @@ func TestManageInstance_UpdateInstancesInDB(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Set updated earlier than the inventory receipt interval
-	_, err = dbSession.DB.Exec("UPDATE instance SET updated = ? WHERE id = ?", time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval)*2), instance4.ID.String())
+	_, err = dbSession.DB.Exec("UPDATE instance SET updated = ? WHERE id = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval)*2), instance4.ID.String())
 	assert.NoError(t, err)
 
 	instance4Subnet := util.TestBuildInterface(t, dbSession, &instance4.ID, &subnet1.ID, nil, true, nil, nil, nil, &tnu.ID, cdbm.InterfaceStatusError)
@@ -1392,7 +1392,7 @@ func TestManageInstance_UpdateInstancesInDB(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Set created earlier than the inventory receipt interval
-	_, err = dbSession.DB.Exec("UPDATE instance SET updated = ? WHERE id = ?", time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval)*2), instance5.ID.String())
+	_, err = dbSession.DB.Exec("UPDATE instance SET updated = ? WHERE id = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval)*2), instance5.ID.String())
 	assert.NoError(t, err)
 
 	// Instance 6 is in Error state and gets restored to Ready state from inventory
@@ -1424,7 +1424,7 @@ func TestManageInstance_UpdateInstancesInDB(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Set updated earlier than the inventory receipt interval
-	_, err = dbSession.DB.Exec("UPDATE instance SET updated = ? WHERE id = ?", time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval)*2), instance6.ID.String())
+	_, err = dbSession.DB.Exec("UPDATE instance SET updated = ? WHERE id = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval)*2), instance6.ID.String())
 	assert.NoError(t, err)
 
 	// Instance 7 does not have controller Instance ID set and is present in inventory, and gets controller Instance ID set
@@ -1452,7 +1452,7 @@ func TestManageInstance_UpdateInstancesInDB(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Set updated earlier than the inventory receipt interval
-	_, err = dbSession.DB.Exec("UPDATE instance SET updated = ? WHERE id = ?", time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval)*2), instance7.ID.String())
+	_, err = dbSession.DB.Exec("UPDATE instance SET updated = ? WHERE id = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval)*2), instance7.ID.String())
 	assert.NoError(t, err)
 
 	// Instance 8 is in Terminating state and has no controller ID, gets deleted on inventory update
@@ -1480,7 +1480,7 @@ func TestManageInstance_UpdateInstancesInDB(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Set updated earlier than the inventory receipt interval
-	_, err = dbSession.DB.Exec("UPDATE instance SET updated = ? WHERE id = ?", time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval)*2), instance8.ID.String())
+	_, err = dbSession.DB.Exec("UPDATE instance SET updated = ? WHERE id = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval)*2), instance8.ID.String())
 	assert.NoError(t, err)
 
 	// Instance 9 is in Ready state and power status is Rebooting, gets set to BootCompleted
@@ -1509,7 +1509,7 @@ func TestManageInstance_UpdateInstancesInDB(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Set updated earlier than the inventory receipt interval
-	_, err = dbSession.DB.Exec("UPDATE instance SET updated = ? WHERE id = ?", time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval)*2), instance9.ID.String())
+	_, err = dbSession.DB.Exec("UPDATE instance SET updated = ? WHERE id = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval)*2), instance9.ID.String())
 	assert.NoError(t, err)
 
 	var vfID uint32 = 1
@@ -1541,11 +1541,11 @@ func TestManageInstance_UpdateInstancesInDB(t *testing.T) {
 	)
 	assert.NoError(t, err)
 	// Update creation timestamp to be earlier than inventory processing interval
-	_, err = dbSession.DB.Exec("UPDATE instance SET is_missing_on_site = true, created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval)*2), instance10.ID.String())
+	_, err = dbSession.DB.Exec("UPDATE instance SET is_missing_on_site = true, created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval)*2), instance10.ID.String())
 	assert.NoError(t, err)
 
 	// Set updated earlier than the inventory receipt interval
-	_, err = dbSession.DB.Exec("UPDATE instance SET updated = ? WHERE id = ?", time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval)*2), instance10.ID.String())
+	_, err = dbSession.DB.Exec("UPDATE instance SET updated = ? WHERE id = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval)*2), instance10.ID.String())
 	assert.NoError(t, err)
 
 	// Create status detail for instance 10
@@ -1581,7 +1581,7 @@ func TestManageInstance_UpdateInstancesInDB(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Set created earlier than the inventory receipt interval
-	_, err = dbSession.DB.Exec("UPDATE instance SET updated = ? WHERE id = ?", time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval)*2), instance11.ID.String())
+	_, err = dbSession.DB.Exec("UPDATE instance SET updated = ? WHERE id = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval)*2), instance11.ID.String())
 	assert.NoError(t, err)
 
 	// Replicate the bug fix test
@@ -1680,7 +1680,7 @@ func TestManageInstance_UpdateInstancesInDB(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Set created earlier than the inventory receipt interval
-	_, err = dbSession.DB.Exec("UPDATE instance SET updated = ? WHERE id = ?", time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval)*2), instance15.ID.String())
+	_, err = dbSession.DB.Exec("UPDATE instance SET updated = ? WHERE id = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval)*2), instance15.ID.String())
 	assert.NoError(t, err)
 
 	ifcvpc_deleting := util.TestBuildInterface(t, dbSession, &instance15.ID, nil, &vpcPrefix1.ID, true, nil, nil, nil, &tnu.ID, cdbm.InterfaceStatusDeleting)
@@ -1718,7 +1718,7 @@ func TestManageInstance_UpdateInstancesInDB(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Set created earlier than the inventory receipt interval
-	_, err = dbSession.DB.Exec("UPDATE instance SET updated = ? WHERE id = ?", time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval)*2), instance16.ID.String())
+	_, err = dbSession.DB.Exec("UPDATE instance SET updated = ? WHERE id = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval)*2), instance16.ID.String())
 	assert.NoError(t, err)
 
 	// Instance 17 starts with nil TPM EK certificate and gets updated with a certificate value
@@ -1750,7 +1750,7 @@ func TestManageInstance_UpdateInstancesInDB(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Set created earlier than the inventory receipt interval
-	_, err = dbSession.DB.Exec("UPDATE instance SET updated = ? WHERE id = ?", time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval)*2), instance17.ID.String())
+	_, err = dbSession.DB.Exec("UPDATE instance SET updated = ? WHERE id = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval)*2), instance17.ID.String())
 	assert.NoError(t, err)
 
 	// Sample base64 encoded TPM EK certificate (truncated for brevity but realistic format)
@@ -1783,7 +1783,7 @@ func TestManageInstance_UpdateInstancesInDB(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Set created earlier than the inventory receipt interval
-	_, err = dbSession.DB.Exec("UPDATE instance SET updated = ? WHERE id = ?", time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval)*2), instance18.ID.String())
+	_, err = dbSession.DB.Exec("UPDATE instance SET updated = ? WHERE id = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval)*2), instance18.ID.String())
 	assert.NoError(t, err)
 
 	interface18_1 := util.TestBuildInterface(t, dbSession, &instance18.ID, &subnet1.ID, nil, true, nil, nil, nil, &tnu.ID, cdbm.InterfaceStatusPending)
@@ -1818,7 +1818,7 @@ func TestManageInstance_UpdateInstancesInDB(t *testing.T) {
 	assert.NotNil(t, dpuExtServiceDeployment2)
 
 	// Set updated earlier than the inventory receipt interval for dpuExtServiceDeployment2 so it can be deleted
-	_, err = dbSession.DB.Exec("UPDATE dpu_extension_service_deployment SET updated = ? WHERE id = ?", time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval)*2), dpuExtServiceDeployment2.ID.String())
+	_, err = dbSession.DB.Exec("UPDATE dpu_extension_service_deployment SET updated = ? WHERE id = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval)*2), dpuExtServiceDeployment2.ID.String())
 	assert.NoError(t, err)
 
 	instanceInventory := &cwsv1.InstanceInventory{
@@ -2255,11 +2255,11 @@ func TestManageInstance_UpdateInstancesInDB(t *testing.T) {
 
 		assert.NoError(t, err)
 		// Update creation timestamp to be earlier than inventory processing interval
-		_, err = dbSession.DB.Exec("UPDATE instance SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval)*2), ins.ID.String())
+		_, err = dbSession.DB.Exec("UPDATE instance SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval)*2), ins.ID.String())
 		assert.NoError(t, err)
 
 		// Update updated timestamp to be earlier than inventory processing interval
-		_, err = dbSession.DB.Exec("UPDATE instance SET updated = ? WHERE id = ?", time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval)*2), ins.ID.String())
+		_, err = dbSession.DB.Exec("UPDATE instance SET updated = ? WHERE id = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval)*2), ins.ID.String())
 		assert.NoError(t, err)
 
 		pagedIns = append(pagedIns, ins)
@@ -2326,7 +2326,7 @@ func TestManageInstance_UpdateInstancesInDB(t *testing.T) {
 	)
 	assert.NoError(t, err)
 	// Update creation timestamp to be earlier than inventory processing interval
-	_, err = dbSession.DB.Exec("UPDATE instance SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval)*2), instance12.ID.String())
+	_, err = dbSession.DB.Exec("UPDATE instance SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval)*2), instance12.ID.String())
 	assert.NoError(t, err)
 
 	tSiteClientPool := testTemporalSiteClientPool(t)

@@ -39,10 +39,11 @@ import (
 	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
 	cdbu "github.com/nvidia/bare-metal-manager-rest/db/pkg/util"
 	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
-	cwu "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/util"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/google/uuid"
+
+	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 )
 
 // testTemporalSiteClientPool Building site client pool
@@ -753,7 +754,7 @@ func TestManageMachine_UpdateMachinesInDB(t *testing.T) {
 	}
 
 	// Set updated for all machines earlier than the inventory receipt interval
-	_, err = dbSession.DB.Exec("UPDATE machine SET updated = ?", time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval)*2))
+	_, err = dbSession.DB.Exec("UPDATE machine SET updated = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval)*2))
 	assert.NoError(t, err)
 
 	type fields struct {
@@ -934,7 +935,7 @@ func TestManageMachine_UpdateMachinesInDB(t *testing.T) {
 
 			if tt.args.resetMachineUpdatedTimeBeforeInventoryTime {
 				// Set updated for all machines earlier than the inventory receipt interval
-				_, err := dbSession.DB.Exec("UPDATE machine SET updated = ?", time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval)*2))
+				_, err := dbSession.DB.Exec("UPDATE machine SET updated = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval)*2))
 				assert.NoError(t, err)
 			}
 

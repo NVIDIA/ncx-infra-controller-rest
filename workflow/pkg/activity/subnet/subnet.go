@@ -39,11 +39,12 @@ import (
 	cwm "github.com/nvidia/bare-metal-manager-rest/workflow/internal/metrics"
 	sc "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/client/site"
 	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/queue"
-	cwu "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/util"
 
 	cwsv1 "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
 
 	"github.com/prometheus/client_golang/prometheus"
+
+	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 )
 
 const (
@@ -579,7 +580,7 @@ func (ms ManageSubnet) UpdateSubnetsInDB(ctx context.Context, siteID uuid.UUID, 
 			}
 		} else if subnet.ControllerNetworkSegmentID != nil {
 			// Was this created within inventory receipt interval? If so, we may be processing an older inventory
-			if time.Since(subnet.Created) < cwu.InventoryReceiptInterval {
+			if time.Since(subnet.Created) < cwutil.InventoryReceiptInterval {
 				continue
 			}
 

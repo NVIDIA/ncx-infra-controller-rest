@@ -29,11 +29,11 @@ import (
 	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
 	cdbp "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
 
-	cwu "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/util"
-
 	sc "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/client/site"
 
 	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
+
+	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 )
 
 const (
@@ -229,7 +229,7 @@ func (mskg ManageOsImage) UpdateOsImagesInDB(ctx context.Context, siteID uuid.UU
 			}
 		} else {
 			// Was this created within inventory receipt interval? If so, we may be processing an older inventory
-			if time.Since(ossa.Created) < cwu.InventoryReceiptInterval {
+			if time.Since(ossa.Created) < cwutil.InventoryReceiptInterval {
 				continue
 			}
 

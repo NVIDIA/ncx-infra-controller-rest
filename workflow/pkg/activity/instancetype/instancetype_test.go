@@ -30,7 +30,6 @@ import (
 	cdbu "github.com/nvidia/bare-metal-manager-rest/db/pkg/util"
 	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
 	sc "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/client/site"
-	cwu "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -46,6 +45,8 @@ import (
 	tmocks "go.temporal.io/sdk/mocks"
 
 	"go.temporal.io/sdk/testsuite"
+
+	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 )
 
 // testTemporalSiteClientPool Building site client pool
@@ -221,17 +222,17 @@ func TestManageInstanceType_UpdateInstanceTypesInDB(t *testing.T) {
 
 	instanceType5 := testInstanceTypeBuildInstanceType(t, dbSession, "test-instanceType-5", ip, st, tnu, cdbm.InstanceTypeStatusError)
 
-	_, err := dbSession.DB.Exec("UPDATE instance_type SET deleted = ? WHERE id = ?", time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval*2)), instanceType5.ID.String())
+	_, err := dbSession.DB.Exec("UPDATE instance_type SET deleted = ? WHERE id = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval*2)), instanceType5.ID.String())
 	assert.NoError(t, err)
 
 	instanceType6 := testInstanceTypeBuildInstanceType(t, dbSession, "test-instanceType-6", ip, st, tnu, cdbm.InstanceTypeStatusError)
 
-	_, err = dbSession.DB.Exec("UPDATE instance_type SET deleted = ? WHERE id = ?", time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval*2)), instanceType6.ID.String())
+	_, err = dbSession.DB.Exec("UPDATE instance_type SET deleted = ? WHERE id = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval*2)), instanceType6.ID.String())
 	assert.NoError(t, err)
 
 	instanceType7 := testInstanceTypeBuildInstanceType(t, dbSession, "test-instanceType-7", ip, st, tnu, cdbm.InstanceTypeStatusReady)
 	// Set created earlier than the inventory receipt interval
-	_, err = dbSession.DB.Exec("UPDATE instance_type SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval)), instanceType7.ID.String())
+	_, err = dbSession.DB.Exec("UPDATE instance_type SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval)), instanceType7.ID.String())
 	assert.NoError(t, err)
 
 	instanceType8 := testInstanceTypeBuildInstanceType(t, dbSession, "test-instanceType-8", ip, st, tnu, cdbm.InstanceTypeStatusReady)
@@ -242,7 +243,7 @@ func TestManageInstanceType_UpdateInstanceTypesInDB(t *testing.T) {
 
 	instanceType11 := testInstanceTypeBuildInstanceType(t, dbSession, "test-instanceType-11", ip, st, tnu, cdbm.InstanceTypeStatusReady)
 	// Set created earlier than the inventory receipt interval
-	_, err = dbSession.DB.Exec("UPDATE instance_type SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval)), instanceType11.ID.String())
+	_, err = dbSession.DB.Exec("UPDATE instance_type SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval)), instanceType11.ID.String())
 	assert.NoError(t, err)
 
 	instanceType8, err = instanceTypeDAO.Update(ctx, nil, cdbm.InstanceTypeUpdateInput{ID: instanceType8.ID, Status: cdb.GetStrPtr(cdbm.InstanceTypeStatusError)})
@@ -258,7 +259,7 @@ func TestManageInstanceType_UpdateInstanceTypesInDB(t *testing.T) {
 	for i := range 38 {
 		instanceType := testInstanceTypeBuildInstanceType(t, dbSession, fmt.Sprintf("test-instanceType-paged-%d", i), ip, st3, tnu, cdbm.InstanceTypeStatusReady)
 		// Update creation timestamp to be earlier than inventory processing interval
-		_, err = dbSession.DB.Exec("UPDATE instance_type SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval*2)), instanceType.ID.String())
+		_, err = dbSession.DB.Exec("UPDATE instance_type SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval*2)), instanceType.ID.String())
 		assert.NoError(t, err)
 		pagedInstanceTypes = append(pagedInstanceTypes, instanceType)
 	}

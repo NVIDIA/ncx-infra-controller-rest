@@ -33,7 +33,6 @@ import (
 	cwsv1 "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
 	sc "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/client/site"
 	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/queue"
-	cwu "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -55,6 +54,8 @@ import (
 
 	cwm "github.com/nvidia/bare-metal-manager-rest/workflow/internal/metrics"
 	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/util"
+
+	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 )
 
 // testTemporalSiteClientPool Building site client pool
@@ -1023,7 +1024,7 @@ func TestManageSubnet_UpdateSubnetsInDB(t *testing.T) {
 	// Subnet 3 is missing from Site Controller inventory but was not requested by user to be deleted, hence gets missing flag set
 	subnet3 := testSubnetBuildSubnet(t, dbSession, "test-subnet-3", tn, vpc, nil, cdb.GetUUIDPtr(uuid.New()), &ipb.RoutingType, cdb.GetStrPtr("192.0.1.8"), cdb.GetStrPtr("192.0.1.8"), nil, 24, cdbm.SubnetStatusProvisioning, tnu)
 	// Set created earlier than the inventory receipt interval
-	_, err = dbSession.DB.Exec("UPDATE subnet SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval)), subnet3.ID.String())
+	_, err = dbSession.DB.Exec("UPDATE subnet SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval)), subnet3.ID.String())
 	assert.NoError(t, err)
 
 	sbPrefix, err = ipam.CreateChildIpamEntryForIPBlock(ctx, nil, dbSession, ipamStorage, ipb, 26)
@@ -1069,7 +1070,7 @@ func TestManageSubnet_UpdateSubnetsInDB(t *testing.T) {
 	for i := 0; i < 38; i++ {
 		subnet := testSubnetBuildSubnet(t, dbSession, fmt.Sprintf("test-vpc-paged-%d", i), tn, vpc, nil, cdb.GetUUIDPtr(uuid.New()), &ipb.RoutingType, &ipv4Prefix, &ipv4Gateway, &ipb.ID, 26, cdbm.SubnetStatusProvisioning, tnu)
 		// Update creation timestamp to be earlier than inventory processing interval
-		_, err = dbSession.DB.Exec("UPDATE subnet SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval)), subnet.ID.String())
+		_, err = dbSession.DB.Exec("UPDATE subnet SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval)), subnet.ID.String())
 		assert.NoError(t, err)
 		pagedSubnets = append(pagedSubnets, subnet)
 		pagedInvIds = append(pagedInvIds, subnet.ControllerNetworkSegmentID.String())

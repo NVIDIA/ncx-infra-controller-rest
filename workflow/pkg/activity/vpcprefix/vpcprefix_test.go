@@ -31,7 +31,6 @@ import (
 	cipam "github.com/nvidia/bare-metal-manager-rest/ipam"
 	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
 	sc "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/client/site"
-	cwu "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun/extra/bundebug"
@@ -44,6 +43,8 @@ import (
 	"os"
 
 	"go.temporal.io/sdk/testsuite"
+
+	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 )
 
 // testTemporalSiteClientPool Building site client pool
@@ -313,7 +314,7 @@ func TestManageVpcPrefix_UpdateVpcPrefixesInDB(t *testing.T) {
 	vpcPrefix7 := testVPCBuildVPCPrefix(t, dbSession, "test-vpcprefix-7", st, tn, vpc7.ID, &ipb1.ID, cdb.GetStrPtr("192.168.0.0/24"), cdb.GetIntPtr(24), cdbm.VpcPrefixStatusReady, tnu)
 
 	// Set created earlier than the inventory receipt interval
-	_, err = dbSession.DB.Exec("UPDATE vpc_prefix SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval)), vpcPrefix7.ID.String())
+	_, err = dbSession.DB.Exec("UPDATE vpc_prefix SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval)), vpcPrefix7.ID.String())
 	assert.NoError(t, err)
 
 	vpc8 := testVPCBuildVPC(t, dbSession, "test-vpc-8", ip, tn, st, cdb.GetUUIDPtr(uuid.New()), nil, tnu, cdbm.VpcStatusReady)
@@ -329,7 +330,7 @@ func TestManageVpcPrefix_UpdateVpcPrefixesInDB(t *testing.T) {
 	vpcPrefix11 := testVPCBuildVPCPrefix(t, dbSession, "test-vpcprefix-11", st, tn, vpc11.ID, &ipb1.ID, cdb.GetStrPtr("192.168.0.0/24"), cdb.GetIntPtr(24), cdbm.VpcPrefixStatusReady, tnu)
 
 	// Set created earlier than the inventory receipt interval
-	_, err = dbSession.DB.Exec("UPDATE vpc_prefix SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval)), vpcPrefix11.ID.String())
+	_, err = dbSession.DB.Exec("UPDATE vpc_prefix SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval)), vpcPrefix11.ID.String())
 	assert.NoError(t, err)
 
 	vpcPrefixDAO := cdbm.NewVpcPrefixDAO(dbSession)
@@ -351,7 +352,7 @@ func TestManageVpcPrefix_UpdateVpcPrefixesInDB(t *testing.T) {
 		vpc := testVPCBuildVPC(t, dbSession, fmt.Sprintf("test-vpc-paged-%d", i), ip, tn, st3, cdb.GetUUIDPtr(uuid.New()), map[string]string{}, tnu, cdbm.VpcStatusReady)
 		vpcPrefix := testVPCBuildVPCPrefix(t, dbSession, fmt.Sprintf("test-vpc-prefix-paged-%d", i), st3, tn, vpc.ID, &ipb1.ID, cdb.GetStrPtr("192.168.0.0/24"), cdb.GetIntPtr(24), cdbm.VpcPrefixStatusReady, tnu)
 		// Update creation timestamp to be earlier than inventory processing interval
-		_, err = dbSession.DB.Exec("UPDATE vpc_prefix SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval*2)), vpcPrefix.ID.String())
+		_, err = dbSession.DB.Exec("UPDATE vpc_prefix SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval*2)), vpcPrefix.ID.String())
 		assert.NoError(t, err)
 		pagedVpcPrefixes = append(pagedVpcPrefixes, vpcPrefix)
 		pagedInvIds = append(pagedInvIds, vpcPrefix.ID.String())

@@ -40,6 +40,7 @@ import (
 	sc "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/client/site"
 	cwu "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/util"
 
+	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
 )
 
@@ -137,8 +138,8 @@ func TestManageExpectedMachine_UpdateExpectedMachinesInDB(t *testing.T) {
 
 		// Update creation and update timestamp to be earlier than inventory processing interval
 		_, uerr := dbSession.DB.Exec("UPDATE expected_machine SET created = ?, updated = ? WHERE id = ?",
-			time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval*2)),
-			time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval*2)),
+			time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval*2)),
+			time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval*2)),
 			em.ID.String())
 		assert.NoError(t, uerr)
 
@@ -592,7 +593,7 @@ func TestStaleInventoryThresholdCondition(t *testing.T) {
 		},
 		{
 			name:       "action just outside stale inventory threshold",
-			actionTime: time.Now().Add(-time.Duration(util.InventoryReceiptInterval + time.Second*15)),
+			actionTime: time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval + time.Second*15)),
 			want:       false,
 		},
 		{

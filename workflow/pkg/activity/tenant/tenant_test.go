@@ -42,6 +42,8 @@ import (
 	cwu "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/util"
 
 	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
+
+	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 )
 
 // testTemporalSiteClientPool Building site client pool
@@ -116,7 +118,7 @@ func TestManageTenant_UpdateTenantsInDB(t *testing.T) {
 		cwu.TestBuildTenantSiteAssociation(t, dbSession, tn.Org, tn.ID, st3.ID, ipu.ID)
 
 		// Update creation timestamp to be earlier than inventory processing interval
-		_, err := dbSession.DB.Exec("UPDATE tenant SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval*2)), tn.ID.String())
+		_, err := dbSession.DB.Exec("UPDATE tenant SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval*2)), tn.ID.String())
 		assert.NoError(t, err)
 		pagedTenants = append(pagedTenants, tn)
 		pagedInvIds = append(pagedInvIds, tn.Org)
