@@ -53,11 +53,10 @@ import (
 	sc "github.com/nvidia/bare-metal-manager-rest/api/pkg/client/site"
 	auth "github.com/nvidia/bare-metal-manager-rest/auth/pkg/authorization"
 	cerr "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
+	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 	sutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
 	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/queue"
-
-	wpkgutil "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/util"
 )
 
 // ~~~~~ Create Handler ~~~~~ //
@@ -396,7 +395,7 @@ func (cith CreateInstanceTypeHandler) Handle(c echo.Context) error {
 	workflowOptions := temporalClient.StartWorkflowOptions{
 		ID:                       "instance-type-create-" + it.ID.String(),
 		TaskQueue:                queue.SiteTaskQueue,
-		WorkflowExecutionTimeout: wpkgutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
 	}
 
 	// InstanceType metadata info
@@ -428,7 +427,7 @@ func (cith CreateInstanceTypeHandler) Handle(c echo.Context) error {
 	logger.Info().Msg("triggering InstanceType create workflow")
 
 	// Add context deadlines
-	ctx, cancel := context.WithTimeout(ctx, wpkgutil.WorkflowContextTimeout)
+	ctx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow
@@ -1461,7 +1460,7 @@ func (uith UpdateInstanceTypeHandler) Handle(c echo.Context) error {
 	workflowOptions := temporalClient.StartWorkflowOptions{
 		ID:                       "instance-type-update-" + it.ID.String(),
 		TaskQueue:                queue.SiteTaskQueue,
-		WorkflowExecutionTimeout: wpkgutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
 	}
 
 	// InstanceType metadata info
@@ -1491,7 +1490,7 @@ func (uith UpdateInstanceTypeHandler) Handle(c echo.Context) error {
 	logger.Info().Msg("triggering InstanceType update workflow")
 
 	// Add context deadlines
-	ctx, cancel := context.WithTimeout(ctx, wpkgutil.WorkflowContextTimeout)
+	ctx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow
@@ -1768,13 +1767,13 @@ func (dith DeleteInstanceTypeHandler) Handle(c echo.Context) error {
 	workflowOptions := temporalClient.StartWorkflowOptions{
 		ID:                       "instance-type-delete-" + it.ID.String(),
 		TaskQueue:                queue.SiteTaskQueue,
-		WorkflowExecutionTimeout: wpkgutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
 	}
 
 	logger.Info().Msg("triggering InstanceType delete workflow")
 
 	// Add context deadlines
-	ctx, cancel := context.WithTimeout(ctx, wpkgutil.WorkflowContextTimeout)
+	ctx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow

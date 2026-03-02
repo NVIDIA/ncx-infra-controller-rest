@@ -41,14 +41,13 @@ import (
 	sc "github.com/nvidia/bare-metal-manager-rest/api/pkg/client/site"
 	auth "github.com/nvidia/bare-metal-manager-rest/auth/pkg/authorization"
 	cerr "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
+	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 	sutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
 	cdbp "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
 	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
 	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/queue"
-
-	wpkgutil "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/util"
 )
 
 const (
@@ -1615,12 +1614,12 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 	workflowOptions := temporalClient.StartWorkflowOptions{
 		ID: workflowID,
 		// TODO: temporary config, to be tuned
-		WorkflowExecutionTimeout: wpkgutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 
 	// Add context timeout
-	workflowCtx, cancel := context.WithTimeout(ctx, wpkgutil.WorkflowContextTimeout)
+	workflowCtx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Execute batch workflow with full request
@@ -1644,7 +1643,7 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 				Msg("failed to create batch Instances, timeout occurred executing workflow on Site.")
 
 			// Create a new context for termination
-			newctx, newcancel := context.WithTimeout(context.Background(), wpkgutil.WorkflowContextNewAfterTimeout)
+			newctx, newcancel := context.WithTimeout(context.Background(), cwutil.WorkflowContextNewAfterTimeout)
 			defer newcancel()
 
 			// Initiate termination workflow

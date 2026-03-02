@@ -40,6 +40,7 @@ import (
 
 	"os"
 
+	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 	"go.temporal.io/sdk/testsuite"
 )
 
@@ -347,7 +348,7 @@ func TestManageDpuExtensionService_UpdateDpuExtensionServicesInDB(t *testing.T) 
 	assert.NoError(t, err)
 
 	// Set updated timestamp to be older than the stale inventory threshold so it can be deleted
-	_, err = dbSession.DB.Exec("UPDATE dpu_extension_service SET updated = ? WHERE id = ?", time.Now().Add(-time.Duration(util.InventoryReceiptInterval)*2), dpuExtensionService5.ID.String())
+	_, err = dbSession.DB.Exec("UPDATE dpu_extension_service SET updated = ? WHERE id = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval)*2), dpuExtensionService5.ID.String())
 	assert.NoError(t, err)
 
 	for _, tt := range tests {

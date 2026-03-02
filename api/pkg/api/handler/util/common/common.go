@@ -53,14 +53,13 @@ import (
 
 	cam "github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model"
 	cau "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
+	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
 	cdbp "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
 	swe "github.com/nvidia/bare-metal-manager-rest/site-workflow/pkg/error"
 	rlav1 "github.com/nvidia/bare-metal-manager-rest/workflow-schema/rla/protobuf/v1"
 	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/queue"
-
-	wpkgutil "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/util"
 )
 
 const (
@@ -1061,7 +1060,7 @@ func TerminateWorkflowOnTimeOut(echoCtx echo.Context, logger zerolog.Logger, tem
 	logger.Error().Err(originalError).Msg(fmt.Sprintf("failed to perform %s for %s - timeout occurred executing workflow on Site.", workflowName, objectType))
 
 	// Create a new context deadline
-	newctx, newcancel := context.WithTimeout(context.Background(), wpkgutil.WorkflowContextNewAfterTimeout)
+	newctx, newcancel := context.WithTimeout(context.Background(), cwutil.WorkflowContextNewAfterTimeout)
 	defer newcancel()
 
 	// Initiate termination workflow
@@ -1351,7 +1350,7 @@ func ExecuteSyncWorkflow(ctx context.Context, logger zerolog.Logger, tpClient tc
 	logger = logger.With().Str("Workflow Name", name).Logger()
 
 	// Add context deadlines
-	ctxWithTimeout, cancel := context.WithTimeout(ctx, wpkgutil.WorkflowContextTimeout)
+	ctxWithTimeout, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow
@@ -1622,11 +1621,11 @@ func ExecutePowerControlWorkflow(
 		ID:                       workflowID,
 		WorkflowIDReusePolicy:    temporalEnums.WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE,
 		WorkflowIDConflictPolicy: temporalEnums.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING,
-		WorkflowExecutionTimeout: wpkgutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, wpkgutil.WorkflowContextTimeout)
+	ctx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
 	defer cancel()
 
 	we, err := stc.ExecuteWorkflow(ctx, workflowOptions, workflowName, rlaRequest)
@@ -1671,11 +1670,11 @@ func ExecuteFirmwareUpdateWorkflow(
 		ID:                       workflowID,
 		WorkflowIDReusePolicy:    temporalEnums.WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE,
 		WorkflowIDConflictPolicy: temporalEnums.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING,
-		WorkflowExecutionTimeout: wpkgutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, wpkgutil.WorkflowContextTimeout)
+	ctx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
 	defer cancel()
 
 	we, err := stc.ExecuteWorkflow(ctx, workflowOptions, "UpgradeFirmware", rlaRequest)

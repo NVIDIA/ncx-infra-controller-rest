@@ -40,13 +40,12 @@ import (
 	sc "github.com/nvidia/bare-metal-manager-rest/api/pkg/client/site"
 	auth "github.com/nvidia/bare-metal-manager-rest/auth/pkg/authorization"
 	cerr "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
+	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 	sutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
 	rlav1 "github.com/nvidia/bare-metal-manager-rest/workflow-schema/rla/protobuf/v1"
 	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/queue"
-
-	wpkgutil "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/util"
 )
 
 // ~~~~~ Get Rack Handler ~~~~~ //
@@ -179,11 +178,11 @@ func (grh GetRackHandler) Handle(c echo.Context) error {
 		ID:                       fmt.Sprintf("rack-get-%s", rackStrID),
 		WorkflowIDReusePolicy:    temporalEnums.WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE,
 		WorkflowIDConflictPolicy: temporalEnums.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING,
-		WorkflowExecutionTimeout: wpkgutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, wpkgutil.WorkflowContextTimeout)
+	ctx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
 	defer cancel()
 
 	we, err := stc.ExecuteWorkflow(ctx, workflowOptions, "GetRack", rlaRequest)
@@ -380,11 +379,11 @@ func (garh GetAllRackHandler) Handle(c echo.Context) error {
 		ID:                       workflowID,
 		WorkflowIDReusePolicy:    temporalEnums.WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE,
 		WorkflowIDConflictPolicy: temporalEnums.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING,
-		WorkflowExecutionTimeout: wpkgutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, wpkgutil.WorkflowContextTimeout)
+	ctx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
 	defer cancel()
 
 	we, err := stc.ExecuteWorkflow(ctx, workflowOptions, "GetRacks", rlaRequest)
@@ -561,11 +560,11 @@ func (vrh ValidateRackHandler) Handle(c echo.Context) error {
 		ID:                       fmt.Sprintf("rack-validate-%s", rackStrID),
 		WorkflowIDReusePolicy:    temporalEnums.WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE,
 		WorkflowIDConflictPolicy: temporalEnums.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING,
-		WorkflowExecutionTimeout: wpkgutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, wpkgutil.WorkflowContextTimeout)
+	ctx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
 	defer cancel()
 
 	we, err := stc.ExecuteWorkflow(ctx, workflowOptions, "ValidateRackComponents", rlaRequest)
@@ -721,11 +720,11 @@ func (vrsh ValidateRacksHandler) Handle(c echo.Context) error {
 		ID:                       workflowID,
 		WorkflowIDReusePolicy:    temporalEnums.WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE,
 		WorkflowIDConflictPolicy: temporalEnums.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING,
-		WorkflowExecutionTimeout: wpkgutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, wpkgutil.WorkflowContextTimeout)
+	ctx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
 	defer cancel()
 
 	we, err := stc.ExecuteWorkflow(ctx, workflowOptions, "ValidateRackComponents", rlaRequest)

@@ -32,9 +32,10 @@ import (
 
 	sc "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/client/site"
 	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/queue"
-	cwu "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/util"
 
 	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
+
+	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 )
 
 // ManageTenant is an activity wrapper for managing Tenant lifecycle that allows
@@ -164,7 +165,7 @@ func (mt ManageTenant) UpdateTenantsInDB(ctx context.Context, siteID uuid.UUID, 
 		slogger := logger.With().Str("Tenant Org", tenant.Org).Logger()
 
 		// Was this created within inventory receipt interval? If so, we may be processing an older inventory
-		if time.Since(tenant.Created) < cwu.InventoryReceiptInterval {
+		if time.Since(tenant.Created) < cwutil.InventoryReceiptInterval {
 			continue
 		}
 

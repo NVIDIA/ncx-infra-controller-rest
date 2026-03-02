@@ -39,6 +39,7 @@ import (
 	sc "github.com/nvidia/bare-metal-manager-rest/api/pkg/client/site"
 	auth "github.com/nvidia/bare-metal-manager-rest/auth/pkg/authorization"
 	cerr "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
+	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 	sutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
@@ -46,8 +47,6 @@ import (
 	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/queue"
 	temporalEnums "go.temporal.io/api/enums/v1"
 	tp "go.temporal.io/sdk/temporal"
-
-	wpkgutil "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/util"
 )
 
 // ~~~~~ Get Tray Handler ~~~~~ //
@@ -174,12 +173,12 @@ func (gth GetTrayHandler) Handle(c echo.Context) error {
 	// Execute workflow
 	workflowOptions := tClient.StartWorkflowOptions{
 		ID:                       fmt.Sprintf("tray-get-%s", trayStrID),
-		WorkflowExecutionTimeout: wpkgutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 		WorkflowIDReusePolicy:    temporalEnums.WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE,
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, wpkgutil.WorkflowContextTimeout)
+	ctx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
 	defer cancel()
 
 	we, err := stc.ExecuteWorkflow(ctx, workflowOptions, "GetTray", rlaRequest)
@@ -377,12 +376,12 @@ func (gath GetAllTrayHandler) Handle(c echo.Context) error {
 	// Execute workflow
 	workflowOptions := tClient.StartWorkflowOptions{
 		ID:                       workflowID,
-		WorkflowExecutionTimeout: wpkgutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 		WorkflowIDReusePolicy:    temporalEnums.WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE,
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, wpkgutil.WorkflowContextTimeout)
+	ctx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
 	defer cancel()
 
 	we, err := stc.ExecuteWorkflow(ctx, workflowOptions, "GetTrays", rlaRequest)
@@ -564,11 +563,11 @@ func (vth ValidateTrayHandler) Handle(c echo.Context) error {
 		ID:                       fmt.Sprintf("tray-validate-%s", trayStrID),
 		WorkflowIDReusePolicy:    temporalEnums.WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE,
 		WorkflowIDConflictPolicy: temporalEnums.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING,
-		WorkflowExecutionTimeout: wpkgutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, wpkgutil.WorkflowContextTimeout)
+	ctx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
 	defer cancel()
 
 	we, err := stc.ExecuteWorkflow(ctx, workflowOptions, "ValidateRackComponents", rlaRequest)
@@ -730,11 +729,11 @@ func (vtsh ValidateTraysHandler) Handle(c echo.Context) error {
 		ID:                       workflowID,
 		WorkflowIDReusePolicy:    temporalEnums.WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE,
 		WorkflowIDConflictPolicy: temporalEnums.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING,
-		WorkflowExecutionTimeout: wpkgutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, wpkgutil.WorkflowContextTimeout)
+	ctx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
 	defer cancel()
 
 	we, err := stc.ExecuteWorkflow(ctx, workflowOptions, "ValidateRackComponents", rlaRequest)
@@ -762,6 +761,7 @@ func (vtsh ValidateTraysHandler) Handle(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, apiResult)
 }
+
 // ~~~~~ Update Tray Power State Handler ~~~~~ //
 
 // UpdateTrayPowerStateHandler is the API Handler for power controlling a single Tray by ID

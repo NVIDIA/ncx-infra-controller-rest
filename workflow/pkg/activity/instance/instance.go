@@ -39,13 +39,14 @@ import (
 	sc "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/client/site"
 	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/queue"
 	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/util"
-	cwu "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/util"
 
 	cwsv1 "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
 	"github.com/nvidia/bare-metal-manager-rest/workflow/internal/config"
 	cwm "github.com/nvidia/bare-metal-manager-rest/workflow/internal/metrics"
 
 	"github.com/prometheus/client_golang/prometheus"
+
+	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 )
 
 // ManageInstance is an activity wrapper for managing Instance lifecycle that allows
@@ -786,7 +787,7 @@ func (mi ManageInstance) UpdateInstancesInDB(ctx context.Context, siteID uuid.UU
 		// We'll add a 5 second buffer to account for a little clock skew/drift.
 		// The only thing that might be safe to perform is propagation status clearing,
 		// but only if we never allow multiple inventory processes to run concurrently.
-		if time.Since(instance.Updated) < util.InventoryReceiptInterval+(time.Second*5) {
+		if time.Since(instance.Updated) < cwutil.InventoryReceiptInterval+(time.Second*5) {
 			slogger.Warn().Msg("instance updated more recently than inventory received time, skipping processing")
 			continue
 		}
@@ -1447,7 +1448,7 @@ func (mi ManageInstance) UpdateInstancesInDB(ctx context.Context, siteID uuid.UU
 			}
 		} else if instance.ControllerInstanceID != nil {
 			// Was this created within inventory receipt interval? If so, we may be processing an older inventory
-			if time.Since(instance.Created) < cwu.InventoryReceiptInterval {
+			if time.Since(instance.Created) < cwutil.InventoryReceiptInterval {
 				continue
 			}
 

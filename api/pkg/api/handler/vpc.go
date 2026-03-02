@@ -46,12 +46,11 @@ import (
 	sc "github.com/nvidia/bare-metal-manager-rest/api/pkg/client/site"
 	auth "github.com/nvidia/bare-metal-manager-rest/auth/pkg/authorization"
 	cerr "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
+	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 	sutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 
 	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
 	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/queue"
-
-	wpkgutil "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/util"
 )
 
 // ~~~~~ Create Handler ~~~~~ //
@@ -386,7 +385,7 @@ func (cvh CreateVPCHandler) Handle(c echo.Context) error {
 	workflowOptions := temporalClient.StartWorkflowOptions{
 		ID:                       "vpc-create-" + vpc.ID.String(),
 		TaskQueue:                queue.SiteTaskQueue,
-		WorkflowExecutionTimeout: wpkgutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
 	}
 
 	// Vpc metadata info
@@ -418,7 +417,7 @@ func (cvh CreateVPCHandler) Handle(c echo.Context) error {
 	logger.Info().Msg("triggering VPC create workflow")
 
 	// Add context deadlines
-	ctx, cancel := context.WithTimeout(ctx, wpkgutil.WorkflowContextTimeout)
+	ctx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow
@@ -440,7 +439,7 @@ func (cvh CreateVPCHandler) Handle(c echo.Context) error {
 			logger.Error().Err(err).Msg("failed to create VPC, timeout occurred executing workflow on Site.")
 
 			// Create a new context deadlines
-			newctx, newcancel := context.WithTimeout(context.Background(), wpkgutil.WorkflowContextNewAfterTimeout)
+			newctx, newcancel := context.WithTimeout(context.Background(), cwutil.WorkflowContextNewAfterTimeout)
 			defer newcancel()
 
 			// Initiate termination workflow
@@ -831,7 +830,7 @@ func (uvh UpdateVPCHandler) Handle(c echo.Context) error {
 	workflowOptions := temporalClient.StartWorkflowOptions{
 		ID:                       "vpc-update-" + vpc.ID.String(),
 		TaskQueue:                queue.SiteTaskQueue,
-		WorkflowExecutionTimeout: wpkgutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
 	}
 
 	// Vpc metadata info
@@ -862,7 +861,7 @@ func (uvh UpdateVPCHandler) Handle(c echo.Context) error {
 	logger.Info().Msg("triggering VPC update workflow")
 
 	// Add context deadlines
-	ctx, cancel := context.WithTimeout(ctx, wpkgutil.WorkflowContextTimeout)
+	ctx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow
@@ -884,7 +883,7 @@ func (uvh UpdateVPCHandler) Handle(c echo.Context) error {
 			logger.Error().Err(err).Msg("failed to update VPC, timeout occurred executing workflow on Site.")
 
 			// Create a new context deadlines
-			newctx, newcancel := context.WithTimeout(context.Background(), wpkgutil.WorkflowContextNewAfterTimeout)
+			newctx, newcancel := context.WithTimeout(context.Background(), cwutil.WorkflowContextNewAfterTimeout)
 			defer newcancel()
 
 			// Initiate termination workflow
@@ -1112,13 +1111,13 @@ func (uvvh UpdateVPCVirtualizationHandler) Handle(c echo.Context) error {
 	workflowOptions := temporalClient.StartWorkflowOptions{
 		ID:                       "vpc-update-virtualzation-" + uv.ID.String(),
 		TaskQueue:                queue.SiteTaskQueue,
-		WorkflowExecutionTimeout: wpkgutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
 	}
 
 	logger.Info().Msg("triggering VPC virtualization update workflow")
 
 	// Add context deadlines
-	ctx, cancel := context.WithTimeout(ctx, wpkgutil.WorkflowContextTimeout)
+	ctx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow
@@ -1771,13 +1770,13 @@ func (dvh DeleteVPCHandler) Handle(c echo.Context) error {
 	workflowOptions := temporalClient.StartWorkflowOptions{
 		ID:                       "vpc-delete-" + vpc.ID.String(),
 		TaskQueue:                queue.SiteTaskQueue,
-		WorkflowExecutionTimeout: wpkgutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
 	}
 
 	logger.Info().Msg("triggering VPC delete workflow")
 
 	// Add context deadlines
-	ctx, cancel := context.WithTimeout(ctx, wpkgutil.WorkflowContextTimeout)
+	ctx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow
@@ -1810,7 +1809,7 @@ func (dvh DeleteVPCHandler) Handle(c echo.Context) error {
 			logger.Error().Err(err).Msg("failed to delete VPC, timeout occurred executing workflow on Site.")
 
 			// Create a new context deadlines
-			newctx, newcancel := context.WithTimeout(context.Background(), wpkgutil.WorkflowContextNewAfterTimeout)
+			newctx, newcancel := context.WithTimeout(context.Background(), cwutil.WorkflowContextNewAfterTimeout)
 			defer newcancel()
 
 			// Initiate termination workflow

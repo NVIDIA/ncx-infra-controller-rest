@@ -29,7 +29,6 @@ import (
 	cdbp "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
 	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
 	sc "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/client/site"
-	cwu "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -45,6 +44,8 @@ import (
 	tmocks "go.temporal.io/sdk/mocks"
 
 	"go.temporal.io/sdk/testsuite"
+
+	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 )
 
 func TestManageSSHKeyGroup_SyncSSHKeyGroupViaSiteAgent(t *testing.T) {
@@ -1276,7 +1277,7 @@ func TestManageSSHKeyGroup_UpdateSSHKeyGroupsInDB(t *testing.T) {
 	skgsa6 := util.TestBuildSSHKeyGroupSiteAssociation(t, dbSession, skg6.ID, st.ID, cdb.GetStrPtr("1137"), cdbm.SSHKeyGroupSiteAssociationStatusSynced, tnu.ID)
 	assert.NotNil(t, skgsa6)
 	// Set created earlier than the inventory receipt interval
-	_, err := dbSession.DB.Exec("UPDATE ssh_key_group_site_association SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval)), skgsa6.ID.String())
+	_, err := dbSession.DB.Exec("UPDATE ssh_key_group_site_association SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval)), skgsa6.ID.String())
 	assert.NoError(t, err)
 
 	// Build SSHKeyGroup7
@@ -1306,14 +1307,14 @@ func TestManageSSHKeyGroup_UpdateSSHKeyGroupsInDB(t *testing.T) {
 	for i := 0; i < 38; i++ {
 		keyGroup := util.TestBuildSSHKeyGroup(t, dbSession, fmt.Sprintf("test-sshkeygroup-paged-%d", i), tnOrg, cdb.GetStrPtr("description"), tn.ID, cdb.GetStrPtr("122346"), cdbm.SSHKeyGroupStatusSynced, tnu.ID)
 		// Update creation timestamp to be earlier than inventory processing interval
-		_, err = dbSession.DB.Exec("UPDATE sshkey_group SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval)), keyGroup.ID.String())
+		_, err = dbSession.DB.Exec("UPDATE sshkey_group SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval)), keyGroup.ID.String())
 		assert.NoError(t, err)
 		pagedSSHKeyGroups = append(pagedSSHKeyGroups, keyGroup)
 		pagedInvSSHKeyGroupIDs = append(pagedInvSSHKeyGroupIDs, keyGroup.ID.String())
 
 		skgsa := util.TestBuildSSHKeyGroupSiteAssociation(t, dbSession, keyGroup.ID, st2.ID, cdb.GetStrPtr("1138"), cdbm.SSHKeyGroupSiteAssociationStatusSynced, tnu.ID)
 		assert.NotNil(t, skgsa)
-		_, err := dbSession.DB.Exec("UPDATE ssh_key_group_site_association SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval)), skgsa.ID.String())
+		_, err := dbSession.DB.Exec("UPDATE ssh_key_group_site_association SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval)), skgsa.ID.String())
 		assert.NoError(t, err)
 	}
 

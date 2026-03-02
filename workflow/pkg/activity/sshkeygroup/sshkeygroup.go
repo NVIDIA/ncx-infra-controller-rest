@@ -37,13 +37,13 @@ import (
 	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
 	cdbp "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
 
-	cwu "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/util"
-
 	sc "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/client/site"
 	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/queue"
 	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/util"
 
 	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
+
+	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 )
 
 const (
@@ -173,7 +173,7 @@ func (mskg ManageSSHKeyGroup) SyncSSHKeyGroupViaSiteAgent(ctx context.Context, s
 
 	// Execute the site workflow to create/update the SSH Key Group in synchronous
 	// Add context deadlines
-	ctx, cancel := context.WithTimeout(ctx, util.WorkflowContextTimeout)
+	ctx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
 	defer cancel()
 
 	var we client.WorkflowRun
@@ -225,7 +225,7 @@ func (mskg ManageSSHKeyGroup) SyncSSHKeyGroupViaSiteAgent(ctx context.Context, s
 				logger.Error().Err(err).Msg(fmt.Sprintf("failed to %s SSHKeyGroup, timeout occurred executing workflow on Site.", workflowMethod))
 
 				// Create a new context deadlines
-				newctx, newcancel := context.WithTimeout(context.Background(), util.WorkflowContextNewAfterTimeout)
+				newctx, newcancel := context.WithTimeout(context.Background(), cwutil.WorkflowContextNewAfterTimeout)
 				defer newcancel()
 
 				// Initiate termination workflow
@@ -245,7 +245,7 @@ func (mskg ManageSSHKeyGroup) SyncSSHKeyGroupViaSiteAgent(ctx context.Context, s
 				logger.Warn().Err(err).Msg("SSHKeyGroup already exists on Site (duplicate key constraint), recording error and failing workflow for retry")
 
 				status = cdbm.SSHKeyGroupSiteAssociationStatusError
-				statusMessage = fmt.Sprintf("SSHKeyGroup already exists on Site: %s", err.Error())
+				statusMessage = fmt.Sprintf("SSH Key Group already exists on Site: %s", util.ErrMsgSiteControllerDuplicateEntryFound)
 
 				// Record the error in status detail
 				_ = mskg.updateSSHKeyGroupSiteAssociationStatusInDB(ctx, nil, skgsa.ID, &status, &statusMessage)
@@ -502,7 +502,7 @@ func (mskg ManageSSHKeyGroup) UpdateSSHKeyGroupsInDB(ctx context.Context, siteID
 				} else {
 					if skgsa.Status == cdbm.SSHKeyGroupSiteAssociationStatusSynced {
 						// Was this created within inventory receipt interval? If so, we may be processing an older inventory
-						if time.Since(skgsa.Created) < cwu.InventoryReceiptInterval {
+						if time.Since(skgsa.Created) < cwutil.InventoryReceiptInterval {
 							continue
 						}
 
