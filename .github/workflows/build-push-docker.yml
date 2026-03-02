@@ -291,6 +291,8 @@ jobs:
           echo "4. \`carbide-rest-workflow:${{ inputs.branch_sha_tag }}\` (amd64 + arm64)" >> $GITHUB_STEP_SUMMARY
           echo "5. \`carbide-rest-site-agent:${{ inputs.branch_sha_tag }}\` (amd64 + arm64)" >> $GITHUB_STEP_SUMMARY
           echo "6. \`carbide-rest-cert-manager:${{ inputs.branch_sha_tag }}\` (amd64 + arm64)" >> $GITHUB_STEP_SUMMARY
+          echo "7. \`carbide-rla:${{ inputs.branch_sha_tag }}\` (amd64 + arm64)" >> $GITHUB_STEP_SUMMARY
+          echo "8. \`carbide-psm:${{ inputs.branch_sha_tag }}\` (amd64 + arm64)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           if [ "${{ inputs.is_main_branch }}" = "true" ] || [ "${{ github.ref_name }}" = "main" ]; then
             echo "## Binary Artifacts Uploaded (Main Branch)" >> $GITHUB_STEP_SUMMARY
@@ -304,6 +306,8 @@ jobs:
           echo "- carbide-rest-workflow: \`${{ needs.build-carbide-rest-workflow.result }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- carbide-rest-site-agent: \`${{ needs.build-carbide-rest-site-agent.result }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- carbide-rest-cert-manager: \`${{ needs.build-carbide-rest-cert-manager.result }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- carbide-rla: \`${{ needs.build-carbide-rla.result }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- carbide-psm: \`${{ needs.build-carbide-psm.result }}\`" >> $GITHUB_STEP_SUMMARY
 
       - name: Aggregate outputs
         id: aggregate
@@ -347,6 +351,18 @@ jobs:
               "image_ref": "${{ needs.build-carbide-rest-cert-manager.outputs.image_ref }}",
               "binary_resource": "${{ needs.build-carbide-rest-cert-manager.outputs.ngc_binary_resource }}",
               "image_resource": "${{ needs.build-carbide-rest-cert-manager.outputs.ngc_image_resource }}"
+            },
+            {
+              "service": "carbide-rla",
+              "image_ref": "${{ needs.build-carbide-rla.outputs.image_ref }}",
+              "binary_resource": "${{ needs.build-carbide-rla.outputs.ngc_binary_resource }}",
+              "image_resource": "${{ needs.build-carbide-rla.outputs.ngc_image_resource }}"
+            },
+            {
+              "service": "carbide-psm",
+              "image_ref": "${{ needs.build-carbide-psm.outputs.image_ref }}",
+              "binary_resource": "${{ needs.build-carbide-psm.ngc_binary_resource }}",
+              "image_resource": "${{ needs.build-carbide-psm.outputs.ngc_image_resource }}"
             }
           ]
           EOF
