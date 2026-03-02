@@ -1,0 +1,11 @@
+apiVersion: v2
+name: carbide-rest-workflow
+description: Helm chart for the Carbide REST Temporal workflow workers
+type: application
+version: 0.1.0
+appVersion: "latest"
+keywords:
+  - carbide
+  - rest
+  - workflow
+  - temporal

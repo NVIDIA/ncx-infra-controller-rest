@@ -1,0 +1,11 @@
+apiVersion: v2
+name: carbide-rest-site-agent
+description: Helm chart for the Carbide REST site agent (Elektra)
+type: application
+version: 0.1.0
+appVersion: "latest"
+keywords:
+  - carbide
+  - rest
+  - site-agent
+  - elektra

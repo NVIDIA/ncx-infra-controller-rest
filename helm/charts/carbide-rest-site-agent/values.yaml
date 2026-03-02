@@ -1,0 +1,62 @@
+replicaCount: 1
+
+nameOverride: ""
+namespaceOverride: ""
+
+image:
+  name: carbide-rest-site-agent
+
+service:
+  type: ClusterIP
+  port: 8080
+  metricsPort: 2112
+
+resources:
+  requests:
+    memory: "128Mi"
+    cpu: "100m"
+  limits:
+    memory: "512Mi"
+    cpu: "500m"
+
+secrets:
+  carbideSecrets: carbide-secrets
+  siteRegistration: site-registration
+  carbideTlsCerts: carbide-tls-certs
+  temporalClientCerts: temporal-client-certs
+
+certificate:
+  enabled: true
+  secretName: carbide-tls-certs
+  duration: 720h
+  renewBefore: 360h
+  privateKey:
+    algorithm: ECDSA
+    size: 384
+
+envConfig:
+  ESA_PORT: "8080"
+  CARBIDE_ADDRESS: ""
+  CARBIDE_SEC_OPT: "0"
+  CLUSTER_ID: ""
+  TEMPORAL_HOST: "temporal-frontend.temporal"
+  TEMPORAL_PORT: "7233"
+  TEMPORAL_SERVER_NAME: "server.temporal.local"
+  TEMPORAL_PUBLISH_NAMESPACE: "site"
+  TEMPORAL_PUBLISH_QUEUE: "site"
+  TEMPORAL_SUBSCRIBE_NAMESPACE: ""
+  TEMPORAL_SUBSCRIBE_QUEUE: ""
+  DEV_MODE: "false"
+  ENABLE_DEBUG: "false"
+  ENABLE_TLS: "true"
+  POD_NAME: "carbide-rest-site-agent-0"
+  POD_NAMESPACE: ""
+  METRICS_PORT: "2112"
+  DB_ADDR: "postgres"
+  DB_USER: "forge"
+  DB_DATABASE: "elektratest"
+  DB_PORT: "5432"
+  OTEL_EXPORTER_OTLP_SPAN_INSECURE: "true"
+  OTEL_EXPORTER_OTLP_SPAN_ENDPOINT: ""
+  TEMPORAL_CERT_PATH: "/etc/temporal-certs"
+  DISABLE_BOOTSTRAP: "true"

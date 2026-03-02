@@ -133,7 +133,49 @@ jobs:
       NVCR_USERNAME: ${{ secrets.NVCR_STG_USERNAME }}
       NVCR_TOKEN: ${{ secrets.NVCR_STG_TOKEN }}
 
-  # Step 6: Promote to release candidate
+  # Step 6: Validate Helm chart
+  build-validate-helm-chart:
+    name: Validate Helm Chart
+    needs:
+      - prepare
+    if: ${{ !cancelled() && needs.prepare.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate Helm chart
+        uses: NVIDIA/dsx-github-actions/.github/actions/helm-validate@94bde998f5d7965576b0c663db7d5d709c918167
+        with:
+          chart-path: helm
+          lint: 'true'
+          template: 'true'
+
+  # Step 7: Package and push Helm chart to NGC
+  build-push-helm-chart:
+    name: Package and Push Helm Chart
+    needs:
+      - prepare
+      - build-and-push
+      - build-validate-helm-chart
+    if: ${{ !cancelled() && needs.prepare.result == 'success' && needs.build-validate-helm-chart.result == 'success' && !contains(github.ref, 'pull-request/') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Package and push Helm chart to NGC
+        uses: NVIDIA/dsx-github-actions/.github/actions/helm-package-push@94bde998f5d7965576b0c663db7d5d709c918167
+        with:
+          chart-path: helm
+          chart-version: ${{ needs.prepare.outputs.helm_version }}
+          app-version: ${{ needs.prepare.outputs.semantic_version }}
+          lint: 'false'
+          ngc-key: ${{ secrets.NVCR_STG_TOKEN }}
+          ngc-path: 0837451325059433/carbide-dev
+          ngc-duplicate: fail
+
+  # Step 8: Promote to release candidate
   promote-carbide-rest-to-release-candidate:
     name: Promote Carbide REST to Release Candidate
     needs:

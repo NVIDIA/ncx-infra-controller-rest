@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: site-worker
+  namespace: {{ include "carbide-rest-workflow.namespace" . }}
+  labels:
+    {{- include "carbide-rest-workflow.labels" . | nindent 4 }}
+    app.kubernetes.io/component: site-worker
+spec:
+  replicas: {{ .Values.siteWorker.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: carbide-rest-workflow
+      app.kubernetes.io/component: site-worker
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: carbide-rest-workflow
+        app.kubernetes.io/component: site-worker
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: site-worker
+          image: "{{ include "carbide-rest-workflow.image" . }}"
+          imagePullPolicy: {{ .Values.global.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.config.metrics.port }}
+              name: metrics
+          env:
+            - name: CONFIG_FILE_PATH
+              value: /app/config.yaml
+            - name: TEMPORAL_NAMESPACE
+              value: site
+            - name: TEMPORAL_QUEUE
+              value: site
+          volumeMounts:
+            - name: config
+              mountPath: /app/config.yaml
+              subPath: config.yaml
+            - name: temporal-encryption-key
+              mountPath: /var/secrets/temporal
+              readOnly: true
+            - name: temporal-tls-certs
+              mountPath: /var/secrets/temporal/certs
+              readOnly: true
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8899
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8899
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.siteWorker.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - NET_RAW
+      securityContext:
+        runAsNonRoot: false
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "carbide-rest-workflow.name" . }}-config
+        - name: temporal-encryption-key
+          secret:
+            secretName: {{ .Values.secrets.carbideSecrets }}
+            items:
+              - key: temporal-encryption-key
+                path: encryption-key
+        - name: temporal-tls-certs
+          secret:
+            secretName: {{ .Values.secrets.temporalClientCerts }}

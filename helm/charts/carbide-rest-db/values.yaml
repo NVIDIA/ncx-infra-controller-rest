@@ -1,0 +1,28 @@
+nameOverride: ""
+namespaceOverride: ""
+
+image:
+  name: carbide-rest-db
+
+waitForPostgres:
+  image: postgres:14.4-alpine
+
+db:
+  host: postgres
+  port: "5432"
+  name: forge
+  user: forge
+
+secrets:
+  carbideSecrets: carbide-secrets
+
+resources:
+  requests:
+    memory: "64Mi"
+    cpu: "50m"
+  limits:
+    memory: "128Mi"
+    cpu: "100m"
+
+ttlSecondsAfterFinished: 300
+backoffLimit: 3

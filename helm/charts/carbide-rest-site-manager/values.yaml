@@ -1,0 +1,40 @@
+replicaCount: 1
+
+nameOverride: ""
+namespaceOverride: ""
+
+image:
+  name: carbide-rest-site-manager
+
+service:
+  type: ClusterIP
+  port: 8100
+
+args:
+  listenPort: 8100
+  credsManagerUrl: "https://carbide-rest-cert-manager:8000"
+  tlsCertPath: /etc/tls/tls.crt
+  tlsKeyPath: /etc/tls/tls.key
+  debug: true
+
+resources:
+  requests:
+    memory: "64Mi"
+    cpu: "50m"
+  limits:
+    memory: "256Mi"
+    cpu: "250m"
+
+certificate:
+  enabled: true
+  secretName: site-manager-tls
+  duration: 2160h
+  renewBefore: 360h
+  commonName: carbide-rest-site-manager
+  privateKey:
+    algorithm: RSA
+    encoding: PKCS1
+    size: 2048
+
+rbac:
+  create: true

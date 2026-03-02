@@ -1,0 +1,25 @@
+apiVersion: v2
+name: carbide-rest
+description: Umbrella chart for the Carbide REST API platform
+type: application
+version: 0.1.0
+appVersion: "latest"
+keywords:
+  - bare-metal-manager-rest
+
+dependencies:
+  - name: carbide-rest-api
+    version: "0.1.0"
+    condition: carbide-rest-api.enabled
+  - name: carbide-rest-workflow
+    version: "0.1.0"
+    condition: carbide-rest-workflow.enabled
+  - name: carbide-rest-site-agent
+    version: "0.1.0"
+    condition: carbide-rest-site-agent.enabled
+  - name: carbide-rest-site-manager
+    version: "0.1.0"
+    condition: carbide-rest-site-manager.enabled
+  - name: carbide-rest-db
+    version: "0.1.0"
+    condition: carbide-rest-db.enabled

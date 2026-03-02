@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "carbide-rest-site-agent.name" . }}
+  namespace: {{ include "carbide-rest-site-agent.namespace" . }}
+  labels:
+    {{- include "carbide-rest-site-agent.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "carbide-rest-site-agent.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "carbide-rest-site-agent.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: site-agent
+          image: "{{ include "carbide-rest-site-agent.image" . }}"
+          imagePullPolicy: {{ .Values.global.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.service.port }}
+              name: http
+            - containerPort: {{ .Values.service.metricsPort }}
+              name: metrics
+          envFrom:
+            - configMapRef:
+                name: {{ include "carbide-rest-site-agent.name" . }}-config
+          env:
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.carbideSecrets }}
+                  key: db-password
+          volumeMounts:
+            - name: site-registration
+              mountPath: /etc/sitereg
+              readOnly: true
+            - name: carbide-certs
+              mountPath: /etc/carbide
+              readOnly: true
+            - name: temporal-certs
+              mountPath: /etc/temporal-certs
+              readOnly: true
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: site-registration
+          secret:
+            secretName: {{ .Values.secrets.siteRegistration }}
+        - name: carbide-certs
+          secret:
+            secretName: {{ .Values.secrets.carbideTlsCerts }}
+            optional: true
+        - name: temporal-certs
+          secret:
+            secretName: {{ .Values.secrets.temporalClientCerts }}
+            optional: true
+            items:
+              - key: ca.crt
+                path: ca/ca.crt
+              - key: tls.crt
+                path: client/tls.crt
+              - key: tls.key
+                path: client/tls.key

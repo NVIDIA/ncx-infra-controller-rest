@@ -1,0 +1,34 @@
+{{- if .Values.certificate.enabled }}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ .Values.certificate.secretName }}
+  namespace: {{ include "carbide-rest-site-manager.namespace" . }}
+  labels:
+    {{- include "carbide-rest-site-manager.labels" . | nindent 4 }}
+spec:
+  secretName: {{ .Values.certificate.secretName }}
+  duration: {{ .Values.certificate.duration }}
+  renewBefore: {{ .Values.certificate.renewBefore }}
+  subject:
+    organizations:
+      - Nvidia
+  commonName: {{ .Values.certificate.commonName }}
+  isCA: false
+  privateKey:
+    algorithm: {{ .Values.certificate.privateKey.algorithm }}
+    encoding: {{ .Values.certificate.privateKey.encoding }}
+    size: {{ .Values.certificate.privateKey.size }}
+  usages:
+    - server auth
+    - client auth
+  dnsNames:
+    - {{ include "carbide-rest-site-manager.name" . }}
+    - {{ include "carbide-rest-site-manager.name" . }}.{{ include "carbide-rest-site-manager.namespace" . }}
+    - {{ include "carbide-rest-site-manager.name" . }}.{{ include "carbide-rest-site-manager.namespace" . }}.svc.cluster.local
+    - localhost
+  issuerRef:
+    name: {{ .Values.global.certificate.issuerRef.name }}
+    kind: {{ .Values.global.certificate.issuerRef.kind }}
+    group: {{ .Values.global.certificate.issuerRef.group }}
+{{- end }}

@@ -1,0 +1,56 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "carbide-rest-db.name" . }}-migrations
+  namespace: {{ include "carbide-rest-db.namespace" . }}
+  labels:
+    {{- include "carbide-rest-db.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation
+    helm.sh/hook-weight: "-5"
+spec:
+  ttlSecondsAfterFinished: {{ .Values.ttlSecondsAfterFinished }}
+  backoffLimit: {{ .Values.backoffLimit }}
+  template:
+    metadata:
+      labels:
+        {{- include "carbide-rest-db.labels" . | nindent 8 }}
+    spec:
+      restartPolicy: OnFailure
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      initContainers:
+        - name: wait-for-postgres
+          image: {{ .Values.waitForPostgres.image }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              until pg_isready -h {{ .Values.db.host }} -p {{ .Values.db.port }} -U {{ .Values.db.user }}; do
+                echo "Waiting for PostgreSQL..."
+                sleep 2
+              done
+              echo "PostgreSQL is ready!"
+      containers:
+        - name: migrations
+          image: "{{ include "carbide-rest-db.image" . }}"
+          imagePullPolicy: {{ .Values.global.image.pullPolicy }}
+          env:
+            - name: PGHOST
+              value: {{ .Values.db.host }}
+            - name: PGPORT
+              value: {{ .Values.db.port | quote }}
+            - name: PGDATABASE
+              value: {{ .Values.db.name }}
+            - name: PGUSER
+              value: {{ .Values.db.user }}
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.carbideSecrets }}
+                  key: db-password
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

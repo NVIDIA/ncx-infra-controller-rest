@@ -1,0 +1,74 @@
+{{- if .Values.rbac.create }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "carbide-rest-site-manager.name" . }}
+  namespace: {{ include "carbide-rest-site-manager.namespace" . }}
+  labels:
+    {{- include "carbide-rest-site-manager.labels" . | nindent 4 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "carbide-rest-site-manager.name" . }}
+  namespace: {{ include "carbide-rest-site-manager.namespace" . }}
+  labels:
+    {{- include "carbide-rest-site-manager.labels" . | nindent 4 }}
+rules:
+  - apiGroups: ["forge.nvidia.io"]
+    resources: ["sites"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["forge.nvidia.io"]
+    resources: ["sites/status"]
+    verbs: ["get", "update", "patch"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "carbide-rest-site-manager.name" . }}
+  namespace: {{ include "carbide-rest-site-manager.namespace" . }}
+  labels:
+    {{- include "carbide-rest-site-manager.labels" . | nindent 4 }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "carbide-rest-site-manager.name" . }}
+roleRef:
+  kind: Role
+  name: {{ include "carbide-rest-site-manager.name" . }}
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "carbide-rest-site-manager.name" . }}
+  labels:
+    {{- include "carbide-rest-site-manager.labels" . | nindent 4 }}
+rules:
+  - apiGroups: ["forge.nvidia.io"]
+    resources: ["sites"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["forge.nvidia.io"]
+    resources: ["sites/status"]
+    verbs: ["get", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "carbide-rest-site-manager.name" . }}
+  labels:
+    {{- include "carbide-rest-site-manager.labels" . | nindent 4 }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "carbide-rest-site-manager.name" . }}
+    namespace: {{ include "carbide-rest-site-manager.namespace" . }}
+roleRef:
+  kind: ClusterRole
+  name: {{ include "carbide-rest-site-manager.name" . }}
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}

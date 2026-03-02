@@ -1,0 +1,55 @@
+## =============================================================================
+## Carbide REST — Umbrella Helm Chart
+## =============================================================================
+## IMPORTANT: You MUST set global.image.repository and global.image.tag before
+## installing. They default to empty strings and the chart will not render
+## valid manifests without them.
+## =============================================================================
+
+global:
+  image:
+    repository: ""
+    tag: ""
+    pullPolicy: IfNotPresent
+
+  imagePullSecrets: []
+
+  certificate:
+    issuerRef:
+      kind: ClusterIssuer
+      name: carbide-ca-issuer
+      group: cert-manager.io
+
+  labels:
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: carbide-rest
+
+## ---------------------------------------------------------------------------
+## carbide-rest-api
+## ---------------------------------------------------------------------------
+carbide-rest-api:
+  enabled: true
+
+## ---------------------------------------------------------------------------
+## carbide-rest-workflow
+## ---------------------------------------------------------------------------
+carbide-rest-workflow:
+  enabled: true
+
+## ---------------------------------------------------------------------------
+## carbide-rest-site-agent
+## ---------------------------------------------------------------------------
+carbide-rest-site-agent:
+  enabled: true
+
+## ---------------------------------------------------------------------------
+## carbide-rest-site-manager
+## ---------------------------------------------------------------------------
+carbide-rest-site-manager:
+  enabled: true
+
+## ---------------------------------------------------------------------------
+## carbide-rest-db (migrations)
+## ---------------------------------------------------------------------------
+carbide-rest-db:
+  enabled: true

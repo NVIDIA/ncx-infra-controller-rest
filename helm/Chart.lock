@@ -1,0 +1,18 @@
+dependencies:
+- name: carbide-rest-api
+  repository: ""
+  version: 0.1.0
+- name: carbide-rest-workflow
+  repository: ""
+  version: 0.1.0
+- name: carbide-rest-site-agent
+  repository: ""
+  version: 0.1.0
+- name: carbide-rest-site-manager
+  repository: ""
+  version: 0.1.0
+- name: carbide-rest-db
+  repository: ""
+  version: 0.1.0
+digest: sha256:410fc92a54bda03d2a5673d7db82312fde8c9dbd5a989cbc7fd53f221b8c4d00
+generated: "2026-03-02T18:15:37.508005+08:00"

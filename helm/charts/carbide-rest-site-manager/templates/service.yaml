@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "carbide-rest-site-manager.name" . }}
+  namespace: {{ include "carbide-rest-site-manager.namespace" . }}
+  labels:
+    {{- include "carbide-rest-site-manager.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.port }}
+      name: https
+  selector:
+    {{- include "carbide-rest-site-manager.selectorLabels" . | nindent 4 }}

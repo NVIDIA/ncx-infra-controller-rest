@@ -51,6 +51,9 @@ on:
       push_requested:
         description: "Whether a push request was made using commit message"
         value: ${{ jobs.prepare.outputs.push_requested }}
+      helm_version:
+        description: "Helm chart version (SemVer with commit SHA suffix)"
+        value: ${{ jobs.prepare.outputs.helm_version }}
 
 jobs:
   prepare:
@@ -67,6 +70,7 @@ jobs:
       is_main_branch: ${{ steps.generate-version.outputs.is_main_branch }}
       release_tag: ${{ steps.generate-version.outputs.release_tag }}
       push_requested: ${{ steps.generate-version.outputs.push_requested }}
+      helm_version: ${{ steps.generate-version.outputs.helm_version }}
 
     steps:
       - name: Checkout code
@@ -136,6 +140,10 @@ jobs:
           echo "release_tag=$RELEASE_TAG" >> $GITHUB_OUTPUT
           echo "push_requested=$PUSH_REQUESTED" >> $GITHUB_OUTPUT
 
+          # Helm chart version: semantic version + commit SHA suffix
+          HELM_VERSION="${SEMANTIC_VERSION}+${SHORT_SHA}"
+          echo "helm_version=$HELM_VERSION" >> $GITHUB_OUTPUT
+
           # Print for logs
           echo "Generated build information:"
           echo "  SEMANTIC_VERSION: $SEMANTIC_VERSION"
@@ -147,6 +155,7 @@ jobs:
           echo "  IS_MAIN_BRANCH: $IS_MAIN_BRANCH"
           echo "  RELEASE_TAG: $RELEASE_TAG"
           echo "  PUSH_REQUESTED: $PUSH_REQUESTED"
+          echo "  HELM_VERSION: $HELM_VERSION"
       - name: Generate build summary
         run: |
           echo "# Build Information Generated" >> $GITHUB_STEP_SUMMARY
@@ -161,4 +170,5 @@ jobs:
           echo "- **Is Main Branch**: \`${{ steps.generate-version.outputs.is_main_branch }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Release Tag**: \`${{ steps.generate-version.outputs.release_tag }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Push Requested**: \`${{ steps.generate-version.outputs.push_requested }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Helm Version**: \`${{ steps.generate-version.outputs.helm_version }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Target Registry**: \`${{ steps.generate-version.outputs.target_registry }}\`" >> $GITHUB_STEP_SUMMARY
