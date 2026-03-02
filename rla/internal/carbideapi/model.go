@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package carbideapi
 
 import (
@@ -159,6 +160,19 @@ func powerStateFromPb(state pb.PowerState) (ret PowerState) {
 	return ret
 }
 
+func powerStateToPb(state PowerState) pb.PowerState {
+	switch state {
+	case PowerStateOff:
+		return pb.PowerState_Off
+	case PowerStateOn:
+		return pb.PowerState_On
+	case PowerStateDisabled:
+		return pb.PowerState_PowerManagerDisabled
+	default:
+		return pb.PowerState_Off
+	}
+}
+
 // SystemPowerControl represents power control actions for AdminPowerControl
 type SystemPowerControl int
 
@@ -229,5 +243,46 @@ func machineInterfaceFromPb(iface *pb.MachineInterface) MachineInterface {
 	return MachineInterface{
 		MacAddress: iface.MacAddress,
 		Addresses:  iface.Address,
+	}
+}
+
+// BringUpState represents the bring-up state of a machine in
+// relation to Carbide's power-on gate.
+type BringUpState int
+
+const (
+	BringUpStateNotDiscovered BringUpState = iota
+	BringUpStateWaitingForIngestion
+	BringUpStateMachineNotCreated
+	BringUpStateMachineCreated
+)
+
+func (s BringUpState) String() string {
+	switch s {
+	case BringUpStateNotDiscovered:
+		return "NotDiscovered"
+	case BringUpStateWaitingForIngestion:
+		return "WaitingForIngestion"
+	case BringUpStateMachineNotCreated:
+		return "IngestionMachineNotCreated"
+	case BringUpStateMachineCreated:
+		return "IngestionMachineCreated"
+	default:
+		return "Unknown"
+	}
+}
+
+func bringUpStateFromPb(
+	s pb.MachineIngestionState,
+) BringUpState {
+	switch s {
+	case pb.MachineIngestionState_WaitingForIngestion:
+		return BringUpStateWaitingForIngestion
+	case pb.MachineIngestionState_IngestionMachineNotCreated:
+		return BringUpStateMachineNotCreated
+	case pb.MachineIngestionState_IngestionMachineCreated:
+		return BringUpStateMachineCreated
+	default:
+		return BringUpStateNotDiscovered
 	}
 }

@@ -43,6 +43,7 @@ Reusable workflow that builds and pushes all Docker images.
 5. `carbide-rest-site-agent`
 6. `carbide-rest-cert-manager`
 7. `carbide-rla`
+8. `carbide-psm`
 
 **Note:** This workflow uses production-optimized multi-stage Dockerfiles located in `docker/production/`.
 ## Required Secrets

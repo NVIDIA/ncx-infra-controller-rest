@@ -57,6 +57,8 @@ jobs:
             path: ./cert-manager/cmd/credsmgr
           - name: rla
             path: ./rla
+          - name: psm
+            path: ./powershelf-manager
 
     steps:
       - name: Checkout code

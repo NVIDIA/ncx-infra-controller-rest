@@ -132,3 +132,129 @@ func (mr *ManageRack) ValidateRackComponents(ctx context.Context, request *rlav1
 
 	return response, nil
 }
+
+// PowerOnRack powers on a rack or its specified components via RLA
+func (mr *ManageRack) PowerOnRack(ctx context.Context, request *rlav1.PowerOnRackRequest) (*rlav1.SubmitTaskResponse, error) {
+	logger := log.With().Str("Activity", "PowerOnRack").Logger()
+	logger.Info().Msg("Starting activity")
+
+	var err error
+
+	// Validate request
+	switch {
+	case request == nil:
+		err = errors.New("received empty power on rack request")
+	}
+
+	if err != nil {
+		return nil, temporal.NewNonRetryableApplicationError(err.Error(), swe.ErrTypeInvalidRequest, err)
+	}
+
+	// Call RLA gRPC endpoint
+	rlaClient := mr.RlaAtomicClient.GetClient()
+	rla := rlaClient.Rla()
+
+	response, err := rla.PowerOnRack(ctx, request)
+	if err != nil {
+		logger.Warn().Err(err).Msg("Failed to power on rack using RLA API")
+		return nil, swe.WrapErr(err)
+	}
+
+	logger.Info().Int("TaskCount", len(response.GetTaskIds())).Msg("Completed activity")
+
+	return response, nil
+}
+
+// PowerOffRack powers off a rack or its specified components via RLA
+func (mr *ManageRack) PowerOffRack(ctx context.Context, request *rlav1.PowerOffRackRequest) (*rlav1.SubmitTaskResponse, error) {
+	logger := log.With().Str("Activity", "PowerOffRack").Logger()
+	logger.Info().Msg("Starting activity")
+
+	var err error
+
+	// Validate request
+	switch {
+	case request == nil:
+		err = errors.New("received empty power off rack request")
+	}
+
+	if err != nil {
+		return nil, temporal.NewNonRetryableApplicationError(err.Error(), swe.ErrTypeInvalidRequest, err)
+	}
+
+	// Call RLA gRPC endpoint
+	rlaClient := mr.RlaAtomicClient.GetClient()
+	rla := rlaClient.Rla()
+
+	response, err := rla.PowerOffRack(ctx, request)
+	if err != nil {
+		logger.Warn().Err(err).Msg("Failed to power off rack using RLA API")
+		return nil, swe.WrapErr(err)
+	}
+
+	logger.Info().Int("TaskCount", len(response.GetTaskIds())).Msg("Completed activity")
+
+	return response, nil
+}
+
+// PowerResetRack resets (power cycles) a rack or its specified components via RLA
+func (mr *ManageRack) PowerResetRack(ctx context.Context, request *rlav1.PowerResetRackRequest) (*rlav1.SubmitTaskResponse, error) {
+	logger := log.With().Str("Activity", "PowerResetRack").Logger()
+	logger.Info().Msg("Starting activity")
+
+	var err error
+
+	// Validate request
+	switch {
+	case request == nil:
+		err = errors.New("received empty power reset rack request")
+	}
+
+	if err != nil {
+		return nil, temporal.NewNonRetryableApplicationError(err.Error(), swe.ErrTypeInvalidRequest, err)
+	}
+
+	// Call RLA gRPC endpoint
+	rlaClient := mr.RlaAtomicClient.GetClient()
+	rla := rlaClient.Rla()
+
+	response, err := rla.PowerResetRack(ctx, request)
+	if err != nil {
+		logger.Warn().Err(err).Msg("Failed to power reset rack using RLA API")
+		return nil, swe.WrapErr(err)
+	}
+
+	logger.Info().Int("TaskCount", len(response.GetTaskIds())).Msg("Completed activity")
+
+	return response, nil
+}
+
+// UpgradeFirmware upgrades firmware on racks or components via RLA
+func (mr *ManageRack) UpgradeFirmware(ctx context.Context, request *rlav1.UpgradeFirmwareRequest) (*rlav1.SubmitTaskResponse, error) {
+	logger := log.With().Str("Activity", "UpgradeFirmware").Logger()
+	logger.Info().Msg("Starting activity")
+
+	var err error
+
+	switch {
+	case request == nil:
+		err = errors.New("received empty upgrade firmware request")
+	}
+
+	if err != nil {
+		return nil, temporal.NewNonRetryableApplicationError(err.Error(), swe.ErrTypeInvalidRequest, err)
+	}
+
+	rlaClient := mr.RlaAtomicClient.GetClient()
+	rla := rlaClient.Rla()
+
+	response, err := rla.UpgradeFirmware(ctx, request)
+	if err != nil {
+		logger.Warn().Err(err).Msg("Failed to upgrade firmware using RLA API")
+		return nil, swe.WrapErr(err)
+	}
+
+	logger.Info().Int("TaskCount", len(response.GetTaskIds())).Msg("Completed activity")
+
+	return response, nil
+}

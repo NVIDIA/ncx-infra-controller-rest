@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 // Package client provides a gRPC client for interacting with the RLA service.
 // This package can be imported by external modules to communicate with RLA.
 //
@@ -754,140 +755,6 @@ func convertGetComponentsResponse(rsp *pb.GetComponentsResponse) *GetExpectedCom
 	}
 }
 
-// GetActualComponentsByRackIDs retrieves actual components from external systems by rack IDs.
-// NOTE: This method is temporarily unavailable because GetActualComponents rpc is commented out in proto.
-// The implementation remains for future use when the rpc is re-enabled.
-// TODO: Uncomment when GetActualComponents rpc is re-enabled in proto.
-func (c *Client) GetActualComponentsByRackIDs(
-	ctx context.Context,
-	rackIDs []uuid.UUID,
-	componentType types.ComponentType,
-) (*GetActualComponentsResult, error) {
-	// TODO: Uncomment when GetActualComponents rpc is re-enabled in proto
-	return nil, fmt.Errorf("GetActualComponents rpc is temporarily disabled in proto")
-	/*
-		rackTargets := make([]*pb.RackTarget, 0, len(rackIDs))
-		for _, id := range rackIDs {
-			rt := &pb.RackTarget{
-				Identifier: &pb.RackTarget_Id{Id: uuidToProto(id)},
-			}
-			if componentType != types.ComponentTypeUnknown {
-				rt.ComponentTypes = []pb.ComponentType{componentTypeToProto(componentType)}
-			}
-			rackTargets = append(rackTargets, rt)
-		}
-
-		rsp, err := c.client.GetActualComponents(
-			ctx,
-			&pb.GetActualComponentsRequest{
-				TargetSpec: &pb.OperationTargetSpec{
-					Targets: &pb.OperationTargetSpec_Racks{
-						Racks: &pb.RackTargets{Targets: rackTargets},
-					},
-				},
-			},
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		return convertGetActualComponentsResponse(rsp), nil
-	*/
-}
-
-// GetActualComponentsByRackNames retrieves actual components from external systems by rack names.
-// NOTE: This method is temporarily unavailable because GetActualComponents rpc is commented out in proto.
-// TODO: Uncomment when GetActualComponents rpc is re-enabled in proto.
-func (c *Client) GetActualComponentsByRackNames(
-	ctx context.Context,
-	rackNames []string,
-	componentType types.ComponentType,
-) (*GetActualComponentsResult, error) {
-	// TODO: Uncomment when GetActualComponents rpc is re-enabled in proto
-	return nil, fmt.Errorf("GetActualComponents rpc is temporarily disabled in proto")
-	/*
-		rackTargets := make([]*pb.RackTarget, 0, len(rackNames))
-		for _, name := range rackNames {
-			rt := &pb.RackTarget{
-				Identifier: &pb.RackTarget_Name{Name: name},
-			}
-			if componentType != types.ComponentTypeUnknown {
-				rt.ComponentTypes = []pb.ComponentType{componentTypeToProto(componentType)}
-			}
-			rackTargets = append(rackTargets, rt)
-		}
-
-		rsp, err := c.client.GetActualComponents(
-			ctx,
-			&pb.GetActualComponentsRequest{
-				TargetSpec: &pb.OperationTargetSpec{
-					Targets: &pb.OperationTargetSpec_Racks{
-						Racks: &pb.RackTargets{Targets: rackTargets},
-					},
-				},
-			},
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		return convertGetActualComponentsResponse(rsp), nil
-	*/
-}
-
-// GetActualComponentsByComponentIDs retrieves actual components by external component IDs.
-// NOTE: This method is temporarily unavailable because GetActualComponents rpc is commented out in proto.
-// TODO: Uncomment when GetActualComponents rpc is re-enabled in proto.
-func (c *Client) GetActualComponentsByComponentIDs(
-	ctx context.Context,
-	componentIDs []string,
-	componentType types.ComponentType,
-) (*GetActualComponentsResult, error) {
-	// TODO: Uncomment when GetActualComponents rpc is re-enabled in proto
-	return nil, fmt.Errorf("GetActualComponents rpc is temporarily disabled in proto")
-	/*
-		compTargets := make([]*pb.ComponentTarget, 0, len(componentIDs))
-		for _, compID := range componentIDs {
-			compTargets = append(compTargets, &pb.ComponentTarget{
-				Identifier: &pb.ComponentTarget_External{
-					External: &pb.ExternalRef{
-						Type: componentTypeToProto(componentType),
-						Id:   compID,
-					},
-				},
-			})
-		}
-
-		rsp, err := c.client.GetActualComponents(
-			ctx,
-			&pb.GetActualComponentsRequest{
-				TargetSpec: &pb.OperationTargetSpec{
-					Targets: &pb.OperationTargetSpec_Components{
-						Components: &pb.ComponentTargets{Targets: compTargets},
-					},
-				},
-			},
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		return convertGetActualComponentsResponse(rsp), nil
-	*/
-}
-
-func convertGetActualComponentsResponse(rsp *pb.GetActualComponentsResponse) *GetActualComponentsResult {
-	components := make([]*types.ActualComponent, 0, len(rsp.Components))
-	for _, c := range rsp.Components {
-		components = append(components, actualComponentFromProto(c))
-	}
-
-	return &GetActualComponentsResult{
-		Components: components,
-		Total:      int(rsp.Total),
-	}
-}
-
 // ValidateComponentsByRackIDs validates expected vs actual components by rack IDs.
 func (c *Client) ValidateComponentsByRackIDs(
 	ctx context.Context,
@@ -1062,4 +929,304 @@ func (c *Client) GetTasksByIDs(
 	}
 
 	return tasks, nil
+}
+
+// AddComponent creates a single component under an existing rack.
+func (c *Client) AddComponent(
+	ctx context.Context,
+	comp *types.Component,
+) (*types.Component, error) {
+	rsp, err := c.client.AddComponent(ctx, &pb.AddComponentRequest{
+		Component: componentToProto(comp),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return componentFromProto(rsp.Component), nil
+}
+
+// DeleteComponent soft-deletes a component by UUID.
+func (c *Client) DeleteComponent(
+	ctx context.Context,
+	componentID uuid.UUID,
+) error {
+	_, err := c.client.DeleteComponent(ctx, &pb.DeleteComponentRequest{
+		Id: uuidToProto(componentID),
+	})
+	return err
+}
+
+// PatchComponentOpts contains the optional fields for patching a component.
+type PatchComponentOpts struct {
+	FirmwareVersion *string
+	SlotID          *int32
+	TrayIndex       *int32
+	HostID          *int32
+	Description     *string
+	RackID          *uuid.UUID
+}
+
+// PatchComponent updates a single component's fields.
+func (c *Client) PatchComponent(
+	ctx context.Context,
+	componentID uuid.UUID,
+	opts PatchComponentOpts,
+) (*types.Component, error) {
+	req := &pb.PatchComponentRequest{
+		Id: uuidToProto(componentID),
+	}
+
+	if opts.FirmwareVersion != nil {
+		req.FirmwareVersion = opts.FirmwareVersion
+	}
+
+	if opts.SlotID != nil || opts.TrayIndex != nil || opts.HostID != nil {
+		req.Position = &pb.RackPosition{}
+		if opts.SlotID != nil {
+			req.Position.SlotId = *opts.SlotID
+		}
+		if opts.TrayIndex != nil {
+			req.Position.TrayIdx = *opts.TrayIndex
+		}
+		if opts.HostID != nil {
+			req.Position.HostId = *opts.HostID
+		}
+	}
+
+	if opts.Description != nil {
+		req.Description = opts.Description
+	}
+
+	if opts.RackID != nil {
+		req.RackId = uuidToProto(*opts.RackID)
+	}
+
+	rsp, err := c.client.PatchComponent(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return componentFromProto(rsp.Component), nil
+}
+
+// ========================================
+// Operation Rules Methods
+// ========================================
+
+// CreateOperationRule creates a new operation rule and returns its UUID.
+func (c *Client) CreateOperationRule(
+	ctx context.Context,
+	name string,
+	description string,
+	operationType types.OperationType,
+	operationCode string,
+	ruleDefinitionJSON string,
+	isDefault bool,
+) (uuid.UUID, error) {
+	rsp, err := c.client.CreateOperationRule(
+		ctx,
+		&pb.CreateOperationRuleRequest{
+			Name:               name,
+			Description:        description,
+			OperationType:      operationTypeToProto(operationType),
+			OperationCode:      operationCode,
+			RuleDefinitionJson: ruleDefinitionJSON,
+			IsDefault:          isDefault,
+		},
+	)
+	if err != nil {
+		return uuid.Nil, err
+	}
+
+	return uuidFromProto(rsp.GetId()), nil
+}
+
+// UpdateOperationRule updates an existing operation rule.
+func (c *Client) UpdateOperationRule(
+	ctx context.Context,
+	ruleID uuid.UUID,
+	name *string,
+	description *string,
+	ruleDefinitionJSON *string,
+) error {
+	req := &pb.UpdateOperationRuleRequest{
+		RuleId: uuidToProto(ruleID),
+	}
+
+	if name != nil {
+		req.Name = name
+	}
+	if description != nil {
+		req.Description = description
+	}
+	if ruleDefinitionJSON != nil {
+		req.RuleDefinitionJson = ruleDefinitionJSON
+	}
+
+	_, err := c.client.UpdateOperationRule(ctx, req)
+	return err
+}
+
+// DeleteOperationRule deletes an operation rule by its ID.
+func (c *Client) DeleteOperationRule(
+	ctx context.Context,
+	ruleID uuid.UUID,
+) error {
+	_, err := c.client.DeleteOperationRule(
+		ctx,
+		&pb.DeleteOperationRuleRequest{
+			RuleId: uuidToProto(ruleID),
+		},
+	)
+	return err
+}
+
+// SetRuleAsDefault marks a rule as the default for its operation type and code.
+func (c *Client) SetRuleAsDefault(
+	ctx context.Context,
+	ruleID uuid.UUID,
+) error {
+	_, err := c.client.SetRuleAsDefault(
+		ctx,
+		&pb.SetRuleAsDefaultRequest{
+			RuleId: uuidToProto(ruleID),
+		},
+	)
+	return err
+}
+
+// GetOperationRule retrieves an operation rule by its ID.
+func (c *Client) GetOperationRule(
+	ctx context.Context,
+	ruleID uuid.UUID,
+) (*types.OperationRule, error) {
+	rsp, err := c.client.GetOperationRule(
+		ctx,
+		&pb.GetOperationRuleRequest{
+			RuleId: uuidToProto(ruleID),
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return operationRuleFromProto(rsp), nil
+}
+
+// ListOperationRules lists operation rules with optional filtering.
+func (c *Client) ListOperationRules(
+	ctx context.Context,
+	operationType *types.OperationType,
+	isDefault *bool,
+	offset *int,
+	limit *int,
+) ([]*types.OperationRule, int, error) {
+	req := &pb.ListOperationRulesRequest{}
+
+	if operationType != nil {
+		opType := operationTypeToProto(*operationType)
+		req.OperationType = &opType
+	}
+	if isDefault != nil {
+		req.IsDefault = isDefault
+	}
+	if offset != nil {
+		offset32 := int32(*offset)
+		req.Offset = &offset32
+	}
+	if limit != nil {
+		limit32 := int32(*limit)
+		req.Limit = &limit32
+	}
+
+	rsp, err := c.client.ListOperationRules(ctx, req)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	rules := make([]*types.OperationRule, 0, len(rsp.Rules))
+	for _, r := range rsp.Rules {
+		rules = append(rules, operationRuleFromProto(r))
+	}
+
+	return rules, int(rsp.TotalCount), nil
+}
+
+// AssociateRuleWithRack associates an operation rule with a specific rack.
+func (c *Client) AssociateRuleWithRack(
+	ctx context.Context,
+	rackID uuid.UUID,
+	ruleID uuid.UUID,
+) error {
+	_, err := c.client.AssociateRuleWithRack(
+		ctx,
+		&pb.AssociateRuleWithRackRequest{
+			RackId: uuidToProto(rackID),
+			RuleId: uuidToProto(ruleID),
+		},
+	)
+	return err
+}
+
+// DisassociateRuleFromRack removes a rule association from a rack.
+func (c *Client) DisassociateRuleFromRack(
+	ctx context.Context,
+	rackID uuid.UUID,
+	operationType types.OperationType,
+	operationCode string,
+) error {
+	_, err := c.client.DisassociateRuleFromRack(
+		ctx,
+		&pb.DisassociateRuleFromRackRequest{
+			RackId:        uuidToProto(rackID),
+			OperationType: operationTypeToProto(operationType),
+			OperationCode: operationCode,
+		},
+	)
+	return err
+}
+
+// GetRackRuleAssociation retrieves the rule associated with a rack for a specific operation.
+func (c *Client) GetRackRuleAssociation(
+	ctx context.Context,
+	rackID uuid.UUID,
+	operationType types.OperationType,
+	operationCode string,
+) (uuid.UUID, error) {
+	rsp, err := c.client.GetRackRuleAssociation(
+		ctx,
+		&pb.GetRackRuleAssociationRequest{
+			RackId:        uuidToProto(rackID),
+			OperationType: operationTypeToProto(operationType),
+			OperationCode: operationCode,
+		},
+	)
+	if err != nil {
+		return uuid.Nil, err
+	}
+
+	return uuidFromProto(rsp.GetRuleId()), nil
+}
+
+// ListRackRuleAssociations lists all rule associations for a specific rack.
+func (c *Client) ListRackRuleAssociations(
+	ctx context.Context,
+	rackID uuid.UUID,
+) ([]*types.RackRuleAssociation, error) {
+	rsp, err := c.client.ListRackRuleAssociations(
+		ctx,
+		&pb.ListRackRuleAssociationsRequest{
+			RackId: uuidToProto(rackID),
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	associations := make([]*types.RackRuleAssociation, 0, len(rsp.Associations))
+	for _, a := range rsp.Associations {
+		associations = append(associations, rackRuleAssociationFromProto(a))
+	}
+
+	return associations, nil
 }

@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package executor
 
 import (
@@ -31,6 +32,7 @@ type Executor interface {
 	PowerControl(ctx context.Context, req *task.ExecutionRequest, info operations.PowerControlTaskInfo) (*task.ExecutionResponse, error)           //nolint
 	FirmwareControl(ctx context.Context, req *task.ExecutionRequest, info operations.FirmwareControlTaskInfo) (*task.ExecutionResponse, error)     //nolint
 	InjectExpectation(ctx context.Context, req *task.ExecutionRequest, info operations.InjectExpectationTaskInfo) (*task.ExecutionResponse, error) //nolint
+	BringUp(ctx context.Context, req *task.ExecutionRequest, info operations.BringUpTaskInfo) (*task.ExecutionResponse, error)                     //nolint
 	CheckStatus(ctx context.Context, executionID string) (common.TaskStatus, error)
 }
 

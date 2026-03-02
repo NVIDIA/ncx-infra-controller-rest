@@ -288,6 +288,7 @@ func TestSiteSQLDAO_GetAll(t *testing.T) {
 		if i == 25 || i == 24 {
 			site.Config.NativeNetworking = true
 			site.Config.NVLinkPartition = true
+			site.Config.RackLevelAdministration = true
 		}
 
 		if i == 23 {
@@ -432,6 +433,24 @@ func TestSiteSQLDAO_GetAll(t *testing.T) {
 			},
 			wantCount:      3,
 			wantTotalCount: 3,
+			wantErr:        false,
+		},
+		{
+			name: "get all Sites by rack level administration flag",
+			fields: fields{
+				dbSession: dbSession,
+			},
+			args: args{
+				ctx: context.Background(),
+				filter: SiteFilterInput{
+					Org:                       nil,
+					InfrastructureProviderIDs: nil,
+					Config:                    &SiteConfigFilterInput{RackLevelAdministration: db.GetBoolPtr(true)},
+				},
+				includeRelations: false,
+			},
+			wantCount:      2,
+			wantTotalCount: 2,
 			wantErr:        false,
 		},
 		{

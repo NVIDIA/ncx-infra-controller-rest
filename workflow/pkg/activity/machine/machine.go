@@ -38,6 +38,8 @@ import (
 	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/util"
 
 	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
+
+	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 )
 
 const (
@@ -422,7 +424,7 @@ func (mm *ManageMachine) UpdateMachinesInDB(ctx context.Context, siteIDStr strin
 			// If the machine was updated at all since this inventory was received, we
 			// should consider the inventory details stale for this machine.
 			// We'll add a 5 second buffer to account for a little clock skew/drift.
-			if time.Since(existingCloudMachine.Updated) < util.InventoryReceiptInterval+(time.Second*5) {
+			if time.Since(existingCloudMachine.Updated) < cwutil.InventoryReceiptInterval+(time.Second*5) {
 				slogger.Warn().Msg("machine updated more recently than inventory received time, skipping processing")
 				txn.Rollback()
 				continue

@@ -52,6 +52,8 @@ import (
 
 	cwm "github.com/nvidia/bare-metal-manager-rest/workflow/internal/metrics"
 	"github.com/prometheus/client_golang/prometheus"
+
+	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 )
 
 // testTemporalSiteClientPool Building site client pool
@@ -697,7 +699,7 @@ func TestManageVpc_UpdateVpcsInDB(t *testing.T) {
 
 	vpc7 := testVPCBuildVPC(t, dbSession, "test-vpc-7", ip, tn, st, cdb.GetStrPtr(cdbm.VpcEthernetVirtualizer), cdb.GetUUIDPtr(uuid.New()), nil, tnu, cdbm.VpcStatusReady)
 	// Set created earlier than the inventory receipt interval
-	_, err := dbSession.DB.Exec("UPDATE vpc SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval)), vpc7.ID.String())
+	_, err := dbSession.DB.Exec("UPDATE vpc SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval)), vpc7.ID.String())
 	assert.NoError(t, err)
 
 	vpc8 := testVPCBuildVPC(t, dbSession, "test-vpc-8", ip, tn, st, cdb.GetStrPtr(cdbm.VpcEthernetVirtualizer), cdb.GetUUIDPtr(uuid.New()), nil, tnu, cdbm.VpcStatusReady)
@@ -708,7 +710,7 @@ func TestManageVpc_UpdateVpcsInDB(t *testing.T) {
 
 	vpc11 := testVPCBuildVPC(t, dbSession, "test-vpc-11", ip, tn, st, cdb.GetStrPtr(cdbm.VpcEthernetVirtualizer), cdb.GetUUIDPtr(uuid.New()), nil, tnu, cdbm.VpcStatusReady)
 	// Set created earlier than the inventory receipt interval
-	_, err = dbSession.DB.Exec("UPDATE vpc SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval)), vpc11.ID.String())
+	_, err = dbSession.DB.Exec("UPDATE vpc SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval)), vpc11.ID.String())
 	assert.NoError(t, err)
 
 	vpcDAO := cdbm.NewVpcDAO(dbSession)
@@ -741,7 +743,7 @@ func TestManageVpc_UpdateVpcsInDB(t *testing.T) {
 
 		vpc := testVPCBuildVPC(t, dbSession, fmt.Sprintf("test-vpc-paged-%d", i), ip, tn, st3, cdb.GetStrPtr(cdbm.VpcEthernetVirtualizer), cdb.GetUUIDPtr(uuid.New()), labels, tnu, cdbm.VpcStatusReady)
 		// Update creation timestamp to be earlier than inventory processing interval
-		_, err = dbSession.DB.Exec("UPDATE vpc SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval*2)), vpc.ID.String())
+		_, err = dbSession.DB.Exec("UPDATE vpc SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval*2)), vpc.ID.String())
 		assert.NoError(t, err)
 		pagedVpcs = append(pagedVpcs, vpc)
 		pagedInvIds = append(pagedInvIds, vpc.ControllerVpcID.String())

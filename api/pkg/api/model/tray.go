@@ -103,6 +103,143 @@ func GetProtoTrayOrderByFromQueryParam(fieldName, direction string) *rlav1.Order
 	}
 }
 
+// ========== Tray Filter (for batch operations) ==========
+
+// TrayFilter specifies which trays to target in a batch operation.
+// If nil or empty, the operation targets all trays in the site.
+type TrayFilter struct {
+	RackID       *string  `json:"rackId,omitempty"`
+	RackName     *string  `json:"rackName,omitempty"`
+	Type         *string  `json:"type,omitempty"`
+	ComponentIDs []string `json:"componentIds,omitempty"`
+	IDs          []string `json:"ids,omitempty"`
+}
+
+// Validate checks the tray filter fields.
+func (f *TrayFilter) Validate() error {
+	if f == nil {
+		return nil
+	}
+
+	err := validation.ValidateStruct(f,
+		validation.Field(&f.RackID,
+			validation.When(f.RackID != nil, validationis.UUID.Error(validationErrorInvalidUUID))),
+		validation.Field(&f.Type,
+			validation.When(f.Type != nil, validation.In(validTrayTypesAny...).Error(
+				fmt.Sprintf("must be one of %v", slices.Collect(maps.Keys(APIToProtoComponentTypeName)))))),
+	)
+	if err != nil {
+		return err
+	}
+
+	for _, id := range f.IDs {
+		if _, parseErr := uuid.Parse(id); parseErr != nil {
+			return validation.Errors{"ids": fmt.Errorf("%s: %s", validationErrorInvalidUUID, id)}
+		}
+	}
+
+	if f.RackID != nil && f.RackName != nil {
+		return validation.Errors{"rackId": fmt.Errorf("rackId and rackName are mutually exclusive")}
+	}
+
+	hasRackParams := f.RackID != nil || f.RackName != nil
+	hasComponentParams := len(f.IDs) > 0 || len(f.ComponentIDs) > 0
+	if hasRackParams && hasComponentParams {
+		return validation.Errors{"rackId": fmt.Errorf("rackId/rackName cannot be combined with ids/componentIds")}
+	}
+
+	if len(f.ComponentIDs) > 0 && f.Type == nil {
+		return validation.Errors{"componentIds": fmt.Errorf("type is required when componentIds is provided")}
+	}
+
+	return nil
+}
+
+// ToTargetSpec converts the filter to an RLA OperationTargetSpec.
+// Handles nil receiver gracefully (targets all trays).
+func (f *TrayFilter) ToTargetSpec() *rlav1.OperationTargetSpec {
+	if f == nil {
+		return &rlav1.OperationTargetSpec{
+			Targets: &rlav1.OperationTargetSpec_Racks{
+				Racks: &rlav1.RackTargets{
+					Targets: []*rlav1.RackTarget{{
+						ComponentTypes: ValidProtoComponentTypes,
+					}},
+				},
+			},
+		}
+	}
+
+	hasIDs := len(f.IDs) > 0
+	hasComponentIDsWithType := len(f.ComponentIDs) > 0 && f.Type != nil
+
+	if hasIDs || hasComponentIDsWithType {
+		componentTargets := make([]*rlav1.ComponentTarget, 0, len(f.IDs)+len(f.ComponentIDs))
+
+		for _, id := range f.IDs {
+			componentTargets = append(componentTargets, &rlav1.ComponentTarget{
+				Identifier: &rlav1.ComponentTarget_Id{
+					Id: &rlav1.UUID{Id: id},
+				},
+			})
+		}
+
+		if hasComponentIDsWithType {
+			if protoName, ok := APIToProtoComponentTypeName[*f.Type]; ok {
+				protoType := rlav1.ComponentType(rlav1.ComponentType_value[protoName])
+				for _, cid := range f.ComponentIDs {
+					componentTargets = append(componentTargets, &rlav1.ComponentTarget{
+						Identifier: &rlav1.ComponentTarget_External{
+							External: &rlav1.ExternalRef{
+								Type: protoType,
+								Id:   cid,
+							},
+						},
+					})
+				}
+			}
+		}
+
+		return &rlav1.OperationTargetSpec{
+			Targets: &rlav1.OperationTargetSpec_Components{
+				Components: &rlav1.ComponentTargets{
+					Targets: componentTargets,
+				},
+			},
+		}
+	}
+
+	rackTarget := &rlav1.RackTarget{}
+
+	if f.RackID != nil {
+		rackTarget.Identifier = &rlav1.RackTarget_Id{
+			Id: &rlav1.UUID{Id: *f.RackID},
+		}
+	} else if f.RackName != nil {
+		rackTarget.Identifier = &rlav1.RackTarget_Name{
+			Name: *f.RackName,
+		}
+	}
+
+	if f.Type != nil {
+		if protoName, ok := APIToProtoComponentTypeName[*f.Type]; ok {
+			rackTarget.ComponentTypes = []rlav1.ComponentType{
+				rlav1.ComponentType(rlav1.ComponentType_value[protoName]),
+			}
+		}
+	} else {
+		rackTarget.ComponentTypes = ValidProtoComponentTypes
+	}
+
+	return &rlav1.OperationTargetSpec{
+		Targets: &rlav1.OperationTargetSpec_Racks{
+			Racks: &rlav1.RackTargets{
+				Targets: []*rlav1.RackTarget{rackTarget},
+			},
+		},
+	}
+}
+
 // APITrayGetAllRequest captures query parameters for listing trays from RLA.
 type APITrayGetAllRequest struct {
 	SiteID       string   `query:"siteId"`

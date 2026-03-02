@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package psm
 
 import (
@@ -165,6 +166,75 @@ func (m *Manager) PowerControl(
 	return nil
 }
 
+// GetPowerStatus retrieves the power status of power shelves via PSM API.
+func (m *Manager) GetPowerStatus(
+	ctx context.Context,
+	target common.Target,
+) (map[string]operations.PowerStatus, error) {
+	log.Debug().
+		Str("components", target.String()).
+		Msg("Get power status request received")
+
+	if m.psmClient == nil {
+		return nil, fmt.Errorf("psm client is not configured")
+	}
+
+	if err := target.Validate(); err != nil {
+		return nil, fmt.Errorf("target is invalid: %w", err)
+	}
+
+	// The component IDs are the PMC MAC addresses for Powershelves.
+	pmcMacs := target.ComponentIDs
+
+	powershelves, err := m.psmClient.GetPowershelves(ctx, pmcMacs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get powershelves: %w", err)
+	}
+
+	result := make(map[string]operations.PowerStatus, len(powershelves))
+	for _, ps := range powershelves {
+		result[ps.PMC.MACAddress] = powerShelfToPowerStatus(ps)
+	}
+
+	log.Info().
+		Str("components", target.String()).
+		Int("result_count", len(result)).
+		Msg("Get power status completed")
+
+	return result, nil
+}
+
+// powerShelfToPowerStatus determines the power status of a powershelf based on its PSU states.
+func powerShelfToPowerStatus(ps psmapi.PowerShelf) operations.PowerStatus {
+	if len(ps.PSUs) == 0 {
+		return operations.PowerStatusUnknown
+	}
+
+	// Check PSU power states
+	allOn := true
+	allOff := true
+	for _, psu := range ps.PSUs {
+		if psu.PowerState {
+			allOff = false
+		} else {
+			allOn = false
+		}
+	}
+
+	// All PSUs are on
+	if allOn {
+		return operations.PowerStatusOn
+	}
+
+	// All PSUs are off
+	if allOff {
+		return operations.PowerStatusOff
+	}
+
+	// Mix of on/off PSUs
+	return operations.PowerStatusUnknown
+}
+
 // FirmwareControl performs firmware operations on a power shelf.
 func (m *Manager) FirmwareControl(
 	ctx context.Context,
@@ -274,11 +344,145 @@ func (m *Manager) ListAvailableFirmware(ctx context.Context, pmcMacs []string) (
 	return m.psmClient.ListAvailableFirmware(ctx, pmcMacs)
 }
 
-// GetFirmwareUpdateStatus returns the status of firmware updates.
-func (m *Manager) GetFirmwareUpdateStatus(ctx context.Context, queries []psmapi.FirmwareUpdateQuery) ([]psmapi.FirmwareUpdateStatus, error) {
+// StartFirmwareUpdate initiates firmware update without waiting for completion.
+// Returns immediately after the update request is accepted.
+func (m *Manager) StartFirmwareUpdate(ctx context.Context, target common.Target, info operations.FirmwareControlTaskInfo) error {
+	log.Debug().
+		Str("components", target.String()).
+		Str("operation", fmt.Sprintf("%v", info.Operation)).
+		Str("target_version", info.TargetVersion).
+		Msg("Starting firmware update")
+
+	if m.psmClient == nil {
+		return fmt.Errorf("psm client is not configured")
+	}
+
+	if err := target.Validate(); err != nil {
+		return fmt.Errorf("target is invalid: %w", err)
+	}
+
+	pmcMacs := target.ComponentIDs
+
+	// Create firmware update request for PMC component
+	updateReqs := make([]psmapi.UpdatePowershelfFirmwareRequest, 0, len(pmcMacs))
+	for _, componentID := range pmcMacs {
+		updateReqs = append(
+			updateReqs,
+			psmapi.UpdatePowershelfFirmwareRequest{
+				PMCMACAddress: componentID,
+				Components: []psmapi.UpdateComponentFirmwareRequest{
+					{
+						Component: psmapi.PowershelfComponentPMC,
+						UpgradeTo: psmapi.FirmwareVersion{Version: info.TargetVersion},
+					},
+				},
+			},
+		)
+	}
+
+	responses, err := m.psmClient.UpdateFirmware(ctx, updateReqs)
+	if err != nil {
+		return fmt.Errorf("firmware update request failed: %w", err)
+	}
+
+	// Check if the request was accepted
+	for _, response := range responses {
+		for _, component := range response.Components {
+			if component.Status != psmapi.StatusSuccess {
+				return fmt.Errorf("firmware update request failed for %s: %s", response.PMCMACAddress, component.Error)
+			}
+			log.Info().
+				Str("pmc_mac", response.PMCMACAddress).
+				Str("component", component.Component.String()).
+				Str("target_version", info.TargetVersion).
+				Msg("Firmware update initiated successfully")
+		}
+	}
+
+	return nil
+}
+
+// AllowBringUpAndPowerOn is not applicable to power shelves.
+func (m *Manager) AllowBringUpAndPowerOn(
+	ctx context.Context,
+	target common.Target,
+) error {
+	return fmt.Errorf(
+		"AllowBringUpAndPowerOn not supported for PowerShelf",
+	)
+}
+
+// GetBringUpState is not applicable to power shelves.
+func (m *Manager) GetBringUpState(
+	ctx context.Context,
+	target common.Target,
+) (map[string]operations.MachineBringUpState, error) {
+	return nil, fmt.Errorf(
+		"GetBringUpState not supported for PowerShelf",
+	)
+}
+
+// GetFirmwareUpdateStatus returns the current status of firmware updates for the target components.
+// Returns a map of component ID to FirmwareUpdateStatus.
+func (m *Manager) GetFirmwareUpdateStatus(ctx context.Context, target common.Target) (map[string]operations.FirmwareUpdateStatus, error) {
+	log.Debug().
+		Str("components", target.String()).
+		Msg("Getting firmware update status")
+
 	if m.psmClient == nil {
 		return nil, fmt.Errorf("psm client is not configured")
 	}
 
-	return m.psmClient.GetFirmwareUpdateStatus(ctx, queries)
+	if err := target.Validate(); err != nil {
+		return nil, fmt.Errorf("target is invalid: %w", err)
+	}
+
+	pmcMacs := target.ComponentIDs
+
+	// Query firmware update status for each component
+	queries := make([]psmapi.FirmwareUpdateQuery, 0, len(pmcMacs))
+	for _, componentID := range pmcMacs {
+		queries = append(queries, psmapi.FirmwareUpdateQuery{
+			PMCMACAddress: componentID,
+			Component:     psmapi.PowershelfComponentPMC,
+		})
+	}
+
+	statuses, err := m.psmClient.GetFirmwareUpdateStatus(ctx, queries)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get firmware update status: %w", err)
+	}
+
+	// Convert PSM statuses to operations.FirmwareUpdateStatus
+	result := make(map[string]operations.FirmwareUpdateStatus, len(statuses))
+	for _, status := range statuses {
+		state := operations.FirmwareUpdateStateUnknown
+		errorMsg := ""
+
+		switch status.State {
+		case psmapi.FirmwareUpdateStateQueued:
+			state = operations.FirmwareUpdateStateQueued
+		case psmapi.FirmwareUpdateStateVerifying:
+			state = operations.FirmwareUpdateStateVerifying
+		case psmapi.FirmwareUpdateStateCompleted:
+			state = operations.FirmwareUpdateStateCompleted
+		case psmapi.FirmwareUpdateStateFailed:
+			state = operations.FirmwareUpdateStateFailed
+			errorMsg = status.Error
+		case psmapi.FirmwareUpdateStateUnknown:
+			state = operations.FirmwareUpdateStateUnknown
+		}
+
+		result[status.PMCMACAddress] = operations.FirmwareUpdateStatus{
+			ComponentID: status.PMCMACAddress,
+			State:       state,
+			Error:       errorMsg,
+		}
+	}
+
+	log.Info().
+		Int("count", len(result)).
+		Msg("Retrieved firmware update statuses")
+
+	return result, nil
 }

@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 // Package psmapi abstracts the GRPC interface used to communicate with the Powershelf Manager (PSM) service.
 // New connection pools can be created with NewClient to create a real client or NewMockClient which fakes
 // everything for unit tests.

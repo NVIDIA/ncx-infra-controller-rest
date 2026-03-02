@@ -770,6 +770,7 @@ func NewGetAllSiteHandler(dbSession *cdb.Session, tc tClient.Client, cfg *config
 // @Param isNativeNetworkingEnabled query boolean false "Filter by native networking enabled flag"
 // @Param isNetworkSecurityGroupEnabled query boolean false "Filter by network security group enabled flag"
 // @Param isNVLinkPartitionEnabled query boolean false "Filter by NVLink partition enabled flag"
+// @Param isRackLevelAdministrationEnabled query boolean false "Filter by Rack Level Administration enabled flag"
 // @Param query query string false "Query input for full text search"
 // @Param status query string false "Query input for status"
 // @Param includeRelation query string false "Related entities to include in response e.g. 'InfrastructureProvider'"
@@ -914,6 +915,18 @@ func (gash GetAllSiteHandler) Handle(c echo.Context) error {
 		isNVLinkPartitionEnabled = &isEnabled
 	}
 	filter.Config.NVLinkPartition = isNVLinkPartitionEnabled
+
+	// Check `isRackLevelAdministrationEnabled` in query
+	var isRackLevelAdministrationEnabled *bool
+	qirlae := c.QueryParam("isRackLevelAdministrationEnabled")
+	if qirlae != "" {
+		isEnabled, err := strconv.ParseBool(qirlae)
+		if err != nil {
+			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid value specified for `isRackLevelAdministrationEnabled` query param", nil)
+		}
+		isRackLevelAdministrationEnabled = &isEnabled
+	}
+	filter.Config.RackLevelAdministration = isRackLevelAdministrationEnabled
 
 	// Get machine stats if requested
 	var machineStats map[uuid.UUID]*model.APISiteMachineStats

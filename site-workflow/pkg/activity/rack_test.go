@@ -372,3 +372,309 @@ func TestManageRack_ValidateRackComponents(t *testing.T) {
 		})
 	}
 }
+
+func TestManageRack_PowerOnRack(t *testing.T) {
+	tests := []struct {
+		name        string
+		request     *rlav1.PowerOnRackRequest
+		wantErr     bool
+		errContains string
+	}{
+		{
+			name:        "nil request returns error",
+			request:     nil,
+			wantErr:     true,
+			errContains: "empty power on rack request",
+		},
+		{
+			name: "successful request",
+			request: &rlav1.PowerOnRackRequest{
+				TargetSpec: &rlav1.OperationTargetSpec{
+					Targets: &rlav1.OperationTargetSpec_Racks{
+						Racks: &rlav1.RackTargets{
+							Targets: []*rlav1.RackTarget{
+								{
+									Identifier: &rlav1.RackTarget_Id{
+										Id: &rlav1.UUID{Id: "test-rack-id"},
+									},
+								},
+							},
+						},
+					},
+				},
+				Description: "API power on Rack",
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockRlaClient := cClient.NewMockRlaClient()
+			rlaAtomicClient := cClient.NewRlaAtomicClient(&cClient.RlaClientConfig{})
+			rlaAtomicClient.SwapClient(mockRlaClient)
+			manageRack := NewManageRack(rlaAtomicClient)
+
+			ctx := context.Background()
+			result, err := manageRack.PowerOnRack(ctx, tt.request)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.errContains != "" {
+					assert.Contains(t, err.Error(), tt.errContains)
+				}
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.NotNil(t, result)
+			assert.NotEmpty(t, result.GetTaskIds())
+		})
+	}
+}
+
+func TestManageRack_PowerOffRack(t *testing.T) {
+	tests := []struct {
+		name        string
+		request     *rlav1.PowerOffRackRequest
+		wantErr     bool
+		errContains string
+	}{
+		{
+			name:        "nil request returns error",
+			request:     nil,
+			wantErr:     true,
+			errContains: "empty power off rack request",
+		},
+		{
+			name: "successful request",
+			request: &rlav1.PowerOffRackRequest{
+				TargetSpec: &rlav1.OperationTargetSpec{
+					Targets: &rlav1.OperationTargetSpec_Racks{
+						Racks: &rlav1.RackTargets{
+							Targets: []*rlav1.RackTarget{
+								{
+									Identifier: &rlav1.RackTarget_Id{
+										Id: &rlav1.UUID{Id: "test-rack-id"},
+									},
+								},
+							},
+						},
+					},
+				},
+				Description: "API power off Rack",
+			},
+			wantErr: false,
+		},
+		{
+			name: "successful forced request",
+			request: &rlav1.PowerOffRackRequest{
+				TargetSpec: &rlav1.OperationTargetSpec{
+					Targets: &rlav1.OperationTargetSpec_Racks{
+						Racks: &rlav1.RackTargets{
+							Targets: []*rlav1.RackTarget{
+								{
+									Identifier: &rlav1.RackTarget_Id{
+										Id: &rlav1.UUID{Id: "test-rack-id"},
+									},
+								},
+							},
+						},
+					},
+				},
+				Forced:      true,
+				Description: "API force power off Rack",
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockRlaClient := cClient.NewMockRlaClient()
+			rlaAtomicClient := cClient.NewRlaAtomicClient(&cClient.RlaClientConfig{})
+			rlaAtomicClient.SwapClient(mockRlaClient)
+			manageRack := NewManageRack(rlaAtomicClient)
+
+			ctx := context.Background()
+			result, err := manageRack.PowerOffRack(ctx, tt.request)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.errContains != "" {
+					assert.Contains(t, err.Error(), tt.errContains)
+				}
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.NotNil(t, result)
+			assert.NotEmpty(t, result.GetTaskIds())
+		})
+	}
+}
+
+func TestManageRack_PowerResetRack(t *testing.T) {
+	tests := []struct {
+		name        string
+		request     *rlav1.PowerResetRackRequest
+		wantErr     bool
+		errContains string
+	}{
+		{
+			name:        "nil request returns error",
+			request:     nil,
+			wantErr:     true,
+			errContains: "empty power reset rack request",
+		},
+		{
+			name: "successful request",
+			request: &rlav1.PowerResetRackRequest{
+				TargetSpec: &rlav1.OperationTargetSpec{
+					Targets: &rlav1.OperationTargetSpec_Racks{
+						Racks: &rlav1.RackTargets{
+							Targets: []*rlav1.RackTarget{
+								{
+									Identifier: &rlav1.RackTarget_Id{
+										Id: &rlav1.UUID{Id: "test-rack-id"},
+									},
+								},
+							},
+						},
+					},
+				},
+				Description: "API power cycle Rack",
+			},
+			wantErr: false,
+		},
+		{
+			name: "successful forced request",
+			request: &rlav1.PowerResetRackRequest{
+				TargetSpec: &rlav1.OperationTargetSpec{
+					Targets: &rlav1.OperationTargetSpec_Racks{
+						Racks: &rlav1.RackTargets{
+							Targets: []*rlav1.RackTarget{
+								{
+									Identifier: &rlav1.RackTarget_Id{
+										Id: &rlav1.UUID{Id: "test-rack-id"},
+									},
+								},
+							},
+						},
+					},
+				},
+				Forced:      true,
+				Description: "API force power cycle Rack",
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockRlaClient := cClient.NewMockRlaClient()
+			rlaAtomicClient := cClient.NewRlaAtomicClient(&cClient.RlaClientConfig{})
+			rlaAtomicClient.SwapClient(mockRlaClient)
+			manageRack := NewManageRack(rlaAtomicClient)
+
+			ctx := context.Background()
+			result, err := manageRack.PowerResetRack(ctx, tt.request)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.errContains != "" {
+					assert.Contains(t, err.Error(), tt.errContains)
+				}
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.NotNil(t, result)
+			assert.NotEmpty(t, result.GetTaskIds())
+		})
+	}
+}
+
+func TestManageRack_UpgradeFirmware(t *testing.T) {
+	tests := []struct {
+		name        string
+		request     *rlav1.UpgradeFirmwareRequest
+		wantErr     bool
+		errContains string
+	}{
+		{
+			name:        "nil request returns error",
+			request:     nil,
+			wantErr:     true,
+			errContains: "empty upgrade firmware request",
+		},
+		{
+			name: "successful request without version",
+			request: &rlav1.UpgradeFirmwareRequest{
+				TargetSpec: &rlav1.OperationTargetSpec{
+					Targets: &rlav1.OperationTargetSpec_Racks{
+						Racks: &rlav1.RackTargets{
+							Targets: []*rlav1.RackTarget{
+								{
+									Identifier: &rlav1.RackTarget_Id{
+										Id: &rlav1.UUID{Id: "test-rack-id"},
+									},
+								},
+							},
+						},
+					},
+				},
+				Description: "API firmware upgrade Rack",
+			},
+			wantErr: false,
+		},
+		{
+			name: "successful request with version",
+			request: func() *rlav1.UpgradeFirmwareRequest {
+				version := "24.11.0"
+				return &rlav1.UpgradeFirmwareRequest{
+					TargetSpec: &rlav1.OperationTargetSpec{
+						Targets: &rlav1.OperationTargetSpec_Racks{
+							Racks: &rlav1.RackTargets{
+								Targets: []*rlav1.RackTarget{
+									{
+										Identifier: &rlav1.RackTarget_Id{
+											Id: &rlav1.UUID{Id: "test-rack-id"},
+										},
+									},
+								},
+							},
+						},
+					},
+					TargetVersion: &version,
+					Description:   "API firmware upgrade Rack",
+				}
+			}(),
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockRlaClient := cClient.NewMockRlaClient()
+			rlaAtomicClient := cClient.NewRlaAtomicClient(&cClient.RlaClientConfig{})
+			rlaAtomicClient.SwapClient(mockRlaClient)
+			manageRack := NewManageRack(rlaAtomicClient)
+
+			ctx := context.Background()
+			result, err := manageRack.UpgradeFirmware(ctx, tt.request)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.errContains != "" {
+					assert.Contains(t, err.Error(), tt.errContains)
+				}
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.NotNil(t, result)
+			assert.NotEmpty(t, result.GetTaskIds())
+		})
+	}
+}

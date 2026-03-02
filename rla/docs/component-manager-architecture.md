@@ -251,8 +251,8 @@ import (
     "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/componentmanager"
     myapiprovider "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/componentmanager/providers/myapi"
     "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/executor/temporalworkflow/common"
-    "github.com/nvidia/bare-metal-manager-rest/nvmetal/rla/internal/task/operations"
-    "github.com/nvidia/bare-metal-manager-rest/nvmetal/rla/pkg/common/devicetypes"
+    "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operations"
+    "github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
 )
 
 const ImplementationName = "myimpl"

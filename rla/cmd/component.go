@@ -14,10 +14,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package cmd
 
 import (
+	"strings"
+
 	"github.com/spf13/cobra"
+
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/types"
 )
 
 var componentCmd = &cobra.Command{
@@ -28,4 +33,24 @@ var componentCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(componentCmd)
+}
+
+// parseComponentTypeToTypes converts string to types.ComponentType
+func parseComponentTypeToTypes(s string) types.ComponentType {
+	switch strings.ToLower(s) {
+	case "compute":
+		return types.ComponentTypeCompute
+	case "nvlswitch", "nvl-switch":
+		return types.ComponentTypeNVSwitch
+	case "powershelf", "power-shelf":
+		return types.ComponentTypePowerShelf
+	case "torswitch", "tor-switch":
+		return types.ComponentTypeTORSwitch
+	case "ums":
+		return types.ComponentTypeUMS
+	case "cdu":
+		return types.ComponentTypeCDU
+	default:
+		return types.ComponentTypeUnknown
+	}
 }

@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package workflow
 
 import (
@@ -28,11 +29,14 @@ import (
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/testsuite"
 
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/inventory/objects/component"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/inventory/objects/rack"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/component"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/rack"
+	activitypkg "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/executor/temporalworkflow/activity"
+	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/executor/temporalworkflow/common"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operations"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/task"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/deviceinfo"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/location"
 )
 
@@ -49,6 +53,18 @@ func mockUpdateTaskStatusForFirmwareControl(ctx context.Context, arg *task.TaskS
 	return nil
 }
 
+// mockStartFirmwareUpdate is a mock activity for starting firmware update
+func mockStartFirmwareUpdate(ctx context.Context, target common.Target, info operations.FirmwareControlTaskInfo) error {
+	return nil
+}
+
+// mockGetFirmwareUpdateStatus is a mock activity for getting firmware update status
+func mockGetFirmwareUpdateStatus(ctx context.Context, target common.Target) (*activitypkg.GetFirmwareUpdateStatusResult, error) {
+	return &activitypkg.GetFirmwareUpdateStatusResult{
+		Statuses: map[string]operations.FirmwareUpdateStatus{},
+	}, nil
+}
+
 // createTestRackForFirmwareControl creates a test rack with components having the given external IDs.
 // externalIDs are the external component IDs (e.g., Carbide machine_id) used for activity calls.
 func createTestRackForFirmwareControl(externalIDs ...string) *rack.Rack {
@@ -56,6 +72,7 @@ func createTestRackForFirmwareControl(externalIDs ...string) *rack.Rack {
 	for _, extID := range externalIDs {
 		r.AddComponent(component.Component{
 			ComponentID: extID, // External ID for Carbide API calls
+			Type:        devicetypes.ComponentTypeCompute,
 		})
 	}
 	return r
@@ -113,9 +130,32 @@ func TestFirmwareControlWorkflow(t *testing.T) {
 			env.RegisterActivityWithOptions(mockUpdateTaskStatusForFirmwareControl, activity.RegisterOptions{
 				Name: "UpdateTaskStatus",
 			})
+			env.RegisterActivityWithOptions(mockStartFirmwareUpdate, activity.RegisterOptions{
+				Name: "StartFirmwareUpdate",
+			})
+			env.RegisterActivityWithOptions(mockGetFirmwareUpdateStatus, activity.RegisterOptions{
+				Name: "GetFirmwareUpdateStatus",
+			})
+			env.RegisterActivityWithOptions(mockPowerControl, activity.RegisterOptions{
+				Name: "PowerControl",
+			})
+			env.RegisterActivityWithOptions(mockGetPowerStatus, activity.RegisterOptions{
+				Name: "GetPowerStatus",
+			})
 
 			env.OnActivity(mockSetFirmwareUpdateTimeWindowForFirmwareControl, mock.Anything, mock.Anything).Return(tc.activityError)
 			env.OnActivity(mockUpdateTaskStatusForFirmwareControl, mock.Anything, mock.Anything).Return(nil)
+			env.OnActivity(mockStartFirmwareUpdate, mock.Anything, mock.Anything, mock.Anything).Return(tc.activityError)
+			env.OnActivity(mockGetFirmwareUpdateStatus, mock.Anything, mock.Anything).Return(
+				&activitypkg.GetFirmwareUpdateStatusResult{
+					Statuses: map[string]operations.FirmwareUpdateStatus{
+						"comp1": {ComponentID: "comp1", State: operations.FirmwareUpdateStateCompleted},
+						"comp2": {ComponentID: "comp2", State: operations.FirmwareUpdateStateCompleted},
+					},
+				}, nil)
+			env.OnActivity(mockPowerControl, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+			env.OnActivity(mockGetPowerStatus, mock.Anything, mock.Anything).Return(
+				map[string]operations.PowerStatus{"comp1": operations.PowerStatusOn, "comp2": operations.PowerStatusOn}, nil)
 
 			env.ExecuteWorkflow(FirmwareControl, tc.reqInfo, tc.info)
 

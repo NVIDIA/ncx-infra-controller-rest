@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 // Package metadata contains build-time metadata for the RLA service.
 // These variables are set by the build system using -ldflags.
 package metadata

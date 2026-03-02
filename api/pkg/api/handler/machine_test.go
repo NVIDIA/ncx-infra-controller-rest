@@ -815,23 +815,39 @@ func TestMachineHandler_GetAll(t *testing.T) {
 	tnOrg4 := "test-tn-org-4"
 	tnu4 := testMachineBuildUser(t, dbSession, uuid.NewString(), []string{tnOrg4}, tnRoles)
 
+	tnOrg5 := "test-tn-org-5"
+	tnu5 := testMachineBuildUser(t, dbSession, uuid.NewString(), []string{tnOrg5}, tnRoles)
+
+	tnOrg6 := "test-tn-org-6"
+	tnu6 := testMachineBuildUser(t, dbSession, uuid.NewString(), []string{tnOrg6}, tnRoles)
+
 	tenant4 := testMachineBuildTenant(t, dbSession, tnOrg4, "test-tenant-4")
+	tenant5 := testMachineBuildTenant(t, dbSession, tnOrg5, "test-tenant-5")
+	tenant6 := testMachineBuildTenant(t, dbSession, tnOrg6, "test-tenant-6")
+	_ = common.TestBuildTenantAccount(t, dbSession, ip4, &tenant4.ID, tnOrg4, cdbm.TenantAccountStatusReady, tnu4)
+	_ = common.TestBuildTenantAccount(t, dbSession, ip4, &tenant5.ID, tnOrg5, cdbm.TenantAccountStatusReady, tnu5)
+	_ = common.TestBuildTenantAccount(t, dbSession, ip4, &tenant6.ID, tnOrg6, cdbm.TenantAccountStatusReady, tnu6)
 	vpc4 := testMachineBuildVpc(t, dbSession, ip, site, tenant4, tnOrg4, "test-vpc-4")
 
 	os4 := testMachineBuildOperatingSystem(t, dbSession, "test-os-4", tenant4.ID, tnu4)
 	assert.NotNil(t, os4)
+	os5 := testMachineBuildOperatingSystem(t, dbSession, "test-os-5", tenant5.ID, tnu5)
+	assert.NotNil(t, os5)
 
 	m31 := testMachineBuildMachine(t, dbSession, ip4.ID, site3.ID, nil, nil, false, false, cdbm.MachineStatusReady)
 	assert.NotNil(t, m31)
-
 	common.TestBuildStatusDetail(t, dbSession, m31.ID, cdbm.MachineStatusInitializing, cdb.GetStrPtr("Machine is being initialized"))
 	common.TestBuildStatusDetail(t, dbSession, m31.ID, cdbm.MachineStatusReady, cdb.GetStrPtr("Machine is ready for assignment"))
 
 	m32 := testMachineBuildMachine(t, dbSession, ip4.ID, site3.ID, nil, nil, false, false, cdbm.MachineStatusReady)
 	assert.NotNil(t, m32)
-
 	common.TestBuildStatusDetail(t, dbSession, m32.ID, cdbm.MachineStatusInitializing, cdb.GetStrPtr("Machine is being initialized"))
 	common.TestBuildStatusDetail(t, dbSession, m32.ID, cdbm.MachineStatusReady, cdb.GetStrPtr("Machine is ready for assignment"))
+
+	m33 := testMachineBuildMachine(t, dbSession, ip4.ID, site3.ID, nil, nil, false, false, cdbm.MachineStatusReady)
+	assert.NotNil(t, m33)
+	common.TestBuildStatusDetail(t, dbSession, m33.ID, cdbm.MachineStatusInitializing, cdb.GetStrPtr("Machine is being initialized"))
+	common.TestBuildStatusDetail(t, dbSession, m33.ID, cdbm.MachineStatusReady, cdb.GetStrPtr("Machine is ready for assignment"))
 
 	ins31, err := isd.Create(
 		context.Background(), nil,
@@ -881,6 +897,31 @@ func TestMachineHandler_GetAll(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, ins32)
 
+	ins33, err := isd.Create(
+
+		context.Background(), nil,
+		cdbm.InstanceCreateInput{
+			Name:                     fmt.Sprintf("test-instance-targeted-33"),
+			AllocationID:             nil,
+			AllocationConstraintID:   nil,
+			TenantID:                 tenant5.ID,
+			InfrastructureProviderID: ip4.ID,
+			SiteID:                   site3.ID,
+			InstanceTypeID:           nil,
+			VpcID:                    vpc4.ID,
+			MachineID:                &m33.ID,
+			OperatingSystemID:        &os5.ID,
+			IpxeScript:               cdb.GetStrPtr("ipxe"),
+			AlwaysBootWithCustomIpxe: true,
+			UserData:                 cdb.GetStrPtr("test-user-data"),
+			Labels:                   map[string]string{},
+			Status:                   cdbm.InstanceStatusPending,
+			CreatedBy:                tnu5.ID,
+		},
+	)
+	assert.Nil(t, err)
+	assert.NotNil(t, ins33)
+
 	cfg := common.GetTestConfig()
 	tempClient := &tmocks.Client{}
 
@@ -894,6 +935,7 @@ func TestMachineHandler_GetAll(t *testing.T) {
 		querySiteID                       *string
 		queryInstanceTypeID               []string
 		queryID                           []string
+		queryTenantID                     []string
 		queryCapabilityType               *string
 		queryCapabilityName               []string
 		queryStatus                       []string
@@ -916,7 +958,7 @@ func TestMachineHandler_GetAll(t *testing.T) {
 		expectedInstanceTypeName          *string
 		expectedTargetedInstance          bool
 		expectInstance                    bool
-		expectTenant                      bool
+		expectedTenant                    *string
 		verifyChildSpanner                bool
 	}{
 		{
@@ -982,7 +1024,7 @@ func TestMachineHandler_GetAll(t *testing.T) {
 			expectedCnt:        totalCount / 2,
 			expectedTotal:      cdb.GetIntPtr(totalCount / 2),
 			expectInstance:     true,
-			expectTenant:       true,
+			expectedTenant:     cdb.GetStrPtr(tenant.ID.String()),
 			verifyChildSpanner: true,
 		},
 		{
@@ -995,7 +1037,7 @@ func TestMachineHandler_GetAll(t *testing.T) {
 			expectedCnt:        totalCount / 2,
 			expectedTotal:      cdb.GetIntPtr(totalCount / 2),
 			expectInstance:     true,
-			expectTenant:       true,
+			expectedTenant:     cdb.GetStrPtr(tenant.ID.String()),
 			verifyChildSpanner: true,
 		},
 		{
@@ -1008,7 +1050,7 @@ func TestMachineHandler_GetAll(t *testing.T) {
 			expectedCnt:        totalCount / 2,
 			expectedTotal:      cdb.GetIntPtr(totalCount / 2),
 			expectInstance:     true,
-			expectTenant:       true,
+			expectedTenant:     cdb.GetStrPtr(tenant.ID.String()),
 			verifyChildSpanner: true,
 		},
 		{
@@ -1021,7 +1063,6 @@ func TestMachineHandler_GetAll(t *testing.T) {
 			expectedCnt:        0,
 			expectedTotal:      cdb.GetIntPtr(0),
 			expectInstance:     false,
-			expectTenant:       false,
 			verifyChildSpanner: true,
 		},
 		{
@@ -1243,18 +1284,69 @@ func TestMachineHandler_GetAll(t *testing.T) {
 			expectedCnt:         totalCount / 2,
 		},
 		{
-			name:                     "success case when Site ID specified in query in case of targetted instance",
+			name:                     "success case when Site ID specified in query in case of targeted instance",
 			reqOrgName:               ipOrg4,
 			user:                     ipu,
 			querySiteID:              cdb.GetStrPtr(site3.ID.String()),
 			expectedErr:              false,
 			expectedStatus:           http.StatusOK,
-			expectedCnt:              2,
-			expectedTotal:            cdb.GetIntPtr(2),
+			expectedCnt:              3,
+			expectedTotal:            cdb.GetIntPtr(3),
 			expectInstance:           false,
-			expectTenant:             false,
 			expectedTargetedInstance: true,
 			verifyChildSpanner:       true,
+		},
+		{
+			name:                     "success case when Tenant ID specified in query",
+			reqOrgName:               ipOrg4,
+			user:                     ipu,
+			queryTenantID:            []string{tenant4.ID.String()},
+			expectedErr:              false,
+			expectedStatus:           http.StatusOK,
+			expectedCnt:              2,
+			expectedTotal:            cdb.GetIntPtr(2),
+			expectedTargetedInstance: true,
+			expectedTenant:           cdb.GetStrPtr(tenant4.ID.String()),
+		},
+		{
+			name:                     "success case when multiple Tenant ID's specified in query",
+			reqOrgName:               ipOrg4,
+			user:                     ipu,
+			queryTenantID:            []string{tenant4.ID.String(), tenant5.ID.String()},
+			expectedErr:              false,
+			expectedStatus:           http.StatusOK,
+			expectedCnt:              3,
+			expectedTotal:            cdb.GetIntPtr(3),
+			expectedTargetedInstance: true,
+			expectedTenant:           cdb.GetStrPtr(tenant4.ID.String()),
+		},
+		{
+			name:           "returns nothing when tenant has no associated instance",
+			reqOrgName:     ipOrg4,
+			user:           ipu,
+			queryTenantID:  []string{tenant6.ID.String()},
+			expectedErr:    false,
+			expectedStatus: http.StatusOK,
+			expectedCnt:    0,
+			expectedTotal:  cdb.GetIntPtr(0),
+		},
+		{
+			name:           "failure case when invalid Tenant ID specified in query",
+			reqOrgName:     ipOrg4,
+			user:           ipu,
+			queryTenantID:  []string{"invalid-tenant-id"},
+			expectedErr:    true,
+			expectedStatus: http.StatusBadRequest,
+			expectedCnt:    0,
+		},
+		{
+			name:           "failure case when Tenant ID specified in query does not belong to the current infrastructure provider",
+			reqOrgName:     ipOrg4,
+			user:           ipu,
+			queryTenantID:  []string{tenant2.ID.String()},
+			expectedErr:    true,
+			expectedStatus: http.StatusForbidden,
+			expectedCnt:    0,
 		},
 	}
 	for _, tc := range tests {
@@ -1272,6 +1364,9 @@ func TestMachineHandler_GetAll(t *testing.T) {
 			}
 			for _, typeID := range tc.queryInstanceTypeID {
 				q.Add("instanceTypeId", typeID)
+			}
+			for _, tenantID := range tc.queryTenantID {
+				q.Add("tenantId", tenantID)
 			}
 			if tc.queryCapabilityType != nil {
 				q.Add("capabilityType", *tc.queryCapabilityType)
@@ -1395,9 +1490,9 @@ func TestMachineHandler_GetAll(t *testing.T) {
 				assert.NotNil(t, resp[1].Instance)
 			}
 
-			if tc.expectTenant {
+			if tc.expectedTenant != nil {
 				assert.NotNil(t, resp[0].TenantID)
-				assert.Equal(t, tenant.ID.String(), *resp[0].TenantID)
+				assert.Equal(t, *tc.expectedTenant, *resp[0].TenantID)
 				assert.NotNil(t, resp[0].Tenant)
 			}
 

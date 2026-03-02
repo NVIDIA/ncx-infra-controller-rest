@@ -8,12 +8,18 @@ The Component Manager configuration controls:
 1. Which implementation to use for each component type (compute, NVL switch, power shelf)
 2. Which API providers to enable and their settings
 
+Timing parameters for power control and firmware update operations are configured
+**per-rule** via action parameters in operation rules, not in the component manager config.
+
 ## Configuration Files
 
 | File | Purpose |
 |------|---------|
-| `componentmanager.prod.yaml` | Production configuration using real API implementations |
 | `componentmanager.test.yaml` | Testing/development configuration using mock implementations |
+| *(embedded)* | Production configuration embedded in the binary via `DefaultProdConfig()` |
+
+The production config is compiled into the binary. No YAML file is needed for production
+deployments. A YAML file is only required when overriding defaults (e.g., for testing).
 
 ## Configuration Structure
 
@@ -40,6 +46,7 @@ Maps each component type to its implementation. Available implementations:
 providers:
   carbide:
     timeout: "<duration>"
+    compute_power_delay: "<duration>"
   psm:
     timeout: "<duration>"
 ```
@@ -56,15 +63,16 @@ Configures API client providers. **A provider is enabled if its section is prese
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `timeout` | duration string | `1m` (carbide), `30s` (psm) | gRPC call timeout |
+| `compute_power_delay` | duration string | `2s` (carbide only) | Delay between sequential power control calls for compute trays. Prevents overwhelming the power delivery system. Set to `0s` to disable. |
 
 Duration strings use Go format: `30s`, `1m`, `2m30s`, etc.
 
 ## Examples
 
-### Production Configuration
+### Production Configuration (embedded default)
 
-```yaml
-# Uses real implementations connecting to external services
+```go
+// Equivalent to DefaultProdConfig() in internal/task/componentmanager/config.go
 component_managers:
   compute: carbide
   nvlswitch: carbide
@@ -126,4 +134,12 @@ Set the configuration file path via:
 
 1. **Command line flag**: `--component-config <path>`
 2. **Environment variable**: `COMPONENT_MANAGER_CONFIG=<path>`
-3. **Default**: `configs/componentmanager.prod.yaml`
+3. **Default**: embedded production config (carbide + psm)
+
+## Timing Parameters
+
+Power control and firmware update timing (delays, poll intervals, timeouts) are
+configured **per-rule** via action parameters in operation rules, not here.
+
+See `CLAUDE.md` (Action-Based Operation Rules section) and
+`docs/operation-rules-example.yaml` for examples.

@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package model
 
 import (
@@ -98,7 +99,7 @@ func GetAllComponents(ctx context.Context, idb bun.IDB) (ret []Component, err er
 
 // GetComponentsByType returns all components of a specific type with their associated BMCs
 func GetComponentsByType(ctx context.Context, idb bun.IDB, componentType devicetypes.ComponentType) (ret []Component, err error) {
-	err = idb.NewSelect().Model(&ret).Where("type = ?", componentType).Relation("BMCs").Scan(ctx)
+	err = idb.NewSelect().Model(&ret).Where("type = ?", devicetypes.ComponentTypeToString(componentType)).Relation("BMCs").Scan(ctx)
 	return ret, err
 }
 
@@ -182,6 +183,12 @@ func GetListOfComponents(
 
 func (cd *Component) Patch(ctx context.Context, idb bun.IDB) error {
 	_, err := idb.NewUpdate().Model(cd).Where("id = ?", cd.ID).Exec(ctx)
+	return err
+}
+
+// Delete soft-deletes the component by setting deleted_at.
+func (cd *Component) Delete(ctx context.Context, idb bun.IDB) error {
+	_, err := idb.NewDelete().Model(cd).Where("id = ?", cd.ID).Exec(ctx)
 	return err
 }
 

@@ -14,8 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// Package store provides the storage layer for task management.
-// It defines the TaskStore interface for persisting and retrieving task data.
+
+// Package store provides the storage layer for task and operation rule management.
+// It defines the Store interface for persisting and retrieving task and operation rule data.
 package store
 
 import (
@@ -25,12 +26,15 @@ import (
 
 	dbquery "github.com/nvidia/bare-metal-manager-rest/rla/internal/db/query"
 	taskcommon "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/common"
+	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operationrules"
 	taskdef "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/task"
 )
 
-// Store defines the interface for task data persistence.
-// It provides operations for creating, retrieving, and updating tasks.
+// Store defines the interface for task and operation rule data persistence.
+// It provides operations for creating, retrieving, and updating both tasks and operation rules.
 type Store interface {
+	// Task operations
+
 	// CreateTask creates a new task record.
 	CreateTask(ctx context.Context, task *taskdef.Task) error
 
@@ -45,4 +49,55 @@ type Store interface {
 
 	// UpdateTaskStatus updates the status and message of a task.
 	UpdateTaskStatus(ctx context.Context, arg *taskdef.TaskStatusUpdate) error
+
+	// Operation rule operations
+
+	// CreateRule creates a new operation rule.
+	CreateRule(ctx context.Context, rule *operationrules.OperationRule) error
+
+	// UpdateRule updates specific fields of an operation rule.
+	UpdateRule(ctx context.Context, id uuid.UUID, updates map[string]interface{}) error
+
+	// DeleteRule deletes an operation rule by ID.
+	DeleteRule(ctx context.Context, id uuid.UUID) error
+
+	// SetRuleAsDefault sets a rule as the default for its operation.
+	// Automatically unsets any existing default for the same (operation_type, operation).
+	SetRuleAsDefault(ctx context.Context, id uuid.UUID) error
+
+	// GetRule retrieves an operation rule by ID.
+	GetRule(ctx context.Context, id uuid.UUID) (*operationrules.OperationRule, error)
+
+	// GetRuleByName retrieves an operation rule by its name.
+	GetRuleByName(ctx context.Context, name string) (*operationrules.OperationRule, error)
+
+	// GetDefaultRule retrieves the default rule for an operation type and operation code.
+	// Returns the rule with is_default=true for the given operation type and operation code.
+	GetDefaultRule(ctx context.Context, opType taskcommon.TaskType, operationCode string) (*operationrules.OperationRule, error)
+
+	// GetRuleByOperationAndRack retrieves the appropriate rule for an operation type, operation code, and rack.
+	// Resolution order: rack association > default rule
+	// If rackID is nil, returns the default rule.
+	GetRuleByOperationAndRack(ctx context.Context, opType taskcommon.TaskType, operationCode string, rackID *uuid.UUID) (*operationrules.OperationRule, error)
+
+	// ListRules lists operation rules matching the given criteria with pagination.
+	ListRules(ctx context.Context, options *taskcommon.OperationRuleListOptions, pagination *dbquery.Pagination) ([]*operationrules.OperationRule, int32, error)
+
+	// Rack rule association operations
+
+	// AssociateRuleWithRack associates a rule with a rack.
+	// The operation type and operation code are extracted from the rule.
+	// If an association already exists, it will be updated.
+	AssociateRuleWithRack(ctx context.Context, rackID uuid.UUID, ruleID uuid.UUID) error
+
+	// DisassociateRuleFromRack removes the rule association for a rack, operation type, and operation code.
+	DisassociateRuleFromRack(ctx context.Context, rackID uuid.UUID, opType taskcommon.TaskType, operationCode string) error
+
+	// GetRackRuleAssociation retrieves the rule ID associated with a rack for an operation type and operation code.
+	// Returns nil if no association exists.
+	GetRackRuleAssociation(ctx context.Context, rackID uuid.UUID, opType taskcommon.TaskType, operationCode string) (*uuid.UUID, error)
+
+	// ListRackRuleAssociations retrieves all rule associations for a rack.
+	// Returns a list of associations with full details (operation type, operation code, rule ID).
+	ListRackRuleAssociations(ctx context.Context, rackID uuid.UUID) ([]*operationrules.RackRuleAssociation, error)
 }

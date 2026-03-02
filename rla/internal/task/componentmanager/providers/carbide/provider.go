@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package carbide
 
 import (
@@ -30,12 +31,22 @@ const (
 
 	// DefaultTimeout is the default timeout for Carbide gRPC calls.
 	DefaultTimeout = time.Minute
+
+	// DefaultComputePowerDelay is the default delay between sequential
+	// power control calls for compute trays. A small stagger avoids
+	// overwhelming the power delivery system.
+	DefaultComputePowerDelay = 2 * time.Second
 )
 
 // Config holds configuration for the Carbide provider.
 type Config struct {
 	// Timeout is the gRPC call timeout for Carbide operations.
 	Timeout time.Duration
+
+	// ComputePowerDelay is the delay inserted between sequential power
+	// control calls when commanding multiple compute trays.
+	// 0 means no delay.
+	ComputePowerDelay time.Duration
 }
 
 // Provider wraps a carbideapi.Client and provides it to component manager

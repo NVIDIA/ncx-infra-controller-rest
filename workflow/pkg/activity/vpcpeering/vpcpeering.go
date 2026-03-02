@@ -30,9 +30,10 @@ import (
 	cdbp "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
 
 	sc "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/client/site"
-	cwu "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/util"
 
 	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
+
+	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 )
 
 // ManageVpcPeering is an activity wrapper for managing VPC Peering lifecycle
@@ -176,7 +177,7 @@ func (mvp ManageVpcPeering) UpdateVpcPeeringsInDB(
 				// inventory, so make sure the object has existed for at least as
 				// long as our inventory interval with a little buffer to make
 				// sure we aren't in lock-step.
-				if time.Since(vpcPeering.Created) < cwu.InventoryReceiptInterval {
+				if time.Since(vpcPeering.Created) < cwutil.InventoryReceiptInterval {
 					slogger.Info().Msg("not going to delete yet because VPC Peering is newer than the inventory interval")
 					continue
 				}

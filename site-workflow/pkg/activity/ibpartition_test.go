@@ -269,6 +269,42 @@ func TestManageIBPartition_CreateIBPartitionOnSite(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "test create ibpartition success with Metadata only (no deprecated Config)",
+			fields: fields{
+				CarbideAtomicClient: carbideAtomicClient,
+			},
+			args: args{
+				ctx: context.Background(),
+				request: &cwssaws.IBPartitionCreationRequest{
+					Id: &cwssaws.IBPartitionId{Value: "b410867c-655a-11ef-bc4a-0393098e5d09"},
+					Config: &cwssaws.IBPartitionConfig{
+						TenantOrganizationId: org,
+					},
+					Metadata: &cwssaws.Metadata{
+						Name: name,
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "test create ibpartition success with deprecated Config only (backward compatibility)",
+			fields: fields{
+				CarbideAtomicClient: carbideAtomicClient,
+			},
+			args: args{
+				ctx: context.Background(),
+				request: &cwssaws.IBPartitionCreationRequest{
+					Id: &cwssaws.IBPartitionId{Value: "b410867c-655a-11ef-bc4a-0393098e5d09"},
+					Config: &cwssaws.IBPartitionConfig{
+						Name:                 name,
+						TenantOrganizationId: org,
+					},
+				},
+			},
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

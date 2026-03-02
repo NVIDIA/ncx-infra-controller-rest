@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package activity
 
 import (
@@ -64,6 +65,18 @@ func PowerControl(
 	return cm.PowerControl(ctx, target, info)
 }
 
+func GetPowerStatus(
+	ctx context.Context,
+	target common.Target,
+) (map[string]operations.PowerStatus, error) {
+	cm, err := validAndGetComponentManager(target)
+	if err != nil {
+		return nil, err
+	}
+
+	return cm.GetPowerStatus(ctx, target)
+}
+
 func FirmwareControl(
 	ctx context.Context,
 	target common.Target,
@@ -97,10 +110,92 @@ func GetAllActivities() []any {
 	return []any{
 		InjectExpectation,
 		PowerControl,
+		GetPowerStatus,
 		FirmwareControl,
 		UpdateTaskStatus,
 		SetFirmwareUpdateTimeWindow,
+		StartFirmwareUpdate,
+		GetFirmwareUpdateStatus,
+		AllowBringUpAndPowerOn,
+		GetBringUpState,
 	}
+}
+
+// AllowBringUpAndPowerOn opens the Carbide power-on gate
+// for the target components.
+func AllowBringUpAndPowerOn(
+	ctx context.Context,
+	target common.Target,
+) error {
+	cm, err := validAndGetComponentManager(target)
+	if err != nil {
+		return err
+	}
+
+	return cm.AllowBringUpAndPowerOn(ctx, target)
+}
+
+// GetBringUpStateResult is the result of GetBringUpState.
+type GetBringUpStateResult struct {
+	States map[string]operations.MachineBringUpState
+}
+
+// GetBringUpState returns the bring-up state for target
+// components.
+func GetBringUpState(
+	ctx context.Context,
+	target common.Target,
+) (*GetBringUpStateResult, error) {
+	cm, err := validAndGetComponentManager(target)
+	if err != nil {
+		return nil, err
+	}
+
+	states, err := cm.GetBringUpState(ctx, target)
+	if err != nil {
+		return nil, err
+	}
+
+	return &GetBringUpStateResult{States: states}, nil
+}
+
+// StartFirmwareUpdate initiates firmware update without waiting for completion.
+// This activity returns immediately after the update request is accepted.
+func StartFirmwareUpdate(
+	ctx context.Context,
+	target common.Target,
+	info operations.FirmwareControlTaskInfo,
+) error {
+	cm, err := validAndGetComponentManager(target)
+	if err != nil {
+		return err
+	}
+
+	return cm.StartFirmwareUpdate(ctx, target, info)
+}
+
+// GetFirmwareUpdateStatusResult is the result of GetFirmwareUpdateStatus activity.
+type GetFirmwareUpdateStatusResult struct {
+	Statuses map[string]operations.FirmwareUpdateStatus
+}
+
+// GetFirmwareUpdateStatus returns the current status of firmware updates.
+// This activity is designed to be called repeatedly in a polling loop.
+func GetFirmwareUpdateStatus(
+	ctx context.Context,
+	target common.Target,
+) (*GetFirmwareUpdateStatusResult, error) {
+	cm, err := validAndGetComponentManager(target)
+	if err != nil {
+		return nil, err
+	}
+
+	statuses, err := cm.GetFirmwareUpdateStatus(ctx, target)
+	if err != nil {
+		return nil, err
+	}
+
+	return &GetFirmwareUpdateStatusResult{Statuses: statuses}, nil
 }
 
 func validAndGetComponentManager(

@@ -67,6 +67,7 @@ type SiteConfig struct {
 	NetworkSecurityGroup             bool `json:"network_security_group"`
 	NativeNetworking                 bool `json:"native_networking"`
 	NVLinkPartition                  bool `json:"nvlink_partition"`
+	RackLevelAdministration          bool `json:"rack_level_administration"`
 	MaxNetworkSecurityGroupRuleCount *int `json:"max_network_security_group_rule_count"`
 }
 
@@ -148,6 +149,7 @@ type SiteConfigUpdateInput struct {
 	NetworkSecurityGroup             *bool `json:"network_security_group,omitempty"`
 	NativeNetworking                 *bool `json:"native_networking,omitempty"`
 	NVLinkPartition                  *bool `json:"nvlink_partition,omitempty"`
+	RackLevelAdministration          *bool `json:"rack_level_administration,omitempty"`
 	MaxNetworkSecurityGroupRuleCount *int  `json:"max_network_security_group_rule_count,omitempty"`
 }
 
@@ -178,6 +180,7 @@ type SiteConfigFilterInput struct {
 	NetworkSecurityGroup             *bool `json:"network_security_group,omitempty"`
 	NativeNetworking                 *bool `json:"native_networking,omitempty"`
 	NVLinkPartition                  *bool `json:"nvlink_partition,omitempty"`
+	RackLevelAdministration          *bool `json:"rack_level_administration,omitempty"`
 	MaxNetworkSecurityGroupRuleCount *int  `json:"max_network_security_group_rule_count,omitempty"`
 }
 

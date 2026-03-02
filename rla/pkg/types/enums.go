@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 // Package types provides public domain types for the RLA client.
 // This package has minimal dependencies (only uuid) and can be imported
 // by external modules for interface definitions and mocking without
@@ -83,4 +84,13 @@ const (
 	DiffTypeOnlyInExpected DiffType = "ONLY_IN_EXPECTED"
 	DiffTypeOnlyInActual   DiffType = "ONLY_IN_ACTUAL"
 	DiffTypeDrift          DiffType = "DRIFT"
+)
+
+// OperationType represents the type of operation (power control, firmware, etc.).
+type OperationType string
+
+const (
+	OperationTypeUnknown         OperationType = "UNKNOWN"
+	OperationTypePowerControl    OperationType = "POWER_CONTROL"
+	OperationTypeFirmwareControl OperationType = "FIRMWARE_CONTROL"
 )

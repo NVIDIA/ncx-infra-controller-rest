@@ -23,6 +23,7 @@ type SiteCapabilities struct {
 	NativeNetworking *bool `json:"nativeNetworking,omitempty"`
 	NetworkSecurityGroup *bool `json:"networkSecurityGroup,omitempty"`
 	NvLinkPartition *bool `json:"nvLinkPartition,omitempty"`
+	RackLevelAdministration *bool `json:"rackLevelAdministration,omitempty"`
 }
 
 // NewSiteCapabilities instantiates a new SiteCapabilities object
@@ -138,6 +139,38 @@ func (o *SiteCapabilities) SetNvLinkPartition(v bool) {
 	o.NvLinkPartition = &v
 }
 
+// GetRackLevelAdministration returns the RackLevelAdministration field value if set, zero value otherwise.
+func (o *SiteCapabilities) GetRackLevelAdministration() bool {
+	if o == nil || IsNil(o.RackLevelAdministration) {
+		var ret bool
+		return ret
+	}
+	return *o.RackLevelAdministration
+}
+
+// GetRackLevelAdministrationOk returns a tuple with the RackLevelAdministration field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *SiteCapabilities) GetRackLevelAdministrationOk() (*bool, bool) {
+	if o == nil || IsNil(o.RackLevelAdministration) {
+		return nil, false
+	}
+	return o.RackLevelAdministration, true
+}
+
+// HasRackLevelAdministration returns a boolean if a field has been set.
+func (o *SiteCapabilities) HasRackLevelAdministration() bool {
+	if o != nil && !IsNil(o.RackLevelAdministration) {
+		return true
+	}
+
+	return false
+}
+
+// SetRackLevelAdministration gets a reference to the given bool and assigns it to the RackLevelAdministration field.
+func (o *SiteCapabilities) SetRackLevelAdministration(v bool) {
+	o.RackLevelAdministration = &v
+}
+
 func (o SiteCapabilities) MarshalJSON() ([]byte, error) {
 	toSerialize,err := o.ToMap()
 	if err != nil {
@@ -156,6 +189,9 @@ func (o SiteCapabilities) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.NvLinkPartition) {
 		toSerialize["nvLinkPartition"] = o.NvLinkPartition
+	}
+	if !IsNil(o.RackLevelAdministration) {
+		toSerialize["rackLevelAdministration"] = o.RackLevelAdministration
 	}
 	return toSerialize, nil
 }

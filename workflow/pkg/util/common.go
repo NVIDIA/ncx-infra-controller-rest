@@ -21,6 +21,7 @@ import (
 	"slices"
 	"time"
 
+	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
 )
 
@@ -35,12 +36,6 @@ var (
 	ErrMsgSiteControllerCouldNotFind = "could not find"
 	// ErrMsgSiteControllerDuplicateEntryFound is returned when an entity is found in Site Controller
 	ErrMsgSiteControllerDuplicateEntryFound = "duplicate key value violates unique constraint"
-)
-
-const (
-	// InventoryReceiptInterval is the interval between 2 subsequent inventory receipts
-	// TODO: Move this to cloud-common so it can be used by Site Agent as well
-	InventoryReceiptInterval = 3 * time.Minute
 )
 
 func PtrsEqual[T comparable](i1 *T, i2 *T) bool {
@@ -97,5 +92,5 @@ func MachineCapabilitiesEqual(cap1 *cdbm.MachineCapability, cap2 *cdbm.MachineCa
 
 // IsTimeWithinStaleInventoryThreshold checks if the action time is within the threshold where we could be processing an older inventory
 func IsTimeWithinStaleInventoryThreshold(actionTime time.Time) bool {
-	return time.Since(actionTime) < InventoryReceiptInterval+(time.Second*10)
+	return time.Since(actionTime) < cwutil.InventoryReceiptInterval+(time.Second*10)
 }

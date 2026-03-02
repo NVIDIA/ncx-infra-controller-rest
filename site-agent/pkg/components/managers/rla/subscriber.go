@@ -50,6 +50,22 @@ func (api *API) RegisterSubscriber() error {
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.ValidateRackComponents)
 	ManagerAccess.Data.EB.Log.Info().Msg("RLA: successfully registered ValidateRackComponents workflow")
 
+	// PowerOnRack
+	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.PowerOnRack)
+	ManagerAccess.Data.EB.Log.Info().Msg("RLA: successfully registered PowerOnRack workflow")
+
+	// PowerOffRack
+	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.PowerOffRack)
+	ManagerAccess.Data.EB.Log.Info().Msg("RLA: successfully registered PowerOffRack workflow")
+
+	// PowerResetRack
+	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.PowerResetRack)
+	ManagerAccess.Data.EB.Log.Info().Msg("RLA: successfully registered PowerResetRack workflow")
+
+	// UpgradeFirmware
+	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.UpgradeFirmware)
+	ManagerAccess.Data.EB.Log.Info().Msg("RLA: successfully registered UpgradeFirmware workflow")
+
 	/// Register rack activities
 
 	// GetRack activity
@@ -63,6 +79,22 @@ func (api *API) RegisterSubscriber() error {
 	// ValidateRackComponents activity
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(rackManager.ValidateRackComponents)
 	ManagerAccess.Data.EB.Log.Info().Msg("RLA: successfully registered ValidateRackComponents activity")
+
+	// PowerOnRack activity
+	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(rackManager.PowerOnRack)
+	ManagerAccess.Data.EB.Log.Info().Msg("RLA: successfully registered PowerOnRack activity")
+
+	// PowerOffRack activity
+	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(rackManager.PowerOffRack)
+	ManagerAccess.Data.EB.Log.Info().Msg("RLA: successfully registered PowerOffRack activity")
+
+	// PowerResetRack activity
+	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(rackManager.PowerResetRack)
+	ManagerAccess.Data.EB.Log.Info().Msg("RLA: successfully registered PowerResetRack activity")
+
+	// UpgradeFirmware activity
+	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(rackManager.UpgradeFirmware)
+	ManagerAccess.Data.EB.Log.Info().Msg("RLA: successfully registered UpgradeFirmware activity")
 
 	// Register the tray subscribers here
 	ManagerAccess.Data.EB.Log.Info().Msg("RLA: Registering the tray workflows")

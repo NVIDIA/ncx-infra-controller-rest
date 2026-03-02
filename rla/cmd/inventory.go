@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package cmd
 
 import (
@@ -23,7 +24,7 @@ import (
 var inventoryCmd = &cobra.Command{
 	Use:   "inventory",
 	Short: "Inventory management",
-	Long:  `Commands for managing rack inventory, including fetching from various sources and building.`,
+	Long:  `Commands for managing rack inventory.`,
 }
 
 func init() {

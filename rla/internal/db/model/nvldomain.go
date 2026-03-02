@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package model
 
 import (
@@ -21,8 +22,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	dbquery "github.com/nvidia/bare-metal-manager-rest/rla/internal/db/query"
 	"github.com/uptrace/bun"
+	dbquery "github.com/nvidia/bare-metal-manager-rest/rla/internal/db/query"
 )
 
 var defaultNVLDomainPagination = dbquery.Pagination{

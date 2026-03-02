@@ -1,3 +1,20 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 syntax = "proto3";
 
 package forge;
@@ -21,10 +38,23 @@ service Forge {
   rpc Version(VersionRequest) returns (BuildInfo);
 
   // Domain
-  rpc CreateDomain(Domain) returns (Domain);
-  rpc UpdateDomain(Domain) returns (Domain);
-  rpc DeleteDomain(DomainDeletion) returns (DomainDeletionResult);
-  rpc FindDomain(DomainSearchQuery) returns (DomainList);
+
+  // DEPRECATED Domain RPCs - for backward compatibility
+  // Use the non-Legacy versions above instead
+  rpc CreateDomainLegacy(DomainLegacy) returns (DomainLegacy) {
+    option deprecated = true;
+  }
+  rpc UpdateDomainLegacy(DomainLegacy) returns (DomainLegacy) {
+    option deprecated = true;
+  }
+  rpc DeleteDomainLegacy(DomainDeletionLegacy)
+      returns (DomainDeletionResultLegacy) {
+    option deprecated = true;
+  }
+  rpc FindDomainLegacy(DomainSearchQueryLegacy) returns (DomainListLegacy) {
+    option deprecated = true;
+  }
+
   // VPC
   rpc CreateVpc(VpcCreationRequest) returns (Vpc);
   rpc UpdateVpc(VpcUpdateRequest) returns (VpcUpdateResult);
@@ -116,7 +146,15 @@ service Forge {
   rpc DpuAgentUpgradeCheck(DpuAgentUpgradeCheckRequest) returns (DpuAgentUpgradeCheckResponse);
   rpc DpuAgentUpgradePolicyAction(DpuAgentUpgradePolicyRequest) returns (DpuAgentUpgradePolicyResponse);
   // Looks up a DNS record for DNS names assigned by Forge
-  rpc LookupRecord(DNSMessage.DNSQuestion) returns (DNSMessage.DNSResponse);
+
+  // DEPRECATED DNS Lookup RPC - for backward compatibility
+  // Use LookupRecord with DnsResourceRecordLookupRequest instead
+  rpc LookupRecordLegacy(DNSMessage.DNSQuestion)returns (DNSMessage.DNSResponse) {
+    option deprecated = true;
+  }
+
+  // Get all DNS domains
+  // Get metadata for a specific DNS domain
 
   // TODO(ajf): Harder to implement bi-directional streaming, commented out for now
   // rpc StreamConsole(stream ConsoleInput) returns (stream ConsoleOutput);
@@ -294,6 +332,19 @@ service Forge {
   rpc GetExpectedMachine(ExpectedMachineRequest) returns (ExpectedMachine);
   // Get the BMC credentials for all expected machines
   rpc GetAllExpectedMachines(google.protobuf.Empty) returns (ExpectedMachineList);
+
+  // Rack Firmware Management
+  // Create or update a Rack firmware configuration
+  rpc CreateRackFirmware(RackFirmwareCreateRequest) returns (RackFirmware);
+  // Get a Rack firmware configuration by ID
+  rpc GetRackFirmware(RackFirmwareGetRequest) returns (RackFirmware);
+  // List all Rack firmware configurations
+  rpc ListRackFirmware(RackFirmwareListRequest) returns (RackFirmwareList);
+  // Delete a Rack firmware configuration
+  rpc DeleteRackFirmware(RackFirmwareDeleteRequest) returns (google.protobuf.Empty);
+  // Apply firmware to all devices in a rack
+  rpc ApplyRackFirmware(RackFirmwareApplyRequest) returns (RackFirmwareApplyResponse);
+
   // Replace all expected machines in site
   rpc ReplaceAllExpectedMachines(ExpectedMachineList) returns (google.protobuf.Empty);
   // Delete all expected machines in site
@@ -461,22 +512,22 @@ service Forge {
   rpc AddUpdateMachineValidationExternalConfig(AddUpdateMachineValidationExternalConfigRequest) returns (google.protobuf.Empty);
   // Machine-Validation executed list
   rpc GetMachineValidationRuns(MachineValidationRunListGetRequest) returns (MachineValidationRunList);
-  
+
   // Remove ExternalConfig
   rpc RemoveMachineValidationExternalConfig(RemoveMachineValidationExternalConfigRequest) returns (google.protobuf.Empty);
   // Machine-Validation test list
   rpc GetMachineValidationTests(MachineValidationTestsGetRequest) returns (MachineValidationTestsGetResponse);
 
   rpc AddMachineValidationTest(MachineValidationTestAddRequest) returns (MachineValidationTestAddUpdateResponse);
-  
+
   rpc UpdateMachineValidationTest(MachineValidationTestUpdateRequest) returns (MachineValidationTestAddUpdateResponse);
 
   rpc MachineValidationTestVerfied(MachineValidationTestVerfiedRequest) returns (MachineValidationTestVerfiedResponse);
 
   rpc MachineValidationTestNextVersion(MachineValidationTestNextVersionRequest) returns (MachineValidationTestNextVersionResponse);
-  
+
   rpc MachineValidationTestEnableDisableTest(MachineValidationTestEnableDisableTestRequest) returns (MachineValidationTestEnableDisableTestResponse);
-  
+
   rpc UpdateMachineValidationRun(MachineValidationRunRequest) returns (MachineValidationRunResponse);
 
   // Bmc Endpoint Explorer Actions
@@ -562,12 +613,12 @@ service Forge {
   // Power Options
   rpc GetPowerOptions(PowerOptionRequest) returns (PowerOptionResponse);
   rpc UpdatePowerOption(PowerOptionUpdateRequest) returns (PowerOptionResponse);
+  rpc AllowIngestionAndPowerOn(BmcEndpointRequest) returns (google.protobuf.Empty);
+  rpc DetermineMachineIngestionState(BmcEndpointRequest) returns (MachineIngestionStateResponse);
 
   // Rack
   rpc GetRack(GetRackRequest) returns (GetRackResponse);
   rpc DeleteRack(DeleteRackRequest) returns (google.protobuf.Empty);
-  // Rack Manager passthrough
-  rpc RackManagerCall(RackManagerForgeRequest) returns (RackManagerForgeResponse);
 
   rpc SetFirmwareUpdateTimeWindow(SetFirmwareUpdateTimeWindowRequest) returns (SetFirmwareUpdateTimeWindowResponse);
   rpc ListHostFirmware(ListHostFirmwareRequest) returns (ListHostFirmwareResponse);
@@ -703,7 +754,7 @@ service Forge {
   // variable values for the provided target machine device, reporting back
   // specifics of what would change.
   rpc MlxAdminConfigCompare(mlx_device.MlxAdminConfigCompareRequest) returns (mlx_device.MlxAdminConfigCompareResponse);
-  
+
   // NVL Partition
   rpc FindNVLinkPartitionIds(NVLinkPartitionSearchFilter) returns (NVLinkPartitionIdList);
   rpc FindNVLinkPartitionsByIds(NVLinkPartitionsByIdsRequest) returns (NVLinkPartitionList);
@@ -725,6 +776,9 @@ service Forge {
   rpc GetMachinePositionInfo(MachinePositionQuery) returns (MachinePositionInfoList);
 
   rpc NmxmBrowse(NmxmBrowseRequest) returns (NmxmBrowseResponse);
+
+  rpc ModifyDPFState(ModifyDPFStateRequest) returns (google.protobuf.Empty);
+  rpc GetDPFState(GetDPFStateRequest) returns (DPFStateResponse);
 }
 
 message AttestationIdsRequest {
@@ -758,6 +812,23 @@ message AttestationResponse {
     repeated AttestationDeviceData device_data = 9;
   }
   repeated AttestationMachineData machines = 1;
+}
+
+// Determines machine ingestion state in relation to the power on gate
+// NotDiscovered - the machine has not been discovered.
+// WaitingForIngestion - the machine is stuck at the gate, will not be powered on yet.
+// IngestionMachineCreated - the machine is past the gate and has been ingested.
+// IngestionMachineNotCreated - the machine is past the gate, but the entry
+// in the DB hasn't been created yet.
+enum MachineIngestionState {
+  NotDiscovered = 0;
+  WaitingForIngestion = 1;
+  IngestionMachineNotCreated = 2;
+  IngestionMachineCreated = 3;
+}
+
+message MachineIngestionStateResponse{
+  MachineIngestionState machine_ingestion_state = 1;
 }
 
 message TpmCaAddedCaStatus{
@@ -926,7 +997,7 @@ message RuntimeConfig {
   bool machine_validation_enabled = 33;
 
   string vpc_isolation_behavior = 34;
-    
+
   // BOM Validation Configuration
   bool bom_validation_enabled = 35;
   bool bom_validation_ignore_unassigned_machines = 36;  // TODO: Remove after all consumers updated
@@ -944,8 +1015,11 @@ message RuntimeConfig {
   int32 mqtt_broker_port = 43;
   string mqtt_hb_interval = 44;
   bool dpu_secure_boot_enabled = 45;
-  
+
   bool bom_validation_allow_allocation_on_validation_failure = 46;
+
+  string dpa_subnet_ip = 47;
+  int32 dpa_subnet_mask = 48;
 }
 
 message EchoRequest {
@@ -955,6 +1029,7 @@ message EchoRequest {
 message EchoResponse {
   string message = 1;
 }
+// Deprecated DNSMessage format used by Forge DNS service
 message DNSMessage {
 
   message DNSQuestion {
@@ -1590,6 +1665,8 @@ message ExpectedSwitch {
   // Metadata that will automatically get associated with a newly created Switch
   Metadata metadata = 5;
   optional string rack_id = 6;
+  optional string nvos_username = 7;
+  optional string nvos_password = 8;
 }
 
 message ExpectedSwitchRequest {
@@ -2238,7 +2315,7 @@ message InstanceInterfaceConfig {
   // Forge will the above strategy to achieve deterministic device selection
   // via `device_instance`.
   uint32 device_instance = 8;
-  
+
   // If the interface is defined as a virtual function (associated
   // `InstanceInterfaceConfig.function_type == InterfaceFunctionType::VIRTUAL_FUNCTION`,
   // then this value is set and specifies the virtual function ID that is configured
@@ -2337,7 +2414,7 @@ message InstanceIBInterfaceStatus {
 
 // The actual status of a single gpu of an instance
 message InstanceNVLinkGpuStatus {
-  /// fabric guid of this GPU 
+  /// fabric guid of this GPU
   optional string gpu_guid = 1;
 
   /// The NVLink domain this GPU is physically a part of
@@ -2376,7 +2453,7 @@ enum IssueCategory {
 // Message containing details about an issue reported during instance release
 message Issue {
   IssueCategory category = 1;    // Category of issue
-  string summary = 2;    // User-friendly summary of the issue  
+  string summary = 2;    // User-friendly summary of the issue
   string details = 3;    // Additional context about the issue
 }
 
@@ -2565,7 +2642,7 @@ message Machine {
   optional bool firmware_autoupdate = 28;
 
   optional string failure_details = 30;
- 
+
   // Infiniband devices information attached to the machine.
   optional InfinibandStatusObservation ib_status = 32;
 
@@ -2584,7 +2661,7 @@ message Machine {
 
   // The known capabilities of a machine
   MachineCapabilitiesSet capabilities = 37;
-  
+
   optional string hw_sku = 38;
   optional SkuStatus hw_sku_status = 39;
 
@@ -2720,6 +2797,13 @@ message MachineEvent {
   google.protobuf.Timestamp time = 4;
 }
 
+enum InterfaceAssociationType {
+  NONE = 0;
+  MACHINE = 1;
+  SWITCH = 2;
+  POWERSHELF = 3;
+}
+
 message MachineInterface {
   common.MachineInterfaceId id = 1;
   optional common.MachineId attached_dpu_machine_id = 2;
@@ -2740,7 +2824,10 @@ message MachineInterface {
   optional google.protobuf.Timestamp last_dhcp = 12;
 
   optional bool is_bmc = 13;
-  optional common.MachineId power_shelf_id = 14;
+  optional common.PowerShelfId power_shelf_id = 14;
+  optional common.SwitchId switch_id = 15;
+
+  optional InterfaceAssociationType association_type = 16;
 }
 
 // Infiniband interface status description
@@ -2795,6 +2882,7 @@ message DhcpDiscovery {
   optional string link_address = 4;
   optional string circuit_id = 5;
   optional string remote_id = 6;
+  optional string desired_address = 7;
 }
 
 message DhcpRecord {
@@ -3039,7 +3127,7 @@ message ManagedHostNetworkConfigResponse {
   // Rules to be inserted before any other NSG rules.Action
   // This should land in a separate policy on the DPU that is
   // evaluated before any user-defined rules but after deny_prefixes.
-  repeated ResolvedNetworkSecurityGroupRule network_security_policy_overrides = 111;  
+  repeated ResolvedNetworkSecurityGroupRule network_security_policy_overrides = 111;
 
   // Extension services that should be deployed on this DPU
   repeated ManagedHostDpuExtensionServiceConfig dpu_extension_services = 112;
@@ -3054,8 +3142,27 @@ message ManagedHostNetworkConfigResponse {
   //       common_internal_route_target to be renamed/repurposed as a site-level RT.
   //       to become a site-level common route target.
   //       This does _not_ replace additional_route_target_imports, which are global
-  //       imports 
+  //       imports
   optional RoutingProfile routing_profile = 114;
+
+  // List of aggregate IPv4 prefixes (in CIDR notation) that contain prefixes assigned
+  // to tenants so that they themselves can announce to the DPU.  E.g., BYOIP
+  repeated string  anycast_site_prefixes = 115;
+
+  // An ASN allocated for tenants to use
+  // when they peer with the DPU.
+  // If configured, the DPU will expect the host
+  // to peer with this ASN.  If left unset
+  // remote-as external will be used, allowing
+  // any ASN.
+  optional uint32 tenant_host_asn = 116;
+
+  // Due to limitations in Cumulus Linux route-leaking,
+  // some sites may require all VRFs to use the same VNI.
+  // Isolation is still possible via ACLs, and route-imports
+  // will still use the dynamically allocated VNI for deriving
+  // route-targets.
+  optional uint32 site_global_vpc_vni = 117;
 }
 
 message TrafficInterceptConfig {
@@ -3098,7 +3205,7 @@ message TrafficInterceptBridging {
 
   // Name of SF used for routing VMaaS VF traffic into
   // the HBN pod.
-  string vf_intercept_bridge_sf          = 6;  
+  string vf_intercept_bridge_sf          = 6;
 }
 
 message ManagedHostDpuExtensionServiceConfig {
@@ -3259,7 +3366,7 @@ message FlatInterfaceConfig {
 message FlatInterfaceNetworkSecurityGroupConfig {
   string id                                       = 1;
   string version                                  = 2;
-  NetworkSecurityGroupSource source               = 3;  
+  NetworkSecurityGroupSource source               = 3;
   repeated ResolvedNetworkSecurityGroupRule rules = 4;
   bool stateful_egress                            = 5;
 }
@@ -3574,6 +3681,8 @@ message MachineDiscoveryResult {
   MachineCertificate machine_certificate = 2;
   // if attestation is enabled, this challenge will allow to bind attestation key to a particular TPM via its EK
   AttestKeyBindChallenge attest_key_challenge = 3;
+  // Interface id
+  common.MachineInterfaceId machine_interface_id = 4;
 }
 
 message MachineDiscoveryCompletedResponse {
@@ -3642,11 +3751,11 @@ message PxeInstructions {
 
 message CloudInitDiscoveryInstructions {
   MachineInterface machine_interface = 1;
-  Domain domain = 2;
+  PxeDomain domain = 2;
   optional string hbn_reps = 3;
   optional string hbn_sfs = 4;
   optional string vf_intercept_bridge_name = 5;
-  optional string host_intercept_bridge_name = 6; 
+  optional string host_intercept_bridge_name = 6;
   // The <vf_intercept_bridge_name> side of the SF representor that connects the HBN pod to br-hbn.
   // This will be the side owned by the <vf_intercept_bridge_name> bridge
   optional string vf_intercept_bridge_port   = 7;
@@ -3847,7 +3956,7 @@ message CreateTenantRequest {
   Metadata metadata = 2;
   optional RoutingProfileType routing_profile_type = 3;
 }
-message CreateTenantResponse {  
+message CreateTenantResponse {
   Tenant tenant = 1;
 }
 
@@ -4072,6 +4181,7 @@ enum MacOwner {
   MacOwnerMachineInterface = 0;
   MacOwnerExploredEndpoint = 1;
   MacOwnerExpectedMachine = 2;
+  MacOwnerDpaInterface = 3;
 }
 
 message IdentifySerialRequest {
@@ -4192,6 +4302,7 @@ enum IpType {
   // table that have been added via forge-admin-cli calls. Their
   // DB records specifically say their source type is `admin`.
   IpTypeRouteServerFromAdminApi = 10;
+  IpTypeDpaInterface = 11;
 }
 
 message MachineBootOverride {
@@ -4394,6 +4505,7 @@ message ExpectedMachine {
   optional common.UUID id = 8;
   repeated ExpectedHostNic host_nics = 9;
   optional string rack_id = 10;
+  optional bool default_pause_ingestion_and_poweron = 11;
 }
 
 message ExpectedMachineRequest {
@@ -4490,7 +4602,7 @@ message MachineValidationResultList {
 }
 
 message MachineValidationGetRequest {
-  optional common.MachineId machine_id = 1;  
+  optional common.MachineId machine_id = 1;
   bool include_history = 2;
   optional common.UUID validation_id = 3;
 }
@@ -4528,7 +4640,7 @@ message MachineValidationRun {
   string name = 5;
   optional string context = 6;
   MachineValidationStatus status = 7;
-  google.protobuf.Duration duration_to_complete = 8;  
+  google.protobuf.Duration duration_to_complete = 8;
 
 }
 
@@ -4600,7 +4712,7 @@ message AdminPowerControlRequest {
     // Graceful host shutdown
     GracefulShutdown = 1;
     // Forcefully powers a machine off
-    ForceOff = 2; 
+    ForceOff = 2;
     // Graceful restart. Asks the OS to restart via ACPI
     GracefulRestart =3;
     // Force restart. This is equivalent to pressing the reset button on the front panel.
@@ -4776,7 +4888,7 @@ message MachineValidationRunResponse {
 enum MachineCapabilityDeviceType {
   MACHINE_CAPABILITY_DEVICE_TYPE_UNKNOWN = 0;
   MACHINE_CAPABILITY_DEVICE_TYPE_DPU = 1;
-  MACHINE_CAPABILITY_DEVICE_TYPE_NVLINK = 2; 
+  MACHINE_CAPABILITY_DEVICE_TYPE_NVLINK = 2;
 }
 
 message MachineCapabilityAttributesCpu {
@@ -4857,7 +4969,7 @@ message InstanceTypeAttributes {
   repeated InstanceTypeMachineCapabilityFilterAttributes desired_capabilities = 1;
 }
 
-// An InstanceType describes a desired set of 
+// An InstanceType describes a desired set of
 // machine capabilities.
 // It's probably easiest to just think of InstanceType
 // as a pool, and the desired capabilities of an InstanceType
@@ -5049,7 +5161,7 @@ message UfmBrowseResponse {
   map<string, string> headers = 3;
 }
 
-message NetworkSecurityGroupAttributes {  
+message NetworkSecurityGroupAttributes {
   repeated NetworkSecurityGroupRuleAttributes rules = 1;
 
   // Whether egress rules should be stateful.
@@ -5139,7 +5251,7 @@ enum NetworkSecurityGroupPropagationStatus {
 
 message NetworkSecurityGroupPropagationObjectStatus {
   // The UUID of the VPC or instance.  If we decide to allow
-  // per-interface NSG application later, this _could_ be used to 
+  // per-interface NSG application later, this _could_ be used to
   // hold the interface index number, and an optional
   // parent_id field could be added to hold the instance id.
   string id                                    = 1;
@@ -5153,12 +5265,12 @@ message NetworkSecurityGroupPropagationObjectStatus {
   // the instance level.
   repeated string related_instance_ids         = 4;
 
-  // Any instances IDs related to the object that 
+  // Any instances IDs related to the object that
   // are negatively affecting the propagation status
   // of the object.
   // In the case of VPCs, it would be any instances
   // that do not have a more specific NSG applied at
-  // the instance level and that do not have the 
+  // the instance level and that do not have the
   // current NSG ID and version used by the parent
   // VPC.
   repeated string unpropagated_instance_ids    = 5;
@@ -5184,7 +5296,7 @@ message GetNetworkSecurityGroupPropagationStatusRequest {
   // across all interfaces of those instances.
   // This is checking observed network_security_group_version
   // of the interfaces with a source of INSTANCE.
-  repeated string instance_ids                                   = 2; 
+  repeated string instance_ids                                   = 2;
 
   // Used to restrict the status results to
   // objects with attachments to a specific set of
@@ -5425,6 +5537,9 @@ message DpaInterface {
 
   string card_state = 15;
   string pci_name = 16;
+
+  string underlay_ip = 17;
+  string overlay_ip = 18;
 }
 
 
@@ -5755,7 +5870,7 @@ message TrimTableResponse{
 // begin DPU remediation models
 message CreateRemediationRequest{
   string script = 1;
-  Metadata metadata = 2; 
+  Metadata metadata = 2;
   int32 retries = 3;
 }
 message CreateRemediationResponse {
@@ -5926,13 +6041,13 @@ message UpdateDpuExtensionServiceRequest {
   // If the field here is set, the update will only be applied if the version
   // is equivalent to the current version on the Forge Site.
   // If a concurrent update changed the site configuration, the API will return
-  // a `ConcurrentModificationError`.  
+  // a `ConcurrentModificationError`.
   optional int32 if_version_ctr_match = 6;
 
   // Metrics configuration to be added to the existing
   // metrics collection service that runs on the DPU.
   optional DpuExtensionServiceObservability observability = 7;
-} 
+}
 
 // If versions is empty, request to delete the whole service;
 // otherwise, request to delete the specified versions **but**
@@ -6001,7 +6116,7 @@ message InstanceDpuExtensionServiceInfo {
 
 message DpuExtensionServiceObservabilityConfigPrometheus {
   uint32 scrape_interval_seconds = 1;
-  string endpoint                = 2;  
+  string endpoint                = 2;
 }
 
 message DpuExtensionServiceObservabilityConfigLogging {
@@ -6190,6 +6305,46 @@ message RoutingProfile {
   repeated common.RouteTarget route_targets_on_exports = 2;
 }
 
+// ============================================================================
+// LEGACY DNS/DOMAIN TYPES - DEPRECATED
+// These types are maintained for backward compatibility
+// TODO : Remove these types after migration is complete
+// ============================================================================
+
+message DomainLegacy {
+  common.DomainId id = 1;
+  string name = 2;
+  google.protobuf.Timestamp created = 3;
+  google.protobuf.Timestamp updated = 4;
+  google.protobuf.Timestamp deleted = 5;
+}
+
+message DomainListLegacy {
+  repeated DomainLegacy domains = 1;
+}
+
+message DomainDeletionLegacy {
+  common.DomainId id = 1;
+}
+
+message DomainDeletionResultLegacy {
+
+}
+
+message DomainSearchQueryLegacy {
+  optional common.DomainId id = 1;
+  optional string name = 2;
+}
+
+// Temporary wrapper around both domain types while we transition
+// TODO: Remove after migration is complete
+message PxeDomain {
+  oneof domain {
+    Domain legacy_domain = 2;
+  }
+}
+
+
 message MachinePositionQuery {
   repeated common.MachineId machine_ids = 1;
 }
@@ -6206,4 +6361,82 @@ message MachinePositionInfo {
   optional int32 revision_id = 5;
   optional common.SwitchId switch_id = 6;
   optional common.PowerShelfId power_shelf_id = 7;
+}
+
+// Rack Firmware Management Messages
+
+message RackFirmware {
+  string id = 1;
+  string config_json = 2;
+  bool available = 3;
+  string created = 4;
+  string updated = 5;
+  string parsed_components = 6; // JSON string of firmware lookup table
+}
+
+message FirmwareComponentInfo {
+  string device_type = 1;
+  string component = 2;
+  string bundle = 3;
+  string filename = 4;
+  string target = 5;
+  string firmware_type = 6; // "prod" or "dev"
+}
+
+message RackFirmwareCreateRequest {
+  string config_json = 1;
+  string artifactory_token = 2;
+}
+
+message RackFirmwareGetRequest {
+  string id = 1;
+}
+
+message RackFirmwareListRequest {
+  bool only_available = 1;
+}
+
+message RackFirmwareList {
+  repeated RackFirmware configs = 1;
+}
+
+message RackFirmwareDeleteRequest {
+  string id = 1;
+}
+
+message RackFirmwareApplyRequest {
+  string rack_id = 1;
+  string firmware_id = 2;
+  string firmware_type = 3; // "dev" or "prod"
+}
+
+message RackFirmwareApplyResponse {
+  int32 total_updates = 1;
+  int32 successful_updates = 2;
+  int32 failed_updates = 3;
+  repeated DeviceUpdateResult device_results = 4;
+}
+
+message DeviceUpdateResult {
+  string device_id = 1;
+  string device_type = 2;
+  bool success = 3;
+  string message = 4;
+}
+
+message ModifyDPFStateRequest {
+  common.MachineId machine_id = 1;
+  bool dpf_enabled = 2;
+}
+
+message DPFStateResponse {
+  message DPFState {
+    common.MachineId machine_id = 1;
+    bool dpf_enabled = 2;
+  }
+  repeated DPFState dpf_states = 1;
+}
+
+message GetDPFStateRequest {
+  repeated common.MachineId machine_ids = 1;
 }

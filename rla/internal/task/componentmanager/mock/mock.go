@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package mock
 
 import (
@@ -119,6 +120,32 @@ func (m *Manager) PowerControl(
 	return nil
 }
 
+// GetPowerStatus simulates getting power status.
+func (m *Manager) GetPowerStatus(
+	ctx context.Context,
+	target common.Target,
+) (map[string]operations.PowerStatus, error) {
+	log.Debug().
+		Str("component_type", m.componentType.String()).
+		Str("target", target.String()).
+		Msg("Mock: GetPowerStatus")
+
+	time.Sleep(m.delay)
+
+	result := make(map[string]operations.PowerStatus)
+	for _, componentID := range target.ComponentIDs {
+		result[componentID] = operations.PowerStatusOn
+	}
+
+	log.Info().
+		Str("component_type", m.componentType.String()).
+		Str("target", target.String()).
+		Int("component_count", len(result)).
+		Msg("Mock: GetPowerStatus completed")
+
+	return result, nil
+}
+
 // FirmwareControl simulates firmware operations.
 func (m *Manager) FirmwareControl(
 	ctx context.Context,
@@ -141,4 +168,90 @@ func (m *Manager) FirmwareControl(
 		Msg("Mock: FirmwareControl completed")
 
 	return nil
+}
+
+// StartFirmwareUpdate simulates initiating firmware update without waiting for completion.
+func (m *Manager) StartFirmwareUpdate(
+	ctx context.Context,
+	target common.Target,
+	info operations.FirmwareControlTaskInfo,
+) error {
+	log.Debug().
+		Str("component_type", m.componentType.String()).
+		Str("target", target.String()).
+		Str("target_version", info.TargetVersion).
+		Msg("Mock: StartFirmwareUpdate")
+
+	time.Sleep(m.delay)
+
+	log.Info().
+		Str("component_type", m.componentType.String()).
+		Str("target", target.String()).
+		Msg("Mock: StartFirmwareUpdate completed")
+
+	return nil
+}
+
+// AllowBringUpAndPowerOn simulates opening the power-on gate.
+func (m *Manager) AllowBringUpAndPowerOn(
+	ctx context.Context,
+	target common.Target,
+) error {
+	log.Debug().
+		Str("component_type", m.componentType.String()).
+		Str("target", target.String()).
+		Msg("Mock: AllowBringUpAndPowerOn")
+	time.Sleep(m.delay)
+	return nil
+}
+
+// GetBringUpState simulates getting bring-up state.
+func (m *Manager) GetBringUpState(
+	ctx context.Context,
+	target common.Target,
+) (map[string]operations.MachineBringUpState, error) {
+	log.Debug().
+		Str("component_type", m.componentType.String()).
+		Str("target", target.String()).
+		Msg("Mock: GetBringUpState")
+	time.Sleep(m.delay)
+
+	result := make(
+		map[string]operations.MachineBringUpState,
+		len(target.ComponentIDs),
+	)
+	for _, id := range target.ComponentIDs {
+		result[id] = operations.MachineBringUpStateMachineCreated
+	}
+	return result, nil
+}
+
+// GetFirmwareUpdateStatus simulates getting firmware update status.
+func (m *Manager) GetFirmwareUpdateStatus(
+	ctx context.Context,
+	target common.Target,
+) (map[string]operations.FirmwareUpdateStatus, error) {
+	log.Debug().
+		Str("component_type", m.componentType.String()).
+		Str("target", target.String()).
+		Msg("Mock: GetFirmwareUpdateStatus")
+
+	time.Sleep(m.delay)
+
+	result := make(map[string]operations.FirmwareUpdateStatus)
+	for _, componentID := range target.ComponentIDs {
+		result[componentID] = operations.FirmwareUpdateStatus{
+			ComponentID: componentID,
+			State:       operations.FirmwareUpdateStateCompleted,
+			Error:       "",
+		}
+	}
+
+	log.Info().
+		Str("component_type", m.componentType.String()).
+		Str("target", target.String()).
+		Int("component_count", len(result)).
+		Msg("Mock: GetFirmwareUpdateStatus completed")
+
+	return result, nil
 }

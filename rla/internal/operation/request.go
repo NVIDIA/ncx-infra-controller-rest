@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package operation
 
 import (
@@ -30,7 +31,8 @@ import (
 // Wrapper wraps the operation type and its serialized information.
 type Wrapper struct {
 	Type taskcommon.TaskType
-	Info json.RawMessage
+	Code string          // Operation code string (e.g., "power_on", "upgrade")
+	Info json.RawMessage // Serialized operation details
 }
 
 // TargetSpec contains either rack targets or component targets, but not both.

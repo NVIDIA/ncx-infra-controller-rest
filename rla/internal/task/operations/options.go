@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package operations
 
 import (
@@ -36,6 +37,9 @@ var (
 		},
 		taskcommon.TaskTypeInjectExpectation: {
 			Timeout: 60 * time.Minute,
+		},
+		taskcommon.TaskTypeBringUp: {
+			Timeout: 120 * time.Minute,
 		},
 	}
 )

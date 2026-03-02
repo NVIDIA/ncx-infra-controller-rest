@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package store
 
 import (
@@ -28,9 +29,9 @@ import (
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/db/model"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/db/postgres"
 	dbquery "github.com/nvidia/bare-metal-manager-rest/rla/internal/db/query"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/inventory/objects/component"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/inventory/objects/nvldomain"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/inventory/objects/rack"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/component"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/nvldomain"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/rack"
 	identifier "github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/Identifier"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/deviceinfo"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
@@ -940,4 +941,80 @@ func (pi *rackPatchInfo) patchComponent(
 
 func (pi *rackPatchInfo) isInvalid() bool {
 	return pi == nil || pi.ndao == nil || pi.opReport == nil || pi.compIDToDao == nil
+}
+
+// AddComponent creates a single component (with BMCs) in the database and returns its UUID.
+func (s *PostgresStore) AddComponent(ctx context.Context, comp *component.Component) (uuid.UUID, error) {
+	compDAO := dao.ComponentTo(comp, comp.RackID)
+
+	operation := func(ctx context.Context, tx bun.Tx) error {
+		if err := compDAO.Create(ctx, tx); err != nil {
+			return err
+		}
+		for _, bmcDAO := range compDAO.BMCs {
+			if err := bmcDAO.Create(ctx, tx); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	if err := s.runInTx(ctx, operation); err != nil {
+		return uuid.Nil, err
+	}
+	return compDAO.ID, nil
+}
+
+// PatchComponent updates a single component's fields in the database.
+func (s *PostgresStore) PatchComponent(ctx context.Context, comp *component.Component) error {
+	compDAO := dao.ComponentTo(comp, comp.RackID)
+	return compDAO.Patch(ctx, s.pg.DB())
+}
+
+// DeleteComponent soft-deletes a component by UUID.
+func (s *PostgresStore) DeleteComponent(ctx context.Context, id uuid.UUID) error {
+	compDAO := &model.Component{ID: id}
+	return compDAO.Delete(ctx, s.pg.DB())
+}
+
+// GetDriftsByComponentIDs retrieves drift records for the given component UUIDs.
+func (s *PostgresStore) GetDriftsByComponentIDs(ctx context.Context, componentIDs []uuid.UUID) ([]ComponentDrift, error) {
+	drifts, err := model.GetDriftsByComponentIDs(ctx, s.pg.DB(), componentIDs)
+	if err != nil {
+		return nil, err
+	}
+	return convertDriftsFromModel(drifts), nil
+}
+
+// GetAllDrifts retrieves all drift records.
+func (s *PostgresStore) GetAllDrifts(ctx context.Context) ([]ComponentDrift, error) {
+	drifts, err := model.GetAllDrifts(ctx, s.pg.DB())
+	if err != nil {
+		return nil, err
+	}
+	return convertDriftsFromModel(drifts), nil
+}
+
+// convertDriftsFromModel converts model-layer drift records to store-layer ones.
+func convertDriftsFromModel(drifts []model.ComponentDrift) []ComponentDrift {
+	result := make([]ComponentDrift, 0, len(drifts))
+	for _, d := range drifts {
+		fieldDiffs := make([]FieldDiff, 0, len(d.Diffs))
+		for _, fd := range d.Diffs {
+			fieldDiffs = append(fieldDiffs, FieldDiff{
+				FieldName:     fd.FieldName,
+				ExpectedValue: fd.ExpectedValue,
+				ActualValue:   fd.ActualValue,
+			})
+		}
+		result = append(result, ComponentDrift{
+			ID:          d.ID,
+			ComponentID: d.ComponentID,
+			ExternalID:  d.ExternalID,
+			DriftType:   string(d.DriftType),
+			Diffs:       fieldDiffs,
+			CheckedAt:   d.CheckedAt,
+		})
+	}
+	return result
 }

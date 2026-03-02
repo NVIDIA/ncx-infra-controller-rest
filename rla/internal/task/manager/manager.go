@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package manager
 
 import (
@@ -25,12 +26,13 @@ import (
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/inventory/objects/rack"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/rack"
 	inventorystore "github.com/nvidia/bare-metal-manager-rest/rla/internal/inventory/store"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/operation"
 	taskcommon "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/common"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/executor"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/executor/temporalworkflow/activity"
+	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operationrules"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operations"
 	taskstore "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/store"
 	taskdef "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/task"
@@ -41,6 +43,7 @@ type Config struct {
 	InventoryStore inventorystore.Store // For rack/component lookups (read-only)
 	TaskStore      taskstore.Store      // For task persistence
 	ExecutorConfig executor.ExecutorConfig
+	// Note: RuleResolver is created internally from TaskStore
 }
 
 func (c *Config) Validate() error {
@@ -69,6 +72,7 @@ type Manager struct {
 	inventoryStore inventorystore.Store // For rack/component lookups
 	taskStore      taskstore.Store      // For task persistence
 	executor       executor.Executor
+	ruleResolver   *operationrules.Resolver // Resolves operation rules (created internally)
 
 	ctx       context.Context
 	cancel    context.CancelFunc
@@ -90,10 +94,14 @@ func New(ctx context.Context, conf *Config) (*Manager, error) {
 		return nil, err
 	}
 
+	// Create rule resolver internally (queries DB for operation rules)
+	ruleResolver := operationrules.NewResolver(conf.TaskStore)
+
 	return &Manager{
 		inventoryStore: conf.InventoryStore,
 		taskStore:      conf.TaskStore,
 		executor:       executor,
+		ruleResolver:   ruleResolver,
 	}, nil
 }
 
@@ -187,6 +195,43 @@ func (m *Manager) createAndExecuteTask(
 		componentUUIDs = append(componentUUIDs, c.Info.ID)
 	}
 
+	// Resolve operation rule for this operation and rack
+	var appliedRuleID *uuid.UUID
+	var ruleDef *operationrules.RuleDefinition
+
+	// Use the operation code from the wrapper (e.g. "power_on", "upgrade")
+	operationCode := req.Operation.Code
+	rule, err := m.ruleResolver.ResolveRule(
+		ctx, req.Operation.Type, operationCode, targetRack.Info.ID,
+	)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("failed to resolve operation rule: %w", err)
+	}
+
+	if rule == nil {
+		return uuid.Nil, fmt.Errorf("resolver returned nil rule (should never happen)")
+	}
+
+	// Only track applied rule ID if it's a database rule (not hardcoded fallback)
+	if rule.ID != uuid.Nil {
+		appliedRuleID = &rule.ID
+		log.Info().
+			Str("rule_name", rule.Name).
+			Str("rule_id", rule.ID.String()).
+			Str("operation_type", string(req.Operation.Type)).
+			Str("operation", operationCode).
+			Str("rack_id", targetRack.Info.ID.String()).
+			Msg("Resolved operation rule for task")
+	} else {
+		log.Info().
+			Str("rule_name", rule.Name).
+			Str("operation_type", string(req.Operation.Type)).
+			Str("operation", operationCode).
+			Str("rack_id", targetRack.Info.ID.String()).
+			Msg("Using hardcoded default rule for task (not tracked in applied_rule_id)")
+	}
+	ruleDef = &rule.RuleDefinition
+
 	// Create task record
 	task := taskdef.Task{
 		ID:             uuid.New(),
@@ -198,14 +243,15 @@ func (m *Manager) createAndExecuteTask(
 		ExecutionID:    "",
 		Status:         taskcommon.TaskStatusPending,
 		Message:        "Created",
+		AppliedRuleID:  appliedRuleID,
 	}
 
 	if err := m.taskStore.CreateTask(ctx, &task); err != nil {
 		return uuid.Nil, err
 	}
 
-	// Execute the task
-	resp, err := m.executeTask(ctx, &task, targetRack)
+	// Execute the task (pass rule definition to execution)
+	resp, err := m.executeTask(ctx, &task, targetRack, ruleDef)
 	if err != nil {
 		lerr := m.taskStore.UpdateTaskStatus(
 			ctx,
@@ -237,6 +283,7 @@ func (m *Manager) executeTask(
 	ctx context.Context,
 	task *taskdef.Task,
 	targetRack *rack.Rack,
+	ruleDef *operationrules.RuleDefinition,
 ) (*taskdef.ExecutionResponse, error) {
 	if task == nil {
 		return nil, fmt.Errorf("task is nil")
@@ -244,10 +291,11 @@ func (m *Manager) executeTask(
 
 	req := taskdef.ExecutionRequest{
 		Info: taskdef.ExecutionInfo{
-			TaskID: task.ID,
-			Rack:   targetRack,
+			TaskID:         task.ID,
+			Rack:           targetRack,
+			RuleDefinition: ruleDef, // Pass rule definition to workflow
 		},
-		Async: false,
+		Async: true,
 	}
 
 	switch task.Operation.Type {
@@ -269,6 +317,12 @@ func (m *Manager) executeTask(
 			return nil, err
 		}
 		return m.executor.InjectExpectation(ctx, &req, info)
+	case taskcommon.TaskTypeBringUp:
+		var info operations.BringUpTaskInfo
+		if err := info.Unmarshal(task.Operation.Info); err != nil {
+			return nil, err
+		}
+		return m.executor.BringUp(ctx, &req, info)
 	default:
 		return nil, fmt.Errorf("unsupported task type: %s", task.Operation.Type)
 	}

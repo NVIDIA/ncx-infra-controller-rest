@@ -1,19 +1,19 @@
-//
-// SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-// SPDX-License-Identifier: Apache-2.0
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 syntax = "proto3";
 
@@ -40,11 +40,16 @@ service RLA {
     rpc GetListOfNVLDomains(GetListOfNVLDomainsRequest) returns (GetListOfNVLDomainsResponse);
     rpc GetRacksForNVLDomain(GetRacksForNVLDomainRequest) returns (GetRacksForNVLDomainResponse);
     rpc UpgradeFirmware(UpgradeFirmwareRequest) returns (SubmitTaskResponse);
-    
+
+    // Bring up rack: power on, configure, and validate a new rack
+    rpc BringUpRack(BringUpRackRequest) returns (SubmitTaskResponse);
+
     // Components APIs
     rpc GetComponents(GetComponentsRequest) returns (GetComponentsResponse);
-    // rpc GetActualComponents(GetActualComponentsRequest) returns (GetActualComponentsResponse);  // Temporarily disabled
     rpc ValidateComponents(ValidateComponentsRequest) returns (ValidateComponentsResponse);
+    rpc AddComponent(AddComponentRequest) returns (AddComponentResponse);
+    rpc PatchComponent(PatchComponentRequest) returns (PatchComponentResponse);
+    rpc DeleteComponent(DeleteComponentRequest) returns (DeleteComponentResponse);
 
     // Power control a rack or a rack's specified components
     rpc PowerOnRack(PowerOnRackRequest) returns (SubmitTaskResponse);
@@ -54,6 +59,20 @@ service RLA {
     // Query for tasks
     rpc ListTasks(ListTasksRequest) returns (ListTasksResponse);
     rpc GetTasksByIDs(GetTasksByIDsRequest) returns (GetTasksByIDsResponse);
+
+    // Operation rules management
+    rpc CreateOperationRule(CreateOperationRuleRequest) returns (CreateOperationRuleResponse);
+    rpc UpdateOperationRule(UpdateOperationRuleRequest) returns (google.protobuf.Empty);
+    rpc DeleteOperationRule(DeleteOperationRuleRequest) returns (google.protobuf.Empty);
+    rpc GetOperationRule(GetOperationRuleRequest) returns (OperationRule);
+    rpc ListOperationRules(ListOperationRulesRequest) returns (ListOperationRulesResponse);
+    rpc SetRuleAsDefault(SetRuleAsDefaultRequest) returns (google.protobuf.Empty);
+
+    // Rack-rule associations
+    rpc AssociateRuleWithRack(AssociateRuleWithRackRequest) returns (google.protobuf.Empty);
+    rpc DisassociateRuleFromRack(DisassociateRuleFromRackRequest) returns (google.protobuf.Empty);
+    rpc GetRackRuleAssociation(GetRackRuleAssociationRequest) returns (GetRackRuleAssociationResponse);
+    rpc ListRackRuleAssociations(ListRackRuleAssociationsRequest) returns (ListRackRuleAssociationsResponse);
 }
 
 message UUID {
@@ -182,23 +201,7 @@ message Component {
     repeated BMCInfo bmcs = 5;
     string component_id = 6;  // Component's own ID from its source system (e.g., Carbide machine_id for Compute)
     UUID rack_id = 7;
-}
-
-// ActualComponent represents a component's actual state from external systems (e.g., Carbide, PSM)
-message ActualComponent {
-    ComponentType type = 1;
-    DeviceInfo info = 2;
-    string firmware_version = 3;
-    RackPosition position = 4;
-    repeated BMCInfo bmcs = 5;
-    string component_id = 6;    // Component's own ID from its source system
-    UUID rack_id = 7;           // Looked up from local DB using component_id
-    
-    // Actual-specific fields
-    google.protobuf.Timestamp last_seen = 8;    // When this component was last observed
-    string power_state = 9;                      // Current power state
-    string health_status = 10;                   // Health status from source system
-    string source = 11;                          // Data source (e.g., "carbide", "psm")
+    string power_state = 8;  // Current power state (synced from external system by inventory loop)
 }
 
 message Rack {
@@ -416,19 +419,11 @@ message GetComponentsResponse {
     int32 total = 2;
 }
 
-// GetActualComponents is temporarily disabled, but message definitions are kept for future use
-message GetActualComponentsRequest {
-    OperationTargetSpec target_spec = 1;   // Flexible targeting: rack(s) with optional type filter, or specific components
-    optional Pagination pagination = 2;
-}
-
-message GetActualComponentsResponse {
-    repeated ActualComponent components = 1;
-    int32 total = 2;
-}
-
 message ValidateComponentsRequest {
-    OperationTargetSpec target_spec = 1;   // Flexible targeting: rack(s) with optional type filter, or specific components
+    optional OperationTargetSpec target_spec = 1;   // Optional: Flexible targeting: rack(s) with optional type filter, or specific components. If not provided, returns all drifts.
+    repeated Filter filters = 2;           // Filter conditions for component queries
+    optional Pagination pagination = 3;
+    optional OrderBy order_by = 4;
 }
 
 message ValidateComponentsResponse {
@@ -453,11 +448,9 @@ message ComponentDiff {
     DiffType type = 1;
     string component_id = 2;
     
-    // Populated when type is ONLY_IN_EXPECTED
+    // Populated when type is ONLY_IN_EXPECTED or ONLY_IN_ACTUAL
     Component expected = 3;
-    
-    // Populated when type is ONLY_IN_ACTUAL
-    ActualComponent actual = 4;
+    Component actual = 4;
     
     // Populated when type is DRIFT - lists the fields that differ
     repeated FieldDiff field_diffs = 5;
@@ -467,6 +460,35 @@ message FieldDiff {
     string field_name = 1;      // e.g., "position.slot_id", "firmware_version"
     string expected_value = 2;
     string actual_value = 3;
+}
+
+// AddComponent - add a single component to an existing rack
+message AddComponentRequest {
+    Component component = 1;              // Required: the component to add; component.rack_id must be set
+}
+
+message AddComponentResponse {
+    Component component = 1;  // The created component
+}
+
+// DeleteComponent - soft-delete a single component by UUID
+message DeleteComponentRequest {
+    UUID id = 1;  // Required: component UUID to delete
+}
+
+message DeleteComponentResponse {}
+
+// PatchComponent - update a single component's fields
+message PatchComponentRequest {
+    UUID id = 1;                          // Required: component UUID
+    optional string firmware_version = 2; // Update firmware version
+    optional RackPosition position = 3;   // Update slot_id, tray_idx, host_id
+    optional string description = 4;      // Update description (JSON string)
+    optional UUID rack_id = 5;            // Re-assign to a different rack
+}
+
+message PatchComponentResponse {
+    Component component = 1;  // The updated component
 }
 
 message SubmitTaskResponse {
@@ -488,6 +510,11 @@ message PowerResetRackRequest {
     OperationTargetSpec target_spec = 1;  // Flexible targeting: rack(s) with optional type filter, or specific components
     bool forced = 2;
     string description = 3;               // optional task description
+}
+
+message BringUpRackRequest {
+    OperationTargetSpec target_spec = 1;  // Target racks for bring-up
+    string description = 2;               // optional task description
 }
 
 message ListTasksRequest {
@@ -516,4 +543,109 @@ message BuildInfo {
     string version = 1;      // e.g., v2025.11.19
     string build_time = 2;   // e.g., 2025-01-27T10:30:00Z
     string git_commit = 3;   // e.g., abc1234
+}
+
+// Operation Rules API messages
+
+enum OperationType {
+    OPERATION_TYPE_UNKNOWN = 0;
+    OPERATION_TYPE_POWER_CONTROL = 1;
+    OPERATION_TYPE_FIRMWARE_CONTROL = 2;
+}
+
+message OperationRule {
+    UUID id = 1;
+    string name = 2;
+    string description = 3;
+    OperationType operation_type = 4;
+    string operation_code = 5;  // Specific operation code (e.g., "power_on", "upgrade")
+    string rule_definition_json = 6;  // JSON-encoded RuleDefinition
+    bool is_default = 7;
+    google.protobuf.Timestamp created_at = 8;
+    google.protobuf.Timestamp updated_at = 9;
+}
+
+message CreateOperationRuleRequest {
+    string name = 1;
+    string description = 2;
+    OperationType operation_type = 3;
+    string operation_code = 4;  // Specific operation code (e.g., "power_on", "upgrade")
+    string rule_definition_json = 5;  // JSON-encoded RuleDefinition
+    bool is_default = 6;
+}
+
+message CreateOperationRuleResponse {
+    UUID id = 1;
+}
+
+message UpdateOperationRuleRequest {
+    UUID rule_id = 1;
+    optional string name = 2;
+    optional string description = 3;
+    optional string rule_definition_json = 4;  // JSON-encoded RuleDefinition
+    // Note: is_default is NOT updatable here - use SetRuleAsDefault instead
+}
+
+message DeleteOperationRuleRequest {
+    UUID rule_id = 1;
+}
+
+message SetRuleAsDefaultRequest {
+    UUID rule_id = 1;
+}
+
+message GetOperationRuleRequest {
+    UUID rule_id = 1;
+}
+
+message ListOperationRulesRequest {
+    optional OperationType operation_type = 1;
+    optional bool is_default = 2;
+    optional int32 offset = 3;
+    optional int32 limit = 4;
+}
+
+message ListOperationRulesResponse {
+    repeated OperationRule rules = 1;
+    int32 total_count = 2;
+}
+
+// Rack-rule associations API messages
+
+message AssociateRuleWithRackRequest {
+    UUID rack_id = 1;
+    UUID rule_id = 2;
+}
+
+message DisassociateRuleFromRackRequest {
+    UUID rack_id = 1;
+    OperationType operation_type = 2;
+    string operation_code = 3;  // Specific operation code
+}
+
+message GetRackRuleAssociationRequest {
+    UUID rack_id = 1;
+    OperationType operation_type = 2;
+    string operation_code = 3;  // Specific operation code
+}
+
+message GetRackRuleAssociationResponse {
+    UUID rule_id = 1;  // Empty if no association exists
+}
+
+message ListRackRuleAssociationsRequest {
+    UUID rack_id = 1;
+}
+
+message RackRuleAssociation {
+    UUID rack_id = 1;
+    OperationType operation_type = 2;
+    string operation_code = 3;  // Specific operation code (e.g., "power_on", "upgrade")
+    UUID rule_id = 4;
+    google.protobuf.Timestamp created_at = 5;
+    google.protobuf.Timestamp updated_at = 6;
+}
+
+message ListRackRuleAssociationsResponse {
+    repeated RackRuleAssociation associations = 1;
 }

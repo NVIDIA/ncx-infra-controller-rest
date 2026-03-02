@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 // Package manager provides the business logic layer for inventory management.
 // It wraps the InventoryStore and provides a place for validation, caching,
 // audit logging, and other business rules.
@@ -26,13 +27,17 @@ import (
 	"github.com/google/uuid"
 
 	dbquery "github.com/nvidia/bare-metal-manager-rest/rla/internal/db/query"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/inventory/objects/component"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/inventory/objects/nvldomain"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/inventory/objects/rack"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/component"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/nvldomain"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/rack"
 	inventorystore "github.com/nvidia/bare-metal-manager-rest/rla/internal/inventory/store"
 	identifier "github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/Identifier"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
 )
+
+// Re-export for convenience
+type ComponentDrift = inventorystore.ComponentDrift
+type FieldDiff = inventorystore.FieldDiff
 
 // Manager defines the interface for inventory management business logic.
 // It wraps InventoryStore and provides a consistent API for the service layer.
@@ -56,6 +61,13 @@ type Manager interface {
 	GetComponentByBMCMAC(ctx context.Context, macAddress string) (*component.Component, error)
 	GetComponentsByExternalIDs(ctx context.Context, externalIDs []string) ([]*component.Component, error)
 	GetListOfComponents(ctx context.Context, info dbquery.StringQueryInfo, manufacturerFilter *dbquery.StringQueryInfo, modelFilter *dbquery.StringQueryInfo, componentTypes []devicetypes.ComponentType, pagination *dbquery.Pagination, orderBy *dbquery.OrderBy) ([]*component.Component, int32, error)
+	AddComponent(ctx context.Context, comp *component.Component) (uuid.UUID, error)
+	PatchComponent(ctx context.Context, comp *component.Component) error
+	DeleteComponent(ctx context.Context, id uuid.UUID) error
+
+	// Component drift operations
+	GetDriftsByComponentIDs(ctx context.Context, componentIDs []uuid.UUID) ([]inventorystore.ComponentDrift, error)
+	GetAllDrifts(ctx context.Context) ([]inventorystore.ComponentDrift, error)
 
 	// NVL Domain operations
 	CreateNVLDomain(ctx context.Context, nvlDomain *nvldomain.NVLDomain) (uuid.UUID, error)
@@ -183,4 +195,29 @@ func (m *ManagerImpl) GetListOfNVLDomains(ctx context.Context, info dbquery.Stri
 // GetRacksForNVLDomain retrieves all racks belonging to an NVL domain.
 func (m *ManagerImpl) GetRacksForNVLDomain(ctx context.Context, nvlDomainID identifier.Identifier) ([]*rack.Rack, error) {
 	return m.store.GetRacksForNVLDomain(ctx, nvlDomainID)
+}
+
+// AddComponent creates a single component in the database and returns its UUID.
+func (m *ManagerImpl) AddComponent(ctx context.Context, comp *component.Component) (uuid.UUID, error) {
+	return m.store.AddComponent(ctx, comp)
+}
+
+// PatchComponent updates a single component's fields in the database.
+func (m *ManagerImpl) PatchComponent(ctx context.Context, comp *component.Component) error {
+	return m.store.PatchComponent(ctx, comp)
+}
+
+// DeleteComponent soft-deletes a component by UUID.
+func (m *ManagerImpl) DeleteComponent(ctx context.Context, id uuid.UUID) error {
+	return m.store.DeleteComponent(ctx, id)
+}
+
+// GetDriftsByComponentIDs retrieves drift records for the given component UUIDs.
+func (m *ManagerImpl) GetDriftsByComponentIDs(ctx context.Context, componentIDs []uuid.UUID) ([]inventorystore.ComponentDrift, error) {
+	return m.store.GetDriftsByComponentIDs(ctx, componentIDs)
+}
+
+// GetAllDrifts retrieves all drift records.
+func (m *ManagerImpl) GetAllDrifts(ctx context.Context) ([]inventorystore.ComponentDrift, error) {
+	return m.store.GetAllDrifts(ctx)
 }

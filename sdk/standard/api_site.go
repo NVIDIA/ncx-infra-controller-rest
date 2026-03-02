@@ -280,6 +280,7 @@ type ApiGetAllSiteRequest struct {
 	isNativeNetworkingEnabled *bool
 	isNetworkSecurityGroupEnabled *bool
 	isNVLinkPartitionEnabled *bool
+	isRackLevelAdministrationEnabled *bool
 	includeMachineStats *bool
 	query *string
 	includeRelation *string
@@ -321,6 +322,12 @@ func (r ApiGetAllSiteRequest) IsNetworkSecurityGroupEnabled(isNetworkSecurityGro
 // Filter Sites by NVLink partitioning enabled flag. Requires Provider Admin role.
 func (r ApiGetAllSiteRequest) IsNVLinkPartitionEnabled(isNVLinkPartitionEnabled bool) ApiGetAllSiteRequest {
 	r.isNVLinkPartitionEnabled = &isNVLinkPartitionEnabled
+	return r
+}
+
+// Filter Sites by Rack Level Administration enabled flag. Requires Provider Admin role.
+func (r ApiGetAllSiteRequest) IsRackLevelAdministrationEnabled(isRackLevelAdministrationEnabled bool) ApiGetAllSiteRequest {
+	r.isRackLevelAdministrationEnabled = &isRackLevelAdministrationEnabled
 	return r
 }
 
@@ -422,6 +429,9 @@ func (a *SiteAPIService) GetAllSiteExecute(r ApiGetAllSiteRequest) ([]Site, *htt
 	}
 	if r.isNVLinkPartitionEnabled != nil {
 		parameterAddToHeaderOrQuery(localVarQueryParams, "isNVLinkPartitionEnabled", r.isNVLinkPartitionEnabled, "form", "")
+	}
+	if r.isRackLevelAdministrationEnabled != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "isRackLevelAdministrationEnabled", r.isRackLevelAdministrationEnabled, "form", "")
 	}
 	if r.includeMachineStats != nil {
 		parameterAddToHeaderOrQuery(localVarQueryParams, "includeMachineStats", r.includeMachineStats, "form", "")

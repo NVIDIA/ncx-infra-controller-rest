@@ -88,6 +88,42 @@ func (r *APIRackGetRequest) Validate() error {
 	return nil
 }
 
+// ========== Rack Filter (for batch operations) ==========
+
+// RackFilter specifies which racks to target in a batch operation.
+// If nil or empty, the operation targets all racks in the site.
+type RackFilter struct {
+	Names []string `json:"names,omitempty"`
+}
+
+// ToTargetSpec converts the filter to an RLA OperationTargetSpec.
+// Handles nil receiver gracefully (targets all racks).
+func (f *RackFilter) ToTargetSpec() *rlav1.OperationTargetSpec {
+	var rackTargets []*rlav1.RackTarget
+
+	if f != nil {
+		for _, name := range f.Names {
+			rackTargets = append(rackTargets, &rlav1.RackTarget{
+				Identifier: &rlav1.RackTarget_Name{
+					Name: name,
+				},
+			})
+		}
+	}
+
+	if len(rackTargets) == 0 {
+		rackTargets = append(rackTargets, &rlav1.RackTarget{})
+	}
+
+	return &rlav1.OperationTargetSpec{
+		Targets: &rlav1.OperationTargetSpec_Racks{
+			Racks: &rlav1.RackTargets{
+				Targets: rackTargets,
+			},
+		},
+	}
+}
+
 // APIRackGetAllRequest captures query parameters for listing racks.
 type APIRackGetAllRequest struct {
 	SiteID            string   `query:"siteId"`

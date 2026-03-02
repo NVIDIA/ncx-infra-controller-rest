@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package workerpool
 
 import (
@@ -194,7 +195,8 @@ func (wp *WorkerPool) GetMetrics() Metrics {
 		for _, d := range wp.metrics.execTimes {
 			total += d
 		}
-		metrics.AverageExecTime = total / time.Duration(len(wp.metrics.execTimes))
+		metrics.AverageExecTime = total /
+			time.Duration(len(wp.metrics.execTimes))
 	}
 
 	return metrics
@@ -268,9 +270,12 @@ func (w *worker) executeJob(job *Job) {
 		w.pool.metrics.mu.Lock()
 		if len(w.pool.metrics.execTimes) >= 1000 {
 			// Rotate out old times to prevent unlimited growth
-			w.pool.metrics.execTimes = w.pool.metrics.execTimes[100:]
+			w.pool.metrics.execTimes =
+				w.pool.metrics.execTimes[100:]
 		}
-		w.pool.metrics.execTimes = append(w.pool.metrics.execTimes, duration)
+		w.pool.metrics.execTimes = append(
+			w.pool.metrics.execTimes, duration,
+		)
 		w.pool.metrics.mu.Unlock()
 	}
 

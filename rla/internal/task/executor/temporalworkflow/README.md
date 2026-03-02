@@ -118,9 +118,9 @@ import (
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
 
-	"gitlab-master.nvidia.com/nvmetal/rla/internal/componentmanager/common"
-	"gitlab-master.nvidia.com/nvmetal/rla/internal/inventory/objects/component"
-	"gitlab-master.nvidia.com/nvmetal/rla/internal/inventory/objects/rack"
+	"github.com/nvidia/bare-metal-manager-rest/rla/internal/componentmanager/common"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/component"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/rack"
 )
 
 const (

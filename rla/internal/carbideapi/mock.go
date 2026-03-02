@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package carbideapi
 
 import (
@@ -68,6 +69,10 @@ func (c *mockClient) AdminPowerControl(ctx context.Context, machineID string, ac
 	return c.adminPowerControlErr
 }
 
+func (c *mockClient) UpdatePowerOption(ctx context.Context, machineID string, desiredState PowerState) error {
+	return nil
+}
+
 func (c *mockClient) AddMachine(machine Machine) {
 	c.machines[machine.MachineID] = machine
 }
@@ -105,4 +110,20 @@ func (c *mockClient) FindMachinesByIds(ctx context.Context, machineIds []string)
 func (c *mockClient) GetMachinePositionInfo(ctx context.Context, machineIds []string) ([]MachinePosition, error) {
 	// Mock implementation returns empty for now
 	return nil, nil
+}
+
+func (c *mockClient) AllowIngestionAndPowerOn(
+	ctx context.Context,
+	bmcIP string,
+	bmcMAC string,
+) error {
+	return nil
+}
+
+func (c *mockClient) DetermineMachineIngestionState(
+	ctx context.Context,
+	bmcIP string,
+	bmcMAC string,
+) (BringUpState, error) {
+	return BringUpStateMachineCreated, nil
 }

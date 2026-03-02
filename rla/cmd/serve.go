@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package cmd
 
 import (
@@ -29,7 +30,6 @@ import (
 	"go.temporal.io/sdk/worker"
 
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/carbideapi"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/config"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/db"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/psmapi"
 	svc "github.com/nvidia/bare-metal-manager-rest/rla/internal/service"
@@ -44,11 +44,13 @@ import (
 )
 
 const (
-	defaultServicePort = 50051
+	defaultServicePort    = 50051
+	componentMgrCfgEnvVar = "COMPONENT_MANAGER_CONFIG"
 )
 
 var (
-	port int
+	port               int
+	componentMgrConfig string
 
 	// serveCmd represents the serve command
 	serveCmd = &cobra.Command{
@@ -65,6 +67,8 @@ func init() {
 	rootCmd.AddCommand(serveCmd)
 
 	serveCmd.Flags().IntVarP(&port, "port", "p", defaultServicePort, "Port for the gRPC server") //nolint
+	// Component manager config: priority is CLI flag > env var > default prod config
+	serveCmd.Flags().StringVarP(&componentMgrConfig, "component-config", "c", "", "Path to component manager config file (YAML)") //nolint
 }
 
 // providerClients holds the API clients extracted from providers for use by the service.
@@ -121,7 +125,11 @@ func initComponentManagerRegistry(config componentmanager.Config, providerRegist
 	registry := componentmanager.NewRegistry()
 
 	// Register all available component manager factories
-	computecarbide.Register(registry)
+	var computePowerDelay time.Duration
+	if config.Providers.Carbide != nil {
+		computePowerDelay = config.Providers.Carbide.ComputePowerDelay
+	}
+	computecarbide.Register(registry, computePowerDelay)
 	nvlswitchcarbide.Register(registry)
 	powershelfpsm.Register(registry)
 	mock.RegisterAll(registry)
@@ -143,17 +151,43 @@ func initComponentManagerRegistry(config componentmanager.Config, providerRegist
 	return registry, nil
 }
 
-// loadComponentManagerConfig loads the component manager configuration from file or defaults.
+// loadComponentManagerConfig loads the component manager configuration with the following priority:
+//
+//  1. CLI flag: --component-config / -c <path>
+//     Example: ./rla serve -c /etc/rla/custom.yaml
+//
+//  2. Environment variable: COMPONENT_MANAGER_CONFIG=<path>
+//     Example: COMPONENT_MANAGER_CONFIG=/etc/rla/componentmanager.yaml
+//
+//  3. Embedded default: componentmanager.DefaultProdConfig()
+//     Used when no config file is provided. The primary production path.
+//     Uses real implementations (Carbide for compute/nvlswitch, PSM for powershelf).
+//
+// The config specifies:
+//   - Which component manager implementations to use (carbide, psm, mock)
+//   - Provider settings (timeouts, endpoints)
 func loadComponentManagerConfig() (componentmanager.Config, error) {
-	globalConfig := config.ReadConfig()
-	if globalConfig.ComponentManager != nil {
-		return *globalConfig.ComponentManager, nil
+	// Priority 1: CLI flag
+	configPath := componentMgrConfig
+
+	// Priority 2: Environment variable
+	if configPath == "" {
+		configPath = os.Getenv(componentMgrCfgEnvVar)
 	}
 
-	log.Info().Msg("No component manager config specified, using default test config")
-	return componentmanager.DefaultTestConfig(), nil
+	// Load from file if a path was specified
+	if configPath != "" {
+		log.Info().Str("config_path", configPath).Msg("Loading component manager config from file")
+		return componentmanager.LoadConfig(configPath)
+	}
+
+	// Priority 3: Embedded production config
+	log.Info().Msg("Using embedded production config (carbide + psm)")
+	return componentmanager.DefaultProdConfig(), nil
 }
 
+// createOperationRulesLoader creates a rule loader from configuration file.
+// Returns a loader that will be used by the resolver to load rules during Start().
 func doServe() {
 	dbConf, err := db.BuildDBConfigFromEnv()
 	if err != nil {

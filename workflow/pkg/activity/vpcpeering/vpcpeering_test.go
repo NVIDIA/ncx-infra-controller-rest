@@ -29,7 +29,6 @@ import (
 	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
 	cdbu "github.com/nvidia/bare-metal-manager-rest/db/pkg/util"
 	sc "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/client/site"
-	cwu "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/uptrace/bun/extra/bundebug"
 	"go.temporal.io/sdk/testsuite"
@@ -40,6 +39,8 @@ import (
 	"os"
 
 	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
+
+	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 )
 
 func testTemporalSiteClientPool(t *testing.T) *sc.ClientPool {
@@ -245,15 +246,15 @@ func TestManageVpcPeering_UpdateVpcPeeringsInDB(t *testing.T) {
 	assert.NotNil(t, vp1)
 	vp2 := testVpcPeeringBuildVpcPeering(t, dbSession, vpc2.ID, vpc1.ID, site.ID, false, user.ID)
 	assert.NotNil(t, vp2)
-	_, err := dbSession.DB.Exec("UPDATE vpc_peering SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval*2)), vp2.ID)
+	_, err := dbSession.DB.Exec("UPDATE vpc_peering SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval*2)), vp2.ID)
 	assert.NoError(t, err)
 	vp3 := testVpcPeeringBuildVpcPeering(t, dbSession, vpc1.ID, vpc3.ID, site.ID, false, user.ID)
 	assert.NotNil(t, vp3)
-	_, err = dbSession.DB.Exec("UPDATE vpc_peering SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval*2)), vp3.ID)
+	_, err = dbSession.DB.Exec("UPDATE vpc_peering SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval*2)), vp3.ID)
 	assert.NoError(t, err)
 	vp4 := testVpcPeeringBuildVpcPeering(t, dbSession, vpc2.ID, vpc3.ID, site.ID, false, user.ID)
 	assert.NotNil(t, vp4)
-	_, err = dbSession.DB.Exec("UPDATE vpc_peering SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval*2)), vp4.ID)
+	_, err = dbSession.DB.Exec("UPDATE vpc_peering SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval*2)), vp4.ID)
 	assert.NoError(t, err)
 
 	tSiteClientPool := testTemporalSiteClientPool(t)
@@ -280,7 +281,7 @@ func TestManageVpcPeering_UpdateVpcPeeringsInDB(t *testing.T) {
 		err = mvp.updateVpcPeeringStatusInDB(ctx, nil, vpcPeering.ID, cdb.GetStrPtr(cdbm.VpcPeeringStatusReady), cdb.GetStrPtr("VPC Peering was created in DB from site inventory"))
 		assert.NoError(t, err)
 		// Set created to 2x inventory interval ago
-		_, err := dbSession.DB.Exec("UPDATE vpc_peering SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval*2)), vpcPeering.ID)
+		_, err := dbSession.DB.Exec("UPDATE vpc_peering SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval*2)), vpcPeering.ID)
 		assert.NoError(t, err)
 
 		if i < 34 {

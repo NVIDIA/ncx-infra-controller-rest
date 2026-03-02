@@ -214,6 +214,25 @@ jobs:
       release_tag: ${{ inputs.release_tag }}
     secrets: inherit
 
+# Build and push carbide-psm
+  build-carbide-psm:
+    name: Build carbide-psm
+    uses: ./.github/workflows/build-push-service.yml
+    with:
+      runner: ${{ inputs.runner }}
+      service_name: carbide-psm
+      binary_name: psm
+      binary_path: /app/psm
+      dockerfile: ./docker/production/Dockerfile.carbide-psm
+      semantic_version: ${{ inputs.semantic_version }}
+      short_sha: ${{ inputs.short_sha }}
+      branch_sha_tag: ${{ inputs.branch_sha_tag }}
+      target_registry: ${{ inputs.target_registry }}
+      push_enabled: ${{ inputs.push_enabled }}
+      is_main_branch: ${{ inputs.is_main_branch }}
+      release_tag: ${{ inputs.release_tag }}
+    secrets: inherit
+
   # Build summary
   build-summary:
     name: Build Summary
@@ -226,6 +245,7 @@ jobs:
       - build-carbide-rest-site-agent
       - build-carbide-rest-cert-manager
       - build-carbide-rla
+      - build-carbide-psm
     if: always()
     outputs:
       build_artifacts: ${{ steps.aggregate.outputs.artifacts }}

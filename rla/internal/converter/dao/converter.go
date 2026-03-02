@@ -14,24 +14,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package dao
 
 import (
+	"database/sql"
+	"encoding/json"
+	"fmt"
 	"net"
 
 	"github.com/google/uuid"
 
+	"github.com/nvidia/bare-metal-manager-rest/rla/internal/carbideapi"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/db/model"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/inventory/objects/bmc"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/inventory/objects/component"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/inventory/objects/nvldomain"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/inventory/objects/rack"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/bmc"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/component"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/nvldomain"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/rack"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/operation"
+	taskcommon "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/common"
+	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operationrules"
+	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operations"
 	taskdef "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/task"
 	identifier "github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/Identifier"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/credential"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/deviceinfo"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/errors"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/location"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/utils"
 )
@@ -44,6 +53,23 @@ func BMCTypeFrom(dt string) devicetypes.BMCType {
 // ComponentTypeFrom convers component type from DAO model to internal model.
 func ComponentTypeFrom(dt string) devicetypes.ComponentType {
 	return devicetypes.ComponentTypeFromString(dt)
+}
+
+// powerStateFromDAO converts a carbideapi.PowerState pointer to a string.
+func powerStateFromDAO(ps *carbideapi.PowerState) string {
+	if ps == nil {
+		return ""
+	}
+	switch *ps {
+	case carbideapi.PowerStateOn:
+		return "on"
+	case carbideapi.PowerStateOff:
+		return "off"
+	case carbideapi.PowerStateDisabled:
+		return "disabled"
+	default:
+		return "unknown"
+	}
 }
 
 // BMCFrom converts BMC from DAO model to internal model
@@ -99,6 +125,7 @@ func ComponentFrom(dao model.Component) *component.Component {
 		BmcsByType:  bmcsByType,
 		ComponentID: componentID,
 		RackID:      dao.RackID,
+		PowerState:  powerStateFromDAO(dao.PowerState),
 	}
 }
 
@@ -143,10 +170,17 @@ func TaskFrom(dao *model.Task) *taskdef.Task {
 		return nil
 	}
 
+	// Extract operation code from the serialized information
+	operationCode := ""
+	if op, err := operations.New(dao.Type, dao.Information); err == nil {
+		operationCode = op.CodeString()
+	}
+
 	return &taskdef.Task{
 		ID: dao.ID,
 		Operation: operation.Wrapper{
 			Type: dao.Type,
+			Code: operationCode,
 			Info: dao.Information,
 		},
 		RackID:         dao.RackID,
@@ -156,6 +190,7 @@ func TaskFrom(dao *model.Task) *taskdef.Task {
 		ExecutionID:    dao.ExecutionID,
 		Status:         dao.Status,
 		Message:        dao.Message,
+		AppliedRuleID:  dao.AppliedRuleID,
 	}
 }
 
@@ -284,5 +319,94 @@ func TaskTo(task *taskdef.Task) *model.Task {
 		ExecutionID:    task.ExecutionID,
 		Status:         task.Status,
 		Message:        task.Message,
+		AppliedRuleID:  task.AppliedRuleID,
+	}
+}
+
+// OperationRuleTo converts domain object to database model
+func OperationRuleTo(rule *operationrules.OperationRule) (*model.OperationRule, error) {
+	if rule == nil {
+		return nil, nil
+	}
+
+	ruleDefJSON, err := operationrules.MarshalRuleDefinition(rule.RuleDefinition)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal rule definition: %w", err)
+	}
+
+	dbModel := &model.OperationRule{
+		ID:             rule.ID,
+		Name:           rule.Name,
+		OperationType:  string(rule.OperationType),
+		OperationCode:  rule.OperationCode,
+		RuleDefinition: json.RawMessage(ruleDefJSON),
+		IsDefault:      rule.IsDefault,
+	}
+
+	if rule.Description != "" {
+		dbModel.Description = sql.NullString{String: rule.Description, Valid: true}
+	}
+
+	return dbModel, nil
+}
+
+// OperationRuleFrom converts database model to domain object
+func OperationRuleFrom(dbModel *model.OperationRule) (*operationrules.OperationRule, error) {
+	if dbModel == nil {
+		return nil, nil
+	}
+
+	ruleDef, err := operationrules.UnmarshalRuleDefinition(dbModel.RuleDefinition)
+	if err != nil {
+		return nil, errors.GRPCErrorInternal(fmt.Sprintf("failed to unmarshal rule definition: %v", err))
+	}
+
+	rule := &operationrules.OperationRule{
+		ID:             dbModel.ID,
+		Name:           dbModel.Name,
+		OperationType:  taskcommon.TaskType(dbModel.OperationType),
+		OperationCode:  dbModel.OperationCode,
+		RuleDefinition: *ruleDef,
+		IsDefault:      dbModel.IsDefault,
+		CreatedAt:      dbModel.CreatedAt,
+		UpdatedAt:      dbModel.UpdatedAt,
+	}
+
+	if dbModel.Description.Valid {
+		rule.Description = dbModel.Description.String
+	}
+
+	return rule, nil
+}
+
+// RackRuleAssociationFrom converts database model to domain object
+func RackRuleAssociationFrom(dbModel *model.RackRuleAssociation) *operationrules.RackRuleAssociation {
+	if dbModel == nil {
+		return nil
+	}
+
+	return &operationrules.RackRuleAssociation{
+		RackID:        dbModel.RackID,
+		OperationType: taskcommon.TaskType(dbModel.OperationType),
+		OperationCode: dbModel.OperationCode,
+		RuleID:        dbModel.RuleID,
+		CreatedAt:     dbModel.CreatedAt,
+		UpdatedAt:     dbModel.UpdatedAt,
+	}
+}
+
+// RackRuleAssociationTo converts domain object to database model
+func RackRuleAssociationTo(assoc *operationrules.RackRuleAssociation) *model.RackRuleAssociation {
+	if assoc == nil {
+		return nil
+	}
+
+	return &model.RackRuleAssociation{
+		RackID:        assoc.RackID,
+		OperationType: string(assoc.OperationType),
+		OperationCode: assoc.OperationCode,
+		RuleID:        assoc.RuleID,
+		CreatedAt:     assoc.CreatedAt,
+		UpdatedAt:     assoc.UpdatedAt,
 	}
 }

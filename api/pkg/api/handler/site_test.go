@@ -1384,8 +1384,8 @@ func TestGetAllSiteHandler_Handle(t *testing.T) {
 	stDAO.Update(ctx, nil, cdbm.SiteUpdateInput{Config: &cdbm.SiteConfigUpdateInput{NetworkSecurityGroup: cdb.GetBoolPtr(true)}, SiteID: sts[2].ID})
 	stDAO.Update(ctx, nil, cdbm.SiteUpdateInput{Config: &cdbm.SiteConfigUpdateInput{NetworkSecurityGroup: cdb.GetBoolPtr(true)}, SiteID: sts[3].ID})
 
-	stDAO.Update(ctx, nil, cdbm.SiteUpdateInput{Config: &cdbm.SiteConfigUpdateInput{NativeNetworking: cdb.GetBoolPtr(true), NetworkSecurityGroup: cdb.GetBoolPtr(true), NVLinkPartition: cdb.GetBoolPtr(true)}, SiteID: sts[4].ID})
-	stDAO.Update(ctx, nil, cdbm.SiteUpdateInput{Config: &cdbm.SiteConfigUpdateInput{NativeNetworking: cdb.GetBoolPtr(true), NetworkSecurityGroup: cdb.GetBoolPtr(true), NVLinkPartition: cdb.GetBoolPtr(true)}, SiteID: sts[5].ID})
+	stDAO.Update(ctx, nil, cdbm.SiteUpdateInput{Config: &cdbm.SiteConfigUpdateInput{NativeNetworking: cdb.GetBoolPtr(true), NetworkSecurityGroup: cdb.GetBoolPtr(true), NVLinkPartition: cdb.GetBoolPtr(true), RackLevelAdministration: cdb.GetBoolPtr(true)}, SiteID: sts[4].ID})
+	stDAO.Update(ctx, nil, cdbm.SiteUpdateInput{Config: &cdbm.SiteConfigUpdateInput{NativeNetworking: cdb.GetBoolPtr(true), NetworkSecurityGroup: cdb.GetBoolPtr(true), NVLinkPartition: cdb.GetBoolPtr(true), RackLevelAdministration: cdb.GetBoolPtr(true)}, SiteID: sts[5].ID})
 
 	// Setup echo server/context
 	e := echo.New()
@@ -1491,6 +1491,25 @@ func TestGetAllSiteHandler_Handle(t *testing.T) {
 				org: ipOrg,
 				query: url.Values{
 					"isNVLinkPartitionEnabled": []string{"True"},
+				},
+				user: ipu1,
+			},
+			wantCount:          2,
+			wantTotalCount:     2,
+			wantRespCode:       http.StatusOK,
+			verifyChildSpanner: true,
+		},
+		{
+			name: "get all Sites by Provider admin with rack level administration enabled success",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        &tmocks.Client{},
+				cfg:       cfg,
+			},
+			args: args{
+				org: ipOrg,
+				query: url.Values{
+					"isRackLevelAdministrationEnabled": []string{"True"},
 				},
 				user: ipu1,
 			},

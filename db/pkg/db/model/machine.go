@@ -231,6 +231,7 @@ type MachineFilterInput struct {
 	Statuses                 []string
 	SearchQuery              *string
 	MachineIDs               []string
+	ExcludeMetadata          bool // When true, excludes the metadata JSONB column from SELECT to improve performance on bulk queries
 }
 
 type MachineHealth struct {
@@ -603,6 +604,11 @@ func (msd MachineSQLDAO) setQueryWithFilter(filter MachineFilterInput, query *bu
 	if filter.MachineIDs != nil {
 		query = query.Where("m.id IN (?)", bun.In(filter.MachineIDs))
 	}
+
+	if filter.ExcludeMetadata {
+		query = query.ExcludeColumn("metadata")
+	}
+
 	return query, nil
 }
 

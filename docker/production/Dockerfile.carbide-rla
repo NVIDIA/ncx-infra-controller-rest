@@ -24,9 +24,6 @@ COPY rla/ ./rla/
 
 WORKDIR /workspace/rla
 
-# Fetch and cache dependencies.  This should mainly be for if we start including other private repos in the build.
-#RUN --mount=type=secret,id=gitcreds,dst=/root/.netrc go mod download
-
 # Build with version information injected via ldflags
 RUN VERSION=$(cat /workspace/VERSION 2>/dev/null || echo "dev") && \
     BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ") && \

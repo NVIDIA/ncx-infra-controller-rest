@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 // Package client_test verifies that the client package can be imported and used
 // by external Go modules. This test uses the _test package suffix to simulate
 // an external consumer - it can only access exported (public) symbols.
@@ -24,7 +25,6 @@ package client_test
 
 import (
 	"testing"
-	"time"
 
 	"github.com/google/uuid"
 
@@ -86,7 +86,6 @@ func TestExternalUsability(t *testing.T) {
 	_ = client.UpgradeFirmwareResult{}
 	_ = client.PowerControlResult{}
 	_ = client.GetExpectedComponentsResult{}
-	_ = client.GetActualComponentsResult{}
 	_ = client.ValidateComponentsResult{}
 	_ = client.ListTasksResult{}
 
@@ -121,7 +120,6 @@ func TestTypesInteroperability(t *testing.T) {
 	// These type assertions verify the types are compatible
 	var _ *types.Rack
 	var _ *types.Component
-	var _ *types.ActualComponent
 	var _ *types.ComponentDiff
 	var _ *types.Task
 	var _ *types.Pagination
@@ -201,12 +199,12 @@ func TestTypesInteroperability(t *testing.T) {
 	}
 }
 
-// TestActualComponentHasLastSeen verifies ActualComponent includes time field.
-func TestActualComponentHasLastSeen(t *testing.T) {
-	ac := types.ActualComponent{
-		LastSeen: time.Now(),
+// TestComponentHasPowerState verifies Component includes power_state field.
+func TestComponentHasPowerState(t *testing.T) {
+	c := types.Component{
+		PowerState: "on",
 	}
-	if ac.LastSeen.IsZero() {
-		t.Error("LastSeen should not be zero")
+	if c.PowerState == "" {
+		t.Error("PowerState should not be empty")
 	}
 }

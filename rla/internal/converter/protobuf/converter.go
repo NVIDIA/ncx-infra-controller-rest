@@ -14,20 +14,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package protobuf
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
 
 	"github.com/google/uuid"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	dbquery "github.com/nvidia/bare-metal-manager-rest/rla/internal/db/query"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/inventory/objects/bmc"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/inventory/objects/component"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/inventory/objects/nvldomain"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/inventory/objects/rack"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/bmc"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/component"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/nvldomain"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/rack"
 	taskcommon "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/common"
+	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operationrules"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operations"
 	taskdef "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/task"
 	identifier "github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/Identifier"
@@ -216,6 +220,7 @@ func ComponentFrom(c *pb.Component) *component.Component {
 		FirmwareVersion: c.GetFirmwareVersion(),
 		Position:        RackPositionFrom(c.GetPosition()),
 		BmcsByType:      bmcsByType,
+		PowerState:      c.GetPowerState(),
 	}
 }
 
@@ -260,34 +265,32 @@ func StringQueryInfoFrom(info *pb.StringQueryInfo) *dbquery.StringQueryInfo {
 	}
 }
 
-// FilterFrom converts a protobuf Filter to internal filter fields
+// FilterFrom converts a protobuf Filter to internal filter fields.
 // Returns: (fieldName, StringQueryInfo, error)
-// For rack filters, returns the column name and query info
-// For component filters, returns the column name and query info
-func FilterFrom(filter *pb.Filter, isRack bool) (string, *dbquery.StringQueryInfo, error) {
+// The filter type (rack vs component) is inferred from which field is set
+// in the Filter message (rack_field or component_field).
+func FilterFrom(filter *pb.Filter) (string, *dbquery.StringQueryInfo, error) {
 	if filter == nil || filter.GetQueryInfo() == nil {
 		return "", nil, nil
 	}
 
 	var fieldName string
-	if isRack {
-		rackField := filter.GetRackField()
-		if rackField == pb.RackFilterField_RACK_FILTER_FIELD_UNSPECIFIED {
-			return "", nil, fmt.Errorf("rack filter field not set")
-		}
-		fieldName = rackFilterFieldToColumn(rackField)
+	switch {
+	case filter.GetRackField() != pb.RackFilterField_RACK_FILTER_FIELD_UNSPECIFIED:
+		fieldName = rackFilterFieldToColumn(filter.GetRackField())
 		if fieldName == "" {
-			return "", nil, fmt.Errorf("unsupported rack filter field: %v", rackField)
+			return "", nil, fmt.Errorf("unsupported rack filter field: %v",
+				filter.GetRackField())
 		}
-	} else {
-		componentField := filter.GetComponentField()
-		if componentField == pb.ComponentFilterField_COMPONENT_FILTER_FIELD_UNSPECIFIED {
-			return "", nil, fmt.Errorf("component filter field not set")
-		}
-		fieldName = componentFilterFieldToColumn(componentField)
+	case filter.GetComponentField() != pb.ComponentFilterField_COMPONENT_FILTER_FIELD_UNSPECIFIED:
+		fieldName = componentFilterFieldToColumn(filter.GetComponentField())
 		if fieldName == "" {
-			return "", nil, fmt.Errorf("unsupported component filter field: %v", componentField)
+			return "", nil, fmt.Errorf("unsupported component filter field: %v",
+				filter.GetComponentField())
 		}
+	default:
+		return "", nil, fmt.Errorf("filter field not set: either rack_field or " +
+			"component_field must be set")
 	}
 
 	queryInfo := StringQueryInfoFrom(filter.GetQueryInfo())
@@ -581,6 +584,7 @@ func ComponentTo(c *component.Component) *pb.Component {
 		Bmcs:            bmcInfos,
 		ComponentId:     c.ComponentID,
 		RackId:          UUIDTo(c.RackID),
+		PowerState:      c.PowerState,
 	}
 }
 
@@ -773,4 +777,124 @@ func NVLDomainTo(info *nvldomain.NVLDomain) *pb.NVLDomain {
 	return &pb.NVLDomain{
 		Identifier: IdentifierTo(&info.Identifier),
 	}
+}
+
+// ========================================
+// Operation Rule Converters
+// ========================================
+
+func OperationTypeToProto(opType taskcommon.TaskType) pb.OperationType {
+	switch opType {
+	case taskcommon.TaskTypePowerControl:
+		return pb.OperationType_OPERATION_TYPE_POWER_CONTROL
+	case taskcommon.TaskTypeFirmwareControl:
+		return pb.OperationType_OPERATION_TYPE_FIRMWARE_CONTROL
+	default:
+		return pb.OperationType_OPERATION_TYPE_UNKNOWN
+	}
+}
+
+func OperationTypeFromProto(opType pb.OperationType) taskcommon.TaskType {
+	switch opType {
+	case pb.OperationType_OPERATION_TYPE_POWER_CONTROL:
+		return taskcommon.TaskTypePowerControl
+	case pb.OperationType_OPERATION_TYPE_FIRMWARE_CONTROL:
+		return taskcommon.TaskTypeFirmwareControl
+	default:
+		return taskcommon.TaskTypeUnknown
+	}
+}
+
+func OperationRuleTo(rule *operationrules.OperationRule) (*pb.OperationRule, error) {
+	if rule == nil {
+		return nil, nil
+	}
+
+	// Marshal RuleDefinition to JSON string
+	ruleDefJSON, err := json.Marshal(rule.RuleDefinition)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.OperationRule{
+		Id:                 UUIDTo(rule.ID),
+		Name:               rule.Name,
+		Description:        rule.Description,
+		OperationType:      OperationTypeToProto(rule.OperationType),
+		OperationCode:      rule.OperationCode,
+		RuleDefinitionJson: string(ruleDefJSON),
+		IsDefault:          rule.IsDefault,
+		CreatedAt:          timestamppb.New(rule.CreatedAt),
+		UpdatedAt:          timestamppb.New(rule.UpdatedAt),
+	}, nil
+}
+
+func OperationRuleFromProto(pbRule *pb.OperationRule) (*operationrules.OperationRule, error) {
+	if pbRule == nil {
+		return nil, nil
+	}
+
+	// Unmarshal RuleDefinition from JSON string
+	var ruleDef operationrules.RuleDefinition
+	if err := json.Unmarshal([]byte(pbRule.GetRuleDefinitionJson()), &ruleDef); err != nil {
+		return nil, err
+	}
+
+	rule := &operationrules.OperationRule{
+		ID:             UUIDFrom(pbRule.GetId()),
+		Name:           pbRule.GetName(),
+		Description:    pbRule.GetDescription(),
+		OperationType:  OperationTypeFromProto(pbRule.GetOperationType()),
+		OperationCode:  pbRule.GetOperationCode(),
+		RuleDefinition: ruleDef,
+		IsDefault:      pbRule.GetIsDefault(),
+	}
+
+	if pbRule.GetCreatedAt() != nil {
+		rule.CreatedAt = pbRule.GetCreatedAt().AsTime()
+	}
+	if pbRule.GetUpdatedAt() != nil {
+		rule.UpdatedAt = pbRule.GetUpdatedAt().AsTime()
+	}
+
+	return rule, nil
+}
+
+// RackRuleAssociationTo converts domain object to protobuf
+func RackRuleAssociationTo(assoc *operationrules.RackRuleAssociation) *pb.RackRuleAssociation {
+	if assoc == nil {
+		return nil
+	}
+
+	return &pb.RackRuleAssociation{
+		RackId:        UUIDTo(assoc.RackID),
+		OperationType: OperationTypeToProto(assoc.OperationType),
+		OperationCode: assoc.OperationCode,
+		RuleId:        UUIDTo(assoc.RuleID),
+		CreatedAt:     timestamppb.New(assoc.CreatedAt),
+		UpdatedAt:     timestamppb.New(assoc.UpdatedAt),
+	}
+}
+
+// RackRuleAssociationFromProto converts protobuf to domain object
+func RackRuleAssociationFromProto(pbAssoc *pb.RackRuleAssociation) *operationrules.RackRuleAssociation {
+	if pbAssoc == nil {
+		return nil
+	}
+
+	assoc := &operationrules.RackRuleAssociation{
+		RackID:        UUIDFrom(pbAssoc.GetRackId()),
+		OperationType: OperationTypeFromProto(pbAssoc.GetOperationType()),
+		OperationCode: pbAssoc.GetOperationCode(),
+		RuleID:        UUIDFrom(pbAssoc.GetRuleId()),
+	}
+
+	if pbAssoc.GetCreatedAt() != nil {
+		assoc.CreatedAt = pbAssoc.GetCreatedAt().AsTime()
+	}
+	if pbAssoc.GetUpdatedAt() != nil {
+		assoc.UpdatedAt = pbAssoc.GetUpdatedAt().AsTime()
+	}
+
+	return assoc
 }

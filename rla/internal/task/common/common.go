@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package common
 
 import (
@@ -31,10 +32,30 @@ const (
 	TaskTypeInjectExpectation TaskType = "inject_expectation"
 	TaskTypePowerControl      TaskType = "power_control"
 	TaskTypeFirmwareControl   TaskType = "firmware_control"
+	TaskTypeBringUp           TaskType = "bring_up"
 )
+
+func TaskTypeFromString(s string) TaskType {
+	switch s {
+	case TaskTypeInjectExpectation.String():
+		return TaskTypeInjectExpectation
+	case TaskTypePowerControl.String():
+		return TaskTypePowerControl
+	case TaskTypeFirmwareControl.String():
+		return TaskTypeFirmwareControl
+	case TaskTypeBringUp.String():
+		return TaskTypeBringUp
+	default:
+		return TaskTypeUnknown
+	}
+}
 
 func (tt TaskType) IsValid() bool {
 	return tt != TaskTypeUnknown
+}
+
+func (tt TaskType) String() string {
+	return string(tt)
 }
 
 type ExecutorType string
@@ -69,6 +90,11 @@ type TaskListOptions struct {
 	TaskType   TaskType
 	RackID     uuid.UUID
 	ActiveOnly bool
+}
+
+type OperationRuleListOptions struct {
+	OperationType TaskType
+	IsDefault     *bool
 }
 
 type ComponentInfo struct {

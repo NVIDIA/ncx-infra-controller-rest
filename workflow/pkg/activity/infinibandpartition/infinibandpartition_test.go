@@ -30,7 +30,6 @@ import (
 	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
 	sc "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/client/site"
 	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/util"
-	cwu "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -46,6 +45,8 @@ import (
 	tmocks "go.temporal.io/sdk/mocks"
 
 	"go.temporal.io/sdk/testsuite"
+
+	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 )
 
 // testTemporalSiteClientPool Building site client pool
@@ -583,7 +584,7 @@ func TestManageInfiniBandPartition_UpdateInfiniBandPartitionsInDB(t *testing.T) 
 	ibp7 := util.TestBuildInfiniBandPartition(t, dbSession, "test-ibp-7", st1, tn, cdb.GetUUIDPtr(uuid.New()), cdbm.InfiniBandPartitionStatusReady, false)
 	assert.NotNil(t, ibp7)
 	// Set created earlier than the inventory receipt interval
-	_, err := dbSession.DB.Exec("UPDATE infiniband_partition SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval)), ibp7.ID.String())
+	_, err := dbSession.DB.Exec("UPDATE infiniband_partition SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval)), ibp7.ID.String())
 	assert.NoError(t, err)
 
 	ibp8 := util.TestBuildInfiniBandPartition(t, dbSession, "test-ibp-8", st1, tn, cdb.GetUUIDPtr(uuid.New()), cdbm.InfiniBandPartitionStatusError, true)
@@ -598,7 +599,7 @@ func TestManageInfiniBandPartition_UpdateInfiniBandPartitionsInDB(t *testing.T) 
 	ibp11 := util.TestBuildInfiniBandPartition(t, dbSession, "test-ibp-11", st1, tn, cdb.GetUUIDPtr(uuid.New()), cdbm.InfiniBandPartitionStatusReady, false)
 	assert.NotNil(t, ibp11)
 	// Set created earlier than the inventory receipt interval
-	_, err = dbSession.DB.Exec("UPDATE infiniband_partition SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval)), ibp11.ID.String())
+	_, err = dbSession.DB.Exec("UPDATE infiniband_partition SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval)), ibp11.ID.String())
 	assert.NoError(t, err)
 
 	// Build InfiniBand Partition inventory that is paginated
@@ -608,7 +609,7 @@ func TestManageInfiniBandPartition_UpdateInfiniBandPartitionsInDB(t *testing.T) 
 	for i := 0; i < 38; i++ {
 		ibp := util.TestBuildInfiniBandPartition(t, dbSession, fmt.Sprintf("test-vpc-paged-%d", i), st2, tn, cdb.GetUUIDPtr(uuid.New()), cdbm.InfiniBandPartitionStatusReady, false)
 		// Update creation timestamp to be earlier than inventory processing interval
-		_, err = dbSession.DB.Exec("UPDATE infiniband_partition SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwu.InventoryReceiptInterval)*2), ibp.ID.String())
+		_, err = dbSession.DB.Exec("UPDATE infiniband_partition SET created = ? WHERE id = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval)*2), ibp.ID.String())
 		assert.NoError(t, err)
 		pagedIbps = append(pagedIbps, ibp)
 		pagedInvIds = append(pagedInvIds, ibp.ControllerIBPartitionID.String())

@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 // Package config defines a configuration file that allows tweaking values on a per environment basis.
 // Default values are used if the file is missing or for individual values that were not specified.
 
@@ -23,7 +24,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/componentmanager"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
 )
@@ -32,11 +32,10 @@ const defaultLocation = "/etc/rla/rlaconfig.yaml"
 
 // Config is a set of configuration operations that will be read from an environment specific config file
 type Config struct {
-	InventoryRunFrequency     time.Duration            `yaml:"inventory_run_frequency"`
-	UpdateMachineIDsFrequency time.Duration            `yaml:"update_machine_ids_frequency"`
-	GRPCTimeout               time.Duration            `yaml:"grpc_timeout"`
-	DisableInventory          bool                     `yaml:"disable_inventory"`
-	ComponentManager          *componentmanager.Config `yaml:"component_manager"`
+	InventoryRunFrequency     time.Duration `yaml:"inventory_run_frequency"`
+	UpdateMachineIDsFrequency time.Duration `yaml:"update_machine_ids_frequency"`
+	GRPCTimeout               time.Duration `yaml:"grpc_timeout"`
+	DisableInventory          bool          `yaml:"disable_inventory"`
 }
 
 // defaultConfig sets up the default values used when something is not specified

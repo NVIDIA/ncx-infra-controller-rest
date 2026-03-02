@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package client
 
 import (
@@ -35,12 +36,6 @@ type PowerControlResult struct {
 // GetExpectedComponentsResult contains the result of GetExpectedComponents operation.
 type GetExpectedComponentsResult struct {
 	Components []*types.Component
-	Total      int
-}
-
-// GetActualComponentsResult represents the result of GetActualComponents call.
-type GetActualComponentsResult struct {
-	Components []*types.ActualComponent
 	Total      int
 }
 

@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package types
 
 import (
@@ -66,6 +67,7 @@ type Component struct {
 	BMCs            []BMC
 	ComponentID     string // External system ID (e.g., Carbide machine_id)
 	RackID          uuid.UUID
+	PowerState      string
 }
 
 // Rack represents a physical rack containing components.
@@ -113,21 +115,12 @@ type Task struct {
 	Message      string
 }
 
-// ActualComponent represents a component's actual state from external systems.
-type ActualComponent struct {
-	Component
-	LastSeen     time.Time
-	PowerState   string
-	HealthStatus string
-	Source       string // Data source (e.g., "carbide", "psm")
-}
-
 // ComponentDiff represents a difference found during validation.
 type ComponentDiff struct {
 	Type        DiffType
 	ComponentID string
 	Expected    *Component
-	Actual      *ActualComponent
+	Actual      *Component
 	FieldDiffs  []FieldDiff
 }
 
@@ -136,4 +129,27 @@ type FieldDiff struct {
 	FieldName     string
 	ExpectedValue string
 	ActualValue   string
+}
+
+// OperationRule represents a configurable rule for executing operations.
+type OperationRule struct {
+	ID                 uuid.UUID
+	Name               string
+	Description        string
+	OperationType      OperationType
+	OperationCode      string // e.g., "power_on", "upgrade"
+	RuleDefinitionJSON string // JSON-encoded rule definition
+	IsDefault          bool
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+}
+
+// RackRuleAssociation represents an association between a rack and an operation rule.
+type RackRuleAssociation struct {
+	RackID        uuid.UUID
+	OperationType OperationType
+	OperationCode string // e.g., "power_on", "upgrade"
+	RuleID        uuid.UUID
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }

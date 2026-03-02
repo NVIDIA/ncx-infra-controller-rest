@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 // Package carbideapi abstracts the GRPC interface used to communicate with carbide-api.  New connection pools can be created with
 // NewClient to create a real client or NewMockClient which fakes everything for unit tests.
 
@@ -36,11 +37,24 @@ type Client interface {
 	// AdminPowerControl performs power control operations on a machine
 	AdminPowerControl(ctx context.Context, machineID string, action SystemPowerControl) error
 
+	// UpdatePowerOption sets the desired power state for a machine in Carbide's power manager.
+	// This controls Carbide's power-on gate: setting desired state to On allows
+	// the machine to power on, while Off or Disabled prevents it.
+	UpdatePowerOption(ctx context.Context, machineID string, desiredState PowerState) error
+
 	// FindMachinesByIds returns detailed machine information for the given machine IDs
 	FindMachinesByIds(ctx context.Context, machineIds []string) ([]MachineDetail, error)
 
 	// GetMachinePositionInfo returns position information for the given machine IDs
 	GetMachinePositionInfo(ctx context.Context, machineIds []string) ([]MachinePosition, error)
+
+	// AllowIngestionAndPowerOn opens Carbide's power-on gate for a BMC endpoint,
+	// allowing the machine to be ingested and powered on.
+	AllowIngestionAndPowerOn(ctx context.Context, bmcIP string, bmcMAC string) error
+
+	// DetermineMachineIngestionState returns the bring-up state of a machine
+	// relative to Carbide's power-on gate.
+	DetermineMachineIngestionState(ctx context.Context, bmcIP string, bmcMAC string) (BringUpState, error) //nolint
 
 	// The following are only valid in the mock environment and should only be called by unit tests
 	AddMachine(Machine)

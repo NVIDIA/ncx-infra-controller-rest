@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package model
 
 import (
@@ -49,6 +50,7 @@ type Task struct {
 	ExecutionID    string                  `bun:"execution_id,notnull"`
 	Status         taskcommon.TaskStatus   `bun:"status,type:varchar(32),notnull"`
 	Message        string                  `bun:"message,nullzero"`
+	AppliedRuleID  *uuid.UUID              `bun:"applied_rule_id,type:uuid"` // Which opeation rule was applied
 	CreatedAt      time.Time               `bun:"created_at,nullzero,notnull,default:current_timestamp"`
 	UpdatedAt      time.Time               `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
 	FinishedAt     *time.Time              `bun:"finished_at"`

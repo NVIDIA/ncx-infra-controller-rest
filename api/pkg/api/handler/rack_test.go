@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -83,13 +84,14 @@ func testRackSetupTestData(t *testing.T, dbSession *cdb.Session, org string) (*c
 	_, err := dbSession.DB.NewInsert().Model(ip).Exec(ctx)
 	assert.Nil(t, err)
 
-	// Create site
+	// Create site with RLA enabled
 	site := &cdbm.Site{
 		ID:                       uuid.New(),
 		Name:                     "test-site",
 		Org:                      org,
 		InfrastructureProviderID: ip.ID,
 		Status:                   cdbm.SiteStatusRegistered,
+		Config:                   &cdbm.SiteConfig{RackLevelAdministration: true},
 	}
 	_, err = dbSession.DB.NewInsert().Model(site).Exec(ctx)
 	assert.Nil(t, err)
@@ -159,6 +161,18 @@ func TestGetRackHandler_Handle(t *testing.T) {
 	org := "test-org"
 	_, site, _ := testRackSetupTestData(t, dbSession, org)
 
+	// Create a site without RLA enabled
+	siteNoRLA := &cdbm.Site{
+		ID:                       uuid.New(),
+		Name:                     "test-site-no-rla",
+		Org:                      org,
+		InfrastructureProviderID: site.InfrastructureProviderID,
+		Status:                   cdbm.SiteStatusRegistered,
+		Config:                   &cdbm.SiteConfig{},
+	}
+	_, err := dbSession.DB.NewInsert().Model(siteNoRLA).Exec(context.Background())
+	assert.Nil(t, err)
+
 	// Create provider user
 	providerUser := testRackBuildUser(t, dbSession, "provider-user-rack-get", org, []string{"FORGE_PROVIDER_ADMIN"})
 
@@ -201,6 +215,17 @@ func TestGetRackHandler_Handle(t *testing.T) {
 			mockRack:       mockRack,
 			expectedStatus: http.StatusOK,
 			wantErr:        false,
+		},
+		{
+			name:   "failure - RLA not enabled on site",
+			reqOrg: org,
+			user:   providerUser,
+			rackID: rackID,
+			queryParams: map[string]string{
+				"siteId": siteNoRLA.ID.String(),
+			},
+			expectedStatus: http.StatusPreconditionFailed,
+			wantErr:        true,
 		},
 		{
 			name:   "failure - missing siteId",
@@ -317,6 +342,18 @@ func TestGetAllRackHandler_Handle(t *testing.T) {
 
 	org := "test-org"
 	_, site, _ := testRackSetupTestData(t, dbSession, org)
+
+	// Create a site without RLA enabled
+	siteNoRLA := &cdbm.Site{
+		ID:                       uuid.New(),
+		Name:                     "test-site-no-rla",
+		Org:                      org,
+		InfrastructureProviderID: site.InfrastructureProviderID,
+		Status:                   cdbm.SiteStatusRegistered,
+		Config:                   &cdbm.SiteConfig{},
+	}
+	_, err := dbSession.DB.NewInsert().Model(siteNoRLA).Exec(context.Background())
+	assert.Nil(t, err)
 
 	// Create provider user
 	providerUser := testRackBuildUser(t, dbSession, "provider-user", org, []string{"FORGE_PROVIDER_ADMIN"})
@@ -470,6 +507,17 @@ func TestGetAllRackHandler_Handle(t *testing.T) {
 			wantErr:        false,
 		},
 		{
+			name:   "failure - RLA not enabled on site",
+			reqOrg: org,
+			user:   providerUser,
+			queryParams: map[string]string{
+				"siteId": siteNoRLA.ID.String(),
+			},
+			mockResponse:   nil,
+			expectedStatus: http.StatusPreconditionFailed,
+			wantErr:        true,
+		},
+		{
 			name:   "failure - tenant access denied",
 			reqOrg: org,
 			user:   tenantUser,
@@ -594,6 +642,18 @@ func TestValidateRackHandler_Handle(t *testing.T) {
 	org := "test-org"
 	_, site, _ := testRackSetupTestData(t, dbSession, org)
 
+	// Create a site without RLA enabled
+	siteNoRLA := &cdbm.Site{
+		ID:                       uuid.New(),
+		Name:                     "test-site-no-rla",
+		Org:                      org,
+		InfrastructureProviderID: site.InfrastructureProviderID,
+		Status:                   cdbm.SiteStatusRegistered,
+		Config:                   &cdbm.SiteConfig{},
+	}
+	_, err := dbSession.DB.NewInsert().Model(siteNoRLA).Exec(context.Background())
+	assert.Nil(t, err)
+
 	// Create provider user
 	providerUser := testRackBuildUser(t, dbSession, "provider-user-validate", org, []string{"FORGE_PROVIDER_ADMIN"})
 
@@ -659,6 +719,18 @@ func TestValidateRackHandler_Handle(t *testing.T) {
 			},
 			expectedStatus: http.StatusOK,
 			wantErr:        false,
+		},
+		{
+			name:   "failure - RLA not enabled on site",
+			reqOrg: org,
+			user:   providerUser,
+			rackID: rackID,
+			queryParams: map[string]string{
+				"siteId": siteNoRLA.ID.String(),
+			},
+			mockResponse:   nil,
+			expectedStatus: http.StatusPreconditionFailed,
+			wantErr:        true,
 		},
 		{
 			name:   "failure - tenant user forbidden",
@@ -775,6 +847,18 @@ func TestValidateRacksHandler_Handle(t *testing.T) {
 	org := "test-org"
 	_, site, _ := testRackSetupTestData(t, dbSession, org)
 
+	// Create a site without RLA enabled
+	siteNoRLA := &cdbm.Site{
+		ID:                       uuid.New(),
+		Name:                     "test-site-no-rla",
+		Org:                      org,
+		InfrastructureProviderID: site.InfrastructureProviderID,
+		Status:                   cdbm.SiteStatusRegistered,
+		Config:                   &cdbm.SiteConfig{},
+	}
+	_, err := dbSession.DB.NewInsert().Model(siteNoRLA).Exec(context.Background())
+	assert.Nil(t, err)
+
 	providerUser := testRackBuildUser(t, dbSession, "provider-user-validate-racks", org, []string{"FORGE_PROVIDER_ADMIN"})
 	tenantUser := testRackBuildUser(t, dbSession, "tenant-user-validate-racks", org, []string{"FORGE_TENANT_ADMIN"})
 
@@ -873,6 +957,15 @@ func TestValidateRacksHandler_Handle(t *testing.T) {
 			expectedStatus: http.StatusOK,
 		},
 		{
+			name:   "failure - RLA not enabled on site",
+			reqOrg: org,
+			user:   providerUser,
+			queryParams: map[string]string{
+				"siteId": siteNoRLA.ID.String(),
+			},
+			expectedStatus: http.StatusPreconditionFailed,
+		},
+		{
 			name:   "failure - tenant user forbidden",
 			reqOrg: org,
 			user:   tenantUser,
@@ -958,6 +1051,522 @@ func TestValidateRacksHandler_Handle(t *testing.T) {
 			assert.Equal(t, tt.mockResponse.TotalDiffs, apiResult.TotalDiffs)
 			assert.Equal(t, tt.mockResponse.MatchCount, apiResult.MatchCount)
 			assert.Equal(t, len(tt.mockResponse.Diffs), len(apiResult.Diffs))
+		})
+	}
+}
+
+
+func TestUpdateRackPowerStateHandler_Handle(t *testing.T) {
+	e := echo.New()
+	dbSession := testRackInitDB(t)
+	defer dbSession.Close()
+
+	cfg := common.GetTestConfig()
+	tcfg, _ := cfg.GetTemporalConfig()
+	scp := sc.NewClientPool(tcfg)
+
+	org := "test-org"
+	_, site, _ := testRackSetupTestData(t, dbSession, org)
+
+	providerUser := testRackBuildUser(t, dbSession, "provider-user-pc-rack", org, []string{"FORGE_PROVIDER_ADMIN"})
+	tenantUser := testRackBuildUser(t, dbSession, "tenant-user-pc-rack", org, []string{"FORGE_TENANT_ADMIN"})
+
+	handler := NewUpdateRackPowerStateHandler(dbSession, nil, scp, cfg)
+
+	rackID := uuid.New().String()
+
+	tracer := oteltrace.NewNoopTracerProvider().Tracer("test")
+	ctx := context.Background()
+
+	tests := []struct {
+		name           string
+		reqOrg         string
+		user           *cdbm.User
+		rackID         string
+		body           string
+		mockTaskIDs    []*rlav1.UUID
+		expectedStatus int
+	}{
+		{
+			name:           "success - power on rack",
+			reqOrg:         org,
+			user:           providerUser,
+			rackID:         rackID,
+			body:           fmt.Sprintf(`{"siteId":"%s","state":"on"}`, site.ID.String()),
+			mockTaskIDs:    []*rlav1.UUID{{Id: uuid.NewString()}},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "success - power off rack",
+			reqOrg:         org,
+			user:           providerUser,
+			rackID:         rackID,
+			body:           fmt.Sprintf(`{"siteId":"%s","state":"off"}`, site.ID.String()),
+			mockTaskIDs:    []*rlav1.UUID{{Id: uuid.NewString()}},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "success - power cycle rack",
+			reqOrg:         org,
+			user:           providerUser,
+			rackID:         rackID,
+			body:           fmt.Sprintf(`{"siteId":"%s","state":"cycle"}`, site.ID.String()),
+			mockTaskIDs:    []*rlav1.UUID{{Id: uuid.NewString()}},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "success - force power off rack",
+			reqOrg:         org,
+			user:           providerUser,
+			rackID:         rackID,
+			body:           fmt.Sprintf(`{"siteId":"%s","state":"forceoff"}`, site.ID.String()),
+			mockTaskIDs:    []*rlav1.UUID{{Id: uuid.NewString()}},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "success - force power cycle rack",
+			reqOrg:         org,
+			user:           providerUser,
+			rackID:         rackID,
+			body:           fmt.Sprintf(`{"siteId":"%s","state":"forcecycle"}`, site.ID.String()),
+			mockTaskIDs:    []*rlav1.UUID{{Id: uuid.NewString()}},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "failure - invalid state",
+			reqOrg:         org,
+			user:           providerUser,
+			rackID:         rackID,
+			body:           fmt.Sprintf(`{"siteId":"%s","state":"reboot"}`, site.ID.String()),
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "failure - empty state",
+			reqOrg:         org,
+			user:           providerUser,
+			rackID:         rackID,
+			body:           fmt.Sprintf(`{"siteId":"%s","state":""}`, site.ID.String()),
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "failure - missing siteId",
+			reqOrg:         org,
+			user:           providerUser,
+			rackID:         rackID,
+			body:           `{"state":"on"}`,
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "failure - invalid siteId",
+			reqOrg:         org,
+			user:           providerUser,
+			rackID:         rackID,
+			body:           fmt.Sprintf(`{"siteId":"%s","state":"on"}`, uuid.New().String()),
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "failure - tenant access denied",
+			reqOrg:         org,
+			user:           tenantUser,
+			rackID:         rackID,
+			body:           fmt.Sprintf(`{"siteId":"%s","state":"on"}`, site.ID.String()),
+			expectedStatus: http.StatusForbidden,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockTemporalClient := &tmocks.Client{}
+			mockWorkflowRun := &tmocks.WorkflowRun{}
+			mockWorkflowRun.On("GetID").Return("test-workflow-id")
+			mockWorkflowRun.Mock.On("Get", mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+				resp := args.Get(1).(*rlav1.SubmitTaskResponse)
+				if tt.mockTaskIDs != nil {
+					resp.TaskIds = tt.mockTaskIDs
+				}
+			}).Return(nil)
+			mockTemporalClient.Mock.On("ExecuteWorkflow", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(mockWorkflowRun, nil)
+			scp.IDClientMap[site.ID.String()] = mockTemporalClient
+
+			path := fmt.Sprintf("/v2/org/%s/carbide/rack/%s/power", tt.reqOrg, tt.rackID)
+
+			req := httptest.NewRequest(http.MethodPatch, path, strings.NewReader(tt.body))
+			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+			rec := httptest.NewRecorder()
+
+			ec := e.NewContext(req, rec)
+			ec.SetParamNames("orgName", "id")
+			ec.SetParamValues(tt.reqOrg, tt.rackID)
+			ec.Set("user", tt.user)
+
+			ctx = context.WithValue(ctx, otelecho.TracerKey, tracer)
+			ec.SetRequest(ec.Request().WithContext(ctx))
+
+			err := handler.Handle(ec)
+
+			if tt.expectedStatus != rec.Code {
+				t.Errorf("UpdateRackPowerStateHandler.Handle() status = %v, want %v, response: %v, err: %v", rec.Code, tt.expectedStatus, rec.Body.String(), err)
+			}
+
+			require.Equal(t, tt.expectedStatus, rec.Code)
+			if tt.expectedStatus != http.StatusOK {
+				return
+			}
+
+			var apiResp model.APIUpdatePowerStateResponse
+			err = json.Unmarshal(rec.Body.Bytes(), &apiResp)
+			assert.NoError(t, err)
+			assert.NotEmpty(t, apiResp.TaskIDs)
+		})
+	}
+}
+
+func TestBatchUpdateRackPowerStateHandler_Handle(t *testing.T) {
+	e := echo.New()
+	dbSession := testRackInitDB(t)
+	defer dbSession.Close()
+
+	cfg := common.GetTestConfig()
+	tcfg, _ := cfg.GetTemporalConfig()
+	scp := sc.NewClientPool(tcfg)
+
+	org := "test-org"
+	_, site, _ := testRackSetupTestData(t, dbSession, org)
+
+	providerUser := testRackBuildUser(t, dbSession, "provider-user-pc-rack-batch", org, []string{"FORGE_PROVIDER_ADMIN"})
+	tenantUser := testRackBuildUser(t, dbSession, "tenant-user-pc-rack-batch", org, []string{"FORGE_TENANT_ADMIN"})
+
+	handler := NewBatchUpdateRackPowerStateHandler(dbSession, nil, scp, cfg)
+
+	tracer := oteltrace.NewNoopTracerProvider().Tracer("test")
+	ctx := context.Background()
+
+	tests := []struct {
+		name           string
+		reqOrg         string
+		user           *cdbm.User
+		body           string
+		mockTaskIDs    []*rlav1.UUID
+		expectedStatus int
+	}{
+		{
+			name:           "success - power on all racks (no filter)",
+			reqOrg:         org,
+			user:           providerUser,
+			body:           fmt.Sprintf(`{"siteId":"%s","state":"on"}`, site.ID.String()),
+			mockTaskIDs:    []*rlav1.UUID{{Id: uuid.NewString()}, {Id: uuid.NewString()}},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "success - power off with name filter",
+			reqOrg:         org,
+			user:           providerUser,
+			body:           fmt.Sprintf(`{"siteId":"%s","filter":{"names":["Rack-001"]},"state":"off"}`, site.ID.String()),
+			mockTaskIDs:    []*rlav1.UUID{{Id: uuid.NewString()}},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "failure - missing siteId",
+			reqOrg:         org,
+			user:           providerUser,
+			body:           `{"state":"on"}`,
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "failure - invalid state",
+			reqOrg:         org,
+			user:           providerUser,
+			body:           fmt.Sprintf(`{"siteId":"%s","state":"reboot"}`, site.ID.String()),
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "failure - tenant access denied",
+			reqOrg:         org,
+			user:           tenantUser,
+			body:           fmt.Sprintf(`{"siteId":"%s","state":"on"}`, site.ID.String()),
+			expectedStatus: http.StatusForbidden,
+		},
+		{
+			name:           "failure - invalid siteId",
+			reqOrg:         org,
+			user:           providerUser,
+			body:           fmt.Sprintf(`{"siteId":"%s","state":"on"}`, uuid.New().String()),
+			expectedStatus: http.StatusBadRequest,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockTemporalClient := &tmocks.Client{}
+			mockWorkflowRun := &tmocks.WorkflowRun{}
+			mockWorkflowRun.On("GetID").Return("test-workflow-id")
+			mockWorkflowRun.Mock.On("Get", mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+				resp := args.Get(1).(*rlav1.SubmitTaskResponse)
+				if tt.mockTaskIDs != nil {
+					resp.TaskIds = tt.mockTaskIDs
+				}
+			}).Return(nil)
+			mockTemporalClient.Mock.On("ExecuteWorkflow", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(mockWorkflowRun, nil)
+			scp.IDClientMap[site.ID.String()] = mockTemporalClient
+
+			path := fmt.Sprintf("/v2/org/%s/carbide/rack/power", tt.reqOrg)
+
+			req := httptest.NewRequest(http.MethodPatch, path, strings.NewReader(tt.body))
+			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+			rec := httptest.NewRecorder()
+
+			ec := e.NewContext(req, rec)
+			ec.SetParamNames("orgName")
+			ec.SetParamValues(tt.reqOrg)
+			ec.Set("user", tt.user)
+
+			ctx = context.WithValue(ctx, otelecho.TracerKey, tracer)
+			ec.SetRequest(ec.Request().WithContext(ctx))
+
+			err := handler.Handle(ec)
+
+			if tt.expectedStatus != rec.Code {
+				t.Errorf("BatchUpdateRackPowerStateHandler.Handle() status = %v, want %v, response: %v, err: %v", rec.Code, tt.expectedStatus, rec.Body.String(), err)
+			}
+
+			require.Equal(t, tt.expectedStatus, rec.Code)
+			if tt.expectedStatus != http.StatusOK {
+				return
+			}
+
+			var apiResp model.APIUpdatePowerStateResponse
+			err = json.Unmarshal(rec.Body.Bytes(), &apiResp)
+			assert.NoError(t, err)
+			assert.NotEmpty(t, apiResp.TaskIDs)
+		})
+	}
+}
+
+func TestUpdateRackFirmwareHandler_Handle(t *testing.T) {
+	e := echo.New()
+	dbSession := testRackInitDB(t)
+	defer dbSession.Close()
+
+	cfg := common.GetTestConfig()
+	tcfg, _ := cfg.GetTemporalConfig()
+	scp := sc.NewClientPool(tcfg)
+
+	org := "test-org"
+	_, site, _ := testRackSetupTestData(t, dbSession, org)
+
+	providerUser := testRackBuildUser(t, dbSession, "provider-user-fw-rack", org, []string{"FORGE_PROVIDER_ADMIN"})
+	tenantUser := testRackBuildUser(t, dbSession, "tenant-user-fw-rack", org, []string{"FORGE_TENANT_ADMIN"})
+
+	handler := NewUpdateRackFirmwareHandler(dbSession, nil, scp, cfg)
+
+	rackID := uuid.New().String()
+
+	tracer := oteltrace.NewNoopTracerProvider().Tracer("test")
+	ctx := context.Background()
+
+	tests := []struct {
+		name           string
+		reqOrg         string
+		user           *cdbm.User
+		rackID         string
+		body           string
+		mockTaskIDs    []*rlav1.UUID
+		expectedStatus int
+	}{
+		{
+			name:           "success - firmware update with version",
+			reqOrg:         org,
+			user:           providerUser,
+			rackID:         rackID,
+			body:           fmt.Sprintf(`{"siteId":"%s","version":"24.11.0"}`, site.ID.String()),
+			mockTaskIDs:    []*rlav1.UUID{{Id: uuid.NewString()}},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "success - firmware update without version",
+			reqOrg:         org,
+			user:           providerUser,
+			rackID:         rackID,
+			body:           fmt.Sprintf(`{"siteId":"%s"}`, site.ID.String()),
+			mockTaskIDs:    []*rlav1.UUID{{Id: uuid.NewString()}},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "failure - missing siteId",
+			reqOrg:         org,
+			user:           providerUser,
+			rackID:         rackID,
+			body:           `{}`,
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "failure - invalid siteId",
+			reqOrg:         org,
+			user:           providerUser,
+			rackID:         rackID,
+			body:           fmt.Sprintf(`{"siteId":"%s"}`, uuid.New().String()),
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "failure - tenant access denied",
+			reqOrg:         org,
+			user:           tenantUser,
+			rackID:         rackID,
+			body:           fmt.Sprintf(`{"siteId":"%s"}`, site.ID.String()),
+			expectedStatus: http.StatusForbidden,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockTemporalClient := &tmocks.Client{}
+			mockWorkflowRun := &tmocks.WorkflowRun{}
+			mockWorkflowRun.On("GetID").Return("test-workflow-id")
+			mockWorkflowRun.Mock.On("Get", mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+				resp := args.Get(1).(*rlav1.SubmitTaskResponse)
+				if tt.mockTaskIDs != nil {
+					resp.TaskIds = tt.mockTaskIDs
+				}
+			}).Return(nil)
+			mockTemporalClient.Mock.On("ExecuteWorkflow", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(mockWorkflowRun, nil)
+			scp.IDClientMap[site.ID.String()] = mockTemporalClient
+
+			path := fmt.Sprintf("/v2/org/%s/carbide/rack/%s/firmware", tt.reqOrg, tt.rackID)
+
+			req := httptest.NewRequest(http.MethodPatch, path, strings.NewReader(tt.body))
+			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+			rec := httptest.NewRecorder()
+
+			ec := e.NewContext(req, rec)
+			ec.SetParamNames("orgName", "id")
+			ec.SetParamValues(tt.reqOrg, tt.rackID)
+			ec.Set("user", tt.user)
+
+			ctx = context.WithValue(ctx, otelecho.TracerKey, tracer)
+			ec.SetRequest(ec.Request().WithContext(ctx))
+
+			err := handler.Handle(ec)
+
+			if tt.expectedStatus != rec.Code {
+				t.Errorf("UpdateRackFirmwareHandler.Handle() status = %v, want %v, response: %v, err: %v", rec.Code, tt.expectedStatus, rec.Body.String(), err)
+			}
+
+			require.Equal(t, tt.expectedStatus, rec.Code)
+			if tt.expectedStatus != http.StatusOK {
+				return
+			}
+
+			var apiResp model.APIUpdateFirmwareResponse
+			err = json.Unmarshal(rec.Body.Bytes(), &apiResp)
+			assert.NoError(t, err)
+			assert.NotEmpty(t, apiResp.TaskIDs)
+		})
+	}
+}
+
+func TestBatchUpdateRackFirmwareHandler_Handle(t *testing.T) {
+	e := echo.New()
+	dbSession := testRackInitDB(t)
+	defer dbSession.Close()
+
+	cfg := common.GetTestConfig()
+	tcfg, _ := cfg.GetTemporalConfig()
+	scp := sc.NewClientPool(tcfg)
+
+	org := "test-org"
+	_, site, _ := testRackSetupTestData(t, dbSession, org)
+
+	providerUser := testRackBuildUser(t, dbSession, "provider-user-fw-rack-batch", org, []string{"FORGE_PROVIDER_ADMIN"})
+	tenantUser := testRackBuildUser(t, dbSession, "tenant-user-fw-rack-batch", org, []string{"FORGE_TENANT_ADMIN"})
+
+	handler := NewBatchUpdateRackFirmwareHandler(dbSession, nil, scp, cfg)
+
+	tracer := oteltrace.NewNoopTracerProvider().Tracer("test")
+	ctx := context.Background()
+
+	tests := []struct {
+		name           string
+		reqOrg         string
+		user           *cdbm.User
+		body           string
+		mockTaskIDs    []*rlav1.UUID
+		expectedStatus int
+	}{
+		{
+			name:           "success - firmware update all racks (no filter)",
+			reqOrg:         org,
+			user:           providerUser,
+			body:           fmt.Sprintf(`{"siteId":"%s"}`, site.ID.String()),
+			mockTaskIDs:    []*rlav1.UUID{{Id: uuid.NewString()}, {Id: uuid.NewString()}},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "success - firmware update with name filter and version",
+			reqOrg:         org,
+			user:           providerUser,
+			body:           fmt.Sprintf(`{"siteId":"%s","filter":{"names":["rack-1"]},"version":"24.11.0"}`, site.ID.String()),
+			mockTaskIDs:    []*rlav1.UUID{{Id: uuid.NewString()}},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "failure - missing siteId",
+			reqOrg:         org,
+			user:           providerUser,
+			body:           `{}`,
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "failure - tenant access denied",
+			reqOrg:         org,
+			user:           tenantUser,
+			body:           fmt.Sprintf(`{"siteId":"%s"}`, site.ID.String()),
+			expectedStatus: http.StatusForbidden,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockTemporalClient := &tmocks.Client{}
+			mockWorkflowRun := &tmocks.WorkflowRun{}
+			mockWorkflowRun.On("GetID").Return("test-workflow-id")
+			mockWorkflowRun.Mock.On("Get", mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+				resp := args.Get(1).(*rlav1.SubmitTaskResponse)
+				if tt.mockTaskIDs != nil {
+					resp.TaskIds = tt.mockTaskIDs
+				}
+			}).Return(nil)
+			mockTemporalClient.Mock.On("ExecuteWorkflow", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(mockWorkflowRun, nil)
+			scp.IDClientMap[site.ID.String()] = mockTemporalClient
+
+			path := fmt.Sprintf("/v2/org/%s/carbide/rack/firmware", tt.reqOrg)
+
+			req := httptest.NewRequest(http.MethodPatch, path, strings.NewReader(tt.body))
+			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+			rec := httptest.NewRecorder()
+
+			ec := e.NewContext(req, rec)
+			ec.SetParamNames("orgName")
+			ec.SetParamValues(tt.reqOrg)
+			ec.Set("user", tt.user)
+
+			ctx = context.WithValue(ctx, otelecho.TracerKey, tracer)
+			ec.SetRequest(ec.Request().WithContext(ctx))
+
+			err := handler.Handle(ec)
+
+			if tt.expectedStatus != rec.Code {
+				t.Errorf("BatchUpdateRackFirmwareHandler.Handle() status = %v, want %v, response: %v, err: %v", rec.Code, tt.expectedStatus, rec.Body.String(), err)
+			}
+
+			require.Equal(t, tt.expectedStatus, rec.Code)
+			if tt.expectedStatus != http.StatusOK {
+				return
+			}
+
+			var apiResp model.APIUpdateFirmwareResponse
+			err = json.Unmarshal(rec.Body.Bytes(), &apiResp)
+			assert.NoError(t, err)
+			assert.NotEmpty(t, apiResp.TaskIDs)
 		})
 	}
 }

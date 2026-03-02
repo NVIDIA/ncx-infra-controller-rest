@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 // Package service implements the gRPC server for the RLA (Rack Level Asset) management system.
 // It provides APIs for managing rack-level assets including creating, retrieving, and updating
 // rack and component information.
@@ -23,26 +24,28 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"google.golang.org/protobuf/types/known/emptypb"
-	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/carbideapi"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/converter/protobuf"
 	dbquery "github.com/nvidia/bare-metal-manager-rest/rla/internal/db/query"
 	inventorymanager "github.com/nvidia/bare-metal-manager-rest/rla/internal/inventory/manager"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/inventory/objects/bmc"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/inventory/objects/component"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/inventory/objects/rack"
+
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/component"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/rack"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/operation"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/psmapi"
 	taskcommon "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/common"
 	taskmanager "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/manager"
+	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operationrules"
 	operations "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operations"
 	taskstore "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/store"
 	identifier "github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/Identifier"
@@ -199,6 +202,125 @@ func (rs *RLAServerImpl) PatchRack(
 	}, err
 }
 
+// AddComponent creates a single component under an existing rack.
+func (rs *RLAServerImpl) AddComponent(
+	ctx context.Context,
+	req *pb.AddComponentRequest,
+) (*pb.AddComponentResponse, error) {
+	pbComp := req.GetComponent()
+	if pbComp == nil {
+		return nil, errors.New("component is required")
+	}
+
+	// Convert proto component to internal; rack_id comes from the component itself
+	comp := protobuf.ComponentFrom(pbComp)
+	comp.RackID = protobuf.UUIDFrom(pbComp.GetRackId())
+	if comp.RackID == uuid.Nil {
+		return nil, errors.New("component.rack_id is required")
+	}
+
+	// Verify the rack exists
+	if _, err := rs.inventoryManager.GetRackByID(ctx, comp.RackID, false); err != nil {
+		return nil, fmt.Errorf("rack not found: %w", err)
+	}
+
+	// Ensure the component has an ID
+	if comp.Info.ID == uuid.Nil {
+		comp.Info.ID = uuid.New()
+	}
+
+	id, err := rs.inventoryManager.AddComponent(ctx, comp)
+	if err != nil {
+		return nil, fmt.Errorf("failed to add component: %w", err)
+	}
+
+	// Re-read the created component to return full state
+	created, err := rs.inventoryManager.GetComponentByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get created component: %w", err)
+	}
+
+	return &pb.AddComponentResponse{
+		Component: protobuf.ComponentTo(created),
+	}, nil
+}
+
+// DeleteComponent soft-deletes a component by UUID.
+func (rs *RLAServerImpl) DeleteComponent(
+	ctx context.Context,
+	req *pb.DeleteComponentRequest,
+) (*pb.DeleteComponentResponse, error) {
+	compID := protobuf.UUIDFrom(req.GetId())
+	if compID == uuid.Nil {
+		return nil, errors.New("component id is required")
+	}
+
+	// Verify the component exists
+	if _, err := rs.inventoryManager.GetComponentByID(ctx, compID); err != nil {
+		return nil, fmt.Errorf("component not found: %w", err)
+	}
+
+	if err := rs.inventoryManager.DeleteComponent(ctx, compID); err != nil {
+		return nil, fmt.Errorf("failed to delete component: %w", err)
+	}
+
+	return &pb.DeleteComponentResponse{}, nil
+}
+
+// PatchComponent updates a single component's patchable fields.
+func (rs *RLAServerImpl) PatchComponent(
+	ctx context.Context,
+	req *pb.PatchComponentRequest,
+) (*pb.PatchComponentResponse, error) {
+	compID := protobuf.UUIDFrom(req.GetId())
+	if compID == uuid.Nil {
+		return nil, errors.New("component id is required")
+	}
+
+	// Get the existing component
+	existing, err := rs.inventoryManager.GetComponentByID(ctx, compID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get component: %w", err)
+	}
+
+	// Apply patch fields
+	if req.FirmwareVersion != nil {
+		existing.FirmwareVersion = *req.FirmwareVersion
+	}
+
+	if req.Position != nil {
+		existing.Position.SlotID = int(req.Position.SlotId)
+		existing.Position.TrayIndex = int(req.Position.TrayIdx)
+		existing.Position.HostID = int(req.Position.HostId)
+	}
+
+	if req.Description != nil {
+		existing.Info.Description = *req.Description
+	}
+
+	if req.RackId != nil {
+		rackID := protobuf.UUIDFrom(req.RackId)
+		if rackID != uuid.Nil {
+			existing.RackID = rackID
+		}
+	}
+
+	// Persist the update
+	if err := rs.inventoryManager.PatchComponent(ctx, existing); err != nil {
+		return nil, fmt.Errorf("failed to patch component: %w", err)
+	}
+
+	// Re-read the updated component to return current state
+	updated, err := rs.inventoryManager.GetComponentByID(ctx, compID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get updated component: %w", err)
+	}
+
+	return &pb.PatchComponentResponse{
+		Component: protobuf.ComponentTo(updated),
+	}, nil
+}
+
 // GetComponentInfoByID retrieves component information by its unique identifier.
 // Optionally includes the parent rack information if requested. This method
 // performs a two-step lookup: first retrieving the component and its rack ID,
@@ -310,7 +432,7 @@ func (rs *RLAServerImpl) GetListOfRacks(
 			if filter == nil {
 				continue
 			}
-			fieldName, queryInfo, err := protobuf.FilterFrom(filter, true) // true = isRack
+			fieldName, queryInfo, err := protobuf.FilterFrom(filter)
 			if err != nil {
 				return nil, fmt.Errorf("invalid filter: %v", err)
 			}
@@ -521,6 +643,47 @@ func (rs *RLAServerImpl) PowerResetRack(
 	)
 }
 
+func (rs *RLAServerImpl) BringUpRack(
+	ctx context.Context,
+	req *pb.BringUpRackRequest,
+) (*pb.SubmitTaskResponse, error) {
+	if rs.taskManager == nil {
+		return nil, errors.New(
+			"task manager is not available",
+		)
+	}
+
+	targetSpec := req.GetTargetSpec()
+	if targetSpec == nil {
+		return nil, errors.New(
+			"target_spec is required",
+		)
+	}
+
+	info := &operations.BringUpTaskInfo{}
+	opReq, err := rs.convertTargetSpecToOperationRequest(
+		targetSpec, req.GetDescription(), info,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	taskIDs, err := rs.taskManager.SubmitTask(ctx, opReq)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(taskIDs) == 0 {
+		return nil, errors.New(
+			"failed to create any tasks",
+		)
+	}
+
+	return &pb.SubmitTaskResponse{
+		TaskIds: protobuf.UUIDsTo(taskIDs),
+	}, nil
+}
+
 func (rs *RLAServerImpl) handlePowerControlTask(
 	ctx context.Context,
 	targetSpec *pb.OperationTargetSpec,
@@ -569,6 +732,7 @@ func (rs *RLAServerImpl) convertTargetSpecToOperationRequest(
 	req := &operation.Request{
 		Operation: operation.Wrapper{
 			Type: info.Type(),
+			Code: info.CodeString(),
 			Info: raw,
 		},
 		Description: description,
@@ -711,6 +875,289 @@ func (rs *RLAServerImpl) GetTasksByIDs(
 	return &pb.GetTasksByIDsResponse{Tasks: results}, nil
 }
 
+// ========================================
+// Operation Rules API
+// ========================================
+
+func (rs *RLAServerImpl) CreateOperationRule(
+	ctx context.Context,
+	req *pb.CreateOperationRuleRequest,
+) (*pb.CreateOperationRuleResponse, error) {
+	// Parse rule definition from JSON
+	var ruleDef operationrules.RuleDefinition
+	if err := json.Unmarshal([]byte(req.GetRuleDefinitionJson()), &ruleDef); err != nil {
+		return nil, fmt.Errorf("invalid rule definition JSON: %w", err)
+	}
+
+	// Create rule object
+	rule := &operationrules.OperationRule{
+		ID:             uuid.New(),
+		Name:           req.GetName(),
+		Description:    req.GetDescription(),
+		OperationType:  protobuf.OperationTypeFromProto(req.GetOperationType()),
+		OperationCode:  req.GetOperationCode(),
+		RuleDefinition: ruleDef,
+		IsDefault:      req.GetIsDefault(),
+	}
+
+	// Validate rule
+	if err := rule.Validate(); err != nil {
+		return nil, fmt.Errorf("rule validation failed: %w", err)
+	}
+
+	// Store in database
+	if err := rs.taskStore.CreateRule(ctx, rule); err != nil {
+		return nil, err
+	}
+
+	// Return UUID only
+	return &pb.CreateOperationRuleResponse{
+		Id: protobuf.UUIDTo(rule.ID),
+	}, nil
+}
+
+func (rs *RLAServerImpl) UpdateOperationRule(
+	ctx context.Context,
+	req *pb.UpdateOperationRuleRequest,
+) (*emptypb.Empty, error) {
+	ruleID := protobuf.UUIDFrom(req.GetRuleId())
+
+	if ruleID == uuid.Nil {
+		return nil, errors.New("rule ID is required")
+	}
+
+	updates := make(map[string]interface{})
+
+	if req.Name != nil {
+		updates["name"] = req.GetName()
+	}
+	if req.Description != nil {
+		updates["description"] = req.GetDescription()
+	}
+	if req.RuleDefinitionJson != nil {
+		var ruleDef operationrules.RuleDefinition
+		if err := json.Unmarshal([]byte(req.GetRuleDefinitionJson()), &ruleDef); err != nil {
+			return nil, fmt.Errorf("invalid rule definition JSON: %w", err)
+		}
+		// Validate the rule definition
+		if err := ruleDef.Validate(); err != nil {
+			return nil, fmt.Errorf("rule definition validation failed: %w", err)
+		}
+		updates["rule_definition"] = ruleDef
+	}
+	// Note: is_default is NOT updatable via UpdateRule - use SetRuleAsDefault instead
+
+	if err := rs.taskStore.UpdateRule(ctx, ruleID, updates); err != nil {
+		return nil, err
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func (rs *RLAServerImpl) DeleteOperationRule(
+	ctx context.Context,
+	req *pb.DeleteOperationRuleRequest,
+) (*emptypb.Empty, error) {
+	ruleID := protobuf.UUIDFrom(req.GetRuleId())
+
+	if ruleID == uuid.Nil {
+		return nil, errors.New("rule ID is required")
+	}
+
+	if err := rs.taskStore.DeleteRule(ctx, ruleID); err != nil {
+		return nil, err
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func (rs *RLAServerImpl) SetRuleAsDefault(
+	ctx context.Context,
+	req *pb.SetRuleAsDefaultRequest,
+) (*emptypb.Empty, error) {
+	ruleID := protobuf.UUIDFrom(req.GetRuleId())
+
+	if ruleID == uuid.Nil {
+		return nil, errors.New("rule ID is required")
+	}
+
+	if err := rs.taskStore.SetRuleAsDefault(ctx, ruleID); err != nil {
+		return nil, err
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func (rs *RLAServerImpl) GetOperationRule(
+	ctx context.Context,
+	req *pb.GetOperationRuleRequest,
+) (*pb.OperationRule, error) {
+	ruleID := protobuf.UUIDFrom(req.GetRuleId())
+
+	if ruleID == uuid.Nil {
+		return nil, errors.New("rule ID is required")
+	}
+
+	rule, err := rs.taskStore.GetRule(ctx, ruleID)
+	if err != nil {
+		return nil, err
+	}
+
+	return protobuf.OperationRuleTo(rule)
+}
+
+func (rs *RLAServerImpl) ListOperationRules(
+	ctx context.Context,
+	req *pb.ListOperationRulesRequest,
+) (*pb.ListOperationRulesResponse, error) {
+	options := &taskcommon.OperationRuleListOptions{
+		OperationType: taskcommon.TaskTypeUnknown,
+	}
+
+	if req.OperationType != nil {
+		options.OperationType = protobuf.OperationTypeFromProto(req.GetOperationType())
+	}
+
+	options.IsDefault = req.IsDefault
+
+	pagination := &dbquery.Pagination{
+		Offset: 0,
+		Limit:  100,
+	}
+	if req.Offset != nil {
+		pagination.Offset = int(req.GetOffset())
+	}
+	if req.Limit != nil {
+		pagination.Limit = int(req.GetLimit())
+	}
+
+	rules, total, err := rs.taskStore.ListRules(ctx, options, pagination)
+	if err != nil {
+		return nil, err
+	}
+
+	pbRules := make([]*pb.OperationRule, 0, len(rules))
+	for _, rule := range rules {
+		pbRule, err := protobuf.OperationRuleTo(rule)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert rule to protobuf: %w", err)
+		}
+		pbRules = append(pbRules, pbRule)
+	}
+
+	return &pb.ListOperationRulesResponse{
+		Rules:      pbRules,
+		TotalCount: total,
+	}, nil
+}
+
+// ========================================
+// Rack-Rule Associations API
+// ========================================
+
+func (rs *RLAServerImpl) AssociateRuleWithRack(
+	ctx context.Context,
+	req *pb.AssociateRuleWithRackRequest,
+) (*emptypb.Empty, error) {
+	rackID := protobuf.UUIDFrom(req.GetRackId())
+	ruleID := protobuf.UUIDFrom(req.GetRuleId())
+
+	if rackID == uuid.Nil {
+		return nil, errors.New("rack ID is required")
+	}
+
+	if ruleID == uuid.Nil {
+		return nil, errors.New("rule ID is required")
+	}
+
+	// Associate the rule with the rack (store will extract operation type/code from the rule)
+	if err := rs.taskStore.AssociateRuleWithRack(ctx, rackID, ruleID); err != nil {
+		return nil, err
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func (rs *RLAServerImpl) DisassociateRuleFromRack(
+	ctx context.Context,
+	req *pb.DisassociateRuleFromRackRequest,
+) (*emptypb.Empty, error) {
+	rackID := protobuf.UUIDFrom(req.GetRackId())
+	opType := protobuf.OperationTypeFromProto(req.GetOperationType())
+	operation := req.GetOperationCode()
+
+	if rackID == uuid.Nil {
+		return nil, errors.New("rack ID is required")
+	}
+
+	if operation == "" {
+		return nil, errors.New("operation code is required")
+	}
+
+	if err := rs.taskStore.DisassociateRuleFromRack(ctx, rackID, opType, operation); err != nil {
+		return nil, err
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func (rs *RLAServerImpl) GetRackRuleAssociation(
+	ctx context.Context,
+	req *pb.GetRackRuleAssociationRequest,
+) (*pb.GetRackRuleAssociationResponse, error) {
+	rackID := protobuf.UUIDFrom(req.GetRackId())
+	opType := protobuf.OperationTypeFromProto(req.GetOperationType())
+	operation := req.GetOperationCode()
+
+	if rackID == uuid.Nil {
+		return nil, errors.New("rack ID is required")
+	}
+
+	if operation == "" {
+		return nil, errors.New("operation code is required")
+	}
+
+	ruleID, err := rs.taskStore.GetRackRuleAssociation(ctx, rackID, opType, operation)
+	if err != nil {
+		return nil, err
+	}
+
+	if ruleID == nil {
+		return &pb.GetRackRuleAssociationResponse{
+			RuleId: &pb.UUID{Id: uuid.Nil.String()},
+		}, nil
+	}
+
+	return &pb.GetRackRuleAssociationResponse{
+		RuleId: protobuf.UUIDTo(*ruleID),
+	}, nil
+}
+
+func (rs *RLAServerImpl) ListRackRuleAssociations(
+	ctx context.Context,
+	req *pb.ListRackRuleAssociationsRequest,
+) (*pb.ListRackRuleAssociationsResponse, error) {
+	rackID := protobuf.UUIDFrom(req.GetRackId())
+
+	if rackID == uuid.Nil {
+		return nil, errors.New("rack ID is required")
+	}
+
+	associations, err := rs.taskStore.ListRackRuleAssociations(ctx, rackID)
+	if err != nil {
+		return nil, err
+	}
+
+	pbAssocs := make([]*pb.RackRuleAssociation, 0, len(associations))
+	for _, assoc := range associations {
+		pbAssocs = append(pbAssocs, protobuf.RackRuleAssociationTo(assoc))
+	}
+
+	return &pb.ListRackRuleAssociationsResponse{
+		Associations: pbAssocs,
+	}, nil
+}
+
 // UpgradeFirmware upgrades firmware for components.
 // It uses OperationTargetSpec to specify targets and creates a task via the Task framework.
 func (rs *RLAServerImpl) UpgradeFirmware(
@@ -791,7 +1238,7 @@ func (rs *RLAServerImpl) GetComponents(
 			if filter == nil {
 				continue
 			}
-			fieldName, queryInfo, err := protobuf.FilterFrom(filter, false) // false = isComponent
+			fieldName, queryInfo, err := protobuf.FilterFrom(filter)
 			if err != nil {
 				return nil, fmt.Errorf("invalid filter: %v", err)
 			}
@@ -894,294 +1341,6 @@ func (rs *RLAServerImpl) GetComponents(
 	}, nil
 }
 
-// GetActualComponents returns actual component data from external systems (e.g., Carbide, PSM).
-// Currently supports Compute and Powershelf component types.
-//
-// TODO: Currently finding actual data by component_id. Consider using MAC or serial number instead.
-// NOTE: This method is temporarily disabled in proto (commented out), but implementation remains for future use.
-func (rs *RLAServerImpl) GetActualComponents(
-	ctx context.Context,
-	req *pb.GetActualComponentsRequest,
-) (*pb.GetActualComponentsResponse, error) {
-	targetSpec := req.GetTargetSpec()
-	if targetSpec == nil {
-		return nil, errors.New("target_spec is required")
-	}
-
-	// First, get expected components
-	expectedComponents, err := rs.extractComponentsFromTargetSpec(ctx, targetSpec)
-	if err != nil {
-		return nil, fmt.Errorf("failed to extract components: %w", err)
-	}
-
-	if len(expectedComponents) == 0 {
-		return &pb.GetActualComponentsResponse{
-			Components: []*pb.ActualComponent{},
-			Total:      0,
-		}, nil
-	}
-
-	// Group components by type
-	componentsByType := make(map[devicetypes.ComponentType][]*component.Component)
-	for _, comp := range expectedComponents {
-		componentsByType[comp.Type] = append(componentsByType[comp.Type], comp)
-	}
-
-	// Process each type and collect results
-	var allActualComponents []*pb.ActualComponent
-	for compType, comps := range componentsByType {
-		switch compType {
-		case devicetypes.ComponentTypeCompute:
-			resp, err := rs.getActualComputeComponents(ctx, comps)
-			if err != nil {
-				return nil, err
-			}
-			allActualComponents = append(allActualComponents, resp.GetComponents()...)
-		case devicetypes.ComponentTypePowerShelf:
-			resp, err := rs.getActualPowershelfComponents(ctx, comps)
-			if err != nil {
-				return nil, err
-			}
-			allActualComponents = append(allActualComponents, resp.GetComponents()...)
-		default:
-			return nil, fmt.Errorf("component type %s is not supported for GetActualComponents, only Compute and Powershelf types are supported",
-				devicetypes.ComponentTypeToString(compType))
-		}
-	}
-
-	return &pb.GetActualComponentsResponse{
-		Components: allActualComponents,
-		Total:      int32(len(allActualComponents)),
-	}, nil
-}
-
-// getActualComputeComponents returns actual compute component data from Carbide.
-func (rs *RLAServerImpl) getActualComputeComponents(
-	ctx context.Context,
-	expectedComponents []*component.Component,
-) (*pb.GetActualComponentsResponse, error) {
-	if rs.carbideClient == nil {
-		return nil, errors.New("carbide client is not available")
-	}
-
-	// Extract component IDs from expected components
-	var componentIDs []string
-	componentIDToRackID := make(map[string]uuid.UUID) // Map component_id -> rack_id for lookup
-	for _, comp := range expectedComponents {
-		if comp.ComponentID != "" {
-			componentIDs = append(componentIDs, comp.ComponentID)
-			componentIDToRackID[comp.ComponentID] = comp.RackID
-		}
-	}
-
-	if len(componentIDs) == 0 {
-		return &pb.GetActualComponentsResponse{
-			Components: []*pb.ActualComponent{},
-			Total:      0,
-		}, nil
-	}
-
-	// Query Carbide for machine details (Carbide uses "machine" terminology)
-	machineDetails, err := rs.carbideClient.FindMachinesByIds(ctx, componentIDs)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get machine details from Carbide: %w", err)
-	}
-
-	// Query Carbide for machine positions
-	machinePositions, err := rs.carbideClient.GetMachinePositionInfo(ctx, componentIDs)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get machine positions from Carbide: %w", err)
-	}
-
-	// Query Carbide for power states
-	powerStates, err := rs.carbideClient.GetPowerStates(ctx, componentIDs)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get power states from Carbide: %w", err)
-	}
-
-	// Build position map for quick lookup
-	positionMap := make(map[string]carbideapi.MachinePosition)
-	for _, pos := range machinePositions {
-		positionMap[pos.MachineID] = pos
-	}
-
-	// Build power state map for quick lookup
-	powerStateMap := make(map[string]carbideapi.PowerState)
-	for _, ps := range powerStates {
-		powerStateMap[ps.MachineID] = ps.PowerState
-	}
-
-	// Convert to ActualComponent
-	actualComponents := make([]*pb.ActualComponent, 0, len(machineDetails))
-	for _, detail := range machineDetails {
-		ac := &pb.ActualComponent{
-			Type:            pb.ComponentType_COMPONENT_TYPE_COMPUTE,
-			ComponentId:     detail.MachineID,
-			FirmwareVersion: detail.FirmwareVersion,
-			HealthStatus:    detail.HealthStatus,
-			Source:          "carbide",
-		}
-
-		// Set info
-		ac.Info = &pb.DeviceInfo{}
-		if detail.ChassisSerial != nil {
-			ac.Info.SerialNumber = *detail.ChassisSerial
-		}
-
-		// Set rack_id from our local lookup
-		if rackID, ok := componentIDToRackID[detail.MachineID]; ok {
-			ac.RackId = protobuf.UUIDTo(rackID)
-		}
-
-		// Set position from Carbide
-		if pos, ok := positionMap[detail.MachineID]; ok {
-			ac.Position = &pb.RackPosition{}
-			if pos.PhysicalSlotNum != nil {
-				ac.Position.SlotId = *pos.PhysicalSlotNum
-			}
-			if pos.ComputeTrayIndex != nil {
-				ac.Position.TrayIdx = *pos.ComputeTrayIndex
-			}
-			if pos.TopologyID != nil {
-				ac.Position.HostId = *pos.TopologyID
-			}
-		}
-
-		// Set BMC info
-		if detail.BmcIP != "" || detail.BmcMac != "" {
-			ac.Bmcs = []*pb.BMCInfo{
-				{
-					IpAddress:  &detail.BmcIP,
-					MacAddress: detail.BmcMac,
-				},
-			}
-		}
-
-		// Set last seen time
-		if detail.LastObservationTime != nil {
-			ac.LastSeen = timestamppb.New(*detail.LastObservationTime)
-		}
-
-		// Set power state from Carbide
-		if ps, ok := powerStateMap[detail.MachineID]; ok {
-			ac.PowerState = powerStateToString(ps)
-		}
-
-		actualComponents = append(actualComponents, ac)
-	}
-
-	return &pb.GetActualComponentsResponse{
-		Components: actualComponents,
-		Total:      int32(len(actualComponents)),
-	}, nil
-}
-
-// getActualPowershelfComponents returns actual powershelf component data from PSM.
-func (rs *RLAServerImpl) getActualPowershelfComponents(
-	ctx context.Context,
-	expectedComponents []*component.Component,
-) (*pb.GetActualComponentsResponse, error) {
-	// Extract PMC MAC addresses from expected components
-	var pmcMacs []string
-	pmcMacToRackID := make(map[string]uuid.UUID) // Map pmc_mac -> rack_id for lookup
-	pmcMacToPosition := make(map[string]component.InRackPosition)
-
-	for _, comp := range expectedComponents {
-		bmcs := getBmcsFromComponent(comp)
-		if len(bmcs) != 1 {
-			return nil, fmt.Errorf("component %s: expected exactly 1 BMC, found %d", comp.Info.Name, len(bmcs))
-		}
-		if len(bmcs[0].MAC) == 0 {
-			return nil, fmt.Errorf("component %s: BMC has invalid MAC address", comp.Info.Name)
-		}
-
-		// For powershelves, the first BMC is the PMC
-		pmcMac := bmcs[0].MAC.String()
-		if pmcMac != "" {
-			pmcMacs = append(pmcMacs, pmcMac)
-			pmcMacToRackID[pmcMac] = comp.RackID
-			pmcMacToPosition[pmcMac] = comp.Position
-		}
-	}
-
-	if len(pmcMacs) == 0 {
-		return &pb.GetActualComponentsResponse{
-			Components: []*pb.ActualComponent{},
-			Total:      0,
-		}, nil
-	}
-
-	if rs.psmClient == nil {
-		return nil, errors.New("PSM client is not available")
-	}
-
-	// Query PSM for powershelf details
-	powershelves, err := rs.psmClient.GetPowershelves(ctx, pmcMacs)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get powershelf details from PSM: %w", err)
-	}
-
-	// Convert to ActualComponent
-	actualComponents := make([]*pb.ActualComponent, 0, len(powershelves))
-	for _, ps := range powershelves {
-		pmcMac := ps.PMC.MACAddress
-
-		ac := &pb.ActualComponent{
-			Type:            pb.ComponentType_COMPONENT_TYPE_POWERSHELF,
-			ComponentId:     pmcMac, // Use PMC MAC as component ID
-			FirmwareVersion: ps.PMC.FirmwareVersion,
-			Source:          "psm",
-		}
-
-		// Set info from chassis
-		ac.Info = &pb.DeviceInfo{
-			SerialNumber: ps.Chassis.SerialNumber,
-			Model:        &ps.Chassis.Model,
-			Manufacturer: ps.Chassis.Manufacturer,
-		}
-
-		// Set rack_id from our local lookup
-		if rackID, ok := pmcMacToRackID[pmcMac]; ok {
-			ac.RackId = protobuf.UUIDTo(rackID)
-		}
-
-		// Set position from expected component
-		if pos, ok := pmcMacToPosition[pmcMac]; ok {
-			ac.Position = &pb.RackPosition{
-				SlotId:  int32(pos.SlotID),
-				TrayIdx: int32(pos.TrayIndex),
-				HostId:  int32(pos.HostID),
-			}
-		}
-
-		// Set BMC info (PMC)
-		ac.Bmcs = []*pb.BMCInfo{
-			{
-				IpAddress:  &ps.PMC.IPAddress,
-				MacAddress: ps.PMC.MACAddress,
-			},
-		}
-
-		// Determine power state from PSUs
-		// If any PSU is powered on, consider the powershelf as "on"
-		powerState := "off"
-		for _, psu := range ps.PSUs {
-			if psu.PowerState {
-				powerState = "on"
-				break
-			}
-		}
-		ac.PowerState = powerState
-
-		actualComponents = append(actualComponents, ac)
-	}
-
-	return &pb.GetActualComponentsResponse{
-		Components: actualComponents,
-		Total:      int32(len(actualComponents)),
-	}, nil
-}
-
 // powerStateToString converts a Carbide PowerState to a string representation
 func powerStateToString(ps carbideapi.PowerState) string {
 	switch ps {
@@ -1196,141 +1355,190 @@ func powerStateToString(ps carbideapi.PowerState) string {
 	}
 }
 
-// ValidateComponents compares expected (local DB) vs actual (from external source systems) components.
-// Returns validation result indicating if components match and details of any differences.
-// Each component type queries its own source system (e.g., Carbide for Compute, PSM for PowerShelf).
-// Currently only supports Compute component type.
+// ValidateComponents returns pre-computed drifts between expected (local DB) and actual
+// (source system) components. Results are computed asynchronously by the inventory loop,
+// so this API returns quickly without calling external systems.
 //
-// TODO: Currently matching by component_id. Consider using MAC or serial number instead.
+// If target_spec is provided, only drifts for the specified components are returned.
+// If target_spec is not provided, all drifts are returned.
 func (rs *RLAServerImpl) ValidateComponents(
 	ctx context.Context,
 	req *pb.ValidateComponentsRequest,
 ) (*pb.ValidateComponentsResponse, error) {
-	targetSpec := req.GetTargetSpec()
-	if targetSpec == nil {
-		return nil, errors.New("target_spec is required")
+	pg := protobuf.PaginationFrom(req.GetPagination())
+	if err := pg.Validate(); err != nil {
+		return nil, fmt.Errorf("invalid pagination information: %v", err)
 	}
 
-	if rs.carbideClient == nil {
-		return nil, errors.New("carbide client is not available")
-	}
-
-	// Get expected components from local DB
-	expectedComponents, err := rs.extractComponentsFromTargetSpec(ctx, targetSpec)
-	if err != nil {
-		return nil, fmt.Errorf("failed to extract expected components: %w", err)
-	}
-
-	// Currently only Compute type is supported - check all components are Compute
-	for _, comp := range expectedComponents {
-		if comp.Type != devicetypes.ComponentTypeCompute {
-			return nil, fmt.Errorf("component type %s is not supported for ValidateComponents, only Compute is supported",
-				devicetypes.ComponentTypeToString(comp.Type))
+	var orderBy *dbquery.OrderBy
+	if req.GetOrderBy() != nil {
+		orderBy = protobuf.OrderByFrom(req.GetOrderBy())
+		if err := orderBy.Validate(); err != nil {
+			return nil, fmt.Errorf("invalid order by: %v", err)
 		}
 	}
 
-	// Build expected component map by component_id
-	expectedByComponentID := make(map[string]*component.Component)
-	var componentIDs []string
-	for _, comp := range expectedComponents {
-		if comp.ComponentID != "" {
-			expectedByComponentID[comp.ComponentID] = comp
-			componentIDs = append(componentIDs, comp.ComponentID)
-		}
-	}
+	// Extract filters from the filters array
+	var infoFilter *dbquery.StringQueryInfo
+	var manufacturerFilter *dbquery.StringQueryInfo
+	var modelFilter *dbquery.StringQueryInfo
+	var componentTypes []devicetypes.ComponentType
 
-	// TODO: Refactor - extract this source system querying logic to a shared helper function
-	// to avoid duplication with GetActualComponents. Each component type should query its own
-	// source system (Carbide for Compute, PSM for PowerShelf, etc.)
+	if len(req.GetFilters()) > 0 {
+		for _, filter := range req.GetFilters() {
+			if filter == nil {
+				continue
+			}
+			fieldName, queryInfo, err := protobuf.FilterFrom(filter)
+			if err != nil {
+				return nil, fmt.Errorf("invalid filter: %v", err)
+			}
+			if queryInfo == nil {
+				continue
+			}
 
-	// Query source system for actual data (currently Carbide for Compute type)
-	var machineDetails []carbideapi.MachineDetail
-	var machinePositions []carbideapi.MachinePosition
-	var powerStates []carbideapi.MachinePowerState
-
-	if len(componentIDs) > 0 {
-		machineDetails, err = rs.carbideClient.FindMachinesByIds(ctx, componentIDs)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get machine details from Carbide: %w", err)
-		}
-
-		machinePositions, err = rs.carbideClient.GetMachinePositionInfo(ctx, componentIDs)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get machine positions from Carbide: %w", err)
-		}
-
-		powerStates, err = rs.carbideClient.GetPowerStates(ctx, componentIDs)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get power states from Carbide: %w", err)
-		}
-	}
-
-	// Build lookup maps for actual data (keyed by Carbide's MachineID which is our ComponentID)
-	positionMap := make(map[string]carbideapi.MachinePosition)
-	for _, pos := range machinePositions {
-		positionMap[pos.MachineID] = pos
-	}
-
-	powerStateMap := make(map[string]carbideapi.PowerState)
-	for _, ps := range powerStates {
-		powerStateMap[ps.MachineID] = ps.PowerState
-	}
-
-	actualByComponentID := make(map[string]carbideapi.MachineDetail)
-	for _, detail := range machineDetails {
-		actualByComponentID[detail.MachineID] = detail
-	}
-
-	// Compare and generate diffs
-	var diffs []*pb.ComponentDiff
-	var onlyInExpectedCount, onlyInActualCount, driftCount, matchCount int32
-
-	// Check expected components
-	for compID, expected := range expectedByComponentID {
-		actual, existsInActual := actualByComponentID[compID]
-
-		if !existsInActual {
-			// Only in expected (missing from source system)
-			diffs = append(diffs, &pb.ComponentDiff{
-				Type:        pb.DiffType_DIFF_TYPE_ONLY_IN_EXPECTED,
-				ComponentId: compID,
-				Expected:    protobuf.ComponentTo(expected),
-			})
-			onlyInExpectedCount++
-		} else {
-			// Exists in both - check for drift
-			fieldDiffs := compareComponentFields(expected, actual, positionMap[compID])
-
-			if len(fieldDiffs) > 0 {
-				diffs = append(diffs, &pb.ComponentDiff{
-					Type:        pb.DiffType_DIFF_TYPE_DRIFT,
-					ComponentId: compID,
-					FieldDiffs:  fieldDiffs,
-				})
-				driftCount++
-			} else {
-				matchCount++
+			switch fieldName {
+			case "name":
+				infoFilter = queryInfo
+			case "manufacturer":
+				manufacturerFilter = queryInfo
+			case "model":
+				modelFilter = queryInfo
+			case "type":
+				// Convert string patterns to ComponentType enums
+				if len(queryInfo.Patterns) > 0 {
+					componentTypes = make([]devicetypes.ComponentType, 0, len(queryInfo.Patterns))
+					for _, pattern := range queryInfo.Patterns {
+						ct := devicetypes.ComponentTypeFromString(pattern)
+						if ct != devicetypes.ComponentTypeUnknown {
+							componentTypes = append(componentTypes, ct)
+						}
+					}
+				}
+			default:
+				return nil, fmt.Errorf("unsupported filter field: %s", fieldName)
 			}
 		}
 	}
 
-	// Check for components only in actual (not in expected)
-	for compID, actual := range actualByComponentID {
-		if _, existsInExpected := expectedByComponentID[compID]; !existsInExpected {
-			// Only in actual (exists in source system but not in local DB)
-			ac := buildActualComponentFromDetail(actual, positionMap[compID], powerStateMap[compID], uuid.Nil)
+	// If info filter is not provided, use empty filter (matches all)
+	if infoFilter == nil {
+		infoFilter = &dbquery.StringQueryInfo{Patterns: []string{}, IsWildcard: false, UseOR: false}
+	}
+
+	hasFilters := len(req.GetFilters()) > 0
+
+	targetSpec := req.GetTargetSpec()
+
+	var storeDrifts []inventorymanager.ComponentDrift
+	var filteredComponentCount int32
+	var err error
+
+	if targetSpec != nil {
+		// Extract component UUIDs from target spec
+		components, extractErr := rs.extractComponentsFromTargetSpec(ctx, targetSpec)
+		if extractErr != nil {
+			return nil, fmt.Errorf("failed to extract components from target_spec: %w", extractErr)
+		}
+
+		// Apply filters to narrow down components
+		if hasFilters {
+			components = rs.applyComponentFilters(components, *infoFilter, manufacturerFilter, modelFilter, componentTypes)
+		}
+
+		// Apply ordering
+		if orderBy != nil {
+			if sortErr := rs.sortComponents(components, orderBy); sortErr != nil {
+				return nil, fmt.Errorf("failed to sort components: %w", sortErr)
+			}
+		}
+
+		filteredComponentCount = int32(len(components))
+
+		componentIDs := make([]uuid.UUID, 0, len(components))
+		for _, comp := range components {
+			componentIDs = append(componentIDs, comp.Info.ID)
+		}
+
+		storeDrifts, err = rs.inventoryManager.GetDriftsByComponentIDs(ctx, componentIDs)
+	} else {
+		storeDrifts, err = rs.inventoryManager.GetAllDrifts(ctx)
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to get drifts: %w", err)
+	}
+
+	// Convert store drifts to proto response
+	var diffs []*pb.ComponentDiff
+	var onlyInExpectedCount, onlyInActualCount, driftCount, matchCount int32
+
+	for _, sd := range storeDrifts {
+		componentIDStr := ""
+		if sd.ComponentID != nil {
+			componentIDStr = sd.ComponentID.String()
+		}
+		externalIDStr := ""
+		if sd.ExternalID != nil {
+			externalIDStr = *sd.ExternalID
+		}
+
+		switch sd.DriftType {
+		case "missing_in_expected":
 			diffs = append(diffs, &pb.ComponentDiff{
 				Type:        pb.DiffType_DIFF_TYPE_ONLY_IN_ACTUAL,
-				ComponentId: compID,
-				Actual:      ac,
+				ComponentId: externalIDStr, // only external_id is known
+			})
+			onlyInExpectedCount++
+		case "missing_in_actual":
+			diffs = append(diffs, &pb.ComponentDiff{
+				Type:        pb.DiffType_DIFF_TYPE_ONLY_IN_EXPECTED,
+				ComponentId: componentIDStr,
 			})
 			onlyInActualCount++
+		case "mismatch":
+			fieldDiffs := make([]*pb.FieldDiff, 0, len(sd.Diffs))
+			for _, fd := range sd.Diffs {
+				fieldDiffs = append(fieldDiffs, &pb.FieldDiff{
+					FieldName:     fd.FieldName,
+					ExpectedValue: fd.ExpectedValue,
+					ActualValue:   fd.ActualValue,
+				})
+			}
+			diffs = append(diffs, &pb.ComponentDiff{
+				Type:        pb.DiffType_DIFF_TYPE_DRIFT,
+				ComponentId: componentIDStr,
+				FieldDiffs:  fieldDiffs,
+			})
+			driftCount++
+		}
+	}
+
+	// Calculate match count: if we have targeted components, matches = targeted - drifts
+	if targetSpec != nil {
+		matchCount = filteredComponentCount - onlyInActualCount - driftCount
+		if matchCount < 0 {
+			matchCount = 0
+		}
+	}
+
+	// Apply pagination to diffs
+	totalDiffs := int32(len(diffs))
+	if pg != nil {
+		start := pg.Offset
+		end := start + pg.Limit
+		if start > len(diffs) {
+			diffs = []*pb.ComponentDiff{}
+		} else if end > len(diffs) {
+			diffs = diffs[start:]
+		} else {
+			diffs = diffs[start:end]
 		}
 	}
 
 	return &pb.ValidateComponentsResponse{
 		Diffs:               diffs,
-		TotalDiffs:          int32(len(diffs)),
+		TotalDiffs:          totalDiffs,
 		OnlyInExpectedCount: onlyInExpectedCount,
 		OnlyInActualCount:   onlyInActualCount,
 		DriftCount:          driftCount,
@@ -1395,69 +1603,6 @@ func compareComponentFields(
 	}
 
 	return diffs
-}
-
-// buildActualComponentFromDetail builds an ActualComponent proto from source system data.
-// TODO: Refactor - consolidate with similar logic in GetActualComponents.
-// This should be generalized to support different source systems per component type.
-func buildActualComponentFromDetail(
-	detail carbideapi.MachineDetail,
-	position carbideapi.MachinePosition,
-	powerState carbideapi.PowerState,
-	rackID uuid.UUID,
-) *pb.ActualComponent {
-	ac := &pb.ActualComponent{
-		Type:            pb.ComponentType_COMPONENT_TYPE_COMPUTE,
-		ComponentId:     detail.MachineID,
-		FirmwareVersion: detail.FirmwareVersion,
-		HealthStatus:    detail.HealthStatus,
-		Source:          "carbide",
-		PowerState:      powerStateToString(powerState),
-	}
-
-	ac.Info = &pb.DeviceInfo{}
-	if detail.ChassisSerial != nil {
-		ac.Info.SerialNumber = *detail.ChassisSerial
-	}
-
-	if rackID != uuid.Nil {
-		ac.RackId = protobuf.UUIDTo(rackID)
-	}
-
-	ac.Position = &pb.RackPosition{}
-	if position.PhysicalSlotNum != nil {
-		ac.Position.SlotId = *position.PhysicalSlotNum
-	}
-	if position.ComputeTrayIndex != nil {
-		ac.Position.TrayIdx = *position.ComputeTrayIndex
-	}
-	if position.TopologyID != nil {
-		ac.Position.HostId = *position.TopologyID
-	}
-
-	if detail.BmcIP != "" || detail.BmcMac != "" {
-		ac.Bmcs = []*pb.BMCInfo{
-			{
-				IpAddress:  &detail.BmcIP,
-				MacAddress: detail.BmcMac,
-			},
-		}
-	}
-
-	if detail.LastObservationTime != nil {
-		ac.LastSeen = timestamppb.New(*detail.LastObservationTime)
-	}
-
-	return ac
-}
-
-// getBmcsFromComponent returns all BMCs found in the component.
-func getBmcsFromComponent(comp *component.Component) []bmc.BMC {
-	var result []bmc.BMC
-	for _, bmcs := range comp.BmcsByType {
-		result = append(result, bmcs...)
-	}
-	return result
 }
 
 // applyComponentFilters applies filters to a list of components in memory.
@@ -1639,6 +1784,20 @@ func (rs *RLAServerImpl) sortComponents(components []*component.Component, order
 	}
 
 	return nil
+}
+
+// now returns the current time (extracted for testing)
+var now = time.Now
+
+// extractComponentsByType extracts components of the specified type from a rack
+func extractComponentsByType(r *rack.Rack, compType devicetypes.ComponentType) []*component.Component {
+	var result []*component.Component
+	for i := range r.Components {
+		if r.Components[i].Type == compType {
+			result = append(result, &r.Components[i])
+		}
+	}
+	return result
 }
 
 // extractComponentsByTypes extracts components matching any of the specified types from a rack.

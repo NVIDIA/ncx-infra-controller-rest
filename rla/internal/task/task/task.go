@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package task
 
 import (
@@ -22,9 +23,10 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/inventory/objects/rack"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/rack"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/operation"
 	taskcommon "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/common"
+	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operationrules"
 )
 
 // Task defines the details of a task. It includes:
@@ -37,6 +39,7 @@ import (
 // -- ExecutionID: The identifier of the execution of the task.
 // -- Status: The status of the task.
 // -- Message: Status message or error details.
+// -- AppliedRuleID: The ID of the operation rule that was applied (if any).
 type Task struct {
 	ID             uuid.UUID
 	Operation      operation.Wrapper
@@ -47,13 +50,16 @@ type Task struct {
 	ExecutionID    string
 	Status         taskcommon.TaskStatus
 	Message        string
+	AppliedRuleID  *uuid.UUID // The ID of the operation rule that was applied
 }
 
 // ExecutionInfo contains the information needed to execute a task.
 // Rack contains rack info and the components to be operated on (see rack.Rack NOTE).
+// RuleDefinition contains the resolved operation rule (resolved at task creation time).
 type ExecutionInfo struct {
-	TaskID uuid.UUID
-	Rack   *rack.Rack
+	TaskID         uuid.UUID
+	Rack           *rack.Rack
+	RuleDefinition *operationrules.RuleDefinition
 }
 
 type ExecutionRequest struct {

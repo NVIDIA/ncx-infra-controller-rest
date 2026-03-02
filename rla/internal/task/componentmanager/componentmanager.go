@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package componentmanager
 
 import (
@@ -35,7 +36,24 @@ type ComponentManager interface {
 	Type() devicetypes.ComponentType
 	InjectExpectation(ctx context.Context, target common.Target, info operations.InjectExpectationTaskInfo) error //nolint
 	PowerControl(ctx context.Context, target common.Target, info operations.PowerControlTaskInfo) error           //nolint
+	GetPowerStatus(ctx context.Context, target common.Target) (map[string]operations.PowerStatus, error)          //nolint
 	FirmwareControl(ctx context.Context, target common.Target, info operations.FirmwareControlTaskInfo) error     //nolint
+
+	// StartFirmwareUpdate initiates firmware update without waiting for completion.
+	// Returns immediately after the update request is accepted.
+	StartFirmwareUpdate(ctx context.Context, target common.Target, info operations.FirmwareControlTaskInfo) error //nolint
+
+	// GetFirmwareUpdateStatus returns the current status of firmware updates for the target components.
+	// Returns a map of component ID to FirmwareUpdateStatus.
+	GetFirmwareUpdateStatus(ctx context.Context, target common.Target) (map[string]operations.FirmwareUpdateStatus, error) //nolint
+
+	// AllowBringUpAndPowerOn opens the power-on gate for the target components via Carbide.
+	// Only applicable to compute and NVSwitch components managed by Carbide.
+	AllowBringUpAndPowerOn(ctx context.Context, target common.Target) error //nolint
+
+	// GetBringUpState returns the bring-up state for each target component.
+	// Returns a map of component ID to MachineBringUpState.
+	GetBringUpState(ctx context.Context, target common.Target) (map[string]operations.MachineBringUpState, error) //nolint
 }
 
 // ManagerFactory is a function that creates a ComponentManager instance.

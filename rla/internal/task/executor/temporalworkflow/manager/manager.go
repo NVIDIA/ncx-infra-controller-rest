@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package manager
 
 import (
@@ -228,6 +229,27 @@ func (m *Manager) InjectExpectation(
 		executeWorkflowParams{
 			workflowName: workflow.InjectExpectationWorkflowName,
 			timeout:      operations.GetOperationOptions(taskcommon.TaskTypeInjectExpectation).Timeout,
+			req:          req,
+			info:         info,
+		},
+	)
+}
+
+func (m *Manager) BringUp(
+	ctx context.Context,
+	req *task.ExecutionRequest,
+	info operations.BringUpTaskInfo,
+) (*task.ExecutionResponse, error) {
+	if err := info.Validate(); err != nil {
+		return nil, err
+	}
+
+	return executeWorkflow(
+		ctx,
+		m.publisherClient.Client(),
+		executeWorkflowParams{
+			workflowName: workflow.BringUpWorkflowName,
+			timeout:      operations.GetOperationOptions(taskcommon.TaskTypeBringUp).Timeout,
 			req:          req,
 			info:         info,
 		},

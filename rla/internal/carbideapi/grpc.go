@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package carbideapi
 
 import (
@@ -25,9 +26,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/rs/zerolog/log"
 	pb "github.com/nvidia/bare-metal-manager-rest/rla/internal/carbideapi/gen"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/certs"
-	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -167,6 +168,24 @@ func (c *grpcClient) AdminPowerControl(ctx context.Context, machineID string, ac
 	return nil
 }
 
+// UpdatePowerOption sets the desired power state for a machine in Carbide's power manager.
+func (c *grpcClient) UpdatePowerOption(ctx context.Context, machineID string, desiredState PowerState) error {
+	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
+	defer cancel()
+
+	req := &pb.PowerOptionUpdateRequest{
+		MachineId:  &pb.MachineId{Id: machineID},
+		PowerState: powerStateToPb(desiredState),
+	}
+
+	_, err := c.gclient.UpdatePowerOption(ctx, req)
+	if err != nil {
+		return fmt.Errorf("failed to update power option for machine %s: %w", machineID, err)
+	}
+
+	return nil
+}
+
 // FindInterfaces returns all machine interfaces known by carbide-api, keyed by MAC address
 func (c *grpcClient) FindInterfaces(ctx context.Context) (map[string]MachineInterface, error) {
 	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
@@ -235,6 +254,62 @@ func (c *grpcClient) GetMachinePositionInfo(ctx context.Context, machineIds []st
 		result = append(result, machinePositionFromPb(pos))
 	}
 	return result, nil
+}
+
+// AllowIngestionAndPowerOn opens Carbide's power-on gate for a
+// BMC endpoint.
+func (c *grpcClient) AllowIngestionAndPowerOn(
+	ctx context.Context,
+	bmcIP string,
+	bmcMAC string,
+) error {
+	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
+	defer cancel()
+
+	req := &pb.BmcEndpointRequest{IpAddress: bmcIP}
+	if bmcMAC != "" {
+		req.MacAddress = &bmcMAC
+	}
+
+	_, err := c.gclient.AllowIngestionAndPowerOn(ctx, req)
+	if err != nil {
+		return fmt.Errorf(
+			"failed to allow ingestion for BMC %s: %w",
+			bmcIP, err,
+		)
+	}
+
+	return nil
+}
+
+// DetermineMachineIngestionState queries the ingestion state of
+// a machine relative to Carbide's power-on gate.
+func (c *grpcClient) DetermineMachineIngestionState(
+	ctx context.Context,
+	bmcIP string,
+	bmcMAC string,
+) (BringUpState, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
+	defer cancel()
+
+	req := &pb.BmcEndpointRequest{IpAddress: bmcIP}
+	if bmcMAC != "" {
+		req.MacAddress = &bmcMAC
+	}
+
+	resp, err := c.gclient.DetermineMachineIngestionState(
+		ctx, req,
+	)
+	if err != nil {
+		return BringUpStateNotDiscovered, fmt.Errorf(
+			"failed to get bring-up state for BMC %s: %w", //nolint
+			bmcIP, err,
+		)
+	}
+
+	return bringUpStateFromPb(
+		resp.GetMachineIngestionState(),
+	), nil
 }
 
 func (c *grpcClient) AddMachine(machine Machine) {

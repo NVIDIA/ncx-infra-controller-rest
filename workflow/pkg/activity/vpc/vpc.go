@@ -39,9 +39,10 @@ import (
 	sc "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/client/site"
 	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/queue"
 	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/util"
-	cwu "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/util"
 
 	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
+
+	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 )
 
 // ManageVpc is an activity wrapper for managing VPC lifecycle that allows
@@ -573,7 +574,7 @@ func (mv ManageVpc) UpdateVpcsInDB(ctx context.Context, siteID uuid.UUID, vpcInv
 			}
 		} else if vpc.ControllerVpcID != nil {
 			// Was this created within inventory receipt interval? If so, we may be processing an older inventory
-			if time.Since(vpc.Created) < cwu.InventoryReceiptInterval {
+			if time.Since(vpc.Created) < cwutil.InventoryReceiptInterval {
 				continue
 			}
 

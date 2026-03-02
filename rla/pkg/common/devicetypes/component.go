@@ -14,9 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package devicetypes
 
-import "strings"
+import (
+	"encoding/json"
+	"fmt"
+	"strings"
+)
 
 // Define component types
 type ComponentType int
@@ -84,6 +89,21 @@ func ComponentTypeToString(ct ComponentType) string {
 
 func IsValidComponentTypeString(str string) bool {
 	return ComponentTypeFromString(str) != ComponentTypeUnknown
+}
+
+// MarshalJSON serializes ComponentType as its string name (e.g. "Compute").
+func (ct ComponentType) MarshalJSON() ([]byte, error) {
+	return json.Marshal(ComponentTypeToString(ct))
+}
+
+// UnmarshalJSON parses a ComponentType from its string name (e.g. "compute").
+func (ct *ComponentType) UnmarshalJSON(data []byte) error {
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return fmt.Errorf("component_type must be a string: %w", err)
+	}
+	*ct = ComponentTypeFromString(s)
+	return nil
 }
 
 // String return the aligned string representation for the given component

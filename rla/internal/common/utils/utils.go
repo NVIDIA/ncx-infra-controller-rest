@@ -14,16 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package utils
 
 import (
 	"context"
 	"testing"
 
+	"github.com/rs/zerolog/log"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/db"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/db/migrations"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/db/postgres"
-	"github.com/rs/zerolog/log"
 )
 
 func UnitTestDB(ctx context.Context, t *testing.T, dbConf db.Config) (*postgres.Postgres, error) {

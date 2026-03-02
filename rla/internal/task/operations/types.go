@@ -14,7 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package operations
+
+import (
+	taskcommon "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/common"
+)
 
 type PowerOperation int
 
@@ -57,6 +62,26 @@ func (o PowerOperation) String() string {
 	return "Unknown"
 }
 
+// powerOperationCodes maps PowerOperation enums to their operation code strings
+var powerOperationCodes = map[PowerOperation]string{
+	PowerOperationPowerOn:       taskcommon.OpCodePowerControlPowerOn,
+	PowerOperationForcePowerOn:  taskcommon.OpCodePowerControlForcePowerOn,
+	PowerOperationPowerOff:      taskcommon.OpCodePowerControlPowerOff,
+	PowerOperationForcePowerOff: taskcommon.OpCodePowerControlForcePowerOff,
+	PowerOperationRestart:       taskcommon.OpCodePowerControlRestart,
+	PowerOperationForceRestart:  taskcommon.OpCodePowerControlForceRestart,
+	PowerOperationWarmReset:     taskcommon.OpCodePowerControlWarmReset,
+	PowerOperationColdReset:     taskcommon.OpCodePowerControlColdReset,
+}
+
+// CodeString returns the operation code string for a PowerOperation
+func (o PowerOperation) CodeString() string {
+	if code, ok := powerOperationCodes[o]; ok {
+		return code
+	}
+	return taskcommon.OpCodePowerControlPowerOn // Default fallback
+}
+
 type PowerStatus string
 
 const (
@@ -89,4 +114,51 @@ func (o FirmwareOperation) String() string {
 	}
 
 	return "Unknown"
+}
+
+// firmwareOperationCodes maps FirmwareOperation enums to their operation code strings
+var firmwareOperationCodes = map[FirmwareOperation]string{
+	FirmwareOperationUpgrade:   taskcommon.OpCodeFirmwareControlUpgrade,
+	FirmwareOperationDowngrade: taskcommon.OpCodeFirmwareControlDowngrade,
+	FirmwareOperationRollback:  taskcommon.OpCodeFirmwareControlRollback,
+}
+
+// MachineBringUpState represents the bring-up state of a
+// machine in relation to Carbide's power-on gate.
+type MachineBringUpState int
+
+const (
+	MachineBringUpStateNotDiscovered MachineBringUpState = iota
+	MachineBringUpStateWaitingForIngestion
+	MachineBringUpStateMachineNotCreated
+	MachineBringUpStateMachineCreated
+)
+
+func (s MachineBringUpState) String() string {
+	switch s {
+	case MachineBringUpStateNotDiscovered:
+		return "NotDiscovered"
+	case MachineBringUpStateWaitingForIngestion:
+		return "WaitingForIngestion"
+	case MachineBringUpStateMachineNotCreated:
+		return "IngestionMachineNotCreated"
+	case MachineBringUpStateMachineCreated:
+		return "IngestionMachineCreated"
+	default:
+		return "Unknown"
+	}
+}
+
+// IsBroughtUp returns true if the machine has passed the
+// gate and been ingested.
+func (s MachineBringUpState) IsBroughtUp() bool {
+	return s == MachineBringUpStateMachineCreated
+}
+
+// CodeString returns the operation code string for a FirmwareOperation
+func (o FirmwareOperation) CodeString() string {
+	if code, ok := firmwareOperationCodes[o]; ok {
+		return code
+	}
+	return taskcommon.OpCodeFirmwareControlUpgrade // Default fallback
 }

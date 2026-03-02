@@ -30,6 +30,7 @@ import (
 	sc "github.com/nvidia/bare-metal-manager-rest/api/pkg/client/site"
 	auth "github.com/nvidia/bare-metal-manager-rest/auth/pkg/authorization"
 	cerr "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
+	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 	sutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
@@ -164,7 +165,7 @@ func (handler CreateMachineValidationTestHandler) Handle(c echo.Context) error {
 	// create workflow
 	createWorkflowOptions := tclient.StartWorkflowOptions{
 		ID:                       "machine-validation-test-create-" + apiRequest.Name,
-		WorkflowExecutionTimeout: common.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 	// build protobuf create request
@@ -172,7 +173,7 @@ func (handler CreateMachineValidationTestHandler) Handle(c echo.Context) error {
 
 	logger.Info().Msg("triggering MachineValidationTest create workflow")
 
-	createCtx, cancel := context.WithTimeout(ctx, common.WorkflowContextTimeout)
+	createCtx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow
@@ -333,7 +334,7 @@ func (handler UpdateMachineValidationTestHandler) Handle(c echo.Context) error {
 	// create workflow
 	updateWorkflowOptions := tclient.StartWorkflowOptions{
 		ID:                       fmt.Sprintf("machine-validation-test-update-%s-%s", testID, testVersion),
-		WorkflowExecutionTimeout: common.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 	// build protobuf update request
@@ -341,7 +342,7 @@ func (handler UpdateMachineValidationTestHandler) Handle(c echo.Context) error {
 
 	logger.Info().Msg("triggering MachineValidationTest update workflow")
 
-	updateCtx, cancel := context.WithTimeout(ctx, common.WorkflowContextTimeout)
+	updateCtx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow
@@ -384,7 +385,7 @@ func getMachineValidationTest(ctx context.Context, echoCtx echo.Context, logger 
 	// get newly created test to be returned
 	getWorkflowOptions := tclient.StartWorkflowOptions{
 		ID:                       fmt.Sprintf("machine-validation-test-get-%s-%s", testID, testVersion),
-		WorkflowExecutionTimeout: common.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 
@@ -397,7 +398,7 @@ func getMachineValidationTest(ctx context.Context, echoCtx echo.Context, logger 
 	logger.Info().Msg("triggering MachineValidationTest get workflow")
 
 	// Add context deadlines
-	getCtx, cancel := context.WithTimeout(ctx, common.WorkflowContextTimeout)
+	getCtx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow
@@ -539,7 +540,7 @@ func (handler GetAllMachineValidationTestHandler) Handle(c echo.Context) error {
 	// create workflow
 	getWorkflowOptions := tclient.StartWorkflowOptions{
 		ID:                       "machine-validation-test-getall",
-		WorkflowExecutionTimeout: common.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 	// build protobuf update request
@@ -547,7 +548,7 @@ func (handler GetAllMachineValidationTestHandler) Handle(c echo.Context) error {
 
 	logger.Info().Msg("triggering MachineValidationTest get workflow")
 
-	updateCtx, cancel := context.WithTimeout(ctx, common.WorkflowContextTimeout)
+	updateCtx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow
@@ -693,7 +694,7 @@ func (handler GetMachineValidationTestHandler) Handle(c echo.Context) error {
 	// create workflow
 	getWorkflowOptions := tclient.StartWorkflowOptions{
 		ID:                       fmt.Sprintf("machine-validation-test-get-%s-%s", testID, testVersion),
-		WorkflowExecutionTimeout: common.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 	// build protobuf update request
@@ -704,7 +705,7 @@ func (handler GetMachineValidationTestHandler) Handle(c echo.Context) error {
 
 	logger.Info().Msg("triggering MachineValidationTest get workflow")
 
-	updateCtx, cancel := context.WithTimeout(ctx, common.WorkflowContextTimeout)
+	updateCtx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow
@@ -852,7 +853,7 @@ func (handler GetMachineValidationResultsHandler) Handle(c echo.Context) error {
 	// create workflow
 	getWorkflowOptions := tclient.StartWorkflowOptions{
 		ID:                       "machine-validation-result-get-" + machineID,
-		WorkflowExecutionTimeout: common.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 	// build protobuf request
@@ -863,7 +864,7 @@ func (handler GetMachineValidationResultsHandler) Handle(c echo.Context) error {
 
 	logger.Info().Msg("triggering MachineValidationResult get workflow")
 
-	updateCtx, cancel := context.WithTimeout(ctx, common.WorkflowContextTimeout)
+	updateCtx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow
@@ -1007,7 +1008,7 @@ func (handler GetAllMachineValidationRunHandler) Handle(c echo.Context) error {
 	// create workflow
 	getWorkflowOptions := tclient.StartWorkflowOptions{
 		ID:                       "machine-validation-run-get-" + machineID,
-		WorkflowExecutionTimeout: common.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 	// build protobuf request
@@ -1018,7 +1019,7 @@ func (handler GetAllMachineValidationRunHandler) Handle(c echo.Context) error {
 
 	logger.Info().Msg("triggering MachineValidationRun get workflow")
 
-	updateCtx, cancel := context.WithTimeout(ctx, common.WorkflowContextTimeout)
+	updateCtx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow
@@ -1158,7 +1159,7 @@ func (handler GetAllMachineValidationExternalConfigHandler) Handle(c echo.Contex
 	// create workflow
 	getWorkflowOptions := tclient.StartWorkflowOptions{
 		ID:                       "machine-validation-ext-config-get-all",
-		WorkflowExecutionTimeout: common.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 	// build protobuf request
@@ -1166,7 +1167,7 @@ func (handler GetAllMachineValidationExternalConfigHandler) Handle(c echo.Contex
 
 	logger.Info().Msg("triggering MachineValidationRun get workflow")
 
-	updateCtx, cancel := context.WithTimeout(ctx, common.WorkflowContextTimeout)
+	updateCtx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow
@@ -1310,7 +1311,7 @@ func (handler GetMachineValidationExternalConfigHandler) Handle(c echo.Context) 
 	// create workflow
 	getWorkflowOptions := tclient.StartWorkflowOptions{
 		ID:                       fmt.Sprintf("machine-validation-ext-cfg-get-%s", cfgName),
-		WorkflowExecutionTimeout: common.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 	// build protobuf update request
@@ -1320,7 +1321,7 @@ func (handler GetMachineValidationExternalConfigHandler) Handle(c echo.Context) 
 
 	logger.Info().Msg("triggering MachineValidationExternalConfig get workflow")
 
-	updateCtx, cancel := context.WithTimeout(ctx, common.WorkflowContextTimeout)
+	updateCtx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow
@@ -1480,7 +1481,7 @@ func (handler CreateMachineValidationExternalConfigHandler) Handle(c echo.Contex
 	// create workflow
 	createWorkflowOptions := tclient.StartWorkflowOptions{
 		ID:                       "machine-validation-ext-cfg-create-" + apiRequest.Name,
-		WorkflowExecutionTimeout: common.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 	// build protobuf create request
@@ -1488,7 +1489,7 @@ func (handler CreateMachineValidationExternalConfigHandler) Handle(c echo.Contex
 
 	logger.Info().Msg("triggering MachineValidationExternalConfig create workflow")
 
-	createCtx, cancel := context.WithTimeout(ctx, common.WorkflowContextTimeout)
+	createCtx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow
@@ -1651,7 +1652,7 @@ func (handler UpdateMachineValidationExternalConfigHandler) Handle(c echo.Contex
 	// create workflow
 	updateWorkflowOptions := tclient.StartWorkflowOptions{
 		ID:                       fmt.Sprintf("machine-validation-ext-cfg-update-%s", extCfgName),
-		WorkflowExecutionTimeout: common.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 	// build protobuf update request
@@ -1669,7 +1670,7 @@ func (handler UpdateMachineValidationExternalConfigHandler) Handle(c echo.Contex
 
 	logger.Info().Msg("triggering MachineValidationExternalConfig update workflow")
 
-	updateCtx, cancel := context.WithTimeout(ctx, common.WorkflowContextTimeout)
+	updateCtx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow
@@ -1712,7 +1713,7 @@ func getMachineValidationExtCfg(ctx context.Context, echoCtx echo.Context, logge
 	// get newly created test to be returned
 	getWorkflowOptions := tclient.StartWorkflowOptions{
 		ID:                       fmt.Sprintf("machine-validation-ext-cfg-get-%s", cfgName),
-		WorkflowExecutionTimeout: common.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 
@@ -1724,7 +1725,7 @@ func getMachineValidationExtCfg(ctx context.Context, echoCtx echo.Context, logge
 	logger.Info().Msg("triggering MachineValidationExternalConfig get workflow")
 
 	// Add context deadlines
-	getCtx, cancel := context.WithTimeout(ctx, common.WorkflowContextTimeout)
+	getCtx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow
@@ -1863,13 +1864,13 @@ func (handler DeleteMachineValidationExternalConfigHandler) Handle(c echo.Contex
 	// create workflow
 	deleteWorkflowOptions := tclient.StartWorkflowOptions{
 		ID:                       fmt.Sprintf("machine-validation-ext-cfg-delete-%s", extCfgName),
-		WorkflowExecutionTimeout: common.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 
 	logger.Info().Msg("triggering MachineValidationExternalConfig delete workflow")
 
-	deleteCtx, cancel := context.WithTimeout(ctx, common.WorkflowContextTimeout)
+	deleteCtx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow

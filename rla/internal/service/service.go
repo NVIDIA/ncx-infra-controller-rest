@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package service
 
 import (
@@ -66,6 +67,7 @@ func New(ctx context.Context, c Config) (*Service, error) {
 	invManager := inventorymanager.New(invStore)
 
 	// 4. Create TaskManager (Business Logic Layer)
+	// Note: Task manager creates its own rule resolver internally
 	taskManager, err := taskmanager.New(
 		ctx,
 		&taskmanager.Config{
@@ -92,6 +94,9 @@ func New(ctx context.Context, c Config) (*Service, error) {
 
 func (s *Service) Start(ctx context.Context) error {
 	log.Logger = log.With().Caller().Logger()
+
+	// Rule resolver is ready immediately (queries DB for rules)
+	log.Info().Msg("Rule resolver ready (will query DB for operation rules)")
 
 	if err := s.inventoryManager.Start(ctx); err != nil {
 		return fmt.Errorf("failed to start inventory manager: %v", err)
@@ -148,6 +153,7 @@ func (s *Service) Stop(ctx context.Context) {
 		s.taskManager.Stop(ctx)
 	}
 	s.inventoryManager.Stop(ctx)
+	// Rule resolver has no cleanup needed (cache is GC'd automatically)
 	if s.pg != nil {
 		s.pg.Close(ctx)
 	}

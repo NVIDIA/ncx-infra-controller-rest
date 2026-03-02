@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package psmapi
 
 import (
@@ -25,9 +26,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/rs/zerolog/log"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/certs"
 	pb "github.com/nvidia/bare-metal-manager-rest/rla/internal/psmapi/gen"
-	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )

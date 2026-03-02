@@ -1,0 +1,24 @@
+FROM golang:1.25 AS builder
+
+ENV GIT_TERMINAL_PROMPT=1
+
+ARG skipcache=0
+COPY . /go/src
+WORKDIR /go/src
+
+# Fetch and cache dependencies.  This should mainly be for if we start including other private repos in the build.
+RUN --mount=type=secret,id=gitcreds,dst=/root/.netrc go mod download
+
+RUN CGO_ENABLED=0 go install -ldflags "-extldflags '-static'"
+
+# Multi-Stage final build
+FROM alpine
+
+RUN apk add --update --no-cache \
+    ca-certificates \
+    bash
+
+# Retrieve the binary from the previous stage
+COPY --from=builder /go/bin/powershelf_manager /opt/powershelf_manager/powershelf_manager
+
+CMD /opt/powershelf_manager/powershelf_manager serve

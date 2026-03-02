@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package componentmanager
 
 import (
@@ -62,7 +63,8 @@ type rawProviderConfig struct {
 
 // rawCarbideConfig is the raw YAML structure for Carbide configuration.
 type rawCarbideConfig struct {
-	Timeout string `yaml:"timeout"`
+	Timeout           string `yaml:"timeout"`
+	ComputePowerDelay string `yaml:"compute_power_delay"`
 }
 
 // rawPSMConfig is the raw YAML structure for PSM configuration.
@@ -103,7 +105,8 @@ func ParseConfig(data []byte) (Config, error) {
 	// Parse Carbide config if present in YAML
 	if raw.Providers.Carbide != nil {
 		carbideConfig := &carbide.Config{
-			Timeout: carbide.DefaultTimeout,
+			Timeout:           carbide.DefaultTimeout,
+			ComputePowerDelay: carbide.DefaultComputePowerDelay,
 		}
 		if raw.Providers.Carbide.Timeout != "" {
 			timeout, err := time.ParseDuration(raw.Providers.Carbide.Timeout)
@@ -111,6 +114,15 @@ func ParseConfig(data []byte) (Config, error) {
 				return Config{}, fmt.Errorf("invalid carbide timeout: %w", err)
 			}
 			carbideConfig.Timeout = timeout
+		}
+		if raw.Providers.Carbide.ComputePowerDelay != "" {
+			delay, err := time.ParseDuration(raw.Providers.Carbide.ComputePowerDelay)
+			if err != nil {
+				return Config{}, fmt.Errorf(
+					"invalid carbide compute_power_delay: %w", err,
+				)
+			}
+			carbideConfig.ComputePowerDelay = delay
 		}
 		config.Providers.Carbide = carbideConfig
 	}
@@ -145,7 +157,8 @@ func deriveProviders(config *Config) {
 		case carbide.ProviderName:
 			if config.Providers.Carbide == nil {
 				config.Providers.Carbide = &carbide.Config{
-					Timeout: carbide.DefaultTimeout,
+					Timeout:           carbide.DefaultTimeout,
+					ComputePowerDelay: carbide.DefaultComputePowerDelay,
 				}
 			}
 		case psm.ProviderName:
@@ -185,8 +198,10 @@ func DefaultTestConfig() Config {
 	}
 }
 
-// DefaultProdConfig returns the default configuration for production.
-// Uses real implementations that connect to external services.
+// DefaultProdConfig returns the embedded production configuration.
+// Used when no config file is specified. Connects to external services
+// (Carbide for compute/nvlswitch, PSM for powershelf).
+// Timing parameters for operations are configured per-rule via action parameters.
 func DefaultProdConfig() Config {
 	return Config{
 		ComponentManagers: map[devicetypes.ComponentType]string{
@@ -196,7 +211,8 @@ func DefaultProdConfig() Config {
 		},
 		Providers: ProviderConfig{
 			Carbide: &carbide.Config{
-				Timeout: carbide.DefaultTimeout,
+				Timeout:           carbide.DefaultTimeout,
+				ComputePowerDelay: carbide.DefaultComputePowerDelay,
 			},
 			PSM: &psm.Config{
 				Timeout: psm.DefaultTimeout,

@@ -35,6 +35,8 @@ import (
 	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/util"
 
 	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
+
+	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 )
 
 var CloudCapabilityTypeToProtobufType = map[string]cwssaws.MachineCapabilityType{
@@ -172,7 +174,7 @@ func (mv ManageInstanceType) UpdateInstanceTypesInDB(ctx context.Context, siteID
 				// inventory, so make sure the object has existed for at least as
 				// long as our inventory interval with a little buffer to make
 				// sure we aren't in lock-step.
-				if time.Since(instanceType.Created) < util.InventoryReceiptInterval+(time.Second*5) {
+				if time.Since(instanceType.Created) < cwutil.InventoryReceiptInterval+(time.Second*5) {
 					continue
 				}
 

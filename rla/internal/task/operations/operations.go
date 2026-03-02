@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package operations
 
 import (
@@ -30,6 +31,7 @@ type Operation interface {
 	Unmarshal(data json.RawMessage) error
 	Type() taskcommon.TaskType
 	Description() string
+	CodeString() string // Returns operation code string (e.g., "power_on", "upgrade")
 }
 
 func New(typ taskcommon.TaskType, info json.RawMessage) (Operation, error) {
@@ -50,6 +52,12 @@ func New(typ taskcommon.TaskType, info json.RawMessage) (Operation, error) {
 		var taskInfo InjectExpectationTaskInfo
 		if err := json.Unmarshal(info, &taskInfo); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal inject expectation task info: %w", err) //nolint
+		}
+		return &taskInfo, nil
+	case taskcommon.TaskTypeBringUp:
+		var taskInfo BringUpTaskInfo
+		if err := json.Unmarshal(info, &taskInfo); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal bring-up task info: %w", err) //nolint
 		}
 		return &taskInfo, nil
 	default:
@@ -93,6 +101,10 @@ func (t *PowerControlTaskInfo) Description() string {
 	return fmt.Sprintf("%s, forced %t", t.Operation.String(), t.Forced)
 }
 
+func (t *PowerControlTaskInfo) CodeString() string {
+	return t.Operation.CodeString()
+}
+
 type InjectExpectationTaskInfo struct {
 	Info json.RawMessage `json:"info"`
 }
@@ -126,6 +138,49 @@ func (t *InjectExpectationTaskInfo) Type() taskcommon.TaskType {
 
 func (t *InjectExpectationTaskInfo) Description() string {
 	return fmt.Sprintf("inject expectation: %s", t.Info)
+}
+
+func (t *InjectExpectationTaskInfo) CodeString() string {
+	return "inject_expectation"
+}
+
+type BringUpTaskInfo struct{}
+
+func (t *BringUpTaskInfo) Validate() error {
+	return nil
+}
+
+func (t *BringUpTaskInfo) Marshal() (json.RawMessage, error) {
+	raw, err := json.Marshal(t)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"failed to marshal bring-up task info: %w", err,
+		)
+	}
+	return raw, nil
+}
+
+func (t *BringUpTaskInfo) Unmarshal(
+	data json.RawMessage,
+) error {
+	if err := json.Unmarshal(data, t); err != nil {
+		return fmt.Errorf(
+			"failed to unmarshal bring-up task info: %w", err,
+		)
+	}
+	return nil
+}
+
+func (t *BringUpTaskInfo) Type() taskcommon.TaskType {
+	return taskcommon.TaskTypeBringUp
+}
+
+func (t *BringUpTaskInfo) Description() string {
+	return "rack bring-up"
+}
+
+func (t *BringUpTaskInfo) CodeString() string {
+	return taskcommon.OpCodeBringUp
 }
 
 type FirmwareControlTaskInfo struct {
@@ -166,10 +221,52 @@ func (t *FirmwareControlTaskInfo) Description() string {
 	return fmt.Sprintf("%s, target version %s", t.Operation.String(), t.TargetVersion)
 }
 
+func (t *FirmwareControlTaskInfo) CodeString() string {
+	return t.Operation.CodeString()
+}
+
 // SetFirmwareUpdateTimeWindowRequest is the request for setting firmware update time window.
 // ComponentIDs are external IDs (e.g., machine_id in Carbide) that identify the components.
 type SetFirmwareUpdateTimeWindowRequest struct {
 	ComponentIDs []string
 	StartTime    time.Time
 	EndTime      time.Time
+}
+
+// FirmwareUpdateState represents the state of a firmware update operation.
+type FirmwareUpdateState int
+
+const (
+	FirmwareUpdateStateUnknown   FirmwareUpdateState = 0
+	FirmwareUpdateStateQueued    FirmwareUpdateState = 1
+	FirmwareUpdateStateVerifying FirmwareUpdateState = 2
+	FirmwareUpdateStateCompleted FirmwareUpdateState = 3
+	FirmwareUpdateStateFailed    FirmwareUpdateState = 4
+)
+
+func (s FirmwareUpdateState) String() string {
+	switch s {
+	case FirmwareUpdateStateQueued:
+		return "Queued"
+	case FirmwareUpdateStateVerifying:
+		return "Verifying"
+	case FirmwareUpdateStateCompleted:
+		return "Completed"
+	case FirmwareUpdateStateFailed:
+		return "Failed"
+	default:
+		return "Unknown"
+	}
+}
+
+// IsTerminal returns true if this state is a terminal state (completed or failed).
+func (s FirmwareUpdateState) IsTerminal() bool {
+	return s == FirmwareUpdateStateCompleted || s == FirmwareUpdateStateFailed
+}
+
+// FirmwareUpdateStatus contains the status of a firmware update operation.
+type FirmwareUpdateStatus struct {
+	ComponentID string
+	State       FirmwareUpdateState
+	Error       string
 }

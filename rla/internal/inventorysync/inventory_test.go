@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package inventorysync
 
 import (
@@ -21,6 +22,7 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
@@ -37,7 +39,6 @@ import (
 
 // TestInventory is the main test for the inventory package
 func TestInventory(t *testing.T) {
-	t.Skip("Skipping inventory test until we fix the test.")
 	ctx := context.Background()
 
 	if os.Getenv("DB_PORT") == "" {
@@ -45,11 +46,15 @@ func TestInventory(t *testing.T) {
 		t.SkipNow()
 	}
 
+	// Reset package-level state to avoid cross-test pollution
+	lastUpdateMachineIDs = time.Time{}
+
 	dbConf, err := db.BuildDBConfigFromEnv()
 	assert.Nil(t, err)
-	db, err := utils.UnitTestDB(ctx, t, dbConf)
+	pool, err := utils.UnitTestDB(ctx, t, dbConf)
+	assert.Nil(t, err)
 
-	config := config.UnitTestConfig()
+	cfg := config.UnitTestConfig()
 
 	grpcMock := carbideapi.NewMockClient()
 
@@ -63,16 +68,27 @@ func TestInventory(t *testing.T) {
 	grpcMock.AddMachine(carbideapi.Machine{MachineID: "id4", ChassisSerial: nil})
 	grpcMock.AddPowerState("id2", carbideapi.PowerStateOn)
 
-	// Create some faked components in the database.  They're not fully formed.
-	c := model.Component{SerialNumber: "serial2"}
-	c.Create(ctx, db.DB())
-	c = model.Component{SerialNumber: "serial4"}
-	c.Create(ctx, db.DB())
+	// Create a rack (required for components due to NOT NULL constraint)
+	rack := model.Rack{
+		Name:         "test-rack",
+		Manufacturer: "TestMfg",
+		SerialNumber: "rack-serial-001",
+	}
+	err = rack.Create(ctx, pool.DB())
+	assert.Nil(t, err)
+
+	// Create components with required fields (manufacturer and rack_id are NOT NULL)
+	c := model.Component{SerialNumber: "serial2", Manufacturer: "TestMfg", RackID: rack.ID}
+	err = c.Create(ctx, pool.DB())
+	assert.Nil(t, err)
+	c = model.Component{SerialNumber: "serial4", Manufacturer: "TestMfg2", RackID: rack.ID}
+	err = c.Create(ctx, pool.DB())
+	assert.Nil(t, err)
 
 	psmMock := psmapi.NewMockClient()
-	runInventoryOne(ctx, &config, db, grpcMock, psmMock)
+	runInventoryOne(ctx, &cfg, pool, grpcMock, psmMock)
 
-	rows, err := db.DB().Query("SELECT serial_number, power_state FROM component;")
+	rows, err := pool.DB().Query("SELECT serial_number, power_state FROM component;")
 	assert.NotNil(t, rows)
 	assert.Nil(t, err)
 	defer rows.Close()
@@ -99,14 +115,15 @@ func TestInventory(t *testing.T) {
 
 // TestHandleExpectedPowershelves tests that expected powershelves are registered with PSM
 func TestHandleExpectedPowershelves(t *testing.T) {
-	t.Skip("Skipping powershelf test until we fix the test.")
-
 	ctx := context.Background()
 
 	if os.Getenv("DB_PORT") == "" {
 		log.Warn().Msgf("Not running unit test due to no DB environment specified")
 		t.SkipNow()
 	}
+
+	// Reset package-level state to avoid cross-test pollution
+	lastUpdateMachineIDs = time.Time{}
 
 	dbConf, err := db.BuildDBConfigFromEnv()
 	assert.Nil(t, err)

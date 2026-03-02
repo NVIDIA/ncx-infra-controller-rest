@@ -79,7 +79,6 @@ flowchart TB
     subgraph external_apis [External APIs]
         carbideAPI[Carbide API]
         psmAPI[PSM API]
-        cerebroAPI[Cerebro/Nautobot]
     end
 
     grpcClient --> grpcServer
@@ -363,45 +362,7 @@ type ComponentManager interface {
 
 ### Inventory Population Flow
 
-```mermaid
-flowchart LR
-    subgraph sources [Data Sources]
-        excel[Excel Files]
-        cerebro[Cerebro/Nautobot]
-    end
-
-    subgraph fetchers [Fetchers]
-        excelFetcher[Excel Fetcher]
-        cerebroFetcher[Cerebro Fetcher]
-    end
-
-    subgraph processing [Processing]
-        dumper[Dumper]
-        builder[Builder]
-    end
-
-    subgraph rla [RLA Service]
-        grpc[gRPC API]
-        store[Inventory Store]
-        db[(PostgreSQL)]
-    end
-
-    excel --> excelFetcher
-    cerebro --> cerebroFetcher
-    excelFetcher --> dumper
-    cerebroFetcher --> dumper
-    dumper --> builder
-    builder --> grpc
-    grpc --> store
-    store --> db
-```
-
-**Steps**:
-
-1. **Fetch**: `rla inventory fetch excel` and `rla inventory fetch cerebro` commands download data
-2. **Dump**: Fetchers serialize rack data to JSON files via Dumper
-3. **Build**: `rla inventory build` merges Excel (source of truth) and Cerebro data
-4. **Populate**: Builder sends merged racks to RLA via gRPC `CreateExpectedRack`/`PatchRack`
+Inventory is populated via the gRPC API using `CreateExpectedRack` and `AddComponent` calls. Users construct their own data and call these APIs directly.
 
 ### Task Execution Flow
 
@@ -517,18 +478,6 @@ PSM runs as a sidecar container in the RLA pod, managing power shelf units.
 - Health and status monitoring
 
 **Configuration**: `PSM_API_URL` environment variable (default: `localhost:50052`)
-
-### Cerebro (Nautobot)
-
-**Location**: `internal/clients/cerebro/`
-
-Cerebro is NVIDIA's network automation platform based on Nautobot.
-
-**Used for**:
-
-- Rack location and topology information
-- NVL domain definitions
-- Component metadata sync
 
 ### Temporal
 
@@ -794,10 +743,7 @@ rla/
 │   ├── carbideapi/               # Carbide client
 │   ├── psmapi/                   # PSM client
 │   ├── clients/                  # External clients
-│   │   ├── cerebro/
 │   │   └── temporal/
-│   ├── builder/                  # Inventory builder
-│   ├── fetcher/                  # Data fetchers
 │   └── proto/v1/                 # Protobuf definitions
 ├── pkg/
 │   ├── client/                   # Go client library

@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package client
 
 import (
@@ -59,6 +60,7 @@ func componentFromProto(c *pb.Component) *types.Component {
 		Position:        positionFromProto(c.GetPosition()),
 		ComponentID:     c.GetComponentId(),
 		RackID:          uuidFromProto(c.GetRackId()),
+		PowerState:      c.GetPowerState(),
 	}
 
 	if len(c.GetBmcs()) > 0 {
@@ -180,39 +182,6 @@ func taskFromProto(t *pb.Task) *types.Task {
 	}
 }
 
-func actualComponentFromProto(c *pb.ActualComponent) *types.ActualComponent {
-	if c == nil {
-		return nil
-	}
-
-	actual := &types.ActualComponent{
-		Component: types.Component{
-			Type:            componentTypeFromProto(c.GetType()),
-			Info:            deviceInfoFromProto(c.GetInfo()),
-			FirmwareVersion: c.GetFirmwareVersion(),
-			Position:        positionFromProto(c.GetPosition()),
-			ComponentID:     c.GetComponentId(),
-			RackID:          uuidFromProto(c.GetRackId()),
-		},
-		PowerState:   c.GetPowerState(),
-		HealthStatus: c.GetHealthStatus(),
-		Source:       c.GetSource(),
-	}
-
-	if c.GetLastSeen() != nil {
-		actual.LastSeen = c.GetLastSeen().AsTime()
-	}
-
-	if len(c.GetBmcs()) > 0 {
-		actual.BMCs = make([]types.BMC, 0, len(c.GetBmcs()))
-		for _, b := range c.GetBmcs() {
-			actual.BMCs = append(actual.BMCs, bmcFromProto(b))
-		}
-	}
-
-	return actual
-}
-
 func componentDiffFromProto(d *pb.ComponentDiff) *types.ComponentDiff {
 	if d == nil {
 		return nil
@@ -222,7 +191,7 @@ func componentDiffFromProto(d *pb.ComponentDiff) *types.ComponentDiff {
 		Type:        diffTypeFromProto(d.GetType()),
 		ComponentID: d.GetComponentId(),
 		Expected:    componentFromProto(d.GetExpected()),
-		Actual:      actualComponentFromProto(d.GetActual()),
+		Actual:      componentFromProto(d.GetActual()),
 	}
 
 	if len(d.GetFieldDiffs()) > 0 {
@@ -549,4 +518,73 @@ func powerControlOpToProto(op types.PowerControlOp) pb.PowerControlOp {
 	default:
 		return pb.PowerControlOp_POWER_CONTROL_OP_UNKNOWN
 	}
+}
+
+func operationTypeFromProto(ot pb.OperationType) types.OperationType {
+	switch ot {
+	case pb.OperationType_OPERATION_TYPE_POWER_CONTROL:
+		return types.OperationTypePowerControl
+	case pb.OperationType_OPERATION_TYPE_FIRMWARE_CONTROL:
+		return types.OperationTypeFirmwareControl
+	default:
+		return types.OperationTypeUnknown
+	}
+}
+
+func operationTypeToProto(ot types.OperationType) pb.OperationType {
+	switch ot {
+	case types.OperationTypePowerControl:
+		return pb.OperationType_OPERATION_TYPE_POWER_CONTROL
+	case types.OperationTypeFirmwareControl:
+		return pb.OperationType_OPERATION_TYPE_FIRMWARE_CONTROL
+	default:
+		return pb.OperationType_OPERATION_TYPE_UNKNOWN
+	}
+}
+
+func operationRuleFromProto(r *pb.OperationRule) *types.OperationRule {
+	if r == nil {
+		return nil
+	}
+
+	rule := &types.OperationRule{
+		ID:                 uuidFromProto(r.GetId()),
+		Name:               r.GetName(),
+		Description:        r.GetDescription(),
+		OperationType:      operationTypeFromProto(r.GetOperationType()),
+		OperationCode:      r.GetOperationCode(),
+		RuleDefinitionJSON: r.GetRuleDefinitionJson(),
+		IsDefault:          r.GetIsDefault(),
+	}
+
+	if r.GetCreatedAt() != nil {
+		rule.CreatedAt = r.GetCreatedAt().AsTime()
+	}
+	if r.GetUpdatedAt() != nil {
+		rule.UpdatedAt = r.GetUpdatedAt().AsTime()
+	}
+
+	return rule
+}
+
+func rackRuleAssociationFromProto(a *pb.RackRuleAssociation) *types.RackRuleAssociation {
+	if a == nil {
+		return nil
+	}
+
+	assoc := &types.RackRuleAssociation{
+		RackID:        uuidFromProto(a.GetRackId()),
+		OperationType: operationTypeFromProto(a.GetOperationType()),
+		OperationCode: a.GetOperationCode(),
+		RuleID:        uuidFromProto(a.GetRuleId()),
+	}
+
+	if a.GetCreatedAt() != nil {
+		assoc.CreatedAt = a.GetCreatedAt().AsTime()
+	}
+	if a.GetUpdatedAt() != nil {
+		assoc.UpdatedAt = a.GetUpdatedAt().AsTime()
+	}
+
+	return assoc
 }
