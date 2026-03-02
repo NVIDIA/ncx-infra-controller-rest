@@ -248,16 +248,16 @@ func TestManageNVLinkLogicalPartition_CreateNVLinkLogicalPartitionOnSite(t *test
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mnvllp := NewManageNVLinkLogicalPartition(tt.fields.carbideAtomicClient)
-			nvlinkLogicalPartition, err := mnvllp.CreateNVLinkLogicalPartitionOnSite(tt.args.ctx, tt.args.request)
+			nvLinkLogicalPartition, err := mnvllp.CreateNVLinkLogicalPartitionOnSite(tt.args.ctx, tt.args.request)
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
 				if tt.args.request != nil {
-					assert.NotNil(t, nvlinkLogicalPartition)
-					assert.Equal(t, tt.args.request.Id.Value, nvlinkLogicalPartition.Id.Value)
-					assert.Equal(t, tt.args.request.Config.Metadata.Name, nvlinkLogicalPartition.Config.Metadata.Name)
-					assert.Equal(t, tt.args.request.Config.TenantOrganizationId, nvlinkLogicalPartition.Config.TenantOrganizationId)
+					assert.NotNil(t, nvLinkLogicalPartition)
+					assert.Equal(t, tt.args.request.Id.Value, nvLinkLogicalPartition.Id.Value)
+					assert.Equal(t, tt.args.request.Config.Metadata.Name, nvLinkLogicalPartition.Config.Metadata.Name)
+					assert.Equal(t, tt.args.request.Config.TenantOrganizationId, nvLinkLogicalPartition.Config.TenantOrganizationId)
 				}
 			}
 		})

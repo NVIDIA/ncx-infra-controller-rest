@@ -30,6 +30,7 @@ import (
 	sc "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/client/site"
 	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/util"
 
+	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
 )
 
@@ -142,7 +143,7 @@ func (mnlp ManageNVLinkLogicalPartition) UpdateNVLinkLogicalPartitionsInDB(ctx c
 
 		// Update status if necessary
 		if controllerNvllp.Status != nil {
-			status, statusMessage = util.GetNVLinkLogicalPartitionStatus(controllerNvllp.Status.State)
+			status, statusMessage = cwutil.GetNVLinkLogicalPartitionStatus(controllerNvllp.Status.State)
 			if status != nil && *status == nvllp.Status {
 				status = nil
 			}
@@ -224,7 +225,7 @@ func (mnlp ManageNVLinkLogicalPartition) UpdateNVLinkLogicalPartitionsInDB(ctx c
 				continue
 			}
 
-			_, _, err = util.UpdateNVLinkLogicalPartitionStatusInDB(ctx, nil, mnlp.dbSession, nvllp.ID, cdb.GetStrPtr(cdbm.NVLinkLogicalPartitionStatusError), cdb.GetStrPtr("NVLink Logical Partition is missing on Site"))
+			_, _, err = cwutil.UpdateNVLinkLogicalPartitionStatusInDB(ctx, nil, mnlp.dbSession, nvllp.ID, cdb.GetStrPtr(cdbm.NVLinkLogicalPartitionStatusError), cdb.GetStrPtr("NVLink Logical Partition is missing on Site"))
 			if err != nil {
 				slogger.Error().Err(err).Msg("failed to update NVLink Logical Partition status detail in DB")
 			}

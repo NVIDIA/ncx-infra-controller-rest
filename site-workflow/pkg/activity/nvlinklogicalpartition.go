@@ -147,14 +147,14 @@ func (mnvllp *ManageNVLinkLogicalPartition) CreateNVLinkLogicalPartitionOnSite(c
 	forgeClient := carbideClient.Carbide()
 
 	// Call Forge gRPC endpoint
-	nvlinkLogicalPartition, err := forgeClient.CreateNVLinkLogicalPartition(ctx, request)
+	nvLinkLogicalPartition, err := forgeClient.CreateNVLinkLogicalPartition(ctx, request)
 	if err != nil {
 		logger.Warn().Err(err).Msg("Failed to create NVLink Logical Partition using Site Controller API")
 		return nil, swe.WrapErr(err)
 	}
 
 	logger.Info().Msg("Completed activity")
-	return nvlinkLogicalPartition, nil
+	return nvLinkLogicalPartition, nil
 }
 
 // Function to update NVLinkLogical Partition with Carbide
