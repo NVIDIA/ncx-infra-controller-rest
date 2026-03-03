@@ -89,9 +89,11 @@ spec:
             secretName: temporal-client-site-agent-certs
             optional: true
             items:
-              - key: ca.crt
+              - key: otp
+                path: otp
+              - key: cacertificate
                 path: ca/ca.crt
-              - key: tls.crt
+              - key: certificate
                 path: client/tls.crt
-              - key: tls.key
+              - key: key
                 path: client/tls.key
