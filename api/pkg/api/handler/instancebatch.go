@@ -364,7 +364,11 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve tenant for org", nil)
 	}
 
-	// Verify tenant-id in request matches tenant from org
+	// Deprecated: tenantId in request body. Infer from org when not provided.
+	if apiRequest.TenantID == "" {
+		apiRequest.TenantID = tenant.ID.String()
+	}
+
 	apiTenant, err := common.GetTenantFromIDString(ctx, nil, apiRequest.TenantID, bcih.dbSession)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error retrieving tenant from request")
