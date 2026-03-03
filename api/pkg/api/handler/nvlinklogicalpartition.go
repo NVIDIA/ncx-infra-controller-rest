@@ -370,7 +370,7 @@ func (cibph CreateNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 					unvllp = updatedNvllp
 				}
 				if newSSD != nil {
-					ssds = []cdbm.StatusDetail{*newSSD}
+					ssds = append(ssds, *newSSD)
 				}
 			}
 		}

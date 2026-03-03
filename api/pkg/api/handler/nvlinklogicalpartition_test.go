@@ -382,7 +382,7 @@ func TestNVLinkLogicalPartitionHandler_Create(t *testing.T) {
 				err := json.Unmarshal(rec.Body.Bytes(), rsp)
 				assert.Nil(t, err)
 				// validate response fields
-				assert.Equal(t, len(rsp.StatusHistory), 1)
+				assert.Equal(t, len(rsp.StatusHistory), 2)
 				assert.Equal(t, rsp.Name, tc.reqBodyModel.Name)
 				if tc.reqBodyModel.Description != nil {
 					assert.Equal(t, *tc.reqBodyModel.Description, *rsp.Description)
