@@ -312,6 +312,70 @@ func (c *grpcClient) DetermineMachineIngestionState(
 	), nil
 }
 
+// AddExpectedMachine registers an expected machine with Carbide.
+func (c *grpcClient) AddExpectedMachine(ctx context.Context, req AddExpectedMachineRequest) error {
+	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
+	defer cancel()
+
+	pbReq := &pb.ExpectedMachine{
+		BmcMacAddress:       req.BMCMACAddress,
+		BmcUsername:         req.BMCUsername,
+		BmcPassword:         req.BMCPassword,
+		ChassisSerialNumber: req.ChassisSerialNumber,
+	}
+
+	if len(req.FallbackDPUSerialNumbers) > 0 {
+		pbReq.FallbackDpuSerialNumbers = req.FallbackDPUSerialNumbers
+	}
+
+	if req.RackID != "" {
+		pbReq.RackId = &req.RackID
+	}
+
+	if req.PauseIngestionAndPowerOn != nil {
+		pbReq.DefaultPauseIngestionAndPoweron = req.PauseIngestionAndPowerOn
+	}
+
+	_, err := c.gclient.AddExpectedMachine(ctx, pbReq)
+	if err != nil {
+		return fmt.Errorf("failed to add expected machine (bmc_mac=%s): %w", req.BMCMACAddress, err)
+	}
+
+	return nil
+}
+
+// AddExpectedSwitch registers an expected switch with Carbide.
+func (c *grpcClient) AddExpectedSwitch(ctx context.Context, req AddExpectedSwitchRequest) error {
+	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
+	defer cancel()
+
+	pbReq := &pb.ExpectedSwitch{
+		BmcMacAddress:      req.BMCMACAddress,
+		BmcUsername:        req.BMCUsername,
+		BmcPassword:        req.BMCPassword,
+		SwitchSerialNumber: req.SwitchSerialNumber,
+	}
+
+	if req.RackID != "" {
+		pbReq.RackId = &req.RackID
+	}
+
+	if req.NVOSUsername != "" {
+		pbReq.NvosUsername = &req.NVOSUsername
+	}
+
+	if req.NVOSPassword != "" {
+		pbReq.NvosPassword = &req.NVOSPassword
+	}
+
+	_, err := c.gclient.AddExpectedSwitch(ctx, pbReq)
+	if err != nil {
+		return fmt.Errorf("failed to add expected switch (bmc_mac=%s): %w", req.BMCMACAddress, err)
+	}
+
+	return nil
+}
+
 func (c *grpcClient) AddMachine(machine Machine) {
 	panic("Not a unit test")
 }

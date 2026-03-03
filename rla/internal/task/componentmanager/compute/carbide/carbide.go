@@ -19,6 +19,7 @@ package carbide
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -79,16 +80,32 @@ func (m *Manager) Type() devicetypes.ComponentType {
 	return devicetypes.ComponentTypeCompute
 }
 
-// InjectExpectation injects expected configuration or state information for a compute node.
+// InjectExpectation registers an expected machine with Carbide via AddExpectedMachine.
+// The Info field should contain a JSON-encoded carbideapi.AddExpectedMachineRequest.
 func (m *Manager) InjectExpectation(
 	ctx context.Context,
 	target common.Target,
 	info operations.InjectExpectationTaskInfo,
 ) error {
-	// TODO: Implement logic to inject expected configuration/state
-	// This might involve validating and storing expected firmware versions,
-	// hardware configurations, etc.
-	return fmt.Errorf("InjectExpectation not yet implemented for compute")
+	var req carbideapi.AddExpectedMachineRequest
+	if err := json.Unmarshal(info.Info, &req); err != nil {
+		return fmt.Errorf("failed to unmarshal AddExpectedMachineRequest: %w", err)
+	}
+
+	if m.carbideClient == nil {
+		return fmt.Errorf("carbide client is not configured")
+	}
+
+	if err := m.carbideClient.AddExpectedMachine(ctx, req); err != nil {
+		return fmt.Errorf("failed to add expected machine: %w", err)
+	}
+
+	log.Info().
+		Str("bmc_mac", req.BMCMACAddress).
+		Str("chassis_serial", req.ChassisSerialNumber).
+		Msg("Successfully registered expected machine with Carbide")
+
+	return nil
 }
 
 // PowerControl performs power operations on a compute node via Carbide API.

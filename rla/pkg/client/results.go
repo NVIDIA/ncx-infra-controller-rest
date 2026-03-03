@@ -49,6 +49,11 @@ type ValidateComponentsResult struct {
 	MatchCount          int
 }
 
+// IngestRackResult represents the result of an IngestRack operation.
+type IngestRackResult struct {
+	TaskIDs []uuid.UUID
+}
+
 // ListTasksResult represents the result of ListTasks call.
 type ListTasksResult struct {
 	Tasks []*types.Task

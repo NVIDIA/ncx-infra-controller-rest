@@ -51,6 +51,7 @@ const (
 	RLA_GetRacksForNVLDomain_FullMethodName     = "/v1.RLA/GetRacksForNVLDomain"
 	RLA_UpgradeFirmware_FullMethodName          = "/v1.RLA/UpgradeFirmware"
 	RLA_BringUpRack_FullMethodName              = "/v1.RLA/BringUpRack"
+	RLA_IngestRack_FullMethodName               = "/v1.RLA/IngestRack"
 	RLA_GetComponents_FullMethodName            = "/v1.RLA/GetComponents"
 	RLA_ValidateComponents_FullMethodName       = "/v1.RLA/ValidateComponents"
 	RLA_AddComponent_FullMethodName             = "/v1.RLA/AddComponent"
@@ -94,6 +95,9 @@ type RLAClient interface {
 	UpgradeFirmware(ctx context.Context, in *UpgradeFirmwareRequest, opts ...grpc.CallOption) (*SubmitTaskResponse, error)
 	// Bring up rack: power on, configure, and validate a new rack
 	BringUpRack(ctx context.Context, in *BringUpRackRequest, opts ...grpc.CallOption) (*SubmitTaskResponse, error)
+	// Ingest rack: inject expected component configurations to backend services
+	// (Carbide for compute/switch, PSM for powershelves)
+	IngestRack(ctx context.Context, in *IngestRackRequest, opts ...grpc.CallOption) (*SubmitTaskResponse, error)
 	// Components APIs
 	GetComponents(ctx context.Context, in *GetComponentsRequest, opts ...grpc.CallOption) (*GetComponentsResponse, error)
 	ValidateComponents(ctx context.Context, in *ValidateComponentsRequest, opts ...grpc.CallOption) (*ValidateComponentsResponse, error)
@@ -273,6 +277,16 @@ func (c *rLAClient) BringUpRack(ctx context.Context, in *BringUpRackRequest, opt
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(SubmitTaskResponse)
 	err := c.cc.Invoke(ctx, RLA_BringUpRack_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *rLAClient) IngestRack(ctx context.Context, in *IngestRackRequest, opts ...grpc.CallOption) (*SubmitTaskResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SubmitTaskResponse)
+	err := c.cc.Invoke(ctx, RLA_IngestRack_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -500,6 +514,9 @@ type RLAServer interface {
 	UpgradeFirmware(context.Context, *UpgradeFirmwareRequest) (*SubmitTaskResponse, error)
 	// Bring up rack: power on, configure, and validate a new rack
 	BringUpRack(context.Context, *BringUpRackRequest) (*SubmitTaskResponse, error)
+	// Ingest rack: inject expected component configurations to backend services
+	// (Carbide for compute/switch, PSM for powershelves)
+	IngestRack(context.Context, *IngestRackRequest) (*SubmitTaskResponse, error)
 	// Components APIs
 	GetComponents(context.Context, *GetComponentsRequest) (*GetComponentsResponse, error)
 	ValidateComponents(context.Context, *ValidateComponentsRequest) (*ValidateComponentsResponse, error)
@@ -579,6 +596,9 @@ func (UnimplementedRLAServer) UpgradeFirmware(context.Context, *UpgradeFirmwareR
 }
 func (UnimplementedRLAServer) BringUpRack(context.Context, *BringUpRackRequest) (*SubmitTaskResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method BringUpRack not implemented")
+}
+func (UnimplementedRLAServer) IngestRack(context.Context, *IngestRackRequest) (*SubmitTaskResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method IngestRack not implemented")
 }
 func (UnimplementedRLAServer) GetComponents(context.Context, *GetComponentsRequest) (*GetComponentsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetComponents not implemented")
@@ -927,6 +947,24 @@ func _RLA_BringUpRack_Handler(srv interface{}, ctx context.Context, dec func(int
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(RLAServer).BringUpRack(ctx, req.(*BringUpRackRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _RLA_IngestRack_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(IngestRackRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RLAServer).IngestRack(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: RLA_IngestRack_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RLAServer).IngestRack(ctx, req.(*IngestRackRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1357,6 +1395,10 @@ var RLA_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "BringUpRack",
 			Handler:    _RLA_BringUpRack_Handler,
+		},
+		{
+			MethodName: "IngestRack",
+			Handler:    _RLA_IngestRack_Handler,
 		},
 		{
 			MethodName: "GetComponents",

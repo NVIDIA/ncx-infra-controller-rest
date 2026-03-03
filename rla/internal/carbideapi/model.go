@@ -246,6 +246,30 @@ func machineInterfaceFromPb(iface *pb.MachineInterface) MachineInterface {
 	}
 }
 
+// AddExpectedMachineRequest contains the parameters for registering
+// an expected machine with Carbide.
+type AddExpectedMachineRequest struct {
+	BMCMACAddress              string   `json:"bmc_mac_address"`
+	BMCUsername                string   `json:"bmc_username"`
+	BMCPassword                string   `json:"bmc_password"`
+	ChassisSerialNumber        string   `json:"chassis_serial_number,omitempty"`
+	FallbackDPUSerialNumbers   []string `json:"fallback_dpu_serial_numbers,omitempty"`
+	RackID                     string   `json:"rack_id,omitempty"`
+	PauseIngestionAndPowerOn   *bool    `json:"default_pause_ingestion_and_poweron,omitempty"`
+}
+
+// AddExpectedSwitchRequest contains the parameters for registering
+// an expected switch with Carbide.
+type AddExpectedSwitchRequest struct {
+	BMCMACAddress      string `json:"bmc_mac_address"`
+	BMCUsername        string `json:"bmc_username"`
+	BMCPassword        string `json:"bmc_password"`
+	SwitchSerialNumber string `json:"switch_serial_number,omitempty"`
+	RackID             string `json:"rack_id,omitempty"`
+	NVOSUsername       string `json:"nvos_username,omitempty"`
+	NVOSPassword       string `json:"nvos_password,omitempty"`
+}
+
 // BringUpState represents the bring-up state of a machine in
 // relation to Carbide's power-on gate.
 type BringUpState int

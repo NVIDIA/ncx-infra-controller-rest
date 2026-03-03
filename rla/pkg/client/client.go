@@ -1230,3 +1230,63 @@ func (c *Client) ListRackRuleAssociations(
 
 	return associations, nil
 }
+
+// IngestRackByRackIDs submits an ingestion task for the given rack IDs.
+func (c *Client) IngestRackByRackIDs(
+	ctx context.Context,
+	rackIDs []uuid.UUID,
+	description string,
+) (*IngestRackResult, error) {
+	rackTargets := make([]*pb.RackTarget, 0, len(rackIDs))
+	for _, id := range rackIDs {
+		rackTargets = append(rackTargets, &pb.RackTarget{
+			Identifier: &pb.RackTarget_Id{Id: uuidToProto(id)},
+		})
+	}
+
+	rsp, err := c.client.IngestRack(ctx, &pb.IngestRackRequest{
+		TargetSpec: &pb.OperationTargetSpec{
+			Targets: &pb.OperationTargetSpec_Racks{
+				Racks: &pb.RackTargets{Targets: rackTargets},
+			},
+		},
+		Description: description,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &IngestRackResult{
+		TaskIDs: uuidsFromProto(rsp.GetTaskIds()),
+	}, nil
+}
+
+// IngestRackByRackNames submits an ingestion task for the given rack names.
+func (c *Client) IngestRackByRackNames(
+	ctx context.Context,
+	rackNames []string,
+	description string,
+) (*IngestRackResult, error) {
+	rackTargets := make([]*pb.RackTarget, 0, len(rackNames))
+	for _, name := range rackNames {
+		rackTargets = append(rackTargets, &pb.RackTarget{
+			Identifier: &pb.RackTarget_Name{Name: name},
+		})
+	}
+
+	rsp, err := c.client.IngestRack(ctx, &pb.IngestRackRequest{
+		TargetSpec: &pb.OperationTargetSpec{
+			Targets: &pb.OperationTargetSpec_Racks{
+				Racks: &pb.RackTargets{Targets: rackTargets},
+			},
+		},
+		Description: description,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &IngestRackResult{
+		TaskIDs: uuidsFromProto(rsp.GetTaskIds()),
+	}, nil
+}
