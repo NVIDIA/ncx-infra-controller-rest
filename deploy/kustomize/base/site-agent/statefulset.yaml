@@ -32,6 +32,7 @@ spec:
     spec:
       imagePullSecrets:
         - name: image-pull-secret
+      serviceAccountName: carbide-rest-site-agent
       containers:
         - name: site-agent
           image: carbide-rest-site-agent
