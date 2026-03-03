@@ -64,11 +64,12 @@ var (
 // to allow "partial" updates, but any nesting here would prevent
 // that.
 type SiteConfig struct {
-	NetworkSecurityGroup             bool `json:"network_security_group"`
-	NativeNetworking                 bool `json:"native_networking"`
-	NVLinkPartition                  bool `json:"nvlink_partition"`
-	RackLevelAdministration          bool `json:"rack_level_administration"`
-	MaxNetworkSecurityGroupRuleCount *int `json:"max_network_security_group_rule_count"`
+	NetworkSecurityGroup             bool  `json:"network_security_group"`
+	NativeNetworking                 bool  `json:"native_networking"`
+	NVLinkPartition                  bool  `json:"nvlink_partition"`
+	RackLevelAdministration          bool  `json:"rack_level_administration"`
+	ImageBaseOS                      bool `json:"image_base_os"`
+	MaxNetworkSecurityGroupRuleCount *int  `json:"max_network_security_group_rule_count"`
 }
 
 // DEPRECATED - We're moving to SiteConfig
@@ -150,6 +151,7 @@ type SiteConfigUpdateInput struct {
 	NativeNetworking                 *bool `json:"native_networking,omitempty"`
 	NVLinkPartition                  *bool `json:"nvlink_partition,omitempty"`
 	RackLevelAdministration          *bool `json:"rack_level_administration,omitempty"`
+	ImageBaseOS                      *bool `json:"image_base_os,omitempty"`
 	MaxNetworkSecurityGroupRuleCount *int  `json:"max_network_security_group_rule_count,omitempty"`
 }
 
@@ -181,6 +183,7 @@ type SiteConfigFilterInput struct {
 	NativeNetworking                 *bool `json:"native_networking,omitempty"`
 	NVLinkPartition                  *bool `json:"nvlink_partition,omitempty"`
 	RackLevelAdministration          *bool `json:"rack_level_administration,omitempty"`
+	ImageBaseOS                      *bool `json:"image_base_os,omitempty"`
 	MaxNetworkSecurityGroupRuleCount *int  `json:"max_network_security_group_rule_count,omitempty"`
 }
 

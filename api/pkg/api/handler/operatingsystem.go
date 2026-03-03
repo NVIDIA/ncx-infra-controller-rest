@@ -206,11 +206,6 @@ func (csh CreateOperatingSystemHandler) Handle(c echo.Context) error {
 		osType = cdbm.OperatingSystemTypeIPXE
 	}
 
-	if osType == cdbm.OperatingSystemTypeImage {
-		logger.Warn().Msg("Creation of Image-based Operating Systems is not supported")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Creation of Image-based Operating Systems is not supported", nil)
-	}
-
 	// Set the phoneHomeEnabled if provided in request
 	phoneHomeEnabled := false
 	if apiRequest.PhoneHomeEnabled != nil {
@@ -278,6 +273,12 @@ func (csh CreateOperatingSystemHandler) Handle(c echo.Context) error {
 		_, ok := sttsmap[site.ID]
 		if !ok {
 			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Unable to associate Operating System with Site: %s, Tenant does not have access to Site", stID), nil)
+		}
+
+		// Validate the Site has the ImageBaseOS capability enabled for Image based Operating Systems
+		if osType == cdbm.OperatingSystemTypeImage && (site.Config == nil || !site.Config.ImageBaseOS) {
+			logger.Warn().Str("siteId", stID).Msg("Image based Operating System is not supported for Site, ImageBaseOS capability is not enabled")
+			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Creation of Image based Operating Systems is not supported. Site must have ImageBaseOS capability enabled.", nil)
 		}
 
 		rdbst = append(rdbst, *site)

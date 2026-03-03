@@ -147,8 +147,21 @@ func (cih CreateInstanceHandler) buildInstanceCreateRequestOsConfig(c echo.Conte
 	}
 
 	if os.Type == cdbm.OperatingSystemTypeImage {
-		logger.Warn().Str("operatingSystemId", os.ID.String()).Msg("Creation of Instance with Image-based Operating Systems is not supported")
-		return nil, nil, cerr.NewAPIError(http.StatusBadRequest, "Creation of Instance with Image-based Operating System is not supported", nil)
+		site, serr := common.GetSiteFromIDString(ctx, nil, siteID.String(), cih.dbSession)
+		if serr != nil {
+			if serr == common.ErrInvalidID {
+				return nil, nil, cerr.NewAPIError(http.StatusBadRequest, fmt.Sprintf("Failed to create Instance, invalid Site ID: %s", siteID.String()), nil)
+			}
+			if serr == cdb.ErrDoesNotExist {
+				return nil, nil, cerr.NewAPIError(http.StatusNotFound, fmt.Sprintf("Failed to create Instance, could not find Site with ID: %s", siteID.String()), nil)
+			}
+			logger.Error().Err(serr).Str("Site ID", siteID.String()).Msg("error retrieving Site from DB")
+			return nil, nil, cerr.NewAPIError(http.StatusInternalServerError, "Failed to retrieve Site, DB error", nil)
+		}
+		if site.Config == nil || !site.Config.ImageBaseOS {
+			logger.Warn().Str("operatingSystemId", os.ID.String()).Str("siteId", siteID.String()).Msg("Creation of Instance with Image based Operating System is not supported for Site, ImageBaseOS capability is not enabled")
+			return nil, nil, cerr.NewAPIError(http.StatusBadRequest, "Creation of Instance with Image based Operating System is not supported. Site must have ImageBaseOS capability enabled.", nil)
+		}
 	}
 
 	// Confirm match between site and OS (only for Image type).
@@ -1826,9 +1839,23 @@ func (uih UpdateInstanceHandler) buildInstanceUpdateRequestOsConfig(c echo.Conte
 			return nil, nil, cerr.NewAPIError(http.StatusBadRequest, "Operating system specified in request is not owned by Tenant", nil)
 		}
 
+		// Validate the Site has the ImageBaseOS capability enabled for Image based Operating Systems
 		if os.Type == cdbm.OperatingSystemTypeImage {
-			logger.Warn().Str("operatingSystemId", os.ID.String()).Msg("Instance update with Image-based Operating System is not supported")
-			return nil, nil, cerr.NewAPIError(http.StatusBadRequest, "Update of Instance with Image-based Operating System is not supported", nil)
+			site, serr := common.GetSiteFromIDString(ctx, nil, siteID.String(), uih.dbSession)
+			if serr != nil {
+				if serr == common.ErrInvalidID {
+					return nil, nil, cerr.NewAPIError(http.StatusBadRequest, fmt.Sprintf("Failed to update Instance, invalid Site ID: %s", siteID.String()), nil)
+				}
+				if serr == cdb.ErrDoesNotExist {
+					return nil, nil, cerr.NewAPIError(http.StatusNotFound, fmt.Sprintf("Failed to update Instance, could not find Site with ID: %s", siteID.String()), nil)
+				}
+				logger.Error().Err(serr).Str("Site ID", siteID.String()).Msg("error retrieving Site from DB")
+				return nil, nil, cerr.NewAPIError(http.StatusInternalServerError, "Failed to retrieve Site, DB error", nil)
+			}
+			if site.Config == nil || !site.Config.ImageBaseOS {
+				logger.Warn().Str("operatingSystemId", os.ID.String()).Str("siteId", siteID.String()).Msg("Instance update with Image based Operating System is not supported for Site, ImageBaseOS capability is not enabled")
+				return nil, nil, cerr.NewAPIError(http.StatusBadRequest, "Update of Instance with Image based Operating System is not supported. Site must have ImageBaseOS capability enabled.", nil)
+			}
 		}
 
 		// Confirm match between site and OS (only for Image type).

@@ -277,6 +277,7 @@ type APISiteCapabilities struct {
 	NetworkSecurityGroup    bool `json:"networkSecurityGroup"`
 	NVLinkPartition         bool `json:"nvLinkPartition"`
 	RackLevelAdministration bool `json:"rackLevelAdministration"`
+	ImageBaseOS             bool `json:"imageBaseOs"`
 }
 
 func siteConfigToAPISiteCapabilities(cfg *cdbm.SiteConfig) *APISiteCapabilities {
@@ -287,6 +288,7 @@ func siteConfigToAPISiteCapabilities(cfg *cdbm.SiteConfig) *APISiteCapabilities 
 		apiCaps.NetworkSecurityGroup = cfg.NetworkSecurityGroup
 		apiCaps.NVLinkPartition = cfg.NVLinkPartition
 		apiCaps.RackLevelAdministration = cfg.RackLevelAdministration
+		apiCaps.ImageBaseOS = cfg.ImageBaseOS
 	}
 
 	return apiCaps
