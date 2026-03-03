@@ -138,7 +138,7 @@ type Machine struct {
 	Health               map[string]interface{} `bun:"health,type:jsonb,json_use_number"`
 	DefaultMacAddress    *string                `bun:"default_mac_address"`
 	Hostname             *string                `bun:"hostname"`
-	IsAssigned           bool                   `bun:"is_assigned,notnull"` // To be deprecate in favor of checking InstanceTypeID not null
+	IsAssigned           bool                   `bun:"is_assigned,notnull"` // true when machine is assigned to an Instance
 	Labels               map[string]string      `bun:"labels,type:jsonb"`   // Labels are used to store additional metadata about the machine
 	Status               string                 `bun:"status,notnull"`
 	IsMissingOnSite      bool                   `bun:"is_missing_on_site,notnull"`

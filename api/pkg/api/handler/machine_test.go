@@ -743,11 +743,13 @@ func TestMachineHandler_GetAll(t *testing.T) {
 	for i := 0; i < totalCount; i++ {
 		var ipID, siteID uuid.UUID
 		var itID *uuid.UUID
+		isAssigned := false
 
 		if i%2 == 0 {
 			ipID = ip.ID
 			siteID = site.ID
 			itID = &it1.ID
+			isAssigned = true
 			if i%3 == 0 {
 				itID = &it2.ID
 			}
@@ -761,7 +763,7 @@ func TestMachineHandler_GetAll(t *testing.T) {
 			status = cdbm.MachineStatusReady
 		}
 
-		m := testMachineBuildMachine(t, dbSession, ipID, siteID, itID, cdb.GetStrPtr(fmt.Sprintf("controller-machine-type-%02d", i)), false, false, status)
+		m := testMachineBuildMachine(t, dbSession, ipID, siteID, itID, cdb.GetStrPtr(fmt.Sprintf("controller-machine-type-%02d", i)), isAssigned, false, status)
 
 		mc1 := testMachineBuildMachineCapability(t, dbSession, &m.ID, cdbm.MachineCapabilityTypeCPU, "AMD Opteron Series x10", cdb.GetStrPtr("3.0GHz"), cdb.GetIntPtr(2))
 		assert.NotNil(t, mc1)
@@ -941,6 +943,7 @@ func TestMachineHandler_GetAll(t *testing.T) {
 		queryStatus                       []string
 		querySearch                       *string
 		queryHasInstanceType              *bool
+		queryHasInstance                  *bool
 		queryIncludeMetadata              *bool
 		queryIncludeRelations1            *string
 		queryIncludeRelations2            *string
@@ -1348,6 +1351,55 @@ func TestMachineHandler_GetAll(t *testing.T) {
 			expectedStatus: http.StatusForbidden,
 			expectedCnt:    0,
 		},
+		{
+			name:             "success case when hasInstance is true in query",
+			reqOrgName:       ipOrg1,
+			user:             ipu,
+			querySiteID:      cdb.GetStrPtr(site.ID.String()),
+			queryHasInstance: cdb.GetBoolPtr(true),
+			expectedErr:      false,
+			expectedStatus:   http.StatusOK,
+			expectedCnt:      totalCount / 2,
+			expectedTotal:    cdb.GetIntPtr(totalCount / 2),
+		},
+		{
+			name:             "success case when hasInstance is false in query",
+			reqOrgName:       ipOrg2,
+			user:             ipu,
+			querySiteID:      cdb.GetStrPtr(site2.ID.String()),
+			queryHasInstance: cdb.GetBoolPtr(false),
+			expectedErr:      false,
+			expectedStatus:   http.StatusOK,
+			expectedCnt:      totalCount / 2,
+			expectedTotal:    cdb.GetIntPtr(totalCount / 2),
+		},
+		{
+			name:             "failure case when hasInstance is true but user is not a privileged Tenant",
+			reqOrgName:       tnOrg1,
+			user:             tnu,
+			querySiteID:      cdb.GetStrPtr(site.ID.String()),
+			queryHasInstance: cdb.GetBoolPtr(true),
+			expectedErr:      true,
+			expectedStatus:   http.StatusForbidden,
+		},
+		{
+			name:             "failure case when hasInstance is specified in query but siteId is not specified",
+			reqOrgName:       ipOrg1,
+			user:             ipu,
+			queryHasInstance: cdb.GetBoolPtr(true),
+			expectedErr:      true,
+			expectedStatus:   http.StatusBadRequest,
+		},
+		{
+			name:             "failure case when hasInstance is false but tenantId is specified",
+			reqOrgName:       ipOrg1,
+			user:             ipu,
+			querySiteID:      cdb.GetStrPtr(site.ID.String()),
+			queryHasInstance: cdb.GetBoolPtr(false),
+			queryTenantID:    []string{tenant.ID.String()},
+			expectedErr:      true,
+			expectedStatus:   http.StatusBadRequest,
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -1382,6 +1434,9 @@ func TestMachineHandler_GetAll(t *testing.T) {
 			}
 			if tc.queryHasInstanceType != nil {
 				q.Add("hasInstanceType", strconv.FormatBool(*tc.queryHasInstanceType))
+			}
+			if tc.queryHasInstance != nil {
+				q.Add("hasInstance", strconv.FormatBool(*tc.queryHasInstance))
 			}
 			if tc.queryIncludeMetadata != nil {
 				q.Add("includeMetadata", strconv.FormatBool(*tc.queryIncludeMetadata))

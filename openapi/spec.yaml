@@ -7232,6 +7232,11 @@ paths:
         - schema:
             type: boolean
           in: query
+          name: hasInstance
+          description: Filter Machines that are assigned to an Instance. siteId must be specified when using this param.
+        - schema:
+            type: boolean
+          in: query
           name: includeMetadata
           description: 'Include Machine metadata e.g. BMC, DPU, GPU and Interface data. Can only be requested by Provider.'
         - schema:
