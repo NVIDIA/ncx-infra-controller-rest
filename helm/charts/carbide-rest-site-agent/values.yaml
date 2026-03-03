@@ -1,3 +1,16 @@
+global:
+  image:
+    repository: ""
+    tag: ""
+    pullPolicy: IfNotPresent
+  imagePullSecrets:
+    - name: image-pull-secret
+  certificate:
+    issuerRef:
+      kind: ClusterIssuer
+      name: carbide-rest-ca-issuer
+      group: cert-manager.io
+
 replicaCount: 1
 
 nameOverride: ""
@@ -20,43 +33,47 @@ resources:
     cpu: "500m"
 
 secrets:
-  carbideSecrets: carbide-secrets
+  dbCreds: db-creds
   siteRegistration: site-registration
-  carbideTlsCerts: carbide-tls-certs
-  temporalClientCerts: temporal-client-certs
+  carbideTlsCerts: core-grpc-client-site-agent-certs
+  temporalClientCerts: temporal-client-site-agent-certs
 
 certificate:
   enabled: true
-  secretName: carbide-tls-certs
+  name: core-grpc-client-site-agent-certs
+  secretName: core-grpc-client-site-agent-certs
   duration: 720h
   renewBefore: 360h
+  subject:
+    organizations:
+      - Nvidia
   privateKey:
     algorithm: ECDSA
     size: 384
 
+rbac:
+  create: true
+
 envConfig:
   ESA_PORT: "8080"
+  METRICS_PORT: "2112"
+  DEV_MODE: "true"
+  ENABLE_DEBUG: "true"
+  ENABLE_TLS: "true"
   CARBIDE_ADDRESS: ""
   CARBIDE_SEC_OPT: "0"
   CLUSTER_ID: ""
   TEMPORAL_HOST: "temporal-frontend.temporal"
   TEMPORAL_PORT: "7233"
-  TEMPORAL_SERVER_NAME: "server.temporal.local"
+  TEMPORAL_SERVER: "interservice.server.temporal.local"
   TEMPORAL_PUBLISH_NAMESPACE: "site"
   TEMPORAL_PUBLISH_QUEUE: "site"
   TEMPORAL_SUBSCRIBE_NAMESPACE: ""
   TEMPORAL_SUBSCRIBE_QUEUE: ""
-  DEV_MODE: "false"
-  ENABLE_DEBUG: "false"
-  ENABLE_TLS: "true"
-  POD_NAME: "carbide-rest-site-agent-0"
-  POD_NAMESPACE: ""
-  METRICS_PORT: "2112"
-  DB_ADDR: "postgres"
+  TEMPORAL_INVENTORY_SCHEDULE: "@every 3m"
+  TEMPORAL_CERT_PATH: "/etc/temporal-certs"
+  TEMPORAL_CERT: "temporal-client-site-agent-certs"
+  DB_ADDR: "postgres.postgres"
   DB_USER: "forge"
   DB_DATABASE: "elektratest"
   DB_PORT: "5432"
-  OTEL_EXPORTER_OTLP_SPAN_INSECURE: "true"
-  OTEL_EXPORTER_OTLP_SPAN_ENDPOINT: ""
-  TEMPORAL_CERT_PATH: "/etc/temporal-certs"
-  DISABLE_BOOTSTRAP: "true"

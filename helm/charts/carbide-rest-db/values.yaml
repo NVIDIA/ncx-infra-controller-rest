@@ -1,3 +1,11 @@
+global:
+  image:
+    repository: ""
+    tag: ""
+    pullPolicy: IfNotPresent
+  imagePullSecrets:
+    - name: image-pull-secret
+
 nameOverride: ""
 namespaceOverride: ""
 
@@ -8,13 +16,13 @@ waitForPostgres:
   image: postgres:14.4-alpine
 
 db:
-  host: postgres
+  host: postgres.postgres
   port: "5432"
   name: forge
   user: forge
 
 secrets:
-  carbideSecrets: carbide-secrets
+  dbCreds: db-creds
 
 resources:
   requests:
@@ -25,4 +33,4 @@ resources:
     cpu: "100m"
 
 ttlSecondsAfterFinished: 300
-backoffLimit: 3
+backoffLimit: 30

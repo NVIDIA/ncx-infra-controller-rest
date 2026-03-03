@@ -10,6 +10,7 @@ spec:
   replicas: {{ .Values.siteWorker.replicaCount }}
   selector:
     matchLabels:
+      app: site-worker
       app.kubernetes.io/name: carbide-rest-workflow
       app.kubernetes.io/component: site-worker
   strategy:
@@ -20,6 +21,7 @@ spec:
   template:
     metadata:
       labels:
+        app: site-worker
         app.kubernetes.io/name: carbide-rest-workflow
         app.kubernetes.io/component: site-worker
     spec:
@@ -78,7 +80,7 @@ spec:
             name: {{ include "carbide-rest-workflow.name" . }}-config
         - name: temporal-encryption-key
           secret:
-            secretName: {{ .Values.secrets.carbideSecrets }}
+            secretName: {{ .Values.secrets.temporalEncryptionKey }}
             items:
               - key: temporal-encryption-key
                 path: encryption-key

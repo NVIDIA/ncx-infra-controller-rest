@@ -19,6 +19,7 @@ app.kubernetes.io/component: api
 {{- end }}
 
 {{- define "carbide-rest-api.selectorLabels" -}}
+app: carbide-rest-api
 app.kubernetes.io/name: carbide-rest-api
 app.kubernetes.io/component: api
 {{- end }}

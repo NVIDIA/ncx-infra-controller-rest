@@ -64,13 +64,13 @@ spec:
             name: {{ include "carbide-rest-api.name" . }}-config
         - name: keycloak-secret
           secret:
-            secretName: {{ .Values.secrets.carbideSecrets }}
+            secretName: {{ .Values.secrets.keycloakClientSecret }}
             items:
               - key: keycloak-client-secret
                 path: client-secret
         - name: temporal-encryption-key
           secret:
-            secretName: {{ .Values.secrets.carbideSecrets }}
+            secretName: {{ .Values.secrets.temporalEncryptionKey }}
             items:
               - key: temporal-encryption-key
                 path: encryption-key

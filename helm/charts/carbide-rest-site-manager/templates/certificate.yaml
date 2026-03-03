@@ -12,7 +12,7 @@ spec:
   renewBefore: {{ .Values.certificate.renewBefore }}
   subject:
     organizations:
-      - Nvidia
+      {{- toYaml .Values.certificate.subject.organizations | nindent 6 }}
   commonName: {{ .Values.certificate.commonName }}
   isCA: false
   privateKey:

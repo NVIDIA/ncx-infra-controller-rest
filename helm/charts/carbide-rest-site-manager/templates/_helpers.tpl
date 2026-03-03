@@ -19,6 +19,7 @@ app.kubernetes.io/component: site-manager
 {{- end }}
 
 {{- define "carbide-rest-site-manager.selectorLabels" -}}
+app: carbide-rest-site-manager
 app.kubernetes.io/name: carbide-rest-site-manager
 app.kubernetes.io/component: site-manager
 {{- end }}

@@ -19,6 +19,7 @@ app.kubernetes.io/component: site-agent
 {{- end }}
 
 {{- define "carbide-rest-site-agent.selectorLabels" -}}
+app: carbide-rest-site-agent
 app.kubernetes.io/name: carbide-rest-site-agent
 app.kubernetes.io/component: site-agent
 {{- end }}

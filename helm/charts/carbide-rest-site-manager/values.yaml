@@ -1,3 +1,16 @@
+global:
+  image:
+    repository: ""
+    tag: ""
+    pullPolicy: IfNotPresent
+  imagePullSecrets:
+    - name: image-pull-secret
+  certificate:
+    issuerRef:
+      kind: ClusterIssuer
+      name: carbide-rest-ca-issuer
+      group: cert-manager.io
+
 replicaCount: 1
 
 nameOverride: ""
@@ -12,7 +25,7 @@ service:
 
 args:
   listenPort: 8100
-  credsManagerUrl: "https://carbide-rest-cert-manager:8000"
+  credsManagerUrl: "https://carbide-rest-cert-manager.carbide-rest:8000"
   tlsCertPath: /etc/tls/tls.crt
   tlsKeyPath: /etc/tls/tls.key
   debug: true
@@ -31,6 +44,9 @@ certificate:
   duration: 2160h
   renewBefore: 360h
   commonName: carbide-rest-site-manager
+  subject:
+    organizations:
+      - Nvidia
   privateKey:
     algorithm: RSA
     encoding: PKCS1

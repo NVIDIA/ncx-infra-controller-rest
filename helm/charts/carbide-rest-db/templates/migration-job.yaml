@@ -1,14 +1,11 @@
+{{- $tag := .Values.global.image.tag | default "latest" | replace "." "-" | replace "+" "-" }}
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{ include "carbide-rest-db.name" . }}-migrations
+  name: {{ include "carbide-rest-db.name" . }}-migration-{{ $tag }}
   namespace: {{ include "carbide-rest-db.namespace" . }}
   labels:
     {{- include "carbide-rest-db.labels" . | nindent 4 }}
-  annotations:
-    helm.sh/hook: pre-install,pre-upgrade
-    helm.sh/hook-delete-policy: before-hook-creation
-    helm.sh/hook-weight: "-5"
 spec:
   ttlSecondsAfterFinished: {{ .Values.ttlSecondsAfterFinished }}
   backoffLimit: {{ .Values.backoffLimit }}
@@ -26,14 +23,13 @@ spec:
         - name: wait-for-postgres
           image: {{ .Values.waitForPostgres.image }}
           command:
-            - /bin/sh
-            - -c
-            - |
-              until pg_isready -h {{ .Values.db.host }} -p {{ .Values.db.port }} -U {{ .Values.db.user }}; do
-                echo "Waiting for PostgreSQL..."
-                sleep 2
-              done
-              echo "PostgreSQL is ready!"
+            - pg_isready
+            - -h
+            - {{ .Values.db.host }}
+            - -p
+            - {{ .Values.db.port | quote }}
+            - -U
+            - {{ .Values.db.user }}
       containers:
         - name: migrations
           image: "{{ include "carbide-rest-db.image" . }}"
@@ -50,7 +46,7 @@ spec:
             - name: PGPASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.secrets.carbideSecrets }}
-                  key: db-password
+                  name: {{ .Values.secrets.dbCreds }}
+                  key: password
           resources:
             {{- toYaml .Values.resources | nindent 12 }}

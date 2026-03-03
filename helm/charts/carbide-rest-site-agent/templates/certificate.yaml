@@ -2,7 +2,7 @@
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: {{ include "carbide-rest-site-agent.name" . }}-grpc-client-cert
+  name: {{ .Values.certificate.name }}
   namespace: {{ include "carbide-rest-site-agent.namespace" . }}
   labels:
     {{- include "carbide-rest-site-agent.labels" . | nindent 4 }}
@@ -12,7 +12,7 @@ spec:
   renewBefore: {{ .Values.certificate.renewBefore }}
   subject:
     organizations:
-      - Nvidia
+      {{- toYaml .Values.certificate.subject.organizations | nindent 6 }}
   isCA: false
   privateKey:
     algorithm: {{ .Values.certificate.privateKey.algorithm }}
