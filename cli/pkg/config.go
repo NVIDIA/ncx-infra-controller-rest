@@ -176,7 +176,7 @@ func HasAPIKeyConfig(cfg *ConfigFile) bool {
 		cfg.Auth.APIKey.Key != ""
 }
 
-const SampleConfig = `# BMM CLI configuration
+const SampleConfig = `# Carbide CLI configuration
 #
 # API connection:
 #   api.base -- server URL

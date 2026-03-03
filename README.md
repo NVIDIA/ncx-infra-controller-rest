@@ -76,10 +76,10 @@ make kind-down      # Tear down cluster
 
 ```bash
 make carbide-cli             # build and install to $GOPATH/bin
-carbidecli init              # generate ~/.bmm/config.yaml
+carbidecli init              # generate ~/.carbide/config.yaml
 ```
 
-Create a config per environment (`~/.bmm/config.yaml`, `~/.bmm/config.staging.yaml`, `~/.bmm/config.prod.yaml`), then launch the interactive TUI which handles environment selection, login, and token refresh automatically:
+Create a config per environment (`~/.carbide/config.yaml`, `~/.carbide/config.staging.yaml`, `~/.carbide/config.prod.yaml`), then launch the interactive TUI which handles environment selection, login, and token refresh automatically:
 
 ```bash
 carbidecli tui
@@ -88,7 +88,7 @@ carbidecli tui
 All commands are also available directly for scripting and one-off use:
 
 ```bash
-carbidecli --config ~/.bmm/config.staging.yaml site list
+carbidecli --config ~/.carbide/config.staging.yaml site list
 ```
 
 See [cli/README.md](cli/README.md) for configuration, authentication, shell completion, and the full command reference.

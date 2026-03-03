@@ -59,7 +59,7 @@ func (s *Session) PromptString() string {
 	if s.Scope.VpcName != "" {
 		parts = append(parts, s.Scope.VpcName)
 	}
-	return Cyan("bmm:"+strings.Join(parts, "/")) + "> "
+	return Cyan("carbide:"+strings.Join(parts, "/")) + "> "
 }
 
 // RefreshClient updates the session with a new token.
