@@ -643,6 +643,37 @@ func TestGetAllInstanceTypeHandler_Handle(t *testing.T) {
 	ins3 := testInstanceBuildInstance(t, dbSession, "test-instance-3", al3.ID, alc3.ID, tn2.ID, ip.ID, st.ID, &its[0].ID, vpc2.ID, cdb.GetStrPtr(ms[0].ID), &os2.ID, nil, cdbm.InstanceStatusReady)
 	tn2inss = append(tn2inss, *ins3)
 
+	// Org with both Provider and Tenant roles: same org acts as its own infrastructure provider and tenant
+	orgName := "test-provider-and-tenant-org"
+	orgRoles := []string{"FORGE_PROVIDER_ADMIN", "FORGE_TENANT_ADMIN"}
+	orgUser := common.TestBuildUser(t, dbSession, uuid.NewString(), orgName, orgRoles)
+	orgProvider := common.TestBuildInfrastructureProvider(t, dbSession, "Test Org Provider", orgName, orgUser)
+	orgSite := common.TestBuildSite(t, dbSession, orgProvider, "Test Org Site", orgUser)
+	orgTenant := common.TestBuildTenant(t, dbSession, "test-org-tenant", orgName, orgUser)
+	common.TestBuildTenantSite(t, dbSession, orgTenant, orgSite, orgUser)
+
+	// Build 4 ITs owned by orgProvider: 1 allocated to orgTenant, 3 unallocated.
+	// orgProvider and orgTenant belong to the same org, so the user has both roles.
+	orgITCount := 4
+	var orgAllocatedIT *cdbm.InstanceType
+	for i := 0; i < orgITCount; i++ {
+		it := common.TestBuildInstanceType(t, dbSession, fmt.Sprintf("test-org-instance-type-%02d", i), cdb.GetUUIDPtr(uuid.New()), orgSite, map[string]string{
+			"name":        fmt.Sprintf("test-org-instance-type-%02d", i),
+			"description": fmt.Sprintf("Test Org Instance Type %02d", i),
+		}, orgUser)
+		common.TestBuildMachineCapability(t, dbSession, nil, &it.ID, cdbm.MachineCapabilityTypeCPU, "Intel Xeon E5-2650v2", cdb.GetStrPtr("3.0Hz"), nil, nil, cdb.GetIntPtr(2), cdb.GetStrPtr(""), nil)
+		if i == 0 {
+			orgAllocatedIT = it
+		}
+	}
+	// Create 2 machines for the allocated IT so the allocation constraint is satisfiable
+	orgM1 := common.TestBuildMachine(t, dbSession, orgProvider, orgSite, &orgAllocatedIT.ID, cdb.GetStrPtr("test-org-machine"), cdbm.MachineStatusReady)
+	orgM2 := common.TestBuildMachine(t, dbSession, orgProvider, orgSite, &orgAllocatedIT.ID, cdb.GetStrPtr("test-org-machine"), cdbm.MachineStatusReady)
+	common.TestBuildMachineInstanceType(t, dbSession, orgM1, orgAllocatedIT)
+	common.TestBuildMachineInstanceType(t, dbSession, orgM2, orgAllocatedIT)
+	orgAlloc := common.TestBuildAllocation(t, dbSession, orgSite, orgTenant, "test-org-allocation", orgUser)
+	common.TestBuildAllocationConstraint(t, dbSession, orgAlloc, orgAllocatedIT, nil, 1, orgUser)
+
 	e := echo.New()
 
 	cfg := common.GetTestConfig()
@@ -740,6 +771,58 @@ func TestGetAllInstanceTypeHandler_Handle(t *testing.T) {
 			},
 			wantCount:      cdbp.DefaultLimit,
 			wantTotalCount: totalCount,
+			wantRespCode:   http.StatusOK,
+			wantErr:        false,
+		},
+		{
+			// Org has both Provider and Tenant roles. Every instance type
+			// belongs to a site owned by orgProvider and also accessible by orgTenant via TenantSite,
+			// so each instance type appears in both the provider and tenant DB queries.
+			// The mapset must deduplicate them so the response contains exactly orgITCount
+			// unique instance types, not 2×orgITCount.
+			name: "get all Instance Types for org with both provider and tenant roles (results deduplicated)",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        &tmocks.Client{},
+				cfg:       cfg,
+			},
+			args: args{
+				org:  orgName,
+				user: orgUser,
+			},
+			wantCount:      orgITCount,
+			wantTotalCount: orgITCount,
+			wantRespCode:   http.StatusOK,
+			wantErr:        false,
+		},
+		{
+			// excludeUnallocated applies only to the tenant query, never the provider query.
+			// A user with both provider and tenant roles always sees their full owned inventory as a provider (including
+			// unallocated ITs), while the tenant query is filtered to only return ITs with an
+			// active allocation. For ITs the provider owns, excludeUnallocated has no effect —
+			// they appear from the provider query regardless.
+			//
+			// Setup: orgITCount=4 ITs total on orgSite, 1 has an AllocationConstraint for
+			// orgTenant (orgAllocatedIT), 3 do not.
+			//
+			// Expected: count=orgITCount (all 4 own ITs from provider query) — the
+			// tenant query with excludeUnallocated would filter to only orgAllocatedIT, but
+			// the provider query contributes all 4 and they all survive the merge.
+			name: "get all Instance Types for org with both provider and tenant roles with excludeUnallocated (provider query unaffected)",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        &tmocks.Client{},
+				cfg:       cfg,
+			},
+			args: args{
+				org: orgName,
+				query: url.Values{
+					"excludeUnallocated": []string{"true"},
+				},
+				user: orgUser,
+			},
+			wantCount:      orgITCount,
+			wantTotalCount: orgITCount,
 			wantRespCode:   http.StatusOK,
 			wantErr:        false,
 		},
