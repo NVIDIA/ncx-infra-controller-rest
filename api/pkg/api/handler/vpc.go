@@ -28,8 +28,10 @@ import (
 	"github.com/labstack/echo/v4"
 	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
+	"github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
 	cdbp "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
 	swe "github.com/nvidia/bare-metal-manager-rest/site-workflow/pkg/error"
+	wutil "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/util"
 
 	"go.opentelemetry.io/otel/attribute"
 	temporalClient "go.temporal.io/sdk/client"
@@ -188,9 +190,23 @@ func (cvh CreateVPCHandler) Handle(c echo.Context) error {
 			"Tenant does not have any Allocations with Site specified in request data", nil)
 	}
 
+	vpcDAO := cdbm.NewVpcDAO(cvh.dbSession)
+	if apiRequest.ID != nil {
+		_, total, err := vpcDAO.GetAll(ctx, nil, cdbm.VpcFilterInput{VpcIDs: []uuid.UUID{*apiRequest.ID}}, cdbp.PageInput{Limit: cdb.GetIntPtr(paginator.DefaultLimit)}, nil)
+		if err != nil {
+			logger.Error().Err(err).Msg("db error checking for ID uniqueness of tenant vpc")
+			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Vpc due to DB error", nil)
+		}
+		if total > 0 {
+			logger.Warn().Str("tenantId", tenant.ID.String()).Str("name", apiRequest.ID.String()).Msg("vpc with same ID already exists")
+			return cerr.NewAPIErrorResponse(c, http.StatusConflict, "A Vpc with specified ID already exists", validation.Errors{
+				"id": errors.New(apiRequest.ID.String()),
+			})
+		}
+	}
+
 	// check for name uniqueness for the tenant, ie, tenant cannot have another vpc with same name at the site
 	// TODO consider doing this with an advisory lock for correctness
-	vpcDAO := cdbm.NewVpcDAO(cvh.dbSession)
 	vpcs, tot, err := vpcDAO.GetAll(ctx, nil, cdbm.VpcFilterInput{Name: &apiRequest.Name, InfrastructureProviderID: cdb.GetUUIDPtr(site.InfrastructureProviderID), TenantIDs: []uuid.UUID{tenant.ID}, SiteIDs: []uuid.UUID{site.ID}}, cdbp.PageInput{}, nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("db error checking for name uniqueness of tenant vpc")
@@ -311,6 +327,7 @@ func (cvh CreateVPCHandler) Handle(c echo.Context) error {
 
 	// Create VPC
 	vpcInput := cdbm.VpcCreateInput{
+		ID:                        apiRequest.ID,
 		Name:                      apiRequest.Name,
 		Description:               apiRequest.Description,
 		Org:                       org,
@@ -323,6 +340,7 @@ func (cvh CreateVPCHandler) Handle(c echo.Context) error {
 		Labels:                    labels,
 		Status:                    cdbm.VpcStatusReady,
 		CreatedBy:                 *dbUser,
+		Vni:                       apiRequest.Vni,
 	}
 
 	vpc, err := vpcDAO.Create(ctx, tx, vpcInput)
@@ -369,12 +387,22 @@ func (cvh CreateVPCHandler) Handle(c echo.Context) error {
 	if *vpc.NetworkVirtualizationType == cwssaws.VpcVirtualizationType_FNN.String() {
 		nwvt = cwssaws.VpcVirtualizationType_FNN
 	}
+
+	vni, err := wutil.GetIntPtrToUint32Ptr(apiRequest.Vni)
+	// We already validate the VNI value in the model validate call, so no err
+	// is ever expected by this point, but we still need to handle it.
+	if err != nil {
+		logger.Error().Err(err).Msg("failed to convert vni to uint32 pointer after validated passed")
+		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "VNI value conversion failed despite passed validation", nil)
+	}
+
 	createVpcRequest := &cwssaws.VpcCreationRequest{
 		Id:                        &cwssaws.VpcId{Value: common.GetSiteVpcID(vpc).String()},
 		Name:                      vpc.Name,
 		TenantOrganizationId:      tenant.Org,
 		NetworkVirtualizationType: &nwvt,
 		NetworkSecurityGroupId:    vpc.NetworkSecurityGroupID,
+		Vni:                       vni,
 	}
 
 	// Add default NVLinkLogicalPartition ID if it is present

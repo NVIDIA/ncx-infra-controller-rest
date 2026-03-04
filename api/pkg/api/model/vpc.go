@@ -20,10 +20,12 @@ package model
 import (
 	"errors"
 	"fmt"
+	"math"
 	"time"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	validationis "github.com/go-ozzo/ozzo-validation/v4/is"
+	"github.com/google/uuid"
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model/util"
 	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
 )
@@ -35,6 +37,8 @@ const (
 
 // APIVpcCreateRequest captures the request data for creating a new VPC
 type APIVpcCreateRequest struct {
+	// ID is the user-specified UUID of the VPC.
+	ID *uuid.UUID `json:"id"`
 	// Name is the name of the VPC
 	Name string `json:"name"`
 	// Description is the description of the VPC
@@ -50,6 +54,10 @@ type APIVpcCreateRequest struct {
 	NetworkSecurityGroupID *string `json:"networkSecurityGroupId"`
 	// NVLinkLogicalPartitionID is the ID of the NVLinkLogicalPartition
 	NVLinkLogicalPartitionID *string `json:"nvLinkLogicalPartitionId"`
+	// Vni is an optional, explicitly requested VPC VNI.
+	// The request will be rejected by the site if the VNI
+	// is not within a VNI range allowed for explicit requests.
+	Vni *int `json:"vni"`
 }
 
 // Validate ensure the values passed in create request are acceptable
@@ -66,6 +74,8 @@ func (ascr APIVpcCreateRequest) Validate() error {
 		validation.Field(&ascr.SiteID,
 			validation.Required.Error(validationErrorValueRequired),
 			validationis.UUID.Error(validationErrorInvalidUUID)),
+		validation.Field(&ascr.ID,
+			validation.When(ascr.ID != nil, validationis.UUID.Error(validationErrorInvalidUUID))),
 	)
 
 	if err != nil {
@@ -78,6 +88,12 @@ func (ascr APIVpcCreateRequest) Validate() error {
 			return validation.Errors{
 				"networkVirtualizationType": errors.New("either ETHERNET_VIRTUALIZER or FNN are currently supported"),
 			}
+		}
+	}
+
+	if ascr.Vni != nil && (*ascr.Vni < 0 || *ascr.Vni > math.MaxUint16) {
+		return validation.Errors{
+			"labels": fmt.Errorf("VNI must be an integer between 0 and %d", math.MaxUint16),
 		}
 	}
 
@@ -282,6 +298,11 @@ type APIVpc struct {
 	Created time.Time `json:"created"`
 	// Updated indicates the ISO datetime string for when the VPC was last updated
 	Updated time.Time `json:"updated"`
+	// RequestedVni is the explicitly requested VPC VNI at creation time _if_ one was requested.
+	RequestedVni *int
+	// Vni is the active/actual VNI of the VPC, regardless of whether it was
+	// explicitly requested or auto-allocated.
+	Vni *int
 }
 
 // NewAPIVpc creates and returns a new APIVpc object
@@ -300,6 +321,8 @@ func NewAPIVpc(dbVpc cdbm.Vpc, dbsds []cdbm.StatusDetail) APIVpc {
 		NetworkSecurityGroupPropagationDetails: NewAPINetworkSecurityGroupPropagationDetails(dbVpc.NetworkSecurityGroupPropagationDetails),
 		Created:                                dbVpc.Created,
 		Updated:                                dbVpc.Updated,
+		RequestedVni:                           dbVpc.Vni,
+		Vni:                                    dbVpc.ActiveVni,
 	}
 
 	if dbVpc.NetworkVirtualizationType != nil {

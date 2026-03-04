@@ -37,6 +37,10 @@ type VPC struct {
 	ControllerVpcId NullableString `json:"controllerVpcId,omitempty"`
 	// Network virtualization type of the VPC
 	NetworkVirtualizationType *string `json:"networkVirtualizationType,omitempty"`
+	// Explicitly requested VNI for the VPC if one was requested at creation time
+	RequestedVni NullableInt32 `json:"requestedVni,omitempty"`
+	// Active VNI assigned to the VPC
+	Vni NullableInt32 `json:"vni,omitempty"`
 	// ID of the Network Security Group attached to the VPC
 	NetworkSecurityGroupId NullableString `json:"networkSecurityGroupId,omitempty"`
 	// Propagation details for the attached Network Security Group
@@ -335,6 +339,90 @@ func (o *VPC) HasNetworkVirtualizationType() bool {
 // SetNetworkVirtualizationType gets a reference to the given string and assigns it to the NetworkVirtualizationType field.
 func (o *VPC) SetNetworkVirtualizationType(v string) {
 	o.NetworkVirtualizationType = &v
+}
+
+// GetRequestedVni returns the RequestedVni field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *VPC) GetRequestedVni() int32 {
+	if o == nil || IsNil(o.RequestedVni.Get()) {
+		var ret int32
+		return ret
+	}
+	return *o.RequestedVni.Get()
+}
+
+// GetRequestedVniOk returns a tuple with the RequestedVni field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *VPC) GetRequestedVniOk() (*int32, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return o.RequestedVni.Get(), o.RequestedVni.IsSet()
+}
+
+// HasRequestedVni returns a boolean if a field has been set.
+func (o *VPC) HasRequestedVni() bool {
+	if o != nil && o.RequestedVni.IsSet() {
+		return true
+	}
+
+	return false
+}
+
+// SetRequestedVni gets a reference to the given NullableInt32 and assigns it to the RequestedVni field.
+func (o *VPC) SetRequestedVni(v int32) {
+	o.RequestedVni.Set(&v)
+}
+// SetRequestedVniNil sets the value for RequestedVni to be an explicit nil
+func (o *VPC) SetRequestedVniNil() {
+	o.RequestedVni.Set(nil)
+}
+
+// UnsetRequestedVni ensures that no value is present for RequestedVni, not even an explicit nil
+func (o *VPC) UnsetRequestedVni() {
+	o.RequestedVni.Unset()
+}
+
+// GetVni returns the Vni field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *VPC) GetVni() int32 {
+	if o == nil || IsNil(o.Vni.Get()) {
+		var ret int32
+		return ret
+	}
+	return *o.Vni.Get()
+}
+
+// GetVniOk returns a tuple with the Vni field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *VPC) GetVniOk() (*int32, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return o.Vni.Get(), o.Vni.IsSet()
+}
+
+// HasVni returns a boolean if a field has been set.
+func (o *VPC) HasVni() bool {
+	if o != nil && o.Vni.IsSet() {
+		return true
+	}
+
+	return false
+}
+
+// SetVni gets a reference to the given NullableInt32 and assigns it to the Vni field.
+func (o *VPC) SetVni(v int32) {
+	o.Vni.Set(&v)
+}
+// SetVniNil sets the value for Vni to be an explicit nil
+func (o *VPC) SetVniNil() {
+	o.Vni.Set(nil)
+}
+
+// UnsetVni ensures that no value is present for Vni, not even an explicit nil
+func (o *VPC) UnsetVni() {
+	o.Vni.Unset()
 }
 
 // GetNetworkSecurityGroupId returns the NetworkSecurityGroupId field value if set, zero value otherwise (both if not set or set to explicit null).
@@ -646,6 +734,12 @@ func (o VPC) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.NetworkVirtualizationType) {
 		toSerialize["networkVirtualizationType"] = o.NetworkVirtualizationType
+	}
+	if o.RequestedVni.IsSet() {
+		toSerialize["requestedVni"] = o.RequestedVni.Get()
+	}
+	if o.Vni.IsSet() {
+		toSerialize["vni"] = o.Vni.Get()
 	}
 	if o.NetworkSecurityGroupId.IsSet() {
 		toSerialize["networkSecurityGroupId"] = o.NetworkSecurityGroupId.Get()

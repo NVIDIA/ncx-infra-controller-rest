@@ -754,6 +754,10 @@ func TestManageVpc_UpdateVpcsInDB(t *testing.T) {
 		ctrlVpc := &cwssaws.Vpc{
 			Id:   &cwssaws.VpcId{Value: pagedVpcs[i].ControllerVpcID.String()},
 			Name: pagedVpcs[i].Name,
+			Vni:  util.GetUint32Ptr(uint32(i)),
+			Status: &cwssaws.VpcStatus{
+				Vni: util.GetUint32Ptr(uint32(i)),
+			},
 		}
 
 		if i == 1 {

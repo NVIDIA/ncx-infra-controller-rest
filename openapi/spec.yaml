@@ -2141,6 +2141,8 @@ paths:
                       siteId: 72771e6a-6f5e-4de4-a5b9-1266c4197811
                       controllerVpcId: 497f6eca-6276-4993-bfeb-53cbbbba6f08
                       networkVirtualizationType: ETHERNET_VIRTUALIZER
+                      requestedVni: 12001
+                      vni: 12001
                       networkSecurityGroupId: c602eb90-3039-11f0-997a-b38d4fc8389e
                       networkSecurityGroupPropagationDetails:
                         id: 497f6eca-6276-4993-bfeb-53cbbbba6f08
@@ -2263,6 +2265,8 @@ paths:
                     siteId: 72771e6a-6f5e-4de4-a5b9-1266c4197811
                     controllerVpcId: 497f6eca-6276-4993-bfeb-53cbbbba6f08
                     networkVirtualizationType: ETHERNET_VIRTUALIZER
+                    requestedVni: 12001
+                    vni: 12001
                     nvLinkLogicalPartitionId: dd887330-dbd3-45ce-b400-c42fc8e47315
                     labels:
                       region: us-west-1
@@ -2291,10 +2295,12 @@ paths:
             examples:
               example-1:
                 value:
+                  id: 497f6eca-6276-4993-bfeb-53cbbbba6f08
                   name: spark-vpc
                   description: Virtual network for machines executing Spark jobs
                   siteId: 72771e6a-6f5e-4de4-a5b9-1266c4197811
                   networkVirtualizationType: ETHERNET_VIRTUALIZER
+                  vni: 12001
                   nvLinkLogicalPartitionId: dd887330-dbd3-45ce-b400-c42fc8e47315
                   labels:
                     region: us-west-1
@@ -2339,6 +2345,8 @@ paths:
                     siteId: 72771e6a-6f5e-4de4-a5b9-1266c4197811
                     controllerVpcId: 497f6eca-6276-4993-bfeb-53cbbbba6f08
                     networkVirtualizationType: ETHERNET_VIRTUALIZER
+                    requestedVni: 12001
+                    vni: 12001
                     nvLinkLogicalPartitionId: dd887330-dbd3-45ce-b400-c42fc8e47315
                     labels:
                       region: us-west-1
@@ -2418,6 +2426,8 @@ paths:
                     siteId: 72771e6a-6f5e-4de4-a5b9-1266c4197811
                     controllerVpcId: 497f6eca-6276-4993-bfeb-53cbbbba6f08
                     networkVirtualizationType: ETHERNET_VIRTUALIZER
+                    requestedVni: 12001
+                    vni: 12001
                     nvLinkLogicalPartitionId: dd887330-dbd3-45ce-b400-c42fc8e47315
                     labels:
                       region: us-west-1
@@ -2489,6 +2499,8 @@ paths:
                     siteId: 72771e6a-6f5e-4de4-a5b9-1266c4197811
                     controllerVpcId: 497f6eca-6276-4993-bfeb-53cbbbba6f08
                     networkVirtualizationType: FNN
+                    requestedVni: 12001
+                    vni: 12001
                     nvLinkLogicalPartitionId: dd887330-dbd3-45ce-b400-c42fc8e47315
                     labels:
                       region: us-west-1
@@ -11620,6 +11632,8 @@ components:
             env: dev
           controllerVpcId: 497f6eca-6276-4993-bfeb-53cbbbba6f08
           networkVirtualizationType: ETHERNET_VIRTUALIZER
+          requestedVni: 12001
+          vni: 12001
           networkSecurityGroupId: c602eb90-3039-11f0-997a-b38d4fc8389e
           networkSecurityGroupPropagationDetails:
             id: 497f6eca-6276-4993-bfeb-53cbbbba6f08
@@ -11678,6 +11692,22 @@ components:
             - ETHERNET_VIRTUALIZER
             - FNN
           description: Network virtualization type of the VPC
+        requestedVni:
+          type:
+            - integer
+            - 'null'
+          minimum: 1
+          maximum: 65535
+          readOnly: true
+          description: Explicitly requested VNI for the VPC if one was requested at creation time
+        vni:
+          type:
+            - integer
+            - 'null'
+          minimum: 1
+          maximum: 65535
+          readOnly: true
+          description: Active VNI assigned to the VPC
         networkSecurityGroupId:
           type:
             - string
@@ -11731,20 +11761,32 @@ components:
       type: object
       description: Request data to create a VPC
       examples:
+        - id: 497f6eca-6276-4993-bfeb-53cbbbba6f08
+          name: spark-id-vpc
+          description: Virtual network with user-specified VPC ID
+          siteId: 72771e6a-6f5e-4de4-a5b9-1266c4197811
+          networkVirtualizationType: ETHERNET_VIRTUALIZER
+          vni: 12001
         - name: spark-ethernet-virtualization-vpc
           description: Virtual network for machines executing Spark jobs
           siteId: 72771e6a-6f5e-4de4-a5b9-1266c4197811
           networkVirtualizationType: ETHERNET_VIRTUALIZER
+          vni: 12001
           networkSecurityGroupId: c602eb90-3039-11f0-997a-b38d4fc8389e
         - name: spark-fnn-vpc
           description: Virtual network for machines executing Spark jobs
           siteId: 72771e6a-6f5e-4de4-a5b9-1266c4197811
           networkVirtualizationType: FNN
+          vni: 12001
           nvLinkLogicalPartitionId: dd887330-dbd3-45ce-b400-c42fc8e47315
           labels:
             region: us-west-1
             env: dev
       properties:
+        id:
+          type: string
+          format: uuid
+          description: Optional user-specified UUID for the VPC
         name:
           type: string
           minLength: 2
@@ -11770,6 +11812,13 @@ components:
             - string
             - 'null'
           description: ID of the Network Security Group to attach to the VPC
+        vni:
+          type:
+            - integer
+            - 'null'
+          minimum: 1
+          maximum: 65535
+          description: Explicitly requested VNI for the VPC
         nvLinkLogicalPartitionId:
           type:
             - string

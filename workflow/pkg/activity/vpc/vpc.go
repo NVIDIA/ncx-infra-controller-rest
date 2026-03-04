@@ -268,8 +268,14 @@ func (mv ManageVpc) UpdateVpcInDB(ctx context.Context, transactionID *cwssaws.Tr
 					networkVirtualizationType = cdb.GetStrPtr(cdbm.VpcEthernetVirtualizer)
 				}
 
+				var activeVni *int
+				if vpcInfo.Vpc.Status != nil {
+					activeVni = util.GetUint32PtrToIntPtr(vpcInfo.Vpc.Status.Vni)
+				}
+				vni := util.GetUint32PtrToIntPtr(vpcInfo.Vpc.Vni)
+
 				// Save controller VPC ID
-				_, serr = vpcDAO.Update(ctx, nil, cdbm.VpcUpdateInput{VpcID: vpcID, NetworkVirtualizationType: networkVirtualizationType, ControllerVpcID: &controllerVpcID})
+				_, serr = vpcDAO.Update(ctx, nil, cdbm.VpcUpdateInput{VpcID: vpcID, NetworkVirtualizationType: networkVirtualizationType, ControllerVpcID: &controllerVpcID, ActiveVni: activeVni, Vni: vni})
 				if serr != nil {
 					logger.Error().Err(serr).Msg("failed to update Controller VPC ID in DB")
 					terr := tx.Rollback()
@@ -455,10 +461,19 @@ func (mv ManageVpc) UpdateVpcsInDB(ctx context.Context, siteID uuid.UUID, vpcInv
 			networkVirtualizationType = cdb.GetStrPtr(controllerVpc.NetworkVirtualizationType.String())
 		}
 
+		var controllerActiveVni *int
+		if controllerVpc.Status != nil {
+			controllerActiveVni = util.GetUint32PtrToIntPtr(controllerVpc.Status.Vni)
+		}
+
 		needsUpdate := isMissingOnSite != nil ||
 			controllerVpcID != nil ||
 			networkVirtualizationType != nil ||
-			!util.NetworkSecurityGroupPropagationDetailsEqual(vpc.NetworkSecurityGroupPropagationDetails, sitePropagationStatus)
+			!util.NetworkSecurityGroupPropagationDetailsEqual(vpc.NetworkSecurityGroupPropagationDetails, sitePropagationStatus) ||
+			// Changing VNI isn't allowed after creation, and it should never go back to nil - that would be a bug.
+			// We should assume status _could start_ as null and then update to the active VPC VNI.
+			// Status should never go back to nil - that would be a bug.
+			(controllerActiveVni != nil && !util.PtrsEqual(vpc.ActiveVni, controllerActiveVni))
 
 		if needsUpdate {
 			// If the VPC in the DB has propagation details but the site reported no propagation details
@@ -475,7 +490,8 @@ func (mv ManageVpc) UpdateVpcsInDB(ctx context.Context, siteID uuid.UUID, vpcInv
 				}
 			}
 
-			_, serr := vpcDAO.Update(ctx, nil, cdbm.VpcUpdateInput{VpcID: vpc.ID, NetworkSecurityGroupID: controllerVpc.NetworkSecurityGroupId, NetworkSecurityGroupPropagationDetails: sitePropagationStatus, NetworkVirtualizationType: networkVirtualizationType, ControllerVpcID: controllerVpcID, IsMissingOnSite: isMissingOnSite})
+			// Save controller VPC ID
+			_, serr := vpcDAO.Update(ctx, nil, cdbm.VpcUpdateInput{VpcID: vpc.ID, NetworkSecurityGroupID: controllerVpc.NetworkSecurityGroupId, NetworkSecurityGroupPropagationDetails: sitePropagationStatus, NetworkVirtualizationType: networkVirtualizationType, ControllerVpcID: controllerVpcID, IsMissingOnSite: isMissingOnSite, ActiveVni: controllerActiveVni})
 			if serr != nil {
 				slogger.Error().Err(serr).Msg("failed to update missing on Site flag/controller VPC ID in DB")
 				continue

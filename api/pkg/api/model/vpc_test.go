@@ -320,6 +320,11 @@ func TestNewAPIVpc(t *testing.T) {
 		SiteID:                    uuid.New(),
 		NetworkVirtualizationType: cdb.GetStrPtr(cdbm.VpcEthernetVirtualizer),
 		ControllerVpcID:           cdb.GetUUIDPtr(uuid.New()),
+		// The normal expectation is that Vni and ActiveVni match or
+		// that Vni is simply null, but we want to test for correctness
+		// in the conversion from the record in the DB and the API struct.
+		Vni:       cdb.GetIntPtr(555),
+		ActiveVni: cdb.GetIntPtr(777),
 		Labels: map[string]string{
 			"zone": "1",
 			"west": "2",
@@ -364,6 +369,8 @@ func TestNewAPIVpc(t *testing.T) {
 				SiteID:                    util.GetUUIDPtrToStrPtr(&dbVpc.SiteID),
 				NetworkVirtualizationType: dbVpc.NetworkVirtualizationType,
 				ControllerVpcID:           util.GetUUIDPtrToStrPtr(dbVpc.ControllerVpcID),
+				RequestedVni:              dbVpc.Vni,
+				Vni:                       dbVpc.ActiveVni,
 				Status:                    dbVpc.Status,
 				Labels: map[string]string{
 					"zone": "1",
@@ -388,6 +395,8 @@ func TestNewAPIVpc(t *testing.T) {
 			assert.Equal(t, *tt.want.SiteID, *got.SiteID)
 			assert.Equal(t, tt.want.NetworkVirtualizationType, got.NetworkVirtualizationType)
 			assert.Equal(t, *tt.want.ControllerVpcID, *got.ControllerVpcID)
+			assert.Equal(t, *tt.want.Vni, *got.Vni)
+			assert.Equal(t, *tt.want.RequestedVni, *got.RequestedVni)
 			assert.Equal(t, len(tt.want.Labels), len(got.Labels))
 			assert.Equal(t, tt.want.Status, got.Status)
 			assert.Equal(t, tt.want.StatusHistory, got.StatusHistory)
