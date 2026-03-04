@@ -26,9 +26,9 @@ import (
 )
 
 func main() {
-	// CARBIDE_SDK_BASE_URL, CARBIDE_SDK_ORG_NAME, and CARBIDE_SDK_TOKEN are required.
-	// CARBIDE_SDK_INSTANCE_NAME is optional; defaults to "test-instance".
-	// CARBIDE_SDK_SITE_ID and CARBIDE_SDK_VPC_ID are optional for testing.
+	// CARBIDE_BASE_URL, CARBIDE_ORG, and CARBIDE_TOKEN are required.
+	// CARBIDE_INSTANCE_NAME is optional; defaults to "test-instance".
+	// CARBIDE_SITE_ID and CARBIDE_VPC_ID are optional for testing.
 	// See sdk/simple/README.md for local dev (kind) setup.
 	client, err := simple.NewClientFromEnv()
 	if err != nil {
@@ -36,10 +36,10 @@ func main() {
 		os.Exit(1)
 	}
 	ctx := context.Background()
-	if siteID := os.Getenv("CARBIDE_SDK_SITE_ID"); siteID != "" {
+	if siteID := os.Getenv("CARBIDE_SITE_ID"); siteID != "" {
 		client.SetSiteID(siteID)
 	}
-	if vpcID := os.Getenv("CARBIDE_SDK_VPC_ID"); vpcID != "" {
+	if vpcID := os.Getenv("CARBIDE_VPC_ID"); vpcID != "" {
 		client.SetVpcID(vpcID)
 	}
 	if err := client.Authenticate(ctx); err != nil {
@@ -99,7 +99,7 @@ func main() {
 	// Example 3: Filter instances by name only
 	fmt.Println("\nExample 3: Filtering instances by name...")
 	instanceName := "test-instance"
-	if envName := os.Getenv("CARBIDE_SDK_INSTANCE_NAME"); envName != "" {
+	if envName := os.Getenv("CARBIDE_INSTANCE_NAME"); envName != "" {
 		instanceName = envName
 	}
 	instanceFilter := &simple.InstanceFilter{Name: &instanceName}

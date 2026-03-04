@@ -672,18 +672,15 @@ func NewClient(config ClientConfig) (*Client, error) {
 // NewClientFromEnv creates a new client from environment variables
 func NewClientFromEnv() (*Client, error) {
 	config := ClientConfig{
-		BaseURL: os.Getenv("CARBIDE_SDK_BASE_URL"),
-		Org:     os.Getenv("CARBIDE_SDK_ORG_NAME"),
-		Token:   os.Getenv("CARBIDE_SDK_TOKEN"),
+		BaseURL: os.Getenv("CARBIDE_BASE_URL"),
+		Org:     os.Getenv("CARBIDE_ORG"),
+		Token:   os.Getenv("CARBIDE_TOKEN"),
 	}
-	// alternate names to be deprecated fast
 	if config.Token == "" {
-		if os.Getenv("SESSION_TOKEN") != "" {
-			config.Token = os.Getenv("SESSION_TOKEN")
-		} else if os.Getenv("PERSONAL_API_KEY") != "" {
-			config.Token = os.Getenv("PERSONAL_API_KEY")
+		if os.Getenv("CARBIDE_API_KEY") != "" {
+			config.Token = os.Getenv("CARBIDE_API_KEY")
 		} else {
-			return nil, errors.New("CARBIDE_SDK_TOKEN env var (or alternatively SESSION_TOKEN or PERSONAL_API_KEY) must be set")
+			return nil, errors.New("CARBIDE_TOKEN env var (or alternatively CARBIDE_API_KEY) must be set")
 		}
 	}
 	return NewClient(config)

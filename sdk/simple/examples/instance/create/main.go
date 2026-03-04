@@ -27,9 +27,9 @@ import (
 )
 
 func main() {
-	// CARBIDE_SDK_BASE_URL, CARBIDE_SDK_ORG_NAME, and CARBIDE_SDK_TOKEN are required.
-	// CARBIDE_SDK_MACHINE_ID is optional; if not set, a Ready machine is selected.
-	// CARBIDE_SDK_SITE_ID and CARBIDE_SDK_VPC_ID are optional for testing.
+	// CARBIDE_BASE_URL, CARBIDE_ORG, and CARBIDE_TOKEN are required.
+	// CARBIDE_MACHINE_ID is optional; if not set, a Ready machine is selected.
+	// CARBIDE_SITE_ID and CARBIDE_VPC_ID are optional for testing.
 	// See sdk/simple/README.md for local dev (kind) setup.
 	client, err := simple.NewClientFromEnv()
 	if err != nil {
@@ -37,10 +37,10 @@ func main() {
 		os.Exit(1)
 	}
 	ctx := context.Background()
-	if siteID := os.Getenv("CARBIDE_SDK_SITE_ID"); siteID != "" {
+	if siteID := os.Getenv("CARBIDE_SITE_ID"); siteID != "" {
 		client.SetSiteID(siteID)
 	}
-	if vpcID := os.Getenv("CARBIDE_SDK_VPC_ID"); vpcID != "" {
+	if vpcID := os.Getenv("CARBIDE_VPC_ID"); vpcID != "" {
 		client.SetVpcID(vpcID)
 	}
 	if err := client.Authenticate(ctx); err != nil {
@@ -55,7 +55,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	selectedMachineID := os.Getenv("CARBIDE_SDK_MACHINE_ID")
+	selectedMachineID := os.Getenv("CARBIDE_MACHINE_ID")
 	if selectedMachineID == "" {
 		for _, machine := range machines {
 			if machine.Status == "Ready" {
@@ -65,7 +65,7 @@ func main() {
 		}
 	}
 	if selectedMachineID == "" {
-		fmt.Println("Could not find a suitable Machine to create an Instance. Set CARBIDE_SDK_MACHINE_ID or ensure a Ready machine exists.")
+		fmt.Println("Could not find a suitable Machine to create an Instance. Set CARBIDE_MACHINE_ID or ensure a Ready machine exists.")
 		os.Exit(1)
 	}
 

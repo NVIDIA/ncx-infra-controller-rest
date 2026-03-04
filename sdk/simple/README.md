@@ -52,7 +52,7 @@ After running `make kind-reset` from the repo root, the API is available at `htt
 **1. Get a token** (requires `jq`; run in a separate terminal or before your program):
 
 ```bash
-export CARBIDE_SDK_TOKEN=$(curl -s -X POST "http://localhost:8080/realms/carbide-dev/protocol/openid-connect/token" \
+export CARBIDE_TOKEN=$(curl -s -X POST "http://localhost:8080/realms/carbide-dev/protocol/openid-connect/token" \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "client_id=carbide-api" \
   -d "client_secret=carbide-local-secret" \
@@ -60,8 +60,8 @@ export CARBIDE_SDK_TOKEN=$(curl -s -X POST "http://localhost:8080/realms/carbide
   -d "username=admin@example.com" \
   -d "password=adminpassword" | jq -r .access_token)
 
-export CARBIDE_SDK_BASE_URL="http://localhost:8388"
-export CARBIDE_SDK_ORG_NAME="test-org"
+export CARBIDE_BASE_URL="http://localhost:8388"
+export CARBIDE_ORG="test-org"
 ```
 
 **2. Use the SDK with environment variables:**
@@ -207,9 +207,9 @@ Use `NewClientFromEnv()` to create a client from environment variables:
 
 | Variable | Description |
 |----------|-------------|
-| `CARBIDE_SDK_BASE_URL` | API base URL (e.g. `http://localhost:8388` for kind, `https://api.example.com` for production) |
-| `CARBIDE_SDK_ORG_NAME` | Organization name (e.g. `test-org` for kind) |
-| `CARBIDE_SDK_TOKEN` | JWT token (or `SESSION_TOKEN` / `PERSONAL_API_KEY`) |
+| `CARBIDE_BASE_URL` | API base URL (e.g. `http://localhost:8388` for kind, `https://api.example.com` for production) |
+| `CARBIDE_ORG` | Organization name (e.g. `test-org` for kind) |
+| `CARBIDE_TOKEN` | JWT token (or `CARBIDE_API_KEY` / `CARBIDE_API_KEY`) |
 
 ```go
 client, err := simple.NewClientFromEnv()
