@@ -42,7 +42,7 @@ func WithLogger(ctx context.Context, logger Logger) context.Context {
 // LoggerFromContext extracts the logger from the context.
 // If no logger is found in the context, it returns a no-op logger.
 func LoggerFromContext(ctx context.Context) Logger {
-	if logger, ok := ctx.Value(loggerKey{}).(Logger); ok {
+	if logger, ok := ctx.Value(loggerKey{}).(Logger); ok && logger != nil {
 		return logger
 	}
 	return NewNoOpLogger()
