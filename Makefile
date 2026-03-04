@@ -487,13 +487,13 @@ kind-verify:
 
 # Run the simple SDK Machine example against local dev (kind).
 # Verifies the SDK can talk to the stack (list, get machines).
-# Requires: kind cluster running, port-forward API (8388) and Keycloak (8080). Uses CARBIDE_SDK_* env vars or defaults.
+# Requires: kind cluster running, port-forward API (8388) and Keycloak (8082). Uses CARBIDE_* env vars or defaults.
 test-simple-sdk-example:
 	@command -v jq >/dev/null 2>&1 || { echo "jq is required (e.g. brew install jq)"; exit 1; }
 	@echo "Running simple SDK Machine example against local dev..."
-	CARBIDE_SDK_BASE_URL=$${CARBIDE_SDK_BASE_URL:-http://localhost:8388} \
-	CARBIDE_SDK_ORG_NAME=$${CARBIDE_SDK_ORG_NAME:-test-org} \
-	CARBIDE_SDK_TOKEN=$${CARBIDE_SDK_TOKEN:-$$(curl -s -X POST "http://localhost:8080/realms/carbide-dev/protocol/openid-connect/token" \
+	CARBIDE_BASE_URL=$${CARBIDE_BASE_URL:-http://localhost:8388} \
+	CARBIDE_ORG=$${CARBIDE_ORG:-test-org} \
+	CARBIDE_TOKEN=$${CARBIDE_TOKEN:-$$(curl -s -X POST "http://localhost:8082/realms/carbide-dev/protocol/openid-connect/token" \
 		-H "Content-Type: application/x-www-form-urlencoded" \
 		-d "client_id=carbide-api" \
 		-d "client_secret=carbide-local-secret" \
