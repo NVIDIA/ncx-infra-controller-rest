@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"sort"
 	"strings"
 	"time"
 
@@ -172,29 +173,34 @@ func Rollback(ctx context.Context, db *postgres.Postgres, rollbackTime time.Time
 	return migrateInternal(ctx, db, &rollbackTime)
 }
 
+type pendingMigration struct {
+	id       string
+	name     string
+	contents []byte
+}
+
 // migrateInternal migrates either up or down, but in an inconvient calling method
 func migrateInternal(ctx context.Context, db *postgres.Postgres, rollbackTime *time.Time) (errFinal error) {
 	return db.RunInTx(ctx, func(ctx context.Context, tx bun.Tx) error {
-		// Lock the migration table manually in case we are running multiple instances that may try to upgrade simultaneously
 		if err := lockOrCreateMigrationTable(ctx, &tx); err != nil {
 			return err
 		}
 
-		// Retrieve the migrations that have already been applied
 		appliedMigrations, err := appliedMigrations(ctx, &tx)
 		if err != nil {
 			return err
 		}
 
-		didSomething := false
-		// For each migration of the appropriate type, check if we need to apply it
+		isRollback := rollbackTime != nil
+
+		// Collect all migrations that need to be applied/rolled back
+		var pending []pendingMigration
 		if err := fs.WalkDir(sqlMigrations, ".", func(path string, d fs.DirEntry, err error) error {
-			// Check for file access errors (permissions, deleted files, etc.)
 			if err != nil {
 				return fmt.Errorf("error accessing migration file %s: %w", path, err)
 			}
 
-			id, name, ok := parseMigrationFilename(path, rollbackTime == nil)
+			id, name, ok := parseMigrationFilename(path, !isRollback)
 			if !ok {
 				return nil
 			}
@@ -210,28 +216,43 @@ func migrateInternal(ctx context.Context, db *postgres.Postgres, rollbackTime *t
 			if err != nil {
 				return err
 			}
-			migration, ok := appliedMigrations[id]
-			if ok {
-				// Already applied
-				if rollbackTime == nil {
+
+			migration, applied := appliedMigrations[id]
+			if isRollback {
+				if applied && rollbackTime.Before(migration.applied) {
+					pending = append(pending, pendingMigration{id: id, name: name, contents: contents})
+				}
+			} else {
+				if applied {
 					if !hashMatch(contents, migration.hash) && !strings.Contains(string(contents), "Allow hash changing") {
 						return fmt.Errorf("Hash for migration %s (%s) does not match already applied migration.  Something inappropriately altered the migration.  Aborting.", name, id)
 					}
-				} else if rollbackTime.Before(migration.applied) {
-					didSomething = true
-					return applyMigration(ctx, &tx, id, name, contents, true)
+				} else {
+					pending = append(pending, pendingMigration{id: id, name: name, contents: contents})
 				}
-				return nil
 			}
-
-			didSomething = true
-			return applyMigration(ctx, &tx, id, name, contents, false)
+			return nil
 		}); err != nil {
 			return err
 		}
 
-		if !didSomething {
+		if len(pending) == 0 {
 			log.Info("Database schema up to date, no migrations applied")
+			return nil
+		}
+
+		// Rollbacks run newest-first; forward migrations run oldest-first (already
+		// in ascending order from fs.WalkDir's alphabetical traversal).
+		if isRollback {
+			sort.Slice(pending, func(i, j int) bool {
+				return pending[i].id > pending[j].id
+			})
+		}
+
+		for _, m := range pending {
+			if err := applyMigration(ctx, &tx, m.id, m.name, m.contents, isRollback); err != nil {
+				return err
+			}
 		}
 
 		return nil

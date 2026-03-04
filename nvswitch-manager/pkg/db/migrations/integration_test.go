@@ -79,16 +79,16 @@ func TestIntegration_Migrate_CreatesTablesAndRecordsMigration(t *testing.T) {
 	require.NoError(t, err, "Should be able to query migrations table")
 	assert.Greater(t, count, 0, "At least one migration should be recorded")
 
-	// Verify the pmc table was created (from initial migration)
+	// Verify the nvswitch table was created (from initial migration)
 	var tableExists bool
 	err = pg.DB().NewSelect().
 		TableExpr("information_schema.tables").
 		ColumnExpr("TRUE").
-		Where("table_name = ?", "pmc").
+		Where("table_name = ?", "nvswitch").
 		Where("table_schema = ?", "public").
 		Scan(ctx, &tableExists)
-	require.NoError(t, err, "Should be able to check for pmc table")
-	assert.True(t, tableExists, "pmc table should exist after migration")
+	require.NoError(t, err, "Should be able to check for nvswitch table")
+	assert.True(t, tableExists, "nvswitch table should exist after migration")
 
 	// Verify the firmware_update table was created
 	err = pg.DB().NewSelect().
@@ -146,12 +146,12 @@ func TestIntegration_Migrate_RecordsHash(t *testing.T) {
 	err := Migrate(ctx, pg)
 	require.NoError(t, err)
 
-	// Verify hash is stored
+	// Verify hash is stored for the initial nvswitch migration
 	var hash string
 	err = pg.DB().NewSelect().
 		TableExpr("migrations").
 		Column("hash").
-		Where("id = ?", "202509290356").
+		Where("id = ?", "202501290000").
 		Scan(ctx, &hash)
 	require.NoError(t, err, "Should be able to query migration hash")
 	assert.NotEmpty(t, hash, "Migration hash should be recorded")
@@ -169,12 +169,12 @@ func TestIntegration_Rollback_RemovesMigration(t *testing.T) {
 	err := Migrate(ctx, pg)
 	require.NoError(t, err)
 
-	// Get the applied date of the migration
+	// Get the applied date of the initial nvswitch migration
 	var appliedDate time.Time
 	err = pg.DB().NewSelect().
 		TableExpr("migrations").
 		Column("applied_date").
-		Where("id = ?", "202509290356").
+		Where("id = ?", "202501290000").
 		Scan(ctx, &appliedDate)
 	require.NoError(t, err)
 
@@ -188,24 +188,24 @@ func TestIntegration_Rollback_RemovesMigration(t *testing.T) {
 	err = pg.DB().NewSelect().
 		TableExpr("migrations").
 		ColumnExpr("COUNT(*)").
-		Where("id = ?", "202509290356").
+		Where("id = ?", "202501290000").
 		Scan(ctx, &count)
 	require.NoError(t, err)
 	assert.Equal(t, 0, count, "Migration should be removed after rollback")
 
-	// Verify pmc table was dropped
+	// Verify nvswitch table was dropped
 	var tableExists bool
 	err = pg.DB().NewSelect().
 		TableExpr("information_schema.tables").
 		ColumnExpr("TRUE").
-		Where("table_name = ?", "pmc").
+		Where("table_name = ?", "nvswitch").
 		Where("table_schema = ?", "public").
 		Scan(ctx, &tableExists)
 	// If no rows, tableExists remains false
 	if err != nil {
 		tableExists = false
 	}
-	assert.False(t, tableExists, "pmc table should be dropped after rollback")
+	assert.False(t, tableExists, "nvswitch table should be dropped after rollback")
 }
 
 // TestIntegration_Rollback_NoOpWhenNothingToRollback tests rollback with future time.
@@ -255,12 +255,12 @@ func TestIntegration_Migrate_AfterRollback(t *testing.T) {
 	err := Migrate(ctx, pg)
 	require.NoError(t, err)
 
-	// Get applied date
+	// Get applied date of initial nvswitch migration
 	var appliedDate time.Time
 	err = pg.DB().NewSelect().
 		TableExpr("migrations").
 		Column("applied_date").
-		Where("id = ?", "202509290356").
+		Where("id = ?", "202501290000").
 		Scan(ctx, &appliedDate)
 	require.NoError(t, err)
 
@@ -278,11 +278,11 @@ func TestIntegration_Migrate_AfterRollback(t *testing.T) {
 	err = pg.DB().NewSelect().
 		TableExpr("information_schema.tables").
 		ColumnExpr("TRUE").
-		Where("table_name = ?", "pmc").
+		Where("table_name = ?", "nvswitch").
 		Where("table_schema = ?", "public").
 		Scan(ctx, &tableExists)
 	require.NoError(t, err)
-	assert.True(t, tableExists, "pmc table should exist after re-migration")
+	assert.True(t, tableExists, "nvswitch table should exist after re-migration")
 }
 
 // TestIntegration_LockOrCreateMigrationTable tests the locking mechanism.
@@ -331,13 +331,13 @@ func TestIntegration_ApplyMigration_SQLSectionSplit(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify both tables were created (they're in different SECTIONs)
-	var pmcExists, fwExists bool
+	var nvswitchExists, fwExists bool
 
 	err = pg.DB().NewSelect().
 		TableExpr("information_schema.tables").
 		ColumnExpr("TRUE").
-		Where("table_name = ?", "pmc").
-		Scan(ctx, &pmcExists)
+		Where("table_name = ?", "nvswitch").
+		Scan(ctx, &nvswitchExists)
 	require.NoError(t, err)
 
 	err = pg.DB().NewSelect().
@@ -347,7 +347,7 @@ func TestIntegration_ApplyMigration_SQLSectionSplit(t *testing.T) {
 		Scan(ctx, &fwExists)
 	require.NoError(t, err)
 
-	assert.True(t, pmcExists, "pmc table (first SECTION) should exist")
+	assert.True(t, nvswitchExists, "nvswitch table (first SECTION) should exist")
 	assert.True(t, fwExists, "firmware_update table (second SECTION) should exist")
 }
 
@@ -364,7 +364,7 @@ func TestIntegration_Indexes_Created(t *testing.T) {
 
 	// Check for expected indexes
 	expectedIndexes := []string{
-		"pmc_vendor_idx",
+		"nvswitch_vendor_idx",
 		"firmware_update_state_idx",
 		"firmware_update_created_at_idx",
 		"firmware_update_state_created_idx",
@@ -396,7 +396,7 @@ func TestIntegration_MacaddrAndInetTypes(t *testing.T) {
 	err := Migrate(ctx, pg)
 	require.NoError(t, err)
 
-	// Check column types for pmc table
+	// Check column types for nvswitch table
 	type columnInfo struct {
 		ColumnName string
 		DataType   string
@@ -406,7 +406,7 @@ func TestIntegration_MacaddrAndInetTypes(t *testing.T) {
 	rows, err := pg.DB().QueryContext(ctx, `
 		SELECT column_name, data_type 
 		FROM information_schema.columns 
-		WHERE table_name = 'pmc' AND table_schema = 'public'
+		WHERE table_name = 'nvswitch' AND table_schema = 'public'
 	`)
 	require.NoError(t, err)
 	defer rows.Close()
@@ -417,17 +417,17 @@ func TestIntegration_MacaddrAndInetTypes(t *testing.T) {
 		columns = append(columns, col)
 	}
 
-	// Find mac_address and ip_address columns
+	// Find bmc_mac_address and bmc_ip_address columns
 	var macType, ipType string
 	for _, col := range columns {
-		if col.ColumnName == "mac_address" {
+		if col.ColumnName == "bmc_mac_address" {
 			macType = col.DataType
 		}
-		if col.ColumnName == "ip_address" {
+		if col.ColumnName == "bmc_ip_address" {
 			ipType = col.DataType
 		}
 	}
 
-	assert.Equal(t, "macaddr", macType, "mac_address should use macaddr type")
-	assert.Equal(t, "inet", ipType, "ip_address should use inet type")
+	assert.Equal(t, "macaddr", macType, "bmc_mac_address should use macaddr type")
+	assert.Equal(t, "inet", ipType, "bmc_ip_address should use inet type")
 }

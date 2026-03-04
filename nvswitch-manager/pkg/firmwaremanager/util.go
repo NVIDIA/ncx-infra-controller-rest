@@ -86,6 +86,7 @@ func ResetTray(ctx context.Context, tray *nvswitch.NVSwitchTray, resetType redfi
 	if err != nil {
 		return fmt.Errorf("%s request failed: %w", resetType, err)
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode >= 300 {
 		return fmt.Errorf("%s returned status %d", resetType, resp.StatusCode)

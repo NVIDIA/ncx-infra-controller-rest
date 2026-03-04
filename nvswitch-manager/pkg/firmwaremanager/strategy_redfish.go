@@ -138,6 +138,7 @@ func (s *RedfishStrategy) executeUpload(ctx context.Context, update *FirmwareUpd
 		}
 		return Failed(fmt.Errorf("failed to upload firmware: %w", err))
 	}
+	defer resp.Body.Close()
 
 	// Check response status
 	if resp.StatusCode != http.StatusAccepted && resp.StatusCode != http.StatusOK {

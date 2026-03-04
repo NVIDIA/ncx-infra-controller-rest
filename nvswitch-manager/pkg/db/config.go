@@ -79,21 +79,24 @@ func (c *Config) BuildDSN() string {
 }
 
 // BuildDBConfigFromEnv builds a Config from environment variables.
-// Required env vars: DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
-// Optional: DB_CA_CERT_PATH
+// Port is read from PGPORT, defaulting to 30432 (the CI host-mapped port).
+// Optional: DB_HOST, DB_NAME, DB_USER, DB_PASSWORD, DB_CA_CERT_PATH
 func BuildDBConfigFromEnv() (Config, error) {
 	host := os.Getenv("DB_HOST")
 	if host == "" {
 		host = "localhost"
 	}
 
-	portStr := os.Getenv("DB_PORT")
+	// Default to port 30432 to match the CI PostgreSQL service port mapping
+	// (see .github/workflows/lint-and-test.yml ports: 30432:5432).
+	// Same convention used in db/pkg/util/testing.go getTestDBParams().
+	portStr := os.Getenv("PGPORT")
 	if portStr == "" {
-		return Config{}, errors.New("DB_PORT environment variable is required")
+		portStr = "30432"
 	}
 	port, err := strconv.Atoi(portStr)
 	if err != nil {
-		return Config{}, fmt.Errorf("invalid DB_PORT: %v", err)
+		return Config{}, fmt.Errorf("invalid PGPORT: %v", err)
 	}
 
 	dbName := os.Getenv("DB_NAME")

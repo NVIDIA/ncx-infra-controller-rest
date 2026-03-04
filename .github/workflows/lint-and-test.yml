@@ -177,6 +177,7 @@ jobs:
           - db
           - ipam
           - powershelf-manager
+          - nvswitch-manager
           - rla
           - site-agent
           - site-manager

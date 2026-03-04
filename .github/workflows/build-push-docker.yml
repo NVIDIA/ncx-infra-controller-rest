@@ -233,6 +233,25 @@ jobs:
       release_tag: ${{ inputs.release_tag }}
     secrets: inherit
 
+  # Build and push carbide-nsm
+  build-carbide-nsm:
+    name: Build carbide-nsm
+    uses: ./.github/workflows/build-push-service.yml
+    with:
+      runner: ${{ inputs.runner }}
+      service_name: carbide-nsm
+      binary_name: nsm
+      binary_path: /app/nsm
+      dockerfile: ./docker/production/Dockerfile.carbide-nsm
+      semantic_version: ${{ inputs.semantic_version }}
+      short_sha: ${{ inputs.short_sha }}
+      branch_sha_tag: ${{ inputs.branch_sha_tag }}
+      target_registry: ${{ inputs.target_registry }}
+      push_enabled: ${{ inputs.push_enabled }}
+      is_main_branch: ${{ inputs.is_main_branch }}
+      release_tag: ${{ inputs.release_tag }}
+    secrets: inherit
+
   # Build summary
   build-summary:
     name: Build Summary
@@ -246,6 +265,7 @@ jobs:
       - build-carbide-rest-cert-manager
       - build-carbide-rla
       - build-carbide-psm
+      - build-carbide-nsm
     if: always()
     outputs:
       build_artifacts: ${{ steps.aggregate.outputs.artifacts }}
@@ -293,6 +313,7 @@ jobs:
           echo "6. \`carbide-rest-cert-manager:${{ inputs.branch_sha_tag }}\` (amd64 + arm64)" >> $GITHUB_STEP_SUMMARY
           echo "7. \`carbide-rla:${{ inputs.branch_sha_tag }}\` (amd64 + arm64)" >> $GITHUB_STEP_SUMMARY
           echo "8. \`carbide-psm:${{ inputs.branch_sha_tag }}\` (amd64 + arm64)" >> $GITHUB_STEP_SUMMARY
+          echo "9. \`carbide-nsm:${{ inputs.branch_sha_tag }}\` (amd64 + arm64)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           if [ "${{ inputs.is_main_branch }}" = "true" ] || [ "${{ github.ref_name }}" = "main" ]; then
             echo "## Binary Artifacts Uploaded (Main Branch)" >> $GITHUB_STEP_SUMMARY
@@ -308,6 +329,7 @@ jobs:
           echo "- carbide-rest-cert-manager: \`${{ needs.build-carbide-rest-cert-manager.result }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- carbide-rla: \`${{ needs.build-carbide-rla.result }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- carbide-psm: \`${{ needs.build-carbide-psm.result }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- carbide-nsm: \`${{ needs.build-carbide-nsm.result }}\`" >> $GITHUB_STEP_SUMMARY
 
       - name: Aggregate outputs
         id: aggregate
@@ -363,6 +385,12 @@ jobs:
               "image_ref": "${{ needs.build-carbide-psm.outputs.image_ref }}",
               "binary_resource": "${{ needs.build-carbide-psm.ngc_binary_resource }}",
               "image_resource": "${{ needs.build-carbide-psm.outputs.ngc_image_resource }}"
+            },
+            {
+              "service": "carbide-nsm",
+              "image_ref": "${{ needs.build-carbide-nsm.outputs.image_ref }}",
+              "binary_resource": "${{ needs.build-carbide-nsm.outputs.ngc_binary_resource }}",
+              "image_resource": "${{ needs.build-carbide-nsm.outputs.ngc_image_resource }}"
             }
           ]
           EOF

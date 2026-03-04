@@ -59,6 +59,8 @@ jobs:
             path: ./rla
           - name: psm
             path: ./powershelf-manager
+          - name: nsm
+            path: ./nvswitch-manager
 
     steps:
       - name: Checkout code
