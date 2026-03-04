@@ -982,11 +982,14 @@ func TestVpcSQLDAO_CreateFromParams(t *testing.T) {
 		siteID                                 uuid.UUID
 		networkVirtualizationType              *string
 		controllerVpcID                        *uuid.UUID
+		activeVni                              *int
 		networkSecurityGroupID                 *string
 		networkSecurityGroupPropagationDetails *NetworkSecurityGroupPropagationDetails
 		labels                                 map[string]string
 		status                                 string
 		createdBy                              User
+		vni                                    *int
+		id                                     *uuid.UUID
 	}
 
 	// Create test DB
@@ -1016,6 +1019,8 @@ func TestVpcSQLDAO_CreateFromParams(t *testing.T) {
 		SiteID:                    st.ID,
 		NetworkVirtualizationType: db.GetStrPtr(VpcEthernetVirtualizer),
 		ControllerVpcID:           db.GetUUIDPtr(uuid.New()),
+		ActiveVni:                 nil,
+		Vni:                       db.GetIntPtr(555),
 		NetworkSecurityGroupID:    &networkSecurityGroup.ID,
 		NetworkSecurityGroupPropagationDetails: &NetworkSecurityGroupPropagationDetails{
 			NetworkSecurityGroupPropagationObjectStatus: &cwssaws.NetworkSecurityGroupPropagationObjectStatus{
@@ -1031,6 +1036,7 @@ func TestVpcSQLDAO_CreateFromParams(t *testing.T) {
 		},
 		Status:    VpcStatusPending,
 		CreatedBy: tnu.ID,
+		ID:        uuid.New(),
 	}
 
 	// OTEL Spanner configuration
@@ -1059,11 +1065,14 @@ func TestVpcSQLDAO_CreateFromParams(t *testing.T) {
 				siteID:                                 vpc.SiteID,
 				networkVirtualizationType:              vpc.NetworkVirtualizationType,
 				controllerVpcID:                        vpc.ControllerVpcID,
+				activeVni:                              vpc.ActiveVni,
+				vni:                                    vpc.Vni,
 				networkSecurityGroupID:                 vpc.NetworkSecurityGroupID,
 				networkSecurityGroupPropagationDetails: vpc.NetworkSecurityGroupPropagationDetails,
 				labels:                                 vpc.Labels,
 				status:                                 vpc.Status,
 				createdBy:                              User{ID: vpc.CreatedBy},
+				id:                                     db.GetUUIDPtr(vpc.ID),
 			},
 			want:               vpc,
 			wantErr:            false,
@@ -1077,6 +1086,7 @@ func TestVpcSQLDAO_CreateFromParams(t *testing.T) {
 			}
 
 			input := VpcCreateInput{
+				ID:                                     tt.args.id,
 				Name:                                   tt.args.name,
 				Description:                            tt.args.description,
 				Org:                                    tt.args.org,
@@ -1085,6 +1095,7 @@ func TestVpcSQLDAO_CreateFromParams(t *testing.T) {
 				SiteID:                                 tt.args.siteID,
 				NetworkVirtualizationType:              tt.args.networkVirtualizationType,
 				ControllerVpcID:                        tt.args.controllerVpcID,
+				Vni:                                    tt.args.vni,
 				NetworkSecurityGroupID:                 tt.args.networkSecurityGroupID,
 				NetworkSecurityGroupPropagationDetails: tt.args.networkSecurityGroupPropagationDetails,
 				Labels:                                 tt.args.labels,
@@ -1104,6 +1115,8 @@ func TestVpcSQLDAO_CreateFromParams(t *testing.T) {
 			assert.Equal(t, *tt.want.NetworkVirtualizationType, *got.NetworkVirtualizationType)
 			assert.Equal(t, len(tt.want.Labels), len(got.Labels))
 			assert.Equal(t, *tt.want.ControllerVpcID, *got.ControllerVpcID)
+			assert.True(t, tt.want.Vni != nil || *tt.want.Vni == *got.Vni)
+			assert.Equal(t, tt.want.ID, got.ID)
 			assert.Equal(t, *tt.want.NetworkSecurityGroupID, *got.NetworkSecurityGroupID)
 			assert.True(t, proto.Equal(tt.want.NetworkSecurityGroupPropagationDetails, got.NetworkSecurityGroupPropagationDetails))
 			assert.Equal(t, tt.want.Status, got.Status)
@@ -1147,6 +1160,8 @@ func TestVpcSQLDAO_UpdateFromParams(t *testing.T) {
 		NetworkVirtualizationType: db.GetStrPtr(VpcEthernetVirtualizerWithNVUE),
 		NetworkSecurityGroupID:    &networkSecurityGroup2.ID,
 		ControllerVpcID:           db.GetUUIDPtr(uuid.New()),
+		ActiveVni:                 db.GetIntPtr(777),
+		Vni:                       db.GetIntPtr(888),
 		Status:                    VpcStatusReady,
 		IsMissingOnSite:           true,
 		Labels: map[string]string{
@@ -1177,6 +1192,8 @@ func TestVpcSQLDAO_UpdateFromParams(t *testing.T) {
 		networkSecurityGroupID                 *string
 		NetworkSecurityGroupPropagationDetails *NetworkSecurityGroupPropagationDetails
 		ControllervpcID                        *uuid.UUID
+		ActiveVni                              *int
+		Vni                                    *int
 		labels                                 map[string]string
 		Status                                 string
 		IsMissingOnSite                        bool
@@ -1203,6 +1220,8 @@ func TestVpcSQLDAO_UpdateFromParams(t *testing.T) {
 				networkSecurityGroupID:                 uvpc.NetworkSecurityGroupID,
 				NetworkSecurityGroupPropagationDetails: uvpc.NetworkSecurityGroupPropagationDetails,
 				ControllervpcID:                        uvpc.ControllerVpcID,
+				ActiveVni:                              uvpc.ActiveVni,
+				Vni:                                    uvpc.Vni,
 				labels:                                 uvpc.Labels,
 				Status:                                 uvpc.Status,
 				IsMissingOnSite:                        uvpc.IsMissingOnSite,
@@ -1226,6 +1245,8 @@ func TestVpcSQLDAO_UpdateFromParams(t *testing.T) {
 				NetworkSecurityGroupID:                 tt.args.networkSecurityGroupID,
 				NetworkSecurityGroupPropagationDetails: tt.args.NetworkSecurityGroupPropagationDetails,
 				ControllerVpcID:                        tt.args.ControllervpcID,
+				ActiveVni:                              tt.args.ActiveVni,
+				Vni:                                    tt.args.Vni,
 				Labels:                                 tt.args.labels,
 				Status:                                 &tt.args.Status,
 				IsMissingOnSite:                        &tt.args.IsMissingOnSite,
@@ -1241,6 +1262,7 @@ func TestVpcSQLDAO_UpdateFromParams(t *testing.T) {
 			assert.Equal(t, *tt.want.Description, *got.Description)
 			assert.Equal(t, *tt.want.NetworkVirtualizationType, *got.NetworkVirtualizationType)
 			assert.Equal(t, *tt.want.ControllerVpcID, *got.ControllerVpcID)
+			assert.Equal(t, *tt.want.ActiveVni, *got.ActiveVni)
 
 			if tt.want.NetworkSecurityGroupID != nil {
 				assert.NotNil(t, got.NetworkSecurityGroupID)

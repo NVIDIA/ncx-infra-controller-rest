@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package bmmcli
+package carbidecli
 
 import (
 	"fmt"

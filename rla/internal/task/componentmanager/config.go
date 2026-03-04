@@ -26,6 +26,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/componentmanager/providers/carbide"
+	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/componentmanager/providers/nvswitchmanager"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/componentmanager/providers/psm"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
 )
@@ -38,6 +39,9 @@ type ProviderConfig struct {
 
 	// PSM holds PSM-specific configuration. Nil means disabled.
 	PSM *psm.Config
+
+	// NVSwitchManager holds NV-Switch Manager-specific configuration. Nil means disabled.
+	NVSwitchManager *nvswitchmanager.Config
 }
 
 // Config holds the component manager configuration.
@@ -57,8 +61,9 @@ type rawConfig struct {
 
 // rawProviderConfig is the raw YAML structure for provider configuration.
 type rawProviderConfig struct {
-	Carbide *rawCarbideConfig `yaml:"carbide"`
-	PSM     *rawPSMConfig     `yaml:"psm"`
+	Carbide         *rawCarbideConfig         `yaml:"carbide"`
+	PSM             *rawPSMConfig             `yaml:"psm"`
+	NVSwitchManager *rawNVSwitchManagerConfig `yaml:"nvswitchmanager"`
 }
 
 // rawCarbideConfig is the raw YAML structure for Carbide configuration.
@@ -69,6 +74,11 @@ type rawCarbideConfig struct {
 
 // rawPSMConfig is the raw YAML structure for PSM configuration.
 type rawPSMConfig struct {
+	Timeout string `yaml:"timeout"`
+}
+
+// rawNVSwitchManagerConfig is the raw YAML structure for NV-Switch Manager configuration.
+type rawNVSwitchManagerConfig struct {
 	Timeout string `yaml:"timeout"`
 }
 
@@ -142,8 +152,23 @@ func ParseConfig(data []byte) (Config, error) {
 		config.Providers.PSM = psmConfig
 	}
 
+	// Parse NV-Switch Manager config if present in YAML
+	if raw.Providers.NVSwitchManager != nil {
+		nsmConfig := &nvswitchmanager.Config{
+			Timeout: nvswitchmanager.DefaultTimeout,
+		}
+		if raw.Providers.NVSwitchManager.Timeout != "" {
+			timeout, err := time.ParseDuration(raw.Providers.NVSwitchManager.Timeout)
+			if err != nil {
+				return Config{}, fmt.Errorf("invalid nvswitchmanager timeout: %w", err)
+			}
+			nsmConfig.Timeout = timeout
+		}
+		config.Providers.NVSwitchManager = nsmConfig
+	}
+
 	// If no providers are explicitly configured, derive from component manager implementations
-	if config.Providers.Carbide == nil && config.Providers.PSM == nil {
+	if config.Providers.Carbide == nil && config.Providers.PSM == nil && config.Providers.NVSwitchManager == nil {
 		deriveProviders(&config)
 	}
 
@@ -167,6 +192,12 @@ func deriveProviders(config *Config) {
 					Timeout: psm.DefaultTimeout,
 				}
 			}
+		case nvswitchmanager.ProviderName:
+			if config.Providers.NVSwitchManager == nil {
+				config.Providers.NVSwitchManager = &nvswitchmanager.Config{
+					Timeout: nvswitchmanager.DefaultTimeout,
+				}
+			}
 			// mock implementations don't require any providers
 		}
 	}
@@ -179,6 +210,8 @@ func (c *Config) HasProvider(name string) bool {
 		return c.Providers.Carbide != nil
 	case psm.ProviderName:
 		return c.Providers.PSM != nil
+	case nvswitchmanager.ProviderName:
+		return c.Providers.NVSwitchManager != nil
 	}
 	return false
 }

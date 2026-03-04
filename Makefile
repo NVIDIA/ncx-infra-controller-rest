@@ -175,13 +175,13 @@ build:
 	cd site-agent && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-extldflags '-static'" -o ../$(BUILD_DIR)/elektra ./cmd/elektra
 	cd db && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-extldflags '-static'" -o ../$(BUILD_DIR)/migrations ./cmd/migrations
 	cd cert-manager && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-extldflags '-static'" -o ../$(BUILD_DIR)/credsmgr ./cmd/credsmgr
-	cd cli && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-extldflags '-static'" -o ../$(BUILD_DIR)/bmmcli ./cmd/bmmcli
+	cd cli && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-extldflags '-static'" -o ../$(BUILD_DIR)/carbidecli ./cmd/carbidecli
 
 INSTALL_DIR ?= $(shell go env GOPATH)/bin
 
-install-bmmcli:
-	cd cli && go build -o $(INSTALL_DIR)/bmmcli ./cmd/bmmcli
-	@echo "Installed bmmcli to $(INSTALL_DIR)/bmmcli"
+carbide-cli:
+	go build -o $(INSTALL_DIR)/carbidecli ./cli/cmd/carbidecli
+	@echo "Installed carbidecli to $(INSTALL_DIR)/carbidecli"
 
 docker-build:
 	docker build -t $(IMAGE_REGISTRY)/carbide-rest-api:$(IMAGE_TAG) -f $(DOCKERFILE_DIR)/Dockerfile.carbide-rest-api .

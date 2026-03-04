@@ -22,6 +22,8 @@ var _ MappedNullable = &VpcCreateRequest{}
 
 // VpcCreateRequest Request data to create a VPC
 type VpcCreateRequest struct {
+	// Optional user-specified UUID for the VPC
+	Id *string `json:"id,omitempty"`
 	// Name of the VPC
 	Name string `json:"name"`
 	// Optional description for the VPC
@@ -32,6 +34,8 @@ type VpcCreateRequest struct {
 	NetworkVirtualizationType NullableString `json:"networkVirtualizationType,omitempty"`
 	// ID of the Network Security Group to attach to the VPC
 	NetworkSecurityGroupId NullableString `json:"networkSecurityGroupId,omitempty"`
+	// Explicitly requested VNI for the VPC
+	Vni NullableInt32 `json:"vni,omitempty"`
 	// ID of the default NVLink Logical Partition that GPUs for all Instances in the VPC will attach to
 	NvLinkLogicalPartitionId NullableString `json:"nvLinkLogicalPartitionId,omitempty"`
 	Labels map[string]string `json:"labels,omitempty"`
@@ -56,6 +60,38 @@ func NewVpcCreateRequest(name string, siteId string) *VpcCreateRequest {
 func NewVpcCreateRequestWithDefaults() *VpcCreateRequest {
 	this := VpcCreateRequest{}
 	return &this
+}
+
+// GetId returns the Id field value if set, zero value otherwise.
+func (o *VpcCreateRequest) GetId() string {
+	if o == nil || IsNil(o.Id) {
+		var ret string
+		return ret
+	}
+	return *o.Id
+}
+
+// GetIdOk returns a tuple with the Id field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *VpcCreateRequest) GetIdOk() (*string, bool) {
+	if o == nil || IsNil(o.Id) {
+		return nil, false
+	}
+	return o.Id, true
+}
+
+// HasId returns a boolean if a field has been set.
+func (o *VpcCreateRequest) HasId() bool {
+	if o != nil && !IsNil(o.Id) {
+		return true
+	}
+
+	return false
+}
+
+// SetId gets a reference to the given string and assigns it to the Id field.
+func (o *VpcCreateRequest) SetId(v string) {
+	o.Id = &v
 }
 
 // GetName returns the Name field value
@@ -222,6 +258,48 @@ func (o *VpcCreateRequest) UnsetNetworkSecurityGroupId() {
 	o.NetworkSecurityGroupId.Unset()
 }
 
+// GetVni returns the Vni field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *VpcCreateRequest) GetVni() int32 {
+	if o == nil || IsNil(o.Vni.Get()) {
+		var ret int32
+		return ret
+	}
+	return *o.Vni.Get()
+}
+
+// GetVniOk returns a tuple with the Vni field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *VpcCreateRequest) GetVniOk() (*int32, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return o.Vni.Get(), o.Vni.IsSet()
+}
+
+// HasVni returns a boolean if a field has been set.
+func (o *VpcCreateRequest) HasVni() bool {
+	if o != nil && o.Vni.IsSet() {
+		return true
+	}
+
+	return false
+}
+
+// SetVni gets a reference to the given NullableInt32 and assigns it to the Vni field.
+func (o *VpcCreateRequest) SetVni(v int32) {
+	o.Vni.Set(&v)
+}
+// SetVniNil sets the value for Vni to be an explicit nil
+func (o *VpcCreateRequest) SetVniNil() {
+	o.Vni.Set(nil)
+}
+
+// UnsetVni ensures that no value is present for Vni, not even an explicit nil
+func (o *VpcCreateRequest) UnsetVni() {
+	o.Vni.Unset()
+}
+
 // GetNvLinkLogicalPartitionId returns the NvLinkLogicalPartitionId field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *VpcCreateRequest) GetNvLinkLogicalPartitionId() string {
 	if o == nil || IsNil(o.NvLinkLogicalPartitionId.Get()) {
@@ -306,6 +384,9 @@ func (o VpcCreateRequest) MarshalJSON() ([]byte, error) {
 
 func (o VpcCreateRequest) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
+	if !IsNil(o.Id) {
+		toSerialize["id"] = o.Id
+	}
 	toSerialize["name"] = o.Name
 	if !IsNil(o.Description) {
 		toSerialize["description"] = o.Description
@@ -316,6 +397,9 @@ func (o VpcCreateRequest) ToMap() (map[string]interface{}, error) {
 	}
 	if o.NetworkSecurityGroupId.IsSet() {
 		toSerialize["networkSecurityGroupId"] = o.NetworkSecurityGroupId.Get()
+	}
+	if o.Vni.IsSet() {
+		toSerialize["vni"] = o.Vni.Get()
 	}
 	if o.NvLinkLogicalPartitionId.IsSet() {
 		toSerialize["nvLinkLogicalPartitionId"] = o.NvLinkLogicalPartitionId.Get()

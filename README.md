@@ -70,6 +70,29 @@ make kind-verify    # Run health checks
 make kind-down      # Tear down cluster
 ```
 
+## CLI
+
+`carbidecli` is a command-line client that wraps the full REST API. Install it and set up configs for each environment you work with:
+
+```bash
+make carbide-cli             # build and install to $GOPATH/bin
+carbidecli init              # generate ~/.carbide/config.yaml
+```
+
+Create a config per environment (`~/.carbide/config.yaml`, `~/.carbide/config.staging.yaml`, `~/.carbide/config.prod.yaml`), then launch the interactive TUI which handles environment selection, login, and token refresh automatically:
+
+```bash
+carbidecli tui
+```
+
+All commands are also available directly for scripting and one-off use:
+
+```bash
+carbidecli --config ~/.carbide/config.staging.yaml site list
+```
+
+See [cli/README.md](cli/README.md) for configuration, authentication, shell completion, and the full command reference.
+
 ## Using the API
 
 ### Get an Access Token
@@ -178,7 +201,7 @@ done
 | carbide-site-agent | `elektra` | On-site agent |
 | carbide-rest-db | `migrations` | Database migrations |
 | carbide-rest-cert-manager | `credsmgr` | Native PKI certificate manager |
-| carbide-cli | `bmmcli` | [CLI client](cli/README.md) for the REST API |
+| carbide-cli | `carbidecli` | [CLI client](cli/README.md) for the REST API |
 
 Supporting modules:
 - **common** - Shared utilities and configurations

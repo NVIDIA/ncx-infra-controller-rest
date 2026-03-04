@@ -1,0 +1,635 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package tui
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"strconv"
+	"strings"
+
+	carbidecli "github.com/nvidia/bare-metal-manager-rest/cli/pkg"
+)
+
+// LoginFunc is a callback to perform login and return a new token.
+type LoginFunc func() (string, error)
+
+// Scope holds the current filter context for the interactive session.
+type Scope struct {
+	SiteID   string
+	SiteName string
+	VpcID    string
+	VpcName  string
+}
+
+// Session holds the shared state for an interactive TUI session.
+type Session struct {
+	Client     *carbidecli.Client
+	ConfigPath string
+	Org        string
+	Token      string
+	Scope      Scope
+	Cache      *Cache
+	Resolver   *Resolver
+	LoginFn    LoginFunc
+}
+
+// PromptString returns the prompt showing org and current scope.
+func (s *Session) PromptString() string {
+	parts := []string{s.Org}
+	if s.Scope.SiteName != "" {
+		parts = append(parts, s.Scope.SiteName)
+	}
+	if s.Scope.VpcName != "" {
+		parts = append(parts, s.Scope.VpcName)
+	}
+	return Cyan("carbide:"+strings.Join(parts, "/")) + "> "
+}
+
+// RefreshClient updates the session with a new token.
+func (s *Session) RefreshClient(token string) {
+	s.Token = token
+	s.Client.Token = token
+}
+
+// NewSession creates a new interactive session.
+func NewSession(client *carbidecli.Client, org, configPath string) *Session {
+	cache := NewCache()
+	resolver := NewResolver(cache)
+	s := &Session{
+		Client:     client,
+		ConfigPath: configPath,
+		Org:        org,
+		Cache:      cache,
+		Resolver:   resolver,
+	}
+	s.registerFetchers()
+	return s
+}
+
+func (s *Session) registerFetchers() {
+	s.Resolver.RegisterFetcher("site", s.fetchSites)
+	s.Resolver.RegisterFetcher("vpc", s.fetchVPCs)
+	s.Resolver.RegisterFetcher("subnet", s.fetchSubnets)
+	s.Resolver.RegisterFetcher("instance", s.fetchInstances)
+	s.Resolver.RegisterFetcher("operating-system", s.fetchOperatingSystems)
+	s.Resolver.RegisterFetcher("machine", s.fetchMachines)
+	s.Resolver.RegisterFetcher("ip-block", s.fetchIPBlocks)
+	s.Resolver.RegisterFetcher("network-security-group", s.fetchNSGs)
+	s.Resolver.RegisterFetcher("audit", s.fetchAudits)
+	s.Resolver.RegisterFetcher("ssh-key", s.fetchSSHKeys)
+	s.Resolver.RegisterFetcher("ssh-key-group", s.fetchSSHKeyGroups)
+	s.Resolver.RegisterFetcher("sku", s.fetchSKUs)
+	s.Resolver.RegisterFetcher("rack", s.fetchRacks)
+	s.Resolver.RegisterFetcher("vpc-prefix", s.fetchVPCPrefixes)
+	s.Resolver.RegisterFetcher("tenant-account", s.fetchTenantAccounts)
+	s.Resolver.RegisterFetcher("allocation", s.fetchAllocations)
+	s.Resolver.RegisterFetcher("expected-machine", s.fetchExpectedMachines)
+	s.Resolver.RegisterFetcher("infiniband-partition", s.fetchInfiniBandPartitions)
+	s.Resolver.RegisterFetcher("nvlink-logical-partition", s.fetchNVLinkLogicalPartitions)
+	s.Resolver.RegisterFetcher("dpu-extension-service", s.fetchDPUExtensionServices)
+}
+
+// fetchAll fetches all pages from a list endpoint and returns raw JSON objects.
+func (s *Session) fetchAll(path string, extraQuery map[string]string) ([]map[string]interface{}, error) {
+	q := map[string]string{"pageSize": "100"}
+	for k, v := range extraQuery {
+		q[k] = v
+	}
+	var all []map[string]interface{}
+	for page := 1; page <= 1000; page++ {
+		q["pageNumber"] = strconv.Itoa(page)
+		body, hdrs, err := s.Client.Do("GET", path, nil, q, nil)
+		if err != nil {
+			return nil, err
+		}
+		var items []map[string]interface{}
+		if err := json.Unmarshal(body, &items); err != nil {
+			return all, nil
+		}
+		all = append(all, items...)
+		if pag := hdrs.Get("X-Pagination"); pag != "" {
+			var ph struct {
+				Total int `json:"total"`
+			}
+			if json.Unmarshal([]byte(pag), &ph) == nil && ph.Total > 0 && len(all) >= ph.Total {
+				break
+			}
+		}
+		if len(items) < 100 {
+			break
+		}
+	}
+	return all, nil
+}
+
+// str extracts a string field from a raw JSON object.
+func str(m map[string]interface{}, key string) string {
+	if v, ok := m[key]; ok {
+		if s, ok := v.(string); ok {
+			return s
+		}
+	}
+	return ""
+}
+
+// buildMachineVPCNames fetches instances and returns a map of machineId → comma-separated VPC names.
+func (s *Session) buildMachineVPCNames(ctx context.Context) map[string]string {
+	q := map[string]string{}
+	if s.Scope.SiteID != "" {
+		q["siteId"] = s.Scope.SiteID
+	}
+	if s.Scope.VpcID != "" {
+		q["vpcId"] = s.Scope.VpcID
+	}
+	instances, err := s.fetchAll("/v2/org/{org}/carbide/instance", q)
+	if err != nil {
+		return map[string]string{}
+	}
+
+	vpcSetByMachine := make(map[string]map[string]struct{})
+	for _, inst := range instances {
+		machineID := strings.TrimSpace(str(inst, "machineId"))
+		vpcID := strings.TrimSpace(str(inst, "vpcId"))
+		if machineID == "" || vpcID == "" {
+			continue
+		}
+		if vpcSetByMachine[machineID] == nil {
+			vpcSetByMachine[machineID] = make(map[string]struct{})
+		}
+		vpcSetByMachine[machineID][vpcID] = struct{}{}
+	}
+
+	result := make(map[string]string, len(vpcSetByMachine))
+	for machineID, vpcIDs := range vpcSetByMachine {
+		names := make([]string, 0, len(vpcIDs))
+		for vpcID := range vpcIDs {
+			name := strings.TrimSpace(s.Resolver.ResolveID("vpc", vpcID))
+			if name == "" {
+				name = vpcID
+			}
+			names = append(names, name)
+		}
+		result[machineID] = strings.Join(names, ",")
+	}
+	return result
+}
+
+// getTenantID returns the current tenant ID, caching it for the session.
+func (s *Session) getTenantID(_ context.Context) (string, error) {
+	if cached := s.Cache.LookupByName("_tenant", s.Org); cached != nil {
+		return cached.ID, nil
+	}
+	body, _, err := s.Client.Do("GET", "/v2/org/{org}/carbide/tenant/current", nil, nil, nil)
+	if err != nil {
+		return "", fmt.Errorf("fetching tenant: %w", err)
+	}
+	var t map[string]interface{}
+	if err := json.Unmarshal(body, &t); err != nil {
+		return "", fmt.Errorf("parsing tenant: %w", err)
+	}
+	id := str(t, "id")
+	if id == "" {
+		return "", fmt.Errorf("tenant has no id")
+	}
+	s.Cache.Set("_tenant", []NamedItem{{Name: s.Org, ID: id}})
+	return id, nil
+}
+
+// -- Fetchers --
+
+func (s *Session) fetchSites(_ context.Context) ([]NamedItem, error) {
+	items, err := s.fetchAll("/v2/org/{org}/carbide/site", nil)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]NamedItem, len(items))
+	for i, m := range items {
+		result[i] = NamedItem{Name: str(m, "name"), ID: str(m, "id"), Status: str(m, "status"), Raw: m}
+	}
+	return result, nil
+}
+
+func (s *Session) fetchVPCs(_ context.Context) ([]NamedItem, error) {
+	q := map[string]string{}
+	if s.Scope.SiteID != "" {
+		q["siteId"] = s.Scope.SiteID
+	}
+	items, err := s.fetchAll("/v2/org/{org}/carbide/vpc", q)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]NamedItem, len(items))
+	for i, m := range items {
+		result[i] = NamedItem{
+			Name: str(m, "name"), ID: str(m, "id"), Status: str(m, "status"),
+			Extra: map[string]string{"siteId": str(m, "siteId")}, Raw: m,
+		}
+	}
+	return result, nil
+}
+
+func (s *Session) fetchSubnets(_ context.Context) ([]NamedItem, error) {
+	q := map[string]string{}
+	if s.Scope.SiteID != "" {
+		q["siteId"] = s.Scope.SiteID
+	}
+	if s.Scope.VpcID != "" {
+		q["vpcId"] = s.Scope.VpcID
+	}
+	items, err := s.fetchAll("/v2/org/{org}/carbide/subnet", q)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]NamedItem, len(items))
+	for i, m := range items {
+		result[i] = NamedItem{
+			Name: str(m, "name"), ID: str(m, "id"), Status: str(m, "status"),
+			Extra: map[string]string{"vpcId": str(m, "vpcId")}, Raw: m,
+		}
+	}
+	return result, nil
+}
+
+func (s *Session) fetchInstances(_ context.Context) ([]NamedItem, error) {
+	q := map[string]string{}
+	if s.Scope.SiteID != "" {
+		q["siteId"] = s.Scope.SiteID
+	}
+	if s.Scope.VpcID != "" {
+		q["vpcId"] = s.Scope.VpcID
+	}
+	items, err := s.fetchAll("/v2/org/{org}/carbide/instance", q)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]NamedItem, len(items))
+	for i, m := range items {
+		result[i] = NamedItem{
+			Name: str(m, "name"), ID: str(m, "id"), Status: str(m, "status"),
+			Extra: map[string]string{"vpcId": str(m, "vpcId"), "siteId": str(m, "siteId")}, Raw: m,
+		}
+	}
+	return result, nil
+}
+
+func (s *Session) fetchMachines(_ context.Context) ([]NamedItem, error) {
+	q := map[string]string{}
+	if s.Scope.SiteID != "" {
+		q["siteId"] = s.Scope.SiteID
+	}
+	items, err := s.fetchAll("/v2/org/{org}/carbide/machine", q)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]NamedItem, len(items))
+	for i, m := range items {
+		name := machineDisplayName(m)
+		result[i] = NamedItem{
+			Name: name, ID: str(m, "id"), Status: str(m, "status"),
+			Extra: map[string]string{"siteId": str(m, "siteId")}, Raw: m,
+		}
+	}
+	return result, nil
+}
+
+func machineDisplayName(m map[string]interface{}) string {
+	if labels, ok := m["labels"].(map[string]interface{}); ok {
+		for _, key := range []string{"ServerName", "serverName", "hostname", "hostName"} {
+			if v, ok := labels[key].(string); ok && strings.TrimSpace(v) != "" {
+				return strings.TrimSpace(v)
+			}
+		}
+	}
+	if sn, ok := m["serialNumber"].(string); ok && strings.TrimSpace(sn) != "" {
+		return strings.TrimSpace(sn)
+	}
+	if id := str(m, "id"); id != "" {
+		return id
+	}
+	return "<unknown>"
+}
+
+func (s *Session) fetchOperatingSystems(_ context.Context) ([]NamedItem, error) {
+	q := map[string]string{}
+	if s.Scope.SiteID != "" {
+		q["siteId"] = s.Scope.SiteID
+	}
+	items, err := s.fetchAll("/v2/org/{org}/carbide/operating-system", q)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]NamedItem, len(items))
+	for i, m := range items {
+		result[i] = NamedItem{Name: str(m, "name"), ID: str(m, "id"), Status: str(m, "status"), Raw: m}
+	}
+	return result, nil
+}
+
+func (s *Session) fetchSSHKeyGroups(_ context.Context) ([]NamedItem, error) {
+	q := map[string]string{}
+	if s.Scope.SiteID != "" {
+		q["siteId"] = s.Scope.SiteID
+	}
+	items, err := s.fetchAll("/v2/org/{org}/carbide/ssh-key-group", q)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]NamedItem, len(items))
+	for i, m := range items {
+		result[i] = NamedItem{Name: str(m, "name"), ID: str(m, "id"), Status: str(m, "status"), Raw: m}
+	}
+	return result, nil
+}
+
+func (s *Session) fetchAllocations(_ context.Context) ([]NamedItem, error) {
+	q := map[string]string{}
+	if s.Scope.SiteID != "" {
+		q["siteId"] = s.Scope.SiteID
+	}
+	items, err := s.fetchAll("/v2/org/{org}/carbide/allocation", q)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]NamedItem, len(items))
+	for i, m := range items {
+		result[i] = NamedItem{
+			Name: str(m, "name"), ID: str(m, "id"), Status: str(m, "status"),
+			Extra: map[string]string{"siteId": str(m, "siteId")}, Raw: m,
+		}
+	}
+	return result, nil
+}
+
+func (s *Session) fetchIPBlocks(_ context.Context) ([]NamedItem, error) {
+	q := map[string]string{}
+	if s.Scope.SiteID != "" {
+		q["siteId"] = s.Scope.SiteID
+	}
+	items, err := s.fetchAll("/v2/org/{org}/carbide/ip-block", q)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]NamedItem, len(items))
+	for i, m := range items {
+		result[i] = NamedItem{
+			Name: str(m, "name"), ID: str(m, "id"), Status: str(m, "status"),
+			Extra: map[string]string{"siteId": str(m, "siteId")}, Raw: m,
+		}
+	}
+	return result, nil
+}
+
+func (s *Session) fetchNSGs(_ context.Context) ([]NamedItem, error) {
+	q := map[string]string{}
+	if s.Scope.SiteID != "" {
+		q["siteId"] = s.Scope.SiteID
+	}
+	items, err := s.fetchAll("/v2/org/{org}/carbide/network-security-group", q)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]NamedItem, len(items))
+	for i, m := range items {
+		result[i] = NamedItem{Name: str(m, "name"), ID: str(m, "id"), Status: str(m, "status"), Raw: m}
+	}
+	return result, nil
+}
+
+func (s *Session) fetchAudits(_ context.Context) ([]NamedItem, error) {
+	items, err := s.fetchAll("/v2/org/{org}/carbide/audit", nil)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]NamedItem, len(items))
+	for i, m := range items {
+		method := str(m, "method")
+		endpoint := str(m, "endpoint")
+		if method == "" {
+			method = "AUDIT"
+		}
+		name := strings.TrimSpace(method + " " + endpoint)
+		if name == "" {
+			name = str(m, "id")
+		}
+		statusCode := ""
+		if sc, ok := m["statusCode"].(float64); ok {
+			statusCode = strconv.Itoa(int(sc))
+		}
+		result[i] = NamedItem{
+			Name: name, ID: str(m, "id"), Status: statusCode,
+			Extra: map[string]string{"method": method, "endpoint": endpoint}, Raw: m,
+		}
+	}
+	return result, nil
+}
+
+func (s *Session) fetchSSHKeys(_ context.Context) ([]NamedItem, error) {
+	items, err := s.fetchAll("/v2/org/{org}/carbide/ssh-key", nil)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]NamedItem, len(items))
+	for i, m := range items {
+		result[i] = NamedItem{
+			Name:  str(m, "name"),
+			ID:    str(m, "id"),
+			Extra: map[string]string{"fingerprint": str(m, "fingerprint")},
+			Raw:   m,
+		}
+	}
+	return result, nil
+}
+
+func (s *Session) fetchSKUs(_ context.Context) ([]NamedItem, error) {
+	q := map[string]string{}
+	if s.Scope.SiteID != "" {
+		q["siteId"] = s.Scope.SiteID
+	}
+	items, err := s.fetchAll("/v2/org/{org}/carbide/sku", q)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]NamedItem, len(items))
+	for i, m := range items {
+		deviceType := str(m, "deviceType")
+		name := deviceType
+		if strings.TrimSpace(name) == "" {
+			name = str(m, "id")
+		}
+		result[i] = NamedItem{
+			Name:  name,
+			ID:    str(m, "id"),
+			Extra: map[string]string{"siteId": str(m, "siteId"), "deviceType": deviceType},
+			Raw:   m,
+		}
+	}
+	return result, nil
+}
+
+func (s *Session) fetchRacks(_ context.Context) ([]NamedItem, error) {
+	q := map[string]string{}
+	if s.Scope.SiteID != "" {
+		q["siteId"] = s.Scope.SiteID
+	}
+	items, err := s.fetchAll("/v2/org/{org}/carbide/rack", q)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]NamedItem, len(items))
+	for i, m := range items {
+		result[i] = NamedItem{
+			Name: str(m, "name"), ID: str(m, "id"),
+			Extra: map[string]string{"manufacturer": str(m, "manufacturer"), "model": str(m, "model")},
+			Raw:   m,
+		}
+	}
+	return result, nil
+}
+
+func (s *Session) fetchVPCPrefixes(_ context.Context) ([]NamedItem, error) {
+	q := map[string]string{}
+	if s.Scope.SiteID != "" {
+		q["siteId"] = s.Scope.SiteID
+	}
+	if s.Scope.VpcID != "" {
+		q["vpcId"] = s.Scope.VpcID
+	}
+	items, err := s.fetchAll("/v2/org/{org}/carbide/vpc-prefix", q)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]NamedItem, len(items))
+	for i, m := range items {
+		result[i] = NamedItem{
+			Name: str(m, "name"), ID: str(m, "id"), Status: str(m, "status"),
+			Extra: map[string]string{"vpcId": str(m, "vpcId")}, Raw: m,
+		}
+	}
+	return result, nil
+}
+
+func (s *Session) fetchTenantAccounts(_ context.Context) ([]NamedItem, error) {
+	items, err := s.fetchAll("/v2/org/{org}/carbide/tenant-account", nil)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]NamedItem, len(items))
+	for i, m := range items {
+		tenantOrg := str(m, "tenantOrg")
+		name := strings.TrimSpace(tenantOrg)
+		if name == "" {
+			name = str(m, "id")
+		}
+		result[i] = NamedItem{
+			Name: name, ID: str(m, "id"), Status: str(m, "status"),
+			Extra: map[string]string{"infrastructureProviderId": str(m, "infrastructureProviderId")}, Raw: m,
+		}
+	}
+	return result, nil
+}
+
+func (s *Session) fetchExpectedMachines(_ context.Context) ([]NamedItem, error) {
+	q := map[string]string{}
+	if s.Scope.SiteID != "" {
+		q["siteId"] = s.Scope.SiteID
+	}
+	items, err := s.fetchAll("/v2/org/{org}/carbide/expected-machine", q)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]NamedItem, len(items))
+	for i, m := range items {
+		name := strings.TrimSpace(str(m, "bmcMacAddress"))
+		if name == "" {
+			name = strings.TrimSpace(str(m, "chassisSerialNumber"))
+		}
+		if name == "" {
+			name = str(m, "id")
+		}
+		result[i] = NamedItem{
+			Name: name, ID: str(m, "id"),
+			Extra: map[string]string{
+				"siteId":              str(m, "siteId"),
+				"bmcMacAddress":       str(m, "bmcMacAddress"),
+				"chassisSerialNumber": str(m, "chassisSerialNumber"),
+			},
+			Raw: m,
+		}
+	}
+	return result, nil
+}
+
+func (s *Session) fetchInfiniBandPartitions(_ context.Context) ([]NamedItem, error) {
+	q := map[string]string{}
+	if s.Scope.SiteID != "" {
+		q["siteId"] = s.Scope.SiteID
+	}
+	items, err := s.fetchAll("/v2/org/{org}/carbide/infiniband-partition", q)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]NamedItem, len(items))
+	for i, m := range items {
+		result[i] = NamedItem{
+			Name: str(m, "name"), ID: str(m, "id"), Status: str(m, "status"),
+			Extra: map[string]string{"siteId": str(m, "siteId")}, Raw: m,
+		}
+	}
+	return result, nil
+}
+
+func (s *Session) fetchNVLinkLogicalPartitions(_ context.Context) ([]NamedItem, error) {
+	q := map[string]string{}
+	if s.Scope.SiteID != "" {
+		q["siteId"] = s.Scope.SiteID
+	}
+	items, err := s.fetchAll("/v2/org/{org}/carbide/nvlink-logical-partition", q)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]NamedItem, len(items))
+	for i, m := range items {
+		result[i] = NamedItem{
+			Name: str(m, "name"), ID: str(m, "id"), Status: str(m, "status"),
+			Extra: map[string]string{"siteId": str(m, "siteId")}, Raw: m,
+		}
+	}
+	return result, nil
+}
+
+func (s *Session) fetchDPUExtensionServices(_ context.Context) ([]NamedItem, error) {
+	q := map[string]string{}
+	if s.Scope.SiteID != "" {
+		q["siteId"] = s.Scope.SiteID
+	}
+	items, err := s.fetchAll("/v2/org/{org}/carbide/dpu-extension-service", q)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]NamedItem, len(items))
+	for i, m := range items {
+		result[i] = NamedItem{
+			Name: str(m, "name"), ID: str(m, "id"),
+			Extra: map[string]string{"siteId": str(m, "siteId"), "serviceType": str(m, "serviceType")},
+			Raw:   m,
+		}
+	}
+	return result, nil
+}

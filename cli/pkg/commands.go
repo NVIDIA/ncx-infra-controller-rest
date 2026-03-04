@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package bmmcli
+package carbidecli
 
 import (
 	"encoding/json"
@@ -343,7 +343,7 @@ func buildActionCommand(spec *Spec, ro resolvedOp, subResource string) *cli.Comm
 		return flags[i].Names()[0] < flags[j].Names()[0]
 	})
 
-	usageText := "bmmcli " + tagToCommand(ro.tag)
+	usageText := "carbidecli " + tagToCommand(ro.tag)
 	if subResource != "" {
 		usageText += " " + subResource
 	}
@@ -607,7 +607,7 @@ func clientFromContext(c *cli.Context) (*Client, error) {
 	}
 
 	if resolved == "" {
-		return nil, fmt.Errorf("no token available; run 'bmmcli login' or set --token / BMM_TOKEN")
+		return nil, fmt.Errorf("no token available; run 'carbidecli login' or set --token / CARBIDE_TOKEN")
 	}
 
 	// Explicit flag > config > flag default (spec server URL).

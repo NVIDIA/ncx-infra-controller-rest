@@ -100,6 +100,7 @@ type Vpc struct {
 	NVLinkLogicalPartition                 *NVLinkLogicalPartition                 `bun:"rel:belongs-to,join:nvlink_logical_partition_id=id"`
 	NetworkVirtualizationType              *string                                 `bun:"network_virtualization_type"`
 	ControllerVpcID                        *uuid.UUID                              `bun:"controller_vpc_id,type:uuid"`
+	ActiveVni                              *int                                    `bun:"active_vni,type:integer"`
 	NetworkSecurityGroupID                 *string                                 `bun:"network_security_group_id"`
 	NetworkSecurityGroup                   *NetworkSecurityGroup                   `bun:"rel:belongs-to,join:network_security_group_id=id"`
 	NetworkSecurityGroupPropagationDetails *NetworkSecurityGroupPropagationDetails `bun:"network_security_group_propagation_details,type:jsonb"`
@@ -110,6 +111,7 @@ type Vpc struct {
 	Updated                                time.Time                               `bun:"updated,nullzero,notnull,default:current_timestamp"`
 	Deleted                                *time.Time                              `bun:"deleted,soft_delete"`
 	CreatedBy                              uuid.UUID                               `bun:"type:uuid,notnull"`
+	Vni                                    *int                                    `bun:"vni,type:integer"`
 }
 
 // VpcCreateInput input parameters for Create method
@@ -117,6 +119,7 @@ type VpcCreateInput struct {
 	Name                                   string
 	Description                            *string
 	Org                                    string
+	ID                                     *uuid.UUID
 	InfrastructureProviderID               uuid.UUID
 	TenantID                               uuid.UUID
 	SiteID                                 uuid.UUID
@@ -128,6 +131,7 @@ type VpcCreateInput struct {
 	Labels                                 map[string]string
 	Status                                 string
 	CreatedBy                              User
+	Vni                                    *int
 }
 
 // VpcUpdateInput input parameters for Update method
@@ -137,12 +141,14 @@ type VpcUpdateInput struct {
 	Description                            *string
 	NetworkVirtualizationType              *string
 	ControllerVpcID                        *uuid.UUID
+	ActiveVni                              *int
 	NVLinkLogicalPartitionID               *uuid.UUID
 	NetworkSecurityGroupID                 *string
 	NetworkSecurityGroupPropagationDetails *NetworkSecurityGroupPropagationDetails
 	Labels                                 map[string]string
 	Status                                 *string
 	IsMissingOnSite                        *bool
+	Vni                                    *int
 }
 
 // VpcClearInput input parameters for Clear method
@@ -466,8 +472,13 @@ func (vsd VpcSQLDAO) Create(ctx context.Context, tx *db.Tx, input VpcCreateInput
 		vsd.tracerSpan.SetAttribute(vpcDAOSpan, "name", input.Name)
 	}
 
+	id := uuid.New()
+	if input.ID != nil {
+		id = *input.ID
+	}
+
 	v := &Vpc{
-		ID:                                     uuid.New(),
+		ID:                                     id,
 		Name:                                   input.Name,
 		Description:                            input.Description,
 		Org:                                    input.Org,
@@ -483,6 +494,7 @@ func (vsd VpcSQLDAO) Create(ctx context.Context, tx *db.Tx, input VpcCreateInput
 		Status:                                 input.Status,
 		IsMissingOnSite:                        false,
 		CreatedBy:                              input.CreatedBy.ID,
+		Vni:                                    input.Vni,
 	}
 
 	_, err := db.GetIDB(tx, vsd.dbSession).NewInsert().Model(v).Exec(ctx)
@@ -542,6 +554,18 @@ func (vsd VpcSQLDAO) Update(ctx context.Context, tx *db.Tx, input VpcUpdateInput
 		v.ControllerVpcID = input.ControllerVpcID
 		updatedFields = append(updatedFields, "controller_vpc_id")
 		vsd.tracerSpan.SetAttribute(vpcDAOSpan, "controller_vpc_id", input.ControllerVpcID.String())
+	}
+
+	if input.ActiveVni != nil {
+		v.ActiveVni = input.ActiveVni
+		updatedFields = append(updatedFields, "active_vni")
+		vsd.tracerSpan.SetAttribute(vpcDAOSpan, "active_vni", *input.ActiveVni)
+	}
+
+	if input.Vni != nil {
+		v.Vni = input.Vni
+		updatedFields = append(updatedFields, "vni")
+		vsd.tracerSpan.SetAttribute(vpcDAOSpan, "vni", *input.Vni)
 	}
 
 	if input.Labels != nil {
