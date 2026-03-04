@@ -134,7 +134,7 @@ func (osm OperatingSystemManager) Get(ctx context.Context, id string) (*Operatin
 }
 
 // GetOperatingSystems returns all Operating Systems
-func (osm OperatingSystemManager) GetOperatingSystems(ctx context.Context, paginationFilter *PaginationFilter) ([]OperatingSystem, *PaginationResponse, *ApiError) {
+func (osm OperatingSystemManager) GetOperatingSystems(ctx context.Context, paginationFilter *PaginationFilter) ([]OperatingSystem, *standard.PaginationResponse, *ApiError) {
 	ctx = WithLogger(ctx, osm.client.Logger)
 	ctx = context.WithValue(ctx, standard.ContextAccessToken, osm.client.Config.Token)
 
@@ -162,7 +162,7 @@ func (osm OperatingSystemManager) GetOperatingSystems(ctx context.Context, pagin
 		oss = append(oss, operatingSystemFromStandard(o))
 	}
 
-	paginationResponse, perr := GetPaginationResponse(ctx, resp)
+	paginationResponse, perr := standard.GetPaginationResponse(ctx, resp)
 	if perr != nil {
 		return nil, nil, &ApiError{
 			Code:    http.StatusInternalServerError,

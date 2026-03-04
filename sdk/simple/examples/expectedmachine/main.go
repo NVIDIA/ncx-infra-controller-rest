@@ -21,6 +21,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 
 	"github.com/rs/zerolog"
@@ -193,7 +194,7 @@ func main() {
 	fmt.Println("\nVerifying deletion...")
 	_, apiErr = client.GetExpectedMachine(ctx, expectedMachineID)
 	if apiErr != nil {
-		if apiErr.StatusCode == 404 {
+		if apiErr.Code == http.StatusNotFound {
 			fmt.Printf("ExpectedMachine with ID %s successfully deleted (no longer present)\n", updatedEMWithNewMAC.ID)
 		} else {
 			fmt.Printf("Error verifying ExpectedMachine deletion: %s\n", apiErr.Message)

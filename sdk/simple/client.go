@@ -34,29 +34,29 @@ type ClientInterface interface {
 
 	// Instance management interfaces
 	CreateInstance(ctx context.Context, request InstanceCreateRequest) (*standard.Instance, *ApiError)
-	GetInstances(ctx context.Context, instanceFilter *InstanceFilter, paginationFilter *PaginationFilter) ([]standard.Instance, *PaginationResponse, *ApiError)
+	GetInstances(ctx context.Context, instanceFilter *InstanceFilter, paginationFilter *PaginationFilter) ([]standard.Instance, *standard.PaginationResponse, *ApiError)
 	GetInstance(ctx context.Context, id string) (*standard.Instance, *ApiError)
 	UpdateInstance(ctx context.Context, id string, request InstanceUpdateRequest) (*standard.Instance, *ApiError)
 	DeleteInstance(ctx context.Context, id string) *ApiError
 
 	// IP Block Management interfaces
-	GetIpBlocks(ctx context.Context, paginationFilter *PaginationFilter) ([]IpBlock, *PaginationResponse, *ApiError)
+	GetIpBlocks(ctx context.Context, paginationFilter *PaginationFilter) ([]IpBlock, *standard.PaginationResponse, *ApiError)
 	GetIpBlock(ctx context.Context, id string) (*IpBlock, *ApiError)
 
 	// InfiniBand Partition management interfaces
 	CreateInfinibandPartition(ctx context.Context, request InfinibandPartitionCreateRequest) (*InfinibandPartition, *ApiError)
-	GetInfinibandPartitions(ctx context.Context, paginationFilter *PaginationFilter) ([]InfinibandPartition, *PaginationResponse, *ApiError)
+	GetInfinibandPartitions(ctx context.Context, paginationFilter *PaginationFilter) ([]InfinibandPartition, *standard.PaginationResponse, *ApiError)
 	GetInfinibandPartition(ctx context.Context, id string) (*InfinibandPartition, *ApiError)
 	UpdateInfinibandPartition(ctx context.Context, id string, request InfinibandPartitionUpdateRequest) (*InfinibandPartition, *ApiError)
 	DeleteInfinibandPartition(ctx context.Context, id string) *ApiError
 
 	// Machine management interfaces
-	GetMachines(ctx context.Context, paginationFilter *PaginationFilter) ([]Machine, *PaginationResponse, *ApiError)
+	GetMachines(ctx context.Context, paginationFilter *PaginationFilter) ([]Machine, *standard.PaginationResponse, *ApiError)
 	GetMachine(ctx context.Context, id string) (*Machine, *ApiError)
 
 	// Expected Machine management interfaces
 	CreateExpectedMachine(ctx context.Context, request ExpectedMachineCreateRequest) (*ExpectedMachine, *ApiError)
-	GetExpectedMachines(ctx context.Context, paginationFilter *PaginationFilter) ([]ExpectedMachine, *PaginationResponse, *ApiError)
+	GetExpectedMachines(ctx context.Context, paginationFilter *PaginationFilter) ([]ExpectedMachine, *standard.PaginationResponse, *ApiError)
 	GetExpectedMachine(ctx context.Context, id string) (*ExpectedMachine, *ApiError)
 	UpdateExpectedMachine(ctx context.Context, id string, request ExpectedMachineUpdateRequest) (*ExpectedMachine, *ApiError)
 	DeleteExpectedMachine(ctx context.Context, id string) *ApiError
@@ -65,21 +65,21 @@ type ClientInterface interface {
 
 	// Operating System management interfaces
 	CreateOperatingSystem(ctx context.Context, request OperatingSystemCreateRequest) (*OperatingSystem, *ApiError)
-	GetOperatingSystems(ctx context.Context, paginationFilter *PaginationFilter) ([]OperatingSystem, *PaginationResponse, *ApiError)
+	GetOperatingSystems(ctx context.Context, paginationFilter *PaginationFilter) ([]OperatingSystem, *standard.PaginationResponse, *ApiError)
 	GetOperatingSystem(ctx context.Context, id string) (*OperatingSystem, *ApiError)
 	UpdateOperatingSystem(ctx context.Context, id string, request OperatingSystemUpdateRequest) (*OperatingSystem, *ApiError)
 	DeleteOperatingSystem(ctx context.Context, id string) *ApiError
 
 	// NVLink Logical Partition management interfaces
 	CreateNVLinkLogicalPartition(ctx context.Context, request NVLinkLogicalPartitionCreateRequest) (*NVLinkLogicalPartition, *ApiError)
-	GetNVLinkLogicalPartitions(ctx context.Context, paginationFilter *PaginationFilter) ([]NVLinkLogicalPartition, *PaginationResponse, *ApiError)
+	GetNVLinkLogicalPartitions(ctx context.Context, paginationFilter *PaginationFilter) ([]NVLinkLogicalPartition, *standard.PaginationResponse, *ApiError)
 	GetNVLinkLogicalPartition(ctx context.Context, id string) (*NVLinkLogicalPartition, *ApiError)
 	UpdateNVLinkLogicalPartition(ctx context.Context, id string, request NVLinkLogicalPartitionUpdateRequest) (*NVLinkLogicalPartition, *ApiError)
 	DeleteNVLinkLogicalPartition(ctx context.Context, id string) *ApiError
 
 	// DPU Extension Service management interfaces
 	CreateDpuExtensionService(ctx context.Context, request DpuExtensionServiceCreateRequest) (*DpuExtensionService, *ApiError)
-	GetDpuExtensionServices(ctx context.Context, paginationFilter *PaginationFilter) ([]DpuExtensionService, *PaginationResponse, *ApiError)
+	GetDpuExtensionServices(ctx context.Context, paginationFilter *PaginationFilter) ([]DpuExtensionService, *standard.PaginationResponse, *ApiError)
 	GetDpuExtensionService(ctx context.Context, id string) (*DpuExtensionService, *ApiError)
 	UpdateDpuExtensionService(ctx context.Context, id string, request DpuExtensionServiceUpdateRequest) (*DpuExtensionService, *ApiError)
 	DeleteDpuExtensionService(ctx context.Context, id string) *ApiError
@@ -88,7 +88,7 @@ type ClientInterface interface {
 
 	// VPC management interfaces
 	CreateVpc(ctx context.Context, request VpcCreateRequest) (*Vpc, *ApiError)
-	GetVpcs(ctx context.Context, vpcFilter *VpcFilter, paginationFilter *PaginationFilter) ([]Vpc, *PaginationResponse, *ApiError)
+	GetVpcs(ctx context.Context, vpcFilter *VpcFilter, paginationFilter *PaginationFilter) ([]Vpc, *standard.PaginationResponse, *ApiError)
 	GetVpc(ctx context.Context, id string) (*Vpc, *ApiError)
 	UpdateVpc(ctx context.Context, id string, request VpcUpdateRequest) (*Vpc, *ApiError)
 	DeleteVpc(ctx context.Context, id string) *ApiError
@@ -152,6 +152,10 @@ func (c *Client) Authenticate(ctx context.Context) error {
 // UpdateToken updates the JWT token and re-authenticates
 func (c *Client) UpdateToken(ctx context.Context, token string) error {
 	ctx = WithLogger(ctx, c.Logger)
+
+	logger := LoggerFromContext(ctx)
+	logger.Info().Msgf("Updating JWT token for org: %s", c.Config.Org)
+
 	c.Config.Token = token
 	return c.Authenticate(ctx)
 }
@@ -220,7 +224,7 @@ func (c *Client) DeleteInstance(ctx context.Context, id string) *ApiError {
 
 	return NewInstanceManager(c).Delete(ctx, id)
 }
-func (c *Client) GetInstances(ctx context.Context, instanceFilter *InstanceFilter, paginationFilter *PaginationFilter) ([]standard.Instance, *PaginationResponse, *ApiError) {
+func (c *Client) GetInstances(ctx context.Context, instanceFilter *InstanceFilter, paginationFilter *PaginationFilter) ([]standard.Instance, *standard.PaginationResponse, *ApiError) {
 	ctx = WithLogger(ctx, c.Logger)
 	ctx = context.WithValue(ctx, standard.ContextAccessToken, c.Config.Token)
 
@@ -249,7 +253,7 @@ func (c *Client) UpdateInstance(ctx context.Context, id string, request Instance
 }
 
 // IpBlock
-func (c *Client) GetIpBlocks(ctx context.Context, paginationFilter *PaginationFilter) ([]IpBlock, *PaginationResponse, *ApiError) {
+func (c *Client) GetIpBlocks(ctx context.Context, paginationFilter *PaginationFilter) ([]IpBlock, *standard.PaginationResponse, *ApiError) {
 	ctx = WithLogger(ctx, c.Logger)
 	ctx = context.WithValue(ctx, standard.ContextAccessToken, c.Config.Token)
 
@@ -287,7 +291,7 @@ func (c *Client) UpdateInfinibandPartition(ctx context.Context, id string, reque
 
 	return NewInfinibandPartitionManager(c).Update(ctx, id, request)
 }
-func (c *Client) GetInfinibandPartitions(ctx context.Context, paginationFilter *PaginationFilter) ([]InfinibandPartition, *PaginationResponse, *ApiError) {
+func (c *Client) GetInfinibandPartitions(ctx context.Context, paginationFilter *PaginationFilter) ([]InfinibandPartition, *standard.PaginationResponse, *ApiError) {
 	ctx = WithLogger(ctx, c.Logger)
 	ctx = context.WithValue(ctx, standard.ContextAccessToken, c.Config.Token)
 
@@ -316,7 +320,7 @@ func (c *Client) DeleteInfinibandPartition(ctx context.Context, id string) *ApiE
 }
 
 // Machine
-func (c *Client) GetMachines(ctx context.Context, paginationFilter *PaginationFilter) ([]Machine, *PaginationResponse, *ApiError) {
+func (c *Client) GetMachines(ctx context.Context, paginationFilter *PaginationFilter) ([]Machine, *standard.PaginationResponse, *ApiError) {
 	ctx = WithLogger(ctx, c.Logger)
 	ctx = context.WithValue(ctx, standard.ContextAccessToken, c.Config.Token)
 
@@ -345,7 +349,7 @@ func (c *Client) CreateExpectedMachine(ctx context.Context, request ExpectedMach
 
 	return NewExpectedMachineManager(c).Create(ctx, request)
 }
-func (c *Client) GetExpectedMachines(ctx context.Context, paginationFilter *PaginationFilter) ([]ExpectedMachine, *PaginationResponse, *ApiError) {
+func (c *Client) GetExpectedMachines(ctx context.Context, paginationFilter *PaginationFilter) ([]ExpectedMachine, *standard.PaginationResponse, *ApiError) {
 	ctx = WithLogger(ctx, c.Logger)
 	ctx = context.WithValue(ctx, standard.ContextAccessToken, c.Config.Token)
 
@@ -410,7 +414,7 @@ func (c *Client) CreateOperatingSystem(ctx context.Context, request OperatingSys
 
 	return NewOperatingSystemManager(c).Create(ctx, request)
 }
-func (c *Client) GetOperatingSystems(ctx context.Context, paginationFilter *PaginationFilter) ([]OperatingSystem, *PaginationResponse, *ApiError) {
+func (c *Client) GetOperatingSystems(ctx context.Context, paginationFilter *PaginationFilter) ([]OperatingSystem, *standard.PaginationResponse, *ApiError) {
 	ctx = WithLogger(ctx, c.Logger)
 	ctx = context.WithValue(ctx, standard.ContextAccessToken, c.Config.Token)
 
@@ -495,7 +499,7 @@ func (c *Client) CreateNVLinkLogicalPartition(ctx context.Context, request NVLin
 
 	return NewNVLinkLogicalPartitionManager(c).Create(ctx, request)
 }
-func (c *Client) GetNVLinkLogicalPartitions(ctx context.Context, paginationFilter *PaginationFilter) ([]NVLinkLogicalPartition, *PaginationResponse, *ApiError) {
+func (c *Client) GetNVLinkLogicalPartitions(ctx context.Context, paginationFilter *PaginationFilter) ([]NVLinkLogicalPartition, *standard.PaginationResponse, *ApiError) {
 	ctx = WithLogger(ctx, c.Logger)
 	ctx = context.WithValue(ctx, standard.ContextAccessToken, c.Config.Token)
 
@@ -542,7 +546,7 @@ func (c *Client) CreateDpuExtensionService(ctx context.Context, request DpuExten
 
 	return NewDpuExtensionServiceManager(c).Create(ctx, request)
 }
-func (c *Client) GetDpuExtensionServices(ctx context.Context, paginationFilter *PaginationFilter) ([]DpuExtensionService, *PaginationResponse, *ApiError) {
+func (c *Client) GetDpuExtensionServices(ctx context.Context, paginationFilter *PaginationFilter) ([]DpuExtensionService, *standard.PaginationResponse, *ApiError) {
 	ctx = WithLogger(ctx, c.Logger)
 	ctx = context.WithValue(ctx, standard.ContextAccessToken, c.Config.Token)
 
@@ -607,7 +611,7 @@ func (c *Client) CreateVpc(ctx context.Context, request VpcCreateRequest) (*Vpc,
 
 	return NewVpcManager(c).CreateVpc(ctx, request)
 }
-func (c *Client) GetVpcs(ctx context.Context, vpcFilter *VpcFilter, paginationFilter *PaginationFilter) ([]Vpc, *PaginationResponse, *ApiError) {
+func (c *Client) GetVpcs(ctx context.Context, vpcFilter *VpcFilter, paginationFilter *PaginationFilter) ([]Vpc, *standard.PaginationResponse, *ApiError) {
 	ctx = WithLogger(ctx, c.Logger)
 	ctx = context.WithValue(ctx, standard.ContextAccessToken, c.Config.Token)
 

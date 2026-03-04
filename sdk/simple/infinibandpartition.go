@@ -117,7 +117,7 @@ func (ipm InfinibandPartitionManager) Get(ctx context.Context, id string) (*Infi
 }
 
 // GetInfinibandPartitions returns all InfiniBand Partitions
-func (ipm InfinibandPartitionManager) GetInfinibandPartitions(ctx context.Context, paginationFilter *PaginationFilter) ([]InfinibandPartition, *PaginationResponse, *ApiError) {
+func (ipm InfinibandPartitionManager) GetInfinibandPartitions(ctx context.Context, paginationFilter *PaginationFilter) ([]InfinibandPartition, *standard.PaginationResponse, *ApiError) {
 	ctx = WithLogger(ctx, ipm.client.Logger)
 	ctx = context.WithValue(ctx, standard.ContextAccessToken, ipm.client.Config.Token)
 
@@ -146,7 +146,7 @@ func (ipm InfinibandPartitionManager) GetInfinibandPartitions(ctx context.Contex
 		partitions = append(partitions, infinibandPartitionFromStandard(p))
 	}
 
-	paginationResponse, perr := GetPaginationResponse(ctx, resp)
+	paginationResponse, perr := standard.GetPaginationResponse(ctx, resp)
 	if perr != nil {
 		return nil, nil, &ApiError{
 			Code:    http.StatusInternalServerError,

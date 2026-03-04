@@ -138,7 +138,7 @@ func (dm DpuExtensionServiceManager) Get(ctx context.Context, id string) (*DpuEx
 }
 
 // GetDpuExtensionServices returns all DPU Extension Services
-func (dm DpuExtensionServiceManager) GetDpuExtensionServices(ctx context.Context, paginationFilter *PaginationFilter) ([]DpuExtensionService, *PaginationResponse, *ApiError) {
+func (dm DpuExtensionServiceManager) GetDpuExtensionServices(ctx context.Context, paginationFilter *PaginationFilter) ([]DpuExtensionService, *standard.PaginationResponse, *ApiError) {
 	ctx = WithLogger(ctx, dm.client.Logger)
 	ctx = context.WithValue(ctx, standard.ContextAccessToken, dm.client.Config.Token)
 
@@ -167,7 +167,7 @@ func (dm DpuExtensionServiceManager) GetDpuExtensionServices(ctx context.Context
 		services = append(services, dpuExtensionServiceFromStandard(s))
 	}
 
-	paginationResponse, perr := GetPaginationResponse(ctx, resp)
+	paginationResponse, perr := standard.GetPaginationResponse(ctx, resp)
 	if perr != nil {
 		return nil, nil, &ApiError{
 			Code:    http.StatusInternalServerError,

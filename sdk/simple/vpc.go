@@ -123,7 +123,7 @@ func (vm VpcManager) CreateVpc(ctx context.Context, request VpcCreateRequest) (*
 }
 
 // GetVpcs returns all VPCs
-func (vm VpcManager) GetVpcs(ctx context.Context, vpcFilter *VpcFilter, paginationFilter *PaginationFilter) ([]Vpc, *PaginationResponse, *ApiError) {
+func (vm VpcManager) GetVpcs(ctx context.Context, vpcFilter *VpcFilter, paginationFilter *PaginationFilter) ([]Vpc, *standard.PaginationResponse, *ApiError) {
 	ctx = WithLogger(ctx, vm.client.Logger)
 	ctx = context.WithValue(ctx, standard.ContextAccessToken, vm.client.Config.Token)
 
@@ -154,7 +154,7 @@ func (vm VpcManager) GetVpcs(ctx context.Context, vpcFilter *VpcFilter, paginati
 		vpcs = append(vpcs, vpcFromStandard(apiVpc))
 	}
 
-	paginationResponse, perr := GetPaginationResponse(ctx, resp)
+	paginationResponse, perr := standard.GetPaginationResponse(ctx, resp)
 	if perr != nil {
 		return nil, nil, &ApiError{
 			Code:    http.StatusInternalServerError,

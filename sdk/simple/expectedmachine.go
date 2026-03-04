@@ -179,7 +179,7 @@ func (emm ExpectedMachineManager) Get(ctx context.Context, id string) (*Expected
 }
 
 // GetExpectedMachines returns all Expected Machines
-func (emm ExpectedMachineManager) GetExpectedMachines(ctx context.Context, paginationFilter *PaginationFilter) ([]ExpectedMachine, *PaginationResponse, *ApiError) {
+func (emm ExpectedMachineManager) GetExpectedMachines(ctx context.Context, paginationFilter *PaginationFilter) ([]ExpectedMachine, *standard.PaginationResponse, *ApiError) {
 	ctx = WithLogger(ctx, emm.client.Logger)
 	ctx = context.WithValue(ctx, standard.ContextAccessToken, emm.client.Config.Token)
 
@@ -208,7 +208,7 @@ func (emm ExpectedMachineManager) GetExpectedMachines(ctx context.Context, pagin
 		ems = append(ems, expectedMachineFromStandard(em))
 	}
 
-	paginationResponse, perr := GetPaginationResponse(ctx, resp)
+	paginationResponse, perr := standard.GetPaginationResponse(ctx, resp)
 	if perr != nil {
 		return nil, nil, &ApiError{
 			Code:    http.StatusInternalServerError,

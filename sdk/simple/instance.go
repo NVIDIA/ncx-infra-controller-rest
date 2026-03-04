@@ -230,7 +230,7 @@ func (im InstanceManager) Get(ctx context.Context, id string) (*standard.Instanc
 }
 
 // GetInstances returns all Instances
-func (im InstanceManager) GetInstances(ctx context.Context, instanceFilter *InstanceFilter, paginationFilter *PaginationFilter) ([]standard.Instance, *PaginationResponse, *ApiError) {
+func (im InstanceManager) GetInstances(ctx context.Context, instanceFilter *InstanceFilter, paginationFilter *PaginationFilter) ([]standard.Instance, *standard.PaginationResponse, *ApiError) {
 	ctx = WithLogger(ctx, im.client.Logger)
 	ctx = context.WithValue(ctx, standard.ContextAccessToken, im.client.Config.Token)
 
@@ -262,7 +262,7 @@ func (im InstanceManager) GetInstances(ctx context.Context, instanceFilter *Inst
 		return nil, nil, apiErr
 	}
 
-	paginationResponse, perr := GetPaginationResponse(ctx, resp)
+	paginationResponse, perr := standard.GetPaginationResponse(ctx, resp)
 	if perr != nil {
 		return nil, nil, &ApiError{
 			Code:    http.StatusInternalServerError,

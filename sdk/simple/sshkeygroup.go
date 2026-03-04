@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"slices"
 	"sort"
+	"strings"
 	"time"
 
 	"golang.org/x/crypto/ssh"
@@ -37,11 +38,11 @@ func GetSSHKeyFingerprint(publicKey string) (*string, error) {
 		return nil, err
 	}
 	fp := ssh.FingerprintSHA256(parsedKey)
-	// Remove "SHA256:" prefix
-	if len(fp) > 7 {
-		fp = fp[7:]
+	trimmed := strings.TrimPrefix(fp, "SHA256:")
+	if trimmed == fp {
+		return nil, fmt.Errorf("unexpected SSH fingerprint format (missing \"SHA256:\" prefix): %s", fp)
 	}
-	return &fp, nil
+	return &trimmed, nil
 }
 
 // GetInstanceSshKeyGroupName returns the name of the SSH Key Group for an Instance

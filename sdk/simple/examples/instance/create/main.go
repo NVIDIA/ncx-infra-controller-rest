@@ -77,7 +77,7 @@ func main() {
 		IpxeScript: "chain ${base-url}/internal/x86_64/qcow-imager.efi loglevel=7 console=ttyS0,115200 console=tty0 console=ttyS1,115200 pci=realloc=off image_distro_name=ubuntu image_distro_version=22.04 ds=nocloud-net;s=${cloudinit-url}\nboot",
 		UserData:   &userData,
 		SSHKeys: []string{
-			"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG97ZbT39B/6DhvY7Wsw1+pxK7L4MFQ37peSZx+jXPuL user3@test.com",
+			"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExampleFakeKeyForDocumentationPurposesOnly user@example.com",
 		},
 		Labels: map[string]string{
 			"test-key": "test-value",

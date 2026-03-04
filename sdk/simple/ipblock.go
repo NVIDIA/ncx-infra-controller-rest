@@ -75,7 +75,7 @@ func ipBlockFromStandard(api standard.IpBlock) IpBlock {
 }
 
 // GetIpBlocks returns all IP blocks
-func (im IpBlockManager) GetIpBlocks(ctx context.Context, paginationFilter *PaginationFilter) ([]IpBlock, *PaginationResponse, *ApiError) {
+func (im IpBlockManager) GetIpBlocks(ctx context.Context, paginationFilter *PaginationFilter) ([]IpBlock, *standard.PaginationResponse, *ApiError) {
 	ctx = WithLogger(ctx, im.client.Logger)
 	ctx = context.WithValue(ctx, standard.ContextAccessToken, im.client.Config.Token)
 
@@ -106,7 +106,7 @@ func (im IpBlockManager) GetIpBlocks(ctx context.Context, paginationFilter *Pagi
 		blocks = append(blocks, ipBlockFromStandard(b))
 	}
 
-	paginationResponse, perr := GetPaginationResponse(ctx, resp)
+	paginationResponse, perr := standard.GetPaginationResponse(ctx, resp)
 	if perr != nil {
 		return nil, nil, &ApiError{
 			Code:    http.StatusInternalServerError,

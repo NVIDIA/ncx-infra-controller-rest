@@ -166,7 +166,7 @@ func machineFromStandard(api standard.Machine) Machine {
 }
 
 // GetMachines returns all Machines
-func (mm MachineManager) GetMachines(ctx context.Context, paginationFilter *PaginationFilter) ([]Machine, *PaginationResponse, *ApiError) {
+func (mm MachineManager) GetMachines(ctx context.Context, paginationFilter *PaginationFilter) ([]Machine, *standard.PaginationResponse, *ApiError) {
 	ctx = WithLogger(ctx, mm.client.Logger)
 	ctx = context.WithValue(ctx, standard.ContextAccessToken, mm.client.Config.Token)
 
@@ -195,7 +195,7 @@ func (mm MachineManager) GetMachines(ctx context.Context, paginationFilter *Pagi
 		machines = append(machines, machineFromStandard(apiMachine))
 	}
 
-	paginationResponse, perr := GetPaginationResponse(ctx, resp)
+	paginationResponse, perr := standard.GetPaginationResponse(ctx, resp)
 	if perr != nil {
 		return nil, nil, &ApiError{
 			Code:    http.StatusInternalServerError,

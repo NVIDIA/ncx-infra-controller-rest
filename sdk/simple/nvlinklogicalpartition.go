@@ -113,7 +113,7 @@ func (nlm NVLinkLogicalPartitionManager) Get(ctx context.Context, id string) (*N
 }
 
 // GetNVLinkLogicalPartitions returns all NVLink Logical Partitions
-func (nlm NVLinkLogicalPartitionManager) GetNVLinkLogicalPartitions(ctx context.Context, paginationFilter *PaginationFilter) ([]NVLinkLogicalPartition, *PaginationResponse, *ApiError) {
+func (nlm NVLinkLogicalPartitionManager) GetNVLinkLogicalPartitions(ctx context.Context, paginationFilter *PaginationFilter) ([]NVLinkLogicalPartition, *standard.PaginationResponse, *ApiError) {
 	ctx = WithLogger(ctx, nlm.client.Logger)
 	ctx = context.WithValue(ctx, standard.ContextAccessToken, nlm.client.Config.Token)
 
@@ -142,7 +142,7 @@ func (nlm NVLinkLogicalPartitionManager) GetNVLinkLogicalPartitions(ctx context.
 		partitions = append(partitions, nvLinkLogicalPartitionFromStandard(p))
 	}
 
-	paginationResponse, perr := GetPaginationResponse(ctx, resp)
+	paginationResponse, perr := standard.GetPaginationResponse(ctx, resp)
 	if perr != nil {
 		return nil, nil, &ApiError{
 			Code:    http.StatusInternalServerError,

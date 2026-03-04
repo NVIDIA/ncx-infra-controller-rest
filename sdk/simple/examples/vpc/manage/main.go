@@ -20,6 +20,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 
 	"github.com/nvidia/bare-metal-manager-rest/sdk/simple"
@@ -110,7 +111,7 @@ func main() {
 	fmt.Println("\n=== Verifying VPC deletion ===")
 	_, apiErr = client.GetVpc(ctx, vpc.ID)
 	if apiErr != nil {
-		if apiErr.Code == 404 {
+		if apiErr.Code == http.StatusNotFound {
 			fmt.Println("VPC successfully deleted (404 returned)")
 		} else {
 			fmt.Printf("Unexpected error when verifying deletion: %s\n", apiErr.Message)
