@@ -47,12 +47,12 @@ replace github.com/nvidia/bare-metal-manager-rest => /path/to/bare-metal-manager
 
 ### Local development (kind)
 
-After running `make kind-reset` from the repo root, the API is available at `http://localhost:8388` and Keycloak at `http://localhost:8080`. Use the `test-org` organization with a token from Keycloak.
+After running `make kind-reset` from the repo root, the API is available at `http://localhost:8388` and Keycloak at `http://localhost:8082`. Use the `test-org` organization with a token from Keycloak.
 
 **1. Get a token** (requires `jq`; run in a separate terminal or before your program):
 
 ```bash
-export CARBIDE_TOKEN=$(curl -s -X POST "http://localhost:8080/realms/carbide-dev/protocol/openid-connect/token" \
+export CARBIDE_TOKEN=$(curl -s -X POST "http://localhost:8082/realms/carbide-dev/protocol/openid-connect/token" \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "client_id=carbide-api" \
   -d "client_secret=carbide-local-secret" \
