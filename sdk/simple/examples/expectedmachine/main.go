@@ -193,7 +193,12 @@ func main() {
 	fmt.Println("\nVerifying deletion...")
 	_, apiErr = client.GetExpectedMachine(ctx, expectedMachineID)
 	if apiErr != nil {
-		fmt.Printf("ExpectedMachine with ID %s successfully deleted (no longer present)\n", updatedEMWithNewMAC.ID)
+		if apiErr.StatusCode == 404 {
+			fmt.Printf("ExpectedMachine with ID %s successfully deleted (no longer present)\n", updatedEMWithNewMAC.ID)
+		} else {
+			fmt.Printf("Error verifying ExpectedMachine deletion: %s\n", apiErr.Message)
+			os.Exit(1)
+		}
 	} else {
 		fmt.Println("Warning: ExpectedMachine still exists after deletion")
 	}
