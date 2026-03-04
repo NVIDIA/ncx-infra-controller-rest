@@ -32,8 +32,8 @@ certificate:
   renewBefore: 360h
   commonName: carbide-rest-site-manager
   subject:
-    organizations:
-      - Nvidia
+    # -- List of organizations for the certificate subject
+    organizations: []
   privateKey:
     algorithm: RSA
     encoding: PKCS1

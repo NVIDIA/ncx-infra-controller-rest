@@ -1,3 +1,4 @@
+{{- include "carbide-rest-api.validateAuth" . -}}
 apiVersion: v1
 kind: ConfigMap
 metadata:

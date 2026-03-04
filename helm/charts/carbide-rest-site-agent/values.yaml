@@ -45,8 +45,8 @@ certificate:
   duration: 720h
   renewBefore: 360h
   subject:
-    organizations:
-      - Nvidia
+    # -- List of organizations for the certificate subject
+    organizations: []
   privateKey:
     algorithm: ECDSA
     size: 384

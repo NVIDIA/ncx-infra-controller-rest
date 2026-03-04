@@ -35,9 +35,11 @@ spec:
             - name: config
               mountPath: /app/config.yaml
               subPath: config.yaml
+            {{- if .Values.config.keycloak.enabled }}
             - name: keycloak-secret
               mountPath: /var/secrets/keycloak
               readOnly: true
+            {{- end }}
             - name: temporal-encryption-key
               mountPath: /var/secrets/temporal
               readOnly: true
@@ -62,12 +64,14 @@ spec:
         - name: config
           configMap:
             name: {{ include "carbide-rest-api.name" . }}-config
+        {{- if .Values.config.keycloak.enabled }}
         - name: keycloak-secret
           secret:
             secretName: {{ .Values.secrets.keycloakClientSecret }}
             items:
               - key: keycloak-client-secret
                 path: client-secret
+        {{- end }}
         - name: temporal-encryption-key
           secret:
             secretName: {{ .Values.secrets.temporalEncryptionKey }}

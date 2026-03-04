@@ -27,3 +27,12 @@ app.kubernetes.io/component: api
 {{- define "carbide-rest-api.image" -}}
 {{ .Values.global.image.repository }}/{{ .Values.image.name }}:{{ .Values.global.image.tag }}
 {{- end }}
+
+{{- define "carbide-rest-api.validateAuth" -}}
+{{- if and (not .Values.config.keycloak.enabled) (not .Values.config.issuers) -}}
+{{- fail "Either keycloak must be enabled or at least one JWT issuer must be configured in config.issuers" -}}
+{{- end -}}
+{{- if and .Values.config.keycloak.enabled .Values.config.issuers -}}
+{{- fail "keycloak and issuers are mutually exclusive — enable only one" -}}
+{{- end -}}
+{{- end -}}

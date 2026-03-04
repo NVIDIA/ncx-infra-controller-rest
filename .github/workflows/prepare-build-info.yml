@@ -52,7 +52,7 @@ on:
         description: "Whether a push request was made using commit message"
         value: ${{ jobs.prepare.outputs.push_requested }}
       helm_version:
-        description: "Helm chart version (SemVer with commit SHA suffix)"
+        description: "Helm chart version (from Chart.yaml)"
         value: ${{ jobs.prepare.outputs.helm_version }}
 
 jobs:
@@ -140,8 +140,8 @@ jobs:
           echo "release_tag=$RELEASE_TAG" >> $GITHUB_OUTPUT
           echo "push_requested=$PUSH_REQUESTED" >> $GITHUB_OUTPUT
 
-          # Helm chart version: semantic version + commit SHA suffix
-          HELM_VERSION="${SEMANTIC_VERSION}+${SHORT_SHA}"
+          # Helm chart version: read from Chart.yaml (umbrella chart as source of truth)
+          HELM_VERSION=$(grep '^version:' helm/charts/carbide-rest/Chart.yaml | awk '{print $2}')
           echo "helm_version=$HELM_VERSION" >> $GITHUB_OUTPUT
 
           # Print for logs

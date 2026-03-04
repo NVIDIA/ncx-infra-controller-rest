@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: cloud-worker
+  name: carbide-rest-cloud-worker
   namespace: {{ include "carbide-rest-workflow.namespace" . }}
   labels:
     {{- include "carbide-rest-workflow.labels" . | nindent 4 }}
@@ -10,7 +10,7 @@ spec:
   replicas: {{ .Values.cloudWorker.replicaCount }}
   selector:
     matchLabels:
-      app: cloud-worker
+      app: carbide-rest-cloud-worker
       app.kubernetes.io/name: carbide-rest-workflow
       app.kubernetes.io/component: cloud-worker
   strategy:
@@ -21,7 +21,7 @@ spec:
   template:
     metadata:
       labels:
-        app: cloud-worker
+        app: carbide-rest-cloud-worker
         app.kubernetes.io/name: carbide-rest-workflow
         app.kubernetes.io/component: cloud-worker
     spec:
@@ -30,7 +30,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       containers:
-        - name: cloud-worker
+        - name: carbide-rest-cloud-worker
           image: "{{ include "carbide-rest-workflow.image" . }}"
           imagePullPolicy: {{ .Values.global.image.pullPolicy }}
           ports:

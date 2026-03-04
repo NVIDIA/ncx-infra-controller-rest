@@ -7,7 +7,7 @@ Helm charts for deploying the Carbide REST API platform services.
 | Chart | Path | Description |
 |-------|------|-------------|
 | `carbide-rest` | `charts/carbide-rest/` | Umbrella chart (api + workflow + site-manager + db) |
-| `carbide-rest-site-agent` | `charts/carbide-rest-site-agent/` | Elektra site agent (deployed independently per-site) |
+| `carbide-rest-site-agent` | `charts/carbide-rest-site-agent/` | Site agent (deployed independently per-site) |
 
 ### Umbrella Sub-Charts
 
@@ -24,11 +24,67 @@ The following must be running before installing charts:
 
 - **PostgreSQL** database
 - **Temporal** server with `cloud` and `site` namespaces
-- **Keycloak** authentication server
 - **cert-manager** with ClusterIssuer `carbide-rest-ca-issuer`
-- **Secrets**: `db-creds`, `keycloak-client-secret`, `temporal-encryption-key`, `temporal-client-cloud-certs`
+- **Secrets**: `db-creds`, `temporal-encryption-key`, `temporal-client-cloud-certs`
+- **Keycloak** (optional) — only if using Keycloak for authentication; also requires `keycloak-client-secret`
 
 > The Site CRD (`sites.forge.nvidia.io`) is bundled in `carbide-rest-site-manager/crds/` and installed automatically by Helm.
+
+## Authentication
+
+The API requires exactly **one** authentication method. Keycloak and JWT issuers are **mutually exclusive**.
+
+### Option A: JWT Issuers (any OpenID Connect provider)
+
+```bash
+helm upgrade --install carbide-rest charts/carbide-rest/ \
+  --namespace $NS --create-namespace \
+  --set global.image.repository=$REPO \
+  --set global.image.tag=$TAG \
+  -f my-auth-values.yaml
+```
+
+Where `my-auth-values.yaml` contains:
+
+```yaml
+carbide-rest-api:
+  config:
+    issuers:
+      - name: my-idp
+        origin: custom
+        jwks: https://my-idp.example.com/.well-known/jwks.json
+        issuer: "my-idp.example.com"
+```
+
+See [auth documentation](../auth/README.md) for full issuer configuration options.
+
+### Option B: Keycloak
+
+```bash
+helm upgrade --install carbide-rest charts/carbide-rest/ \
+  --namespace $NS --create-namespace \
+  --set global.image.repository=$REPO \
+  --set global.image.tag=$TAG \
+  -f my-keycloak-values.yaml
+```
+
+Where `my-keycloak-values.yaml` contains:
+
+```yaml
+carbide-rest-api:
+  config:
+    keycloak:
+      enabled: true
+      baseURL: http://keycloak:8082
+      externalBaseURL: https://keycloak.example.com
+      realm: my-realm
+      clientID: my-client
+      serviceAccount: true
+```
+
+This also requires a `keycloak-client-secret` Kubernetes Secret in the target namespace.
+
+> **Note:** If neither method is configured, `helm install` will fail with a validation error.
 
 ## Install
 
@@ -42,7 +98,8 @@ NS=carbide-rest
 helm upgrade --install carbide-rest charts/carbide-rest/ \
   --namespace $NS --create-namespace \
   --set global.image.repository=$REPO \
-  --set global.image.tag=$TAG
+  --set global.image.tag=$TAG \
+  -f my-auth-values.yaml
 ```
 
 ### Site Agent (deployed separately per-site)

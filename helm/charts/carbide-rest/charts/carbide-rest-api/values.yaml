@@ -24,9 +24,10 @@ resources:
     cpu: "500m"
 
 secrets:
-  keycloakClientSecret: keycloak-client-secret
   temporalEncryptionKey: temporal-encryption-key
   temporalClientCerts: temporal-client-cloud-certs
+  # -- Only required when keycloak is enabled
+  keycloakClientSecret: keycloak-client-secret
 
 config:
   env:
@@ -68,14 +69,24 @@ config:
   tracing:
     enabled: false
     serviceName: carbide-rest-api
+  # -- JWT issuers for authentication (mutually exclusive with keycloak)
+  # When keycloak is disabled, at least one issuer must be configured.
+  # Example:
+  #   issuers:
+  #     - name: my-idp
+  #       origin: custom
+  #       jwks: https://my-idp.example.com/.well-known/jwks.json
+  #       issuer: "my-idp.example.com"
+  issuers: []
+  # -- Keycloak authentication (mutually exclusive with issuers)
   keycloak:
-    enabled: true
-    baseURL: http://keycloak:8082
-    externalBaseURL: http://localhost:8082
-    realm: carbide-dev
-    clientID: carbide-api
+    enabled: false
+    baseURL: ""
+    externalBaseURL: ""
+    realm: ""
+    clientID: ""
     clientSecretPath: /var/secrets/keycloak/client-secret
-    serviceAccount: true
+    serviceAccount: false
   rateLimiter:
     enabled: false
     rate: 10.0

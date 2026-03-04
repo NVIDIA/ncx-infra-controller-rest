@@ -10,9 +10,11 @@ spec:
   secretName: {{ .Values.certificate.secretName }}
   duration: {{ .Values.certificate.duration }}
   renewBefore: {{ .Values.certificate.renewBefore }}
+  {{- if .Values.certificate.subject.organizations }}
   subject:
     organizations:
       {{- toYaml .Values.certificate.subject.organizations | nindent 6 }}
+  {{- end }}
   commonName: {{ .Values.certificate.commonName }}
   isCA: false
   privateKey:
