@@ -218,10 +218,10 @@ func TestVpcPrefixHandler_Create(t *testing.T) {
 	okBodyFG, err := json.Marshal(model.APIVpcPrefixCreateRequest{Name: "okFG", VpcID: vpc1.ID.String(), IPBlockID: cdb.GetStrPtr(ipbFG.ID.String()), PrefixLength: 16})
 	assert.Nil(t, err)
 
-	okBodySlash30, err := json.Marshal(model.APIVpcPrefixCreateRequest{Name: "ok31", VpcID: vpc1.ID.String(), IPBlockID: cdb.GetStrPtr(ipb1.ID.String()), PrefixLength: 30})
+	okBodySlash31, err := json.Marshal(model.APIVpcPrefixCreateRequest{Name: "ok31", VpcID: vpc1.ID.String(), IPBlockID: cdb.GetStrPtr(ipb1.ID.String()), PrefixLength: 31})
 	assert.Nil(t, err)
 
-	errBodySlash31, err := json.Marshal(model.APIVpcPrefixCreateRequest{Name: "err32", VpcID: vpc1.ID.String(), IPBlockID: cdb.GetStrPtr(ipb1.ID.String()), PrefixLength: 31})
+	errBodySlash32, err := json.Marshal(model.APIVpcPrefixCreateRequest{Name: "err32", VpcID: vpc1.ID.String(), IPBlockID: cdb.GetStrPtr(ipb1.ID.String()), PrefixLength: 32})
 	assert.Nil(t, err)
 
 	okBodyNameClash, err := json.Marshal(model.APIVpcPrefixCreateRequest{Name: "ok1", VpcID: vpc2.ID.String(), IPBlockID: cdb.GetStrPtr(ipb3.ID.String()), PrefixLength: 24})
@@ -407,16 +407,16 @@ func TestVpcPrefixHandler_Create(t *testing.T) {
 		{
 			name:           "success case with /31",
 			reqOrgName:     tnOrg1,
-			reqBody:        string(okBodySlash30),
+			reqBody:        string(okBodySlash31),
 			user:           tnu,
 			expectedErr:    false,
 			expectedStatus: http.StatusCreated,
-			expectedPrefix: "192.168.1.0/30",
+			expectedPrefix: "192.168.1.0/31",
 		},
 		{
 			name:           "error case with /32",
 			reqOrgName:     tnOrg1,
-			reqBody:        string(errBodySlash31),
+			reqBody:        string(errBodySlash32),
 			user:           tnu,
 			expectedErr:    true,
 			expectedStatus: http.StatusBadRequest,

@@ -29,10 +29,10 @@ import (
 )
 
 func TestAPIVpcPrefixCreateRequest_Validate(t *testing.T) {
-	prefix7 := 7
+	prefix7 := VpcPrefixBlockSizeMin - 1
 	prefix24 := 24
 	prefix32 := 32
-	prefix31 := 31
+	prefix31 := VpcPrefixBlockSizeMax + 1
 	tests := []struct {
 		desc      string
 		obj       APIVpcPrefixCreateRequest

@@ -27,6 +27,7 @@ type VpcPrefixCreateRequest struct {
 	// ID of the VPC
 	VpcId string `json:"vpcId"`
 	IpBlockId *string `json:"ipBlockId,omitempty"`
+	// Prefix length for the VPC Prefix. Valid range is 8 to 31, and max usable value depends on prefix length of parent IP Block.
 	PrefixLength int32 `json:"prefixLength"`
 }
 

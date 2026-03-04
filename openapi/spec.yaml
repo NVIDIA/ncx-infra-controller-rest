@@ -11929,8 +11929,10 @@ components:
           description: The network prefix including prefix length in CIDR notation
         prefixLength:
           type: integer
+          minimum: 8
+          maximum: 31
           example: 24
-          description: Length of the prefix. Max value depends on prefix length of parent IP Block.
+          description: Length of the prefix. Valid range is 8 to 31, and max usable value depends on prefix length of parent IP Block.
         status:
           $ref: '#/components/schemas/VpcPrefixStatus'
           readOnly: true
@@ -11983,6 +11985,9 @@ components:
           format: uuid
         prefixLength:
           type: integer
+          minimum: 8
+          maximum: 31
+          description: Prefix length for the VPC Prefix. Valid range is 8 to 31, and max usable value depends on prefix length of parent IP Block.
       required:
         - name
         - vpcId

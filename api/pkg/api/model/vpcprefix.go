@@ -32,11 +32,11 @@ const (
 	// VpcPrefixBlockSizeMin is the minimum value of the VpcPrefixSize field
 	VpcPrefixBlockSizeMin = 8
 	// VpcPrefixBlockSizeMax is the maximum value of the VpcPrefixSize field
-	VpcPrefixBlockSizeMax = 30
+	VpcPrefixBlockSizeMax = 31
 
 	validationErrorIPBlockIDRequired     = "IPBlockID is required in request"
 	validationErrorVpcPrefixBlockSizeMin = "prefixLength must be at least 8"
-	validationErrorVpcPrefixBlockSizeMax = "prefixLength must be at most 30"
+	validationErrorVpcPrefixBlockSizeMax = "prefixLength must be at most 31"
 )
 
 // APIVpcPrefixCreateRequest is the data structure to capture user request to create a new VpcPrefix
