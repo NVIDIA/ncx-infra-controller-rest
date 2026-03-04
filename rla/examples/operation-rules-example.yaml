@@ -18,13 +18,13 @@
 # ⚠️  This file is REFERENCE DOCUMENTATION ONLY - not loaded automatically at runtime.
 #
 # Initial Setup (run once per environment):
-#   rla rule create --from-yaml docs/operation-rules-example.yaml
+#   rla rule create --from-yaml examples/operation-rules-example.yaml
 #
 # Update existing rules (skip existing by default):
-#   rla rule create --from-yaml docs/operation-rules-example.yaml
+#   rla rule create --from-yaml examples/operation-rules-example.yaml
 #
 # Update existing rules (overwrite mode):
-#   rla rule create --from-yaml docs/operation-rules-example.yaml --overwrite
+#   rla rule create --from-yaml examples/operation-rules-example.yaml --overwrite
 #
 # After setup, manage rules via API:
 #   rla rule create --name "..." --operation-type power_control --operation power_on --rule-file steps.json
@@ -32,7 +32,7 @@
 #   rla rule associate --rack-id <rack> --rule-id <rule>
 #
 # Validate before creating (dry-run):
-#   rla rule create --from-yaml docs/operation-rules-example.yaml --dry-run
+#   rla rule create --from-yaml examples/operation-rules-example.yaml --dry-run
 #
 # ═══════════════════════════════════════════════════════════════════════════════
 

@@ -142,4 +142,4 @@ Power control and firmware update timing (delays, poll intervals, timeouts) are
 configured **per-rule** via action parameters in operation rules, not here.
 
 See `CLAUDE.md` (Action-Based Operation Rules section) and
-`docs/operation-rules-example.yaml` for examples.
+`examples/operation-rules-example.yaml` for examples.

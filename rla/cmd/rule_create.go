@@ -46,13 +46,13 @@ Single rule mode (create one rule):
     --is-default
 
 Batch mode (create multiple rules from YAML):
-  rla rule create --from-yaml docs/operation-rules-example.yaml
+  rla rule create --from-yaml examples/operation-rules-example.yaml
 
 Batch mode with dry-run (validate without creating):
-  rla rule create --from-yaml docs/operation-rules-example.yaml --dry-run
+  rla rule create --from-yaml examples/operation-rules-example.yaml --dry-run
 
 Batch mode with overwrite (replace existing rules):
-  rla rule create --from-yaml docs/operation-rules-example.yaml --overwrite
+  rla rule create --from-yaml examples/operation-rules-example.yaml --overwrite
 
 The --dry-run flag validates rules without creating them (preview mode).
 The --overwrite flag will replace existing rules with the same operation_type and operation.`,
