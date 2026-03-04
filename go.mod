@@ -91,6 +91,7 @@ require (
 	go.uber.org/atomic v1.11.0
 	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba
 	golang.org/x/crypto v0.47.0
+	golang.org/x/mod v0.31.0
 	golang.org/x/net v0.49.0
 	golang.org/x/sync v0.19.0
 	golang.org/x/term v0.39.0
