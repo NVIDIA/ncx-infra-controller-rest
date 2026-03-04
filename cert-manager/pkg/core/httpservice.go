@@ -47,14 +47,14 @@ import (
 //
 // - Reasonable defaults
 //
-// - Helper methods for adding common routes (/healthz, /version,
-//   /metrics, /admin ...).
+//   - Helper methods for adding common routes (/healthz, /version,
+//     /metrics, /admin ...).
 //
-// - Handle both tcp addresses (e.g., :8000) and unix socket addresses
-//   (e.g., unix:///tmp/test.sock)
+//   - Handle both tcp addresses (e.g., :8000) and unix socket addresses
+//     (e.g., unix:///tmp/test.sock)
 //
-// - A non-blocking Start(ctx) method handles grace shutdown when
-//   receiving ctx.Done().
+//   - A non-blocking Start(ctx) method handles grace shutdown when
+//     receiving ctx.Done().
 type HTTPService struct {
 	*mux.Router
 
@@ -355,19 +355,18 @@ func WithTelemetry(serverName string) HTTPMiddlewareOption {
 
 // NewHTTPMiddleware builds a http middleware that:
 //
-// - Adds contexted request logger with {method,path,ip} into
-//   request.Context
+//   - Adds contexted request logger with {method,path,ip} into
+//     request.Context
 //
-// - Collects <latencyMetricsName>_http_duration_seconds metrics with
-//   {path,method} dimensions, if latencyMetricsName is specified
+//   - Collects <latencyMetricsName>_http_duration_seconds metrics with
+//     {path,method} dimensions, if latencyMetricsName is specified
 //
 // - Wraps handler with http.TimeoutHandler with `handlerTimeout`.
 //
 // - Wraps request.Body with MaxBytesReader with `requestBodyLimit`.
 //
-// - Instruments OpenTelemetry by adding a span to the request context
-//   that tracks the response and its return codes
-//
+//   - Instruments OpenTelemetry by adding a span to the request context
+//     that tracks the response and its return codes
 func NewHTTPMiddleware(ctx context.Context, opts ...HTTPMiddlewareOption) []mux.MiddlewareFunc {
 	m := &httpMiddleware{
 		handlerTimeout:   5 * time.Second,

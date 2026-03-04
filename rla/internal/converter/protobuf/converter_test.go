@@ -25,13 +25,13 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	dbquery "github.com/nvidia/bare-metal-manager-rest/rla/internal/db/query"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/bmc"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/component"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/rack"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/credential"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/deviceinfo"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/location"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/bmc"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/component"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/rack"
 	pb "github.com/nvidia/bare-metal-manager-rest/rla/pkg/proto/v1"
 )
 

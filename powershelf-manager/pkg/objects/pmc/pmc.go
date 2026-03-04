@@ -18,9 +18,9 @@ package pmc
 
 import (
 	"fmt"
-	"net"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/credential"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/vendor"
+	"net"
 	"regexp"
 	"strings"
 )

@@ -23,8 +23,8 @@ import (
 
 // TemporalConfig holds configuration for Temporal communication
 type MetricsConfig struct {
-	Enabled       bool
-	Port          int
+	Enabled bool
+	Port    int
 }
 
 // GetListenAddr returns the local address for listen socket.
@@ -35,8 +35,7 @@ func (mcfg *MetricsConfig) GetListenAddr() string {
 // NewMetricsConfig initializes and returns a configuration object for managing Metrics
 func NewMetricsConfig(enabled bool, port int) *MetricsConfig {
 	return &MetricsConfig{
-		Enabled:       enabled,
-		Port:          port,
+		Enabled: enabled,
+		Port:    port,
 	}
 }
-

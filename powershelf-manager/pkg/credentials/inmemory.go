@@ -19,8 +19,8 @@ package credentials
 import (
 	"context"
 	"errors"
-	"net"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/credential"
+	"net"
 	"sync"
 
 	log "github.com/sirupsen/logrus"

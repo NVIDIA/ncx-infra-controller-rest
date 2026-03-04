@@ -20,7 +20,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"net"
 	svc "github.com/nvidia/bare-metal-manager-rest/powershelf-manager/internal/service"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/credential"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/secretstring"
@@ -30,6 +29,7 @@ import (
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/objects/pmc"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/objects/powershelf"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/powershelfmanager"
+	"net"
 	"strings"
 
 	log "github.com/sirupsen/logrus"

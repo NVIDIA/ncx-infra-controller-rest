@@ -27,8 +27,8 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/term"
 	cli "github.com/urfave/cli/v2"
+	"golang.org/x/term"
 )
 
 // TokenResponse is the OAuth2 token endpoint response.
@@ -77,10 +77,10 @@ func LoginCommand() *cli.Command {
 				apiKey = cfg.Auth.APIKey.Key
 			}
 			if apiKey != "" {
-			authnURL := c.String("authn-url")
-			if authnURL == "" && cfg.Auth.APIKey != nil && cfg.Auth.APIKey.AuthnURL != "" {
-				authnURL = cfg.Auth.APIKey.AuthnURL
-			}
+				authnURL := c.String("authn-url")
+				if authnURL == "" && cfg.Auth.APIKey != nil && cfg.Auth.APIKey.AuthnURL != "" {
+					authnURL = cfg.Auth.APIKey.AuthnURL
+				}
 				return loginWithAPIKey(cfg, authnURL, apiKey)
 			}
 			return loginWithOIDCCmd(c, cfg)

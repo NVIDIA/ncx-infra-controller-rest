@@ -23,10 +23,10 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/rack"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/operation"
 	taskcommon "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/common"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operationrules"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/rack"
 )
 
 // Task defines the details of a task. It includes:

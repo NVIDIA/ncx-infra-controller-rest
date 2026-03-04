@@ -26,7 +26,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/rack"
 	inventorystore "github.com/nvidia/bare-metal-manager-rest/rla/internal/inventory/store"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/operation"
 	taskcommon "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/common"
@@ -36,6 +35,7 @@ import (
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operations"
 	taskstore "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/store"
 	taskdef "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/task"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/rack"
 )
 
 // Config holds the configuration for the task manager.

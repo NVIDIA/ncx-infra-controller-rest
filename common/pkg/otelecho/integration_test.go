@@ -96,10 +96,10 @@ func TestOriginalBehaviorMatch(t *testing.T) {
 	otel.SetTextMapPropagator(propagation.TraceContext{})
 
 	tests := []struct {
-		name           string
-		setupRequest   func() *http.Request
+		name            string
+		setupRequest    func() *http.Request
 		expectedTraceID string
-		expectHeader   bool
+		expectHeader    bool
 	}{
 		{
 			name: "with parent trace",
@@ -156,4 +156,3 @@ func TestOriginalBehaviorMatch(t *testing.T) {
 
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator())
 }
-

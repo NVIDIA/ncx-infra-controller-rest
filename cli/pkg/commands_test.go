@@ -181,9 +181,9 @@ func TestSubResourceName(t *testing.T) {
 
 func TestDetectPrimaryResource(t *testing.T) {
 	tests := []struct {
-		name    string
-		opIDs   []string
-		want    string
+		name  string
+		opIDs []string
+		want  string
 	}{
 		{
 			name: "site is primary",

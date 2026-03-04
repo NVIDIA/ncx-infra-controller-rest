@@ -18,10 +18,10 @@ package firmwaremanager
 
 import (
 	"context"
-	"net/http"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/vendor"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/objects/pmc"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/redfish"
+	"net/http"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
