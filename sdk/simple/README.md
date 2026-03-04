@@ -209,7 +209,7 @@ Use `NewClientFromEnv()` to create a client from environment variables:
 |----------|-------------|
 | `CARBIDE_BASE_URL` | API base URL (e.g. `http://localhost:8388` for kind, `https://api.example.com` for production) |
 | `CARBIDE_ORG` | Organization name (e.g. `test-org` for kind) |
-| `CARBIDE_TOKEN` | JWT token (or `CARBIDE_API_KEY` / `CARBIDE_API_KEY`) |
+| `CARBIDE_TOKEN` | JWT token (or `CARBIDE_API_KEY`) |
 
 ```go
 client, err := simple.NewClientFromEnv()
