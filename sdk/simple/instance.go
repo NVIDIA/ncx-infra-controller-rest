@@ -125,14 +125,23 @@ func toStandardDpuExtensionDeployment(request DpuExtensionServiceDeploymentReque
 
 func toStandardInstanceCreateRequest(request InstanceCreateRequest, sshKeyGroupIDs []string, am ApiMetadata) standard.InstanceCreateRequest {
 	vpcID := am.VpcID
+	useDefaultVpcMetadata := true
 	if request.VpcID != nil {
 		vpcID = *request.VpcID
+		// Only use ApiMetadata-derived prefix/subnet when the effective VPC
+		// matches the metadata VPC; otherwise, let the backend choose
+		// appropriate defaults for the overridden VPC.
+		if *request.VpcID != am.VpcID {
+			useDefaultVpcMetadata = false
+		}
 	}
 	defaultIface := standard.InterfaceCreateRequest{IsPhysical: standard.PtrBool(true)}
-	if am.VpcNetworkVirtualizationType == FNNVirtualizationType {
-		defaultIface.VpcPrefixId = &am.VpcPrefixID
-	} else if am.SubnetID != "" {
-		defaultIface.SubnetId = &am.SubnetID
+	if useDefaultVpcMetadata {
+		if am.VpcNetworkVirtualizationType == FNNVirtualizationType {
+			defaultIface.VpcPrefixId = &am.VpcPrefixID
+		} else if am.SubnetID != "" {
+			defaultIface.SubnetId = &am.SubnetID
+		}
 	}
 	apiReq := standard.InstanceCreateRequest{
 		Name:            request.Name,
