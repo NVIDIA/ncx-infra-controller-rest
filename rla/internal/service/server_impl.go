@@ -39,8 +39,6 @@ import (
 	dbquery "github.com/nvidia/bare-metal-manager-rest/rla/internal/db/query"
 	inventorymanager "github.com/nvidia/bare-metal-manager-rest/rla/internal/inventory/manager"
 
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/component"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/rack"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/operation"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/psmapi"
 	taskcommon "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/common"
@@ -50,6 +48,8 @@ import (
 	taskstore "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/store"
 	identifier "github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/Identifier"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/component"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/rack"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/metadata"
 	pb "github.com/nvidia/bare-metal-manager-rest/rla/pkg/proto/v1"
 )
@@ -677,6 +677,44 @@ func (rs *RLAServerImpl) BringUpRack(
 		return nil, errors.New(
 			"failed to create any tasks",
 		)
+	}
+
+	return &pb.SubmitTaskResponse{
+		TaskIds: protobuf.UUIDsTo(taskIDs),
+	}, nil
+}
+
+// IngestRack creates an InjectExpectation task that registers expected components
+// with their respective backend services (Carbide for compute/switch, PSM for powershelves).
+func (rs *RLAServerImpl) IngestRack(
+	ctx context.Context,
+	req *pb.IngestRackRequest,
+) (*pb.SubmitTaskResponse, error) {
+	if rs.taskManager == nil {
+		return nil, errors.New("task manager is not available")
+	}
+
+	targetSpec := req.GetTargetSpec()
+	if targetSpec == nil {
+		return nil, errors.New("target_spec is required")
+	}
+
+	info := &operations.InjectExpectationTaskInfo{}
+
+	opReq, err := rs.convertTargetSpecToOperationRequest(
+		targetSpec, req.GetDescription(), info,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	taskIDs, err := rs.taskManager.SubmitTask(ctx, opReq)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(taskIDs) == 0 {
+		return nil, errors.New("failed to create any tasks")
 	}
 
 	return &pb.SubmitTaskResponse{

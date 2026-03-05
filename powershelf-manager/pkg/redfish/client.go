@@ -24,12 +24,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"io/ioutil"
-	"net/http"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/objects/pmc"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/objects/powershelf"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/objects/powersupply"
+	"io"
+	"io/ioutil"
+	"net/http"
 
 	log "github.com/sirupsen/logrus"
 

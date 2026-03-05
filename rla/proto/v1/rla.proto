@@ -44,6 +44,10 @@ service RLA {
     // Bring up rack: power on, configure, and validate a new rack
     rpc BringUpRack(BringUpRackRequest) returns (SubmitTaskResponse);
 
+    // Ingest rack: inject expected component configurations to backend services
+    // (Carbide for compute/switch, PSM for powershelves)
+    rpc IngestRack(IngestRackRequest) returns (SubmitTaskResponse);
+
     // Components APIs
     rpc GetComponents(GetComponentsRequest) returns (GetComponentsResponse);
     rpc ValidateComponents(ValidateComponentsRequest) returns (ValidateComponentsResponse);
@@ -515,6 +519,12 @@ message PowerResetRackRequest {
 message BringUpRackRequest {
     OperationTargetSpec target_spec = 1;  // Target racks for bring-up
     string description = 2;               // optional task description
+}
+
+message IngestRackRequest {
+    OperationTargetSpec target_spec = 1;  // Target racks for ingestion
+    repeated Filter filters = 2;          // Filter conditions for component queries (e.g. by type, name)
+    string description = 3;               // optional task description
 }
 
 message ListTasksRequest {

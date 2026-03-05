@@ -106,7 +106,7 @@ jobs:
           scanners: 'vuln,secret,misconfig,license'
           severity: 'HIGH,CRITICAL'
           ignore-unfixed: 'true'
-          upload-sarif: 'false'  # Disable upload until GHAS is enabled, such as the repo be public
+          upload-sarif: 'true'
           post-pr-comment: 'true'
           fail-on-findings: 'false' # FIXME: Disabled until all issues are fixed
 
@@ -133,7 +133,19 @@ jobs:
       NVCR_USERNAME: ${{ secrets.NVCR_STG_USERNAME }}
       NVCR_TOKEN: ${{ secrets.NVCR_STG_TOKEN }}
 
-  # Step 6: Promote to release candidate
+  # Step 6: Helm Charts (detect changes, validate versions, lint/template, push)
+  helm:
+    name: Helm Charts
+    needs:
+      - prepare
+    if: ${{ !cancelled() && needs.prepare.result == 'success' }}
+    uses: ./.github/workflows/helm-workflows.yml
+    with:
+      app_version: ${{ needs.prepare.outputs.semantic_version }}
+    secrets:
+      NVCR_STG_TOKEN: ${{ secrets.NVCR_STG_TOKEN }}
+
+  # Step 7: Promote to release candidate
   promote-carbide-rest-to-release-candidate:
     name: Promote Carbide REST to Release Candidate
     needs:

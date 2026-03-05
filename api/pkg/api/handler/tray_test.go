@@ -244,10 +244,10 @@ func TestGetTrayHandler_Handle(t *testing.T) {
 			wantErr:        true,
 		},
 		{
-			name:   "failure - missing siteId",
-			reqOrg: org,
-			user:   providerUser,
-			trayID: trayID,
+			name:        "failure - missing siteId",
+			reqOrg:      org,
+			user:        providerUser,
+			trayID:      trayID,
 			queryParams: map[string]string{
 				// no siteId
 			},
@@ -526,9 +526,9 @@ func TestGetAllTrayHandler_Handle(t *testing.T) {
 			wantErr:        true,
 		},
 		{
-			name:   "failure - missing siteId",
-			reqOrg: org,
-			user:   providerUser,
+			name:        "failure - missing siteId",
+			reqOrg:      org,
+			user:        providerUser,
 			queryParams: map[string]string{
 				// no siteId
 			},
@@ -822,11 +822,11 @@ func TestValidateTrayHandler_Handle(t *testing.T) {
 			expectedStatus: http.StatusForbidden,
 		},
 		{
-			name:        "failure - missing siteId",
-			reqOrg:      org,
-			user:        providerUser,
-			trayID:      trayID,
-			queryParams: map[string]string{},
+			name:           "failure - missing siteId",
+			reqOrg:         org,
+			user:           providerUser,
+			trayID:         trayID,
+			queryParams:    map[string]string{},
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
@@ -1127,10 +1127,10 @@ func TestValidateTraysHandler_Handle(t *testing.T) {
 			expectedStatus: http.StatusForbidden,
 		},
 		{
-			name:        "failure - missing siteId",
-			reqOrg:      org,
-			user:        providerUser,
-			queryParams: map[string]string{},
+			name:           "failure - missing siteId",
+			reqOrg:         org,
+			user:           providerUser,
+			queryParams:    map[string]string{},
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
@@ -1206,7 +1206,6 @@ func TestValidateTraysHandler_Handle(t *testing.T) {
 		})
 	}
 }
-
 
 func TestUpdateTrayPowerStateHandler_Handle(t *testing.T) {
 	e := echo.New()

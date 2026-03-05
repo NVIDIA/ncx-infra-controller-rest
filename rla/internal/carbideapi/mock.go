@@ -127,3 +127,11 @@ func (c *mockClient) DetermineMachineIngestionState(
 ) (BringUpState, error) {
 	return BringUpStateMachineCreated, nil
 }
+
+func (c *mockClient) AddExpectedMachine(ctx context.Context, req AddExpectedMachineRequest) error {
+	return nil
+}
+
+func (c *mockClient) AddExpectedSwitch(ctx context.Context, req AddExpectedSwitchRequest) error {
+	return nil
+}

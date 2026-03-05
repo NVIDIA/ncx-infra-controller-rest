@@ -26,10 +26,6 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	dbquery "github.com/nvidia/bare-metal-manager-rest/rla/internal/db/query"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/bmc"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/component"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/nvldomain"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/rack"
 	taskcommon "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/common"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operationrules"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operations"
@@ -39,6 +35,10 @@ import (
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/deviceinfo"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/location"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/bmc"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/component"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/nvldomain"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/rack"
 	pb "github.com/nvidia/bare-metal-manager-rest/rla/pkg/proto/v1"
 )
 

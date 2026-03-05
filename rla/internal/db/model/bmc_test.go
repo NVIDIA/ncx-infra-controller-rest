@@ -21,8 +21,8 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/stretchr/testify/assert"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
+	"github.com/stretchr/testify/assert"
 )
 
 type testBMC struct {

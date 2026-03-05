@@ -100,7 +100,6 @@ type APITenantInstanceTypeStatsEntry struct {
 	Allocations []APITenantInstanceTypeAllocation `json:"allocations"`
 }
 
-
 // APITenantInstanceTypeAllocation represents a single allocation's stats for an instance type
 type APITenantInstanceTypeAllocation struct {
 	// ID is the unique identifier for the Allocation

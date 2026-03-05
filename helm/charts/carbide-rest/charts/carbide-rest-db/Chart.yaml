@@ -1,0 +1,11 @@
+apiVersion: v2
+name: carbide-rest-db
+description: Helm chart for the Carbide REST database migrations
+type: application
+version: 0.1.0
+appVersion: "latest"
+keywords:
+  - carbide
+  - rest
+  - database
+  - migrations

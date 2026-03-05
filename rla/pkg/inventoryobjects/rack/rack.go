@@ -25,10 +25,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/component"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/deviceinfo"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/location"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/component"
 )
 
 // Rack represents a hardware rack with various properties and components

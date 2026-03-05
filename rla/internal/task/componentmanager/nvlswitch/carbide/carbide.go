@@ -19,6 +19,7 @@ package carbide
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -73,16 +74,32 @@ func (m *Manager) Type() devicetypes.ComponentType {
 	return devicetypes.ComponentTypeNVLSwitch
 }
 
-// InjectExpectation injects expected configuration or state information for an NVLink switch.
+// InjectExpectation registers an expected switch with Carbide via AddExpectedSwitch.
+// The Info field should contain a JSON-encoded carbideapi.AddExpectedSwitchRequest.
 func (m *Manager) InjectExpectation(
 	ctx context.Context,
 	target common.Target,
 	info operations.InjectExpectationTaskInfo,
 ) error {
-	// TODO: Implement logic to inject expected configuration/state
-	// This might involve validating and storing expected firmware versions,
-	// link configurations, etc.
-	return fmt.Errorf("InjectExpectation not yet implemented for NVLSwitch")
+	var req carbideapi.AddExpectedSwitchRequest
+	if err := json.Unmarshal(info.Info, &req); err != nil {
+		return fmt.Errorf("failed to unmarshal AddExpectedSwitchRequest: %w", err)
+	}
+
+	if m.carbideClient == nil {
+		return fmt.Errorf("carbide client is not configured")
+	}
+
+	if err := m.carbideClient.AddExpectedSwitch(ctx, req); err != nil {
+		return fmt.Errorf("failed to add expected switch: %w", err)
+	}
+
+	log.Info().
+		Str("bmc_mac", req.BMCMACAddress).
+		Str("switch_serial", req.SwitchSerialNumber).
+		Msg("Successfully registered expected switch with Carbide")
+
+	return nil
 }
 
 // PowerControl performs power operations on an NVLink switch via Carbide API.

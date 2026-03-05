@@ -27,10 +27,6 @@ import (
 
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/carbideapi"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/db/model"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/bmc"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/component"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/nvldomain"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/rack"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/operation"
 	taskcommon "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/common"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operationrules"
@@ -43,6 +39,10 @@ import (
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/errors"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/location"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/utils"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/bmc"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/component"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/nvldomain"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/rack"
 )
 
 // BMCTypeFrom converts BMC type from DAO model to internal model.

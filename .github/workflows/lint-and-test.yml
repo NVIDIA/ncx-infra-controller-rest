@@ -44,14 +44,24 @@ jobs:
       - name: Download dependencies
         run: go mod download
 
-      - name: Install revive
-        run: go install github.com/mgechev/revive@v1.3.9
+      - name: Install and run revive
+        run: |
+          go install github.com/mgechev/revive@v1.3.9
+          pkgs=$(go list ./... | grep -v $(go env GOMODCACHE))
+          go list $pkgs | grep -v $(go env GOMODCACHE) | xargs -L1 revive -config .revive.toml -set_exit_status
 
       - name: Run go fmt
         run: |
           pkgs=$(go list ./... | grep -v $(go env GOMODCACHE))
-          go fmt $pkgs
-          go list $pkgs | grep -v $(go env GOMODCACHE) | xargs -L1 revive -config .revive.toml -set_exit_status
+          go fmt $pkgs > /dev/null 2>&1
+          # Check if there are any changes, if there are then exit with an error that go fmt must be run and changes committed
+          if git diff --quiet; then
+            echo "go fmt was clean"
+          else
+            echo "::error::go fmt was unclean on the following files:"
+            git -P diff --name-only
+            exit 1
+          fi
 
   # ============================================================================
   # Lint Go Job - Static analysis

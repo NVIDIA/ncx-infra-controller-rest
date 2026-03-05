@@ -1,0 +1,27 @@
+global:
+  image:
+    repository: ""
+    tag: ""
+    pullPolicy: IfNotPresent
+  imagePullSecrets:
+    - name: image-pull-secret
+  certificate:
+    issuerRef:
+      kind: ClusterIssuer
+      name: carbide-rest-ca-issuer
+      group: cert-manager.io
+  labels:
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: carbide-rest
+
+carbide-rest-api:
+  enabled: true
+
+carbide-rest-workflow:
+  enabled: true
+
+carbide-rest-site-manager:
+  enabled: true
+
+carbide-rest-db:
+  enabled: true

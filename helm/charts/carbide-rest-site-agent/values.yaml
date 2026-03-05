@@ -1,0 +1,79 @@
+global:
+  image:
+    repository: ""
+    tag: ""
+    pullPolicy: IfNotPresent
+  imagePullSecrets:
+    - name: image-pull-secret
+  certificate:
+    issuerRef:
+      kind: ClusterIssuer
+      name: carbide-rest-ca-issuer
+      group: cert-manager.io
+
+replicaCount: 1
+
+nameOverride: ""
+namespaceOverride: ""
+
+image:
+  name: carbide-rest-site-agent
+
+service:
+  type: ClusterIP
+  port: 8080
+  metricsPort: 2112
+
+resources:
+  requests:
+    memory: "128Mi"
+    cpu: "100m"
+  limits:
+    memory: "512Mi"
+    cpu: "500m"
+
+secrets:
+  dbCreds: db-creds
+  siteRegistration: site-registration
+  carbideTlsCerts: core-grpc-client-site-agent-certs
+  temporalClientCerts: temporal-client-site-agent-certs
+
+certificate:
+  enabled: true
+  name: core-grpc-client-site-agent-certs
+  secretName: core-grpc-client-site-agent-certs
+  duration: 720h
+  renewBefore: 360h
+  subject:
+    # -- List of organizations for the certificate subject
+    organizations: []
+  privateKey:
+    algorithm: ECDSA
+    size: 384
+
+rbac:
+  create: true
+
+envConfig:
+  ESA_PORT: "8080"
+  METRICS_PORT: "2112"
+  DEV_MODE: "true"
+  ENABLE_DEBUG: "true"
+  ENABLE_TLS: "true"
+  CARBIDE_ADDRESS: ""
+  CARBIDE_SEC_OPT: "0"
+  CLUSTER_ID: ""
+  TEMPORAL_HOST: "temporal-frontend.temporal"
+  TEMPORAL_PORT: "7233"
+  TEMPORAL_SERVER: "interservice.server.temporal.local"
+  TEMPORAL_PUBLISH_NAMESPACE: "site"
+  TEMPORAL_PUBLISH_QUEUE: "site"
+  TEMPORAL_SUBSCRIBE_NAMESPACE: ""
+  TEMPORAL_SUBSCRIBE_QUEUE: ""
+  TEMPORAL_INVENTORY_SCHEDULE: "@every 3m"
+  TEMPORAL_CERT_PATH: "/etc/temporal-certs"
+  TEMPORAL_CERT: "temporal-client-site-agent-certs"
+  DB_ADDR: "postgres.postgres"
+  DB_USER: "forge"
+  DB_DATABASE: "elektratest"
+  DB_PORT: "5432"

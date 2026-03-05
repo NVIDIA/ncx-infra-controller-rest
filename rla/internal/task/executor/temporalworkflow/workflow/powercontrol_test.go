@@ -29,8 +29,6 @@ import (
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/testsuite"
 
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/component"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/rack"
 	taskcommon "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/common"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/executor/temporalworkflow/common"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operationrules"
@@ -39,6 +37,8 @@ import (
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/deviceinfo"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/location"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/component"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/rack"
 )
 
 // mockPowerControl is a mock activity function for testing

@@ -1,0 +1,10 @@
+apiVersion: v2
+name: carbide-rest-api
+description: Helm chart for the Carbide REST API server
+type: application
+version: 0.1.0
+appVersion: "latest"
+keywords:
+  - carbide
+  - rest
+  - api

@@ -1,0 +1,10 @@
+apiVersion: v2
+name: carbide-rest-site-manager
+description: Helm chart for the Carbide REST site lifecycle manager
+type: application
+version: 0.1.0
+appVersion: "latest"
+keywords:
+  - carbide
+  - rest
+  - site-manager

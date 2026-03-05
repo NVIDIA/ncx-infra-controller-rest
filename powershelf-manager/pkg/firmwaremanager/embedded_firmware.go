@@ -19,8 +19,8 @@ package firmwaremanager
 import (
 	"embed"
 	"fmt"
-	"io/fs"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/vendor"
+	"io/fs"
 	"strings"
 
 	log "github.com/sirupsen/logrus"

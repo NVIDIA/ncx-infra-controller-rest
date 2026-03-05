@@ -20,12 +20,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/credentials"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/objects/pmc"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/objects/powershelf"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/pmcregistry"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/redfish"
+	"net"
 	"time"
 )
 

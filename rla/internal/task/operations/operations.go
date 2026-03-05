@@ -110,10 +110,6 @@ type InjectExpectationTaskInfo struct {
 }
 
 func (t *InjectExpectationTaskInfo) Validate() error {
-	if t.Info == nil {
-		return fmt.Errorf("invalid info")
-	}
-
 	return nil
 }
 

@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "carbide-rest-site-agent.name" . }}
+  namespace: {{ include "carbide-rest-site-agent.namespace" . }}
+  labels:
+    {{- include "carbide-rest-site-agent.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.port }}
+      name: http
+    - port: {{ .Values.service.metricsPort }}
+      targetPort: {{ .Values.service.metricsPort }}
+      name: metrics
+  selector:
+    {{- include "carbide-rest-site-agent.selectorLabels" . | nindent 4 }}

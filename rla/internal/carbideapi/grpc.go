@@ -26,9 +26,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rs/zerolog/log"
 	pb "github.com/nvidia/bare-metal-manager-rest/rla/internal/carbideapi/gen"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/certs"
+	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -310,6 +310,70 @@ func (c *grpcClient) DetermineMachineIngestionState(
 	return bringUpStateFromPb(
 		resp.GetMachineIngestionState(),
 	), nil
+}
+
+// AddExpectedMachine registers an expected machine with Carbide.
+func (c *grpcClient) AddExpectedMachine(ctx context.Context, req AddExpectedMachineRequest) error {
+	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
+	defer cancel()
+
+	pbReq := &pb.ExpectedMachine{
+		BmcMacAddress:       req.BMCMACAddress,
+		BmcUsername:         req.BMCUsername,
+		BmcPassword:         req.BMCPassword,
+		ChassisSerialNumber: req.ChassisSerialNumber,
+	}
+
+	if len(req.FallbackDPUSerialNumbers) > 0 {
+		pbReq.FallbackDpuSerialNumbers = req.FallbackDPUSerialNumbers
+	}
+
+	if req.RackID != "" {
+		pbReq.RackId = &req.RackID
+	}
+
+	if req.PauseIngestionAndPowerOn != nil {
+		pbReq.DefaultPauseIngestionAndPoweron = req.PauseIngestionAndPowerOn
+	}
+
+	_, err := c.gclient.AddExpectedMachine(ctx, pbReq)
+	if err != nil {
+		return fmt.Errorf("failed to add expected machine (bmc_mac=%s): %w", req.BMCMACAddress, err)
+	}
+
+	return nil
+}
+
+// AddExpectedSwitch registers an expected switch with Carbide.
+func (c *grpcClient) AddExpectedSwitch(ctx context.Context, req AddExpectedSwitchRequest) error {
+	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
+	defer cancel()
+
+	pbReq := &pb.ExpectedSwitch{
+		BmcMacAddress:      req.BMCMACAddress,
+		BmcUsername:        req.BMCUsername,
+		BmcPassword:        req.BMCPassword,
+		SwitchSerialNumber: req.SwitchSerialNumber,
+	}
+
+	if req.RackID != "" {
+		pbReq.RackId = &req.RackID
+	}
+
+	if req.NVOSUsername != "" {
+		pbReq.NvosUsername = &req.NVOSUsername
+	}
+
+	if req.NVOSPassword != "" {
+		pbReq.NvosPassword = &req.NVOSPassword
+	}
+
+	_, err := c.gclient.AddExpectedSwitch(ctx, pbReq)
+	if err != nil {
+		return fmt.Errorf("failed to add expected switch (bmc_mac=%s): %w", req.BMCMACAddress, err)
+	}
+
+	return nil
 }
 
 func (c *grpcClient) AddMachine(machine Machine) {

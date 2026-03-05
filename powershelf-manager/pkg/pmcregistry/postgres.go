@@ -19,7 +19,6 @@ package pmcregistry
 import (
 	"context"
 	"fmt"
-	"net"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/errors"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/converter/dao"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/db"
@@ -27,6 +26,7 @@ import (
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/db/model"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/db/postgres"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/objects/pmc"
+	"net"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/uptrace/bun"

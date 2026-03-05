@@ -1,0 +1,52 @@
+{{- $tag := .Values.global.image.tag | default "latest" | replace "." "-" | replace "+" "-" }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "carbide-rest-db.name" . }}-migration-{{ $tag }}
+  namespace: {{ include "carbide-rest-db.namespace" . }}
+  labels:
+    {{- include "carbide-rest-db.labels" . | nindent 4 }}
+spec:
+  ttlSecondsAfterFinished: {{ .Values.ttlSecondsAfterFinished }}
+  backoffLimit: {{ .Values.backoffLimit }}
+  template:
+    metadata:
+      labels:
+        {{- include "carbide-rest-db.labels" . | nindent 8 }}
+    spec:
+      restartPolicy: OnFailure
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      initContainers:
+        - name: wait-for-postgres
+          image: {{ .Values.waitForPostgres.image }}
+          command:
+            - pg_isready
+            - -h
+            - {{ .Values.db.host }}
+            - -p
+            - {{ .Values.db.port | quote }}
+            - -U
+            - {{ .Values.db.user }}
+      containers:
+        - name: migrations
+          image: "{{ include "carbide-rest-db.image" . }}"
+          imagePullPolicy: {{ .Values.global.image.pullPolicy }}
+          env:
+            - name: PGHOST
+              value: {{ .Values.db.host }}
+            - name: PGPORT
+              value: {{ .Values.db.port | quote }}
+            - name: PGDATABASE
+              value: {{ .Values.db.name }}
+            - name: PGUSER
+              value: {{ .Values.db.user }}
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.dbCreds }}
+                  key: password
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

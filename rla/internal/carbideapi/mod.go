@@ -56,6 +56,12 @@ type Client interface {
 	// relative to Carbide's power-on gate.
 	DetermineMachineIngestionState(ctx context.Context, bmcIP string, bmcMAC string) (BringUpState, error) //nolint
 
+	// AddExpectedMachine registers an expected machine with Carbide for ingestion.
+	AddExpectedMachine(ctx context.Context, req AddExpectedMachineRequest) error
+
+	// AddExpectedSwitch registers an expected switch with Carbide for ingestion.
+	AddExpectedSwitch(ctx context.Context, req AddExpectedSwitchRequest) error
+
 	// The following are only valid in the mock environment and should only be called by unit tests
 	AddMachine(Machine)
 	AddPowerState(machineID string, state PowerState)

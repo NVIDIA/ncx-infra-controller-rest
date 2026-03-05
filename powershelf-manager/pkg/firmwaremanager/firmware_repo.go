@@ -18,9 +18,9 @@ package firmwaremanager
 
 import (
 	"fmt"
-	"io/fs"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/util"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/vendor"
+	"io/fs"
 	"strings"
 )
 

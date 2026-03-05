@@ -23,13 +23,13 @@ import (
 
 func TestMetricsConfig(t *testing.T) {
 	type args struct {
-		enabled  bool
-		port     int
+		enabled bool
+		port    int
 	}
 
 	mcfg := MetricsConfig{
-		Enabled:  true,
-		Port:     6930,
+		Enabled: true,
+		Port:    6930,
 	}
 
 	tests := []struct {
@@ -40,8 +40,8 @@ func TestMetricsConfig(t *testing.T) {
 		{
 			name: "initialize Metrics config",
 			args: args{
-				enabled:  true,
-				port:     mcfg.Port,
+				enabled: true,
+				port:    mcfg.Port,
 			},
 			want: &mcfg,
 		},

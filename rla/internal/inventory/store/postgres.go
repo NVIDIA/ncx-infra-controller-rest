@@ -29,14 +29,14 @@ import (
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/db/model"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/db/postgres"
 	dbquery "github.com/nvidia/bare-metal-manager-rest/rla/internal/db/query"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/component"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/nvldomain"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/rack"
 	identifier "github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/Identifier"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/deviceinfo"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/errors"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/rackopreport"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/component"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/nvldomain"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/rack"
 )
 
 // PostgresStore implements the Store interface using PostgreSQL.

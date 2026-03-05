@@ -19,10 +19,10 @@ package inventorymanager
 import (
 	"context"
 	"fmt"
-	"net"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/runner"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/objects/powershelf"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/pmcmanager"
+	"net"
 	"sync"
 
 	log "github.com/sirupsen/logrus"

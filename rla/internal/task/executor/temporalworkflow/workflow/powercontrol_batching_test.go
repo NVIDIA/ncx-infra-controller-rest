@@ -29,12 +29,12 @@ import (
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/testsuite"
 
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/component"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/executor/temporalworkflow/common"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operationrules"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operations"
 	taskdef "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/task"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/component"
 )
 
 // TestPowerControlWorkflowWithBatching tests the new workflow-level batching implementation
