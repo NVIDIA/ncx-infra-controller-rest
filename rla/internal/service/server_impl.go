@@ -684,8 +684,10 @@ func (rs *RLAServerImpl) BringUpRack(
 	}, nil
 }
 
-// IngestRack creates an InjectExpectation task that registers expected components
-// with their respective backend services (Carbide for compute/switch, PSM for powershelves).
+// IngestRack is a convenience API that triggers component ingestion by reusing
+// the BringUp workflow with an ingestion-only rule. This registers expected
+// components with their backend services (Carbide for compute/switch, PSM for
+// powershelves) without performing power or firmware operations.
 func (rs *RLAServerImpl) IngestRack(
 	ctx context.Context,
 	req *pb.IngestRackRequest,
@@ -699,7 +701,7 @@ func (rs *RLAServerImpl) IngestRack(
 		return nil, errors.New("target_spec is required")
 	}
 
-	info := &operations.InjectExpectationTaskInfo{}
+	info := &operations.BringUpTaskInfo{}
 
 	opReq, err := rs.convertTargetSpecToOperationRequest(
 		targetSpec, req.GetDescription(), info,
@@ -707,6 +709,10 @@ func (rs *RLAServerImpl) IngestRack(
 	if err != nil {
 		return nil, err
 	}
+
+	// Override the operation code so the rule resolver picks the
+	// ingestion-only rule instead of the full bring-up rule.
+	opReq.Operation.Code = taskcommon.OpCodeIngest
 
 	taskIDs, err := rs.taskManager.SubmitTask(ctx, opReq)
 	if err != nil {

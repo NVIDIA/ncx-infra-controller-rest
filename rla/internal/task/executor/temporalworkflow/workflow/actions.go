@@ -51,8 +51,9 @@ var actionExecutorRegistry = map[string]actionExecutor{
 	operationrules.ActionVerifyReachability: executeVerifyReachabilityAction,
 	operationrules.ActionGetPowerStatus:     executeGetPowerStatusAction,
 	operationrules.ActionFirmwareControl:    executeFirmwareControlAction,
-	operationrules.ActionAllowBringUp:       executeAllowBringUpAction,
-	operationrules.ActionWaitBringUp:        executeWaitBringUpAction,
+	operationrules.ActionAllowBringUp:        executeAllowBringUpAction,
+	operationrules.ActionWaitBringUp:         executeWaitBringUpAction,
+	operationrules.ActionInjectExpectation:   executeInjectExpectationAction,
 }
 
 // executeActionList executes a list of actions sequentially
@@ -553,4 +554,20 @@ func verifyReachability(
 
 		workflow.Sleep(ctx, pollInterval)
 	}
+}
+
+// executeInjectExpectationAction calls the InjectExpectation activity to register
+// expected component configurations with their backend services.
+func executeInjectExpectationAction(actx actionExecutionContext) error {
+	ctx := actx.workflowContext
+	info := operations.InjectExpectationTaskInfo{}
+
+	log.Debug().
+		Str("component_type", devicetypes.ComponentTypeToString(actx.target.Type)).
+		Int("component_count", len(actx.target.ComponentIDs)).
+		Msg("Executing InjectExpectation action")
+
+	return workflow.ExecuteActivity(
+		ctx, activity.InjectExpectation, actx.target, info,
+	).Get(ctx, nil)
 }

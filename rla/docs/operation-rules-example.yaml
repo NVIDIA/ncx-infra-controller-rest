@@ -767,27 +767,57 @@ rules:
 #      - timeout: Maximum time to wait (e.g., "15m")
 #      - poll_interval: Time between polls (e.g., "30s")
 #
+# 9. InjectExpectation (ingestion / bring-up)
+#    - Registers expected component configurations with backend services
+#      (Carbide for compute/switch, PSM for powershelves)
+#    - No required parameters — uses the component Target from the step
+#    - Used as the initial stage in full bring-up rules, and as the sole
+#      action in ingestion-only rules
+#
   # ===========================================
-  # Bring-Up - Rack Bring-Up Sequence
+  # Bring-Up - Full Rack Bring-Up Sequence
   # ===========================================
-  # Stage 1: PowerShelf — wait PMC ready, turn on PSUs, verify
-  # Stage 2: Compute    — open gate, wait bring-up, verify,
-  #                        reboot, verify again
+  # Stage 1: Ingestion   — register all component types with backend services (parallel)
+  # Stage 2: PowerShelf  — wait PMC ready, turn on PSUs, verify
+  # Stage 3: Compute     — open gate, wait bring-up, verify, reboot, verify again
   #
-  # Bring-up specific actions:
-  #   AllowBringUp   — open Carbide power-on gate
-  #   WaitBringUp    — poll Carbide until ingestion complete
-  # Also uses VerifyReachability with require_all to wait for all PMCs.
+  # Actions used:
+  #   InjectExpectation — register components with Carbide/PSM
+  #   AllowBringUp      — open Carbide power-on gate
+  #   WaitBringUp       — poll Carbide until ingestion complete
+  #   VerifyReachability with require_all — wait for all PMCs
 
   - name: Default Rack Bring-Up
     description: >
-      Standard rack bring-up sequence.
+      Full rack bring-up: ingestion, powershelf power-on, compute bring-up.
     operation_type: bring_up
     operation: bring_up
     steps:
-      # === Stage 1: PowerShelf ===
+      # === Stage 1: Ingestion (all component types in parallel) ===
       - component_type: powershelf
         stage: 1
+        max_parallel: 0
+        timeout: 10m
+        main_operation:
+          name: InjectExpectation
+
+      - component_type: compute
+        stage: 1
+        max_parallel: 0
+        timeout: 10m
+        main_operation:
+          name: InjectExpectation
+
+      - component_type: nvlswitch
+        stage: 1
+        max_parallel: 0
+        timeout: 10m
+        main_operation:
+          name: InjectExpectation
+
+      # === Stage 2: PowerShelf ===
+      - component_type: powershelf
+        stage: 2
         max_parallel: 0
         timeout: 20m
         retry:
@@ -812,9 +842,9 @@ rules:
             parameters:
               expected_status: "on"
 
-      # === Stage 2: Compute ===
+      # === Stage 3: Compute ===
       - component_type: compute
-        stage: 2
+        stage: 3
         max_parallel: 0
         timeout: 30m
         retry:
@@ -844,6 +874,40 @@ rules:
             poll_interval: 15s
             parameters:
               expected_status: "on"
+
+  # ===========================================
+  # Ingestion Only — Convenience Rule
+  # ===========================================
+  # Registers components with backend services without performing
+  # power or firmware operations. Used by the IngestRack gRPC API.
+  # All component types are ingested in parallel in a single stage.
+
+  - name: Default Ingestion
+    description: >
+      Ingestion-only: register components with backend services.
+    operation_type: bring_up
+    operation: ingest
+    steps:
+      - component_type: powershelf
+        stage: 1
+        max_parallel: 0
+        timeout: 10m
+        main_operation:
+          name: InjectExpectation
+
+      - component_type: compute
+        stage: 1
+        max_parallel: 0
+        timeout: 10m
+        main_operation:
+          name: InjectExpectation
+
+      - component_type: nvlswitch
+        stage: 1
+        max_parallel: 0
+        timeout: 10m
+        main_operation:
+          name: InjectExpectation
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # BEST PRACTICES

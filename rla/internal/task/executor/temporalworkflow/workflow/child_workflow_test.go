@@ -577,3 +577,93 @@ func TestGenericComponentStepWorkflow_PowerControlWithParamOperation(t *testing.
 	assert.True(t, env.IsWorkflowCompleted())
 	assert.NoError(t, env.GetWorkflowError())
 }
+
+// TestGenericComponentStepWorkflow_InjectExpectationAction tests the
+// InjectExpectation action executor used in ingestion and full bring-up rules.
+func TestGenericComponentStepWorkflow_InjectExpectationAction(t *testing.T) {
+	testSuite := &testsuite.WorkflowTestSuite{}
+	env := testSuite.NewTestWorkflowEnvironment()
+
+	mockInjectExpectation := func(
+		ctx context.Context,
+		target common.Target,
+		info operations.InjectExpectationTaskInfo,
+	) error {
+		return nil
+	}
+
+	env.RegisterActivityWithOptions(mockInjectExpectation,
+		activity.RegisterOptions{Name: "InjectExpectation"})
+
+	env.OnActivity(mockInjectExpectation, mock.Anything, mock.Anything,
+		mock.Anything).Return(nil)
+
+	step := operationrules.SequenceStep{
+		ComponentType: devicetypes.ComponentTypePowerShelf,
+		Stage:         1,
+		MaxParallel:   0,
+		Timeout:       10 * time.Minute,
+		MainOperation: operationrules.ActionConfig{
+			Name: operationrules.ActionInjectExpectation,
+		},
+	}
+
+	target := common.Target{
+		Type:         devicetypes.ComponentTypePowerShelf,
+		ComponentIDs: []string{"ps-1", "ps-2"},
+	}
+	allTargets := map[devicetypes.ComponentType]common.Target{
+		devicetypes.ComponentTypePowerShelf: target,
+	}
+
+	env.ExecuteWorkflow(GenericComponentStepWorkflow, step, target, "",
+		&operations.BringUpTaskInfo{}, allTargets)
+
+	assert.True(t, env.IsWorkflowCompleted())
+	assert.NoError(t, env.GetWorkflowError())
+}
+
+// TestGenericComponentStepWorkflow_InjectExpectationFailure verifies that
+// InjectExpectation action propagates activity errors.
+func TestGenericComponentStepWorkflow_InjectExpectationFailure(t *testing.T) {
+	testSuite := &testsuite.WorkflowTestSuite{}
+	env := testSuite.NewTestWorkflowEnvironment()
+
+	mockInjectExpectation := func(
+		ctx context.Context,
+		target common.Target,
+		info operations.InjectExpectationTaskInfo,
+	) error {
+		return nil
+	}
+
+	env.RegisterActivityWithOptions(mockInjectExpectation,
+		activity.RegisterOptions{Name: "InjectExpectation"})
+
+	env.OnActivity(mockInjectExpectation, mock.Anything, mock.Anything,
+		mock.Anything).Return(errors.New("backend service unavailable"))
+
+	step := operationrules.SequenceStep{
+		ComponentType: devicetypes.ComponentTypeCompute,
+		Stage:         1,
+		MaxParallel:   0,
+		Timeout:       10 * time.Minute,
+		MainOperation: operationrules.ActionConfig{
+			Name: operationrules.ActionInjectExpectation,
+		},
+	}
+
+	target := common.Target{
+		Type:         devicetypes.ComponentTypeCompute,
+		ComponentIDs: []string{"compute-1"},
+	}
+	allTargets := map[devicetypes.ComponentType]common.Target{
+		devicetypes.ComponentTypeCompute: target,
+	}
+
+	env.ExecuteWorkflow(GenericComponentStepWorkflow, step, target, "",
+		&operations.BringUpTaskInfo{}, allTargets)
+
+	assert.True(t, env.IsWorkflowCompleted())
+	assert.Error(t, env.GetWorkflowError())
+}

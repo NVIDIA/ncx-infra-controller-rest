@@ -46,6 +46,7 @@ const (
 // Bring-up sequence names - use shared operation codes
 const (
 	SequenceBringUp = common.OpCodeBringUp
+	SequenceIngest  = common.OpCodeIngest
 )
 
 // RequiredOperations maps operation types to their required operations
@@ -80,6 +81,7 @@ var ValidOperations = map[common.TaskType][]string{
 	},
 	common.TaskTypeBringUp: {
 		SequenceBringUp,
+		SequenceIngest,
 	},
 }
 

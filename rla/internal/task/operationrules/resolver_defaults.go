@@ -37,6 +37,7 @@ func init() {
 	forceRestartRule := buildForceRestartRule()
 	firmwareUpgradeRule := buildFirmwareUpgradeRule()
 	bringUpRule := buildBringUpRule()
+	ingestRule := buildIngestRule()
 
 	// Populate lookup map
 	hardcodedRuleMap = map[string]*OperationRule{
@@ -50,6 +51,7 @@ func init() {
 		ruleKey(common.TaskTypeFirmwareControl, SequenceDowngrade):  firmwareUpgradeRule, // Same rule
 		ruleKey(common.TaskTypeFirmwareControl, SequenceRollback):   firmwareUpgradeRule, // Same rule
 		ruleKey(common.TaskTypeBringUp, SequenceBringUp):            bringUpRule,
+		ruleKey(common.TaskTypeBringUp, SequenceIngest):             ingestRule,
 	}
 }
 
@@ -836,16 +838,44 @@ func buildForcePowerOffRule() *OperationRule {
 func buildBringUpRule() *OperationRule {
 	return &OperationRule{
 		Name:          "Hardcoded Default Bring-Up",
-		Description:   "Fallback rule for rack bring-up",
+		Description:   "Fallback rule for full rack bring-up (ingestion + power + verification)",
 		OperationType: common.TaskTypeBringUp,
 		OperationCode: SequenceBringUp,
 		RuleDefinition: RuleDefinition{
 			Version: CurrentRuleDefinitionVersion,
 			Steps: []SequenceStep{
-				// === Stage 1: PowerShelf ===
+				// === Stage 1: Ingestion — register components with backend services ===
 				{
 					ComponentType: devicetypes.ComponentTypePowerShelf,
 					Stage:         1,
+					MaxParallel:   0,
+					Timeout:       10 * time.Minute,
+					MainOperation: ActionConfig{
+						Name: ActionInjectExpectation,
+					},
+				},
+				{
+					ComponentType: devicetypes.ComponentTypeCompute,
+					Stage:         1, // Parallel with PowerShelf
+					MaxParallel:   0,
+					Timeout:       10 * time.Minute,
+					MainOperation: ActionConfig{
+						Name: ActionInjectExpectation,
+					},
+				},
+				{
+					ComponentType: devicetypes.ComponentTypeNVLSwitch,
+					Stage:         1, // Parallel with others
+					MaxParallel:   0,
+					Timeout:       10 * time.Minute,
+					MainOperation: ActionConfig{
+						Name: ActionInjectExpectation,
+					},
+				},
+				// === Stage 2: PowerShelf — verify reachability, power on, verify ===
+				{
+					ComponentType: devicetypes.ComponentTypePowerShelf,
+					Stage:         2,
 					MaxParallel:   0,
 					Timeout:       20 * time.Minute,
 					RetryPolicy: &RetryPolicy{
@@ -853,38 +883,38 @@ func buildBringUpRule() *OperationRule {
 						InitialInterval:    10 * time.Second,
 						BackoffCoefficient: 2.0,
 					},
-				PreOperation: []ActionConfig{
-					{
-						Name:         ActionVerifyReachability,
-						Timeout:      10 * time.Minute,
-						PollInterval: 30 * time.Second,
+					PreOperation: []ActionConfig{
+						{
+							Name:         ActionVerifyReachability,
+							Timeout:      10 * time.Minute,
+							PollInterval: 30 * time.Second,
+							Parameters: map[string]any{
+								ParamComponentTypes: []string{"powershelf"},
+								ParamRequireAll:     true,
+							},
+						},
+					},
+					MainOperation: ActionConfig{
+						Name: ActionPowerControl,
 						Parameters: map[string]any{
-							ParamComponentTypes: []string{"powershelf"},
-							ParamRequireAll:     true,
+							ParamOperation: "power_on",
+						},
+					},
+					PostOperation: []ActionConfig{
+						{
+							Name:         ActionVerifyPowerStatus,
+							Timeout:      5 * time.Minute,
+							PollInterval: 10 * time.Second,
+							Parameters: map[string]any{
+								ParamExpectedStatus: "on",
+							},
 						},
 					},
 				},
-				MainOperation: ActionConfig{
-					Name: ActionPowerControl,
-					Parameters: map[string]any{
-						ParamOperation: "power_on",
-					},
-				},
-				PostOperation: []ActionConfig{
-					{
-						Name:         ActionVerifyPowerStatus,
-						Timeout:      5 * time.Minute,
-						PollInterval: 10 * time.Second,
-						Parameters: map[string]any{
-							ParamExpectedStatus: "on",
-						},
-					},
-				},
-			},
-			// === Stage 2: Compute ===
+				// === Stage 3: Compute — allow, wait, verify, reboot, verify ===
 				{
 					ComponentType: devicetypes.ComponentTypeCompute,
-					Stage:         2,
+					Stage:         3,
 					MaxParallel:   0,
 					Timeout:       30 * time.Minute,
 					RetryPolicy: &RetryPolicy{
@@ -931,6 +961,51 @@ func buildBringUpRule() *OperationRule {
 								ParamExpectedStatus: "on",
 							},
 						},
+					},
+				},
+			},
+		},
+	}
+}
+
+// buildIngestRule creates the default rule for ingestion-only operations.
+// This rule registers expected components with their backend services (Carbide,
+// PSM) without performing power or firmware operations. All component types
+// are ingested in parallel within a single stage.
+func buildIngestRule() *OperationRule {
+	return &OperationRule{
+		Name:          "Hardcoded Default Ingestion",
+		Description:   "Ingestion-only: register components with backend services",
+		OperationType: common.TaskTypeBringUp,
+		OperationCode: SequenceIngest,
+		RuleDefinition: RuleDefinition{
+			Version: CurrentRuleDefinitionVersion,
+			Steps: []SequenceStep{
+				{
+					ComponentType: devicetypes.ComponentTypePowerShelf,
+					Stage:         1,
+					MaxParallel:   0,
+					Timeout:       10 * time.Minute,
+					MainOperation: ActionConfig{
+						Name: ActionInjectExpectation,
+					},
+				},
+				{
+					ComponentType: devicetypes.ComponentTypeCompute,
+					Stage:         1, // Parallel with PowerShelf
+					MaxParallel:   0,
+					Timeout:       10 * time.Minute,
+					MainOperation: ActionConfig{
+						Name: ActionInjectExpectation,
+					},
+				},
+				{
+					ComponentType: devicetypes.ComponentTypeNVLSwitch,
+					Stage:         1, // Parallel with others
+					MaxParallel:   0,
+					Timeout:       10 * time.Minute,
+					MainOperation: ActionConfig{
+						Name: ActionInjectExpectation,
 					},
 				},
 			},

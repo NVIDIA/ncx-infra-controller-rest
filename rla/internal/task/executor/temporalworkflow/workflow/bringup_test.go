@@ -202,6 +202,90 @@ func TestBringUpWorkflow(t *testing.T) {
 	}
 }
 
+// TestBringUpWorkflowWithIngestion tests the BringUp workflow when executed
+// with an ingestion-only rule (as triggered by IngestRack API). All component
+// types run InjectExpectation in parallel within a single stage.
+func TestBringUpWorkflowWithIngestion(t *testing.T) {
+	testSuite := &testsuite.WorkflowTestSuite{}
+	env := testSuite.NewTestWorkflowEnvironment()
+
+	mockInjectExpectation := func(
+		ctx context.Context,
+		target common.Target,
+		info operations.InjectExpectationTaskInfo,
+	) error {
+		return nil
+	}
+
+	env.RegisterWorkflow(GenericComponentStepWorkflow)
+	env.RegisterActivityWithOptions(mockUpdateTaskStatusForBringUp,
+		activity.RegisterOptions{Name: "UpdateTaskStatus"})
+	env.RegisterActivityWithOptions(mockInjectExpectation,
+		activity.RegisterOptions{Name: "InjectExpectation"})
+
+	env.OnActivity(mockUpdateTaskStatusForBringUp, mock.Anything, mock.Anything).Return(nil)
+	env.OnActivity(mockInjectExpectation, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+	testRack := rack.New(deviceinfo.DeviceInfo{ID: uuid.New(), Name: "test-rack"}, location.Location{})
+	testRack.AddComponent(component.Component{
+		ComponentID: "ps-1",
+		Type:        devicetypes.ComponentTypePowerShelf,
+	})
+	testRack.AddComponent(component.Component{
+		ComponentID: "compute-1",
+		Type:        devicetypes.ComponentTypeCompute,
+	})
+	testRack.AddComponent(component.Component{
+		ComponentID: "switch-1",
+		Type:        devicetypes.ComponentTypeNVLSwitch,
+	})
+
+	ingestRule := &operationrules.RuleDefinition{
+		Version: "v1",
+		Steps: []operationrules.SequenceStep{
+			{
+				ComponentType: devicetypes.ComponentTypePowerShelf,
+				Stage:         1,
+				MaxParallel:   0,
+				Timeout:       10 * time.Minute,
+				MainOperation: operationrules.ActionConfig{
+					Name: operationrules.ActionInjectExpectation,
+				},
+			},
+			{
+				ComponentType: devicetypes.ComponentTypeCompute,
+				Stage:         1,
+				MaxParallel:   0,
+				Timeout:       10 * time.Minute,
+				MainOperation: operationrules.ActionConfig{
+					Name: operationrules.ActionInjectExpectation,
+				},
+			},
+			{
+				ComponentType: devicetypes.ComponentTypeNVLSwitch,
+				Stage:         1,
+				MaxParallel:   0,
+				Timeout:       10 * time.Minute,
+				MainOperation: operationrules.ActionConfig{
+					Name: operationrules.ActionInjectExpectation,
+				},
+			},
+		},
+	}
+
+	reqInfo := task.ExecutionInfo{
+		TaskID:         uuid.New(),
+		Rack:           testRack,
+		RuleDefinition: ingestRule,
+	}
+	info := &operations.BringUpTaskInfo{}
+
+	env.ExecuteWorkflow(BringUp, reqInfo, info)
+
+	assert.True(t, env.IsWorkflowCompleted())
+	assert.NoError(t, env.GetWorkflowError())
+}
+
 func TestBringUpWorkflowEmptyRack(t *testing.T) {
 	testSuite := &testsuite.WorkflowTestSuite{}
 	env := testSuite.NewTestWorkflowEnvironment()

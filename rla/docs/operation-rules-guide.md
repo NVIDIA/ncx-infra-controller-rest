@@ -1,8 +1,8 @@
 # Operation Rules Guide
 
-Operation rules define how RLA executes power control and firmware operations.
-Each rule specifies a sequence of steps that determine component ordering,
-parallelism, verification, and retry behavior.
+Operation rules define how RLA executes power control, firmware, ingestion, and
+bring-up operations. Each rule specifies a sequence of steps that determine
+component ordering, parallelism, verification, and retry behavior.
 
 ## Table of Contents
 
@@ -292,6 +292,26 @@ Queries the current power status of components and returns a status map.
 
 ---
 
+### InjectExpectation
+
+Registers expected component configurations with backend services (Carbide for
+compute/switch, PSM for powershelves). Used as the initial ingestion stage in
+full bring-up rules, and as the sole action in ingestion-only rules.
+
+The `IngestRack` gRPC API is a convenience wrapper that triggers a BringUp
+workflow with an ingestion-only rule (all component types run
+`InjectExpectation` in parallel).
+
+```yaml
+main_operation:
+  name: InjectExpectation
+```
+
+No parameters or timeout overrides required — the action uses the step-level
+timeout and the component `Target` to call the `InjectExpectation` activity.
+
+---
+
 ## Examples
 
 ### Graceful power on
@@ -568,6 +588,116 @@ first; a dedicated final stage (4) verifies all component types simultaneously.
         "poll_interval": "5s",
         "parameters": { "expected_status": "on" }
       }
+    }
+  ]
+}
+```
+
+### Ingestion only
+
+Registers components with backend services without performing power or firmware
+operations. All component types are ingested in parallel in a single stage.
+The `IngestRack` gRPC API triggers this rule automatically.
+
+```json
+{
+  "version": "v1",
+  "steps": [
+    {
+      "component_type": "powershelf",
+      "stage": 1,
+      "max_parallel": 0,
+      "timeout": "10m",
+      "main_operation": { "name": "InjectExpectation" }
+    },
+    {
+      "component_type": "compute",
+      "stage": 1,
+      "max_parallel": 0,
+      "timeout": "10m",
+      "main_operation": { "name": "InjectExpectation" }
+    },
+    {
+      "component_type": "nvlswitch",
+      "stage": 1,
+      "max_parallel": 0,
+      "timeout": "10m",
+      "main_operation": { "name": "InjectExpectation" }
+    }
+  ]
+}
+```
+
+### Full bring-up (with ingestion)
+
+A complete bring-up sequence that first ingests components, then powers on
+powershelves, and finally brings up compute nodes. The `BringUpRack` gRPC API
+uses this as its default rule.
+
+```json
+{
+  "version": "v1",
+  "steps": [
+    {
+      "component_type": "powershelf",
+      "stage": 1,
+      "max_parallel": 0,
+      "timeout": "10m",
+      "main_operation": { "name": "InjectExpectation" }
+    },
+    {
+      "component_type": "compute",
+      "stage": 1,
+      "max_parallel": 0,
+      "timeout": "10m",
+      "main_operation": { "name": "InjectExpectation" }
+    },
+    {
+      "component_type": "nvlswitch",
+      "stage": 1,
+      "max_parallel": 0,
+      "timeout": "10m",
+      "main_operation": { "name": "InjectExpectation" }
+    },
+    {
+      "component_type": "powershelf",
+      "stage": 2,
+      "max_parallel": 0,
+      "timeout": "20m",
+      "pre_operation": [
+        {
+          "name": "VerifyReachability",
+          "timeout": "10m",
+          "poll_interval": "30s",
+          "parameters": { "component_types": ["powershelf"], "require_all": true }
+        }
+      ],
+      "main_operation": {
+        "name": "PowerControl",
+        "parameters": { "operation": "power_on" }
+      },
+      "post_operation": [
+        { "name": "VerifyPowerStatus", "timeout": "5m", "poll_interval": "10s", "parameters": { "expected_status": "on" } }
+      ]
+    },
+    {
+      "component_type": "compute",
+      "stage": 3,
+      "max_parallel": 0,
+      "timeout": "30m",
+      "pre_operation": [
+        { "name": "AllowBringUp" },
+        { "name": "WaitBringUp", "timeout": "15m", "poll_interval": "30s" },
+        { "name": "VerifyPowerStatus", "timeout": "10m", "poll_interval": "15s", "parameters": { "expected_status": "on" } }
+      ],
+      "main_operation": {
+        "name": "PowerControl",
+        "parameters": { "operation": "force_restart" }
+      },
+      "post_operation": [
+        { "name": "Sleep", "parameters": { "duration": "30s" } },
+        { "name": "VerifyPowerStatus", "timeout": "10m", "poll_interval": "15s", "parameters": { "expected_status": "on" } }
+      ]
     }
   ]
 }

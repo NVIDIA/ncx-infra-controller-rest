@@ -39,4 +39,5 @@ const (
 // Bring-up operation codes
 const (
 	OpCodeBringUp = "bring_up"
+	OpCodeIngest  = "ingest"
 )
