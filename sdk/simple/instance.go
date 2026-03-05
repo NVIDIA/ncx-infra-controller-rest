@@ -108,7 +108,7 @@ func toStandardInfiniBandInterface(request InfiniBandInterfaceCreateOrUpdateRequ
 
 func toStandardNVLinkInterface(request NVLinkInterfaceCreateOrUpdateRequest) standard.NVLinkInterfaceCreateRequest {
 	return standard.NVLinkInterfaceCreateRequest{
-		NvLinklogicalPartitionId: &request.NVLinkLogicalPartitionID,
+		NvLinkLogicalPartitionId: &request.NVLinkLogicalPartitionID,
 		DeviceInstance:           standard.PtrInt32(int32(request.DeviceInstance)),
 	}
 }
