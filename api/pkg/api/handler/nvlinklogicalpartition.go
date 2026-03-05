@@ -52,6 +52,8 @@ import (
 
 	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
 	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/queue"
+
+	wfutil "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/util"
 )
 
 // ~~~~~ Create Handler ~~~~~ //
@@ -359,10 +361,10 @@ func (cibph CreateNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	if protoNvllp != nil {
 		logger.Info().Str("Workflow ID", wid).Msg("received NVLink Logical Partition info from workflow")
 
-		status, statusMessage := sutil.GetNVLinkLogicalPartitionStatus(protoNvllp.Status.State)
+		status, statusMessage := wfutil.GetNVLinkLogicalPartitionStatus(protoNvllp.Status.State)
 		// if status is nil, then default is pending and inventory will be updating status from workflow
 		if status != nil {
-			updatedNvllp, newSSD, err := sutil.UpdateNVLinkLogicalPartitionStatusInDB(ctx, nil, cibph.dbSession, nvllp.ID, status, statusMessage)
+			updatedNvllp, newSSD, err := wfutil.UpdateNVLinkLogicalPartitionStatusInDB(ctx, nil, cibph.dbSession, nvllp.ID, status, statusMessage)
 			if err != nil {
 				logger.Error().Err(err).Msg("failed to update NVLink Logical Partition status in DB")
 			} else {

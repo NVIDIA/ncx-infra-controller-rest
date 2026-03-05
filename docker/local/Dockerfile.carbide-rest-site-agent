@@ -42,7 +42,6 @@ RUN go mod download
 # Copy source files
 COPY site-agent/ ./site-agent/
 COPY common/ ./common/
-COPY db/ ./db/
 COPY site-manager/ ./site-manager/
 COPY workflow-schema/ ./workflow-schema/
 COPY site-workflow/ ./site-workflow/
