@@ -21,8 +21,8 @@ import (
 	"net"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/credential"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNew(t *testing.T) {

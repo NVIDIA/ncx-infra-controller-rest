@@ -19,8 +19,8 @@ package pmcregistry
 import (
 	"context"
 	"fmt"
-	"net"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/objects/pmc"
+	"net"
 	"sync"
 
 	log "github.com/sirupsen/logrus"

@@ -449,6 +449,7 @@ func (a *TrayAPIService) GetAllTrayExecute(r ApiGetAllTrayRequest) ([]Tray, *htt
 		parameterAddToHeaderOrQuery(localVarQueryParams, "pageNumber", r.pageNumber, "form", "")
 	} else {
 		var defaultValue int32 = 1
+		parameterAddToHeaderOrQuery(localVarQueryParams, "pageNumber", defaultValue, "form", "")
 		r.pageNumber = &defaultValue
 	}
 	if r.pageSize != nil {
@@ -970,9 +971,9 @@ func (r ApiValidateTrayRequest) Execute() (*RackValidationResult, *http.Response
 /*
 ValidateTray Validate a Tray
 
-Validate a Tray by comparing expected vs actual state via RLA.
+Validate a Tray by comparing expected vs actual state.
 
-Compares the expected component configuration (stored in RLA) against the actual state from external systems. Returns a detailed diff report showing missing, extra, and drifted components.
+Compares the expected component configuration against the actual state. Returns a detailed diff report showing missing, extra, and drifted components.
 
 Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` authorization role.
 
@@ -1154,11 +1155,11 @@ func (r ApiValidateTraysRequest) Execute() (*RackValidationResult, *http.Respons
 /*
 ValidateTrays Validate Trays
 
-Validate Tray components by comparing expected vs actual state via RLA.
+Validate Tray components by comparing expected vs actual state.
 
 If no filter is specified, validates all trays in the Site. Use rackId/rackName to scope to a specific rack, and name/manufacturer/type to filter by tray attributes.
 
-Compares the expected component configuration (stored in RLA) against the actual state from external systems. Returns a detailed diff report showing missing, extra, and drifted components.
+Compares the expected component configuration against the actual state. Returns a detailed diff report showing missing, extra, and drifted components.
 
 Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` authorization role.
 

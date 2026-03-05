@@ -15,28 +15,16 @@
  * limitations under the License.
  */
 
-package utils
+package cmd
 
 import (
 	"context"
-	"testing"
-
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/db"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/db/migrations"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/db/postgres"
-	"github.com/rs/zerolog/log"
+	"time"
 )
 
-func UnitTestDB(ctx context.Context, t *testing.T, dbConf db.Config) (*postgres.Postgres, error) {
-	db, err := postgres.UnitTest(ctx, t, dbConf)
-
-	if err != nil {
-		log.Warn().Msgf("Not running unit test due to unable to connect to db: %v", err)
-		t.SkipNow()
-		return nil, err
-	}
-
-	err = migrations.Migrate(ctx, db)
-
-	return db, err
+// newCLIContext returns a context with a timeout suitable for CLI commands.
+// The caller must call the returned cancel function when done, typically
+// via defer.
+func newCLIContext(timeout time.Duration) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.Background(), timeout)
 }

@@ -77,6 +77,15 @@ migrate:
 	PGPASSWORD=$(POSTGRES_PASSWORD) \
 	./db/cmd/migrations/migrations db init_migrate
 
+fmt-go:
+	go fmt ./...
+	if git diff --quiet; then
+		echo "go fmt was clean"
+	else
+		echo "go fmt was unclean. Please commit the changes."
+		exit 1
+	fi
+
 lint-go:
 	go vet ./...
 	golangci-lint run --issues-exit-code 0 --output.code-climate.path=stdout | jq .
@@ -500,7 +509,7 @@ generate-sdk:
 		--global-property=apis,models,supportingFiles
 	rm -rf sdk/standard/docs sdk/standard/api sdk/standard/README.md sdk/standard/test sdk/standard/.openapi-generator
 	@echo "Client generated in sdk/standard/"
-	go build ./sdk/standard/...
+	cd sdk/standard && go build ./...
 	@echo "Client compiles successfully"
 
 # =============================================================================

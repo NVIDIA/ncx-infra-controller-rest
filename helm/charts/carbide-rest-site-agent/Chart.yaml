@@ -2,7 +2,7 @@ apiVersion: v2
 name: carbide-rest-site-agent
 description: Helm chart for the Carbide REST site agent
 type: application
-version: 0.1.0
+version: 0.1.2
 appVersion: "latest"
 keywords:
   - carbide

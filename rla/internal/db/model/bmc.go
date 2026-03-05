@@ -21,8 +21,8 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	"github.com/uptrace/bun"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
+	"github.com/uptrace/bun"
 )
 
 type BMC struct {

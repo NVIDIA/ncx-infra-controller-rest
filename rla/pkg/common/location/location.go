@@ -20,8 +20,8 @@ package location
 import (
 	"encoding/json"
 
-	"github.com/rs/zerolog/log"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/utils"
+	"github.com/rs/zerolog/log"
 )
 
 // Location represents location information for devices

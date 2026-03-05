@@ -22,7 +22,7 @@ var _ MappedNullable = &Tray{}
 type Tray struct {
 	// Unique identifier of the Tray
 	Id *string `json:"id,omitempty"`
-	// ID of the component in its source system (e.g. Carbide machine ID for compute nodes)
+	// ID of the component
 	ComponentId *string `json:"componentId,omitempty"`
 	// Type of the tray
 	Type *string `json:"type,omitempty"`

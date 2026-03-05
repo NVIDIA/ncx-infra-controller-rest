@@ -20,9 +20,9 @@ var _ MappedNullable = &RackComponent{}
 
 // RackComponent A component within a Rack (e.g. compute node, switch, PDU)
 type RackComponent struct {
-	// Unique identifier of the component in RLA
+	// Unique identifier of the component
 	Id *string `json:"id,omitempty"`
-	// ID of the component in its source system (e.g. Carbide machine ID for compute nodes)
+	// ID of the component
 	ComponentId *string `json:"componentId,omitempty"`
 	// ID of the rack this component belongs to
 	RackId *string `json:"rackId,omitempty"`
@@ -48,7 +48,7 @@ type RackComponent struct {
 	HostId *int32 `json:"hostId,omitempty"`
 	// BMC (Baseboard Management Controller) entries for the component
 	Bmcs []BMCInfo `json:"bmcs,omitempty"`
-	// Current power state of the component (synced from external system)
+	// Current power state of the component
 	PowerState *string `json:"powerState,omitempty"`
 }
 

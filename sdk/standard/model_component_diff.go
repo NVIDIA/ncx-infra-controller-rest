@@ -22,7 +22,7 @@ var _ MappedNullable = &ComponentDiff{}
 type ComponentDiff struct {
 	// Type of difference: DIFF_TYPE_ONLY_IN_EXPECTED, DIFF_TYPE_ONLY_IN_ACTUAL, or DIFF_TYPE_DRIFT
 	Type *string `json:"type,omitempty"`
-	// ID of the component in its source system
+	// ID of the component
 	ComponentId *string `json:"componentId,omitempty"`
 	Expected *RackComponent `json:"expected,omitempty"`
 	Actual *RackComponent `json:"actual,omitempty"`

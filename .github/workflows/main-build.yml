@@ -106,7 +106,7 @@ jobs:
           scanners: 'vuln,secret,misconfig,license'
           severity: 'HIGH,CRITICAL'
           ignore-unfixed: 'true'
-          upload-sarif: 'false'  # Disable upload until GHAS is enabled, such as the repo be public
+          upload-sarif: 'true'
           post-pr-comment: 'true'
           fail-on-findings: 'false' # FIXME: Disabled until all issues are fixed
 
@@ -133,124 +133,19 @@ jobs:
       NVCR_USERNAME: ${{ secrets.NVCR_STG_USERNAME }}
       NVCR_TOKEN: ${{ secrets.NVCR_STG_TOKEN }}
 
-  # Step 6: Detect Helm chart changes
-  detect-helm-changes:
-    name: Detect Helm Chart Changes
+  # Step 6: Helm Charts (detect changes, validate versions, lint/template, push)
+  helm:
+    name: Helm Charts
     needs:
       - prepare
     if: ${{ !cancelled() && needs.prepare.result == 'success' }}
-    runs-on: ubuntu-latest
-    outputs:
-      helm_changed: ${{ steps.changes.outputs.helm }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    uses: ./.github/workflows/helm-workflows.yml
+    with:
+      app_version: ${{ needs.prepare.outputs.semantic_version }}
+    secrets:
+      NVCR_STG_TOKEN: ${{ secrets.NVCR_STG_TOKEN }}
 
-      - name: Check for helm/ changes
-        uses: dorny/paths-filter@v3
-        id: changes
-        with:
-          filters: |
-            helm:
-              - 'helm/**'
-
-  # Step 7: Validate Helm chart versions
-  validate-helm-versions:
-    name: Validate Helm Chart Versions
-    needs:
-      - prepare
-      - detect-helm-changes
-    if: ${{ needs.detect-helm-changes.outputs.helm_changed == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Verify Chart.yaml versions are updated
-        run: |
-          CHARTS=("helm/charts/carbide-rest" "helm/charts/carbide-rest-site-agent")
-          FAILED=false
-          for CHART_DIR in "${CHARTS[@]}"; do
-            CHART_YAML="${CHART_DIR}/Chart.yaml"
-            CURRENT_VERSION=$(grep '^version:' "$CHART_YAML" | awk '{print $2}')
-            BASE_VERSION=$(git show origin/main:"$CHART_YAML" 2>/dev/null | grep '^version:' | awk '{print $2}' || echo "")
-            if [ -n "$BASE_VERSION" ] && [ "$CURRENT_VERSION" = "$BASE_VERSION" ]; then
-              echo "::error file=${CHART_YAML}::Chart version ($CURRENT_VERSION) was not updated. Please bump the version in $CHART_YAML"
-              FAILED=true
-            else
-              echo "✓ ${CHART_DIR}: version updated to $CURRENT_VERSION"
-            fi
-          done
-          if [ "$FAILED" = "true" ]; then
-            exit 1
-          fi
-
-  # Step 8: Validate Helm charts
-  build-validate-helm-charts:
-    name: Validate Helm Charts
-    needs:
-      - prepare
-      - detect-helm-changes
-      - validate-helm-versions
-    if: ${{ needs.detect-helm-changes.outputs.helm_changed == 'true' }}
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - chart: helm/charts/carbide-rest
-            valueOverrides: '["carbide-rest-api.config.keycloak.enabled=true","carbide-rest-api.config.keycloak.baseURL=http://keycloak:8082","carbide-rest-api.config.keycloak.realm=test","carbide-rest-api.config.keycloak.clientID=test"]'
-          - chart: helm/charts/carbide-rest-site-agent
-            valueOverrides: '[]'
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Validate Helm chart
-        uses: NVIDIA/dsx-github-actions/.github/actions/helm-validate@94bde998f5d7965576b0c663db7d5d709c918167
-        with:
-          chart-path: ${{ matrix.chart }}
-          lint: 'true'
-          template: 'true'
-          valueOverrides: ${{ matrix.valueOverrides }}
-
-  # Step 9: Package and push Helm charts to NGC
-  build-push-helm-charts:
-    name: Push Helm Charts
-    needs:
-      - prepare
-      - detect-helm-changes
-      - build-validate-helm-charts
-    if: ${{ needs.detect-helm-changes.outputs.helm_changed == 'true' && needs.build-validate-helm-charts.result == 'success' && !contains(github.ref, 'pull-request/') }}
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        chart:
-          - helm/charts/carbide-rest
-          - helm/charts/carbide-rest-site-agent
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Read chart version from Chart.yaml
-        id: chart-version
-        run: |
-          VERSION=$(grep '^version:' ${{ matrix.chart }}/Chart.yaml | awk '{print $2}')
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Package and push Helm chart to NGC
-        uses: NVIDIA/dsx-github-actions/.github/actions/helm-package-push@94bde998f5d7965576b0c663db7d5d709c918167
-        with:
-          chart-path: ${{ matrix.chart }}
-          chart-version: ${{ steps.chart-version.outputs.version }}
-          app-version: ${{ needs.prepare.outputs.semantic_version }}
-          lint: 'false'
-          ngc-key: ${{ secrets.NVCR_STG_TOKEN }}
-          ngc-path: 0837451325059433/carbide-dev
-          ngc-duplicate: fail
-
-  # Step 10: Promote to release candidate
+  # Step 7: Promote to release candidate
   promote-carbide-rest-to-release-candidate:
     name: Promote Carbide REST to Release Candidate
     needs:

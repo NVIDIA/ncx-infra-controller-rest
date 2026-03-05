@@ -228,10 +228,10 @@ func TestGetRackHandler_Handle(t *testing.T) {
 			wantErr:        true,
 		},
 		{
-			name:   "failure - missing siteId",
-			reqOrg: org,
-			user:   providerUser,
-			rackID: rackID,
+			name:        "failure - missing siteId",
+			reqOrg:      org,
+			user:        providerUser,
+			rackID:      rackID,
 			queryParams: map[string]string{
 				// no siteId
 			},
@@ -745,11 +745,11 @@ func TestValidateRackHandler_Handle(t *testing.T) {
 			wantErr:        true,
 		},
 		{
-			name:   "failure - missing siteId",
-			reqOrg: org,
-			user:   providerUser,
-			rackID: rackID,
-			queryParams: map[string]string{},
+			name:           "failure - missing siteId",
+			reqOrg:         org,
+			user:           providerUser,
+			rackID:         rackID,
+			queryParams:    map[string]string{},
 			mockResponse:   nil,
 			expectedStatus: http.StatusBadRequest,
 			wantErr:        true,
@@ -1054,7 +1054,6 @@ func TestValidateRacksHandler_Handle(t *testing.T) {
 		})
 	}
 }
-
 
 func TestUpdateRackPowerStateHandler_Handle(t *testing.T) {
 	e := echo.New()

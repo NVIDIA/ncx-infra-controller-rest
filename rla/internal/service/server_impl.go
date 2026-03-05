@@ -39,8 +39,6 @@ import (
 	dbquery "github.com/nvidia/bare-metal-manager-rest/rla/internal/db/query"
 	inventorymanager "github.com/nvidia/bare-metal-manager-rest/rla/internal/inventory/manager"
 
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/component"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/rack"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/operation"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/psmapi"
 	taskcommon "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/common"
@@ -50,6 +48,8 @@ import (
 	taskstore "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/store"
 	identifier "github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/Identifier"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/component"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/rack"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/metadata"
 	pb "github.com/nvidia/bare-metal-manager-rest/rla/pkg/proto/v1"
 )

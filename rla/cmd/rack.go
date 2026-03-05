@@ -15,28 +15,18 @@
  * limitations under the License.
  */
 
-package utils
+package cmd
 
 import (
-	"context"
-	"testing"
-
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/db"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/db/migrations"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/db/postgres"
-	"github.com/rs/zerolog/log"
+	"github.com/spf13/cobra"
 )
 
-func UnitTestDB(ctx context.Context, t *testing.T, dbConf db.Config) (*postgres.Postgres, error) {
-	db, err := postgres.UnitTest(ctx, t, dbConf)
+var rackCmd = &cobra.Command{
+	Use:   "rack",
+	Short: "Rack operations",
+	Long:  `Commands for managing racks in the inventory.`,
+}
 
-	if err != nil {
-		log.Warn().Msgf("Not running unit test due to unable to connect to db: %v", err)
-		t.SkipNow()
-		return nil, err
-	}
-
-	err = migrations.Migrate(ctx, db)
-
-	return db, err
+func init() {
+	rootCmd.AddCommand(rackCmd)
 }

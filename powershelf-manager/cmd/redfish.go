@@ -20,12 +20,12 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"net"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/credential"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/secretstring"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/util"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/objects/pmc"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/redfish"
+	"net"
 	"strings"
 
 	log "github.com/sirupsen/logrus"

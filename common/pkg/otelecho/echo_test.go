@@ -26,10 +26,10 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
+	b3prop "go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
-	b3prop "go.opentelemetry.io/contrib/propagators/b3"
 )
 
 func TestErrorOnlyHandledOnce(t *testing.T) {
@@ -171,24 +171,24 @@ func TestTraceIDHeader(t *testing.T) {
 	})
 
 	router.ServeHTTP(w, r)
-	
+
 	response := w.Result()
 	assert.Equal(t, http.StatusOK, response.StatusCode)
-	
+
 	// Verify X-Ngc-Trace-Id header is set
 	traceIDHeader := response.Header.Get(TraceHdr)
 	assert.NotEmpty(t, traceIDHeader, "X-Ngc-Trace-Id header should be set")
-	
+
 	// Verify it's a valid trace ID format (non-empty string)
 	assert.Greater(t, len(traceIDHeader), 0, "Trace ID should not be empty")
-	
+
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator())
 }
 
 // TestTracerInContext verifies that the tracer is stored in context for use by util/tracer.go
 func TestTracerInContext(t *testing.T) {
 	provider := trace.NewNoopTracerProvider()
-	
+
 	r := httptest.NewRequest("GET", "/test", nil)
 	w := httptest.NewRecorder()
 
@@ -205,7 +205,7 @@ func TestTracerInContext(t *testing.T) {
 	})
 
 	router.ServeHTTP(w, r)
-	
+
 	response := w.Result()
 	assert.Equal(t, http.StatusOK, response.StatusCode)
 	assert.NotNil(t, tracerInContext, "Tracer should be stored in context")
@@ -240,13 +240,13 @@ func TestTraceIDInheritance(t *testing.T) {
 	})
 
 	router.ServeHTTP(w, r)
-	
+
 	response := w.Result()
 	assert.Equal(t, http.StatusOK, response.StatusCode)
-	
+
 	// Verify trace ID is inherited from parent
 	assert.Equal(t, parentTraceID, receivedTraceID, "Trace ID should be inherited from parent")
-	
+
 	// Verify header contains the same trace ID
 	traceIDHeader := response.Header.Get(TraceHdr)
 	assert.NotEmpty(t, traceIDHeader, "X-Ngc-Trace-Id header should be set")
@@ -284,7 +284,7 @@ func TestWrapperPreservesUpstreamBehavior(t *testing.T) {
 	})
 
 	router.ServeHTTP(w, r)
-	
+
 	response := w.Result()
 	assert.Equal(t, http.StatusOK, response.StatusCode)
 	// Note: With NoopTracerProvider, spans are created but may not be fully valid
@@ -293,7 +293,6 @@ func TestWrapperPreservesUpstreamBehavior(t *testing.T) {
 	assert.True(t, spanCreated, "Span should be created and valid when parent trace exists")
 	assert.True(t, spanContext.HasTraceID(), "Span should have trace ID")
 	assert.True(t, spanContext.HasSpanID(), "Span should have span ID")
-	
+
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator())
 }
-

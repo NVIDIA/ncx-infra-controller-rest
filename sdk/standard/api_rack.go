@@ -419,6 +419,7 @@ func (a *RackAPIService) GetAllRackExecute(r ApiGetAllRackRequest) ([]Rack, *htt
 		parameterAddToHeaderOrQuery(localVarQueryParams, "pageNumber", r.pageNumber, "form", "")
 	} else {
 		var defaultValue int32 = 1
+		parameterAddToHeaderOrQuery(localVarQueryParams, "pageNumber", defaultValue, "form", "")
 		r.pageNumber = &defaultValue
 	}
 	if r.pageSize != nil {
@@ -947,7 +948,7 @@ ValidateRack Validate a Rack
 
 Validate a Rack's components by comparing expected vs actual state.
 
-Compares the rack's expected component configuration against the actual state from component management systems. Returns a detailed diff report showing missing, extra, and drifted components.
+Compares the rack's expected component configuration against the actual state. Returns a detailed diff report showing missing, extra, and drifted components.
 
 Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` authorization role.
 
@@ -1105,7 +1106,7 @@ Validate Rack components by comparing expected vs actual state.
 
 If no filter is specified, validates all racks in the Site. Filters can narrow the scope to specific racks by name or manufacturer.
 
-Compares the expected component configuration against the actual state from component management systems. Returns a detailed diff report showing missing, extra, and drifted components.
+Compares the expected component configuration against the actual state. Returns a detailed diff report showing missing, extra, and drifted components.
 
 Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` authorization role.
 

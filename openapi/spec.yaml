@@ -8287,7 +8287,14 @@ paths:
                           serialNumber: SN-SRV-001
                           manufacturer: Dell
                           firmwareVersion: 2.1.0
-                          position: 1
+                          slotId: 1
+                          trayIdx: 0
+                          hostId: 0
+                          bmcs:
+                            - type: BMC_TYPE_HOST
+                              macAddress: 'AA:BB:CC:DD:EE:01'
+                              ipAddress: 10.0.0.101
+                          powerState: 'on'
           headers:
             X-Pagination:
               schema:
@@ -8362,7 +8369,14 @@ paths:
                         serialNumber: SN-SRV-001
                         manufacturer: Dell
                         firmwareVersion: 2.1.0
-                        position: 1
+                        slotId: 1
+                        trayIdx: 0
+                        hostId: 0
+                        bmcs:
+                          - type: BMC_TYPE_HOST
+                            macAddress: 'AA:BB:CC:DD:EE:01'
+                            ipAddress: 10.0.0.101
+                        powerState: 'on'
         '403':
           $ref: '#/components/responses/ForbiddenError'
         '404':
@@ -8385,7 +8399,7 @@ paths:
 
         If no filter is specified, validates all racks in the Site. Filters can narrow the scope to specific racks by name or manufacturer.
 
-        Compares the expected component configuration against the actual state from component management systems. Returns a detailed diff report showing missing, extra, and drifted components.
+        Compares the expected component configuration against the actual state. Returns a detailed diff report showing missing, extra, and drifted components.
 
         Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` authorization role.
       parameters:
@@ -8437,7 +8451,14 @@ paths:
                           serialNumber: SN-SRV-001
                           manufacturer: Dell
                           firmwareVersion: 2.1.0
-                          position: 1
+                          slotId: 1
+                          trayIdx: 0
+                          hostId: 0
+                          bmcs:
+                            - type: BMC_TYPE_HOST
+                              macAddress: 'AA:BB:CC:DD:EE:01'
+                              ipAddress: 10.0.0.101
+                          powerState: 'on'
                       - type: DIFF_TYPE_DRIFT
                         componentId: comp-2
                         fieldDiffs:
@@ -8476,7 +8497,7 @@ paths:
       description: |-
         Validate a Rack's components by comparing expected vs actual state.
 
-        Compares the rack's expected component configuration against the actual state from component management systems. Returns a detailed diff report showing missing, extra, and drifted components.
+        Compares the rack's expected component configuration against the actual state. Returns a detailed diff report showing missing, extra, and drifted components.
 
         Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` authorization role.
       parameters:
@@ -8516,7 +8537,14 @@ paths:
                           serialNumber: SN-SRV-001
                           manufacturer: Dell
                           firmwareVersion: 2.1.0
-                          position: 1
+                          slotId: 1
+                          trayIdx: 0
+                          hostId: 0
+                          bmcs:
+                            - type: BMC_TYPE_HOST
+                              macAddress: 'AA:BB:CC:DD:EE:01'
+                              ipAddress: 10.0.0.101
+                          powerState: 'on'
                       - type: DIFF_TYPE_DRIFT
                         componentId: comp-2
                         fieldDiffs:
@@ -8954,11 +8982,11 @@ paths:
       summary: Validate Trays
       operationId: validate-trays
       description: |-
-        Validate Tray components by comparing expected vs actual state via RLA.
+        Validate Tray components by comparing expected vs actual state.
 
         If no filter is specified, validates all trays in the Site. Use rackId/rackName to scope to a specific rack, and name/manufacturer/type to filter by tray attributes.
 
-        Compares the expected component configuration (stored in RLA) against the actual state from external systems. Returns a detailed diff report showing missing, extra, and drifted components.
+        Compares the expected component configuration against the actual state. Returns a detailed diff report showing missing, extra, and drifted components.
 
         Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` authorization role.
       parameters:
@@ -9051,9 +9079,9 @@ paths:
       summary: Validate a Tray
       operationId: validate-tray
       description: |-
-        Validate a Tray by comparing expected vs actual state via RLA.
+        Validate a Tray by comparing expected vs actual state.
 
-        Compares the expected component configuration (stored in RLA) against the actual state from external systems. Returns a detailed diff report showing missing, extra, and drifted components.
+        Compares the expected component configuration against the actual state. Returns a detailed diff report showing missing, extra, and drifted components.
 
         Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` authorization role.
       parameters:
@@ -14659,7 +14687,14 @@ components:
               serialNumber: SN-SRV-001
               manufacturer: Dell
               firmwareVersion: 2.1.0
-              position: 1
+              slotId: 1
+              trayIdx: 0
+              hostId: 0
+              bmcs:
+                - type: BMC_TYPE_HOST
+                  macAddress: 'AA:BB:CC:DD:EE:01'
+                  ipAddress: 10.0.0.101
+              powerState: 'on'
       properties:
         id:
           type: string
@@ -14744,7 +14779,7 @@ components:
             - DIFF_TYPE_DRIFT
         componentId:
           type: string
-          description: ID of the component in its source system
+          description: ID of the component
         expected:
           $ref: '#/components/schemas/RackComponent'
         actual:
@@ -14776,10 +14811,10 @@ components:
         id:
           type: string
           format: uuid
-          description: Unique identifier of the component in RLA
+          description: Unique identifier of the component
         componentId:
           type: string
-          description: ID of the component in its source system (e.g. Carbide machine ID for compute nodes)
+          description: ID of the component
         rackId:
           type: string
           format: uuid
@@ -14821,7 +14856,7 @@ components:
             $ref: '#/components/schemas/BMCInfo'
         powerState:
           type: string
-          description: Current power state of the component (synced from external system)
+          description: Current power state of the component
     BMCInfo:
       title: BMCInfo
       type: object
@@ -14863,7 +14898,7 @@ components:
           description: Unique identifier of the Tray
         componentId:
           type: string
-          description: ID of the component in its source system (e.g. Carbide machine ID for compute nodes)
+          description: ID of the component
         type:
           type: string
           enum:

@@ -33,8 +33,8 @@ func TestGetAuthToken_Priority(t *testing.T) {
 			name: "direct token wins",
 			cfg: ConfigFile{
 				Auth: ConfigAuth{
-					Token: "direct-token",
-					OIDC:  &ConfigOIDC{Token: "oidc-token"},
+					Token:  "direct-token",
+					OIDC:   &ConfigOIDC{Token: "oidc-token"},
 					APIKey: &ConfigAPIKey{Token: "api-key-token"},
 				},
 			},

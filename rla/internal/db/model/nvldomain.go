@@ -22,8 +22,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/uptrace/bun"
 	dbquery "github.com/nvidia/bare-metal-manager-rest/rla/internal/db/query"
+	"github.com/uptrace/bun"
 )
 
 var defaultNVLDomainPagination = dbquery.Pagination{
