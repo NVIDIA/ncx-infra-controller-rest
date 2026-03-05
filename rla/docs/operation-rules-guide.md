@@ -677,13 +677,13 @@ rla rule create \
 
 ```bash
 # Create (skip rules that already exist by name)
-rla rule create --from-yaml docs/operation-rules-example.yaml
+rla rule create --from-yaml examples/operation-rules-example.yaml
 
 # Create or overwrite existing rules
-rla rule create --from-yaml docs/operation-rules-example.yaml --overwrite
+rla rule create --from-yaml examples/operation-rules-example.yaml --overwrite
 
 # Validate without writing to the database
-rla rule create --from-yaml docs/operation-rules-example.yaml --dry-run
+rla rule create --from-yaml examples/operation-rules-example.yaml --dry-run
 ```
 
 ### Manage rules
@@ -728,11 +728,11 @@ rules:
 
 ## Reference YAML
 
-The file `docs/operation-rules-example.yaml` is the canonical loadable reference
+The file `examples/operation-rules-example.yaml` is the canonical loadable reference
 covering all built-in rule patterns. Load it with:
 
 ```bash
-rla rule create --from-yaml docs/operation-rules-example.yaml
+rla rule create --from-yaml examples/operation-rules-example.yaml
 ```
 
 ```yaml
