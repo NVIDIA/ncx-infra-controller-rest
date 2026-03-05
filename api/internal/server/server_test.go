@@ -29,10 +29,10 @@ import (
 
 	echo "github.com/labstack/echo/v4"
 	"github.com/nvidia/bare-metal-manager-rest/api/internal/config"
-	cconfig "github.com/nvidia/bare-metal-manager-rest/common/pkg/config"
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/handler/util/common"
 	_ "github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model"
 	sc "github.com/nvidia/bare-metal-manager-rest/api/pkg/client/site"
+	cconfig "github.com/nvidia/bare-metal-manager-rest/common/pkg/config"
 	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
 	cdbu "github.com/nvidia/bare-metal-manager-rest/db/pkg/util"

@@ -58,8 +58,8 @@ func (c *Config) Validate() error {
 }
 
 // ConfigFromEnv builds a Config from environment variables.
-// Reads: DB_ADDR or DB_HOST (host), DB_PORT (port), DB_USER, DB_PASSWORD,
-// DB_DATABASE or DB_NAME (database name), DB_CERT_PATH (optional CA certificate).
+// Reads: DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME,
+// DB_CERT_PATH (optional CA certificate).
 func ConfigFromEnv() (Config, error) {
 	port, err := strconv.Atoi(os.Getenv("DB_PORT"))
 	if err != nil {
@@ -71,21 +71,11 @@ func ConfigFromEnv() (Config, error) {
 		return Config{}, ErrInvalidCredential
 	}
 
-	host := os.Getenv("DB_ADDR")
-	if host == "" {
-		host = os.Getenv("DB_HOST")
-	}
-
-	dbName := os.Getenv("DB_DATABASE")
-	if dbName == "" {
-		dbName = os.Getenv("DB_NAME")
-	}
-
 	return Config{
-		Host:              host,
+		Host:              os.Getenv("DB_HOST"),
 		Port:              port,
 		Credential:        cred,
-		DBName:            dbName,
+		DBName:            os.Getenv("DB_NAME"),
 		CACertificatePath: os.Getenv("DB_CERT_PATH"),
 	}, nil
 }

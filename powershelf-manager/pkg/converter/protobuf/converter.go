@@ -18,14 +18,15 @@ package protobuf
 
 import (
 	"fmt"
-	pb "github.com/nvidia/bare-metal-manager-rest/powershelf-manager/internal/proto/v1"
+
+	gofish "github.com/stmcginnis/gofish/redfish"
+
 	"github.com/nvidia/bare-metal-manager-rest/common/pkg/credential"
+	pb "github.com/nvidia/bare-metal-manager-rest/powershelf-manager/internal/proto/v1"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/vendor"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/objects/pmc"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/objects/powershelf"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/objects/powersupply"
-
-	gofish "github.com/stmcginnis/gofish/redfish"
 )
 
 var pmcTypeToMap map[vendor.VendorCode]pb.PMCVendor
@@ -221,7 +222,7 @@ func PMCFrom(protobufPmc *pb.PowerManagementController, protobufCreds *pb.Creden
 		return nil, err
 	}
 
-	if protobufPmc != nil {
+	if protobufCreds != nil {
 		creds := credential.New(protobufCreds.Username, protobufCreds.Password)
 		pmc.SetCredential(&creds)
 	}

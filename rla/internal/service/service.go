@@ -56,6 +56,8 @@ func New(ctx context.Context, c Config) (*Service, error) {
 
 	// Run migrations
 	if err := migrations.MigrateWithDB(ctx, session.DB); err != nil {
+		session.Close()
+
 		return nil, fmt.Errorf("failed to run migrations: %v", err)
 	}
 

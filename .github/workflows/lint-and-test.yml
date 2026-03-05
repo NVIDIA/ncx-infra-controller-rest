@@ -208,7 +208,7 @@ jobs:
       DB_USER: postgres
       DB_PASSWORD: postgres
       DB_HOST: localhost
-      DB_PORT: 5432
+      DB_PORT: 30432
       CGO_ENABLED: 1
 
     steps:

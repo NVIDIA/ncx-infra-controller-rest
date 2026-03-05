@@ -21,7 +21,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"net/url"
 	"os"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -29,6 +28,8 @@ import (
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/pgdialect"
 	"github.com/uptrace/bun/extra/bunotel"
+
+	"github.com/nvidia/bare-metal-manager-rest/common/pkg/credential"
 )
 
 // Session is a wrapper for an ORM DB object
@@ -40,39 +41,23 @@ type Session struct {
 }
 
 // NewSession creates and returns a new session object using pgx v5 + pgxpool.
+// It delegates to NewSessionFromConfig to keep DSN logic centralized.
 func NewSession(ctx context.Context, host string, port int, dbName string, user string, password string, caCertPath string) (*Session, error) {
-	configDSN := fmt.Sprintf("postgres://%v:%v@%v:%v/%v", url.PathEscape(user), url.PathEscape(password), host, port, dbName)
-
-	if caCertPath != "" {
-		configDSN = fmt.Sprintf("%v?sslmode=verify-full&sslrootcert=%v", configDSN, caCertPath)
-	}
-
-	pool, err := pgxpool.New(ctx, configDSN)
-	if err != nil {
-		return nil, err
-	}
-
-	sqldb := stdlib.OpenDBFromPool(pool)
-	db := bun.NewDB(sqldb, pgdialect.New())
-
-	// if tracing service name is configured, add otel hooks
-	if os.Getenv("TRACING_SERVICE_NAME") != "" {
-		db.AddQueryHook(bunotel.NewQueryHook(
-			bunotel.WithDBName(dbName),
-			bunotel.WithFormattedQueries(true),
-		))
-	}
-
-	return &Session{
-		DBName:       dbName,
-		DB:           db,
-		pool:         pool,
-		errorChecker: &PostgresErrorChecker{},
-	}, nil
+	return NewSessionFromConfig(ctx, Config{
+		Host:              host,
+		Port:              port,
+		DBName:            dbName,
+		Credential:        credential.New(user, password),
+		CACertificatePath: caCertPath,
+	})
 }
 
 // NewSessionFromConfig creates a Session from a Config.
 func NewSessionFromConfig(ctx context.Context, c Config) (*Session, error) {
+	if err := c.Validate(); err != nil {
+		return nil, err
+	}
+
 	pool, err := pgxpool.New(ctx, c.BuildDSN())
 	if err != nil {
 		return nil, err
@@ -106,7 +91,7 @@ func (s *Session) Close() {
 }
 
 // GetErrorChecker returns the error classifier for this session.
-func (s *Session) GetErrorChecker() ErrorChecker { //nolint:ireturn // interface by design
+func (s *Session) GetErrorChecker() ErrorChecker {
 	return s.errorChecker
 }
 

@@ -47,6 +47,8 @@ func newPostgresRegistry(ctx context.Context, c cdb.Config) (*PostgresPmcRegistr
 
 	// Run migrations automatically at startup to ensure schema is up to date
 	if err := migrations.MigrateWithDB(ctx, session.DB); err != nil {
+		session.Close()
+
 		return nil, fmt.Errorf("failed to run migrations: %v", err)
 	}
 

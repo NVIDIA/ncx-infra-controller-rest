@@ -20,6 +20,8 @@ WORKDIR /workspace
 COPY go.mod go.sum VERSION ./
 RUN go mod download
 
+COPY common/ ./common/
+COPY db/ ./db/
 COPY rla/ ./rla/
 
 WORKDIR /workspace/rla
