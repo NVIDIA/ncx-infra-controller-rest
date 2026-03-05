@@ -77,6 +77,15 @@ migrate:
 	PGPASSWORD=$(POSTGRES_PASSWORD) \
 	./db/cmd/migrations/migrations db init_migrate
 
+fmt-go:
+	go fmt ./...
+	if git diff --quiet; then
+		echo "go fmt was clean"
+	else
+		echo "go fmt was unclean. Please commit the changes."
+		exit 1
+	fi
+
 lint-go:
 	go vet ./...
 	golangci-lint run --issues-exit-code 0 --output.code-climate.path=stdout | jq .
