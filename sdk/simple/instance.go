@@ -253,6 +253,10 @@ func (im InstanceManager) GetInstances(ctx context.Context, instanceFilter *Inst
 			gir = gir.VpcId(*instanceFilter.VpcID)
 		}
 	}
+	// If no explicit VPC filter was provided, fall back to the client's default VPC (if set).
+	if (instanceFilter == nil || instanceFilter.VpcID == nil) && im.client.apiMetadata.VpcID != "" {
+		gir = gir.VpcId(im.client.apiMetadata.VpcID)
+	}
 	if paginationFilter != nil {
 		if paginationFilter.PageNumber != nil {
 			gir = gir.PageNumber(int32(*paginationFilter.PageNumber))
