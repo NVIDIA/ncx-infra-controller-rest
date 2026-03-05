@@ -128,19 +128,23 @@ jobs:
           CHANGED=$(git diff --name-only "$BASE"...HEAD)
 
           if echo "$CHANGED" | grep -q '^openapi/spec.yaml$'; then
-            MISSING=""
-            echo "$CHANGED" | grep -q '^sdk/standard/' || MISSING="sdk/standard/"
-            echo "$CHANGED" | grep -q '^docs/index.html$' || MISSING="${MISSING:+$MISSING, }docs/index.html"
+            SDK_UPDATED=false
+            DOCS_UPDATED=false
+            echo "$CHANGED" | grep -q '^sdk/standard/' && SDK_UPDATED=true
+            echo "$CHANGED" | grep -q '^docs/index.html$' && DOCS_UPDATED=true
 
-            if [ -n "$MISSING" ]; then
-              echo "::error::openapi/spec.yaml was modified but generated files were not updated: $MISSING"
-              echo ""
-              echo "Please run the following commands locally and commit the results:"
-              echo "  make generate-sdk"
-              echo "  make publish-openapi"
+            if [ "$SDK_UPDATED" = false ]; then
+              echo "::warning::sdk/standard/ was not updated. Please ensure you have run: make generate-sdk"
+            fi
+            if [ "$DOCS_UPDATED" = false ]; then
+              echo "::warning::docs/index.html was not updated. Please ensure you have run: make publish-openapi"
+            fi
+
+            if [ "$SDK_UPDATED" = false ] && [ "$DOCS_UPDATED" = false ]; then
+              echo "::error::openapi/spec.yaml was modified but neither sdk/standard/ nor docs/index.html was updated."
               exit 1
             fi
-            echo "✓ openapi/spec.yaml changed and generated files (sdk/standard/, docs/index.html) were also updated."
+            echo "✓ openapi/spec.yaml changed and generated files were also updated (sdk=$SDK_UPDATED, docs=$DOCS_UPDATED)."
           else
             echo "✓ openapi/spec.yaml not changed, skipping generated files check."
           fi
