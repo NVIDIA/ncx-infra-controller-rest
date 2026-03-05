@@ -500,7 +500,7 @@ generate-sdk:
 		--global-property=apis,models,supportingFiles
 	rm -rf sdk/standard/docs sdk/standard/api sdk/standard/README.md sdk/standard/test sdk/standard/.openapi-generator
 	@echo "Client generated in sdk/standard/"
-	go build ./sdk/standard/...
+	cd sdk/standard && go build ./...
 	@echo "Client compiles successfully"
 
 # =============================================================================

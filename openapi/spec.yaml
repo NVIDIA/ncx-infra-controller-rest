@@ -8290,6 +8290,11 @@ paths:
                           slotId: 1
                           trayIdx: 0
                           hostId: 0
+                          bmcs:
+                            - type: BMC_TYPE_HOST
+                              macAddress: 'AA:BB:CC:DD:EE:01'
+                              ipAddress: 10.0.0.101
+                          powerState: 'on'
           headers:
             X-Pagination:
               schema:
@@ -8367,6 +8372,11 @@ paths:
                         slotId: 1
                         trayIdx: 0
                         hostId: 0
+                        bmcs:
+                          - type: BMC_TYPE_HOST
+                            macAddress: 'AA:BB:CC:DD:EE:01'
+                            ipAddress: 10.0.0.101
+                        powerState: 'on'
         '403':
           $ref: '#/components/responses/ForbiddenError'
         '404':
@@ -8444,6 +8454,11 @@ paths:
                           slotId: 1
                           trayIdx: 0
                           hostId: 0
+                          bmcs:
+                            - type: BMC_TYPE_HOST
+                              macAddress: 'AA:BB:CC:DD:EE:01'
+                              ipAddress: 10.0.0.101
+                          powerState: 'on'
                       - type: DIFF_TYPE_DRIFT
                         componentId: comp-2
                         fieldDiffs:
@@ -8525,6 +8540,11 @@ paths:
                           slotId: 1
                           trayIdx: 0
                           hostId: 0
+                          bmcs:
+                            - type: BMC_TYPE_HOST
+                              macAddress: 'AA:BB:CC:DD:EE:01'
+                              ipAddress: 10.0.0.101
+                          powerState: 'on'
                       - type: DIFF_TYPE_DRIFT
                         componentId: comp-2
                         fieldDiffs:
@@ -14670,6 +14690,11 @@ components:
               slotId: 1
               trayIdx: 0
               hostId: 0
+              bmcs:
+                - type: BMC_TYPE_HOST
+                  macAddress: 'AA:BB:CC:DD:EE:01'
+                  ipAddress: 10.0.0.101
+              powerState: 'on'
       properties:
         id:
           type: string
