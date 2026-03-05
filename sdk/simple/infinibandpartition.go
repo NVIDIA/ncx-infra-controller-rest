@@ -27,13 +27,13 @@ import (
 
 // InfinibandPartition represents a simplified InfiniBand Partition
 type InfinibandPartition struct {
-	ID          string     `json:"id"`
-	Name        string     `json:"name"`
-	Description *string    `json:"description"`
+	ID           string    `json:"id"`
+	Name         string    `json:"name"`
+	Description  *string   `json:"description"`
 	PartitionKey *string   `json:"partitionKey"`
-	Created     time.Time  `json:"created"`
-	Updated     time.Time  `json:"updated"`
-	Status      string     `json:"status"`
+	Created      time.Time `json:"created"`
+	Updated      time.Time `json:"updated"`
+	Status       string    `json:"status"`
 }
 
 // InfinibandPartitionCreateRequest represents a request to create an InfiniBand Partition

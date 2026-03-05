@@ -26,17 +26,17 @@ import (
 
 // InstanceCreateRequest represents a simplified request to create an Instance
 type InstanceCreateRequest struct {
-	Name                        string                                   `json:"name"`
-	Description                 *string                                  `json:"description"`
-	MachineID                   string                                   `json:"machineId"`
-	VpcID                       *string                                  `json:"vpcId"`
-	IpxeScript                  string                                   `json:"ipxeScript"`
-	UserData                    *string                                  `json:"userData"`
-	SSHKeys                     []string                                 `json:"sshKeys"`
-	Labels                      map[string]string                         `json:"labels"`
-	InfinibandInterfaces        []InfiniBandInterfaceCreateOrUpdateRequest `json:"infinibandInterfaces"`
-	NVLinkInterfaces            []NVLinkInterfaceCreateOrUpdateRequest   `json:"nvLinkInterfaces"`
-	DpuExtensionServiceDeployments []DpuExtensionServiceDeploymentRequest `json:"dpuExtensionServiceDeployments"`
+	Name                           string                                     `json:"name"`
+	Description                    *string                                    `json:"description"`
+	MachineID                      string                                     `json:"machineId"`
+	VpcID                          *string                                    `json:"vpcId"`
+	IpxeScript                     string                                     `json:"ipxeScript"`
+	UserData                       *string                                    `json:"userData"`
+	SSHKeys                        []string                                   `json:"sshKeys"`
+	Labels                         map[string]string                          `json:"labels"`
+	InfinibandInterfaces           []InfiniBandInterfaceCreateOrUpdateRequest `json:"infinibandInterfaces"`
+	NVLinkInterfaces               []NVLinkInterfaceCreateOrUpdateRequest     `json:"nvLinkInterfaces"`
+	DpuExtensionServiceDeployments []DpuExtensionServiceDeploymentRequest     `json:"dpuExtensionServiceDeployments"`
 }
 
 // InfiniBandInterfaceCreateOrUpdateRequest represents an InfiniBand interface attachment
@@ -69,14 +69,14 @@ type InstanceFilter struct {
 
 // InstanceUpdateRequest represents a simplified request to update an Instance
 type InstanceUpdateRequest struct {
-	Name                        *string                                  `json:"name"`
-	Description                 *string                                  `json:"description"`
-	IpxeScript                  *string                                  `json:"ipxeScript"`
-	UserData                    *string                                  `json:"userData"`
-	Labels                      map[string]string                         `json:"labels"`
-	InfinibandInterfaces        []InfiniBandInterfaceCreateOrUpdateRequest `json:"infinibandInterfaces"`
-	NVLinkInterfaces            []NVLinkInterfaceCreateOrUpdateRequest   `json:"nvLinkInterfaces"`
-	DpuExtensionServiceDeployments []DpuExtensionServiceDeploymentRequest `json:"dpuExtensionServiceDeployments"`
+	Name                           *string                                    `json:"name"`
+	Description                    *string                                    `json:"description"`
+	IpxeScript                     *string                                    `json:"ipxeScript"`
+	UserData                       *string                                    `json:"userData"`
+	Labels                         map[string]string                          `json:"labels"`
+	InfinibandInterfaces           []InfiniBandInterfaceCreateOrUpdateRequest `json:"infinibandInterfaces"`
+	NVLinkInterfaces               []NVLinkInterfaceCreateOrUpdateRequest     `json:"nvLinkInterfaces"`
+	DpuExtensionServiceDeployments []DpuExtensionServiceDeploymentRequest     `json:"dpuExtensionServiceDeployments"`
 }
 
 // InstanceManager manages Instance operations
@@ -109,7 +109,7 @@ func toStandardInfiniBandInterface(request InfiniBandInterfaceCreateOrUpdateRequ
 func toStandardNVLinkInterface(request NVLinkInterfaceCreateOrUpdateRequest) standard.NVLinkInterfaceCreateRequest {
 	return standard.NVLinkInterfaceCreateRequest{
 		NvLinklogicalPartitionId: &request.NVLinkLogicalPartitionID,
-		DeviceInstance:          standard.PtrInt32(int32(request.DeviceInstance)),
+		DeviceInstance:           standard.PtrInt32(int32(request.DeviceInstance)),
 	}
 }
 
@@ -144,13 +144,13 @@ func toStandardInstanceCreateRequest(request InstanceCreateRequest, sshKeyGroupI
 		}
 	}
 	apiReq := standard.InstanceCreateRequest{
-		Name:            request.Name,
-		TenantId:        am.TenantID,
-		MachineId:       &request.MachineID,
-		VpcId:           vpcID,
-		Labels:          request.Labels,
-		SshKeyGroupIds:  sshKeyGroupIDs,
-		Interfaces:      []standard.InterfaceCreateRequest{defaultIface},
+		Name:           request.Name,
+		TenantId:       am.TenantID,
+		MachineId:      &request.MachineID,
+		VpcId:          vpcID,
+		Labels:         request.Labels,
+		SshKeyGroupIds: sshKeyGroupIDs,
+		Interfaces:     []standard.InterfaceCreateRequest{defaultIface},
 	}
 	if request.Description != nil {
 		apiReq.Description.Set(request.Description)

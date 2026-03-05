@@ -28,39 +28,39 @@ import (
 
 // ExpectedMachine represents a simplified Expected Machine
 type ExpectedMachine struct {
-	ID                      string                 `json:"id"`
-	BmcMacAddress          string                 `json:"bmcMacAddress"`
-	ChassisSerialNumber     string                 `json:"chassisSerialNumber"`
-	FallbackDPUSerialNumbers []string              `json:"fallbackDPUSerialNumbers"`
-	SkuID                   *string                `json:"skuId"`
-	Sku                     *standard.Sku         `json:"sku,omitempty"`
-	MachineID               *string                `json:"machineId"`
-	Machine                 *standard.MachineSummary `json:"machine,omitempty"`
-	Labels                  map[string]string     `json:"labels"`
-	Created                 time.Time              `json:"created"`
-	Updated                 time.Time              `json:"updated"`
+	ID                       string                   `json:"id"`
+	BmcMacAddress            string                   `json:"bmcMacAddress"`
+	ChassisSerialNumber      string                   `json:"chassisSerialNumber"`
+	FallbackDPUSerialNumbers []string                 `json:"fallbackDPUSerialNumbers"`
+	SkuID                    *string                  `json:"skuId"`
+	Sku                      *standard.Sku            `json:"sku,omitempty"`
+	MachineID                *string                  `json:"machineId"`
+	Machine                  *standard.MachineSummary `json:"machine,omitempty"`
+	Labels                   map[string]string        `json:"labels"`
+	Created                  time.Time                `json:"created"`
+	Updated                  time.Time                `json:"updated"`
 }
 
 // ExpectedMachineCreateRequest represents a request to create an Expected Machine
 type ExpectedMachineCreateRequest struct {
-	BmcMacAddress           string            `json:"bmcMacAddress"`
-	BmcUsername             *string           `json:"bmcUsername"`
-	BmcPassword             *string           `json:"bmcPassword"`
-	ChassisSerialNumber     string           `json:"chassisSerialNumber"`
-	FallbackDPUSerialNumbers []string         `json:"fallbackDPUSerialNumbers"`
-	Labels                  map[string]string `json:"labels"`
+	BmcMacAddress            string            `json:"bmcMacAddress"`
+	BmcUsername              *string           `json:"bmcUsername"`
+	BmcPassword              *string           `json:"bmcPassword"`
+	ChassisSerialNumber      string            `json:"chassisSerialNumber"`
+	FallbackDPUSerialNumbers []string          `json:"fallbackDPUSerialNumbers"`
+	Labels                   map[string]string `json:"labels"`
 }
 
 // ExpectedMachineUpdateRequest represents a request to update an Expected Machine
 type ExpectedMachineUpdateRequest struct {
-	ID                      string            `json:"id,omitempty"` // Required for batch operations
-	BmcMacAddress           *string           `json:"bmcMacAddress"`
-	BmcUsername             *string           `json:"bmcUsername"`
-	BmcPassword             *string           `json:"bmcPassword"`
-	ChassisSerialNumber     *string           `json:"chassisSerialNumber"`
-	FallbackDPUSerialNumbers []string         `json:"fallbackDPUSerialNumbers"`
-	SkuID                   *string           `json:"skuId"`
-	Labels                  map[string]string `json:"labels"`
+	ID                       string            `json:"id,omitempty"` // Required for batch operations
+	BmcMacAddress            *string           `json:"bmcMacAddress"`
+	BmcUsername              *string           `json:"bmcUsername"`
+	BmcPassword              *string           `json:"bmcPassword"`
+	ChassisSerialNumber      *string           `json:"chassisSerialNumber"`
+	FallbackDPUSerialNumbers []string          `json:"fallbackDPUSerialNumbers"`
+	SkuID                    *string           `json:"skuId"`
+	Labels                   map[string]string `json:"labels"`
 }
 
 // ExpectedMachineManager manages Expected Machine operations
@@ -108,8 +108,8 @@ func toStandardExpectedMachineCreateRequest(request ExpectedMachineCreateRequest
 	apiReq := standard.ExpectedMachineCreateRequest{
 		SiteId:                   siteID,
 		BmcMacAddress:            request.BmcMacAddress,
-		ChassisSerialNumber:       request.ChassisSerialNumber,
-		FallbackDPUSerialNumbers:  request.FallbackDPUSerialNumbers,
+		ChassisSerialNumber:      request.ChassisSerialNumber,
+		FallbackDPUSerialNumbers: request.FallbackDPUSerialNumbers,
 		Labels:                   request.Labels,
 	}
 	if request.BmcUsername != nil {

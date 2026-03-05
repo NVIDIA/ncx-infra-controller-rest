@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"golang.org/x/mod/semver"
 
@@ -62,8 +63,13 @@ type ApiMetadata struct {
 	SubnetName string
 }
 
-// IsMinimumAPIVersion returns the API version and whether it meets the required minimum
+// IsMinimumAPIVersion returns the API version and whether it meets the required minimum.
+// Returns false if the current API version is empty or does not start with "v", as semver.Compare
+// treats two invalid versions as equal (returning 0), which would otherwise produce a false positive.
 func (am *ApiMetadata) IsMinimumAPIVersion(requiredVersion string) (string, bool) {
+	if !strings.HasPrefix(am.apiVersion, "v") {
+		return am.apiVersion, false
+	}
 	return am.apiVersion, semver.Compare(am.apiVersion, requiredVersion) >= 0
 }
 

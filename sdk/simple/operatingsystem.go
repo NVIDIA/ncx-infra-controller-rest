@@ -27,14 +27,14 @@ import (
 
 // OperatingSystem represents a simplified Operating System
 type OperatingSystem struct {
-	ID          string     `json:"id"`
-	Name        string     `json:"name"`
-	Description *string    `json:"description"`
-	IpxeScript  *string    `json:"ipxeScript"`
-	UserData    *string    `json:"userData"`
-	Status      string     `json:"status"`
-	Created     time.Time  `json:"created"`
-	Updated     time.Time  `json:"updated"`
+	ID          string    `json:"id"`
+	Name        string    `json:"name"`
+	Description *string   `json:"description"`
+	IpxeScript  *string   `json:"ipxeScript"`
+	UserData    *string   `json:"userData"`
+	Status      string    `json:"status"`
+	Created     time.Time `json:"created"`
+	Updated     time.Time `json:"updated"`
 }
 
 // OperatingSystemCreateRequest represents a request to create an Operating System

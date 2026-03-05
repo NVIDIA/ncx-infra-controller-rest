@@ -27,12 +27,12 @@ import (
 
 // Vpc represents a simplified VPC
 type Vpc struct {
-	ID                        string     `json:"id"`
-	Name                      string     `json:"name"`
-	Description               *string    `json:"description"`
-	NetworkVirtualizationType string     `json:"networkVirtualizationType"`
-	Created                   time.Time  `json:"created"`
-	Updated                   time.Time  `json:"updated"`
+	ID                        string    `json:"id"`
+	Name                      string    `json:"name"`
+	Description               *string   `json:"description"`
+	NetworkVirtualizationType string    `json:"networkVirtualizationType"`
+	Created                   time.Time `json:"created"`
+	Updated                   time.Time `json:"updated"`
 }
 
 // VpcCreateRequest is a request to create a VPC

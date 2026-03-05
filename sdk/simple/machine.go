@@ -27,34 +27,34 @@ import (
 
 // Machine represents a simplified Machine
 type Machine struct {
-	ID                   string                 `json:"id"`
-	InstanceTypeID       *string                `json:"instanceTypeId"`
-	InstanceID          *string                `json:"instanceId"`
-	Vendor              *string                `json:"vendor"`
-	ProductName         *string                `json:"productName"`
-	SerialNumber        *string                `json:"serialNumber"`
-	Hostname            *string                `json:"hostname"`
+	ID                  string                  `json:"id"`
+	InstanceTypeID      *string                 `json:"instanceTypeId"`
+	InstanceID          *string                 `json:"instanceId"`
+	Vendor              *string                 `json:"vendor"`
+	ProductName         *string                 `json:"productName"`
+	SerialNumber        *string                 `json:"serialNumber"`
+	Hostname            *string                 `json:"hostname"`
 	MachineCapabilities []MachineCapability     `json:"machineCapabilities"`
 	AdminInterfaces     []MachineAdminInterface `json:"adminInterfaces"`
-	MaintenanceMessage  *string                `json:"maintenanceMessage"`
-	Labels              map[string]string      `json:"labels"`
-	Status              string                 `json:"status"`
-	Created             time.Time              `json:"created"`
-	Updated             time.Time              `json:"updated"`
+	MaintenanceMessage  *string                 `json:"maintenanceMessage"`
+	Labels              map[string]string       `json:"labels"`
+	Status              string                  `json:"status"`
+	Created             time.Time               `json:"created"`
+	Updated             time.Time               `json:"updated"`
 }
 
 // MachineCapability represents a machine capability
 type MachineCapability struct {
-	Type             string   `json:"type"`
-	Name             string   `json:"name"`
-	Frequency        *string  `json:"frequency"`
-	Cores            *int     `json:"cores"`
-	Threads          *int     `json:"threads"`
-	Capacity         *string  `json:"capacity"`
-	Vendor           *string  `json:"vendor"`
-	InactiveDevices  []int    `json:"inactiveDevices"`
-	Count            *int     `json:"count"`
-	DeviceType       *string  `json:"deviceType"`
+	Type            string  `json:"type"`
+	Name            string  `json:"name"`
+	Frequency       *string `json:"frequency"`
+	Cores           *int    `json:"cores"`
+	Threads         *int    `json:"threads"`
+	Capacity        *string `json:"capacity"`
+	Vendor          *string `json:"vendor"`
+	InactiveDevices []int   `json:"inactiveDevices"`
+	Count           *int    `json:"count"`
+	DeviceType      *string `json:"deviceType"`
 }
 
 // MachineAdminInterface describes an interface attached to a machine

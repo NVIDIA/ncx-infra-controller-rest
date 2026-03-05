@@ -27,12 +27,12 @@ import (
 
 // NVLinkLogicalPartition represents a simplified NVLink Logical Partition
 type NVLinkLogicalPartition struct {
-	ID          string     `json:"id"`
-	Name        string     `json:"name"`
-	Description *string    `json:"description"`
-	Status      string     `json:"status"`
-	Created     time.Time  `json:"created"`
-	Updated     time.Time  `json:"updated"`
+	ID          string    `json:"id"`
+	Name        string    `json:"name"`
+	Description *string   `json:"description"`
+	Status      string    `json:"status"`
+	Created     time.Time `json:"created"`
+	Updated     time.Time `json:"updated"`
 }
 
 // NVLinkLogicalPartitionCreateRequest represents a request to create an NVLink Logical Partition

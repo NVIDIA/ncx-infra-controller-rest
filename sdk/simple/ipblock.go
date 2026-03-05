@@ -28,15 +28,15 @@ import (
 
 // IpBlock represents a simplified IP block
 type IpBlock struct {
-	ID             string     `json:"id"`
-	Name           *string    `json:"name"`
-	Description    *string    `json:"description"`
-	SiteID         *string    `json:"siteId"`
-	Cidr           string     `json:"cidr"` // prefix/prefixLength
+	ID              string    `json:"id"`
+	Name            *string   `json:"name"`
+	Description     *string   `json:"description"`
+	SiteID          *string   `json:"siteId"`
+	Cidr            string    `json:"cidr"` // prefix/prefixLength
 	ProtocolVersion *string   `json:"protocolVersion"`
-	Status         string     `json:"status"`
-	Created        time.Time  `json:"created"`
-	Updated        time.Time  `json:"updated"`
+	Status          string    `json:"status"`
+	Created         time.Time `json:"created"`
+	Updated         time.Time `json:"updated"`
 }
 
 // IpBlockManager manages IP block operations
@@ -51,9 +51,9 @@ func NewIpBlockManager(client *Client) IpBlockManager {
 
 func ipBlockFromStandard(api standard.IpBlock) IpBlock {
 	ib := IpBlock{
-		Name:           api.Name,
-		Description:    api.Description,
-		SiteID:         api.SiteId,
+		Name:            api.Name,
+		Description:     api.Description,
+		SiteID:          api.SiteId,
 		ProtocolVersion: api.ProtocolVersion,
 	}
 	if api.Id != nil {

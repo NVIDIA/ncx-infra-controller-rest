@@ -32,13 +32,13 @@ const (
 
 // DpuExtensionService represents a simplified DPU Extension Service
 type DpuExtensionService struct {
-	ID             string   `json:"id"`
-	Name           string   `json:"name"`
-	Description    *string  `json:"description"`
-	ServiceType    string   `json:"serviceType"`
-	Version        *string  `json:"version"`
-	ActiveVersions []string `json:"activeVersions"`
-	Status         string   `json:"status"`
+	ID             string    `json:"id"`
+	Name           string    `json:"name"`
+	Description    *string   `json:"description"`
+	ServiceType    string    `json:"serviceType"`
+	Version        *string   `json:"version"`
+	ActiveVersions []string  `json:"activeVersions"`
+	Status         string    `json:"status"`
 	Created        time.Time `json:"created"`
 	Updated        time.Time `json:"updated"`
 }
