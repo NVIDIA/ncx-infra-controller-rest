@@ -175,6 +175,7 @@ func main() {
 |-------|----------|-------|
 | `admin@example.com` | `adminpassword` | FORGE_PROVIDER_ADMIN, FORGE_TENANT_ADMIN |
 | `testuser@example.com` | `testpassword` | FORGE_TENANT_ADMIN |
+| `provider@example.com` | `providerpassword` | FORGE_PROVIDER_ADMIN |
 
 ### Programmatic configuration
 
