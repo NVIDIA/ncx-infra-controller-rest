@@ -51,9 +51,9 @@ var actionExecutorRegistry = map[string]actionExecutor{
 	operationrules.ActionVerifyReachability: executeVerifyReachabilityAction,
 	operationrules.ActionGetPowerStatus:     executeGetPowerStatusAction,
 	operationrules.ActionFirmwareControl:    executeFirmwareControlAction,
-	operationrules.ActionAllowBringUp:        executeAllowBringUpAction,
-	operationrules.ActionWaitBringUp:         executeWaitBringUpAction,
-	operationrules.ActionInjectExpectation:   executeInjectExpectationAction,
+	operationrules.ActionAllowBringUp:       executeAllowBringUpAction,
+	operationrules.ActionWaitBringUp:        executeWaitBringUpAction,
+	operationrules.ActionInjectExpectation:  executeInjectExpectationAction,
 }
 
 // executeActionList executes a list of actions sequentially
