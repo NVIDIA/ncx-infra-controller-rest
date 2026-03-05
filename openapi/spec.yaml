@@ -8287,7 +8287,9 @@ paths:
                           serialNumber: SN-SRV-001
                           manufacturer: Dell
                           firmwareVersion: 2.1.0
-                          position: 1
+                          slotId: 1
+                          trayIdx: 0
+                          hostId: 0
           headers:
             X-Pagination:
               schema:
@@ -8362,7 +8364,9 @@ paths:
                         serialNumber: SN-SRV-001
                         manufacturer: Dell
                         firmwareVersion: 2.1.0
-                        position: 1
+                        slotId: 1
+                        trayIdx: 0
+                        hostId: 0
         '403':
           $ref: '#/components/responses/ForbiddenError'
         '404':
@@ -8437,7 +8441,9 @@ paths:
                           serialNumber: SN-SRV-001
                           manufacturer: Dell
                           firmwareVersion: 2.1.0
-                          position: 1
+                          slotId: 1
+                          trayIdx: 0
+                          hostId: 0
                       - type: DIFF_TYPE_DRIFT
                         componentId: comp-2
                         fieldDiffs:
@@ -8516,7 +8522,9 @@ paths:
                           serialNumber: SN-SRV-001
                           manufacturer: Dell
                           firmwareVersion: 2.1.0
-                          position: 1
+                          slotId: 1
+                          trayIdx: 0
+                          hostId: 0
                       - type: DIFF_TYPE_DRIFT
                         componentId: comp-2
                         fieldDiffs:
@@ -14659,7 +14667,9 @@ components:
               serialNumber: SN-SRV-001
               manufacturer: Dell
               firmwareVersion: 2.1.0
-              position: 1
+              slotId: 1
+              trayIdx: 0
+              hostId: 0
       properties:
         id:
           type: string
