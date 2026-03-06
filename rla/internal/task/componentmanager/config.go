@@ -233,7 +233,7 @@ func DefaultTestConfig() Config {
 
 // DefaultProdConfig returns the embedded production configuration.
 // Used when no config file is specified. Connects to external services
-// (Carbide for compute/nvlswitch, PSM for powershelf).
+//
 // Timing parameters for operations are configured per-rule via action parameters.
 func DefaultProdConfig() Config {
 	return Config{

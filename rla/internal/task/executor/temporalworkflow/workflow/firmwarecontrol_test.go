@@ -127,12 +127,12 @@ func createFirmwareTestRuleDef() *operationrules.RuleDefinition {
 }
 
 // createTestRackForFirmwareControl creates a test rack with components having the given external IDs.
-// externalIDs are the external component IDs (e.g., Carbide machine_id) used for activity calls.
+// externalIDs are the external component IDs used for activity calls.
 func createTestRackForFirmwareControl(externalIDs ...string) *rack.Rack {
 	r := rack.New(deviceinfo.DeviceInfo{ID: uuid.New(), Name: "test-rack"}, location.Location{})
 	for _, extID := range externalIDs {
 		r.AddComponent(component.Component{
-			ComponentID: extID, // External ID for Carbide API calls
+			ComponentID: extID,
 			Type:        devicetypes.ComponentTypeCompute,
 		})
 	}

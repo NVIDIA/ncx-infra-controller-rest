@@ -121,8 +121,7 @@ func GetAllActivities() []any {
 	}
 }
 
-// AllowBringUpAndPowerOn opens the Carbide power-on gate
-// for the target components.
+// AllowBringUpAndPowerOn opens the power-on gate for the target components.
 func AllowBringUpAndPowerOn(
 	ctx context.Context,
 	target common.Target,
@@ -208,8 +207,7 @@ func validAndGetComponentManager(
 	return GetComponentManager(target.Type), nil
 }
 
-// SetFirmwareUpdateTimeWindow sets the firmware update time window for the given components
-// via Carbide API. Returns error if the API call fails.
+// SetFirmwareUpdateTimeWindow sets the firmware update time window for the given components.
 func SetFirmwareUpdateTimeWindow(
 	ctx context.Context,
 	req operations.SetFirmwareUpdateTimeWindowRequest,
@@ -227,11 +225,11 @@ func SetFirmwareUpdateTimeWindow(
 
 	client, err := carbideapi.NewClient(time.Minute * 5)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to create carbide API client")
+		log.Error().Err(err).Msg("Failed to create API client")
 		return err
 	}
 
-	// Carbide API uses machine_id terminology
+	// Component manager API uses machine_id terminology
 	err = client.SetFirmwareUpdateTimeWindow(ctx, req.ComponentIDs, req.StartTime, req.EndTime)
 	if err != nil {
 		log.Error().Err(err).Strs("component_ids", req.ComponentIDs).Msg("Failed to set firmware update time window")

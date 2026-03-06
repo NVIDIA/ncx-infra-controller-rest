@@ -95,8 +95,7 @@ type RLAClient interface {
 	UpgradeFirmware(ctx context.Context, in *UpgradeFirmwareRequest, opts ...grpc.CallOption) (*SubmitTaskResponse, error)
 	// Bring up rack: power on, configure, and validate a new rack
 	BringUpRack(ctx context.Context, in *BringUpRackRequest, opts ...grpc.CallOption) (*SubmitTaskResponse, error)
-	// Ingest rack: inject expected component configurations to backend services
-	// (Carbide for compute/switch, PSM for powershelves)
+	// Ingest rack: inject expected component configurations to component manager services
 	IngestRack(ctx context.Context, in *IngestRackRequest, opts ...grpc.CallOption) (*SubmitTaskResponse, error)
 	// Components APIs
 	GetComponents(ctx context.Context, in *GetComponentsRequest, opts ...grpc.CallOption) (*GetComponentsResponse, error)
@@ -514,8 +513,7 @@ type RLAServer interface {
 	UpgradeFirmware(context.Context, *UpgradeFirmwareRequest) (*SubmitTaskResponse, error)
 	// Bring up rack: power on, configure, and validate a new rack
 	BringUpRack(context.Context, *BringUpRackRequest) (*SubmitTaskResponse, error)
-	// Ingest rack: inject expected component configurations to backend services
-	// (Carbide for compute/switch, PSM for powershelves)
+	// Ingest rack: inject expected component configurations to component manager services
 	IngestRack(context.Context, *IngestRackRequest) (*SubmitTaskResponse, error)
 	// Components APIs
 	GetComponents(context.Context, *GetComponentsRequest) (*GetComponentsResponse, error)

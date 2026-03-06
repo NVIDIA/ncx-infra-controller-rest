@@ -100,7 +100,7 @@ type OperationRuleListOptions struct {
 type ComponentInfo struct {
 	Type        devicetypes.ComponentType
 	DeviceInfo  deviceinfo.DeviceInfo
-	ComponentID string // Component service's own ID (e.g., machine_id from Carbide)
+	ComponentID string // Component ID from the component manager service
 }
 
 func (ci *ComponentInfo) Validate() error {

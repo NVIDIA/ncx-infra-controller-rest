@@ -63,7 +63,7 @@ func mockGetPowerStatus(ctx context.Context, target common.Target) (map[string]o
 // Helper function for creating test components
 // - id: internal UUID (RLA database primary key)
 // - name: human-readable name for DeviceInfo.Name
-// - externalID: external ID for ComponentID (e.g., Carbide machine_id)
+// - externalID: external component ID for activity calls
 // - compType: component type
 func newTestComponent(id uuid.UUID, name string, externalID string, compType devicetypes.ComponentType) *component.Component {
 	return &component.Component{

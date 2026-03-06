@@ -844,7 +844,7 @@ func buildBringUpRule() *OperationRule {
 		RuleDefinition: RuleDefinition{
 			Version: CurrentRuleDefinitionVersion,
 			Steps: []SequenceStep{
-				// === Stage 1: Ingestion — register components with backend services ===
+				// === Stage 1: Ingestion — register components with component manager services ===
 				{
 					ComponentType: devicetypes.ComponentTypePowerShelf,
 					Stage:         1,
@@ -969,13 +969,13 @@ func buildBringUpRule() *OperationRule {
 }
 
 // buildIngestRule creates the default rule for ingestion-only operations.
-// This rule registers expected components with their backend services (Carbide,
-// PSM) without performing power or firmware operations. All component types
+// This rule registers expected components with their respective component
+// manager services without performing power or firmware operations. All component types
 // are ingested in parallel within a single stage.
 func buildIngestRule() *OperationRule {
 	return &OperationRule{
 		Name:          "Hardcoded Default Ingestion",
-		Description:   "Ingestion-only: register components with backend services",
+		Description:   "Ingestion-only: register components with component manager services",
 		OperationType: common.TaskTypeBringUp,
 		OperationCode: SequenceIngest,
 		RuleDefinition: RuleDefinition{

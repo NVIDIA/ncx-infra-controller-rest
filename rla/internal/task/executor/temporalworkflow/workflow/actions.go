@@ -376,8 +376,7 @@ func verifyPowerStatus(
 	}
 }
 
-// executeAllowBringUpAction opens the Carbide power-on gate for the target
-// components.
+// executeAllowBringUpAction opens the power-on gate for the target components.
 func executeAllowBringUpAction(actx actionExecutionContext) error {
 	return workflow.ExecuteActivity(
 		actx.workflowContext, "AllowBringUpAndPowerOn", actx.target,
@@ -557,7 +556,7 @@ func verifyReachability(
 }
 
 // executeInjectExpectationAction calls the InjectExpectation activity to register
-// expected component configurations with their backend services.
+// expected component configurations with their respective component manager services.
 func executeInjectExpectationAction(actx actionExecutionContext) error {
 	ctx := actx.workflowContext
 	info := operations.InjectExpectationTaskInfo{}

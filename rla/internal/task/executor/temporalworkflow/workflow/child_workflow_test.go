@@ -641,7 +641,7 @@ func TestGenericComponentStepWorkflow_InjectExpectationFailure(t *testing.T) {
 		activity.RegisterOptions{Name: "InjectExpectation"})
 
 	env.OnActivity(mockInjectExpectation, mock.Anything, mock.Anything,
-		mock.Anything).Return(errors.New("backend service unavailable"))
+		mock.Anything).Return(errors.New("component manager service unavailable"))
 
 	step := operationrules.SequenceStep{
 		ComponentType: devicetypes.ComponentTypeCompute,

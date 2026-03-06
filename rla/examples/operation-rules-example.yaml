@@ -768,8 +768,8 @@ rules:
 #      - poll_interval: Time between polls (e.g., "30s")
 #
 # 9. InjectExpectation (ingestion / bring-up)
-#    - Registers expected component configurations with backend services
-#      (Carbide for compute/switch, PSM for powershelves)
+#    - Registers expected component configurations with their respective
+#      component manager services
 #    - No required parameters — uses the component Target from the step
 #    - Used as the initial stage in full bring-up rules, and as the sole
 #      action in ingestion-only rules
@@ -777,7 +777,7 @@ rules:
   # ===========================================
   # Bring-Up - Full Rack Bring-Up Sequence
   # ===========================================
-  # Stage 1: Ingestion   — register all component types with backend services (parallel)
+  # Stage 1: Ingestion   — register all component types with component manager services (parallel)
   # Stage 2: PowerShelf  — wait PMC ready, turn on PSUs, verify
   # Stage 3: Compute     — open gate, wait bring-up, verify, reboot, verify again
   #
@@ -878,13 +878,13 @@ rules:
   # ===========================================
   # Ingestion Only — Convenience Rule
   # ===========================================
-  # Registers components with backend services without performing
+  # Registers components with their component manager services without performing
   # power or firmware operations. Used by the IngestRack gRPC API.
   # All component types are ingested in parallel in a single stage.
 
   - name: Default Ingestion
     description: >
-      Ingestion-only: register components with backend services.
+      Ingestion-only: register components with component manager services.
     operation_type: bring_up
     operation: ingest
     steps:

@@ -38,7 +38,7 @@ import (
 type ComponentDrift struct {
 	ID          uuid.UUID
 	ComponentID *uuid.UUID  // NULL for missing_in_expected
-	ExternalID  *string     // Carbide machine_id; NULL for missing_in_actual without external_id
+	ExternalID  *string     // Component ID from the component manager service; NULL for missing_in_actual
 	DriftType   string      // "missing_in_expected", "missing_in_actual", "mismatch"
 	Diffs       []FieldDiff // Field-level differences (for mismatch type)
 	CheckedAt   time.Time

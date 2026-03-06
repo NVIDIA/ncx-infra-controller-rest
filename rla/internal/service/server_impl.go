@@ -686,8 +686,8 @@ func (rs *RLAServerImpl) BringUpRack(
 
 // IngestRack is a convenience API that triggers component ingestion by reusing
 // the BringUp workflow with an ingestion-only rule. This registers expected
-// components with their backend services (Carbide for compute/switch, PSM for
-// powershelves) without performing power or firmware operations.
+// components with their respective component manager services without
+// performing power or firmware operations.
 func (rs *RLAServerImpl) IngestRack(
 	ctx context.Context,
 	req *pb.IngestRackRequest,
@@ -1385,7 +1385,7 @@ func (rs *RLAServerImpl) GetComponents(
 	}, nil
 }
 
-// powerStateToString converts a Carbide PowerState to a string representation
+// powerStateToString converts a PowerState to a string representation
 func powerStateToString(ps carbideapi.PowerState) string {
 	switch ps {
 	case carbideapi.PowerStateOn:

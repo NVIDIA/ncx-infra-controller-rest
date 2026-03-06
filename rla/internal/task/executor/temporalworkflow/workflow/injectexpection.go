@@ -42,8 +42,7 @@ var injectExpectationActivityOptions = workflow.ActivityOptions{
 }
 
 // InjectExpectation orchestrates injecting expected component configurations
-// to their respective backend services (Carbide for compute/switch, PSM for
-// powershelves). Each component is processed via the InjectExpectation activity
+// to their respective component manager services. Each component is processed via the InjectExpectation activity
 // which delegates to the appropriate component manager.
 func InjectExpectation(
 	ctx workflow.Context,

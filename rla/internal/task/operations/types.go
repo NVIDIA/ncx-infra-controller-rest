@@ -136,7 +136,7 @@ var firmwareOperationCodes = map[FirmwareOperation]string{
 }
 
 // MachineBringUpState represents the bring-up state of a
-// machine in relation to Carbide's power-on gate.
+// machine in relation to the power-on gate.
 type MachineBringUpState int
 
 const (

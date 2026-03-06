@@ -30,7 +30,7 @@ type DriftType string
 
 const (
 	// DriftTypeMissingInExpected means the component exists in the source system
-	// (e.g., Carbide) but is NOT in the local DB (component table).
+	// but is NOT in the local DB (component table).
 	DriftTypeMissingInExpected DriftType = "missing_in_expected"
 
 	// DriftTypeMissingInActual means the component exists in the local DB
@@ -57,7 +57,7 @@ type ComponentDrift struct {
 
 	ID          uuid.UUID   `bun:"id,pk,type:uuid,default:gen_random_uuid()"`
 	ComponentID *uuid.UUID  `bun:"component_id,type:uuid"` // NULL for missing_in_expected
-	ExternalID  *string     `bun:"external_id"`            // Carbide machine_id; NULL for missing_in_actual without external_id
+	ExternalID  *string     `bun:"external_id"`            // Component ID from the component manager service; NULL for missing_in_actual
 	DriftType   DriftType   `bun:"drift_type,type:varchar(32),notnull"`
 	Diffs       []FieldDiff `bun:"diffs,type:jsonb,notnull,default:'[]'"`
 	CheckedAt   time.Time   `bun:"checked_at,notnull,default:current_timestamp"`

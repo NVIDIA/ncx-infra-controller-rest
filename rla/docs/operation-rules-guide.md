@@ -294,9 +294,9 @@ Queries the current power status of components and returns a status map.
 
 ### InjectExpectation
 
-Registers expected component configurations with backend services (Carbide for
-compute/switch, PSM for powershelves). Used as the initial ingestion stage in
-full bring-up rules, and as the sole action in ingestion-only rules.
+Registers expected component configurations with their respective component
+manager services. Used as the initial ingestion stage in full bring-up rules,
+and as the sole action in ingestion-only rules.
 
 The `IngestRack` gRPC API is a convenience wrapper that triggers a BringUp
 workflow with an ingestion-only rule (all component types run
@@ -595,7 +595,7 @@ first; a dedicated final stage (4) verifies all component types simultaneously.
 
 ### Ingestion only
 
-Registers components with backend services without performing power or firmware
+Registers components with their respective component manager services without performing power or firmware
 operations. All component types are ingested in parallel in a single stage.
 The `IngestRack` gRPC API triggers this rule automatically.
 
