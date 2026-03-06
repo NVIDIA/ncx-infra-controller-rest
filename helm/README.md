@@ -137,7 +137,7 @@ Global values are passed to all sub-charts:
 global:
   image:
     repository: nvcr.io/0837451325059433/carbide-dev
-    tag: "1.0.5"
+    tag: "1.0.6"
     pullPolicy: IfNotPresent
   imagePullSecrets:
     - name: image-pull-secret
