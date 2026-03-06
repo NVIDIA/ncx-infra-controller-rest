@@ -55,13 +55,17 @@ RUN apk add --no-cache \
     sshpass \
     iputils
 
+RUN addgroup -S nvs && adduser -S nvs -G nvs
+
 WORKDIR /opt/nvswitch-manager
 
-COPY --from=builder /app/nsm ./nsm
-COPY nvswitch-manager/scripts/ ./scripts/
-COPY nvswitch-manager/firmware/ ./firmware/
+COPY --from=builder --chown=nvs:nvs /app/nsm ./nsm
+COPY --chown=nvs:nvs nvswitch-manager/scripts/ ./scripts/
+COPY --chown=nvs:nvs nvswitch-manager/firmware/ ./firmware/
 
 RUN chmod +x scripts/*.sh
+
+USER nvs
 
 EXPOSE 50051
 

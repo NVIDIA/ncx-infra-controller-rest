@@ -22,9 +22,9 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"github.com/nvidia/bare-metal-manager-rest/nvswitch-manager/pkg/common/credential"
 	"net"
 	"net/http"
-	"github.com/nvidia/bare-metal-manager-rest/nvswitch-manager/pkg/common/credential"
 	"strings"
 
 	vault "github.com/hashicorp/vault/api"

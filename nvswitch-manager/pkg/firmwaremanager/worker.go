@@ -67,7 +67,7 @@ type WorkerPool struct {
 	mu         sync.RWMutex
 
 	// Lifecycle management
-	wg     sync.WaitGroup
+	wg sync.WaitGroup
 	// WorkerPool owns its lifecycle via context for goroutine shutdown
 	ctx    context.Context //nolint:containedctx
 	cancel context.CancelFunc

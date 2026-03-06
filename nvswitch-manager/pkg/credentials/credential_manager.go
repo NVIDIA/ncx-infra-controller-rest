@@ -20,8 +20,8 @@ package credentials
 import (
 	"context"
 	"fmt"
-	"net"
 	"github.com/nvidia/bare-metal-manager-rest/nvswitch-manager/pkg/common/credential"
+	"net"
 
 	log "github.com/sirupsen/logrus"
 )
