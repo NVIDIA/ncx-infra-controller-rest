@@ -23,8 +23,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/nvidia/bare-metal-manager-rest/cert-manager/pkg/core"
 	"github.com/stretchr/testify/assert"
+
+	ctls "github.com/nvidia/bare-metal-manager-rest/common/pkg/tls"
 )
 
 func TestNewTemporalConfig(t *testing.T) {
@@ -40,7 +41,7 @@ func TestNewTemporalConfig(t *testing.T) {
 	keyPath, certPath := SetupTestCerts(t)
 	defer os.Remove(keyPath)
 	defer os.Remove(certPath)
-	d, err := core.NewDynTLSCfg(keyPath, certPath, certPath)
+	d, err := ctls.NewDynTLSCfg(keyPath, certPath, certPath)
 	assert.NoError(t, err)
 	defer d.Close()
 

@@ -15,13 +15,13 @@
  * limitations under the License.
  */
 
-package core
+package tls
 
 import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"reflect"
 	"runtime"
@@ -65,7 +65,7 @@ func NewDynTLSCfg(keyPath, certPath, cacertPath string) (*DynTLSCfg, error) {
 		cacertPath: cacertPath,
 	}
 
-	caCert, err := ioutil.ReadFile(cacertPath)
+	caCert, err := os.ReadFile(cacertPath)
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +120,7 @@ func (d *DynTLSCfg) ClientCfg() *tls.Config {
 		d.Lock()
 		defer d.Unlock()
 		if d.err != nil {
-			d.logger.Errorf("GetClientCertificate %v", d.err)
+			d.logger.Errorf("GetClientCertificate: %v", d.err)
 			return nil, d.err
 		}
 
@@ -171,10 +171,10 @@ func (d *DynTLSCfg) refresh() {
 	defer d.Unlock()
 
 	// read ca
-	caCert, err := ioutil.ReadFile(d.cacertPath)
+	caCert, err := os.ReadFile(d.cacertPath)
 	if err != nil {
 		d.err = err
-		d.logger.Errorf("Can't read ca  from %s - %v", d.cacertPath, err)
+		d.logger.Errorf("Failed to read CA certificate from %s - %v", d.cacertPath, err)
 		return
 	}
 
@@ -182,14 +182,14 @@ func (d *DynTLSCfg) refresh() {
 		if d.isClient {
 			// for client config, we don't have a way to update CA
 			// just log a warning
-			d.logger.Warnf("CA has changed, clients may not work without restart")
+			d.logger.Warn("CA has changed, clients will likely not work without restart")
 		} else {
 			caCertPool := x509.NewCertPool()
 			caCertPool.AppendCertsFromPEM(caCert)
 			d.caCertPool = caCertPool
 			d.cachedCa = caCert
 			d.cacheUpdated = true
-			d.logger.Infof("Updated server CA certificate")
+			d.logger.Info("Updated server CA certificate")
 		}
 	}
 
@@ -197,12 +197,12 @@ func (d *DynTLSCfg) refresh() {
 	cert, err := tls.LoadX509KeyPair(d.certPath, d.keyPath)
 	if err != nil {
 		d.err = err
-		d.logger.Errorf("Can't from %s, %s - %v", d.certPath, d.keyPath, err)
+		d.logger.Errorf("Failed to read certificate and key from %s, %s - %v", d.certPath, d.keyPath, err)
 		return
 	}
 
 	if !reflect.DeepEqual(&cert, d.cachedCert) {
-		d.logger.Infof("Updated certificate")
+		d.logger.Info("Updated certificate")
 		d.cachedCert = &cert
 		d.cacheUpdated = true
 	}
