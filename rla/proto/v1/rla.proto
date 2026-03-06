@@ -44,8 +44,7 @@ service RLA {
     // Bring up rack: power on, configure, and validate a new rack
     rpc BringUpRack(BringUpRackRequest) returns (SubmitTaskResponse);
 
-    // Ingest rack: inject expected component configurations to backend services
-    // (Carbide for compute/switch, PSM for powershelves)
+    // Ingest rack: inject expected component configurations to component manager services
     rpc IngestRack(IngestRackRequest) returns (SubmitTaskResponse);
 
     // Components APIs

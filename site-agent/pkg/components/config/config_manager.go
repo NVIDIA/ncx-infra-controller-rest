@@ -20,7 +20,6 @@ package config
 import (
 	"flag"
 	"fmt"
-	"net/url"
 	"os"
 	"regexp"
 	"strconv"
@@ -46,42 +45,6 @@ const (
 	DefaultRLAClientKeyPath  = "/etc/carbide/tls.key"
 )
 
-// Fill the datastructure to intialize the database
-func newDBConfig(db *conftypes.DBConfig) {
-	db.Server = os.Getenv("DB_ADDR")
-	if os.Getenv("CI") == "true" {
-		db.Server = "postgres"
-	}
-	if db.Server == "" {
-		panic("db.Server not specified")
-	}
-
-	db.User = os.Getenv("DB_USER")
-	if db.User == "" {
-		panic("db.User not specified")
-	}
-
-	password := os.Getenv("DB_PASSWORD")
-	if password == "" {
-		panic("db.Password not specified")
-	}
-	db.Password = url.QueryEscape(password)
-
-	db.Name = os.Getenv("DB_DATABASE")
-	if db.Name == "" {
-		panic("db.Name not specified")
-	}
-
-	var err error
-	db.Port, err = strconv.Atoi(os.Getenv("DB_PORT"))
-	if os.Getenv("CI") == "true" {
-		db.Port = 5432
-	}
-	if err != nil {
-		panic(err.Error())
-	}
-}
-
 // NewElektraConfig reads configurations from env variables and returns
 func NewElektraConfig(utMode bool) *conftypes.Config {
 	log.Info().Msg("Config Manager: Processing Config")
@@ -98,9 +61,6 @@ func NewElektraConfig(utMode bool) *conftypes.Config {
 	// Determine environment in which app is running.
 	conf.RunningIn = determineEnvironment()
 	conf.UtMode = utMode
-
-	newDBConfig(&conf.DB)
-	log.Info().Msgf("db srv:%v port:%v", conf.DB.Server, conf.DB.Port)
 
 	// Carbide config
 	flag.StringVar(&conf.Carbide.Address, "carbideAddress", os.Getenv("CARBIDE_ADDRESS"), "Carbide Address")

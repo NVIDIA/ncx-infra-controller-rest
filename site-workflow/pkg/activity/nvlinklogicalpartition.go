@@ -116,7 +116,7 @@ func NewManageNVLinkLogicalPartition(carbideClient *cClient.CarbideAtomicClient)
 }
 
 // Function to create NVLinkLogical Partition with Carbide
-func (mnvllp *ManageNVLinkLogicalPartition) CreateNVLinkLogicalPartitionOnSite(ctx context.Context, request *cwssaws.NVLinkLogicalPartitionCreationRequest) error {
+func (mnvllp *ManageNVLinkLogicalPartition) CreateNVLinkLogicalPartitionOnSite(ctx context.Context, request *cwssaws.NVLinkLogicalPartitionCreationRequest) (*cwssaws.NVLinkLogicalPartition, error) {
 	logger := log.With().Str("Activity", "CreateNVLinkLogicalPartitionOnSite").Logger()
 
 	logger.Info().Msg("Starting activity")
@@ -139,7 +139,7 @@ func (mnvllp *ManageNVLinkLogicalPartition) CreateNVLinkLogicalPartitionOnSite(c
 	}
 
 	if err != nil {
-		return temporal.NewNonRetryableApplicationError(err.Error(), swe.ErrTypeInvalidRequest, err)
+		return nil, temporal.NewNonRetryableApplicationError(err.Error(), swe.ErrTypeInvalidRequest, err)
 	}
 
 	// Call Site Controller gRPC endpoint
@@ -147,15 +147,14 @@ func (mnvllp *ManageNVLinkLogicalPartition) CreateNVLinkLogicalPartitionOnSite(c
 	forgeClient := carbideClient.Carbide()
 
 	// Call Forge gRPC endpoint
-	_, err = forgeClient.CreateNVLinkLogicalPartition(ctx, request)
+	nvLinkLogicalPartition, err := forgeClient.CreateNVLinkLogicalPartition(ctx, request)
 	if err != nil {
 		logger.Warn().Err(err).Msg("Failed to create NVLink Logical Partition using Site Controller API")
-		return swe.WrapErr(err)
+		return nil, swe.WrapErr(err)
 	}
 
 	logger.Info().Msg("Completed activity")
-
-	return nil
+	return nvLinkLogicalPartition, nil
 }
 
 // Function to update NVLinkLogical Partition with Carbide

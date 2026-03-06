@@ -107,14 +107,33 @@ func (cnvllvts *CreateNVLinkLogicalPartitionTestSuite) Test_CreateNVLinkLogicalP
 		},
 	}
 
+	nvLinkLogicalPartition := &cwssaws.NVLinkLogicalPartition{
+		Id: &cwssaws.NVLinkLogicalPartitionId{Value: "b410867c-655a-11ef-bc4a-0393098e5d09"},
+		Config: &cwssaws.NVLinkLogicalPartitionConfig{
+			Metadata: &cwssaws.Metadata{
+				Name: "the_name",
+			},
+			TenantOrganizationId: "test_org",
+		},
+	}
+
 	// Mock CreateNVLinkLogicalPartitionOnSite activity
 	cnvllvts.env.RegisterActivity(NVLinkLogicalPartitionManager.CreateNVLinkLogicalPartitionOnSite)
-	cnvllvts.env.OnActivity(NVLinkLogicalPartitionManager.CreateNVLinkLogicalPartitionOnSite, mock.Anything, mock.Anything).Return(nil)
+	cnvllvts.env.OnActivity(NVLinkLogicalPartitionManager.CreateNVLinkLogicalPartitionOnSite, mock.Anything, mock.Anything).Return(nvLinkLogicalPartition, nil)
 
 	// Execute CreateNVLinkLogicalPartition workflow
 	cnvllvts.env.ExecuteWorkflow(CreateNVLinkLogicalPartition, request)
 	cnvllvts.True(cnvllvts.env.IsWorkflowCompleted())
 	cnvllvts.NoError(cnvllvts.env.GetWorkflowError())
+
+	// Verify result
+	var result cwssaws.NVLinkLogicalPartition
+	cnvllvts.NoError(cnvllvts.env.GetWorkflowResult(&result))
+	cnvllvts.NotNil(result.Id)
+	cnvllvts.Equal(nvLinkLogicalPartition.Id.Value, result.Id.Value)
+	cnvllvts.NotNil(result.Config)
+	cnvllvts.Equal(nvLinkLogicalPartition.Config.Metadata.Name, result.Config.Metadata.Name)
+	cnvllvts.Equal(nvLinkLogicalPartition.Config.TenantOrganizationId, result.Config.TenantOrganizationId)
 }
 
 func (cnvllvts *CreateNVLinkLogicalPartitionTestSuite) Test_CreateNVLinkLogicalPartition_Failure() {
@@ -134,7 +153,7 @@ func (cnvllvts *CreateNVLinkLogicalPartitionTestSuite) Test_CreateNVLinkLogicalP
 
 	// Mock CreateNVLinkLogicalPartitionOnSite activity
 	cnvllvts.env.RegisterActivity(NVLinkLogicalPartitionManager.CreateNVLinkLogicalPartitionOnSite)
-	cnvllvts.env.OnActivity(NVLinkLogicalPartitionManager.CreateNVLinkLogicalPartitionOnSite, mock.Anything, mock.Anything).Return(errors.New(errMsg))
+	cnvllvts.env.OnActivity(NVLinkLogicalPartitionManager.CreateNVLinkLogicalPartitionOnSite, mock.Anything, mock.Anything).Return(nil, errors.New(errMsg))
 
 	// execute CreateNVLinkLogicalPartition workflow
 	cnvllvts.env.ExecuteWorkflow(CreateNVLinkLogicalPartition, request)

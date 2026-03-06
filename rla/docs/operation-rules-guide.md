@@ -1,8 +1,8 @@
 # Operation Rules Guide
 
-Operation rules define how RLA executes power control and firmware operations.
-Each rule specifies a sequence of steps that determine component ordering,
-parallelism, verification, and retry behavior.
+Operation rules define how RLA executes power control, firmware, ingestion, and
+bring-up operations. Each rule specifies a sequence of steps that determine
+component ordering, parallelism, verification, and retry behavior.
 
 ## Table of Contents
 
@@ -103,30 +103,87 @@ All duration fields accept Go duration strings: `"5s"`, `"30s"`, `"2m"`,
 
 ### PowerControl
 
-Executes the power operation (on/off/restart) for the component. The operation
-is inherited from the task context — no parameters required.
+Executes a power operation (on/off/restart) for the component.
 
-```json
-{ "name": "PowerControl" }
+When used from the power workflow, the operation is inherited from the task
+context — no parameters required. When used cross-workflow (e.g., firmware
+power recycle, bring-up), specify `operation` explicitly:
+
+```yaml
+# Within a power workflow (inherits from task):
+main_operation:
+  name: PowerControl
+
+# Cross-workflow usage (explicit operation):
+main_operation:
+  name: PowerControl
+  parameters:
+    operation: "force_power_off"
 ```
 
 | Field     | Required | Description |
 |-----------|----------|-------------|
 | `timeout` | no       | Overrides step timeout for this action only |
+
+| Parameter   | Required | Description |
+|-------------|----------|-------------|
+| `operation` | no*      | Power operation code. Required when used outside a power workflow. Valid values: `power_on`, `force_power_on`, `power_off`, `force_power_off`, `restart`, `force_restart`, `warm_reset`, `cold_reset` |
 
 ---
 
 ### FirmwareControl
 
-Executes the firmware operation (upgrade/downgrade) for the component.
+Starts a firmware update and polls for completion (async start + poll pattern).
+Calls `StartFirmwareUpdate` to initiate, then repeatedly calls
+`GetFirmwareUpdateStatus` until all components complete or the poll timeout
+expires.
 
-```json
-{ "name": "FirmwareControl" }
+```yaml
+main_operation:
+  name: FirmwareControl
+  parameters:
+    poll_interval: 2m    # time between status polls (default: 2m)
+    poll_timeout: 30m    # max wait for completion (default: 30m)
 ```
 
 | Field     | Required | Description |
 |-----------|----------|-------------|
 | `timeout` | no       | Overrides step timeout for this action only |
+
+| Parameter       | Required | Description |
+|-----------------|----------|-------------|
+| `poll_interval` | no       | Time between status polls (default `2m`) |
+| `poll_timeout`  | no       | Max time to wait for completion (default `30m`) |
+
+---
+
+### AllowBringUp
+
+Opens the Carbide power-on gate for target components. No parameters required.
+
+```yaml
+main_operation:
+  name: AllowBringUp
+```
+
+---
+
+### WaitBringUp
+
+Polls `GetBringUpState` until all components reach the `MachineCreated` state
+(ingestion complete). Used as a post-operation after `AllowBringUp`.
+
+```yaml
+post_operation:
+  - name: WaitBringUp
+    timeout: 15m
+    poll_interval: 30s
+```
+
+| Field           | Required | Description |
+|-----------------|----------|-------------|
+| `timeout`       | yes      | Max time to wait for bring-up |
+| `poll_interval` | yes      | Time between polls |
 
 ---
 
@@ -162,24 +219,39 @@ stages.
 
 Polls until all components of the specified types in the rack become reachable
 over the network. Used after powering on a powershelf to confirm downstream
-components have booted.
+components have booted, or before bring-up to wait for all PMCs.
 
-```json
-{
-  "name": "VerifyReachability",
-  "timeout": "3m",
-  "poll_interval": "10s",
-  "parameters": {
-    "component_types": ["compute", "nvlswitch"]
-  }
-}
+By default, a component type is considered reachable when the `GetPowerStatus`
+API call succeeds. With `require_all: true`, every individual component within
+the type must respond (i.e., the returned status map must contain all target
+component IDs).
+
+```yaml
+# Basic reachability (API call succeeds):
+- name: VerifyReachability
+  timeout: 3m
+  poll_interval: 10s
+  parameters:
+    component_types: ["compute", "nvlswitch"]
+
+# Strict mode (every individual component must respond):
+- name: VerifyReachability
+  timeout: 10m
+  poll_interval: 30s
+  parameters:
+    component_types: ["powershelf"]
+    require_all: true
 ```
 
 | Field              | Required | Description |
 |--------------------|----------|-------------|
 | `timeout`          | yes      | Maximum time to wait |
 | `poll_interval`    | yes      | How often to probe |
-| `component_types` (param) | yes | Array of component type strings to check |
+
+| Parameter          | Required | Description |
+|--------------------|----------|-------------|
+| `component_types`  | yes      | Array of component type strings to check |
+| `require_all`      | no       | When `true`, every individual component must respond (default `false`) |
 
 ---
 
@@ -217,6 +289,26 @@ Queries the current power status of components and returns a status map.
 | Field     | Required | Description |
 |-----------|----------|-------------|
 | `timeout` | yes      | Maximum time for the query |
+
+---
+
+### InjectExpectation
+
+Registers expected component configurations with their respective component
+manager services. Used as the initial ingestion stage in full bring-up rules,
+and as the sole action in ingestion-only rules.
+
+The `IngestRack` gRPC API is a convenience wrapper that triggers a BringUp
+workflow with an ingestion-only rule (all component types run
+`InjectExpectation` in parallel).
+
+```yaml
+main_operation:
+  name: InjectExpectation
+```
+
+No parameters or timeout overrides required — the action uses the step-level
+timeout and the component `Target` to call the `InjectExpectation` activity.
 
 ---
 
@@ -501,6 +593,116 @@ first; a dedicated final stage (4) verifies all component types simultaneously.
 }
 ```
 
+### Ingestion only
+
+Registers components with their respective component manager services without performing power or firmware
+operations. All component types are ingested in parallel in a single stage.
+The `IngestRack` gRPC API triggers this rule automatically.
+
+```json
+{
+  "version": "v1",
+  "steps": [
+    {
+      "component_type": "powershelf",
+      "stage": 1,
+      "max_parallel": 0,
+      "timeout": "10m",
+      "main_operation": { "name": "InjectExpectation" }
+    },
+    {
+      "component_type": "compute",
+      "stage": 1,
+      "max_parallel": 0,
+      "timeout": "10m",
+      "main_operation": { "name": "InjectExpectation" }
+    },
+    {
+      "component_type": "nvlswitch",
+      "stage": 1,
+      "max_parallel": 0,
+      "timeout": "10m",
+      "main_operation": { "name": "InjectExpectation" }
+    }
+  ]
+}
+```
+
+### Full bring-up (with ingestion)
+
+A complete bring-up sequence that first ingests components, then powers on
+powershelves, and finally brings up compute nodes. The `BringUpRack` gRPC API
+uses this as its default rule.
+
+```json
+{
+  "version": "v1",
+  "steps": [
+    {
+      "component_type": "powershelf",
+      "stage": 1,
+      "max_parallel": 0,
+      "timeout": "10m",
+      "main_operation": { "name": "InjectExpectation" }
+    },
+    {
+      "component_type": "compute",
+      "stage": 1,
+      "max_parallel": 0,
+      "timeout": "10m",
+      "main_operation": { "name": "InjectExpectation" }
+    },
+    {
+      "component_type": "nvlswitch",
+      "stage": 1,
+      "max_parallel": 0,
+      "timeout": "10m",
+      "main_operation": { "name": "InjectExpectation" }
+    },
+    {
+      "component_type": "powershelf",
+      "stage": 2,
+      "max_parallel": 0,
+      "timeout": "20m",
+      "pre_operation": [
+        {
+          "name": "VerifyReachability",
+          "timeout": "10m",
+          "poll_interval": "30s",
+          "parameters": { "component_types": ["powershelf"], "require_all": true }
+        }
+      ],
+      "main_operation": {
+        "name": "PowerControl",
+        "parameters": { "operation": "power_on" }
+      },
+      "post_operation": [
+        { "name": "VerifyPowerStatus", "timeout": "5m", "poll_interval": "10s", "parameters": { "expected_status": "on" } }
+      ]
+    },
+    {
+      "component_type": "compute",
+      "stage": 3,
+      "max_parallel": 0,
+      "timeout": "30m",
+      "pre_operation": [
+        { "name": "AllowBringUp" },
+        { "name": "WaitBringUp", "timeout": "15m", "poll_interval": "30s" },
+        { "name": "VerifyPowerStatus", "timeout": "10m", "poll_interval": "15s", "parameters": { "expected_status": "on" } }
+      ],
+      "main_operation": {
+        "name": "PowerControl",
+        "parameters": { "operation": "force_restart" }
+      },
+      "post_operation": [
+        { "name": "Sleep", "parameters": { "duration": "30s" } },
+        { "name": "VerifyPowerStatus", "timeout": "10m", "poll_interval": "15s", "parameters": { "expected_status": "on" } }
+      ]
+    }
+  ]
+}
+```
+
 ---
 
 ## Temporal Execution Model
@@ -592,10 +794,12 @@ function:
 |--------|----------|--------------------|
 | `Sleep` | `executeSleepAction` | `workflow.Sleep()` — durable timer |
 | `PowerControl` | `executePowerControlAction` | `workflow.ExecuteActivity("PowerControl")` |
-| `FirmwareControl` | `executeFirmwareControlAction` | `workflow.ExecuteActivity("FirmwareControl")` |
+| `FirmwareControl` | `executeFirmwareControlAction` | `StartFirmwareUpdate` + poll `GetFirmwareUpdateStatus` |
 | `GetPowerStatus` | `executeGetPowerStatusAction` | `workflow.ExecuteActivity("GetPowerStatus")` |
 | `VerifyPowerStatus` | `executeVerifyPowerStatusAction` | polling loop (see below) |
 | `VerifyReachability` | `executeVerifyReachabilityAction` | polling loop (see below) |
+| `AllowBringUp` | `executeAllowBringUpAction` | `workflow.ExecuteActivity("AllowBringUpAndPowerOn")` |
+| `WaitBringUp` | `executeWaitBringUpAction` | polling loop on `GetBringUpState` |
 
 `Sleep` is a workflow timer, not an activity. It survives worker restarts and
 does not consume an activity slot.
@@ -1271,48 +1475,82 @@ rules:
   # ===========================================
   # Firmware Control Operations
   # ===========================================
+  # Stage 1: PowerShelf firmware
+  # Stage 2: NVLSwitch + Compute firmware (parallel)
+  # Stage 3: Compute power recycle to activate new firmware
 
   - name: "Default Firmware Upgrade"
-    description: "Parallel firmware upgrade across all component types"
+    description: "Three-stage firmware upgrade with power recycle"
     operation_type: firmware_control
     operation: upgrade
     steps:
-      # All component types upgrade in parallel (Stage 1)
-      - component_type: compute
-        stage: 1
-        max_parallel: 4
-        timeout: 45m
-        retry:
-          max_attempts: 2
-          initial_interval: 30s
-          backoff_coefficient: 1.5
-
-        main_operation:
-          name: FirmwareControl
-
-      - component_type: nvlswitch
-        stage: 1
-        max_parallel: 2
-        timeout: 45m
-        retry:
-          max_attempts: 2
-          initial_interval: 30s
-          backoff_coefficient: 1.5
-
-        main_operation:
-          name: FirmwareControl
-
       - component_type: powershelf
         stage: 1
-        max_parallel: 1
-        timeout: 45m
+        max_parallel: 0
+        timeout: 30m
         retry:
           max_attempts: 2
           initial_interval: 30s
           backoff_coefficient: 1.5
-
         main_operation:
           name: FirmwareControl
+          parameters:
+            poll_interval: 2m
+            poll_timeout: 30m
+
+      - component_type: nvlswitch
+        stage: 2
+        max_parallel: 0
+        timeout: 30m
+        retry:
+          max_attempts: 2
+          initial_interval: 30s
+          backoff_coefficient: 1.5
+        main_operation:
+          name: FirmwareControl
+          parameters:
+            poll_interval: 2m
+            poll_timeout: 30m
+
+      - component_type: compute
+        stage: 2
+        max_parallel: 0
+        timeout: 30m
+        retry:
+          max_attempts: 2
+          initial_interval: 30s
+          backoff_coefficient: 1.5
+        main_operation:
+          name: FirmwareControl
+          parameters:
+            poll_interval: 2m
+            poll_timeout: 30m
+
+      - component_type: compute
+        stage: 3
+        max_parallel: 0
+        timeout: 10m
+        retry:
+          max_attempts: 3
+          initial_interval: 5s
+          backoff_coefficient: 2.0
+        pre_operation:
+          - name: PowerControl
+            parameters:
+              operation: "force_power_off"
+          - name: Sleep
+            parameters:
+              duration: 10s
+        main_operation:
+          name: PowerControl
+          parameters:
+            operation: "power_on"
+        post_operation:
+          - name: VerifyPowerStatus
+            timeout: 5m
+            poll_interval: 15s
+            parameters:
+              expected_status: "on"
 
   # ===========================================
   # Legacy Format (Backward Compatibility)

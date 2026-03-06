@@ -142,7 +142,7 @@ func (mnlp ManageNVLinkLogicalPartition) UpdateNVLinkLogicalPartitionsInDB(ctx c
 
 		// Update status if necessary
 		if controllerNvllp.Status != nil {
-			status, statusMessage = getNVLinkLogicalPartitionStatus(controllerNvllp.Status.State)
+			status, statusMessage = util.GetNVLinkLogicalPartitionStatus(controllerNvllp.Status.State)
 			if status != nil && *status == nvllp.Status {
 				status = nil
 			}
@@ -224,7 +224,7 @@ func (mnlp ManageNVLinkLogicalPartition) UpdateNVLinkLogicalPartitionsInDB(ctx c
 				continue
 			}
 
-			err = mnlp.updateNVLinkLogicalPartitionStatusInDB(ctx, nil, nvllp.ID, cdb.GetStrPtr(cdbm.NVLinkLogicalPartitionStatusError), cdb.GetStrPtr("NVLink Logical Partition is missing on Site"))
+			_, _, err = util.UpdateNVLinkLogicalPartitionStatusInDB(ctx, nil, mnlp.dbSession, nvllp.ID, cdb.GetStrPtr(cdbm.NVLinkLogicalPartitionStatusError), cdb.GetStrPtr("NVLink Logical Partition is missing on Site"))
 			if err != nil {
 				slogger.Error().Err(err).Msg("failed to update NVLink Logical Partition status detail in DB")
 			}
@@ -232,48 +232,6 @@ func (mnlp ManageNVLinkLogicalPartition) UpdateNVLinkLogicalPartitionsInDB(ctx c
 	}
 
 	return nil
-}
-
-// updateNVLinkLogicalPartitionStatusInDB is helper function to write NVLinkPartition updates to DB
-func (mnlp ManageNVLinkLogicalPartition) updateNVLinkLogicalPartitionStatusInDB(ctx context.Context, tx *cdb.Tx, nvlinklogicalpartitionID uuid.UUID, status *string, statusMessage *string) error {
-	if status != nil {
-		nvlinklogicalpartitionDAO := cdbm.NewNVLinkLogicalPartitionDAO(mnlp.dbSession)
-
-		_, err := nvlinklogicalpartitionDAO.Update(
-			ctx,
-			tx,
-			cdbm.NVLinkLogicalPartitionUpdateInput{
-				NVLinkLogicalPartitionID: nvlinklogicalpartitionID,
-				Status:                   status,
-			},
-		)
-		if err != nil {
-			return err
-		}
-
-		statusDetailDAO := cdbm.NewStatusDetailDAO(mnlp.dbSession)
-		_, err = statusDetailDAO.CreateFromParams(ctx, tx, nvlinklogicalpartitionID.String(), *status, statusMessage)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// Utility function to get NVLinkLogicalPartition status from Controller NVLinkLogicalPartition state
-func getNVLinkLogicalPartitionStatus(controllerNVLinkLogicalPartitionTenantState cwssaws.TenantState) (*string, *string) {
-	switch controllerNVLinkLogicalPartitionTenantState {
-	case cwssaws.TenantState_PROVISIONING:
-		return cdb.GetStrPtr(cdbm.NVLinkLogicalPartitionStatusProvisioning), cdb.GetStrPtr("NVLink Logical Partition is being provisioned on Site")
-	case cwssaws.TenantState_CONFIGURING:
-		return cdb.GetStrPtr(cdbm.NVLinkLogicalPartitionStatusConfiguring), cdb.GetStrPtr("NVLink Logical Partition is being configured on Site")
-	case cwssaws.TenantState_READY:
-		return cdb.GetStrPtr(cdbm.NVLinkLogicalPartitionStatusReady), cdb.GetStrPtr("NVLink Logical Partition is ready for use")
-	case cwssaws.TenantState_FAILED:
-		return cdb.GetStrPtr(cdbm.NVLinkLogicalPartitionStatusError), cdb.GetStrPtr("NVLink Logical Partition is in error state")
-	default:
-		return nil, nil
-	}
 }
 
 // NewManageNVLinkLogicalPartition returns a new ManageNVLinkLogicalPartition activity

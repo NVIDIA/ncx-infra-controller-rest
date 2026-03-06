@@ -24,6 +24,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"go.temporal.io/sdk/workflow"
 
+	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/executor/temporalworkflow/activity"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/executor/temporalworkflow/common"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operationrules"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operations"
@@ -50,6 +51,9 @@ var actionExecutorRegistry = map[string]actionExecutor{
 	operationrules.ActionVerifyReachability: executeVerifyReachabilityAction,
 	operationrules.ActionGetPowerStatus:     executeGetPowerStatusAction,
 	operationrules.ActionFirmwareControl:    executeFirmwareControlAction,
+	operationrules.ActionAllowBringUp:       executeAllowBringUpAction,
+	operationrules.ActionWaitBringUp:        executeWaitBringUpAction,
+	operationrules.ActionInjectExpectation:  executeInjectExpectationAction,
 }
 
 // executeActionList executes a list of actions sequentially
@@ -103,13 +107,28 @@ func executeSleepAction(actx actionExecutionContext) error {
 	return workflow.Sleep(actx.workflowContext, duration)
 }
 
-// executePowerControlAction handles PowerControl action
+// executePowerControlAction handles PowerControl action.
+// When called from a non-power workflow (firmware, bring-up), ParamOperation
+// must be set in the action config to specify the desired power operation.
+// When called from the power workflow, operationInfo is passed through
+// directly (Temporal handles deserialization at the activity boundary).
 func executePowerControlAction(actx actionExecutionContext) error {
+	if opParam, ok := actx.config.Parameters[operationrules.ParamOperation]; ok {
+		opStr, _ := opParam.(string)
+		op := operations.PowerOperationFromString(opStr)
+		if op == operations.PowerOperationUnknown {
+			return fmt.Errorf(
+				"PowerControl action: unrecognized operation %q", opStr,
+			)
+		}
+		info := operations.PowerControlTaskInfo{Operation: op}
+		return executeGenericActivity(
+			actx.workflowContext, "PowerControl", actx.target, info,
+		)
+	}
+
 	return executeGenericActivity(
-		actx.workflowContext,
-		"PowerControl",
-		actx.target,
-		actx.operationInfo,
+		actx.workflowContext, "PowerControl", actx.target, actx.operationInfo,
 	)
 }
 
@@ -127,7 +146,6 @@ func executeVerifyPowerStatusAction(actx actionExecutionContext) error {
 
 // executeVerifyReachabilityAction handles VerifyReachability action
 func executeVerifyReachabilityAction(actx actionExecutionContext) error {
-	// Extract component types parameter
 	var componentTypes []string
 	switch v := actx.config.Parameters[operationrules.ParamComponentTypes].(type) {
 	case []string:
@@ -139,12 +157,15 @@ func executeVerifyReachabilityAction(actx actionExecutionContext) error {
 		}
 	}
 
+	requireAll, _ := actx.config.Parameters[operationrules.ParamRequireAll].(bool)
+
 	return verifyReachability(
 		actx.workflowContext,
 		actx.allTargets,
 		componentTypes,
 		actx.config.Timeout,
 		actx.config.PollInterval,
+		requireAll,
 	)
 }
 
@@ -158,14 +179,94 @@ func executeGetPowerStatusAction(actx actionExecutionContext) error {
 	)
 }
 
-// executeFirmwareControlAction handles FirmwareControl action
+// executeFirmwareControlAction handles FirmwareControl action by starting a
+// firmware update and polling for completion. Poll parameters are read from
+// the action config (poll_interval, poll_timeout) with sensible defaults.
+// operationInfo is passed through to the activity for Temporal to
+// deserialize at the activity boundary.
 func executeFirmwareControlAction(actx actionExecutionContext) error {
-	return executeGenericActivity(
-		actx.workflowContext,
-		"FirmwareControl",
-		actx.target,
-		actx.operationInfo,
-	)
+	ctx := actx.workflowContext
+	target := actx.target
+
+	// Start firmware update (Temporal deserializes operationInfo at activity level)
+	if err := workflow.ExecuteActivity(
+		ctx, "StartFirmwareUpdate", target, actx.operationInfo,
+	).Get(ctx, nil); err != nil {
+		return fmt.Errorf("failed to start firmware update: %w", err)
+	}
+
+	// Determine poll parameters from action config
+	pollInterval := 2 * time.Minute
+	pollTimeout := 30 * time.Minute
+
+	if v, ok := actx.config.Parameters[operationrules.ParamPollInterval]; ok {
+		if d := parseDurationParam(v); d > 0 {
+			pollInterval = d
+		}
+	}
+	if v, ok := actx.config.Parameters[operationrules.ParamPollTimeout]; ok {
+		if d := parseDurationParam(v); d > 0 {
+			pollTimeout = d
+		}
+	}
+
+	componentStr := devicetypes.ComponentTypeToString(target.Type)
+	startTime := workflow.Now(ctx)
+	deadline := startTime.Add(pollTimeout)
+
+	log.Debug().
+		Str("component_type", componentStr).
+		Dur("poll_interval", pollInterval).
+		Dur("poll_timeout", pollTimeout).
+		Msg("Polling firmware update status")
+
+	for {
+		if workflow.Now(ctx).After(deadline) {
+			return fmt.Errorf(
+				"%s firmware update timed out after %v", componentStr, pollTimeout,
+			)
+		}
+
+		if err := workflow.Sleep(ctx, pollInterval); err != nil {
+			return fmt.Errorf("workflow sleep interrupted: %w", err)
+		}
+
+		var result activity.GetFirmwareUpdateStatusResult
+		err := workflow.ExecuteActivity(
+			ctx, "GetFirmwareUpdateStatus", target,
+		).Get(ctx, &result)
+		if err != nil {
+			log.Warn().Err(err).
+				Str("target", target.String()).
+				Msg("Failed to get firmware update status, will retry")
+			continue
+		}
+
+		allCompleted := true
+		var failedComponents []string
+		for componentID, status := range result.Statuses {
+			if status.State == operations.FirmwareUpdateStateFailed {
+				failedComponents = append(failedComponents, componentID)
+			}
+			if status.State != operations.FirmwareUpdateStateCompleted {
+				allCompleted = false
+			}
+		}
+
+		if len(failedComponents) > 0 {
+			return fmt.Errorf(
+				"firmware update failed for components: %v", failedComponents,
+			)
+		}
+
+		if allCompleted {
+			log.Info().
+				Str("target", target.String()).
+				Dur("duration", workflow.Now(ctx).Sub(startTime)).
+				Msg("Firmware update completed")
+			return nil
+		}
+	}
 }
 
 // executeGenericActivity executes a Temporal activity with the given name
@@ -275,16 +376,85 @@ func verifyPowerStatus(
 	}
 }
 
-// verifyReachability polls GetPowerStatus for multiple component types
-// until all are reachable.
+// executeAllowBringUpAction opens the power-on gate for the target components.
+func executeAllowBringUpAction(actx actionExecutionContext) error {
+	return workflow.ExecuteActivity(
+		actx.workflowContext, "AllowBringUpAndPowerOn", actx.target,
+	).Get(actx.workflowContext, nil)
+}
+
+// executeWaitBringUpAction polls GetBringUpState until all components reach
+// the MachineBringUpStateMachineCreated state. Uses config.Timeout and
+// config.PollInterval.
+func executeWaitBringUpAction(actx actionExecutionContext) error {
+	ctx := actx.workflowContext
+	target := actx.target
+
+	timeout := actx.config.Timeout
+	if timeout == 0 {
+		timeout = 15 * time.Minute
+	}
+	pollInterval := actx.config.PollInterval
+	if pollInterval == 0 {
+		pollInterval = 30 * time.Second
+	}
+
+	log.Debug().
+		Dur("timeout", timeout).
+		Dur("poll_interval", pollInterval).
+		Msg("Waiting for compute bring-up")
+
+	deadline := workflow.Now(ctx).Add(timeout)
+
+	for {
+		if workflow.Now(ctx).After(deadline) {
+			return fmt.Errorf(
+				"timed out waiting for compute bring-up (timeout %v)", timeout,
+			)
+		}
+
+		_ = workflow.Sleep(ctx, pollInterval)
+
+		var result activity.GetBringUpStateResult
+		err := workflow.ExecuteActivity(
+			ctx, "GetBringUpState", target,
+		).Get(ctx, &result)
+		if err != nil {
+			log.Warn().Err(err).Msg("Failed to get bring-up state, will retry")
+			continue
+		}
+
+		allReady := true
+		for componentID, state := range result.States {
+			if !state.IsBroughtUp() {
+				allReady = false
+				log.Debug().
+					Str("component_id", componentID).
+					Str("state", state.String()).
+					Msg("Compute not yet brought up")
+			}
+		}
+
+		if allReady {
+			log.Info().
+				Int("count", len(result.States)).
+				Msg("All compute components brought up")
+			return nil
+		}
+	}
+}
+
+// verifyReachability polls GetPowerStatus for multiple component types until
+// all are reachable. When requireAll is true, every individual component
+// within a type must respond (not just the API call succeeding).
 func verifyReachability(
 	ctx workflow.Context,
 	allTargets map[devicetypes.ComponentType]common.Target,
 	componentTypes []string,
 	timeout time.Duration,
 	pollInterval time.Duration,
+	requireAll bool,
 ) error {
-	// Convert string component types to enum
 	typesToCheck := make([]devicetypes.ComponentType, 0, len(componentTypes))
 	for _, ctStr := range componentTypes {
 		ct := devicetypes.ComponentTypeFromString(ctStr)
@@ -296,6 +466,7 @@ func verifyReachability(
 
 	log.Debug().
 		Strs("component_types", componentTypes).
+		Bool("require_all", requireAll).
 		Dur("timeout", timeout).
 		Dur("poll_interval", pollInterval).
 		Msg("Starting reachability verification")
@@ -304,9 +475,7 @@ func verifyReachability(
 	reachable := make(map[devicetypes.ComponentType]bool)
 
 	for {
-		// Try to reach each component type
 		for _, ct := range typesToCheck {
-			// Skip if already verified reachable
 			if reachable[ct] {
 				continue
 			}
@@ -320,7 +489,6 @@ func verifyReachability(
 				continue
 			}
 
-			// Try to get power status (BMC is reachable if this succeeds)
 			var statusMap map[string]operations.PowerStatus
 			err := workflow.ExecuteActivity(
 				ctx,
@@ -333,15 +501,24 @@ func verifyReachability(
 					Str("component_type", devicetypes.ComponentTypeToString(ct)).
 					Err(err).
 					Msg("Component type not yet reachable")
-			} else {
+				continue
+			}
+
+			if requireAll && len(statusMap) < len(target.ComponentIDs) {
 				log.Debug().
 					Str("component_type", devicetypes.ComponentTypeToString(ct)).
-					Msg("Component type is reachable")
-				reachable[ct] = true
+					Int("responding", len(statusMap)).
+					Int("expected", len(target.ComponentIDs)).
+					Msg("Not all components responding yet")
+				continue
 			}
+
+			log.Debug().
+				Str("component_type", devicetypes.ComponentTypeToString(ct)).
+				Msg("Component type is reachable")
+			reachable[ct] = true
 		}
 
-		// Check if all types are reachable
 		allReachable := true
 		for _, ct := range typesToCheck {
 			if !reachable[ct] {
@@ -357,7 +534,6 @@ func verifyReachability(
 			return nil
 		}
 
-		// Check timeout
 		if workflow.Now(ctx).After(deadline) {
 			unreachable := []string{}
 			for _, ct := range typesToCheck {
@@ -375,7 +551,22 @@ func verifyReachability(
 			)
 		}
 
-		// Sleep before next poll (durable sleep in workflow)
 		workflow.Sleep(ctx, pollInterval)
 	}
+}
+
+// executeInjectExpectationAction calls the InjectExpectation activity to register
+// expected component configurations with their respective component manager services.
+func executeInjectExpectationAction(actx actionExecutionContext) error {
+	ctx := actx.workflowContext
+	info := operations.InjectExpectationTaskInfo{}
+
+	log.Debug().
+		Str("component_type", devicetypes.ComponentTypeToString(actx.target.Type)).
+		Int("component_count", len(actx.target.ComponentIDs)).
+		Msg("Executing InjectExpectation action")
+
+	return workflow.ExecuteActivity(
+		ctx, activity.InjectExpectation, actx.target, info,
+	).Get(ctx, nil)
 }

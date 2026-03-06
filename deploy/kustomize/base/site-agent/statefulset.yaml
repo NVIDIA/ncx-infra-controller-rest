@@ -54,11 +54,6 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
-            - name: DB_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: db-creds
-                  key: password
           volumeMounts:
             - name: site-registration
               mountPath: /etc/sitereg

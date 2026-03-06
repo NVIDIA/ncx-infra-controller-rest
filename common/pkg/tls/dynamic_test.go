@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package core
+package tls
 
 import (
 	"crypto/tls"

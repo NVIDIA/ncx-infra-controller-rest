@@ -185,7 +185,7 @@ func (gtitsh GetTenantInstanceTypeStatsHandler) Handle(c echo.Context) error {
 	// 1. Fetch all instance types for the site
 	itDAO := cdbm.NewInstanceTypeDAO(gtitsh.dbSession)
 	instanceTypes, _, err := itDAO.GetAll(ctx, nil, cdbm.InstanceTypeFilterInput{SiteIDs: siteIDs},
-		nil, nil, nil, nil)
+		nil, nil, cdb.GetIntPtr(cdbp.TotalLimit), nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving instance types")
 		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve instance types", nil)
@@ -271,17 +271,24 @@ func (gtitsh GetTenantInstanceTypeStatsHandler) Handle(c echo.Context) error {
 		tenantITAllocs[tID][itID] = append(tenantITAllocs[tID][itID], ac)
 	}
 
-	// Healthy (non-error) machines per instance type for maxAllocatable
-	healthyAssignedMachines := lo.Filter(machines, func(m cdbm.Machine, _ int) bool {
-		return m.InstanceTypeID != nil && m.Status != cdbm.MachineStatusError && m.Status != cdbm.MachineStatusMaintenance
+	// Ready assigned machines per instance type
+	readyAssignedMachines := lo.Filter(machines, func(m cdbm.Machine, _ int) bool {
+		return m.InstanceTypeID != nil && m.Status == cdbm.MachineStatusReady
 	})
-	healthyMachineCountByIT := lo.CountValuesBy(healthyAssignedMachines, func(m cdbm.Machine) uuid.UUID { return *m.InstanceTypeID })
+	readyMachineCountByIT := lo.CountValuesBy(readyAssignedMachines, func(m cdbm.Machine) uuid.UUID { return *m.InstanceTypeID })
 
-	// Used machines per instance type across all tenants (in any state)
-	usedMachinesByIT := make(map[uuid.UUID]int)
-	for _, itMap := range tenantITUsed {
-		for itID, stats := range itMap {
-			usedMachinesByIT[itID] += stats.Total
+	// Calculate total allocated per instance type across all tenants
+	totalAllocatedByIT := lo.Reduce(constraints, func(acc map[uuid.UUID]int, ac cdbm.AllocationConstraint, _ int) map[uuid.UUID]int {
+		acc[ac.ResourceTypeID] += ac.ConstraintValue
+		return acc
+	}, make(map[uuid.UUID]int))
+
+	// Calculate total machines in use per instance type across all tenants
+	// This counts machines with running instances regardless of their status
+	totalInUseByIT := make(map[uuid.UUID]int)
+	for _, itUsageMap := range tenantITUsed {
+		for itID, breakdown := range itUsageMap {
+			totalInUseByIT[itID] += breakdown.Total
 		}
 	}
 
@@ -329,10 +336,8 @@ func (gtitsh GetTenantInstanceTypeStatsHandler) Handle(c echo.Context) error {
 				used = *tenantITUsed[tID][itID]
 			}
 
-			maxAlloc := healthyMachineCountByIT[itID] - usedMachinesByIT[itID]
-			if maxAlloc < 0 {
-				maxAlloc = 0
-			}
+			// ready machines minus those already reserved (allocated but not yet in use)
+			maxAlloc := max(0, readyMachineCountByIT[itID]-(totalAllocatedByIT[itID]-totalInUseByIT[itID]))
 
 			ts.InstanceTypes = append(ts.InstanceTypes, model.APITenantInstanceTypeStatsEntry{
 				ID:               it.ID.String(),
@@ -499,7 +504,7 @@ func (gmitsh GetMachineInstanceTypeStatsHandler) Handle(c echo.Context) error {
 	// 1. Fetch all instance types for the site
 	itDAO := cdbm.NewInstanceTypeDAO(gmitsh.dbSession)
 	instanceTypes, _, err := itDAO.GetAll(ctx, nil, cdbm.InstanceTypeFilterInput{SiteIDs: siteIDs},
-		nil, nil, nil, nil)
+		nil, nil, cdb.GetIntPtr(cdbp.TotalLimit), nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving instance types")
 		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve instance types", nil)

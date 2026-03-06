@@ -6581,6 +6581,7 @@ paths:
                               networkSecurityGroup: true
                               nvLinkPartition: false
                               rackLevelAdministration: false
+                              imageBasedOperatingSystem: false
                             status: Registered
                           status: Syncing
                           version: a94a8fe5ccb19ba61c4c0873d391e987982fbbd3
@@ -6597,6 +6598,7 @@ paths:
                               networkSecurityGroup: false
                               nvLinkPartition: false
                               rackLevelAdministration: false
+                              imageBasedOperatingSystem: false
                             status: Registered
                           status: Syncing
                           version: a94a8fe5ccb19ba61c4c0873d391e987982fbbd3
@@ -6914,6 +6916,7 @@ paths:
                             networkSecurityGroup: true
                             nvLinkPartition: false
                             rackLevelAdministration: false
+                            imageBasedOperatingSystem: false
                           status: Registered
                         status: Syncing
                         version: a94a8fe5ccb19ba61c4c0873d391e987982fbbd3
@@ -6930,6 +6933,7 @@ paths:
                             networkSecurityGroup: false
                             nvLinkPartition: false
                             rackLevelAdministration: false
+                            imageBasedOperatingSystem: false
                           status: Registered
                         status: Syncing
                         version: a94a8fe5ccb19ba61c4c0873d391e987982fbbd3
@@ -10000,6 +10004,7 @@ paths:
                               networkSecurityGroup: true
                               nvLinkPartition: false
                               rackLevelAdministration: false
+                              imageBasedOperatingSystem: false
                             status: Registered
                           status: Syncing
                           version: a94a8fe5ccb19ba61c4c0873d391e987982fbbd3
@@ -10211,6 +10216,7 @@ paths:
                             networkSecurityGroup: true
                             nvLinkPartition: false
                             rackLevelAdministration: false
+                            imageBasedOperatingSystem: false
                           status: Registered
                         status: Syncing
                         version: a94a8fe5ccb19ba61c4c0873d391e987982fbbd3
@@ -11245,6 +11251,7 @@ components:
             networkSecurityGroup: true
             nvLinkPartition: false
             rackLevelAdministration: false
+            imageBasedOperatingSystem: false
           isOnline: false
           status: Pending
           statusHistory:
@@ -11348,6 +11355,7 @@ components:
             networkSecurityGroup: true
             nvLinkPartition: false
             rackLevelAdministration: false
+            imageBasedOperatingSystem: false
           status: Pending
       properties:
         id:
@@ -11393,6 +11401,8 @@ components:
         nvLinkPartition:
           type: boolean
         rackLevelAdministration:
+          type: boolean
+        imageBasedOperatingSystem:
           type: boolean
     SiteCreateRequest:
       title: SiteCreateRequest
@@ -12661,6 +12671,7 @@ components:
                   networkSecurityGroup: true
                   nvLinkPartition: false
                   rackLevelAdministration: false
+                  imageBasedOperatingSystem: false
                 status: Registered
               status: Syncing
               version: a94a8fe5ccb19ba61c4c0873d391e987982fbbd3
@@ -12677,6 +12688,7 @@ components:
                   networkSecurityGroup: false
                   nvLinkPartition: false
                   rackLevelAdministration: false
+                  imageBasedOperatingSystem: false
                 status: Registered
               status: Syncing
               version: a94a8fe5ccb19ba61c4c0873d391e987982fbbd3
@@ -12880,6 +12892,7 @@ components:
               networkSecurityGroup: false
               nvLinkPartition: false
               rackLevelAdministration: false
+              imageBasedOperatingSystem: false
             status: Pending
           status: Syncing
           version: a94a8fe5ccb19ba61c4c0873d391e987982fbbd3
@@ -16967,6 +16980,7 @@ components:
                   networkSecurityGroup: true
                   nvLinkPartition: false
                   rackLevelAdministration: false
+                  imageBasedOperatingSystem: false
                 status: Registered
               status: Syncing
               version: a94a8fe5ccb19ba61c4c0873d391e987982fbbd3
@@ -17066,6 +17080,7 @@ components:
               networkSecurityGroup: true
               nvLinkPartition: false
               rackLevelAdministration: false
+              imageBasedOperatingSystem: false
             status: Pending
           status: Syncing
           version: a94a8fe5ccb19ba61c4c0873d391e987982fbbd3

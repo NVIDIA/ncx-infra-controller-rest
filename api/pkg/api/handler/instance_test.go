@@ -1966,7 +1966,7 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 				reqOrg:      tnOrg,
 				reqUser:     tnu1,
 				respCode:    http.StatusBadRequest,
-				respMessage: "OperatingSystem specified in request is not in VPC site",
+				respMessage: "Creation of Instance with Image based Operating System is not supported. Site must have ImageBasedOperatingSystem capability enabled.",
 			},
 			wantErr: false,
 		},
@@ -2092,7 +2092,7 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "os type image, should succeed",
+			name: "os type image, temporarily expect StatusBadRequest (Image based OS not allowed)",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        tc,
@@ -2116,8 +2116,8 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 				reqMachine:  mc8,
 				reqOrg:      tnOrg8,
 				reqUser:     tnu8,
-				respCode:    http.StatusCreated,
-				respMessage: "",
+				respCode:    http.StatusBadRequest,
+				respMessage: "Creation of Instance with Image based Operating System is not supported. Site must have ImageBasedOperatingSystem capability enabled.",
 			},
 			wantErr: false,
 		},
@@ -2448,7 +2448,7 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "test Instance create API endpoint failed, always iPXE boot flag specified along with image based OS",
+			name: "test Instance create API endpoint failed, always iPXE boot flag specified along with image based OS (Image based OS not allowed)",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        tc,
@@ -2472,12 +2472,12 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 				reqOrg:      tnOrg5,
 				reqUser:     tnu5,
 				respCode:    http.StatusBadRequest,
-				respMessage: "cannot be set with Operating System of type `Image`",
+				respMessage: "Creation of Instance with Image based Operating System is not supported. Site must have ImageBasedOperatingSystem capability enabled.",
 			},
 			wantErr: false,
 		},
 		{
-			name: "test Instance create API endpoint failed, custom iPXE specified along with image based OS",
+			name: "test Instance create API endpoint failed, custom iPXE specified along with image based OS (Image based OS not allowed)",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        tc,
@@ -2501,7 +2501,7 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 				reqOrg:      tnOrg5,
 				reqUser:     tnu5,
 				respCode:    http.StatusBadRequest,
-				respMessage: "cannot be specified with Operating System of type `Image`",
+				respMessage: "Creation of Instance with Image based Operating System is not supported. Site must have ImageBasedOperatingSystem capability enabled.",
 			},
 			wantErr: false,
 		},
@@ -4515,7 +4515,7 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "test Instance update API endpoint success with OS image base change, custom user-data, phone-home disabled, update trigger with timeout",
+			name: "test Instance update API endpoint with OS image base change (temporarily expect StatusBadRequest - Image based OS not allowed)",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        tc,
@@ -4532,12 +4532,13 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 				cleanInstanceToStatus: inst7.Status,
 				reqOrg:                tnOrg1,
 				reqUser:               tnu2,
-				respCode:              http.StatusInternalServerError,
+				respCode:              http.StatusBadRequest,
+				respMessage:           cdb.GetStrPtr("Update of Instance with Image based Operating System is not supported. Site must have ImageBasedOperatingSystem capability enabled."),
 			},
 			wantErr: false,
 		},
 		{
-			name: "test Instance update API endpoint failure with OS change of OS to image-based OS from wrong site",
+			name: "test Instance update API endpoint failure with OS change to Image based OS (wrong site; now fails earlier with Image not allowed)",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        tc,
@@ -4554,11 +4555,12 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 				reqOrg:                tnOrg1,
 				reqUser:               tnu2,
 				respCode:              http.StatusBadRequest,
+				respMessage:           cdb.GetStrPtr("Update of Instance with Image based Operating System is not supported. Site must have ImageBasedOperatingSystem capability enabled."),
 			},
 			wantErr: false,
 		},
 		{
-			name: "test Instance update API endpoint success with OS change of OS to image-based OS from correct site, trigger workflow timeout",
+			name: "test Instance update API endpoint with OS change to Image based OS from correct site (temporarily expect StatusBadRequest)",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        tc,
@@ -4573,7 +4575,8 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 				cleanInstanceToStatus: inst7.Status,
 				reqOrg:                tnOrg1,
 				reqUser:               tnu2,
-				respCode:              http.StatusInternalServerError,
+				respCode:              http.StatusBadRequest,
+				respMessage:           cdb.GetStrPtr("Update of Instance with Image based Operating System is not supported. Site must have ImageBasedOperatingSystem capability enabled."),
 			},
 			wantErr: false,
 		},

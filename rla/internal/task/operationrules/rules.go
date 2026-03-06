@@ -42,9 +42,9 @@ const (
 	ActionVerifyFirmwareVersion = "VerifyFirmwareVersion"
 
 	// Bring-up specific actions
-	ActionWaitPMCReady = "WaitPMCReady"
-	ActionAllowBringUp = "AllowBringUp"
-	ActionWaitBringUp  = "WaitBringUp"
+	ActionAllowBringUp      = "AllowBringUp"
+	ActionWaitBringUp       = "WaitBringUp"
+	ActionInjectExpectation = "InjectExpectation"
 )
 
 // Parameter keys for ActionConfig.Parameters
@@ -55,6 +55,7 @@ const (
 	ParamOperation      = "operation"       // For PowerControl/FirmwareControl (optional)
 	ParamPollInterval   = "poll_interval"   // For FirmwareControl: firmware update poll interval
 	ParamPollTimeout    = "poll_timeout"    // For FirmwareControl: firmware update poll timeout
+	ParamRequireAll     = "require_all"     // For VerifyReachability: require every component to respond
 )
 
 // RackRuleAssociation represents an association between a rack and an operation rule.

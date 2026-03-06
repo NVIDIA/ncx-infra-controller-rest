@@ -95,9 +95,9 @@ func TestInjectExpectationWorkflow(t *testing.T) {
 		},
 		"activity failure returns error": {
 			components:    computeOnly,
-			activityError: errors.New("carbide API unavailable"),
+			activityError: errors.New("component manager service unavailable"),
 			expectError:   true,
-			errorContains: "carbide API unavailable",
+			errorContains: "component manager service unavailable",
 		},
 	}
 

@@ -253,36 +253,40 @@ func testStatsSetupEchoContext(t *testing.T, org, siteID string, user *cdbm.User
 
 // ~~~~~ Test Data Setup ~~~~~ //
 //
-// Test scenario:
+//
 //   1 Infrastructure Provider (org: "stats-org")
 //   1 Site
-//   2 Tenants: "tenant-a" (org: "tenant-a-org", display: "Tenant A Org") and "tenant-b" (org: "tenant-b-org", display: "Tenant B Org")
-//   4 Instance Types: "cpu.x100", "gpu.a100", "gpu.h100", "storage.hdd"
+//   3 Tenants: alpha, beta, gamma
+//   3 Instance Types: gpu-large, gpu-small, cpu-standard
 //
-//   Machines (20 total across instance types + 3 unassigned):
-//     cpu.x100: 8 machines (5 ready, 1 inUse, 1 error, 1 maintenance) - 2 degraded
-//     gpu.a100: 5 machines (2 ready, 2 inUse, 1 error) - 1 degraded
-//     gpu.h100: 4 machines (3 ready, 1 maintenance)
-//     storage.hdd: 3 machines (3 ready)
-//     unassigned: 3 machines (2 ready, 1 unknown)
+//   Machines (29 assigned + 8 unassigned = 37 total):
+//     gpu-large:    12 (1 Init, 5 Ready, 2 InUse, 1 Error, 1 Maint, 1 Unknown, 1 Decom)
+//     gpu-small:    12 (1 Init, 4 Ready, 3 InUse, 1 Error, 1 Maint, 1 Unknown, 1 Reset)
+//     cpu-standard:  5 (3 Ready, 1 InUse, 1 Error)
+//     unassigned:    8 (2 Ready, 1 Error, 1 Maint, 1 Unknown, 1 Decom, 2 Reset)
 //
 //   GPU Capabilities:
-//     gpu.a100 machines: each has "NVIDIA A100 PCIe" GPU with count=8
-//     gpu.h100 machines: each has "NVIDIA H100 PCIe" GPU with count=8
+//     gpu-large: "NVIDIA H100 SXM5 80GB" count=8 per machine, except 1 with count=4 (11×8 + 1×4 = 92)
+//     gpu-small: "NVIDIA A100 SXM4 80GB" count=8 per machine, except 1 with count=4 (11×8 + 1×4 = 92)
 //
-//   Allocations:
-//     Tenant A: 2 allocations
-//       alloc-a-1: cpu.x100 constraint=20, gpu.a100 constraint=3
-//       alloc-a-2: cpu.x100 constraint=10
-//     Tenant B: 1 allocation
-//       alloc-b-1: cpu.x100 constraint=15, gpu.h100 constraint=2
+//   Allocations (4 allocations, 7 constraints):
+//     alpha: training-reserved (gpu-large:4, gpu-small:3), inference-ondemand (gpu-large:2)
+//     beta:  simulation-pool (gpu-large:1, gpu-small:3)
+//     gamma: general-compute (gpu-small:2, cpu:1)
+//     Totals per IT: gpu-large=7, gpu-small=8, cpu=1
 //
-//   Instances (machines in use by tenants):
-//     Tenant A:
-//       3 instances on cpu.x100 machines (1 on error machine, 1 on maintenance machine, 1 on inUse machine)
-//       2 instances on gpu.a100 machines (both on inUse machines)
-//     Tenant B:
-//       1 instance on gpu.h100 machine (on maintenance machine)
+//   Instances (12 total — machines in use by tenants, status reflects machine state):
+//     alpha: gpu-large×4 (2 InUse→Ready, 1 Error→Error, 1 Init→Provisioning)
+//            gpu-small×2 (2 InUse→Ready)
+//     beta:  gpu-large×1 (Maintenance→Ready)
+//            gpu-small×3 (1 Error→Error, 1 Maintenance→Ready, 1 Init→Provisioning)
+//     gamma: gpu-small×1 (InUse→Ready), cpu×1 (InUse→Ready)
+//     Used per IT:  gpu-large=5, gpu-small=6, cpu=1
+//
+//   MaxAllocatable = max(0, ready - (allocated - used)):
+//     gpu-large: max(0, 5-(7-5)) = 3
+//     gpu-small: max(0, 4-(8-6)) = 2
+//     cpu:       max(0, 3-(1-1)) = 3
 
 func TestStatsHandlers(t *testing.T) {
 	dbSession := testStatsInitDB(t)
@@ -300,96 +304,130 @@ func TestStatsHandlers(t *testing.T) {
 	site := testStatsBuildSite(t, dbSession, ip, "stats-site")
 
 	// Tenants
-	tenantA := testStatsBuildTenant(t, dbSession, "tenant-a-org", "tenant-a", "Tenant A Org")
-	tenantB := testStatsBuildTenant(t, dbSession, "tenant-b-org", "tenant-b", "Tenant B Org")
+	tenantAlpha := testStatsBuildTenant(t, dbSession, "alpha-org", "alpha", "Alpha Corp")
+	tenantBeta := testStatsBuildTenant(t, dbSession, "beta-org", "beta", "Beta Labs")
+	tenantGamma := testStatsBuildTenant(t, dbSession, "gamma-org", "gamma", "Gamma Dev")
 
 	// Instance Types
-	itCPU := testStatsBuildInstanceType(t, dbSession, ip, site, "cpu.x100")
-	itA100 := testStatsBuildInstanceType(t, dbSession, ip, site, "gpu.a100")
-	itH100 := testStatsBuildInstanceType(t, dbSession, ip, site, "gpu.h100")
-	itStorage := testStatsBuildInstanceType(t, dbSession, ip, site, "storage.hdd")
+	itGPULarge := testStatsBuildInstanceType(t, dbSession, ip, site, "gpu-large")
+	itGPUSmall := testStatsBuildInstanceType(t, dbSession, ip, site, "gpu-small")
+	itCPU := testStatsBuildInstanceType(t, dbSession, ip, site, "cpu-standard")
 
 	// ~~~~~ Machines ~~~~~ //
 
-	// cpu.x100 machines (8 total)
-	cpuMachines := make([]*cdbm.Machine, 8)
-	cpuMachines[0] = testStatsBuildMachine(t, dbSession, ip, site, &itCPU.ID, cdbm.MachineStatusReady, false)
-	cpuMachines[1] = testStatsBuildMachine(t, dbSession, ip, site, &itCPU.ID, cdbm.MachineStatusReady, false)
-	cpuMachines[2] = testStatsBuildMachine(t, dbSession, ip, site, &itCPU.ID, cdbm.MachineStatusReady, true) // degraded
-	cpuMachines[3] = testStatsBuildMachine(t, dbSession, ip, site, &itCPU.ID, cdbm.MachineStatusReady, true) // degraded
-	cpuMachines[4] = testStatsBuildMachine(t, dbSession, ip, site, &itCPU.ID, cdbm.MachineStatusReady, false)
-	cpuMachines[5] = testStatsBuildMachine(t, dbSession, ip, site, &itCPU.ID, cdbm.MachineStatusInUse, false)
-	cpuMachines[6] = testStatsBuildMachine(t, dbSession, ip, site, &itCPU.ID, cdbm.MachineStatusError, false)
-	cpuMachines[7] = testStatsBuildMachine(t, dbSession, ip, site, &itCPU.ID, cdbm.MachineStatusMaintenance, false)
+	// gpu-large: 12 machines (1 Init, 5 Ready, 2 InUse, 1 Error, 1 Maint, 1 Unknown, 1 Decom)
+	gpuL := make([]*cdbm.Machine, 12)
+	gpuL[0] = testStatsBuildMachine(t, dbSession, ip, site, &itGPULarge.ID, cdbm.MachineStatusInitializing, false)
+	gpuL[1] = testStatsBuildMachine(t, dbSession, ip, site, &itGPULarge.ID, cdbm.MachineStatusReady, false)
+	gpuL[2] = testStatsBuildMachine(t, dbSession, ip, site, &itGPULarge.ID, cdbm.MachineStatusReady, false)
+	gpuL[3] = testStatsBuildMachine(t, dbSession, ip, site, &itGPULarge.ID, cdbm.MachineStatusReady, false)
+	gpuL[4] = testStatsBuildMachine(t, dbSession, ip, site, &itGPULarge.ID, cdbm.MachineStatusReady, false)
+	gpuL[5] = testStatsBuildMachine(t, dbSession, ip, site, &itGPULarge.ID, cdbm.MachineStatusReady, false)
+	gpuL[6] = testStatsBuildMachine(t, dbSession, ip, site, &itGPULarge.ID, cdbm.MachineStatusInUse, false)
+	gpuL[7] = testStatsBuildMachine(t, dbSession, ip, site, &itGPULarge.ID, cdbm.MachineStatusInUse, false)
+	gpuL[8] = testStatsBuildMachine(t, dbSession, ip, site, &itGPULarge.ID, cdbm.MachineStatusError, false)
+	gpuL[9] = testStatsBuildMachine(t, dbSession, ip, site, &itGPULarge.ID, cdbm.MachineStatusMaintenance, false)
+	gpuL[10] = testStatsBuildMachine(t, dbSession, ip, site, &itGPULarge.ID, cdbm.MachineStatusUnknown, false)
+	gpuL[11] = testStatsBuildMachine(t, dbSession, ip, site, &itGPULarge.ID, cdbm.MachineStatusDecommissioned, false)
 
-	// gpu.a100 machines (5 total)
-	a100Machines := make([]*cdbm.Machine, 5)
-	a100Machines[0] = testStatsBuildMachine(t, dbSession, ip, site, &itA100.ID, cdbm.MachineStatusReady, false)
-	a100Machines[1] = testStatsBuildMachine(t, dbSession, ip, site, &itA100.ID, cdbm.MachineStatusReady, false)
-	a100Machines[2] = testStatsBuildMachine(t, dbSession, ip, site, &itA100.ID, cdbm.MachineStatusInUse, false)
-	a100Machines[3] = testStatsBuildMachine(t, dbSession, ip, site, &itA100.ID, cdbm.MachineStatusInUse, false)
-	a100Machines[4] = testStatsBuildMachine(t, dbSession, ip, site, &itA100.ID, cdbm.MachineStatusError, true) // degraded
+	// gpu-small: 12 machines (1 Init, 4 Ready, 3 InUse, 1 Error, 1 Maint, 1 Unknown, 1 Reset)
+	gpuS := make([]*cdbm.Machine, 12)
+	gpuS[0] = testStatsBuildMachine(t, dbSession, ip, site, &itGPUSmall.ID, cdbm.MachineStatusInitializing, false)
+	gpuS[1] = testStatsBuildMachine(t, dbSession, ip, site, &itGPUSmall.ID, cdbm.MachineStatusReady, false)
+	gpuS[2] = testStatsBuildMachine(t, dbSession, ip, site, &itGPUSmall.ID, cdbm.MachineStatusReady, false)
+	gpuS[3] = testStatsBuildMachine(t, dbSession, ip, site, &itGPUSmall.ID, cdbm.MachineStatusReady, false)
+	gpuS[4] = testStatsBuildMachine(t, dbSession, ip, site, &itGPUSmall.ID, cdbm.MachineStatusReady, false)
+	gpuS[5] = testStatsBuildMachine(t, dbSession, ip, site, &itGPUSmall.ID, cdbm.MachineStatusInUse, false)
+	gpuS[6] = testStatsBuildMachine(t, dbSession, ip, site, &itGPUSmall.ID, cdbm.MachineStatusInUse, false)
+	gpuS[7] = testStatsBuildMachine(t, dbSession, ip, site, &itGPUSmall.ID, cdbm.MachineStatusInUse, false)
+	gpuS[8] = testStatsBuildMachine(t, dbSession, ip, site, &itGPUSmall.ID, cdbm.MachineStatusError, false)
+	gpuS[9] = testStatsBuildMachine(t, dbSession, ip, site, &itGPUSmall.ID, cdbm.MachineStatusMaintenance, false)
+	gpuS[10] = testStatsBuildMachine(t, dbSession, ip, site, &itGPUSmall.ID, cdbm.MachineStatusUnknown, false)
+	gpuS[11] = testStatsBuildMachine(t, dbSession, ip, site, &itGPUSmall.ID, cdbm.MachineStatusReset, false)
 
-	// gpu.h100 machines (4 total)
-	h100Machines := make([]*cdbm.Machine, 4)
-	h100Machines[0] = testStatsBuildMachine(t, dbSession, ip, site, &itH100.ID, cdbm.MachineStatusReady, false)
-	h100Machines[1] = testStatsBuildMachine(t, dbSession, ip, site, &itH100.ID, cdbm.MachineStatusReady, false)
-	h100Machines[2] = testStatsBuildMachine(t, dbSession, ip, site, &itH100.ID, cdbm.MachineStatusReady, false)
-	h100Machines[3] = testStatsBuildMachine(t, dbSession, ip, site, &itH100.ID, cdbm.MachineStatusMaintenance, false)
+	// cpu-standard: 5 machines (3 Ready, 1 InUse, 1 Error)
+	cpu := make([]*cdbm.Machine, 5)
+	cpu[0] = testStatsBuildMachine(t, dbSession, ip, site, &itCPU.ID, cdbm.MachineStatusReady, false)
+	cpu[1] = testStatsBuildMachine(t, dbSession, ip, site, &itCPU.ID, cdbm.MachineStatusReady, false)
+	cpu[2] = testStatsBuildMachine(t, dbSession, ip, site, &itCPU.ID, cdbm.MachineStatusReady, false)
+	cpu[3] = testStatsBuildMachine(t, dbSession, ip, site, &itCPU.ID, cdbm.MachineStatusInUse, false)
+	cpu[4] = testStatsBuildMachine(t, dbSession, ip, site, &itCPU.ID, cdbm.MachineStatusError, false)
 
-	// storage.hdd machines (3 total)
-	testStatsBuildMachine(t, dbSession, ip, site, &itStorage.ID, cdbm.MachineStatusReady, false)
-	testStatsBuildMachine(t, dbSession, ip, site, &itStorage.ID, cdbm.MachineStatusReady, false)
-	testStatsBuildMachine(t, dbSession, ip, site, &itStorage.ID, cdbm.MachineStatusReady, false)
-
-	// Unassigned machines (3 total)
+	// unassigned: 8 machines (2 Ready, 1 Error, 1 Maint, 1 Unknown, 1 Decom, 2 Reset)
 	testStatsBuildMachine(t, dbSession, ip, site, nil, cdbm.MachineStatusReady, false)
 	testStatsBuildMachine(t, dbSession, ip, site, nil, cdbm.MachineStatusReady, false)
+	testStatsBuildMachine(t, dbSession, ip, site, nil, cdbm.MachineStatusError, false)
+	testStatsBuildMachine(t, dbSession, ip, site, nil, cdbm.MachineStatusMaintenance, false)
 	testStatsBuildMachine(t, dbSession, ip, site, nil, cdbm.MachineStatusUnknown, false)
+	testStatsBuildMachine(t, dbSession, ip, site, nil, cdbm.MachineStatusDecommissioned, false)
+	testStatsBuildMachine(t, dbSession, ip, site, nil, cdbm.MachineStatusReset, false)
+	testStatsBuildMachine(t, dbSession, ip, site, nil, cdbm.MachineStatusReset, false)
 
 	// ~~~~~ GPU Capabilities ~~~~~ //
 
-	for _, m := range a100Machines {
-		testStatsBuildMachineCapability(t, dbSession, m.ID, cdbm.MachineCapabilityTypeGPU, "NVIDIA A100 PCIe", 8)
+	for i, m := range gpuL {
+		count := 8
+		if i == 11 { // Decommissioned machine has only 4 GPUs (partially populated)
+			count = 4
+		}
+		testStatsBuildMachineCapability(t, dbSession, m.ID, cdbm.MachineCapabilityTypeGPU, "NVIDIA H100 SXM5 80GB", count)
 	}
-	for _, m := range h100Machines {
-		testStatsBuildMachineCapability(t, dbSession, m.ID, cdbm.MachineCapabilityTypeGPU, "NVIDIA H100 PCIe", 8)
+	for i, m := range gpuS {
+		count := 8
+		if i == 11 { // Reset machine has only 4 GPUs
+			count = 4
+		}
+		testStatsBuildMachineCapability(t, dbSession, m.ID, cdbm.MachineCapabilityTypeGPU, "NVIDIA A100 SXM4 80GB", count)
 	}
 
 	// ~~~~~ Allocations & Constraints ~~~~~ //
 
-	allocA1 := testStatsBuildAllocation(t, dbSession, ip, tenantA, site, "alloc-a-1")
-	testStatsBuildAllocationConstraint(t, dbSession, allocA1, itCPU.ID, 20) // 20 cpu.x100 for Tenant A alloc-1
-	testStatsBuildAllocationConstraint(t, dbSession, allocA1, itA100.ID, 3) // 3 gpu.a100 for Tenant A alloc-1
+	allocTraining := testStatsBuildAllocation(t, dbSession, ip, tenantAlpha, site, "training-reserved")
+	testStatsBuildAllocationConstraint(t, dbSession, allocTraining, itGPULarge.ID, 4)
+	testStatsBuildAllocationConstraint(t, dbSession, allocTraining, itGPUSmall.ID, 3)
 
-	allocA2 := testStatsBuildAllocation(t, dbSession, ip, tenantA, site, "alloc-a-2")
-	testStatsBuildAllocationConstraint(t, dbSession, allocA2, itCPU.ID, 10) // 10 cpu.x100 for Tenant A alloc-2
+	allocInference := testStatsBuildAllocation(t, dbSession, ip, tenantAlpha, site, "inference-ondemand")
+	testStatsBuildAllocationConstraint(t, dbSession, allocInference, itGPULarge.ID, 2)
 
-	allocB1 := testStatsBuildAllocation(t, dbSession, ip, tenantB, site, "alloc-b-1")
-	testStatsBuildAllocationConstraint(t, dbSession, allocB1, itCPU.ID, 15) // 15 cpu.x100 for Tenant B alloc-1
-	testStatsBuildAllocationConstraint(t, dbSession, allocB1, itH100.ID, 2) // 2 gpu.h100 for Tenant B alloc-1
+	allocSimulation := testStatsBuildAllocation(t, dbSession, ip, tenantBeta, site, "simulation-pool")
+	testStatsBuildAllocationConstraint(t, dbSession, allocSimulation, itGPULarge.ID, 1)
+	testStatsBuildAllocationConstraint(t, dbSession, allocSimulation, itGPUSmall.ID, 3)
 
-	// ~~~~~ Instances (machines associated with tenant instances) ~~~~~ //
+	allocGeneral := testStatsBuildAllocation(t, dbSession, ip, tenantGamma, site, "general-compute")
+	testStatsBuildAllocationConstraint(t, dbSession, allocGeneral, itGPUSmall.ID, 2)
+	testStatsBuildAllocationConstraint(t, dbSession, allocGeneral, itCPU.ID, 1)
 
-	// VPCs needed for instances
-	vpcA := testStatsBuildVpc(t, dbSession, ip, site, tenantA, "vpc-a")
-	vpcB := testStatsBuildVpc(t, dbSession, ip, site, tenantB, "vpc-b")
+	// ~~~~~ Instances ~~~~~ //
 
-	// Tenant A instances on cpu.x100: 3 instances
-	testStatsBuildInstance(t, dbSession, ip, site, tenantA, vpcA, &itCPU.ID, &cpuMachines[5].ID, &allocA1.ID, nil, "a-cpu-inst-1", cdbm.InstanceStatusReady) // on inUse machine
-	testStatsBuildInstance(t, dbSession, ip, site, tenantA, vpcA, &itCPU.ID, &cpuMachines[6].ID, &allocA1.ID, nil, "a-cpu-inst-2", cdbm.InstanceStatusReady) // on error machine
-	testStatsBuildInstance(t, dbSession, ip, site, tenantA, vpcA, &itCPU.ID, &cpuMachines[7].ID, &allocA2.ID, nil, "a-cpu-inst-3", cdbm.InstanceStatusReady) // on maintenance machine
+	vpcAlpha := testStatsBuildVpc(t, dbSession, ip, site, tenantAlpha, "vpc-alpha")
+	vpcBeta := testStatsBuildVpc(t, dbSession, ip, site, tenantBeta, "vpc-beta")
+	vpcGamma := testStatsBuildVpc(t, dbSession, ip, site, tenantGamma, "vpc-gamma")
 
-	// Tenant A instances on gpu.a100: 2 instances
-	testStatsBuildInstance(t, dbSession, ip, site, tenantA, vpcA, &itA100.ID, &a100Machines[2].ID, &allocA1.ID, nil, "a-a100-inst-1", cdbm.InstanceStatusReady) // on inUse machine
-	testStatsBuildInstance(t, dbSession, ip, site, tenantA, vpcA, &itA100.ID, &a100Machines[3].ID, &allocA1.ID, nil, "a-a100-inst-2", cdbm.InstanceStatusReady) // on inUse machine
+	// alpha: 4 instances on gpu-large (2 InUse→Ready, 1 Error→Error, 1 Initializing→Provisioning)
+	testStatsBuildInstance(t, dbSession, ip, site, tenantAlpha, vpcAlpha, &itGPULarge.ID, &gpuL[6].ID, &allocTraining.ID, nil, "alpha-gpuL-1", cdbm.InstanceStatusReady)        // machine InUse
+	testStatsBuildInstance(t, dbSession, ip, site, tenantAlpha, vpcAlpha, &itGPULarge.ID, &gpuL[7].ID, &allocTraining.ID, nil, "alpha-gpuL-2", cdbm.InstanceStatusReady)        // machine InUse
+	testStatsBuildInstance(t, dbSession, ip, site, tenantAlpha, vpcAlpha, &itGPULarge.ID, &gpuL[8].ID, &allocInference.ID, nil, "alpha-gpuL-3", cdbm.InstanceStatusError)       // machine Error
+	testStatsBuildInstance(t, dbSession, ip, site, tenantAlpha, vpcAlpha, &itGPULarge.ID, &gpuL[0].ID, &allocTraining.ID, nil, "alpha-gpuL-4", cdbm.InstanceStatusProvisioning) // machine Initializing
 
-	// Tenant B instances on gpu.h100: 1 instance
-	testStatsBuildInstance(t, dbSession, ip, site, tenantB, vpcB, &itH100.ID, &h100Machines[3].ID, &allocB1.ID, nil, "b-h100-inst-1", cdbm.InstanceStatusReady) // on maintenance machine
+	// alpha: 2 instances on gpu-small (2 InUse→Ready)
+	testStatsBuildInstance(t, dbSession, ip, site, tenantAlpha, vpcAlpha, &itGPUSmall.ID, &gpuS[5].ID, &allocTraining.ID, nil, "alpha-gpuS-1", cdbm.InstanceStatusReady) // machine InUse
+	testStatsBuildInstance(t, dbSession, ip, site, tenantAlpha, vpcAlpha, &itGPUSmall.ID, &gpuS[6].ID, &allocTraining.ID, nil, "alpha-gpuS-2", cdbm.InstanceStatusReady) // machine InUse
+
+	// beta: 1 instance on gpu-large (Maintenance→Ready)
+	testStatsBuildInstance(t, dbSession, ip, site, tenantBeta, vpcBeta, &itGPULarge.ID, &gpuL[9].ID, &allocSimulation.ID, nil, "beta-gpuL-1", cdbm.InstanceStatusReady) // machine Maintenance
+
+	// beta: 3 instances on gpu-small (1 Error→Error, 1 Maintenance→Ready, 1 Initializing→Provisioning)
+	testStatsBuildInstance(t, dbSession, ip, site, tenantBeta, vpcBeta, &itGPUSmall.ID, &gpuS[8].ID, &allocSimulation.ID, nil, "beta-gpuS-1", cdbm.InstanceStatusError)        // machine Error
+	testStatsBuildInstance(t, dbSession, ip, site, tenantBeta, vpcBeta, &itGPUSmall.ID, &gpuS[9].ID, &allocSimulation.ID, nil, "beta-gpuS-2", cdbm.InstanceStatusReady)        // machine Maintenance
+	testStatsBuildInstance(t, dbSession, ip, site, tenantBeta, vpcBeta, &itGPUSmall.ID, &gpuS[0].ID, &allocSimulation.ID, nil, "beta-gpuS-3", cdbm.InstanceStatusProvisioning) // machine Initializing
+
+	// gamma: 1 instance on gpu-small (InUse→Ready), 1 on cpu (InUse→Ready)
+	testStatsBuildInstance(t, dbSession, ip, site, tenantGamma, vpcGamma, &itGPUSmall.ID, &gpuS[7].ID, &allocGeneral.ID, nil, "gamma-gpuS-1", cdbm.InstanceStatusReady) // machine InUse
+	testStatsBuildInstance(t, dbSession, ip, site, tenantGamma, vpcGamma, &itCPU.ID, &cpu[3].ID, &allocGeneral.ID, nil, "gamma-cpu-1", cdbm.InstanceStatusReady)        // machine InUse
 
 	cfg := common.GetTestConfig()
 
-	// ~~~~~ Test: Machine GPU Stats ~~~~~ //
+	// ~~~~~ Test: 3.1 Machine GPU Stats ~~~~~ //
 
 	t.Run("GetMachineGPUStats", func(t *testing.T) {
 		ec, rec := testStatsSetupEchoContext(t, org, site.ID.String(), providerUser)
@@ -403,7 +441,6 @@ func TestStatsHandlers(t *testing.T) {
 		err = json.Unmarshal(rec.Body.Bytes(), &result)
 		require.Nil(t, err)
 
-		// Should have 2 GPU types: NVIDIA A100 PCIe and NVIDIA H100 PCIe
 		assert.Equal(t, 2, len(result))
 
 		gpuByName := make(map[string]model.APIMachineGPUStats)
@@ -411,18 +448,16 @@ func TestStatsHandlers(t *testing.T) {
 			gpuByName[g.Name] = g
 		}
 
-		// A100: 5 machines x 8 GPUs each = 40 GPUs
-		a100Stats := gpuByName["NVIDIA A100 PCIe"]
-		assert.Equal(t, 40, a100Stats.GPUs)
-		assert.Equal(t, 5, a100Stats.Machines)
+		h100Stats := gpuByName["NVIDIA H100 SXM5 80GB"]
+		assert.Equal(t, 92, h100Stats.GPUs) // 11×8 + 1×4
+		assert.Equal(t, 12, h100Stats.Machines)
 
-		// H100: 4 machines x 8 GPUs each = 32 GPUs
-		h100Stats := gpuByName["NVIDIA H100 PCIe"]
-		assert.Equal(t, 32, h100Stats.GPUs)
-		assert.Equal(t, 4, h100Stats.Machines)
+		a100Stats := gpuByName["NVIDIA A100 SXM4 80GB"]
+		assert.Equal(t, 92, a100Stats.GPUs) // 11×8 + 1×4
+		assert.Equal(t, 12, a100Stats.Machines)
 	})
 
-	// ~~~~~ Test: Machine Instance Type Summary ~~~~~ //
+	// ~~~~~ Test: 3.2 Machine Instance Type Summary ~~~~~ //
 
 	t.Run("GetMachineInstanceTypeSummary", func(t *testing.T) {
 		ec, rec := testStatsSetupEchoContext(t, org, site.ID.String(), providerUser)
@@ -436,24 +471,28 @@ func TestStatsHandlers(t *testing.T) {
 		err = json.Unmarshal(rec.Body.Bytes(), &result)
 		require.Nil(t, err)
 
-		// Assigned: 8 cpu + 5 a100 + 4 h100 + 3 storage = 20 machines
-		assert.Equal(t, 20, result.Assigned.Total)
-		assert.Equal(t, 13, result.Assigned.Ready)      // 5 cpu + 2 a100 + 3 h100 + 3 storage
-		assert.Equal(t, 3, result.Assigned.InUse)       // 1 cpu + 2 a100
-		assert.Equal(t, 2, result.Assigned.Error)       // 1 cpu + 1 a100
-		assert.Equal(t, 2, result.Assigned.Maintenance) // 1 cpu + 1 h100
-		assert.Equal(t, 0, result.Assigned.Unknown)
+		// Assigned: 12 gpu-large + 12 gpu-small + 5 cpu = 29
+		assert.Equal(t, 29, result.Assigned.Total)
+		assert.Equal(t, 2, result.Assigned.Initializing) // 1 gpuL + 1 gpuS
+		assert.Equal(t, 12, result.Assigned.Ready)       // 5 gpuL + 4 gpuS + 3 cpu
+		assert.Equal(t, 6, result.Assigned.InUse)        // 2 gpuL + 3 gpuS + 1 cpu
+		assert.Equal(t, 3, result.Assigned.Error)        // 1 gpuL + 1 gpuS + 1 cpu
+		assert.Equal(t, 2, result.Assigned.Maintenance)  // 1 gpuL + 1 gpuS
+		assert.Equal(t, 2, result.Assigned.Unknown)      // 1 gpuL + 1 gpuS
+		// 29 > 2+12+6+3+2+2=27 because 1 Decom (gpuL) + 1 Reset (gpuS) = 2 untracked
 
-		// Unassigned: 3 machines (2 ready, 1 unknown)
-		assert.Equal(t, 3, result.Unassigned.Total)
+		// Unassigned: 8 machines
+		assert.Equal(t, 8, result.Unassigned.Total)
+		assert.Equal(t, 0, result.Unassigned.Initializing)
 		assert.Equal(t, 2, result.Unassigned.Ready)
 		assert.Equal(t, 0, result.Unassigned.InUse)
-		assert.Equal(t, 0, result.Unassigned.Error)
-		assert.Equal(t, 0, result.Unassigned.Maintenance)
+		assert.Equal(t, 1, result.Unassigned.Error)
+		assert.Equal(t, 1, result.Unassigned.Maintenance)
 		assert.Equal(t, 1, result.Unassigned.Unknown)
+		// 8 > 0+2+0+1+1+1=5 because 1 Decom + 2 Reset = 3 untracked
 	})
 
-	// ~~~~~ Test: Machine Instance Type Stats (detailed) ~~~~~ //
+	// ~~~~~ Test: 3.3 Machine Instance Type Stats (Detailed) ~~~~~ //
 
 	t.Run("GetMachineInstanceTypeStats", func(t *testing.T) {
 		ec, rec := testStatsSetupEchoContext(t, org, site.ID.String(), providerUser)
@@ -467,71 +506,123 @@ func TestStatsHandlers(t *testing.T) {
 		err = json.Unmarshal(rec.Body.Bytes(), &result)
 		require.Nil(t, err)
 
-		// Should have 4 instance types
-		assert.Equal(t, 4, len(result))
+		assert.Equal(t, 3, len(result))
 
 		statsByName := make(map[string]model.APIMachineInstanceTypeStats)
 		for _, s := range result {
 			statsByName[s.Name] = s
 		}
 
-		// cpu.x100: 8 assigned (5 Ready, 1 InUse, 1 Error, 1 Maintenance), 3 used, maxAllocatable=(7 healthy)-(3 used)=4
-		cpuStats := statsByName["cpu.x100"]
+		// --- gpu-large ---
+		gpuLStats := statsByName["gpu-large"]
+		assert.Equal(t, itGPULarge.ID.String(), gpuLStats.ID)
+		assert.Equal(t, "gpu-large", gpuLStats.Name)
+		// assigned: 12 total (1 Init, 5 Ready, 2 InUse, 1 Error, 1 Maint, 1 Unknown, 1 Decom)
+		assert.Equal(t, 12, gpuLStats.AssignedMachineStats.Total)
+		assert.Equal(t, 1, gpuLStats.AssignedMachineStats.Initializing)
+		assert.Equal(t, 5, gpuLStats.AssignedMachineStats.Ready)
+		assert.Equal(t, 2, gpuLStats.AssignedMachineStats.InUse)
+		assert.Equal(t, 1, gpuLStats.AssignedMachineStats.Error)
+		assert.Equal(t, 1, gpuLStats.AssignedMachineStats.Maintenance)
+		assert.Equal(t, 1, gpuLStats.AssignedMachineStats.Unknown)
+		assert.Equal(t, 7, gpuLStats.Allocated)      // 4+2 alpha + 1 beta
+		assert.Equal(t, 3, gpuLStats.MaxAllocatable) // max(0, 5-(7-5))
+		// used: 5 machines (alpha: 2 InUse + 1 Error + 1 Init, beta: 1 Maint)
+		assert.Equal(t, 5, gpuLStats.UsedMachineStats.Total)
+		assert.Equal(t, 2, gpuLStats.UsedMachineStats.InUse)
+		assert.Equal(t, 1, gpuLStats.UsedMachineStats.Error)
+		assert.Equal(t, 1, gpuLStats.UsedMachineStats.Maintenance)
+		assert.Equal(t, 1, gpuLStats.UsedMachineStats.Initializing)
+		assert.Equal(t, 0, gpuLStats.UsedMachineStats.Unknown)
+		assert.Equal(t, 2, len(gpuLStats.Tenants)) // alpha, beta
+
+		gpuLTenantByName := make(map[string]model.APIMachineInstanceTypeTenant)
+		for _, tn := range gpuLStats.Tenants {
+			gpuLTenantByName[tn.Name] = tn
+		}
+		alphaGpuL := gpuLTenantByName["alpha-org"]
+		assert.Equal(t, tenantAlpha.ID.String(), alphaGpuL.ID)
+		assert.Equal(t, 6, alphaGpuL.Allocated) // training:4 + inference:2
+		assert.Equal(t, 4, alphaGpuL.UsedMachineStats.Total)
+		assert.Equal(t, 1, alphaGpuL.UsedMachineStats.Initializing)
+		assert.Equal(t, 2, alphaGpuL.UsedMachineStats.InUse)
+		assert.Equal(t, 1, alphaGpuL.UsedMachineStats.Error)
+		assert.Equal(t, 2, len(alphaGpuL.Allocations))
+
+		betaGpuL := gpuLTenantByName["beta-org"]
+		assert.Equal(t, tenantBeta.ID.String(), betaGpuL.ID)
+		assert.Equal(t, 1, betaGpuL.Allocated) // simulation:1
+		assert.Equal(t, 1, betaGpuL.UsedMachineStats.Total)
+		assert.Equal(t, 1, betaGpuL.UsedMachineStats.Maintenance)
+		assert.Equal(t, 1, len(betaGpuL.Allocations))
+
+		// --- gpu-small ---
+		gpuSStats := statsByName["gpu-small"]
+		assert.Equal(t, itGPUSmall.ID.String(), gpuSStats.ID)
+		// assigned: 12 total (1 Init, 4 Ready, 3 InUse, 1 Error, 1 Maint, 1 Unknown, 1 Reset)
+		assert.Equal(t, 12, gpuSStats.AssignedMachineStats.Total)
+		assert.Equal(t, 1, gpuSStats.AssignedMachineStats.Initializing)
+		assert.Equal(t, 4, gpuSStats.AssignedMachineStats.Ready)
+		assert.Equal(t, 3, gpuSStats.AssignedMachineStats.InUse)
+		assert.Equal(t, 1, gpuSStats.AssignedMachineStats.Error)
+		assert.Equal(t, 1, gpuSStats.AssignedMachineStats.Maintenance)
+		assert.Equal(t, 1, gpuSStats.AssignedMachineStats.Unknown)
+		assert.Equal(t, 8, gpuSStats.Allocated)      // 3 alpha + 3 beta + 2 gamma
+		assert.Equal(t, 2, gpuSStats.MaxAllocatable) // max(0, 4-(8-6))
+		// used: 6 machines (alpha: 2 InUse, beta: 1 Error + 1 Maint + 1 Init, gamma: 1 InUse)
+		assert.Equal(t, 6, gpuSStats.UsedMachineStats.Total)
+		assert.Equal(t, 3, gpuSStats.UsedMachineStats.InUse)
+		assert.Equal(t, 1, gpuSStats.UsedMachineStats.Error)
+		assert.Equal(t, 1, gpuSStats.UsedMachineStats.Maintenance)
+		assert.Equal(t, 1, gpuSStats.UsedMachineStats.Initializing)
+		assert.Equal(t, 3, len(gpuSStats.Tenants)) // alpha, beta, gamma
+
+		gpuSTenantByName := make(map[string]model.APIMachineInstanceTypeTenant)
+		for _, tn := range gpuSStats.Tenants {
+			gpuSTenantByName[tn.Name] = tn
+		}
+		alphaGpuS := gpuSTenantByName["alpha-org"]
+		assert.Equal(t, 3, alphaGpuS.Allocated)
+		assert.Equal(t, 2, alphaGpuS.UsedMachineStats.Total)
+		assert.Equal(t, 2, alphaGpuS.UsedMachineStats.InUse)
+		assert.Equal(t, 1, len(alphaGpuS.Allocations))
+
+		betaGpuS := gpuSTenantByName["beta-org"]
+		assert.Equal(t, 3, betaGpuS.Allocated)
+		assert.Equal(t, 3, betaGpuS.UsedMachineStats.Total)
+		assert.Equal(t, 1, betaGpuS.UsedMachineStats.Initializing)
+		assert.Equal(t, 1, betaGpuS.UsedMachineStats.Error)
+		assert.Equal(t, 1, betaGpuS.UsedMachineStats.Maintenance)
+		assert.Equal(t, 1, len(betaGpuS.Allocations))
+
+		gammaGpuS := gpuSTenantByName["gamma-org"]
+		assert.Equal(t, 2, gammaGpuS.Allocated)
+		assert.Equal(t, 1, gammaGpuS.UsedMachineStats.Total)
+		assert.Equal(t, 1, gammaGpuS.UsedMachineStats.InUse)
+		assert.Equal(t, 1, len(gammaGpuS.Allocations))
+
+		// --- cpu-standard ---
+		cpuStats := statsByName["cpu-standard"]
 		assert.Equal(t, itCPU.ID.String(), cpuStats.ID)
-		// assignedMachineStats: all 8 machines assigned to this IT
-		assert.Equal(t, 8, cpuStats.AssignedMachineStats.Total)
+		// assigned: 5 total (3 Ready, 1 InUse, 1 Error)
+		assert.Equal(t, 5, cpuStats.AssignedMachineStats.Total)
+		assert.Equal(t, 0, cpuStats.AssignedMachineStats.Initializing)
+		assert.Equal(t, 3, cpuStats.AssignedMachineStats.Ready)
+		assert.Equal(t, 1, cpuStats.AssignedMachineStats.InUse)
 		assert.Equal(t, 1, cpuStats.AssignedMachineStats.Error)
-		assert.Equal(t, 1, cpuStats.AssignedMachineStats.Maintenance)
-		assert.Equal(t, 45, cpuStats.Allocated)     // 20 + 10 (Tenant A) + 15 (Tenant B)
-		assert.Equal(t, 3, cpuStats.MaxAllocatable) // (8 - 1 error - 1 maintenance) - 3 used = 3
-		// usedMachineStats: 3 total (Tenant A: 3), 1 error, 1 maintenance
-		assert.Equal(t, 3, cpuStats.UsedMachineStats.Total)
-		assert.Equal(t, 1, cpuStats.UsedMachineStats.Error)
-		assert.Equal(t, 1, cpuStats.UsedMachineStats.Maintenance)
-		// 2 tenants for cpu.x100
-		assert.Equal(t, 2, len(cpuStats.Tenants))
-
-		// gpu.a100: 5 assigned (2 Ready, 2 InUse, 1 Error), 2 used, maxAllocatable=(4 healthy)-(2 used)=2
-		a100Stats := statsByName["gpu.a100"]
-		// assignedMachineStats: all 5 machines
-		assert.Equal(t, 5, a100Stats.AssignedMachineStats.Total)
-		assert.Equal(t, 1, a100Stats.AssignedMachineStats.Error)
-		assert.Equal(t, 0, a100Stats.AssignedMachineStats.Maintenance)
-		assert.Equal(t, 3, a100Stats.Allocated)      // 3 from Tenant A
-		assert.Equal(t, 2, a100Stats.MaxAllocatable) // (5 - 1 error) - 2 used = 2
-		assert.Equal(t, 2, a100Stats.UsedMachineStats.Total)
-		assert.Equal(t, 0, a100Stats.UsedMachineStats.Error)
-		assert.Equal(t, 0, a100Stats.UsedMachineStats.Maintenance)
-		// 1 tenant for gpu.a100
-		assert.Equal(t, 1, len(a100Stats.Tenants))
-
-		// gpu.h100: 4 assigned (3 Ready, 1 Maintenance), 1 used, maxAllocatable=(4 - 0 error - 1 maintenance)-(1 used)=2
-		h100Stats := statsByName["gpu.h100"]
-		// assignedMachineStats: all 4 machines
-		assert.Equal(t, 4, h100Stats.AssignedMachineStats.Total)
-		assert.Equal(t, 0, h100Stats.AssignedMachineStats.Error)
-		assert.Equal(t, 1, h100Stats.AssignedMachineStats.Maintenance)
-		assert.Equal(t, 2, h100Stats.Allocated)      // 2 from Tenant B
-		assert.Equal(t, 2, h100Stats.MaxAllocatable) // (4 - 0 error - 1 maintenance) - 1 used = 2
-		assert.Equal(t, 1, h100Stats.UsedMachineStats.Total)
-		assert.Equal(t, 0, h100Stats.UsedMachineStats.Error)
-		assert.Equal(t, 1, h100Stats.UsedMachineStats.Maintenance) // Tenant B instance on maintenance machine
-		// 1 tenant for gpu.h100
-		assert.Equal(t, 1, len(h100Stats.Tenants))
-
-		// storage.hdd: 3 assigned (3 Ready), 0 allocated, maxAllocatable=3
-		storageStats := statsByName["storage.hdd"]
-		// assignedMachineStats: all 3 machines, all ready
-		assert.Equal(t, 3, storageStats.AssignedMachineStats.Total)
-		assert.Equal(t, 0, storageStats.AssignedMachineStats.Error)
-		assert.Equal(t, 0, storageStats.AssignedMachineStats.Maintenance)
-		assert.Equal(t, 0, storageStats.Allocated)
-		assert.Equal(t, 3, storageStats.MaxAllocatable) // 3 - 0 = 3
-		assert.Equal(t, 0, storageStats.UsedMachineStats.Total)
-		assert.Equal(t, 0, len(storageStats.Tenants))
+		assert.Equal(t, 0, cpuStats.AssignedMachineStats.Maintenance)
+		assert.Equal(t, 0, cpuStats.AssignedMachineStats.Unknown)
+		assert.Equal(t, 1, cpuStats.Allocated)      // general-compute:1
+		assert.Equal(t, 3, cpuStats.MaxAllocatable) // max(0, 3-(1-1))
+		// used: 1 machine (gamma: 1 InUse)
+		assert.Equal(t, 1, cpuStats.UsedMachineStats.Total)
+		assert.Equal(t, 1, cpuStats.UsedMachineStats.InUse)
+		assert.Equal(t, 0, cpuStats.UsedMachineStats.Error)
+		assert.Equal(t, 0, cpuStats.UsedMachineStats.Maintenance)
+		assert.Equal(t, 1, len(cpuStats.Tenants)) // gamma only
 	})
 
-	// ~~~~~ Test: Tenant Instance Type Stats ~~~~~ //
+	// ~~~~~ Test: 3.4 Tenant Instance Type Stats ~~~~~ //
 
 	t.Run("GetTenantInstanceTypeStats", func(t *testing.T) {
 		ec, rec := testStatsSetupEchoContext(t, org, site.ID.String(), providerUser)
@@ -545,67 +636,94 @@ func TestStatsHandlers(t *testing.T) {
 		err = json.Unmarshal(rec.Body.Bytes(), &result)
 		require.Nil(t, err)
 
-		// Should have 2 tenants
-		assert.Equal(t, 2, len(result))
+		assert.Equal(t, 3, len(result))
 
 		tenantByOrg := make(map[string]model.APITenantInstanceTypeStats)
 		for _, ts := range result {
 			tenantByOrg[ts.Org] = ts
 		}
 
-		// Tenant A
-		tenantAStats := tenantByOrg["tenant-a-org"]
-		assert.Equal(t, tenantA.ID.String(), tenantAStats.ID)
-		assert.Equal(t, "Tenant A Org", tenantAStats.OrgDisplayName)
-		// Tenant A has allocations for cpu.x100 and gpu.a100
-		assert.Equal(t, 2, len(tenantAStats.InstanceTypes))
+		// --- alpha ---
+		alphaStats := tenantByOrg["alpha-org"]
+		assert.Equal(t, tenantAlpha.ID.String(), alphaStats.ID)
+		assert.Equal(t, "Alpha Corp", alphaStats.OrgDisplayName)
+		assert.Equal(t, 2, len(alphaStats.InstanceTypes)) // gpu-large, gpu-small
 
-		tenantAByIT := make(map[string]model.APITenantInstanceTypeStatsEntry)
-		for _, it := range tenantAStats.InstanceTypes {
-			tenantAByIT[it.Name] = it
+		alphaByIT := make(map[string]model.APITenantInstanceTypeStatsEntry)
+		for _, it := range alphaStats.InstanceTypes {
+			alphaByIT[it.Name] = it
 		}
 
-		// Tenant A cpu.x100: allocated=30 (20+10), used=3 (1 error, 1 maintenance), 2 allocations
-		tenantACPU := tenantAByIT["cpu.x100"]
-		assert.Equal(t, 30, tenantACPU.Allocated)
-		assert.Equal(t, 3, tenantACPU.UsedMachineStats.Total)
-		assert.Equal(t, 1, tenantACPU.UsedMachineStats.Error)
-		assert.Equal(t, 1, tenantACPU.UsedMachineStats.Maintenance)
-		assert.Equal(t, 2, len(tenantACPU.Allocations))
+		alphaGpuLEntry := alphaByIT["gpu-large"]
+		assert.Equal(t, itGPULarge.ID.String(), alphaGpuLEntry.ID)
+		assert.Equal(t, 6, alphaGpuLEntry.Allocated)      // 4+2
+		assert.Equal(t, 3, alphaGpuLEntry.MaxAllocatable) // global gpu-large maxAlloc
+		assert.Equal(t, 4, alphaGpuLEntry.UsedMachineStats.Total)
+		assert.Equal(t, 1, alphaGpuLEntry.UsedMachineStats.Initializing)
+		assert.Equal(t, 2, alphaGpuLEntry.UsedMachineStats.InUse)
+		assert.Equal(t, 1, alphaGpuLEntry.UsedMachineStats.Error)
+		assert.Equal(t, 0, alphaGpuLEntry.UsedMachineStats.Maintenance)
+		assert.Equal(t, 2, len(alphaGpuLEntry.Allocations)) // training, inference
 
-		// Tenant A gpu.a100: allocated=3, used=2, 1 allocation
-		tenantAA100 := tenantAByIT["gpu.a100"]
-		assert.Equal(t, 3, tenantAA100.Allocated)
-		assert.Equal(t, 2, tenantAA100.UsedMachineStats.Total)
-		assert.Equal(t, 0, tenantAA100.UsedMachineStats.Error)
-		assert.Equal(t, 0, tenantAA100.UsedMachineStats.Maintenance)
-		assert.Equal(t, 1, len(tenantAA100.Allocations))
+		alphaGpuSEntry := alphaByIT["gpu-small"]
+		assert.Equal(t, 3, alphaGpuSEntry.Allocated)
+		assert.Equal(t, 2, alphaGpuSEntry.MaxAllocatable) // global gpu-small maxAlloc
+		assert.Equal(t, 2, alphaGpuSEntry.UsedMachineStats.Total)
+		assert.Equal(t, 2, alphaGpuSEntry.UsedMachineStats.InUse)
+		assert.Equal(t, 1, len(alphaGpuSEntry.Allocations))
 
-		// Tenant B
-		tenantBStats := tenantByOrg["tenant-b-org"]
-		assert.Equal(t, tenantB.ID.String(), tenantBStats.ID)
-		assert.Equal(t, "Tenant B Org", tenantBStats.OrgDisplayName)
-		// Tenant B has allocations for cpu.x100 and gpu.h100
-		assert.Equal(t, 2, len(tenantBStats.InstanceTypes))
+		// --- beta ---
+		betaStats := tenantByOrg["beta-org"]
+		assert.Equal(t, tenantBeta.ID.String(), betaStats.ID)
+		assert.Equal(t, "Beta Labs", betaStats.OrgDisplayName)
+		assert.Equal(t, 2, len(betaStats.InstanceTypes)) // gpu-large, gpu-small
 
-		tenantBByIT := make(map[string]model.APITenantInstanceTypeStatsEntry)
-		for _, it := range tenantBStats.InstanceTypes {
-			tenantBByIT[it.Name] = it
+		betaByIT := make(map[string]model.APITenantInstanceTypeStatsEntry)
+		for _, it := range betaStats.InstanceTypes {
+			betaByIT[it.Name] = it
 		}
 
-		// Tenant B cpu.x100: allocated=15, used=0 (no instances), 1 allocation
-		tenantBCPU := tenantBByIT["cpu.x100"]
-		assert.Equal(t, 15, tenantBCPU.Allocated)
-		assert.Equal(t, 0, tenantBCPU.UsedMachineStats.Total)
-		assert.Equal(t, 1, len(tenantBCPU.Allocations))
+		betaGpuLEntry := betaByIT["gpu-large"]
+		assert.Equal(t, 1, betaGpuLEntry.Allocated)
+		assert.Equal(t, 3, betaGpuLEntry.MaxAllocatable)
+		assert.Equal(t, 1, betaGpuLEntry.UsedMachineStats.Total)
+		assert.Equal(t, 0, betaGpuLEntry.UsedMachineStats.InUse)
+		assert.Equal(t, 1, betaGpuLEntry.UsedMachineStats.Maintenance)
+		assert.Equal(t, 1, len(betaGpuLEntry.Allocations))
 
-		// Tenant B gpu.h100: allocated=2, used=1 (maintenance), 1 allocation
-		tenantBH100 := tenantBByIT["gpu.h100"]
-		assert.Equal(t, 2, tenantBH100.Allocated)
-		assert.Equal(t, 1, tenantBH100.UsedMachineStats.Total)
-		assert.Equal(t, 0, tenantBH100.UsedMachineStats.Error)
-		assert.Equal(t, 1, tenantBH100.UsedMachineStats.Maintenance)
-		assert.Equal(t, 1, len(tenantBH100.Allocations))
+		betaGpuSEntry := betaByIT["gpu-small"]
+		assert.Equal(t, 3, betaGpuSEntry.Allocated)
+		assert.Equal(t, 2, betaGpuSEntry.MaxAllocatable)
+		assert.Equal(t, 3, betaGpuSEntry.UsedMachineStats.Total)
+		assert.Equal(t, 1, betaGpuSEntry.UsedMachineStats.Initializing)
+		assert.Equal(t, 1, betaGpuSEntry.UsedMachineStats.Error)
+		assert.Equal(t, 1, betaGpuSEntry.UsedMachineStats.Maintenance)
+		assert.Equal(t, 1, len(betaGpuSEntry.Allocations))
+
+		// --- gamma ---
+		gammaStats := tenantByOrg["gamma-org"]
+		assert.Equal(t, tenantGamma.ID.String(), gammaStats.ID)
+		assert.Equal(t, "Gamma Dev", gammaStats.OrgDisplayName)
+		assert.Equal(t, 2, len(gammaStats.InstanceTypes)) // gpu-small, cpu
+
+		gammaByIT := make(map[string]model.APITenantInstanceTypeStatsEntry)
+		for _, it := range gammaStats.InstanceTypes {
+			gammaByIT[it.Name] = it
+		}
+
+		gammaGpuSEntry := gammaByIT["gpu-small"]
+		assert.Equal(t, 2, gammaGpuSEntry.Allocated)
+		assert.Equal(t, 2, gammaGpuSEntry.MaxAllocatable)
+		assert.Equal(t, 1, gammaGpuSEntry.UsedMachineStats.Total)
+		assert.Equal(t, 1, gammaGpuSEntry.UsedMachineStats.InUse)
+		assert.Equal(t, 1, len(gammaGpuSEntry.Allocations))
+
+		gammaCPUEntry := gammaByIT["cpu-standard"]
+		assert.Equal(t, 1, gammaCPUEntry.Allocated)
+		assert.Equal(t, 3, gammaCPUEntry.MaxAllocatable) // global cpu maxAlloc
+		assert.Equal(t, 1, gammaCPUEntry.UsedMachineStats.Total)
+		assert.Equal(t, 1, gammaCPUEntry.UsedMachineStats.InUse)
+		assert.Equal(t, 1, len(gammaCPUEntry.Allocations))
 	})
 
 	// ~~~~~ Test: Auth - Tenant user should be denied ~~~~~ //
@@ -627,7 +745,7 @@ func TestStatsHandlers(t *testing.T) {
 		ctx = context.WithValue(ctx, otelecho.TracerKey, tracer)
 
 		e := echo.New()
-		req := httptest.NewRequest(http.MethodGet, "/", nil) // no siteId
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 		rec := httptest.NewRecorder()
 
@@ -687,5 +805,4 @@ func TestStatsHandlers(t *testing.T) {
 		assert.Equal(t, 0, result.Unassigned.Total)
 	})
 
-	_ = tenantUser // used above
 }

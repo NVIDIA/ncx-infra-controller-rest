@@ -73,7 +73,3 @@ envConfig:
   TEMPORAL_INVENTORY_SCHEDULE: "@every 3m"
   TEMPORAL_CERT_PATH: "/etc/temporal-certs"
   TEMPORAL_CERT: "temporal-client-site-agent-certs"
-  DB_ADDR: "postgres.postgres"
-  DB_USER: "forge"
-  DB_DATABASE: "elektratest"
-  DB_PORT: "5432"

@@ -222,7 +222,7 @@ func (t *FirmwareControlTaskInfo) CodeString() string {
 }
 
 // SetFirmwareUpdateTimeWindowRequest is the request for setting firmware update time window.
-// ComponentIDs are external IDs (e.g., machine_id in Carbide) that identify the components.
+// ComponentIDs are external IDs that identify the components.
 type SetFirmwareUpdateTimeWindowRequest struct {
 	ComponentIDs []string
 	StartTime    time.Time

@@ -170,11 +170,21 @@ func TestNVLinkLogicalPartitionHandler_Create(t *testing.T) {
 	wrun := &tmocks.WorkflowRun{}
 	wrun.On("GetID").Return(wid)
 
-	// Mock create call for CreateNVLinkLogicalPartitionV2 workflow
+	// Mock create call for CreateNVLinkLogicalPartition workflow
 	tsc.Mock.On("ExecuteWorkflow", mock.Anything, mock.AnythingOfType("internal.StartWorkflowOptions"),
 		"CreateNVLinkLogicalPartition", mock.Anything).Return(wrun, nil)
 
-	wrun.Mock.On("Get", mock.Anything, mock.Anything).Return(nil)
+	// Mock Get to populate workflow result
+	wrun.Mock.On("Get", mock.Anything, mock.Anything).Return(
+		func(ctx context.Context, value interface{}) error {
+			response := value.(**cwssaws.NVLinkLogicalPartition)
+			*response = &cwssaws.NVLinkLogicalPartition{
+				Id:     &cwssaws.NVLinkLogicalPartitionId{Value: "test-nvllp-id"},
+				Status: &cwssaws.NVLinkLogicalPartitionStatus{State: cwssaws.TenantState_READY},
+			}
+			return nil
+		},
+	)
 
 	// Mock timeout error for timeout test case
 	wruntimeout := &tmocks.WorkflowRun{}
@@ -372,12 +382,12 @@ func TestNVLinkLogicalPartitionHandler_Create(t *testing.T) {
 				err := json.Unmarshal(rec.Body.Bytes(), rsp)
 				assert.Nil(t, err)
 				// validate response fields
-				assert.Equal(t, len(rsp.StatusHistory), 1)
+				assert.Equal(t, len(rsp.StatusHistory), 2)
 				assert.Equal(t, rsp.Name, tc.reqBodyModel.Name)
 				if tc.reqBodyModel.Description != nil {
 					assert.Equal(t, *tc.reqBodyModel.Description, *rsp.Description)
 				}
-				assert.Equal(t, rsp.Status, cdbm.NVLinkLogicalPartitionStatusPending)
+				assert.Equal(t, rsp.Status, cdbm.NVLinkLogicalPartitionStatusReady)
 
 				if len(tsc.Calls) > 0 {
 					req := tsc.Calls[0].Arguments[3].(*cwssaws.NVLinkLogicalPartitionCreationRequest)

@@ -1189,6 +1189,15 @@ func (c *MockForgeClient) GetDpuExtensionServiceVersionsInfo(ctx context.Context
 // NVLink Logical Partition Mocks
 func (c *MockForgeClient) CreateNVLinkLogicalPartition(ctx context.Context, in *wflows.NVLinkLogicalPartitionCreationRequest, opts ...grpc.CallOption) (*wflows.NVLinkLogicalPartition, error) {
 	out := new(wflows.NVLinkLogicalPartition)
+	if in != nil {
+		out.Id = in.Id
+		out.Config = in.Config
+		out.Config.Metadata = in.Config.Metadata
+		out.Config.TenantOrganizationId = in.Config.TenantOrganizationId
+		out.Status = &wflows.NVLinkLogicalPartitionStatus{
+			State: wflows.TenantState_READY,
+		}
+	}
 	return out, nil
 }
 

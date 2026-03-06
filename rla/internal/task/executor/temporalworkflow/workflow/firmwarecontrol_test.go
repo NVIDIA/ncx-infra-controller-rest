@@ -31,6 +31,7 @@ import (
 
 	activitypkg "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/executor/temporalworkflow/activity"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/executor/temporalworkflow/common"
+	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operationrules"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operations"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/task"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/deviceinfo"
@@ -65,13 +66,73 @@ func mockGetFirmwareUpdateStatus(ctx context.Context, target common.Target) (*ac
 	}, nil
 }
 
+// createFirmwareTestRuleDef creates a minimal rule definition for firmware
+// control tests. Single stage with all compute components running
+// FirmwareControl, followed by a power recycle stage.
+func createFirmwareTestRuleDef() *operationrules.RuleDefinition {
+	return &operationrules.RuleDefinition{
+		Version: "v1",
+		Steps: []operationrules.SequenceStep{
+			{
+				ComponentType: devicetypes.ComponentTypeCompute,
+				Stage:         1,
+				MaxParallel:   0,
+				Timeout:       30 * time.Minute,
+				MainOperation: operationrules.ActionConfig{
+					Name: operationrules.ActionFirmwareControl,
+					Parameters: map[string]any{
+						operationrules.ParamPollInterval: "1s",
+						operationrules.ParamPollTimeout:  "1m",
+					},
+				},
+			},
+			{
+				ComponentType: devicetypes.ComponentTypeCompute,
+				Stage:         2,
+				MaxParallel:   0,
+				Timeout:       10 * time.Minute,
+				PreOperation: []operationrules.ActionConfig{
+					{
+						Name: operationrules.ActionPowerControl,
+						Parameters: map[string]any{
+							operationrules.ParamOperation: "force_power_off",
+						},
+					},
+					{
+						Name: operationrules.ActionSleep,
+						Parameters: map[string]any{
+							operationrules.ParamDuration: 1 * time.Second,
+						},
+					},
+				},
+				MainOperation: operationrules.ActionConfig{
+					Name: operationrules.ActionPowerControl,
+					Parameters: map[string]any{
+						operationrules.ParamOperation: "power_on",
+					},
+				},
+				PostOperation: []operationrules.ActionConfig{
+					{
+						Name:         operationrules.ActionVerifyPowerStatus,
+						Timeout:      5 * time.Second,
+						PollInterval: 1 * time.Second,
+						Parameters: map[string]any{
+							operationrules.ParamExpectedStatus: "on",
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
 // createTestRackForFirmwareControl creates a test rack with components having the given external IDs.
-// externalIDs are the external component IDs (e.g., Carbide machine_id) used for activity calls.
+// externalIDs are the external component IDs used for activity calls.
 func createTestRackForFirmwareControl(externalIDs ...string) *rack.Rack {
 	r := rack.New(deviceinfo.DeviceInfo{ID: uuid.New(), Name: "test-rack"}, location.Location{})
 	for _, extID := range externalIDs {
 		r.AddComponent(component.Component{
-			ComponentID: extID, // External ID for Carbide API calls
+			ComponentID: extID,
 			Type:        devicetypes.ComponentTypeCompute,
 		})
 	}
@@ -86,8 +147,9 @@ func TestFirmwareControlWorkflow(t *testing.T) {
 		EndTime:   now.Add(time.Hour * 2).Unix(),
 	}
 	baseReqInfo := task.ExecutionInfo{
-		TaskID: uuid.New(),
-		Rack:   createTestRackForFirmwareControl("comp1", "comp2"),
+		TaskID:         uuid.New(),
+		Rack:           createTestRackForFirmwareControl("comp1", "comp2"),
+		RuleDefinition: createFirmwareTestRuleDef(),
 	}
 
 	testCases := map[string]struct {
@@ -110,8 +172,9 @@ func TestFirmwareControlWorkflow(t *testing.T) {
 		},
 		"single machine success": {
 			reqInfo: task.ExecutionInfo{
-				TaskID: uuid.New(),
-				Rack:   createTestRackForFirmwareControl("single-component"),
+				TaskID:         uuid.New(),
+				Rack:           createTestRackForFirmwareControl("single-component"),
+				RuleDefinition: createFirmwareTestRuleDef(),
 			},
 			info:          baseInfo,
 			activityError: nil,
@@ -123,6 +186,8 @@ func TestFirmwareControlWorkflow(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			testSuite := &testsuite.WorkflowTestSuite{}
 			env := testSuite.NewTestWorkflowEnvironment()
+
+			env.RegisterWorkflow(GenericComponentStepWorkflow)
 
 			env.RegisterActivityWithOptions(mockSetFirmwareUpdateTimeWindowForFirmwareControl, activity.RegisterOptions{
 				Name: "SetFirmwareUpdateTimeWindow",
@@ -203,8 +268,9 @@ func TestFirmwareControlWorkflowNoComponentIDs(t *testing.T) {
 	r.AddComponent(component.Component{}) // Component without ComponentID
 	r.AddComponent(component.Component{}) // Component without ComponentID
 	reqInfo := task.ExecutionInfo{
-		TaskID: uuid.New(),
-		Rack:   r,
+		TaskID:         uuid.New(),
+		Rack:           r,
+		RuleDefinition: createFirmwareTestRuleDef(),
 	}
 	info := &operations.FirmwareControlTaskInfo{
 		Operation: operations.FirmwareOperationUpgrade,

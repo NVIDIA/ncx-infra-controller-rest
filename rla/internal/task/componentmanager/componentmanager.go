@@ -47,8 +47,7 @@ type ComponentManager interface {
 	// Returns a map of component ID to FirmwareUpdateStatus.
 	GetFirmwareUpdateStatus(ctx context.Context, target common.Target) (map[string]operations.FirmwareUpdateStatus, error) //nolint
 
-	// AllowBringUpAndPowerOn opens the power-on gate for the target components via Carbide.
-	// Only applicable to compute and NVSwitch components managed by Carbide.
+	// AllowBringUpAndPowerOn opens the power-on gate for the target components.
 	AllowBringUpAndPowerOn(ctx context.Context, target common.Target) error //nolint
 
 	// GetBringUpState returns the bring-up state for each target component.

@@ -18,18 +18,13 @@
 package workflow
 
 import (
-	"fmt"
 	"time"
 
-	"github.com/rs/zerolog/log"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
 
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/executor/temporalworkflow/common" //nolint
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operationrules"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operations"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/task"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
 )
 
 var (
@@ -53,84 +48,21 @@ func PowerControl(
 		return nil
 	}
 
-	// Set default activity options for UpdateTaskStatus calls
 	ctx = workflow.WithActivityOptions(ctx, powerControlActivityOptions)
 
 	if err := updateRunningTaskStatus(ctx, reqInfo.TaskID); err != nil {
-		// XXX -- The workflow will be terminated, but the task status won't be
-		// updated. We need to add a background process to try to detect and
-		// fix this situation in the future.
 		return err
 	}
 
 	typeToTargets := buildTargets(&reqInfo)
 
-	// Execute power control using operation rules
-	err = executePowerControl(
+	err = executeRuleBasedOperation(
 		ctx,
 		typeToTargets,
+		"PowerControl",
 		info,
 		reqInfo.RuleDefinition,
 	)
 
 	return updateFinishedTaskStatus(ctx, reqInfo.TaskID, err)
-}
-
-// executePowerControl executes power control using operation rules.
-// All pre/post-operation activities (delays, verification, reachability checks)
-// are handled in child workflows via action-based configuration.
-func executePowerControl(
-	ctx workflow.Context,
-	typeToTargets map[devicetypes.ComponentType]common.Target,
-	info operations.PowerControlTaskInfo,
-	ruleDef *operationrules.RuleDefinition,
-) error {
-	if ruleDef == nil {
-		return fmt.Errorf(
-			"rule definition is nil (resolver should never return nil)",
-		)
-	}
-
-	if len(ruleDef.Steps) == 0 {
-		return fmt.Errorf(
-			"rule definition has no steps for operation %s",
-			info.Operation.String(),
-		)
-	}
-
-	log.Info().
-		Int("step_count", len(ruleDef.Steps)).
-		Msg("Executing power control with operation rules")
-
-	// Execute stages sequentially
-	// All pre/post-operation activities now handled in child workflow
-	iter := operationrules.NewStageIterator(ruleDef)
-	for stage := iter.Next(); stage != nil; stage = iter.Next() {
-		log.Info().
-			Int("stage", stage.Number).
-			Int("step_count", len(stage.Steps)).
-			Msg("Executing stage")
-
-		if err := executeGenericStageParallel(
-			ctx,
-			stage.Steps,
-			typeToTargets,
-			"PowerControl",
-			info,
-		); err != nil {
-			log.Error().
-				Err(err).
-				Int("stage", stage.Number).
-				Msg("Stage execution failed")
-			return fmt.Errorf("stage %d failed: %w", stage.Number, err)
-		}
-
-		log.Info().
-			Int("stage", stage.Number).
-			Msg("Stage completed successfully")
-	}
-
-	log.Info().Msg("Power control completed successfully")
-
-	return nil
 }

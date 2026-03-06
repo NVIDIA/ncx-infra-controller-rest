@@ -64,7 +64,7 @@ func DiscoverNVLinkLogicalPartitionInventory(ctx workflow.Context) error {
 }
 
 // CreateNVLinkLogicalPartition is a workflow to create new NVLinkLogical Partitions using the CreateNVLinkLogicalPartitionOnSite activity
-func CreateNVLinkLogicalPartition(ctx workflow.Context, request *cwssaws.NVLinkLogicalPartitionCreationRequest) error {
+func CreateNVLinkLogicalPartition(ctx workflow.Context, request *cwssaws.NVLinkLogicalPartitionCreationRequest) (*cwssaws.NVLinkLogicalPartition, error) {
 	var requestId string
 	if request != nil {
 		requestId = request.Id.Value
@@ -92,15 +92,16 @@ func CreateNVLinkLogicalPartition(ctx workflow.Context, request *cwssaws.NVLinkL
 
 	var nvLinkPartitionManager activity.ManageNVLinkLogicalPartition
 
-	err := workflow.ExecuteActivity(ctx, nvLinkPartitionManager.CreateNVLinkLogicalPartitionOnSite, request).Get(ctx, nil)
+	var nvLinkLogicalPartition cwssaws.NVLinkLogicalPartition
+	err := workflow.ExecuteActivity(ctx, nvLinkPartitionManager.CreateNVLinkLogicalPartitionOnSite, request).Get(ctx, &nvLinkLogicalPartition)
 	if err != nil {
 		logger.Error().Err(err).Str("Activity", "CreateNVLinkLogicalPartitionOnSite").Msg("Failed to execute activity from workflow")
-		return err
+		return nil, err
 	}
 
 	logger.Info().Msg("completing workflow")
 
-	return nil
+	return &nvLinkLogicalPartition, nil
 }
 
 // UpdateNVLinkLogicalPartition is a workflow to update NVLinkLogical Partitions using the UpdateNVLinkLogicalPartitionOnSite activity

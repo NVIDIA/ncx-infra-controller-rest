@@ -49,6 +49,41 @@ func TestPowerOperationCodeString(t *testing.T) {
 	}
 }
 
+func TestPowerOperationFromString(t *testing.T) {
+	// All known operations should round-trip through CodeString → FromString
+	knownOps := []PowerOperation{
+		PowerOperationPowerOn,
+		PowerOperationForcePowerOn,
+		PowerOperationPowerOff,
+		PowerOperationForcePowerOff,
+		PowerOperationRestart,
+		PowerOperationForceRestart,
+		PowerOperationWarmReset,
+		PowerOperationColdReset,
+	}
+
+	for _, op := range knownOps {
+		t.Run(op.String(), func(t *testing.T) {
+			code := op.CodeString()
+			got := PowerOperationFromString(code)
+			if got != op {
+				t.Errorf("PowerOperationFromString(%q) = %v, want %v", code, got, op)
+			}
+		})
+	}
+
+	// Unknown strings should return PowerOperationUnknown
+	unknownCases := []string{"", "invalid", "POWER_ON", "shutdown"}
+	for _, code := range unknownCases {
+		t.Run("unknown_"+code, func(t *testing.T) {
+			got := PowerOperationFromString(code)
+			if got != PowerOperationUnknown {
+				t.Errorf("PowerOperationFromString(%q) = %v, want PowerOperationUnknown", code, got)
+			}
+		})
+	}
+}
+
 func TestFirmwareOperationCodeString(t *testing.T) {
 	tests := []struct {
 		name         string

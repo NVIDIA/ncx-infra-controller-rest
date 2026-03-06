@@ -138,7 +138,7 @@ type APIMachineStatusBreakdown struct {
 	Unknown int `json:"unknown"`
 }
 
-// AddMachineStatusCounts increments counters based on machine status
+// AddMachineStatusCounts increments counters based on machine status.
 func (amsb *APIMachineStatusBreakdown) AddMachineStatusCounts(m cdbm.Machine) {
 	amsb.Total++
 	switch m.Status {
@@ -224,11 +224,8 @@ func NewAPIMachineInstanceTypeStats(
 		used = *itUsed[it.ID]
 	}
 
-	maxAlloc := (assignedStats.Total - assignedStats.Error - assignedStats.Maintenance) - used.Total
-
-	if maxAlloc < 0 {
-		maxAlloc = 0
-	}
+	// ready machines minus those already reserved (allocated but not yet in use)
+	maxAlloc := max(0, assignedStats.Ready-(allocated-used.Total))
 
 	tenantMap := make(map[uuid.UUID]*APIMachineInstanceTypeTenant)
 	for _, ac := range itConstraints {

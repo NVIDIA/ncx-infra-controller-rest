@@ -29,8 +29,8 @@ import (
 var (
 	ingestCmd = &cobra.Command{
 		Use:   "ingest",
-		Short: "Ingest rack components to backend services",
-		Long: `Inject expected component configurations to their respective backend services.
+		Short: "Ingest rack components to component manager services",
+		Long: `Inject expected component configurations to their respective component manager services.
 
 Components are routed to the appropriate service based on type:
   - Compute    → Carbide AddExpectedMachine API

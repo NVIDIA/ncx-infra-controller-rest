@@ -21,7 +21,7 @@ import (
 	"crypto/tls"
 	"fmt"
 
-	"github.com/nvidia/bare-metal-manager-rest/cert-manager/pkg/core"
+	ctls "github.com/nvidia/bare-metal-manager-rest/common/pkg/tls"
 	cwfns "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/namespace"
 )
 
@@ -35,7 +35,7 @@ type TemporalConfig struct {
 	EncryptionKey string
 	TLSenabled    bool
 	ClientTLSCfg  *tls.Config
-	dynTLS        *core.DynTLSCfg
+	dynTLS        *ctls.DynTLSCfg
 }
 
 // GetHostPort returns the concatenated host & port
@@ -51,13 +51,13 @@ func (tcfg *TemporalConfig) Close() {
 
 // NewTemporalConfig initializes and returns a configuration object for managing Temporal
 func NewTemporalConfig(host string, port int, serverName string, namespace string, queue string, encryptionKey string, tlsEnabled bool, certPath string, keyPath string, caPath string) (*TemporalConfig, error) {
-	var dynTLS *core.DynTLSCfg
+	var dynTLS *ctls.DynTLSCfg
 	var clientTLSCfg *tls.Config
 
 	if tlsEnabled {
 		var err error
 
-		dynTLS, err = core.NewDynTLSCfg(keyPath, certPath, caPath)
+		dynTLS, err = ctls.NewDynTLSCfg(keyPath, certPath, caPath)
 		if err != nil {
 			return nil, err
 		}

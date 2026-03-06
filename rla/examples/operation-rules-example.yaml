@@ -588,46 +588,82 @@ rules:
   # ===========================================
 
   - name: "Default Firmware Upgrade"
-    description: "Parallel firmware upgrade across all component types"
+    description: >
+      Three-stage firmware upgrade: PowerShelf first, then NVLSwitch + Compute
+      in parallel, finally power-recycle compute nodes to activate new firmware.
     operation_type: firmware_control
     operation: upgrade
     steps:
-      # All component types can upgrade in parallel (Stage 1)
-      - component_type: compute
-        stage: 1
-        max_parallel: 4  # Batch size
-        timeout: 45m
-        retry:
-          max_attempts: 2
-          initial_interval: 30s
-          backoff_coefficient: 1.5
-
-        main_operation:
-          name: FirmwareControl
-
-      - component_type: nvlswitch
-        stage: 1  # Parallel with compute
-        max_parallel: 2
-        timeout: 45m
-        retry:
-          max_attempts: 2
-          initial_interval: 30s
-          backoff_coefficient: 1.5
-
-        main_operation:
-          name: FirmwareControl
-
+      # === Stage 1: PowerShelf firmware ===
       - component_type: powershelf
-        stage: 1  # Parallel with others
-        max_parallel: 1
-        timeout: 45m
+        stage: 1
+        max_parallel: 0
+        timeout: 30m
         retry:
           max_attempts: 2
           initial_interval: 30s
           backoff_coefficient: 1.5
-
         main_operation:
           name: FirmwareControl
+          parameters:
+            poll_interval: 2m
+            poll_timeout: 30m
+
+      # === Stage 2: NVLSwitch + Compute firmware (parallel) ===
+      - component_type: nvlswitch
+        stage: 2
+        max_parallel: 0
+        timeout: 30m
+        retry:
+          max_attempts: 2
+          initial_interval: 30s
+          backoff_coefficient: 1.5
+        main_operation:
+          name: FirmwareControl
+          parameters:
+            poll_interval: 2m
+            poll_timeout: 30m
+
+      - component_type: compute
+        stage: 2
+        max_parallel: 0
+        timeout: 30m
+        retry:
+          max_attempts: 2
+          initial_interval: 30s
+          backoff_coefficient: 1.5
+        main_operation:
+          name: FirmwareControl
+          parameters:
+            poll_interval: 2m
+            poll_timeout: 30m
+
+      # === Stage 3: Compute power recycle ===
+      - component_type: compute
+        stage: 3
+        max_parallel: 0
+        timeout: 10m
+        retry:
+          max_attempts: 3
+          initial_interval: 5s
+          backoff_coefficient: 2.0
+        pre_operation:
+          - name: PowerControl
+            parameters:
+              operation: "force_power_off"
+          - name: Sleep
+            parameters:
+              duration: 10s
+        main_operation:
+          name: PowerControl
+          parameters:
+            operation: "power_on"
+        post_operation:
+          - name: VerifyPowerStatus
+            timeout: 5m
+            poll_interval: 15s
+            parameters:
+              expected_status: "on"
 
   # ===========================================
   # LEGACY FORMAT EXAMPLES (Backward Compatibility)
@@ -677,8 +713,11 @@ rules:
 #
 # 1. PowerControl
 #    - Main operation for power on/off/restart
-#    - No required parameters
-#    - Uses operation context from task
+#    - When used from the power workflow: no parameters needed (uses task context)
+#    - When used cross-workflow (firmware power recycle, bring-up):
+#      - Required parameter: operation (e.g. "power_on", "force_power_off")
+#      - Valid values: power_on, force_power_on, power_off, force_power_off,
+#        restart, force_restart, warm_reset, cold_reset
 #
 # 2. VerifyPowerStatus
 #    - Polls until expected power status is reached
@@ -692,6 +731,9 @@ rules:
 #    - Polls until specified component types become reachable
 #    - Required parameters:
 #      - component_types: Array of strings ["compute", "nvlswitch", "powershelf"]
+#    - Optional parameters:
+#      - require_all: true/false (default false). When true, every individual
+#        component within the type must respond, not just the API call succeeding.
 #    - Required fields:
 #      - timeout: Maximum time to wait
 #      - poll_interval: Time between polls
@@ -703,36 +745,79 @@ rules:
 #    - Implemented as workflow.Sleep() (not an activity)
 #
 # 5. FirmwareControl
-#    - Main operation for firmware upgrade/downgrade/rollback
-#    - No required parameters
-#    - Uses operation context from task
+#    - Starts firmware update and polls for completion (async start + poll)
+#    - Calls StartFirmwareUpdate, then polls GetFirmwareUpdateStatus
+#    - Optional parameters:
+#      - poll_interval: Time between status polls (default: "2m")
+#      - poll_timeout: Max time to wait for completion (default: "30m")
+#    - Uses operation context (FirmwareControlTaskInfo) from task
 #
 # 6. GetPowerStatus
 #    - Query current power status of components
 #    - Returns map of component IDs to power status
 #    - No required parameters
 #
+# 7. AllowBringUp (bring-up only)
+#    - Opens the Carbide power-on gate for target components
+#    - No required parameters
+#
+# 8. WaitBringUp (bring-up only)
+#    - Polls GetBringUpState until all components reach MachineCreated state
+#    - Required fields:
+#      - timeout: Maximum time to wait (e.g., "15m")
+#      - poll_interval: Time between polls (e.g., "30s")
+#
+# 9. InjectExpectation (ingestion / bring-up)
+#    - Registers expected component configurations with their respective
+#      component manager services
+#    - No required parameters — uses the component Target from the step
+#    - Used as the initial stage in full bring-up rules, and as the sole
+#      action in ingestion-only rules
+#
   # ===========================================
-  # Bring-Up - Rack Bring-Up Sequence
+  # Bring-Up - Full Rack Bring-Up Sequence
   # ===========================================
-  # Stage 1: PowerShelf — wait PMC ready, turn on PSUs, verify
-  # Stage 2: Compute    — open gate, wait bring-up, verify,
-  #                        reboot, verify again
+  # Stage 1: Ingestion   — register all component types with component manager services (parallel)
+  # Stage 2: PowerShelf  — wait PMC ready, turn on PSUs, verify
+  # Stage 3: Compute     — open gate, wait bring-up, verify, reboot, verify again
   #
-  # Bring-up specific actions:
-  #   WaitPMCReady   — poll PSM until all PMCs are reachable
-  #   AllowBringUp   — open Carbide power-on gate
-  #   WaitBringUp    — poll Carbide until ingestion complete
+  # Actions used:
+  #   InjectExpectation — register components with Carbide/PSM
+  #   AllowBringUp      — open Carbide power-on gate
+  #   WaitBringUp       — poll Carbide until ingestion complete
+  #   VerifyReachability with require_all — wait for all PMCs
 
   - name: Default Rack Bring-Up
     description: >
-      Standard rack bring-up sequence.
+      Full rack bring-up: ingestion, powershelf power-on, compute bring-up.
     operation_type: bring_up
     operation: bring_up
     steps:
-      # === Stage 1: PowerShelf ===
+      # === Stage 1: Ingestion (all component types in parallel) ===
       - component_type: powershelf
         stage: 1
+        max_parallel: 0
+        timeout: 10m
+        main_operation:
+          name: InjectExpectation
+
+      - component_type: compute
+        stage: 1
+        max_parallel: 0
+        timeout: 10m
+        main_operation:
+          name: InjectExpectation
+
+      - component_type: nvlswitch
+        stage: 1
+        max_parallel: 0
+        timeout: 10m
+        main_operation:
+          name: InjectExpectation
+
+      # === Stage 2: PowerShelf ===
+      - component_type: powershelf
+        stage: 2
         max_parallel: 0
         timeout: 20m
         retry:
@@ -740,11 +825,16 @@ rules:
           initial_interval: 10s
           backoff_coefficient: 2.0
         pre_operation:
-          - name: WaitPMCReady
+          - name: VerifyReachability
             timeout: 10m
             poll_interval: 30s
+            parameters:
+              component_types: ["powershelf"]
+              require_all: true
         main_operation:
           name: PowerControl
+          parameters:
+            operation: "power_on"
         post_operation:
           - name: VerifyPowerStatus
             timeout: 5m
@@ -752,9 +842,9 @@ rules:
             parameters:
               expected_status: "on"
 
-      # === Stage 2: Compute ===
+      # === Stage 3: Compute ===
       - component_type: compute
-        stage: 2
+        stage: 3
         max_parallel: 0
         timeout: 30m
         retry:
@@ -784,6 +874,40 @@ rules:
             poll_interval: 15s
             parameters:
               expected_status: "on"
+
+  # ===========================================
+  # Ingestion Only — Convenience Rule
+  # ===========================================
+  # Registers components with their component manager services without performing
+  # power or firmware operations. Used by the IngestRack gRPC API.
+  # All component types are ingested in parallel in a single stage.
+
+  - name: Default Ingestion
+    description: >
+      Ingestion-only: register components with component manager services.
+    operation_type: bring_up
+    operation: ingest
+    steps:
+      - component_type: powershelf
+        stage: 1
+        max_parallel: 0
+        timeout: 10m
+        main_operation:
+          name: InjectExpectation
+
+      - component_type: compute
+        stage: 1
+        max_parallel: 0
+        timeout: 10m
+        main_operation:
+          name: InjectExpectation
+
+      - component_type: nvlswitch
+        stage: 1
+        max_parallel: 0
+        timeout: 10m
+        main_operation:
+          name: InjectExpectation
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # BEST PRACTICES

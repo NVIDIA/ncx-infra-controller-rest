@@ -65,7 +65,7 @@ type Component struct {
 	FirmwareVersion string
 	Position        InRackPosition
 	BMCs            []BMC
-	ComponentID     string // External system ID (e.g., Carbide machine_id)
+	ComponentID     string // Component ID from the component manager service
 	RackID          uuid.UUID
 	PowerState      string
 }

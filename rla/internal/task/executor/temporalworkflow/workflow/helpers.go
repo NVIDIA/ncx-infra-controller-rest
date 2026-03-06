@@ -336,3 +336,58 @@ func parseDurationParam(val any) time.Duration {
 		return 0
 	}
 }
+
+// executeRuleBasedOperation drives any operation through its RuleDefinition.
+// Stages execute sequentially; steps within a stage execute in parallel via
+// child workflows. The activityName is a legacy fallback used only when a
+// step has no MainOperation configured.
+func executeRuleBasedOperation(
+	ctx workflow.Context,
+	typeToTargets map[devicetypes.ComponentType]common.Target,
+	activityName string,
+	operationInfo any,
+	ruleDef *operationrules.RuleDefinition,
+) error {
+	if ruleDef == nil {
+		return fmt.Errorf(
+			"rule definition is nil (resolver should never return nil)",
+		)
+	}
+
+	if len(ruleDef.Steps) == 0 {
+		return fmt.Errorf("rule definition has no steps")
+	}
+
+	log.Info().
+		Int("step_count", len(ruleDef.Steps)).
+		Msg("Executing operation with rule definition")
+
+	iter := operationrules.NewStageIterator(ruleDef)
+	for stage := iter.Next(); stage != nil; stage = iter.Next() {
+		log.Info().
+			Int("stage", stage.Number).
+			Int("step_count", len(stage.Steps)).
+			Msg("Executing stage")
+
+		if err := executeGenericStageParallel(
+			ctx,
+			stage.Steps,
+			typeToTargets,
+			activityName,
+			operationInfo,
+		); err != nil {
+			log.Error().
+				Err(err).
+				Int("stage", stage.Number).
+				Msg("Stage execution failed")
+			return fmt.Errorf("stage %d failed: %w", stage.Number, err)
+		}
+
+		log.Info().
+			Int("stage", stage.Number).
+			Msg("Stage completed successfully")
+	}
+
+	log.Info().Msg("Rule-based operation completed successfully")
+	return nil
+}

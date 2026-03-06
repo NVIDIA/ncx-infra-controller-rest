@@ -45,8 +45,3 @@ data:
   TEMPORAL_CERT_PATH: "/etc/temporal-certs"
   # Name of Temporal certificate secret
   TEMPORAL_CERT: "temporal-client-site-agent-certs"
-  # Database configuration
-  DB_ADDR: "postgres.postgres"
-  DB_USER: "forge"
-  DB_DATABASE: "elektratest"
-  DB_PORT: "5432"

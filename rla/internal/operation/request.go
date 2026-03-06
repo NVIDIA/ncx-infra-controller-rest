@@ -134,10 +134,9 @@ func (ct *ComponentTarget) Validate() error {
 
 // ExternalRef identifies a component by its external system ID.
 // The component type determines which external system to query
-// (e.g., Compute -> Carbide, PowerShelf -> PSM)
 type ExternalRef struct {
 	Type devicetypes.ComponentType // Component type determines the source system
-	ID   string                    // ID in that system (e.g., Carbide machine_id, PSM PMC MAC)
+	ID   string                    // Component ID from the component manager service
 }
 
 func (er *ExternalRef) Validate() error {
