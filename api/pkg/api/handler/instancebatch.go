@@ -80,7 +80,7 @@ func NewBatchCreateInstanceHandler(dbSession *cdb.Session, tc temporalClient.Cli
 // buildBatchInstanceCreateRequestOsConfig validates and retrieves OS configuration for batch instance creation.
 // This mirrors the behavior of CreateInstanceHandler.buildInstanceCreateRequestOsConfig.
 // Returns: osConfig, osID, and error (matching single API pattern)
-func (bcih BatchCreateInstanceHandler) buildBatchInstanceCreateRequestOsConfig(c echo.Context, logger *zerolog.Logger, apiRequest *model.APIBatchInstanceCreateRequest, siteID uuid.UUID) (*cwssaws.OperatingSystem, *uuid.UUID, *cerr.APIError) {
+func (bcih BatchCreateInstanceHandler) buildBatchInstanceCreateRequestOsConfig(c echo.Context, logger *zerolog.Logger, apiRequest *model.APIBatchInstanceCreateRequest, site *cdbm.Site) (*cwssaws.OperatingSystem, *uuid.UUID, *cerr.APIError) {
 
 	ctx := c.Request().Context()
 
@@ -145,19 +145,8 @@ func (bcih BatchCreateInstanceHandler) buildBatchInstanceCreateRequestOsConfig(c
 	}
 
 	if os.Type == cdbm.OperatingSystemTypeImage {
-		site, serr := common.GetSiteFromIDString(ctx, nil, siteID.String(), bcih.dbSession)
-		if serr != nil {
-			if serr == common.ErrInvalidID {
-				return nil, nil, cerr.NewAPIError(http.StatusBadRequest, fmt.Sprintf("Failed to create Instance, invalid Site ID: %s", siteID.String()), nil)
-			}
-			if serr == cdb.ErrDoesNotExist {
-				return nil, nil, cerr.NewAPIError(http.StatusNotFound, fmt.Sprintf("Failed to create Instance, could not find Site with ID: %s", siteID.String()), nil)
-			}
-			logger.Error().Err(serr).Str("Site ID", siteID.String()).Msg("error retrieving Site from DB")
-			return nil, nil, cerr.NewAPIError(http.StatusInternalServerError, "Failed to retrieve Site, DB error", nil)
-		}
 		if site.Config == nil || !site.Config.ImageBasedOperatingSystem {
-			logger.Warn().Str("operatingSystemId", os.ID.String()).Str("siteId", siteID.String()).Msg("Creation of Instance with Image based Operating System is not supported for Site, ImageBasedOperatingSystem capability is not enabled")
+			logger.Warn().Str("operatingSystemId", os.ID.String()).Str("siteId", site.ID.String()).Msg("Creation of Instance with Image based Operating System is not supported for Site, ImageBasedOperatingSystem capability is not enabled")
 			return nil, nil, cerr.NewAPIError(http.StatusBadRequest, "Creation of Instance with Image based Operating System is not supported. Site must have ImageBasedOperatingSystem capability enabled.", nil)
 		}
 	}
@@ -766,7 +755,7 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 	// apiRequest will be mutated for use in CreateFromParams.
 	// osConfig will hold the struct/data for use with Temporal/Carbide calls.
 	// Errors will be returned already in the form of cerr.NewAPIErrorResponse
-	osConfig, osID, oserr := bcih.buildBatchInstanceCreateRequestOsConfig(c, &logger, &apiRequest, site.ID)
+	osConfig, osID, oserr := bcih.buildBatchInstanceCreateRequestOsConfig(c, &logger, &apiRequest, site)
 	if oserr != nil {
 		// buildBatchInstanceCreateRequestOsConfig already handles logging,
 		// so this is a bit redundant, but this log brings you to the
