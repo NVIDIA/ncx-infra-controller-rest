@@ -80,7 +80,7 @@ func NewBatchCreateInstanceHandler(dbSession *cdb.Session, tc temporalClient.Cli
 // buildBatchInstanceCreateRequestOsConfig validates and retrieves OS configuration for batch instance creation.
 // This mirrors the behavior of CreateInstanceHandler.buildInstanceCreateRequestOsConfig.
 // Returns: osConfig, osID, and error (matching single API pattern)
-func (bcih BatchCreateInstanceHandler) buildBatchInstanceCreateRequestOsConfig(c echo.Context, logger *zerolog.Logger, apiRequest *model.APIBatchInstanceCreateRequest, siteID uuid.UUID) (*cwssaws.OperatingSystem, *uuid.UUID, *cerr.APIError) {
+func (bcih BatchCreateInstanceHandler) buildBatchInstanceCreateRequestOsConfig(c echo.Context, logger *zerolog.Logger, apiRequest *model.APIBatchInstanceCreateRequest, site *cdbm.Site) (*cwssaws.OperatingSystem, *uuid.UUID, *cerr.APIError) {
 
 	ctx := c.Request().Context()
 
@@ -144,30 +144,38 @@ func (bcih BatchCreateInstanceHandler) buildBatchInstanceCreateRequestOsConfig(c
 		return nil, nil, cerr.NewAPIError(http.StatusBadRequest, "OperatingSystem specified in request is not owned by Tenant", nil)
 	}
 
-	// Confirm match between site and OS (only for Image type).
 	if os.Type == cdbm.OperatingSystemTypeImage {
-		ossaDAO := cdbm.NewOperatingSystemSiteAssociationDAO(bcih.dbSession)
-		_, ossaCount, err := ossaDAO.GetAll(
-			ctx,
-			nil,
-			cdbm.OperatingSystemSiteAssociationFilterInput{
-				OperatingSystemIDs: []uuid.UUID{id},
-				SiteIDs:            []uuid.UUID{siteID},
-			},
-			cdbp.PageInput{Limit: cdb.GetIntPtr(1)},
-			nil,
-		)
-		if err != nil {
-			logger.Error().Msgf("Error retrieving OperatingSystemAssociations for OS: %s", err)
-			return nil, nil, cerr.NewAPIError(http.StatusInternalServerError, "Failed to retrieve OperatingSystemAssociations for OS with ID specified in request data, DB error", validation.Errors{
-				"id": errors.New(osID.String()),
-			})
-		}
-		if ossaCount == 0 {
-			logger.Error().Msg("OperatingSystem does not belong to VPC site")
-			return nil, nil, cerr.NewAPIError(http.StatusBadRequest, "OperatingSystem specified in request is not in VPC site", nil)
+		if site.Config == nil || !site.Config.ImageBasedOperatingSystem {
+			logger.Warn().Str("operatingSystemId", os.ID.String()).Str("siteId", site.ID.String()).Msg("Creation of Instance with Image based Operating System is not supported for Site, ImageBasedOperatingSystem capability is not enabled")
+			return nil, nil, cerr.NewAPIError(http.StatusBadRequest, "Creation of Instance with Image based Operating System is not supported. Site must have ImageBasedOperatingSystem capability enabled.", nil)
 		}
 	}
+
+	// Confirm match between site and OS (only for Image type).
+	/*
+		if os.Type == cdbm.OperatingSystemTypeImage {
+			ossaDAO := cdbm.NewOperatingSystemSiteAssociationDAO(bcih.dbSession)
+			_, ossaCount, err := ossaDAO.GetAll(
+				ctx,
+				nil,
+				cdbm.OperatingSystemSiteAssociationFilterInput{
+					OperatingSystemIDs: []uuid.UUID{id},
+					SiteIDs:            []uuid.UUID{siteID},
+				},
+				cdbp.PageInput{Limit: cdb.GetIntPtr(1)},
+				nil,
+			)
+			if err != nil {
+				logger.Error().Msgf("Error retrieving OperatingSystemAssociations for OS: %s", err)
+				return nil, nil, cerr.NewAPIError(http.StatusInternalServerError, "Failed to retrieve OperatingSystemAssociations for OS with ID specified in request data, DB error", validation.Errors{
+					"id": errors.New(osID.String()),
+				})
+			}
+			if ossaCount == 0 {
+				logger.Error().Msg("OperatingSystem does not belong to VPC site")
+				return nil, nil, cerr.NewAPIError(http.StatusBadRequest, "OperatingSystem specified in request is not in VPC site", nil)
+			}
+		}*/
 
 	// Validate any additional properties.
 	// `os` could still be nil here if no OS ID was sent
@@ -747,7 +755,7 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 	// apiRequest will be mutated for use in CreateFromParams.
 	// osConfig will hold the struct/data for use with Temporal/Carbide calls.
 	// Errors will be returned already in the form of cerr.NewAPIErrorResponse
-	osConfig, osID, oserr := bcih.buildBatchInstanceCreateRequestOsConfig(c, &logger, &apiRequest, site.ID)
+	osConfig, osID, oserr := bcih.buildBatchInstanceCreateRequestOsConfig(c, &logger, &apiRequest, site)
 	if oserr != nil {
 		// buildBatchInstanceCreateRequestOsConfig already handles logging,
 		// so this is a bit redundant, but this log brings you to the

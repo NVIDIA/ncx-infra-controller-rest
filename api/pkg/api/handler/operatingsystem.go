@@ -275,6 +275,12 @@ func (csh CreateOperatingSystemHandler) Handle(c echo.Context) error {
 			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Unable to associate Operating System with Site: %s, Tenant does not have access to Site", stID), nil)
 		}
 
+		// Validate the Site has the ImageBasedOperatingSystem capability enabled for Image based Operating Systems
+		if osType == cdbm.OperatingSystemTypeImage && (site.Config == nil || !site.Config.ImageBasedOperatingSystem) {
+			logger.Warn().Str("siteId", stID).Msg("Image based Operating System is not supported for Site, ImageBasedOperatingSystem capability is not enabled")
+			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Creation of Image based Operating Systems is not supported. Site must have ImageBasedOperatingSystem capability enabled.", nil)
+		}
+
 		rdbst = append(rdbst, *site)
 	}
 
