@@ -3511,6 +3511,12 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 	desd1 := common.TestBuildDpuExtensionServiceDeployment(t, dbSession, des1, inst1.ID, "1.0.0", cdbm.DpuExtensionServiceDeploymentStatusRunning, tnu1)
 	assert.NotNil(t, desd1)
 
+	// Dedicated fixture for verifying omitted DPU Extension Service updates preserve existing deployments.
+	inst15 := testInstanceBuildInstance(t, dbSession, "test-instance-des-preserve", al1.ID, alc1.ID, tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1.ID, cdb.GetStrPtr(mc2.ID), &os2.ID, nil, cdbm.InstanceStatusReady)
+	assert.NotNil(t, inst15)
+	desd15 := common.TestBuildDpuExtensionServiceDeployment(t, dbSession, des1, inst15.ID, "1.0.0", cdbm.DpuExtensionServiceDeploymentStatusRunning, tnu1)
+	assert.NotNil(t, desd15)
+
 	e := echo.New()
 	cfg := common.GetTestConfig()
 	tc := &tmocks.Client{}
@@ -3585,6 +3591,7 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 		respUserDataContains     *string
 		respUserData             *string
 		respMessage              *string
+		expectedDesdIDs          []string
 	}
 
 	tests := []struct {
@@ -3695,6 +3702,55 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 				respCode:              http.StatusOK,
 			},
 			wantErr: false,
+		},
+		{
+			name: "test Instance update API endpoint success preserves DPU Extension Service Deployments when omitted from request",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				scp:       scp,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIInstanceUpdateRequest{
+					Name:       cdb.GetStrPtr("test-instance-des-preserve-renamed"),
+					IpxeScript: os2.IpxeScript,
+				},
+				reqInstance:           inst15.ID.String(),
+				cleanInstanceToStatus: inst15.Status,
+				reqOrg:                tnOrg1,
+				reqUser:               tnu1,
+				respCode:              http.StatusOK,
+				expectedDesdIDs:       []string{desd15.ID.String()},
+			},
+			wantErr:                     false,
+			verifySiteControllerRequest: true,
+			verifyChildSpanner:          true,
+		},
+		{
+			name: "test Instance update API endpoint success clears DPU Extension Service Deployments when explicitly empty in request",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				scp:       scp,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIInstanceUpdateRequest{
+					Name:                           cdb.GetStrPtr("test-instance-des-cleared"),
+					IpxeScript:                     os2.IpxeScript,
+					DpuExtensionServiceDeployments: []model.APIDpuExtensionServiceDeploymentRequest{},
+				},
+				reqInstance:           inst15.ID.String(),
+				cleanInstanceToStatus: inst15.Status,
+				reqOrg:                tnOrg1,
+				reqUser:               tnu1,
+				respCode:              http.StatusOK,
+				expectedDesdIDs:       []string{},
+			},
+			wantErr:                     false,
+			verifySiteControllerRequest: true,
+			verifyChildSpanner:          true,
 		},
 		{
 			name: "test Instance update API endpoint success with DPU Extension Service Deployments",
@@ -4910,6 +4966,19 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 
 			if tt.args.respMessage != nil {
 				assert.Contains(t, rec.Body.String(), *tt.args.respMessage)
+			}
+
+			if tt.args.expectedDesdIDs != nil {
+				assert.Equal(t, len(tt.args.expectedDesdIDs), len(rst.DpuExtensionServiceDeployments))
+
+				foundDesdIDs := map[string]bool{}
+				for _, d := range rst.DpuExtensionServiceDeployments {
+					foundDesdIDs[d.ID] = true
+				}
+
+				for _, expectedID := range tt.args.expectedDesdIDs {
+					assert.True(t, foundDesdIDs[expectedID], "expected deployment %s to be present in response", expectedID)
+				}
 			}
 
 			reqIns, _ := insDAO.GetByID(ec.Request().Context(), nil, uuid.MustParse(tt.args.reqInstance), nil)

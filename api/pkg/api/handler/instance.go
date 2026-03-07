@@ -2920,7 +2920,11 @@ func (uih UpdateInstanceHandler) Handle(c echo.Context) error {
 	updateDesds := []cdbm.DpuExtensionServiceDeployment{}
 	updatedDesdMap := map[string]*cdbm.DpuExtensionServiceDeployment{}
 
-	if len(apiRequest.DpuExtensionServiceDeployments) > 0 {
+	// If DPU extension services were omitted from the request, preserve existing
+	// services in the config we send to Site Controller.
+	if apiRequest.DpuExtensionServiceDeployments == nil {
+		updateDesds = append(updateDesds, existingDesds...)
+	} else {
 		for _, adesdr := range apiRequest.DpuExtensionServiceDeployments {
 			desdID, err := uuid.Parse(adesdr.DpuExtensionServiceID)
 			if err != nil {
