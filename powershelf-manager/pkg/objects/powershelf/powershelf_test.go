@@ -19,7 +19,7 @@ package powershelf
 import (
 	"testing"
 
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/credential"
+	"github.com/nvidia/bare-metal-manager-rest/common/pkg/credential"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/vendor"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/objects/pmc"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/objects/powersupply"
@@ -29,11 +29,16 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func newCred(u, p string) *credential.Credential {
+	c := credential.New(u, p)
+	return &c
+}
+
 // pickValidVendor returns a supported vendor code; hard-fails if not accepted.
 func pickValidVendor(t *testing.T) vendor.VendorCode {
 	t.Helper()
 	code := vendor.VendorCodeLiteon
-	if obj, err := pmc.New("00:11:22:33:44:55", "192.168.1.10", code, credential.New("u", "p")); err == nil && obj != nil {
+	if obj, err := pmc.New("00:11:22:33:44:55", "192.168.1.10", code, newCred("u", "p")); err == nil && obj != nil {
 		return code
 	}
 	t.Fatalf("pmc.New did not accept vendor code %v", code)
@@ -45,7 +50,7 @@ func TestPowerShelfConstruction(t *testing.T) {
 
 	// Helpers
 	makePMC := func(mac, ip string, v vendor.VendorCode, user, pass string) *pmc.PMC {
-		obj, err := pmc.New(mac, ip, v, credential.New(user, pass))
+		obj, err := pmc.New(mac, ip, v, newCred(user, pass))
 		assert.NoError(t, err)
 		return obj
 	}
@@ -221,7 +226,7 @@ func TestPowerShelfPointerSemantics(t *testing.T) {
 					PowerSupplies: []*powersupply.PowerSupply{&powersupply.PowerSupply{Entity: rfcommon.Entity{ID: "psu-1"}}},
 				}
 				p.PMC = func() *pmc.PMC {
-					obj, err := pmc.New("00:11:22:33:44:55", "192.168.1.10", validVendor, credential.New("u", "p"))
+					obj, err := pmc.New("00:11:22:33:44:55", "192.168.1.10", validVendor, newCred("u", "p"))
 					assert.NoError(t, err)
 					return obj
 				}()

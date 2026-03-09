@@ -18,13 +18,14 @@ package cmd
 
 import (
 	"context"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/db"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/db/migrations"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/db/postgres"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+
+	"github.com/nvidia/bare-metal-manager-rest/common/pkg/credential"
+	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
+	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/db/migrations"
 )
 
 var (
@@ -62,30 +63,30 @@ func init() {
 func doMigration() {
 	ctx := context.Background()
 
-	dbConf := db.Config{
+	dbConf := cdb.Config{
 		Host:              migrateDBHost,
 		Port:              migrateDBPort,
 		DBName:            migrateDBName,
+		Credential:        credential.New(migrateDBUser, migrateDBUserPassword),
 		CACertificatePath: migrateDBCertificate,
 	}
 
-	dbConf.Credential.Update(&migrateDBUser, &migrateDBUserPassword)
-
-	db, err := postgres.New(ctx, dbConf)
+	session, err := cdb.NewSessionFromConfig(ctx, dbConf)
 	if err != nil {
 		log.Fatalf("failed to connect to DB: %v", err)
 	}
+	defer session.Close()
 
 	if rollBack != "" {
 		rollbackTime, err := time.Parse("2006-01-02T15:04:05", rollBack)
 		if err != nil {
 			log.Fatal("Bad rollback time format. Expected format: 2006-01-02T15:04:05")
 		}
-		if err := migrations.Rollback(ctx, db, rollbackTime); err != nil {
+		if err := migrations.RollbackWithDB(ctx, session.DB, rollbackTime); err != nil {
 			log.Fatalf("Failed to roll back migrations: %v", err)
 		}
 	} else {
-		if err := migrations.Migrate(ctx, db); err != nil {
+		if err := migrations.MigrateWithDB(ctx, session.DB); err != nil {
 			log.Fatalf("Failed to run migrations: %v", err)
 		}
 	}

@@ -26,8 +26,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/uptrace/bun"
 
+	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/common/utils"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/db"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
 )
 
@@ -262,7 +262,7 @@ func TestGetComponentsByType(t *testing.T) {
 		t.Skip("Skipping integration test: no DB environment specified")
 	}
 
-	dbConf, err := db.BuildDBConfigFromEnv()
+	dbConf, err := cdb.ConfigFromEnv()
 	assert.Nil(t, err)
 
 	pool, err := utils.UnitTestDB(ctx, t, dbConf)
@@ -274,7 +274,7 @@ func TestGetComponentsByType(t *testing.T) {
 		Manufacturer: "TestMfg",
 		SerialNumber: "rack-serial-001",
 	}
-	err = rack.Create(ctx, pool.DB())
+	err = rack.Create(ctx, pool.DB)
 	assert.Nil(t, err)
 
 	// Create Compute components
@@ -286,7 +286,7 @@ func TestGetComponentsByType(t *testing.T) {
 		SerialNumber: "comp-serial-001",
 		RackID:       rack.ID,
 	}
-	err = compute1.Create(ctx, pool.DB())
+	err = compute1.Create(ctx, pool.DB)
 	assert.Nil(t, err)
 
 	compute2 := Component{
@@ -296,7 +296,7 @@ func TestGetComponentsByType(t *testing.T) {
 		SerialNumber: "comp-serial-002",
 		RackID:       rack.ID,
 	}
-	err = compute2.Create(ctx, pool.DB())
+	err = compute2.Create(ctx, pool.DB)
 	assert.Nil(t, err)
 
 	// Create PowerShelf component with a BMC
@@ -307,7 +307,7 @@ func TestGetComponentsByType(t *testing.T) {
 		SerialNumber: "ps-serial-001",
 		RackID:       rack.ID,
 	}
-	err = ps1.Create(ctx, pool.DB())
+	err = ps1.Create(ctx, pool.DB)
 	assert.Nil(t, err)
 
 	err = pool.RunInTx(ctx, func(ctx context.Context, tx bun.Tx) error {
@@ -320,7 +320,7 @@ func TestGetComponentsByType(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Test: Get Compute components
-	computes, err := GetComponentsByType(ctx, pool.DB(), devicetypes.ComponentTypeCompute)
+	computes, err := GetComponentsByType(ctx, pool.DB, devicetypes.ComponentTypeCompute)
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(computes))
 	for _, c := range computes {
@@ -328,7 +328,7 @@ func TestGetComponentsByType(t *testing.T) {
 	}
 
 	// Test: Get PowerShelf components (should include BMCs via Relation)
-	powershelves, err := GetComponentsByType(ctx, pool.DB(), devicetypes.ComponentTypePowerShelf)
+	powershelves, err := GetComponentsByType(ctx, pool.DB, devicetypes.ComponentTypePowerShelf)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(powershelves))
 	assert.Equal(t, "powershelf-1", powershelves[0].Name)
@@ -336,7 +336,7 @@ func TestGetComponentsByType(t *testing.T) {
 	assert.Equal(t, "aa:bb:cc:dd:ee:01", powershelves[0].BMCs[0].MacAddress)
 
 	// Test: Get NVLSwitch components (should be empty)
-	switches, err := GetComponentsByType(ctx, pool.DB(), devicetypes.ComponentTypeNVLSwitch)
+	switches, err := GetComponentsByType(ctx, pool.DB, devicetypes.ComponentTypeNVLSwitch)
 	assert.Nil(t, err)
 	assert.Equal(t, 0, len(switches))
 }

@@ -28,10 +28,10 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/nvidia/bare-metal-manager-rest/common/pkg/credential"
+	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	svc "github.com/nvidia/bare-metal-manager-rest/powershelf-manager/internal/service"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/credential"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/credentials"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/db"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/powershelfmanager"
 )
 
@@ -104,15 +104,15 @@ func init() {
 
 	// Flags with environment variable fallbacks for Kubernetes deployment compatibility.
 	// Environment variables take precedence over defaults, CLI flags take precedence over env vars.
-	// Uses same env var names as RLA for consistency: DB_ADDR, DB_DATABASE, DB_USER, DB_PASSWORD, DB_PORT, VAULT_ADDR, VAULT_TOKEN
+	// Env vars: DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD, DB_CERT_PATH, VAULT_ADDR, VAULT_TOKEN
 	serveCmd.Flags().IntVarP(&port, "port", "p", getEnvIntOrDefault("PSM_PORT", defaultServicePort), "Port for the gRPC server (env: PSM_PORT)") //nolint
 	serveCmd.Flags().StringVarP(&datastoreType, "datastore", "d", string(defaultDataStoreType), "DataStore Type")
 
 	serveCmd.Flags().StringVarP(&dbUser, "db_user", "u", getEnvOrDefault("DB_USER", defaultDbUser), "DB User (env: DB_USER)")
 	serveCmd.Flags().StringVarP(&dbPassword, "db_password", "b", getEnvOrDefault("DB_PASSWORD", defaultDbPassword), "DB Password (env: DB_PASSWORD)")
 	serveCmd.Flags().IntVarP(&dbPort, "db_port", "r", getEnvIntOrDefault("DB_PORT", defaultDbPort), "DB Port (env: DB_PORT)") //nolint
-	serveCmd.Flags().StringVarP(&dbHostName, "db_host", "o", getEnvOrDefault("DB_ADDR", defaultDbHostName), "DB Host Name (env: DB_ADDR)")
-	serveCmd.Flags().StringVarP(&dbName, "db_name", "n", getEnvOrDefault("DB_DATABASE", defaultDbName), "DB Name (env: DB_DATABASE)")
+	serveCmd.Flags().StringVarP(&dbHostName, "db_host", "o", getEnvOrDefault("DB_HOST", defaultDbHostName), "DB Host Name (env: DB_HOST)")
+	serveCmd.Flags().StringVarP(&dbName, "db_name", "n", getEnvOrDefault("DB_NAME", defaultDbName), "DB Name (env: DB_NAME)")
 	serveCmd.Flags().StringVarP(&dbCertPath, "db_cert_path", "c", getEnvOrDefault("DB_CERT_PATH", ""), "DB CA Certificate Path (env: DB_CERT_PATH)")
 
 	serveCmd.Flags().StringVarP(&vaultToken, "vault_token", "t", getEnvOrDefault("VAULT_TOKEN", defaultVaultToken), "Vault Token (env: VAULT_TOKEN)")
@@ -130,11 +130,11 @@ func doServe() {
 				Address: vaultAddress,
 				Token:   vaultToken,
 			},
-			DBConf: db.Config{
+			DBConf: cdb.Config{
 				Host:              dbHostName,
 				Port:              dbPort,
 				DBName:            dbName,
-				Credential:        *credential.New(dbUser, dbPassword),
+				Credential:        credential.New(dbUser, dbPassword),
 				CACertificatePath: dbCertPath,
 			},
 		},

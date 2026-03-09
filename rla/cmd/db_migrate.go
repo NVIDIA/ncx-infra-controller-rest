@@ -24,9 +24,8 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/db"
+	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/db/migrations"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/db/postgres"
 )
 
 var (
@@ -50,28 +49,29 @@ func init() {
 }
 
 func doMigration() {
-	dbConf, err := db.BuildDBConfigFromEnv()
+	dbConf, err := cdb.ConfigFromEnv()
 	if err != nil {
 		log.Fatal().Msgf("Unable to build database configuration: %v", err)
 	}
 
 	ctx := context.Background()
 
-	db, err := postgres.New(ctx, dbConf)
+	session, err := cdb.NewSessionFromConfig(ctx, dbConf)
 	if err != nil {
 		log.Fatal().Msgf("failed to connect to DB: %v", err)
 	}
+	defer session.Close()
 
 	if rollBack != "" {
 		rollbackTime, err := time.Parse("2006-01-02T15:04:05", rollBack)
 		if err != nil {
 			log.Fatal().Msg("Bad rollback time")
 		}
-		if err := migrations.Rollback(ctx, db, rollbackTime); err != nil {
+		if err := migrations.RollbackWithDB(ctx, session.DB, rollbackTime); err != nil {
 			log.Fatal().Msgf("Failed to roll back migrations: %v", err)
 		}
 	} else {
-		if err := migrations.Migrate(ctx, db); err != nil {
+		if err := migrations.MigrateWithDB(ctx, session.DB); err != nil {
 			log.Fatal().Msgf("Failed to run migrations: %v", err)
 		}
 	}

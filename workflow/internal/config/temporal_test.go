@@ -25,7 +25,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	ctls "github.com/nvidia/bare-metal-manager-rest/common/pkg/tls"
+	cconfig "github.com/nvidia/bare-metal-manager-rest/common/pkg/config"
 )
 
 func TestNewTemporalConfig(t *testing.T) {
@@ -41,11 +41,8 @@ func TestNewTemporalConfig(t *testing.T) {
 	keyPath, certPath := SetupTestCerts(t)
 	defer os.Remove(keyPath)
 	defer os.Remove(certPath)
-	d, err := ctls.NewDynTLSCfg(keyPath, certPath, certPath)
-	assert.NoError(t, err)
-	defer d.Close()
 
-	tcfg := TemporalConfig{
+	tcfg := cconfig.TemporalConfig{
 		Host:          "localhost",
 		Port:          7233,
 		ServerName:    "temporal.local",
@@ -57,13 +54,12 @@ func TestNewTemporalConfig(t *testing.T) {
 			MinVersion:         tls.VersionTLS12,
 			InsecureSkipVerify: false,
 		},
-		dynTLS: d,
 	}
 
 	tests := []struct {
 		name string
 		args args
-		want *TemporalConfig
+		want *cconfig.TemporalConfig
 	}{
 		{
 			name: "initialize Temporal config",
@@ -80,7 +76,7 @@ func TestNewTemporalConfig(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := NewTemporalConfig(tt.args.host, tt.args.port, tt.args.serverName, tt.args.namespace, tt.args.queue, tt.args.encryptionKey, true, certPath, keyPath, certPath)
+			got, err := cconfig.NewTemporalConfig(tt.args.host, tt.args.port, tt.args.serverName, tt.args.namespace, tt.args.queue, tt.args.encryptionKey, true, certPath, keyPath, certPath)
 			assert.NoError(t, err)
 			defer got.Close()
 

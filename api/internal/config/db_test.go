@@ -20,6 +20,8 @@ package config
 import (
 	"reflect"
 	"testing"
+
+	cconfig "github.com/nvidia/bare-metal-manager-rest/common/pkg/config"
 )
 
 func TestNewDBConfig(t *testing.T) {
@@ -31,7 +33,7 @@ func TestNewDBConfig(t *testing.T) {
 		password string
 	}
 
-	dbcfg := DBConfig{
+	dbcfg := cconfig.DBConfig{
 		Host:     "localhost",
 		Port:     5432,
 		Name:     "forge",
@@ -42,7 +44,7 @@ func TestNewDBConfig(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want *DBConfig
+		want *cconfig.DBConfig
 	}{
 		{
 			name: "initialize database config",
@@ -58,7 +60,7 @@ func TestNewDBConfig(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := NewDBConfig(tt.args.host, tt.args.port, tt.args.name, tt.args.user, tt.args.password)
+			got := cconfig.NewDBConfig(tt.args.host, tt.args.port, tt.args.name, tt.args.user, tt.args.password)
 
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("NewDBConfig() = %v, want %v", got, tt.want)

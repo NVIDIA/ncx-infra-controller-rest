@@ -27,6 +27,7 @@ import (
 )
 
 func TestNewSession(t *testing.T) {
+	ctx := context.Background()
 	type args struct {
 		host       string
 		port       int
@@ -57,7 +58,7 @@ func TestNewSession(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := NewSession(tt.args.host, tt.args.port, tt.args.dbName, tt.args.user, tt.args.password, tt.args.caCertPath)
+			got, err := NewSession(ctx, tt.args.host, tt.args.port, tt.args.dbName, tt.args.user, tt.args.password, tt.args.caCertPath)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewSession() error = %v, wantErr %v", err, tt.wantErr)
 				return

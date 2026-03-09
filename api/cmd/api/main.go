@@ -71,7 +71,7 @@ func main() {
 	dbConfig := cfg.GetDBConfig()
 
 	// Initialize DB connection
-	dbSession, err := cdb.NewSession(dbConfig.Host, dbConfig.Port, dbConfig.Name, dbConfig.User, dbConfig.Password, "")
+	dbSession, err := cdb.NewSession(context.Background(), dbConfig.Host, dbConfig.Port, dbConfig.Name, dbConfig.User, dbConfig.Password, "")
 	if err != nil {
 		log.Panic().Err(err).Msg("failed to initialize DB session")
 	} else {

@@ -29,6 +29,7 @@ import (
 	"time"
 
 	cauth "github.com/nvidia/bare-metal-manager-rest/auth/pkg/config"
+	cconfig "github.com/nvidia/bare-metal-manager-rest/common/pkg/config"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -207,8 +208,8 @@ var config *Config
 type Config struct {
 	sync.RWMutex
 	v               *viper.Viper
-	db              *DBConfig
-	temporal        *TemporalConfig
+	db              *cconfig.DBConfig
+	temporal        *cconfig.TemporalConfig
 	JwtOriginConfig *cauth.JWTOriginConfig
 	SiteConfig      *SiteConfig
 	KeycloakConfig  *cauth.KeycloakConfig
@@ -411,18 +412,18 @@ func (c *Config) setDBPassword() {
 
 /* Get sub-configurations */
 // GetDBConfig returns the database config
-func (c *Config) GetDBConfig() *DBConfig {
+func (c *Config) GetDBConfig() *cconfig.DBConfig {
 	if c.db == nil {
-		c.db = NewDBConfig(c.GetDBHost(), c.GetDBPort(), c.GetDBName(), c.GetDBUser(), c.GetDBPassword())
+		c.db = cconfig.NewDBConfig(c.GetDBHost(), c.GetDBPort(), c.GetDBName(), c.GetDBUser(), c.GetDBPassword())
 	}
 	return c.db
 }
 
 // GetTemporalConfig returns the temporal config
-func (c *Config) GetTemporalConfig() (*TemporalConfig, error) {
+func (c *Config) GetTemporalConfig() (*cconfig.TemporalConfig, error) {
 	var err error
 	if c.temporal == nil {
-		c.temporal, err = NewTemporalConfig(c.GetTemporalHost(), c.GetTemporalPort(), c.GetTemporalServerName(), c.GetTemporalNamespace(), c.GetTemporalQueue(), c.GetTemporalEncryptionKey(), c.GetTemporalTlsEnabled(), c.GetTemporalCertPath(), c.GetTemporalKeyPath(), c.GetTemporalCaPath())
+		c.temporal, err = cconfig.NewTemporalConfig(c.GetTemporalHost(), c.GetTemporalPort(), c.GetTemporalServerName(), c.GetTemporalNamespace(), c.GetTemporalQueue(), c.GetTemporalEncryptionKey(), c.GetTemporalTlsEnabled(), c.GetTemporalCertPath(), c.GetTemporalKeyPath(), c.GetTemporalCaPath())
 	}
 	return c.temporal, err
 }

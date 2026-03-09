@@ -26,9 +26,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/uptrace/bun"
 
+	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/converter/dao"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/db/model"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/db/postgres"
 	dbquery "github.com/nvidia/bare-metal-manager-rest/rla/internal/db/query"
 	taskcommon "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/common"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operationrules"
@@ -38,11 +38,11 @@ import (
 
 // PostgresStore implements the Store interface using PostgreSQL.
 type PostgresStore struct {
-	pg *postgres.Postgres
+	pg *cdb.Session
 }
 
 // NewPostgres creates a new PostgreSQL-backed task store.
-func NewPostgres(pg *postgres.Postgres) *PostgresStore {
+func NewPostgres(pg *cdb.Session) *PostgresStore {
 	return &PostgresStore{pg: pg}
 }
 
@@ -51,7 +51,7 @@ func (s *PostgresStore) CreateTask(
 	ctx context.Context,
 	task *taskdef.Task,
 ) error {
-	if err := dao.TaskTo(task).Create(ctx, s.pg.DB()); err != nil {
+	if err := dao.TaskTo(task).Create(ctx, s.pg.DB); err != nil {
 		return errors.GRPCErrorInternal(err.Error())
 	}
 
@@ -70,7 +70,7 @@ func (s *PostgresStore) GetTasks(
 			continue
 		}
 
-		taskDao, err := model.GetTask(ctx, s.pg.DB(), id)
+		taskDao, err := model.GetTask(ctx, s.pg.DB, id)
 		if err != nil {
 			return nil, errors.GRPCErrorInternal(err.Error())
 		}
@@ -87,7 +87,7 @@ func (s *PostgresStore) ListTasks(
 	options *taskcommon.TaskListOptions,
 	pagination *dbquery.Pagination,
 ) ([]*taskdef.Task, int32, error) {
-	taskDaos, total, err := model.ListTasks(ctx, s.pg.DB(), options, pagination)
+	taskDaos, total, err := model.ListTasks(ctx, s.pg.DB, options, pagination)
 	if err != nil {
 		return nil, 0, errors.GRPCErrorInternal(err.Error())
 	}
@@ -106,7 +106,7 @@ func (s *PostgresStore) UpdateScheduledTask(
 	task *taskdef.Task,
 ) error {
 	taskDao := dao.TaskTo(task)
-	if err := taskDao.UpdateScheduledTask(ctx, s.pg.DB()); err != nil {
+	if err := taskDao.UpdateScheduledTask(ctx, s.pg.DB); err != nil {
 		return errors.GRPCErrorInternal(err.Error())
 	}
 
@@ -122,7 +122,7 @@ func (s *PostgresStore) UpdateTaskStatus(
 		ID: arg.ID,
 	}
 
-	err := taskDao.UpdateTaskStatus(ctx, s.pg.DB(), arg.Status, arg.Message)
+	err := taskDao.UpdateTaskStatus(ctx, s.pg.DB, arg.Status, arg.Message)
 	if err != nil {
 		return errors.GRPCErrorInternal(err.Error())
 	}
@@ -144,8 +144,8 @@ func (s *PostgresStore) CreateRule(
 		return errors.GRPCErrorInvalidArgument(err.Error())
 	}
 
-	if err := dbModel.Create(ctx, s.pg.DB()); err != nil {
-		if s.pg.ErrorChecker().IsUniqueConstraintError(err) {
+	if err := dbModel.Create(ctx, s.pg.DB); err != nil {
+		if s.pg.GetErrorChecker().IsUniqueConstraintError(err) {
 			return errors.GRPCErrorAlreadyExists(
 				"a default rule already exists for this operation type",
 			)
@@ -169,9 +169,9 @@ func (s *PostgresStore) UpdateRule(
 		return nil
 	}
 
-	dbModel, err := model.GetOperationRule(ctx, s.pg.DB(), id)
+	dbModel, err := model.GetOperationRule(ctx, s.pg.DB, id)
 	if err != nil {
-		if s.pg.ErrorChecker().IsErrNoRows(err) {
+		if s.pg.GetErrorChecker().IsErrNoRows(err) {
 			return errors.GRPCErrorNotFound("operation rule not found")
 		}
 		return errors.GRPCErrorInternal(err.Error())
@@ -211,7 +211,7 @@ func (s *PostgresStore) UpdateRule(
 		return nil
 	}
 
-	if err := dbModel.Update(ctx, s.pg.DB(), columns...); err != nil {
+	if err := dbModel.Update(ctx, s.pg.DB, columns...); err != nil {
 		return errors.GRPCErrorInternal(fmt.Sprintf("failed to update operation rule: %v", err))
 	}
 
@@ -224,7 +224,7 @@ func (s *PostgresStore) DeleteRule(
 	id uuid.UUID,
 ) error {
 	dbModel := &model.OperationRule{ID: id}
-	if err := dbModel.Delete(ctx, s.pg.DB()); err != nil {
+	if err := dbModel.Delete(ctx, s.pg.DB); err != nil {
 		return errors.GRPCErrorInternal(
 			fmt.Sprintf("failed to delete operation rule: %v", err),
 		)
@@ -287,9 +287,9 @@ func (s *PostgresStore) GetRule(
 	ctx context.Context,
 	id uuid.UUID,
 ) (*operationrules.OperationRule, error) {
-	dbModel, err := model.GetOperationRule(ctx, s.pg.DB(), id)
+	dbModel, err := model.GetOperationRule(ctx, s.pg.DB, id)
 	if err != nil {
-		if s.pg.ErrorChecker().IsErrNoRows(err) {
+		if s.pg.GetErrorChecker().IsErrNoRows(err) {
 			return nil, errors.GRPCErrorNotFound("operation rule not found")
 		}
 		return nil, errors.GRPCErrorInternal(fmt.Sprintf("failed to get operation rule: %v", err))
@@ -308,8 +308,8 @@ func (s *PostgresStore) GetRuleByOperationAndRack(
 ) (*operationrules.OperationRule, error) {
 	// Check rack association first if rackID is provided
 	if rackID != nil && *rackID != uuid.Nil {
-		assoc, err := model.GetRackRuleAssociation(ctx, s.pg.DB(), *rackID, opType, operationCode)
-		if err != nil && !s.pg.ErrorChecker().IsErrNoRows(err) {
+		assoc, err := model.GetRackRuleAssociation(ctx, s.pg.DB, *rackID, opType, operationCode)
+		if err != nil && !s.pg.GetErrorChecker().IsErrNoRows(err) {
 			return nil, errors.GRPCErrorInternal(
 				fmt.Sprintf("failed to query rack rule association: %v", err),
 			)
@@ -317,9 +317,9 @@ func (s *PostgresStore) GetRuleByOperationAndRack(
 
 		// If association found, get the rule by ID
 		if assoc != nil {
-			dbModel, err := model.GetOperationRule(ctx, s.pg.DB(), assoc.RuleID)
+			dbModel, err := model.GetOperationRule(ctx, s.pg.DB, assoc.RuleID)
 			if err != nil {
-				if s.pg.ErrorChecker().IsErrNoRows(err) {
+				if s.pg.GetErrorChecker().IsErrNoRows(err) {
 					return nil, errors.GRPCErrorNotFound(
 						fmt.Sprintf("associated rule %s not found", assoc.RuleID),
 					)
@@ -342,7 +342,7 @@ func (s *PostgresStore) ListRules(
 	options *taskcommon.OperationRuleListOptions,
 	pagination *dbquery.Pagination,
 ) ([]*operationrules.OperationRule, int32, error) {
-	dbModels, total, err := model.ListOperationRules(ctx, s.pg.DB(), options, pagination)
+	dbModels, total, err := model.ListOperationRules(ctx, s.pg.DB, options, pagination)
 	if err != nil {
 		return nil, 0, errors.GRPCErrorInternal(
 			fmt.Sprintf("failed to list operation rules: %v", err),
@@ -367,14 +367,14 @@ func (s *PostgresStore) GetRuleByName(
 	name string,
 ) (*operationrules.OperationRule, error) {
 	var dbModel model.OperationRule
-	err := s.pg.DB().NewSelect().
+	err := s.pg.DB.NewSelect().
 		Model(&dbModel).
 		Where("name = ?", name).
 		Limit(1).
 		Scan(ctx)
 
 	if err != nil {
-		if s.pg.ErrorChecker().IsErrNoRows(err) {
+		if s.pg.GetErrorChecker().IsErrNoRows(err) {
 			return nil, errors.GRPCErrorNotFound(fmt.Sprintf("rule with name '%s' not found", name))
 		}
 		return nil, errors.GRPCErrorInternal(fmt.Sprintf("failed to get rule by name: %v", err))
@@ -390,7 +390,7 @@ func (s *PostgresStore) GetDefaultRule(
 	operationCode string,
 ) (*operationrules.OperationRule, error) {
 	var dbModel model.OperationRule
-	err := s.pg.DB().NewSelect().
+	err := s.pg.DB.NewSelect().
 		Model(&dbModel).
 		Where("operation_type = ?", string(opType)).
 		Where("operation_code = ?", operationCode).
@@ -399,7 +399,7 @@ func (s *PostgresStore) GetDefaultRule(
 		Scan(ctx)
 
 	if err != nil {
-		if s.pg.ErrorChecker().IsErrNoRows(err) {
+		if s.pg.GetErrorChecker().IsErrNoRows(err) {
 			return nil, nil // No default rule exists
 		}
 		return nil, errors.GRPCErrorInternal(
@@ -422,9 +422,9 @@ func (s *PostgresStore) AssociateRuleWithRack(
 	ruleID uuid.UUID,
 ) error {
 	// Get the rule to extract operation_type and operation_code (also verifies it exists)
-	dbModel, err := model.GetOperationRule(ctx, s.pg.DB(), ruleID)
+	dbModel, err := model.GetOperationRule(ctx, s.pg.DB, ruleID)
 	if err != nil {
-		if s.pg.ErrorChecker().IsErrNoRows(err) {
+		if s.pg.GetErrorChecker().IsErrNoRows(err) {
 			return errors.GRPCErrorNotFound(fmt.Sprintf("rule %s not found", ruleID))
 		}
 		return errors.GRPCErrorInternal(fmt.Sprintf("failed to get rule: %v", err))
@@ -434,14 +434,14 @@ func (s *PostgresStore) AssociateRuleWithRack(
 	opType := taskcommon.TaskTypeFromString(dbModel.OperationType)
 
 	// Check if association already exists
-	existing, err := model.GetRackRuleAssociation(ctx, s.pg.DB(), rackID, opType, operationCode)
-	if err != nil && !s.pg.ErrorChecker().IsErrNoRows(err) {
+	existing, err := model.GetRackRuleAssociation(ctx, s.pg.DB, rackID, opType, operationCode)
+	if err != nil && !s.pg.GetErrorChecker().IsErrNoRows(err) {
 		return errors.GRPCErrorInternal(fmt.Sprintf("failed to check existing association: %v", err))
 	}
 
 	if existing != nil {
 		// Update existing association
-		_, err := s.pg.DB().NewUpdate().
+		_, err := s.pg.DB.NewUpdate().
 			Model((*model.RackRuleAssociation)(nil)).
 			Set("rule_id = ?", ruleID).
 			Set("updated_at = NOW()").
@@ -463,7 +463,7 @@ func (s *PostgresStore) AssociateRuleWithRack(
 		RuleID:        ruleID,
 	}
 
-	if err := assoc.Create(ctx, s.pg.DB()); err != nil {
+	if err := assoc.Create(ctx, s.pg.DB); err != nil {
 		return errors.GRPCErrorInternal(fmt.Sprintf("failed to create association: %v", err))
 	}
 
@@ -483,9 +483,9 @@ func (s *PostgresStore) DisassociateRuleFromRack(
 		OperationCode: operationCode,
 	}
 
-	if err := assoc.Delete(ctx, s.pg.DB()); err != nil {
+	if err := assoc.Delete(ctx, s.pg.DB); err != nil {
 		// Don't treat "not found" as an error
-		if s.pg.ErrorChecker().IsErrNoRows(err) {
+		if s.pg.GetErrorChecker().IsErrNoRows(err) {
 			return nil
 		}
 		return errors.GRPCErrorInternal(fmt.Sprintf("failed to delete association: %v", err))
@@ -501,9 +501,9 @@ func (s *PostgresStore) GetRackRuleAssociation(
 	opType taskcommon.TaskType,
 	operationCode string,
 ) (*uuid.UUID, error) {
-	assoc, err := model.GetRackRuleAssociation(ctx, s.pg.DB(), rackID, opType, operationCode)
+	assoc, err := model.GetRackRuleAssociation(ctx, s.pg.DB, rackID, opType, operationCode)
 	if err != nil {
-		if s.pg.ErrorChecker().IsErrNoRows(err) {
+		if s.pg.GetErrorChecker().IsErrNoRows(err) {
 			return nil, nil // No association exists
 		}
 		return nil, errors.GRPCErrorInternal(fmt.Sprintf("failed to get association: %v", err))
@@ -521,7 +521,7 @@ func (s *PostgresStore) ListRackRuleAssociations(
 	ctx context.Context,
 	rackID uuid.UUID,
 ) ([]*operationrules.RackRuleAssociation, error) {
-	assocs, err := model.ListRackRuleAssociations(ctx, s.pg.DB(), rackID)
+	assocs, err := model.ListRackRuleAssociations(ctx, s.pg.DB, rackID)
 	if err != nil {
 		return nil, errors.GRPCErrorInternal(
 			fmt.Sprintf("failed to list rack associations: %v", err),

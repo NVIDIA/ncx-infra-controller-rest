@@ -21,14 +21,15 @@ import (
 	"context"
 	"testing"
 
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/db"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/db/migrations"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/db/postgres"
 	"github.com/rs/zerolog/log"
+
+	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
+	dbtestutil "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/testutil"
+	"github.com/nvidia/bare-metal-manager-rest/rla/internal/db/migrations"
 )
 
-func UnitTestDB(ctx context.Context, t *testing.T, dbConf db.Config) (*postgres.Postgres, error) {
-	db, err := postgres.UnitTest(ctx, t, dbConf)
+func UnitTestDB(ctx context.Context, t *testing.T, dbConf cdb.Config) (*cdb.Session, error) {
+	session, err := dbtestutil.CreateTestDB(ctx, t, dbConf)
 
 	if err != nil {
 		log.Warn().Msgf("Not running unit test due to unable to connect to db: %v", err)
@@ -36,7 +37,7 @@ func UnitTestDB(ctx context.Context, t *testing.T, dbConf db.Config) (*postgres.
 		return nil, err
 	}
 
-	err = migrations.Migrate(ctx, db)
+	err = migrations.MigrateWithDB(ctx, session.DB)
 
-	return db, err
+	return session, err
 }

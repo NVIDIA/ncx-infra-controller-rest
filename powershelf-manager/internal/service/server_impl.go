@@ -24,8 +24,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/nvidia/bare-metal-manager-rest/common/pkg/credential"
 	pb "github.com/nvidia/bare-metal-manager-rest/powershelf-manager/internal/proto/v1"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/credential"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/converter/protobuf"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/objects/pmc"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/powershelfmanager"
@@ -51,7 +51,16 @@ func (s *PowershelfManagerServerImpl) registerPowershelf(
 	ctx context.Context,
 	req *pb.RegisterPowershelfRequest,
 ) *pb.RegisterPowershelfResponse {
-	pmc, err := pmc.New(req.PmcMacAddress, req.PmcIpAddress, protobuf.PMCVendorFrom(req.PmcVendor), credential.New(req.PmcCredentials.Username, req.PmcCredentials.Password))
+	if req.PmcCredentials == nil {
+		return &pb.RegisterPowershelfResponse{
+			PmcMacAddress: req.PmcMacAddress,
+			Status:        pb.StatusCode_INVALID_ARGUMENT,
+			Error:         "PMC credentials are required",
+		}
+	}
+
+	cred := credential.New(req.PmcCredentials.Username, req.PmcCredentials.Password)
+	pmc, err := pmc.New(req.PmcMacAddress, req.PmcIpAddress, protobuf.PMCVendorFrom(req.PmcVendor), &cred)
 	if err != nil {
 		return &pb.RegisterPowershelfResponse{
 			PmcMacAddress: req.PmcMacAddress,

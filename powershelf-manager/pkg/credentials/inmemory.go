@@ -19,11 +19,12 @@ package credentials
 import (
 	"context"
 	"errors"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/credential"
 	"net"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
+
+	"github.com/nvidia/bare-metal-manager-rest/common/pkg/credential"
 )
 
 // InMemoryCredentialManager implements the CredentialManager interface with an in-memory store.

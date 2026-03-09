@@ -27,9 +27,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/runner"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/vendor"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/db"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/db/model"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/objects/pmc"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/objects/powershelf"
@@ -51,7 +51,7 @@ type Manager struct {
 }
 
 // New constructs a Manager by creating updaters for all supported vendors.
-func New(ctx context.Context, c db.Config, pmcManager *pmcmanager.PmcManager, dryRun bool) (*Manager, error) {
+func New(ctx context.Context, c cdb.Config, pmcManager *pmcmanager.PmcManager, dryRun bool) (*Manager, error) {
 	registry, err := newRegistry(ctx, c)
 	if err != nil {
 		return nil, err
@@ -133,13 +133,13 @@ func (manager *Manager) Upgrade(ctx context.Context, pmc *pmc.PMC, component pow
 		return fmt.Errorf("cannot update %v for %v from %v to %v", component, pmc, currentFwVersion.String(), targetVersion)
 	}
 
-	_, err = model.NewFirmwareUpdate(ctx, manager.fwUpdateRegistry.pg.DB(), pmc.MAC, component, currentFwVersion.String(), targetVersion)
+	_, err = model.NewFirmwareUpdate(ctx, manager.fwUpdateRegistry.session.DB, pmc.MAC, component, currentFwVersion.String(), targetVersion)
 	return err
 }
 
 // CanUpdate returns whether a PMC’s current firmware is within the supported range.
 func (manager *Manager) CanUpdate(ctx context.Context, pmc *pmc.PMC, component powershelf.Component, targetVersion string) (bool, error) {
-	update, err := model.GetFirmwareUpdate(ctx, manager.fwUpdateRegistry.pg.DB(), pmc.MAC, component)
+	update, err := model.GetFirmwareUpdate(ctx, manager.fwUpdateRegistry.session.DB, pmc.MAC, component)
 	if err != nil {
 		// if there isnt a pendinging firmware update, we can proceed
 		if !errors.Is(err, sql.ErrNoRows) {
@@ -210,14 +210,14 @@ func (manager *Manager) getPendingFwUpdates(ctx context.Context) ([]model.Firmwa
 	dbCtx, cancel := context.WithTimeout(ctx, dbTimeout)
 	defer cancel()
 
-	return model.GetAllPendingFirmwareUpdates(dbCtx, manager.fwUpdateRegistry.pg.DB())
+	return model.GetAllPendingFirmwareUpdates(dbCtx, manager.fwUpdateRegistry.session.DB)
 }
 
 func (manager *Manager) SetUpdateState(ctx context.Context, update model.FirmwareUpdate, newState powershelf.FirmwareState, errMsg string) error {
 	dbCtx, cancel := context.WithTimeout(ctx, dbTimeout)
 	defer cancel()
 
-	return update.UpdateFirmwareUpdateState(dbCtx, manager.fwUpdateRegistry.pg.DB(), newState, errMsg)
+	return update.UpdateFirmwareUpdateState(dbCtx, manager.fwUpdateRegistry.session.DB, newState, errMsg)
 }
 
 func (manager *Manager) handleOnePmcUpdate(ctx context.Context, pmc *pmc.PMC, update model.FirmwareUpdate) (powershelf.FirmwareState, error) {

@@ -30,19 +30,23 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/credential"
+	"github.com/nvidia/bare-metal-manager-rest/common/pkg/credential"
+	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
+	dbtestutil "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/testutil"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/vendor"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/credentials"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/db"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/db/migrations"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/db/model"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/db/postgres"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/db/testutil"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/objects/pmc"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/objects/powershelf"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/pmcmanager"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/pmcregistry"
 )
+
+func newCred(u, p string) *credential.Credential {
+	c := credential.New(u, p)
+	return &c
+}
 
 // skipIfNoDatabase skips the test if database environment is not configured
 func skipIfNoDatabase(t *testing.T) {
@@ -55,29 +59,29 @@ func skipIfNoDatabase(t *testing.T) {
 
 // testRegistry wraps the firmware Registry for testing with direct database access
 type testRegistry struct {
-	pg *postgres.Postgres
+	session *cdb.Session
 }
 
 // setupTestDB creates a fresh test database with migrations applied
-func setupTestDB(t *testing.T) (*postgres.Postgres, func()) {
+func setupTestDB(t *testing.T) (*cdb.Session, func()) {
 	t.Helper()
 	ctx := context.Background()
 
-	dbConf, err := db.BuildDBConfigFromEnv()
+	dbConf, err := cdb.ConfigFromEnv()
 	require.NoError(t, err, "Failed to build DB config from env")
 
-	pg, err := testutil.CreateTestDB(ctx, t, dbConf)
+	session, err := dbtestutil.CreateTestDB(ctx, t, dbConf)
 	require.NoError(t, err, "Failed to create test database")
 
 	// Run migrations
-	err = migrations.Migrate(ctx, pg)
+	err = migrations.MigrateWithDB(ctx, session.DB)
 	require.NoError(t, err, "Failed to run migrations")
 
 	cleanup := func() {
-		pg.Close(ctx)
+		session.Close()
 	}
 
-	return pg, cleanup
+	return session, cleanup
 }
 
 // createTestPMC creates a test PMC object with unique MAC/IP based on index
@@ -93,7 +97,7 @@ func createTestPMC(t *testing.T, index int, v vendor.VendorCode) *pmc.PMC {
 	ip := net.ParseIP(ipStr)
 	require.NotNil(t, ip, "Failed to parse IP")
 
-	cred := credential.New("admin", "password")
+	cred := newCred("admin", "password")
 	p, err := pmc.NewFromAddr(mac, ip, v, cred)
 	require.NoError(t, err, "Failed to create test PMC")
 	return p
@@ -103,7 +107,7 @@ func createTestPMC(t *testing.T, index int, v vendor.VendorCode) *pmc.PMC {
 func TestIntegration_FirmwareManager_CanUpdate(t *testing.T) {
 	skipIfNoDatabase(t)
 
-	pg, cleanup := setupTestDB(t)
+	session, cleanup := setupTestDB(t)
 	defer cleanup()
 
 	ctx := context.Background()
@@ -112,14 +116,14 @@ func TestIntegration_FirmwareManager_CanUpdate(t *testing.T) {
 	testPmc := createTestPMC(t, 1, vendor.VendorCodeLiteon)
 
 	// Create PMC registry using the test database and register the PMC
-	pmcRegistry := pmcregistry.NewPostgresRegistryFromDB(pg)
+	pmcRegistry := pmcregistry.NewPostgresRegistryFromDB(session)
 	require.NoError(t, pmcRegistry.RegisterPmc(ctx, testPmc))
 
 	credMgr := credentials.NewInMemoryCredentialManager()
 	pmcMgr := pmcmanager.New(pmcRegistry, credMgr)
 
 	// Create firmware manager with test database
-	registry := &Registry{pg: pg}
+	registry := &Registry{session: session}
 	manager := &Manager{
 		firmwareUpdater:  make(map[vendor.Vendor]*FirmwareUpdater),
 		fwUpdateRegistry: registry,
@@ -137,11 +141,11 @@ func TestIntegration_FirmwareManager_CanUpdate(t *testing.T) {
 	// so we test the database-level blocking logic
 
 	// Create a pending (non-terminal) firmware update
-	_, err = model.NewFirmwareUpdate(ctx, pg.DB(), testPmc.GetMac(), powershelf.PMC, "1.0.0", "2.0.0")
+	_, err = model.NewFirmwareUpdate(ctx, session.DB, testPmc.GetMac(), powershelf.PMC, "1.0.0", "2.0.0")
 	require.NoError(t, err)
 
 	// Verify update was created
-	fu, err := model.GetFirmwareUpdate(ctx, pg.DB(), testPmc.GetMac(), powershelf.PMC)
+	fu, err := model.GetFirmwareUpdate(ctx, session.DB, testPmc.GetMac(), powershelf.PMC)
 	require.NoError(t, err)
 	assert.Equal(t, powershelf.FirmwareStateQueued, fu.State)
 	assert.Equal(t, "1.0.0", fu.VersionFrom)
@@ -152,7 +156,7 @@ func TestIntegration_FirmwareManager_CanUpdate(t *testing.T) {
 func TestIntegration_FirmwareManager_SetUpdateState(t *testing.T) {
 	skipIfNoDatabase(t)
 
-	pg, cleanup := setupTestDB(t)
+	session, cleanup := setupTestDB(t)
 	defer cleanup()
 
 	ctx := context.Background()
@@ -166,20 +170,20 @@ func TestIntegration_FirmwareManager_SetUpdateState(t *testing.T) {
 		Vendor:     testPmc.GetVendor().Code,
 		IPAddress:  model.IPAddr(testPmc.GetIp()),
 	}
-	tx, err := pg.BeginTx(ctx)
+	tx, err := session.BeginTx(ctx)
 	require.NoError(t, err)
 	require.NoError(t, pmcModel.Create(ctx, tx))
 	require.NoError(t, tx.Commit())
 
 	// Create firmware manager
-	registry := &Registry{pg: pg}
+	registry := &Registry{session: session}
 	manager := &Manager{
 		fwUpdateRegistry: registry,
 		dryRun:           true,
 	}
 
 	// Create a firmware update in Queued state
-	fu, err := model.NewFirmwareUpdate(ctx, pg.DB(), testPmc.GetMac(), powershelf.PMC, "1.0.0", "2.0.0")
+	fu, err := model.NewFirmwareUpdate(ctx, session.DB, testPmc.GetMac(), powershelf.PMC, "1.0.0", "2.0.0")
 	require.NoError(t, err)
 	assert.Equal(t, powershelf.FirmwareStateQueued, fu.State)
 
@@ -188,7 +192,7 @@ func TestIntegration_FirmwareManager_SetUpdateState(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Verify state changed
-	retrieved, err := model.GetFirmwareUpdate(ctx, pg.DB(), testPmc.GetMac(), powershelf.PMC)
+	retrieved, err := model.GetFirmwareUpdate(ctx, session.DB, testPmc.GetMac(), powershelf.PMC)
 	require.NoError(t, err)
 	assert.Equal(t, powershelf.FirmwareStateVerifying, retrieved.State)
 
@@ -197,7 +201,7 @@ func TestIntegration_FirmwareManager_SetUpdateState(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Verify terminal state
-	final, err := model.GetFirmwareUpdate(ctx, pg.DB(), testPmc.GetMac(), powershelf.PMC)
+	final, err := model.GetFirmwareUpdate(ctx, session.DB, testPmc.GetMac(), powershelf.PMC)
 	require.NoError(t, err)
 	assert.Equal(t, powershelf.FirmwareStateCompleted, final.State)
 	assert.True(t, final.IsTerminal())
@@ -207,7 +211,7 @@ func TestIntegration_FirmwareManager_SetUpdateState(t *testing.T) {
 func TestIntegration_FirmwareManager_SetUpdateState_WithError(t *testing.T) {
 	skipIfNoDatabase(t)
 
-	pg, cleanup := setupTestDB(t)
+	session, cleanup := setupTestDB(t)
 	defer cleanup()
 
 	ctx := context.Background()
@@ -221,20 +225,20 @@ func TestIntegration_FirmwareManager_SetUpdateState_WithError(t *testing.T) {
 		Vendor:     testPmc.GetVendor().Code,
 		IPAddress:  model.IPAddr(testPmc.GetIp()),
 	}
-	tx, err := pg.BeginTx(ctx)
+	tx, err := session.BeginTx(ctx)
 	require.NoError(t, err)
 	require.NoError(t, pmcModel.Create(ctx, tx))
 	require.NoError(t, tx.Commit())
 
 	// Create firmware manager
-	registry := &Registry{pg: pg}
+	registry := &Registry{session: session}
 	manager := &Manager{
 		fwUpdateRegistry: registry,
 		dryRun:           true,
 	}
 
 	// Create a firmware update
-	fu, err := model.NewFirmwareUpdate(ctx, pg.DB(), testPmc.GetMac(), powershelf.PSU, "1.0.0", "2.0.0")
+	fu, err := model.NewFirmwareUpdate(ctx, session.DB, testPmc.GetMac(), powershelf.PSU, "1.0.0", "2.0.0")
 	require.NoError(t, err)
 
 	// Transition to Failed with error message
@@ -243,7 +247,7 @@ func TestIntegration_FirmwareManager_SetUpdateState_WithError(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Verify error message was stored
-	retrieved, err := model.GetFirmwareUpdate(ctx, pg.DB(), testPmc.GetMac(), powershelf.PSU)
+	retrieved, err := model.GetFirmwareUpdate(ctx, session.DB, testPmc.GetMac(), powershelf.PSU)
 	require.NoError(t, err)
 	assert.Equal(t, powershelf.FirmwareStateFailed, retrieved.State)
 	assert.Equal(t, errMsg, retrieved.ErrorMessage)
@@ -254,7 +258,7 @@ func TestIntegration_FirmwareManager_SetUpdateState_WithError(t *testing.T) {
 func TestIntegration_FirmwareManager_GetPendingUpdates(t *testing.T) {
 	skipIfNoDatabase(t)
 
-	pg, cleanup := setupTestDB(t)
+	session, cleanup := setupTestDB(t)
 	defer cleanup()
 
 	ctx := context.Background()
@@ -273,14 +277,14 @@ func TestIntegration_FirmwareManager_GetPendingUpdates(t *testing.T) {
 			Vendor:     p.GetVendor().Code,
 			IPAddress:  model.IPAddr(p.GetIp()),
 		}
-		tx, err := pg.BeginTx(ctx)
+		tx, err := session.BeginTx(ctx)
 		require.NoError(t, err)
 		require.NoError(t, pmcModel.Create(ctx, tx))
 		require.NoError(t, tx.Commit())
 	}
 
 	// Create firmware manager
-	registry := &Registry{pg: pg}
+	registry := &Registry{session: session}
 	manager := &Manager{
 		fwUpdateRegistry: registry,
 		dryRun:           true,
@@ -288,7 +292,7 @@ func TestIntegration_FirmwareManager_GetPendingUpdates(t *testing.T) {
 
 	// Create firmware updates for all PMCs
 	for _, p := range pmcs {
-		_, err := model.NewFirmwareUpdate(ctx, pg.DB(), p.GetMac(), powershelf.PMC, "1.0.0", "2.0.0")
+		_, err := model.NewFirmwareUpdate(ctx, session.DB, p.GetMac(), powershelf.PMC, "1.0.0", "2.0.0")
 		require.NoError(t, err)
 	}
 
@@ -298,13 +302,13 @@ func TestIntegration_FirmwareManager_GetPendingUpdates(t *testing.T) {
 	assert.Len(t, pending, 3, "Should have 3 pending updates")
 
 	// Mark one as completed
-	fu, err := model.GetFirmwareUpdate(ctx, pg.DB(), pmcs[0].GetMac(), powershelf.PMC)
+	fu, err := model.GetFirmwareUpdate(ctx, session.DB, pmcs[0].GetMac(), powershelf.PMC)
 	require.NoError(t, err)
 	err = manager.SetUpdateState(ctx, *fu, powershelf.FirmwareStateCompleted, "")
 	require.NoError(t, err)
 
 	// Mark one as failed
-	fu2, err := model.GetFirmwareUpdate(ctx, pg.DB(), pmcs[1].GetMac(), powershelf.PMC)
+	fu2, err := model.GetFirmwareUpdate(ctx, session.DB, pmcs[1].GetMac(), powershelf.PMC)
 	require.NoError(t, err)
 	err = manager.SetUpdateState(ctx, *fu2, powershelf.FirmwareStateFailed, "test error")
 	require.NoError(t, err)
@@ -322,7 +326,7 @@ func TestIntegration_FirmwareManager_GetPendingUpdates(t *testing.T) {
 func TestIntegration_FirmwareManager_BlockDuplicateUpdate(t *testing.T) {
 	skipIfNoDatabase(t)
 
-	pg, cleanup := setupTestDB(t)
+	session, cleanup := setupTestDB(t)
 	defer cleanup()
 
 	ctx := context.Background()
@@ -336,33 +340,33 @@ func TestIntegration_FirmwareManager_BlockDuplicateUpdate(t *testing.T) {
 		Vendor:     testPmc.GetVendor().Code,
 		IPAddress:  model.IPAddr(testPmc.GetIp()),
 	}
-	tx, err := pg.BeginTx(ctx)
+	tx, err := session.BeginTx(ctx)
 	require.NoError(t, err)
 	require.NoError(t, pmcModel.Create(ctx, tx))
 	require.NoError(t, tx.Commit())
 
 	// Create initial firmware update
-	_, err = model.NewFirmwareUpdate(ctx, pg.DB(), testPmc.GetMac(), powershelf.PMC, "1.0.0", "2.0.0")
+	_, err = model.NewFirmwareUpdate(ctx, session.DB, testPmc.GetMac(), powershelf.PMC, "1.0.0", "2.0.0")
 	require.NoError(t, err)
 
 	// Get the update
-	fu, err := model.GetFirmwareUpdate(ctx, pg.DB(), testPmc.GetMac(), powershelf.PMC)
+	fu, err := model.GetFirmwareUpdate(ctx, session.DB, testPmc.GetMac(), powershelf.PMC)
 	require.NoError(t, err)
 	assert.Equal(t, "1.0.0", fu.VersionFrom)
 	assert.Equal(t, "2.0.0", fu.VersionTo)
 
 	// Create another update for the same component - should upsert (replace)
-	_, err = model.NewFirmwareUpdate(ctx, pg.DB(), testPmc.GetMac(), powershelf.PMC, "2.0.0", "3.0.0")
+	_, err = model.NewFirmwareUpdate(ctx, session.DB, testPmc.GetMac(), powershelf.PMC, "2.0.0", "3.0.0")
 	require.NoError(t, err)
 
 	// Verify the update was replaced
-	fu2, err := model.GetFirmwareUpdate(ctx, pg.DB(), testPmc.GetMac(), powershelf.PMC)
+	fu2, err := model.GetFirmwareUpdate(ctx, session.DB, testPmc.GetMac(), powershelf.PMC)
 	require.NoError(t, err)
 	assert.Equal(t, "2.0.0", fu2.VersionFrom)
 	assert.Equal(t, "3.0.0", fu2.VersionTo)
 
 	// Should still only be 1 update for this PMC/component
-	updates, err := model.ListFirmwareUpdatesForPMC(ctx, pg.DB(), testPmc.GetMac(), nil)
+	updates, err := model.ListFirmwareUpdatesForPMC(ctx, session.DB, testPmc.GetMac(), nil)
 	require.NoError(t, err)
 	assert.Len(t, updates, 1)
 }
@@ -371,7 +375,7 @@ func TestIntegration_FirmwareManager_BlockDuplicateUpdate(t *testing.T) {
 func TestIntegration_FirmwareManager_MultipleComponents(t *testing.T) {
 	skipIfNoDatabase(t)
 
-	pg, cleanup := setupTestDB(t)
+	session, cleanup := setupTestDB(t)
 	defer cleanup()
 
 	ctx := context.Background()
@@ -385,22 +389,22 @@ func TestIntegration_FirmwareManager_MultipleComponents(t *testing.T) {
 		Vendor:     testPmc.GetVendor().Code,
 		IPAddress:  model.IPAddr(testPmc.GetIp()),
 	}
-	tx, err := pg.BeginTx(ctx)
+	tx, err := session.BeginTx(ctx)
 	require.NoError(t, err)
 	require.NoError(t, pmcModel.Create(ctx, tx))
 	require.NoError(t, tx.Commit())
 
 	// Create updates for different components
-	_, err = model.NewFirmwareUpdate(ctx, pg.DB(), testPmc.GetMac(), powershelf.PMC, "1.0.0", "2.0.0")
+	_, err = model.NewFirmwareUpdate(ctx, session.DB, testPmc.GetMac(), powershelf.PMC, "1.0.0", "2.0.0")
 	require.NoError(t, err)
 
 	time.Sleep(10 * time.Millisecond) // Ensure different timestamps
 
-	_, err = model.NewFirmwareUpdate(ctx, pg.DB(), testPmc.GetMac(), powershelf.PSU, "3.0.0", "4.0.0")
+	_, err = model.NewFirmwareUpdate(ctx, session.DB, testPmc.GetMac(), powershelf.PSU, "3.0.0", "4.0.0")
 	require.NoError(t, err)
 
 	// Create firmware manager
-	registry := &Registry{pg: pg}
+	registry := &Registry{session: session}
 	manager := &Manager{
 		fwUpdateRegistry: registry,
 		dryRun:           true,
@@ -412,7 +416,7 @@ func TestIntegration_FirmwareManager_MultipleComponents(t *testing.T) {
 	assert.Len(t, pending, 2, "Should have 2 pending updates for different components")
 
 	// Complete one component
-	pmcFu, err := model.GetFirmwareUpdate(ctx, pg.DB(), testPmc.GetMac(), powershelf.PMC)
+	pmcFu, err := model.GetFirmwareUpdate(ctx, session.DB, testPmc.GetMac(), powershelf.PMC)
 	require.NoError(t, err)
 	err = manager.SetUpdateState(ctx, *pmcFu, powershelf.FirmwareStateCompleted, "")
 	require.NoError(t, err)
@@ -428,7 +432,7 @@ func TestIntegration_FirmwareManager_MultipleComponents(t *testing.T) {
 func TestIntegration_FirmwareManager_StateTransitionTimestamps(t *testing.T) {
 	skipIfNoDatabase(t)
 
-	pg, cleanup := setupTestDB(t)
+	session, cleanup := setupTestDB(t)
 	defer cleanup()
 
 	ctx := context.Background()
@@ -442,20 +446,20 @@ func TestIntegration_FirmwareManager_StateTransitionTimestamps(t *testing.T) {
 		Vendor:     testPmc.GetVendor().Code,
 		IPAddress:  model.IPAddr(testPmc.GetIp()),
 	}
-	tx, err := pg.BeginTx(ctx)
+	tx, err := session.BeginTx(ctx)
 	require.NoError(t, err)
 	require.NoError(t, pmcModel.Create(ctx, tx))
 	require.NoError(t, tx.Commit())
 
 	// Create firmware manager
-	registry := &Registry{pg: pg}
+	registry := &Registry{session: session}
 	manager := &Manager{
 		fwUpdateRegistry: registry,
 		dryRun:           true,
 	}
 
 	// Create firmware update
-	fu, err := model.NewFirmwareUpdate(ctx, pg.DB(), testPmc.GetMac(), powershelf.PMC, "1.0.0", "2.0.0")
+	fu, err := model.NewFirmwareUpdate(ctx, session.DB, testPmc.GetMac(), powershelf.PMC, "1.0.0", "2.0.0")
 	require.NoError(t, err)
 
 	initialTransitionTime := fu.LastTransitionTime
@@ -469,7 +473,7 @@ func TestIntegration_FirmwareManager_StateTransitionTimestamps(t *testing.T) {
 	require.NoError(t, err)
 
 	// Retrieve and check timestamps
-	retrieved, err := model.GetFirmwareUpdate(ctx, pg.DB(), testPmc.GetMac(), powershelf.PMC)
+	retrieved, err := model.GetFirmwareUpdate(ctx, session.DB, testPmc.GetMac(), powershelf.PMC)
 	require.NoError(t, err)
 
 	assert.True(t, retrieved.LastTransitionTime.After(initialTransitionTime),
@@ -482,7 +486,7 @@ func TestIntegration_FirmwareManager_StateTransitionTimestamps(t *testing.T) {
 func TestIntegration_FirmwareManager_TerminalStateCheck(t *testing.T) {
 	skipIfNoDatabase(t)
 
-	pg, cleanup := setupTestDB(t)
+	session, cleanup := setupTestDB(t)
 	defer cleanup()
 
 	ctx := context.Background()
@@ -516,20 +520,20 @@ func TestIntegration_FirmwareManager_TerminalStateCheck(t *testing.T) {
 				Vendor:     testPmc.GetVendor().Code,
 				IPAddress:  model.IPAddr(testPmc.GetIp()),
 			}
-			tx, err := pg.BeginTx(ctx)
+			tx, err := session.BeginTx(ctx)
 			require.NoError(t, err)
 			require.NoError(t, pmcModel.Create(ctx, tx))
 			require.NoError(t, tx.Commit())
 
 			// Create firmware manager
-			registry := &Registry{pg: pg}
+			registry := &Registry{session: session}
 			manager := &Manager{
 				fwUpdateRegistry: registry,
 				dryRun:           true,
 			}
 
 			// Create and transition firmware update
-			fu, err := model.NewFirmwareUpdate(ctx, pg.DB(), testPmc.GetMac(), powershelf.PMC, "1.0.0", "2.0.0")
+			fu, err := model.NewFirmwareUpdate(ctx, session.DB, testPmc.GetMac(), powershelf.PMC, "1.0.0", "2.0.0")
 			require.NoError(t, err)
 
 			if tc.finalState != powershelf.FirmwareStateQueued {
@@ -538,7 +542,7 @@ func TestIntegration_FirmwareManager_TerminalStateCheck(t *testing.T) {
 			}
 
 			// Retrieve and check terminal state
-			retrieved, err := model.GetFirmwareUpdate(ctx, pg.DB(), testPmc.GetMac(), powershelf.PMC)
+			retrieved, err := model.GetFirmwareUpdate(ctx, session.DB, testPmc.GetMac(), powershelf.PMC)
 			require.NoError(t, err)
 			assert.Equal(t, tc.isTerminal, retrieved.IsTerminal())
 		})
@@ -549,14 +553,14 @@ func TestIntegration_FirmwareManager_TerminalStateCheck(t *testing.T) {
 func TestIntegration_FirmwareManager_GetUpdateNoRows(t *testing.T) {
 	skipIfNoDatabase(t)
 
-	pg, cleanup := setupTestDB(t)
+	session, cleanup := setupTestDB(t)
 	defer cleanup()
 
 	ctx := context.Background()
 
 	// Try to get an update that doesn't exist
 	mac, _ := net.ParseMAC("FF:FF:FF:FF:FF:FF") // non-existent PMC
-	_, err := model.GetFirmwareUpdate(ctx, pg.DB(), mac, powershelf.PMC)
+	_, err := model.GetFirmwareUpdate(ctx, session.DB, mac, powershelf.PMC)
 
 	// Should get sql.ErrNoRows
 	assert.True(t, errors.Is(err, sql.ErrNoRows), "Should return sql.ErrNoRows for missing update")

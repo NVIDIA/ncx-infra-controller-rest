@@ -21,13 +21,14 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/credential"
 	"net"
 	"net/http"
 	"strings"
 
 	vault "github.com/hashicorp/vault/api"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/nvidia/bare-metal-manager-rest/common/pkg/credential"
 )
 
 // The mount path for the secrets engine
@@ -153,16 +154,16 @@ func (m *VaultCredentialManager) Get(ctx context.Context, mac net.HardwareAddr) 
 		return nil, fmt.Errorf("unexpected secret data format")
 	}
 
-	credential, err := credential.FromMap(credData)
+	cred, err := credentialFromMap(credData)
 	if err != nil {
 		return nil, err
 	}
 
-	if credential == nil || !credential.IsValid() {
+	if cred == nil || !cred.IsValid() {
 		return nil, fmt.Errorf("retrieved invalid credential from vault")
 	}
 
-	return credential, nil
+	return cred, nil
 }
 
 // Put writes the credentials of a given PMC (specified by MAC) to Vault.
@@ -172,7 +173,7 @@ func (m *VaultCredentialManager) Put(ctx context.Context, mac net.HardwareAddr, 
 	}
 
 	payload := map[string]any{
-		"data": cred.ToMap(),
+		"data": credentialToMap(cred),
 	}
 
 	key := m.getCredentialKey(mac)
@@ -226,4 +227,33 @@ func (m *VaultCredentialManager) Keys(ctx context.Context) ([]net.HardwareAddr, 
 	}
 
 	return macs, nil
+}
+
+var (
+	errInvalidUsername = errors.New("invalid username value")
+	errInvalidPassword = errors.New("invalid password value")
+)
+
+// credentialToMap converts a Credential to a map[string]interface{} suitable for Vault storage.
+func credentialToMap(c *credential.Credential) map[string]interface{} {
+	return map[string]interface{}{
+		"username": c.User,
+		"password": c.Password.Value,
+	}
+}
+
+// credentialFromMap converts a map[string]interface{} from Vault storage to a Credential.
+func credentialFromMap(data map[string]interface{}) (*credential.Credential, error) {
+	user, ok := data["username"].(string)
+	if !ok {
+		return nil, errInvalidUsername
+	}
+
+	password, ok := data["password"].(string)
+	if !ok {
+		return nil, errInvalidPassword
+	}
+
+	cred := credential.New(user, password)
+	return &cred, nil
 }

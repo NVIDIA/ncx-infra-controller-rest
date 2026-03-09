@@ -25,9 +25,9 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/uptrace/bun"
 
+	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/converter/dao"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/db/model"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/db/postgres"
 	dbquery "github.com/nvidia/bare-metal-manager-rest/rla/internal/db/query"
 	identifier "github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/Identifier"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/deviceinfo"
@@ -41,11 +41,11 @@ import (
 
 // PostgresStore implements the Store interface using PostgreSQL.
 type PostgresStore struct {
-	pg *postgres.Postgres
+	pg *cdb.Session
 }
 
 // NewPostgres creates a new PostgreSQL-backed inventory store.
-func NewPostgres(pg *postgres.Postgres) *PostgresStore {
+func NewPostgres(pg *cdb.Session) *PostgresStore {
 	return &PostgresStore{pg: pg}
 }
 
@@ -56,7 +56,8 @@ func (s *PostgresStore) Start(ctx context.Context) error {
 
 // Stop stops the PostgresStore instance by closing the PostgreSQL connection.
 func (s *PostgresStore) Stop(ctx context.Context) error {
-	return s.pg.Close(ctx)
+	s.pg.Close()
+	return nil
 }
 
 // CreateExpectedRack creates an expected rack in the database and returns its UUID.
@@ -74,7 +75,7 @@ func (s *PostgresStore) CreateExpectedRack(
 
 	operation := func(ctx context.Context, tx bun.Tx) error {
 		if err := dao.RackTo(rack).Create(ctx, tx); err != nil {
-			if !s.pg.ErrorChecker().IsUniqueConstraintError(err) {
+			if !s.pg.GetErrorChecker().IsUniqueConstraintError(err) {
 				rackDevInfo.ID = uuid.Nil
 				return err
 			}
@@ -163,7 +164,7 @@ func (s *PostgresStore) GetRacksByIDs(
 		return nil, errors.GRPCErrorInvalidArgument("no valid rack ids specified")
 	}
 
-	rackDaos, err := model.GetRacksByIDs(ctx, s.pg.DB(), validIDs, withComponents)
+	rackDaos, err := model.GetRacksByIDs(ctx, s.pg.DB, validIDs, withComponents)
 	if err != nil {
 		return nil, errors.GRPCErrorInternal(err.Error())
 	}
@@ -194,7 +195,7 @@ func (s *PostgresStore) GetRackBySerial(
 		SerialNumber: serialNumber,
 	}
 
-	return s.getRack(ctx, s.pg.DB(), deviceInfo, withComponents)
+	return s.getRack(ctx, s.pg.DB, deviceInfo, withComponents)
 }
 
 // GetRackByIdentifier retrieves a rack by its identifier (ID or name).
@@ -213,12 +214,12 @@ func (s *PostgresStore) GetRackByIdentifier(
 		deviceInfo := deviceinfo.DeviceInfo{
 			ID: identifier.ID,
 		}
-		return s.getRack(ctx, s.pg.DB(), deviceInfo, withComponents)
+		return s.getRack(ctx, s.pg.DB, deviceInfo, withComponents)
 	}
 
 	rackDaos, _, err := model.GetListOfRacks(
 		ctx,
-		s.pg.DB(),
+		s.pg.DB,
 		dbquery.StringQueryInfo{
 			Patterns:   []string{identifier.Name},
 			IsWildcard: false,
@@ -290,7 +291,7 @@ func (s *PostgresStore) GetListOfRacks(
 	withComponents bool,
 ) ([]*rack.Rack, int32, error) {
 	racks, total, err := model.GetListOfRacks(
-		ctx, s.pg.DB(), info, manufacturerFilter, modelFilter, pagination, orderBy, withComponents,
+		ctx, s.pg.DB, info, manufacturerFilter, modelFilter, pagination, orderBy, withComponents,
 	)
 	if err != nil {
 		return nil, 0, err
@@ -315,7 +316,7 @@ func (s *PostgresStore) GetListOfComponents(
 	orderBy *dbquery.OrderBy,
 ) ([]*component.Component, int32, error) {
 	components, total, err := model.GetListOfComponents(
-		ctx, s.pg.DB(), info, manufacturerFilter, modelFilter, componentTypes, pagination, orderBy,
+		ctx, s.pg.DB, info, manufacturerFilter, modelFilter, componentTypes, pagination, orderBy,
 	)
 	if err != nil {
 		return nil, 0, errors.GRPCErrorInternal(err.Error())
@@ -339,7 +340,7 @@ func (s *PostgresStore) GetComponentByID(
 	}
 
 	deviceInfo := deviceinfo.DeviceInfo{ID: id}
-	cur, err := s.getComponent(ctx, s.pg.DB(), deviceInfo)
+	cur, err := s.getComponent(ctx, s.pg.DB, deviceInfo)
 	if err != nil {
 		return nil, s.checkDBGetError(
 			err,
@@ -367,7 +368,7 @@ func (s *PostgresStore) GetComponentBySerial(
 		SerialNumber: serialNumber,
 	}
 
-	cur, err := s.getComponent(ctx, s.pg.DB(), deviceInfo)
+	cur, err := s.getComponent(ctx, s.pg.DB, deviceInfo)
 	if err != nil {
 		return nil, s.checkDBGetError(
 			err,
@@ -387,7 +388,7 @@ func (s *PostgresStore) GetComponentByBMCMAC(
 		return nil, errors.GRPCErrorInvalidArgument("mac address is not specified")
 	}
 
-	c, err := model.GetComponentByBMCMAC(ctx, s.pg.DB(), macAddress)
+	c, err := model.GetComponentByBMCMAC(ctx, s.pg.DB, macAddress)
 	if err != nil {
 		return nil, s.checkDBGetError(err, fmt.Sprintf("component with BMC MAC %s", macAddress))
 	}
@@ -409,7 +410,7 @@ func (s *PostgresStore) GetComponentsByExternalIDs(
 	}
 
 	var componentModels []model.Component
-	err := s.pg.DB().NewSelect().
+	err := s.pg.DB.NewSelect().
 		Model(&componentModels).
 		Where("external_id IN (?)", bun.In(externalIDs)).
 		Scan(ctx)
@@ -439,7 +440,7 @@ func (s *PostgresStore) CreateNVLDomain(
 
 	operation := func(ctx context.Context, tx bun.Tx) error {
 		if err := dao.NVLDomainTo(nvlDomain).Create(ctx, tx); err != nil {
-			if !s.pg.ErrorChecker().IsUniqueConstraintError(err) {
+			if !s.pg.GetErrorChecker().IsUniqueConstraintError(err) {
 				return errors.GRPCErrorInternal(err.Error())
 			}
 
@@ -602,7 +603,7 @@ func (s *PostgresStore) GetListOfNVLDomains(
 	pagination *dbquery.Pagination,
 ) ([]*nvldomain.NVLDomain, int32, error) {
 	domains, total, err := model.GetListOfNVLDomains(
-		ctx, s.pg.DB(), info, pagination,
+		ctx, s.pg.DB, info, pagination,
 	)
 	if err != nil {
 		return nil, 0, err
@@ -668,7 +669,7 @@ func (s *PostgresStore) GetRacksForNVLDomain(
 // Helper methods
 
 func (s *PostgresStore) checkDBGetError(err error, info string) error {
-	if !s.pg.ErrorChecker().IsErrNoRows(err) {
+	if !s.pg.GetErrorChecker().IsErrNoRows(err) {
 		return errors.GRPCErrorInternal(err.Error())
 	}
 
@@ -968,18 +969,18 @@ func (s *PostgresStore) AddComponent(ctx context.Context, comp *component.Compon
 // PatchComponent updates a single component's fields in the database.
 func (s *PostgresStore) PatchComponent(ctx context.Context, comp *component.Component) error {
 	compDAO := dao.ComponentTo(comp, comp.RackID)
-	return compDAO.Patch(ctx, s.pg.DB())
+	return compDAO.Patch(ctx, s.pg.DB)
 }
 
 // DeleteComponent soft-deletes a component by UUID.
 func (s *PostgresStore) DeleteComponent(ctx context.Context, id uuid.UUID) error {
 	compDAO := &model.Component{ID: id}
-	return compDAO.Delete(ctx, s.pg.DB())
+	return compDAO.Delete(ctx, s.pg.DB)
 }
 
 // GetDriftsByComponentIDs retrieves drift records for the given component UUIDs.
 func (s *PostgresStore) GetDriftsByComponentIDs(ctx context.Context, componentIDs []uuid.UUID) ([]ComponentDrift, error) {
-	drifts, err := model.GetDriftsByComponentIDs(ctx, s.pg.DB(), componentIDs)
+	drifts, err := model.GetDriftsByComponentIDs(ctx, s.pg.DB, componentIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -988,7 +989,7 @@ func (s *PostgresStore) GetDriftsByComponentIDs(ctx context.Context, componentID
 
 // GetAllDrifts retrieves all drift records.
 func (s *PostgresStore) GetAllDrifts(ctx context.Context) ([]ComponentDrift, error) {
-	drifts, err := model.GetAllDrifts(ctx, s.pg.DB())
+	drifts, err := model.GetAllDrifts(ctx, s.pg.DB)
 	if err != nil {
 		return nil, err
 	}

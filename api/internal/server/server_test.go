@@ -32,6 +32,7 @@ import (
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/handler/util/common"
 	_ "github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model"
 	sc "github.com/nvidia/bare-metal-manager-rest/api/pkg/client/site"
+	cconfig "github.com/nvidia/bare-metal-manager-rest/common/pkg/config"
 	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
 	cdbu "github.com/nvidia/bare-metal-manager-rest/db/pkg/util"
@@ -101,7 +102,7 @@ func Test_InitTemporalClients(t *testing.T) {
 	defer cfg.Close()
 
 	type args struct {
-		tConfig *config.TemporalConfig
+		tConfig *cconfig.TemporalConfig
 	}
 
 	tests := []struct {

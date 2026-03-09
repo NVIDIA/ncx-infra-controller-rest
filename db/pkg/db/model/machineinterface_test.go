@@ -57,7 +57,7 @@ func TestMachineInterfaceSQLDAO_Create(t *testing.T) {
 	machine := testMachineBuildMachine(t, dbSession, ip.ID, site.ID, nil, db.GetStrPtr("mcTypeTest"))
 	miDAO := NewMachineInterfaceDAO(dbSession)
 
-	badSession, err := db.NewSession("localhost", 1234, "postgres", "postgres", "postgres", "")
+	badSession, err := db.NewSession(context.Background(), "localhost", 1234, "postgres", "postgres", "postgres", "")
 	assert.Nil(t, err)
 	badDAO := NewMachineInterfaceDAO(badSession)
 
@@ -251,7 +251,7 @@ func TestMachineInterfaceSQLDAO_GetAll(t *testing.T) {
 		mis = append(mis, *mi)
 	}
 
-	badSession, err := db.NewSession("localhost", 1234, "postgres", "postgres", "postgres", "")
+	badSession, err := db.NewSession(context.Background(), "localhost", 1234, "postgres", "postgres", "postgres", "")
 	assert.Nil(t, err)
 	badDAO := NewMachineInterfaceDAO(badSession)
 
@@ -426,7 +426,7 @@ func TestMachineInterfaceSQLDAO_UpdateFromParams(t *testing.T) {
 		ctx, nil, MachineInterfaceCreateInput{MachineID: machine.ID, IsPrimary: true, IpAddresses: []string{}})
 	assert.Nil(t, err)
 	assert.NotNil(t, mi1)
-	badSession, err := db.NewSession("localhost", 1234, "postgres", "postgres", "postgres", "")
+	badSession, err := db.NewSession(context.Background(), "localhost", 1234, "postgres", "postgres", "postgres", "")
 	assert.Nil(t, err)
 	badDAO := NewMachineInterfaceDAO(badSession)
 
@@ -575,7 +575,7 @@ func TestMachineInterfaceSQLDAO_Clear(t *testing.T) {
 	)
 	assert.Nil(t, err)
 	assert.NotNil(t, mi1)
-	badSession, err := db.NewSession("localhost", 1234, "postgres", "postgres", "postgres", "")
+	badSession, err := db.NewSession(context.Background(), "localhost", 1234, "postgres", "postgres", "postgres", "")
 	assert.Nil(t, err)
 	badDAO := NewMachineInterfaceDAO(badSession)
 
@@ -709,7 +709,7 @@ func TestMachineInterfaceSQLDAO_Delete(t *testing.T) {
 	)
 
 	// Test with bad DB session
-	badSession, err := db.NewSession("localhost", 1234, "postgres", "postgres", "postgres", "")
+	badSession, err := db.NewSession(context.Background(), "localhost", 1234, "postgres", "postgres", "postgres", "")
 	assert.Nil(t, err)
 	badDAO := NewMachineInterfaceDAO(badSession)
 

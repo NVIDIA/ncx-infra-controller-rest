@@ -27,17 +27,16 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/uptrace/bun"
 
+	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/carbideapi"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/config"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/db"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/db/model"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/db/postgres"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/psmapi"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
 )
 
 // RunInventory will loop and handle various inventory monitoring tasks
-func RunInventory(ctx context.Context, dbConf *db.Config) {
+func RunInventory(ctx context.Context, dbConf *cdb.Config) {
 	config := config.ReadConfig()
 	if config.DisableInventory {
 		log.Info().Msg("Inventory disabled by configuration")
@@ -67,7 +66,7 @@ func RunInventory(ctx context.Context, dbConf *db.Config) {
 		defer psmClient.Close()
 	}
 
-	pool, err := postgres.New(ctx, *dbConf)
+	pool, err := cdb.NewSessionFromConfig(ctx, *dbConf)
 	if err != nil {
 		log.Fatal().Msgf("Unable to create database pool: %v", err)
 	}
@@ -84,7 +83,7 @@ var lastUpdateMachineIDs time.Time
 // runInventoryOne is a single iteration for RunInventory.
 // It syncs each resource type against its external source, collects all drifts,
 // and persists them in one shot.
-func runInventoryOne(ctx context.Context, config *config.Config, pool *postgres.Postgres, carbideClient carbideapi.Client, psmClient psmapi.Client) {
+func runInventoryOne(ctx context.Context, config *config.Config, pool *cdb.Session, carbideClient carbideapi.Client, psmClient psmapi.Client) {
 	var allDrifts []model.ComponentDrift
 
 	// Sync machines (compute nodes, NVSwitches, etc.) against Carbide
@@ -120,11 +119,11 @@ func runInventoryOne(ctx context.Context, config *config.Config, pool *postgres.
 //
 // Validation fields (always compared): slot_id, tray_index, host_id, firmware_version, serial_number
 // Direct-write fields (written, NOT compared): external_id, power_state
-func syncMachines(ctx context.Context, config *config.Config, pool *postgres.Postgres, carbideClient carbideapi.Client) []model.ComponentDrift {
+func syncMachines(ctx context.Context, config *config.Config, pool *cdb.Session, carbideClient carbideapi.Client) []model.ComponentDrift {
 	log.Debug().Msg("Syncing machines...")
 
 	// Step 1: Get all components from DB, filter out PowerShelves
-	allComponents, err := model.GetAllComponents(ctx, pool.DB())
+	allComponents, err := model.GetAllComponents(ctx, pool.DB)
 	if err != nil {
 		log.Error().Msgf("Unable to retrieve components from db: %v", err)
 		return nil
@@ -145,7 +144,7 @@ func syncMachines(ctx context.Context, config *config.Config, pool *postgres.Pos
 	syncMachineIDs(ctx, config, pool, carbideClient, components)
 
 	// Re-read components to pick up any external_id updates from step 2
-	allComponents, err = model.GetAllComponents(ctx, pool.DB())
+	allComponents, err = model.GetAllComponents(ctx, pool.DB)
 	if err != nil {
 		log.Error().Msgf("Unable to re-read components from db after machine ID update: %v", err)
 		return nil
@@ -272,7 +271,7 @@ func syncMachines(ctx context.Context, config *config.Config, pool *postgres.Pos
 
 // syncMachineIDs matches components by serial number against Carbide machines
 // and direct-writes the external_id. Respects UpdateMachineIDsFrequency config.
-func syncMachineIDs(ctx context.Context, config *config.Config, pool *postgres.Postgres, carbideClient carbideapi.Client, components []model.Component) {
+func syncMachineIDs(ctx context.Context, config *config.Config, pool *cdb.Session, carbideClient carbideapi.Client, components []model.Component) {
 	shouldUpdate := false
 	if config.UpdateMachineIDsFrequency == 0 {
 		// A frequency of zero means to do it only once on startup
@@ -348,7 +347,7 @@ func syncMachineIDs(ctx context.Context, config *config.Config, pool *postgres.P
 }
 
 // syncPowerStates fetches power states from Carbide and direct-writes to component table.
-func syncPowerStates(ctx context.Context, pool *postgres.Postgres, carbideClient carbideapi.Client, machineIDs []string, componentsByExternalID map[string]*model.Component) {
+func syncPowerStates(ctx context.Context, pool *cdb.Session, carbideClient carbideapi.Client, machineIDs []string, componentsByExternalID map[string]*model.Component) {
 	machines, err := carbideClient.GetPowerStates(ctx, machineIDs)
 	if err != nil {
 		log.Error().Msgf("Unable to retrieve power states from carbide-api: %v", err)
@@ -455,7 +454,7 @@ const (
 	powershelfDefaultPassword = "0penBmc"
 )
 
-func syncPowershelves(ctx context.Context, pool *postgres.Postgres, carbideClient carbideapi.Client, psmClient psmapi.Client) []model.ComponentDrift {
+func syncPowershelves(ctx context.Context, pool *cdb.Session, carbideClient carbideapi.Client, psmClient psmapi.Client) []model.ComponentDrift {
 	if psmClient == nil {
 		log.Debug().Msg("PSM client not available, skipping powershelf sync")
 		return nil
@@ -464,7 +463,7 @@ func syncPowershelves(ctx context.Context, pool *postgres.Postgres, carbideClien
 	log.Debug().Msg("Syncing powershelves...")
 
 	// Step 1: Get all PowerShelf components with their PMCs
-	expectedPowershelves, err := model.GetComponentsByType(ctx, pool.DB(), devicetypes.ComponentTypePowerShelf)
+	expectedPowershelves, err := model.GetComponentsByType(ctx, pool.DB, devicetypes.ComponentTypePowerShelf)
 	if err != nil {
 		log.Error().Msgf("Unable to retrieve powershelf components from db: %v", err)
 		return nil
@@ -560,7 +559,7 @@ func syncPowershelves(ctx context.Context, pool *postgres.Postgres, carbideClien
 			}
 
 			if needsUpdate {
-				if err := powershelf.Patch(ctx, pool.DB()); err != nil {
+				if err := powershelf.Patch(ctx, pool.DB); err != nil {
 					log.Error().Msgf("Unable to update powershelf %s: %v", pmcMac, err)
 				}
 			}

@@ -18,6 +18,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -87,7 +88,7 @@ func main() {
 		log.Print("Using PGSSLROOTCERT from environment variable")
 	}
 
-	dbSession, err := db.NewSession(dbHost, dbPort, dbName, dbUser, dbPassword, dbCACertPath)
+	dbSession, err := db.NewSession(context.Background(), dbHost, dbPort, dbName, dbUser, dbPassword, dbCACertPath)
 	if err != nil {
 		panic(err)
 	}

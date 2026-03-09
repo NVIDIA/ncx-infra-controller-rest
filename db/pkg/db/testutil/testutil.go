@@ -14,9 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// Package testutil provides database test utilities for integration tests.
-// This package is intentionally separate from production code to prevent
-// test infrastructure from being compiled into production binaries.
+
 package testutil
 
 import (
@@ -28,14 +26,13 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/db"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/db/postgres"
+	"github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 )
 
 // CreateTestDB creates a fresh test database for integration tests.
 // It creates a new database with a unique name based on the test name
 // and returns the connection.
-func CreateTestDB(ctx context.Context, t *testing.T, dbConf db.Config) (*postgres.Postgres, error) {
+func CreateTestDB(ctx context.Context, t *testing.T, dbConf db.Config) (*db.Session, error) {
 	// Connect to the main database first to create the test database
 	dbInitial, err := pgxpool.New(ctx, dbConf.BuildDSN())
 	if err != nil {
@@ -69,7 +66,6 @@ func CreateTestDB(ctx context.Context, t *testing.T, dbConf db.Config) (*postgre
 	log.Infof("Creating test database: %v", testDBName)
 
 	// Quote the database name as a PostgreSQL identifier to prevent SQL injection
-	// PostgreSQL identifiers are quoted with double quotes, and internal double quotes are escaped by doubling
 	quotedDBName := QuoteIdentifier(testDBName)
 
 	// Drop existing test database if it exists
@@ -86,12 +82,12 @@ func CreateTestDB(ctx context.Context, t *testing.T, dbConf db.Config) (*postgre
 	dbConfNew := dbConf
 	dbConfNew.DBName = testDBName
 
-	pg, err := postgres.New(ctx, dbConfNew)
+	session, err := db.NewSessionFromConfig(ctx, dbConfNew)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to test DB %s: %w", testDBName, err)
 	}
 
-	return pg, nil
+	return session, nil
 }
 
 // QuoteIdentifier quotes a string as a PostgreSQL identifier.

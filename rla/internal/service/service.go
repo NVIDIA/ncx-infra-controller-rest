@@ -27,9 +27,9 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/reflection"
 
+	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/certs"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/db/migrations"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/db/postgres"
 	inventorymanager "github.com/nvidia/bare-metal-manager-rest/rla/internal/inventory/manager"
 	inventorystore "github.com/nvidia/bare-metal-manager-rest/rla/internal/inventory/store"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/inventorysync"
@@ -41,7 +41,7 @@ import (
 type Service struct {
 	conf             Config
 	grpcServer       *grpc.Server
-	pg               *postgres.Postgres
+	session          *cdb.Session
 	inventoryManager inventorymanager.Manager
 	taskStore        taskstore.Store
 	taskManager      *taskmanager.Manager
@@ -49,19 +49,21 @@ type Service struct {
 
 func New(ctx context.Context, c Config) (*Service, error) {
 	// 1. Create shared PostgreSQL connection
-	pg, err := postgres.New(ctx, c.DBConf)
+	session, err := cdb.NewSessionFromConfig(ctx, c.DBConf)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create database connection: %v", err)
 	}
 
 	// Run migrations
-	if err := migrations.Migrate(ctx, pg); err != nil {
+	if err := migrations.MigrateWithDB(ctx, session.DB); err != nil {
+		session.Close()
+
 		return nil, fmt.Errorf("failed to run migrations: %v", err)
 	}
 
 	// 2. Create stores (Storage Layer)
-	invStore := inventorystore.NewPostgres(pg)
-	tskStore := taskstore.NewPostgres(pg)
+	invStore := inventorystore.NewPostgres(session)
+	tskStore := taskstore.NewPostgres(session)
 
 	// 3. Create InventoryManager (Business Logic Layer)
 	invManager := inventorymanager.New(invStore)
@@ -85,7 +87,7 @@ func New(ctx context.Context, c Config) (*Service, error) {
 
 	return &Service{
 		conf:             c,
-		pg:               pg,
+		session:          session,
 		inventoryManager: invManager,
 		taskStore:        tskStore,
 		taskManager:      taskManager,
@@ -154,8 +156,8 @@ func (s *Service) Stop(ctx context.Context) {
 	}
 	s.inventoryManager.Stop(ctx)
 	// Rule resolver has no cleanup needed (cache is GC'd automatically)
-	if s.pg != nil {
-		s.pg.Close(ctx)
+	if s.session != nil {
+		s.session.Close()
 	}
 }
 

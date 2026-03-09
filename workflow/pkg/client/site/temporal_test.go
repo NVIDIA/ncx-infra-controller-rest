@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	cconfig "github.com/nvidia/bare-metal-manager-rest/common/pkg/config"
 	"github.com/nvidia/bare-metal-manager-rest/workflow/internal/config"
 	"github.com/stretchr/testify/assert"
 	temporalClient "go.temporal.io/sdk/client"
@@ -30,7 +31,7 @@ import (
 
 func TestNewClientPool(t *testing.T) {
 	type args struct {
-		tcfg *config.TemporalConfig
+		tcfg *cconfig.TemporalConfig
 	}
 
 	keyPath, certPath := config.SetupTestCerts(t)
@@ -72,7 +73,7 @@ func TestNewClientPool(t *testing.T) {
 
 func TestClientPool_GetClientByID(t *testing.T) {
 	type fields struct {
-		tcfg *config.TemporalConfig
+		tcfg *cconfig.TemporalConfig
 	}
 	type args struct {
 		siteID uuid.UUID

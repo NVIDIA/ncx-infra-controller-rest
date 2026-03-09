@@ -26,9 +26,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/db"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/db/postgres"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/db/testutil"
+	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
+	dbtestutil "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/testutil"
 )
 
 // skipIfNoDatabase skips the test if database environment variables are not set.
@@ -41,37 +40,37 @@ func skipIfNoDatabase(t *testing.T) {
 }
 
 // setupTestDB creates a fresh test database for the migration tests.
-func setupTestDB(t *testing.T) (*postgres.Postgres, func()) {
+func setupTestDB(t *testing.T) (*cdb.Session, func()) {
 	t.Helper()
 	ctx := context.Background()
 
-	dbConf, err := db.BuildDBConfigFromEnv()
+	dbConf, err := cdb.ConfigFromEnv()
 	require.NoError(t, err, "Failed to build DB config from env")
 
-	pg, err := testutil.CreateTestDB(ctx, t, dbConf)
+	session, err := dbtestutil.CreateTestDB(ctx, t, dbConf)
 	require.NoError(t, err, "Failed to create test database")
 
 	cleanup := func() {
-		pg.Close(ctx)
+		session.Close()
 	}
 
-	return pg, cleanup
+	return session, cleanup
 }
 
 // TestIntegration_Migrate_CreatesTablesAndRecordsMigration tests the basic migration flow.
 func TestIntegration_Migrate_CreatesTablesAndRecordsMigration(t *testing.T) {
 	skipIfNoDatabase(t)
 	ctx := context.Background()
-	pg, cleanup := setupTestDB(t)
+	session, cleanup := setupTestDB(t)
 	defer cleanup()
 
 	// Run migrations
-	err := Migrate(ctx, pg)
+	err := MigrateWithDB(ctx, session.DB)
 	require.NoError(t, err, "Migrate should succeed")
 
 	// Verify migrations table was created and has entries
 	var count int
-	err = pg.DB().NewSelect().
+	err = session.DB.NewSelect().
 		TableExpr("migrations").
 		ColumnExpr("COUNT(*)").
 		Scan(ctx, &count)
@@ -80,7 +79,7 @@ func TestIntegration_Migrate_CreatesTablesAndRecordsMigration(t *testing.T) {
 
 	// Verify the pmc table was created (from initial migration)
 	var tableExists bool
-	err = pg.DB().NewSelect().
+	err = session.DB.NewSelect().
 		TableExpr("information_schema.tables").
 		ColumnExpr("TRUE").
 		Where("table_name = ?", "pmc").
@@ -90,7 +89,7 @@ func TestIntegration_Migrate_CreatesTablesAndRecordsMigration(t *testing.T) {
 	assert.True(t, tableExists, "pmc table should exist after migration")
 
 	// Verify the firmware_update table was created
-	err = pg.DB().NewSelect().
+	err = session.DB.NewSelect().
 		TableExpr("information_schema.tables").
 		ColumnExpr("TRUE").
 		Where("table_name = ?", "firmware_update").
@@ -104,28 +103,28 @@ func TestIntegration_Migrate_CreatesTablesAndRecordsMigration(t *testing.T) {
 func TestIntegration_Migrate_IsIdempotent(t *testing.T) {
 	skipIfNoDatabase(t)
 	ctx := context.Background()
-	pg, cleanup := setupTestDB(t)
+	session, cleanup := setupTestDB(t)
 	defer cleanup()
 
 	// Run migrations first time
-	err := Migrate(ctx, pg)
+	err := MigrateWithDB(ctx, session.DB)
 	require.NoError(t, err, "First Migrate should succeed")
 
 	// Get count of applied migrations
 	var countBefore int
-	err = pg.DB().NewSelect().
+	err = session.DB.NewSelect().
 		TableExpr("migrations").
 		ColumnExpr("COUNT(*)").
 		Scan(ctx, &countBefore)
 	require.NoError(t, err)
 
 	// Run migrations second time - should be idempotent
-	err = Migrate(ctx, pg)
+	err = MigrateWithDB(ctx, session.DB)
 	require.NoError(t, err, "Second Migrate should succeed (idempotent)")
 
 	// Verify count is the same
 	var countAfter int
-	err = pg.DB().NewSelect().
+	err = session.DB.NewSelect().
 		TableExpr("migrations").
 		ColumnExpr("COUNT(*)").
 		Scan(ctx, &countAfter)
@@ -138,16 +137,16 @@ func TestIntegration_Migrate_IsIdempotent(t *testing.T) {
 func TestIntegration_Migrate_RecordsHash(t *testing.T) {
 	skipIfNoDatabase(t)
 	ctx := context.Background()
-	pg, cleanup := setupTestDB(t)
+	session, cleanup := setupTestDB(t)
 	defer cleanup()
 
 	// Run migrations
-	err := Migrate(ctx, pg)
+	err := MigrateWithDB(ctx, session.DB)
 	require.NoError(t, err)
 
 	// Verify hash is stored
 	var hash string
-	err = pg.DB().NewSelect().
+	err = session.DB.NewSelect().
 		TableExpr("migrations").
 		Column("hash").
 		Where("id = ?", "202509290356").
@@ -161,16 +160,16 @@ func TestIntegration_Migrate_RecordsHash(t *testing.T) {
 func TestIntegration_Rollback_RemovesMigration(t *testing.T) {
 	skipIfNoDatabase(t)
 	ctx := context.Background()
-	pg, cleanup := setupTestDB(t)
+	session, cleanup := setupTestDB(t)
 	defer cleanup()
 
 	// Run migrations first
-	err := Migrate(ctx, pg)
+	err := MigrateWithDB(ctx, session.DB)
 	require.NoError(t, err)
 
 	// Get the applied date of the migration
 	var appliedDate time.Time
-	err = pg.DB().NewSelect().
+	err = session.DB.NewSelect().
 		TableExpr("migrations").
 		Column("applied_date").
 		Where("id = ?", "202509290356").
@@ -179,12 +178,12 @@ func TestIntegration_Rollback_RemovesMigration(t *testing.T) {
 
 	// Rollback to before the migration was applied
 	rollbackTime := appliedDate.Add(-1 * time.Second)
-	err = Rollback(ctx, pg, rollbackTime)
+	err = RollbackWithDB(ctx, session.DB, rollbackTime)
 	require.NoError(t, err, "Rollback should succeed")
 
 	// Verify migration record was removed
 	var count int
-	err = pg.DB().NewSelect().
+	err = session.DB.NewSelect().
 		TableExpr("migrations").
 		ColumnExpr("COUNT(*)").
 		Where("id = ?", "202509290356").
@@ -194,7 +193,7 @@ func TestIntegration_Rollback_RemovesMigration(t *testing.T) {
 
 	// Verify pmc table was dropped
 	var tableExists bool
-	err = pg.DB().NewSelect().
+	err = session.DB.NewSelect().
 		TableExpr("information_schema.tables").
 		ColumnExpr("TRUE").
 		Where("table_name = ?", "pmc").
@@ -211,16 +210,16 @@ func TestIntegration_Rollback_RemovesMigration(t *testing.T) {
 func TestIntegration_Rollback_NoOpWhenNothingToRollback(t *testing.T) {
 	skipIfNoDatabase(t)
 	ctx := context.Background()
-	pg, cleanup := setupTestDB(t)
+	session, cleanup := setupTestDB(t)
 	defer cleanup()
 
 	// Run migrations first
-	err := Migrate(ctx, pg)
+	err := MigrateWithDB(ctx, session.DB)
 	require.NoError(t, err)
 
 	// Get count before rollback
 	var countBefore int
-	err = pg.DB().NewSelect().
+	err = session.DB.NewSelect().
 		TableExpr("migrations").
 		ColumnExpr("COUNT(*)").
 		Scan(ctx, &countBefore)
@@ -229,12 +228,12 @@ func TestIntegration_Rollback_NoOpWhenNothingToRollback(t *testing.T) {
 	// Rollback to a time far in the past (before any migrations)
 	// Actually, let's use current time which should be after all migrations
 	// This means nothing should be rolled back
-	err = Rollback(ctx, pg, time.Now().Add(1*time.Hour))
+	err = RollbackWithDB(ctx, session.DB, time.Now().Add(1*time.Hour))
 	require.NoError(t, err, "Rollback should succeed even with nothing to rollback")
 
 	// Count should be the same
 	var countAfter int
-	err = pg.DB().NewSelect().
+	err = session.DB.NewSelect().
 		TableExpr("migrations").
 		ColumnExpr("COUNT(*)").
 		Scan(ctx, &countAfter)
@@ -247,16 +246,16 @@ func TestIntegration_Rollback_NoOpWhenNothingToRollback(t *testing.T) {
 func TestIntegration_Migrate_AfterRollback(t *testing.T) {
 	skipIfNoDatabase(t)
 	ctx := context.Background()
-	pg, cleanup := setupTestDB(t)
+	session, cleanup := setupTestDB(t)
 	defer cleanup()
 
 	// Initial migration
-	err := Migrate(ctx, pg)
+	err := MigrateWithDB(ctx, session.DB)
 	require.NoError(t, err)
 
 	// Get applied date
 	var appliedDate time.Time
-	err = pg.DB().NewSelect().
+	err = session.DB.NewSelect().
 		TableExpr("migrations").
 		Column("applied_date").
 		Where("id = ?", "202509290356").
@@ -265,16 +264,16 @@ func TestIntegration_Migrate_AfterRollback(t *testing.T) {
 
 	// Rollback
 	rollbackTime := appliedDate.Add(-1 * time.Second)
-	err = Rollback(ctx, pg, rollbackTime)
+	err = RollbackWithDB(ctx, session.DB, rollbackTime)
 	require.NoError(t, err)
 
 	// Re-apply migrations
-	err = Migrate(ctx, pg)
+	err = MigrateWithDB(ctx, session.DB)
 	require.NoError(t, err, "Re-applying migrations after rollback should succeed")
 
 	// Verify tables exist again
 	var tableExists bool
-	err = pg.DB().NewSelect().
+	err = session.DB.NewSelect().
 		TableExpr("information_schema.tables").
 		ColumnExpr("TRUE").
 		Where("table_name = ?", "pmc").
@@ -288,19 +287,19 @@ func TestIntegration_Migrate_AfterRollback(t *testing.T) {
 func TestIntegration_LockOrCreateMigrationTable(t *testing.T) {
 	skipIfNoDatabase(t)
 	ctx := context.Background()
-	pg, cleanup := setupTestDB(t)
+	session, cleanup := setupTestDB(t)
 	defer cleanup()
 
 	// The real test is that Migrate succeeds (which uses locking internally)
-	err := Migrate(ctx, pg)
+	err := MigrateWithDB(ctx, session.DB)
 	require.NoError(t, err)
 
 	// Verify migrations table has correct schema
 	var columns []string
-	rows, err := pg.DB().QueryContext(ctx, `
-		SELECT column_name 
-		FROM information_schema.columns 
-		WHERE table_name = 'migrations' 
+	rows, err := session.DB.QueryContext(ctx, `
+		SELECT column_name
+		FROM information_schema.columns
+		WHERE table_name = 'migrations'
 		ORDER BY ordinal_position
 	`)
 	require.NoError(t, err)
@@ -322,24 +321,24 @@ func TestIntegration_LockOrCreateMigrationTable(t *testing.T) {
 func TestIntegration_ApplyMigration_SQLSectionSplit(t *testing.T) {
 	skipIfNoDatabase(t)
 	ctx := context.Background()
-	pg, cleanup := setupTestDB(t)
+	session, cleanup := setupTestDB(t)
 	defer cleanup()
 
 	// Run migrations - the initial migration has SECTION markers
-	err := Migrate(ctx, pg)
+	err := MigrateWithDB(ctx, session.DB)
 	require.NoError(t, err)
 
 	// Verify both tables were created (they're in different SECTIONs)
 	var pmcExists, fwExists bool
 
-	err = pg.DB().NewSelect().
+	err = session.DB.NewSelect().
 		TableExpr("information_schema.tables").
 		ColumnExpr("TRUE").
 		Where("table_name = ?", "pmc").
 		Scan(ctx, &pmcExists)
 	require.NoError(t, err)
 
-	err = pg.DB().NewSelect().
+	err = session.DB.NewSelect().
 		TableExpr("information_schema.tables").
 		ColumnExpr("TRUE").
 		Where("table_name = ?", "firmware_update").
@@ -354,11 +353,11 @@ func TestIntegration_ApplyMigration_SQLSectionSplit(t *testing.T) {
 func TestIntegration_Indexes_Created(t *testing.T) {
 	skipIfNoDatabase(t)
 	ctx := context.Background()
-	pg, cleanup := setupTestDB(t)
+	session, cleanup := setupTestDB(t)
 	defer cleanup()
 
 	// Run migrations
-	err := Migrate(ctx, pg)
+	err := MigrateWithDB(ctx, session.DB)
 	require.NoError(t, err)
 
 	// Check for expected indexes
@@ -371,7 +370,7 @@ func TestIntegration_Indexes_Created(t *testing.T) {
 
 	for _, indexName := range expectedIndexes {
 		var exists bool
-		err := pg.DB().NewSelect().
+		err := session.DB.NewSelect().
 			TableExpr("pg_indexes").
 			ColumnExpr("TRUE").
 			Where("indexname = ?", indexName).
@@ -388,11 +387,11 @@ func TestIntegration_Indexes_Created(t *testing.T) {
 func TestIntegration_MacaddrAndInetTypes(t *testing.T) {
 	skipIfNoDatabase(t)
 	ctx := context.Background()
-	pg, cleanup := setupTestDB(t)
+	session, cleanup := setupTestDB(t)
 	defer cleanup()
 
 	// Run migrations
-	err := Migrate(ctx, pg)
+	err := MigrateWithDB(ctx, session.DB)
 	require.NoError(t, err)
 
 	// Check column types for pmc table
@@ -402,9 +401,9 @@ func TestIntegration_MacaddrAndInetTypes(t *testing.T) {
 	}
 
 	var columns []columnInfo
-	rows, err := pg.DB().QueryContext(ctx, `
-		SELECT column_name, data_type 
-		FROM information_schema.columns 
+	rows, err := session.DB.QueryContext(ctx, `
+		SELECT column_name, data_type
+		FROM information_schema.columns
 		WHERE table_name = 'pmc' AND table_schema = 'public'
 	`)
 	require.NoError(t, err)

@@ -28,11 +28,6 @@ type DBConfig struct {
 	Password string
 }
 
-// GetHostPort returns the concatenated host & port
-func (dbcfg *DBConfig) GetHostPort() string {
-	return fmt.Sprintf("%v:%v", dbcfg.Host, dbcfg.Port)
-}
-
 // NewDBConfig initializes and returns a configuration object for managing database access
 func NewDBConfig(host string, port int, name string, user string, password string) *DBConfig {
 	return &DBConfig{
@@ -42,4 +37,9 @@ func NewDBConfig(host string, port int, name string, user string, password strin
 		User:     user,
 		Password: password,
 	}
+}
+
+// GetHostPort returns the concatenated host & port.
+func (dbcfg *DBConfig) GetHostPort() string {
+	return fmt.Sprintf("%v:%v", dbcfg.Host, dbcfg.Port)
 }

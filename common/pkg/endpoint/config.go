@@ -21,9 +21,10 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/credential"
+	"github.com/nvidia/bare-metal-manager-rest/common/pkg/credential"
 )
 
+// Config represents a network endpoint with optional authentication and TLS.
 type Config struct {
 	Host              string
 	Port              int
@@ -31,6 +32,7 @@ type Config struct {
 	CACertificatePath string
 }
 
+// Validate checks if the Config fields are set correctly.
 func (c *Config) Validate() error {
 	if c.Host == "" {
 		return errors.New("host is required")
@@ -47,6 +49,7 @@ func (c *Config) Validate() error {
 	return nil
 }
 
+// Target returns the host:port connection string.
 func (c *Config) Target() string {
 	return fmt.Sprintf("%s:%v", c.Host, c.Port)
 }

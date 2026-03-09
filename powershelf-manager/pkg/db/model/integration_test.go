@@ -27,11 +27,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
+	dbtestutil "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/testutil"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/vendor"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/db"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/db/migrations"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/db/postgres"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/db/testutil"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/objects/powershelf"
 )
 
@@ -45,25 +44,25 @@ func skipIfNoDatabase(t *testing.T) {
 }
 
 // setupTestDB creates a fresh test database with migrations applied
-func setupTestDB(t *testing.T) (*postgres.Postgres, func()) {
+func setupTestDB(t *testing.T) (*cdb.Session, func()) {
 	t.Helper()
 	ctx := context.Background()
 
-	dbConf, err := db.BuildDBConfigFromEnv()
+	dbConf, err := cdb.ConfigFromEnv()
 	require.NoError(t, err, "Failed to build DB config from env")
 
-	pg, err := testutil.CreateTestDB(ctx, t, dbConf)
+	session, err := dbtestutil.CreateTestDB(ctx, t, dbConf)
 	require.NoError(t, err, "Failed to create test database")
 
 	// Run migrations
-	err = migrations.Migrate(ctx, pg)
+	err = migrations.MigrateWithDB(ctx, session.DB)
 	require.NoError(t, err, "Failed to run migrations")
 
 	cleanup := func() {
-		pg.Close(ctx)
+		session.Close()
 	}
 
-	return pg, cleanup
+	return session, cleanup
 }
 
 // parseMac is a test helper that parses a MAC address and converts to MacAddr
@@ -85,7 +84,7 @@ func parseIP(t *testing.T, s string) IPAddr {
 func TestIntegration_PMC_CreateAndGet(t *testing.T) {
 	skipIfNoDatabase(t)
 
-	pg, cleanup := setupTestDB(t)
+	session, cleanup := setupTestDB(t)
 	defer cleanup()
 
 	ctx := context.Background()
@@ -101,7 +100,7 @@ func TestIntegration_PMC_CreateAndGet(t *testing.T) {
 	}
 
 	// Insert via transaction
-	tx, err := pg.BeginTx(ctx)
+	tx, err := session.BeginTx(ctx)
 	require.NoError(t, err)
 
 	err = pmc.Create(ctx, tx)
@@ -112,7 +111,7 @@ func TestIntegration_PMC_CreateAndGet(t *testing.T) {
 
 	// Retrieve by MAC
 	query := &PMC{MacAddress: mac}
-	retrieved, err := query.Get(ctx, pg.DB())
+	retrieved, err := query.Get(ctx, session.DB)
 	assert.NoError(t, err, "Get by MAC should succeed")
 	assert.NotNil(t, retrieved)
 	assert.Equal(t, "00:11:22:33:44:55", retrieved.MacAddress.String())
@@ -121,7 +120,7 @@ func TestIntegration_PMC_CreateAndGet(t *testing.T) {
 
 	// Retrieve by IP
 	queryByIP := &PMC{IPAddress: ip}
-	retrievedByIP, err := queryByIP.Get(ctx, pg.DB())
+	retrievedByIP, err := queryByIP.Get(ctx, session.DB)
 	assert.NoError(t, err, "Get by IP should succeed")
 	assert.NotNil(t, retrievedByIP)
 	assert.Equal(t, "00:11:22:33:44:55", retrievedByIP.MacAddress.String())
@@ -130,7 +129,7 @@ func TestIntegration_PMC_CreateAndGet(t *testing.T) {
 func TestIntegration_PMC_Patch(t *testing.T) {
 	skipIfNoDatabase(t)
 
-	pg, cleanup := setupTestDB(t)
+	session, cleanup := setupTestDB(t)
 	defer cleanup()
 
 	ctx := context.Background()
@@ -145,7 +144,7 @@ func TestIntegration_PMC_Patch(t *testing.T) {
 		IPAddress:  ip,
 	}
 
-	tx, err := pg.BeginTx(ctx)
+	tx, err := session.BeginTx(ctx)
 	require.NoError(t, err)
 	require.NoError(t, pmc.Create(ctx, tx))
 	require.NoError(t, tx.Commit())
@@ -153,12 +152,12 @@ func TestIntegration_PMC_Patch(t *testing.T) {
 	// Patch IP
 	newIP := parseIP(t, "10.0.0.2")
 	pmc.IPAddress = newIP
-	err = pmc.Patch(ctx, pg.DB())
+	err = pmc.Patch(ctx, session.DB)
 	assert.NoError(t, err, "Patch should succeed")
 
 	// Verify patch
 	query := &PMC{MacAddress: mac}
-	retrieved, err := query.Get(ctx, pg.DB())
+	retrieved, err := query.Get(ctx, session.DB)
 	assert.NoError(t, err)
 	assert.Equal(t, "10.0.0.2", retrieved.IPAddress.String())
 }
@@ -166,7 +165,7 @@ func TestIntegration_PMC_Patch(t *testing.T) {
 func TestIntegration_FirmwareUpdate_CreateAndGet(t *testing.T) {
 	skipIfNoDatabase(t)
 
-	pg, cleanup := setupTestDB(t)
+	session, cleanup := setupTestDB(t)
 	defer cleanup()
 
 	ctx := context.Background()
@@ -180,20 +179,20 @@ func TestIntegration_FirmwareUpdate_CreateAndGet(t *testing.T) {
 		IPAddress:  ip,
 	}
 
-	tx, err := pg.BeginTx(ctx)
+	tx, err := session.BeginTx(ctx)
 	require.NoError(t, err)
 	require.NoError(t, pmc.Create(ctx, tx))
 	require.NoError(t, tx.Commit())
 
 	// Create FirmwareUpdate - use net.HardwareAddr for the function signature
 	netMac := mac.HardwareAddr()
-	fu, err := NewFirmwareUpdate(ctx, pg.DB(), netMac, powershelf.PMC, "1.0.0", "2.0.0")
+	fu, err := NewFirmwareUpdate(ctx, session.DB, netMac, powershelf.PMC, "1.0.0", "2.0.0")
 	assert.NoError(t, err, "NewFirmwareUpdate should succeed")
 	assert.NotNil(t, fu)
 	assert.Equal(t, powershelf.FirmwareStateQueued, fu.State)
 
 	// Get FirmwareUpdate
-	retrieved, err := GetFirmwareUpdate(ctx, pg.DB(), netMac, powershelf.PMC)
+	retrieved, err := GetFirmwareUpdate(ctx, session.DB, netMac, powershelf.PMC)
 	assert.NoError(t, err, "GetFirmwareUpdate should succeed")
 	assert.NotNil(t, retrieved)
 	assert.Equal(t, "1.0.0", retrieved.VersionFrom)
@@ -204,7 +203,7 @@ func TestIntegration_FirmwareUpdate_CreateAndGet(t *testing.T) {
 func TestIntegration_FirmwareUpdate_UpdateState(t *testing.T) {
 	skipIfNoDatabase(t)
 
-	pg, cleanup := setupTestDB(t)
+	session, cleanup := setupTestDB(t)
 	defer cleanup()
 
 	ctx := context.Background()
@@ -218,22 +217,22 @@ func TestIntegration_FirmwareUpdate_UpdateState(t *testing.T) {
 		IPAddress:  ip,
 	}
 
-	tx, err := pg.BeginTx(ctx)
+	tx, err := session.BeginTx(ctx)
 	require.NoError(t, err)
 	require.NoError(t, pmc.Create(ctx, tx))
 	require.NoError(t, tx.Commit())
 
 	// Create FirmwareUpdate
 	netMac := mac.HardwareAddr()
-	fu, err := NewFirmwareUpdate(ctx, pg.DB(), netMac, powershelf.PSU, "1.0.0", "2.0.0")
+	fu, err := NewFirmwareUpdate(ctx, session.DB, netMac, powershelf.PSU, "1.0.0", "2.0.0")
 	require.NoError(t, err)
 
 	// Update state
-	err = fu.UpdateFirmwareUpdateState(ctx, pg.DB(), powershelf.FirmwareStateCompleted, "")
+	err = fu.UpdateFirmwareUpdateState(ctx, session.DB, powershelf.FirmwareStateCompleted, "")
 	assert.NoError(t, err, "UpdateFirmwareUpdateState should succeed")
 
 	// Verify
-	retrieved, err := GetFirmwareUpdate(ctx, pg.DB(), netMac, powershelf.PSU)
+	retrieved, err := GetFirmwareUpdate(ctx, session.DB, netMac, powershelf.PSU)
 	assert.NoError(t, err)
 	assert.Equal(t, powershelf.FirmwareStateCompleted, retrieved.State)
 	assert.True(t, retrieved.IsTerminal())
@@ -242,7 +241,7 @@ func TestIntegration_FirmwareUpdate_UpdateState(t *testing.T) {
 func TestIntegration_FirmwareUpdate_GetAllPending(t *testing.T) {
 	skipIfNoDatabase(t)
 
-	pg, cleanup := setupTestDB(t)
+	session, cleanup := setupTestDB(t)
 	defer cleanup()
 
 	ctx := context.Background()
@@ -256,23 +255,23 @@ func TestIntegration_FirmwareUpdate_GetAllPending(t *testing.T) {
 		ip := parseIP(t, ips[i])
 		pmc := &PMC{MacAddress: mac, Vendor: vendor.VendorCodeLiteon, IPAddress: ip}
 
-		tx, err := pg.BeginTx(ctx)
+		tx, err := session.BeginTx(ctx)
 		require.NoError(t, err)
 		require.NoError(t, pmc.Create(ctx, tx))
 		require.NoError(t, tx.Commit())
 
-		_, err = NewFirmwareUpdate(ctx, pg.DB(), mac.HardwareAddr(), powershelf.PMC, "1.0.0", "2.0.0")
+		_, err = NewFirmwareUpdate(ctx, session.DB, mac.HardwareAddr(), powershelf.PMC, "1.0.0", "2.0.0")
 		require.NoError(t, err)
 	}
 
 	// Mark one as completed
 	mac1 := parseMac(t, macStrs[0])
-	fu, err := GetFirmwareUpdate(ctx, pg.DB(), mac1.HardwareAddr(), powershelf.PMC)
+	fu, err := GetFirmwareUpdate(ctx, session.DB, mac1.HardwareAddr(), powershelf.PMC)
 	require.NoError(t, err)
-	require.NoError(t, fu.UpdateFirmwareUpdateState(ctx, pg.DB(), powershelf.FirmwareStateCompleted, ""))
+	require.NoError(t, fu.UpdateFirmwareUpdateState(ctx, session.DB, powershelf.FirmwareStateCompleted, ""))
 
 	// Get all pending - should be 2
-	pending, err := GetAllPendingFirmwareUpdates(ctx, pg.DB())
+	pending, err := GetAllPendingFirmwareUpdates(ctx, session.DB)
 	assert.NoError(t, err)
 	assert.Len(t, pending, 2, "Should have 2 pending updates")
 }
@@ -280,7 +279,7 @@ func TestIntegration_FirmwareUpdate_GetAllPending(t *testing.T) {
 func TestIntegration_FirmwareUpdate_ListForPMC(t *testing.T) {
 	skipIfNoDatabase(t)
 
-	pg, cleanup := setupTestDB(t)
+	session, cleanup := setupTestDB(t)
 	defer cleanup()
 
 	ctx := context.Background()
@@ -290,7 +289,7 @@ func TestIntegration_FirmwareUpdate_ListForPMC(t *testing.T) {
 	ip := parseIP(t, "192.168.1.100")
 	pmc := &PMC{MacAddress: mac, Vendor: vendor.VendorCodeLiteon, IPAddress: ip}
 
-	tx, err := pg.BeginTx(ctx)
+	tx, err := session.BeginTx(ctx)
 	require.NoError(t, err)
 	require.NoError(t, pmc.Create(ctx, tx))
 	require.NoError(t, tx.Commit())
@@ -298,23 +297,23 @@ func TestIntegration_FirmwareUpdate_ListForPMC(t *testing.T) {
 	netMac := mac.HardwareAddr()
 
 	// Create updates for different components
-	_, err = NewFirmwareUpdate(ctx, pg.DB(), netMac, powershelf.PMC, "1.0.0", "2.0.0")
+	_, err = NewFirmwareUpdate(ctx, session.DB, netMac, powershelf.PMC, "1.0.0", "2.0.0")
 	require.NoError(t, err)
 
 	// Wait a moment to ensure different created_at times
 	time.Sleep(10 * time.Millisecond)
 
-	_, err = NewFirmwareUpdate(ctx, pg.DB(), netMac, powershelf.PSU, "3.0.0", "4.0.0")
+	_, err = NewFirmwareUpdate(ctx, session.DB, netMac, powershelf.PSU, "3.0.0", "4.0.0")
 	require.NoError(t, err)
 
 	// List all for PMC
-	updates, err := ListFirmwareUpdatesForPMC(ctx, pg.DB(), netMac, nil)
+	updates, err := ListFirmwareUpdatesForPMC(ctx, session.DB, netMac, nil)
 	assert.NoError(t, err)
 	assert.Len(t, updates, 2, "Should have 2 updates")
 
 	// List filtered by component
 	pmcComp := powershelf.PMC
-	updates, err = ListFirmwareUpdatesForPMC(ctx, pg.DB(), netMac, &pmcComp)
+	updates, err = ListFirmwareUpdatesForPMC(ctx, session.DB, netMac, &pmcComp)
 	assert.NoError(t, err)
 	assert.Len(t, updates, 1, "Should have 1 PMC update")
 	assert.Equal(t, powershelf.PMC, updates[0].Component)

@@ -26,7 +26,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/credential"
+	"github.com/nvidia/bare-metal-manager-rest/common/pkg/credential"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -182,7 +182,7 @@ func TestVaultManager_PutGet(t *testing.T) {
 	}{
 		"put and get valid credential": {
 			putMAC:   "00:11:22:33:44:55",
-			putCred:  credential.New("admin", "secret"),
+			putCred:  newCred("admin", "secret"),
 			getMAC:   "00:11:22:33:44:55",
 			wantErr:  false,
 			wantUser: "admin",
@@ -190,13 +190,13 @@ func TestVaultManager_PutGet(t *testing.T) {
 		},
 		"put invalid credential (empty user) returns error": {
 			putMAC:  "00:11:22:33:44:66",
-			putCred: credential.New("", "nopass"),
+			putCred: newCred("", "nopass"),
 			getMAC:  "00:11:22:33:44:66",
 			wantErr: true,
 		},
 		"get missing credential returns not found": {
 			putMAC:  "aa:bb:cc:dd:ee:ff",
-			putCred: credential.New("user", "p"),
+			putCred: newCred("user", "p"),
 			getMAC:  "66:77:88:99:00:11",
 			wantErr: true,
 		},
@@ -245,27 +245,27 @@ func TestVaultManager_Patch(t *testing.T) {
 	}{
 		"patch existing replaces value": {
 			setupMAC:  "00:11:22:33:44:55",
-			setupCred: credential.New("admin", "old"),
+			setupCred: newCred("admin", "old"),
 			patchMAC:  "00:11:22:33:44:55",
-			patchCred: credential.New("root", "new"),
+			patchCred: newCred("root", "new"),
 			wantErr:   false,
 			wantUser:  "root",
 			wantPass:  "new",
 		},
 		"patch missing creates value (same as Put)": {
 			setupMAC:  "aa:bb:cc:dd:ee:ff",
-			setupCred: credential.New("user", "pass"),
+			setupCred: newCred("user", "pass"),
 			patchMAC:  "66:77:88:99:00:11",
-			patchCred: credential.New("root", "new"),
+			patchCred: newCred("root", "new"),
 			wantErr:   false,
 			wantUser:  "root",
 			wantPass:  "new",
 		},
 		"patch with invalid credential returns error": {
 			setupMAC:  "00:11:22:33:44:66",
-			setupCred: credential.New("user", "pass"),
+			setupCred: newCred("user", "pass"),
 			patchMAC:  "00:11:22:33:44:66",
-			patchCred: credential.New("", "nopass"),
+			patchCred: newCred("", "nopass"),
 			wantErr:   true,
 		},
 	}
@@ -307,13 +307,13 @@ func TestVaultManager_Delete(t *testing.T) {
 	}{
 		"delete existing removes entry": {
 			putMAC:       "00:11:22:33:44:55",
-			putCred:      credential.New("admin", "secret"),
+			putCred:      newCred("admin", "secret"),
 			delMAC:       "00:11:22:33:44:55",
 			expectErrGet: true,
 		},
 		"delete missing returns nil and does not affect other entries": {
 			putMAC:       "aa:bb:cc:dd:ee:ff",
-			putCred:      credential.New("user", "p"),
+			putCred:      newCred("user", "p"),
 			delMAC:       "66:77:88:99:00:11",
 			expectErrGet: false,
 		},
@@ -359,16 +359,16 @@ func TestVaultManager_Keys(t *testing.T) {
 		},
 		"one entry returns that MAC": {
 			putPairs: [][2]interface{}{
-				{"00:11:22:33:44:55", credential.New("admin", "secret")},
+				{"00:11:22:33:44:55", newCred("admin", "secret")},
 			},
 			expectCount: 1,
 			expectSet:   map[string]bool{"00:11:22:33:44:55": true},
 		},
 		"multiple entries return all MACs": {
 			putPairs: [][2]interface{}{
-				{"00:11:22:33:44:55", credential.New("admin", "a")},
-				{"66:77:88:99:00:11", credential.New("root", "r")},
-				{"aa:bb:cc:dd:ee:ff", credential.New("user", "u")},
+				{"00:11:22:33:44:55", newCred("admin", "a")},
+				{"66:77:88:99:00:11", newCred("root", "r")},
+				{"aa:bb:cc:dd:ee:ff", newCred("user", "u")},
 			},
 			expectCount: 3,
 			expectSet: map[string]bool{

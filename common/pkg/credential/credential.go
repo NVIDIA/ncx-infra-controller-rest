@@ -14,13 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package credential
 
 import (
-	"errors"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/secretstring"
 	"os"
 	"strings"
+
+	"github.com/nvidia/bare-metal-manager-rest/common/pkg/secretstring"
 )
 
 // Credential holds authentication information with password protection
@@ -30,8 +31,8 @@ type Credential struct {
 }
 
 // New creates a Credential with the given user and password.
-func New(user string, password string) *Credential {
-	return &Credential{
+func New(user string, password string) Credential {
+	return Credential{
 		User:     user,
 		Password: secretstring.New(password),
 	}
@@ -94,27 +95,4 @@ func (cred *Credential) Retrieve() (*string, *string) {
 	// Create a copy to avoid exposing internal state
 	c := *cred
 	return &c.User, &c.Password.Value
-}
-
-// ToMap converts a Credential to a map[string]interface{} suitable for Vault storage
-func (c Credential) ToMap() map[string]interface{} {
-	return map[string]interface{}{
-		"username": c.User,
-		"password": c.Password.Value, // Store the actual password value in Vault
-	}
-}
-
-// FromMap converts a map[string]interface{} from Vault storage to a Credential
-func FromMap(data map[string]interface{}) (*Credential, error) {
-	user, ok := data["username"].(string)
-	if !ok {
-		return nil, errors.New("invalid username value")
-	}
-
-	password, ok := data["password"].(string)
-	if !ok {
-		return nil, errors.New("invalid password value")
-	}
-
-	return New(user, password), nil
 }

@@ -19,44 +19,46 @@ package pmcregistry
 import (
 	"context"
 	"fmt"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/errors"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/converter/dao"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/db"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/db/migrations"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/db/model"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/db/postgres"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/objects/pmc"
 	"net"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/uptrace/bun"
+
+	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
+	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/errors"
+	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/converter/dao"
+	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/db/migrations"
+	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/db/model"
+	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/objects/pmc"
 )
 
 // PostgresPmcRegistry implements the PmcRegister interface and it uses PostgresQL
 // as the datastore.
 type PostgresPmcRegistry struct {
-	pg *postgres.Postgres
+	session *cdb.Session
 }
 
 // newPostgresRegistry initializes connectivity to Postgres and runs any pending migrations.
-func newPostgresRegistry(ctx context.Context, c db.Config) (*PostgresPmcRegistry, error) {
-	pg, err := postgres.New(ctx, c)
+func newPostgresRegistry(ctx context.Context, c cdb.Config) (*PostgresPmcRegistry, error) {
+	session, err := cdb.NewSessionFromConfig(ctx, c)
 	if err != nil {
 		return nil, err
 	}
 
 	// Run migrations automatically at startup to ensure schema is up to date
-	if err := migrations.Migrate(ctx, pg); err != nil {
+	if err := migrations.MigrateWithDB(ctx, session.DB); err != nil {
+		session.Close()
+
 		return nil, fmt.Errorf("failed to run migrations: %v", err)
 	}
 
-	return &PostgresPmcRegistry{pg}, nil
+	return &PostgresPmcRegistry{session}, nil
 }
 
 // NewPostgresRegistryFromDB creates a PostgresPmcRegistry from an existing database connection.
 // This is useful for tests where migrations have already been applied.
-func NewPostgresRegistryFromDB(pg *postgres.Postgres) *PostgresPmcRegistry {
-	return &PostgresPmcRegistry{pg: pg}
+func NewPostgresRegistryFromDB(session *cdb.Session) *PostgresPmcRegistry {
+	return &PostgresPmcRegistry{session: session}
 }
 
 // Start starts the PostgresStore instance. Currently, it is no-op.
@@ -68,14 +70,15 @@ func (ps *PostgresPmcRegistry) Start(ctx context.Context) error {
 // Stop stops the PostgresStore instance by closing the PostgresQL connection.
 func (ps *PostgresPmcRegistry) Stop(ctx context.Context) error {
 	log.Printf("Stopping PostgresQL PMC Register")
-	return ps.pg.Close(ctx)
+	ps.session.Close()
+	return nil
 }
 
 func (ps *PostgresPmcRegistry) runInTx(
 	ctx context.Context,
 	operation func(ctx context.Context, tx bun.Tx) error,
 ) error {
-	if err := ps.pg.RunInTx(ctx, operation); err != nil {
+	if err := ps.session.RunInTx(ctx, operation); err != nil {
 		if !errors.IsGRPCError(err) {
 			err = errors.GRPCErrorInternal(err.Error())
 		}
@@ -111,7 +114,7 @@ func (ps *PostgresPmcRegistry) GetPmc(
 		MacAddress: model.MacAddr(mac),
 	}
 
-	cur, err := pmcModel.Get(ctx, ps.pg.DB())
+	cur, err := pmcModel.Get(ctx, ps.session.DB)
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +136,7 @@ func (ps *PostgresPmcRegistry) IsPmcRegistered(ctx context.Context, mac net.Hard
 // GetAllPmcs returns all PMCs mapped to domain objects.
 func (ps *PostgresPmcRegistry) GetAllPmcs(ctx context.Context) ([]*pmc.PMC, error) {
 	pmcDaos := make([]model.PMC, 0)
-	err := ps.pg.DB().NewSelect().Model(&pmcDaos).Scan(ctx)
+	err := ps.session.DB.NewSelect().Model(&pmcDaos).Scan(ctx)
 	if err != nil {
 		return nil, errors.GRPCErrorInternal(err.Error())
 	}

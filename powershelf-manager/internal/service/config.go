@@ -17,14 +17,12 @@
 package service
 
 import (
-	"errors"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/credential"
+	"os"
+
+	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/credentials"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/db"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/pmcregistry"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/powershelfmanager"
-	"os"
-	"strconv"
 )
 
 // Config captures runtime settings for running the gRPC service, including the public port,
@@ -33,7 +31,7 @@ type Config struct {
 	Port          int
 	DataStoreType powershelfmanager.DataStoreType
 	VaultConf     credentials.VaultConfig
-	DBConf        db.Config
+	DBConf        cdb.Config
 }
 
 // toCredentialManagerConf converts the public service Config into a pmcregistry.Config,
@@ -92,22 +90,14 @@ func (c *Config) ToPsmConf() (*powershelfmanager.Config, error) {
 	return &psmConf, nil
 }
 
-// BuildDBConfigFromEnv builds db.Config from environment variables (DB_ADDR, DB_PORT, DB_USER, DB_PASSWORD, DB_DATABASE).
-// Returns an error if the port is not a valid integer.
-func BuildDBConfigFromEnv() (*db.Config, error) {
-	port, err := strconv.Atoi(os.Getenv("DB_PORT"))
+// BuildDBConfigFromEnv builds cdb.Config from environment variables.
+// Delegates to cdb.ConfigFromEnv() and returns a pointer for backward compatibility.
+func BuildDBConfigFromEnv() (*cdb.Config, error) {
+	c, err := cdb.ConfigFromEnv()
 	if err != nil {
-		return nil, errors.New("fail to retrieve port")
+		return nil, err
 	}
-
-	dbConf := db.Config{
-		Host:       os.Getenv("DB_ADDR"),
-		Port:       port,
-		Credential: credential.NewFromEnv("DB_USER", "DB_PASSWORD"),
-		DBName:     os.Getenv("DB_DATABASE"),
-	}
-
-	return &dbConf, nil
+	return &c, nil
 }
 
 // BuildVaultConfigFromEnv builds credentials.VaultConfig from environment variables (VAULT_ADDR, VAULT_TOKEN).

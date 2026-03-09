@@ -87,7 +87,7 @@ func GetTestDBSession(t *testing.T, reset bool) *db.Session {
 	// Create test DB
 	tdbcfg := getTestDBParams()
 
-	dbSession, err := db.NewSession(tdbcfg.Host, tdbcfg.Port, "postgres", tdbcfg.User, tdbcfg.Password, "")
+	dbSession, err := db.NewSession(context.Background(), tdbcfg.Host, tdbcfg.Port, "postgres", tdbcfg.User, tdbcfg.Password, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -117,7 +117,7 @@ func GetTestDBSession(t *testing.T, reset bool) *db.Session {
 	dbSession.Close()
 
 	// Create another session to the forgetest database
-	dbSession, err = db.NewSession(tdbcfg.Host, tdbcfg.Port, tdbcfg.Name, tdbcfg.User, tdbcfg.Password, "")
+	dbSession, err = db.NewSession(context.Background(), tdbcfg.Host, tdbcfg.Port, tdbcfg.Name, tdbcfg.User, tdbcfg.Password, "")
 	if err != nil {
 		t.Fatal(err)
 	}

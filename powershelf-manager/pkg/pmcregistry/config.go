@@ -16,7 +16,7 @@
  */
 package pmcregistry
 
-import "github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/db"
+import cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 
 // PmcRegisterType enumerates registry backends.
 type PmcRegisterType string
@@ -29,7 +29,7 @@ const (
 // Config holds the selected backend type and DB configuration.
 type Config struct {
 	DSType PmcRegisterType
-	DSConf db.Config
+	DSConf cdb.Config
 }
 
 // StringToDSType converts a string to a PmcRegisterType.

@@ -62,7 +62,7 @@ import (
 	_ "github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model"
 )
 
-func InitTemporalClients(tcfg *config.TemporalConfig, tracingEnabled bool) (tsdkClient.Client, tsdkClient.NamespaceClient, error) {
+func InitTemporalClients(tcfg *cconfig.TemporalConfig, tracingEnabled bool) (tsdkClient.Client, tsdkClient.NamespaceClient, error) {
 	var tc tsdkClient.Client
 	var tnc tsdkClient.NamespaceClient
 

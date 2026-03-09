@@ -37,7 +37,7 @@ func testTxGetTestSession(t *testing.T) *Session {
 		host = "postgres"
 		port = 5432
 	}
-	dbSession, err := NewSession(host, port, "postgres", "postgres", "postgres", "")
+	dbSession, err := NewSession(context.Background(), host, port, "postgres", "postgres", "postgres", "")
 	assert.Nil(t, err)
 	dbSession.DB.AddQueryHook(bundebug.NewQueryHook(
 		bundebug.WithEnabled(false),
@@ -67,7 +67,7 @@ func TestTxBase(t *testing.T) {
 	dbSession := testTxGetTestSession(t)
 	defer dbSession.Close()
 	testTxSetupSchema(t, dbSession)
-	badSession, err := NewSession("localhost", 1234, "postgres", "postgres", "postgres", "")
+	badSession, err := NewSession(context.Background(), "localhost", 1234, "postgres", "postgres", "postgres", "")
 	assert.Nil(t, err)
 	ctx := context.Background()
 	txOpts := sql.TxOptions{Isolation: sql.LevelRepeatableRead}

@@ -20,11 +20,16 @@ import (
 	"net"
 	"testing"
 
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/credential"
+	"github.com/nvidia/bare-metal-manager-rest/common/pkg/credential"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/vendor"
 
 	"github.com/stretchr/testify/assert"
 )
+
+func newCred(u, p string) *credential.Credential {
+	c := credential.New(u, p)
+	return &c
+}
 
 func TestNew(t *testing.T) {
 	testCases := map[string]struct {
@@ -41,7 +46,7 @@ func TestNew(t *testing.T) {
 			mac:        "001122334455",
 			ip:         "192.168.1.100",
 			vcode:      vendor.VendorCodeLiteon,
-			cred:       credential.New("admin", "password"),
+			cred:       newCred("admin", "password"),
 			expectErr:  false,
 			wantMacStr: "00:11:22:33:44:55",
 			wantIPStr:  "192.168.1.100",
@@ -51,7 +56,7 @@ func TestNew(t *testing.T) {
 			mac:        "00:11:22:33:44:55",
 			ip:         "10.0.0.5",
 			vcode:      vendor.VendorCodeLiteon,
-			cred:       credential.New("user", "pass"),
+			cred:       newCred("user", "pass"),
 			expectErr:  false,
 			wantMacStr: "00:11:22:33:44:55",
 			wantIPStr:  "10.0.0.5",
@@ -61,28 +66,28 @@ func TestNew(t *testing.T) {
 			mac:       "invalid-mac",
 			ip:        "192.168.1.100",
 			vcode:     vendor.VendorCodeLiteon,
-			cred:      credential.New("admin", "password"),
+			cred:      newCred("admin", "password"),
 			expectErr: true,
 		},
 		"invalid ip string": {
 			mac:       "00:11:22:33:44:55",
 			ip:        "not-an-ip",
 			vcode:     vendor.VendorCodeLiteon,
-			cred:      credential.New("admin", "password"),
+			cred:      newCred("admin", "password"),
 			expectErr: true,
 		},
 		"unsupported vendor code (Unsupported)": {
 			mac:       "00:11:22:33:44:55",
 			ip:        "192.168.1.100",
 			vcode:     vendor.VendorCodeUnsupported,
-			cred:      credential.New("admin", "password"),
+			cred:      newCred("admin", "password"),
 			expectErr: true,
 		},
 		"unsupported vendor code (Max sentinel)": {
 			mac:       "00:11:22:33:44:55",
 			ip:        "192.168.1.100",
 			vcode:     vendor.VendorCodeMax,
-			cred:      credential.New("admin", "password"),
+			cred:      newCred("admin", "password"),
 			expectErr: true,
 		},
 	}
@@ -126,24 +131,24 @@ func TestSetCredential(t *testing.T) {
 	}{
 		"set new credential on empty PMC": {
 			startPMC: &PMC{},
-			newCred:  credential.New("admin", "secret"),
+			newCred:  newCred("admin", "secret"),
 			wantSet:  true,
 			wantUser: "admin",
 			wantPass: "secret",
 		},
 		"replace existing credential": {
 			startPMC: func() *PMC {
-				p, _ := New("00:11:22:33:44:55", "192.168.1.10", vendor.VendorCodeLiteon, credential.New("old", "oldpass"))
+				p, _ := New("00:11:22:33:44:55", "192.168.1.10", vendor.VendorCodeLiteon, newCred("old", "oldpass"))
 				return p
 			}(),
-			newCred:  credential.New("new", "newpass"),
+			newCred:  newCred("new", "newpass"),
 			wantSet:  true,
 			wantUser: "new",
 			wantPass: "newpass",
 		},
 		"nil credential does nothing": {
 			startPMC: func() *PMC {
-				p, _ := New("00:11:22:33:44:55", "192.168.1.10", vendor.VendorCodeLiteon, credential.New("old", "oldpass"))
+				p, _ := New("00:11:22:33:44:55", "192.168.1.10", vendor.VendorCodeLiteon, newCred("old", "oldpass"))
 				return p
 			}(),
 			newCred: nil,
@@ -193,7 +198,7 @@ func TestSetIP(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			p, err := New("00:11:22:33:44:55", tc.startIP, vendor.VendorCodeLiteon, credential.New("u", "p"))
+			p, err := New("00:11:22:33:44:55", tc.startIP, vendor.VendorCodeLiteon, newCred("u", "p"))
 			assert.NoError(t, err)
 			p.SetIP(tc.setTo)
 			if tc.wantNil {
@@ -234,7 +239,7 @@ func TestSetVendor(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			p, err := New("00:11:22:33:44:55", "192.168.1.10", tc.startCode, credential.New("u", "p"))
+			p, err := New("00:11:22:33:44:55", "192.168.1.10", tc.startCode, newCred("u", "p"))
 			assert.NoError(t, err)
 			err = p.SetVendor(tc.setTo)
 			if tc.expectErr {
@@ -249,7 +254,7 @@ func TestSetVendor(t *testing.T) {
 }
 
 func TestPatch(t *testing.T) {
-	credPtr := func(u, p string) *credential.Credential { return credential.New(u, p) }
+	credPtr := func(u, p string) *credential.Credential { return newCred(u, p) }
 
 	// Helper to create PMC quickly
 	makePMC := func(mac, ip string, v vendor.VendorCode, cred *credential.Credential) PMC {
@@ -340,7 +345,7 @@ func TestPatch(t *testing.T) {
 				Vendor: vendor.CodeToVendor(vendor.VendorCodeLiteon),
 				Credential: &credential.Credential{ // empty user and empty password => no change
 					User:     "",
-					Password: credential.New("", "").Password,
+					Password: newCred("", "").Password,
 				},
 			},
 			wantPatched: false,

@@ -28,10 +28,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/uptrace/bun"
 
+	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/carbideapi"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/common/utils"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/config"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/db"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/db/model"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/psmapi"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
@@ -49,7 +49,7 @@ func TestInventory(t *testing.T) {
 	// Reset package-level state to avoid cross-test pollution
 	lastUpdateMachineIDs = time.Time{}
 
-	dbConf, err := db.BuildDBConfigFromEnv()
+	dbConf, err := cdb.ConfigFromEnv()
 	assert.Nil(t, err)
 	pool, err := utils.UnitTestDB(ctx, t, dbConf)
 	assert.Nil(t, err)
@@ -74,21 +74,21 @@ func TestInventory(t *testing.T) {
 		Manufacturer: "TestMfg",
 		SerialNumber: "rack-serial-001",
 	}
-	err = rack.Create(ctx, pool.DB())
+	err = rack.Create(ctx, pool.DB)
 	assert.Nil(t, err)
 
 	// Create components with required fields (manufacturer and rack_id are NOT NULL)
 	c := model.Component{SerialNumber: "serial2", Manufacturer: "TestMfg", RackID: rack.ID}
-	err = c.Create(ctx, pool.DB())
+	err = c.Create(ctx, pool.DB)
 	assert.Nil(t, err)
 	c = model.Component{SerialNumber: "serial4", Manufacturer: "TestMfg2", RackID: rack.ID}
-	err = c.Create(ctx, pool.DB())
+	err = c.Create(ctx, pool.DB)
 	assert.Nil(t, err)
 
 	psmMock := psmapi.NewMockClient()
 	runInventoryOne(ctx, &cfg, pool, grpcMock, psmMock)
 
-	rows, err := pool.DB().Query("SELECT serial_number, power_state FROM component;")
+	rows, err := pool.DB.Query("SELECT serial_number, power_state FROM component;")
 	assert.NotNil(t, rows)
 	assert.Nil(t, err)
 	defer rows.Close()
@@ -125,7 +125,7 @@ func TestHandleExpectedPowershelves(t *testing.T) {
 	// Reset package-level state to avoid cross-test pollution
 	lastUpdateMachineIDs = time.Time{}
 
-	dbConf, err := db.BuildDBConfigFromEnv()
+	dbConf, err := cdb.ConfigFromEnv()
 	assert.Nil(t, err)
 	pool, err := utils.UnitTestDB(ctx, t, dbConf)
 	assert.Nil(t, err)
@@ -140,7 +140,7 @@ func TestHandleExpectedPowershelves(t *testing.T) {
 		Manufacturer: "TestMfg",
 		SerialNumber: "rack-serial-001",
 	}
-	err = rack.Create(ctx, pool.DB())
+	err = rack.Create(ctx, pool.DB)
 	assert.Nil(t, err)
 
 	// Create PowerShelf components with PMCs (BMCs)
@@ -152,7 +152,7 @@ func TestHandleExpectedPowershelves(t *testing.T) {
 		SerialNumber: "ps-serial-001",
 		RackID:       rack.ID,
 	}
-	err = ps1.Create(ctx, pool.DB())
+	err = ps1.Create(ctx, pool.DB)
 	assert.Nil(t, err)
 
 	// Add PMC (BMC) for powershelf 1
@@ -174,7 +174,7 @@ func TestHandleExpectedPowershelves(t *testing.T) {
 		SerialNumber: "ps-serial-002",
 		RackID:       rack.ID,
 	}
-	err = ps2.Create(ctx, pool.DB())
+	err = ps2.Create(ctx, pool.DB)
 	assert.Nil(t, err)
 
 	pmc2 := model.BMC{
@@ -195,7 +195,7 @@ func TestHandleExpectedPowershelves(t *testing.T) {
 		SerialNumber: "ps-serial-003",
 		RackID:       rack.ID,
 	}
-	err = ps3.Create(ctx, pool.DB())
+	err = ps3.Create(ctx, pool.DB)
 	assert.Nil(t, err)
 
 	pmc3 := model.BMC{
@@ -217,7 +217,7 @@ func TestHandleExpectedPowershelves(t *testing.T) {
 		RackID:          rack.ID,
 		FirmwareVersion: "1.0.0", // Old firmware version
 	}
-	err = ps4.Create(ctx, pool.DB())
+	err = ps4.Create(ctx, pool.DB)
 	assert.Nil(t, err)
 
 	pmc4 := model.BMC{
@@ -252,7 +252,7 @@ func TestHandleExpectedPowershelves(t *testing.T) {
 		RackID:          rack.ID,
 		FirmwareVersion: "1.0.0",
 	}
-	err = ps5.Create(ctx, pool.DB())
+	err = ps5.Create(ctx, pool.DB)
 	assert.Nil(t, err)
 
 	pmc5 := model.BMC{
@@ -287,7 +287,7 @@ func TestHandleExpectedPowershelves(t *testing.T) {
 		RackID:          rack.ID,
 		FirmwareVersion: "1.0.0",
 	}
-	err = ps6.Create(ctx, pool.DB())
+	err = ps6.Create(ctx, pool.DB)
 	assert.Nil(t, err)
 
 	pmc6 := model.BMC{
@@ -321,7 +321,7 @@ func TestHandleExpectedPowershelves(t *testing.T) {
 		SerialNumber: "ps-serial-007",
 		RackID:       rack.ID,
 	}
-	err = ps7.Create(ctx, pool.DB())
+	err = ps7.Create(ctx, pool.DB)
 	assert.Nil(t, err)
 
 	pmc7 := model.BMC{
@@ -411,7 +411,7 @@ func TestHandleExpectedPowershelves(t *testing.T) {
 	// Verify power state and firmware version updates in the component table
 	// PMC 4: Should have updated firmware version and PowerStateOn (all PSUs on)
 	var updatedPs4 model.Component
-	err = pool.DB().NewSelect().Model(&updatedPs4).Where("id = ?", ps4.ID).Scan(ctx)
+	err = pool.DB.NewSelect().Model(&updatedPs4).Where("id = ?", ps4.ID).Scan(ctx)
 	assert.Nil(t, err)
 	assert.Equal(t, "2.0.0", updatedPs4.FirmwareVersion, "PMC 4 firmware version should be updated")
 	assert.NotNil(t, updatedPs4.PowerState, "PMC 4 power state should be set")
@@ -419,7 +419,7 @@ func TestHandleExpectedPowershelves(t *testing.T) {
 
 	// PMC 5: Should have updated firmware version and PowerStateUnknown (mixed PSU states)
 	var updatedPs5 model.Component
-	err = pool.DB().NewSelect().Model(&updatedPs5).Where("id = ?", ps5.ID).Scan(ctx)
+	err = pool.DB.NewSelect().Model(&updatedPs5).Where("id = ?", ps5.ID).Scan(ctx)
 	assert.Nil(t, err)
 	assert.Equal(t, "2.1.0", updatedPs5.FirmwareVersion, "PMC 5 firmware version should be updated")
 	assert.NotNil(t, updatedPs5.PowerState, "PMC 5 power state should be set")
@@ -427,7 +427,7 @@ func TestHandleExpectedPowershelves(t *testing.T) {
 
 	// PMC 6: Should have updated firmware version and PowerStateOff (all PSUs off)
 	var updatedPs6 model.Component
-	err = pool.DB().NewSelect().Model(&updatedPs6).Where("id = ?", ps6.ID).Scan(ctx)
+	err = pool.DB.NewSelect().Model(&updatedPs6).Where("id = ?", ps6.ID).Scan(ctx)
 	assert.Nil(t, err)
 	assert.Equal(t, "2.2.0", updatedPs6.FirmwareVersion, "PMC 6 firmware version should be updated")
 	assert.NotNil(t, updatedPs6.PowerState, "PMC 6 power state should be set")

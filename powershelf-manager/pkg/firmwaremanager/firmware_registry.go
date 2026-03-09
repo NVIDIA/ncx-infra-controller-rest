@@ -21,12 +21,11 @@ import (
 	"fmt"
 	"net"
 
+	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/errors"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/converter/dao"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/db"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/db/migrations"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/db/model"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/db/postgres"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/objects/powershelf"
 
 	log "github.com/sirupsen/logrus"
@@ -34,22 +33,24 @@ import (
 )
 
 type Registry struct {
-	pg *postgres.Postgres
+	session *cdb.Session
 }
 
 // newRegistry initializes connectivity to Postgres and runs any pending migrations.
-func newRegistry(ctx context.Context, c db.Config) (*Registry, error) {
-	pg, err := postgres.New(ctx, c)
+func newRegistry(ctx context.Context, c cdb.Config) (*Registry, error) {
+	session, err := cdb.NewSessionFromConfig(ctx, c)
 	if err != nil {
 		return nil, err
 	}
 
 	// Run migrations automatically at startup to ensure schema is up to date
-	if err := migrations.Migrate(ctx, pg); err != nil {
+	if err := migrations.MigrateWithDB(ctx, session.DB); err != nil {
+		session.Close()
+
 		return nil, fmt.Errorf("failed to run migrations: %v", err)
 	}
 
-	return &Registry{pg}, nil
+	return &Registry{session}, nil
 }
 
 // Start starts the PostgresStore instance. Currently, it is no-op.
@@ -61,14 +62,15 @@ func (ps *Registry) Start(ctx context.Context) error {
 // Stop stops the PostgresStore instance by closing the PostgresQL connection.
 func (ps *Registry) Stop(ctx context.Context) error {
 	log.Printf("Stopping PostgresQL FW Register")
-	return ps.pg.Close(ctx)
+	ps.session.Close()
+	return nil
 }
 
 func (ps *Registry) runInTx(
 	ctx context.Context,
 	operation func(ctx context.Context, tx bun.Tx) error,
 ) error {
-	if err := ps.pg.RunInTx(ctx, operation); err != nil {
+	if err := ps.session.RunInTx(ctx, operation); err != nil {
 		if !errors.IsGRPCError(err) {
 			err = errors.GRPCErrorInternal(err.Error())
 		}
@@ -104,7 +106,7 @@ func (ps *Registry) GetFwUpdate(
 	mac net.HardwareAddr,
 	component powershelf.Component,
 ) (*powershelf.FirmwareUpdate, error) {
-	fwUpdate, err := model.GetFirmwareUpdate(ctx, ps.pg.DB(), mac, component)
+	fwUpdate, err := model.GetFirmwareUpdate(ctx, ps.session.DB, mac, component)
 	if err != nil {
 		return nil, err
 	}

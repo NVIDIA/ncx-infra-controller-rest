@@ -29,8 +29,8 @@ import (
 	"github.com/spf13/cobra"
 	"go.temporal.io/sdk/worker"
 
+	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/carbideapi"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/db"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/nsmapi"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/psmapi"
 	svc "github.com/nvidia/bare-metal-manager-rest/rla/internal/service"
@@ -208,7 +208,7 @@ func loadComponentManagerConfig() (componentmanager.Config, error) {
 // createOperationRulesLoader creates a rule loader from configuration file.
 // Returns a loader that will be used by the resolver to load rules during Start().
 func doServe() {
-	dbConf, err := db.BuildDBConfigFromEnv()
+	dbConf, err := cdb.ConfigFromEnv()
 	if err != nil {
 		log.Fatal().Msgf("failed to retrieve DB conn information: %v", err)
 	}

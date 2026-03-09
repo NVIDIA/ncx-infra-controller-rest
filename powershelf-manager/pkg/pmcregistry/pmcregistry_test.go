@@ -22,7 +22,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/db"
+	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -37,14 +37,14 @@ func TestPmcRegistryNew(t *testing.T) {
 		"in-memory returns in-memory registry type": {
 			cfg: Config{
 				DSType: RegisterTypeInMemory,
-				DSConf: db.Config{}, // unused for in-memory
+				DSConf: cdb.Config{}, //nolint:exhaustruct // unused for in-memory
 			},
 			checkTypeFn: func() PmcRegistry { return NewMemRegistry() },
 		},
 		"postgres with invalid db config returns error": {
 			cfg: Config{
 				DSType: RegisterTypePostgres,
-				DSConf: db.Config{}, // zero-value invalid; db.Config.Validate() returns "host is required"
+				DSConf: cdb.Config{}, //nolint:exhaustruct // zero-value triggers validation error
 			},
 			expectErr:   true,
 			errContains: "host is required",
@@ -52,7 +52,7 @@ func TestPmcRegistryNew(t *testing.T) {
 		"unsupported type returns error": {
 			cfg: Config{
 				DSType: PmcRegisterType("UnknownType"),
-				DSConf: db.Config{},
+				DSConf: cdb.Config{}, //nolint:exhaustruct // unused for error path
 			},
 			expectErr:   true,
 			errContains: "unsupported datastore type",

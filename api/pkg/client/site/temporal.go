@@ -33,12 +33,12 @@ import (
 	tsdkClient "go.temporal.io/sdk/client"
 	tsdkConverter "go.temporal.io/sdk/converter"
 
-	"github.com/nvidia/bare-metal-manager-rest/api/internal/config"
+	cconfig "github.com/nvidia/bare-metal-manager-rest/common/pkg/config"
 )
 
 // ClientPool contains Temporal clients for different site agents
 type ClientPool struct {
-	tcfg        *config.TemporalConfig
+	tcfg        *cconfig.TemporalConfig
 	IDClientMap map[string]tsdkClient.Client
 	mutex       sync.RWMutex
 }
@@ -100,7 +100,7 @@ func (cp *ClientPool) GetClientByID(siteID uuid.UUID) (tsdkClient.Client, error)
 }
 
 // NewClientPool initializes and returns a new client pool
-func NewClientPool(tcfg *config.TemporalConfig) *ClientPool {
+func NewClientPool(tcfg *cconfig.TemporalConfig) *ClientPool {
 	return &ClientPool{
 		tcfg:        tcfg,
 		IDClientMap: map[string]tsdkClient.Client{},

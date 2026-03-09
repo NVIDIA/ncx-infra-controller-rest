@@ -4,6 +4,7 @@ import (
 	"context"
 	dbsql "database/sql"
 	"fmt"
+	"net/url"
 	"os"
 	"testing"
 
@@ -50,7 +51,7 @@ func getTestDBParams() TestDBConfig {
 
 // newBunPostgres will open a connection to a database
 func newBunPostgres(host, port, user, password, dbname string) (*bun.DB, error) {
-	configDSN := fmt.Sprintf("postgres://%v:%v@%v:%v/%v", user, password, host, port, dbname)
+	configDSN := fmt.Sprintf("postgres://%v:%v@%v:%v/%v", url.PathEscape(user), url.PathEscape(password), host, port, dbname)
 
 	config, err := pgx.ParseConfig(configDSN)
 	if err != nil {

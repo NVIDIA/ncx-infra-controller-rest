@@ -19,6 +19,7 @@ package migrations
 import (
 	"context"
 	"crypto/md5"
+	"database/sql"
 	"embed"
 	"encoding/hex"
 	"fmt"
@@ -26,8 +27,6 @@ import (
 	"io/fs"
 	"strings"
 	"time"
-
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/db/postgres"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/uptrace/bun"
@@ -161,19 +160,21 @@ func alternatePresent(path string) bool {
 	return false
 }
 
-// Migrate ensures that the database contains all currently known migrations
-func Migrate(ctx context.Context, db *postgres.Postgres) error {
-	return migrateInternal(ctx, db, nil)
+// MigrateWithDB ensures that the database contains all currently known migrations.
+// Accepts a *bun.DB directly.
+func MigrateWithDB(ctx context.Context, db *bun.DB) error {
+	return migrateInternalWithDB(ctx, db, nil)
 }
 
-// Rollback will roll back migrations that have been applied since the given time
-func Rollback(ctx context.Context, db *postgres.Postgres, rollbackTime time.Time) error {
-	return migrateInternal(ctx, db, &rollbackTime)
+// RollbackWithDB will roll back migrations that have been applied since the given time.
+// Accepts a *bun.DB directly.
+func RollbackWithDB(ctx context.Context, db *bun.DB, rollbackTime time.Time) error {
+	return migrateInternalWithDB(ctx, db, &rollbackTime)
 }
 
-// migrateInternal migrates either up or down, but in an inconvient calling method
-func migrateInternal(ctx context.Context, db *postgres.Postgres, rollbackTime *time.Time) (errFinal error) {
-	return db.RunInTx(ctx, func(ctx context.Context, tx bun.Tx) error {
+// migrateInternalWithDB migrates either up or down using a *bun.DB
+func migrateInternalWithDB(ctx context.Context, db *bun.DB, rollbackTime *time.Time) (errFinal error) {
+	return db.RunInTx(ctx, &sql.TxOptions{}, func(ctx context.Context, tx bun.Tx) error { //nolint:exhaustruct,varnamelen,wrapcheck // default options; tx is idiomatic; thin wrapper
 		// Lock the migration table manually in case we are running multiple instances that may try to upgrade simultaneously
 		if err := lockOrCreateMigrationTable(ctx, &tx); err != nil {
 			return err

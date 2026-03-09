@@ -20,12 +20,12 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"github.com/nvidia/bare-metal-manager-rest/common/pkg/credential"
+	"github.com/nvidia/bare-metal-manager-rest/common/pkg/secretstring"
+	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	svc "github.com/nvidia/bare-metal-manager-rest/powershelf-manager/internal/service"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/credential"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/secretstring"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/vendor"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/credentials"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/db"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/objects/pmc"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/objects/powershelf"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/powershelfmanager"
@@ -113,11 +113,11 @@ func doFw() {
 			Address: vaultAddress,
 			Token:   vaultToken,
 		},
-		DBConf: db.Config{
+		DBConf: cdb.Config{
 			Host:              dbHostName,
 			Port:              dbPort,
 			DBName:            dbName,
-			Credential:        *credential.New(dbUser, dbPassword),
+			Credential:        credential.New(dbUser, dbPassword),
 			CACertificatePath: "",
 		},
 	}

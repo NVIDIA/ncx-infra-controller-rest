@@ -37,4 +37,9 @@ var (
 	ErrSessionAdvisoryLockFailed = errors.New("unable to take session advisory lock")
 	// ErrSessionAdvisoryLockUnlockFailed indicates that the session advisory lock could not be released.
 	ErrSessionAdvisoryLockUnlockFailed = errors.New("unable to release session advisory lock or lock was not held by this session")
+
+	// ErrInvalidPort indicates the DB_PORT environment variable is not a valid integer.
+	ErrInvalidPort = errors.New("failed to parse DB_PORT")
+	// ErrInvalidCredential indicates the credential is not valid.
+	ErrInvalidCredential = errors.New("invalid credential")
 )

@@ -18,44 +18,38 @@
 package db
 
 import (
+	"database/sql"
 	"errors"
-	"os"
-	"strconv"
 	"time"
 
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/credential"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/endpoint"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
-func CurTime() time.Time {
-	return time.Now().UTC().Round(time.Microsecond)
-}
-
+// ErrorChecker abstracts database error classification.
 type ErrorChecker interface {
 	IsErrNoRows(err error) bool
 	IsUniqueConstraintError(err error) bool
 }
 
-func BuildDBConfigFromEnv() (Config, error) {
-	port, err := strconv.Atoi(os.Getenv("DB_PORT"))
-	if err != nil {
-		return Config{}, errors.New("fail to retrieve port")
+// PostgresErrorChecker classifies common Postgres errors such as
+// no rows and unique constraint violations.
+type PostgresErrorChecker struct{}
+
+func (checker *PostgresErrorChecker) IsErrNoRows(err error) bool {
+	return errors.Is(err, sql.ErrNoRows)
+}
+
+func (checker *PostgresErrorChecker) IsUniqueConstraintError(err error) bool {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) {
+		return pgErr.Code == "23505"
 	}
 
-	credential := credential.NewFromEnv("DB_USER", "DB_PASSWORD")
-	if !credential.IsValid() {
-		return Config{}, errors.New("invalid credential")
-	}
+	return false
+}
 
-	dbConf := Config{
-		Endpoint: endpoint.Config{
-			Host:              os.Getenv("DB_ADDR"),
-			Port:              port,
-			Credential:        &credential,
-			CACertificatePath: os.Getenv("DB_CERT_PATH"),
-		},
-		DBName: os.Getenv("DB_DATABASE"),
-	}
-
-	return dbConf, nil
+// CurTime returns the current UTC time rounded to microseconds
+// (useful for DB timestamps).
+func CurTime() time.Time {
+	return time.Now().UTC().Round(time.Microsecond)
 }

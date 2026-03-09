@@ -22,7 +22,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/credential"
+	"github.com/nvidia/bare-metal-manager-rest/common/pkg/credential"
 )
 
 // BMC specifies the information for a BMC which includes MAC address, IP

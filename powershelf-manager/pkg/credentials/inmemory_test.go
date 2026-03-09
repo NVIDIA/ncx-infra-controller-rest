@@ -21,10 +21,15 @@ import (
 	"net"
 	"testing"
 
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/credential"
+	"github.com/nvidia/bare-metal-manager-rest/common/pkg/credential"
 
 	"github.com/stretchr/testify/assert"
 )
+
+func newCred(u, p string) *credential.Credential {
+	c := credential.New(u, p)
+	return &c
+}
 
 func parseMAC(t *testing.T, s string) net.HardwareAddr {
 	t.Helper()
@@ -67,7 +72,7 @@ func TestInMemoryPutGet(t *testing.T) {
 		"get existing valid credential": {
 			initialPut: true,
 			putMAC:     "00:11:22:33:44:55",
-			putCred:    credential.New("admin", "secret"),
+			putCred:    newCred("admin", "secret"),
 			getMAC:     "00:11:22:33:44:55",
 			wantErr:    false,
 			wantUser:   "admin",
@@ -77,7 +82,7 @@ func TestInMemoryPutGet(t *testing.T) {
 		"get existing invalid credential (empty user) returns not found": {
 			initialPut: true,
 			putMAC:     "00:11:22:33:44:66",
-			putCred:    credential.New("", "nopass"),
+			putCred:    newCred("", "nopass"),
 			getMAC:     "00:11:22:33:44:66",
 			wantErr:    true,
 		},
@@ -89,7 +94,7 @@ func TestInMemoryPutGet(t *testing.T) {
 		"put overwrites existing value": {
 			initialPut: true,
 			putMAC:     "aa:bb:cc:dd:ee:ff",
-			putCred:    credential.New("user1", "p1"),
+			putCred:    newCred("user1", "p1"),
 			getMAC:     "aa:bb:cc:dd:ee:ff",
 			wantErr:    false,
 			wantUser:   "user2",
@@ -109,7 +114,7 @@ func TestInMemoryPutGet(t *testing.T) {
 				assert.NoError(t, mgr.Put(ctx, mac, tc.putCred))
 				// For the overwrite scenario, put a second credential to same MAC
 				if name == "put overwrites existing value" {
-					assert.NoError(t, mgr.Put(ctx, mac, credential.New("user2", "p2")))
+					assert.NoError(t, mgr.Put(ctx, mac, newCred("user2", "p2")))
 				}
 			}
 
@@ -147,9 +152,9 @@ func TestInMemoryPatch(t *testing.T) {
 	}{
 		"patch existing replaces value": {
 			setupMAC:      "00:11:22:33:44:55",
-			setupCred:     credential.New("admin", "old"),
+			setupCred:     newCred("admin", "old"),
 			patchMAC:      "00:11:22:33:44:55",
-			patchCred:     credential.New("root", "new"),
+			patchCred:     newCred("root", "new"),
 			wantErr:       false,
 			wantUser:      "root",
 			wantPass:      "new",
@@ -157,9 +162,9 @@ func TestInMemoryPatch(t *testing.T) {
 		},
 		"patch missing returns error": {
 			setupMAC:  "aa:bb:cc:dd:ee:ff",
-			setupCred: credential.New("user", "pass"),
+			setupCred: newCred("user", "pass"),
 			patchMAC:  "66:77:88:99:00:11",
-			patchCred: credential.New("root", "new"),
+			patchCred: newCred("root", "new"),
 			wantErr:   true,
 		},
 	}
@@ -202,13 +207,13 @@ func TestInMemoryDelete(t *testing.T) {
 	}{
 		"delete existing removes entry": {
 			putMAC:       "00:11:22:33:44:55",
-			putCred:      credential.New("admin", "secret"),
+			putCred:      newCred("admin", "secret"),
 			delMAC:       "00:11:22:33:44:55",
 			expectErrGet: true,
 		},
 		"delete missing returns nil": {
 			putMAC:       "aa:bb:cc:dd:ee:ff",
-			putCred:      credential.New("user", "p"),
+			putCred:      newCred("user", "p"),
 			delMAC:       "66:77:88:99:00:11",
 			expectErrGet: false, // original still present
 		},
@@ -254,16 +259,16 @@ func TestInMemoryKeys(t *testing.T) {
 		},
 		"one entry returns that MAC": {
 			putPairs: [][2]interface{}{
-				{"00:11:22:33:44:55", credential.New("admin", "secret")},
+				{"00:11:22:33:44:55", newCred("admin", "secret")},
 			},
 			expectCount: 1,
 			expectSet:   map[string]bool{"00:11:22:33:44:55": true},
 		},
 		"multiple entries return all MACs": {
 			putPairs: [][2]interface{}{
-				{"00:11:22:33:44:55", credential.New("admin", "a")},
-				{"66:77:88:99:00:11", credential.New("root", "r")},
-				{"aa:bb:cc:dd:ee:ff", credential.New("user", "u")},
+				{"00:11:22:33:44:55", newCred("admin", "a")},
+				{"66:77:88:99:00:11", newCred("root", "r")},
+				{"aa:bb:cc:dd:ee:ff", newCred("user", "u")},
 			},
 			expectCount: 3,
 			expectSet: map[string]bool{

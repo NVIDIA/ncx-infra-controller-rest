@@ -25,6 +25,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/nvidia/bare-metal-manager-rest/common/pkg/credential"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/carbideapi"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/db/model"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/operation"
@@ -33,7 +34,6 @@ import (
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operations"
 	taskdef "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/task"
 	identifier "github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/Identifier"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/credential"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/deviceinfo"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/errors"

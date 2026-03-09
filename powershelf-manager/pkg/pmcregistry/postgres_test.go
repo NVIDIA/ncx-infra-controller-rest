@@ -26,12 +26,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/credential"
+	"github.com/nvidia/bare-metal-manager-rest/common/pkg/credential"
+	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
+	dbtestutil "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/testutil"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/vendor"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/db"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/db/migrations"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/db/postgres"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/db/testutil"
 	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/objects/pmc"
 )
 
@@ -45,25 +44,25 @@ func skipIfNoDatabase(t *testing.T) {
 }
 
 // setupTestDB creates a fresh test database with migrations applied
-func setupTestDB(t *testing.T) (*postgres.Postgres, func()) {
+func setupTestDB(t *testing.T) (*cdb.Session, func()) {
 	t.Helper()
 	ctx := context.Background()
 
-	dbConf, err := db.BuildDBConfigFromEnv()
+	dbConf, err := cdb.ConfigFromEnv()
 	require.NoError(t, err, "Failed to build DB config from env")
 
-	pg, err := testutil.CreateTestDB(ctx, t, dbConf)
+	session, err := dbtestutil.CreateTestDB(ctx, t, dbConf)
 	require.NoError(t, err, "Failed to create test database")
 
 	// Run migrations
-	err = migrations.Migrate(ctx, pg)
+	err = migrations.MigrateWithDB(ctx, session.DB)
 	require.NoError(t, err, "Failed to run migrations")
 
 	cleanup := func() {
-		pg.Close(ctx)
+		session.Close()
 	}
 
-	return pg, cleanup
+	return session, cleanup
 }
 
 // createTestPMC creates a test PMC object
@@ -75,7 +74,7 @@ func createTestPMC(t *testing.T, macStr, ipStr string, v vendor.VendorCode) *pmc
 	require.NotNil(t, ip, "Failed to parse IP")
 
 	cred := credential.New("admin", "password")
-	p, err := pmc.NewFromAddr(mac, ip, v, cred)
+	p, err := pmc.NewFromAddr(mac, ip, v, &cred)
 	require.NoError(t, err, "Failed to create test PMC")
 	return p
 }
@@ -83,13 +82,13 @@ func createTestPMC(t *testing.T, macStr, ipStr string, v vendor.VendorCode) *pmc
 func TestIntegration_PostgresRegistry_RegisterAndGetPmc(t *testing.T) {
 	skipIfNoDatabase(t)
 
-	pg, cleanup := setupTestDB(t)
+	session, cleanup := setupTestDB(t)
 	defer cleanup()
 
 	ctx := context.Background()
 
 	// Create registry using the test database
-	registry := &PostgresPmcRegistry{pg: pg}
+	registry := &PostgresPmcRegistry{session: session}
 
 	// Test data
 	testPmc := createTestPMC(t, "00:11:22:33:44:55", "192.168.1.100", vendor.VendorCodeLiteon)
@@ -110,11 +109,11 @@ func TestIntegration_PostgresRegistry_RegisterAndGetPmc(t *testing.T) {
 func TestIntegration_PostgresRegistry_IsPmcRegistered(t *testing.T) {
 	skipIfNoDatabase(t)
 
-	pg, cleanup := setupTestDB(t)
+	session, cleanup := setupTestDB(t)
 	defer cleanup()
 
 	ctx := context.Background()
-	registry := &PostgresPmcRegistry{pg: pg}
+	registry := &PostgresPmcRegistry{session: session}
 
 	testPmc := createTestPMC(t, "AA:BB:CC:DD:EE:FF", "10.0.0.1", vendor.VendorCodeLiteon)
 
@@ -136,11 +135,11 @@ func TestIntegration_PostgresRegistry_IsPmcRegistered(t *testing.T) {
 func TestIntegration_PostgresRegistry_GetAllPmcs(t *testing.T) {
 	skipIfNoDatabase(t)
 
-	pg, cleanup := setupTestDB(t)
+	session, cleanup := setupTestDB(t)
 	defer cleanup()
 
 	ctx := context.Background()
-	registry := &PostgresPmcRegistry{pg: pg}
+	registry := &PostgresPmcRegistry{session: session}
 
 	// Register multiple PMCs
 	pmc1 := createTestPMC(t, "00:11:22:33:44:55", "192.168.1.1", vendor.VendorCodeLiteon)
@@ -169,11 +168,11 @@ func TestIntegration_PostgresRegistry_GetAllPmcs(t *testing.T) {
 func TestIntegration_PostgresRegistry_DuplicateRegistration(t *testing.T) {
 	skipIfNoDatabase(t)
 
-	pg, cleanup := setupTestDB(t)
+	session, cleanup := setupTestDB(t)
 	defer cleanup()
 
 	ctx := context.Background()
-	registry := &PostgresPmcRegistry{pg: pg}
+	registry := &PostgresPmcRegistry{session: session}
 
 	testPmc := createTestPMC(t, "00:11:22:33:44:55", "192.168.1.100", vendor.VendorCodeLiteon)
 
@@ -189,11 +188,11 @@ func TestIntegration_PostgresRegistry_DuplicateRegistration(t *testing.T) {
 func TestIntegration_PostgresRegistry_UniqueIPConstraint(t *testing.T) {
 	skipIfNoDatabase(t)
 
-	pg, cleanup := setupTestDB(t)
+	session, cleanup := setupTestDB(t)
 	defer cleanup()
 
 	ctx := context.Background()
-	registry := &PostgresPmcRegistry{pg: pg}
+	registry := &PostgresPmcRegistry{session: session}
 
 	pmc1 := createTestPMC(t, "00:11:22:33:44:55", "192.168.1.100", vendor.VendorCodeLiteon)
 	pmc2 := createTestPMC(t, "AA:BB:CC:DD:EE:FF", "192.168.1.100", vendor.VendorCodeLiteon) // Same IP
