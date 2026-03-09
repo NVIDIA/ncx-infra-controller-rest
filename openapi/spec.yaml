@@ -5405,7 +5405,6 @@ paths:
                       infinibandInterfaces:
                         - id: c518a0e8-3f49-4a1a-8935-a6d3dee6911e
                           instanceId: 497f6eca-6276-4993-bfeb-53cbbbba6f08
-                          siteId: 60189e9c-7d12-438c-b9ca-6998d9c364b1
                           partitionId: 05ef7e84-1d4e-4e4d-980d-38589479a0fe
                           device: 'MT2910 Family [ConnectX-7]'
                           deviceInstance: 0
@@ -5528,7 +5527,6 @@ paths:
                       infinibandInterfaces:
                         - id: c518a0e8-3f49-4a1a-8935-a6d3dee6911e
                           instanceId: 497f6eca-6276-4993-bfeb-53cbbbba6f08
-                          siteId: 60189e9c-7d12-438c-b9ca-6998d9c364b1
                           partitionId: 05ef7e84-1d4e-4e4d-980d-38589479a0fe
                           device: 'MT2910 Family [ConnectX-7]'
                           deviceInstance: 0
@@ -5853,7 +5851,6 @@ paths:
                     infinibandInterfaces:
                       - id: c518a0e8-3f49-4a1a-8935-a6d3dee6911e
                         instanceId: 497f6eca-6276-4993-bfeb-53cbbbba6f08
-                        siteId: 60189e9c-7d12-438c-b9ca-6998d9c364b1
                         partitionId: 05ef7e84-1d4e-4e4d-980d-38589479a0fe
                         device: 'MT2910 Family [ConnectX-7]'
                         deviceInstance: 0
@@ -6285,7 +6282,6 @@ paths:
                     infinibandInterfaces:
                       - id: c518a0e8-3f49-4a1a-8935-a6d3dee6911e
                         instanceId: 497f6eca-6276-4993-bfeb-53cbbbba6f08
-                        siteId: 60189e9c-7d12-438c-b9ca-6998d9c364b1
                         partitionId: 4f4decba-7d7f-46b9-9e5f-e5d71c2e0666
                         device: 'MT2910 Family [ConnectX-7]'
                         deviceInstance: 0
@@ -6466,7 +6462,6 @@ paths:
                     infinibandInterfaces:
                       - id: c518a0e8-3f49-4a1a-8935-a6d3dee6911e
                         instanceId: 497f6eca-6276-4993-bfeb-53cbbbba6f08
-                        siteId: 60189e9c-7d12-438c-b9ca-6998d9c364b1
                         partitionId: 550e8400-e29b-41d4-a716-446655440000
                         device: 'MT2910 Family [ConnectX-7]'
                         deviceInstance: 0
@@ -6478,7 +6473,6 @@ paths:
                         updated: '2019-08-24T14:15:22Z'
                       - id: 3cc0206e-8ac9-4572-8f72-e1dd124c4351
                         instanceId: 497f6eca-6276-4993-bfeb-53cbbbba6f08
-                        siteId: 60189e9c-7d12-438c-b9ca-6998d9c364b1
                         partitionId: 6ba7b810-9dad-11d1-80b4-00c04fd430c8
                         device: 'MT2910 Family [ConnectX-7]'
                         deviceInstance: 1
@@ -6819,6 +6813,7 @@ paths:
       tags:
         - InfiniBand Partition
       responses:
+
         '200':
           description: OK
           content:
@@ -6832,7 +6827,6 @@ paths:
                   value:
                     - id: 497f6eca-6276-4993-bfeb-53cbbbba6f08
                       instanceId: 64d2028c-ae87-4069-a624-66089d957ef9
-                      siteId: 60189e9c-7d12-438c-b9ca-6998d9c364b1
                       partitionId: 05ef7e84-1d4e-4e4d-980d-38589479a0fe
                       device: 'MT2910 Family [ConnectX-7]'
                       deviceInstance: 0
@@ -6875,7 +6869,7 @@ paths:
             type: string
           in: query
           name: status
-          description: Filter Interfaces by Status
+          description: Filter InfiniBand Interfaces by Status. Can be specified multiple times to filter on more than one status.
         - schema:
             type: string
             enum:
@@ -15102,7 +15096,6 @@ components:
       examples:
         - id: 497f6eca-6276-4993-bfeb-53cbbbba6f08
           instanceId: 64d2028c-ae87-4069-a624-66089d957ef9
-          siteId: 2b7ca7d5-eb0e-4076-aa17-11ce98af8214
           partitionId: 05ef7e84-1d4e-4e4d-980d-38589479a0fe
           device: 'MT2910 Family [ConnectX-7]'
           deviceInstance: 0

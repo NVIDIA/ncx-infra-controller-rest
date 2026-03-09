@@ -555,8 +555,14 @@ func TestGetAllInfiniBandInterface_Handle(t *testing.T) {
 				if tt.expectedInfiniBandPartitionID != nil && tt.expectedInfiniBandPartitionID.String() != "" {
 					assert.Equal(t, tt.expectedInfiniBandPartitionID.String(), rst[0].InfiniBandPartition.ID)
 				}
+				if tt.expectedInstance != nil && tt.expectedInstance.ID.String() != "" {
+					assert.Equal(t, tt.expectedInstance.ID.String(), rst[0].InstanceID)
+				}
 			} else {
 				if len(rst) > 0 {
+					if tt.expectedInstance != nil && tt.expectedInstance.ID.String() != "" {
+						assert.Equal(t, tt.expectedInstance.ID.String(), rst[0].InstanceID)
+					}
 					if tt.expectedInfiniBandPartitionID != nil && tt.expectedInfiniBandPartitionID.String() != "" {
 						assert.Equal(t, tt.expectedInfiniBandPartitionID.String(), rst[0].InfiniBandPartitonID)
 					}
