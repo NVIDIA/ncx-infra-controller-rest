@@ -1335,6 +1335,9 @@ func (burh BringUpRackHandler) Handle(c echo.Context) error {
 	// Validate the site
 	site, err := common.GetSiteFromIDString(ctx, nil, apiRequest.SiteID, burh.dbSession)
 	if err != nil {
+		if errors.Is(err, common.ErrInvalidID) {
+			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate Site specified in request: invalid ID", nil)
+		}
 		if errors.Is(err, cdb.ErrDoesNotExist) {
 			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request does not exist", nil)
 		}
@@ -1374,7 +1377,7 @@ func (burh BringUpRackHandler) Handle(c echo.Context) error {
 		description = fmt.Sprintf("API bring up Rack %s", rackStrID)
 	}
 
-	rlaResp, err := common.ExecuteBringUpWorkflow(ctx, c, logger, stc, targetSpec, description,
+	rlaResp, err := common.ExecuteBringUpRackWorkflow(ctx, c, logger, stc, targetSpec, description,
 		fmt.Sprintf("rack-bringup-%s", rackStrID), "Rack")
 	if err != nil {
 		return err
@@ -1467,6 +1470,9 @@ func (bbuh BatchBringUpRackHandler) Handle(c echo.Context) error {
 	// Validate the site
 	site, err := common.GetSiteFromIDString(ctx, nil, request.SiteID, bbuh.dbSession)
 	if err != nil {
+		if errors.Is(err, common.ErrInvalidID) {
+			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate Site specified in request: invalid ID", nil)
+		}
 		if errors.Is(err, cdb.ErrDoesNotExist) {
 			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request does not exist", nil)
 		}
@@ -1494,7 +1500,7 @@ func (bbuh BatchBringUpRackHandler) Handle(c echo.Context) error {
 		description = "API batch bring up Racks"
 	}
 
-	rlaResp, err := common.ExecuteBringUpWorkflow(ctx, c, logger, stc, targetSpec, description,
+	rlaResp, err := common.ExecuteBringUpRackWorkflow(ctx, c, logger, stc, targetSpec, description,
 		fmt.Sprintf("rack-bringup-batch-%s", common.RequestHash(request.Filter)), "Rack")
 	if err != nil {
 		return err

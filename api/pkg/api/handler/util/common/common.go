@@ -1648,9 +1648,9 @@ func ExecutePowerControlWorkflow(
 	return &rlaResponse, nil
 }
 
-// ExecuteBringUpWorkflow builds a BringUpRackRequest, executes the BringUpRack
+// ExecuteBringUpRackWorkflow builds a BringUpRackRequest, executes the BringUpRack
 // workflow via Temporal, and returns the raw SubmitTaskResponse.
-func ExecuteBringUpWorkflow(
+func ExecuteBringUpRackWorkflow(
 	ctx context.Context,
 	c echo.Context,
 	logger zerolog.Logger,
