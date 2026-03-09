@@ -6806,7 +6806,7 @@ paths:
           in: query
           name: orderBy
           description: Ordering for pagination query
-  '/v2/org/{org}/carbide/instance/{instanceId}/infiniband-interface':
+  '/v2/org/{org}/carbide/infiniband-interface':
     parameters:
       - schema:
           type: string
@@ -6814,16 +6814,10 @@ paths:
         in: path
         required: true
         description: Name of the Org
-      - schema:
-          type: string
-        name: instanceId
-        in: path
-        required: true
-        description: ID of the Instance
     get:
       summary: Retrieve all InfiniBand Interfaces
       tags:
-        - Instance
+        - InfiniBand Partition
       responses:
         '200':
           description: OK
@@ -6858,10 +6852,25 @@ paths:
           $ref: '#/components/responses/ForbiddenError'
       operationId: get-all-infiniband-interface
       description: |-
-        Get all InfiniBand Interfaces for an Instance
+        Get all InfiniBand Interfaces
 
         Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` authorization role.
       parameters:
+        - schema:
+            type: string
+          in: query
+          name: siteId
+          description: Filter InfiniBand Interfaces by Site ID.  Can be specified multiple times to filter on more than one ID.
+        - schema:
+            type: string
+          in: query
+          name: instanceId
+          description: Filter InfiniBand Interfaces by Instance ID.  Can be specified multiple times to filter on more than one ID.
+        - schema:
+            type: string
+          in: query
+          name: infinibandPartitionId
+          description: Filter InfiniBand Interfaces by InfiniBand Partition ID.  Can be specified multiple times to filter on more than one ID.
         - schema:
             type: string
           in: query
@@ -6871,7 +6880,7 @@ paths:
             type: string
             enum:
               - Instance
-              - Partition
+              - InfiniBandPartition
           in: query
           name: includeRelation
           description: Related entity to expand

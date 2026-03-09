@@ -317,6 +317,12 @@ func NewAPIRoutes(dbSession *cdb.Session, tc tClient.Client, tnc tClient.Namespa
 			Method:  http.MethodGet,
 			Handler: apiHandler.NewGetAllInterfaceHandler(dbSession, tc, cfg),
 		},
+		// InfiniBandInterface endpoints
+		{
+			Path:    apiPathPrefix + "/infiniband-interface",
+			Method:  http.MethodGet,
+			Handler: apiHandler.NewGetAllInfiniBandInterfaceHandler(dbSession, tc, cfg),
+		},
 		// NVLinkInterface endpoints
 		{
 			Path:    apiPathPrefix + "/nvlink-interface",
