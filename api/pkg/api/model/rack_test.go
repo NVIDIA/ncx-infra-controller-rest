@@ -199,8 +199,8 @@ func TestNewAPIRack(t *testing.T) {
 					assert.Equal(t, wantComp.SlotID, gotComp.SlotID)
 				}
 			} else {
-			assert.Nil(t, got.Components)
-		}
+				assert.Nil(t, got.Components)
+			}
 		})
 	}
 }
