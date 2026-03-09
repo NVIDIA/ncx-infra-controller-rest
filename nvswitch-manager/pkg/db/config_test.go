@@ -116,6 +116,24 @@ func TestConfigBuildDSN(t *testing.T) {
 			},
 			expected: "postgres://user:password@localhost:5432/testdb?sslmode=disable",
 		},
+		"special characters in password": {
+			config: Config{
+				Host:       "localhost",
+				Port:       5432,
+				DBName:     "testdb",
+				Credential: *credential.New("admin", "p@ss:word/1"),
+			},
+			expected: "postgres://admin:p%40ss%3Aword%2F1@localhost:5432/testdb?sslmode=disable",
+		},
+		"special characters in user and password": {
+			config: Config{
+				Host:       "db.example.com",
+				Port:       5433,
+				DBName:     "mydb",
+				Credential: *credential.New("user@domain", "s3cr3t#!"),
+			},
+			expected: "postgres://user%40domain:s3cr3t%23%21@db.example.com:5433/mydb?sslmode=disable",
+		},
 	}
 
 	for name, tt := range tests {

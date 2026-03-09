@@ -74,6 +74,8 @@ func (r *PostgresRegistry) Stop(ctx context.Context) error {
 }
 
 // Register creates or updates an NV-Switch tray.
+// The select (lookup by BMC MAC) and the resulting insert or update run in a single
+// transaction to avoid races when two concurrent calls register the same tray.
 func (r *PostgresRegistry) Register(ctx context.Context, tray *nvswitch.NVSwitchTray) (uuid.UUID, bool, error) {
 	if tray == nil {
 		return uuid.Nil, false, fmt.Errorf("tray is nil")
@@ -87,61 +89,76 @@ func (r *PostgresRegistry) Register(ctx context.Context, tray *nvswitch.NVSwitch
 
 	bmcMAC := tray.BMC.MAC.String()
 
-	// Check if this BMC MAC is already registered
-	existing := &NVSwitchModel{}
-	err := r.db.NewSelect().
-		Model(existing).
-		Where("bmc_mac_address = ?", bmcMAC).
-		Scan(ctx)
+	var outID uuid.UUID
+	var outCreated bool
 
-	if err == nil {
-		// Update existing entry
-		existing.Vendor = int(tray.Vendor.Code)
-		existing.BMCIPAddress = tray.BMC.IP.String()
-		existing.BMCPort = tray.BMC.GetPort()
-		existing.NVOSMACAddress = tray.NVOS.MAC.String()
-		existing.NVOSIPAddress = tray.NVOS.IP.String()
-		existing.NVOSPort = tray.NVOS.GetPort()
-		existing.RackID = tray.RackID
-
-		_, err = r.db.NewUpdate().
+	err := r.db.RunInTx(ctx, &sql.TxOptions{}, func(ctx context.Context, tx bun.Tx) error {
+		// Check if this BMC MAC is already registered (within this transaction)
+		existing := &NVSwitchModel{}
+		err := tx.NewSelect().
 			Model(existing).
-			WherePK().
-			Exec(ctx)
-		if err != nil {
-			return uuid.Nil, false, fmt.Errorf("failed to update nvswitch: %w", err)
+			Where("bmc_mac_address = ?", bmcMAC).
+			Scan(ctx)
+
+		if err == nil {
+			// Update existing entry
+			existing.Vendor = int(tray.Vendor.Code)
+			existing.BMCIPAddress = tray.BMC.IP.String()
+			existing.BMCPort = tray.BMC.GetPort()
+			existing.NVOSMACAddress = tray.NVOS.MAC.String()
+			existing.NVOSIPAddress = tray.NVOS.IP.String()
+			existing.NVOSPort = tray.NVOS.GetPort()
+			existing.RackID = tray.RackID
+
+			_, err = tx.NewUpdate().
+				Model(existing).
+				WherePK().
+				Exec(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to update nvswitch: %w", err)
+			}
+
+			outID = existing.UUID
+			outCreated = false
+			return nil
 		}
 
-		return existing.UUID, false, nil
-	}
+		if err != sql.ErrNoRows {
+			return fmt.Errorf("failed to check existing nvswitch: %w", err)
+		}
 
-	if err != sql.ErrNoRows {
-		return uuid.Nil, false, fmt.Errorf("failed to check existing nvswitch: %w", err)
-	}
+		// Generate new UUID if not set
+		if tray.UUID == uuid.Nil {
+			tray.UUID = uuid.New()
+		}
 
-	// Generate new UUID if not set
-	if tray.UUID == uuid.Nil {
-		tray.UUID = uuid.New()
-	}
+		model := &NVSwitchModel{
+			UUID:           tray.UUID,
+			Vendor:         int(tray.Vendor.Code),
+			BMCMACAddress:  bmcMAC,
+			BMCIPAddress:   tray.BMC.IP.String(),
+			BMCPort:        tray.BMC.GetPort(),
+			NVOSMACAddress: tray.NVOS.MAC.String(),
+			NVOSIPAddress:  tray.NVOS.IP.String(),
+			NVOSPort:       tray.NVOS.GetPort(),
+			RackID:         tray.RackID,
+		}
 
-	model := &NVSwitchModel{
-		UUID:           tray.UUID,
-		Vendor:         int(tray.Vendor.Code),
-		BMCMACAddress:  bmcMAC,
-		BMCIPAddress:   tray.BMC.IP.String(),
-		BMCPort:        tray.BMC.GetPort(),
-		NVOSMACAddress: tray.NVOS.MAC.String(),
-		NVOSIPAddress:  tray.NVOS.IP.String(),
-		NVOSPort:       tray.NVOS.GetPort(),
-		RackID:         tray.RackID,
-	}
+		_, err = tx.NewInsert().Model(model).Exec(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to insert nvswitch: %w", err)
+		}
 
-	_, err = r.db.NewInsert().Model(model).Exec(ctx)
+		outID = tray.UUID
+		outCreated = true
+		return nil
+	})
+
 	if err != nil {
-		return uuid.Nil, false, fmt.Errorf("failed to insert nvswitch: %w", err)
+		return uuid.Nil, false, err
 	}
 
-	return tray.UUID, true, nil
+	return outID, outCreated, nil
 }
 
 // Get retrieves an NV-Switch by UUID.

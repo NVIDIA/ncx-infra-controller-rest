@@ -159,7 +159,6 @@ func doServe() {
 		},
 	)
 
-	log.Printf("New service is created with port: %+v, data store type: %s, vault address: %s, vault token: %s", port, datastoreType, vaultAddress, vaultToken)
 	if firmwarePackagesDir != "" {
 		log.Printf("Firmware config: packages_dir=%s, firmware_dir=%s, workers=%d, poll_seconds=%d",
 			firmwarePackagesDir, firmwareFirmwareDir, firmwareNumWorkers, firmwarePollSeconds)
@@ -168,6 +167,8 @@ func doServe() {
 	if err != nil {
 		log.Fatalf("failed to create the new gRPC server: %v\n", err)
 	}
+
+	log.Printf("New service is created with port: %+v, data store type: %s, vault address: %s", port, datastoreType, vaultAddress)
 
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)

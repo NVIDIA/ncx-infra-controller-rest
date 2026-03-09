@@ -25,12 +25,18 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"time"
 
 	"github.com/nvidia/bare-metal-manager-rest/nvswitch-manager/pkg/objects/nvos"
 
 	"golang.org/x/crypto/ssh"
 )
+
+// safePathRe matches paths that contain only alphanumerics, slashes,
+// hyphens, underscores, and dots -- the characters safe to use in a
+// shell argument without quoting.
+var safePathRe = regexp.MustCompile(`^[a-zA-Z0-9/_.\-]+$`)
 
 // NVOSClient provides SSH-based operations for NV-Switch NVOS.
 type NVOSClient struct {
@@ -100,35 +106,42 @@ func (c *NVOSClient) RunCommand(cmd string) (string, error) {
 
 // CopyFile copies a local file to the remote NVOS.
 func (c *NVOSClient) CopyFile(localPath, remotePath string) error {
-	// Open local file
+	remotePath = filepath.Clean(remotePath)
+	if !filepath.IsAbs(remotePath) {
+		return fmt.Errorf("remote path must be absolute: %s", remotePath)
+	}
+
+	remoteDir := filepath.Dir(remotePath)
+	remoteFileName := filepath.Base(remotePath)
+
+	if !safePathRe.MatchString(remoteDir) {
+		return fmt.Errorf("remote directory contains invalid characters: %s", remoteDir)
+	}
+	if !safePathRe.MatchString(remoteFileName) {
+		return fmt.Errorf("remote filename contains invalid characters: %s", remoteFileName)
+	}
+
 	localFile, err := os.Open(localPath)
 	if err != nil {
 		return fmt.Errorf("failed to open local file: %v", err)
 	}
 	defer localFile.Close()
 
-	// Get file info
 	fileInfo, err := localFile.Stat()
 	if err != nil {
 		return fmt.Errorf("failed to stat local file: %v", err)
 	}
 
-	// Create session
 	session, err := c.client.NewSession()
 	if err != nil {
 		return fmt.Errorf("failed to create session: %v", err)
 	}
 	defer session.Close()
 
-	// Get stdin pipe
 	stdin, err := session.StdinPipe()
 	if err != nil {
 		return fmt.Errorf("failed to get stdin pipe: %v", err)
 	}
-
-	// Start SCP command
-	remoteDir := filepath.Dir(remotePath)
-	remoteFileName := filepath.Base(remotePath)
 
 	go func() {
 		defer stdin.Close()

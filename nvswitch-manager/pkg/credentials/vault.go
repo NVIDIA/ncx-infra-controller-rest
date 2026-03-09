@@ -22,10 +22,11 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"github.com/nvidia/bare-metal-manager-rest/nvswitch-manager/pkg/common/credential"
 	"net"
 	"net/http"
 	"strings"
+
+	"github.com/nvidia/bare-metal-manager-rest/nvswitch-manager/pkg/common/credential"
 
 	vault "github.com/hashicorp/vault/api"
 	log "github.com/sirupsen/logrus"
@@ -50,7 +51,7 @@ type VaultConfig struct {
 
 // String returns the canonical string form of the version.
 func (c VaultConfig) String() string {
-	return fmt.Sprintf("Vault Address: %s; Vault Token: %s", c.Address, c.Token)
+	return fmt.Sprintf("Vault Address: %s; Valid Vault Token: %t", c.Address, len(c.Token) > 0)
 }
 
 // Validate ensures required Vault fields are provided.

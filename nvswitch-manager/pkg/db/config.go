@@ -20,6 +20,7 @@ package db
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"strconv"
 
@@ -57,25 +58,24 @@ func (c *Config) Validate() error {
 }
 
 // BuildDSN builds the Data Source Name (DSN) string for connecting to
-// the database.
+// the database. User and password are URL-encoded to handle special
+// characters such as "@", ":", "/", etc.
 func (c *Config) BuildDSN() string {
-	dsn := fmt.Sprintf(
-		"postgres://%v:%v@%v:%v/%v?sslmode=",
-		c.Credential.User,
-		c.Credential.Password.Value,
-		c.Host,
-		c.Port,
-		c.DBName,
-	)
+	u := &url.URL{
+		Scheme: "postgres",
+		User:   url.UserPassword(c.Credential.User, c.Credential.Password.Value),
+		Host:   fmt.Sprintf("%s:%d", c.Host, c.Port),
+		Path:   c.DBName,
+	}
 
 	if len(c.CACertificatePath) > 0 {
 		// Use sslmode=prefer (like RLA) instead of verify-full to avoid issues with expired server certs
-		dsn += fmt.Sprintf("prefer&sslrootcert=%v", c.CACertificatePath)
+		u.RawQuery = fmt.Sprintf("sslmode=prefer&sslrootcert=%s", c.CACertificatePath)
 	} else {
-		dsn += "disable"
+		u.RawQuery = "sslmode=disable"
 	}
 
-	return dsn
+	return u.String()
 }
 
 // BuildDBConfigFromEnv builds a Config from environment variables.

@@ -133,10 +133,9 @@ func (p *WorkerPool) Stop() {
 	}
 	p.mu.Unlock()
 
-	// Close work channel to signal workers to exit
-	close(p.workChan)
-
 	// Wait for all goroutines to finish
+	// NOTE: workChan is closed by the scheduler goroutine (the sole writer)
+	// when it observes context cancellation, which unblocks the workers.
 	p.wg.Wait()
 	log.Info("Worker pool stopped")
 }
@@ -145,6 +144,7 @@ func (p *WorkerPool) Stop() {
 // It implements a batch-and-wait model: dispatch N updates, wait for all to complete, repeat.
 func (p *WorkerPool) scheduler() {
 	defer p.wg.Done()
+	defer close(p.workChan)
 	log.Info("Scheduler started")
 
 	ticker := time.NewTicker(p.schedulerInterval)
