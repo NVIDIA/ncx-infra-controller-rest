@@ -772,7 +772,7 @@ func NewAPIRoutes(dbSession *cdb.Session, tc tClient.Client, tnc tClient.Namespa
 		},
 		{
 			Path:    apiPathPrefix + "/rack/bringup",
-			Method:  http.MethodPatch,
+			Method:  http.MethodPost,
 			Handler: apiHandler.NewBatchBringUpRackHandler(dbSession, tc, scp, cfg),
 		},
 		{
@@ -797,7 +797,7 @@ func NewAPIRoutes(dbSession *cdb.Session, tc tClient.Client, tnc tClient.Namespa
 		},
 		{
 			Path:    apiPathPrefix + "/rack/:id/bringup",
-			Method:  http.MethodPatch,
+			Method:  http.MethodPost,
 			Handler: apiHandler.NewBringUpRackHandler(dbSession, tc, scp, cfg),
 		},
 		// Tray endpoints (RLA)

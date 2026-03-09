@@ -1280,7 +1280,7 @@ func NewBringUpRackHandler(dbSession *cdb.Session, tc tClient.Client, scp *sc.Cl
 // @Param id path string true "UUID of the Rack"
 // @Param body body model.APIBringUpRackRequest true "Bring up request"
 // @Success 200 {object} model.APIBringUpRackResponse
-// @Router /v2/org/{org}/carbide/rack/{id}/bringup [patch]
+// @Router /v2/org/{org}/carbide/rack/{id}/bringup [post]
 func (burh BringUpRackHandler) Handle(c echo.Context) error {
 	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("Rack", "BringUp", c, burh.tracerSpan)
 	if handlerSpan != nil {
@@ -1419,7 +1419,7 @@ func NewBatchBringUpRackHandler(dbSession *cdb.Session, tc tClient.Client, scp *
 // @Param org path string true "Name of NGC organization"
 // @Param body body model.APIBatchBringUpRackRequest true "Batch rack bring up request"
 // @Success 200 {object} model.APIBringUpRackResponse
-// @Router /v2/org/{org}/carbide/rack/bringup [patch]
+// @Router /v2/org/{org}/carbide/rack/bringup [post]
 func (bbuh BatchBringUpRackHandler) Handle(c echo.Context) error {
 	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("Rack", "BringUpBatch", c, bbuh.tracerSpan)
 	if handlerSpan != nil {

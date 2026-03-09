@@ -66,7 +66,7 @@ func (a *RackAPIService) BringupRack(ctx context.Context, org string, id string)
 //  @return BringUpRackResponse
 func (a *RackAPIService) BringupRackExecute(r ApiBringupRackRequest) (*BringUpRackResponse, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodPatch
+		localVarHTTPMethod   = http.MethodPost
 		localVarPostBody     interface{}
 		formFiles            []formFile
 		localVarReturnValue  *BringUpRackResponse
@@ -204,7 +204,7 @@ func (a *RackAPIService) BringupRacks(ctx context.Context, org string) ApiBringu
 //  @return BringUpRackResponse
 func (a *RackAPIService) BringupRacksExecute(r ApiBringupRacksRequest) (*BringUpRackResponse, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodPatch
+		localVarHTTPMethod   = http.MethodPost
 		localVarPostBody     interface{}
 		formFiles            []formFile
 		localVarReturnValue  *BringUpRackResponse

@@ -8795,7 +8795,7 @@ paths:
         in: path
         required: true
         description: Name of the Org
-    patch:
+    post:
       summary: Bring up Racks
       operationId: bringup-racks
       description: |-
@@ -8853,7 +8853,7 @@ paths:
         in: path
         required: true
         description: ID of the Rack
-    patch:
+    post:
       summary: Bring up a Rack
       operationId: bringup-rack
       description: |-
