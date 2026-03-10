@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Issuer Configuration Guide
 
-Configure external identity providers (IdPs) for JWT authentication in cloud-api.
+Configure external identity providers (IdPs) for JWT authentication in carbide-rest-api.
 
 ## Configuration Structure
 
@@ -169,7 +169,7 @@ claimMappings:
 
 ## Keycloak Integration
 
-To use Keycloak as an identity provider, update the Cloud-API ConfigMap.
+To use Keycloak as an identity provider, update the Carbide REST API ConfigMap.
 
 ### Prerequisites
 
@@ -205,17 +205,17 @@ Once Keycloak configuration is finalized, the ingress controller for the Keycloa
 
 ```bash
 kubectl create secret generic keycloak-client-secret \
-  --namespace cloud-api \
+  --namespace carbide-rest \
   --from-literal=client-secret="${OAUTH_CLIENT_SECRET}" \
   --dry-run=client -o yaml | kubectl apply -f -
 ```
 
-### Step 2: Update the Cloud-API ConfigMap
+### Step 2: Update the Carbide REST API ConfigMap
 
-Edit the `cloud-api-config` ConfigMap in the `cloud-api` namespace:
+Edit the `carbide-rest-api-config` ConfigMap in the `carbide-rest` namespace:
 
 ```bash
-kubectl edit configmap cloud-api-config -n cloud-api
+kubectl edit configmap carbide-rest-api-config -n carbide-rest
 ```
 
 Add the Keycloak configuration section:
@@ -224,8 +224,8 @@ Add the Keycloak configuration section:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: cloud-api-config
-  namespace: cloud-api
+  name: carbide-rest-api-config
+  namespace: carbide-rest
 data:
   config.yaml: |
     # Keycloak integration configuration
@@ -248,14 +248,14 @@ data:
 
 ### Step 3: Mount the Client Secret Volume
 
-Ensure the Cloud-API Deployment mounts the Keycloak client secret:
+Ensure the Carbide REST API Deployment mounts the Keycloak client secret:
 
 ```yaml
 spec:
   template:
     spec:
       containers:
-        - name: cloud-api
+        - name: carbide-rest-api
           volumeMounts:
             - name: keycloak-client-secret
               mountPath: /var/secrets/keycloak/
@@ -269,14 +269,14 @@ spec:
 ### Step 4: Apply Configuration and Restart
 
 ```bash
-# Restart the Cloud-API deployment to pick up changes
-kubectl rollout restart deployment/cloud-api -n cloud-api
+# Restart the Carbide REST API deployment to pick up changes
+kubectl rollout restart deployment/carbide-rest-api -n carbide-rest
 
 # Verify the pods are running
-kubectl get pods -n cloud-api -l app.kubernetes.io/name=cloud-api
+kubectl get pods -n carbide-rest -l app.kubernetes.io/name=carbide-rest-api
 
 # Check logs for Keycloak configuration
-kubectl logs -n cloud-api -l app.kubernetes.io/name=cloud-api --tail=50 | grep -i keycloak
+kubectl logs -n carbide-rest -l app.kubernetes.io/name=carbide-rest-api --tail=50 | grep -i keycloak
 ```
 
 Expected log messages:

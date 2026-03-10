@@ -404,7 +404,7 @@ func (mm *ManageMachine) UpdateMachinesInDB(ctx context.Context, siteIDStr strin
 			// Update
 			//
 
-			// There could be a race between inventory and human changes in cloud-api,
+			// There could be a race between inventory and human changes in carbide-rest-api,
 			// so we need to grab a txn and also lock on the machine record.
 
 			txn, err := cdb.BeginTx(ctx, mm.dbSession, &sql.TxOptions{})

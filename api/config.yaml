@@ -57,7 +57,7 @@ issuers:
 
 siteManager:
   enabled: false
-  svcEndpoint: "https://sitemgr.cloud-site-manager:8100/v1/site"
+  svcEndpoint: "https://sitemgr.carbide-rest-site-manager:8100/v1/site"
 
 metrics:
   enabled: true
