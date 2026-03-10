@@ -40,9 +40,7 @@ import (
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model"
 	sc "github.com/nvidia/bare-metal-manager-rest/api/pkg/client/site"
 	auth "github.com/nvidia/bare-metal-manager-rest/auth/pkg/authorization"
-	cerr "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	sutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
+	cutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
 	cdbp "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
@@ -63,7 +61,7 @@ type BatchCreateInstanceHandler struct {
 	tc         temporalClient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewBatchCreateInstanceHandler initializes and returns a new handler for batch creating Instances
@@ -73,14 +71,14 @@ func NewBatchCreateInstanceHandler(dbSession *cdb.Session, tc temporalClient.Cli
 		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
 // buildBatchInstanceCreateRequestOsConfig validates and retrieves OS configuration for batch instance creation.
 // This mirrors the behavior of CreateInstanceHandler.buildInstanceCreateRequestOsConfig.
 // Returns: osConfig, osID, and error (matching single API pattern)
-func (bcih BatchCreateInstanceHandler) buildBatchInstanceCreateRequestOsConfig(c echo.Context, logger *zerolog.Logger, apiRequest *model.APIBatchInstanceCreateRequest, site *cdbm.Site) (*cwssaws.OperatingSystem, *uuid.UUID, *cerr.APIError) {
+func (bcih BatchCreateInstanceHandler) buildBatchInstanceCreateRequestOsConfig(c echo.Context, logger *zerolog.Logger, apiRequest *model.APIBatchInstanceCreateRequest, site *cdbm.Site) (*cwssaws.OperatingSystem, *uuid.UUID, *cutil.APIError) {
 
 	ctx := c.Request().Context()
 
@@ -89,7 +87,7 @@ func (bcih BatchCreateInstanceHandler) buildBatchInstanceCreateRequestOsConfig(c
 
 		if err := apiRequest.ValidateAndSetOperatingSystemData(bcih.cfg, nil); err != nil {
 			logger.Error().Err(err).Msg("failed to validate OperatingSystem")
-			return nil, nil, cerr.NewAPIError(http.StatusBadRequest, "Failed to validate OperatingSystem data", err)
+			return nil, nil, cutil.NewAPIError(http.StatusBadRequest, "Failed to validate OperatingSystem data", err)
 		}
 
 		return &cwssaws.OperatingSystem{
@@ -111,7 +109,7 @@ func (bcih BatchCreateInstanceHandler) buildBatchInstanceCreateRequestOsConfig(c
 
 	if id, err = uuid.Parse(*apiRequest.OperatingSystemID); err != nil {
 		logger.Error().Err(err).Msg("failed to parse OperatingSystemID")
-		return nil, nil, cerr.NewAPIError(http.StatusBadRequest, "Unable to parse `operatingSystemId` specified", validation.Errors{
+		return nil, nil, cutil.NewAPIError(http.StatusBadRequest, "Unable to parse `operatingSystemId` specified", validation.Errors{
 			"operatingSystemId": errors.New(*apiRequest.OperatingSystemID),
 		})
 	}
@@ -123,12 +121,12 @@ func (bcih BatchCreateInstanceHandler) buildBatchInstanceCreateRequestOsConfig(c
 	os, serr := osDAO.GetByID(ctx, nil, *osID, nil)
 	if serr != nil {
 		if serr == cdb.ErrDoesNotExist {
-			return nil, nil, cerr.NewAPIError(http.StatusBadRequest, "Could not find OperatingSystem with ID specified in request data", validation.Errors{
+			return nil, nil, cutil.NewAPIError(http.StatusBadRequest, "Could not find OperatingSystem with ID specified in request data", validation.Errors{
 				"id": errors.New(osID.String()),
 			})
 		}
 		logger.Error().Err(serr).Msg("error retrieving OperatingSystem from DB by ID")
-		return nil, nil, cerr.NewAPIError(http.StatusInternalServerError, "Failed to retrieve OperatingSystem with ID specified in request data, DB error", validation.Errors{
+		return nil, nil, cutil.NewAPIError(http.StatusInternalServerError, "Failed to retrieve OperatingSystem with ID specified in request data, DB error", validation.Errors{
 			"id": errors.New(osID.String()),
 		})
 	}
@@ -141,13 +139,13 @@ func (bcih BatchCreateInstanceHandler) buildBatchInstanceCreateRequestOsConfig(c
 	// Confirm ownership between tenant and OS.
 	if os.TenantID.String() != apiRequest.TenantID {
 		logger.Error().Msg("OperatingSystem in request is not owned by tenant")
-		return nil, nil, cerr.NewAPIError(http.StatusBadRequest, "OperatingSystem specified in request is not owned by Tenant", nil)
+		return nil, nil, cutil.NewAPIError(http.StatusBadRequest, "OperatingSystem specified in request is not owned by Tenant", nil)
 	}
 
 	if os.Type == cdbm.OperatingSystemTypeImage {
 		if site.Config == nil || !site.Config.ImageBasedOperatingSystem {
 			logger.Warn().Str("operatingSystemId", os.ID.String()).Str("siteId", site.ID.String()).Msg("Creation of Instance with Image based Operating System is not supported for Site, ImageBasedOperatingSystem capability is not enabled")
-			return nil, nil, cerr.NewAPIError(http.StatusBadRequest, "Creation of Instance with Image based Operating System is not supported. Site must have ImageBasedOperatingSystem capability enabled.", nil)
+			return nil, nil, cutil.NewAPIError(http.StatusBadRequest, "Creation of Instance with Image based Operating System is not supported. Site must have ImageBasedOperatingSystem capability enabled.", nil)
 		}
 	}
 
@@ -167,13 +165,13 @@ func (bcih BatchCreateInstanceHandler) buildBatchInstanceCreateRequestOsConfig(c
 			)
 			if err != nil {
 				logger.Error().Msgf("Error retrieving OperatingSystemAssociations for OS: %s", err)
-				return nil, nil, cerr.NewAPIError(http.StatusInternalServerError, "Failed to retrieve OperatingSystemAssociations for OS with ID specified in request data, DB error", validation.Errors{
+				return nil, nil, cutil.NewAPIError(http.StatusInternalServerError, "Failed to retrieve OperatingSystemAssociations for OS with ID specified in request data, DB error", validation.Errors{
 					"id": errors.New(osID.String()),
 				})
 			}
 			if ossaCount == 0 {
 				logger.Error().Msg("OperatingSystem does not belong to VPC site")
-				return nil, nil, cerr.NewAPIError(http.StatusBadRequest, "OperatingSystem specified in request is not in VPC site", nil)
+				return nil, nil, cutil.NewAPIError(http.StatusBadRequest, "OperatingSystem specified in request is not in VPC site", nil)
 			}
 		}*/
 
@@ -184,7 +182,7 @@ func (bcih BatchCreateInstanceHandler) buildBatchInstanceCreateRequestOsConfig(c
 	err = apiRequest.ValidateAndSetOperatingSystemData(bcih.cfg, os)
 	if err != nil {
 		logger.Error().Msgf("OperatingSystem options validation failed: %s", err)
-		return nil, nil, cerr.NewAPIError(http.StatusBadRequest, "OperatingSystem options validation failed", err)
+		return nil, nil, cutil.NewAPIError(http.StatusBadRequest, "OperatingSystem options validation failed", err)
 	}
 
 	// Options below should all have been set by the
@@ -306,7 +304,7 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 
 	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, bcih.tracerSpan, handlerSpan)
 	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -317,14 +315,14 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Tenant Admins are allowed to create Instances
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	// ==================== Step 2: Request Validation ====================
@@ -335,14 +333,14 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 	err = c.Bind(&apiRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
 	}
 
 	// Validate request attributes
 	verr := apiRequest.Validate()
 	if verr != nil {
 		logger.Warn().Err(verr).Msg("error validating batch instance creation request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating batch instance creation request data", verr)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating batch instance creation request data", verr)
 	}
 
 	// Set default for TopologyOptimized if not provided
@@ -359,60 +357,60 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 	if err != nil {
 		if err == common.ErrOrgTenantNotFound {
 			logger.Warn().Err(err).Msg("Org does not have a Tenant associated")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
 		}
 		logger.Error().Err(err).Msg("unable to retrieve tenant for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve tenant for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve tenant for org", nil)
 	}
 
 	// Verify tenant-id in request matches tenant from org
 	apiTenant, err := common.GetTenantFromIDString(ctx, nil, apiRequest.TenantID, bcih.dbSession)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error retrieving tenant from request")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "TenantID in request is not valid", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "TenantID in request is not valid", nil)
 	}
 	if apiTenant.ID != tenant.ID {
 		logger.Warn().Msg("tenant id in request does not match tenant in org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "TenantID in request does not match tenant in org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "TenantID in request does not match tenant in org", nil)
 	}
 
 	// Validate the instance type
 	apiInstanceTypeID, err := uuid.Parse(apiRequest.InstanceTypeID)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error parsing instance type id in request")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Instance Type ID in request is not valid", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Instance Type ID in request is not valid", nil)
 	}
 
 	itDAO := cdbm.NewInstanceTypeDAO(bcih.dbSession)
 	instancetype, err := itDAO.GetByID(ctx, nil, apiInstanceTypeID, nil)
 	if err != nil {
 		if err == cdb.ErrDoesNotExist {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Could not find Instance Type with ID specified in request data", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Could not find Instance Type with ID specified in request data", nil)
 		}
 		logger.Error().Err(err).Msg("error retrieving Instance Type from DB by ID")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Instance Type with ID specified in request data", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Instance Type with ID specified in request data", nil)
 	}
 
 	// Validate the VPC state
 	vpc, err := common.GetVpcFromIDString(ctx, nil, apiRequest.VpcID, []string{cdbm.NVLinkLogicalPartitionRelationName}, bcih.dbSession)
 	if err != nil {
 		if err == cdb.ErrDoesNotExist {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Could not find VPC with ID specified in request data", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Could not find VPC with ID specified in request data", nil)
 		}
 		logger.Warn().Err(err).Str("vpcId", apiRequest.VpcID).Msg("error retrieving VPC from request")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "VpcID in request is not valid", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "VpcID in request is not valid", nil)
 	}
 
 	// Ensure that the VPC belongs to the Tenant (check ownership before status)
 	if vpc.TenantID != tenant.ID {
 		logger.Warn().Msg("tenant id in request does not match tenant in VPC")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "VPC specified in request is not owned by Tenant", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "VPC specified in request is not owned by Tenant", nil)
 	}
 
 	// Validate VPC status
 	if vpc.ControllerVpcID == nil || vpc.Status != cdbm.VpcStatusReady {
 		logger.Warn().Msg("VPC specified in request data is not ready")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "VPC specified in request data is not ready", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "VPC specified in request data is not ready", nil)
 	}
 
 	var defaultNvllpID *uuid.UUID
@@ -427,7 +425,7 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 			Str("Site ID for VPC", vpc.SiteID.String()).
 			Str("Site ID for Instance Type", instancetype.SiteID.String()).
 			Msg("VPC and InstanceType are not on the same Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "VPC and Instance Type specified in request data do not belong to the same Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "VPC and Instance Type specified in request data do not belong to the same Site", nil)
 	}
 
 	// Get Site
@@ -435,17 +433,17 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 	site, err := siteDAO.GetByID(ctx, nil, vpc.SiteID, nil, false)
 	if err != nil {
 		if err == cdb.ErrDoesNotExist {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "The Site where Instances are being created could not be found", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "The Site where Instances are being created could not be found", nil)
 		}
 		logger.Error().Err(err).Msg("error retrieving Site from DB by ID")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "The Site where Instances are being created could not be retrieved", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "The Site where Instances are being created could not be retrieved", nil)
 	}
 
 	// Validate Site status
 	if site.Status != cdbm.SiteStatusRegistered {
 		logger.Warn().Str("Site ID", site.ID.String()).Str("Site Status", site.Status).
 			Msg("The Site where Instances are being created is not in Registered state")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "The Site where Instances are being created is not in Registered state", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "The Site where Instances are being created is not in Registered state", nil)
 	}
 
 	// Load and validate subnets and VPC prefixes (batch query for efficiency)
@@ -462,7 +460,7 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 			if err != nil {
 				logger.Error().Err(err).Str("subnetID", *ifc.SubnetID).
 					Msg("error parsing subnet id")
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Subnet ID format", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Subnet ID format", nil)
 			}
 			subnetIDs = append(subnetIDs, subnetID)
 		}
@@ -470,7 +468,7 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 			vpcPrefixID, err := uuid.Parse(*ifc.VpcPrefixID)
 			if err != nil {
 				logger.Warn().Err(err).Msg("error parsing vpcprefix id in instance vpcprefix request")
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "VPC Prefix ID specified in request data is not valid", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "VPC Prefix ID specified in request data is not valid", nil)
 			}
 			vpcPrefixIDs = append(vpcPrefixIDs, vpcPrefixID)
 		}
@@ -482,7 +480,7 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 		subnets, _, err := subnetDAO.GetAll(ctx, nil, cdbm.SubnetFilterInput{SubnetIDs: subnetIDs}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
 		if err != nil {
 			logger.Error().Err(err).Msg("error retrieving Subnets from DB by IDs")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Subnets from DB by IDs", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Subnets from DB by IDs", nil)
 		}
 		for i := range subnets {
 			subnetIDMap[subnets[i].ID] = &subnets[i]
@@ -495,7 +493,7 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 		vpcPrefixes, _, err := vpDAO.GetAll(ctx, nil, cdbm.VpcPrefixFilterInput{VpcPrefixIDs: vpcPrefixIDs}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
 		if err != nil {
 			logger.Error().Err(err).Msg("error retrieving VPC Prefixes from DB by IDs")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve VPC Prefixes from DB by IDs", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve VPC Prefixes from DB by IDs", nil)
 		}
 		for i := range vpcPrefixes {
 			vpcPrefixIDMap[vpcPrefixes[i].ID] = &vpcPrefixes[i]
@@ -512,27 +510,27 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 
 			subnet, ok := subnetIDMap[subnetID]
 			if !ok {
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Could not find Subnet with ID specified in request data", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Could not find Subnet with ID specified in request data", nil)
 			}
 
 			if subnet.TenantID != tenant.ID {
 				logger.Warn().Msg(fmt.Sprintf("Subnet: %v specified in request is not owned by Tenant", subnetID))
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Subnet: %v specified in request is not owned by Tenant", subnetID), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Subnet: %v specified in request is not owned by Tenant", subnetID), nil)
 			}
 
 			if subnet.ControllerNetworkSegmentID == nil || subnet.Status != cdbm.SubnetStatusReady {
 				logger.Warn().Msg(fmt.Sprintf("Subnet: %v specified in request data is not in Ready state", subnetID))
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Subnet: %v specified in request data is not in Ready state", subnetID), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Subnet: %v specified in request data is not in Ready state", subnetID), nil)
 			}
 
 			if subnet.VpcID != vpc.ID {
 				logger.Warn().Msg(fmt.Sprintf("Subnet: %v specified in request does not match with VPC", subnetID))
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Subnet: %v specified in request does not match with VPC", subnetID), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Subnet: %v specified in request does not match with VPC", subnetID), nil)
 			}
 
 			if vpc.NetworkVirtualizationType != nil && *vpc.NetworkVirtualizationType != cdbm.VpcEthernetVirtualizer {
 				logger.Warn().Msg(fmt.Sprintf("VPC: %v specified in request must have Ethernet network virtualization type in order to create Subnet based interfaces", vpc.ID))
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("VPC: %v specified in request must have Ethernet network virtualization type in order to create Subnet based interfaces", vpc.ID), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("VPC: %v specified in request must have Ethernet network virtualization type in order to create Subnet based interfaces", vpc.ID), nil)
 			}
 
 			dbInterfaces = append(dbInterfaces, cdbm.Interface{
@@ -547,27 +545,27 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 
 			vpcPrefix, ok := vpcPrefixIDMap[vpcPrefixUUID]
 			if !ok {
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Could not find VPC Prefix with ID specified in request data", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Could not find VPC Prefix with ID specified in request data", nil)
 			}
 
 			if vpcPrefix.TenantID != tenant.ID {
 				logger.Warn().Msg(fmt.Sprintf("VPC Prefix: %v specified in request is not owned by Tenant", vpcPrefixUUID))
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("VPC Prefix: %v specified in request is not owned by Tenant", vpcPrefixUUID), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("VPC Prefix: %v specified in request is not owned by Tenant", vpcPrefixUUID), nil)
 			}
 
 			if vpcPrefix.Status != cdbm.VpcPrefixStatusReady {
 				logger.Warn().Msg(fmt.Sprintf("VPC Prefix: %v specified in request data is not in Ready state", vpcPrefixUUID))
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("VPC Prefix: %v specified in request data is not in Ready state", vpcPrefixUUID), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("VPC Prefix: %v specified in request data is not in Ready state", vpcPrefixUUID), nil)
 			}
 
 			if vpcPrefix.VpcID != vpc.ID {
 				logger.Warn().Msg(fmt.Sprintf("VPC Prefix: %v specified in request does not match with VPC", vpcPrefixUUID))
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("VPC Prefix: %v specified in request does not match with VPC", vpcPrefixUUID), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("VPC Prefix: %v specified in request does not match with VPC", vpcPrefixUUID), nil)
 			}
 
 			if vpc.NetworkVirtualizationType == nil || *vpc.NetworkVirtualizationType != cdbm.VpcFNN {
 				logger.Warn().Msg(fmt.Sprintf("VPC: %v specified in request must have FNN network virtualization type in order to create VPC Prefix based interfaces", vpc.ID))
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("VPC: %v specified in request must have FNN network virtualization type in order to create VPC Prefix based interfaces", vpc.ID), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("VPC: %v specified in request must have FNN network virtualization type in order to create VPC Prefix based interfaces", vpc.ID), nil)
 			}
 
 			if ifc.Device != nil && ifc.DeviceInstance != nil {
@@ -601,7 +599,7 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 			if err != nil {
 				logger.Warn().Err(err).Str("serviceID", adesdr.DpuExtensionServiceID).
 					Msg("error parsing DPU Extension Service ID")
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest,
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest,
 					fmt.Sprintf("Invalid DPU Extension Service ID: %s", adesdr.DpuExtensionServiceID), nil)
 			}
 			desIDs = append(desIDs, desID)
@@ -618,7 +616,7 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 		}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
 		if err != nil {
 			logger.Error().Err(err).Msg("error retrieving DPU Extension Services from DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError,
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError,
 				"Failed to retrieve DPU Extension Services specified in request, DB error", nil)
 		}
 
@@ -634,7 +632,7 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 		for i, desID := range desIDs {
 			des, exists := desMap[desID]
 			if !exists {
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest,
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest,
 					fmt.Sprintf("Could not find DPU Extension Service with ID: %s", desID), nil)
 			}
 
@@ -642,7 +640,7 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 			if des.TenantID != tenant.ID {
 				logger.Warn().Str("tenantID", tenant.ID.String()).Str("serviceID", desID.String()).
 					Msg("DPU Extension Service does not belong to current Tenant")
-				return cerr.NewAPIErrorResponse(c, http.StatusForbidden,
+				return cutil.NewAPIErrorResponse(c, http.StatusForbidden,
 					fmt.Sprintf("DPU Extension Service: %s does not belong to current Tenant", desID.String()), nil)
 			}
 
@@ -650,7 +648,7 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 			if des.SiteID != site.ID {
 				logger.Warn().Str("siteID", site.ID.String()).Str("serviceID", desID.String()).
 					Msg("DPU Extension Service does not belong to Site")
-				return cerr.NewAPIErrorResponse(c, http.StatusForbidden,
+				return cutil.NewAPIErrorResponse(c, http.StatusForbidden,
 					fmt.Sprintf("DPU Extension Service: %s does not belong to Site where Instances are being created", desID.String()), nil)
 			}
 
@@ -664,7 +662,7 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 				}
 			}
 			if !versionFound {
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest,
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest,
 					fmt.Sprintf("Version: %s was not found for DPU Extension Service: %s", requestedVersion, desID.String()), nil)
 			}
 
@@ -682,12 +680,12 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 		nsg, err := nsgDAO.GetByID(ctx, nil, *apiRequest.NetworkSecurityGroupID, nil)
 		if err != nil {
 			if err == cdb.ErrDoesNotExist {
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest,
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest,
 					fmt.Sprintf("Could not find Network Security Group with ID: %s", *apiRequest.NetworkSecurityGroupID), nil)
 			}
 			logger.Error().Err(err).Str("nsgID", *apiRequest.NetworkSecurityGroupID).
 				Msg("error retrieving Network Security Group from DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError,
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError,
 				"Failed to retrieve Network Security Group specified in request, DB error", nil)
 		}
 
@@ -695,7 +693,7 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 		if nsg.SiteID != site.ID {
 			logger.Error().Str("siteID", site.ID.String()).Str("nsgID", *apiRequest.NetworkSecurityGroupID).
 				Msg("Network Security Group does not belong to Site")
-			return cerr.NewAPIErrorResponse(c, http.StatusForbidden,
+			return cutil.NewAPIErrorResponse(c, http.StatusForbidden,
 				"Network Security Group specified in request does not belong to Site", nil)
 		}
 
@@ -703,7 +701,7 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 		if nsg.TenantID != tenant.ID {
 			logger.Error().Str("tenantID", tenant.ID.String()).Str("nsgID", *apiRequest.NetworkSecurityGroupID).
 				Msg("Network Security Group does not belong to Tenant")
-			return cerr.NewAPIErrorResponse(c, http.StatusForbidden,
+			return cutil.NewAPIErrorResponse(c, http.StatusForbidden,
 				"Network Security Group specified in request does not belong to Tenant", nil)
 		}
 
@@ -720,29 +718,29 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 		sshkeygroup, serr := common.GetSSHKeyGroupFromIDString(ctx, nil, skgIDStr, bcih.dbSession, nil)
 		if serr != nil {
 			if serr == common.ErrInvalidID {
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to create Instances, Invalid SSH Key Group ID: %s", skgIDStr), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to create Instances, Invalid SSH Key Group ID: %s", skgIDStr), nil)
 			}
 			if serr == cdb.ErrDoesNotExist {
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to create Instances, Could not find SSH Key Group with ID: %s", skgIDStr), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to create Instances, Could not find SSH Key Group with ID: %s", skgIDStr), nil)
 			}
 
 			logger.Warn().Err(serr).Str("SSH Key Group ID", skgIDStr).Msg("error retrieving SSH Key Group from DB by ID")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to retrieve SSH Key Group with ID `%s` specified in request, DB error", skgIDStr), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to retrieve SSH Key Group with ID `%s` specified in request, DB error", skgIDStr), nil)
 		}
 
 		if sshkeygroup.TenantID != tenant.ID {
 			logger.Warn().Str("Tenant ID", tenant.ID.String()).Str("SSH Key Group ID", skgIDStr).Msg("SSH Key Group does not belong to current Tenant")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to create Instances, SSH Key Group with ID: %s does not belong to Tenant", skgIDStr), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to create Instances, SSH Key Group with ID: %s does not belong to Tenant", skgIDStr), nil)
 		}
 
 		// Verify if SSH Key Group Site Association exists
 		_, serr = skgsaDAO.GetBySSHKeyGroupIDAndSiteID(ctx, nil, sshkeygroup.ID, site.ID, nil)
 		if serr != nil {
 			if serr == cdb.ErrDoesNotExist {
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("SSH Key Group with ID: %s is not associated with the Site where Instances are being created", skgIDStr), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("SSH Key Group with ID: %s is not associated with the Site where Instances are being created", skgIDStr), nil)
 			}
 			logger.Warn().Err(serr).Str("SSH Key Group ID", skgIDStr).Msg("error retrieving SSH Key Group Site Association from DB by SSH Key Group ID & Site ID")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to determine if SSH Key Group: %s is associated with the Site where Instances are being created, DB error", skgIDStr), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to determine if SSH Key Group: %s is associated with the Site where Instances are being created, DB error", skgIDStr), nil)
 		}
 
 		sshKeyGroups = append(sshKeyGroups, *sshkeygroup)
@@ -754,7 +752,7 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 	// Validate and build OS configuration for temporal workflow
 	// apiRequest will be mutated for use in CreateFromParams.
 	// osConfig will hold the struct/data for use with Temporal/Carbide calls.
-	// Errors will be returned already in the form of cerr.NewAPIErrorResponse
+	// Errors will be returned already in the form of cutil.NewAPIErrorResponse
 	osConfig, osID, oserr := bcih.buildBatchInstanceCreateRequestOsConfig(c, &logger, &apiRequest, site)
 	if oserr != nil {
 		// buildBatchInstanceCreateRequestOsConfig already handles logging,
@@ -789,12 +787,12 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 		cdbp.PageInput{}, nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error checking for name uniqueness")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to check instance name uniqueness, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to check instance name uniqueness, DB error", nil)
 	}
 	if tot > 0 {
 		logger.Warn().Str("existingInstanceName", existing[0].Name).Str("existingInstanceID", existing[0].ID.String()).
 			Msg("instance with same name already exists for tenant at site")
-		return cerr.NewAPIErrorResponse(c, http.StatusConflict,
+		return cutil.NewAPIErrorResponse(c, http.StatusConflict,
 			fmt.Sprintf("Instance with name '%s' already exists for Tenant at this Site. Please choose a different name prefix.", existing[0].Name), nil)
 	}
 
@@ -807,7 +805,7 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 	tx, err := cdb.BeginTx(ctx, bcih.dbSession, &sql.TxOptions{})
 	if err != nil {
 		logger.Error().Err(err).Msg("unable to start transaction")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Instances", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Instances", nil)
 	}
 	// this variable is used in cleanup actions to indicate if this transaction committed
 	txCommitted := false
@@ -820,7 +818,7 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 	err = tx.TryAcquireAdvisoryLock(ctx, cdb.GetAdvisoryLockIDFromString(fmt.Sprintf("%s-%s", tenant.ID.String(), instancetype.ID.String())), nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed to acquire advisory lock on Tenant and Instance Type")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error creating Instances, detected multiple parallel requests on Instance Type by Tenant", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error creating Instances, detected multiple parallel requests on Instance Type by Tenant", nil)
 	}
 
 	// Ensure that Tenant has an Allocation with specified Tenant InstanceType Site
@@ -830,20 +828,20 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 	tnas, _, serr := aDAO.GetAll(ctx, tx, allocationFilter, allocationPage, nil)
 	if serr != nil {
 		logger.Error().Err(serr).Msg("error retrieving allocations for tenant")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Allocation for Tenant", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Allocation for Tenant", nil)
 	}
 	if len(tnas) == 0 {
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden,
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden,
 			"Tenant does not have any Allocations for Site and Instance Type specified in request data", nil)
 	}
 
 	alconstraints, err := common.GetAllocationConstraintsForInstanceType(ctx, tx, bcih.dbSession, tenant.ID, instancetype, tnas)
 	if err != nil {
 		if err == common.ErrAllocationConstraintNotFound {
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "No Allocations for specified Instance Type were found for current Tenant", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "No Allocations for specified Instance Type were found for current Tenant", nil)
 		}
 		logger.Error().Err(err).Msg("error retrieving Allocation Constraints from DB for InstanceType and Allocation")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Allocations for specified Instance Type, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Allocations for specified Instance Type, DB error", nil)
 	}
 
 	// Getting active instances for the tenant on requested instance type
@@ -854,7 +852,7 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 	instances, insTotal, err := inDAO.GetAll(ctx, tx, cdbm.InstanceFilterInput{TenantIDs: []uuid.UUID{tenant.ID}, SiteIDs: siteIDs, InstanceTypeIDs: []uuid.UUID{instancetype.ID}}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Active Instances from DB for Tenant and InstanceType")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve active instances for Tenant and Instance Type, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve active instances for Tenant and Instance Type, DB error", nil)
 	}
 
 	// Build map allocation constraint ID which has been used by Instance
@@ -862,7 +860,7 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 	for _, inst := range instances {
 		if inst.AllocationConstraintID == nil {
 			logger.Error().Msgf("found Instance missing AllocationConstraintID")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Instance is missing Allocation Constraint ID", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Instance is missing Allocation Constraint ID", nil)
 		}
 		usedMapAllocationConstraintIDs[*inst.AllocationConstraintID] += 1
 	}
@@ -875,7 +873,7 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 
 	// Check if we have enough allocation for all requested instances
 	if insTotal+apiRequest.Count > totalConstraintValue {
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden,
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden,
 			fmt.Sprintf("Tenant has reached the maximum number of Instances for Instance Type. Current: %d, Requested: %d, Max: %d", insTotal, apiRequest.Count, totalConstraintValue), nil)
 	}
 
@@ -903,7 +901,7 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 	// Allocate machines with topology optimization
 	machines, apiErr := allocateMachinesForBatch(ctx, tx, bcih.dbSession, instancetype, apiRequest.Count, topologyOptimized, logger)
 	if apiErr != nil {
-		return cerr.NewAPIErrorResponse(c, apiErr.Code, apiErr.Message, apiErr.Data)
+		return cutil.NewAPIErrorResponse(c, apiErr.Code, apiErr.Message, apiErr.Data)
 	}
 
 	// ==================== Step 5: Machine Capability Validation ====================
@@ -921,11 +919,11 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 		itIbCaps, itIbCapCount, err := mcDAO.GetAll(ctx, nil, nil, []uuid.UUID{apiInstanceTypeID}, cdb.GetStrPtr(cdbm.MachineCapabilityTypeInfiniBand), nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 		if err != nil {
 			logger.Error().Err(err).Msg("error retrieving InfiniBand Machine Capabilities from DB for Instance Type")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve InfiniBand Capabilities for Instance Type, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve InfiniBand Capabilities for Instance Type, DB error", nil)
 		}
 		if itIbCapCount == 0 {
 			logger.Warn().Msg("InfiniBand interfaces specified but Instance Type doesn't have InfiniBand Capability")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "InfiniBand Interfaces cannot be specified if Instance Type doesn't have InfiniBand Capability", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "InfiniBand Interfaces cannot be specified if Instance Type doesn't have InfiniBand Capability", nil)
 		}
 
 		// Validate InfiniBand Partitions: parse IDs, batch fetch from DB, verify tenant/site ownership
@@ -935,7 +933,7 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 			ibpID, err := uuid.Parse(ibic.InfiniBandPartitionID)
 			if err != nil {
 				logger.Warn().Err(err).Msg("error parsing infiniband partition id")
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Partition ID %v is not valid", ibic.InfiniBandPartitionID), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Partition ID %v is not valid", ibic.InfiniBandPartitionID), nil)
 			}
 			ibpIDs = append(ibpIDs, ibpID)
 		}
@@ -946,7 +944,7 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 		}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
 		if err != nil {
 			logger.Error().Err(err).Msg("error retrieving InfiniBand Partitions from DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Partitions specified in request data, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Partitions specified in request data, DB error", nil)
 		}
 
 		// Build map for quick lookup
@@ -961,22 +959,22 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 			ibpID := ibpIDs[i]
 			ibp, exists := ibpMap[ibpID]
 			if !exists {
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Could not find Partition with ID %v", ibic.InfiniBandPartitionID), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Could not find Partition with ID %v", ibic.InfiniBandPartitionID), nil)
 			}
 
 			if ibp.SiteID != site.ID {
 				logger.Warn().Msgf("InfiniBandPartition: %v does not match with Instance Site", ibpID)
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Partition %v does not match with Instance Site", ibpID), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Partition %v does not match with Instance Site", ibpID), nil)
 			}
 
 			if ibp.TenantID != tenant.ID {
 				logger.Warn().Msgf("InfiniBandPartition: %v is not owned by Tenant", ibpID)
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Partition %v is not owned by Tenant", ibpID), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Partition %v is not owned by Tenant", ibpID), nil)
 			}
 
 			if ibp.ControllerIBPartitionID == nil || ibp.Status != cdbm.InfiniBandPartitionStatusReady {
 				logger.Warn().Msgf("InfiniBandPartition: %v is not in Ready state", ibpID)
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Partition %v is not in Ready state", ibpID), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Partition %v is not in Ready state", ibpID), nil)
 			}
 
 			dbibic = append(dbibic, cdbm.InfiniBandInterface{
@@ -993,7 +991,7 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 		err = model.ValidateInfiniBandInterfaces(itIbCaps, apiRequest.InfiniBandInterfaces)
 		if err != nil {
 			logger.Error().Err(err).Msg("InfiniBand interfaces validation failed")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("InfiniBand interfaces validation failed: %v", err), err)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("InfiniBand interfaces validation failed: %v", err), err)
 		}
 		logger.Info().Int("infiniBandInterfaceCount", len(dbibic)).Msg("validated InfiniBand interfaces (shared across all instances)")
 	}
@@ -1006,13 +1004,13 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 			cdb.GetStrPtr(cdbm.MachineCapabilityDeviceTypeDPU), nil, nil, nil, nil, nil)
 		if err != nil {
 			logger.Error().Err(err).Msg("error retrieving DPU Machine Capabilities")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError,
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError,
 				"Failed to retrieve DPU Capabilities for Instance Type, DB error", nil)
 		}
 
 		if itDpuCapCount == 0 {
 			logger.Warn().Msg("Device/DeviceInstance specified but Instance Type doesn't have DPU Capability")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest,
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest,
 				"Device and DeviceInstance cannot be specified if Instance Type doesn't have Network Capabilities with DPU device type", nil)
 		}
 
@@ -1020,7 +1018,7 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 		err = model.ValidateMultiEthernetDeviceInterfaces(itDpuCaps, dbInterfaces)
 		if err != nil {
 			logger.Error().Err(err).Msg("DPU interfaces validation failed")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest,
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest,
 				fmt.Sprintf("DPU interfaces validation failed: %v", err), err)
 		}
 		logger.Info().Msg("validated DPU interfaces (shared across all instances)")
@@ -1031,20 +1029,20 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 	itNvlCaps, itNvlCapCount, err := mcDAO.GetAll(ctx, nil, nil, []uuid.UUID{apiInstanceTypeID}, cdb.GetStrPtr(cdbm.MachineCapabilityTypeGPU), nil, nil, nil, nil, nil, cdb.GetStrPtr(cdbm.MachineCapabilityDeviceTypeNVLink), nil, nil, nil, cdb.GetIntPtr(cdbp.TotalLimit), nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving GPU (NVLink) Machine Capabilities from DB for Instance Type")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve GPU Capabilities for Instance Type, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve GPU Capabilities for Instance Type, DB error", nil)
 	}
 
 	if len(apiRequest.NVLinkInterfaces) > 0 {
 		if itNvlCapCount == 0 {
 			logger.Warn().Msg("NVLink interfaces specified but Instance Type doesn't have GPU (NVLink) Capability")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "NVLink Interfaces cannot be specified if Instance Type doesn't have GPU Capabilities", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "NVLink Interfaces cannot be specified if Instance Type doesn't have GPU Capabilities", nil)
 		}
 
 		// Validate NVLink interface configuration against capabilities
 		err = model.ValidateNVLinkInterfaces(itNvlCaps, apiRequest.NVLinkInterfaces)
 		if err != nil {
 			logger.Error().Err(err).Msg("NVLink interfaces validation failed")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("NVLink interfaces validation failed: %v", err), err)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("NVLink interfaces validation failed: %v", err), err)
 		}
 
 		// Validate NVLink Logical Partitions: parse IDs, batch fetch from DB, verify VPC ownership
@@ -1054,7 +1052,7 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 			nvllpID, err := uuid.Parse(nvlifc.NVLinkLogicalPartitionID)
 			if err != nil {
 				logger.Warn().Err(err).Msg("error parsing NVLink Logical Partition id")
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("NVLink Logical Partition ID %v is not valid", nvlifc.NVLinkLogicalPartitionID), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("NVLink Logical Partition ID %v is not valid", nvlifc.NVLinkLogicalPartitionID), nil)
 			}
 			nvllpIDs = append(nvllpIDs, nvllpID)
 		}
@@ -1077,7 +1075,7 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 			}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
 			if err != nil {
 				logger.Error().Err(err).Msg("error retrieving NVLink Logical Partitions from DB")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve NVLink Logical Partitions specified in request data, DB error", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve NVLink Logical Partitions specified in request data, DB error", nil)
 			}
 
 			nvllpMap = make(map[uuid.UUID]*cdbm.NVLinkLogicalPartition, len(nvllpList))
@@ -1094,28 +1092,28 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 			// Validate that the NVLink Logical Partition ID matches the default NVLink Logical Partition ID
 			if defaultNvllpID != nil {
 				if nvllpID != *defaultNvllpID {
-					return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "NVLink Logical Partition specified for NVLink Interface does not match NVLink Logical Partition of VPC", nil)
+					return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "NVLink Logical Partition specified for NVLink Interface does not match NVLink Logical Partition of VPC", nil)
 				}
 			} else {
 				// Validate NVLink Logical Partition only if it's not the default
 				nvllp, exists := nvllpMap[nvllpID]
 				if !exists {
-					return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Could not find NVLink Logical Partition with ID %v", nvllpID), nil)
+					return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Could not find NVLink Logical Partition with ID %v", nvllpID), nil)
 				}
 
 				if nvllp.SiteID != site.ID {
 					logger.Warn().Msgf("NVLink Logical Partition: %v does not match with Instance Site", nvllpID)
-					return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("NVLink Logical Partition %v does not match with Instance Site", nvllpID), nil)
+					return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("NVLink Logical Partition %v does not match with Instance Site", nvllpID), nil)
 				}
 
 				if nvllp.TenantID != tenant.ID {
 					logger.Warn().Msgf("NVLink Logical Partition: %v is not owned by Tenant", nvllpID)
-					return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("NVLink Logical Partition %v is not owned by Tenant", nvllpID), nil)
+					return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("NVLink Logical Partition %v is not owned by Tenant", nvllpID), nil)
 				}
 
 				if nvllp.Status != cdbm.NVLinkLogicalPartitionStatusReady {
 					logger.Warn().Msgf("NVLink Logical Partition: %v is not in Ready state", nvllpID)
-					return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("NVLink Logical Partition %v is not in Ready state", nvllpID), nil)
+					return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("NVLink Logical Partition %v is not in Ready state", nvllpID), nil)
 				}
 			}
 
@@ -1161,7 +1159,7 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 		if err != nil {
 			logger.Warn().Err(err).Str("serviceID", adesdr.DpuExtensionServiceID).
 				Msg("error parsing DPU Extension Service ID")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest,
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest,
 				fmt.Sprintf("Invalid DPU Extension Service ID: %s", adesdr.DpuExtensionServiceID), nil)
 		}
 		dpuServiceIDs = append(dpuServiceIDs, desdID)
@@ -1179,7 +1177,7 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 			constraintUsedCount = 0
 			if constraintIdx >= len(availableConstraints) {
 				logger.Error().Msg("ran out of allocation constraints (should not happen)")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError,
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError,
 					"Failed to allocate instances: insufficient allocation constraints", nil)
 			}
 		}
@@ -1215,7 +1213,7 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 	createdInstances, err := inDAO.CreateMultiple(ctx, tx, instanceCreateInputs)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to batch create instance records")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError,
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError,
 			fmt.Sprintf("Failed to batch create instances: %v", err), nil)
 	}
 	logger.Info().Int("count", len(createdInstances)).Msg("batch created all instance records")
@@ -1232,7 +1230,7 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 	updatedInstances, err := inDAO.UpdateMultiple(ctx, tx, instanceUpdateInputs)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to batch update controller instance IDs")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError,
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError,
 			fmt.Sprintf("Failed to batch update instances: %v", err), nil)
 	}
 	logger.Info().Int("count", len(updatedInstances)).Msg("batch updated all controller instance IDs")
@@ -1261,7 +1259,7 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 		_, err = skgiaDAO.CreateMultiple(ctx, tx, skgiaInputs)
 		if err != nil {
 			logger.Error().Err(err).Msg("failed to batch create SSH key group associations")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError,
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError,
 				fmt.Sprintf("Failed to batch create SSH key group associations: %v", err), nil)
 		}
 		logger.Info().Int("count", len(skgiaInputs)).Msg("batch created all SSH key group associations")
@@ -1291,7 +1289,7 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 		createdIfcsAll, err = ifcDAO.CreateMultiple(ctx, tx, ifcInputs)
 		if err != nil {
 			logger.Error().Err(err).Msg("failed to batch create interfaces")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError,
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError,
 				fmt.Sprintf("Failed to batch create interfaces: %v", err), nil)
 		}
 		logger.Info().Int("count", len(createdIfcsAll)).Msg("batch created all interfaces")
@@ -1322,7 +1320,7 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 		createdIbIfcsAll, err = ibifcDAO.CreateMultiple(ctx, tx, ibifcInputs)
 		if err != nil {
 			logger.Error().Err(err).Msg("failed to batch create InfiniBand interfaces")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError,
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError,
 				fmt.Sprintf("Failed to batch create InfiniBand interfaces: %v", err), nil)
 		}
 		logger.Info().Int("count", len(createdIbIfcsAll)).Msg("batch created all InfiniBand interfaces")
@@ -1350,7 +1348,7 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 		createdNvlIfcsAll, err = nvlifcDAO.CreateMultiple(ctx, tx, nvlifcInputs)
 		if err != nil {
 			logger.Error().Err(err).Msg("failed to batch create NVLink interfaces")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError,
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError,
 				fmt.Sprintf("Failed to batch create NVLink interfaces: %v", err), nil)
 		}
 		logger.Info().Int("count", len(createdNvlIfcsAll)).Msg("batch created all NVLink interfaces")
@@ -1378,7 +1376,7 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 		createdDesdsAll, err = desdDAO.CreateMultiple(ctx, tx, desdInputs)
 		if err != nil {
 			logger.Error().Err(err).Msg("failed to batch create DPU Extension Service Deployments")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError,
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError,
 				fmt.Sprintf("Failed to batch create DPU Extension Service Deployments: %v", err), nil)
 		}
 		logger.Info().Int("count", len(createdDesdsAll)).Msg("batch created all DPU Extension Service Deployments")
@@ -1398,7 +1396,7 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 	createdSdsAll, err := sdDAO.CreateMultiple(ctx, tx, sdInputs)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to batch create status details")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError,
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError,
 			fmt.Sprintf("Failed to batch create status details: %v", err), nil)
 	}
 	logger.Info().Int("count", len(createdSdsAll)).Msg("batch created all status details")
@@ -1550,7 +1548,7 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 	stc, err := bcih.scp.GetClientByID(site.ID)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
 	}
 
 	// Build batch workflow request using pre-built configs (no DB queries)
@@ -1622,19 +1620,19 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 	workflowOptions := temporalClient.StartWorkflowOptions{
 		ID: workflowID,
 		// TODO: temporary config, to be tuned
-		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 
 	// Add context timeout
-	workflowCtx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
+	workflowCtx, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Execute batch workflow with full request
 	we, err := stc.ExecuteWorkflow(workflowCtx, workflowOptions, "CreateInstances", batchRequest)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to synchronously start Temporal workflow to create batch Instances")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to start sync workflow to create batch Instances on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to start sync workflow to create batch Instances on Site: %s", err), nil)
 	}
 
 	wid := we.GetID()
@@ -1651,26 +1649,26 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 				Msg("failed to create batch Instances, timeout occurred executing workflow on Site.")
 
 			// Create a new context for termination
-			newctx, newcancel := context.WithTimeout(context.Background(), cwutil.WorkflowContextNewAfterTimeout)
+			newctx, newcancel := context.WithTimeout(context.Background(), cutil.WorkflowContextNewAfterTimeout)
 			defer newcancel()
 
 			// Initiate termination workflow
 			serr := stc.TerminateWorkflow(newctx, wid, "", "timeout occurred executing batch create Instances workflow")
 			if serr != nil {
 				logger.Error().Err(serr).Str("Workflow ID", wid).Msg("failed to terminate Temporal workflow for creating batch Instances")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to terminate synchronous batch Instances creation workflow after timeout, Cloud and Site data may be de-synced: %s", serr), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to terminate synchronous batch Instances creation workflow after timeout, Cloud and Site data may be de-synced: %s", serr), nil)
 			}
 
 			logger.Info().Str("Workflow ID", wid).Msg("initiated terminate synchronous batch create Instances workflow successfully")
 
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError,
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError,
 				fmt.Sprintf("Failed to create batch Instances, timeout occurred executing workflow on Site: %s", err), nil)
 		}
 
 		// Handle other workflow errors (matching single API pattern)
 		code, err := common.UnwrapWorkflowError(err)
 		logger.Error().Err(err).Str("Workflow ID", wid).Msg("failed to synchronously execute Temporal workflow to create batch Instances")
-		return cerr.NewAPIErrorResponse(c, code,
+		return cutil.NewAPIErrorResponse(c, code,
 			fmt.Sprintf("Failed to execute sync workflow to create batch Instances on Site: %s", err), nil)
 	}
 
@@ -1683,7 +1681,7 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 	err = tx.Commit()
 	if err != nil {
 		logger.Error().Err(err).Msg("error committing batch instance transaction to DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create batch Instances, DB transaction error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create batch Instances, DB transaction error", nil)
 	}
 	// Set committed so, deferred cleanup functions will do nothing
 	txCommitted = true
@@ -1720,13 +1718,13 @@ func allocateMachinesForBatch(
 	count int,
 	topologyOptimized bool,
 	logger zerolog.Logger,
-) ([]cdbm.Machine, *cerr.APIError) {
+) ([]cdbm.Machine, *cutil.APIError) {
 	if instancetype == nil || count <= 0 {
-		return nil, cerr.NewAPIError(http.StatusBadRequest, "Invalid parameters for machine allocation", nil)
+		return nil, cutil.NewAPIError(http.StatusBadRequest, "Invalid parameters for machine allocation", nil)
 	}
 
 	if tx == nil {
-		return nil, cerr.NewAPIError(http.StatusInternalServerError, "Transaction required for machine allocation", nil)
+		return nil, cutil.NewAPIError(http.StatusInternalServerError, "Transaction required for machine allocation", nil)
 	}
 
 	mcDAO := cdbm.NewMachineDAO(dbSession)
@@ -1741,13 +1739,13 @@ func allocateMachinesForBatch(
 	machines, _, err := mcDAO.GetAll(ctx, tx, filterInput, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to retrieve available machines")
-		return nil, cerr.NewAPIError(http.StatusInternalServerError, "Failed to retrieve available machines", nil)
+		return nil, cutil.NewAPIError(http.StatusInternalServerError, "Failed to retrieve available machines", nil)
 	}
 
 	if len(machines) < count {
 		logger.Warn().Int("available", len(machines)).Int("requested", count).
 			Msg("insufficient machines available")
-		return nil, cerr.NewAPIError(http.StatusConflict,
+		return nil, cutil.NewAPIError(http.StatusConflict,
 			fmt.Sprintf("Insufficient machines available: requested %d, available %d", count, len(machines)), nil)
 	}
 
@@ -1792,7 +1790,7 @@ func allocateMachinesForBatch(
 		if len(nvlinkDomainMap[bestDomainID]) < count {
 			logger.Warn().Str("bestDomainID", bestDomainID).Int("bestDomainCount", len(nvlinkDomainMap[bestDomainID])).Int("requested", count).
 				Msg("topology optimization requires same NVLink domain but insufficient machines in any single domain")
-			return nil, cerr.NewAPIError(http.StatusConflict,
+			return nil, cutil.NewAPIError(http.StatusConflict,
 				fmt.Sprintf("Topology optimization requires all %d machines on same NVLink domain, but best domain only has %d available", count, len(nvlinkDomainMap[bestDomainID])), nil)
 		}
 
@@ -1850,7 +1848,7 @@ func allocateMachinesForBatch(
 	if len(verifiedMachines) < count {
 		logger.Error().Int("verified", len(verifiedMachines)).Int("requested", count).
 			Msg("could not verify sufficient machines for allocation")
-		return nil, cerr.NewAPIError(http.StatusConflict,
+		return nil, cutil.NewAPIError(http.StatusConflict,
 			fmt.Sprintf("Could not allocate sufficient machines: requested %d, verified %d", count, len(verifiedMachines)), nil)
 	}
 
@@ -1858,7 +1856,7 @@ func allocateMachinesForBatch(
 	allocatedMachines, err := mcDAO.UpdateMultiple(ctx, tx, updateInputs)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to batch update machines to assigned")
-		return nil, cerr.NewAPIError(http.StatusInternalServerError,
+		return nil, cutil.NewAPIError(http.StatusInternalServerError,
 			fmt.Sprintf("Failed to batch update machines: %v", err), nil)
 	}
 

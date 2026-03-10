@@ -45,8 +45,7 @@ import (
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model"
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/pagination"
 	auth "github.com/nvidia/bare-metal-manager-rest/auth/pkg/authorization"
-	cerr "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	sutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
+	cutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 	"github.com/nvidia/bare-metal-manager-rest/db/pkg/db/ipam"
 )
 
@@ -57,7 +56,7 @@ type CreateIPBlockHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewCreateIPBlockHandler initializes and returns a new handler for creating IPBlock
@@ -66,7 +65,7 @@ func NewCreateIPBlockHandler(dbSession *cdb.Session, tc temporalClient.Client, c
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -106,7 +105,7 @@ func (cipbh CreateIPBlockHandler) Handle(c echo.Context) error {
 
 	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, cipbh.tracerSpan, handlerSpan)
 	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -117,14 +116,14 @@ func (cipbh CreateIPBlockHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Provider Admins are allowed to create IP Blocks
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Provider Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
 	}
 
 	// Validate request
@@ -133,33 +132,33 @@ func (cipbh CreateIPBlockHandler) Handle(c echo.Context) error {
 	err = c.Bind(&apiRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
 	}
 
 	// Validate request attributes
 	verr := apiRequest.Validate()
 	if verr != nil {
 		logger.Warn().Err(verr).Msg("error validating IP Block creation request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating IP Block creation request data", verr)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating IP Block creation request data", verr)
 	}
 
 	// Check that infrastructureProvider for org matches request
 	ip, err := common.GetInfrastructureProviderForOrg(ctx, nil, cipbh.dbSession, org)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error getting infrastructure provider for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve infrastructure provider", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve infrastructure provider", nil)
 	}
 
 	// Validate the site for which this IPBlock is being created
 	site, err := common.GetSiteFromIDString(ctx, nil, apiRequest.SiteID, cipbh.dbSession)
 	if err != nil {
 		logger.Warn().Str("siteId", apiRequest.SiteID).Err(err).Msg("error getting site from request")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Site in request", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Site in request", nil)
 	}
 	// verify site's infrastructure provider matches org's infrastructure provider
 	if site.InfrastructureProviderID != ip.ID {
 		logger.Warn().Msg("site infrastructure provider does not match org's infrastructure provider")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Site Infrastructure Provider does not match Org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site Infrastructure Provider does not match Org", nil)
 	}
 
 	// Check if an ipblock already exists for the provider with given name at the site
@@ -179,11 +178,11 @@ func (cipbh CreateIPBlockHandler) Handle(c echo.Context) error {
 	)
 	if err != nil {
 		logger.Error().Err(err).Msg("db error checking for name uniqueness of ip block")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create IPBlock due to db error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create IPBlock due to db error", nil)
 	}
 	if tot > 0 {
 		logger.Warn().Str("providerId", ip.ID.String()).Str("name", apiRequest.Name).Msg("ip block with same name already exists")
-		return cerr.NewAPIErrorResponse(c, http.StatusConflict, fmt.Sprintf("IPBlock with name: %s for Site: %s already exists for provider", apiRequest.Name, apiRequest.SiteID), validation.Errors{
+		return cutil.NewAPIErrorResponse(c, http.StatusConflict, fmt.Sprintf("IPBlock with name: %s for Site: %s already exists for provider", apiRequest.Name, apiRequest.SiteID), validation.Errors{
 			"id": errors.New(ipbs[0].ID.String()),
 		})
 	}
@@ -206,11 +205,11 @@ func (cipbh CreateIPBlockHandler) Handle(c echo.Context) error {
 
 	if err != nil {
 		logger.Error().Err(err).Msg("db error checking for prefix and prefixlength uniqueness of ip block")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create IPBlock due to db error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create IPBlock due to db error", nil)
 	}
 	if totp > 0 {
 		logger.Warn().Str("providerId", ip.ID.String()).Str("prefix", apiRequest.Prefix).Int("prefix_length", apiRequest.PrefixLength).Msg("ip block with same prefix and prefix_length already exists")
-		return cerr.NewAPIErrorResponse(c, http.StatusConflict, fmt.Sprintf("IPBlock with prefix: %s and prefix_length: %d for Site: %s already exists for provider", apiRequest.Prefix, apiRequest.PrefixLength, apiRequest.SiteID), validation.Errors{
+		return cutil.NewAPIErrorResponse(c, http.StatusConflict, fmt.Sprintf("IPBlock with prefix: %s and prefix_length: %d for Site: %s already exists for provider", apiRequest.Prefix, apiRequest.PrefixLength, apiRequest.SiteID), validation.Errors{
 			"id": errors.New(ipbp[0].ID.String()),
 		})
 	}
@@ -219,7 +218,7 @@ func (cipbh CreateIPBlockHandler) Handle(c echo.Context) error {
 	tx, err := cdb.BeginTx(ctx, cipbh.dbSession, &sql.TxOptions{})
 	if err != nil {
 		logger.Error().Err(err).Msg("unable to start transaction")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error creating ipblock", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error creating ipblock", nil)
 	}
 	// this variable is used in cleanup actions to indicate if this transaction committed
 	txCommitted := false
@@ -230,7 +229,7 @@ func (cipbh CreateIPBlockHandler) Handle(c echo.Context) error {
 	prefix, err := ipam.CreateIpamEntryForIPBlock(ctx, ipamStorage, apiRequest.Prefix, apiRequest.PrefixLength, apiRequest.RoutingType, ip.ID.String(), site.ID.String())
 	if err != nil {
 		logger.Warn().Err(err).Msg("error creating ipam prefix")
-		return cerr.NewAPIErrorResponse(c, http.StatusConflict, fmt.Sprintf("Could not create IPAM entry for IPBlock. Details: %s", err.Error()), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusConflict, fmt.Sprintf("Could not create IPAM entry for IPBlock. Details: %s", err.Error()), nil)
 	}
 	logger.Info().Str("namespace", prefix.Namespace).Str("prefix", prefix.String()).Msg("created prefix in ipam")
 
@@ -253,7 +252,7 @@ func (cipbh CreateIPBlockHandler) Handle(c echo.Context) error {
 	)
 	if err != nil {
 		logger.Error().Err(err).Msg("error creating IPBlock in DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create ip block", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create ip block", nil)
 	}
 
 	// Create a status detail record for the IPBlock
@@ -262,18 +261,18 @@ func (cipbh CreateIPBlockHandler) Handle(c echo.Context) error {
 		cdb.GetStrPtr("IP Block is ready for use"))
 	if serr != nil {
 		logger.Error().Err(serr).Msg("error creating Status Detail DB entry")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for IPBlock", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for IPBlock", nil)
 	}
 	if ssd == nil {
 		logger.Error().Msg("Status Detail DB entry not returned from CreateFromParams")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to get new Status Detail for IPBlock", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to get new Status Detail for IPBlock", nil)
 	}
 
 	// commit transaction
 	err = tx.Commit()
 	if err != nil {
 		logger.Error().Err(err).Msg("error committing IPBlock transaction to DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create db entry for IPBlock", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create db entry for IPBlock", nil)
 	}
 	// set committed so, deferred cleanup functions will do nothing
 	txCommitted = true
@@ -291,7 +290,7 @@ type GetAllIPBlockHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetAllIPBlockHandler initializes and returns a new handler for getting all IPBlocks
@@ -300,7 +299,7 @@ func NewGetAllIPBlockHandler(dbSession *cdb.Session, tc temporalClient.Client, c
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -349,7 +348,7 @@ func (gaipbh GetAllIPBlockHandler) Handle(c echo.Context) error {
 
 	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gaipbh.tracerSpan, handlerSpan)
 	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -360,7 +359,7 @@ func (gaipbh GetAllIPBlockHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate pagination request
@@ -368,14 +367,14 @@ func (gaipbh GetAllIPBlockHandler) Handle(c echo.Context) error {
 	err = c.Bind(&pageRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding pagination request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request pagination data", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request pagination data", nil)
 	}
 
 	// Validate request attributes
 	err = pageRequest.Validate(cdbm.IPBlockOrderByFields)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error validating pagination request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate pagination request data", err)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate pagination request data", err)
 	}
 
 	// Get and validate includeRelation params
@@ -383,7 +382,7 @@ func (gaipbh GetAllIPBlockHandler) Handle(c echo.Context) error {
 	qIncludeRelations, errMsg := common.GetAndValidateQueryRelations(qParams, cdbm.IPBlockRelatedEntities)
 	if errMsg != "" {
 		logger.Warn().Msg(errMsg)
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
 	}
 
 	// Check `includeUsageStats` in query
@@ -392,13 +391,13 @@ func (gaipbh GetAllIPBlockHandler) Handle(c echo.Context) error {
 	if qius != "" {
 		includeUsageStats, err = strconv.ParseBool(qius)
 		if err != nil {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid value specified for `includeUsageStats` query param", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid value specified for `includeUsageStats` query param", nil)
 		}
 	}
 
 	provider, tenant, apiError := common.IsProviderOrTenant(ctx, logger, gaipbh.dbSession, org, dbUser, true, false)
 	if apiError != nil {
-		return cerr.NewAPIErrorResponse(c, apiError.Code, apiError.Message, apiError.Data)
+		return cutil.NewAPIErrorResponse(c, apiError.Code, apiError.Message, apiError.Data)
 	}
 
 	// Get and validate query params
@@ -411,17 +410,17 @@ func (gaipbh GetAllIPBlockHandler) Handle(c echo.Context) error {
 		siteID, serr := uuid.Parse(qSiteID)
 		if serr != nil {
 			logger.Warn().Err(serr).Msg("error parsing siteId in query into uuid")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Site ID in query", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Site ID in query", nil)
 		}
 
 		_, serr = stDAO.GetByID(ctx, nil, siteID, nil, false)
 		if serr != nil {
 			if serr == cdb.ErrDoesNotExist {
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in query param does not exist", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in query param does not exist", nil)
 			}
 
 			logger.Error().Err(serr).Msg("error retrieving Site from DB by ID")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site specified in query param, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site specified in query param, DB error", nil)
 		}
 
 		siteIDs = append(siteIDs, siteID)
@@ -445,7 +444,7 @@ func (gaipbh GetAllIPBlockHandler) Handle(c echo.Context) error {
 		_, ok := cdbm.IPBlockStatusMap[statusQuery]
 		if !ok {
 			logger.Warn().Msg(fmt.Sprintf("invalid value in status query: %v", statusQuery))
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Status value in query", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Status value in query", nil)
 		}
 		statuses = append(statuses, statusQuery)
 	}
@@ -467,7 +466,7 @@ func (gaipbh GetAllIPBlockHandler) Handle(c echo.Context) error {
 
 		if err != nil {
 			logger.Error().Err(err).Msg("error getting IPBlocks from db")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve IP Blocks, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve IP Blocks, DB error", nil)
 		}
 
 		for _, ipb := range ipbs {
@@ -486,7 +485,7 @@ func (gaipbh GetAllIPBlockHandler) Handle(c echo.Context) error {
 
 		if err != nil {
 			logger.Error().Err(err).Msg("error getting IPBlocks from db")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve IP Blocks, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve IP Blocks, DB error", nil)
 		}
 
 		for _, ipb := range ipbs {
@@ -505,7 +504,7 @@ func (gaipbh GetAllIPBlockHandler) Handle(c echo.Context) error {
 
 	if err != nil {
 		logger.Error().Err(err).Msg("error getting IPBlocks from db")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve IP Blocks, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve IP Blocks, DB error", nil)
 	}
 
 	// Get IPAM usage stats
@@ -534,7 +533,7 @@ func (gaipbh GetAllIPBlockHandler) Handle(c echo.Context) error {
 	ssds, serr := sdDAO.GetRecentByEntityIDs(ctx, nil, pagedIpbIDs, common.RECENT_STATUS_DETAIL_COUNT)
 	if serr != nil {
 		logger.Warn().Err(serr).Msg("error retrieving Status Details for IP Blocks from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to populate status history for IP Blocks", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to populate status history for IP Blocks", nil)
 	}
 	ssdMap := map[string][]cdbm.StatusDetail{}
 	for _, ssd := range ssds {
@@ -558,7 +557,7 @@ func (gaipbh GetAllIPBlockHandler) Handle(c echo.Context) error {
 	pageHeader, err := json.Marshal(pageReponse)
 	if err != nil {
 		logger.Error().Err(err).Msg("error marshaling pagination response")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to generate pagination response header", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to generate pagination response header", nil)
 	}
 
 	c.Response().Header().Set(pagination.ResponseHeaderName, string(pageHeader))
@@ -575,7 +574,7 @@ type GetAllDerivedIPBlockHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetAllDerivedIPBlockHandler initializes and returns a new handler for getting derived IPBlocks
@@ -584,7 +583,7 @@ func NewGetAllDerivedIPBlockHandler(dbSession *cdb.Session, tc temporalClient.Cl
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -627,7 +626,7 @@ func (gadipbh GetAllDerivedIPBlockHandler) Handle(c echo.Context) error {
 
 	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gadipbh.tracerSpan, handlerSpan)
 	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -638,21 +637,21 @@ func (gadipbh GetAllDerivedIPBlockHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, Provider Admin/Viewer are allowed to retrieve all derived IP Blocks across Tenants
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole, auth.ProviderViewerRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Provider Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
 	}
 
 	// Check that infrastructureProvider for org matches request
 	ip, err := common.GetInfrastructureProviderForOrg(ctx, nil, gadipbh.dbSession, org)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error getting infrastructure provider for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve infrastructure provider", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve infrastructure provider", nil)
 	}
 
 	// Validate pagination request
@@ -660,14 +659,14 @@ func (gadipbh GetAllDerivedIPBlockHandler) Handle(c echo.Context) error {
 	err = c.Bind(&pageRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding pagination request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request pagination data", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request pagination data", nil)
 	}
 
 	// Validate request attributes
 	err = pageRequest.Validate(cdbm.IPBlockOrderByFields)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error validating pagination request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate pagination request data", err)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate pagination request data", err)
 	}
 
 	// Get and validate includeRelation params
@@ -675,7 +674,7 @@ func (gadipbh GetAllDerivedIPBlockHandler) Handle(c echo.Context) error {
 	qIncludeRelations, errMsg := common.GetAndValidateQueryRelations(qParams, cdbm.IPBlockRelatedEntities)
 	if errMsg != "" {
 		logger.Warn().Msg(errMsg)
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
 	}
 
 	// Get ipBlock ID from URL param
@@ -686,7 +685,7 @@ func (gadipbh GetAllDerivedIPBlockHandler) Handle(c echo.Context) error {
 	ipbID, err := uuid.Parse(ipbStrID)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error parsing id in url into uuid")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid IP Block ID in URL", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid IP Block ID in URL", nil)
 	}
 
 	// Get query text for full text search from query param
@@ -707,7 +706,7 @@ func (gadipbh GetAllDerivedIPBlockHandler) Handle(c echo.Context) error {
 		_, ok := cdbm.IPBlockStatusMap[statusQuery]
 		if !ok {
 			logger.Warn().Msg(fmt.Sprintf("invalid value in status query: %v", statusQuery))
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Status value in query", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Status value in query", nil)
 		}
 		statuses = append(statuses, statusQuery)
 	}
@@ -718,22 +717,22 @@ func (gadipbh GetAllDerivedIPBlockHandler) Handle(c echo.Context) error {
 	ipb, err := ipbDAO.GetByID(ctx, nil, ipbID, qIncludeRelations)
 	if err != nil {
 		if err == cdb.ErrDoesNotExist {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find parent IPBlock with specified ID", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find parent IPBlock with specified ID", nil)
 		}
 		logger.Error().Err(err).Msg("error retrieving parent IPBlock DB entity")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve parent IP Blocks, error communicating with DB", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve parent IP Blocks, error communicating with DB", nil)
 	}
 
 	// Verify ipblock's infrastructure provider matches org's infrastructure provider
 	if ipb.InfrastructureProviderID != ip.ID {
 		logger.Warn().Msg("ipblock specified in URL is not owned by the provider of current org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "IP Block specified in URL is not owned by the Provider of current Org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "IP Block specified in URL is not owned by the Provider of current Org", nil)
 	}
 
 	// Verify provided ipblock is parent
 	if ipb.TenantID != nil {
 		logger.Warn().Msg("ipblock specified in url cannot be a derived block allocated to Tenant")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "IP Block specified in URL cannot be a derived block allocated to Tenant", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "IP Block specified in URL cannot be a derived block allocated to Tenant", nil)
 	}
 
 	// Get allocation constraints by resourcetype ID (parent IPBlock)
@@ -741,7 +740,7 @@ func (gadipbh GetAllDerivedIPBlockHandler) Handle(c echo.Context) error {
 	acs, _, err := acDAO.GetAll(ctx, nil, nil, nil, []uuid.UUID{ipb.ID}, nil, nil, nil, nil, cdb.GetIntPtr(cdbp.TotalLimit), nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Allocation Constraints for parent IPBlock from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Allocation Constraints for parent IPBlock", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Allocation Constraints for parent IPBlock", nil)
 	}
 
 	childIPBlockIDs := []uuid.UUID{}
@@ -772,7 +771,7 @@ func (gadipbh GetAllDerivedIPBlockHandler) Handle(c echo.Context) error {
 	)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving derived IPBlocks from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve derived IPBlocks", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve derived IPBlocks", nil)
 	}
 
 	// Get status details for derived IPBlocks
@@ -785,7 +784,7 @@ func (gadipbh GetAllDerivedIPBlockHandler) Handle(c echo.Context) error {
 	dssds, err := sdDAO.GetRecentByEntityIDs(ctx, nil, sdEntityIDs, common.RECENT_STATUS_DETAIL_COUNT)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error retrieving Status Details for derived IP Blocks from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to populate status history for derived IP Blocks", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to populate status history for derived IP Blocks", nil)
 	}
 
 	dssdMap := map[string][]cdbm.StatusDetail{}
@@ -806,7 +805,7 @@ func (gadipbh GetAllDerivedIPBlockHandler) Handle(c echo.Context) error {
 	pageHeader, err := json.Marshal(pageReponse)
 	if err != nil {
 		logger.Error().Err(err).Msg("error marshaling pagination response")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to generate pagination response header", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to generate pagination response header", nil)
 	}
 
 	c.Response().Header().Set(pagination.ResponseHeaderName, string(pageHeader))
@@ -823,7 +822,7 @@ type GetIPBlockHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetIPBlockHandler initializes and returns a new handler to retrieve IPBlock
@@ -832,7 +831,7 @@ func NewGetIPBlockHandler(dbSession *cdb.Session, tc temporalClient.Client, cfg 
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -876,7 +875,7 @@ func (gipbh GetIPBlockHandler) Handle(c echo.Context) error {
 
 	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gipbh.tracerSpan, handlerSpan)
 	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -887,7 +886,7 @@ func (gipbh GetIPBlockHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Get and validate includeRelation params
@@ -895,7 +894,7 @@ func (gipbh GetIPBlockHandler) Handle(c echo.Context) error {
 	qIncludeRelations, errMsg := common.GetAndValidateQueryRelations(qParams, cdbm.IPBlockRelatedEntities)
 	if errMsg != "" {
 		logger.Warn().Msg(errMsg)
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
 	}
 
 	// Get ipBlock ID from URL param
@@ -906,7 +905,7 @@ func (gipbh GetIPBlockHandler) Handle(c echo.Context) error {
 	ipbID, err := uuid.Parse(ipbStrID)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error parsing id in url into uuid")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid IP Block ID in URL", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid IP Block ID in URL", nil)
 	}
 
 	// Check `includeUsageStats` in query
@@ -915,13 +914,13 @@ func (gipbh GetIPBlockHandler) Handle(c echo.Context) error {
 	if qius != "" {
 		includeUsageStats, err = strconv.ParseBool(qius)
 		if err != nil {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid value specified for `includeUsageStats` query param", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid value specified for `includeUsageStats` query param", nil)
 		}
 	}
 
 	provider, tenant, apiError := common.IsProviderOrTenant(ctx, logger, gipbh.dbSession, org, dbUser, true, false)
 	if apiError != nil {
-		return cerr.NewAPIErrorResponse(c, apiError.Code, apiError.Message, apiError.Data)
+		return cutil.NewAPIErrorResponse(c, apiError.Code, apiError.Message, apiError.Data)
 	}
 
 	ipbDAO := cdbm.NewIPBlockDAO(gipbh.dbSession)
@@ -931,10 +930,10 @@ func (gipbh GetIPBlockHandler) Handle(c echo.Context) error {
 	if err != nil {
 		if err == cdb.ErrDoesNotExist {
 			logger.Warn().Err(err).Msg("IP Block not found")
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find IP Block with specified ID", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find IP Block with specified ID", nil)
 		}
 		logger.Error().Err(err).Msg("error retrieving IP Block from DB by ID")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve IP Block, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve IP Block, DB error", nil)
 	}
 
 	// Check if IP Block is associated with Provider
@@ -950,7 +949,7 @@ func (gipbh GetIPBlockHandler) Handle(c echo.Context) error {
 	}
 
 	if !isAssociated {
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "IP Block is not associated with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "IP Block is not associated with org", nil)
 	}
 
 	// Get status details
@@ -959,7 +958,7 @@ func (gipbh GetIPBlockHandler) Handle(c echo.Context) error {
 	ssds, err := sdDAO.GetRecentByEntityIDs(ctx, nil, []string{ipb.ID.String()}, common.RECENT_STATUS_DETAIL_COUNT)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Status Details for IPBlock from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details for IPBlock", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details for IPBlock", nil)
 	}
 
 	// Get IPAM usage stats
@@ -970,7 +969,7 @@ func (gipbh GetIPBlockHandler) Handle(c echo.Context) error {
 		puipb, err = ipam.GetIpamUsageForIPBlock(ctx, ipamStorage, ipb)
 		if err != nil {
 			logger.Error().Err(err).Msg("error retrieving ipam usage stats details for IPBlock")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Usage Stats Details for IPBlock", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Usage Stats Details for IPBlock", nil)
 		}
 	}
 
@@ -989,7 +988,7 @@ type UpdateIPBlockHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewUpdateIPBlockHandler initializes and returns a new handler for updating IPBlock
@@ -998,7 +997,7 @@ func NewUpdateIPBlockHandler(dbSession *cdb.Session, tc temporalClient.Client, c
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -1039,7 +1038,7 @@ func (uipbh UpdateIPBlockHandler) Handle(c echo.Context) error {
 
 	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, uipbh.tracerSpan, handlerSpan)
 	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -1050,14 +1049,14 @@ func (uipbh UpdateIPBlockHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Provider Admins are allowed to update IP Blocks
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Provider Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
 	}
 
 	// Get ipBlock ID from URL param
@@ -1068,7 +1067,7 @@ func (uipbh UpdateIPBlockHandler) Handle(c echo.Context) error {
 	ipbID, err := uuid.Parse(ipbStrID)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error parsing id in url into uuid")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid IPBlock ID in URL", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid IPBlock ID in URL", nil)
 	}
 
 	ipbDAO := cdbm.NewIPBlockDAO(uipbh.dbSession)
@@ -1079,34 +1078,34 @@ func (uipbh UpdateIPBlockHandler) Handle(c echo.Context) error {
 	err = c.Bind(&apiRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
 	}
 
 	// Validate request attributes
 	verr := apiRequest.Validate()
 	if verr != nil {
 		logger.Warn().Err(verr).Msg("error validating IP Block update request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating IP Block update request data", verr)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating IP Block update request data", verr)
 	}
 
 	// Check that IPBlock exists
 	ipb, err := ipbDAO.GetByID(ctx, nil, ipbID, nil)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error retrieving IPBlock DB entity")
-		return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not retrieve IPBlock to update", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not retrieve IPBlock to update", nil)
 	}
 
 	// Check that the org's infrastructureProvider matches infrastructure provider in ipBlock
 	ip, err := common.GetInfrastructureProviderForOrg(ctx, nil, uipbh.dbSession, org)
 	if err != nil {
 		logger.Warn().Str("org", org).Err(err).Msg("infrastructureProvider does not exist for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Error retrieving infrastructureProvider for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Error retrieving infrastructureProvider for org", nil)
 	}
 
 	// CHeck that InfrastructureProvider in IPBlock matches infrastructureProvider in org
 	if ipb.InfrastructureProviderID != ip.ID {
 		logger.Warn().Msg("infrastructureProvider in ipBlock does not match infrastructureProvider in org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest,
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest,
 			"InfrastructureProvider in org does not match InfrastructureProvider in IPBlock", nil)
 	}
 
@@ -1131,10 +1130,10 @@ func (uipbh UpdateIPBlockHandler) Handle(c echo.Context) error {
 		)
 		if serr != nil {
 			logger.Error().Err(serr).Msg("db error checking for name uniqueness of ip block")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update IPBlock due to db error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update IPBlock due to db error", nil)
 		}
 		if tot > 0 {
-			return cerr.NewAPIErrorResponse(c, http.StatusConflict, "Another IP Block with same name already exists for this Site and Provider", validation.Errors{
+			return cutil.NewAPIErrorResponse(c, http.StatusConflict, "Another IP Block with same name already exists for this Site and Provider", validation.Errors{
 				"id": errors.New(ipbs[0].ID.String()),
 			})
 		}
@@ -1146,7 +1145,7 @@ func (uipbh UpdateIPBlockHandler) Handle(c echo.Context) error {
 	tx, err := cdb.BeginTx(ctx, uipbh.dbSession, &sql.TxOptions{})
 	if err != nil {
 		logger.Error().Err(err).Msg("unable to start transaction")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error creating instance", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error creating instance", nil)
 	}
 	// This variable is used in cleanup actions to indicate if this transaction committed
 	txCommitted := false
@@ -1163,21 +1162,21 @@ func (uipbh UpdateIPBlockHandler) Handle(c echo.Context) error {
 	)
 	if err != nil {
 		logger.Error().Err(err).Msg("error updating IPBlock in DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update IPBlock", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update IPBlock", nil)
 	}
 
 	sdDAO := cdbm.NewStatusDetailDAO(uipbh.dbSession)
 	ssds, _, err := sdDAO.GetAllByEntityID(ctx, tx, ipb.ID.String(), nil, cdb.GetIntPtr(pagination.MaxPageSize), nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Status Details for IPBlock from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details for IPBlock", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details for IPBlock", nil)
 	}
 
 	// Commit transaction
 	err = tx.Commit()
 	if err != nil {
 		logger.Error().Err(err).Msg("error committing transaction")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Instance", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Instance", nil)
 	}
 	txCommitted = true
 
@@ -1196,7 +1195,7 @@ type DeleteIPBlockHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewDeleteIPBlockHandler initializes and returns a new handler for deleting IPBlock
@@ -1205,7 +1204,7 @@ func NewDeleteIPBlockHandler(dbSession *cdb.Session, tc temporalClient.Client, c
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -1245,7 +1244,7 @@ func (dipbh DeleteIPBlockHandler) Handle(c echo.Context) error {
 
 	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, dipbh.tracerSpan, handlerSpan)
 	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -1256,14 +1255,14 @@ func (dipbh DeleteIPBlockHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Provider Admins are allowed to delete IP Blocks
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Provider Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
 	}
 
 	// Get ipBlock ID from URL param
@@ -1274,7 +1273,7 @@ func (dipbh DeleteIPBlockHandler) Handle(c echo.Context) error {
 	ipbID, err := uuid.Parse(ipbStrID)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error parsing id in url into uuid")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid IP Block ID in URL", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid IP Block ID in URL", nil)
 	}
 
 	logger.Info().Str("IP Block ID", ipbStrID).Msg("deleting IP Block")
@@ -1285,18 +1284,18 @@ func (dipbh DeleteIPBlockHandler) Handle(c echo.Context) error {
 	ipb, err := ipbDAO.GetByID(ctx, nil, ipbID, nil)
 	if err != nil {
 		logger.Warn().Str("IP Block ID", ipbID.String()).Err(err).Msg("error retrieving IP Block DB entity")
-		return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Specified IP Block does not exist, or has been deleted", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Specified IP Block does not exist, or has been deleted", nil)
 	}
 
 	// Check that the org's infrastructureProvider matches infrastructureProvider in IPBlock
 	ip, err := common.GetInfrastructureProviderForOrg(ctx, nil, dipbh.dbSession, org)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error getting infrastructure provider for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error getting Infrastructure Provider for Org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error getting Infrastructure Provider for Org", nil)
 	}
 	if ip.ID != ipb.InfrastructureProviderID {
 		logger.Warn().Msg("infrastructureProvider in org does not match infrastructureProvider in ipBlock")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "IP Block does not belong to current Infrastructure Provider", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "IP Block does not belong to current Infrastructure Provider", nil)
 	}
 
 	// Verify that the IPBlock does not have a tenant field set
@@ -1304,7 +1303,7 @@ func (dipbh DeleteIPBlockHandler) Handle(c echo.Context) error {
 	// and cannot be deleted directly
 	if ipb.TenantID != nil {
 		logger.Warn().Msg("cannot delete derived IP Block")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Allocated Tenant IP Blocks cannot be deleted directly, they are deleted when Allocation is deleted", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Allocated Tenant IP Blocks cannot be deleted directly, they are deleted when Allocation is deleted", nil)
 	}
 
 	// Verify that the IPBlock does not have any allocations associated with it
@@ -1312,18 +1311,18 @@ func (dipbh DeleteIPBlockHandler) Handle(c echo.Context) error {
 	_, acCount, err := acDAO.GetAll(ctx, nil, nil, cdb.GetStrPtr(cdbm.AllocationResourceTypeIPBlock), []uuid.UUID{ipb.ID}, nil, nil, nil, nil, nil, nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error getting allocation constraints")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error retrieving Allocations for IP Block", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error retrieving Allocations for IP Block", nil)
 	}
 	if acCount > 0 {
 		logger.Warn().Msg("allocation constraints exist for ipBlock")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("%v Allocations exist for IP Block, unable to delete", acCount), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("%v Allocations exist for IP Block, unable to delete", acCount), nil)
 	}
 
 	// start a database transaction
 	tx, err := cdb.BeginTx(ctx, dipbh.dbSession, &sql.TxOptions{})
 	if err != nil {
 		logger.Error().Err(err).Msg("unable to start transaction")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error creating IP Block, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error creating IP Block, DB error", nil)
 	}
 	// this variable is used in cleanup actions to indicate if this transaction committed
 	txCommitted := false
@@ -1333,7 +1332,7 @@ func (dipbh DeleteIPBlockHandler) Handle(c echo.Context) error {
 	err = ipbDAO.Delete(ctx, tx, ipbID)
 	if err != nil {
 		logger.Error().Err(err).Msg("error deleting IP Block in DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error deleting IP Block, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error deleting IP Block, DB error", nil)
 	}
 
 	// delete IPAM entry for this ipBlock
@@ -1341,14 +1340,14 @@ func (dipbh DeleteIPBlockHandler) Handle(c echo.Context) error {
 	err = ipam.DeleteIpamEntryForIPBlock(ctx, ipamStorage, ipb.Prefix, ipb.PrefixLength, ipb.RoutingType, ipb.InfrastructureProviderID.String(), ipb.SiteID.String())
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to delete IPAM record for IP Block")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Could not delete IPAM entry for IP Block. Details: %s", err.Error()), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Could not delete IPAM entry for IP Block. Details: %s", err.Error()), nil)
 	}
 
 	// commit transaction
 	err = tx.Commit()
 	if err != nil {
 		logger.Error().Err(err).Msg("error committing IP Block transaction to DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create db entry for IP Block", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create db entry for IP Block", nil)
 	}
 	// set committed so, deferred cleanup functions will do nothing
 	txCommitted = true

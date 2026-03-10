@@ -38,9 +38,7 @@ import (
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/pagination"
 	sc "github.com/nvidia/bare-metal-manager-rest/api/pkg/client/site"
 	auth "github.com/nvidia/bare-metal-manager-rest/auth/pkg/authorization"
-	cerr "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	sutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
+	cutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
 	rlav1 "github.com/nvidia/bare-metal-manager-rest/workflow-schema/rla/protobuf/v1"
@@ -57,7 +55,7 @@ type GetTrayHandler struct {
 	tc         tClient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetTrayHandler initializes and returns a new handler for getting a Tray
@@ -67,7 +65,7 @@ func NewGetTrayHandler(dbSession *cdb.Session, tc tClient.Client, scp *sc.Client
 		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -92,7 +90,7 @@ func (gth GetTrayHandler) Handle(c echo.Context) error {
 	// Is DB user missing?
 	if dbUser == nil {
 		logger.Error().Msg("invalid User object found in request context")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org membership
@@ -103,42 +101,42 @@ func (gth GetTrayHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Provider Admins are allowed to access Tray data
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Provider Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
 	}
 
 	// Get Infrastructure Provider for org
 	infrastructureProvider, err := common.GetInfrastructureProviderForOrg(ctx, nil, gth.dbSession, org)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error getting infrastructure provider for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for org", nil)
 	}
 
 	// Validate siteId is provided
 	siteStrID := c.QueryParam("siteId")
 	if siteStrID == "" {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "siteId query parameter is required", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "siteId query parameter is required", nil)
 	}
 
 	// Retrieve the Site from the DB
 	site, err := common.GetSiteFromIDString(ctx, nil, siteStrID, gth.dbSession)
 	if err != nil {
 		if errors.Is(err, cdb.ErrDoesNotExist) {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request does not exist", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request does not exist", nil)
 		}
 		logger.Error().Err(err).Msg("error retrieving Site from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site due to DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site due to DB error", nil)
 	}
 
 	// Verify site belongs to the org's Infrastructure Provider
 	if site.InfrastructureProviderID != infrastructureProvider.ID {
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Site specified in request doesn't belong to current org's Provider", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Site specified in request doesn't belong to current org's Provider", nil)
 	}
 
 	siteConfig := &cdbm.SiteConfig{}
@@ -148,13 +146,13 @@ func (gth GetTrayHandler) Handle(c echo.Context) error {
 
 	if !siteConfig.RackLevelAdministration {
 		logger.Warn().Msg("site does not have Rack Level Administration enabled")
-		return cerr.NewAPIErrorResponse(c, http.StatusPreconditionFailed, "Site does not have Rack Level Administration enabled", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusPreconditionFailed, "Site does not have Rack Level Administration enabled", nil)
 	}
 
 	// Get tray ID from URL param
 	trayStrID := c.Param("id")
 	if _, err := uuid.Parse(trayStrID); err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Tray ID in URL", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Tray ID in URL", nil)
 	}
 	gth.tracerSpan.SetAttribute(handlerSpan, attribute.String("tray_id", trayStrID), logger)
 
@@ -162,7 +160,7 @@ func (gth GetTrayHandler) Handle(c echo.Context) error {
 	stc, err := gth.scp.GetClientByID(site.ID)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
 	}
 
 	// Build RLA request
@@ -173,18 +171,18 @@ func (gth GetTrayHandler) Handle(c echo.Context) error {
 	// Execute workflow
 	workflowOptions := tClient.StartWorkflowOptions{
 		ID:                       fmt.Sprintf("tray-get-%s", trayStrID),
-		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 		WorkflowIDReusePolicy:    temporalEnums.WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE,
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
+	ctx, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
 	defer cancel()
 
 	we, err := stc.ExecuteWorkflow(ctx, workflowOptions, "GetTray", rlaRequest)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to execute GetTray workflow")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to get Tray details", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to get Tray details", nil)
 	}
 
 	// Get workflow result
@@ -196,13 +194,13 @@ func (gth GetTrayHandler) Handle(c echo.Context) error {
 			return common.TerminateWorkflowOnTimeOut(c, logger, stc, fmt.Sprintf("tray-get-%s", trayStrID), err, "Tray", "GetTray")
 		}
 		logger.Error().Err(err).Msg("failed to get result from GetTray workflow")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to get Tray details", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to get Tray details", nil)
 	}
 
 	// Convert to API model
 	apiTray := model.NewAPITray(rlaResponse.GetComponent())
 	if apiTray == nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Tray not found", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Tray not found", nil)
 	}
 
 	logger.Info().Msg("finishing API handler")
@@ -218,7 +216,7 @@ type GetAllTrayHandler struct {
 	tc         tClient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetAllTrayHandler initializes and returns a new handler for getting all Trays
@@ -228,7 +226,7 @@ func NewGetAllTrayHandler(dbSession *cdb.Session, tc tClient.Client, scp *sc.Cli
 		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -260,7 +258,7 @@ func (gath GetAllTrayHandler) Handle(c echo.Context) error {
 	// Is DB user missing?
 	if dbUser == nil {
 		logger.Error().Msg("invalid User object found in request context")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org membership
@@ -271,53 +269,53 @@ func (gath GetAllTrayHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Provider Admins are allowed to access Tray data
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Provider Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
 	}
 
 	// Get Infrastructure Provider for org
 	infrastructureProvider, err := common.GetInfrastructureProviderForOrg(ctx, nil, gath.dbSession, org)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error getting infrastructure provider for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for org", nil)
 	}
 
 	// Bind and validate tray request from query params
 	var apiRequest model.APITrayGetAllRequest
 	pageRequest := pagination.PageRequest{}
 	if err := common.ValidateKnownQueryParams(c.QueryParams(), apiRequest, pageRequest); err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, err.Error(), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, err.Error(), nil)
 	}
 	if err := c.Bind(&apiRequest); err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data", nil)
 	}
 	if apiRequest.SiteID == "" {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "siteId query parameter is required", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "siteId query parameter is required", nil)
 	}
 	if verr := apiRequest.Validate(); verr != nil {
 		logger.Warn().Err(verr).Msg("invalid tray request parameters")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate request data", verr)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate request data", verr)
 	}
 
 	// Retrieve the Site from the DB
 	site, err := common.GetSiteFromIDString(ctx, nil, apiRequest.SiteID, gath.dbSession)
 	if err != nil {
 		if errors.Is(err, cdb.ErrDoesNotExist) {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request does not exist", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request does not exist", nil)
 		}
 		logger.Error().Err(err).Msg("error retrieving Site from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site due to DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site due to DB error", nil)
 	}
 
 	// Verify site belongs to the org's Infrastructure Provider
 	if site.InfrastructureProviderID != infrastructureProvider.ID {
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Site specified in request doesn't belong to current org's Provider", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Site specified in request doesn't belong to current org's Provider", nil)
 	}
 
 	siteConfig := &cdbm.SiteConfig{}
@@ -327,26 +325,26 @@ func (gath GetAllTrayHandler) Handle(c echo.Context) error {
 
 	if !siteConfig.RackLevelAdministration {
 		logger.Warn().Msg("site does not have Rack Level Administration enabled")
-		return cerr.NewAPIErrorResponse(c, http.StatusPreconditionFailed, "Site does not have Rack Level Administration enabled", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusPreconditionFailed, "Site does not have Rack Level Administration enabled", nil)
 	}
 
 	// Validate pagination request (orderBy, pageNumber, pageSize)
 	err = c.Bind(&pageRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding pagination request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request pagination data", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request pagination data", nil)
 	}
 	err = pageRequest.Validate(slices.Collect(maps.Keys(model.TrayOrderByFieldMap)))
 	if err != nil {
 		logger.Warn().Err(err).Msg("error validating pagination request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate pagination request data", err)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate pagination request data", err)
 	}
 
 	// Get the temporal client for the site
 	stc, err := gath.scp.GetClientByID(site.ID)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
 	}
 
 	// Build RLA request from validated API request
@@ -376,18 +374,18 @@ func (gath GetAllTrayHandler) Handle(c echo.Context) error {
 	// Execute workflow
 	workflowOptions := tClient.StartWorkflowOptions{
 		ID:                       workflowID,
-		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 		WorkflowIDReusePolicy:    temporalEnums.WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE,
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
+	ctx, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
 	defer cancel()
 
 	we, err := stc.ExecuteWorkflow(ctx, workflowOptions, "GetTrays", rlaRequest)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to execute GetTrays workflow")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to get Trays", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to get Trays", nil)
 	}
 
 	// Get workflow result
@@ -399,7 +397,7 @@ func (gath GetAllTrayHandler) Handle(c echo.Context) error {
 			return common.TerminateWorkflowOnTimeOut(c, logger, stc, workflowID, err, "Tray", "GetTrays")
 		}
 		logger.Error().Err(err).Msg("failed to get result from GetTrays workflow")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to get Trays", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to get Trays", nil)
 	}
 
 	apiTrays := make([]*model.APITray, 0, len(rlaResponse.GetComponents()))
@@ -416,7 +414,7 @@ func (gath GetAllTrayHandler) Handle(c echo.Context) error {
 	pageHeader, err := json.Marshal(pageResponse)
 	if err != nil {
 		logger.Error().Err(err).Msg("error marshaling pagination response")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create pagination response", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create pagination response", nil)
 	}
 	c.Response().Header().Set(pagination.ResponseHeaderName, string(pageHeader))
 
@@ -433,7 +431,7 @@ type ValidateTrayHandler struct {
 	tc         tClient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewValidateTrayHandler initializes and returns a new handler for validating a Tray
@@ -443,7 +441,7 @@ func NewValidateTrayHandler(dbSession *cdb.Session, tc tClient.Client, scp *sc.C
 		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -468,7 +466,7 @@ func (vth ValidateTrayHandler) Handle(c echo.Context) error {
 	// Is DB user missing?
 	if dbUser == nil {
 		logger.Error().Msg("invalid User object found in request context")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org membership
@@ -479,49 +477,49 @@ func (vth ValidateTrayHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Provider Admins are allowed to access Tray data
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Provider Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
 	}
 
 	// Get Infrastructure Provider for org
 	infrastructureProvider, err := common.GetInfrastructureProviderForOrg(ctx, nil, vth.dbSession, org)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error getting infrastructure provider for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for org", nil)
 	}
 
 	// Get tray ID from URL param
 	trayStrID := c.Param("id")
 	if _, err := uuid.Parse(trayStrID); err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Tray ID in URL", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Tray ID in URL", nil)
 	}
 	vth.tracerSpan.SetAttribute(handlerSpan, attribute.String("tray_id", trayStrID), logger)
 
 	// Get site ID from query param (required)
 	siteStrID := c.QueryParam("siteId")
 	if siteStrID == "" {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "siteId query parameter is required", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "siteId query parameter is required", nil)
 	}
 
 	// Validate the site
 	site, err := common.GetSiteFromIDString(ctx, nil, siteStrID, vth.dbSession)
 	if err != nil {
 		if errors.Is(err, cdb.ErrDoesNotExist) {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request does not exist", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request does not exist", nil)
 		}
 		logger.Error().Err(err).Msg("error retrieving Site from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site specified in request due to DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site specified in request due to DB error", nil)
 	}
 
 	// Verify site belongs to the org's Infrastructure Provider
 	if site.InfrastructureProviderID != infrastructureProvider.ID {
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Site specified in request doesn't belong to current org's Provider", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Site specified in request doesn't belong to current org's Provider", nil)
 	}
 
 	siteConfig := &cdbm.SiteConfig{}
@@ -531,14 +529,14 @@ func (vth ValidateTrayHandler) Handle(c echo.Context) error {
 
 	if !siteConfig.RackLevelAdministration {
 		logger.Warn().Msg("site does not have Rack Level Administration enabled")
-		return cerr.NewAPIErrorResponse(c, http.StatusPreconditionFailed, "Site does not have Rack Level Administration enabled", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusPreconditionFailed, "Site does not have Rack Level Administration enabled", nil)
 	}
 
 	// Get the temporal client for the site
 	stc, err := vth.scp.GetClientByID(site.ID)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
 	}
 
 	// Build RLA request - target the specific tray by ID
@@ -563,17 +561,17 @@ func (vth ValidateTrayHandler) Handle(c echo.Context) error {
 		ID:                       fmt.Sprintf("tray-validate-%s", trayStrID),
 		WorkflowIDReusePolicy:    temporalEnums.WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE,
 		WorkflowIDConflictPolicy: temporalEnums.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING,
-		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
+	ctx, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
 	defer cancel()
 
 	we, err := stc.ExecuteWorkflow(ctx, workflowOptions, "ValidateRackComponents", rlaRequest)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to execute ValidateComponents workflow")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to validate Tray", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to validate Tray", nil)
 	}
 
 	// Get workflow result
@@ -585,7 +583,7 @@ func (vth ValidateTrayHandler) Handle(c echo.Context) error {
 			return common.TerminateWorkflowOnTimeOut(c, logger, stc, fmt.Sprintf("tray-validate-%s", trayStrID), err, "Tray", "ValidateRackComponents")
 		}
 		logger.Error().Err(err).Msg("failed to get result from ValidateComponents workflow")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to validate Tray", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to validate Tray", nil)
 	}
 
 	// Convert to API model
@@ -605,7 +603,7 @@ type ValidateTraysHandler struct {
 	tc         tClient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewValidateTraysHandler initializes and returns a new handler for validating Trays
@@ -615,7 +613,7 @@ func NewValidateTraysHandler(dbSession *cdb.Session, tc tClient.Client, scp *sc.
 		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -644,20 +642,20 @@ func (vtsh ValidateTraysHandler) Handle(c echo.Context) error {
 
 	var apiRequest model.APITrayValidateAllRequest
 	if err := common.ValidateKnownQueryParams(c.QueryParams(), apiRequest); err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, err.Error(), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, err.Error(), nil)
 	}
 	if err := c.Bind(&apiRequest); err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data", nil)
 	}
 	if verr := apiRequest.Validate(); verr != nil {
 		logger.Warn().Err(verr).Msg("invalid tray validate request parameters")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate request data", verr)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate request data", verr)
 	}
 
 	// Is DB user missing?
 	if dbUser == nil {
 		logger.Error().Msg("invalid User object found in request context")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org membership
@@ -668,36 +666,36 @@ func (vtsh ValidateTraysHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Provider Admins are allowed to access Tray data
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Provider Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
 	}
 
 	// Get Infrastructure Provider for org
 	infrastructureProvider, err := common.GetInfrastructureProviderForOrg(ctx, nil, vtsh.dbSession, org)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error getting infrastructure provider for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for org", nil)
 	}
 
 	// Validate the site
 	site, err := common.GetSiteFromIDString(ctx, nil, apiRequest.SiteID, vtsh.dbSession)
 	if err != nil {
 		if errors.Is(err, cdb.ErrDoesNotExist) {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request does not exist", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request does not exist", nil)
 		}
 		logger.Error().Err(err).Msg("error retrieving Site from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site specified in request due to DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site specified in request due to DB error", nil)
 	}
 
 	// Verify site belongs to the org's Infrastructure Provider
 	if site.InfrastructureProviderID != infrastructureProvider.ID {
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Site specified in request doesn't belong to current org's Provider", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Site specified in request doesn't belong to current org's Provider", nil)
 	}
 
 	siteConfig := &cdbm.SiteConfig{}
@@ -707,14 +705,14 @@ func (vtsh ValidateTraysHandler) Handle(c echo.Context) error {
 
 	if !siteConfig.RackLevelAdministration {
 		logger.Warn().Msg("site does not have Rack Level Administration enabled")
-		return cerr.NewAPIErrorResponse(c, http.StatusPreconditionFailed, "Site does not have Rack Level Administration enabled", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusPreconditionFailed, "Site does not have Rack Level Administration enabled", nil)
 	}
 
 	// Get the temporal client for the site
 	stc, err := vtsh.scp.GetClientByID(site.ID)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
 	}
 
 	// Build RLA request from validated request struct
@@ -729,17 +727,17 @@ func (vtsh ValidateTraysHandler) Handle(c echo.Context) error {
 		ID:                       workflowID,
 		WorkflowIDReusePolicy:    temporalEnums.WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE,
 		WorkflowIDConflictPolicy: temporalEnums.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING,
-		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
+	ctx, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
 	defer cancel()
 
 	we, err := stc.ExecuteWorkflow(ctx, workflowOptions, "ValidateRackComponents", rlaRequest)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to execute ValidateComponents workflow")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to validate Trays", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to validate Trays", nil)
 	}
 
 	// Get workflow result
@@ -751,7 +749,7 @@ func (vtsh ValidateTraysHandler) Handle(c echo.Context) error {
 			return common.TerminateWorkflowOnTimeOut(c, logger, stc, workflowID, err, "Tray", "ValidateRackComponents")
 		}
 		logger.Error().Err(err).Msg("failed to get result from ValidateComponents workflow")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to validate Trays", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to validate Trays", nil)
 	}
 
 	// Convert to API model
@@ -770,7 +768,7 @@ type UpdateTrayPowerStateHandler struct {
 	tc         tClient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewUpdateTrayPowerStateHandler initializes and returns a new handler for power controlling a Tray
@@ -780,7 +778,7 @@ func NewUpdateTrayPowerStateHandler(dbSession *cdb.Session, tc tClient.Client, s
 		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -805,7 +803,7 @@ func (pcth UpdateTrayPowerStateHandler) Handle(c echo.Context) error {
 	// Is DB user missing?
 	if dbUser == nil {
 		logger.Error().Msg("invalid User object found in request context")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org membership
@@ -816,61 +814,61 @@ func (pcth UpdateTrayPowerStateHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Provider Admins are allowed to power control Tray
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Provider Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
 	}
 
 	// Get Infrastructure Provider for org
 	infrastructureProvider, err := common.GetInfrastructureProviderForOrg(ctx, nil, pcth.dbSession, org)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error getting infrastructure provider for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for org", nil)
 	}
 
 	// Get tray ID from URL param
 	trayStrID := c.Param("id")
 	if _, err := uuid.Parse(trayStrID); err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Tray ID in URL", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Tray ID in URL", nil)
 	}
 	pcth.tracerSpan.SetAttribute(handlerSpan, attribute.String("tray_id", trayStrID), logger)
 
 	// Parse and validate request body
 	apiRequest := model.APIUpdatePowerStateRequest{}
 	if err := c.Bind(&apiRequest); err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data", nil)
 	}
 	verr := apiRequest.Validate()
 	if verr != nil {
 		logger.Warn().Err(verr).Msg("error validating power control request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate power control request data", verr)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate power control request data", verr)
 	}
 
 	// Retrieve the Site from the DB
 	site, err := common.GetSiteFromIDString(ctx, nil, apiRequest.SiteID, pcth.dbSession)
 	if err != nil {
 		if errors.Is(err, cdb.ErrDoesNotExist) {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request does not exist", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request does not exist", nil)
 		}
 		logger.Error().Err(err).Msg("error retrieving Site from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site due to DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site due to DB error", nil)
 	}
 
 	// Verify site belongs to the org's Infrastructure Provider
 	if site.InfrastructureProviderID != infrastructureProvider.ID {
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Site specified in request doesn't belong to current org's Provider", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Site specified in request doesn't belong to current org's Provider", nil)
 	}
 
 	// Get the temporal client for the site
 	stc, err := pcth.scp.GetClientByID(site.ID)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
 	}
 
 	// Build TargetSpec for single tray by ID
@@ -906,7 +904,7 @@ type BatchUpdateTrayPowerStateHandler struct {
 	tc         tClient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewBatchUpdateTrayPowerStateHandler initializes and returns a new handler for batch power controlling Trays
@@ -916,7 +914,7 @@ func NewBatchUpdateTrayPowerStateHandler(dbSession *cdb.Session, tc tClient.Clie
 		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -940,17 +938,17 @@ func (pctbh BatchUpdateTrayPowerStateHandler) Handle(c echo.Context) error {
 	// Bind and validate the JSON body
 	var request model.APIBatchUpdateTrayPowerStateRequest
 	if err := c.Bind(&request); err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data", nil)
 	}
 	if verr := request.Validate(); verr != nil {
 		logger.Warn().Err(verr).Msg("error validating batch tray power control request")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate request data", verr)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate request data", verr)
 	}
 
 	// Is DB user missing?
 	if dbUser == nil {
 		logger.Error().Msg("invalid User object found in request context")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org membership
@@ -961,43 +959,43 @@ func (pctbh BatchUpdateTrayPowerStateHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Provider Admins are allowed to power control Tray
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Provider Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
 	}
 
 	// Get Infrastructure Provider for org
 	infrastructureProvider, err := common.GetInfrastructureProviderForOrg(ctx, nil, pctbh.dbSession, org)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error getting infrastructure provider for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for org", nil)
 	}
 
 	// Validate the site
 	site, err := common.GetSiteFromIDString(ctx, nil, request.SiteID, pctbh.dbSession)
 	if err != nil {
 		if errors.Is(err, cdb.ErrDoesNotExist) {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request does not exist", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request does not exist", nil)
 		}
 		logger.Error().Err(err).Msg("error retrieving Site from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site due to DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site due to DB error", nil)
 	}
 
 	// Verify site belongs to the org's Infrastructure Provider
 	if site.InfrastructureProviderID != infrastructureProvider.ID {
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Site specified in request doesn't belong to current org's Provider", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Site specified in request doesn't belong to current org's Provider", nil)
 	}
 
 	// Get the temporal client for the site
 	stc, err := pctbh.scp.GetClientByID(site.ID)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
 	}
 
 	// Build TargetSpec from filter (nil filter = all trays)
@@ -1021,7 +1019,7 @@ type UpdateTrayFirmwareHandler struct {
 	tc         tClient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewUpdateTrayFirmwareHandler initializes and returns a new handler for firmware upgrading a Tray
@@ -1031,7 +1029,7 @@ func NewUpdateTrayFirmwareHandler(dbSession *cdb.Session, tc tClient.Client, scp
 		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -1056,7 +1054,7 @@ func (futh UpdateTrayFirmwareHandler) Handle(c echo.Context) error {
 	// Is DB user missing?
 	if dbUser == nil {
 		logger.Error().Msg("invalid User object found in request context")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org membership
@@ -1067,60 +1065,60 @@ func (futh UpdateTrayFirmwareHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Provider Admins are allowed to firmware update Tray
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Provider Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
 	}
 
 	// Get Infrastructure Provider for org
 	infrastructureProvider, err := common.GetInfrastructureProviderForOrg(ctx, nil, futh.dbSession, org)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error getting infrastructure provider for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for org", nil)
 	}
 
 	// Get tray ID from URL param
 	trayStrID := c.Param("id")
 	if _, err := uuid.Parse(trayStrID); err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Tray ID in URL", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Tray ID in URL", nil)
 	}
 	futh.tracerSpan.SetAttribute(handlerSpan, attribute.String("tray_id", trayStrID), logger)
 
 	// Parse and validate request body
 	apiRequest := model.APIUpdateFirmwareRequest{}
 	if err := c.Bind(&apiRequest); err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data", nil)
 	}
 	if verr := apiRequest.Validate(); verr != nil {
 		logger.Warn().Err(verr).Msg("error validating firmware update request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate firmware update request data", verr)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate firmware update request data", verr)
 	}
 
 	// Retrieve the Site from the DB
 	site, err := common.GetSiteFromIDString(ctx, nil, apiRequest.SiteID, futh.dbSession)
 	if err != nil {
 		if errors.Is(err, cdb.ErrDoesNotExist) {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request does not exist", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request does not exist", nil)
 		}
 		logger.Error().Err(err).Msg("error retrieving Site from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site due to DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site due to DB error", nil)
 	}
 
 	// Verify site belongs to the org's Infrastructure Provider
 	if site.InfrastructureProviderID != infrastructureProvider.ID {
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Site specified in request doesn't belong to current org's Provider", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Site specified in request doesn't belong to current org's Provider", nil)
 	}
 
 	// Get the temporal client for the site
 	stc, err := futh.scp.GetClientByID(site.ID)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
 	}
 
 	targetSpec := &rlav1.OperationTargetSpec{
@@ -1155,7 +1153,7 @@ type BatchUpdateTrayFirmwareHandler struct {
 	tc         tClient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewBatchUpdateTrayFirmwareHandler initializes and returns a new handler for batch firmware upgrading Trays
@@ -1165,7 +1163,7 @@ func NewBatchUpdateTrayFirmwareHandler(dbSession *cdb.Session, tc tClient.Client
 		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -1189,17 +1187,17 @@ func (futbh BatchUpdateTrayFirmwareHandler) Handle(c echo.Context) error {
 	// Bind and validate the JSON body
 	var request model.APIBatchTrayFirmwareUpdateRequest
 	if err := c.Bind(&request); err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data", nil)
 	}
 	if verr := request.Validate(); verr != nil {
 		logger.Warn().Err(verr).Msg("error validating batch tray firmware update request")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate request data", verr)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate request data", verr)
 	}
 
 	// Is DB user missing?
 	if dbUser == nil {
 		logger.Error().Msg("invalid User object found in request context")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org membership
@@ -1210,43 +1208,43 @@ func (futbh BatchUpdateTrayFirmwareHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Provider Admins are allowed to firmware update Tray
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Provider Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
 	}
 
 	// Get Infrastructure Provider for org
 	infrastructureProvider, err := common.GetInfrastructureProviderForOrg(ctx, nil, futbh.dbSession, org)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error getting infrastructure provider for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for org", nil)
 	}
 
 	// Validate the site
 	site, err := common.GetSiteFromIDString(ctx, nil, request.SiteID, futbh.dbSession)
 	if err != nil {
 		if errors.Is(err, cdb.ErrDoesNotExist) {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request does not exist", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request does not exist", nil)
 		}
 		logger.Error().Err(err).Msg("error retrieving Site from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site due to DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site due to DB error", nil)
 	}
 
 	// Verify site belongs to the org's Infrastructure Provider
 	if site.InfrastructureProviderID != infrastructureProvider.ID {
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Site specified in request doesn't belong to current org's Provider", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Site specified in request doesn't belong to current org's Provider", nil)
 	}
 
 	// Get the temporal client for the site
 	stc, err := futbh.scp.GetClientByID(site.ID)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
 	}
 
 	// Build TargetSpec from filter (nil filter = all trays)

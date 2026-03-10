@@ -40,7 +40,6 @@ import (
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/pagination"
 	sc "github.com/nvidia/bare-metal-manager-rest/api/pkg/client/site"
 	cutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
 	"github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
@@ -284,7 +283,7 @@ func (cemh CreateExpectedMachineHandler) Handle(c echo.Context) error {
 	// Create workflow options
 	workflowOptions := tclient.StartWorkflowOptions{
 		ID:                       "expected-machine-create-" + expectedMachine.ID.String(),
-		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 
@@ -770,7 +769,7 @@ func (uemh UpdateExpectedMachineHandler) Handle(c echo.Context) error {
 	// Create workflow options
 	workflowOptions := tclient.StartWorkflowOptions{
 		ID:                       "expected-machine-update-" + expectedMachine.ID.String(),
-		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 
@@ -918,7 +917,7 @@ func (demh DeleteExpectedMachineHandler) Handle(c echo.Context) error {
 	// Create workflow options
 	workflowOptions := tclient.StartWorkflowOptions{
 		ID:                       "expected-machine-delete-" + expectedMachine.ID.String(),
-		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 
@@ -1235,7 +1234,7 @@ func (cemh CreateExpectedMachinesHandler) Handle(c echo.Context) error {
 	workflowID := fmt.Sprintf("create-expected-machines-%s-%d", site.ID.String(), len(workflowMachines))
 	workflowOptions := tclient.StartWorkflowOptions{
 		ID:                       workflowID,
-		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 
@@ -1674,7 +1673,7 @@ func (uemh UpdateExpectedMachinesHandler) Handle(c echo.Context) error {
 	workflowID := fmt.Sprintf("expected-machines-update-batch-%s-%d", site.ID.String(), len(workflowMachines))
 	workflowOptions := tclient.StartWorkflowOptions{
 		ID:                       workflowID,
-		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 

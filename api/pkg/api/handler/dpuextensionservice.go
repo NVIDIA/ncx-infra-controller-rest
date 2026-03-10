@@ -38,9 +38,7 @@ import (
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/pagination"
 	sc "github.com/nvidia/bare-metal-manager-rest/api/pkg/client/site"
 	auth "github.com/nvidia/bare-metal-manager-rest/auth/pkg/authorization"
-	cerr "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	sutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
+	cutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
 	"github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
@@ -57,7 +55,7 @@ type CreateDpuExtensionServiceHandler struct {
 	tc         tclient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewCreateDpuExtensionServiceHandler initializes and returns a new handler for creating DPU Extension Service
@@ -67,7 +65,7 @@ func NewCreateDpuExtensionServiceHandler(dbSession *cdb.Session, tc tclient.Clie
 		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -91,7 +89,7 @@ func (cdesh CreateDpuExtensionServiceHandler) Handle(c echo.Context) error {
 	// Is DB user missing?
 	if dbUser == nil {
 		logger.Error().Msg("invalid User object found in request context")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate the tenant for which this DPU Extension Service is being created
@@ -99,17 +97,17 @@ func (cdesh CreateDpuExtensionServiceHandler) Handle(c echo.Context) error {
 	if err != nil {
 		if err == common.ErrOrgTenantNotFound {
 			logger.Warn().Err(err).Msg("Org does not have a Tenant associated")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
 		}
 		logger.Error().Err(err).Msg("unable to retrieve Tenant for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
 	}
 
 	// Validate role, only Tenant Admins are allowed to create DPU Extension Service
 	ok := auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role with org, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	// Validate request
@@ -118,7 +116,7 @@ func (cdesh CreateDpuExtensionServiceHandler) Handle(c echo.Context) error {
 	err = c.Bind(&apiRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
 	}
 
 	cdesh.tracerSpan.SetAttribute(handlerSpan, attribute.String("name", apiRequest.Name), logger)
@@ -127,17 +125,17 @@ func (cdesh CreateDpuExtensionServiceHandler) Handle(c echo.Context) error {
 	verr := apiRequest.Validate()
 	if verr != nil {
 		logger.Warn().Err(verr).Msg("error validating DPU Extension Service creation request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating DPU Extension Service creation request data", verr)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating DPU Extension Service creation request data", verr)
 	}
 
 	// Retrieve the Site from the DB
 	site, err := common.GetSiteFromIDString(ctx, nil, apiRequest.SiteID, cdesh.dbSession)
 	if err != nil {
 		if errors.Is(err, cdb.ErrDoesNotExist) {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request data does not exist", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request data does not exist", nil)
 		}
 		logger.Error().Err(err).Msg("error retrieving Site from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site specified in request data, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site specified in request data, DB error", nil)
 	}
 
 	// Verify Tenant has access to Site
@@ -154,17 +152,17 @@ func (cdesh CreateDpuExtensionServiceHandler) Handle(c echo.Context) error {
 	)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving TenantSite from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to validate Site access for Tenant, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to validate Site access for Tenant, DB error", nil)
 	}
 	if len(tenantSites) == 0 {
 		logger.Warn().Msg("Tenant does not have access to Site specified in request")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Tenant does not have access to Site specified in request", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Tenant does not have access to Site specified in request", nil)
 	}
 
 	// Validate that site is in Registered state
 	if site.Status != cdbm.SiteStatusRegistered {
 		logger.Warn().Msg("Site specified in request data is not in Registered state")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request data is not in Registered state, cannot create DPU Extension Service", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request data is not in Registered state, cannot create DPU Extension Service", nil)
 	}
 
 	// Check for duplicate DPU Extension Service name for this Tenant
@@ -181,18 +179,18 @@ func (cdesh CreateDpuExtensionServiceHandler) Handle(c echo.Context) error {
 	)
 	if err != nil {
 		logger.Error().Err(err).Msg("error checking for duplicate DPU Extension Service name")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to validate DPU Extension Service name uniqueness, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to validate DPU Extension Service name uniqueness, DB error", nil)
 	}
 	if len(existingServices) > 0 {
 		logger.Warn().Msg("DPU Extension Service with this name already exists for Tenant")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "DPU Extension Service with this name already exists", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "DPU Extension Service with this name already exists", nil)
 	}
 
 	// Start a db transaction
 	tx, err := cdb.BeginTx(ctx, cdesh.dbSession, &sql.TxOptions{})
 	if err != nil {
 		logger.Error().Err(err).Msg("unable to start transaction")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create DPU Extension Service, DB transaction error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create DPU Extension Service, DB transaction error", nil)
 	}
 	txCommitted := false
 	defer common.RollbackTx(ctx, tx, &txCommitted)
@@ -213,7 +211,7 @@ func (cdesh CreateDpuExtensionServiceHandler) Handle(c echo.Context) error {
 	)
 	if err != nil {
 		logger.Error().Err(err).Msg("error creating DPU Extension Service record in DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create DPU Extension Service, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create DPU Extension Service, DB error", nil)
 	}
 
 	// Create a status detail record for the DPU Extension Service
@@ -222,7 +220,7 @@ func (cdesh CreateDpuExtensionServiceHandler) Handle(c echo.Context) error {
 		cdb.GetStrPtr("Received DPU Extension Service creation request, pending processing"))
 	if err != nil {
 		logger.Error().Err(err).Msg("error creating Status Detail DB entry")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for DPU Extension Service", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for DPU Extension Service", nil)
 	}
 
 	statusDetails := []cdbm.StatusDetail{}
@@ -259,7 +257,7 @@ func (cdesh CreateDpuExtensionServiceHandler) Handle(c echo.Context) error {
 	// Create workflow options
 	workflowOptions := tclient.StartWorkflowOptions{
 		ID:                       "dpu-extension-service-create-" + dpuExtensionService.ID.String(),
-		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 
@@ -267,18 +265,18 @@ func (cdesh CreateDpuExtensionServiceHandler) Handle(c echo.Context) error {
 	stc, err := cdesh.scp.GetClientByID(site.ID)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve workflow client for Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve workflow client for Site", nil)
 	}
 
 	// Add context deadlines
-	ctxWithTimeout, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
+	ctxWithTimeout, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow
 	workflowRun, err := stc.ExecuteWorkflow(ctxWithTimeout, workflowOptions, "CreateDpuExtensionService", createDpuExtensionServiceRequest)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to schedule CreateDpuExtensionService workflow on Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to schedule DPU Extension Service creation workflow", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to schedule DPU Extension Service creation workflow", nil)
 	}
 
 	workflowID := workflowRun.GetID()
@@ -293,19 +291,19 @@ func (cdesh CreateDpuExtensionServiceHandler) Handle(c echo.Context) error {
 		var timeoutErr *tp.TimeoutError
 		if errors.As(err, &timeoutErr) {
 			logger.Error().Err(err).Msg("timed out executing DPU Extension Service creation workflow on Site")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Timed out executing DPU Extension Service creation workflow on Site: %s", err), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Timed out executing DPU Extension Service creation workflow on Site: %s", err), nil)
 		}
 
 		code, uwerr := common.UnwrapWorkflowError(err)
 		logger.Error().Err(uwerr).Msg("failed to execute DPU Extension Service creation workflow on Site")
-		return cerr.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to execute DPU Extension Service creation workflow on Site: %s", uwerr), nil)
+		return cutil.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to execute DPU Extension Service creation workflow on Site: %s", uwerr), nil)
 	}
 
 	// Commit transaction
 	err = tx.Commit()
 	if err != nil {
 		logger.Error().Err(err).Msg("error committing DPU Extension Service transaction to DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create DPU Extension Service, DB transaction error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create DPU Extension Service, DB transaction error", nil)
 	}
 	txCommitted = true
 
@@ -365,7 +363,7 @@ type GetAllDpuExtensionServiceHandler struct {
 	dbSession  *cdb.Session
 	tc         tclient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetAllDpuExtensionServiceHandler initializes and returns a new handler for getting all DPU Extension Services
@@ -374,7 +372,7 @@ func NewGetAllDpuExtensionServiceHandler(dbSession *cdb.Session, tc tclient.Clie
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -404,7 +402,7 @@ func (gadesh GetAllDpuExtensionServiceHandler) Handle(c echo.Context) error {
 	// Is DB user missing?
 	if dbUser == nil {
 		logger.Error().Msg("invalid User object found in request context")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate the tenant
@@ -412,17 +410,17 @@ func (gadesh GetAllDpuExtensionServiceHandler) Handle(c echo.Context) error {
 	if err != nil {
 		if err == common.ErrOrgTenantNotFound {
 			logger.Warn().Err(err).Msg("Org does not have a Tenant associated")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
 		}
 		logger.Error().Err(err).Msg("unable to retrieve Tenant for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
 	}
 
 	// Validate role, only Tenant Admins are allowed to get DPU Extension Services
 	ok := auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role with org, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	filterInput := cdbm.DpuExtensionServiceFilterInput{
@@ -435,10 +433,10 @@ func (gadesh GetAllDpuExtensionServiceHandler) Handle(c echo.Context) error {
 		site, err := common.GetSiteFromIDString(ctx, nil, siteIDStr, gadesh.dbSession)
 		if err != nil {
 			if errors.Is(err, cdb.ErrDoesNotExist) {
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in query does not exist", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in query does not exist", nil)
 			}
 			logger.Error().Err(err).Msg("error retrieving Site from DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site specified in query, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site specified in query, DB error", nil)
 		}
 
 		// Verify Tenant has access to Site
@@ -455,11 +453,11 @@ func (gadesh GetAllDpuExtensionServiceHandler) Handle(c echo.Context) error {
 		)
 		if err != nil {
 			logger.Error().Err(err).Msg("error retrieving TenantSite from DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to validate Site access for Tenant, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to validate Site access for Tenant, DB error", nil)
 		}
 		if len(tenantSites) == 0 {
 			logger.Warn().Msg("Tenant does not have access to Site specified in query")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Tenant does not have access to Site specified in query", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Tenant does not have access to Site specified in query", nil)
 		}
 
 		filterInput.SiteIDs = []uuid.UUID{site.ID}
@@ -472,7 +470,7 @@ func (gadesh GetAllDpuExtensionServiceHandler) Handle(c echo.Context) error {
 		_, ok := cdbm.DpuExtensionServiceStatusMap[statusQuery]
 		if !ok {
 			logger.Warn().Msg(fmt.Sprintf("invalid value in status query: %v", statusQuery))
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Status value in query", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Status value in query", nil)
 		}
 		filterInput.Statuses = []string{statusQuery}
 		gadesh.tracerSpan.SetAttribute(handlerSpan, attribute.String("status", statusQuery), logger)
@@ -490,7 +488,7 @@ func (gadesh GetAllDpuExtensionServiceHandler) Handle(c echo.Context) error {
 	qIncludeRelations, errStr := common.GetAndValidateQueryRelations(qParams, cdbm.DpuExtensionServiceRelatedEntities)
 	if errStr != "" {
 		logger.Warn().Msg(errStr)
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, errStr, nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, errStr, nil)
 	}
 
 	// Validate pagination request
@@ -498,14 +496,14 @@ func (gadesh GetAllDpuExtensionServiceHandler) Handle(c echo.Context) error {
 	err = c.Bind(&pageRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding pagination request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request pagination data", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request pagination data", nil)
 	}
 
 	// Validate pagination attributes
 	err = pageRequest.Validate(cdbm.DpuExtensionServiceOrderByFields)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error validating pagination request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate pagination request data", err)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate pagination request data", err)
 	}
 
 	// Get DPU Extension Services from DB
@@ -523,7 +521,7 @@ func (gadesh GetAllDpuExtensionServiceHandler) Handle(c echo.Context) error {
 	)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving DPU Extension Services from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve DPU Extension Services, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve DPU Extension Services, DB error", nil)
 	}
 
 	// Get status details for all DPU Extension Services
@@ -536,7 +534,7 @@ func (gadesh GetAllDpuExtensionServiceHandler) Handle(c echo.Context) error {
 	statusDetails, err := sdDAO.GetRecentByEntityIDs(ctx, nil, dpuExtensionServiceIDs, common.RECENT_STATUS_DETAIL_COUNT)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Status Details from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details, DB error", nil)
 	}
 
 	statusDetailsMap := map[string][]cdbm.StatusDetail{}
@@ -558,7 +556,7 @@ func (gadesh GetAllDpuExtensionServiceHandler) Handle(c echo.Context) error {
 	pageHeader, err := json.Marshal(pageResponse)
 	if err != nil {
 		logger.Error().Err(err).Msg("error marshaling pagination response")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to generate pagination response header", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to generate pagination response header", nil)
 	}
 
 	c.Response().Header().Set(pagination.ResponseHeaderName, string(pageHeader))
@@ -575,7 +573,7 @@ type GetDpuExtensionServiceHandler struct {
 	dbSession  *cdb.Session
 	tc         tclient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetDpuExtensionServiceHandler initializes and returns a new handler to retrieve DPU Extension Service
@@ -584,7 +582,7 @@ func NewGetDpuExtensionServiceHandler(dbSession *cdb.Session, tc tclient.Client,
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -609,7 +607,7 @@ func (gdesh GetDpuExtensionServiceHandler) Handle(c echo.Context) error {
 	// Is DB user missing?
 	if dbUser == nil {
 		logger.Error().Msg("invalid User object found in request context")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate the tenant
@@ -617,23 +615,23 @@ func (gdesh GetDpuExtensionServiceHandler) Handle(c echo.Context) error {
 	if err != nil {
 		if err == common.ErrOrgTenantNotFound {
 			logger.Warn().Err(err).Msg("Org does not have a Tenant associated")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
 		}
 		logger.Error().Err(err).Msg("unable to retrieve Tenant for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
 	}
 
 	// Validate role, only Tenant Admins are allowed to get DPU Extension Service
 	ok := auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role with org, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	// Get DPU Extension Service ID from URL param
 	dpuExtensionServiceID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid DPU Extension Service ID in URL", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid DPU Extension Service ID in URL", nil)
 	}
 
 	logger = logger.With().Str("DPU Extension Service ID", dpuExtensionServiceID.String()).Logger()
@@ -645,7 +643,7 @@ func (gdesh GetDpuExtensionServiceHandler) Handle(c echo.Context) error {
 	qIncludeRelations, errStr := common.GetAndValidateQueryRelations(qParams, cdbm.DpuExtensionServiceRelatedEntities)
 	if errStr != "" {
 		logger.Warn().Msg(errStr)
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, errStr, nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, errStr, nil)
 	}
 
 	// Get DPU Extension Service from DB by ID
@@ -653,16 +651,16 @@ func (gdesh GetDpuExtensionServiceHandler) Handle(c echo.Context) error {
 	dpuExtensionService, err := desDAO.GetByID(ctx, nil, dpuExtensionServiceID, qIncludeRelations)
 	if err != nil {
 		if errors.Is(err, cdb.ErrDoesNotExist) {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf("Could not find DPU Extension Service with ID: %s", dpuExtensionServiceID.String()), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf("Could not find DPU Extension Service with ID: %s", dpuExtensionServiceID.String()), nil)
 		}
 		logger.Error().Err(err).Msg("error retrieving DPU Extension Service from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve DPU Extension Service, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve DPU Extension Service, DB error", nil)
 	}
 
 	// Validate that DPU Extension Service belongs to the Tenant
 	if dpuExtensionService.TenantID != tenant.ID {
 		logger.Warn().Msg("DPU Extension Service does not belong to current Tenant")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "DPU Extension Service does not belong to current Tenant", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "DPU Extension Service does not belong to current Tenant", nil)
 	}
 
 	// Get status details
@@ -670,7 +668,7 @@ func (gdesh GetDpuExtensionServiceHandler) Handle(c echo.Context) error {
 	statusDetails, err := sdDAO.GetRecentByEntityIDs(ctx, nil, []string{dpuExtensionService.ID.String()}, common.RECENT_STATUS_DETAIL_COUNT)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Status Details from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details, DB error", nil)
 	}
 
 	// Create response
@@ -688,7 +686,7 @@ type UpdateDpuExtensionServiceHandler struct {
 	tc         tclient.Client
 	cfg        *config.Config
 	scp        *sc.ClientPool
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewUpdateDpuExtensionServiceHandler initializes and returns a new handler for updating DPU Extension Service
@@ -698,7 +696,7 @@ func NewUpdateDpuExtensionServiceHandler(dbSession *cdb.Session, tc tclient.Clie
 		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -723,7 +721,7 @@ func (udesh UpdateDpuExtensionServiceHandler) Handle(c echo.Context) error {
 	// Is DB user missing?
 	if dbUser == nil {
 		logger.Error().Msg("invalid User object found in request context")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate the tenant
@@ -731,23 +729,23 @@ func (udesh UpdateDpuExtensionServiceHandler) Handle(c echo.Context) error {
 	if err != nil {
 		if err == common.ErrOrgTenantNotFound {
 			logger.Warn().Err(err).Msg("Org does not have a Tenant associated")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
 		}
 		logger.Error().Err(err).Msg("unable to retrieve Tenant for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
 	}
 
 	// Validate role, only Tenant Admins are allowed to update DPU Extension Service
 	ok := auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role with org, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	// Get DPU Extension Service ID from URL param
 	dpuExtensionServiceID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid DPU Extension Service ID in URL", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid DPU Extension Service ID in URL", nil)
 	}
 	logger = logger.With().Str("DPU Extension Service ID", dpuExtensionServiceID.String()).Logger()
 
@@ -759,14 +757,14 @@ func (udesh UpdateDpuExtensionServiceHandler) Handle(c echo.Context) error {
 	err = c.Bind(&apiRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
 	}
 
 	// Validate request attributes
 	verr := apiRequest.Validate()
 	if verr != nil {
 		logger.Warn().Err(verr).Msg("error validating DPU Extension Service update request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating DPU Extension Service update request data", verr)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating DPU Extension Service update request data", verr)
 	}
 
 	// Get DPU Extension Service from DB by ID
@@ -774,16 +772,16 @@ func (udesh UpdateDpuExtensionServiceHandler) Handle(c echo.Context) error {
 	dpuExtensionService, err := desDAO.GetByID(ctx, nil, dpuExtensionServiceID, []string{cdbm.SiteRelationName})
 	if err != nil {
 		if errors.Is(err, cdb.ErrDoesNotExist) {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf("Could not find DPU Extension Service with ID: %s", dpuExtensionServiceID.String()), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf("Could not find DPU Extension Service with ID: %s", dpuExtensionServiceID.String()), nil)
 		}
 		logger.Error().Err(err).Msg("error retrieving DPU Extension Service from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve DPU Extension Service, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve DPU Extension Service, DB error", nil)
 	}
 
 	// Validate that DPU Extension Service belongs to the Tenant
 	if dpuExtensionService.TenantID != tenant.ID {
 		logger.Warn().Msg("DPU Extension Service does not belong to current Tenant")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "DPU Extension Service does not belong to current Tenant", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "DPU Extension Service does not belong to current Tenant", nil)
 	}
 
 	// Check if name is being updated and if it's unique
@@ -800,11 +798,11 @@ func (udesh UpdateDpuExtensionServiceHandler) Handle(c echo.Context) error {
 		)
 		if err != nil {
 			logger.Error().Err(err).Msg("error checking for duplicate DPU Extension Service name")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to validate DPU Extension Service name uniqueness, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to validate DPU Extension Service name uniqueness, DB error", nil)
 		}
 		if len(existingServices) > 0 {
 			logger.Warn().Msg("DPU Extension Service with this name already exists for Tenant")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "DPU Extension Service with this name already exists", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "DPU Extension Service with this name already exists", nil)
 		}
 	}
 
@@ -812,7 +810,7 @@ func (udesh UpdateDpuExtensionServiceHandler) Handle(c echo.Context) error {
 	tx, err := cdb.BeginTx(ctx, udesh.dbSession, &sql.TxOptions{})
 	if err != nil {
 		logger.Error().Err(err).Msg("unable to start transaction")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update DPU Extension Service, DB transaction error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update DPU Extension Service, DB transaction error", nil)
 	}
 	txCommitted := false
 	defer common.RollbackTx(ctx, tx, &txCommitted)
@@ -832,7 +830,7 @@ func (udesh UpdateDpuExtensionServiceHandler) Handle(c echo.Context) error {
 	updatedDpuExtensionService, err := desDAO.Update(ctx, tx, updateInput)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to update DPU Extension Service record in DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update DPU Extension Service, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update DPU Extension Service, DB error", nil)
 	}
 
 	// Get updated status details
@@ -870,7 +868,7 @@ func (udesh UpdateDpuExtensionServiceHandler) Handle(c echo.Context) error {
 
 	workflowOptions := tclient.StartWorkflowOptions{
 		ID:                       "dpu-extension-service-update-" + updatedDpuExtensionService.ID.String(),
-		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 
@@ -878,18 +876,18 @@ func (udesh UpdateDpuExtensionServiceHandler) Handle(c echo.Context) error {
 	stc, err := udesh.scp.GetClientByID(updatedDpuExtensionService.SiteID)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve workflow client for Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve workflow client for Site", nil)
 	}
 
 	// Add context deadlines
-	ctxWithTimeout, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
+	ctxWithTimeout, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow
 	workflowRun, err := stc.ExecuteWorkflow(ctxWithTimeout, workflowOptions, "UpdateDpuExtensionService", updateDpuExtensionServiceRequest)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to schedule UpdateDpuExtensionService workflow on Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to schedule DPU Extension Service update workflow", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to schedule DPU Extension Service update workflow", nil)
 	}
 
 	workflowID := workflowRun.GetID()
@@ -904,19 +902,19 @@ func (udesh UpdateDpuExtensionServiceHandler) Handle(c echo.Context) error {
 		var timeoutErr *tp.TimeoutError
 		if errors.As(err, &timeoutErr) {
 			logger.Error().Err(err).Msg("timed out executing DPU Extension Service update workflow on Site")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Timed out executing DPU Extension Service update workflow on Site: %v", err), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Timed out executing DPU Extension Service update workflow on Site: %v", err), nil)
 		}
 
 		code, uwerr := common.UnwrapWorkflowError(err)
 		logger.Error().Err(uwerr).Msg("failed to execute DPU Extension Service update workflow on Site")
-		return cerr.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to execute DPU Extension Service update workflow on Site: %s", uwerr), nil)
+		return cutil.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to execute DPU Extension Service update workflow on Site: %s", uwerr), nil)
 	}
 
 	// Commit transaction
 	err = tx.Commit()
 	if err != nil {
 		logger.Error().Err(err).Msg("error committing DPU Extension Service transaction to DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update DPU Extension Service, DB transaction error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update DPU Extension Service, DB transaction error", nil)
 	}
 	txCommitted = true
 
@@ -968,7 +966,7 @@ type DeleteDpuExtensionServiceHandler struct {
 	tc         tclient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewDeleteDpuExtensionServiceHandler initializes and returns a new handler for deleting DPU Extension Service
@@ -978,7 +976,7 @@ func NewDeleteDpuExtensionServiceHandler(dbSession *cdb.Session, tc tclient.Clie
 		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -1002,7 +1000,7 @@ func (ddesh DeleteDpuExtensionServiceHandler) Handle(c echo.Context) error {
 	// Is DB user missing?
 	if dbUser == nil {
 		logger.Error().Msg("invalid User object found in request context")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate the tenant
@@ -1010,23 +1008,23 @@ func (ddesh DeleteDpuExtensionServiceHandler) Handle(c echo.Context) error {
 	if err != nil {
 		if err == common.ErrOrgTenantNotFound {
 			logger.Warn().Err(err).Msg("Org does not have a Tenant associated")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
 		}
 		logger.Error().Err(err).Msg("unable to retrieve Tenant for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
 	}
 
 	// Validate role, only Tenant Admins are allowed to delete DPU Extension Service
 	ok := auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role with org, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	// Get DPU Extension Service ID from URL param
 	dpuExtensionServiceID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid DPU Extension Service ID in URL", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid DPU Extension Service ID in URL", nil)
 	}
 	logger = logger.With().Str("DPU Extension Service ID", dpuExtensionServiceID.String()).Logger()
 
@@ -1037,16 +1035,16 @@ func (ddesh DeleteDpuExtensionServiceHandler) Handle(c echo.Context) error {
 	dpuExtensionService, err := desDAO.GetByID(ctx, nil, dpuExtensionServiceID, nil)
 	if err != nil {
 		if errors.Is(err, cdb.ErrDoesNotExist) {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf("Could not find DPU Extension Service with ID: %s", dpuExtensionServiceID.String()), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf("Could not find DPU Extension Service with ID: %s", dpuExtensionServiceID.String()), nil)
 		}
 		logger.Error().Err(err).Msg("error retrieving DPU Extension Service from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve DPU Extension Service, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve DPU Extension Service, DB error", nil)
 	}
 
 	// Validate that DPU Extension Service belongs to the Tenant
 	if dpuExtensionService.TenantID != tenant.ID {
 		logger.Warn().Msg("DPU Extension Service does not belong to current Tenant")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "DPU Extension Service does not belong to current Tenant", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "DPU Extension Service does not belong to current Tenant", nil)
 	}
 
 	// Check if any deployments are active
@@ -1062,18 +1060,18 @@ func (ddesh DeleteDpuExtensionServiceHandler) Handle(c echo.Context) error {
 	)
 	if err != nil {
 		logger.Error().Err(err).Msg("error checking for active deployments")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to check for active deployments, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to check for active deployments, DB error", nil)
 	}
 	if len(activeDeployments) > 0 {
 		logger.Warn().Msg("Cannot delete DPU Extension Service with active deployments")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Cannot delete DPU Extension Service with active deployments", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Cannot delete DPU Extension Service with active deployments", nil)
 	}
 
 	// Start a db tx
 	tx, err := cdb.BeginTx(ctx, ddesh.dbSession, &sql.TxOptions{})
 	if err != nil {
 		logger.Error().Err(err).Msg("unable to start transaction")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete DPU Extension Service, DB transaction error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete DPU Extension Service, DB transaction error", nil)
 	}
 	txCommitted := false
 	defer common.RollbackTx(ctx, tx, &txCommitted)
@@ -1089,14 +1087,14 @@ func (ddesh DeleteDpuExtensionServiceHandler) Handle(c echo.Context) error {
 	)
 	if err != nil {
 		logger.Error().Err(err).Msg("unable to update DPU Extension Service status to Deleting")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update DPU Extension Service status to Deleting, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update DPU Extension Service status to Deleting, DB error", nil)
 	}
 
 	// Delete the DPU Extension Service
 	err = desDAO.Delete(ctx, tx, dpuExtensionService.ID)
 	if err != nil {
 		logger.Error().Err(err).Msg("unable to delete DPU Extension Service")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete DPU Extension Service, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete DPU Extension Service, DB error", nil)
 	}
 
 	// Trigger workflow to delete DPU Extension Service
@@ -1108,26 +1106,26 @@ func (ddesh DeleteDpuExtensionServiceHandler) Handle(c echo.Context) error {
 	stc, err := ddesh.scp.GetClientByID(dpuExtensionService.SiteID)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve workflow client for Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve workflow client for Site", nil)
 	}
 
 	workflowOptions := tclient.StartWorkflowOptions{
 		ID:                       "dpu-extension-service-delete-" + dpuExtensionService.ID.String(),
-		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 
 	// Trigger Site workflow
 	apiErr := common.ExecuteSyncWorkflow(ctx, logger, stc, "DeleteDpuExtensionService", workflowOptions, deleteDpuExtensionServiceRequest)
 	if apiErr != nil {
-		return cerr.NewAPIErrorResponse(c, apiErr.Code, apiErr.Message, apiErr.Data)
+		return cutil.NewAPIErrorResponse(c, apiErr.Code, apiErr.Message, apiErr.Data)
 	}
 
 	// Commit transaction
 	err = tx.Commit()
 	if err != nil {
 		logger.Error().Err(err).Msg("error committing DPU Extension Service delete transaction to DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete DPU Extension Service, DB transaction error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete DPU Extension Service, DB transaction error", nil)
 	}
 	txCommitted = true
 
@@ -1144,7 +1142,7 @@ type GetDpuExtensionServiceVersionHandler struct {
 	tc         tclient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetDpuExtensionServiceVersionHandler initializes and returns a new handler for retrieving DPU Extension Service version
@@ -1154,7 +1152,7 @@ func NewGetDpuExtensionServiceVersionHandler(dbSession *cdb.Session, tc tclient.
 		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -1179,7 +1177,7 @@ func (gdesvh GetDpuExtensionServiceVersionHandler) Handle(c echo.Context) error 
 	// Is DB user missing?
 	if dbUser == nil {
 		logger.Error().Msg("invalid User object found in request context")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate the tenant
@@ -1187,23 +1185,23 @@ func (gdesvh GetDpuExtensionServiceVersionHandler) Handle(c echo.Context) error 
 	if err != nil {
 		if err == common.ErrOrgTenantNotFound {
 			logger.Warn().Err(err).Msg("Org does not have a Tenant associated")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
 		}
 		logger.Error().Err(err).Msg("unable to retrieve Tenant for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
 	}
 
 	// Validate role, only Tenant Admins are allowed to get DPU Extension Service version
 	ok := auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role with org, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	// Get DPU Extension Service ID from URL param
 	dpuExtensionServiceID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid DPU Extension Service ID in URL", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid DPU Extension Service ID in URL", nil)
 	}
 
 	// Get version ID from URL param
@@ -1222,16 +1220,16 @@ func (gdesvh GetDpuExtensionServiceVersionHandler) Handle(c echo.Context) error 
 	dpuExtensionService, err := desDAO.GetByID(ctx, nil, dpuExtensionServiceID, nil)
 	if err != nil {
 		if errors.Is(err, cdb.ErrDoesNotExist) {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf("Could not find DPU Extension Service with ID: %s", dpuExtensionServiceID.String()), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf("Could not find DPU Extension Service with ID: %s", dpuExtensionServiceID.String()), nil)
 		}
 		logger.Error().Err(err).Msg("error retrieving DPU Extension Service from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve DPU Extension Service, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve DPU Extension Service, DB error", nil)
 	}
 
 	// Validate that DPU Extension Service belongs to the Tenant
 	if dpuExtensionService.TenantID != tenant.ID {
 		logger.Warn().Msg("DPU Extension Service does not belong to current Tenant")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "DPU Extension Service does not belong to current Tenant", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "DPU Extension Service does not belong to current Tenant", nil)
 	}
 
 	// Get version info from Site DPU Extension Service
@@ -1244,25 +1242,25 @@ func (gdesvh GetDpuExtensionServiceVersionHandler) Handle(c echo.Context) error 
 	stc, err := gdesvh.scp.GetClientByID(dpuExtensionService.SiteID)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve workflow client for Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve workflow client for Site", nil)
 	}
 
 	workflowOptions := tclient.StartWorkflowOptions{
 		ID:                       "dpu-extension-service-get-versions-info-" + dpuExtensionService.ID.String() + "-" + versionID,
-		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 
 	// Trigger Site workflow
 	// Add context deadlines
-	ctxWithTimeout, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
+	ctxWithTimeout, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow
 	workflowRun, err := stc.ExecuteWorkflow(ctxWithTimeout, workflowOptions, "GetDpuExtensionServiceVersionsInfo", getDpuVersionInfoRequest)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to schedule DPU Extension Service version info retrieval workflow on Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to schedule DPU Extension Service version info retrieval workflow", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to schedule DPU Extension Service version info retrieval workflow", nil)
 	}
 
 	workflowID := workflowRun.GetID()
@@ -1278,16 +1276,16 @@ func (gdesvh GetDpuExtensionServiceVersionHandler) Handle(c echo.Context) error 
 		var timeoutErr *tp.TimeoutError
 		if errors.As(err, &timeoutErr) {
 			logger.Error().Err(err).Msg("timed out executing DPU Extension Service version info retrieval workflow on Site")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Timed out executing DPU Extension Service version info retrieval workflow on Site: %s", err), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Timed out executing DPU Extension Service version info retrieval workflow on Site: %s", err), nil)
 		}
 
 		code, uwerr := common.UnwrapWorkflowError(err)
 		logger.Error().Err(uwerr).Msg("failed to execute DPU Extension Service version info retrieval workflow on Site")
-		return cerr.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to execute DPU Extension Service version info retrieval workflow on Site: %s", uwerr), nil)
+		return cutil.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to execute DPU Extension Service version info retrieval workflow on Site: %s", uwerr), nil)
 	}
 
 	if len(versionInfos.VersionInfos) == 0 {
-		return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find version info for DPU Extension Service", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find version info for DPU Extension Service", nil)
 	}
 
 	versionInfo := versionInfos.VersionInfos[0]
@@ -1319,7 +1317,7 @@ type DeleteDpuExtensionServiceVersionHandler struct {
 	tc         tclient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewDeleteDpuExtensionServiceVersionHandler initializes and returns a new handler for deleting DPU Extension Service version
@@ -1329,7 +1327,7 @@ func NewDeleteDpuExtensionServiceVersionHandler(dbSession *cdb.Session, tc tclie
 		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -1354,7 +1352,7 @@ func (ddesvh DeleteDpuExtensionServiceVersionHandler) Handle(c echo.Context) err
 	// Is DB user missing?
 	if dbUser == nil {
 		logger.Error().Msg("invalid User object found in request context")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate the tenant
@@ -1362,23 +1360,23 @@ func (ddesvh DeleteDpuExtensionServiceVersionHandler) Handle(c echo.Context) err
 	if err != nil {
 		if err == common.ErrOrgTenantNotFound {
 			logger.Warn().Err(err).Msg("Org does not have a Tenant associated")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
 		}
 		logger.Error().Err(err).Msg("unable to retrieve Tenant for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
 	}
 
 	// Validate role, only Tenant Admins are allowed to delete DPU Extension Service version
 	ok := auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role with org, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	// Get DPU Extension Service ID from URL param
 	dpuExtensionServiceID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid DPU Extension Service ID in URL", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid DPU Extension Service ID in URL", nil)
 	}
 
 	// Get version ID from URL param
@@ -1397,16 +1395,16 @@ func (ddesvh DeleteDpuExtensionServiceVersionHandler) Handle(c echo.Context) err
 	dpuExtensionService, err := desDAO.GetByID(ctx, nil, dpuExtensionServiceID, nil)
 	if err != nil {
 		if errors.Is(err, cdb.ErrDoesNotExist) {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf("Could not find DPU Extension Service with ID: %s", dpuExtensionServiceID.String()), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf("Could not find DPU Extension Service with ID: %s", dpuExtensionServiceID.String()), nil)
 		}
 		logger.Error().Err(err).Msg("error retrieving DPU Extension Service from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve DPU Extension Service, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve DPU Extension Service, DB error", nil)
 	}
 
 	// Validate that DPU Extension Service belongs to the Tenant
 	if dpuExtensionService.TenantID != tenant.ID {
 		logger.Warn().Msg("DPU Extension Service does not belong to current Tenant")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "DPU Extension Service does not belong to current Tenant", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "DPU Extension Service does not belong to current Tenant", nil)
 	}
 
 	// Verify version exists
@@ -1420,7 +1418,7 @@ func (ddesvh DeleteDpuExtensionServiceVersionHandler) Handle(c echo.Context) err
 			}
 		}
 		if !versionFound {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf("Version: %s not found for DPU Extension Service: %s", versionID, dpuExtensionServiceID.String()), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf("Version: %s not found for DPU Extension Service: %s", versionID, dpuExtensionServiceID.String()), nil)
 		}
 	}
 
@@ -1438,18 +1436,18 @@ func (ddesvh DeleteDpuExtensionServiceVersionHandler) Handle(c echo.Context) err
 	)
 	if err != nil {
 		logger.Error().Err(err).Msg("error checking for active deployments of version")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to check for active deployments, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to check for active deployments, DB error", nil)
 	}
 	if len(activeDeployments) > 0 {
 		logger.Warn().Msg("Cannot delete version with active deployments")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Cannot delete version with active deployments", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Cannot delete version with active deployments", nil)
 	}
 
 	// Start a db tx
 	tx, err := cdb.BeginTx(ctx, ddesvh.dbSession, &sql.TxOptions{})
 	if err != nil {
 		logger.Error().Err(err).Msg("unable to start transaction")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete DPU Extension Service version, DB transaction error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete DPU Extension Service version, DB transaction error", nil)
 	}
 	txCommitted := false
 	defer common.RollbackTx(ctx, tx, &txCommitted)
@@ -1470,7 +1468,7 @@ func (ddesvh DeleteDpuExtensionServiceVersionHandler) Handle(c echo.Context) err
 		err := desDAO.Delete(ctx, tx, dpuExtensionService.ID)
 		if err != nil {
 			logger.Error().Err(err).Msg("error deleting DPU Extension Service from DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete DPU Extension Service version, error deleting parent DPU Extension Service", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete DPU Extension Service version, error deleting parent DPU Extension Service", nil)
 		}
 	} else if dpuExtensionService.Version != nil {
 		// Update active versions
@@ -1481,7 +1479,7 @@ func (ddesvh DeleteDpuExtensionServiceVersionHandler) Handle(c echo.Context) err
 		})
 		if err != nil {
 			logger.Error().Err(err).Msg("error updating DPU Extension Service record in DB after deleting individual version")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update active versions after DPU Extension Service version deletion, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update active versions after DPU Extension Service version deletion, DB error", nil)
 		}
 
 		// If latest version is not equal to the remaining latest version, then fetch the latest remaining version
@@ -1501,7 +1499,7 @@ func (ddesvh DeleteDpuExtensionServiceVersionHandler) Handle(c echo.Context) err
 		})
 		if err != nil {
 			logger.Error().Err(err).Msg("error clearing version info after DPU Extension Service version deletion")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to clear version info for deleted version, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to clear version info for deleted version, DB error", nil)
 		}
 	}
 
@@ -1515,26 +1513,26 @@ func (ddesvh DeleteDpuExtensionServiceVersionHandler) Handle(c echo.Context) err
 	stc, err := ddesvh.scp.GetClientByID(dpuExtensionService.SiteID)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve workflow client for Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve workflow client for Site", nil)
 	}
 
 	workflowOptions := tclient.StartWorkflowOptions{
 		ID:                       "dpu-extension-service-delete-version-" + dpuExtensionService.ID.String() + "-" + versionID,
-		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 
 	// Trigger Site workflow
 	apiErr := common.ExecuteSyncWorkflow(ctx, logger, stc, "DeleteDpuExtensionService", workflowOptions, deleteDpuExtensionServiceVersionRequest)
 	if apiErr != nil {
-		return cerr.NewAPIErrorResponse(c, apiErr.Code, apiErr.Message, apiErr.Data)
+		return cutil.NewAPIErrorResponse(c, apiErr.Code, apiErr.Message, apiErr.Data)
 	}
 
 	// Commit transaction
 	err = tx.Commit()
 	if err != nil {
 		logger.Error().Err(err).Msg("error committing DPU Extension Service transaction to DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete DPU Extension Service version, DB transaction error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete DPU Extension Service version, DB transaction error", nil)
 	}
 	txCommitted = true
 
@@ -1542,13 +1540,13 @@ func (ddesvh DeleteDpuExtensionServiceVersionHandler) Handle(c echo.Context) err
 	if fetchLatestRemainingVersion {
 		workflowOptions := tclient.StartWorkflowOptions{
 			ID:                       "dpu-extension-service-get-versions-info-" + dpuExtensionService.ID.String() + "-" + remainingVersions[0],
-			WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
+			WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
 			TaskQueue:                queue.SiteTaskQueue,
 		}
 
 		// Trigger Site workflow
 		// Add context deadlines
-		ctxWithTimeout, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
+		ctxWithTimeout, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
 		defer cancel()
 
 		getDpuVersionInfoRequest := &cwssaws.GetDpuExtensionServiceVersionsInfoRequest{
@@ -1560,7 +1558,7 @@ func (ddesvh DeleteDpuExtensionServiceVersionHandler) Handle(c echo.Context) err
 		workflowRun, err := stc.ExecuteWorkflow(ctxWithTimeout, workflowOptions, "GetDpuExtensionServiceVersionsInfo", getDpuVersionInfoRequest)
 		if err != nil {
 			logger.Error().Err(err).Msg("failed to schedule DPU Extension Service version info retrieval workflow on Site")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to schedule DPU Extension Service version info retrieval workflow", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to schedule DPU Extension Service version info retrieval workflow", nil)
 		}
 
 		workflowID := workflowRun.GetID()
@@ -1576,16 +1574,16 @@ func (ddesvh DeleteDpuExtensionServiceVersionHandler) Handle(c echo.Context) err
 			var timeoutErr *tp.TimeoutError
 			if errors.As(err, &timeoutErr) {
 				logger.Error().Err(err).Msg("timed out executing DPU Extension Service version info retrieval workflow on Site")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Timed out executing DPU Extension Service version info retrieval workflow on Site: %s", err), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Timed out executing DPU Extension Service version info retrieval workflow on Site: %s", err), nil)
 			}
 
 			code, uwerr := common.UnwrapWorkflowError(err)
 			logger.Error().Err(uwerr).Msg("failed to execute DPU Extension Service version info retrieval workflow on Site")
-			return cerr.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to execute DPU Extension Service version info retrieval workflow on Site: %s", uwerr), nil)
+			return cutil.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to execute DPU Extension Service version info retrieval workflow on Site: %s", uwerr), nil)
 		}
 
 		if len(controllerVersionInfos.VersionInfos) == 0 {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find latest remaining version details for DPU Extension Service", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find latest remaining version details for DPU Extension Service", nil)
 		}
 
 		controllerVersionInfo := controllerVersionInfos.VersionInfos[0]
