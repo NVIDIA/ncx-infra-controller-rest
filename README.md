@@ -70,6 +70,10 @@ make kind-verify    # Run health checks
 make kind-down      # Tear down cluster
 ```
 
+### Production Cluster Deployment
+
+See **[QuickStart.md](QuickStart.md)** for a concise bring-up guide, and **[Installation.md](Installation.md)** for the full step-by-step reference with per-component explanations.
+
 ## CLI
 
 `carbidecli` is a command-line client that wraps the full REST API. Install it and set up configs for each environment you work with:
