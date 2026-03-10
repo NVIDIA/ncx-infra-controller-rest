@@ -1341,7 +1341,8 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 			fields: fields{
 				dbSession: dbSession,
 				tc:        tc,
-				cfg:       cfg,
+
+				cfg: cfg,
 			},
 			args: args{
 				reqData: &model.APIInstanceCreateRequest{
