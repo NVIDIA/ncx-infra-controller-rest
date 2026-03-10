@@ -23,6 +23,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"syscall"
 	"time"
@@ -33,6 +34,10 @@ import (
 
 	log "github.com/sirupsen/logrus"
 )
+
+// safePathRe matches paths containing only shell-safe characters
+// (alphanumerics, slashes, hyphens, underscores, and dots).
+var safePathRe = regexp.MustCompile(`^[a-zA-Z0-9/_.\-]+$`)
 
 // Ensure SSHStrategy implements UpdateStrategy.
 var _ UpdateStrategy = (*SSHStrategy)(nil)
@@ -272,17 +277,17 @@ func (s *SSHStrategy) executeCopy(ctx context.Context, update *FirmwareUpdate, t
 	// Get the port from NVOS config (uses custom port if set, otherwise default 22)
 	port := fmt.Sprintf("%d", tray.NVOS.GetPort())
 
-	cmd := exec.Command("sshpass", "-p", tray.NVOS.Credential.Password.Value,
+	cmd := exec.Command("sshpass", "-e",
 		"scp",
-		"-P", port, // Use custom SSH port
+		"-P", port,
 		"-o", "StrictHostKeyChecking=no",
 		"-o", "UserKnownHostsFile=/dev/null",
 		"-o", "ConnectTimeout=30",
 		s.firmwarePath,
 		targetAddr,
 	)
+	cmd.Env = append(os.Environ(), "SSHPASS="+tray.NVOS.Credential.Password.Value)
 
-	// Start the SCP command asynchronously
 	if err := cmd.Start(); err != nil {
 		return Failed(fmt.Errorf("failed to start SCP: %w", err))
 	}
@@ -362,7 +367,10 @@ func (s *SSHStrategy) verifySCPComplete(ctx context.Context, update *FirmwareUpd
 	fileName := filepath.Base(s.firmwarePath)
 	remotePath := filepath.Join(s.config.RemoteDir, fileName)
 
-	// Verify file was copied
+	if !safePathRe.MatchString(remotePath) {
+		return Failed(fmt.Errorf("remote path contains invalid characters: %s", remotePath))
+	}
+
 	output, err := client.RunCommand(fmt.Sprintf("ls -l %s", remotePath))
 	if err != nil {
 		return Failed(fmt.Errorf("failed to verify file copy: %w", err))
@@ -384,6 +392,10 @@ func (s *SSHStrategy) executeUpload(ctx context.Context, update *FirmwareUpdate,
 
 	fileName := filepath.Base(s.firmwarePath)
 	remotePath := filepath.Join(s.config.RemoteDir, fileName)
+
+	if !safePathRe.MatchString(remotePath) {
+		return Failed(fmt.Errorf("remote path contains invalid characters: %s", remotePath))
+	}
 
 	var fetchCmd string
 	switch update.Component {
@@ -422,6 +434,10 @@ func (s *SSHStrategy) executeInstall(ctx context.Context, update *FirmwareUpdate
 	defer client.Close()
 
 	fileName := filepath.Base(s.firmwarePath)
+
+	if !safePathRe.MatchString(fileName) {
+		return Failed(fmt.Errorf("firmware filename contains invalid characters: %s", fileName))
+	}
 
 	var installCmd string
 	switch update.Component {
@@ -520,6 +536,12 @@ func (s *SSHStrategy) executeCleanup(ctx context.Context, update *FirmwareUpdate
 
 	fileName := filepath.Base(s.firmwarePath)
 	remotePath := filepath.Join(s.config.RemoteDir, fileName)
+
+	if !safePathRe.MatchString(remotePath) {
+		// Non-fatal: cleanup is best-effort
+		log.Warnf("[%s] Remote path contains invalid characters, skipping cleanup: %s", update.ID, remotePath)
+		return Transition(StateCompleted)
+	}
 
 	// Delete the copied file
 	if _, err := client.RunCommand(fmt.Sprintf("rm -f %s", remotePath)); err != nil {
