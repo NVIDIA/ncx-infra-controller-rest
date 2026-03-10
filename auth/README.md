@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Issuer Configuration Guide
 
-Configure external identity providers (IdPs) for JWT authentication in carbide-rest-api.
+Configure external identity providers (IdPs) for JWT authentication in `carbide-rest-api`.
 
 ## Configuration Structure
 
@@ -210,33 +210,28 @@ kubectl create secret generic keycloak-client-secret \
   --dry-run=client -o yaml | kubectl apply -f -
 ```
 
-### Step 2: Update the Carbide REST API ConfigMap
+### Step 2: Update Carbide REST API ConfigMap
 
-Edit the `carbide-rest-api-config` ConfigMap in the `carbide-rest` namespace:
+Edit the `carbide-rest-api-config` ConfigMap in `carbide-rest` namespace:
 
 ```bash
 kubectl edit configmap carbide-rest-api-config -n carbide-rest
 ```
 
-Add the Keycloak configuration section:
+If you applied the [kustomize manifests](https://github.com/NVIDIA/bare-metal-manager-rest/blob/main/deploy/kustomize/base/api/configmap.yaml), there should already be a section for KeyCloak auth.
+
+Edit the Keycloak configuration (or add if not present) section to match the following:
 
 ```yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: carbide-rest-api-config
-  namespace: carbide-rest
-data:
-  config.yaml: |
-    # Keycloak integration configuration
-    keycloak:
-      enabled: true
-      baseURL: http://keycloak.keycloak.svc.cluster.local:8082
-      externalBaseURL: https://auth.forge.acme.com
-      realm: carbide
-      clientID: carbide-cloud
-      clientSecretPath: /var/secrets/keycloak/client-secret
-      serviceAccount: true
+# Keycloak integration configuration
+keycloak:
+  enabled: true
+  baseURL: http://keycloak.keycloak.svc.cluster.local:8082
+  externalBaseURL: https://auth.forge.acme.com
+  realm: carbide
+  clientID: carbide-cloud
+  clientSecretPath: /var/secrets/keycloak/client-secret
+  serviceAccount: true
 ```
 
 **Key Configuration Notes:**
@@ -248,14 +243,16 @@ data:
 
 ### Step 3: Mount the Client Secret Volume
 
-Ensure the Carbide REST API Deployment mounts the Keycloak client secret:
+Ensure the Carbide REST API Deployment mounts the Keycloak client secret.
+
+If you applied the [kustomize manifests](https://github.com/NVIDIA/bare-metal-manager-rest/blob/main/deploy/kustomize/base/api/deployment.yaml) without any changes, this step should not be needed. Verify and edit as needed.
 
 ```yaml
 spec:
   template:
     spec:
       containers:
-        - name: carbide-rest-api
+        - name: api
           volumeMounts:
             - name: keycloak-client-secret
               mountPath: /var/secrets/keycloak/
