@@ -1802,6 +1802,40 @@ func TestManageInstance_UpdateInstancesInDB(t *testing.T) {
 	ibInterface18_3 := util.TestBuildInfiniBandInterface(t, dbSession, instance18.ID, site.ID, partition1.ID, "MT2910 Family [ConnectX-7]", 2, true, nil, cdbm.InfiniBandInterfaceStatusDeleting, false)
 	assert.NotNil(t, ibInterface18_3)
 
+	// Instance 19 receives a broadcast IP from the Site Controller which should be rejected
+	machine19 := util.TestBuildMachine(t, dbSession, ip.ID, site.ID, nil, cdb.GetBoolPtr(true), cdbm.MachineStatusReady)
+	instance19, err := instanceDAO.Create(
+		ctx, nil,
+		cdbm.InstanceCreateInput{
+			Name:                     "test-instance-19",
+			Description:              cdb.GetStrPtr("Test description"),
+			TenantID:                 tenant.ID,
+			InfrastructureProviderID: ip.ID,
+			SiteID:                   site.ID,
+			InstanceTypeID:           &instanceType.ID,
+			VpcID:                    vpc.ID,
+			MachineID:                &machine19.ID,
+			ControllerInstanceID:     cdb.GetUUIDPtr(uuid.New()),
+			Hostname:                 cdb.GetStrPtr("test.com"),
+			OperatingSystemID:        cdb.GetUUIDPtr(operatingSystem.ID),
+			IpxeScript:               cdb.GetStrPtr("ipxe"),
+			AlwaysBootWithCustomIpxe: true,
+			UserData:                 cdb.GetStrPtr("userdata"),
+			Labels:                   map[string]string{},
+			Status:                   cdbm.InstanceStatusProvisioning,
+			CreatedBy:                tnu.ID,
+		},
+	)
+	assert.Nil(t, err)
+
+	// Set created earlier than the inventory receipt interval
+	_, err = dbSession.DB.Exec("UPDATE instance SET updated = ? WHERE id = ?", time.Now().Add(-time.Duration(cwutil.InventoryReceiptInterval)*2), instance19.ID.String())
+	assert.NoError(t, err)
+
+	// Interface on vpcPrefix2 (192.172.0.0/24) - will receive broadcast address from inventory
+	ifcvpc_reserved_ip := util.TestBuildInterface(t, dbSession, &instance19.ID, nil, &vpcPrefix2.ID, true, nil, nil, nil, &tnu.ID, cdbm.InterfaceStatusPending)
+	assert.NotNil(t, ifcvpc_reserved_ip)
+
 	// Build DPU Extension Services and Deployments for testing
 	dpuExtensionService1 := util.TestBuildDpuExtensionService(t, dbSession, "test-dpu-ext-service-1", site, tenant, "ovs-offload", cdb.GetStrPtr("1"), nil, []string{}, cdbm.DpuExtensionServiceStatusReady, ipu)
 	assert.NotNil(t, dpuExtensionService1)
@@ -2199,6 +2233,40 @@ func TestManageInstance_UpdateInstancesInDB(t *testing.T) {
 					},
 				},
 			},
+			// Instance 19: VPC Prefix interface with broadcast address - should be rejected
+			{
+				Id: &cwsv1.InstanceId{Value: instance19.ControllerInstanceID.String()},
+				Config: &cwsv1.InstanceConfig{
+					Network: &cwsv1.InstanceNetworkConfig{
+						Interfaces: []*cwsv1.InstanceInterfaceConfig{
+							{
+								FunctionType:     cwsv1.InterfaceFunctionType_PHYSICAL_FUNCTION,
+								NetworkSegmentId: nil,
+								NetworkDetails: &cwsv1.InstanceInterfaceConfig_VpcPrefixId{
+									VpcPrefixId: &cwsv1.VpcPrefixId{Value: vpcPrefix2.ID.String()},
+								},
+							},
+						},
+					},
+				},
+				Status: &cwsv1.InstanceStatus{
+					Tenant: &cwsv1.InstanceTenantStatus{
+						State: cwsv1.TenantState_READY,
+					},
+					Network: &cwsv1.InstanceNetworkStatus{
+						Interfaces: []*cwsv1.InstanceInterfaceStatus{
+							{
+								MacAddress: &macAddress,
+								Addresses:  []string{"192.172.0.255", "192.172.0.10"},
+							},
+						},
+						ConfigsSynced: cwsv1.SyncState_SYNCED,
+					},
+					Update: &cwsv1.InstanceUpdateStatus{
+						UserApprovalReceived: false,
+					},
+				},
+			},
 		},
 	}
 
@@ -2395,6 +2463,7 @@ func TestManageInstance_UpdateInstancesInDB(t *testing.T) {
 		deletedDpuExtServiceDeployments       []*cdbm.DpuExtensionServiceDeployment
 		readyNVLinkInterfaces                 []*cdbm.NVLinkInterface
 		deletingNVLinkInterfaces              []*cdbm.NVLinkInterface
+		rejectedIPInterfaces                  []*cdbm.Interface
 		requiredMetadataUpdate                bool
 		metadataInstanceUpdate                *cdbm.Instance
 		tpmCertificateUpdatedInstance         *cdbm.Instance
@@ -2432,6 +2501,7 @@ func TestManageInstance_UpdateInstancesInDB(t *testing.T) {
 			deletedDpuExtServiceDeployments: []*cdbm.DpuExtensionServiceDeployment{dpuExtServiceDeployment2},
 			readyNVLinkInterfaces:           []*cdbm.NVLinkInterface{nvlinkInterface1, nvlinkInterface2},
 			deletingNVLinkInterfaces:        []*cdbm.NVLinkInterface{nvlinkInterface3},
+			rejectedIPInterfaces:            []*cdbm.Interface{ifcvpc_reserved_ip},
 			tpmCertificateUpdatedInstance:   instance16,
 			expectErr:                       false,
 		},
@@ -2689,6 +2759,14 @@ func TestManageInstance_UpdateInstancesInDB(t *testing.T) {
 					assert.Equal(t, uifc.IsPhysical, ifc.IsPhysical)
 					assert.Equal(t, *uifc.VpcPrefixID, *ifc.VpcPrefixID)
 				}
+			}
+
+			// Verify interfaces with reserved IPs are set to Error with no IPs stored
+			for _, ifc := range tc.rejectedIPInterfaces {
+				rejectedIfc, serr := ifcDAO.GetByID(ctx, nil, ifc.ID, nil)
+				assert.Nil(t, serr)
+				assert.Equal(t, cdbm.InterfaceStatusError, rejectedIfc.Status, "interface with reserved IP should be in Error status")
+				assert.Nil(t, rejectedIfc.IPAddresses, "interface with reserved IP should not have IP addresses stored")
 			}
 
 			for _, instPropStatus := range tc.instanceInventory.NetworkSecurityGroupPropagations {

@@ -32,6 +32,7 @@ import (
 	"go.temporal.io/sdk/client"
 
 	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
+	"github.com/nvidia/bare-metal-manager-rest/db/pkg/db/ipam"
 	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
 	"github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
 	cdbp "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
@@ -1041,6 +1042,17 @@ func (mi ManageInstance) UpdateInstancesInDB(ctx context.Context, siteID uuid.UU
 					ipAddresses := []string{}
 					ipAddresses = append(ipAddresses, interfaceStatus.Addresses...)
 
+					// Validate IP addresses against the interface's prefix to reject
+					// network, broadcast, and gateway addresses
+					var ipValidationFailed bool
+					if cidr, gateway := ipam.GetInterfaceCIDRAndGateway(ifc); cidr != "" {
+						_, rejectedIPs := ipam.ValidateIPAddresses(ipAddresses, cidr, gateway)
+						if len(rejectedIPs) > 0 {
+							slogger.Error().Strs("rejected_ips", rejectedIPs).Str("Interface ID", ifc.ID.String()).Msg("interface has reserved IP addresses assigned by site controller")
+							ipValidationFailed = true
+						}
+					}
+
 					// Update device and device_instance  if specified in the inventory
 					var device *string
 					var deviceInstance *int
@@ -1052,7 +1064,11 @@ func (mi ManageInstance) UpdateInstancesInDB(ctx context.Context, siteID uuid.UU
 					}
 
 					var status *string
-					if controllerInstance.Status.Network.ConfigsSynced == cwsv1.SyncState_SYNCED {
+					if ipValidationFailed {
+						status = cdb.GetStrPtr(cdbm.InterfaceStatusError)
+						// Do not persist invalid IP addresses
+						ipAddresses = nil
+					} else if controllerInstance.Status.Network.ConfigsSynced == cwsv1.SyncState_SYNCED {
 						status = cdb.GetStrPtr(cdbm.InterfaceStatusReady)
 					}
 

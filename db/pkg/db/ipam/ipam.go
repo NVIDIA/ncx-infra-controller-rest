@@ -26,6 +26,7 @@ import (
 
 	cipam "github.com/nvidia/bare-metal-manager-rest/ipam"
 	"github.com/uptrace/bun"
+	"go4.org/netipx"
 
 	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
@@ -241,4 +242,88 @@ func DeleteChildIpamEntryFromCidr(ctx context.Context, tx *cdb.Tx, dbSession *cd
 		return err
 	}
 	return nil
+}
+
+// ValidateIPAddresses checks that none of the given IP addresses are reserved
+// network addresses (network address, broadcast address, or gateway) for the
+// specified CIDR prefix. It returns the list of valid IPs and the list of
+// rejected IPs with reasons.
+func ValidateIPAddresses(ipAddresses []string, cidr string, gateway string) (valid []string, rejected []string) {
+	if len(ipAddresses) == 0 {
+		return ipAddresses, nil
+	}
+
+	prefix, err := netip.ParsePrefix(cidr)
+	if err != nil {
+		// If we can't parse the prefix, we can't validate — pass through
+		return ipAddresses, nil
+	}
+
+	iprange := netipx.RangeOfPrefix(prefix)
+	networkAddr := iprange.From()
+	broadcastAddr := iprange.To()
+
+	var gatewayAddr netip.Addr
+	if gateway != "" {
+		gatewayAddr, _ = netip.ParseAddr(gateway)
+	}
+
+	for _, ipStr := range ipAddresses {
+		addr, err := netip.ParseAddr(ipStr)
+		if err != nil {
+			rejected = append(rejected, fmt.Sprintf("%s (invalid IP)", ipStr))
+			continue
+		}
+
+		if !prefix.Contains(addr) {
+			rejected = append(rejected, fmt.Sprintf("%s (not in prefix %s)", ipStr, cidr))
+			continue
+		}
+
+		if addr == networkAddr {
+			rejected = append(rejected, fmt.Sprintf("%s (network address of %s)", ipStr, cidr))
+			continue
+		}
+
+		if prefix.Addr().Is4() && addr == broadcastAddr {
+			rejected = append(rejected, fmt.Sprintf("%s (broadcast address of %s)", ipStr, cidr))
+			continue
+		}
+
+		if gatewayAddr.IsValid() && addr == gatewayAddr {
+			rejected = append(rejected, fmt.Sprintf("%s (gateway address of %s)", ipStr, cidr))
+			continue
+		}
+
+		valid = append(valid, ipStr)
+	}
+
+	return valid, rejected
+}
+
+// GetInterfaceCIDRAndGateway returns the CIDR and gateway for an interface
+// based on its associated Subnet or VpcPrefix.
+func GetInterfaceCIDRAndGateway(ifc *cdbm.Interface) (cidr string, gateway string) {
+	if ifc.Subnet != nil {
+		if ifc.Subnet.IPv4Prefix != nil {
+			cidr = fmt.Sprintf("%s/%d", *ifc.Subnet.IPv4Prefix, ifc.Subnet.PrefixLength)
+			if ifc.Subnet.IPv4Gateway != nil {
+				gateway = *ifc.Subnet.IPv4Gateway
+			}
+		} else if ifc.Subnet.IPv6Prefix != nil {
+			cidr = fmt.Sprintf("%s/%d", *ifc.Subnet.IPv6Prefix, ifc.Subnet.PrefixLength)
+			if ifc.Subnet.IPv6Gateway != nil {
+				gateway = *ifc.Subnet.IPv6Gateway
+			}
+		}
+	} else if ifc.VpcPrefix != nil {
+		// VpcPrefix.Prefix may already contain the prefix length (e.g. "192.172.0.0/24")
+		// from the IPAM library's Cidr format. Parse it to extract just the address.
+		if p, err := netip.ParsePrefix(ifc.VpcPrefix.Prefix); err == nil {
+			cidr = p.String()
+		} else {
+			cidr = fmt.Sprintf("%s/%d", ifc.VpcPrefix.Prefix, ifc.VpcPrefix.PrefixLength)
+		}
+	}
+	return cidr, gateway
 }

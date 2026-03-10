@@ -846,3 +846,186 @@ func TestGetFirstIPFromCidr(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateIPAddresses(t *testing.T) {
+	tests := []struct {
+		name             string
+		ipAddresses      []string
+		cidr             string
+		gateway          string
+		expectedValid    []string
+		expectedRejected []string
+	}{
+		{
+			name:             "all valid IPs in /24",
+			ipAddresses:      []string{"192.168.1.10", "192.168.1.20"},
+			cidr:             "192.168.1.0/24",
+			gateway:          "192.168.1.1",
+			expectedValid:    []string{"192.168.1.10", "192.168.1.20"},
+			expectedRejected: nil,
+		},
+		{
+			name:             "reject network address",
+			ipAddresses:      []string{"192.168.1.0", "192.168.1.10"},
+			cidr:             "192.168.1.0/24",
+			gateway:          "",
+			expectedValid:    []string{"192.168.1.10"},
+			expectedRejected: []string{"192.168.1.0 (network address of 192.168.1.0/24)"},
+		},
+		{
+			name:             "reject broadcast address",
+			ipAddresses:      []string{"192.168.1.255", "192.168.1.10"},
+			cidr:             "192.168.1.0/24",
+			gateway:          "",
+			expectedValid:    []string{"192.168.1.10"},
+			expectedRejected: []string{"192.168.1.255 (broadcast address of 192.168.1.0/24)"},
+		},
+		{
+			name:             "reject gateway address",
+			ipAddresses:      []string{"192.168.1.1", "192.168.1.10"},
+			cidr:             "192.168.1.0/24",
+			gateway:          "192.168.1.1",
+			expectedValid:    []string{"192.168.1.10"},
+			expectedRejected: []string{"192.168.1.1 (gateway address of 192.168.1.0/24)"},
+		},
+		{
+			name:             "reject all reserved addresses at once",
+			ipAddresses:      []string{"192.168.1.0", "192.168.1.1", "192.168.1.255", "192.168.1.100"},
+			cidr:             "192.168.1.0/24",
+			gateway:          "192.168.1.1",
+			expectedValid:    []string{"192.168.1.100"},
+			expectedRejected: []string{"192.168.1.0 (network address of 192.168.1.0/24)", "192.168.1.1 (gateway address of 192.168.1.0/24)", "192.168.1.255 (broadcast address of 192.168.1.0/24)"},
+		},
+		{
+			name:             "reject IP outside prefix",
+			ipAddresses:      []string{"10.0.0.1", "192.168.1.10"},
+			cidr:             "192.168.1.0/24",
+			gateway:          "",
+			expectedValid:    []string{"192.168.1.10"},
+			expectedRejected: []string{"10.0.0.1 (not in prefix 192.168.1.0/24)"},
+		},
+		{
+			name:             "reject invalid IP string",
+			ipAddresses:      []string{"not-an-ip", "192.168.1.10"},
+			cidr:             "192.168.1.0/24",
+			gateway:          "",
+			expectedValid:    []string{"192.168.1.10"},
+			expectedRejected: []string{"not-an-ip (invalid IP)"},
+		},
+		{
+			name:             "small /30 prefix - reject network and broadcast",
+			ipAddresses:      []string{"10.0.0.0", "10.0.0.1", "10.0.0.2", "10.0.0.3"},
+			cidr:             "10.0.0.0/30",
+			gateway:          "10.0.0.1",
+			expectedValid:    []string{"10.0.0.2"},
+			expectedRejected: []string{"10.0.0.0 (network address of 10.0.0.0/30)", "10.0.0.1 (gateway address of 10.0.0.0/30)", "10.0.0.3 (broadcast address of 10.0.0.0/30)"},
+		},
+		{
+			name:             "IPv6 - reject network address only (no broadcast in IPv6)",
+			ipAddresses:      []string{"2001:db8::", "2001:db8::1", "2001:db8::f"},
+			cidr:             "2001:db8::/124",
+			gateway:          "",
+			expectedValid:    []string{"2001:db8::1", "2001:db8::f"},
+			expectedRejected: []string{"2001:db8:: (network address of 2001:db8::/124)"},
+		},
+		{
+			name:             "empty IP list",
+			ipAddresses:      []string{},
+			cidr:             "192.168.1.0/24",
+			gateway:          "",
+			expectedValid:    []string{},
+			expectedRejected: nil,
+		},
+		{
+			name:             "invalid CIDR passes through",
+			ipAddresses:      []string{"192.168.1.10"},
+			cidr:             "bad-cidr",
+			gateway:          "",
+			expectedValid:    []string{"192.168.1.10"},
+			expectedRejected: nil,
+		},
+		{
+			name:             "no gateway - only network and broadcast rejected",
+			ipAddresses:      []string{"192.168.1.0", "192.168.1.1", "192.168.1.255"},
+			cidr:             "192.168.1.0/24",
+			gateway:          "",
+			expectedValid:    []string{"192.168.1.1"},
+			expectedRejected: []string{"192.168.1.0 (network address of 192.168.1.0/24)", "192.168.1.255 (broadcast address of 192.168.1.0/24)"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			valid, rejected := ValidateIPAddresses(tc.ipAddresses, tc.cidr, tc.gateway)
+			assert.Equal(t, tc.expectedValid, valid)
+			assert.Equal(t, tc.expectedRejected, rejected)
+		})
+	}
+}
+
+func TestGetInterfaceCIDRAndGateway(t *testing.T) {
+	ipv4Prefix := "192.168.1.0"
+	ipv4Gateway := "192.168.1.1"
+	ipv6Prefix := "2001:db8::"
+	ipv6Gateway := "2001:db8::1"
+
+	t.Run("subnet interface with IPv4", func(t *testing.T) {
+		ifc := &cdbm.Interface{
+			Subnet: &cdbm.Subnet{
+				IPv4Prefix:   &ipv4Prefix,
+				PrefixLength: 24,
+				IPv4Gateway:  &ipv4Gateway,
+			},
+		}
+		cidr, gw := GetInterfaceCIDRAndGateway(ifc)
+		assert.Equal(t, "192.168.1.0/24", cidr)
+		assert.Equal(t, "192.168.1.1", gw)
+	})
+
+	t.Run("subnet interface with IPv6 only", func(t *testing.T) {
+		ifc := &cdbm.Interface{
+			Subnet: &cdbm.Subnet{
+				IPv6Prefix:   &ipv6Prefix,
+				PrefixLength: 64,
+				IPv6Gateway:  &ipv6Gateway,
+			},
+		}
+		cidr, gw := GetInterfaceCIDRAndGateway(ifc)
+		assert.Equal(t, "2001:db8::/64", cidr)
+		assert.Equal(t, "2001:db8::1", gw)
+	})
+
+	t.Run("vpc prefix interface with CIDR format", func(t *testing.T) {
+		// In production, VpcPrefix.Prefix is set from childPrefix.Cidr which
+		// includes the prefix length (e.g. "10.0.0.0/16")
+		ifc := &cdbm.Interface{
+			VpcPrefix: &cdbm.VpcPrefix{
+				Prefix:       "10.0.0.0/16",
+				PrefixLength: 16,
+			},
+		}
+		cidr, gw := GetInterfaceCIDRAndGateway(ifc)
+		assert.Equal(t, "10.0.0.0/16", cidr)
+		assert.Equal(t, "", gw)
+	})
+
+	t.Run("vpc prefix interface with bare IP format", func(t *testing.T) {
+		// Fallback: if Prefix is just an IP without prefix length
+		ifc := &cdbm.Interface{
+			VpcPrefix: &cdbm.VpcPrefix{
+				Prefix:       "10.0.0.0",
+				PrefixLength: 16,
+			},
+		}
+		cidr, gw := GetInterfaceCIDRAndGateway(ifc)
+		assert.Equal(t, "10.0.0.0/16", cidr)
+		assert.Equal(t, "", gw)
+	})
+
+	t.Run("no subnet or vpc prefix", func(t *testing.T) {
+		ifc := &cdbm.Interface{}
+		cidr, gw := GetInterfaceCIDRAndGateway(ifc)
+		assert.Equal(t, "", cidr)
+		assert.Equal(t, "", gw)
+	})
+}
