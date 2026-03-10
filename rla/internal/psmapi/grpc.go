@@ -66,7 +66,7 @@ func NewClient(grpcTimeout time.Duration) (Client, error) {
 
 	conn, err := grpc.NewClient(psmURL, grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)))
 	if err != nil {
-		return nil, fmt.Errorf("Unable to connect to PSM: %v", err)
+		return nil, fmt.Errorf("Unable to connect to PSM: %w", err)
 	}
 
 	return &grpcClient{

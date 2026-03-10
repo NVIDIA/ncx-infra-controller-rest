@@ -35,11 +35,9 @@ import (
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model"
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/pagination"
 	auth "github.com/nvidia/bare-metal-manager-rest/auth/pkg/authorization"
-	sutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
+	cutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
-
-	cerr "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 )
 
 // ~~~~~ GetAll Handler ~~~~~ //
@@ -49,7 +47,7 @@ type GetAllFabricHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetAllFabricHandler initializes and returns a new handler for getting all Fabrics
@@ -58,7 +56,7 @@ func NewGetAllFabricHandler(dbSession *cdb.Session, tc temporalClient.Client, cf
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -101,7 +99,7 @@ func (gafh GetAllFabricHandler) Handle(c echo.Context) error {
 
 	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gafh.tracerSpan, handlerSpan)
 	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -112,7 +110,7 @@ func (gafh GetAllFabricHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Provider Admins or Tenat Admins are allowed to retrieve Fabrics
@@ -127,14 +125,14 @@ func (gafh GetAllFabricHandler) Handle(c echo.Context) error {
 	err = c.Bind(&pageRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding pagination request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request pagination data", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request pagination data", nil)
 	}
 
 	// Validate request attributes
 	err = pageRequest.Validate(cdbm.FabricOrderByFields)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error validating pagination request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate pagination request data", err)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate pagination request data", err)
 	}
 
 	// Get Site ID from url
@@ -144,7 +142,7 @@ func (gafh GetAllFabricHandler) Handle(c echo.Context) error {
 
 	stID, err := uuid.Parse(stStrID)
 	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Site ID in URL", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Site ID in URL", nil)
 	}
 
 	// Get Site
@@ -152,7 +150,7 @@ func (gafh GetAllFabricHandler) Handle(c echo.Context) error {
 	st, err := stDAO.GetByID(ctx, nil, stID, nil, false)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Site from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site specified in query", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site specified in query", nil)
 	}
 
 	// Get and validate includeRelation params
@@ -160,14 +158,14 @@ func (gafh GetAllFabricHandler) Handle(c echo.Context) error {
 	qIncludeRelations, errMsg := common.GetAndValidateQueryRelations(qParams, cdbm.FabricRelatedEntities)
 	if errMsg != "" {
 		logger.Warn().Msg(errMsg)
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
 	}
 
 	// Check Site association with Provider
 	tsDAO := cdbm.NewTenantSiteDAO(gafh.dbSession)
 	if isProviderRequest {
 		if orgProvider.ID != st.InfrastructureProviderID {
-			return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Site is not associated with org's Infrastructure Provider", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Site is not associated with org's Infrastructure Provider", nil)
 		}
 	} else {
 		// Check Site association with Tenant
@@ -175,10 +173,10 @@ func (gafh GetAllFabricHandler) Handle(c echo.Context) error {
 		_, serr = tsDAO.GetByTenantIDAndSiteID(ctx, nil, orgTenant.ID, stID, nil)
 		if serr != nil {
 			if serr == cdb.ErrDoesNotExist {
-				return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant does not have access to this Site", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant does not have access to this Site", nil)
 			}
 			logger.Error().Err(serr).Msg("error retrieving TenantSite from DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to determine Tenant access to Site, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to determine Tenant access to Site, DB error", nil)
 		}
 	}
 
@@ -195,7 +193,7 @@ func (gafh GetAllFabricHandler) Handle(c echo.Context) error {
 	dbfbs, total, err := fbDAO.GetAll(ctx, nil, &org, &st.ID, nil, nil, nil, searchQuery, qIncludeRelations, pageRequest.Offset, pageRequest.Limit, pageRequest.OrderBy)
 	if err != nil {
 		logger.Error().Err(err).Msg("error getting Fabrics from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Fabrics", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Fabrics", nil)
 	}
 
 	// Get status details
@@ -208,7 +206,7 @@ func (gafh GetAllFabricHandler) Handle(c echo.Context) error {
 	ssds, serr := sdDAO.GetRecentByEntityIDs(ctx, nil, sdEntityIDs, common.RECENT_STATUS_DETAIL_COUNT)
 	if serr != nil {
 		logger.Warn().Err(serr).Msg("error retrieving Status Details for Fabrics from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to populate status history for Fabrics", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to populate status history for Fabrics", nil)
 	}
 	ssdMap := map[string][]cdbm.StatusDetail{}
 	for _, ssd := range ssds {
@@ -229,7 +227,7 @@ func (gafh GetAllFabricHandler) Handle(c echo.Context) error {
 	pageHeader, err := json.Marshal(pageReponse)
 	if err != nil {
 		logger.Error().Err(err).Msg("error marshaling pagination response")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to generate pagination response header", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to generate pagination response header", nil)
 	}
 
 	c.Response().Header().Set(pagination.ResponseHeaderName, string(pageHeader))
@@ -246,7 +244,7 @@ type GetFabricHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetFabricHandler initializes and returns a new handler to retrieve Fabric
@@ -255,7 +253,7 @@ func NewGetFabricHandler(dbSession *cdb.Session, tc temporalClient.Client, cfg *
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -297,7 +295,7 @@ func (gfh GetFabricHandler) Handle(c echo.Context) error {
 
 	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gfh.tracerSpan, handlerSpan)
 	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -308,7 +306,7 @@ func (gfh GetFabricHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Provider Admins or Tenat Admins are allowed to retrieve Fabrics
@@ -323,7 +321,7 @@ func (gfh GetFabricHandler) Handle(c echo.Context) error {
 	qIncludeRelations, errMsg := common.GetAndValidateQueryRelations(qParams, cdbm.FabricRelatedEntities)
 	if errMsg != "" {
 		logger.Warn().Msg(errMsg)
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
 	}
 
 	// Get Site ID URL param
@@ -333,7 +331,7 @@ func (gfh GetFabricHandler) Handle(c echo.Context) error {
 
 	stID, err := uuid.Parse(stStrID)
 	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Site ID in URL", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Site ID in URL", nil)
 	}
 
 	// Get Site
@@ -341,7 +339,7 @@ func (gfh GetFabricHandler) Handle(c echo.Context) error {
 	st, err := stDAO.GetByID(ctx, nil, stID, nil, false)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Site from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site specified in query", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site specified in query", nil)
 	}
 
 	// Get fabric ID from URL param
@@ -354,17 +352,17 @@ func (gfh GetFabricHandler) Handle(c echo.Context) error {
 	fb, err := fbDAO.GetByID(ctx, nil, fID, stID, qIncludeRelations)
 	if err != nil {
 		if err == cdb.ErrDoesNotExist {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find Fabric with specified ID", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find Fabric with specified ID", nil)
 		}
 		logger.Error().Err(err).Msg("error retrieving Fabric DB entity")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Could not retrieve Fabric", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Could not retrieve Fabric", nil)
 	}
 
 	// Check Site association with Provider
 	tsDAO := cdbm.NewTenantSiteDAO(gfh.dbSession)
 	if isProviderRequest {
 		if orgProvider.ID != st.InfrastructureProviderID {
-			return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Site is not associated with org's Infrastructure Provider", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Site is not associated with org's Infrastructure Provider", nil)
 		}
 	} else {
 		// Check Site association with Tenant
@@ -372,10 +370,10 @@ func (gfh GetFabricHandler) Handle(c echo.Context) error {
 		_, serr = tsDAO.GetByTenantIDAndSiteID(ctx, nil, orgTenant.ID, stID, nil)
 		if serr != nil {
 			if serr == cdb.ErrDoesNotExist {
-				return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant does not have access to this Site", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant does not have access to this Site", nil)
 			}
 			logger.Error().Err(serr).Msg("error retrieving TenantSite from DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to determine Tenant access to Site, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to determine Tenant access to Site, DB error", nil)
 		}
 	}
 
@@ -385,7 +383,7 @@ func (gfh GetFabricHandler) Handle(c echo.Context) error {
 	ssds, err := sdDAO.GetRecentByEntityIDs(ctx, nil, []string{fb.ID}, common.RECENT_STATUS_DETAIL_COUNT)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error retrieving Status Details for Fabrics from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to populate status history for Fabrics", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to populate status history for Fabrics", nil)
 	}
 	ssdMap := map[string][]cdbm.StatusDetail{}
 	for _, ssd := range ssds {

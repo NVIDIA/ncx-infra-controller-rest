@@ -41,12 +41,12 @@ func TLSConfig() (tlsConfig *tls.Config, certDir string, err error) {
 
 	clientCert, err := tls.LoadX509KeyPair(certDir+"/tls.crt", certDir+"/tls.key")
 	if err != nil {
-		return nil, certDir, fmt.Errorf("Invalid certs present: %v", err)
+		return nil, certDir, fmt.Errorf("Invalid certs present: %w", err)
 	}
 
 	certPool := x509.NewCertPool()
 	if !certPool.AppendCertsFromPEM(caCert) {
-		return nil, certDir, fmt.Errorf("Invalid CA cert present: %v", err)
+		return nil, certDir, fmt.Errorf("Invalid CA cert present: %w", err)
 	}
 
 	return &tls.Config{

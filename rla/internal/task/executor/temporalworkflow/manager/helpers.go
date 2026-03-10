@@ -76,7 +76,7 @@ func executeWorkflow(
 		params.info,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to execute workflow: %v", err)
+		return nil, fmt.Errorf("failed to execute workflow: %w", err)
 	}
 
 	executionID := &common.ExecutionID{
@@ -89,14 +89,14 @@ func executeWorkflow(
 	encodedExecutionID, err := executionID.Encode()
 	if err != nil {
 		return nil, fmt.Errorf(
-			"failed to encode execution ID %s: %v", executionID.String(), err,
+			"failed to encode execution ID %s: %w", executionID.String(), err,
 		)
 	}
 
 	if !params.req.Async {
 		// For synchronous requests, block until the workflow is completed.
 		if err := r.Get(ctx, nil); err != nil {
-			return nil, fmt.Errorf("failed to get workflow result: %v", err)
+			return nil, fmt.Errorf("failed to get workflow result: %w", err)
 		}
 	}
 

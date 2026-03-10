@@ -41,9 +41,7 @@ import (
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/pagination"
 	sc "github.com/nvidia/bare-metal-manager-rest/api/pkg/client/site"
 	auth "github.com/nvidia/bare-metal-manager-rest/auth/pkg/authorization"
-	cerr "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	sutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
+	cutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	"github.com/nvidia/bare-metal-manager-rest/db/pkg/db/ipam"
 	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
@@ -62,7 +60,7 @@ type CreateVpcPrefixHandler struct {
 	tc         temporalClient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewCreateVpcPrefixHandler initializes and returns a new handler for creating VPC prefix
@@ -72,7 +70,7 @@ func NewCreateVpcPrefixHandler(dbSession *cdb.Session, tc temporalClient.Client,
 		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -112,7 +110,7 @@ func (csh CreateVpcPrefixHandler) Handle(c echo.Context) error {
 
 	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, csh.tracerSpan, handlerSpan)
 	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -123,14 +121,14 @@ func (csh CreateVpcPrefixHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Tenant Admins are allowed to interact with VPC prefix endpoints
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role with org, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	// Validate request
@@ -139,40 +137,40 @@ func (csh CreateVpcPrefixHandler) Handle(c echo.Context) error {
 	err = c.Bind(&apiRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
 	}
 	// Validate request attributes
 	verr := apiRequest.Validate()
 	if verr != nil {
 		logger.Warn().Err(verr).Msg("error validating VPC prefix creation request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating VPC prefix creation request data", verr)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating VPC prefix creation request data", verr)
 	}
 
 	// Validate the tenant for which this VPC prefix is being created
 	tenant, err := common.GetTenantForOrg(ctx, nil, csh.dbSession, org)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error getting tenant from org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Tenant from org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Tenant from org", nil)
 	}
 	// Verify vpc in request
 	vpc, err := common.GetVpcFromIDString(ctx, nil, apiRequest.VpcID, nil, csh.dbSession)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error getting vpc in request")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Could not find VPC specified in request", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Could not find VPC specified in request", nil)
 	}
 	if vpc.TenantID != tenant.ID {
 		logger.Warn().Msg("tenant in vpc does not belong to tenant in org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Tenant for VPC in request does not match tenant in org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Tenant for VPC in request does not match tenant in org", nil)
 	}
 
 	if vpc.NetworkVirtualizationType == nil || *vpc.NetworkVirtualizationType != cdbm.VpcFNN {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("VPC: %v specified in request must have FNN network virtualization type in order to create VPC Prefixes", vpc.ID), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("VPC: %v specified in request must have FNN network virtualization type in order to create VPC Prefixes", vpc.ID), nil)
 	}
 
 	// Verify if vpc is ready
 	if vpc.ControllerVpcID == nil || vpc.Status != cdbm.VpcStatusReady {
 		logger.Warn().Msg(fmt.Sprintf("VPC: %v specified in request data must be in Ready state in order to create VPC prefix", apiRequest.VpcID))
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "VPC specified in request data must be in Ready state in order to create VPC prefix", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "VPC specified in request data must be in Ready state in order to create VPC prefix", nil)
 	}
 
 	// Verify if site is ready
@@ -180,15 +178,15 @@ func (csh CreateVpcPrefixHandler) Handle(c echo.Context) error {
 	site, err := stDAO.GetByID(ctx, nil, vpc.SiteID, nil, false)
 	if err != nil {
 		if err == cdb.ErrDoesNotExist {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Could not find Site associated with VPC prefix", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Could not find Site associated with VPC prefix", nil)
 		}
 		logger.Error().Err(err).Msg("error retrieving Site from DB by ID")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site with ID from VPC", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site with ID from VPC", nil)
 	}
 
 	if site.Status != cdbm.SiteStatusRegistered {
 		logger.Warn().Msg(fmt.Sprintf("The Site: %v where the VPC prefix is being created must be in Registered state in order to proceed", vpc.SiteID.String()))
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "The Site where the VPC prefix is being created must be in Registered state in order to proceed", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "The Site where the VPC prefix is being created must be in Registered state in order to proceed", nil)
 	}
 
 	// Validate IPBlocks in request
@@ -196,16 +194,16 @@ func (csh CreateVpcPrefixHandler) Handle(c echo.Context) error {
 	ipBlock, err := common.GetIPBlockFromIDString(ctx, nil, *apiRequest.IPBlockID, csh.dbSession)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error getting IPv4 IPBlock in request")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving ipv4 IPBlock from request", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving ipv4 IPBlock from request", nil)
 	}
 	// ipv4block is derived, check if it belongs to tenant via an allocation
 	if ipBlock.TenantID == nil || *ipBlock.TenantID != tenant.ID {
 		logger.Warn().Msg("IPv4 IPBlock in request does not belong to tenant")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "ipv4 IPBlock in request does not belong to tenant", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "ipv4 IPBlock in request does not belong to tenant", nil)
 	}
 	if vpc.SiteID != ipBlock.SiteID {
 		logger.Warn().Msg("IPv4 Block specified in request and VPC do not belong to the same Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "IPv4 Block specified in request and VPC do not belong to the same Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "IPv4 Block specified in request and VPC do not belong to the same Site", nil)
 	}
 
 	// Check for name uniqueness for the tenant, ie, Tenant cannot have another VPC prefix with same name at the Site
@@ -214,11 +212,11 @@ func (csh CreateVpcPrefixHandler) Handle(c echo.Context) error {
 	vps, tot, err := vpcPrefixDAO.GetAll(ctx, nil, cdbm.VpcPrefixFilterInput{Names: []string{apiRequest.Name}, SiteIDs: []uuid.UUID{vpc.SiteID}, TenantIDs: []uuid.UUID{tenant.ID}}, cdbp.PageInput{}, nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("db error checking for name uniqueness of tenant VPC prefix")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create VPC prefix due to DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create VPC prefix due to DB error", nil)
 	}
 	if tot > 0 {
 		logger.Warn().Str("tenantId", tenant.ID.String()).Str("name", apiRequest.Name).Msg("VPC prefix with same name already exists for tenant")
-		return cerr.NewAPIErrorResponse(c, http.StatusConflict, "A VPC prefix with specified name already exists for Tenant at this Site", validation.Errors{
+		return cutil.NewAPIErrorResponse(c, http.StatusConflict, "A VPC prefix with specified name already exists for Tenant at this Site", validation.Errors{
 			"id": errors.New(vps[0].ID.String()),
 		})
 	}
@@ -227,7 +225,7 @@ func (csh CreateVpcPrefixHandler) Handle(c echo.Context) error {
 	tx, err := cdb.BeginTx(ctx, csh.dbSession, &sql.TxOptions{})
 	if err != nil {
 		logger.Error().Err(err).Msg("unable to start transaction")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error creating VPC prefix", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error creating VPC prefix", nil)
 	}
 	// this variable is used in cleanup actions to indicate if this transaction committed
 	txCommitted := false
@@ -239,7 +237,7 @@ func (csh CreateVpcPrefixHandler) Handle(c echo.Context) error {
 	if err != nil {
 		// TODO add a retry here
 		logger.Error().Err(err).Msg("Failed to acquire advisory lock on ipblock")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error creating VPC prefix, detected multiple parallel request on IP Block by Tenant", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error creating VPC prefix, detected multiple parallel request on IP Block by Tenant", nil)
 	}
 
 	// create an IPAM allocation for the VPC prefix
@@ -255,7 +253,7 @@ func (csh CreateVpcPrefixHandler) Handle(c echo.Context) error {
 		}
 
 		logger.Warn().Err(err).Msg("failed to create IPAM entry for VPC prefix")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Could not create IPAM entry for VPC prefix. Details: %s", err.Error()), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Could not create IPAM entry for VPC prefix. Details: %s", err.Error()), nil)
 	}
 	logger.Info().Str("childCidr", childPrefix.Cidr).Msg("created child cidr for VPC prefix")
 
@@ -263,7 +261,7 @@ func (csh CreateVpcPrefixHandler) Handle(c echo.Context) error {
 	vpcPrefix, err := vpcPrefixDAO.Create(ctx, tx, cdbm.VpcPrefixCreateInput{Name: apiRequest.Name, TenantOrg: org, SiteID: site.ID, VpcID: vpc.ID, TenantID: tenant.ID, IpBlockID: &ipBlock.ID, Prefix: childPrefix.Cidr, PrefixLength: apiRequest.PrefixLength, Status: cdbm.VpcPrefixStatusReady, CreatedBy: dbUser.ID})
 	if err != nil {
 		logger.Error().Err(err).Msg("unable to create VPC prefix record in DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed creating VPC prefix record", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed creating VPC prefix record", nil)
 	}
 
 	// create the status detail record
@@ -272,18 +270,18 @@ func (csh CreateVpcPrefixHandler) Handle(c echo.Context) error {
 		cdb.GetStrPtr("Received VPC prefix creation request, ready"))
 	if serr != nil {
 		logger.Error().Err(serr).Msg("error creating Status Detail DB entry")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for VPC prefix", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for VPC prefix", nil)
 	}
 	if ssd == nil {
 		logger.Error().Msg("Status Detail DB entry not returned from CreateFromParams")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to get new Status Detail for VPC prefix", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to get new Status Detail for VPC prefix", nil)
 	}
 
 	// Get the temporal client for the site we are working with.
 	stc, err := csh.scp.GetClientByID(vpcPrefix.SiteID)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
 	}
 
 	createVpcPrefixRequest := &cwssaws.VpcPrefixCreationRequest{
@@ -295,14 +293,14 @@ func (csh CreateVpcPrefixHandler) Handle(c echo.Context) error {
 
 	workflowOptions := temporalClient.StartWorkflowOptions{
 		ID:                       "vpcprefix-create-" + vpcPrefix.ID.String(),
-		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 
 	logger.Info().Msg("triggering VPC prefix create workflow")
 
 	// Add context deadlines
-	ctx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
+	ctx, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow
@@ -310,7 +308,7 @@ func (csh CreateVpcPrefixHandler) Handle(c echo.Context) error {
 
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to synchronously start Temporal workflow to create VPC prefix")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed start sync workflow to create VPC prefix on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed start sync workflow to create VPC prefix on Site: %s", err), nil)
 	}
 
 	wid := we.GetID()
@@ -325,24 +323,24 @@ func (csh CreateVpcPrefixHandler) Handle(c echo.Context) error {
 			logger.Error().Err(err).Msg("failed to create VPC prefix, timeout occurred executing workflow on Site.")
 
 			// Create a new context deadlines
-			newctx, newcancel := context.WithTimeout(context.Background(), cwutil.WorkflowContextNewAfterTimeout)
+			newctx, newcancel := context.WithTimeout(context.Background(), cutil.WorkflowContextNewAfterTimeout)
 			defer newcancel()
 
 			// Initiate termination workflow
 			serr := stc.TerminateWorkflow(newctx, wid, "", "timeout occurred executing create VPC prefix workflow")
 			if serr != nil {
 				logger.Error().Err(serr).Msg("failed to execute terminate Temporal workflow for creating VPC prefix")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to terminate synchronous VPC prefix creation workflow after timeout, Cloud and Site data may be de-synced: %s", serr), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to terminate synchronous VPC prefix creation workflow after timeout, Cloud and Site data may be de-synced: %s", serr), nil)
 			}
 
 			logger.Info().Str("Workflow ID", wid).Msg("initiated terminate synchronous create VPC prefix workflow successfully")
 
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to create VPC Prefix, timeout occurred executing workflow on Site: %s", err), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to create VPC Prefix, timeout occurred executing workflow on Site: %s", err), nil)
 		}
 
 		code, err := common.UnwrapWorkflowError(err)
 		logger.Error().Err(err).Msg("failed to synchronously execute Temporal workflow to create VPC prefix")
-		return cerr.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to execute sync workflow to create VPC prefix on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to execute sync workflow to create VPC prefix on Site: %s", err), nil)
 	}
 
 	logger.Info().Str("Workflow ID", wid).Msg("completed synchronous create VPC prefix workflow")
@@ -351,7 +349,7 @@ func (csh CreateVpcPrefixHandler) Handle(c echo.Context) error {
 	err = tx.Commit()
 	if err != nil {
 		logger.Error().Err(err).Msg("error committing transaction")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create VPC Prefix, DB transaction error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create VPC Prefix, DB transaction error", nil)
 	}
 
 	// set committed so, deferred cleanup functions will do nothing
@@ -370,7 +368,7 @@ type GetAllVpcPrefixHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetAllVpcPrefixHandler initializes and returns a new handler for getting all VpcPrefixs
@@ -379,7 +377,7 @@ func NewGetAllVpcPrefixHandler(dbSession *cdb.Session, tc temporalClient.Client,
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -425,7 +423,7 @@ func (gash GetAllVpcPrefixHandler) Handle(c echo.Context) error {
 
 	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gash.tracerSpan, handlerSpan)
 	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -436,14 +434,14 @@ func (gash GetAllVpcPrefixHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Tenant Admins are allowed to interact with VPC prefix endpoints
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role with org, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	// Validate paginantion request
@@ -451,21 +449,21 @@ func (gash GetAllVpcPrefixHandler) Handle(c echo.Context) error {
 	err = c.Bind(&pageRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding pagination request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request pagination data", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request pagination data", nil)
 	}
 
 	// Validate request attributes
 	err = pageRequest.Validate(cdbm.VpcPrefixOrderByFields)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error validating pagination request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate pagination request data", err)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate pagination request data", err)
 	}
 
 	// Validate the tenant for which this VPC prefix is being created
 	tenant, err := common.GetTenantForOrg(ctx, nil, gash.dbSession, org)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error getting tenant from org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Tenant from org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Tenant from org", nil)
 	}
 
 	// Get and validate includeRelation params
@@ -473,7 +471,7 @@ func (gash GetAllVpcPrefixHandler) Handle(c echo.Context) error {
 	qIncludeRelations, errMsg := common.GetAndValidateQueryRelations(qParams, cdbm.VpcPrefixRelatedEntities)
 	if errMsg != "" {
 		logger.Warn().Msg(errMsg)
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
 	}
 
 	// Get site ID from query param
@@ -484,7 +482,7 @@ func (gash GetAllVpcPrefixHandler) Handle(c echo.Context) error {
 		site, err := common.GetSiteFromIDString(ctx, nil, siteIDStr, gash.dbSession)
 		if err != nil {
 			logger.Warn().Err(err).Msg("error getting site in request")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Site specified in query param, invalid ID or DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Site specified in query param, invalid ID or DB error", nil)
 		}
 		siteIDs = append(siteIDs, site.ID)
 
@@ -492,10 +490,10 @@ func (gash GetAllVpcPrefixHandler) Handle(c echo.Context) error {
 		_, err = tsDAO.GetByTenantIDAndSiteID(ctx, nil, tenant.ID, site.ID, nil)
 		if err != nil {
 			if err == cdb.ErrDoesNotExist {
-				return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant does not have access to this Site", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant does not have access to this Site", nil)
 			}
 			logger.Error().Err(err).Msg("error retrieving TenantSite from DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to determine Tenant access to Site, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to determine Tenant access to Site, DB error", nil)
 		}
 	}
 
@@ -506,11 +504,11 @@ func (gash GetAllVpcPrefixHandler) Handle(c echo.Context) error {
 		vpc, err := common.GetVpcFromIDString(ctx, nil, qVpcID, nil, gash.dbSession)
 		if err != nil {
 			logger.Warn().Err(err).Msg("error getting vpc in request")
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find VPC specified in request", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find VPC specified in request", nil)
 		}
 		if vpc.TenantID != tenant.ID {
 			logger.Warn().Msg("tenant in vpc does not belong to tenant in org")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Tenant for VPC in request does not match tenant in org", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Tenant for VPC in request does not match tenant in org", nil)
 		}
 		vpcIDs = append(vpcIDs, vpc.ID)
 	}
@@ -544,7 +542,7 @@ func (gash GetAllVpcPrefixHandler) Handle(c echo.Context) error {
 	)
 	if err != nil {
 		logger.Error().Err(err).Msg("error getting VPC Prefixes from db")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve VPC Prefixes", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve VPC Prefixes", nil)
 	}
 
 	// Get status details
@@ -557,7 +555,7 @@ func (gash GetAllVpcPrefixHandler) Handle(c echo.Context) error {
 	ssds, serr := sdDAO.GetRecentByEntityIDs(ctx, nil, sdEntityIDs, common.RECENT_STATUS_DETAIL_COUNT)
 	if serr != nil {
 		logger.Warn().Err(serr).Msg("error retrieving Status Details for VPC Prefixes from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to populate status history for VPC Prefixes", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to populate status history for VPC Prefixes", nil)
 	}
 	ssdMap := map[string][]cdbm.StatusDetail{}
 	for _, ssd := range ssds {
@@ -580,7 +578,7 @@ func (gash GetAllVpcPrefixHandler) Handle(c echo.Context) error {
 	pageHeader, err := json.Marshal(pageReponse)
 	if err != nil {
 		logger.Error().Err(err).Msg("error marshaling pagination response")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to generate pagination response header", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to generate pagination response header", nil)
 	}
 
 	c.Response().Header().Set(pagination.ResponseHeaderName, string(pageHeader))
@@ -597,7 +595,7 @@ type GetVpcPrefixHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetVpcPrefixHandler initializes and returns a new handler to retrieve VPC prefix
@@ -606,7 +604,7 @@ func NewGetVpcPrefixHandler(dbSession *cdb.Session, tc temporalClient.Client, cf
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -648,7 +646,7 @@ func (gsh GetVpcPrefixHandler) Handle(c echo.Context) error {
 	// Get user
 	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gsh.tracerSpan, handlerSpan)
 	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -659,14 +657,14 @@ func (gsh GetVpcPrefixHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Tenant Admins are allowed to interact with VPC prefix endpoints
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role with org, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	// Get and validate includeRelation params
@@ -674,7 +672,7 @@ func (gsh GetVpcPrefixHandler) Handle(c echo.Context) error {
 	qIncludeRelations, errMsg := common.GetAndValidateQueryRelations(qParams, cdbm.VpcPrefixRelatedEntities)
 	if errMsg != "" {
 		logger.Warn().Msg(errMsg)
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
 	}
 
 	// Get VPC prefix ID from URL param
@@ -685,7 +683,7 @@ func (gsh GetVpcPrefixHandler) Handle(c echo.Context) error {
 	sID, err := uuid.Parse(sStrID)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error parsing id in url into uuid")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid VPC prefix ID in URL", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid VPC prefix ID in URL", nil)
 	}
 
 	vpDAO := cdbm.NewVpcPrefixDAO(gsh.dbSession)
@@ -694,7 +692,7 @@ func (gsh GetVpcPrefixHandler) Handle(c echo.Context) error {
 	tenant, err := common.GetTenantForOrg(ctx, nil, gsh.dbSession, org)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error getting tenant from org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Tenant from org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Tenant from org", nil)
 	}
 
 	// Check that VPC prefix exists
@@ -702,15 +700,15 @@ func (gsh GetVpcPrefixHandler) Handle(c echo.Context) error {
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving VPC prefix DB entity")
 		if err == cdb.ErrDoesNotExist {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not retrieve VPC prefix to update", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not retrieve VPC prefix to update", nil)
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Could not retrieve VPC prefix to update", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Could not retrieve VPC prefix to update", nil)
 	}
 
 	// verify tenant matches
 	if tenant.ID != vpcPrefix.TenantID {
 		logger.Warn().Msg("tenant in VPC prefix does not belong to tenant in org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Tenant for VPC prefix in request does not match tenant in org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Tenant for VPC prefix in request does not match tenant in org", nil)
 	}
 
 	// get status details for the response
@@ -718,7 +716,7 @@ func (gsh GetVpcPrefixHandler) Handle(c echo.Context) error {
 	ssds, err := sdDAO.GetRecentByEntityIDs(ctx, nil, []string{vpcPrefix.ID.String()}, common.RECENT_STATUS_DETAIL_COUNT)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Status Details for VPC prefix from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details for VPC prefix", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details for VPC prefix", nil)
 	}
 
 	// Send response
@@ -735,7 +733,7 @@ type UpdateVpcPrefixHandler struct {
 	tc         temporalClient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewUpdateVpcPrefixHandler initializes and returns a new handler for updating VPC prefix
@@ -745,7 +743,7 @@ func NewUpdateVpcPrefixHandler(dbSession *cdb.Session, tc temporalClient.Client,
 		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -787,7 +785,7 @@ func (ush UpdateVpcPrefixHandler) Handle(c echo.Context) error {
 	// Get user
 	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, ush.tracerSpan, handlerSpan)
 	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -798,14 +796,14 @@ func (ush UpdateVpcPrefixHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Tenant Admins are allowed to interact with VPC prefix endpoints
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role with org, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	// Get VPC prefix ID from URL param
@@ -816,7 +814,7 @@ func (ush UpdateVpcPrefixHandler) Handle(c echo.Context) error {
 	sID, err := uuid.Parse(sStrID)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error parsing id in url into uuid")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid VPC prefix ID in URL", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid VPC prefix ID in URL", nil)
 	}
 
 	vpDAO := cdbm.NewVpcPrefixDAO(ush.dbSession)
@@ -827,20 +825,20 @@ func (ush UpdateVpcPrefixHandler) Handle(c echo.Context) error {
 	err = c.Bind(&apiRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
 	}
 	// Validate request attributes
 	verr := apiRequest.Validate()
 	if verr != nil {
 		logger.Warn().Err(verr).Msg("error validating VPC prefix update request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating VPC prefix update request data", verr)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating VPC prefix update request data", verr)
 	}
 
 	// Validate the tenant for which this VPC prefix is being updated
 	tenant, err := common.GetTenantForOrg(ctx, nil, ush.dbSession, org)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error getting tenant from org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Tenant from org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Tenant from org", nil)
 	}
 
 	// Check that VPC prefix exists
@@ -848,25 +846,25 @@ func (ush UpdateVpcPrefixHandler) Handle(c echo.Context) error {
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving VPC prefix DB entity")
 		if err == cdb.ErrDoesNotExist {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not retrieve VPC prefix to update", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not retrieve VPC prefix to update", nil)
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Could not retrieve VPC prefix to update", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Could not retrieve VPC prefix to update", nil)
 	}
 
 	// verify tenant matches
 	if tenant.ID != vpcPrefix.TenantID {
 		logger.Warn().Msg("tenant in VPC prefix does not belong to tenant in org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Tenant for VPC prefix in request does not match tenant in org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Tenant for VPC prefix in request does not match tenant in org", nil)
 	}
 
 	if apiRequest.Name != nil && *apiRequest.Name != vpcPrefix.Name {
 		vps, tot, serr := vpDAO.GetAll(ctx, nil, cdbm.VpcPrefixFilterInput{Names: []string{*apiRequest.Name}, SiteIDs: []uuid.UUID{vpcPrefix.SiteID}, TenantIDs: []uuid.UUID{vpcPrefix.TenantID}}, cdbp.PageInput{}, nil)
 		if serr != nil {
 			logger.Error().Err(serr).Msg("db error checking for name uniqueness of tenant VPC prefix")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create VPC prefix due to DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create VPC prefix due to DB error", nil)
 		}
 		if tot > 0 {
-			return cerr.NewAPIErrorResponse(c, http.StatusConflict, "Another VPC prefix with specified name already exists for Tenant", validation.Errors{
+			return cutil.NewAPIErrorResponse(c, http.StatusConflict, "Another VPC prefix with specified name already exists for Tenant", validation.Errors{
 				"id": fmt.Errorf("%v", vps[0].ID.String()),
 			})
 		}
@@ -876,7 +874,7 @@ func (ush UpdateVpcPrefixHandler) Handle(c echo.Context) error {
 	tx, err := cdb.BeginTx(ctx, ush.dbSession, &sql.TxOptions{})
 	if err != nil {
 		logger.Error().Err(err).Msg("error updating VPC prefix in DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update VPC prefix", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update VPC prefix", nil)
 	}
 	txCommitted := false
 	defer common.RollbackTx(ctx, tx, &txCommitted)
@@ -884,7 +882,7 @@ func (ush UpdateVpcPrefixHandler) Handle(c echo.Context) error {
 	vpcPrefix, err = vpDAO.Update(ctx, tx, cdbm.VpcPrefixUpdateInput{VpcPrefixID: vpcPrefix.ID, Name: apiRequest.Name})
 	if err != nil {
 		logger.Error().Err(err).Msg("error updating VPC prefix in DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update VPC prefix", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update VPC prefix", nil)
 	}
 
 	// get status details for the response
@@ -892,14 +890,14 @@ func (ush UpdateVpcPrefixHandler) Handle(c echo.Context) error {
 	ssds, _, err := sdDAO.GetAllByEntityID(ctx, tx, vpcPrefix.ID.String(), nil, cdb.GetIntPtr(pagination.MaxPageSize), nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Status Details for VPC prefix from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details for VPC prefix", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details for VPC prefix", nil)
 	}
 
 	// Get the temporal client for the site we are working with.
 	stc, err := ush.scp.GetClientByID(vpcPrefix.SiteID)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
 	}
 
 	updateVpcPrefixRequest := &cwssaws.VpcPrefixUpdateRequest{
@@ -909,14 +907,14 @@ func (ush UpdateVpcPrefixHandler) Handle(c echo.Context) error {
 
 	workflowOptions := temporalClient.StartWorkflowOptions{
 		ID:                       "vpcprefix-update-" + vpcPrefix.ID.String(),
-		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 
 	logger.Info().Msg("triggering VPC prefix update workflow")
 
 	// Add context deadlines
-	ctx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
+	ctx, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow
@@ -924,7 +922,7 @@ func (ush UpdateVpcPrefixHandler) Handle(c echo.Context) error {
 
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to synchronously start Temporal workflow to update VPC prefix")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed start sync workflow to update VPC prefix on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed start sync workflow to update VPC prefix on Site: %s", err), nil)
 	}
 
 	wid := we.GetID()
@@ -939,24 +937,24 @@ func (ush UpdateVpcPrefixHandler) Handle(c echo.Context) error {
 			logger.Error().Err(err).Msg("failed to update VPC Prefix, timeout occurred executing workflow on Site.")
 
 			// Create a new context deadlines
-			newctx, newcancel := context.WithTimeout(context.Background(), cwutil.WorkflowContextNewAfterTimeout)
+			newctx, newcancel := context.WithTimeout(context.Background(), cutil.WorkflowContextNewAfterTimeout)
 			defer newcancel()
 
 			// Initiate termination workflow
 			serr := stc.TerminateWorkflow(newctx, wid, "", "timeout occurred executing update VPC prefix workflow")
 			if serr != nil {
 				logger.Error().Err(serr).Msg("failed to execute terminate Temporal workflow for creating VPC prefix")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to terminate synchronous VPC prefix updation workflow after timeout, Cloud and Site data may be de-synced: %s", serr), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to terminate synchronous VPC prefix updation workflow after timeout, Cloud and Site data may be de-synced: %s", serr), nil)
 			}
 
 			logger.Info().Str("Workflow ID", wid).Msg("initiated terminate synchronous update VPC prefix workflow successfully")
 
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to update VPC Prefix, timeout occurred executing workflow on Site: %s", err), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to update VPC Prefix, timeout occurred executing workflow on Site: %s", err), nil)
 		}
 
 		code, err := common.UnwrapWorkflowError(err)
 		logger.Error().Err(err).Msg("failed to synchronously execute Temporal workflow to update VPC prefix")
-		return cerr.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to execute sync workflow to update VPC prefix on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to execute sync workflow to update VPC prefix on Site: %s", err), nil)
 	}
 
 	logger.Info().Str("Workflow ID", wid).Msg("completed synchronous update VPC prefix workflow")
@@ -965,7 +963,7 @@ func (ush UpdateVpcPrefixHandler) Handle(c echo.Context) error {
 	err = tx.Commit()
 	if err != nil {
 		logger.Error().Err(err).Msg("error updating VPC prefix in DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update VPC prefix", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update VPC prefix", nil)
 	}
 	txCommitted = true
 
@@ -983,7 +981,7 @@ type DeleteVpcPrefixHandler struct {
 	tc         temporalClient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewDeleteVpcPrefixHandler initializes and returns a new handler for deleting VPC prefix
@@ -993,7 +991,7 @@ func NewDeleteVpcPrefixHandler(dbSession *cdb.Session, tc temporalClient.Client,
 		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -1034,7 +1032,7 @@ func (dsh DeleteVpcPrefixHandler) Handle(c echo.Context) error {
 	// Get user
 	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, dsh.tracerSpan, handlerSpan)
 	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -1045,14 +1043,14 @@ func (dsh DeleteVpcPrefixHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Tenant Admins are allowed to interact with VPC prefix endpoints
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role with org, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	// Get VPC prefix ID from URL param
@@ -1063,7 +1061,7 @@ func (dsh DeleteVpcPrefixHandler) Handle(c echo.Context) error {
 	sID, err := uuid.Parse(sStrID)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error parsing id in url into uuid")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid VPC prefix ID in URL", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid VPC prefix ID in URL", nil)
 	}
 
 	// Check that VPC prefix exists
@@ -1072,33 +1070,33 @@ func (dsh DeleteVpcPrefixHandler) Handle(c echo.Context) error {
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving VPC prefix DB entity")
 		if err == cdb.ErrDoesNotExist {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find VPC prefix to delete", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find VPC prefix to delete", nil)
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed not retrieve VPC prefix for deletion, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed not retrieve VPC prefix for deletion, DB error", nil)
 	}
 
 	if vpcPrefix.Tenant == nil {
 		logger.Warn().Err(err).Msg("failed to retrieve Tenant details")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant details", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant details", nil)
 	}
 
 	// Validate the tenant for which this VPC prefix is being updated
 	if vpcPrefix.Tenant.Org != org {
 		logger.Warn().Msg("org specified in request does not match org of Tenant associated with VPC prefix")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Org specified in request does not match org of Tenant associated with VPC prefix", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Org specified in request does not match org of Tenant associated with VPC prefix", nil)
 	}
 
 	// Verify that the VPC prefix is associated with a site and then that the site is
 	// in a valid state.
 	if vpcPrefix.Site == nil {
 		logger.Error().Msg("failed to pull site data for VPC prefix")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site details for VPC prefix", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site details for VPC prefix", nil)
 	}
 
 	// Verify if site is ready
 	if vpcPrefix.Site.Status != cdbm.SiteStatusRegistered {
 		logger.Warn().Str("Site ID", vpcPrefix.SiteID.String()).Msg("Site associated with VPC prefix must be in Registered state in order to proceed")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Site associated with VPC prefix must be in Registered state in order to proceed", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site associated with VPC prefix must be in Registered state in order to proceed", nil)
 	}
 
 	// Verify no instances are using the VPC prefix
@@ -1109,12 +1107,12 @@ func (dsh DeleteVpcPrefixHandler) Handle(c echo.Context) error {
 		_, ifcCount, err := isDAO.GetAll(ctx, nil, nil, &vpcPrefix.ID, nil, nil, nil, nil, cdb.GetIntPtr(0), nil)
 		if err != nil {
 			logger.Error().Err(err).Msg("error retrieving Interfaces for VPC prefix from DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Interfaces for vpcPrefix, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Interfaces for vpcPrefix, DB error", nil)
 		}
 
 		if ifcCount > 0 {
 			logger.Warn().Msg("Interfaces exist for vpcPrefix, cannot delete it")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "VPC prefix is being used by one or more Instances and cannot be deleted", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "VPC prefix is being used by one or more Instances and cannot be deleted", nil)
 		}
 	*/
 
@@ -1122,7 +1120,7 @@ func (dsh DeleteVpcPrefixHandler) Handle(c echo.Context) error {
 	tx, err := cdb.BeginTx(ctx, dsh.dbSession, &sql.TxOptions{})
 	if err != nil {
 		logger.Error().Err(err).Msg("unable to start transaction")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete VPC Prefix, DB transaction error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete VPC Prefix, DB transaction error", nil)
 	}
 	// this variable is used in cleanup actions to indicate if this transaction committed
 	txCommitted := false
@@ -1134,7 +1132,7 @@ func (dsh DeleteVpcPrefixHandler) Handle(c echo.Context) error {
 	if err != nil {
 		// TODO: Add a retry here
 		logger.Error().Err(err).Msg("Failed to acquire advisory lock on ipblock")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete VPC Prefix, DB lock error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete VPC Prefix, DB lock error", nil)
 	}
 
 	// Set VPC prefix status to Deleting
@@ -1143,21 +1141,21 @@ func (dsh DeleteVpcPrefixHandler) Handle(c echo.Context) error {
 	_, err = vpDAO.Update(ctx, tx, cdbm.VpcPrefixUpdateInput{VpcPrefixID: vpcPrefix.ID, Status: &status})
 	if err != nil {
 		logger.Error().Err(err).Msg("error setting VPC prefix status to deleting")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update VPC prefix status, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update VPC prefix status, DB error", nil)
 	}
 
 	sdDAO := cdbm.NewStatusDetailDAO(dsh.dbSession)
 	_, err = sdDAO.CreateFromParams(ctx, tx, vpcPrefix.ID.String(), status, &statusMsg)
 	if err != nil {
 		logger.Error().Err(err).Msg("error creating Status Detail for VPC prefix")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create VPC prefix status detail, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create VPC prefix status detail, DB error", nil)
 	}
 
 	// Get the temporal client for the site we are working with.
 	stc, err := dsh.scp.GetClientByID(vpcPrefix.SiteID)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
 	}
 
 	// Prepare the delete/release request workflow object
@@ -1177,7 +1175,7 @@ func (dsh DeleteVpcPrefixHandler) Handle(c echo.Context) error {
 	we, err := stc.ExecuteWorkflow(ctx, workflowOptions, "DeleteVpcPrefix", deleteVpcPrefixRequest)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to synchronously start Temporal workflow to delete VPC prefix")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to start sync workflow to delete VPC prefix on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to start sync workflow to delete VPC prefix on Site: %s", err), nil)
 	}
 
 	wid := we.GetID()
@@ -1204,24 +1202,24 @@ func (dsh DeleteVpcPrefixHandler) Handle(c echo.Context) error {
 			logger.Error().Err(err).Msg("failed to delete VPC Prefix, timeout occurred executing workflow on Site.")
 
 			// Create a new context deadlines
-			newctx, newcancel := context.WithTimeout(context.Background(), cwutil.WorkflowContextNewAfterTimeout)
+			newctx, newcancel := context.WithTimeout(context.Background(), cutil.WorkflowContextNewAfterTimeout)
 			defer newcancel()
 
 			// Initiate termination workflow
 			serr := stc.TerminateWorkflow(newctx, wid, "", "timeout occurred executing delete VPC prefix workflow")
 			if serr != nil {
 				logger.Error().Err(serr).Msg("failed to terminate Temporal workflow for deleting VPC prefix")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to terminate synchronous VPC prefix deletion workflow after timeout, Cloud and Site data may be de-synced: %s", serr), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to terminate synchronous VPC prefix deletion workflow after timeout, Cloud and Site data may be de-synced: %s", serr), nil)
 			}
 
 			logger.Info().Str("Workflow ID", wid).Msg("initiated terminate synchronous delete VPC prefix workflow successfully")
 
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to delete VPC Prefix, timeout occurred executing workflow on Site: %s", err), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to delete VPC Prefix, timeout occurred executing workflow on Site: %s", err), nil)
 		}
 
 		code, err := common.UnwrapWorkflowError(err)
 		logger.Error().Err(err).Msg("failed to delete VPC Prefix, timeout occurred executing workflow on Site.")
-		return cerr.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to execute sync workflow to delete VPC prefix on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to execute sync workflow to delete VPC prefix on Site: %s", err), nil)
 	}
 
 	logger.Info().Str("Workflow ID", wid).Msg("completed synchronous delete VPC prefix workflow")
@@ -1230,7 +1228,7 @@ func (dsh DeleteVpcPrefixHandler) Handle(c echo.Context) error {
 	err = tx.Commit()
 	if err != nil {
 		logger.Error().Err(err).Msg("error committing VPC prefix transaction to DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete VPC Prefix, DB transaction error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete VPC Prefix, DB transaction error", nil)
 	}
 
 	// Set committed so, deferred cleanup functions will do nothing
