@@ -19,6 +19,7 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"time"
 
@@ -57,6 +58,7 @@ type ForgeServerImpl struct {
 	m   map[string]*cwssaws.Machine
 	tk  map[string]*cwssaws.TenantKeyset
 	ibp map[string]*cwssaws.IBPartition
+	em  map[string]*cwssaws.ExpectedMachine
 }
 
 var logger = log.With().Str("Component", "Mock Carbide gRPC Server").Logger()
@@ -105,7 +107,7 @@ func (f *ForgeServerImpl) UpdateVpc(c context.Context, req *cwssaws.VpcUpdateReq
 		return &cwssaws.VpcUpdateResult{}, nil
 	}
 
-	return nil, status.Errorf(codes.NotFound, "VPC with ID not found")
+	return nil, status.Errorf(codes.NotFound, "VPC with ID %q not found", req.Id.Value)
 }
 
 // DeleteVpc implements interface ForgeServer
@@ -120,7 +122,7 @@ func (f *ForgeServerImpl) DeleteVpc(c context.Context, req *cwssaws.VpcDeletionR
 		return &cwssaws.VpcDeletionResult{}, nil
 	}
 
-	return nil, status.Errorf(codes.NotFound, "VPC with ID not found")
+	return nil, status.Errorf(codes.NotFound, "VPC with ID %q not found", req.Id.Value)
 }
 
 // FindVpcIds implements interface ForgeServer
@@ -222,7 +224,7 @@ func (f *ForgeServerImpl) DeleteNetworkSegment(c context.Context, req *cwssaws.N
 		return &cwssaws.NetworkSegmentDeletionResult{}, nil
 	}
 
-	return nil, status.Errorf(codes.NotFound, "NetworkSegment with ID not found")
+	return nil, status.Errorf(codes.NotFound, "NetworkSegment with ID %q not found", req.Id.Value)
 }
 
 // FindNetworkSegmentIds implements interface ForgeServer
@@ -347,7 +349,7 @@ func (f *ForgeServerImpl) ReleaseInstance(c context.Context, req *cwssaws.Instan
 		return &cwssaws.InstanceReleaseResult{}, nil
 	}
 
-	return nil, status.Errorf(codes.NotFound, "Instance with ID not found")
+	return nil, status.Errorf(codes.NotFound, "Instance with ID %q not found", req.Id.Value)
 }
 
 // FindInstances implements interface ForgeServer
@@ -415,7 +417,7 @@ func (f *ForgeServerImpl) InvokeInstancePower(c context.Context, req *cwssaws.In
 		return &cwssaws.InstancePowerResult{}, status.Errorf(codes.InvalidArgument, "Invalid operation in request")
 	}
 
-	return nil, status.Errorf(codes.NotFound, "Machine with ID not found")
+	return nil, status.Errorf(codes.NotFound, "Machine with ID %q not found", req.MachineId.Id)
 }
 
 // FindMachines implements interface ForgeServer
@@ -833,7 +835,7 @@ func (f *ForgeServerImpl) DeleteTenantKeyset(c context.Context, req *cwssaws.Del
 		return &cwssaws.DeleteTenantKeysetResponse{}, nil
 	}
 
-	return nil, status.Errorf(codes.NotFound, "TenantKeyset with ID not found")
+	return nil, status.Errorf(codes.NotFound, "TenantKeyset with ID %q not found", eid)
 }
 
 // FindTenantKeysetIds implements interface ForgeServer
@@ -933,7 +935,7 @@ func (f *ForgeServerImpl) DeleteIBPartition(c context.Context, req *cwssaws.IBPa
 		return &cwssaws.IBPartitionDeletionResult{}, nil
 	}
 
-	return nil, status.Errorf(codes.NotFound, "IB Partition with ID not found")
+	return nil, status.Errorf(codes.NotFound, "IB Partition with ID %q not found", req.Id.Value)
 }
 
 // FindIBPartitionIds implements interface ForgeServer
@@ -985,6 +987,150 @@ func (f *ForgeServerImpl) FindIBPartitions(c context.Context, req *cwssaws.IBPar
 	return &cwssaws.IBPartitionList{IbPartitions: res}, nil
 }
 
+// AddExpectedMachine implements interface ForgeServer
+func (f *ForgeServerImpl) AddExpectedMachine(ctx context.Context, req *cwssaws.ExpectedMachine) (*emptypb.Empty, error) {
+	if req == nil || req.Id == nil || req.Id.Value == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "ID not provided for AddExpectedMachine")
+	}
+	if req.BmcMacAddress == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "MAC address not provided for AddExpectedMachine")
+	}
+	if req.ChassisSerialNumber == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "Chassis Serial Number not provided for AddExpectedMachine")
+	}
+	f.em[req.Id.Value] = req
+	return &emptypb.Empty{}, nil
+}
+
+// UpdateExpectedMachine implements interface ForgeServer
+func (f *ForgeServerImpl) UpdateExpectedMachine(ctx context.Context, req *cwssaws.ExpectedMachine) (*emptypb.Empty, error) {
+	if req == nil || req.Id == nil || req.Id.Value == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "ID not provided for UpdateExpectedMachine")
+	}
+	if req.BmcMacAddress == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "MAC address not provided for UpdateExpectedMachine")
+	}
+	if req.ChassisSerialNumber == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "Chassis Serial Number not provided for UpdateExpectedMachine")
+	}
+	if _, ok := f.em[req.Id.Value]; !ok {
+		return nil, status.Errorf(codes.NotFound, "ExpectedMachine with ID %q not found", req.Id.Value)
+	}
+	f.em[req.Id.Value] = req
+	return &emptypb.Empty{}, nil
+}
+
+// DeleteExpectedMachine implements interface ForgeServer
+func (f *ForgeServerImpl) DeleteExpectedMachine(ctx context.Context, req *cwssaws.ExpectedMachineRequest) (*emptypb.Empty, error) {
+	if req == nil || req.Id == nil || req.Id.Value == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "ID not provided for DeleteExpectedMachine")
+	}
+	if _, ok := f.em[req.Id.Value]; !ok {
+		return nil, status.Errorf(codes.NotFound, "ExpectedMachine with ID %q not found", req.Id.Value)
+	}
+	delete(f.em, req.Id.Value)
+	return &emptypb.Empty{}, nil
+}
+
+// CreateExpectedMachines implements interface ForgeServer
+func (f *ForgeServerImpl) CreateExpectedMachines(ctx context.Context, req *cwssaws.BatchExpectedMachineOperationRequest) (*cwssaws.BatchExpectedMachineOperationResponse, error) {
+	if req == nil || req.GetExpectedMachines() == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid request for CreateExpectedMachines")
+	}
+	emList := req.GetExpectedMachines().GetExpectedMachines()
+	out := &cwssaws.BatchExpectedMachineOperationResponse{
+		Results: make([]*cwssaws.ExpectedMachineOperationResult, 0, len(emList)),
+	}
+	for _, em := range emList {
+		if em == nil {
+			msg := "nil expected machine entry"
+			out.Results = append(out.Results, &cwssaws.ExpectedMachineOperationResult{
+				Success:         false,
+				ErrorMessage:    &msg,
+				ExpectedMachine: nil,
+			})
+			continue
+		}
+		result := &cwssaws.ExpectedMachineOperationResult{
+			Id:              em.Id,
+			Success:         true,
+			ExpectedMachine: em,
+		}
+		if em.GetId() == nil || em.GetId().GetValue() == "" {
+			result.Success = false
+			msg := "ID not provided"
+			result.ErrorMessage = &msg
+			result.ExpectedMachine = nil
+		} else if em.GetBmcMacAddress() == "" {
+			result.Success = false
+			msg := "MAC address not provided"
+			result.ErrorMessage = &msg
+			result.ExpectedMachine = nil
+		} else if em.GetChassisSerialNumber() == "" {
+			result.Success = false
+			msg := "Chassis Serial Number not provided"
+			result.ErrorMessage = &msg
+			result.ExpectedMachine = nil
+		} else {
+			f.em[em.Id.Value] = em
+		}
+		out.Results = append(out.Results, result)
+	}
+	return out, nil
+}
+
+// UpdateExpectedMachines implements interface ForgeServer
+func (f *ForgeServerImpl) UpdateExpectedMachines(ctx context.Context, req *cwssaws.BatchExpectedMachineOperationRequest) (*cwssaws.BatchExpectedMachineOperationResponse, error) {
+	if req == nil || req.GetExpectedMachines() == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid request for UpdateExpectedMachines")
+	}
+	emList := req.GetExpectedMachines().GetExpectedMachines()
+	out := &cwssaws.BatchExpectedMachineOperationResponse{
+		Results: make([]*cwssaws.ExpectedMachineOperationResult, 0, len(emList)),
+	}
+	for _, em := range emList {
+		if em == nil {
+			msg := "nil expected machine entry"
+			out.Results = append(out.Results, &cwssaws.ExpectedMachineOperationResult{
+				Success:         false,
+				ErrorMessage:    &msg,
+				ExpectedMachine: nil,
+			})
+			continue
+		}
+		result := &cwssaws.ExpectedMachineOperationResult{
+			Id:              em.Id,
+			Success:         true,
+			ExpectedMachine: em,
+		}
+		if em.GetId() == nil || em.GetId().GetValue() == "" {
+			result.Success = false
+			msg := "ID not provided"
+			result.ErrorMessage = &msg
+			result.ExpectedMachine = nil
+		} else if em.GetBmcMacAddress() == "" {
+			result.Success = false
+			msg := "MAC address not provided"
+			result.ErrorMessage = &msg
+			result.ExpectedMachine = nil
+		} else if em.GetChassisSerialNumber() == "" {
+			result.Success = false
+			msg := "Chassis Serial Number not provided"
+			result.ErrorMessage = &msg
+			result.ExpectedMachine = nil
+		} else if _, ok := f.em[em.Id.Value]; !ok {
+			result.Success = false
+			msg := fmt.Sprintf("ExpectedMachine with ID %q not found", em.Id.Value)
+			result.ErrorMessage = &msg
+			result.ExpectedMachine = nil
+		} else {
+			f.em[em.Id.Value] = em
+		}
+		out.Results = append(out.Results, result)
+	}
+	return out, nil
+}
+
 // ForgeTest tests the grpc server
 func ForgeTest(secs int) {
 	listener, err := net.Listen("tcp", DefaultPort)
@@ -1001,6 +1147,7 @@ func ForgeTest(secs int) {
 		m:   make(map[string]*cwssaws.Machine),
 		tk:  make(map[string]*cwssaws.TenantKeyset),
 		ibp: make(map[string]*cwssaws.IBPartition),
+		em:  make(map[string]*cwssaws.ExpectedMachine),
 	})
 
 	if secs != 0 {

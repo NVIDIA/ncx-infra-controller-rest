@@ -233,7 +233,7 @@ rla-protogen:
 # Kind Local Deployment Targets
 # =============================================================================
 
-.PHONY: kind-up kind-down kind-deploy kind-load kind-apply kind-redeploy kind-status kind-logs kind-reset kind-verify setup-site-agent
+.PHONY: kind-up kind-down kind-deploy kind-load kind-apply kind-redeploy kind-status kind-logs kind-reset kind-verify setup-site-agent test-simple-sdk-example
 .PHONY: deploy-overlay-api deploy-overlay-cert-manager deploy-overlay-site-manager deploy-overlay-workflow
 
 # Kind cluster configuration
@@ -485,6 +485,23 @@ setup-site-agent:
 kind-verify:
 	./scripts/setup-local.sh verify
 
+# Run the simple SDK Machine example against local dev (kind).
+# Verifies the SDK can talk to the stack (list, get machines).
+# Requires: kind cluster running, port-forward API (8388) and Keycloak (8082). Uses CARBIDE_* env vars or defaults.
+test-simple-sdk-example:
+	@command -v jq >/dev/null 2>&1 || { echo "jq is required (e.g. brew install jq)"; exit 1; }
+	@echo "Running simple SDK Machine example against local dev..."
+	CARBIDE_BASE_URL=$${CARBIDE_BASE_URL:-http://localhost:8388} \
+	CARBIDE_ORG=$${CARBIDE_ORG:-test-org} \
+	CARBIDE_TOKEN=$${CARBIDE_TOKEN:-$$(curl -s -X POST "http://localhost:8082/realms/carbide-dev/protocol/openid-connect/token" \
+		-H "Content-Type: application/x-www-form-urlencoded" \
+		-d "client_id=carbide-api" \
+		-d "client_secret=carbide-local-secret" \
+		-d "grant_type=password" \
+		-d "username=admin@example.com" \
+		-d "password=adminpassword" | jq -r .access_token)} \
+	go run ./sdk/simple/examples/machine/
+
 # Run PKI E2E tests
 test-pki:
 	./scripts/test-pki.sh
@@ -497,11 +514,14 @@ test-temporal-e2e:
 # Generated Go API Client
 # =============================================================================
 
+# OpenAPI spec path or URL for SDK generation. Override with: OPENAPI_SPEC=/path/to/spec.yaml make generate-sdk
+OPENAPI_SPEC ?= openapi/spec.yaml
+
 # Generate Go API SDK from OpenAPI spec using openapi-generator
 # Requires: brew install openapi-generator
 generate-sdk:
 	openapi-generator generate \
-		-i openapi/spec.yaml \
+		-i $(OPENAPI_SPEC) \
 		-g go \
 		-o sdk/standard \
 		--package-name standard \
