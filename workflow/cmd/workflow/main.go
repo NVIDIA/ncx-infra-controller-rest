@@ -80,6 +80,12 @@ import (
 	expectedMachineActivity "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/activity/expectedmachine"
 	expectedMachineWorkflow "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/workflow/expectedmachine"
 
+	expectedPowerShelfActivity "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/activity/expectedpowershelf"
+	expectedPowerShelfWorkflow "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/workflow/expectedpowershelf"
+
+	expectedSwitchActivity "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/activity/expectedswitch"
+	expectedSwitchWorkflow "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/workflow/expectedswitch"
+
 	tenantActivity "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/activity/tenant"
 	tenantWorkflow "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/workflow/tenant"
 
@@ -320,6 +326,12 @@ func main() {
 		// ExpectedMachine workflow
 		w.RegisterWorkflow(expectedMachineWorkflow.UpdateExpectedMachineInventory)
 
+		// ExpectedPowerShelf workflow
+		w.RegisterWorkflow(expectedPowerShelfWorkflow.UpdateExpectedPowerShelfInventory)
+
+		// ExpectedSwitch workflow
+		w.RegisterWorkflow(expectedSwitchWorkflow.UpdateExpectedSwitchInventory)
+
 		// SKU workflow
 		w.RegisterWorkflow(skuWorkflow.UpdateSkuInventory)
 
@@ -374,6 +386,14 @@ func main() {
 	// ExpectedMachine activities
 	expectedMachineManager := expectedMachineActivity.NewManageExpectedMachine(dbSession, siteClientPool)
 	w.RegisterActivity(&expectedMachineManager)
+
+	// ExpectedPowerShelf activities
+	expectedPowerShelfManager := expectedPowerShelfActivity.NewManageExpectedPowerShelf(dbSession, siteClientPool)
+	w.RegisterActivity(&expectedPowerShelfManager)
+
+	// ExpectedSwitch activities
+	expectedSwitchManager := expectedSwitchActivity.NewManageExpectedSwitch(dbSession, siteClientPool)
+	w.RegisterActivity(&expectedSwitchManager)
 
 	// SKU activities
 	skuManager := skuActivity.NewManageSku(dbSession, siteClientPool)

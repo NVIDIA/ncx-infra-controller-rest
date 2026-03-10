@@ -32,6 +32,8 @@ import (
 	"github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/components/managers/carbide"
 	"github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/components/managers/dpuextensionservice"
 	"github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/components/managers/expectedmachine"
+	"github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/components/managers/expectedpowershelf"
+	"github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/components/managers/expectedswitch"
 	"github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/components/managers/health"
 	"github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/components/managers/infinibandpartition"
 	"github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/components/managers/instance"
@@ -76,6 +78,8 @@ func NewAPIHandlers() {
 		InstanceType:           &instancetype.API{},
 		NetworkSecurityGroup:   &networksecuritygroup.API{},
 		ExpectedMachine:        &expectedmachine.API{},
+		ExpectedPowerShelf:     &expectedpowershelf.API{},
+		ExpectedSwitch:         &expectedswitch.API{},
 		SKU:                    &sku.API{},
 		DpuExtensionService:    &dpuextensionservice.API{},
 		NVLinkLogicalPartition: &nvlinklogicalpartition.API{},
@@ -119,6 +123,8 @@ func (Managers *Manager) NewInstance() {
 	Managers.InstanceType()
 	Managers.NetworkSecurityGroup()
 	Managers.ExpectedMachine()
+	Managers.ExpectedPowerShelf()
+	Managers.ExpectedSwitch()
 	Managers.SKU()
 	Managers.DpuExtensionService()
 	Managers.NVLinkLogicalPartition()
@@ -165,6 +171,8 @@ func (Managers *Manager) Init() {
 	Managers.InstanceType().Init()
 	Managers.NetworkSecurityGroup().Init()
 	Managers.ExpectedMachine().Init()
+	Managers.ExpectedPowerShelf().Init()
+	Managers.ExpectedSwitch().Init()
 	Managers.SKU().Init()
 	Managers.DpuExtensionService().Init()
 	Managers.NVLinkLogicalPartition().Init()

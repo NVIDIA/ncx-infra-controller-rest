@@ -1,0 +1,43 @@
+// SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package workflows.v1;
+
+import "google/protobuf/timestamp.proto";
+
+import "workflow.proto";
+import "common_carbide.proto";
+import "forge_carbide.proto";
+
+option go_package = "github.com/nvidia/bare-metal-manager-rest/workflow-schema/proto";
+
+// ExpectedSwitchInventory - inventory info of all ExpectedSwitches on Site collected
+// periodically
+message ExpectedSwitchInventory {
+  // Status of Inventory
+  InventoryStatus inventory_status = 1;
+  // Status message
+  string status_msg = 2;
+  // Reported timestamp of Expected Switch inventory
+  google.protobuf.Timestamp timestamp = 3;
+  // List of Expected Switches
+  repeated forge.ExpectedSwitch expected_switches = 4;
+  // Inventory page information
+  InventoryPage inventory_page = 5;
+  // Linked Expected Switches (contains Switch ID)
+  repeated forge.LinkedExpectedSwitch linked_switches = 6;
+}
