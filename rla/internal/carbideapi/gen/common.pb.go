@@ -22,11 +22,12 @@
 package carbideapigrpc
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -35,6 +36,64 @@ const (
 	// Verify that runtime/protoimpl is sufficiently up-to-date.
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
+
+type SystemPowerControl int32
+
+const (
+	SystemPowerControl_SYSTEM_POWER_CONTROL_ON                SystemPowerControl = 0
+	SystemPowerControl_SYSTEM_POWER_CONTROL_GRACEFUL_SHUTDOWN SystemPowerControl = 1
+	SystemPowerControl_SYSTEM_POWER_CONTROL_FORCE_OFF         SystemPowerControl = 2
+	SystemPowerControl_SYSTEM_POWER_CONTROL_GRACEFUL_RESTART  SystemPowerControl = 3
+	SystemPowerControl_SYSTEM_POWER_CONTROL_FORCE_RESTART     SystemPowerControl = 4
+	SystemPowerControl_SYSTEM_POWER_CONTROL_AC_POWERCYCLE     SystemPowerControl = 5
+)
+
+// Enum value maps for SystemPowerControl.
+var (
+	SystemPowerControl_name = map[int32]string{
+		0: "SYSTEM_POWER_CONTROL_ON",
+		1: "SYSTEM_POWER_CONTROL_GRACEFUL_SHUTDOWN",
+		2: "SYSTEM_POWER_CONTROL_FORCE_OFF",
+		3: "SYSTEM_POWER_CONTROL_GRACEFUL_RESTART",
+		4: "SYSTEM_POWER_CONTROL_FORCE_RESTART",
+		5: "SYSTEM_POWER_CONTROL_AC_POWERCYCLE",
+	}
+	SystemPowerControl_value = map[string]int32{
+		"SYSTEM_POWER_CONTROL_ON":                0,
+		"SYSTEM_POWER_CONTROL_GRACEFUL_SHUTDOWN": 1,
+		"SYSTEM_POWER_CONTROL_FORCE_OFF":         2,
+		"SYSTEM_POWER_CONTROL_GRACEFUL_RESTART":  3,
+		"SYSTEM_POWER_CONTROL_FORCE_RESTART":     4,
+		"SYSTEM_POWER_CONTROL_AC_POWERCYCLE":     5,
+	}
+)
+
+func (x SystemPowerControl) Enum() *SystemPowerControl {
+	p := new(SystemPowerControl)
+	*p = x
+	return p
+}
+
+func (x SystemPowerControl) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (SystemPowerControl) Descriptor() protoreflect.EnumDescriptor {
+	return file_common_proto_enumTypes[0].Descriptor()
+}
+
+func (SystemPowerControl) Type() protoreflect.EnumType {
+	return &file_common_proto_enumTypes[0]
+}
+
+func (x SystemPowerControl) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use SystemPowerControl.Descriptor instead.
+func (SystemPowerControl) EnumDescriptor() ([]byte, []int) {
+	return file_common_proto_rawDescGZIP(), []int{0}
+}
 
 type MachineId struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1163,6 +1222,14 @@ const file_common_proto_rawDesc = "" +
 	"\x05value\x18\x01 \x01(\tR\x05value\"+\n" +
 	"\x13ComputeAllocationId\x12\x14\n" +
 	"\x05value\x18\x01 \x01(\tR\x05valueB\x9a\x01\n" +
+	"\x05value\x18\x01 \x01(\tR\x05value*\xfc\x01\n" +
+	"\x12SystemPowerControl\x12\x1b\n" +
+	"\x17SYSTEM_POWER_CONTROL_ON\x10\x00\x12*\n" +
+	"&SYSTEM_POWER_CONTROL_GRACEFUL_SHUTDOWN\x10\x01\x12\"\n" +
+	"\x1eSYSTEM_POWER_CONTROL_FORCE_OFF\x10\x02\x12)\n" +
+	"%SYSTEM_POWER_CONTROL_GRACEFUL_RESTART\x10\x03\x12&\n" +
+	"\"SYSTEM_POWER_CONTROL_FORCE_RESTART\x10\x04\x12&\n" +
+	"\"SYSTEM_POWER_CONTROL_AC_POWERCYCLE\x10\x05B\x98\x01\n" +
 	"\n" +
 	"com.commonB\vCommonProtoP\x01ZGgithub.com/NVIDIA/ncx-infra-controller-rest/rla/internal/carbideapigrpc\xa2\x02\x03CXX\xaa\x02\x06Common\xca\x02\x06Common\xe2\x02\x12Common\\GPBMetadata\xea\x02\x06Commonb\x06proto3"
 
@@ -1178,14 +1245,15 @@ func file_common_proto_rawDescGZIP() []byte {
 	return file_common_proto_rawDescData
 }
 
-var file_common_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
+var file_common_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_common_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
 var file_common_proto_goTypes = []any{
-	(*MachineId)(nil),                // 0: common.MachineId
-	(*MachineIdList)(nil),            // 1: common.MachineIdList
-	(*StringList)(nil),               // 2: common.StringList
-	(*UUID)(nil),                     // 3: common.UUID
-	(*PowerShelfId)(nil),             // 4: common.PowerShelfId
-	(*RackId)(nil),                   // 5: common.RackId
+	(SystemPowerControl)(0),          // 0: common.SystemPowerControl
+	(*MachineId)(nil),                // 1: common.MachineId
+	(*MachineIdList)(nil),            // 2: common.MachineIdList
+	(*StringList)(nil),               // 3: common.StringList
+	(*UUID)(nil),                     // 4: common.UUID
+	(*PowerShelfId)(nil),             // 5: common.PowerShelfId
 	(*SwitchId)(nil),                 // 6: common.SwitchId
 	(*Uint32List)(nil),               // 7: common.Uint32List
 	(*RouteTarget)(nil),              // 8: common.RouteTarget
@@ -1206,7 +1274,7 @@ var file_common_proto_goTypes = []any{
 	(*ComputeAllocationId)(nil),      // 23: common.ComputeAllocationId
 }
 var file_common_proto_depIdxs = []int32{
-	0, // 0: common.MachineIdList.machine_ids:type_name -> common.MachineId
+	1, // 0: common.MachineIdList.machine_ids:type_name -> common.MachineId
 	1, // [1:1] is the sub-list for method output_type
 	1, // [1:1] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
@@ -1224,13 +1292,14 @@ func file_common_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_common_proto_rawDesc), len(file_common_proto_rawDesc)),
-			NumEnums:      0,
+			NumEnums:      1,
 			NumMessages:   24,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_common_proto_goTypes,
 		DependencyIndexes: file_common_proto_depIdxs,
+		EnumInfos:         file_common_proto_enumTypes,
 		MessageInfos:      file_common_proto_msgTypes,
 	}.Build()
 	File_common_proto = out.File

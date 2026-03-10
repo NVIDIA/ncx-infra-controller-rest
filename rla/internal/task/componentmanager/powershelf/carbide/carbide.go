@@ -24,104 +24,92 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/carbideapi"
-	pb "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/carbideapi/gen"
-	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/componentmanager"
-	carbideprovider "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/componentmanager/providers/carbide"
-	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor/temporalworkflow/common"
-	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operations"
-	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
+	"github.com/nvidia/bare-metal-manager-rest/rla/internal/carbideapi"
+	pb "github.com/nvidia/bare-metal-manager-rest/rla/internal/carbideapi/gen"
+	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/componentmanager"
+	carbideprovider "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/componentmanager/providers/carbide"
+	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/executor/temporalworkflow/common"
+	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operations"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
 )
 
 const (
-	// ImplementationName is the name used to identify this implementation.
 	ImplementationName = "carbide"
 )
 
-// Manager manages NVLink switch components via the Carbide API.
+// Manager manages power shelf components via the Carbide/Forge component dispatch RPCs.
 type Manager struct {
 	carbideClient carbideapi.Client
 }
 
-// New creates a new Carbide-based NVLSwitch Manager instance.
 func New(carbideClient carbideapi.Client) *Manager {
-	return &Manager{
-		carbideClient: carbideClient,
-	}
+	return &Manager{carbideClient: carbideClient}
 }
 
 // Factory creates a new Manager from the provided providers.
-// It retrieves the CarbideProvider from the registry and uses its client.
 func Factory(providerRegistry *componentmanager.ProviderRegistry) (componentmanager.ComponentManager, error) {
 	provider, err := componentmanager.GetTyped[*carbideprovider.Provider](
 		providerRegistry,
 		carbideprovider.ProviderName,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("nvlswitch/carbide requires carbide provider: %w", err)
+		return nil, fmt.Errorf("powershelf/carbide requires carbide provider: %w", err)
 	}
-
 	return New(provider.Client()), nil
 }
 
-// Register registers the Carbide NVLSwitch manager factory with the given registry.
+// Register registers the Carbide PowerShelf manager factory with the given registry.
 func Register(registry *componentmanager.Registry) {
-	registry.RegisterFactory(devicetypes.ComponentTypeNVLSwitch, ImplementationName, Factory)
+	registry.RegisterFactory(devicetypes.ComponentTypePowerShelf, ImplementationName, Factory)
 }
 
-// Type returns the component type this manager handles.
 func (m *Manager) Type() devicetypes.ComponentType {
-	return devicetypes.ComponentTypeNVLSwitch
+	return devicetypes.ComponentTypePowerShelf
 }
 
-// InjectExpectation registers an expected switch with Carbide via AddExpectedSwitch.
-// The Info field should contain a JSON-encoded carbideapi.AddExpectedSwitchRequest.
+func powerShelfIDsProto(ids []string) *pb.PowerShelfIdList {
+	pbIDs := make([]*pb.PowerShelfId, len(ids))
+	for i, id := range ids {
+		pbIDs[i] = &pb.PowerShelfId{Id: id}
+	}
+	return &pb.PowerShelfIdList{Ids: pbIDs}
+}
+
+// InjectExpectation registers an expected power shelf with Carbide via AddExpectedPowerShelf.
+// The Info field should contain a JSON-encoded carbideapi.AddExpectedPowerShelfRequest.
 func (m *Manager) InjectExpectation(
 	ctx context.Context,
 	target common.Target,
 	info operations.InjectExpectationTaskInfo,
 ) error {
-	var req carbideapi.AddExpectedSwitchRequest
+	var req carbideapi.AddExpectedPowerShelfRequest
 	if err := json.Unmarshal(info.Info, &req); err != nil {
-		return fmt.Errorf("failed to unmarshal AddExpectedSwitchRequest: %w", err)
+		return fmt.Errorf("failed to unmarshal AddExpectedPowerShelfRequest: %w", err)
 	}
 
 	if m.carbideClient == nil {
 		return fmt.Errorf("carbide client is not configured")
 	}
 
-	if err := m.carbideClient.AddExpectedSwitch(ctx, req); err != nil {
-		return fmt.Errorf("failed to add expected switch: %w", err)
+	if err := m.carbideClient.AddExpectedPowerShelf(ctx, req); err != nil {
+		return fmt.Errorf("failed to add expected power shelf: %w", err)
 	}
 
 	log.Info().
 		Str("bmc_mac", req.BMCMACAddress).
-		Str("switch_serial", req.SwitchSerialNumber).
-		Msg("Successfully registered expected switch with Carbide")
+		Str("shelf_serial", req.ShelfSerialNumber).
+		Msg("Successfully registered expected power shelf with Carbide")
 
 	return nil
 }
 
-func switchIDsProto(ids []string) *pb.SwitchIdList {
-	pbIDs := make([]*pb.SwitchId, len(ids))
-	for i, id := range ids {
-		pbIDs[i] = &pb.SwitchId{Id: id}
-	}
-	return &pb.SwitchIdList{Ids: pbIDs}
-}
-
-// PowerControl performs power operations on NVLink switches via Carbide's
-// ComponentPowerControl RPC.
 func (m *Manager) PowerControl(
 	ctx context.Context,
 	target common.Target,
 	info operations.PowerControlTaskInfo,
 ) error {
-	log.Debug().Msgf(
-		"NVLSwitch power control %s op %s via Carbide",
-		target.String(),
-		info.Operation.String(),
-	)
+	log.Debug().Msgf("PowerShelf power control %s op %s via Carbide",
+		target.String(), info.Operation.String())
 
 	if err := target.Validate(); err != nil {
 		return fmt.Errorf("target is invalid: %w", err)
@@ -140,12 +128,12 @@ func (m *Manager) PowerControl(
 	case operations.PowerOperationForceRestart:
 		action = pb.SystemPowerControl_SYSTEM_POWER_CONTROL_FORCE_RESTART
 	default:
-		return fmt.Errorf("unsupported power operation for NVLSwitch: %v", info.Operation)
+		return fmt.Errorf("unsupported power operation for PowerShelf: %v", info.Operation)
 	}
 
 	req := &pb.ComponentPowerControlRequest{
-		Target: &pb.ComponentPowerControlRequest_SwitchIds{
-			SwitchIds: switchIDsProto(target.ComponentIDs),
+		Target: &pb.ComponentPowerControlRequest_PowerShelfIds{
+			PowerShelfIds: powerShelfIDsProto(target.ComponentIDs),
 		},
 		Action: action,
 	}
@@ -161,7 +149,7 @@ func (m *Manager) PowerControl(
 		}
 	}
 
-	log.Info().Msgf("NVLSwitch power control %s on %s completed via Carbide",
+	log.Info().Msgf("PowerShelf power control %s on %s completed via Carbide",
 		info.Operation.String(), target.String())
 	return nil
 }
@@ -175,8 +163,8 @@ func (m *Manager) GetPowerStatus(
 	}
 
 	req := &pb.GetComponentInventoryRequest{
-		Target: &pb.GetComponentInventoryRequest_SwitchIds{
-			SwitchIds: switchIDsProto(target.ComponentIDs),
+		Target: &pb.GetComponentInventoryRequest_PowerShelfIds{
+			PowerShelfIds: powerShelfIDsProto(target.ComponentIDs),
 		},
 	}
 
@@ -200,34 +188,31 @@ func (m *Manager) GetPowerStatus(
 	return result, nil
 }
 
-// carbidePowerStateToOperationsPowerStatus converts carbide PowerState to operations PowerStatus.
-func carbidePowerStateToOperationsPowerStatus(state carbideapi.PowerState) operations.PowerStatus {
-	switch state {
-	case carbideapi.PowerStateOn:
-		return operations.PowerStatusOn
-	case carbideapi.PowerStateOff, carbideapi.PowerStateDisabled:
-		return operations.PowerStatusOff
-	default:
-		return operations.PowerStatusUnknown
-	}
+func (m *Manager) FirmwareControl(
+	ctx context.Context,
+	target common.Target,
+	info operations.FirmwareControlTaskInfo,
+) error {
+	return fmt.Errorf("FirmwareControl not yet implemented for PowerShelf via Carbide; use StartFirmwareUpdate")
 }
 
-// FirmwareControl schedules a firmware update via Carbide's SetFirmwareUpdateTimeWindow API.
-// This sets the time window during which Carbide will automatically perform the firmware update.
-// Returns immediately after the schedule request is accepted.
-func (m *Manager) FirmwareControl(ctx context.Context, target common.Target, info operations.FirmwareControlTaskInfo) error {
+func (m *Manager) StartFirmwareUpdate(
+	ctx context.Context,
+	target common.Target,
+	info operations.FirmwareControlTaskInfo,
+) error {
 	log.Debug().
 		Str("components", target.String()).
 		Str("target_version", info.TargetVersion).
-		Msg("Starting firmware update for NVLSwitch via Carbide")
+		Msg("Starting firmware update for PowerShelf via Carbide")
 
 	if err := target.Validate(); err != nil {
 		return fmt.Errorf("target is invalid: %w", err)
 	}
 
 	req := &pb.UpdateComponentFirmwareRequest{
-		Target: &pb.UpdateComponentFirmwareRequest_SwitchIds{
-			SwitchIds: switchIDsProto(target.ComponentIDs),
+		Target: &pb.UpdateComponentFirmwareRequest_PowerShelfIds{
+			PowerShelfIds: powerShelfIDsProto(target.ComponentIDs),
 		},
 		TargetVersion: info.TargetVersion,
 	}
@@ -246,26 +231,25 @@ func (m *Manager) FirmwareControl(ctx context.Context, target common.Target, inf
 	log.Info().
 		Str("components", target.String()).
 		Str("target_version", info.TargetVersion).
-		Msg("Firmware update started for NVLSwitch via Carbide")
+		Msg("Firmware update started for PowerShelf via Carbide")
 	return nil
 }
 
-// GetFirmwareStatus returns the current status of firmware updates for the target components.
-// Carbide does not have a dedicated firmware update status API; we read the current firmware version
-// to determine if the update completed.
-// TODO: Implement proper status checking once Carbide exposes a firmware update status API.
-func (m *Manager) GetFirmwareStatus(ctx context.Context, target common.Target) (map[string]operations.FirmwareUpdateStatus, error) { //nolint
+func (m *Manager) GetFirmwareUpdateStatus(
+	ctx context.Context,
+	target common.Target,
+) (map[string]operations.FirmwareUpdateStatus, error) {
 	log.Debug().
 		Str("components", target.String()).
-		Msg("GetFirmwareStatus called for NVLSwitch")
+		Msg("GetFirmwareUpdateStatus for PowerShelf via Carbide")
 
 	if err := target.Validate(); err != nil {
 		return nil, fmt.Errorf("target is invalid: %w", err)
 	}
 
 	req := &pb.GetComponentFirmwareStatusRequest{
-		Target: &pb.GetComponentFirmwareStatusRequest_SwitchIds{
-			SwitchIds: switchIDsProto(target.ComponentIDs),
+		Target: &pb.GetComponentFirmwareStatusRequest_PowerShelfIds{
+			PowerShelfIds: powerShelfIDsProto(target.ComponentIDs),
 		},
 	}
 
@@ -291,7 +275,7 @@ func mapFirmwareState(state pb.FirmwareUpdateState) operations.FirmwareUpdateSta
 	case pb.FirmwareUpdateState_FW_STATE_QUEUED:
 		return operations.FirmwareUpdateStateQueued
 	case pb.FirmwareUpdateState_FW_STATE_IN_PROGRESS:
-		return operations.FirmwareUpdateStateQueued
+		return operations.FirmwareUpdateStateQueued // closest available state
 	case pb.FirmwareUpdateState_FW_STATE_VERIFYING:
 		return operations.FirmwareUpdateStateVerifying
 	case pb.FirmwareUpdateState_FW_STATE_COMPLETED:
@@ -307,26 +291,12 @@ func (m *Manager) AllowBringUpAndPowerOn(
 	ctx context.Context,
 	target common.Target,
 ) error {
-	log.Info().
-		Str("components", target.String()).
-		Msg("NVLSwitch AllowBringUpAndPowerOn: placeholder")
-	return nil
+	return fmt.Errorf("AllowBringUpAndPowerOn not supported for PowerShelf")
 }
 
 func (m *Manager) GetBringUpState(
 	ctx context.Context,
 	target common.Target,
 ) (map[string]operations.MachineBringUpState, error) {
-	log.Info().
-		Str("components", target.String()).
-		Msg("NVLSwitch GetBringUpState: placeholder")
-
-	result := make(
-		map[string]operations.MachineBringUpState,
-		len(target.ComponentIDs),
-	)
-	for _, id := range target.ComponentIDs {
-		result[id] = operations.MachineBringUpStateMachineCreated
-	}
-	return result, nil
+	return nil, fmt.Errorf("GetBringUpState not supported for PowerShelf")
 }

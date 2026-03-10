@@ -402,6 +402,11 @@ const (
 	Forge_NmxmBrowse_FullMethodName                               = "/forge.Forge/NmxmBrowse"
 	Forge_ModifyDPFState_FullMethodName                           = "/forge.Forge/ModifyDPFState"
 	Forge_GetDPFState_FullMethodName                              = "/forge.Forge/GetDPFState"
+	Forge_ComponentPowerControl_FullMethodName                    = "/forge.Forge/ComponentPowerControl"
+	Forge_GetComponentInventory_FullMethodName                    = "/forge.Forge/GetComponentInventory"
+	Forge_UpdateComponentFirmware_FullMethodName                  = "/forge.Forge/UpdateComponentFirmware"
+	Forge_GetComponentFirmwareStatus_FullMethodName               = "/forge.Forge/GetComponentFirmwareStatus"
+	Forge_ListComponentFirmwareVersions_FullMethodName            = "/forge.Forge/ListComponentFirmwareVersions"
 )
 
 // ForgeClient is the client API for Forge service.
@@ -1033,6 +1038,12 @@ type ForgeClient interface {
 	NmxmBrowse(ctx context.Context, in *NmxmBrowseRequest, opts ...grpc.CallOption) (*NmxmBrowseResponse, error)
 	ModifyDPFState(ctx context.Context, in *ModifyDPFStateRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetDPFState(ctx context.Context, in *GetDPFStateRequest, opts ...grpc.CallOption) (*DPFStateResponse, error)
+	// --- Component management (unified switch + power shelf operations) ---
+	ComponentPowerControl(ctx context.Context, in *ComponentPowerControlRequest, opts ...grpc.CallOption) (*ComponentPowerControlResponse, error)
+	GetComponentInventory(ctx context.Context, in *GetComponentInventoryRequest, opts ...grpc.CallOption) (*GetComponentInventoryResponse, error)
+	UpdateComponentFirmware(ctx context.Context, in *UpdateComponentFirmwareRequest, opts ...grpc.CallOption) (*UpdateComponentFirmwareResponse, error)
+	GetComponentFirmwareStatus(ctx context.Context, in *GetComponentFirmwareStatusRequest, opts ...grpc.CallOption) (*GetComponentFirmwareStatusResponse, error)
+	ListComponentFirmwareVersions(ctx context.Context, in *ListComponentFirmwareVersionsRequest, opts ...grpc.CallOption) (*ListComponentFirmwareVersionsResponse, error)
 }
 
 type forgeClient struct {
@@ -4721,6 +4732,56 @@ func (c *forgeClient) GetDPFState(ctx context.Context, in *GetDPFStateRequest, o
 	return out, nil
 }
 
+func (c *forgeClient) ComponentPowerControl(ctx context.Context, in *ComponentPowerControlRequest, opts ...grpc.CallOption) (*ComponentPowerControlResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ComponentPowerControlResponse)
+	err := c.cc.Invoke(ctx, Forge_ComponentPowerControl_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *forgeClient) GetComponentInventory(ctx context.Context, in *GetComponentInventoryRequest, opts ...grpc.CallOption) (*GetComponentInventoryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetComponentInventoryResponse)
+	err := c.cc.Invoke(ctx, Forge_GetComponentInventory_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *forgeClient) UpdateComponentFirmware(ctx context.Context, in *UpdateComponentFirmwareRequest, opts ...grpc.CallOption) (*UpdateComponentFirmwareResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateComponentFirmwareResponse)
+	err := c.cc.Invoke(ctx, Forge_UpdateComponentFirmware_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *forgeClient) GetComponentFirmwareStatus(ctx context.Context, in *GetComponentFirmwareStatusRequest, opts ...grpc.CallOption) (*GetComponentFirmwareStatusResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetComponentFirmwareStatusResponse)
+	err := c.cc.Invoke(ctx, Forge_GetComponentFirmwareStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *forgeClient) ListComponentFirmwareVersions(ctx context.Context, in *ListComponentFirmwareVersionsRequest, opts ...grpc.CallOption) (*ListComponentFirmwareVersionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListComponentFirmwareVersionsResponse)
+	err := c.cc.Invoke(ctx, Forge_ListComponentFirmwareVersions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ForgeServer is the server API for Forge service.
 // All implementations should embed UnimplementedForgeServer
 // for forward compatibility.
@@ -5350,6 +5411,12 @@ type ForgeServer interface {
 	NmxmBrowse(context.Context, *NmxmBrowseRequest) (*NmxmBrowseResponse, error)
 	ModifyDPFState(context.Context, *ModifyDPFStateRequest) (*emptypb.Empty, error)
 	GetDPFState(context.Context, *GetDPFStateRequest) (*DPFStateResponse, error)
+	// --- Component management (unified switch + power shelf operations) ---
+	ComponentPowerControl(context.Context, *ComponentPowerControlRequest) (*ComponentPowerControlResponse, error)
+	GetComponentInventory(context.Context, *GetComponentInventoryRequest) (*GetComponentInventoryResponse, error)
+	UpdateComponentFirmware(context.Context, *UpdateComponentFirmwareRequest) (*UpdateComponentFirmwareResponse, error)
+	GetComponentFirmwareStatus(context.Context, *GetComponentFirmwareStatusRequest) (*GetComponentFirmwareStatusResponse, error)
+	ListComponentFirmwareVersions(context.Context, *ListComponentFirmwareVersionsRequest) (*ListComponentFirmwareVersionsResponse, error)
 }
 
 // UnimplementedForgeServer should be embedded to have
@@ -6459,6 +6526,21 @@ func (UnimplementedForgeServer) ModifyDPFState(context.Context, *ModifyDPFStateR
 }
 func (UnimplementedForgeServer) GetDPFState(context.Context, *GetDPFStateRequest) (*DPFStateResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetDPFState not implemented")
+}
+func (UnimplementedForgeServer) ComponentPowerControl(context.Context, *ComponentPowerControlRequest) (*ComponentPowerControlResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ComponentPowerControl not implemented")
+}
+func (UnimplementedForgeServer) GetComponentInventory(context.Context, *GetComponentInventoryRequest) (*GetComponentInventoryResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetComponentInventory not implemented")
+}
+func (UnimplementedForgeServer) UpdateComponentFirmware(context.Context, *UpdateComponentFirmwareRequest) (*UpdateComponentFirmwareResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateComponentFirmware not implemented")
+}
+func (UnimplementedForgeServer) GetComponentFirmwareStatus(context.Context, *GetComponentFirmwareStatusRequest) (*GetComponentFirmwareStatusResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetComponentFirmwareStatus not implemented")
+}
+func (UnimplementedForgeServer) ListComponentFirmwareVersions(context.Context, *ListComponentFirmwareVersionsRequest) (*ListComponentFirmwareVersionsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListComponentFirmwareVersions not implemented")
 }
 func (UnimplementedForgeServer) testEmbeddedByValue() {}
 
@@ -13075,6 +13157,96 @@ func _Forge_GetDPFState_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Forge_ComponentPowerControl_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ComponentPowerControlRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ForgeServer).ComponentPowerControl(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Forge_ComponentPowerControl_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ForgeServer).ComponentPowerControl(ctx, req.(*ComponentPowerControlRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Forge_GetComponentInventory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetComponentInventoryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ForgeServer).GetComponentInventory(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Forge_GetComponentInventory_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ForgeServer).GetComponentInventory(ctx, req.(*GetComponentInventoryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Forge_UpdateComponentFirmware_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateComponentFirmwareRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ForgeServer).UpdateComponentFirmware(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Forge_UpdateComponentFirmware_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ForgeServer).UpdateComponentFirmware(ctx, req.(*UpdateComponentFirmwareRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Forge_GetComponentFirmwareStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetComponentFirmwareStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ForgeServer).GetComponentFirmwareStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Forge_GetComponentFirmwareStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ForgeServer).GetComponentFirmwareStatus(ctx, req.(*GetComponentFirmwareStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Forge_ListComponentFirmwareVersions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListComponentFirmwareVersionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ForgeServer).ListComponentFirmwareVersions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Forge_ListComponentFirmwareVersions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ForgeServer).ListComponentFirmwareVersions(ctx, req.(*ListComponentFirmwareVersionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Forge_ServiceDesc is the grpc.ServiceDesc for Forge service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -14545,6 +14717,26 @@ var Forge_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetDPFState",
 			Handler:    _Forge_GetDPFState_Handler,
+		},
+		{
+			MethodName: "ComponentPowerControl",
+			Handler:    _Forge_ComponentPowerControl_Handler,
+		},
+		{
+			MethodName: "GetComponentInventory",
+			Handler:    _Forge_GetComponentInventory_Handler,
+		},
+		{
+			MethodName: "UpdateComponentFirmware",
+			Handler:    _Forge_UpdateComponentFirmware_Handler,
+		},
+		{
+			MethodName: "GetComponentFirmwareStatus",
+			Handler:    _Forge_GetComponentFirmwareStatus_Handler,
+		},
+		{
+			MethodName: "ListComponentFirmwareVersions",
+			Handler:    _Forge_ListComponentFirmwareVersions_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
