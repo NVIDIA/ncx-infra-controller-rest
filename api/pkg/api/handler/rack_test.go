@@ -1554,7 +1554,7 @@ func TestBringUpRackHandler_Handle(t *testing.T) {
 
 			path := fmt.Sprintf("/v2/org/%s/carbide/rack/%s/bringup", tt.reqOrg, tt.rackID)
 
-			req := httptest.NewRequest(http.MethodPatch, path, strings.NewReader(tt.body))
+			req := httptest.NewRequest(http.MethodPost, path, strings.NewReader(tt.body))
 			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 			rec := httptest.NewRecorder()
 
@@ -1676,7 +1676,7 @@ func TestBatchBringUpRackHandler_Handle(t *testing.T) {
 
 			path := fmt.Sprintf("/v2/org/%s/carbide/rack/bringup", tt.reqOrg)
 
-			req := httptest.NewRequest(http.MethodPatch, path, strings.NewReader(tt.body))
+			req := httptest.NewRequest(http.MethodPost, path, strings.NewReader(tt.body))
 			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 			rec := httptest.NewRecorder()
 
