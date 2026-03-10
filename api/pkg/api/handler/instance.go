@@ -2921,7 +2921,7 @@ func (uih UpdateInstanceHandler) Handle(c echo.Context) error {
 			desvID := fmt.Sprintf("%s:%s", existingDesd.DpuExtensionServiceID.String(), existingDesd.Version)
 			_, exists := updatedDesdMap[desvID]
 			if !exists && existingDesd.Status != cdbm.DpuExtensionServiceDeploymentStatusTerminating {
-				// TH deployment is not present in request sent by user, update status to Terminating if not already in that state
+				// The deployment is not present in request sent by user, update status to Terminating if not already in that state
 				_, err = desdDAO.Update(ctx, tx, cdbm.DpuExtensionServiceDeploymentUpdateInput{
 					DpuExtensionServiceDeploymentID: existingDesd.ID,
 					Status:                          cdb.GetStrPtr(cdbm.DpuExtensionServiceDeploymentStatusTerminating)})
@@ -3102,10 +3102,17 @@ func (uih UpdateInstanceHandler) Handle(c echo.Context) error {
 	// Populate DPU Extension Service Deployment details for Site Controller request
 	desdConfigs := []*cwssaws.InstanceDpuExtensionServiceConfig{}
 	for _, desd := range updateDesds {
-		desdConfigs = append(desdConfigs, &cwssaws.InstanceDpuExtensionServiceConfig{
+		// Skip deployments that are being deleted
+		if desd.Status == cdbm.DpuExtensionServiceDeploymentStatusTerminating {
+			continue
+		}
+
+		desdConfig := &cwssaws.InstanceDpuExtensionServiceConfig{
 			ServiceId: desd.DpuExtensionServiceID.String(),
 			Version:   desd.Version,
-		})
+		}
+
+		desdConfigs = append(desdConfigs, desdConfig)
 	}
 
 	// Populate NVLink Interface details for Site Controller request
@@ -3115,6 +3122,7 @@ func (uih UpdateInstanceHandler) Handle(c echo.Context) error {
 			// NOTE: Don't send any NVLink interfaces that are being deleted
 			continue
 		}
+
 		nvlInterfaceConfig := &cwssaws.InstanceNVLinkGpuConfig{
 			DeviceInstance:     uint32(newNvlIfc.DeviceInstance),
 			LogicalPartitionId: &cwssaws.NVLinkLogicalPartitionId{Value: newNvlIfc.NVLinkLogicalPartitionID.String()},
