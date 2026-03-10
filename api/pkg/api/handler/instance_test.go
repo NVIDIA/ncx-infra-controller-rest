@@ -814,6 +814,9 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 	nvllpDefault := testBuildNVLinkLogicalPartition(t, dbSession, "test-nvllp-default", cdb.GetStrPtr("Test NVLink Logical Partition"), tnOrg, st1, tn1, cdb.GetStrPtr(cdbm.NVLinkLogicalPartitionStatusReady), false)
 	assert.NotNil(t, nvllpDefault)
 
+	nvllpNotDefault := testBuildNVLinkLogicalPartition(t, dbSession, "test-nvllp-not-default", cdb.GetStrPtr("Test NVLink Logical Partition"), tnOrg, st1, tn1, cdb.GetStrPtr(cdbm.NVLinkLogicalPartitionStatusReady), false)
+	assert.NotNil(t, nvllpNotDefault)
+
 	vpc1 := testInstanceBuildVPC(t, dbSession, "test-vpc-1", ip, tn1, st1, cdb.GetUUIDPtr(uuid.New()), nil, cdb.GetStrPtr(cdbm.VpcEthernetVirtualizer), cdb.GetUUIDPtr(nvllpDefault.ID), cdbm.VpcStatusReady, tnu1)
 	assert.NotNil(t, vpc1)
 
@@ -1114,6 +1117,9 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 	nvllp1 := testBuildNVLinkLogicalPartition(t, dbSession, "test-nvllp-1", cdb.GetStrPtr("Test NVLink Logical Partition"), tnOrg, st1, tn1, cdb.GetStrPtr(cdbm.NVLinkLogicalPartitionStatusReady), false)
 	assert.NotNil(t, nvllp1)
 
+	nvllp2 := testBuildNVLinkLogicalPartition(t, dbSession, "test-nvllp-2", cdb.GetStrPtr("Test NVLink Logical Partition"), tnOrg, st1, tn1, cdb.GetStrPtr(cdbm.NVLinkLogicalPartitionStatusReady), false)
+	assert.NotNil(t, nvllp2)
+
 	e := echo.New()
 	cfg := common.GetTestConfig()
 	tc := &tmocks.Client{}
@@ -1188,16 +1194,16 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 		cfg       *config.Config
 	}
 	type args struct {
-		reqData                            *model.APIInstanceCreateRequest
-		reqOrg                             string
-		reqUser                            *cdbm.User
-		reqMachine                         *cdbm.Machine
-		reqDefaultNVLinkLogicalPartitionID *uuid.UUID
-		reqNVLinkMachineCapabilities       *cdbm.MachineCapability
-		respCode                           int
-		respMessage                        string
-		respUserDataContains               *string
-		respUserData                       *string
+		reqData                      *model.APIInstanceCreateRequest
+		reqOrg                       string
+		reqUser                      *cdbm.User
+		reqMachine                   *cdbm.Machine
+		reqNVLinkLogicalPartitionIDs []string
+		reqNVLinkMachineCapabilities *cdbm.MachineCapability
+		respCode                     int
+		respMessage                  string
+		respUserDataContains         *string
+		respUserData                 *string
 	}
 	tests := []struct {
 		name               string
@@ -1260,24 +1266,20 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 						},
 						{
 							DeviceInstance:           2,
-							NVLinkLogicalPartitionID: nvllpDefault.ID.String(),
-						},
-						{
-							DeviceInstance:           3,
-							NVLinkLogicalPartitionID: nvllpDefault.ID.String(),
+							NVLinkLogicalPartitionID: nvllpNotDefault.ID.String(),
 						},
 					},
 					Labels: map[string]string{
 						"GPUType": mcNvlType.Name,
 					},
 				},
-				reqMachine:                         nil, // We randomize machines.  Any instance type with multiple valid machines can't be tested for a known machine.
-				reqDefaultNVLinkLogicalPartitionID: &nvllpDefault.ID,
-				reqNVLinkMachineCapabilities:       mcNvlType,
-				reqOrg:                             tnOrg,
-				reqUser:                            tnu1,
-				respCode:                           http.StatusCreated,
-				respMessage:                        "",
+				reqMachine:                   nil, // We randomize machines.  Any instance type with multiple valid machines can't be tested for a known machine.
+				reqNVLinkLogicalPartitionIDs: []string{nvllpDefault.ID.String(), nvllpNotDefault.ID.String()},
+				reqNVLinkMachineCapabilities: mcNvlType,
+				reqOrg:                       tnOrg,
+				reqUser:                      tnu1,
+				respCode:                     http.StatusCreated,
+				respMessage:                  "",
 			},
 			wantErr:            false,
 			verifyChildSpanner: true,
@@ -1584,7 +1586,7 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 							DeviceInstance:           2,
 						},
 						{
-							NVLinkLogicalPartitionID: nvllp1.ID.String(),
+							NVLinkLogicalPartitionID: nvllp2.ID.String(),
 							DeviceInstance:           3,
 						},
 					},
@@ -3065,13 +3067,10 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 				assert.Equal(t, len(tt.args.reqData.NVLinkInterfaces), len(rst.NVLinkInterfaces))
 				for i, nvlifc := range rst.NVLinkInterfaces {
 					assert.Equal(t, tt.args.reqData.NVLinkInterfaces[i].DeviceInstance, nvlifc.DeviceInstance)
-				}
-			}
 
-			if tt.args.reqDefaultNVLinkLogicalPartitionID != nil {
-				assert.Equal(t, len(rst.NVLinkInterfaces), *tt.args.reqNVLinkMachineCapabilities.Count)
-				for i, nvlifc := range rst.NVLinkInterfaces {
-					assert.Equal(t, nvlifc.DeviceInstance, i)
+					if len(tt.args.reqNVLinkLogicalPartitionIDs) > 0 {
+						assert.Contains(t, tt.args.reqNVLinkLogicalPartitionIDs, nvlifc.NVLinkLogicalPartitionID)
+					}
 				}
 			}
 
@@ -3421,10 +3420,10 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 	instnvlifc2 := testInstanceBuildInstanceNVLinkInterface(t, dbSession, st3.ID, inst13.ID, nvllp1.ID, cdb.GetUUIDPtr(uuid.New()), cdb.GetStrPtr("NVIDIA GB200"), 1, cdbm.NVLinkInterfaceStatusReady)
 	assert.NotNil(t, instnvlifc2)
 
-	instnvlifc3 := testInstanceBuildInstanceNVLinkInterface(t, dbSession, st3.ID, inst13.ID, nvllp1.ID, cdb.GetUUIDPtr(uuid.New()), cdb.GetStrPtr("NVIDIA GB200"), 2, cdbm.NVLinkInterfaceStatusReady)
+	instnvlifc3 := testInstanceBuildInstanceNVLinkInterface(t, dbSession, st3.ID, inst13.ID, nvllp2.ID, cdb.GetUUIDPtr(uuid.New()), cdb.GetStrPtr("NVIDIA GB200"), 2, cdbm.NVLinkInterfaceStatusReady)
 	assert.NotNil(t, instnvlifc3)
 
-	instnvlifc4 := testInstanceBuildInstanceNVLinkInterface(t, dbSession, st3.ID, inst13.ID, nvllp1.ID, cdb.GetUUIDPtr(uuid.New()), cdb.GetStrPtr("NVIDIA GB200"), 3, cdbm.NVLinkInterfaceStatusReady)
+	instnvlifc4 := testInstanceBuildInstanceNVLinkInterface(t, dbSession, st3.ID, inst13.ID, nvllp2.ID, cdb.GetUUIDPtr(uuid.New()), cdb.GetStrPtr("NVIDIA GB200"), 3, cdbm.NVLinkInterfaceStatusReady)
 	assert.NotNil(t, instnvlifc4)
 
 	mc6 := testInstanceBuildMachine(t, dbSession, ip.ID, st2.ID, cdb.GetBoolPtr(false), nil)
@@ -4742,7 +4741,7 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 			verifyChildSpanner:          true,
 		},
 		{
-			name: "test Instance update API endpoint failure with update existing NVLink interfaces with same NVLink Logical Partition ID",
+			name: "test Instance update API endpoint failure with update existing NVLink interfaces with same NVLink Logical Partition ID and Device Instance",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        tc,
@@ -4760,14 +4759,6 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 						{
 							NVLinkLogicalPartitionID: nvllp1.ID.String(),
 							DeviceInstance:           1,
-						},
-						{
-							NVLinkLogicalPartitionID: nvllp1.ID.String(),
-							DeviceInstance:           2,
-						},
-						{
-							NVLinkLogicalPartitionID: nvllp1.ID.String(),
-							DeviceInstance:           3,
 						},
 					},
 				},
@@ -4775,14 +4766,14 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 				reqOrg:      tnOrg1,
 				reqUser:     tnu1,
 				respCode:    http.StatusBadRequest,
-				respMessage: cdb.GetStrPtr(fmt.Sprintf("NVLink Interfaces of this Instance are already connected to NVLink Logical Partition: %v", nvllp1.ID.String())),
+				respMessage: cdb.GetStrPtr(fmt.Sprintf("NVLink Interfaces of this Instance are already connected to NVLink Logical Partition: %v and Device Instance: %d", nvllp1.ID.String(), 0)),
 			},
 			wantErr:                     false,
 			verifySiteControllerRequest: true,
 			verifyChildSpanner:          true,
 		},
 		{
-			name: "test Instance update API endpoint success with NVLink interface update ",
+			name: "test Instance update API endpoint success with NVLink interface update with different NVLink Logical Partition IDs",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        tc,
@@ -4802,11 +4793,11 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 							DeviceInstance:           1,
 						},
 						{
-							NVLinkLogicalPartitionID: nvllp2.ID.String(),
+							NVLinkLogicalPartitionID: nvllp1.ID.String(),
 							DeviceInstance:           2,
 						},
 						{
-							NVLinkLogicalPartitionID: nvllp2.ID.String(),
+							NVLinkLogicalPartitionID: nvllp1.ID.String(),
 							DeviceInstance:           3,
 						},
 					},
