@@ -6875,6 +6875,7 @@ paths:
             enum:
               - Instance
               - InfiniBandPartition
+              - Site
           in: query
           name: includeRelation
           description: Related entity to expand

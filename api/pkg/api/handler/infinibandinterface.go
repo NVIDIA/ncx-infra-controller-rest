@@ -25,6 +25,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	temporalClient "go.temporal.io/sdk/client"
 
+	goset "github.com/deckarep/golang-set/v2"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 
@@ -32,7 +33,7 @@ import (
 
 	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
-	"github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
+	cdbp "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
 
 	"github.com/nvidia/bare-metal-manager-rest/api/internal/config"
 	common "github.com/nvidia/bare-metal-manager-rest/api/pkg/api/handler/util/common"
@@ -165,84 +166,105 @@ func (gaibih GetAllInfiniBandInterfaceHandler) Handle(c echo.Context) error {
 	}
 	tenant := tenants[0]
 
-	// Get site ID from query param
+	// Get site IDs from query param - parse first, then bulk fetch
 	var siteIDs []uuid.UUID
-	siteIDStr := qParams["siteId"]
-	tsDAO := cdbm.NewTenantSiteDAO(gaibih.dbSession)
-	for _, siteIDStr := range siteIDStr {
-		site, err := common.GetSiteFromIDString(ctx, nil, siteIDStr, gaibih.dbSession)
+	for _, siteIDStr := range qParams["siteId"] {
+		parsedID, err := uuid.Parse(siteIDStr)
 		if err != nil {
-			logger.Warn().Err(err).Msg("error getting site in request")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Site specified in query param, invalid ID or DB error", nil)
+			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Invalid Site ID %v in query", siteIDStr), nil)
 		}
-		siteIDs = append(siteIDs, site.ID)
+		siteIDs = append(siteIDs, parsedID)
+	}
 
-		// Check Site association with Tenant
-		_, err = tsDAO.GetByTenantIDAndSiteID(ctx, nil, tenant.ID, site.ID, nil)
+	if len(siteIDs) > 0 {
+		siteIDs = goset.NewSet(siteIDs...).ToSlice()
+
+		stDAO := cdbm.NewSiteDAO(gaibih.dbSession)
+		sites, _, err := stDAO.GetAll(ctx, nil, cdbm.SiteFilterInput{SiteIDs: siteIDs}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
 		if err != nil {
-			if err == cdb.ErrDoesNotExist {
-				return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant does not have access to this Site", nil)
-			}
+			logger.Error().Err(err).Msg("error retrieving Sites from DB")
+			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Sites", nil)
+		}
+		if len(sites) != len(siteIDs) {
+			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find one or more Sites specified in query", nil)
+		}
+
+		tsDAO := cdbm.NewTenantSiteDAO(gaibih.dbSession)
+		_, tsCount, err := tsDAO.GetAll(
+			ctx,
+			nil,
+			cdbm.TenantSiteFilterInput{
+				TenantIDs: []uuid.UUID{tenant.ID},
+				SiteIDs:   siteIDs,
+			},
+			cdbp.PageInput{},
+			nil,
+		)
+		if err != nil {
 			logger.Error().Err(err).Msg("error retrieving TenantSite from DB")
 			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to determine Tenant access to Site, DB error", nil)
 		}
+		if tsCount != len(siteIDs) {
+			return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant does not have access to one or more Sites specified in query", nil)
+		}
 	}
 
-	// Get Instance ID from query param
+	// Get Instance IDs from query param - parse first, then bulk fetch
 	var instanceIDs []uuid.UUID
-	instanceIDStr := qParams["instanceId"]
-	instanceDAO := cdbm.NewInstanceDAO(gaibih.dbSession)
-	for _, instanceIDStr := range instanceIDStr {
-		instanceID, err := uuid.Parse(instanceIDStr)
+	for _, instanceIDStr := range qParams["instanceId"] {
+		parsedID, err := uuid.Parse(instanceIDStr)
 		if err != nil {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Instance ID in URL", nil)
+			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Invalid Instance ID %v in query", instanceIDStr), nil)
 		}
-
-		// Get Instance
-		instance, err := instanceDAO.GetByID(ctx, nil, instanceID, nil)
-		if err != nil {
-			if err == cdb.ErrDoesNotExist {
-				return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find Instance with specified ID", nil)
-			}
-			logger.Error().Err(err).Msg("error retrieving Instance from DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Instance", nil)
-		}
-
-		// Check if Instance belongs to Tenant
-		if instance.TenantID != tenant.ID {
-			return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Instance does not belong to current Tenant", nil)
-		}
-
-		instanceIDs = append(instanceIDs, instanceID)
+		instanceIDs = append(instanceIDs, parsedID)
 	}
 
-	// Get InfiniBand Partition ID from URL param
-	var infiniBandPartitionIDs []uuid.UUID
-	infiniBandPartitionIDStr := qParams["infinibandPartitionId"]
+	if len(instanceIDs) > 0 {
+		instanceIDs = goset.NewSet(instanceIDs...).ToSlice()
 
-	ibpDAO := cdbm.NewInfiniBandPartitionDAO(gaibih.dbSession)
-	for _, infiniBandPartitionIDStr := range infiniBandPartitionIDStr {
-		infiniBandPartitionID, err := uuid.Parse(infiniBandPartitionIDStr)
+		instanceDAO := cdbm.NewInstanceDAO(gaibih.dbSession)
+		instances, _, err := instanceDAO.GetAll(ctx, nil, cdbm.InstanceFilterInput{InstanceIDs: instanceIDs}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
 		if err != nil {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid InfiniBand Partition ID in URL", nil)
+			logger.Error().Err(err).Msg("error retrieving Instances from DB")
+			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Instances", nil)
 		}
-
-		// Get InfiniBand Partition
-		ibp, err := ibpDAO.GetByID(ctx, nil, infiniBandPartitionID, nil)
-		if err != nil {
-			if err == cdb.ErrDoesNotExist {
-				return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find InfiniBand Partition with specified ID", nil)
+		if len(instances) != len(instanceIDs) {
+			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find one or more Instances specified in query", nil)
+		}
+		for _, instance := range instances {
+			if instance.TenantID != tenant.ID {
+				return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Instance does not belong to current Tenant", nil)
 			}
-			logger.Error().Err(err).Msg("error retrieving InfiniBand Partition from DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve InfiniBand Partition", nil)
 		}
+	}
 
-		// Check if InfiniBand Partition belongs to Tenant
-		if ibp.TenantID != tenant.ID {
-			return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "InfiniBand Partition does not belong to current Tenant", nil)
+	// Get InfiniBand Partition IDs from query param - parse first, then bulk fetch
+	var infiniBandPartitionIDs []uuid.UUID
+	for _, ibpIDStr := range qParams["infinibandPartitionId"] {
+		parsedID, err := uuid.Parse(ibpIDStr)
+		if err != nil {
+			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Invalid InfiniBand Partition ID %v in query", ibpIDStr), nil)
 		}
+		infiniBandPartitionIDs = append(infiniBandPartitionIDs, parsedID)
+	}
 
-		infiniBandPartitionIDs = append(infiniBandPartitionIDs, infiniBandPartitionID)
+	if len(infiniBandPartitionIDs) > 0 {
+		infiniBandPartitionIDs = goset.NewSet(infiniBandPartitionIDs...).ToSlice()
+
+		ibpDAO := cdbm.NewInfiniBandPartitionDAO(gaibih.dbSession)
+		ibPartitions, _, err := ibpDAO.GetAll(ctx, nil, cdbm.InfiniBandPartitionFilterInput{InfiniBandPartitionIDs: infiniBandPartitionIDs}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
+		if err != nil {
+			logger.Error().Err(err).Msg("error retrieving InfiniBand Partitions from DB")
+			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve InfiniBand Partitions", nil)
+		}
+		if len(ibPartitions) != len(infiniBandPartitionIDs) {
+			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find one or more InfiniBand Partitions specified in query", nil)
+		}
+		for _, ibp := range ibPartitions {
+			if ibp.TenantID != tenant.ID {
+				return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "InfiniBand Partition does not belong to current Tenant", nil)
+			}
+		}
 	}
 
 	// Get status from query param
@@ -268,7 +290,7 @@ func (gaibih GetAllInfiniBandInterfaceHandler) Handle(c echo.Context) error {
 		Statuses:               statuses,
 	}
 
-	pageInput := paginator.PageInput{
+	pageInput := cdbp.PageInput{
 		Limit:   pageRequest.Limit,
 		Offset:  pageRequest.Offset,
 		OrderBy: pageRequest.OrderBy,
