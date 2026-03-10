@@ -55,7 +55,7 @@ func NewClient(grpcTimeout time.Duration) (Client, error) {
 
 	conn, err := grpc.NewClient(nsmURL, grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)))
 	if err != nil {
-		return nil, fmt.Errorf("Unable to connect to NV-Switch Manager: %v", err)
+		return nil, fmt.Errorf("Unable to connect to NV-Switch Manager: %w", err)
 	}
 
 	return &grpcClient{

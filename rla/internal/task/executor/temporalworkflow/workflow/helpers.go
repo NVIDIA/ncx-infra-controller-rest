@@ -84,7 +84,7 @@ func updateFinishedTaskStatus(
 	}
 
 	if lerr := workflow.ExecuteActivity(ctx, "UpdateTaskStatus", arg).Get(ctx, nil); lerr != nil { //nolint
-		return errors.Join(err, fmt.Errorf("failed to update task status: %v", lerr))
+		return errors.Join(err, fmt.Errorf("failed to update task status: %w", lerr))
 	}
 
 	return err

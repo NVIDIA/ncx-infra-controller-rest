@@ -201,7 +201,7 @@ func validAndGetComponentManager(
 	target common.Target,
 ) (componentmanager.ComponentManager, error) {
 	if err := target.Validate(); err != nil {
-		return nil, fmt.Errorf("target is invalid: %v", err)
+		return nil, fmt.Errorf("target is invalid: %w", err)
 	}
 
 	return GetComponentManager(target.Type), nil
