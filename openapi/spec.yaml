@@ -8787,6 +8787,111 @@ paths:
           $ref: '#/components/responses/ForbiddenError'
       tags:
         - Rack
+  '/v2/org/{org}/carbide/rack/bringup':
+    parameters:
+      - schema:
+          type: string
+        name: org
+        in: path
+        required: true
+        description: Name of the Org
+    post:
+      summary: Bring up Racks
+      operationId: bringup-racks
+      description: |-
+        Bring up Racks with optional name filter. If no filter is specified, targets all racks in the Site.
+
+        Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` authorization role.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchBringUpRackRequest'
+            examples:
+              all-racks:
+                value:
+                  siteId: 550e8400-e29b-41d4-a716-446655440000
+              filtered:
+                value:
+                  siteId: 550e8400-e29b-41d4-a716-446655440000
+                  filter:
+                    names:
+                      - Rack-001
+                  description: Bring up Rack-001
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BringUpRackResponse'
+              examples:
+                example-1:
+                  value:
+                    taskIds:
+                      - 550e8400-e29b-41d4-a716-446655440000
+                      - 660e8400-e29b-41d4-a716-446655440001
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+      tags:
+        - Rack
+  '/v2/org/{org}/carbide/rack/{id}/bringup':
+    parameters:
+      - schema:
+          type: string
+        name: org
+        in: path
+        required: true
+        description: Name of the Org
+      - schema:
+          type: string
+          format: uuid
+        name: id
+        in: path
+        required: true
+        description: ID of the Rack
+    post:
+      summary: Bring up a Rack
+      operationId: bringup-rack
+      description: |-
+        Bring up a Rack identified by Rack UUID.
+
+        Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` authorization role.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BringUpRackRequest'
+            examples:
+              basic:
+                value:
+                  siteId: 550e8400-e29b-41d4-a716-446655440000
+              with-description:
+                value:
+                  siteId: 550e8400-e29b-41d4-a716-446655440000
+                  description: Initial bring up for production rack
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BringUpRackResponse'
+              examples:
+                example-1:
+                  value:
+                    taskIds:
+                      - 550e8400-e29b-41d4-a716-446655440000
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+      tags:
+        - Rack
   '/v2/org/{org}/carbide/tray':
     parameters:
       - schema:
@@ -15065,6 +15170,54 @@ components:
         version:
           type: string
           description: Target firmware version.
+    BringUpRackRequest:
+      title: BringUpRackRequest
+      type: object
+      description: Request body for single-rack bring up operations
+      required:
+        - siteId
+      properties:
+        siteId:
+          type: string
+          format: uuid
+          description: ID of the Site
+        description:
+          type: string
+          description: Optional description for the bring up operation
+      examples:
+        - siteId: 550e8400-e29b-41d4-a716-446655440000
+        - siteId: 550e8400-e29b-41d4-a716-446655440000
+          description: Initial bring up for production rack
+    BatchBringUpRackRequest:
+      title: BatchBringUpRackRequest
+      type: object
+      description: Request body for batch rack bring up operations
+      required:
+        - siteId
+      properties:
+        siteId:
+          type: string
+          format: uuid
+          description: ID of the Site
+        filter:
+          $ref: '#/components/schemas/RackFilter'
+        description:
+          type: string
+          description: Optional description for the bring up operation
+    BringUpRackResponse:
+      title: BringUpRackResponse
+      type: object
+      description: Response for bring up operations containing task IDs for tracking
+      properties:
+        taskIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: List of task IDs created for the bring up operation (one per rack)
+      examples:
+        - taskIds:
+            - 550e8400-e29b-41d4-a716-446655440000
     BatchTrayFirmwareUpdateRequest:
       title: BatchTrayFirmwareUpdateRequest
       type: object

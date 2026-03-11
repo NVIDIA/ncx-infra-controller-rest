@@ -317,7 +317,11 @@ func readLineWithSuggestions(s *Session, cmdNames []string) (string, error) {
 				fmt.Print("\r" + prompt + line + "\r\n")
 				restore()
 				chosen := selectFromHistory()
-				restore, _ = RawMode()
+				var rawErr error
+				restore, rawErr = RawMode()
+				if rawErr != nil {
+					fmt.Fprintf(os.Stderr, "Warning: failed to enter raw mode: %v\n", rawErr)
+				}
 				if chosen != "" {
 					line = chosen
 				}

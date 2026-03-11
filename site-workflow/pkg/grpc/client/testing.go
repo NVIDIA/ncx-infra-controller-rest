@@ -1478,6 +1478,13 @@ func (c *MockRLAClient) PowerResetRack(ctx context.Context, in *rlav1.PowerReset
 	return out, nil
 }
 
+func (c *MockRLAClient) BringUpRack(ctx context.Context, in *rlav1.BringUpRackRequest, opts ...grpc.CallOption) (*rlav1.SubmitTaskResponse, error) {
+	out := &rlav1.SubmitTaskResponse{
+		TaskIds: []*rlav1.UUID{{Id: uuid.NewString()}},
+	}
+	return out, nil
+}
+
 func (c *MockRLAClient) ListTasks(ctx context.Context, in *rlav1.ListTasksRequest, opts ...grpc.CallOption) (*rlav1.ListTasksResponse, error) {
 	out := &rlav1.ListTasksResponse{
 		Tasks: []*rlav1.Task{},

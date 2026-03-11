@@ -639,6 +639,27 @@ func (r *RlaServerImpl) PowerResetRack(ctx context.Context, req *rlav1.PowerRese
 	}, nil
 }
 
+// BringUpRack implements interface RLAServer
+func (r *RlaServerImpl) BringUpRack(ctx context.Context, req *rlav1.BringUpRackRequest) (*rlav1.SubmitTaskResponse, error) {
+	if req == nil || req.TargetSpec == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
+	}
+
+	taskID := uuid.NewString()
+	task := &rlav1.Task{
+		Id:           &rlav1.UUID{Id: taskID},
+		Operation:    "BringUpRack",
+		Status:       rlav1.TaskStatus_TASK_STATUS_PENDING,
+		ExecutorType: rlav1.TaskExecutorType_TASK_EXECUTOR_TYPE_TEMPORAL,
+		Message:      "Bring up task created",
+	}
+	r.tasks[taskID] = task
+
+	return &rlav1.SubmitTaskResponse{
+		TaskIds: []*rlav1.UUID{{Id: taskID}},
+	}, nil
+}
+
 // ListTasks implements interface RLAServer
 func (r *RlaServerImpl) ListTasks(ctx context.Context, req *rlav1.ListTasksRequest) (*rlav1.ListTasksResponse, error) {
 	if req == nil {
