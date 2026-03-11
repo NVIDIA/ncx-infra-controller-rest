@@ -198,7 +198,7 @@ func NewGetAuditEntryHandler(dbSession *cdb.Session) GetAuditEntryHandler {
 // @Success 200 {object} model.APIAuditEntry
 // @Router /v2/org/{org}/carbide/audit/{id} [get]
 func (gaeh GetAuditEntryHandler) Handle(c echo.Context) error {
-	orgName, dbUser, ctx, logger, handlerSpan := common.SetupHandler("AuditEntry", "GetAll", c, gaeh.tracerSpan)
+	orgName, dbUser, ctx, logger, handlerSpan := common.SetupHandler("AuditEntry", "Get", c, gaeh.tracerSpan)
 	if handlerSpan != nil {
 		defer handlerSpan.End()
 	}
