@@ -80,8 +80,18 @@ func NewGetAllInstanceInfiniBandInterfaceHandler(dbSession *cdb.Session, tc temp
 // @Param orderBy query string false "Order by field"
 // @Success 200 {object} model.APIInterface
 // @Router /v2/org/{org}/carbide/instance/{instance_id}/interface [get]
-func (gaibih GetAllInstanceInfiniBandInterfaceHandler) Handle(c echo.Context) error {
-	return cerr.NewAPIErrorResponse(c, http.StatusNotImplemented, "Not implemented", nil)
+func (gaiibih GetAllInstanceInfiniBandInterfaceHandler) Handle(c echo.Context) error {
+
+	// Get query params
+	q := c.QueryParams()
+
+	instanceID := c.Param("instanceId")
+	q.Set("instanceId", instanceID)
+
+	c.Request().URL.RawQuery = q.Encode()
+
+	delegate := NewGetAllInfiniBandInterfaceHandler(gaiibih.dbSession, gaiibih.tc, gaiibih.cfg)
+	return delegate.Handle(c)
 }
 
 // ~~~~~ GetAll InfiniBandInterface Handler ~~~~~ //
@@ -305,7 +315,7 @@ func (gaibih GetAllInfiniBandInterfaceHandler) Handle(c echo.Context) error {
 		for _, instanceID := range instanceIDs {
 			instance, ok := instanceIDMap[instanceID]
 			if !ok {
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Instance: %s specified in query is not found in DB", instanceID.String()), nil)
+				return cerr.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf("Could not find Instance with ID: %s specified in query", instanceID.String()), nil)
 			}
 
 			if instance.TenantID != tenant.ID {
@@ -346,7 +356,7 @@ func (gaibih GetAllInfiniBandInterfaceHandler) Handle(c echo.Context) error {
 		for _, ibPartitionID := range infiniBandPartitionIDs {
 			ibPartition, ok := ibPartitionIDMap[ibPartitionID]
 			if !ok {
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("InfiniBand Partition: %s specified in query is not found in DB", ibPartitionID.String()), nil)
+				return cerr.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf("Could not find InfiniBand Partition with ID: %s specified in query", ibPartitionID.String()), nil)
 			}
 
 			if ibPartition.TenantID != tenant.ID {

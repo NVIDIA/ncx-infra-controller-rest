@@ -79,7 +79,16 @@ func NewGetAllInstanceNVLinkInterfaceHandler(dbSession *cdb.Session, tc temporal
 // @Success 200 {object} model.APIInterface
 // @Router /v2/org/{org}/carbide/instance/{instance_id}/interface [get]
 func (ganvliih GetAllInstanceNVLinkInterfaceHandler) Handle(c echo.Context) error {
-	return cerr.NewAPIErrorResponse(c, http.StatusNotImplemented, "Not implemented", nil)
+	// Get query params
+	q := c.QueryParams()
+
+	instanceID := c.Param("instanceId")
+	q.Set("instanceId", instanceID)
+
+	c.Request().URL.RawQuery = q.Encode()
+
+	delegate := NewGetAllNVLinkInterfaceHandler(ganvliih.dbSession, ganvliih.tc, ganvliih.cfg)
+	return delegate.Handle(c)
 }
 
 // ~~~~~ GetAll NVLinkInterface Handler ~~~~~ //
