@@ -39,8 +39,7 @@ import (
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model"
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/pagination"
 	auth "github.com/nvidia/bare-metal-manager-rest/auth/pkg/authorization"
-	cerr "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	sutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
+	cutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 )
 
 // ~~~~~ GetAll NVLinkInterface Handler ~~~~~ //
@@ -50,7 +49,7 @@ type GetAllNVLinkInterfaceHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetAllNVLinkInterfaceHandler initializes and returns a new handler for retrieving all NVLinkInterfaces
@@ -59,7 +58,7 @@ func NewGetAllNVLinkInterfaceHandler(dbSession *cdb.Session, tc temporalClient.C
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -107,7 +106,7 @@ func (gaish GetAllNVLinkInterfaceHandler) Handle(c echo.Context) error {
 
 	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gaish.tracerSpan, handlerSpan)
 	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -118,14 +117,14 @@ func (gaish GetAllNVLinkInterfaceHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Tenant Admins are allowed to retrieve Instances
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	// Validate pagination request
@@ -133,14 +132,14 @@ func (gaish GetAllNVLinkInterfaceHandler) Handle(c echo.Context) error {
 	err = c.Bind(&pageRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding pagination request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request pagination data", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request pagination data", nil)
 	}
 
 	// Validate pagination request attributes
 	err = pageRequest.Validate(cdbm.NVLinkInterfaceOrderByFields)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error validating pagination request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest,
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest,
 			"Failed to validate pagination request data", err)
 	}
 
@@ -149,7 +148,7 @@ func (gaish GetAllNVLinkInterfaceHandler) Handle(c echo.Context) error {
 	qIncludeRelations, errMsg := common.GetAndValidateQueryRelations(qParams, cdbm.NVLinkInterfaceRelatedEntities)
 	if errMsg != "" {
 		logger.Warn().Msg(errMsg)
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
 	}
 
 	// Get Tenant for this org
@@ -158,11 +157,11 @@ func (gaish GetAllNVLinkInterfaceHandler) Handle(c echo.Context) error {
 	tenants, err := tnDAO.GetAllByOrg(ctx, nil, org, nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Tenant for this org")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant", nil)
 	}
 
 	if len(tenants) == 0 {
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Org does not have a Tenant associated", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Org does not have a Tenant associated", nil)
 	}
 	tenant := tenants[0]
 
@@ -174,7 +173,7 @@ func (gaish GetAllNVLinkInterfaceHandler) Handle(c echo.Context) error {
 		site, err := common.GetSiteFromIDString(ctx, nil, siteIDStr, gaish.dbSession)
 		if err != nil {
 			logger.Warn().Err(err).Msg("error getting site in request")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Site specified in query param, invalid ID or DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Site specified in query param, invalid ID or DB error", nil)
 		}
 		siteIDs = append(siteIDs, site.ID)
 
@@ -182,10 +181,10 @@ func (gaish GetAllNVLinkInterfaceHandler) Handle(c echo.Context) error {
 		_, err = tsDAO.GetByTenantIDAndSiteID(ctx, nil, tenant.ID, site.ID, nil)
 		if err != nil {
 			if err == cdb.ErrDoesNotExist {
-				return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant does not have access to this Site", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant does not have access to this Site", nil)
 			}
 			logger.Error().Err(err).Msg("error retrieving TenantSite from DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to determine Tenant access to Site, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to determine Tenant access to Site, DB error", nil)
 		}
 	}
 
@@ -196,22 +195,22 @@ func (gaish GetAllNVLinkInterfaceHandler) Handle(c echo.Context) error {
 	for _, instanceIDStr := range instanceIDStr {
 		instanceID, err := uuid.Parse(instanceIDStr)
 		if err != nil {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Instance ID in URL", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Instance ID in URL", nil)
 		}
 
 		// Get Instance
 		instance, err := instanceDAO.GetByID(ctx, nil, instanceID, nil)
 		if err != nil {
 			if err == cdb.ErrDoesNotExist {
-				return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find Instance with specified ID", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find Instance with specified ID", nil)
 			}
 			logger.Error().Err(err).Msg("error retrieving Instance from DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Instance", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Instance", nil)
 		}
 
 		// Check if Instance belongs to Tenant
 		if instance.TenantID != tenant.ID {
-			return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Instance does not belong to current Tenant", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Instance does not belong to current Tenant", nil)
 		}
 
 		instanceIDs = append(instanceIDs, instanceID)
@@ -225,22 +224,22 @@ func (gaish GetAllNVLinkInterfaceHandler) Handle(c echo.Context) error {
 	for _, nvlinkLogicalPartitionIDStr := range nvlinkLogicalPartitionIDStr {
 		nvlinkLogicalPartitionID, err := uuid.Parse(nvlinkLogicalPartitionIDStr)
 		if err != nil {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid NVLink Logical Partition ID in URL", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid NVLink Logical Partition ID in URL", nil)
 		}
 
 		// Get NVLink Logical Partition
 		nvllp, err := nvllpDAO.GetByID(ctx, nil, nvlinkLogicalPartitionID, nil)
 		if err != nil {
 			if err == cdb.ErrDoesNotExist {
-				return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find NVLink Logical Partition with specified ID", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find NVLink Logical Partition with specified ID", nil)
 			}
 			logger.Error().Err(err).Msg("error retrieving NVLink Logical Partition from DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve NVLink Logical Partition", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve NVLink Logical Partition", nil)
 		}
 
 		// Check if NVLink Logical Partition belongs to Tenant
 		if nvllp.TenantID != tenant.ID {
-			return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "NVLink Logical Partition does not belong to current Tenant", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "NVLink Logical Partition does not belong to current Tenant", nil)
 		}
 
 		nvlinkLogicalPartitionIDs = append(nvlinkLogicalPartitionIDs, nvlinkLogicalPartitionID)
@@ -252,7 +251,7 @@ func (gaish GetAllNVLinkInterfaceHandler) Handle(c echo.Context) error {
 	for _, nvlinkDomainIDStr := range nvlinkDomainIDStr {
 		nvlinkDomainID, err := uuid.Parse(nvlinkDomainIDStr)
 		if err != nil {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid NVLink Domain ID in query param", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid NVLink Domain ID in query param", nil)
 		}
 		nvlinkDomainIDs = append(nvlinkDomainIDs, nvlinkDomainID)
 	}
@@ -265,7 +264,7 @@ func (gaish GetAllNVLinkInterfaceHandler) Handle(c echo.Context) error {
 		_, ok := cdbm.NVLinkInterfaceStatusMap[statusQuery]
 		if !ok {
 			logger.Warn().Msg(fmt.Sprintf("invalid value in status query: %v", statusQuery))
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Status value in query", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Status value in query", nil)
 		}
 		statuses = append(statuses, statusQuery)
 	}
@@ -290,7 +289,7 @@ func (gaish GetAllNVLinkInterfaceHandler) Handle(c echo.Context) error {
 	dbNVLinkInterfaces, total, err := nvlIfcDAO.GetAll(ctx, nil, filterInput, pageInput, qIncludeRelations)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving NVLink Interface Details from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve NVLink Interface ", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve NVLink Interface ", nil)
 	}
 
 	// Create response
@@ -305,7 +304,7 @@ func (gaish GetAllNVLinkInterfaceHandler) Handle(c echo.Context) error {
 	pageHeader, err := json.Marshal(pageReponse)
 	if err != nil {
 		logger.Error().Err(err).Msg("error marshaling pagination response")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to generate pagination response header", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to generate pagination response header", nil)
 	}
 	c.Response().Header().Set(pagination.ResponseHeaderName, string(pageHeader))
 

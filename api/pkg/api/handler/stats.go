@@ -29,8 +29,7 @@ import (
 	"github.com/nvidia/bare-metal-manager-rest/api/internal/config"
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/handler/util/common"
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model"
-	cerr "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	sutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
+	cutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
 	cdbp "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
@@ -42,7 +41,7 @@ import (
 type GetMachineGPUStatsHandler struct {
 	dbSession  *cdb.Session
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetMachineGPUStatsHandler initializes and returns a new handler for machine GPU stats
@@ -50,7 +49,7 @@ func NewGetMachineGPUStatsHandler(dbSession *cdb.Session, cfg *config.Config) Ge
 	return GetMachineGPUStatsHandler{
 		dbSession:  dbSession,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -73,21 +72,21 @@ func (gmgsh GetMachineGPUStatsHandler) Handle(c echo.Context) error {
 
 	infrastructureProvider, apiError := common.IsProvider(ctx, logger, gmgsh.dbSession, org, dbUser, false)
 	if apiError != nil {
-		return cerr.NewAPIErrorResponse(c, apiError.Code, apiError.Message, apiError.Data)
+		return cutil.NewAPIErrorResponse(c, apiError.Code, apiError.Message, apiError.Data)
 	}
 
 	siteIDStr := c.QueryParam("siteId")
 	if siteIDStr == "" {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "siteId query parameter is required", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "siteId query parameter is required", nil)
 	}
 	site, err := common.GetSiteFromIDString(ctx, nil, siteIDStr, gmgsh.dbSession)
 	if err != nil {
 		logger.Error().Err(err).Str("siteId", siteIDStr).Msg("error parsing or retrieving site")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Site ID specified in query param", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Site ID specified in query param", nil)
 	}
 
 	if site.InfrastructureProviderID != infrastructureProvider.ID {
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have access to the specified site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have access to the specified site", nil)
 	}
 
 	siteID := &site.ID
@@ -100,7 +99,7 @@ func (gmgsh GetMachineGPUStatsHandler) Handle(c echo.Context) error {
 	}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving machines for site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve machines", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve machines", nil)
 	}
 
 	if len(machines) == 0 {
@@ -116,7 +115,7 @@ func (gmgsh GetMachineGPUStatsHandler) Handle(c echo.Context) error {
 		nil, nil, nil, nil, nil, nil, nil, nil, nil, cdb.GetIntPtr(cdbp.TotalLimit), nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving GPU capabilities")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve GPU capabilities", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve GPU capabilities", nil)
 	}
 
 	result := model.NewAPIMachineGPUStatsList(capabilities)
@@ -131,7 +130,7 @@ func (gmgsh GetMachineGPUStatsHandler) Handle(c echo.Context) error {
 type GetTenantInstanceTypeStatsHandler struct {
 	dbSession  *cdb.Session
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetTenantInstanceTypeStatsHandler initializes and returns a new handler for tenant instance type stats
@@ -139,7 +138,7 @@ func NewGetTenantInstanceTypeStatsHandler(dbSession *cdb.Session, cfg *config.Co
 	return GetTenantInstanceTypeStatsHandler{
 		dbSession:  dbSession,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -162,21 +161,21 @@ func (gtitsh GetTenantInstanceTypeStatsHandler) Handle(c echo.Context) error {
 
 	infrastructureProvider, apiError := common.IsProvider(ctx, logger, gtitsh.dbSession, org, dbUser, false)
 	if apiError != nil {
-		return cerr.NewAPIErrorResponse(c, apiError.Code, apiError.Message, apiError.Data)
+		return cutil.NewAPIErrorResponse(c, apiError.Code, apiError.Message, apiError.Data)
 	}
 
 	siteIDStr := c.QueryParam("siteId")
 	if siteIDStr == "" {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "siteId query parameter is required", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "siteId query parameter is required", nil)
 	}
 	site, err := common.GetSiteFromIDString(ctx, nil, siteIDStr, gtitsh.dbSession)
 	if err != nil {
 		logger.Error().Err(err).Str("siteId", siteIDStr).Msg("error parsing or retrieving site")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Site ID specified in query param", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Site ID specified in query param", nil)
 	}
 
 	if site.InfrastructureProviderID != infrastructureProvider.ID {
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have access to the specified site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have access to the specified site", nil)
 	}
 
 	siteID := &site.ID
@@ -188,7 +187,7 @@ func (gtitsh GetTenantInstanceTypeStatsHandler) Handle(c echo.Context) error {
 		nil, nil, cdb.GetIntPtr(cdbp.TotalLimit), nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving instance types")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve instance types", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve instance types", nil)
 	}
 
 	instanceTypeIDs := lo.Map(instanceTypes, func(it cdbm.InstanceType, _ int) uuid.UUID { return it.ID })
@@ -200,7 +199,7 @@ func (gtitsh GetTenantInstanceTypeStatsHandler) Handle(c echo.Context) error {
 		cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving allocations")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve allocations", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve allocations", nil)
 	}
 
 	allocationIDs := lo.Map(allocations, func(a cdbm.Allocation, _ int) uuid.UUID { return a.ID })
@@ -214,7 +213,7 @@ func (gtitsh GetTenantInstanceTypeStatsHandler) Handle(c echo.Context) error {
 			nil, nil, []string{"Allocation.Tenant"}, nil, cdb.GetIntPtr(cdbp.TotalLimit), nil)
 		if err != nil {
 			logger.Error().Err(err).Msg("error retrieving allocation constraints")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve allocation constraints", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve allocation constraints", nil)
 		}
 	}
 
@@ -224,7 +223,7 @@ func (gtitsh GetTenantInstanceTypeStatsHandler) Handle(c echo.Context) error {
 		cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving instances")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve instances", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve instances", nil)
 	}
 
 	// 5. Fetch all machines with instance types for the site (exclude metadata)
@@ -236,7 +235,7 @@ func (gtitsh GetTenantInstanceTypeStatsHandler) Handle(c echo.Context) error {
 	}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving machines")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve machines", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve machines", nil)
 	}
 
 	machineByID := lo.KeyBy(machines, func(m cdbm.Machine) string { return m.ID })
@@ -364,7 +363,7 @@ func (gtitsh GetTenantInstanceTypeStatsHandler) Handle(c echo.Context) error {
 type GetMachineInstanceTypeSummaryHandler struct {
 	dbSession  *cdb.Session
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetMachineInstanceTypeSummaryHandler initializes and returns a new handler for machine instance type summary
@@ -372,7 +371,7 @@ func NewGetMachineInstanceTypeSummaryHandler(dbSession *cdb.Session, cfg *config
 	return GetMachineInstanceTypeSummaryHandler{
 		dbSession:  dbSession,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -395,21 +394,21 @@ func (gmitsh GetMachineInstanceTypeSummaryHandler) Handle(c echo.Context) error 
 
 	infrastructureProvider, apiError := common.IsProvider(ctx, logger, gmitsh.dbSession, org, dbUser, false)
 	if apiError != nil {
-		return cerr.NewAPIErrorResponse(c, apiError.Code, apiError.Message, apiError.Data)
+		return cutil.NewAPIErrorResponse(c, apiError.Code, apiError.Message, apiError.Data)
 	}
 
 	siteIDStr := c.QueryParam("siteId")
 	if siteIDStr == "" {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "siteId query parameter is required", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "siteId query parameter is required", nil)
 	}
 	site, err := common.GetSiteFromIDString(ctx, nil, siteIDStr, gmitsh.dbSession)
 	if err != nil {
 		logger.Error().Err(err).Str("siteId", siteIDStr).Msg("error parsing or retrieving site")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Site ID specified in query param", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Site ID specified in query param", nil)
 	}
 
 	if site.InfrastructureProviderID != infrastructureProvider.ID {
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have access to the specified site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have access to the specified site", nil)
 	}
 
 	siteID := &site.ID
@@ -422,7 +421,7 @@ func (gmitsh GetMachineInstanceTypeSummaryHandler) Handle(c echo.Context) error 
 	}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving machines for site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve machines", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve machines", nil)
 	}
 
 	// Partition into assigned vs unassigned, count by status
@@ -450,7 +449,7 @@ func (gmitsh GetMachineInstanceTypeSummaryHandler) Handle(c echo.Context) error 
 type GetMachineInstanceTypeStatsHandler struct {
 	dbSession  *cdb.Session
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetMachineInstanceTypeStatsHandler initializes and returns a new handler for machine instance type stats
@@ -458,7 +457,7 @@ func NewGetMachineInstanceTypeStatsHandler(dbSession *cdb.Session, cfg *config.C
 	return GetMachineInstanceTypeStatsHandler{
 		dbSession:  dbSession,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -481,21 +480,21 @@ func (gmitsh GetMachineInstanceTypeStatsHandler) Handle(c echo.Context) error {
 
 	infrastructureProvider, apiError := common.IsProvider(ctx, logger, gmitsh.dbSession, org, dbUser, false)
 	if apiError != nil {
-		return cerr.NewAPIErrorResponse(c, apiError.Code, apiError.Message, apiError.Data)
+		return cutil.NewAPIErrorResponse(c, apiError.Code, apiError.Message, apiError.Data)
 	}
 
 	siteIDStr := c.QueryParam("siteId")
 	if siteIDStr == "" {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "siteId query parameter is required", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "siteId query parameter is required", nil)
 	}
 	site, err := common.GetSiteFromIDString(ctx, nil, siteIDStr, gmitsh.dbSession)
 	if err != nil {
 		logger.Error().Err(err).Str("siteId", siteIDStr).Msg("error parsing or retrieving site")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Site ID specified in query param", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Site ID specified in query param", nil)
 	}
 
 	if site.InfrastructureProviderID != infrastructureProvider.ID {
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have access to the specified site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have access to the specified site", nil)
 	}
 
 	siteID := &site.ID
@@ -507,7 +506,7 @@ func (gmitsh GetMachineInstanceTypeStatsHandler) Handle(c echo.Context) error {
 		nil, nil, cdb.GetIntPtr(cdbp.TotalLimit), nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving instance types")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve instance types", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve instance types", nil)
 	}
 
 	if len(instanceTypes) == 0 {
@@ -524,7 +523,7 @@ func (gmitsh GetMachineInstanceTypeStatsHandler) Handle(c echo.Context) error {
 	}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving machines")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve machines", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve machines", nil)
 	}
 
 	machineByID := lo.KeyBy(machines, func(m cdbm.Machine) string { return m.ID })
@@ -538,7 +537,7 @@ func (gmitsh GetMachineInstanceTypeStatsHandler) Handle(c echo.Context) error {
 		cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving allocations")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve allocations", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve allocations", nil)
 	}
 
 	allocationIDs := lo.Map(allocations, func(a cdbm.Allocation, _ int) uuid.UUID { return a.ID })
@@ -552,7 +551,7 @@ func (gmitsh GetMachineInstanceTypeStatsHandler) Handle(c echo.Context) error {
 			nil, nil, []string{"Allocation.Tenant"}, nil, cdb.GetIntPtr(cdbp.TotalLimit), nil)
 		if err != nil {
 			logger.Error().Err(err).Msg("error retrieving allocation constraints")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve allocation constraints", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve allocation constraints", nil)
 		}
 	}
 
@@ -562,7 +561,7 @@ func (gmitsh GetMachineInstanceTypeStatsHandler) Handle(c echo.Context) error {
 		cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving instances")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve instances", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve instances", nil)
 	}
 
 	// Build aggregation maps using shared helpers

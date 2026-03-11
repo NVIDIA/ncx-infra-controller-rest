@@ -119,7 +119,7 @@ func (m *Manager) Start(ctx context.Context) error {
 	for queue, worker := range m.workers {
 		log.Info().Msgf("Starting temporal worker for queue %s", queue)
 		if err := worker.Start(); err != nil {
-			return fmt.Errorf("failed to start temporal worker: %v", err)
+			return fmt.Errorf("failed to start temporal worker: %w", err)
 		}
 		log.Info().Msgf("Temporal worker started for queue %s", queue)
 	}

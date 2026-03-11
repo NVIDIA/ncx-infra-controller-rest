@@ -32,7 +32,7 @@ import (
 	"sync"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
-	sutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
+	cutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -52,8 +52,6 @@ import (
 	temporalEnums "go.temporal.io/api/enums/v1"
 
 	cam "github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model"
-	cau "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
 	cdbp "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
@@ -612,7 +610,7 @@ func GetAndValidateQueryRelations(qParams url.Values, relatedEntities map[string
 }
 
 // GetAllInstanceTypeAllocationStats is a utility function to get all instance type allocation stats
-func GetAllInstanceTypeAllocationStats(ctx context.Context, dbSession *cdb.Session, siteID *uuid.UUID, instanceTypeIDs []uuid.UUID, logger zerolog.Logger, tenantID *uuid.UUID) (map[uuid.UUID]*cam.APIAllocationStats, *cau.APIError) {
+func GetAllInstanceTypeAllocationStats(ctx context.Context, dbSession *cdb.Session, siteID *uuid.UUID, instanceTypeIDs []uuid.UUID, logger zerolog.Logger, tenantID *uuid.UUID) (map[uuid.UUID]*cam.APIAllocationStats, *cutil.APIError) {
 	var instances []cdbm.Instance
 	var serr error
 
@@ -630,7 +628,7 @@ func GetAllInstanceTypeAllocationStats(ctx context.Context, dbSession *cdb.Sessi
 	instances, _, serr = iDAO.GetAll(ctx, nil, cdbm.InstanceFilterInput{TenantIDs: tenantIDs, SiteIDs: siteIDs}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
 	if serr != nil {
 		logger.Error().Err(serr).Msg("error retrieving Instances for Instance Type from DB")
-		return nil, cau.NewAPIError(http.StatusInternalServerError, "Error retrieving Instances for Instance Type, DB error", nil)
+		return nil, cutil.NewAPIError(http.StatusInternalServerError, "Error retrieving Instances for Instance Type, DB error", nil)
 	}
 
 	// Get all Allocations for the SiteID (optional TenantID)
@@ -641,7 +639,7 @@ func GetAllInstanceTypeAllocationStats(ctx context.Context, dbSession *cdb.Sessi
 	}
 	allocs, _, err := aDAO.GetAll(ctx, nil, allocationFilter, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
 	if err != nil {
-		return nil, cau.NewAPIError(http.StatusInternalServerError, "Error retrieving Allocations for Instance Type, DB error", nil)
+		return nil, cutil.NewAPIError(http.StatusInternalServerError, "Error retrieving Allocations for Instance Type, DB error", nil)
 	}
 
 	var aids []uuid.UUID
@@ -653,7 +651,7 @@ func GetAllInstanceTypeAllocationStats(ctx context.Context, dbSession *cdb.Sessi
 	acDAO := cdbm.NewAllocationConstraintDAO(dbSession)
 	acss, _, err := acDAO.GetAll(ctx, nil, aids, cdb.GetStrPtr(cdbm.AllocationResourceTypeInstanceType), instanceTypeIDs, nil, nil, nil, nil, cdb.GetIntPtr(cdbp.TotalLimit), nil)
 	if err != nil {
-		return nil, cau.NewAPIError(http.StatusInternalServerError, "Error retrieving Allocations for Instance Type, DB error", nil)
+		return nil, cutil.NewAPIError(http.StatusInternalServerError, "Error retrieving Allocations for Instance Type, DB error", nil)
 	}
 
 	// Get all Machines for the Instance Type IDs
@@ -661,7 +659,7 @@ func GetAllInstanceTypeAllocationStats(ctx context.Context, dbSession *cdb.Sessi
 	machines, _, err := machineDAO.GetAll(ctx, nil, cdbm.MachineFilterInput{InstanceTypeIDs: instanceTypeIDs}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Machines from DB")
-		return nil, cau.NewAPIError(http.StatusInternalServerError, "Error retrieving Machines assigned to the Instance Type, DB error", nil)
+		return nil, cutil.NewAPIError(http.StatusInternalServerError, "Error retrieving Machines assigned to the Instance Type, DB error", nil)
 	}
 
 	// instanceTypeToSumConstraintValue is used to keep track of the total constraint value for each instance type
@@ -743,7 +741,7 @@ func GetAllInstanceTypeAllocationStats(ctx context.Context, dbSession *cdb.Sessi
 }
 
 // GetInstanceTypeAllocationStats is a utility function to get the allocation stats from allocation constraints and instances based on instancetype
-func GetInstanceTypeAllocationStats(ctx context.Context, dbSession *cdb.Session, logger zerolog.Logger, it cdbm.InstanceType, tenantID *uuid.UUID) (*cam.APIAllocationStats, *cau.APIError) {
+func GetInstanceTypeAllocationStats(ctx context.Context, dbSession *cdb.Session, logger zerolog.Logger, it cdbm.InstanceType, tenantID *uuid.UUID) (*cam.APIAllocationStats, *cutil.APIError) {
 	mstats, err := GetAllInstanceTypeAllocationStats(ctx, dbSession, it.SiteID, []uuid.UUID{it.ID}, logger, tenantID)
 	if err != nil {
 		return nil, err
@@ -756,33 +754,33 @@ func GetInstanceTypeAllocationStats(ctx context.Context, dbSession *cdb.Session,
 // If user only has Tenant admin role then we can deduce they are acting as a Tenant
 // If user has both Provider and Tenant admin role then we expect the user to specify the query param indicating which role they are acting on
 // This function supports both NGC and Keycloak authentication systems automatically
-func GetIsProviderRequest(ctx context.Context, logger zerolog.Logger, dbSession *cdb.Session, org string, user *cdbm.User, providerRoles []string, tenantRoles []string, queryParams url.Values) (isProviderRequest bool, provider *cdbm.InfrastructureProvider, tenant *cdbm.Tenant, apiError *cau.APIError) {
+func GetIsProviderRequest(ctx context.Context, logger zerolog.Logger, dbSession *cdb.Session, org string, user *cdbm.User, providerRoles []string, tenantRoles []string, queryParams url.Values) (isProviderRequest bool, provider *cdbm.InfrastructureProvider, tenant *cdbm.Tenant, apiError *cutil.APIError) {
 	// Use the flexible role validation that works with both NGC and Keycloak
 	hasProviderRole := auth.ValidateUserRoles(user, org, nil, providerRoles...)
 	hasTenantRole := auth.ValidateUserRoles(user, org, nil, tenantRoles...)
 
 	if !hasProviderRole && !hasTenantRole {
 		logger.Warn().Msg("user does not have Provider or Tenant Admin role with org, access denied")
-		return false, nil, nil, cau.NewAPIError(http.StatusForbidden, "User does not have Provider or Tenant Admin role with org", nil)
+		return false, nil, nil, cutil.NewAPIError(http.StatusForbidden, "User does not have Provider or Tenant Admin role with org", nil)
 	}
 
 	queryProviderID := queryParams.Get("infrastructureProviderId")
 	queryTenantID := queryParams.Get("tenantId")
 
 	if queryProviderID != "" && queryTenantID != "" {
-		return false, nil, nil, cau.NewAPIError(http.StatusBadRequest, "Only one of `infrastructureProviderId` or `tenantId` query params is allowed", nil)
+		return false, nil, nil, cutil.NewAPIError(http.StatusBadRequest, "Only one of `infrastructureProviderId` or `tenantId` query params is allowed", nil)
 	}
 
 	if queryProviderID != "" && !hasProviderRole {
-		return false, nil, nil, cau.NewAPIError(http.StatusForbidden, "Infrastructure Provider ID specified in query param but user does not have Provider Admin role with org, access denied", nil)
+		return false, nil, nil, cutil.NewAPIError(http.StatusForbidden, "Infrastructure Provider ID specified in query param but user does not have Provider Admin role with org, access denied", nil)
 	}
 
 	if queryTenantID != "" && !hasTenantRole {
-		return false, nil, nil, cau.NewAPIError(http.StatusForbidden, "Tenant ID specified in query param but user does not have Tenant Admin role with org, access denied", nil)
+		return false, nil, nil, cutil.NewAPIError(http.StatusForbidden, "Tenant ID specified in query param but user does not have Tenant Admin role with org, access denied", nil)
 	}
 
 	if hasProviderRole && hasTenantRole && queryProviderID == "" && queryTenantID == "" {
-		return false, nil, nil, cau.NewAPIError(http.StatusBadRequest, "User has both Provider Admin and Tenant Admin role. Please specify one of `infrastructureProviderId` or `tenantId` query params", nil)
+		return false, nil, nil, cutil.NewAPIError(http.StatusBadRequest, "User has both Provider Admin and Tenant Admin role. Please specify one of `infrastructureProviderId` or `tenantId` query params", nil)
 	}
 
 	// Check Provider/Tenant associated with org
@@ -794,14 +792,14 @@ func GetIsProviderRequest(ctx context.Context, logger zerolog.Logger, dbSession 
 		orgInfrastructureProvider, serr = GetInfrastructureProviderForOrg(ctx, nil, dbSession, org)
 		if serr != nil {
 			if queryProviderID != "" && serr == ErrOrgInstrastructureProviderNotFound {
-				return false, nil, nil, cau.NewAPIError(http.StatusBadRequest, "Infrastructure Provider ID was specified in query param but org doesn't have an Infrastructure Provider associated", nil)
+				return false, nil, nil, cutil.NewAPIError(http.StatusBadRequest, "Infrastructure Provider ID was specified in query param but org doesn't have an Infrastructure Provider associated", nil)
 			} else if serr != ErrOrgInstrastructureProviderNotFound {
 				logger.Error().Err(serr).Msg("error retrieving Infrastructure Provider for org from DB")
-				return false, nil, nil, cau.NewAPIError(http.StatusInternalServerError, "Failed to retrieve Infrastructure Provider for org, DB error", nil)
+				return false, nil, nil, cutil.NewAPIError(http.StatusInternalServerError, "Failed to retrieve Infrastructure Provider for org, DB error", nil)
 			}
 		}
 		if queryProviderID != "" && orgInfrastructureProvider.ID.String() != queryProviderID {
-			return false, nil, nil, cau.NewAPIError(http.StatusBadRequest, "`Infrastructure Provider ID specified in query param does not belong to org", nil)
+			return false, nil, nil, cutil.NewAPIError(http.StatusBadRequest, "`Infrastructure Provider ID specified in query param does not belong to org", nil)
 		}
 	}
 
@@ -809,14 +807,14 @@ func GetIsProviderRequest(ctx context.Context, logger zerolog.Logger, dbSession 
 		orgTenant, serr = GetTenantForOrg(ctx, nil, dbSession, org)
 		if serr != nil {
 			if queryTenantID != "" && serr == ErrOrgTenantNotFound {
-				return false, nil, nil, cau.NewAPIError(http.StatusBadRequest, "Tenant ID was specified in query param but org doesn't have a Tenant associated", nil)
+				return false, nil, nil, cutil.NewAPIError(http.StatusBadRequest, "Tenant ID was specified in query param but org doesn't have a Tenant associated", nil)
 			} else if serr != ErrOrgTenantNotFound {
 				logger.Error().Err(serr).Msg("error retrieving Tenant for org from DB")
-				return false, nil, nil, cau.NewAPIError(http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
+				return false, nil, nil, cutil.NewAPIError(http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
 			}
 		}
 		if queryTenantID != "" && orgTenant.ID.String() != queryTenantID {
-			return false, nil, nil, cau.NewAPIError(http.StatusBadRequest, "Tenant ID specified in query param does not belong to org", nil)
+			return false, nil, nil, cutil.NewAPIError(http.StatusBadRequest, "Tenant ID specified in query param does not belong to org", nil)
 		}
 	}
 
@@ -830,18 +828,18 @@ func GetIsProviderRequest(ctx context.Context, logger zerolog.Logger, dbSession 
 	}
 
 	if isProviderRequest && orgInfrastructureProvider == nil {
-		return false, nil, nil, cau.NewAPIError(http.StatusBadRequest, "Org doesn't have an Infrastructure Provider associated", nil)
+		return false, nil, nil, cutil.NewAPIError(http.StatusBadRequest, "Org doesn't have an Infrastructure Provider associated", nil)
 	}
 
 	if !isProviderRequest && orgTenant == nil {
-		return false, nil, nil, cau.NewAPIError(http.StatusBadRequest, "Org doesn't have a Tenant associated", nil)
+		return false, nil, nil, cutil.NewAPIError(http.StatusBadRequest, "Org doesn't have a Tenant associated", nil)
 	}
 
 	return isProviderRequest, orgInfrastructureProvider, orgTenant, nil
 }
 
 // MatchInstanceTypeCapabilitiesForMachines is a utility function to check if Instance Type Capabilities are present in the Capabilities of Machines
-func MatchInstanceTypeCapabilitiesForMachines(ctx context.Context, logger zerolog.Logger, dbSession *cdb.Session, instanceTypeID uuid.UUID, machineIds []string) (bool, *string, *cau.APIError) {
+func MatchInstanceTypeCapabilitiesForMachines(ctx context.Context, logger zerolog.Logger, dbSession *cdb.Session, instanceTypeID uuid.UUID, machineIds []string) (bool, *string, *cutil.APIError) {
 	if len(machineIds) == 0 {
 		return true, nil, nil
 	}
@@ -852,7 +850,7 @@ func MatchInstanceTypeCapabilitiesForMachines(ctx context.Context, logger zerolo
 	instmcs, total, err := mcDAO.GetAll(ctx, nil, nil, []uuid.UUID{instanceTypeID}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, cdb.GetIntPtr(cdbp.TotalLimit), nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to retrieve Machine Capabilities for Instance Type from DB")
-		return false, nil, cau.NewAPIError(http.StatusInternalServerError, "Failed to retrieve Machine Capabilities for Instance Type, DB error", nil)
+		return false, nil, cutil.NewAPIError(http.StatusInternalServerError, "Failed to retrieve Machine Capabilities for Instance Type, DB error", nil)
 	}
 
 	// All Machines valid if Instance Type does not have Capabilities
@@ -871,12 +869,12 @@ func MatchInstanceTypeCapabilitiesForMachines(ctx context.Context, logger zerolo
 	mmcs, mtotal, serr := mcDAO.GetAll(ctx, nil, machineIds, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, cdb.GetIntPtr(cdbp.TotalLimit), nil)
 	if serr != nil {
 		logger.Error().Err(serr).Msg("failed to retrieve Machine Capabilities for Machine from DB")
-		return false, nil, cau.NewAPIError(http.StatusInternalServerError, "Failed to retrieve Machine Capabilities for Machine, DB error", nil)
+		return false, nil, cutil.NewAPIError(http.StatusInternalServerError, "Failed to retrieve Machine Capabilities for Machine, DB error", nil)
 	}
 
 	if mtotal == 0 {
 		logger.Error().Err(serr).Msg("Machine Capabilities not found for Machines")
-		return false, nil, cau.NewAPIError(http.StatusConflict, "Machines specified in request currently do not have any Capabilities to match against Instance Type", nil)
+		return false, nil, cutil.NewAPIError(http.StatusConflict, "Machines specified in request currently do not have any Capabilities to match against Instance Type", nil)
 	}
 
 	// Build a map of Machine ID to Machine Capabilities
@@ -953,7 +951,7 @@ func MatchInstanceTypeCapabilitiesForMachines(ctx context.Context, logger zerolo
 // GetAllocationResourceTypeMaps is a utility function to get resource info based on resource type in allocation constraints
 // currently its only supports Instance Type and IPBlock
 func GetAllocationResourceTypeMaps(ctx context.Context, logger zerolog.Logger, dbSession *cdb.Session, acs []cdbm.AllocationConstraint) (
-	map[uuid.UUID]*cdbm.InstanceType, map[uuid.UUID]*cdbm.IPBlock, *cau.APIError) {
+	map[uuid.UUID]*cdbm.InstanceType, map[uuid.UUID]*cdbm.IPBlock, *cutil.APIError) {
 	// Maps to eliminate duplicate entries from array
 	ipbIDsToAllocID := make(map[uuid.UUID]bool)
 	itIDsToAllocID := make(map[uuid.UUID]bool)
@@ -1010,7 +1008,7 @@ func GetAllocationResourceTypeMaps(ctx context.Context, logger zerolog.Logger, d
 		)
 		if err != nil {
 			logger.Error().Err(err).Msg("Failed to retrieve IP Blocks")
-			return nil, nil, cau.NewAPIError(http.StatusInternalServerError, "Failed to populate IP Block detail for Allocation", nil)
+			return nil, nil, cutil.NewAPIError(http.StatusInternalServerError, "Failed to populate IP Block detail for Allocation", nil)
 		}
 
 		for _, ipb := range ipbs {
@@ -1025,7 +1023,7 @@ func GetAllocationResourceTypeMaps(ctx context.Context, logger zerolog.Logger, d
 		its, _, err = itDAO.GetAll(ctx, nil, cdbm.InstanceTypeFilterInput{InstanceTypeIDs: itIDs}, nil, nil, cdb.GetIntPtr(cdbp.TotalLimit), nil)
 		if err != nil {
 			logger.Error().Err(err).Msg("Failed to retrieve Instance Types")
-			return nil, nil, cau.NewAPIError(http.StatusInternalServerError, "Failed to populate Instance Type detail for Allocation", nil)
+			return nil, nil, cutil.NewAPIError(http.StatusInternalServerError, "Failed to populate Instance Type detail for Allocation", nil)
 		}
 
 		for _, it := range its {
@@ -1060,19 +1058,19 @@ func TerminateWorkflowOnTimeOut(echoCtx echo.Context, logger zerolog.Logger, tem
 	logger.Error().Err(originalError).Msg(fmt.Sprintf("failed to perform %s for %s - timeout occurred executing workflow on Site.", workflowName, objectType))
 
 	// Create a new context deadline
-	newctx, newcancel := context.WithTimeout(context.Background(), cwutil.WorkflowContextNewAfterTimeout)
+	newctx, newcancel := context.WithTimeout(context.Background(), cutil.WorkflowContextNewAfterTimeout)
 	defer newcancel()
 
 	// Initiate termination workflow
 	serr := temporalClient.TerminateWorkflow(newctx, workflowID, "", fmt.Sprintf("timeout occurred executing %s workflow for %s", workflowName, objectType))
 	if serr != nil {
 		logger.Error().Err(serr).Msg(fmt.Sprintf("failed to execute terminate Temporal workflow for %s %s workflow", objectType, workflowName))
-		return cau.NewAPIErrorResponse(echoCtx, http.StatusInternalServerError, fmt.Sprintf("Failed to terminate synchronous %s %s workflow after timeout, Cloud and Site data may be de-synced: %s", objectType, workflowName, serr), nil)
+		return cutil.NewAPIErrorResponse(echoCtx, http.StatusInternalServerError, fmt.Sprintf("Failed to terminate synchronous %s %s workflow after timeout, Cloud and Site data may be de-synced: %s", objectType, workflowName, serr), nil)
 	}
 
 	logger.Info().Str("Workflow ID", workflowID).Msg(fmt.Sprintf("initiated terminate synchronous %s workflow for %s successfully", workflowName, objectType))
 
-	return cau.NewAPIErrorResponse(echoCtx, http.StatusInternalServerError, fmt.Sprintf("Failed to perform %s %s - timeout occurred executing workflow on Site: %s", objectType, workflowName, originalError), nil)
+	return cutil.NewAPIErrorResponse(echoCtx, http.StatusInternalServerError, fmt.Sprintf("Failed to perform %s %s - timeout occurred executing workflow on Site: %s", objectType, workflowName, originalError), nil)
 }
 
 func UnwrapWorkflowError(err error) (code int, unwrappedError error) {
@@ -1140,7 +1138,7 @@ func UnwrapWorkflowError(err error) (code int, unwrappedError error) {
 // and tracer span with user ID information (StarfleetID or AuxiliaryID).
 // This eliminates the repetitive if-else block for user ID logging across handlers.
 // The tracerSpan and handlerSpan parameters are optional and can be nil if tracing is not needed.
-func GetUserAndEnrichLogger(c echo.Context, logger zerolog.Logger, tracerSpan *cau.TracerSpan, handlerSpan trace.Span) (*cdbm.User, zerolog.Logger, error) {
+func GetUserAndEnrichLogger(c echo.Context, logger zerolog.Logger, tracerSpan *cutil.TracerSpan, handlerSpan trace.Span) (*cdbm.User, zerolog.Logger, error) {
 	// Get user
 	dbUser, ok := c.Get("user").(*cdbm.User)
 	if !ok || dbUser == nil {
@@ -1167,7 +1165,7 @@ func GetUserAndEnrichLogger(c echo.Context, logger zerolog.Logger, tracerSpan *c
 }
 
 // IsProvider ensures that user is authorized to act as a Provider Admin for the org
-func IsProvider(ctx context.Context, logger zerolog.Logger, dbSession *cdb.Session, org string, user *cdbm.User, allowViewerRole bool) (*cdbm.InfrastructureProvider, *cau.APIError) {
+func IsProvider(ctx context.Context, logger zerolog.Logger, dbSession *cdb.Session, org string, user *cdbm.User, allowViewerRole bool) (*cdbm.InfrastructureProvider, *cutil.APIError) {
 	// Validate that user has the right Provider role
 	targetRoles := []string{auth.ProviderAdminRole}
 	if allowViewerRole {
@@ -1183,24 +1181,24 @@ func IsProvider(ctx context.Context, logger zerolog.Logger, dbSession *cdb.Sessi
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
 
-		return nil, cau.NewAPIError(http.StatusForbidden, "Failed to validate membership for org", nil)
+		return nil, cutil.NewAPIError(http.StatusForbidden, "Failed to validate membership for org", nil)
 	}
 
 	// Validate that user has the right Provider role
 	ok = auth.ValidateUserRoles(user, org, nil, targetRoles...)
 	if !ok {
 		logger.Warn().Msg("User does not have Provider role with org, access denied")
-		return nil, cau.NewAPIError(http.StatusForbidden, "User does not have Provider role with org", nil)
+		return nil, cutil.NewAPIError(http.StatusForbidden, "User does not have Provider role with org", nil)
 	}
 
 	// Retrieve Infrastructure Provider for org
 	infrastructureProvider, err := GetInfrastructureProviderForOrg(ctx, nil, dbSession, org)
 	if err != nil {
 		if errors.Is(err, ErrOrgInstrastructureProviderNotFound) {
-			return nil, cau.NewAPIError(http.StatusNotFound, "Could not find Infrastructure Provider for org", nil)
+			return nil, cutil.NewAPIError(http.StatusNotFound, "Could not find Infrastructure Provider for org", nil)
 		}
 		logger.Error().Err(err).Msg("error getting infrastructure provider for org")
-		return nil, cau.NewAPIError(http.StatusInternalServerError, "Failed to retrieve infrastructure provider for org, DB error", nil)
+		return nil, cutil.NewAPIError(http.StatusInternalServerError, "Failed to retrieve infrastructure provider for org, DB error", nil)
 	}
 
 	return infrastructureProvider, nil
@@ -1208,7 +1206,7 @@ func IsProvider(ctx context.Context, logger zerolog.Logger, dbSession *cdb.Sessi
 
 // IsTenant ensures that user is authorized to act as a Tenant Admin for the org.
 // if authorized it returns the tenant otherwise a relevant error.
-func IsTenant(ctx context.Context, logger zerolog.Logger, dbSession *cdb.Session, org string, user *cdbm.User, requirePrivileged bool) (*cdbm.Tenant, *cau.APIError) {
+func IsTenant(ctx context.Context, logger zerolog.Logger, dbSession *cdb.Session, org string, user *cdbm.User, requirePrivileged bool) (*cdbm.Tenant, *cutil.APIError) {
 	// Validate that user belongs to org
 	ok, err := auth.ValidateOrgMembership(user, org)
 	if !ok {
@@ -1218,28 +1216,28 @@ func IsTenant(ctx context.Context, logger zerolog.Logger, dbSession *cdb.Session
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
 
-		return nil, cau.NewAPIError(http.StatusForbidden, "Failed to validate membership for org", nil)
+		return nil, cutil.NewAPIError(http.StatusForbidden, "Failed to validate membership for org", nil)
 	}
 
 	// Validate that user has the right Tenant role
 	ok = auth.ValidateUserRoles(user, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("User does not have Tenant role with org, access denied")
-		return nil, cau.NewAPIError(http.StatusForbidden, "User does not have Tenant role with org", nil)
+		return nil, cutil.NewAPIError(http.StatusForbidden, "User does not have Tenant role with org", nil)
 	}
 
 	// Find tenant for org
 	tenant, err := GetTenantForOrg(ctx, nil, dbSession, org)
 	if err != nil {
 		if errors.Is(err, ErrOrgTenantNotFound) {
-			return nil, cau.NewAPIError(http.StatusNotFound, "Could not find Tenant for org", nil)
+			return nil, cutil.NewAPIError(http.StatusNotFound, "Could not find Tenant for org", nil)
 		}
 		logger.Error().Err(err).Msg("error getting tenant for org")
-		return nil, cau.NewAPIError(http.StatusInternalServerError, "Failed to retrieve tenant for org, DB error", nil)
+		return nil, cutil.NewAPIError(http.StatusInternalServerError, "Failed to retrieve tenant for org, DB error", nil)
 	}
 
 	if requirePrivileged && !tenant.Config.TargetedInstanceCreation {
-		return nil, cau.NewAPIError(http.StatusForbidden, "Tenant does not have Targeted Instance Creation capability enabled", nil)
+		return nil, cutil.NewAPIError(http.StatusForbidden, "Tenant does not have Targeted Instance Creation capability enabled", nil)
 	}
 
 	return tenant, nil
@@ -1247,7 +1245,7 @@ func IsTenant(ctx context.Context, logger zerolog.Logger, dbSession *cdb.Session
 
 // IsProviderOrTenant ensures that user is authorized to act as a Provider Admin or/and Tenant Admin for the org.
 // if authorized it returns the tenant otherwise a relevant error.
-func IsProviderOrTenant(ctx context.Context, logger zerolog.Logger, dbSession *cdb.Session, org string, user *cdbm.User, allowViewerRole bool, requirePrivilegedTenant bool) (infrastructureProvider *cdbm.InfrastructureProvider, tenant *cdbm.Tenant, apiError *cau.APIError) {
+func IsProviderOrTenant(ctx context.Context, logger zerolog.Logger, dbSession *cdb.Session, org string, user *cdbm.User, allowViewerRole bool, requirePrivilegedTenant bool) (infrastructureProvider *cdbm.InfrastructureProvider, tenant *cdbm.Tenant, apiError *cutil.APIError) {
 	// Validate that user has the right Provider role
 	targetRoles := []string{auth.ProviderAdminRole}
 	if allowViewerRole {
@@ -1263,7 +1261,7 @@ func IsProviderOrTenant(ctx context.Context, logger zerolog.Logger, dbSession *c
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
 
-		return nil, nil, cau.NewAPIError(http.StatusForbidden, "Failed to validate membership for org", nil)
+		return nil, nil, cutil.NewAPIError(http.StatusForbidden, "Failed to validate membership for org", nil)
 	}
 
 	// Validate that user has the right Provider role
@@ -1273,11 +1271,11 @@ func IsProviderOrTenant(ctx context.Context, logger zerolog.Logger, dbSession *c
 		infrastructureProvider, err = GetInfrastructureProviderForOrg(ctx, nil, dbSession, org)
 		if err != nil {
 			if errors.Is(err, ErrOrgInstrastructureProviderNotFound) {
-				return nil, nil, cau.NewAPIError(http.StatusBadRequest, "Could not find Infrastructure Provider for org, retrieve current Provider for org and try again", nil)
+				return nil, nil, cutil.NewAPIError(http.StatusBadRequest, "Could not find Infrastructure Provider for org, retrieve current Provider for org and try again", nil)
 			}
 
 			logger.Error().Err(err).Msg("error getting infrastructure provider for org")
-			return nil, nil, cau.NewAPIError(http.StatusInternalServerError, "Failed to retrieve infrastructure provider for org, DB error", nil)
+			return nil, nil, cutil.NewAPIError(http.StatusInternalServerError, "Failed to retrieve infrastructure provider for org, DB error", nil)
 		}
 	}
 
@@ -1289,7 +1287,7 @@ func IsProviderOrTenant(ctx context.Context, logger zerolog.Logger, dbSession *c
 		tenant, err = GetTenantForOrg(ctx, nil, dbSession, org)
 		if err != nil {
 			if errors.Is(err, ErrOrgTenantNotFound) {
-				return nil, nil, cau.NewAPIError(http.StatusBadRequest, "Could not find Tenant for org, retrieve current Tenant for org and try again", nil)
+				return nil, nil, cutil.NewAPIError(http.StatusBadRequest, "Could not find Tenant for org, retrieve current Tenant for org and try again", nil)
 			}
 			logger.Error().Err(err).Msg("error getting tenant for org")
 		}
@@ -1297,7 +1295,7 @@ func IsProviderOrTenant(ctx context.Context, logger zerolog.Logger, dbSession *c
 			// Check if Tenant has TargetedInstanceCreation capability
 			if !tenant.Config.TargetedInstanceCreation {
 				if infrastructureProvider == nil {
-					return nil, nil, cau.NewAPIError(http.StatusForbidden, "Tenant does not have Targeted Instance Creation capability enabled", nil)
+					return nil, nil, cutil.NewAPIError(http.StatusForbidden, "Tenant does not have Targeted Instance Creation capability enabled", nil)
 				} else {
 					tenant = nil
 				}
@@ -1307,7 +1305,7 @@ func IsProviderOrTenant(ctx context.Context, logger zerolog.Logger, dbSession *c
 
 	if infrastructureProvider == nil && tenant == nil {
 		logger.Error().Msg("user does not have Provider or Tenant role with org, access denied")
-		return nil, nil, cau.NewAPIError(http.StatusForbidden, "User does not have Provider or Tenant role with org", nil)
+		return nil, nil, cutil.NewAPIError(http.StatusForbidden, "User does not have Provider or Tenant role with org", nil)
 	}
 
 	return infrastructureProvider, tenant, nil
@@ -1316,7 +1314,7 @@ func IsProviderOrTenant(ctx context.Context, logger zerolog.Logger, dbSession *c
 // SetupHandler sets up common tasks for handlers not requiring error handling.
 // WARNING: caller MUST defer handlerSpan.End() if handlerSpan is not nil!!!
 // This function can be used across handlers to reduce duplication of initialization logic.
-func SetupHandler(modelName, handlerName string, c echo.Context, s *sutil.TracerSpan) (org string, user *cdbm.User, ctx context.Context, logger zerolog.Logger, hs oteltrace.Span) {
+func SetupHandler(modelName, handlerName string, c echo.Context, s *cutil.TracerSpan) (org string, user *cdbm.User, ctx context.Context, logger zerolog.Logger, hs oteltrace.Span) {
 	// Get org
 	org = c.Param("orgName")
 
@@ -1346,18 +1344,18 @@ func SetupHandler(modelName, handlerName string, c echo.Context, s *sutil.Tracer
 
 // ExecuteSyncWorkflow is a utility function to execute a Temporal workflow synchronously from a Handler.
 // This function can be used across handlers to reduce duplication of workflow execution logic.
-func ExecuteSyncWorkflow(ctx context.Context, logger zerolog.Logger, tpClient tclient.Client, name string, options tclient.StartWorkflowOptions, request interface{}) *cau.APIError {
+func ExecuteSyncWorkflow(ctx context.Context, logger zerolog.Logger, tpClient tclient.Client, name string, options tclient.StartWorkflowOptions, request interface{}) *cutil.APIError {
 	logger = logger.With().Str("Workflow Name", name).Logger()
 
 	// Add context deadlines
-	ctxWithTimeout, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
+	ctxWithTimeout, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow
 	workflowRun, err := tpClient.ExecuteWorkflow(ctxWithTimeout, options, name, request)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to schedule workflow on Site")
-		return cau.NewAPIError(http.StatusInternalServerError, fmt.Sprintf("Failed to schedule workflow: %s on Site: %v", name, err), nil)
+		return cutil.NewAPIError(http.StatusInternalServerError, fmt.Sprintf("Failed to schedule workflow: %s on Site: %v", name, err), nil)
 	}
 
 	workflowID := workflowRun.GetID()
@@ -1372,12 +1370,12 @@ func ExecuteSyncWorkflow(ctx context.Context, logger zerolog.Logger, tpClient tc
 		var timeoutErr *tp.TimeoutError
 		if errors.As(err, &timeoutErr) {
 			logger.Error().Err(err).Msg("timed out executing workflow on Site")
-			return cau.NewAPIError(http.StatusInternalServerError, fmt.Sprintf("Timed out executing workflow: %s on Site: %v", name, err), nil)
+			return cutil.NewAPIError(http.StatusInternalServerError, fmt.Sprintf("Timed out executing workflow: %s on Site: %v", name, err), nil)
 		}
 
 		code, uwerr := UnwrapWorkflowError(err)
 		logger.Error().Err(uwerr).Msg("error executing workflow on Site")
-		return cau.NewAPIError(code, fmt.Sprintf("Failed to execute workflow: %s on Site: %s", name, uwerr), nil)
+		return cutil.NewAPIError(code, fmt.Sprintf("Failed to execute workflow: %s on Site: %s", name, uwerr), nil)
 	}
 	return nil
 }
@@ -1614,24 +1612,24 @@ func ExecutePowerControlWorkflow(
 			Description: fmt.Sprintf("API force power cycle %s", entityName),
 		}
 	default:
-		return nil, cau.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Invalid power control state: %s", state), nil)
+		return nil, cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Invalid power control state: %s", state), nil)
 	}
 
 	workflowOptions := tclient.StartWorkflowOptions{
 		ID:                       workflowID,
 		WorkflowIDReusePolicy:    temporalEnums.WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE,
 		WorkflowIDConflictPolicy: temporalEnums.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING,
-		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
+	ctx, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
 	defer cancel()
 
 	we, err := stc.ExecuteWorkflow(ctx, workflowOptions, workflowName, rlaRequest)
 	if err != nil {
 		logger.Error().Err(err).Msg(fmt.Sprintf("failed to execute %s workflow", workflowName))
-		return nil, cau.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to power control %s", entityName), nil)
+		return nil, cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to power control %s", entityName), nil)
 	}
 
 	var rlaResponse rlav1.SubmitTaskResponse
@@ -1642,7 +1640,7 @@ func ExecutePowerControlWorkflow(
 			return nil, TerminateWorkflowOnTimeOut(c, logger, stc, workflowID, err, entityName, workflowName)
 		}
 		logger.Error().Err(err).Msg(fmt.Sprintf("failed to get result from %s workflow", workflowName))
-		return nil, cau.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to power control %s", entityName), nil)
+		return nil, cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to power control %s", entityName), nil)
 	}
 
 	return &rlaResponse, nil
@@ -1718,17 +1716,17 @@ func ExecuteFirmwareUpdateWorkflow(
 		ID:                       workflowID,
 		WorkflowIDReusePolicy:    temporalEnums.WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE,
 		WorkflowIDConflictPolicy: temporalEnums.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING,
-		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
+	ctx, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
 	defer cancel()
 
 	we, err := stc.ExecuteWorkflow(ctx, workflowOptions, "UpgradeFirmware", rlaRequest)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to execute UpgradeFirmware workflow")
-		return nil, cau.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to upgrade firmware for %s", entityName), nil)
+		return nil, cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to upgrade firmware for %s", entityName), nil)
 	}
 
 	var rlaResponse rlav1.SubmitTaskResponse
@@ -1739,7 +1737,7 @@ func ExecuteFirmwareUpdateWorkflow(
 			return nil, TerminateWorkflowOnTimeOut(c, logger, stc, workflowID, err, entityName, "UpgradeFirmware")
 		}
 		logger.Error().Err(err).Msg("failed to get result from UpgradeFirmware workflow")
-		return nil, cau.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to upgrade firmware for %s", entityName), nil)
+		return nil, cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to upgrade firmware for %s", entityName), nil)
 	}
 
 	return &rlaResponse, nil

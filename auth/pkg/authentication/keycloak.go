@@ -63,7 +63,7 @@ func (k *KeycloakAuthService) getIDPAliasForDomain(ctx context.Context, adminTok
 	// Get all identity providers for the realm
 	idps, err := k.client.GetIdentityProviders(ctx, adminToken, k.config.Realm)
 	if err != nil {
-		return "", fmt.Errorf("failed to get identity providers: %v", err)
+		return "", fmt.Errorf("failed to get identity providers: %w", err)
 	}
 
 	// Look for an IDP that matches the email domain
@@ -110,7 +110,7 @@ func (k *KeycloakAuthService) InitiateAuthFlow(ctx context.Context, email, redir
 	token, err := k.client.GetToken(ctx, k.config.Realm, tokenOptions)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to get admin token using client credentials")
-		return nil, fmt.Errorf("failed to get admin token using client credentials: %v", err)
+		return nil, fmt.Errorf("failed to get admin token using client credentials: %w", err)
 	}
 
 	adminToken := token.AccessToken
@@ -119,7 +119,7 @@ func (k *KeycloakAuthService) InitiateAuthFlow(ctx context.Context, email, redir
 	idpAlias, err := k.getIDPAliasForDomain(ctx, adminToken, emailDomain)
 	if err != nil {
 		log.Error().Err(err).Str("domain", emailDomain).Msg("Failed to find IDP alias for domain")
-		return nil, fmt.Errorf("failed to find identity provider for domain %s: %v", emailDomain, err)
+		return nil, fmt.Errorf("failed to find identity provider for domain %s: %w", emailDomain, err)
 	}
 
 	// Construct simplified Keycloak authorization URL with kc_idp_hint
@@ -162,7 +162,7 @@ func (k *KeycloakAuthService) ExchangeCodeForTokens(ctx context.Context, code st
 
 	tokens, err := k.client.GetToken(ctx, k.config.Realm, tokenOptions)
 	if err != nil {
-		return nil, fmt.Errorf("failed to exchange authorization code: %v", err)
+		return nil, fmt.Errorf("failed to exchange authorization code: %w", err)
 	}
 
 	return &model.APITokenResponse{
@@ -177,7 +177,7 @@ func (k *KeycloakAuthService) ExchangeCodeForTokens(ctx context.Context, code st
 func (k *KeycloakAuthService) GetUserInfo(ctx context.Context, accessToken string) (*gocloak.UserInfo, error) {
 	userInfo, err := k.client.GetUserInfo(ctx, accessToken, k.config.Realm)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get user info: %v", err)
+		return nil, fmt.Errorf("failed to get user info: %w", err)
 	}
 	return userInfo, nil
 }
@@ -192,7 +192,7 @@ func (k *KeycloakAuthService) RefreshAccessToken(ctx context.Context, refreshTok
 		k.config.Realm,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to refresh token: %v", err)
+		return nil, fmt.Errorf("failed to refresh token: %w", err)
 	}
 
 	return &model.APITokenResponse{
@@ -233,7 +233,7 @@ func (k *KeycloakAuthService) ClientCredentialsAuth(ctx context.Context, clientI
 			Err(err).
 			Str("client_id", clientID).
 			Msg("Failed to authenticate using client credentials")
-		return nil, fmt.Errorf("failed to authenticate using client credentials: %v", err)
+		return nil, fmt.Errorf("failed to authenticate using client credentials: %w", err)
 	}
 
 	return &model.APITokenResponse{

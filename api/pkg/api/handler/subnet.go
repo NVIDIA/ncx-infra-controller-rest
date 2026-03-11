@@ -41,9 +41,7 @@ import (
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/pagination"
 	sc "github.com/nvidia/bare-metal-manager-rest/api/pkg/client/site"
 	auth "github.com/nvidia/bare-metal-manager-rest/auth/pkg/authorization"
-	cerr "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	sutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
+	cutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	"github.com/nvidia/bare-metal-manager-rest/db/pkg/db/ipam"
 	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
@@ -64,7 +62,7 @@ type CreateSubnetHandler struct {
 	tc         temporalClient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewCreateSubnetHandler initializes and returns a new handler for creating Subnet
@@ -74,7 +72,7 @@ func NewCreateSubnetHandler(dbSession *cdb.Session, tc temporalClient.Client, sc
 		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -114,7 +112,7 @@ func (csh CreateSubnetHandler) Handle(c echo.Context) error {
 
 	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, csh.tracerSpan, handlerSpan)
 	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -125,14 +123,14 @@ func (csh CreateSubnetHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Tenant Admins are allowed to interact with Subnet endpoints
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role with org, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	// Validate request
@@ -141,41 +139,41 @@ func (csh CreateSubnetHandler) Handle(c echo.Context) error {
 	err = c.Bind(&apiRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
 	}
 	// Validate request attributes
 	verr := apiRequest.Validate()
 	if verr != nil {
 		logger.Warn().Err(verr).Msg("error validating Subnet creation request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating Subnet creation request data", verr)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating Subnet creation request data", verr)
 	}
 
 	// Validate the tenant for which this Subnet is being created
 	tenant, err := common.GetTenantForOrg(ctx, nil, csh.dbSession, org)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error getting tenant from org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Tenant from org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Tenant from org", nil)
 	}
 	// Verify vpc in request
 	vpc, err := common.GetVpcFromIDString(ctx, nil, apiRequest.VpcID, nil, csh.dbSession)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error getting vpc in request")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Could not find VPC specified in request", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Could not find VPC specified in request", nil)
 	}
 	if vpc.TenantID != tenant.ID {
 		logger.Warn().Msg("tenant in vpc does not belong to tenant in org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Tenant for VPC in request does not match tenant in org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Tenant for VPC in request does not match tenant in org", nil)
 	}
 
 	// Verify if vpc is ethernet virtualized
 	if vpc.NetworkVirtualizationType != nil && *vpc.NetworkVirtualizationType != cdbm.VpcEthernetVirtualizer {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("VPC: %v specified in request must have Ethernet network virtualization type in order to create Subnets", vpc.ID), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("VPC: %v specified in request must have Ethernet network virtualization type in order to create Subnets", vpc.ID), nil)
 	}
 
 	// Verify if vpc is ready
 	if vpc.ControllerVpcID == nil || vpc.Status != cdbm.VpcStatusReady {
 		logger.Warn().Msg(fmt.Sprintf("VPC: %v specified in request data must be in Ready state in order to create Subnet", apiRequest.VpcID))
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "VPC specified in request data must be in Ready state in order to create Subnet", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "VPC specified in request data must be in Ready state in order to create Subnet", nil)
 	}
 
 	// Verify if site is ready
@@ -183,15 +181,15 @@ func (csh CreateSubnetHandler) Handle(c echo.Context) error {
 	site, err := stDAO.GetByID(ctx, nil, vpc.SiteID, nil, false)
 	if err != nil {
 		if err == cdb.ErrDoesNotExist {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Could not find Site associated with Subnet", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Could not find Site associated with Subnet", nil)
 		}
 		logger.Error().Err(err).Msg("error retrieving Site from DB by ID")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site with ID from VPC", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site with ID from VPC", nil)
 	}
 
 	if site.Status != cdbm.SiteStatusRegistered {
 		logger.Warn().Msg(fmt.Sprintf("The Site: %v where the Subnet is being created must be in Registered state in order to proceed", vpc.SiteID.String()))
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "The Site where the Subnet is being created must be in Registered state in order to proceed", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "The Site where the Subnet is being created must be in Registered state in order to proceed", nil)
 	}
 
 	// Validate IPBlocks in request
@@ -199,16 +197,16 @@ func (csh CreateSubnetHandler) Handle(c echo.Context) error {
 	ipv4Block, err := common.GetIPBlockFromIDString(ctx, nil, *apiRequest.IPv4BlockID, csh.dbSession)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error getting IPv4 IPBlock in request")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving ipv4 IPBlock from request", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving ipv4 IPBlock from request", nil)
 	}
 	// ipv4block is derived, check if it belongs to tenant via an allocation
 	if ipv4Block.TenantID == nil || *ipv4Block.TenantID != tenant.ID {
 		logger.Warn().Msg("IPv4 IPBlock in request does not belong to tenant")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "ipv4 IPBlock in request does not belong to tenant", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "ipv4 IPBlock in request does not belong to tenant", nil)
 	}
 	if vpc.SiteID != ipv4Block.SiteID {
 		logger.Warn().Msg("IPv4 Block specified in request and VPC do not belong to the same Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "IPv4 Block specified in request and VPC do not belong to the same Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "IPv4 Block specified in request and VPC do not belong to the same Site", nil)
 	}
 	// NOTE: validation ensures that IPv6BlockID will be nil, ie, it is not supported yet
 	// when IPv6 is supported, further validations must ensure that the RoutingType of v4 and v6 must match
@@ -220,11 +218,11 @@ func (csh CreateSubnetHandler) Handle(c echo.Context) error {
 	sbs, tot, err := sDAO.GetAll(ctx, nil, cdbm.SubnetFilterInput{Names: []string{apiRequest.Name}, SiteIDs: []uuid.UUID{vpc.SiteID}, TenantIDs: []uuid.UUID{tenant.ID}}, paginator.PageInput{}, []string{})
 	if err != nil {
 		logger.Error().Err(err).Msg("db error checking for name uniqueness of tenant subnet")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Subnet due to DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Subnet due to DB error", nil)
 	}
 	if tot > 0 {
 		logger.Warn().Str("tenantId", tenant.ID.String()).Str("name", apiRequest.Name).Msg("subnet with same name already exists for tenant")
-		return cerr.NewAPIErrorResponse(c, http.StatusConflict, "A Subnet with specified name already exists for Tenant at this Site", validation.Errors{
+		return cutil.NewAPIErrorResponse(c, http.StatusConflict, "A Subnet with specified name already exists for Tenant at this Site", validation.Errors{
 			"id": errors.New(sbs[0].ID.String()),
 		})
 	}
@@ -233,7 +231,7 @@ func (csh CreateSubnetHandler) Handle(c echo.Context) error {
 	tx, err := cdb.BeginTx(ctx, csh.dbSession, &sql.TxOptions{})
 	if err != nil {
 		logger.Error().Err(err).Msg("unable to start transaction")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error creating subnet", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error creating subnet", nil)
 	}
 	// this variable is used in cleanup actions to indicate if this transaction committed
 	txCommitted := false
@@ -245,7 +243,7 @@ func (csh CreateSubnetHandler) Handle(c echo.Context) error {
 	if err != nil {
 		// TODO add a retry here
 		logger.Error().Err(err).Msg("Failed to acquire advisory lock on ipblock")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error creating Subnet, detected multiple parallel request on IP Block by Tenant", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error creating Subnet, detected multiple parallel request on IP Block by Tenant", nil)
 	}
 
 	// create an IPAM allocation for the subnet
@@ -261,7 +259,7 @@ func (csh CreateSubnetHandler) Handle(c echo.Context) error {
 		}
 
 		logger.Warn().Err(err).Msg("failed to create IPAM entry for subnet")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Could not create IPAM entry for Subnet. Details: %s", err.Error()), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Could not create IPAM entry for Subnet. Details: %s", err.Error()), nil)
 	}
 	logger.Info().Str("childCidr", childPrefix.Cidr).Msg("created child cidr for subnet")
 
@@ -269,13 +267,13 @@ func (csh CreateSubnetHandler) Handle(c echo.Context) error {
 	ipv4Prefix, _, err := ipam.ParseCidrIntoPrefixAndBlockSize(childPrefix.Cidr)
 	if err != nil {
 		logger.Warn().Err(err).Msg("unable to parse cidr")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Could not create IPAM entry for Subnet. Details: %s", err.Error()), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Could not create IPAM entry for Subnet. Details: %s", err.Error()), nil)
 	}
 
 	ipv4Gateway, err := ipam.GetFirstIPFromCidr(childPrefix.Cidr)
 	if err != nil {
 		logger.Warn().Err(err).Msg("unable to get first ip in cidr")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Could not create IPAM entry for Subnet. Details: %s", err.Error()), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Could not create IPAM entry for Subnet. Details: %s", err.Error()), nil)
 	}
 
 	// Create Subnet in DB
@@ -297,7 +295,7 @@ func (csh CreateSubnetHandler) Handle(c echo.Context) error {
 		})
 	if err != nil {
 		logger.Error().Err(err).Msg("unable to create Subnet record in DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed creating subnet record", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed creating subnet record", nil)
 	}
 
 	// Update the controller ID for the subnet.
@@ -307,7 +305,7 @@ func (csh CreateSubnetHandler) Handle(c echo.Context) error {
 
 	if err != nil {
 		logger.Error().Err(err).Msg("unable to update Subnet record controllerNetworkSegmentId")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed updating new subnet record", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed updating new subnet record", nil)
 	}
 	// create the status detail record
 	sdDAO := cdbm.NewStatusDetailDAO(csh.dbSession)
@@ -315,18 +313,18 @@ func (csh CreateSubnetHandler) Handle(c echo.Context) error {
 		cdb.GetStrPtr("received subnet creation request, pending"))
 	if serr != nil {
 		logger.Error().Err(serr).Msg("error creating Status Detail DB entry")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for Subnet", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for Subnet", nil)
 	}
 	if ssd == nil {
 		logger.Error().Msg("Status Detail DB entry not returned from CreateFromParams")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to get new Status Detail for Subnet", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to get new Status Detail for Subnet", nil)
 	}
 
 	// Get the temporal client for the site we are working with.
 	stc, err := csh.scp.GetClientByID(subnet.SiteID)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
 	}
 
 	var subnetMTU *int32 = nil
@@ -358,14 +356,14 @@ func (csh CreateSubnetHandler) Handle(c echo.Context) error {
 
 	workflowOptions := temporalClient.StartWorkflowOptions{
 		ID:                       "subnet-create-" + subnet.ID.String(),
-		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 
 	logger.Info().Msg("triggering Subnet create workflow")
 
 	// Add context deadlines
-	ctx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
+	ctx, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow
@@ -373,7 +371,7 @@ func (csh CreateSubnetHandler) Handle(c echo.Context) error {
 
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to synchronously start Temporal workflow to create Subnet")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed start sync workflow to create Subnet on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed start sync workflow to create Subnet on Site: %s", err), nil)
 	}
 
 	wid := we.GetID()
@@ -388,24 +386,24 @@ func (csh CreateSubnetHandler) Handle(c echo.Context) error {
 			logger.Error().Err(err).Msg("failed to create Subnet, timeout occurred executing workflow on Site.")
 
 			// Create a new context deadlines
-			newctx, newcancel := context.WithTimeout(context.Background(), cwutil.WorkflowContextNewAfterTimeout)
+			newctx, newcancel := context.WithTimeout(context.Background(), cutil.WorkflowContextNewAfterTimeout)
 			defer newcancel()
 
 			// Initiate termination workflow
 			serr := stc.TerminateWorkflow(newctx, wid, "", "timeout occurred executing create Subnet workflow")
 			if serr != nil {
 				logger.Error().Err(serr).Msg("failed to execute terminate Temporal workflow for creating Subnet")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to terminate synchronous Subnet creation workflow after timeout, Cloud and Site data may be de-synced: %s", serr), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to terminate synchronous Subnet creation workflow after timeout, Cloud and Site data may be de-synced: %s", serr), nil)
 			}
 
 			logger.Info().Str("Workflow ID", wid).Msg("initiated terminate synchronous create Subnet workflow successfully")
 
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to create Subnet, timeout occurred executing workflow on Site: %s", err), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to create Subnet, timeout occurred executing workflow on Site: %s", err), nil)
 		}
 
 		code, err := common.UnwrapWorkflowError(err)
 		logger.Error().Err(err).Msg("failed to synchronously execute Temporal workflow to create Subnet")
-		return cerr.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to execute sync workflow to create Subnet on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to execute sync workflow to create Subnet on Site: %s", err), nil)
 	}
 
 	logger.Info().Str("Workflow ID", wid).Msg("completed synchronous create Subnet workflow")
@@ -414,7 +412,7 @@ func (csh CreateSubnetHandler) Handle(c echo.Context) error {
 	err = tx.Commit()
 	if err != nil {
 		logger.Error().Err(err).Msg("error committing transaction")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Subnet, DB transaction error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Subnet, DB transaction error", nil)
 	}
 	// set committed so, deferred cleanup functions will do nothing
 	txCommitted = true
@@ -432,7 +430,7 @@ type GetAllSubnetHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetAllSubnetHandler initializes and returns a new handler for getting all Subnets
@@ -441,7 +439,7 @@ func NewGetAllSubnetHandler(dbSession *cdb.Session, tc temporalClient.Client, cf
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -488,7 +486,7 @@ func (gash GetAllSubnetHandler) Handle(c echo.Context) error {
 
 	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gash.tracerSpan, handlerSpan)
 	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -499,14 +497,14 @@ func (gash GetAllSubnetHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Tenant Admins are allowed to interact with Subnet endpoints
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role with org, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	// Validate paginantion request
@@ -514,14 +512,14 @@ func (gash GetAllSubnetHandler) Handle(c echo.Context) error {
 	err = c.Bind(&pageRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding pagination request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request pagination data", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request pagination data", nil)
 	}
 
 	// Validate request attributes
 	err = pageRequest.Validate(cdbm.SubnetOrderByFields)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error validating pagination request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate pagination request data", err)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate pagination request data", err)
 	}
 	subnetFilter := cdbm.SubnetFilterInput{}
 
@@ -529,7 +527,7 @@ func (gash GetAllSubnetHandler) Handle(c echo.Context) error {
 	tenant, err := common.GetTenantForOrg(ctx, nil, gash.dbSession, org)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error getting tenant from org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Tenant from org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Tenant from org", nil)
 	}
 	subnetFilter.TenantIDs = []uuid.UUID{tenant.ID}
 
@@ -538,7 +536,7 @@ func (gash GetAllSubnetHandler) Handle(c echo.Context) error {
 	qIncludeRelations, errMsg := common.GetAndValidateQueryRelations(qParams, cdbm.SubnetRelatedEntities)
 	if errMsg != "" {
 		logger.Warn().Msg(errMsg)
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
 	}
 
 	// Get site ID from query param
@@ -549,7 +547,7 @@ func (gash GetAllSubnetHandler) Handle(c echo.Context) error {
 		site, err := common.GetSiteFromIDString(ctx, nil, siteIDStr, gash.dbSession)
 		if err != nil {
 			logger.Warn().Err(err).Msg("error getting site in request")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Site specified in query param, invalid ID or DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Site specified in query param, invalid ID or DB error", nil)
 		}
 		siteID = &site.ID
 
@@ -557,10 +555,10 @@ func (gash GetAllSubnetHandler) Handle(c echo.Context) error {
 		_, err = tsDAO.GetByTenantIDAndSiteID(ctx, nil, tenant.ID, site.ID, nil)
 		if err != nil {
 			if err == cdb.ErrDoesNotExist {
-				return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant does not have access to this Site", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant does not have access to this Site", nil)
 			}
 			logger.Error().Err(err).Msg("error retrieving TenantSite from DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to determine Tenant access to Site, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to determine Tenant access to Site, DB error", nil)
 		}
 		subnetFilter.SiteIDs = []uuid.UUID{*siteID}
 	}
@@ -572,11 +570,11 @@ func (gash GetAllSubnetHandler) Handle(c echo.Context) error {
 		vpc, err := common.GetVpcFromIDString(ctx, nil, qVpcID, nil, gash.dbSession)
 		if err != nil {
 			logger.Warn().Err(err).Msg("error getting vpc in request")
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find VPC specified in request", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find VPC specified in request", nil)
 		}
 		if vpc.TenantID != tenant.ID {
 			logger.Warn().Msg("tenant in vpc does not belong to tenant in org")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Tenant for VPC in request does not match tenant in org", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Tenant for VPC in request does not match tenant in org", nil)
 		}
 		vpcID = &vpc.ID
 		subnetFilter.VpcIDs = []uuid.UUID{*vpcID}
@@ -601,7 +599,7 @@ func (gash GetAllSubnetHandler) Handle(c echo.Context) error {
 		_, ok := cdbm.SubnetStatusMap[statusQuery]
 		if !ok {
 			logger.Warn().Msg(fmt.Sprintf("invalid value in status query: %v", statusQuery))
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Status value in query", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Status value in query", nil)
 		}
 		status = &statusQuery
 		subnetFilter.Statuses = []string{*status}
@@ -616,7 +614,7 @@ func (gash GetAllSubnetHandler) Handle(c echo.Context) error {
 	}, qIncludeRelations)
 	if err != nil {
 		logger.Error().Err(err).Msg("error getting subnets from db")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Subnets", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Subnets", nil)
 	}
 
 	// Get status details
@@ -629,7 +627,7 @@ func (gash GetAllSubnetHandler) Handle(c echo.Context) error {
 	ssds, serr := sdDAO.GetRecentByEntityIDs(ctx, nil, sdEntityIDs, common.RECENT_STATUS_DETAIL_COUNT)
 	if serr != nil {
 		logger.Warn().Err(serr).Msg("error retrieving Status Details for Subnets from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to populate status history for Subnets", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to populate status history for Subnets", nil)
 	}
 	ssdMap := map[string][]cdbm.StatusDetail{}
 	for _, ssd := range ssds {
@@ -652,7 +650,7 @@ func (gash GetAllSubnetHandler) Handle(c echo.Context) error {
 	pageHeader, err := json.Marshal(pageReponse)
 	if err != nil {
 		logger.Error().Err(err).Msg("error marshaling pagination response")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to generate pagination response header", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to generate pagination response header", nil)
 	}
 
 	c.Response().Header().Set(pagination.ResponseHeaderName, string(pageHeader))
@@ -669,7 +667,7 @@ type GetSubnetHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetSubnetHandler initializes and returns a new handler to retrieve Subnet
@@ -678,7 +676,7 @@ func NewGetSubnetHandler(dbSession *cdb.Session, tc temporalClient.Client, cfg *
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -719,7 +717,7 @@ func (gsh GetSubnetHandler) Handle(c echo.Context) error {
 
 	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gsh.tracerSpan, handlerSpan)
 	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -730,14 +728,14 @@ func (gsh GetSubnetHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Tenant Admins are allowed to interact with Subnet endpoints
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role with org, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	// Get and validate includeRelation params
@@ -745,7 +743,7 @@ func (gsh GetSubnetHandler) Handle(c echo.Context) error {
 	qIncludeRelations, errMsg := common.GetAndValidateQueryRelations(qParams, cdbm.SubnetRelatedEntities)
 	if errMsg != "" {
 		logger.Warn().Msg(errMsg)
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
 	}
 
 	// Get subnet ID from URL param
@@ -756,7 +754,7 @@ func (gsh GetSubnetHandler) Handle(c echo.Context) error {
 	sID, err := uuid.Parse(sStrID)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error parsing id in url into uuid")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Subnet ID in URL", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Subnet ID in URL", nil)
 	}
 
 	sDAO := cdbm.NewSubnetDAO(gsh.dbSession)
@@ -765,7 +763,7 @@ func (gsh GetSubnetHandler) Handle(c echo.Context) error {
 	tenant, err := common.GetTenantForOrg(ctx, nil, gsh.dbSession, org)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error getting tenant from org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Tenant from org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Tenant from org", nil)
 	}
 
 	// Check that subnet exists
@@ -773,15 +771,15 @@ func (gsh GetSubnetHandler) Handle(c echo.Context) error {
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Subnet DB entity")
 		if err == cdb.ErrDoesNotExist {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not retrieve Subnet to update", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not retrieve Subnet to update", nil)
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Could not retrieve Subnet to update", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Could not retrieve Subnet to update", nil)
 	}
 
 	// verify tenant matches
 	if tenant.ID != subnet.TenantID {
 		logger.Warn().Msg("tenant in subnet does not belong to tenant in org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Tenant for subnet in request does not match tenant in org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Tenant for subnet in request does not match tenant in org", nil)
 	}
 
 	// get status details for the response
@@ -789,7 +787,7 @@ func (gsh GetSubnetHandler) Handle(c echo.Context) error {
 	ssds, err := sdDAO.GetRecentByEntityIDs(ctx, nil, []string{subnet.ID.String()}, common.RECENT_STATUS_DETAIL_COUNT)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Status Details for subnet from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details for subnet", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details for subnet", nil)
 	}
 
 	// Send response
@@ -805,7 +803,7 @@ type UpdateSubnetHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewUpdateSubnetHandler initializes and returns a new handler for updating Subnet
@@ -814,7 +812,7 @@ func NewUpdateSubnetHandler(dbSession *cdb.Session, tc temporalClient.Client, cf
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -855,7 +853,7 @@ func (ush UpdateSubnetHandler) Handle(c echo.Context) error {
 
 	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, ush.tracerSpan, handlerSpan)
 	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -866,14 +864,14 @@ func (ush UpdateSubnetHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Tenant Admins are allowed to interact with Subnet endpoints
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role with org, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	// Get subnet ID from URL param
@@ -884,7 +882,7 @@ func (ush UpdateSubnetHandler) Handle(c echo.Context) error {
 	sID, err := uuid.Parse(sStrID)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error parsing id in url into uuid")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Subnet ID in URL", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Subnet ID in URL", nil)
 	}
 
 	sDAO := cdbm.NewSubnetDAO(ush.dbSession)
@@ -895,20 +893,20 @@ func (ush UpdateSubnetHandler) Handle(c echo.Context) error {
 	err = c.Bind(&apiRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
 	}
 	// Validate request attributes
 	verr := apiRequest.Validate()
 	if verr != nil {
 		logger.Warn().Err(verr).Msg("error validating Subnet update request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating Subnet update request data", verr)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating Subnet update request data", verr)
 	}
 
 	// Validate the tenant for which this Subnet is being updated
 	tenant, err := common.GetTenantForOrg(ctx, nil, ush.dbSession, org)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error getting tenant from org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Tenant from org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Tenant from org", nil)
 	}
 
 	// Check that subnet exists
@@ -916,25 +914,25 @@ func (ush UpdateSubnetHandler) Handle(c echo.Context) error {
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Subnet DB entity")
 		if err == cdb.ErrDoesNotExist {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not retrieve Subnet to update", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not retrieve Subnet to update", nil)
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Could not retrieve Subnet to update", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Could not retrieve Subnet to update", nil)
 	}
 
 	// verify tenant matches
 	if tenant.ID != subnet.TenantID {
 		logger.Warn().Msg("tenant in subnet does not belong to tenant in org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Tenant for subnet in request does not match tenant in org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Tenant for subnet in request does not match tenant in org", nil)
 	}
 
 	if apiRequest.Name != nil && *apiRequest.Name != subnet.Name {
 		sbs, tot, serr := sDAO.GetAll(ctx, nil, cdbm.SubnetFilterInput{Names: []string{*apiRequest.Name}, SiteIDs: []uuid.UUID{subnet.SiteID}, TenantIDs: []uuid.UUID{tenant.ID}}, paginator.PageInput{}, []string{})
 		if serr != nil {
 			logger.Error().Err(serr).Msg("db error checking for name uniqueness of tenant subnet")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Subnet due to DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Subnet due to DB error", nil)
 		}
 		if tot > 0 {
-			return cerr.NewAPIErrorResponse(c, http.StatusConflict, "Another Subnet with specified name already exists for Tenant", validation.Errors{
+			return cutil.NewAPIErrorResponse(c, http.StatusConflict, "Another Subnet with specified name already exists for Tenant", validation.Errors{
 				"id": errors.New(sbs[0].ID.String()),
 			})
 		}
@@ -944,7 +942,7 @@ func (ush UpdateSubnetHandler) Handle(c echo.Context) error {
 	tx, err := cdb.BeginTx(ctx, ush.dbSession, &sql.TxOptions{})
 	if err != nil {
 		logger.Error().Err(err).Msg("error updating subnet in DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Subnet", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Subnet", nil)
 	}
 	txCommitted := false
 	defer common.RollbackTx(ctx, tx, &txCommitted)
@@ -952,21 +950,21 @@ func (ush UpdateSubnetHandler) Handle(c echo.Context) error {
 	subnet, err = sDAO.Update(ctx, tx, cdbm.SubnetUpdateInput{SubnetId: sID, Name: apiRequest.Name, Description: apiRequest.Description})
 	if err != nil {
 		logger.Error().Err(err).Msg("error updating Subnet in DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Subnet", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Subnet", nil)
 	}
 	// get status details for the response
 	sdDAO := cdbm.NewStatusDetailDAO(ush.dbSession)
 	ssds, _, err := sdDAO.GetAllByEntityID(ctx, tx, subnet.ID.String(), nil, cdb.GetIntPtr(pagination.MaxPageSize), nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Status Details for subnet from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details for subnet", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details for subnet", nil)
 	}
 
 	// commit transaction
 	err = tx.Commit()
 	if err != nil {
 		logger.Error().Err(err).Msg("error updating Subnet in DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Subnet", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Subnet", nil)
 	}
 	txCommitted = true
 
@@ -984,7 +982,7 @@ type DeleteSubnetHandler struct {
 	tc         temporalClient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewDeleteSubnetHandler initializes and returns a new handler for deleting Subnet
@@ -994,7 +992,7 @@ func NewDeleteSubnetHandler(dbSession *cdb.Session, tc temporalClient.Client, sc
 		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -1034,7 +1032,7 @@ func (dsh DeleteSubnetHandler) Handle(c echo.Context) error {
 
 	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, dsh.tracerSpan, handlerSpan)
 	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -1045,14 +1043,14 @@ func (dsh DeleteSubnetHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Tenant Admins are allowed to interact with Subnet endpoints
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role with org, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	// Get subnet ID from URL param
@@ -1063,7 +1061,7 @@ func (dsh DeleteSubnetHandler) Handle(c echo.Context) error {
 	sID, err := uuid.Parse(sStrID)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error parsing id in url into uuid")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Subnet ID in URL", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Subnet ID in URL", nil)
 	}
 
 	// Check that subnet exists
@@ -1072,33 +1070,33 @@ func (dsh DeleteSubnetHandler) Handle(c echo.Context) error {
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Subnet DB entity")
 		if err == cdb.ErrDoesNotExist {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find Subnet to delete", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find Subnet to delete", nil)
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed not retrieve Subnet for deletion, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed not retrieve Subnet for deletion, DB error", nil)
 	}
 
 	if subnet.Tenant == nil {
 		logger.Warn().Err(err).Msg("failed to retrieve Tenant details")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant details", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant details", nil)
 	}
 
 	// Validate the tenant for which this Subnet is being updated
 	if subnet.Tenant.Org != org {
 		logger.Warn().Msg("org specified in request does not match org of Tenant associated with Subnet")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Org specified in request does not match org of Tenant associated with Subnet", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Org specified in request does not match org of Tenant associated with Subnet", nil)
 	}
 
 	// Verify that the Subnet is associated with a site and then that the site is
 	// in a valid state.
 	if subnet.Site == nil {
 		logger.Error().Msg("failed to pull site data for Subnet")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site details for Subnet", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site details for Subnet", nil)
 	}
 
 	// Verify if site is ready
 	if subnet.Site.Status != cdbm.SiteStatusRegistered {
 		logger.Warn().Str("Site ID", subnet.SiteID.String()).Msg("Site associated with Subnet must be in Registered state in order to proceed")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Site associated with Subnet must be in Registered state in order to proceed", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site associated with Subnet must be in Registered state in order to proceed", nil)
 	}
 
 	// Verify no instances are using the Subnet
@@ -1117,19 +1115,19 @@ func (dsh DeleteSubnetHandler) Handle(c echo.Context) error {
 	_, ifcCount, err := isDAO.GetAll(ctx, nil, filterInput, pageInput, nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Interfaces for Subnet from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Interfaces for Subnet, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Interfaces for Subnet, DB error", nil)
 	}
 
 	if ifcCount > 0 {
 		logger.Warn().Msg("Interfaces exist for Subnet, cannot delete it")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Subnet is being used by one or more Instances and cannot be deleted", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Subnet is being used by one or more Instances and cannot be deleted", nil)
 	}
 
 	// Start a db tx
 	tx, err := cdb.BeginTx(ctx, dsh.dbSession, &sql.TxOptions{})
 	if err != nil {
 		logger.Error().Err(err).Msg("unable to start transaction")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete Subnet, DB transaction error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete Subnet, DB transaction error", nil)
 	}
 	// this variable is used in cleanup actions to indicate if this transaction committed
 	txCommitted := false
@@ -1141,7 +1139,7 @@ func (dsh DeleteSubnetHandler) Handle(c echo.Context) error {
 	if err != nil {
 		// TODO: Add a retry here
 		logger.Error().Err(err).Msg("Failed to acquire advisory lock on ipblock")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete Subnet, DB lock error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete Subnet, DB lock error", nil)
 	}
 
 	// Set Subnet status to Deleting
@@ -1150,21 +1148,21 @@ func (dsh DeleteSubnetHandler) Handle(c echo.Context) error {
 	_, err = sDAO.Update(ctx, tx, cdbm.SubnetUpdateInput{SubnetId: subnet.ID, Status: &status})
 	if err != nil {
 		logger.Error().Err(err).Msg("error setting Subnet status to deleting")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Subnet status, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Subnet status, DB error", nil)
 	}
 
 	sdDAO := cdbm.NewStatusDetailDAO(dsh.dbSession)
 	_, err = sdDAO.CreateFromParams(ctx, tx, subnet.ID.String(), status, &statusMsg)
 	if err != nil {
 		logger.Error().Err(err).Msg("error creating Status Detail for Subnet")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Subnet status detail, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Subnet status detail, DB error", nil)
 	}
 
 	// Get the temporal client for the site we are working with.
 	stc, err := dsh.scp.GetClientByID(subnet.SiteID)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
 	}
 
 	// Prepare the delete/release request workflow object
@@ -1184,7 +1182,7 @@ func (dsh DeleteSubnetHandler) Handle(c echo.Context) error {
 	we, err := stc.ExecuteWorkflow(ctx, workflowOptions, "DeleteSubnetV2", deleteSubnetRequest)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to synchronously start Temporal workflow to delete Subnet")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to start sync workflow to delete Subnet on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to start sync workflow to delete Subnet on Site: %s", err), nil)
 	}
 
 	wid := we.GetID()
@@ -1211,24 +1209,24 @@ func (dsh DeleteSubnetHandler) Handle(c echo.Context) error {
 			logger.Error().Err(err).Msg("failed to delete Subnet, timeout occurred executing workflow on Site.")
 
 			// Create a new context deadlines
-			newctx, newcancel := context.WithTimeout(context.Background(), cwutil.WorkflowContextNewAfterTimeout)
+			newctx, newcancel := context.WithTimeout(context.Background(), cutil.WorkflowContextNewAfterTimeout)
 			defer newcancel()
 
 			// Initiate termination workflow
 			serr := stc.TerminateWorkflow(newctx, wid, "", "timeout occurred executing delete Subnet workflow")
 			if serr != nil {
 				logger.Error().Err(serr).Msg("failed to terminate Temporal workflow for deleting Subnet")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to terminate synchronous Subnet deletion workflow after timeout, Cloud and Site data may be de-synced: %s", serr), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to terminate synchronous Subnet deletion workflow after timeout, Cloud and Site data may be de-synced: %s", serr), nil)
 			}
 
 			logger.Info().Str("Workflow ID", wid).Msg("initiated terminate synchronous delete Subnet workflow successfully")
 
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to delete Subnet, timeout occurred executing workflow on Site: %s", err), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to delete Subnet, timeout occurred executing workflow on Site: %s", err), nil)
 		}
 
 		code, err := common.UnwrapWorkflowError(err)
 		logger.Error().Err(err).Msg("failed to synchronously execute Temporal workflow to delete Subnet")
-		return cerr.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to execute sync workflow to delete Subnet on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to execute sync workflow to delete Subnet on Site: %s", err), nil)
 	}
 
 	logger.Info().Str("Workflow ID", wid).Msg("completed synchronous delete Subnet workflow")
@@ -1237,7 +1235,7 @@ func (dsh DeleteSubnetHandler) Handle(c echo.Context) error {
 	err = tx.Commit()
 	if err != nil {
 		logger.Error().Err(err).Msg("error committing Subnet transaction to DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete Subnet, DB transaction error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete Subnet, DB transaction error", nil)
 	}
 
 	// Set committed so, deferred cleanup functions will do nothing

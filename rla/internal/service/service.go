@@ -51,14 +51,14 @@ func New(ctx context.Context, c Config) (*Service, error) {
 	// 1. Create shared PostgreSQL connection
 	session, err := cdb.NewSessionFromConfig(ctx, c.DBConf)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create database connection: %v", err)
+		return nil, fmt.Errorf("failed to create database connection: %w", err)
 	}
 
 	// Run migrations
 	if err := migrations.MigrateWithDB(ctx, session.DB); err != nil {
 		session.Close()
 
-		return nil, fmt.Errorf("failed to run migrations: %v", err)
+		return nil, fmt.Errorf("failed to run migrations: %w", err)
 	}
 
 	// 2. Create stores (Storage Layer)
@@ -101,14 +101,14 @@ func (s *Service) Start(ctx context.Context) error {
 	log.Info().Msg("Rule resolver ready (will query DB for operation rules)")
 
 	if err := s.inventoryManager.Start(ctx); err != nil {
-		return fmt.Errorf("failed to start inventory manager: %v", err)
+		return fmt.Errorf("failed to start inventory manager: %w", err)
 	}
 
 	log.Info().Msg("Inventory manager started")
 
 	if s.taskManager != nil {
 		if err := s.taskManager.Start(ctx); err != nil {
-			return fmt.Errorf("failed to start task manager: %v", err)
+			return fmt.Errorf("failed to start task manager: %w", err)
 		}
 
 		log.Info().Msg("Task manager started")

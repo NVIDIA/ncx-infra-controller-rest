@@ -43,7 +43,7 @@ type PowershelfManager struct {
 func New(ctx context.Context, c Config) (*PowershelfManager, error) {
 	credentialManager, err := credentials.New(ctx, &c.CredentialConf)
 	if err != nil {
-		return nil, fmt.Errorf("failed to initialize credential manager (conf: %v): %v", c, err)
+		return nil, fmt.Errorf("failed to initialize credential manager (conf: %v): %w", c, err)
 	}
 
 	var registry pmcregistry.PmcRegistry
@@ -56,14 +56,14 @@ func New(ctx context.Context, c Config) (*PowershelfManager, error) {
 
 		registry, err = pmcregistry.New(ctx, &c.PmcRegistryConf)
 		if err != nil {
-			return nil, fmt.Errorf("failed to initialize persistent PMC registry (conf: %v): %v", c, err)
+			return nil, fmt.Errorf("failed to initialize persistent PMC registry (conf: %v): %w", c, err)
 		}
 	case DatastoreTypeInMemory:
 		log.Printf("Initializing Powershelf Manager with an in-memory PMC registry")
 
 		registry, err = pmcregistry.New(ctx, &c.PmcRegistryConf)
 		if err != nil {
-			return nil, fmt.Errorf("failed to initialize in-memory PMC registry (conf: %v): %v", c, err)
+			return nil, fmt.Errorf("failed to initialize in-memory PMC registry (conf: %v): %w", c, err)
 		}
 	default:
 		return nil, fmt.Errorf("unsupported PMC registry type %v", c.DSType)
@@ -72,7 +72,7 @@ func New(ctx context.Context, c Config) (*PowershelfManager, error) {
 	pmcManager := pmcmanager.New(registry, credentialManager)
 	firmwareManager, err := firmwaremanager.New(ctx, c.PmcRegistryConf.DSConf, pmcManager, false)
 	if err != nil {
-		return nil, fmt.Errorf("failed to initialize firmware manager (conf: %v): %v", c, err)
+		return nil, fmt.Errorf("failed to initialize firmware manager (conf: %v): %w", c, err)
 	}
 
 	return &PowershelfManager{
@@ -123,7 +123,7 @@ func (pm *PowershelfManager) RegisterPmc(ctx context.Context, pmc *pmc.PMC) erro
 func (pm *PowershelfManager) ListAvailableFirmware(ctx context.Context, mac net.HardwareAddr) ([]firmwaremanager.FirmwareUpgrade, error) {
 	pmc, err := pm.GetPmc(ctx, mac)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get query PMC (%s): %v", mac.String(), err)
+		return nil, fmt.Errorf("failed to get query PMC (%s): %w", mac.String(), err)
 	}
 
 	return pm.FirmwareManager.ListAvailableFirmware(ctx, pmc)
@@ -134,7 +134,7 @@ func (pm *PowershelfManager) ListAvailableFirmware(ctx context.Context, mac net.
 func (pm *PowershelfManager) UpgradeFirmware(ctx context.Context, mac net.HardwareAddr, component powershelf.Component, targetFwVersion string) error {
 	pmc, err := pm.GetPmc(ctx, mac)
 	if err != nil {
-		return fmt.Errorf("failed to get query PMC (%s): %v", mac.String(), err)
+		return fmt.Errorf("failed to get query PMC (%s): %w", mac.String(), err)
 	}
 
 	return pm.FirmwareManager.Upgrade(ctx, pmc, component, targetFwVersion)

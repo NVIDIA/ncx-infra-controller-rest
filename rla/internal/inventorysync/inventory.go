@@ -330,7 +330,7 @@ func syncMachineIDs(ctx context.Context, config *config.Config, pool *cdb.Sessio
 		if err := pool.RunInTx(ctx, func(ctx context.Context, tx bun.Tx) error {
 			for _, cur := range toUpdate {
 				if err := cur.SetComponentIDBySerial(ctx, tx); err != nil {
-					return fmt.Errorf("Unable to update machine ID: %v", err)
+					return fmt.Errorf("Unable to update machine ID: %w", err)
 				}
 			}
 			return nil
@@ -369,7 +369,7 @@ func syncPowerStates(ctx context.Context, pool *cdb.Session, carbideClient carbi
 		if err := pool.RunInTx(ctx, func(ctx context.Context, tx bun.Tx) error {
 			for _, cur := range toUpdate {
 				if err := cur.SetPowerStateByComponentID(ctx, tx); err != nil {
-					return fmt.Errorf("Unable to update power state: %v", err)
+					return fmt.Errorf("Unable to update power state: %w", err)
 				}
 			}
 			return nil

@@ -411,14 +411,14 @@ func (rs *RLAServerImpl) GetListOfRacks(
 ) (*pb.GetListOfRacksResponse, error) {
 	pg := protobuf.PaginationFrom(req.GetPagination())
 	if err := pg.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid pagination information: %v", err)
+		return nil, fmt.Errorf("invalid pagination information: %w", err)
 	}
 
 	var orderBy *dbquery.OrderBy
 	if req.GetOrderBy() != nil {
 		orderBy = protobuf.OrderByFrom(req.GetOrderBy())
 		if err := orderBy.Validate(); err != nil {
-			return nil, fmt.Errorf("invalid order by: %v", err)
+			return nil, fmt.Errorf("invalid order by: %w", err)
 		}
 	}
 
@@ -434,7 +434,7 @@ func (rs *RLAServerImpl) GetListOfRacks(
 			}
 			fieldName, queryInfo, err := protobuf.FilterFrom(filter)
 			if err != nil {
-				return nil, fmt.Errorf("invalid filter: %v", err)
+				return nil, fmt.Errorf("invalid filter: %w", err)
 			}
 			if queryInfo == nil {
 				continue
@@ -544,7 +544,7 @@ func (rs *RLAServerImpl) GetListOfNVLDomains(
 ) (*pb.GetListOfNVLDomainsResponse, error) {
 	pg := protobuf.PaginationFrom(req.GetPagination())
 	if err := pg.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid pagination information: %v", err)
+		return nil, fmt.Errorf("invalid pagination information: %w", err)
 	}
 
 	if req.GetInfo() == nil {
@@ -881,7 +881,7 @@ func (rs *RLAServerImpl) ListTasks(
 
 	pagination := protobuf.PaginationFrom(req.GetPagination())
 	if err := pagination.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid pagination information: %v", err)
+		return nil, fmt.Errorf("invalid pagination information: %w", err)
 	}
 
 	tasks, total, err := rs.taskStore.ListTasks(ctx, options, pagination)
@@ -1260,14 +1260,14 @@ func (rs *RLAServerImpl) GetComponents(
 ) (*pb.GetComponentsResponse, error) {
 	pg := protobuf.PaginationFrom(req.GetPagination())
 	if err := pg.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid pagination information: %v", err)
+		return nil, fmt.Errorf("invalid pagination information: %w", err)
 	}
 
 	var orderBy *dbquery.OrderBy
 	if req.GetOrderBy() != nil {
 		orderBy = protobuf.OrderByFrom(req.GetOrderBy())
 		if err := orderBy.Validate(); err != nil {
-			return nil, fmt.Errorf("invalid order by: %v", err)
+			return nil, fmt.Errorf("invalid order by: %w", err)
 		}
 	}
 
@@ -1284,7 +1284,7 @@ func (rs *RLAServerImpl) GetComponents(
 			}
 			fieldName, queryInfo, err := protobuf.FilterFrom(filter)
 			if err != nil {
-				return nil, fmt.Errorf("invalid filter: %v", err)
+				return nil, fmt.Errorf("invalid filter: %w", err)
 			}
 			if queryInfo == nil {
 				continue
@@ -1411,14 +1411,14 @@ func (rs *RLAServerImpl) ValidateComponents(
 ) (*pb.ValidateComponentsResponse, error) {
 	pg := protobuf.PaginationFrom(req.GetPagination())
 	if err := pg.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid pagination information: %v", err)
+		return nil, fmt.Errorf("invalid pagination information: %w", err)
 	}
 
 	var orderBy *dbquery.OrderBy
 	if req.GetOrderBy() != nil {
 		orderBy = protobuf.OrderByFrom(req.GetOrderBy())
 		if err := orderBy.Validate(); err != nil {
-			return nil, fmt.Errorf("invalid order by: %v", err)
+			return nil, fmt.Errorf("invalid order by: %w", err)
 		}
 	}
 
@@ -1435,7 +1435,7 @@ func (rs *RLAServerImpl) ValidateComponents(
 			}
 			fieldName, queryInfo, err := protobuf.FilterFrom(filter)
 			if err != nil {
-				return nil, fmt.Errorf("invalid filter: %v", err)
+				return nil, fmt.Errorf("invalid filter: %w", err)
 			}
 			if queryInfo == nil {
 				continue

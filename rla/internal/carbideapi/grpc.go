@@ -66,7 +66,7 @@ func NewClient(grpcTimeout time.Duration) (Client, error) {
 
 	conn, err := grpc.NewClient(carbideURL, grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)))
 	if err != nil {
-		return nil, fmt.Errorf("Unable to connect to carbide-api: %v", err)
+		return nil, fmt.Errorf("Unable to connect to carbide-api: %w", err)
 	}
 
 	return &grpcClient{gclient: pb.NewForgeClient(conn), grpcTimeout: grpcTimeout}, nil

@@ -597,7 +597,11 @@ func clientFromContext(c *cli.Context) (*Client, error) {
 	if token == "" {
 		token = GetAuthToken(cfg)
 		if token == "" {
-			token, _ = AutoRefreshToken(cfg)
+			var refreshErr error
+			token, refreshErr = AutoRefreshToken(cfg)
+			if refreshErr != nil {
+				fmt.Fprintf(os.Stderr, "Warning: auto-refresh token failed: %v\n", refreshErr)
+			}
 		}
 	}
 
