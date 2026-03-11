@@ -44,6 +44,46 @@ import (
 	sutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 )
 
+// ~~~~~ GetAll Instance InfiniBandInterface Handler ~~~~~ //
+
+// GetAllInstanceInfiniBandInterfaceHandler is the API Handler for retrieving all InfiniBandInterfaces for an Instance
+type GetAllInstanceInfiniBandInterfaceHandler struct {
+	dbSession  *cdb.Session
+	tc         temporalClient.Client
+	cfg        *config.Config
+	tracerSpan *sutil.TracerSpan
+}
+
+// NewGetAllInstanceInfiniBandInterfaceHandler initializes and returns a new handler for retrieving all InfiniBandInterfaces for an Instance
+func NewGetAllInstanceInfiniBandInterfaceHandler(dbSession *cdb.Session, tc temporalClient.Client, cfg *config.Config) GetAllInstanceInfiniBandInterfaceHandler {
+	return GetAllInstanceInfiniBandInterfaceHandler{
+		dbSession:  dbSession,
+		tc:         tc,
+		cfg:        cfg,
+		tracerSpan: sutil.NewTracerSpan(),
+	}
+}
+
+// Handle godoc
+// @Summary Retrieve all Interfaces for an Instance
+// @Description Retrieve all Interfaces for an Instance
+// @Tags interface
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param org path string true "Name of NGC organization"
+// @Param instanceId path string true "ID of Instance"
+// @Param status query string false "Filter by status" e.g. 'Pending', 'Error'"
+// @Param includeRelation query string false "Related entities to include in response e.g. 'Instance', 'Subnet'"
+// @Param pageNumber query integer false "Page number of results returned"
+// @Param pageSize query integer false "Number of results per page"
+// @Param orderBy query string false "Order by field"
+// @Success 200 {object} model.APIInterface
+// @Router /v2/org/{org}/carbide/instance/{instance_id}/interface [get]
+func (gaibih GetAllInstanceInfiniBandInterfaceHandler) Handle(c echo.Context) error {
+	return cerr.NewAPIErrorResponse(c, http.StatusNotImplemented, "Not implemented", nil)
+}
+
 // ~~~~~ GetAll InfiniBandInterface Handler ~~~~~ //
 
 // GetAllInfiniBandInterfaceHandler is the API Handler for retrieving all InfiniBandInterfaces
@@ -168,29 +208,38 @@ func (gaibih GetAllInfiniBandInterfaceHandler) Handle(c echo.Context) error {
 
 	// Get site IDs from query param - parse first, then bulk fetch
 	var siteIDs []uuid.UUID
-	for _, siteIDStr := range qParams["siteId"] {
+	siteIDStrs := qParams["siteId"]
+	for _, siteIDStr := range siteIDStrs {
+		gaibih.tracerSpan.SetAttribute(handlerSpan, attribute.StringSlice("siteId", siteIDStrs), logger)
 		parsedID, err := uuid.Parse(siteIDStr)
 		if err != nil {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Invalid Site ID %v in query", siteIDStr), nil)
+			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Invalid Site ID: %s specified in query", siteIDStr), nil)
 		}
 		siteIDs = append(siteIDs, parsedID)
 	}
 
 	if len(siteIDs) > 0 {
+		// deduplicate site IDs
 		siteIDs = goset.NewSet(siteIDs...).ToSlice()
+		// Get all Sites specified in query
 
+		// This is to check if the Sites specified in query exist
+		siteIDMap := map[uuid.UUID]bool{}
 		stDAO := cdbm.NewSiteDAO(gaibih.dbSession)
+
 		sites, _, err := stDAO.GetAll(ctx, nil, cdbm.SiteFilterInput{SiteIDs: siteIDs}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
 		if err != nil {
 			logger.Error().Err(err).Msg("error retrieving Sites from DB")
 			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Sites", nil)
 		}
-		if len(sites) != len(siteIDs) {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find one or more Sites specified in query", nil)
+
+		for _, site := range sites {
+			siteIDMap[site.ID] = true
 		}
 
+		// Get all TenantSites for the Tenant and Sites specified in query
 		tsDAO := cdbm.NewTenantSiteDAO(gaibih.dbSession)
-		_, tsCount, err := tsDAO.GetAll(
+		tenantSites, _, err := tsDAO.GetAll(
 			ctx,
 			nil,
 			cdbm.TenantSiteFilterInput{
@@ -198,20 +247,38 @@ func (gaibih GetAllInfiniBandInterfaceHandler) Handle(c echo.Context) error {
 				SiteIDs:   siteIDs,
 			},
 			cdbp.PageInput{},
-			nil,
+			[]string{cdbm.SiteRelationName},
 		)
+
 		if err != nil {
 			logger.Error().Err(err).Msg("error retrieving TenantSite from DB")
 			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to determine Tenant access to Site, DB error", nil)
 		}
-		if tsCount != len(siteIDs) {
-			return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant does not have access to one or more Sites specified in query", nil)
+
+		// Check if Tenant has access to each Site
+		tenantSiteIDMap := map[uuid.UUID]*cdbm.TenantSite{}
+		for i := range tenantSites {
+			tenantSiteIDMap[tenantSites[i].SiteID] = &tenantSites[i]
+		}
+
+		for _, siteID := range siteIDs {
+			// Check if Site exists
+			if _, ok := siteIDMap[siteID]; !ok {
+				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Site: %s specified in query is not found in DB", siteID.String()), nil)
+			}
+
+			// Check if Tenant has access to Site
+			if _, ok := tenantSiteIDMap[siteID]; !ok {
+				return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Tenant does not have access to Site: %s specified in query", siteID.String()), nil)
+			}
 		}
 	}
 
 	// Get Instance IDs from query param - parse first, then bulk fetch
 	var instanceIDs []uuid.UUID
-	for _, instanceIDStr := range qParams["instanceId"] {
+	instanceIDStrs := qParams["instanceId"]
+	for _, instanceIDStr := range instanceIDStrs {
+		gaibih.tracerSpan.SetAttribute(handlerSpan, attribute.StringSlice("instanceId", instanceIDStrs), logger)
 		parsedID, err := uuid.Parse(instanceIDStr)
 		if err != nil {
 			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Invalid Instance ID %v in query", instanceIDStr), nil)
@@ -220,6 +287,7 @@ func (gaibih GetAllInfiniBandInterfaceHandler) Handle(c echo.Context) error {
 	}
 
 	if len(instanceIDs) > 0 {
+		// deduplicate instance IDs
 		instanceIDs = goset.NewSet(instanceIDs...).ToSlice()
 
 		instanceDAO := cdbm.NewInstanceDAO(gaibih.dbSession)
@@ -228,19 +296,30 @@ func (gaibih GetAllInfiniBandInterfaceHandler) Handle(c echo.Context) error {
 			logger.Error().Err(err).Msg("error retrieving Instances from DB")
 			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Instances", nil)
 		}
-		if len(instances) != len(instanceIDs) {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find one or more Instances specified in query", nil)
+		instanceIDMap := map[uuid.UUID]*cdbm.Instance{}
+
+		for i := range instances {
+			instanceIDMap[instances[i].ID] = &instances[i]
 		}
-		for _, instance := range instances {
+
+		for _, instanceID := range instanceIDs {
+			instance, ok := instanceIDMap[instanceID]
+			if !ok {
+				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Instance: %s specified in query is not found in DB", instanceID.String()), nil)
+			}
+
 			if instance.TenantID != tenant.ID {
-				return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Instance does not belong to current Tenant", nil)
+				return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Instance: %s does not belong to current Tenant", instanceID.String()), nil)
 			}
 		}
 	}
 
 	// Get InfiniBand Partition IDs from query param - parse first, then bulk fetch
 	var infiniBandPartitionIDs []uuid.UUID
-	for _, ibpIDStr := range qParams["infinibandPartitionId"] {
+	ibpIDStrs := qParams["infinibandPartitionId"]
+	for _, ibpIDStr := range ibpIDStrs {
+		gaibih.tracerSpan.SetAttribute(handlerSpan, attribute.StringSlice("infinibandPartitionId", ibpIDStrs), logger)
+
 		parsedID, err := uuid.Parse(ibpIDStr)
 		if err != nil {
 			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Invalid InfiniBand Partition ID %v in query", ibpIDStr), nil)
@@ -249,6 +328,7 @@ func (gaibih GetAllInfiniBandInterfaceHandler) Handle(c echo.Context) error {
 	}
 
 	if len(infiniBandPartitionIDs) > 0 {
+		// Deduplicate InfiniBand Partition IDs
 		infiniBandPartitionIDs = goset.NewSet(infiniBandPartitionIDs...).ToSlice()
 
 		ibpDAO := cdbm.NewInfiniBandPartitionDAO(gaibih.dbSession)
@@ -257,12 +337,20 @@ func (gaibih GetAllInfiniBandInterfaceHandler) Handle(c echo.Context) error {
 			logger.Error().Err(err).Msg("error retrieving InfiniBand Partitions from DB")
 			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve InfiniBand Partitions", nil)
 		}
-		if len(ibPartitions) != len(infiniBandPartitionIDs) {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find one or more InfiniBand Partitions specified in query", nil)
+
+		ibPartitionIDMap := map[uuid.UUID]*cdbm.InfiniBandPartition{}
+		for i := range ibPartitions {
+			ibPartitionIDMap[ibPartitions[i].ID] = &ibPartitions[i]
 		}
-		for _, ibp := range ibPartitions {
-			if ibp.TenantID != tenant.ID {
-				return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "InfiniBand Partition does not belong to current Tenant", nil)
+
+		for _, ibPartitionID := range infiniBandPartitionIDs {
+			ibPartition, ok := ibPartitionIDMap[ibPartitionID]
+			if !ok {
+				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("InfiniBand Partition: %s specified in query is not found in DB", ibPartitionID.String()), nil)
+			}
+
+			if ibPartition.TenantID != tenant.ID {
+				return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("InfiniBand Partition: %s does not belong to current Tenant", ibPartitionID.String()), nil)
 			}
 		}
 	}

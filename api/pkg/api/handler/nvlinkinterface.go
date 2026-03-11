@@ -38,8 +38,49 @@ import (
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model"
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/pagination"
 	auth "github.com/nvidia/bare-metal-manager-rest/auth/pkg/authorization"
+	cerr "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 	cutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 )
+
+// ~~~~~ GetAll Instance NVLinkInterface Handler ~~~~~ //
+
+// GetAllInstanceNVLinkInterfaceHandler is the API Handler for retrieving all NVLinkInterfaces for an Instance
+type GetAllInstanceNVLinkInterfaceHandler struct {
+	dbSession  *cdb.Session
+	tc         temporalClient.Client
+	cfg        *config.Config
+	tracerSpan *cutil.TracerSpan
+}
+
+// NewGetAllInstanceNVLinkInterfaceHandler initializes and returns a new handler for retrieving all NVLinkInterfaces for an Instance
+func NewGetAllInstanceNVLinkInterfaceHandler(dbSession *cdb.Session, tc temporalClient.Client, cfg *config.Config) GetAllInstanceNVLinkInterfaceHandler {
+	return GetAllInstanceNVLinkInterfaceHandler{
+		dbSession:  dbSession,
+		tc:         tc,
+		cfg:        cfg,
+		tracerSpan: cutil.NewTracerSpan(),
+	}
+}
+
+// Handle godoc
+// @Summary Retrieve all Interfaces for an Instance
+// @Description Retrieve all Interfaces for an Instance
+// @Tags interface
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param org path string true "Name of NGC organization"
+// @Param instanceId path string true "ID of Instance"
+// @Param status query string false "Filter by status" e.g. 'Pending', 'Error'"
+// @Param includeRelation query string false "Related entities to include in response e.g. 'Instance', 'Subnet'"
+// @Param pageNumber query integer false "Page number of results returned"
+// @Param pageSize query integer false "Number of results per page"
+// @Param orderBy query string false "Order by field"
+// @Success 200 {object} model.APIInterface
+// @Router /v2/org/{org}/carbide/instance/{instance_id}/interface [get]
+func (ganvliih GetAllInstanceNVLinkInterfaceHandler) Handle(c echo.Context) error {
+	return cerr.NewAPIErrorResponse(c, http.StatusNotImplemented, "Not implemented", nil)
+}
 
 // ~~~~~ GetAll NVLinkInterface Handler ~~~~~ //
 
