@@ -47,6 +47,7 @@ type VPC struct {
 	NetworkSecurityGroupPropagationDetails *NetworkSecurityGroupPropagationDetails `json:"networkSecurityGroupPropagationDetails,omitempty"`
 	// ID of the default NVLink Logical Partition that GPUs for all Instances in the VPC will attach to
 	NvLinkLogicalPartitionId NullableString `json:"nvLinkLogicalPartitionId,omitempty"`
+	// String key value pairs describing VPC labels
 	Labels map[string]string `json:"labels,omitempty"`
 	// Status of the VPC
 	Status *VpcStatus `json:"status,omitempty"`

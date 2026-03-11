@@ -449,6 +449,7 @@ func (a *TrayAPIService) GetAllTrayExecute(r ApiGetAllTrayRequest) ([]Tray, *htt
 		parameterAddToHeaderOrQuery(localVarQueryParams, "pageNumber", r.pageNumber, "form", "")
 	} else {
 		var defaultValue int32 = 1
+		parameterAddToHeaderOrQuery(localVarQueryParams, "pageNumber", defaultValue, "form", "")
 		r.pageNumber = &defaultValue
 	}
 	if r.pageSize != nil {

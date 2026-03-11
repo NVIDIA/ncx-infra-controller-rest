@@ -480,3 +480,62 @@ func NewAPIRackValidationResult(protoResp *rlav1.ValidateComponentsResponse) *AP
 	result.FromProto(protoResp)
 	return result
 }
+
+// ========== Bring Up Request ==========
+
+// APIBringUpRackRequest is the request body for bring up operations on a single rack
+type APIBringUpRackRequest struct {
+	SiteID      string `json:"siteId"`
+	Description string `json:"description,omitempty"`
+}
+
+// Validate validates the bring up request
+func (r *APIBringUpRackRequest) Validate() error {
+	if r.SiteID == "" {
+		return fmt.Errorf("siteId is required")
+	}
+	return nil
+}
+
+// ========== Bring Up Response ==========
+
+// APIBringUpRackResponse is the API response for bring up operations
+type APIBringUpRackResponse struct {
+	TaskIDs []string `json:"taskIds"`
+}
+
+// FromProto converts an RLA SubmitTaskResponse to an APIBringUpRackResponse
+func (r *APIBringUpRackResponse) FromProto(resp *rlav1.SubmitTaskResponse) {
+	if resp == nil {
+		r.TaskIDs = []string{}
+		return
+	}
+	r.TaskIDs = make([]string, 0, len(resp.GetTaskIds()))
+	for _, id := range resp.GetTaskIds() {
+		r.TaskIDs = append(r.TaskIDs, id.GetId())
+	}
+}
+
+// NewAPIBringUpRackResponse creates an APIBringUpRackResponse from an RLA SubmitTaskResponse
+func NewAPIBringUpRackResponse(resp *rlav1.SubmitTaskResponse) *APIBringUpRackResponse {
+	r := &APIBringUpRackResponse{}
+	r.FromProto(resp)
+	return r
+}
+
+// ========== Batch Bring Up Rack Request ==========
+
+// APIBatchBringUpRackRequest is the JSON body for batch rack bring up.
+type APIBatchBringUpRackRequest struct {
+	SiteID      string      `json:"siteId"`
+	Filter      *RackFilter `json:"filter,omitempty"`
+	Description string      `json:"description,omitempty"`
+}
+
+// Validate checks required fields.
+func (r *APIBatchBringUpRackRequest) Validate() error {
+	if r.SiteID == "" {
+		return fmt.Errorf("siteId is required")
+	}
+	return nil
+}
