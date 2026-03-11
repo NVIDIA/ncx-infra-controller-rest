@@ -34,11 +34,7 @@ import (
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operationrules"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operations"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/task"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/deviceinfo"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/location"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/component"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/rack"
 )
 
 func mockUpdateTaskStatusForBringUp(ctx context.Context, arg *task.TaskStatusUpdate) error {
@@ -112,17 +108,17 @@ func createBringUpTestRuleDef() *operationrules.RuleDefinition {
 	}
 }
 
-func createBringUpTestRack() *rack.Rack {
-	r := rack.New(deviceinfo.DeviceInfo{ID: uuid.New(), Name: "test-rack"}, location.Location{})
-	r.AddComponent(component.Component{
-		ComponentID: "ps-1",
-		Type:        devicetypes.ComponentTypePowerShelf,
-	})
-	r.AddComponent(component.Component{
-		ComponentID: "compute-1",
-		Type:        devicetypes.ComponentTypeCompute,
-	})
-	return r
+func createBringUpTestComponents() []task.WorkflowComponent {
+	return []task.WorkflowComponent{
+		{
+			ComponentID: "ps-1",
+			Type:        devicetypes.ComponentTypePowerShelf,
+		},
+		{
+			ComponentID: "compute-1",
+			Type:        devicetypes.ComponentTypeCompute,
+		},
+	}
 }
 
 func registerBringUpActivities(env *testsuite.TestWorkflowEnvironment) {
@@ -185,7 +181,7 @@ func TestBringUpWorkflow(t *testing.T) {
 
 			reqInfo := task.ExecutionInfo{
 				TaskID:         uuid.New(),
-				Rack:           createBringUpTestRack(),
+				Components:     createBringUpTestComponents(),
 				RuleDefinition: createBringUpTestRuleDef(),
 			}
 			info := &operations.BringUpTaskInfo{}
@@ -226,19 +222,11 @@ func TestBringUpWorkflowWithIngestion(t *testing.T) {
 	env.OnActivity(mockUpdateTaskStatusForBringUp, mock.Anything, mock.Anything).Return(nil)
 	env.OnActivity(mockInjectExpectation, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-	testRack := rack.New(deviceinfo.DeviceInfo{ID: uuid.New(), Name: "test-rack"}, location.Location{})
-	testRack.AddComponent(component.Component{
-		ComponentID: "ps-1",
-		Type:        devicetypes.ComponentTypePowerShelf,
-	})
-	testRack.AddComponent(component.Component{
-		ComponentID: "compute-1",
-		Type:        devicetypes.ComponentTypeCompute,
-	})
-	testRack.AddComponent(component.Component{
-		ComponentID: "switch-1",
-		Type:        devicetypes.ComponentTypeNVLSwitch,
-	})
+	testComponents := []task.WorkflowComponent{
+		{ComponentID: "ps-1", Type: devicetypes.ComponentTypePowerShelf},
+		{ComponentID: "compute-1", Type: devicetypes.ComponentTypeCompute},
+		{ComponentID: "switch-1", Type: devicetypes.ComponentTypeNVLSwitch},
+	}
 
 	ingestRule := &operationrules.RuleDefinition{
 		Version: "v1",
@@ -275,7 +263,7 @@ func TestBringUpWorkflowWithIngestion(t *testing.T) {
 
 	reqInfo := task.ExecutionInfo{
 		TaskID:         uuid.New(),
-		Rack:           testRack,
+		Components:     testComponents,
 		RuleDefinition: ingestRule,
 	}
 	info := &operations.BringUpTaskInfo{}
@@ -290,13 +278,9 @@ func TestBringUpWorkflowEmptyRack(t *testing.T) {
 	testSuite := &testsuite.WorkflowTestSuite{}
 	env := testSuite.NewTestWorkflowEnvironment()
 
-	emptyRack := rack.New(
-		deviceinfo.DeviceInfo{ID: uuid.New(), Name: "empty-rack"},
-		location.Location{},
-	)
 	reqInfo := task.ExecutionInfo{
 		TaskID:         uuid.New(),
-		Rack:           emptyRack,
+		Components:     []task.WorkflowComponent{},
 		RuleDefinition: createBringUpTestRuleDef(),
 	}
 	info := &operations.BringUpTaskInfo{}

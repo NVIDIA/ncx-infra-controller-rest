@@ -49,7 +49,7 @@ func InjectExpectation(
 	reqInfo task.ExecutionInfo,
 	info *operations.InjectExpectationTaskInfo,
 ) error {
-	if reqInfo.Rack == nil || len(reqInfo.Rack.Components) == 0 {
+	if len(reqInfo.Components) == 0 {
 		return fmt.Errorf("no components provided")
 	}
 
