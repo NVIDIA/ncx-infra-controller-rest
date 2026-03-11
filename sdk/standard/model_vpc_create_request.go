@@ -38,7 +38,6 @@ type VpcCreateRequest struct {
 	Vni NullableInt32 `json:"vni,omitempty"`
 	// ID of the default NVLink Logical Partition that GPUs for all Instances in the VPC will attach to
 	NvLinkLogicalPartitionId NullableString `json:"nvLinkLogicalPartitionId,omitempty"`
-	// String key value pairs describing VPC labels. Up to 10 key value pairs can be specified
 	Labels map[string]string `json:"labels,omitempty"`
 }
 

@@ -231,21 +231,6 @@ func (gaibih GetAllInfiniBandInterfaceHandler) Handle(c echo.Context) error {
 	if len(siteIDs) > 0 {
 		// deduplicate site IDs
 		siteIDs = goset.NewSet(siteIDs...).ToSlice()
-		// Get all Sites specified in query
-
-		// This is to check if the Sites specified in query exist
-		siteIDMap := map[uuid.UUID]bool{}
-		stDAO := cdbm.NewSiteDAO(gaibih.dbSession)
-
-		sites, _, err := stDAO.GetAll(ctx, nil, cdbm.SiteFilterInput{SiteIDs: siteIDs}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
-		if err != nil {
-			logger.Error().Err(err).Msg("error retrieving Sites from DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Sites", nil)
-		}
-
-		for _, site := range sites {
-			siteIDMap[site.ID] = true
-		}
 
 		// Get all TenantSites for the Tenant and Sites specified in query
 		tsDAO := cdbm.NewTenantSiteDAO(gaibih.dbSession)
@@ -272,14 +257,9 @@ func (gaibih GetAllInfiniBandInterfaceHandler) Handle(c echo.Context) error {
 		}
 
 		for _, siteID := range siteIDs {
-			// Check if Site exists
-			if _, ok := siteIDMap[siteID]; !ok {
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Site: %s specified in query is not found in DB", siteID.String()), nil)
-			}
-
 			// Check if Tenant has access to Site
 			if _, ok := tenantSiteIDMap[siteID]; !ok {
-				return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Tenant does not have access to Site: %s specified in query", siteID.String()), nil)
+				return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Site: %s specified in query does not exist or Tenant does not have access to it", siteID.String()), nil)
 			}
 		}
 	}

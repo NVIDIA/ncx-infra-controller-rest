@@ -6818,7 +6818,6 @@ paths:
       summary: Retrieve all Instance InfiniBand Interfaces
       tags:
         - Instance
-        - InfiniBand Partition
       responses:
         '200':
           description: OK
