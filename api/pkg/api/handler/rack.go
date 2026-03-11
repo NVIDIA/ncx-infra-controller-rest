@@ -137,7 +137,7 @@ func (grh GetRackHandler) Handle(c echo.Context) error {
 	site, err := common.GetSiteFromIDString(ctx, nil, apiRequest.SiteID, grh.dbSession)
 	if err != nil {
 		if errors.Is(err, common.ErrInvalidID) {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate Site specified in request: invalid ID", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate Site specified in request: invalid ID", nil)
 		}
 		if errors.Is(err, cdb.ErrDoesNotExist) {
 			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request does not exist", nil)
@@ -307,7 +307,7 @@ func (garh GetAllRackHandler) Handle(c echo.Context) error {
 	site, err := common.GetSiteFromIDString(ctx, nil, apiRequest.SiteID, garh.dbSession)
 	if err != nil {
 		if errors.Is(err, common.ErrInvalidID) {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate Site specified in request: invalid ID", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate Site specified in request: invalid ID", nil)
 		}
 		if errors.Is(err, cdb.ErrDoesNotExist) {
 			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request does not exist", nil)
@@ -514,7 +514,7 @@ func (vrh ValidateRackHandler) Handle(c echo.Context) error {
 	site, err := common.GetSiteFromIDString(ctx, nil, siteStrID, vrh.dbSession)
 	if err != nil {
 		if errors.Is(err, common.ErrInvalidID) {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate Site specified in request: invalid ID", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate Site specified in request: invalid ID", nil)
 		}
 		if errors.Is(err, cdb.ErrDoesNotExist) {
 			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request does not exist", nil)
@@ -688,7 +688,7 @@ func (vrsh ValidateRacksHandler) Handle(c echo.Context) error {
 	site, err := common.GetSiteFromIDString(ctx, nil, apiRequest.SiteID, vrsh.dbSession)
 	if err != nil {
 		if errors.Is(err, common.ErrInvalidID) {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate Site specified in request: invalid ID", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate Site specified in request: invalid ID", nil)
 		}
 		if errors.Is(err, cdb.ErrDoesNotExist) {
 			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request does not exist", nil)
@@ -853,7 +853,7 @@ func (pcrh UpdateRackPowerStateHandler) Handle(c echo.Context) error {
 	site, err := common.GetSiteFromIDString(ctx, nil, apiRequest.SiteID, pcrh.dbSession)
 	if err != nil {
 		if errors.Is(err, common.ErrInvalidID) {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate Site specified in request: invalid ID", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate Site specified in request: invalid ID", nil)
 		}
 		if errors.Is(err, cdb.ErrDoesNotExist) {
 			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request does not exist", nil)
@@ -983,7 +983,7 @@ func (pcrbh BatchUpdateRackPowerStateHandler) Handle(c echo.Context) error {
 	site, err := common.GetSiteFromIDString(ctx, nil, request.SiteID, pcrbh.dbSession)
 	if err != nil {
 		if errors.Is(err, common.ErrInvalidID) {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate Site specified in request: invalid ID", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate Site specified in request: invalid ID", nil)
 		}
 		if errors.Is(err, cdb.ErrDoesNotExist) {
 			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request does not exist", nil)
@@ -1106,7 +1106,7 @@ func (furh UpdateRackFirmwareHandler) Handle(c echo.Context) error {
 	site, err := common.GetSiteFromIDString(ctx, nil, apiRequest.SiteID, furh.dbSession)
 	if err != nil {
 		if errors.Is(err, common.ErrInvalidID) {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate Site specified in request: invalid ID", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate Site specified in request: invalid ID", nil)
 		}
 		if errors.Is(err, cdb.ErrDoesNotExist) {
 			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request does not exist", nil)
@@ -1235,7 +1235,7 @@ func (furbh BatchUpdateRackFirmwareHandler) Handle(c echo.Context) error {
 	site, err := common.GetSiteFromIDString(ctx, nil, request.SiteID, furbh.dbSession)
 	if err != nil {
 		if errors.Is(err, common.ErrInvalidID) {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate Site specified in request: invalid ID", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate Site specified in request: invalid ID", nil)
 		}
 		if errors.Is(err, cdb.ErrDoesNotExist) {
 			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request does not exist", nil)
@@ -1277,7 +1277,7 @@ type BringUpRackHandler struct {
 	tc         tClient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewBringUpRackHandler initializes and returns a new handler for bringing up a Rack
@@ -1287,7 +1287,7 @@ func NewBringUpRackHandler(dbSession *cdb.Session, tc tClient.Client, scp *sc.Cl
 		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -1312,7 +1312,7 @@ func (burh BringUpRackHandler) Handle(c echo.Context) error {
 	// Is DB user missing?
 	if dbUser == nil {
 		logger.Error().Msg("invalid User object found in request context")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org membership
@@ -1323,21 +1323,21 @@ func (burh BringUpRackHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Provider Admins are allowed to bring up Rack
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Provider Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
 	}
 
 	// Get Infrastructure Provider for org
 	infrastructureProvider, err := common.GetInfrastructureProviderForOrg(ctx, nil, burh.dbSession, org)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error getting infrastructure provider for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for org", nil)
 	}
 
 	// Get rack ID from URL param
@@ -1347,36 +1347,36 @@ func (burh BringUpRackHandler) Handle(c echo.Context) error {
 	// Parse and validate request body
 	apiRequest := model.APIBringUpRackRequest{}
 	if err := c.Bind(&apiRequest); err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data", nil)
 	}
 	if verr := apiRequest.Validate(); verr != nil {
 		logger.Warn().Err(verr).Msg("error validating bring up request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate bring up request data", verr)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate bring up request data", verr)
 	}
 
 	// Validate the site
 	site, err := common.GetSiteFromIDString(ctx, nil, apiRequest.SiteID, burh.dbSession)
 	if err != nil {
 		if errors.Is(err, common.ErrInvalidID) {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate Site specified in request: invalid ID", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate Site specified in request: invalid ID", nil)
 		}
 		if errors.Is(err, cdb.ErrDoesNotExist) {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request does not exist", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request does not exist", nil)
 		}
 		logger.Error().Err(err).Msg("error retrieving Site from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site specified in request due to DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site specified in request due to DB error", nil)
 	}
 
 	// Verify site belongs to the org's Infrastructure Provider
 	if site.InfrastructureProviderID != infrastructureProvider.ID {
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Site specified in request doesn't belong to current org's Provider", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Site specified in request doesn't belong to current org's Provider", nil)
 	}
 
 	// Get the temporal client for the site
 	stc, err := burh.scp.GetClientByID(site.ID)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
 	}
 
 	// Build TargetSpec for single rack by ID
@@ -1417,7 +1417,7 @@ type BatchBringUpRackHandler struct {
 	tc         tClient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewBatchBringUpRackHandler initializes and returns a new handler for batch bringing up Racks
@@ -1427,7 +1427,7 @@ func NewBatchBringUpRackHandler(dbSession *cdb.Session, tc tClient.Client, scp *
 		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -1451,17 +1451,17 @@ func (bbuh BatchBringUpRackHandler) Handle(c echo.Context) error {
 	// Bind and validate the JSON body
 	var request model.APIBatchBringUpRackRequest
 	if err := c.Bind(&request); err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data", nil)
 	}
 	if verr := request.Validate(); verr != nil {
 		logger.Warn().Err(verr).Msg("error validating batch rack bring up request")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate request data", verr)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate request data", verr)
 	}
 
 	// Is DB user missing?
 	if dbUser == nil {
 		logger.Error().Msg("invalid User object found in request context")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org membership
@@ -1472,46 +1472,46 @@ func (bbuh BatchBringUpRackHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Provider Admins are allowed to bring up Rack
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Provider Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
 	}
 
 	// Get Infrastructure Provider for org
 	infrastructureProvider, err := common.GetInfrastructureProviderForOrg(ctx, nil, bbuh.dbSession, org)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error getting infrastructure provider for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for org", nil)
 	}
 
 	// Validate the site
 	site, err := common.GetSiteFromIDString(ctx, nil, request.SiteID, bbuh.dbSession)
 	if err != nil {
 		if errors.Is(err, common.ErrInvalidID) {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate Site specified in request: invalid ID", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate Site specified in request: invalid ID", nil)
 		}
 		if errors.Is(err, cdb.ErrDoesNotExist) {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request does not exist", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request does not exist", nil)
 		}
 		logger.Error().Err(err).Msg("error retrieving Site from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site specified in request due to DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site specified in request due to DB error", nil)
 	}
 
 	// Verify site belongs to the org's Infrastructure Provider
 	if site.InfrastructureProviderID != infrastructureProvider.ID {
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Site specified in request doesn't belong to current org's Provider", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Site specified in request doesn't belong to current org's Provider", nil)
 	}
 
 	// Get the temporal client for the site
 	stc, err := bbuh.scp.GetClientByID(site.ID)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
 	}
 
 	// Build TargetSpec from filter (nil filter = all racks)
