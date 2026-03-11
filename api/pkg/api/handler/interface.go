@@ -26,7 +26,6 @@ import (
 	temporalClient "go.temporal.io/sdk/client"
 
 	"github.com/google/uuid"
-	"github.com/rs/zerolog/log"
 
 	"github.com/labstack/echo/v4"
 
@@ -79,30 +78,11 @@ func NewGetAllInterfaceHandler(dbSession *cdb.Session, tc temporalClient.Client,
 // @Success 200 {object} model.APIInterface
 // @Router /v2/org/{org}/carbide/instance/{instance_id}/interface [get]
 func (gaish GetAllInterfaceHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "Interface").Str("Handler", "GetAll").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gaish.tracerSpan.CreateChildInContext(ctx, "GetAllInterfaceHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("Interface", "GetAll", c, gaish.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gaish.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gaish.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 

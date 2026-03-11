@@ -25,8 +25,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
-	"github.com/rs/zerolog/log"
-	"go.opentelemetry.io/otel/attribute"
 
 	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
@@ -65,30 +63,11 @@ func NewGetAllMachineCapabilityHandler(dbSession *cdb.Session) GetAllMachineCapa
 // @Success 200 {object} model.APIUser
 // @Router /v2/org/{org}/carbide/machine-capability [get]
 func (gamch GetAllMachineCapabilityHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "MachineCapability").Str("Handler", "GetAll").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gamch.tracerSpan.CreateChildInContext(ctx, "GetAllMachineCapabilityHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("MachineCapability", "GetAll", c, gamch.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gamch.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gamch.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 

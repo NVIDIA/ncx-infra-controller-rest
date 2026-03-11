@@ -29,8 +29,6 @@ import (
 	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
 	cdbp "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
-	"github.com/rs/zerolog/log"
-	"go.opentelemetry.io/otel/attribute"
 )
 
 // GetCurrentServiceAccountHandler is the API Handler for getting the current Service Account
@@ -60,30 +58,11 @@ func NewGetCurrentServiceAccountHandler(dbSession *cdb.Session, cfg *config.Conf
 // @Success 200 {object} model.APIServiceAccount
 // @Router /v2/org/{org}/carbide/service-account/current [get]
 func (gcsah GetCurrentServiceAccountHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "ServiceAccount").Str("Handler", "GetCurrent").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gcsah.tracerSpan.CreateChildInContext(ctx, "GetCurrentServiceAccountHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("ServiceAccount", "GetCurrent", c, gcsah.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gcsah.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gcsah.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 

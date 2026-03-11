@@ -32,7 +32,6 @@ import (
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/google/uuid"
-	"github.com/rs/zerolog/log"
 
 	"github.com/labstack/echo/v4"
 
@@ -91,30 +90,11 @@ func NewCreateInstanceTypeHandler(dbSession *cdb.Session, tc temporalClient.Clie
 // @Success 201 {object} model.APIInstanceType
 // @Router /v2/org/{org}/carbide/instance/type [post]
 func (cith CreateInstanceTypeHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "InstanceType").Str("Handler", "Create").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := cith.tracerSpan.CreateChildInContext(ctx, "CreateInstanceTypeHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("InstanceType", "Create", c, cith.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		cith.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, cith.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -527,30 +507,11 @@ func NewGetAllInstanceTypeHandler(dbSession *cdb.Session, tc temporalClient.Clie
 // @Success 200 {object} []model.APIInstanceType
 // @Router /v2/org/{org}/carbide/instance/type [get]
 func (gaith GetAllInstanceTypeHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "InstanceType").Str("Handler", "GetAll").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gaith.tracerSpan.CreateChildInContext(ctx, "GetAllInstanceTypeHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("InstanceType", "GetAll", c, gaith.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gaith.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gaith.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -880,30 +841,11 @@ func NewGetInstanceTypeHandler(dbSession *cdb.Session, tc temporalClient.Client,
 // @Success 200 {object} []model.APIInstanceType
 // @Router /v2/org/{org}/carbide/instance/type/{id} [get]
 func (gith GetInstanceTypeHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "InstanceType").Str("Handler", "Get").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gith.tracerSpan.CreateChildInContext(ctx, "GetInstanceTypeHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("InstanceType", "Get", c, gith.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gith.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gith.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -1087,30 +1029,11 @@ func NewUpdateInstanceTypeHandler(dbSession *cdb.Session, tc temporalClient.Clie
 // @Success 200 {object} model.APIInstanceType
 // @Router /v2/org/{org}/carbide/instance/type/{id} [patch]
 func (uith UpdateInstanceTypeHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "InstanceType").Str("Handler", "Update").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := uith.tracerSpan.CreateChildInContext(ctx, "UpdateInstanceTypeHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("InstanceType", "Update", c, uith.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		uith.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, uith.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -1595,30 +1518,11 @@ func NewDeleteInstanceTypeHandler(dbSession *cdb.Session, tc temporalClient.Clie
 // @Success 204
 // @Router /v2/org/{org}/carbide/instance/type/{id} [delete]
 func (dith DeleteInstanceTypeHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "InstanceType").Str("Handler", "Delete").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := dith.tracerSpan.CreateChildInContext(ctx, "DeleteInstanceTypeHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("InstanceType", "Delete", c, dith.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		dith.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, dith.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 

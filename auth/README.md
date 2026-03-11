@@ -169,7 +169,7 @@ claimMappings:
 
 ## Keycloak Integration
 
-To use Keycloak as an identity provider, update the Cloud-API ConfigMap.
+To use Keycloak as an identity provider, update the Carbide REST API ConfigMap.
 
 ### Prerequisites
 
@@ -266,7 +266,7 @@ spec:
 ### Step 4: Apply Configuration and Restart
 
 ```bash
-# Restart the Cloud-API deployment to pick up changes
+# Restart the Carbide REST API deployment to pick up changes
 kubectl rollout restart deployment/carbide-rest-api -n carbide-rest
 
 # Verify the pods are running

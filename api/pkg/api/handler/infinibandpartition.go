@@ -32,7 +32,6 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
-	"github.com/rs/zerolog/log"
 
 	"github.com/nvidia/bare-metal-manager-rest/api/internal/config"
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/handler/util/common"
@@ -84,30 +83,11 @@ func NewCreateInfiniBandPartitionHandler(dbSession *cdb.Session, tc temporalClie
 // @Success 201 {object} model.APIInfiniBandPartition
 // @Router /v2/org/{org}/carbide/infiniband-partition [post]
 func (cibph CreateInfiniBandPartitionHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "InfiniBandPartition").Str("Handler", "Create").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := cibph.tracerSpan.CreateChildInContext(ctx, "CreateInfiniBandPartitionHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("InfiniBandPartition", "Create", c, cibph.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		cibph.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, cibph.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -420,30 +400,11 @@ func NewGetAllInfiniBandPartitionHandler(dbSession *cdb.Session, tc temporalClie
 // @Success 200 {object} []model.APIInfiniBandPartition
 // @Router /v2/org/{org}/carbide/infiniband-partition [get]
 func (gaibph GetAllInfiniBandPartitionHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "InfiniBandPartition").Str("Handler", "GetAll").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gaibph.tracerSpan.CreateChildInContext(ctx, "GetAllInfiniBandPartitionHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("InfiniBandPartition", "GetAll", c, gaibph.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gaibph.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gaibph.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -641,30 +602,11 @@ func NewGetInfiniBandPartitionHandler(dbSession *cdb.Session, tc temporalClient.
 // @Success 200 {object} model.APIInfiniBandPartition
 // @Router /v2/org/{org}/carbide/infiniband-partition/{id} [get]
 func (gibph GetInfiniBandPartitionHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "InfiniBandPartition").Str("Handler", "Get").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gibph.tracerSpan.CreateChildInContext(ctx, "GetInfiniBandPartitionHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("InfiniBandPartition", "Get", c, gibph.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gibph.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gibph.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -780,30 +722,11 @@ func NewUpdateInfiniBandPartitionHandler(dbSession *cdb.Session, tc temporalClie
 // @Success 200 {object} model.APIInfiniBandPartition
 // @Router /v2/org/{org}/carbide/infiniband-partition/{id} [patch]
 func (uibph UpdateInfiniBandPartitionHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "InfiniBandPartition").Str("Handler", "Update").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := uibph.tracerSpan.CreateChildInContext(ctx, "UpdateInfiniBandPartitionHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("InfiniBandPartition", "Update", c, uibph.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		uibph.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, uibph.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -998,30 +921,11 @@ func NewDeleteInfiniBandPartitionHandler(dbSession *cdb.Session, tc temporalClie
 // @Success 202
 // @Router /v2/org/{org}/carbide/infiniband-partition/{id} [delete]
 func (dibph DeleteInfiniBandPartitionHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "InfiniBandPartition").Str("Handler", "Delete").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := dibph.tracerSpan.CreateChildInContext(ctx, "DeleteInfiniBandPartitionHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("InfiniBandPartition", "Delete", c, dibph.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		dibph.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, dibph.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 

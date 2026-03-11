@@ -26,7 +26,6 @@ import (
 	temporalClient "go.temporal.io/sdk/client"
 
 	"github.com/google/uuid"
-	"github.com/rs/zerolog/log"
 
 	"github.com/labstack/echo/v4"
 
@@ -82,30 +81,11 @@ func NewGetAllNVLinkInterfaceHandler(dbSession *cdb.Session, tc temporalClient.C
 // @Success 200 {object} model.APINVLinkInterface
 // @Router /v2/org/{org}/carbide/nvlink-interface [get]
 func (gaish GetAllNVLinkInterfaceHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "NVLinkInterface").Str("Handler", "GetAll").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gaish.tracerSpan.CreateChildInContext(ctx, "GetAllNVLinkInterfaceHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("NVLinkInterface", "GetAll", c, gaish.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gaish.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gaish.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 

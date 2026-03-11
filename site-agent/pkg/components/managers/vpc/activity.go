@@ -25,7 +25,7 @@ import (
 	wflows "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
 )
 
-// TODO(deprecated): Remove any related DeleteVPC references after cloud-api and agent are updated everywhere.  We've moved to sync workflow.
+// TODO(deprecated): Remove any related DeleteVPC references after carbide-rest-api and agent are updated everywhere.  We've moved to sync workflow.
 // TODO: Remove this and and any related references (deprecated).  We've moved to sync workflow.
 // CreateVPCActivity - Create VPC Activity
 func (ac *Workflows) CreateVPCActivity(ctx context.Context, ResourceVer uint64, ResourceID string,

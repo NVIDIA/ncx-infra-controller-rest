@@ -39,7 +39,7 @@ const (
 )
 
 // TODO: Remove SubnetCreate an any related references.  We've moved to sync workflow (deprecated)
-// TODO: Remove SubnetDelete (deprecated) and any related references after cloud-api and site-agent are updated everywhere.  We're moving to sync workflow.
+// TODO: Remove SubnetDelete (deprecated) and any related references after carbide-rest-api and site-agent are updated everywhere.  We're moving to sync workflow.
 var activityStr = []string{"SubnetCreate", "SubnetUpdate", "SubnetDelete", "SubnetGet", "SubnetPublish"}
 
 type subnetWorkflowMetadata struct {
