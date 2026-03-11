@@ -442,7 +442,7 @@ kind-reset-infra: docker-build-local
 	@echo "  make helm-deploy              # Helm umbrella chart"
 	@echo "  make helm-deploy-site-agent   # Helm site-agent chart"
 	@echo "  — or —"
-	@echo "  make kind-reset-kustomize     # Kustomize overlays (skips infra if already up)"
+	@echo "  make kind-reset-kustomize     # Full reset + Kustomize app deployment"
 	@echo "================================================================================"
 
 # =============================================================================
@@ -522,7 +522,8 @@ helm-template:
 	helm template carbide-rest-site-agent $(SITE_AGENT_CHART)/ $(HELM_SET) --namespace carbide-rest
 
 # Deploy umbrella chart (api + workflow + site-manager + db)
-helm-deploy: kind-load
+# Note: images must be loaded into kind before calling this (kind-load or kind-reset-infra)
+helm-deploy:
 	helm upgrade --install carbide-rest $(UMBRELLA_CHART)/ \
 		--namespace carbide-rest --create-namespace $(HELM_SET) $(HELM_SET_KEYCLOAK) \
 		--set carbide-rest-api.nodePort.enabled=true \
@@ -547,7 +548,7 @@ helm-deploy-site-agent:
 # Deploy everything (umbrella + site-agent)
 helm-deploy-all: helm-deploy helm-deploy-site-agent
 
-# Rebuild images and redeploy via Helm
+# Rebuild images and redeploy umbrella chart via Helm (excludes site-agent; use helm-deploy-site-agent separately)
 helm-redeploy: docker-build-local kind-load helm-deploy
 
 helm-verify:
