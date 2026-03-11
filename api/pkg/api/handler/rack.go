@@ -138,6 +138,9 @@ func (grh GetRackHandler) Handle(c echo.Context) error {
 	// Validate the site
 	site, err := common.GetSiteFromIDString(ctx, nil, apiRequest.SiteID, grh.dbSession)
 	if err != nil {
+		if errors.Is(err, common.ErrInvalidID) {
+			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate Site specified in request: invalid ID", nil)
+		}
 		if errors.Is(err, cdb.ErrDoesNotExist) {
 			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request does not exist", nil)
 		}
@@ -305,6 +308,9 @@ func (garh GetAllRackHandler) Handle(c echo.Context) error {
 	// Validate the site
 	site, err := common.GetSiteFromIDString(ctx, nil, apiRequest.SiteID, garh.dbSession)
 	if err != nil {
+		if errors.Is(err, common.ErrInvalidID) {
+			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate Site specified in request: invalid ID", nil)
+		}
 		if errors.Is(err, cdb.ErrDoesNotExist) {
 			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request does not exist", nil)
 		}
@@ -509,6 +515,9 @@ func (vrh ValidateRackHandler) Handle(c echo.Context) error {
 	// Validate the site
 	site, err := common.GetSiteFromIDString(ctx, nil, siteStrID, vrh.dbSession)
 	if err != nil {
+		if errors.Is(err, common.ErrInvalidID) {
+			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate Site specified in request: invalid ID", nil)
+		}
 		if errors.Is(err, cdb.ErrDoesNotExist) {
 			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request does not exist", nil)
 		}
@@ -680,6 +689,9 @@ func (vrsh ValidateRacksHandler) Handle(c echo.Context) error {
 	// Validate the site
 	site, err := common.GetSiteFromIDString(ctx, nil, apiRequest.SiteID, vrsh.dbSession)
 	if err != nil {
+		if errors.Is(err, common.ErrInvalidID) {
+			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate Site specified in request: invalid ID", nil)
+		}
 		if errors.Is(err, cdb.ErrDoesNotExist) {
 			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request does not exist", nil)
 		}
@@ -842,6 +854,9 @@ func (pcrh UpdateRackPowerStateHandler) Handle(c echo.Context) error {
 	// Validate the site
 	site, err := common.GetSiteFromIDString(ctx, nil, apiRequest.SiteID, pcrh.dbSession)
 	if err != nil {
+		if errors.Is(err, common.ErrInvalidID) {
+			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate Site specified in request: invalid ID", nil)
+		}
 		if errors.Is(err, cdb.ErrDoesNotExist) {
 			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request does not exist", nil)
 		}
@@ -969,6 +984,9 @@ func (pcrbh BatchUpdateRackPowerStateHandler) Handle(c echo.Context) error {
 	// Validate the site
 	site, err := common.GetSiteFromIDString(ctx, nil, request.SiteID, pcrbh.dbSession)
 	if err != nil {
+		if errors.Is(err, common.ErrInvalidID) {
+			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate Site specified in request: invalid ID", nil)
+		}
 		if errors.Is(err, cdb.ErrDoesNotExist) {
 			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request does not exist", nil)
 		}
@@ -1089,6 +1107,9 @@ func (furh UpdateRackFirmwareHandler) Handle(c echo.Context) error {
 	// Validate the site
 	site, err := common.GetSiteFromIDString(ctx, nil, apiRequest.SiteID, furh.dbSession)
 	if err != nil {
+		if errors.Is(err, common.ErrInvalidID) {
+			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate Site specified in request: invalid ID", nil)
+		}
 		if errors.Is(err, cdb.ErrDoesNotExist) {
 			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request does not exist", nil)
 		}
@@ -1215,6 +1236,9 @@ func (furbh BatchUpdateRackFirmwareHandler) Handle(c echo.Context) error {
 	// Validate the site
 	site, err := common.GetSiteFromIDString(ctx, nil, request.SiteID, furbh.dbSession)
 	if err != nil {
+		if errors.Is(err, common.ErrInvalidID) {
+			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate Site specified in request: invalid ID", nil)
+		}
 		if errors.Is(err, cdb.ErrDoesNotExist) {
 			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request does not exist", nil)
 		}
