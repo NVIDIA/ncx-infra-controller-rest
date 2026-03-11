@@ -43,7 +43,6 @@ import (
 	swe "github.com/nvidia/bare-metal-manager-rest/site-workflow/pkg/error"
 	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
 	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/queue"
-	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel/attribute"
 	temporalClient "go.temporal.io/sdk/client"
 	tp "go.temporal.io/sdk/temporal"
@@ -83,30 +82,11 @@ func NewCreateNetworkSecurityGroupHandler(dbSession *cdb.Session, tc temporalCli
 // @Success 201 {object} model.APINetworkSecurityGroup
 // @Router /v2/org/{org}/carbide/network-security-group [post]
 func (cnsgh CreateNetworkSecurityGroupHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "NetworkSecurityGroup").Str("Handler", "Create").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := cnsgh.tracerSpan.CreateChildInContext(ctx, "CreateNetworkSecurityGroupHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("NetworkSecurityGroup", "Create", c, cnsgh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		cnsgh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, cnsgh.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -433,30 +413,11 @@ func NewGetAllNetworkSecurityGroupHandler(dbSession *cdb.Session, tc temporalCli
 // @Success 200 {object} []model.APINetworkSecurityGroup
 // @Router /v2/org/{org}/carbide/network-security-group [get]
 func (gansgh GetAllNetworkSecurityGroupHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "NetworkSecurityGroup").Str("Handler", "GetAll").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gansgh.tracerSpan.CreateChildInContext(ctx, "GetAllNetworkSecurityGroupHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("NetworkSecurityGroup", "GetAll", c, gansgh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gansgh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gansgh.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -723,30 +684,11 @@ func NewGetNetworkSecurityGroupHandler(dbSession *cdb.Session, tc temporalClient
 // @Success 200 {object} []model.APINetworkSecurityGroup
 // @Router /v2/org/{org}/carbide/network-security-group [get]
 func (gansgh GetNetworkSecurityGroupHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "NetworkSecurityGroup").Str("Handler", "Get").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gansgh.tracerSpan.CreateChildInContext(ctx, "GetNetworkSecurityGroupHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("NetworkSecurityGroup", "Get", c, gansgh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gansgh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gansgh.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -902,30 +844,11 @@ func NewDeleteNetworkSecurityGroupHandler(dbSession *cdb.Session, tc temporalCli
 // @Success 202 {object} model.APINetworkSecurityGroup
 // @Router /v2/org/{org}/carbide/network-security-group [post]
 func (dnsgh DeleteNetworkSecurityGroupHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "NetworkSecurityGroup").Str("Handler", "Delete").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := dnsgh.tracerSpan.CreateChildInContext(ctx, "DeleteNetworkSecurityGroupHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("NetworkSecurityGroup", "Delete", c, dnsgh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		dnsgh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, dnsgh.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -1153,30 +1076,11 @@ func NewUpdateNetworkSecurityGroupHandler(dbSession *cdb.Session, tc temporalCli
 // @Success 200 {object} model.APINetworkSecurityGroup
 // @Router /v2/org/{org}/carbide/network-security-group [post]
 func (dnsgh UpdateNetworkSecurityGroupHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "NetworkSecurityGroup").Str("Handler", "Update").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := dnsgh.tracerSpan.CreateChildInContext(ctx, "UpdateNetworkSecurityGroupHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("NetworkSecurityGroup", "Update", c, dnsgh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		dnsgh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, dnsgh.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 

@@ -31,7 +31,6 @@ import (
 	mapset "github.com/deckarep/golang-set/v2"
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/google/uuid"
-	"github.com/rs/zerolog/log"
 
 	"github.com/labstack/echo/v4"
 
@@ -81,30 +80,11 @@ func NewCreateIPBlockHandler(dbSession *cdb.Session, tc temporalClient.Client, c
 // @Success 201 {object} model.APIIPBlock
 // @Router /v2/org/{org}/carbide/ipblock [post]
 func (cipbh CreateIPBlockHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "IPBlock").Str("Handler", "Create").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := cipbh.tracerSpan.CreateChildInContext(ctx, "CreateIPBlockHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("IPBlock", "Create", c, cipbh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		cipbh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, cipbh.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -324,30 +304,11 @@ func NewGetAllIPBlockHandler(dbSession *cdb.Session, tc temporalClient.Client, c
 // @Success 200 {object} []model.APIIPBlock
 // @Router /v2/org/{org}/carbide/ipblock [get]
 func (gaipbh GetAllIPBlockHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "IPBlock").Str("Handler", "GetAll").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gaipbh.tracerSpan.CreateChildInContext(ctx, "GetAllIPBlockHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("IPBlock", "GetAll", c, gaipbh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gaipbh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gaipbh.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -602,30 +563,11 @@ func NewGetAllDerivedIPBlockHandler(dbSession *cdb.Session, tc temporalClient.Cl
 // @Success 200 {object} model.APIIPBlock
 // @Router /v2/org/{org}/carbide/ipblock/{id}/derived [get]
 func (gadipbh GetAllDerivedIPBlockHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "IPBlock").Str("Handler", "GetAllDerived").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gadipbh.tracerSpan.CreateChildInContext(ctx, "GetAllDerivedIPBlockHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("IPBlock", "GetAllDerived", c, gadipbh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gadipbh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gadipbh.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -851,30 +793,11 @@ func NewGetIPBlockHandler(dbSession *cdb.Session, tc temporalClient.Client, cfg 
 // @Success 200 {object} model.APIIPBlock
 // @Router /v2/org/{org}/carbide/ipblock/{id} [get]
 func (gipbh GetIPBlockHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "IPBlock").Str("Handler", "Get").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gipbh.tracerSpan.CreateChildInContext(ctx, "GetIPBlockHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("IPBlock", "Get", c, gipbh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gipbh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gipbh.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -1014,30 +937,11 @@ func NewUpdateIPBlockHandler(dbSession *cdb.Session, tc temporalClient.Client, c
 // @Success 200 {object} model.APIIPBlock
 // @Router /v2/org/{org}/carbide/ipblock/{id} [patch]
 func (uipbh UpdateIPBlockHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "IPBlock").Str("Handler", "Update").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := uipbh.tracerSpan.CreateChildInContext(ctx, "UpdateIPBlockHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("IPBlock", "Update", c, uipbh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		uipbh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, uipbh.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -1220,30 +1124,11 @@ func NewDeleteIPBlockHandler(dbSession *cdb.Session, tc temporalClient.Client, c
 // @Success 202
 // @Router /v2/org/{org}/carbide/ipblock/{id} [delete]
 func (dipbh DeleteIPBlockHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "IPBlock").Str("Handler", "Delete").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := dipbh.tracerSpan.CreateChildInContext(ctx, "DeleteIPBlockHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("IPBlock", "Delete", c, dipbh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		dipbh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, dipbh.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 

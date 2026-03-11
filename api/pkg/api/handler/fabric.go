@@ -26,7 +26,6 @@ import (
 	temporalClient "go.temporal.io/sdk/client"
 
 	"github.com/google/uuid"
-	"github.com/rs/zerolog/log"
 
 	"github.com/labstack/echo/v4"
 
@@ -75,30 +74,11 @@ func NewGetAllFabricHandler(dbSession *cdb.Session, tc temporalClient.Client, cf
 // @Success 200 {object} []model.APIFabric
 // @Router /v2/org/{org}/carbide/site/{siteId}/fabric [get]
 func (gafh GetAllFabricHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "Fabric").Str("Handler", "GetAll").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gafh.tracerSpan.CreateChildInContext(ctx, "GetAllFabricHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("Fabric", "GetAll", c, gafh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gafh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gafh.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -271,30 +251,11 @@ func NewGetFabricHandler(dbSession *cdb.Session, tc temporalClient.Client, cfg *
 // @Success 200 {object} model.APIFabric
 // @Router /v2/org/{org}/carbide/site/{siteId}/fabric/{id} [get]
 func (gfh GetFabricHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "Fabric").Str("Handler", "Get").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gfh.tracerSpan.CreateChildInContext(ctx, "GetFabricHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("Fabric", "Get", c, gfh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gfh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gfh.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 

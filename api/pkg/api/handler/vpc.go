@@ -39,7 +39,6 @@ import (
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/google/uuid"
-	"github.com/rs/zerolog/log"
 
 	"github.com/nvidia/bare-metal-manager-rest/api/internal/config"
 	common "github.com/nvidia/bare-metal-manager-rest/api/pkg/api/handler/util/common"
@@ -87,30 +86,11 @@ func NewCreateVPCHandler(dbSession *cdb.Session, tc temporalClient.Client, sc *s
 // @Success 201 {object} model.APIVpc
 // @Router /v2/org/{org}/carbide/vpc [post]
 func (cvh CreateVPCHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "VPC").Str("Handler", "Create").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := cvh.tracerSpan.CreateChildInContext(ctx, "CreateVPCHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("VPC", "Create", c, cvh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		cvh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, cvh.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -538,29 +518,11 @@ func NewUpdateVPCHandler(dbSession *cdb.Session, tc temporalClient.Client, sc *s
 // @Success 200 {object} model.APIVpc
 // @Router /v2/org/{org}/carbide/vpc/{id} [patch]
 func (uvh UpdateVPCHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "VPC").Str("Handler", "Update").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := uvh.tracerSpan.CreateChildInContext(ctx, "UpdateVPCHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("VPC", "Update", c, uvh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-		uvh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, uvh.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -981,29 +943,11 @@ func NewUpdateVPCVirtualizationHandler(dbSession *cdb.Session, tc temporalClient
 // @Success 200 {object} model.APIVpc
 // @Router /v2/org/{org}/carbide/vpc/{id}/virtualization [patch]
 func (uvvh UpdateVPCVirtualizationHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "VPC").Str("Handler", "Update Virtualization").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := uvvh.tracerSpan.CreateChildInContext(ctx, "UpdateVPCHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("VPC", "Update Virtualization", c, uvvh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-		uvvh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, uvvh.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -1219,30 +1163,11 @@ func NewGetVPCHandler(dbSession *cdb.Session, tc temporalClient.Client, cfg *con
 // @Success 200 {object} model.APIVpc
 // @Router /v2/org/{org}/carbide/vpc/{id} [get]
 func (gvh GetVPCHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "VPC").Str("Handler", "Get").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gvh.tracerSpan.CreateChildInContext(ctx, "GetVPCHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("VPC", "Get", c, gvh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gvh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gvh.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -1364,30 +1289,11 @@ func NewGetAllVPCHandler(dbSession *cdb.Session, tc temporalClient.Client, cfg *
 // @Success 200 {array} []model.APIVpc
 // @Router /v2/org/{org}/carbide/vpc [get]
 func (gavh GetAllVPCHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "VPC").Str("Handler", "GetAll").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gavh.tracerSpan.CreateChildInContext(ctx, "GetAllVPCHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("VPC", "GetAll", c, gavh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gavh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gavh.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -1626,30 +1532,11 @@ func NewDeleteVPCHandler(dbSession *cdb.Session, tc temporalClient.Client, scp *
 // @Success 202
 // @Router /v2/org/{org}/carbide/vpc/{id} [delete]
 func (dvh DeleteVPCHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "VPC").Str("Handler", "Delete").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := dvh.tracerSpan.CreateChildInContext(ctx, "DeleteVPCHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("VPC", "Delete", c, dvh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		dvh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, dvh.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
