@@ -277,9 +277,16 @@ func (rac *RlaAtomicClient) SwapClient(newClient *RlaClient) *RlaClient {
 	return oldClient
 }
 
-// GetClient returns the current version of Rla client from the atomic value
+// GetClient returns the current version of Rla client from the atomic value.
+// Returns nil if the client has not been initialized yet.
 func (rac *RlaAtomicClient) GetClient() *RlaClient {
-	return rac.value.Load().(*RlaClient)
+	v := rac.value.Load()
+	if v == nil {
+		return nil
+	}
+	client, _ := v.(*RlaClient)
+
+	return client
 }
 
 // CheckAndReloadCerts continuously monitors the TLS certificates for changes.

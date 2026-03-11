@@ -71,6 +71,9 @@ func (mos *ManageOperatingSystem) CreateOsImageOnSite(ctx context.Context, reque
 
 	// Call Site Controller gRPC endpoint
 	carbideClient := mos.CarbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return client.ErrClientNotConnected
+	}
 	computeClient := carbideClient.Compute()
 
 	_, err = computeClient.CreateOsImage(ctx, request)
@@ -109,6 +112,9 @@ func (mos *ManageOperatingSystem) UpdateOsImageOnSite(ctx context.Context, reque
 
 	// Call Site Controller gRPC endpoint
 	carbideClient := mos.CarbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return client.ErrClientNotConnected
+	}
 	computeClient := carbideClient.Compute()
 
 	_, err = computeClient.UpdateOsImage(ctx, request)
@@ -145,6 +151,9 @@ func (mos *ManageOperatingSystem) DeleteOsImageOnSite(ctx context.Context, reque
 
 	// Call Site Controller gRPC endpoint
 	carbideClient := mos.CarbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return client.ErrClientNotConnected
+	}
 	computeClient := carbideClient.Compute()
 
 	_, err = computeClient.DeleteOsImage(ctx, request)

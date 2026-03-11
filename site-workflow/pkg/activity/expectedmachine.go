@@ -63,6 +63,9 @@ func (memi *ManageExpectedMachineInventory) DiscoverExpectedMachineInventory(ctx
 
 	// Get Site Controller gRPC client
 	carbideClient := memi.carbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return cclient.ErrClientNotConnected
+	}
 	forgeClient := carbideClient.Carbide()
 
 	// Call GetAllExpectedMachines to get full list of ExpectedMachines on Site
@@ -285,6 +288,9 @@ func (mem *ManageExpectedMachine) CreateExpectedMachineOnSite(ctx context.Contex
 
 	// Call Site Controller gRPC endpoint
 	carbideClient := mem.CarbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return cclient.ErrClientNotConnected
+	}
 	forgeClient := carbideClient.Carbide()
 
 	// Call Forge gRPC endpoint
@@ -322,6 +328,9 @@ func (mem *ManageExpectedMachine) UpdateExpectedMachineOnSite(ctx context.Contex
 
 	// Call Site Controller gRPC endpoint
 	carbideClient := mem.CarbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return cclient.ErrClientNotConnected
+	}
 	forgeClient := carbideClient.Carbide()
 
 	_, err = forgeClient.UpdateExpectedMachine(ctx, request)
@@ -356,6 +365,9 @@ func (mem *ManageExpectedMachine) DeleteExpectedMachineOnSite(ctx context.Contex
 
 	// Call Site Controller gRPC endpoint
 	carbideClient := mem.CarbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return cclient.ErrClientNotConnected
+	}
 	forgeClient := carbideClient.Carbide()
 
 	_, err = forgeClient.DeleteExpectedMachine(ctx, request)
@@ -390,6 +402,9 @@ func (mem *ManageExpectedMachine) CreateExpectedMachinesOnSite(ctx context.Conte
 
 	// Call Site Controller gRPC batch endpoint
 	carbideClient := mem.CarbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return nil, cclient.ErrClientNotConnected
+	}
 	forgeClient := carbideClient.Carbide()
 
 	// Call the batch CreateExpectedMachines endpoint
@@ -440,6 +455,9 @@ func (mem *ManageExpectedMachine) UpdateExpectedMachinesOnSite(ctx context.Conte
 
 	// Call Site Controller gRPC batch endpoint
 	carbideClient := mem.CarbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return nil, cclient.ErrClientNotConnected
+	}
 	forgeClient := carbideClient.Carbide()
 
 	// Call the batch UpdateExpectedMachines endpoint

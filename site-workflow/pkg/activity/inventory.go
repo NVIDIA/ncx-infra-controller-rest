@@ -105,6 +105,9 @@ func (impl *manageInventoryImpl[K, R, P]) CollectAndPublishInventory(ctx context
 	workflowName := fmt.Sprintf("Update%sInventory", impl.itemType)
 	// get carbide client
 	carbideClient := impl.config.CarbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return cClient.ErrClientNotConnected
+	}
 
 	// find IDs
 	allIDs, err := impl.internalFindIDs(ctx, carbideClient)

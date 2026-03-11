@@ -61,6 +61,9 @@ func (mm *ManageInstanceType) CreateInstanceTypeOnSite(ctx context.Context, requ
 
 	// Call Site Controller gRPC endpoint
 	carbideClient := mm.CarbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return cClient.ErrClientNotConnected
+	}
 	forgeClient := carbideClient.Carbide()
 
 	_, err = forgeClient.CreateInstanceType(ctx, request)
@@ -95,6 +98,9 @@ func (mm *ManageInstanceType) UpdateInstanceTypeOnSite(ctx context.Context, requ
 
 	// Call Site Controller gRPC endpoint
 	carbideClient := mm.CarbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return cClient.ErrClientNotConnected
+	}
 	forgeClient := carbideClient.Carbide()
 
 	_, err = forgeClient.UpdateInstanceType(ctx, request)
@@ -129,6 +135,9 @@ func (mm *ManageInstanceType) DeleteInstanceTypeOnSite(ctx context.Context, requ
 
 	// Call Site Controller gRPC endpoint
 	carbideClient := mm.CarbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return cClient.ErrClientNotConnected
+	}
 	forgeClient := carbideClient.Carbide()
 
 	_, err = forgeClient.DeleteInstanceType(ctx, request)
@@ -166,6 +175,9 @@ func (mm *ManageInstanceType) AssociateMachinesWithInstanceTypeOnSite(ctx contex
 
 	// Call Site Controller gRPC endpoint
 	carbideClient := mm.CarbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return cClient.ErrClientNotConnected
+	}
 	forgeClient := carbideClient.Carbide()
 
 	_, err = forgeClient.AssociateMachinesWithInstanceType(ctx, request)
@@ -201,6 +213,9 @@ func (mm *ManageInstanceType) RemoveMachineInstanceTypeAssociationOnSite(ctx con
 
 	// Call Site Controller gRPC endpoint
 	carbideClient := mm.CarbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return cClient.ErrClientNotConnected
+	}
 	forgeClient := carbideClient.Carbide()
 
 	_, err = forgeClient.RemoveMachineInstanceTypeAssociation(ctx, request)
