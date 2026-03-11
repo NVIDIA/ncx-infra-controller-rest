@@ -57,7 +57,7 @@ RUN apk add --no-cache \
 
 RUN addgroup -S nvs && adduser -S nvs -G nvs
 
-WORKDIR /opt/nvswitch-manager
+WORKDIR /app
 
 COPY --from=builder --chown=nvs:nvs /app/nsm ./nsm
 COPY --chown=nvs:nvs nvswitch-manager/scripts/ ./scripts/

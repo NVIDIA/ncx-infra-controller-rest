@@ -591,11 +591,11 @@ var scriptListCmd = &cobra.Command{
 	Long: `List available firmware update scripts in the scripts directory.
 
 Example:
-  nvswitch-manager update-strategy script list --script-dir /opt/nvswitch-manager/scripts`,
+  nvswitch-manager update-strategy script list --script-dir /app/scripts`,
 	Run: func(cmd *cobra.Command, args []string) {
 		scriptDir, _ := cmd.Flags().GetString("script-dir")
 		if scriptDir == "" {
-			scriptDir = "/opt/nvswitch-manager/scripts"
+			scriptDir = "/app/scripts"
 		}
 
 		fmt.Printf("Scripts in %s:\n\n", scriptDir)
@@ -723,5 +723,5 @@ func init() {
 	scriptStrategyCmd.AddCommand(scriptListCmd)
 
 	scriptRunCmd.Flags().StringVar(&usScriptPath, "script", "", "Path to update script")
-	scriptListCmd.Flags().String("script-dir", "/opt/nvswitch-manager/scripts", "Directory containing update scripts")
+	scriptListCmd.Flags().String("script-dir", "/app/scripts", "Directory containing update scripts")
 }
