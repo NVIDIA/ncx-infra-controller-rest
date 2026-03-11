@@ -20,6 +20,7 @@ package task
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -51,6 +52,11 @@ type Task struct {
 	Status         taskcommon.TaskStatus
 	Message        string
 	AppliedRuleID  *uuid.UUID // The ID of the operation rule that was applied
+
+	// QueueExpiresAt is the deadline for a waiting task to be promoted.
+	// After this time the Promoter terminates the task automatically.
+	// Nil for non-waiting tasks.
+	QueueExpiresAt *time.Time
 }
 
 // ExecutionInfo contains the information needed to execute a task.

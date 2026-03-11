@@ -19,9 +19,9 @@ package manager
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
@@ -29,13 +29,20 @@ import (
 	inventorystore "github.com/nvidia/bare-metal-manager-rest/rla/internal/inventory/store"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/operation"
 	taskcommon "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/common"
+	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/conflict"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/executor"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/executor/temporalworkflow/activity"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operationrules"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operations"
 	taskstore "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/store"
 	taskdef "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/task"
+	identifier "github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/Identifier"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/rack"
+)
+
+const (
+	defaultMaxWaitingPerRack = 5
+	defaultQueueTimeout      = time.Hour
 )
 
 // Config holds the configuration for the task manager.
@@ -44,6 +51,26 @@ type Config struct {
 	TaskStore      taskstore.Store      // For task persistence
 	ExecutorConfig executor.ExecutorConfig
 	// Note: RuleResolver is created internally from TaskStore
+
+	// MaxWaitingTasksPerRack is the maximum number of queued tasks allowed per
+	// rack. Zero uses the default (5).
+	MaxWaitingTasksPerRack int
+	// DefaultQueueTimeout is the expiry duration for tasks that do not supply
+	// their own QueueTimeout. Zero uses the default (1 hour).
+	DefaultQueueTimeout time.Duration
+	// PromoterConfig tunes the Promoter's sweep interval and channel size.
+	// Zero values use the Promoter's own defaults.
+	PromoterConfig conflict.PromoterConfig
+}
+
+func (c *Config) applyDefaults() {
+	if c.MaxWaitingTasksPerRack <= 0 {
+		c.MaxWaitingTasksPerRack = defaultMaxWaitingPerRack
+	}
+
+	if c.DefaultQueueTimeout <= 0 {
+		c.DefaultQueueTimeout = defaultQueueTimeout
+	}
 }
 
 func (c *Config) Validate() error {
@@ -69,10 +96,15 @@ func (c *Config) Validate() error {
 // Manager maintains unfinished tasks, schedules them via temporal workflows,
 // and monitors their progress.
 type Manager struct {
-	inventoryStore inventorystore.Store // For rack/component lookups
-	taskStore      taskstore.Store      // For task persistence
-	executor       executor.Executor
-	ruleResolver   *operationrules.Resolver // Resolves operation rules (created internally)
+	inventoryStore   inventorystore.Store // For rack/component lookups
+	taskStore        taskstore.Store      // For task persistence
+	executor         executor.Executor
+	ruleResolver     *operationrules.Resolver // Resolves operation rules (created internally)
+	conflictResolver *conflict.ConflictResolver
+	promoter         *conflict.Promoter
+
+	maxWaitingPerRack   int
+	defaultQueueTimeout time.Duration
 
 	ctx       context.Context
 	cancel    context.CancelFunc
@@ -85,24 +117,40 @@ func New(ctx context.Context, conf *Config) (*Manager, error) {
 	if err := conf.Validate(); err != nil {
 		return nil, err
 	}
+	conf.applyDefaults()
 
-	// Set task store as the status updater for workflow activities
-	activity.SetTaskStatusUpdater(conf.TaskStore)
-
-	executor, err := executor.New(ctx, conf.ExecutorConfig)
+	exec, err := executor.New(ctx, conf.ExecutorConfig)
 	if err != nil {
 		return nil, err
 	}
 
 	// Create rule resolver internally (queries DB for operation rules)
 	ruleResolver := operationrules.NewResolver(conf.TaskStore)
+	conflictResolver := conflict.NewConflictResolver(conf.TaskStore)
 
-	return &Manager{
-		inventoryStore: conf.InventoryStore,
-		taskStore:      conf.TaskStore,
-		executor:       executor,
-		ruleResolver:   ruleResolver,
-	}, nil
+	m := &Manager{
+		inventoryStore:      conf.InventoryStore,
+		executor:            exec,
+		ruleResolver:        ruleResolver,
+		conflictResolver:    conflictResolver,
+		maxWaitingPerRack:   conf.MaxWaitingTasksPerRack,
+		defaultQueueTimeout: conf.DefaultQueueTimeout,
+	}
+
+	// Promoter needs m.promoteTask, so it is created after the manager.
+	promoter := conflict.NewPromoter(
+		conf.TaskStore, m.promoteTask, conf.PromoterConfig,
+	)
+	m.promoter = promoter
+
+	// Wrap the task store so completed tasks trigger promotion of waiting tasks.
+	wrappedStore := newNotifyingTaskStore(conf.TaskStore, promoter)
+	m.taskStore = wrappedStore
+
+	// Activities use the wrapped store so completions fire Promoter notifications.
+	activity.SetTaskStatusUpdater(wrappedStore)
+
+	return m, nil
 }
 
 // Start starts the task manager to make it ready to accept tasks.
@@ -123,6 +171,8 @@ func (m *Manager) Start(ctx context.Context) error {
 		startCtx, cancel := context.WithCancel(ctx)
 		m.ctx = startCtx
 		m.cancel = cancel
+
+		m.promoter.Start(startCtx)
 	})
 
 	return startErr
@@ -195,44 +245,7 @@ func (m *Manager) createAndExecuteTask(
 		componentUUIDs = append(componentUUIDs, c.Info.ID)
 	}
 
-	// Resolve operation rule for this operation and rack
-	var appliedRuleID *uuid.UUID
-	var ruleDef *operationrules.RuleDefinition
-
-	// Use the operation code from the wrapper (e.g. "power_on", "upgrade")
-	operationCode := req.Operation.Code
-	rule, err := m.ruleResolver.ResolveRule(
-		ctx, req.Operation.Type, operationCode, targetRack.Info.ID,
-	)
-	if err != nil {
-		return uuid.Nil, fmt.Errorf("failed to resolve operation rule: %w", err)
-	}
-
-	if rule == nil {
-		return uuid.Nil, fmt.Errorf("resolver returned nil rule (should never happen)")
-	}
-
-	// Only track applied rule ID if it's a database rule (not hardcoded fallback)
-	if rule.ID != uuid.Nil {
-		appliedRuleID = &rule.ID
-		log.Info().
-			Str("rule_name", rule.Name).
-			Str("rule_id", rule.ID.String()).
-			Str("operation_type", string(req.Operation.Type)).
-			Str("operation", operationCode).
-			Str("rack_id", targetRack.Info.ID.String()).
-			Msg("Resolved operation rule for task")
-	} else {
-		log.Info().
-			Str("rule_name", rule.Name).
-			Str("operation_type", string(req.Operation.Type)).
-			Str("operation", operationCode).
-			Str("rack_id", targetRack.Info.ID.String()).
-			Msg("Using hardcoded default rule for task (not tracked in applied_rule_id)")
-	}
-	ruleDef = &rule.RuleDefinition
-
-	// Create task record
+	// Build the task record (status and rule are determined below).
 	task := taskdef.Task{
 		ID:             uuid.New(),
 		Operation:      req.Operation,
@@ -241,42 +254,223 @@ func (m *Manager) createAndExecuteTask(
 		Description:    req.Description,
 		ExecutorType:   taskcommon.ExecutorTypeUnknown,
 		ExecutionID:    "",
-		Status:         taskcommon.TaskStatusPending,
-		Message:        "Created",
-		AppliedRuleID:  appliedRuleID,
 	}
 
-	if err := m.taskStore.CreateTask(ctx, &task); err != nil {
+	// Check for conflicts inside a transaction to avoid a race between the
+	// check and the creation.
+	txErr := m.taskStore.RunInTransaction(
+		ctx,
+		func(txCtx context.Context) error {
+			hasConflict, err := m.conflictResolver.HasConflict(
+				txCtx,
+				conflict.OperationSpec{
+					OperationType: string(req.Operation.Type),
+					OperationCode: req.Operation.Code,
+				},
+				targetRack.Info.ID,
+			)
+			if err != nil {
+				return err
+			}
+
+			if hasConflict {
+				if req.ConflictStrategy != operation.ConflictStrategyQueue {
+					return fmt.Errorf(
+						"rack %s already has a conflicting task",
+						targetRack.Info.ID,
+					)
+				}
+
+				count, err := m.taskStore.CountWaitingTasksForRack(
+					txCtx, targetRack.Info.ID,
+				)
+				if err != nil {
+					return err
+				}
+				if count >= m.maxWaitingPerRack {
+					return fmt.Errorf(
+						"rack %s waiting queue is full (%d/%d tasks)",
+						targetRack.Info.ID, count, m.maxWaitingPerRack,
+					)
+				}
+
+				task.Status = taskcommon.TaskStatusWaiting
+				task.Message = "Queued: waiting for rack to become available"
+				task.QueueExpiresAt = m.getReqExpiresAt(req)
+			} else {
+				task.Status = taskcommon.TaskStatusPending
+				task.Message = "Created"
+			}
+
+			return m.taskStore.CreateTask(txCtx, &task)
+		},
+	)
+	if txErr != nil {
+		return uuid.Nil, txErr
+	}
+
+	if task.Status == taskcommon.TaskStatusWaiting {
+		log.Info().
+			Str("task_id", task.ID.String()).
+			Str("rack_id", targetRack.Info.ID.String()).
+			Msg("task queued: waiting for rack to become available")
+		return task.ID, nil
+	}
+
+	// Task executes immediately — resolve rule and run.
+	if err := m.resolveAndExecuteTask(ctx, &task, targetRack); err != nil {
 		return uuid.Nil, err
-	}
-
-	// Execute the task (pass rule definition to execution)
-	resp, err := m.executeTask(ctx, &task, targetRack, ruleDef)
-	if err != nil {
-		lerr := m.taskStore.UpdateTaskStatus(
-			ctx,
-			&taskdef.TaskStatusUpdate{
-				ID:      task.ID,
-				Status:  taskcommon.TaskStatusFailed,
-				Message: err.Error(),
-			},
-		)
-		if lerr != nil {
-			log.Error().Err(err).Msgf("failed to update task %s status to failed", task.ID)
-			err = errors.Join(err, lerr)
-		}
-		return uuid.Nil, err
-	}
-
-	// Update task with execution info
-	task.ExecutionID = resp.ExecutionID
-	task.ExecutorType = m.executor.Type()
-
-	if err := m.taskStore.UpdateScheduledTask(ctx, &task); err != nil {
-		log.Error().Err(err).Msgf("failed to update task %s scheduled", task.ID)
 	}
 
 	return task.ID, nil
+}
+
+// promoteTask is invoked by the Promoter to execute a previously waiting task
+// that has been promoted to pending.
+func (m *Manager) promoteTask(ctx context.Context, taskID uuid.UUID) error {
+	task, err := m.taskStore.GetTask(ctx, taskID)
+	if err != nil {
+		return fmt.Errorf("promoteTask: failed to load task %s: %w", taskID, err)
+	}
+
+	targetRack, err := m.loadRackForTask(ctx, task)
+	if err != nil {
+		return fmt.Errorf("promoteTask: failed to load rack: %w", err)
+	}
+
+	return m.resolveAndExecuteTask(ctx, task, targetRack)
+}
+
+// resolveAndExecuteTask resolves the operation rule for a task, executes it,
+// and updates the task record with the execution result. It is shared by the
+// immediate-execution path in createAndExecuteTask and the promotion path in
+// promoteTask.
+func (m *Manager) resolveAndExecuteTask(
+	ctx context.Context,
+	task *taskdef.Task,
+	targetRack *rack.Rack,
+) error {
+	rule, err := m.ruleResolver.ResolveRule(
+		ctx, task.Operation.Type, task.Operation.Code, task.RackID,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to resolve operation rule: %w", err)
+	}
+	if rule == nil {
+		return fmt.Errorf("resolver returned nil rule (should never happen)")
+	}
+
+	if rule.ID != uuid.Nil {
+		task.AppliedRuleID = &rule.ID
+		log.Info().
+			Str("rule_name", rule.Name).
+			Str("rule_id", rule.ID.String()).
+			Str("operation_type", string(task.Operation.Type)).
+			Str("operation", task.Operation.Code).
+			Str("rack_id", task.RackID.String()).
+			Msg("Resolved operation rule for task")
+	} else {
+		log.Info().
+			Str("rule_name", rule.Name).
+			Str("operation_type", string(task.Operation.Type)).
+			Str("operation", task.Operation.Code).
+			Str("rack_id", task.RackID.String()).
+			Msg("Using hardcoded default rule for task")
+	}
+
+	resp, err := m.executeTask(ctx, task, targetRack, &rule.RuleDefinition)
+	if err != nil {
+		if uerr := m.taskStore.UpdateTaskStatus(ctx, &taskdef.TaskStatusUpdate{
+			ID:      task.ID,
+			Status:  taskcommon.TaskStatusFailed,
+			Message: err.Error(),
+		}); uerr != nil {
+			log.Error().Err(uerr).
+				Msgf("failed to mark task %s failed", task.ID)
+		}
+		return err
+	}
+
+	task.ExecutionID = resp.ExecutionID
+	task.ExecutorType = m.executor.Type()
+	if err := m.taskStore.UpdateScheduledTask(ctx, task); err != nil {
+		log.Error().Err(err).
+			Msgf("failed to update scheduled task %s", task.ID)
+	}
+	return nil
+}
+
+// CancelTask cancels a task by its ID.
+// Waiting tasks are terminated immediately (no workflow to stop).
+// Pending/running tasks have their Temporal workflow terminated.
+// Already-terminated tasks return nil (idempotent).
+// Completed or failed tasks return an error.
+func (m *Manager) CancelTask(ctx context.Context, taskID uuid.UUID) error {
+	task, err := m.taskStore.GetTask(ctx, taskID)
+	if err != nil {
+		return fmt.Errorf("failed to get task %s: %w", taskID, err)
+	}
+
+	if task.Status == taskcommon.TaskStatusTerminated {
+		return nil // already cancelled — idempotent
+	}
+
+	if task.Status.IsFinished() {
+		return fmt.Errorf(
+			"task %s cannot be cancelled (status: %s)", taskID, task.Status,
+		)
+	}
+
+	// Terminate the Temporal workflow if one was scheduled (pending/running).
+	// Waiting tasks have no workflow (ExecutionID is empty) so this is skipped.
+	if task.ExecutionID != "" {
+		if err := m.executor.TerminateTask(
+			ctx, task.ExecutionID, "Cancelled by user",
+		); err != nil {
+			return fmt.Errorf(
+				"failed to terminate workflow for task %s: %w", taskID, err,
+			)
+		}
+	}
+
+	return m.taskStore.UpdateTaskStatus(
+		ctx,
+		&taskdef.TaskStatusUpdate{
+			ID:      taskID,
+			Status:  taskcommon.TaskStatusTerminated,
+			Message: "Cancelled by user",
+		},
+	)
+}
+
+// loadRackForTask re-fetches the rack for a task and filters its component
+// list to only those tracked in task.ComponentUUIDs.
+func (m *Manager) loadRackForTask(
+	ctx context.Context,
+	task *taskdef.Task,
+) (*rack.Rack, error) {
+	rackObj, err := m.inventoryStore.GetRackByIdentifier(
+		ctx,
+		identifier.Identifier{ID: task.RackID},
+		true,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("rack %s not found: %w", task.RackID, err)
+	}
+
+	// Filter to the components originally targeted by the task.
+	uuidSet := make(map[uuid.UUID]struct{}, len(task.ComponentUUIDs))
+	for _, id := range task.ComponentUUIDs {
+		uuidSet[id] = struct{}{}
+	}
+
+	r := rack.New(rackObj.Info, rackObj.Loc)
+	for _, comp := range rackObj.Components {
+		if _, ok := uuidSet[comp.Info.ID]; ok {
+			r.AddComponent(comp)
+		}
+	}
+	return r, nil
 }
 
 func (m *Manager) executeTask(
@@ -326,4 +520,14 @@ func (m *Manager) executeTask(
 	default:
 		return nil, fmt.Errorf("unsupported task type: %s", task.Operation.Type)
 	}
+}
+
+func (m *Manager) getReqExpiresAt(req *operation.Request) *time.Time {
+	timeout := req.QueueTimeout
+	if timeout <= 0 {
+		timeout = m.defaultQueueTimeout
+	}
+
+	expiresAt := time.Now().Add(timeout)
+	return &expiresAt
 }

@@ -19,11 +19,13 @@ package manager
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/rs/zerolog/log"
 	"go.temporal.io/api/enums/v1"
+	"go.temporal.io/api/serviceerror"
 	temporalclient "go.temporal.io/sdk/client"
 
 	taskcommon "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/common"
@@ -42,6 +44,17 @@ var (
 		enums.WORKFLOW_EXECUTION_STATUS_TIMED_OUT:        taskcommon.TaskStatusTerminated,
 	}
 )
+
+// ignoreNotFound returns nil if err is a Temporal NotFound error, otherwise
+// returns err unchanged. Use this when the absence of a workflow is an
+// acceptable outcome (e.g. it already completed before the call was made).
+func ignoreNotFound(err error) error {
+	var notFound *serviceerror.NotFound
+	if errors.As(err, &notFound) {
+		return nil
+	}
+	return err
+}
 
 func taskStatusFromTemporalWorkflowStatus(
 	workflowStatus enums.WorkflowExecutionStatus,
