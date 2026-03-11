@@ -72,7 +72,7 @@ make kind-down      # Tear down cluster
 
 ### Production Cluster Deployment
 
-See **[QuickStart.md](QuickStart.md)** for a concise bring-up guide, and **[Installation.md](Installation.md)** for the full step-by-step reference with per-component explanations.
+See **[Deployment QuickStart Guide](deploy/README.md)** for a concise bring-up guide, and **[Detailed Installation Guide](deploy/INSTALLATION.md)** for the full step-by-step reference with per-component explanations.
 
 ## CLI
 

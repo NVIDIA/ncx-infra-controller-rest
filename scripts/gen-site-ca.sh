@@ -55,7 +55,7 @@ info() { echo "ℹ️   $*"; }
 ok()   { echo "✅  $*"; }
 warn() { echo "⚠️   $*"; }
 
-# ---- defaults -------------------------------------------------------
+# ---- Defaults -------------------------------------------------------
 NAMESPACE="carbide-rest"
 OUTPUT_DIR=""
 CA_CN="Carbide Local Dev CA"
@@ -63,7 +63,7 @@ CA_ORG="NVIDIA"
 CA_DAYS=3650
 DRY_RUN=false
 
-# ---- parse args -----------------------------------------------------
+# ---- Parse args -----------------------------------------------------
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --namespace)   NAMESPACE="${2:?--namespace requires a value}";  shift 2 ;;
@@ -85,7 +85,7 @@ if [[ -z "$OUTPUT_DIR" ]] && [[ "$DRY_RUN" == "false" ]]; then
   command -v kubectl >/dev/null 2>&1 || die "'kubectl' not found in PATH"
 fi
 
-# ---- generate CA in a temp dir -------------------------------------
+# ---- Generate CA in a temp dir -------------------------------------
 TMP_DIR=$(mktemp -d)
 trap 'rm -rf "$TMP_DIR"' EXIT
 
@@ -121,7 +121,7 @@ openssl req -x509 -sha256 -nodes -newkey rsa:4096 \
 
 ok "CA generated (CN: ${CA_CN}, O: ${CA_ORG})"
 
-# ---- output-dir mode: just write files, no kubectl -----------------
+# ---- Output-dir mode: just write files, no kubectl -----------------
 if [[ -n "$OUTPUT_DIR" ]]; then
   mkdir -p "$OUTPUT_DIR"
   cp "$TMP_DIR/ca.crt" "$OUTPUT_DIR/ca.crt"
@@ -141,7 +141,7 @@ if [[ -n "$OUTPUT_DIR" ]]; then
   exit 0
 fi
 
-# ---- build kubectl commands ----------------------------------------
+# ---- Build kubectl commands ----------------------------------------
 APPLY_NS_CMD="kubectl create secret tls ca-signing-secret \
   --cert=$TMP_DIR/ca.crt \
   --key=$TMP_DIR/ca.key \
@@ -161,7 +161,7 @@ if [[ "$DRY_RUN" == "true" ]]; then
   exit 0
 fi
 
-# ---- apply to cluster ----------------------------------------------
+# ---- Apply CA secrets to cluster ----------------------------------
 info "Creating ca-signing-secret in namespace '${NAMESPACE}'…"
 eval "$APPLY_NS_CMD"
 ok "ca-signing-secret created in '${NAMESPACE}'"

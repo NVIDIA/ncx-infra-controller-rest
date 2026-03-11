@@ -1,6 +1,6 @@
 # Carbide REST Production Quick Start
 
-This guide gets the Carbide REST control plane running on an existing Kubernetes cluster. For a full explanation of each component and production configuration options, see [Installation.md](Installation.md).
+This guide deploys the Carbide REST control plane running on an existing Kubernetes cluster. For a full explanation of each component and production configuration options, see [INSTALLATION.md](INSTALLATION.md).
 
 **Prerequisites:**
 - Kubernetes cluster (v1.27+) with cluster-admin access
@@ -45,13 +45,13 @@ kubectl apply -f deploy/kustomize/base/temporal-helm/namespace.yaml
 
 Creates `ca-signing-secret` in both `carbide-rest` and `cert-manager` namespaces. This is the trust anchor for all TLS in the deployment — every certificate issued to Carbide REST workloads traces back to it.
 
-To bring your own CA instead, see [Installation.md — Step 2](Installation.md#step-2--create-the-ca-signing-secret).
+To bring your own CA instead, see [INSTALLATION.md — Step 2](INSTALLATION.md#step-2--create-the-ca-signing-secret).
 
 ---
 
 ## 4. Deploy PostgreSQL and Keycloak
 
-> If you already have a PostgreSQL instance, skip the PostgreSQL apply and go straight to Step 7 (migrations). See [Installation.md — Step 3](Installation.md#step-3--deploy-postgresql) for the databases and users that must exist.
+> If you already have a PostgreSQL instance, skip the PostgreSQL apply and go straight to Step 7 (migrations). See [INSTALLATION.md — Step 3](INSTALLATION.md#step-3--deploy-postgresql) for the databases and users that must exist.
 
 ```bash
 # PostgreSQL
@@ -154,6 +154,6 @@ curl http://<node-ip>:30388/healthz
 
 ## Next Steps
 
-- **Site agent bootstrap** — register a site via the API and configure the site agent with the resulting UUID and OTP. See [Installation.md — Step 13](Installation.md#step-13--deploy-carbide-rest-site-agent).
-- **Production hardening** — change default credentials, replace `start-dev` Keycloak mode, tune Temporal resource limits. See [Installation.md](Installation.md) for per-component configuration details.
+- **Site agent bootstrap** — register a site via the API and configure the site agent with the resulting UUID and OTP. See [INSTALLATION.md — Step 13](INSTALLATION.md#step-13--deploy-carbide-rest-site-agent).
+- **Production hardening** — change default credentials, replace `start-dev` Keycloak mode, tune Temporal resource limits. See [INSTALLATION.md](INSTALLATION.md) for per-component configuration details.
 - **CLI** — install `carbidecli` to interact with the deployed cluster. See [cli/README.md](cli/README.md).

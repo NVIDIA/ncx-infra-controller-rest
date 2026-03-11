@@ -100,9 +100,11 @@ kubectl apply -f deploy/kustomize/base/temporal-helm/namespace.yaml
 
 ### What it is
 
-`carbide-rest-cert-manager` is the internal PKI service for Carbide REST. Before it can start, it needs a root CA (certificate + private key) provided as a Kubernetes Secret named `ca-signing-secret` in the `carbide-rest` namespace. The cert-manager.io `ClusterIssuer` also references this same secret to issue certificates for all other components.
+Before we begin with the installation, we need a root CA (certificate + private key) provided as a Kubernetes Secret named `ca-signing-secret` in the `carbide-rest` namespace.
 
-This is the trust anchor for the entire deployment. Every TLS certificate issued to Carbide REST workloads — site-manager, site-agent gRPC, Temporal client certs — traces back to this CA.
+The cert-manager.io `ClusterIssuer` references this secret to issue certificates for all other components. It is also used by `carbide-rest-cert-manager`, which is the internal PKI service for Carbide REST working in conjunction with cert-manager.io to dynamically dispense mTLS certificate for all connecting Site Agents.
+
+The CA certificate is the trust anchor for the entire deployment. Every TLS certificate issued to Carbide REST workloads — site-manager, site-agent gRPC, Temporal client certs — traces back to this CA.
 
 ### Required secret shape
 
@@ -179,7 +181,6 @@ A single-replica PostgreSQL 14 StatefulSet that hosts all databases for the Carb
 | `keycloak` | `keycloak` | Keycloak |
 | `temporal` | `temporal` | Temporal |
 | `temporal_visibility` | `temporal` | Temporal |
-| `elektratest` | `forge` | carbide-rest-site-agent |
 
 ### Credentials to change for production
 
@@ -199,7 +200,9 @@ kubectl rollout status statefulset/postgres -n postgres
 
 ### What it is
 
-Keycloak is the OIDC identity provider for the Carbide REST API. It handles authentication and issues JWTs that the API validates on every request. It is pre-loaded with the `carbide-dev` realm via an imported realm ConfigMap, which includes the `carbide-api` client, realm roles, and a set of pre-seeded dev users.
+Keycloak is the **reference OIDC identity provider** for the Carbide REST API. It handles authentication and issues JWTs that the API validates on every request. It is pre-loaded with the `carbide-dev` realm via an imported realm ConfigMap, which includes the `carbide-api` client, realm roles, and a set of pre-seeded dev users.
+
+Users of Carbide can also bring their own OpenID/OAuth JWT Provider, see [Auth docs](https://github.com/NVIDIA/bare-metal-manager-rest/tree/main/auth) for more details.
 
 ### Manifests
 
