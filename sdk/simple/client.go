@@ -99,7 +99,7 @@ var _ ClientInterface = (*Client)(nil)
 
 // ClientConfig is a struct that contains the configuration for the client
 type ClientConfig struct {
-	// BaseURL is the base URL of Carbide REST API. For in-cluster requests, use "https://cloud-api.cloud-api.svc.cluster.local"
+	// BaseURL is the base URL of Carbide REST API. For in-cluster requests, use "https://carbide-rest-api.carbide-rest.svc.cluster.local"
 	BaseURL string
 	// Org is the organization to use for the client. Select desired service org from const.go.
 	Org string
@@ -121,7 +121,7 @@ type Client struct {
 	Logger Logger
 }
 
-// Authenticate initiate session with cloud-api/keycloak and retrieve JWT.
+// Authenticate initiate session with carbide-rest-api/keycloak and retrieve JWT.
 // It also makes an API call to retrieve service-specific information to cache.
 func (c *Client) Authenticate(ctx context.Context) error {
 	ctx = WithLogger(ctx, c.Logger)

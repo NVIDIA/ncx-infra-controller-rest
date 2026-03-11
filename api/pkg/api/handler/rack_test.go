@@ -1463,6 +1463,250 @@ func TestUpdateRackFirmwareHandler_Handle(t *testing.T) {
 	}
 }
 
+func TestBringUpRackHandler_Handle(t *testing.T) {
+	e := echo.New()
+	dbSession := testRackInitDB(t)
+	defer dbSession.Close()
+
+	cfg := common.GetTestConfig()
+	tcfg, _ := cfg.GetTemporalConfig()
+	scp := sc.NewClientPool(tcfg)
+
+	org := "test-org"
+	_, site, _ := testRackSetupTestData(t, dbSession, org)
+
+	providerUser := testRackBuildUser(t, dbSession, "provider-user-bu-rack", org, []string{"FORGE_PROVIDER_ADMIN"})
+	tenantUser := testRackBuildUser(t, dbSession, "tenant-user-bu-rack", org, []string{"FORGE_TENANT_ADMIN"})
+
+	handler := NewBringUpRackHandler(dbSession, nil, scp, cfg)
+
+	rackID := uuid.New().String()
+
+	tracer := oteltrace.NewNoopTracerProvider().Tracer("test")
+	ctx := context.Background()
+
+	tests := []struct {
+		name           string
+		reqOrg         string
+		user           *cdbm.User
+		rackID         string
+		body           string
+		mockTaskIDs    []*rlav1.UUID
+		expectedStatus int
+	}{
+		{
+			name:           "success - bring up rack",
+			reqOrg:         org,
+			user:           providerUser,
+			rackID:         rackID,
+			body:           fmt.Sprintf(`{"siteId":"%s"}`, site.ID.String()),
+			mockTaskIDs:    []*rlav1.UUID{{Id: uuid.NewString()}},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "success - bring up rack with description",
+			reqOrg:         org,
+			user:           providerUser,
+			rackID:         rackID,
+			body:           fmt.Sprintf(`{"siteId":"%s","description":"test bring up"}`, site.ID.String()),
+			mockTaskIDs:    []*rlav1.UUID{{Id: uuid.NewString()}},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "failure - missing siteId",
+			reqOrg:         org,
+			user:           providerUser,
+			rackID:         rackID,
+			body:           `{}`,
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "failure - invalid siteId",
+			reqOrg:         org,
+			user:           providerUser,
+			rackID:         rackID,
+			body:           fmt.Sprintf(`{"siteId":"%s"}`, uuid.New().String()),
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "failure - tenant access denied",
+			reqOrg:         org,
+			user:           tenantUser,
+			rackID:         rackID,
+			body:           fmt.Sprintf(`{"siteId":"%s"}`, site.ID.String()),
+			expectedStatus: http.StatusForbidden,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockTemporalClient := &tmocks.Client{}
+			mockWorkflowRun := &tmocks.WorkflowRun{}
+			mockWorkflowRun.On("GetID").Return("test-workflow-id")
+			mockWorkflowRun.Mock.On("Get", mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+				resp := args.Get(1).(*rlav1.SubmitTaskResponse)
+				if tt.mockTaskIDs != nil {
+					resp.TaskIds = tt.mockTaskIDs
+				}
+			}).Return(nil)
+			mockTemporalClient.Mock.On("ExecuteWorkflow", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(mockWorkflowRun, nil)
+			scp.IDClientMap[site.ID.String()] = mockTemporalClient
+
+			path := fmt.Sprintf("/v2/org/%s/carbide/rack/%s/bringup", tt.reqOrg, tt.rackID)
+
+			req := httptest.NewRequest(http.MethodPost, path, strings.NewReader(tt.body))
+			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+			rec := httptest.NewRecorder()
+
+			ec := e.NewContext(req, rec)
+			ec.SetParamNames("orgName", "id")
+			ec.SetParamValues(tt.reqOrg, tt.rackID)
+			ec.Set("user", tt.user)
+
+			ctx = context.WithValue(ctx, otelecho.TracerKey, tracer)
+			ec.SetRequest(ec.Request().WithContext(ctx))
+
+			err := handler.Handle(ec)
+
+			if tt.expectedStatus != rec.Code {
+				t.Errorf("BringUpRackHandler.Handle() status = %v, want %v, response: %v, err: %v", rec.Code, tt.expectedStatus, rec.Body.String(), err)
+			}
+
+			require.Equal(t, tt.expectedStatus, rec.Code)
+			if tt.expectedStatus != http.StatusOK {
+				return
+			}
+
+			var apiResp model.APIBringUpRackResponse
+			err = json.Unmarshal(rec.Body.Bytes(), &apiResp)
+			assert.NoError(t, err)
+			assert.NotEmpty(t, apiResp.TaskIDs)
+		})
+	}
+}
+
+func TestBatchBringUpRackHandler_Handle(t *testing.T) {
+	e := echo.New()
+	dbSession := testRackInitDB(t)
+	defer dbSession.Close()
+
+	cfg := common.GetTestConfig()
+	tcfg, _ := cfg.GetTemporalConfig()
+	scp := sc.NewClientPool(tcfg)
+
+	org := "test-org"
+	_, site, _ := testRackSetupTestData(t, dbSession, org)
+
+	providerUser := testRackBuildUser(t, dbSession, "provider-user-bu-rack-batch", org, []string{"FORGE_PROVIDER_ADMIN"})
+	tenantUser := testRackBuildUser(t, dbSession, "tenant-user-bu-rack-batch", org, []string{"FORGE_TENANT_ADMIN"})
+
+	handler := NewBatchBringUpRackHandler(dbSession, nil, scp, cfg)
+
+	tracer := oteltrace.NewNoopTracerProvider().Tracer("test")
+	ctx := context.Background()
+
+	tests := []struct {
+		name           string
+		reqOrg         string
+		user           *cdbm.User
+		body           string
+		mockTaskIDs    []*rlav1.UUID
+		expectedStatus int
+	}{
+		{
+			name:           "success - bring up all racks (no filter)",
+			reqOrg:         org,
+			user:           providerUser,
+			body:           fmt.Sprintf(`{"siteId":"%s"}`, site.ID.String()),
+			mockTaskIDs:    []*rlav1.UUID{{Id: uuid.NewString()}, {Id: uuid.NewString()}},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "success - bring up with name filter",
+			reqOrg:         org,
+			user:           providerUser,
+			body:           fmt.Sprintf(`{"siteId":"%s","filter":{"names":["Rack-001"]}}`, site.ID.String()),
+			mockTaskIDs:    []*rlav1.UUID{{Id: uuid.NewString()}},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "success - bring up with description",
+			reqOrg:         org,
+			user:           providerUser,
+			body:           fmt.Sprintf(`{"siteId":"%s","description":"batch bring up test"}`, site.ID.String()),
+			mockTaskIDs:    []*rlav1.UUID{{Id: uuid.NewString()}},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "failure - missing siteId",
+			reqOrg:         org,
+			user:           providerUser,
+			body:           `{}`,
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "failure - tenant access denied",
+			reqOrg:         org,
+			user:           tenantUser,
+			body:           fmt.Sprintf(`{"siteId":"%s"}`, site.ID.String()),
+			expectedStatus: http.StatusForbidden,
+		},
+		{
+			name:           "failure - invalid siteId",
+			reqOrg:         org,
+			user:           providerUser,
+			body:           fmt.Sprintf(`{"siteId":"%s"}`, uuid.New().String()),
+			expectedStatus: http.StatusBadRequest,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockTemporalClient := &tmocks.Client{}
+			mockWorkflowRun := &tmocks.WorkflowRun{}
+			mockWorkflowRun.On("GetID").Return("test-workflow-id")
+			mockWorkflowRun.Mock.On("Get", mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+				resp := args.Get(1).(*rlav1.SubmitTaskResponse)
+				if tt.mockTaskIDs != nil {
+					resp.TaskIds = tt.mockTaskIDs
+				}
+			}).Return(nil)
+			mockTemporalClient.Mock.On("ExecuteWorkflow", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(mockWorkflowRun, nil)
+			scp.IDClientMap[site.ID.String()] = mockTemporalClient
+
+			path := fmt.Sprintf("/v2/org/%s/carbide/rack/bringup", tt.reqOrg)
+
+			req := httptest.NewRequest(http.MethodPost, path, strings.NewReader(tt.body))
+			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+			rec := httptest.NewRecorder()
+
+			ec := e.NewContext(req, rec)
+			ec.SetParamNames("orgName")
+			ec.SetParamValues(tt.reqOrg)
+			ec.Set("user", tt.user)
+
+			ctx = context.WithValue(ctx, otelecho.TracerKey, tracer)
+			ec.SetRequest(ec.Request().WithContext(ctx))
+
+			err := handler.Handle(ec)
+
+			if tt.expectedStatus != rec.Code {
+				t.Errorf("BatchBringUpRackHandler.Handle() status = %v, want %v, response: %v, err: %v", rec.Code, tt.expectedStatus, rec.Body.String(), err)
+			}
+
+			require.Equal(t, tt.expectedStatus, rec.Code)
+			if tt.expectedStatus != http.StatusOK {
+				return
+			}
+
+			var apiResp model.APIBringUpRackResponse
+			err = json.Unmarshal(rec.Body.Bytes(), &apiResp)
+			assert.NoError(t, err)
+			assert.NotEmpty(t, apiResp.TaskIDs)
+		})
+	}
+}
+
 func TestBatchUpdateRackFirmwareHandler_Handle(t *testing.T) {
 	e := echo.New()
 	dbSession := testRackInitDB(t)

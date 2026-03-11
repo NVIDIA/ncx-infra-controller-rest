@@ -159,7 +159,9 @@ func (ms ManageSubnet) CreateSubnetViaSiteAgent(ctx context.Context, subnetID uu
 		statusMessage = "Failed to initiate Subnet provisioning on Site"
 	}
 
-	_ = ms.updateSubnetStatusInDB(ctx, nil, subnetID, &status, &statusMessage)
+	if updateErr := ms.updateSubnetStatusInDB(ctx, nil, subnetID, &status, &statusMessage); updateErr != nil {
+		logger.Warn().Err(updateErr).Msg("failed to update Subnet status in DB")
+	}
 
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to trigger site agent create Subnet workflow")
@@ -240,7 +242,9 @@ func (ms ManageSubnet) DeleteSubnetViaSiteAgent(ctx context.Context, subnetID uu
 
 	status := cdbm.SubnetStatusDeleting
 	statusMessage := "Deletion request was sent to the Site"
-	_ = ms.updateSubnetStatusInDB(ctx, nil, subnetID, &status, &statusMessage)
+	if updateErr := ms.updateSubnetStatusInDB(ctx, nil, subnetID, &status, &statusMessage); updateErr != nil {
+		logger.Warn().Err(updateErr).Msg("failed to update Subnet status in DB")
+	}
 
 	logger.Info().Str("Workflow ID", we.GetID()).Msg("triggered Site agent workflow to delete Subnet")
 

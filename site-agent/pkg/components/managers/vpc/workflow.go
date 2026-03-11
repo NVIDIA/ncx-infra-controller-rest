@@ -46,7 +46,7 @@ const (
 	activityPublish
 )
 
-// TODO(deprecated): Remove any related VpcDelete references after cloud-api and agent are updated everywhere.  We've moved to sync workflow.
+// TODO(deprecated): Remove any related VpcDelete references after carbide-rest-api and agent are updated everywhere.  We've moved to sync workflow.
 // TODO: Remove VpcCreate an any related references (deprecated).  We've moved to sync workflow.
 var activityStr = []string{"VpcCreate", "VpcUpdate", "VpcDelete", "VpcGetByName", "VpcGetList", "VPCCollectInventory", "VpcPublish"}
 
@@ -340,10 +340,10 @@ Site Controller:
 
 
    Summary:
-   1. Handling Temporal failure after cloud api persists the user Request
+   1. Handling Temporal failure after carbide-rest-api persists the user Request
    2. Site Agent Queue Request timestamp:
 	   A. Use the status timestamp
    3. Resoultion of the timestamp: microseconds
    4. All update Requests will be sepearate row in the status table
-	  This status timestamp is the one that will be sent from cloud api - worker -> site agent
+	  This status timestamp is the one that will be sent from carbide-rest-api - worker -> site agent
 */

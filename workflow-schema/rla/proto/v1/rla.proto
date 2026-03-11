@@ -16,11 +16,10 @@
 syntax = "proto3";
 
 package v1;
+option go_package = "github.com/nvidia/bare-metal-manager-rest/rla/pkg/proto/v1";
 
 import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
-
-option go_package = "github.com/nvidia/bare-metal-manager-rest/workflow-schema/rla";
 
 service RLA {
     // What version of RLA is this service running?
@@ -39,7 +38,13 @@ service RLA {
     rpc GetListOfNVLDomains(GetListOfNVLDomainsRequest) returns (GetListOfNVLDomainsResponse);
     rpc GetRacksForNVLDomain(GetRacksForNVLDomainRequest) returns (GetRacksForNVLDomainResponse);
     rpc UpgradeFirmware(UpgradeFirmwareRequest) returns (SubmitTaskResponse);
-    
+
+    // Bring up rack: power on, configure, and validate a new rack
+    rpc BringUpRack(BringUpRackRequest) returns (SubmitTaskResponse);
+
+    // Ingest rack: inject expected component configurations to component manager services
+    rpc IngestRack(IngestRackRequest) returns (SubmitTaskResponse);
+
     // Components APIs
     rpc GetComponents(GetComponentsRequest) returns (GetComponentsResponse);
     rpc ValidateComponents(ValidateComponentsRequest) returns (ValidateComponentsResponse);
@@ -505,6 +510,17 @@ message PowerOffRackRequest {
 message PowerResetRackRequest {
     OperationTargetSpec target_spec = 1;  // Flexible targeting: rack(s) with optional type filter, or specific components
     bool forced = 2;
+    string description = 3;               // optional task description
+}
+
+message BringUpRackRequest {
+    OperationTargetSpec target_spec = 1;  // Target racks for bring-up
+    string description = 2;               // optional task description
+}
+
+message IngestRackRequest {
+    OperationTargetSpec target_spec = 1;  // Target racks for ingestion
+    repeated Filter filters = 2;          // Filter conditions for component queries (e.g. by type, name)
     string description = 3;               // optional task description
 }
 

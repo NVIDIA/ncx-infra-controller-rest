@@ -229,6 +229,36 @@ func (mr *ManageRack) PowerResetRack(ctx context.Context, request *rlav1.PowerRe
 	return response, nil
 }
 
+// BringUpRack brings up a rack or its specified components via RLA
+func (mr *ManageRack) BringUpRack(ctx context.Context, request *rlav1.BringUpRackRequest) (*rlav1.SubmitTaskResponse, error) {
+	logger := log.With().Str("Activity", "BringUpRack").Logger()
+	logger.Info().Msg("Starting activity")
+
+	var err error
+
+	switch {
+	case request == nil:
+		err = errors.New("received empty bring up rack request")
+	}
+
+	if err != nil {
+		return nil, temporal.NewNonRetryableApplicationError(err.Error(), swe.ErrTypeInvalidRequest, err)
+	}
+
+	rlaClient := mr.RlaAtomicClient.GetClient()
+	rla := rlaClient.Rla()
+
+	response, err := rla.BringUpRack(ctx, request)
+	if err != nil {
+		logger.Warn().Err(err).Msg("Failed to bring up rack using RLA API")
+		return nil, swe.WrapErr(err)
+	}
+
+	logger.Info().Int("TaskCount", len(response.GetTaskIds())).Msg("Completed activity")
+
+	return response, nil
+}
+
 // UpgradeFirmware upgrades firmware on racks or components via RLA
 func (mr *ManageRack) UpgradeFirmware(ctx context.Context, request *rlav1.UpgradeFirmwareRequest) (*rlav1.SubmitTaskResponse, error) {
 	logger := log.With().Str("Activity", "UpgradeFirmware").Logger()
