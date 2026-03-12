@@ -505,6 +505,21 @@ func (gamh GetAllMachineHandler) Handle(c echo.Context) error {
 		}
 	}
 
+	// Get isMissingOnSite from query param
+	qIsMissingOnSite := c.QueryParam("isMissingOnSite")
+	if qIsMissingOnSite != "" {
+		isMissingOnSite, err := strconv.ParseBool(qIsMissingOnSite)
+		if err != nil {
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid value specified for `isMissingOnSite` query param", nil)
+		}
+
+		if filterInput.SiteID == nil {
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "`isMissingOnSite` cannot be specified when `siteId` is not specified in query", nil)
+		}
+
+		filterInput.IsMissingOnSite = cdb.GetBoolPtr(isMissingOnSite)
+	}
+
 	// Get hwSkuDeviceType from query param
 	hwSkuDeviceTypeQuery := qParams["hwSkuDeviceType"]
 	if len(hwSkuDeviceTypeQuery) > 0 {

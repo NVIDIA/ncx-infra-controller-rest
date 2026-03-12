@@ -7737,6 +7737,11 @@ paths:
         - schema:
             type: boolean
           in: query
+          name: isMissingOnSite
+          description: Filter Machines that are missing on Site. siteId must be specified when using this param.
+        - schema:
+            type: boolean
+          in: query
           name: includeMetadata
           description: 'Include Machine metadata e.g. BMC, DPU, GPU and Interface data. Can only be requested by Provider.'
         - schema:
