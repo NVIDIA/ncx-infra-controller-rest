@@ -79,15 +79,12 @@ func NewGetAllInstanceNVLinkInterfaceHandler(dbSession *cdb.Session, tc temporal
 // @Success 200 {object} model.APIInterface
 // @Router /v2/org/{org}/carbide/instance/{instance_id}/interface [get]
 func (ganvliih GetAllInstanceNVLinkInterfaceHandler) Handle(c echo.Context) error {
-	// Get query params
-	q := c.QueryParams()
-
 	instanceID := c.Param("instanceId")
-	q.Set("instanceId", instanceID)
-
-	c.Request().URL.RawQuery = q.Encode()
-
-	delegate := NewGetAllNVLinkInterfaceHandler(ganvliih.dbSession, ganvliih.tc, ganvliih.cfg)
+	queryOverride := &common.InstanceIDQueryOverride{
+		InstanceIDs:        []string{instanceID},
+		InstanceIDFromPath: true,
+	}
+	delegate := NewGetAllNVLinkInterfaceHandler(ganvliih.dbSession, ganvliih.tc, ganvliih.cfg, queryOverride)
 	return delegate.Handle(c)
 }
 
@@ -95,19 +92,27 @@ func (ganvliih GetAllInstanceNVLinkInterfaceHandler) Handle(c echo.Context) erro
 
 // GetAllNVLinkInterfaceHandler is the API Handler for retrieving all NVLinkInterfaces
 type GetAllNVLinkInterfaceHandler struct {
-	dbSession  *cdb.Session
-	tc         temporalClient.Client
-	cfg        *config.Config
-	tracerSpan *cutil.TracerSpan
+	dbSession     *cdb.Session
+	tc            temporalClient.Client
+	cfg           *config.Config
+	tracerSpan    *cutil.TracerSpan
+	queryOverride *common.InstanceIDQueryOverride
 }
 
-// NewGetAllNVLinkInterfaceHandler initializes and returns a new handler for retrieving all NVLinkInterfaces
-func NewGetAllNVLinkInterfaceHandler(dbSession *cdb.Session, tc temporalClient.Client, cfg *config.Config) GetAllNVLinkInterfaceHandler {
+// NewGetAllNVLinkInterfaceHandler initializes and returns a new handler for retrieving all NVLinkInterfaces.
+// When queryOverride is provided (e.g. when delegating from instance-scoped endpoint), it supplies values
+// that would otherwise come from query params, and error messages use "request" instead of "query".
+func NewGetAllNVLinkInterfaceHandler(dbSession *cdb.Session, tc temporalClient.Client, cfg *config.Config, queryOverride ...*common.InstanceIDQueryOverride) GetAllNVLinkInterfaceHandler {
+	var override *common.InstanceIDQueryOverride
+	if len(queryOverride) > 0 {
+		override = queryOverride[0]
+	}
 	return GetAllNVLinkInterfaceHandler{
-		dbSession:  dbSession,
-		tc:         tc,
-		cfg:        cfg,
-		tracerSpan: cutil.NewTracerSpan(),
+		dbSession:     dbSession,
+		tc:            tc,
+		cfg:           cfg,
+		tracerSpan:    cutil.NewTracerSpan(),
+		queryOverride: override,
 	}
 }
 
@@ -218,21 +223,32 @@ func (gaish GetAllNVLinkInterfaceHandler) Handle(c echo.Context) error {
 		}
 	}
 
-	// Get Instance ID from query param
+	// Get Instance IDs - from queryOverride when delegating from path-scoped endpoint, else from query param
+	instanceIDFromPath := gaish.queryOverride != nil && gaish.queryOverride.InstanceIDFromPath
+	instanceIDStrs := qParams["instanceId"]
+	if instanceIDFromPath && len(gaish.queryOverride.InstanceIDs) > 0 {
+		instanceIDStrs = gaish.queryOverride.InstanceIDs
+	}
+
 	var instanceIDs []uuid.UUID
-	instanceIDStr := qParams["instanceId"]
 	instanceDAO := cdbm.NewInstanceDAO(gaish.dbSession)
-	for _, instanceIDStr := range instanceIDStr {
+	for _, instanceIDStr := range instanceIDStrs {
 		instanceID, err := uuid.Parse(instanceIDStr)
 		if err != nil {
-			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Instance ID in URL", nil)
+			if instanceIDFromPath {
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Invalid Instance ID %v specified in request", instanceIDStr), nil)
+			}
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Invalid Instance ID %v in query", instanceIDStr), nil)
 		}
 
 		// Get Instance
 		instance, err := instanceDAO.GetByID(ctx, nil, instanceID, nil)
 		if err != nil {
 			if err == cdb.ErrDoesNotExist {
-				return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find Instance with specified ID", nil)
+				if instanceIDFromPath {
+					return cutil.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf("Could not find Instance with specified ID: %s in request", instanceID.String()), nil)
+				}
+				return cutil.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf("Could not find Instance with ID: %s specified in query", instanceID.String()), nil)
 			}
 			logger.Error().Err(err).Msg("error retrieving Instance from DB")
 			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Instance", nil)
@@ -240,7 +256,10 @@ func (gaish GetAllNVLinkInterfaceHandler) Handle(c echo.Context) error {
 
 		// Check if Instance belongs to Tenant
 		if instance.TenantID != tenant.ID {
-			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Instance does not belong to current Tenant", nil)
+			if instanceIDFromPath {
+				return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Instance with specified ID: %s in request does not belong to current Tenant", instanceID.String()), nil)
+			}
+			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Instance: %s does not belong to current Tenant", instanceID.String()), nil)
 		}
 
 		instanceIDs = append(instanceIDs, instanceID)

@@ -333,13 +333,13 @@ func NewAPIRoutes(dbSession *cdb.Session, tc tClient.Client, tnc tClient.Namespa
 		{
 			Path:    apiPathPrefix + "/infiniband-interface",
 			Method:  http.MethodGet,
-			Handler: apiHandler.NewGetAllInfiniBandInterfaceHandler(dbSession, tc, cfg),
+			Handler: apiHandler.NewGetAllInfiniBandInterfaceHandler(dbSession, tc, cfg, nil),
 		},
 		// NVLinkInterface endpoints
 		{
 			Path:    apiPathPrefix + "/nvlink-interface",
 			Method:  http.MethodGet,
-			Handler: apiHandler.NewGetAllNVLinkInterfaceHandler(dbSession, tc, cfg),
+			Handler: apiHandler.NewGetAllNVLinkInterfaceHandler(dbSession, tc, cfg, nil),
 		},
 		// InfiniBandPartition endpoints
 		{

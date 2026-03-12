@@ -81,16 +81,12 @@ func NewGetAllInstanceInfiniBandInterfaceHandler(dbSession *cdb.Session, tc temp
 // @Success 200 {object} model.APIInterface
 // @Router /v2/org/{org}/carbide/instance/{instance_id}/interface [get]
 func (gaiibih GetAllInstanceInfiniBandInterfaceHandler) Handle(c echo.Context) error {
-
-	// Get query params
-	q := c.QueryParams()
-
 	instanceID := c.Param("instanceId")
-	q.Set("instanceId", instanceID)
-
-	c.Request().URL.RawQuery = q.Encode()
-
-	delegate := NewGetAllInfiniBandInterfaceHandler(gaiibih.dbSession, gaiibih.tc, gaiibih.cfg)
+	queryOverride := &common.InstanceIDQueryOverride{
+		InstanceIDs:        []string{instanceID},
+		InstanceIDFromPath: true,
+	}
+	delegate := NewGetAllInfiniBandInterfaceHandler(gaiibih.dbSession, gaiibih.tc, gaiibih.cfg, queryOverride)
 	return delegate.Handle(c)
 }
 
@@ -98,19 +94,27 @@ func (gaiibih GetAllInstanceInfiniBandInterfaceHandler) Handle(c echo.Context) e
 
 // GetAllInfiniBandInterfaceHandler is the API Handler for retrieving all InfiniBandInterfaces
 type GetAllInfiniBandInterfaceHandler struct {
-	dbSession  *cdb.Session
-	tc         temporalClient.Client
-	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	dbSession     *cdb.Session
+	tc            temporalClient.Client
+	cfg           *config.Config
+	tracerSpan    *sutil.TracerSpan
+	queryOverride *common.InstanceIDQueryOverride
 }
 
-// NewGetAllInfiniBandInterfaceHandler initializes and returns a new handler for retrieving all InfiniBandInterfaces
-func NewGetAllInfiniBandInterfaceHandler(dbSession *cdb.Session, tc temporalClient.Client, cfg *config.Config) GetAllInfiniBandInterfaceHandler {
+// NewGetAllInfiniBandInterfaceHandler initializes and returns a new handler for retrieving all InfiniBandInterfaces.
+// When queryOverride is provided (e.g. when delegating from instance-scoped endpoint), it supplies values
+// that would otherwise come from query params, and error messages use "path" instead of "query".
+func NewGetAllInfiniBandInterfaceHandler(dbSession *cdb.Session, tc temporalClient.Client, cfg *config.Config, queryOverride ...*common.InstanceIDQueryOverride) GetAllInfiniBandInterfaceHandler {
+	var override *common.InstanceIDQueryOverride
+	if len(queryOverride) > 0 {
+		override = queryOverride[0]
+	}
 	return GetAllInfiniBandInterfaceHandler{
-		dbSession:  dbSession,
-		tc:         tc,
-		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		dbSession:     dbSession,
+		tc:            tc,
+		cfg:           cfg,
+		tracerSpan:    sutil.NewTracerSpan(),
+		queryOverride: override,
 	}
 }
 
@@ -264,13 +268,24 @@ func (gaibih GetAllInfiniBandInterfaceHandler) Handle(c echo.Context) error {
 		}
 	}
 
-	// Get Instance IDs from query param - parse first, then bulk fetch
+	// Get Instance IDs - from queryOverride when delegating from path-scoped endpoint, else from query param
 	var instanceIDs []uuid.UUID
+	instanceIDFromPath := gaibih.queryOverride != nil && gaibih.queryOverride.InstanceIDFromPath
+
 	instanceIDStrs := qParams["instanceId"]
-	for _, instanceIDStr := range instanceIDStrs {
+	if instanceIDFromPath && len(gaibih.queryOverride.InstanceIDs) > 0 {
+		instanceIDStrs = gaibih.queryOverride.InstanceIDs
+	}
+
+	if len(instanceIDStrs) > 0 {
 		gaibih.tracerSpan.SetAttribute(handlerSpan, attribute.StringSlice("instanceId", instanceIDStrs), logger)
+	}
+	for _, instanceIDStr := range instanceIDStrs {
 		parsedID, err := uuid.Parse(instanceIDStr)
 		if err != nil {
+			if instanceIDFromPath {
+				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Invalid Instance ID %v specified in request", instanceIDStr), nil)
+			}
 			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Invalid Instance ID %v in query", instanceIDStr), nil)
 		}
 		instanceIDs = append(instanceIDs, parsedID)
@@ -292,14 +307,27 @@ func (gaibih GetAllInfiniBandInterfaceHandler) Handle(c echo.Context) error {
 			instanceIDMap[instances[i].ID] = &instances[i]
 		}
 
+		notFoundMsg := "Could not find Instance with ID: %s specified in query"
+		forbiddenMsg := "Instance: %s does not belong to current Tenant"
+		if instanceIDFromPath {
+			notFoundMsg = "Could not find Instance with specified ID: %s in request"
+			forbiddenMsg = "Instance with specified ID: %s in request does not belong to current Tenant"
+		}
+
 		for _, instanceID := range instanceIDs {
 			instance, ok := instanceIDMap[instanceID]
 			if !ok {
-				return cerr.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf("Could not find Instance with ID: %s specified in query", instanceID.String()), nil)
+				if instanceIDFromPath {
+					return cerr.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf(notFoundMsg, instanceID.String()), nil)
+				}
+				return cerr.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf(notFoundMsg, instanceID.String()), nil)
 			}
 
 			if instance.TenantID != tenant.ID {
-				return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Instance: %s does not belong to current Tenant", instanceID.String()), nil)
+				if instanceIDFromPath {
+					return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf(forbiddenMsg, instanceID.String()), nil)
+				}
+				return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf(forbiddenMsg, instanceID.String()), nil)
 			}
 		}
 	}

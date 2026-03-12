@@ -645,17 +645,19 @@ func TestNewGetAllNVLinkInterfaceHandler(t *testing.T) {
 				cfg:       cfg,
 			},
 			want: GetAllNVLinkInterfaceHandler{
-				dbSession:  dbSession,
-				tc:         tc,
-				cfg:        cfg,
-				tracerSpan: sutil.NewTracerSpan(),
+				dbSession:     dbSession,
+				tc:            tc,
+				cfg:           cfg,
+				tracerSpan:    sutil.NewTracerSpan(),
+				queryOverride: nil,
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NewGetAllNVLinkInterfaceHandler(tt.args.dbSession, tt.args.tc, tt.args.cfg); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewGetAllNVLinkInterfaceHandler() = %v, want %v", got, tt.want)
+			got := NewGetAllNVLinkInterfaceHandler(tt.args.dbSession, tt.args.tc, tt.args.cfg)
+			if got.dbSession != tt.want.dbSession || got.tc != tt.want.tc || got.cfg != tt.want.cfg || got.queryOverride != nil {
+				t.Errorf("NewGetAllNVLinkInterfaceHandler() dbSession=%v tc=%v cfg=%v queryOverride=%v, want queryOverride=nil", got.dbSession, got.tc, got.cfg, got.queryOverride)
 			}
 		})
 	}
@@ -742,6 +744,14 @@ func TestGetAllInstanceNVLinkInterfaceHandler_Handle(t *testing.T) {
 	tn1 := testInstanceBuildTenant(t, dbSession, "test-tenant", tnOrg1, tnu1)
 
 	tnu2 := testInstanceBuildUser(t, dbSession, "test-starfleet-id-3", tnOrg2, tnOrgRoles2)
+	tn2 := testInstanceBuildTenant(t, dbSession, "test-tenant-2", tnOrg2, tnu2)
+	assert.NotNil(t, tn2)
+
+	ts1 := testBuildTenantSiteAssociation(t, dbSession, tnOrg1, tn1.ID, st1.ID, tnu1.ID)
+	assert.NotNil(t, ts1)
+
+	ts2 := testBuildTenantSiteAssociation(t, dbSession, tnOrg2, tn2.ID, st1.ID, tnu2.ID)
+	assert.NotNil(t, ts2)
 
 	al1 := testInstanceSiteBuildAllocation(t, dbSession, st1, tn1, "test-allocation-1", ipu)
 	assert.NotNil(t, al1)
@@ -839,6 +849,7 @@ func TestGetAllInstanceNVLinkInterfaceHandler_Handle(t *testing.T) {
 		expectedCount                    int
 		expectedTotal                    int
 		verifyChildSpanner               bool
+		expectedErrorMessage             string
 	}{
 		{
 			name: "test NVLinkInterface getall by Instance API endpoint success",
@@ -924,6 +935,7 @@ func TestGetAllInstanceNVLinkInterfaceHandler_Handle(t *testing.T) {
 			pageSize:                         cdb.GetIntPtr(10),
 			orderBy:                          cdb.GetStrPtr("TEST_ASC"),
 			expectedNVLinkLogicalPartitionID: cdb.GetUUIDPtr(nvllps[0].ID),
+			expectedErrorMessage:            "Failed to validate pagination request data",
 		},
 		{
 			name: "test NVLinkInterface getall by Instance API failure, org does not have a Tenant associated",
@@ -939,7 +951,8 @@ func TestGetAllInstanceNVLinkInterfaceHandler_Handle(t *testing.T) {
 				reqUser:       ipu,
 				respCode:      http.StatusForbidden,
 			},
-			wantErr: false,
+			wantErr:               false,
+			expectedErrorMessage: "User does not have Tenant Admin role with org",
 		},
 		{
 			name: "test NVLinkInterface getall by Instance API failure, invalid Instance ID in request",
@@ -955,7 +968,8 @@ func TestGetAllInstanceNVLinkInterfaceHandler_Handle(t *testing.T) {
 				reqUser:       tnu1,
 				respCode:      http.StatusBadRequest,
 			},
-			wantErr: false,
+			wantErr:               false,
+			expectedErrorMessage: "Invalid Instance ID badID specified in request",
 		},
 		{
 			name: "test NVLinkInterface getall by Instance API failure, Instance ID in request not found",
@@ -971,7 +985,8 @@ func TestGetAllInstanceNVLinkInterfaceHandler_Handle(t *testing.T) {
 				reqUser:       tnu1,
 				respCode:      http.StatusNotFound,
 			},
-			wantErr: false,
+			wantErr:               false,
+			expectedErrorMessage: "Could not find Instance with specified ID",
 		},
 		{
 			name: "test NVLinkInterface getall by Instance API failure, Instance not belong to current tenant",
@@ -987,7 +1002,8 @@ func TestGetAllInstanceNVLinkInterfaceHandler_Handle(t *testing.T) {
 				reqUser:       tnu2,
 				respCode:      http.StatusForbidden,
 			},
-			wantErr: false,
+			wantErr:               false,
+			expectedErrorMessage: "Instance with specified ID",
 		},
 		{
 			name: "test NVLinkInterface getall by Instance API endpoint success include relation",
@@ -1107,6 +1123,13 @@ func TestGetAllInstanceNVLinkInterfaceHandler_Handle(t *testing.T) {
 
 			require.Equal(t, tt.args.respCode, rec.Code)
 			if tt.args.respCode != http.StatusOK {
+				if tt.expectedErrorMessage != "" {
+					var errResp struct {
+						Message string `json:"message"`
+					}
+					_ = json.Unmarshal(rec.Body.Bytes(), &errResp)
+					assert.Contains(t, errResp.Message, tt.expectedErrorMessage)
+				}
 				return
 			}
 
