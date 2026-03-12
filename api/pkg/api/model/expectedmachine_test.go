@@ -44,6 +44,7 @@ func TestAPIExpectedMachineCreateRequest_Validate(t *testing.T) {
 		{
 			desc: "ok when all required fields are provided",
 			obj: APIExpectedMachineCreateRequest{
+				SiteID:              "550e8400-e29b-41d4-a716-446655440000",
 				BmcMacAddress:       "00:11:22:33:44:55",
 				DefaultBmcUsername:  &validUsername,
 				DefaultBmcPassword:  &validPassword,
@@ -54,6 +55,7 @@ func TestAPIExpectedMachineCreateRequest_Validate(t *testing.T) {
 		{
 			desc: "ok when required fields and optional fields are provided",
 			obj: APIExpectedMachineCreateRequest{
+				SiteID:                   "550e8400-e29b-41d4-a716-446655440000",
 				BmcMacAddress:            "00:11:22:33:44:55",
 				DefaultBmcUsername:       &validUsername,
 				DefaultBmcPassword:       &validPassword,
@@ -106,6 +108,7 @@ func TestAPIExpectedMachineCreateRequest_Validate(t *testing.T) {
 		{
 			desc: "ok when BMC username is exactly 16 characters",
 			obj: APIExpectedMachineCreateRequest{
+				SiteID:              "550e8400-e29b-41d4-a716-446655440000",
 				BmcMacAddress:       "00:11:22:33:44:55",
 				DefaultBmcUsername:  cdb.GetStrPtr(strings.Repeat("a", 16)),
 				DefaultBmcPassword:  &validPassword,
@@ -127,6 +130,7 @@ func TestAPIExpectedMachineCreateRequest_Validate(t *testing.T) {
 		{
 			desc: "ok when BMC password is exactly 20 characters",
 			obj: APIExpectedMachineCreateRequest{
+				SiteID:              "550e8400-e29b-41d4-a716-446655440000",
 				BmcMacAddress:       "00:11:22:33:44:55",
 				DefaultBmcUsername:  &validUsername,
 				DefaultBmcPassword:  cdb.GetStrPtr(strings.Repeat("a", 20)),
@@ -148,6 +152,7 @@ func TestAPIExpectedMachineCreateRequest_Validate(t *testing.T) {
 		{
 			desc: "ok when chassis serial number is exactly 32 characters",
 			obj: APIExpectedMachineCreateRequest{
+				SiteID:              "550e8400-e29b-41d4-a716-446655440000",
 				BmcMacAddress:       "00:11:22:33:44:55",
 				DefaultBmcUsername:  &validUsername,
 				DefaultBmcPassword:  &validPassword,
@@ -168,6 +173,7 @@ func TestAPIExpectedMachineCreateRequest_Validate(t *testing.T) {
 		{
 			desc: "ok when optional fields are empty",
 			obj: APIExpectedMachineCreateRequest{
+				SiteID:                   "550e8400-e29b-41d4-a716-446655440000",
 				BmcMacAddress:            "00:11:22:33:44:55",
 				DefaultBmcUsername:       &emptyString,
 				DefaultBmcPassword:       &emptyString,
@@ -178,7 +184,7 @@ func TestAPIExpectedMachineCreateRequest_Validate(t *testing.T) {
 			expectErr: false,
 		},
 		{
-			desc: "ok when SiteID is empty string",
+			desc: "error when SiteID is empty string",
 			obj: APIExpectedMachineCreateRequest{
 				SiteID:              "",
 				BmcMacAddress:       "00:11:22:33:44:55",
@@ -186,7 +192,7 @@ func TestAPIExpectedMachineCreateRequest_Validate(t *testing.T) {
 				DefaultBmcPassword:  &validPassword,
 				ChassisSerialNumber: validChassisSerial,
 			},
-			expectErr: false,
+			expectErr: true,
 		},
 		{
 			desc: "ok when SiteID is valid UUID",

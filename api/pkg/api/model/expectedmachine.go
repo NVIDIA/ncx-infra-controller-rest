@@ -59,7 +59,8 @@ type APIExpectedMachineCreateRequest struct {
 func (emcr *APIExpectedMachineCreateRequest) Validate() error {
 	err := validation.ValidateStruct(emcr,
 		validation.Field(&emcr.SiteID,
-			validation.When(emcr.SiteID != "", validationis.UUID.Error(validationErrorInvalidUUID))),
+			validation.Required.Error(validationErrorValueRequired),
+			validationis.UUID.Error(validationErrorInvalidUUID)),
 		validation.Field(&emcr.BmcMacAddress,
 			validation.Required.Error(validationErrorValueRequired),
 			validationis.MAC),
