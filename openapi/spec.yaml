@@ -11735,6 +11735,10 @@ components:
               Unknown:
                 healthy: 0
                 unhealthy: 0
+            totalByAllocation:
+              allocatedInUse: 3
+              allocatedNotInUse: 3
+              unallocated: 5
           capabilities:
             nativeNetworking: true
             networkSecurityGroup: true
@@ -11829,6 +11833,8 @@ components:
           $ref: '#/components/schemas/SiteContact'
         capabilities:
           $ref: '#/components/schemas/SiteCapabilities'
+        machineStats:
+          $ref: '#/components/schemas/SiteMachineStats'
     SiteSummary:
       title: SiteSummary
       type: object
@@ -11893,6 +11899,83 @@ components:
           type: boolean
         imageBasedOperatingSystem:
           type: boolean
+    SiteMachineStats:
+      title: SiteMachineStats
+      type: object
+      description: Machine stats for a Site
+      properties:
+        total:
+          type: integer
+        totalByStatus:
+          $ref: '#/components/schemas/SiteMachineStatsByStatus'
+        totalByHealth:
+          $ref: '#/components/schemas/SiteMachineStatsByHealth'
+        totalByStatusAndHealth:
+          $ref: '#/components/schemas/SiteMachineStatsByStatusAndHealth'
+        totalByAllocation:
+          $ref: '#/components/schemas/SiteMachineStatsByAllocation'
+    SiteMachineStatsByAllocation:
+      title: SiteMachineStatsByAllocation
+      type: object
+      description: Machine stats for a Site by allocation
+      properties:
+        allocatedInUse:
+          type: integer
+        allocatedNotInUse:
+          type: integer
+        unallocated:
+          type: integer
+    SiteMachineStatsByHealth:
+      title: SiteMachineStatsByHealth
+      type: object
+      description: Machine stats for a Site by health
+      properties:
+        healthy:
+          type: integer
+        unhealthy:
+          type: integer
+    SiteMachineStatsByStatus:
+      title: SiteMachineStatsByStatus
+      type: object
+      description: Machine stats for a Site by status
+      properties:
+        Decommissioned:
+          type: integer
+        Error:
+          type: integer
+        Initializing:
+          type: integer
+        InUse:
+          type: integer
+        Maintenance:
+          type: integer
+        Ready:
+          type: integer
+        Reset:
+          type: integer
+        Unknown:
+          type: integer
+    SiteMachineStatsByStatusAndHealth:
+      title: SiteMachineStatsByStatusAndHealth
+      type: object
+      description: Machine stats for a Site by status and health
+      properties:
+        Decommissioned:
+          $ref: '#/components/schemas/SiteMachineStatsByHealth'
+        Error:
+          $ref: '#/components/schemas/SiteMachineStatsByHealth'
+        Initializing:
+          $ref: '#/components/schemas/SiteMachineStatsByHealth'
+        InUse:
+          $ref: '#/components/schemas/SiteMachineStatsByHealth'
+        Maintenance:
+          $ref: '#/components/schemas/SiteMachineStatsByHealth'
+        Ready:
+          $ref: '#/components/schemas/SiteMachineStatsByHealth'
+        Reset:
+          $ref: '#/components/schemas/SiteMachineStatsByHealth'
+        Unknown:
+          $ref: '#/components/schemas/SiteMachineStatsByHealth'
     SiteCreateRequest:
       title: SiteCreateRequest
       type: object
