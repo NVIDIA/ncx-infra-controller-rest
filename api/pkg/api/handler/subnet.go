@@ -33,7 +33,6 @@ import (
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/google/uuid"
-	"github.com/rs/zerolog/log"
 
 	"github.com/nvidia/bare-metal-manager-rest/api/internal/config"
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/handler/util/common"
@@ -88,30 +87,11 @@ func NewCreateSubnetHandler(dbSession *cdb.Session, tc temporalClient.Client, sc
 // @Success 201 {object} model.APISubnet
 // @Router /v2/org/{org}/carbide/subnet [post]
 func (csh CreateSubnetHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "Subnet").Str("Handler", "Create").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := csh.tracerSpan.CreateChildInContext(ctx, "CreateSubnetHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("Subnet", "Create", c, csh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		csh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, csh.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -462,30 +442,11 @@ func NewGetAllSubnetHandler(dbSession *cdb.Session, tc temporalClient.Client, cf
 // @Success 200 {object} []model.APISubnet
 // @Router /v2/org/{org}/carbide/subnet [get]
 func (gash GetAllSubnetHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "Subnet").Str("Handler", "GetAll").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gash.tracerSpan.CreateChildInContext(ctx, "GetAllSubnetHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("Subnet", "GetAll", c, gash.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gash.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gash.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -693,30 +654,11 @@ func NewGetSubnetHandler(dbSession *cdb.Session, tc temporalClient.Client, cfg *
 // @Success 200 {object} model.APISubnet
 // @Router /v2/org/{org}/carbide/subnet/{id} [get]
 func (gsh GetSubnetHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "Subnet").Str("Handler", "Get").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gsh.tracerSpan.CreateChildInContext(ctx, "GetSubnetHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("Subnet", "Get", c, gsh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gsh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gsh.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -829,30 +771,11 @@ func NewUpdateSubnetHandler(dbSession *cdb.Session, tc temporalClient.Client, cf
 // @Success 200 {object} model.APISubnet
 // @Router /v2/org/{org}/carbide/subnet/{id} [patch]
 func (ush UpdateSubnetHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "Subnet").Str("Handler", "Update").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := ush.tracerSpan.CreateChildInContext(ctx, "UpdateSubnetHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("Subnet", "Update", c, ush.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		ush.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, ush.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -1008,30 +931,11 @@ func NewDeleteSubnetHandler(dbSession *cdb.Session, tc temporalClient.Client, sc
 // @Success 202
 // @Router /v2/org/{org}/carbide/subnet/{id} [delete]
 func (dsh DeleteSubnetHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "Subnet").Str("Handler", "Delete").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := dsh.tracerSpan.CreateChildInContext(ctx, "DeleteSubnetHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("Subnet", "Delete", c, dsh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		dsh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, dsh.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 

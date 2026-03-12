@@ -846,10 +846,15 @@ func TestMachineHandler_GetAll(t *testing.T) {
 	common.TestBuildStatusDetail(t, dbSession, m32.ID, cdbm.MachineStatusInitializing, cdb.GetStrPtr("Machine is being initialized"))
 	common.TestBuildStatusDetail(t, dbSession, m32.ID, cdbm.MachineStatusReady, cdb.GetStrPtr("Machine is ready for assignment"))
 
-	m33 := testMachineBuildMachine(t, dbSession, ip4.ID, site3.ID, nil, nil, false, false, cdbm.MachineStatusReady)
+	m33 := testMachineBuildMachine(t, dbSession, ip4.ID, site3.ID, nil, nil, false, true, cdbm.MachineStatusError)
 	assert.NotNil(t, m33)
 	common.TestBuildStatusDetail(t, dbSession, m33.ID, cdbm.MachineStatusInitializing, cdb.GetStrPtr("Machine is being initialized"))
-	common.TestBuildStatusDetail(t, dbSession, m33.ID, cdbm.MachineStatusReady, cdb.GetStrPtr("Machine is ready for assignment"))
+	common.TestBuildStatusDetail(t, dbSession, m33.ID, cdbm.MachineStatusError, cdb.GetStrPtr("Machine is missing on Site"))
+
+	m34 := testMachineBuildMachine(t, dbSession, ip4.ID, site3.ID, nil, nil, false, false, cdbm.MachineStatusReady)
+	assert.NotNil(t, m34)
+	common.TestBuildStatusDetail(t, dbSession, m34.ID, cdbm.MachineStatusInitializing, cdb.GetStrPtr("Machine is being initialized"))
+	common.TestBuildStatusDetail(t, dbSession, m34.ID, cdbm.MachineStatusReady, cdb.GetStrPtr("Machine is ready for assignment"))
 
 	ins31, err := isd.Create(
 		context.Background(), nil,
@@ -899,11 +904,11 @@ func TestMachineHandler_GetAll(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, ins32)
 
-	ins33, err := isd.Create(
+	ins34, err := isd.Create(
 
 		context.Background(), nil,
 		cdbm.InstanceCreateInput{
-			Name:                     fmt.Sprintf("test-instance-targeted-33"),
+			Name:                     fmt.Sprintf("test-instance-targeted-34"),
 			AllocationID:             nil,
 			AllocationConstraintID:   nil,
 			TenantID:                 tenant5.ID,
@@ -911,7 +916,7 @@ func TestMachineHandler_GetAll(t *testing.T) {
 			SiteID:                   site3.ID,
 			InstanceTypeID:           nil,
 			VpcID:                    vpc4.ID,
-			MachineID:                &m33.ID,
+			MachineID:                &m34.ID,
 			OperatingSystemID:        &os5.ID,
 			IpxeScript:               cdb.GetStrPtr("ipxe"),
 			AlwaysBootWithCustomIpxe: true,
@@ -922,7 +927,7 @@ func TestMachineHandler_GetAll(t *testing.T) {
 		},
 	)
 	assert.Nil(t, err)
-	assert.NotNil(t, ins33)
+	assert.NotNil(t, ins34)
 
 	cfg := common.GetTestConfig()
 	tempClient := &tmocks.Client{}
@@ -944,6 +949,7 @@ func TestMachineHandler_GetAll(t *testing.T) {
 		querySearch                       *string
 		queryHasInstanceType              *bool
 		queryHasInstance                  *bool
+		queryIsMissingOnSite              *bool
 		queryIncludeMetadata              *bool
 		queryIncludeRelations1            *string
 		queryIncludeRelations2            *string
@@ -1293,8 +1299,8 @@ func TestMachineHandler_GetAll(t *testing.T) {
 			querySiteID:              cdb.GetStrPtr(site3.ID.String()),
 			expectedErr:              false,
 			expectedStatus:           http.StatusOK,
-			expectedCnt:              3,
-			expectedTotal:            cdb.GetIntPtr(3),
+			expectedCnt:              4,
+			expectedTotal:            cdb.GetIntPtr(4),
 			expectInstance:           false,
 			expectedTargetedInstance: true,
 			verifyChildSpanner:       true,
@@ -1400,6 +1406,28 @@ func TestMachineHandler_GetAll(t *testing.T) {
 			expectedErr:      true,
 			expectedStatus:   http.StatusBadRequest,
 		},
+		{
+			name:                 "success case when isMissingOnSite is true in query",
+			reqOrgName:           ipOrg4,
+			user:                 ipu,
+			querySiteID:          cdb.GetStrPtr(site3.ID.String()),
+			queryIsMissingOnSite: cdb.GetBoolPtr(true),
+			expectedErr:          false,
+			expectedStatus:       http.StatusOK,
+			expectedCnt:          1,
+			expectedTotal:        cdb.GetIntPtr(1),
+		},
+		{
+			name:                 "success case when isMissingOnSite is false in query",
+			reqOrgName:           ipOrg1,
+			user:                 ipu,
+			querySiteID:          cdb.GetStrPtr(site.ID.String()),
+			queryIsMissingOnSite: cdb.GetBoolPtr(false),
+			expectedErr:          false,
+			expectedStatus:       http.StatusOK,
+			expectedCnt:          totalCount / 2,
+			expectedTotal:        cdb.GetIntPtr(totalCount / 2),
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -1437,6 +1465,9 @@ func TestMachineHandler_GetAll(t *testing.T) {
 			}
 			if tc.queryHasInstance != nil {
 				q.Add("hasInstance", strconv.FormatBool(*tc.queryHasInstance))
+			}
+			if tc.queryIsMissingOnSite != nil {
+				q.Add("isMissingOnSite", strconv.FormatBool(*tc.queryIsMissingOnSite))
 			}
 			if tc.queryIncludeMetadata != nil {
 				q.Add("includeMetadata", strconv.FormatBool(*tc.queryIncludeMetadata))

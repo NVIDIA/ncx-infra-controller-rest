@@ -147,6 +147,9 @@ func (mmi *ManageSSHKeyGroup) CreateSSHKeyGroupOnSite(ctx context.Context, reque
 
 	// Call Site Controller gRPC endpoint
 	carbideClient := mmi.CarbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return client.ErrClientNotConnected
+	}
 	forgeClient := carbideClient.Carbide()
 
 	_, err = forgeClient.CreateTenantKeyset(ctx, request)
@@ -185,6 +188,9 @@ func (mmi *ManageSSHKeyGroup) UpdateSSHKeyGroupOnSite(ctx context.Context, reque
 
 	// Call Site Controller gRPC endpoint
 	carbideClient := mmi.CarbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return client.ErrClientNotConnected
+	}
 	forgeClient := carbideClient.Carbide()
 
 	_, err = forgeClient.UpdateTenantKeyset(ctx, request)
@@ -221,6 +227,9 @@ func (mmi *ManageSSHKeyGroup) DeleteSSHKeyGroupOnSite(ctx context.Context, reque
 
 	// Call Site Controller gRPC endpoint
 	carbideClient := mmi.CarbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return client.ErrClientNotConnected
+	}
 	forgeClient := carbideClient.Carbide()
 
 	_, err = forgeClient.DeleteTenantKeyset(ctx, request)

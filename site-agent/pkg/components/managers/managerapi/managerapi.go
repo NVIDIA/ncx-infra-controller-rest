@@ -58,6 +58,8 @@ type ManagerAPI struct {
 	InstanceType           InstanceTypeInterface
 	NetworkSecurityGroup   NetworkSecurityGroupInterface
 	ExpectedMachine        ExpectedMachineInterface
+	ExpectedPowerShelf     ExpectedPowerShelfInterface
+	ExpectedSwitch         ExpectedSwitchInterface
 	SKU                    SKUInterface
 	DpuExtensionService    DpuExtensionServiceInterface
 	NVLinkLogicalPartition NVLinkLogicalPartitionInterface

@@ -62,6 +62,9 @@ func (mmv *ManageMachineValidation) EnableDisableMachineValidationTestOnSite(ctx
 
 	// Call Site Controller gRPC endpoint
 	carbideClient := mmv.CarbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return client.ErrClientNotConnected
+	}
 
 	_, err = carbideClient.Carbide().MachineValidationTestEnableDisableTest(ctx, request)
 	if err != nil {
@@ -94,6 +97,9 @@ func (mmv *ManageMachineValidation) PersistValidationResultOnSite(ctx context.Co
 
 	// Call Site Controller gRPC endpoint
 	carbideClient := mmv.CarbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return client.ErrClientNotConnected
+	}
 
 	_, err = carbideClient.Carbide().PersistValidationResult(ctx, request)
 	if err != nil {
@@ -124,6 +130,9 @@ func (mmv *ManageMachineValidation) GetMachineValidationResultsFromSite(ctx cont
 
 	// Call Site Controller gRPC endpoint
 	carbideClient := mmv.CarbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return nil, client.ErrClientNotConnected
+	}
 
 	result, err := carbideClient.Carbide().GetMachineValidationResults(ctx, request)
 	if err != nil {
@@ -156,6 +165,9 @@ func (mmv *ManageMachineValidation) GetMachineValidationRunsFromSite(ctx context
 
 	// Call Site Controller gRPC endpoint
 	carbideClient := mmv.CarbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return nil, client.ErrClientNotConnected
+	}
 
 	result, err := carbideClient.Carbide().GetMachineValidationRuns(ctx, request)
 	if err != nil {
@@ -186,6 +198,9 @@ func (mmv *ManageMachineValidation) GetMachineValidationTestsFromSite(ctx contex
 
 	// Call Site Controller gRPC endpoint
 	carbideClient := mmv.CarbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return nil, client.ErrClientNotConnected
+	}
 
 	result, err := carbideClient.Carbide().GetMachineValidationTests(ctx, request)
 	if err != nil {
@@ -222,6 +237,9 @@ func (mmv *ManageMachineValidation) AddMachineValidationTestOnSite(ctx context.C
 
 	// Call Site Controller gRPC endpoint
 	carbideClient := mmv.CarbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return nil, client.ErrClientNotConnected
+	}
 
 	response, err := carbideClient.Carbide().AddMachineValidationTest(ctx, request)
 	if err != nil {
@@ -258,6 +276,9 @@ func (mmv *ManageMachineValidation) UpdateMachineValidationTestOnSite(ctx contex
 
 	// Call Site Controller gRPC endpoint
 	carbideClient := mmv.CarbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return client.ErrClientNotConnected
+	}
 
 	_, err = carbideClient.Carbide().UpdateMachineValidationTest(ctx, request)
 	if err != nil {
@@ -288,6 +309,9 @@ func (mmv *ManageMachineValidation) GetMachineValidationExternalConfigsFromSite(
 
 	// Call Site Controller gRPC endpoint
 	carbideClient := mmv.CarbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return nil, client.ErrClientNotConnected
+	}
 
 	result, err := carbideClient.Carbide().GetMachineValidationExternalConfigs(ctx, request)
 	if err != nil {
@@ -320,6 +344,9 @@ func (mmv *ManageMachineValidation) AddUpdateMachineValidationExternalConfigOnSi
 
 	// Call Site Controller gRPC endpoint
 	carbideClient := mmv.CarbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return client.ErrClientNotConnected
+	}
 
 	_, err = carbideClient.Carbide().AddUpdateMachineValidationExternalConfig(ctx, request)
 	if err != nil {
@@ -352,6 +379,9 @@ func (mmv *ManageMachineValidation) RemoveMachineValidationExternalConfigOnSite(
 
 	// Call Site Controller gRPC endpoint
 	carbideClient := mmv.CarbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return client.ErrClientNotConnected
+	}
 
 	_, err = carbideClient.Carbide().RemoveMachineValidationExternalConfig(ctx, request)
 	if err != nil {

@@ -29,7 +29,6 @@ import (
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/google/uuid"
-	"github.com/rs/zerolog/log"
 
 	"github.com/labstack/echo/v4"
 
@@ -79,30 +78,11 @@ func NewCreateSSHKeyGroupHandler(dbSession *cdb.Session, tc temporalClient.Clien
 // @Success 201 {object} model.APISSHKeyGroup
 // @Router /v2/org/{org}/carbide/sshkeygroup [post]
 func (cskgh CreateSSHKeyGroupHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "SSHKeyGroup").Str("Handler", "Create").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := cskgh.tracerSpan.CreateChildInContext(ctx, "CreateSSHKeyGroupHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("SSHKeyGroup", "Create", c, cskgh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		cskgh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, cskgh.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -439,30 +419,11 @@ func NewUpdateSSHKeyGroupHandler(dbSession *cdb.Session, tc temporalClient.Clien
 // @Success 200 {object} model.SSHKeyGroup
 // @Router /v2/org/{org}/carbide/sshkeygroup/{id} [patch]
 func (uskgh UpdateSSHKeyGroupHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "SSHKeyGroup").Str("Handler", "Update").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := uskgh.tracerSpan.CreateChildInContext(ctx, "UpdateSSHKeyGroupHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("SSHKeyGroup", "Update", c, uskgh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		uskgh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, uskgh.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -973,30 +934,11 @@ func NewGetSSHKeyGroupHandler(dbSession *cdb.Session, tc temporalClient.Client, 
 // @Success 200 {object} model.APISSHKeyGroup
 // @Router /v2/org/{org}/carbide/sshkeygroup/{id} [get]
 func (gskgh GetSSHKeyGroupHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "SSHKeyGroup").Str("Handler", "Get").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gskgh.tracerSpan.CreateChildInContext(ctx, "GetSSHKeyGroupHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("SSHKeyGroup", "Get", c, gskgh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gskgh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gskgh.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -1181,30 +1123,11 @@ func NewGetAllSSHKeyGroupHandler(dbSession *cdb.Session, tc temporalClient.Clien
 // @Success 200 {array} []model.APISSHKeyGroup
 // @Router /v2/org/{org}/carbide/sshkeygroup [get]
 func (gaskgh GetAllSSHKeyGroupHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "SSHKeyGroup").Str("Handler", "GetAll").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gaskgh.tracerSpan.CreateChildInContext(ctx, "GetAllSSHKeyGroupHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("SSHKeyGroup", "GetAll", c, gaskgh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gaskgh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gaskgh.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -1561,30 +1484,11 @@ func NewDeleteSSHKeyGroupHandler(dbSession *cdb.Session, tc temporalClient.Clien
 // @Success 202
 // @Router /v2/org/{org}/carbide/sshkeygroup/{id} [delete]
 func (dskgh DeleteSSHKeyGroupHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "SSHKeyGroup").Str("Handler", "Delete").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := dskgh.tracerSpan.CreateChildInContext(ctx, "DeleteSSHKeyGroupHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("SSHKeyGroup", "Delete", c, dskgh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		dskgh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, dskgh.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 

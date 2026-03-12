@@ -76,6 +76,8 @@ type Workflow struct {
 	InstanceTypeState           *MgrState
 	NetworkSecurityGroupState   *MgrState
 	ExpectedMachineState        *MgrState
+	ExpectedPowerShelfState     *MgrState
+	ExpectedSwitchState         *MgrState
 	SKUState                    *MgrState
 	DpuExtensionServiceState    *MgrState
 	NVLinkLogicalPartitionState *MgrState
@@ -106,6 +108,8 @@ func NewWorkflowInstance() *Workflow {
 		InstanceTypeState:           &MgrState{},
 		NetworkSecurityGroupState:   &MgrState{},
 		ExpectedMachineState:        &MgrState{},
+		ExpectedPowerShelfState:     &MgrState{},
+		ExpectedSwitchState:         &MgrState{},
 		SKUState:                    &MgrState{},
 		DpuExtensionServiceState:    &MgrState{},
 		NVLinkLogicalPartitionState: &MgrState{},

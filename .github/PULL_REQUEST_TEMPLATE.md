@@ -21,6 +21,7 @@
 - [ ] **Site Agent** - Site Agent updated
 - [ ] **RLA** - RLA service updated
 - [ ] **Powershelf Manager** - Powershelf Manager updated
+- [ ] **NVSwitch Manager** - NVSwitch Manager updated
 
 ## Related Issues (Optional)
 <!-- If applicable, provide GitHub Issue. -->

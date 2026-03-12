@@ -31,7 +31,6 @@ import (
 	temporalClient "go.temporal.io/sdk/client"
 
 	"github.com/google/uuid"
-	"github.com/rs/zerolog/log"
 
 	"github.com/nvidia/bare-metal-manager-rest/api/internal/config"
 	common "github.com/nvidia/bare-metal-manager-rest/api/pkg/api/handler/util/common"
@@ -74,30 +73,11 @@ func NewCreateTenantAccountHandler(dbSession *cdb.Session, tc temporalClient.Cli
 // @Success 201 {object} model.APITenantAccount
 // @Router /v2/org/{org}/carbide/tenant/account [post]
 func (ctah CreateTenantAccountHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "TenantAccount").Str("Handler", "Create").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := ctah.tracerSpan.CreateChildInContext(ctx, "CreateTenantAccountHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("TenantAccount", "Create", c, ctah.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		ctah.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, ctah.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -295,30 +275,11 @@ func NewGetAllTenantAccountHandler(dbSession *cdb.Session, tc temporalClient.Cli
 // @Success 200 {object} []model.APITenantAccount
 // @Router /v2/org/{org}/carbide/tenant/account [get]
 func (gatah GetAllTenantAccountHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "TenantAccount").Str("Handler", "GetAll").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gatah.tracerSpan.CreateChildInContext(ctx, "GetAllTenantAccountHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("TenantAccount", "GetAll", c, gatah.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gatah.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gatah.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -582,30 +543,11 @@ func NewGetTenantAccountHandler(dbSession *cdb.Session, tc temporalClient.Client
 // @Success 200 {object} model.APITenantAccount
 // @Router /v2/org/{org}/carbide/tenant/account/{id} [get]
 func (gtah GetTenantAccountHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "TenantAccount").Str("Handler", "Get").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gtah.tracerSpan.CreateChildInContext(ctx, "GetTenantAccountHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("TenantAccount", "Get", c, gtah.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gtah.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gtah.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -801,30 +743,11 @@ func NewUpdateTenantAccountHandler(dbSession *cdb.Session, tc temporalClient.Cli
 // @Success 200 {object} model.APITenantAccount
 // @Router /v2/org/{org}/carbide/tenant/account/{id} [patch]
 func (utah UpdateTenantAccountHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "TenantAccount").Str("Handler", "Update").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := utah.tracerSpan.CreateChildInContext(ctx, "UpdateTenantAccountHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("TenantAccount", "Update", c, utah.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		utah.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, utah.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -986,30 +909,11 @@ func NewDeleteTenantAccountHandler(dbSession *cdb.Session, tc temporalClient.Cli
 // @Success 202
 // @Router /v2/org/{org}/carbide/tenant/account/{id} [delete]
 func (dtah DeleteTenantAccountHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "TenantAccount").Str("Handler", "Delete").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := dtah.tracerSpan.CreateChildInContext(ctx, "DeleteTenantAccountHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("TenantAccount", "Delete", c, dtah.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		dtah.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, dtah.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 

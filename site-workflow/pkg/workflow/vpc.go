@@ -67,7 +67,7 @@ func DiscoverVPCInventory(ctx workflow.Context) error {
 // V1 (CreateVPC) is found in cloud-workflow and uses a different activity that does not speak
 // to carbide directly.
 func CreateVPCV2(ctx workflow.Context, request *cwssaws.VpcCreationRequest) error {
-	logger := log.With().Str("Workflow", "VPC").Str("Action", "Create").Str("VPC ID", request.Id.String()).Str("Name", request.Name).Logger()
+	logger := log.With().Str("Workflow", "VPC").Str("Action", "Create").Str("VPC ID", request.GetId().GetValue()).Str("Name", request.Name).Logger()
 
 	logger.Info().Msg("starting workflow")
 
@@ -102,7 +102,7 @@ func CreateVPCV2(ctx workflow.Context, request *cwssaws.VpcCreationRequest) erro
 
 // UpdateVPC is a workflow to update VPCs using the UpdateVpcOnSite activity
 func UpdateVPC(ctx workflow.Context, request *cwssaws.VpcUpdateRequest) error {
-	logger := log.With().Str("Workflow", "VPC").Str("Action", "Update").Str("VPC ID", request.Id.String()).Logger()
+	logger := log.With().Str("Workflow", "VPC").Str("Action", "Update").Str("VPC ID", request.GetId().GetValue()).Logger()
 
 	logger.Info().Msg("starting workflow")
 
@@ -139,7 +139,7 @@ func UpdateVPC(ctx workflow.Context, request *cwssaws.VpcUpdateRequest) error {
 // V1 (DeleteVPC) is found in cloud-workflow and uses a different activity that does not speak
 // to carbide directly.
 func DeleteVPCV2(ctx workflow.Context, request *cwssaws.VpcDeletionRequest) error {
-	logger := log.With().Str("Workflow", "VPC").Str("Action", "Delete").Str("VPC ID", request.Id.String()).Logger()
+	logger := log.With().Str("Workflow", "VPC").Str("Action", "Delete").Str("VPC ID", request.GetId().GetValue()).Logger()
 
 	logger.Info().Msg("starting workflow")
 
@@ -174,7 +174,7 @@ func DeleteVPCV2(ctx workflow.Context, request *cwssaws.VpcDeletionRequest) erro
 
 // UpdateVPCVirtualization is a workflow to update VPC virtualization type
 func UpdateVPCVirtualization(ctx workflow.Context, request *cwssaws.VpcUpdateVirtualizationRequest) error {
-	logger := log.With().Str("Workflow", "VPC").Str("Action", "Update Virtualization").Str("VPC ID", request.Id.String()).Logger()
+	logger := log.With().Str("Workflow", "VPC").Str("Action", "Update Virtualization").Str("VPC ID", request.GetId().GetValue()).Logger()
 
 	logger.Info().Msg("starting workflow")
 

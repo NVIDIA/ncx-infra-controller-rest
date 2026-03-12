@@ -22,6 +22,8 @@ import (
 	"github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/components/managers/carbide"
 	"github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/components/managers/dpuextensionservice"
 	"github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/components/managers/expectedmachine"
+	"github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/components/managers/expectedpowershelf"
+	"github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/components/managers/expectedswitch"
 	"github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/components/managers/health"
 	"github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/components/managers/infinibandpartition"
 	"github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/components/managers/instance"
@@ -139,6 +141,16 @@ func (m *Manager) NetworkSecurityGroup() *networksecuritygroup.API {
 // ExpectedMachine - Add ExpectedMachine Manager instance here
 func (m *Manager) ExpectedMachine() *expectedmachine.API {
 	return expectedmachine.NewExpectedMachineManager(m.Data.EB, m.API, m.Conf)
+}
+
+// ExpectedPowerShelf - Add ExpectedPowerShelf Manager instance here
+func (m *Manager) ExpectedPowerShelf() *expectedpowershelf.API {
+	return expectedpowershelf.NewExpectedPowerShelfManager(m.Data.EB, m.API, m.Conf)
+}
+
+// ExpectedSwitch - Add ExpectedSwitch Manager instance here
+func (m *Manager) ExpectedSwitch() *expectedswitch.API {
+	return expectedswitch.NewExpectedSwitchManager(m.Data.EB, m.API, m.Conf)
 }
 
 // SKU - Add SKU Manager instance here

@@ -144,6 +144,9 @@ func (mnvllp *ManageNVLinkLogicalPartition) CreateNVLinkLogicalPartitionOnSite(c
 
 	// Call Site Controller gRPC endpoint
 	carbideClient := mnvllp.CarbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return nil, cClient.ErrClientNotConnected
+	}
 	forgeClient := carbideClient.Carbide()
 
 	// Call Forge gRPC endpoint
@@ -184,6 +187,9 @@ func (mnvllp *ManageNVLinkLogicalPartition) UpdateNVLinkLogicalPartitionOnSite(c
 
 	// Call Site Controller gRPC endpoint
 	carbideClient := mnvllp.CarbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return cClient.ErrClientNotConnected
+	}
 	forgeClient := carbideClient.Carbide()
 
 	// Call Forge gRPC endpoint
@@ -219,6 +225,9 @@ func (mnvllp *ManageNVLinkLogicalPartition) DeleteNVLinkLogicalPartitionOnSite(c
 
 	// Call Site Controller gRPC endpoint
 	carbideClient := mnvllp.CarbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return cClient.ErrClientNotConnected
+	}
 	forgeClient := carbideClient.Carbide()
 
 	_, err = forgeClient.DeleteNVLinkLogicalPartition(ctx, request)

@@ -29,7 +29,6 @@ import (
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/google/uuid"
-	"github.com/rs/zerolog/log"
 
 	"github.com/labstack/echo/v4"
 
@@ -86,30 +85,11 @@ func NewCreateAllocationHandler(dbSession *cdb.Session, tc temporalClient.Client
 // @Success 201 {object} model.APIAllocation
 // @Router /v2/org/{org}/carbide/allocation [post]
 func (cah CreateAllocationHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "Allocation").Str("Handler", "Create").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := cah.tracerSpan.CreateChildInContext(ctx, "CreateAllocationHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("Allocation", "Create", c, cah.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		cah.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, cah.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -538,30 +518,11 @@ func NewGetAllAllocationHandler(dbSession *cdb.Session, tc temporalClient.Client
 // @Success 200 {object} []model.APIAllocation
 // @Router /v2/org/{org}/carbide/allocation [get]
 func (gaah GetAllAllocationHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "Allocation").Str("Handler", "GetAll").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gaah.tracerSpan.CreateChildInContext(ctx, "GetAllAllocationHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("Allocation", "GetAll", c, gaah.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gaah.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gaah.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -906,30 +867,11 @@ func NewGetAllocationHandler(dbSession *cdb.Session, tc temporalClient.Client, c
 // @Success 200 {object} model.APIAllocation
 // @Router /v2/org/{org}/carbide/allocation/{id} [get]
 func (gah GetAllocationHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "Allocation").Str("Handler", "Get").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gah.tracerSpan.CreateChildInContext(ctx, "GetAllocationHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("Allocation", "Get", c, gah.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gah.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gah.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -1123,30 +1065,11 @@ func NewUpdateAllocationHandler(dbSession *cdb.Session, tc temporalClient.Client
 // @Success 200 {object} model.APIAllocation
 // @Router /v2/org/{org}/carbide/allocation/{id} [patch]
 func (uah UpdateAllocationHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "Allocation").Str("Handler", "Update").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := uah.tracerSpan.CreateChildInContext(ctx, "UpdateAllocationHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("Allocation", "Update", c, uah.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		uah.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, uah.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -1346,32 +1269,11 @@ func NewDeleteAllocationHandler(dbSession *cdb.Session, tc temporalClient.Client
 // @Success 202
 // @Router /v2/org/{org}/carbide/allocation/{id} [delete]
 func (dah DeleteAllocationHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "Allocation").Str("Handler", "Delete").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child spanner and set the attribute
-	newctx, handlerSpan := dah.tracerSpan.CreateChildInContext(ctx, "DeleteAllocationHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("Allocation", "Delete", c, dah.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		// dah.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
-		dah.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
-
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, dah.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 

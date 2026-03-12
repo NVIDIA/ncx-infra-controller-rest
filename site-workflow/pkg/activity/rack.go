@@ -62,6 +62,9 @@ func (mr *ManageRack) GetRack(ctx context.Context, request *rlav1.GetRackInfoByI
 
 	// Call RLA gRPC endpoint
 	rlaClient := mr.RlaAtomicClient.GetClient()
+	if rlaClient == nil {
+		return nil, cClient.ErrClientNotConnected
+	}
 	rla := rlaClient.Rla()
 
 	response, err := rla.GetRackInfoByID(ctx, request)
@@ -87,6 +90,9 @@ func (mr *ManageRack) GetRacks(ctx context.Context, request *rlav1.GetListOfRack
 
 	// Call RLA gRPC endpoint
 	rlaClient := mr.RlaAtomicClient.GetClient()
+	if rlaClient == nil {
+		return nil, cClient.ErrClientNotConnected
+	}
 	rla := rlaClient.Rla()
 
 	response, err := rla.GetListOfRacks(ctx, request)
@@ -120,6 +126,9 @@ func (mr *ManageRack) ValidateRackComponents(ctx context.Context, request *rlav1
 
 	// Call RLA gRPC endpoint
 	rlaClient := mr.RlaAtomicClient.GetClient()
+	if rlaClient == nil {
+		return nil, cClient.ErrClientNotConnected
+	}
 	rla := rlaClient.Rla()
 
 	response, err := rla.ValidateComponents(ctx, request)
@@ -152,6 +161,9 @@ func (mr *ManageRack) PowerOnRack(ctx context.Context, request *rlav1.PowerOnRac
 
 	// Call RLA gRPC endpoint
 	rlaClient := mr.RlaAtomicClient.GetClient()
+	if rlaClient == nil {
+		return nil, cClient.ErrClientNotConnected
+	}
 	rla := rlaClient.Rla()
 
 	response, err := rla.PowerOnRack(ctx, request)
@@ -184,6 +196,9 @@ func (mr *ManageRack) PowerOffRack(ctx context.Context, request *rlav1.PowerOffR
 
 	// Call RLA gRPC endpoint
 	rlaClient := mr.RlaAtomicClient.GetClient()
+	if rlaClient == nil {
+		return nil, cClient.ErrClientNotConnected
+	}
 	rla := rlaClient.Rla()
 
 	response, err := rla.PowerOffRack(ctx, request)
@@ -216,6 +231,9 @@ func (mr *ManageRack) PowerResetRack(ctx context.Context, request *rlav1.PowerRe
 
 	// Call RLA gRPC endpoint
 	rlaClient := mr.RlaAtomicClient.GetClient()
+	if rlaClient == nil {
+		return nil, cClient.ErrClientNotConnected
+	}
 	rla := rlaClient.Rla()
 
 	response, err := rla.PowerResetRack(ctx, request)
@@ -276,6 +294,9 @@ func (mr *ManageRack) UpgradeFirmware(ctx context.Context, request *rlav1.Upgrad
 	}
 
 	rlaClient := mr.RlaAtomicClient.GetClient()
+	if rlaClient == nil {
+		return nil, cClient.ErrClientNotConnected
+	}
 	rla := rlaClient.Rla()
 
 	response, err := rla.UpgradeFirmware(ctx, request)

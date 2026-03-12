@@ -59,7 +59,7 @@ RUN addgroup -S nvs && adduser -S nvs -G nvs
 
 WORKDIR /opt/nvswitch-manager
 
-COPY --from=builder --chown=nvs:nvs /app/nsm ./nsm
+COPY --from=builder --chown=nvs:nvs /app/nsm /app/nsm
 COPY --chown=nvs:nvs nvswitch-manager/scripts/ ./scripts/
 COPY --chown=nvs:nvs nvswitch-manager/firmware/ ./firmware/
 
@@ -69,4 +69,4 @@ USER nvs
 
 EXPOSE 50051
 
-ENTRYPOINT ["./nsm", "serve"]
+ENTRYPOINT ["/app/nsm", "serve"]

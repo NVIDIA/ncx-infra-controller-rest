@@ -54,6 +54,7 @@ type Site struct {
 	Location *SiteLocation `json:"location,omitempty"`
 	Contact *SiteContact `json:"contact,omitempty"`
 	Capabilities *SiteCapabilities `json:"capabilities,omitempty"`
+	MachineStats *SiteMachineStats `json:"machineStats,omitempty"`
 }
 
 // NewSite instantiates a new Site object
@@ -797,6 +798,38 @@ func (o *Site) SetCapabilities(v SiteCapabilities) {
 	o.Capabilities = &v
 }
 
+// GetMachineStats returns the MachineStats field value if set, zero value otherwise.
+func (o *Site) GetMachineStats() SiteMachineStats {
+	if o == nil || IsNil(o.MachineStats) {
+		var ret SiteMachineStats
+		return ret
+	}
+	return *o.MachineStats
+}
+
+// GetMachineStatsOk returns a tuple with the MachineStats field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *Site) GetMachineStatsOk() (*SiteMachineStats, bool) {
+	if o == nil || IsNil(o.MachineStats) {
+		return nil, false
+	}
+	return o.MachineStats, true
+}
+
+// HasMachineStats returns a boolean if a field has been set.
+func (o *Site) HasMachineStats() bool {
+	if o != nil && !IsNil(o.MachineStats) {
+		return true
+	}
+
+	return false
+}
+
+// SetMachineStats gets a reference to the given SiteMachineStats and assigns it to the MachineStats field.
+func (o *Site) SetMachineStats(v SiteMachineStats) {
+	o.MachineStats = &v
+}
+
 func (o Site) MarshalJSON() ([]byte, error) {
 	toSerialize,err := o.ToMap()
 	if err != nil {
@@ -872,6 +905,9 @@ func (o Site) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.Capabilities) {
 		toSerialize["capabilities"] = o.Capabilities
+	}
+	if !IsNil(o.MachineStats) {
+		toSerialize["machineStats"] = o.MachineStats
 	}
 	return toSerialize, nil
 }

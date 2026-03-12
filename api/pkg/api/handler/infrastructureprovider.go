@@ -21,10 +21,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"go.opentelemetry.io/otel/attribute"
 	temporalClient "go.temporal.io/sdk/client"
-
-	"github.com/rs/zerolog/log"
 
 	"github.com/labstack/echo/v4"
 
@@ -70,30 +67,11 @@ func NewCreateInfrastructureProviderHandler(dbSession *cdb.Session, tc temporalC
 // @Success 201 {object} model.APIInfrastructureProvider
 // @Router /v2/org/{org}/carbide/infrastructure-provider [post]
 func (ciph CreateInfrastructureProviderHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "InfrastructureProvider").Str("Handler", "Create").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := ciph.tracerSpan.CreateChildInContext(ctx, "CreateInfrastructureProviderHandler", logger)
+	org, dbUser, _, logger, handlerSpan := common.SetupHandler("InfrastructureProvider", "Create", c, ciph.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		ciph.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, ciph.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -149,30 +127,11 @@ func NewGetCurrentInfrastructureProviderHandler(dbSession *cdb.Session, tc tempo
 // @Success 200 {object} model.APIInfrastructureProvider
 // @Router /v2/org/{org}/carbide/infrastructure-provider/current [get]
 func (gciph GetCurrentInfrastructureProviderHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "InfrastructureProvider").Str("Handler", "GetCurrent").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gciph.tracerSpan.CreateChildInContext(ctx, "GetCurrentInfrastructureProviderHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("InfrastructureProvider", "GetCurrent", c, gciph.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gciph.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gciph.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -264,30 +223,11 @@ func NewGetCurrentInfrastructureProviderStatsHandler(dbSession *cdb.Session, tc 
 // @Success 200 {object} model.APIInfrastructureProviderStats
 // @Router /v2/org/{org}/carbide/infrastructure-provider/current/stats [get]
 func (gcipsh GetCurrentInfrastructureProviderStatsHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "InfrastructureProvider").Str("Handler", "GetCurrentStats").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gcipsh.tracerSpan.CreateChildInContext(ctx, "GetCurrentInfrastructureProviderStatsHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("InfrastructureProvider", "GetCurrentStats", c, gcipsh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gcipsh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gcipsh.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -386,30 +326,11 @@ func NewUpdateCurrentInfrastructureProviderHandler(dbSession *cdb.Session, tc te
 // @Success 200 {object} model.APIInfrastructureProvider
 // @Router /v2/org/{org}/carbide/infrastructure-provider/current [patch]
 func (uciph UpdateCurrentInfrastructureProviderHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "InfrastructureProvider").Str("Handler", "UpdateCurrent").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := uciph.tracerSpan.CreateChildInContext(ctx, "UpdateCurrentInfrastructureProviderHandler", logger)
+	org, dbUser, _, logger, handlerSpan := common.SetupHandler("InfrastructureProvider", "UpdateCurrent", c, uciph.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		uciph.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, uciph.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
