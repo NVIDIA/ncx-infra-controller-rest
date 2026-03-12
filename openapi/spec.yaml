@@ -6789,8 +6789,6 @@ paths:
         - schema:
             type: string
             enum:
-              - NAME_ASC
-              - NAME_DESC
               - STATUS_ASC
               - STATUS_DESC
               - CREATED_ASC
@@ -7108,8 +7106,6 @@ paths:
         - schema:
             type: string
             enum:
-              - NAME_ASC
-              - NAME_DESC
               - STATUS_ASC
               - STATUS_DESC
               - CREATED_ASC
