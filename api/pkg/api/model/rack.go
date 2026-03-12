@@ -481,6 +481,260 @@ func NewAPIRackValidationResult(protoResp *rlav1.ValidateComponentsResponse) *AP
 	return result
 }
 
+// ========== Create Rack Request/Response ==========
+
+// APICreateRackRequest is the JSON body for POST /rack (CreateExpectedRack)
+type APICreateRackRequest struct {
+	SiteID       string                    `json:"siteId"`
+	Name         string                    `json:"name"`
+	Manufacturer string                    `json:"manufacturer"`
+	Model        string                    `json:"model,omitempty"`
+	SerialNumber string                    `json:"serialNumber"`
+	Description  string                    `json:"description,omitempty"`
+	Location     *APIRackLocation          `json:"location,omitempty"`
+	Components   []*APICreateRackComponent `json:"components,omitempty"`
+}
+
+// Validate validates the create rack request
+func (r *APICreateRackRequest) Validate() error {
+	if r.SiteID == "" {
+		return fmt.Errorf("siteId is required")
+	}
+	if r.Name == "" {
+		return fmt.Errorf("name is required")
+	}
+	if r.Manufacturer == "" {
+		return fmt.Errorf("manufacturer is required")
+	}
+	if r.SerialNumber == "" {
+		return fmt.Errorf("serialNumber is required")
+	}
+	for i, comp := range r.Components {
+		if err := comp.Validate(); err != nil {
+			return fmt.Errorf("components[%d]: %w", i, err)
+		}
+	}
+	return nil
+}
+
+// ToProtoRack converts the API request to an RLA Rack proto
+func (r *APICreateRackRequest) ToProtoRack() *rlav1.Rack {
+	rack := &rlav1.Rack{
+		Info: &rlav1.DeviceInfo{
+			Name:         r.Name,
+			Manufacturer: r.Manufacturer,
+			SerialNumber: r.SerialNumber,
+		},
+	}
+	if r.Model != "" {
+		rack.Info.Model = &r.Model
+	}
+	if r.Description != "" {
+		rack.Info.Description = &r.Description
+	}
+	if r.Location != nil {
+		rack.Location = r.Location.ToProto()
+	}
+	for _, comp := range r.Components {
+		rack.Components = append(rack.Components, comp.ToProto())
+	}
+	return rack
+}
+
+// APICreateRackComponent is a component in a create rack request
+type APICreateRackComponent struct {
+	Type            string                `json:"type"`
+	Name            string                `json:"name"`
+	Manufacturer    string                `json:"manufacturer"`
+	Model           string                `json:"model,omitempty"`
+	SerialNumber    string                `json:"serialNumber"`
+	Description     string                `json:"description,omitempty"`
+	FirmwareVersion string                `json:"firmwareVersion,omitempty"`
+	ComponentID     string                `json:"componentId,omitempty"`
+	SlotID          int32                 `json:"slotId,omitempty"`
+	TrayIdx         int32                 `json:"trayIdx,omitempty"`
+	HostID          int32                 `json:"hostId,omitempty"`
+	BMCs            []*APICreateRackBMC   `json:"bmcs,omitempty"`
+}
+
+// Validate validates a create rack component
+func (c *APICreateRackComponent) Validate() error {
+	if c.Type == "" {
+		return fmt.Errorf("type is required")
+	}
+	if c.Name == "" {
+		return fmt.Errorf("name is required")
+	}
+	if c.SerialNumber == "" {
+		return fmt.Errorf("serialNumber is required")
+	}
+	return nil
+}
+
+// ToProto converts to RLA Component proto
+func (c *APICreateRackComponent) ToProto() *rlav1.Component {
+	comp := &rlav1.Component{
+		Type: componentTypeFromString(c.Type),
+		Info: &rlav1.DeviceInfo{
+			Name:         c.Name,
+			Manufacturer: c.Manufacturer,
+			SerialNumber: c.SerialNumber,
+		},
+		FirmwareVersion: c.FirmwareVersion,
+		ComponentId:     c.ComponentID,
+		Position: &rlav1.RackPosition{
+			SlotId:  c.SlotID,
+			TrayIdx: c.TrayIdx,
+			HostId:  c.HostID,
+		},
+	}
+	if c.Model != "" {
+		comp.Info.Model = &c.Model
+	}
+	if c.Description != "" {
+		comp.Info.Description = &c.Description
+	}
+	for _, bmc := range c.BMCs {
+		comp.Bmcs = append(comp.Bmcs, bmc.ToProto())
+	}
+	return comp
+}
+
+// APICreateRackBMC is a BMC entry in a create rack request
+type APICreateRackBMC struct {
+	Type       string `json:"type"`
+	MacAddress string `json:"macAddress"`
+	IPAddress  string `json:"ipAddress,omitempty"`
+	User       string `json:"user,omitempty"`
+	Password   string `json:"password,omitempty"`
+}
+
+// ToProto converts to RLA BMCInfo proto
+func (b *APICreateRackBMC) ToProto() *rlav1.BMCInfo {
+	bmc := &rlav1.BMCInfo{
+		Type:       bmcTypeFromString(b.Type),
+		MacAddress: b.MacAddress,
+	}
+	if b.IPAddress != "" {
+		bmc.IpAddress = &b.IPAddress
+	}
+	if b.User != "" {
+		bmc.User = &b.User
+	}
+	if b.Password != "" {
+		bmc.Password = &b.Password
+	}
+	return bmc
+}
+
+// ToProto converts APIRackLocation to RLA Location proto
+func (arl *APIRackLocation) ToProto() *rlav1.Location {
+	return &rlav1.Location{
+		Region:     arl.Region,
+		Datacenter: arl.Datacenter,
+		Room:       arl.Room,
+		Position:   arl.Position,
+	}
+}
+
+// APICreateRackResponse is the API response for POST /rack
+type APICreateRackResponse struct {
+	ID string `json:"id"`
+}
+
+// NewAPICreateRackResponse creates a response from the RLA CreateExpectedRackResponse
+func NewAPICreateRackResponse(resp *rlav1.CreateExpectedRackResponse) *APICreateRackResponse {
+	if resp == nil {
+		return &APICreateRackResponse{}
+	}
+	return &APICreateRackResponse{
+		ID: resp.GetId().GetId(),
+	}
+}
+
+// ========== Patch Rack Request/Response ==========
+
+// APIPatchRackRequest is the JSON body for PATCH /rack/:id (PatchRack)
+type APIPatchRackRequest struct {
+	SiteID       string           `json:"siteId"`
+	Name         *string          `json:"name,omitempty"`
+	Manufacturer *string          `json:"manufacturer,omitempty"`
+	Model        *string          `json:"model,omitempty"`
+	SerialNumber *string          `json:"serialNumber,omitempty"`
+	Description  *string          `json:"description,omitempty"`
+	Location     *APIRackLocation `json:"location,omitempty"`
+}
+
+// Validate validates the patch rack request
+func (r *APIPatchRackRequest) Validate() error {
+	if r.SiteID == "" {
+		return fmt.Errorf("siteId is required")
+	}
+	return nil
+}
+
+// ToProtoRack converts the API patch request to an RLA Rack proto.
+// The rack ID is set from the URL path parameter.
+func (r *APIPatchRackRequest) ToProtoRack(rackID string) *rlav1.Rack {
+	rack := &rlav1.Rack{
+		Info: &rlav1.DeviceInfo{
+			Id: &rlav1.UUID{Id: rackID},
+		},
+	}
+	if r.Name != nil {
+		rack.Info.Name = *r.Name
+	}
+	if r.Manufacturer != nil {
+		rack.Info.Manufacturer = *r.Manufacturer
+	}
+	if r.Model != nil {
+		rack.Info.Model = r.Model
+	}
+	if r.SerialNumber != nil {
+		rack.Info.SerialNumber = *r.SerialNumber
+	}
+	if r.Description != nil {
+		rack.Info.Description = r.Description
+	}
+	if r.Location != nil {
+		rack.Location = r.Location.ToProto()
+	}
+	return rack
+}
+
+// APIPatchRackResponse is the API response for PATCH /rack/:id
+type APIPatchRackResponse struct {
+	Report string `json:"report"`
+}
+
+// NewAPIPatchRackResponse creates a response from the RLA PatchRackResponse
+func NewAPIPatchRackResponse(resp *rlav1.PatchRackResponse) *APIPatchRackResponse {
+	if resp == nil {
+		return &APIPatchRackResponse{}
+	}
+	return &APIPatchRackResponse{
+		Report: resp.GetReport(),
+	}
+}
+
+// ========== Proto Enum Helpers ==========
+
+// componentTypeFromString converts a string to RLA ComponentType enum
+func componentTypeFromString(s string) rlav1.ComponentType {
+	if v, ok := rlav1.ComponentType_value[s]; ok {
+		return rlav1.ComponentType(v)
+	}
+	return rlav1.ComponentType_COMPONENT_TYPE_UNKNOWN
+}
+
+// bmcTypeFromString converts a string to RLA BMCType enum
+func bmcTypeFromString(s string) rlav1.BMCType {
+	if v, ok := rlav1.BMCType_value[s]; ok {
+		return rlav1.BMCType(v)
+	}
+	return rlav1.BMCType_BMC_TYPE_UNKNOWN
+}
+
 // ========== Bring Up Request ==========
 
 // APIBringUpRackRequest is the request body for bring up operations on a single rack

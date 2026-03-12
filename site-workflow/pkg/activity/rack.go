@@ -277,6 +277,78 @@ func (mr *ManageRack) BringUpRack(ctx context.Context, request *rlav1.BringUpRac
 	return response, nil
 }
 
+// CreateExpectedRack creates an expected rack definition in RLA
+func (mr *ManageRack) CreateExpectedRack(ctx context.Context, request *rlav1.CreateExpectedRackRequest) (*rlav1.CreateExpectedRackResponse, error) {
+	logger := log.With().Str("Activity", "CreateExpectedRack").Logger()
+	logger.Info().Msg("Starting activity")
+
+	var err error
+
+	switch {
+	case request == nil:
+		err = errors.New("received empty create expected rack request")
+	case request.Rack == nil:
+		err = errors.New("received create expected rack request without rack data")
+	}
+
+	if err != nil {
+		return nil, temporal.NewNonRetryableApplicationError(err.Error(), swe.ErrTypeInvalidRequest, err)
+	}
+
+	rlaClient := mr.RlaAtomicClient.GetClient()
+	if rlaClient == nil {
+		return nil, cClient.ErrClientNotConnected
+	}
+	rla := rlaClient.Rla()
+
+	response, err := rla.CreateExpectedRack(ctx, request)
+	if err != nil {
+		logger.Warn().Err(err).Msg("Failed to create expected rack using RLA API")
+		return nil, swe.WrapErr(err)
+	}
+
+	logger.Info().Str("RackID", response.GetId().GetId()).Msg("Completed activity")
+
+	return response, nil
+}
+
+// PatchRack patches an existing rack in RLA
+func (mr *ManageRack) PatchRack(ctx context.Context, request *rlav1.PatchRackRequest) (*rlav1.PatchRackResponse, error) {
+	logger := log.With().Str("Activity", "PatchRack").Logger()
+	logger.Info().Msg("Starting activity")
+
+	var err error
+
+	switch {
+	case request == nil:
+		err = errors.New("received empty patch rack request")
+	case request.Rack == nil:
+		err = errors.New("received patch rack request without rack data")
+	case request.Rack.Info == nil || request.Rack.Info.Id == nil || request.Rack.Info.Id.Id == "":
+		err = errors.New("received patch rack request without rack ID")
+	}
+
+	if err != nil {
+		return nil, temporal.NewNonRetryableApplicationError(err.Error(), swe.ErrTypeInvalidRequest, err)
+	}
+
+	rlaClient := mr.RlaAtomicClient.GetClient()
+	if rlaClient == nil {
+		return nil, cClient.ErrClientNotConnected
+	}
+	rla := rlaClient.Rla()
+
+	response, err := rla.PatchRack(ctx, request)
+	if err != nil {
+		logger.Warn().Err(err).Msg("Failed to patch rack using RLA API")
+		return nil, swe.WrapErr(err)
+	}
+
+	logger.Info().Str("Report", response.GetReport()).Msg("Completed activity")
+
+	return response, nil
+}
+
 // UpgradeFirmware upgrades firmware on racks or components via RLA
 func (mr *ManageRack) UpgradeFirmware(ctx context.Context, request *rlav1.UpgradeFirmwareRequest) (*rlav1.SubmitTaskResponse, error) {
 	logger := log.With().Str("Activity", "UpgradeFirmware").Logger()

@@ -239,6 +239,72 @@ func PowerResetRack(ctx workflow.Context, request *rlav1.PowerResetRackRequest) 
 	return &response, nil
 }
 
+// CreateExpectedRack is a workflow to create an expected rack definition in RLA
+func CreateExpectedRack(ctx workflow.Context, request *rlav1.CreateExpectedRackRequest) (*rlav1.CreateExpectedRackResponse, error) {
+	logger := log.With().Str("Workflow", "Rack").Str("Action", "CreateExpectedRack").Logger()
+
+	logger.Info().Msg("Starting workflow")
+
+	retrypolicy := &temporal.RetryPolicy{
+		InitialInterval:    1 * time.Second,
+		BackoffCoefficient: 2.0,
+		MaximumInterval:    10 * time.Second,
+		MaximumAttempts:    2,
+	}
+	options := workflow.ActivityOptions{
+		StartToCloseTimeout: 2 * time.Minute,
+		RetryPolicy:         retrypolicy,
+	}
+
+	ctx = workflow.WithActivityOptions(ctx, options)
+
+	var rackManager activity.ManageRack
+	var response rlav1.CreateExpectedRackResponse
+
+	err := workflow.ExecuteActivity(ctx, rackManager.CreateExpectedRack, request).Get(ctx, &response)
+	if err != nil {
+		logger.Error().Err(err).Str("Activity", "CreateExpectedRack").Msg("Failed to execute activity from workflow")
+		return nil, err
+	}
+
+	logger.Info().Str("RackID", response.GetId().GetId()).Msg("Completing workflow")
+
+	return &response, nil
+}
+
+// PatchRack is a workflow to patch an existing rack's fields in RLA
+func PatchRack(ctx workflow.Context, request *rlav1.PatchRackRequest) (*rlav1.PatchRackResponse, error) {
+	logger := log.With().Str("Workflow", "Rack").Str("Action", "PatchRack").Logger()
+
+	logger.Info().Msg("Starting workflow")
+
+	retrypolicy := &temporal.RetryPolicy{
+		InitialInterval:    1 * time.Second,
+		BackoffCoefficient: 2.0,
+		MaximumInterval:    10 * time.Second,
+		MaximumAttempts:    2,
+	}
+	options := workflow.ActivityOptions{
+		StartToCloseTimeout: 2 * time.Minute,
+		RetryPolicy:         retrypolicy,
+	}
+
+	ctx = workflow.WithActivityOptions(ctx, options)
+
+	var rackManager activity.ManageRack
+	var response rlav1.PatchRackResponse
+
+	err := workflow.ExecuteActivity(ctx, rackManager.PatchRack, request).Get(ctx, &response)
+	if err != nil {
+		logger.Error().Err(err).Str("Activity", "PatchRack").Msg("Failed to execute activity from workflow")
+		return nil, err
+	}
+
+	logger.Info().Str("Report", response.GetReport()).Msg("Completing workflow")
+
+	return &response, nil
+}
+
 // BringUpRack is a workflow to bring up a rack or its specified components via RLA
 func BringUpRack(ctx workflow.Context, request *rlav1.BringUpRackRequest) (*rlav1.SubmitTaskResponse, error) {
 	logger := log.With().Str("Workflow", "Rack").Str("Action", "BringUpRack").Logger()

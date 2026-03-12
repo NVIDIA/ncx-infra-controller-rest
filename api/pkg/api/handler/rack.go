@@ -429,6 +429,319 @@ func (garh GetAllRackHandler) Handle(c echo.Context) error {
 	return c.JSON(http.StatusOK, apiRacks)
 }
 
+// ~~~~~ Create Rack Handler ~~~~~ //
+
+// CreateRackHandler is the API Handler for creating a new expected Rack
+type CreateRackHandler struct {
+	dbSession  *cdb.Session
+	tc         tClient.Client
+	scp        *sc.ClientPool
+	cfg        *config.Config
+	tracerSpan *cutil.TracerSpan
+}
+
+// NewCreateRackHandler initializes and returns a new handler for creating a Rack
+func NewCreateRackHandler(dbSession *cdb.Session, tc tClient.Client, scp *sc.ClientPool, cfg *config.Config) CreateRackHandler {
+	return CreateRackHandler{
+		dbSession:  dbSession,
+		tc:         tc,
+		scp:        scp,
+		cfg:        cfg,
+		tracerSpan: cutil.NewTracerSpan(),
+	}
+}
+
+// Handle godoc
+// @Summary Create a Rack
+// @Description Create a new expected Rack definition in RLA
+// @Tags rack
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param org path string true "Name of NGC organization"
+// @Param body body model.APICreateRackRequest true "Create rack request"
+// @Success 201 {object} model.APICreateRackResponse
+// @Router /v2/org/{org}/carbide/rack [post]
+func (crh CreateRackHandler) Handle(c echo.Context) error {
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("Rack", "Create", c, crh.tracerSpan)
+	if handlerSpan != nil {
+		defer handlerSpan.End()
+	}
+
+	// Parse and validate request body
+	var apiRequest model.APICreateRackRequest
+	if err := c.Bind(&apiRequest); err != nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data", nil)
+	}
+	if err := apiRequest.Validate(); err != nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, err.Error(), nil)
+	}
+
+	// Is DB user missing?
+	if dbUser == nil {
+		logger.Error().Msg("invalid User object found in request context")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	}
+
+	// Validate org membership
+	ok, err := auth.ValidateOrgMembership(dbUser, org)
+	if !ok {
+		if err != nil {
+			logger.Error().Err(err).Msg("error validating org membership for User in request")
+		} else {
+			logger.Warn().Msg("could not validate org membership for user, access denied")
+		}
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+	}
+
+	// Validate role, only Provider Admins are allowed to create Rack
+	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole)
+	if !ok {
+		logger.Warn().Msg("user does not have Provider Admin role, access denied")
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
+	}
+
+	// Get Infrastructure Provider for org
+	infrastructureProvider, err := common.GetInfrastructureProviderForOrg(ctx, nil, crh.dbSession, org)
+	if err != nil {
+		logger.Warn().Err(err).Msg("error getting infrastructure provider for org")
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for org", nil)
+	}
+
+	// Validate the site
+	site, err := common.GetSiteFromIDString(ctx, nil, apiRequest.SiteID, crh.dbSession)
+	if err != nil {
+		if errors.Is(err, common.ErrInvalidID) {
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate Site specified in request: invalid ID", nil)
+		}
+		if errors.Is(err, cdb.ErrDoesNotExist) {
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request does not exist", nil)
+		}
+		logger.Error().Err(err).Msg("error retrieving Site from DB")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site specified in request due to DB error", nil)
+	}
+
+	// Verify site belongs to the org's Infrastructure Provider
+	if site.InfrastructureProviderID != infrastructureProvider.ID {
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Site specified in request doesn't belong to current org's Provider", nil)
+	}
+
+	siteConfig := &cdbm.SiteConfig{}
+	if site.Config != nil {
+		siteConfig = site.Config
+	}
+
+	if !siteConfig.RackLevelAdministration {
+		logger.Warn().Msg("site does not have Rack Level Administration enabled")
+		return cutil.NewAPIErrorResponse(c, http.StatusPreconditionFailed, "Site does not have Rack Level Administration enabled", nil)
+	}
+
+	// Get the temporal client for the site
+	stc, err := crh.scp.GetClientByID(site.ID)
+	if err != nil {
+		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
+	}
+
+	// Build RLA request
+	rlaRequest := &rlav1.CreateExpectedRackRequest{
+		Rack: apiRequest.ToProtoRack(),
+	}
+
+	// Execute workflow
+	workflowOptions := tClient.StartWorkflowOptions{
+		ID:                       fmt.Sprintf("rack-create-%s-%s", apiRequest.Name, apiRequest.SerialNumber),
+		WorkflowIDReusePolicy:    temporalEnums.WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE,
+		WorkflowIDConflictPolicy: temporalEnums.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING,
+		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
+		TaskQueue:                queue.SiteTaskQueue,
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
+	defer cancel()
+
+	we, err := stc.ExecuteWorkflow(ctx, workflowOptions, "CreateExpectedRack", rlaRequest)
+	if err != nil {
+		logger.Error().Err(err).Msg("failed to execute CreateExpectedRack workflow")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Rack", nil)
+	}
+
+	// Get workflow result
+	var rlaResponse rlav1.CreateExpectedRackResponse
+	err = we.Get(ctx, &rlaResponse)
+	if err != nil {
+		var timeoutErr *tp.TimeoutError
+		if errors.As(err, &timeoutErr) || err == context.DeadlineExceeded || ctx.Err() != nil {
+			return common.TerminateWorkflowOnTimeOut(c, logger, stc, fmt.Sprintf("rack-create-%s-%s", apiRequest.Name, apiRequest.SerialNumber), err, "Rack", "CreateExpectedRack")
+		}
+		logger.Error().Err(err).Msg("failed to get result from CreateExpectedRack workflow")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Rack", nil)
+	}
+
+	logger.Info().Str("RackID", rlaResponse.GetId().GetId()).Msg("finishing API handler")
+
+	return c.JSON(http.StatusCreated, model.NewAPICreateRackResponse(&rlaResponse))
+}
+
+// ~~~~~ Patch Rack Handler ~~~~~ //
+
+// PatchRackHandler is the API Handler for patching an existing Rack
+type PatchRackHandler struct {
+	dbSession  *cdb.Session
+	tc         tClient.Client
+	scp        *sc.ClientPool
+	cfg        *config.Config
+	tracerSpan *cutil.TracerSpan
+}
+
+// NewPatchRackHandler initializes and returns a new handler for patching a Rack
+func NewPatchRackHandler(dbSession *cdb.Session, tc tClient.Client, scp *sc.ClientPool, cfg *config.Config) PatchRackHandler {
+	return PatchRackHandler{
+		dbSession:  dbSession,
+		tc:         tc,
+		scp:        scp,
+		cfg:        cfg,
+		tracerSpan: cutil.NewTracerSpan(),
+	}
+}
+
+// Handle godoc
+// @Summary Patch a Rack
+// @Description Patch an existing Rack's fields by ID via RLA
+// @Tags rack
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param org path string true "Name of NGC organization"
+// @Param id path string true "ID of Rack"
+// @Param body body model.APIPatchRackRequest true "Patch rack request"
+// @Success 200 {object} model.APIPatchRackResponse
+// @Router /v2/org/{org}/carbide/rack/{id} [patch]
+func (prh PatchRackHandler) Handle(c echo.Context) error {
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("Rack", "Patch", c, prh.tracerSpan)
+	if handlerSpan != nil {
+		defer handlerSpan.End()
+	}
+
+	// Parse and validate request body
+	var apiRequest model.APIPatchRackRequest
+	if err := c.Bind(&apiRequest); err != nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data", nil)
+	}
+	if err := apiRequest.Validate(); err != nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, err.Error(), nil)
+	}
+
+	// Is DB user missing?
+	if dbUser == nil {
+		logger.Error().Msg("invalid User object found in request context")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	}
+
+	// Validate org membership
+	ok, err := auth.ValidateOrgMembership(dbUser, org)
+	if !ok {
+		if err != nil {
+			logger.Error().Err(err).Msg("error validating org membership for User in request")
+		} else {
+			logger.Warn().Msg("could not validate org membership for user, access denied")
+		}
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+	}
+
+	// Validate role, only Provider Admins are allowed to patch Rack
+	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole)
+	if !ok {
+		logger.Warn().Msg("user does not have Provider Admin role, access denied")
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
+	}
+
+	// Get Infrastructure Provider for org
+	infrastructureProvider, err := common.GetInfrastructureProviderForOrg(ctx, nil, prh.dbSession, org)
+	if err != nil {
+		logger.Warn().Err(err).Msg("error getting infrastructure provider for org")
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for org", nil)
+	}
+
+	// Get rack ID from URL param
+	rackStrID := c.Param("id")
+	prh.tracerSpan.SetAttribute(handlerSpan, attribute.String("rack_id", rackStrID), logger)
+
+	// Validate the site
+	site, err := common.GetSiteFromIDString(ctx, nil, apiRequest.SiteID, prh.dbSession)
+	if err != nil {
+		if errors.Is(err, common.ErrInvalidID) {
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate Site specified in request: invalid ID", nil)
+		}
+		if errors.Is(err, cdb.ErrDoesNotExist) {
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request does not exist", nil)
+		}
+		logger.Error().Err(err).Msg("error retrieving Site from DB")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site specified in request due to DB error", nil)
+	}
+
+	// Verify site belongs to the org's Infrastructure Provider
+	if site.InfrastructureProviderID != infrastructureProvider.ID {
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Site specified in request doesn't belong to current org's Provider", nil)
+	}
+
+	siteConfig := &cdbm.SiteConfig{}
+	if site.Config != nil {
+		siteConfig = site.Config
+	}
+
+	if !siteConfig.RackLevelAdministration {
+		logger.Warn().Msg("site does not have Rack Level Administration enabled")
+		return cutil.NewAPIErrorResponse(c, http.StatusPreconditionFailed, "Site does not have Rack Level Administration enabled", nil)
+	}
+
+	// Get the temporal client for the site
+	stc, err := prh.scp.GetClientByID(site.ID)
+	if err != nil {
+		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
+	}
+
+	// Build RLA request
+	rlaRequest := &rlav1.PatchRackRequest{
+		Rack: apiRequest.ToProtoRack(rackStrID),
+	}
+
+	// Execute workflow
+	workflowOptions := tClient.StartWorkflowOptions{
+		ID:                       fmt.Sprintf("rack-patch-%s", rackStrID),
+		WorkflowIDReusePolicy:    temporalEnums.WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE,
+		WorkflowIDConflictPolicy: temporalEnums.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING,
+		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
+		TaskQueue:                queue.SiteTaskQueue,
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
+	defer cancel()
+
+	we, err := stc.ExecuteWorkflow(ctx, workflowOptions, "PatchRack", rlaRequest)
+	if err != nil {
+		logger.Error().Err(err).Msg("failed to execute PatchRack workflow")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to patch Rack", nil)
+	}
+
+	// Get workflow result
+	var rlaResponse rlav1.PatchRackResponse
+	err = we.Get(ctx, &rlaResponse)
+	if err != nil {
+		var timeoutErr *tp.TimeoutError
+		if errors.As(err, &timeoutErr) || err == context.DeadlineExceeded || ctx.Err() != nil {
+			return common.TerminateWorkflowOnTimeOut(c, logger, stc, fmt.Sprintf("rack-patch-%s", rackStrID), err, "Rack", "PatchRack")
+		}
+		logger.Error().Err(err).Msg("failed to get result from PatchRack workflow")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to patch Rack", nil)
+	}
+
+	logger.Info().Str("Report", rlaResponse.GetReport()).Msg("finishing API handler")
+
+	return c.JSON(http.StatusOK, model.NewAPIPatchRackResponse(&rlaResponse))
+}
+
 // ~~~~~ Validate Rack Handler ~~~~~ //
 
 // ValidateRackHandler is the API Handler for validating a Rack's components
