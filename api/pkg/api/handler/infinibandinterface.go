@@ -27,7 +27,7 @@ import (
 
 	goset "github.com/deckarep/golang-set/v2"
 	"github.com/google/uuid"
-	"github.com/rs/zerolog/log"
+	"github.com/samber/lo"
 
 	"github.com/labstack/echo/v4"
 
@@ -40,8 +40,7 @@ import (
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model"
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/pagination"
 	auth "github.com/nvidia/bare-metal-manager-rest/auth/pkg/authorization"
-	cerr "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	sutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
+	cutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 )
 
 // ~~~~~ GetAll Instance InfiniBandInterface Handler ~~~~~ //
@@ -51,7 +50,7 @@ type GetAllInstanceInfiniBandInterfaceHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetAllInstanceInfiniBandInterfaceHandler initializes and returns a new handler for retrieving all InfiniBandInterfaces for an Instance
@@ -60,7 +59,7 @@ func NewGetAllInstanceInfiniBandInterfaceHandler(dbSession *cdb.Session, tc temp
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -82,9 +81,9 @@ func NewGetAllInstanceInfiniBandInterfaceHandler(dbSession *cdb.Session, tc temp
 // @Router /v2/org/{org}/carbide/instance/{instance_id}/interface [get]
 func (gaiibih GetAllInstanceInfiniBandInterfaceHandler) Handle(c echo.Context) error {
 	instanceID := c.Param("instanceId")
-	queryOverride := &common.InstanceIDQueryOverride{
-		InstanceIDs:        []string{instanceID},
-		InstanceIDFromPath: true,
+	queryOverride := &common.QueryOverride{
+		InstanceIDs:   []string{instanceID},
+		ValueFromPath: true,
 	}
 	delegate := NewGetAllInfiniBandInterfaceHandler(gaiibih.dbSession, gaiibih.tc, gaiibih.cfg, queryOverride)
 	return delegate.Handle(c)
@@ -97,15 +96,15 @@ type GetAllInfiniBandInterfaceHandler struct {
 	dbSession     *cdb.Session
 	tc            temporalClient.Client
 	cfg           *config.Config
-	tracerSpan    *sutil.TracerSpan
-	queryOverride *common.InstanceIDQueryOverride
+	tracerSpan    *cutil.TracerSpan
+	queryOverride *common.QueryOverride
 }
 
 // NewGetAllInfiniBandInterfaceHandler initializes and returns a new handler for retrieving all InfiniBandInterfaces.
 // When queryOverride is provided (e.g. when delegating from instance-scoped endpoint), it supplies values
 // that would otherwise come from query params, and error messages use "path" instead of "query".
-func NewGetAllInfiniBandInterfaceHandler(dbSession *cdb.Session, tc temporalClient.Client, cfg *config.Config, queryOverride ...*common.InstanceIDQueryOverride) GetAllInfiniBandInterfaceHandler {
-	var override *common.InstanceIDQueryOverride
+func NewGetAllInfiniBandInterfaceHandler(dbSession *cdb.Session, tc temporalClient.Client, cfg *config.Config, queryOverride ...*common.QueryOverride) GetAllInfiniBandInterfaceHandler {
+	var override *common.QueryOverride
 	if len(queryOverride) > 0 {
 		override = queryOverride[0]
 	}
@@ -113,7 +112,7 @@ func NewGetAllInfiniBandInterfaceHandler(dbSession *cdb.Session, tc temporalClie
 		dbSession:     dbSession,
 		tc:            tc,
 		cfg:           cfg,
-		tracerSpan:    sutil.NewTracerSpan(),
+		tracerSpan:    cutil.NewTracerSpan(),
 		queryOverride: override,
 	}
 }
@@ -137,31 +136,12 @@ func NewGetAllInfiniBandInterfaceHandler(dbSession *cdb.Session, tc temporalClie
 // @Success 200 {object} model.APIInfiniBandInterface
 // @Router /v2/org/{org}/carbide/infiniband-interface [get]
 func (gaibih GetAllInfiniBandInterfaceHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "InfiniBandInterface").Str("Handler", "GetAll").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gaibih.tracerSpan.CreateChildInContext(ctx, "GetAllInfiniBandInterfaceHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("InfiniBandInterface", "GetAll", c, gaibih.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gaibih.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gaibih.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -172,14 +152,14 @@ func (gaibih GetAllInfiniBandInterfaceHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Tenant Admins are allowed to retrieve Instances
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	// Validate pagination request
@@ -187,14 +167,14 @@ func (gaibih GetAllInfiniBandInterfaceHandler) Handle(c echo.Context) error {
 	err = c.Bind(&pageRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding pagination request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request pagination data", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request pagination data", nil)
 	}
 
 	// Validate pagination request attributes
 	err = pageRequest.Validate(cdbm.InfiniBandInterfaceOrderByFields)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error validating pagination request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest,
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest,
 			"Failed to validate pagination request data", err)
 	}
 
@@ -203,7 +183,7 @@ func (gaibih GetAllInfiniBandInterfaceHandler) Handle(c echo.Context) error {
 	qIncludeRelations, errMsg := common.GetAndValidateQueryRelations(qParams, cdbm.InfiniBandInterfaceRelatedEntities)
 	if errMsg != "" {
 		logger.Warn().Msg(errMsg)
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
 	}
 
 	// Get Tenant for this org
@@ -212,11 +192,11 @@ func (gaibih GetAllInfiniBandInterfaceHandler) Handle(c echo.Context) error {
 	tenants, err := tnDAO.GetAllByOrg(ctx, nil, org, nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Tenant for this org")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant", nil)
 	}
 
 	if len(tenants) == 0 {
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Org does not have a Tenant associated", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Org does not have a Tenant associated", nil)
 	}
 	tenant := tenants[0]
 
@@ -224,16 +204,18 @@ func (gaibih GetAllInfiniBandInterfaceHandler) Handle(c echo.Context) error {
 	var siteIDs []uuid.UUID
 	siteIDStrs := qParams["siteId"]
 	for _, siteIDStr := range siteIDStrs {
-		gaibih.tracerSpan.SetAttribute(handlerSpan, attribute.StringSlice("siteId", siteIDStrs), logger)
 		parsedID, err := uuid.Parse(siteIDStr)
 		if err != nil {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Invalid Site ID: %s specified in query", siteIDStr), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Invalid Site ID: %s specified in query", siteIDStr), nil)
 		}
 		siteIDs = append(siteIDs, parsedID)
 	}
 
-	if len(siteIDs) > 0 {
-		// deduplicate site IDs
+	if len(siteIDStrs) > 0 {
+		// Set tracer span attribute
+		gaibih.tracerSpan.SetAttribute(handlerSpan, attribute.StringSlice("siteIds", siteIDStrs), logger)
+
+		// De-duplicate Site IDs
 		siteIDs = goset.NewSet(siteIDs...).ToSlice()
 
 		// Get all TenantSites for the Tenant and Sites specified in query
@@ -251,7 +233,7 @@ func (gaibih GetAllInfiniBandInterfaceHandler) Handle(c echo.Context) error {
 
 		if err != nil {
 			logger.Error().Err(err).Msg("error retrieving TenantSite from DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to determine Tenant access to Site, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to determine Tenant access to Sites specified in query, DB error", nil)
 		}
 
 		// Check if Tenant has access to each Site
@@ -263,43 +245,44 @@ func (gaibih GetAllInfiniBandInterfaceHandler) Handle(c echo.Context) error {
 		for _, siteID := range siteIDs {
 			// Check if Tenant has access to Site
 			if _, ok := tenantSiteIDMap[siteID]; !ok {
-				return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Site: %s specified in query does not exist or Tenant does not have access to it", siteID.String()), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Site: %s specified in query doesn't exist or Tenant doesn't have access to it", siteID.String()), nil)
 			}
 		}
 	}
 
 	// Get Instance IDs - from queryOverride when delegating from path-scoped endpoint, else from query param
 	var instanceIDs []uuid.UUID
-	instanceIDFromPath := gaibih.queryOverride != nil && gaibih.queryOverride.InstanceIDFromPath
+	instanceIDFromPath := gaibih.queryOverride != nil && gaibih.queryOverride.ValueFromPath
 
 	instanceIDStrs := qParams["instanceId"]
 	if instanceIDFromPath && len(gaibih.queryOverride.InstanceIDs) > 0 {
 		instanceIDStrs = gaibih.queryOverride.InstanceIDs
 	}
 
-	if len(instanceIDStrs) > 0 {
-		gaibih.tracerSpan.SetAttribute(handlerSpan, attribute.StringSlice("instanceId", instanceIDStrs), logger)
-	}
 	for _, instanceIDStr := range instanceIDStrs {
 		parsedID, err := uuid.Parse(instanceIDStr)
 		if err != nil {
+			errMsg := fmt.Sprintf("Invalid Instance ID: %s in query", instanceIDStr)
 			if instanceIDFromPath {
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Invalid Instance ID %v specified in request", instanceIDStr), nil)
+				errMsg = fmt.Sprintf("Invalid Instance ID: %s specified in request", instanceIDStr)
 			}
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Invalid Instance ID %v in query", instanceIDStr), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
 		}
 		instanceIDs = append(instanceIDs, parsedID)
 	}
 
-	if len(instanceIDs) > 0 {
-		// deduplicate instance IDs
+	if len(instanceIDStrs) > 0 {
+		// Set tracer span attribute
+		gaibih.tracerSpan.SetAttribute(handlerSpan, attribute.StringSlice("instanceIds", instanceIDStrs), logger)
+
+		// De-duplicate Instance IDs
 		instanceIDs = goset.NewSet(instanceIDs...).ToSlice()
 
 		instanceDAO := cdbm.NewInstanceDAO(gaibih.dbSession)
 		instances, _, err := instanceDAO.GetAll(ctx, nil, cdbm.InstanceFilterInput{InstanceIDs: instanceIDs}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
 		if err != nil {
 			logger.Error().Err(err).Msg("error retrieving Instances from DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Instances", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to retrieve Instances specified in %s, DB error", lo.Ternary(instanceIDFromPath, "request", "query")), nil)
 		}
 		instanceIDMap := map[uuid.UUID]*cdbm.Instance{}
 
@@ -307,27 +290,16 @@ func (gaibih GetAllInfiniBandInterfaceHandler) Handle(c echo.Context) error {
 			instanceIDMap[instances[i].ID] = &instances[i]
 		}
 
-		notFoundMsg := "Could not find Instance with ID: %s specified in query"
-		forbiddenMsg := "Instance: %s does not belong to current Tenant"
-		if instanceIDFromPath {
-			notFoundMsg = "Could not find Instance with specified ID: %s in request"
-			forbiddenMsg = "Instance with specified ID: %s in request does not belong to current Tenant"
-		}
-
 		for _, instanceID := range instanceIDs {
 			instance, ok := instanceIDMap[instanceID]
 			if !ok {
-				if instanceIDFromPath {
-					return cerr.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf(notFoundMsg, instanceID.String()), nil)
-				}
-				return cerr.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf(notFoundMsg, instanceID.String()), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf("Could not find Instance with ID: %s specified in %s",
+					instanceID.String(), lo.Ternary(instanceIDFromPath, "request", "query")), nil)
 			}
 
 			if instance.TenantID != tenant.ID {
-				if instanceIDFromPath {
-					return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf(forbiddenMsg, instanceID.String()), nil)
-				}
-				return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf(forbiddenMsg, instanceID.String()), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Instance: %s specified in %s doesn't belong to current Tenant",
+					instanceID.String(), lo.Ternary(instanceIDFromPath, "request", "query")), nil)
 			}
 		}
 	}
@@ -340,12 +312,15 @@ func (gaibih GetAllInfiniBandInterfaceHandler) Handle(c echo.Context) error {
 
 		parsedID, err := uuid.Parse(ibpIDStr)
 		if err != nil {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Invalid InfiniBand Partition ID %v in query", ibpIDStr), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Invalid InfiniBand Partition ID: %s in query", ibpIDStr), nil)
 		}
 		infiniBandPartitionIDs = append(infiniBandPartitionIDs, parsedID)
 	}
 
-	if len(infiniBandPartitionIDs) > 0 {
+	if len(ibpIDStrs) > 0 {
+		// Set tracer span attribute
+		gaibih.tracerSpan.SetAttribute(handlerSpan, attribute.StringSlice("infinibandPartitionIds", ibpIDStrs), logger)
+
 		// Deduplicate InfiniBand Partition IDs
 		infiniBandPartitionIDs = goset.NewSet(infiniBandPartitionIDs...).ToSlice()
 
@@ -353,7 +328,7 @@ func (gaibih GetAllInfiniBandInterfaceHandler) Handle(c echo.Context) error {
 		ibPartitions, _, err := ibpDAO.GetAll(ctx, nil, cdbm.InfiniBandPartitionFilterInput{InfiniBandPartitionIDs: infiniBandPartitionIDs}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
 		if err != nil {
 			logger.Error().Err(err).Msg("error retrieving InfiniBand Partitions from DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve InfiniBand Partitions", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve InfiniBand Partitions", nil)
 		}
 
 		ibPartitionIDMap := map[uuid.UUID]*cdbm.InfiniBandPartition{}
@@ -364,26 +339,31 @@ func (gaibih GetAllInfiniBandInterfaceHandler) Handle(c echo.Context) error {
 		for _, ibPartitionID := range infiniBandPartitionIDs {
 			ibPartition, ok := ibPartitionIDMap[ibPartitionID]
 			if !ok {
-				return cerr.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf("Could not find InfiniBand Partition with ID: %s specified in query", ibPartitionID.String()), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf("Could not find InfiniBand Partition with ID: %s specified in query", ibPartitionID.String()), nil)
 			}
 
 			if ibPartition.TenantID != tenant.ID {
-				return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("InfiniBand Partition: %s does not belong to current Tenant", ibPartitionID.String()), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("InfiniBand Partition: %s specified in query doesn't belong to current Tenant", ibPartitionID.String()), nil)
 			}
 		}
 	}
 
 	// Get status from query param
 	var statuses []string
-	statusQuery := qParams["status"]
-	for _, statusQuery := range statusQuery {
-		gaibih.tracerSpan.SetAttribute(handlerSpan, attribute.String("status", statusQuery), logger)
-		_, ok := cdbm.InfiniBandInterfaceStatusMap[statusQuery]
+	qStatuses := qParams["status"]
+	for _, status := range qStatuses {
+		gaibih.tracerSpan.SetAttribute(handlerSpan, attribute.String("status", status), logger)
+		_, ok := cdbm.InfiniBandInterfaceStatusMap[status]
 		if !ok {
-			logger.Warn().Msg(fmt.Sprintf("invalid value in status query: %v", statusQuery))
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Status value in query", nil)
+			logger.Warn().Msg(fmt.Sprintf("invalid value in status query: %v", status))
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Invalid Status value: %s in query", status), nil)
 		}
-		statuses = append(statuses, statusQuery)
+		statuses = append(statuses, status)
+	}
+
+	if len(qStatuses) > 0 {
+		// Set tracer span attribute
+		gaibih.tracerSpan.SetAttribute(handlerSpan, attribute.StringSlice("statuses", qStatuses), logger)
 	}
 
 	// Get the InfiniBand Interfaces record from the db
@@ -402,17 +382,16 @@ func (gaibih GetAllInfiniBandInterfaceHandler) Handle(c echo.Context) error {
 		OrderBy: pageRequest.OrderBy,
 	}
 
-	dbibInterfaces, total, err := ibIfcDAO.GetAll(ctx, nil, filterInput, pageInput, qIncludeRelations)
+	dbIbInterfaces, total, err := ibIfcDAO.GetAll(ctx, nil, filterInput, pageInput, qIncludeRelations)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving InfiniBand Interface Details from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve InfiniBand Interface ", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve InfiniBand Interfaces, DB error", nil)
 	}
 
 	// Create response
-	apiibInterfaces := []model.APIInfiniBandInterface{}
-	for _, dbibifc := range dbibInterfaces {
-		curibifc := dbibifc
-		apiibInterfaces = append(apiibInterfaces, *model.NewAPIInfiniBandInterface(&curibifc))
+	apiIbInterfaces := []model.APIInfiniBandInterface{}
+	for i := range dbIbInterfaces {
+		apiIbInterfaces = append(apiIbInterfaces, *model.NewAPIInfiniBandInterface(&dbIbInterfaces[i]))
 	}
 
 	// Create pagination response header
@@ -420,11 +399,11 @@ func (gaibih GetAllInfiniBandInterfaceHandler) Handle(c echo.Context) error {
 	pageHeader, err := json.Marshal(pageReponse)
 	if err != nil {
 		logger.Error().Err(err).Msg("error marshaling pagination response")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to generate pagination response header", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to generate pagination response header", nil)
 	}
 	c.Response().Header().Set(pagination.ResponseHeaderName, string(pageHeader))
 
 	logger.Info().Msg("finishing API handler")
 
-	return c.JSON(http.StatusOK, apiibInterfaces)
+	return c.JSON(http.StatusOK, apiIbInterfaces)
 }

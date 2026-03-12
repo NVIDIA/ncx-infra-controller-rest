@@ -17,10 +17,10 @@
 
 package common
 
-// InstanceIDQueryOverride provides values that override query params when delegating from
-// path-scoped endpoints (e.g. instance/{instanceId}/interface, instance/{instanceId}/nvlink-interface).
-// When set, error messages use "request" instead of "query" for better UX.
-type InstanceIDQueryOverride struct {
-	InstanceIDs        []string
-	InstanceIDFromPath bool
+// QueryOverride provides values that override query params when delegating from
+// path-scoped endpoints (e.g. instance/{instanceId}/interface, instance/{instanceId}/nvlink-interface) to more general endpoints.
+// When set, error messages in general endpoints will be modulated
+type QueryOverride struct {
+	InstanceIDs   []string
+	ValueFromPath bool
 }
