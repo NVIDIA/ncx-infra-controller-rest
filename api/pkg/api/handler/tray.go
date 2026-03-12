@@ -193,8 +193,10 @@ func (gth GetTrayHandler) Handle(c echo.Context) error {
 		if errors.As(err, &timeoutErr) || err == context.DeadlineExceeded || ctx.Err() != nil {
 			return common.TerminateWorkflowOnTimeOut(c, logger, stc, fmt.Sprintf("tray-get-%s", trayStrID), err, "Tray", "GetTray")
 		}
+		code, err := common.UnwrapWorkflowError(err)
 		logger.Error().Err(err).Msg("failed to get result from GetTray workflow")
-		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to get Tray details", nil)
+
+		return cutil.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to get Tray details: %s", err), nil)
 	}
 
 	// Convert to API model
@@ -396,8 +398,10 @@ func (gath GetAllTrayHandler) Handle(c echo.Context) error {
 		if errors.As(err, &timeoutErr) || err == context.DeadlineExceeded || ctx.Err() != nil {
 			return common.TerminateWorkflowOnTimeOut(c, logger, stc, workflowID, err, "Tray", "GetTrays")
 		}
+		code, err := common.UnwrapWorkflowError(err)
 		logger.Error().Err(err).Msg("failed to get result from GetTrays workflow")
-		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to get Trays", nil)
+
+		return cutil.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to get Trays: %s", err), nil)
 	}
 
 	apiTrays := make([]*model.APITray, 0, len(rlaResponse.GetComponents()))
@@ -582,8 +586,10 @@ func (vth ValidateTrayHandler) Handle(c echo.Context) error {
 		if errors.As(err, &timeoutErr) || err == context.DeadlineExceeded || ctx.Err() != nil {
 			return common.TerminateWorkflowOnTimeOut(c, logger, stc, fmt.Sprintf("tray-validate-%s", trayStrID), err, "Tray", "ValidateRackComponents")
 		}
+		code, err := common.UnwrapWorkflowError(err)
 		logger.Error().Err(err).Msg("failed to get result from ValidateComponents workflow")
-		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to validate Tray", nil)
+
+		return cutil.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to validate Tray: %s", err), nil)
 	}
 
 	// Convert to API model
@@ -748,8 +754,10 @@ func (vtsh ValidateTraysHandler) Handle(c echo.Context) error {
 		if errors.As(err, &timeoutErr) || err == context.DeadlineExceeded || ctx.Err() != nil {
 			return common.TerminateWorkflowOnTimeOut(c, logger, stc, workflowID, err, "Tray", "ValidateRackComponents")
 		}
+		code, err := common.UnwrapWorkflowError(err)
 		logger.Error().Err(err).Msg("failed to get result from ValidateComponents workflow")
-		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to validate Trays", nil)
+
+		return cutil.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to validate Trays: %s", err), nil)
 	}
 
 	// Convert to API model

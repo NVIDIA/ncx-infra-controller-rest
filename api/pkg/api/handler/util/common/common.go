@@ -1076,9 +1076,31 @@ func TerminateWorkflowOnTimeOut(echoCtx echo.Context, logger zerolog.Logger, tem
 func UnwrapWorkflowError(err error) (code int, unwrappedError error) {
 	code, unwrappedError = http.StatusInternalServerError, err
 
+	// Attempt to unwrap our way through Temporal's WorkflowExecutionError
+	// and ActivityError layers to reach the underlying cause. These types
+	// contain Temporal-internal details (workflow IDs, run IDs, scheduled
+	// event IDs, etc) that generally shouldn't be getting exposed to users.
+	innerErr := err
+
+	var wfErr *tp.WorkflowExecutionError
+	if errors.As(innerErr, &wfErr) {
+		if cause := errors.Unwrap(wfErr); cause != nil {
+			innerErr = cause
+		}
+	}
+
+	var actErr *tp.ActivityError
+	if errors.As(innerErr, &actErr) {
+		if cause := errors.Unwrap(actErr); cause != nil {
+			innerErr = cause
+		}
+	}
+
+	unwrappedError = innerErr
+
 	// if the error chain contains a gRPC error code use it to tune our HTTP response code
 	// NOTE: this is duplicating some feature of grpc-gateway and not exhaustive
-	s, ok := status.FromError(err)
+	s, ok := status.FromError(innerErr)
 	if ok {
 		// NOTE: this matches WrapErr in site-workflow/pkg/error/error.go
 		switch s.Code() {
@@ -1099,9 +1121,9 @@ func UnwrapWorkflowError(err error) (code int, unwrappedError error) {
 		}
 	}
 
-	// if the error is NOT a Temporal error return as-is
+	// if the error is NOT a Temporal ApplicationError return what we have
 	tpError := &tp.ApplicationError{}
-	if !errors.As(err, &tpError) {
+	if !errors.As(innerErr, &tpError) {
 		return
 	}
 
@@ -1126,7 +1148,7 @@ func UnwrapWorkflowError(err error) (code int, unwrappedError error) {
 	}
 
 	// if the error is an internal Temporal error it is mostly useless so we unwrap it but we keep
-	// the original error if there is no unwrapped error
+	// the current error if there is no unwrapped error
 	if potentialError := errors.Unwrap(tpError); potentialError != nil {
 		unwrappedError = potentialError
 	}
