@@ -543,18 +543,18 @@ func (r *APICreateRackRequest) ToProtoRack() *rlav1.Rack {
 
 // APICreateRackComponent is a component in a create rack request
 type APICreateRackComponent struct {
-	Type            string                `json:"type"`
-	Name            string                `json:"name"`
-	Manufacturer    string                `json:"manufacturer"`
-	Model           string                `json:"model,omitempty"`
-	SerialNumber    string                `json:"serialNumber"`
-	Description     string                `json:"description,omitempty"`
-	FirmwareVersion string                `json:"firmwareVersion,omitempty"`
-	ComponentID     string                `json:"componentId,omitempty"`
-	SlotID          int32                 `json:"slotId,omitempty"`
-	TrayIdx         int32                 `json:"trayIdx,omitempty"`
-	HostID          int32                 `json:"hostId,omitempty"`
-	BMCs            []*APICreateRackBMC   `json:"bmcs,omitempty"`
+	Type            string              `json:"type"`
+	Name            string              `json:"name"`
+	Manufacturer    string              `json:"manufacturer"`
+	Model           string              `json:"model,omitempty"`
+	SerialNumber    string              `json:"serialNumber"`
+	Description     string              `json:"description,omitempty"`
+	FirmwareVersion string              `json:"firmwareVersion,omitempty"`
+	ComponentID     string              `json:"componentId,omitempty"`
+	SlotID          int32               `json:"slotId,omitempty"`
+	TrayIdx         int32               `json:"trayIdx,omitempty"`
+	HostID          int32               `json:"hostId,omitempty"`
+	BMCs            []*APICreateRackBMC `json:"bmcs,omitempty"`
 }
 
 // Validate validates a create rack component

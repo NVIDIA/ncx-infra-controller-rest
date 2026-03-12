@@ -655,6 +655,151 @@ func TestManageRack_BringUpRack(t *testing.T) {
 	}
 }
 
+func TestManageRack_CreateExpectedRack(t *testing.T) {
+	tests := []struct {
+		name        string
+		request     *rlav1.CreateExpectedRackRequest
+		wantErr     bool
+		errContains string
+	}{
+		{
+			name:        "nil request returns error",
+			request:     nil,
+			wantErr:     true,
+			errContains: "empty create expected rack request",
+		},
+		{
+			name: "request with nil rack returns error",
+			request: &rlav1.CreateExpectedRackRequest{
+				Rack: nil,
+			},
+			wantErr:     true,
+			errContains: "without rack data",
+		},
+		{
+			name: "successful request",
+			request: &rlav1.CreateExpectedRackRequest{
+				Rack: &rlav1.Rack{
+					Info: &rlav1.DeviceInfo{
+						Name:         "test-rack",
+						Manufacturer: "NVIDIA",
+						SerialNumber: "SN-001",
+					},
+				},
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockRlaClient := cClient.NewMockRlaClient()
+			rlaAtomicClient := cClient.NewRlaAtomicClient(&cClient.RlaClientConfig{})
+			rlaAtomicClient.SwapClient(mockRlaClient)
+			manageRack := NewManageRack(rlaAtomicClient)
+
+			ctx := context.Background()
+			result, err := manageRack.CreateExpectedRack(ctx, tt.request)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.errContains != "" {
+					assert.Contains(t, err.Error(), tt.errContains)
+				}
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.NotNil(t, result)
+			assert.NotNil(t, result.GetId())
+		})
+	}
+}
+
+func TestManageRack_PatchRack(t *testing.T) {
+	tests := []struct {
+		name        string
+		request     *rlav1.PatchRackRequest
+		wantErr     bool
+		errContains string
+	}{
+		{
+			name:        "nil request returns error",
+			request:     nil,
+			wantErr:     true,
+			errContains: "empty patch rack request",
+		},
+		{
+			name: "request with nil rack returns error",
+			request: &rlav1.PatchRackRequest{
+				Rack: nil,
+			},
+			wantErr:     true,
+			errContains: "without rack data",
+		},
+		{
+			name: "request without rack ID returns error",
+			request: &rlav1.PatchRackRequest{
+				Rack: &rlav1.Rack{
+					Info: &rlav1.DeviceInfo{
+						Name: "updated-name",
+					},
+				},
+			},
+			wantErr:     true,
+			errContains: "without rack ID",
+		},
+		{
+			name: "request with empty rack ID returns error",
+			request: &rlav1.PatchRackRequest{
+				Rack: &rlav1.Rack{
+					Info: &rlav1.DeviceInfo{
+						Id:   &rlav1.UUID{Id: ""},
+						Name: "updated-name",
+					},
+				},
+			},
+			wantErr:     true,
+			errContains: "without rack ID",
+		},
+		{
+			name: "successful request",
+			request: &rlav1.PatchRackRequest{
+				Rack: &rlav1.Rack{
+					Info: &rlav1.DeviceInfo{
+						Id:   &rlav1.UUID{Id: "test-rack-id"},
+						Name: "updated-rack",
+					},
+				},
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockRlaClient := cClient.NewMockRlaClient()
+			rlaAtomicClient := cClient.NewRlaAtomicClient(&cClient.RlaClientConfig{})
+			rlaAtomicClient.SwapClient(mockRlaClient)
+			manageRack := NewManageRack(rlaAtomicClient)
+
+			ctx := context.Background()
+			result, err := manageRack.PatchRack(ctx, tt.request)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.errContains != "" {
+					assert.Contains(t, err.Error(), tt.errContains)
+				}
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.NotNil(t, result)
+		})
+	}
+}
+
 func TestManageRack_UpgradeFirmware(t *testing.T) {
 	tests := []struct {
 		name        string

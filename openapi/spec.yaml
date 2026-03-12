@@ -8793,6 +8793,60 @@ paths:
           $ref: '#/components/responses/ForbiddenError'
       tags:
         - Rack
+    post:
+      summary: Create a Rack
+      operationId: create-rack
+      description: |-
+        Create a new expected Rack definition.
+
+        Defines the expected configuration of a rack including its components, location, and device information. The rack will be tracked by RLA for validation and lifecycle management.
+
+        Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` authorization role.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRackRequest'
+            examples:
+              basic:
+                value:
+                  siteId: 550e8400-e29b-41d4-a716-446655440000
+                  name: Rack-01
+                  manufacturer: NVIDIA
+                  serialNumber: SN-RACK-001
+              with-location:
+                value:
+                  siteId: 550e8400-e29b-41d4-a716-446655440000
+                  name: Rack-01
+                  manufacturer: NVIDIA
+                  model: NVL72
+                  serialNumber: SN-RACK-001
+                  description: Primary compute rack
+                  location:
+                    region: us-east-1
+                    datacenter: DC-01
+                    room: Room-A
+                    position: A1
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateRackResponse'
+              examples:
+                example-1:
+                  value:
+                    id: 550e8400-e29b-41d4-a716-446655440000
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '412':
+          description: Precondition Failed - Rack Level Administration not enabled on Site
+      tags:
+        - Rack
   '/v2/org/{org}/carbide/rack/{id}':
     parameters:
       - schema:
@@ -8869,6 +8923,53 @@ paths:
           $ref: '#/components/responses/ForbiddenError'
         '404':
           $ref: '#/components/responses/NotFoundError'
+      tags:
+        - Rack
+    patch:
+      summary: Patch a Rack
+      operationId: patch-rack
+      description: |-
+        Patch an existing Rack's fields by ID.
+
+        Updates only the fields provided in the request body. Fields not included are left unchanged.
+
+        Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` authorization role.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchRackRequest'
+            examples:
+              update-name:
+                value:
+                  siteId: 550e8400-e29b-41d4-a716-446655440000
+                  name: Rack-01-Updated
+              update-location:
+                value:
+                  siteId: 550e8400-e29b-41d4-a716-446655440000
+                  location:
+                    region: us-west-2
+                    datacenter: DC-02
+                    room: Room-B
+                    position: B3
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatchRackResponse'
+              examples:
+                example-1:
+                  value:
+                    report: Rack updated successfully
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '412':
+          description: Precondition Failed - Rack Level Administration not enabled on Site
       tags:
         - Rack
   '/v2/org/{org}/carbide/rack/validation':
@@ -15654,6 +15755,87 @@ components:
         version:
           type: string
           description: Target firmware version.
+    CreateRackRequest:
+      title: CreateRackRequest
+      type: object
+      description: Request body for creating a new expected Rack definition
+      required:
+        - siteId
+        - name
+        - manufacturer
+        - serialNumber
+      properties:
+        siteId:
+          type: string
+          format: uuid
+          description: ID of the Site
+        name:
+          type: string
+          description: Name of the Rack
+        manufacturer:
+          type: string
+          description: Manufacturer of the Rack
+        model:
+          type: string
+          description: Model of the Rack
+        serialNumber:
+          type: string
+          description: Serial number of the Rack
+        description:
+          type: string
+          description: Description of the Rack
+        location:
+          $ref: '#/components/schemas/RackLocation'
+        components:
+          type: array
+          description: Components to include in the Rack
+          items:
+            $ref: '#/components/schemas/RackComponent'
+    CreateRackResponse:
+      title: CreateRackResponse
+      type: object
+      description: Response for creating a Rack containing the new rack's ID
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ID of the newly created Rack
+    PatchRackRequest:
+      title: PatchRackRequest
+      type: object
+      description: Request body for patching an existing Rack. Only provided fields are updated.
+      required:
+        - siteId
+      properties:
+        siteId:
+          type: string
+          format: uuid
+          description: ID of the Site
+        name:
+          type: string
+          description: Updated name of the Rack
+        manufacturer:
+          type: string
+          description: Updated manufacturer of the Rack
+        model:
+          type: string
+          description: Updated model of the Rack
+        serialNumber:
+          type: string
+          description: Updated serial number of the Rack
+        description:
+          type: string
+          description: Updated description of the Rack
+        location:
+          $ref: '#/components/schemas/RackLocation'
+    PatchRackResponse:
+      title: PatchRackResponse
+      type: object
+      description: Response for patching a Rack
+      properties:
+        report:
+          type: string
+          description: Summary report of changes applied
     BringUpRackRequest:
       title: BringUpRackRequest
       type: object

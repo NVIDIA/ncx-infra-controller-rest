@@ -700,6 +700,160 @@ func TestPowerResetRackTestSuite(t *testing.T) {
 	suite.Run(t, new(PowerResetRackTestSuite))
 }
 
+// CreateExpectedRackTestSuite tests the CreateExpectedRack workflow
+type CreateExpectedRackTestSuite struct {
+	suite.Suite
+	testsuite.WorkflowTestSuite
+
+	env *testsuite.TestWorkflowEnvironment
+}
+
+func (s *CreateExpectedRackTestSuite) SetupTest() {
+	s.env = s.NewTestWorkflowEnvironment()
+}
+
+func (s *CreateExpectedRackTestSuite) AfterTest(suiteName, testName string) {
+	s.env.AssertExpectations(s.T())
+}
+
+func (s *CreateExpectedRackTestSuite) Test_CreateExpectedRack_Success() {
+	var rackManager rActivity.ManageRack
+
+	request := &rlav1.CreateExpectedRackRequest{
+		Rack: &rlav1.Rack{
+			Info: &rlav1.DeviceInfo{
+				Name:         "test-rack",
+				Manufacturer: "NVIDIA",
+				SerialNumber: "SN-001",
+			},
+		},
+	}
+
+	expectedResponse := &rlav1.CreateExpectedRackResponse{
+		Id: &rlav1.UUID{Id: "new-rack-id"},
+	}
+
+	s.env.RegisterActivity(rackManager.CreateExpectedRack)
+	s.env.OnActivity(rackManager.CreateExpectedRack, mock.Anything, mock.Anything).Return(expectedResponse, nil)
+
+	s.env.ExecuteWorkflow(CreateExpectedRack, request)
+	s.True(s.env.IsWorkflowCompleted())
+	s.NoError(s.env.GetWorkflowError())
+
+	var response rlav1.CreateExpectedRackResponse
+	s.NoError(s.env.GetWorkflowResult(&response))
+	s.NotNil(response.Id)
+	s.Equal("new-rack-id", response.Id.Id)
+}
+
+func (s *CreateExpectedRackTestSuite) Test_CreateExpectedRack_ActivityFails() {
+	var rackManager rActivity.ManageRack
+
+	request := &rlav1.CreateExpectedRackRequest{
+		Rack: &rlav1.Rack{
+			Info: &rlav1.DeviceInfo{
+				Name:         "test-rack",
+				Manufacturer: "NVIDIA",
+				SerialNumber: "SN-001",
+			},
+		},
+	}
+
+	errMsg := "RLA connection failed"
+
+	s.env.RegisterActivity(rackManager.CreateExpectedRack)
+	s.env.OnActivity(rackManager.CreateExpectedRack, mock.Anything, mock.Anything).Return(nil, errors.New(errMsg))
+
+	s.env.ExecuteWorkflow(CreateExpectedRack, request)
+	s.True(s.env.IsWorkflowCompleted())
+	err := s.env.GetWorkflowError()
+	s.Error(err)
+
+	var applicationErr *temporal.ApplicationError
+	s.True(errors.As(err, &applicationErr))
+	s.Equal(errMsg, applicationErr.Error())
+}
+
+func TestCreateExpectedRackTestSuite(t *testing.T) {
+	suite.Run(t, new(CreateExpectedRackTestSuite))
+}
+
+// PatchRackTestSuite tests the PatchRack workflow
+type PatchRackTestSuite struct {
+	suite.Suite
+	testsuite.WorkflowTestSuite
+
+	env *testsuite.TestWorkflowEnvironment
+}
+
+func (s *PatchRackTestSuite) SetupTest() {
+	s.env = s.NewTestWorkflowEnvironment()
+}
+
+func (s *PatchRackTestSuite) AfterTest(suiteName, testName string) {
+	s.env.AssertExpectations(s.T())
+}
+
+func (s *PatchRackTestSuite) Test_PatchRack_Success() {
+	var rackManager rActivity.ManageRack
+
+	newName := "updated-rack"
+	request := &rlav1.PatchRackRequest{
+		Rack: &rlav1.Rack{
+			Info: &rlav1.DeviceInfo{
+				Id:   &rlav1.UUID{Id: "test-rack-id"},
+				Name: newName,
+			},
+		},
+	}
+
+	expectedResponse := &rlav1.PatchRackResponse{
+		Report: "Rack updated successfully",
+	}
+
+	s.env.RegisterActivity(rackManager.PatchRack)
+	s.env.OnActivity(rackManager.PatchRack, mock.Anything, mock.Anything).Return(expectedResponse, nil)
+
+	s.env.ExecuteWorkflow(PatchRack, request)
+	s.True(s.env.IsWorkflowCompleted())
+	s.NoError(s.env.GetWorkflowError())
+
+	var response rlav1.PatchRackResponse
+	s.NoError(s.env.GetWorkflowResult(&response))
+	s.Equal("Rack updated successfully", response.Report)
+}
+
+func (s *PatchRackTestSuite) Test_PatchRack_ActivityFails() {
+	var rackManager rActivity.ManageRack
+
+	request := &rlav1.PatchRackRequest{
+		Rack: &rlav1.Rack{
+			Info: &rlav1.DeviceInfo{
+				Id:   &rlav1.UUID{Id: "test-rack-id"},
+				Name: "updated-rack",
+			},
+		},
+	}
+
+	errMsg := "RLA connection failed"
+
+	s.env.RegisterActivity(rackManager.PatchRack)
+	s.env.OnActivity(rackManager.PatchRack, mock.Anything, mock.Anything).Return(nil, errors.New(errMsg))
+
+	s.env.ExecuteWorkflow(PatchRack, request)
+	s.True(s.env.IsWorkflowCompleted())
+	err := s.env.GetWorkflowError()
+	s.Error(err)
+
+	var applicationErr *temporal.ApplicationError
+	s.True(errors.As(err, &applicationErr))
+	s.Equal(errMsg, applicationErr.Error())
+}
+
+func TestPatchRackTestSuite(t *testing.T) {
+	suite.Run(t, new(PatchRackTestSuite))
+}
+
 // BringUpRackTestSuite tests the BringUpRack workflow
 type BringUpRackTestSuite struct {
 	suite.Suite

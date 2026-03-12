@@ -148,6 +148,300 @@ func testRackBuildUser(t *testing.T, dbSession *cdb.Session, starfleetID string,
 	return u
 }
 
+func TestCreateRackHandler_Handle(t *testing.T) {
+	e := echo.New()
+	dbSession := testRackInitDB(t)
+	defer dbSession.Close()
+
+	cfg := common.GetTestConfig()
+	tcfg, _ := cfg.GetTemporalConfig()
+	scp := sc.NewClientPool(tcfg)
+
+	org := "test-org"
+	_, site, _ := testRackSetupTestData(t, dbSession, org)
+
+	siteNoRLA := &cdbm.Site{
+		ID:                       uuid.New(),
+		Name:                     "test-site-no-rla",
+		Org:                      org,
+		InfrastructureProviderID: site.InfrastructureProviderID,
+		Status:                   cdbm.SiteStatusRegistered,
+		Config:                   &cdbm.SiteConfig{},
+	}
+	_, err := dbSession.DB.NewInsert().Model(siteNoRLA).Exec(context.Background())
+	assert.Nil(t, err)
+
+	providerUser := testRackBuildUser(t, dbSession, "provider-user-create-rack", org, []string{"FORGE_PROVIDER_ADMIN"})
+	tenantUser := testRackBuildUser(t, dbSession, "tenant-user-create-rack", org, []string{"FORGE_TENANT_ADMIN"})
+
+	handler := NewCreateRackHandler(dbSession, nil, scp, cfg)
+
+	tracer := oteltrace.NewNoopTracerProvider().Tracer("test")
+	ctx := context.Background()
+
+	newRackID := uuid.NewString()
+
+	tests := []struct {
+		name           string
+		reqOrg         string
+		user           *cdbm.User
+		body           string
+		mockRackID     string
+		expectedStatus int
+	}{
+		{
+			name:           "success - create rack",
+			reqOrg:         org,
+			user:           providerUser,
+			body:           fmt.Sprintf(`{"siteId":"%s","name":"Rack-New","manufacturer":"NVIDIA","serialNumber":"SN-NEW-001"}`, site.ID.String()),
+			mockRackID:     newRackID,
+			expectedStatus: http.StatusCreated,
+		},
+		{
+			name:           "success - create rack with location",
+			reqOrg:         org,
+			user:           providerUser,
+			body:           fmt.Sprintf(`{"siteId":"%s","name":"Rack-Loc","manufacturer":"NVIDIA","serialNumber":"SN-LOC-001","location":{"region":"us-east-1","datacenter":"DC1","room":"A","position":"1"}}`, site.ID.String()),
+			mockRackID:     newRackID,
+			expectedStatus: http.StatusCreated,
+		},
+		{
+			name:           "failure - missing name",
+			reqOrg:         org,
+			user:           providerUser,
+			body:           fmt.Sprintf(`{"siteId":"%s","manufacturer":"NVIDIA","serialNumber":"SN-001"}`, site.ID.String()),
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "failure - missing siteId",
+			reqOrg:         org,
+			user:           providerUser,
+			body:           `{"name":"Rack-New","manufacturer":"NVIDIA","serialNumber":"SN-001"}`,
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "failure - missing manufacturer",
+			reqOrg:         org,
+			user:           providerUser,
+			body:           fmt.Sprintf(`{"siteId":"%s","name":"Rack-New","serialNumber":"SN-001"}`, site.ID.String()),
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "failure - missing serialNumber",
+			reqOrg:         org,
+			user:           providerUser,
+			body:           fmt.Sprintf(`{"siteId":"%s","name":"Rack-New","manufacturer":"NVIDIA"}`, site.ID.String()),
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "failure - RLA not enabled",
+			reqOrg:         org,
+			user:           providerUser,
+			body:           fmt.Sprintf(`{"siteId":"%s","name":"Rack-New","manufacturer":"NVIDIA","serialNumber":"SN-001"}`, siteNoRLA.ID.String()),
+			expectedStatus: http.StatusPreconditionFailed,
+		},
+		{
+			name:           "failure - tenant access denied",
+			reqOrg:         org,
+			user:           tenantUser,
+			body:           fmt.Sprintf(`{"siteId":"%s","name":"Rack-New","manufacturer":"NVIDIA","serialNumber":"SN-001"}`, site.ID.String()),
+			expectedStatus: http.StatusForbidden,
+		},
+		{
+			name:           "failure - invalid siteId",
+			reqOrg:         org,
+			user:           providerUser,
+			body:           fmt.Sprintf(`{"siteId":"%s","name":"Rack-New","manufacturer":"NVIDIA","serialNumber":"SN-001"}`, uuid.NewString()),
+			expectedStatus: http.StatusBadRequest,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockTemporalClient := &tmocks.Client{}
+			mockWorkflowRun := &tmocks.WorkflowRun{}
+			mockWorkflowRun.On("GetID").Return("test-workflow-id")
+			mockWorkflowRun.Mock.On("Get", mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+				resp := args.Get(1).(*rlav1.CreateExpectedRackResponse)
+				if tt.mockRackID != "" {
+					resp.Id = &rlav1.UUID{Id: tt.mockRackID}
+				}
+			}).Return(nil)
+			mockTemporalClient.Mock.On("ExecuteWorkflow", mock.Anything, mock.Anything, "CreateExpectedRack", mock.Anything).Return(mockWorkflowRun, nil)
+			scp.IDClientMap[site.ID.String()] = mockTemporalClient
+
+			path := fmt.Sprintf("/v2/org/%s/carbide/rack", tt.reqOrg)
+
+			req := httptest.NewRequest(http.MethodPost, path, strings.NewReader(tt.body))
+			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+			rec := httptest.NewRecorder()
+
+			ec := e.NewContext(req, rec)
+			ec.SetParamNames("orgName")
+			ec.SetParamValues(tt.reqOrg)
+			ec.Set("user", tt.user)
+
+			ctx = context.WithValue(ctx, otelecho.TracerKey, tracer)
+			ec.SetRequest(ec.Request().WithContext(ctx))
+
+			err := handler.Handle(ec)
+
+			if tt.expectedStatus != rec.Code {
+				t.Errorf("CreateRackHandler.Handle() status = %v, want %v, response: %v, err: %v", rec.Code, tt.expectedStatus, rec.Body.String(), err)
+			}
+
+			require.Equal(t, tt.expectedStatus, rec.Code)
+			if tt.expectedStatus != http.StatusCreated {
+				return
+			}
+
+			var apiResp model.APICreateRackResponse
+			err = json.Unmarshal(rec.Body.Bytes(), &apiResp)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.mockRackID, apiResp.ID)
+		})
+	}
+}
+
+func TestPatchRackHandler_Handle(t *testing.T) {
+	e := echo.New()
+	dbSession := testRackInitDB(t)
+	defer dbSession.Close()
+
+	cfg := common.GetTestConfig()
+	tcfg, _ := cfg.GetTemporalConfig()
+	scp := sc.NewClientPool(tcfg)
+
+	org := "test-org"
+	_, site, _ := testRackSetupTestData(t, dbSession, org)
+
+	siteNoRLA := &cdbm.Site{
+		ID:                       uuid.New(),
+		Name:                     "test-site-no-rla",
+		Org:                      org,
+		InfrastructureProviderID: site.InfrastructureProviderID,
+		Status:                   cdbm.SiteStatusRegistered,
+		Config:                   &cdbm.SiteConfig{},
+	}
+	_, err := dbSession.DB.NewInsert().Model(siteNoRLA).Exec(context.Background())
+	assert.Nil(t, err)
+
+	providerUser := testRackBuildUser(t, dbSession, "provider-user-patch-rack", org, []string{"FORGE_PROVIDER_ADMIN"})
+	tenantUser := testRackBuildUser(t, dbSession, "tenant-user-patch-rack", org, []string{"FORGE_TENANT_ADMIN"})
+
+	handler := NewPatchRackHandler(dbSession, nil, scp, cfg)
+
+	rackID := uuid.NewString()
+
+	tracer := oteltrace.NewNoopTracerProvider().Tracer("test")
+	ctx := context.Background()
+
+	tests := []struct {
+		name           string
+		reqOrg         string
+		user           *cdbm.User
+		rackID         string
+		body           string
+		mockReport     string
+		expectedStatus int
+	}{
+		{
+			name:           "success - patch rack name",
+			reqOrg:         org,
+			user:           providerUser,
+			rackID:         rackID,
+			body:           fmt.Sprintf(`{"siteId":"%s","name":"Updated-Rack"}`, site.ID.String()),
+			mockReport:     "Rack updated successfully",
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "success - patch rack location",
+			reqOrg:         org,
+			user:           providerUser,
+			rackID:         rackID,
+			body:           fmt.Sprintf(`{"siteId":"%s","location":{"region":"us-west-2","datacenter":"DC2","room":"B","position":"3"}}`, site.ID.String()),
+			mockReport:     "Rack location updated",
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "failure - missing siteId",
+			reqOrg:         org,
+			user:           providerUser,
+			rackID:         rackID,
+			body:           `{"name":"Updated-Rack"}`,
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "failure - RLA not enabled",
+			reqOrg:         org,
+			user:           providerUser,
+			rackID:         rackID,
+			body:           fmt.Sprintf(`{"siteId":"%s","name":"Updated-Rack"}`, siteNoRLA.ID.String()),
+			expectedStatus: http.StatusPreconditionFailed,
+		},
+		{
+			name:           "failure - tenant access denied",
+			reqOrg:         org,
+			user:           tenantUser,
+			rackID:         rackID,
+			body:           fmt.Sprintf(`{"siteId":"%s","name":"Updated-Rack"}`, site.ID.String()),
+			expectedStatus: http.StatusForbidden,
+		},
+		{
+			name:           "failure - invalid siteId",
+			reqOrg:         org,
+			user:           providerUser,
+			rackID:         rackID,
+			body:           fmt.Sprintf(`{"siteId":"%s","name":"Updated-Rack"}`, uuid.NewString()),
+			expectedStatus: http.StatusBadRequest,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockTemporalClient := &tmocks.Client{}
+			mockWorkflowRun := &tmocks.WorkflowRun{}
+			mockWorkflowRun.On("GetID").Return("test-workflow-id")
+			mockWorkflowRun.Mock.On("Get", mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+				resp := args.Get(1).(*rlav1.PatchRackResponse)
+				resp.Report = tt.mockReport
+			}).Return(nil)
+			mockTemporalClient.Mock.On("ExecuteWorkflow", mock.Anything, mock.Anything, "PatchRack", mock.Anything).Return(mockWorkflowRun, nil)
+			scp.IDClientMap[site.ID.String()] = mockTemporalClient
+
+			path := fmt.Sprintf("/v2/org/%s/carbide/rack/%s", tt.reqOrg, tt.rackID)
+
+			req := httptest.NewRequest(http.MethodPatch, path, strings.NewReader(tt.body))
+			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+			rec := httptest.NewRecorder()
+
+			ec := e.NewContext(req, rec)
+			ec.SetParamNames("orgName", "id")
+			ec.SetParamValues(tt.reqOrg, tt.rackID)
+			ec.Set("user", tt.user)
+
+			ctx = context.WithValue(ctx, otelecho.TracerKey, tracer)
+			ec.SetRequest(ec.Request().WithContext(ctx))
+
+			err := handler.Handle(ec)
+
+			if tt.expectedStatus != rec.Code {
+				t.Errorf("PatchRackHandler.Handle() status = %v, want %v, response: %v, err: %v", rec.Code, tt.expectedStatus, rec.Body.String(), err)
+			}
+
+			require.Equal(t, tt.expectedStatus, rec.Code)
+			if tt.expectedStatus != http.StatusOK {
+				return
+			}
+
+			var apiResp model.APIPatchRackResponse
+			err = json.Unmarshal(rec.Body.Bytes(), &apiResp)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.mockReport, apiResp.Report)
+		})
+	}
+}
+
 func TestGetRackHandler_Handle(t *testing.T) {
 	// Setup
 	e := echo.New()
