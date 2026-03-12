@@ -59,6 +59,8 @@ type ForgeServerImpl struct {
 	tk  map[string]*cwssaws.TenantKeyset
 	ibp map[string]*cwssaws.IBPartition
 	em  map[string]*cwssaws.ExpectedMachine
+	eps map[string]*cwssaws.ExpectedPowerShelf
+	es  map[string]*cwssaws.ExpectedSwitch
 }
 
 var logger = log.With().Str("Component", "Mock Carbide gRPC Server").Logger()
@@ -1131,6 +1133,138 @@ func (f *ForgeServerImpl) UpdateExpectedMachines(ctx context.Context, req *cwssa
 	return out, nil
 }
 
+// AddExpectedPowerShelf implements interface ForgeServer
+func (f *ForgeServerImpl) AddExpectedPowerShelf(ctx context.Context, req *cwssaws.ExpectedPowerShelf) (*emptypb.Empty, error) {
+	if req == nil || req.Id == nil || req.Id.Value == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "ID not provided for AddExpectedPowerShelf")
+	}
+	if req.BmcMacAddress == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "MAC address not provided for AddExpectedPowerShelf")
+	}
+	if req.ShelfSerialNumber == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "Shelf Serial Number not provided for AddExpectedPowerShelf")
+	}
+	f.eps[req.Id.Value] = req
+	return &emptypb.Empty{}, nil
+}
+
+// UpdateExpectedPowerShelf implements interface ForgeServer
+func (f *ForgeServerImpl) UpdateExpectedPowerShelf(ctx context.Context, req *cwssaws.ExpectedPowerShelf) (*emptypb.Empty, error) {
+	if req == nil || req.Id == nil || req.Id.Value == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "ID not provided for UpdateExpectedPowerShelf")
+	}
+	if req.BmcMacAddress == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "MAC address not provided for UpdateExpectedPowerShelf")
+	}
+	if req.ShelfSerialNumber == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "Shelf Serial Number not provided for UpdateExpectedPowerShelf")
+	}
+	if _, ok := f.eps[req.Id.Value]; !ok {
+		return nil, status.Errorf(codes.NotFound, "ExpectedPowerShelf with ID %q not found", req.Id.Value)
+	}
+	f.eps[req.Id.Value] = req
+	return &emptypb.Empty{}, nil
+}
+
+// DeleteExpectedPowerShelf implements interface ForgeServer
+func (f *ForgeServerImpl) DeleteExpectedPowerShelf(ctx context.Context, req *cwssaws.ExpectedPowerShelfRequest) (*emptypb.Empty, error) {
+	if req == nil || req.Id == nil || req.Id.Value == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "ID not provided for DeleteExpectedPowerShelf")
+	}
+	if _, ok := f.eps[req.Id.Value]; !ok {
+		return nil, status.Errorf(codes.NotFound, "ExpectedPowerShelf with ID %q not found", req.Id.Value)
+	}
+	delete(f.eps, req.Id.Value)
+	return &emptypb.Empty{}, nil
+}
+
+// GetExpectedPowerShelf implements interface ForgeServer
+func (f *ForgeServerImpl) GetExpectedPowerShelf(ctx context.Context, req *cwssaws.ExpectedPowerShelfRequest) (*cwssaws.ExpectedPowerShelf, error) {
+	if req == nil || req.Id == nil || req.Id.Value == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "ID not provided for GetExpectedPowerShelf")
+	}
+	eps, ok := f.eps[req.Id.Value]
+	if !ok {
+		return nil, status.Errorf(codes.NotFound, "ExpectedPowerShelf with ID %q not found", req.Id.Value)
+	}
+	return eps, nil
+}
+
+// GetAllExpectedPowerShelves implements interface ForgeServer
+func (f *ForgeServerImpl) GetAllExpectedPowerShelves(ctx context.Context, req *emptypb.Empty) (*cwssaws.ExpectedPowerShelfList, error) {
+	res := make([]*cwssaws.ExpectedPowerShelf, 0, len(f.eps))
+	for _, eps := range f.eps {
+		res = append(res, eps)
+	}
+	return &cwssaws.ExpectedPowerShelfList{ExpectedPowerShelves: res}, nil
+}
+
+// AddExpectedSwitch implements interface ForgeServer
+func (f *ForgeServerImpl) AddExpectedSwitch(ctx context.Context, req *cwssaws.ExpectedSwitch) (*emptypb.Empty, error) {
+	if req == nil || req.Id == nil || req.Id.Value == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "ID not provided for AddExpectedSwitch")
+	}
+	if req.BmcMacAddress == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "MAC address not provided for AddExpectedSwitch")
+	}
+	if req.SwitchSerialNumber == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "Switch Serial Number not provided for AddExpectedSwitch")
+	}
+	f.es[req.Id.Value] = req
+	return &emptypb.Empty{}, nil
+}
+
+// UpdateExpectedSwitch implements interface ForgeServer
+func (f *ForgeServerImpl) UpdateExpectedSwitch(ctx context.Context, req *cwssaws.ExpectedSwitch) (*emptypb.Empty, error) {
+	if req == nil || req.Id == nil || req.Id.Value == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "ID not provided for UpdateExpectedSwitch")
+	}
+	if req.BmcMacAddress == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "MAC address not provided for UpdateExpectedSwitch")
+	}
+	if req.SwitchSerialNumber == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "Switch Serial Number not provided for UpdateExpectedSwitch")
+	}
+	if _, ok := f.es[req.Id.Value]; !ok {
+		return nil, status.Errorf(codes.NotFound, "ExpectedSwitch with ID %q not found", req.Id.Value)
+	}
+	f.es[req.Id.Value] = req
+	return &emptypb.Empty{}, nil
+}
+
+// DeleteExpectedSwitch implements interface ForgeServer
+func (f *ForgeServerImpl) DeleteExpectedSwitch(ctx context.Context, req *cwssaws.ExpectedSwitchRequest) (*emptypb.Empty, error) {
+	if req == nil || req.Id == nil || req.Id.Value == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "ID not provided for DeleteExpectedSwitch")
+	}
+	if _, ok := f.es[req.Id.Value]; !ok {
+		return nil, status.Errorf(codes.NotFound, "ExpectedSwitch with ID %q not found", req.Id.Value)
+	}
+	delete(f.es, req.Id.Value)
+	return &emptypb.Empty{}, nil
+}
+
+// GetExpectedSwitch implements interface ForgeServer
+func (f *ForgeServerImpl) GetExpectedSwitch(ctx context.Context, req *cwssaws.ExpectedSwitchRequest) (*cwssaws.ExpectedSwitch, error) {
+	if req == nil || req.Id == nil || req.Id.Value == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "ID not provided for GetExpectedSwitch")
+	}
+	es, ok := f.es[req.Id.Value]
+	if !ok {
+		return nil, status.Errorf(codes.NotFound, "ExpectedSwitch with ID %q not found", req.Id.Value)
+	}
+	return es, nil
+}
+
+// GetAllExpectedSwitches implements interface ForgeServer
+func (f *ForgeServerImpl) GetAllExpectedSwitches(ctx context.Context, req *emptypb.Empty) (*cwssaws.ExpectedSwitchList, error) {
+	res := make([]*cwssaws.ExpectedSwitch, 0, len(f.es))
+	for _, es := range f.es {
+		res = append(res, es)
+	}
+	return &cwssaws.ExpectedSwitchList{ExpectedSwitches: res}, nil
+}
+
 // ForgeTest tests the grpc server
 func ForgeTest(secs int) {
 	listener, err := net.Listen("tcp", DefaultPort)
@@ -1148,6 +1282,8 @@ func ForgeTest(secs int) {
 		tk:  make(map[string]*cwssaws.TenantKeyset),
 		ibp: make(map[string]*cwssaws.IBPartition),
 		em:  make(map[string]*cwssaws.ExpectedMachine),
+		eps: make(map[string]*cwssaws.ExpectedPowerShelf),
+		es:  make(map[string]*cwssaws.ExpectedSwitch),
 	})
 
 	if secs != 0 {
