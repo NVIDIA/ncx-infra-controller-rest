@@ -245,7 +245,7 @@ func (gaibih GetAllInfiniBandInterfaceHandler) Handle(c echo.Context) error {
 				TenantIDs: []uuid.UUID{tenant.ID},
 				SiteIDs:   siteIDs,
 			},
-			cdbp.PageInput{},
+			cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)},
 			[]string{cdbm.SiteRelationName},
 		)
 

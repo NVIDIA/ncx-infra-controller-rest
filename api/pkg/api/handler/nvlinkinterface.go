@@ -25,13 +25,14 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	temporalClient "go.temporal.io/sdk/client"
 
+	goset "github.com/deckarep/golang-set/v2"
 	"github.com/google/uuid"
 
 	"github.com/labstack/echo/v4"
 
 	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
-	"github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
+	cdbp "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
 
 	"github.com/nvidia/bare-metal-manager-rest/api/internal/config"
 	common "github.com/nvidia/bare-metal-manager-rest/api/pkg/api/handler/util/common"
@@ -199,109 +200,167 @@ func (gaish GetAllNVLinkInterfaceHandler) Handle(c echo.Context) error {
 	}
 	tenant := tenants[0]
 
-	// Get site ID from query param
+	// Get site IDs from query param - parse first, then bulk fetch
 	var siteIDs []uuid.UUID
-	siteIDStr := qParams["siteId"]
-	tsDAO := cdbm.NewTenantSiteDAO(gaish.dbSession)
-	for _, siteIDStr := range siteIDStr {
-		site, err := common.GetSiteFromIDString(ctx, nil, siteIDStr, gaish.dbSession)
+	siteIDStrs := qParams["siteId"]
+	for _, siteIDStr := range siteIDStrs {
+		gaish.tracerSpan.SetAttribute(handlerSpan, attribute.StringSlice("siteId", siteIDStrs), logger)
+		parsedID, err := uuid.Parse(siteIDStr)
 		if err != nil {
-			logger.Warn().Err(err).Msg("error getting site in request")
-			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Site specified in query param, invalid ID or DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Invalid Site ID: %s specified in query", siteIDStr), nil)
 		}
-		siteIDs = append(siteIDs, site.ID)
+		siteIDs = append(siteIDs, parsedID)
+	}
 
-		// Check Site association with Tenant
-		_, err = tsDAO.GetByTenantIDAndSiteID(ctx, nil, tenant.ID, site.ID, nil)
+	if len(siteIDs) > 0 {
+		// deduplicate site IDs
+		siteIDs = goset.NewSet(siteIDs...).ToSlice()
+
+		// Get all TenantSites for the Tenant and Sites specified in query
+		tsDAO := cdbm.NewTenantSiteDAO(gaish.dbSession)
+		tenantSites, _, err := tsDAO.GetAll(
+			ctx,
+			nil,
+			cdbm.TenantSiteFilterInput{
+				TenantIDs: []uuid.UUID{tenant.ID},
+				SiteIDs:   siteIDs,
+			},
+			cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)},
+			[]string{cdbm.SiteRelationName},
+		)
+
 		if err != nil {
-			if err == cdb.ErrDoesNotExist {
-				return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant does not have access to this Site", nil)
-			}
 			logger.Error().Err(err).Msg("error retrieving TenantSite from DB")
 			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to determine Tenant access to Site, DB error", nil)
+		}
+
+		// Check if Tenant has access to each Site
+		tenantSiteIDMap := map[uuid.UUID]*cdbm.TenantSite{}
+		for i := range tenantSites {
+			tenantSiteIDMap[tenantSites[i].SiteID] = &tenantSites[i]
+		}
+
+		for _, siteID := range siteIDs {
+			// Check if Tenant has access to Site
+			if _, ok := tenantSiteIDMap[siteID]; !ok {
+				return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Site: %s specified in query does not exist or Tenant does not have access to it", siteID.String()), nil)
+			}
 		}
 	}
 
 	// Get Instance IDs - from queryOverride when delegating from path-scoped endpoint, else from query param
+	var instanceIDs []uuid.UUID
 	instanceIDFromPath := gaish.queryOverride != nil && gaish.queryOverride.InstanceIDFromPath
+
 	instanceIDStrs := qParams["instanceId"]
 	if instanceIDFromPath && len(gaish.queryOverride.InstanceIDs) > 0 {
 		instanceIDStrs = gaish.queryOverride.InstanceIDs
 	}
 
-	var instanceIDs []uuid.UUID
-	instanceDAO := cdbm.NewInstanceDAO(gaish.dbSession)
 	for _, instanceIDStr := range instanceIDStrs {
-		instanceID, err := uuid.Parse(instanceIDStr)
+		gaish.tracerSpan.SetAttribute(handlerSpan, attribute.StringSlice("instanceId", instanceIDStrs), logger)
+		parsedID, err := uuid.Parse(instanceIDStr)
 		if err != nil {
 			if instanceIDFromPath {
 				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Invalid Instance ID %v specified in request", instanceIDStr), nil)
 			}
 			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Invalid Instance ID %v in query", instanceIDStr), nil)
 		}
-
-		// Get Instance
-		instance, err := instanceDAO.GetByID(ctx, nil, instanceID, nil)
-		if err != nil {
-			if err == cdb.ErrDoesNotExist {
-				if instanceIDFromPath {
-					return cutil.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf("Could not find Instance with specified ID: %s in request", instanceID.String()), nil)
-				}
-				return cutil.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf("Could not find Instance with ID: %s specified in query", instanceID.String()), nil)
-			}
-			logger.Error().Err(err).Msg("error retrieving Instance from DB")
-			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Instance", nil)
-		}
-
-		// Check if Instance belongs to Tenant
-		if instance.TenantID != tenant.ID {
-			if instanceIDFromPath {
-				return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Instance with specified ID: %s in request does not belong to current Tenant", instanceID.String()), nil)
-			}
-			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Instance: %s does not belong to current Tenant", instanceID.String()), nil)
-		}
-
-		instanceIDs = append(instanceIDs, instanceID)
+		instanceIDs = append(instanceIDs, parsedID)
 	}
 
-	// Get NVLink Logical Partition ID from URL param
+	if len(instanceIDs) > 0 {
+		// deduplicate instance IDs
+		instanceIDs = goset.NewSet(instanceIDs...).ToSlice()
+
+		instanceDAO := cdbm.NewInstanceDAO(gaish.dbSession)
+		instances, _, err := instanceDAO.GetAll(ctx, nil, cdbm.InstanceFilterInput{InstanceIDs: instanceIDs}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
+		if err != nil {
+			logger.Error().Err(err).Msg("error retrieving Instances from DB")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Instances", nil)
+		}
+		instanceIDMap := map[uuid.UUID]*cdbm.Instance{}
+
+		for i := range instances {
+			instanceIDMap[instances[i].ID] = &instances[i]
+		}
+
+		notFoundMsg := "Could not find Instance with ID: %s specified in query"
+		forbiddenMsg := "Instance: %s does not belong to current Tenant"
+		if instanceIDFromPath {
+			notFoundMsg = "Could not find Instance with specified ID: %s in request"
+			forbiddenMsg = "Instance with specified ID: %s in request does not belong to current Tenant"
+		}
+
+		for _, instanceID := range instanceIDs {
+			instance, ok := instanceIDMap[instanceID]
+			if !ok {
+				return cutil.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf(notFoundMsg, instanceID.String()), nil)
+			}
+
+			if instance.TenantID != tenant.ID {
+				return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf(forbiddenMsg, instanceID.String()), nil)
+			}
+		}
+	}
+
+	// Get NVLink Logical Partition IDs from query param - parse first, then bulk fetch
 	var nvlinkLogicalPartitionIDs []uuid.UUID
-	nvlinkLogicalPartitionIDStr := qParams["nvLinkLogicalPartitionId"]
+	nvllpIDStrs := qParams["nvLinkLogicalPartitionId"]
 
-	nvllpDAO := cdbm.NewNVLinkLogicalPartitionDAO(gaish.dbSession)
-	for _, nvlinkLogicalPartitionIDStr := range nvlinkLogicalPartitionIDStr {
-		nvlinkLogicalPartitionID, err := uuid.Parse(nvlinkLogicalPartitionIDStr)
+	for _, nvllpIDStr := range nvllpIDStrs {
+		gaish.tracerSpan.SetAttribute(handlerSpan, attribute.StringSlice("nvLinkLogicalPartitionId", nvllpIDStrs), logger)
+		parsedID, err := uuid.Parse(nvllpIDStr)
 		if err != nil {
-			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid NVLink Logical Partition ID in URL", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Invalid NVLink Logical Partition ID %v in query", nvllpIDStr), nil)
 		}
-
-		// Get NVLink Logical Partition
-		nvllp, err := nvllpDAO.GetByID(ctx, nil, nvlinkLogicalPartitionID, nil)
-		if err != nil {
-			if err == cdb.ErrDoesNotExist {
-				return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find NVLink Logical Partition with specified ID", nil)
-			}
-			logger.Error().Err(err).Msg("error retrieving NVLink Logical Partition from DB")
-			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve NVLink Logical Partition", nil)
-		}
-
-		// Check if NVLink Logical Partition belongs to Tenant
-		if nvllp.TenantID != tenant.ID {
-			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "NVLink Logical Partition does not belong to current Tenant", nil)
-		}
-
-		nvlinkLogicalPartitionIDs = append(nvlinkLogicalPartitionIDs, nvlinkLogicalPartitionID)
+		nvlinkLogicalPartitionIDs = append(nvlinkLogicalPartitionIDs, parsedID)
 	}
 
-	// Get NVLink Domain ID from query param
-	var nvlinkDomainIDs []uuid.UUID
-	nvlinkDomainIDStr := qParams["nvLinkDomainId"]
-	for _, nvlinkDomainIDStr := range nvlinkDomainIDStr {
-		nvlinkDomainID, err := uuid.Parse(nvlinkDomainIDStr)
+	if len(nvlinkLogicalPartitionIDs) > 0 {
+		// Deduplicate NVLink Logical Partition IDs
+		nvlinkLogicalPartitionIDs = goset.NewSet(nvlinkLogicalPartitionIDs...).ToSlice()
+
+		nvllpDAO := cdbm.NewNVLinkLogicalPartitionDAO(gaish.dbSession)
+		nvllps, _, err := nvllpDAO.GetAll(ctx, nil, cdbm.NVLinkLogicalPartitionFilterInput{NVLinkLogicalPartitionIDs: nvlinkLogicalPartitionIDs}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
 		if err != nil {
-			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid NVLink Domain ID in query param", nil)
+			logger.Error().Err(err).Msg("error retrieving NVLink Logical Partitions from DB")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve NVLink Logical Partitions", nil)
 		}
-		nvlinkDomainIDs = append(nvlinkDomainIDs, nvlinkDomainID)
+
+		nvllpIDMap := map[uuid.UUID]*cdbm.NVLinkLogicalPartition{}
+		for i := range nvllps {
+			nvllpIDMap[nvllps[i].ID] = &nvllps[i]
+		}
+
+		for _, nvllpID := range nvlinkLogicalPartitionIDs {
+			nvllp, ok := nvllpIDMap[nvllpID]
+			if !ok {
+				return cutil.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf("Could not find NVLink Logical Partition with ID: %s specified in query", nvllpID.String()), nil)
+			}
+
+			if nvllp.TenantID != tenant.ID {
+				return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("NVLink Logical Partition: %s does not belong to current Tenant", nvllpID.String()), nil)
+			}
+		}
+	}
+
+	// Get NVLink Domain IDs from query param - parse first, then deduplicate
+	var nvlinkDomainIDs []uuid.UUID
+	nvlinkDomainIDStrs := qParams["nvLinkDomainId"]
+
+	for _, nvlinkDomainIDStr := range nvlinkDomainIDStrs {
+		gaish.tracerSpan.SetAttribute(handlerSpan, attribute.StringSlice("nvLinkDomainId", nvlinkDomainIDStrs), logger)
+		parsedID, err := uuid.Parse(nvlinkDomainIDStr)
+		if err != nil {
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Invalid NVLink Domain ID %v in query", nvlinkDomainIDStr), nil)
+		}
+		nvlinkDomainIDs = append(nvlinkDomainIDs, parsedID)
+	}
+
+	if len(nvlinkDomainIDs) > 0 {
+		// Deduplicate NVLink Domain IDs
+		nvlinkDomainIDs = goset.NewSet(nvlinkDomainIDs...).ToSlice()
 	}
 
 	// Get status from query param
@@ -328,7 +387,7 @@ func (gaish GetAllNVLinkInterfaceHandler) Handle(c echo.Context) error {
 		Statuses:                  statuses,
 	}
 
-	pageInput := paginator.PageInput{
+	pageInput := cdbp.PageInput{
 		Limit:   pageRequest.Limit,
 		Offset:  pageRequest.Offset,
 		OrderBy: pageRequest.OrderBy,
