@@ -56,7 +56,7 @@ func TestNewAPIRoutes(t *testing.T) {
 		"vpc":                      6,
 		"vpcprefix":                5,
 		"ip-block":                 6,
-		"instance":                 10,
+		"instance":                 8,
 		"interface":                1,
 		"infiniband-interface":     2,
 		"infiniband-partition":     5,
