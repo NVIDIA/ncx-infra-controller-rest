@@ -935,7 +935,7 @@ func TestGetAllInstanceNVLinkInterfaceHandler_Handle(t *testing.T) {
 			pageSize:                         cdb.GetIntPtr(10),
 			orderBy:                          cdb.GetStrPtr("TEST_ASC"),
 			expectedNVLinkLogicalPartitionID: cdb.GetUUIDPtr(nvllps[0].ID),
-			expectedErrorMessage:            "Failed to validate pagination request data",
+			expectedErrorMessage:             "Failed to validate pagination request data",
 		},
 		{
 			name: "test NVLinkInterface getall by Instance API failure, org does not have a Tenant associated",
@@ -951,7 +951,7 @@ func TestGetAllInstanceNVLinkInterfaceHandler_Handle(t *testing.T) {
 				reqUser:       ipu,
 				respCode:      http.StatusForbidden,
 			},
-			wantErr:               false,
+			wantErr:              false,
 			expectedErrorMessage: "User does not have Tenant Admin role with org",
 		},
 		{
@@ -968,7 +968,7 @@ func TestGetAllInstanceNVLinkInterfaceHandler_Handle(t *testing.T) {
 				reqUser:       tnu1,
 				respCode:      http.StatusBadRequest,
 			},
-			wantErr:               false,
+			wantErr:              false,
 			expectedErrorMessage: "Invalid Instance ID badID specified in request",
 		},
 		{
@@ -985,7 +985,7 @@ func TestGetAllInstanceNVLinkInterfaceHandler_Handle(t *testing.T) {
 				reqUser:       tnu1,
 				respCode:      http.StatusNotFound,
 			},
-			wantErr:               false,
+			wantErr:              false,
 			expectedErrorMessage: "Could not find Instance with specified ID",
 		},
 		{
@@ -1002,7 +1002,7 @@ func TestGetAllInstanceNVLinkInterfaceHandler_Handle(t *testing.T) {
 				reqUser:       tnu2,
 				respCode:      http.StatusForbidden,
 			},
-			wantErr:               false,
+			wantErr:              false,
 			expectedErrorMessage: "Instance with specified ID",
 		},
 		{
