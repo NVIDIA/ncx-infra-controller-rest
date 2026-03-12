@@ -24,30 +24,38 @@ import (
 	rlav1 "github.com/nvidia/bare-metal-manager-rest/workflow-schema/rla/protobuf/v1"
 )
 
-// ProtoToAPIBMCTypeName maps protobuf BMCType enum names to API-friendly names.
-var ProtoToAPIBMCTypeName = map[string]string{
-	"BMC_TYPE_UNKNOWN": "BmcTypeUnknown",
-	"BMC_TYPE_HOST":    "BmcTypeHost",
-	"BMC_TYPE_DPU":     "BmcTypeDpu",
+// ProtoToAPIBMCTypeName maps protobuf BMCType to API-friendly names.
+var ProtoToAPIBMCTypeName = map[rlav1.BMCType]string{
+	rlav1.BMCType_BMC_TYPE_UNKNOWN: "BmcTypeUnknown",
+	rlav1.BMCType_BMC_TYPE_HOST:    "BmcTypeHost",
+	rlav1.BMCType_BMC_TYPE_DPU:     "BmcTypeDpu",
 }
 
-// ProtoToAPIRackComponentTypeName maps protobuf ComponentType enum names to API-friendly names for rack components.
-var ProtoToAPIRackComponentTypeName = map[string]string{
-	"COMPONENT_TYPE_UNKNOWN":    "ComponentTypeUnknown",
-	"COMPONENT_TYPE_COMPUTE":    "ComponentTypeCompute",
-	"COMPONENT_TYPE_NVLSWITCH":  "ComponentTypeNvlswitch",
-	"COMPONENT_TYPE_POWERSHELF": "ComponentTypePowershelf",
-	"COMPONENT_TYPE_TORSWITCH":  "ComponentTypeTorswitch",
-	"COMPONENT_TYPE_UMS":        "ComponentTypeUms",
-	"COMPONENT_TYPE_CDU":        "ComponentTypeCdu",
+// ProtoToAPIRackComponentTypeName maps protobuf ComponentType to API-friendly names for rack components.
+var ProtoToAPIRackComponentTypeName = map[rlav1.ComponentType]string{
+	rlav1.ComponentType_COMPONENT_TYPE_UNKNOWN:    "ComponentTypeUnknown",
+	rlav1.ComponentType_COMPONENT_TYPE_COMPUTE:    "ComponentTypeCompute",
+	rlav1.ComponentType_COMPONENT_TYPE_NVLSWITCH:  "ComponentTypeNvlswitch",
+	rlav1.ComponentType_COMPONENT_TYPE_POWERSHELF: "ComponentTypePowershelf",
+	rlav1.ComponentType_COMPONENT_TYPE_TORSWITCH:  "ComponentTypeTorswitch",
+	rlav1.ComponentType_COMPONENT_TYPE_UMS:        "ComponentTypeUms",
+	rlav1.ComponentType_COMPONENT_TYPE_CDU:        "ComponentTypeCdu",
 }
 
-// ProtoToAPIDiffTypeName maps protobuf DiffType enum names to API-friendly names.
-var ProtoToAPIDiffTypeName = map[string]string{
-	"DIFF_TYPE_UNKNOWN":          "DiffTypeUnknown",
-	"DIFF_TYPE_ONLY_IN_EXPECTED": "DiffTypeOnlyInExpected",
-	"DIFF_TYPE_ONLY_IN_ACTUAL":   "DiffTypeOnlyInActual",
-	"DIFF_TYPE_DRIFT":            "DiffTypeDrift",
+// ProtoToAPIDiffTypeName maps protobuf DiffType to API-friendly names.
+var ProtoToAPIDiffTypeName = map[rlav1.DiffType]string{
+	rlav1.DiffType_DIFF_TYPE_UNKNOWN:          "DiffTypeUnknown",
+	rlav1.DiffType_DIFF_TYPE_ONLY_IN_EXPECTED: "DiffTypeOnlyInExpected",
+	rlav1.DiffType_DIFF_TYPE_ONLY_IN_ACTUAL:   "DiffTypeOnlyInActual",
+	rlav1.DiffType_DIFF_TYPE_DRIFT:            "DiffTypeDrift",
+}
+
+// enumOr returns mapped value or fallback when key is missing from mapping.
+func enumOr[K comparable](m map[K]string, key K, fallback string) string {
+	if v, ok := m[key]; ok {
+		return v
+	}
+	return fallback
 }
 
 // ========== Rack Query Fields ==========
@@ -340,7 +348,7 @@ func (ab *APIBMC) FromProto(protoBMC *rlav1.BMCInfo) {
 	if protoBMC == nil {
 		return
 	}
-	ab.Type = ProtoToAPIBMCTypeName[rlav1.BMCType_name[int32(protoBMC.GetType())]]
+	ab.Type = enumOr(ProtoToAPIBMCTypeName, protoBMC.GetType(), "BmcTypeUnknown")
 	ab.MacAddress = protoBMC.GetMacAddress()
 	ab.IPAddress = protoBMC.GetIpAddress()
 }
@@ -369,7 +377,7 @@ func (arc *APIRackComponent) FromProto(protoComponent *rlav1.Component) {
 	if protoComponent == nil {
 		return
 	}
-	arc.Type = ProtoToAPIRackComponentTypeName[rlav1.ComponentType_name[int32(protoComponent.GetType())]]
+	arc.Type = enumOr(ProtoToAPIRackComponentTypeName, protoComponent.GetType(), "ComponentTypeUnknown")
 	arc.FirmwareVersion = protoComponent.GetFirmwareVersion()
 	arc.ComponentID = protoComponent.GetComponentId()
 	arc.PowerState = protoComponent.GetPowerState()
@@ -444,7 +452,7 @@ func (d *APIComponentDiff) FromProto(protoDiff *rlav1.ComponentDiff) {
 		return
 	}
 
-	d.Type = ProtoToAPIDiffTypeName[rlav1.DiffType_name[int32(protoDiff.GetType())]]
+	d.Type = enumOr(ProtoToAPIDiffTypeName, protoDiff.GetType(), "DiffTypeUnknown")
 	d.ComponentID = protoDiff.GetComponentId()
 
 	if protoDiff.GetExpected() != nil {

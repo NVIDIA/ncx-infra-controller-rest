@@ -52,7 +52,7 @@ func TestProtoToAPIComponentTypeName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := ProtoToAPIComponentTypeName[rlav1.ComponentType_name[int32(tt.ct)]]
+			got := ProtoToAPIComponentTypeName[tt.ct]
 			assert.Equal(t, tt.want, got)
 		})
 	}
@@ -246,6 +246,20 @@ func TestNewAPITray(t *testing.T) {
 			assert.Equal(t, tt.want.Description, got.Description)
 			assert.Equal(t, tt.want.FirmwareVersion, got.FirmwareVersion)
 			assert.Equal(t, tt.want.RackID, got.RackID)
+
+			// Assert BMCs field
+			if tt.want.BMCs != nil {
+				require.NotNil(t, got.BMCs)
+				assert.Len(t, got.BMCs, len(tt.want.BMCs))
+				for i, wantBMC := range tt.want.BMCs {
+					gotBMC := got.BMCs[i]
+					assert.Equal(t, wantBMC.Type, gotBMC.Type, "BMC Type mismatch at index %d", i)
+					assert.Equal(t, wantBMC.MacAddress, gotBMC.MacAddress, "BMC MacAddress mismatch at index %d", i)
+					assert.Equal(t, wantBMC.IPAddress, gotBMC.IPAddress, "BMC IPAddress mismatch at index %d", i)
+				}
+			} else {
+				assert.Nil(t, got.BMCs)
+			}
 
 			if tt.want.Position != nil {
 				assert.NotNil(t, got.Position)
