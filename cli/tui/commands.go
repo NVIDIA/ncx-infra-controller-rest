@@ -284,7 +284,6 @@ func cmdInstanceList(s *Session, _ []string) error {
 }
 
 func cmdMachineList(s *Session, _ []string) error {
-	LogCmd(s, "machine", "list")
 	items, err := s.Resolver.Fetch(context.Background(), "machine")
 	if err != nil {
 		if s.Scope.SiteID == "" && strings.Contains(err.Error(), "400") {
@@ -304,6 +303,7 @@ func cmdMachineList(s *Session, _ []string) error {
 			return err
 		}
 	}
+	LogCmd(s, "machine", "list")
 
 	// Warm VPC cache so names resolve, then build machine→vpc map via instances.
 	_, _ = s.Resolver.Fetch(context.Background(), "vpc")
