@@ -366,6 +366,8 @@ func NewAPIInstanceTypeSummary(dbist *cdbm.InstanceType) *APIInstanceTypeSummary
 
 // APIAllocationStats is the data structure to capture API representation of an InstanceType allocation stats
 type APIAllocationStats struct {
+	// Assigned is the total number of Machines assigned to this Instance Type
+	Assigned int `json:"assigned"`
 	// Total is the total number of Machines allocated to different Tenants for this Instance Type
 	Total int `json:"total"`
 	// Used is the total number of allocated Machines of this Instance Type currently being used by Tenants

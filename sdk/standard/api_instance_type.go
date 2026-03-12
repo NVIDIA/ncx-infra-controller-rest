@@ -577,7 +577,7 @@ func (r ApiGetAllInstanceTypeRequest) IncludeMachineAssignment(includeMachineAss
 	return r
 }
 
-// Include Allocation stats. Currently can only be requested by Tenant
+// Include Allocation stats.
 func (r ApiGetAllInstanceTypeRequest) IncludeAllocationStats(includeAllocationStats bool) ApiGetAllInstanceTypeRequest {
 	r.includeAllocationStats = &includeAllocationStats
 	return r

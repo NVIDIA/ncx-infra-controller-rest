@@ -4850,7 +4850,7 @@ paths:
             type: boolean
           in: query
           name: includeAllocationStats
-          description: Include Allocation stats. Currently can only be requested by Tenant
+          description: Include Allocation stats.
         - schema:
             type: boolean
           in: query
@@ -5030,6 +5030,7 @@ paths:
                         threads: 36
                         count: 2
                     allocationStats:
+                      assigned: 30
                       total: 10
                       used: 3
                       unused: 7
@@ -13793,7 +13794,7 @@ components:
             $ref: '#/components/schemas/MachineInstanceType'
         allocationStats:
           $ref: '#/components/schemas/InstanceTypeAllocationStats'
-          description: Currently only available for Tenants
+          description: summary of machine counts by allocation status
         status:
           $ref: '#/components/schemas/InstanceTypeStatus'
         statusHistory:
@@ -13853,13 +13854,17 @@ components:
       title: InstanceTypeAllocationStats
       type: object
       examples:
-        - total: 10
+        - assigned: 30
+          total: 10
           used: 3
           unused: 7
           unusedUsable: 7
           maxAllocatable: 20
       description: Allocation statistics for Instance Type
       properties:
+        assigned:
+          type: integer
+          description: Total number of Machines assigned to this Instance Type
         total:
           type: integer
           description: Total number of Machines allocated to different Tenants for this Instance Type

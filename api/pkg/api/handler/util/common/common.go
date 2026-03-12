@@ -712,6 +712,7 @@ func GetAllInstanceTypeAllocationStats(ctx context.Context, dbSession *cdb.Sessi
 	for _, instanceTypeID := range instanceTypeIDs {
 		aas := &cam.APIAllocationStats{}
 
+		aas.Assigned = instanceTypeIDToMachinesMap[instanceTypeID]
 		aas.Total = instanceTypeToSumConstraintValue[instanceTypeID]
 		aas.Used = instanceTypeIDsToUsedCountMap[instanceTypeID]
 		aas.Unused = aas.Total - aas.Used
