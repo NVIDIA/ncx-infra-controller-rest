@@ -1266,7 +1266,7 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 						},
 						{
 							DeviceInstance:           2,
-							NVLinkLogicalPartitionID: nvllpNotDefault.ID.String(),
+							NVLinkLogicalPartitionID: nvllpDefault.ID.String(),
 						},
 					},
 					Labels: map[string]string{
@@ -1274,7 +1274,7 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 					},
 				},
 				reqMachine:                   nil, // We randomize machines.  Any instance type with multiple valid machines can't be tested for a known machine.
-				reqNVLinkLogicalPartitionIDs: []string{nvllpDefault.ID.String(), nvllpNotDefault.ID.String()},
+				reqNVLinkLogicalPartitionIDs: []string{nvllpDefault.ID.String()},
 				reqNVLinkMachineCapabilities: mcNvlType,
 				reqOrg:                       tnOrg,
 				reqUser:                      tnu1,

@@ -1096,7 +1096,6 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate NVLink interfaces specified in request data", err)
 		}
 
-		// Allow different NVLink Logical Partitions for different NVLink Interfaces
 		for _, nvlifc := range apiRequest.NVLinkInterfaces {
 			nvllp, ok := nvllpIDMap[nvlifc.NVLinkLogicalPartitionID]
 			if !ok {
