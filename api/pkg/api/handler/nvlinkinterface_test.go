@@ -969,7 +969,7 @@ func TestGetAllInstanceNVLinkInterfaceHandler_Handle(t *testing.T) {
 				respCode:      http.StatusBadRequest,
 			},
 			wantErr:              false,
-			expectedErrorMessage: "Invalid Instance ID badID specified in request",
+			expectedErrorMessage: "Invalid Instance ID: badID",
 		},
 		{
 			name: "test NVLinkInterface getall by Instance API failure, Instance ID in request not found",
@@ -986,7 +986,7 @@ func TestGetAllInstanceNVLinkInterfaceHandler_Handle(t *testing.T) {
 				respCode:      http.StatusNotFound,
 			},
 			wantErr:              false,
-			expectedErrorMessage: "Could not find Instance with specified ID",
+			expectedErrorMessage: "Could not find Instance with ID:",
 		},
 		{
 			name: "test NVLinkInterface getall by Instance API failure, Instance not belong to current tenant",
@@ -1003,7 +1003,7 @@ func TestGetAllInstanceNVLinkInterfaceHandler_Handle(t *testing.T) {
 				respCode:      http.StatusForbidden,
 			},
 			wantErr:              false,
-			expectedErrorMessage: "Instance with specified ID",
+			expectedErrorMessage: "doesn't belong to current Tenant",
 		},
 		{
 			name: "test NVLinkInterface getall by Instance API endpoint success include relation",
