@@ -1,5 +1,8 @@
 # Repository-specific override
 reviews:
-  profile: assertive # assertive / chill profile
+  profile: chill # assertive / chill profile
+  path_filters:
+    - "sdk/standard/**"
+    - "docs/index.html"
   auto_review:
     enabled: true # Enable auto-review for this repository
