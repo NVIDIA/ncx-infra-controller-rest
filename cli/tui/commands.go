@@ -139,18 +139,11 @@ func appendScopeFlags(s *Session, parts []string) []string {
 	switch resource {
 	case "vpc", "allocation", "ip-block", "operating-system", "ssh-key-group",
 		"network-security-group", "sku", "rack", "expected-machine",
-		"dpu-extension-service", "infiniband-partition", "nvlink-logical-partition", "machine":
+		"dpu-extension-service", "infiniband-partition", "nvlink-logical-partition":
 		if scopeSiteID != "" {
 			out = append(out, "--site-id", scopeSiteID)
 		}
-	case "subnet", "vpc-prefix":
-		if scopeSiteID != "" {
-			out = append(out, "--site-id", scopeSiteID)
-		}
-		if scopeVpcID != "" {
-			out = append(out, "--vpc-id", scopeVpcID)
-		}
-	case "instance":
+	case "subnet", "vpc-prefix", "instance", "machine":
 		if scopeSiteID != "" {
 			out = append(out, "--site-id", scopeSiteID)
 		}
@@ -308,6 +301,16 @@ func cmdMachineList(s *Session, _ []string) error {
 	// Warm VPC cache so names resolve, then build machine→vpc map via instances.
 	_, _ = s.Resolver.Fetch(context.Background(), "vpc")
 	vpcNamesByMachineID := s.buildMachineVPCNames(context.Background())
+
+	if s.Scope.VpcID != "" {
+		filtered := items[:0]
+		for _, item := range items {
+			if _, ok := vpcNamesByMachineID[item.ID]; ok {
+				filtered = append(filtered, item)
+			}
+		}
+		items = filtered
+	}
 
 	fmt.Fprintf(os.Stderr, "%d items\n", len(items))
 	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
