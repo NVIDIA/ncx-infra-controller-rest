@@ -5405,7 +5405,6 @@ paths:
                       infinibandInterfaces:
                         - id: c518a0e8-3f49-4a1a-8935-a6d3dee6911e
                           instanceId: 497f6eca-6276-4993-bfeb-53cbbbba6f08
-                          siteId: 60189e9c-7d12-438c-b9ca-6998d9c364b1
                           partitionId: 05ef7e84-1d4e-4e4d-980d-38589479a0fe
                           device: 'MT2910 Family [ConnectX-7]'
                           deviceInstance: 0
@@ -5528,7 +5527,6 @@ paths:
                       infinibandInterfaces:
                         - id: c518a0e8-3f49-4a1a-8935-a6d3dee6911e
                           instanceId: 497f6eca-6276-4993-bfeb-53cbbbba6f08
-                          siteId: 60189e9c-7d12-438c-b9ca-6998d9c364b1
                           partitionId: 05ef7e84-1d4e-4e4d-980d-38589479a0fe
                           device: 'MT2910 Family [ConnectX-7]'
                           deviceInstance: 0
@@ -5853,7 +5851,6 @@ paths:
                     infinibandInterfaces:
                       - id: c518a0e8-3f49-4a1a-8935-a6d3dee6911e
                         instanceId: 497f6eca-6276-4993-bfeb-53cbbbba6f08
-                        siteId: 60189e9c-7d12-438c-b9ca-6998d9c364b1
                         partitionId: 05ef7e84-1d4e-4e4d-980d-38589479a0fe
                         device: 'MT2910 Family [ConnectX-7]'
                         deviceInstance: 0
@@ -6285,7 +6282,6 @@ paths:
                     infinibandInterfaces:
                       - id: c518a0e8-3f49-4a1a-8935-a6d3dee6911e
                         instanceId: 497f6eca-6276-4993-bfeb-53cbbbba6f08
-                        siteId: 60189e9c-7d12-438c-b9ca-6998d9c364b1
                         partitionId: 4f4decba-7d7f-46b9-9e5f-e5d71c2e0666
                         device: 'MT2910 Family [ConnectX-7]'
                         deviceInstance: 0
@@ -6466,7 +6462,6 @@ paths:
                     infinibandInterfaces:
                       - id: c518a0e8-3f49-4a1a-8935-a6d3dee6911e
                         instanceId: 497f6eca-6276-4993-bfeb-53cbbbba6f08
-                        siteId: 60189e9c-7d12-438c-b9ca-6998d9c364b1
                         partitionId: 550e8400-e29b-41d4-a716-446655440000
                         device: 'MT2910 Family [ConnectX-7]'
                         deviceInstance: 0
@@ -6478,7 +6473,6 @@ paths:
                         updated: '2019-08-24T14:15:22Z'
                       - id: 3cc0206e-8ac9-4572-8f72-e1dd124c4351
                         instanceId: 497f6eca-6276-4993-bfeb-53cbbbba6f08
-                        siteId: 60189e9c-7d12-438c-b9ca-6998d9c364b1
                         partitionId: 6ba7b810-9dad-11d1-80b4-00c04fd430c8
                         device: 'MT2910 Family [ConnectX-7]'
                         deviceInstance: 1
@@ -6795,8 +6789,6 @@ paths:
         - schema:
             type: string
             enum:
-              - NAME_ASC
-              - NAME_DESC
               - STATUS_ASC
               - STATUS_DESC
               - CREATED_ASC
@@ -6821,7 +6813,7 @@ paths:
         required: true
         description: ID of the Instance
     get:
-      summary: Retrieve all InfiniBand Interfaces
+      summary: Retrieve all Instance InfiniBand Interfaces
       tags:
         - Instance
       responses:
@@ -6838,14 +6830,24 @@ paths:
                   value:
                     - id: 497f6eca-6276-4993-bfeb-53cbbbba6f08
                       instanceId: 64d2028c-ae87-4069-a624-66089d957ef9
-                      siteId: 60189e9c-7d12-438c-b9ca-6998d9c364b1
                       partitionId: 05ef7e84-1d4e-4e4d-980d-38589479a0fe
                       device: 'MT2910 Family [ConnectX-7]'
                       deviceInstance: 0
                       isPhysical: true
                       virtualFunctionId: null
                       guid: 946dae0300339498
-                      status: Ready
+                      status: Provisioning
+                      created: '2019-08-24T14:15:22Z'
+                      updated: '2019-08-24T14:15:22Z'
+                    - id: c518a0e8-3f49-4a1a-8935-a6d3dee6911e
+                      instanceId: 64d2028c-ae87-4069-a624-66089d957ef9
+                      partitionId: 6ba7b810-9dad-11d1-80b4-00c04fd430c8
+                      device: 'MT2910 Family [ConnectX-7]'
+                      deviceInstance: 1
+                      isPhysical: false
+                      virtualFunctionId: 1
+                      guid: 946dae0300339499
+                      status: Provisioning
                       created: '2019-08-24T14:15:22Z'
                       updated: '2019-08-24T14:15:22Z'
           headers:
@@ -6856,7 +6858,7 @@ paths:
               description: Pagination result in JSON format
         '403':
           $ref: '#/components/responses/ForbiddenError'
-      operationId: get-all-infiniband-interface
+      operationId: get-all-instance-infiniband-interface
       description: |-
         Get all InfiniBand Interfaces for an Instance
 
@@ -6866,12 +6868,12 @@ paths:
             type: string
           in: query
           name: status
-          description: Filter Interfaces by Status
+          description: Filter InfiniBand Interfaces by Status
         - schema:
             type: string
             enum:
               - Instance
-              - Partition
+              - InfiniBandPartition
           in: query
           name: includeRelation
           description: Related entity to expand
@@ -6894,8 +6896,216 @@ paths:
         - schema:
             type: string
             enum:
-              - NAME_ASC
-              - NAME_DESC
+              - STATUS_ASC
+              - STATUS_DESC
+              - CREATED_ASC
+              - CREATED_DESC
+              - UPDATED_ASC
+              - UPDATED_DESC
+          in: query
+          name: orderBy
+          description: Ordering for pagination query
+  '/v2/org/{org}/carbide/instance/{instanceId}/nvlink-interface':
+    parameters:
+      - schema:
+          type: string
+        name: org
+        in: path
+        required: true
+        description: Name of the Org
+      - schema:
+          type: string
+        name: instanceId
+        in: path
+        required: true
+        description: ID of the Instance
+    get:
+      summary: Retrieve all Instance NVLink Interfaces
+      tags:
+        - Instance
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NVLinkInterface'
+              examples:
+                Example 1:
+                  value:
+                    - id: 497f6eca-6276-4993-bfeb-53cbbbba6f08
+                      instanceId: 64d2028c-ae87-4069-a624-66089d957ef9
+                      nvLinkLogicalPartitionId: 05ef7e84-1d4e-4e4d-980d-38589479a0fe
+                      nvLinkDomainId: 4b145552-0d8f-45ff-b652-eed105f93e50
+                      deviceInstance: 0
+                      gpuGuid: '5108732638879268442'
+                      status: Ready
+                      created: '2019-08-24T14:15:22Z'
+                      updated: '2019-08-24T14:15:22Z'
+                    - id: 8a7c3b21-1ffc-4c78-9a00-2a6f3859d099
+                      instanceId: 64d2028c-ae87-4069-a624-66089d957ef9
+                      nvLinkLogicalPartitionId: 05ef7e84-1d4e-4e4d-980d-38589479a0fe
+                      nvLinkDomainId: 4b145552-0d8f-45ff-b652-eed105f93e50
+                      deviceInstance: 1
+                      gpuGuid: '5108732638879268443'
+                      status: Provisioning
+                      created: '2019-08-24T14:15:22Z'
+                      updated: '2019-08-24T14:15:22Z'
+          headers:
+            X-Pagination:
+              schema:
+                type: string
+                example: '{"pageNumber":1,"pageSize":20,"total":30,"orderBy": "CREATED_DESC"}'
+              description: Pagination result in JSON format
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+      operationId: get-all-instance-nvlink-interface
+      description: |-
+        Get all NVLink Interfaces for an Instance
+
+        Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` authorization role.
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: status
+          description: Filter NVLink Interfaces by Status. Can be specified multiple times to filter on more than one status.
+        - schema:
+            type: string
+            enum:
+              - Instance
+              - NVLinkLogicalPartition
+          in: query
+          name: includeRelation
+          description: Related entity to expand
+        - schema:
+            type: integer
+            example: 1
+            default: 1
+            minimum: 1
+          in: query
+          name: pageNumber
+          description: Page number for pagination query
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            example: 20
+          in: query
+          name: pageSize
+          description: Page size for pagination query
+        - schema:
+            type: string
+            enum:
+              - STATUS_ASC
+              - STATUS_DESC
+              - CREATED_ASC
+              - CREATED_DESC
+              - UPDATED_ASC
+              - UPDATED_DESC
+          in: query
+          name: orderBy
+          description: Ordering for pagination query
+  '/v2/org/{org}/carbide/infiniband-interface':
+    parameters:
+      - schema:
+          type: string
+        name: org
+        in: path
+        required: true
+        description: Name of the Org
+    get:
+      summary: Retrieve all InfiniBand Interfaces
+      tags:
+        - InfiniBand Partition
+      responses:
+
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/InfiniBandInterface'
+              examples:
+                Example 1:
+                  value:
+                    - id: 497f6eca-6276-4993-bfeb-53cbbbba6f08
+                      instanceId: 64d2028c-ae87-4069-a624-66089d957ef9
+                      partitionId: 05ef7e84-1d4e-4e4d-980d-38589479a0fe
+                      device: 'MT2910 Family [ConnectX-7]'
+                      deviceInstance: 0
+                      isPhysical: true
+                      virtualFunctionId: null
+                      guid: 946dae0300339498
+                      status: Ready
+                      created: '2019-08-24T14:15:22Z'
+                      updated: '2019-08-24T14:15:22Z'
+          headers:
+            X-Pagination:
+              schema:
+                type: string
+                example: '{"pageNumber":1,"pageSize":20,"total":30,"orderBy": "CREATED_DESC"}'
+              description: Pagination result in JSON format
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+      operationId: get-all-infiniband-interface
+      description: |-
+        Get all InfiniBand Interfaces
+
+        Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` authorization role.
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: siteId
+          description: Filter InfiniBand Interfaces by Site ID.  Can be specified multiple times to filter on more than one ID.
+        - schema:
+            type: string
+          in: query
+          name: instanceId
+          description: Filter InfiniBand Interfaces by Instance ID.  Can be specified multiple times to filter on more than one ID.
+        - schema:
+            type: string
+          in: query
+          name: infinibandPartitionId
+          description: Filter InfiniBand Interfaces by InfiniBand Partition ID.  Can be specified multiple times to filter on more than one ID.
+        - schema:
+            type: string
+          in: query
+          name: status
+          description: Filter InfiniBand Interfaces by Status. Can be specified multiple times to filter on more than one status.
+        - schema:
+            type: string
+            enum:
+              - Instance
+              - InfiniBandPartition
+              - Site
+          in: query
+          name: includeRelation
+          description: Related entity to expand
+        - schema:
+            type: integer
+            example: 1
+            default: 1
+            minimum: 1
+          in: query
+          name: pageNumber
+          description: Page number for pagination query
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            example: 20
+          in: query
+          name: pageSize
+          description: Page size for pagination query
+        - schema:
+            type: string
+            enum:
               - STATUS_ASC
               - STATUS_DESC
               - CREATED_ASC
@@ -15093,7 +15303,6 @@ components:
       examples:
         - id: 497f6eca-6276-4993-bfeb-53cbbbba6f08
           instanceId: 64d2028c-ae87-4069-a624-66089d957ef9
-          siteId: 2b7ca7d5-eb0e-4076-aa17-11ce98af8214
           partitionId: 05ef7e84-1d4e-4e4d-980d-38589479a0fe
           device: 'MT2910 Family [ConnectX-7]'
           deviceInstance: 0
@@ -15110,9 +15319,6 @@ components:
           minLength: 1
           format: uuid
         instanceId:
-          type: string
-          format: uuid
-        siteId:
           type: string
           format: uuid
         partitionId:

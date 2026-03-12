@@ -3622,7 +3622,6 @@ func (gaih GetAllInstanceHandler) Handle(c echo.Context) error {
 		if err != nil {
 			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Invalid site ID %v in query", siteIDStr), nil)
 		}
-
 		siteIDs = append(siteIDs, parsedID)
 	}
 

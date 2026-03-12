@@ -43,7 +43,7 @@ import (
 	tmocks "go.temporal.io/sdk/mocks"
 )
 
-func TestGetAllNVLinkInterface_Handle(t *testing.T) {
+func TestGetAllInfiniBandInterface_Handle(t *testing.T) {
 	ctx := context.Background()
 	type fields struct {
 		dbSession *cdb.Session
@@ -51,16 +51,15 @@ func TestGetAllNVLinkInterface_Handle(t *testing.T) {
 		cfg       *config.Config
 	}
 	type args struct {
-		reqInstance                 *cdbm.Instance
-		reqInstanceID               string
-		reqNvlinkLogicalPartition   *cdbm.NVLinkLogicalPartition
-		reqNvlinkLogicalPartitionID string
-		reqSiteID                   string
-		reqNVLinkDomainID           *uuid.UUID
-		reqOrg                      string
-		reqUser                     *cdbm.User
-		reqMachine                  *cdbm.Machine
-		respCode                    int
+		reqInstance              *cdbm.Instance
+		reqInstanceID            string
+		reqInfiniBandPartition   *cdbm.InfiniBandPartition
+		reqInfiniBandPartitionID string
+		reqSiteID                string
+		reqOrg                   string
+		reqUser                  *cdbm.User
+		reqMachine               *cdbm.Machine
+		respCode                 int
 	}
 
 	dbSession := testInstanceInitDB(t)
@@ -118,19 +117,19 @@ func TestGetAllNVLinkInterface_Handle(t *testing.T) {
 	inst1 := testInstanceBuildInstance(t, dbSession, "test-instance-2", al1.ID, alc1.ID, tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1.ID, cdb.GetStrPtr(mc1.ID), &os1.ID, nil, cdbm.InstanceStatusReady)
 	assert.NotNil(t, inst1)
 
-	nvlinklogicalpartitions := []*cdbm.NVLinkLogicalPartition{}
+	ibPartitions := []*cdbm.InfiniBandPartition{}
 	for i := 0; i < 3; i++ {
-		nvlinklogicalpartition1 := testBuildNVLinkLogicalPartition(t, dbSession, fmt.Sprintf("test-nvlinklogicalpartition-%d", i), cdb.GetStrPtr("Test NVLink Logical Partition"), tn1.Org, st1, tn1, cdb.GetStrPtr(cdbm.NVLinkLogicalPartitionStatusReady), false)
-		assert.NotNil(t, nvlinklogicalpartition1)
-		nvlinklogicalpartitions = append(nvlinklogicalpartitions, nvlinklogicalpartition1)
+		ibPartition := testBuildIBPartition(t, dbSession, fmt.Sprintf("test-InfiniBandPartition-%d", i), tn1.Org, st1, tn1, nil, cdb.GetStrPtr(cdbm.InfiniBandPartitionStatusReady), false)
+		assert.NotNil(t, ibPartition)
+		ibPartitions = append(ibPartitions, ibPartition)
 	}
 
-	nvlifcs := []*cdbm.NVLinkInterface{}
+	ibifcs := []*cdbm.InfiniBandInterface{}
 	for i := 0; i < 25; i++ {
-		nvlinklogicalpartition := nvlinklogicalpartitions[i%3]
-		nvlifc := testInstanceBuildInstanceNVLinkInterface(t, dbSession, st1.ID, inst1.ID, nvlinklogicalpartition.ID, cdb.GetUUIDPtr(uuid.New()), cdb.GetStrPtr("NVIDIA GB200"), i%4, cdbm.NVLinkInterfaceStatusProvisioning)
-		assert.NotNil(t, nvlifc)
-		nvlifcs = append(nvlifcs, nvlifc)
+		ibPartition := ibPartitions[i%3]
+		ibifc := testInstanceBuildIBInterface(t, dbSession, inst1, st1, ibPartition, i%4, true, nil, cdb.GetStrPtr(cdbm.InfiniBandInterfaceStatusProvisioning), false)
+		assert.NotNil(t, ibifc)
+		ibifcs = append(ibifcs, ibifc)
 	}
 
 	e := echo.New()
@@ -141,26 +140,24 @@ func TestGetAllNVLinkInterface_Handle(t *testing.T) {
 	tracer, _, ctx := common.TestCommonTraceProviderSetup(t, ctx)
 
 	tests := []struct {
-		name                             string
-		fields                           fields
-		args                             args
-		wantErr                          bool
-		queryStatus                      *string
-		queryIncludeRelations1           *string
-		queryIncludeRelations2           *string
-		pageNumber                       *int
-		pageSize                         *int
-		orderBy                          *string
-		expectedNVLinkLogicalPartitionID *uuid.UUID
-		expectedDeviceInstance           *int
-		expectedInstance                 *cdbm.Instance
-		expectedNVLinkDomainID           *uuid.UUID
-		expectedCount                    int
-		expectedTotal                    int
-		verifyChildSpanner               bool
+		name                          string
+		fields                        fields
+		args                          args
+		wantErr                       bool
+		queryStatus                   *string
+		queryIncludeRelations1        *string
+		queryIncludeRelations2        *string
+		pageNumber                    *int
+		pageSize                      *int
+		orderBy                       *string
+		expectedInfiniBandPartitionID *uuid.UUID
+		expectedInstance              *cdbm.Instance
+		expectedCount                 int
+		expectedTotal                 int
+		verifyChildSpanner            bool
 	}{
 		{
-			name: "test NVLinkInterface getall by Instance API endpoint success",
+			name: "test InfiniBandInterface getall by Instance API endpoint success",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        tc,
@@ -174,59 +171,36 @@ func TestGetAllNVLinkInterface_Handle(t *testing.T) {
 				reqUser:       tnu1,
 				respCode:      http.StatusOK,
 			},
-			wantErr:                false,
-			orderBy:                cdb.GetStrPtr("CREATED_ASC"),
-			expectedCount:          20,
-			expectedTotal:          25,
-			expectedInstance:       inst1,
-			expectedDeviceInstance: cdb.GetIntPtr(nvlifcs[0].DeviceInstance),
-			verifyChildSpanner:     true,
+			wantErr:            false,
+			orderBy:            cdb.GetStrPtr("CREATED_ASC"),
+			expectedCount:      20,
+			expectedTotal:      25,
+			expectedInstance:   inst1,
+			verifyChildSpanner: true,
 		},
 		{
-			name: "test NVLinkInterface getall by NVLinkLogicalPartition API endpoint success",
+			name: "test InfiniBandInterface getall by InfiniBandPartition API endpoint success",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        tc,
 				cfg:       cfg,
 			},
 			args: args{
-				reqNvlinkLogicalPartition:   nvlinklogicalpartitions[0],
-				reqNvlinkLogicalPartitionID: nvlinklogicalpartitions[0].ID.String(),
-				reqOrg:                      tnOrg1,
-				reqUser:                     tnu1,
-				respCode:                    http.StatusOK,
+				reqInfiniBandPartition:   ibPartitions[0],
+				reqInfiniBandPartitionID: ibPartitions[0].ID.String(),
+				reqOrg:                   tnOrg1,
+				reqUser:                  tnu1,
+				respCode:                 http.StatusOK,
 			},
-			wantErr:                          false,
-			orderBy:                          cdb.GetStrPtr("CREATED_ASC"),
-			expectedCount:                    9,
-			expectedTotal:                    9,
-			expectedNVLinkLogicalPartitionID: cdb.GetUUIDPtr(nvlinklogicalpartitions[0].ID),
-			expectedDeviceInstance:           cdb.GetIntPtr(nvlifcs[0].DeviceInstance),
-			verifyChildSpanner:               true,
+			wantErr:                       false,
+			orderBy:                       cdb.GetStrPtr("CREATED_ASC"),
+			expectedCount:                 9,
+			expectedTotal:                 9,
+			expectedInfiniBandPartitionID: cdb.GetUUIDPtr(ibPartitions[0].ID),
+			verifyChildSpanner:            true,
 		},
 		{
-			name: "test NVLinkInterface getall by NVLinkDomain API endpoint success",
-			fields: fields{
-				dbSession: dbSession,
-				tc:        tc,
-				cfg:       cfg,
-			},
-			args: args{
-				reqNVLinkDomainID: nvlifcs[0].NVLinkDomainID,
-				reqOrg:            tnOrg1,
-				reqUser:           tnu1,
-				respCode:          http.StatusOK,
-			},
-			wantErr:                false,
-			orderBy:                cdb.GetStrPtr("CREATED_ASC"),
-			expectedCount:          1,
-			expectedTotal:          1,
-			expectedNVLinkDomainID: nvlifcs[0].NVLinkDomainID,
-			expectedDeviceInstance: &nvlifcs[0].DeviceInstance,
-			verifyChildSpanner:     true,
-		},
-		{
-			name: "test NVLinkInterface getall by Instance success with paging",
+			name: "test InfiniBandInterface getall by Instance success with paging",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        tc,
@@ -239,40 +213,38 @@ func TestGetAllNVLinkInterface_Handle(t *testing.T) {
 				reqUser:       tnu1,
 				respCode:      http.StatusOK,
 			},
-			wantErr:                          false,
-			pageNumber:                       cdb.GetIntPtr(1),
-			pageSize:                         cdb.GetIntPtr(10),
-			orderBy:                          cdb.GetStrPtr("CREATED_ASC"),
-			expectedCount:                    10,
-			expectedTotal:                    25,
-			expectedNVLinkLogicalPartitionID: cdb.GetUUIDPtr(nvlinklogicalpartitions[0].ID),
-			expectedDeviceInstance:           cdb.GetIntPtr(nvlifcs[0].DeviceInstance),
+			wantErr:                       false,
+			pageNumber:                    cdb.GetIntPtr(1),
+			pageSize:                      cdb.GetIntPtr(10),
+			orderBy:                       cdb.GetStrPtr("CREATED_ASC"),
+			expectedCount:                 10,
+			expectedTotal:                 25,
+			expectedInfiniBandPartitionID: cdb.GetUUIDPtr(ibPartitions[0].ID),
 		},
 		{
-			name: "test NVLinkInterface getall success with paging",
+			name: "test InfiniBandInterface getall success with paging",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        tc,
 				cfg:       cfg,
 			},
 			args: args{
-				reqNvlinkLogicalPartition:   nvlinklogicalpartitions[0],
-				reqNvlinkLogicalPartitionID: nvlinklogicalpartitions[0].ID.String(),
-				reqOrg:                      tnOrg1,
-				reqUser:                     tnu1,
-				respCode:                    http.StatusOK,
+				reqInfiniBandPartition:   ibPartitions[0],
+				reqInfiniBandPartitionID: ibPartitions[0].ID.String(),
+				reqOrg:                   tnOrg1,
+				reqUser:                  tnu1,
+				respCode:                 http.StatusOK,
 			},
-			wantErr:                          false,
-			pageNumber:                       cdb.GetIntPtr(1),
-			pageSize:                         cdb.GetIntPtr(10),
-			orderBy:                          cdb.GetStrPtr("CREATED_ASC"),
-			expectedCount:                    9,
-			expectedTotal:                    9,
-			expectedNVLinkLogicalPartitionID: cdb.GetUUIDPtr(nvlinklogicalpartitions[0].ID),
-			expectedDeviceInstance:           cdb.GetIntPtr(nvlifcs[0].DeviceInstance),
+			wantErr:                       false,
+			pageNumber:                    cdb.GetIntPtr(1),
+			pageSize:                      cdb.GetIntPtr(10),
+			orderBy:                       cdb.GetStrPtr("CREATED_ASC"),
+			expectedCount:                 9,
+			expectedTotal:                 9,
+			expectedInfiniBandPartitionID: cdb.GetUUIDPtr(ibPartitions[0].ID),
 		},
 		{
-			name: "test NVLinkInterface getall by Instance success with paging on page 2",
+			name: "test InfiniBandInterface getall by Instance success with paging on page 2",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        tc,
@@ -285,40 +257,38 @@ func TestGetAllNVLinkInterface_Handle(t *testing.T) {
 				reqUser:       tnu1,
 				respCode:      http.StatusOK,
 			},
-			wantErr:                          false,
-			pageNumber:                       cdb.GetIntPtr(2),
-			pageSize:                         cdb.GetIntPtr(10),
-			orderBy:                          cdb.GetStrPtr("CREATED_ASC"),
-			expectedCount:                    10,
-			expectedTotal:                    25,
-			expectedNVLinkLogicalPartitionID: cdb.GetUUIDPtr(nvlinklogicalpartitions[1].ID),
-			expectedDeviceInstance:           cdb.GetIntPtr(nvlifcs[10].DeviceInstance),
+			wantErr:                       false,
+			pageNumber:                    cdb.GetIntPtr(2),
+			pageSize:                      cdb.GetIntPtr(10),
+			orderBy:                       cdb.GetStrPtr("CREATED_ASC"),
+			expectedCount:                 10,
+			expectedTotal:                 25,
+			expectedInfiniBandPartitionID: cdb.GetUUIDPtr(ibPartitions[1].ID),
 		},
 		{
-			name: "test NVLinkInterface getall success with paging on page 2",
+			name: "test InfiniBandInterface getall success with paging on page 2",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        tc,
 				cfg:       cfg,
 			},
 			args: args{
-				reqNvlinkLogicalPartition:   nvlinklogicalpartitions[1],
-				reqNvlinkLogicalPartitionID: nvlinklogicalpartitions[1].ID.String(),
-				reqOrg:                      tnOrg1,
-				reqUser:                     tnu1,
-				respCode:                    http.StatusOK,
+				reqInfiniBandPartition:   ibPartitions[1],
+				reqInfiniBandPartitionID: ibPartitions[1].ID.String(),
+				reqOrg:                   tnOrg1,
+				reqUser:                  tnu1,
+				respCode:                 http.StatusOK,
 			},
-			wantErr:                          false,
-			pageNumber:                       cdb.GetIntPtr(2),
-			pageSize:                         cdb.GetIntPtr(10),
-			orderBy:                          cdb.GetStrPtr("CREATED_ASC"),
-			expectedCount:                    0,
-			expectedTotal:                    8,
-			expectedNVLinkLogicalPartitionID: cdb.GetUUIDPtr(nvlinklogicalpartitions[1].ID),
-			expectedDeviceInstance:           cdb.GetIntPtr(nvlifcs[10].DeviceInstance),
+			wantErr:                       false,
+			pageNumber:                    cdb.GetIntPtr(2),
+			pageSize:                      cdb.GetIntPtr(10),
+			orderBy:                       cdb.GetStrPtr("CREATED_ASC"),
+			expectedCount:                 0,
+			expectedTotal:                 8,
+			expectedInfiniBandPartitionID: cdb.GetUUIDPtr(ibPartitions[1].ID),
 		},
 		{
-			name: "test NVLinkInterface getall by Instance filter  with paging bad orderby",
+			name: "test InfiniBandInterface getall by Instance filter  with paging bad orderby",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        tc,
@@ -337,7 +307,7 @@ func TestGetAllNVLinkInterface_Handle(t *testing.T) {
 			orderBy:    cdb.GetStrPtr("TEST_ASC"),
 		},
 		{
-			name: "test NVLinkInterface getall by Instance filter, org does not have a Tenant associated",
+			name: "test InfiniBandInterface getall by Instance filter, org does not have a Tenant associated",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        tc,
@@ -352,7 +322,7 @@ func TestGetAllNVLinkInterface_Handle(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "test NVLinkInterface getall by Instance filter, invalid Instance ID in request",
+			name: "test InfiniBandInterface getall by Instance filter, invalid Instance ID in request",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        tc,
@@ -367,7 +337,7 @@ func TestGetAllNVLinkInterface_Handle(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "test NVLinkInterface getall by Instance filter, Instance ID in request not found",
+			name: "test InfiniBandInterface getall by Instance filter, Instance ID in request not found",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        tc,
@@ -383,22 +353,22 @@ func TestGetAllNVLinkInterface_Handle(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "test NVLinkInterface getall by NVLinkLogicalPartition filter, NVLinkLogicalPartition ID in request not found",
+			name: "test InfiniBandInterface getall by InfiniBandPartition filter, InfiniBandPartition ID in request not found",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        tc,
 				cfg:       cfg,
 			},
 			args: args{
-				reqNvlinkLogicalPartitionID: uuid.New().String(),
-				reqOrg:                      tnOrg1,
-				reqUser:                     tnu1,
-				respCode:                    http.StatusNotFound,
+				reqInfiniBandPartitionID: uuid.New().String(),
+				reqOrg:                   tnOrg1,
+				reqUser:                  tnu1,
+				respCode:                 http.StatusNotFound,
 			},
 			wantErr: false,
 		},
 		{
-			name: "test NVLinkInterface getall by Instance filter, Instance not belong to current tenant",
+			name: "test InfiniBandInterface getall by Instance filter, Instance not belong to current tenant",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        tc,
@@ -414,7 +384,7 @@ func TestGetAllNVLinkInterface_Handle(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "test NVLinkInterface getall by Instance filter success include relation",
+			name: "test InfiniBandInterface getall by Instance filter success include relation",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        tc,
@@ -427,41 +397,39 @@ func TestGetAllNVLinkInterface_Handle(t *testing.T) {
 				reqUser:       tnu1,
 				respCode:      http.StatusOK,
 			},
-			queryIncludeRelations1:           cdb.GetStrPtr(cdbm.NVLinkLogicalPartitionRelationName),
-			queryIncludeRelations2:           cdb.GetStrPtr(cdbm.InstanceRelationName),
-			expectedCount:                    20,
-			expectedTotal:                    25,
-			orderBy:                          cdb.GetStrPtr("CREATED_ASC"),
-			expectedNVLinkLogicalPartitionID: cdb.GetUUIDPtr(nvlinklogicalpartitions[0].ID),
-			expectedDeviceInstance:           cdb.GetIntPtr(nvlifcs[0].DeviceInstance),
-			wantErr:                          false,
+			queryIncludeRelations1:        cdb.GetStrPtr(cdbm.InfiniBandPartitionRelationName),
+			queryIncludeRelations2:        cdb.GetStrPtr(cdbm.InstanceRelationName),
+			expectedCount:                 20,
+			expectedTotal:                 25,
+			orderBy:                       cdb.GetStrPtr("CREATED_ASC"),
+			expectedInfiniBandPartitionID: cdb.GetUUIDPtr(ibPartitions[0].ID),
+			wantErr:                       false,
 		},
 		{
-			name: "test NVLinkInterface getall by NVLinkLogicalPartition filter include relation",
+			name: "test InfiniBandInterface getall by InfiniBandPartition filter include relation",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        tc,
 				cfg:       cfg,
 			},
 			args: args{
-				reqNvlinkLogicalPartition:   nvlinklogicalpartitions[0],
-				reqNvlinkLogicalPartitionID: nvlinklogicalpartitions[0].ID.String(),
-				reqOrg:                      tnOrg1,
-				reqUser:                     tnu1,
-				respCode:                    http.StatusOK,
+				reqInfiniBandPartition:   ibPartitions[0],
+				reqInfiniBandPartitionID: ibPartitions[0].ID.String(),
+				reqOrg:                   tnOrg1,
+				reqUser:                  tnu1,
+				respCode:                 http.StatusOK,
 			},
-			queryIncludeRelations1:           cdb.GetStrPtr(cdbm.NVLinkLogicalPartitionRelationName),
-			queryIncludeRelations2:           cdb.GetStrPtr(cdbm.InstanceRelationName),
-			expectedCount:                    9,
-			expectedTotal:                    9,
-			orderBy:                          cdb.GetStrPtr("CREATED_ASC"),
-			expectedNVLinkLogicalPartitionID: cdb.GetUUIDPtr(nvlinklogicalpartitions[0].ID),
-			expectedDeviceInstance:           cdb.GetIntPtr(nvlifcs[0].DeviceInstance),
-			expectedInstance:                 inst1,
-			wantErr:                          false,
+			queryIncludeRelations1:        cdb.GetStrPtr(cdbm.InfiniBandPartitionRelationName),
+			queryIncludeRelations2:        cdb.GetStrPtr(cdbm.InstanceRelationName),
+			expectedCount:                 9,
+			expectedTotal:                 9,
+			orderBy:                       cdb.GetStrPtr("CREATED_ASC"),
+			expectedInfiniBandPartitionID: cdb.GetUUIDPtr(ibPartitions[0].ID),
+			expectedInstance:              inst1,
+			wantErr:                       false,
 		},
 		{
-			name: "test NVLinkInterface getall by NVLinkInterfaceStatusProvisioning status success",
+			name: "test InfiniBandInterface getall by InfiniBandInterfaceStatusProvisioning status success",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        tc,
@@ -474,16 +442,15 @@ func TestGetAllNVLinkInterface_Handle(t *testing.T) {
 				reqUser:       tnu1,
 				respCode:      http.StatusOK,
 			},
-			queryStatus:                      cdb.GetStrPtr(cdbm.NVLinkInterfaceStatusProvisioning),
-			expectedCount:                    20,
-			expectedTotal:                    25,
-			orderBy:                          cdb.GetStrPtr("CREATED_ASC"),
-			expectedNVLinkLogicalPartitionID: cdb.GetUUIDPtr(nvlinklogicalpartitions[0].ID),
-			expectedDeviceInstance:           cdb.GetIntPtr(nvlifcs[0].DeviceInstance),
-			wantErr:                          false,
+			queryStatus:                   cdb.GetStrPtr(cdbm.InfiniBandInterfaceStatusProvisioning),
+			expectedCount:                 20,
+			expectedTotal:                 25,
+			orderBy:                       cdb.GetStrPtr("CREATED_ASC"),
+			expectedInfiniBandPartitionID: cdb.GetUUIDPtr(ibPartitions[0].ID),
+			wantErr:                       false,
 		},
 		{
-			name: "test NVLinkInterface getall by BadStatus status success",
+			name: "test InfiniBandInterface getall by BadStatus status success",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        tc,
@@ -504,7 +471,7 @@ func TestGetAllNVLinkInterface_Handle(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			csh := GetAllNVLinkInterfaceHandler{
+			csh := GetAllInfiniBandInterfaceHandler{
 				dbSession: tt.fields.dbSession,
 				tc:        tt.fields.tc,
 				cfg:       tt.fields.cfg,
@@ -522,11 +489,8 @@ func TestGetAllNVLinkInterface_Handle(t *testing.T) {
 			if tt.args.reqInstanceID != "" {
 				q.Add("instanceId", tt.args.reqInstanceID)
 			}
-			if tt.args.reqNvlinkLogicalPartitionID != "" {
-				q.Add("nvLinkLogicalPartitionId", tt.args.reqNvlinkLogicalPartitionID)
-			}
-			if tt.args.reqNVLinkDomainID != nil {
-				q.Add("nvLinkDomainId", tt.args.reqNVLinkDomainID.String())
+			if tt.args.reqInfiniBandPartitionID != "" {
+				q.Add("infinibandPartitionId", tt.args.reqInfiniBandPartitionID)
 			}
 			if tt.queryIncludeRelations1 != nil {
 				q.Add("includeRelation", *tt.queryIncludeRelations1)
@@ -549,7 +513,7 @@ func TestGetAllNVLinkInterface_Handle(t *testing.T) {
 			req.URL.RawQuery = q.Encode()
 
 			ec := e.NewContext(req, rec)
-			ec.SetPath(fmt.Sprintf("/v2/org/%v/carbide/nvlink-interface", tt.args.reqOrg))
+			ec.SetPath(fmt.Sprintf("/v2/org/%v/carbide/infiniband-interface", tt.args.reqOrg))
 			ec.SetParamNames("orgName")
 			ec.SetParamValues(tt.args.reqOrg)
 			ec.Set("user", tt.args.reqUser)
@@ -558,11 +522,11 @@ func TestGetAllNVLinkInterface_Handle(t *testing.T) {
 			ec.SetRequest(ec.Request().WithContext(ctx))
 
 			if err := csh.Handle(ec); (err != nil) != tt.wantErr {
-				t.Errorf("GetAllNVLinkInterfaceByInstanceHandler.Handle() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("GetAllInfiniBandInterfaceByInstanceHandler.Handle() error = %v, wantErr %v", err, tt.wantErr)
 			}
 
 			if tt.args.respCode != rec.Code {
-				t.Errorf("GetAllNVLinkInterfaceByInstanceHandler.Handle() resp = %v", rec.Body.String())
+				t.Errorf("GetAllInfiniBandInterfaceByInstanceHandler.Handle() resp = %v", rec.Body.String())
 			}
 
 			require.Equal(t, tt.args.respCode, rec.Code)
@@ -570,7 +534,7 @@ func TestGetAllNVLinkInterface_Handle(t *testing.T) {
 				return
 			}
 
-			rst := []model.APINVLinkInterface{}
+			rst := []model.APIInfiniBandInterface{}
 			serr := json.Unmarshal(rec.Body.Bytes(), &rst)
 			if serr != nil {
 				t.Fatal(serr)
@@ -588,26 +552,19 @@ func TestGetAllNVLinkInterface_Handle(t *testing.T) {
 			assert.Equal(t, tt.expectedTotal, pr.Total)
 
 			if tt.queryIncludeRelations1 != nil || tt.queryIncludeRelations2 != nil {
-				if tt.expectedNVLinkLogicalPartitionID != nil && tt.expectedNVLinkLogicalPartitionID.String() != "" {
-					assert.Equal(t, tt.expectedNVLinkLogicalPartitionID.String(), rst[0].NVLinkLogicalPartition.ID)
+				if tt.expectedInfiniBandPartitionID != nil && tt.expectedInfiniBandPartitionID.String() != "" {
+					assert.Equal(t, tt.expectedInfiniBandPartitionID.String(), rst[0].InfiniBandPartition.ID)
 				}
 				if tt.expectedInstance != nil && tt.expectedInstance.ID.String() != "" {
-					assert.Equal(t, tt.expectedInstance.ID.String(), rst[0].Instance.ID)
-					assert.Equal(t, tt.expectedInstance.Name, rst[0].Instance.Name)
+					assert.Equal(t, tt.expectedInstance.ID.String(), rst[0].InstanceID)
 				}
 			} else {
 				if len(rst) > 0 {
 					if tt.expectedInstance != nil && tt.expectedInstance.ID.String() != "" {
 						assert.Equal(t, tt.expectedInstance.ID.String(), rst[0].InstanceID)
 					}
-					if tt.expectedNVLinkLogicalPartitionID != nil && tt.expectedNVLinkLogicalPartitionID.String() != "" {
-						assert.Equal(t, tt.expectedNVLinkLogicalPartitionID.String(), rst[0].NVLinkLogicalPartitionID)
-					}
-					if tt.expectedDeviceInstance != nil {
-						assert.Equal(t, *tt.expectedDeviceInstance, rst[0].DeviceInstance)
-					}
-					if tt.expectedNVLinkDomainID != nil && tt.expectedNVLinkDomainID.String() != "" {
-						assert.Equal(t, tt.expectedNVLinkDomainID.String(), *rst[0].NVLinkDomainID)
+					if tt.expectedInfiniBandPartitionID != nil && tt.expectedInfiniBandPartitionID.String() != "" {
+						assert.Equal(t, tt.expectedInfiniBandPartitionID.String(), rst[0].InfiniBandPartitonID)
 					}
 				}
 			}
@@ -620,7 +577,7 @@ func TestGetAllNVLinkInterface_Handle(t *testing.T) {
 	}
 }
 
-func TestNewGetAllNVLinkInterfaceHandler(t *testing.T) {
+func TestNewGetAllInfiniBandInterfaceHandler(t *testing.T) {
 	type args struct {
 		dbSession *cdb.Session
 		tc        temporalClient.Client
@@ -635,16 +592,16 @@ func TestNewGetAllNVLinkInterfaceHandler(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want GetAllNVLinkInterfaceHandler
+		want GetAllInfiniBandInterfaceHandler
 	}{
 		{
-			name: "test GetAllNVLinkInterfaceHandler initialization",
+			name: "test GetAllInfiniBandInterfaceHandler initialization",
 			args: args{
 				dbSession: dbSession,
 				tc:        tc,
 				cfg:       cfg,
 			},
-			want: GetAllNVLinkInterfaceHandler{
+			want: GetAllInfiniBandInterfaceHandler{
 				dbSession:     dbSession,
 				tc:            tc,
 				cfg:           cfg,
@@ -655,15 +612,15 @@ func TestNewGetAllNVLinkInterfaceHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := NewGetAllNVLinkInterfaceHandler(tt.args.dbSession, tt.args.tc, tt.args.cfg)
+			got := NewGetAllInfiniBandInterfaceHandler(tt.args.dbSession, tt.args.tc, tt.args.cfg)
 			if got.dbSession != tt.want.dbSession || got.tc != tt.want.tc || got.cfg != tt.want.cfg || got.queryOverride != nil {
-				t.Errorf("NewGetAllNVLinkInterfaceHandler() dbSession=%v tc=%v cfg=%v queryOverride=%v, want queryOverride=nil", got.dbSession, got.tc, got.cfg, got.queryOverride)
+				t.Errorf("NewGetAllInfiniBandInterfaceHandler() dbSession=%v tc=%v cfg=%v queryOverride=%v, want queryOverride=nil", got.dbSession, got.tc, got.cfg, got.queryOverride)
 			}
 		})
 	}
 }
 
-func TestNewGetAllInstanceNVLinkInterfaceHandler(t *testing.T) {
+func TestNewGetAllInstanceInfiniBandInterfaceHandler(t *testing.T) {
 	type args struct {
 		dbSession *cdb.Session
 		tc        temporalClient.Client
@@ -678,16 +635,16 @@ func TestNewGetAllInstanceNVLinkInterfaceHandler(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want GetAllInstanceNVLinkInterfaceHandler
+		want GetAllInstanceInfiniBandInterfaceHandler
 	}{
 		{
-			name: "test GetAllInstanceNVLinkInterfaceHandler initialization",
+			name: "test GetAllInstanceInfiniBandInterfaceHandler initialization",
 			args: args{
 				dbSession: dbSession,
 				tc:        tc,
 				cfg:       cfg,
 			},
-			want: GetAllInstanceNVLinkInterfaceHandler{
+			want: GetAllInstanceInfiniBandInterfaceHandler{
 				dbSession:  dbSession,
 				tc:         tc,
 				cfg:        cfg,
@@ -697,14 +654,14 @@ func TestNewGetAllInstanceNVLinkInterfaceHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NewGetAllInstanceNVLinkInterfaceHandler(tt.args.dbSession, tt.args.tc, tt.args.cfg); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewGetAllInstanceNVLinkInterfaceHandler() = %v, want %v", got, tt.want)
+			if got := NewGetAllInstanceInfiniBandInterfaceHandler(tt.args.dbSession, tt.args.tc, tt.args.cfg); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("NewGetAllInstanceInfiniBandInterfaceHandler() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestGetAllInstanceNVLinkInterfaceHandler_Handle(t *testing.T) {
+func TestGetAllInstanceInfiniBandInterfaceHandler_Handle(t *testing.T) {
 	ctx := context.Background()
 	type fields struct {
 		dbSession *cdb.Session
@@ -811,21 +768,6 @@ func TestGetAllInstanceNVLinkInterfaceHandler_Handle(t *testing.T) {
 		ibifs = append(ibifs, ibif1)
 	}
 
-	nvllps := []*cdbm.NVLinkLogicalPartition{}
-	for i := 0; i < 3; i++ {
-		nvlinklogicalpartition1 := testBuildNVLinkLogicalPartition(t, dbSession, fmt.Sprintf("test-nvlinklogicalpartition-%d", i), cdb.GetStrPtr("Test NVLink Logical Partition"), tn1.Org, st1, tn1, cdb.GetStrPtr(cdbm.NVLinkLogicalPartitionStatusReady), false)
-		assert.NotNil(t, nvlinklogicalpartition1)
-		nvllps = append(nvllps, nvlinklogicalpartition1)
-	}
-
-	nvlifcs := []*cdbm.NVLinkInterface{}
-	for i := 0; i < 25; i++ {
-		nvllp := nvllps[i%3]
-		nvlifc := testInstanceBuildInstanceNVLinkInterface(t, dbSession, st1.ID, inst1.ID, nvllp.ID, cdb.GetUUIDPtr(uuid.New()), cdb.GetStrPtr("NVIDIA GB200"), i%4, cdbm.NVLinkInterfaceStatusProvisioning)
-		assert.NotNil(t, nvlifc)
-		nvlifcs = append(nvlifcs, nvlifc)
-	}
-
 	e := echo.New()
 	cfg := common.GetTestConfig()
 	tc := &tmocks.Client{}
@@ -834,25 +776,26 @@ func TestGetAllInstanceNVLinkInterfaceHandler_Handle(t *testing.T) {
 	tracer, _, ctx := common.TestCommonTraceProviderSetup(t, ctx)
 
 	tests := []struct {
-		name                             string
-		fields                           fields
-		args                             args
-		wantErr                          bool
-		queryStatus                      *string
-		queryIncludeRelations1           *string
-		queryIncludeRelations2           *string
-		pageNumber                       *int
-		pageSize                         *int
-		orderBy                          *string
-		expectedNVLinkLogicalPartitionID *uuid.UUID
-		expectedInstanceID               *uuid.UUID
-		expectedCount                    int
-		expectedTotal                    int
-		verifyChildSpanner               bool
-		expectedErrorMessage             string
+		name                          string
+		fields                        fields
+		args                          args
+		wantErr                       bool
+		queryStatus                   *string
+		queryIncludeRelations1        *string
+		queryIncludeRelations2        *string
+		pageNumber                    *int
+		pageSize                      *int
+		orderBy                       *string
+		expectSubnet                  bool
+		expectedInfiniBandPartitionID *uuid.UUID
+		expectedInstanceID            *uuid.UUID
+		expectedCount                 int
+		expectedTotal                 int
+		verifyChildSpanner            bool
+		expectedErrorMessage          string
 	}{
 		{
-			name: "test NVLinkInterface getall by Instance API endpoint success",
+			name: "test InfiniBandInterface getall by Instance API endpoint success",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        tc,
@@ -873,7 +816,7 @@ func TestGetAllInstanceNVLinkInterfaceHandler_Handle(t *testing.T) {
 			verifyChildSpanner: true,
 		},
 		{
-			name: "test NVLinkInterface getall by NVLinkLogicalPartition API endpoint success",
+			name: "test InfiniBandInterface getall by InfiniBandPartition API endpoint success",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        tc,
@@ -886,16 +829,16 @@ func TestGetAllInstanceNVLinkInterfaceHandler_Handle(t *testing.T) {
 				reqUser:       tnu1,
 				respCode:      http.StatusOK,
 			},
-			wantErr:                          false,
-			pageNumber:                       cdb.GetIntPtr(1),
-			pageSize:                         cdb.GetIntPtr(10),
-			orderBy:                          cdb.GetStrPtr("CREATED_ASC"),
-			expectedCount:                    10,
-			expectedTotal:                    25,
-			expectedNVLinkLogicalPartitionID: cdb.GetUUIDPtr(nvllps[0].ID),
+			wantErr:                       false,
+			pageNumber:                    cdb.GetIntPtr(1),
+			pageSize:                      cdb.GetIntPtr(10),
+			orderBy:                       cdb.GetStrPtr("CREATED_ASC"),
+			expectedCount:                 10,
+			expectedTotal:                 25,
+			expectedInfiniBandPartitionID: cdb.GetUUIDPtr(ibps[0].ID),
 		},
 		{
-			name: "test NVLinkInterface getall by NVLinkLogicalPartition success with paging on page 2",
+			name: "test InfiniBandInterface getall by InfiniBandPartition success with paging on page 2",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        tc,
@@ -908,16 +851,16 @@ func TestGetAllInstanceNVLinkInterfaceHandler_Handle(t *testing.T) {
 				reqUser:       tnu1,
 				respCode:      http.StatusOK,
 			},
-			wantErr:                          false,
-			pageNumber:                       cdb.GetIntPtr(2),
-			pageSize:                         cdb.GetIntPtr(10),
-			orderBy:                          cdb.GetStrPtr("CREATED_ASC"),
-			expectedCount:                    10,
-			expectedTotal:                    25,
-			expectedNVLinkLogicalPartitionID: cdb.GetUUIDPtr(nvllps[1].ID),
+			wantErr:                       false,
+			pageNumber:                    cdb.GetIntPtr(2),
+			pageSize:                      cdb.GetIntPtr(10),
+			orderBy:                       cdb.GetStrPtr("CREATED_ASC"),
+			expectedCount:                 10,
+			expectedTotal:                 25,
+			expectedInfiniBandPartitionID: cdb.GetUUIDPtr(ibps[10].ID),
 		},
 		{
-			name: "test NVLinkInterface getall by NVLinkLogicalPartition error with paging bad orderby",
+			name: "test InfiniBandInterface getall by InfiniBandPartition error with paging bad orderby",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        tc,
@@ -930,15 +873,15 @@ func TestGetAllInstanceNVLinkInterfaceHandler_Handle(t *testing.T) {
 				reqUser:       tnu1,
 				respCode:      http.StatusBadRequest,
 			},
-			wantErr:                          false,
-			pageNumber:                       cdb.GetIntPtr(2),
-			pageSize:                         cdb.GetIntPtr(10),
-			orderBy:                          cdb.GetStrPtr("TEST_ASC"),
-			expectedNVLinkLogicalPartitionID: cdb.GetUUIDPtr(nvllps[0].ID),
-			expectedErrorMessage:             "Failed to validate pagination request data",
+			wantErr:                       false,
+			pageNumber:                    cdb.GetIntPtr(2),
+			pageSize:                      cdb.GetIntPtr(10),
+			orderBy:                       cdb.GetStrPtr("TEST_ASC"),
+			expectedInfiniBandPartitionID: cdb.GetUUIDPtr(ibps[0].ID),
+			expectedErrorMessage:          "Failed to validate pagination request data",
 		},
 		{
-			name: "test NVLinkInterface getall by Instance API failure, org does not have a Tenant associated",
+			name: "test InfiniBandInterface getall by Instance API failure, org does not have a Tenant associated",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        tc,
@@ -955,7 +898,7 @@ func TestGetAllInstanceNVLinkInterfaceHandler_Handle(t *testing.T) {
 			expectedErrorMessage: "User does not have Tenant Admin role with org",
 		},
 		{
-			name: "test NVLinkInterface getall by Instance API failure, invalid Instance ID in request",
+			name: "test InfiniBandInterface getall by Instance API failure, invalid Instance ID in request",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        tc,
@@ -972,7 +915,7 @@ func TestGetAllInstanceNVLinkInterfaceHandler_Handle(t *testing.T) {
 			expectedErrorMessage: "Invalid Instance ID: badID",
 		},
 		{
-			name: "test NVLinkInterface getall by Instance API failure, Instance ID in request not found",
+			name: "test InfiniBandInterface getall by Instance API failure, Instance ID in request not found",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        tc,
@@ -986,10 +929,10 @@ func TestGetAllInstanceNVLinkInterfaceHandler_Handle(t *testing.T) {
 				respCode:      http.StatusNotFound,
 			},
 			wantErr:              false,
-			expectedErrorMessage: "Could not find Instance with ID:",
+			expectedErrorMessage: "Could not find Instance with ID",
 		},
 		{
-			name: "test NVLinkInterface getall by Instance API failure, Instance not belong to current tenant",
+			name: "test InfiniBandInterface getall by Instance API failure, Instance not belong to current tenant",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        tc,
@@ -1006,7 +949,7 @@ func TestGetAllInstanceNVLinkInterfaceHandler_Handle(t *testing.T) {
 			expectedErrorMessage: "doesn't belong to current Tenant",
 		},
 		{
-			name: "test NVLinkInterface getall by Instance API endpoint success include relation",
+			name: "test InfiniBandInterface getall by Instance API endpoint success include relation",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        tc,
@@ -1019,16 +962,17 @@ func TestGetAllInstanceNVLinkInterfaceHandler_Handle(t *testing.T) {
 				reqUser:       tnu1,
 				respCode:      http.StatusOK,
 			},
-			queryIncludeRelations1: cdb.GetStrPtr(cdbm.NVLinkLogicalPartitionRelationName),
+			queryIncludeRelations1: cdb.GetStrPtr(cdbm.InfiniBandPartitionRelationName),
 			queryIncludeRelations2: cdb.GetStrPtr(cdbm.InstanceRelationName),
 			expectedCount:          20,
 			expectedTotal:          25,
 			orderBy:                cdb.GetStrPtr("CREATED_ASC"),
+			expectSubnet:           true,
 			expectedInstanceID:     cdb.GetUUIDPtr(inst1.ID),
 			wantErr:                false,
 		},
 		{
-			name: "test NVLinkInterface getall by NVLinkLogicalPartition InterfaceStatusProvisioning status success",
+			name: "test InfiniBandInterface getall by InfiniBandPartition InterfaceStatusProvisioning status success",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        tc,
@@ -1041,15 +985,16 @@ func TestGetAllInstanceNVLinkInterfaceHandler_Handle(t *testing.T) {
 				reqUser:       tnu1,
 				respCode:      http.StatusOK,
 			},
-			queryStatus:                      cdb.GetStrPtr(cdbm.InterfaceStatusProvisioning),
-			expectedCount:                    20,
-			expectedTotal:                    25,
-			orderBy:                          cdb.GetStrPtr("CREATED_ASC"),
-			expectedNVLinkLogicalPartitionID: cdb.GetUUIDPtr(nvllps[0].ID),
-			wantErr:                          false,
+			queryStatus:                   cdb.GetStrPtr(cdbm.InterfaceStatusProvisioning),
+			expectedCount:                 20,
+			expectedTotal:                 25,
+			orderBy:                       cdb.GetStrPtr("CREATED_ASC"),
+			expectSubnet:                  true,
+			expectedInfiniBandPartitionID: cdb.GetUUIDPtr(ibps[0].ID),
+			wantErr:                       false,
 		},
 		{
-			name: "test NVLinkInterface getall by NVLinkLogicalPartition BadStatus status success",
+			name: "test InfiniBandInterface getall by InfiniBandPartition BadStatus status success",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        tc,
@@ -1070,7 +1015,7 @@ func TestGetAllInstanceNVLinkInterfaceHandler_Handle(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			csh := GetAllInstanceNVLinkInterfaceHandler{
+			csh := GetAllInstanceInfiniBandInterfaceHandler{
 				dbSession: tt.fields.dbSession,
 				tc:        tt.fields.tc,
 				cfg:       tt.fields.cfg,
@@ -1103,7 +1048,7 @@ func TestGetAllInstanceNVLinkInterfaceHandler_Handle(t *testing.T) {
 			req.URL.RawQuery = q.Encode()
 
 			ec := e.NewContext(req, rec)
-			ec.SetPath(fmt.Sprintf("/v2/org/%v/carbide/instance/%v/nvlinkinterface", tt.args.reqOrg, tt.args.reqInstanceID))
+			ec.SetPath(fmt.Sprintf("/v2/org/%v/carbide/instance/%v/infinibandinterface", tt.args.reqOrg, tt.args.reqInstanceID))
 			ec.SetParamNames("orgName", "instanceId")
 			if tt.args.reqInstanceID != "" {
 				ec.SetParamValues(tt.args.reqOrg, tt.args.reqInstanceID)
@@ -1114,11 +1059,11 @@ func TestGetAllInstanceNVLinkInterfaceHandler_Handle(t *testing.T) {
 			ec.SetRequest(ec.Request().WithContext(ctx))
 
 			if err := csh.Handle(ec); (err != nil) != tt.wantErr {
-				t.Errorf("GetAllInstanceNVLinkInterfaceHandler.Handle() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("GetAllInstanceInfiniBandInterfaceHandler.Handle() error = %v, wantErr %v", err, tt.wantErr)
 			}
 
 			if tt.args.respCode != rec.Code {
-				t.Errorf("GetAllInstanceNVLinkInterfaceHandler.Handle() resp = %v", rec.Body.String())
+				t.Errorf("GetAllInstanceInfiniBandInterfaceHandler.Handle() resp = %v", rec.Body.String())
 			}
 
 			require.Equal(t, tt.args.respCode, rec.Code)
@@ -1133,7 +1078,7 @@ func TestGetAllInstanceNVLinkInterfaceHandler_Handle(t *testing.T) {
 				return
 			}
 
-			rst := []model.APINVLinkInterface{}
+			rst := []model.APIInfiniBandInterface{}
 			serr := json.Unmarshal(rec.Body.Bytes(), &rst)
 			if serr != nil {
 				t.Fatal(serr)
@@ -1155,8 +1100,8 @@ func TestGetAllInstanceNVLinkInterfaceHandler_Handle(t *testing.T) {
 				if tt.expectedInstanceID != nil {
 					assert.Equal(t, tt.expectedInstanceID.String(), rst[0].InstanceID)
 				}
-				if tt.expectedNVLinkLogicalPartitionID != nil {
-					assert.Equal(t, tt.expectedNVLinkLogicalPartitionID.String(), rst[0].NVLinkLogicalPartitionID)
+				if tt.expectedInfiniBandPartitionID != nil {
+					assert.Equal(t, tt.expectedInfiniBandPartitionID.String(), rst[0].InfiniBandPartitonID)
 				}
 			}
 
