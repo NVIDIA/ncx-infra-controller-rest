@@ -20,7 +20,7 @@ var _ MappedNullable = &BMCInfo{}
 
 // BMCInfo BMC (Baseboard Management Controller) information
 type BMCInfo struct {
-	// BMC type (e.g. BMC_TYPE_HOST, BMC_TYPE_DPU)
+	// BMC type (e.g. BmcTypeHost, BmcTypeDpu)
 	Type *string `json:"type,omitempty"`
 	// MAC address of the BMC
 	MacAddress *string `json:"macAddress,omitempty"`
