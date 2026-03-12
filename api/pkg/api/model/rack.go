@@ -24,6 +24,32 @@ import (
 	rlav1 "github.com/nvidia/bare-metal-manager-rest/workflow-schema/rla/protobuf/v1"
 )
 
+// ProtoToAPIBMCTypeName maps protobuf BMCType enum names to API-friendly names.
+var ProtoToAPIBMCTypeName = map[string]string{
+	"BMC_TYPE_UNKNOWN": "BmcTypeUnknown",
+	"BMC_TYPE_HOST":    "BmcTypeHost", 
+	"BMC_TYPE_DPU":     "BmcTypeDpu",
+}
+
+// ProtoToAPIRackComponentTypeName maps protobuf ComponentType enum names to API-friendly names for rack components.
+var ProtoToAPIRackComponentTypeName = map[string]string{
+	"COMPONENT_TYPE_UNKNOWN":    "ComponentTypeUnknown",
+	"COMPONENT_TYPE_COMPUTE":    "ComponentTypeCompute",
+	"COMPONENT_TYPE_NVLSWITCH":  "ComponentTypeNvlswitch",
+	"COMPONENT_TYPE_POWERSHELF": "ComponentTypePowershelf",
+	"COMPONENT_TYPE_TORSWITCH":  "ComponentTypeTorswitch",
+	"COMPONENT_TYPE_UMS":        "ComponentTypeUms",
+	"COMPONENT_TYPE_CDU":        "ComponentTypeCdu",
+}
+
+// ProtoToAPIDiffTypeName maps protobuf DiffType enum names to API-friendly names.
+var ProtoToAPIDiffTypeName = map[string]string{
+	"DIFF_TYPE_UNKNOWN":             "DiffTypeUnknown",
+	"DIFF_TYPE_ONLY_IN_EXPECTED":    "DiffTypeOnlyInExpected",
+	"DIFF_TYPE_ONLY_IN_ACTUAL":      "DiffTypeOnlyInActual", 
+	"DIFF_TYPE_DRIFT":               "DiffTypeDrift",
+}
+
 // ========== Rack Query Fields ==========
 
 // RackFilterFieldMap maps API field names to RLA protobuf filter enum
@@ -314,7 +340,7 @@ func (ab *APIBMC) FromProto(protoBMC *rlav1.BMCInfo) {
 	if protoBMC == nil {
 		return
 	}
-	ab.Type = protoBMC.GetType().String()
+	ab.Type = ProtoToAPIBMCTypeName[rlav1.BMCType_name[int32(protoBMC.GetType())]]
 	ab.MacAddress = protoBMC.GetMacAddress()
 	ab.IPAddress = protoBMC.GetIpAddress()
 }
@@ -343,7 +369,7 @@ func (arc *APIRackComponent) FromProto(protoComponent *rlav1.Component) {
 	if protoComponent == nil {
 		return
 	}
-	arc.Type = protoComponent.GetType().String()
+	arc.Type = ProtoToAPIRackComponentTypeName[rlav1.ComponentType_name[int32(protoComponent.GetType())]]
 	arc.FirmwareVersion = protoComponent.GetFirmwareVersion()
 	arc.ComponentID = protoComponent.GetComponentId()
 	arc.PowerState = protoComponent.GetPowerState()
@@ -418,7 +444,7 @@ func (d *APIComponentDiff) FromProto(protoDiff *rlav1.ComponentDiff) {
 		return
 	}
 
-	d.Type = protoDiff.GetType().String()
+	d.Type = ProtoToAPIDiffTypeName[rlav1.DiffType_name[int32(protoDiff.GetType())]]
 	d.ComponentID = protoDiff.GetComponentId()
 
 	if protoDiff.GetExpected() != nil {

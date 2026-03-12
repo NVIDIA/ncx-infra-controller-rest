@@ -117,7 +117,7 @@ func TestNewAPIRack(t *testing.T) {
 					{
 						ID:              "comp-1",
 						ComponentID:     "carbide-machine-123",
-						Type:            "COMPONENT_TYPE_COMPUTE",
+						Type:            "ComponentTypeCompute",
 						Name:            "compute-node-1",
 						SerialNumber:    "CSN001",
 						Manufacturer:    "NVIDIA",
@@ -126,7 +126,7 @@ func TestNewAPIRack(t *testing.T) {
 					},
 					{
 						ID:     "comp-2",
-						Type:   "COMPONENT_TYPE_TORSWITCH",
+						Type:   "ComponentTypeTorswitch",
 						Name:   "switch-1",
 						SlotID: 48,
 					},

@@ -8286,7 +8286,7 @@ paths:
                       components:
                         - id: 660e8400-e29b-41d4-a716-446655440001
                           componentId: fm100ht4v4mce2qstjnl8970nnj3ie6ecek4mtjn27pea4kre5gsa49jg0g
-                          type: COMPONENT_TYPE_COMPUTE
+                          type: ComponentTypeCompute
                           name: Server-01
                           serialNumber: SN-SRV-001
                           manufacturer: Dell
@@ -8295,7 +8295,7 @@ paths:
                           trayIdx: 0
                           hostId: 0
                           bmcs:
-                            - type: BMC_TYPE_HOST
+                            - type: BmcTypeHost
                               macAddress: 'AA:BB:CC:DD:EE:01'
                               ipAddress: 10.0.0.101
                           powerState: 'on'
@@ -8368,7 +8368,7 @@ paths:
                     components:
                       - id: 660e8400-e29b-41d4-a716-446655440001
                         componentId: fm100ht4v4mce2qstjnl8970nnj3ie6ecek4mtjn27pea4kre5gsa49jg0g
-                        type: COMPONENT_TYPE_COMPUTE
+                        type: ComponentTypeCompute
                         name: Server-01
                         serialNumber: SN-SRV-001
                         manufacturer: Dell
@@ -8377,7 +8377,7 @@ paths:
                         trayIdx: 0
                         hostId: 0
                         bmcs:
-                          - type: BMC_TYPE_HOST
+                          - type: BmcTypeHost
                             macAddress: 'AA:BB:CC:DD:EE:01'
                             ipAddress: 10.0.0.101
                         powerState: 'on'
@@ -8445,12 +8445,12 @@ paths:
                 example-with-diffs:
                   value:
                     diffs:
-                      - type: DIFF_TYPE_ONLY_IN_EXPECTED
+                      - type: DiffTypeOnlyInExpected
                         componentId: comp-1
                         expected:
                           id: 660e8400-e29b-41d4-a716-446655440001
                           componentId: comp-1
-                          type: COMPONENT_TYPE_COMPUTE
+                          type: ComponentTypeCompute
                           name: Server-01
                           serialNumber: SN-SRV-001
                           manufacturer: Dell
@@ -8459,11 +8459,11 @@ paths:
                           trayIdx: 0
                           hostId: 0
                           bmcs:
-                            - type: BMC_TYPE_HOST
+                            - type: BmcTypeHost
                               macAddress: 'AA:BB:CC:DD:EE:01'
                               ipAddress: 10.0.0.101
                           powerState: 'on'
-                      - type: DIFF_TYPE_DRIFT
+                      - type: DiffTypeDrift
                         componentId: comp-2
                         fieldDiffs:
                           - fieldName: firmware_version
@@ -8531,12 +8531,12 @@ paths:
                 example-with-diffs:
                   value:
                     diffs:
-                      - type: DIFF_TYPE_ONLY_IN_EXPECTED
+                      - type: DiffTypeOnlyInExpected
                         componentId: comp-1
                         expected:
                           id: 660e8400-e29b-41d4-a716-446655440001
                           componentId: comp-1
-                          type: COMPONENT_TYPE_COMPUTE
+                          type: ComponentTypeCompute
                           name: Server-01
                           serialNumber: SN-SRV-001
                           manufacturer: Dell
@@ -8545,11 +8545,11 @@ paths:
                           trayIdx: 0
                           hostId: 0
                           bmcs:
-                            - type: BMC_TYPE_HOST
+                            - type: BmcTypeHost
                               macAddress: 'AA:BB:CC:DD:EE:01'
                               ipAddress: 10.0.0.101
                           powerState: 'on'
-                      - type: DIFF_TYPE_DRIFT
+                      - type: DiffTypeDrift
                         componentId: comp-2
                         fieldDiffs:
                           - fieldName: firmware_version
@@ -14800,7 +14800,7 @@ components:
           components:
             - id: 660e8400-e29b-41d4-a716-446655440001
               componentId: fm100ht4v4mce2qstjnl8970nnj3ie6ecek4mtjn27pea4kre5gsa49jg0g
-              type: COMPONENT_TYPE_COMPUTE
+              type: ComponentTypeCompute
               name: Server-01
               serialNumber: SN-SRV-001
               manufacturer: Dell
@@ -14809,7 +14809,7 @@ components:
               trayIdx: 0
               hostId: 0
               bmcs:
-                - type: BMC_TYPE_HOST
+                - type: BmcTypeHost
                   macAddress: 'AA:BB:CC:DD:EE:01'
                   ipAddress: 10.0.0.101
               powerState: 'on'
@@ -14889,12 +14889,12 @@ components:
       properties:
         type:
           type: string
-          description: 'Type of difference: DIFF_TYPE_ONLY_IN_EXPECTED, DIFF_TYPE_ONLY_IN_ACTUAL, or DIFF_TYPE_DRIFT'
+          description: 'Type of difference: DiffTypeOnlyInExpected, DiffTypeOnlyInActual, or DiffTypeDrift'
           enum:
-            - DIFF_TYPE_UNKNOWN
-            - DIFF_TYPE_ONLY_IN_EXPECTED
-            - DIFF_TYPE_ONLY_IN_ACTUAL
-            - DIFF_TYPE_DRIFT
+            - DiffTypeUnknown
+            - DiffTypeOnlyInExpected
+            - DiffTypeOnlyInActual
+            - DiffTypeDrift
         componentId:
           type: string
           description: ID of the component
@@ -14904,7 +14904,7 @@ components:
           $ref: '#/components/schemas/RackComponent'
         fieldDiffs:
           type: array
-          description: List of field differences (populated when type is DIFF_TYPE_DRIFT)
+          description: List of field differences (populated when type is DiffTypeDrift)
           items:
             $ref: '#/components/schemas/FieldDiff'
     FieldDiff:
@@ -14939,7 +14939,7 @@ components:
           description: ID of the rack this component belongs to
         type:
           type: string
-          description: Type of the component (e.g. COMPONENT_TYPE_COMPUTE, COMPONENT_TYPE_NVLSWITCH)
+          description: Type of the component (e.g. ComponentTypeCompute, ComponentTypeNvlswitch)
         name:
           type: string
           description: Name of the component
@@ -14982,7 +14982,7 @@ components:
       properties:
         type:
           type: string
-          description: BMC type (e.g. BMC_TYPE_HOST, BMC_TYPE_DPU)
+          description: BMC type (e.g. BmcTypeHost, BmcTypeDpu)
         macAddress:
           type: string
           description: MAC address of the BMC
