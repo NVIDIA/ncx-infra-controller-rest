@@ -15008,6 +15008,10 @@ components:
             slotId: 1
             trayIdx: 0
             hostId: 1
+          bmcs:
+            - type: BmcTypeHost
+              macAddress: '00:11:22:33:44:55'
+              ipAddress: 192.168.1.100
           rackId: 550e8400-e29b-41d4-a716-446655440000
       properties:
         id:
@@ -15047,6 +15051,11 @@ components:
           description: Current power state of the tray
         position:
           $ref: '#/components/schemas/TrayPosition'
+        bmcs:
+          type: array
+          description: BMC (Baseboard Management Controller) entries for the tray
+          items:
+            $ref: '#/components/schemas/BMCInfo'
         rackId:
           type: string
           format: uuid

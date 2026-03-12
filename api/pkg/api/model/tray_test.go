@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	rlav1 "github.com/nvidia/bare-metal-manager-rest/workflow-schema/rla/protobuf/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -90,6 +91,13 @@ func TestNewAPITray(t *testing.T) {
 					TrayIdx: 0,
 					HostId:  1,
 				},
+				Bmcs: []*rlav1.BMCInfo{
+					{
+						Type:       rlav1.BMCType_BMC_TYPE_HOST,
+						MacAddress: "00:11:22:33:44:55",
+						IpAddress:  cdb.GetStrPtr("192.168.1.100"),
+					},
+				},
 				RackId: &rlav1.UUID{Id: "rack-id-789"},
 			},
 			want: &APITray{
@@ -106,6 +114,13 @@ func TestNewAPITray(t *testing.T) {
 					SlotID:  1,
 					TrayIdx: 0,
 					HostID:  1,
+				},
+				BMCs: []*APIBMC{
+					{
+						Type:       "BmcTypeHost",
+						MacAddress: "00:11:22:33:44:55",
+						IPAddress:  "192.168.1.100",
+					},
 				},
 				RackID: "rack-id-789",
 			},

@@ -554,6 +554,7 @@ type APITray struct {
 	FirmwareVersion string           `json:"firmwareVersion"`
 	PowerState      string           `json:"powerState"`
 	Position        *APITrayPosition `json:"position"`
+	BMCs            []*APIBMC        `json:"bmcs"`
 	RackID          string           `json:"rackId"`
 }
 
@@ -589,6 +590,16 @@ func (at *APITray) FromProto(comp *rlav1.Component) {
 	if comp.GetPosition() != nil {
 		at.Position = &APITrayPosition{}
 		at.Position.FromProto(comp.GetPosition())
+	}
+
+	// Get BMCs
+	if len(comp.GetBmcs()) > 0 {
+		at.BMCs = make([]*APIBMC, 0, len(comp.GetBmcs()))
+		for _, bmc := range comp.GetBmcs() {
+			apiBMC := &APIBMC{}
+			apiBMC.FromProto(bmc)
+			at.BMCs = append(at.BMCs, apiBMC)
+		}
 	}
 
 	// Get rack ID
