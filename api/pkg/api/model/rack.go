@@ -27,7 +27,7 @@ import (
 // ProtoToAPIBMCTypeName maps protobuf BMCType enum names to API-friendly names.
 var ProtoToAPIBMCTypeName = map[string]string{
 	"BMC_TYPE_UNKNOWN": "BmcTypeUnknown",
-	"BMC_TYPE_HOST":    "BmcTypeHost", 
+	"BMC_TYPE_HOST":    "BmcTypeHost",
 	"BMC_TYPE_DPU":     "BmcTypeDpu",
 }
 
@@ -44,10 +44,10 @@ var ProtoToAPIRackComponentTypeName = map[string]string{
 
 // ProtoToAPIDiffTypeName maps protobuf DiffType enum names to API-friendly names.
 var ProtoToAPIDiffTypeName = map[string]string{
-	"DIFF_TYPE_UNKNOWN":             "DiffTypeUnknown",
-	"DIFF_TYPE_ONLY_IN_EXPECTED":    "DiffTypeOnlyInExpected",
-	"DIFF_TYPE_ONLY_IN_ACTUAL":      "DiffTypeOnlyInActual", 
-	"DIFF_TYPE_DRIFT":               "DiffTypeDrift",
+	"DIFF_TYPE_UNKNOWN":          "DiffTypeUnknown",
+	"DIFF_TYPE_ONLY_IN_EXPECTED": "DiffTypeOnlyInExpected",
+	"DIFF_TYPE_ONLY_IN_ACTUAL":   "DiffTypeOnlyInActual",
+	"DIFF_TYPE_DRIFT":            "DiffTypeDrift",
 }
 
 // ========== Rack Query Fields ==========
