@@ -7718,7 +7718,7 @@ paths:
             type: boolean
           in: query
           name: hasInstanceType
-          description: Filter Machines that have been assigned an Instance Type. siteId must be specified when using this param.
+          description: Filter Machines that have been assigned an Instance Type.
         - schema:
             type: string
           in: query
@@ -7738,7 +7738,7 @@ paths:
             type: boolean
           in: query
           name: isMissingOnSite
-          description: Filter Machines that are missing on Site. siteId must be specified when using this param.
+          description: Filter Machines that are missing on Site.
         - schema:
             type: boolean
           in: query

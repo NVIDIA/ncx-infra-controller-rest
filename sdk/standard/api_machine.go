@@ -209,7 +209,7 @@ func (r ApiGetAllMachineRequest) Id(id string) ApiGetAllMachineRequest {
 	return r
 }
 
-// Filter Machines that have been assigned an Instance Type. siteId must be specified when using this param.
+// Filter Machines that have been assigned an Instance Type.
 func (r ApiGetAllMachineRequest) HasInstanceType(hasInstanceType bool) ApiGetAllMachineRequest {
 	r.hasInstanceType = &hasInstanceType
 	return r
@@ -233,7 +233,7 @@ func (r ApiGetAllMachineRequest) HasInstance(hasInstance bool) ApiGetAllMachineR
 	return r
 }
 
-// Filter Machines that are missing on Site. siteId must be specified when using this param.
+// Filter Machines that are missing on Site.
 func (r ApiGetAllMachineRequest) IsMissingOnSite(isMissingOnSite bool) ApiGetAllMachineRequest {
 	r.isMissingOnSite = &isMissingOnSite
 	return r

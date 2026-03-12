@@ -1428,14 +1428,6 @@ func TestMachineHandler_GetAll(t *testing.T) {
 			expectedCnt:          totalCount / 2,
 			expectedTotal:        cdb.GetIntPtr(totalCount / 2),
 		},
-		{
-			name:                 "failure case when isMissingOnSite is true but siteId is not specified",
-			reqOrgName:           ipOrg1,
-			user:                 ipu,
-			queryIsMissingOnSite: cdb.GetBoolPtr(true),
-			expectedErr:          true,
-			expectedStatus:       http.StatusBadRequest,
-		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
