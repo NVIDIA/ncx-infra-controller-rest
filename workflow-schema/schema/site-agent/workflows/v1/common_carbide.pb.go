@@ -929,6 +929,94 @@ func (x *NVLinkDomainId) GetValue() string {
 	return ""
 }
 
+type PowerShelfId struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PowerShelfId) Reset() {
+	*x = PowerShelfId{}
+	mi := &file_common_carbide_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PowerShelfId) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PowerShelfId) ProtoMessage() {}
+
+func (x *PowerShelfId) ProtoReflect() protoreflect.Message {
+	mi := &file_common_carbide_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PowerShelfId.ProtoReflect.Descriptor instead.
+func (*PowerShelfId) Descriptor() ([]byte, []int) {
+	return file_common_carbide_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *PowerShelfId) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type SwitchId struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SwitchId) Reset() {
+	*x = SwitchId{}
+	mi := &file_common_carbide_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SwitchId) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SwitchId) ProtoMessage() {}
+
+func (x *SwitchId) ProtoReflect() protoreflect.Message {
+	mi := &file_common_carbide_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SwitchId.ProtoReflect.Descriptor instead.
+func (*SwitchId) Descriptor() ([]byte, []int) {
+	return file_common_carbide_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *SwitchId) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
 var File_common_carbide_proto protoreflect.FileDescriptor
 
 const file_common_carbide_proto_rawDesc = "" +
@@ -978,7 +1066,11 @@ const file_common_carbide_proto_rawDesc = "" +
 	"\x18NVLinkLogicalPartitionId\x12\x14\n" +
 	"\x05value\x18\x01 \x01(\tR\x05value\"&\n" +
 	"\x0eNVLinkDomainId\x12\x14\n" +
-	"\x05value\x18\x01 \x01(\tR\x05valueBAZ?github.com/nvidia/bare-metal-manager-rest/workflow-schema/protob\x06proto3"
+	"\x05value\x18\x01 \x01(\tR\x05value\"\x1e\n" +
+	"\fPowerShelfId\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\x1a\n" +
+	"\bSwitchId\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02idBAZ?github.com/nvidia/bare-metal-manager-rest/workflow-schema/protob\x06proto3"
 
 var (
 	file_common_carbide_proto_rawDescOnce sync.Once
@@ -992,7 +1084,7 @@ func file_common_carbide_proto_rawDescGZIP() []byte {
 	return file_common_carbide_proto_rawDescData
 }
 
-var file_common_carbide_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
+var file_common_carbide_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
 var file_common_carbide_proto_goTypes = []any{
 	(*MachineId)(nil),                // 0: common.MachineId
 	(*MachineIdList)(nil),            // 1: common.MachineIdList
@@ -1014,6 +1106,8 @@ var file_common_carbide_proto_goTypes = []any{
 	(*NVLinkPartitionId)(nil),        // 17: common.NVLinkPartitionId
 	(*NVLinkLogicalPartitionId)(nil), // 18: common.NVLinkLogicalPartitionId
 	(*NVLinkDomainId)(nil),           // 19: common.NVLinkDomainId
+	(*PowerShelfId)(nil),             // 20: common.PowerShelfId
+	(*SwitchId)(nil),                 // 21: common.SwitchId
 }
 var file_common_carbide_proto_depIdxs = []int32{
 	0, // 0: common.MachineIdList.machine_ids:type_name -> common.MachineId
@@ -1035,7 +1129,7 @@ func file_common_carbide_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_common_carbide_proto_rawDesc), len(file_common_carbide_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   20,
+			NumMessages:   22,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

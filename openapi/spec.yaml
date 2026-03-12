@@ -77,6 +77,16 @@ tags:
       Expected Machine operations allow Infrastructure Providers to pre-register machines that are expected to be discovered at a site.
 
       Expected Machines contain BMC credentials and hardware identifiers to help with automated machine provisioning and management.
+  - name: Expected Power Shelf
+    description: |-
+      Expected Power Shelf operations allow Infrastructure Providers to pre-register power shelves that are expected to be discovered at a site.
+
+      Expected Power Shelves contain BMC credentials and hardware identifiers to help with automated power shelf provisioning and management.
+  - name: Expected Switch
+    description: |-
+      Expected Switch operations allow Infrastructure Providers to pre-register network switches that are expected to be discovered at a site.
+
+      Expected Switches contain BMC and NvOS credentials and hardware identifiers to help with automated switch provisioning and management.
   - name: SKU
     description: |-
       SKU (Stock Keeping Unit) operations allow Infrastructure Providers to retrieve hardware configurations discovered at their sites.
@@ -3436,6 +3446,480 @@ paths:
                 $ref: '#/components/schemas/CarbideAPIError'
       tags:
         - Expected Machine
+  '/v2/org/{org}/carbide/expected-power-shelf':
+    parameters:
+      - schema:
+          type: string
+        name: org
+        in: path
+        required: true
+        description: Name of the Org
+    post:
+      summary: Create Expected Power Shelf
+      operationId: create-expected-power-shelf
+      description: |-
+        Create an Expected Power Shelf to pre-register power shelves expected to be discovered at a Site.
+
+        Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` role.
+
+        Alternatively, Tenant Admins with `TargetedInstanceCreation` capability can also create Expected Power Shelves if they have an account with the Site's Infrastructure Provider.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExpectedPowerShelfCreateRequest'
+            examples:
+              example-1:
+                value:
+                  siteId: f97df110-f4de-492e-8849-4a6af68026b0
+                  bmcMacAddress: '00:1A:2B:3C:4D:5E'
+                  defaultBmcUsername: admin
+                  defaultBmcPassword: password123
+                  shelfSerialNumber: SHELF-12345
+                  ipAddress: '192.168.1.100'
+                  labels:
+                    environment: production
+                    rack: A1
+        description: Expected Power Shelf creation request
+        required: true
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpectedPowerShelf'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+      tags:
+        - Expected Power Shelf
+    get:
+      summary: Retrieve all Expected Power Shelves
+      operationId: get-all-expected-power-shelf
+      description: |-
+        Retrieve all Expected Power Shelves.
+
+        Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` or `FORGE_PROVIDER_VIEWER` role.
+
+        Alternatively, Tenant Admins with `TargetedInstanceCreation` capability can also retrieve Expected Power Shelves if they have an account with the Site's Infrastructure Provider (siteId query parameter is required for Tenants).
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          name: siteId
+          in: query
+          description: ID of the Site to filter Expected Power Shelves by
+        - schema:
+            type: string
+            enum:
+              - Site
+          in: query
+          name: includeRelation
+          description: Related entity to expand
+        - schema:
+            type: integer
+            example: 1
+            default: 1
+            minimum: 1
+          in: query
+          name: pageNumber
+          description: Page number for pagination query
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            example: 20
+          in: query
+          name: pageSize
+          description: Page size for pagination query
+        - schema:
+            type: string
+            enum:
+              - BMC_MAC_ADDRESS_ASC
+              - BMC_MAC_ADDRESS_DESC
+              - SHELF_SERIAL_NUMBER_ASC
+              - SHELF_SERIAL_NUMBER_DESC
+              - CREATED_ASC
+              - CREATED_DESC
+              - UPDATED_ASC
+              - UPDATED_DESC
+          in: query
+          name: orderBy
+          description: Ordering for pagination query
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExpectedPowerShelf'
+          headers:
+            X-Pagination:
+              schema:
+                type: string
+                example: '{"pageNumber":1,"pageSize":20,"total":30,"orderBy": "CREATED_DESC"}'
+              description: Pagination result in JSON format
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+      tags:
+        - Expected Power Shelf
+  '/v2/org/{org}/carbide/expected-power-shelf/{expectedPowerShelfId}':
+    parameters:
+      - schema:
+          type: string
+        name: org
+        in: path
+        required: true
+        description: Name of the Org
+      - schema:
+          type: string
+        name: expectedPowerShelfId
+        in: path
+        required: true
+        description: ID of the Expected Power Shelf
+    get:
+      summary: Retrieve Expected Power Shelf
+      operationId: get-expected-power-shelf
+      description: |-
+        Retrieve a specific Expected Power Shelf by ID.
+
+        Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` or `FORGE_PROVIDER_VIEWER` role.
+
+        Alternatively, Tenant Admins with `TargetedInstanceCreation` capability can also retrieve Expected Power Shelves if they have an account with the Site's Infrastructure Provider.
+      parameters:
+        - schema:
+            type: string
+            enum:
+              - Site
+          in: query
+          name: includeRelation
+          description: Related entity to expand
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpectedPowerShelf'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+      tags:
+        - Expected Power Shelf
+    patch:
+      summary: Update Expected Power Shelf
+      operationId: update-expected-power-shelf
+      description: |-
+        Update an existing Expected Power Shelf by ID.
+
+        Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` role.
+
+        Infrastructure Provider must own the Expected Power Shelf.
+
+        Alternatively, Tenant Admins with `TargetedInstanceCreation` capability can also update Expected Power Shelves if they have an account with the Site's Infrastructure Provider.
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExpectedPowerShelfUpdateRequest'
+            examples:
+              example-1:
+                value:
+                  defaultBmcUsername: newadmin
+                  defaultBmcPassword: newpassword123
+                  shelfSerialNumber: SHELF-54321
+                  ipAddress: '192.168.1.200'
+                  labels:
+                    environment: staging
+                    rack: B2
+        description: Expected Power Shelf update request
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpectedPowerShelf'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+      tags:
+        - Expected Power Shelf
+    delete:
+      summary: Delete Expected Power Shelf
+      operationId: delete-expected-power-shelf
+      description: |-
+        Delete an existing Expected Power Shelf by ID.
+
+        Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` role.
+
+        Infrastructure Provider must own the Expected Power Shelf.
+
+        Alternatively, Tenant Admins with `TargetedInstanceCreation` capability can also delete Expected Power Shelves if they have an account with the Site's Infrastructure Provider.
+      parameters: []
+      responses:
+        '204':
+          description: Expected Power Shelf deleted successfully
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+      tags:
+        - Expected Power Shelf
+  '/v2/org/{org}/carbide/expected-switch':
+    parameters:
+      - schema:
+          type: string
+        name: org
+        in: path
+        required: true
+        description: Name of the Org
+    post:
+      summary: Create Expected Switch
+      operationId: create-expected-switch
+      description: |-
+        Create an Expected Switch to pre-register network switches expected to be discovered at a Site.
+
+        Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` role.
+
+        Alternatively, Tenant Admins with `TargetedInstanceCreation` capability can also create Expected Switches if they have an account with the Site's Infrastructure Provider.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExpectedSwitchCreateRequest'
+            examples:
+              example-1:
+                value:
+                  siteId: f97df110-f4de-492e-8849-4a6af68026b0
+                  bmcMacAddress: '00:1A:2B:3C:4D:5E'
+                  defaultBmcUsername: admin
+                  defaultBmcPassword: password123
+                  switchSerialNumber: SWITCH-12345
+                  nvOsUsername: nvadmin
+                  nvOsPassword: nvpassword123
+                  labels:
+                    environment: production
+                    rack: A1
+        description: Expected Switch creation request
+        required: true
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpectedSwitch'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+      tags:
+        - Expected Switch
+    get:
+      summary: Retrieve all Expected Switches
+      operationId: get-all-expected-switch
+      description: |-
+        Retrieve all Expected Switches.
+
+        Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` or `FORGE_PROVIDER_VIEWER` role.
+
+        Alternatively, Tenant Admins with `TargetedInstanceCreation` capability can also retrieve Expected Switches if they have an account with the Site's Infrastructure Provider (siteId query parameter is required for Tenants).
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          name: siteId
+          in: query
+          description: ID of the Site to filter Expected Switches by
+        - schema:
+            type: string
+            enum:
+              - Site
+          in: query
+          name: includeRelation
+          description: Related entity to expand
+        - schema:
+            type: integer
+            example: 1
+            default: 1
+            minimum: 1
+          in: query
+          name: pageNumber
+          description: Page number for pagination query
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            example: 20
+          in: query
+          name: pageSize
+          description: Page size for pagination query
+        - schema:
+            type: string
+            enum:
+              - BMC_MAC_ADDRESS_ASC
+              - BMC_MAC_ADDRESS_DESC
+              - SWITCH_SERIAL_NUMBER_ASC
+              - SWITCH_SERIAL_NUMBER_DESC
+              - CREATED_ASC
+              - CREATED_DESC
+              - UPDATED_ASC
+              - UPDATED_DESC
+          in: query
+          name: orderBy
+          description: Ordering for pagination query
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExpectedSwitch'
+          headers:
+            X-Pagination:
+              schema:
+                type: string
+                example: '{"pageNumber":1,"pageSize":20,"total":30,"orderBy": "CREATED_DESC"}'
+              description: Pagination result in JSON format
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+      tags:
+        - Expected Switch
+  '/v2/org/{org}/carbide/expected-switch/{expectedSwitchId}':
+    parameters:
+      - schema:
+          type: string
+        name: org
+        in: path
+        required: true
+        description: Name of the Org
+      - schema:
+          type: string
+        name: expectedSwitchId
+        in: path
+        required: true
+        description: ID of the Expected Switch
+    get:
+      summary: Retrieve Expected Switch
+      operationId: get-expected-switch
+      description: |-
+        Retrieve a specific Expected Switch by ID.
+
+        Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` or `FORGE_PROVIDER_VIEWER` role.
+
+        Alternatively, Tenant Admins with `TargetedInstanceCreation` capability can also retrieve Expected Switches if they have an account with the Site's Infrastructure Provider.
+      parameters:
+        - schema:
+            type: string
+            enum:
+              - Site
+          in: query
+          name: includeRelation
+          description: Related entity to expand
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpectedSwitch'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+      tags:
+        - Expected Switch
+    patch:
+      summary: Update Expected Switch
+      operationId: update-expected-switch
+      description: |-
+        Update an existing Expected Switch by ID.
+
+        Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` role.
+
+        Infrastructure Provider must own the Expected Switch.
+
+        Alternatively, Tenant Admins with `TargetedInstanceCreation` capability can also update Expected Switches if they have an account with the Site's Infrastructure Provider.
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExpectedSwitchUpdateRequest'
+            examples:
+              example-1:
+                value:
+                  defaultBmcUsername: newadmin
+                  defaultBmcPassword: newpassword123
+                  switchSerialNumber: SWITCH-54321
+                  nvOsUsername: newnvadmin
+                  nvOsPassword: newnvpassword123
+                  labels:
+                    environment: staging
+                    rack: B2
+        description: Expected Switch update request
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpectedSwitch'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+      tags:
+        - Expected Switch
+    delete:
+      summary: Delete Expected Switch
+      operationId: delete-expected-switch
+      description: |-
+        Delete an existing Expected Switch by ID.
+
+        Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` role.
+
+        Infrastructure Provider must own the Expected Switch.
+
+        Alternatively, Tenant Admins with `TargetedInstanceCreation` capability can also delete Expected Switches if they have an account with the Site's Infrastructure Provider.
+      parameters: []
+      responses:
+        '204':
+          description: Expected Switch deleted successfully
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+      tags:
+        - Expected Switch
   '/v2/org/{org}/carbide/sku':
     parameters:
       - schema:
@@ -16221,6 +16705,340 @@ components:
         labels:
           $ref: '#/components/schemas/Labels'
           description: User-defined key-value pairs for organizing and categorizing Expected Machines
+    ExpectedPowerShelf:
+      title: ExpectedPowerShelf
+      type: object
+      description: |-
+        An Expected Power Shelf represents a power shelf that is expected to be discovered at a site, with hardware identifiers and metadata.
+
+        Note: BMC credentials (username/password) are only accepted during creation and updates but are not returned in responses.
+      examples:
+        - id: 497f6eca-6276-4993-bfeb-53cbbbba6f08
+          siteId: f97df110-f4de-492e-8849-4a6af68026b0
+          bmcMacAddress: '00:1A:2B:3C:4D:5E'
+          shelfSerialNumber: SHELF-12345
+          ipAddress: '192.168.1.100'
+          labels:
+            environment: production
+            rack: A1
+          created: '2019-08-24T14:15:22Z'
+          updated: '2019-08-24T14:15:22Z'
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the Expected Power Shelf
+          readOnly: true
+        siteId:
+          type: string
+          format: uuid
+          description: ID of the site the Expected Power Shelf belongs to
+          readOnly: true
+        bmcMacAddress:
+          type: string
+          pattern: '^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$'
+          description: MAC address of the Expected Power Shelf's BMC (Baseboard Management Controller)
+        shelfSerialNumber:
+          type: string
+          description: Serial number of the Expected Power Shelf
+        ipAddress:
+          type:
+            - string
+            - 'null'
+          description: IP address of the Expected Power Shelf
+        labels:
+          $ref: '#/components/schemas/Labels'
+          description: User-defined key-value pairs for organizing and categorizing Expected Power Shelves
+        created:
+          type: string
+          format: date-time
+          description: ISO 8601 datetime when the Expected Power Shelf was created
+          readOnly: true
+        updated:
+          type: string
+          format: date-time
+          description: ISO 8601 datetime when the Expected Power Shelf was last updated
+          readOnly: true
+    ExpectedPowerShelfCreateRequest:
+      title: ExpectedPowerShelfCreateRequest
+      type: object
+      description: |-
+        Request data to create a new Expected Power Shelf.
+
+        Note: BMC credentials (username/password) are only accepted during creation and updates but are not returned in responses.
+      examples:
+        - siteId: f97df110-f4de-492e-8849-4a6af68026b0
+          bmcMacAddress: '00:1A:2B:3C:4D:5E'
+          defaultBmcUsername: admin
+          defaultBmcPassword: password123
+          shelfSerialNumber: SHELF-12345
+          ipAddress: '192.168.1.100'
+          labels:
+            environment: production
+            rack: A1
+      properties:
+        siteId:
+          type: string
+          format: uuid
+          description: ID of the site the Expected Power Shelf belongs to
+        bmcMacAddress:
+          type: string
+          pattern: '^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$'
+          description: MAC address of the Expected Power Shelf's BMC (Baseboard Management Controller)
+        defaultBmcUsername:
+          type:
+            - string
+            - 'null'
+          maxLength: 16
+          description: Username for accessing the Expected Power Shelf's BMC
+        defaultBmcPassword:
+          type:
+            - string
+            - 'null'
+          maxLength: 20
+          description: Password for accessing the Expected Power Shelf's BMC
+        shelfSerialNumber:
+          type: string
+          minLength: 1
+          maxLength: 32
+          description: Serial number of the Expected Power Shelf
+        ipAddress:
+          type:
+            - string
+            - 'null'
+          description: IP address of the Expected Power Shelf
+        labels:
+          $ref: '#/components/schemas/Labels'
+          description: User-defined key-value pairs for organizing and categorizing Expected Power Shelves
+      required:
+        - siteId
+        - bmcMacAddress
+        - shelfSerialNumber
+    ExpectedPowerShelfUpdateRequest:
+      title: ExpectedPowerShelfUpdateRequest
+      type: object
+      description: |-
+        Request data to update an existing Expected Power Shelf.
+
+        Note: BMC credentials (username/password) are only accepted during creation and updates but are not returned in responses.
+      examples:
+        - defaultBmcUsername: newadmin
+          defaultBmcPassword: newpassword123
+          shelfSerialNumber: SHELF-54321
+          ipAddress: '192.168.1.200'
+          labels:
+            environment: staging
+            rack: B2
+      properties:
+        id:
+          type:
+            - string
+            - 'null'
+          format: uuid
+          description: ID of the Expected Power Shelf to update (ignored for single update, used for identification in batch operations).
+        bmcMacAddress:
+          type:
+            - string
+            - 'null'
+          pattern: '^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$'
+          description: MAC address of the Expected Power Shelf's BMC (Baseboard Management Controller)
+        defaultBmcUsername:
+          type:
+            - string
+            - 'null'
+          maxLength: 16
+          description: Username for accessing the Expected Power Shelf's BMC
+        defaultBmcPassword:
+          type:
+            - string
+            - 'null'
+          maxLength: 20
+          description: Password for accessing the Expected Power Shelf's BMC
+        shelfSerialNumber:
+          type:
+            - string
+            - 'null'
+          minLength: 1
+          maxLength: 32
+          description: Serial number of the Expected Power Shelf
+        ipAddress:
+          type:
+            - string
+            - 'null'
+          description: IP address of the Expected Power Shelf
+        labels:
+          $ref: '#/components/schemas/Labels'
+          description: User-defined key-value pairs for organizing and categorizing Expected Power Shelves
+    ExpectedSwitch:
+      title: ExpectedSwitch
+      type: object
+      description: |-
+        An Expected Switch represents a network switch that is expected to be discovered at a site, with hardware identifiers and metadata.
+
+        Note: BMC and NvOS credentials (username/password) are only accepted during creation and updates but are not returned in responses.
+      examples:
+        - id: 497f6eca-6276-4993-bfeb-53cbbbba6f08
+          siteId: f97df110-f4de-492e-8849-4a6af68026b0
+          bmcMacAddress: '00:1A:2B:3C:4D:5E'
+          switchSerialNumber: SWITCH-12345
+          labels:
+            environment: production
+            rack: A1
+          created: '2019-08-24T14:15:22Z'
+          updated: '2019-08-24T14:15:22Z'
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the Expected Switch
+          readOnly: true
+        siteId:
+          type: string
+          format: uuid
+          description: ID of the site the Expected Switch belongs to
+          readOnly: true
+        bmcMacAddress:
+          type: string
+          pattern: '^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$'
+          description: MAC address of the Expected Switch's BMC (Baseboard Management Controller)
+        switchSerialNumber:
+          type: string
+          description: Serial number of the Expected Switch
+        labels:
+          $ref: '#/components/schemas/Labels'
+          description: User-defined key-value pairs for organizing and categorizing Expected Switches
+        created:
+          type: string
+          format: date-time
+          description: ISO 8601 datetime when the Expected Switch was created
+          readOnly: true
+        updated:
+          type: string
+          format: date-time
+          description: ISO 8601 datetime when the Expected Switch was last updated
+          readOnly: true
+    ExpectedSwitchCreateRequest:
+      title: ExpectedSwitchCreateRequest
+      type: object
+      description: |-
+        Request data to create a new Expected Switch.
+
+        Note: BMC and NvOS credentials (username/password) are only accepted during creation and updates but are not returned in responses.
+      examples:
+        - siteId: f97df110-f4de-492e-8849-4a6af68026b0
+          bmcMacAddress: '00:1A:2B:3C:4D:5E'
+          defaultBmcUsername: admin
+          defaultBmcPassword: password123
+          switchSerialNumber: SWITCH-12345
+          nvOsUsername: nvadmin
+          nvOsPassword: nvpassword123
+          labels:
+            environment: production
+            rack: A1
+      properties:
+        siteId:
+          type: string
+          format: uuid
+          description: ID of the site the Expected Switch belongs to
+        bmcMacAddress:
+          type: string
+          pattern: '^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$'
+          description: MAC address of the Expected Switch's BMC (Baseboard Management Controller)
+        defaultBmcUsername:
+          type:
+            - string
+            - 'null'
+          maxLength: 16
+          description: Username for accessing the Expected Switch's BMC
+        defaultBmcPassword:
+          type:
+            - string
+            - 'null'
+          maxLength: 20
+          description: Password for accessing the Expected Switch's BMC
+        switchSerialNumber:
+          type: string
+          minLength: 1
+          maxLength: 32
+          description: Serial number of the Expected Switch
+        nvOsUsername:
+          type:
+            - string
+            - 'null'
+          description: NvOS username for the Expected Switch
+        nvOsPassword:
+          type:
+            - string
+            - 'null'
+          description: NvOS password for the Expected Switch
+        labels:
+          $ref: '#/components/schemas/Labels'
+          description: User-defined key-value pairs for organizing and categorizing Expected Switches
+      required:
+        - siteId
+        - bmcMacAddress
+        - switchSerialNumber
+    ExpectedSwitchUpdateRequest:
+      title: ExpectedSwitchUpdateRequest
+      type: object
+      description: |-
+        Request data to update an existing Expected Switch.
+
+        Note: BMC and NvOS credentials (username/password) are only accepted during creation and updates but are not returned in responses.
+      examples:
+        - defaultBmcUsername: newadmin
+          defaultBmcPassword: newpassword123
+          switchSerialNumber: SWITCH-54321
+          nvOsUsername: newnvadmin
+          nvOsPassword: newnvpassword123
+          labels:
+            environment: staging
+            rack: B2
+      properties:
+        id:
+          type:
+            - string
+            - 'null'
+          format: uuid
+          description: ID of the Expected Switch to update (ignored for single update, used for identification in batch operations).
+        bmcMacAddress:
+          type:
+            - string
+            - 'null'
+          pattern: '^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$'
+          description: MAC address of the Expected Switch's BMC (Baseboard Management Controller)
+        defaultBmcUsername:
+          type:
+            - string
+            - 'null'
+          maxLength: 16
+          description: Username for accessing the Expected Switch's BMC
+        defaultBmcPassword:
+          type:
+            - string
+            - 'null'
+          maxLength: 20
+          description: Password for accessing the Expected Switch's BMC
+        switchSerialNumber:
+          type:
+            - string
+            - 'null'
+          minLength: 1
+          maxLength: 32
+          description: Serial number of the Expected Switch
+        nvOsUsername:
+          type:
+            - string
+            - 'null'
+          description: NvOS username for the Expected Switch
+        nvOsPassword:
+          type:
+            - string
+            - 'null'
+          description: NvOS password for the Expected Switch
+        labels:
+          $ref: '#/components/schemas/Labels'
+          description: User-defined key-value pairs for organizing and categorizing Expected Switches
     Sku:
       title: Sku
       type: object

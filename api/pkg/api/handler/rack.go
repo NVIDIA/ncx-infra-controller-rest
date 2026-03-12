@@ -200,8 +200,10 @@ func (grh GetRackHandler) Handle(c echo.Context) error {
 		if errors.As(err, &timeoutErr) || err == context.DeadlineExceeded || ctx.Err() != nil {
 			return common.TerminateWorkflowOnTimeOut(c, logger, stc, fmt.Sprintf("rack-get-%s", rackStrID), err, "Rack", "GetRack")
 		}
+		code, err := common.UnwrapWorkflowError(err)
 		logger.Error().Err(err).Msg("failed to get result from GetRack workflow")
-		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to get Rack details", nil)
+
+		return cutil.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to get Rack details: %s", err), nil)
 	}
 
 	// Convert to API model
@@ -404,8 +406,10 @@ func (garh GetAllRackHandler) Handle(c echo.Context) error {
 		if errors.As(err, &timeoutErr) || err == context.DeadlineExceeded || ctx.Err() != nil {
 			return common.TerminateWorkflowOnTimeOut(c, logger, stc, workflowID, err, "Rack", "GetRacks")
 		}
+		code, err := common.UnwrapWorkflowError(err)
 		logger.Error().Err(err).Msg("failed to get result from GetRacks workflow")
-		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to get Racks", nil)
+
+		return cutil.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to get Racks: %s", err), nil)
 	}
 
 	// Convert to API model
@@ -588,8 +592,10 @@ func (vrh ValidateRackHandler) Handle(c echo.Context) error {
 		if errors.As(err, &timeoutErr) || err == context.DeadlineExceeded || ctx.Err() != nil {
 			return common.TerminateWorkflowOnTimeOut(c, logger, stc, fmt.Sprintf("rack-validate-%s", rackStrID), err, "Rack", "ValidateRackComponents")
 		}
+		code, err := common.UnwrapWorkflowError(err)
 		logger.Error().Err(err).Msg("failed to get result from ValidateComponents workflow")
-		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to validate Rack", nil)
+
+		return cutil.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to validate Rack: %s", err), nil)
 	}
 
 	// Convert to API model
@@ -751,8 +757,10 @@ func (vrsh ValidateRacksHandler) Handle(c echo.Context) error {
 		if errors.As(err, &timeoutErr) || err == context.DeadlineExceeded || ctx.Err() != nil {
 			return common.TerminateWorkflowOnTimeOut(c, logger, stc, workflowID, err, "Rack", "ValidateRackComponents")
 		}
+		code, err := common.UnwrapWorkflowError(err)
 		logger.Error().Err(err).Msg("failed to get result from ValidateComponents workflow")
-		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to validate Racks", nil)
+
+		return cutil.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to validate Racks: %s", err), nil)
 	}
 
 	// Convert to API model

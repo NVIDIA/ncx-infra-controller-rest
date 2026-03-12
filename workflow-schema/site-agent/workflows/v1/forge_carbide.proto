@@ -329,6 +329,40 @@ service Forge {
   // Batch update expected machines
   rpc UpdateExpectedMachines(BatchExpectedMachineOperationRequest) returns (BatchExpectedMachineOperationResponse);
 
+  // Expected Power Shelf Management
+  // Add expected power shelf
+  rpc AddExpectedPowerShelf(ExpectedPowerShelf) returns (google.protobuf.Empty);
+  // Delete expected power shelf
+  rpc DeleteExpectedPowerShelf(ExpectedPowerShelfRequest) returns (google.protobuf.Empty);
+  // Update expected power shelf
+  rpc UpdateExpectedPowerShelf(ExpectedPowerShelf) returns (google.protobuf.Empty);
+  // Get expected power shelf
+  rpc GetExpectedPowerShelf(ExpectedPowerShelfRequest) returns (ExpectedPowerShelf);
+  // Get all expected power shelves
+  rpc GetAllExpectedPowerShelves(google.protobuf.Empty) returns (ExpectedPowerShelfList);
+  // Replace all expected power shelves in site
+  rpc ReplaceAllExpectedPowerShelves(ExpectedPowerShelfList) returns (google.protobuf.Empty);
+  // Expected power shelves linked to actual power shelves
+  rpc GetAllExpectedPowerShelvesLinked(google.protobuf.Empty) returns (LinkedExpectedPowerShelfList);
+
+  // Expected Switch Management
+  // Add expected switch
+  rpc AddExpectedSwitch(ExpectedSwitch) returns (google.protobuf.Empty);
+  // Delete expected switch
+  rpc DeleteExpectedSwitch(ExpectedSwitchRequest) returns (google.protobuf.Empty);
+  // Update expected switch
+  rpc UpdateExpectedSwitch(ExpectedSwitch) returns (google.protobuf.Empty);
+  // Get expected switch
+  rpc GetExpectedSwitch(ExpectedSwitchRequest) returns (ExpectedSwitch);
+  // Get all expected switches
+  rpc GetAllExpectedSwitches(google.protobuf.Empty) returns (ExpectedSwitchList);
+  // Replace all expected switches in site
+  rpc ReplaceAllExpectedSwitches(ExpectedSwitchList) returns (google.protobuf.Empty);
+  // Delete all expected switches in site
+  rpc DeleteAllExpectedSwitches(google.protobuf.Empty) returns (google.protobuf.Empty);
+  // Expected switches linked to actual switches
+  rpc GetAllExpectedSwitchesLinked(google.protobuf.Empty) returns (LinkedExpectedSwitchList);
+
   // Perform Attestation Procedure for Measured Boot
   rpc AttestQuote	(AttestQuoteRequest) returns (AttestQuoteResponse);
 
@@ -4101,6 +4135,77 @@ message ExpectedMachineOperationResult {
 message BatchExpectedMachineOperationResponse {
   // Individual results for each ExpectedMachine
   repeated ExpectedMachineOperationResult results = 1;
+}
+
+// Expected Power Shelf messages
+message ExpectedPowerShelf {
+  string bmc_mac_address = 1;
+  string bmc_username = 2;
+  string bmc_password = 3;
+  string shelf_serial_number = 4;
+  string ip_address = 5;
+  // Metadata that will automatically get associated with a newly created PowerShelf
+  Metadata metadata = 6;
+  optional string rack_id = 7;
+  // Unique identifier for the expected power shelf. When omitted, server generates one.
+  optional common.UUID id = 8;
+}
+
+message ExpectedPowerShelfRequest {
+  string bmc_mac_address = 1;
+  // Optional unique identifier for selecting an expected power shelf.
+  optional common.UUID id = 2;
+}
+
+message ExpectedPowerShelfList {
+  repeated ExpectedPowerShelf expected_power_shelves = 1;
+}
+
+message LinkedExpectedPowerShelfList {
+  repeated LinkedExpectedPowerShelf expected_power_shelves = 1;
+}
+
+message LinkedExpectedPowerShelf {
+  string shelf_serial_number = 1;
+  string bmc_mac_address = 2;
+  optional common.PowerShelfId power_shelf_id = 3;
+  optional common.UUID expected_power_shelf_id = 4;
+}
+
+// Expected Switch messages
+message ExpectedSwitch {
+  string bmc_mac_address = 1;
+  string bmc_username = 2;
+  string bmc_password = 3;
+  string switch_serial_number = 4;
+  // Metadata that will automatically get associated with a newly created Switch
+  Metadata metadata = 5;
+  optional string rack_id = 6;
+  optional string nvos_username = 7;
+  optional string nvos_password = 8;
+  // Unique identifier for the expected switch. When omitted, server generates one.
+  optional common.UUID id = 9;
+}
+
+message ExpectedSwitchRequest {
+  string bmc_mac_address = 1;
+  // Optional unique identifier for selecting an expected switch.
+  optional common.UUID id = 2;
+}
+
+message ExpectedSwitchList {
+  repeated ExpectedSwitch expected_switches = 1;
+}
+
+message LinkedExpectedSwitchList {
+  repeated LinkedExpectedSwitch expected_switches = 1;
+}
+
+message LinkedExpectedSwitch {
+  string switch_serial_number = 1;
+  string bmc_mac_address = 2;
+  optional common.SwitchId switch_id = 3;
+  optional common.UUID expected_switch_id = 4;
 }
 
 message MachineRebootCompletedResponse {

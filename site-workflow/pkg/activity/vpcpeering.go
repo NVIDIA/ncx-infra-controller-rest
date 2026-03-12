@@ -65,6 +65,9 @@ func (mvp *ManageVpcPeering) CreateVpcPeeringOnSite(ctx context.Context, request
 
 	// Call Site Controller API
 	carbideClient := mvp.CarbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return cClient.ErrClientNotConnected
+	}
 	forgeClient := carbideClient.Carbide()
 
 	_, err = forgeClient.CreateVpcPeering(ctx, request)
@@ -99,6 +102,9 @@ func (mvp *ManageVpcPeering) DeleteVpcPeeringOnSite(ctx context.Context, request
 
 	// Call Site Controller API
 	carbideClient := mvp.CarbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return cClient.ErrClientNotConnected
+	}
 	forgeClient := carbideClient.Carbide()
 
 	_, err = forgeClient.DeleteVpcPeering(ctx, request)

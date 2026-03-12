@@ -30,7 +30,6 @@ import (
 	tp "go.temporal.io/sdk/temporal"
 
 	"github.com/google/uuid"
-	"github.com/rs/zerolog/log"
 
 	"github.com/labstack/echo/v4"
 
@@ -85,30 +84,11 @@ func NewCreateMachineInstanceTypeHandler(dbSession *cdb.Session, tc temporalClie
 // @Success 201 {object} model.APIMachineInstanceType
 // @Router /v2/org/{org}/carbide/instance/type/{instance_type_id}/machine [post]
 func (cmith CreateMachineInstanceTypeHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "MachineInstanceType").Str("Handler", "Create").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := cmith.tracerSpan.CreateChildInContext(ctx, "CreateMachineInstanceTypeHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("MachineInstanceType", "Create", c, cmith.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		cmith.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, cmith.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -379,30 +359,11 @@ func NewGetAllMachineInstanceTypeHandler(dbSession *cdb.Session, tc temporalClie
 // @Success 200 {object} []model.APIMachineInstanceType
 // @Router /v2/org/{org}/carbide/instance/type/{instance_type_id}/machine [get]
 func (gamith GetAllMachineInstanceTypeHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "MachineInstanceType").Str("Handler", "GetAll").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gamith.tracerSpan.CreateChildInContext(ctx, "GetAllMachineInstanceTypeHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("MachineInstanceType", "GetAll", c, gamith.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gamith.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gamith.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -548,30 +509,11 @@ func NewDeleteMachineInstanceTypeHandler(dbSession *cdb.Session, tc temporalClie
 // @Success 204
 // @Router /v2/org/{org}/carbide/instance/type/{instance_type_id}/machine/{id} [delete]
 func (dmith DeleteMachineInstanceTypeHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "MachineInstanceType").Str("Handler", "Delete").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := dmith.tracerSpan.CreateChildInContext(ctx, "DeleteMachineInstanceTypeHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("MachineInstanceType", "Delete", c, dmith.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		dmith.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, dmith.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 

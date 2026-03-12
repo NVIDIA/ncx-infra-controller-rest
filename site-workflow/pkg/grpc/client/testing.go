@@ -1052,6 +1052,196 @@ func (c *MockForgeClient) GetAllExpectedMachinesLinked(ctx context.Context, in *
 	return out, nil
 }
 
+/* Expected Power Shelf mock methods */
+func (c *MockForgeClient) AddExpectedPowerShelf(ctx context.Context, in *wflows.ExpectedPowerShelf, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	if in.Id == nil || in.Id.Value == "" {
+		return nil, status.Error(codes.Internal, "ID not provided for AddExpectedPowerShelf")
+	}
+	if in.BmcMacAddress == "" {
+		return nil, status.Error(codes.Internal, "MAC address not provided for AddExpectedPowerShelf")
+	}
+	if in.ShelfSerialNumber == "" {
+		return nil, status.Error(codes.Internal, "Shelf Serial Number not provided for AddExpectedPowerShelf")
+	}
+	out := new(emptypb.Empty)
+	return out, nil
+}
+
+func (c *MockForgeClient) DeleteExpectedPowerShelf(ctx context.Context, in *wflows.ExpectedPowerShelfRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	if in.Id == nil || in.Id.Value == "" {
+		return nil, status.Error(codes.Internal, "ID not provided for DeleteExpectedPowerShelf")
+	}
+	out := new(emptypb.Empty)
+	return out, nil
+}
+
+func (c *MockForgeClient) UpdateExpectedPowerShelf(ctx context.Context, in *wflows.ExpectedPowerShelf, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	if in.Id == nil || in.Id.Value == "" {
+		return nil, status.Error(codes.Internal, "ID not provided for UpdateExpectedPowerShelf")
+	}
+	if in.BmcMacAddress == "" {
+		return nil, status.Error(codes.Internal, "MAC address not provided for UpdateExpectedPowerShelf")
+	}
+	if in.ShelfSerialNumber == "" {
+		return nil, status.Error(codes.Internal, "Shelf Serial Number not provided for UpdateExpectedPowerShelf")
+	}
+	out := new(emptypb.Empty)
+	return out, nil
+}
+
+func (c *MockForgeClient) GetAllExpectedPowerShelves(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*wflows.ExpectedPowerShelfList, error) {
+	err, ok := ctx.Value("wantError").(error)
+	if ok {
+		if status.Code(err) == codes.Internal {
+			return nil, status.Error(codes.Internal, "failed to retrieve expected power shelves")
+		}
+	}
+
+	out := &wflows.ExpectedPowerShelfList{}
+
+	count, ok := ctx.Value("wantCount").(int)
+	if ok {
+		mac, _ := net.ParseMAC("02:00:00:00:00:00")
+		for i := 0; i < count; i++ {
+			var uuidBytes [16]byte
+			copy(uuidBytes[:6], mac)
+			epsID, _ := uuid.FromBytes(uuidBytes[:])
+			out.ExpectedPowerShelves = append(out.ExpectedPowerShelves, &wflows.ExpectedPowerShelf{
+				Id:                &wflows.UUID{Value: epsID.String()},
+				BmcMacAddress:     mac.String(),
+				ShelfSerialNumber: "shelf-serial-" + mac.String()})
+			incrementMAC(mac)
+		}
+	}
+
+	return out, nil
+}
+
+func (c *MockForgeClient) GetAllExpectedPowerShelvesLinked(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*wflows.LinkedExpectedPowerShelfList, error) {
+	err, ok := ctx.Value("wantError").(error)
+	if ok {
+		if status.Code(err) == codes.Internal {
+			return nil, status.Error(codes.Internal, "failed to retrieve linked expected power shelves")
+		}
+	}
+
+	out := &wflows.LinkedExpectedPowerShelfList{}
+
+	count, ok := ctx.Value("wantCount").(int)
+	if ok {
+		mac, _ := net.ParseMAC("02:00:00:00:00:00")
+		for i := 0; i < count; i++ {
+			var uuidBytes [16]byte
+			copy(uuidBytes[:6], mac)
+			powerShelfID, _ := uuid.FromBytes(uuidBytes[:])
+
+			out.ExpectedPowerShelves = append(out.ExpectedPowerShelves, &wflows.LinkedExpectedPowerShelf{
+				ShelfSerialNumber: "shelf-serial-" + mac.String(),
+				BmcMacAddress:     mac.String(),
+				PowerShelfId:      &wflows.PowerShelfId{Id: powerShelfID.String()},
+			})
+			incrementMAC(mac)
+		}
+	}
+
+	return out, nil
+}
+
+/* Expected Switch mock methods */
+func (c *MockForgeClient) AddExpectedSwitch(ctx context.Context, in *wflows.ExpectedSwitch, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	if in.Id == nil || in.Id.Value == "" {
+		return nil, status.Error(codes.Internal, "ID not provided for AddExpectedSwitch")
+	}
+	if in.BmcMacAddress == "" {
+		return nil, status.Error(codes.Internal, "MAC address not provided for AddExpectedSwitch")
+	}
+	if in.SwitchSerialNumber == "" {
+		return nil, status.Error(codes.Internal, "Switch Serial Number not provided for AddExpectedSwitch")
+	}
+	out := new(emptypb.Empty)
+	return out, nil
+}
+
+func (c *MockForgeClient) DeleteExpectedSwitch(ctx context.Context, in *wflows.ExpectedSwitchRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	if in.Id == nil || in.Id.Value == "" {
+		return nil, status.Error(codes.Internal, "ID not provided for DeleteExpectedSwitch")
+	}
+	out := new(emptypb.Empty)
+	return out, nil
+}
+
+func (c *MockForgeClient) UpdateExpectedSwitch(ctx context.Context, in *wflows.ExpectedSwitch, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	if in.Id == nil || in.Id.Value == "" {
+		return nil, status.Error(codes.Internal, "ID not provided for UpdateExpectedSwitch")
+	}
+	if in.BmcMacAddress == "" {
+		return nil, status.Error(codes.Internal, "MAC address not provided for UpdateExpectedSwitch")
+	}
+	if in.SwitchSerialNumber == "" {
+		return nil, status.Error(codes.Internal, "Switch Serial Number not provided for UpdateExpectedSwitch")
+	}
+	out := new(emptypb.Empty)
+	return out, nil
+}
+
+func (c *MockForgeClient) GetAllExpectedSwitches(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*wflows.ExpectedSwitchList, error) {
+	err, ok := ctx.Value("wantError").(error)
+	if ok {
+		if status.Code(err) == codes.Internal {
+			return nil, status.Error(codes.Internal, "failed to retrieve expected switches")
+		}
+	}
+
+	out := &wflows.ExpectedSwitchList{}
+
+	count, ok := ctx.Value("wantCount").(int)
+	if ok {
+		mac, _ := net.ParseMAC("02:00:00:00:00:00")
+		for i := 0; i < count; i++ {
+			var uuidBytes [16]byte
+			copy(uuidBytes[:6], mac)
+			esID, _ := uuid.FromBytes(uuidBytes[:])
+			out.ExpectedSwitches = append(out.ExpectedSwitches, &wflows.ExpectedSwitch{
+				Id:                 &wflows.UUID{Value: esID.String()},
+				BmcMacAddress:      mac.String(),
+				SwitchSerialNumber: "switch-serial-" + mac.String()})
+			incrementMAC(mac)
+		}
+	}
+
+	return out, nil
+}
+
+func (c *MockForgeClient) GetAllExpectedSwitchesLinked(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*wflows.LinkedExpectedSwitchList, error) {
+	err, ok := ctx.Value("wantError").(error)
+	if ok {
+		if status.Code(err) == codes.Internal {
+			return nil, status.Error(codes.Internal, "failed to retrieve linked expected switches")
+		}
+	}
+
+	out := &wflows.LinkedExpectedSwitchList{}
+
+	count, ok := ctx.Value("wantCount").(int)
+	if ok {
+		mac, _ := net.ParseMAC("02:00:00:00:00:00")
+		for i := 0; i < count; i++ {
+			var uuidBytes [16]byte
+			copy(uuidBytes[:6], mac)
+			switchID, _ := uuid.FromBytes(uuidBytes[:])
+
+			out.ExpectedSwitches = append(out.ExpectedSwitches, &wflows.LinkedExpectedSwitch{
+				SwitchSerialNumber: "switch-serial-" + mac.String(),
+				BmcMacAddress:      mac.String(),
+				SwitchId:           &wflows.SwitchId{Id: switchID.String()},
+			})
+			incrementMAC(mac)
+		}
+	}
+
+	return out, nil
+}
+
 /* SKU mock methods */
 func (c *MockForgeClient) FindSkusByIds(ctx context.Context, in *wflows.SkusByIdsRequest, opts ...grpc.CallOption) (*wflows.SkuList, error) {
 	err, ok := ctx.Value("wantError").(error)

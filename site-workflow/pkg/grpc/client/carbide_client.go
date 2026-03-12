@@ -51,6 +51,7 @@ var (
 	ErrCarbideClientInvalidClientCA   = errors.New("CarbideClient: invalid client CA")
 	ErrCarbideClientInvalidClientKey  = errors.New("CarbideClient: invalid client key")
 	ErrCarbideClientInvalidClientCert = errors.New("CarbideClient: invalid client cert")
+	ErrClientNotConnected             = errors.New("gRPC client is not connected to the server")
 )
 
 // SecureOptions is the enum for the secure options
@@ -286,9 +287,16 @@ func (cac *CarbideAtomicClient) SwapClient(newClient *CarbideClient) *CarbideCli
 	return oldClient
 }
 
-// GetClient returns the current version of Carbide client from the atomic value
+// GetClient returns the current version of Carbide client from the atomic value.
+// Returns nil if the client has not been initialized yet.
 func (cac *CarbideAtomicClient) GetClient() *CarbideClient {
-	return cac.value.Load().(*CarbideClient)
+	v := cac.value.Load()
+	if v == nil {
+		return nil
+	}
+	client, _ := v.(*CarbideClient)
+
+	return client
 }
 
 // CheckAndReloadCerts continuously monitors the TLS certificates for changes.

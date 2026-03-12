@@ -34,7 +34,6 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
-	"github.com/rs/zerolog/log"
 
 	"github.com/nvidia/bare-metal-manager-rest/api/internal/config"
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/handler/util/common"
@@ -88,30 +87,11 @@ func NewCreateNVLinkLogicalPartitionHandler(dbSession *cdb.Session, tc temporalC
 // @Success 201 {object} model.APINVLinkLogicalPartition
 // @Router /v2/org/{org}/carbide/nvlink-logical-partition [post]
 func (cibph CreateNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "NVLinkLogicalPartition").Str("Handler", "Create").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := cibph.tracerSpan.CreateChildInContext(ctx, "CreateNVLinkLogicalPartitionHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("NVLinkLogicalPartition", "Create", c, cibph.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		cibph.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, cibph.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -423,30 +403,11 @@ func NewGetAllNVLinkLogicalPartitionHandler(dbSession *cdb.Session, tc temporalC
 // @Success 200 {object} []model.APINVLinkLogicalPartition
 // @Router /v2/org/{org}/carbide/nvlink-logical-partition [get]
 func (gaibph GetAllNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "NVLinkLogicalPartition").Str("Handler", "GetAll").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gaibph.tracerSpan.CreateChildInContext(ctx, "GetAllNVLinkLogicalPartitionHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("NVLinkLogicalPartition", "GetAll", c, gaibph.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gaibph.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gaibph.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -744,30 +705,11 @@ func NewGetNVLinkLogicalPartitionHandler(dbSession *cdb.Session, tc temporalClie
 // @Success 200 {object} model.APINVLinkLogicalPartition
 // @Router /v2/org/{org}/carbide/nvlink-logical-partition/{id} [get]
 func (gibph GetNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "NVLinkLogicalPartition").Str("Handler", "Get").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gibph.tracerSpan.CreateChildInContext(ctx, "GetNVLinkLogicalPartitionHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("NVLinkLogicalPartition", "Get", c, gibph.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gibph.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gibph.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -956,30 +898,11 @@ func NewUpdateNVLinkLogicalPartitionHandler(dbSession *cdb.Session, tc temporalC
 // @Success 200 {object} model.APINVLinkLogicalPartition
 // @Router /v2/org/{org}/carbide/nvlink-logical-partition/{id} [patch]
 func (uibph UpdateNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "NVLinkLogicalPartition").Str("Handler", "Update").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := uibph.tracerSpan.CreateChildInContext(ctx, "UpdateNVLinkLogicalPartitionHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("NVLinkLogicalPartition", "Update", c, uibph.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		uibph.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, uibph.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -1252,30 +1175,11 @@ func NewDeleteNVLinkLogicalPartitionHandler(dbSession *cdb.Session, tc temporalC
 // @Success 202
 // @Router /v2/org/{org}/carbide/nvlink-logical-partition/{id} [delete]
 func (dibph DeleteNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "NVLinkLogicalPartition").Str("Handler", "Delete").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := dibph.tracerSpan.CreateChildInContext(ctx, "DeleteNVLinkLogicalPartitionHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("NVLinkLogicalPartition", "Delete", c, dibph.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		dibph.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, dibph.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 

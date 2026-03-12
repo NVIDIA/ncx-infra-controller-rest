@@ -401,6 +401,58 @@ func NewAPIRoutes(dbSession *cdb.Session, tc tClient.Client, tnc tClient.Namespa
 			Method:  http.MethodDelete,
 			Handler: apiHandler.NewDeleteExpectedMachineHandler(dbSession, tc, scp, cfg),
 		},
+		// ExpectedPowerShelf endpoints
+		{
+			Path:    apiPathPrefix + "/expected-power-shelf",
+			Method:  http.MethodPost,
+			Handler: apiHandler.NewCreateExpectedPowerShelfHandler(dbSession, tc, scp, cfg),
+		},
+		{
+			Path:    apiPathPrefix + "/expected-power-shelf",
+			Method:  http.MethodGet,
+			Handler: apiHandler.NewGetAllExpectedPowerShelfHandler(dbSession, tc, cfg),
+		},
+		{
+			Path:    apiPathPrefix + "/expected-power-shelf/:id",
+			Method:  http.MethodGet,
+			Handler: apiHandler.NewGetExpectedPowerShelfHandler(dbSession, tc, cfg),
+		},
+		{
+			Path:    apiPathPrefix + "/expected-power-shelf/:id",
+			Method:  http.MethodPatch,
+			Handler: apiHandler.NewUpdateExpectedPowerShelfHandler(dbSession, tc, scp, cfg),
+		},
+		{
+			Path:    apiPathPrefix + "/expected-power-shelf/:id",
+			Method:  http.MethodDelete,
+			Handler: apiHandler.NewDeleteExpectedPowerShelfHandler(dbSession, tc, scp, cfg),
+		},
+		// ExpectedSwitch endpoints
+		{
+			Path:    apiPathPrefix + "/expected-switch",
+			Method:  http.MethodPost,
+			Handler: apiHandler.NewCreateExpectedSwitchHandler(dbSession, tc, scp, cfg),
+		},
+		{
+			Path:    apiPathPrefix + "/expected-switch",
+			Method:  http.MethodGet,
+			Handler: apiHandler.NewGetAllExpectedSwitchHandler(dbSession, tc, cfg),
+		},
+		{
+			Path:    apiPathPrefix + "/expected-switch/:id",
+			Method:  http.MethodGet,
+			Handler: apiHandler.NewGetExpectedSwitchHandler(dbSession, tc, cfg),
+		},
+		{
+			Path:    apiPathPrefix + "/expected-switch/:id",
+			Method:  http.MethodPatch,
+			Handler: apiHandler.NewUpdateExpectedSwitchHandler(dbSession, tc, scp, cfg),
+		},
+		{
+			Path:    apiPathPrefix + "/expected-switch/:id",
+			Method:  http.MethodDelete,
+			Handler: apiHandler.NewDeleteExpectedSwitchHandler(dbSession, tc, scp, cfg),
+		},
 		// Machine endpoints
 		{
 			Path:    apiPathPrefix + "/machine",

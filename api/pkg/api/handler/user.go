@@ -21,9 +21,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/rs/zerolog/log"
-	"go.opentelemetry.io/otel/attribute"
-
 	"github.com/labstack/echo/v4"
 
 	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
@@ -59,30 +56,11 @@ func NewGetUserHandler(dbSession *cdb.Session) GetUserHandler {
 // @Success 200 {object} model.APIUser
 // @Router /v2/org/{org}/carbide/user/current [get]
 func (guh GetUserHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "User").Str("Handler", "Get").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := guh.tracerSpan.CreateChildInContext(ctx, "GetUserHandler", logger)
+	org, dbUser, _, logger, handlerSpan := common.SetupHandler("User", "Get", c, guh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		guh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, guh.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 

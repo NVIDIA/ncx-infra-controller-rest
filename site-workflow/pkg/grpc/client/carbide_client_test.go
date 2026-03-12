@@ -20,6 +20,7 @@ package client
 import (
 	"crypto/md5"
 	"os"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -90,6 +91,24 @@ func TestCarbideAtomicClient_GetInitialCertMD5(t *testing.T) {
 			assert.Equal(t, tt.wantServerCAMD5, gotServerCAMD5)
 		})
 	}
+}
+
+func TestCarbideAtomicClient_GetClient_ReturnsNilWhenUninitialized(t *testing.T) {
+	cac := &CarbideAtomicClient{
+		value: &atomic.Value{},
+	}
+	// GetClient should return nil without panicking when no client has been stored
+	assert.Nil(t, cac.GetClient())
+}
+
+func TestCarbideAtomicClient_GetClient_ReturnsClientAfterSwap(t *testing.T) {
+	cac := &CarbideAtomicClient{
+		value: &atomic.Value{},
+	}
+	// Simulate storing a client via SwapClient
+	testClient := &CarbideClient{}
+	cac.value.Store(testClient)
+	assert.Equal(t, testClient, cac.GetClient())
 }
 
 func TestCarbideAtomicClient_CheckCertificates(t *testing.T) {

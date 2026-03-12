@@ -127,7 +127,7 @@ func NewCreateExpectedMachineHandler(dbSession *cdb.Session, tc tclient.Client, 
 // @Success 201 {object} model.APIExpectedMachine
 // @Router /v2/org/{org}/carbide/expected-machine [post]
 func (cemh CreateExpectedMachineHandler) Handle(c echo.Context) error {
-	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("Create", "ExpectedMachine", c, cemh.tracerSpan)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("ExpectedMachine", "Create", c, cemh.tracerSpan)
 	if handlerSpan != nil {
 		defer handlerSpan.End()
 	}
@@ -352,7 +352,7 @@ func NewGetAllExpectedMachineHandler(dbSession *cdb.Session, tc tclient.Client, 
 // @Success 200 {object} []model.APIExpectedMachine
 // @Router /v2/org/{org}/carbide/expected-machine [get]
 func (gaemh GetAllExpectedMachineHandler) Handle(c echo.Context) error {
-	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("GetAll", "ExpectedMachine", c, gaemh.tracerSpan)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("ExpectedMachine", "GetAll", c, gaemh.tracerSpan)
 	if handlerSpan != nil {
 		defer handlerSpan.End()
 	}
@@ -511,7 +511,7 @@ func NewGetExpectedMachineHandler(dbSession *cdb.Session, tc tclient.Client, cfg
 // @Success 200 {object} model.APIExpectedMachine
 // @Router /v2/org/{org}/carbide/expected-machine/{id} [get]
 func (gemh GetExpectedMachineHandler) Handle(c echo.Context) error {
-	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("Get", "ExpectedMachine", c, gemh.tracerSpan)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("ExpectedMachine", "Get", c, gemh.tracerSpan)
 	if handlerSpan != nil {
 		defer handlerSpan.End()
 	}
@@ -617,7 +617,7 @@ func NewUpdateExpectedMachineHandler(dbSession *cdb.Session, tc tclient.Client, 
 // @Success 200 {object} model.APIExpectedMachine
 // @Router /v2/org/{org}/carbide/expected-machine/{id} [patch]
 func (uemh UpdateExpectedMachineHandler) Handle(c echo.Context) error {
-	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("Update", "ExpectedMachine", c, uemh.tracerSpan)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("ExpectedMachine", "Update", c, uemh.tracerSpan)
 	if handlerSpan != nil {
 		defer handlerSpan.End()
 	}
@@ -837,7 +837,7 @@ func NewDeleteExpectedMachineHandler(dbSession *cdb.Session, tc tclient.Client, 
 // @Success 204
 // @Router /v2/org/{org}/carbide/expected-machine/{id} [delete]
 func (demh DeleteExpectedMachineHandler) Handle(c echo.Context) error {
-	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("Delete", "ExpectedMachine", c, demh.tracerSpan)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("ExpectedMachine", "Delete", c, demh.tracerSpan)
 	if handlerSpan != nil {
 		defer handlerSpan.End()
 	}
@@ -982,7 +982,7 @@ func NewCreateExpectedMachinesHandler(dbSession *cdb.Session, tc tclient.Client,
 // @Success 201 {object} model.APIExpectedMachineBatchResponse
 // @Router /v2/org/{org}/carbide/expected-machine/batch [post]
 func (cemh CreateExpectedMachinesHandler) Handle(c echo.Context) error {
-	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("CreateMultiple", "ExpectedMachine", c, cemh.tracerSpan)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("ExpectedMachine", "CreateMultiple", c, cemh.tracerSpan)
 	if handlerSpan != nil {
 		defer handlerSpan.End()
 	}
@@ -1321,7 +1321,7 @@ func NewUpdateExpectedMachinesHandler(dbSession *cdb.Session, tc tclient.Client,
 // @Success 200 {object} model.APIExpectedMachineBatchResponse
 // @Router /v2/org/{org}/carbide/expected-machine/batch [patch]
 func (uemh UpdateExpectedMachinesHandler) Handle(c echo.Context) error {
-	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("UpdateMultiple", "ExpectedMachine", c, uemh.tracerSpan)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("ExpectedMachine", "UpdateMultiple", c, uemh.tracerSpan)
 	if handlerSpan != nil {
 		defer handlerSpan.End()
 	}

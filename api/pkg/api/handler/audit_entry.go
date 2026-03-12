@@ -35,7 +35,6 @@ import (
 	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
 	"github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
-	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel/attribute"
 )
 
@@ -63,30 +62,11 @@ func NewGetAllAuditEntryHandler(dbSession *cdb.Session) GetAllAuditEntryHandler 
 // @Success 200 {array} []model.APIAuditEntry
 // @Router /v2/org/{org}/carbide/audit [get]
 func (gaaeh GetAllAuditEntryHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	orgName := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "AuditEntry").Str("Handler", "GetAll").Str("Org", orgName).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gaaeh.tracerSpan.CreateChildInContext(ctx, "GetAllAuditEntryHandler", logger)
+	orgName, dbUser, ctx, logger, handlerSpan := common.SetupHandler("AuditEntry", "GetAll", c, gaaeh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gaaeh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", orgName), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gaaeh.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
@@ -218,30 +198,11 @@ func NewGetAuditEntryHandler(dbSession *cdb.Session) GetAuditEntryHandler {
 // @Success 200 {object} model.APIAuditEntry
 // @Router /v2/org/{org}/carbide/audit/{id} [get]
 func (gaeh GetAuditEntryHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	orgName := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "AuditEntry").Str("Handler", "GetAll").Str("Org", orgName).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gaeh.tracerSpan.CreateChildInContext(ctx, "GetAuditEntryHandler", logger)
+	orgName, dbUser, ctx, logger, handlerSpan := common.SetupHandler("AuditEntry", "Get", c, gaeh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gaeh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", orgName), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gaeh.tracerSpan, handlerSpan)
-	if err != nil {
+	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 

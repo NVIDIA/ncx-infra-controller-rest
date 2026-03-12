@@ -392,6 +392,12 @@ func TestUnwrapWorkflowError(t *testing.T) {
 			wantCode: http.StatusBadRequest,
 			wantErr:  causeErr,
 		},
+		{
+			name:     "unwraps ApplicationError wrapped in generic error chain",
+			err:      fmt.Errorf("workflow execution error: %w", fmt.Errorf("activity error: %w", temporal.NewApplicationErrorWithCause("wrapped", swe.ErrTypeCarbideObjectNotFound, causeErr))),
+			wantCode: http.StatusNotFound,
+			wantErr:  causeErr,
+		},
 	}
 
 	for _, tt := range tests {
