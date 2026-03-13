@@ -9592,6 +9592,56 @@ paths:
           $ref: '#/components/responses/ForbiddenError'
       tags:
         - Rack
+  '/v2/org/{org}/carbide/rack/task/{uuid}':
+    parameters:
+      - schema:
+          type: string
+        name: org
+        in: path
+        required: true
+        description: Name of the Org
+      - schema:
+          type: string
+          format: uuid
+        name: uuid
+        in: path
+        required: true
+        description: UUID of the Task
+    get:
+      summary: Retrieve a Task
+      operationId: get-rack-task
+      description: |-
+        Get a Task by UUID.
+
+        Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` authorization role.
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          name: siteId
+          in: query
+          required: true
+          description: ID of the Site
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RackTask'
+              examples:
+                example-1:
+                  value:
+                    id: 550e8400-e29b-41d4-a716-446655440000
+                    status: running
+                    description: Power on rack components
+                    message: 'Processing 3 of 5 components'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+      tags:
+        - Rack
   '/v2/org/{org}/carbide/tray':
     parameters:
       - schema:
@@ -16010,6 +16060,48 @@ components:
       examples:
         - taskIds:
             - 550e8400-e29b-41d4-a716-446655440000
+    RackTask:
+      title: RackTask
+      type: object
+      description: A task representing an asynchronous operation on rack infrastructure.
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier of the task.
+        status:
+          type: string
+          enum:
+            - unknown
+            - pending
+            - running
+            - succeeded
+            - failed
+          description: Current state of the task.
+        description:
+          type: string
+          description: Human-readable description provided when the task was created.
+        startTime:
+          type: string
+          format: date-time
+          description: Timestamp when the task started execution.
+        endTime:
+          type: string
+          format: date-time
+          description: Timestamp when the task finished (succeeded, failed or canceled).
+        message:
+          type: string
+          description: Optional status or error message describing the current state or result.
+        metadata:
+          type: object
+          additionalProperties:
+            type: string
+          description: Extensible key-value data for additional task details.
+      examples:
+        - id: 550e8400-e29b-41d4-a716-446655440000
+          status: running
+          description: Power on rack components
+          message: 'Processing 3 of 5 components'
     BatchTrayFirmwareUpdateRequest:
       title: BatchTrayFirmwareUpdateRequest
       type: object

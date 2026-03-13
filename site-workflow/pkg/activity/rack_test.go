@@ -655,6 +655,71 @@ func TestManageRack_BringUpRack(t *testing.T) {
 	}
 }
 
+func TestManageRack_GetTaskByID(t *testing.T) {
+	tests := []struct {
+		name        string
+		request     *rlav1.GetTasksByIDsRequest
+		wantErr     bool
+		errContains string
+	}{
+		{
+			name:        "nil request returns error",
+			request:     nil,
+			wantErr:     true,
+			errContains: "empty get task request",
+		},
+		{
+			name: "request with empty task IDs returns error",
+			request: &rlav1.GetTasksByIDsRequest{
+				TaskIds: []*rlav1.UUID{},
+			},
+			wantErr:     true,
+			errContains: "without task IDs",
+		},
+		{
+			name: "successful request - single task",
+			request: &rlav1.GetTasksByIDsRequest{
+				TaskIds: []*rlav1.UUID{{Id: "test-task-id"}},
+			},
+			wantErr: false,
+		},
+		{
+			name: "successful request - multiple task IDs",
+			request: &rlav1.GetTasksByIDsRequest{
+				TaskIds: []*rlav1.UUID{
+					{Id: "task-1"},
+					{Id: "task-2"},
+				},
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockRlaClient := cClient.NewMockRlaClient()
+			rlaAtomicClient := cClient.NewRlaAtomicClient(&cClient.RlaClientConfig{})
+			rlaAtomicClient.SwapClient(mockRlaClient)
+			manageRack := NewManageRack(rlaAtomicClient)
+
+			ctx := context.Background()
+			result, err := manageRack.GetTaskByID(ctx, tt.request)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.errContains != "" {
+					assert.Contains(t, err.Error(), tt.errContains)
+				}
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.NotNil(t, result)
+			assert.Equal(t, len(tt.request.GetTaskIds()), len(result.GetTasks()))
+		})
+	}
+}
+
 func TestManageRack_UpgradeFirmware(t *testing.T) {
 	tests := []struct {
 		name        string
