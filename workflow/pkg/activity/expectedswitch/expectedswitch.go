@@ -137,7 +137,7 @@ func (mei ManageExpectedSwitch) UpdateExpectedSwitchesInDB(ctx context.Context, 
 		if res == nil {
 			logger.Error().Msg("received nil Expected Switch entry, skipping processing")
 			continue
-		} else if res.Id == nil {
+		} else if res.ExpectedSwitchId == nil {
 			mac := "unknown"
 			if res.BmcMacAddress != "" {
 				mac = res.BmcMacAddress
@@ -145,9 +145,9 @@ func (mei ManageExpectedSwitch) UpdateExpectedSwitchesInDB(ctx context.Context, 
 			logger.Error().Str("MAC", mac).Msg("received Expected Switch entry from Site without UUID set, skipping processing")
 			continue
 		}
-		esID, perr := uuid.Parse(res.Id.Value)
+		esID, perr := uuid.Parse(res.ExpectedSwitchId.Value)
 		if perr != nil || esID == uuid.Nil {
-			logger.Error().Str("ID", res.Id.Value).Msg("received Expected Switch entry from Site with invalid UUID, skipping processing")
+			logger.Error().Str("ID", res.ExpectedSwitchId.Value).Msg("received Expected Switch entry from Site with invalid UUID, skipping processing")
 			continue
 		}
 		reportedIDs[esID] = true

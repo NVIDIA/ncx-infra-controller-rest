@@ -120,11 +120,11 @@ func (mepsi *ManageExpectedPowerShelfInventory) DiscoverExpectedPowerShelfInvent
 	allExpectedPowerShelfIDs := []string{}
 	for _, eps := range epsList.ExpectedPowerShelves {
 		// Discard records without ID
-		if eps.Id == nil || eps.Id.Value == "" {
+		if eps.ExpectedPowerShelfId == nil || eps.ExpectedPowerShelfId.Value == "" {
 			logger.Warn().Str("MAC", eps.BmcMacAddress).Str("Serial", eps.ShelfSerialNumber).Msg("Discarding ExpectedPowerShelf without ID")
 			continue
 		}
-		allExpectedPowerShelfIDs = append(allExpectedPowerShelfIDs, eps.Id.Value)
+		allExpectedPowerShelfIDs = append(allExpectedPowerShelfIDs, eps.ExpectedPowerShelfId.Value)
 		// Find matching LinkedPowerShelf record by MAC address if it exists
 		linked := linkedPowerShelvesByKey[eps.BmcMacAddress]
 		linkedExpectedPowerShelvesInfo = append(linkedExpectedPowerShelvesInfo, linkedExpectedPowerShelfInfo{
@@ -273,7 +273,7 @@ func (meps *ManageExpectedPowerShelf) CreateExpectedPowerShelfOnSite(ctx context
 	// Validate request
 	if request == nil {
 		err = errors.New("received empty create Expected Power Shelf request")
-	} else if id := request.GetId(); id == nil || (*id).String() == "" {
+	} else if request.GetExpectedPowerShelfId().GetValue() == "" {
 		err = errors.New("received create Expected Power Shelf request without required id field")
 	} else if request.GetBmcMacAddress() == "" || request.GetShelfSerialNumber() == "" {
 		err = errors.New("received create Expected Power Shelf request with missing MAC or serial")
@@ -310,7 +310,7 @@ func (meps *ManageExpectedPowerShelf) UpdateExpectedPowerShelfOnSite(ctx context
 	// Validate request
 	if request == nil {
 		err = errors.New("received empty update Expected Power Shelf request")
-	} else if id := request.GetId(); id == nil || (*id).String() == "" {
+	} else if request.GetExpectedPowerShelfId().GetValue() == "" {
 		err = errors.New("received update Expected Power Shelf request without required id field")
 	} else if request.GetBmcMacAddress() == "" || request.GetShelfSerialNumber() == "" {
 		err = errors.New("received update Expected Power Shelf request with missing MAC or serial")
@@ -346,7 +346,7 @@ func (meps *ManageExpectedPowerShelf) DeleteExpectedPowerShelfOnSite(ctx context
 	// Validate request
 	if request == nil {
 		err = errors.New("received empty delete Expected Power Shelf request")
-	} else if id := request.GetId(); id == nil || (*id).String() == "" {
+	} else if request.GetExpectedPowerShelfId().GetValue() == "" {
 		err = errors.New("received delete Expected Power Shelf request without required id field")
 	}
 

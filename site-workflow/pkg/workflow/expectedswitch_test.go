@@ -98,7 +98,7 @@ func (cests *CreateExpectedSwitchTestSuite) Test_CreateExpectedSwitch_Success() 
 	var expectedSwitchManager iActivity.ManageExpectedSwitch
 
 	request := &cwssaws.ExpectedSwitch{
-		Id:                 &cwssaws.UUID{Value: "test-create-workflow-001"},
+		ExpectedSwitchId:   &cwssaws.UUID{Value: "test-create-workflow-001"},
 		BmcMacAddress:      "00:11:22:33:44:55",
 		SwitchSerialNumber: "SWITCH-001",
 	}
@@ -117,7 +117,7 @@ func (cests *CreateExpectedSwitchTestSuite) Test_CreateExpectedSwitch_Failure() 
 	var expectedSwitchManager iActivity.ManageExpectedSwitch
 
 	request := &cwssaws.ExpectedSwitch{
-		Id:                 &cwssaws.UUID{Value: "test-create-workflow-001"},
+		ExpectedSwitchId:   &cwssaws.UUID{Value: "test-create-workflow-001"},
 		BmcMacAddress:      "00:11:22:33:44:55",
 		SwitchSerialNumber: "SWITCH-001",
 	}
@@ -157,7 +157,7 @@ func (uests *UpdateExpectedSwitchTestSuite) Test_UpdateExpectedSwitch_Success() 
 	var expectedSwitchManager iActivity.ManageExpectedSwitch
 
 	request := &cwssaws.ExpectedSwitch{
-		Id:                 &cwssaws.UUID{Value: "test-update-workflow-001"},
+		ExpectedSwitchId:   &cwssaws.UUID{Value: "test-update-workflow-001"},
 		BmcMacAddress:      "00:11:22:33:44:55",
 		SwitchSerialNumber: "SWITCH-001",
 	}
@@ -176,7 +176,7 @@ func (uests *UpdateExpectedSwitchTestSuite) Test_UpdateExpectedSwitch_Failure() 
 	var expectedSwitchManager iActivity.ManageExpectedSwitch
 
 	request := &cwssaws.ExpectedSwitch{
-		Id:                 &cwssaws.UUID{Value: "test-update-workflow-001"},
+		ExpectedSwitchId:   &cwssaws.UUID{Value: "test-update-workflow-001"},
 		BmcMacAddress:      "00:11:22:33:44:55",
 		SwitchSerialNumber: "SWITCH-001",
 	}
@@ -216,8 +216,8 @@ func (dests *DeleteExpectedSwitchTestSuite) Test_DeleteExpectedSwitch_Success() 
 	var expectedSwitchManager iActivity.ManageExpectedSwitch
 
 	request := &cwssaws.ExpectedSwitchRequest{
-		Id:            &cwssaws.UUID{Value: "test-delete-workflow-001"},
-		BmcMacAddress: "00:11:22:33:44:55",
+		ExpectedSwitchId: &cwssaws.UUID{Value: "test-delete-workflow-001"},
+		BmcMacAddress:    "00:11:22:33:44:55",
 	}
 
 	// Mock DeleteExpectedSwitchOnSite activity
@@ -234,8 +234,8 @@ func (dests *DeleteExpectedSwitchTestSuite) Test_DeleteExpectedSwitch_Failure() 
 	var expectedSwitchManager iActivity.ManageExpectedSwitch
 
 	request := &cwssaws.ExpectedSwitchRequest{
-		Id:            &cwssaws.UUID{Value: "test-delete-workflow-001"},
-		BmcMacAddress: "00:11:22:33:44:55",
+		ExpectedSwitchId: &cwssaws.UUID{Value: "test-delete-workflow-001"},
+		BmcMacAddress:    "00:11:22:33:44:55",
 	}
 
 	errMsg := "Site Controller communication error"

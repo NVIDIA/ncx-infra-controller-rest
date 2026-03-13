@@ -66,7 +66,7 @@ func DiscoverExpectedSwitchInventory(ctx workflow.Context) error {
 
 // CreateExpectedSwitch is a workflow to create a new Expected Switch using the CreateExpectedSwitchOnSite activity
 func CreateExpectedSwitch(ctx workflow.Context, request *cwssaws.ExpectedSwitch) error {
-	logger := log.With().Str("Workflow", "ExpectedSwitch").Str("Action", "Create").Str("ID", request.GetId().GetValue()).Str("Expected MAC address", request.BmcMacAddress).Str("Serial", request.SwitchSerialNumber).Logger()
+	logger := log.With().Str("Workflow", "ExpectedSwitch").Str("Action", "Create").Str("ID", request.GetExpectedSwitchId().GetValue()).Str("Expected MAC address", request.BmcMacAddress).Str("Serial", request.SwitchSerialNumber).Logger()
 
 	logger.Info().Msg("starting workflow")
 
@@ -101,7 +101,7 @@ func CreateExpectedSwitch(ctx workflow.Context, request *cwssaws.ExpectedSwitch)
 
 // UpdateExpectedSwitch is a workflow to update an Expected Switch using the UpdateExpectedSwitchOnSite activity
 func UpdateExpectedSwitch(ctx workflow.Context, request *cwssaws.ExpectedSwitch) error {
-	logger := log.With().Str("Workflow", "ExpectedSwitch").Str("Action", "Update").Str("ID", request.GetId().GetValue()).Str("Expected MAC address", request.BmcMacAddress).Str("Serial", request.SwitchSerialNumber).Logger()
+	logger := log.With().Str("Workflow", "ExpectedSwitch").Str("Action", "Update").Str("ID", request.GetExpectedSwitchId().GetValue()).Str("Expected MAC address", request.BmcMacAddress).Str("Serial", request.SwitchSerialNumber).Logger()
 
 	logger.Info().Msg("starting workflow")
 
@@ -136,7 +136,7 @@ func UpdateExpectedSwitch(ctx workflow.Context, request *cwssaws.ExpectedSwitch)
 
 // DeleteExpectedSwitch is a workflow to Delete an Expected Switch using the DeleteExpectedSwitchOnSite activity
 func DeleteExpectedSwitch(ctx workflow.Context, request *cwssaws.ExpectedSwitchRequest) error {
-	logger := log.With().Str("Workflow", "ExpectedSwitch").Str("Action", "Delete").Str("ID", request.GetId().GetValue()).Str("optional MAC address", request.BmcMacAddress).Logger()
+	logger := log.With().Str("Workflow", "ExpectedSwitch").Str("Action", "Delete").Str("ID", request.GetExpectedSwitchId().GetValue()).Str("optional MAC address", request.BmcMacAddress).Logger()
 
 	logger.Info().Msg("starting workflow")
 

@@ -1054,7 +1054,7 @@ func (c *MockForgeClient) GetAllExpectedMachinesLinked(ctx context.Context, in *
 
 /* Expected Power Shelf mock methods */
 func (c *MockForgeClient) AddExpectedPowerShelf(ctx context.Context, in *wflows.ExpectedPowerShelf, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	if in.Id == nil || in.Id.Value == "" {
+	if in.ExpectedPowerShelfId == nil || in.ExpectedPowerShelfId.Value == "" {
 		return nil, status.Error(codes.Internal, "ID not provided for AddExpectedPowerShelf")
 	}
 	if in.BmcMacAddress == "" {
@@ -1068,7 +1068,7 @@ func (c *MockForgeClient) AddExpectedPowerShelf(ctx context.Context, in *wflows.
 }
 
 func (c *MockForgeClient) DeleteExpectedPowerShelf(ctx context.Context, in *wflows.ExpectedPowerShelfRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	if in.Id == nil || in.Id.Value == "" {
+	if in.ExpectedPowerShelfId == nil || in.ExpectedPowerShelfId.Value == "" {
 		return nil, status.Error(codes.Internal, "ID not provided for DeleteExpectedPowerShelf")
 	}
 	out := new(emptypb.Empty)
@@ -1076,7 +1076,7 @@ func (c *MockForgeClient) DeleteExpectedPowerShelf(ctx context.Context, in *wflo
 }
 
 func (c *MockForgeClient) UpdateExpectedPowerShelf(ctx context.Context, in *wflows.ExpectedPowerShelf, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	if in.Id == nil || in.Id.Value == "" {
+	if in.ExpectedPowerShelfId == nil || in.ExpectedPowerShelfId.Value == "" {
 		return nil, status.Error(codes.Internal, "ID not provided for UpdateExpectedPowerShelf")
 	}
 	if in.BmcMacAddress == "" {
@@ -1107,9 +1107,9 @@ func (c *MockForgeClient) GetAllExpectedPowerShelves(ctx context.Context, in *em
 			copy(uuidBytes[:6], mac)
 			epsID, _ := uuid.FromBytes(uuidBytes[:])
 			out.ExpectedPowerShelves = append(out.ExpectedPowerShelves, &wflows.ExpectedPowerShelf{
-				Id:                &wflows.UUID{Value: epsID.String()},
-				BmcMacAddress:     mac.String(),
-				ShelfSerialNumber: "shelf-serial-" + mac.String()})
+				ExpectedPowerShelfId: &wflows.UUID{Value: epsID.String()},
+				BmcMacAddress:        mac.String(),
+				ShelfSerialNumber:    "shelf-serial-" + mac.String()})
 			incrementMAC(mac)
 		}
 	}
@@ -1149,7 +1149,7 @@ func (c *MockForgeClient) GetAllExpectedPowerShelvesLinked(ctx context.Context, 
 
 /* Expected Switch mock methods */
 func (c *MockForgeClient) AddExpectedSwitch(ctx context.Context, in *wflows.ExpectedSwitch, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	if in.Id == nil || in.Id.Value == "" {
+	if in.ExpectedSwitchId == nil || in.ExpectedSwitchId.Value == "" {
 		return nil, status.Error(codes.Internal, "ID not provided for AddExpectedSwitch")
 	}
 	if in.BmcMacAddress == "" {
@@ -1163,7 +1163,7 @@ func (c *MockForgeClient) AddExpectedSwitch(ctx context.Context, in *wflows.Expe
 }
 
 func (c *MockForgeClient) DeleteExpectedSwitch(ctx context.Context, in *wflows.ExpectedSwitchRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	if in.Id == nil || in.Id.Value == "" {
+	if in.ExpectedSwitchId == nil || in.ExpectedSwitchId.Value == "" {
 		return nil, status.Error(codes.Internal, "ID not provided for DeleteExpectedSwitch")
 	}
 	out := new(emptypb.Empty)
@@ -1171,7 +1171,7 @@ func (c *MockForgeClient) DeleteExpectedSwitch(ctx context.Context, in *wflows.E
 }
 
 func (c *MockForgeClient) UpdateExpectedSwitch(ctx context.Context, in *wflows.ExpectedSwitch, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	if in.Id == nil || in.Id.Value == "" {
+	if in.ExpectedSwitchId == nil || in.ExpectedSwitchId.Value == "" {
 		return nil, status.Error(codes.Internal, "ID not provided for UpdateExpectedSwitch")
 	}
 	if in.BmcMacAddress == "" {
@@ -1202,7 +1202,7 @@ func (c *MockForgeClient) GetAllExpectedSwitches(ctx context.Context, in *emptyp
 			copy(uuidBytes[:6], mac)
 			esID, _ := uuid.FromBytes(uuidBytes[:])
 			out.ExpectedSwitches = append(out.ExpectedSwitches, &wflows.ExpectedSwitch{
-				Id:                 &wflows.UUID{Value: esID.String()},
+				ExpectedSwitchId:   &wflows.UUID{Value: esID.String()},
 				BmcMacAddress:      mac.String(),
 				SwitchSerialNumber: "switch-serial-" + mac.String()})
 			incrementMAC(mac)

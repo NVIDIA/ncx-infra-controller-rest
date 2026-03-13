@@ -160,9 +160,9 @@ func TestManageExpectedPowerShelf_CreateExpectedPowerShelfOnSite(t *testing.T) {
 			args: args{
 				ctx: context.Background(),
 				request: &cwssaws.ExpectedPowerShelf{
-					Id:                &cwssaws.UUID{Value: "test-powershelf-001"},
-					BmcMacAddress:     "00:11:22:33:44:55",
-					ShelfSerialNumber: "SHELF-123456789",
+					ExpectedPowerShelfId: &cwssaws.UUID{Value: "test-powershelf-001"},
+					BmcMacAddress:        "00:11:22:33:44:55",
+					ShelfSerialNumber:    "SHELF-123456789",
 				},
 			},
 			wantErr: false,
@@ -175,9 +175,9 @@ func TestManageExpectedPowerShelf_CreateExpectedPowerShelfOnSite(t *testing.T) {
 			args: args{
 				ctx: context.Background(),
 				request: &cwssaws.ExpectedPowerShelf{
-					Id:                &cwssaws.UUID{Value: "test-powershelf-002"},
-					BmcMacAddress:     "",
-					ShelfSerialNumber: "SHELF-123456789",
+					ExpectedPowerShelfId: &cwssaws.UUID{Value: "test-powershelf-002"},
+					BmcMacAddress:        "",
+					ShelfSerialNumber:    "SHELF-123456789",
 				},
 			},
 			wantErr: true,
@@ -190,9 +190,9 @@ func TestManageExpectedPowerShelf_CreateExpectedPowerShelfOnSite(t *testing.T) {
 			args: args{
 				ctx: context.Background(),
 				request: &cwssaws.ExpectedPowerShelf{
-					Id:                &cwssaws.UUID{Value: "test-powershelf-003"},
-					BmcMacAddress:     "00:11:22:33:44:55",
-					ShelfSerialNumber: "",
+					ExpectedPowerShelfId: &cwssaws.UUID{Value: "test-powershelf-003"},
+					BmcMacAddress:        "00:11:22:33:44:55",
+					ShelfSerialNumber:    "",
 				},
 			},
 			wantErr: true,
@@ -205,9 +205,9 @@ func TestManageExpectedPowerShelf_CreateExpectedPowerShelfOnSite(t *testing.T) {
 			args: args{
 				ctx: context.Background(),
 				request: &cwssaws.ExpectedPowerShelf{
-					Id:                nil,
-					BmcMacAddress:     "00:11:22:33:44:55",
-					ShelfSerialNumber: "SHELF-123456789",
+					ExpectedPowerShelfId: nil,
+					BmcMacAddress:        "00:11:22:33:44:55",
+					ShelfSerialNumber:    "SHELF-123456789",
 				},
 			},
 			wantErr: true,
@@ -220,9 +220,9 @@ func TestManageExpectedPowerShelf_CreateExpectedPowerShelfOnSite(t *testing.T) {
 			args: args{
 				ctx: context.Background(),
 				request: &cwssaws.ExpectedPowerShelf{
-					Id:                &cwssaws.UUID{Value: "test-powershelf-004"},
-					BmcMacAddress:     "",
-					ShelfSerialNumber: "",
+					ExpectedPowerShelfId: &cwssaws.UUID{Value: "test-powershelf-004"},
+					BmcMacAddress:        "",
+					ShelfSerialNumber:    "",
 				},
 			},
 			wantErr: true,
@@ -279,9 +279,9 @@ func TestManageExpectedPowerShelf_UpdateExpectedPowerShelfOnSite(t *testing.T) {
 			args: args{
 				ctx: context.Background(),
 				request: &cwssaws.ExpectedPowerShelf{
-					Id:                &cwssaws.UUID{Value: "test-update-001"},
-					BmcMacAddress:     "00:11:22:33:44:55",
-					ShelfSerialNumber: "SHELF-123456789",
+					ExpectedPowerShelfId: &cwssaws.UUID{Value: "test-update-001"},
+					BmcMacAddress:        "00:11:22:33:44:55",
+					ShelfSerialNumber:    "SHELF-123456789",
 				},
 			},
 			wantErr: false,
@@ -294,9 +294,9 @@ func TestManageExpectedPowerShelf_UpdateExpectedPowerShelfOnSite(t *testing.T) {
 			args: args{
 				ctx: context.Background(),
 				request: &cwssaws.ExpectedPowerShelf{
-					Id:                nil,
-					BmcMacAddress:     "00:11:22:33:44:55",
-					ShelfSerialNumber: "SHELF-123456789",
+					ExpectedPowerShelfId: nil,
+					BmcMacAddress:        "00:11:22:33:44:55",
+					ShelfSerialNumber:    "SHELF-123456789",
 				},
 			},
 			wantErr: true,
@@ -309,9 +309,9 @@ func TestManageExpectedPowerShelf_UpdateExpectedPowerShelfOnSite(t *testing.T) {
 			args: args{
 				ctx: context.Background(),
 				request: &cwssaws.ExpectedPowerShelf{
-					Id:                &cwssaws.UUID{Value: "test-update-002"},
-					BmcMacAddress:     "",
-					ShelfSerialNumber: "SHELF-123456789",
+					ExpectedPowerShelfId: &cwssaws.UUID{Value: "test-update-002"},
+					BmcMacAddress:        "",
+					ShelfSerialNumber:    "SHELF-123456789",
 				},
 			},
 			wantErr: true,
@@ -324,9 +324,9 @@ func TestManageExpectedPowerShelf_UpdateExpectedPowerShelfOnSite(t *testing.T) {
 			args: args{
 				ctx: context.Background(),
 				request: &cwssaws.ExpectedPowerShelf{
-					Id:                &cwssaws.UUID{Value: "test-update-003"},
-					BmcMacAddress:     "00:11:22:33:44:55",
-					ShelfSerialNumber: "",
+					ExpectedPowerShelfId: &cwssaws.UUID{Value: "test-update-003"},
+					BmcMacAddress:        "00:11:22:33:44:55",
+					ShelfSerialNumber:    "",
 				},
 			},
 			wantErr: true,
@@ -339,9 +339,9 @@ func TestManageExpectedPowerShelf_UpdateExpectedPowerShelfOnSite(t *testing.T) {
 			args: args{
 				ctx: context.Background(),
 				request: &cwssaws.ExpectedPowerShelf{
-					Id:                &cwssaws.UUID{Value: "test-update-004"},
-					BmcMacAddress:     "",
-					ShelfSerialNumber: "",
+					ExpectedPowerShelfId: &cwssaws.UUID{Value: "test-update-004"},
+					BmcMacAddress:        "",
+					ShelfSerialNumber:    "",
 				},
 			},
 			wantErr: true,
@@ -398,8 +398,8 @@ func TestManageExpectedPowerShelf_DeleteExpectedPowerShelfOnSite(t *testing.T) {
 			args: args{
 				ctx: context.Background(),
 				request: &cwssaws.ExpectedPowerShelfRequest{
-					Id:            &cwssaws.UUID{Value: "test-delete-001"},
-					BmcMacAddress: "00:11:22:33:44:55",
+					ExpectedPowerShelfId: &cwssaws.UUID{Value: "test-delete-001"},
+					BmcMacAddress:        "00:11:22:33:44:55",
 				},
 			},
 			wantErr: false,
@@ -412,8 +412,8 @@ func TestManageExpectedPowerShelf_DeleteExpectedPowerShelfOnSite(t *testing.T) {
 			args: args{
 				ctx: context.Background(),
 				request: &cwssaws.ExpectedPowerShelfRequest{
-					Id:            nil,
-					BmcMacAddress: "00:11:22:33:44:55",
+					ExpectedPowerShelfId: nil,
+					BmcMacAddress:        "00:11:22:33:44:55",
 				},
 			},
 			wantErr: true,
@@ -426,8 +426,8 @@ func TestManageExpectedPowerShelf_DeleteExpectedPowerShelfOnSite(t *testing.T) {
 			args: args{
 				ctx: context.Background(),
 				request: &cwssaws.ExpectedPowerShelfRequest{
-					Id:            &cwssaws.UUID{Value: "test-delete-002"},
-					BmcMacAddress: "",
+					ExpectedPowerShelfId: &cwssaws.UUID{Value: "test-delete-002"},
+					BmcMacAddress:        "",
 				},
 			},
 			wantErr: false,

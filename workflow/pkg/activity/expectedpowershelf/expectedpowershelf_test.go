@@ -160,10 +160,10 @@ func TestManageExpectedPowerShelf_UpdateExpectedPowerShelvesInDB(t *testing.T) {
 		}
 
 		ctrlExpectedPowerShelf := &cwssaws.ExpectedPowerShelf{
-			Id:                &cwssaws.UUID{Value: pagedExpectedPowerShelves[i].ID.String()},
-			BmcMacAddress:     pagedExpectedPowerShelves[i].BmcMacAddress,
-			ShelfSerialNumber: pagedExpectedPowerShelves[i].ShelfSerialNumber,
-			IpAddress:         protoIpAddress,
+			ExpectedPowerShelfId: &cwssaws.UUID{Value: pagedExpectedPowerShelves[i].ID.String()},
+			BmcMacAddress:        pagedExpectedPowerShelves[i].BmcMacAddress,
+			ShelfSerialNumber:    pagedExpectedPowerShelves[i].ShelfSerialNumber,
+			IpAddress:            protoIpAddress,
 		}
 
 		// Add labels to controller expected power shelves
@@ -389,10 +389,10 @@ func TestManageExpectedPowerShelf_UpdateExpectedPowerShelvesInDB(t *testing.T) {
 				expectedPowerShelfInventory: &cwssaws.ExpectedPowerShelfInventory{
 					ExpectedPowerShelves: []*cwssaws.ExpectedPowerShelf{
 						{
-							Id:                &cwssaws.UUID{Value: uuid.New().String()},
-							BmcMacAddress:     "00:11:22:33:44:FF",
-							ShelfSerialNumber: "SHELF-SN-NEW-1",
-							IpAddress:         "10.0.0.100",
+							ExpectedPowerShelfId: &cwssaws.UUID{Value: uuid.New().String()},
+							BmcMacAddress:        "00:11:22:33:44:FF",
+							ShelfSerialNumber:    "SHELF-SN-NEW-1",
+							IpAddress:            "10.0.0.100",
 							Metadata: &cwssaws.Metadata{
 								Labels: []*cwssaws.Label{
 									{Key: "environment", Value: cdb.GetStrPtr("test")},
@@ -442,7 +442,7 @@ func TestManageExpectedPowerShelf_UpdateExpectedPowerShelvesInDB(t *testing.T) {
 				// Find the corresponding controller power shelf
 				var ctrlEPS *cwssaws.ExpectedPowerShelf
 				for _, ceps := range tt.args.expectedPowerShelfInventory.ExpectedPowerShelves {
-					if ceps.Id.Value == eps.ID.String() {
+					if ceps.ExpectedPowerShelfId.Value == eps.ID.String() {
 						ctrlEPS = ceps
 						break
 					}
@@ -471,7 +471,7 @@ func TestManageExpectedPowerShelf_UpdateExpectedPowerShelvesInDB(t *testing.T) {
 
 			// Verify newly created power shelves have correct labels
 			for _, ceps := range tt.args.expectedPowerShelfInventory.ExpectedPowerShelves {
-				epsID, perr := uuid.Parse(ceps.Id.Value)
+				epsID, perr := uuid.Parse(ceps.ExpectedPowerShelfId.Value)
 				assert.NoError(t, perr)
 				created := powerShelvesByID[epsID]
 				if created != nil {
