@@ -310,13 +310,18 @@ func TestAPIRackUpdateRequest_Validate(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:    "valid - with siteId",
-			request: APIRackUpdateRequest{SiteID: "550e8400-e29b-41d4-a716-446655440000"},
+			name:    "valid - with siteId and name",
+			request: APIRackUpdateRequest{SiteID: "550e8400-e29b-41d4-a716-446655440000", Name: strPtr("Updated")},
 			wantErr: false,
 		},
 		{
+			name:    "invalid - siteId only (no mutable fields)",
+			request: APIRackUpdateRequest{SiteID: "550e8400-e29b-41d4-a716-446655440000"},
+			wantErr: true,
+		},
+		{
 			name:    "invalid - non-UUID siteId",
-			request: APIRackUpdateRequest{SiteID: "not-a-uuid"},
+			request: APIRackUpdateRequest{SiteID: "not-a-uuid", Name: strPtr("Updated")},
 			wantErr: true,
 		},
 		{
@@ -341,12 +346,13 @@ func TestAPIRackUpdateRequest_Validate(t *testing.T) {
 func TestAPIRackUpdateRequest_ToProtoRack(t *testing.T) {
 	name := "Updated-Rack"
 	manufacturer := "Dell"
+	region := "us-west-2"
 	req := APIRackUpdateRequest{
 		SiteID:       "550e8400-e29b-41d4-a716-446655440000",
 		Name:         &name,
 		Manufacturer: &manufacturer,
-		Location: &APIRackLocation{
-			Region: "us-west-2",
+		Location: &APIRackUpdateLocation{
+			Region: &region,
 		},
 	}
 

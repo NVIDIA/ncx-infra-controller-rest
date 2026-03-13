@@ -598,9 +598,9 @@ type APICreateRackComponentRequest struct {
 	Description     *string                    `json:"description"`
 	FirmwareVersion *string                    `json:"firmwareVersion"`
 	ComponentID     *string                    `json:"componentId"`
-	SlotID          int32                      `json:"slotId,omitempty"`
-	TrayIdx         int32                      `json:"trayIdx,omitempty"`
-	HostID          int32                      `json:"hostId,omitempty"`
+	SlotID          *int32                     `json:"slotId"`
+	TrayIdx         *int32                     `json:"trayIdx"`
+	HostID          *int32                     `json:"hostId"`
 	BMCs            []*APICreateRackBMCRequest `json:"bmcs"`
 }
 
@@ -645,11 +645,18 @@ func (c *APICreateRackComponentRequest) ToProto() *rlav1.Component {
 			Manufacturer: c.Manufacturer,
 			SerialNumber: c.SerialNumber,
 		},
-		Position: &rlav1.RackPosition{
-			SlotId:  c.SlotID,
-			TrayIdx: c.TrayIdx,
-			HostId:  c.HostID,
-		},
+	}
+	if c.SlotID != nil || c.TrayIdx != nil || c.HostID != nil {
+		comp.Position = &rlav1.RackPosition{}
+		if c.SlotID != nil {
+			comp.Position.SlotId = *c.SlotID
+		}
+		if c.TrayIdx != nil {
+			comp.Position.TrayIdx = *c.TrayIdx
+		}
+		if c.HostID != nil {
+			comp.Position.HostId = *c.HostID
+		}
 	}
 	if c.Model != nil {
 		comp.Info.Model = c.Model
@@ -742,22 +749,56 @@ func NewAPICreateRackResponse(resp *rlav1.CreateExpectedRackResponse) *APICreate
 
 // APIRackUpdateRequest is the JSON body for PATCH /rack/:id (PatchRack)
 type APIRackUpdateRequest struct {
-	SiteID       string           `json:"siteId"`
-	Name         *string          `json:"name"`
-	Manufacturer *string          `json:"manufacturer"`
-	Model        *string          `json:"model"`
-	SerialNumber *string          `json:"serialNumber"`
-	Description  *string          `json:"description"`
-	Location     *APIRackLocation `json:"location"`
+	SiteID       string                 `json:"siteId"`
+	Name         *string                `json:"name"`
+	Manufacturer *string                `json:"manufacturer"`
+	Model        *string                `json:"model"`
+	SerialNumber *string                `json:"serialNumber"`
+	Description  *string                `json:"description"`
+	Location     *APIRackUpdateLocation `json:"location"`
+}
+
+// APIRackUpdateLocation is a patch-specific location type with pointer fields
+// to distinguish between "not provided" and "set to empty string".
+type APIRackUpdateLocation struct {
+	Region     *string `json:"region"`
+	Datacenter *string `json:"datacenter"`
+	Room       *string `json:"room"`
+	Position   *string `json:"position"`
+}
+
+func (l *APIRackUpdateLocation) ToProto() *rlav1.Location {
+	loc := &rlav1.Location{}
+	if l.Region != nil {
+		loc.Region = *l.Region
+	}
+	if l.Datacenter != nil {
+		loc.Datacenter = *l.Datacenter
+	}
+	if l.Room != nil {
+		loc.Room = *l.Room
+	}
+	if l.Position != nil {
+		loc.Position = *l.Position
+	}
+	return loc
 }
 
 // Validate validates the update rack request
 func (r *APIRackUpdateRequest) Validate() error {
-	return validation.ValidateStruct(r,
+	err := validation.ValidateStruct(r,
 		validation.Field(&r.SiteID,
 			validation.Required.Error(validationErrorValueRequired),
 			validationis.UUID.Error(validationErrorInvalidUUID)),
 	)
+	if err != nil {
+		return err
+	}
+	if r.Name == nil && r.Manufacturer == nil && r.Model == nil &&
+		r.SerialNumber == nil && r.Description == nil && r.Location == nil {
+		return fmt.Errorf("at least one field to update must be provided")
+	}
+	return nil
 }
 
 // ToProtoRack converts the API update request to an RLA Rack proto.
