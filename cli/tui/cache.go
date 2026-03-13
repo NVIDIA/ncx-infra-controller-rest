@@ -67,9 +67,11 @@ func (c *Cache) InvalidateAll() {
 }
 
 func (c *Cache) InvalidateFiltered() {
-	for _, rt := range []string{"vpc", "subnet", "instance", "instance-type",
+	for _, rt := range []string{"vpc", "subnet", "instance",
 		"allocation", "machine", "ip-block", "operating-system",
-		"ssh-key-group", "network-security-group"} {
+		"ssh-key-group", "network-security-group",
+		"vpc-prefix", "rack", "expected-machine", "sku",
+		"dpu-extension-service", "infiniband-partition", "nvlink-logical-partition"} {
 		delete(c.items, rt)
 		delete(c.fetched, rt)
 	}

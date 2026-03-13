@@ -23,7 +23,6 @@ var _ MappedNullable = &InfiniBandInterface{}
 type InfiniBandInterface struct {
 	Id *string `json:"id,omitempty"`
 	InstanceId *string `json:"instanceId,omitempty"`
-	SiteId *string `json:"siteId,omitempty"`
 	// ID of the InfiniBand Partition associated with this interface
 	PartitionId *string `json:"partitionId,omitempty"`
 	// Name of the InfiniBand device associated with this interface
@@ -117,38 +116,6 @@ func (o *InfiniBandInterface) HasInstanceId() bool {
 // SetInstanceId gets a reference to the given string and assigns it to the InstanceId field.
 func (o *InfiniBandInterface) SetInstanceId(v string) {
 	o.InstanceId = &v
-}
-
-// GetSiteId returns the SiteId field value if set, zero value otherwise.
-func (o *InfiniBandInterface) GetSiteId() string {
-	if o == nil || IsNil(o.SiteId) {
-		var ret string
-		return ret
-	}
-	return *o.SiteId
-}
-
-// GetSiteIdOk returns a tuple with the SiteId field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *InfiniBandInterface) GetSiteIdOk() (*string, bool) {
-	if o == nil || IsNil(o.SiteId) {
-		return nil, false
-	}
-	return o.SiteId, true
-}
-
-// HasSiteId returns a boolean if a field has been set.
-func (o *InfiniBandInterface) HasSiteId() bool {
-	if o != nil && !IsNil(o.SiteId) {
-		return true
-	}
-
-	return false
-}
-
-// SetSiteId gets a reference to the given string and assigns it to the SiteId field.
-func (o *InfiniBandInterface) SetSiteId(v string) {
-	o.SiteId = &v
 }
 
 // GetPartitionId returns the PartitionId field value if set, zero value otherwise.
@@ -474,9 +441,6 @@ func (o InfiniBandInterface) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.InstanceId) {
 		toSerialize["instanceId"] = o.InstanceId
-	}
-	if !IsNil(o.SiteId) {
-		toSerialize["siteId"] = o.SiteId
 	}
 	if !IsNil(o.PartitionId) {
 		toSerialize["partitionId"] = o.PartitionId

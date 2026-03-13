@@ -31,7 +31,7 @@ type InstanceType struct {
 	MachineCapabilities []MachineCapability `json:"machineCapabilities,omitempty"`
 	// Available only for Providers
 	MachineInstanceTypes []MachineInstanceType `json:"machineInstanceTypes,omitempty"`
-	// Currently only available for Tenants
+	// summary of machine counts by allocation status
 	AllocationStats *InstanceTypeAllocationStats `json:"allocationStats,omitempty"`
 	Status *InstanceTypeStatus `json:"status,omitempty"`
 	StatusHistory []StatusDetail `json:"statusHistory,omitempty"`

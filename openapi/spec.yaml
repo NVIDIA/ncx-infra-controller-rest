@@ -4850,7 +4850,7 @@ paths:
             type: boolean
           in: query
           name: includeAllocationStats
-          description: Include Allocation stats. Currently can only be requested by Tenant
+          description: Include Allocation stats.
         - schema:
             type: boolean
           in: query
@@ -5030,6 +5030,7 @@ paths:
                         threads: 36
                         count: 2
                     allocationStats:
+                      assigned: 30
                       total: 10
                       used: 3
                       unused: 7
@@ -5404,7 +5405,6 @@ paths:
                       infinibandInterfaces:
                         - id: c518a0e8-3f49-4a1a-8935-a6d3dee6911e
                           instanceId: 497f6eca-6276-4993-bfeb-53cbbbba6f08
-                          siteId: 60189e9c-7d12-438c-b9ca-6998d9c364b1
                           partitionId: 05ef7e84-1d4e-4e4d-980d-38589479a0fe
                           device: 'MT2910 Family [ConnectX-7]'
                           deviceInstance: 0
@@ -5527,7 +5527,6 @@ paths:
                       infinibandInterfaces:
                         - id: c518a0e8-3f49-4a1a-8935-a6d3dee6911e
                           instanceId: 497f6eca-6276-4993-bfeb-53cbbbba6f08
-                          siteId: 60189e9c-7d12-438c-b9ca-6998d9c364b1
                           partitionId: 05ef7e84-1d4e-4e4d-980d-38589479a0fe
                           device: 'MT2910 Family [ConnectX-7]'
                           deviceInstance: 0
@@ -5852,7 +5851,6 @@ paths:
                     infinibandInterfaces:
                       - id: c518a0e8-3f49-4a1a-8935-a6d3dee6911e
                         instanceId: 497f6eca-6276-4993-bfeb-53cbbbba6f08
-                        siteId: 60189e9c-7d12-438c-b9ca-6998d9c364b1
                         partitionId: 05ef7e84-1d4e-4e4d-980d-38589479a0fe
                         device: 'MT2910 Family [ConnectX-7]'
                         deviceInstance: 0
@@ -6284,7 +6282,6 @@ paths:
                     infinibandInterfaces:
                       - id: c518a0e8-3f49-4a1a-8935-a6d3dee6911e
                         instanceId: 497f6eca-6276-4993-bfeb-53cbbbba6f08
-                        siteId: 60189e9c-7d12-438c-b9ca-6998d9c364b1
                         partitionId: 4f4decba-7d7f-46b9-9e5f-e5d71c2e0666
                         device: 'MT2910 Family [ConnectX-7]'
                         deviceInstance: 0
@@ -6465,7 +6462,6 @@ paths:
                     infinibandInterfaces:
                       - id: c518a0e8-3f49-4a1a-8935-a6d3dee6911e
                         instanceId: 497f6eca-6276-4993-bfeb-53cbbbba6f08
-                        siteId: 60189e9c-7d12-438c-b9ca-6998d9c364b1
                         partitionId: 550e8400-e29b-41d4-a716-446655440000
                         device: 'MT2910 Family [ConnectX-7]'
                         deviceInstance: 0
@@ -6477,7 +6473,6 @@ paths:
                         updated: '2019-08-24T14:15:22Z'
                       - id: 3cc0206e-8ac9-4572-8f72-e1dd124c4351
                         instanceId: 497f6eca-6276-4993-bfeb-53cbbbba6f08
-                        siteId: 60189e9c-7d12-438c-b9ca-6998d9c364b1
                         partitionId: 6ba7b810-9dad-11d1-80b4-00c04fd430c8
                         device: 'MT2910 Family [ConnectX-7]'
                         deviceInstance: 1
@@ -6794,8 +6789,6 @@ paths:
         - schema:
             type: string
             enum:
-              - NAME_ASC
-              - NAME_DESC
               - STATUS_ASC
               - STATUS_DESC
               - CREATED_ASC
@@ -6820,7 +6813,7 @@ paths:
         required: true
         description: ID of the Instance
     get:
-      summary: Retrieve all InfiniBand Interfaces
+      summary: Retrieve all Instance InfiniBand Interfaces
       tags:
         - Instance
       responses:
@@ -6837,14 +6830,24 @@ paths:
                   value:
                     - id: 497f6eca-6276-4993-bfeb-53cbbbba6f08
                       instanceId: 64d2028c-ae87-4069-a624-66089d957ef9
-                      siteId: 60189e9c-7d12-438c-b9ca-6998d9c364b1
                       partitionId: 05ef7e84-1d4e-4e4d-980d-38589479a0fe
                       device: 'MT2910 Family [ConnectX-7]'
                       deviceInstance: 0
                       isPhysical: true
                       virtualFunctionId: null
                       guid: 946dae0300339498
-                      status: Ready
+                      status: Provisioning
+                      created: '2019-08-24T14:15:22Z'
+                      updated: '2019-08-24T14:15:22Z'
+                    - id: c518a0e8-3f49-4a1a-8935-a6d3dee6911e
+                      instanceId: 64d2028c-ae87-4069-a624-66089d957ef9
+                      partitionId: 6ba7b810-9dad-11d1-80b4-00c04fd430c8
+                      device: 'MT2910 Family [ConnectX-7]'
+                      deviceInstance: 1
+                      isPhysical: false
+                      virtualFunctionId: 1
+                      guid: 946dae0300339499
+                      status: Provisioning
                       created: '2019-08-24T14:15:22Z'
                       updated: '2019-08-24T14:15:22Z'
           headers:
@@ -6855,7 +6858,7 @@ paths:
               description: Pagination result in JSON format
         '403':
           $ref: '#/components/responses/ForbiddenError'
-      operationId: get-all-infiniband-interface
+      operationId: get-all-instance-infiniband-interface
       description: |-
         Get all InfiniBand Interfaces for an Instance
 
@@ -6865,12 +6868,12 @@ paths:
             type: string
           in: query
           name: status
-          description: Filter Interfaces by Status
+          description: Filter InfiniBand Interfaces by Status
         - schema:
             type: string
             enum:
               - Instance
-              - Partition
+              - InfiniBandPartition
           in: query
           name: includeRelation
           description: Related entity to expand
@@ -6893,8 +6896,216 @@ paths:
         - schema:
             type: string
             enum:
-              - NAME_ASC
-              - NAME_DESC
+              - STATUS_ASC
+              - STATUS_DESC
+              - CREATED_ASC
+              - CREATED_DESC
+              - UPDATED_ASC
+              - UPDATED_DESC
+          in: query
+          name: orderBy
+          description: Ordering for pagination query
+  '/v2/org/{org}/carbide/instance/{instanceId}/nvlink-interface':
+    parameters:
+      - schema:
+          type: string
+        name: org
+        in: path
+        required: true
+        description: Name of the Org
+      - schema:
+          type: string
+        name: instanceId
+        in: path
+        required: true
+        description: ID of the Instance
+    get:
+      summary: Retrieve all Instance NVLink Interfaces
+      tags:
+        - Instance
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NVLinkInterface'
+              examples:
+                Example 1:
+                  value:
+                    - id: 497f6eca-6276-4993-bfeb-53cbbbba6f08
+                      instanceId: 64d2028c-ae87-4069-a624-66089d957ef9
+                      nvLinkLogicalPartitionId: 05ef7e84-1d4e-4e4d-980d-38589479a0fe
+                      nvLinkDomainId: 4b145552-0d8f-45ff-b652-eed105f93e50
+                      deviceInstance: 0
+                      gpuGuid: '5108732638879268442'
+                      status: Ready
+                      created: '2019-08-24T14:15:22Z'
+                      updated: '2019-08-24T14:15:22Z'
+                    - id: 8a7c3b21-1ffc-4c78-9a00-2a6f3859d099
+                      instanceId: 64d2028c-ae87-4069-a624-66089d957ef9
+                      nvLinkLogicalPartitionId: 05ef7e84-1d4e-4e4d-980d-38589479a0fe
+                      nvLinkDomainId: 4b145552-0d8f-45ff-b652-eed105f93e50
+                      deviceInstance: 1
+                      gpuGuid: '5108732638879268443'
+                      status: Provisioning
+                      created: '2019-08-24T14:15:22Z'
+                      updated: '2019-08-24T14:15:22Z'
+          headers:
+            X-Pagination:
+              schema:
+                type: string
+                example: '{"pageNumber":1,"pageSize":20,"total":30,"orderBy": "CREATED_DESC"}'
+              description: Pagination result in JSON format
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+      operationId: get-all-instance-nvlink-interface
+      description: |-
+        Get all NVLink Interfaces for an Instance
+
+        Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` authorization role.
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: status
+          description: Filter NVLink Interfaces by Status. Can be specified multiple times to filter on more than one status.
+        - schema:
+            type: string
+            enum:
+              - Instance
+              - NVLinkLogicalPartition
+          in: query
+          name: includeRelation
+          description: Related entity to expand
+        - schema:
+            type: integer
+            example: 1
+            default: 1
+            minimum: 1
+          in: query
+          name: pageNumber
+          description: Page number for pagination query
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            example: 20
+          in: query
+          name: pageSize
+          description: Page size for pagination query
+        - schema:
+            type: string
+            enum:
+              - STATUS_ASC
+              - STATUS_DESC
+              - CREATED_ASC
+              - CREATED_DESC
+              - UPDATED_ASC
+              - UPDATED_DESC
+          in: query
+          name: orderBy
+          description: Ordering for pagination query
+  '/v2/org/{org}/carbide/infiniband-interface':
+    parameters:
+      - schema:
+          type: string
+        name: org
+        in: path
+        required: true
+        description: Name of the Org
+    get:
+      summary: Retrieve all InfiniBand Interfaces
+      tags:
+        - InfiniBand Partition
+      responses:
+
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/InfiniBandInterface'
+              examples:
+                Example 1:
+                  value:
+                    - id: 497f6eca-6276-4993-bfeb-53cbbbba6f08
+                      instanceId: 64d2028c-ae87-4069-a624-66089d957ef9
+                      partitionId: 05ef7e84-1d4e-4e4d-980d-38589479a0fe
+                      device: 'MT2910 Family [ConnectX-7]'
+                      deviceInstance: 0
+                      isPhysical: true
+                      virtualFunctionId: null
+                      guid: 946dae0300339498
+                      status: Ready
+                      created: '2019-08-24T14:15:22Z'
+                      updated: '2019-08-24T14:15:22Z'
+          headers:
+            X-Pagination:
+              schema:
+                type: string
+                example: '{"pageNumber":1,"pageSize":20,"total":30,"orderBy": "CREATED_DESC"}'
+              description: Pagination result in JSON format
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+      operationId: get-all-infiniband-interface
+      description: |-
+        Get all InfiniBand Interfaces
+
+        Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` authorization role.
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: siteId
+          description: Filter InfiniBand Interfaces by Site ID.  Can be specified multiple times to filter on more than one ID.
+        - schema:
+            type: string
+          in: query
+          name: instanceId
+          description: Filter InfiniBand Interfaces by Instance ID.  Can be specified multiple times to filter on more than one ID.
+        - schema:
+            type: string
+          in: query
+          name: infinibandPartitionId
+          description: Filter InfiniBand Interfaces by InfiniBand Partition ID.  Can be specified multiple times to filter on more than one ID.
+        - schema:
+            type: string
+          in: query
+          name: status
+          description: Filter InfiniBand Interfaces by Status. Can be specified multiple times to filter on more than one status.
+        - schema:
+            type: string
+            enum:
+              - Instance
+              - InfiniBandPartition
+              - Site
+          in: query
+          name: includeRelation
+          description: Related entity to expand
+        - schema:
+            type: integer
+            example: 1
+            default: 1
+            minimum: 1
+          in: query
+          name: pageNumber
+          description: Page number for pagination query
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            example: 20
+          in: query
+          name: pageSize
+          description: Page size for pagination query
+        - schema:
+            type: string
+            enum:
               - STATUS_ASC
               - STATUS_DESC
               - CREATED_ASC
@@ -7718,7 +7929,7 @@ paths:
             type: boolean
           in: query
           name: hasInstanceType
-          description: Filter Machines that have been assigned an Instance Type. siteId must be specified when using this param.
+          description: Filter Machines that have been assigned an Instance Type.
         - schema:
             type: string
           in: query
@@ -7734,6 +7945,11 @@ paths:
           in: query
           name: hasInstance
           description: Filter Machines that are assigned to an Instance. siteId must be specified when using this param.
+        - schema:
+            type: boolean
+          in: query
+          name: isMissingOnSite
+          description: Filter Machines that are missing on Site.
         - schema:
             type: boolean
           in: query
@@ -8770,7 +8986,7 @@ paths:
                       components:
                         - id: 660e8400-e29b-41d4-a716-446655440001
                           componentId: fm100ht4v4mce2qstjnl8970nnj3ie6ecek4mtjn27pea4kre5gsa49jg0g
-                          type: COMPONENT_TYPE_COMPUTE
+                          type: ComponentTypeCompute
                           name: Server-01
                           serialNumber: SN-SRV-001
                           manufacturer: Dell
@@ -8779,7 +8995,7 @@ paths:
                           trayIdx: 0
                           hostId: 0
                           bmcs:
-                            - type: BMC_TYPE_HOST
+                            - type: BmcTypeHost
                               macAddress: 'AA:BB:CC:DD:EE:01'
                               ipAddress: 10.0.0.101
                           powerState: 'on'
@@ -8852,7 +9068,7 @@ paths:
                     components:
                       - id: 660e8400-e29b-41d4-a716-446655440001
                         componentId: fm100ht4v4mce2qstjnl8970nnj3ie6ecek4mtjn27pea4kre5gsa49jg0g
-                        type: COMPONENT_TYPE_COMPUTE
+                        type: ComponentTypeCompute
                         name: Server-01
                         serialNumber: SN-SRV-001
                         manufacturer: Dell
@@ -8861,7 +9077,7 @@ paths:
                         trayIdx: 0
                         hostId: 0
                         bmcs:
-                          - type: BMC_TYPE_HOST
+                          - type: BmcTypeHost
                             macAddress: 'AA:BB:CC:DD:EE:01'
                             ipAddress: 10.0.0.101
                         powerState: 'on'
@@ -8929,12 +9145,12 @@ paths:
                 example-with-diffs:
                   value:
                     diffs:
-                      - type: DIFF_TYPE_ONLY_IN_EXPECTED
+                      - type: DiffTypeOnlyInExpected
                         componentId: comp-1
                         expected:
                           id: 660e8400-e29b-41d4-a716-446655440001
                           componentId: comp-1
-                          type: COMPONENT_TYPE_COMPUTE
+                          type: ComponentTypeCompute
                           name: Server-01
                           serialNumber: SN-SRV-001
                           manufacturer: Dell
@@ -8943,11 +9159,11 @@ paths:
                           trayIdx: 0
                           hostId: 0
                           bmcs:
-                            - type: BMC_TYPE_HOST
+                            - type: BmcTypeHost
                               macAddress: 'AA:BB:CC:DD:EE:01'
                               ipAddress: 10.0.0.101
                           powerState: 'on'
-                      - type: DIFF_TYPE_DRIFT
+                      - type: DiffTypeDrift
                         componentId: comp-2
                         fieldDiffs:
                           - fieldName: firmware_version
@@ -9015,12 +9231,12 @@ paths:
                 example-with-diffs:
                   value:
                     diffs:
-                      - type: DIFF_TYPE_ONLY_IN_EXPECTED
+                      - type: DiffTypeOnlyInExpected
                         componentId: comp-1
                         expected:
                           id: 660e8400-e29b-41d4-a716-446655440001
                           componentId: comp-1
-                          type: COMPONENT_TYPE_COMPUTE
+                          type: ComponentTypeCompute
                           name: Server-01
                           serialNumber: SN-SRV-001
                           manufacturer: Dell
@@ -9029,11 +9245,11 @@ paths:
                           trayIdx: 0
                           hostId: 0
                           bmcs:
-                            - type: BMC_TYPE_HOST
+                            - type: BmcTypeHost
                               macAddress: 'AA:BB:CC:DD:EE:01'
                               ipAddress: 10.0.0.101
                           powerState: 'on'
-                      - type: DIFF_TYPE_DRIFT
+                      - type: DiffTypeDrift
                         componentId: comp-2
                         fieldDiffs:
                           - fieldName: firmware_version
@@ -11730,6 +11946,10 @@ components:
               Unknown:
                 healthy: 0
                 unhealthy: 0
+            totalByAllocation:
+              allocatedInUse: 3
+              allocatedNotInUse: 3
+              unallocated: 5
           capabilities:
             nativeNetworking: true
             networkSecurityGroup: true
@@ -11824,6 +12044,8 @@ components:
           $ref: '#/components/schemas/SiteContact'
         capabilities:
           $ref: '#/components/schemas/SiteCapabilities'
+        machineStats:
+          $ref: '#/components/schemas/SiteMachineStats'
     SiteSummary:
       title: SiteSummary
       type: object
@@ -11888,6 +12110,83 @@ components:
           type: boolean
         imageBasedOperatingSystem:
           type: boolean
+    SiteMachineStats:
+      title: SiteMachineStats
+      type: object
+      description: Machine stats for a Site
+      properties:
+        total:
+          type: integer
+        totalByStatus:
+          $ref: '#/components/schemas/SiteMachineStatsByStatus'
+        totalByHealth:
+          $ref: '#/components/schemas/SiteMachineStatsByHealth'
+        totalByStatusAndHealth:
+          $ref: '#/components/schemas/SiteMachineStatsByStatusAndHealth'
+        totalByAllocation:
+          $ref: '#/components/schemas/SiteMachineStatsByAllocation'
+    SiteMachineStatsByAllocation:
+      title: SiteMachineStatsByAllocation
+      type: object
+      description: Machine stats for a Site by allocation
+      properties:
+        allocatedInUse:
+          type: integer
+        allocatedNotInUse:
+          type: integer
+        unallocated:
+          type: integer
+    SiteMachineStatsByHealth:
+      title: SiteMachineStatsByHealth
+      type: object
+      description: Machine stats for a Site by health
+      properties:
+        healthy:
+          type: integer
+        unhealthy:
+          type: integer
+    SiteMachineStatsByStatus:
+      title: SiteMachineStatsByStatus
+      type: object
+      description: Machine stats for a Site by status
+      properties:
+        Decommissioned:
+          type: integer
+        Error:
+          type: integer
+        Initializing:
+          type: integer
+        InUse:
+          type: integer
+        Maintenance:
+          type: integer
+        Ready:
+          type: integer
+        Reset:
+          type: integer
+        Unknown:
+          type: integer
+    SiteMachineStatsByStatusAndHealth:
+      title: SiteMachineStatsByStatusAndHealth
+      type: object
+      description: Machine stats for a Site by status and health
+      properties:
+        Decommissioned:
+          $ref: '#/components/schemas/SiteMachineStatsByHealth'
+        Error:
+          $ref: '#/components/schemas/SiteMachineStatsByHealth'
+        Initializing:
+          $ref: '#/components/schemas/SiteMachineStatsByHealth'
+        InUse:
+          $ref: '#/components/schemas/SiteMachineStatsByHealth'
+        Maintenance:
+          $ref: '#/components/schemas/SiteMachineStatsByHealth'
+        Ready:
+          $ref: '#/components/schemas/SiteMachineStatsByHealth'
+        Reset:
+          $ref: '#/components/schemas/SiteMachineStatsByHealth'
+        Unknown:
+          $ref: '#/components/schemas/SiteMachineStatsByHealth'
     SiteCreateRequest:
       title: SiteCreateRequest
       type: object
@@ -13705,7 +14004,7 @@ components:
             $ref: '#/components/schemas/MachineInstanceType'
         allocationStats:
           $ref: '#/components/schemas/InstanceTypeAllocationStats'
-          description: Currently only available for Tenants
+          description: summary of machine counts by allocation status
         status:
           $ref: '#/components/schemas/InstanceTypeStatus'
         statusHistory:
@@ -13765,13 +14064,17 @@ components:
       title: InstanceTypeAllocationStats
       type: object
       examples:
-        - total: 10
+        - assigned: 30
+          total: 10
           used: 3
           unused: 7
           unusedUsable: 7
           maxAllocatable: 20
       description: Allocation statistics for Instance Type
       properties:
+        assigned:
+          type: integer
+          description: Total number of Machines assigned to this Instance Type
         total:
           type: integer
           description: Total number of Machines allocated to different Tenants for this Instance Type
@@ -15000,7 +15303,6 @@ components:
       examples:
         - id: 497f6eca-6276-4993-bfeb-53cbbbba6f08
           instanceId: 64d2028c-ae87-4069-a624-66089d957ef9
-          siteId: 2b7ca7d5-eb0e-4076-aa17-11ce98af8214
           partitionId: 05ef7e84-1d4e-4e4d-980d-38589479a0fe
           device: 'MT2910 Family [ConnectX-7]'
           deviceInstance: 0
@@ -15017,9 +15319,6 @@ components:
           minLength: 1
           format: uuid
         instanceId:
-          type: string
-          format: uuid
-        siteId:
           type: string
           format: uuid
         partitionId:
@@ -15284,7 +15583,7 @@ components:
           components:
             - id: 660e8400-e29b-41d4-a716-446655440001
               componentId: fm100ht4v4mce2qstjnl8970nnj3ie6ecek4mtjn27pea4kre5gsa49jg0g
-              type: COMPONENT_TYPE_COMPUTE
+              type: ComponentTypeCompute
               name: Server-01
               serialNumber: SN-SRV-001
               manufacturer: Dell
@@ -15293,7 +15592,7 @@ components:
               trayIdx: 0
               hostId: 0
               bmcs:
-                - type: BMC_TYPE_HOST
+                - type: BmcTypeHost
                   macAddress: 'AA:BB:CC:DD:EE:01'
                   ipAddress: 10.0.0.101
               powerState: 'on'
@@ -15373,12 +15672,12 @@ components:
       properties:
         type:
           type: string
-          description: 'Type of difference: DIFF_TYPE_ONLY_IN_EXPECTED, DIFF_TYPE_ONLY_IN_ACTUAL, or DIFF_TYPE_DRIFT'
+          description: 'Type of difference: DiffTypeOnlyInExpected, DiffTypeOnlyInActual, or DiffTypeDrift'
           enum:
-            - DIFF_TYPE_UNKNOWN
-            - DIFF_TYPE_ONLY_IN_EXPECTED
-            - DIFF_TYPE_ONLY_IN_ACTUAL
-            - DIFF_TYPE_DRIFT
+            - DiffTypeUnknown
+            - DiffTypeOnlyInExpected
+            - DiffTypeOnlyInActual
+            - DiffTypeDrift
         componentId:
           type: string
           description: ID of the component
@@ -15388,7 +15687,7 @@ components:
           $ref: '#/components/schemas/RackComponent'
         fieldDiffs:
           type: array
-          description: List of field differences (populated when type is DIFF_TYPE_DRIFT)
+          description: List of field differences (populated when type is DiffTypeDrift)
           items:
             $ref: '#/components/schemas/FieldDiff'
     FieldDiff:
@@ -15423,7 +15722,7 @@ components:
           description: ID of the rack this component belongs to
         type:
           type: string
-          description: Type of the component (e.g. COMPONENT_TYPE_COMPUTE, COMPONENT_TYPE_NVLSWITCH)
+          description: Type of the component (e.g. ComponentTypeCompute, ComponentTypeNvlswitch)
         name:
           type: string
           description: Name of the component
@@ -15466,7 +15765,7 @@ components:
       properties:
         type:
           type: string
-          description: BMC type (e.g. BMC_TYPE_HOST, BMC_TYPE_DPU)
+          description: BMC type (e.g. BmcTypeHost, BmcTypeDpu)
         macAddress:
           type: string
           description: MAC address of the BMC
@@ -15492,6 +15791,10 @@ components:
             slotId: 1
             trayIdx: 0
             hostId: 1
+          bmcs:
+            - type: BmcTypeHost
+              macAddress: '00:11:22:33:44:55'
+              ipAddress: 192.168.1.100
           rackId: 550e8400-e29b-41d4-a716-446655440000
       properties:
         id:
@@ -15531,6 +15834,11 @@ components:
           description: Current power state of the tray
         position:
           $ref: '#/components/schemas/TrayPosition'
+        bmcs:
+          type: array
+          description: BMC (Baseboard Management Controller) entries for the tray
+          items:
+            $ref: '#/components/schemas/BMCInfo'
         rackId:
           type: string
           format: uuid

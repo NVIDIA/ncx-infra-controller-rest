@@ -1458,6 +1458,7 @@ func TestGetInstanceTypeAllocationStats(t *testing.T) {
 			instances: tn1inss,
 			it:        it1,
 			expectStats: &cam.APIAllocationStats{
+				Assigned:       len(m1s),
 				Total:          alc1.ConstraintValue,
 				Used:           len(tn1inss),
 				Unused:         alc1.ConstraintValue - len(tn1inss),
@@ -1472,6 +1473,7 @@ func TestGetInstanceTypeAllocationStats(t *testing.T) {
 			instances: tn2inss,
 			it:        it1,
 			expectStats: &cam.APIAllocationStats{
+				Assigned:       len(m1s),
 				Total:          alc2.ConstraintValue,
 				Used:           len(tn2inss),
 				Unused:         alc2.ConstraintValue - len(tn2inss),
@@ -1486,6 +1488,7 @@ func TestGetInstanceTypeAllocationStats(t *testing.T) {
 			instances: tn3inss,
 			it:        it1,
 			expectStats: &cam.APIAllocationStats{
+				Assigned:       len(m1s),
 				Total:          alc3.ConstraintValue,
 				Used:           len(tn3inss),
 				Unused:         alc3.ConstraintValue - len(tn3inss),
@@ -1500,6 +1503,7 @@ func TestGetInstanceTypeAllocationStats(t *testing.T) {
 			instances: it1inss,
 			it:        it1,
 			expectStats: &cam.APIAllocationStats{
+				Assigned:       len(m1s),
 				Total:          alc1.ConstraintValue + alc2.ConstraintValue + alc3.ConstraintValue,
 				Used:           len(it1inss),
 				Unused:         (alc1.ConstraintValue + alc2.ConstraintValue + alc3.ConstraintValue) - len(it1inss),
@@ -1514,6 +1518,7 @@ func TestGetInstanceTypeAllocationStats(t *testing.T) {
 			instances: []cdbm.Instance{},
 			it:        it2,
 			expectStats: &cam.APIAllocationStats{
+				Assigned:       len(m2s),
 				Total:          0,
 				Used:           0,
 				Unused:         0,
