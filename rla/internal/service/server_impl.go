@@ -599,6 +599,7 @@ func (rs *RLAServerImpl) PowerOnRack(
 		ctx,
 		req.GetTargetSpec(),
 		req.GetDescription(),
+		req.GetQueueOptions(),
 		&operations.PowerControlTaskInfo{
 			Operation: operations.PowerOperationPowerOn,
 		},
@@ -617,6 +618,7 @@ func (rs *RLAServerImpl) PowerOffRack(
 		ctx,
 		req.GetTargetSpec(),
 		req.GetDescription(),
+		req.GetQueueOptions(),
 		&operations.PowerControlTaskInfo{
 			Operation: op,
 			Forced:    req.GetForced(),
@@ -636,6 +638,7 @@ func (rs *RLAServerImpl) PowerResetRack(
 		ctx,
 		req.GetTargetSpec(),
 		req.GetDescription(),
+		req.GetQueueOptions(),
 		&operations.PowerControlTaskInfo{
 			Operation: op,
 			Forced:    req.GetForced(),
@@ -732,6 +735,7 @@ func (rs *RLAServerImpl) handlePowerControlTask(
 	ctx context.Context,
 	targetSpec *pb.OperationTargetSpec,
 	description string,
+	queueOptions *pb.QueueOptions,
 	info *operations.PowerControlTaskInfo,
 ) (*pb.SubmitTaskResponse, error) {
 	if rs.taskManager == nil {
@@ -747,6 +751,8 @@ func (rs *RLAServerImpl) handlePowerControlTask(
 	if err != nil {
 		return nil, err
 	}
+
+	req.ConflictStrategy, req.QueueTimeout = protobuf.QueueOptionsFrom(queueOptions)
 
 	// Task Manager handles resolve + split by rack + create tasks
 	taskIDs, err := rs.taskManager.SubmitTask(ctx, req)
@@ -917,6 +923,31 @@ func (rs *RLAServerImpl) GetTasksByIDs(
 	}
 
 	return &pb.GetTasksByIDsResponse{Tasks: results}, nil
+}
+
+func (rs *RLAServerImpl) CancelTask(
+	ctx context.Context,
+	req *pb.CancelTaskRequest,
+) (*pb.CancelTaskResponse, error) {
+	if rs.taskManager == nil {
+		return nil, errors.New("task manager is not available")
+	}
+
+	taskID, err := uuid.Parse(req.GetTaskId().GetId())
+	if err != nil {
+		return nil, fmt.Errorf("invalid task ID: %w", err)
+	}
+
+	if err := rs.taskManager.CancelTask(ctx, taskID); err != nil {
+		return nil, err
+	}
+
+	task, err := rs.taskStore.GetTask(ctx, taskID)
+	if err != nil {
+		return &pb.CancelTaskResponse{}, nil
+	}
+
+	return &pb.CancelTaskResponse{Task: protobuf.TaskTo(task)}, nil
 }
 
 // ========================================
@@ -1236,6 +1267,10 @@ func (rs *RLAServerImpl) UpgradeFirmware(
 	if err != nil {
 		return nil, err
 	}
+
+	opReq.ConflictStrategy, opReq.QueueTimeout = protobuf.QueueOptionsFrom(
+		req.GetQueueOptions(),
+	)
 
 	// Task Manager handles resolve + split by rack + create tasks
 	taskIDs, err := rs.taskManager.SubmitTask(ctx, opReq)

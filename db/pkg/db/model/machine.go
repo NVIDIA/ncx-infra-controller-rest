@@ -231,6 +231,7 @@ type MachineFilterInput struct {
 	Statuses                 []string
 	SearchQuery              *string
 	MachineIDs               []string
+	IsMissingOnSite          *bool
 	ExcludeMetadata          bool // When true, excludes the metadata JSONB column from SELECT to improve performance on bulk queries
 }
 
@@ -546,6 +547,14 @@ func (msd MachineSQLDAO) setQueryWithFilter(filter MachineFilterInput, query *bu
 
 		if machineDAOSpan != nil {
 			msd.tracerSpan.SetAttribute(machineDAOSpan, "is_assigned", *filter.IsAssigned)
+		}
+	}
+
+	if filter.IsMissingOnSite != nil {
+		query = query.Where("m.is_missing_on_site = ?", *filter.IsMissingOnSite)
+
+		if machineDAOSpan != nil {
+			msd.tracerSpan.SetAttribute(machineDAOSpan, "is_missing_on_site", *filter.IsMissingOnSite)
 		}
 	}
 

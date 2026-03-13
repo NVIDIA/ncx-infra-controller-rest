@@ -370,6 +370,7 @@ func (gamh GetAllMachineHandler) Handle(c echo.Context) error {
 	// Check if `hasInstanceType` query params
 	qHasInstanceType := c.QueryParam("hasInstanceType")
 	if qHasInstanceType != "" {
+		gamh.tracerSpan.SetAttribute(handlerSpan, attribute.String("hasInstanceType", qHasInstanceType), logger)
 		hiType, serr := strconv.ParseBool(qHasInstanceType)
 		if serr != nil {
 			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid value specified for hasInstanceType in query", nil)
@@ -450,6 +451,7 @@ func (gamh GetAllMachineHandler) Handle(c echo.Context) error {
 	//	Check if `hasInstance` query params
 	qHasInstance := c.QueryParam("hasInstance")
 	if qHasInstance != "" {
+		gamh.tracerSpan.SetAttribute(handlerSpan, attribute.String("hasInstance", qHasInstance), logger)
 		hi, serr := strconv.ParseBool(qHasInstance)
 		if serr != nil {
 			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid value specified for `hasInstance` in query", nil)
@@ -503,6 +505,18 @@ func (gamh GetAllMachineHandler) Handle(c echo.Context) error {
 			}
 			filterInput.Statuses = append(filterInput.Statuses, status)
 		}
+	}
+
+	// Get isMissingOnSite from query param
+	qIsMissingOnSite := c.QueryParam("isMissingOnSite")
+	if qIsMissingOnSite != "" {
+		gamh.tracerSpan.SetAttribute(handlerSpan, attribute.String("isMissingOnSite", qIsMissingOnSite), logger)
+		isMissingOnSite, err := strconv.ParseBool(qIsMissingOnSite)
+		if err != nil {
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid value specified for `isMissingOnSite` query param", nil)
+		}
+
+		filterInput.IsMissingOnSite = cdb.GetBoolPtr(isMissingOnSite)
 	}
 
 	// Get hwSkuDeviceType from query param

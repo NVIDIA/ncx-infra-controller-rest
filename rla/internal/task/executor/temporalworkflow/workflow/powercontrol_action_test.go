@@ -138,15 +138,13 @@ func TestPowerControlWorkflow_GracefulWithVerification(t *testing.T) {
 					devicetypes.ComponentTypeCompute),
 			}
 
-			rack := buildTestRack(components)
-
 			info := operations.PowerControlTaskInfo{
 				Operation: tc.operation,
 			}
 
 			reqInfo := taskdef.ExecutionInfo{
 				TaskID:         uuid.New(),
-				Rack:           rack,
+				Components:     toWorkflowComponents(components),
 				RuleDefinition: tc.ruleDef,
 			}
 
@@ -243,15 +241,13 @@ func TestPowerControlWorkflow_ForcefulWithFinalVerification(t *testing.T) {
 					devicetypes.ComponentTypeCompute),
 			}
 
-			rack := buildTestRack(components)
-
 			info := operations.PowerControlTaskInfo{
 				Operation: tc.operation,
 			}
 
 			reqInfo := taskdef.ExecutionInfo{
 				TaskID:         uuid.New(),
-				Rack:           rack,
+				Components:     toWorkflowComponents(components),
 				RuleDefinition: tc.ruleDef,
 			}
 
@@ -350,15 +346,13 @@ func TestPowerControlWorkflow_CompositeVerification(t *testing.T) {
 			devicetypes.ComponentTypePowerShelf),
 	}
 
-	rack := buildTestRack(components)
-
 	info := operations.PowerControlTaskInfo{
 		Operation: operations.PowerOperationPowerOn,
 	}
 
 	reqInfo := taskdef.ExecutionInfo{
 		TaskID:         uuid.New(),
-		Rack:           rack,
+		Components:     toWorkflowComponents(components),
 		RuleDefinition: ruleDef,
 	}
 
@@ -418,15 +412,13 @@ func TestPowerControlWorkflow_BackwardCompatibility(t *testing.T) {
 			devicetypes.ComponentTypeCompute),
 	}
 
-	rack := buildTestRack(components)
-
 	info := operations.PowerControlTaskInfo{
 		Operation: operations.PowerOperationPowerOn,
 	}
 
 	reqInfo := taskdef.ExecutionInfo{
 		TaskID:         uuid.New(),
-		Rack:           rack,
+		Components:     toWorkflowComponents(components),
 		RuleDefinition: ruleDef,
 	}
 

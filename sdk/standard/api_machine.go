@@ -184,6 +184,7 @@ type ApiGetAllMachineRequest struct {
 	instanceTypeId *string
 	tenantId *string
 	hasInstance *bool
+	isMissingOnSite *bool
 	includeMetadata *bool
 	status *string
 	capabilityType *string
@@ -208,7 +209,7 @@ func (r ApiGetAllMachineRequest) Id(id string) ApiGetAllMachineRequest {
 	return r
 }
 
-// Filter Machines that have been assigned an Instance Type. siteId must be specified when using this param.
+// Filter Machines that have been assigned an Instance Type.
 func (r ApiGetAllMachineRequest) HasInstanceType(hasInstanceType bool) ApiGetAllMachineRequest {
 	r.hasInstanceType = &hasInstanceType
 	return r
@@ -229,6 +230,12 @@ func (r ApiGetAllMachineRequest) TenantId(tenantId string) ApiGetAllMachineReque
 // Filter Machines that are assigned to an Instance. siteId must be specified when using this param.
 func (r ApiGetAllMachineRequest) HasInstance(hasInstance bool) ApiGetAllMachineRequest {
 	r.hasInstance = &hasInstance
+	return r
+}
+
+// Filter Machines that are missing on Site.
+func (r ApiGetAllMachineRequest) IsMissingOnSite(isMissingOnSite bool) ApiGetAllMachineRequest {
+	r.isMissingOnSite = &isMissingOnSite
 	return r
 }
 
@@ -355,6 +362,9 @@ func (a *MachineAPIService) GetAllMachineExecute(r ApiGetAllMachineRequest) ([]M
 	}
 	if r.hasInstance != nil {
 		parameterAddToHeaderOrQuery(localVarQueryParams, "hasInstance", r.hasInstance, "form", "")
+	}
+	if r.isMissingOnSite != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "isMissingOnSite", r.isMissingOnSite, "form", "")
 	}
 	if r.includeMetadata != nil {
 		parameterAddToHeaderOrQuery(localVarQueryParams, "includeMetadata", r.includeMetadata, "form", "")

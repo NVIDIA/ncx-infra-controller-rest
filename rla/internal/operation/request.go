@@ -20,6 +20,7 @@ package operation
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -155,16 +156,36 @@ func (er *ExternalRef) Validate() error {
 	return nil
 }
 
+// ConflictStrategy controls how a task behaves when a conflict is detected.
+type ConflictStrategy int
+
+const (
+	// ConflictStrategyReject immediately rejects the task when a conflict is detected (default).
+	ConflictStrategyReject ConflictStrategy = iota
+	// ConflictStrategyQueue queues the task until the conflicting task completes.
+	ConflictStrategyQueue
+)
+
 // Request represents the specification of an operation submitted by the user.
 // This is a simple translation of the gRPC input, can contain multiple racks/components.
 // Task Manager will resolve and split by rack, creating one Task per rack.
 // -- Operation: The operation to be performed.
 // -- TargetSpec: Either rack targets or component targets (single-type targeting enforced).
 // -- Description: Optional task description.
+// -- ConflictStrategy: How to handle the task when a conflict is detected.
+//
+//	Default (ConflictStrategyReject) rejects on conflict.
+//
+// -- QueueTimeout: How long to wait in queue before auto-expiry. Zero means
+//
+//	use the server default (e.g. 1 hour). The server may enforce a maximum.
+//	Only relevant when ConflictStrategy is ConflictStrategyQueue.
 type Request struct {
-	Operation   Wrapper
-	TargetSpec  TargetSpec // Either racks or components, not both
-	Description string
+	Operation        Wrapper
+	TargetSpec       TargetSpec // Either racks or components, not both
+	Description      string
+	ConflictStrategy ConflictStrategy
+	QueueTimeout     time.Duration
 }
 
 func (r *Request) Validate() error {

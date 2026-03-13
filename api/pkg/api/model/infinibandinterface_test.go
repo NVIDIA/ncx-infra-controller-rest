@@ -60,6 +60,7 @@ func TestNewAPIInfiniBandInterface(t *testing.T) {
 			},
 			want: &APIInfiniBandInterface{
 				ID:                   dbibi.ID.String(),
+				InstanceID:           dbibi.InstanceID.String(),
 				InfiniBandPartitonID: dbibi.InfiniBandPartitionID.String(),
 				Device:               dbibi.Device,
 				Vendor:               dbibi.Vendor,

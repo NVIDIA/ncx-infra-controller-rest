@@ -172,6 +172,27 @@ func (m *Manager) CheckStatus(
 	), nil
 }
 
+// TerminateTask terminates the Temporal workflow backing the given execution ID.
+func (m *Manager) TerminateTask(
+	ctx context.Context,
+	encodedExecutionID string,
+	reason string,
+) error {
+	executionID, err := common.NewFromEncoded(encodedExecutionID)
+	if err != nil {
+		return fmt.Errorf("invalid execution ID %q: %w", encodedExecutionID, err)
+	}
+
+	// Empty runID targets the latest run.
+	// ignoreNotFound: workflow already completed/terminated before this call.
+	return ignoreNotFound(m.publisherClient.Client().TerminateWorkflow(
+		ctx,
+		executionID.WorkflowID,
+		"",
+		reason,
+	))
+}
+
 func (m *Manager) PowerControl(
 	ctx context.Context,
 	req *task.ExecutionRequest,

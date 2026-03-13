@@ -45,6 +45,21 @@ func (s SecretString) MarshalJSON() ([]byte, error) {
 	return json.Marshal(s.String())
 }
 
+// UnmarshalJSON implements json.Unmarshaler to accept a JSON string.
+// The deserialized value is stored as-is; callers that round-trip through
+// JSON (e.g. Temporal workflow input) will receive a placeholder "******"
+// rather than the original secret. This is intentional — use the proper
+// architectural fix (see docs/WORKFLOW_EXECUTION_INFO_PLAN.md) to avoid
+// passing secrets through serialization boundaries altogether.
+func (s *SecretString) UnmarshalJSON(data []byte) error {
+	var v string
+	if err := json.Unmarshal(data, &v); err != nil {
+		return err
+	}
+	s.Value = v
+	return nil
+}
+
 // IsEmpty returns true if the secret string has no value
 func (s SecretString) IsEmpty() bool {
 	return strings.TrimSpace(s.Value) == ""

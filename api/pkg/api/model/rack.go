@@ -24,6 +24,40 @@ import (
 	rlav1 "github.com/nvidia/bare-metal-manager-rest/workflow-schema/rla/protobuf/v1"
 )
 
+// ProtoToAPIBMCTypeName maps protobuf BMCType to API-friendly names.
+var ProtoToAPIBMCTypeName = map[rlav1.BMCType]string{
+	rlav1.BMCType_BMC_TYPE_UNKNOWN: "BmcTypeUnknown",
+	rlav1.BMCType_BMC_TYPE_HOST:    "BmcTypeHost",
+	rlav1.BMCType_BMC_TYPE_DPU:     "BmcTypeDpu",
+}
+
+// ProtoToAPIRackComponentTypeName maps protobuf ComponentType to API-friendly names for rack components.
+var ProtoToAPIRackComponentTypeName = map[rlav1.ComponentType]string{
+	rlav1.ComponentType_COMPONENT_TYPE_UNKNOWN:    "ComponentTypeUnknown",
+	rlav1.ComponentType_COMPONENT_TYPE_COMPUTE:    "ComponentTypeCompute",
+	rlav1.ComponentType_COMPONENT_TYPE_NVLSWITCH:  "ComponentTypeNvlswitch",
+	rlav1.ComponentType_COMPONENT_TYPE_POWERSHELF: "ComponentTypePowershelf",
+	rlav1.ComponentType_COMPONENT_TYPE_TORSWITCH:  "ComponentTypeTorswitch",
+	rlav1.ComponentType_COMPONENT_TYPE_UMS:        "ComponentTypeUms",
+	rlav1.ComponentType_COMPONENT_TYPE_CDU:        "ComponentTypeCdu",
+}
+
+// ProtoToAPIDiffTypeName maps protobuf DiffType to API-friendly names.
+var ProtoToAPIDiffTypeName = map[rlav1.DiffType]string{
+	rlav1.DiffType_DIFF_TYPE_UNKNOWN:          "DiffTypeUnknown",
+	rlav1.DiffType_DIFF_TYPE_ONLY_IN_EXPECTED: "DiffTypeOnlyInExpected",
+	rlav1.DiffType_DIFF_TYPE_ONLY_IN_ACTUAL:   "DiffTypeOnlyInActual",
+	rlav1.DiffType_DIFF_TYPE_DRIFT:            "DiffTypeDrift",
+}
+
+// enumOr returns mapped value or fallback when key is missing from mapping.
+func enumOr[K comparable](m map[K]string, key K, fallback string) string {
+	if v, ok := m[key]; ok {
+		return v
+	}
+	return fallback
+}
+
 // ========== Rack Query Fields ==========
 
 // RackFilterFieldMap maps API field names to RLA protobuf filter enum
@@ -314,7 +348,7 @@ func (ab *APIBMC) FromProto(protoBMC *rlav1.BMCInfo) {
 	if protoBMC == nil {
 		return
 	}
-	ab.Type = protoBMC.GetType().String()
+	ab.Type = enumOr(ProtoToAPIBMCTypeName, protoBMC.GetType(), "BmcTypeUnknown")
 	ab.MacAddress = protoBMC.GetMacAddress()
 	ab.IPAddress = protoBMC.GetIpAddress()
 }
@@ -343,7 +377,7 @@ func (arc *APIRackComponent) FromProto(protoComponent *rlav1.Component) {
 	if protoComponent == nil {
 		return
 	}
-	arc.Type = protoComponent.GetType().String()
+	arc.Type = enumOr(ProtoToAPIRackComponentTypeName, protoComponent.GetType(), "ComponentTypeUnknown")
 	arc.FirmwareVersion = protoComponent.GetFirmwareVersion()
 	arc.ComponentID = protoComponent.GetComponentId()
 	arc.PowerState = protoComponent.GetPowerState()
@@ -418,7 +452,7 @@ func (d *APIComponentDiff) FromProto(protoDiff *rlav1.ComponentDiff) {
 		return
 	}
 
-	d.Type = protoDiff.GetType().String()
+	d.Type = enumOr(ProtoToAPIDiffTypeName, protoDiff.GetType(), "DiffTypeUnknown")
 	d.ComponentID = protoDiff.GetComponentId()
 
 	if protoDiff.GetExpected() != nil {

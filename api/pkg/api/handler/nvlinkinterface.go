@@ -25,13 +25,15 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	temporalClient "go.temporal.io/sdk/client"
 
+	goset "github.com/deckarep/golang-set/v2"
 	"github.com/google/uuid"
+	"github.com/samber/lo"
 
 	"github.com/labstack/echo/v4"
 
 	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
-	"github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
+	cdbp "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
 
 	"github.com/nvidia/bare-metal-manager-rest/api/internal/config"
 	common "github.com/nvidia/bare-metal-manager-rest/api/pkg/api/handler/util/common"
@@ -41,23 +43,77 @@ import (
 	cutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 )
 
-// ~~~~~ GetAll NVLinkInterface Handler ~~~~~ //
+// ~~~~~ GetAll Instance NVLinkInterface Handler ~~~~~ //
 
-// GetAllNVLinkInterfaceHandler is the API Handler for retrieving all NVLinkInterfaces
-type GetAllNVLinkInterfaceHandler struct {
+// GetAllInstanceNVLinkInterfaceHandler is the API Handler for retrieving all NVLinkInterfaces for an Instance
+type GetAllInstanceNVLinkInterfaceHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
 	tracerSpan *cutil.TracerSpan
 }
 
-// NewGetAllNVLinkInterfaceHandler initializes and returns a new handler for retrieving all NVLinkInterfaces
-func NewGetAllNVLinkInterfaceHandler(dbSession *cdb.Session, tc temporalClient.Client, cfg *config.Config) GetAllNVLinkInterfaceHandler {
-	return GetAllNVLinkInterfaceHandler{
+// NewGetAllInstanceNVLinkInterfaceHandler initializes and returns a new handler for retrieving all NVLinkInterfaces for an Instance
+func NewGetAllInstanceNVLinkInterfaceHandler(dbSession *cdb.Session, tc temporalClient.Client, cfg *config.Config) GetAllInstanceNVLinkInterfaceHandler {
+	return GetAllInstanceNVLinkInterfaceHandler{
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
 		tracerSpan: cutil.NewTracerSpan(),
+	}
+}
+
+// Handle godoc
+// @Summary Retrieve all Interfaces for an Instance
+// @Description Retrieve all Interfaces for an Instance
+// @Tags interface
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param org path string true "Name of NGC organization"
+// @Param instanceId path string true "ID of Instance"
+// @Param status query string false "Filter by status" e.g. 'Pending', 'Error'"
+// @Param includeRelation query string false "Related entities to include in response e.g. 'Instance', 'Subnet'"
+// @Param pageNumber query integer false "Page number of results returned"
+// @Param pageSize query integer false "Number of results per page"
+// @Param orderBy query string false "Order by field"
+// @Success 200 {object} model.APIInterface
+// @Router /v2/org/{org}/carbide/instance/{instance_id}/interface [get]
+func (ganvliih GetAllInstanceNVLinkInterfaceHandler) Handle(c echo.Context) error {
+	instanceID := c.Param("instanceId")
+	queryOverride := &common.QueryOverride{
+		InstanceIDs:   []string{instanceID},
+		ValueFromPath: true,
+	}
+	delegate := NewGetAllNVLinkInterfaceHandler(ganvliih.dbSession, ganvliih.tc, ganvliih.cfg, queryOverride)
+	return delegate.Handle(c)
+}
+
+// ~~~~~ GetAll NVLinkInterface Handler ~~~~~ //
+
+// GetAllNVLinkInterfaceHandler is the API Handler for retrieving all NVLinkInterfaces
+type GetAllNVLinkInterfaceHandler struct {
+	dbSession     *cdb.Session
+	tc            temporalClient.Client
+	cfg           *config.Config
+	tracerSpan    *cutil.TracerSpan
+	queryOverride *common.QueryOverride
+}
+
+// NewGetAllNVLinkInterfaceHandler initializes and returns a new handler for retrieving all NVLinkInterfaces.
+// When queryOverride is provided (e.g. when delegating from instance-scoped endpoint), it supplies values
+// that would otherwise come from query params, and error messages use "request" instead of "query".
+func NewGetAllNVLinkInterfaceHandler(dbSession *cdb.Session, tc temporalClient.Client, cfg *config.Config, queryOverride ...*common.QueryOverride) GetAllNVLinkInterfaceHandler {
+	var override *common.QueryOverride
+	if len(queryOverride) > 0 {
+		override = queryOverride[0]
+	}
+	return GetAllNVLinkInterfaceHandler{
+		dbSession:     dbSession,
+		tc:            tc,
+		cfg:           cfg,
+		tracerSpan:    cutil.NewTracerSpan(),
+		queryOverride: override,
 	}
 }
 
@@ -145,108 +201,188 @@ func (gaish GetAllNVLinkInterfaceHandler) Handle(c echo.Context) error {
 	}
 	tenant := tenants[0]
 
-	// Get site ID from query param
+	// Get site IDs from query param - parse first, then bulk fetch
 	var siteIDs []uuid.UUID
-	siteIDStr := qParams["siteId"]
-	tsDAO := cdbm.NewTenantSiteDAO(gaish.dbSession)
-	for _, siteIDStr := range siteIDStr {
-		site, err := common.GetSiteFromIDString(ctx, nil, siteIDStr, gaish.dbSession)
+	siteIDStrs := qParams["siteId"]
+	for _, siteIDStr := range siteIDStrs {
+		parsedID, err := uuid.Parse(siteIDStr)
 		if err != nil {
-			logger.Warn().Err(err).Msg("error getting site in request")
-			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Site specified in query param, invalid ID or DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Invalid Site ID: %s specified in query", siteIDStr), nil)
 		}
-		siteIDs = append(siteIDs, site.ID)
+		siteIDs = append(siteIDs, parsedID)
+	}
 
-		// Check Site association with Tenant
-		_, err = tsDAO.GetByTenantIDAndSiteID(ctx, nil, tenant.ID, site.ID, nil)
+	if len(siteIDStrs) > 0 {
+		// Set tracer span attribute
+		gaish.tracerSpan.SetAttribute(handlerSpan, attribute.StringSlice("siteIds", siteIDStrs), logger)
+
+		// De-duplicate Site IDs
+		siteIDs = goset.NewSet(siteIDs...).ToSlice()
+
+		// Get all TenantSites for the Tenant and Sites specified in query
+		tsDAO := cdbm.NewTenantSiteDAO(gaish.dbSession)
+		tenantSites, _, err := tsDAO.GetAll(
+			ctx,
+			nil,
+			cdbm.TenantSiteFilterInput{
+				TenantIDs: []uuid.UUID{tenant.ID},
+				SiteIDs:   siteIDs,
+			},
+			cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)},
+			[]string{cdbm.SiteRelationName},
+		)
+
 		if err != nil {
-			if err == cdb.ErrDoesNotExist {
-				return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant does not have access to this Site", nil)
-			}
 			logger.Error().Err(err).Msg("error retrieving TenantSite from DB")
-			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to determine Tenant access to Site, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to determine Tenant access to Sites specified in query, DB error", nil)
+		}
+
+		// Check if Tenant has access to each Site
+		tenantSiteIDMap := map[uuid.UUID]*cdbm.TenantSite{}
+		for i := range tenantSites {
+			tenantSiteIDMap[tenantSites[i].SiteID] = &tenantSites[i]
+		}
+
+		for _, siteID := range siteIDs {
+			// Check if Tenant has access to Site
+			if _, ok := tenantSiteIDMap[siteID]; !ok {
+				return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Site: %s specified in query doesn't exist or Tenant doesn't have access to it", siteID.String()), nil)
+			}
 		}
 	}
 
-	// Get Instance ID from query param
+	// Get Instance IDs - from queryOverride when delegating from path-scoped endpoint, else from query param
 	var instanceIDs []uuid.UUID
-	instanceIDStr := qParams["instanceId"]
-	instanceDAO := cdbm.NewInstanceDAO(gaish.dbSession)
-	for _, instanceIDStr := range instanceIDStr {
-		instanceID, err := uuid.Parse(instanceIDStr)
-		if err != nil {
-			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Instance ID in URL", nil)
-		}
+	instanceIDFromPath := gaish.queryOverride != nil && gaish.queryOverride.ValueFromPath
 
-		// Get Instance
-		instance, err := instanceDAO.GetByID(ctx, nil, instanceID, nil)
-		if err != nil {
-			if err == cdb.ErrDoesNotExist {
-				return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find Instance with specified ID", nil)
-			}
-			logger.Error().Err(err).Msg("error retrieving Instance from DB")
-			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Instance", nil)
-		}
-
-		// Check if Instance belongs to Tenant
-		if instance.TenantID != tenant.ID {
-			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Instance does not belong to current Tenant", nil)
-		}
-
-		instanceIDs = append(instanceIDs, instanceID)
+	instanceIDStrs := qParams["instanceId"]
+	if instanceIDFromPath && len(gaish.queryOverride.InstanceIDs) > 0 {
+		instanceIDStrs = gaish.queryOverride.InstanceIDs
 	}
 
-	// Get NVLink Logical Partition ID from URL param
+	for _, instanceIDStr := range instanceIDStrs {
+		parsedID, err := uuid.Parse(instanceIDStr)
+		if err != nil {
+			if instanceIDFromPath {
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Invalid Instance ID: %s specified in request", instanceIDStr), nil)
+			}
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Invalid Instance ID: %s in query", instanceIDStr), nil)
+		}
+		instanceIDs = append(instanceIDs, parsedID)
+	}
+
+	if len(instanceIDStrs) > 0 {
+		// Set tracer span attribute
+		gaish.tracerSpan.SetAttribute(handlerSpan, attribute.StringSlice("instanceIds", instanceIDStrs), logger)
+
+		// De-duplicate Instance IDs
+		instanceIDs = goset.NewSet(instanceIDs...).ToSlice()
+
+		instanceDAO := cdbm.NewInstanceDAO(gaish.dbSession)
+		instances, _, err := instanceDAO.GetAll(ctx, nil, cdbm.InstanceFilterInput{InstanceIDs: instanceIDs}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
+		if err != nil {
+			logger.Error().Err(err).Msg("error retrieving Instances from DB")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to retrieve Instances specified in %s, DB error", lo.Ternary(instanceIDFromPath, "request", "query")), nil)
+		}
+		instanceIDMap := map[uuid.UUID]*cdbm.Instance{}
+
+		for i := range instances {
+			instanceIDMap[instances[i].ID] = &instances[i]
+		}
+
+		for _, instanceID := range instanceIDs {
+			instance, ok := instanceIDMap[instanceID]
+			if !ok {
+				return cutil.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf("Could not find Instance with ID: %s specified in %s",
+					instanceID.String(), lo.Ternary(instanceIDFromPath, "request", "query")), nil)
+			}
+
+			if instance.TenantID != tenant.ID {
+				return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Instance: %s specified in %s doesn't belong to current Tenant",
+					instanceID.String(), lo.Ternary(instanceIDFromPath, "request", "query")), nil)
+			}
+		}
+	}
+
+	// Get NVLink Logical Partition IDs from query param - parse first, then bulk fetch
 	var nvlinkLogicalPartitionIDs []uuid.UUID
-	nvlinkLogicalPartitionIDStr := qParams["nvLinkLogicalPartitionId"]
+	nvllpIDStrs := qParams["nvLinkLogicalPartitionId"]
 
-	nvllpDAO := cdbm.NewNVLinkLogicalPartitionDAO(gaish.dbSession)
-	for _, nvlinkLogicalPartitionIDStr := range nvlinkLogicalPartitionIDStr {
-		nvlinkLogicalPartitionID, err := uuid.Parse(nvlinkLogicalPartitionIDStr)
+	for _, nvllpIDStr := range nvllpIDStrs {
+		parsedID, err := uuid.Parse(nvllpIDStr)
 		if err != nil {
-			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid NVLink Logical Partition ID in URL", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Invalid NVLink Logical Partition ID: %s in query", nvllpIDStr), nil)
 		}
-
-		// Get NVLink Logical Partition
-		nvllp, err := nvllpDAO.GetByID(ctx, nil, nvlinkLogicalPartitionID, nil)
-		if err != nil {
-			if err == cdb.ErrDoesNotExist {
-				return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find NVLink Logical Partition with specified ID", nil)
-			}
-			logger.Error().Err(err).Msg("error retrieving NVLink Logical Partition from DB")
-			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve NVLink Logical Partition", nil)
-		}
-
-		// Check if NVLink Logical Partition belongs to Tenant
-		if nvllp.TenantID != tenant.ID {
-			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "NVLink Logical Partition does not belong to current Tenant", nil)
-		}
-
-		nvlinkLogicalPartitionIDs = append(nvlinkLogicalPartitionIDs, nvlinkLogicalPartitionID)
+		nvlinkLogicalPartitionIDs = append(nvlinkLogicalPartitionIDs, parsedID)
 	}
 
-	// Get NVLink Domain ID from query param
-	var nvlinkDomainIDs []uuid.UUID
-	nvlinkDomainIDStr := qParams["nvLinkDomainId"]
-	for _, nvlinkDomainIDStr := range nvlinkDomainIDStr {
-		nvlinkDomainID, err := uuid.Parse(nvlinkDomainIDStr)
+	if len(nvllpIDStrs) > 0 {
+		// Set tracer span attribute
+		gaish.tracerSpan.SetAttribute(handlerSpan, attribute.StringSlice("nvLinkLogicalPartitionIds", nvllpIDStrs), logger)
+
+		// Deduplicate NVLink Logical Partition IDs
+		nvlinkLogicalPartitionIDs = goset.NewSet(nvlinkLogicalPartitionIDs...).ToSlice()
+
+		nvllpDAO := cdbm.NewNVLinkLogicalPartitionDAO(gaish.dbSession)
+		nvllps, _, err := nvllpDAO.GetAll(ctx, nil, cdbm.NVLinkLogicalPartitionFilterInput{NVLinkLogicalPartitionIDs: nvlinkLogicalPartitionIDs}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
 		if err != nil {
-			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid NVLink Domain ID in query param", nil)
+			logger.Error().Err(err).Msg("error retrieving NVLink Logical Partitions from DB")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve NVLink Logical Partitions specified in query, DB error", nil)
 		}
-		nvlinkDomainIDs = append(nvlinkDomainIDs, nvlinkDomainID)
+
+		nvllpIDMap := map[uuid.UUID]*cdbm.NVLinkLogicalPartition{}
+		for i := range nvllps {
+			nvllpIDMap[nvllps[i].ID] = &nvllps[i]
+		}
+
+		for _, nvllpID := range nvlinkLogicalPartitionIDs {
+			nvllp, ok := nvllpIDMap[nvllpID]
+			if !ok {
+				return cutil.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf("Could not find NVLink Logical Partition with ID: %s specified in query", nvllpID.String()), nil)
+			}
+
+			if nvllp.TenantID != tenant.ID {
+				return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("NVLink Logical Partition: %s specified in query doesn't belong to current Tenant", nvllpID.String()), nil)
+			}
+		}
+	}
+
+	// Get NVLink Domain IDs from query param - parse first, then deduplicate
+	var nvLinkDomainIDs []uuid.UUID
+	nvLinkDomainIDStrs := qParams["nvLinkDomainId"]
+
+	for _, nvLinkDomainIDStr := range nvLinkDomainIDStrs {
+		parsedID, err := uuid.Parse(nvLinkDomainIDStr)
+		if err != nil {
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Invalid NVLink Domain ID: %s in query", nvLinkDomainIDStr), nil)
+		}
+		nvLinkDomainIDs = append(nvLinkDomainIDs, parsedID)
+	}
+
+	if len(nvLinkDomainIDStrs) > 0 {
+		// Set tracer span attribute
+		gaish.tracerSpan.SetAttribute(handlerSpan, attribute.StringSlice("nvLinkDomainIds", nvLinkDomainIDStrs), logger)
+
+		// Deduplicate NVLink Domain IDs
+		nvLinkDomainIDs = goset.NewSet(nvLinkDomainIDs...).ToSlice()
 	}
 
 	// Get status from query param
 	var statuses []string
-	statusQuery := qParams["status"]
-	for _, statusQuery := range statusQuery {
-		gaish.tracerSpan.SetAttribute(handlerSpan, attribute.String("status", statusQuery), logger)
-		_, ok := cdbm.NVLinkInterfaceStatusMap[statusQuery]
+	qStatuses := qParams["status"]
+	for _, status := range qStatuses {
+		gaish.tracerSpan.SetAttribute(handlerSpan, attribute.String("status", status), logger)
+		_, ok := cdbm.NVLinkInterfaceStatusMap[status]
 		if !ok {
-			logger.Warn().Msg(fmt.Sprintf("invalid value in status query: %v", statusQuery))
-			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Status value in query", nil)
+			logger.Warn().Msg(fmt.Sprintf("invalid value in status query: %v", status))
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Invalid Status value: %s in query", status), nil)
 		}
-		statuses = append(statuses, statusQuery)
+		statuses = append(statuses, status)
+	}
+
+	if len(qStatuses) > 0 {
+		// Set tracer span attribute
+		gaish.tracerSpan.SetAttribute(handlerSpan, attribute.StringSlice("statuses", qStatuses), logger)
 	}
 
 	// Get the NVLink Logical Partition NVLink Interfaces record from the db
@@ -256,11 +392,11 @@ func (gaish GetAllNVLinkInterfaceHandler) Handle(c echo.Context) error {
 		SiteIDs:                   siteIDs,
 		InstanceIDs:               instanceIDs,
 		NVLinkLogicalPartitionIDs: nvlinkLogicalPartitionIDs,
-		NVLinkDomainIDs:           nvlinkDomainIDs,
+		NVLinkDomainIDs:           nvLinkDomainIDs,
 		Statuses:                  statuses,
 	}
 
-	pageInput := paginator.PageInput{
+	pageInput := cdbp.PageInput{
 		Limit:   pageRequest.Limit,
 		Offset:  pageRequest.Offset,
 		OrderBy: pageRequest.OrderBy,
@@ -269,7 +405,7 @@ func (gaish GetAllNVLinkInterfaceHandler) Handle(c echo.Context) error {
 	dbNVLinkInterfaces, total, err := nvlIfcDAO.GetAll(ctx, nil, filterInput, pageInput, qIncludeRelations)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving NVLink Interface Details from DB")
-		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve NVLink Interface ", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve NVLink Interfaces, DB error", nil)
 	}
 
 	// Create response

@@ -819,6 +819,15 @@ func TestMachineSQLDAO_GetAll(t *testing.T) {
 	})
 	assert.Nil(t, err)
 
+	// set one of machines in set 2 to be missing on site
+	ms2[0].IsMissingOnSite = true
+	_, err = msd.Update(ctx, nil, MachineUpdateInput{
+		MachineID:       ms2[2].ID,
+		Status:          db.GetStrPtr(MachineStatusError),
+		IsMissingOnSite: db.GetBoolPtr(true),
+	})
+	assert.Nil(t, err)
+
 	dummyID := uuid.New()
 
 	controllerMachineID, _ := uuid.Parse(ms1[0].ControllerMachineID)
@@ -980,7 +989,7 @@ func TestMachineSQLDAO_GetAll(t *testing.T) {
 				Statuses: []string{MachineStatusInitializing},
 			},
 			expectedCount: paginator.DefaultLimit,
-			expectedTotal: db.GetIntPtr(totalCount - 1),
+			expectedTotal: db.GetIntPtr(totalCount - 2),
 			expectedError: false,
 		},
 		{
@@ -1019,7 +1028,7 @@ func TestMachineSQLDAO_GetAll(t *testing.T) {
 				},
 			},
 			expectedCount: paginator.DefaultLimit,
-			expectedTotal: db.GetIntPtr(totalCount - 1),
+			expectedTotal: db.GetIntPtr(totalCount - 2),
 			expectedError: false,
 		},
 		{
@@ -1134,6 +1143,14 @@ func TestMachineSQLDAO_GetAll(t *testing.T) {
 				HwSkuDeviceTypes: []string{"testhwskudevicetype3"},
 			},
 			expectedCount: 0,
+			expectedError: false,
+		},
+		{
+			desc: "GetAll with isMissingOnSite filter returns objects",
+			filter: MachineFilterInput{
+				IsMissingOnSite: db.GetBoolPtr(true),
+			},
+			expectedCount: 1,
 			expectedError: false,
 		},
 	}

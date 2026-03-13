@@ -1703,8 +1703,10 @@ func (uih UpdateInstanceHandler) handleReboot(c echo.Context, logger *zerolog.Lo
 
 			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to reboot Instance, timeout occurred executing workflow on Site: %s", err), nil)
 		}
+		code, err := common.UnwrapWorkflowError(err)
 		logger.Error().Err(err).Msg("failed to execute Temporal workflow to reboot Instance")
-		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to execute sync workflow to reboot Instance on Site: %s", err), nil)
+
+		return cutil.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to execute sync workflow to reboot Instance on Site: %s", err), nil)
 	}
 
 	logger.Info().Str("Workflow ID", wid).Msg("completed synchronous reboot Instance workflow")
@@ -3620,7 +3622,6 @@ func (gaih GetAllInstanceHandler) Handle(c echo.Context) error {
 		if err != nil {
 			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Invalid site ID %v in query", siteIDStr), nil)
 		}
-
 		siteIDs = append(siteIDs, parsedID)
 	}
 
