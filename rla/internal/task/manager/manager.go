@@ -473,6 +473,24 @@ func (m *Manager) loadRackForTask(
 	return r, nil
 }
 
+func workflowComponentsFrom(
+	r *rack.Rack,
+) []taskdef.WorkflowComponent {
+	if r == nil {
+		return nil
+	}
+
+	comps := make([]taskdef.WorkflowComponent, len(r.Components))
+	for i, c := range r.Components {
+		comps[i] = taskdef.WorkflowComponent{
+			Type:        c.Type,
+			ComponentID: c.ComponentID,
+		}
+	}
+
+	return comps
+}
+
 func (m *Manager) executeTask(
 	ctx context.Context,
 	task *taskdef.Task,
@@ -486,8 +504,8 @@ func (m *Manager) executeTask(
 	req := taskdef.ExecutionRequest{
 		Info: taskdef.ExecutionInfo{
 			TaskID:         task.ID,
-			Rack:           targetRack,
-			RuleDefinition: ruleDef, // Pass rule definition to workflow
+			Components:     workflowComponentsFrom(targetRack),
+			RuleDefinition: ruleDef,
 		},
 		Async: true,
 	}

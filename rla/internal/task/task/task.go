@@ -27,7 +27,7 @@ import (
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/operation"
 	taskcommon "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/common"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operationrules"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/rack"
+	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
 )
 
 // Task defines the details of a task. It includes:
@@ -59,12 +59,19 @@ type Task struct {
 	QueueExpiresAt *time.Time
 }
 
+// WorkflowComponent holds the minimal component data needed to execute
+// a workflow. All fields are plain JSON-safe types.
+type WorkflowComponent struct {
+	Type        devicetypes.ComponentType `json:"type"`
+	ComponentID string                    `json:"component_id"`
+}
+
 // ExecutionInfo contains the information needed to execute a task.
-// Rack contains rack info and the components to be operated on (see rack.Rack NOTE).
-// RuleDefinition contains the resolved operation rule (resolved at task creation time).
+// RuleDefinition contains the resolved operation rule
+// (resolved at task creation time).
 type ExecutionInfo struct {
 	TaskID         uuid.UUID
-	Rack           *rack.Rack
+	Components     []WorkflowComponent
 	RuleDefinition *operationrules.RuleDefinition
 }
 
@@ -86,11 +93,7 @@ func (r *ExecutionRequest) Validate() error {
 		return fmt.Errorf("task ID is nil")
 	}
 
-	if r.Info.Rack == nil {
-		return fmt.Errorf("rack is nil")
-	}
-
-	if len(r.Info.Rack.Components) == 0 {
+	if len(r.Info.Components) == 0 {
 		return fmt.Errorf("components list is empty")
 	}
 

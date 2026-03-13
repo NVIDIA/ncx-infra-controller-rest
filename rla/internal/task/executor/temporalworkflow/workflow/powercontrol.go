@@ -44,7 +44,7 @@ func PowerControl(
 	reqInfo task.ExecutionInfo,
 	info operations.PowerControlTaskInfo,
 ) (err error) {
-	if reqInfo.Rack == nil || len(reqInfo.Rack.Components) == 0 {
+	if len(reqInfo.Components) == 0 {
 		return nil
 	}
 
