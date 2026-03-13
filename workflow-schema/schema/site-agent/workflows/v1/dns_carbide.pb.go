@@ -257,27 +257,27 @@ func (x *DnsResourceRecord) GetAuth() string {
 	return ""
 }
 
-type Metadata struct {
+type DomainMetadata struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	AllowAxfrFrom []string               `protobuf:"bytes,2,rep,name=allow_axfr_from,json=allowAxfrFrom,proto3" json:"allow_axfr_from,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Metadata) Reset() {
-	*x = Metadata{}
+func (x *DomainMetadata) Reset() {
+	*x = DomainMetadata{}
 	mi := &file_dns_carbide_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Metadata) String() string {
+func (x *DomainMetadata) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Metadata) ProtoMessage() {}
+func (*DomainMetadata) ProtoMessage() {}
 
-func (x *Metadata) ProtoReflect() protoreflect.Message {
+func (x *DomainMetadata) ProtoReflect() protoreflect.Message {
 	mi := &file_dns_carbide_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -289,12 +289,12 @@ func (x *Metadata) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Metadata.ProtoReflect.Descriptor instead.
-func (*Metadata) Descriptor() ([]byte, []int) {
+// Deprecated: Use DomainMetadata.ProtoReflect.Descriptor instead.
+func (*DomainMetadata) Descriptor() ([]byte, []int) {
 	return file_dns_carbide_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *Metadata) GetAllowAxfrFrom() []string {
+func (x *DomainMetadata) GetAllowAxfrFrom() []string {
 	if x != nil {
 		return x.AllowAxfrFrom
 	}
@@ -347,7 +347,7 @@ func (x *DomainMetadataRequest) GetDomain() string {
 
 type DomainMetadataResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Result        *Metadata              `protobuf:"bytes,1,opt,name=result,proto3" json:"result,omitempty"`
+	Result        *DomainMetadata        `protobuf:"bytes,1,opt,name=result,proto3" json:"result,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -382,7 +382,7 @@ func (*DomainMetadataResponse) Descriptor() ([]byte, []int) {
 	return file_dns_carbide_proto_rawDescGZIP(), []int{5}
 }
 
-func (x *DomainMetadataResponse) GetResult() *Metadata {
+func (x *DomainMetadataResponse) GetResult() *DomainMetadata {
 	if x != nil {
 		return x.Result
 	}
@@ -692,7 +692,7 @@ type Domain struct {
 	Created       *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=created,proto3" json:"created,omitempty"`
 	Updated       *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=updated,proto3" json:"updated,omitempty"`
 	Deleted       *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=deleted,proto3" json:"deleted,omitempty"`
-	Metadata      *Metadata              `protobuf:"bytes,6,opt,name=metadata,proto3" json:"metadata,omitempty"`
+	Metadata      *DomainMetadata        `protobuf:"bytes,6,opt,name=metadata,proto3" json:"metadata,omitempty"`
 	Soa           *string                `protobuf:"bytes,7,opt,name=soa,proto3,oneof" json:"soa,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -763,7 +763,7 @@ func (x *Domain) GetDeleted() *timestamppb.Timestamp {
 	return nil
 }
 
-func (x *Domain) GetMetadata() *Metadata {
+func (x *Domain) GetMetadata() *DomainMetadata {
 	if x != nil {
 		return x.Metadata
 	}
@@ -1027,13 +1027,13 @@ const file_dns_carbide_proto_rawDesc = "" +
 	"\n" +
 	"_domain_idB\r\n" +
 	"\v_scope_maskB\a\n" +
-	"\x05_auth\"2\n" +
-	"\bMetadata\x12&\n" +
+	"\x05_auth\"8\n" +
+	"\x0eDomainMetadata\x12&\n" +
 	"\x0fallow_axfr_from\x18\x02 \x03(\tR\rallowAxfrFrom\"/\n" +
 	"\x15DomainMetadataRequest\x12\x16\n" +
-	"\x06domain\x18\x01 \x01(\tR\x06domain\"?\n" +
-	"\x16DomainMetadataResponse\x12%\n" +
-	"\x06result\x18\x01 \x01(\v2\r.dns.MetadataR\x06result\"3\n" +
+	"\x06domain\x18\x01 \x01(\tR\x06domain\"E\n" +
+	"\x16DomainMetadataResponse\x12+\n" +
+	"\x06result\x18\x01 \x01(\v2\x13.dns.DomainMetadataR\x06result\"3\n" +
 	"\n" +
 	"DomainList\x12%\n" +
 	"\adomains\x18\x01 \x03(\v2\v.dns.DomainR\adomains\"\x16\n" +
@@ -1053,14 +1053,14 @@ const file_dns_carbide_proto_rawDesc = "" +
 	"\flast_checked\x18\x05 \x01(\x05H\x00R\vlastChecked\x88\x01\x01\x12,\n" +
 	"\x0fnotified_serial\x18\x06 \x01(\x05H\x01R\x0enotifiedSerial\x88\x01\x01B\x0f\n" +
 	"\r_last_checkedB\x12\n" +
-	"\x10_notified_serial\"\xaa\x02\n" +
+	"\x10_notified_serial\"\xb0\x02\n" +
 	"\x06Domain\x12 \n" +
 	"\x02id\x18\x01 \x01(\v2\x10.common.DomainIdR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x124\n" +
 	"\acreated\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\acreated\x124\n" +
 	"\aupdated\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\aupdated\x124\n" +
-	"\adeleted\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\adeleted\x12)\n" +
-	"\bmetadata\x18\x06 \x01(\v2\r.dns.MetadataR\bmetadata\x12\x15\n" +
+	"\adeleted\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\adeleted\x12/\n" +
+	"\bmetadata\x18\x06 \x01(\v2\x13.dns.DomainMetadataR\bmetadata\x12\x15\n" +
 	"\x03soa\x18\a \x01(\tH\x00R\x03soa\x88\x01\x01B\x06\n" +
 	"\x04_soa\")\n" +
 	"\x13CreateDomainRequest\x12\x12\n" +
@@ -1093,7 +1093,7 @@ var file_dns_carbide_proto_goTypes = []any{
 	(*DnsResourceRecordLookupRequest)(nil),  // 0: dns.DnsResourceRecordLookupRequest
 	(*DnsResourceRecordLookupResponse)(nil), // 1: dns.DnsResourceRecordLookupResponse
 	(*DnsResourceRecord)(nil),               // 2: dns.DnsResourceRecord
-	(*Metadata)(nil),                        // 3: dns.Metadata
+	(*DomainMetadata)(nil),                  // 3: dns.DomainMetadata
 	(*DomainMetadataRequest)(nil),           // 4: dns.DomainMetadataRequest
 	(*DomainMetadataResponse)(nil),          // 5: dns.DomainMetadataResponse
 	(*DomainList)(nil),                      // 6: dns.DomainList
@@ -1113,7 +1113,7 @@ var file_dns_carbide_proto_goTypes = []any{
 }
 var file_dns_carbide_proto_depIdxs = []int32{
 	2,  // 0: dns.DnsResourceRecordLookupResponse.records:type_name -> dns.DnsResourceRecord
-	3,  // 1: dns.DomainMetadataResponse.result:type_name -> dns.Metadata
+	3,  // 1: dns.DomainMetadataResponse.result:type_name -> dns.DomainMetadata
 	12, // 2: dns.DomainList.domains:type_name -> dns.Domain
 	11, // 3: dns.GetAllDomainsResponse.result:type_name -> dns.DomainInfo
 	2,  // 4: dns.GetAllRecordsForDomainResponse.result:type_name -> dns.DnsResourceRecord
@@ -1122,7 +1122,7 @@ var file_dns_carbide_proto_depIdxs = []int32{
 	19, // 7: dns.Domain.created:type_name -> google.protobuf.Timestamp
 	19, // 8: dns.Domain.updated:type_name -> google.protobuf.Timestamp
 	19, // 9: dns.Domain.deleted:type_name -> google.protobuf.Timestamp
-	3,  // 10: dns.Domain.metadata:type_name -> dns.Metadata
+	3,  // 10: dns.Domain.metadata:type_name -> dns.DomainMetadata
 	12, // 11: dns.UpdateDomainRequest.domain:type_name -> dns.Domain
 	18, // 12: dns.DomainSearchQuery.id:type_name -> common.DomainId
 	18, // 13: dns.DomainDeletionRequest.id:type_name -> common.DomainId

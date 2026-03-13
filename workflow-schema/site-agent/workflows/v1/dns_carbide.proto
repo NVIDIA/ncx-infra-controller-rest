@@ -45,7 +45,7 @@ message DnsResourceRecord {
   optional string auth = 7;
 }
 
-message Metadata {
+message DomainMetadata {
   repeated string allow_axfr_from = 2;
 }
 message DomainMetadataRequest {
@@ -53,7 +53,7 @@ message DomainMetadataRequest {
 }
 
 message DomainMetadataResponse {
-  Metadata result = 1;
+  DomainMetadata result = 1;
 }
 
 message DomainList {
@@ -90,7 +90,7 @@ message Domain {
   google.protobuf.Timestamp created = 3;
   google.protobuf.Timestamp updated = 4;
   google.protobuf.Timestamp deleted = 5;
-  Metadata metadata = 6;
+  DomainMetadata metadata = 6;
   optional string soa = 7;
 }
 
