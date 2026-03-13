@@ -716,7 +716,7 @@ func TestManageRack_CreateExpectedRack(t *testing.T) {
 	}
 }
 
-func TestManageRack_PatchRack(t *testing.T) {
+func TestManageRack_UpdateRack(t *testing.T) {
 	tests := []struct {
 		name        string
 		request     *rlav1.PatchRackRequest
@@ -727,7 +727,7 @@ func TestManageRack_PatchRack(t *testing.T) {
 			name:        "nil request returns error",
 			request:     nil,
 			wantErr:     true,
-			errContains: "empty patch rack request",
+			errContains: "empty update rack request",
 		},
 		{
 			name: "request with nil rack returns error",
@@ -784,7 +784,7 @@ func TestManageRack_PatchRack(t *testing.T) {
 			manageRack := NewManageRack(rlaAtomicClient)
 
 			ctx := context.Background()
-			result, err := manageRack.PatchRack(ctx, tt.request)
+			result, err := manageRack.UpdateRack(ctx, tt.request)
 
 			if tt.wantErr {
 				assert.Error(t, err)

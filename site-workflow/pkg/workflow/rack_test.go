@@ -778,23 +778,23 @@ func TestCreateExpectedRackTestSuite(t *testing.T) {
 	suite.Run(t, new(CreateExpectedRackTestSuite))
 }
 
-// PatchRackTestSuite tests the PatchRack workflow
-type PatchRackTestSuite struct {
+// UpdateRackTestSuite tests the UpdateRack workflow
+type UpdateRackTestSuite struct {
 	suite.Suite
 	testsuite.WorkflowTestSuite
 
 	env *testsuite.TestWorkflowEnvironment
 }
 
-func (s *PatchRackTestSuite) SetupTest() {
+func (s *UpdateRackTestSuite) SetupTest() {
 	s.env = s.NewTestWorkflowEnvironment()
 }
 
-func (s *PatchRackTestSuite) AfterTest(suiteName, testName string) {
+func (s *UpdateRackTestSuite) AfterTest(suiteName, testName string) {
 	s.env.AssertExpectations(s.T())
 }
 
-func (s *PatchRackTestSuite) Test_PatchRack_Success() {
+func (s *UpdateRackTestSuite) Test_UpdateRack_Success() {
 	var rackManager rActivity.ManageRack
 
 	newName := "updated-rack"
@@ -811,10 +811,10 @@ func (s *PatchRackTestSuite) Test_PatchRack_Success() {
 		Report: "Rack updated successfully",
 	}
 
-	s.env.RegisterActivity(rackManager.PatchRack)
-	s.env.OnActivity(rackManager.PatchRack, mock.Anything, mock.Anything).Return(expectedResponse, nil)
+	s.env.RegisterActivity(rackManager.UpdateRack)
+	s.env.OnActivity(rackManager.UpdateRack, mock.Anything, mock.Anything).Return(expectedResponse, nil)
 
-	s.env.ExecuteWorkflow(PatchRack, request)
+	s.env.ExecuteWorkflow(UpdateRack, request)
 	s.True(s.env.IsWorkflowCompleted())
 	s.NoError(s.env.GetWorkflowError())
 
@@ -823,7 +823,7 @@ func (s *PatchRackTestSuite) Test_PatchRack_Success() {
 	s.Equal("Rack updated successfully", response.Report)
 }
 
-func (s *PatchRackTestSuite) Test_PatchRack_ActivityFails() {
+func (s *UpdateRackTestSuite) Test_UpdateRack_ActivityFails() {
 	var rackManager rActivity.ManageRack
 
 	request := &rlav1.PatchRackRequest{
@@ -837,10 +837,10 @@ func (s *PatchRackTestSuite) Test_PatchRack_ActivityFails() {
 
 	errMsg := "RLA connection failed"
 
-	s.env.RegisterActivity(rackManager.PatchRack)
-	s.env.OnActivity(rackManager.PatchRack, mock.Anything, mock.Anything).Return(nil, errors.New(errMsg))
+	s.env.RegisterActivity(rackManager.UpdateRack)
+	s.env.OnActivity(rackManager.UpdateRack, mock.Anything, mock.Anything).Return(nil, errors.New(errMsg))
 
-	s.env.ExecuteWorkflow(PatchRack, request)
+	s.env.ExecuteWorkflow(UpdateRack, request)
 	s.True(s.env.IsWorkflowCompleted())
 	err := s.env.GetWorkflowError()
 	s.Error(err)
@@ -850,8 +850,8 @@ func (s *PatchRackTestSuite) Test_PatchRack_ActivityFails() {
 	s.Equal(errMsg, applicationErr.Error())
 }
 
-func TestPatchRackTestSuite(t *testing.T) {
-	suite.Run(t, new(PatchRackTestSuite))
+func TestUpdateRackTestSuite(t *testing.T) {
+	suite.Run(t, new(UpdateRackTestSuite))
 }
 
 // BringUpRackTestSuite tests the BringUpRack workflow

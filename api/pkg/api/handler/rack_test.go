@@ -303,7 +303,7 @@ func TestCreateRackHandler_Handle(t *testing.T) {
 	}
 }
 
-func TestPatchRackHandler_Handle(t *testing.T) {
+func TestUpdateRackHandler_Handle(t *testing.T) {
 	e := echo.New()
 	dbSession := testRackInitDB(t)
 	defer dbSession.Close()
@@ -326,10 +326,10 @@ func TestPatchRackHandler_Handle(t *testing.T) {
 	_, err := dbSession.DB.NewInsert().Model(siteNoRLA).Exec(context.Background())
 	assert.Nil(t, err)
 
-	providerUser := testRackBuildUser(t, dbSession, "provider-user-patch-rack", org, []string{"FORGE_PROVIDER_ADMIN"})
-	tenantUser := testRackBuildUser(t, dbSession, "tenant-user-patch-rack", org, []string{"FORGE_TENANT_ADMIN"})
+	providerUser := testRackBuildUser(t, dbSession, "provider-user-update-rack", org, []string{"FORGE_PROVIDER_ADMIN"})
+	tenantUser := testRackBuildUser(t, dbSession, "tenant-user-update-rack", org, []string{"FORGE_TENANT_ADMIN"})
 
-	handler := NewPatchRackHandler(dbSession, nil, scp, cfg)
+	handler := NewUpdateRackHandler(dbSession, nil, scp, cfg)
 
 	rackID := uuid.NewString()
 
@@ -346,7 +346,7 @@ func TestPatchRackHandler_Handle(t *testing.T) {
 		expectedStatus int
 	}{
 		{
-			name:           "success - patch rack name",
+			name:           "success - update rack name",
 			reqOrg:         org,
 			user:           providerUser,
 			rackID:         rackID,
@@ -355,7 +355,7 @@ func TestPatchRackHandler_Handle(t *testing.T) {
 			expectedStatus: http.StatusOK,
 		},
 		{
-			name:           "success - patch rack location",
+			name:           "success - update rack location",
 			reqOrg:         org,
 			user:           providerUser,
 			rackID:         rackID,
@@ -406,7 +406,7 @@ func TestPatchRackHandler_Handle(t *testing.T) {
 				resp := args.Get(1).(*rlav1.PatchRackResponse)
 				resp.Report = tt.mockReport
 			}).Return(nil)
-			mockTemporalClient.Mock.On("ExecuteWorkflow", mock.Anything, mock.Anything, "PatchRack", mock.Anything).Return(mockWorkflowRun, nil)
+			mockTemporalClient.Mock.On("ExecuteWorkflow", mock.Anything, mock.Anything, "UpdateRack", mock.Anything).Return(mockWorkflowRun, nil)
 			scp.IDClientMap[site.ID.String()] = mockTemporalClient
 
 			path := fmt.Sprintf("/v2/org/%s/carbide/rack/%s", tt.reqOrg, tt.rackID)
@@ -426,7 +426,7 @@ func TestPatchRackHandler_Handle(t *testing.T) {
 			err := handler.Handle(ec)
 
 			if tt.expectedStatus != rec.Code {
-				t.Errorf("PatchRackHandler.Handle() status = %v, want %v, response: %v, err: %v", rec.Code, tt.expectedStatus, rec.Body.String(), err)
+				t.Errorf("UpdateRackHandler.Handle() status = %v, want %v, response: %v, err: %v", rec.Code, tt.expectedStatus, rec.Body.String(), err)
 			}
 
 			require.Equal(t, tt.expectedStatus, rec.Code)
@@ -434,7 +434,7 @@ func TestPatchRackHandler_Handle(t *testing.T) {
 				return
 			}
 
-			var apiResp model.APIPatchRackResponse
+			var apiResp model.APIRackUpdateResponse
 			err = json.Unmarshal(rec.Body.Bytes(), &apiResp)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.mockReport, apiResp.Report)

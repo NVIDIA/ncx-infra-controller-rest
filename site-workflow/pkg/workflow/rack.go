@@ -272,9 +272,9 @@ func CreateExpectedRack(ctx workflow.Context, request *rlav1.CreateExpectedRackR
 	return &response, nil
 }
 
-// PatchRack is a workflow to patch an existing rack's fields in RLA
-func PatchRack(ctx workflow.Context, request *rlav1.PatchRackRequest) (*rlav1.PatchRackResponse, error) {
-	logger := log.With().Str("Workflow", "Rack").Str("Action", "PatchRack").Logger()
+// UpdateRack is a workflow to update an existing rack's fields in RLA
+func UpdateRack(ctx workflow.Context, request *rlav1.PatchRackRequest) (*rlav1.PatchRackResponse, error) {
+	logger := log.With().Str("Workflow", "Rack").Str("Action", "UpdateRack").Logger()
 
 	logger.Info().Msg("Starting workflow")
 
@@ -294,9 +294,9 @@ func PatchRack(ctx workflow.Context, request *rlav1.PatchRackRequest) (*rlav1.Pa
 	var rackManager activity.ManageRack
 	var response rlav1.PatchRackResponse
 
-	err := workflow.ExecuteActivity(ctx, rackManager.PatchRack, request).Get(ctx, &response)
+	err := workflow.ExecuteActivity(ctx, rackManager.UpdateRack, request).Get(ctx, &response)
 	if err != nil {
-		logger.Error().Err(err).Str("Activity", "PatchRack").Msg("Failed to execute activity from workflow")
+		logger.Error().Err(err).Str("Activity", "UpdateRack").Msg("Failed to execute activity from workflow")
 		return nil, err
 	}
 

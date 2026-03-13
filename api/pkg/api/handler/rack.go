@@ -27,6 +27,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"go.opentelemetry.io/otel/attribute"
 	temporalEnums "go.temporal.io/api/enums/v1"
@@ -554,7 +555,7 @@ func (crh CreateRackHandler) Handle(c echo.Context) error {
 
 	// Execute workflow
 	workflowOptions := tClient.StartWorkflowOptions{
-		ID:                       fmt.Sprintf("rack-create-%s-%s", apiRequest.Name, apiRequest.SerialNumber),
+		ID:                       fmt.Sprintf("rack-create-%s", apiRequest.SerialNumber),
 		WorkflowIDReusePolicy:    temporalEnums.WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE,
 		WorkflowIDConflictPolicy: temporalEnums.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING,
 		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
@@ -576,7 +577,7 @@ func (crh CreateRackHandler) Handle(c echo.Context) error {
 	if err != nil {
 		var timeoutErr *tp.TimeoutError
 		if errors.As(err, &timeoutErr) || err == context.DeadlineExceeded || ctx.Err() != nil {
-			return common.TerminateWorkflowOnTimeOut(c, logger, stc, fmt.Sprintf("rack-create-%s-%s", apiRequest.Name, apiRequest.SerialNumber), err, "Rack", "CreateExpectedRack")
+			return common.TerminateWorkflowOnTimeOut(c, logger, stc, fmt.Sprintf("rack-create-%s", apiRequest.SerialNumber), err, "Rack", "CreateExpectedRack")
 		}
 		logger.Error().Err(err).Msg("failed to get result from CreateExpectedRack workflow")
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Rack", nil)
@@ -584,13 +585,14 @@ func (crh CreateRackHandler) Handle(c echo.Context) error {
 
 	logger.Info().Str("RackID", rlaResponse.GetId().GetId()).Msg("finishing API handler")
 
-	return c.JSON(http.StatusCreated, model.NewAPICreateRackResponse(&rlaResponse))
+	apiResponse := model.NewAPICreateRackResponse(&rlaResponse)
+	return c.JSON(http.StatusCreated, apiResponse)
 }
 
-// ~~~~~ Patch Rack Handler ~~~~~ //
+// ~~~~~ Update Rack Handler ~~~~~ //
 
-// PatchRackHandler is the API Handler for patching an existing Rack
-type PatchRackHandler struct {
+// UpdateRackHandler is the API Handler for updating an existing Rack
+type UpdateRackHandler struct {
 	dbSession  *cdb.Session
 	tc         tClient.Client
 	scp        *sc.ClientPool
@@ -598,9 +600,9 @@ type PatchRackHandler struct {
 	tracerSpan *cutil.TracerSpan
 }
 
-// NewPatchRackHandler initializes and returns a new handler for patching a Rack
-func NewPatchRackHandler(dbSession *cdb.Session, tc tClient.Client, scp *sc.ClientPool, cfg *config.Config) PatchRackHandler {
-	return PatchRackHandler{
+// NewUpdateRackHandler initializes and returns a new handler for updating a Rack
+func NewUpdateRackHandler(dbSession *cdb.Session, tc tClient.Client, scp *sc.ClientPool, cfg *config.Config) UpdateRackHandler {
+	return UpdateRackHandler{
 		dbSession:  dbSession,
 		tc:         tc,
 		scp:        scp,
@@ -610,25 +612,25 @@ func NewPatchRackHandler(dbSession *cdb.Session, tc tClient.Client, scp *sc.Clie
 }
 
 // Handle godoc
-// @Summary Patch a Rack
-// @Description Patch an existing Rack's fields by ID via RLA
+// @Summary Update a Rack
+// @Description Update an existing Rack's fields by ID via RLA
 // @Tags rack
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
 // @Param org path string true "Name of NGC organization"
 // @Param id path string true "ID of Rack"
-// @Param body body model.APIPatchRackRequest true "Patch rack request"
-// @Success 200 {object} model.APIPatchRackResponse
+// @Param body body model.APIRackUpdateRequest true "Update rack request"
+// @Success 200 {object} model.APIRackUpdateResponse
 // @Router /v2/org/{org}/carbide/rack/{id} [patch]
-func (prh PatchRackHandler) Handle(c echo.Context) error {
-	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("Rack", "Patch", c, prh.tracerSpan)
+func (urh UpdateRackHandler) Handle(c echo.Context) error {
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("Rack", "Update", c, urh.tracerSpan)
 	if handlerSpan != nil {
 		defer handlerSpan.End()
 	}
 
 	// Parse and validate request body
-	var apiRequest model.APIPatchRackRequest
+	var apiRequest model.APIRackUpdateRequest
 	if err := c.Bind(&apiRequest); err != nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data", nil)
 	}
@@ -653,7 +655,7 @@ func (prh PatchRackHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
-	// Validate role, only Provider Admins are allowed to patch Rack
+	// Validate role, only Provider Admins are allowed to update Rack
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Provider Admin role, access denied")
@@ -661,7 +663,7 @@ func (prh PatchRackHandler) Handle(c echo.Context) error {
 	}
 
 	// Get Infrastructure Provider for org
-	infrastructureProvider, err := common.GetInfrastructureProviderForOrg(ctx, nil, prh.dbSession, org)
+	infrastructureProvider, err := common.GetInfrastructureProviderForOrg(ctx, nil, urh.dbSession, org)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error getting infrastructure provider for org")
 		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for org", nil)
@@ -669,10 +671,13 @@ func (prh PatchRackHandler) Handle(c echo.Context) error {
 
 	// Get rack ID from URL param
 	rackStrID := c.Param("id")
-	prh.tracerSpan.SetAttribute(handlerSpan, attribute.String("rack_id", rackStrID), logger)
+	if _, err := uuid.Parse(rackStrID); err != nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid rack ID: must be a valid UUID", nil)
+	}
+	urh.tracerSpan.SetAttribute(handlerSpan, attribute.String("rack_id", rackStrID), logger)
 
 	// Validate the site
-	site, err := common.GetSiteFromIDString(ctx, nil, apiRequest.SiteID, prh.dbSession)
+	site, err := common.GetSiteFromIDString(ctx, nil, apiRequest.SiteID, urh.dbSession)
 	if err != nil {
 		if errors.Is(err, common.ErrInvalidID) {
 			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate Site specified in request: invalid ID", nil)
@@ -700,7 +705,7 @@ func (prh PatchRackHandler) Handle(c echo.Context) error {
 	}
 
 	// Get the temporal client for the site
-	stc, err := prh.scp.GetClientByID(site.ID)
+	stc, err := urh.scp.GetClientByID(site.ID)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
@@ -713,9 +718,9 @@ func (prh PatchRackHandler) Handle(c echo.Context) error {
 
 	// Execute workflow
 	workflowOptions := tClient.StartWorkflowOptions{
-		ID:                       fmt.Sprintf("rack-patch-%s", rackStrID),
+		ID:                       fmt.Sprintf("rack-update-%s", rackStrID),
 		WorkflowIDReusePolicy:    temporalEnums.WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE,
-		WorkflowIDConflictPolicy: temporalEnums.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING,
+		WorkflowIDConflictPolicy: temporalEnums.WORKFLOW_ID_CONFLICT_POLICY_FAIL,
 		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
@@ -723,10 +728,10 @@ func (prh PatchRackHandler) Handle(c echo.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
 	defer cancel()
 
-	we, err := stc.ExecuteWorkflow(ctx, workflowOptions, "PatchRack", rlaRequest)
+	we, err := stc.ExecuteWorkflow(ctx, workflowOptions, "UpdateRack", rlaRequest)
 	if err != nil {
-		logger.Error().Err(err).Msg("failed to execute PatchRack workflow")
-		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to patch Rack", nil)
+		logger.Error().Err(err).Msg("failed to execute UpdateRack workflow")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Rack", nil)
 	}
 
 	// Get workflow result
@@ -735,15 +740,16 @@ func (prh PatchRackHandler) Handle(c echo.Context) error {
 	if err != nil {
 		var timeoutErr *tp.TimeoutError
 		if errors.As(err, &timeoutErr) || err == context.DeadlineExceeded || ctx.Err() != nil {
-			return common.TerminateWorkflowOnTimeOut(c, logger, stc, fmt.Sprintf("rack-patch-%s", rackStrID), err, "Rack", "PatchRack")
+			return common.TerminateWorkflowOnTimeOut(c, logger, stc, fmt.Sprintf("rack-update-%s", rackStrID), err, "Rack", "UpdateRack")
 		}
-		logger.Error().Err(err).Msg("failed to get result from PatchRack workflow")
-		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to patch Rack", nil)
+		logger.Error().Err(err).Msg("failed to get result from UpdateRack workflow")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Rack", nil)
 	}
 
 	logger.Info().Str("Report", rlaResponse.GetReport()).Msg("finishing API handler")
 
-	return c.JSON(http.StatusOK, model.NewAPIPatchRackResponse(&rlaResponse))
+	apiResponse := model.NewAPIRackUpdateResponse(&rlaResponse)
+	return c.JSON(http.StatusOK, apiResponse)
 }
 
 // ~~~~~ Validate Rack Handler ~~~~~ //

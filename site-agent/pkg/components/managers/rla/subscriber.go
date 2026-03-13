@@ -74,9 +74,9 @@ func (api *API) RegisterSubscriber() error {
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.CreateExpectedRack)
 	ManagerAccess.Data.EB.Log.Info().Msg("RLA: successfully registered CreateExpectedRack workflow")
 
-	// PatchRack
-	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.PatchRack)
-	ManagerAccess.Data.EB.Log.Info().Msg("RLA: successfully registered PatchRack workflow")
+	// UpdateRack
+	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.UpdateRack)
+	ManagerAccess.Data.EB.Log.Info().Msg("RLA: successfully registered UpdateRack workflow")
 
 	/// Register rack activities
 
@@ -116,9 +116,9 @@ func (api *API) RegisterSubscriber() error {
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(rackManager.CreateExpectedRack)
 	ManagerAccess.Data.EB.Log.Info().Msg("RLA: successfully registered CreateExpectedRack activity")
 
-	// PatchRack activity
-	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(rackManager.PatchRack)
-	ManagerAccess.Data.EB.Log.Info().Msg("RLA: successfully registered PatchRack activity")
+	// UpdateRack activity
+	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(rackManager.UpdateRack)
+	ManagerAccess.Data.EB.Log.Info().Msg("RLA: successfully registered UpdateRack activity")
 
 	// Register the tray subscribers here
 	ManagerAccess.Data.EB.Log.Info().Msg("RLA: Registering the tray workflows")

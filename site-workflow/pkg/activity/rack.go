@@ -312,20 +312,20 @@ func (mr *ManageRack) CreateExpectedRack(ctx context.Context, request *rlav1.Cre
 	return response, nil
 }
 
-// PatchRack patches an existing rack in RLA
-func (mr *ManageRack) PatchRack(ctx context.Context, request *rlav1.PatchRackRequest) (*rlav1.PatchRackResponse, error) {
-	logger := log.With().Str("Activity", "PatchRack").Logger()
+// UpdateRack updates an existing rack in RLA
+func (mr *ManageRack) UpdateRack(ctx context.Context, request *rlav1.PatchRackRequest) (*rlav1.PatchRackResponse, error) {
+	logger := log.With().Str("Activity", "UpdateRack").Logger()
 	logger.Info().Msg("Starting activity")
 
 	var err error
 
 	switch {
 	case request == nil:
-		err = errors.New("received empty patch rack request")
+		err = errors.New("received empty update rack request")
 	case request.Rack == nil:
-		err = errors.New("received patch rack request without rack data")
+		err = errors.New("received update rack request without rack data")
 	case request.Rack.Info == nil || request.Rack.Info.Id == nil || request.Rack.Info.Id.Id == "":
-		err = errors.New("received patch rack request without rack ID")
+		err = errors.New("received update rack request without rack ID")
 	}
 
 	if err != nil {
@@ -340,7 +340,7 @@ func (mr *ManageRack) PatchRack(ctx context.Context, request *rlav1.PatchRackReq
 
 	response, err := rla.PatchRack(ctx, request)
 	if err != nil {
-		logger.Warn().Err(err).Msg("Failed to patch rack using RLA API")
+		logger.Warn().Err(err).Msg("Failed to update rack using RLA API")
 		return nil, swe.WrapErr(err)
 	}
 

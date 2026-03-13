@@ -858,7 +858,7 @@ func NewAPIRoutes(dbSession *cdb.Session, tc tClient.Client, tnc tClient.Namespa
 		{
 			Path:    apiPathPrefix + "/rack/:id",
 			Method:  http.MethodPatch,
-			Handler: apiHandler.NewPatchRackHandler(dbSession, tc, scp, cfg),
+			Handler: apiHandler.NewUpdateRackHandler(dbSession, tc, scp, cfg),
 		},
 		{
 			Path:    apiPathPrefix + "/rack/:id/validation",

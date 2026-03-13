@@ -214,7 +214,7 @@ func TestAPICreateRackRequest_Validate(t *testing.T) {
 		{
 			name: "valid - all required fields",
 			request: APICreateRackRequest{
-				SiteID:       "site-1",
+				SiteID:       "550e8400-e29b-41d4-a716-446655440000",
 				Name:         "Rack-01",
 				Manufacturer: "NVIDIA",
 				SerialNumber: "SN-001",
@@ -224,12 +224,12 @@ func TestAPICreateRackRequest_Validate(t *testing.T) {
 		{
 			name: "valid - with optional fields",
 			request: APICreateRackRequest{
-				SiteID:       "site-1",
+				SiteID:       "550e8400-e29b-41d4-a716-446655440000",
 				Name:         "Rack-01",
 				Manufacturer: "NVIDIA",
 				SerialNumber: "SN-001",
-				Model:        "NVL72",
-				Description:  "Test rack",
+				Model:        strPtr("NVL72"),
+				Description:  strPtr("Test rack"),
 				Location:     &APIRackLocation{Region: "us-east-1"},
 			},
 			wantErr: false,
@@ -240,18 +240,23 @@ func TestAPICreateRackRequest_Validate(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name:    "invalid - non-UUID siteId",
+			request: APICreateRackRequest{SiteID: "not-a-uuid", Name: "Rack-01", Manufacturer: "NVIDIA", SerialNumber: "SN-001"},
+			wantErr: true,
+		},
+		{
 			name:    "invalid - missing name",
-			request: APICreateRackRequest{SiteID: "site-1", Manufacturer: "NVIDIA", SerialNumber: "SN-001"},
+			request: APICreateRackRequest{SiteID: "550e8400-e29b-41d4-a716-446655440000", Manufacturer: "NVIDIA", SerialNumber: "SN-001"},
 			wantErr: true,
 		},
 		{
 			name:    "invalid - missing manufacturer",
-			request: APICreateRackRequest{SiteID: "site-1", Name: "Rack-01", SerialNumber: "SN-001"},
+			request: APICreateRackRequest{SiteID: "550e8400-e29b-41d4-a716-446655440000", Name: "Rack-01", SerialNumber: "SN-001"},
 			wantErr: true,
 		},
 		{
 			name:    "invalid - missing serialNumber",
-			request: APICreateRackRequest{SiteID: "site-1", Name: "Rack-01", Manufacturer: "NVIDIA"},
+			request: APICreateRackRequest{SiteID: "550e8400-e29b-41d4-a716-446655440000", Name: "Rack-01", Manufacturer: "NVIDIA"},
 			wantErr: true,
 		},
 	}
@@ -275,8 +280,8 @@ func TestAPICreateRackRequest_ToProtoRack(t *testing.T) {
 		Name:         "Rack-01",
 		Manufacturer: "NVIDIA",
 		SerialNumber: "SN-001",
-		Model:        model,
-		Description:  desc,
+		Model:        &model,
+		Description:  &desc,
 		Location: &APIRackLocation{
 			Region:     "us-east-1",
 			Datacenter: "DC1",
@@ -298,20 +303,25 @@ func TestAPICreateRackRequest_ToProtoRack(t *testing.T) {
 	assert.Equal(t, "DC1", proto.Location.Datacenter)
 }
 
-func TestAPIPatchRackRequest_Validate(t *testing.T) {
+func TestAPIRackUpdateRequest_Validate(t *testing.T) {
 	tests := []struct {
 		name    string
-		request APIPatchRackRequest
+		request APIRackUpdateRequest
 		wantErr bool
 	}{
 		{
 			name:    "valid - with siteId",
-			request: APIPatchRackRequest{SiteID: "site-1"},
+			request: APIRackUpdateRequest{SiteID: "550e8400-e29b-41d4-a716-446655440000"},
 			wantErr: false,
 		},
 		{
+			name:    "invalid - non-UUID siteId",
+			request: APIRackUpdateRequest{SiteID: "not-a-uuid"},
+			wantErr: true,
+		},
+		{
 			name:    "invalid - missing siteId",
-			request: APIPatchRackRequest{},
+			request: APIRackUpdateRequest{},
 			wantErr: true,
 		},
 	}
@@ -328,11 +338,11 @@ func TestAPIPatchRackRequest_Validate(t *testing.T) {
 	}
 }
 
-func TestAPIPatchRackRequest_ToProtoRack(t *testing.T) {
+func TestAPIRackUpdateRequest_ToProtoRack(t *testing.T) {
 	name := "Updated-Rack"
 	manufacturer := "Dell"
-	req := APIPatchRackRequest{
-		SiteID:       "site-1",
+	req := APIRackUpdateRequest{
+		SiteID:       "550e8400-e29b-41d4-a716-446655440000",
 		Name:         &name,
 		Manufacturer: &manufacturer,
 		Location: &APIRackLocation{
@@ -379,29 +389,29 @@ func TestNewAPICreateRackResponse(t *testing.T) {
 	}
 }
 
-func TestNewAPIPatchRackResponse(t *testing.T) {
+func TestNewAPIRackUpdateResponse(t *testing.T) {
 	tests := []struct {
 		name     string
 		resp     *rlav1.PatchRackResponse
-		expected *APIPatchRackResponse
+		expected *APIRackUpdateResponse
 	}{
 		{
 			name:     "nil response returns empty",
 			resp:     nil,
-			expected: &APIPatchRackResponse{},
+			expected: &APIRackUpdateResponse{},
 		},
 		{
 			name: "valid response",
 			resp: &rlav1.PatchRackResponse{
 				Report: "Rack updated successfully",
 			},
-			expected: &APIPatchRackResponse{Report: "Rack updated successfully"},
+			expected: &APIRackUpdateResponse{Report: "Rack updated successfully"},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := NewAPIPatchRackResponse(tt.resp)
+			result := NewAPIRackUpdateResponse(tt.resp)
 			assert.NotNil(t, result)
 			assert.Equal(t, tt.expected.Report, result.Report)
 		})

@@ -9142,8 +9142,8 @@ paths:
       tags:
         - Rack
     patch:
-      summary: Patch a Rack
-      operationId: patch-rack
+      summary: Update a Rack
+      operationId: update-rack
       description: |-
         Patch an existing Rack's fields by ID.
 
@@ -9184,6 +9184,8 @@ paths:
           $ref: '#/components/responses/ValidationError'
         '403':
           $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
         '412':
           description: Precondition Failed - Rack Level Administration not enabled on Site
       tags:

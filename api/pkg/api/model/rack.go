@@ -21,6 +21,9 @@ import (
 	"fmt"
 	"net/url"
 
+	validation "github.com/go-ozzo/ozzo-validation/v4"
+	validationis "github.com/go-ozzo/ozzo-validation/v4/is"
+
 	rlav1 "github.com/nvidia/bare-metal-manager-rest/workflow-schema/rla/protobuf/v1"
 )
 
@@ -519,34 +522,44 @@ func NewAPIRackValidationResult(protoResp *rlav1.ValidateComponentsResponse) *AP
 
 // APICreateRackRequest is the JSON body for POST /rack (CreateExpectedRack)
 type APICreateRackRequest struct {
-	SiteID       string                    `json:"siteId"`
-	Name         string                    `json:"name"`
-	Manufacturer string                    `json:"manufacturer"`
-	Model        string                    `json:"model,omitempty"`
-	SerialNumber string                    `json:"serialNumber"`
-	Description  string                    `json:"description,omitempty"`
-	Location     *APIRackLocation          `json:"location,omitempty"`
-	Components   []*APICreateRackComponent `json:"components,omitempty"`
+	SiteID       string                           `json:"siteId"`
+	Name         string                           `json:"name"`
+	Manufacturer string                           `json:"manufacturer"`
+	Model        *string                          `json:"model"`
+	SerialNumber string                           `json:"serialNumber"`
+	Description  *string                          `json:"description"`
+	Location     *APIRackLocation                 `json:"location"`
+	Components   []*APICreateRackComponentRequest `json:"components"`
 }
 
 // Validate validates the create rack request
 func (r *APICreateRackRequest) Validate() error {
-	if r.SiteID == "" {
-		return fmt.Errorf("siteId is required")
+	err := validation.ValidateStruct(r,
+		validation.Field(&r.SiteID,
+			validation.Required.Error(validationErrorValueRequired),
+			validationis.UUID.Error(validationErrorInvalidUUID)),
+		validation.Field(&r.Name,
+			validation.Required.Error(validationErrorValueRequired)),
+		validation.Field(&r.Manufacturer,
+			validation.Required.Error(validationErrorValueRequired)),
+		validation.Field(&r.SerialNumber,
+			validation.Required.Error(validationErrorValueRequired)),
+	)
+	if err != nil {
+		return err
 	}
-	if r.Name == "" {
-		return fmt.Errorf("name is required")
-	}
-	if r.Manufacturer == "" {
-		return fmt.Errorf("manufacturer is required")
-	}
-	if r.SerialNumber == "" {
-		return fmt.Errorf("serialNumber is required")
-	}
+	errs := validation.Errors{}
 	for i, comp := range r.Components {
-		if err := comp.Validate(); err != nil {
-			return fmt.Errorf("components[%d]: %w", i, err)
+		if comp == nil {
+			errs[fmt.Sprintf("components[%d]", i)] = fmt.Errorf("must not be null")
+			continue
 		}
+		if compErr := comp.Validate(); compErr != nil {
+			errs[fmt.Sprintf("components[%d]", i)] = compErr
+		}
+	}
+	if len(errs) > 0 {
+		return errs
 	}
 	return nil
 }
@@ -560,11 +573,11 @@ func (r *APICreateRackRequest) ToProtoRack() *rlav1.Rack {
 			SerialNumber: r.SerialNumber,
 		},
 	}
-	if r.Model != "" {
-		rack.Info.Model = &r.Model
+	if r.Model != nil {
+		rack.Info.Model = r.Model
 	}
-	if r.Description != "" {
-		rack.Info.Description = &r.Description
+	if r.Description != nil {
+		rack.Info.Description = r.Description
 	}
 	if r.Location != nil {
 		rack.Location = r.Location.ToProto()
@@ -575,38 +588,56 @@ func (r *APICreateRackRequest) ToProtoRack() *rlav1.Rack {
 	return rack
 }
 
-// APICreateRackComponent is a component in a create rack request
-type APICreateRackComponent struct {
-	Type            string              `json:"type"`
-	Name            string              `json:"name"`
-	Manufacturer    string              `json:"manufacturer"`
-	Model           string              `json:"model,omitempty"`
-	SerialNumber    string              `json:"serialNumber"`
-	Description     string              `json:"description,omitempty"`
-	FirmwareVersion string              `json:"firmwareVersion,omitempty"`
-	ComponentID     string              `json:"componentId,omitempty"`
-	SlotID          int32               `json:"slotId,omitempty"`
-	TrayIdx         int32               `json:"trayIdx,omitempty"`
-	HostID          int32               `json:"hostId,omitempty"`
-	BMCs            []*APICreateRackBMC `json:"bmcs,omitempty"`
+// APICreateRackComponentRequest is a component in a create rack request
+type APICreateRackComponentRequest struct {
+	Type            string                     `json:"type"`
+	Name            string                     `json:"name"`
+	Manufacturer    string                     `json:"manufacturer"`
+	Model           *string                    `json:"model"`
+	SerialNumber    string                     `json:"serialNumber"`
+	Description     *string                    `json:"description"`
+	FirmwareVersion *string                    `json:"firmwareVersion"`
+	ComponentID     *string                    `json:"componentId"`
+	SlotID          int32                      `json:"slotId,omitempty"`
+	TrayIdx         int32                      `json:"trayIdx,omitempty"`
+	HostID          int32                      `json:"hostId,omitempty"`
+	BMCs            []*APICreateRackBMCRequest `json:"bmcs"`
 }
 
 // Validate validates a create rack component
-func (c *APICreateRackComponent) Validate() error {
-	if c.Type == "" {
-		return fmt.Errorf("type is required")
+func (c *APICreateRackComponentRequest) Validate() error {
+	err := validation.ValidateStruct(c,
+		validation.Field(&c.Type,
+			validation.Required.Error(validationErrorValueRequired)),
+		validation.Field(&c.Name,
+			validation.Required.Error(validationErrorValueRequired)),
+		validation.Field(&c.SerialNumber,
+			validation.Required.Error(validationErrorValueRequired)),
+	)
+	if err != nil {
+		return err
 	}
-	if c.Name == "" {
-		return fmt.Errorf("name is required")
+	if _, ok := rlav1.ComponentType_value[c.Type]; !ok {
+		return fmt.Errorf("invalid component type: %q", c.Type)
 	}
-	if c.SerialNumber == "" {
-		return fmt.Errorf("serialNumber is required")
+	errs := validation.Errors{}
+	for i, bmc := range c.BMCs {
+		if bmc == nil {
+			errs[fmt.Sprintf("bmcs[%d]", i)] = fmt.Errorf("must not be null")
+			continue
+		}
+		if bmcErr := bmc.Validate(); bmcErr != nil {
+			errs[fmt.Sprintf("bmcs[%d]", i)] = bmcErr
+		}
+	}
+	if len(errs) > 0 {
+		return errs
 	}
 	return nil
 }
 
 // ToProto converts to RLA Component proto
-func (c *APICreateRackComponent) ToProto() *rlav1.Component {
+func (c *APICreateRackComponentRequest) ToProto() *rlav1.Component {
 	comp := &rlav1.Component{
 		Type: componentTypeFromString(c.Type),
 		Info: &rlav1.DeviceInfo{
@@ -614,19 +645,23 @@ func (c *APICreateRackComponent) ToProto() *rlav1.Component {
 			Manufacturer: c.Manufacturer,
 			SerialNumber: c.SerialNumber,
 		},
-		FirmwareVersion: c.FirmwareVersion,
-		ComponentId:     c.ComponentID,
 		Position: &rlav1.RackPosition{
 			SlotId:  c.SlotID,
 			TrayIdx: c.TrayIdx,
 			HostId:  c.HostID,
 		},
 	}
-	if c.Model != "" {
-		comp.Info.Model = &c.Model
+	if c.Model != nil {
+		comp.Info.Model = c.Model
 	}
-	if c.Description != "" {
-		comp.Info.Description = &c.Description
+	if c.Description != nil {
+		comp.Info.Description = c.Description
+	}
+	if c.FirmwareVersion != nil {
+		comp.FirmwareVersion = *c.FirmwareVersion
+	}
+	if c.ComponentID != nil {
+		comp.ComponentId = *c.ComponentID
 	}
 	for _, bmc := range c.BMCs {
 		comp.Bmcs = append(comp.Bmcs, bmc.ToProto())
@@ -634,29 +669,46 @@ func (c *APICreateRackComponent) ToProto() *rlav1.Component {
 	return comp
 }
 
-// APICreateRackBMC is a BMC entry in a create rack request
-type APICreateRackBMC struct {
-	Type       string `json:"type"`
-	MacAddress string `json:"macAddress"`
-	IPAddress  string `json:"ipAddress,omitempty"`
-	User       string `json:"user,omitempty"`
-	Password   string `json:"password,omitempty"`
+// APICreateRackBMCRequest is a BMC entry in a create rack request
+type APICreateRackBMCRequest struct {
+	Type       string  `json:"type"`
+	MacAddress string  `json:"macAddress"`
+	IPAddress  *string `json:"ipAddress"`
+	User       *string `json:"user"`
+	Password   *string `json:"password"`
+}
+
+// Validate validates a create rack BMC
+func (b *APICreateRackBMCRequest) Validate() error {
+	err := validation.ValidateStruct(b,
+		validation.Field(&b.Type,
+			validation.Required.Error(validationErrorValueRequired)),
+		validation.Field(&b.MacAddress,
+			validation.Required.Error(validationErrorValueRequired)),
+	)
+	if err != nil {
+		return err
+	}
+	if _, ok := rlav1.BMCType_value[b.Type]; !ok {
+		return fmt.Errorf("invalid bmc type: %q", b.Type)
+	}
+	return nil
 }
 
 // ToProto converts to RLA BMCInfo proto
-func (b *APICreateRackBMC) ToProto() *rlav1.BMCInfo {
+func (b *APICreateRackBMCRequest) ToProto() *rlav1.BMCInfo {
 	bmc := &rlav1.BMCInfo{
 		Type:       bmcTypeFromString(b.Type),
 		MacAddress: b.MacAddress,
 	}
-	if b.IPAddress != "" {
-		bmc.IpAddress = &b.IPAddress
+	if b.IPAddress != nil {
+		bmc.IpAddress = b.IPAddress
 	}
-	if b.User != "" {
-		bmc.User = &b.User
+	if b.User != nil {
+		bmc.User = b.User
 	}
-	if b.Password != "" {
-		bmc.Password = &b.Password
+	if b.Password != nil {
+		bmc.Password = b.Password
 	}
 	return bmc
 }
@@ -686,30 +738,31 @@ func NewAPICreateRackResponse(resp *rlav1.CreateExpectedRackResponse) *APICreate
 	}
 }
 
-// ========== Patch Rack Request/Response ==========
+// ========== Update Rack Request/Response ==========
 
-// APIPatchRackRequest is the JSON body for PATCH /rack/:id (PatchRack)
-type APIPatchRackRequest struct {
+// APIRackUpdateRequest is the JSON body for PATCH /rack/:id (PatchRack)
+type APIRackUpdateRequest struct {
 	SiteID       string           `json:"siteId"`
-	Name         *string          `json:"name,omitempty"`
-	Manufacturer *string          `json:"manufacturer,omitempty"`
-	Model        *string          `json:"model,omitempty"`
-	SerialNumber *string          `json:"serialNumber,omitempty"`
-	Description  *string          `json:"description,omitempty"`
-	Location     *APIRackLocation `json:"location,omitempty"`
+	Name         *string          `json:"name"`
+	Manufacturer *string          `json:"manufacturer"`
+	Model        *string          `json:"model"`
+	SerialNumber *string          `json:"serialNumber"`
+	Description  *string          `json:"description"`
+	Location     *APIRackLocation `json:"location"`
 }
 
-// Validate validates the patch rack request
-func (r *APIPatchRackRequest) Validate() error {
-	if r.SiteID == "" {
-		return fmt.Errorf("siteId is required")
-	}
-	return nil
+// Validate validates the update rack request
+func (r *APIRackUpdateRequest) Validate() error {
+	return validation.ValidateStruct(r,
+		validation.Field(&r.SiteID,
+			validation.Required.Error(validationErrorValueRequired),
+			validationis.UUID.Error(validationErrorInvalidUUID)),
+	)
 }
 
-// ToProtoRack converts the API patch request to an RLA Rack proto.
+// ToProtoRack converts the API update request to an RLA Rack proto.
 // The rack ID is set from the URL path parameter.
-func (r *APIPatchRackRequest) ToProtoRack(rackID string) *rlav1.Rack {
+func (r *APIRackUpdateRequest) ToProtoRack(rackID string) *rlav1.Rack {
 	rack := &rlav1.Rack{
 		Info: &rlav1.DeviceInfo{
 			Id: &rlav1.UUID{Id: rackID},
@@ -736,17 +789,17 @@ func (r *APIPatchRackRequest) ToProtoRack(rackID string) *rlav1.Rack {
 	return rack
 }
 
-// APIPatchRackResponse is the API response for PATCH /rack/:id
-type APIPatchRackResponse struct {
+// APIRackUpdateResponse is the API response for PATCH /rack/:id
+type APIRackUpdateResponse struct {
 	Report string `json:"report"`
 }
 
-// NewAPIPatchRackResponse creates a response from the RLA PatchRackResponse
-func NewAPIPatchRackResponse(resp *rlav1.PatchRackResponse) *APIPatchRackResponse {
+// NewAPIRackUpdateResponse creates a response from the RLA PatchRackResponse
+func NewAPIRackUpdateResponse(resp *rlav1.PatchRackResponse) *APIRackUpdateResponse {
 	if resp == nil {
-		return &APIPatchRackResponse{}
+		return &APIRackUpdateResponse{}
 	}
-	return &APIPatchRackResponse{
+	return &APIRackUpdateResponse{
 		Report: resp.GetReport(),
 	}
 }
