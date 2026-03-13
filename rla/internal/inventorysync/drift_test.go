@@ -71,7 +71,7 @@ func TestCompareMachineFieldsForDrift_AllFieldsMismatch(t *testing.T) {
 	}
 
 	diffs := compareMachineFieldsForDrift(expected, actual, position)
-	assert.Len(t, diffs, 5)
+	assert.Len(t, diffs, 4)
 
 	diffByField := make(map[string]model.FieldDiff)
 	for _, d := range diffs {
@@ -87,11 +87,10 @@ func TestCompareMachineFieldsForDrift_AllFieldsMismatch(t *testing.T) {
 	assert.Equal(t, "5", diffByField["host_id"].ExpectedValue)
 	assert.Equal(t, "7", diffByField["host_id"].ActualValue)
 
-	assert.Equal(t, "1.0.0", diffByField["firmware_version"].ExpectedValue)
-	assert.Equal(t, "2.0.0", diffByField["firmware_version"].ActualValue)
-
 	assert.Equal(t, "SN001", diffByField["serial_number"].ExpectedValue)
 	assert.Equal(t, "SN999", diffByField["serial_number"].ActualValue)
+
+	assert.NotContains(t, diffByField, "firmware_version")
 }
 
 func TestCompareMachineFieldsForDrift_NilPositionFieldsSkipped(t *testing.T) {
@@ -160,32 +159,29 @@ func TestCompareMachineFieldsForDrift_PartialMismatch(t *testing.T) {
 	}
 
 	diffs := compareMachineFieldsForDrift(expected, actual, position)
-	assert.Len(t, diffs, 2)
+	assert.Len(t, diffs, 1)
 
 	diffByField := make(map[string]model.FieldDiff)
 	for _, d := range diffs {
 		diffByField[d.FieldName] = d
 	}
 
-	assert.Contains(t, diffByField, "firmware_version")
+	assert.NotContains(t, diffByField, "firmware_version")
 	assert.Contains(t, diffByField, "host_id")
 	assert.NotContains(t, diffByField, "slot_id")
 	assert.NotContains(t, diffByField, "tray_index")
 	assert.NotContains(t, diffByField, "serial_number")
 }
 
-func TestCompareMachineFieldsForDrift_ExpectedEmptyFirmwareActualHasValue(t *testing.T) {
+func TestCompareMachineFieldsForDrift_FirmwareVersionNotCompared(t *testing.T) {
 	expected := &model.Component{
 		FirmwareVersion: "", // empty in DB
 	}
 	actual := carbideapi.MachineDetail{
-		FirmwareVersion: "2.0.0", // Carbide has value
+		FirmwareVersion: "2.0.0", // Carbide has value — should NOT produce drift (firmware_version is direct-write)
 	}
 	position := carbideapi.MachinePosition{}
 
 	diffs := compareMachineFieldsForDrift(expected, actual, position)
-	assert.Len(t, diffs, 1)
-	assert.Equal(t, "firmware_version", diffs[0].FieldName)
-	assert.Equal(t, "", diffs[0].ExpectedValue)
-	assert.Equal(t, "2.0.0", diffs[0].ActualValue)
+	assert.Empty(t, diffs)
 }

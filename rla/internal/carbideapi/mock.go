@@ -135,3 +135,11 @@ func (c *mockClient) AddExpectedMachine(ctx context.Context, req AddExpectedMach
 func (c *mockClient) AddExpectedSwitch(ctx context.Context, req AddExpectedSwitchRequest) error {
 	return nil
 }
+
+func (c *mockClient) FindSwitches(ctx context.Context) ([]ActualSwitch, error) {
+	return nil, nil
+}
+
+func (c *mockClient) FindPowerShelves(ctx context.Context) ([]ActualPowerShelf, error) {
+	return nil, nil
+}

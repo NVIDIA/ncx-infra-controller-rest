@@ -62,6 +62,12 @@ type Client interface {
 	// AddExpectedSwitch registers an expected switch with Carbide for ingestion.
 	AddExpectedSwitch(ctx context.Context, req AddExpectedSwitchRequest) error
 
+	// FindSwitches returns all switches known by carbide-api
+	FindSwitches(ctx context.Context) ([]ActualSwitch, error)
+
+	// FindPowerShelves returns all power shelves known by carbide-api
+	FindPowerShelves(ctx context.Context) ([]ActualPowerShelf, error)
+
 	// The following are only valid in the mock environment and should only be called by unit tests
 	AddMachine(Machine)
 	AddPowerState(machineID string, state PowerState)

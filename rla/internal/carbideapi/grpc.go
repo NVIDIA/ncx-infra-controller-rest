@@ -344,6 +344,40 @@ func (c *grpcClient) AddExpectedMachine(ctx context.Context, req AddExpectedMach
 	return nil
 }
 
+// FindSwitches returns all switches known by carbide-api.
+func (c *grpcClient) FindSwitches(ctx context.Context) ([]ActualSwitch, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
+	defer cancel()
+
+	res, err := c.gclient.FindSwitches(ctx, &pb.SwitchQuery{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to find switches: %w", err)
+	}
+
+	var result []ActualSwitch
+	for _, s := range res.Switches {
+		result = append(result, actualSwitchFromPb(s))
+	}
+	return result, nil
+}
+
+// FindPowerShelves returns all power shelves known by carbide-api.
+func (c *grpcClient) FindPowerShelves(ctx context.Context) ([]ActualPowerShelf, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
+	defer cancel()
+
+	res, err := c.gclient.FindPowerShelves(ctx, &pb.PowerShelfQuery{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to find power shelves: %w", err)
+	}
+
+	var result []ActualPowerShelf
+	for _, ps := range res.PowerShelves {
+		result = append(result, actualPowerShelfFromPb(ps))
+	}
+	return result, nil
+}
+
 // AddExpectedSwitch registers an expected switch with Carbide.
 func (c *grpcClient) AddExpectedSwitch(ctx context.Context, req AddExpectedSwitchRequest) error {
 	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)

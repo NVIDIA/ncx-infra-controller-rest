@@ -86,9 +86,17 @@ var lastUpdateMachineIDs time.Time
 func runInventoryOne(ctx context.Context, config *config.Config, pool *cdb.Session, carbideClient carbideapi.Client, psmClient psmapi.Client) {
 	var allDrifts []model.ComponentDrift
 
-	// Sync machines (compute nodes, NVSwitches, etc.) against Carbide
+	// Sync machines against Carbide
 	machineDrifts := syncMachines(ctx, config, pool, carbideClient)
 	allDrifts = append(allDrifts, machineDrifts...)
+
+	// Sync NVL switches against Carbide
+	switchDrifts := syncSwitches(ctx, pool, carbideClient)
+	allDrifts = append(allDrifts, switchDrifts...)
+
+	// Sync powershelves against Carbide
+	carbidePowerShelfDrifts := syncCarbidePowerShelves(ctx, pool, carbideClient)
+	allDrifts = append(allDrifts, carbidePowerShelfDrifts...)
 
 	// Sync powershelves against PSM
 	powershelfDrifts := syncPowershelves(ctx, pool, carbideClient, psmClient)
@@ -106,23 +114,30 @@ func runInventoryOne(ctx context.Context, config *config.Config, pool *cdb.Sessi
 	time.Sleep(config.InventoryRunFrequency)
 }
 
+// isMachineComponentType returns true for component types that are represented
+// as Carbide machines (as opposed to switches or power shelves).
+func isMachineComponentType(t string) bool {
+	return t != devicetypes.ComponentTypePowerShelf.String() &&
+		t != devicetypes.ComponentTypeNVLSwitch.String()
+}
+
 // ---------------------------------------------------------------------------
-// syncMachines: sync non-PowerShelf components against Carbide
+// syncMachines: sync machine components against Carbide
 // ---------------------------------------------------------------------------
 //
 // Flow:
-//  1. DB: get all non-PowerShelf components
+//  1. DB: get all machine components
 //  2. Carbide GetMachines: match by serial → direct-write external_id
 //  3. Carbide GetPowerStates: direct-write power_state
-//  4. Carbide FindMachinesByIds + GetMachinePositionInfo: compare validation fields
-//  5. Return drifts
+//  4. Carbide FindMachinesByIds: direct-write firmware_version
+//  5. Carbide GetMachinePositionInfo: compare validation fields, return drifts
 //
-// Validation fields (always compared): slot_id, tray_index, host_id, firmware_version, serial_number
-// Direct-write fields (written, NOT compared): external_id, power_state
+// Validation fields (compared for drift): slot_id, tray_index, host_id, serial_number
+// Direct-write fields (written to DB, not compared): external_id, power_state, firmware_version
 func syncMachines(ctx context.Context, config *config.Config, pool *cdb.Session, carbideClient carbideapi.Client) []model.ComponentDrift {
 	log.Debug().Msg("Syncing machines...")
 
-	// Step 1: Get all components from DB, filter out PowerShelves
+	// Step 1: Get all machine components from DB
 	allComponents, err := model.GetAllComponents(ctx, pool.DB)
 	if err != nil {
 		log.Error().Msgf("Unable to retrieve components from db: %v", err)
@@ -131,7 +146,7 @@ func syncMachines(ctx context.Context, config *config.Config, pool *cdb.Session,
 
 	var components []model.Component
 	for _, c := range allComponents {
-		if c.Type != devicetypes.ComponentTypePowerShelf.String() {
+		if isMachineComponentType(c.Type) {
 			components = append(components, c)
 		}
 	}
@@ -140,10 +155,10 @@ func syncMachines(ctx context.Context, config *config.Config, pool *cdb.Session,
 		return nil
 	}
 
-	// Step 2: Direct-write external_id by serial matching (respecting frequency config)
+	// Step 2: Direct-write external_id by serial matching
 	syncMachineIDs(ctx, config, pool, carbideClient, components)
 
-	// Re-read components to pick up any external_id updates from step 2
+	// Re-read components to pick up any external_id updates
 	allComponents, err = model.GetAllComponents(ctx, pool.DB)
 	if err != nil {
 		log.Error().Msgf("Unable to re-read components from db after machine ID update: %v", err)
@@ -151,7 +166,7 @@ func syncMachines(ctx context.Context, config *config.Config, pool *cdb.Session,
 	}
 	components = components[:0]
 	for _, c := range allComponents {
-		if c.Type != devicetypes.ComponentTypePowerShelf.String() {
+		if isMachineComponentType(c.Type) {
 			components = append(components, c)
 		}
 	}
@@ -167,40 +182,39 @@ func syncMachines(ctx context.Context, config *config.Config, pool *cdb.Session,
 		}
 	}
 
+	if len(machineIDs) == 0 {
+		return buildDriftsForUnmatchedComponents(components)
+	}
+
 	// Step 3: Direct-write power_state
-	if len(machineIDs) > 0 {
-		syncPowerStates(ctx, pool, carbideClient, machineIDs, componentsByExternalID)
+	syncPowerStates(ctx, pool, carbideClient, machineIDs, componentsByExternalID)
+
+	// Step 4: Direct-write firmware_version
+	machineDetails, err := carbideClient.FindMachinesByIds(ctx, machineIDs)
+	if err != nil {
+		log.Error().Msgf("Unable to retrieve machine details from Carbide: %v", err)
+		return nil
 	}
 
-	// Step 4: Fetch machine details and positions for drift detection
-	var machineDetails []carbideapi.MachineDetail
-	var machinePositions []carbideapi.MachinePosition
-
-	if len(machineIDs) > 0 {
-		machineDetails, err = carbideClient.FindMachinesByIds(ctx, machineIDs)
-		if err != nil {
-			log.Error().Msgf("Unable to retrieve machine details from Carbide: %v", err)
-			return nil
-		}
-
-		machinePositions, err = carbideClient.GetMachinePositionInfo(ctx, machineIDs)
-		if err != nil {
-			log.Error().Msgf("Unable to retrieve machine positions from Carbide: %v", err)
-			return nil
-		}
-	}
-
-	// Build lookup maps
 	detailByID := make(map[string]carbideapi.MachineDetail)
 	for _, d := range machineDetails {
 		detailByID[d.MachineID] = d
 	}
+
+	syncFirmwareVersions(ctx, pool, detailByID, componentsByExternalID)
+
+	// Step 5: Fetch positions and build drift records
+	machinePositions, err := carbideClient.GetMachinePositionInfo(ctx, machineIDs)
+	if err != nil {
+		log.Error().Msgf("Unable to retrieve machine positions from Carbide: %v", err)
+		return nil
+	}
+
 	positionByID := make(map[string]carbideapi.MachinePosition)
 	for _, p := range machinePositions {
 		positionByID[p.MachineID] = p
 	}
 
-	// Step 5: Compare and build drift records
 	now := time.Now()
 	var drifts []model.ComponentDrift
 
@@ -208,7 +222,6 @@ func syncMachines(ctx context.Context, config *config.Config, pool *cdb.Session,
 		comp := &components[i]
 
 		if comp.ComponentID == nil || *comp.ComponentID == "" {
-			// Component has no external_id — cannot look up in Carbide
 			compID := comp.ID
 			drifts = append(drifts, model.ComponentDrift{
 				ComponentID: &compID,
@@ -222,10 +235,9 @@ func syncMachines(ctx context.Context, config *config.Config, pool *cdb.Session,
 
 		externalID := *comp.ComponentID
 		detail, foundDetail := detailByID[externalID]
-		position := positionByID[externalID] // zero value is fine if not found
+		position := positionByID[externalID]
 
 		if !foundDetail {
-			// Component has external_id but Carbide doesn't know about it
 			compID := comp.ID
 			drifts = append(drifts, model.ComponentDrift{
 				ComponentID: &compID,
@@ -237,7 +249,6 @@ func syncMachines(ctx context.Context, config *config.Config, pool *cdb.Session,
 			continue
 		}
 
-		// Compare validation fields
 		fieldDiffs := compareMachineFieldsForDrift(comp, detail, position)
 		if len(fieldDiffs) > 0 {
 			compID := comp.ID
@@ -266,6 +277,25 @@ func syncMachines(ctx context.Context, config *config.Config, pool *cdb.Session,
 	}
 
 	log.Info().Msgf("Machine sync: %d drift(s) out of %d component(s)", len(drifts), len(components))
+	return drifts
+}
+
+// buildDriftsForUnmatchedComponents returns missing_in_actual drifts for all components
+// that have no external_id (none matched Carbide).
+func buildDriftsForUnmatchedComponents(components []model.Component) []model.ComponentDrift {
+	now := time.Now()
+	var drifts []model.ComponentDrift
+	for i := range components {
+		if components[i].ComponentID == nil || *components[i].ComponentID == "" {
+			compID := components[i].ID
+			drifts = append(drifts, model.ComponentDrift{
+				ComponentID: &compID,
+				DriftType:   model.DriftTypeMissingInActual,
+				Diffs:       []model.FieldDiff{},
+				CheckedAt:   now,
+			})
+		}
+	}
 	return drifts
 }
 
@@ -379,8 +409,34 @@ func syncPowerStates(ctx context.Context, pool *cdb.Session, carbideClient carbi
 	}
 }
 
+// syncFirmwareVersions direct-writes firmware_version from Carbide machine details to component table.
+func syncFirmwareVersions(ctx context.Context, pool *cdb.Session, detailByID map[string]carbideapi.MachineDetail, componentsByExternalID map[string]*model.Component) {
+	var toUpdate []model.Component
+	for machineID, detail := range detailByID {
+		if comp, ok := componentsByExternalID[machineID]; ok {
+			if detail.FirmwareVersion != "" && comp.FirmwareVersion != detail.FirmwareVersion {
+				comp.FirmwareVersion = detail.FirmwareVersion
+				toUpdate = append(toUpdate, *comp)
+			}
+		}
+	}
+
+	if len(toUpdate) > 0 {
+		if err := pool.RunInTx(ctx, func(ctx context.Context, tx bun.Tx) error {
+			for _, cur := range toUpdate {
+				if err := cur.Patch(ctx, tx); err != nil {
+					return fmt.Errorf("unable to update firmware version: %w", err)
+				}
+			}
+			return nil
+		}); err != nil {
+			log.Error().Msgf("Unable to update components with firmware version: %v", err)
+		}
+	}
+}
+
 // compareMachineFieldsForDrift compares validation fields between expected (DB) and actual (Carbide).
-// Validation fields: slot_id, tray_index, host_id, firmware_version, serial_number.
+// Validation fields: slot_id, tray_index, host_id, serial_number.
 func compareMachineFieldsForDrift(
 	expected *model.Component,
 	actual carbideapi.MachineDetail,
@@ -415,21 +471,286 @@ func compareMachineFieldsForDrift(
 		})
 	}
 
-	// Compare firmware_version
-	if actual.FirmwareVersion != "" && expected.FirmwareVersion != actual.FirmwareVersion {
-		diffs = append(diffs, model.FieldDiff{
-			FieldName:     "firmware_version",
-			ExpectedValue: expected.FirmwareVersion,
-			ActualValue:   actual.FirmwareVersion,
-		})
-	}
-
 	// Compare serial_number (chassis_serial)
 	if actual.ChassisSerial != nil && expected.SerialNumber != *actual.ChassisSerial {
 		diffs = append(diffs, model.FieldDiff{
 			FieldName:     "serial_number",
 			ExpectedValue: expected.SerialNumber,
 			ActualValue:   *actual.ChassisSerial,
+		})
+	}
+
+	return diffs
+}
+
+// ---------------------------------------------------------------------------
+// syncSwitches: sync NVLSwitch components against Carbide FindSwitches
+// ---------------------------------------------------------------------------
+//
+// Flow:
+//  1. DB: get all NVLSwitch components
+//  2. Carbide FindSwitches: get actual switches
+//  3. Match by external_id → detect drift (missing_in_expected, missing_in_actual)
+//  4. Direct-write power_state from Carbide switch status
+//  5. Return drifts
+func syncSwitches(ctx context.Context, pool *cdb.Session, carbideClient carbideapi.Client) []model.ComponentDrift {
+	log.Debug().Msg("Syncing switches...")
+
+	// Step 1: Get all NVLSwitch components from DB
+	switchComponents, err := model.GetComponentsByType(ctx, pool.DB, devicetypes.ComponentTypeNVLSwitch)
+	if err != nil {
+		log.Error().Msgf("Unable to retrieve switch components from db: %v", err)
+		return nil
+	}
+
+	// Step 2: Get actual switches from Carbide
+	actualSwitches, err := carbideClient.FindSwitches(ctx)
+	if err != nil {
+		log.Error().Msgf("Unable to retrieve switches from carbide-api: %v", err)
+		return nil
+	}
+
+	if len(switchComponents) == 0 && len(actualSwitches) == 0 {
+		return nil
+	}
+
+	// Build lookup: external_id → component
+	componentsByExternalID := make(map[string]*model.Component)
+	for i := range switchComponents {
+		comp := &switchComponents[i]
+		if comp.ComponentID != nil && *comp.ComponentID != "" {
+			componentsByExternalID[*comp.ComponentID] = comp
+		}
+	}
+
+	// Build lookup: switch_id → actual switch
+	actualByID := make(map[string]carbideapi.ActualSwitch)
+	for _, s := range actualSwitches {
+		actualByID[s.SwitchID] = s
+	}
+
+	now := time.Now()
+	var drifts []model.ComponentDrift
+
+	// Step 3 & 4: Compare expected vs actual
+	for i := range switchComponents {
+		comp := &switchComponents[i]
+
+		if comp.ComponentID == nil || *comp.ComponentID == "" {
+			compID := comp.ID
+			drifts = append(drifts, model.ComponentDrift{
+				ComponentID: &compID,
+				ExternalID:  nil,
+				DriftType:   model.DriftTypeMissingInActual,
+				Diffs:       []model.FieldDiff{},
+				CheckedAt:   now,
+			})
+			continue
+		}
+
+		externalID := *comp.ComponentID
+		actual, found := actualByID[externalID]
+		if !found {
+			compID := comp.ID
+			drifts = append(drifts, model.ComponentDrift{
+				ComponentID: &compID,
+				ExternalID:  &externalID,
+				DriftType:   model.DriftTypeMissingInActual,
+				Diffs:       []model.FieldDiff{},
+				CheckedAt:   now,
+			})
+			continue
+		}
+
+		// Direct-write: power_state from Carbide switch status
+		if actual.PowerState != nil {
+			actualPowerState := carbideapi.PowerStateFromString(*actual.PowerState)
+			if comp.PowerState == nil || *comp.PowerState != actualPowerState {
+				comp.PowerState = &actualPowerState
+				if pErr := comp.Patch(ctx, pool.DB); pErr != nil {
+					log.Error().Msgf("Unable to update switch power state for %s: %v", externalID, pErr)
+				}
+			}
+		}
+
+		// Compare validation fields
+		fieldDiffs := compareSwitchFieldsForDrift(comp, actual)
+		if len(fieldDiffs) > 0 {
+			compID := comp.ID
+			drifts = append(drifts, model.ComponentDrift{
+				ComponentID: &compID,
+				ExternalID:  &externalID,
+				DriftType:   model.DriftTypeMismatch,
+				Diffs:       fieldDiffs,
+				CheckedAt:   now,
+			})
+		}
+	}
+
+	// Detect missing_in_expected: switches in Carbide but not in local DB
+	for _, actual := range actualSwitches {
+		if _, found := componentsByExternalID[actual.SwitchID]; !found {
+			extID := actual.SwitchID
+			drifts = append(drifts, model.ComponentDrift{
+				ComponentID: nil,
+				ExternalID:  &extID,
+				DriftType:   model.DriftTypeMissingInExpected,
+				Diffs:       []model.FieldDiff{},
+				CheckedAt:   now,
+			})
+		}
+	}
+
+	log.Info().Msgf("Switch sync: %d drift(s) out of %d component(s)", len(drifts), len(switchComponents))
+	return drifts
+}
+
+// compareSwitchFieldsForDrift compares validation fields between expected (DB) and actual (Carbide) for switches.
+func compareSwitchFieldsForDrift(expected *model.Component, actual carbideapi.ActualSwitch) []model.FieldDiff {
+	var diffs []model.FieldDiff
+
+	if actual.Name != "" && expected.Name != actual.Name {
+		diffs = append(diffs, model.FieldDiff{
+			FieldName:     "name",
+			ExpectedValue: expected.Name,
+			ActualValue:   actual.Name,
+		})
+	}
+
+	return diffs
+}
+
+// ---------------------------------------------------------------------------
+// syncCarbidePowerShelves: sync PowerShelf components against Carbide FindPowerShelves
+// ---------------------------------------------------------------------------
+//
+// Flow:
+//  1. DB: get all PowerShelf components
+//  2. Carbide FindPowerShelves: get actual power shelves
+//  3. Match by external_id → detect drift (missing_in_expected, missing_in_actual)
+//  4. Direct-write power_state from Carbide power shelf status
+//  5. Return drifts
+func syncCarbidePowerShelves(ctx context.Context, pool *cdb.Session, carbideClient carbideapi.Client) []model.ComponentDrift {
+	log.Debug().Msg("Syncing power shelves against Carbide...")
+
+	// Step 1: Get all PowerShelf components from DB
+	psComponents, err := model.GetComponentsByType(ctx, pool.DB, devicetypes.ComponentTypePowerShelf)
+	if err != nil {
+		log.Error().Msgf("Unable to retrieve powershelf components from db: %v", err)
+		return nil
+	}
+
+	// Step 2: Get actual power shelves from Carbide
+	actualPowerShelves, err := carbideClient.FindPowerShelves(ctx)
+	if err != nil {
+		log.Error().Msgf("Unable to retrieve power shelves from carbide-api: %v", err)
+		return nil
+	}
+
+	if len(psComponents) == 0 && len(actualPowerShelves) == 0 {
+		return nil
+	}
+
+	// Build lookup: external_id → component
+	componentsByExternalID := make(map[string]*model.Component)
+	for i := range psComponents {
+		comp := &psComponents[i]
+		if comp.ComponentID != nil && *comp.ComponentID != "" {
+			componentsByExternalID[*comp.ComponentID] = comp
+		}
+	}
+
+	// Build lookup: power_shelf_id → actual power shelf
+	actualByID := make(map[string]carbideapi.ActualPowerShelf)
+	for _, ps := range actualPowerShelves {
+		actualByID[ps.PowerShelfID] = ps
+	}
+
+	now := time.Now()
+	var drifts []model.ComponentDrift
+
+	// Step 3 & 4: Compare expected vs actual
+	for i := range psComponents {
+		comp := &psComponents[i]
+
+		if comp.ComponentID == nil || *comp.ComponentID == "" {
+			compID := comp.ID
+			drifts = append(drifts, model.ComponentDrift{
+				ComponentID: &compID,
+				ExternalID:  nil,
+				DriftType:   model.DriftTypeMissingInActual,
+				Diffs:       []model.FieldDiff{},
+				CheckedAt:   now,
+			})
+			continue
+		}
+
+		externalID := *comp.ComponentID
+		actual, found := actualByID[externalID]
+		if !found {
+			compID := comp.ID
+			drifts = append(drifts, model.ComponentDrift{
+				ComponentID: &compID,
+				ExternalID:  &externalID,
+				DriftType:   model.DriftTypeMissingInActual,
+				Diffs:       []model.FieldDiff{},
+				CheckedAt:   now,
+			})
+			continue
+		}
+
+		// Direct-write: power_state from Carbide power shelf status
+		if actual.PowerState != nil {
+			actualPowerState := carbideapi.PowerStateFromString(*actual.PowerState)
+			if comp.PowerState == nil || *comp.PowerState != actualPowerState {
+				comp.PowerState = &actualPowerState
+				if pErr := comp.Patch(ctx, pool.DB); pErr != nil {
+					log.Error().Msgf("Unable to update powershelf power state for %s: %v", externalID, pErr)
+				}
+			}
+		}
+
+		// Compare validation fields
+		fieldDiffs := comparePowerShelfFieldsForDrift(comp, actual)
+		if len(fieldDiffs) > 0 {
+			compID := comp.ID
+			drifts = append(drifts, model.ComponentDrift{
+				ComponentID: &compID,
+				ExternalID:  &externalID,
+				DriftType:   model.DriftTypeMismatch,
+				Diffs:       fieldDiffs,
+				CheckedAt:   now,
+			})
+		}
+	}
+
+	// Detect missing_in_expected: power shelves in Carbide but not in local DB
+	for _, actual := range actualPowerShelves {
+		if _, found := componentsByExternalID[actual.PowerShelfID]; !found {
+			extID := actual.PowerShelfID
+			drifts = append(drifts, model.ComponentDrift{
+				ComponentID: nil,
+				ExternalID:  &extID,
+				DriftType:   model.DriftTypeMissingInExpected,
+				Diffs:       []model.FieldDiff{},
+				CheckedAt:   now,
+			})
+		}
+	}
+
+	log.Info().Msgf("Carbide powershelf sync: %d drift(s) out of %d component(s)", len(drifts), len(psComponents))
+	return drifts
+}
+
+// comparePowerShelfFieldsForDrift compares validation fields between expected (DB) and actual (Carbide) for power shelves.
+func comparePowerShelfFieldsForDrift(expected *model.Component, actual carbideapi.ActualPowerShelf) []model.FieldDiff {
+	var diffs []model.FieldDiff
+
+	if actual.Name != "" && expected.Name != actual.Name {
+		diffs = append(diffs, model.FieldDiff{
+			FieldName:     "name",
+			ExpectedValue: expected.Name,
+			ActualValue:   actual.Name,
 		})
 	}
 
