@@ -3,3 +3,6 @@ reviews:
   profile: chill # assertive / chill profile
   auto_review:
     enabled: true # Enable auto-review for this repository
+  high_level_summary_in_walkthrough: true # Copilot already does this
+  suggested_reviewers: false
+  in_progress_fortune: false
