@@ -134,8 +134,6 @@ func machinePowerStateFromPb(state *pb.PowerOptions) MachinePowerState {
 	return MachinePowerState{MachineID: state.HostId.Id, PowerState: powerStateFromPb(state.ActualState)}
 }
 
- 
-
 func powerStateFromPb(state pb.PowerState) (ret PowerState) {
 	switch state {
 	case pb.PowerState_Off:

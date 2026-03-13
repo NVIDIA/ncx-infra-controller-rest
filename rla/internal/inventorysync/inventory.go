@@ -419,7 +419,7 @@ func syncFirmwareVersions(ctx context.Context, pool *cdb.Session, detailByID map
 	if len(toUpdate) > 0 {
 		if err := pool.RunInTx(ctx, func(ctx context.Context, tx bun.Tx) error {
 			for _, cur := range toUpdate {
-				if err := cur.Patch(ctx, tx); err != nil {
+				if err := cur.SetFirmwareVersionByComponentID(ctx, tx); err != nil {
 					return fmt.Errorf("unable to update firmware version: %w", err)
 				}
 			}

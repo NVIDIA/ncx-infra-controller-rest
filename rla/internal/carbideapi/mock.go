@@ -138,5 +138,3 @@ func (c *mockClient) AddExpectedMachine(ctx context.Context, req AddExpectedMach
 func (c *mockClient) AddExpectedSwitch(ctx context.Context, req AddExpectedSwitchRequest) error {
 	return nil
 }
-
- 
