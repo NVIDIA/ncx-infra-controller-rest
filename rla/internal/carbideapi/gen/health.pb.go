@@ -1,4 +1,3 @@
-//
 // SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -47,6 +46,9 @@ type HealthReport struct {
 	// This could e.g. be `forge-dpu-agent`, `forge-host-validation`,
 	// or an override (e.g. `overrides.sre-team`)
 	Source string `protobuf:"bytes,1,opt,name=source,proto3" json:"source,omitempty"`
+	// The person or system (service) that triggered this health report.
+	// For manually triggered reports (e.g. via web UI), this identifies the user.
+	TriggeredBy *string `protobuf:"bytes,5,opt,name=triggered_by,json=triggeredBy,proto3,oneof" json:"triggered_by,omitempty"`
 	// The time when this health status was observed.
 	//
 	// Clients submitting a health report can leave this field empty in order
@@ -96,6 +98,13 @@ func (*HealthReport) Descriptor() ([]byte, []int) {
 func (x *HealthReport) GetSource() string {
 	if x != nil {
 		return x.Source
+	}
+	return ""
+}
+
+func (x *HealthReport) GetTriggeredBy() string {
+	if x != nil && x.TriggeredBy != nil {
+		return *x.TriggeredBy
 	}
 	return ""
 }
@@ -303,13 +312,15 @@ var File_health_proto protoreflect.FileDescriptor
 
 const file_health_proto_rawDesc = "" +
 	"\n" +
-	"\fhealth.proto\x12\x06health\x1a\x1egoogle/protobuf/duration.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xe4\x01\n" +
+	"\fhealth.proto\x12\x06health\x1a\x1egoogle/protobuf/duration.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x9d\x02\n" +
 	"\fHealthReport\x12\x16\n" +
-	"\x06source\x18\x01 \x01(\tR\x06source\x12@\n" +
-	"\vobserved_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampH\x00R\n" +
+	"\x06source\x18\x01 \x01(\tR\x06source\x12&\n" +
+	"\ftriggered_by\x18\x05 \x01(\tH\x00R\vtriggeredBy\x88\x01\x01\x12@\n" +
+	"\vobserved_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampH\x01R\n" +
 	"observedAt\x88\x01\x01\x128\n" +
 	"\tsuccesses\x18\x03 \x03(\v2\x1a.health.HealthProbeSuccessR\tsuccesses\x120\n" +
-	"\x06alerts\x18\x04 \x03(\v2\x18.health.HealthProbeAlertR\x06alertsB\x0e\n" +
+	"\x06alerts\x18\x04 \x03(\v2\x18.health.HealthProbeAlertR\x06alertsB\x0f\n" +
+	"\r_triggered_byB\x0e\n" +
 	"\f_observed_at\"\xa7\x02\n" +
 	"\x10HealthProbeAlert\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
