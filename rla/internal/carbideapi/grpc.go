@@ -378,7 +378,7 @@ func (c *grpcClient) AddExpectedSwitch(ctx context.Context, req AddExpectedSwitc
 	return nil
 }
 
-func (c *grpcClient) AddMachine(machine Machine) {
+func (c *grpcClient) AddMachine(machine MachineDetail) {
 	panic("Not a unit test")
 }
 

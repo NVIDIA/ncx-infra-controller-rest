@@ -63,7 +63,7 @@ type Client interface {
 	AddExpectedSwitch(ctx context.Context, req AddExpectedSwitchRequest) error
 
 	// The following are only valid in the mock environment and should only be called by unit tests
-	AddMachine(Machine)
+	AddMachine(MachineDetail)
 	AddPowerState(machineID string, state PowerState)
 	SetFirmwareUpdateTimeWindowError(err error)
 	SetAdminPowerControlError(err error)

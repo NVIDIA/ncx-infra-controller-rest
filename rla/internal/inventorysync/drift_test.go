@@ -48,7 +48,7 @@ func TestCompareMachineFieldsForDrift_NoMismatch(t *testing.T) {
 		TopologyID:       ptr(int32(5)),
 	}
 
-	diffs := compareMachineFieldsForDrift(expected, actual, position)
+	diffs := compareMachineFieldsForDrift(expected, actual, &position)
 	assert.Empty(t, diffs)
 }
 
@@ -70,7 +70,7 @@ func TestCompareMachineFieldsForDrift_AllFieldsMismatch(t *testing.T) {
 		TopologyID:       ptr(int32(7)),
 	}
 
-	diffs := compareMachineFieldsForDrift(expected, actual, position)
+	diffs := compareMachineFieldsForDrift(expected, actual, &position)
 	assert.Len(t, diffs, 4)
 
 	diffByField := make(map[string]model.FieldDiff)
@@ -105,10 +105,10 @@ func TestCompareMachineFieldsForDrift_NilPositionFieldsSkipped(t *testing.T) {
 		ChassisSerial:   ptr("SN001"),
 		FirmwareVersion: "1.0.0",
 	}
-	// All position fields nil — should not produce diffs even if expected values differ
+	// Position found but all fields nil — should not produce diffs
 	position := carbideapi.MachinePosition{}
 
-	diffs := compareMachineFieldsForDrift(expected, actual, position)
+	diffs := compareMachineFieldsForDrift(expected, actual, &position)
 	assert.Empty(t, diffs)
 }
 
@@ -122,7 +122,7 @@ func TestCompareMachineFieldsForDrift_EmptyActualFirmwareSkipped(t *testing.T) {
 	}
 	position := carbideapi.MachinePosition{}
 
-	diffs := compareMachineFieldsForDrift(expected, actual, position)
+	diffs := compareMachineFieldsForDrift(expected, actual, &position)
 	assert.Empty(t, diffs)
 }
 
@@ -136,7 +136,7 @@ func TestCompareMachineFieldsForDrift_NilChassisSerialSkipped(t *testing.T) {
 	}
 	position := carbideapi.MachinePosition{}
 
-	diffs := compareMachineFieldsForDrift(expected, actual, position)
+	diffs := compareMachineFieldsForDrift(expected, actual, &position)
 	assert.Empty(t, diffs)
 }
 
@@ -158,7 +158,7 @@ func TestCompareMachineFieldsForDrift_PartialMismatch(t *testing.T) {
 		TopologyID:       ptr(int32(9)), // mismatch
 	}
 
-	diffs := compareMachineFieldsForDrift(expected, actual, position)
+	diffs := compareMachineFieldsForDrift(expected, actual, &position)
 	assert.Len(t, diffs, 1)
 
 	diffByField := make(map[string]model.FieldDiff)
@@ -182,6 +182,54 @@ func TestCompareMachineFieldsForDrift_FirmwareVersionNotCompared(t *testing.T) {
 	}
 	position := carbideapi.MachinePosition{}
 
-	diffs := compareMachineFieldsForDrift(expected, actual, position)
+	diffs := compareMachineFieldsForDrift(expected, actual, &position)
+	assert.Empty(t, diffs)
+}
+
+func TestCompareMachineFieldsForDrift_MissingPositionReportsDrift(t *testing.T) {
+	expected := &model.Component{
+		SerialNumber:    "SN001",
+		FirmwareVersion: "1.0.0",
+		SlotID:          2,
+		TrayIndex:       1,
+		HostID:          5,
+	}
+	actual := carbideapi.MachineDetail{
+		ChassisSerial:   ptr("SN001"),
+		FirmwareVersion: "1.0.0",
+	}
+
+	// nil position means no entry in positionByID — should flag non-zero expected fields
+	diffs := compareMachineFieldsForDrift(expected, actual, nil)
+	assert.Len(t, diffs, 3)
+
+	diffByField := make(map[string]model.FieldDiff)
+	for _, d := range diffs {
+		diffByField[d.FieldName] = d
+	}
+
+	assert.Equal(t, "2", diffByField["slot_id"].ExpectedValue)
+	assert.Equal(t, "<missing>", diffByField["slot_id"].ActualValue)
+
+	assert.Equal(t, "1", diffByField["tray_index"].ExpectedValue)
+	assert.Equal(t, "<missing>", diffByField["tray_index"].ActualValue)
+
+	assert.Equal(t, "5", diffByField["host_id"].ExpectedValue)
+	assert.Equal(t, "<missing>", diffByField["host_id"].ActualValue)
+}
+
+func TestCompareMachineFieldsForDrift_MissingPositionZeroExpectedNoDrift(t *testing.T) {
+	expected := &model.Component{
+		SerialNumber: "SN001",
+		SlotID:       0,
+		TrayIndex:    0,
+		HostID:       0,
+	}
+	actual := carbideapi.MachineDetail{
+		ChassisSerial: ptr("SN001"),
+	}
+
+	// nil position with zero-value expected fields — no position drift
+	diffs := compareMachineFieldsForDrift(expected, actual, nil)
 	assert.Empty(t, diffs)
 }

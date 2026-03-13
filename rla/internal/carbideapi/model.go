@@ -35,12 +35,6 @@ func stringsToMachineIds(machineIds []string) (ret []*pb.MachineId) {
 	return ret
 }
 
-// Machine represents an individual host or DPU (basic info)
-type Machine struct {
-	MachineID     string
-	ChassisSerial *string
-}
-
 // MachineDetail represents detailed machine information from Carbide
 type MachineDetail struct {
 	MachineID           string

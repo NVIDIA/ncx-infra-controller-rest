@@ -110,11 +110,8 @@ func runInventoryOne(ctx context.Context, config *config.Config, pool *cdb.Sessi
 	time.Sleep(config.InventoryRunFrequency)
 }
 
-// isMachineComponentType returns true for component types that are represented
-// as Carbide machines (as opposed to switches or power shelves).
 func isMachineComponentType(t string) bool {
-	return t != devicetypes.ComponentTypePowerShelf.String() &&
-		t != devicetypes.ComponentTypeNVLSwitch.String()
+	return t == devicetypes.ComponentTypeToString(devicetypes.ComponentTypeCompute)
 }
 
 // ---------------------------------------------------------------------------
@@ -198,7 +195,7 @@ func syncMachines(ctx context.Context, config *config.Config, pool *cdb.Session,
 	}
 
 	if len(machineIDs) == 0 {
-		return buildDriftsForUnmatchedComponents(components)
+		return buildDriftsForUnmatchedComponents(components, allMachineDetails)
 	}
 
 	// Step 4: Direct-write power_state (requires separate Carbide API)
@@ -239,7 +236,7 @@ func syncMachines(ctx context.Context, config *config.Config, pool *cdb.Session,
 
 		externalID := *comp.ComponentID
 		detail, foundDetail := detailByID[externalID]
-		position := positionByID[externalID]
+		position, foundPosition := positionByID[externalID]
 
 		if !foundDetail {
 			compID := comp.ID
@@ -253,7 +250,11 @@ func syncMachines(ctx context.Context, config *config.Config, pool *cdb.Session,
 			continue
 		}
 
-		fieldDiffs := compareMachineFieldsForDrift(comp, detail, position)
+		var posPtr *carbideapi.MachinePosition
+		if foundPosition {
+			posPtr = &position
+		}
+		fieldDiffs := compareMachineFieldsForDrift(comp, detail, posPtr)
 		if len(fieldDiffs) > 0 {
 			compID := comp.ID
 			drifts = append(drifts, model.ComponentDrift{
@@ -284,9 +285,11 @@ func syncMachines(ctx context.Context, config *config.Config, pool *cdb.Session,
 	return drifts
 }
 
-// buildDriftsForUnmatchedComponents returns missing_in_actual drifts for all components
-// that have no external_id (none matched Carbide).
-func buildDriftsForUnmatchedComponents(components []model.Component) []model.ComponentDrift {
+// buildDriftsForUnmatchedComponents returns missing_in_actual drifts for all
+// components that have no external_id, plus missing_in_expected drifts for
+// every Carbide machine (since no DB component has an external_id, none can
+// match).
+func buildDriftsForUnmatchedComponents(components []model.Component, allMachineDetails []carbideapi.MachineDetail) []model.ComponentDrift {
 	now := time.Now()
 	var drifts []model.ComponentDrift
 	for i := range components {
@@ -299,6 +302,16 @@ func buildDriftsForUnmatchedComponents(components []model.Component) []model.Com
 				CheckedAt:   now,
 			})
 		}
+	}
+	for _, detail := range allMachineDetails {
+		extID := detail.MachineID
+		drifts = append(drifts, model.ComponentDrift{
+			ComponentID: nil,
+			ExternalID:  &extID,
+			DriftType:   model.DriftTypeMissingInExpected,
+			Diffs:       []model.FieldDiff{},
+			CheckedAt:   now,
+		})
 	}
 	return drifts
 }
@@ -323,7 +336,7 @@ func syncMachineIDs(ctx context.Context, config *config.Config, pool *cdb.Sessio
 
 	missingMachine := false
 	for _, cur := range components {
-		if cur.ComponentID == nil {
+		if cur.ComponentID == nil || *cur.ComponentID == "" {
 			missingMachine = true
 			break
 		}
@@ -435,35 +448,54 @@ func syncFirmwareVersions(ctx context.Context, pool *cdb.Session, detailByID map
 func compareMachineFieldsForDrift(
 	expected *model.Component,
 	actual carbideapi.MachineDetail,
-	position carbideapi.MachinePosition,
+	position *carbideapi.MachinePosition,
 ) []model.FieldDiff {
 	var diffs []model.FieldDiff
 
-	// Compare position.slot_id
-	if position.PhysicalSlotNum != nil && expected.SlotID != int(*position.PhysicalSlotNum) {
-		diffs = append(diffs, model.FieldDiff{
-			FieldName:     "slot_id",
-			ExpectedValue: fmt.Sprintf("%d", expected.SlotID),
-			ActualValue:   fmt.Sprintf("%d", *position.PhysicalSlotNum),
-		})
-	}
-
-	// Compare position.tray_index
-	if position.ComputeTrayIndex != nil && expected.TrayIndex != int(*position.ComputeTrayIndex) {
-		diffs = append(diffs, model.FieldDiff{
-			FieldName:     "tray_index",
-			ExpectedValue: fmt.Sprintf("%d", expected.TrayIndex),
-			ActualValue:   fmt.Sprintf("%d", *position.ComputeTrayIndex),
-		})
-	}
-
-	// Compare position.host_id
-	if position.TopologyID != nil && expected.HostID != int(*position.TopologyID) {
-		diffs = append(diffs, model.FieldDiff{
-			FieldName:     "host_id",
-			ExpectedValue: fmt.Sprintf("%d", expected.HostID),
-			ActualValue:   fmt.Sprintf("%d", *position.TopologyID),
-		})
+	if position != nil {
+		if position.PhysicalSlotNum != nil && expected.SlotID != int(*position.PhysicalSlotNum) {
+			diffs = append(diffs, model.FieldDiff{
+				FieldName:     "slot_id",
+				ExpectedValue: fmt.Sprintf("%d", expected.SlotID),
+				ActualValue:   fmt.Sprintf("%d", *position.PhysicalSlotNum),
+			})
+		}
+		if position.ComputeTrayIndex != nil && expected.TrayIndex != int(*position.ComputeTrayIndex) {
+			diffs = append(diffs, model.FieldDiff{
+				FieldName:     "tray_index",
+				ExpectedValue: fmt.Sprintf("%d", expected.TrayIndex),
+				ActualValue:   fmt.Sprintf("%d", *position.ComputeTrayIndex),
+			})
+		}
+		if position.TopologyID != nil && expected.HostID != int(*position.TopologyID) {
+			diffs = append(diffs, model.FieldDiff{
+				FieldName:     "host_id",
+				ExpectedValue: fmt.Sprintf("%d", expected.HostID),
+				ActualValue:   fmt.Sprintf("%d", *position.TopologyID),
+			})
+		}
+	} else {
+		if expected.SlotID != 0 {
+			diffs = append(diffs, model.FieldDiff{
+				FieldName:     "slot_id",
+				ExpectedValue: fmt.Sprintf("%d", expected.SlotID),
+				ActualValue:   "<missing>",
+			})
+		}
+		if expected.TrayIndex != 0 {
+			diffs = append(diffs, model.FieldDiff{
+				FieldName:     "tray_index",
+				ExpectedValue: fmt.Sprintf("%d", expected.TrayIndex),
+				ActualValue:   "<missing>",
+			})
+		}
+		if expected.HostID != 0 {
+			diffs = append(diffs, model.FieldDiff{
+				FieldName:     "host_id",
+				ExpectedValue: fmt.Sprintf("%d", expected.HostID),
+				ActualValue:   "<missing>",
+			})
+		}
 	}
 
 	// Compare serial_number (chassis_serial)
