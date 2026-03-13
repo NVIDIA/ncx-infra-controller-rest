@@ -18,11 +18,11 @@ import (
 // checks if the NVLinkInterfaceCreateRequest type satisfies the MappedNullable interface at compile time
 var _ MappedNullable = &NVLinkInterfaceCreateRequest{}
 
-// NVLinkInterfaceCreateRequest Request data to create an NVLink Interface for an Instance by associating it with an NVLink Logical Partition
+// NVLinkInterfaceCreateRequest Request data to create an NVLink Interface for an Instance by associating a specific GPU index with an NVLink Logical Partition.
 type NVLinkInterfaceCreateRequest struct {
 	// ID of the NVLink Logical Partition the Interface should attach to
 	NvLinklogicalPartitionId *string `json:"nvLinklogicalPartitionId,omitempty"`
-	// Index of the device, used to identify which GPU to attache the Partition to
+	// GPU index for this NVLink interface. Must be non-negative, unique within the request, and within the GPU count exposed by the selected Machine or Instance Type.
 	DeviceInstance *int32 `json:"deviceInstance,omitempty"`
 }
 

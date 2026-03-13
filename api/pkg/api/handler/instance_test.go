@@ -3068,10 +3068,10 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 				assert.Equal(t, len(tt.args.reqData.NVLinkInterfaces), len(rst.NVLinkInterfaces))
 				for i, nvlifc := range rst.NVLinkInterfaces {
 					assert.Equal(t, tt.args.reqData.NVLinkInterfaces[i].DeviceInstance, nvlifc.DeviceInstance)
-
-					if len(tt.args.reqNVLinkLogicalPartitionIDs) > 0 {
-						assert.Contains(t, tt.args.reqNVLinkLogicalPartitionIDs, nvlifc.NVLinkLogicalPartitionID)
-					}
+					expectedPartitionID := tt.args.reqData.NVLinkInterfaces[i].NVLinkLogicalPartitionID
+					assert.Equal(t, expectedPartitionID, nvlifc.NVLinkLogicalPartitionID,
+						"NVLink interface for DeviceInstance %d: expected partition %s, got %s",
+						nvlifc.DeviceInstance, expectedPartitionID, nvlifc.NVLinkLogicalPartitionID)
 				}
 			}
 

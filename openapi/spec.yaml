@@ -15472,6 +15472,7 @@ components:
           description: ID of the NVLink Logical Partition the Interface should attach to
         deviceInstance:
           type: integer
+          minimum: 0
           description: GPU index for this NVLink interface. Must be non-negative, unique within the request, and within the GPU count exposed by the selected Machine or Instance Type.
     MachineCapability:
       title: MachineCapability

@@ -34,7 +34,6 @@ type ExpectedSwitchUpdateRequest struct {
 	NvOsUsername NullableString `json:"nvOsUsername,omitempty"`
 	// NvOS password for the Expected Switch
 	NvOsPassword NullableString `json:"nvOsPassword,omitempty"`
-	// User-defined key-value pairs for organizing and categorizing Expected Switches
 	Labels map[string]string `json:"labels,omitempty"`
 }
 

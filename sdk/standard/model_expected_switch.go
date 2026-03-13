@@ -29,7 +29,6 @@ type ExpectedSwitch struct {
 	BmcMacAddress *string `json:"bmcMacAddress,omitempty" validate:"regexp=^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$"`
 	// Serial number of the Expected Switch
 	SwitchSerialNumber *string `json:"switchSerialNumber,omitempty"`
-	// User-defined key-value pairs for organizing and categorizing Expected Switches
 	Labels map[string]string `json:"labels,omitempty"`
 	// ISO 8601 datetime when the Expected Switch was created
 	Created *time.Time `json:"created,omitempty"`

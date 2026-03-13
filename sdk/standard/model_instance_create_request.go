@@ -52,7 +52,7 @@ type InstanceCreateRequest struct {
 	InfinibandInterfaces []InfiniBandInterfaceCreateRequest `json:"infinibandInterfaces,omitempty"`
 	// DPU Extension Services to deploy to the DPUs of this Instance
 	DpuExtensionServiceDeployments []DpuExtensionServiceDeploymentRequest `json:"dpuExtensionServiceDeployments,omitempty"`
-	// Associate one or more NVLink Logical Partitions with this Instance
+	// Associate NVLink interfaces with this Instance. A subset of GPUs may be specified (it is not required to include all GPUs). Each item references one GPU index (`deviceInstance`) and one NVLink Logical Partition. Different interfaces may reference different NVLink Logical Partitions.
 	NvLinkInterfaces []NVLinkInterfaceCreateRequest `json:"nvLinkInterfaces,omitempty"`
 	// Specify list of SSH Key Group IDs that will provide Serial over LAN access
 	SshKeyGroupIds []string `json:"sshKeyGroupIds,omitempty"`
