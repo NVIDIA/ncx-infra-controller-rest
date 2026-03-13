@@ -21,6 +21,7 @@ package forge;
 // message types!
 
 import "common_carbide.proto";
+import "dns_carbide.proto";
 import "dpa_rpc_carbide.proto";
 import "google/protobuf/duration.proto";
 import "google/protobuf/empty.proto";
@@ -39,10 +40,28 @@ service Forge {
   rpc Version(VersionRequest) returns (BuildInfo);
 
   // Domain
-  rpc CreateDomain(Domain) returns (Domain);
-  rpc UpdateDomain(Domain) returns (Domain);
-  rpc DeleteDomain(DomainDeletion) returns (DomainDeletionResult);
-  rpc FindDomain(DomainSearchQuery) returns (DomainList);
+  rpc CreateDomain(dns.CreateDomainRequest) returns (dns.Domain);
+  rpc UpdateDomain(dns.UpdateDomainRequest) returns (dns.Domain);
+  rpc DeleteDomain(dns.DomainDeletionRequest)
+      returns (dns.DomainDeletionResult);
+  rpc FindDomain(dns.DomainSearchQuery) returns (dns.DomainList);
+
+  // DEPRECATED Domain RPCs - for backward compatibility
+  // Use the non-Legacy versions above instead
+  rpc CreateDomainLegacy(DomainLegacy) returns (DomainLegacy) {
+    option deprecated = true;
+  }
+  rpc UpdateDomainLegacy(DomainLegacy) returns (DomainLegacy) {
+    option deprecated = true;
+  }
+  rpc DeleteDomainLegacy(DomainDeletionLegacy)
+      returns (DomainDeletionResultLegacy) {
+    option deprecated = true;
+  }
+  rpc FindDomainLegacy(DomainSearchQueryLegacy) returns (DomainListLegacy) {
+    option deprecated = true;
+  }
+
   // VPC
   rpc CreateVpc(VpcCreationRequest) returns (Vpc);
   rpc UpdateVpc(VpcUpdateRequest) returns (VpcUpdateResult);
@@ -50,8 +69,6 @@ service Forge {
   rpc DeleteVpc(VpcDeletionRequest) returns (VpcDeletionResult);
   rpc FindVpcIds(VpcSearchFilter) returns (VpcIdList);
   rpc FindVpcsByIds(VpcsByIdsRequest) returns (VpcList);
-  // DEPRECATED: use FindVpcIds and FindVpcsByIds instead
-  rpc FindVpcs(VpcSearchQuery) returns (VpcList);
 
   // VPC prefixes
   rpc CreateVpcPrefix(VpcPrefixCreationRequest) returns (VpcPrefix);
@@ -69,23 +86,26 @@ service Forge {
   // Segments - i.e. Overlay Networks
   rpc FindNetworkSegmentIds(NetworkSegmentSearchFilter) returns (NetworkSegmentIdList);
   rpc FindNetworkSegmentsByIds(NetworkSegmentsByIdsRequest) returns (NetworkSegmentList);
-  // DEPRECATED: use FindNetworkSegmentIds and FindNetworkSegmentIds instead
-  rpc FindNetworkSegments(NetworkSegmentQuery) returns (NetworkSegmentList);
   rpc CreateNetworkSegment(NetworkSegmentCreationRequest) returns (NetworkSegment);
   rpc DeleteNetworkSegment(NetworkSegmentDeletionRequest) returns (NetworkSegmentDeletionResult);
+  // TODO: This functionality should get integrated into NetworkSegmentSearchFilter
   rpc NetworkSegmentsForVpc(VpcSearchQuery) returns (NetworkSegmentList);
 
   // InfiniBand Partitions
   rpc FindIBPartitionIds(IBPartitionSearchFilter) returns (IBPartitionIdList);
   rpc FindIBPartitionsByIds(IBPartitionsByIdsRequest) returns (IBPartitionList);
-  // DEPRECATED: use FindIBPartitionIds and FindIBPartitionsByIds instead
-  rpc FindIBPartitions(IBPartitionQuery) returns (IBPartitionList);
   // Create a IB partition
   rpc CreateIBPartition(IBPartitionCreationRequest) returns (IBPartition);
   // Delete a IB partition
   rpc DeleteIBPartition(IBPartitionDeletionRequest) returns (IBPartitionDeletionResult);
   // Find all IB partitions under a specified tenant
   rpc IBPartitionsForTenant(TenantSearchQuery) returns (IBPartitionList);
+
+  rpc FindPowerShelves(PowerShelfQuery) returns (PowerShelfList);
+  rpc DeletePowerShelf(PowerShelfDeletionRequest) returns (PowerShelfDeletionResult);
+
+  rpc FindSwitches(SwitchQuery) returns (SwitchList);
+  rpc DeleteSwitch(SwitchDeletionRequest) returns (SwitchDeletionResult);
 
   // InfiniBand Fabrics
   // Returns the list of all InfiniBand fabrics available within the site
@@ -116,26 +136,38 @@ service Forge {
 
   rpc FindInstanceIds(InstanceSearchFilter) returns (InstanceIdList);
   rpc FindInstancesByIds(InstancesByIdsRequest) returns (InstanceList);
-  // DEPRECATED: use FindInstanceIds and FindInstancesByIds instead
-  rpc FindInstances(InstanceSearchQuery) returns (InstanceList);
   rpc FindInstanceByMachineID(common.MachineId) returns (InstanceList);
 
   // forge-dpu-agent -> carbide-api
   rpc GetManagedHostNetworkConfig(ManagedHostNetworkConfigRequest) returns (ManagedHostNetworkConfigResponse);
   rpc RecordDpuNetworkStatus(DpuNetworkStatus) returns (google.protobuf.Empty);
-  rpc RecordHardwareHealthReport(HardwareHealthReport) returns (google.protobuf.Empty);
-  rpc GetHardwareHealthReport(common.MachineId) returns (OptionalHealthReport);
-  rpc RecordLogParserHealthReport(HardwareHealthReport) returns (google.protobuf.Empty);
   // Lists all overrides that have been placed on a Machine health status
   rpc ListHealthReportOverrides(common.MachineId) returns (ListHealthReportOverrideResponse);
   // Adds a new override for a Machines health status
   rpc InsertHealthReportOverride(InsertHealthReportOverrideRequest) returns (google.protobuf.Empty);
   // Removes a health report override
   rpc RemoveHealthReportOverride(RemoveHealthReportOverrideRequest) returns (google.protobuf.Empty);
+  // Lists all overrides that have been placed on a Rack health status
+  rpc ListRackHealthReportOverrides(ListRackHealthReportOverridesRequest) returns (ListHealthReportOverrideResponse);
+  // Adds a new health report override for a Rack
+  rpc InsertRackHealthReportOverride(InsertRackHealthReportOverrideRequest) returns (google.protobuf.Empty);
+  // Removes a health report override for a Rack
+  rpc RemoveRackHealthReportOverride(RemoveRackHealthReportOverrideRequest) returns (google.protobuf.Empty);
   rpc DpuAgentUpgradeCheck(DpuAgentUpgradeCheckRequest) returns (DpuAgentUpgradeCheckResponse);
   rpc DpuAgentUpgradePolicyAction(DpuAgentUpgradePolicyRequest) returns (DpuAgentUpgradePolicyResponse);
   // Looks up a DNS record for DNS names assigned by Forge
-  rpc LookupRecord(DNSMessage.DNSQuestion) returns (DNSMessage.DNSResponse);
+  rpc LookupRecord(dns.DnsResourceRecordLookupRequest)returns (dns.DnsResourceRecordLookupResponse);
+
+  // DEPRECATED DNS Lookup RPC - for backward compatibility
+  // Use LookupRecord with DnsResourceRecordLookupRequest instead
+  rpc LookupRecordLegacy(DNSMessage.DNSQuestion)returns (DNSMessage.DNSResponse) {
+    option deprecated = true;
+  }
+
+  // Get all DNS domains
+  rpc GetAllDomains(dns.GetAllDomainsRequest) returns (dns.GetAllDomainsResponse);
+  // Get metadata for a specific DNS domain
+  rpc GetAllDomainMetadata(dns.DomainMetadataRequest) returns (dns.DomainMetadataResponse);
 
   // TODO(ajf): Harder to implement bi-directional streaming, commented out for now
   // rpc StreamConsole(stream ConsoleInput) returns (stream ConsoleOutput);
@@ -154,12 +186,7 @@ service Forge {
   rpc ReportForgeScoutError(ForgeScoutErrorReport) returns (ForgeScoutErrorReportResult);
   rpc DiscoverDhcp(DhcpDiscovery) returns (DhcpRecord);
 
-  // PRIVILEGED: Get a single machine
-  rpc GetMachine(common.MachineId) returns (Machine);
-
   // PRIVILEGED: Find things
-  // DEPRECATED: use FindMachineIds and FindMachinesByIds instead
-  rpc FindMachines(MachineSearchQuery) returns (MachineList);
   rpc FindInterfaces(InterfaceSearchQuery) returns (InterfaceList);
   rpc DeleteInterface(InterfaceDeleteQuery) returns (google.protobuf.Empty);
   rpc FindIpAddress(FindIpAddressRequest) returns (FindIpAddressResponse);
@@ -167,6 +194,9 @@ service Forge {
   rpc FindMachinesByIds(MachinesByIdsRequest) returns (MachineList);
   rpc FindMachineStateHistories(MachineStateHistoriesRequest) returns (MachineStateHistories);
   rpc FindMachineHealthHistories(MachineHealthHistoriesRequest) returns (MachineHealthHistories);
+  rpc FindPowerShelfStateHistories(PowerShelfStateHistoriesRequest) returns (PowerShelfStateHistories);
+  rpc FindRackStateHistories(RackStateHistoriesRequest) returns (RackStateHistories);
+  rpc FindSwitchStateHistories(SwitchStateHistoriesRequest) returns (SwitchStateHistories);
   rpc FindTenantOrganizationIds(TenantSearchFilter) returns (TenantOrganizationIdList);
   rpc FindTenantsByOrganizationIds(TenantByOrganizationIdsRequest) returns (TenantList);
   rpc FindConnectedDevicesByDpuMachineIds(common.MachineIdList) returns (ConnectedDeviceList);
@@ -194,8 +224,6 @@ service Forge {
   rpc CreateTenantKeyset(CreateTenantKeysetRequest) returns (CreateTenantKeysetResponse);
   rpc FindTenantKeysetIds(TenantKeysetSearchFilter) returns (TenantKeysetIdList);
   rpc FindTenantKeysetsByIds(TenantKeysetsByIdsRequest) returns (TenantKeySetList);
-  // DEPRECATED: use FindTenantKeysetIds and FindTenantKeysetsByIds instead
-  rpc FindTenantKeyset(FindTenantKeysetRequest) returns (TenantKeySetList);
   rpc UpdateTenantKeyset(UpdateTenantKeysetRequest) returns (UpdateTenantKeysetResponse);
   rpc DeleteTenantKeyset(DeleteTenantKeysetRequest) returns (DeleteTenantKeysetResponse);
 
@@ -259,6 +287,9 @@ service Forge {
   // Update the Metadata of a Machine
   rpc UpdateMachineMetadata(MachineMetadataUpdateRequest) returns (google.protobuf.Empty);
 
+  // Update the NVLink Info of a Machine
+  rpc UpdateMachineNvLinkInfo(UpdateMachineNvLinkInfoRequest) returns (google.protobuf.Empty);
+
   // Maintenance mode operations: enable, disable
   rpc SetMaintenance(MaintenanceRequest) returns (google.protobuf.Empty);
 
@@ -274,6 +305,9 @@ service Forge {
   rpc TriggerHostReprovisioning(HostReprovisioningRequest) returns (google.protobuf.Empty);
   // List hosts waiting for reprovisioning
   rpc ListHostsWaitingForReprovisioning(HostReprovisioningListRequest) returns (HostReprovisioningListResponse);
+  // TODO: Remove when manual upgrade feature is removed
+  // Mark host as having completed manual firmware upgrade
+  rpc MarkManualFirmwareUpgradeComplete(common.MachineId) returns (google.protobuf.Empty);
 
   rpc GetDpuInfoList(GetDpuInfoListRequest) returns (GetDpuInfoListResponse);
 
@@ -297,7 +331,7 @@ service Forge {
   rpc RemoveRouteServers(RouteServers) returns (google.protobuf.Empty);
   rpc ReplaceRouteServers(RouteServers) returns (google.protobuf.Empty);
 
-  // MachineInventory
+  // MachineComponentInventory
   rpc UpdateAgentReportedInventory(DpuAgentInventoryReport) returns (google.protobuf.Empty);
 
   // Phone Home
@@ -318,6 +352,23 @@ service Forge {
   rpc GetExpectedMachine(ExpectedMachineRequest) returns (ExpectedMachine);
   // Get the BMC credentials for all expected machines
   rpc GetAllExpectedMachines(google.protobuf.Empty) returns (ExpectedMachineList);
+
+  // Rack Firmware Management
+  // Create or update a Rack firmware configuration
+  rpc CreateRackFirmware(RackFirmwareCreateRequest) returns (RackFirmware);
+  // Get a Rack firmware configuration by ID
+  rpc GetRackFirmware(RackFirmwareGetRequest) returns (RackFirmware);
+  // List all Rack firmware configurations
+  rpc ListRackFirmware(RackFirmwareListRequest) returns (RackFirmwareList);
+  // Delete a Rack firmware configuration
+  rpc DeleteRackFirmware(RackFirmwareDeleteRequest) returns (google.protobuf.Empty);
+  // Apply firmware to all devices in a rack
+  rpc ApplyRackFirmware(RackFirmwareApplyRequest) returns (RackFirmwareApplyResponse);
+  // Check the status of an async firmware update job
+  rpc GetRackFirmwareJobStatus(RackFirmwareJobStatusRequest) returns (RackFirmwareJobStatusResponse);
+  // Get the history of rack firmware apply operations
+  rpc GetRackFirmwareHistory(RackFirmwareHistoryRequest) returns (RackFirmwareHistoryResponse);
+
   // Replace all expected machines in site
   rpc ReplaceAllExpectedMachines(ExpectedMachineList) returns (google.protobuf.Empty);
   // Delete all expected machines in site
@@ -334,15 +385,17 @@ service Forge {
   rpc AddExpectedPowerShelf(ExpectedPowerShelf) returns (google.protobuf.Empty);
   // Delete expected power shelf
   rpc DeleteExpectedPowerShelf(ExpectedPowerShelfRequest) returns (google.protobuf.Empty);
-  // Update expected power shelf
+  // Update the BMC credentials for a specific username/password
   rpc UpdateExpectedPowerShelf(ExpectedPowerShelf) returns (google.protobuf.Empty);
-  // Get expected power shelf
+  // Get the BMC credentials for a specific expected power shelf
   rpc GetExpectedPowerShelf(ExpectedPowerShelfRequest) returns (ExpectedPowerShelf);
-  // Get all expected power shelves
+  // Get the BMC credentials for all expected power shelves
   rpc GetAllExpectedPowerShelves(google.protobuf.Empty) returns (ExpectedPowerShelfList);
   // Replace all expected power shelves in site
   rpc ReplaceAllExpectedPowerShelves(ExpectedPowerShelfList) returns (google.protobuf.Empty);
-  // Expected power shelves linked to actual power shelves
+  // Delete all expected power shelves in site
+  rpc DeleteAllExpectedPowerShelves(google.protobuf.Empty) returns (google.protobuf.Empty);
+  // Expected power shelves connected to Explored Endpoints and Power Shelves
   rpc GetAllExpectedPowerShelvesLinked(google.protobuf.Empty) returns (LinkedExpectedPowerShelfList);
 
   // Expected Switch Management
@@ -350,17 +403,17 @@ service Forge {
   rpc AddExpectedSwitch(ExpectedSwitch) returns (google.protobuf.Empty);
   // Delete expected switch
   rpc DeleteExpectedSwitch(ExpectedSwitchRequest) returns (google.protobuf.Empty);
-  // Update expected switch
+  // Update the BMC credentials for a specific username/password
   rpc UpdateExpectedSwitch(ExpectedSwitch) returns (google.protobuf.Empty);
-  // Get expected switch
+  // Get the BMC credentials for a specific expected switch
   rpc GetExpectedSwitch(ExpectedSwitchRequest) returns (ExpectedSwitch);
-  // Get all expected switches
+  // Get the BMC credentials for all expected switches
   rpc GetAllExpectedSwitches(google.protobuf.Empty) returns (ExpectedSwitchList);
   // Replace all expected switches in site
   rpc ReplaceAllExpectedSwitches(ExpectedSwitchList) returns (google.protobuf.Empty);
   // Delete all expected switches in site
   rpc DeleteAllExpectedSwitches(google.protobuf.Empty) returns (google.protobuf.Empty);
-  // Expected switches linked to actual switches
+  // Expected switches connected to Explored Endpoints and switches
   rpc GetAllExpectedSwitchesLinked(google.protobuf.Empty) returns (LinkedExpectedSwitchList);
 
   // Perform Attestation Procedure for Measured Boot
@@ -512,8 +565,8 @@ service Forge {
   rpc Lockdown(LockdownRequest) returns (LockdownResponse);
   // Fetch Lockdown Status
   rpc LockdownStatus(LockdownStatusRequest) returns (site_explorer.LockdownStatus);
-  // Start Forge Setup
-  rpc ForgeSetup(ForgeSetupRequest) returns (ForgeSetupResponse);
+  // Start Machine Setup
+  rpc MachineSetup(MachineSetupRequest) returns (MachineSetupResponse);
   // Set DPU as first boot option
   rpc SetDpuFirstBootOrder(SetDpuFirstBootOrderRequest) returns (SetDpuFirstBootOrderResponse);
   // Create BMC User
@@ -556,7 +609,7 @@ service Forge {
   rpc AssignSkuToMachine(SkuMachinePair) returns (google.protobuf.Empty);
   // Remove a SKU assignemnt from a machine.  Must be in the Ready or SkuVerifyFailed states.
   // The machine will move to the WaitingForSkuAssignment state.
-  rpc RemoveSkuAssociation(common.MachineId) returns (google.protobuf.Empty);
+  rpc RemoveSkuAssociation(RemoveSkuRequest) returns (google.protobuf.Empty);
   // Removes an unused SKU
   rpc DeleteSku(SkuIdList) returns (google.protobuf.Empty);
   rpc GetAllSkuIds(google.protobuf.Empty) returns (SkuIdList);
@@ -578,16 +631,33 @@ service Forge {
   rpc FindDpaInterfacesByIds(DpaInterfacesByIdsRequest) returns (DpaInterfaceList);
   // XXX TODO XXX Remove the calls below, as they are only for debug testing
   rpc CreateDpaInterface(DpaInterfaceCreationRequest) returns (DpaInterface);
+  rpc EnsureDpaInterface(DpaInterfaceCreationRequest) returns (DpaInterface);
   rpc DeleteDpaInterface(DpaInterfaceDeletionRequest) returns (DpaInterfaceDeletionResult);
   rpc SetDpaNetworkObservationStatus(DpaNetworkObservationSetRequest) returns (DpaInterface);
 
   // Power Options
   rpc GetPowerOptions(PowerOptionRequest) returns (PowerOptionResponse);
   rpc UpdatePowerOption(PowerOptionUpdateRequest) returns (PowerOptionResponse);
+  rpc AllowIngestionAndPowerOn(BmcEndpointRequest) returns (google.protobuf.Empty);
+  rpc DetermineMachineIngestionState(BmcEndpointRequest) returns (MachineIngestionStateResponse);
+
+  // Rack
+  rpc GetRack(GetRackRequest) returns (GetRackResponse);
+  rpc DeleteRack(DeleteRackRequest) returns (google.protobuf.Empty);
+
+  //
+  // Compute Allocations
+  //
+  rpc CreateComputeAllocation(CreateComputeAllocationRequest) returns (CreateComputeAllocationResponse);
+  rpc FindComputeAllocationIds(FindComputeAllocationIdsRequest) returns (FindComputeAllocationIdsResponse);
+  rpc FindComputeAllocationsByIds(FindComputeAllocationsByIdsRequest) returns (FindComputeAllocationsByIdsResponse);
+  rpc UpdateComputeAllocation(UpdateComputeAllocationRequest) returns (UpdateComputeAllocationResponse);
+  rpc DeleteComputeAllocation(DeleteComputeAllocationRequest) returns (DeleteComputeAllocationResponse);
 
   rpc SetFirmwareUpdateTimeWindow(SetFirmwareUpdateTimeWindowRequest) returns (SetFirmwareUpdateTimeWindowResponse);
   rpc ListHostFirmware(ListHostFirmwareRequest) returns (ListHostFirmwareResponse);
   rpc PublishMlxDeviceReport(mlx_device.PublishMlxDeviceReportRequest) returns (mlx_device.PublishMlxDeviceReportResponse);
+  rpc PublishMlxObservationReport(mlx_device.PublishMlxObservationReportRequest) returns (mlx_device.PublishMlxObservationReportResponse);
 
   // Trim DB Tables
   rpc TrimTable(TrimTableRequest) returns (TrimTableResponse);
@@ -626,6 +696,103 @@ service Forge {
   rpc GetDpuExtensionServiceVersionsInfo(GetDpuExtensionServiceVersionsInfoRequest) returns (DpuExtensionServiceVersionInfoList);
   rpc FindInstancesByDpuExtensionService(FindInstancesByDpuExtensionServiceRequest) returns (FindInstancesByDpuExtensionServiceResponse);
 
+  // SPDM attestation APIs start
+  rpc TriggerMachineAttestation(AttestationData) returns (google.protobuf.Empty);
+  rpc CancelMachineAttestation(AttestationData) returns (google.protobuf.Empty);
+  rpc FindMachineIdsUnderAttestation(AttestationIdsRequest) returns (common.MachineIdList);
+  rpc FindMachinesUnderAttestation(AttestationMachineList) returns (AttestationResponse);
+  // SPDM attestation APIs end
+
+  // SPIFFE Machine Identity APIs
+  // Signs a JWT-SVID token for machine identity
+  rpc SignMachineIdentity(MachineIdentityRequest) returns (MachineIdentityResponse);
+
+  // ScoutStream establishes a bidirectional streaming connection between
+  // scout agents and carbide-api. The initial use-case for this is for
+  // Mellanox device management using forge-admin-cli, but there's an
+  // opportunity to pull the ForgeAgentControl flow into here as well.
+  rpc ScoutStream(stream ScoutStreamApiBoundMessage) returns (stream ScoutStreamScoutBoundMessage);
+
+  // ScoutStreamShowConnections is used to show all established
+  // connections from scout agents to the ScoutStream endpoint.
+  rpc ScoutStreamShowConnections(ScoutStreamShowConnectionsRequest) returns (ScoutStreamShowConnectionsResponse);
+
+  // ScoutStreamDisconnect is used to disconnect a current machines
+  // ScoutStream connection.
+  rpc ScoutStreamDisconnect(ScoutStreamDisconnectRequest) returns (ScoutStreamDisconnectResponse);
+
+  // ScoutStreamPing is used to ping a given machine ID's scout stream
+  // connection to make sure it's responsive.
+  rpc ScoutStreamPing(ScoutStreamAdminPingRequest) returns (ScoutStreamAdminPingResponse);
+
+  // Mellanox administrative endpoints for profile management, which are called by
+  // the CLI (forge-admin-cli) and potentially the UI. These endpoints ultimately
+  // interconnect with a scout agent listening via an open ScoutStream connection.
+  //
+  // MlxAdminProfileSync is used to sync an MlxConfigProfile to a given device.
+  rpc MlxAdminProfileSync(mlx_device.MlxAdminProfileSyncRequest) returns (mlx_device.MlxAdminProfileSyncResponse);
+  // MlxAdminProfileShow shows the configuration of a specific MlxConfigProfile
+  // loaded into carbide-api.
+  rpc MlxAdminProfileShow(mlx_device.MlxAdminProfileShowRequest) returns (mlx_device.MlxAdminProfileShowResponse);
+  // MlxAdminProfileCompare compares the running config of a device to
+  // the values of a given MlxConfigProfile.
+  rpc MlxAdminProfileCompare(mlx_device.MlxAdminProfileCompareRequest) returns (mlx_device.MlxAdminProfileCompareResponse);
+  // MlxAdminProfileList lists all configured MlxConfigProfiles in carbide-api.
+  rpc MlxAdminProfileList(mlx_device.MlxAdminProfileListRequest) returns (mlx_device.MlxAdminProfileListResponse);
+
+  // Mellanox administrative endpoints for lockdown management, which are called by
+  // the CLI (forge-admin-cli) and potentially the UI. These endpoints ultimately
+  // interconnect with a scout agent listening via an open ScoutStream connection.
+  //
+  // MlxAdminLockdownLock locks a Mellanox device, using whatever key is currently
+  // managed internally within Carbide.
+  rpc MlxAdminLockdownLock(mlx_device.MlxAdminLockdownLockRequest) returns (mlx_device.MlxAdminLockdownLockResponse);
+  // MlxAdminLockdownUnlock unlocks a Mellanox device, using whatever key is currently
+  // managed internally within Carbide.
+  rpc MlxAdminLockdownUnlock(mlx_device.MlxAdminLockdownUnlockRequest) returns (mlx_device.MlxAdminLockdownUnlockResponse);
+  // MlxAdminLockdownStatus returns the live lock status of a Mellanox device
+  // by querying over an open ScoutStream connection.
+  rpc MlxAdminLockdownStatus(mlx_device.MlxAdminLockdownStatusRequest) returns (mlx_device.MlxAdminLockdownStatusResponse);
+
+  // Mellanox administrative endpoints for device info querying, which are called by
+  // the CLI (forge-admin-cli) and potentially the UI. These endpoints ultimately
+  // interconnect with a scout agent listening via an open ScoutStream connection.
+  //
+  // MlxAdminShowDevice will show MlxDeviceInfo data for a given device on a machine.
+  rpc MlxAdminShowDevice(mlx_device.MlxAdminDeviceInfoRequest) returns (mlx_device.MlxAdminDeviceInfoResponse);
+  // MlxAdminShowMachine will show an MlxDeviceReport for a given machine.
+  rpc MlxAdminShowMachine(mlx_device.MlxAdminDeviceReportRequest) returns (mlx_device.MlxAdminDeviceReportResponse);
+
+  // Mellanox administrative endpoints for registry querying, which are called by
+  // the CLI (forge-admin-cli) and potentially the UI. These endpoints ultimately
+  // interconnect with a scout agent listening via an open ScoutStream connection.
+  //
+  // MlxAdminRegistryList lists all known mlxconfig variable registries
+  // that are currently compiled into scout on the target machine.
+  rpc MlxAdminRegistryList(mlx_device.MlxAdminRegistryListRequest) returns (mlx_device.MlxAdminRegistryListResponse);
+  // MlxAdminRegistryShow returns the given MlxVariableRegistry as
+  // configured on the scout agent on the target machine.
+  rpc MlxAdminRegistryShow(mlx_device.MlxAdminRegistryShowRequest) returns (mlx_device.MlxAdminRegistryShowResponse);
+
+  // Mellanox administrative endpoints for direct mlxconfig management, called by
+  // the CLI (forge-admin-cli) and potentially the UI. These endpoints ultimately
+  // interconnect with a scout agent listening via an open ScoutStream connection.
+  //
+  // MlxAdminConfigQuery is used to fetch one or more running mlxconfig
+  // variable values for the provided target machine device.
+  rpc MlxAdminConfigQuery(mlx_device.MlxAdminConfigQueryRequest) returns (mlx_device.MlxAdminConfigQueryResponse);
+  // MlxAdminConfigSet is used to set one or more running mlxconfig
+  // variable values for the provided target machine device.
+  rpc MlxAdminConfigSet(mlx_device.MlxAdminConfigSetRequest) returns (mlx_device.MlxAdminConfigSetResponse);
+  // MlxAdminConfigSync is used to sync one or more running mlxconfig
+  // variable values for the provided target machine device, reporting back
+  // specifics of what changed.
+  rpc MlxAdminConfigSync(mlx_device.MlxAdminConfigSyncRequest) returns (mlx_device.MlxAdminConfigSyncResponse);
+  // MlxAdminConfigSync is used to compare one or more running mlxconfig
+  // variable values for the provided target machine device, reporting back
+  // specifics of what would change.
+  rpc MlxAdminConfigCompare(mlx_device.MlxAdminConfigCompareRequest) returns (mlx_device.MlxAdminConfigCompareResponse);
+
   // NVL Partition
   rpc FindNVLinkPartitionIds(NVLinkPartitionSearchFilter) returns (NVLinkPartitionIdList);
   rpc FindNVLinkPartitionsByIds(NVLinkPartitionsByIdsRequest) returns (NVLinkPartitionList);
@@ -643,6 +810,75 @@ service Forge {
   rpc DeleteNVLinkLogicalPartition(NVLinkLogicalPartitionDeletionRequest) returns (NVLinkLogicalPartitionDeletionResult);
   // Find all Logical partitions under a specified tenant
   rpc NVLinkLogicalPartitionsForTenant(TenantSearchQuery) returns (NVLinkLogicalPartitionList);
+  // Get position related information for machines
+  rpc GetMachinePositionInfo(MachinePositionQuery) returns (MachinePositionInfoList);
+
+  rpc NmxmBrowse(NmxmBrowseRequest) returns (NmxmBrowseResponse);
+
+  rpc ModifyDPFState(ModifyDPFStateRequest) returns (google.protobuf.Empty);
+  rpc GetDPFState(GetDPFStateRequest) returns (DPFStateResponse);
+}
+
+message AttestationIdsRequest {
+
+}
+
+message AttestationData {
+  common.MachineId machine_id = 1;
+}
+
+message AttestationMachineList {
+  repeated common.MachineId machine_ids = 1;
+}
+
+message AttestationResponse {
+  message AttestationDeviceData {
+    string device_id = 1;
+    common.UUID nonce = 2;
+    string state = 3;
+    optional string metadata = 4;
+  }
+  message AttestationMachineData {
+    common.MachineId machine_id = 1;
+    google.protobuf.Timestamp requested_at = 2;
+    optional google.protobuf.Timestamp started_at = 3;
+    optional google.protobuf.Timestamp canceled_at = 4;
+    string state = 5;
+    string state_version = 6;
+    optional string state_outcome = 7;
+    string status = 8;
+    repeated AttestationDeviceData device_data = 9;
+  }
+  repeated AttestationMachineData machines = 1;
+}
+
+// Machine Identity - JWT-SVID token signing
+message MachineIdentityRequest {
+  repeated string audience = 1;
+}
+
+message MachineIdentityResponse {
+  string access_token = 1;
+  string issued_token_type = 2;
+  string token_type = 3;
+  string expires_in = 4;
+}
+
+// Determines machine ingestion state in relation to the power on gate
+// NotDiscovered - the machine has not been discovered.
+// WaitingForIngestion - the machine is stuck at the gate, will not be powered on yet.
+// IngestionMachineCreated - the machine is past the gate and has been ingested.
+// IngestionMachineNotCreated - the machine is past the gate, but the entry
+// in the DB hasn't been created yet.
+enum MachineIngestionState {
+  NotDiscovered = 0;
+  WaitingForIngestion = 1;
+  IngestionMachineNotCreated = 2;
+  IngestionMachineCreated = 3;
+}
+
+message MachineIngestionStateResponse{
+  MachineIngestionState machine_ingestion_state = 1;
 }
 
 message TpmCaAddedCaStatus{
@@ -814,7 +1050,7 @@ message RuntimeConfig {
 
   // BOM Validation Configuration
   bool bom_validation_enabled = 35;
-  bool bom_validation_ignore_unassigned_machines = 36;  // TODO: Remove after all consumers updated
+  bool bom_validation_ignore_unassigned_machines = 36; // TODO: Remove after all consumers updated
 
   repeated string dpu_nic_firmware_update_versions=37;
 
@@ -831,6 +1067,11 @@ message RuntimeConfig {
   bool dpu_secure_boot_enabled = 45;
 
   bool bom_validation_allow_allocation_on_validation_failure = 46;
+
+  string dpa_subnet_ip = 47;
+  int32 dpa_subnet_mask = 48;
+
+  bool dpf_enabled = 49;
 }
 
 message EchoRequest {
@@ -840,6 +1081,7 @@ message EchoRequest {
 message EchoResponse {
   string message = 1;
 }
+// Deprecated DNSMessage format used by Forge DNS service
 message DNSMessage {
 
   message DNSQuestion {
@@ -927,6 +1169,7 @@ message TenantSearchQuery {
   optional string tenantOrganizationId = 1; // protolint:disable:this FIELD_NAMES_LOWER_SNAKE_CASE
 }
 
+//
 message VpcStatus {
   // The actual VNI allocated to the VPC. If a VNI had been
   // explicitly requested, we'd expect this to match the VNI
@@ -948,7 +1191,12 @@ message Vpc {
   google.protobuf.Timestamp deleted = 6;
 
   optional string tenantKeysetId = 7; // protolint:disable:this FIELD_NAMES_LOWER_SNAKE_CASE
-  optional uint32 deprecated_vni = 8;
+
+  // We'll keep populating this field but it will come from
+  // status.vni
+  // We'll be able to trim it out later after some deprecation window.
+  optional uint32 deprecated_vni = 8; // Deprecated
+
   optional VpcVirtualizationType network_virtualization_type = 9;
   Metadata metadata = 10;
 
@@ -966,7 +1214,7 @@ message Vpc {
 
   // This will only be populated if the VNI was explicitly
   // requested during creation of the VPC.
-  optional uint32 vni = 15;  
+  optional uint32 vni = 15;
 }
 
 message VpcCreationRequest {
@@ -990,11 +1238,19 @@ message VpcCreationRequest {
   // This is the NVLink Logical Partition that will be used by default for all instances in the VPC.
   optional common.NVLinkLogicalPartitionId default_nvlink_logical_partition_id = 14;
 
+
   // Desired VNI for this VPC. If the VNI is not provided, Carbide will
   // auto-allocate one.
   // The requested VNI must be available in a resource-pool range that is not
   // marked for auto-assignment; otherwise, the request will be rejected.
-  optional uint32 vni = 15;  
+  optional uint32 vni = 15;
+
+  // Desired routing profile type for this VPC.
+  // The requested type must be equal to or less than
+  // type of the tenant.
+  // For example, an internal tenant can request internal or external VPCs,
+  // but an external tenant can only request external VPCs.
+  optional RoutingProfileType routing_profile_type = 16;
 }
 
 enum VpcVirtualizationType {
@@ -1085,21 +1341,39 @@ enum PrefixMatchType {
 
 message VpcPrefix {
   common.VpcPrefixId id = 1;
-  string prefix = 2;
-  string name = 3;
+  string prefix = 2; // Deprecated, use config instead
+  string name = 3; // Deprecated, use metadata instead
   common.VpcId vpc_id = 4;
-  // UUID tenant_prefix_id = 5;
-  uint32 total_31_segments = 6;
-  uint32 available_31_segments = 7;
+  reserved 5; // tenant_prefix_id
+  uint32 total_31_segments = 6; // Deprecated, use status instead
+  uint32 available_31_segments = 7; // Deprecated, use status instead
+
+  VpcPrefixConfig config = 8;
+  VpcPrefixStatus status = 9;
+  Metadata metadata = 10;
+}
+
+message VpcPrefixConfig {
+  // IPv4 or IPv6 prefix in CIDR notation
+  string prefix = 1;
+}
+
+message VpcPrefixStatus {
+  uint32 total_31_segments = 1;
+  uint32 available_31_segments = 2;
+  uint64 total_linknet_segments = 3;
+  uint64 available_linknet_segments = 4;
 }
 
 message VpcPrefixCreationRequest {
   optional common.VpcPrefixId id = 1;
   // IPv4 or IPv6 prefix in CIDR notation
-  string prefix = 2;
-  string name = 3;
+  string prefix = 2; // Deprecated, use config instead
+  string name = 3; // Deprecated, use config instead
   common.VpcId vpc_id = 4;
-    // common.UUID tenant_prefix_id = 5;
+  reserved 5; // tenant_prefix_id
+  VpcPrefixConfig config = 6;
+  Metadata metadata = 7;
 }
 
 message VpcPrefixSearchQuery {
@@ -1132,8 +1406,10 @@ message VpcPrefixUpdateRequest {
   // 1. It is the same address family as the old prefix.
   // 2. It is not larger than its containing site prefix.
   // 3. It contains all of its associated network segment prefixes.
-  optional string prefix = 2;
-  optional string name = 3;
+  optional string prefix = 2; // Deprecated, use config instead
+  optional string name = 3;  // Deprecated, use metadata instead
+  VpcPrefixConfig config = 4;
+  Metadata metadata = 5;
 }
 
 message VpcPrefixDeletionRequest {
@@ -1160,6 +1436,9 @@ message VpcPeeringList {
 message VpcPeeringCreationRequest {
   common.VpcId vpc_id = 1;
   common.VpcId peer_vpc_id = 2;
+
+  // The desired ID for this VPC peering. If the ID is not provided, a random one will be generated.
+  optional common.VpcPeeringId id = 3;
 }
 
 message VpcPeeringSearchFilter {
@@ -1219,7 +1498,11 @@ message IBPartitionConfig {
   string name = 1;
   // The ID of tenant that IBPartition belong to
   string tenantOrganizationId = 2; // protolint:disable:this FIELD_NAMES_LOWER_SNAKE_CASE
-  // This was previously: Metadata metadata = 3 and moved to IBPartition in a backwards incompatible way
+
+  // Desired PKEY for this IB partition (in hexidecimal format, e.g.: 0x76b).
+  // If the PKEY is not provided, Carbide will auto-allocate one.
+  // The requested PKEY must be available in a resource-pool range that is not
+  // marked for auto-assignment; otherwise, the request will be rejected.
   optional string pkey = 3;
 }
 
@@ -1279,15 +1562,6 @@ message IBPartitionDeletionRequest {
 message IBPartitionDeletionResult {
 }
 
-message IBPartitionSearchConfig {
-  bool include_history = 1;
-}
-
-message IBPartitionQuery {
-  common.IBPartitionId id = 1;
-  optional IBPartitionSearchConfig search_config = 2;
-}
-
 message IBPartitionSearchFilter {
   optional string tenant_org_id = 1;
   optional string name = 2;
@@ -1300,6 +1574,238 @@ message IBPartitionsByIdsRequest {
 
 message IBPartitionIdList {
   repeated common.IBPartitionId ib_partition_ids = 1;
+}
+
+// Describe the desired configuration of a PowerShelf
+message PowerShelfConfig {
+  // The name of PowerShelf.
+  string name = 1;
+  // Power capacity in watts
+  optional int32 capacity = 2;
+  // Voltage in volts
+  optional int32 voltage = 3;
+  // Physical location
+  optional string location = 4;
+}
+
+// Describe the status and applied configuration of a PowerShelf
+message PowerShelfStatus {
+  // The result of last state controller run - its outcome and an optional reason for that outcome
+  optional ControllerStateReason state_reason = 1;
+  // The SLA for the current state - and whether the SLA has been breached
+  StateSla state_sla = 2;
+
+  // The shelf name of PowerShelf
+  optional string shelf_name = 3;
+  // Power state: "on", "off", "standby"
+  optional string power_state = 4;
+  // Health status: "ok", "warning", "critical"
+  optional string health_status = 5;
+}
+
+// Describe a PowerShelf configuration and status
+message PowerShelf {
+  common.PowerShelfId id = 1;
+
+  PowerShelfConfig config = 2;
+
+  PowerShelfStatus status = 3;
+
+  // Timestamp when the power shelf was marked as deleted
+  optional google.protobuf.Timestamp deleted = 4;
+
+  string controller_state = 5;
+}
+
+message PowerShelfList {
+  repeated PowerShelf power_shelves = 1;
+}
+
+message PowerShelfCreationRequest {
+  PowerShelfConfig config = 1;
+  // Desired ID for this PowerShelf. If the ID is not provided, Forge will generate
+  // a random ID.
+  // The PowerShelf ID must be unique within the Forge site.
+  optional common.PowerShelfId id = 2;
+}
+
+message PowerShelfDeletionRequest {
+  common.PowerShelfId id = 1;
+}
+
+message PowerShelfDeletionResult {
+}
+
+message PowerShelfStateHistoryRecord {
+  string state = 1;
+  string version = 2;
+  google.protobuf.Timestamp time = 3;
+}
+
+message PowerShelfStateHistoriesRequest {
+  repeated common.PowerShelfId power_shelf_ids = 1;
+}
+
+message PowerShelfStateHistories {
+  map<string, PowerShelfStateHistoryRecords> histories = 1;
+}
+
+message PowerShelfStateHistoryRecords {
+  repeated PowerShelfStateHistoryRecord records = 1;
+}
+
+message PowerShelfQuery {
+  optional string name = 1;
+  common.PowerShelfId power_shelf_id = 2;
+}
+
+message ExpectedPowerShelf {
+  string bmc_mac_address = 1;
+  string bmc_username = 2;
+  string bmc_password = 3;
+  string shelf_serial_number = 4;
+  string ip_address = 5;
+  // Metadata that will automatically get associated with a newly created PowerShelf
+  Metadata metadata = 6;
+  optional common.RackId rack_id = 7;
+}
+
+message ExpectedPowerShelfRequest {
+  string bmc_mac_address = 1;
+}
+
+message ExpectedPowerShelfList {
+  repeated ExpectedPowerShelf expected_power_shelves = 1;
+}
+
+message LinkedExpectedPowerShelfList {
+  repeated LinkedExpectedPowerShelf expected_power_shelves = 1;
+}
+
+message LinkedExpectedPowerShelf {
+  string shelf_serial_number = 1;
+  string bmc_mac_address = 2; // from expected_power_shelves table
+  optional common.PowerShelfId power_shelf_id = 3; // The power shelf
+}
+
+// Describe the desired configuration of a Switch
+message SwitchConfig {
+  // The name of Switch.
+  string name = 1;
+  bool enable_nmxc = 2;
+  FabricManagerConfig fabric_manager_config = 3;
+  // Physical location
+  optional string location = 4;
+}
+
+// Describe the desired configuration of Fabric Manager
+message FabricManagerConfig {
+  map<string, string> config_map = 1;
+}
+
+// Describe the status and applied configuration of a Switch
+message SwitchStatus {
+  // The result of last state controller run - its outcome and an optional reason for that outcome
+  optional ControllerStateReason state_reason = 1;
+  // The SLA for the current state - and whether the SLA has been breached
+  StateSla state_sla = 2;
+
+  // The name of Switch
+  optional string switch_name = 3;
+  // Power state: "on", "off", "standby"
+  optional string power_state = 4;
+  // Health status: "ok", "warning", "critical"
+  optional string health_status = 5;
+}
+
+// Describe a Switch configuration and status
+message Switch {
+  common.SwitchId id = 1;
+
+  SwitchConfig config = 2;
+
+  SwitchStatus status = 3;
+
+  // Timestamp when the switch was marked as deleted
+  optional google.protobuf.Timestamp deleted = 4;
+
+  string controller_state = 5;
+
+  BmcInfo bmc_info = 6;
+}
+
+message SwitchList {
+  repeated Switch switches = 1;
+}
+
+message SwitchCreationRequest {
+  SwitchConfig config = 1;
+  // Desired ID for this Switch. If the ID is not provided, Forge will generate
+  // a random ID.
+  // The Switch ID must be unique within the Forge site.
+  optional common.UUID id = 2;
+}
+
+message SwitchDeletionRequest {
+  common.SwitchId id = 1;
+}
+
+message SwitchDeletionResult {
+}
+
+
+message SwitchStateHistoryRecord {
+  string state = 1;
+  string version = 2;
+  google.protobuf.Timestamp time = 3;
+}
+
+message SwitchStateHistoriesRequest {
+  repeated common.SwitchId switch_ids = 1;
+}
+
+message SwitchStateHistories {
+  map<string, SwitchStateHistoryRecords> histories = 1;
+}
+
+message SwitchStateHistoryRecords {
+  repeated SwitchStateHistoryRecord records = 1;
+}
+
+
+message SwitchQuery {
+  optional string name = 1;
+  common.SwitchId switch_id = 2;
+}
+
+message ExpectedSwitch {
+  string bmc_mac_address = 1;
+  string bmc_username = 2;
+  string bmc_password = 3;
+  string switch_serial_number = 4;
+  // Metadata that will automatically get associated with a newly created Switch
+  Metadata metadata = 5;
+  optional common.RackId rack_id = 6;
+  optional string nvos_username = 7;
+  optional string nvos_password = 8;
+}
+
+message ExpectedSwitchRequest {
+  string bmc_mac_address = 1;
+}
+
+message ExpectedSwitchList {
+  repeated ExpectedSwitch expected_switches = 1;
+}
+
+message LinkedExpectedSwitchList {
+  repeated LinkedExpectedSwitch expected_switches = 1;
+}
+
+message LinkedExpectedSwitch {
+  string switch_serial_number = 1;
+  string bmc_mac_address = 2; // from expected_switches table
+  optional common.SwitchId switch_id = 3; // The switch
 }
 
 message IBFabricSearchFilter {
@@ -1395,11 +1901,6 @@ message NetworkSegmentSearchConfig {
   bool include_num_free_ips = 2;
 }
 
-message NetworkSegmentQuery {
-  common.NetworkSegmentId id = 1;
-  optional NetworkSegmentSearchConfig search_config = 2;
-}
-
 message NetworkSegmentSearchFilter {
   optional string name = 1;
   optional string tenant_org_id = 2;
@@ -1420,8 +1921,7 @@ message NetworkPrefix {
   string prefix = 2;
   optional string gateway = 3;
   int32 reserve_first = 4;
-  VpcResourceState state = 5;
-  repeated NetworkPrefixEvent events = 6;
+  reserved 5,6; // deprecated state and events
   // deprecated circuit id.
   reserved 7;
   uint32 free_ip_count = 8;
@@ -1433,6 +1933,8 @@ message MachineState {
 }
 
 message InstancePowerRequest {
+  // The Machine to perform power operation on.
+  // Deprecated: User `instance_id` field instead.
   common.MachineId machine_id = 1;
 
   enum Operation {
@@ -1456,14 +1958,12 @@ message InstancePowerRequest {
   // In case update is needed, and user wants to approve, they can inform via this flag.
   // If this flag is true, first update will be performed and then host will be rebooted.
   bool apply_updates_on_reboot = 4;
+
+  // The instance to perform power operation on.
+  common.InstanceId instance_id = 5;
 }
 
 message InstancePowerResult {
-}
-
-message InstanceSearchQuery {
-  optional common.InstanceId id = 1;
-  optional Label label = 2;
 }
 
 message InstanceList {
@@ -1497,19 +1997,6 @@ message InstancesByIdsRequest {
   repeated common.InstanceId instance_ids = 1;
 }
 
-// Batch instance allocation request
-message BatchInstanceAllocationRequest {
-  // List of instance allocation requests to be processed in a single transaction
-  // All instances will be allocated atomically - if any fails, all will be rolled back
-  repeated InstanceAllocationRequest instance_requests = 1;
-}
-
-// Batch instance allocation response
-message BatchInstanceAllocationResponse {
-  // List of successfully allocated instances
-  repeated Instance instances = 1;
-}
-
 message InstanceAllocationRequest {
   // The Machine on top of which we create an Instance
   // If we go towards "we already have instances model", this would become more of a
@@ -1537,36 +2024,28 @@ message InstanceAllocationRequest {
   bool allow_unhealthy_machine = 13;
 }
 
+// Batch instance allocation request
+message BatchInstanceAllocationRequest {
+  // List of instance allocation requests to be processed in a single transaction
+  // All instances will be allocated atomically - if any fails, all will be rolled back
+  repeated InstanceAllocationRequest instance_requests = 1;
+}
+
+// Batch instance allocation response
+message BatchInstanceAllocationResponse {
+  // List of successfully allocated instances
+  repeated Instance instances = 1;
+}
+
 // Tenant related configuration that is set once the instance is allocated
 // by a tenant
 message TenantConfig {
   // Identifies the tenant that uses this instance
   string tenant_organization_id = 1;
 
-  // These fields are deprecated. If no `os` or `os_reference` object is defined
-  // in `InstanceConfig`, the fields would still be utilized. Otherwise
-  // the `os` configurations would take precedence.
-  optional string user_data = 11;
-  string custom_ipxe = 12;
-
-  // If this flag is set to `true`, the instance will receive the `custom_ipxe` instructions
-  // on every reboot attempts. Depending on the type of iPXE instructions, this might
-  // lead the instance to reinstall itself on every reboot.
-  //
-  // If the flag is set to `false` or not specified, Forge will only provide the
-  // `custom_ipxe` script on the first boot attempt. For every subsequent boot,
-  // the instance will use the default boot action - which is usually to boot from
-  // the hard drive.
-  //
-  // If the `custom_ipxe` instructions should only be used for specific reboots
-  // in order to trigger reinstallation, tenants can use the `InvokeInstancePower`
-  // API to reboot instances with the `boot_with_custom_ipxe` parameter set to
-  // `true`.
-  bool always_boot_with_custom_ipxe = 13;
-
-  // If this flag is set to `true` the instance will not transition to a Ready state until
-  // InstancePhoneHomeLastContact is updated
-  bool phone_home_enabled = 14;
+  // These fields have been used for OS configuration in the past.
+  // They are now replaced with the OperatingSystem message.
+  reserved 11, 12, 13, 14;
 
   optional string hostname = 15;
 
@@ -1578,7 +2057,7 @@ message TenantConfig {
 message OperatingSystem {
   // Contains the operating system definition based on the variant of operating system
   oneof variant {
-    IpxeOperatingSystem ipxe = 1;
+    InlineIpxe ipxe = 1;
     common.UUID os_image_id = 2;
   }
 
@@ -1609,7 +2088,7 @@ message OperatingSystem {
   optional string user_data = 13;
 }
 
-message IpxeOperatingSystem {
+message InlineIpxe {
   // The iPXE script which is booted into
   string ipxe_script = 1;
   // Optional user-data that is associated with the iPXE script
@@ -1649,6 +2128,7 @@ message InstanceConfig {
 
   // Configures instance nvlink partitions
   InstanceNVLinkConfig nvlink = 24;
+
 }
 
 // Desired network configuration for an instance
@@ -1672,7 +2152,6 @@ message InstanceDpuExtensionServiceConfig {
 message InstanceDpuExtensionServicesConfig {
   repeated InstanceDpuExtensionServiceConfig service_configs = 1;
 }
-
 // Desired nvlink configuration for an instance
 message InstanceNVLinkConfig {
   // Configures how instance nvlink gpus are set up
@@ -1755,7 +2234,6 @@ message InstanceStatus {
 
   // Status of attached extension services of an instance
   InstanceDpuExtensionServicesStatus dpu_extension_services = 22;
-
   // Whether all configurations related to an instance are in-sync.
   // This is a logical AND for the settings of all sub-configurations.
   // At this time it equals `InstanceNetworkStatus::configs_synced`,
@@ -1765,7 +2243,6 @@ message InstanceStatus {
   // This indicates if updates are pending for the instance
   optional InstanceUpdateStatus update = 102;
 
-  // Status of the NVLink subsystem of an instance
   InstanceNVLinkStatus nvlink = 103;
 }
 
@@ -1818,11 +2295,6 @@ message InstanceInfinibandStatus {
   SyncState configs_synced = 101;
 }
 
-message InstanceNVLinkStatus {
-  repeated InstanceNVLinkGpuStatus gpu_statuses = 1;
-  SyncState configs_synced = 101;
-}
-
 message DpuExtensionServiceStatus {
   common.MachineId dpu_machine_id = 1;
   DpuExtensionServiceDeploymentStatus status = 2;
@@ -1841,6 +2313,11 @@ message InstanceDpuExtensionServiceStatus {
 // Status of extension services subsystem of an instance
 message InstanceDpuExtensionServicesStatus {
   repeated InstanceDpuExtensionServiceStatus dpu_extension_services = 1;
+  SyncState configs_synced = 101;
+}
+
+message InstanceNVLinkStatus {
+  repeated InstanceNVLinkGpuStatus gpu_statuses = 1;
   SyncState configs_synced = 101;
 }
 
@@ -2060,7 +2537,6 @@ message InstanceNVLinkGpuConfig {
   common.NVLinkLogicalPartitionId logical_partition_id = 2;
 }
 
-
 message InstancePhoneHomeLastContactRequest {
   common.InstanceId instance_id = 1;
 }
@@ -2080,9 +2556,9 @@ enum IssueCategory {
 
 // Message containing details about an issue reported during instance release
 message Issue {
-  IssueCategory category = 1;    // Category of issue
-  string summary = 2;    // User-friendly summary of the issue
-  string details = 3;    // Additional context about the issue
+  IssueCategory category = 1; // Category of issue
+  string summary = 2; // User-friendly summary of the issue
+  string details = 3; // Additional context about the issue
 }
 
 message InstanceReleaseRequest {
@@ -2129,6 +2605,10 @@ message MachineStateHistoryRecords {
 
 message MachineHealthHistoriesRequest {
   repeated common.MachineId machine_ids = 1;
+  // Optional: Start time of the range (inclusive) for filtering health history
+  google.protobuf.Timestamp start_time = 2;
+  // Optional: End time of the range (inclusive) for filtering health history
+  google.protobuf.Timestamp end_time = 3;
 }
 
 message MachineHealthHistories {
@@ -2165,12 +2645,6 @@ message TenantOrganizationIdList {
   repeated string tenant_organization_ids = 1;
 }
 
-message MachineSearchQuery {
-  optional common.MachineId id = 1;
-  optional string fqdn = 2;
-  optional MachineSearchConfig search_config = 3;
-}
-
 message InterfaceList {
   repeated MachineInterface interfaces = 1;
 }
@@ -2192,6 +2666,7 @@ enum MachineType {
   UNKNOWN = 0;
   DPU = 1;
   HOST = 2;
+  POWER_SHELF = 3;
 }
 
 message BmcInfo {
@@ -2251,7 +2726,6 @@ message Machine {
   // TODO: Once all admin CLI clients have updated, drop this and stop filling it in.
   optional common.MachineId associated_dpu_machine_id = 20;
 
-  // WARNING: Cloud workflow schema already has a MachineInventory message, so we use MachineComponentInventory here
   optional MachineComponentInventory inventory = 21;
   optional google.protobuf.Timestamp last_reboot_requested_time = 22;
   optional string last_reboot_requested_mode = 23;
@@ -2300,7 +2774,10 @@ message Machine {
   optional string hw_sku_device_type = 41;
 
   bool update_complete = 42;
+
   optional MachineNVLinkInfo nvlink_info = 43;
+
+  optional MachineNVLinkStatusObservation nvlink_status_observation = 44;
 }
 
 message InstanceNetworkRestrictions {
@@ -2340,11 +2817,10 @@ message MachineMetadataUpdateRequest {
 
 message DpuAgentInventoryReport {
   common.MachineId machine_id = 1;
-  // WARNING: Cloud workflow schema already has a MachineInventory message, so we use MachineComponentInventory here
   MachineComponentInventory inventory = 2;
 }
 
-// WARNING: Cloud workflow schema already has a MachineInventory message, so we rename MachineComponentInventory here
+// WARNING: Cloud workflow schema already has a MachineInventory message, so we use MachineComponentInventory here
 message MachineComponentInventory {
   repeated MachineInventorySoftwareComponent components = 1;
 }
@@ -2426,6 +2902,13 @@ message MachineEvent {
   google.protobuf.Timestamp time = 4;
 }
 
+enum InterfaceAssociationType {
+  NONE = 0;
+  MACHINE = 1;
+  SWITCH = 2;
+  POWERSHELF = 3;
+}
+
 message MachineInterface {
   common.MachineInterfaceId id = 1;
   optional common.MachineId attached_dpu_machine_id = 2;
@@ -2446,6 +2929,10 @@ message MachineInterface {
   optional google.protobuf.Timestamp last_dhcp = 12;
 
   optional bool is_bmc = 13;
+  optional common.PowerShelfId power_shelf_id = 14;
+  optional common.SwitchId switch_id = 15;
+
+  optional InterfaceAssociationType association_type = 16;
 }
 
 // Infiniband interface status description
@@ -2500,6 +2987,7 @@ message DhcpDiscovery {
   optional string link_address = 4;
   optional string circuit_id = 5;
   optional string remote_id = 6;
+  optional string desired_address = 7;
 }
 
 message DhcpRecord {
@@ -2546,7 +3034,7 @@ message SSHKeyValidationResponse {
 }
 
 message CredentialRequest {
-  string host_id = 1;  // UUID, IP address, host name or MAC address
+  string host_id = 1; // UUID, IP address, host name or MAC address
 }
 
 message CredentialResponse {
@@ -2611,8 +3099,7 @@ message SshTimeoutConfig {
 message SshRequest {
   // BMC Endpoint Request
   BmcEndpointRequest endpoint_request = 1;
-  // Optional SSH Timeout Configuration
-  optional SshTimeoutConfig timeout_config = 2;
+  reserved 2; // deprecated -- timeout_config
 }
 
 message CopyBfbToDpuRshimRequest {
@@ -2677,7 +3164,7 @@ message ManagedHostNetworkConfigResponse {
   // Remote ID. Used by DPU to update host's DHCP request with option 82.
   string remote_id = 15;
 
-  // IPv4 prefixes to be denied in the DPU ACL rules.
+  // IP prefixes to be denied in the DPU ACL rules.
   // This is an old field that was hijacked to hold
   // a combination of site_fabric_prefixes _and_ the
   // actual deny_prefixes.  We need to keep populating it
@@ -2688,10 +3175,10 @@ message ManagedHostNetworkConfigResponse {
   // Network monitor pinger type
   optional string dpu_network_pinger_type = 17;
 
-  // IPv4 prefixes to be denied in the DPU ACL rules.
+  // IP prefixes to be denied in the DPU ACL rules.
   repeated string deny_prefixes = 18;
 
-  // List of IPv4 prefixes (in CIDR notation) that are assigned for tenant
+  // List of IP prefixes (in CIDR notation) that are assigned for tenant
   // use within this site.
   repeated string site_fabric_prefixes = 19;
 
@@ -2753,6 +3240,34 @@ message ManagedHostNetworkConfigResponse {
   // All config related to traffic interception on
   // the DPU: intermediate bridging, additional VTEPs, etc.
   optional TrafficInterceptConfig traffic_intercept_config = 113;
+
+  // Route imports and tagging details for exports
+  // used by FNN configs.
+  // NOTE: This will replace internet_l3_vni and common_internal_route_target but could allow
+  //       common_internal_route_target to be renamed/repurposed as a site-level RT.
+  //       to become a site-level common route target.
+  //       This does _not_ replace additional_route_target_imports, which are global
+  //       imports
+  optional RoutingProfile routing_profile = 114;
+
+  // List of aggregate IP prefixes (in CIDR notation) that contain prefixes assigned
+  // to tenants so that they themselves can announce to the DPU.  E.g., BYOIP
+  repeated string  anycast_site_prefixes = 115;
+
+  // An ASN allocated for tenants to use
+  // when they peer with the DPU.
+  // If configured, the DPU will expect the host
+  // to peer with this ASN.  If left unset
+  // remote-as external will be used, allowing
+  // any ASN.
+  optional uint32 tenant_host_asn = 116;
+
+  // Due to limitations in Cumulus Linux route-leaking,
+  // some sites may require all VRFs to use the same VNI.
+  // Isolation is still possible via ACLs, and route-imports
+  // will still use the dynamically allocated VNI for deriving
+  // route-targets.
+  optional uint32 site_global_vpc_vni = 117;
 }
 
 message TrafficInterceptConfig {
@@ -2806,6 +3321,7 @@ message ManagedHostDpuExtensionServiceConfig {
   DpuExtensionServiceType service_type = 5;
   string data = 6;
   optional DpuExtensionServiceCredential credential = 7;
+  optional DpuExtensionServiceObservability observability = 8;
 }
 
 message ManagedHostQuarantineState {
@@ -2888,7 +3404,7 @@ message FlatInterfaceConfig {
   // then this value is set and specifies the virtual function ID that is configured
   // for this network interface.
   optional uint32 virtual_function_id = 6;
-  // A list of IPv4 prefixes that belong to this VPC. Note this may contain
+  // A list of IP prefixes that belong to this VPC. Note this may contain
   // the prefix from the network segment this interface is attached to (which
   // could be independently derived from the `gateway` field).
   repeated string vpc_prefixes = 7;
@@ -3079,18 +3595,18 @@ message LockdownStatusRequest {
   optional common.MachineId machine_id = 2;
 }
 
-message ForgeSetupStatusRequest {
+message MachineSetupStatusRequest {
   optional BmcEndpointRequest bmc_endpoint_request = 1;
   optional string machine_id = 2;
 }
 
-message ForgeSetupRequest {
+message MachineSetupRequest {
   optional BmcEndpointRequest bmc_endpoint_request = 1;
   optional string machine_id = 2;
   optional string boot_interface_mac = 3;
 }
 
-message ForgeSetupResponse {
+message MachineSetupResponse {
 }
 
 message SetDpuFirstBootOrderRequest {
@@ -3189,14 +3705,15 @@ message ForgeAgentControlRequest {
 
 message ForgeAgentControlResponse {
   enum Action {
-    NOOP = 0;       // No operation. Do nothing
-    RESET = 1;      // Wipe the machine, prepare for next tenant
-    DISCOVERY = 2;  // Run full discovery
-    REBUILD = 3;    // Future thingy
-    RETRY = 4;      // Machine needs more time to come in proper state. Retry again.
-    MEASURE = 5;    // Machine needs to send measurements for attestation.
-    LOGERROR = 6;   // Log error.
-    MACHINE_VALIDATION = 7;   // Machine validation.
+    NOOP = 0; // No operation. Do nothing
+    RESET = 1; // Wipe the machine, prepare for next tenant
+    DISCOVERY = 2; // Run full discovery
+    REBUILD = 3; // Future thingy
+    RETRY = 4; // Machine needs more time to come in proper state. Retry again.
+    MEASURE = 5; // Machine needs to send measurements for attestation.
+    LOGERROR = 6; // Log error.
+    MACHINE_VALIDATION = 7; // Machine validation.
+    MLX_ACTION = 8; // MlxAction for DPA NICs
   }
   Action action = 1;
 
@@ -3269,6 +3786,8 @@ message MachineDiscoveryResult {
   MachineCertificate machine_certificate = 2;
   // if attestation is enabled, this challenge will allow to bind attestation key to a particular TPM via its EK
   AttestKeyBindChallenge attest_key_challenge = 3;
+  // Interface id
+  common.MachineInterfaceId machine_interface_id = 4;
 }
 
 message MachineDiscoveryCompletedResponse {
@@ -3291,43 +3810,10 @@ message ForgeScoutErrorReport {
 message ForgeScoutErrorReportResult {
 }
 
-message VpcResourceState {
-  string state = 1;
-}
-
-message NetworkPrefixEvent {
-  int64 id = 1;
-
-  common.NetworkPrefixId network_prefix_id = 2;
-
-  VpcResourceAction event = 3;
-
-  google.protobuf.Timestamp time = 4;
-}
-
-message VpcResourceLeafEvent {
-  int64 id = 1;
-
-  common.UUID vpc_leaf_id = 2;
-
-  VpcResourceAction event = 3;
-
-  google.protobuf.Timestamp time = 4;
-}
-
-enum VpcResourceAction {
-  VPC_INITIALIZE = 0;
-  VPC_SUBMIT = 1;
-  VPC_ACCEPT = 2;
-  VPC_WAIT = 3;
-  VPC_FAIL = 4;
-  VPC_SUCCESS = 5;
-  VPC_RECOMMISSION = 6;
-}
-
 message PxeInstructionRequest {
   MachineArchitecture arch = 1;
   common.MachineInterfaceId interface_id = 2;
+  optional string product = 3;
 }
 
 message PxeInstructions {
@@ -3336,7 +3822,7 @@ message PxeInstructions {
 
 message CloudInitDiscoveryInstructions {
   MachineInterface machine_interface = 1;
-  Domain domain = 2;
+  PxeDomain domain = 2;
   optional string hbn_reps = 3;
   optional string hbn_sfs = 4;
   optional string vf_intercept_bridge_name = 5;
@@ -3429,11 +3915,6 @@ message DpuExtensionServiceComponent {
   string status = 4;
 }
 
-message HardwareHealthReport {
-  common.MachineId machine_id = 1;
-  health.HealthReport report = 2;
-}
-
 message OptionalHealthReport {
   optional health.HealthReport report = 1;
 }
@@ -3457,6 +3938,25 @@ message HealthReportOverride {
 message InsertHealthReportOverrideRequest {
   common.MachineId machine_id = 1;
   HealthReportOverride override = 2;
+}
+
+// Request to insert a health report override for a Rack.
+// Same as InsertHealthReportOverrideRequest but with rack_id instead of machine_id.
+message InsertRackHealthReportOverrideRequest {
+  common.RackId rack_id = 1;
+  HealthReportOverride override = 2;
+}
+
+// Request to remove a health report override for a Rack.
+// Same as RemoveHealthReportOverrideRequest but with rack_id instead of machine_id.
+message RemoveRackHealthReportOverrideRequest {
+  common.RackId rack_id = 1;
+  string source = 2;
+}
+
+// Request to list health report overrides for a Rack.
+message ListRackHealthReportOverridesRequest {
+  optional common.RackId rack_id = 1;
 }
 
 message ListHealthReportOverrideResponse {
@@ -3533,13 +4033,14 @@ message Tenant {
   Metadata metadata = 2;
   // this string is used to verify that the client has the most updated "view" of a keyset when attempting to modify it
   string version = 3;
+  optional RoutingProfileType routing_profile_type = 4;
 }
 
 message CreateTenantRequest {
   // this organization ID must be globally unique
   string organization_id = 1;
   Metadata metadata = 2;
-
+  optional RoutingProfileType routing_profile_type = 3;
 }
 message CreateTenantResponse {
   Tenant tenant = 1;
@@ -3552,6 +4053,9 @@ message UpdateTenantRequest {
   // if this field is set and non-empty, the request will only update the tenant if the version matches the server's view,
   // otherwise it will return a concurrency related error.
   optional string if_version_match = 3;
+
+  // Updating will only be allowed if the tenant has no active VPCs
+  optional RoutingProfileType routing_profile_type = 4;
 }
 message UpdateTenantResponse {
   // the updated tenant after modification
@@ -3602,20 +4106,6 @@ message CreateTenantKeysetResponse {
   TenantKeyset keyset = 1;
 }
 
-message FindTenantKeysetRequest {
-  // The tenant organization for which to list keysets. If this is empty, the call will
-  // return the key sets for all tenant organizations.
-  optional string organization_id = 1;
-  // The keyset ID within the tenant organization. If this is not empty, the call will
-  // return only the content of a single keyset if this exists.
-  // Otherwise all keysets for the selected tenant will be listed.
-  optional string keyset_id = 2;
-  // Whether to include the actual keys in the response. By default only the names
-  // of the keysets will be returned and their versions. The keys will be omitted
-  // since it is assumed that the caller (Forge Cloud API) is already aware of them.
-  bool include_key_data = 3;
-
-}
 message TenantKeySetList {
   repeated TenantKeyset keyset = 1;
 }
@@ -3673,6 +4163,7 @@ message ValidateTenantPublicKeyResponse {
 }
 
 message ListResourcePoolsRequest {
+  optional bool auto_assignable = 1;
 }
 message ResourcePools {
   repeated ResourcePool pools = 1;
@@ -3702,6 +4193,8 @@ message Range {
 enum ResourcePoolType {
   Integer = 0;
   Ipv4 = 1;
+  Ipv6 = 2;
+  Ipv6Prefix = 3;
 }
 
 message MigrateVpcVniResponse {
@@ -3761,6 +4254,7 @@ enum UuidType {
   UuidTypeVpc = 3;
   UuidTypeDomain = 4;
   UuidTypeDpaInterfaceId = 5;
+  UuidTypeComputeAllocationId = 6;
 }
 
 message IdentifyMacRequest {
@@ -3777,6 +4271,7 @@ enum MacOwner {
   MacOwnerMachineInterface = 0;
   MacOwnerExploredEndpoint = 1;
   MacOwnerExpectedMachine = 2;
+  MacOwnerDpaInterface = 3;
 }
 
 message IdentifySerialRequest {
@@ -3815,13 +4310,13 @@ message DpuReprovisioningListRequest {
 
 message DpuReprovisioningListResponse {
   message DpuReprovisioningListItem {
-    common.MachineId id = 1;  // Dpu Machine ID
-    string state = 2;  // ManagedHost state
-    string initiator = 3;  // Who requested this reprovisioning.
-    google.protobuf.Timestamp requested_at = 4;  // When reprovisioning was requested.
+    common.MachineId id = 1; // Dpu Machine ID
+    string state = 2; // ManagedHost state
+    string initiator = 3; // Who requested this reprovisioning.
+    google.protobuf.Timestamp requested_at = 4; // When reprovisioning was requested.
     bool update_firmware = 5;
     optional google.protobuf.Timestamp initiated_at = 6;  // When reprovisioning is started.
-    bool user_approval_received = 7;  // User approval received or not if needed
+    bool user_approval_received = 7; // User approval received or not if needed
   }
   repeated DpuReprovisioningListItem dpus = 1;
 }
@@ -3842,11 +4337,11 @@ message HostReprovisioningListRequest {
 message HostReprovisioningListResponse {
   message HostReprovisioningListItem {
     common.MachineId id = 1; // Machine ID
-    string state = 2;  // ManagedHost state
-    string initiator = 3;  // Who requested this reprovisioning.
-    google.protobuf.Timestamp requested_at = 4;  // When reprovisioning was requested.
+    string state = 2; // ManagedHost state
+    string initiator = 3; // Who requested this reprovisioning.
+    google.protobuf.Timestamp requested_at = 4; // When reprovisioning was requested.
     optional google.protobuf.Timestamp initiated_at = 5;  // When reprovisioning is started.
-    bool user_approval_received = 6;  // User approval received or not if needed
+    bool user_approval_received = 6; // User approval received or not if needed
   }
   repeated HostReprovisioningListItem hosts = 1;
 }
@@ -3897,6 +4392,7 @@ enum IpType {
   // table that have been added via forge-admin-cli calls. Their
   // DB records specifically say their source type is `admin`.
   IpTypeRouteServerFromAdminApi = 10;
+  IpTypeDpaInterface = 11;
 }
 
 message MachineBootOverride {
@@ -4003,7 +4499,10 @@ enum RouteServerSourceType {
 }
 
 message SetHostUefiPasswordRequest {
+  // Deprecated: use machine_query instead
   common.MachineId host_id = 1;
+  // UUID, IP address, hostname or MAC address
+  optional string machine_query = 2;
 }
 
 message SetHostUefiPasswordResponse {
@@ -4011,7 +4510,10 @@ message SetHostUefiPasswordResponse {
 }
 
 message ClearHostUefiPasswordRequest {
+  // Deprecated: use machine_query instead
   common.MachineId host_id = 1;
+  // UUID, IP address, hostname or MAC address
+  optional string machine_query = 2;
 }
 
 message ClearHostUefiPasswordResponse {
@@ -4077,6 +4579,15 @@ message DeleteOsImageRequest {
 message DeleteOsImageResponse {
 }
 
+
+message ExpectedHostNic {
+  string mac_address = 1;
+  optional string nic_type = 2;
+  optional string fixed_ip = 3;
+  optional string fixed_mask = 4;
+  optional string fixed_gateway = 5;
+}
+
 message ExpectedMachine {
   string bmc_mac_address = 1;
   string bmc_username = 2;
@@ -4088,6 +4599,12 @@ message ExpectedMachine {
   optional string sku_id =  7;
   // Unique identifier for the expected machine. When omitted, server generates one.
   optional common.UUID id = 8;
+  repeated ExpectedHostNic host_nics = 9;
+  optional common.RackId rack_id = 10;
+  optional bool default_pause_ingestion_and_poweron = 11;
+  // deprecated
+  bool dpf_enabled = 12 [deprecated = true];
+  optional bool is_dpf_enabled = 13;
 }
 
 message ExpectedMachineRequest {
@@ -4135,77 +4652,6 @@ message ExpectedMachineOperationResult {
 message BatchExpectedMachineOperationResponse {
   // Individual results for each ExpectedMachine
   repeated ExpectedMachineOperationResult results = 1;
-}
-
-// Expected Power Shelf messages
-message ExpectedPowerShelf {
-  string bmc_mac_address = 1;
-  string bmc_username = 2;
-  string bmc_password = 3;
-  string shelf_serial_number = 4;
-  string ip_address = 5;
-  // Metadata that will automatically get associated with a newly created PowerShelf
-  Metadata metadata = 6;
-  optional string rack_id = 7;
-  // Unique identifier for the expected power shelf. When omitted, server generates one.
-  optional common.UUID id = 8;
-}
-
-message ExpectedPowerShelfRequest {
-  string bmc_mac_address = 1;
-  // Optional unique identifier for selecting an expected power shelf.
-  optional common.UUID id = 2;
-}
-
-message ExpectedPowerShelfList {
-  repeated ExpectedPowerShelf expected_power_shelves = 1;
-}
-
-message LinkedExpectedPowerShelfList {
-  repeated LinkedExpectedPowerShelf expected_power_shelves = 1;
-}
-
-message LinkedExpectedPowerShelf {
-  string shelf_serial_number = 1;
-  string bmc_mac_address = 2;
-  optional common.PowerShelfId power_shelf_id = 3;
-  optional common.UUID expected_power_shelf_id = 4;
-}
-
-// Expected Switch messages
-message ExpectedSwitch {
-  string bmc_mac_address = 1;
-  string bmc_username = 2;
-  string bmc_password = 3;
-  string switch_serial_number = 4;
-  // Metadata that will automatically get associated with a newly created Switch
-  Metadata metadata = 5;
-  optional string rack_id = 6;
-  optional string nvos_username = 7;
-  optional string nvos_password = 8;
-  // Unique identifier for the expected switch. When omitted, server generates one.
-  optional common.UUID id = 9;
-}
-
-message ExpectedSwitchRequest {
-  string bmc_mac_address = 1;
-  // Optional unique identifier for selecting an expected switch.
-  optional common.UUID id = 2;
-}
-
-message ExpectedSwitchList {
-  repeated ExpectedSwitch expected_switches = 1;
-}
-
-message LinkedExpectedSwitchList {
-  repeated LinkedExpectedSwitch expected_switches = 1;
-}
-
-message LinkedExpectedSwitch {
-  string switch_serial_number = 1;
-  string bmc_mac_address = 2;
-  optional common.SwitchId switch_id = 3;
-  optional common.UUID expected_switch_id = 4;
 }
 
 message MachineRebootCompletedResponse {
@@ -4260,7 +4706,7 @@ message MachineValidationGetRequest {
   optional common.UUID validation_id = 3;
 }
 
-// WARNING: Site proto declares these enums inside `MachineValidationStatus`. This is not compilable to protobuf so we move the enums to the top level.
+// WARNING: Site proto declares these enums inside `MachineValidationStatus`. This is not compilable to protobuf so we move the enums to the top level
 enum MachineValidationStarted {
   Started = 0;
 }
@@ -4628,11 +5074,12 @@ message InstanceTypeAttributes {
 // as a pool, and the desired capabilities of an InstanceType
 // define which machines are allowed in the pool.
 message InstanceType {
-  string id                         = 1;
-  InstanceTypeAttributes attributes = 2;
-  string version                    = 3;
-  Metadata metadata                 = 4;
-  optional string created_at        = 5;
+  string id                                             = 1;
+  InstanceTypeAttributes attributes                     = 2;
+  string version                                        = 3;
+  Metadata metadata                                     = 4;
+  optional string created_at                            = 5;
+  optional InstanceTypeAllocationStats allocation_stats = 6;
 }
 
 // These match the current set of distinct
@@ -4687,7 +5134,19 @@ message FindInstanceTypeIdsResponse {
 }
 
 message FindInstanceTypesByIdsRequest {
-  repeated string instance_type_ids = 1;
+  repeated string instance_type_ids        = 1;
+
+  // Used to filter by tenant allocations.
+  // In the future, this value would be ignored if the
+  // caller is a tenant and the org of the tenant would
+  // be used automatically by the handler. If this option
+  // is used and there are no allocations associated with
+  // the tenant org, no results will be returned.
+
+  optional string tenant_organization_id = 2;
+  // This option would trigger additional queries to calculate
+  // allocation stats.
+  bool include_allocation_stats = 3;
 }
 
 message FindInstanceTypesByIdsResponse {
@@ -5141,6 +5600,11 @@ message SkuMachinePair {
   bool force = 3;
 }
 
+message RemoveSkuRequest {
+  common.MachineId machine_id = 1;
+  bool force = 2;
+}
+
 message SkuList {
   repeated Sku skus = 1;
 }
@@ -5179,15 +5643,23 @@ message DpaInterface {
   string network_config = 11;
   string network_config_version = 12;
 
-  repeated DpaInterfaceStateHistory history = 13;
+  repeated DpaInterfaceStateHistoryRecord history = 13;
 
   google.protobuf.Timestamp last_hb_time = 14;
+
+  string card_state = 15;
+  string pci_name = 16;
+
+  string underlay_ip = 17;
+  string overlay_ip = 18;
 }
 
 
 message DpaInterfaceCreationRequest {
   common.MachineId machine_id = 1;
   string mac_addr = 2;
+  string device_type = 3;
+  string pci_name = 4;
 }
 
 message DpaInterfaceIdList {
@@ -5203,7 +5675,7 @@ message DpaInterfaceList {
   repeated DpaInterface interfaces = 1;
 }
 
-message DpaInterfaceStateHistory {
+message DpaInterfaceStateHistoryRecord {
   string state = 1;
   string version = 2;
   google.protobuf.Timestamp time = 3;
@@ -5257,6 +5729,327 @@ message PowerOptions {
 
 message PowerOptionResponse {
   repeated PowerOptions response = 1;
+}
+
+
+
+message ComputeAllocationAttributes {
+  string instance_type_id = 1; // The source of the compute resources
+
+  // The number of instances for this requested instance type allocated
+  // for the tenant.  The total for all allocations of an instance type
+  // cannot exceed the number of machines associated with the instance
+  // type.  Still, it's possible for an allocation to be unable to
+  // satisfy an allocation if associated machines are in failed states
+  // that prevent them from being allocated.
+  uint32 count            = 2;
+}
+
+
+message ComputeAllocation {
+  common.ComputeAllocationId id          = 1;
+  string tenant_organization_id          = 2;
+  ComputeAllocationAttributes attributes = 3;
+  string version                         = 4;
+  Metadata metadata                      = 5;
+  optional string created_at             = 6;
+  optional string created_by             = 7;
+  optional string updated_by             = 8;
+}
+
+message CreateComputeAllocationRequest {
+  optional common.ComputeAllocationId id = 1;
+  Metadata metadata                      = 2;
+  string tenant_organization_id          = 3; // Allocations are created by provider admins for tenants, but only providers can update them.
+  ComputeAllocationAttributes attributes = 4;
+  optional string created_by             = 5;
+}
+
+message CreateComputeAllocationResponse {
+  ComputeAllocation allocation = 1;
+}
+
+// Tenants and providers are both allowed to call the related endpoint.
+// A provider could filter on `tenant_organization_id`. In the
+// future, the field would be ignored if a tenant attempted to filter
+// on the org and the handler would automatically filter by the tenant
+// org of the caller.
+message FindComputeAllocationIdsRequest {
+  // Options will be AND'ed
+  optional string name                   = 1;
+  optional string tenant_organization_id = 2;
+  optional string instance_type_id       = 3;
+};
+
+message FindComputeAllocationIdsResponse {
+  repeated common.ComputeAllocationId ids = 1;
+}
+
+// Tenants and providers are both allowed to call this endpoint.
+// In the future, the handler would automatically filter by the
+// tenant org of the caller.
+message FindComputeAllocationsByIdsRequest {
+  repeated common.ComputeAllocationId ids = 1;
+}
+
+message FindComputeAllocationsByIdsResponse {
+  repeated ComputeAllocation allocations = 1;
+}
+
+message UpdateComputeAllocationResponse {
+  ComputeAllocation allocation = 1;
+}
+
+message UpdateComputeAllocationRequest {
+  common.ComputeAllocationId id          = 1;
+  string tenant_organization_id          = 2;
+  Metadata metadata                      = 3;
+  ComputeAllocationAttributes attributes = 4;
+  optional string if_version_match       = 5;
+  optional string updated_by             = 6;
+}
+
+message DeleteComputeAllocationRequest {
+  common.ComputeAllocationId id = 1;
+  string tenant_organization_id = 2;
+}
+
+message DeleteComputeAllocationResponse {
+}
+
+// For use with the existing InstanceType message
+// to include allocation stats when requested in
+// FindInstanceTypesByIdsRequest
+message InstanceTypeAllocationStats {
+  // The sum of all allocations for the instance type
+  uint32 max_allocatable = 1;
+
+  // The number of active instances for an instance type
+  uint32 used            = 2;
+
+  // The number of additional instances that a user _should_
+  // be able to create.
+  uint32 unused          = 3;
+
+  // The number of additional instances that a user can
+  // _actually_ create after filtering out all unused
+  // machines in bad states
+  uint32 unused_usable   = 4;
+}
+
+message GetRackRequest {
+  optional string id = 1;
+}
+
+message GetRackResponse {
+  repeated Rack rack = 1;
+}
+
+message Rack {
+  common.RackId id = 1;
+  string rack_state = 2;
+  repeated string expected_compute_trays = 3;
+  repeated string expected_power_shelves = 4;
+  repeated string expected_nvlink_switches = 5;
+  repeated common.MachineId compute_trays = 6;
+  repeated common.PowerShelfId power_shelves = 7;
+  // repeated common.NvlinkSwitchId nvlink_switches = 8;
+  google.protobuf.Timestamp created = 9;
+  google.protobuf.Timestamp updated = 10;
+  google.protobuf.Timestamp deleted = 11;
+  health.HealthReport health = 12;
+  repeated HealthOverrideOrigin health_overrides = 13;
+}
+
+message RackStateHistoryRecord {
+  string state = 1;
+  string version = 2;
+  google.protobuf.Timestamp time = 3;
+}
+
+message RackStateHistoriesRequest {
+  repeated common.RackId rack_ids = 1;
+}
+
+message RackStateHistories {
+  map<string, RackStateHistoryRecords> histories = 1;
+}
+
+message RackStateHistoryRecords {
+  repeated RackStateHistoryRecord records = 1;
+}
+
+message DeleteRackRequest {
+  string id = 1;
+}
+
+// put some sample rack manager commands in for now
+enum RackManagerForgeCmd {
+  InventoryGet = 0;
+  RemoveNode = 1;
+  GetPoweronOrder = 2;
+  GetPowerState = 3;
+  GetFirmwareInventory = 4;
+  GetAvailableFwImages = 5;
+  GetBkcFiles = 6;
+  CheckBkcCompliance = 7;
+}
+
+message RackManagerForgeRequest {
+  RackManagerForgeCmd cmd = 1;
+  optional string node_id = 2;
+}
+
+message RackManagerForgeResponse {
+  optional string json_result = 1;
+}
+message MachineNVLinkInfo {
+  common.NVLinkDomainId domain_uuid = 1;
+  repeated NVLinkGpu gpus = 2;
+}
+
+message UpdateMachineNvLinkInfoRequest {
+  common.MachineId machine_id = 1;
+  MachineNVLinkInfo nvlink_info = 2;
+}
+
+message NVLinkGpu {
+  string nmx_m_id = 1;
+  int32 tray_index = 2;
+  int32 slot_id = 3;
+  int32 device_id = 4;
+  uint64 guid = 5;
+}
+
+message MachineNVLinkStatusObservation {
+  repeated MachineNVLinkGpuStatusObservation gpu_status = 1;
+}
+
+message MachineNVLinkGpuStatusObservation {
+  string gpu_id = 1;
+  optional common.NVLinkPartitionId partition_id = 2;
+  optional common.NVLinkLogicalPartitionId logical_partition_id = 3;
+  uint32 device_instance = 4;
+  common.NVLinkDomainId domain_id = 5;
+  uint64 guid = 6;
+}
+
+message NmxmBrowseRequest {
+  string path = 1;
+}
+
+message NmxmBrowseResponse {
+  // Response body
+  string body = 1;
+  // Response status code
+  int32 code = 2;
+  // Response headers
+  map<string, string> headers = 3;
+}
+
+// Describe an NVLink based Partition configuration and status
+message NVLinkPartition {
+  common.NVLinkPartitionId id = 1;
+  string name = 2;
+  string nmx_m_id = 3;
+  common.NVLinkDomainId domain_uuid = 4;
+  common.NVLinkLogicalPartitionId logical_partition_id = 5;
+}
+
+message NVLinkPartitionList {
+  repeated NVLinkPartition partitions = 1;
+}
+
+message NVLinkPartitionSearchConfig {
+  bool include_history = 1;
+}
+
+message NVLinkPartitionQuery {
+  common.UUID id = 1;
+  optional NVLinkPartitionSearchConfig search_config = 2;
+}
+
+message NVLinkPartitionSearchFilter {
+  optional string tenant_organization_id = 1;
+  optional string name = 2;
+}
+
+message NVLinkPartitionsByIdsRequest {
+  repeated common.NVLinkPartitionId partition_ids = 1;
+  bool include_history = 2;
+}
+
+message NVLinkPartitionIdList {
+  repeated common.NVLinkPartitionId partition_ids = 1;
+}
+
+message NVLinkFabricSearchFilter {
+}
+
+// Describe the desired configuration of an Logical Partition
+message NVLinkLogicalPartitionConfig {
+  Metadata metadata = 1;
+  // The ID of tenant that NVLPartition belong to
+  string tenant_organization_id = 2;
+}
+
+// Describe the status and applied configuration of an Logical Partition
+message NVLinkLogicalPartitionStatus {
+  // Provisioning state of this partition
+  TenantState state = 1;
+}
+
+// Describe a Logical Partition configuration and status
+message NVLinkLogicalPartition {
+  common.NVLinkLogicalPartitionId id = 1;
+  NVLinkLogicalPartitionConfig config = 2;
+
+  string config_version = 3;
+
+  NVLinkLogicalPartitionStatus status = 4;
+
+  google.protobuf.Timestamp created = 5;
+}
+
+message NVLinkLogicalPartitionList {
+  repeated NVLinkLogicalPartition partitions = 1;
+}
+
+message NVLinkLogicalPartitionCreationRequest {
+  NVLinkLogicalPartitionConfig config = 1;
+  // Desired ID for this Partition. If the ID is not provided, Forge will generate
+  // a random ID.
+  // The Partition ID must be unique within the Forge site.
+  optional common.NVLinkLogicalPartitionId id = 2;
+}
+
+message NVLinkLogicalPartitionDeletionRequest {
+  common.NVLinkLogicalPartitionId id = 1;
+}
+
+message NVLinkLogicalPartitionDeletionResult {
+}
+
+message NVLinkLogicalPartitionSearchFilter {
+  optional string name = 1;
+}
+
+message NVLinkLogicalPartitionsByIdsRequest {
+  repeated common.NVLinkLogicalPartitionId partition_ids = 1;
+  bool include_history = 2;
+}
+
+message NVLinkLogicalPartitionIdList {
+  repeated common.NVLinkLogicalPartitionId partition_ids = 1;
+}
+
+message NVLinkLogicalPartitionUpdateRequest {
+  common.NVLinkLogicalPartitionId id = 1;
+  NVLinkLogicalPartitionConfig config = 2;
+  optional string if_version_match = 3;
+}
+
+message NVLinkLogicalPartitionUpdateResult {
 }
 
 // Must provide either machine_id or ip/mac pair
@@ -5434,6 +6227,7 @@ message DpuExtensionServiceVersionInfo {
   string data = 2;
   bool has_credential = 3;
   string created = 4;
+  optional DpuExtensionServiceObservability observability = 5;
 }
 
 message DpuExtensionService {
@@ -5473,6 +6267,10 @@ message CreateDpuExtensionServiceRequest {
   // Versioned extension service spec
   string data = 6;
   optional DpuExtensionServiceCredential credential = 7;
+
+  // Metrics configuration to be added to the existing
+  // metrics collection service that runs on the DPU.
+  optional DpuExtensionServiceObservability observability = 8;
 }
 
 message UpdateDpuExtensionServiceRequest {
@@ -5490,6 +6288,10 @@ message UpdateDpuExtensionServiceRequest {
   // If a concurrent update changed the site configuration, the API will return
   // a `ConcurrentModificationError`.
   optional int32 if_version_ctr_match = 6;
+
+  // Metrics configuration to be added to the existing
+  // metrics collection service that runs on the DPU.
+  optional DpuExtensionServiceObservability observability = 7;
 }
 
 // If versions is empty, request to delete the whole service;
@@ -5557,118 +6359,379 @@ message InstanceDpuExtensionServiceInfo {
   optional string removed = 4; // Signals that this service is being removed from instance config and is terminating
 }
 
-message MachineNVLinkInfo {
-  common.NVLinkDomainId domain_uuid = 1;
-  repeated NVLinkGpu gpus = 2;
+message DpuExtensionServiceObservabilityConfigPrometheus {
+  uint32 scrape_interval_seconds = 1;
+  string endpoint                = 2;
 }
 
-message NVLinkGpu {
-  string nmx_m_id = 1;
-  int32 tray_index = 2;
-  int32 slot_id = 3;
-  int32 device_id = 4;
-  int32 guid = 5;
+message DpuExtensionServiceObservabilityConfigLogging {
+  string path = 1;
 }
 
-// Describe an NVLink based Partition configuration and status
-message NVLinkPartition {
-  common.NVLinkPartitionId id = 1;
+message DpuExtensionServiceObservabilityConfig {
+  // The name of service being monitored OR the name of
+  // the portion of the service being monitored.
+  // This will default to the name of the service.
+  optional string name = 1;
+
+  oneof config {
+    DpuExtensionServiceObservabilityConfigPrometheus prometheus = 2;
+    DpuExtensionServiceObservabilityConfigLogging    logging    = 3;
+  }
+}
+
+
+message DpuExtensionServiceObservability {
+  repeated DpuExtensionServiceObservabilityConfig configs = 1;
+}
+
+// ScoutStreamApiBoundMessage is sent as part of scout initiating a new
+// streaming gRPC connection with carbide-api. The agent will connect
+// and sent an InitRequest, and then wait for control messages from
+// the API. For example, the API will send down a MlxDeviceLockdownStatusRequest,
+// and scout will populate an MlxDeviceLockdownStatusResponse and send
+// it back over the stream.
+message ScoutStreamApiBoundMessage {
+  // flow_uuid is used to track the oneshot channel flow unique to this
+  // specific request/response flow over the streaming connection. The
+  // ScoutStreamScoutBoundMessage populates the initial flow_uuid, and this must
+  // populate the same UUID.
+  common.UUID flow_uuid = 1;
+
+  oneof payload {
+    // ScoutStreamInitRequest is sent as the first message to establish
+    // a connection between a scout agent and carbide-api. After this,
+    // carbide-api will populate a "request" within a ScoutStreamScoutBoundMessage,
+    // send it to the scout agent, and expect the scout agent to respond
+    // with a "response" from the oneof ScoutStreamApiBoundMessage options below.
+    //
+    // For information about all other messages, see the docstrings
+    // associated with each message type.
+    ScoutStreamInitRequest init = 2;
+    mlx_device.MlxDeviceLockdownResponse mlx_device_lockdown_response = 3;
+    mlx_device.MlxDeviceProfileSyncResponse mlx_device_profile_sync_response = 4;
+    mlx_device.MlxDeviceProfileCompareResponse mlx_device_profile_compare_response = 5;
+    mlx_device.MlxDeviceInfoDeviceResponse mlx_device_info_device_response = 6;
+    mlx_device.MlxDeviceInfoReportResponse mlx_device_info_report_response = 7;
+    mlx_device.MlxDeviceRegistryListResponse mlx_device_registry_list_response = 8;
+    mlx_device.MlxDeviceRegistryShowResponse mlx_device_registry_show_response = 9;
+    mlx_device.MlxDeviceConfigQueryResponse mlx_device_config_query_response = 10;
+    mlx_device.MlxDeviceConfigSetResponse mlx_device_config_set_response = 11;
+    mlx_device.MlxDeviceConfigSyncResponse mlx_device_config_sync_response = 12;
+    mlx_device.MlxDeviceConfigCompareResponse mlx_device_config_compare_response = 13;
+    ScoutStreamAgentPingResponse scout_stream_agent_ping_response = 14;
+  }
+}
+
+// ScoutStreamScoutBoundMessage contains the requests from carbide-api
+// that a connected scout agent should process and respond to,
+// populating a response from one of the ScoutStreamApiBoundMessages.
+message ScoutStreamScoutBoundMessage {
+  // flow_uuid is used to track the oneshot channel flow unique to this
+  // specific request/response flow over the streaming connection. The
+  // ScoutStreamApiBoundMessage provided the value which is populated here.
+  common.UUID flow_uuid = 1;
+
+  // For information about each message type, see the docstrings
+  // associated with the corresponding type.
+  oneof payload {
+    mlx_device.MlxDeviceLockdownLockRequest mlx_device_lockdown_lock_request = 2;
+    mlx_device.MlxDeviceLockdownUnlockRequest mlx_device_lockdown_unlock_request = 3;
+    mlx_device.MlxDeviceLockdownStatusRequest mlx_device_lockdown_status_request = 4;
+    mlx_device.MlxDeviceProfileSyncRequest mlx_device_profile_sync_request = 5;
+    mlx_device.MlxDeviceProfileCompareRequest mlx_device_profile_compare_request = 6;
+    mlx_device.MlxDeviceInfoDeviceRequest mlx_device_info_device_request = 7;
+    mlx_device.MlxDeviceInfoReportRequest mlx_device_info_report_request = 8;
+    mlx_device.MlxDeviceRegistryListRequest mlx_device_registry_list_request = 9;
+    mlx_device.MlxDeviceRegistryShowRequest mlx_device_registry_show_request = 10;
+    mlx_device.MlxDeviceConfigQueryRequest mlx_device_config_query_request = 11;
+    mlx_device.MlxDeviceConfigSetRequest mlx_device_config_set_request = 12;
+    mlx_device.MlxDeviceConfigSyncRequest mlx_device_config_sync_request = 13;
+    mlx_device.MlxDeviceConfigCompareRequest mlx_device_config_compare_request = 14;
+    ScoutStreamAgentPingRequest scout_stream_agent_ping_request = 15;
+  }
+}
+
+// ScoutStreamInitRequest is sent by the scout agent to identify itself
+// and establish a connection to carbide-api.
+message ScoutStreamInitRequest {
+  common.MachineId machine_id = 1;
+}
+
+// ScoutStreamShowConnectionsRequest is sent to request information
+// about all established scout agent connections.
+message ScoutStreamShowConnectionsRequest {
+}
+
+// ShowConnectionsResponse is the response containing active
+// scout agent connection information.
+message ScoutStreamShowConnectionsResponse {
+  repeated ScoutStreamConnectionInfo scout_stream_connections = 1;
+}
+
+// ScoutStreamDisconnectRequest is sent to request closing the
+// ScoutStream connection of a given machine ID.
+message ScoutStreamDisconnectRequest {
+  common.MachineId machine_id = 1;
+}
+
+// ScoutStreamDisconnectResponse is a response to an attempt
+// to disconnect a machine's ScoutStream connection.
+message ScoutStreamDisconnectResponse {
+  common.MachineId machine_id = 1;
+  bool success = 2;
+}
+
+// ScoutStreamAdminPingRequest is sent to check the liveliness
+// of the scout agent by attempting to get back a pong. This
+// comes from an administrative caller.
+message ScoutStreamAdminPingRequest {
+  common.MachineId machine_id = 1;
+}
+
+// ScoutStreamAdminPingResponse is hopefully a response from
+// the scout agent to the administrative caller.
+message ScoutStreamAdminPingResponse {
+  string pong = 1;
+}
+
+// ScoutStreamAgentPingRequest is sent to check the liveliness
+// of the scout agent by attempting to get back a pong. This
+// comes from the API -> scout.
+message ScoutStreamAgentPingRequest {
+}
+
+// ScoutStreamAgentPingResponse is hopefully a response from
+// the scout agent. This is from scout -> API.
+message ScoutStreamAgentPingResponse {
+  oneof reply {
+    string pong = 1;
+    ScoutStreamError error = 2;
+  }
+}
+
+// ScoutStreamConnectionInfo contains information about an
+// active scout agent connection.
+message ScoutStreamConnectionInfo {
+  common.MachineId machine_id = 1;
+  // connected_at contains an RFC3339 timestamp
+  // showing when the scout agent first established a connection.
+  string connected_at = 2;
+  // uptime_seconds is just a convenience field with
+  // the number of seconds the scout agent has been connected.
+  uint64 uptime_seconds = 3;
+}
+
+// ScoutStreamError is a mechanism to send an error back over the stream,
+// since you can't send status errors over established bidirectional
+// streams.
+message ScoutStreamError {
+  ScoutStreamErrorStatus status = 1;
+  string message = 2;
+}
+
+// ScoutStreamErrorStatus is an internal code to set to help
+// with troubleshooting and debugging.
+enum ScoutStreamErrorStatus {
+  SCOUT_STREAM_ERROR_STATUS_INTERNAL = 0;
+}
+
+
+enum RoutingProfileType {
+  ROUTING_PROFILE_TYPE_EXTERNAL            = 0; // Default to least privileged
+  ROUTING_PROFILE_TYPE_ADMIN               = 1;
+  ROUTING_PROFILE_TYPE_INTERNAL            = 2;
+  ROUTING_PROFILE_TYPE_PRIVILEGED_INTERNAL = 3;
+  ROUTING_PROFILE_TYPE_MAINTENANCE         = 4;
+}
+
+message RoutingProfile {
+  repeated common.RouteTarget route_target_imports     = 1;
+  repeated common.RouteTarget route_targets_on_exports = 2;
+}
+
+// ============================================================================
+// LEGACY DNS/DOMAIN TYPES - DEPRECATED
+// These types are maintained for backward compatibility
+// New code should use the types defined in dns.proto
+// TODO : Remove these types after migration is complete
+// ============================================================================
+
+// DEPRECATED: Use dns.Domain instead
+message DomainLegacy {
+  common.DomainId id = 1;
   string name = 2;
-  string nmx_m_id = 3;
-  common.NVLinkDomainId domain_uuid = 4;
-  common.NVLinkLogicalPartitionId logical_partition_id = 5;
+  google.protobuf.Timestamp created = 3;
+  google.protobuf.Timestamp updated = 4;
+  google.protobuf.Timestamp deleted = 5;
 }
 
-message NVLinkPartitionList {
-  repeated NVLinkPartition partitions = 1;
+// DEPRECATED: Use dns.DomainList instead
+message DomainListLegacy {
+  repeated DomainLegacy domains = 1;
 }
 
-message NVLinkPartitionSearchConfig {
-  bool include_history = 1;
+// DEPRECATED: Use dns.DomainDeletionRequest instead
+message DomainDeletionLegacy {
+  common.DomainId id = 1;
 }
 
-message NVLinkPartitionQuery {
-  common.UUID id = 1;
-  optional NVLinkPartitionSearchConfig search_config = 2;
+// DEPRECATED: Use dns.DomainDeletionResult instead
+message DomainDeletionResultLegacy {
+
 }
 
-message NVLinkPartitionSearchFilter {
-  optional string tenant_organization_id = 1;
+// DEPRECATED: Use dns.DomainSearchQuery instead
+message DomainSearchQueryLegacy {
+  optional common.DomainId id = 1;
   optional string name = 2;
 }
 
-message NVLinkPartitionsByIdsRequest {
-  repeated common.NVLinkPartitionId partition_ids = 1;
-  bool include_history = 2;
+// Temporary wrapper around both domain types while we transition
+// TODO: Remove after migration is complete
+message PxeDomain {
+  oneof domain {
+    dns.Domain new_domain = 1;
+    Domain legacy_domain = 2;
+  }
 }
 
-message NVLinkPartitionIdList {
-  repeated common.NVLinkPartitionId partition_ids = 1;
+
+message MachinePositionQuery {
+  repeated common.MachineId machine_ids = 1;
 }
 
-message NVLinkFabricSearchFilter {
+message MachinePositionInfoList {
+  repeated MachinePositionInfo machine_position_info = 1;
 }
 
-// Describe the desired configuration of an Logical Partition
-message NVLinkLogicalPartitionConfig {
-  Metadata metadata = 1;
-  // The ID of tenant that NVLPartition belong to
-  string tenant_organization_id = 2;
+message MachinePositionInfo {
+  common.MachineId machine_id = 1;
+  optional int32 physical_slot_number = 2;
+  optional int32 compute_tray_index = 3;
+  optional int32 topology_id = 4;
+  optional int32 revision_id = 5;
+  optional common.SwitchId switch_id = 6;
+  optional common.PowerShelfId power_shelf_id = 7;
 }
 
-// Describe the status and applied configuration of an Logical Partition
-message NVLinkLogicalPartitionStatus {
-  // Provisioning state of this partition
-  TenantState state = 1;
+// Rack Firmware Management Messages
+
+message RackFirmware {
+  string id = 1;
+  string config_json = 2;
+  bool available = 3;
+  string created = 4;
+  string updated = 5;
+  string parsed_components = 6; // JSON string of firmware lookup table
 }
 
-// Describe a Logical Partition configuration and status
-message NVLinkLogicalPartition {
-  common.NVLinkLogicalPartitionId id = 1;
-  NVLinkLogicalPartitionConfig config = 2;
-
-  string config_version = 3;
-
-  NVLinkLogicalPartitionStatus status = 4;
+message FirmwareComponentInfo {
+  string device_type = 1;
+  string component = 2;
+  string bundle = 3;
+  string filename = 4;
+  string target = 5;
+  string firmware_type = 6; // "prod" or "dev"
 }
 
-message NVLinkLogicalPartitionList {
-  repeated NVLinkLogicalPartition partitions = 1;
+message RackFirmwareCreateRequest {
+  string config_json = 1;
+  string artifactory_token = 2;
 }
 
-message NVLinkLogicalPartitionCreationRequest {
-  NVLinkLogicalPartitionConfig config = 1;
-  // Desired ID for this Partition. If the ID is not provided, Forge will generate
-  // a random ID.
-  // The Partition ID must be unique within the Forge site.
-  optional common.NVLinkLogicalPartitionId id = 2;
+message RackFirmwareGetRequest {
+  string id = 1;
 }
 
-message NVLinkLogicalPartitionDeletionRequest {
-  common.NVLinkLogicalPartitionId id = 1;
+message RackFirmwareListRequest {
+  bool only_available = 1;
 }
 
-message NVLinkLogicalPartitionDeletionResult {
+message RackFirmwareList {
+  repeated RackFirmware configs = 1;
 }
 
-message NVLinkLogicalPartitionSearchFilter {
-  optional string name = 1;
+message RackFirmwareDeleteRequest {
+  string id = 1;
 }
 
-message NVLinkLogicalPartitionsByIdsRequest {
-  repeated common.NVLinkLogicalPartitionId partition_ids = 1;
-  bool include_history = 2;
+message RackFirmwareApplyRequest {
+  common.RackId rack_id = 1;
+  string firmware_id = 2;
+  string firmware_type = 3; // "dev" or "prod"
 }
 
-message NVLinkLogicalPartitionIdList {
-  repeated common.NVLinkLogicalPartitionId partition_ids = 1;
+message RackFirmwareApplyResponse {
+  int32 total_updates = 1;
+  int32 successful_updates = 2;
+  int32 failed_updates = 3;
+  repeated DeviceUpdateResult device_results = 4;
 }
 
-message NVLinkLogicalPartitionUpdateRequest {
-  common.NVLinkLogicalPartitionId id = 1;
-  NVLinkLogicalPartitionConfig config = 2;
-  optional string if_version_match = 3;
+message DeviceUpdateResult {
+  string device_id = 1;
+  string device_type = 2;
+  bool success = 3;
+  string message = 4;
+  string job_id = 5; // Parent job ID for async firmware updates (use with RMS GetFirmwareJobStatus)
+  repeated NodeJobInfo node_jobs = 6; // Per-node job IDs for tracking individual node progress
 }
 
-message NVLinkLogicalPartitionUpdateResult {
+message NodeJobInfo {
+  string node_id = 1;
+  string job_id = 2;
+}
+
+message RackFirmwareJobStatusRequest {
+  string job_id = 1;
+}
+
+message RackFirmwareJobStatusResponse {
+  string job_id = 1;
+  string state = 2; // QUEUED, RUNNING, COMPLETED, FAILED
+  string state_description = 3; // Human-readable description
+  string rack_id = 4;
+  string node_id = 5;
+  string error_message = 6; // Populated if state is FAILED
+  string result_json = 7; // Detailed result data on completion
+}
+
+message RackFirmwareHistoryRequest {
+  string firmware_id = 1;      // Optional: filter by firmware ID. Empty string means no filter.
+  repeated string rack_ids = 2; // Optional: filter by rack IDs. Empty list returns all racks.
+}
+
+message RackFirmwareHistoryResponse {
+  map<string, RackFirmwareHistoryRecords> histories = 1; // Keyed by rack ID
+}
+
+message RackFirmwareHistoryRecords {
+  repeated RackFirmwareHistoryRecord records = 1;
+}
+
+message RackFirmwareHistoryRecord {
+  string firmware_id = 1;
+  string rack_id = 2;
+  string firmware_type = 3;
+  string applied_at = 4;
+  bool firmware_available = 5; // Whether the firmware ID still exists and is available
+}
+
+message ModifyDPFStateRequest {
+  common.MachineId machine_id = 1;
+  bool dpf_enabled = 2;
+}
+
+message DPFStateResponse {
+  message DPFState {
+    common.MachineId machine_id = 1;
+    bool enabled = 2;
+    bool used_for_ingestion = 3;
+  }
+  repeated DPFState dpf_states = 1;
+}
+
+message GetDPFStateRequest {
+  repeated common.MachineId machine_ids = 1;
 }

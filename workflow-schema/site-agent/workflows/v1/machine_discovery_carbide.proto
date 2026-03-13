@@ -178,7 +178,6 @@ message GpuPlatformInfo {
   uint32 host_id = 4;
   uint32 module_id = 5;
   string fabric_guid = 6;
-  GpuPlatformInfo platform_info = 9;
 }
 
 message Gpu {
@@ -190,6 +189,7 @@ message Gpu {
   string total_memory = 6;
   string frequency = 7;
   string pci_bus_id = 8;
+  GpuPlatformInfo platform_info = 9;
 }
 
 message MemoryDevice {
