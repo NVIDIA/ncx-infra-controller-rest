@@ -35,6 +35,6 @@ func TestBasicMock(t *testing.T) {
 	mID := "fm100ht09g4atrqgjb0b83b2to1qa1hfugks9mhutb0umcng1rkr54vliqg"
 	serial := "12345"
 	client.AddMachine(Machine{MachineID: mID, ChassisSerial: &serial})
-	machines, _ := client.GetMachines(ctx)
-	assert.Equal(t, machines[0].MachineID, mID)
+	details, _ := client.GetMachines(ctx)
+	assert.Equal(t, details[0].MachineID, mID)
 }

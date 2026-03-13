@@ -43,12 +43,15 @@ func (c *mockClient) Version(ctx context.Context) (string, error) {
 	return "1.2.3", nil
 }
 
-func (c *mockClient) GetMachines(ctx context.Context) (ret []Machine, err error) {
-	for _, machine := range c.machines {
-		ret = append(ret, machine)
+func (c *mockClient) GetMachines(ctx context.Context) ([]MachineDetail, error) {
+	var result []MachineDetail
+	for _, m := range c.machines {
+		result = append(result, MachineDetail{
+			MachineID:     m.MachineID,
+			ChassisSerial: m.ChassisSerial,
+		})
 	}
-
-	return ret, nil
+	return result, nil
 }
 
 func (c *mockClient) GetPowerStates(ctx context.Context, machineIds []string) (ret []MachinePowerState, err error) {
@@ -136,10 +139,4 @@ func (c *mockClient) AddExpectedSwitch(ctx context.Context, req AddExpectedSwitc
 	return nil
 }
 
-func (c *mockClient) FindSwitches(ctx context.Context) ([]ActualSwitch, error) {
-	return nil, nil
-}
-
-func (c *mockClient) FindPowerShelves(ctx context.Context) ([]ActualPowerShelf, error) {
-	return nil, nil
-}
+ 

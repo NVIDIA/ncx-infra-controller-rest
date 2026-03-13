@@ -62,17 +62,6 @@ type MachinePosition struct {
 	TopologyID       *int32
 }
 
-func machineFromPb(machine *pb.Machine) Machine {
-	var chassisSerial *string
-	if machine.DiscoveryInfo != nil && machine.DiscoveryInfo.DmiData != nil {
-		chassisSerialStr := machine.DiscoveryInfo.DmiData.ChassisSerial
-		chassisSerial = &chassisSerialStr
-	} else {
-		chassisSerial = nil
-	}
-	return Machine{MachineID: machine.Id.Id, ChassisSerial: chassisSerial}
-}
-
 func machineDetailFromPb(machine *pb.Machine) MachineDetail {
 	detail := MachineDetail{
 		MachineID:   machine.Id.Id,
@@ -145,17 +134,7 @@ func machinePowerStateFromPb(state *pb.PowerOptions) MachinePowerState {
 	return MachinePowerState{MachineID: state.HostId.Id, PowerState: powerStateFromPb(state.ActualState)}
 }
 
-// PowerStateFromString converts a string power state (e.g. "on", "off") to PowerState.
-func PowerStateFromString(s string) PowerState {
-	switch s {
-	case "on":
-		return PowerStateOn
-	case "off":
-		return PowerStateOff
-	default:
-		return PowerStateUnknown
-	}
-}
+ 
 
 func powerStateFromPb(state pb.PowerState) (ret PowerState) {
 	switch state {
@@ -268,62 +247,6 @@ type AddExpectedMachineRequest struct {
 	FallbackDPUSerialNumbers []string `json:"fallback_dpu_serial_numbers,omitempty"`
 	RackID                   string   `json:"rack_id,omitempty"`
 	PauseIngestionAndPowerOn *bool    `json:"default_pause_ingestion_and_poweron,omitempty"`
-}
-
-// ActualSwitch represents a switch reported by Carbide (from FindSwitches)
-type ActualSwitch struct {
-	SwitchID        string
-	Name            string
-	ControllerState string
-	PowerState      *string
-	HealthStatus    *string
-}
-
-func actualSwitchFromPb(s *pb.Switch) ActualSwitch {
-	as := ActualSwitch{
-		SwitchID:        s.Id.Id,
-		ControllerState: s.ControllerState,
-	}
-	if s.Config != nil {
-		as.Name = s.Config.Name
-	}
-	if s.Status != nil {
-		if s.Status.PowerState != nil {
-			as.PowerState = s.Status.PowerState
-		}
-		if s.Status.HealthStatus != nil {
-			as.HealthStatus = s.Status.HealthStatus
-		}
-	}
-	return as
-}
-
-// ActualPowerShelf represents a power shelf reported by Carbide (from FindPowerShelves)
-type ActualPowerShelf struct {
-	PowerShelfID    string
-	Name            string
-	ControllerState string
-	PowerState      *string
-	HealthStatus    *string
-}
-
-func actualPowerShelfFromPb(ps *pb.PowerShelf) ActualPowerShelf {
-	aps := ActualPowerShelf{
-		PowerShelfID:    ps.Id.Id,
-		ControllerState: ps.ControllerState,
-	}
-	if ps.Config != nil {
-		aps.Name = ps.Config.Name
-	}
-	if ps.Status != nil {
-		if ps.Status.PowerState != nil {
-			aps.PowerState = ps.Status.PowerState
-		}
-		if ps.Status.HealthStatus != nil {
-			aps.HealthStatus = ps.Status.HealthStatus
-		}
-	}
-	return aps
 }
 
 // AddExpectedSwitchRequest contains the parameters for registering

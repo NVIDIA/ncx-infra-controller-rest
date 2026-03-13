@@ -28,7 +28,7 @@ import (
 // Client allow us to have both a real implemenation and a mock implementation for unit tests which can be switched transparently
 type Client interface {
 	Version(ctx context.Context) (string, error)
-	GetMachines(ctx context.Context) ([]Machine, error)
+	GetMachines(ctx context.Context) ([]MachineDetail, error)
 	GetPowerStates(ctx context.Context, machineIds []string) (ret []MachinePowerState, err error)
 	SetFirmwareUpdateTimeWindow(ctx context.Context, machineIds []string, startTime, endTime time.Time) error
 	// FindInterfaces returns all machine interfaces known by carbide-api, keyed by MAC address
@@ -61,12 +61,6 @@ type Client interface {
 
 	// AddExpectedSwitch registers an expected switch with Carbide for ingestion.
 	AddExpectedSwitch(ctx context.Context, req AddExpectedSwitchRequest) error
-
-	// FindSwitches returns all switches known by carbide-api
-	FindSwitches(ctx context.Context) ([]ActualSwitch, error)
-
-	// FindPowerShelves returns all power shelves known by carbide-api
-	FindPowerShelves(ctx context.Context) ([]ActualPowerShelf, error)
 
 	// The following are only valid in the mock environment and should only be called by unit tests
 	AddMachine(Machine)
