@@ -16105,6 +16105,8 @@ components:
       title: CreateRackResponse
       type: object
       description: Response for creating a Rack containing the new rack's ID
+      required:
+        - id
       properties:
         id:
           type: string
@@ -16142,6 +16144,8 @@ components:
       title: PatchRackResponse
       type: object
       description: Response for patching a Rack
+      required:
+        - report
       properties:
         report:
           type: string

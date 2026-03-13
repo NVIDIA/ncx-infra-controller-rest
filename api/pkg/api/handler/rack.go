@@ -31,6 +31,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"go.opentelemetry.io/otel/attribute"
 	temporalEnums "go.temporal.io/api/enums/v1"
+	"go.temporal.io/api/serviceerror"
 	tClient "go.temporal.io/sdk/client"
 	tp "go.temporal.io/sdk/temporal"
 
@@ -557,7 +558,7 @@ func (crh CreateRackHandler) Handle(c echo.Context) error {
 	workflowOptions := tClient.StartWorkflowOptions{
 		ID:                       fmt.Sprintf("rack-create-%s", apiRequest.SerialNumber),
 		WorkflowIDReusePolicy:    temporalEnums.WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE,
-		WorkflowIDConflictPolicy: temporalEnums.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING,
+		WorkflowIDConflictPolicy: temporalEnums.WORKFLOW_ID_CONFLICT_POLICY_FAIL,
 		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
@@ -567,6 +568,10 @@ func (crh CreateRackHandler) Handle(c echo.Context) error {
 
 	we, err := stc.ExecuteWorkflow(ctx, workflowOptions, "CreateExpectedRack", rlaRequest)
 	if err != nil {
+		var alreadyStarted *serviceerror.WorkflowExecutionAlreadyStarted
+		if errors.As(err, &alreadyStarted) {
+			return cutil.NewAPIErrorResponse(c, http.StatusConflict, "A rack creation with this serial number is already in progress", nil)
+		}
 		logger.Error().Err(err).Msg("failed to execute CreateExpectedRack workflow")
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Rack", nil)
 	}
@@ -730,6 +735,10 @@ func (urh UpdateRackHandler) Handle(c echo.Context) error {
 
 	we, err := stc.ExecuteWorkflow(ctx, workflowOptions, "UpdateRack", rlaRequest)
 	if err != nil {
+		var alreadyStarted *serviceerror.WorkflowExecutionAlreadyStarted
+		if errors.As(err, &alreadyStarted) {
+			return cutil.NewAPIErrorResponse(c, http.StatusConflict, "A rack update is already in progress for this rack", nil)
+		}
 		logger.Error().Err(err).Msg("failed to execute UpdateRack workflow")
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Rack", nil)
 	}

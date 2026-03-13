@@ -13,6 +13,8 @@ package standard
 
 import (
 	"encoding/json"
+	"bytes"
+	"fmt"
 )
 
 // checks if the CreateRackResponse type satisfies the MappedNullable interface at compile time
@@ -21,15 +23,18 @@ var _ MappedNullable = &CreateRackResponse{}
 // CreateRackResponse Response for creating a Rack containing the new rack's ID
 type CreateRackResponse struct {
 	// ID of the newly created Rack
-	Id *string `json:"id,omitempty"`
+	Id string `json:"id"`
 }
+
+type _CreateRackResponse CreateRackResponse
 
 // NewCreateRackResponse instantiates a new CreateRackResponse object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewCreateRackResponse() *CreateRackResponse {
+func NewCreateRackResponse(id string) *CreateRackResponse {
 	this := CreateRackResponse{}
+	this.Id = id
 	return &this
 }
 
@@ -41,36 +46,28 @@ func NewCreateRackResponseWithDefaults() *CreateRackResponse {
 	return &this
 }
 
-// GetId returns the Id field value if set, zero value otherwise.
+// GetId returns the Id field value
 func (o *CreateRackResponse) GetId() string {
-	if o == nil || IsNil(o.Id) {
+	if o == nil {
 		var ret string
 		return ret
 	}
-	return *o.Id
+
+	return o.Id
 }
 
-// GetIdOk returns a tuple with the Id field value if set, nil otherwise
+// GetIdOk returns a tuple with the Id field value
 // and a boolean to check if the value has been set.
 func (o *CreateRackResponse) GetIdOk() (*string, bool) {
-	if o == nil || IsNil(o.Id) {
+	if o == nil {
 		return nil, false
 	}
-	return o.Id, true
+	return &o.Id, true
 }
 
-// HasId returns a boolean if a field has been set.
-func (o *CreateRackResponse) HasId() bool {
-	if o != nil && !IsNil(o.Id) {
-		return true
-	}
-
-	return false
-}
-
-// SetId gets a reference to the given string and assigns it to the Id field.
+// SetId sets field value
 func (o *CreateRackResponse) SetId(v string) {
-	o.Id = &v
+	o.Id = v
 }
 
 func (o CreateRackResponse) MarshalJSON() ([]byte, error) {
@@ -83,10 +80,45 @@ func (o CreateRackResponse) MarshalJSON() ([]byte, error) {
 
 func (o CreateRackResponse) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
-	if !IsNil(o.Id) {
-		toSerialize["id"] = o.Id
-	}
+	toSerialize["id"] = o.Id
 	return toSerialize, nil
+}
+
+func (o *CreateRackResponse) UnmarshalJSON(data []byte) (err error) {
+	// This validates that all required properties are included in the JSON object
+	// by unmarshalling the object into a generic map with string keys and checking
+	// that every required field exists as a key in the generic map.
+	requiredProperties := []string{
+		"id",
+	}
+
+	allProperties := make(map[string]interface{})
+
+	err = json.Unmarshal(data, &allProperties)
+
+	if err != nil {
+		return err;
+	}
+
+	for _, requiredProperty := range(requiredProperties) {
+		if _, exists := allProperties[requiredProperty]; !exists {
+			return fmt.Errorf("no value given for required property %v", requiredProperty)
+		}
+	}
+
+	varCreateRackResponse := _CreateRackResponse{}
+
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	err = decoder.Decode(&varCreateRackResponse)
+
+	if err != nil {
+		return err
+	}
+
+	*o = CreateRackResponse(varCreateRackResponse)
+
+	return err
 }
 
 type NullableCreateRackResponse struct {

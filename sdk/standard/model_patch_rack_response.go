@@ -13,6 +13,8 @@ package standard
 
 import (
 	"encoding/json"
+	"bytes"
+	"fmt"
 )
 
 // checks if the PatchRackResponse type satisfies the MappedNullable interface at compile time
@@ -21,15 +23,18 @@ var _ MappedNullable = &PatchRackResponse{}
 // PatchRackResponse Response for patching a Rack
 type PatchRackResponse struct {
 	// Summary report of changes applied
-	Report *string `json:"report,omitempty"`
+	Report string `json:"report"`
 }
+
+type _PatchRackResponse PatchRackResponse
 
 // NewPatchRackResponse instantiates a new PatchRackResponse object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewPatchRackResponse() *PatchRackResponse {
+func NewPatchRackResponse(report string) *PatchRackResponse {
 	this := PatchRackResponse{}
+	this.Report = report
 	return &this
 }
 
@@ -41,36 +46,28 @@ func NewPatchRackResponseWithDefaults() *PatchRackResponse {
 	return &this
 }
 
-// GetReport returns the Report field value if set, zero value otherwise.
+// GetReport returns the Report field value
 func (o *PatchRackResponse) GetReport() string {
-	if o == nil || IsNil(o.Report) {
+	if o == nil {
 		var ret string
 		return ret
 	}
-	return *o.Report
+
+	return o.Report
 }
 
-// GetReportOk returns a tuple with the Report field value if set, nil otherwise
+// GetReportOk returns a tuple with the Report field value
 // and a boolean to check if the value has been set.
 func (o *PatchRackResponse) GetReportOk() (*string, bool) {
-	if o == nil || IsNil(o.Report) {
+	if o == nil {
 		return nil, false
 	}
-	return o.Report, true
+	return &o.Report, true
 }
 
-// HasReport returns a boolean if a field has been set.
-func (o *PatchRackResponse) HasReport() bool {
-	if o != nil && !IsNil(o.Report) {
-		return true
-	}
-
-	return false
-}
-
-// SetReport gets a reference to the given string and assigns it to the Report field.
+// SetReport sets field value
 func (o *PatchRackResponse) SetReport(v string) {
-	o.Report = &v
+	o.Report = v
 }
 
 func (o PatchRackResponse) MarshalJSON() ([]byte, error) {
@@ -83,10 +80,45 @@ func (o PatchRackResponse) MarshalJSON() ([]byte, error) {
 
 func (o PatchRackResponse) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
-	if !IsNil(o.Report) {
-		toSerialize["report"] = o.Report
-	}
+	toSerialize["report"] = o.Report
 	return toSerialize, nil
+}
+
+func (o *PatchRackResponse) UnmarshalJSON(data []byte) (err error) {
+	// This validates that all required properties are included in the JSON object
+	// by unmarshalling the object into a generic map with string keys and checking
+	// that every required field exists as a key in the generic map.
+	requiredProperties := []string{
+		"report",
+	}
+
+	allProperties := make(map[string]interface{})
+
+	err = json.Unmarshal(data, &allProperties)
+
+	if err != nil {
+		return err;
+	}
+
+	for _, requiredProperty := range(requiredProperties) {
+		if _, exists := allProperties[requiredProperty]; !exists {
+			return fmt.Errorf("no value given for required property %v", requiredProperty)
+		}
+	}
+
+	varPatchRackResponse := _PatchRackResponse{}
+
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	err = decoder.Decode(&varPatchRackResponse)
+
+	if err != nil {
+		return err
+	}
+
+	*o = PatchRackResponse(varPatchRackResponse)
+
+	return err
 }
 
 type NullablePatchRackResponse struct {
