@@ -3,13 +3,13 @@ SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All 
 SPDX-License-Identifier: Apache-2.0
 -->
 
-# NVIDIA Bare Metal Manager REST API
+# NCX Infra Controller REST API
 
-A collection of microservices that comprise the management backend for NVIDIA Bare Metal Manager, exposed as a REST API.
+A collection of microservices that comprise the management backend for NCX Infra Controller, exposed as a REST API.
 
-In deployments, NVIDIA Bare Metal Manager REST requires [NVIDIA Bare Metal Manager Core](https://github.com/NVIDIA/bare-metal-manager-core) to function.
+In deployments, NCX Infra Controller REST requires [NCX Infra Controller Core](https://github.com/NVIDIA/bare-metal-manager-core) to function.
 
-The REST layer can be deployed in the datacenter with Bare Metal Manager Core, or deployed anywhere in Cloud and allow Site Agent to connect from the datacenter. Multiple Bare Metal Manager Cores running in different datacenters can also connect to Bare Metal Manager REST through respective Site Agents.
+The REST layer can be deployed in the datacenter with NCX Infra Controller Core, or deployed anywhere in Cloud and allow Site Agent to connect from the datacenter. Multiple NCX Infra Controller Cores running in different datacenters can also connect to NCX Infra Controller REST through respective Site Agents.
 
 View latest OpenAPI schema on [Github pages](https://nvidia.github.io/bare-metal-manager-rest/).
 
@@ -49,7 +49,7 @@ This deploys the full stack via **Helm charts** (default). It:
 3. Sets up infrastructure (PostgreSQL, Temporal, Keycloak, cert-manager, etc.)
 4. Deploys app services via Helm umbrella chart
 5. Bootstraps and deploys site-agent
-6. Deploys a mock Bare Metal Manager Core
+6. Deploys a mock NCX Infra Controller Core
 
 To deploy via **Kustomize overlays** instead:
 
