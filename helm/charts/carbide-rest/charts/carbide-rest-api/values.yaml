@@ -28,6 +28,9 @@ secrets:
   temporalClientCerts: temporal-client-cloud-certs
   # -- Only required when keycloak is enabled
   keycloakClientSecret: keycloak-client-secret
+  # -- Secret containing DB password at key "password". When set, db.password is ignored
+  # and the password is read from /var/secrets/db/password (supports live rotation).
+  dbCreds: ""
 
 config:
   env:
@@ -46,6 +49,7 @@ config:
     port: 5432
     name: forge
     user: forge
+    # -- Plain-text password. Ignored when secrets.dbCreds is set.
     password: forge
   temporal:
     host: temporal-frontend.temporal

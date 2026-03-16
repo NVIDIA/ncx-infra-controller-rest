@@ -8,4 +8,11 @@ metadata:
     {{- include "carbide-rest-api.labels" . | nindent 4 }}
 data:
   config.yaml: |
+    {{- if .Values.secrets.dbCreds }}
+    {{- $config := deepCopy .Values.config -}}
+    {{- $_ := set $config.db "passwordPath" "/var/secrets/db/password" -}}
+    {{- $_ := unset $config.db "password" -}}
+    {{- $config | toYaml | nindent 4 }}
+    {{- else }}
     {{- .Values.config | toYaml | nindent 4 }}
+    {{- end }}
