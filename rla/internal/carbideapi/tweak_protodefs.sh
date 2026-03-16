@@ -82,6 +82,10 @@ LICENSE_HEADER="// SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION
 "
 for f in carbideproto/*.proto; do
     if ! head -1 "$f" | grep -q "SPDX"; then
-        printf '%s\n%s' "$LICENSE_HEADER" "$(cat "$f")" > "$f"
+        tmp="$(mktemp)"
+        {
+            printf '%s\n' "$LICENSE_HEADER"
+            cat "$f"
+        } > "$tmp" && mv "$tmp" "$f"
     fi
 done
