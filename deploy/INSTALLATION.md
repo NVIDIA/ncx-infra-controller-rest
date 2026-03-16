@@ -418,7 +418,7 @@ For a production deployment, copy `values-kind.yaml` and adjust resource limits,
 
 After Temporal is running, create the `cloud` and `site` namespaces that the workflow workers register to:
 
-The admintools pod has the TLS environment variables pre-configured via the Helm values, so no TLS flags are needed on the CLI commands themselves. You do need to pass `--address` since the pod's default is `localhost:7233`:
+The `temporal-admintools` pod has the TLS environment variables pre-configured via the Helm values, so no TLS flags are needed on the CLI commands themselves. You do need to pass `--address` since the pod's default is `localhost:7233`:
 
 ```bash
 kubectl exec -it -n temporal deployment/temporal-admintools -- \
@@ -560,15 +560,14 @@ db:
   host: postgres.postgres
   port: 5432
   name: forge
-  user: forge
-  password: forge          # keep in sync with db-creds Secret
+  user: forge # Password comes from secret `db-creds`
 
 temporal:
   host: temporal-frontend.temporal
   port: 7233
   serverName: server.temporal.local
-  namespace: cloud
-  queue: cloud
+  namespace: cloud # `site` for Site Worker
+  queue: cloud # `site` for Site Worker
   tls:
     enabled: true
     certPath: /var/secrets/temporal/certs/tls.crt
@@ -617,8 +616,8 @@ The API is reachable at `http://<node-ip>:30388` via NodePort, or at `carbide-re
 
 Two Temporal worker deployments that execute the workflow and activity logic for Carbide REST. They share one image (`carbide-rest-workflow`) but listen on different Temporal namespaces and queues:
 
-- **`carbide-rest-cloud-worker`** — handles cloud-side workflows on Temporal namespace `cloud`, queue `cloud`. This includes hardware provisioning, OS imaging orchestration, and machine validation workflows.
-- **`carbide-rest-site-worker`** — handles site-side workflows on Temporal namespace `site`, queue `site`. This processes tasks that need to be dispatched to site agents.
+- **`carbide-rest-cloud-worker`** — handles system workflows in Temporal namespace: `cloud` and queue: `cloud`. This includes Site health monitoring, Site Agent mTLS cert renewal workflows.
+- **`carbide-rest-site-worker`** — handles Site workflows in Temporal namespace `site`, queue `site`. This processes data sent from Site Agents e.g. object inventory.
 
 Both workers connect to PostgreSQL for state persistence and to Temporal over mTLS.
 
@@ -636,8 +635,7 @@ db:
   host: postgres.postgres
   port: 5432
   name: forge
-  user: forge
-  password: forge
+  user: forge # Password comes from secret `db-creds`
 
 temporal:
   host: temporal-frontend.temporal
