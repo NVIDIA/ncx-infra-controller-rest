@@ -120,14 +120,14 @@ func testCommonSetupSchema(t *testing.T, dbSession *cdb.Session) {
 	// create StatusDetail table
 	err = dbSession.DB.ResetModel(context.Background(), (*cdbm.StatusDetail)(nil))
 	assert.Nil(t, err)
+	// create SSH Key Group table (must be before SSHKeyAssociation which references it)
+	err = dbSession.DB.ResetModel(context.Background(), (*cdbm.SSHKeyGroup)(nil))
+	assert.Nil(t, err)
 	// create SSH Key table
 	err = dbSession.DB.ResetModel(context.Background(), (*cdbm.SSHKey)(nil))
 	assert.Nil(t, err)
 	// create SSH Key Association table
 	err = dbSession.DB.ResetModel(context.Background(), (*cdbm.SSHKeyAssociation)(nil))
-	assert.Nil(t, err)
-	// create SSH Key Group table
-	err = dbSession.DB.ResetModel(context.Background(), (*cdbm.SSHKeyGroup)(nil))
 	assert.Nil(t, err)
 	// create SSH Key Group Site Association table
 	err = dbSession.DB.ResetModel(context.Background(), (*cdbm.SSHKeyGroupSiteAssociation)(nil))
