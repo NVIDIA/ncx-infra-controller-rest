@@ -929,7 +929,7 @@ curl -s "http://<api-host>:8388/v2/org/<org>/carbide/site" \
 |---|---|---|---|
 | `ca-signing-secret` | `carbide-rest` | Operator (Step 2) | `carbide-rest-cert-manager`, `carbide-rest-ca-issuer` |
 | `image-pull-secret` | `carbide-rest` | `base/common/image-pull-secret.yaml` | All workload pods |
-| `db-creds` | `carbide-rest` | `base/common/db-creds.yaml` | `carbide-rest-db-migration` |
+| `db-creds` | `carbide-rest` | `base/common/db-creds.yaml` | `carbide-rest-db-migration`, `carbide-rest-api`, workflow workers |
 | `keycloak-client-secret` | `carbide-rest` | `base/common/keycloak-client-secret.yaml` | `carbide-rest-api` |
 | `temporal-encryption-key` | `carbide-rest` | `base/common/temporal-encryption-key.yaml` | `carbide-rest-api`, workflow workers |
 | `temporal-client-cloud-certs` | `carbide-rest` | cert-manager via `base/common/temporal-client-cloud-cert.yaml` | `carbide-rest-api`, workflow workers |

@@ -59,7 +59,7 @@ kubectl apply -k deploy/kustomize/base/postgres
 kubectl rollout status statefulset/postgres -n postgres
 
 # Keycloak
-kubectl apply -k deploy/kustomize/base/keycloak -n carbide-rest
+kubectl apply -k deploy/kustomize/base/keycloak
 ```
 
 ---
