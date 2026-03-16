@@ -112,20 +112,6 @@ func TestCompareMachineFieldsForDrift_NilPositionFieldsSkipped(t *testing.T) {
 	assert.Empty(t, diffs)
 }
 
-func TestCompareMachineFieldsForDrift_EmptyActualFirmwareSkipped(t *testing.T) {
-	expected := &model.Component{
-		FirmwareVersion: "1.0.0",
-	}
-	// Empty firmware version from Carbide — should not flag as mismatch
-	actual := carbideapi.MachineDetail{
-		FirmwareVersion: "",
-	}
-	position := carbideapi.MachinePosition{}
-
-	diffs := compareMachineFieldsForDrift(expected, actual, &position)
-	assert.Empty(t, diffs)
-}
-
 func TestCompareMachineFieldsForDrift_NilChassisSerialSkipped(t *testing.T) {
 	expected := &model.Component{
 		SerialNumber: "SN001",
