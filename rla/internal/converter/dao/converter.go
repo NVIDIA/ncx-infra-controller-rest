@@ -191,6 +191,7 @@ func TaskFrom(dao *model.Task) *taskdef.Task {
 		Status:         dao.Status,
 		Message:        dao.Message,
 		AppliedRuleID:  dao.AppliedRuleID,
+		QueueExpiresAt: dao.QueueExpiresAt,
 	}
 }
 
@@ -320,6 +321,7 @@ func TaskTo(task *taskdef.Task) *model.Task {
 		Status:         task.Status,
 		Message:        task.Message,
 		AppliedRuleID:  task.AppliedRuleID,
+		QueueExpiresAt: task.QueueExpiresAt,
 	}
 }
 

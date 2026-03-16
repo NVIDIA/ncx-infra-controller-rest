@@ -116,7 +116,7 @@ func TestPowerControlWorkflowWithBatching(t *testing.T) {
 		info := operations.PowerControlTaskInfo{Operation: operations.PowerOperationPowerOn}
 		reqInfo := taskdef.ExecutionInfo{
 			TaskID:         uuid.New(),
-			Rack:           buildTestRack(components),
+			Components:     toWorkflowComponents(components),
 			RuleDefinition: ruleDef,
 		}
 
@@ -203,7 +203,7 @@ func TestPowerControlWorkflowWithBatching(t *testing.T) {
 		info := operations.PowerControlTaskInfo{Operation: operations.PowerOperationPowerOn}
 		reqInfo := taskdef.ExecutionInfo{
 			TaskID:         uuid.New(),
-			Rack:           buildTestRack(components),
+			Components:     toWorkflowComponents(components),
 			RuleDefinition: ruleDef,
 		}
 
@@ -277,7 +277,7 @@ func TestPowerControlWorkflowWithBatching(t *testing.T) {
 		info := operations.PowerControlTaskInfo{Operation: operations.PowerOperationPowerOn}
 		reqInfo := taskdef.ExecutionInfo{
 			TaskID:         uuid.New(),
-			Rack:           buildTestRack(components),
+			Components:     toWorkflowComponents(components),
 			RuleDefinition: ruleDef,
 		}
 
@@ -340,7 +340,7 @@ func TestPowerControlWorkflowWithBatching(t *testing.T) {
 		info := operations.PowerControlTaskInfo{Operation: operations.PowerOperationPowerOn}
 		reqInfo := taskdef.ExecutionInfo{
 			TaskID:         uuid.New(),
-			Rack:           buildTestRack(components),
+			Components:     toWorkflowComponents(components),
 			RuleDefinition: ruleDef,
 		}
 

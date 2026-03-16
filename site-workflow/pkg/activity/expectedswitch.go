@@ -120,11 +120,11 @@ func (mesi *ManageExpectedSwitchInventory) DiscoverExpectedSwitchInventory(ctx c
 	allExpectedSwitchIDs := []string{}
 	for _, es := range esList.ExpectedSwitches {
 		// Discard records without ID
-		if es.Id == nil || es.Id.Value == "" {
+		if es.ExpectedSwitchId == nil || es.ExpectedSwitchId.Value == "" {
 			logger.Warn().Str("MAC", es.BmcMacAddress).Str("Serial", es.SwitchSerialNumber).Msg("Discarding ExpectedSwitch without ID")
 			continue
 		}
-		allExpectedSwitchIDs = append(allExpectedSwitchIDs, es.Id.Value)
+		allExpectedSwitchIDs = append(allExpectedSwitchIDs, es.ExpectedSwitchId.Value)
 		// Find matching LinkedSwitch record by MAC address if it exists
 		linked := linkedSwitchesByKey[es.BmcMacAddress]
 		linkedExpectedSwitchesInfo = append(linkedExpectedSwitchesInfo, linkedExpectedSwitchInfo{
@@ -273,7 +273,7 @@ func (mes *ManageExpectedSwitch) CreateExpectedSwitchOnSite(ctx context.Context,
 	// Validate request
 	if request == nil {
 		err = errors.New("received empty create Expected Switch request")
-	} else if id := request.GetId(); id == nil || (*id).String() == "" {
+	} else if request.GetExpectedSwitchId().GetValue() == "" {
 		err = errors.New("received create Expected Switch request without required id field")
 	} else if request.GetBmcMacAddress() == "" || request.GetSwitchSerialNumber() == "" {
 		err = errors.New("received create Expected Switch request with missing MAC or serial")
@@ -310,7 +310,7 @@ func (mes *ManageExpectedSwitch) UpdateExpectedSwitchOnSite(ctx context.Context,
 	// Validate request
 	if request == nil {
 		err = errors.New("received empty update Expected Switch request")
-	} else if id := request.GetId(); id == nil || (*id).String() == "" {
+	} else if request.GetExpectedSwitchId().GetValue() == "" {
 		err = errors.New("received update Expected Switch request without required id field")
 	} else if request.GetBmcMacAddress() == "" || request.GetSwitchSerialNumber() == "" {
 		err = errors.New("received update Expected Switch request with missing MAC or serial")
@@ -346,7 +346,7 @@ func (mes *ManageExpectedSwitch) DeleteExpectedSwitchOnSite(ctx context.Context,
 	// Validate request
 	if request == nil {
 		err = errors.New("received empty delete Expected Switch request")
-	} else if id := request.GetId(); id == nil || (*id).String() == "" {
+	} else if request.GetExpectedSwitchId().GetValue() == "" {
 		err = errors.New("received delete Expected Switch request without required id field")
 	}
 

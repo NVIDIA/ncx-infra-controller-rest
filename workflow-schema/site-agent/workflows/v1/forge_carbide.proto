@@ -4148,13 +4148,13 @@ message ExpectedPowerShelf {
   Metadata metadata = 6;
   optional string rack_id = 7;
   // Unique identifier for the expected power shelf. When omitted, server generates one.
-  optional common.UUID id = 8;
+  optional common.UUID expected_power_shelf_id = 8;
 }
 
 message ExpectedPowerShelfRequest {
   string bmc_mac_address = 1;
   // Optional unique identifier for selecting an expected power shelf.
-  optional common.UUID id = 2;
+  optional common.UUID expected_power_shelf_id = 2;
 }
 
 message ExpectedPowerShelfList {
@@ -4184,13 +4184,13 @@ message ExpectedSwitch {
   optional string nvos_username = 7;
   optional string nvos_password = 8;
   // Unique identifier for the expected switch. When omitted, server generates one.
-  optional common.UUID id = 9;
+  optional common.UUID expected_switch_id = 9;
 }
 
 message ExpectedSwitchRequest {
   string bmc_mac_address = 1;
   // Optional unique identifier for selecting an expected switch.
-  optional common.UUID id = 2;
+  optional common.UUID expected_switch_id = 2;
 }
 
 message ExpectedSwitchList {

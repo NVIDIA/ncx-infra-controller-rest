@@ -137,7 +137,7 @@ func (mei ManageExpectedPowerShelf) UpdateExpectedPowerShelvesInDB(ctx context.C
 		if reps == nil {
 			logger.Error().Msg("received nil Expected Power Shelf entry, skipping processing")
 			continue
-		} else if reps.Id == nil {
+		} else if reps.ExpectedPowerShelfId == nil {
 			mac := "unknown"
 			if reps.BmcMacAddress != "" {
 				mac = reps.BmcMacAddress
@@ -145,9 +145,9 @@ func (mei ManageExpectedPowerShelf) UpdateExpectedPowerShelvesInDB(ctx context.C
 			logger.Error().Str("MAC", mac).Msg("received Expected Power Shelf entry from Site without UUID set, skipping processing")
 			continue
 		}
-		epsID, perr := uuid.Parse(reps.Id.Value)
+		epsID, perr := uuid.Parse(reps.ExpectedPowerShelfId.Value)
 		if perr != nil || epsID == uuid.Nil {
-			logger.Error().Str("ID", reps.Id.Value).Msg("received Expected Power Shelf entry from Site with invalid UUID, skipping processing")
+			logger.Error().Str("ID", reps.ExpectedPowerShelfId.Value).Msg("received Expected Power Shelf entry from Site with invalid UUID, skipping processing")
 			continue
 		}
 		reportedIDs[epsID] = true

@@ -43,13 +43,19 @@ Test database configuration:
 make kind-reset
 ```
 
-This command:
+This deploys the full stack via **Helm charts** (default). It:
 1. Creates a Kind Kubernetes cluster
 2. Builds all Docker images
-3. Deploys all services (PostgreSQL, Temporal, Keycloak, cert-manager, etc.)
-4. Runs database migrations
-5. Configures PKI and site-agent
+3. Sets up infrastructure (PostgreSQL, Temporal, Keycloak, cert-manager, etc.)
+4. Deploys app services via Helm umbrella chart
+5. Bootstraps and deploys site-agent
 6. Deploys a mock Bare Metal Manager Core
+
+To deploy via **Kustomize overlays** instead:
+
+```bash
+make kind-reset-kustomize
+```
 
 Once complete, services are available at:
 
@@ -63,11 +69,14 @@ Once complete, services are available at:
 Other useful commands:
 
 ```bash
-make kind-status    # Check pod status
-make kind-logs      # Tail API logs
-make kind-redeploy  # Rebuild and restart after code changes
-make kind-verify    # Run health checks
-make kind-down      # Tear down cluster
+make kind-status         # Check pod status
+make kind-logs           # Tail API logs
+make kind-redeploy       # Rebuild and restart after code changes (Kustomize)
+make helm-redeploy       # Rebuild and restart after code changes (Helm)
+make kind-verify         # Run health checks
+make helm-verify         # Check Helm deployment rollout status
+make helm-uninstall      # Uninstall Helm releases
+make kind-down           # Tear down cluster
 ```
 
 ## CLI

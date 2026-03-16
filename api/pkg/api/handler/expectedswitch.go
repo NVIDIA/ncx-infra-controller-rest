@@ -191,7 +191,7 @@ func (cesh CreateExpectedSwitchHandler) Handle(c echo.Context) error {
 	// Build the create request for workflow
 	// NVOS credentials come from API request since they're not stored in DB
 	createExpectedSwitchRequest := &cwssaws.ExpectedSwitch{
-		Id:                 &cwssaws.UUID{Value: expectedSwitch.ID.String()},
+		ExpectedSwitchId:   &cwssaws.UUID{Value: expectedSwitch.ID.String()},
 		BmcMacAddress:      expectedSwitch.BmcMacAddress,
 		SwitchSerialNumber: expectedSwitch.SwitchSerialNumber,
 	}
@@ -667,7 +667,7 @@ func (uesh UpdateExpectedSwitchHandler) Handle(c echo.Context) error {
 	// Build the update request for workflow
 	// NVOS credentials come from API request since they're not stored in DB
 	updateExpectedSwitchRequest := &cwssaws.ExpectedSwitch{
-		Id:                 &cwssaws.UUID{Value: expectedSwitch.ID.String()},
+		ExpectedSwitchId:   &cwssaws.UUID{Value: expectedSwitch.ID.String()},
 		BmcMacAddress:      updatedExpectedSwitch.BmcMacAddress,
 		SwitchSerialNumber: updatedExpectedSwitch.SwitchSerialNumber,
 	}
@@ -840,8 +840,8 @@ func (desh DeleteExpectedSwitchHandler) Handle(c echo.Context) error {
 
 	// Build the delete request for workflow
 	deleteExpectedSwitchRequest := &cwssaws.ExpectedSwitchRequest{
-		Id:            &cwssaws.UUID{Value: expectedSwitch.ID.String()},
-		BmcMacAddress: expectedSwitch.BmcMacAddress,
+		ExpectedSwitchId: &cwssaws.UUID{Value: expectedSwitch.ID.String()},
+		BmcMacAddress:    expectedSwitch.BmcMacAddress,
 	}
 
 	logger.Info().Msg("triggering ExpectedSwitch delete workflow")

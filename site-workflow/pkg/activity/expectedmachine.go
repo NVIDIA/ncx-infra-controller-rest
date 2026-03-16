@@ -276,7 +276,7 @@ func (mem *ManageExpectedMachine) CreateExpectedMachineOnSite(ctx context.Contex
 	// Validate request
 	if request == nil {
 		err = errors.New("received empty create Expected Machine request")
-	} else if id := request.GetId(); id == nil || (*id).String() == "" {
+	} else if request.GetId().GetValue() == "" {
 		err = errors.New("received create Expected Machine request without required id field")
 	} else if request.GetBmcMacAddress() == "" || request.GetChassisSerialNumber() == "" {
 		err = errors.New("received create Expected Machine request with missing MAC or serial")
@@ -316,7 +316,7 @@ func (mem *ManageExpectedMachine) UpdateExpectedMachineOnSite(ctx context.Contex
 	// Validate request
 	if request == nil {
 		err = errors.New("received empty update Expected Machine request")
-	} else if id := request.GetId(); id == nil || (*id).String() == "" {
+	} else if request.GetId().GetValue() == "" {
 		err = errors.New("received update Expected Machine request without required id field")
 	} else if request.GetBmcMacAddress() == "" || request.GetChassisSerialNumber() == "" {
 		err = errors.New("received update Expected Machine request with missing MAC or serial")
@@ -355,7 +355,7 @@ func (mem *ManageExpectedMachine) DeleteExpectedMachineOnSite(ctx context.Contex
 	// Validate request
 	if request == nil {
 		err = errors.New("received empty delete Expected Machine request")
-	} else if id := request.GetId(); id == nil || (*id).String() == "" {
+	} else if request.GetId().GetValue() == "" {
 		err = errors.New("received delete Expected Machine request without required id field")
 	}
 

@@ -192,9 +192,9 @@ func (cepsh CreateExpectedPowerShelfHandler) Handle(c echo.Context) error {
 	// Build the create request for workflow
 	// BMC credentials come from API request since they're not stored in DB
 	createExpectedPowerShelfRequest := &cwssaws.ExpectedPowerShelf{
-		Id:                &cwssaws.UUID{Value: expectedPowerShelf.ID.String()},
-		BmcMacAddress:     expectedPowerShelf.BmcMacAddress,
-		ShelfSerialNumber: expectedPowerShelf.ShelfSerialNumber,
+		ExpectedPowerShelfId: &cwssaws.UUID{Value: expectedPowerShelf.ID.String()},
+		BmcMacAddress:        expectedPowerShelf.BmcMacAddress,
+		ShelfSerialNumber:    expectedPowerShelf.ShelfSerialNumber,
 	}
 
 	if expectedPowerShelf.IpAddress != nil {
@@ -665,9 +665,9 @@ func (uepsh UpdateExpectedPowerShelfHandler) Handle(c echo.Context) error {
 	// Build the update request for workflow
 	// BMC credentials come from API request since they're not stored in DB
 	updateExpectedPowerShelfRequest := &cwssaws.ExpectedPowerShelf{
-		Id:                &cwssaws.UUID{Value: expectedPowerShelf.ID.String()},
-		BmcMacAddress:     updatedExpectedPowerShelf.BmcMacAddress,
-		ShelfSerialNumber: updatedExpectedPowerShelf.ShelfSerialNumber,
+		ExpectedPowerShelfId: &cwssaws.UUID{Value: expectedPowerShelf.ID.String()},
+		BmcMacAddress:        updatedExpectedPowerShelf.BmcMacAddress,
+		ShelfSerialNumber:    updatedExpectedPowerShelf.ShelfSerialNumber,
 	}
 
 	if updatedExpectedPowerShelf.IpAddress != nil {
@@ -834,8 +834,8 @@ func (depsh DeleteExpectedPowerShelfHandler) Handle(c echo.Context) error {
 
 	// Build the delete request for workflow
 	deleteExpectedPowerShelfRequest := &cwssaws.ExpectedPowerShelfRequest{
-		Id:            &cwssaws.UUID{Value: expectedPowerShelf.ID.String()},
-		BmcMacAddress: expectedPowerShelf.BmcMacAddress,
+		ExpectedPowerShelfId: &cwssaws.UUID{Value: expectedPowerShelf.ID.String()},
+		BmcMacAddress:        expectedPowerShelf.BmcMacAddress,
 	}
 
 	logger.Info().Msg("triggering ExpectedPowerShelf delete workflow")

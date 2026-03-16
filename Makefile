@@ -33,6 +33,21 @@ POSTGRES_PASSWORD := postgres
 POSTGRES_DB := forgetest
 POSTGRES_IMAGE := postgres:14.4-alpine
 
+# Helm chart configuration (for kind-reset-helm / helm-* targets)
+UMBRELLA_CHART := helm/charts/carbide-rest
+SITE_AGENT_CHART := helm/charts/carbide-rest-site-agent
+
+HELM_SET := --set global.image.repository=$(IMAGE_REGISTRY) \
+	--set global.image.tag=$(IMAGE_TAG) \
+	--set global.image.pullPolicy=Never
+
+HELM_SET_KEYCLOAK := --set carbide-rest-api.config.keycloak.enabled=true \
+	--set carbide-rest-api.config.keycloak.baseURL=http://keycloak:8082 \
+	--set carbide-rest-api.config.keycloak.externalBaseURL=http://localhost:8082 \
+	--set carbide-rest-api.config.keycloak.realm=carbide-dev \
+	--set carbide-rest-api.config.keycloak.clientID=carbide-api \
+	--set carbide-rest-api.config.keycloak.serviceAccount=true
+
 postgres-up:
 	docker run -d --rm \
 		--name $(POSTGRES_CONTAINER_NAME) \
@@ -234,8 +249,9 @@ rla-protogen:
 # Kind Local Deployment Targets
 # =============================================================================
 
-.PHONY: kind-up kind-down kind-deploy kind-load kind-apply kind-redeploy kind-status kind-logs kind-reset kind-verify setup-site-agent test-simple-sdk-example
+.PHONY: kind-up kind-down kind-deploy kind-load kind-apply kind-redeploy kind-status kind-logs kind-reset kind-reset-infra kind-reset-kustomize kind-reset-helm kind-verify setup-site-agent test-simple-sdk-example
 .PHONY: deploy-overlay-api deploy-overlay-cert-manager deploy-overlay-site-manager deploy-overlay-workflow
+.PHONY: helm-lint helm-template helm-deploy helm-deploy-site-agent helm-deploy-all helm-redeploy helm-verify helm-verify-site-agent helm-uninstall
 
 # Kind cluster configuration
 KIND_CLUSTER_NAME := carbide-rest-local
@@ -339,26 +355,17 @@ deploy-overlay-site-manager:
 deploy-overlay-workflow:
 	kubectl kustomize --load-restrictor LoadRestrictionsNone deploy/kustomize/overlays/workflow | kubectl apply -f -
 
-# Full reset: tear down cluster, rebuild images, and redeploy everything
-kind-reset:
+# =============================================================================
+# Kind: Shared Infrastructure (used by both Helm and Kustomize deployment paths)
+# =============================================================================
+
+# Shared infrastructure: cluster, cert-manager.io, PostgreSQL, Temporal, Keycloak,
+# common secrets, credsmgr, and mock-core (dev only).
+# App services are deployed separately by kind-reset-helm or kind-reset-kustomize.
+kind-reset-infra: docker-build-local
 	-kind delete cluster --name $(KIND_CLUSTER_NAME)
 	kind create cluster --name $(KIND_CLUSTER_NAME) --config deploy/kind/cluster-config.yaml
-
-	@echo "Building images..."
-	docker build -t $(IMAGE_REGISTRY)/carbide-rest-api:$(IMAGE_TAG) -f $(LOCAL_DOCKERFILE_DIR)/Dockerfile.carbide-rest-api .
-	docker build -t $(IMAGE_REGISTRY)/carbide-rest-workflow:$(IMAGE_TAG) -f $(LOCAL_DOCKERFILE_DIR)/Dockerfile.carbide-rest-workflow .
-	docker build -t $(IMAGE_REGISTRY)/carbide-rest-site-manager:$(IMAGE_TAG) -f $(LOCAL_DOCKERFILE_DIR)/Dockerfile.carbide-rest-site-manager .
-	docker build -t $(IMAGE_REGISTRY)/carbide-rest-site-agent:$(IMAGE_TAG) -f $(LOCAL_DOCKERFILE_DIR)/Dockerfile.carbide-rest-site-agent .
-	docker build -t $(IMAGE_REGISTRY)/carbide-rest-mock-core:$(IMAGE_TAG) -f $(LOCAL_DOCKERFILE_DIR)/Dockerfile.carbide-rest-mock-core .
-	docker build -t $(IMAGE_REGISTRY)/carbide-rest-db:$(IMAGE_TAG) -f $(LOCAL_DOCKERFILE_DIR)/Dockerfile.carbide-rest-db .
-	docker build -t $(IMAGE_REGISTRY)/carbide-rest-cert-manager:$(IMAGE_TAG) -f $(LOCAL_DOCKERFILE_DIR)/Dockerfile.carbide-rest-cert-manager .
-	kind load docker-image $(IMAGE_REGISTRY)/carbide-rest-api:$(IMAGE_TAG) --name $(KIND_CLUSTER_NAME)
-	kind load docker-image $(IMAGE_REGISTRY)/carbide-rest-workflow:$(IMAGE_TAG) --name $(KIND_CLUSTER_NAME)
-	kind load docker-image $(IMAGE_REGISTRY)/carbide-rest-site-manager:$(IMAGE_TAG) --name $(KIND_CLUSTER_NAME)
-	kind load docker-image $(IMAGE_REGISTRY)/carbide-rest-site-agent:$(IMAGE_TAG) --name $(KIND_CLUSTER_NAME)
-	kind load docker-image $(IMAGE_REGISTRY)/carbide-rest-mock-core:$(IMAGE_TAG) --name $(KIND_CLUSTER_NAME)
-	kind load docker-image $(IMAGE_REGISTRY)/carbide-rest-db:$(IMAGE_TAG) --name $(KIND_CLUSTER_NAME)
-	kind load docker-image $(IMAGE_REGISTRY)/carbide-rest-cert-manager:$(IMAGE_TAG) --name $(KIND_CLUSTER_NAME)
+	$(MAKE) kind-load
 
 	@echo "Installing cert-manager.io..."
 	kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.14.4/cert-manager.yaml
@@ -417,13 +424,34 @@ kind-reset:
 	kubectl apply -k deploy/kustomize/base/keycloak
 	kubectl -n carbide-rest rollout status deployment/keycloak --timeout=240s
 
-	@echo "Setting up Carbide REST services..."
+	@echo "Setting up common secrets..."
 	kubectl apply -k deploy/kustomize/base/common
 	kubectl -n carbide-rest wait --for=condition=Ready certificate/temporal-client-cloud-cert --timeout=240s || true
 
-	@echo "Setting up Carbide REST Cert Manager..."
+	@echo "Setting up Carbide REST Cert Manager (credsmgr)..."
 	kubectl apply -k deploy/kustomize/overlays/cert-manager
 	kubectl -n carbide-rest rollout status deployment/carbide-rest-cert-manager --timeout=240s
+
+	@echo "Setting up Carbide Mock Core (dev only, not in Helm chart)..."
+	kubectl apply -k deploy/kustomize/overlays/mock-core
+	kubectl -n carbide-rest rollout status deployment/carbide-rest-mock-core --timeout=240s
+
+	@echo ""
+	@echo "================================================================================"
+	@echo "Infrastructure ready! Now deploy app services with:"
+	@echo "  make helm-deploy              # Helm umbrella chart"
+	@echo "  make helm-deploy-site-agent   # Helm site-agent chart"
+	@echo "  — or —"
+	@echo "  make kind-reset-kustomize     # Full reset + Kustomize app deployment"
+	@echo "================================================================================"
+
+# =============================================================================
+# Kind: Kustomize Deployment (alternative to Helm)
+# =============================================================================
+
+# Full reset with Kustomize-based app deployment
+kind-reset-kustomize: kind-reset-infra
+	@echo "Deploying app services via Kustomize overlays..."
 
 	@echo "Waiting for Carbide REST Site Manager..."
 	kubectl apply -k deploy/kustomize/overlays/site-manager
@@ -442,10 +470,6 @@ kind-reset:
 	kubectl apply -k deploy/kustomize/overlays/api
 	kubectl -n carbide-rest rollout status deployment/carbide-rest-api --timeout=240s
 
-	@echo "Setting up Carbide Mock Core..."
-	kubectl apply -k deploy/kustomize/overlays/mock-core
-	kubectl -n carbide-rest rollout status deployment/carbide-rest-mock-core --timeout=240s
-
 	@echo "Setting up Carbide REST Site Agent..."
 	kubectl apply -k deploy/kustomize/overlays/site-agent
 	kubectl -n carbide-rest rollout status statefulset/carbide-rest-site-agent --timeout=240s
@@ -455,28 +479,102 @@ kind-reset:
 
 	@echo ""
 	@echo "================================================================================"
-	@echo "Deployment complete!"
+	@echo "Deployment complete! (Kustomize)"
 	@echo ""
 	@echo "Temporal UI: http://localhost:8233"
-	@echo "  - View running workflows and their execution history"
-	@echo ""
 	@echo "API: http://localhost:8388"
 	@echo "Keycloak: http://localhost:8082"
 	@echo "================================================================================"
+
+# =============================================================================
+# Kind: Helm Deployment (default)
+# =============================================================================
+
+# Full reset with Helm-based app deployment (default for kind-reset)
+kind-reset-helm: kind-reset-infra
+	@echo "Deploying app services via Helm charts..."
+	$(MAKE) helm-deploy
+	$(MAKE) helm-deploy-site-agent
 	@echo ""
-	@echo "Example: Get a token and list all sites:"
+	@echo "================================================================================"
+	@echo "Deployment complete! (Helm)"
 	@echo ""
-	@echo '  TOKEN=$$(curl -s -X POST "http://localhost:8082/realms/carbide-dev/protocol/openid-connect/token" \'
-	@echo '    -H "Content-Type: application/x-www-form-urlencoded" \'
-	@echo '    -d "client_id=carbide-api" \'
-	@echo '    -d "client_secret=carbide-local-secret" \'
-	@echo '    -d "grant_type=password" \'
-	@echo '    -d "username=admin@example.com" \'
-	@echo '    -d "password=adminpassword" | jq -r .access_token)'
+	@echo "Temporal UI: http://localhost:8233"
+	@echo "API: http://localhost:8388"
+	@echo "Keycloak: http://localhost:8082"
+	@echo "================================================================================"
+
+# Default: full reset using Helm deployment
+kind-reset: kind-reset-helm
+
+# =============================================================================
+# Helm Charts
+# =============================================================================
+
+helm-lint:
+	helm lint $(UMBRELLA_CHART)/ $(HELM_SET) $(HELM_SET_KEYCLOAK)
+	helm lint $(SITE_AGENT_CHART)/ $(HELM_SET)
+
+helm-template:
+	@echo "--- carbide-rest (umbrella) ---"
+	helm template carbide-rest $(UMBRELLA_CHART)/ $(HELM_SET) $(HELM_SET_KEYCLOAK) --namespace carbide-rest
+	@echo "--- carbide-rest-site-agent ---"
+	helm template carbide-rest-site-agent $(SITE_AGENT_CHART)/ $(HELM_SET) --namespace carbide-rest
+
+# Deploy umbrella chart (api + workflow + site-manager + db)
+# Note: images must be loaded into kind before calling this (kind-load or kind-reset-infra)
+helm-deploy:
+	helm upgrade --install carbide-rest $(UMBRELLA_CHART)/ \
+		--namespace carbide-rest --create-namespace $(HELM_SET) $(HELM_SET_KEYCLOAK) \
+		--set carbide-rest-api.nodePort.enabled=true \
+		--set carbide-rest-api.nodePort.port=30388 \
+		--wait --timeout 5m
 	@echo ""
-	@echo '  curl -s "http://localhost:8388/v2/org/test-org/carbide/site" \'
-	@echo '    -H "Authorization: Bearer $$TOKEN" | jq ".[].name"'
+	@echo "================================================================================"
+	@echo "Umbrella chart deployed. To deploy site-agent:"
+	@echo "  make helm-deploy-site-agent"
+	@echo "================================================================================"
+
+# Deploy site-agent: install chart first (will CrashLoop), then bootstrap, then stabilize
+helm-deploy-site-agent:
+	@echo "Installing site-agent chart (will CrashLoop until bootstrapped)..."
+	helm upgrade --install carbide-rest-site-agent $(SITE_AGENT_CHART)/ \
+		--namespace carbide-rest $(HELM_SET) --timeout 1m || true
+	@echo "Running site bootstrap (setup-local.sh site-agent)..."
+	./scripts/setup-local.sh site-agent
+	@echo "Waiting for site-agent to stabilize..."
+	kubectl -n carbide-rest rollout status statefulset/carbide-rest-site-agent --timeout=120s
+
+# Deploy everything (umbrella + site-agent)
+helm-deploy-all: helm-deploy helm-deploy-site-agent
+
+# Rebuild images and redeploy umbrella chart via Helm (excludes site-agent; use helm-deploy-site-agent separately)
+helm-redeploy: docker-build-local kind-load helm-deploy
+
+helm-verify:
+	@echo "Checking Site Manager..."
+	kubectl -n carbide-rest rollout status deployment/carbide-rest-site-manager --timeout=120s
+	@echo "Checking Cloud Worker..."
+	kubectl -n carbide-rest rollout status deployment/carbide-rest-cloud-worker --timeout=120s
+	@echo "Checking Site Worker..."
+	kubectl -n carbide-rest rollout status deployment/carbide-rest-site-worker --timeout=120s
+	@echo "Checking API..."
+	kubectl -n carbide-rest rollout status deployment/carbide-rest-api --timeout=120s
 	@echo ""
+	@echo "All umbrella chart services are ready."
+	@kubectl -n carbide-rest get pods
+
+helm-verify-site-agent:
+	@echo "Checking Site Agent..."
+	kubectl -n carbide-rest rollout status statefulset/carbide-rest-site-agent --timeout=120s
+
+helm-uninstall:
+	-helm uninstall carbide-rest-site-agent --namespace carbide-rest
+	-helm uninstall carbide-rest --namespace carbide-rest
+
+# =============================================================================
+# Kind: Utilities
+# =============================================================================
 
 # Setup site-agent with a real site created via the API
 setup-site-agent:

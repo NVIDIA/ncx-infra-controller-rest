@@ -118,8 +118,8 @@ func TestInjectExpectationWorkflow(t *testing.T) {
 
 			info := &operations.InjectExpectationTaskInfo{}
 			reqInfo := taskdef.ExecutionInfo{
-				TaskID: uuid.New(),
-				Rack:   buildTestRack(tc.components),
+				TaskID:     uuid.New(),
+				Components: toWorkflowComponents(tc.components),
 			}
 
 			env.ExecuteWorkflow(InjectExpectation, reqInfo, info)

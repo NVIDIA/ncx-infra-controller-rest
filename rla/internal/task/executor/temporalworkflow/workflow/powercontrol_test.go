@@ -36,9 +36,7 @@ import (
 	taskdef "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/task"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/deviceinfo"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/location"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/component"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/rack"
 )
 
 // mockPowerControl is a mock activity function for testing
@@ -76,13 +74,22 @@ func newTestComponent(id uuid.UUID, name string, externalID string, compType dev
 	}
 }
 
-// Helper function to build a rack from components for testing
-func buildTestRack(components []*component.Component) *rack.Rack {
-	r := rack.New(deviceinfo.DeviceInfo{ID: uuid.New(), Name: "test-rack"}, location.Location{})
-	for _, c := range components {
-		r.AddComponent(*c)
+// toWorkflowComponents converts a slice of *component.Component to
+// []taskdef.WorkflowComponent for use in test ExecutionInfo structs.
+func toWorkflowComponents(
+	components []*component.Component,
+) []taskdef.WorkflowComponent {
+	if components == nil {
+		return nil
 	}
-	return r
+	result := make([]taskdef.WorkflowComponent, len(components))
+	for i, c := range components {
+		result[i] = taskdef.WorkflowComponent{
+			Type:        c.Type,
+			ComponentID: c.ComponentID,
+		}
+	}
+	return result
 }
 
 // Helper function to create a default rule definition for power operations
@@ -344,7 +351,7 @@ func TestPowerControlWorkflow(t *testing.T) {
 			info := operations.PowerControlTaskInfo{Operation: tc.op}
 			reqInfo := taskdef.ExecutionInfo{
 				TaskID:         uuid.New(),
-				Rack:           buildTestRack(tc.components),
+				Components:     toWorkflowComponents(tc.components),
 				RuleDefinition: createDefaultPowerRuleDef(tc.op),
 			}
 
