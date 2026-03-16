@@ -338,7 +338,7 @@ func ValidateNVLinkInterfaces(itNvlCaps []cdbm.MachineCapability, nvlifcs []APIN
 		for _, nvlifc := range nvlifcs {
 			if nvlifc.DeviceInstance < 0 || nvlifc.DeviceInstance >= gpuCount {
 				return validation.Errors{
-					"nvLinkInterfaces": fmt.Errorf("deviceInstance %d is out of range [0, %d)", nvlifc.DeviceInstance, gpuCount),
+					"nvLinkInterfaces": fmt.Errorf("deviceInstance: %d is out of available range [0, %d]", nvlifc.DeviceInstance, gpuCount),
 				}
 			}
 			if seen[nvlifc.DeviceInstance] {

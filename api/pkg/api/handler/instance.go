@@ -44,7 +44,6 @@ import (
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/pagination"
 	sc "github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/client/site"
 	auth "github.com/NVIDIA/ncx-infra-controller-rest/auth/pkg/authorization"
-	cerr "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/util"
 	cutil "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/util"
 	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
@@ -2423,19 +2422,12 @@ func (uih UpdateInstanceHandler) Handle(c echo.Context) error {
 		}
 	}
 
-	existingNvllpIDMap := make(map[string]bool)
 	if len(apiRequest.NVLinkInterfaces) > 0 {
 		nvlIfcDAO := cdbm.NewNVLinkInterfaceDAO(uih.dbSession)
 		nvlIfcs, _, err := nvlIfcDAO.GetAll(ctx, nil, cdbm.NVLinkInterfaceFilterInput{InstanceIDs: []uuid.UUID{instance.ID}}, cdbp.PageInput{}, nil)
 		if err != nil {
 			logger.Error().Err(err).Msg("error retrieving NVLink Interfaces from DB for Instance")
 			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve NVLink Interfaces for Instance", nil)
-		}
-
-		// Existing NVLink Logical Partition IDs and Device Instances
-		for _, nvlIfc := range nvlIfcs {
-			existingNvllpID := fmt.Sprintf("%s:%d", nvlIfc.NVLinkLogicalPartitionID.String(), nvlIfc.DeviceInstance)
-			existingNvllpIDMap[existingNvllpID] = true
 		}
 
 		// Discard if VPC has default NVLink Logical Partition specified and NVLink Interfaces are exists
@@ -2452,14 +2444,6 @@ func (uih UpdateInstanceHandler) Handle(c echo.Context) error {
 			logger.Warn().Err(err).Msg("error parsing NVLink Logical Partition id in instance NVLink Interface request")
 			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("NVLink Logical Partition ID: %v specified in request data is not valid", nvlifc.NVLinkLogicalPartitionID), nil)
 		}
-
-		// Discard if the same NVLink Logical Partition + Device Instance pair already exists for the Instance
-		existingKey := fmt.Sprintf("%s:%d", nvllpID.String(), nvlifc.DeviceInstance)
-		if _, ok := existingNvllpIDMap[existingKey]; ok {
-			logger.Warn().Msg(fmt.Sprintf("NVLink Interfaces of this Instance are already connected to NVLink Logical Partition: %v and Device Instance: %d", nvllpID, nvlifc.DeviceInstance))
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("NVLink Interfaces of this Instance are already connected to NVLink Logical Partition: %v and Device Instance: %d", nvllpID, nvlifc.DeviceInstance), nil)
-		}
-
 		nvllpIDs = append(nvllpIDs, nvllpID)
 	}
 
@@ -2488,7 +2472,7 @@ func (uih UpdateInstanceHandler) Handle(c echo.Context) error {
 		nvllp, ok := nvllpIDMap[nvllpID]
 		if !ok {
 			logger.Error().Msg("error retrieving NVLink Logical Partition from DB by ID")
-			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve NVLink Logical Partition with ID specified in request data, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve NVLink Logical Partition with ID specified in request data, DB error", nil)
 		}
 
 		if nvllp.SiteID != instance.SiteID {
