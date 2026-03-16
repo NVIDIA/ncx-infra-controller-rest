@@ -11,7 +11,7 @@ This is a **prescriptive, BYO-Kubernetes bring-up guide** for the Carbide REST c
 Carbide REST can be deployed in two ways:
 
 - **Co-located:** The REST layer and [Bare Metal Manager Core](https://github.com/NVIDIA/bare-metal-manager-core) run together in the same datacenter cluster.
-- **Cloud-hosted:** The REST layer runs anywhere (cloud, remote DC) and site agents running at each datacenter connect back to it. Multiple Bare Metal Manager Core instances in different datacenters can each connect through their own site agent.
+- **Cloud-hosted:** The REST layer runs anywhere (cloud, remote DC) and Site Agents running at each datacenter connect back to it. Multiple Bare Metal Manager Core instances in different datacenters can each connect through their own Site Agent.
 
 This guide covers the cloud-hosted topology — deploying the REST control plane components on a Kubernetes cluster that site agents will connect to from remote sites.
 
@@ -104,13 +104,13 @@ Before we begin with the installation, we need a root CA (certificate + private 
 
 The cert-manager.io `ClusterIssuer` references this secret to issue certificates for all other components. It is also used by `carbide-rest-cert-manager`, which is the internal PKI service for Carbide REST working in conjunction with cert-manager.io to dynamically dispense mTLS certificate for all connecting Site Agents.
 
-The CA certificate is the trust anchor for the entire deployment. Every TLS certificate issued to Carbide REST workloads — site-manager, site-agent gRPC, Temporal client certs — traces back to this CA.
+The CA certificate is the trust anchor for the entire deployment. Every TLS certificate issued to Carbide REST workloads — `site-manager` HTTPS cert, `site-agent` gRPC/Temporal client certs — traces back to this CA.
 
 ### Required secret shape
 
 ```
 Secret name: ca-signing-secret  (type: kubernetes.io/tls)
-Namespaces:  carbide-rest  and  cert-manager
+Namespaces:  `carbide-rest`  and  `cert-manager`
 Keys:
   tls.crt  →  PEM-encoded root CA certificate
   tls.key  →  PEM-encoded root CA private key
@@ -244,7 +244,7 @@ kubectl apply -k deploy/kustomize/base/keycloak -n carbide-rest
 
 ### What it is
 
-`carbide-rest-cert-manager` is the internal PKI microservice (formerly `credsmgr`). It uses native Go PKI to issue TLS certificates for Carbide REST components. When the site-manager receives a new site registration, it calls this service to issue the client certificates the site-agent will use to authenticate. It exposes two ports:
+`carbide-rest-cert-manager` is the internal PKI microservice (also referred as `credsmgr`). It uses native Go PKI to vend mTLS certificates for components over HTTPS, primarily for dynamic/external entities e.g. Site Agents. When the `site-manager` receives a new site registration, it calls `carbide-rest-cert-manager` service to issue the client certificates `site-agent` will use to authenticate. It exposes two ports:
 
 - **8000** (HTTPS) — certificate issuance API
 - **8001** (HTTP) — health and liveness endpoint
@@ -289,7 +289,7 @@ kubectl rollout status deployment/carbide-rest-cert-manager -n carbide-rest
 
 ### What it is
 
-A cert-manager.io `ClusterIssuer` named `carbide-rest-ca-issuer` that uses `ca-signing-secret` to sign certificates cluster-wide. All `Certificate` resources created by subsequent steps reference this issuer — Temporal TLS certs, site-manager TLS, site-agent gRPC certs, and Temporal client certs all flow through it.
+A cert-manager.io `ClusterIssuer` named `carbide-rest-ca-issuer` that uses `ca-signing-secret` to sign certificates cluster-wide. All `Certificate` resources created by subsequent steps reference this issuer — Temporal TLS certs, site-manager TLS, site-agent gRPC certs, and Temporal client certs all flow through it. The ClusterIssuer is used for generating mTLS certs for static/well known in cluster services.
 
 ### Manifests
 
@@ -356,7 +356,7 @@ kubectl apply -k deploy/kustomize/base/common
 
 ### What it is
 
-Temporal is the durable workflow engine that coordinates all long-running operations in Carbide REST. The cloud-worker and site-worker connect to it to poll for and execute workflow tasks. The API schedules workflows via Temporal. Temporal itself is deployed via the Helm chart vendored at `temporal-helm/temporal/`.
+Temporal is the durable workflow engine that coordinates all async and long-running operations in Carbide REST. The `cloud-worker` and `site-worker` services connect to it to poll and execute workflow tasks. `carbide-rest-api` schedules temporal workflows for `cloud-worker` and `site-agent` to execute. Temporal itself is deployed via the Helm chart vendored at `temporal-helm/temporal/`.
 
 ### Versions used
 
