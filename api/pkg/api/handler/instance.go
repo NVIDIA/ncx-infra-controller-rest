@@ -2472,7 +2472,7 @@ func (uih UpdateInstanceHandler) Handle(c echo.Context) error {
 		nvllp, ok := nvllpIDMap[nvllpID]
 		if !ok {
 			logger.Error().Msg("error retrieving NVLink Logical Partition from DB by ID")
-			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve NVLink Logical Partition with ID specified in request data, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Could not find NVLink Logical Partition with ID: %s specified in request data", nvllpID), nil)
 		}
 
 		if nvllp.SiteID != instance.SiteID {

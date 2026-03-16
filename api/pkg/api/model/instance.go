@@ -343,7 +343,7 @@ func ValidateNVLinkInterfaces(itNvlCaps []cdbm.MachineCapability, nvlifcs []APIN
 			}
 			if seen[nvlifc.DeviceInstance] {
 				return validation.Errors{
-					"nvLinkInterfaces": fmt.Errorf("duplicate deviceInstance %d specified in NVLink Interfaces", nvlifc.DeviceInstance),
+					"nvLinkInterfaces": fmt.Errorf("duplicate deviceInstance: %d specified in NVLink Interfaces", nvlifc.DeviceInstance),
 				}
 			}
 			seen[nvlifc.DeviceInstance] = true

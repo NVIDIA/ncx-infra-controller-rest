@@ -14784,7 +14784,7 @@ components:
             $ref: '#/components/schemas/DpuExtensionServiceDeploymentRequest'
         nvLinkInterfaces:
           type: array
-          description: Associate NVLink interfaces with this Instance. A subset of GPUs may be specified (it is not required to include all GPUs). Each item references one GPU index (`deviceInstance`) and one NVLink Logical Partition. Different interfaces may reference different NVLink Logical Partitions.
+          description: Define Interfaces to associate Instance GPUs with NVLink Logical Partitions. A subset of GPUs may be specified (it is not required to include all GPUs). Each item references one GPU index (`deviceInstance`) and one NVLink Logical Partition. Different interfaces may reference different NVLink Logical Partitions.
           items:
             $ref: '#/components/schemas/NVLinkInterfaceCreateRequest'
         sshKeyGroupIds:
