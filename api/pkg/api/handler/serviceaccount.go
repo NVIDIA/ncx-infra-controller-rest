@@ -25,20 +25,17 @@ import (
 	"github.com/nvidia/bare-metal-manager-rest/api/internal/config"
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/handler/util/common"
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model"
-	cerr "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	sutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
+	cutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
 	cdbp "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
-	"github.com/rs/zerolog/log"
-	"go.opentelemetry.io/otel/attribute"
 )
 
 // GetCurrentServiceAccountHandler is the API Handler for getting the current Service Account
 type GetCurrentServiceAccountHandler struct {
 	dbSession  *cdb.Session
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetCurrentServiceAccountHandler initializes and returns a new handler for getting the current Service Account
@@ -46,7 +43,7 @@ func NewGetCurrentServiceAccountHandler(dbSession *cdb.Session, cfg *config.Conf
 	return GetCurrentServiceAccountHandler{
 		dbSession:  dbSession,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -61,31 +58,12 @@ func NewGetCurrentServiceAccountHandler(dbSession *cdb.Session, cfg *config.Conf
 // @Success 200 {object} model.APIServiceAccount
 // @Router /v2/org/{org}/carbide/service-account/current [get]
 func (gcsah GetCurrentServiceAccountHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "ServiceAccount").Str("Handler", "GetCurrent").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gcsah.tracerSpan.CreateChildInContext(ctx, "GetCurrentServiceAccountHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("ServiceAccount", "GetCurrent", c, gcsah.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gcsah.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gcsah.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Check if service account is enabled for at least one auth configuration
@@ -112,7 +90,7 @@ func (gcsah GetCurrentServiceAccountHandler) Handle(c echo.Context) error {
 	ips, err := ipDAO.GetAllByOrg(ctx, nil, org, nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Infrastructure Provider for this org")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Infrastructure Provider for org, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Infrastructure Provider for org, DB error", nil)
 	}
 
 	var serr error
@@ -121,7 +99,7 @@ func (gcsah GetCurrentServiceAccountHandler) Handle(c echo.Context) error {
 		ip, serr = ipDAO.CreateFromParams(ctx, nil, org, nil, org, cdb.GetStrPtr(org), dbUser)
 		if serr != nil {
 			logger.Error().Err(serr).Msg("error creating Infrastructure Provider DB entity")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Infrastructure Provider for org, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Infrastructure Provider for org, DB error", nil)
 		}
 	} else {
 		ip = &ips[0]
@@ -135,7 +113,7 @@ func (gcsah GetCurrentServiceAccountHandler) Handle(c echo.Context) error {
 	tns, err := tnDAO.GetAllByOrg(ctx, nil, org, nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Tenant for this org")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org, DB error", nil)
 	}
 
 	if len(tns) == 0 {
@@ -147,7 +125,7 @@ func (gcsah GetCurrentServiceAccountHandler) Handle(c echo.Context) error {
 		tn, serr = tnDAO.CreateFromParams(ctx, nil, org, nil, org, cdb.GetStrPtr(org), tenantConfig, dbUser)
 		if serr != nil {
 			logger.Error().Err(serr).Msg("error creating Tenant DB entity")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Tenant for org, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Tenant for org, DB error", nil)
 		}
 	} else {
 		tn = &tns[0]
@@ -160,7 +138,7 @@ func (gcsah GetCurrentServiceAccountHandler) Handle(c echo.Context) error {
 			tn, serr = tnDAO.UpdateFromParams(ctx, nil, tn.ID, nil, nil, nil, tenantConfig)
 			if serr != nil {
 				logger.Error().Err(serr).Msg("error updating Tenant DB entity")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Tenant capabilities for org, DB error", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Tenant capabilities for org, DB error", nil)
 			}
 		}
 	}
@@ -173,7 +151,7 @@ func (gcsah GetCurrentServiceAccountHandler) Handle(c echo.Context) error {
 	}, cdbp.PageInput{}, nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Tenant Account for this org")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant Account for org's Tenant, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant Account for org's Tenant, DB error", nil)
 	}
 
 	if len(tas) == 0 {
@@ -189,7 +167,7 @@ func (gcsah GetCurrentServiceAccountHandler) Handle(c echo.Context) error {
 		})
 		if serr != nil {
 			logger.Error().Err(serr).Msg("error creating Tenant Account DB entity")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Tenant Account for org's Tenant, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Tenant Account for org's Tenant, DB error", nil)
 		}
 	}
 

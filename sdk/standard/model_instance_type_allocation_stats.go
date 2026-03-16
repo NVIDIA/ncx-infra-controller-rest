@@ -20,6 +20,8 @@ var _ MappedNullable = &InstanceTypeAllocationStats{}
 
 // InstanceTypeAllocationStats Allocation statistics for Instance Type
 type InstanceTypeAllocationStats struct {
+	// Total number of Machines assigned to this Instance Type
+	Assigned *int32 `json:"assigned,omitempty"`
 	// Total number of Machines allocated to different Tenants for this Instance Type
 	Total *int32 `json:"total,omitempty"`
 	// Total number of allocated Machines of this Instance Type currently being used by Tenants
@@ -47,6 +49,38 @@ func NewInstanceTypeAllocationStats() *InstanceTypeAllocationStats {
 func NewInstanceTypeAllocationStatsWithDefaults() *InstanceTypeAllocationStats {
 	this := InstanceTypeAllocationStats{}
 	return &this
+}
+
+// GetAssigned returns the Assigned field value if set, zero value otherwise.
+func (o *InstanceTypeAllocationStats) GetAssigned() int32 {
+	if o == nil || IsNil(o.Assigned) {
+		var ret int32
+		return ret
+	}
+	return *o.Assigned
+}
+
+// GetAssignedOk returns a tuple with the Assigned field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *InstanceTypeAllocationStats) GetAssignedOk() (*int32, bool) {
+	if o == nil || IsNil(o.Assigned) {
+		return nil, false
+	}
+	return o.Assigned, true
+}
+
+// HasAssigned returns a boolean if a field has been set.
+func (o *InstanceTypeAllocationStats) HasAssigned() bool {
+	if o != nil && !IsNil(o.Assigned) {
+		return true
+	}
+
+	return false
+}
+
+// SetAssigned gets a reference to the given int32 and assigns it to the Assigned field.
+func (o *InstanceTypeAllocationStats) SetAssigned(v int32) {
+	o.Assigned = &v
 }
 
 // GetTotal returns the Total field value if set, zero value otherwise.
@@ -219,6 +253,9 @@ func (o InstanceTypeAllocationStats) MarshalJSON() ([]byte, error) {
 
 func (o InstanceTypeAllocationStats) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
+	if !IsNil(o.Assigned) {
+		toSerialize["assigned"] = o.Assigned
+	}
 	if !IsNil(o.Total) {
 		toSerialize["total"] = o.Total
 	}

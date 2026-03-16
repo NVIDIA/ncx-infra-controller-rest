@@ -72,7 +72,7 @@ func NewNativeCertificateIssuer(opts NativeCertificateIssuerOptions) (types.Cert
 			}, nil
 		}
 		if loadErr != nil {
-			loadErr = fmt.Errorf("%v; alternate path (%s): %w", loadErr, opts.AltCACertFile, err)
+			loadErr = fmt.Errorf("%w; alternate path (%s): %w", loadErr, opts.AltCACertFile, err)
 		} else {
 			loadErr = fmt.Errorf("alternate path (%s): %w", opts.AltCACertFile, err)
 		}

@@ -31,15 +31,13 @@ import (
 	temporalClient "go.temporal.io/sdk/client"
 
 	"github.com/google/uuid"
-	"github.com/rs/zerolog/log"
 
 	"github.com/nvidia/bare-metal-manager-rest/api/internal/config"
 	common "github.com/nvidia/bare-metal-manager-rest/api/pkg/api/handler/util/common"
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model"
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/pagination"
 	auth "github.com/nvidia/bare-metal-manager-rest/auth/pkg/authorization"
-	cerr "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	sutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
+	cutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 	cdbp "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
 )
 
@@ -50,7 +48,7 @@ type CreateTenantAccountHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewCreateTenantAccountHandler initializes and returns a new handler for creating TenantAccount
@@ -59,7 +57,7 @@ func NewCreateTenantAccountHandler(dbSession *cdb.Session, tc temporalClient.Cli
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -75,31 +73,12 @@ func NewCreateTenantAccountHandler(dbSession *cdb.Session, tc temporalClient.Cli
 // @Success 201 {object} model.APITenantAccount
 // @Router /v2/org/{org}/carbide/tenant/account [post]
 func (ctah CreateTenantAccountHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "TenantAccount").Str("Handler", "Create").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := ctah.tracerSpan.CreateChildInContext(ctx, "CreateTenantAccountHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("TenantAccount", "Create", c, ctah.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		ctah.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, ctah.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -110,14 +89,14 @@ func (ctah CreateTenantAccountHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Provider Admins are allowed to create TenantAccounts
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Provider Admin role with org, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
 	}
 
 	// Validate request
@@ -126,26 +105,26 @@ func (ctah CreateTenantAccountHandler) Handle(c echo.Context) error {
 	err = c.Bind(&apiRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
 	}
 
 	// Validate request attributes
 	verr := apiRequest.Validate()
 	if verr != nil {
 		logger.Warn().Err(verr).Msg("error validating Tenant Account creation request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating Tenant Account creation request data", verr)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating Tenant Account creation request data", verr)
 	}
 
 	// Check that infrastructureProvider for org matches request
 	ip, err := common.GetInfrastructureProviderForOrg(ctx, nil, ctah.dbSession, org)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error getting infrastructure provider for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for current org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for current org", nil)
 	}
 
 	if ip.ID.String() != apiRequest.InfrastructureProviderID {
 		logger.Warn().Err(err).Msg("infrastructure provider in request does not belong to org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Infrastructure ProviderId in request", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Infrastructure ProviderId in request", nil)
 	}
 
 	// Validate the Tenant for which this TenantAccount is being created
@@ -160,12 +139,12 @@ func (ctah CreateTenantAccountHandler) Handle(c echo.Context) error {
 	if apiRequest.TenantID != nil {
 		id, serr := uuid.Parse(*apiRequest.TenantID)
 		if serr != nil {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Tenant ID specified in request", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Tenant ID specified in request", nil)
 		}
 		tenant, serr := tnDAO.GetByID(ctx, nil, id, nil)
 		if serr != nil {
 			logger.Warn().Err(serr).Msg("error retrieving tenant")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Tenant specified in request", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Tenant specified in request", nil)
 		}
 		tenantID = &tenant.ID
 		tenantOrg = &tenant.Org
@@ -174,12 +153,12 @@ func (ctah CreateTenantAccountHandler) Handle(c echo.Context) error {
 		tenants, serr := tnDAO.GetAllByOrg(ctx, nil, *tenantOrg, nil)
 		if serr != nil {
 			logger.Warn().Err(err).Msg("error retrieving tenant")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Tenant specified in request", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Tenant specified in request", nil)
 		}
 
 		if len(tenants) > 1 {
 			logger.Warn().Err(err).Msg("multiple tenants found for org")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Multiple tenants found for org", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Multiple tenants found for org", nil)
 		} else if len(tenants) > 0 {
 			tenantID = &tenants[0].ID
 		}
@@ -194,10 +173,10 @@ func (ctah CreateTenantAccountHandler) Handle(c echo.Context) error {
 	}, cdbp.PageInput{}, nil)
 	if terr != nil {
 		logger.Error().Err(terr).Msg("error retrieving Tenant Accounts")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant Accounts", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant Accounts", nil)
 	}
 	if len(tas) > 0 {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Tenant Account between Infrastructure Provider and Tenant already exists", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Tenant Account between Infrastructure Provider and Tenant already exists", nil)
 	}
 
 	// Generate a unique account number
@@ -207,7 +186,7 @@ func (ctah CreateTenantAccountHandler) Handle(c echo.Context) error {
 	tx, err := cdb.BeginTx(ctx, ctah.dbSession, &sql.TxOptions{})
 	if err != nil {
 		logger.Error().Err(err).Msg("unable to start transaction")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error creating Tenant Account", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error creating Tenant Account", nil)
 	}
 	txCommitted := false
 	defer common.RollbackTx(ctx, tx, &txCommitted)
@@ -224,7 +203,7 @@ func (ctah CreateTenantAccountHandler) Handle(c echo.Context) error {
 	if err != nil {
 		logger.Error().Err(err).Msg("error creating TenantAccount in DB")
 		// rollback transaction
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create tenant account", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create tenant account", nil)
 	}
 
 	// Create a status detail record for the tenantaccount
@@ -234,18 +213,18 @@ func (ctah CreateTenantAccountHandler) Handle(c echo.Context) error {
 	if serr != nil {
 		logger.Error().Err(serr).Msg("error creating Status Detail DB entry")
 		// rollback transaction
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for TenantAccount", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for TenantAccount", nil)
 	}
 	if ssd == nil {
 		logger.Error().Msg("Status Detail DB entry not returned from CreateFromParams")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to get new Status Detail for TenantAccount", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to get new Status Detail for TenantAccount", nil)
 	}
 
 	// Commit transaction
 	err = tx.Commit()
 	if err != nil {
 		logger.Error().Err(err).Msg("error committing subnet transaction to DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Tenant Account", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Tenant Account", nil)
 	}
 	// set committed so, deferred cleanup functions will do nothing
 	txCommitted = true
@@ -265,7 +244,7 @@ type GetAllTenantAccountHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetAllTenantAccountHandler initializes and returns a new handler for getting all TenantAccounts
@@ -274,7 +253,7 @@ func NewGetAllTenantAccountHandler(dbSession *cdb.Session, tc temporalClient.Cli
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -296,31 +275,12 @@ func NewGetAllTenantAccountHandler(dbSession *cdb.Session, tc temporalClient.Cli
 // @Success 200 {object} []model.APITenantAccount
 // @Router /v2/org/{org}/carbide/tenant/account [get]
 func (gatah GetAllTenantAccountHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "TenantAccount").Str("Handler", "GetAll").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gatah.tracerSpan.CreateChildInContext(ctx, "GetAllTenantAccountHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("TenantAccount", "GetAll", c, gatah.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gatah.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gatah.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -331,7 +291,7 @@ func (gatah GetAllTenantAccountHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate paginantion request
@@ -339,14 +299,14 @@ func (gatah GetAllTenantAccountHandler) Handle(c echo.Context) error {
 	err = c.Bind(&pageRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding pagination request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request pagination data", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request pagination data", nil)
 	}
 
 	// Validate request attributes
 	err = pageRequest.Validate(cdbm.TenantAccountOrderByFields)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error validating pagination request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate pagination request data", err)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate pagination request data", err)
 	}
 
 	// Get and validate query params
@@ -355,7 +315,7 @@ func (gatah GetAllTenantAccountHandler) Handle(c echo.Context) error {
 	if qInfrastructureProviderID == "" && qTenantID == "" {
 		errStr := "Either infrastructureProviderId or tenantId query param must be specified."
 		logger.Warn().Msg(errStr)
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, errStr, nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, errStr, nil)
 	}
 
 	// Get and validate includeRelation params
@@ -363,7 +323,7 @@ func (gatah GetAllTenantAccountHandler) Handle(c echo.Context) error {
 	qIncludeRelations, errMsg := common.GetAndValidateQueryRelations(qParams, cdbm.TenantAccountRelatedEntities)
 	if errMsg != "" {
 		logger.Warn().Msg(errMsg)
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
 	}
 
 	// Get status from query param
@@ -375,7 +335,7 @@ func (gatah GetAllTenantAccountHandler) Handle(c echo.Context) error {
 		_, sok := cdbm.TenantAccountStatusMap[statusQuery]
 		if !sok {
 			logger.Warn().Msg(fmt.Sprintf("invalid value in status query: %v", statusQuery))
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Status value in query", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Status value in query", nil)
 		}
 		status = &statusQuery
 	}
@@ -387,7 +347,7 @@ func (gatah GetAllTenantAccountHandler) Handle(c echo.Context) error {
 		id, serr := uuid.Parse(qInfrastructureProviderID)
 		if serr != nil {
 			logger.Warn().Err(serr).Msg("error parsing infrastructureProviderId in query into uuid")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Infrastructure Provider ID in query", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Infrastructure Provider ID in query", nil)
 		}
 
 		infrastructureProviderID = &id
@@ -399,7 +359,7 @@ func (gatah GetAllTenantAccountHandler) Handle(c echo.Context) error {
 		id, serr := uuid.Parse(qTenantID)
 		if serr != nil {
 			logger.Warn().Err(serr).Msg("error parsing tenantId in query into uuid")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Tenant ID in query", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Tenant ID in query", nil)
 		}
 
 		tenantID = &id
@@ -414,14 +374,14 @@ func (gatah GetAllTenantAccountHandler) Handle(c echo.Context) error {
 	if err != nil {
 		if err != common.ErrOrgInstrastructureProviderNotFound {
 			logger.Error().Err(err).Msg("error getting infrastructure provider for org")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Infrastructure Provider for org, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Infrastructure Provider for org, DB error", nil)
 		}
 	} else if infrastructureProviderID != nil && orgInfrastructureProvider.ID == *infrastructureProviderID {
 		// Validate role, only Provider Admins are allowed to proceed from here
 		ok = auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole, auth.ProviderViewerRole)
 		if !ok {
 			logger.Warn().Msg("user does not have Provider Admin role with org, access denied")
-			return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
 		}
 
 		isAssociated = true
@@ -433,14 +393,14 @@ func (gatah GetAllTenantAccountHandler) Handle(c echo.Context) error {
 		if err1 != nil {
 			if err1 != common.ErrOrgTenantNotFound {
 				logger.Error().Err(err1).Msg("error getting tenant for org")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve tenant for org", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve tenant for org", nil)
 			}
 		} else if tenantID != nil && orgTenant.ID == *tenantID {
 			// Validate role, only Tenant Admins are allowed to proceed from here
 			ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 			if !ok {
 				logger.Warn().Msg("user does not have Tenant Admin role with org, access denied")
-				return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 			}
 
 			isAssociated = true
@@ -448,7 +408,7 @@ func (gatah GetAllTenantAccountHandler) Handle(c echo.Context) error {
 	}
 
 	if !isAssociated {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Either Infrastructure Provider or Tenant in query param must be associated with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Either Infrastructure Provider or Tenant in query param must be associated with org", nil)
 	}
 
 	// Get Tenant Accounts
@@ -477,7 +437,7 @@ func (gatah GetAllTenantAccountHandler) Handle(c echo.Context) error {
 	}, qIncludeRelations)
 	if err != nil {
 		logger.Error().Err(err).Msg("error getting TenantAccounts from db")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve TenantAccounts", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve TenantAccounts", nil)
 	}
 
 	// Get status details
@@ -490,7 +450,7 @@ func (gatah GetAllTenantAccountHandler) Handle(c echo.Context) error {
 	ssds, serr := sdDAO.GetRecentByEntityIDs(ctx, nil, sdEntityIDs, common.RECENT_STATUS_DETAIL_COUNT)
 	if serr != nil {
 		logger.Warn().Err(serr).Msg("error retrieving Status Details for Tenant Accounts from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to populate status history for Tenant Accounts", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to populate status history for Tenant Accounts", nil)
 	}
 	ssdMap := map[string][]cdbm.StatusDetail{}
 	for _, ssd := range ssds {
@@ -514,7 +474,7 @@ func (gatah GetAllTenantAccountHandler) Handle(c echo.Context) error {
 		als, _, serr := aDAO.GetAll(ctx, nil, allocationFilter, allocationPage, nil)
 		if serr != nil {
 			logger.Error().Err(serr).Msg("error retrieving allocation for Tenant from DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Allocations to determine total Allocation count for Tenants", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Allocations to determine total Allocation count for Tenants", nil)
 		}
 
 		for _, al := range als {
@@ -538,7 +498,7 @@ func (gatah GetAllTenantAccountHandler) Handle(c echo.Context) error {
 	pageHeader, err := json.Marshal(pageReponse)
 	if err != nil {
 		logger.Error().Err(err).Msg("error marshaling pagination response")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to generate pagination response header", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to generate pagination response header", nil)
 	}
 
 	c.Response().Header().Set(pagination.ResponseHeaderName, string(pageHeader))
@@ -555,7 +515,7 @@ type GetTenantAccountHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetTenantAccountHandler initializes and returns a new handler to retrieve TenantAccount
@@ -564,7 +524,7 @@ func NewGetTenantAccountHandler(dbSession *cdb.Session, tc temporalClient.Client
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -583,31 +543,12 @@ func NewGetTenantAccountHandler(dbSession *cdb.Session, tc temporalClient.Client
 // @Success 200 {object} model.APITenantAccount
 // @Router /v2/org/{org}/carbide/tenant/account/{id} [get]
 func (gtah GetTenantAccountHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "TenantAccount").Str("Handler", "Get").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gtah.tracerSpan.CreateChildInContext(ctx, "GetTenantAccountHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("TenantAccount", "Get", c, gtah.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gtah.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gtah.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -618,7 +559,7 @@ func (gtah GetTenantAccountHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Get tenant account ID from URL param
@@ -629,7 +570,7 @@ func (gtah GetTenantAccountHandler) Handle(c echo.Context) error {
 	taID, err := uuid.Parse(taStrID)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error parsing id in url into uuid")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Tenant Account ID in URL", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Tenant Account ID in URL", nil)
 	}
 
 	// Get and validate includeRelation params
@@ -637,7 +578,7 @@ func (gtah GetTenantAccountHandler) Handle(c echo.Context) error {
 	qIncludeRelations, errStr := common.GetAndValidateQueryRelations(qParams, cdbm.TenantAccountRelatedEntities)
 	if errStr != "" {
 		logger.Warn().Msg(errStr)
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, errStr, nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, errStr, nil)
 	}
 
 	// Check that TenantAccount exists
@@ -649,7 +590,7 @@ func (gtah GetTenantAccountHandler) Handle(c echo.Context) error {
 	ta, err := taDAO.GetByID(ctx, nil, taID, qIncludeRelations)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error retrieving TenantAccount DB entity")
-		return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not retrieve Tenant Account to update", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not retrieve Tenant Account to update", nil)
 	}
 
 	// Get and validate query params
@@ -658,7 +599,7 @@ func (gtah GetTenantAccountHandler) Handle(c echo.Context) error {
 
 	if qInfrastructureProviderID == "" && qTenantID == "" {
 		// Logging common user request data error can add a lot to system logs
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Either Infrastructure Provider ID or Tenant ID query param must be specified.", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Either Infrastructure Provider ID or Tenant ID query param must be specified.", nil)
 	}
 
 	var infrastructureProviderID *uuid.UUID
@@ -669,12 +610,12 @@ func (gtah GetTenantAccountHandler) Handle(c echo.Context) error {
 		id, err1 := uuid.Parse(qInfrastructureProviderID)
 		if err1 != nil {
 			logger.Warn().Err(err1).Msg("error parsing infrastructureProviderId in query into uuid")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Infrastructure Provider ID in query", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Infrastructure Provider ID in query", nil)
 		}
 
 		// If the Infrastructure Provider ID in query is not the same as the one in the Tenant Account, return an error
 		if id != ta.InfrastructureProviderID {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find Tenant Account matching Infrastructure Provider in query", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find Tenant Account matching Infrastructure Provider in query", nil)
 		}
 
 		infrastructureProviderID = &id
@@ -685,12 +626,12 @@ func (gtah GetTenantAccountHandler) Handle(c echo.Context) error {
 		id, err1 := uuid.Parse(qTenantID)
 		if err1 != nil {
 			logger.Warn().Err(err1).Msg("error parsing tenantId in query into uuid")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Tenant ID in query", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Tenant ID in query", nil)
 		}
 
 		// If the Tenant in query is not the same as the one in the Tenant Account, return an error
 		if ta.TenantID == nil || *ta.TenantID != id {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find Tenant Account matching Tenant in query", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find Tenant Account matching Tenant in query", nil)
 		}
 
 		tenantID = &id
@@ -705,14 +646,14 @@ func (gtah GetTenantAccountHandler) Handle(c echo.Context) error {
 	if err != nil {
 		if err != common.ErrOrgInstrastructureProviderNotFound {
 			logger.Error().Err(err).Msg("error getting infrastructure provider for org")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve infrastructure provider for org, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve infrastructure provider for org, DB error", nil)
 		}
 	} else if infrastructureProviderID != nil && orgInfrastructureProvider.ID == *infrastructureProviderID {
 		// Validate role, only Provider Admins are allowed to proceed from here
 		ok = auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole, auth.ProviderViewerRole)
 		if !ok {
 			logger.Warn().Msg("user does not have Provider Admin role with org, access denied")
-			return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
 		}
 
 		isAssociated = true
@@ -724,14 +665,14 @@ func (gtah GetTenantAccountHandler) Handle(c echo.Context) error {
 		if err1 != nil {
 			if err1 != common.ErrOrgTenantNotFound {
 				logger.Error().Err(err1).Msg("error getting tenant for org")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
 			}
 		} else if tenantID != nil && orgTenant.ID == *tenantID {
 			// Validate role, only Tenant Admins are allowed to proceed from here
 			ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 			if !ok {
 				logger.Warn().Msg("user does not have Tenant Admin role with org, access denied")
-				return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 			}
 
 			isAssociated = true
@@ -739,7 +680,7 @@ func (gtah GetTenantAccountHandler) Handle(c echo.Context) error {
 	}
 
 	if !isAssociated {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Either Infrastructure Provider or Tenant in query param must be associated with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Either Infrastructure Provider or Tenant in query param must be associated with org", nil)
 	}
 
 	// Check for Allocation
@@ -751,14 +692,14 @@ func (gtah GetTenantAccountHandler) Handle(c echo.Context) error {
 	total, serr := aDAO.GetCount(ctx, nil, allocationFilter)
 	if serr != nil {
 		logger.Error().Err(serr).Msg("error retrieving allocation for Tenant from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Allocations to determine total allocation for tenant account", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Allocations to determine total allocation for tenant account", nil)
 	}
 
 	sdDAO := cdbm.NewStatusDetailDAO(gtah.dbSession)
 	ssds, err := sdDAO.GetRecentByEntityIDs(ctx, nil, []string{ta.ID.String()}, common.RECENT_STATUS_DETAIL_COUNT)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Status Details for TenantAccount from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details for TenantAccount", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details for TenantAccount", nil)
 	}
 
 	// Create response
@@ -776,7 +717,7 @@ type UpdateTenantAccountHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewUpdateTenantAccountHandler initializes and returns a new handler for updating Tenant
@@ -785,7 +726,7 @@ func NewUpdateTenantAccountHandler(dbSession *cdb.Session, tc temporalClient.Cli
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -802,31 +743,12 @@ func NewUpdateTenantAccountHandler(dbSession *cdb.Session, tc temporalClient.Cli
 // @Success 200 {object} model.APITenantAccount
 // @Router /v2/org/{org}/carbide/tenant/account/{id} [patch]
 func (utah UpdateTenantAccountHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "TenantAccount").Str("Handler", "Update").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := utah.tracerSpan.CreateChildInContext(ctx, "UpdateTenantAccountHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("TenantAccount", "Update", c, utah.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		utah.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, utah.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -837,14 +759,14 @@ func (utah UpdateTenantAccountHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Tenant Admins are allowed to update TenantAccount
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role with org, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	// Get tenant account ID from URL param
@@ -855,7 +777,7 @@ func (utah UpdateTenantAccountHandler) Handle(c echo.Context) error {
 	taID, err := uuid.Parse(taStrID)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error parsing id in url into uuid")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Tenant Account ID in URL", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Tenant Account ID in URL", nil)
 	}
 
 	taDAO := cdbm.NewTenantAccountDAO(utah.dbSession)
@@ -866,34 +788,34 @@ func (utah UpdateTenantAccountHandler) Handle(c echo.Context) error {
 	err = c.Bind(&apiRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
 	}
 
 	// Validate request attributes
 	verr := apiRequest.Validate()
 	if verr != nil {
 		logger.Warn().Err(verr).Msg("error validating Tenant Account update request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating Tenant Account update request data", verr)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating Tenant Account update request data", verr)
 	}
 
 	// Check that TenantAccount exists
 	ta, err := taDAO.GetByID(ctx, nil, taID, nil)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error retrieving TenantAccount DB entity")
-		return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not retrieve TenantAccount to update", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not retrieve TenantAccount to update", nil)
 	}
 
 	// Check that the org's tenant matches tenant in tenant-account
 	tn, err := common.GetTenantForOrg(ctx, nil, utah.dbSession, org)
 	if err != nil {
 		logger.Warn().Err(err).Msg("tenant does not exist for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Org does not have tenant", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Org does not have tenant", nil)
 	}
 
 	// CHeck that Tenant in TenantAccount matches tenant in org
 	if ta.TenantID == nil || *ta.TenantID != tn.ID {
 		logger.Warn().Msg("tenant in tenant account does not match tenant in org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest,
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest,
 			"Tenant in org does not match tenant in TenantAccount", nil)
 	}
 
@@ -902,18 +824,18 @@ func (utah UpdateTenantAccountHandler) Handle(c echo.Context) error {
 		tnContactID, err1 := uuid.Parse(*apiRequest.TenantContactID)
 		if err1 != nil {
 			logger.Warn().Err(err1).Msg("error parsing tenantContactId in request into uuid")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Tenant Contact ID in request", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Tenant Contact ID in request", nil)
 		}
 		if tnContactID != dbUser.ID {
 			logger.Warn().Msg("tenant contact id in request must be the requesting user")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Tenant Contact ID in request must match requesting user", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Tenant Contact ID in request must match requesting user", nil)
 		}
 	}
 
 	// Check that the tenant account status is invited
 	if ta.Status != cdbm.TenantAccountStatusInvited {
 		logger.Warn().Msg("tenant account status is not Invited")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Tenant Account status is not Invited", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Tenant Account status is not Invited", nil)
 	}
 
 	// Update TenantAccount in DB
@@ -926,7 +848,7 @@ func (utah UpdateTenantAccountHandler) Handle(c echo.Context) error {
 	if err != nil {
 		logger.Error().Err(err).Msg("error updating TenantAccount in DB")
 		// TODO rollback transaction
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Tenant", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Tenant", nil)
 	}
 
 	// create status detail record for the update
@@ -936,14 +858,14 @@ func (utah UpdateTenantAccountHandler) Handle(c echo.Context) error {
 	if serr != nil {
 		// TODO rollback transaction
 		logger.Error().Err(serr).Msg("error updating Status Detail DB entry")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for TenantAccount", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for TenantAccount", nil)
 	}
 
 	ssds, _, err := sdDAO.GetAllByEntityID(ctx, nil, ta.ID.String(), nil, cdb.GetIntPtr(pagination.MaxPageSize), nil)
 	if err != nil {
 		// TODO rollback transaction
 		logger.Error().Err(err).Msg("error retrieving Status Details for TenantAccount from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details for TenantAccount", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details for TenantAccount", nil)
 	}
 	// TODO commit transaction
 
@@ -962,7 +884,7 @@ type DeleteTenantAccountHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewDeleteTenantAccountHandler initializes and returns a new handler for deleting Tenant
@@ -971,7 +893,7 @@ func NewDeleteTenantAccountHandler(dbSession *cdb.Session, tc temporalClient.Cli
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -987,31 +909,12 @@ func NewDeleteTenantAccountHandler(dbSession *cdb.Session, tc temporalClient.Cli
 // @Success 202
 // @Router /v2/org/{org}/carbide/tenant/account/{id} [delete]
 func (dtah DeleteTenantAccountHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "TenantAccount").Str("Handler", "Delete").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := dtah.tracerSpan.CreateChildInContext(ctx, "DeleteTenantAccountHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("TenantAccount", "Delete", c, dtah.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		dtah.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, dtah.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -1022,14 +925,14 @@ func (dtah DeleteTenantAccountHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Provider Admins are allowed to delete TenantAccounts
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Provider Admin role with org, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
 	}
 
 	// Get tenant account ID from URL param
@@ -1040,7 +943,7 @@ func (dtah DeleteTenantAccountHandler) Handle(c echo.Context) error {
 	taID, err := uuid.Parse(taStrID)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error parsing id in url into uuid")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Tenant Account ID in URL", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Tenant Account ID in URL", nil)
 	}
 
 	logger.Info().Str("tenantaccount", taStrID).Msg("deleting tenant account")
@@ -1051,21 +954,21 @@ func (dtah DeleteTenantAccountHandler) Handle(c echo.Context) error {
 	ta, err := taDAO.GetByID(ctx, nil, taID, nil)
 	if err != nil {
 		if err == cdb.ErrDoesNotExist {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find TenantAccount with specified ID", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find TenantAccount with specified ID", nil)
 		}
 		logger.Error().Str("tenantaccount", taID.String()).Err(err).Msg("error retrieving TenantAccount DB entity")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Could not retrieve TenantAccount", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Could not retrieve TenantAccount", nil)
 	}
 
 	// Check that the org's infrastructureProvider matches infrastructureProvider in TenantAccount
 	ip, err := common.GetInfrastructureProviderForOrg(ctx, nil, dtah.dbSession, org)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error getting infrastructure provider for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error getting InfrastructureProvider for Org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error getting InfrastructureProvider for Org", nil)
 	}
 	if ip.ID != ta.InfrastructureProviderID {
 		logger.Warn().Msg("infrastructureProvider in org does not match infrastructureProvider in tenant")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "InfrastructureProvider for Org does not match InfrastructureProvider in TenantAccount", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "InfrastructureProvider for Org does not match InfrastructureProvider in TenantAccount", nil)
 	}
 
 	if ta.TenantID != nil {
@@ -1078,12 +981,12 @@ func (dtah DeleteTenantAccountHandler) Handle(c echo.Context) error {
 		aCount, err := allocationDAO.GetCount(ctx, nil, allocationFilter)
 		if err != nil {
 			logger.Error().Str("ip", ip.ID.String()).Str("tenant", ta.TenantID.String()).Err(err).Msg("error getting allocations")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error getting allocations for InfrastructureProvider, Tenant", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error getting allocations for InfrastructureProvider, Tenant", nil)
 		}
 
 		if aCount > 0 {
 			logger.Warn().Str("tenant", ta.TenantID.String()).Msg("allocations exist for tenant")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Allocations exist for Tenant", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Allocations exist for Tenant", nil)
 		}
 	}
 
@@ -1091,7 +994,7 @@ func (dtah DeleteTenantAccountHandler) Handle(c echo.Context) error {
 	err = taDAO.Delete(ctx, nil, taID)
 	if err != nil {
 		logger.Error().Err(err).Msg("error deleting TenantAccount in DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete Tenant", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete Tenant", nil)
 	}
 
 	// Create response

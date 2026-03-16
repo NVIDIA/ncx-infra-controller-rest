@@ -66,14 +66,15 @@ func NewClient(grpcTimeout time.Duration) (Client, error) {
 
 	conn, err := grpc.NewClient(carbideURL, grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)))
 	if err != nil {
-		return nil, fmt.Errorf("Unable to connect to carbide-api: %v", err)
+		return nil, fmt.Errorf("Unable to connect to carbide-api: %w", err)
 	}
 
 	return &grpcClient{gclient: pb.NewForgeClient(conn), grpcTimeout: grpcTimeout}, nil
 }
 
 // GetMachines retrieves all machines known by carbide-api
-func (c *grpcClient) GetMachines(ctx context.Context) (ret []Machine, err error) {
+// (FindMachineIds + FindMachinesByIds).
+func (c *grpcClient) GetMachines(ctx context.Context) ([]MachineDetail, error) {
 	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
 	defer cancel()
 
@@ -81,13 +82,13 @@ func (c *grpcClient) GetMachines(ctx context.Context) (ret []Machine, err error)
 	if err != nil {
 		return nil, err
 	}
+
 	req := &pb.MachinesByIdsRequest{}
 	for _, machineID := range machineIDs.MachineIds {
 		req.MachineIds = append(req.MachineIds, machineID)
 	}
 
 	if len(req.MachineIds) == 0 {
-		// carbide-api would return an error for this
 		return nil, nil
 	}
 
@@ -96,10 +97,11 @@ func (c *grpcClient) GetMachines(ctx context.Context) (ret []Machine, err error)
 		return nil, err
 	}
 
+	var result []MachineDetail
 	for _, machine := range machines.Machines {
-		ret = append(ret, machineFromPb(machine))
+		result = append(result, machineDetailFromPb(machine))
 	}
-	return ret, nil
+	return result, nil
 }
 
 // Version returns the version string of carbide-api, mainly as a "ping"
@@ -329,7 +331,7 @@ func (c *grpcClient) AddExpectedMachine(ctx context.Context, req AddExpectedMach
 	}
 
 	if req.RackID != "" {
-		pbReq.RackId = &req.RackID
+		pbReq.RackId = &pb.RackId{Id: req.RackID}
 	}
 
 	if req.PauseIngestionAndPowerOn != nil {
@@ -357,7 +359,7 @@ func (c *grpcClient) AddExpectedSwitch(ctx context.Context, req AddExpectedSwitc
 	}
 
 	if req.RackID != "" {
-		pbReq.RackId = &req.RackID
+		pbReq.RackId = &pb.RackId{Id: req.RackID}
 	}
 
 	if req.NVOSUsername != "" {
@@ -376,7 +378,7 @@ func (c *grpcClient) AddExpectedSwitch(ctx context.Context, req AddExpectedSwitc
 	return nil
 }
 
-func (c *grpcClient) AddMachine(machine Machine) {
+func (c *grpcClient) AddMachine(machine MachineDetail) {
 	panic("Not a unit test")
 }
 

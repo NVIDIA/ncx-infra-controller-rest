@@ -36,6 +36,12 @@ import (
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/errors"
 )
 
+// txKeyType is an unexported type for the transaction context key.
+// Using a dedicated type prevents collisions with other context keys.
+type txKeyType struct{}
+
+var txKey = txKeyType{}
+
 // PostgresStore implements the Store interface using PostgreSQL.
 type PostgresStore struct {
 	pg *cdb.Session
@@ -46,16 +52,49 @@ func NewPostgres(pg *cdb.Session) *PostgresStore {
 	return &PostgresStore{pg: pg}
 }
 
-// CreateTask creates a new task record.
+// idb returns the bun.Tx stored in ctx by RunInTransaction, falling back to
+// the underlying *bun.DB when called outside a transaction.
+func (s *PostgresStore) idb(ctx context.Context) bun.IDB {
+	if tx, ok := ctx.Value(txKey).(bun.Tx); ok {
+		return tx
+	}
+	return s.pg.DB
+}
+
+// RunInTransaction executes fn within a database transaction, propagating
+// the transaction through the context so nested store calls participate.
+func (s *PostgresStore) RunInTransaction(
+	ctx context.Context,
+	fn func(ctx context.Context) error,
+) error {
+	return s.pg.RunInTx(ctx, func(ctx context.Context, tx bun.Tx) error {
+		return fn(context.WithValue(ctx, txKey, tx))
+	})
+}
+
+// CreateTask creates a new task record. Participates in a surrounding
+// transaction if one was started by RunInTransaction.
 func (s *PostgresStore) CreateTask(
 	ctx context.Context,
 	task *taskdef.Task,
 ) error {
-	if err := dao.TaskTo(task).Create(ctx, s.pg.DB); err != nil {
+	if err := dao.TaskTo(task).Create(ctx, s.idb(ctx)); err != nil {
 		return errors.GRPCErrorInternal(err.Error())
 	}
 
 	return nil
+}
+
+// GetTask retrieves a single task by its ID.
+func (s *PostgresStore) GetTask(
+	ctx context.Context,
+	id uuid.UUID,
+) (*taskdef.Task, error) {
+	taskDao, err := model.GetTask(ctx, s.idb(ctx), id)
+	if err != nil {
+		return nil, errors.GRPCErrorInternal(err.Error())
+	}
+	return dao.TaskFrom(taskDao), nil
 }
 
 // GetTasks retrieves tasks by their IDs.
@@ -128,6 +167,72 @@ func (s *PostgresStore) UpdateTaskStatus(
 	}
 
 	return nil
+}
+
+// ListActiveTasksForRack returns pending and running tasks for the given rack.
+func (s *PostgresStore) ListActiveTasksForRack(
+	ctx context.Context,
+	rackID uuid.UUID,
+) ([]*taskdef.Task, error) {
+	tasks, err := model.ListTasksForRackByStatus(
+		ctx, s.idb(ctx), rackID,
+		[]taskcommon.TaskStatus{
+			taskcommon.TaskStatusPending,
+			taskcommon.TaskStatusRunning,
+		},
+	)
+	if err != nil {
+		return nil, errors.GRPCErrorInternal(err.Error())
+	}
+
+	result := make([]*taskdef.Task, len(tasks))
+	for i := range tasks {
+		result[i] = dao.TaskFrom(&tasks[i])
+	}
+	return result, nil
+}
+
+// ListWaitingTasksForRack returns waiting tasks for the rack, oldest first.
+func (s *PostgresStore) ListWaitingTasksForRack(
+	ctx context.Context,
+	rackID uuid.UUID,
+) ([]*taskdef.Task, error) {
+	tasks, err := model.ListTasksForRackByStatus(
+		ctx, s.idb(ctx), rackID,
+		[]taskcommon.TaskStatus{taskcommon.TaskStatusWaiting},
+	)
+	if err != nil {
+		return nil, errors.GRPCErrorInternal(err.Error())
+	}
+
+	result := make([]*taskdef.Task, len(tasks))
+	for i := range tasks {
+		result[i] = dao.TaskFrom(&tasks[i])
+	}
+	return result, nil
+}
+
+// ListRacksWithWaitingTasks returns distinct rack IDs with waiting tasks.
+func (s *PostgresStore) ListRacksWithWaitingTasks(
+	ctx context.Context,
+) ([]uuid.UUID, error) {
+	rackIDs, err := model.ListRacksWithWaitingTasks(ctx, s.idb(ctx))
+	if err != nil {
+		return nil, errors.GRPCErrorInternal(err.Error())
+	}
+	return rackIDs, nil
+}
+
+// CountWaitingTasksForRack returns the count of waiting tasks for the rack.
+func (s *PostgresStore) CountWaitingTasksForRack(
+	ctx context.Context,
+	rackID uuid.UUID,
+) (int, error) {
+	count, err := model.CountWaitingTasksForRack(ctx, s.idb(ctx), rackID)
+	if err != nil {
+		return 0, errors.GRPCErrorInternal(err.Error())
+	}
+	return count, nil
 }
 
 // ========================================

@@ -63,6 +63,9 @@ func (mm *ManageMachine) SetMachineMaintenanceOnSite(ctx context.Context, reques
 
 	// Call Site Controller gRPC endpoint to set SetMaintenance request
 	carbideClient := mm.carbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return cClient.ErrClientNotConnected
+	}
 	forgeClient := carbideClient.Carbide()
 
 	_, err = forgeClient.SetMaintenance(ctx, request)
@@ -97,6 +100,9 @@ func (mm *ManageMachine) UpdateMachineMetadataOnSite(ctx context.Context, reques
 
 	// Call Site Controller gRPC endpoint to update Machine metadata
 	carbideClient := mm.carbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return cClient.ErrClientNotConnected
+	}
 	forgeClient := carbideClient.Carbide()
 
 	_, err = forgeClient.UpdateMachineMetadata(ctx, request)
@@ -126,6 +132,9 @@ func (mm *ManageMachine) GetDpuMachinesByIDs(ctx context.Context, dpuMachineIDs 
 
 	// Call Site Controller gRPC endpoint to get DPU Machines by IDs
 	carbideClient := mm.carbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return nil, cClient.ErrClientNotConnected
+	}
 	forgeClient := carbideClient.Carbide()
 
 	// Convert string IDs to MachineId objects
@@ -201,6 +210,9 @@ func (mmi *ManageMachineInventory) CollectAndPublishMachineInventory(ctx context
 
 	// Call Site Controller gRPC endpoint to get available Machine IDs
 	carbideClient := mmi.carbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return cClient.ErrClientNotConnected
+	}
 	forgeClient := carbideClient.Carbide()
 
 	machineIDList, err := forgeClient.FindMachineIds(ctx, &cwssaws.MachineSearchConfig{})

@@ -41,6 +41,8 @@ type Tray struct {
 	// Current power state of the tray
 	PowerState *string `json:"powerState,omitempty"`
 	Position *TrayPosition `json:"position,omitempty"`
+	// BMC (Baseboard Management Controller) entries for the tray
+	Bmcs []BMCInfo `json:"bmcs,omitempty"`
 	// ID of the rack this tray belongs to
 	RackId *string `json:"rackId,omitempty"`
 }
@@ -414,6 +416,38 @@ func (o *Tray) SetPosition(v TrayPosition) {
 	o.Position = &v
 }
 
+// GetBmcs returns the Bmcs field value if set, zero value otherwise.
+func (o *Tray) GetBmcs() []BMCInfo {
+	if o == nil || IsNil(o.Bmcs) {
+		var ret []BMCInfo
+		return ret
+	}
+	return o.Bmcs
+}
+
+// GetBmcsOk returns a tuple with the Bmcs field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *Tray) GetBmcsOk() ([]BMCInfo, bool) {
+	if o == nil || IsNil(o.Bmcs) {
+		return nil, false
+	}
+	return o.Bmcs, true
+}
+
+// HasBmcs returns a boolean if a field has been set.
+func (o *Tray) HasBmcs() bool {
+	if o != nil && !IsNil(o.Bmcs) {
+		return true
+	}
+
+	return false
+}
+
+// SetBmcs gets a reference to the given []BMCInfo and assigns it to the Bmcs field.
+func (o *Tray) SetBmcs(v []BMCInfo) {
+	o.Bmcs = v
+}
+
 // GetRackId returns the RackId field value if set, zero value otherwise.
 func (o *Tray) GetRackId() string {
 	if o == nil || IsNil(o.RackId) {
@@ -488,6 +522,9 @@ func (o Tray) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.Position) {
 		toSerialize["position"] = o.Position
+	}
+	if !IsNil(o.Bmcs) {
+		toSerialize["bmcs"] = o.Bmcs
 	}
 	if !IsNil(o.RackId) {
 		toSerialize["rackId"] = o.RackId

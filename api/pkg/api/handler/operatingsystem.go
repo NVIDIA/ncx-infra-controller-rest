@@ -32,7 +32,6 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
-	"github.com/rs/zerolog/log"
 
 	"github.com/nvidia/bare-metal-manager-rest/api/internal/config"
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/handler/util/common"
@@ -40,9 +39,7 @@ import (
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/pagination"
 	sc "github.com/nvidia/bare-metal-manager-rest/api/pkg/client/site"
 	auth "github.com/nvidia/bare-metal-manager-rest/auth/pkg/authorization"
-	cerr "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	sutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
+	cutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 	"github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
@@ -62,7 +59,7 @@ type CreateOperatingSystemHandler struct {
 	tc         temporalClient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewCreateOperatingSystemHandler initializes and returns a new handler for creating OperatingSystem
@@ -72,7 +69,7 @@ func NewCreateOperatingSystemHandler(dbSession *cdb.Session, tc temporalClient.C
 		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -88,31 +85,12 @@ func NewCreateOperatingSystemHandler(dbSession *cdb.Session, tc temporalClient.C
 // @Success 201 {object} model.APIOperatingSystem
 // @Router /v2/org/{org}/carbide/operating-system [post]
 func (csh CreateOperatingSystemHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "OperatingSystem").Str("Handler", "Create").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := csh.tracerSpan.CreateChildInContext(ctx, "CreateOperatingSystemHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("OperatingSystem", "Create", c, csh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		csh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, csh.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -123,14 +101,14 @@ func (csh CreateOperatingSystemHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Tenant Admins are allowed to create OperatingSystem
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	// Validate request
@@ -139,20 +117,20 @@ func (csh CreateOperatingSystemHandler) Handle(c echo.Context) error {
 	err = c.Bind(&apiRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
 	}
 	// Validate request attributes
 	verr := apiRequest.Validate()
 	if verr != nil {
 		logger.Warn().Err(verr).Msg("error validating Operating System creation request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating Operating System request creation data", verr)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating Operating System request creation data", verr)
 	}
 
 	// Validate and Set UserData
 	verr = apiRequest.ValidateAndSetUserData(csh.cfg.GetSitePhoneHomeUrl())
 	if verr != nil {
 		logger.Warn().Err(verr).Msg("error validating user data in Operating System creation request")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating user data in Operating System creation request", verr)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating user data in Operating System creation request", verr)
 	}
 
 	// Validate the tenant for which this OperatingSystem is being created
@@ -160,20 +138,20 @@ func (csh CreateOperatingSystemHandler) Handle(c echo.Context) error {
 	if err != nil {
 		if err == common.ErrOrgTenantNotFound {
 			logger.Warn().Err(err).Msg("Org does not have a Tenant associated")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
 		}
 		logger.Error().Err(err).Msg("unable to retrieve tenant for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve tenant for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve tenant for org", nil)
 	}
 	// verify tenant-id in request, the api validation ensures non-nil tenantID in request
 	apiTenant, err := common.GetTenantFromIDString(ctx, nil, *apiRequest.TenantID, csh.dbSession)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error retrieving tenant from request")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "TenantID in request is not valid", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "TenantID in request is not valid", nil)
 	}
 	if apiTenant.ID != tenant.ID {
 		logger.Warn().Msg("tenant id in request does not match tenant in org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "TenantID in request does not match tenant in org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "TenantID in request does not match tenant in org", nil)
 	}
 
 	// check for name uniqueness for the tenant, ie, tenant cannot have another os with same name
@@ -191,11 +169,11 @@ func (csh CreateOperatingSystemHandler) Handle(c echo.Context) error {
 	)
 	if err != nil {
 		logger.Error().Err(err).Msg("db error checking for name uniqueness of tenant os")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create OperatingSystem due to DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create OperatingSystem due to DB error", nil)
 	}
 	if tot > 0 {
 		logger.Warn().Str("tenantId", tenant.ID.String()).Str("name", apiRequest.Name).Msg("Operating System with same name already exists for tenant")
-		return cerr.NewAPIErrorResponse(c, http.StatusConflict, "Another Operating System with specified name already exists for Tenant", validation.Errors{
+		return cutil.NewAPIErrorResponse(c, http.StatusConflict, "Another Operating System with specified name already exists for Tenant", validation.Errors{
 			"id": errors.New(oss[0].ID.String()),
 		})
 	}
@@ -216,7 +194,7 @@ func (csh CreateOperatingSystemHandler) Handle(c echo.Context) error {
 	tx, err := cdb.BeginTx(ctx, csh.dbSession, &sql.TxOptions{})
 	if err != nil {
 		logger.Error().Err(err).Msg("unable to start transaction")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Operating System", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Operating System", nil)
 	}
 
 	// This variable is used in cleanup actions to indicate if this transaction committed
@@ -243,7 +221,7 @@ func (csh CreateOperatingSystemHandler) Handle(c echo.Context) error {
 	)
 	if err != nil {
 		logger.Error().Err(err).Msg("db error retrieving TenantSite records for Tenant")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site associations for Tenant, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site associations for Tenant, DB error", nil)
 	}
 	for _, ts := range tss {
 		cts := ts
@@ -255,30 +233,30 @@ func (csh CreateOperatingSystemHandler) Handle(c echo.Context) error {
 		site, serr := common.GetSiteFromIDString(ctx, nil, stID, csh.dbSession)
 		if serr != nil {
 			if serr == common.ErrInvalidID {
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to create Operating System, invalid Site ID: %s", stID), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to create Operating System, invalid Site ID: %s", stID), nil)
 			}
 			if serr == cdb.ErrDoesNotExist {
-				return cerr.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf("Failed to create Operating System, could not find Site with ID: %s ", stID), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf("Failed to create Operating System, could not find Site with ID: %s ", stID), nil)
 			}
 			logger.Warn().Err(serr).Str("Site ID", stID).Msg("error retrieving Site from DB by ID")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to create Operating System, could not retrieve Site with ID: %s, DB error", stID), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to create Operating System, could not retrieve Site with ID: %s, DB error", stID), nil)
 		}
 
 		if site.Status != cdbm.SiteStatusRegistered {
 			logger.Warn().Msg(fmt.Sprintf("Unable to associate Operating System to Site: %s. Site is not in Registered state", site.ID.String()))
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to create Operating System, Site: %s specified in request is not in Registered state", site.ID.String()), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to create Operating System, Site: %s specified in request is not in Registered state", site.ID.String()), nil)
 		}
 
 		// Validate the TenantSite exists for current tenant and this site
 		_, ok := sttsmap[site.ID]
 		if !ok {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Unable to associate Operating System with Site: %s, Tenant does not have access to Site", stID), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Unable to associate Operating System with Site: %s, Tenant does not have access to Site", stID), nil)
 		}
 
 		// Validate the Site has the ImageBasedOperatingSystem capability enabled for Image based Operating Systems
 		if osType == cdbm.OperatingSystemTypeImage && (site.Config == nil || !site.Config.ImageBasedOperatingSystem) {
 			logger.Warn().Str("siteId", stID).Msg("Image based Operating System is not supported for Site, ImageBasedOperatingSystem capability is not enabled")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Creation of Image based Operating Systems is not supported. Site must have ImageBasedOperatingSystem capability enabled.", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Creation of Image based Operating Systems is not supported. Site must have ImageBasedOperatingSystem capability enabled.", nil)
 		}
 
 		rdbst = append(rdbst, *site)
@@ -318,7 +296,7 @@ func (csh CreateOperatingSystemHandler) Handle(c echo.Context) error {
 	os, err := osDAO.Create(ctx, tx, osInput)
 	if err != nil {
 		logger.Error().Err(err).Msg("unable to create Operating System record in DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed creating Operating System record", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed creating Operating System record", nil)
 	}
 
 	// Create the status detail record for Operating System
@@ -327,12 +305,12 @@ func (csh CreateOperatingSystemHandler) Handle(c echo.Context) error {
 		cdb.GetStrPtr(osStatusMessage))
 	if serr != nil {
 		logger.Error().Err(serr).Msg("error creating Status Detail DB entry")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for Operating System", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for Operating System", nil)
 	}
 
 	if ossd == nil {
 		logger.Error().Msg("Status Detail DB entry not returned from CreateFromParams")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to get new Status Detail for Operating System", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to get new Status Detail for Operating System", nil)
 	}
 	dbossd = append(dbossd, *ossd)
 
@@ -352,7 +330,7 @@ func (csh CreateOperatingSystemHandler) Handle(c echo.Context) error {
 		)
 		if serr != nil {
 			logger.Error().Err(serr).Msg("unable to create the Operating System association record in DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to associate Operating System with one or more Sites, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to associate Operating System with one or more Sites, DB error", nil)
 		}
 
 		// Create Status details
@@ -360,14 +338,14 @@ func (csh CreateOperatingSystemHandler) Handle(c echo.Context) error {
 			cdb.GetStrPtr("received Operating System Association create request, syncing"))
 		if serr != nil {
 			logger.Error().Err(serr).Msg("error creating Status Detail DB entry")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for Operating System Association", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for Operating System Association", nil)
 		}
 
 		// Update Operating System Site Association version
 		_, err := ossaDAO.GenerateAndUpdateVersion(ctx, tx, ossa.ID)
 		if err != nil {
 			logger.Error().Err(err).Msg("error updating version for created Operating System Association")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to set version for created Operating System Association, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to set version for created Operating System Association, DB error", nil)
 		}
 	}
 
@@ -385,7 +363,7 @@ func (csh CreateOperatingSystemHandler) Handle(c echo.Context) error {
 	)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Operating System Site associations from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Operating System Site associations from DB", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Operating System Site associations from DB", nil)
 	}
 
 	// Trigger workflows to sync Image based Operating System with various Sites
@@ -394,7 +372,7 @@ func (csh CreateOperatingSystemHandler) Handle(c echo.Context) error {
 		stc, err := csh.scp.GetClientByID(ossa.SiteID)
 		if err != nil {
 			logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
 		}
 
 		createOsRequest := &cwssaws.OsImageAttributes{
@@ -413,14 +391,14 @@ func (csh CreateOperatingSystemHandler) Handle(c echo.Context) error {
 
 		workflowOptions := temporalClient.StartWorkflowOptions{
 			ID:                       "image-os-create-" + ossa.SiteID.String() + "-" + os.ID.String() + "-" + *ossa.Version,
-			WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
+			WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
 			TaskQueue:                queue.SiteTaskQueue,
 		}
 
 		logger.Info().Str("Site ID", ossa.SiteID.String()).Msg("triggering Image based Operating System create workflow ")
 
 		// Add context deadlines
-		ctx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
+		ctx, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
 		defer cancel()
 
 		// Trigger Site workflow
@@ -428,7 +406,7 @@ func (csh CreateOperatingSystemHandler) Handle(c echo.Context) error {
 
 		if err != nil {
 			logger.Error().Err(err).Msg("failed to synchronously start Temporal workflow to create Operating System")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed start sync workflow to create Operating System on Site: %s", err), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed start sync workflow to create Operating System on Site: %s", err), nil)
 		}
 
 		wid := we.GetID()
@@ -443,24 +421,24 @@ func (csh CreateOperatingSystemHandler) Handle(c echo.Context) error {
 				logger.Error().Err(err).Msg("failed to create Operating System, timeout occurred executing workflow on Site.")
 
 				// Create a new context deadlines
-				newctx, newcancel := context.WithTimeout(context.Background(), cwutil.WorkflowContextNewAfterTimeout)
+				newctx, newcancel := context.WithTimeout(context.Background(), cutil.WorkflowContextNewAfterTimeout)
 				defer newcancel()
 
 				// Initiate termination workflow
 				serr := stc.TerminateWorkflow(newctx, wid, "", "timeout occurred executing create Operating System workflow")
 				if serr != nil {
 					logger.Error().Err(serr).Msg("failed to execute terminate Temporal workflow for creating Operating System")
-					return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to terminate synchronous Operating System creation workflow after timeout, Cloud and Site data may be de-synced: %s", serr), nil)
+					return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to terminate synchronous Operating System creation workflow after timeout, Cloud and Site data may be de-synced: %s", serr), nil)
 				}
 
 				logger.Info().Str("Workflow ID", wid).Msg("initiated terminate synchronous create Operating System workflow successfully")
 
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to create Operating System, timeout occurred executing workflow on Site: %s", err), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to create Operating System, timeout occurred executing workflow on Site: %s", err), nil)
 			}
 
 			code, err := common.UnwrapWorkflowError(err)
 			logger.Error().Err(err).Msg("failed to synchronously execute Temporal workflow to create Operating System")
-			return cerr.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to execute sync workflow to create Operating System on Site: %s", err), nil)
+			return cutil.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to execute sync workflow to create Operating System on Site: %s", err), nil)
 		}
 		logger.Info().Str("Workflow ID", wid).Str("Site ID", ossa.SiteID.String()).Msg("completed synchronous create Operating System workflow")
 	}
@@ -469,7 +447,7 @@ func (csh CreateOperatingSystemHandler) Handle(c echo.Context) error {
 	err = tx.Commit()
 	if err != nil {
 		logger.Error().Err(err).Msg("error committing Operating System transaction to DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Operating System", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Operating System", nil)
 	}
 	// set committed so, deferred cleanup functions will do nothing
 	txCommitted = true
@@ -487,7 +465,7 @@ type GetAllOperatingSystemHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetAllOperatingSystemHandler initializes and returns a new handler for getting all OperatingSystems
@@ -496,7 +474,7 @@ func NewGetAllOperatingSystemHandler(dbSession *cdb.Session, tc temporalClient.C
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -519,31 +497,12 @@ func NewGetAllOperatingSystemHandler(dbSession *cdb.Session, tc temporalClient.C
 // @Success 200 {object} []model.APIOperatingSystem
 // @Router /v2/org/{org}/carbide/operating-system [get]
 func (gash GetAllOperatingSystemHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "OperatingSystem").Str("Handler", "GetAll").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gash.tracerSpan.CreateChildInContext(ctx, "GetAllOperatingSystemHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("OperatingSystem", "GetAll", c, gash.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gash.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gash.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -554,14 +513,14 @@ func (gash GetAllOperatingSystemHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Tenant Admins are allowed to retrieve OperatingSystems
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	// Validate pagination request
@@ -569,14 +528,14 @@ func (gash GetAllOperatingSystemHandler) Handle(c echo.Context) error {
 	err = c.Bind(&pageRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding pagination request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request pagination data", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request pagination data", nil)
 	}
 
 	// Validate request attributes
 	err = pageRequest.Validate(cdbm.OperatingSystemOrderByFields)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error validating pagination request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate pagination request data", err)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate pagination request data", err)
 	}
 
 	// Validate the tenant associated with the org
@@ -584,10 +543,10 @@ func (gash GetAllOperatingSystemHandler) Handle(c echo.Context) error {
 	if err != nil {
 		if err == common.ErrOrgTenantNotFound {
 			logger.Warn().Err(err).Msg("Org does not have a Tenant associated")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
 		}
 		logger.Error().Err(err).Msg("unable to retrieve tenant for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve tenant for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve tenant for org", nil)
 	}
 
 	filter := cdbm.OperatingSystemFilterInput{
@@ -600,7 +559,7 @@ func (gash GetAllOperatingSystemHandler) Handle(c echo.Context) error {
 	qIncludeRelations, errMsg := common.GetAndValidateQueryRelations(qParams, cdbm.OperatingSystemRelatedEntities)
 	if errMsg != "" {
 		logger.Warn().Msg(errMsg)
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
 	}
 
 	// now check siteID in query
@@ -612,17 +571,17 @@ func (gash GetAllOperatingSystemHandler) Handle(c echo.Context) error {
 			site, err := common.GetSiteFromIDString(ctx, nil, siteID, gash.dbSession)
 			if err != nil {
 				logger.Warn().Err(err).Msg("error getting Site from query string")
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Site specified in query", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Site specified in query", nil)
 			}
 
 			// Determine if tenant has access to requested site
 			_, err = tsDAO.GetByTenantIDAndSiteID(ctx, nil, tenant.ID, site.ID, nil)
 			if err != nil {
 				if err == cdb.ErrDoesNotExist {
-					return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant is not associated with Site specified in query", nil)
+					return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant is not associated with Site specified in query", nil)
 				}
 				logger.Warn().Err(err).Msg("error retrieving Tenant Site association from DB")
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to determine if Tenant has access to Site specified in query, DB error", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to determine if Tenant has access to Site specified in query, DB error", nil)
 			}
 			filter.SiteIDs = append(filter.SiteIDs, site.ID)
 		}
@@ -635,7 +594,7 @@ func (gash GetAllOperatingSystemHandler) Handle(c echo.Context) error {
 			_, ok := cdbm.OperatingSystemsTypeMap[typeVal]
 			if !ok {
 				logger.Warn().Msg(fmt.Sprintf("Invalid type value in query: %v", typeVal))
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid type value in query", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid type value in query", nil)
 			}
 			filter.OsTypes = append(filter.OsTypes, typeVal)
 		}
@@ -658,7 +617,7 @@ func (gash GetAllOperatingSystemHandler) Handle(c echo.Context) error {
 				statusError := validation.Errors{
 					"status": errors.New(status),
 				}
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Status value in query", statusError)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Status value in query", statusError)
 			}
 			filter.Statuses = append(filter.Statuses, status)
 		}
@@ -682,7 +641,7 @@ func (gash GetAllOperatingSystemHandler) Handle(c echo.Context) error {
 	)
 	if err != nil {
 		logger.Error().Err(err).Msg("error getting os from db")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve OperatingSystems", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve OperatingSystems", nil)
 	}
 
 	// Get status details
@@ -698,7 +657,7 @@ func (gash GetAllOperatingSystemHandler) Handle(c echo.Context) error {
 	ssds, serr := sdDAO.GetRecentByEntityIDs(ctx, nil, sdEntityIDs, common.RECENT_STATUS_DETAIL_COUNT)
 	if serr != nil {
 		logger.Warn().Err(serr).Msg("error retrieving Status Details for Operating Systems from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to populate status history for Operating Systems", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to populate status history for Operating Systems", nil)
 	}
 	ssdMap := map[string][]cdbm.StatusDetail{}
 	for _, ssd := range ssds {
@@ -723,7 +682,7 @@ func (gash GetAllOperatingSystemHandler) Handle(c echo.Context) error {
 	)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Operating System Site associations from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Operating System Site associations from DB", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Operating System Site associations from DB", nil)
 	}
 
 	// Prepare OperatingSystemSiteAssociation for each OS if it exists
@@ -751,7 +710,7 @@ func (gash GetAllOperatingSystemHandler) Handle(c echo.Context) error {
 	)
 	if err != nil {
 		logger.Error().Err(err).Msg("db error retrieving TenantSite records for Tenant")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site associations for Tenant, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site associations for Tenant, DB error", nil)
 	}
 
 	for _, ts := range tss {
@@ -777,7 +736,7 @@ func (gash GetAllOperatingSystemHandler) Handle(c echo.Context) error {
 	pageHeader, err := json.Marshal(pageReponse)
 	if err != nil {
 		logger.Error().Err(err).Msg("error marshaling pagination response")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to generate pagination response header", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to generate pagination response header", nil)
 	}
 
 	c.Response().Header().Set(pagination.ResponseHeaderName, string(pageHeader))
@@ -795,7 +754,7 @@ type GetOperatingSystemHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetOperatingSystemHandler initializes and returns a new handler to retrieve OperatingSystem
@@ -804,7 +763,7 @@ func NewGetOperatingSystemHandler(dbSession *cdb.Session, tc temporalClient.Clie
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -821,31 +780,12 @@ func NewGetOperatingSystemHandler(dbSession *cdb.Session, tc temporalClient.Clie
 // @Success 200 {object} model.APIOperatingSystem
 // @Router /v2/org/{org}/carbide/operating-system/{id} [get]
 func (gsh GetOperatingSystemHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "OperatingSystem").Str("Handler", "Get").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gsh.tracerSpan.CreateChildInContext(ctx, "GetOperatingSystemHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("OperatingSystem", "Get", c, gsh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gsh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gsh.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -856,14 +796,14 @@ func (gsh GetOperatingSystemHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Tenant Admins are allowed to retrieve OperatingSystem
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	// Get and validate includeRelation params
@@ -871,7 +811,7 @@ func (gsh GetOperatingSystemHandler) Handle(c echo.Context) error {
 	qIncludeRelations, errMsg := common.GetAndValidateQueryRelations(qParams, cdbm.OperatingSystemRelatedEntities)
 	if errMsg != "" {
 		logger.Warn().Msg(errMsg)
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
 	}
 
 	// Get os ID from URL param
@@ -882,7 +822,7 @@ func (gsh GetOperatingSystemHandler) Handle(c echo.Context) error {
 	sID, err := uuid.Parse(osStrID)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error parsing id in url into uuid")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid OperatingSystem ID in URL", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid OperatingSystem ID in URL", nil)
 	}
 
 	osDAO := cdbm.NewOperatingSystemDAO(gsh.dbSession)
@@ -892,10 +832,10 @@ func (gsh GetOperatingSystemHandler) Handle(c echo.Context) error {
 	if err != nil {
 		if err == common.ErrOrgTenantNotFound {
 			logger.Warn().Err(err).Msg("Org does not have a Tenant associated")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
 		}
 		logger.Error().Err(err).Msg("unable to retrieve tenant for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve tenant for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve tenant for org", nil)
 	}
 
 	// Check that operating system exists
@@ -903,15 +843,15 @@ func (gsh GetOperatingSystemHandler) Handle(c echo.Context) error {
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving OperatingSystem DB entity")
 		if err == cdb.ErrDoesNotExist {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not retrieve OperatingSystem to update", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not retrieve OperatingSystem to update", nil)
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Could not retrieve OperatingSystem to update", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Could not retrieve OperatingSystem to update", nil)
 	}
 
 	// verify tenant matches
 	if os.TenantID == nil || tenant.ID != *os.TenantID {
 		logger.Warn().Msg("tenant in org does not match tenant in operating system")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Tenant for OperatingSystem in request does not match tenant in org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Tenant for OperatingSystem in request does not match tenant in org", nil)
 	}
 
 	// get status details for the response
@@ -919,7 +859,7 @@ func (gsh GetOperatingSystemHandler) Handle(c echo.Context) error {
 	ssds, err := sdDAO.GetRecentByEntityIDs(ctx, nil, []string{os.ID.String()}, common.RECENT_STATUS_DETAIL_COUNT)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Status Details for operating system from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details for OperatingSystem", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details for OperatingSystem", nil)
 	}
 
 	dbossas := []cdbm.OperatingSystemSiteAssociation{}
@@ -940,7 +880,7 @@ func (gsh GetOperatingSystemHandler) Handle(c echo.Context) error {
 		)
 		if err != nil {
 			logger.Error().Err(err).Msg("error retrieving Operating System Site associations from DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Operating System Site associations from DB", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Operating System Site associations from DB", nil)
 		}
 
 		// Get all TenantSite records for the Tenant
@@ -958,7 +898,7 @@ func (gsh GetOperatingSystemHandler) Handle(c echo.Context) error {
 		)
 		if err != nil {
 			logger.Error().Err(err).Msg("db error retrieving TenantSite records for Tenant")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site associations for Tenant, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site associations for Tenant, DB error", nil)
 		}
 
 		for _, ts := range tss {
@@ -981,7 +921,7 @@ type UpdateOperatingSystemHandler struct {
 	tc         temporalClient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewUpdateOperatingSystemHandler initializes and returns a new handler for updating OperatingSystem
@@ -991,7 +931,7 @@ func NewUpdateOperatingSystemHandler(dbSession *cdb.Session, tc temporalClient.C
 		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -1008,31 +948,12 @@ func NewUpdateOperatingSystemHandler(dbSession *cdb.Session, tc temporalClient.C
 // @Success 200 {object} model.APIOperatingSystem
 // @Router /v2/org/{org}/carbide/operating-system/{id} [patch]
 func (ush UpdateOperatingSystemHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "OperatingSystem").Str("Handler", "Update").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := ush.tracerSpan.CreateChildInContext(ctx, "UpdateOperatingSystemHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("OperatingSystem", "Update", c, ush.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		ush.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, ush.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -1043,14 +964,14 @@ func (ush UpdateOperatingSystemHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Tenant Admins are allowed to update OperatingSystem
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	// Get os ID from URL param
@@ -1061,7 +982,7 @@ func (ush UpdateOperatingSystemHandler) Handle(c echo.Context) error {
 	osID, err := uuid.Parse(osStrID)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error parsing id in url into uuid")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid OperatingSystem ID in URL", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid OperatingSystem ID in URL", nil)
 	}
 
 	osDAO := cdbm.NewOperatingSystemDAO(ush.dbSession)
@@ -1072,7 +993,7 @@ func (ush UpdateOperatingSystemHandler) Handle(c echo.Context) error {
 	err = c.Bind(&apiRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
 	}
 
 	// Check that os exists
@@ -1080,23 +1001,23 @@ func (ush UpdateOperatingSystemHandler) Handle(c echo.Context) error {
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving OperatingSystem DB entity")
 		if err == cdb.ErrDoesNotExist {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find Operating System with ID specified in URL", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find Operating System with ID specified in URL", nil)
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Could not retrieve OperatingSystem to update", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Could not retrieve OperatingSystem to update", nil)
 	}
 
 	// Validate request attributes
 	verr := apiRequest.Validate(os)
 	if verr != nil {
 		logger.Warn().Err(verr).Msg("error validating Operating System update request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating Operating System update request data", verr)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating Operating System update request data", verr)
 	}
 
 	// Validate and Set UserData
 	verr = apiRequest.ValidateAndSetUserData(ush.cfg.GetSitePhoneHomeUrl(), os)
 	if verr != nil {
 		logger.Warn().Err(verr).Msg("error validating user data in Operating System creation request")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating user data in Operating System creation request", verr)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating user data in Operating System creation request", verr)
 	}
 
 	// Validate the tenant for which this OperatingSystem is being updated
@@ -1104,16 +1025,16 @@ func (ush UpdateOperatingSystemHandler) Handle(c echo.Context) error {
 	if err != nil {
 		if err == common.ErrOrgTenantNotFound {
 			logger.Warn().Err(err).Msg("Org does not have a Tenant associated")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
 		}
 		logger.Error().Err(err).Msg("unable to retrieve tenant for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve tenant for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve tenant for org", nil)
 	}
 
 	// verify tenant matches
 	if os.TenantID == nil || tenant.ID != *os.TenantID {
 		logger.Warn().Msg("tenant in os does not belong to tenant in org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Tenant for OperatingSystem in request does not match tenant in org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Tenant for OperatingSystem in request does not match tenant in org", nil)
 	}
 
 	// check for name uniqueness for the tenant, ie, tenant cannot have another os with same name
@@ -1130,10 +1051,10 @@ func (ush UpdateOperatingSystemHandler) Handle(c echo.Context) error {
 		)
 		if serr != nil {
 			logger.Error().Err(serr).Msg("db error checking for name uniqueness of tenant os")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update OperatingSystem due to DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update OperatingSystem due to DB error", nil)
 		}
 		if tot > 0 {
-			return cerr.NewAPIErrorResponse(c, http.StatusConflict, "Another Operating System with specified name already exists for Tenant", validation.Errors{
+			return cutil.NewAPIErrorResponse(c, http.StatusConflict, "Another Operating System with specified name already exists for Tenant", validation.Errors{
 				"id": errors.New(oss[0].ID.String()),
 			})
 		}
@@ -1158,7 +1079,7 @@ func (ush UpdateOperatingSystemHandler) Handle(c echo.Context) error {
 		)
 		if err != nil {
 			logger.Error().Err(err).Msg("error retrieving Operating System Site associations from DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Operating System Site associations from DB", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Operating System Site associations from DB", nil)
 		}
 
 		// Get all TenantSite records for the Tenant
@@ -1173,7 +1094,7 @@ func (ush UpdateOperatingSystemHandler) Handle(c echo.Context) error {
 		)
 		if err != nil {
 			logger.Error().Err(err).Msg("db error retrieving TenantSite records for Tenant")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site associations for Tenant, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site associations for Tenant, DB error", nil)
 		}
 
 		for _, ts := range tss {
@@ -1186,13 +1107,13 @@ func (ush UpdateOperatingSystemHandler) Handle(c echo.Context) error {
 		for _, dbosa := range dbossas {
 			if dbosa.Site.Status != cdbm.SiteStatusRegistered {
 				logger.Warn().Msg(fmt.Sprintf("unable to update Operating System. Site: %s. Site is not in Registered state", dbosa.Site.Name))
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to update Operating System, Associated Site: %s is not in Registered state", dbosa.Site.Name), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to update Operating System, Associated Site: %s is not in Registered state", dbosa.Site.Name), nil)
 			}
 
 			// Validate the TenantSite exists for current tenant and this site
 			_, ok := sttsmap[dbosa.SiteID]
 			if !ok {
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Unable to update associate Operating System with Site: %s, Tenant does not have access to Site", dbosa.Site.Name), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Unable to update associate Operating System with Site: %s, Tenant does not have access to Site", dbosa.Site.Name), nil)
 			}
 		}
 	}
@@ -1201,7 +1122,7 @@ func (ush UpdateOperatingSystemHandler) Handle(c echo.Context) error {
 	tx, err := cdb.BeginTx(ctx, ush.dbSession, &sql.TxOptions{})
 	if err != nil {
 		logger.Error().Err(err).Msg("error updating os in DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Operating System", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Operating System", nil)
 	}
 	txCommitted := false
 	defer common.RollbackTx(ctx, tx, &txCommitted)
@@ -1232,7 +1153,7 @@ func (ush UpdateOperatingSystemHandler) Handle(c echo.Context) error {
 		_, err := osDAO.Clear(ctx, tx, cdbm.OperatingSystemClearInput{OperatingSystemId: osID, DeactivationNote: true})
 		if err != nil {
 			logger.Error().Err(err).Msg("error updating/clearing Operating System in DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update/clear Operating System", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update/clear Operating System", nil)
 		}
 	}
 	uos, err := osDAO.Update(ctx, tx, cdbm.OperatingSystemUpdateInput{
@@ -1257,7 +1178,7 @@ func (ush UpdateOperatingSystemHandler) Handle(c echo.Context) error {
 	})
 	if err != nil {
 		logger.Error().Err(err).Msg("error updating Operating System in DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Operating System", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Operating System", nil)
 	}
 	logger.Info().Msg("done updating os in DB")
 
@@ -1265,14 +1186,14 @@ func (ush UpdateOperatingSystemHandler) Handle(c echo.Context) error {
 	_, serr := sdDAO.CreateFromParams(ctx, tx, uos.ID.String(), *osStatus, &osStatusMessage)
 	if serr != nil {
 		logger.Error().Err(serr).Msg("error creating Status Detail DB entry")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create status detail for Operating System update", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create status detail for Operating System update", nil)
 	}
 
 	// get status details for the response
 	ssds, _, err := sdDAO.GetAllByEntityID(ctx, tx, uos.ID.String(), nil, cdb.GetIntPtr(pagination.MaxPageSize), nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Status Details for os from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details for Operating System", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details for Operating System", nil)
 	}
 
 	// If OS is Image based, update version too
@@ -1290,7 +1211,7 @@ func (ush UpdateOperatingSystemHandler) Handle(c echo.Context) error {
 			)
 			if err != nil {
 				logger.Error().Err(serr).Msg("unable to update the Operating System association record in DB")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Operating System Site Association status, DB error", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Operating System Site Association status, DB error", nil)
 			}
 
 			// Create Status details
@@ -1298,21 +1219,21 @@ func (ush UpdateOperatingSystemHandler) Handle(c echo.Context) error {
 				cdb.GetStrPtr("received Operating System Association update request, syncing"))
 			if serr != nil {
 				logger.Error().Err(serr).Msg("error creating Status Detail DB entry")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for Operating System Site Association", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for Operating System Site Association", nil)
 			}
 
 			// Update Operating System Association version
 			updatedOssa, err := ossaDAO.GenerateAndUpdateVersion(ctx, tx, dbossa.ID)
 			if err != nil {
 				logger.Error().Err(err).Msg("error updating version for updated Operating System Association")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to set version for updated Operating System Site Association, DB error", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to set version for updated Operating System Site Association, DB error", nil)
 			}
 
 			// Get the temporal client for the site we are working with.
 			stc, err := ush.scp.GetClientByID(dbossa.SiteID)
 			if err != nil {
 				logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
 			}
 
 			updateOsRequest := &cwssaws.OsImageAttributes{
@@ -1331,14 +1252,14 @@ func (ush UpdateOperatingSystemHandler) Handle(c echo.Context) error {
 
 			workflowOptions := temporalClient.StartWorkflowOptions{
 				ID:                       "image-os-update-" + updatedOssa.SiteID.String() + "-" + uos.ID.String() + "-" + *updatedOssa.Version,
-				WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
+				WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
 				TaskQueue:                queue.SiteTaskQueue,
 			}
 
 			logger.Info().Str("Site ID", dbossa.SiteID.String()).Msg("triggering Image based Operating System update workflow ")
 
 			// Add context deadlines
-			ctx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
+			ctx, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
 			defer cancel()
 
 			// Trigger Site workflow
@@ -1346,7 +1267,7 @@ func (ush UpdateOperatingSystemHandler) Handle(c echo.Context) error {
 
 			if err != nil {
 				logger.Error().Err(err).Msg("failed to synchronously start Temporal workflow to update Operating System")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed start sync workflow to update Operating System on Site: %s", err), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed start sync workflow to update Operating System on Site: %s", err), nil)
 			}
 
 			wid := we.GetID()
@@ -1361,23 +1282,23 @@ func (ush UpdateOperatingSystemHandler) Handle(c echo.Context) error {
 					logger.Error().Err(err).Msg("failed to update Operating System, timeout occurred executing workflow on Site.")
 
 					// Create a new context deadlines
-					newctx, newcancel := context.WithTimeout(context.Background(), cwutil.WorkflowContextNewAfterTimeout)
+					newctx, newcancel := context.WithTimeout(context.Background(), cutil.WorkflowContextNewAfterTimeout)
 					defer newcancel()
 
 					// Initiate termination workflow
 					serr := stc.TerminateWorkflow(newctx, wid, "", "timeout occurred executing update Operating System workflow")
 					if serr != nil {
 						logger.Error().Err(serr).Msg("failed to execute terminate Temporal workflow for updating Operating System")
-						return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to terminate synchronous Operating System update workflow after timeout, Cloud and Site data may be de-synced: %s", serr), nil)
+						return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to terminate synchronous Operating System update workflow after timeout, Cloud and Site data may be de-synced: %s", serr), nil)
 					}
 
 					logger.Info().Str("Workflow ID", wid).Msg("initiated terminate synchronous update Operating System workflow successfully")
 
-					return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to update Operating System, timeout occurred executing workflow on Site: %s", err), nil)
+					return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to update Operating System, timeout occurred executing workflow on Site: %s", err), nil)
 				}
 				code, err := common.UnwrapWorkflowError(err)
 				logger.Error().Err(err).Msg("failed to synchronously execute Temporal workflow to update Operating System")
-				return cerr.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to execute sync workflow to update Operating System on Site: %s", err), nil)
+				return cutil.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to execute sync workflow to update Operating System on Site: %s", err), nil)
 			}
 			logger.Info().Str("Workflow ID", wid).Str("Site ID", dbossa.SiteID.String()).Msg("completed synchronous update Operating System workflow")
 		}
@@ -1387,7 +1308,7 @@ func (ush UpdateOperatingSystemHandler) Handle(c echo.Context) error {
 	err = tx.Commit()
 	if err != nil {
 		logger.Error().Err(err).Msg("error updating OperatingSystem in DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update OperatingSystem", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update OperatingSystem", nil)
 	}
 	txCommitted = true
 
@@ -1405,7 +1326,7 @@ type DeleteOperatingSystemHandler struct {
 	tc         temporalClient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewDeleteOperatingSystemHandler initializes and returns a new handler for deleting OperatingSystem
@@ -1415,7 +1336,7 @@ func NewDeleteOperatingSystemHandler(dbSession *cdb.Session, tc temporalClient.C
 		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -1431,31 +1352,12 @@ func NewDeleteOperatingSystemHandler(dbSession *cdb.Session, tc temporalClient.C
 // @Success 202
 // @Router /v2/org/{org}/carbide/operating-system/{id} [delete]
 func (dsh DeleteOperatingSystemHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "OperatingSystem").Str("Handler", "Delete").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := dsh.tracerSpan.CreateChildInContext(ctx, "DeleteOperatingSystemHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("OperatingSystem", "Delete", c, dsh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		dsh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, dsh.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -1466,14 +1368,14 @@ func (dsh DeleteOperatingSystemHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Tenant Admins are allowed to delete OperatingSystem
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	// Get operating system ID from URL param
@@ -1484,7 +1386,7 @@ func (dsh DeleteOperatingSystemHandler) Handle(c echo.Context) error {
 	osID, err := uuid.Parse(osStrID)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error parsing id in url into uuid")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Operating System ID in URL", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Operating System ID in URL", nil)
 	}
 
 	// Validate the tenant for which this OperatingSystem is being updated
@@ -1492,10 +1394,10 @@ func (dsh DeleteOperatingSystemHandler) Handle(c echo.Context) error {
 	if err != nil {
 		if err == common.ErrOrgTenantNotFound {
 			logger.Warn().Err(err).Msg("Org does not have a Tenant associated")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
 		}
 		logger.Error().Err(err).Msg("unable to retrieve tenant for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve tenant for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve tenant for org", nil)
 	}
 
 	// Check that operating system exists
@@ -1504,15 +1406,15 @@ func (dsh DeleteOperatingSystemHandler) Handle(c echo.Context) error {
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Operating System DB entity")
 		if err == cdb.ErrDoesNotExist {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not retrieve Operating System to delete", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not retrieve Operating System to delete", nil)
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Could not retrieve Operating System to delete", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Could not retrieve Operating System to delete", nil)
 	}
 
 	// verify tenant matches
 	if os.TenantID == nil || tenant.ID != *os.TenantID {
 		logger.Warn().Msg("tenant in os does not belong to tenant in org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Tenant for Operating System in request does not match tenant in org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Tenant for Operating System in request does not match tenant in org", nil)
 	}
 
 	// Verify if tenant associated with Site in case of Image based OS
@@ -1532,14 +1434,14 @@ func (dsh DeleteOperatingSystemHandler) Handle(c echo.Context) error {
 		)
 		if err != nil {
 			logger.Error().Err(err).Msg("error retrieving Operating System Site associations from DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Operating System Site associations from DB", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Operating System Site associations from DB", nil)
 		}
 
 		// Verify if associated Site is not registered state
 		for _, dbosa := range ossasToDelete {
 			if dbosa.Site.Status != cdbm.SiteStatusRegistered {
 				logger.Warn().Msg(fmt.Sprintf("unable to delete Operating System. Site: %s. is not in Registered state", dbosa.SiteID.String()))
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to delete Operating System, Associated Site: %s is not in Registered state", dbosa.Site.Name), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to delete Operating System, Associated Site: %s is not in Registered state", dbosa.Site.Name), nil)
 			}
 		}
 	}
@@ -1550,19 +1452,19 @@ func (dsh DeleteOperatingSystemHandler) Handle(c echo.Context) error {
 	instances, _, err := isDAO.GetAll(ctx, nil, cdbm.InstanceFilterInput{TenantIDs: []uuid.UUID{tenant.ID}, OperatingSystemIDs: []uuid.UUID{os.ID}}, paginator.PageInput{}, nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Instances for Operating System from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Instances for deleting operatingsystem", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Instances for deleting operatingsystem", nil)
 	}
 
 	if len(instances) > 0 {
 		logger.Warn().Msg("Instances exist for Operating System, cannot delete it")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Operating System is being used by one or more Instances and cannot be deleted", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Operating System is being used by one or more Instances and cannot be deleted", nil)
 	}
 
 	// Start a db tx
 	tx, err := cdb.BeginTx(ctx, dsh.dbSession, &sql.TxOptions{})
 	if err != nil {
 		logger.Error().Err(err).Msg("unable to start transaction")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error deleting Operating System", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error deleting Operating System", nil)
 	}
 	// this variable is used in cleanup actions to indicate if this transaction committed
 	txCommitted := false
@@ -1573,7 +1475,7 @@ func (dsh DeleteOperatingSystemHandler) Handle(c echo.Context) error {
 	err = tx.TryAcquireAdvisoryLock(ctx, cdb.GetAdvisoryLockIDFromString(os.ID.String()), nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed to acquire advisory lock on Operating System")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete Operating System, could not acquire data store lock on Operating System", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete Operating System, could not acquire data store lock on Operating System", nil)
 	}
 
 	// Verify if OS is image based
@@ -1583,7 +1485,7 @@ func (dsh DeleteOperatingSystemHandler) Handle(c echo.Context) error {
 		_, err = osDAO.Update(ctx, tx, cdbm.OperatingSystemUpdateInput{OperatingSystemId: os.ID, Status: cdb.GetStrPtr(cdbm.OperatingSystemStatusDeleting)})
 		if err != nil {
 			logger.Error().Err(err).Msg("error updating Operating System in DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete Operating System", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete Operating System", nil)
 		}
 
 		// Create status detail
@@ -1592,7 +1494,7 @@ func (dsh DeleteOperatingSystemHandler) Handle(c echo.Context) error {
 		_, err = sdDAO.CreateFromParams(ctx, tx, os.ID.String(), cdbm.OperatingSystemStatusDeleting, cdb.GetStrPtr("received request for deletion, pending processing"))
 		if err != nil {
 			logger.Error().Err(err).Msg("error creating Status Detail DB entry")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for Operating System", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for Operating System", nil)
 		}
 
 		// Update Status Deleting for Operating System Association
@@ -1609,21 +1511,21 @@ func (dsh DeleteOperatingSystemHandler) Handle(c echo.Context) error {
 				)
 				if err != nil {
 					logger.Error().Err(err).Msg("error updating Operating System Association in DB")
-					return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete Operating Systems", nil)
+					return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete Operating Systems", nil)
 				}
 
 				// create a status detail record for the Operating System Association
 				_, err = sdDAO.CreateFromParams(ctx, tx, ossa.ID.String(), cdbm.OperatingSystemSiteAssociationStatusDeleting, cdb.GetStrPtr("received request for deletion, pending processing"))
 				if err != nil {
 					logger.Error().Err(err).Msg("error creating Status Detail DB entry")
-					return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for Operating System Association", nil)
+					return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for Operating System Association", nil)
 				}
 
 				// Get the temporal client for the site we are working with.
 				stc, err := dsh.scp.GetClientByID(ossa.SiteID)
 				if err != nil {
 					logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-					return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
+					return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
 				}
 
 				// Prepare the delete/release request workflow object
@@ -1643,7 +1545,7 @@ func (dsh DeleteOperatingSystemHandler) Handle(c echo.Context) error {
 				we, err := stc.ExecuteWorkflow(ctx, workflowOptions, "DeleteOsImage", deleteOsRequest)
 				if err != nil {
 					logger.Error().Err(err).Msg("failed to synchronously start Temporal workflow to delete Operating System")
-					return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to start sync workflow to delete Operating System on Site: %s", err), nil)
+					return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to start sync workflow to delete Operating System on Site: %s", err), nil)
 				}
 
 				wid := we.GetID()
@@ -1670,24 +1572,24 @@ func (dsh DeleteOperatingSystemHandler) Handle(c echo.Context) error {
 						logger.Error().Err(err).Msg("failed to delete Operating System, timeout occurred executing workflow on Site.")
 
 						// Create a new context deadlines
-						newctx, newcancel := context.WithTimeout(context.Background(), cwutil.WorkflowContextNewAfterTimeout)
+						newctx, newcancel := context.WithTimeout(context.Background(), cutil.WorkflowContextNewAfterTimeout)
 						defer newcancel()
 
 						// Initiate termination workflow
 						serr := stc.TerminateWorkflow(newctx, wid, "", "timeout occurred executing delete Operating System workflow")
 						if serr != nil {
 							logger.Error().Err(serr).Msg("failed to terminate Temporal workflow for deleting Operating System")
-							return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to terminate synchronous Operating System deletion workflow after timeout, Cloud and Site data may be de-synced: %s", serr), nil)
+							return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to terminate synchronous Operating System deletion workflow after timeout, Cloud and Site data may be de-synced: %s", serr), nil)
 						}
 
 						logger.Info().Str("Workflow ID", wid).Msg("initiated terminate synchronous delete Operating System workflow successfully")
 
-						return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to delete Operating System, timeout occurred executing workflow on Site: %s", err), nil)
+						return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to delete Operating System, timeout occurred executing workflow on Site: %s", err), nil)
 					}
 
 					code, err := common.UnwrapWorkflowError(err)
 					logger.Error().Err(err).Msg("failed to synchronously execute Temporal workflow to delete Operating System")
-					return cerr.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to execute sync workflow to delete Operating System on Site: %s", err), nil)
+					return cutil.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to execute sync workflow to delete Operating System on Site: %s", err), nil)
 				}
 
 				logger.Info().Str("Workflow ID", wid).Msg("completed synchronous delete Operating System workflow")
@@ -1701,7 +1603,7 @@ func (dsh DeleteOperatingSystemHandler) Handle(c echo.Context) error {
 		err = osDAO.Delete(ctx, tx, os.ID)
 		if err != nil {
 			logger.Error().Msg("error deleting Operating System record in DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error deleting Operating System record in DB", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error deleting Operating System record in DB", nil)
 		}
 	}
 
@@ -1709,7 +1611,7 @@ func (dsh DeleteOperatingSystemHandler) Handle(c echo.Context) error {
 	err = tx.Commit()
 	if err != nil {
 		logger.Error().Err(err).Msg("error committing Operating System transaction to DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete Operating System", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete Operating System", nil)
 	}
 	// set committed so, deferred cleanup functions will do nothing
 	txCommitted = true

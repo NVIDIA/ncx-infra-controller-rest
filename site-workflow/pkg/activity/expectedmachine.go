@@ -63,6 +63,9 @@ func (memi *ManageExpectedMachineInventory) DiscoverExpectedMachineInventory(ctx
 
 	// Get Site Controller gRPC client
 	carbideClient := memi.carbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return cclient.ErrClientNotConnected
+	}
 	forgeClient := carbideClient.Carbide()
 
 	// Call GetAllExpectedMachines to get full list of ExpectedMachines on Site
@@ -273,7 +276,7 @@ func (mem *ManageExpectedMachine) CreateExpectedMachineOnSite(ctx context.Contex
 	// Validate request
 	if request == nil {
 		err = errors.New("received empty create Expected Machine request")
-	} else if id := request.GetId(); id == nil || (*id).String() == "" {
+	} else if request.GetId().GetValue() == "" {
 		err = errors.New("received create Expected Machine request without required id field")
 	} else if request.GetBmcMacAddress() == "" || request.GetChassisSerialNumber() == "" {
 		err = errors.New("received create Expected Machine request with missing MAC or serial")
@@ -285,6 +288,9 @@ func (mem *ManageExpectedMachine) CreateExpectedMachineOnSite(ctx context.Contex
 
 	// Call Site Controller gRPC endpoint
 	carbideClient := mem.CarbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return cclient.ErrClientNotConnected
+	}
 	forgeClient := carbideClient.Carbide()
 
 	// Call Forge gRPC endpoint
@@ -310,7 +316,7 @@ func (mem *ManageExpectedMachine) UpdateExpectedMachineOnSite(ctx context.Contex
 	// Validate request
 	if request == nil {
 		err = errors.New("received empty update Expected Machine request")
-	} else if id := request.GetId(); id == nil || (*id).String() == "" {
+	} else if request.GetId().GetValue() == "" {
 		err = errors.New("received update Expected Machine request without required id field")
 	} else if request.GetBmcMacAddress() == "" || request.GetChassisSerialNumber() == "" {
 		err = errors.New("received update Expected Machine request with missing MAC or serial")
@@ -322,6 +328,9 @@ func (mem *ManageExpectedMachine) UpdateExpectedMachineOnSite(ctx context.Contex
 
 	// Call Site Controller gRPC endpoint
 	carbideClient := mem.CarbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return cclient.ErrClientNotConnected
+	}
 	forgeClient := carbideClient.Carbide()
 
 	_, err = forgeClient.UpdateExpectedMachine(ctx, request)
@@ -346,7 +355,7 @@ func (mem *ManageExpectedMachine) DeleteExpectedMachineOnSite(ctx context.Contex
 	// Validate request
 	if request == nil {
 		err = errors.New("received empty delete Expected Machine request")
-	} else if id := request.GetId(); id == nil || (*id).String() == "" {
+	} else if request.GetId().GetValue() == "" {
 		err = errors.New("received delete Expected Machine request without required id field")
 	}
 
@@ -356,6 +365,9 @@ func (mem *ManageExpectedMachine) DeleteExpectedMachineOnSite(ctx context.Contex
 
 	// Call Site Controller gRPC endpoint
 	carbideClient := mem.CarbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return cclient.ErrClientNotConnected
+	}
 	forgeClient := carbideClient.Carbide()
 
 	_, err = forgeClient.DeleteExpectedMachine(ctx, request)
@@ -390,6 +402,9 @@ func (mem *ManageExpectedMachine) CreateExpectedMachinesOnSite(ctx context.Conte
 
 	// Call Site Controller gRPC batch endpoint
 	carbideClient := mem.CarbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return nil, cclient.ErrClientNotConnected
+	}
 	forgeClient := carbideClient.Carbide()
 
 	// Call the batch CreateExpectedMachines endpoint
@@ -440,6 +455,9 @@ func (mem *ManageExpectedMachine) UpdateExpectedMachinesOnSite(ctx context.Conte
 
 	// Call Site Controller gRPC batch endpoint
 	carbideClient := mem.CarbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return nil, cclient.ErrClientNotConnected
+	}
 	forgeClient := carbideClient.Carbide()
 
 	// Call the batch UpdateExpectedMachines endpoint

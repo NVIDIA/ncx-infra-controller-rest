@@ -119,7 +119,7 @@ func (m *Manager) Start(ctx context.Context) error {
 	for queue, worker := range m.workers {
 		log.Info().Msgf("Starting temporal worker for queue %s", queue)
 		if err := worker.Start(); err != nil {
-			return fmt.Errorf("failed to start temporal worker: %v", err)
+			return fmt.Errorf("failed to start temporal worker: %w", err)
 		}
 		log.Info().Msgf("Temporal worker started for queue %s", queue)
 	}
@@ -170,6 +170,27 @@ func (m *Manager) CheckStatus(
 	return taskStatusFromTemporalWorkflowStatus(
 		resp.GetWorkflowExecutionInfo().GetStatus(),
 	), nil
+}
+
+// TerminateTask terminates the Temporal workflow backing the given execution ID.
+func (m *Manager) TerminateTask(
+	ctx context.Context,
+	encodedExecutionID string,
+	reason string,
+) error {
+	executionID, err := common.NewFromEncoded(encodedExecutionID)
+	if err != nil {
+		return fmt.Errorf("invalid execution ID %q: %w", encodedExecutionID, err)
+	}
+
+	// Empty runID targets the latest run.
+	// ignoreNotFound: workflow already completed/terminated before this call.
+	return ignoreNotFound(m.publisherClient.Client().TerminateWorkflow(
+		ctx,
+		executionID.WorkflowID,
+		"",
+		reason,
+	))
 }
 
 func (m *Manager) PowerControl(

@@ -32,7 +32,6 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
-	"github.com/rs/zerolog/log"
 
 	"github.com/nvidia/bare-metal-manager-rest/api/internal/config"
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/handler/util/common"
@@ -40,9 +39,7 @@ import (
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/pagination"
 	sc "github.com/nvidia/bare-metal-manager-rest/api/pkg/client/site"
 	auth "github.com/nvidia/bare-metal-manager-rest/auth/pkg/authorization"
-	cerr "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	sutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
+	cutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
 	"github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
@@ -60,7 +57,7 @@ type CreateInfiniBandPartitionHandler struct {
 	tc         temporalClient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewCreateInfiniBandPartitionHandler initializes and returns a new handler for creating InfiniBandPartition
@@ -70,7 +67,7 @@ func NewCreateInfiniBandPartitionHandler(dbSession *cdb.Session, tc temporalClie
 		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -86,31 +83,12 @@ func NewCreateInfiniBandPartitionHandler(dbSession *cdb.Session, tc temporalClie
 // @Success 201 {object} model.APIInfiniBandPartition
 // @Router /v2/org/{org}/carbide/infiniband-partition [post]
 func (cibph CreateInfiniBandPartitionHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "InfiniBandPartition").Str("Handler", "Create").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := cibph.tracerSpan.CreateChildInContext(ctx, "CreateInfiniBandPartitionHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("InfiniBandPartition", "Create", c, cibph.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		cibph.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, cibph.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -121,14 +99,14 @@ func (cibph CreateInfiniBandPartitionHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Tenant Admins are allowed to create InfiniBandPartition
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	// Validate request
@@ -137,13 +115,13 @@ func (cibph CreateInfiniBandPartitionHandler) Handle(c echo.Context) error {
 	err = c.Bind(&apiRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
 	}
 	// Validate request attributes
 	verr := apiRequest.Validate()
 	if verr != nil {
 		logger.Warn().Err(verr).Msg("error validating InfiniBand Partition creation request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating InfiniBand Partition request creation data", verr)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating InfiniBand Partition request creation data", verr)
 	}
 
 	// Validate the tenant for which this InfiniBandPartition is being created
@@ -151,28 +129,28 @@ func (cibph CreateInfiniBandPartitionHandler) Handle(c echo.Context) error {
 	if err != nil {
 		if err == common.ErrOrgTenantNotFound {
 			logger.Warn().Err(err).Msg("Org does not have a Tenant associated")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
 		}
 		logger.Error().Err(err).Msg("unable to retrieve tenant for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
 	}
 
 	// Validate and Verify if Site is ready
 	site, serr := common.GetSiteFromIDString(ctx, nil, apiRequest.SiteID, cibph.dbSession)
 	if serr != nil {
 		if serr == common.ErrInvalidID {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to create InfiniBand Partition, Invalid Site ID: %s", apiRequest.SiteID), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to create InfiniBand Partition, Invalid Site ID: %s", apiRequest.SiteID), nil)
 		}
 		if serr == cdb.ErrDoesNotExist {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf("Failed to create InfiniBand Partition, Could not find Site with ID: %s ", apiRequest.SiteID), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf("Failed to create InfiniBand Partition, Could not find Site with ID: %s ", apiRequest.SiteID), nil)
 		}
 		logger.Warn().Err(serr).Str("Site ID", apiRequest.SiteID).Msg("error retrieving Site from DB by ID")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to create InfiniBand Partition, Could not find Site with ID: %s, DB error", apiRequest.SiteID), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to create InfiniBand Partition, Could not find Site with ID: %s, DB error", apiRequest.SiteID), nil)
 	}
 
 	if site.Status != cdbm.SiteStatusRegistered {
 		logger.Warn().Msg(fmt.Sprintf("Unable to associate InfiniBand Partition to Site: %s. Site is not in Registered state", site.ID.String()))
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to create InfiniBand Partition, Site: %s specified in request is not in Registered state", site.ID.String()), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to create InfiniBand Partition, Site: %s specified in request is not in Registered state", site.ID.String()), nil)
 	}
 
 	// Determine if tenant has access to requested site
@@ -180,10 +158,10 @@ func (cibph CreateInfiniBandPartitionHandler) Handle(c echo.Context) error {
 	_, err = tsDAO.GetByTenantIDAndSiteID(ctx, nil, orgTenant.ID, site.ID, nil)
 	if err != nil {
 		if err == cdb.ErrDoesNotExist {
-			return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant is not associated with Site specified in query", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant is not associated with Site specified in query", nil)
 		}
 		logger.Warn().Err(err).Msg("error retrieving Tenant Site association from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to determine if Tenant has access to Site specified in query, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to determine if Tenant has access to Site specified in query, DB error", nil)
 	}
 
 	// Ensure that Tenant has an Allocation with specified Site
@@ -192,11 +170,11 @@ func (cibph CreateInfiniBandPartitionHandler) Handle(c echo.Context) error {
 	aCount, serr := aDAO.GetCount(ctx, nil, allocationFilter)
 	if serr != nil {
 		logger.Error().Err(serr).Msg("error retrieving Allocations count from DB for Tenant and Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site Allocations count for Tenant", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site Allocations count for Tenant", nil)
 	}
 
 	if aCount == 0 {
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden,
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden,
 			"Tenant does not have any Allocations with Site specified in request data", nil)
 	}
 
@@ -216,11 +194,11 @@ func (cibph CreateInfiniBandPartitionHandler) Handle(c echo.Context) error {
 	)
 	if err != nil {
 		logger.Error().Err(err).Msg("db error checking for name uniqueness of tenant ib partition")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create InfiniBand Partition due to DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create InfiniBand Partition due to DB error", nil)
 	}
 	if tot > 0 {
 		logger.Warn().Str("tenantId", orgTenant.ID.String()).Str("name", apiRequest.Name).Msg("InfiniBand Partition with same name already exists for Tenant")
-		return cerr.NewAPIErrorResponse(c, http.StatusConflict, "Another InfiniBand Partition with specified name already exists for Tenant", validation.Errors{
+		return cutil.NewAPIErrorResponse(c, http.StatusConflict, "Another InfiniBand Partition with specified name already exists for Tenant", validation.Errors{
 			"id": errors.New(ibps[0].ID.String()),
 		})
 	}
@@ -235,7 +213,7 @@ func (cibph CreateInfiniBandPartitionHandler) Handle(c echo.Context) error {
 	tx, err := cdb.BeginTx(ctx, cibph.dbSession, &sql.TxOptions{})
 	if err != nil {
 		logger.Error().Err(err).Msg("unable to start transaction")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create InfiniBand Partition", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create InfiniBand Partition", nil)
 	}
 	// this variable is used in cleanup actions to indicate if this transaction committed
 	txCommitted := false
@@ -258,7 +236,7 @@ func (cibph CreateInfiniBandPartitionHandler) Handle(c echo.Context) error {
 	)
 	if err != nil {
 		logger.Error().Err(err).Msg("unable to create InfiniBand Partition record in DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed creating InfiniBand Partition record", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed creating InfiniBand Partition record", nil)
 	}
 
 	// create the status detail record
@@ -267,18 +245,18 @@ func (cibph CreateInfiniBandPartitionHandler) Handle(c echo.Context) error {
 		cdb.GetStrPtr("received InfiniBand Partition creation request, pending"))
 	if err != nil {
 		logger.Error().Err(err).Msg("error creating Status Detail DB entry")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for InfiniBand Partition", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for InfiniBand Partition", nil)
 	}
 	if ssd == nil {
 		logger.Error().Msg("Status Detail DB entry not returned from CreateFromParams")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to get new Status Detail for InfiniBand Partition", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to get new Status Detail for InfiniBand Partition", nil)
 	}
 
 	// Get the temporal client for the site we are working with.
 	stc, err := cibph.scp.GetClientByID(site.ID)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
 	}
 
 	createIBPRequest := &cwssaws.IBPartitionCreationRequest{
@@ -292,7 +270,7 @@ func (cibph CreateInfiniBandPartitionHandler) Handle(c echo.Context) error {
 	workflowOptions := temporalClient.StartWorkflowOptions{
 		ID:                       "infiniband-partition-create-" + ibp.ID.String(),
 		TaskQueue:                queue.SiteTaskQueue,
-		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
 	}
 
 	// InfiniBand Partition metadata info
@@ -324,14 +302,14 @@ func (cibph CreateInfiniBandPartitionHandler) Handle(c echo.Context) error {
 	logger.Info().Msg("triggering InfiniBand Partition create workflow")
 
 	// Add context deadlines
-	ctx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
+	ctx, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow
 	we, err := stc.ExecuteWorkflow(ctx, workflowOptions, "CreateInfiniBandPartitionV2", createIBPRequest)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to synchronously start Temporal workflow to create InfiniBand Partition")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed start sync workflow to create InfiniBand Partition on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed start sync workflow to create InfiniBand Partition on Site: %s", err), nil)
 	}
 
 	wid := we.GetID()
@@ -346,24 +324,24 @@ func (cibph CreateInfiniBandPartitionHandler) Handle(c echo.Context) error {
 			logger.Error().Err(err).Msg("failed to create InfiniBand Partition, timeout occurred executing workflow on Site.")
 
 			// Create a new context deadlines
-			newctx, newcancel := context.WithTimeout(context.Background(), cwutil.WorkflowContextNewAfterTimeout)
+			newctx, newcancel := context.WithTimeout(context.Background(), cutil.WorkflowContextNewAfterTimeout)
 			defer newcancel()
 
 			// Initiate termination workflow
 			serr := stc.TerminateWorkflow(newctx, wid, "", "timeout occurred executing create InfiniBand Partition workflow")
 			if serr != nil {
 				logger.Error().Err(serr).Msg("failed to execute terminate Temporal workflow for creating InfiniBand Partition")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to terminate synchronous InfiniBand Partition creation workflow after timeout, Cloud and Site data may be de-synced: %s", serr), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to terminate synchronous InfiniBand Partition creation workflow after timeout, Cloud and Site data may be de-synced: %s", serr), nil)
 			}
 
 			logger.Info().Str("Workflow ID", wid).Msg("initiated terminate synchronous create InfiniBand Partition workflow successfully")
 
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to create InfiniBand Partition, timeout occurred executing workflow on Site: %s", err), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to create InfiniBand Partition, timeout occurred executing workflow on Site: %s", err), nil)
 		}
 
 		code, err := common.UnwrapWorkflowError(err)
 		logger.Error().Err(err).Msg("failed to synchronously execute Temporal workflow to create InfiniBand Partition")
-		return cerr.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to execute sync workflow to create InfiniBand Partition on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to execute sync workflow to create InfiniBand Partition on Site: %s", err), nil)
 	}
 
 	logger.Info().Str("Workflow ID", wid).Msg("completed synchronous create InfiniBand Partition workflow")
@@ -372,7 +350,7 @@ func (cibph CreateInfiniBandPartitionHandler) Handle(c echo.Context) error {
 	err = tx.Commit()
 	if err != nil {
 		logger.Error().Err(err).Msg("error committing InfiniBand Partition transaction to DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create InfiniBand Partition", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create InfiniBand Partition", nil)
 	}
 
 	// set committed so, deferred cleanup functions will do nothing
@@ -391,7 +369,7 @@ type GetAllInfiniBandPartitionHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetAllInfiniBandPartitionHandler initializes and returns a new handler for getting all InfiniBandPartitions
@@ -400,7 +378,7 @@ func NewGetAllInfiniBandPartitionHandler(dbSession *cdb.Session, tc temporalClie
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -422,31 +400,12 @@ func NewGetAllInfiniBandPartitionHandler(dbSession *cdb.Session, tc temporalClie
 // @Success 200 {object} []model.APIInfiniBandPartition
 // @Router /v2/org/{org}/carbide/infiniband-partition [get]
 func (gaibph GetAllInfiniBandPartitionHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "InfiniBandPartition").Str("Handler", "GetAll").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gaibph.tracerSpan.CreateChildInContext(ctx, "GetAllInfiniBandPartitionHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("InfiniBandPartition", "GetAll", c, gaibph.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gaibph.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gaibph.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -457,14 +416,14 @@ func (gaibph GetAllInfiniBandPartitionHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Tenant Admins are allowed to retrieve InfiniBandPartitions
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	// Validate paginantion request
@@ -472,14 +431,14 @@ func (gaibph GetAllInfiniBandPartitionHandler) Handle(c echo.Context) error {
 	err = c.Bind(&pageRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding pagination request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request pagination data", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request pagination data", nil)
 	}
 
 	// Validate request attributes
 	err = pageRequest.Validate(cdbm.InfiniBandPartitionOrderByFields)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error validating pagination request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate pagination request data", err)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate pagination request data", err)
 	}
 
 	// Validate the tenant for which this InfiniBandPartition is being created
@@ -487,10 +446,10 @@ func (gaibph GetAllInfiniBandPartitionHandler) Handle(c echo.Context) error {
 	if err != nil {
 		if err == common.ErrOrgTenantNotFound {
 			logger.Warn().Err(err).Msg("Org does not have a Tenant associated")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
 		}
 		logger.Error().Err(err).Msg("unable to retrieve tenant for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve tenant for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve tenant for org", nil)
 	}
 
 	// Get site ID from query param
@@ -501,7 +460,7 @@ func (gaibph GetAllInfiniBandPartitionHandler) Handle(c echo.Context) error {
 		site, err := common.GetSiteFromIDString(ctx, nil, siteIDStr, gaibph.dbSession)
 		if err != nil {
 			logger.Warn().Err(err).Msg("error getting site in request")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Site specified in query param, invalid ID or DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Site specified in query param, invalid ID or DB error", nil)
 		}
 		siteIDs = append(siteIDs, site.ID)
 
@@ -509,10 +468,10 @@ func (gaibph GetAllInfiniBandPartitionHandler) Handle(c echo.Context) error {
 		_, err = tsDAO.GetByTenantIDAndSiteID(ctx, nil, tenant.ID, site.ID, nil)
 		if err != nil {
 			if err == cdb.ErrDoesNotExist {
-				return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant does not have access to this Site", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant does not have access to this Site", nil)
 			}
 			logger.Error().Err(err).Msg("error retrieving TenantSite from DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to determine Tenant access to Site, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to determine Tenant access to Site, DB error", nil)
 		}
 	}
 
@@ -521,7 +480,7 @@ func (gaibph GetAllInfiniBandPartitionHandler) Handle(c echo.Context) error {
 	qIncludeRelations, errMsg := common.GetAndValidateQueryRelations(qParams, cdbm.InfiniBandPartitionRelatedEntities)
 	if errMsg != "" {
 		logger.Warn().Msg(errMsg)
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
 	}
 
 	// Get query text for full text search from query param
@@ -542,7 +501,7 @@ func (gaibph GetAllInfiniBandPartitionHandler) Handle(c echo.Context) error {
 		_, ok := cdbm.InfiniBandPartitionStatusMap[statusQuery]
 		if !ok {
 			logger.Warn().Msg(fmt.Sprintf("invalid value in status query: %v", statusQuery))
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Status value in query", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Status value in query", nil)
 		}
 		statuses = append(statuses, statusQuery)
 	}
@@ -565,7 +524,7 @@ func (gaibph GetAllInfiniBandPartitionHandler) Handle(c echo.Context) error {
 	)
 	if err != nil {
 		logger.Error().Err(err).Msg("error getting InfiniBand Partitions from db")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve InfiniBand Partitions, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve InfiniBand Partitions, DB error", nil)
 	}
 
 	// Get status details
@@ -578,7 +537,7 @@ func (gaibph GetAllInfiniBandPartitionHandler) Handle(c echo.Context) error {
 	ssds, serr := sdDAO.GetRecentByEntityIDs(ctx, nil, sdEntityIDs, common.RECENT_STATUS_DETAIL_COUNT)
 	if serr != nil {
 		logger.Warn().Err(serr).Msg("error retrieving Status Details for InfiniBand Partitions from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to populate status history for InfiniBand Partitions", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to populate status history for InfiniBand Partitions", nil)
 	}
 
 	ssdMap := map[string][]cdbm.StatusDetail{}
@@ -600,7 +559,7 @@ func (gaibph GetAllInfiniBandPartitionHandler) Handle(c echo.Context) error {
 	pageHeader, err := json.Marshal(pageReponse)
 	if err != nil {
 		logger.Error().Err(err).Msg("error marshaling pagination response")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to generate pagination response header", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to generate pagination response header", nil)
 	}
 
 	c.Response().Header().Set(pagination.ResponseHeaderName, string(pageHeader))
@@ -617,7 +576,7 @@ type GetInfiniBandPartitionHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetInfiniBandPartitionHandler initializes and returns a new handler to retrieve InfiniBandPartition
@@ -626,7 +585,7 @@ func NewGetInfiniBandPartitionHandler(dbSession *cdb.Session, tc temporalClient.
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -643,31 +602,12 @@ func NewGetInfiniBandPartitionHandler(dbSession *cdb.Session, tc temporalClient.
 // @Success 200 {object} model.APIInfiniBandPartition
 // @Router /v2/org/{org}/carbide/infiniband-partition/{id} [get]
 func (gibph GetInfiniBandPartitionHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "InfiniBandPartition").Str("Handler", "Get").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gibph.tracerSpan.CreateChildInContext(ctx, "GetInfiniBandPartitionHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("InfiniBandPartition", "Get", c, gibph.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gibph.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gibph.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -678,14 +618,14 @@ func (gibph GetInfiniBandPartitionHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Tenant Admins are allowed to retrieve InfiniBandPartition
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	// Get and validate includeRelation params
@@ -693,7 +633,7 @@ func (gibph GetInfiniBandPartitionHandler) Handle(c echo.Context) error {
 	qIncludeRelations, errMsg := common.GetAndValidateQueryRelations(qParams, cdbm.InfiniBandPartitionRelatedEntities)
 	if errMsg != "" {
 		logger.Warn().Msg(errMsg)
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
 	}
 
 	// Get IB Partition ID from URL
@@ -704,7 +644,7 @@ func (gibph GetInfiniBandPartitionHandler) Handle(c echo.Context) error {
 	ibpID, err := uuid.Parse(ibpStrID)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error parsing id in url into uuid")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid InfiniBand Partition ID in URL", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid InfiniBand Partition ID in URL", nil)
 	}
 
 	ibpDAO := cdbm.NewInfiniBandPartitionDAO(gibph.dbSession)
@@ -714,10 +654,10 @@ func (gibph GetInfiniBandPartitionHandler) Handle(c echo.Context) error {
 	if err != nil {
 		if err == common.ErrOrgTenantNotFound {
 			logger.Warn().Err(err).Msg("Org does not have a Tenant associated")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
 		}
 		logger.Error().Err(err).Msg("unable to retrieve Tenant for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
 	}
 
 	// Check that InfiniBand Partition exists
@@ -725,14 +665,14 @@ func (gibph GetInfiniBandPartitionHandler) Handle(c echo.Context) error {
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving InfiniBand Partition DB entity")
 		if err == cdb.ErrDoesNotExist {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not retrieve InfiniBand Partition with specified ID", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not retrieve InfiniBand Partition with specified ID", nil)
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Could not retrieve InfiniBand Partition", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Could not retrieve InfiniBand Partition", nil)
 	}
 
 	if ibp.TenantID != orgTenant.ID {
 		logger.Warn().Msg("tenant in org does not match tenant in InfiniBand Partition")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Tenant for InfiniBand Partition in request does not match Tenant in org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Tenant for InfiniBand Partition in request does not match Tenant in org", nil)
 	}
 
 	// get status details for the response
@@ -740,7 +680,7 @@ func (gibph GetInfiniBandPartitionHandler) Handle(c echo.Context) error {
 	ssds, err := sdDAO.GetRecentByEntityIDs(ctx, nil, []string{ibp.ID.String()}, common.RECENT_STATUS_DETAIL_COUNT)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Status Details for InfiniBand Partition from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details for InfiniBand Partition", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details for InfiniBand Partition", nil)
 	}
 
 	// Send response
@@ -756,7 +696,7 @@ type UpdateInfiniBandPartitionHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewUpdateInfiniBandPartitionHandler initializes and returns a new handler for updating InfiniBandPartition
@@ -765,7 +705,7 @@ func NewUpdateInfiniBandPartitionHandler(dbSession *cdb.Session, tc temporalClie
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -782,31 +722,12 @@ func NewUpdateInfiniBandPartitionHandler(dbSession *cdb.Session, tc temporalClie
 // @Success 200 {object} model.APIInfiniBandPartition
 // @Router /v2/org/{org}/carbide/infiniband-partition/{id} [patch]
 func (uibph UpdateInfiniBandPartitionHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "InfiniBandPartition").Str("Handler", "Update").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := uibph.tracerSpan.CreateChildInContext(ctx, "UpdateInfiniBandPartitionHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("InfiniBandPartition", "Update", c, uibph.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		uibph.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, uibph.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -817,14 +738,14 @@ func (uibph UpdateInfiniBandPartitionHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Tenant Admins are allowed to update InfiniBandPartition
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	// Get IB Partition ID from URL
@@ -835,7 +756,7 @@ func (uibph UpdateInfiniBandPartitionHandler) Handle(c echo.Context) error {
 	ibpID, err := uuid.Parse(ibpStrID)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error parsing id in url into uuid")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid InfiniBand Partition ID in URL", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid InfiniBand Partition ID in URL", nil)
 	}
 
 	ibpDAO := cdbm.NewInfiniBandPartitionDAO(uibph.dbSession)
@@ -846,13 +767,13 @@ func (uibph UpdateInfiniBandPartitionHandler) Handle(c echo.Context) error {
 	err = c.Bind(&apiRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
 	}
 	// Validate request attributes
 	verr := apiRequest.Validate()
 	if verr != nil {
 		logger.Warn().Err(verr).Msg("error validating InfiniBand Partition update request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating InfiniBand Partition update request data", verr)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating InfiniBand Partition update request data", verr)
 	}
 
 	// Validate the tenant for which this InfiniBandPartition is being updated
@@ -860,10 +781,10 @@ func (uibph UpdateInfiniBandPartitionHandler) Handle(c echo.Context) error {
 	if err != nil {
 		if err == common.ErrOrgTenantNotFound {
 			logger.Warn().Err(err).Msg("Org does not have a Tenant associated")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
 		}
 		logger.Error().Err(err).Msg("unable to retrieve Tenant for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
 	}
 
 	// check that InfiniBandPartition exists
@@ -871,15 +792,15 @@ func (uibph UpdateInfiniBandPartitionHandler) Handle(c echo.Context) error {
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving InfiniBand Partition DB entity")
 		if err == cdb.ErrDoesNotExist {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find InfiniBand Partition with ID specified in URL", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find InfiniBand Partition with ID specified in URL", nil)
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Could not retrieve InfiniBand Partition to update", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Could not retrieve InfiniBand Partition to update", nil)
 	}
 
 	// verify tenant matches
 	if ibp.TenantID != orgTenant.ID {
 		logger.Warn().Msg("Tenant in InfiniBand Partition does not belong to Tenant in org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Tenant for InfiniBand Partition in request does not match Tenant in org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Tenant for InfiniBand Partition in request does not match Tenant in org", nil)
 	}
 
 	// Ensure that Tenant has an Allocation with specified Site
@@ -888,11 +809,11 @@ func (uibph UpdateInfiniBandPartitionHandler) Handle(c echo.Context) error {
 	aCount, serr := aDAO.GetCount(ctx, nil, allocationFilter)
 	if serr != nil {
 		logger.Error().Err(serr).Msg("error retrieving Allocations count from DB for Tenant and Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site Allocations count for Tenant", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site Allocations count for Tenant", nil)
 	}
 
 	if aCount == 0 {
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden,
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden,
 			"Tenant does not have any Allocations with Site specified in request data", nil)
 	}
 
@@ -911,10 +832,10 @@ func (uibph UpdateInfiniBandPartitionHandler) Handle(c echo.Context) error {
 		)
 		if serr != nil {
 			logger.Error().Err(serr).Msg("db error checking for name uniqueness of tenant's InfiniBand Partition")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update InfiniBand Partition due to DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update InfiniBand Partition due to DB error", nil)
 		}
 		if tot > 0 {
-			return cerr.NewAPIErrorResponse(c, http.StatusConflict, "Another InfiniBand Partition with specified name already exists for Tenant", validation.Errors{
+			return cutil.NewAPIErrorResponse(c, http.StatusConflict, "Another InfiniBand Partition with specified name already exists for Tenant", validation.Errors{
 				"id": errors.New(ibps[0].ID.String()),
 			})
 		}
@@ -924,7 +845,7 @@ func (uibph UpdateInfiniBandPartitionHandler) Handle(c echo.Context) error {
 	tx, err := cdb.BeginTx(ctx, uibph.dbSession, &sql.TxOptions{})
 	if err != nil {
 		logger.Error().Err(err).Msg("error updating InfiniBand Partition in DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update InfiniBand Partition", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update InfiniBand Partition", nil)
 	}
 	txCommitted := false
 	defer common.RollbackTx(ctx, tx, &txCommitted)
@@ -940,7 +861,7 @@ func (uibph UpdateInfiniBandPartitionHandler) Handle(c echo.Context) error {
 	)
 	if err != nil {
 		logger.Error().Err(err).Msg("error updating InfiniBand Partition in DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update InfiniBand Partition", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update InfiniBand Partition", nil)
 	}
 	logger.Info().Msg("done updating InfiniBand Partition in DB")
 
@@ -949,14 +870,14 @@ func (uibph UpdateInfiniBandPartitionHandler) Handle(c echo.Context) error {
 	ssds, _, err := sdDAO.GetAllByEntityID(ctx, tx, uipb.ID.String(), nil, cdb.GetIntPtr(pagination.MaxPageSize), nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Status Details for InfiniBand Partition from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details for InfiniBand Partition", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details for InfiniBand Partition", nil)
 	}
 
 	// commit transaction
 	err = tx.Commit()
 	if err != nil {
 		logger.Error().Err(err).Msg("error updating InfiniBand Partition in DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update InfiniBand Partition", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update InfiniBand Partition", nil)
 	}
 	txCommitted = true
 
@@ -974,7 +895,7 @@ type DeleteInfiniBandPartitionHandler struct {
 	tc         temporalClient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewDeleteInfiniBandPartitionHandler initializes and returns a new handler for deleting InfiniBandPartition
@@ -984,7 +905,7 @@ func NewDeleteInfiniBandPartitionHandler(dbSession *cdb.Session, tc temporalClie
 		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -1000,31 +921,12 @@ func NewDeleteInfiniBandPartitionHandler(dbSession *cdb.Session, tc temporalClie
 // @Success 202
 // @Router /v2/org/{org}/carbide/infiniband-partition/{id} [delete]
 func (dibph DeleteInfiniBandPartitionHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "InfiniBandPartition").Str("Handler", "Delete").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := dibph.tracerSpan.CreateChildInContext(ctx, "DeleteInfiniBandPartitionHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("InfiniBandPartition", "Delete", c, dibph.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		dibph.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, dibph.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -1035,14 +937,14 @@ func (dibph DeleteInfiniBandPartitionHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Tenant Admins are allowed to delete InfiniBandPartition
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	// Get InfiniBand Partition ID from URL param
@@ -1053,7 +955,7 @@ func (dibph DeleteInfiniBandPartitionHandler) Handle(c echo.Context) error {
 	ibpID, err := uuid.Parse(ibpStrID)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error parsing id in url into uuid")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid InfiniBand Partition ID in URL", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid InfiniBand Partition ID in URL", nil)
 	}
 
 	// Validate the tenant for which this InfiniBandPartition is being updated
@@ -1061,10 +963,10 @@ func (dibph DeleteInfiniBandPartitionHandler) Handle(c echo.Context) error {
 	if err != nil {
 		if err == common.ErrOrgTenantNotFound {
 			logger.Warn().Err(err).Msg("Org does not have a Tenant associated")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
 		}
 		logger.Error().Err(err).Msg("unable to retrieve Tenant for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
 	}
 
 	// Check that InfiniBand Partition exists
@@ -1073,22 +975,22 @@ func (dibph DeleteInfiniBandPartitionHandler) Handle(c echo.Context) error {
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving InfiniBand Partition DB entity")
 		if err == cdb.ErrDoesNotExist {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not retrieve InfiniBand Partition to delete", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not retrieve InfiniBand Partition to delete", nil)
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Could not retrieve InfiniBand Partition to delete", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Could not retrieve InfiniBand Partition to delete", nil)
 	}
 
 	// verify tenant matches
 	if ibp.TenantID != orgTenant.ID {
 		logger.Warn().Msg("Tenant in InfiniBand Partition does not belong to Tenant in org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Tenant for InfiniBand Partition in request does not match Tenant in org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Tenant for InfiniBand Partition in request does not match Tenant in org", nil)
 	}
 
 	// Start a DB transaction
 	tx, err := cdb.BeginTx(ctx, dibph.dbSession, &sql.TxOptions{})
 	if err != nil {
 		logger.Error().Err(err).Msg("unable to start transaction")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete VPC", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete VPC", nil)
 	}
 
 	// This variable is used in cleanup actions to indicate if this transaction committed
@@ -1106,7 +1008,7 @@ func (dibph DeleteInfiniBandPartitionHandler) Handle(c echo.Context) error {
 	)
 	if err != nil {
 		logger.Error().Err(err).Msg("error updating InfiniBand Partition in DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete InfiniBand Partition, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete InfiniBand Partition, DB error", nil)
 	}
 
 	// Create status detail
@@ -1121,7 +1023,7 @@ func (dibph DeleteInfiniBandPartitionHandler) Handle(c echo.Context) error {
 	stc, err := dibph.scp.GetClientByID(ibp.SiteID)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
 	}
 
 	deleteIBPRequest := &cwssaws.IBPartitionDeletionRequest{
@@ -1131,20 +1033,20 @@ func (dibph DeleteInfiniBandPartitionHandler) Handle(c echo.Context) error {
 	workflowOptions := temporalClient.StartWorkflowOptions{
 		ID:                       "infiniband-partition-delete-" + ibp.ID.String(),
 		TaskQueue:                queue.SiteTaskQueue,
-		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
 	}
 
 	logger.Info().Msg("triggering InfiniBand Partition delete workflow")
 
 	// Add context deadlines
-	ctx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
+	ctx, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow
 	we, err := stc.ExecuteWorkflow(ctx, workflowOptions, "DeleteInfiniBandPartitionV2", deleteIBPRequest)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to synchronously start Temporal workflow to delete InfiniBand Partition")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed start sync workflow to delete InfiniBand Partition on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed start sync workflow to delete InfiniBand Partition on Site: %s", err), nil)
 	}
 
 	wid := we.GetID()
@@ -1170,24 +1072,24 @@ func (dibph DeleteInfiniBandPartitionHandler) Handle(c echo.Context) error {
 			logger.Error().Err(err).Msg("failed to delete InfiniBand Partition, timeout occurred executing workflow on Site.")
 
 			// Create a new context deadlines
-			newctx, newcancel := context.WithTimeout(context.Background(), cwutil.WorkflowContextNewAfterTimeout)
+			newctx, newcancel := context.WithTimeout(context.Background(), cutil.WorkflowContextNewAfterTimeout)
 			defer newcancel()
 
 			// Initiate termination workflow
 			serr := stc.TerminateWorkflow(newctx, wid, "", "timeout occurred executing delete InfiniBand Partition workflow")
 			if serr != nil {
 				logger.Error().Err(serr).Msg("failed to execute terminate Temporal workflow for deleting InfiniBand Partition")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to terminate synchronous InfiniBand Partition deletion workflow after timeout, Cloud and Site data may be de-synced: %s", serr), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to terminate synchronous InfiniBand Partition deletion workflow after timeout, Cloud and Site data may be de-synced: %s", serr), nil)
 			}
 
 			logger.Info().Str("Workflow ID", wid).Msg("initiated terminate synchronous delete InfiniBand Partition workflow successfully")
 
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to delete InfiniBand Partition, timeout occurred executing workflow on Site: %s", err), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to delete InfiniBand Partition, timeout occurred executing workflow on Site: %s", err), nil)
 		}
 
 		code, err := common.UnwrapWorkflowError(err)
 		logger.Error().Err(err).Msg("failed to synchronously execute Temporal workflow to delete InfiniBand Partition")
-		return cerr.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to execute sync workflow to delete InfiniBand Partition on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to execute sync workflow to delete InfiniBand Partition on Site: %s", err), nil)
 	}
 
 	logger.Info().Str("Workflow ID", wid).Msg("completed synchronous delete InfiniBand Partition workflow")
@@ -1196,7 +1098,7 @@ func (dibph DeleteInfiniBandPartitionHandler) Handle(c echo.Context) error {
 	err = tx.Commit()
 	if err != nil {
 		logger.Error().Err(err).Msg("error committing transaction")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete InfiniBand Partition, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete InfiniBand Partition, DB error", nil)
 	}
 	txCommitted = true
 

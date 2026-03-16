@@ -38,11 +38,11 @@ var APIToProtoComponentTypeName = map[string]string{
 	"powershelf": "COMPONENT_TYPE_POWERSHELF",
 }
 
-// ProtoToAPIComponentTypeName maps protobuf ComponentType enum names to API tray type strings.
-var ProtoToAPIComponentTypeName = map[string]string{
-	"COMPONENT_TYPE_COMPUTE":    "compute",
-	"COMPONENT_TYPE_NVLSWITCH":  "switch",
-	"COMPONENT_TYPE_POWERSHELF": "powershelf",
+// ProtoToAPIComponentTypeName maps protobuf ComponentType to API tray type strings.
+var ProtoToAPIComponentTypeName = map[rlav1.ComponentType]string{
+	rlav1.ComponentType_COMPONENT_TYPE_COMPUTE:    "compute",
+	rlav1.ComponentType_COMPONENT_TYPE_NVLSWITCH:  "switch",
+	rlav1.ComponentType_COMPONENT_TYPE_POWERSHELF: "powershelf",
 }
 
 var validTrayTypesAny, ValidProtoComponentTypes = func() ([]interface{}, []rlav1.ComponentType) {
@@ -554,6 +554,7 @@ type APITray struct {
 	FirmwareVersion string           `json:"firmwareVersion"`
 	PowerState      string           `json:"powerState"`
 	Position        *APITrayPosition `json:"position"`
+	BMCs            []*APIBMC        `json:"bmcs"`
 	RackID          string           `json:"rackId"`
 }
 
@@ -563,7 +564,7 @@ func (at *APITray) FromProto(comp *rlav1.Component) {
 		return
 	}
 
-	at.Type = ProtoToAPIComponentTypeName[rlav1.ComponentType_name[int32(comp.GetType())]]
+	at.Type = enumOr(ProtoToAPIComponentTypeName, comp.GetType(), "compute")
 	at.FirmwareVersion = comp.GetFirmwareVersion()
 	at.PowerState = comp.GetPowerState()
 	at.ComponentID = comp.GetComponentId()
@@ -589,6 +590,16 @@ func (at *APITray) FromProto(comp *rlav1.Component) {
 	if comp.GetPosition() != nil {
 		at.Position = &APITrayPosition{}
 		at.Position.FromProto(comp.GetPosition())
+	}
+
+	// Get BMCs
+	if len(comp.GetBmcs()) > 0 {
+		at.BMCs = make([]*APIBMC, 0, len(comp.GetBmcs()))
+		for _, bmc := range comp.GetBmcs() {
+			apiBMC := &APIBMC{}
+			apiBMC.FromProto(bmc)
+			at.BMCs = append(at.BMCs, apiBMC)
+		}
 	}
 
 	// Get rack ID

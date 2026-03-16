@@ -29,7 +29,6 @@ import (
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/google/uuid"
-	"github.com/rs/zerolog/log"
 
 	"github.com/labstack/echo/v4"
 
@@ -42,8 +41,7 @@ import (
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model"
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/pagination"
 	auth "github.com/nvidia/bare-metal-manager-rest/auth/pkg/authorization"
-	cerr "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	sutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
+	cutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 
 	sshKeyGroupWorkflow "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/workflow/sshkeygroup"
 )
@@ -55,7 +53,7 @@ type CreateSSHKeyGroupHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewCreateSSHKeyGroupHandler initializes and returns a new handler for creating SSH Key Group
@@ -64,7 +62,7 @@ func NewCreateSSHKeyGroupHandler(dbSession *cdb.Session, tc temporalClient.Clien
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -80,31 +78,12 @@ func NewCreateSSHKeyGroupHandler(dbSession *cdb.Session, tc temporalClient.Clien
 // @Success 201 {object} model.APISSHKeyGroup
 // @Router /v2/org/{org}/carbide/sshkeygroup [post]
 func (cskgh CreateSSHKeyGroupHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "SSHKeyGroup").Str("Handler", "Create").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := cskgh.tracerSpan.CreateChildInContext(ctx, "CreateSSHKeyGroupHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("SSHKeyGroup", "Create", c, cskgh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		cskgh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, cskgh.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -115,7 +94,7 @@ func (cskgh CreateSSHKeyGroupHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate the tenant for which this SSH Key Group is being created
@@ -123,17 +102,17 @@ func (cskgh CreateSSHKeyGroupHandler) Handle(c echo.Context) error {
 	if err != nil {
 		if err == common.ErrOrgTenantNotFound {
 			logger.Warn().Err(err).Msg("Org does not have a Tenant associated")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
 		}
 		logger.Error().Err(err).Msg("unable to retrieve Tenant for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
 	}
 
 	// Validate role, only Tenant Admins are allowed to create SSH Key Group
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role with org, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	// Validate request
@@ -142,7 +121,7 @@ func (cskgh CreateSSHKeyGroupHandler) Handle(c echo.Context) error {
 	err = c.Bind(&apiRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
 	}
 
 	cskgh.tracerSpan.SetAttribute(handlerSpan, attribute.String("name", apiRequest.Name), logger)
@@ -151,7 +130,7 @@ func (cskgh CreateSSHKeyGroupHandler) Handle(c echo.Context) error {
 	verr := apiRequest.Validate()
 	if verr != nil {
 		logger.Warn().Err(verr).Msg("error validating SSH Key Group creation request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating SSH Key Group creation request data", verr)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating SSH Key Group creation request data", verr)
 	}
 
 	// check for name uniqueness for the tenant, ie, Tenant cannot have another SSH Key Group with same name
@@ -168,11 +147,11 @@ func (cskgh CreateSSHKeyGroupHandler) Handle(c echo.Context) error {
 	)
 	if err != nil {
 		logger.Error().Err(err).Msg("db error checking for name uniqueness of tenant SSH Key Group")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create SSH Key Group due to DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create SSH Key Group due to DB error", nil)
 	}
 	if tot > 0 {
 		logger.Warn().Str("tenantId", tenant.ID.String()).Str("name", apiRequest.Name).Msg("SSH Key Group with same name already exists for tenant")
-		return cerr.NewAPIErrorResponse(c, http.StatusConflict, "An SSH Key Group with specified name already exists for Tenant", validation.Errors{
+		return cutil.NewAPIErrorResponse(c, http.StatusConflict, "An SSH Key Group with specified name already exists for Tenant", validation.Errors{
 			"id": errors.New(skgs[0].ID.String()),
 		})
 	}
@@ -181,7 +160,7 @@ func (cskgh CreateSSHKeyGroupHandler) Handle(c echo.Context) error {
 	tx, err := cdb.BeginTx(ctx, cskgh.dbSession, &sql.TxOptions{})
 	if err != nil {
 		logger.Error().Err(err).Msg("unable to start transaction")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create SSH Key Group, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create SSH Key Group, DB error", nil)
 	}
 	// this variable is used in cleanup actions to indicate if this transaction committed
 	txCommitted := false
@@ -207,7 +186,7 @@ func (cskgh CreateSSHKeyGroupHandler) Handle(c echo.Context) error {
 	)
 	if err != nil {
 		logger.Error().Err(err).Msg("db error retrieving TenantSite records for Tenant")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site associations for Tenant, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site associations for Tenant, DB error", nil)
 	}
 
 	for _, ts := range tss {
@@ -220,24 +199,24 @@ func (cskgh CreateSSHKeyGroupHandler) Handle(c echo.Context) error {
 		site, serr := common.GetSiteFromIDString(ctx, nil, stID, cskgh.dbSession)
 		if serr != nil {
 			if serr == common.ErrInvalidID {
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to create SSH Key Group, Invalid Site ID: %s", stID), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to create SSH Key Group, Invalid Site ID: %s", stID), nil)
 			}
 			if serr == cdb.ErrDoesNotExist {
-				return cerr.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf("Failed to create SSH Key Group, Could not find Site with ID: %s ", stID), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf("Failed to create SSH Key Group, Could not find Site with ID: %s ", stID), nil)
 			}
 			logger.Warn().Err(serr).Str("Site ID", stID).Msg("error retrieving Site from DB by ID")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to create SSH Key Group, Could not find Site with ID: %s, DB error", stID), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to create SSH Key Group, Could not find Site with ID: %s, DB error", stID), nil)
 		}
 
 		if site.Status != cdbm.SiteStatusRegistered {
 			logger.Warn().Msg(fmt.Sprintf("Unable to associate SSH Key Group to Site: %s. Site is not in Registered state", site.ID.String()))
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to create SSH Key Group, Site: %s specified in request is not in Registered state", site.ID.String()), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to create SSH Key Group, Site: %s specified in request is not in Registered state", site.ID.String()), nil)
 		}
 
 		// Validate the TenantSite exists for current tenant and this site
 		_, ok := sttsmap[site.ID]
 		if !ok {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Unable to associate SSH Key Group with Site: %s, Tenant does not have access to Site", stID), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Unable to associate SSH Key Group with Site: %s, Tenant does not have access to Site", stID), nil)
 		}
 
 		rdbst = append(rdbst, *site)
@@ -250,19 +229,19 @@ func (cskgh CreateSSHKeyGroupHandler) Handle(c echo.Context) error {
 		sshkey, serr := common.GetSSHKeyFromIDString(ctx, nil, skID, cskgh.dbSession)
 		if serr != nil {
 			if serr == common.ErrInvalidID {
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to create SSH Key Group, Invalid SSH Key ID: %s", skID), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to create SSH Key Group, Invalid SSH Key ID: %s", skID), nil)
 			}
 			if serr == cdb.ErrDoesNotExist {
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to create SSH Key Group, Could not find SSH Key with ID: %s ", skID), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to create SSH Key Group, Could not find SSH Key with ID: %s ", skID), nil)
 			}
 
 			logger.Warn().Err(serr).Str("SSH Key ID", skID).Msg("error retrieving SSH Key from DB by ID")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to create SSH Key Group, Could not find SSH Key with ID: %s, DB error", skID), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to create SSH Key Group, Could not find SSH Key with ID: %s, DB error", skID), nil)
 		}
 
 		if sshkey.TenantID != tenant.ID {
 			logger.Warn().Str("Tenant ID", tenant.ID.String()).Str("SSH Key ID", skID).Msg("SSH Key does not belong to current Tenant")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to create SSH Key Group, SSH Key with ID: %s does not belong to Tenant", skID), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to create SSH Key Group, SSH Key with ID: %s does not belong to Tenant", skID), nil)
 		}
 		rdbsk = append(rdbsk, *sshkey)
 	}
@@ -282,7 +261,7 @@ func (cskgh CreateSSHKeyGroupHandler) Handle(c echo.Context) error {
 	)
 	if err != nil {
 		logger.Error().Err(err).Msg("unable to create the SSH Key Group record in DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error creating SSH Key Group, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error creating SSH Key Group, DB error", nil)
 	}
 
 	// Create a status detail record for the SSH Key Group
@@ -290,11 +269,11 @@ func (cskgh CreateSSHKeyGroupHandler) Handle(c echo.Context) error {
 		cdb.GetStrPtr("received SSH Key Group creation request, syncing"))
 	if err != nil {
 		logger.Error().Err(err).Msg("error creating Status Detail DB entry")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for SSH Key Group", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for SSH Key Group", nil)
 	}
 	if skgsd1 == nil {
 		logger.Error().Msg("Status Detail DB entry not returned from CreateFromParams")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to get new Status Detail for SSH Key Group Association", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to get new Status Detail for SSH Key Group Association", nil)
 	}
 	dbskgsd = append(dbskgsd, *skgsd1)
 
@@ -304,7 +283,7 @@ func (cskgh CreateSSHKeyGroupHandler) Handle(c echo.Context) error {
 		_, serr := skaDAO.CreateFromParams(ctx, tx, sk.ID, skg.ID, dbUser.ID)
 		if serr != nil {
 			logger.Error().Err(serr).Msg("unable to create the SSH Key association record in DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to associate SSH Key Group with one or more SSH Keys, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to associate SSH Key Group with one or more SSH Keys, DB error", nil)
 		}
 	}
 
@@ -315,7 +294,7 @@ func (cskgh CreateSSHKeyGroupHandler) Handle(c echo.Context) error {
 		skgsa, serr := skgsaDAO.CreateFromParams(ctx, tx, skg.ID, st.ID, nil, cdbm.SSHKeyGroupSiteAssociationStatusSyncing, dbUser.ID)
 		if serr != nil {
 			logger.Error().Err(serr).Msg("unable to create the SSH Key Group association record in DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to associate SSH Key Group with one or more Sites, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to associate SSH Key Group with one or more Sites, DB error", nil)
 		}
 
 		// Create Status details
@@ -323,7 +302,7 @@ func (cskgh CreateSSHKeyGroupHandler) Handle(c echo.Context) error {
 			cdb.GetStrPtr("received SSH Key Group Association create request, syncing"))
 		if serr != nil {
 			logger.Error().Err(serr).Msg("error creating Status Detail DB entry")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for SSH Key Group Association", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for SSH Key Group Association", nil)
 		}
 	}
 
@@ -332,7 +311,7 @@ func (cskgh CreateSSHKeyGroupHandler) Handle(c echo.Context) error {
 	uskg, err := skgDAO.GenerateAndUpdateVersion(ctx, tx, skg.ID)
 	if err != nil {
 		logger.Error().Err(err).Msg("error updating version for created SSH Key Group")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to set version for created SSH Key Group, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to set version for created SSH Key Group, DB error", nil)
 	}
 
 	// If there are no SSH Key Group Associations, then we can mark the SSH Key Group as synced
@@ -348,18 +327,18 @@ func (cskgh CreateSSHKeyGroupHandler) Handle(c echo.Context) error {
 		)
 		if err != nil {
 			logger.Error().Err(err).Msg("unable to update the SSH Key Group record in DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update SSH Key Group, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update SSH Key Group, DB error", nil)
 		}
 
 		// Create a status detail record for the SSH Key Group
 		skgsd2, serr := sdDAO.CreateFromParams(ctx, tx, skg.ID.String(), cdbm.SSHKeyGroupStatusSynced, cdb.GetStrPtr("SSH Key Group has successfully been synced to all Sites"))
 		if serr != nil {
 			logger.Error().Err(serr).Msg("error creating Status Detail DB entry")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for SSH Key Group", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for SSH Key Group", nil)
 		}
 		if skgsd2 == nil {
 			logger.Error().Msg("Status Detail DB entry not returned from CreateFromParams")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to get new Status Detail for SSH Key Group Association", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to get new Status Detail for SSH Key Group Association", nil)
 		}
 		dbskgsd = append(dbskgsd, *skgsd2)
 	}
@@ -368,21 +347,21 @@ func (cskgh CreateSSHKeyGroupHandler) Handle(c echo.Context) error {
 	dbskgsas, _, err := skgsaDAO.GetAll(ctx, tx, []uuid.UUID{skg.ID}, nil, nil, nil, []string{cdbm.SiteRelationName}, nil, cdb.GetIntPtr(cdbp.TotalLimit), &cdbp.OrderBy{Field: "created", Order: cdbp.OrderAscending})
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving SSH Key Group association from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve SSH Key Group Site associations from DB", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve SSH Key Group Site associations from DB", nil)
 	}
 
 	// Retrieve SSH Key Association details
 	dbska, _, err := skaDAO.GetAll(ctx, tx, nil, []uuid.UUID{skg.ID}, []string{cdbm.SSHKeyRelationName}, nil, cdb.GetIntPtr(cdbp.TotalLimit), &cdbp.OrderBy{Field: "created", Order: cdbp.OrderAscending})
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving SSH Key association from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve SSH Key Association from DB", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve SSH Key Association from DB", nil)
 	}
 
 	// Commit transaction
 	err = tx.Commit()
 	if err != nil {
 		logger.Error().Err(err).Msg("error committing transaction")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create SSH Key Group, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create SSH Key Group, DB error", nil)
 	}
 	txCommitted = true
 
@@ -414,7 +393,7 @@ type UpdateSSHKeyGroupHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewUpdateSSHKeyGroupHandler initializes and returns a new handler for updating SSH Key Group
@@ -423,7 +402,7 @@ func NewUpdateSSHKeyGroupHandler(dbSession *cdb.Session, tc temporalClient.Clien
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -440,31 +419,12 @@ func NewUpdateSSHKeyGroupHandler(dbSession *cdb.Session, tc temporalClient.Clien
 // @Success 200 {object} model.SSHKeyGroup
 // @Router /v2/org/{org}/carbide/sshkeygroup/{id} [patch]
 func (uskgh UpdateSSHKeyGroupHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "SSHKeyGroup").Str("Handler", "Update").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := uskgh.tracerSpan.CreateChildInContext(ctx, "UpdateSSHKeyGroupHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("SSHKeyGroup", "Update", c, uskgh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		uskgh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, uskgh.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -475,7 +435,7 @@ func (uskgh UpdateSSHKeyGroupHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate the tenant for which this SSH Key Group is being created
@@ -483,17 +443,17 @@ func (uskgh UpdateSSHKeyGroupHandler) Handle(c echo.Context) error {
 	if err != nil {
 		if err == common.ErrOrgTenantNotFound {
 			logger.Warn().Err(err).Msg("Org does not have a Tenant associated")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
 		}
 		logger.Error().Err(err).Msg("unable to retrieve Tenant for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
 	}
 
 	// Validate role, only Tenant Admins are allowed to update SSH Key Group
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role with org, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	// Get SSH Key Group ID from URL param
@@ -505,25 +465,25 @@ func (uskgh UpdateSSHKeyGroupHandler) Handle(c echo.Context) error {
 	skg, err := common.GetSSHKeyGroupFromIDString(ctx, nil, sshKeyGroupStrID, uskgh.dbSession, nil)
 	if err != nil {
 		if err == common.ErrInvalidID {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to update SSH Key Group, Invalid SSH Key ID: %s", sshKeyGroupStrID), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to update SSH Key Group, Invalid SSH Key ID: %s", sshKeyGroupStrID), nil)
 		}
 
 		if err == cdb.ErrDoesNotExist {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf("Failed to update SSH Key Group, Could not find SSH Key Group with ID: %s ", sshKeyGroupStrID), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf("Failed to update SSH Key Group, Could not find SSH Key Group with ID: %s ", sshKeyGroupStrID), nil)
 		}
 
 		logger.Warn().Err(err).Str("SSH Key Group ID", sshKeyGroupStrID).Msg("error retrieving SSH Key Group from DB by ID")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to update SSH Key Group, Could not find SSH Key Group with ID: %s, DB error", sshKeyGroupStrID), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to update SSH Key Group, Could not find SSH Key Group with ID: %s, DB error", sshKeyGroupStrID), nil)
 	}
 
 	// Check SSH Key Group belongs to the Tenant
 	if skg.TenantID != tenant.ID {
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "SSH Key Group does not belong to current Tenant", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "SSH Key Group does not belong to current Tenant", nil)
 	}
 
 	// Check SSH Key Group if it is currently in deleting state
 	if skg.Status == cdbm.SSHKeyGroupStatusDeleting {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "SSH Key Group is being deleted and cannot be modified", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "SSH Key Group is being deleted and cannot be modified", nil)
 	}
 
 	// Validate request
@@ -532,19 +492,19 @@ func (uskgh UpdateSSHKeyGroupHandler) Handle(c echo.Context) error {
 	err = c.Bind(&apiRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
 	}
 
 	// Validate request attributes
 	verr := apiRequest.Validate()
 	if verr != nil {
 		logger.Warn().Err(verr).Msg("error validating SSH Key Group update request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating SSH Key Group update data", verr)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating SSH Key Group update data", verr)
 	}
 
 	// Verify version with current one
 	if *skg.Version != *apiRequest.Version {
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Version for SSH Key Group in request does not match with current SSH Key Group. Please fetch latest object before updating.", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Version for SSH Key Group in request does not match with current SSH Key Group. Please fetch latest object before updating.", nil)
 	}
 
 	skgDAO := cdbm.NewSSHKeyGroupDAO(uskgh.dbSession)
@@ -562,10 +522,10 @@ func (uskgh UpdateSSHKeyGroupHandler) Handle(c echo.Context) error {
 		)
 		if serr != nil {
 			logger.Error().Err(serr).Msg("db error checking for name uniqueness of tenant SSH Key Group")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update SSH Key Group, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update SSH Key Group, DB error", nil)
 		}
 		if tot > 0 {
-			return cerr.NewAPIErrorResponse(c, http.StatusConflict, "Another SSH Key Group with specified name already exists for Tenant", validation.Errors{"id": errors.New(skgs[0].ID.String())})
+			return cutil.NewAPIErrorResponse(c, http.StatusConflict, "Another SSH Key Group with specified name already exists for Tenant", validation.Errors{"id": errors.New(skgs[0].ID.String())})
 		}
 	}
 
@@ -573,7 +533,7 @@ func (uskgh UpdateSSHKeyGroupHandler) Handle(c echo.Context) error {
 	tx, err := cdb.BeginTx(ctx, uskgh.dbSession, &sql.TxOptions{})
 	if err != nil {
 		logger.Error().Err(err).Msg("unable to start transaction")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error updating SSH Key Group, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error updating SSH Key Group, DB error", nil)
 	}
 
 	// This variable is used in cleanup actions to indicate if this transaction committed
@@ -585,7 +545,7 @@ func (uskgh UpdateSSHKeyGroupHandler) Handle(c echo.Context) error {
 	err = tx.TryAcquireAdvisoryLock(ctx, cdb.GetAdvisoryLockIDFromString(skg.ID.String()), nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed to acquire advisory lock on SSH Key Group")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update SSH Key Group, could not acquire DB lock", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update SSH Key Group, could not acquire DB lock", nil)
 	}
 
 	// Get all TenantSite records for the Tenant
@@ -604,7 +564,7 @@ func (uskgh UpdateSSHKeyGroupHandler) Handle(c echo.Context) error {
 	)
 	if err != nil {
 		logger.Error().Err(err).Msg("db error retrieving TenantSite records for Tenant")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site associations for Tenant, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site associations for Tenant, DB error", nil)
 	}
 
 	for _, ts := range tss {
@@ -626,7 +586,7 @@ func (uskgh UpdateSSHKeyGroupHandler) Handle(c echo.Context) error {
 		existingGroupAssociations, _, serr := skgsaDAO.GetAll(ctx, tx, []uuid.UUID{skg.ID}, nil, nil, nil, nil, nil, cdb.GetIntPtr(cdbp.TotalLimit), nil)
 		if serr != nil {
 			logger.Error().Err(serr).Msg("error retrieving SSH Key Group association entry")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve SSH Key Group association, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve SSH Key Group association, DB error", nil)
 		}
 
 		for _, sga := range existingGroupAssociations {
@@ -649,31 +609,31 @@ func (uskgh UpdateSSHKeyGroupHandler) Handle(c echo.Context) error {
 			site, serr := common.GetSiteFromIDString(ctx, nil, stID, uskgh.dbSession)
 			if serr != nil {
 				if serr == common.ErrInvalidID {
-					return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to update SSH Key Group, Invalid Site ID: %s", stID), nil)
+					return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to update SSH Key Group, Invalid Site ID: %s", stID), nil)
 				}
 				if serr == cdb.ErrDoesNotExist {
-					return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to update SSH Key Group, Could not find Site with ID: %s ", stID), nil)
+					return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to update SSH Key Group, Could not find Site with ID: %s ", stID), nil)
 				}
 				logger.Warn().Err(serr).Str("Site ID", stID).Msg("error retrieving Site from DB by ID")
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to update SSH Key Group, Could not find Site with ID: %s, DB error", stID), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to update SSH Key Group, Could not find Site with ID: %s, DB error", stID), nil)
 			}
 
 			if site.Status != cdbm.SiteStatusRegistered {
 				logger.Warn().Msg(fmt.Sprintf("Unable to associate SSH Key Group to Site: %s. Site is not in Registered state", site.ID.String()))
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to update SSH Key Group, The Site with ID: %s where this SSH Key Group is being created is not in Registered state", site.ID.String()), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to update SSH Key Group, The Site with ID: %s where this SSH Key Group is being created is not in Registered state", site.ID.String()), nil)
 			}
 
 			// Validate the TenantSite exists for current tenant and this site
 			_, ok := sttsmap[site.ID]
 			if !ok {
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Unable to associate SSH Key Group with Site: %s, Tenant does not have access to Site", stID), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Unable to associate SSH Key Group with Site: %s, Tenant does not have access to Site", stID), nil)
 			}
 
 			// Create SSH Key Group Association
 			skgsa, serr := skgsaDAO.CreateFromParams(ctx, tx, skg.ID, site.ID, nil, cdbm.SSHKeyGroupSiteAssociationStatusSyncing, dbUser.ID)
 			if serr != nil {
 				logger.Error().Err(err).Msg("unable to create the SSH Key Group association record in DB")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to associate SSH Key Group with one or more Sites, DB error", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to associate SSH Key Group with one or more Sites, DB error", nil)
 			}
 
 			// Create Status details
@@ -681,7 +641,7 @@ func (uskgh UpdateSSHKeyGroupHandler) Handle(c echo.Context) error {
 				cdb.GetStrPtr("received SSH Key Group Association create request, syncing"))
 			if serr != nil {
 				logger.Error().Err(serr).Msg("error creating Status Detail DB entry")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for SSH Key Group Association", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for SSH Key Group Association", nil)
 			}
 		}
 
@@ -698,7 +658,7 @@ func (uskgh UpdateSSHKeyGroupHandler) Handle(c echo.Context) error {
 			_, serr := skgsaDAO.UpdateFromParams(ctx, tx, sgaID, nil, nil, nil, cdb.GetStrPtr(cdbm.SSHKeyGroupSiteAssociationStatusDeleting), nil)
 			if serr != nil {
 				logger.Error().Err(serr).Msg("unable to update the SSH Key Group association status record in DB")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update SSH Key Group association status with one or more Sites, DB error", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update SSH Key Group association status with one or more Sites, DB error", nil)
 			}
 
 			// Create Status details
@@ -706,7 +666,7 @@ func (uskgh UpdateSSHKeyGroupHandler) Handle(c echo.Context) error {
 				cdb.GetStrPtr("received SSH Key Group Association update request, deleting"))
 			if serr != nil {
 				logger.Error().Err(serr).Msg("error creating Status Detail DB entry")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for SSH Key Group Association", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for SSH Key Group Association", nil)
 			}
 		}
 	}
@@ -723,7 +683,7 @@ func (uskgh UpdateSSHKeyGroupHandler) Handle(c echo.Context) error {
 		existingSSHKeyAssociations, _, serr := skaDAO.GetAll(ctx, nil, nil, []uuid.UUID{skg.ID}, nil, nil, cdb.GetIntPtr(cdbp.TotalLimit), nil)
 		if serr != nil {
 			logger.Error().Err(serr).Msg("error retrieving SSH Key association entry")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve SSH Key association, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve SSH Key association, DB error", nil)
 		}
 
 		for _, ska := range existingSSHKeyAssociations {
@@ -745,25 +705,25 @@ func (uskgh UpdateSSHKeyGroupHandler) Handle(c echo.Context) error {
 			sshkey, serr := common.GetSSHKeyFromIDString(ctx, nil, skID, uskgh.dbSession)
 			if serr != nil {
 				if serr == common.ErrInvalidID {
-					return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to update SSH Key Group, Invalid SSH Key ID: %s", skID), nil)
+					return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to update SSH Key Group, Invalid SSH Key ID: %s", skID), nil)
 				}
 				if serr == cdb.ErrDoesNotExist {
-					return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to update SSH Key Group, Could not find SSH Key with ID: %s ", skID), nil)
+					return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to update SSH Key Group, Could not find SSH Key with ID: %s ", skID), nil)
 				}
 				logger.Warn().Err(serr).Str("SSH Key ID", skID).Msg("error retrieving SSH Key from DB by ID")
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to update SSH Key Group, Could not find SSH Key with ID: %s, DB error", skID), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to update SSH Key Group, Could not find SSH Key with ID: %s, DB error", skID), nil)
 			}
 
 			if sshkey.TenantID != tenant.ID {
 				logger.Warn().Str("Tenant ID", tenant.ID.String()).Str("SSH Key ID", skID).Msg("SSH Key does not belong to current Tenant")
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to update SSH Key Group, SSH Key with ID: %s does not belong to Tenant", skID), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to update SSH Key Group, SSH Key with ID: %s does not belong to Tenant", skID), nil)
 			}
 
 			// Create SSH Key Association
 			_, err = skaDAO.CreateFromParams(ctx, tx, sshkey.ID, skg.ID, dbUser.ID)
 			if err != nil {
 				logger.Error().Err(err).Msg("unable to create the SSH Key association record in DB")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to associate SSH Key Group with one or more SSH Keys, DB error", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to associate SSH Key Group with one or more SSH Keys, DB error", nil)
 			}
 		}
 
@@ -781,7 +741,7 @@ func (uskgh UpdateSSHKeyGroupHandler) Handle(c echo.Context) error {
 			serr := skaDAO.DeleteByID(ctx, tx, skaID)
 			if serr != nil {
 				logger.Error().Err(serr).Msg("unable to delete the SSH Key association record in DB")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update SSH Key Group, unable to delete SSH Key Group association with one or more SSH Key, DB error", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update SSH Key Group, unable to delete SSH Key Group association with one or more SSH Key, DB error", nil)
 			}
 		}
 	}
@@ -796,7 +756,7 @@ func (uskgh UpdateSSHKeyGroupHandler) Handle(c echo.Context) error {
 				_, serr := skgsaDAO.UpdateFromParams(ctx, tx, sga.ID, nil, nil, nil, cdb.GetStrPtr(cdbm.SSHKeyGroupSiteAssociationStatusSyncing), nil)
 				if serr != nil {
 					logger.Error().Err(serr).Msg("failed to update the SSH Key Group association status record in DB")
-					return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update SSH Key Group Association status for one or more Sites, DB error", nil)
+					return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update SSH Key Group Association status for one or more Sites, DB error", nil)
 				}
 			}
 		}
@@ -820,7 +780,7 @@ func (uskgh UpdateSSHKeyGroupHandler) Handle(c echo.Context) error {
 		)
 		if err != nil {
 			logger.Error().Err(err).Msg("unable to update the SSH Key Group record in DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update SSH Key Group, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update SSH Key Group, DB error", nil)
 		}
 	}
 
@@ -829,7 +789,7 @@ func (uskgh UpdateSSHKeyGroupHandler) Handle(c echo.Context) error {
 		skg, err = skgDAO.GenerateAndUpdateVersion(ctx, tx, skg.ID)
 		if err != nil {
 			logger.Error().Err(err).Msg("error updating current version for SSH Key Group")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to set updated version for SSH Key Group", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to set updated version for SSH Key Group", nil)
 		}
 	}
 
@@ -838,21 +798,21 @@ func (uskgh UpdateSSHKeyGroupHandler) Handle(c echo.Context) error {
 	dbskgsd, _, err := sdDAO.GetAllByEntityID(ctx, tx, skg.ID.String(), nil, cdb.GetIntPtr(cdbp.TotalLimit), nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Status Details for SSH Key Group from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details for SSH Key Group, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details for SSH Key Group, DB error", nil)
 	}
 
 	// Retrieve SSH Key Group Site Association details
 	dbskgsas, _, err := skgsaDAO.GetAll(ctx, tx, []uuid.UUID{skg.ID}, nil, nil, nil, []string{cdbm.SiteRelationName}, nil, cdb.GetIntPtr(cdbp.TotalLimit), &cdbp.OrderBy{Field: "created", Order: cdbp.OrderAscending})
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving SSH Key Group association from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve SSH Key Group Site associations from DB", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve SSH Key Group Site associations from DB", nil)
 	}
 
 	// Retrieve SSH Key Association details
 	dbska, _, err := skaDAO.GetAll(ctx, tx, nil, []uuid.UUID{skg.ID}, []string{cdbm.SSHKeyRelationName}, nil, cdb.GetIntPtr(cdbp.TotalLimit), &cdbp.OrderBy{Field: "created", Order: cdbp.OrderAscending})
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving SSH Key association from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve SSH Key Association from DB", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve SSH Key Association from DB", nil)
 	}
 
 	if syncRequired {
@@ -866,14 +826,14 @@ func (uskgh UpdateSSHKeyGroupHandler) Handle(c echo.Context) error {
 		)
 		if err != nil {
 			logger.Error().Err(err).Msg("unable to update the SSH Key Group record in DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update SSH Key Group, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update SSH Key Group, DB error", nil)
 		}
 
 		// Create a status detail record for the SSH Key Group
 		_, serr := sdDAO.CreateFromParams(ctx, tx, skg.ID.String(), cdbm.SSHKeyGroupStatusSyncing, cdb.GetStrPtr("received SSH Key Group update request, syncing"))
 		if serr != nil {
 			logger.Error().Err(serr).Msg("error creating Status Detail DB entry")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for SSH Key Group", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for SSH Key Group", nil)
 		}
 	}
 
@@ -906,7 +866,7 @@ func (uskgh UpdateSSHKeyGroupHandler) Handle(c echo.Context) error {
 	err = tx.Commit()
 	if err != nil {
 		logger.Error().Err(err).Msg("error committing transaction")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update SSH Key Group, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update SSH Key Group, DB error", nil)
 	}
 	txCommitted = true
 
@@ -948,7 +908,7 @@ type GetSSHKeyGroupHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetSSHKeyGroupHandler initializes and returns a new handler for getting SSH Key Group
@@ -957,7 +917,7 @@ func NewGetSSHKeyGroupHandler(dbSession *cdb.Session, tc temporalClient.Client, 
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -974,31 +934,12 @@ func NewGetSSHKeyGroupHandler(dbSession *cdb.Session, tc temporalClient.Client, 
 // @Success 200 {object} model.APISSHKeyGroup
 // @Router /v2/org/{org}/carbide/sshkeygroup/{id} [get]
 func (gskgh GetSSHKeyGroupHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "SSHKeyGroup").Str("Handler", "Get").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gskgh.tracerSpan.CreateChildInContext(ctx, "GetSSHKeyGroupHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("SSHKeyGroup", "Get", c, gskgh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gskgh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gskgh.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -1009,7 +950,7 @@ func (gskgh GetSSHKeyGroupHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate the tenant for which this SSH Key Group is being created
@@ -1017,17 +958,17 @@ func (gskgh GetSSHKeyGroupHandler) Handle(c echo.Context) error {
 	if err != nil {
 		if err == common.ErrOrgTenantNotFound {
 			logger.Warn().Err(err).Msg("Org does not have a Tenant associated")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
 		}
 		logger.Error().Err(err).Msg("unable to retrieve Tenant for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
 	}
 
 	// Validate role, only Tenant Admins are allowed to get SSH Key Group
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role with org, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	// Get SSH Key Group ID from URL param
@@ -1040,27 +981,27 @@ func (gskgh GetSSHKeyGroupHandler) Handle(c echo.Context) error {
 	qIncludeRelations, errMsg := common.GetAndValidateQueryRelations(qParams, cdbm.SSHKeyGroupRelatedEntities)
 	if errMsg != "" {
 		logger.Warn().Msg(errMsg)
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
 	}
 
 	// Check or valdiate SSH Key Group exists
 	skg, err := common.GetSSHKeyGroupFromIDString(ctx, nil, sshKeyGroupStrID, gskgh.dbSession, qIncludeRelations)
 	if err != nil {
 		if err == common.ErrInvalidID {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to get SSH Key Group, Invalid SSH Key ID: %s", sshKeyGroupStrID), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to get SSH Key Group, Invalid SSH Key ID: %s", sshKeyGroupStrID), nil)
 		}
 
 		if err == cdb.ErrDoesNotExist {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf("Failed to get SSH Key Group, Could not find SSH Key Group with ID: %s ", sshKeyGroupStrID), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf("Failed to get SSH Key Group, Could not find SSH Key Group with ID: %s ", sshKeyGroupStrID), nil)
 		}
 
 		logger.Warn().Err(err).Str("SSH Key Group ID", sshKeyGroupStrID).Msg("error retrieving SSH Key Group from DB by ID")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to get SSH Key Group, Could not find SSH Key Group with ID: %s, DB error", sshKeyGroupStrID), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to get SSH Key Group, Could not find SSH Key Group with ID: %s, DB error", sshKeyGroupStrID), nil)
 	}
 
 	// Check SSH Key Group belongs to the Tenant
 	if skg.TenantID != tenant.ID {
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "SSH Key Group does not belong to current Tenant", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "SSH Key Group does not belong to current Tenant", nil)
 	}
 
 	tsDAO := cdbm.NewTenantSiteDAO(gskgh.dbSession)
@@ -1082,7 +1023,7 @@ func (gskgh GetSSHKeyGroupHandler) Handle(c echo.Context) error {
 	)
 	if err != nil {
 		logger.Error().Err(err).Msg("db error retrieving TenantSite records for Tenant")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site associations for Tenant, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site associations for Tenant, DB error", nil)
 	}
 
 	for _, ts := range tss {
@@ -1094,14 +1035,14 @@ func (gskgh GetSSHKeyGroupHandler) Handle(c echo.Context) error {
 	dbskgsd, err := sdDAO.GetRecentByEntityIDs(ctx, nil, []string{skg.ID.String()}, common.RECENT_STATUS_DETAIL_COUNT)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Status Details for SSH Key Group from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details for SSH Key Group, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details for SSH Key Group, DB error", nil)
 	}
 
 	// Retrieve SSH Key Group Site Association details
 	dbskgsas, _, err := skgsaDAO.GetAll(ctx, nil, []uuid.UUID{skg.ID}, nil, nil, nil, nil, nil, cdb.GetIntPtr(cdbp.TotalLimit), &cdbp.OrderBy{Field: "created", Order: cdbp.OrderAscending})
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving SSH Key Group association from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve SSH Key Group Site associations from DB", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve SSH Key Group Site associations from DB", nil)
 	}
 
 	// Retrieve Site with Infrastructure Provider if requested
@@ -1115,7 +1056,7 @@ func (gskgh GetSSHKeyGroupHandler) Handle(c echo.Context) error {
 	sts, _, err := stDAO.GetAll(ctx, nil, cdbm.SiteFilterInput{SiteIDs: siteIDs}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, []string{cdbm.InfrastructureProviderRelationName})
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Site from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site from DB", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site from DB", nil)
 	}
 
 	// Build site map with siteID
@@ -1133,7 +1074,7 @@ func (gskgh GetSSHKeyGroupHandler) Handle(c echo.Context) error {
 	dbska, _, err := skaDAO.GetAll(ctx, nil, nil, []uuid.UUID{skg.ID}, []string{cdbm.SSHKeyRelationName}, nil, cdb.GetIntPtr(cdbp.TotalLimit), &cdbp.OrderBy{Field: "created", Order: cdbp.OrderAscending})
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving SSH Key association from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve SSH Key Association from DB", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve SSH Key Association from DB", nil)
 	}
 
 	// Create response
@@ -1150,7 +1091,7 @@ type GetAllSSHKeyGroupHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetAllSSHKeyGroupHandler initializes and returns a new handler for retreiving all SSH Key Groups
@@ -1159,7 +1100,7 @@ func NewGetAllSSHKeyGroupHandler(dbSession *cdb.Session, tc temporalClient.Clien
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -1182,31 +1123,12 @@ func NewGetAllSSHKeyGroupHandler(dbSession *cdb.Session, tc temporalClient.Clien
 // @Success 200 {array} []model.APISSHKeyGroup
 // @Router /v2/org/{org}/carbide/sshkeygroup [get]
 func (gaskgh GetAllSSHKeyGroupHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "SSHKeyGroup").Str("Handler", "GetAll").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gaskgh.tracerSpan.CreateChildInContext(ctx, "GetAllSSHKeyGroupHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("SSHKeyGroup", "GetAll", c, gaskgh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gaskgh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gaskgh.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -1217,7 +1139,7 @@ func (gaskgh GetAllSSHKeyGroupHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate the tenant for which this SSH Key Group is being created
@@ -1225,17 +1147,17 @@ func (gaskgh GetAllSSHKeyGroupHandler) Handle(c echo.Context) error {
 	if err != nil {
 		if err == common.ErrOrgTenantNotFound {
 			logger.Warn().Err(err).Msg("Org does not have a Tenant associated")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
 		}
 		logger.Error().Err(err).Msg("unable to retrieve tenant for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve tenant for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve tenant for org", nil)
 	}
 
 	// Validate role, only Tenant Admins are allowed to get SSH Key Groups
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role with org, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	// Validate pagination request
@@ -1243,14 +1165,14 @@ func (gaskgh GetAllSSHKeyGroupHandler) Handle(c echo.Context) error {
 	err = c.Bind(&pageRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding pagination request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request pagination data", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request pagination data", nil)
 	}
 
 	// Validate pagination request attributes
 	err = pageRequest.Validate(cdbm.SSHKeyGroupOrderByFields)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error validating pagination request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest,
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest,
 			"Failed to validate pagination request data", err)
 	}
 
@@ -1259,7 +1181,7 @@ func (gaskgh GetAllSSHKeyGroupHandler) Handle(c echo.Context) error {
 	qIncludeRelations, errMsg := common.GetAndValidateQueryRelations(qParams, cdbm.SSHKeyGroupRelatedEntities)
 	if errMsg != "" {
 		logger.Warn().Msg(errMsg)
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
 	}
 
 	// now check siteID in query
@@ -1272,17 +1194,17 @@ func (gaskgh GetAllSSHKeyGroupHandler) Handle(c echo.Context) error {
 		site, err = common.GetSiteFromIDString(ctx, nil, qSiteID, gaskgh.dbSession)
 		if err != nil {
 			logger.Warn().Err(err).Msg("error getting Site from query string")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Site specified in query", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Site specified in query", nil)
 		}
 
 		// Determine if tenant has access to requested site
 		_, err = tsDAO.GetByTenantIDAndSiteID(ctx, nil, tenant.ID, site.ID, nil)
 		if err != nil {
 			if err == cdb.ErrDoesNotExist {
-				return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant is not associated with Site specified in query", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant is not associated with Site specified in query", nil)
 			}
 			logger.Warn().Err(err).Msg("error retrieving Tenant Site association from DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to determine if Tenant has access to Site specified in query, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to determine if Tenant has access to Site specified in query, DB error", nil)
 		}
 	}
 
@@ -1294,15 +1216,15 @@ func (gaskgh GetAllSSHKeyGroupHandler) Handle(c echo.Context) error {
 		instance, err = common.GetInstanceFromIDString(ctx, nil, qInstanceID, gaskgh.dbSession)
 		if err != nil {
 			logger.Warn().Err(err).Msg("error getting Instance from query string")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Instance specified in query", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Instance specified in query", nil)
 		}
 
 		if instance.TenantID != tenant.ID {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Instance specified in query is not owned by Tenant", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Instance specified in query is not owned by Tenant", nil)
 		}
 
 		if site != nil && instance.SiteID != site.ID {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Instance specified in query is not associated with Site specified in query", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Instance specified in query is not associated with Site specified in query", nil)
 		}
 	}
 
@@ -1330,7 +1252,7 @@ func (gaskgh GetAllSSHKeyGroupHandler) Handle(c echo.Context) error {
 		skgias, _, err = skgiaDAO.GetAll(ctx, nil, nil, nil, []uuid.UUID{instance.ID}, nil, nil, cdb.GetIntPtr(cdbp.TotalLimit), nil)
 		if err != nil {
 			logger.Error().Err(err).Msg("error retrieving SSH Key Group Instance Associations from DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to filter SSH Key Groups by Instance ID, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to filter SSH Key Groups by Instance ID, DB error", nil)
 		}
 
 		for _, skgia := range skgias {
@@ -1349,7 +1271,7 @@ func (gaskgh GetAllSSHKeyGroupHandler) Handle(c echo.Context) error {
 		)
 		if serr != nil {
 			logger.Error().Err(serr).Msg("error retrieving SSH Key Groups for Tenant from DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve SSH Key Groups for Tenant, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve SSH Key Groups for Tenant, DB error", nil)
 		}
 		tskgIDs := []uuid.UUID{}
 		for _, tskg := range tskgs {
@@ -1360,7 +1282,7 @@ func (gaskgh GetAllSSHKeyGroupHandler) Handle(c echo.Context) error {
 			sttskgs, _, serr := skgsaDAO.GetAll(ctx, nil, tskgIDs, &site.ID, nil, nil, nil, nil, cdb.GetIntPtr(cdbp.TotalLimit), nil)
 			if serr != nil {
 				logger.Error().Err(serr).Msg("error retrieving SSH Key Group Site Associations from DB")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to filter SSH Key Groups by Site ID, DB error", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to filter SSH Key Groups by Site ID, DB error", nil)
 			}
 
 			for _, sttskg := range sttskgs {
@@ -1378,7 +1300,7 @@ func (gaskgh GetAllSSHKeyGroupHandler) Handle(c echo.Context) error {
 		_, ok := cdbm.SSHKeyGroupMap[statusQuery]
 		if !ok {
 			logger.Warn().Msg(fmt.Sprintf("invalid value in status query: %v", statusQuery))
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Status value in query", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Status value in query", nil)
 		}
 		statuses = append(statuses, statusQuery)
 		gaskgh.tracerSpan.SetAttribute(handlerSpan, attribute.String("status", statusQuery), logger)
@@ -1411,7 +1333,7 @@ func (gaskgh GetAllSSHKeyGroupHandler) Handle(c echo.Context) error {
 	)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving SSH Key Groups from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve SSH Key Groups, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve SSH Key Groups, DB error", nil)
 	}
 
 	// Get all TenantSite records for the Tenant
@@ -1428,7 +1350,7 @@ func (gaskgh GetAllSSHKeyGroupHandler) Handle(c echo.Context) error {
 	)
 	if err != nil {
 		logger.Error().Err(err).Msg("db error retrieving TenantSite records for Tenant")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site associations for Tenant, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site associations for Tenant, DB error", nil)
 	}
 
 	for _, ts := range tss {
@@ -1445,7 +1367,7 @@ func (gaskgh GetAllSSHKeyGroupHandler) Handle(c echo.Context) error {
 	dbskgssd, err := sdDAO.GetRecentByEntityIDs(ctx, nil, dbskgStrIDs, common.RECENT_STATUS_DETAIL_COUNT)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Status Details for SSH Key Group from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details for SSH Key Group, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details for SSH Key Group, DB error", nil)
 	}
 
 	for _, skgssd := range dbskgssd {
@@ -1457,7 +1379,7 @@ func (gaskgh GetAllSSHKeyGroupHandler) Handle(c echo.Context) error {
 	dbskgsas, _, err := skgsaDAO.GetAll(ctx, nil, skgIDs, nil, nil, nil, nil, nil, cdb.GetIntPtr(cdbp.TotalLimit), &cdbp.OrderBy{Field: "created", Order: cdbp.OrderAscending})
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving SSH Key Group Site association from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve SSH Key Group Site associations from DB", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve SSH Key Group Site associations from DB", nil)
 	}
 
 	// Retrieve Site with Infrastructure Provider if requested
@@ -1472,7 +1394,7 @@ func (gaskgh GetAllSSHKeyGroupHandler) Handle(c echo.Context) error {
 	sts, _, err := stDAO.GetAll(ctx, nil, cdbm.SiteFilterInput{SiteIDs: siteIDs}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, []string{cdbm.InfrastructureProviderRelationName})
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Site from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site from DB", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site from DB", nil)
 	}
 
 	// Build site map with siteID
@@ -1491,7 +1413,7 @@ func (gaskgh GetAllSSHKeyGroupHandler) Handle(c echo.Context) error {
 	dbskas, _, err := skaDAO.GetAll(ctx, nil, nil, skgIDs, []string{cdbm.SSHKeyRelationName}, nil, cdb.GetIntPtr(cdbp.TotalLimit), &cdbp.OrderBy{Field: "created", Order: cdbp.OrderAscending})
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving SSH Key association from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve SSH Key Association from DB", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve SSH Key Association from DB", nil)
 	}
 
 	for _, dbska := range dbskas {
@@ -1521,7 +1443,7 @@ func (gaskgh GetAllSSHKeyGroupHandler) Handle(c echo.Context) error {
 	pageHeader, err := json.Marshal(pageReponse)
 	if err != nil {
 		logger.Error().Err(err).Msg("error marshaling pagination response")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to generate pagination response header", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to generate pagination response header", nil)
 	}
 	c.Response().Header().Set(pagination.ResponseHeaderName, string(pageHeader))
 
@@ -1537,7 +1459,7 @@ type DeleteSSHKeyGroupHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewDeleteSSHKeyGroupHandler initializes and returns a new handler for deleting an SSH Key Group
@@ -1546,7 +1468,7 @@ func NewDeleteSSHKeyGroupHandler(dbSession *cdb.Session, tc temporalClient.Clien
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -1562,31 +1484,12 @@ func NewDeleteSSHKeyGroupHandler(dbSession *cdb.Session, tc temporalClient.Clien
 // @Success 202
 // @Router /v2/org/{org}/carbide/sshkeygroup/{id} [delete]
 func (dskgh DeleteSSHKeyGroupHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "SSHKeyGroup").Str("Handler", "Delete").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := dskgh.tracerSpan.CreateChildInContext(ctx, "DeleteSSHKeyGroupHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("SSHKeyGroup", "Delete", c, dskgh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		dskgh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, dskgh.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -1597,7 +1500,7 @@ func (dskgh DeleteSSHKeyGroupHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate the tenant for which this SSHKeyGroup is being created
@@ -1605,17 +1508,17 @@ func (dskgh DeleteSSHKeyGroupHandler) Handle(c echo.Context) error {
 	if err != nil {
 		if err == common.ErrOrgTenantNotFound {
 			logger.Warn().Err(err).Msg("Org does not have a Tenant associated")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
 		}
 		logger.Error().Err(err).Msg("unable to retrieve Tenant for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
 	}
 
 	// Validate role, only Tenant Admins are allowed to delete SSH Key Group
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role with org, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	// Get ID from URL param
@@ -1627,27 +1530,27 @@ func (dskgh DeleteSSHKeyGroupHandler) Handle(c echo.Context) error {
 	skg, err := common.GetSSHKeyGroupFromIDString(ctx, nil, sshKeyGroupStrID, dskgh.dbSession, nil)
 	if err != nil {
 		if err == common.ErrInvalidID {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to delete SSH Key Group, Invalid SSH Key ID: %s", sshKeyGroupStrID), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to delete SSH Key Group, Invalid SSH Key ID: %s", sshKeyGroupStrID), nil)
 		}
 
 		if err == cdb.ErrDoesNotExist {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf("Failed to delete SSH Key Group, Could not find SSH Key Group with ID: %s ", sshKeyGroupStrID), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf("Failed to delete SSH Key Group, Could not find SSH Key Group with ID: %s ", sshKeyGroupStrID), nil)
 		}
 
 		logger.Warn().Err(err).Str("SSH Key Group ID", sshKeyGroupStrID).Msg("error retrieving SSH Key Group from DB by ID")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to delete SSH Key Group, Could not find SSH Key Group with ID: %s, DB error", sshKeyGroupStrID), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to delete SSH Key Group, Could not find SSH Key Group with ID: %s, DB error", sshKeyGroupStrID), nil)
 	}
 
 	// Check that the SSH Key Group belongs to the Tenant
 	if skg.TenantID != tenant.ID {
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "SSH Key Group does not belong to current Tenant", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "SSH Key Group does not belong to current Tenant", nil)
 	}
 
 	// Start a DB transaction
 	tx, err := cdb.BeginTx(ctx, dskgh.dbSession, &sql.TxOptions{})
 	if err != nil {
 		logger.Error().Err(err).Msg("unable to start transaction")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete SSH Key Group, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete SSH Key Group, DB error", nil)
 	}
 
 	// This variable is used in cleanup actions to indicate if this transaction committed
@@ -1659,7 +1562,7 @@ func (dskgh DeleteSSHKeyGroupHandler) Handle(c echo.Context) error {
 	err = tx.TryAcquireAdvisoryLock(ctx, cdb.GetAdvisoryLockIDFromString(skg.ID.String()), nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed to acquire advisory lock on SSH Key Group")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update SSH Key Group, could not acquire data store lock on Group", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update SSH Key Group, could not acquire data store lock on Group", nil)
 	}
 
 	// Update SSH Key Group to set status to Deleting
@@ -1674,7 +1577,7 @@ func (dskgh DeleteSSHKeyGroupHandler) Handle(c echo.Context) error {
 	)
 	if err != nil {
 		logger.Error().Err(err).Msg("error updating SSH Key Group in DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete SSH Key Groups", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete SSH Key Groups", nil)
 	}
 
 	// Create status detail
@@ -1683,14 +1586,14 @@ func (dskgh DeleteSSHKeyGroupHandler) Handle(c echo.Context) error {
 	_, err = sdDAO.CreateFromParams(ctx, tx, skg.ID.String(), cdbm.SSHKeyGroupStatusDeleting, cdb.GetStrPtr("received request for deletion, pending processing"))
 	if err != nil {
 		logger.Error().Err(err).Msg("error creating Status Detail DB entry")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for SSH Key Group", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for SSH Key Group", nil)
 	}
 
 	skgsaDAO := cdbm.NewSSHKeyGroupSiteAssociationDAO(dskgh.dbSession)
 	skgsasToSync, _, err := skgsaDAO.GetAll(ctx, nil, []uuid.UUID{skg.ID}, nil, nil, nil, nil, nil, cdb.GetIntPtr(cdbp.TotalLimit), nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving SSH Key Group Associations from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve SSH Key Group Site associations from DB", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve SSH Key Group Site associations from DB", nil)
 	}
 
 	// Update Status Deleting for SSH Key Group Association
@@ -1700,14 +1603,14 @@ func (dskgh DeleteSSHKeyGroupHandler) Handle(c echo.Context) error {
 			_, err = skgsaDAO.UpdateFromParams(ctx, tx, skgsa.ID, nil, nil, nil, cdb.GetStrPtr(cdbm.SSHKeyGroupSiteAssociationStatusDeleting), nil)
 			if err != nil {
 				logger.Error().Err(err).Msg("error updating SSH Key Group Association in DB")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete SSH Key Groups", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete SSH Key Groups", nil)
 			}
 
 			// create a status detail record for the SSH Key Group Association
 			_, err = sdDAO.CreateFromParams(ctx, tx, skgsa.ID.String(), cdbm.SSHKeyGroupSiteAssociationStatusDeleting, cdb.GetStrPtr("received request for deletion, pending processing"))
 			if err != nil {
 				logger.Error().Err(err).Msg("error creating Status Detail DB entry")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for SSH Key Group Association", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for SSH Key Group Association", nil)
 			}
 		}
 	}
@@ -1718,7 +1621,7 @@ func (dskgh DeleteSSHKeyGroupHandler) Handle(c echo.Context) error {
 		serr := skgDAO.Delete(ctx, tx, skg.ID)
 		if serr != nil {
 			logger.Error().Err(err).Msg("error deleting SSH Key Group from DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete SSH Key Group, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete SSH Key Group, DB error", nil)
 		}
 
 		// Delete SSH Key Associations for SSH Key Group
@@ -1726,13 +1629,13 @@ func (dskgh DeleteSSHKeyGroupHandler) Handle(c echo.Context) error {
 		skas, _, serr := skaDAO.GetAll(ctx, tx, nil, []uuid.UUID{skg.ID}, nil, nil, cdb.GetIntPtr(cdbp.TotalLimit), nil)
 		if serr != nil {
 			logger.Error().Err(err).Msg("error retrieving SSH Key Associations from DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve SSH Key Associations from DB", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve SSH Key Associations from DB", nil)
 		}
 		for _, skas := range skas {
 			serr = skaDAO.DeleteByID(ctx, tx, skas.ID)
 			if serr != nil {
 				logger.Error().Err(serr).Msg("error deleting SSH Key Association from DB")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete SSH Key Association, DB error", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete SSH Key Association, DB error", nil)
 			}
 		}
 	}
@@ -1741,7 +1644,7 @@ func (dskgh DeleteSSHKeyGroupHandler) Handle(c echo.Context) error {
 	err = tx.Commit()
 	if err != nil {
 		logger.Error().Err(err).Msg("error committing transaction")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete SSH Key Group", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete SSH Key Group", nil)
 	}
 	txCommitted = true
 

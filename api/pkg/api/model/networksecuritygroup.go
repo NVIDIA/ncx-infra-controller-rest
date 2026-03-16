@@ -462,7 +462,7 @@ func ProtobufRuleFromAPINetworkSecurityGroupRule(rule *APINetworkSecurityGroupRu
 }
 
 // Accepts a Carbide rule definition and converts
-// it to the cloud-api request representation that will be
+// it to the carbide-rest-api request representation that will be
 // returned to users
 func APINetworkSecurityGroupRuleFromProtobufRule(rule *cdbm.NetworkSecurityGroupRule) (*APINetworkSecurityGroupRule, error) {
 
@@ -525,7 +525,7 @@ func APINetworkSecurityGroupRuleFromProtobufRule(rule *cdbm.NetworkSecurityGroup
 	var srcPortRange *string
 	var dstPortRange *string
 
-	// Whether cloud-api validates ranges or not,
+	// Whether carbide-rest-api validates ranges or not,
 	// Carbide will reject half-defined port ranges.
 	// If we see a half-defined range, it means DB
 	// corruption.

@@ -25,8 +25,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
-	"github.com/rs/zerolog/log"
-	"go.opentelemetry.io/otel/attribute"
 
 	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
@@ -36,21 +34,20 @@ import (
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model"
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/pagination"
 	auth "github.com/nvidia/bare-metal-manager-rest/auth/pkg/authorization"
-	cerr "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	sutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
+	cutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 )
 
 // GetAllMachineCapabilityHandler is an API Handler to return various Machine Capabilities
 type GetAllMachineCapabilityHandler struct {
 	dbSession  *cdb.Session
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetAllMachineCapabilityHandler creates and returns a new handler for retrieving Machine Capabilities
 func NewGetAllMachineCapabilityHandler(dbSession *cdb.Session) GetAllMachineCapabilityHandler {
 	return GetAllMachineCapabilityHandler{
 		dbSession:  dbSession,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -66,31 +63,12 @@ func NewGetAllMachineCapabilityHandler(dbSession *cdb.Session) GetAllMachineCapa
 // @Success 200 {object} model.APIUser
 // @Router /v2/org/{org}/carbide/machine-capability [get]
 func (gamch GetAllMachineCapabilityHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "MachineCapability").Str("Handler", "GetAll").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gamch.tracerSpan.CreateChildInContext(ctx, "GetAllMachineCapabilityHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("MachineCapability", "GetAll", c, gamch.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gamch.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gamch.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -101,14 +79,14 @@ func (gamch GetAllMachineCapabilityHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Provider Admins are allowed to retrieve Machine/InstanceType associations
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Provider Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
 	}
 
 	// Validate paginantion request
@@ -116,24 +94,24 @@ func (gamch GetAllMachineCapabilityHandler) Handle(c echo.Context) error {
 	err = c.Bind(&pageRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding pagination request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request pagination data", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request pagination data", nil)
 	}
 
 	// Validate request attributes
 	err = pageRequest.Validate(cdbm.MachineCapabilityOrderByFields)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error validating pagination request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate pagination request data", err)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate pagination request data", err)
 	}
 
 	// Validate other query params
 	orgInfrastructureProvider, err := common.GetInfrastructureProviderForOrg(ctx, nil, gamch.dbSession, org)
 	if err != nil {
 		if err == common.ErrOrgInstrastructureProviderNotFound {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Infrastructure Provider not found in org", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Infrastructure Provider not found in org", nil)
 		}
 		logger.Error().Err(err).Msg("error getting infrastructure provider for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve infrastructure provider for org, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve infrastructure provider for org, DB error", nil)
 	}
 
 	mDAO := cdbm.NewMachineDAO(gamch.dbSession)
@@ -147,15 +125,15 @@ func (gamch GetAllMachineCapabilityHandler) Handle(c echo.Context) error {
 		site, serr := common.GetSiteFromIDString(ctx, nil, qSiteID, gamch.dbSession)
 		if serr != nil {
 			if serr == cdb.ErrDoesNotExist {
-				return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find Site specified in query", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find Site specified in query", nil)
 			}
 			logger.Error().Err(serr).Str("Site ID", qSiteID).Msg("error retrieving Site specified in query")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error retrieving Site specified in query", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error retrieving Site specified in query", nil)
 		}
 
 		if site.InfrastructureProviderID != orgInfrastructureProvider.ID {
 			logger.Error().Msg("Site's Infrastructure Provider doesn't match org's Infrastructure Provider")
-			return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Site specified in query doesn't belong to org's Infrastructure provider", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Site specified in query doesn't belong to org's Infrastructure provider", nil)
 		}
 
 		siteIDPtr = &site.ID
@@ -167,7 +145,7 @@ func (gamch GetAllMachineCapabilityHandler) Handle(c echo.Context) error {
 	if qHasInstanceType != "" {
 		hiType, serr := strconv.ParseBool(qHasInstanceType)
 		if serr != nil {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Invalid value: %v specified for hasInstanceType in query", qHasInstanceType), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Invalid value: %v specified for hasInstanceType in query", qHasInstanceType), nil)
 		}
 
 		hasInstanceType = cdb.GetBoolPtr(hiType)
@@ -182,7 +160,7 @@ func (gamch GetAllMachineCapabilityHandler) Handle(c echo.Context) error {
 	ms, _, err := mDAO.GetAll(ctx, nil, filterInput, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error getting Machines from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Machines, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Machines, DB error", nil)
 	}
 
 	mids := []string{}
@@ -225,7 +203,7 @@ func (gamch GetAllMachineCapabilityHandler) Handle(c echo.Context) error {
 	if countParam != "" {
 		countVal, serr := strconv.Atoi(countParam)
 		if serr != nil {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid value specified for count in query", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid value specified for count in query", nil)
 		}
 		count = &countVal
 	}
@@ -240,7 +218,7 @@ func (gamch GetAllMachineCapabilityHandler) Handle(c echo.Context) error {
 		for _, inactiveDeviceStr := range inactiveDevicesParam {
 			inactiveDeviceInt, serr := strconv.Atoi(inactiveDeviceStr)
 			if serr != nil {
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid value specified for inactiveDevices in query", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid value specified for inactiveDevices in query", nil)
 			}
 			inactiveDevices = append(inactiveDevices, inactiveDeviceInt)
 		}
@@ -251,7 +229,7 @@ func (gamch GetAllMachineCapabilityHandler) Handle(c echo.Context) error {
 	mcs, total, err := mcDAO.GetAllDistinct(ctx, nil, mids, nil, capabilityType, name, frequency, capacity, vendor, count, deviceType, inactiveDevices, pageRequest.Offset, pageRequest.Limit, pageRequest.OrderBy)
 	if err != nil {
 		logger.Error().Err(err).Msg("error getting Machine Capabilities from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Machine Capabilities, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Machine Capabilities, DB error", nil)
 	}
 
 	// Return response
@@ -266,7 +244,7 @@ func (gamch GetAllMachineCapabilityHandler) Handle(c echo.Context) error {
 	pageHeader, err := json.Marshal(pageReponse)
 	if err != nil {
 		logger.Error().Err(err).Msg("error marshaling pagination response")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to generate pagination response header", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to generate pagination response header", nil)
 	}
 
 	c.Response().Header().Set(pagination.ResponseHeaderName, string(pageHeader))

@@ -317,11 +317,29 @@ func NewAPIRoutes(dbSession *cdb.Session, tc tClient.Client, tnc tClient.Namespa
 			Method:  http.MethodGet,
 			Handler: apiHandler.NewGetAllInterfaceHandler(dbSession, tc, cfg),
 		},
+		// Instance InfiniBandInterface endpoints
+		{
+			Path:    apiPathPrefix + "/instance/:instanceId/infiniband-interface",
+			Method:  http.MethodGet,
+			Handler: apiHandler.NewGetAllInstanceInfiniBandInterfaceHandler(dbSession, tc, cfg),
+		},
+		// Instance NVLinkInterface endpoints
+		{
+			Path:    apiPathPrefix + "/instance/:instanceId/nvlink-interface",
+			Method:  http.MethodGet,
+			Handler: apiHandler.NewGetAllInstanceNVLinkInterfaceHandler(dbSession, tc, cfg),
+		},
+		// InfiniBandInterface endpoints
+		{
+			Path:    apiPathPrefix + "/infiniband-interface",
+			Method:  http.MethodGet,
+			Handler: apiHandler.NewGetAllInfiniBandInterfaceHandler(dbSession, tc, cfg, nil),
+		},
 		// NVLinkInterface endpoints
 		{
 			Path:    apiPathPrefix + "/nvlink-interface",
 			Method:  http.MethodGet,
-			Handler: apiHandler.NewGetAllNVLinkInterfaceHandler(dbSession, tc, cfg),
+			Handler: apiHandler.NewGetAllNVLinkInterfaceHandler(dbSession, tc, cfg, nil),
 		},
 		// InfiniBandPartition endpoints
 		{
@@ -400,6 +418,58 @@ func NewAPIRoutes(dbSession *cdb.Session, tc tClient.Client, tnc tClient.Namespa
 			Path:    apiPathPrefix + "/expected-machine/:id",
 			Method:  http.MethodDelete,
 			Handler: apiHandler.NewDeleteExpectedMachineHandler(dbSession, tc, scp, cfg),
+		},
+		// ExpectedPowerShelf endpoints
+		{
+			Path:    apiPathPrefix + "/expected-power-shelf",
+			Method:  http.MethodPost,
+			Handler: apiHandler.NewCreateExpectedPowerShelfHandler(dbSession, tc, scp, cfg),
+		},
+		{
+			Path:    apiPathPrefix + "/expected-power-shelf",
+			Method:  http.MethodGet,
+			Handler: apiHandler.NewGetAllExpectedPowerShelfHandler(dbSession, tc, cfg),
+		},
+		{
+			Path:    apiPathPrefix + "/expected-power-shelf/:id",
+			Method:  http.MethodGet,
+			Handler: apiHandler.NewGetExpectedPowerShelfHandler(dbSession, tc, cfg),
+		},
+		{
+			Path:    apiPathPrefix + "/expected-power-shelf/:id",
+			Method:  http.MethodPatch,
+			Handler: apiHandler.NewUpdateExpectedPowerShelfHandler(dbSession, tc, scp, cfg),
+		},
+		{
+			Path:    apiPathPrefix + "/expected-power-shelf/:id",
+			Method:  http.MethodDelete,
+			Handler: apiHandler.NewDeleteExpectedPowerShelfHandler(dbSession, tc, scp, cfg),
+		},
+		// ExpectedSwitch endpoints
+		{
+			Path:    apiPathPrefix + "/expected-switch",
+			Method:  http.MethodPost,
+			Handler: apiHandler.NewCreateExpectedSwitchHandler(dbSession, tc, scp, cfg),
+		},
+		{
+			Path:    apiPathPrefix + "/expected-switch",
+			Method:  http.MethodGet,
+			Handler: apiHandler.NewGetAllExpectedSwitchHandler(dbSession, tc, cfg),
+		},
+		{
+			Path:    apiPathPrefix + "/expected-switch/:id",
+			Method:  http.MethodGet,
+			Handler: apiHandler.NewGetExpectedSwitchHandler(dbSession, tc, cfg),
+		},
+		{
+			Path:    apiPathPrefix + "/expected-switch/:id",
+			Method:  http.MethodPatch,
+			Handler: apiHandler.NewUpdateExpectedSwitchHandler(dbSession, tc, scp, cfg),
+		},
+		{
+			Path:    apiPathPrefix + "/expected-switch/:id",
+			Method:  http.MethodDelete,
+			Handler: apiHandler.NewDeleteExpectedSwitchHandler(dbSession, tc, scp, cfg),
 		},
 		// Machine endpoints
 		{
@@ -771,6 +841,11 @@ func NewAPIRoutes(dbSession *cdb.Session, tc tClient.Client, tnc tClient.Namespa
 			Handler: apiHandler.NewBatchUpdateRackFirmwareHandler(dbSession, tc, scp, cfg),
 		},
 		{
+			Path:    apiPathPrefix + "/rack/bringup",
+			Method:  http.MethodPost,
+			Handler: apiHandler.NewBatchBringUpRackHandler(dbSession, tc, scp, cfg),
+		},
+		{
 			Path:    apiPathPrefix + "/rack/:id",
 			Method:  http.MethodGet,
 			Handler: apiHandler.NewGetRackHandler(dbSession, tc, scp, cfg),
@@ -789,6 +864,11 @@ func NewAPIRoutes(dbSession *cdb.Session, tc tClient.Client, tnc tClient.Namespa
 			Path:    apiPathPrefix + "/rack/:id/firmware",
 			Method:  http.MethodPatch,
 			Handler: apiHandler.NewUpdateRackFirmwareHandler(dbSession, tc, scp, cfg),
+		},
+		{
+			Path:    apiPathPrefix + "/rack/:id/bringup",
+			Method:  http.MethodPost,
+			Handler: apiHandler.NewBringUpRackHandler(dbSession, tc, scp, cfg),
 		},
 		// Tray endpoints (RLA)
 		{

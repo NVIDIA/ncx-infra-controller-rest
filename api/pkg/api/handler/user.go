@@ -21,9 +21,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/rs/zerolog/log"
-	"go.opentelemetry.io/otel/attribute"
-
 	"github.com/labstack/echo/v4"
 
 	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
@@ -31,21 +28,20 @@ import (
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/handler/util/common"
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model"
 	auth "github.com/nvidia/bare-metal-manager-rest/auth/pkg/authorization"
-	cerr "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	sutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
+	cutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 )
 
 // GetUserHandler is an API Handler to return information about the current user
 type GetUserHandler struct {
 	dbSession  *cdb.Session
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetUserHandler creates and returns a new handler
 func NewGetUserHandler(dbSession *cdb.Session) GetUserHandler {
 	return GetUserHandler{
 		dbSession:  dbSession,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -60,31 +56,12 @@ func NewGetUserHandler(dbSession *cdb.Session) GetUserHandler {
 // @Success 200 {object} model.APIUser
 // @Router /v2/org/{org}/carbide/user/current [get]
 func (guh GetUserHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "User").Str("Handler", "Get").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := guh.tracerSpan.CreateChildInContext(ctx, "GetUserHandler", logger)
+	org, dbUser, _, logger, handlerSpan := common.SetupHandler("User", "Get", c, guh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		guh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, guh.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -95,7 +72,7 @@ func (guh GetUserHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	apiUser := model.NewAPIUserFromDBUser(*dbUser)

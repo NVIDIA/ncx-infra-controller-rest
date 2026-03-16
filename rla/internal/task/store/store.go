@@ -35,8 +35,17 @@ import (
 type Store interface {
 	// Task operations
 
+	// RunInTransaction executes fn within a database transaction.
+	// The transaction is propagated through the context so that nested store
+	// calls automatically participate without extra plumbing.
+	RunInTransaction(ctx context.Context, fn func(ctx context.Context) error) error
+
 	// CreateTask creates a new task record.
 	CreateTask(ctx context.Context, task *taskdef.Task) error
+
+	// GetTask retrieves a single task by its ID.
+	// Returns an error if the task is not found.
+	GetTask(ctx context.Context, id uuid.UUID) (*taskdef.Task, error)
 
 	// GetTasks retrieves tasks by their IDs.
 	GetTasks(ctx context.Context, ids []uuid.UUID) ([]*taskdef.Task, error)
@@ -49,6 +58,20 @@ type Store interface {
 
 	// UpdateTaskStatus updates the status and message of a task.
 	UpdateTaskStatus(ctx context.Context, arg *taskdef.TaskStatusUpdate) error
+
+	// ListActiveTasksForRack returns non-finished, non-waiting tasks for a rack
+	// (i.e. tasks with status pending or running).
+	ListActiveTasksForRack(ctx context.Context, rackID uuid.UUID) ([]*taskdef.Task, error)
+
+	// ListWaitingTasksForRack returns waiting tasks for a rack, ordered oldest-first.
+	ListWaitingTasksForRack(ctx context.Context, rackID uuid.UUID) ([]*taskdef.Task, error)
+
+	// CountWaitingTasksForRack returns the number of waiting tasks for a rack.
+	CountWaitingTasksForRack(ctx context.Context, rackID uuid.UUID) (int, error)
+
+	// ListRacksWithWaitingTasks returns distinct rack IDs that have at least
+	// one task in the waiting state.
+	ListRacksWithWaitingTasks(ctx context.Context) ([]uuid.UUID, error)
 
 	// Operation rule operations
 

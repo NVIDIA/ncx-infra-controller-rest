@@ -47,7 +47,7 @@ func newRegistry(ctx context.Context, c cdb.Config) (*Registry, error) {
 	if err := migrations.MigrateWithDB(ctx, session.DB); err != nil {
 		session.Close()
 
-		return nil, fmt.Errorf("failed to run migrations: %v", err)
+		return nil, fmt.Errorf("failed to run migrations: %w", err)
 	}
 
 	return &Registry{session}, nil

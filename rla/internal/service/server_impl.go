@@ -411,14 +411,14 @@ func (rs *RLAServerImpl) GetListOfRacks(
 ) (*pb.GetListOfRacksResponse, error) {
 	pg := protobuf.PaginationFrom(req.GetPagination())
 	if err := pg.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid pagination information: %v", err)
+		return nil, fmt.Errorf("invalid pagination information: %w", err)
 	}
 
 	var orderBy *dbquery.OrderBy
 	if req.GetOrderBy() != nil {
 		orderBy = protobuf.OrderByFrom(req.GetOrderBy())
 		if err := orderBy.Validate(); err != nil {
-			return nil, fmt.Errorf("invalid order by: %v", err)
+			return nil, fmt.Errorf("invalid order by: %w", err)
 		}
 	}
 
@@ -434,7 +434,7 @@ func (rs *RLAServerImpl) GetListOfRacks(
 			}
 			fieldName, queryInfo, err := protobuf.FilterFrom(filter)
 			if err != nil {
-				return nil, fmt.Errorf("invalid filter: %v", err)
+				return nil, fmt.Errorf("invalid filter: %w", err)
 			}
 			if queryInfo == nil {
 				continue
@@ -544,7 +544,7 @@ func (rs *RLAServerImpl) GetListOfNVLDomains(
 ) (*pb.GetListOfNVLDomainsResponse, error) {
 	pg := protobuf.PaginationFrom(req.GetPagination())
 	if err := pg.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid pagination information: %v", err)
+		return nil, fmt.Errorf("invalid pagination information: %w", err)
 	}
 
 	if req.GetInfo() == nil {
@@ -599,6 +599,7 @@ func (rs *RLAServerImpl) PowerOnRack(
 		ctx,
 		req.GetTargetSpec(),
 		req.GetDescription(),
+		req.GetQueueOptions(),
 		&operations.PowerControlTaskInfo{
 			Operation: operations.PowerOperationPowerOn,
 		},
@@ -617,6 +618,7 @@ func (rs *RLAServerImpl) PowerOffRack(
 		ctx,
 		req.GetTargetSpec(),
 		req.GetDescription(),
+		req.GetQueueOptions(),
 		&operations.PowerControlTaskInfo{
 			Operation: op,
 			Forced:    req.GetForced(),
@@ -636,6 +638,7 @@ func (rs *RLAServerImpl) PowerResetRack(
 		ctx,
 		req.GetTargetSpec(),
 		req.GetDescription(),
+		req.GetQueueOptions(),
 		&operations.PowerControlTaskInfo{
 			Operation: op,
 			Forced:    req.GetForced(),
@@ -732,6 +735,7 @@ func (rs *RLAServerImpl) handlePowerControlTask(
 	ctx context.Context,
 	targetSpec *pb.OperationTargetSpec,
 	description string,
+	queueOptions *pb.QueueOptions,
 	info *operations.PowerControlTaskInfo,
 ) (*pb.SubmitTaskResponse, error) {
 	if rs.taskManager == nil {
@@ -747,6 +751,8 @@ func (rs *RLAServerImpl) handlePowerControlTask(
 	if err != nil {
 		return nil, err
 	}
+
+	req.ConflictStrategy, req.QueueTimeout = protobuf.QueueOptionsFrom(queueOptions)
 
 	// Task Manager handles resolve + split by rack + create tasks
 	taskIDs, err := rs.taskManager.SubmitTask(ctx, req)
@@ -881,7 +887,7 @@ func (rs *RLAServerImpl) ListTasks(
 
 	pagination := protobuf.PaginationFrom(req.GetPagination())
 	if err := pagination.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid pagination information: %v", err)
+		return nil, fmt.Errorf("invalid pagination information: %w", err)
 	}
 
 	tasks, total, err := rs.taskStore.ListTasks(ctx, options, pagination)
@@ -917,6 +923,31 @@ func (rs *RLAServerImpl) GetTasksByIDs(
 	}
 
 	return &pb.GetTasksByIDsResponse{Tasks: results}, nil
+}
+
+func (rs *RLAServerImpl) CancelTask(
+	ctx context.Context,
+	req *pb.CancelTaskRequest,
+) (*pb.CancelTaskResponse, error) {
+	if rs.taskManager == nil {
+		return nil, errors.New("task manager is not available")
+	}
+
+	taskID, err := uuid.Parse(req.GetTaskId().GetId())
+	if err != nil {
+		return nil, fmt.Errorf("invalid task ID: %w", err)
+	}
+
+	if err := rs.taskManager.CancelTask(ctx, taskID); err != nil {
+		return nil, err
+	}
+
+	task, err := rs.taskStore.GetTask(ctx, taskID)
+	if err != nil {
+		return &pb.CancelTaskResponse{}, nil
+	}
+
+	return &pb.CancelTaskResponse{Task: protobuf.TaskTo(task)}, nil
 }
 
 // ========================================
@@ -1237,6 +1268,10 @@ func (rs *RLAServerImpl) UpgradeFirmware(
 		return nil, err
 	}
 
+	opReq.ConflictStrategy, opReq.QueueTimeout = protobuf.QueueOptionsFrom(
+		req.GetQueueOptions(),
+	)
+
 	// Task Manager handles resolve + split by rack + create tasks
 	taskIDs, err := rs.taskManager.SubmitTask(ctx, opReq)
 	if err != nil {
@@ -1260,14 +1295,14 @@ func (rs *RLAServerImpl) GetComponents(
 ) (*pb.GetComponentsResponse, error) {
 	pg := protobuf.PaginationFrom(req.GetPagination())
 	if err := pg.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid pagination information: %v", err)
+		return nil, fmt.Errorf("invalid pagination information: %w", err)
 	}
 
 	var orderBy *dbquery.OrderBy
 	if req.GetOrderBy() != nil {
 		orderBy = protobuf.OrderByFrom(req.GetOrderBy())
 		if err := orderBy.Validate(); err != nil {
-			return nil, fmt.Errorf("invalid order by: %v", err)
+			return nil, fmt.Errorf("invalid order by: %w", err)
 		}
 	}
 
@@ -1284,7 +1319,7 @@ func (rs *RLAServerImpl) GetComponents(
 			}
 			fieldName, queryInfo, err := protobuf.FilterFrom(filter)
 			if err != nil {
-				return nil, fmt.Errorf("invalid filter: %v", err)
+				return nil, fmt.Errorf("invalid filter: %w", err)
 			}
 			if queryInfo == nil {
 				continue
@@ -1411,14 +1446,14 @@ func (rs *RLAServerImpl) ValidateComponents(
 ) (*pb.ValidateComponentsResponse, error) {
 	pg := protobuf.PaginationFrom(req.GetPagination())
 	if err := pg.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid pagination information: %v", err)
+		return nil, fmt.Errorf("invalid pagination information: %w", err)
 	}
 
 	var orderBy *dbquery.OrderBy
 	if req.GetOrderBy() != nil {
 		orderBy = protobuf.OrderByFrom(req.GetOrderBy())
 		if err := orderBy.Validate(); err != nil {
-			return nil, fmt.Errorf("invalid order by: %v", err)
+			return nil, fmt.Errorf("invalid order by: %w", err)
 		}
 	}
 
@@ -1435,7 +1470,7 @@ func (rs *RLAServerImpl) ValidateComponents(
 			}
 			fieldName, queryInfo, err := protobuf.FilterFrom(filter)
 			if err != nil {
-				return nil, fmt.Errorf("invalid filter: %v", err)
+				return nil, fmt.Errorf("invalid filter: %w", err)
 			}
 			if queryInfo == nil {
 				continue

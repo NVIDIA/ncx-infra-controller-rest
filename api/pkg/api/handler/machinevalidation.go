@@ -29,14 +29,11 @@ import (
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model"
 	sc "github.com/nvidia/bare-metal-manager-rest/api/pkg/client/site"
 	auth "github.com/nvidia/bare-metal-manager-rest/auth/pkg/authorization"
-	cerr "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	sutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
+	cutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
 	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/queue"
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel/attribute"
 	tclient "go.temporal.io/sdk/client"
 	tp "go.temporal.io/sdk/temporal"
@@ -50,7 +47,7 @@ type CreateMachineValidationTestHandler struct {
 	tc         tclient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewCreateMachineValidationTestHandler initializes and returns a new handler for creating MachineValidationTest
@@ -60,7 +57,7 @@ func NewCreateMachineValidationTestHandler(dbSession *cdb.Session, tc tclient.Cl
 		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -76,33 +73,14 @@ func NewCreateMachineValidationTestHandler(dbSession *cdb.Session, tc tclient.Cl
 // @Success 201 {object} model.APIMachineValidationTest
 // @Router /v2/org/{org}/carbide/site/{site}/machine-validation/test [post]
 func (handler CreateMachineValidationTestHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-	siteID := c.Param("siteID")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "MachineValidationTest").Str("Handler", "Create").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := handler.tracerSpan.CreateChildInContext(ctx, "CreateMachineValidationTestHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("MachineValidationTest", "Create", c, handler.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		handler.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, handler.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
+	siteID := c.Param("siteID")
 
 	// Validate org
 	ok, err := auth.ValidateOrgMembership(dbUser, org)
@@ -112,14 +90,14 @@ func (handler CreateMachineValidationTestHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Provider Admins are allowed to create MachineValidationTest
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Provider Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
 	}
 
 	// Validate request
@@ -128,44 +106,44 @@ func (handler CreateMachineValidationTestHandler) Handle(c echo.Context) error {
 	err = c.Bind(&apiRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
 	}
 	// Validate request attributes
 	verr := apiRequest.Validate()
 	if verr != nil {
 		logger.Warn().Err(verr).Msg("error validating MachineValidationTest creation request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating MachineValidationTest creation request data", verr)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating MachineValidationTest creation request data", verr)
 	}
 
 	// Check that infrastructureProvider exists in org
 	ip, err := common.GetInfrastructureProviderForOrg(ctx, nil, handler.dbSession, org)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error getting infrastructure provider for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for org", nil)
 	}
 
 	// Validate the site for which this test is being created
 	site, err := common.GetSiteFromIDString(ctx, nil, siteID, handler.dbSession)
 	if err != nil {
 		logger.Warn().Err(err).Str("Site ID", siteID).Msg("error getting site from request")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Site in request", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Site in request", nil)
 	}
 	// verify site's infrastructure provider matches org's infrastructure provider
 	if site.InfrastructureProviderID != ip.ID {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request doesn't belong to current org's Provider", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request doesn't belong to current org's Provider", nil)
 	}
 
 	// Get the temporal client for the site we are working with
 	temporalClient, err := handler.scp.GetClientByID(site.ID)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
 	}
 
 	// create workflow
 	createWorkflowOptions := tclient.StartWorkflowOptions{
 		ID:                       "machine-validation-test-create-" + apiRequest.Name,
-		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 	// build protobuf create request
@@ -173,14 +151,14 @@ func (handler CreateMachineValidationTestHandler) Handle(c echo.Context) error {
 
 	logger.Info().Msg("triggering MachineValidationTest create workflow")
 
-	createCtx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
+	createCtx, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow
 	createWorkflowRun, err := temporalClient.ExecuteWorkflow(createCtx, createWorkflowOptions, "AddMachineValidationTest", createProtoRequest)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to synchronously start Temporal workflow to create MachineValidationTest")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to start sync workflow to create MachineValidationTest on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to start sync workflow to create MachineValidationTest on Site: %s", err), nil)
 	}
 	createWorkflowID := createWorkflowRun.GetID()
 	logger.Info().Str("Workflow ID", createWorkflowID).Msg("executed synchronous create MachineValidationTest workflow")
@@ -195,7 +173,7 @@ func (handler CreateMachineValidationTestHandler) Handle(c echo.Context) error {
 			return common.TerminateWorkflowOnTimeOut(c, logger, temporalClient, createWorkflowID, err, "MachineValidationTest", "AddMachineValidationTest")
 		}
 		logger.Error().Err(err).Msg("failed to synchronously execute Temporal workflow to create MachineValidationTest")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to execute sync workflow to create MachineValidationTest on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to execute sync workflow to create MachineValidationTest on Site: %s", err), nil)
 	}
 
 	logger.Info().Str("Workflow ID", createWorkflowID).Msg("completed synchronous create MachineValidationTest workflow")
@@ -219,7 +197,7 @@ type UpdateMachineValidationTestHandler struct {
 	tc         tclient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewUpdateMachineValidationTestHandler initializes and returns a new handler for updating MachineValidationTest
@@ -229,7 +207,7 @@ func NewUpdateMachineValidationTestHandler(dbSession *cdb.Session, tc tclient.Cl
 		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -245,33 +223,14 @@ func NewUpdateMachineValidationTestHandler(dbSession *cdb.Session, tc tclient.Cl
 // @Success 201 {object} model.APIMachineValidationTest
 // @Router /v2/org/{org}/carbide/site/{site}/machine-validation/test/{id}/version/{version} [patch]
 func (handler UpdateMachineValidationTestHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-	siteID := c.Param("siteID")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "MachineValidationTest").Str("Handler", "Update").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := handler.tracerSpan.CreateChildInContext(ctx, "UpdateMachineValidationTestHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("MachineValidationTest", "Update", c, handler.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		handler.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, handler.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
+	siteID := c.Param("siteID")
 
 	// Validate org
 	ok, err := auth.ValidateOrgMembership(dbUser, org)
@@ -281,14 +240,14 @@ func (handler UpdateMachineValidationTestHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Provider Admins are allowed to update MachineValidationTest
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Provider Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
 	}
 
 	// get ID of the test
@@ -303,38 +262,38 @@ func (handler UpdateMachineValidationTestHandler) Handle(c echo.Context) error {
 	err = c.Bind(&apiRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
 	}
 
 	// Check that infrastructureProvider exists in org
 	ip, err := common.GetInfrastructureProviderForOrg(ctx, nil, handler.dbSession, org)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error getting infrastructure provider for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for org", nil)
 	}
 
 	// Validate the site for which this test is being updated
 	site, err := common.GetSiteFromIDString(ctx, nil, siteID, handler.dbSession)
 	if err != nil {
 		logger.Warn().Err(err).Str("Site ID", siteID).Msg("error getting site from request")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Site in request", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Site in request", nil)
 	}
 	// verify site's infrastructure provider matches org's infrastructure provider
 	if site.InfrastructureProviderID != ip.ID {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request doesn't belong to current org's Provider", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request doesn't belong to current org's Provider", nil)
 	}
 
 	// Get the temporal client for the site we are working with
 	temporalClient, err := handler.scp.GetClientByID(site.ID)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
 	}
 
 	// create workflow
 	updateWorkflowOptions := tclient.StartWorkflowOptions{
 		ID:                       fmt.Sprintf("machine-validation-test-update-%s-%s", testID, testVersion),
-		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 	// build protobuf update request
@@ -342,14 +301,14 @@ func (handler UpdateMachineValidationTestHandler) Handle(c echo.Context) error {
 
 	logger.Info().Msg("triggering MachineValidationTest update workflow")
 
-	updateCtx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
+	updateCtx, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow
 	updateWorkflowRun, err := temporalClient.ExecuteWorkflow(updateCtx, updateWorkflowOptions, "UpdateMachineValidationTest", updateProtoRequest)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to synchronously start Temporal workflow to update MachineValidationTest")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to start sync workflow to update MachineValidationTest on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to start sync workflow to update MachineValidationTest on Site: %s", err), nil)
 	}
 	updateWorkflowID := updateWorkflowRun.GetID()
 	logger.Info().Str("Workflow ID", updateWorkflowID).Msg("executed synchronous update MachineValidationTest workflow")
@@ -363,7 +322,7 @@ func (handler UpdateMachineValidationTestHandler) Handle(c echo.Context) error {
 			return common.TerminateWorkflowOnTimeOut(c, logger, temporalClient, updateWorkflowID, err, "MachineValidationTest", "UpdateMachineValidationTest")
 		}
 		logger.Error().Err(err).Msg("failed to synchronously execute Temporal workflow to update MachineValidationTest")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to execute sync workflow to update MachineValidationTest on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to execute sync workflow to update MachineValidationTest on Site: %s", err), nil)
 	}
 
 	logger.Info().Str("Workflow ID", updateWorkflowID).Msg("completed synchronous update MachineValidationTest workflow")
@@ -385,7 +344,7 @@ func getMachineValidationTest(ctx context.Context, echoCtx echo.Context, logger 
 	// get newly created test to be returned
 	getWorkflowOptions := tclient.StartWorkflowOptions{
 		ID:                       fmt.Sprintf("machine-validation-test-get-%s-%s", testID, testVersion),
-		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 
@@ -398,14 +357,14 @@ func getMachineValidationTest(ctx context.Context, echoCtx echo.Context, logger 
 	logger.Info().Msg("triggering MachineValidationTest get workflow")
 
 	// Add context deadlines
-	getCtx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
+	getCtx, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow
 	getWorkflowRun, err := temporalClient.ExecuteWorkflow(getCtx, getWorkflowOptions, "GetMachineValidationTests", getProtoRequest)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to synchronously start Temporal workflow to get MachineValidationTest")
-		return nil, cerr.NewAPIErrorResponse(echoCtx, http.StatusInternalServerError, fmt.Sprintf("Failed to start sync workflow to get MachineValidationTest on Site: %s", err), nil)
+		return nil, cutil.NewAPIErrorResponse(echoCtx, http.StatusInternalServerError, fmt.Sprintf("Failed to start sync workflow to get MachineValidationTest on Site: %s", err), nil)
 	}
 
 	getWorkflowID := getWorkflowRun.GetID()
@@ -416,14 +375,14 @@ func getMachineValidationTest(ctx context.Context, echoCtx echo.Context, logger 
 	err = getWorkflowRun.Get(getCtx, &getProtoResponse)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to synchronously execute Temporal workflow to get MachineValidationTest")
-		return nil, cerr.NewAPIErrorResponse(echoCtx, http.StatusInternalServerError, fmt.Sprintf("Failed to execute sync workflow to get MachineValidationTest on Site: %s", err), nil)
+		return nil, cutil.NewAPIErrorResponse(echoCtx, http.StatusInternalServerError, fmt.Sprintf("Failed to execute sync workflow to get MachineValidationTest on Site: %s", err), nil)
 	}
 
 	logger.Info().Str("Workflow ID", getWorkflowID).Msg("completed synchronous get MachineValidationTest workflow")
 
 	if len(getProtoResponse.Tests) != 1 {
 		logger.Error().Err(err).Msgf("expected to get 1 MachineValidationTest and instead got %d", len(getProtoResponse.Tests))
-		return nil, cerr.NewAPIErrorResponse(echoCtx, http.StatusInternalServerError, fmt.Sprintf("Expected to get 1 MachineValidationTest from Site and instead got %d", len(getProtoResponse.Tests)), nil)
+		return nil, cutil.NewAPIErrorResponse(echoCtx, http.StatusInternalServerError, fmt.Sprintf("Expected to get 1 MachineValidationTest from Site and instead got %d", len(getProtoResponse.Tests)), nil)
 	}
 	return getProtoResponse.Tests[0], nil
 }
@@ -434,7 +393,7 @@ type GetAllMachineValidationTestHandler struct {
 	tc         tclient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetAllMachineValidationTestHandler initializes and returns a new handler to get all MachineValidationTests
@@ -444,7 +403,7 @@ func NewGetAllMachineValidationTestHandler(dbSession *cdb.Session, tc tclient.Cl
 		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -459,33 +418,14 @@ func NewGetAllMachineValidationTestHandler(dbSession *cdb.Session, tc tclient.Cl
 // @Success 200 {object} []model.APIMachineValidationTest
 // @Router /v2/org/{org}/carbide/site/{site}/machine-validation/test [get]
 func (handler GetAllMachineValidationTestHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-	siteID := c.Param("siteID")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "MachineValidationTest").Str("Handler", "GetAll").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := handler.tracerSpan.CreateChildInContext(ctx, "GetAllMachineValidationTestHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("MachineValidationTest", "GetAll", c, handler.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		handler.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, handler.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
+	siteID := c.Param("siteID")
 
 	// Validate org
 	ok, err := auth.ValidateOrgMembership(dbUser, org)
@@ -495,52 +435,52 @@ func (handler GetAllMachineValidationTestHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Provider Admins are allowed to update MachineValidationTest
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Provider Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
 	}
 
 	// get filter query params
 	filter := model.APIMachineValidationTestsFilter{}
 	if err := c.Bind(&filter); err != nil {
 		logger.Warn().Err(err).Msg("error binding query data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse query data, potentially invalid structure", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse query data, potentially invalid structure", nil)
 	}
 
 	// Check that infrastructureProvider exists in org
 	ip, err := common.GetInfrastructureProviderForOrg(ctx, nil, handler.dbSession, org)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error getting infrastructure provider for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for org", nil)
 	}
 
 	// Validate the site for which we query tests
 	site, err := common.GetSiteFromIDString(ctx, nil, siteID, handler.dbSession)
 	if err != nil {
 		logger.Warn().Err(err).Str("Site ID", siteID).Msg("error getting site from request")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Site in request", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Site in request", nil)
 	}
 	// verify site's infrastructure provider matches org's infrastructure provider
 	if site.InfrastructureProviderID != ip.ID {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request doesn't belong to current org's Provider", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request doesn't belong to current org's Provider", nil)
 	}
 
 	// Get the temporal client for the site we are working with
 	temporalClient, err := handler.scp.GetClientByID(site.ID)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
 	}
 
 	// create workflow
 	getWorkflowOptions := tclient.StartWorkflowOptions{
 		ID:                       "machine-validation-test-getall",
-		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 	// build protobuf update request
@@ -548,14 +488,14 @@ func (handler GetAllMachineValidationTestHandler) Handle(c echo.Context) error {
 
 	logger.Info().Msg("triggering MachineValidationTest get workflow")
 
-	updateCtx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
+	updateCtx, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow
 	getWorkflowRun, err := temporalClient.ExecuteWorkflow(updateCtx, getWorkflowOptions, "GetMachineValidationTests", getProtoRequest)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to synchronously start Temporal workflow to get MachineValidationTests")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to start sync workflow to get MachineValidationTests on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to start sync workflow to get MachineValidationTests on Site: %s", err), nil)
 	}
 	getWorkflowID := getWorkflowRun.GetID()
 	logger.Info().Str("Workflow ID", getWorkflowID).Msg("executed synchronous get MachineValidationTests workflow")
@@ -569,7 +509,7 @@ func (handler GetAllMachineValidationTestHandler) Handle(c echo.Context) error {
 			return common.TerminateWorkflowOnTimeOut(c, logger, temporalClient, getWorkflowID, err, "MachineValidationTest", "UpdateMachineValidationTest")
 		}
 		logger.Error().Err(err).Msg("failed to synchronously execute Temporal workflow to get MachineValidationTests")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to execute sync workflow to get MachineValidationTests on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to execute sync workflow to get MachineValidationTests on Site: %s", err), nil)
 	}
 
 	logger.Info().Str("Workflow ID", getWorkflowID).Msg("completed synchronous get MachineValidationTests workflow")
@@ -589,7 +529,7 @@ type GetMachineValidationTestHandler struct {
 	tc         tclient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetMachineValidationTestHandler initializes and returns a new handler to get MachineValidationTest
@@ -599,7 +539,7 @@ func NewGetMachineValidationTestHandler(dbSession *cdb.Session, tc tclient.Clien
 		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -614,33 +554,14 @@ func NewGetMachineValidationTestHandler(dbSession *cdb.Session, tc tclient.Clien
 // @Success 200 {object} model.APIMachineValidationTest
 // @Router /v2/org/{org}/carbide/site/{site}/machine-validation/test [get]
 func (handler GetMachineValidationTestHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-	siteID := c.Param("siteID")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "MachineValidationTest").Str("Handler", "Get").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := handler.tracerSpan.CreateChildInContext(ctx, "GetMachineValidationTestHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("MachineValidationTest", "Get", c, handler.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		handler.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, handler.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
+	siteID := c.Param("siteID")
 
 	// Validate org
 	ok, err := auth.ValidateOrgMembership(dbUser, org)
@@ -650,14 +571,14 @@ func (handler GetMachineValidationTestHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Provider Admins are allowed to update MachineValidationTest
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Provider Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
 	}
 
 	// get ID of the test
@@ -670,31 +591,31 @@ func (handler GetMachineValidationTestHandler) Handle(c echo.Context) error {
 	ip, err := common.GetInfrastructureProviderForOrg(ctx, nil, handler.dbSession, org)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error getting infrastructure provider for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for org", nil)
 	}
 
 	// Validate the site for which we query tests
 	site, err := common.GetSiteFromIDString(ctx, nil, siteID, handler.dbSession)
 	if err != nil {
 		logger.Warn().Err(err).Str("Site ID", siteID).Msg("error getting site from request")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Site in request", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Site in request", nil)
 	}
 	// verify site's infrastructure provider matches org's infrastructure provider
 	if site.InfrastructureProviderID != ip.ID {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request doesn't belong to current org's Provider", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request doesn't belong to current org's Provider", nil)
 	}
 
 	// Get the temporal client for the site we are working with
 	temporalClient, err := handler.scp.GetClientByID(site.ID)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
 	}
 
 	// create workflow
 	getWorkflowOptions := tclient.StartWorkflowOptions{
 		ID:                       fmt.Sprintf("machine-validation-test-get-%s-%s", testID, testVersion),
-		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 	// build protobuf update request
@@ -705,14 +626,14 @@ func (handler GetMachineValidationTestHandler) Handle(c echo.Context) error {
 
 	logger.Info().Msg("triggering MachineValidationTest get workflow")
 
-	updateCtx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
+	updateCtx, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow
 	getWorkflowRun, err := temporalClient.ExecuteWorkflow(updateCtx, getWorkflowOptions, "GetMachineValidationTests", getProtoRequest)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to synchronously start Temporal workflow to get MachineValidationTests")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to start sync workflow to get MachineValidationTests on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to start sync workflow to get MachineValidationTests on Site: %s", err), nil)
 	}
 	getWorkflowID := getWorkflowRun.GetID()
 	logger.Info().Str("Workflow ID", getWorkflowID).Msg("executed synchronous get MachineValidationTests workflow")
@@ -726,17 +647,17 @@ func (handler GetMachineValidationTestHandler) Handle(c echo.Context) error {
 			return common.TerminateWorkflowOnTimeOut(c, logger, temporalClient, getWorkflowID, err, "MachineValidationTest", "UpdateMachineValidationTest")
 		}
 		logger.Error().Err(err).Msg("failed to synchronously execute Temporal workflow to get MachineValidationTests")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to execute sync workflow to get MachineValidationTests on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to execute sync workflow to get MachineValidationTests on Site: %s", err), nil)
 	}
 
 	logger.Info().Str("Workflow ID", getWorkflowID).Msg("completed synchronous get MachineValidationTests workflow")
 
 	if len(getProtoResponse.Tests) == 0 {
 		logger.Error().Err(err).Msg("expected to get 1 MachineValidationTest and instead got 0")
-		return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "No MachineValidationTest found", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "No MachineValidationTest found", nil)
 	} else if len(getProtoResponse.Tests) > 1 {
 		logger.Error().Err(err).Msgf("expected to get 1 MachineValidationTest and instead got %d", len(getProtoResponse.Tests))
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "More than one MachineValidationTest found", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "More than one MachineValidationTest found", nil)
 	}
 
 	// Create response
@@ -750,7 +671,7 @@ type GetMachineValidationResultsHandler struct {
 	tc         tclient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetMachineValidationResultsHandler initializes and returns a new handler to get MachineValidationResults
@@ -760,7 +681,7 @@ func NewGetMachineValidationResultsHandler(dbSession *cdb.Session, tc tclient.Cl
 		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -775,33 +696,14 @@ func NewGetMachineValidationResultsHandler(dbSession *cdb.Session, tc tclient.Cl
 // @Success 200 {object} []model.APIMachineValidationResult
 // @Router /v2/org/{org}/carbide/site/{site}/machine-validation/results/machine/{id} [get]
 func (handler GetMachineValidationResultsHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-	siteID := c.Param("siteID")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "MachineValidationResult").Str("Handler", "Get").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := handler.tracerSpan.CreateChildInContext(ctx, "GetMachineValidationResultsHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("MachineValidationResult", "Get", c, handler.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		handler.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, handler.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
+	siteID := c.Param("siteID")
 
 	// Validate org
 	ok, err := auth.ValidateOrgMembership(dbUser, org)
@@ -811,14 +713,14 @@ func (handler GetMachineValidationResultsHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Provider Admins are allowed to update MachineValidationTest
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Provider Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
 	}
 
 	// get machine id
@@ -829,31 +731,31 @@ func (handler GetMachineValidationResultsHandler) Handle(c echo.Context) error {
 	ip, err := common.GetInfrastructureProviderForOrg(ctx, nil, handler.dbSession, org)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error getting infrastructure provider for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for org", nil)
 	}
 
 	// Validate the site for which we query tests
 	site, err := common.GetSiteFromIDString(ctx, nil, siteID, handler.dbSession)
 	if err != nil {
 		logger.Warn().Err(err).Str("Site ID", siteID).Msg("error getting site from request")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Site in request", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Site in request", nil)
 	}
 	// verify site's infrastructure provider matches org's infrastructure provider
 	if site.InfrastructureProviderID != ip.ID {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request doesn't belong to current org's Provider", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request doesn't belong to current org's Provider", nil)
 	}
 
 	// Get the temporal client for the site we are working with
 	temporalClient, err := handler.scp.GetClientByID(site.ID)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
 	}
 
 	// create workflow
 	getWorkflowOptions := tclient.StartWorkflowOptions{
 		ID:                       "machine-validation-result-get-" + machineID,
-		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 	// build protobuf request
@@ -864,14 +766,14 @@ func (handler GetMachineValidationResultsHandler) Handle(c echo.Context) error {
 
 	logger.Info().Msg("triggering MachineValidationResult get workflow")
 
-	updateCtx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
+	updateCtx, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow
 	getWorkflowRun, err := temporalClient.ExecuteWorkflow(updateCtx, getWorkflowOptions, "GetMachineValidationResults", getProtoRequest)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to synchronously start Temporal workflow to get MachineValidationResults")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to start sync workflow to get MachineValidationResults on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to start sync workflow to get MachineValidationResults on Site: %s", err), nil)
 	}
 	getWorkflowID := getWorkflowRun.GetID()
 	logger.Info().Str("Workflow ID", getWorkflowID).Msg("executed synchronous get MachineValidationResults workflow")
@@ -885,7 +787,7 @@ func (handler GetMachineValidationResultsHandler) Handle(c echo.Context) error {
 			return common.TerminateWorkflowOnTimeOut(c, logger, temporalClient, getWorkflowID, err, "MachineValidationResult", "GetMachineValidationResults")
 		}
 		logger.Error().Err(err).Msg("failed to synchronously execute Temporal workflow to get MachineValidationResults")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to execute sync workflow to get MachineValidationResults on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to execute sync workflow to get MachineValidationResults on Site: %s", err), nil)
 	}
 
 	logger.Info().Str("Workflow ID", getWorkflowID).Msg("completed synchronous get MachineValidationResults workflow")
@@ -905,7 +807,7 @@ type GetAllMachineValidationRunHandler struct {
 	tc         tclient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetAllMachineValidationRunHandler initializes and returns a new handler to get all MachineValidationRuns
@@ -915,7 +817,7 @@ func NewGetAllMachineValidationRunHandler(dbSession *cdb.Session, tc tclient.Cli
 		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -930,33 +832,14 @@ func NewGetAllMachineValidationRunHandler(dbSession *cdb.Session, tc tclient.Cli
 // @Success 200 {object} []model.APIMachineValidationRun
 // @Router /v2/org/{org}/carbide/site/{site}/machine-validation/runs/machine/{id} [get]
 func (handler GetAllMachineValidationRunHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-	siteID := c.Param("siteID")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "MachineValidationRun").Str("Handler", "GetAll").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := handler.tracerSpan.CreateChildInContext(ctx, "GetAllMachineValidationRunHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("MachineValidationRun", "GetAll", c, handler.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		handler.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, handler.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
+	siteID := c.Param("siteID")
 
 	// Validate org
 	ok, err := auth.ValidateOrgMembership(dbUser, org)
@@ -966,14 +849,14 @@ func (handler GetAllMachineValidationRunHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Provider Admins are allowed to update MachineValidationTest
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Provider Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
 	}
 
 	// get machine id
@@ -984,31 +867,31 @@ func (handler GetAllMachineValidationRunHandler) Handle(c echo.Context) error {
 	ip, err := common.GetInfrastructureProviderForOrg(ctx, nil, handler.dbSession, org)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error getting infrastructure provider for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for org", nil)
 	}
 
 	// Validate the site for which we query tests
 	site, err := common.GetSiteFromIDString(ctx, nil, siteID, handler.dbSession)
 	if err != nil {
 		logger.Warn().Err(err).Str("Site ID", siteID).Msg("error getting site from request")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Site in request", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Site in request", nil)
 	}
 	// verify site's infrastructure provider matches org's infrastructure provider
 	if site.InfrastructureProviderID != ip.ID {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request doesn't belong to current org's Provider", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request doesn't belong to current org's Provider", nil)
 	}
 
 	// Get the temporal client for the site we are working with
 	temporalClient, err := handler.scp.GetClientByID(site.ID)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
 	}
 
 	// create workflow
 	getWorkflowOptions := tclient.StartWorkflowOptions{
 		ID:                       "machine-validation-run-get-" + machineID,
-		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 	// build protobuf request
@@ -1019,14 +902,14 @@ func (handler GetAllMachineValidationRunHandler) Handle(c echo.Context) error {
 
 	logger.Info().Msg("triggering MachineValidationRun get workflow")
 
-	updateCtx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
+	updateCtx, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow
 	getWorkflowRun, err := temporalClient.ExecuteWorkflow(updateCtx, getWorkflowOptions, "GetMachineValidationRuns", getProtoRequest)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to synchronously start Temporal workflow to get MachineValidationRuns")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to start sync workflow to get MachineValidationRuns on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to start sync workflow to get MachineValidationRuns on Site: %s", err), nil)
 	}
 	getWorkflowID := getWorkflowRun.GetID()
 	logger.Info().Str("Workflow ID", getWorkflowID).Msg("executed synchronous get MachineValidationRuns workflow")
@@ -1040,7 +923,7 @@ func (handler GetAllMachineValidationRunHandler) Handle(c echo.Context) error {
 			return common.TerminateWorkflowOnTimeOut(c, logger, temporalClient, getWorkflowID, err, "MachineValidationRun", "GetMachineValidationRuns")
 		}
 		logger.Error().Err(err).Msg("failed to synchronously execute Temporal workflow to get MachineValidationRuns")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to execute sync workflow to get MachineValidationRuns on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to execute sync workflow to get MachineValidationRuns on Site: %s", err), nil)
 	}
 
 	logger.Info().Str("Workflow ID", getWorkflowID).Msg("completed synchronous get MachineValidationRuns workflow")
@@ -1060,7 +943,7 @@ type GetAllMachineValidationExternalConfigHandler struct {
 	tc         tclient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetAllMachineValidationExternalConfigHandler initializes and returns a new handler to get all MachineValidationExternalConfigs
@@ -1070,7 +953,7 @@ func NewGetAllMachineValidationExternalConfigHandler(dbSession *cdb.Session, tc 
 		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -1085,33 +968,14 @@ func NewGetAllMachineValidationExternalConfigHandler(dbSession *cdb.Session, tc 
 // @Success 200 {object} []model.APIMachineValidationExternalConfig
 // @Router /v2/org/{org}/carbide/site/{site}/machine-validation/external-config [get]
 func (handler GetAllMachineValidationExternalConfigHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-	siteID := c.Param("siteID")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "MachineValidationExternalConfig").Str("Handler", "GetAll").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := handler.tracerSpan.CreateChildInContext(ctx, "GetAllMachineValidationExternalConfigHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("MachineValidationExternalConfig", "GetAll", c, handler.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		handler.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, handler.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
+	siteID := c.Param("siteID")
 
 	// Validate org
 	ok, err := auth.ValidateOrgMembership(dbUser, org)
@@ -1121,45 +985,45 @@ func (handler GetAllMachineValidationExternalConfigHandler) Handle(c echo.Contex
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Provider Admins are allowed
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Provider Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
 	}
 
 	// Check that infrastructureProvider exists in org
 	ip, err := common.GetInfrastructureProviderForOrg(ctx, nil, handler.dbSession, org)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error getting infrastructure provider for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for org", nil)
 	}
 
 	// Validate the site for which we query tests
 	site, err := common.GetSiteFromIDString(ctx, nil, siteID, handler.dbSession)
 	if err != nil {
 		logger.Warn().Err(err).Str("Site ID", siteID).Msg("error getting site from request")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Site in request", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Site in request", nil)
 	}
 	// verify site's infrastructure provider matches org's infrastructure provider
 	if site.InfrastructureProviderID != ip.ID {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request doesn't belong to current org's Provider", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request doesn't belong to current org's Provider", nil)
 	}
 
 	// Get the temporal client for the site we are working with
 	temporalClient, err := handler.scp.GetClientByID(site.ID)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
 	}
 
 	// create workflow
 	getWorkflowOptions := tclient.StartWorkflowOptions{
 		ID:                       "machine-validation-ext-config-get-all",
-		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 	// build protobuf request
@@ -1167,14 +1031,14 @@ func (handler GetAllMachineValidationExternalConfigHandler) Handle(c echo.Contex
 
 	logger.Info().Msg("triggering MachineValidationRun get workflow")
 
-	updateCtx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
+	updateCtx, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow
 	getWorkflowRun, err := temporalClient.ExecuteWorkflow(updateCtx, getWorkflowOptions, "GetMachineValidationExternalConfigs", getProtoRequest)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to synchronously start Temporal workflow to get MachineValidationExternalConfigs")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to start sync workflow to get Machine Validation External Configs on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to start sync workflow to get Machine Validation External Configs on Site: %s", err), nil)
 	}
 	getWorkflowID := getWorkflowRun.GetID()
 	logger.Info().Str("Workflow ID", getWorkflowID).Msg("executed synchronous get MachineValidationExternalConfigs workflow")
@@ -1188,7 +1052,7 @@ func (handler GetAllMachineValidationExternalConfigHandler) Handle(c echo.Contex
 			return common.TerminateWorkflowOnTimeOut(c, logger, temporalClient, getWorkflowID, err, "MachineValidationExternalConfig", "GetMachineValidationExternalConfigs")
 		}
 		logger.Error().Err(err).Msg("failed to synchronously execute Temporal workflow to get MachineValidationExternalConfigs")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to execute sync workflow to get Machine Validation External Config on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to execute sync workflow to get Machine Validation External Config on Site: %s", err), nil)
 	}
 
 	logger.Info().Str("Workflow ID", getWorkflowID).Msg("completed synchronous get MachineValidationExternalConfigs workflow")
@@ -1208,7 +1072,7 @@ type GetMachineValidationExternalConfigHandler struct {
 	tc         tclient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetMachineValidationExternalConfigHandler initializes and returns a new handler to get MachineValidationTest
@@ -1218,7 +1082,7 @@ func NewGetMachineValidationExternalConfigHandler(dbSession *cdb.Session, tc tcl
 		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -1233,33 +1097,14 @@ func NewGetMachineValidationExternalConfigHandler(dbSession *cdb.Session, tc tcl
 // @Success 200 {object} model.APIMachineValidationExternalConfig
 // @Router /v2/org/{org}/carbide/site/{site}/machine-validation/external-config/{name} [get]
 func (handler GetMachineValidationExternalConfigHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-	siteID := c.Param("siteID")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "MachineValidationExternalConfig").Str("Handler", "Get").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := handler.tracerSpan.CreateChildInContext(ctx, "GetMachineValidationExternalConfigHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("MachineValidationExternalConfig", "Get", c, handler.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		handler.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, handler.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
+	siteID := c.Param("siteID")
 
 	// Validate org
 	ok, err := auth.ValidateOrgMembership(dbUser, org)
@@ -1269,14 +1114,14 @@ func (handler GetMachineValidationExternalConfigHandler) Handle(c echo.Context) 
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Provider Admins are allowed to update MachineValidationTest
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Provider Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
 	}
 
 	// get ID of the test
@@ -1287,31 +1132,31 @@ func (handler GetMachineValidationExternalConfigHandler) Handle(c echo.Context) 
 	ip, err := common.GetInfrastructureProviderForOrg(ctx, nil, handler.dbSession, org)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error getting infrastructure provider for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for org", nil)
 	}
 
 	// Validate the site for which we query tests
 	site, err := common.GetSiteFromIDString(ctx, nil, siteID, handler.dbSession)
 	if err != nil {
 		logger.Warn().Err(err).Str("Site ID", siteID).Msg("error getting site from request")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Site in request", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Site in request", nil)
 	}
 	// verify site's infrastructure provider matches org's infrastructure provider
 	if site.InfrastructureProviderID != ip.ID {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request doesn't belong to current org's Provider", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request doesn't belong to current org's Provider", nil)
 	}
 
 	// Get the temporal client for the site we are working with
 	temporalClient, err := handler.scp.GetClientByID(site.ID)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
 	}
 
 	// create workflow
 	getWorkflowOptions := tclient.StartWorkflowOptions{
 		ID:                       fmt.Sprintf("machine-validation-ext-cfg-get-%s", cfgName),
-		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 	// build protobuf update request
@@ -1321,14 +1166,14 @@ func (handler GetMachineValidationExternalConfigHandler) Handle(c echo.Context) 
 
 	logger.Info().Msg("triggering MachineValidationExternalConfig get workflow")
 
-	updateCtx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
+	updateCtx, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow
 	getWorkflowRun, err := temporalClient.ExecuteWorkflow(updateCtx, getWorkflowOptions, "GetMachineValidationExternalConfigs", getProtoRequest)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to synchronously start Temporal workflow to get MachineValidationExternalConfig")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to start sync workflow to get Machine Validation External Config on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to start sync workflow to get Machine Validation External Config on Site: %s", err), nil)
 	}
 	getWorkflowID := getWorkflowRun.GetID()
 	logger.Info().Str("Workflow ID", getWorkflowID).Msg("executed synchronous get MachineValidationExternalConfig workflow")
@@ -1342,17 +1187,17 @@ func (handler GetMachineValidationExternalConfigHandler) Handle(c echo.Context) 
 			return common.TerminateWorkflowOnTimeOut(c, logger, temporalClient, getWorkflowID, err, "MachineValidationExternalConfig", "GetMachineValidationExternalConfigs")
 		}
 		logger.Error().Err(err).Msg("failed to synchronously execute Temporal workflow to get MachineValidationExternalConfig")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to execute sync workflow to get Machine Validation External Config on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to execute sync workflow to get Machine Validation External Config on Site: %s", err), nil)
 	}
 
 	logger.Info().Str("Workflow ID", getWorkflowID).Msg("completed synchronous get MachineValidationExternalConfig workflow")
 
 	if len(getProtoResponse.Configs) == 0 {
 		logger.Error().Err(err).Msg("expected to get 1 MachineValidationExternalConfig and instead got 0")
-		return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "No Machine Validation External Config found", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "No Machine Validation External Config found", nil)
 	} else if len(getProtoResponse.Configs) > 1 {
 		logger.Error().Err(err).Msgf("expected to get 1 MachineValidationExternalConfig and instead got %d", len(getProtoResponse.Configs))
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "More than one Machine Validation External Config found", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "More than one Machine Validation External Config found", nil)
 	}
 
 	// Create response
@@ -1366,7 +1211,7 @@ type CreateMachineValidationExternalConfigHandler struct {
 	tc         tclient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewCreateMachineValidationExternalConfigHandler initializes and returns a new handler for creating MachineValidationExternalConfig
@@ -1376,7 +1221,7 @@ func NewCreateMachineValidationExternalConfigHandler(dbSession *cdb.Session, tc 
 		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -1392,33 +1237,14 @@ func NewCreateMachineValidationExternalConfigHandler(dbSession *cdb.Session, tc 
 // @Success 201 {object} model.APIMachineValidationExternalConfig
 // @Router /v2/org/{org}/carbide/site/{site}/machine-validation/external-config [post]
 func (handler CreateMachineValidationExternalConfigHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-	siteID := c.Param("siteID")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "MachineValidationExternalConfig").Str("Handler", "Create").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := handler.tracerSpan.CreateChildInContext(ctx, "CreateMachineValidationExternalConfigHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("MachineValidationExternalConfig", "Create", c, handler.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		handler.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, handler.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
+	siteID := c.Param("siteID")
 
 	// Validate org
 	ok, err := auth.ValidateOrgMembership(dbUser, org)
@@ -1428,14 +1254,14 @@ func (handler CreateMachineValidationExternalConfigHandler) Handle(c echo.Contex
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Provider Admins are allowed to create MachineValidationTest
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Provider Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
 	}
 
 	// Validate request
@@ -1444,44 +1270,44 @@ func (handler CreateMachineValidationExternalConfigHandler) Handle(c echo.Contex
 	err = c.Bind(&apiRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
 	}
 	// Validate request attributes
 	verr := apiRequest.Validate()
 	if verr != nil {
 		logger.Warn().Err(verr).Msg("error validating MachineValidationExternalConfig creation request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating Machine Validation External Config creation request data", verr)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating Machine Validation External Config creation request data", verr)
 	}
 
 	// Check that infrastructureProvider exists in org
 	ip, err := common.GetInfrastructureProviderForOrg(ctx, nil, handler.dbSession, org)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error getting infrastructure provider for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for org", nil)
 	}
 
 	// Validate the site for which this test is being created
 	site, err := common.GetSiteFromIDString(ctx, nil, siteID, handler.dbSession)
 	if err != nil {
 		logger.Warn().Err(err).Str("Site ID", siteID).Msg("error getting site from request")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Site in request", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Site in request", nil)
 	}
 	// verify site's infrastructure provider matches org's infrastructure provider
 	if site.InfrastructureProviderID != ip.ID {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request doesn't belong to current org's Provider", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request doesn't belong to current org's Provider", nil)
 	}
 
 	// Get the temporal client for the site we are working with
 	temporalClient, err := handler.scp.GetClientByID(site.ID)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
 	}
 
 	// create workflow
 	createWorkflowOptions := tclient.StartWorkflowOptions{
 		ID:                       "machine-validation-ext-cfg-create-" + apiRequest.Name,
-		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 	// build protobuf create request
@@ -1489,14 +1315,14 @@ func (handler CreateMachineValidationExternalConfigHandler) Handle(c echo.Contex
 
 	logger.Info().Msg("triggering MachineValidationExternalConfig create workflow")
 
-	createCtx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
+	createCtx, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow
 	createWorkflowRun, err := temporalClient.ExecuteWorkflow(createCtx, createWorkflowOptions, "AddUpdateMachineValidationExternalConfig", createProtoRequest)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to synchronously start Temporal workflow to create MachineValidationExternalConfig")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to start sync workflow to create Machine Validation External Config on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to start sync workflow to create Machine Validation External Config on Site: %s", err), nil)
 	}
 	createWorkflowID := createWorkflowRun.GetID()
 	logger.Info().Str("Workflow ID", createWorkflowID).Msg("executed synchronous create MachineValidationExternalConfig workflow")
@@ -1509,7 +1335,7 @@ func (handler CreateMachineValidationExternalConfigHandler) Handle(c echo.Contex
 			return common.TerminateWorkflowOnTimeOut(c, logger, temporalClient, createWorkflowID, err, "MachineValidationExternalConfig", "AddUpdateMachineValidationExternalConfig")
 		}
 		logger.Error().Err(err).Msg("failed to synchronously execute Temporal workflow to create MachineValidationExternalConfig")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to execute sync workflow to create Machine Validation External Config on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to execute sync workflow to create Machine Validation External Config on Site: %s", err), nil)
 	}
 
 	logger.Info().Str("Workflow ID", createWorkflowID).Msg("completed synchronous create MachineValidationExternalConfig workflow")
@@ -1533,7 +1359,7 @@ type UpdateMachineValidationExternalConfigHandler struct {
 	tc         tclient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewUpdateMachineValidationExternalConfigHandler initializes and returns a new handler for updating MachineValidationExternalConfig
@@ -1543,7 +1369,7 @@ func NewUpdateMachineValidationExternalConfigHandler(dbSession *cdb.Session, tc 
 		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -1559,33 +1385,14 @@ func NewUpdateMachineValidationExternalConfigHandler(dbSession *cdb.Session, tc 
 // @Success 200 {object} model.APIMachineValidationExternalConfig
 // @Router /v2/org/{org}/carbide/site/{site}/machine-validation/external-config/{name} [patch]
 func (handler UpdateMachineValidationExternalConfigHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-	siteID := c.Param("siteID")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "MachineValidationExternalConfig").Str("Handler", "Update").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := handler.tracerSpan.CreateChildInContext(ctx, "UpdateMachineValidationExternalConfigHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("MachineValidationExternalConfig", "Update", c, handler.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		handler.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, handler.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
+	siteID := c.Param("siteID")
 
 	// Validate org
 	ok, err := auth.ValidateOrgMembership(dbUser, org)
@@ -1595,14 +1402,14 @@ func (handler UpdateMachineValidationExternalConfigHandler) Handle(c echo.Contex
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Provider Admins are allowed to update MachineValidationTest
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Provider Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
 	}
 
 	// get name
@@ -1614,32 +1421,32 @@ func (handler UpdateMachineValidationExternalConfigHandler) Handle(c echo.Contex
 	err = c.Bind(&apiRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
 	}
 
 	// Check that infrastructureProvider exists in org
 	ip, err := common.GetInfrastructureProviderForOrg(ctx, nil, handler.dbSession, org)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error getting infrastructure provider for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for org", nil)
 	}
 
 	// Validate the site for which this test is being updated
 	site, err := common.GetSiteFromIDString(ctx, nil, siteID, handler.dbSession)
 	if err != nil {
 		logger.Warn().Err(err).Str("Site ID", siteID).Msg("error getting site from request")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Site in request", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Site in request", nil)
 	}
 	// verify site's infrastructure provider matches org's infrastructure provider
 	if site.InfrastructureProviderID != ip.ID {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request doesn't belong to current org's Provider", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request doesn't belong to current org's Provider", nil)
 	}
 
 	// Get the temporal client for the site we are working with
 	temporalClient, err := handler.scp.GetClientByID(site.ID)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
 	}
 
 	// get existing external config
@@ -1652,7 +1459,7 @@ func (handler UpdateMachineValidationExternalConfigHandler) Handle(c echo.Contex
 	// create workflow
 	updateWorkflowOptions := tclient.StartWorkflowOptions{
 		ID:                       fmt.Sprintf("machine-validation-ext-cfg-update-%s", extCfgName),
-		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 	// build protobuf update request
@@ -1670,14 +1477,14 @@ func (handler UpdateMachineValidationExternalConfigHandler) Handle(c echo.Contex
 
 	logger.Info().Msg("triggering MachineValidationExternalConfig update workflow")
 
-	updateCtx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
+	updateCtx, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow
 	updateWorkflowRun, err := temporalClient.ExecuteWorkflow(updateCtx, updateWorkflowOptions, "AddUpdateMachineValidationExternalConfig", updateProtoRequest)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to synchronously start Temporal workflow to update MachineValidationExternalConfig")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to start sync workflow to update Machine Validation External Config on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to start sync workflow to update Machine Validation External Config on Site: %s", err), nil)
 	}
 	updateWorkflowID := updateWorkflowRun.GetID()
 	logger.Info().Str("Workflow ID", updateWorkflowID).Msg("executed synchronous update MachineValidationExternalConfig workflow")
@@ -1691,7 +1498,7 @@ func (handler UpdateMachineValidationExternalConfigHandler) Handle(c echo.Contex
 			return common.TerminateWorkflowOnTimeOut(c, logger, temporalClient, updateWorkflowID, err, "MachineValidationExternalConfig", "AddUpdateMachineValidationExternalConfig")
 		}
 		logger.Error().Err(err).Msg("failed to synchronously execute Temporal workflow to update MachineValidationExternalConfig")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to execute sync workflow to update Machine Validation External Config on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to execute sync workflow to update Machine Validation External Config on Site: %s", err), nil)
 	}
 
 	logger.Info().Str("Workflow ID", updateWorkflowID).Msg("completed synchronous update MachineValidationExternalConfig workflow")
@@ -1713,7 +1520,7 @@ func getMachineValidationExtCfg(ctx context.Context, echoCtx echo.Context, logge
 	// get newly created test to be returned
 	getWorkflowOptions := tclient.StartWorkflowOptions{
 		ID:                       fmt.Sprintf("machine-validation-ext-cfg-get-%s", cfgName),
-		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 
@@ -1725,14 +1532,14 @@ func getMachineValidationExtCfg(ctx context.Context, echoCtx echo.Context, logge
 	logger.Info().Msg("triggering MachineValidationExternalConfig get workflow")
 
 	// Add context deadlines
-	getCtx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
+	getCtx, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow
 	getWorkflowRun, err := temporalClient.ExecuteWorkflow(getCtx, getWorkflowOptions, "GetMachineValidationExternalConfigs", getProtoRequest)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to synchronously start Temporal workflow to get MachineValidationExternalConfig")
-		return nil, cerr.NewAPIErrorResponse(echoCtx, http.StatusInternalServerError, fmt.Sprintf("Failed to start sync workflow to get Machine Validation External Config on Site: %s", err), nil)
+		return nil, cutil.NewAPIErrorResponse(echoCtx, http.StatusInternalServerError, fmt.Sprintf("Failed to start sync workflow to get Machine Validation External Config on Site: %s", err), nil)
 	}
 
 	getWorkflowID := getWorkflowRun.GetID()
@@ -1743,14 +1550,14 @@ func getMachineValidationExtCfg(ctx context.Context, echoCtx echo.Context, logge
 	err = getWorkflowRun.Get(getCtx, &getProtoResponse)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to synchronously execute Temporal workflow to get MachineValidationExternalConfig")
-		return nil, cerr.NewAPIErrorResponse(echoCtx, http.StatusInternalServerError, fmt.Sprintf("Failed to execute sync workflow to get Machine Validation External Config on Site: %s", err), nil)
+		return nil, cutil.NewAPIErrorResponse(echoCtx, http.StatusInternalServerError, fmt.Sprintf("Failed to execute sync workflow to get Machine Validation External Config on Site: %s", err), nil)
 	}
 
 	logger.Info().Str("Workflow ID", getWorkflowID).Msg("completed synchronous get MachineValidationExternalConfig workflow")
 
 	if len(getProtoResponse.Configs) != 1 {
 		logger.Error().Err(err).Msgf("expected to get 1 MachineValidationTest and instead got %d", len(getProtoResponse.Configs))
-		return nil, cerr.NewAPIErrorResponse(echoCtx, http.StatusInternalServerError, fmt.Sprintf("Expected to get 1 Machine Validation External Config from Site and instead got %d", len(getProtoResponse.Configs)), nil)
+		return nil, cutil.NewAPIErrorResponse(echoCtx, http.StatusInternalServerError, fmt.Sprintf("Expected to get 1 Machine Validation External Config from Site and instead got %d", len(getProtoResponse.Configs)), nil)
 	}
 	return getProtoResponse.Configs[0], nil
 }
@@ -1761,7 +1568,7 @@ type DeleteMachineValidationExternalConfigHandler struct {
 	tc         tclient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewDeleteMachineValidationExternalConfigHandler initializes and returns a new handler for updating MachineValidationExternalConfig
@@ -1771,7 +1578,7 @@ func NewDeleteMachineValidationExternalConfigHandler(dbSession *cdb.Session, tc 
 		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -1786,33 +1593,14 @@ func NewDeleteMachineValidationExternalConfigHandler(dbSession *cdb.Session, tc 
 // @Success 202
 // @Router /v2/org/{org}/carbide/site/{site}/machine-validation/external-config/{name} [delete]
 func (handler DeleteMachineValidationExternalConfigHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-	siteID := c.Param("siteID")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "MachineValidationExternalConfig").Str("Handler", "Delete").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := handler.tracerSpan.CreateChildInContext(ctx, "DeleteMachineValidationExternalConfigHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("MachineValidationExternalConfig", "Delete", c, handler.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		handler.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, handler.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
+	siteID := c.Param("siteID")
 
 	// Validate org
 	ok, err := auth.ValidateOrgMembership(dbUser, org)
@@ -1822,14 +1610,14 @@ func (handler DeleteMachineValidationExternalConfigHandler) Handle(c echo.Contex
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Provider Admins are allowed to update MachineValidationTest
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Provider Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
 	}
 
 	// get name
@@ -1840,44 +1628,44 @@ func (handler DeleteMachineValidationExternalConfigHandler) Handle(c echo.Contex
 	ip, err := common.GetInfrastructureProviderForOrg(ctx, nil, handler.dbSession, org)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error getting infrastructure provider for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for org", nil)
 	}
 
 	// Validate the site for which this test is being updated
 	site, err := common.GetSiteFromIDString(ctx, nil, siteID, handler.dbSession)
 	if err != nil {
 		logger.Warn().Err(err).Str("Site ID", siteID).Msg("error getting site from request")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Site in request", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Site in request", nil)
 	}
 	// verify site's infrastructure provider matches org's infrastructure provider
 	if site.InfrastructureProviderID != ip.ID {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request doesn't belong to current org's Provider", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request doesn't belong to current org's Provider", nil)
 	}
 
 	// Get the temporal client for the site we are working with
 	temporalClient, err := handler.scp.GetClientByID(site.ID)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
 	}
 
 	// create workflow
 	deleteWorkflowOptions := tclient.StartWorkflowOptions{
 		ID:                       fmt.Sprintf("machine-validation-ext-cfg-delete-%s", extCfgName),
-		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 
 	logger.Info().Msg("triggering MachineValidationExternalConfig delete workflow")
 
-	deleteCtx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
+	deleteCtx, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow
 	deleteWorkflowRun, err := temporalClient.ExecuteWorkflow(deleteCtx, deleteWorkflowOptions, "RemoveMachineValidationExternalConfig")
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to synchronously start Temporal workflow to delete update MachineValidationExternalConfig")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to start sync workflow to delete Machine Validation External Config on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to start sync workflow to delete Machine Validation External Config on Site: %s", err), nil)
 	}
 	deleteWorkflowID := deleteWorkflowRun.GetID()
 	logger.Info().Str("Workflow ID", deleteWorkflowID).Msg("executed synchronous delete MachineValidationExternalConfig workflow")
@@ -1890,7 +1678,7 @@ func (handler DeleteMachineValidationExternalConfigHandler) Handle(c echo.Contex
 			return common.TerminateWorkflowOnTimeOut(c, logger, temporalClient, deleteWorkflowID, err, "MachineValidationExternalConfig", "RemoveMachineValidationExternalConfig")
 		}
 		logger.Error().Err(err).Msg("failed to synchronously execute Temporal workflow to delete MachineValidationExternalConfig")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to execute sync workflow to delete Machine Validation External Config on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to execute sync workflow to delete Machine Validation External Config on Site: %s", err), nil)
 	}
 
 	logger.Info().Str("Workflow ID", deleteWorkflowID).Msg("completed synchronous delete MachineValidationExternalConfig workflow")

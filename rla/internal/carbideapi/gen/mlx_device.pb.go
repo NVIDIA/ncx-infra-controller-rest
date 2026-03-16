@@ -1,4 +1,3 @@
-//
 // SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -2022,6 +2021,691 @@ func (x *SerializableMlxConfigProfile) GetConfig() map[string]string {
 	return nil
 }
 
+// FirmwareCredentials represents authentication credentials for
+// accessing firmware or device config resources. Maps to the Rust
+// Credentials enum in libmlx::firmware::credentials.
+type FirmwareCredentials struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Types that are valid to be assigned to CredentialType:
+	//
+	//	*FirmwareCredentials_BearerToken
+	//	*FirmwareCredentials_BasicAuth
+	//	*FirmwareCredentials_Header
+	//	*FirmwareCredentials_SshKey
+	//	*FirmwareCredentials_SshAgent
+	CredentialType isFirmwareCredentials_CredentialType `protobuf_oneof:"credential_type"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *FirmwareCredentials) Reset() {
+	*x = FirmwareCredentials{}
+	mi := &file_mlx_device_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FirmwareCredentials) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FirmwareCredentials) ProtoMessage() {}
+
+func (x *FirmwareCredentials) ProtoReflect() protoreflect.Message {
+	mi := &file_mlx_device_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FirmwareCredentials.ProtoReflect.Descriptor instead.
+func (*FirmwareCredentials) Descriptor() ([]byte, []int) {
+	return file_mlx_device_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *FirmwareCredentials) GetCredentialType() isFirmwareCredentials_CredentialType {
+	if x != nil {
+		return x.CredentialType
+	}
+	return nil
+}
+
+func (x *FirmwareCredentials) GetBearerToken() *BearerTokenCredentials {
+	if x != nil {
+		if x, ok := x.CredentialType.(*FirmwareCredentials_BearerToken); ok {
+			return x.BearerToken
+		}
+	}
+	return nil
+}
+
+func (x *FirmwareCredentials) GetBasicAuth() *BasicAuthCredentials {
+	if x != nil {
+		if x, ok := x.CredentialType.(*FirmwareCredentials_BasicAuth); ok {
+			return x.BasicAuth
+		}
+	}
+	return nil
+}
+
+func (x *FirmwareCredentials) GetHeader() *HeaderCredentials {
+	if x != nil {
+		if x, ok := x.CredentialType.(*FirmwareCredentials_Header); ok {
+			return x.Header
+		}
+	}
+	return nil
+}
+
+func (x *FirmwareCredentials) GetSshKey() *SshKeyCredentials {
+	if x != nil {
+		if x, ok := x.CredentialType.(*FirmwareCredentials_SshKey); ok {
+			return x.SshKey
+		}
+	}
+	return nil
+}
+
+func (x *FirmwareCredentials) GetSshAgent() *SshAgentCredentials {
+	if x != nil {
+		if x, ok := x.CredentialType.(*FirmwareCredentials_SshAgent); ok {
+			return x.SshAgent
+		}
+	}
+	return nil
+}
+
+type isFirmwareCredentials_CredentialType interface {
+	isFirmwareCredentials_CredentialType()
+}
+
+type FirmwareCredentials_BearerToken struct {
+	BearerToken *BearerTokenCredentials `protobuf:"bytes,1,opt,name=bearer_token,json=bearerToken,proto3,oneof"`
+}
+
+type FirmwareCredentials_BasicAuth struct {
+	BasicAuth *BasicAuthCredentials `protobuf:"bytes,2,opt,name=basic_auth,json=basicAuth,proto3,oneof"`
+}
+
+type FirmwareCredentials_Header struct {
+	Header *HeaderCredentials `protobuf:"bytes,3,opt,name=header,proto3,oneof"`
+}
+
+type FirmwareCredentials_SshKey struct {
+	SshKey *SshKeyCredentials `protobuf:"bytes,4,opt,name=ssh_key,json=sshKey,proto3,oneof"`
+}
+
+type FirmwareCredentials_SshAgent struct {
+	SshAgent *SshAgentCredentials `protobuf:"bytes,5,opt,name=ssh_agent,json=sshAgent,proto3,oneof"`
+}
+
+func (*FirmwareCredentials_BearerToken) isFirmwareCredentials_CredentialType() {}
+
+func (*FirmwareCredentials_BasicAuth) isFirmwareCredentials_CredentialType() {}
+
+func (*FirmwareCredentials_Header) isFirmwareCredentials_CredentialType() {}
+
+func (*FirmwareCredentials_SshKey) isFirmwareCredentials_CredentialType() {}
+
+func (*FirmwareCredentials_SshAgent) isFirmwareCredentials_CredentialType() {}
+
+// BearerTokenCredentials uses an Authorization: Bearer <token> header.
+type BearerTokenCredentials struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Token         string                 `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BearerTokenCredentials) Reset() {
+	*x = BearerTokenCredentials{}
+	mi := &file_mlx_device_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BearerTokenCredentials) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BearerTokenCredentials) ProtoMessage() {}
+
+func (x *BearerTokenCredentials) ProtoReflect() protoreflect.Message {
+	mi := &file_mlx_device_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BearerTokenCredentials.ProtoReflect.Descriptor instead.
+func (*BearerTokenCredentials) Descriptor() ([]byte, []int) {
+	return file_mlx_device_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *BearerTokenCredentials) GetToken() string {
+	if x != nil {
+		return x.Token
+	}
+	return ""
+}
+
+// BasicAuthCredentials uses HTTP Basic authentication.
+type BasicAuthCredentials struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Username      string                 `protobuf:"bytes,1,opt,name=username,proto3" json:"username,omitempty"`
+	Password      string                 `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BasicAuthCredentials) Reset() {
+	*x = BasicAuthCredentials{}
+	mi := &file_mlx_device_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BasicAuthCredentials) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BasicAuthCredentials) ProtoMessage() {}
+
+func (x *BasicAuthCredentials) ProtoReflect() protoreflect.Message {
+	mi := &file_mlx_device_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BasicAuthCredentials.ProtoReflect.Descriptor instead.
+func (*BasicAuthCredentials) Descriptor() ([]byte, []int) {
+	return file_mlx_device_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *BasicAuthCredentials) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+func (x *BasicAuthCredentials) GetPassword() string {
+	if x != nil {
+		return x.Password
+	}
+	return ""
+}
+
+// HeaderCredentials uses a custom HTTP header for authentication.
+type HeaderCredentials struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Value         string                 `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *HeaderCredentials) Reset() {
+	*x = HeaderCredentials{}
+	mi := &file_mlx_device_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HeaderCredentials) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HeaderCredentials) ProtoMessage() {}
+
+func (x *HeaderCredentials) ProtoReflect() protoreflect.Message {
+	mi := &file_mlx_device_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HeaderCredentials.ProtoReflect.Descriptor instead.
+func (*HeaderCredentials) Descriptor() ([]byte, []int) {
+	return file_mlx_device_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *HeaderCredentials) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *HeaderCredentials) GetValue() string {
+	if x != nil {
+		return x.Value
+	}
+	return ""
+}
+
+// SshKeyCredentials uses a private key file for SSH authentication.
+type SshKeyCredentials struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Path          string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
+	Passphrase    *string                `protobuf:"bytes,2,opt,name=passphrase,proto3,oneof" json:"passphrase,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SshKeyCredentials) Reset() {
+	*x = SshKeyCredentials{}
+	mi := &file_mlx_device_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SshKeyCredentials) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SshKeyCredentials) ProtoMessage() {}
+
+func (x *SshKeyCredentials) ProtoReflect() protoreflect.Message {
+	mi := &file_mlx_device_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SshKeyCredentials.ProtoReflect.Descriptor instead.
+func (*SshKeyCredentials) Descriptor() ([]byte, []int) {
+	return file_mlx_device_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *SshKeyCredentials) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *SshKeyCredentials) GetPassphrase() string {
+	if x != nil && x.Passphrase != nil {
+		return *x.Passphrase
+	}
+	return ""
+}
+
+// SshAgentCredentials uses the running SSH agent for authentication.
+type SshAgentCredentials struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SshAgentCredentials) Reset() {
+	*x = SshAgentCredentials{}
+	mi := &file_mlx_device_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SshAgentCredentials) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SshAgentCredentials) ProtoMessage() {}
+
+func (x *SshAgentCredentials) ProtoReflect() protoreflect.Message {
+	mi := &file_mlx_device_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SshAgentCredentials.ProtoReflect.Descriptor instead.
+func (*SshAgentCredentials) Descriptor() ([]byte, []int) {
+	return file_mlx_device_proto_rawDescGZIP(), []int{25}
+}
+
+// FirmwareSpec identifies a firmware target by device identity
+// (part_number, psid) and the target firmware version. It is
+// used to construct a FirmwareFlasher following an RAII model,
+// where we poll the device to confirm part_number + PSID of
+// the device match that of the spec, otherwise we won't hand
+// back a new flasher. This helps to ensure we will only flash
+// firmware to a device the firmware supports.
+type FirmwareSpec struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// part_number is the manufacturer part number for the target device
+	// (e.g., "900-9D3B4-00CV-TA0").
+	PartNumber string `protobuf:"bytes,1,opt,name=part_number,json=partNumber,proto3" json:"part_number,omitempty"`
+	// psid (Parameter-Set IDentification) identifies the firmware
+	// configuration of the target device (e.g., "MT_0000000884").
+	Psid string `protobuf:"bytes,2,opt,name=psid,proto3" json:"psid,omitempty"`
+	// version is the target firmware version string (e.g., "32.43.1014").
+	Version       string `protobuf:"bytes,3,opt,name=version,proto3" json:"version,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FirmwareSpec) Reset() {
+	*x = FirmwareSpec{}
+	mi := &file_mlx_device_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FirmwareSpec) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FirmwareSpec) ProtoMessage() {}
+
+func (x *FirmwareSpec) ProtoReflect() protoreflect.Message {
+	mi := &file_mlx_device_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FirmwareSpec.ProtoReflect.Descriptor instead.
+func (*FirmwareSpec) Descriptor() ([]byte, []int) {
+	return file_mlx_device_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *FirmwareSpec) GetPartNumber() string {
+	if x != nil {
+		return x.PartNumber
+	}
+	return ""
+}
+
+func (x *FirmwareSpec) GetPsid() string {
+	if x != nil {
+		return x.Psid
+	}
+	return ""
+}
+
+func (x *FirmwareSpec) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+// FlashSpec specifies the source locations and caching options for
+// flash and verify_image operations. Passed to flasher.flash() and
+// flasher.verify_image().
+type FlashSpec struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// firmware_url is the location of the firmware binary.
+	// Supports local paths, file://, https://, and ssh:// URLs.
+	FirmwareUrl string `protobuf:"bytes,1,opt,name=firmware_url,json=firmwareUrl,proto3" json:"firmware_url,omitempty"`
+	// firmware_credentials is the optional authentication for
+	// downloading the firmware binary.
+	FirmwareCredentials *FirmwareCredentials `protobuf:"bytes,2,opt,name=firmware_credentials,json=firmwareCredentials,proto3,oneof" json:"firmware_credentials,omitempty"`
+	// device_conf_url is the optional location of the device config
+	// to apply before flashing (e.g., a debug token or mlxconfig blob).
+	DeviceConfUrl *string `protobuf:"bytes,3,opt,name=device_conf_url,json=deviceConfUrl,proto3,oneof" json:"device_conf_url,omitempty"`
+	// device_conf_credentials is the optional authentication for
+	// downloading the device config.
+	DeviceConfCredentials *FirmwareCredentials `protobuf:"bytes,4,opt,name=device_conf_credentials,json=deviceConfCredentials,proto3,oneof" json:"device_conf_credentials,omitempty"`
+	// verify_from_cache controls whether verify_image() uses the
+	// cached firmware from cache_dir instead of re-pulling from source.
+	VerifyFromCache bool `protobuf:"varint,5,opt,name=verify_from_cache,json=verifyFromCache,proto3" json:"verify_from_cache,omitempty"`
+	// cache_dir is the directory for staging downloaded firmware files.
+	// Defaults to a temporary directory if not specified.
+	CacheDir      *string `protobuf:"bytes,6,opt,name=cache_dir,json=cacheDir,proto3,oneof" json:"cache_dir,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FlashSpec) Reset() {
+	*x = FlashSpec{}
+	mi := &file_mlx_device_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FlashSpec) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FlashSpec) ProtoMessage() {}
+
+func (x *FlashSpec) ProtoReflect() protoreflect.Message {
+	mi := &file_mlx_device_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FlashSpec.ProtoReflect.Descriptor instead.
+func (*FlashSpec) Descriptor() ([]byte, []int) {
+	return file_mlx_device_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *FlashSpec) GetFirmwareUrl() string {
+	if x != nil {
+		return x.FirmwareUrl
+	}
+	return ""
+}
+
+func (x *FlashSpec) GetFirmwareCredentials() *FirmwareCredentials {
+	if x != nil {
+		return x.FirmwareCredentials
+	}
+	return nil
+}
+
+func (x *FlashSpec) GetDeviceConfUrl() string {
+	if x != nil && x.DeviceConfUrl != nil {
+		return *x.DeviceConfUrl
+	}
+	return ""
+}
+
+func (x *FlashSpec) GetDeviceConfCredentials() *FirmwareCredentials {
+	if x != nil {
+		return x.DeviceConfCredentials
+	}
+	return nil
+}
+
+func (x *FlashSpec) GetVerifyFromCache() bool {
+	if x != nil {
+		return x.VerifyFromCache
+	}
+	return false
+}
+
+func (x *FlashSpec) GetCacheDir() string {
+	if x != nil && x.CacheDir != nil {
+		return *x.CacheDir
+	}
+	return ""
+}
+
+// FlashOptions contains lifecycle flags for the apply() orchestrator.
+// Controls which post-flash steps are executed.
+type FlashOptions struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// verify_image controls whether the firmware image on the device is
+	// verified against the source binary after flashing. Default is false.
+	VerifyImage bool `protobuf:"varint,1,opt,name=verify_image,json=verifyImage,proto3" json:"verify_image,omitempty"`
+	// verify_version controls whether the firmware version on the device
+	// is checked after flashing. Default is false.
+	VerifyVersion bool `protobuf:"varint,2,opt,name=verify_version,json=verifyVersion,proto3" json:"verify_version,omitempty"`
+	// reset controls whether the device is reset via mlxfwreset after
+	// flashing. Default is false.
+	Reset_ bool `protobuf:"varint,3,opt,name=reset,proto3" json:"reset,omitempty"`
+	// reset_level is the mlxfwreset level to use. Default is 3.
+	ResetLevel    uint32 `protobuf:"varint,4,opt,name=reset_level,json=resetLevel,proto3" json:"reset_level,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FlashOptions) Reset() {
+	*x = FlashOptions{}
+	mi := &file_mlx_device_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FlashOptions) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FlashOptions) ProtoMessage() {}
+
+func (x *FlashOptions) ProtoReflect() protoreflect.Message {
+	mi := &file_mlx_device_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FlashOptions.ProtoReflect.Descriptor instead.
+func (*FlashOptions) Descriptor() ([]byte, []int) {
+	return file_mlx_device_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *FlashOptions) GetVerifyImage() bool {
+	if x != nil {
+		return x.VerifyImage
+	}
+	return false
+}
+
+func (x *FlashOptions) GetVerifyVersion() bool {
+	if x != nil {
+		return x.VerifyVersion
+	}
+	return false
+}
+
+func (x *FlashOptions) GetReset_() bool {
+	if x != nil {
+		return x.Reset_
+	}
+	return false
+}
+
+func (x *FlashOptions) GetResetLevel() uint32 {
+	if x != nil {
+		return x.ResetLevel
+	}
+	return 0
+}
+
+// FirmwareFlasherProfile bundles a FirmwareSpec, FlashSpec, and
+// FlashOptions into a complete firmware management profile. Used by
+// the API runtime config and sent to scout via OpCode::ApplyFirmware.
+type FirmwareFlasherProfile struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	FirmwareSpec  *FirmwareSpec          `protobuf:"bytes,1,opt,name=firmware_spec,json=firmwareSpec,proto3" json:"firmware_spec,omitempty"`
+	FlashSpec     *FlashSpec             `protobuf:"bytes,2,opt,name=flash_spec,json=flashSpec,proto3" json:"flash_spec,omitempty"`
+	FlashOptions  *FlashOptions          `protobuf:"bytes,3,opt,name=flash_options,json=flashOptions,proto3,oneof" json:"flash_options,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FirmwareFlasherProfile) Reset() {
+	*x = FirmwareFlasherProfile{}
+	mi := &file_mlx_device_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FirmwareFlasherProfile) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FirmwareFlasherProfile) ProtoMessage() {}
+
+func (x *FirmwareFlasherProfile) ProtoReflect() protoreflect.Message {
+	mi := &file_mlx_device_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FirmwareFlasherProfile.ProtoReflect.Descriptor instead.
+func (*FirmwareFlasherProfile) Descriptor() ([]byte, []int) {
+	return file_mlx_device_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *FirmwareFlasherProfile) GetFirmwareSpec() *FirmwareSpec {
+	if x != nil {
+		return x.FirmwareSpec
+	}
+	return nil
+}
+
+func (x *FirmwareFlasherProfile) GetFlashSpec() *FlashSpec {
+	if x != nil {
+		return x.FlashSpec
+	}
+	return nil
+}
+
+func (x *FirmwareFlasherProfile) GetFlashOptions() *FlashOptions {
+	if x != nil {
+		return x.FlashOptions
+	}
+	return nil
+}
+
 type MlxObservationReport struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	MachineId     *MachineId             `protobuf:"bytes,1,opt,name=machine_id,json=machineId,proto3" json:"machine_id,omitempty"`
@@ -2033,7 +2717,7 @@ type MlxObservationReport struct {
 
 func (x *MlxObservationReport) Reset() {
 	*x = MlxObservationReport{}
-	mi := &file_mlx_device_proto_msgTypes[20]
+	mi := &file_mlx_device_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2045,7 +2729,7 @@ func (x *MlxObservationReport) String() string {
 func (*MlxObservationReport) ProtoMessage() {}
 
 func (x *MlxObservationReport) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[20]
+	mi := &file_mlx_device_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2058,7 +2742,7 @@ func (x *MlxObservationReport) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxObservationReport.ProtoReflect.Descriptor instead.
 func (*MlxObservationReport) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{20}
+	return file_mlx_device_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *MlxObservationReport) GetMachineId() *MachineId {
@@ -2082,19 +2766,127 @@ func (x *MlxObservationReport) GetObservations() []*MlxObservation {
 	return nil
 }
 
+// FirmwareFlashReport captures the outcome of each step in the
+// firmware flash lifecycle: flash, reset, image verification, and
+// version verification. Each optional step (reset, verify_image,
+// verify_version) is controlled by the corresponding flag in
+// SupernicFirmwareConfig. A None value means the step was not
+// requested; Some(true/false) means it was attempted and the result.
+// Sent from scout to the API as part of an MlxObservation after an
+// ApplyFirmware operation.
+type FirmwareFlashReport struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Whether the firmware was successfully flashed via flint.
+	Flashed bool `protobuf:"varint,1,opt,name=flashed,proto3" json:"flashed,omitempty"`
+	// Whether the device was successfully reset via mlxfwreset.
+	// None if config.reset was false (not requested).
+	Reset_ *bool `protobuf:"varint,2,opt,name=reset,proto3,oneof" json:"reset,omitempty"`
+	// Whether the firmware image on the device was verified against
+	// the source image via flint verify.
+	// None if config.verify_image was false (not requested).
+	VerifiedImage *bool `protobuf:"varint,3,opt,name=verified_image,json=verifiedImage,proto3,oneof" json:"verified_image,omitempty"`
+	// Whether the firmware version on the device matches the expected
+	// version. None if config.verify_version was false (not requested).
+	VerifiedVersion *bool `protobuf:"varint,4,opt,name=verified_version,json=verifiedVersion,proto3,oneof" json:"verified_version,omitempty"`
+	// The firmware version observed on the device after flashing,
+	// queried via mlxfwmanager. None if the device could not be queried
+	// or if the step was not performed.
+	ObservedVersion *string `protobuf:"bytes,5,opt,name=observed_version,json=observedVersion,proto3,oneof" json:"observed_version,omitempty"`
+	// The expected firmware version from the config, if one was set.
+	ExpectedVersion *string `protobuf:"bytes,6,opt,name=expected_version,json=expectedVersion,proto3,oneof" json:"expected_version,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *FirmwareFlashReport) Reset() {
+	*x = FirmwareFlashReport{}
+	mi := &file_mlx_device_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FirmwareFlashReport) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FirmwareFlashReport) ProtoMessage() {}
+
+func (x *FirmwareFlashReport) ProtoReflect() protoreflect.Message {
+	mi := &file_mlx_device_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FirmwareFlashReport.ProtoReflect.Descriptor instead.
+func (*FirmwareFlashReport) Descriptor() ([]byte, []int) {
+	return file_mlx_device_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *FirmwareFlashReport) GetFlashed() bool {
+	if x != nil {
+		return x.Flashed
+	}
+	return false
+}
+
+func (x *FirmwareFlashReport) GetReset_() bool {
+	if x != nil && x.Reset_ != nil {
+		return *x.Reset_
+	}
+	return false
+}
+
+func (x *FirmwareFlashReport) GetVerifiedImage() bool {
+	if x != nil && x.VerifiedImage != nil {
+		return *x.VerifiedImage
+	}
+	return false
+}
+
+func (x *FirmwareFlashReport) GetVerifiedVersion() bool {
+	if x != nil && x.VerifiedVersion != nil {
+		return *x.VerifiedVersion
+	}
+	return false
+}
+
+func (x *FirmwareFlashReport) GetObservedVersion() string {
+	if x != nil && x.ObservedVersion != nil {
+		return *x.ObservedVersion
+	}
+	return ""
+}
+
+func (x *FirmwareFlashReport) GetExpectedVersion() string {
+	if x != nil && x.ExpectedVersion != nil {
+		return *x.ExpectedVersion
+	}
+	return ""
+}
+
 type MlxObservation struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	DeviceInfo    *MlxDeviceInfo         `protobuf:"bytes,1,opt,name=device_info,json=deviceInfo,proto3" json:"device_info,omitempty"`
 	LockStatus    *LockStatus            `protobuf:"varint,2,opt,name=lock_status,json=lockStatus,proto3,enum=mlx_device.LockStatus,oneof" json:"lock_status,omitempty"`
 	ProfileName   *string                `protobuf:"bytes,3,opt,name=profile_name,json=profileName,proto3,oneof" json:"profile_name,omitempty"`
 	ProfileSynced *bool                  `protobuf:"varint,4,opt,name=profile_synced,json=profileSynced,proto3,oneof" json:"profile_synced,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// firmware_report captures the outcome of the firmware flash lifecycle
+	// during the ApplyFirmware state. Each step's report reflects whether
+	// it was requested (via config flags) and whether it succeeded.
+	FirmwareReport *FirmwareFlashReport `protobuf:"bytes,5,opt,name=firmware_report,json=firmwareReport,proto3,oneof" json:"firmware_report,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *MlxObservation) Reset() {
 	*x = MlxObservation{}
-	mi := &file_mlx_device_proto_msgTypes[21]
+	mi := &file_mlx_device_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2106,7 +2898,7 @@ func (x *MlxObservation) String() string {
 func (*MlxObservation) ProtoMessage() {}
 
 func (x *MlxObservation) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[21]
+	mi := &file_mlx_device_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2119,7 +2911,7 @@ func (x *MlxObservation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxObservation.ProtoReflect.Descriptor instead.
 func (*MlxObservation) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{21}
+	return file_mlx_device_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *MlxObservation) GetDeviceInfo() *MlxDeviceInfo {
@@ -2150,6 +2942,13 @@ func (x *MlxObservation) GetProfileSynced() bool {
 	return false
 }
 
+func (x *MlxObservation) GetFirmwareReport() *FirmwareFlashReport {
+	if x != nil {
+		return x.FirmwareReport
+	}
+	return nil
+}
+
 // PublishMlxObservationReportRequest is sent by scout or the agent
 // into carbide-api so that we can both observe the current
 // state of the Mellanox devices (DPAs and DPUs), and potentially
@@ -2164,7 +2963,7 @@ type PublishMlxObservationReportRequest struct {
 
 func (x *PublishMlxObservationReportRequest) Reset() {
 	*x = PublishMlxObservationReportRequest{}
-	mi := &file_mlx_device_proto_msgTypes[22]
+	mi := &file_mlx_device_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2176,7 +2975,7 @@ func (x *PublishMlxObservationReportRequest) String() string {
 func (*PublishMlxObservationReportRequest) ProtoMessage() {}
 
 func (x *PublishMlxObservationReportRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[22]
+	mi := &file_mlx_device_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2189,7 +2988,7 @@ func (x *PublishMlxObservationReportRequest) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use PublishMlxObservationReportRequest.ProtoReflect.Descriptor instead.
 func (*PublishMlxObservationReportRequest) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{22}
+	return file_mlx_device_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *PublishMlxObservationReportRequest) GetReport() *MlxObservationReport {
@@ -2212,7 +3011,7 @@ type PublishMlxObservationReportResponse struct {
 
 func (x *PublishMlxObservationReportResponse) Reset() {
 	*x = PublishMlxObservationReportResponse{}
-	mi := &file_mlx_device_proto_msgTypes[23]
+	mi := &file_mlx_device_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2224,7 +3023,7 @@ func (x *PublishMlxObservationReportResponse) String() string {
 func (*PublishMlxObservationReportResponse) ProtoMessage() {}
 
 func (x *PublishMlxObservationReportResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[23]
+	mi := &file_mlx_device_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2237,7 +3036,7 @@ func (x *PublishMlxObservationReportResponse) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use PublishMlxObservationReportResponse.ProtoReflect.Descriptor instead.
 func (*PublishMlxObservationReportResponse) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{23}
+	return file_mlx_device_proto_rawDescGZIP(), []int{34}
 }
 
 // MlxAdminProfileSyncRequest is sent by an administrative
@@ -2260,7 +3059,7 @@ type MlxAdminProfileSyncRequest struct {
 
 func (x *MlxAdminProfileSyncRequest) Reset() {
 	*x = MlxAdminProfileSyncRequest{}
-	mi := &file_mlx_device_proto_msgTypes[24]
+	mi := &file_mlx_device_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2272,7 +3071,7 @@ func (x *MlxAdminProfileSyncRequest) String() string {
 func (*MlxAdminProfileSyncRequest) ProtoMessage() {}
 
 func (x *MlxAdminProfileSyncRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[24]
+	mi := &file_mlx_device_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2285,7 +3084,7 @@ func (x *MlxAdminProfileSyncRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxAdminProfileSyncRequest.ProtoReflect.Descriptor instead.
 func (*MlxAdminProfileSyncRequest) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{24}
+	return file_mlx_device_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *MlxAdminProfileSyncRequest) GetMachineId() *MachineId {
@@ -2319,7 +3118,7 @@ type MlxAdminProfileSyncResponse struct {
 
 func (x *MlxAdminProfileSyncResponse) Reset() {
 	*x = MlxAdminProfileSyncResponse{}
-	mi := &file_mlx_device_proto_msgTypes[25]
+	mi := &file_mlx_device_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2331,7 +3130,7 @@ func (x *MlxAdminProfileSyncResponse) String() string {
 func (*MlxAdminProfileSyncResponse) ProtoMessage() {}
 
 func (x *MlxAdminProfileSyncResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[25]
+	mi := &file_mlx_device_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2344,7 +3143,7 @@ func (x *MlxAdminProfileSyncResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxAdminProfileSyncResponse.ProtoReflect.Descriptor instead.
 func (*MlxAdminProfileSyncResponse) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{25}
+	return file_mlx_device_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *MlxAdminProfileSyncResponse) GetSyncResult() *SyncResult {
@@ -2376,7 +3175,7 @@ type MlxDeviceProfileSyncRequest struct {
 
 func (x *MlxDeviceProfileSyncRequest) Reset() {
 	*x = MlxDeviceProfileSyncRequest{}
-	mi := &file_mlx_device_proto_msgTypes[26]
+	mi := &file_mlx_device_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2388,7 +3187,7 @@ func (x *MlxDeviceProfileSyncRequest) String() string {
 func (*MlxDeviceProfileSyncRequest) ProtoMessage() {}
 
 func (x *MlxDeviceProfileSyncRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[26]
+	mi := &file_mlx_device_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2401,7 +3200,7 @@ func (x *MlxDeviceProfileSyncRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxDeviceProfileSyncRequest.ProtoReflect.Descriptor instead.
 func (*MlxDeviceProfileSyncRequest) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{26}
+	return file_mlx_device_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *MlxDeviceProfileSyncRequest) GetDeviceId() string {
@@ -2440,7 +3239,7 @@ type MlxDeviceProfileSyncResponse struct {
 
 func (x *MlxDeviceProfileSyncResponse) Reset() {
 	*x = MlxDeviceProfileSyncResponse{}
-	mi := &file_mlx_device_proto_msgTypes[27]
+	mi := &file_mlx_device_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2452,7 +3251,7 @@ func (x *MlxDeviceProfileSyncResponse) String() string {
 func (*MlxDeviceProfileSyncResponse) ProtoMessage() {}
 
 func (x *MlxDeviceProfileSyncResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[27]
+	mi := &file_mlx_device_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2465,7 +3264,7 @@ func (x *MlxDeviceProfileSyncResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxDeviceProfileSyncResponse.ProtoReflect.Descriptor instead.
 func (*MlxDeviceProfileSyncResponse) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{27}
+	return file_mlx_device_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *MlxDeviceProfileSyncResponse) GetReply() isMlxDeviceProfileSyncResponse_Reply {
@@ -2521,7 +3320,7 @@ type MlxAdminProfileCompareRequest struct {
 
 func (x *MlxAdminProfileCompareRequest) Reset() {
 	*x = MlxAdminProfileCompareRequest{}
-	mi := &file_mlx_device_proto_msgTypes[28]
+	mi := &file_mlx_device_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2533,7 +3332,7 @@ func (x *MlxAdminProfileCompareRequest) String() string {
 func (*MlxAdminProfileCompareRequest) ProtoMessage() {}
 
 func (x *MlxAdminProfileCompareRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[28]
+	mi := &file_mlx_device_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2546,7 +3345,7 @@ func (x *MlxAdminProfileCompareRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxAdminProfileCompareRequest.ProtoReflect.Descriptor instead.
 func (*MlxAdminProfileCompareRequest) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{28}
+	return file_mlx_device_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *MlxAdminProfileCompareRequest) GetMachineId() *MachineId {
@@ -2580,7 +3379,7 @@ type MlxAdminProfileCompareResponse struct {
 
 func (x *MlxAdminProfileCompareResponse) Reset() {
 	*x = MlxAdminProfileCompareResponse{}
-	mi := &file_mlx_device_proto_msgTypes[29]
+	mi := &file_mlx_device_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2592,7 +3391,7 @@ func (x *MlxAdminProfileCompareResponse) String() string {
 func (*MlxAdminProfileCompareResponse) ProtoMessage() {}
 
 func (x *MlxAdminProfileCompareResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[29]
+	mi := &file_mlx_device_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2605,7 +3404,7 @@ func (x *MlxAdminProfileCompareResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxAdminProfileCompareResponse.ProtoReflect.Descriptor instead.
 func (*MlxAdminProfileCompareResponse) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{29}
+	return file_mlx_device_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *MlxAdminProfileCompareResponse) GetComparisonResult() *ComparisonResult {
@@ -2627,7 +3426,7 @@ type MlxDeviceProfileCompareRequest struct {
 
 func (x *MlxDeviceProfileCompareRequest) Reset() {
 	*x = MlxDeviceProfileCompareRequest{}
-	mi := &file_mlx_device_proto_msgTypes[30]
+	mi := &file_mlx_device_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2639,7 +3438,7 @@ func (x *MlxDeviceProfileCompareRequest) String() string {
 func (*MlxDeviceProfileCompareRequest) ProtoMessage() {}
 
 func (x *MlxDeviceProfileCompareRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[30]
+	mi := &file_mlx_device_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2652,7 +3451,7 @@ func (x *MlxDeviceProfileCompareRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxDeviceProfileCompareRequest.ProtoReflect.Descriptor instead.
 func (*MlxDeviceProfileCompareRequest) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{30}
+	return file_mlx_device_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *MlxDeviceProfileCompareRequest) GetDeviceId() string {
@@ -2690,7 +3489,7 @@ type MlxDeviceProfileCompareResponse struct {
 
 func (x *MlxDeviceProfileCompareResponse) Reset() {
 	*x = MlxDeviceProfileCompareResponse{}
-	mi := &file_mlx_device_proto_msgTypes[31]
+	mi := &file_mlx_device_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2702,7 +3501,7 @@ func (x *MlxDeviceProfileCompareResponse) String() string {
 func (*MlxDeviceProfileCompareResponse) ProtoMessage() {}
 
 func (x *MlxDeviceProfileCompareResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[31]
+	mi := &file_mlx_device_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2715,7 +3514,7 @@ func (x *MlxDeviceProfileCompareResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxDeviceProfileCompareResponse.ProtoReflect.Descriptor instead.
 func (*MlxDeviceProfileCompareResponse) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{31}
+	return file_mlx_device_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *MlxDeviceProfileCompareResponse) GetReply() isMlxDeviceProfileCompareResponse_Reply {
@@ -2771,7 +3570,7 @@ type MlxAdminLockdownLockRequest struct {
 
 func (x *MlxAdminLockdownLockRequest) Reset() {
 	*x = MlxAdminLockdownLockRequest{}
-	mi := &file_mlx_device_proto_msgTypes[32]
+	mi := &file_mlx_device_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2783,7 +3582,7 @@ func (x *MlxAdminLockdownLockRequest) String() string {
 func (*MlxAdminLockdownLockRequest) ProtoMessage() {}
 
 func (x *MlxAdminLockdownLockRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[32]
+	mi := &file_mlx_device_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2796,7 +3595,7 @@ func (x *MlxAdminLockdownLockRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxAdminLockdownLockRequest.ProtoReflect.Descriptor instead.
 func (*MlxAdminLockdownLockRequest) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{32}
+	return file_mlx_device_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *MlxAdminLockdownLockRequest) GetMachineId() *MachineId {
@@ -2825,7 +3624,7 @@ type MlxAdminLockdownLockResponse struct {
 
 func (x *MlxAdminLockdownLockResponse) Reset() {
 	*x = MlxAdminLockdownLockResponse{}
-	mi := &file_mlx_device_proto_msgTypes[33]
+	mi := &file_mlx_device_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2837,7 +3636,7 @@ func (x *MlxAdminLockdownLockResponse) String() string {
 func (*MlxAdminLockdownLockResponse) ProtoMessage() {}
 
 func (x *MlxAdminLockdownLockResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[33]
+	mi := &file_mlx_device_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2850,7 +3649,7 @@ func (x *MlxAdminLockdownLockResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxAdminLockdownLockResponse.ProtoReflect.Descriptor instead.
 func (*MlxAdminLockdownLockResponse) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{33}
+	return file_mlx_device_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *MlxAdminLockdownLockResponse) GetStatusReport() *StatusReport {
@@ -2872,7 +3671,7 @@ type MlxAdminLockdownUnlockRequest struct {
 
 func (x *MlxAdminLockdownUnlockRequest) Reset() {
 	*x = MlxAdminLockdownUnlockRequest{}
-	mi := &file_mlx_device_proto_msgTypes[34]
+	mi := &file_mlx_device_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2884,7 +3683,7 @@ func (x *MlxAdminLockdownUnlockRequest) String() string {
 func (*MlxAdminLockdownUnlockRequest) ProtoMessage() {}
 
 func (x *MlxAdminLockdownUnlockRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[34]
+	mi := &file_mlx_device_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2897,7 +3696,7 @@ func (x *MlxAdminLockdownUnlockRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxAdminLockdownUnlockRequest.ProtoReflect.Descriptor instead.
 func (*MlxAdminLockdownUnlockRequest) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{34}
+	return file_mlx_device_proto_rawDescGZIP(), []int{45}
 }
 
 func (x *MlxAdminLockdownUnlockRequest) GetMachineId() *MachineId {
@@ -2926,7 +3725,7 @@ type MlxAdminLockdownUnlockResponse struct {
 
 func (x *MlxAdminLockdownUnlockResponse) Reset() {
 	*x = MlxAdminLockdownUnlockResponse{}
-	mi := &file_mlx_device_proto_msgTypes[35]
+	mi := &file_mlx_device_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2938,7 +3737,7 @@ func (x *MlxAdminLockdownUnlockResponse) String() string {
 func (*MlxAdminLockdownUnlockResponse) ProtoMessage() {}
 
 func (x *MlxAdminLockdownUnlockResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[35]
+	mi := &file_mlx_device_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2951,7 +3750,7 @@ func (x *MlxAdminLockdownUnlockResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxAdminLockdownUnlockResponse.ProtoReflect.Descriptor instead.
 func (*MlxAdminLockdownUnlockResponse) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{35}
+	return file_mlx_device_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *MlxAdminLockdownUnlockResponse) GetStatusReport() *StatusReport {
@@ -2973,7 +3772,7 @@ type MlxAdminLockdownStatusRequest struct {
 
 func (x *MlxAdminLockdownStatusRequest) Reset() {
 	*x = MlxAdminLockdownStatusRequest{}
-	mi := &file_mlx_device_proto_msgTypes[36]
+	mi := &file_mlx_device_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2985,7 +3784,7 @@ func (x *MlxAdminLockdownStatusRequest) String() string {
 func (*MlxAdminLockdownStatusRequest) ProtoMessage() {}
 
 func (x *MlxAdminLockdownStatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[36]
+	mi := &file_mlx_device_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2998,7 +3797,7 @@ func (x *MlxAdminLockdownStatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxAdminLockdownStatusRequest.ProtoReflect.Descriptor instead.
 func (*MlxAdminLockdownStatusRequest) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{36}
+	return file_mlx_device_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *MlxAdminLockdownStatusRequest) GetMachineId() *MachineId {
@@ -3027,7 +3826,7 @@ type MlxAdminLockdownStatusResponse struct {
 
 func (x *MlxAdminLockdownStatusResponse) Reset() {
 	*x = MlxAdminLockdownStatusResponse{}
-	mi := &file_mlx_device_proto_msgTypes[37]
+	mi := &file_mlx_device_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3039,7 +3838,7 @@ func (x *MlxAdminLockdownStatusResponse) String() string {
 func (*MlxAdminLockdownStatusResponse) ProtoMessage() {}
 
 func (x *MlxAdminLockdownStatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[37]
+	mi := &file_mlx_device_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3052,7 +3851,7 @@ func (x *MlxAdminLockdownStatusResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxAdminLockdownStatusResponse.ProtoReflect.Descriptor instead.
 func (*MlxAdminLockdownStatusResponse) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{37}
+	return file_mlx_device_proto_rawDescGZIP(), []int{48}
 }
 
 func (x *MlxAdminLockdownStatusResponse) GetStatusReport() *StatusReport {
@@ -3078,7 +3877,7 @@ type MlxDeviceLockdownLockRequest struct {
 
 func (x *MlxDeviceLockdownLockRequest) Reset() {
 	*x = MlxDeviceLockdownLockRequest{}
-	mi := &file_mlx_device_proto_msgTypes[38]
+	mi := &file_mlx_device_proto_msgTypes[49]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3090,7 +3889,7 @@ func (x *MlxDeviceLockdownLockRequest) String() string {
 func (*MlxDeviceLockdownLockRequest) ProtoMessage() {}
 
 func (x *MlxDeviceLockdownLockRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[38]
+	mi := &file_mlx_device_proto_msgTypes[49]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3103,7 +3902,7 @@ func (x *MlxDeviceLockdownLockRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxDeviceLockdownLockRequest.ProtoReflect.Descriptor instead.
 func (*MlxDeviceLockdownLockRequest) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{38}
+	return file_mlx_device_proto_rawDescGZIP(), []int{49}
 }
 
 func (x *MlxDeviceLockdownLockRequest) GetDeviceId() string {
@@ -3136,7 +3935,7 @@ type MlxDeviceLockdownUnlockRequest struct {
 
 func (x *MlxDeviceLockdownUnlockRequest) Reset() {
 	*x = MlxDeviceLockdownUnlockRequest{}
-	mi := &file_mlx_device_proto_msgTypes[39]
+	mi := &file_mlx_device_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3148,7 +3947,7 @@ func (x *MlxDeviceLockdownUnlockRequest) String() string {
 func (*MlxDeviceLockdownUnlockRequest) ProtoMessage() {}
 
 func (x *MlxDeviceLockdownUnlockRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[39]
+	mi := &file_mlx_device_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3161,7 +3960,7 @@ func (x *MlxDeviceLockdownUnlockRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxDeviceLockdownUnlockRequest.ProtoReflect.Descriptor instead.
 func (*MlxDeviceLockdownUnlockRequest) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{39}
+	return file_mlx_device_proto_rawDescGZIP(), []int{50}
 }
 
 func (x *MlxDeviceLockdownUnlockRequest) GetDeviceId() string {
@@ -3192,7 +3991,7 @@ type MlxDeviceLockdownStatusRequest struct {
 
 func (x *MlxDeviceLockdownStatusRequest) Reset() {
 	*x = MlxDeviceLockdownStatusRequest{}
-	mi := &file_mlx_device_proto_msgTypes[40]
+	mi := &file_mlx_device_proto_msgTypes[51]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3204,7 +4003,7 @@ func (x *MlxDeviceLockdownStatusRequest) String() string {
 func (*MlxDeviceLockdownStatusRequest) ProtoMessage() {}
 
 func (x *MlxDeviceLockdownStatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[40]
+	mi := &file_mlx_device_proto_msgTypes[51]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3217,7 +4016,7 @@ func (x *MlxDeviceLockdownStatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxDeviceLockdownStatusRequest.ProtoReflect.Descriptor instead.
 func (*MlxDeviceLockdownStatusRequest) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{40}
+	return file_mlx_device_proto_rawDescGZIP(), []int{51}
 }
 
 func (x *MlxDeviceLockdownStatusRequest) GetDeviceId() string {
@@ -3243,7 +4042,7 @@ type MlxDeviceLockdownResponse struct {
 
 func (x *MlxDeviceLockdownResponse) Reset() {
 	*x = MlxDeviceLockdownResponse{}
-	mi := &file_mlx_device_proto_msgTypes[41]
+	mi := &file_mlx_device_proto_msgTypes[52]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3255,7 +4054,7 @@ func (x *MlxDeviceLockdownResponse) String() string {
 func (*MlxDeviceLockdownResponse) ProtoMessage() {}
 
 func (x *MlxDeviceLockdownResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[41]
+	mi := &file_mlx_device_proto_msgTypes[52]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3268,7 +4067,7 @@ func (x *MlxDeviceLockdownResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxDeviceLockdownResponse.ProtoReflect.Descriptor instead.
 func (*MlxDeviceLockdownResponse) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{41}
+	return file_mlx_device_proto_rawDescGZIP(), []int{52}
 }
 
 func (x *MlxDeviceLockdownResponse) GetReply() isMlxDeviceLockdownResponse_Reply {
@@ -3326,7 +4125,7 @@ type MlxDeviceInfoDeviceRequest struct {
 
 func (x *MlxDeviceInfoDeviceRequest) Reset() {
 	*x = MlxDeviceInfoDeviceRequest{}
-	mi := &file_mlx_device_proto_msgTypes[42]
+	mi := &file_mlx_device_proto_msgTypes[53]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3338,7 +4137,7 @@ func (x *MlxDeviceInfoDeviceRequest) String() string {
 func (*MlxDeviceInfoDeviceRequest) ProtoMessage() {}
 
 func (x *MlxDeviceInfoDeviceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[42]
+	mi := &file_mlx_device_proto_msgTypes[53]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3351,7 +4150,7 @@ func (x *MlxDeviceInfoDeviceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxDeviceInfoDeviceRequest.ProtoReflect.Descriptor instead.
 func (*MlxDeviceInfoDeviceRequest) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{42}
+	return file_mlx_device_proto_rawDescGZIP(), []int{53}
 }
 
 func (x *MlxDeviceInfoDeviceRequest) GetDeviceId() string {
@@ -3376,7 +4175,7 @@ type MlxDeviceInfoDeviceResponse struct {
 
 func (x *MlxDeviceInfoDeviceResponse) Reset() {
 	*x = MlxDeviceInfoDeviceResponse{}
-	mi := &file_mlx_device_proto_msgTypes[43]
+	mi := &file_mlx_device_proto_msgTypes[54]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3388,7 +4187,7 @@ func (x *MlxDeviceInfoDeviceResponse) String() string {
 func (*MlxDeviceInfoDeviceResponse) ProtoMessage() {}
 
 func (x *MlxDeviceInfoDeviceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[43]
+	mi := &file_mlx_device_proto_msgTypes[54]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3401,7 +4200,7 @@ func (x *MlxDeviceInfoDeviceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxDeviceInfoDeviceResponse.ProtoReflect.Descriptor instead.
 func (*MlxDeviceInfoDeviceResponse) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{43}
+	return file_mlx_device_proto_rawDescGZIP(), []int{54}
 }
 
 func (x *MlxDeviceInfoDeviceResponse) GetReply() isMlxDeviceInfoDeviceResponse_Reply {
@@ -3457,7 +4256,7 @@ type MlxDeviceInfoReportRequest struct {
 
 func (x *MlxDeviceInfoReportRequest) Reset() {
 	*x = MlxDeviceInfoReportRequest{}
-	mi := &file_mlx_device_proto_msgTypes[44]
+	mi := &file_mlx_device_proto_msgTypes[55]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3469,7 +4268,7 @@ func (x *MlxDeviceInfoReportRequest) String() string {
 func (*MlxDeviceInfoReportRequest) ProtoMessage() {}
 
 func (x *MlxDeviceInfoReportRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[44]
+	mi := &file_mlx_device_proto_msgTypes[55]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3482,7 +4281,7 @@ func (x *MlxDeviceInfoReportRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxDeviceInfoReportRequest.ProtoReflect.Descriptor instead.
 func (*MlxDeviceInfoReportRequest) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{44}
+	return file_mlx_device_proto_rawDescGZIP(), []int{55}
 }
 
 func (x *MlxDeviceInfoReportRequest) GetFilters() *DeviceFilterSet {
@@ -3507,7 +4306,7 @@ type MlxDeviceInfoReportResponse struct {
 
 func (x *MlxDeviceInfoReportResponse) Reset() {
 	*x = MlxDeviceInfoReportResponse{}
-	mi := &file_mlx_device_proto_msgTypes[45]
+	mi := &file_mlx_device_proto_msgTypes[56]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3519,7 +4318,7 @@ func (x *MlxDeviceInfoReportResponse) String() string {
 func (*MlxDeviceInfoReportResponse) ProtoMessage() {}
 
 func (x *MlxDeviceInfoReportResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[45]
+	mi := &file_mlx_device_proto_msgTypes[56]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3532,7 +4331,7 @@ func (x *MlxDeviceInfoReportResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxDeviceInfoReportResponse.ProtoReflect.Descriptor instead.
 func (*MlxDeviceInfoReportResponse) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{45}
+	return file_mlx_device_proto_rawDescGZIP(), []int{56}
 }
 
 func (x *MlxDeviceInfoReportResponse) GetReply() isMlxDeviceInfoReportResponse_Reply {
@@ -3586,7 +4385,7 @@ type MlxAdminRegistryListRequest struct {
 
 func (x *MlxAdminRegistryListRequest) Reset() {
 	*x = MlxAdminRegistryListRequest{}
-	mi := &file_mlx_device_proto_msgTypes[46]
+	mi := &file_mlx_device_proto_msgTypes[57]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3598,7 +4397,7 @@ func (x *MlxAdminRegistryListRequest) String() string {
 func (*MlxAdminRegistryListRequest) ProtoMessage() {}
 
 func (x *MlxAdminRegistryListRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[46]
+	mi := &file_mlx_device_proto_msgTypes[57]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3611,7 +4410,7 @@ func (x *MlxAdminRegistryListRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxAdminRegistryListRequest.ProtoReflect.Descriptor instead.
 func (*MlxAdminRegistryListRequest) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{46}
+	return file_mlx_device_proto_rawDescGZIP(), []int{57}
 }
 
 func (x *MlxAdminRegistryListRequest) GetMachineId() *MachineId {
@@ -3631,7 +4430,7 @@ type MlxAdminRegistryListResponse struct {
 
 func (x *MlxAdminRegistryListResponse) Reset() {
 	*x = MlxAdminRegistryListResponse{}
-	mi := &file_mlx_device_proto_msgTypes[47]
+	mi := &file_mlx_device_proto_msgTypes[58]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3643,7 +4442,7 @@ func (x *MlxAdminRegistryListResponse) String() string {
 func (*MlxAdminRegistryListResponse) ProtoMessage() {}
 
 func (x *MlxAdminRegistryListResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[47]
+	mi := &file_mlx_device_proto_msgTypes[58]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3656,7 +4455,7 @@ func (x *MlxAdminRegistryListResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxAdminRegistryListResponse.ProtoReflect.Descriptor instead.
 func (*MlxAdminRegistryListResponse) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{47}
+	return file_mlx_device_proto_rawDescGZIP(), []int{58}
 }
 
 func (x *MlxAdminRegistryListResponse) GetRegistryListing() *RegistryListing {
@@ -3676,7 +4475,7 @@ type MlxDeviceRegistryListRequest struct {
 
 func (x *MlxDeviceRegistryListRequest) Reset() {
 	*x = MlxDeviceRegistryListRequest{}
-	mi := &file_mlx_device_proto_msgTypes[48]
+	mi := &file_mlx_device_proto_msgTypes[59]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3688,7 +4487,7 @@ func (x *MlxDeviceRegistryListRequest) String() string {
 func (*MlxDeviceRegistryListRequest) ProtoMessage() {}
 
 func (x *MlxDeviceRegistryListRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[48]
+	mi := &file_mlx_device_proto_msgTypes[59]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3701,7 +4500,7 @@ func (x *MlxDeviceRegistryListRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxDeviceRegistryListRequest.ProtoReflect.Descriptor instead.
 func (*MlxDeviceRegistryListRequest) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{48}
+	return file_mlx_device_proto_rawDescGZIP(), []int{59}
 }
 
 // MlxDeviceRegistryListResponse is sent by scout back to carbide-api
@@ -3719,7 +4518,7 @@ type MlxDeviceRegistryListResponse struct {
 
 func (x *MlxDeviceRegistryListResponse) Reset() {
 	*x = MlxDeviceRegistryListResponse{}
-	mi := &file_mlx_device_proto_msgTypes[49]
+	mi := &file_mlx_device_proto_msgTypes[60]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3731,7 +4530,7 @@ func (x *MlxDeviceRegistryListResponse) String() string {
 func (*MlxDeviceRegistryListResponse) ProtoMessage() {}
 
 func (x *MlxDeviceRegistryListResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[49]
+	mi := &file_mlx_device_proto_msgTypes[60]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3744,7 +4543,7 @@ func (x *MlxDeviceRegistryListResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxDeviceRegistryListResponse.ProtoReflect.Descriptor instead.
 func (*MlxDeviceRegistryListResponse) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{49}
+	return file_mlx_device_proto_rawDescGZIP(), []int{60}
 }
 
 func (x *MlxDeviceRegistryListResponse) GetReply() isMlxDeviceRegistryListResponse_Reply {
@@ -3797,7 +4596,7 @@ type RegistryListing struct {
 
 func (x *RegistryListing) Reset() {
 	*x = RegistryListing{}
-	mi := &file_mlx_device_proto_msgTypes[50]
+	mi := &file_mlx_device_proto_msgTypes[61]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3809,7 +4608,7 @@ func (x *RegistryListing) String() string {
 func (*RegistryListing) ProtoMessage() {}
 
 func (x *RegistryListing) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[50]
+	mi := &file_mlx_device_proto_msgTypes[61]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3822,7 +4621,7 @@ func (x *RegistryListing) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegistryListing.ProtoReflect.Descriptor instead.
 func (*RegistryListing) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{50}
+	return file_mlx_device_proto_rawDescGZIP(), []int{61}
 }
 
 func (x *RegistryListing) GetRegistryNames() []string {
@@ -3843,7 +4642,7 @@ type MlxAdminRegistryShowRequest struct {
 
 func (x *MlxAdminRegistryShowRequest) Reset() {
 	*x = MlxAdminRegistryShowRequest{}
-	mi := &file_mlx_device_proto_msgTypes[51]
+	mi := &file_mlx_device_proto_msgTypes[62]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3855,7 +4654,7 @@ func (x *MlxAdminRegistryShowRequest) String() string {
 func (*MlxAdminRegistryShowRequest) ProtoMessage() {}
 
 func (x *MlxAdminRegistryShowRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[51]
+	mi := &file_mlx_device_proto_msgTypes[62]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3868,7 +4667,7 @@ func (x *MlxAdminRegistryShowRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxAdminRegistryShowRequest.ProtoReflect.Descriptor instead.
 func (*MlxAdminRegistryShowRequest) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{51}
+	return file_mlx_device_proto_rawDescGZIP(), []int{62}
 }
 
 func (x *MlxAdminRegistryShowRequest) GetMachineId() *MachineId {
@@ -3895,7 +4694,7 @@ type MlxAdminRegistryShowResponse struct {
 
 func (x *MlxAdminRegistryShowResponse) Reset() {
 	*x = MlxAdminRegistryShowResponse{}
-	mi := &file_mlx_device_proto_msgTypes[52]
+	mi := &file_mlx_device_proto_msgTypes[63]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3907,7 +4706,7 @@ func (x *MlxAdminRegistryShowResponse) String() string {
 func (*MlxAdminRegistryShowResponse) ProtoMessage() {}
 
 func (x *MlxAdminRegistryShowResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[52]
+	mi := &file_mlx_device_proto_msgTypes[63]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3920,7 +4719,7 @@ func (x *MlxAdminRegistryShowResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxAdminRegistryShowResponse.ProtoReflect.Descriptor instead.
 func (*MlxAdminRegistryShowResponse) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{52}
+	return file_mlx_device_proto_rawDescGZIP(), []int{63}
 }
 
 func (x *MlxAdminRegistryShowResponse) GetVariableRegistry() *MlxVariableRegistry {
@@ -3941,7 +4740,7 @@ type MlxDeviceRegistryShowRequest struct {
 
 func (x *MlxDeviceRegistryShowRequest) Reset() {
 	*x = MlxDeviceRegistryShowRequest{}
-	mi := &file_mlx_device_proto_msgTypes[53]
+	mi := &file_mlx_device_proto_msgTypes[64]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3953,7 +4752,7 @@ func (x *MlxDeviceRegistryShowRequest) String() string {
 func (*MlxDeviceRegistryShowRequest) ProtoMessage() {}
 
 func (x *MlxDeviceRegistryShowRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[53]
+	mi := &file_mlx_device_proto_msgTypes[64]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3966,7 +4765,7 @@ func (x *MlxDeviceRegistryShowRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxDeviceRegistryShowRequest.ProtoReflect.Descriptor instead.
 func (*MlxDeviceRegistryShowRequest) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{53}
+	return file_mlx_device_proto_rawDescGZIP(), []int{64}
 }
 
 func (x *MlxDeviceRegistryShowRequest) GetRegistryName() string {
@@ -3991,7 +4790,7 @@ type MlxDeviceRegistryShowResponse struct {
 
 func (x *MlxDeviceRegistryShowResponse) Reset() {
 	*x = MlxDeviceRegistryShowResponse{}
-	mi := &file_mlx_device_proto_msgTypes[54]
+	mi := &file_mlx_device_proto_msgTypes[65]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4003,7 +4802,7 @@ func (x *MlxDeviceRegistryShowResponse) String() string {
 func (*MlxDeviceRegistryShowResponse) ProtoMessage() {}
 
 func (x *MlxDeviceRegistryShowResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[54]
+	mi := &file_mlx_device_proto_msgTypes[65]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4016,7 +4815,7 @@ func (x *MlxDeviceRegistryShowResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxDeviceRegistryShowResponse.ProtoReflect.Descriptor instead.
 func (*MlxDeviceRegistryShowResponse) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{54}
+	return file_mlx_device_proto_rawDescGZIP(), []int{65}
 }
 
 func (x *MlxDeviceRegistryShowResponse) GetReply() isMlxDeviceRegistryShowResponse_Reply {
@@ -4073,7 +4872,7 @@ type MlxAdminConfigSyncRequest struct {
 
 func (x *MlxAdminConfigSyncRequest) Reset() {
 	*x = MlxAdminConfigSyncRequest{}
-	mi := &file_mlx_device_proto_msgTypes[55]
+	mi := &file_mlx_device_proto_msgTypes[66]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4085,7 +4884,7 @@ func (x *MlxAdminConfigSyncRequest) String() string {
 func (*MlxAdminConfigSyncRequest) ProtoMessage() {}
 
 func (x *MlxAdminConfigSyncRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[55]
+	mi := &file_mlx_device_proto_msgTypes[66]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4098,7 +4897,7 @@ func (x *MlxAdminConfigSyncRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxAdminConfigSyncRequest.ProtoReflect.Descriptor instead.
 func (*MlxAdminConfigSyncRequest) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{55}
+	return file_mlx_device_proto_rawDescGZIP(), []int{66}
 }
 
 func (x *MlxAdminConfigSyncRequest) GetMachineId() *MachineId {
@@ -4139,7 +4938,7 @@ type MlxAdminConfigSyncResponse struct {
 
 func (x *MlxAdminConfigSyncResponse) Reset() {
 	*x = MlxAdminConfigSyncResponse{}
-	mi := &file_mlx_device_proto_msgTypes[56]
+	mi := &file_mlx_device_proto_msgTypes[67]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4151,7 +4950,7 @@ func (x *MlxAdminConfigSyncResponse) String() string {
 func (*MlxAdminConfigSyncResponse) ProtoMessage() {}
 
 func (x *MlxAdminConfigSyncResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[56]
+	mi := &file_mlx_device_proto_msgTypes[67]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4164,7 +4963,7 @@ func (x *MlxAdminConfigSyncResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxAdminConfigSyncResponse.ProtoReflect.Descriptor instead.
 func (*MlxAdminConfigSyncResponse) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{56}
+	return file_mlx_device_proto_rawDescGZIP(), []int{67}
 }
 
 func (x *MlxAdminConfigSyncResponse) GetSyncResult() *SyncResult {
@@ -4186,7 +4985,7 @@ type MlxDeviceConfigSyncRequest struct {
 
 func (x *MlxDeviceConfigSyncRequest) Reset() {
 	*x = MlxDeviceConfigSyncRequest{}
-	mi := &file_mlx_device_proto_msgTypes[57]
+	mi := &file_mlx_device_proto_msgTypes[68]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4198,7 +4997,7 @@ func (x *MlxDeviceConfigSyncRequest) String() string {
 func (*MlxDeviceConfigSyncRequest) ProtoMessage() {}
 
 func (x *MlxDeviceConfigSyncRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[57]
+	mi := &file_mlx_device_proto_msgTypes[68]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4211,7 +5010,7 @@ func (x *MlxDeviceConfigSyncRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxDeviceConfigSyncRequest.ProtoReflect.Descriptor instead.
 func (*MlxDeviceConfigSyncRequest) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{57}
+	return file_mlx_device_proto_rawDescGZIP(), []int{68}
 }
 
 func (x *MlxDeviceConfigSyncRequest) GetDeviceId() string {
@@ -4249,7 +5048,7 @@ type MlxDeviceConfigSyncResponse struct {
 
 func (x *MlxDeviceConfigSyncResponse) Reset() {
 	*x = MlxDeviceConfigSyncResponse{}
-	mi := &file_mlx_device_proto_msgTypes[58]
+	mi := &file_mlx_device_proto_msgTypes[69]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4261,7 +5060,7 @@ func (x *MlxDeviceConfigSyncResponse) String() string {
 func (*MlxDeviceConfigSyncResponse) ProtoMessage() {}
 
 func (x *MlxDeviceConfigSyncResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[58]
+	mi := &file_mlx_device_proto_msgTypes[69]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4274,7 +5073,7 @@ func (x *MlxDeviceConfigSyncResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxDeviceConfigSyncResponse.ProtoReflect.Descriptor instead.
 func (*MlxDeviceConfigSyncResponse) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{58}
+	return file_mlx_device_proto_rawDescGZIP(), []int{69}
 }
 
 func (x *MlxDeviceConfigSyncResponse) GetReply() isMlxDeviceConfigSyncResponse_Reply {
@@ -4332,7 +5131,7 @@ type MlxAdminConfigQueryRequest struct {
 
 func (x *MlxAdminConfigQueryRequest) Reset() {
 	*x = MlxAdminConfigQueryRequest{}
-	mi := &file_mlx_device_proto_msgTypes[59]
+	mi := &file_mlx_device_proto_msgTypes[70]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4344,7 +5143,7 @@ func (x *MlxAdminConfigQueryRequest) String() string {
 func (*MlxAdminConfigQueryRequest) ProtoMessage() {}
 
 func (x *MlxAdminConfigQueryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[59]
+	mi := &file_mlx_device_proto_msgTypes[70]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4357,7 +5156,7 @@ func (x *MlxAdminConfigQueryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxAdminConfigQueryRequest.ProtoReflect.Descriptor instead.
 func (*MlxAdminConfigQueryRequest) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{59}
+	return file_mlx_device_proto_rawDescGZIP(), []int{70}
 }
 
 func (x *MlxAdminConfigQueryRequest) GetMachineId() *MachineId {
@@ -4398,7 +5197,7 @@ type MlxAdminConfigQueryResponse struct {
 
 func (x *MlxAdminConfigQueryResponse) Reset() {
 	*x = MlxAdminConfigQueryResponse{}
-	mi := &file_mlx_device_proto_msgTypes[60]
+	mi := &file_mlx_device_proto_msgTypes[71]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4410,7 +5209,7 @@ func (x *MlxAdminConfigQueryResponse) String() string {
 func (*MlxAdminConfigQueryResponse) ProtoMessage() {}
 
 func (x *MlxAdminConfigQueryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[60]
+	mi := &file_mlx_device_proto_msgTypes[71]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4423,7 +5222,7 @@ func (x *MlxAdminConfigQueryResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxAdminConfigQueryResponse.ProtoReflect.Descriptor instead.
 func (*MlxAdminConfigQueryResponse) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{60}
+	return file_mlx_device_proto_rawDescGZIP(), []int{71}
 }
 
 func (x *MlxAdminConfigQueryResponse) GetQueryResult() *QueryResult {
@@ -4446,7 +5245,7 @@ type MlxDeviceConfigQueryRequest struct {
 
 func (x *MlxDeviceConfigQueryRequest) Reset() {
 	*x = MlxDeviceConfigQueryRequest{}
-	mi := &file_mlx_device_proto_msgTypes[61]
+	mi := &file_mlx_device_proto_msgTypes[72]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4458,7 +5257,7 @@ func (x *MlxDeviceConfigQueryRequest) String() string {
 func (*MlxDeviceConfigQueryRequest) ProtoMessage() {}
 
 func (x *MlxDeviceConfigQueryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[61]
+	mi := &file_mlx_device_proto_msgTypes[72]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4471,7 +5270,7 @@ func (x *MlxDeviceConfigQueryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxDeviceConfigQueryRequest.ProtoReflect.Descriptor instead.
 func (*MlxDeviceConfigQueryRequest) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{61}
+	return file_mlx_device_proto_rawDescGZIP(), []int{72}
 }
 
 func (x *MlxDeviceConfigQueryRequest) GetDeviceId() string {
@@ -4509,7 +5308,7 @@ type MlxDeviceConfigQueryResponse struct {
 
 func (x *MlxDeviceConfigQueryResponse) Reset() {
 	*x = MlxDeviceConfigQueryResponse{}
-	mi := &file_mlx_device_proto_msgTypes[62]
+	mi := &file_mlx_device_proto_msgTypes[73]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4521,7 +5320,7 @@ func (x *MlxDeviceConfigQueryResponse) String() string {
 func (*MlxDeviceConfigQueryResponse) ProtoMessage() {}
 
 func (x *MlxDeviceConfigQueryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[62]
+	mi := &file_mlx_device_proto_msgTypes[73]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4534,7 +5333,7 @@ func (x *MlxDeviceConfigQueryResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxDeviceConfigQueryResponse.ProtoReflect.Descriptor instead.
 func (*MlxDeviceConfigQueryResponse) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{62}
+	return file_mlx_device_proto_rawDescGZIP(), []int{73}
 }
 
 func (x *MlxDeviceConfigQueryResponse) GetReply() isMlxDeviceConfigQueryResponse_Reply {
@@ -4591,7 +5390,7 @@ type MlxAdminConfigSetRequest struct {
 
 func (x *MlxAdminConfigSetRequest) Reset() {
 	*x = MlxAdminConfigSetRequest{}
-	mi := &file_mlx_device_proto_msgTypes[63]
+	mi := &file_mlx_device_proto_msgTypes[74]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4603,7 +5402,7 @@ func (x *MlxAdminConfigSetRequest) String() string {
 func (*MlxAdminConfigSetRequest) ProtoMessage() {}
 
 func (x *MlxAdminConfigSetRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[63]
+	mi := &file_mlx_device_proto_msgTypes[74]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4616,7 +5415,7 @@ func (x *MlxAdminConfigSetRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxAdminConfigSetRequest.ProtoReflect.Descriptor instead.
 func (*MlxAdminConfigSetRequest) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{63}
+	return file_mlx_device_proto_rawDescGZIP(), []int{74}
 }
 
 func (x *MlxAdminConfigSetRequest) GetMachineId() *MachineId {
@@ -4657,7 +5456,7 @@ type MlxAdminConfigSetResponse struct {
 
 func (x *MlxAdminConfigSetResponse) Reset() {
 	*x = MlxAdminConfigSetResponse{}
-	mi := &file_mlx_device_proto_msgTypes[64]
+	mi := &file_mlx_device_proto_msgTypes[75]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4669,7 +5468,7 @@ func (x *MlxAdminConfigSetResponse) String() string {
 func (*MlxAdminConfigSetResponse) ProtoMessage() {}
 
 func (x *MlxAdminConfigSetResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[64]
+	mi := &file_mlx_device_proto_msgTypes[75]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4682,7 +5481,7 @@ func (x *MlxAdminConfigSetResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxAdminConfigSetResponse.ProtoReflect.Descriptor instead.
 func (*MlxAdminConfigSetResponse) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{64}
+	return file_mlx_device_proto_rawDescGZIP(), []int{75}
 }
 
 func (x *MlxAdminConfigSetResponse) GetTotalApplied() uint32 {
@@ -4704,7 +5503,7 @@ type MlxDeviceConfigSetRequest struct {
 
 func (x *MlxDeviceConfigSetRequest) Reset() {
 	*x = MlxDeviceConfigSetRequest{}
-	mi := &file_mlx_device_proto_msgTypes[65]
+	mi := &file_mlx_device_proto_msgTypes[76]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4716,7 +5515,7 @@ func (x *MlxDeviceConfigSetRequest) String() string {
 func (*MlxDeviceConfigSetRequest) ProtoMessage() {}
 
 func (x *MlxDeviceConfigSetRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[65]
+	mi := &file_mlx_device_proto_msgTypes[76]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4729,7 +5528,7 @@ func (x *MlxDeviceConfigSetRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxDeviceConfigSetRequest.ProtoReflect.Descriptor instead.
 func (*MlxDeviceConfigSetRequest) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{65}
+	return file_mlx_device_proto_rawDescGZIP(), []int{76}
 }
 
 func (x *MlxDeviceConfigSetRequest) GetDeviceId() string {
@@ -4767,7 +5566,7 @@ type MlxDeviceConfigSetResponse struct {
 
 func (x *MlxDeviceConfigSetResponse) Reset() {
 	*x = MlxDeviceConfigSetResponse{}
-	mi := &file_mlx_device_proto_msgTypes[66]
+	mi := &file_mlx_device_proto_msgTypes[77]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4779,7 +5578,7 @@ func (x *MlxDeviceConfigSetResponse) String() string {
 func (*MlxDeviceConfigSetResponse) ProtoMessage() {}
 
 func (x *MlxDeviceConfigSetResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[66]
+	mi := &file_mlx_device_proto_msgTypes[77]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4792,7 +5591,7 @@ func (x *MlxDeviceConfigSetResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxDeviceConfigSetResponse.ProtoReflect.Descriptor instead.
 func (*MlxDeviceConfigSetResponse) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{66}
+	return file_mlx_device_proto_rawDescGZIP(), []int{77}
 }
 
 func (x *MlxDeviceConfigSetResponse) GetReply() isMlxDeviceConfigSetResponse_Reply {
@@ -4849,7 +5648,7 @@ type MlxAdminConfigCompareRequest struct {
 
 func (x *MlxAdminConfigCompareRequest) Reset() {
 	*x = MlxAdminConfigCompareRequest{}
-	mi := &file_mlx_device_proto_msgTypes[67]
+	mi := &file_mlx_device_proto_msgTypes[78]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4861,7 +5660,7 @@ func (x *MlxAdminConfigCompareRequest) String() string {
 func (*MlxAdminConfigCompareRequest) ProtoMessage() {}
 
 func (x *MlxAdminConfigCompareRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[67]
+	mi := &file_mlx_device_proto_msgTypes[78]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4874,7 +5673,7 @@ func (x *MlxAdminConfigCompareRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxAdminConfigCompareRequest.ProtoReflect.Descriptor instead.
 func (*MlxAdminConfigCompareRequest) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{67}
+	return file_mlx_device_proto_rawDescGZIP(), []int{78}
 }
 
 func (x *MlxAdminConfigCompareRequest) GetMachineId() *MachineId {
@@ -4915,7 +5714,7 @@ type MlxAdminConfigCompareResponse struct {
 
 func (x *MlxAdminConfigCompareResponse) Reset() {
 	*x = MlxAdminConfigCompareResponse{}
-	mi := &file_mlx_device_proto_msgTypes[68]
+	mi := &file_mlx_device_proto_msgTypes[79]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4927,7 +5726,7 @@ func (x *MlxAdminConfigCompareResponse) String() string {
 func (*MlxAdminConfigCompareResponse) ProtoMessage() {}
 
 func (x *MlxAdminConfigCompareResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[68]
+	mi := &file_mlx_device_proto_msgTypes[79]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4940,7 +5739,7 @@ func (x *MlxAdminConfigCompareResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxAdminConfigCompareResponse.ProtoReflect.Descriptor instead.
 func (*MlxAdminConfigCompareResponse) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{68}
+	return file_mlx_device_proto_rawDescGZIP(), []int{79}
 }
 
 func (x *MlxAdminConfigCompareResponse) GetComparisonResult() *ComparisonResult {
@@ -4962,7 +5761,7 @@ type MlxDeviceConfigCompareRequest struct {
 
 func (x *MlxDeviceConfigCompareRequest) Reset() {
 	*x = MlxDeviceConfigCompareRequest{}
-	mi := &file_mlx_device_proto_msgTypes[69]
+	mi := &file_mlx_device_proto_msgTypes[80]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4974,7 +5773,7 @@ func (x *MlxDeviceConfigCompareRequest) String() string {
 func (*MlxDeviceConfigCompareRequest) ProtoMessage() {}
 
 func (x *MlxDeviceConfigCompareRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[69]
+	mi := &file_mlx_device_proto_msgTypes[80]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4987,7 +5786,7 @@ func (x *MlxDeviceConfigCompareRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxDeviceConfigCompareRequest.ProtoReflect.Descriptor instead.
 func (*MlxDeviceConfigCompareRequest) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{69}
+	return file_mlx_device_proto_rawDescGZIP(), []int{80}
 }
 
 func (x *MlxDeviceConfigCompareRequest) GetDeviceId() string {
@@ -5025,7 +5824,7 @@ type MlxDeviceConfigCompareResponse struct {
 
 func (x *MlxDeviceConfigCompareResponse) Reset() {
 	*x = MlxDeviceConfigCompareResponse{}
-	mi := &file_mlx_device_proto_msgTypes[70]
+	mi := &file_mlx_device_proto_msgTypes[81]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5037,7 +5836,7 @@ func (x *MlxDeviceConfigCompareResponse) String() string {
 func (*MlxDeviceConfigCompareResponse) ProtoMessage() {}
 
 func (x *MlxDeviceConfigCompareResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[70]
+	mi := &file_mlx_device_proto_msgTypes[81]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5050,7 +5849,7 @@ func (x *MlxDeviceConfigCompareResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxDeviceConfigCompareResponse.ProtoReflect.Descriptor instead.
 func (*MlxDeviceConfigCompareResponse) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{70}
+	return file_mlx_device_proto_rawDescGZIP(), []int{81}
 }
 
 func (x *MlxDeviceConfigCompareResponse) GetReply() isMlxDeviceConfigCompareResponse_Reply {
@@ -5107,7 +5906,7 @@ type MlxAdminProfileShowRequest struct {
 
 func (x *MlxAdminProfileShowRequest) Reset() {
 	*x = MlxAdminProfileShowRequest{}
-	mi := &file_mlx_device_proto_msgTypes[71]
+	mi := &file_mlx_device_proto_msgTypes[82]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5119,7 +5918,7 @@ func (x *MlxAdminProfileShowRequest) String() string {
 func (*MlxAdminProfileShowRequest) ProtoMessage() {}
 
 func (x *MlxAdminProfileShowRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[71]
+	mi := &file_mlx_device_proto_msgTypes[82]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5132,7 +5931,7 @@ func (x *MlxAdminProfileShowRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxAdminProfileShowRequest.ProtoReflect.Descriptor instead.
 func (*MlxAdminProfileShowRequest) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{71}
+	return file_mlx_device_proto_rawDescGZIP(), []int{82}
 }
 
 func (x *MlxAdminProfileShowRequest) GetProfileName() string {
@@ -5155,7 +5954,7 @@ type MlxAdminProfileShowResponse struct {
 
 func (x *MlxAdminProfileShowResponse) Reset() {
 	*x = MlxAdminProfileShowResponse{}
-	mi := &file_mlx_device_proto_msgTypes[72]
+	mi := &file_mlx_device_proto_msgTypes[83]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5167,7 +5966,7 @@ func (x *MlxAdminProfileShowResponse) String() string {
 func (*MlxAdminProfileShowResponse) ProtoMessage() {}
 
 func (x *MlxAdminProfileShowResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[72]
+	mi := &file_mlx_device_proto_msgTypes[83]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5180,7 +5979,7 @@ func (x *MlxAdminProfileShowResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxAdminProfileShowResponse.ProtoReflect.Descriptor instead.
 func (*MlxAdminProfileShowResponse) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{72}
+	return file_mlx_device_proto_rawDescGZIP(), []int{83}
 }
 
 func (x *MlxAdminProfileShowResponse) GetSerializableProfile() *SerializableMlxConfigProfile {
@@ -5199,7 +5998,7 @@ type MlxAdminProfileListRequest struct {
 
 func (x *MlxAdminProfileListRequest) Reset() {
 	*x = MlxAdminProfileListRequest{}
-	mi := &file_mlx_device_proto_msgTypes[73]
+	mi := &file_mlx_device_proto_msgTypes[84]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5211,7 +6010,7 @@ func (x *MlxAdminProfileListRequest) String() string {
 func (*MlxAdminProfileListRequest) ProtoMessage() {}
 
 func (x *MlxAdminProfileListRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[73]
+	mi := &file_mlx_device_proto_msgTypes[84]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5224,7 +6023,7 @@ func (x *MlxAdminProfileListRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxAdminProfileListRequest.ProtoReflect.Descriptor instead.
 func (*MlxAdminProfileListRequest) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{73}
+	return file_mlx_device_proto_rawDescGZIP(), []int{84}
 }
 
 // MlxAdminProfileListResponse is the response with a list of profiles.
@@ -5237,7 +6036,7 @@ type MlxAdminProfileListResponse struct {
 
 func (x *MlxAdminProfileListResponse) Reset() {
 	*x = MlxAdminProfileListResponse{}
-	mi := &file_mlx_device_proto_msgTypes[74]
+	mi := &file_mlx_device_proto_msgTypes[85]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5249,7 +6048,7 @@ func (x *MlxAdminProfileListResponse) String() string {
 func (*MlxAdminProfileListResponse) ProtoMessage() {}
 
 func (x *MlxAdminProfileListResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[74]
+	mi := &file_mlx_device_proto_msgTypes[85]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5262,7 +6061,7 @@ func (x *MlxAdminProfileListResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxAdminProfileListResponse.ProtoReflect.Descriptor instead.
 func (*MlxAdminProfileListResponse) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{74}
+	return file_mlx_device_proto_rawDescGZIP(), []int{85}
 }
 
 func (x *MlxAdminProfileListResponse) GetProfiles() []*ProfileSummary {
@@ -5283,7 +6082,7 @@ type MlxAdminDeviceInfoRequest struct {
 
 func (x *MlxAdminDeviceInfoRequest) Reset() {
 	*x = MlxAdminDeviceInfoRequest{}
-	mi := &file_mlx_device_proto_msgTypes[75]
+	mi := &file_mlx_device_proto_msgTypes[86]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5295,7 +6094,7 @@ func (x *MlxAdminDeviceInfoRequest) String() string {
 func (*MlxAdminDeviceInfoRequest) ProtoMessage() {}
 
 func (x *MlxAdminDeviceInfoRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[75]
+	mi := &file_mlx_device_proto_msgTypes[86]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5308,7 +6107,7 @@ func (x *MlxAdminDeviceInfoRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxAdminDeviceInfoRequest.ProtoReflect.Descriptor instead.
 func (*MlxAdminDeviceInfoRequest) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{75}
+	return file_mlx_device_proto_rawDescGZIP(), []int{86}
 }
 
 func (x *MlxAdminDeviceInfoRequest) GetMachineId() *MachineId {
@@ -5335,7 +6134,7 @@ type MlxAdminDeviceInfoResponse struct {
 
 func (x *MlxAdminDeviceInfoResponse) Reset() {
 	*x = MlxAdminDeviceInfoResponse{}
-	mi := &file_mlx_device_proto_msgTypes[76]
+	mi := &file_mlx_device_proto_msgTypes[87]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5347,7 +6146,7 @@ func (x *MlxAdminDeviceInfoResponse) String() string {
 func (*MlxAdminDeviceInfoResponse) ProtoMessage() {}
 
 func (x *MlxAdminDeviceInfoResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[76]
+	mi := &file_mlx_device_proto_msgTypes[87]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5360,7 +6159,7 @@ func (x *MlxAdminDeviceInfoResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxAdminDeviceInfoResponse.ProtoReflect.Descriptor instead.
 func (*MlxAdminDeviceInfoResponse) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{76}
+	return file_mlx_device_proto_rawDescGZIP(), []int{87}
 }
 
 func (x *MlxAdminDeviceInfoResponse) GetDeviceInfo() *MlxDeviceInfo {
@@ -5380,7 +6179,7 @@ type MlxAdminDeviceReportRequest struct {
 
 func (x *MlxAdminDeviceReportRequest) Reset() {
 	*x = MlxAdminDeviceReportRequest{}
-	mi := &file_mlx_device_proto_msgTypes[77]
+	mi := &file_mlx_device_proto_msgTypes[88]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5392,7 +6191,7 @@ func (x *MlxAdminDeviceReportRequest) String() string {
 func (*MlxAdminDeviceReportRequest) ProtoMessage() {}
 
 func (x *MlxAdminDeviceReportRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[77]
+	mi := &file_mlx_device_proto_msgTypes[88]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5405,7 +6204,7 @@ func (x *MlxAdminDeviceReportRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxAdminDeviceReportRequest.ProtoReflect.Descriptor instead.
 func (*MlxAdminDeviceReportRequest) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{77}
+	return file_mlx_device_proto_rawDescGZIP(), []int{88}
 }
 
 func (x *MlxAdminDeviceReportRequest) GetMachineId() *MachineId {
@@ -5425,7 +6224,7 @@ type MlxAdminDeviceReportResponse struct {
 
 func (x *MlxAdminDeviceReportResponse) Reset() {
 	*x = MlxAdminDeviceReportResponse{}
-	mi := &file_mlx_device_proto_msgTypes[78]
+	mi := &file_mlx_device_proto_msgTypes[89]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5437,7 +6236,7 @@ func (x *MlxAdminDeviceReportResponse) String() string {
 func (*MlxAdminDeviceReportResponse) ProtoMessage() {}
 
 func (x *MlxAdminDeviceReportResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[78]
+	mi := &file_mlx_device_proto_msgTypes[89]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5450,7 +6249,7 @@ func (x *MlxAdminDeviceReportResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxAdminDeviceReportResponse.ProtoReflect.Descriptor instead.
 func (*MlxAdminDeviceReportResponse) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{78}
+	return file_mlx_device_proto_rawDescGZIP(), []int{89}
 }
 
 func (x *MlxAdminDeviceReportResponse) GetDeviceReport() *MlxDeviceReport {
@@ -5473,7 +6272,7 @@ type ProfileSummary struct {
 
 func (x *ProfileSummary) Reset() {
 	*x = ProfileSummary{}
-	mi := &file_mlx_device_proto_msgTypes[79]
+	mi := &file_mlx_device_proto_msgTypes[90]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5485,7 +6284,7 @@ func (x *ProfileSummary) String() string {
 func (*ProfileSummary) ProtoMessage() {}
 
 func (x *ProfileSummary) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[79]
+	mi := &file_mlx_device_proto_msgTypes[90]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5498,7 +6297,7 @@ func (x *ProfileSummary) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProfileSummary.ProtoReflect.Descriptor instead.
 func (*ProfileSummary) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{79}
+	return file_mlx_device_proto_rawDescGZIP(), []int{90}
 }
 
 func (x *ProfileSummary) GetName() string {
@@ -5542,7 +6341,7 @@ type VariableAssignment struct {
 
 func (x *VariableAssignment) Reset() {
 	*x = VariableAssignment{}
-	mi := &file_mlx_device_proto_msgTypes[80]
+	mi := &file_mlx_device_proto_msgTypes[91]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5554,7 +6353,7 @@ func (x *VariableAssignment) String() string {
 func (*VariableAssignment) ProtoMessage() {}
 
 func (x *VariableAssignment) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[80]
+	mi := &file_mlx_device_proto_msgTypes[91]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5567,7 +6366,7 @@ func (x *VariableAssignment) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VariableAssignment.ProtoReflect.Descriptor instead.
 func (*VariableAssignment) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{80}
+	return file_mlx_device_proto_rawDescGZIP(), []int{91}
 }
 
 func (x *VariableAssignment) GetVariableName() string {
@@ -5597,7 +6396,7 @@ type MlxDeviceStreamError struct {
 
 func (x *MlxDeviceStreamError) Reset() {
 	*x = MlxDeviceStreamError{}
-	mi := &file_mlx_device_proto_msgTypes[81]
+	mi := &file_mlx_device_proto_msgTypes[92]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5609,7 +6408,7 @@ func (x *MlxDeviceStreamError) String() string {
 func (*MlxDeviceStreamError) ProtoMessage() {}
 
 func (x *MlxDeviceStreamError) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[81]
+	mi := &file_mlx_device_proto_msgTypes[92]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5622,7 +6421,7 @@ func (x *MlxDeviceStreamError) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlxDeviceStreamError.ProtoReflect.Descriptor instead.
 func (*MlxDeviceStreamError) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{81}
+	return file_mlx_device_proto_rawDescGZIP(), []int{92}
 }
 
 func (x *MlxDeviceStreamError) GetStatus() MlxDeviceStreamErrorStatus {
@@ -5654,7 +6453,7 @@ type StatusReport struct {
 
 func (x *StatusReport) Reset() {
 	*x = StatusReport{}
-	mi := &file_mlx_device_proto_msgTypes[82]
+	mi := &file_mlx_device_proto_msgTypes[93]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5666,7 +6465,7 @@ func (x *StatusReport) String() string {
 func (*StatusReport) ProtoMessage() {}
 
 func (x *StatusReport) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[82]
+	mi := &file_mlx_device_proto_msgTypes[93]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5679,7 +6478,7 @@ func (x *StatusReport) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StatusReport.ProtoReflect.Descriptor instead.
 func (*StatusReport) Descriptor() ([]byte, []int) {
-	return file_mlx_device_proto_rawDescGZIP(), []int{82}
+	return file_mlx_device_proto_rawDescGZIP(), []int{93}
 }
 
 func (x *StatusReport) GetDeviceId() string {
@@ -5711,7 +6510,7 @@ type MlxVariableSpec_BooleanSpec struct {
 
 func (x *MlxVariableSpec_BooleanSpec) Reset() {
 	*x = MlxVariableSpec_BooleanSpec{}
-	mi := &file_mlx_device_proto_msgTypes[83]
+	mi := &file_mlx_device_proto_msgTypes[94]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5723,7 +6522,7 @@ func (x *MlxVariableSpec_BooleanSpec) String() string {
 func (*MlxVariableSpec_BooleanSpec) ProtoMessage() {}
 
 func (x *MlxVariableSpec_BooleanSpec) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[83]
+	mi := &file_mlx_device_proto_msgTypes[94]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5747,7 +6546,7 @@ type MlxVariableSpec_IntegerSpec struct {
 
 func (x *MlxVariableSpec_IntegerSpec) Reset() {
 	*x = MlxVariableSpec_IntegerSpec{}
-	mi := &file_mlx_device_proto_msgTypes[84]
+	mi := &file_mlx_device_proto_msgTypes[95]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5759,7 +6558,7 @@ func (x *MlxVariableSpec_IntegerSpec) String() string {
 func (*MlxVariableSpec_IntegerSpec) ProtoMessage() {}
 
 func (x *MlxVariableSpec_IntegerSpec) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[84]
+	mi := &file_mlx_device_proto_msgTypes[95]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5783,7 +6582,7 @@ type MlxVariableSpec_StringSpec struct {
 
 func (x *MlxVariableSpec_StringSpec) Reset() {
 	*x = MlxVariableSpec_StringSpec{}
-	mi := &file_mlx_device_proto_msgTypes[85]
+	mi := &file_mlx_device_proto_msgTypes[96]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5795,7 +6594,7 @@ func (x *MlxVariableSpec_StringSpec) String() string {
 func (*MlxVariableSpec_StringSpec) ProtoMessage() {}
 
 func (x *MlxVariableSpec_StringSpec) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[85]
+	mi := &file_mlx_device_proto_msgTypes[96]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5819,7 +6618,7 @@ type MlxVariableSpec_BinarySpec struct {
 
 func (x *MlxVariableSpec_BinarySpec) Reset() {
 	*x = MlxVariableSpec_BinarySpec{}
-	mi := &file_mlx_device_proto_msgTypes[86]
+	mi := &file_mlx_device_proto_msgTypes[97]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5831,7 +6630,7 @@ func (x *MlxVariableSpec_BinarySpec) String() string {
 func (*MlxVariableSpec_BinarySpec) ProtoMessage() {}
 
 func (x *MlxVariableSpec_BinarySpec) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[86]
+	mi := &file_mlx_device_proto_msgTypes[97]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5855,7 +6654,7 @@ type MlxVariableSpec_BytesSpec struct {
 
 func (x *MlxVariableSpec_BytesSpec) Reset() {
 	*x = MlxVariableSpec_BytesSpec{}
-	mi := &file_mlx_device_proto_msgTypes[87]
+	mi := &file_mlx_device_proto_msgTypes[98]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5867,7 +6666,7 @@ func (x *MlxVariableSpec_BytesSpec) String() string {
 func (*MlxVariableSpec_BytesSpec) ProtoMessage() {}
 
 func (x *MlxVariableSpec_BytesSpec) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[87]
+	mi := &file_mlx_device_proto_msgTypes[98]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5891,7 +6690,7 @@ type MlxVariableSpec_ArraySpec struct {
 
 func (x *MlxVariableSpec_ArraySpec) Reset() {
 	*x = MlxVariableSpec_ArraySpec{}
-	mi := &file_mlx_device_proto_msgTypes[88]
+	mi := &file_mlx_device_proto_msgTypes[99]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5903,7 +6702,7 @@ func (x *MlxVariableSpec_ArraySpec) String() string {
 func (*MlxVariableSpec_ArraySpec) ProtoMessage() {}
 
 func (x *MlxVariableSpec_ArraySpec) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[88]
+	mi := &file_mlx_device_proto_msgTypes[99]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5927,7 +6726,7 @@ type MlxVariableSpec_OpaqueSpec struct {
 
 func (x *MlxVariableSpec_OpaqueSpec) Reset() {
 	*x = MlxVariableSpec_OpaqueSpec{}
-	mi := &file_mlx_device_proto_msgTypes[89]
+	mi := &file_mlx_device_proto_msgTypes[100]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5939,7 +6738,7 @@ func (x *MlxVariableSpec_OpaqueSpec) String() string {
 func (*MlxVariableSpec_OpaqueSpec) ProtoMessage() {}
 
 func (x *MlxVariableSpec_OpaqueSpec) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[89]
+	mi := &file_mlx_device_proto_msgTypes[100]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5964,7 +6763,7 @@ type MlxVariableSpec_EnumSpec struct {
 
 func (x *MlxVariableSpec_EnumSpec) Reset() {
 	*x = MlxVariableSpec_EnumSpec{}
-	mi := &file_mlx_device_proto_msgTypes[90]
+	mi := &file_mlx_device_proto_msgTypes[101]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5976,7 +6775,7 @@ func (x *MlxVariableSpec_EnumSpec) String() string {
 func (*MlxVariableSpec_EnumSpec) ProtoMessage() {}
 
 func (x *MlxVariableSpec_EnumSpec) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[90]
+	mi := &file_mlx_device_proto_msgTypes[101]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6008,7 +6807,7 @@ type MlxVariableSpec_PresetSpec struct {
 
 func (x *MlxVariableSpec_PresetSpec) Reset() {
 	*x = MlxVariableSpec_PresetSpec{}
-	mi := &file_mlx_device_proto_msgTypes[91]
+	mi := &file_mlx_device_proto_msgTypes[102]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6020,7 +6819,7 @@ func (x *MlxVariableSpec_PresetSpec) String() string {
 func (*MlxVariableSpec_PresetSpec) ProtoMessage() {}
 
 func (x *MlxVariableSpec_PresetSpec) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[91]
+	mi := &file_mlx_device_proto_msgTypes[102]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6052,7 +6851,7 @@ type MlxVariableSpec_BooleanArraySpec struct {
 
 func (x *MlxVariableSpec_BooleanArraySpec) Reset() {
 	*x = MlxVariableSpec_BooleanArraySpec{}
-	mi := &file_mlx_device_proto_msgTypes[92]
+	mi := &file_mlx_device_proto_msgTypes[103]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6064,7 +6863,7 @@ func (x *MlxVariableSpec_BooleanArraySpec) String() string {
 func (*MlxVariableSpec_BooleanArraySpec) ProtoMessage() {}
 
 func (x *MlxVariableSpec_BooleanArraySpec) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[92]
+	mi := &file_mlx_device_proto_msgTypes[103]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6096,7 +6895,7 @@ type MlxVariableSpec_IntegerArraySpec struct {
 
 func (x *MlxVariableSpec_IntegerArraySpec) Reset() {
 	*x = MlxVariableSpec_IntegerArraySpec{}
-	mi := &file_mlx_device_proto_msgTypes[93]
+	mi := &file_mlx_device_proto_msgTypes[104]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6108,7 +6907,7 @@ func (x *MlxVariableSpec_IntegerArraySpec) String() string {
 func (*MlxVariableSpec_IntegerArraySpec) ProtoMessage() {}
 
 func (x *MlxVariableSpec_IntegerArraySpec) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[93]
+	mi := &file_mlx_device_proto_msgTypes[104]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6141,7 +6940,7 @@ type MlxVariableSpec_EnumArraySpec struct {
 
 func (x *MlxVariableSpec_EnumArraySpec) Reset() {
 	*x = MlxVariableSpec_EnumArraySpec{}
-	mi := &file_mlx_device_proto_msgTypes[94]
+	mi := &file_mlx_device_proto_msgTypes[105]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6153,7 +6952,7 @@ func (x *MlxVariableSpec_EnumArraySpec) String() string {
 func (*MlxVariableSpec_EnumArraySpec) ProtoMessage() {}
 
 func (x *MlxVariableSpec_EnumArraySpec) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[94]
+	mi := &file_mlx_device_proto_msgTypes[105]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6192,7 +6991,7 @@ type MlxVariableSpec_BinaryArraySpec struct {
 
 func (x *MlxVariableSpec_BinaryArraySpec) Reset() {
 	*x = MlxVariableSpec_BinaryArraySpec{}
-	mi := &file_mlx_device_proto_msgTypes[95]
+	mi := &file_mlx_device_proto_msgTypes[106]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6204,7 +7003,7 @@ func (x *MlxVariableSpec_BinaryArraySpec) String() string {
 func (*MlxVariableSpec_BinaryArraySpec) ProtoMessage() {}
 
 func (x *MlxVariableSpec_BinaryArraySpec) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[95]
+	mi := &file_mlx_device_proto_msgTypes[106]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6236,7 +7035,7 @@ type MlxValueType_StringArray struct {
 
 func (x *MlxValueType_StringArray) Reset() {
 	*x = MlxValueType_StringArray{}
-	mi := &file_mlx_device_proto_msgTypes[96]
+	mi := &file_mlx_device_proto_msgTypes[107]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6248,7 +7047,7 @@ func (x *MlxValueType_StringArray) String() string {
 func (*MlxValueType_StringArray) ProtoMessage() {}
 
 func (x *MlxValueType_StringArray) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[96]
+	mi := &file_mlx_device_proto_msgTypes[107]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6280,7 +7079,7 @@ type MlxValueType_BooleanArray struct {
 
 func (x *MlxValueType_BooleanArray) Reset() {
 	*x = MlxValueType_BooleanArray{}
-	mi := &file_mlx_device_proto_msgTypes[97]
+	mi := &file_mlx_device_proto_msgTypes[108]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6292,7 +7091,7 @@ func (x *MlxValueType_BooleanArray) String() string {
 func (*MlxValueType_BooleanArray) ProtoMessage() {}
 
 func (x *MlxValueType_BooleanArray) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[97]
+	mi := &file_mlx_device_proto_msgTypes[108]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6324,7 +7123,7 @@ type MlxValueType_IntegerArray struct {
 
 func (x *MlxValueType_IntegerArray) Reset() {
 	*x = MlxValueType_IntegerArray{}
-	mi := &file_mlx_device_proto_msgTypes[98]
+	mi := &file_mlx_device_proto_msgTypes[109]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6336,7 +7135,7 @@ func (x *MlxValueType_IntegerArray) String() string {
 func (*MlxValueType_IntegerArray) ProtoMessage() {}
 
 func (x *MlxValueType_IntegerArray) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[98]
+	mi := &file_mlx_device_proto_msgTypes[109]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6368,7 +7167,7 @@ type MlxValueType_BytesArray struct {
 
 func (x *MlxValueType_BytesArray) Reset() {
 	*x = MlxValueType_BytesArray{}
-	mi := &file_mlx_device_proto_msgTypes[99]
+	mi := &file_mlx_device_proto_msgTypes[110]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6380,7 +7179,7 @@ func (x *MlxValueType_BytesArray) String() string {
 func (*MlxValueType_BytesArray) ProtoMessage() {}
 
 func (x *MlxValueType_BytesArray) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[99]
+	mi := &file_mlx_device_proto_msgTypes[110]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6413,7 +7212,7 @@ type MlxValueType_OptionalBool struct {
 
 func (x *MlxValueType_OptionalBool) Reset() {
 	*x = MlxValueType_OptionalBool{}
-	mi := &file_mlx_device_proto_msgTypes[100]
+	mi := &file_mlx_device_proto_msgTypes[111]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6425,7 +7224,7 @@ func (x *MlxValueType_OptionalBool) String() string {
 func (*MlxValueType_OptionalBool) ProtoMessage() {}
 
 func (x *MlxValueType_OptionalBool) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[100]
+	mi := &file_mlx_device_proto_msgTypes[111]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6465,7 +7264,7 @@ type MlxValueType_OptionalInt64 struct {
 
 func (x *MlxValueType_OptionalInt64) Reset() {
 	*x = MlxValueType_OptionalInt64{}
-	mi := &file_mlx_device_proto_msgTypes[101]
+	mi := &file_mlx_device_proto_msgTypes[112]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6477,7 +7276,7 @@ func (x *MlxValueType_OptionalInt64) String() string {
 func (*MlxValueType_OptionalInt64) ProtoMessage() {}
 
 func (x *MlxValueType_OptionalInt64) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[101]
+	mi := &file_mlx_device_proto_msgTypes[112]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6517,7 +7316,7 @@ type MlxValueType_OptionalString struct {
 
 func (x *MlxValueType_OptionalString) Reset() {
 	*x = MlxValueType_OptionalString{}
-	mi := &file_mlx_device_proto_msgTypes[102]
+	mi := &file_mlx_device_proto_msgTypes[113]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6529,7 +7328,7 @@ func (x *MlxValueType_OptionalString) String() string {
 func (*MlxValueType_OptionalString) ProtoMessage() {}
 
 func (x *MlxValueType_OptionalString) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[102]
+	mi := &file_mlx_device_proto_msgTypes[113]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6569,7 +7368,7 @@ type MlxValueType_OptionalBytes struct {
 
 func (x *MlxValueType_OptionalBytes) Reset() {
 	*x = MlxValueType_OptionalBytes{}
-	mi := &file_mlx_device_proto_msgTypes[103]
+	mi := &file_mlx_device_proto_msgTypes[114]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6581,7 +7380,7 @@ func (x *MlxValueType_OptionalBytes) String() string {
 func (*MlxValueType_OptionalBytes) ProtoMessage() {}
 
 func (x *MlxValueType_OptionalBytes) ProtoReflect() protoreflect.Message {
-	mi := &file_mlx_device_proto_msgTypes[103]
+	mi := &file_mlx_device_proto_msgTypes[114]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6805,22 +7604,88 @@ const file_mlx_device_proto_rawDesc = "" +
 	"\vConfigEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\x0e\n" +
-	"\f_description\"\xc2\x01\n" +
+	"\f_description\"\xe7\x02\n" +
+	"\x13FirmwareCredentials\x12G\n" +
+	"\fbearer_token\x18\x01 \x01(\v2\".mlx_device.BearerTokenCredentialsH\x00R\vbearerToken\x12A\n" +
+	"\n" +
+	"basic_auth\x18\x02 \x01(\v2 .mlx_device.BasicAuthCredentialsH\x00R\tbasicAuth\x127\n" +
+	"\x06header\x18\x03 \x01(\v2\x1d.mlx_device.HeaderCredentialsH\x00R\x06header\x128\n" +
+	"\assh_key\x18\x04 \x01(\v2\x1d.mlx_device.SshKeyCredentialsH\x00R\x06sshKey\x12>\n" +
+	"\tssh_agent\x18\x05 \x01(\v2\x1f.mlx_device.SshAgentCredentialsH\x00R\bsshAgentB\x11\n" +
+	"\x0fcredential_type\".\n" +
+	"\x16BearerTokenCredentials\x12\x14\n" +
+	"\x05token\x18\x01 \x01(\tR\x05token\"N\n" +
+	"\x14BasicAuthCredentials\x12\x1a\n" +
+	"\busername\x18\x01 \x01(\tR\busername\x12\x1a\n" +
+	"\bpassword\x18\x02 \x01(\tR\bpassword\"=\n" +
+	"\x11HeaderCredentials\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value\"[\n" +
+	"\x11SshKeyCredentials\x12\x12\n" +
+	"\x04path\x18\x01 \x01(\tR\x04path\x12#\n" +
+	"\n" +
+	"passphrase\x18\x02 \x01(\tH\x00R\n" +
+	"passphrase\x88\x01\x01B\r\n" +
+	"\v_passphrase\"\x15\n" +
+	"\x13SshAgentCredentials\"]\n" +
+	"\fFirmwareSpec\x12\x1f\n" +
+	"\vpart_number\x18\x01 \x01(\tR\n" +
+	"partNumber\x12\x12\n" +
+	"\x04psid\x18\x02 \x01(\tR\x04psid\x12\x18\n" +
+	"\aversion\x18\x03 \x01(\tR\aversion\"\xb7\x03\n" +
+	"\tFlashSpec\x12!\n" +
+	"\ffirmware_url\x18\x01 \x01(\tR\vfirmwareUrl\x12W\n" +
+	"\x14firmware_credentials\x18\x02 \x01(\v2\x1f.mlx_device.FirmwareCredentialsH\x00R\x13firmwareCredentials\x88\x01\x01\x12+\n" +
+	"\x0fdevice_conf_url\x18\x03 \x01(\tH\x01R\rdeviceConfUrl\x88\x01\x01\x12\\\n" +
+	"\x17device_conf_credentials\x18\x04 \x01(\v2\x1f.mlx_device.FirmwareCredentialsH\x02R\x15deviceConfCredentials\x88\x01\x01\x12*\n" +
+	"\x11verify_from_cache\x18\x05 \x01(\bR\x0fverifyFromCache\x12 \n" +
+	"\tcache_dir\x18\x06 \x01(\tH\x03R\bcacheDir\x88\x01\x01B\x17\n" +
+	"\x15_firmware_credentialsB\x12\n" +
+	"\x10_device_conf_urlB\x1a\n" +
+	"\x18_device_conf_credentialsB\f\n" +
+	"\n" +
+	"_cache_dir\"\x8f\x01\n" +
+	"\fFlashOptions\x12!\n" +
+	"\fverify_image\x18\x01 \x01(\bR\vverifyImage\x12%\n" +
+	"\x0everify_version\x18\x02 \x01(\bR\rverifyVersion\x12\x14\n" +
+	"\x05reset\x18\x03 \x01(\bR\x05reset\x12\x1f\n" +
+	"\vreset_level\x18\x04 \x01(\rR\n" +
+	"resetLevel\"\xe3\x01\n" +
+	"\x16FirmwareFlasherProfile\x12=\n" +
+	"\rfirmware_spec\x18\x01 \x01(\v2\x18.mlx_device.FirmwareSpecR\ffirmwareSpec\x124\n" +
+	"\n" +
+	"flash_spec\x18\x02 \x01(\v2\x15.mlx_device.FlashSpecR\tflashSpec\x12B\n" +
+	"\rflash_options\x18\x03 \x01(\v2\x18.mlx_device.FlashOptionsH\x00R\fflashOptions\x88\x01\x01B\x10\n" +
+	"\x0e_flash_options\"\xc2\x01\n" +
 	"\x14MlxObservationReport\x120\n" +
 	"\n" +
 	"machine_id\x18\x01 \x01(\v2\x11.common.MachineIdR\tmachineId\x128\n" +
 	"\ttimestamp\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12>\n" +
-	"\fobservations\x18\x03 \x03(\v2\x1a.mlx_device.MlxObservationR\fobservations\"\x92\x02\n" +
+	"\fobservations\x18\x03 \x03(\v2\x1a.mlx_device.MlxObservationR\fobservations\"\xe2\x02\n" +
+	"\x13FirmwareFlashReport\x12\x18\n" +
+	"\aflashed\x18\x01 \x01(\bR\aflashed\x12\x19\n" +
+	"\x05reset\x18\x02 \x01(\bH\x00R\x05reset\x88\x01\x01\x12*\n" +
+	"\x0everified_image\x18\x03 \x01(\bH\x01R\rverifiedImage\x88\x01\x01\x12.\n" +
+	"\x10verified_version\x18\x04 \x01(\bH\x02R\x0fverifiedVersion\x88\x01\x01\x12.\n" +
+	"\x10observed_version\x18\x05 \x01(\tH\x03R\x0fobservedVersion\x88\x01\x01\x12.\n" +
+	"\x10expected_version\x18\x06 \x01(\tH\x04R\x0fexpectedVersion\x88\x01\x01B\b\n" +
+	"\x06_resetB\x11\n" +
+	"\x0f_verified_imageB\x13\n" +
+	"\x11_verified_versionB\x13\n" +
+	"\x11_observed_versionB\x13\n" +
+	"\x11_expected_version\"\xf5\x02\n" +
 	"\x0eMlxObservation\x12:\n" +
 	"\vdevice_info\x18\x01 \x01(\v2\x19.mlx_device.MlxDeviceInfoR\n" +
 	"deviceInfo\x12<\n" +
 	"\vlock_status\x18\x02 \x01(\x0e2\x16.mlx_device.LockStatusH\x00R\n" +
 	"lockStatus\x88\x01\x01\x12&\n" +
 	"\fprofile_name\x18\x03 \x01(\tH\x01R\vprofileName\x88\x01\x01\x12*\n" +
-	"\x0eprofile_synced\x18\x04 \x01(\bH\x02R\rprofileSynced\x88\x01\x01B\x0e\n" +
+	"\x0eprofile_synced\x18\x04 \x01(\bH\x02R\rprofileSynced\x88\x01\x01\x12M\n" +
+	"\x0ffirmware_report\x18\x05 \x01(\v2\x1f.mlx_device.FirmwareFlashReportH\x03R\x0efirmwareReport\x88\x01\x01B\x0e\n" +
 	"\f_lock_statusB\x0f\n" +
 	"\r_profile_nameB\x11\n" +
-	"\x0f_profile_synced\"^\n" +
+	"\x0f_profile_syncedB\x12\n" +
+	"\x10_firmware_report\"^\n" +
 	"\"PublishMlxObservationReportRequest\x128\n" +
 	"\x06report\x18\x01 \x01(\v2 .mlx_device.MlxObservationReportR\x06report\"%\n" +
 	"#PublishMlxObservationReportResponse\"\x8e\x01\n" +
@@ -7062,7 +7927,7 @@ func file_mlx_device_proto_rawDescGZIP() []byte {
 }
 
 var file_mlx_device_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
-var file_mlx_device_proto_msgTypes = make([]protoimpl.MessageInfo, 105)
+var file_mlx_device_proto_msgTypes = make([]protoimpl.MessageInfo, 116)
 var file_mlx_device_proto_goTypes = []any{
 	(DeviceField)(0),                            // 0: mlx_device.DeviceField
 	(MatchMode)(0),                              // 1: mlx_device.MatchMode
@@ -7088,116 +7953,127 @@ var file_mlx_device_proto_goTypes = []any{
 	(*PublishMlxDeviceReportRequest)(nil),       // 21: mlx_device.PublishMlxDeviceReportRequest
 	(*PublishMlxDeviceReportResponse)(nil),      // 22: mlx_device.PublishMlxDeviceReportResponse
 	(*SerializableMlxConfigProfile)(nil),        // 23: mlx_device.SerializableMlxConfigProfile
-	(*MlxObservationReport)(nil),                // 24: mlx_device.MlxObservationReport
-	(*MlxObservation)(nil),                      // 25: mlx_device.MlxObservation
-	(*PublishMlxObservationReportRequest)(nil),  // 26: mlx_device.PublishMlxObservationReportRequest
-	(*PublishMlxObservationReportResponse)(nil), // 27: mlx_device.PublishMlxObservationReportResponse
-	(*MlxAdminProfileSyncRequest)(nil),          // 28: mlx_device.MlxAdminProfileSyncRequest
-	(*MlxAdminProfileSyncResponse)(nil),         // 29: mlx_device.MlxAdminProfileSyncResponse
-	(*MlxDeviceProfileSyncRequest)(nil),         // 30: mlx_device.MlxDeviceProfileSyncRequest
-	(*MlxDeviceProfileSyncResponse)(nil),        // 31: mlx_device.MlxDeviceProfileSyncResponse
-	(*MlxAdminProfileCompareRequest)(nil),       // 32: mlx_device.MlxAdminProfileCompareRequest
-	(*MlxAdminProfileCompareResponse)(nil),      // 33: mlx_device.MlxAdminProfileCompareResponse
-	(*MlxDeviceProfileCompareRequest)(nil),      // 34: mlx_device.MlxDeviceProfileCompareRequest
-	(*MlxDeviceProfileCompareResponse)(nil),     // 35: mlx_device.MlxDeviceProfileCompareResponse
-	(*MlxAdminLockdownLockRequest)(nil),         // 36: mlx_device.MlxAdminLockdownLockRequest
-	(*MlxAdminLockdownLockResponse)(nil),        // 37: mlx_device.MlxAdminLockdownLockResponse
-	(*MlxAdminLockdownUnlockRequest)(nil),       // 38: mlx_device.MlxAdminLockdownUnlockRequest
-	(*MlxAdminLockdownUnlockResponse)(nil),      // 39: mlx_device.MlxAdminLockdownUnlockResponse
-	(*MlxAdminLockdownStatusRequest)(nil),       // 40: mlx_device.MlxAdminLockdownStatusRequest
-	(*MlxAdminLockdownStatusResponse)(nil),      // 41: mlx_device.MlxAdminLockdownStatusResponse
-	(*MlxDeviceLockdownLockRequest)(nil),        // 42: mlx_device.MlxDeviceLockdownLockRequest
-	(*MlxDeviceLockdownUnlockRequest)(nil),      // 43: mlx_device.MlxDeviceLockdownUnlockRequest
-	(*MlxDeviceLockdownStatusRequest)(nil),      // 44: mlx_device.MlxDeviceLockdownStatusRequest
-	(*MlxDeviceLockdownResponse)(nil),           // 45: mlx_device.MlxDeviceLockdownResponse
-	(*MlxDeviceInfoDeviceRequest)(nil),          // 46: mlx_device.MlxDeviceInfoDeviceRequest
-	(*MlxDeviceInfoDeviceResponse)(nil),         // 47: mlx_device.MlxDeviceInfoDeviceResponse
-	(*MlxDeviceInfoReportRequest)(nil),          // 48: mlx_device.MlxDeviceInfoReportRequest
-	(*MlxDeviceInfoReportResponse)(nil),         // 49: mlx_device.MlxDeviceInfoReportResponse
-	(*MlxAdminRegistryListRequest)(nil),         // 50: mlx_device.MlxAdminRegistryListRequest
-	(*MlxAdminRegistryListResponse)(nil),        // 51: mlx_device.MlxAdminRegistryListResponse
-	(*MlxDeviceRegistryListRequest)(nil),        // 52: mlx_device.MlxDeviceRegistryListRequest
-	(*MlxDeviceRegistryListResponse)(nil),       // 53: mlx_device.MlxDeviceRegistryListResponse
-	(*RegistryListing)(nil),                     // 54: mlx_device.RegistryListing
-	(*MlxAdminRegistryShowRequest)(nil),         // 55: mlx_device.MlxAdminRegistryShowRequest
-	(*MlxAdminRegistryShowResponse)(nil),        // 56: mlx_device.MlxAdminRegistryShowResponse
-	(*MlxDeviceRegistryShowRequest)(nil),        // 57: mlx_device.MlxDeviceRegistryShowRequest
-	(*MlxDeviceRegistryShowResponse)(nil),       // 58: mlx_device.MlxDeviceRegistryShowResponse
-	(*MlxAdminConfigSyncRequest)(nil),           // 59: mlx_device.MlxAdminConfigSyncRequest
-	(*MlxAdminConfigSyncResponse)(nil),          // 60: mlx_device.MlxAdminConfigSyncResponse
-	(*MlxDeviceConfigSyncRequest)(nil),          // 61: mlx_device.MlxDeviceConfigSyncRequest
-	(*MlxDeviceConfigSyncResponse)(nil),         // 62: mlx_device.MlxDeviceConfigSyncResponse
-	(*MlxAdminConfigQueryRequest)(nil),          // 63: mlx_device.MlxAdminConfigQueryRequest
-	(*MlxAdminConfigQueryResponse)(nil),         // 64: mlx_device.MlxAdminConfigQueryResponse
-	(*MlxDeviceConfigQueryRequest)(nil),         // 65: mlx_device.MlxDeviceConfigQueryRequest
-	(*MlxDeviceConfigQueryResponse)(nil),        // 66: mlx_device.MlxDeviceConfigQueryResponse
-	(*MlxAdminConfigSetRequest)(nil),            // 67: mlx_device.MlxAdminConfigSetRequest
-	(*MlxAdminConfigSetResponse)(nil),           // 68: mlx_device.MlxAdminConfigSetResponse
-	(*MlxDeviceConfigSetRequest)(nil),           // 69: mlx_device.MlxDeviceConfigSetRequest
-	(*MlxDeviceConfigSetResponse)(nil),          // 70: mlx_device.MlxDeviceConfigSetResponse
-	(*MlxAdminConfigCompareRequest)(nil),        // 71: mlx_device.MlxAdminConfigCompareRequest
-	(*MlxAdminConfigCompareResponse)(nil),       // 72: mlx_device.MlxAdminConfigCompareResponse
-	(*MlxDeviceConfigCompareRequest)(nil),       // 73: mlx_device.MlxDeviceConfigCompareRequest
-	(*MlxDeviceConfigCompareResponse)(nil),      // 74: mlx_device.MlxDeviceConfigCompareResponse
-	(*MlxAdminProfileShowRequest)(nil),          // 75: mlx_device.MlxAdminProfileShowRequest
-	(*MlxAdminProfileShowResponse)(nil),         // 76: mlx_device.MlxAdminProfileShowResponse
-	(*MlxAdminProfileListRequest)(nil),          // 77: mlx_device.MlxAdminProfileListRequest
-	(*MlxAdminProfileListResponse)(nil),         // 78: mlx_device.MlxAdminProfileListResponse
-	(*MlxAdminDeviceInfoRequest)(nil),           // 79: mlx_device.MlxAdminDeviceInfoRequest
-	(*MlxAdminDeviceInfoResponse)(nil),          // 80: mlx_device.MlxAdminDeviceInfoResponse
-	(*MlxAdminDeviceReportRequest)(nil),         // 81: mlx_device.MlxAdminDeviceReportRequest
-	(*MlxAdminDeviceReportResponse)(nil),        // 82: mlx_device.MlxAdminDeviceReportResponse
-	(*ProfileSummary)(nil),                      // 83: mlx_device.ProfileSummary
-	(*VariableAssignment)(nil),                  // 84: mlx_device.VariableAssignment
-	(*MlxDeviceStreamError)(nil),                // 85: mlx_device.MlxDeviceStreamError
-	(*StatusReport)(nil),                        // 86: mlx_device.StatusReport
-	(*MlxVariableSpec_BooleanSpec)(nil),         // 87: mlx_device.MlxVariableSpec.BooleanSpec
-	(*MlxVariableSpec_IntegerSpec)(nil),         // 88: mlx_device.MlxVariableSpec.IntegerSpec
-	(*MlxVariableSpec_StringSpec)(nil),          // 89: mlx_device.MlxVariableSpec.StringSpec
-	(*MlxVariableSpec_BinarySpec)(nil),          // 90: mlx_device.MlxVariableSpec.BinarySpec
-	(*MlxVariableSpec_BytesSpec)(nil),           // 91: mlx_device.MlxVariableSpec.BytesSpec
-	(*MlxVariableSpec_ArraySpec)(nil),           // 92: mlx_device.MlxVariableSpec.ArraySpec
-	(*MlxVariableSpec_OpaqueSpec)(nil),          // 93: mlx_device.MlxVariableSpec.OpaqueSpec
-	(*MlxVariableSpec_EnumSpec)(nil),            // 94: mlx_device.MlxVariableSpec.EnumSpec
-	(*MlxVariableSpec_PresetSpec)(nil),          // 95: mlx_device.MlxVariableSpec.PresetSpec
-	(*MlxVariableSpec_BooleanArraySpec)(nil),    // 96: mlx_device.MlxVariableSpec.BooleanArraySpec
-	(*MlxVariableSpec_IntegerArraySpec)(nil),    // 97: mlx_device.MlxVariableSpec.IntegerArraySpec
-	(*MlxVariableSpec_EnumArraySpec)(nil),       // 98: mlx_device.MlxVariableSpec.EnumArraySpec
-	(*MlxVariableSpec_BinaryArraySpec)(nil),     // 99: mlx_device.MlxVariableSpec.BinaryArraySpec
-	(*MlxValueType_StringArray)(nil),            // 100: mlx_device.MlxValueType.StringArray
-	(*MlxValueType_BooleanArray)(nil),           // 101: mlx_device.MlxValueType.BooleanArray
-	(*MlxValueType_IntegerArray)(nil),           // 102: mlx_device.MlxValueType.IntegerArray
-	(*MlxValueType_BytesArray)(nil),             // 103: mlx_device.MlxValueType.BytesArray
-	(*MlxValueType_OptionalBool)(nil),           // 104: mlx_device.MlxValueType.OptionalBool
-	(*MlxValueType_OptionalInt64)(nil),          // 105: mlx_device.MlxValueType.OptionalInt64
-	(*MlxValueType_OptionalString)(nil),         // 106: mlx_device.MlxValueType.OptionalString
-	(*MlxValueType_OptionalBytes)(nil),          // 107: mlx_device.MlxValueType.OptionalBytes
-	nil,                                         // 108: mlx_device.SerializableMlxConfigProfile.ConfigEntry
-	(*timestamppb.Timestamp)(nil),               // 109: google.protobuf.Timestamp
-	(*MachineId)(nil),                           // 110: common.MachineId
+	(*FirmwareCredentials)(nil),                 // 24: mlx_device.FirmwareCredentials
+	(*BearerTokenCredentials)(nil),              // 25: mlx_device.BearerTokenCredentials
+	(*BasicAuthCredentials)(nil),                // 26: mlx_device.BasicAuthCredentials
+	(*HeaderCredentials)(nil),                   // 27: mlx_device.HeaderCredentials
+	(*SshKeyCredentials)(nil),                   // 28: mlx_device.SshKeyCredentials
+	(*SshAgentCredentials)(nil),                 // 29: mlx_device.SshAgentCredentials
+	(*FirmwareSpec)(nil),                        // 30: mlx_device.FirmwareSpec
+	(*FlashSpec)(nil),                           // 31: mlx_device.FlashSpec
+	(*FlashOptions)(nil),                        // 32: mlx_device.FlashOptions
+	(*FirmwareFlasherProfile)(nil),              // 33: mlx_device.FirmwareFlasherProfile
+	(*MlxObservationReport)(nil),                // 34: mlx_device.MlxObservationReport
+	(*FirmwareFlashReport)(nil),                 // 35: mlx_device.FirmwareFlashReport
+	(*MlxObservation)(nil),                      // 36: mlx_device.MlxObservation
+	(*PublishMlxObservationReportRequest)(nil),  // 37: mlx_device.PublishMlxObservationReportRequest
+	(*PublishMlxObservationReportResponse)(nil), // 38: mlx_device.PublishMlxObservationReportResponse
+	(*MlxAdminProfileSyncRequest)(nil),          // 39: mlx_device.MlxAdminProfileSyncRequest
+	(*MlxAdminProfileSyncResponse)(nil),         // 40: mlx_device.MlxAdminProfileSyncResponse
+	(*MlxDeviceProfileSyncRequest)(nil),         // 41: mlx_device.MlxDeviceProfileSyncRequest
+	(*MlxDeviceProfileSyncResponse)(nil),        // 42: mlx_device.MlxDeviceProfileSyncResponse
+	(*MlxAdminProfileCompareRequest)(nil),       // 43: mlx_device.MlxAdminProfileCompareRequest
+	(*MlxAdminProfileCompareResponse)(nil),      // 44: mlx_device.MlxAdminProfileCompareResponse
+	(*MlxDeviceProfileCompareRequest)(nil),      // 45: mlx_device.MlxDeviceProfileCompareRequest
+	(*MlxDeviceProfileCompareResponse)(nil),     // 46: mlx_device.MlxDeviceProfileCompareResponse
+	(*MlxAdminLockdownLockRequest)(nil),         // 47: mlx_device.MlxAdminLockdownLockRequest
+	(*MlxAdminLockdownLockResponse)(nil),        // 48: mlx_device.MlxAdminLockdownLockResponse
+	(*MlxAdminLockdownUnlockRequest)(nil),       // 49: mlx_device.MlxAdminLockdownUnlockRequest
+	(*MlxAdminLockdownUnlockResponse)(nil),      // 50: mlx_device.MlxAdminLockdownUnlockResponse
+	(*MlxAdminLockdownStatusRequest)(nil),       // 51: mlx_device.MlxAdminLockdownStatusRequest
+	(*MlxAdminLockdownStatusResponse)(nil),      // 52: mlx_device.MlxAdminLockdownStatusResponse
+	(*MlxDeviceLockdownLockRequest)(nil),        // 53: mlx_device.MlxDeviceLockdownLockRequest
+	(*MlxDeviceLockdownUnlockRequest)(nil),      // 54: mlx_device.MlxDeviceLockdownUnlockRequest
+	(*MlxDeviceLockdownStatusRequest)(nil),      // 55: mlx_device.MlxDeviceLockdownStatusRequest
+	(*MlxDeviceLockdownResponse)(nil),           // 56: mlx_device.MlxDeviceLockdownResponse
+	(*MlxDeviceInfoDeviceRequest)(nil),          // 57: mlx_device.MlxDeviceInfoDeviceRequest
+	(*MlxDeviceInfoDeviceResponse)(nil),         // 58: mlx_device.MlxDeviceInfoDeviceResponse
+	(*MlxDeviceInfoReportRequest)(nil),          // 59: mlx_device.MlxDeviceInfoReportRequest
+	(*MlxDeviceInfoReportResponse)(nil),         // 60: mlx_device.MlxDeviceInfoReportResponse
+	(*MlxAdminRegistryListRequest)(nil),         // 61: mlx_device.MlxAdminRegistryListRequest
+	(*MlxAdminRegistryListResponse)(nil),        // 62: mlx_device.MlxAdminRegistryListResponse
+	(*MlxDeviceRegistryListRequest)(nil),        // 63: mlx_device.MlxDeviceRegistryListRequest
+	(*MlxDeviceRegistryListResponse)(nil),       // 64: mlx_device.MlxDeviceRegistryListResponse
+	(*RegistryListing)(nil),                     // 65: mlx_device.RegistryListing
+	(*MlxAdminRegistryShowRequest)(nil),         // 66: mlx_device.MlxAdminRegistryShowRequest
+	(*MlxAdminRegistryShowResponse)(nil),        // 67: mlx_device.MlxAdminRegistryShowResponse
+	(*MlxDeviceRegistryShowRequest)(nil),        // 68: mlx_device.MlxDeviceRegistryShowRequest
+	(*MlxDeviceRegistryShowResponse)(nil),       // 69: mlx_device.MlxDeviceRegistryShowResponse
+	(*MlxAdminConfigSyncRequest)(nil),           // 70: mlx_device.MlxAdminConfigSyncRequest
+	(*MlxAdminConfigSyncResponse)(nil),          // 71: mlx_device.MlxAdminConfigSyncResponse
+	(*MlxDeviceConfigSyncRequest)(nil),          // 72: mlx_device.MlxDeviceConfigSyncRequest
+	(*MlxDeviceConfigSyncResponse)(nil),         // 73: mlx_device.MlxDeviceConfigSyncResponse
+	(*MlxAdminConfigQueryRequest)(nil),          // 74: mlx_device.MlxAdminConfigQueryRequest
+	(*MlxAdminConfigQueryResponse)(nil),         // 75: mlx_device.MlxAdminConfigQueryResponse
+	(*MlxDeviceConfigQueryRequest)(nil),         // 76: mlx_device.MlxDeviceConfigQueryRequest
+	(*MlxDeviceConfigQueryResponse)(nil),        // 77: mlx_device.MlxDeviceConfigQueryResponse
+	(*MlxAdminConfigSetRequest)(nil),            // 78: mlx_device.MlxAdminConfigSetRequest
+	(*MlxAdminConfigSetResponse)(nil),           // 79: mlx_device.MlxAdminConfigSetResponse
+	(*MlxDeviceConfigSetRequest)(nil),           // 80: mlx_device.MlxDeviceConfigSetRequest
+	(*MlxDeviceConfigSetResponse)(nil),          // 81: mlx_device.MlxDeviceConfigSetResponse
+	(*MlxAdminConfigCompareRequest)(nil),        // 82: mlx_device.MlxAdminConfigCompareRequest
+	(*MlxAdminConfigCompareResponse)(nil),       // 83: mlx_device.MlxAdminConfigCompareResponse
+	(*MlxDeviceConfigCompareRequest)(nil),       // 84: mlx_device.MlxDeviceConfigCompareRequest
+	(*MlxDeviceConfigCompareResponse)(nil),      // 85: mlx_device.MlxDeviceConfigCompareResponse
+	(*MlxAdminProfileShowRequest)(nil),          // 86: mlx_device.MlxAdminProfileShowRequest
+	(*MlxAdminProfileShowResponse)(nil),         // 87: mlx_device.MlxAdminProfileShowResponse
+	(*MlxAdminProfileListRequest)(nil),          // 88: mlx_device.MlxAdminProfileListRequest
+	(*MlxAdminProfileListResponse)(nil),         // 89: mlx_device.MlxAdminProfileListResponse
+	(*MlxAdminDeviceInfoRequest)(nil),           // 90: mlx_device.MlxAdminDeviceInfoRequest
+	(*MlxAdminDeviceInfoResponse)(nil),          // 91: mlx_device.MlxAdminDeviceInfoResponse
+	(*MlxAdminDeviceReportRequest)(nil),         // 92: mlx_device.MlxAdminDeviceReportRequest
+	(*MlxAdminDeviceReportResponse)(nil),        // 93: mlx_device.MlxAdminDeviceReportResponse
+	(*ProfileSummary)(nil),                      // 94: mlx_device.ProfileSummary
+	(*VariableAssignment)(nil),                  // 95: mlx_device.VariableAssignment
+	(*MlxDeviceStreamError)(nil),                // 96: mlx_device.MlxDeviceStreamError
+	(*StatusReport)(nil),                        // 97: mlx_device.StatusReport
+	(*MlxVariableSpec_BooleanSpec)(nil),         // 98: mlx_device.MlxVariableSpec.BooleanSpec
+	(*MlxVariableSpec_IntegerSpec)(nil),         // 99: mlx_device.MlxVariableSpec.IntegerSpec
+	(*MlxVariableSpec_StringSpec)(nil),          // 100: mlx_device.MlxVariableSpec.StringSpec
+	(*MlxVariableSpec_BinarySpec)(nil),          // 101: mlx_device.MlxVariableSpec.BinarySpec
+	(*MlxVariableSpec_BytesSpec)(nil),           // 102: mlx_device.MlxVariableSpec.BytesSpec
+	(*MlxVariableSpec_ArraySpec)(nil),           // 103: mlx_device.MlxVariableSpec.ArraySpec
+	(*MlxVariableSpec_OpaqueSpec)(nil),          // 104: mlx_device.MlxVariableSpec.OpaqueSpec
+	(*MlxVariableSpec_EnumSpec)(nil),            // 105: mlx_device.MlxVariableSpec.EnumSpec
+	(*MlxVariableSpec_PresetSpec)(nil),          // 106: mlx_device.MlxVariableSpec.PresetSpec
+	(*MlxVariableSpec_BooleanArraySpec)(nil),    // 107: mlx_device.MlxVariableSpec.BooleanArraySpec
+	(*MlxVariableSpec_IntegerArraySpec)(nil),    // 108: mlx_device.MlxVariableSpec.IntegerArraySpec
+	(*MlxVariableSpec_EnumArraySpec)(nil),       // 109: mlx_device.MlxVariableSpec.EnumArraySpec
+	(*MlxVariableSpec_BinaryArraySpec)(nil),     // 110: mlx_device.MlxVariableSpec.BinaryArraySpec
+	(*MlxValueType_StringArray)(nil),            // 111: mlx_device.MlxValueType.StringArray
+	(*MlxValueType_BooleanArray)(nil),           // 112: mlx_device.MlxValueType.BooleanArray
+	(*MlxValueType_IntegerArray)(nil),           // 113: mlx_device.MlxValueType.IntegerArray
+	(*MlxValueType_BytesArray)(nil),             // 114: mlx_device.MlxValueType.BytesArray
+	(*MlxValueType_OptionalBool)(nil),           // 115: mlx_device.MlxValueType.OptionalBool
+	(*MlxValueType_OptionalInt64)(nil),          // 116: mlx_device.MlxValueType.OptionalInt64
+	(*MlxValueType_OptionalString)(nil),         // 117: mlx_device.MlxValueType.OptionalString
+	(*MlxValueType_OptionalBytes)(nil),          // 118: mlx_device.MlxValueType.OptionalBytes
+	nil,                                         // 119: mlx_device.SerializableMlxConfigProfile.ConfigEntry
+	(*timestamppb.Timestamp)(nil),               // 120: google.protobuf.Timestamp
+	(*MachineId)(nil),                           // 121: common.MachineId
 }
 var file_mlx_device_proto_depIdxs = []int32{
 	6,   // 0: mlx_device.MlxVariableRegistry.variables:type_name -> mlx_device.MlxConfigVariable
 	18,  // 1: mlx_device.MlxVariableRegistry.filters:type_name -> mlx_device.DeviceFilterSet
-	87,  // 2: mlx_device.MlxVariableSpec.boolean:type_name -> mlx_device.MlxVariableSpec.BooleanSpec
-	88,  // 3: mlx_device.MlxVariableSpec.integer:type_name -> mlx_device.MlxVariableSpec.IntegerSpec
-	89,  // 4: mlx_device.MlxVariableSpec.string:type_name -> mlx_device.MlxVariableSpec.StringSpec
-	90,  // 5: mlx_device.MlxVariableSpec.binary:type_name -> mlx_device.MlxVariableSpec.BinarySpec
-	91,  // 6: mlx_device.MlxVariableSpec.bytes:type_name -> mlx_device.MlxVariableSpec.BytesSpec
-	92,  // 7: mlx_device.MlxVariableSpec.array:type_name -> mlx_device.MlxVariableSpec.ArraySpec
-	94,  // 8: mlx_device.MlxVariableSpec.enum_type:type_name -> mlx_device.MlxVariableSpec.EnumSpec
-	95,  // 9: mlx_device.MlxVariableSpec.preset:type_name -> mlx_device.MlxVariableSpec.PresetSpec
-	96,  // 10: mlx_device.MlxVariableSpec.boolean_array:type_name -> mlx_device.MlxVariableSpec.BooleanArraySpec
-	97,  // 11: mlx_device.MlxVariableSpec.integer_array:type_name -> mlx_device.MlxVariableSpec.IntegerArraySpec
-	98,  // 12: mlx_device.MlxVariableSpec.enum_array:type_name -> mlx_device.MlxVariableSpec.EnumArraySpec
-	99,  // 13: mlx_device.MlxVariableSpec.binary_array:type_name -> mlx_device.MlxVariableSpec.BinaryArraySpec
-	93,  // 14: mlx_device.MlxVariableSpec.opaque:type_name -> mlx_device.MlxVariableSpec.OpaqueSpec
+	98,  // 2: mlx_device.MlxVariableSpec.boolean:type_name -> mlx_device.MlxVariableSpec.BooleanSpec
+	99,  // 3: mlx_device.MlxVariableSpec.integer:type_name -> mlx_device.MlxVariableSpec.IntegerSpec
+	100, // 4: mlx_device.MlxVariableSpec.string:type_name -> mlx_device.MlxVariableSpec.StringSpec
+	101, // 5: mlx_device.MlxVariableSpec.binary:type_name -> mlx_device.MlxVariableSpec.BinarySpec
+	102, // 6: mlx_device.MlxVariableSpec.bytes:type_name -> mlx_device.MlxVariableSpec.BytesSpec
+	103, // 7: mlx_device.MlxVariableSpec.array:type_name -> mlx_device.MlxVariableSpec.ArraySpec
+	105, // 8: mlx_device.MlxVariableSpec.enum_type:type_name -> mlx_device.MlxVariableSpec.EnumSpec
+	106, // 9: mlx_device.MlxVariableSpec.preset:type_name -> mlx_device.MlxVariableSpec.PresetSpec
+	107, // 10: mlx_device.MlxVariableSpec.boolean_array:type_name -> mlx_device.MlxVariableSpec.BooleanArraySpec
+	108, // 11: mlx_device.MlxVariableSpec.integer_array:type_name -> mlx_device.MlxVariableSpec.IntegerArraySpec
+	109, // 12: mlx_device.MlxVariableSpec.enum_array:type_name -> mlx_device.MlxVariableSpec.EnumArraySpec
+	110, // 13: mlx_device.MlxVariableSpec.binary_array:type_name -> mlx_device.MlxVariableSpec.BinaryArraySpec
+	104, // 14: mlx_device.MlxVariableSpec.opaque:type_name -> mlx_device.MlxVariableSpec.OpaqueSpec
 	5,   // 15: mlx_device.MlxConfigVariable.spec:type_name -> mlx_device.MlxVariableSpec
-	100, // 16: mlx_device.MlxValueType.array:type_name -> mlx_device.MlxValueType.StringArray
-	101, // 17: mlx_device.MlxValueType.boolean_array:type_name -> mlx_device.MlxValueType.BooleanArray
-	102, // 18: mlx_device.MlxValueType.integer_array:type_name -> mlx_device.MlxValueType.IntegerArray
-	100, // 19: mlx_device.MlxValueType.enum_array:type_name -> mlx_device.MlxValueType.StringArray
-	103, // 20: mlx_device.MlxValueType.binary_array:type_name -> mlx_device.MlxValueType.BytesArray
+	111, // 16: mlx_device.MlxValueType.array:type_name -> mlx_device.MlxValueType.StringArray
+	112, // 17: mlx_device.MlxValueType.boolean_array:type_name -> mlx_device.MlxValueType.BooleanArray
+	113, // 18: mlx_device.MlxValueType.integer_array:type_name -> mlx_device.MlxValueType.IntegerArray
+	111, // 19: mlx_device.MlxValueType.enum_array:type_name -> mlx_device.MlxValueType.StringArray
+	114, // 20: mlx_device.MlxValueType.binary_array:type_name -> mlx_device.MlxValueType.BytesArray
 	6,   // 21: mlx_device.MlxConfigValue.variable:type_name -> mlx_device.MlxConfigVariable
 	7,   // 22: mlx_device.MlxConfigValue.value:type_name -> mlx_device.MlxValueType
 	6,   // 23: mlx_device.QueriedVariable.variable:type_name -> mlx_device.MlxConfigVariable
@@ -7214,88 +8090,99 @@ var file_mlx_device_proto_depIdxs = []int32{
 	11,  // 34: mlx_device.ComparisonResult.query_result:type_name -> mlx_device.QueryResult
 	13,  // 35: mlx_device.SyncResult.changes_applied:type_name -> mlx_device.VariableChange
 	11,  // 36: mlx_device.SyncResult.query_result:type_name -> mlx_device.QueryResult
-	109, // 37: mlx_device.MlxDeviceReport.timestamp:type_name -> google.protobuf.Timestamp
+	120, // 37: mlx_device.MlxDeviceReport.timestamp:type_name -> google.protobuf.Timestamp
 	17,  // 38: mlx_device.MlxDeviceReport.devices:type_name -> mlx_device.MlxDeviceInfo
 	18,  // 39: mlx_device.MlxDeviceReport.filters:type_name -> mlx_device.DeviceFilterSet
-	110, // 40: mlx_device.MlxDeviceReport.machine_id:type_name -> common.MachineId
+	121, // 40: mlx_device.MlxDeviceReport.machine_id:type_name -> common.MachineId
 	19,  // 41: mlx_device.DeviceFilterSet.filters:type_name -> mlx_device.DeviceFilter
 	0,   // 42: mlx_device.DeviceFilter.field:type_name -> mlx_device.DeviceField
 	1,   // 43: mlx_device.DeviceFilter.match_mode:type_name -> mlx_device.MatchMode
 	16,  // 44: mlx_device.PublishMlxDeviceReportRequest.report:type_name -> mlx_device.MlxDeviceReport
-	108, // 45: mlx_device.SerializableMlxConfigProfile.config:type_name -> mlx_device.SerializableMlxConfigProfile.ConfigEntry
-	110, // 46: mlx_device.MlxObservationReport.machine_id:type_name -> common.MachineId
-	109, // 47: mlx_device.MlxObservationReport.timestamp:type_name -> google.protobuf.Timestamp
-	25,  // 48: mlx_device.MlxObservationReport.observations:type_name -> mlx_device.MlxObservation
-	17,  // 49: mlx_device.MlxObservation.device_info:type_name -> mlx_device.MlxDeviceInfo
-	3,   // 50: mlx_device.MlxObservation.lock_status:type_name -> mlx_device.LockStatus
-	24,  // 51: mlx_device.PublishMlxObservationReportRequest.report:type_name -> mlx_device.MlxObservationReport
-	110, // 52: mlx_device.MlxAdminProfileSyncRequest.machine_id:type_name -> common.MachineId
-	15,  // 53: mlx_device.MlxAdminProfileSyncResponse.sync_result:type_name -> mlx_device.SyncResult
-	23,  // 54: mlx_device.MlxDeviceProfileSyncRequest.serializable_profile:type_name -> mlx_device.SerializableMlxConfigProfile
-	15,  // 55: mlx_device.MlxDeviceProfileSyncResponse.sync_result:type_name -> mlx_device.SyncResult
-	85,  // 56: mlx_device.MlxDeviceProfileSyncResponse.error:type_name -> mlx_device.MlxDeviceStreamError
-	110, // 57: mlx_device.MlxAdminProfileCompareRequest.machine_id:type_name -> common.MachineId
-	14,  // 58: mlx_device.MlxAdminProfileCompareResponse.comparison_result:type_name -> mlx_device.ComparisonResult
-	23,  // 59: mlx_device.MlxDeviceProfileCompareRequest.serializable_profile:type_name -> mlx_device.SerializableMlxConfigProfile
-	14,  // 60: mlx_device.MlxDeviceProfileCompareResponse.comparison_result:type_name -> mlx_device.ComparisonResult
-	85,  // 61: mlx_device.MlxDeviceProfileCompareResponse.error:type_name -> mlx_device.MlxDeviceStreamError
-	110, // 62: mlx_device.MlxAdminLockdownLockRequest.machine_id:type_name -> common.MachineId
-	86,  // 63: mlx_device.MlxAdminLockdownLockResponse.status_report:type_name -> mlx_device.StatusReport
-	110, // 64: mlx_device.MlxAdminLockdownUnlockRequest.machine_id:type_name -> common.MachineId
-	86,  // 65: mlx_device.MlxAdminLockdownUnlockResponse.status_report:type_name -> mlx_device.StatusReport
-	110, // 66: mlx_device.MlxAdminLockdownStatusRequest.machine_id:type_name -> common.MachineId
-	86,  // 67: mlx_device.MlxAdminLockdownStatusResponse.status_report:type_name -> mlx_device.StatusReport
-	86,  // 68: mlx_device.MlxDeviceLockdownResponse.status_report:type_name -> mlx_device.StatusReport
-	85,  // 69: mlx_device.MlxDeviceLockdownResponse.error:type_name -> mlx_device.MlxDeviceStreamError
-	17,  // 70: mlx_device.MlxDeviceInfoDeviceResponse.device_info:type_name -> mlx_device.MlxDeviceInfo
-	85,  // 71: mlx_device.MlxDeviceInfoDeviceResponse.error:type_name -> mlx_device.MlxDeviceStreamError
-	18,  // 72: mlx_device.MlxDeviceInfoReportRequest.filters:type_name -> mlx_device.DeviceFilterSet
-	16,  // 73: mlx_device.MlxDeviceInfoReportResponse.device_report:type_name -> mlx_device.MlxDeviceReport
-	85,  // 74: mlx_device.MlxDeviceInfoReportResponse.error:type_name -> mlx_device.MlxDeviceStreamError
-	110, // 75: mlx_device.MlxAdminRegistryListRequest.machine_id:type_name -> common.MachineId
-	54,  // 76: mlx_device.MlxAdminRegistryListResponse.registry_listing:type_name -> mlx_device.RegistryListing
-	54,  // 77: mlx_device.MlxDeviceRegistryListResponse.registry_listing:type_name -> mlx_device.RegistryListing
-	85,  // 78: mlx_device.MlxDeviceRegistryListResponse.error:type_name -> mlx_device.MlxDeviceStreamError
-	110, // 79: mlx_device.MlxAdminRegistryShowRequest.machine_id:type_name -> common.MachineId
-	4,   // 80: mlx_device.MlxAdminRegistryShowResponse.variable_registry:type_name -> mlx_device.MlxVariableRegistry
-	4,   // 81: mlx_device.MlxDeviceRegistryShowResponse.variable_registry:type_name -> mlx_device.MlxVariableRegistry
-	85,  // 82: mlx_device.MlxDeviceRegistryShowResponse.error:type_name -> mlx_device.MlxDeviceStreamError
-	110, // 83: mlx_device.MlxAdminConfigSyncRequest.machine_id:type_name -> common.MachineId
-	84,  // 84: mlx_device.MlxAdminConfigSyncRequest.assignments:type_name -> mlx_device.VariableAssignment
-	15,  // 85: mlx_device.MlxAdminConfigSyncResponse.sync_result:type_name -> mlx_device.SyncResult
-	84,  // 86: mlx_device.MlxDeviceConfigSyncRequest.assignments:type_name -> mlx_device.VariableAssignment
-	15,  // 87: mlx_device.MlxDeviceConfigSyncResponse.sync_result:type_name -> mlx_device.SyncResult
-	85,  // 88: mlx_device.MlxDeviceConfigSyncResponse.error:type_name -> mlx_device.MlxDeviceStreamError
-	110, // 89: mlx_device.MlxAdminConfigQueryRequest.machine_id:type_name -> common.MachineId
-	11,  // 90: mlx_device.MlxAdminConfigQueryResponse.query_result:type_name -> mlx_device.QueryResult
-	11,  // 91: mlx_device.MlxDeviceConfigQueryResponse.query_result:type_name -> mlx_device.QueryResult
-	85,  // 92: mlx_device.MlxDeviceConfigQueryResponse.error:type_name -> mlx_device.MlxDeviceStreamError
-	110, // 93: mlx_device.MlxAdminConfigSetRequest.machine_id:type_name -> common.MachineId
-	84,  // 94: mlx_device.MlxAdminConfigSetRequest.assignments:type_name -> mlx_device.VariableAssignment
-	84,  // 95: mlx_device.MlxDeviceConfigSetRequest.assignments:type_name -> mlx_device.VariableAssignment
-	85,  // 96: mlx_device.MlxDeviceConfigSetResponse.error:type_name -> mlx_device.MlxDeviceStreamError
-	110, // 97: mlx_device.MlxAdminConfigCompareRequest.machine_id:type_name -> common.MachineId
-	84,  // 98: mlx_device.MlxAdminConfigCompareRequest.assignments:type_name -> mlx_device.VariableAssignment
-	14,  // 99: mlx_device.MlxAdminConfigCompareResponse.comparison_result:type_name -> mlx_device.ComparisonResult
-	84,  // 100: mlx_device.MlxDeviceConfigCompareRequest.assignments:type_name -> mlx_device.VariableAssignment
-	14,  // 101: mlx_device.MlxDeviceConfigCompareResponse.comparison_result:type_name -> mlx_device.ComparisonResult
-	85,  // 102: mlx_device.MlxDeviceConfigCompareResponse.error:type_name -> mlx_device.MlxDeviceStreamError
-	23,  // 103: mlx_device.MlxAdminProfileShowResponse.serializable_profile:type_name -> mlx_device.SerializableMlxConfigProfile
-	83,  // 104: mlx_device.MlxAdminProfileListResponse.profiles:type_name -> mlx_device.ProfileSummary
-	110, // 105: mlx_device.MlxAdminDeviceInfoRequest.machine_id:type_name -> common.MachineId
-	17,  // 106: mlx_device.MlxAdminDeviceInfoResponse.device_info:type_name -> mlx_device.MlxDeviceInfo
-	110, // 107: mlx_device.MlxAdminDeviceReportRequest.machine_id:type_name -> common.MachineId
-	16,  // 108: mlx_device.MlxAdminDeviceReportResponse.device_report:type_name -> mlx_device.MlxDeviceReport
-	2,   // 109: mlx_device.MlxDeviceStreamError.status:type_name -> mlx_device.MlxDeviceStreamErrorStatus
-	3,   // 110: mlx_device.StatusReport.status:type_name -> mlx_device.LockStatus
-	104, // 111: mlx_device.MlxValueType.BooleanArray.values:type_name -> mlx_device.MlxValueType.OptionalBool
-	105, // 112: mlx_device.MlxValueType.IntegerArray.values:type_name -> mlx_device.MlxValueType.OptionalInt64
-	107, // 113: mlx_device.MlxValueType.BytesArray.values:type_name -> mlx_device.MlxValueType.OptionalBytes
-	114, // [114:114] is the sub-list for method output_type
-	114, // [114:114] is the sub-list for method input_type
-	114, // [114:114] is the sub-list for extension type_name
-	114, // [114:114] is the sub-list for extension extendee
-	0,   // [0:114] is the sub-list for field type_name
+	119, // 45: mlx_device.SerializableMlxConfigProfile.config:type_name -> mlx_device.SerializableMlxConfigProfile.ConfigEntry
+	25,  // 46: mlx_device.FirmwareCredentials.bearer_token:type_name -> mlx_device.BearerTokenCredentials
+	26,  // 47: mlx_device.FirmwareCredentials.basic_auth:type_name -> mlx_device.BasicAuthCredentials
+	27,  // 48: mlx_device.FirmwareCredentials.header:type_name -> mlx_device.HeaderCredentials
+	28,  // 49: mlx_device.FirmwareCredentials.ssh_key:type_name -> mlx_device.SshKeyCredentials
+	29,  // 50: mlx_device.FirmwareCredentials.ssh_agent:type_name -> mlx_device.SshAgentCredentials
+	24,  // 51: mlx_device.FlashSpec.firmware_credentials:type_name -> mlx_device.FirmwareCredentials
+	24,  // 52: mlx_device.FlashSpec.device_conf_credentials:type_name -> mlx_device.FirmwareCredentials
+	30,  // 53: mlx_device.FirmwareFlasherProfile.firmware_spec:type_name -> mlx_device.FirmwareSpec
+	31,  // 54: mlx_device.FirmwareFlasherProfile.flash_spec:type_name -> mlx_device.FlashSpec
+	32,  // 55: mlx_device.FirmwareFlasherProfile.flash_options:type_name -> mlx_device.FlashOptions
+	121, // 56: mlx_device.MlxObservationReport.machine_id:type_name -> common.MachineId
+	120, // 57: mlx_device.MlxObservationReport.timestamp:type_name -> google.protobuf.Timestamp
+	36,  // 58: mlx_device.MlxObservationReport.observations:type_name -> mlx_device.MlxObservation
+	17,  // 59: mlx_device.MlxObservation.device_info:type_name -> mlx_device.MlxDeviceInfo
+	3,   // 60: mlx_device.MlxObservation.lock_status:type_name -> mlx_device.LockStatus
+	35,  // 61: mlx_device.MlxObservation.firmware_report:type_name -> mlx_device.FirmwareFlashReport
+	34,  // 62: mlx_device.PublishMlxObservationReportRequest.report:type_name -> mlx_device.MlxObservationReport
+	121, // 63: mlx_device.MlxAdminProfileSyncRequest.machine_id:type_name -> common.MachineId
+	15,  // 64: mlx_device.MlxAdminProfileSyncResponse.sync_result:type_name -> mlx_device.SyncResult
+	23,  // 65: mlx_device.MlxDeviceProfileSyncRequest.serializable_profile:type_name -> mlx_device.SerializableMlxConfigProfile
+	15,  // 66: mlx_device.MlxDeviceProfileSyncResponse.sync_result:type_name -> mlx_device.SyncResult
+	96,  // 67: mlx_device.MlxDeviceProfileSyncResponse.error:type_name -> mlx_device.MlxDeviceStreamError
+	121, // 68: mlx_device.MlxAdminProfileCompareRequest.machine_id:type_name -> common.MachineId
+	14,  // 69: mlx_device.MlxAdminProfileCompareResponse.comparison_result:type_name -> mlx_device.ComparisonResult
+	23,  // 70: mlx_device.MlxDeviceProfileCompareRequest.serializable_profile:type_name -> mlx_device.SerializableMlxConfigProfile
+	14,  // 71: mlx_device.MlxDeviceProfileCompareResponse.comparison_result:type_name -> mlx_device.ComparisonResult
+	96,  // 72: mlx_device.MlxDeviceProfileCompareResponse.error:type_name -> mlx_device.MlxDeviceStreamError
+	121, // 73: mlx_device.MlxAdminLockdownLockRequest.machine_id:type_name -> common.MachineId
+	97,  // 74: mlx_device.MlxAdminLockdownLockResponse.status_report:type_name -> mlx_device.StatusReport
+	121, // 75: mlx_device.MlxAdminLockdownUnlockRequest.machine_id:type_name -> common.MachineId
+	97,  // 76: mlx_device.MlxAdminLockdownUnlockResponse.status_report:type_name -> mlx_device.StatusReport
+	121, // 77: mlx_device.MlxAdminLockdownStatusRequest.machine_id:type_name -> common.MachineId
+	97,  // 78: mlx_device.MlxAdminLockdownStatusResponse.status_report:type_name -> mlx_device.StatusReport
+	97,  // 79: mlx_device.MlxDeviceLockdownResponse.status_report:type_name -> mlx_device.StatusReport
+	96,  // 80: mlx_device.MlxDeviceLockdownResponse.error:type_name -> mlx_device.MlxDeviceStreamError
+	17,  // 81: mlx_device.MlxDeviceInfoDeviceResponse.device_info:type_name -> mlx_device.MlxDeviceInfo
+	96,  // 82: mlx_device.MlxDeviceInfoDeviceResponse.error:type_name -> mlx_device.MlxDeviceStreamError
+	18,  // 83: mlx_device.MlxDeviceInfoReportRequest.filters:type_name -> mlx_device.DeviceFilterSet
+	16,  // 84: mlx_device.MlxDeviceInfoReportResponse.device_report:type_name -> mlx_device.MlxDeviceReport
+	96,  // 85: mlx_device.MlxDeviceInfoReportResponse.error:type_name -> mlx_device.MlxDeviceStreamError
+	121, // 86: mlx_device.MlxAdminRegistryListRequest.machine_id:type_name -> common.MachineId
+	65,  // 87: mlx_device.MlxAdminRegistryListResponse.registry_listing:type_name -> mlx_device.RegistryListing
+	65,  // 88: mlx_device.MlxDeviceRegistryListResponse.registry_listing:type_name -> mlx_device.RegistryListing
+	96,  // 89: mlx_device.MlxDeviceRegistryListResponse.error:type_name -> mlx_device.MlxDeviceStreamError
+	121, // 90: mlx_device.MlxAdminRegistryShowRequest.machine_id:type_name -> common.MachineId
+	4,   // 91: mlx_device.MlxAdminRegistryShowResponse.variable_registry:type_name -> mlx_device.MlxVariableRegistry
+	4,   // 92: mlx_device.MlxDeviceRegistryShowResponse.variable_registry:type_name -> mlx_device.MlxVariableRegistry
+	96,  // 93: mlx_device.MlxDeviceRegistryShowResponse.error:type_name -> mlx_device.MlxDeviceStreamError
+	121, // 94: mlx_device.MlxAdminConfigSyncRequest.machine_id:type_name -> common.MachineId
+	95,  // 95: mlx_device.MlxAdminConfigSyncRequest.assignments:type_name -> mlx_device.VariableAssignment
+	15,  // 96: mlx_device.MlxAdminConfigSyncResponse.sync_result:type_name -> mlx_device.SyncResult
+	95,  // 97: mlx_device.MlxDeviceConfigSyncRequest.assignments:type_name -> mlx_device.VariableAssignment
+	15,  // 98: mlx_device.MlxDeviceConfigSyncResponse.sync_result:type_name -> mlx_device.SyncResult
+	96,  // 99: mlx_device.MlxDeviceConfigSyncResponse.error:type_name -> mlx_device.MlxDeviceStreamError
+	121, // 100: mlx_device.MlxAdminConfigQueryRequest.machine_id:type_name -> common.MachineId
+	11,  // 101: mlx_device.MlxAdminConfigQueryResponse.query_result:type_name -> mlx_device.QueryResult
+	11,  // 102: mlx_device.MlxDeviceConfigQueryResponse.query_result:type_name -> mlx_device.QueryResult
+	96,  // 103: mlx_device.MlxDeviceConfigQueryResponse.error:type_name -> mlx_device.MlxDeviceStreamError
+	121, // 104: mlx_device.MlxAdminConfigSetRequest.machine_id:type_name -> common.MachineId
+	95,  // 105: mlx_device.MlxAdminConfigSetRequest.assignments:type_name -> mlx_device.VariableAssignment
+	95,  // 106: mlx_device.MlxDeviceConfigSetRequest.assignments:type_name -> mlx_device.VariableAssignment
+	96,  // 107: mlx_device.MlxDeviceConfigSetResponse.error:type_name -> mlx_device.MlxDeviceStreamError
+	121, // 108: mlx_device.MlxAdminConfigCompareRequest.machine_id:type_name -> common.MachineId
+	95,  // 109: mlx_device.MlxAdminConfigCompareRequest.assignments:type_name -> mlx_device.VariableAssignment
+	14,  // 110: mlx_device.MlxAdminConfigCompareResponse.comparison_result:type_name -> mlx_device.ComparisonResult
+	95,  // 111: mlx_device.MlxDeviceConfigCompareRequest.assignments:type_name -> mlx_device.VariableAssignment
+	14,  // 112: mlx_device.MlxDeviceConfigCompareResponse.comparison_result:type_name -> mlx_device.ComparisonResult
+	96,  // 113: mlx_device.MlxDeviceConfigCompareResponse.error:type_name -> mlx_device.MlxDeviceStreamError
+	23,  // 114: mlx_device.MlxAdminProfileShowResponse.serializable_profile:type_name -> mlx_device.SerializableMlxConfigProfile
+	94,  // 115: mlx_device.MlxAdminProfileListResponse.profiles:type_name -> mlx_device.ProfileSummary
+	121, // 116: mlx_device.MlxAdminDeviceInfoRequest.machine_id:type_name -> common.MachineId
+	17,  // 117: mlx_device.MlxAdminDeviceInfoResponse.device_info:type_name -> mlx_device.MlxDeviceInfo
+	121, // 118: mlx_device.MlxAdminDeviceReportRequest.machine_id:type_name -> common.MachineId
+	16,  // 119: mlx_device.MlxAdminDeviceReportResponse.device_report:type_name -> mlx_device.MlxDeviceReport
+	2,   // 120: mlx_device.MlxDeviceStreamError.status:type_name -> mlx_device.MlxDeviceStreamErrorStatus
+	3,   // 121: mlx_device.StatusReport.status:type_name -> mlx_device.LockStatus
+	115, // 122: mlx_device.MlxValueType.BooleanArray.values:type_name -> mlx_device.MlxValueType.OptionalBool
+	116, // 123: mlx_device.MlxValueType.IntegerArray.values:type_name -> mlx_device.MlxValueType.OptionalInt64
+	118, // 124: mlx_device.MlxValueType.BytesArray.values:type_name -> mlx_device.MlxValueType.OptionalBytes
+	125, // [125:125] is the sub-list for method output_type
+	125, // [125:125] is the sub-list for method input_type
+	125, // [125:125] is the sub-list for extension type_name
+	125, // [125:125] is the sub-list for extension extendee
+	0,   // [0:125] is the sub-list for field type_name
 }
 
 func init() { file_mlx_device_proto_init() }
@@ -7338,60 +8225,71 @@ func file_mlx_device_proto_init() {
 	file_mlx_device_proto_msgTypes[5].OneofWrappers = []any{}
 	file_mlx_device_proto_msgTypes[12].OneofWrappers = []any{}
 	file_mlx_device_proto_msgTypes[19].OneofWrappers = []any{}
-	file_mlx_device_proto_msgTypes[21].OneofWrappers = []any{}
-	file_mlx_device_proto_msgTypes[27].OneofWrappers = []any{
+	file_mlx_device_proto_msgTypes[20].OneofWrappers = []any{
+		(*FirmwareCredentials_BearerToken)(nil),
+		(*FirmwareCredentials_BasicAuth)(nil),
+		(*FirmwareCredentials_Header)(nil),
+		(*FirmwareCredentials_SshKey)(nil),
+		(*FirmwareCredentials_SshAgent)(nil),
+	}
+	file_mlx_device_proto_msgTypes[24].OneofWrappers = []any{}
+	file_mlx_device_proto_msgTypes[27].OneofWrappers = []any{}
+	file_mlx_device_proto_msgTypes[29].OneofWrappers = []any{}
+	file_mlx_device_proto_msgTypes[31].OneofWrappers = []any{}
+	file_mlx_device_proto_msgTypes[32].OneofWrappers = []any{}
+	file_mlx_device_proto_msgTypes[38].OneofWrappers = []any{
 		(*MlxDeviceProfileSyncResponse_SyncResult)(nil),
 		(*MlxDeviceProfileSyncResponse_Error)(nil),
 	}
-	file_mlx_device_proto_msgTypes[31].OneofWrappers = []any{
+	file_mlx_device_proto_msgTypes[42].OneofWrappers = []any{
 		(*MlxDeviceProfileCompareResponse_ComparisonResult)(nil),
 		(*MlxDeviceProfileCompareResponse_Error)(nil),
 	}
-	file_mlx_device_proto_msgTypes[41].OneofWrappers = []any{
+	file_mlx_device_proto_msgTypes[52].OneofWrappers = []any{
 		(*MlxDeviceLockdownResponse_StatusReport)(nil),
 		(*MlxDeviceLockdownResponse_Error)(nil),
 	}
-	file_mlx_device_proto_msgTypes[43].OneofWrappers = []any{
+	file_mlx_device_proto_msgTypes[54].OneofWrappers = []any{
 		(*MlxDeviceInfoDeviceResponse_DeviceInfo)(nil),
 		(*MlxDeviceInfoDeviceResponse_Error)(nil),
 	}
-	file_mlx_device_proto_msgTypes[44].OneofWrappers = []any{}
-	file_mlx_device_proto_msgTypes[45].OneofWrappers = []any{
+	file_mlx_device_proto_msgTypes[55].OneofWrappers = []any{}
+	file_mlx_device_proto_msgTypes[56].OneofWrappers = []any{
 		(*MlxDeviceInfoReportResponse_DeviceReport)(nil),
 		(*MlxDeviceInfoReportResponse_Error)(nil),
 	}
-	file_mlx_device_proto_msgTypes[49].OneofWrappers = []any{
+	file_mlx_device_proto_msgTypes[60].OneofWrappers = []any{
 		(*MlxDeviceRegistryListResponse_RegistryListing)(nil),
 		(*MlxDeviceRegistryListResponse_Error)(nil),
 	}
-	file_mlx_device_proto_msgTypes[54].OneofWrappers = []any{
+	file_mlx_device_proto_msgTypes[65].OneofWrappers = []any{
 		(*MlxDeviceRegistryShowResponse_VariableRegistry)(nil),
 		(*MlxDeviceRegistryShowResponse_Error)(nil),
 	}
-	file_mlx_device_proto_msgTypes[58].OneofWrappers = []any{
+	file_mlx_device_proto_msgTypes[69].OneofWrappers = []any{
 		(*MlxDeviceConfigSyncResponse_SyncResult)(nil),
 		(*MlxDeviceConfigSyncResponse_Error)(nil),
 	}
-	file_mlx_device_proto_msgTypes[62].OneofWrappers = []any{
+	file_mlx_device_proto_msgTypes[73].OneofWrappers = []any{
 		(*MlxDeviceConfigQueryResponse_QueryResult)(nil),
 		(*MlxDeviceConfigQueryResponse_Error)(nil),
 	}
-	file_mlx_device_proto_msgTypes[66].OneofWrappers = []any{
+	file_mlx_device_proto_msgTypes[77].OneofWrappers = []any{
 		(*MlxDeviceConfigSetResponse_TotalApplied)(nil),
 		(*MlxDeviceConfigSetResponse_Error)(nil),
 	}
-	file_mlx_device_proto_msgTypes[70].OneofWrappers = []any{
+	file_mlx_device_proto_msgTypes[81].OneofWrappers = []any{
 		(*MlxDeviceConfigCompareResponse_ComparisonResult)(nil),
 		(*MlxDeviceConfigCompareResponse_Error)(nil),
 	}
-	file_mlx_device_proto_msgTypes[79].OneofWrappers = []any{}
+	file_mlx_device_proto_msgTypes[90].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_mlx_device_proto_rawDesc), len(file_mlx_device_proto_rawDesc)),
 			NumEnums:      4,
-			NumMessages:   105,
+			NumMessages:   116,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

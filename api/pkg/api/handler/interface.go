@@ -26,10 +26,10 @@ import (
 	temporalClient "go.temporal.io/sdk/client"
 
 	"github.com/google/uuid"
-	"github.com/rs/zerolog/log"
 
 	"github.com/labstack/echo/v4"
 
+	cutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
 	"github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
@@ -39,8 +39,6 @@ import (
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model"
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/pagination"
 	auth "github.com/nvidia/bare-metal-manager-rest/auth/pkg/authorization"
-	cerr "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	sutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 )
 
 // ~~~~~ GetAll Interface Handler ~~~~~ //
@@ -50,7 +48,7 @@ type GetAllInterfaceHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetAllInterfaceHandler initializes and returns a new handler for retrieving all subnets for an Instance
@@ -59,7 +57,7 @@ func NewGetAllInterfaceHandler(dbSession *cdb.Session, tc temporalClient.Client,
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -80,31 +78,12 @@ func NewGetAllInterfaceHandler(dbSession *cdb.Session, tc temporalClient.Client,
 // @Success 200 {object} model.APIInterface
 // @Router /v2/org/{org}/carbide/instance/{instance_id}/interface [get]
 func (gaish GetAllInterfaceHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "Interface").Str("Handler", "GetAll").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gaish.tracerSpan.CreateChildInContext(ctx, "GetAllInterfaceHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("Interface", "GetAll", c, gaish.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gaish.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gaish.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -115,14 +94,14 @@ func (gaish GetAllInterfaceHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Tenant Admins are allowed to retrieve Instances
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	// Validate pagination request
@@ -130,14 +109,14 @@ func (gaish GetAllInterfaceHandler) Handle(c echo.Context) error {
 	err = c.Bind(&pageRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding pagination request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request pagination data", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request pagination data", nil)
 	}
 
 	// Validate pagination request attributes
 	err = pageRequest.Validate(cdbm.InterfaceOrderByFields)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error validating pagination request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest,
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest,
 			"Failed to validate pagination request data", err)
 	}
 
@@ -146,7 +125,7 @@ func (gaish GetAllInterfaceHandler) Handle(c echo.Context) error {
 	qIncludeRelations, errMsg := common.GetAndValidateQueryRelations(qParams, cdbm.InterfaceRelatedEntities)
 	if errMsg != "" {
 		logger.Warn().Msg(errMsg)
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
 	}
 
 	// Get status from query param
@@ -158,7 +137,7 @@ func (gaish GetAllInterfaceHandler) Handle(c echo.Context) error {
 		_, ok := cdbm.InterfaceStatusMap[statusQuery]
 		if !ok {
 			logger.Warn().Msg(fmt.Sprintf("invalid value in status query: %v", statusQuery))
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Status value in query", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Status value in query", nil)
 		}
 		status = &statusQuery
 	}
@@ -167,10 +146,10 @@ func (gaish GetAllInterfaceHandler) Handle(c echo.Context) error {
 	tenant, err := common.GetTenantForOrg(ctx, nil, gaish.dbSession, org)
 	if err != nil {
 		if err == common.ErrOrgTenantNotFound {
-			return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Org does not have a Tenant associated", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Org does not have a Tenant associated", nil)
 		}
 		logger.Error().Err(err).Msg("error retrieving Tenant for this org")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant", nil)
 	}
 
 	// Get Instance ID from URL param
@@ -180,15 +159,15 @@ func (gaish GetAllInterfaceHandler) Handle(c echo.Context) error {
 	instance, err := common.GetInstanceFromIDString(ctx, nil, instanceStrID, gaish.dbSession)
 	if err != nil {
 		if err == cdb.ErrDoesNotExist {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find Instance with specified ID", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find Instance with specified ID", nil)
 		}
 		logger.Error().Err(err).Msg("error retrieving Instance from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Instance ID in URL", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Instance ID in URL", nil)
 	}
 
 	// Check if Instance belongs to Tenant
 	if instance.TenantID != tenant.ID {
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Instance does not belong to current Tenant", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Instance does not belong to current Tenant", nil)
 	}
 
 	instanceID := instance.ID
@@ -213,7 +192,7 @@ func (gaish GetAllInterfaceHandler) Handle(c echo.Context) error {
 	dbInterfaces, total, err := ifcDAO.GetAll(ctx, nil, filterInput, pageInput, qIncludeRelations)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving instance Subnet Details from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Instance Subnet Details for Instance", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Instance Subnet Details for Instance", nil)
 	}
 
 	// Create response
@@ -228,7 +207,7 @@ func (gaish GetAllInterfaceHandler) Handle(c echo.Context) error {
 	pageHeader, err := json.Marshal(pageReponse)
 	if err != nil {
 		logger.Error().Err(err).Msg("error marshaling pagination response")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to generate pagination response header", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to generate pagination response header", nil)
 	}
 	c.Response().Header().Set(pagination.ResponseHeaderName, string(pageHeader))
 

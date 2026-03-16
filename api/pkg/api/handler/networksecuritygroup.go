@@ -36,16 +36,13 @@ import (
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/pagination"
 	sc "github.com/nvidia/bare-metal-manager-rest/api/pkg/client/site"
 	auth "github.com/nvidia/bare-metal-manager-rest/auth/pkg/authorization"
-	cerr "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	sutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
+	cutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
 	cdbp "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
 	swe "github.com/nvidia/bare-metal-manager-rest/site-workflow/pkg/error"
 	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
 	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/queue"
-	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel/attribute"
 	temporalClient "go.temporal.io/sdk/client"
 	tp "go.temporal.io/sdk/temporal"
@@ -59,7 +56,7 @@ type CreateNetworkSecurityGroupHandler struct {
 	tc         temporalClient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewCreateNetworkSecurityGroupHandler initializes and returns a new handler for creating NetworkSecurityGroup
@@ -69,7 +66,7 @@ func NewCreateNetworkSecurityGroupHandler(dbSession *cdb.Session, tc temporalCli
 		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -85,31 +82,12 @@ func NewCreateNetworkSecurityGroupHandler(dbSession *cdb.Session, tc temporalCli
 // @Success 201 {object} model.APINetworkSecurityGroup
 // @Router /v2/org/{org}/carbide/network-security-group [post]
 func (cnsgh CreateNetworkSecurityGroupHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "NetworkSecurityGroup").Str("Handler", "Create").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := cnsgh.tracerSpan.CreateChildInContext(ctx, "CreateNetworkSecurityGroupHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("NetworkSecurityGroup", "Create", c, cnsgh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		cnsgh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, cnsgh.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -120,14 +98,14 @@ func (cnsgh CreateNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Tenant Admins are allowed to create NetworkSecurityGroups
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	// Validate request
@@ -136,7 +114,7 @@ func (cnsgh CreateNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 	err = c.Bind(&apiRequest)
 	if err != nil {
 		logger.Error().Err(err).Msg("error binding request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
 	}
 
 	// Validate the tenant for which this NetworkSecurityGroup is being created
@@ -146,19 +124,19 @@ func (cnsgh CreateNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 	if err != nil {
 		if err == common.ErrOrgTenantNotFound {
 			logger.Error().Err(err).Msg("Tenant not found for org in request")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Tenant not found for org in request", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Tenant not found for org in request", nil)
 		}
 		logger.Error().Err(err).Msg("unable to retrieve tenant for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve tenant for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve tenant for org", nil)
 	}
 
 	site, err := common.GetSiteFromIDString(ctx, nil, apiRequest.SiteID, cnsgh.dbSession)
 	if err != nil {
 		if err == cdb.ErrDoesNotExist {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "The Site where this Network Security Group is being created could not be found", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "The Site where this Network Security Group is being created could not be found", nil)
 		}
 		logger.Error().Err(err).Msg("error retrieving Site from DB by ID")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "SiteID in request is not valid", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "SiteID in request is not valid", nil)
 	}
 
 	// Ensure that Tenant has access to Site
@@ -166,16 +144,16 @@ func (cnsgh CreateNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 	_, err = tsDAO.GetByTenantIDAndSiteID(ctx, nil, tenant.ID, site.ID, nil)
 	if err != nil {
 		if err == cdb.ErrDoesNotExist {
-			return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant does not have access to Site, Network Security Group cannot be created", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant does not have access to Site, Network Security Group cannot be created", nil)
 		}
 
 		logger.Error().Err(err).Msg("error retrieving Tenant Site association")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant Site association", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant Site association", nil)
 	}
 
 	if site.Status != cdbm.SiteStatusRegistered {
 		logger.Warn().Msg(fmt.Sprintf("The Site: %v where this NetworkSecurityGroup is being created is not in Registered state", site.ID.String()))
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "The Site where this Network Security Group is being created is not in Registered state", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "The Site where this Network Security Group is being created is not in Registered state", nil)
 	}
 
 	siteConfig := &cdbm.SiteConfig{}
@@ -185,14 +163,14 @@ func (cnsgh CreateNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 
 	if !siteConfig.NetworkSecurityGroup {
 		logger.Warn().Msg("site does not have NetworkSecurityGroup capability")
-		return cerr.NewAPIErrorResponse(c, http.StatusPreconditionFailed, "Site does not have NetworkSecurityGroup capability", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusPreconditionFailed, "Site does not have NetworkSecurityGroup capability", nil)
 	}
 
 	// Validate request attributes
 	verr := apiRequest.Validate(siteConfig)
 	if verr != nil {
 		logger.Error().Err(verr).Msg("error validating NetworkSecurityGroup creation request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating Network Security Group creation request data", verr)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating Network Security Group creation request data", verr)
 	}
 
 	// Get our DB DAO object ready.
@@ -205,10 +183,10 @@ func (cnsgh CreateNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 	nsgs, tot, err := nsgDAO.GetAll(ctx, nil, cdbm.NetworkSecurityGroupFilterInput{Name: &apiRequest.Name, TenantIDs: []uuid.UUID{tenant.ID}, SiteIDs: []uuid.UUID{site.ID}}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error checking for existing NetworkSecurityGroup")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to check for existing Network Security Group", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to check for existing Network Security Group", nil)
 	}
 	if tot > 0 {
-		return cerr.NewAPIErrorResponse(c, http.StatusConflict, fmt.Sprintf("Network Security Group with name: %s for Site: %s already exists", apiRequest.Name, apiRequest.SiteID), validation.Errors{
+		return cutil.NewAPIErrorResponse(c, http.StatusConflict, fmt.Sprintf("Network Security Group with name: %s for Site: %s already exists", apiRequest.Name, apiRequest.SiteID), validation.Errors{
 			"id": errors.New(nsgs[0].ID),
 		})
 	}
@@ -223,7 +201,7 @@ func (cnsgh CreateNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 		if rule.Name != nil {
 			if names[*rule.Name] {
 				logger.Error().Str("name", *rule.Name).Msg("duplicate rule name in request")
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Duplicate rule name `%s` in request", *rule.Name), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Duplicate rule name `%s` in request", *rule.Name), nil)
 			}
 			names[*rule.Name] = true
 		}
@@ -231,7 +209,7 @@ func (cnsgh CreateNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 		newRule, err := model.ProtobufRuleFromAPINetworkSecurityGroupRule(&rule)
 		if err != nil {
 			logger.Error().Err(err).Msg("unable to convert rules in request to internal rules")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Unable to process rules in request", err)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Unable to process rules in request", err)
 		}
 
 		rules[i] = newRule
@@ -241,7 +219,7 @@ func (cnsgh CreateNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 	tx, err := cdb.BeginTx(ctx, cnsgh.dbSession, &sql.TxOptions{})
 	if err != nil {
 		logger.Error().Err(err).Msg("unable to start transaction")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Network Security Group", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Network Security Group", nil)
 	}
 
 	// If false, a rollback will be trigger on any early return.
@@ -270,7 +248,7 @@ func (cnsgh CreateNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 
 	if err != nil {
 		logger.Error().Err(err).Msg("unable to create NetworkSecurityGroup record in DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed creating Network Security Group record, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed creating Network Security Group record, DB error", nil)
 	}
 
 	// create the status detail record
@@ -279,18 +257,18 @@ func (cnsgh CreateNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 		cdb.GetStrPtr("processed network security group creation request"))
 	if serr != nil {
 		logger.Error().Err(serr).Msg("error creating Status Detail DB entry")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for Network Security Group, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for Network Security Group, DB error", nil)
 	}
 	if ssd == nil {
 		logger.Error().Msg("Status Detail DB entry not returned from CreateFromParams")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to get new Status Detail for Network Security Group", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to get new Status Detail for Network Security Group", nil)
 	}
 
 	// Get the temporal client for the site we are working with.
 	stc, err := cnsgh.scp.GetClientByID(networkSecurityGroup.SiteID)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
 	}
 
 	// Prepare the labels for the metadata of the carbide call.
@@ -332,21 +310,21 @@ func (cnsgh CreateNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 
 	workflowOptions := temporalClient.StartWorkflowOptions{
 		ID:                       "network-security-group-create-" + networkSecurityGroup.ID,
-		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
 
 	logger.Info().Msg("triggering network security group update workflow")
 
 	// Add context deadlines
-	ctx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
+	ctx, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow to update networkSecurityGroup
 	we, err := stc.ExecuteWorkflow(ctx, workflowOptions, "CreateNetworkSecurityGroup", createNetworkSecurityGroupRequest)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to synchronously start Temporal workflow to create NetworkSecurityGroup")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to start sync workflow to create Network Security Group on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to start sync workflow to create Network Security Group on Site: %s", err), nil)
 	}
 
 	wid := we.GetID()
@@ -360,7 +338,7 @@ func (cnsgh CreateNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 		var applicationErr *tp.ApplicationError
 		if errors.As(err, &applicationErr) && (applicationErr.Type() == swe.ErrTypeCarbideUnimplemented || applicationErr.Type() == swe.ErrTypeCarbideDenied) {
 			logger.Error().Msg("feature not yet implemented on target Site")
-			return cerr.NewAPIErrorResponse(c, http.StatusNotImplemented, fmt.Sprintf("Feature not yet implemented on target Site: %s", err), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotImplemented, fmt.Sprintf("Feature not yet implemented on target Site: %s", err), nil)
 		}
 
 		var timeoutErr *tp.TimeoutError
@@ -370,7 +348,7 @@ func (cnsgh CreateNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 
 		code, err := common.UnwrapWorkflowError(err)
 		logger.Error().Err(err).Msg("failed to synchronously execute Temporal workflow to update CreateNetworkSecurityGroup")
-		return cerr.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to execute sync workflow to create Network Security Group on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to execute sync workflow to create Network Security Group on Site: %s", err), nil)
 	}
 
 	logger.Info().Str("Workflow ID", wid).Msg("completed synchronous create NetworkSecurityGroup workflow")
@@ -379,14 +357,14 @@ func (cnsgh CreateNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 	apiNetworkSecurityGroup, err := model.NewAPINetworkSecurityGroup(networkSecurityGroup, []cdbm.StatusDetail{*ssd})
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to convert NetworkSecurityGroup database record to API response")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to convert Network Security Group database record to API response", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to convert Network Security Group database record to API response", nil)
 	}
 
 	// Commit the DB transaction after the synchronous workflow has completed without error
 	err = tx.Commit()
 	if err != nil {
 		logger.Error().Err(err).Msg("error committing NetworkSecurityGroup transaction to DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Network Security Group, DB transaction error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Network Security Group, DB transaction error", nil)
 	}
 
 	// Set committed so deferred cleanup functions will do nothing
@@ -403,7 +381,7 @@ type GetAllNetworkSecurityGroupHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetAllNetworkSecurityGroupHandler initializes and returns a new handler for getting all NetworkSecurityGroups
@@ -412,7 +390,7 @@ func NewGetAllNetworkSecurityGroupHandler(dbSession *cdb.Session, tc temporalCli
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -435,31 +413,12 @@ func NewGetAllNetworkSecurityGroupHandler(dbSession *cdb.Session, tc temporalCli
 // @Success 200 {object} []model.APINetworkSecurityGroup
 // @Router /v2/org/{org}/carbide/network-security-group [get]
 func (gansgh GetAllNetworkSecurityGroupHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "NetworkSecurityGroup").Str("Handler", "GetAll").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gansgh.tracerSpan.CreateChildInContext(ctx, "GetAllNetworkSecurityGroupHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("NetworkSecurityGroup", "GetAll", c, gansgh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gansgh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gansgh.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -470,7 +429,7 @@ func (gansgh GetAllNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate paginantion request
@@ -479,21 +438,21 @@ func (gansgh GetAllNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 	err = c.Bind(&pageRequest)
 	if err != nil {
 		logger.Error().Err(err).Msg("error binding pagination request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request pagination data", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request pagination data", nil)
 	}
 
 	// Validate paginantion request attributes
 	err = pageRequest.Validate(cdbm.NetworkSecurityGroupOrderByFields)
 	if err != nil {
 		logger.Error().Err(err).Msg("error validating pagination request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate pagination request data", err)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate pagination request data", err)
 	}
 
 	// Validate role.  Only Tenant Admins are allowed to interact with NetworkSecurityGroup endpoints.
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	var siteID *uuid.UUID
@@ -501,7 +460,7 @@ func (gansgh GetAllNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 	if qstID != "" {
 		stID, err := uuid.Parse(qstID)
 		if err != nil {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Site ID in query", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Site ID in query", nil)
 		}
 		siteID = &stID
 
@@ -510,7 +469,7 @@ func (gansgh GetAllNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 		_, err = stDAO.GetByID(ctx, nil, *siteID, nil, false)
 		if err != nil {
 			logger.Error().Err(err).Msg("error retrieving Site from DB by ID")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Could not retrieve Site with ID specified in query", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Could not retrieve Site with ID specified in query", nil)
 		}
 	}
 
@@ -520,7 +479,7 @@ func (gansgh GetAllNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 	if qoa != "" {
 		includeAttachmentStats, err = strconv.ParseBool(qoa)
 		if err != nil {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid value specified for `includeAttachmentStats` query param", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid value specified for `includeAttachmentStats` query param", nil)
 		}
 	}
 
@@ -541,7 +500,7 @@ func (gansgh GetAllNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 		_, ok := cdbm.NetworkSecurityGroupStatusMap[statusQuery]
 		if !ok {
 			logger.Warn().Msg(fmt.Sprintf("invalid value in status query: %v", statusQuery))
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Status value in query", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Status value in query", nil)
 		}
 		statuses = []string{statusQuery}
 		gansgh.tracerSpan.SetAttribute(handlerSpan, attribute.String("status", statusQuery), logger)
@@ -552,7 +511,7 @@ func (gansgh GetAllNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 	qIncludeRelations, errMsg := common.GetAndValidateQueryRelations(qParams, cdbm.NetworkSecurityGroupRelatedEntities)
 	if errMsg != "" {
 		logger.Warn().Msg(errMsg)
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
 	}
 
 	// Get all NetworkSecurityGroups
@@ -572,7 +531,7 @@ func (gansgh GetAllNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 	nsgs, total, err := nsgDAO.GetAll(ctx, nil, filter, cdbp.PageInput{Offset: pageRequest.Offset, Limit: pageRequest.Limit, OrderBy: pageRequest.OrderBy}, qIncludeRelations)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving NetworkSecurityGroups for Site specified in query")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Network Security Groups for Site in query", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Network Security Groups for Site in query", nil)
 	}
 
 	// Get status details
@@ -585,7 +544,7 @@ func (gansgh GetAllNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 	ssds, serr := sdDAO.GetRecentByEntityIDs(ctx, nil, sdEntityIDs, common.RECENT_STATUS_DETAIL_COUNT)
 	if serr != nil {
 		logger.Error().Err(serr).Msg("error retrieving Status Details for NetworkSecurityGroups from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to populate status history for Network Security Groups", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to populate status history for Network Security Groups", nil)
 	}
 	ssdMap := map[string][]cdbm.StatusDetail{}
 	for _, ssd := range ssds {
@@ -607,12 +566,12 @@ func (gansgh GetAllNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 
 		instances, _, err := insDAO.GetAll(ctx, nil, cdbm.InstanceFilterInput{NetworkSecurityGroupIDs: itIDs}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
 		if err != nil {
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve related Instances for Network Security Groups", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve related Instances for Network Security Groups", nil)
 		}
 
 		vpcs, _, err := vpcDAO.GetAll(ctx, nil, cdbm.VpcFilterInput{NetworkSecurityGroupIDs: itIDs}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
 		if err != nil {
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve related VPCs for Network Security Groups", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve related VPCs for Network Security Groups", nil)
 		}
 
 		// Loop through the instances and vpcs and fill in the statsMap
@@ -652,7 +611,7 @@ func (gansgh GetAllNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 		apiNSG, err := model.NewAPINetworkSecurityGroup(&nsg, ssdMap[nsg.ID])
 		if err != nil {
 			logger.Error().Err(err).Msg("error converting NetworkSecurityGroup to APINetworkSecurityGroup")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to prepare Network Security Group for response", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to prepare Network Security Group for response", nil)
 		}
 
 		aits[i] = apiNSG
@@ -678,7 +637,7 @@ func (gansgh GetAllNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 	pageHeader, err := json.Marshal(pageReponse)
 	if err != nil {
 		logger.Error().Err(err).Msg("error marshaling pagination response")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to generate pagination response header", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to generate pagination response header", nil)
 	}
 
 	c.Response().Header().Set(pagination.ResponseHeaderName, string(pageHeader))
@@ -696,7 +655,7 @@ type GetNetworkSecurityGroupHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetAllNetworkSecurityGroupHandler initializes and returns a new handler for getting all NetworkSecurityGroups
@@ -705,7 +664,7 @@ func NewGetNetworkSecurityGroupHandler(dbSession *cdb.Session, tc temporalClient
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -725,31 +684,12 @@ func NewGetNetworkSecurityGroupHandler(dbSession *cdb.Session, tc temporalClient
 // @Success 200 {object} []model.APINetworkSecurityGroup
 // @Router /v2/org/{org}/carbide/network-security-group [get]
 func (gansgh GetNetworkSecurityGroupHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "NetworkSecurityGroup").Str("Handler", "Get").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gansgh.tracerSpan.CreateChildInContext(ctx, "GetNetworkSecurityGroupHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("NetworkSecurityGroup", "Get", c, gansgh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gansgh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gansgh.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -760,7 +700,7 @@ func (gansgh GetNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate paginantion request
@@ -769,21 +709,21 @@ func (gansgh GetNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 	err = c.Bind(&pageRequest)
 	if err != nil {
 		logger.Error().Err(err).Msg("error binding pagination request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request pagination data", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request pagination data", nil)
 	}
 
 	// Validate paginantion request attributes
 	err = pageRequest.Validate(cdbm.NetworkSecurityGroupOrderByFields)
 	if err != nil {
 		logger.Error().Err(err).Msg("error validating pagination request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate pagination request data", err)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate pagination request data", err)
 	}
 
 	// Validate role.  Only Tenant Admins are allowed to interact with NetworkSecurityGroup endpoints.
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	// Check `includeAttachmentStats` in query
@@ -792,7 +732,7 @@ func (gansgh GetNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 	if qoa != "" {
 		includeAttachmentStats, err = strconv.ParseBool(qoa)
 		if err != nil {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid value specified for `includeAttachmentStats` query param", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid value specified for `includeAttachmentStats` query param", nil)
 		}
 	}
 
@@ -801,7 +741,7 @@ func (gansgh GetNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 	qIncludeRelations, errMsg := common.GetAndValidateQueryRelations(qParams, cdbm.NetworkSecurityGroupRelatedEntities)
 	if errMsg != "" {
 		logger.Warn().Msg(errMsg)
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
 	}
 
 	// Get NSG ID from path
@@ -814,16 +754,16 @@ func (gansgh GetNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 	if err != nil {
 		if err == cdb.ErrDoesNotExist {
 			logger.Error().Err(err).Msg("NetworkSecurityGroup in request not found")
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Network Security Group in request not found", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Network Security Group in request not found", nil)
 		}
 
 		logger.Error().Err(err).Msg("error retrieving NetworkSecurityGroup for Site specified in query")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Network Security Group for Site in query", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Network Security Group for Site in query", nil)
 	}
 
 	if nsg.TenantOrg != org {
 		logger.Error().Err(err).Msg("org specified in request does not match org of Tenant associated with NetworkSecurityGroup")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Org specified in request does not match org of Tenant associated with Network Security Group", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Org specified in request does not match org of Tenant associated with Network Security Group", nil)
 	}
 
 	// Get status details
@@ -832,14 +772,14 @@ func (gansgh GetNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 	ssds, serr := sdDAO.GetRecentByEntityIDs(ctx, nil, []string{nsgID}, common.RECENT_STATUS_DETAIL_COUNT)
 	if serr != nil {
 		logger.Error().Err(serr).Msg("error retrieving Status Details for NetworkSecurityGroup from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to populate status history for Network Security Group", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to populate status history for Network Security Group", nil)
 	}
 
 	// Create response
 	apiNetworkSecurityGroup, err := model.NewAPINetworkSecurityGroup(nsg, ssds)
 	if err != nil {
 		logger.Error().Err(err).Msg("error converting NetworkSecurityGroup to APINetworkSecurityGroup")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to prepare Network Security Group for response", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to prepare Network Security Group for response", nil)
 	}
 
 	// Attach stats if requested
@@ -850,12 +790,12 @@ func (gansgh GetNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 
 		_, instanceCount, err := insDAO.GetAll(ctx, nil, cdbm.InstanceFilterInput{NetworkSecurityGroupIDs: []string{nsgID}}, cdbp.PageInput{Limit: cdb.GetIntPtr(0)}, nil)
 		if err != nil {
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve related Instances for Network Security Group", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve related Instances for Network Security Group", nil)
 		}
 
 		_, vpcCount, err := vpcDAO.GetAll(ctx, nil, cdbm.VpcFilterInput{NetworkSecurityGroupIDs: []string{nsgID}}, cdbp.PageInput{Limit: cdb.GetIntPtr(0)}, nil)
 		if err != nil {
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve related VPCs for Network Security Group", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve related VPCs for Network Security Group", nil)
 		}
 		apiNetworkSecurityGroup.AttachmentStats = &model.APINetworkSecurityGroupStats{
 			VpcAttachmentCount:      vpcCount,
@@ -878,7 +818,7 @@ type DeleteNetworkSecurityGroupHandler struct {
 	tc         temporalClient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewDeleteNetworkSecurityGroupHandler initializes and returns a new handler for creating NetworkSecurityGroup
@@ -888,7 +828,7 @@ func NewDeleteNetworkSecurityGroupHandler(dbSession *cdb.Session, tc temporalCli
 		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -904,31 +844,12 @@ func NewDeleteNetworkSecurityGroupHandler(dbSession *cdb.Session, tc temporalCli
 // @Success 202 {object} model.APINetworkSecurityGroup
 // @Router /v2/org/{org}/carbide/network-security-group [post]
 func (dnsgh DeleteNetworkSecurityGroupHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "NetworkSecurityGroup").Str("Handler", "Delete").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := dnsgh.tracerSpan.CreateChildInContext(ctx, "DeleteNetworkSecurityGroupHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("NetworkSecurityGroup", "Delete", c, dnsgh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		dnsgh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, dnsgh.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -939,14 +860,14 @@ func (dnsgh DeleteNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Tenant Admins are allowed to interact with NetworkSecurityGroup endpoints
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role with org, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	// Get NetworkSecurityGroup ID from URL param
@@ -961,16 +882,16 @@ func (dnsgh DeleteNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 	})
 	if err != nil {
 		if err == cdb.ErrDoesNotExist {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find Network Security Group with specified ID", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find Network Security Group with specified ID", nil)
 		}
 		logger.Error().Err(err).Msg("error retrieving NetworkSecurityGroup from DB by ID")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Network Security Group with specified ID", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Network Security Group with specified ID", nil)
 	}
 
 	// Validate the tenant for which this NetworkSecurityGroup is being deleted
 	if nsg.TenantOrg != org {
 		logger.Warn().Msg("org specified in request does not match org of Tenant associated with NetworkSecurityGroup")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Org specified in request does not match org of Tenant associated with Network Security Group", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Org specified in request does not match org of Tenant associated with Network Security Group", nil)
 	}
 
 	// Check if any objects are using the NetworkSecurityGroup
@@ -983,27 +904,27 @@ func (dnsgh DeleteNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 
 	_, instanceCount, err := insDAO.GetAll(ctx, nil, cdbm.InstanceFilterInput{NetworkSecurityGroupIDs: []string{nsgID}}, cdbp.PageInput{Limit: cdb.GetIntPtr(0)}, nil)
 	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve related Instances for Network Security Group", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve related Instances for Network Security Group", nil)
 	}
 
 	if instanceCount > 0 {
-		return cerr.NewAPIErrorResponse(c, http.StatusPreconditionFailed, "Cannot delete NetworkSecurityGroup, one or more Instances have attached this Network Security Group", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusPreconditionFailed, "Cannot delete NetworkSecurityGroup, one or more Instances have attached this Network Security Group", nil)
 	}
 
 	_, vpcCount, err := vpcDAO.GetAll(ctx, nil, cdbm.VpcFilterInput{NetworkSecurityGroupIDs: []string{nsgID}}, cdbp.PageInput{Limit: cdb.GetIntPtr(0)}, nil)
 	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve related VPCs for Network Security Group", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve related VPCs for Network Security Group", nil)
 	}
 
 	if vpcCount > 0 {
-		return cerr.NewAPIErrorResponse(c, http.StatusPreconditionFailed, "Cannot delete NetworkSecurityGroup, one or more VPCs have attached this Network Security Group", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusPreconditionFailed, "Cannot delete NetworkSecurityGroup, one or more VPCs have attached this Network Security Group", nil)
 	}
 
 	// Start a DB transaction
 	tx, err := cdb.BeginTx(ctx, dnsgh.dbSession, &sql.TxOptions{})
 	if err != nil {
 		logger.Error().Err(err).Msg("unable to start transaction")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete Network Security Group", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete Network Security Group", nil)
 	}
 
 	// This variable is used in cleanup actions to indicate if this transaction committed
@@ -1018,7 +939,7 @@ func (dnsgh DeleteNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 	_, err = nsgDAO.Update(ctx, tx, unsgInput)
 	if err != nil {
 		logger.Error().Err(err).Msg("error updating NetworkSecurityGroup in DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete Network Security Group", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete Network Security Group", nil)
 	}
 
 	// Delete NetworkSecurityGroup
@@ -1030,7 +951,7 @@ func (dnsgh DeleteNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 	err = nsgDAO.Delete(ctx, tx, dnsgInput)
 	if err != nil {
 		logger.Error().Err(err).Msg("error deleting NetworkSecurityGroup in DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete Network Security Group", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete Network Security Group", nil)
 	}
 
 	// Create status detail
@@ -1045,7 +966,7 @@ func (dnsgh DeleteNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 	stc, err := dnsgh.scp.GetClientByID(nsg.SiteID)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
 	}
 
 	deleteNetworkSecurityGroupRequest := &cwssaws.DeleteNetworkSecurityGroupRequest{
@@ -1056,20 +977,20 @@ func (dnsgh DeleteNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 	workflowOptions := temporalClient.StartWorkflowOptions{
 		ID:                       "network-security-group-delete-" + nsg.ID,
 		TaskQueue:                queue.SiteTaskQueue,
-		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
 	}
 
 	logger.Info().Msg("triggering NetworkSecurityGroup delete workflow")
 
 	// Add context deadlines
-	ctx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
+	ctx, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow
 	we, err := stc.ExecuteWorkflow(ctx, workflowOptions, "DeleteNetworkSecurityGroup", deleteNetworkSecurityGroupRequest)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to synchronously start Temporal workflow to delete NetworkSecurityGroup")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed start sync workflow to delete Network Security Group on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed start sync workflow to delete Network Security Group on Site: %s", err), nil)
 	}
 
 	wid := we.GetID()
@@ -1092,7 +1013,7 @@ func (dnsgh DeleteNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 		var applicationErr *tp.ApplicationError
 		if errors.As(err, &applicationErr) && (applicationErr.Type() == swe.ErrTypeCarbideUnimplemented || applicationErr.Type() == swe.ErrTypeCarbideDenied) {
 			logger.Error().Msg("feature not yet implemented on target Site")
-			return cerr.NewAPIErrorResponse(c, http.StatusNotImplemented, fmt.Sprintf("Feature not yet implemented on target Site: %s", err), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotImplemented, fmt.Sprintf("Feature not yet implemented on target Site: %s", err), nil)
 		}
 
 		var timeoutErr *tp.TimeoutError
@@ -1102,7 +1023,7 @@ func (dnsgh DeleteNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 
 		code, err := common.UnwrapWorkflowError(err)
 		logger.Error().Err(err).Msg("failed to synchronously execute Temporal workflow to delete NetworkSecurityGroup")
-		return cerr.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to execute sync workflow to delete Network Security Group on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to execute sync workflow to delete Network Security Group on Site: %s", err), nil)
 	}
 
 	logger.Info().Str("Workflow ID", wid).Msg("completed synchronous delete NetworkSecurityGroup workflow")
@@ -1111,7 +1032,7 @@ func (dnsgh DeleteNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 	err = tx.Commit()
 	if err != nil {
 		logger.Error().Err(err).Msg("error committing transaction")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete Network Security Group", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete Network Security Group", nil)
 	}
 	txCommitted = true
 
@@ -1129,7 +1050,7 @@ type UpdateNetworkSecurityGroupHandler struct {
 	tc         temporalClient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewDeleteNetworkSecurityGroupHandler initializes and returns a new handler for creating NetworkSecurityGroup
@@ -1139,7 +1060,7 @@ func NewUpdateNetworkSecurityGroupHandler(dbSession *cdb.Session, tc temporalCli
 		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -1155,31 +1076,12 @@ func NewUpdateNetworkSecurityGroupHandler(dbSession *cdb.Session, tc temporalCli
 // @Success 200 {object} model.APINetworkSecurityGroup
 // @Router /v2/org/{org}/carbide/network-security-group [post]
 func (dnsgh UpdateNetworkSecurityGroupHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "NetworkSecurityGroup").Str("Handler", "Update").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := dnsgh.tracerSpan.CreateChildInContext(ctx, "UpdateNetworkSecurityGroupHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("NetworkSecurityGroup", "Update", c, dnsgh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		dnsgh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, dnsgh.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -1190,14 +1092,14 @@ func (dnsgh UpdateNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Tenant Admins are allowed to interact with NetworkSecurityGroup endpoints
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role with org, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	// Get NetworkSecurityGroup ID from URL param
@@ -1211,7 +1113,7 @@ func (dnsgh UpdateNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 	err = c.Bind(&apiRequest)
 	if err != nil {
 		logger.Error().Err(err).Msg("error binding request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
 	}
 
 	// Get NSG from DB
@@ -1221,16 +1123,16 @@ func (dnsgh UpdateNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 	})
 	if err != nil {
 		if err == cdb.ErrDoesNotExist {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find Network Security Group with specified ID", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find Network Security Group with specified ID", nil)
 		}
 		logger.Error().Err(err).Msg("error retrieving NetworkSecurityGroup from DB by ID")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Network Security Group with specified ID", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Network Security Group with specified ID", nil)
 	}
 
 	// Validate the tenant for which this NetworkSecurityGroup is being deleted
 	if nsg.TenantOrg != org {
 		logger.Warn().Msg("org specified in request does not match org of Tenant associated with NetworkSecurityGroup")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Org specified in request does not match org of Tenant associated with Network Security Group", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Org specified in request does not match org of Tenant associated with Network Security Group", nil)
 	}
 
 	// Get any site-specific config
@@ -1238,7 +1140,7 @@ func (dnsgh UpdateNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 	site, err := stDAO.GetByID(ctx, nil, nsg.SiteID, nil, false)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Site from DB by ID")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "The Site where this Network Security Group is being updated could not be retrieved", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "The Site where this Network Security Group is being updated could not be retrieved", nil)
 	}
 
 	siteConfig := &cdbm.SiteConfig{}
@@ -1251,14 +1153,14 @@ func (dnsgh UpdateNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 	// have created a valid update request anyway.
 	if !siteConfig.NetworkSecurityGroup {
 		logger.Warn().Msg("site does not have NetworkSecurityGroup capability")
-		return cerr.NewAPIErrorResponse(c, http.StatusPreconditionFailed, "Site does not have NetworkSecurityGroup capability", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusPreconditionFailed, "Site does not have NetworkSecurityGroup capability", nil)
 	}
 
 	// Validate request attributes
 	err = apiRequest.Validate(siteConfig)
 	if err != nil {
 		logger.Error().Err(err).Msg("error validating NetworkSecurityGroup update request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating Network Security Group update request data", err)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating Network Security Group update request data", err)
 	}
 
 	// If a name change is happening, check for name conflicts.
@@ -1266,12 +1168,12 @@ func (dnsgh UpdateNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 		nsgs, tot, err := nsgDAO.GetAll(ctx, nil, cdbm.NetworkSecurityGroupFilterInput{Name: apiRequest.Name, TenantOrgs: []string{nsg.TenantOrg}, SiteIDs: []uuid.UUID{nsg.SiteID}}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
 		if err != nil {
 			logger.Error().Err(err).Msg("error checking for existing NetworkSecurityGroup")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to check for existing Network Security Group", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to check for existing Network Security Group", nil)
 		}
 		// If we found one, and it's not the one in this request,
 		// no good.
 		if tot > 0 && nsgs[0].ID != nsg.ID {
-			return cerr.NewAPIErrorResponse(c, http.StatusConflict, fmt.Sprintf("Network Security Group with name: %s for Site: %s already exists", *apiRequest.Name, nsg.SiteID), validation.Errors{
+			return cutil.NewAPIErrorResponse(c, http.StatusConflict, fmt.Sprintf("Network Security Group with name: %s for Site: %s already exists", *apiRequest.Name, nsg.SiteID), validation.Errors{
 				"id": errors.New(nsgs[0].ID),
 			})
 		}
@@ -1292,7 +1194,7 @@ func (dnsgh UpdateNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 			if rule.Name != nil {
 				if names[*rule.Name] {
 					logger.Error().Str("name", *rule.Name).Msg("duplicate rule name in request")
-					return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Duplicate rule name `%s` in request", *rule.Name), nil)
+					return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Duplicate rule name `%s` in request", *rule.Name), nil)
 				}
 
 				names[*rule.Name] = true
@@ -1301,7 +1203,7 @@ func (dnsgh UpdateNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 			newRule, err := model.ProtobufRuleFromAPINetworkSecurityGroupRule(&rule)
 			if err != nil {
 				logger.Error().Err(err).Msg("unable to convert rules in request to internal rules")
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Unable to process rules in request", err)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Unable to process rules in request", err)
 			}
 
 			rules[i] = newRule
@@ -1312,7 +1214,7 @@ func (dnsgh UpdateNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 	tx, err := cdb.BeginTx(ctx, dnsgh.dbSession, &sql.TxOptions{})
 	if err != nil {
 		logger.Error().Err(err).Msg("unable to start transaction")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete Network Security Group", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete Network Security Group", nil)
 	}
 
 	// This variable is used in cleanup actions to indicate if this transaction committed
@@ -1332,7 +1234,7 @@ func (dnsgh UpdateNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 	nsg, err = nsgDAO.Update(ctx, tx, unsgInput)
 	if err != nil {
 		logger.Error().Err(err).Msg("error updating NetworkSecurityGroup in DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Network Security Group", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Network Security Group", nil)
 	}
 
 	// Get status details
@@ -1341,14 +1243,14 @@ func (dnsgh UpdateNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 	ssds, _, err := sdDAO.GetAllByEntityID(ctx, tx, nsg.ID, nil, cdb.GetIntPtr(pagination.MaxPageSize), nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Status Details for NetworkSecurityGroup from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details for Network Security Group", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details for Network Security Group", nil)
 	}
 
 	// Get the temporal client for the site we are working with.
 	stc, err := dnsgh.scp.GetClientByID(nsg.SiteID)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
 	}
 
 	// Prepare the labels for the metadata of the carbide call.
@@ -1391,20 +1293,20 @@ func (dnsgh UpdateNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 	workflowOptions := temporalClient.StartWorkflowOptions{
 		ID:                       "network-security-group-update-" + nsg.ID,
 		TaskQueue:                queue.SiteTaskQueue,
-		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
 	}
 
 	logger.Info().Msg("triggering NetworkSecurityGroup update workflow")
 
 	// Add context deadlines
-	ctx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
+	ctx, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow
 	we, err := stc.ExecuteWorkflow(ctx, workflowOptions, "UpdateNetworkSecurityGroup", updateNetworkSecurityGroupRequest)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to synchronously start Temporal workflow to update NetworkSecurityGroup")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed start sync workflow to update Network Security Group on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed start sync workflow to update Network Security Group on Site: %s", err), nil)
 	}
 
 	wid := we.GetID()
@@ -1418,7 +1320,7 @@ func (dnsgh UpdateNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 		var applicationErr *tp.ApplicationError
 		if errors.As(err, &applicationErr) && (applicationErr.Type() == swe.ErrTypeCarbideUnimplemented || applicationErr.Type() == swe.ErrTypeCarbideDenied) {
 			logger.Error().Msg("feature not yet implemented on target Site")
-			return cerr.NewAPIErrorResponse(c, http.StatusNotImplemented, fmt.Sprintf("Feature not yet implemented on target Site: %s", err), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotImplemented, fmt.Sprintf("Feature not yet implemented on target Site: %s", err), nil)
 		}
 
 		var timeoutErr *tp.TimeoutError
@@ -1428,7 +1330,7 @@ func (dnsgh UpdateNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 
 		code, err := common.UnwrapWorkflowError(err)
 		logger.Error().Err(err).Msg("failed to synchronously execute Temporal workflow to update NetworkSecurityGroup")
-		return cerr.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to execute sync workflow to update Network Security Group on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to execute sync workflow to update Network Security Group on Site: %s", err), nil)
 	}
 
 	logger.Info().Str("Workflow ID", wid).Msg("completed synchronous update NetworkSecurityGroup workflow")
@@ -1437,14 +1339,14 @@ func (dnsgh UpdateNetworkSecurityGroupHandler) Handle(c echo.Context) error {
 	apiNetworkSecurityGroup, err := model.NewAPINetworkSecurityGroup(nsg, ssds)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to convert NetworkSecurityGroup database record to API response")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to convert Network Security Group database record to API response", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to convert Network Security Group database record to API response", nil)
 	}
 
 	// Commit the DB transaction after the synchronous workflow has completed without error
 	err = tx.Commit()
 	if err != nil {
 		logger.Error().Err(err).Msg("error committing NetworkSecurityGroup transaction to DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Network Security Group, DB transaction error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Network Security Group, DB transaction error", nil)
 	}
 
 	// Set committed so deferred cleanup functions will do nothing

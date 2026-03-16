@@ -66,7 +66,7 @@ func DiscoverExpectedMachineInventory(ctx workflow.Context) error {
 
 // CreateExpectedMachine is a workflow to create new Expected Machines using the CreateExpectedMachineOnSite activity
 func CreateExpectedMachine(ctx workflow.Context, request *cwssaws.ExpectedMachine) error {
-	logger := log.With().Str("Workflow", "ExpectedMachine").Str("Action", "Create").Str("ID", request.Id.String()).Str("Expected MAC address", request.BmcMacAddress).Str("Serial", request.ChassisSerialNumber).Logger()
+	logger := log.With().Str("Workflow", "ExpectedMachine").Str("Action", "Create").Str("ID", request.GetId().GetValue()).Str("Expected MAC address", request.BmcMacAddress).Str("Serial", request.ChassisSerialNumber).Logger()
 
 	logger.Info().Msg("starting workflow")
 
@@ -101,7 +101,7 @@ func CreateExpectedMachine(ctx workflow.Context, request *cwssaws.ExpectedMachin
 
 // UpdateExpectedMachine is a workflow to update Expected Machines using the UpdateExpectedMachineOnSite activity
 func UpdateExpectedMachine(ctx workflow.Context, request *cwssaws.ExpectedMachine) error {
-	logger := log.With().Str("Workflow", "ExpectedMachine").Str("Action", "Update").Str("ID", request.Id.String()).Str("Expected MAC address", request.BmcMacAddress).Str("Serial", request.ChassisSerialNumber).Logger()
+	logger := log.With().Str("Workflow", "ExpectedMachine").Str("Action", "Update").Str("ID", request.GetId().GetValue()).Str("Expected MAC address", request.BmcMacAddress).Str("Serial", request.ChassisSerialNumber).Logger()
 
 	logger.Info().Msg("starting workflow")
 
@@ -210,7 +210,7 @@ func UpdateExpectedMachines(ctx workflow.Context, request *cwssaws.BatchExpected
 
 // DeleteExpectedMachine is a workflow to Delete Expected Machines using the DeleteExpectedMachineOnSite activity
 func DeleteExpectedMachine(ctx workflow.Context, request *cwssaws.ExpectedMachineRequest) error {
-	logger := log.With().Str("Workflow", "ExpectedMachine").Str("Action", "Delete").Str("ID", request.Id.String()).Str("optional MAC address", request.BmcMacAddress).Logger()
+	logger := log.With().Str("Workflow", "ExpectedMachine").Str("Action", "Delete").Str("ID", request.GetId().GetValue()).Str("optional MAC address", request.BmcMacAddress).Logger()
 
 	logger.Info().Msg("starting workflow")
 

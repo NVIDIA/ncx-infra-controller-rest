@@ -72,6 +72,9 @@ func (mvp *ManageVpcPrefix) CreateVpcPrefixOnSite(ctx context.Context, request *
 
 	// Call Site Controller gRPC endpoint
 	carbideClient := mvp.CarbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return client.ErrClientNotConnected
+	}
 	forgeClient := carbideClient.Carbide()
 
 	_, err = forgeClient.CreateVpcPrefix(ctx, request)
@@ -106,6 +109,9 @@ func (mvp *ManageVpcPrefix) UpdateVpcPrefixOnSite(ctx context.Context, request *
 
 	// Call Site Controller gRPC endpoint
 	carbideClient := mvp.CarbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return client.ErrClientNotConnected
+	}
 	forgeClient := carbideClient.Carbide()
 
 	_, err = forgeClient.UpdateVpcPrefix(ctx, request)
@@ -140,6 +146,9 @@ func (mvp *ManageVpcPrefix) DeleteVpcPrefixOnSite(ctx context.Context, request *
 
 	// Call Site Controller gRPC endpoint
 	carbideClient := mvp.CarbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return client.ErrClientNotConnected
+	}
 	forgeClient := carbideClient.Carbide()
 
 	_, err = forgeClient.DeleteVpcPrefix(ctx, request)

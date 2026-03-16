@@ -38,15 +38,13 @@ import (
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/google/uuid"
-	"github.com/rs/zerolog/log"
 
 	"github.com/nvidia/bare-metal-manager-rest/api/internal/config"
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/handler/util/common"
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model"
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/pagination"
 	auth "github.com/nvidia/bare-metal-manager-rest/auth/pkg/authorization"
-	cerr "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	sutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
+	cutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 	csm "github.com/nvidia/bare-metal-manager-rest/site-manager/pkg/sitemgr"
 
 	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
@@ -72,7 +70,7 @@ type CreateSiteHandler struct {
 	tc         tClient.Client
 	tnc        tClient.NamespaceClient
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewCreateSiteHandler initializes and returns a new handler for creating Tenant
@@ -82,7 +80,7 @@ func NewCreateSiteHandler(dbSession *cdb.Session, tc tClient.Client, tnc tClient
 		tc:         tc,
 		tnc:        tnc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -98,29 +96,12 @@ func NewCreateSiteHandler(dbSession *cdb.Session, tc tClient.Client, tnc tClient
 // @Success 201 {object} model.APISite
 // @Router /v2/org/{org}/carbide/site [post]
 func (csh CreateSiteHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "Site").Str("Handler", "Create").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := csh.tracerSpan.CreateChildInContext(ctx, "CreateSiteHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("Site", "Create", c, csh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
 		defer handlerSpan.End()
-		csh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, csh.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -131,14 +112,14 @@ func (csh CreateSiteHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Provider Admins are allowed to create Site
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Provider Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
 	}
 
 	// Validate request
@@ -147,25 +128,25 @@ func (csh CreateSiteHandler) Handle(c echo.Context) error {
 	err = c.Bind(&apiRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
 	}
 
 	// Validate request attributes
 	verr := apiRequest.Validate()
 	if verr != nil {
 		logger.Warn().Err(verr).Msg("error validating Site creation request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating Site creation request data", verr)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating Site creation request data", verr)
 	}
 
 	// Get Infrastructure Provider for this org
 	ip, err := common.GetInfrastructureProviderForOrg(ctx, nil, csh.dbSession, org)
 	if err != nil {
 		if err == common.ErrOrgInstrastructureProviderNotFound {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound,
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound,
 				fmt.Sprintf("Org '%v' does not have an Infrastructure Provider", org), nil)
 		}
 		logger.Error().Err(err).Msg("error retrieving Infrastructure Provider for this org")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Infrastructure Provider", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Infrastructure Provider", nil)
 	}
 
 	// Check for name uniqueness for the Site within the scope of the Provider
@@ -173,10 +154,10 @@ func (csh CreateSiteHandler) Handle(c echo.Context) error {
 	sts, tot, err := stDAO.GetAll(ctx, nil, cdbm.SiteFilterInput{Name: &apiRequest.Name, InfrastructureProviderIDs: []uuid.UUID{ip.ID}}, paginator.PageInput{}, nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("db error checking for name uniqueness of Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Site, error reading from data store", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Site, error reading from data store", nil)
 	}
 	if tot > 0 {
-		return cerr.NewAPIErrorResponse(c, http.StatusConflict, "A Site with specified name already exists for Infrastructure Provider", validation.Errors{
+		return cutil.NewAPIErrorResponse(c, http.StatusConflict, "A Site with specified name already exists for Infrastructure Provider", validation.Errors{
 			"id": errors.New(sts[0].ID.String()),
 		})
 	}
@@ -185,7 +166,7 @@ func (csh CreateSiteHandler) Handle(c echo.Context) error {
 	tx, err := cdb.BeginTx(ctx, csh.dbSession, &sql.TxOptions{})
 	if err != nil {
 		logger.Error().Err(err).Msg("unable to start transaction")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Site, error initiating data store transaction", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Site, error initiating data store transaction", nil)
 	}
 	// this variable is used in cleanup actions to indicate if this transaction committed
 	txCommitted := false
@@ -221,7 +202,7 @@ func (csh CreateSiteHandler) Handle(c echo.Context) error {
 	st, err := stDAO.Create(ctx, tx, dbCreateInput)
 	if err != nil {
 		logger.Error().Err(err).Msg("error creating Site DB entry")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Site", nil)
 	}
 
 	// Create status detail
@@ -233,7 +214,7 @@ func (csh CreateSiteHandler) Handle(c echo.Context) error {
 	}
 	if ssd == nil {
 		logger.Error().Msg("Status Detail DB entry not returned from CreateFromParams")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to get new Status Detail for Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to get new Status Detail for Site", nil)
 	}
 
 	// Create Site entry in Site Manager
@@ -248,7 +229,7 @@ func (csh CreateSiteHandler) Handle(c echo.Context) error {
 		err = csm.CreateSite(ctx, logger, st.ID.String(), st.Name, provider, st.Org, url)
 		if err != nil {
 			logger.Error().Err(err).Msg("failed to create Site entry in Site Manager")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Unable to create Site Manager entry for Site", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Unable to create Site Manager entry for Site", nil)
 		}
 		defer func() {
 			if !txCommitted {
@@ -259,7 +240,7 @@ func (csh CreateSiteHandler) Handle(c echo.Context) error {
 		// Retrieve registration token (OTP) from Site Manager
 		registrationToken, registrationTokenExpires, serr := csm.GetSiteOTP(ctx, logger, st.ID.String(), url)
 		if serr != nil {
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to obtain registration token from Site Manager", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to obtain registration token from Site Manager", nil)
 		}
 
 		_, err = stDAO.Update(ctx, tx, cdbm.SiteUpdateInput{
@@ -269,14 +250,14 @@ func (csh CreateSiteHandler) Handle(c echo.Context) error {
 		})
 		if err != nil {
 			logger.Error().Err(err).Msg("error updating Site with registration token")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Site with registration token, error communicating with data store", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Site with registration token, error communicating with data store", nil)
 		}
 
 		// Refresh Site object
 		st, serr = stDAO.GetByID(ctx, tx, st.ID, nil, false)
 		if serr != nil {
 			logger.Error().Err(serr).Msg("error retrieving Site from DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to refresh Site data with registration token, error communicating with data store", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to refresh Site data with registration token, error communicating with data store", nil)
 		}
 	}
 
@@ -292,13 +273,13 @@ func (csh CreateSiteHandler) Handle(c echo.Context) error {
 	err = csh.tnc.Register(ctx, &regRequest)
 	if err != nil {
 		logger.Error().Err(err).Msg("error creating Temporal namespace for Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create workflow namespace for Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create workflow namespace for Site", nil)
 	}
 
 	err = tx.Commit()
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to commit transaction, error creating site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Site, error finalizing data store transaction", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Site, error finalizing data store transaction", nil)
 	}
 	txCommitted = true
 
@@ -317,7 +298,7 @@ type UpdateSiteHandler struct {
 	dbSession  *cdb.Session
 	tc         tClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewUpdateSiteHandler initializes and returns a new handler for updating Site
@@ -326,7 +307,7 @@ func NewUpdateSiteHandler(dbSession *cdb.Session, tc tClient.Client, cfg *config
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -343,31 +324,12 @@ func NewUpdateSiteHandler(dbSession *cdb.Session, tc tClient.Client, cfg *config
 // @Success 200 {object} model.APISite
 // @Router /v2/org/{org}/carbide/site/{id} [patch]
 func (ush UpdateSiteHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "Site").Str("Handler", "Update").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := ush.tracerSpan.CreateChildInContext(ctx, "UpdateSiteHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("Site", "Update", c, ush.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		ush.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, ush.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -378,7 +340,7 @@ func (ush UpdateSiteHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Provider Admins are allowed to update Site
@@ -395,7 +357,7 @@ func (ush UpdateSiteHandler) Handle(c echo.Context) error {
 
 	stID, err := uuid.Parse(stStrID)
 	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Site ID in URL", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Site ID in URL", nil)
 	}
 
 	stDAO := cdbm.NewSiteDAO(ush.dbSession)
@@ -406,21 +368,21 @@ func (ush UpdateSiteHandler) Handle(c echo.Context) error {
 	err = c.Bind(&apiRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
 	}
 
 	// Validate request attributes
 	verr := apiRequest.Validate(isProviderRequest)
 	if verr != nil {
 		logger.Warn().Err(verr).Msg("error validating Site update request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating Site update request data", verr)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating Site update request data", verr)
 	}
 
 	// Check that Site exists
 	es, err := stDAO.GetByID(ctx, nil, stID, nil, false)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error retrieving Site DB entity")
-		return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not retrieve Site to update", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not retrieve Site to update", nil)
 	}
 
 	tsDAO := cdbm.NewTenantSiteDAO(ush.dbSession)
@@ -429,17 +391,17 @@ func (ush UpdateSiteHandler) Handle(c echo.Context) error {
 
 	if isProviderRequest {
 		if orgProvider.ID != es.InfrastructureProviderID {
-			return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Site is not associated with org's Infrastructure Provider", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Site is not associated with org's Infrastructure Provider", nil)
 		}
 	} else {
 		// Check that TenantSite exists
 		ts, err = tsDAO.GetByTenantIDAndSiteID(ctx, nil, orgTenant.ID, stID, nil)
 		if err != nil {
 			if err == cdb.ErrDoesNotExist {
-				return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant does not have access to Site", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant does not have access to Site", nil)
 			}
 			logger.Warn().Err(err).Msg("error retrieving TenantSite DB entity")
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Failed to determine Tenant access to Site, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Failed to determine Tenant access to Site, DB error", nil)
 		}
 	}
 
@@ -454,13 +416,13 @@ func (ush UpdateSiteHandler) Handle(c echo.Context) error {
 		err = csm.RollSite(ctx, logger, es.ID.String(), es.Name, url)
 		if err != nil {
 			logger.Warn().Err(err).Msg("error rolling site in site manager")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Site Manager failure", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site Manager failure", nil)
 		}
 
 		registrationToken, registrationTokenExpires, err = csm.GetSiteOTP(ctx, logger, es.ID.String(), url)
 		if err != nil {
 			logger.Error().Err(err).Msg("error getting site from site manager")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Site Manager failure", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Site Manager failure", nil)
 		}
 
 		// Switch Site status only if it is currently not Registered
@@ -475,10 +437,10 @@ func (ush UpdateSiteHandler) Handle(c echo.Context) error {
 		sts, tot, serr := stDAO.GetAll(ctx, nil, cdbm.SiteFilterInput{Name: apiRequest.Name, InfrastructureProviderIDs: []uuid.UUID{es.InfrastructureProviderID}}, paginator.PageInput{}, nil)
 		if serr != nil {
 			logger.Error().Err(serr).Msg("db error checking for name uniqueness of Site")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Site, error reading from data store", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Site, error reading from data store", nil)
 		}
 		if tot > 0 {
-			return cerr.NewAPIErrorResponse(c, http.StatusConflict, "Another Site with specified name already exists for Provider", validation.Errors{
+			return cutil.NewAPIErrorResponse(c, http.StatusConflict, "Another Site with specified name already exists for Provider", validation.Errors{
 				"id": errors.New(sts[0].ID.String()),
 			})
 		}
@@ -487,15 +449,15 @@ func (ush UpdateSiteHandler) Handle(c echo.Context) error {
 	// Check if SOL params changed
 	if es.Status != cdbm.SiteStatusRegistered {
 		if apiRequest.IsSerialConsoleEnabled != nil && *apiRequest.IsSerialConsoleEnabled != es.IsSerialConsoleEnabled {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Cannot enable/disable Serial Console for Site that is not in Registered state", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Cannot enable/disable Serial Console for Site that is not in Registered state", nil)
 		}
 
 		if apiRequest.SerialConsoleIdleTimeout != nil {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Cannot update Serial Console idle timeout for Site that is not in Registered state", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Cannot update Serial Console idle timeout for Site that is not in Registered state", nil)
 		}
 
 		if apiRequest.SerialConsoleMaxSessionLength != nil {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Cannot update Serial Console max session length for Site that is not in Registered state", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Cannot update Serial Console max session length for Site that is not in Registered state", nil)
 		}
 	}
 
@@ -503,7 +465,7 @@ func (ush UpdateSiteHandler) Handle(c echo.Context) error {
 	tx, err := cdb.BeginTx(ctx, ush.dbSession, &sql.TxOptions{})
 	if err != nil {
 		logger.Error().Err(err).Msg("unable to start transaction")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Site, error initiating data store transaction", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Site, error initiating data store transaction", nil)
 	}
 	// this variable is used in cleanup actions to indicate if this transaction committed
 	txCommitted := false
@@ -541,7 +503,7 @@ func (ush UpdateSiteHandler) Handle(c echo.Context) error {
 		us, err = stDAO.Update(ctx, tx, dbUpdateInput)
 		if err != nil {
 			logger.Error().Err(err).Msg("error updating site")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update site", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update site", nil)
 		}
 	} else {
 		us = es
@@ -555,7 +517,7 @@ func (ush UpdateSiteHandler) Handle(c echo.Context) error {
 		)
 		if err != nil {
 			logger.Error().Err(err).Msg("error updating tenant site")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update tenant site", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update tenant site", nil)
 		}
 	}
 
@@ -574,13 +536,13 @@ func (ush UpdateSiteHandler) Handle(c echo.Context) error {
 	ssds, _, err := sdDAO.GetAllByEntityID(ctx, tx, stID.String(), nil, cdb.GetIntPtr(pagination.MaxPageSize), nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Status Details for Site from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details for Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details for Site", nil)
 	}
 
 	err = tx.Commit()
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to commit transaction, error updating site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Site, error finalizing data store transaction", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Site, error finalizing data store transaction", nil)
 	}
 	txCommitted = true
 
@@ -599,7 +561,7 @@ type GetSiteHandler struct {
 	dbSession  *cdb.Session
 	tc         tClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetSiteHandler initializes and returns a new handler for getting Site
@@ -608,7 +570,7 @@ func NewGetSiteHandler(dbSession *cdb.Session, tc tClient.Client, cfg *config.Co
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -625,31 +587,12 @@ func NewGetSiteHandler(dbSession *cdb.Session, tc tClient.Client, cfg *config.Co
 // @Success 200 {object} model.APISite
 // @Router /v2/org/{org}/carbide/site/{id} [get]
 func (gsh GetSiteHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "Site").Str("Handler", "Get").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gsh.tracerSpan.CreateChildInContext(ctx, "GetSiteHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("Site", "Get", c, gsh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gsh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gsh.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -660,7 +603,7 @@ func (gsh GetSiteHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	provider, tenant, apiErr := common.IsProviderOrTenant(ctx, logger, gsh.dbSession, org, dbUser, true, false)
@@ -673,7 +616,7 @@ func (gsh GetSiteHandler) Handle(c echo.Context) error {
 	qIncludeRelations, errMsg := common.GetAndValidateQueryRelations(qParams, cdbm.SiteRelatedEntities)
 	if errMsg != "" {
 		logger.Warn().Msg(errMsg)
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
 	}
 
 	// Get Site ID from URL param
@@ -683,7 +626,7 @@ func (gsh GetSiteHandler) Handle(c echo.Context) error {
 
 	stID, err := uuid.Parse(stStrID)
 	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Site ID in URL", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Site ID in URL", nil)
 	}
 
 	// Get Site
@@ -692,10 +635,10 @@ func (gsh GetSiteHandler) Handle(c echo.Context) error {
 	st, err := stDAO.GetByID(ctx, nil, stID, qIncludeRelations, false)
 	if err != nil {
 		if err == cdb.ErrDoesNotExist {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find Site with specified ID", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find Site with specified ID", nil)
 		}
 		logger.Error().Err(err).Msg("error retrieving Site from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site", nil)
 	}
 
 	// Check Site association with Provider
@@ -713,7 +656,7 @@ func (gsh GetSiteHandler) Handle(c echo.Context) error {
 		if serr != nil {
 			if serr != cdb.ErrDoesNotExist {
 				logger.Error().Err(serr).Msg("error retrieving TenantSite from DB")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to determine org's association with Site, DB error", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to determine org's association with Site, DB error", nil)
 			}
 		} else {
 			isAssociated = true
@@ -721,7 +664,7 @@ func (gsh GetSiteHandler) Handle(c echo.Context) error {
 	}
 
 	if !isAssociated {
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Site is not associated with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Site is not associated with org", nil)
 	}
 
 	// Get Site status details
@@ -730,7 +673,7 @@ func (gsh GetSiteHandler) Handle(c echo.Context) error {
 	ssds, err := sdDAO.GetRecentByEntityIDs(ctx, nil, []string{stID.String()}, common.RECENT_STATUS_DETAIL_COUNT)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Status Details for Site from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details for Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details for Site", nil)
 	}
 
 	// Create response
@@ -746,7 +689,7 @@ type GetAllSiteHandler struct {
 	dbSession  *cdb.Session
 	tc         tClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetAllSiteHandler initializes and returns a new handler for retrieving all Sites
@@ -755,7 +698,7 @@ func NewGetAllSiteHandler(dbSession *cdb.Session, tc tClient.Client, cfg *config
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -777,31 +720,12 @@ func NewGetAllSiteHandler(dbSession *cdb.Session, tc tClient.Client, cfg *config
 // @Success 200 {array} []model.APISite
 // @Router /v2/org/{org}/carbide/site [get]
 func (gash GetAllSiteHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "Site").Str("Handler", "GetAll").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gash.tracerSpan.CreateChildInContext(ctx, "GetAllSiteHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("Site", "GetAll", c, gash.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gash.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gash.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -812,7 +736,7 @@ func (gash GetAllSiteHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate pagination request
@@ -821,14 +745,14 @@ func (gash GetAllSiteHandler) Handle(c echo.Context) error {
 	err = c.Bind(&pageRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding pagination request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request pagination data", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request pagination data", nil)
 	}
 
 	// Validate request attributes
 	err = pageRequest.Validate(cdbm.SiteOrderByFields)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error validating pagination request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate pagination request data", err)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate pagination request data", err)
 	}
 
 	// Get and validate includeRelation params
@@ -836,7 +760,7 @@ func (gash GetAllSiteHandler) Handle(c echo.Context) error {
 	qIncludeRelations, errMsg := common.GetAndValidateQueryRelations(qParams, cdbm.SiteRelatedEntities)
 	if errMsg != "" {
 		logger.Warn().Msg(errMsg)
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
 	}
 
 	provider, tenant, apiErr := common.IsProviderOrTenant(ctx, logger, gash.dbSession, org, dbUser, true, false)
@@ -862,7 +786,7 @@ func (gash GetAllSiteHandler) Handle(c echo.Context) error {
 				statusError := validation.Errors{
 					"status": errors.New(status),
 				}
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Status value in query", statusError)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Status value in query", statusError)
 			}
 			filter.Statuses = append(filter.Statuses, status)
 		}
@@ -874,7 +798,7 @@ func (gash GetAllSiteHandler) Handle(c echo.Context) error {
 	if qims != "" {
 		includeMachineStats, err = strconv.ParseBool(qims)
 		if err != nil {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid value specified for `includeMachineStats` query param", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid value specified for `includeMachineStats` query param", nil)
 		}
 	}
 
@@ -886,7 +810,7 @@ func (gash GetAllSiteHandler) Handle(c echo.Context) error {
 	if qinne != "" {
 		isnnEnabled, err := strconv.ParseBool(qinne)
 		if err != nil {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid value specified for `isNativeNetworkingEnabled` query param", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid value specified for `isNativeNetworkingEnabled` query param", nil)
 		}
 		isNativeNetworkingEnabled = &isnnEnabled
 	}
@@ -898,7 +822,7 @@ func (gash GetAllSiteHandler) Handle(c echo.Context) error {
 	if qie != "" {
 		isEnabled, err := strconv.ParseBool(qie)
 		if err != nil {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid value specified for `isNativeNetworkingEnabled` query param", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid value specified for `isNativeNetworkingEnabled` query param", nil)
 		}
 		isNetworkSecurityGroupEnabled = &isEnabled
 	}
@@ -910,7 +834,7 @@ func (gash GetAllSiteHandler) Handle(c echo.Context) error {
 	if qinlpe != "" {
 		isEnabled, err := strconv.ParseBool(qinlpe)
 		if err != nil {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid value specified for `isNVLinkPartitionEnabled` query param", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid value specified for `isNVLinkPartitionEnabled` query param", nil)
 		}
 		isNVLinkPartitionEnabled = &isEnabled
 	}
@@ -922,7 +846,7 @@ func (gash GetAllSiteHandler) Handle(c echo.Context) error {
 	if qirlae != "" {
 		isEnabled, err := strconv.ParseBool(qirlae)
 		if err != nil {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid value specified for `isRackLevelAdministrationEnabled` query param", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid value specified for `isRackLevelAdministrationEnabled` query param", nil)
 		}
 		isRackLevelAdministrationEnabled = &isEnabled
 	}
@@ -934,13 +858,13 @@ func (gash GetAllSiteHandler) Handle(c echo.Context) error {
 	if includeMachineStats {
 		if provider == nil {
 			logger.Warn().Msg("`includeMachineStats` is only permitted with Provider Admin role")
-			return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User must have Provider Admin role to request `includeMachineStats`", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User must have Provider Admin role to request `includeMachineStats`", nil)
 		}
 
 		machineStats, err = common.GetSiteMachineCountStats(ctx, nil, gash.dbSession, logger, &provider.ID, nil)
 		if err != nil {
 			logger.Error().Err(err).Msg("unable to request Machine stats for Site")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Unable to request Machine stats for Site", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Unable to request Machine stats for Site", nil)
 		}
 	}
 
@@ -955,7 +879,7 @@ func (gash GetAllSiteHandler) Handle(c echo.Context) error {
 		sites, _, serr := stDAO.GetAll(ctx, nil, cdbm.SiteFilterInput{InfrastructureProviderIDs: []uuid.UUID{provider.ID}}, paginator.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
 		if serr != nil {
 			logger.Error().Err(serr).Msg("error retrieving all Sites by param from DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Sites", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Sites", nil)
 		}
 		for _, site := range sites {
 			siteIDs.Add(site.ID)
@@ -968,7 +892,7 @@ func (gash GetAllSiteHandler) Handle(c echo.Context) error {
 		tss, _, serr := tsDAO.GetAll(ctx, nil, cdbm.TenantSiteFilterInput{TenantIDs: []uuid.UUID{tenant.ID}}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
 		if serr != nil {
 			logger.Error().Err(serr).Msg("error retrieving Tenant Site associations from DB by Tenant ID")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site associated with Tenant", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site associated with Tenant", nil)
 		}
 
 		for _, ts := range tss {
@@ -986,7 +910,7 @@ func (gash GetAllSiteHandler) Handle(c echo.Context) error {
 			}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
 			if serr != nil {
 				logger.Error().Err(serr).Msg("error retrieving Tenant Accounts for privileged Tenant")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant Accounts", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant Accounts", nil)
 			}
 
 			if len(tas) > 0 {
@@ -998,7 +922,7 @@ func (gash GetAllSiteHandler) Handle(c echo.Context) error {
 				providerSites, _, serr := stDAO.GetAll(ctx, nil, cdbm.SiteFilterInput{InfrastructureProviderIDs: providerIDs}, paginator.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
 				if serr != nil {
 					logger.Error().Err(serr).Msg("error retrieving Sites for Providers from Tenant Accounts")
-					return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Sites for one or more Providers", nil)
+					return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Sites for one or more Providers", nil)
 				}
 				for _, site := range providerSites {
 					siteIDs.Add(site.ID)
@@ -1013,7 +937,7 @@ func (gash GetAllSiteHandler) Handle(c echo.Context) error {
 	sites, total, err := stDAO.GetAll(ctx, nil, filter, paginator.PageInput{Offset: pageRequest.Offset, Limit: pageRequest.Limit, OrderBy: pageRequest.OrderBy}, qIncludeRelations)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Sites from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Sites, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Sites, DB error", nil)
 	}
 
 	// Get status details
@@ -1028,7 +952,7 @@ func (gash GetAllSiteHandler) Handle(c echo.Context) error {
 	ssds, serr := sdDAO.GetRecentByEntityIDs(ctx, nil, pagedSiteIDs, common.RECENT_STATUS_DETAIL_COUNT)
 	if serr != nil {
 		logger.Warn().Err(serr).Msg("error retrieving Status Details for Sites from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to populate status history for Sites", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to populate status history for Sites", nil)
 	}
 	ssdMap := map[string][]cdbm.StatusDetail{}
 	for _, ssd := range ssds {
@@ -1050,7 +974,7 @@ func (gash GetAllSiteHandler) Handle(c echo.Context) error {
 	pageHeader, err := json.Marshal(pageReponse)
 	if err != nil {
 		logger.Error().Err(err).Msg("error marshaling pagination response")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to generate pagination response header", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to generate pagination response header", nil)
 	}
 
 	c.Response().Header().Set(pagination.ResponseHeaderName, string(pageHeader))
@@ -1067,7 +991,7 @@ type DeleteSiteHandler struct {
 	dbSession  *cdb.Session
 	tc         tClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewDeleteSiteHandler initializes and returns a new handler for deleting Site
@@ -1076,7 +1000,7 @@ func NewDeleteSiteHandler(dbSession *cdb.Session, tc tClient.Client, cfg *config
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -1093,31 +1017,12 @@ func NewDeleteSiteHandler(dbSession *cdb.Session, tc tClient.Client, cfg *config
 // @Success 204
 // @Router /v2/org/{org}/carbide/site/{id} [delete]
 func (dsh DeleteSiteHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "Site").Str("Handler", "Delete").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := dsh.tracerSpan.CreateChildInContext(ctx, "DeleteSiteHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("Site", "Delete", c, dsh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		dsh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, dsh.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -1128,14 +1033,14 @@ func (dsh DeleteSiteHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Provider Admins are allowed to delete Site
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Provider Admin role with org, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
 	}
 
 	// Get Site ID from URL param
@@ -1145,7 +1050,7 @@ func (dsh DeleteSiteHandler) Handle(c echo.Context) error {
 
 	stID, err := uuid.Parse(stStrID)
 	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Site ID in URL", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Site ID in URL", nil)
 	}
 
 	// Check query param for purging Machine data
@@ -1154,7 +1059,7 @@ func (dsh DeleteSiteHandler) Handle(c echo.Context) error {
 	if purgeMachinesStr != "" {
 		purgeMachines, err = strconv.ParseBool(purgeMachinesStr)
 		if err != nil {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid purgeMachines query param", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid purgeMachines query param", nil)
 		}
 	}
 
@@ -1163,10 +1068,10 @@ func (dsh DeleteSiteHandler) Handle(c echo.Context) error {
 	ip, err := common.GetInfrastructureProviderForOrg(ctx, nil, dsh.dbSession, org)
 	if err != nil {
 		if err == common.ErrOrgInstrastructureProviderNotFound {
-			return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "No Infrastructure Provider found for this org", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "No Infrastructure Provider found for this org", nil)
 		}
 		logger.Error().Err(err).Msg("error retrieving Infrastructure Provider for this org")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Infrastructure Provider", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Infrastructure Provider", nil)
 	}
 
 	// Get Site
@@ -1174,11 +1079,11 @@ func (dsh DeleteSiteHandler) Handle(c echo.Context) error {
 	st, err := stDAO.GetByID(ctx, nil, stID, nil, false)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error retrieving Site from DB by ID")
-		return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not retrieve Site with ID in URL", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not retrieve Site with ID in URL", nil)
 	}
 
 	if st.InfrastructureProviderID != ip.ID {
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Site does not belong to org's Infrastructure Provider", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Site does not belong to org's Infrastructure Provider", nil)
 	}
 
 	// Check for Allocations for Site
@@ -1187,18 +1092,18 @@ func (dsh DeleteSiteHandler) Handle(c echo.Context) error {
 	atotal, err := aDAO.GetCount(ctx, nil, allocationFilter)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Allocations count for Site from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Allocations count for Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Allocations count for Site", nil)
 	}
 
 	if atotal > 0 {
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Site has Allocations which must be deleted first", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Site has Allocations which must be deleted first", nil)
 	}
 
 	// start a transaction
 	tx, err := cdb.BeginTx(ctx, dsh.dbSession, &sql.TxOptions{})
 	if err != nil {
 		logger.Error().Err(err).Msg("unable to start transaction")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete site, error initiating data store transaction", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete site, error initiating data store transaction", nil)
 	}
 	// this variable is used in cleanup actions to indicate if this transaction committed
 	txCommitted := false
@@ -1208,7 +1113,7 @@ func (dsh DeleteSiteHandler) Handle(c echo.Context) error {
 	err = stDAO.Delete(ctx, tx, stID)
 	if err != nil {
 		logger.Error().Err(err).Msg("error deleting Site from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete Site, error deleting Site in data store", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete Site, error deleting Site in data store", nil)
 	}
 
 	// Delete Temporal namespace
@@ -1221,7 +1126,7 @@ func (dsh DeleteSiteHandler) Handle(c echo.Context) error {
 			logger.Warn().Str("Site ID", stStrID).Msg("temporal namespace not found, continuing")
 		} else {
 			logger.Error().Err(err).Msg("error deleting Temporal namespace for Site")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete Site, error deleting workflow namespace", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete Site, error deleting workflow namespace", nil)
 		}
 	}
 
@@ -1232,14 +1137,14 @@ func (dsh DeleteSiteHandler) Handle(c echo.Context) error {
 			logger.Warn().Err(err).Msg("Site not found in Site Manager, continuing with deletion")
 		} else if err != nil {
 			logger.Error().Err(err).Msg("error deleting site in site manager")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete Site, error deleting Site Manager entry", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete Site, error deleting Site Manager entry", nil)
 		}
 	}
 
 	err = tx.Commit()
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to commit transaction, error deleting site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete site, error finalizing data store transaction", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete site, error finalizing data store transaction", nil)
 	}
 	txCommitted = true
 
@@ -1247,7 +1152,7 @@ func (dsh DeleteSiteHandler) Handle(c echo.Context) error {
 	wid, err := siteWorkflow.ExecuteDeleteSiteComponentsWorkflow(ctx, dsh.tc, st.ID, st.InfrastructureProviderID, purgeMachines)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to execute delete Site Components workflow")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to initiate Site Component deletion from DB", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to initiate Site Component deletion from DB", nil)
 	}
 
 	logger.Info().Str("Workflow ID", *wid).Msg("triggered delete Site Component workflow")
@@ -1261,14 +1166,14 @@ func (dsh DeleteSiteHandler) Handle(c echo.Context) error {
 // GetSiteStatusDetailsHandler is the API Handler for getting Site StatusDetail records
 type GetSiteStatusDetailsHandler struct {
 	dbSession  *cdb.Session
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetSiteStatusDetailsHandler initializes and returns a new handler to retrieve Site StatusDetail records
 func NewGetSiteStatusDetailsHandler(dbSession *cdb.Session) GetSiteStatusDetailsHandler {
 	return GetSiteStatusDetailsHandler{
 		dbSession:  dbSession,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -1284,29 +1189,12 @@ func NewGetSiteStatusDetailsHandler(dbSession *cdb.Session) GetSiteStatusDetails
 // @Success 200 {object} []model.APIStatusDetail
 // @Router /v2/org/{org}/carbide/Site/{id}/status-history [get]
 func (gssdh GetSiteStatusDetailsHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "Site").Str("Handler", "Get").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gssdh.tracerSpan.CreateChildInContext(ctx, "GetSiteStatusDetailsHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("Site", "Get", c, gssdh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
 		defer handlerSpan.End()
-		gssdh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gssdh.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -1317,7 +1205,7 @@ func (gssdh GetSiteStatusDetailsHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, user must be either Provider or Tenant Admin to retrieve a Site
@@ -1332,7 +1220,7 @@ func (gssdh GetSiteStatusDetailsHandler) Handle(c echo.Context) error {
 	gssdh.tracerSpan.SetAttribute(handlerSpan, attribute.String("site_id", stStrID), logger)
 	stID, err := uuid.Parse(stStrID)
 	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Site ID in URL", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Site ID in URL", nil)
 	}
 
 	// Get Site
@@ -1340,27 +1228,27 @@ func (gssdh GetSiteStatusDetailsHandler) Handle(c echo.Context) error {
 	st, err := stDAO.GetByID(ctx, nil, stID, nil, false)
 	if err != nil {
 		if err == cdb.ErrDoesNotExist {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find Site with specified ID", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find Site with specified ID", nil)
 		}
 		logger.Error().Err(err).Msg("error retrieving Site from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site", nil)
 	}
 
 	// Check Site association with Provider
 	tsDAO := cdbm.NewTenantSiteDAO(gssdh.dbSession)
 	if isProviderRequest {
 		if orgProvider.ID != st.InfrastructureProviderID {
-			return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Site is not associated with org's Infrastructure Provider", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Site is not associated with org's Infrastructure Provider", nil)
 		}
 	} else {
 		// Check Site association with Tenant
 		_, serr := tsDAO.GetByTenantIDAndSiteID(ctx, nil, orgTenant.ID, stID, nil)
 		if serr != nil {
 			if serr == cdb.ErrDoesNotExist {
-				return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant does not have access to this Site", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant does not have access to this Site", nil)
 			}
 			logger.Error().Err(serr).Msg("error retrieving TenantSite from DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to determine Tenant access to Site, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to determine Tenant access to Site, DB error", nil)
 		}
 	}
 

@@ -29,12 +29,12 @@ import (
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/google/uuid"
-	"github.com/rs/zerolog/log"
 
 	"github.com/labstack/echo/v4"
 
 	"go.opentelemetry.io/otel/attribute"
 
+	cutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
 	cdbp "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
@@ -46,10 +46,8 @@ import (
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/pagination"
 	sc "github.com/nvidia/bare-metal-manager-rest/api/pkg/client/site"
 	auth "github.com/nvidia/bare-metal-manager-rest/auth/pkg/authorization"
-	sutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
 
-	cerr "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 	"github.com/nvidia/bare-metal-manager-rest/db/pkg/db/ipam"
 )
 
@@ -61,7 +59,7 @@ type CreateAllocationHandler struct {
 	tc         temporalClient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewCreateAllocationHandler initializes and returns a new handler for creating Allocation
@@ -71,7 +69,7 @@ func NewCreateAllocationHandler(dbSession *cdb.Session, tc temporalClient.Client
 		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -87,31 +85,12 @@ func NewCreateAllocationHandler(dbSession *cdb.Session, tc temporalClient.Client
 // @Success 201 {object} model.APIAllocation
 // @Router /v2/org/{org}/carbide/allocation [post]
 func (cah CreateAllocationHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "Allocation").Str("Handler", "Create").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := cah.tracerSpan.CreateChildInContext(ctx, "CreateAllocationHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("Allocation", "Create", c, cah.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		cah.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, cah.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -122,14 +101,14 @@ func (cah CreateAllocationHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, currently only Provider Admins are allowed to create Allocations
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Provider Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
 	}
 
 	// Validate request
@@ -138,37 +117,37 @@ func (cah CreateAllocationHandler) Handle(c echo.Context) error {
 	err = c.Bind(&apiRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
 	}
 	// Validate request attributes
 	verr := apiRequest.Validate()
 	if verr != nil {
 		logger.Warn().Err(verr).Msg("error validating Allocation creation request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating Allocation creation request data", verr)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating Allocation creation request data", verr)
 	}
 
 	// Check that infrastructureProvider exists in org
 	ip, err := common.GetInfrastructureProviderForOrg(ctx, nil, cah.dbSession, org)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error getting infrastructure provider for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for org", nil)
 	}
 
 	// Validate the site for which this Allocation is being created
 	site, err := common.GetSiteFromIDString(ctx, nil, apiRequest.SiteID, cah.dbSession)
 	if err != nil {
 		logger.Warn().Err(err).Str("Site ID", apiRequest.SiteID).Msg("error getting site from request")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Site in request", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Site in request", nil)
 	}
 	// verify site's infrastructure provider matches org's infrastructure provider
 	if site.InfrastructureProviderID != ip.ID {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request doesn't belong to current org's Provider", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request doesn't belong to current org's Provider", nil)
 	}
 	// Validate the tenant for which this Allocation is being created
 	tenant, err := common.GetTenantFromIDString(ctx, nil, apiRequest.TenantID, cah.dbSession)
 	if err != nil {
 		logger.Warn().Err(err).Str("tenantId", apiRequest.TenantID).Msg("error getting tenant from request")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Tenant in request", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Tenant in request", nil)
 	}
 
 	// check for name uniqueness for the tenant, ie, tenant cannot have another allocation with same name at the site
@@ -182,10 +161,10 @@ func (cah CreateAllocationHandler) Handle(c echo.Context) error {
 	acs, tot, err := aDAO.GetAll(ctx, nil, filter, cdbp.PageInput{}, nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("DB error checking for name uniqueness of Tenant Allocation")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Allocation due to DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Allocation due to DB error", nil)
 	}
 	if tot > 0 {
-		return cerr.NewAPIErrorResponse(c, http.StatusConflict, "An Allocation with specified name already exists for Tenant", validation.Errors{
+		return cutil.NewAPIErrorResponse(c, http.StatusConflict, "An Allocation with specified name already exists for Tenant", validation.Errors{
 			"id": errors.New(acs[0].ID.String()),
 		})
 	}
@@ -195,7 +174,7 @@ func (cah CreateAllocationHandler) Handle(c echo.Context) error {
 	tx, err := cdb.BeginTx(ctx, cah.dbSession, &sql.TxOptions{})
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to start transaction")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error creating allocation", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error creating allocation", nil)
 	}
 	// this variable is used in cleanup actions to indicate if this transaction committed
 	txCommitted := false
@@ -208,13 +187,13 @@ func (cah CreateAllocationHandler) Handle(c echo.Context) error {
 	err = tx.TryAcquireAdvisoryLock(ctx, cdb.GetAdvisoryLockIDFromString(lockID), nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("unable to acquire advisory lock to create Allocation")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Allocation", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Allocation", nil)
 	}
 
 	_, _, err = common.GetAllAllocationConstraintsForInstanceType(ctx, tx, cah.dbSession, ip, site, tenant, nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error getting count of Allocation Constraints for Instance Type")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error retrieving Count of Allocation Constraints from DB", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error retrieving Count of Allocation Constraints from DB", nil)
 	}
 
 	ipamStorage := ipam.NewIpamStorage(cah.dbSession.DB, tx.GetBunTx())
@@ -230,7 +209,7 @@ func (cah CreateAllocationHandler) Handle(c echo.Context) error {
 	for _, ac := range apiRequest.AllocationConstraints {
 		// Check if a Constraint with Instance Type was already specified in this request
 		if resourceTypeIDMap[ac.ResourceTypeID] {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Multiple Allocation Constraints with same Resource Type ID: %s found in request", ac.ResourceTypeID), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Multiple Allocation Constraints with same Resource Type ID: %s found in request", ac.ResourceTypeID), nil)
 		}
 		resourceTypeIDMap[ac.ResourceTypeID] = true
 
@@ -241,13 +220,13 @@ func (cah CreateAllocationHandler) Handle(c echo.Context) error {
 			it, serr := common.GetInstanceTypeFromIDString(ctx, tx, ac.ResourceTypeID, cah.dbSession)
 			if serr != nil {
 				logger.Warn().Err(serr).Str("resourceId", ac.ResourceTypeID).Msg("error getting Instance Type for Allocation Constraint")
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Instance Type in Allocation Constraint in request", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Instance Type in Allocation Constraint in request", nil)
 			}
 			if it.SiteID != nil && *it.SiteID != site.ID {
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Instance Type: %v in Allocation Constraint does not belong to Site specified in request", it.ID.String()), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Instance Type: %v in Allocation Constraint does not belong to Site specified in request", it.ID.String()), nil)
 			}
 			if it.InfrastructureProviderID != ip.ID {
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Instance Type: %v in Allocation Constraint does not belong to current Provider", it.ID.String()), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Instance Type: %v in Allocation Constraint does not belong to current Provider", it.ID.String()), nil)
 			}
 
 			// Check if there are Machines which are available for Allocation
@@ -257,19 +236,19 @@ func (cah CreateAllocationHandler) Handle(c echo.Context) error {
 				err = tx.TryAcquireAdvisoryLock(ctx, cdb.GetAdvisoryLockIDFromString(it.ID.String()), nil)
 				if err != nil {
 					logger.Error().Err(err).Msg("failed to acquire advisory lock on InstanceType")
-					return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error creating allocation due to db error", nil)
+					return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error creating allocation due to db error", nil)
 				}
 				ok, sserr := common.CheckMachinesForInstanceTypeAllocation(ctx, tx, cah.dbSession, logger, it.ID, ac.ConstraintValue)
 				if sserr != nil {
 					logger.Error().Err(sserr).Str("Resource ID", ac.ResourceTypeID).Msg("error checking available Machines for Instance Type Allocation")
-					return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error checking Machine availability for the Instance Type allocation", nil)
+					return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error checking Machine availability for the Instance Type allocation", nil)
 				}
 				if !ok {
 					logger.Warn().Str("Instance Type ID", ac.ResourceTypeID).Msg("not enough Machines available for Instance Type Allocation")
-					return cerr.NewAPIErrorResponse(c, http.StatusConflict, fmt.Sprintf("Allocation Constraint with Instance Type: %s cannot be satisfied due to machine availability", it.Name), nil)
+					return cutil.NewAPIErrorResponse(c, http.StatusConflict, fmt.Sprintf("Allocation Constraint with Instance Type: %s cannot be satisfied due to machine availability", it.Name), nil)
 				}
 			} else {
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Only Constraint Type: %s is supported at this time", cdbm.AllocationConstraintTypeReserved), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Only Constraint Type: %s is supported at this time", cdbm.AllocationConstraintTypeReserved), nil)
 			}
 
 			dbac.ResourceTypeID = it.ID
@@ -278,13 +257,13 @@ func (cah CreateAllocationHandler) Handle(c echo.Context) error {
 			ipb, serr := common.GetIPBlockFromIDString(ctx, tx, ac.ResourceTypeID, cah.dbSession)
 			if serr != nil {
 				logger.Warn().Err(serr).Str("Resource ID", ac.ResourceTypeID).Msg("error getting IP Block for Allocation Constraint")
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving IPBlock in Allocation Constraint in request", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving IPBlock in Allocation Constraint in request", nil)
 			}
 			if ipb.SiteID != site.ID {
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("IP Block: %s in Allocation Constraint doesn't belong Site specified in request", ipb.ID.String()), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("IP Block: %s in Allocation Constraint doesn't belong Site specified in request", ipb.ID.String()), nil)
 			}
 			if ipb.InfrastructureProviderID != ip.ID {
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("IP Block: %s in Allocation Constraint doesn't belong to current Provider", ipb.ID.String()), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("IP Block: %s in Allocation Constraint doesn't belong to current Provider", ipb.ID.String()), nil)
 			}
 
 			// Allocate a child prefix in ipam
@@ -297,7 +276,7 @@ func (cah CreateAllocationHandler) Handle(c echo.Context) error {
 				}
 
 				logger.Warn().Err(serr).Msg("unable to create child IPAM entry for Allocation Constraint")
-				return cerr.NewAPIErrorResponse(c, http.StatusConflict, fmt.Sprintf("Could not create child IPAM entry for Allocation Constraint. Details: %s", serr.Error()), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusConflict, fmt.Sprintf("Could not create child IPAM entry for Allocation Constraint. Details: %s", serr.Error()), nil)
 			}
 			logger.Info().Str("Child CIDR", childPrefix.Cidr).Msg("created child CIDR")
 
@@ -306,7 +285,7 @@ func (cah CreateAllocationHandler) Handle(c echo.Context) error {
 			prefix, blockSize, serr := ipam.ParseCidrIntoPrefixAndBlockSize(childPrefix.Cidr)
 			if serr != nil {
 				logger.Error().Err(serr).Msg("unable to create IP Block child IPAM entry for Allocation Constraint")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Could not create IPBlock child IPAM entry for Allocation Constraint. Details: %s", serr.Error()), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Could not create IPBlock child IPAM entry for Allocation Constraint. Details: %s", serr.Error()), nil)
 			}
 
 			childIPBlock, serr := ipbDAO.Create(
@@ -328,7 +307,7 @@ func (cah CreateAllocationHandler) Handle(c echo.Context) error {
 			)
 			if serr != nil {
 				logger.Error().Err(serr).Msg("unable to create child IP Block entry for Allocation Constraint")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed creating ipblock entry for Allocation Constraint", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed creating ipblock entry for Allocation Constraint", nil)
 			}
 
 			// Create a status detail record for the child IPBlock
@@ -336,7 +315,7 @@ func (cah CreateAllocationHandler) Handle(c echo.Context) error {
 				cdb.GetStrPtr("Child IP Block is ready for use"))
 			if serr != nil {
 				logger.Error().Err(serr).Msg("error creating Status Detail DB entry for IP Block in Allocation Constraint")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail ipblock entry for Allocation Constraint", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail ipblock entry for Allocation Constraint", nil)
 			}
 
 			dbac.ResourceTypeID = ipb.ID
@@ -359,7 +338,7 @@ func (cah CreateAllocationHandler) Handle(c echo.Context) error {
 	a, err := aDAO.Create(ctx, tx, allocationCreateInput)
 	if err != nil {
 		logger.Error().Err(err).Msg("unable to create Allocation record in DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed creating allocation record", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed creating allocation record", nil)
 	}
 
 	// Create a status detail record for the Allocation
@@ -367,11 +346,11 @@ func (cah CreateAllocationHandler) Handle(c echo.Context) error {
 		cdb.GetStrPtr("received allocation creation request, registered"))
 	if serr != nil {
 		logger.Error().Err(serr).Msg("error creating Status Detail DB entry")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for Allocation", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for Allocation", nil)
 	}
 	if ssd == nil {
 		logger.Error().Msg("Status Detail DB entry not returned from CreateFromParams")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to get new Status Detail for Allocation", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to get new Status Detail for Allocation", nil)
 	}
 
 	// Create the Allocation Constraints in DB
@@ -385,13 +364,13 @@ func (cah CreateAllocationHandler) Handle(c echo.Context) error {
 		retac, serr := acDAO.CreateFromParams(ctx, tx, a.ID, ac.ResourceType, ac.ResourceTypeID, ac.ConstraintType, ac.ConstraintValue, ac.DerivedResourceID, dbUser.ID)
 		if serr != nil {
 			logger.Error().Err(serr).Msg("error creating Allocation Constraint DB entry")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Allocation Constraint entry for Allocation", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Allocation Constraint entry for Allocation", nil)
 		}
 		dbacsRet = append(dbacsRet, *retac)
 		_, cnt, err := common.GetAllAllocationConstraintsForInstanceType(ctx, tx, cah.dbSession, ip, site, tenant, &ac.ResourceTypeID)
 		if err != nil {
 			logger.Error().Err(serr).Msg("error getting Allocation Constraints")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Allocation, db error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Allocation, db error", nil)
 		}
 		if cnt > 1 {
 			imAcUpd = append(imAcUpd, *retac)
@@ -427,7 +406,7 @@ func (cah CreateAllocationHandler) Handle(c echo.Context) error {
 	)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving TenantSite entry")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Allocation, DB error retrieving Tenant/Site association", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Allocation, DB error retrieving Tenant/Site association", nil)
 	}
 	if count == 0 {
 		_, err = tsDAO.Create(
@@ -442,14 +421,14 @@ func (cah CreateAllocationHandler) Handle(c echo.Context) error {
 		)
 		if err != nil {
 			logger.Error().Err(err).Msg("error creating TenantSite entry")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Allocation, DB error creating Tenant/Site association.", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Allocation, DB error creating Tenant/Site association.", nil)
 		}
 
 		// Get the temporal client for the site we are working with.
 		stc, err := cah.scp.GetClientByID(site.ID)
 		if err != nil {
 			logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
 		}
 
 		// Trigger creation of Tenant on Site
@@ -483,7 +462,7 @@ func (cah CreateAllocationHandler) Handle(c echo.Context) error {
 	err = tx.Commit()
 	if err != nil {
 		logger.Error().Err(err).Msg("error committing Allocation transaction to DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create entry for Allocation", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create entry for Allocation", nil)
 	}
 	// set committed so, deferred cleanup functions will do nothing
 	txCommitted = true
@@ -501,7 +480,7 @@ type GetAllAllocationHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetAllAllocationHandler initializes and returns a new handler for getting all Allocations
@@ -510,7 +489,7 @@ func NewGetAllAllocationHandler(dbSession *cdb.Session, tc temporalClient.Client
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -539,31 +518,12 @@ func NewGetAllAllocationHandler(dbSession *cdb.Session, tc temporalClient.Client
 // @Success 200 {object} []model.APIAllocation
 // @Router /v2/org/{org}/carbide/allocation [get]
 func (gaah GetAllAllocationHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "Allocation").Str("Handler", "GetAll").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gaah.tracerSpan.CreateChildInContext(ctx, "GetAllAllocationHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("Allocation", "GetAll", c, gaah.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gaah.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gaah.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -574,7 +534,7 @@ func (gaah GetAllAllocationHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate pagination request
@@ -583,14 +543,14 @@ func (gaah GetAllAllocationHandler) Handle(c echo.Context) error {
 	err = c.Bind(&pageRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding pagination request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request pagination data", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request pagination data", nil)
 	}
 
 	// Validate request attributes
 	err = pageRequest.Validate(cdbm.AllocationOrderByFields)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error validating pagination request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest,
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest,
 			"Failed to validate pagination request data", err)
 	}
 
@@ -599,7 +559,7 @@ func (gaah GetAllAllocationHandler) Handle(c echo.Context) error {
 	qIncludeRelations, errStr := common.GetAndValidateQueryRelations(qParams, cdbm.AllocationRelatedEntities)
 	if errStr != "" {
 		logger.Warn().Msg(errStr)
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, errStr, nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, errStr, nil)
 	}
 
 	filter := cdbm.AllocationFilterInput{}
@@ -607,7 +567,7 @@ func (gaah GetAllAllocationHandler) Handle(c echo.Context) error {
 	qInfrastructureProviderID := c.QueryParam("infrastructureProviderId")
 	tenantIdQuery := qParams["tenantId"]
 	if qInfrastructureProviderID == "" && len(tenantIdQuery) == 0 {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, common.ErrMsgProviderOrTenantIDQueryRequired, nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, common.ErrMsgProviderOrTenantIDQueryRequired, nil)
 	}
 
 	// Validate infrastructure provider id if provided
@@ -615,7 +575,7 @@ func (gaah GetAllAllocationHandler) Handle(c echo.Context) error {
 		id, serr := uuid.Parse(qInfrastructureProviderID)
 		if serr != nil {
 			logger.Warn().Err(serr).Msg("error parsing infrastructureProviderId in query into uuid")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Infrastructure Provider ID in query", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Infrastructure Provider ID in query", nil)
 		}
 
 		filter.InfrastructureProviderID = &id
@@ -630,7 +590,7 @@ func (gaah GetAllAllocationHandler) Handle(c echo.Context) error {
 				tenantIdError := validation.Errors{
 					"tenantId": errors.New(tenantId),
 				}
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Tenant ID in query", tenantIdError)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Tenant ID in query", tenantIdError)
 			}
 
 			filter.TenantIDs = append(filter.TenantIDs, id)
@@ -646,14 +606,14 @@ func (gaah GetAllAllocationHandler) Handle(c echo.Context) error {
 	if err != nil {
 		if err != common.ErrOrgInstrastructureProviderNotFound {
 			logger.Error().Err(err).Msg("error getting infrastructure provider for org")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve infrastructure provider for org, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve infrastructure provider for org, DB error", nil)
 		}
 	} else if filter.InfrastructureProviderID != nil && orgInfrastructureProvider.ID == *filter.InfrastructureProviderID {
 		// Validate role
 		ok = auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole, auth.ProviderViewerRole)
 		if !ok {
 			logger.Warn().Msg("user does not have Provider Admin role, access denied")
-			return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
 		}
 
 		isAssociated = true
@@ -665,7 +625,7 @@ func (gaah GetAllAllocationHandler) Handle(c echo.Context) error {
 		if err1 != nil {
 			if err1 != common.ErrOrgTenantNotFound {
 				logger.Error().Err(err1).Msg("error getting tenant for org")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve tenant for org", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve tenant for org", nil)
 			}
 		} else {
 			for _, tenantID := range filter.TenantIDs {
@@ -674,7 +634,7 @@ func (gaah GetAllAllocationHandler) Handle(c echo.Context) error {
 					ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 					if !ok {
 						logger.Warn().Msg("user does not have Tenant Admin role, access denied")
-						return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+						return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 					}
 
 					isAssociated = true
@@ -683,7 +643,7 @@ func (gaah GetAllAllocationHandler) Handle(c echo.Context) error {
 		}
 	}
 	if !isAssociated {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Either Infrastructure Provider or Tenant in query param must be associated with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Either Infrastructure Provider or Tenant in query param must be associated with org", nil)
 	}
 
 	// now check siteID in query
@@ -695,7 +655,7 @@ func (gaah GetAllAllocationHandler) Handle(c echo.Context) error {
 				siteIdError := validation.Errors{
 					"siteId": errors.New(siteId),
 				}
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve site from request", siteIdError)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve site from request", siteIdError)
 			}
 			filter.SiteIDs = append(filter.SiteIDs, site.ID)
 		}
@@ -717,7 +677,7 @@ func (gaah GetAllAllocationHandler) Handle(c echo.Context) error {
 				statusError := validation.Errors{
 					"status": errors.New(status),
 				}
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Status value in query", statusError)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Status value in query", statusError)
 			}
 			filter.Statuses = append(filter.Statuses, status)
 		}
@@ -732,7 +692,7 @@ func (gaah GetAllAllocationHandler) Handle(c echo.Context) error {
 			} else {
 				errStr := fmt.Sprintf("Invalid resourceType value in query: %v", resourceType)
 				logger.Warn().Msg(errStr)
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, errStr, nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, errStr, nil)
 			}
 		}
 	}
@@ -747,7 +707,7 @@ func (gaah GetAllAllocationHandler) Handle(c echo.Context) error {
 				resourceTypeIdError := validation.Errors{
 					"resourceTypeId": errors.New(resourceTypeId),
 				}
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid ResourceType ID in query", resourceTypeIdError)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid ResourceType ID in query", resourceTypeIdError)
 			}
 			filter.ResourceTypeIDs = append(filter.ResourceTypeIDs, id)
 		}
@@ -761,7 +721,7 @@ func (gaah GetAllAllocationHandler) Handle(c echo.Context) error {
 			} else {
 				errStr := fmt.Sprintf("Invalid constraintType value in query: %v", constraintType)
 				logger.Warn().Msg(errStr)
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, errStr, nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, errStr, nil)
 			}
 		}
 	}
@@ -775,7 +735,7 @@ func (gaah GetAllAllocationHandler) Handle(c echo.Context) error {
 				constraintValueError := validation.Errors{
 					"constraintValue": errors.New(constraintValue),
 				}
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Constraint Value in query", constraintValueError)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Constraint Value in query", constraintValueError)
 			}
 			filter.ConstraintValues = append(filter.ConstraintValues, cv)
 		}
@@ -790,7 +750,7 @@ func (gaah GetAllAllocationHandler) Handle(c echo.Context) error {
 				idError := validation.Errors{
 					"id": errors.New(id),
 				}
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Allocation ID in query", idError)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Allocation ID in query", idError)
 			}
 			filter.AllocationIDs = append(filter.AllocationIDs, allocID)
 		}
@@ -801,7 +761,7 @@ func (gaah GetAllAllocationHandler) Handle(c echo.Context) error {
 	als, total, err := aDAO.GetAll(ctx, nil, filter, pageRequest.ConvertToDB(), qIncludeRelations)
 	if err != nil {
 		logger.Error().Err(err).Msg("error getting Allocations from db")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Allocations", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Allocations", nil)
 	}
 
 	// Get status details
@@ -819,7 +779,7 @@ func (gaah GetAllAllocationHandler) Handle(c echo.Context) error {
 	ssds, err := sdDAO.GetRecentByEntityIDs(ctx, nil, sdEntityIDs, common.RECENT_STATUS_DETAIL_COUNT)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Status Details for Allocations from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to populate status history for Allocations", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to populate status history for Allocations", nil)
 	}
 	ssdMap := map[string][]cdbm.StatusDetail{}
 	for _, ssd := range ssds {
@@ -835,13 +795,13 @@ func (gaah GetAllAllocationHandler) Handle(c echo.Context) error {
 	alcs, _, err := acDAO.GetAll(ctx, nil, aids, nil, nil, nil, nil, nil, nil, cdb.GetIntPtr(cdbp.TotalLimit), nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Allocation Constraints for Allocations from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to populate Constraints for Allocations", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to populate Constraints for Allocations", nil)
 	}
 
 	// Get Resource Type info
 	alcsInstanceTypeMap, alcsIPBlockMap, apiErr := common.GetAllocationResourceTypeMaps(ctx, logger, gaah.dbSession, alcs)
 	if apiErr != nil {
-		return cerr.NewAPIErrorResponse(c, apiErr.Code, apiErr.Message, apiErr.Data)
+		return cutil.NewAPIErrorResponse(c, apiErr.Code, apiErr.Message, apiErr.Data)
 	}
 
 	alcsMap := map[uuid.UUID][]cdbm.AllocationConstraint{}
@@ -862,7 +822,7 @@ func (gaah GetAllAllocationHandler) Handle(c echo.Context) error {
 	pageHeader, err := json.Marshal(pageReponse)
 	if err != nil {
 		logger.Error().Err(err).Msg("error marshaling pagination response")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to generate pagination response header", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to generate pagination response header", nil)
 	}
 
 	c.Response().Header().Set(pagination.ResponseHeaderName, string(pageHeader))
@@ -879,7 +839,7 @@ type GetAllocationHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetAllocationHandler initializes and returns a new handler to retrieve Allocation
@@ -888,7 +848,7 @@ func NewGetAllocationHandler(dbSession *cdb.Session, tc temporalClient.Client, c
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -907,31 +867,12 @@ func NewGetAllocationHandler(dbSession *cdb.Session, tc temporalClient.Client, c
 // @Success 200 {object} model.APIAllocation
 // @Router /v2/org/{org}/carbide/allocation/{id} [get]
 func (gah GetAllocationHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "Allocation").Str("Handler", "Get").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gah.tracerSpan.CreateChildInContext(ctx, "GetAllocationHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("Allocation", "Get", c, gah.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gah.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gah.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -942,7 +883,7 @@ func (gah GetAllocationHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Get allocation ID from URL param
@@ -950,7 +891,7 @@ func (gah GetAllocationHandler) Handle(c echo.Context) error {
 	aID, err := uuid.Parse(aStrID)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error parsing id in url into uuid")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Allocation ID in URL", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Allocation ID in URL", nil)
 	}
 
 	gah.tracerSpan.SetAttribute(handlerSpan, attribute.String("allocation_id", aStrID), logger)
@@ -960,10 +901,10 @@ func (gah GetAllocationHandler) Handle(c echo.Context) error {
 	a, err := aDAO.GetByID(ctx, nil, aID, nil)
 	if err != nil {
 		if err == cdb.ErrDoesNotExist {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find Allocation with specified ID", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find Allocation with specified ID", nil)
 		}
 		logger.Error().Err(err).Msg("error retrieving Allocation DB entity")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Could not retrieve Allocation entity", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Could not retrieve Allocation entity", nil)
 	}
 
 	var infrastructureProviderID *uuid.UUID
@@ -976,7 +917,7 @@ func (gah GetAllocationHandler) Handle(c echo.Context) error {
 	qIncludeRelations, errStr := common.GetAndValidateQueryRelations(qParams, cdbm.AllocationRelatedEntities)
 	if errStr != "" {
 		logger.Warn().Msg(errStr)
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, errStr, nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, errStr, nil)
 	}
 
 	qInfrastructureProviderID := c.QueryParam("infrastructureProviderId")
@@ -984,7 +925,7 @@ func (gah GetAllocationHandler) Handle(c echo.Context) error {
 	if qInfrastructureProviderID == "" && qTenantID == "" {
 		errStr := "Either infrastructureProviderId or tenantId query param must be specified."
 		logger.Warn().Msg(errStr)
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, errStr, nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, errStr, nil)
 	}
 
 	// Validate infrastructure provider id if provided
@@ -992,12 +933,12 @@ func (gah GetAllocationHandler) Handle(c echo.Context) error {
 		id, err1 := uuid.Parse(qInfrastructureProviderID)
 		if err1 != nil {
 			logger.Warn().Err(err1).Msg("error parsing infrastructureProviderId in query into uuid")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Infrastructure Provider ID in query", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Infrastructure Provider ID in query", nil)
 		}
 
 		// If the Infrastructure Provider ID in query is not the same as the one in the allocation, return an error
 		if id != a.InfrastructureProviderID {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find Allocation with Infrastructure Provider in query", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find Allocation with Infrastructure Provider in query", nil)
 		}
 		infrastructureProviderID = &id
 	}
@@ -1006,12 +947,12 @@ func (gah GetAllocationHandler) Handle(c echo.Context) error {
 		id, err1 := uuid.Parse(qTenantID)
 		if err1 != nil {
 			logger.Warn().Err(err1).Msg("error parsing tenantId in query into uuid")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Tenant ID in query", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Tenant ID in query", nil)
 		}
 
 		// If the Tenant in query is not the same as the one in the Allocatioon, return an error
 		if id != a.TenantID {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find Allocation matching Tenant in query", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find Allocation matching Tenant in query", nil)
 		}
 
 		tenantID = &id
@@ -1026,13 +967,13 @@ func (gah GetAllocationHandler) Handle(c echo.Context) error {
 	if err != nil {
 		if err != common.ErrOrgInstrastructureProviderNotFound {
 			logger.Error().Err(err).Msg("error getting infrastructure provider for org")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve infrastructure provider for org, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve infrastructure provider for org, DB error", nil)
 		}
 	} else if infrastructureProviderID != nil && orgInfrastructureProvider.ID == *infrastructureProviderID {
 		// Validate role
 		ok = auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole, auth.ProviderViewerRole)
 		if !ok {
-			return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
 		}
 
 		isAssociated = true
@@ -1044,13 +985,13 @@ func (gah GetAllocationHandler) Handle(c echo.Context) error {
 		if err1 != nil {
 			if err1 != common.ErrOrgTenantNotFound {
 				logger.Error().Err(err1).Msg("error getting tenant for org")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
 			}
 		} else if tenantID != nil && orgTenant.ID == *tenantID {
 			// Validate role
 			ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 			if !ok {
-				return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 			}
 
 			isAssociated = true
@@ -1058,31 +999,31 @@ func (gah GetAllocationHandler) Handle(c echo.Context) error {
 	}
 
 	if !isAssociated {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Either Infrastructure Provider or Tenant in query param must be associated with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Either Infrastructure Provider or Tenant in query param must be associated with org", nil)
 	}
 
 	a, err = aDAO.GetByID(ctx, nil, aID, qIncludeRelations)
 	if err != nil {
 		logger.Error().Err(err).Msg("error getting Allocation from db")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve allocation", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve allocation", nil)
 	}
 	sdDAO := cdbm.NewStatusDetailDAO(gah.dbSession)
 	ssds, err := sdDAO.GetRecentByEntityIDs(ctx, nil, []string{a.ID.String()}, common.RECENT_STATUS_DETAIL_COUNT)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Status Details for Allocation from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details for Allocation", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details for Allocation", nil)
 	}
 	acDAO := cdbm.NewAllocationConstraintDAO(gah.dbSession)
 	acs, _, err := acDAO.GetAll(ctx, nil, []uuid.UUID{a.ID}, nil, nil, nil, nil, nil, nil, nil, nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Allocation Constraints for Allocation from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Allocation Constraints for Allocation", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Allocation Constraints for Allocation", nil)
 	}
 
 	// Get Resource Type info
 	alcsInstanceTypeMap, alcsIPBlockMap, apiErr := common.GetAllocationResourceTypeMaps(ctx, logger, gah.dbSession, acs)
 	if apiErr != nil {
-		return cerr.NewAPIErrorResponse(c, apiErr.Code, apiErr.Message, apiErr.Data)
+		return cutil.NewAPIErrorResponse(c, apiErr.Code, apiErr.Message, apiErr.Data)
 	}
 
 	// Create response
@@ -1098,7 +1039,7 @@ type UpdateAllocationHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewUpdateAllocationHandler initializes and returns a new handler for updating Allocation
@@ -1107,7 +1048,7 @@ func NewUpdateAllocationHandler(dbSession *cdb.Session, tc temporalClient.Client
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -1124,31 +1065,12 @@ func NewUpdateAllocationHandler(dbSession *cdb.Session, tc temporalClient.Client
 // @Success 200 {object} model.APIAllocation
 // @Router /v2/org/{org}/carbide/allocation/{id} [patch]
 func (uah UpdateAllocationHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "Allocation").Str("Handler", "Update").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := uah.tracerSpan.CreateChildInContext(ctx, "UpdateAllocationHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("Allocation", "Update", c, uah.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		uah.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, uah.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -1159,14 +1081,14 @@ func (uah UpdateAllocationHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, currently only Provider Admins can update an Allocation
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Provider Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
 	}
 
 	// Get allocation ID from URL param
@@ -1174,7 +1096,7 @@ func (uah UpdateAllocationHandler) Handle(c echo.Context) error {
 	aID, err := uuid.Parse(aStrID)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error parsing id in url into uuid")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Allocation ID in URL", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Allocation ID in URL", nil)
 	}
 
 	uah.tracerSpan.SetAttribute(handlerSpan, attribute.String("allocation_id", aStrID), logger)
@@ -1187,21 +1109,21 @@ func (uah UpdateAllocationHandler) Handle(c echo.Context) error {
 	err = c.Bind(&apiRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
 	}
 
 	// Validate request attributes
 	verr := apiRequest.Validate()
 	if verr != nil {
 		logger.Warn().Err(verr).Msg("error validating Allocation update request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating Allocation update request data", verr)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating Allocation update request data", verr)
 	}
 
 	// start a database transaction
 	tx, err := cdb.BeginTx(ctx, uah.dbSession, &sql.TxOptions{})
 	if err != nil {
 		logger.Error().Err(err).Msg("error updating Allocation in DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Allocation", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Allocation", nil)
 	}
 	txCommitted := false
 	defer common.RollbackTx(ctx, tx, &txCommitted)
@@ -1211,21 +1133,21 @@ func (uah UpdateAllocationHandler) Handle(c echo.Context) error {
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Allocation DB entity")
 		if err == cdb.ErrDoesNotExist {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not retrieve Allocation to update", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not retrieve Allocation to update", nil)
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Could not retrieve Allocation to update", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Could not retrieve Allocation to update", nil)
 	}
 
 	// Check that the org's infrastructureProvider matches infrastructure provider in allocation
 	ip, err := common.GetInfrastructureProviderForOrg(ctx, tx, uah.dbSession, org)
 	if err != nil {
 		logger.Warn().Err(err).Msg("Infrastructure Provider does not exist for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Error retrieving infrastructureProvider for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Error retrieving infrastructureProvider for org", nil)
 	}
 
 	if a.InfrastructureProviderID != ip.ID {
 		logger.Warn().Msg("infrastructureProvider in allocation does not match infrastructureProvider in org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest,
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest,
 			"InfrastructureProvider in org does not match InfrastructureProvider in Allocation", nil)
 	}
 
@@ -1239,10 +1161,10 @@ func (uah UpdateAllocationHandler) Handle(c echo.Context) error {
 		acs, tot, serr := aDAO.GetAll(ctx, tx, filter, cdbp.PageInput{}, nil)
 		if serr != nil {
 			logger.Error().Err(serr).Msg("DB error checking for name uniqueness of Allocation")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Allocation due to DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Allocation due to DB error", nil)
 		}
 		if tot > 0 {
-			return cerr.NewAPIErrorResponse(c, http.StatusConflict, "Another Allocation with specified name already exists for Tenant", validation.Errors{
+			return cutil.NewAPIErrorResponse(c, http.StatusConflict, "Another Allocation with specified name already exists for Tenant", validation.Errors{
 				"id": errors.New(acs[0].ID.String()),
 			})
 		}
@@ -1251,7 +1173,7 @@ func (uah UpdateAllocationHandler) Handle(c echo.Context) error {
 	a, err = aDAO.Update(ctx, tx, cdbm.AllocationUpdateInput{AllocationID: aID, Name: apiRequest.Name, Description: apiRequest.Description})
 	if err != nil {
 		logger.Error().Err(err).Msg("error updating Allocation in DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Allocation", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Allocation", nil)
 	}
 
 	if apiRequest.Name != nil {
@@ -1261,7 +1183,7 @@ func (uah UpdateAllocationHandler) Handle(c echo.Context) error {
 		acs, _, err := acDAO.GetAll(ctx, tx, []uuid.UUID{a.ID}, cdb.GetStrPtr(cdbm.AllocationResourceTypeIPBlock), nil, nil, nil, nil, nil, nil, nil)
 		if err != nil {
 			logger.Error().Err(err).Msg("error retrieving Allocation Constraints for Allocation from DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Allocation Constraints for Allocation", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Allocation Constraints for Allocation", nil)
 		}
 
 		if len(acs) > 0 {
@@ -1278,7 +1200,7 @@ func (uah UpdateAllocationHandler) Handle(c echo.Context) error {
 			)
 			if err != nil {
 				logger.Error().Err(err).Msg("error retrieving IP Block DB entity")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Tenant IP Block name to match Allocation name, DB error", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Tenant IP Block name to match Allocation name, DB error", nil)
 			}
 		}
 	}
@@ -1287,26 +1209,26 @@ func (uah UpdateAllocationHandler) Handle(c echo.Context) error {
 	ssds, _, err := sdDAO.GetAllByEntityID(ctx, tx, a.ID.String(), nil, cdb.GetIntPtr(pagination.MaxPageSize), nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Status Details for Allocation from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details for Allocation", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details for Allocation", nil)
 	}
 
 	acDAO := cdbm.NewAllocationConstraintDAO(uah.dbSession)
 	acs, _, err := acDAO.GetAll(ctx, tx, []uuid.UUID{a.ID}, nil, nil, nil, nil, nil, nil, nil, nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Allocation Constraints for Allocation from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Allocation Constraints for Allocation", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Allocation Constraints for Allocation", nil)
 	}
 
 	if err = tx.Commit(); err != nil {
 		logger.Error().Err(err).Msg("error updating Allocation in DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Allocation", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Allocation", nil)
 	}
 	txCommitted = true
 
 	// Get Resource Type info
 	alcsInstanceTypeMap, alcsIPBlockMap, apiErr := common.GetAllocationResourceTypeMaps(ctx, logger, uah.dbSession, acs)
 	if apiErr != nil {
-		return cerr.NewAPIErrorResponse(c, apiErr.Code, apiErr.Message, apiErr.Data)
+		return cutil.NewAPIErrorResponse(c, apiErr.Code, apiErr.Message, apiErr.Data)
 	}
 
 	// Create response
@@ -1322,7 +1244,7 @@ type DeleteAllocationHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewDeleteAllocationHandler initializes and returns a new handler for deleting Allocation
@@ -1331,7 +1253,7 @@ func NewDeleteAllocationHandler(dbSession *cdb.Session, tc temporalClient.Client
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -1347,33 +1269,12 @@ func NewDeleteAllocationHandler(dbSession *cdb.Session, tc temporalClient.Client
 // @Success 202
 // @Router /v2/org/{org}/carbide/allocation/{id} [delete]
 func (dah DeleteAllocationHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "Allocation").Str("Handler", "Delete").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child spanner and set the attribute
-	newctx, handlerSpan := dah.tracerSpan.CreateChildInContext(ctx, "DeleteAllocationHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("Allocation", "Delete", c, dah.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		// dah.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
-		dah.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
-
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, dah.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -1384,14 +1285,14 @@ func (dah DeleteAllocationHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Provider Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
 	}
 
 	// Get allocation ID from URL param
@@ -1399,7 +1300,7 @@ func (dah DeleteAllocationHandler) Handle(c echo.Context) error {
 	aID, err := uuid.Parse(aStrID)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error parsing id in url into uuid")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Allocation ID in URL", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Allocation ID in URL", nil)
 	}
 
 	dah.tracerSpan.SetAttribute(handlerSpan, attribute.String("allocation_id", aStrID), logger)
@@ -1412,7 +1313,7 @@ func (dah DeleteAllocationHandler) Handle(c echo.Context) error {
 	tx, err := cdb.BeginTx(ctx, dah.dbSession, &sql.TxOptions{})
 	if err != nil {
 		logger.Error().Err(err).Msg("unable to start a DB transaction")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete Allocation, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete Allocation, DB error", nil)
 	}
 	// this variable is used in deferred functions
 	txCommitted := false
@@ -1423,20 +1324,20 @@ func (dah DeleteAllocationHandler) Handle(c echo.Context) error {
 	if err != nil {
 		logger.Error().Str("Allocation", aID.String()).Err(err).Msg("error retrieving Allocation DB entity")
 		if err == cdb.ErrDoesNotExist {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Allocation specified does not exist, or has been deleted", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Allocation specified does not exist, or has been deleted", nil)
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Could not retrieve Allocation to delete, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Could not retrieve Allocation to delete, DB error", nil)
 	}
 
 	// Check that the org's infrastructureProvider matches infrastructureProvider in Allocation
 	ip, err := common.GetInfrastructureProviderForOrg(ctx, tx, dah.dbSession, org)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error getting infrastructure provider for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Infrastructure Provider for Org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Infrastructure Provider for Org", nil)
 	}
 	if ip.ID != a.InfrastructureProviderID {
 		logger.Warn().Msg("infrastructureProvider in org does not match infrastructureProvider in Allocation")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Allocation does not belong to current Infrastructure Provider", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Allocation does not belong to current Infrastructure Provider", nil)
 	}
 
 	// take an advisory lock on allocation api - this is needed because, we are checking the allocation constraint counts
@@ -1445,13 +1346,13 @@ func (dah DeleteAllocationHandler) Handle(c echo.Context) error {
 	err = tx.TryAcquireAdvisoryLock(ctx, cdb.GetAdvisoryLockIDFromString(lockID), nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("unable to acquire advisory lock to delete Allocation")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete Allocation, unable to acquire lock", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete Allocation, unable to acquire lock", nil)
 	}
 	// Get count of existing allocation constraints of instance type - this is used later to interact with IM
 	_, _, err = common.GetAllAllocationConstraintsForInstanceType(ctx, tx, dah.dbSession, ip, a.Site, a.Tenant, nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error getting count of Allocation Constraints for Instance Type")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error calculating number of Constraints for Allocation, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error calculating number of Constraints for Allocation, DB error", nil)
 	}
 
 	// check dependent objects (instances or subnets for the tenant) in allocation constraints for the allocation
@@ -1459,7 +1360,7 @@ func (dah DeleteAllocationHandler) Handle(c echo.Context) error {
 	acs, _, err := acDAO.GetAll(ctx, tx, []uuid.UUID{a.ID}, nil, nil, nil, nil, nil, nil, cdb.GetIntPtr(cdbp.TotalLimit), nil)
 	if err != nil && err != cdb.ErrDoesNotExist {
 		logger.Error().Err(err).Msg("error retrieving Allocation Constraints from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error getting allocation constraints for allocation", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error getting allocation constraints for allocation", nil)
 	}
 
 	iDAO := cdbm.NewInstanceDAO(dah.dbSession)
@@ -1488,16 +1389,16 @@ func (dah DeleteAllocationHandler) Handle(c echo.Context) error {
 			)
 			if serr != nil {
 				logger.Error().Err(serr).Msg("error retrieving Instances for Allocation Constraint")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error getting Instances for this Allocation", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error getting Instances for this Allocation", nil)
 			}
 			if iCount > 0 {
 				logger.Warn().Msg("unable to delete Allocation, Instances found for Allocation Constraint")
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("%v Instances exist for this Allocation", iCount), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("%v Instances exist for this Allocation", iCount), nil)
 			}
 			_, acCnt, serr := common.GetAllAllocationConstraintsForInstanceType(ctx, tx, dah.dbSession, a.InfrastructureProvider, a.Site, a.Tenant, &ac.ResourceTypeID)
 			if serr != nil {
 				logger.Error().Err(serr).Msg("error getting Allocation Constraints")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete Allocation, DB error", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete Allocation, DB error", nil)
 			}
 			if acCnt > 1 {
 				imAcUpd = append(imAcUpd, ac)
@@ -1513,7 +1414,7 @@ func (dah DeleteAllocationHandler) Handle(c echo.Context) error {
 						logger.Warn().Err(serr).Str("Constraint ID", ac.ResourceTypeID.String()).Msg("IP Block for Allocation not found in DB")
 					} else {
 						logger.Error().Err(serr).Str("Constraint ID", ac.ResourceTypeID.String()).Msg("error getting IP Block for Allocation Constraint")
-						return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error retrieving IP Block for Allocation", nil)
+						return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error retrieving IP Block for Allocation", nil)
 					}
 				}
 				childIPBlock, sserr := ipbDAO.GetByID(ctx, tx, *ac.DerivedResourceID, nil)
@@ -1522,7 +1423,7 @@ func (dah DeleteAllocationHandler) Handle(c echo.Context) error {
 						logger.Warn().Err(sserr).Str("Constraint ID", ac.DerivedResourceID.String()).Msg("Tenant IP Block for Allocation was not found in DB")
 					} else {
 						logger.Error().Err(sserr).Str("Constraint ID", ac.DerivedResourceID.String()).Msg("error getting Tenant IP Block corresponding to Allocation Constraint")
-						return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error retrieving Tenant IP Block for Allocation", nil)
+						return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error retrieving Tenant IP Block for Allocation", nil)
 					}
 				}
 
@@ -1553,35 +1454,35 @@ func (dah DeleteAllocationHandler) Handle(c echo.Context) error {
 					_, sbCount, sserr := sDAO.GetAll(ctx, tx, subnetFilter, cdbp.PageInput{Limit: cdb.GetIntPtr(0)}, []string{})
 					if sserr != nil {
 						logger.Error().Err(sserr).Str("Constraint ID", ac.DerivedResourceID.String()).Msg("error getting Subnets for Allocation Constraint's IP Block")
-						return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error retrieving Subnets for Allocation's IP Block'", nil)
+						return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error retrieving Subnets for Allocation's IP Block'", nil)
 					}
 					if sbCount > 0 {
 						logger.Warn().Msg("failed to delete Allocation, Subnets present for Allocation Constraint")
-						return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("%v Subnets exist for Allocation", sbCount), nil)
+						return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("%v Subnets exist for Allocation", sbCount), nil)
 					}
 
 					// Get count of Vpc Prefixes for the IP Block
 					_, vpCount, sserr := vpDAO.GetAll(ctx, tx, vpcPrefixFilter, cdbp.PageInput{Limit: cdb.GetIntPtr(0)}, []string{})
 					if sserr != nil {
 						logger.Error().Err(sserr).Str("Constraint ID", ac.DerivedResourceID.String()).Msg("error getting Vpc Prefixes for Allocation Constraint's IP Block")
-						return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error retrieving Vpc Prefixes for Allocation's IP Block'", nil)
+						return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error retrieving Vpc Prefixes for Allocation's IP Block'", nil)
 					}
 					if vpCount > 0 {
 						logger.Warn().Msg("failed to delete Allocation, VPC Prefixes present for Allocation Constraint")
-						return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("%v VPC Prefixes exist for Allocation", vpCount), nil)
+						return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("%v VPC Prefixes exist for Allocation", vpCount), nil)
 					}
 
 					sserr = ipbDAO.Delete(ctx, tx, childIPBlock.ID)
 					if sserr != nil {
 						logger.Error().Err(sserr).Str("Constraint ID", ac.DerivedResourceID.String()).Msg("error deleting Tenant IP Block for Allocation Constraint")
-						return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error deleting Tenant IP Block for Allocation", nil)
+						return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error deleting Tenant IP Block for Allocation", nil)
 					}
 					childCidr := ipam.GetCidrForIPBlock(ctx, childIPBlock.Prefix, childIPBlock.PrefixLength)
 					sserr = ipam.DeleteChildIpamEntryFromCidr(ctx, tx, dah.dbSession, ipamStorage, parentIPBlock, childCidr)
 					if sserr != nil {
 						logger.Error().Err(sserr).Str("Constraint ID", ac.DerivedResourceID.String()).Msg("error deleting child IPAM entry for Allocation Constraint's IP Block")
 						if !errors.Is(sserr, ipam.ErrPrefixDoesNotExistForIPBlock) {
-							return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Could not delete child IP Block IPAM entry for Allocation. Details: %s", sserr.Error()), nil)
+							return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Could not delete child IP Block IPAM entry for Allocation. Details: %s", sserr.Error()), nil)
 						}
 					}
 				}
@@ -1590,7 +1491,7 @@ func (dah DeleteAllocationHandler) Handle(c echo.Context) error {
 		err = acDAO.DeleteByID(ctx, tx, ac.ID)
 		if err != nil {
 			logger.Error().Err(err).Msg("error deleting Allocation Constraint in Allocation")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error deleting Allocation Constraint for Allocation", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error deleting Allocation Constraint for Allocation", nil)
 		}
 	}
 
@@ -1599,7 +1500,7 @@ func (dah DeleteAllocationHandler) Handle(c echo.Context) error {
 	err = aDAO.Delete(ctx, tx, a.ID)
 	if err != nil {
 		logger.Error().Err(err).Msg("error deleting Allocation in DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete Allocation, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete Allocation, DB error", nil)
 	}
 
 	// Delete Tenant/Site association if this is the last allocation for the Tenant
@@ -1610,7 +1511,7 @@ func (dah DeleteAllocationHandler) Handle(c echo.Context) error {
 	_, acount, err := aDAO.GetAll(ctx, tx, filter, cdbp.PageInput{}, nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error getting count of remaining Allocations for Tenant on the Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error deleting Allocation, DB error retrieving remaining Allocations for Tenant", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error deleting Allocation, DB error retrieving remaining Allocations for Tenant", nil)
 	}
 	if acount == 0 {
 		tsDAO := cdbm.NewTenantSiteDAO(dah.dbSession)
@@ -1627,13 +1528,13 @@ func (dah DeleteAllocationHandler) Handle(c echo.Context) error {
 
 		if serr != nil {
 			logger.Error().Err(serr).Msg("error getting count of Tenant/Site associations")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error deleting Allocation, DB error retrieving Tenant/Site associations", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error deleting Allocation, DB error retrieving Tenant/Site associations", nil)
 		}
 		if tscount > 0 {
 			err = tsDAO.Delete(ctx, tx, tss[0].ID)
 			if err != nil {
 				logger.Error().Err(err).Msg("error deleting Tenant/Site association")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error deleting Allocation, DB error deleting Tenant/Site association", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error deleting Allocation, DB error deleting Tenant/Site association", nil)
 			}
 		}
 	}
@@ -1642,7 +1543,7 @@ func (dah DeleteAllocationHandler) Handle(c echo.Context) error {
 	err = tx.Commit()
 	if err != nil {
 		logger.Error().Err(err).Msg("error deleting Allocation in DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error deleting Allocation", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error deleting Allocation", nil)
 	}
 	// this is for the deferred functions
 	txCommitted = true

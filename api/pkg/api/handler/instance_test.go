@@ -3494,7 +3494,13 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 	ibp5 := testBuildIBPartition(t, dbSession, "test-ibp-2", tnOrg1, st2, tn1, cdb.GetUUIDPtr(uuid.New()), cdb.GetStrPtr(cdbm.InfiniBandPartitionStatusReady), false)
 	assert.NotNil(t, ibp5)
 
-	// DPU Extension Service Deployment Support
+	// Instance for DPU Extension Service Deployment update
+	mc15 := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
+	assert.NotNil(t, mc15)
+
+	inst15 := testInstanceBuildInstance(t, dbSession, "test-instance-des-preserve", al1.ID, alc1.ID, tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1.ID, cdb.GetStrPtr(mc15.ID), &os2.ID, nil, cdbm.InstanceStatusReady)
+	assert.NotNil(t, inst15)
+
 	des1 := common.TestBuildDpuExtensionService(t, dbSession, "test-dpu-extension-service-1", model.DpuExtensionServiceTypeKubernetesPod, tn1, st1, "1.0.0", cdbm.DpuExtensionServiceStatusReady, tnu1)
 	assert.NotNil(t, des1)
 
@@ -3508,14 +3514,34 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 	des3 := common.TestBuildDpuExtensionService(t, dbSession, "test-dpu-extension-service-3", model.DpuExtensionServiceTypeKubernetesPod, tn2, st2, "1.0.0", cdbm.DpuExtensionServiceStatusReady, tnu2)
 	assert.NotNil(t, des3)
 
-	desd1 := common.TestBuildDpuExtensionServiceDeployment(t, dbSession, des1, inst1.ID, "1.0.0", cdbm.DpuExtensionServiceDeploymentStatusRunning, tnu1)
+	des4 := common.TestBuildDpuExtensionService(t, dbSession, "test-dpu-extension-service-4", model.DpuExtensionServiceTypeKubernetesPod, tn1, st1, "1.0.0", cdbm.DpuExtensionServiceStatusReady, tnu2)
+	assert.NotNil(t, des4)
+
+	desd1 := common.TestBuildDpuExtensionServiceDeployment(t, dbSession, des1, inst15.ID, "1.0.0", cdbm.DpuExtensionServiceDeploymentStatusRunning, tnu1)
 	assert.NotNil(t, desd1)
 
-	// Dedicated fixture for verifying omitted DPU Extension Service updates preserve existing deployments.
-	inst15 := testInstanceBuildInstance(t, dbSession, "test-instance-des-preserve", al1.ID, alc1.ID, tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1.ID, cdb.GetStrPtr(mc2.ID), &os2.ID, nil, cdbm.InstanceStatusReady)
-	assert.NotNil(t, inst15)
-	desd15 := common.TestBuildDpuExtensionServiceDeployment(t, dbSession, des1, inst15.ID, "1.0.0", cdbm.DpuExtensionServiceDeploymentStatusRunning, tnu1)
-	assert.NotNil(t, desd15)
+	desd2 := common.TestBuildDpuExtensionServiceDeployment(t, dbSession, des2, inst15.ID, "1.0.0", cdbm.DpuExtensionServiceDeploymentStatusTerminating, tnu1)
+	assert.NotNil(t, desd2)
+
+	// Instance to test preservation of existing DPU Extension Service Deployments when omitted from request
+	mc16 := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
+	assert.NotNil(t, mc16)
+
+	inst16 := testInstanceBuildInstance(t, dbSession, "test-instance-des-update", al1.ID, alc1.ID, tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1.ID, cdb.GetStrPtr(mc16.ID), &os2.ID, nil, cdbm.InstanceStatusReady)
+	assert.NotNil(t, inst16)
+
+	desd16 := common.TestBuildDpuExtensionServiceDeployment(t, dbSession, des1, inst16.ID, "1.0.0", cdbm.DpuExtensionServiceDeploymentStatusRunning, tnu1)
+	assert.NotNil(t, desd16)
+
+	// Instance to test creation of new DPU Extension Service Deployments when empty array is provided in request
+	mc17 := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
+	assert.NotNil(t, mc17)
+
+	inst17 := testInstanceBuildInstance(t, dbSession, "test-instance-des-update", al1.ID, alc1.ID, tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1.ID, cdb.GetStrPtr(mc17.ID), &os2.ID, nil, cdbm.InstanceStatusReady)
+	assert.NotNil(t, inst17)
+
+	desd17 := common.TestBuildDpuExtensionServiceDeployment(t, dbSession, des1, inst17.ID, "1.0.0", cdbm.DpuExtensionServiceDeploymentStatusRunning, tnu1)
+	assert.NotNil(t, desd17)
 
 	e := echo.New()
 	cfg := common.GetTestConfig()
@@ -3716,12 +3742,12 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 					Name:       cdb.GetStrPtr("test-instance-des-preserve-renamed"),
 					IpxeScript: os2.IpxeScript,
 				},
-				reqInstance:           inst15.ID.String(),
-				cleanInstanceToStatus: inst15.Status,
+				reqInstance:           inst16.ID.String(),
+				cleanInstanceToStatus: inst16.Status,
 				reqOrg:                tnOrg1,
 				reqUser:               tnu1,
 				respCode:              http.StatusOK,
-				expectedDesdIDs:       []string{desd15.ID.String()},
+				expectedDesdIDs:       []string{desd16.ID.String()},
 			},
 			wantErr:                     false,
 			verifySiteControllerRequest: true,
@@ -3741,8 +3767,8 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 					IpxeScript:                     os2.IpxeScript,
 					DpuExtensionServiceDeployments: []model.APIDpuExtensionServiceDeploymentRequest{},
 				},
-				reqInstance:           inst15.ID.String(),
-				cleanInstanceToStatus: inst15.Status,
+				reqInstance:           inst17.ID.String(),
+				cleanInstanceToStatus: inst17.Status,
 				reqOrg:                tnOrg1,
 				reqUser:               tnu1,
 				respCode:              http.StatusOK,
@@ -3762,8 +3788,8 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 			},
 			args: args{
 				reqData: &model.APIInstanceUpdateRequest{
-					Name:        cdb.GetStrPtr("Test Instance with DES"),
-					Description: cdb.GetStrPtr("Test Instance Description"),
+					Name:        cdb.GetStrPtr("test-instance-des-update"),
+					Description: cdb.GetStrPtr("Test Instance updated description"),
 					IpxeScript:  os2.IpxeScript,
 					DpuExtensionServiceDeployments: []model.APIDpuExtensionServiceDeploymentRequest{
 						{
@@ -3776,8 +3802,8 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 						},
 					},
 				},
-				reqInstance:           inst1.ID.String(),
-				cleanInstanceToStatus: inst1.Status,
+				reqInstance:           inst15.ID.String(),
+				cleanInstanceToStatus: inst15.Status,
 				reqOrg:                tnOrg1,
 				reqUser:               tnu1,
 				respCode:              http.StatusOK,
@@ -3796,7 +3822,7 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 			},
 			args: args{
 				reqData: &model.APIInstanceUpdateRequest{
-					Name:       cdb.GetStrPtr("Test Instance"),
+					Name:       cdb.GetStrPtr("test-instance-des-wrong-tenant"),
 					IpxeScript: os2.IpxeScript,
 					DpuExtensionServiceDeployments: []model.APIDpuExtensionServiceDeploymentRequest{
 						{
@@ -3805,8 +3831,8 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 						},
 					},
 				},
-				reqInstance:           inst1.ID.String(),
-				cleanInstanceToStatus: inst1.Status,
+				reqInstance:           inst15.ID.String(),
+				cleanInstanceToStatus: inst15.Status,
 				reqOrg:                tnOrg1,
 				reqUser:               tnu1,
 				respCode:              http.StatusForbidden,
@@ -3823,7 +3849,7 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 			},
 			args: args{
 				reqData: &model.APIInstanceUpdateRequest{
-					Name:       cdb.GetStrPtr("Test Instance"),
+					Name:       cdb.GetStrPtr("test-instance-des-invalid-version"),
 					IpxeScript: os2.IpxeScript,
 					DpuExtensionServiceDeployments: []model.APIDpuExtensionServiceDeploymentRequest{
 						{
@@ -3832,8 +3858,8 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 						},
 					},
 				},
-				reqInstance:           inst1.ID.String(),
-				cleanInstanceToStatus: inst1.Status,
+				reqInstance:           inst15.ID.String(),
+				cleanInstanceToStatus: inst15.Status,
 				reqOrg:                tnOrg1,
 				reqUser:               tnu1,
 				respCode:              http.StatusBadRequest,
@@ -3850,7 +3876,7 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 			},
 			args: args{
 				reqData: &model.APIInstanceUpdateRequest{
-					Name:       cdb.GetStrPtr("Test Instance"),
+					Name:       cdb.GetStrPtr("test-instance-des-invalid-id"),
 					IpxeScript: os2.IpxeScript,
 					DpuExtensionServiceDeployments: []model.APIDpuExtensionServiceDeploymentRequest{
 						{
@@ -3859,8 +3885,8 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 						},
 					},
 				},
-				reqInstance:           inst1.ID.String(),
-				cleanInstanceToStatus: inst1.Status,
+				reqInstance:           inst15.ID.String(),
+				cleanInstanceToStatus: inst15.Status,
 				reqOrg:                tnOrg1,
 				reqUser:               tnu1,
 				respCode:              http.StatusBadRequest,
@@ -5086,8 +5112,6 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 			}
 
 			if tt.verifySiteControllerRequest {
-				// tst3.Mock.On("ExecuteWorkflow", mock.Anything, mock.AnythingOfType("internal.StartWorkflowOptions"),
-				// "UpdateInstance", mock.Anything).Return(wruntimeout, nil)
 				for _, call := range ttscm.Calls {
 					if call.Method == "ExecuteWorkflow" && call.Arguments[2] == "UpdateInstance" {
 						siteReq := call.Arguments[3].(*cwssaws.InstanceConfigUpdateRequest)
@@ -5151,7 +5175,7 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 							assert.Equal(t, len(siteReq.Config.Infiniband.IbInterfaces), len(tt.args.reqData.InfiniBandInterfaces))
 
 							// Make sure order to should be same as the request received
-							for i, _ := range siteReq.Config.Infiniband.IbInterfaces {
+							for i := range siteReq.Config.Infiniband.IbInterfaces {
 								assert.Equal(t, siteReq.Config.Infiniband.IbInterfaces[i].IbPartitionId.Value, tt.args.reqData.InfiniBandInterfaces[i].InfiniBandPartitionID)
 							}
 						}
@@ -5161,8 +5185,18 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 							assert.Equal(t, len(siteReq.Config.Nvlink.GpuConfigs), len(tt.args.reqData.NVLinkInterfaces))
 
 							// Make sure order to should be same as the request received
-							for i, _ := range siteReq.Config.Nvlink.GpuConfigs {
+							for i := range siteReq.Config.Nvlink.GpuConfigs {
 								assert.Equal(t, siteReq.Config.Nvlink.GpuConfigs[i].LogicalPartitionId.Value, tt.args.reqData.NVLinkInterfaces[i].NVLinkLogicalPartitionID)
+							}
+						}
+
+						// Verify the DPU Extension Service Deployments are in the Site Controller request
+						if len(tt.args.reqData.DpuExtensionServiceDeployments) > 0 {
+							assert.Equal(t, len(tt.args.reqData.DpuExtensionServiceDeployments), len(siteReq.Config.DpuExtensionServices.ServiceConfigs), siteReq.Config.DpuExtensionServices.ServiceConfigs)
+
+							// Make sure order to should be same as the request received
+							for i := range siteReq.Config.DpuExtensionServices.ServiceConfigs {
+								assert.Equal(t, siteReq.Config.DpuExtensionServices.ServiceConfigs[i].ServiceId, tt.args.reqData.DpuExtensionServiceDeployments[i].DpuExtensionServiceID)
 							}
 						}
 

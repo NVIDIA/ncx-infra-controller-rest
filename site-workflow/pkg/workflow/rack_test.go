@@ -700,6 +700,96 @@ func TestPowerResetRackTestSuite(t *testing.T) {
 	suite.Run(t, new(PowerResetRackTestSuite))
 }
 
+// BringUpRackTestSuite tests the BringUpRack workflow
+type BringUpRackTestSuite struct {
+	suite.Suite
+	testsuite.WorkflowTestSuite
+
+	env *testsuite.TestWorkflowEnvironment
+}
+
+func (s *BringUpRackTestSuite) SetupTest() {
+	s.env = s.NewTestWorkflowEnvironment()
+}
+
+func (s *BringUpRackTestSuite) AfterTest(suiteName, testName string) {
+	s.env.AssertExpectations(s.T())
+}
+
+func (s *BringUpRackTestSuite) Test_BringUpRack_Success() {
+	var rackManager rActivity.ManageRack
+
+	request := &rlav1.BringUpRackRequest{
+		TargetSpec: &rlav1.OperationTargetSpec{
+			Targets: &rlav1.OperationTargetSpec_Racks{
+				Racks: &rlav1.RackTargets{
+					Targets: []*rlav1.RackTarget{
+						{
+							Identifier: &rlav1.RackTarget_Id{
+								Id: &rlav1.UUID{Id: "test-rack-id"},
+							},
+						},
+					},
+				},
+			},
+		},
+		Description: "API bring up Rack",
+	}
+
+	expectedResponse := &rlav1.SubmitTaskResponse{
+		TaskIds: []*rlav1.UUID{{Id: "task-1"}},
+	}
+
+	s.env.RegisterActivity(rackManager.BringUpRack)
+	s.env.OnActivity(rackManager.BringUpRack, mock.Anything, mock.Anything).Return(expectedResponse, nil)
+
+	s.env.ExecuteWorkflow(BringUpRack, request)
+	s.True(s.env.IsWorkflowCompleted())
+	s.NoError(s.env.GetWorkflowError())
+
+	var response rlav1.SubmitTaskResponse
+	s.NoError(s.env.GetWorkflowResult(&response))
+	s.Equal(1, len(response.GetTaskIds()))
+}
+
+func (s *BringUpRackTestSuite) Test_BringUpRack_ActivityFails() {
+	var rackManager rActivity.ManageRack
+
+	request := &rlav1.BringUpRackRequest{
+		TargetSpec: &rlav1.OperationTargetSpec{
+			Targets: &rlav1.OperationTargetSpec_Racks{
+				Racks: &rlav1.RackTargets{
+					Targets: []*rlav1.RackTarget{
+						{
+							Identifier: &rlav1.RackTarget_Id{
+								Id: &rlav1.UUID{Id: "test-rack-id"},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	errMsg := "RLA connection failed"
+
+	s.env.RegisterActivity(rackManager.BringUpRack)
+	s.env.OnActivity(rackManager.BringUpRack, mock.Anything, mock.Anything).Return(nil, errors.New(errMsg))
+
+	s.env.ExecuteWorkflow(BringUpRack, request)
+	s.True(s.env.IsWorkflowCompleted())
+	err := s.env.GetWorkflowError()
+	s.Error(err)
+
+	var applicationErr *temporal.ApplicationError
+	s.True(errors.As(err, &applicationErr))
+	s.Equal(errMsg, applicationErr.Error())
+}
+
+func TestBringUpRackTestSuite(t *testing.T) {
+	suite.Run(t, new(BringUpRackTestSuite))
+}
+
 // UpgradeFirmwareTestSuite tests the UpgradeFirmware workflow
 type UpgradeFirmwareTestSuite struct {
 	suite.Suite

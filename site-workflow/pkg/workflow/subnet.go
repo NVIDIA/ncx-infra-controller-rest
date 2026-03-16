@@ -71,7 +71,7 @@ func CreateSubnetV2(ctx workflow.Context, request *cwssaws.NetworkSegmentCreatio
 // V1 (DeleteSubnet) is found cloud-workflow and uses a different activity that does not speak
 // to carbide directly.
 func DeleteSubnetV2(ctx workflow.Context, request *cwssaws.NetworkSegmentDeletionRequest) error {
-	logger := log.With().Str("Workflow", "Subnet").Str("Action", "Delete").Str("Subnet ID", request.Id.String()).Logger()
+	logger := log.With().Str("Workflow", "Subnet").Str("Action", "Delete").Str("Subnet ID", request.GetId().GetValue()).Logger()
 
 	logger.Info().Msg("Starting workflow")
 

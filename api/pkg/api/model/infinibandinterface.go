@@ -80,6 +80,10 @@ func (ibicr APIInfiniBandInterfaceCreateOrUpdateRequest) Validate() error {
 type APIInfiniBandInterface struct {
 	// ID is the unique UUID v4 identifier for the InfiniBandInterface
 	ID string `json:"id"`
+	// InstanceID is the ID of the associated Instance
+	InstanceID string `json:"instanceId"`
+	// Instance is the summary of the Instance
+	Instance *APIInstanceSummary `json:"instance,omitempty"`
 	// InfiniBandPartitonID is the ID of the associated InfiniBandPartition
 	InfiniBandPartitonID string `json:"partitionId"`
 	// InfiniBandPartiton is the summary of the InfiniBandPartiton
@@ -108,6 +112,7 @@ type APIInfiniBandInterface struct {
 func NewAPIInfiniBandInterface(dbibi *cdbm.InfiniBandInterface) *APIInfiniBandInterface {
 	apiInfiniBandInterface := &APIInfiniBandInterface{
 		ID:                   dbibi.ID.String(),
+		InstanceID:           dbibi.InstanceID.String(),
 		InfiniBandPartitonID: dbibi.InfiniBandPartitionID.String(),
 		Device:               dbibi.Device,
 		Vendor:               dbibi.Vendor,
@@ -118,6 +123,10 @@ func NewAPIInfiniBandInterface(dbibi *cdbm.InfiniBandInterface) *APIInfiniBandIn
 		Status:               dbibi.Status,
 		Created:              dbibi.Created,
 		Updated:              dbibi.Updated,
+	}
+
+	if dbibi.Instance != nil {
+		apiInfiniBandInterface.Instance = NewAPIInstanceSummary(dbibi.Instance)
 	}
 
 	if dbibi.InfiniBandPartition != nil {

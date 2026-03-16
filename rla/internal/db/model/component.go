@@ -283,3 +283,11 @@ func (cd *Component) SetPowerStateByComponentID(ctx context.Context, idb bun.IDB
 	_, err := idb.NewUpdate().Model(cd).Set("power_state = ?", *cd.PowerState).Where("external_id = ?", *cd.ComponentID).Exec(ctx)
 	return err
 }
+
+func (cd *Component) SetFirmwareVersionByComponentID(ctx context.Context, idb bun.IDB) error {
+	if cd.ComponentID == nil || *cd.ComponentID == "" {
+		return errors.New("component ID not set")
+	}
+	_, err := idb.NewUpdate().Model(cd).Set("firmware_version = ?", cd.FirmwareVersion).Where("external_id = ?", *cd.ComponentID).Exec(ctx)
+	return err
+}

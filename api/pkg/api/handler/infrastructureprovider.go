@@ -21,10 +21,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"go.opentelemetry.io/otel/attribute"
 	temporalClient "go.temporal.io/sdk/client"
-
-	"github.com/rs/zerolog/log"
 
 	"github.com/labstack/echo/v4"
 
@@ -35,8 +32,7 @@ import (
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/handler/util/common"
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model"
 	auth "github.com/nvidia/bare-metal-manager-rest/auth/pkg/authorization"
-	cerr "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	sutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
+	cutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 )
 
 // ~~~~~ Create Handler ~~~~~ //
@@ -46,7 +42,7 @@ type CreateInfrastructureProviderHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewCreateInfrastructureProviderHandler initializes and returns a new handler for creating Infrastructure Provider
@@ -55,7 +51,7 @@ func NewCreateInfrastructureProviderHandler(dbSession *cdb.Session, tc temporalC
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -71,31 +67,12 @@ func NewCreateInfrastructureProviderHandler(dbSession *cdb.Session, tc temporalC
 // @Success 201 {object} model.APIInfrastructureProvider
 // @Router /v2/org/{org}/carbide/infrastructure-provider [post]
 func (ciph CreateInfrastructureProviderHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "InfrastructureProvider").Str("Handler", "Create").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := ciph.tracerSpan.CreateChildInContext(ctx, "CreateInfrastructureProviderHandler", logger)
+	org, dbUser, _, logger, handlerSpan := common.SetupHandler("InfrastructureProvider", "Create", c, ciph.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		ciph.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, ciph.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -106,17 +83,17 @@ func (ciph CreateInfrastructureProviderHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Provider Admins are allowed to interact with Infrastructure Provider endpoints
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Provider Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
 	}
 
-	return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, model.ErrMsgproviderCreateEndpointDeprecated, nil)
+	return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, model.ErrMsgproviderCreateEndpointDeprecated, nil)
 }
 
 // ~~~~~ Get Current Handler ~~~~~ //
@@ -126,7 +103,7 @@ type GetCurrentInfrastructureProviderHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetCurrentInfrastructureProviderHandler initializes and returns a new handler to retrieve Infrastructure Provider associate with the org
@@ -135,7 +112,7 @@ func NewGetCurrentInfrastructureProviderHandler(dbSession *cdb.Session, tc tempo
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -150,31 +127,12 @@ func NewGetCurrentInfrastructureProviderHandler(dbSession *cdb.Session, tc tempo
 // @Success 200 {object} model.APIInfrastructureProvider
 // @Router /v2/org/{org}/carbide/infrastructure-provider/current [get]
 func (gciph GetCurrentInfrastructureProviderHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "InfrastructureProvider").Str("Handler", "GetCurrent").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gciph.tracerSpan.CreateChildInContext(ctx, "GetCurrentInfrastructureProviderHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("InfrastructureProvider", "GetCurrent", c, gciph.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gciph.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gciph.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -185,7 +143,7 @@ func (gciph GetCurrentInfrastructureProviderHandler) Handle(c echo.Context) erro
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 	userOrgDetails, _ := dbUser.OrgData.GetOrgByName(org)
 
@@ -193,7 +151,7 @@ func (gciph GetCurrentInfrastructureProviderHandler) Handle(c echo.Context) erro
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole, auth.ProviderViewerRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Provider Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
 	}
 
 	// Get Infrastructure Provider for this org
@@ -204,7 +162,7 @@ func (gciph GetCurrentInfrastructureProviderHandler) Handle(c echo.Context) erro
 	ips, err := ipDAO.GetAllByOrg(ctx, nil, org, nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Infrastructure Provider for this org")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Infrastructure Provider", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Infrastructure Provider", nil)
 	}
 
 	var serr error
@@ -213,7 +171,7 @@ func (gciph GetCurrentInfrastructureProviderHandler) Handle(c echo.Context) erro
 		ip, serr = ipDAO.CreateFromParams(ctx, nil, userOrgDetails.Name, nil, org, cdb.GetStrPtr(userOrgDetails.DisplayName), dbUser)
 		if serr != nil {
 			logger.Error().Err(serr).Msg("error creating Infrastructure Provider DB entity")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Infrastructure Provider", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Infrastructure Provider", nil)
 		}
 	} else {
 		ip = &ips[0]
@@ -221,7 +179,7 @@ func (gciph GetCurrentInfrastructureProviderHandler) Handle(c echo.Context) erro
 			ip, serr = ipDAO.UpdateFromParams(ctx, nil, ip.ID, nil, nil, cdb.GetStrPtr(userOrgDetails.DisplayName))
 			if serr != nil {
 				logger.Error().Err(serr).Msg("error updating Infrastructure Provider DB entity")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Infrastructure Provider", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Infrastructure Provider", nil)
 			}
 		}
 	}
@@ -241,7 +199,7 @@ type GetCurrentInfrastructureProviderStatsHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetCurrentInfrastructureProviderStatsHandler initializes and returns a new handler to retrieve InfrastructureProvider stats associate with the org
@@ -250,7 +208,7 @@ func NewGetCurrentInfrastructureProviderStatsHandler(dbSession *cdb.Session, tc 
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -265,31 +223,12 @@ func NewGetCurrentInfrastructureProviderStatsHandler(dbSession *cdb.Session, tc 
 // @Success 200 {object} model.APIInfrastructureProviderStats
 // @Router /v2/org/{org}/carbide/infrastructure-provider/current/stats [get]
 func (gcipsh GetCurrentInfrastructureProviderStatsHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "InfrastructureProvider").Str("Handler", "GetCurrentStats").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gcipsh.tracerSpan.CreateChildInContext(ctx, "GetCurrentInfrastructureProviderStatsHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("InfrastructureProvider", "GetCurrentStats", c, gcipsh.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gcipsh.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gcipsh.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -300,14 +239,14 @@ func (gcipsh GetCurrentInfrastructureProviderStatsHandler) Handle(c echo.Context
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Provider Admins are allowed to interact with Infrastructure Provider endpoints
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Provider Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
 	}
 
 	// Get Infrastructure Provider for this org
@@ -316,11 +255,11 @@ func (gcipsh GetCurrentInfrastructureProviderStatsHandler) Handle(c echo.Context
 	ips, err := ipDAO.GetAllByOrg(ctx, nil, org, nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Infrastructure Provider for this org")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Infrastructure Provider", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Infrastructure Provider", nil)
 	}
 
 	if len(ips) == 0 {
-		return cerr.NewAPIErrorResponse(c, http.StatusNotFound,
+		return cutil.NewAPIErrorResponse(c, http.StatusNotFound,
 			fmt.Sprintf("Org '%v' does not have an Infrastructure Provider", org), nil)
 	}
 
@@ -329,7 +268,7 @@ func (gcipsh GetCurrentInfrastructureProviderStatsHandler) Handle(c echo.Context
 	mcStatsMap, err := mcDAO.GetCountByStatus(ctx, nil, cdb.GetUUIDPtr(ips[0].ID), nil, nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Machine stats for this org's infrastructure provider")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Machine stats", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Machine stats", nil)
 	}
 
 	// Get IPBlock stats for this org infrastructure provider
@@ -337,7 +276,7 @@ func (gcipsh GetCurrentInfrastructureProviderStatsHandler) Handle(c echo.Context
 	ipbStatsMap, err := ipbDAO.GetCountByStatus(ctx, nil, cdb.GetUUIDPtr(ips[0].ID), nil, nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving IPBlock stats for this org's infrastructure provider")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve IPBlock stats", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve IPBlock stats", nil)
 	}
 
 	// Get TenantAccount stats for this org infrastructure provider
@@ -345,7 +284,7 @@ func (gcipsh GetCurrentInfrastructureProviderStatsHandler) Handle(c echo.Context
 	taStatsMap, err := taDAO.GetCountByStatus(ctx, nil, cdb.GetUUIDPtr(ips[0].ID), nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving TenantAccount stats for this org's infrastructure provider")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to populate Tenant Account stats for Infrastructure Provider", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to populate Tenant Account stats for Infrastructure Provider", nil)
 	}
 
 	// Create response
@@ -362,7 +301,7 @@ type UpdateCurrentInfrastructureProviderHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewUpdateCurrentInfrastructureProviderHandler initializes and returns a new handler for updating the current Infrastructure Provider
@@ -371,7 +310,7 @@ func NewUpdateCurrentInfrastructureProviderHandler(dbSession *cdb.Session, tc te
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -387,31 +326,12 @@ func NewUpdateCurrentInfrastructureProviderHandler(dbSession *cdb.Session, tc te
 // @Success 200 {object} model.APIInfrastructureProvider
 // @Router /v2/org/{org}/carbide/infrastructure-provider/current [patch]
 func (uciph UpdateCurrentInfrastructureProviderHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "InfrastructureProvider").Str("Handler", "UpdateCurrent").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := uciph.tracerSpan.CreateChildInContext(ctx, "UpdateCurrentInfrastructureProviderHandler", logger)
+	org, dbUser, _, logger, handlerSpan := common.SetupHandler("InfrastructureProvider", "UpdateCurrent", c, uciph.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		uciph.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, uciph.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -422,15 +342,15 @@ func (uciph UpdateCurrentInfrastructureProviderHandler) Handle(c echo.Context) e
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Provider Admins are allowed to interact with Infrastructure Provider endpoints
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Provider Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
 	}
 
-	return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, model.ErrMsgproviderUpdateEndpointDeprecated, nil)
+	return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, model.ErrMsgproviderUpdateEndpointDeprecated, nil)
 }

@@ -23,7 +23,7 @@ import (
 )
 
 type mockClient struct {
-	machines                    map[string]Machine
+	machines                    map[string]MachineDetail
 	powerStates                 map[string]PowerState
 	machineInterfaces           map[string]MachineInterface
 	firmwareUpdateTimeWindowErr error // If set, SetFirmwareUpdateTimeWindow will return this error
@@ -33,7 +33,7 @@ type mockClient struct {
 // NewMockClient returns a "GRPC" client that returns mock values so it can be used in unit tests.
 func NewMockClient() Client {
 	return &mockClient{
-		machines:          map[string]Machine{},
+		machines:          map[string]MachineDetail{},
 		powerStates:       map[string]PowerState{},
 		machineInterfaces: map[string]MachineInterface{},
 	}
@@ -43,12 +43,12 @@ func (c *mockClient) Version(ctx context.Context) (string, error) {
 	return "1.2.3", nil
 }
 
-func (c *mockClient) GetMachines(ctx context.Context) (ret []Machine, err error) {
-	for _, machine := range c.machines {
-		ret = append(ret, machine)
+func (c *mockClient) GetMachines(ctx context.Context) ([]MachineDetail, error) {
+	var result []MachineDetail
+	for _, m := range c.machines {
+		result = append(result, m)
 	}
-
-	return ret, nil
+	return result, nil
 }
 
 func (c *mockClient) GetPowerStates(ctx context.Context, machineIds []string) (ret []MachinePowerState, err error) {
@@ -73,7 +73,7 @@ func (c *mockClient) UpdatePowerOption(ctx context.Context, machineID string, de
 	return nil
 }
 
-func (c *mockClient) AddMachine(machine Machine) {
+func (c *mockClient) AddMachine(machine MachineDetail) {
 	c.machines[machine.MachineID] = machine
 }
 
@@ -103,8 +103,13 @@ func (c *mockClient) AddMachineInterface(iface MachineInterface) {
 }
 
 func (c *mockClient) FindMachinesByIds(ctx context.Context, machineIds []string) ([]MachineDetail, error) {
-	// Mock implementation returns empty for now
-	return nil, nil
+	var result []MachineDetail
+	for _, id := range machineIds {
+		if m, ok := c.machines[id]; ok {
+			result = append(result, m)
+		}
+	}
+	return result, nil
 }
 
 func (c *mockClient) GetMachinePositionInfo(ctx context.Context, machineIds []string) ([]MachinePosition, error) {

@@ -91,3 +91,9 @@ message NVLinkLogicalPartitionId {
 message NVLinkDomainId {
   string value = 1;
 }
+message PowerShelfId {
+  string id = 1;
+}
+message SwitchId {
+  string id = 1;
+}

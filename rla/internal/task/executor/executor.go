@@ -34,6 +34,7 @@ type Executor interface {
 	InjectExpectation(ctx context.Context, req *task.ExecutionRequest, info operations.InjectExpectationTaskInfo) (*task.ExecutionResponse, error) //nolint
 	BringUp(ctx context.Context, req *task.ExecutionRequest, info operations.BringUpTaskInfo) (*task.ExecutionResponse, error)                     //nolint
 	CheckStatus(ctx context.Context, executionID string) (common.TaskStatus, error)
+	TerminateTask(ctx context.Context, executionID string, reason string) error
 }
 
 type ExecutorConfig interface {

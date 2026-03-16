@@ -27,10 +27,10 @@ import (
 	temporalClient "go.temporal.io/sdk/client"
 
 	"github.com/google/uuid"
-	"github.com/rs/zerolog/log"
 
 	"github.com/labstack/echo/v4"
 
+	cutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	"github.com/nvidia/bare-metal-manager-rest/db/pkg/db/ipam"
 	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
@@ -40,8 +40,6 @@ import (
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/handler/util/common"
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model"
 	auth "github.com/nvidia/bare-metal-manager-rest/auth/pkg/authorization"
-	cerr "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	sutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 )
 
 // ~~~~~ Update Handler ~~~~~ //
@@ -51,7 +49,7 @@ type UpdateAllocationConstraintHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewUpdateAllocationConstraintHandler initializes and returns a new handler for updating Allocation Constraint
@@ -60,7 +58,7 @@ func NewUpdateAllocationConstraintHandler(dbSession *cdb.Session, tc temporalCli
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -78,31 +76,12 @@ func NewUpdateAllocationConstraintHandler(dbSession *cdb.Session, tc temporalCli
 // @Success 200 {object} model.APIAllocationConstraint
 // @Router /v2/org/{org}/carbide/allocation/{allocation_id}/constraint/{id} [patch]
 func (uach UpdateAllocationConstraintHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "AllocationConstraint").Str("Handler", "Update").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := uach.tracerSpan.CreateChildInContext(ctx, "UpdateAllocationConstraintHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("AllocationConstraint", "Update", c, uach.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		uach.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, uach.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -113,14 +92,14 @@ func (uach UpdateAllocationConstraintHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, currently only Provider Admins can update an Allocation
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Provider Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
 	}
 
 	// Get allocation ID from URL param
@@ -128,7 +107,7 @@ func (uach UpdateAllocationConstraintHandler) Handle(c echo.Context) error {
 	aID, err := uuid.Parse(aStrID)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error parsing allocation id in url into uuid")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Allocation ID in URL", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Allocation ID in URL", nil)
 	}
 
 	// Get allocationconstraint ID from URL param
@@ -136,7 +115,7 @@ func (uach UpdateAllocationConstraintHandler) Handle(c echo.Context) error {
 	acID, err := uuid.Parse(acStrID)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error parsing id in url into uuid")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid AllocationConstraint ID in URL", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid AllocationConstraint ID in URL", nil)
 	}
 
 	uach.tracerSpan.SetAttribute(handlerSpan, attribute.String("allocationconstraint_id", acStrID), logger)
@@ -147,14 +126,14 @@ func (uach UpdateAllocationConstraintHandler) Handle(c echo.Context) error {
 	err = c.Bind(&apiRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
 	}
 
 	// Validate request attributes
 	verr := apiRequest.Validate()
 	if verr != nil {
 		logger.Warn().Err(verr).Msg("error validating Allocation Constraint update request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating Allocation Constraint update request data", verr)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating Allocation Constraint update request data", verr)
 	}
 
 	// Check that AllocationConstraint exists
@@ -162,15 +141,15 @@ func (uach UpdateAllocationConstraintHandler) Handle(c echo.Context) error {
 	ac, err := acDAO.GetByID(ctx, nil, acID, nil)
 	if err != nil {
 		if err == cdb.ErrDoesNotExist {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not retrieve AllocationConstraint to update", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not retrieve AllocationConstraint to update", nil)
 		}
 		logger.Error().Err(err).Msg("error retrieving Allocation Constraint DB entity")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Could not retrieve AllocationConstraint to update", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Could not retrieve AllocationConstraint to update", nil)
 	}
 
 	if ac.AllocationID != aID {
 		logger.Warn().Msg("Allocation constraint does not belong to Allocation specified in request")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest,
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest,
 			"Allocation Constraint does not belong to Allocation specified in request", nil)
 	}
 
@@ -180,21 +159,21 @@ func (uach UpdateAllocationConstraintHandler) Handle(c echo.Context) error {
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Allocation DB entity")
 		if err == cdb.ErrDoesNotExist {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find Allocation with ID specified in request", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find Allocation with ID specified in request", nil)
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error retrieving Allocation with ID specified in request", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error retrieving Allocation with ID specified in request", nil)
 	}
 
 	// Check that the org's infrastructureProvider matches infrastructure provider in allocation
 	ip, err := common.GetInfrastructureProviderForOrg(ctx, nil, uach.dbSession, org)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error retrieving Infrastructure Provider for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Error retrieving Infrastructure Provider for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Error retrieving Infrastructure Provider for org", nil)
 	}
 
 	if a.InfrastructureProviderID != ip.ID {
 		logger.Warn().Msg("Allocation does not belong to org's Infrastructure Provider")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest,
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest,
 			"Allocation does not belong to org's Infrastructure Provider", nil)
 	}
 
@@ -209,7 +188,7 @@ func (uach UpdateAllocationConstraintHandler) Handle(c echo.Context) error {
 		tx, err := cdb.BeginTx(ctx, uach.dbSession, &sql.TxOptions{})
 		if err != nil {
 			logger.Error().Err(err).Msg("failed to start transaction")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update AllocationConstraint", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update AllocationConstraint", nil)
 		}
 		txCommitted := false
 		defer common.RollbackTx(ctx, tx, &txCommitted)
@@ -224,7 +203,7 @@ func (uach UpdateAllocationConstraintHandler) Handle(c echo.Context) error {
 			dbit, serr = common.GetInstanceTypeFromIDString(ctx, tx, ac.ResourceTypeID.String(), uach.dbSession)
 			if serr != nil {
 				logger.Warn().Err(serr).Str("Resource ID", ac.ResourceTypeID.String()).Msg("error getting Instance type for Allocation Constraint")
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Instance Type in Allocation Constraint in request", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Instance Type in Allocation Constraint in request", nil)
 			}
 
 			// acquire an advisory lock on the InstanceType
@@ -232,7 +211,7 @@ func (uach UpdateAllocationConstraintHandler) Handle(c echo.Context) error {
 			serr = tx.TryAcquireAdvisoryLock(ctx, cdb.GetAdvisoryLockIDFromString(dbit.ID.String()), nil)
 			if serr != nil {
 				logger.Error().Err(serr).Msg("Failed to acquire advisory lock on Instance Type")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Allocation Constraint, DB error", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Allocation Constraint, DB error", nil)
 			}
 
 			// Validating if any instances are exist for this allocation constraint
@@ -240,11 +219,11 @@ func (uach UpdateAllocationConstraintHandler) Handle(c echo.Context) error {
 			_, iCount, serr := inDAO.GetAll(ctx, tx, cdbm.InstanceFilterInput{AllocationIDs: []uuid.UUID{ac.AllocationID}, AllocationConstraintIDs: []uuid.UUID{ac.ID}}, paginator.PageInput{}, nil)
 			if serr != nil {
 				logger.Error().Err(serr).Msg("error getting Instances from db for AllocationConstraint")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Instances for AllocationConstraint", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Instances for AllocationConstraint", nil)
 			}
 			if iCount > apiRequest.ConstraintValue {
 				logger.Warn().Msg("current number of Instances exceed Constraint value, failed to update Allocation Constraint")
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Cannot update AllocationConstraint, more Instances exist than requested constraint for this Allocation", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Cannot update AllocationConstraint, more Instances exist than requested constraint for this Allocation", nil)
 			}
 
 			// Check if there are machines which are available to be allocated
@@ -252,11 +231,11 @@ func (uach UpdateAllocationConstraintHandler) Handle(c echo.Context) error {
 				ok, serr := common.CheckMachinesForInstanceTypeAllocation(ctx, tx, uach.dbSession, logger, dbit.ID, apiRequest.ConstraintValue-ac.ConstraintValue)
 				if serr != nil {
 					logger.Error().Err(serr).Str("resourceId", ac.ResourceTypeID.String()).Msg("error checking available machines for instance type allocation")
-					return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error checking Machine availability for the Instance Type Allocation", nil)
+					return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error checking Machine availability for the Instance Type Allocation", nil)
 				}
 				if !ok {
 					logger.Warn().Str("resourceId", ac.ResourceTypeID.String()).Msg("machines unavailable for instance type allocation")
-					return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "New constraint value cannot be satisfied due to Machine availability", nil)
+					return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "New constraint value cannot be satisfied due to Machine availability", nil)
 				}
 			}
 
@@ -264,7 +243,7 @@ func (uach UpdateAllocationConstraintHandler) Handle(c echo.Context) error {
 		case cdbm.AllocationResourceTypeIPBlock:
 			if ac.DerivedResourceID == nil {
 				logger.Error().Msg("allocation constraint does not have a derived resource id")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "IP Block constraint is missing derived resource ID, potentially inconsistent data", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "IP Block constraint is missing derived resource ID, potentially inconsistent data", nil)
 			}
 
 			// get parent IPBlock
@@ -272,18 +251,18 @@ func (uach UpdateAllocationConstraintHandler) Handle(c echo.Context) error {
 			dbParentIPBlock, serr := ipbDAO.GetByID(ctx, tx, ac.ResourceTypeID, nil)
 			if serr != nil {
 				logger.Error().Err(serr).Msg("error getting ipblock corresponding to allocation constraint")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error retrieving IP Block for Allocation Constraint", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error retrieving IP Block for Allocation Constraint", nil)
 			}
 
 			if apiRequest.ConstraintValue < dbParentIPBlock.PrefixLength {
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "New constraint value cannot be less that source IP Block size", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "New constraint value cannot be less that source IP Block size", nil)
 			}
 
 			// get childIPBlock
 			existingChildIPBlock, serr := ipbDAO.GetByID(ctx, tx, *ac.DerivedResourceID, nil)
 			if serr != nil {
 				logger.Error().Err(serr).Msg("error getting child ipblock corresponding to allocation constraint")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error retrieving IP Block for Allocation Constraint", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error retrieving IP Block for Allocation Constraint", nil)
 			}
 
 			subnetFilter := cdbm.SubnetFilterInput{
@@ -306,7 +285,7 @@ func (uach UpdateAllocationConstraintHandler) Handle(c echo.Context) error {
 			serr = tx.TryAcquireAdvisoryLock(ctx, cdb.GetAdvisoryLockIDFromString(fmt.Sprintf("%s-%s", a.TenantID.String(), existingChildIPBlock.ID.String())), nil)
 			if serr != nil {
 				logger.Error().Err(serr).Msg("Failed to acquire advisory lock on IP Block")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error udating allocation constraint", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error udating allocation constraint", nil)
 			}
 
 			// check if the tenant has subnets using this ipblock
@@ -314,11 +293,11 @@ func (uach UpdateAllocationConstraintHandler) Handle(c echo.Context) error {
 			_, sCount, serr := sDAO.GetAll(ctx, tx, subnetFilter, paginator.PageInput{}, []string{})
 			if serr != nil {
 				logger.Error().Err(serr).Msg("error getting subnets corresponding to allocation constraint")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error retrieving Subnets for allocation constraint", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error retrieving Subnets for allocation constraint", nil)
 			}
 			if sCount > 0 {
 				logger.Warn().Msg("subnets present for allocation constraint, cannot update allocation constraint")
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Subnets exist for allocation constraint in allocation", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Subnets exist for allocation constraint in allocation", nil)
 			}
 
 			// We must delete or cleanup the existing child prefix IPAM entry when we successfully update the constraint value by
@@ -328,7 +307,7 @@ func (uach UpdateAllocationConstraintHandler) Handle(c echo.Context) error {
 			if err != nil {
 				logger.Error().Err(err).Msg("unable to delete child ipam entry for updated allocation constraint")
 				if !errors.Is(err, ipam.ErrPrefixDoesNotExistForIPBlock) {
-					return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Could not delete child IPAM entry from IPBlock for updated Allocation Constraint. Details: %s", err.Error()), nil)
+					return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Could not delete child IPAM entry from IPBlock for updated Allocation Constraint. Details: %s", err.Error()), nil)
 				}
 			}
 
@@ -342,7 +321,7 @@ func (uach UpdateAllocationConstraintHandler) Handle(c echo.Context) error {
 				}
 
 				logger.Warn().Err(serr).Msg("unable to create child ipam entry for updated allocation constraint")
-				return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Could not create child IPAM entry for updated Allocation Constraint. Details: %s", serr.Error()), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Could not create child IPAM entry for updated Allocation Constraint. Details: %s", serr.Error()), nil)
 			}
 			logger.Info().Str("Child CIDR", newChildPrefix.Cidr).Msg("created child CIDR")
 
@@ -350,7 +329,7 @@ func (uach UpdateAllocationConstraintHandler) Handle(c echo.Context) error {
 			newprefix, newblockSize, serr := ipam.ParseCidrIntoPrefixAndBlockSize(newChildPrefix.Cidr)
 			if serr != nil {
 				logger.Error().Err(serr).Msg("unable to create child ipam entry for updated allocation constraint")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Could not create IPAM entry for updated Allocation Constraint. Details: %s", serr.Error()), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Could not create IPAM entry for updated Allocation Constraint. Details: %s", serr.Error()), nil)
 			}
 
 			// Update existind IP Block with new prefix, block size
@@ -365,20 +344,20 @@ func (uach UpdateAllocationConstraintHandler) Handle(c echo.Context) error {
 			)
 			if serr != nil {
 				logger.Error().Err(serr).Msg("unable to update child ip block entry for allocation constraint")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed updating ipblock entry for Allocation Constraint", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed updating ipblock entry for Allocation Constraint", nil)
 			}
 		}
 
 		updatedac, err = acDAO.UpdateFromParams(ctx, tx, ac.ID, nil, nil, nil, nil, cdb.GetIntPtr(apiRequest.ConstraintValue), nil)
 		if err != nil {
 			logger.Error().Err(err).Msg("error updating AllocationConstraint in DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update AllocationConstraint", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update AllocationConstraint", nil)
 		}
 
 		err = tx.Commit()
 		if err != nil {
 			logger.Error().Err(err).Msg("error updating AllocationConstraint in DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update AllocationConstraint", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update AllocationConstraint", nil)
 		}
 		txCommitted = true
 	}

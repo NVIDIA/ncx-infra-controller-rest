@@ -34,11 +34,7 @@ import (
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operationrules"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operations"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/task"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/deviceinfo"
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/location"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/component"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/rack"
 )
 
 // mockSetFirmwareUpdateTimeWindowForFirmwareControl is a mock activity function for testing
@@ -126,17 +122,19 @@ func createFirmwareTestRuleDef() *operationrules.RuleDefinition {
 	}
 }
 
-// createTestRackForFirmwareControl creates a test rack with components having the given external IDs.
-// externalIDs are the external component IDs used for activity calls.
-func createTestRackForFirmwareControl(externalIDs ...string) *rack.Rack {
-	r := rack.New(deviceinfo.DeviceInfo{ID: uuid.New(), Name: "test-rack"}, location.Location{})
-	for _, extID := range externalIDs {
-		r.AddComponent(component.Component{
-			ComponentID: extID,
+// firmwareTestComponents creates WorkflowComponent slices for firmware tests.
+// Each ID becomes a Compute component.
+func firmwareTestComponents(
+	externalIDs ...string,
+) []task.WorkflowComponent {
+	comps := make([]task.WorkflowComponent, len(externalIDs))
+	for i, id := range externalIDs {
+		comps[i] = task.WorkflowComponent{
+			ComponentID: id,
 			Type:        devicetypes.ComponentTypeCompute,
-		})
+		}
 	}
-	return r
+	return comps
 }
 
 func TestFirmwareControlWorkflow(t *testing.T) {
@@ -148,7 +146,7 @@ func TestFirmwareControlWorkflow(t *testing.T) {
 	}
 	baseReqInfo := task.ExecutionInfo{
 		TaskID:         uuid.New(),
-		Rack:           createTestRackForFirmwareControl("comp1", "comp2"),
+		Components:     firmwareTestComponents("comp1", "comp2"),
 		RuleDefinition: createFirmwareTestRuleDef(),
 	}
 
@@ -173,7 +171,7 @@ func TestFirmwareControlWorkflow(t *testing.T) {
 		"single machine success": {
 			reqInfo: task.ExecutionInfo{
 				TaskID:         uuid.New(),
-				Rack:           createTestRackForFirmwareControl("single-component"),
+				Components:     firmwareTestComponents("single-component"),
 				RuleDefinition: createFirmwareTestRuleDef(),
 			},
 			info:          baseInfo,
@@ -240,11 +238,10 @@ func TestFirmwareControlWorkflowEmptyComponents(t *testing.T) {
 	env := testSuite.NewTestWorkflowEnvironment()
 
 	now := time.Now()
-	// Create rack with no components
-	emptyRack := rack.New(deviceinfo.DeviceInfo{ID: uuid.New(), Name: "empty-rack"}, location.Location{})
+	// Empty Components slice — no components to operate on
 	reqInfo := task.ExecutionInfo{
-		TaskID: uuid.New(),
-		Rack:   emptyRack,
+		TaskID:     uuid.New(),
+		Components: []task.WorkflowComponent{},
 	}
 	info := &operations.FirmwareControlTaskInfo{
 		Operation: operations.FirmwareOperationUpgrade,
@@ -263,13 +260,10 @@ func TestFirmwareControlWorkflowNoComponentIDs(t *testing.T) {
 	env := testSuite.NewTestWorkflowEnvironment()
 
 	now := time.Now()
-	// Components without ComponentID
-	r := rack.New(deviceinfo.DeviceInfo{ID: uuid.New(), Name: "test-rack"}, location.Location{})
-	r.AddComponent(component.Component{}) // Component without ComponentID
-	r.AddComponent(component.Component{}) // Component without ComponentID
+	// nil Components slice — treated as no components
 	reqInfo := task.ExecutionInfo{
 		TaskID:         uuid.New(),
-		Rack:           r,
+		Components:     nil,
 		RuleDefinition: createFirmwareTestRuleDef(),
 	}
 	info := &operations.FirmwareControlTaskInfo{
@@ -281,5 +275,5 @@ func TestFirmwareControlWorkflowNoComponentIDs(t *testing.T) {
 	env.ExecuteWorkflow(FirmwareControl, reqInfo, info)
 
 	assert.True(t, env.IsWorkflowCompleted())
-	assert.Error(t, env.GetWorkflowError()) // Should error because no component IDs
+	assert.Error(t, env.GetWorkflowError()) // Should error because no components
 }

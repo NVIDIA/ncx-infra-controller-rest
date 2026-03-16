@@ -35,12 +35,6 @@ func stringsToMachineIds(machineIds []string) (ret []*pb.MachineId) {
 	return ret
 }
 
-// Machine represents an individual host or DPU (basic info)
-type Machine struct {
-	MachineID     string
-	ChassisSerial *string
-}
-
 // MachineDetail represents detailed machine information from Carbide
 type MachineDetail struct {
 	MachineID           string
@@ -60,17 +54,6 @@ type MachinePosition struct {
 	PhysicalSlotNum  *int32
 	ComputeTrayIndex *int32
 	TopologyID       *int32
-}
-
-func machineFromPb(machine *pb.Machine) Machine {
-	var chassisSerial *string
-	if machine.DiscoveryInfo != nil && machine.DiscoveryInfo.DmiData != nil {
-		chassisSerialStr := machine.DiscoveryInfo.DmiData.ChassisSerial
-		chassisSerial = &chassisSerialStr
-	} else {
-		chassisSerial = nil
-	}
-	return Machine{MachineID: machine.Id.Id, ChassisSerial: chassisSerial}
 }
 
 func machineDetailFromPb(machine *pb.Machine) MachineDetail {

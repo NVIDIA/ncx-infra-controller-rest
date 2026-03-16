@@ -34,7 +34,6 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
-	"github.com/rs/zerolog/log"
 
 	"github.com/nvidia/bare-metal-manager-rest/api/internal/config"
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/handler/util/common"
@@ -42,9 +41,7 @@ import (
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/pagination"
 	sc "github.com/nvidia/bare-metal-manager-rest/api/pkg/client/site"
 	auth "github.com/nvidia/bare-metal-manager-rest/auth/pkg/authorization"
-	cerr "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	sutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
+	cutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
 	"github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
@@ -64,7 +61,7 @@ type CreateNVLinkLogicalPartitionHandler struct {
 	tc         temporalClient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewCreateNVLinkLogicalPartitionHandler initializes and returns a new handler for creating NVLinkLogicalPartition
@@ -74,7 +71,7 @@ func NewCreateNVLinkLogicalPartitionHandler(dbSession *cdb.Session, tc temporalC
 		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -90,31 +87,12 @@ func NewCreateNVLinkLogicalPartitionHandler(dbSession *cdb.Session, tc temporalC
 // @Success 201 {object} model.APINVLinkLogicalPartition
 // @Router /v2/org/{org}/carbide/nvlink-logical-partition [post]
 func (cibph CreateNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "NVLinkLogicalPartition").Str("Handler", "Create").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := cibph.tracerSpan.CreateChildInContext(ctx, "CreateNVLinkLogicalPartitionHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("NVLinkLogicalPartition", "Create", c, cibph.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		cibph.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, cibph.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -125,14 +103,14 @@ func (cibph CreateNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Tenant Admins are allowed to create NVLinkLogicalPartition
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	// Validate request
@@ -141,13 +119,13 @@ func (cibph CreateNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	err = c.Bind(&apiRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
 	}
 	// Validate request attributes
 	verr := apiRequest.Validate()
 	if verr != nil {
 		logger.Warn().Err(verr).Msg("error validating NVLink Logical Partition creation request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating NVLink Logical Partition request creation data", verr)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating NVLink Logical Partition request creation data", verr)
 	}
 
 	// Validate the tenant for which this NVLinkLogicalPartition is being created
@@ -155,28 +133,28 @@ func (cibph CreateNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	if err != nil {
 		if err == common.ErrOrgTenantNotFound {
 			logger.Warn().Err(err).Msg("Org does not have a Tenant associated")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
 		}
 		logger.Error().Err(err).Msg("unable to retrieve tenant for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
 	}
 
 	// Validate and Verify if Site is ready
 	site, serr := common.GetSiteFromIDString(ctx, nil, apiRequest.SiteID, cibph.dbSession)
 	if serr != nil {
 		if serr == common.ErrInvalidID {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to create NVLink Logical Partition, Invalid Site ID: %s", apiRequest.SiteID), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to create NVLink Logical Partition, Invalid Site ID: %s", apiRequest.SiteID), nil)
 		}
 		if serr == cdb.ErrDoesNotExist {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf("Failed to create NVLink Logical Partition, Could not find Site with ID: %s ", apiRequest.SiteID), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf("Failed to create NVLink Logical Partition, Could not find Site with ID: %s ", apiRequest.SiteID), nil)
 		}
 		logger.Warn().Err(serr).Str("Site ID", apiRequest.SiteID).Msg("error retrieving Site from DB by ID")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to create NVLink Logical Partition, Could not find Site with ID: %s, DB error", apiRequest.SiteID), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to create NVLink Logical Partition, Could not find Site with ID: %s, DB error", apiRequest.SiteID), nil)
 	}
 
 	if site.Status != cdbm.SiteStatusRegistered {
 		logger.Warn().Msg(fmt.Sprintf("Unable to associate NVLink Logical Partition to Site: %s. Site is not in Registered state", site.ID.String()))
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to create NVLink Logical Partition, Site: %s specified in request is not in Registered state", site.ID.String()), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to create NVLink Logical Partition, Site: %s specified in request is not in Registered state", site.ID.String()), nil)
 	}
 
 	// Determine if tenant has access to requested site
@@ -184,10 +162,10 @@ func (cibph CreateNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	_, err = tsDAO.GetByTenantIDAndSiteID(ctx, nil, orgTenant.ID, site.ID, nil)
 	if err != nil {
 		if err == cdb.ErrDoesNotExist {
-			return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant is not associated with Site specified in query", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant is not associated with Site specified in query", nil)
 		}
 		logger.Warn().Err(err).Msg("error retrieving Tenant Site association from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to determine if Tenant has access to Site specified in query, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to determine if Tenant has access to Site specified in query, DB error", nil)
 	}
 
 	// Check if site has NVLinkLogicalPartition enabled
@@ -198,7 +176,7 @@ func (cibph CreateNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 
 	if !siteConfig.NVLinkPartition {
 		logger.Warn().Msg(fmt.Sprintf("Site: %v specified in request data must have NVLink Logical Partition enabled in order to create NVLink Logical Partition", site.ID.String()))
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Site: %v specified in request data must have NVLink Logical Partition enabled in order to create NVLink Logical Partition", site.ID.String()), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Site: %v specified in request data must have NVLink Logical Partition enabled in order to create NVLink Logical Partition", site.ID.String()), nil)
 	}
 
 	// check for name uniqueness for the tenant, ie, tenant cannot have another NVLinkLogicalPartition with same name
@@ -216,11 +194,11 @@ func (cibph CreateNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	)
 	if err != nil {
 		logger.Error().Err(err).Msg("db error checking for name uniqueness of tenant NVLink Logical Partition")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to check name uniqueness for NVLink Logical Partition, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to check name uniqueness for NVLink Logical Partition, DB error", nil)
 	}
 	if tot > 0 {
 		logger.Warn().Str("Tenant ID", orgTenant.ID.String()).Str("name", apiRequest.Name).Msg("NVLink Logical Partition with same name already exists for Tenant")
-		return cerr.NewAPIErrorResponse(c, http.StatusConflict, "Another NVLink Logical Partition with specified name already exists for Tenant", validation.Errors{
+		return cutil.NewAPIErrorResponse(c, http.StatusConflict, "Another NVLink Logical Partition with specified name already exists for Tenant", validation.Errors{
 			"id": errors.New(nvllps[0].ID.String()),
 		})
 	}
@@ -229,7 +207,7 @@ func (cibph CreateNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	tx, err := cdb.BeginTx(ctx, cibph.dbSession, &sql.TxOptions{})
 	if err != nil {
 		logger.Error().Err(err).Msg("unable to start transaction")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create NVLink Logical Partition", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create NVLink Logical Partition", nil)
 	}
 	// this variable is used in cleanup actions to indicate if this transaction committed
 	txCommitted := false
@@ -251,7 +229,7 @@ func (cibph CreateNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	)
 	if err != nil {
 		logger.Error().Err(err).Msg("unable to create NVLink Logical Partition record in DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create NVLink Logical Partition, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create NVLink Logical Partition, DB error", nil)
 	}
 
 	// create the status detail record
@@ -260,18 +238,18 @@ func (cibph CreateNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 		cdb.GetStrPtr("received NVLink Logical Partition creation request, pending"))
 	if err != nil {
 		logger.Error().Err(err).Msg("error creating Status Detail DB entry")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for NVLink Logical Partition", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for NVLink Logical Partition", nil)
 	}
 	if ssd == nil {
 		logger.Error().Msg("Status Detail DB entry not returned from CreateFromParams")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to get new Status Detail for NVLink Logical Partition", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to get new Status Detail for NVLink Logical Partition", nil)
 	}
 
 	// Get the temporal client for the site we are working with.
 	stc, err := cibph.scp.GetClientByID(site.ID)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
 	}
 
 	createRequest := &cwssaws.NVLinkLogicalPartitionCreationRequest{
@@ -292,20 +270,20 @@ func (cibph CreateNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	workflowOptions := temporalClient.StartWorkflowOptions{
 		ID:                       "nvlink-logical-partition-create-" + nvllp.ID.String(),
 		TaskQueue:                queue.SiteTaskQueue,
-		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
 	}
 
 	logger.Info().Msg("triggering NVLink Logical Partition creation")
 
 	// Add context deadlines
-	ctx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
+	ctx, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow
 	we, err := stc.ExecuteWorkflow(ctx, workflowOptions, "CreateNVLinkLogicalPartition", createRequest)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to schedule NVLink Logical Partition creation workflow")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to schedule NVLink Logical Partition creation workflow on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to schedule NVLink Logical Partition creation workflow on Site: %s", err), nil)
 	}
 
 	wid := we.GetID()
@@ -320,24 +298,24 @@ func (cibph CreateNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 			logger.Error().Err(err).Msg("failed to create NVLink Logical Partition, timeout occurred executing creation workflow on Site.")
 
 			// Create a new context deadlines
-			newctx, newcancel := context.WithTimeout(context.Background(), cwutil.WorkflowContextNewAfterTimeout)
+			newctx, newcancel := context.WithTimeout(context.Background(), cutil.WorkflowContextNewAfterTimeout)
 			defer newcancel()
 
 			// Initiate termination workflow
 			serr := stc.TerminateWorkflow(newctx, wid, "", "timeout occurred executing NVLink Logical Partition creation workflow")
 			if serr != nil {
 				logger.Error().Err(serr).Msg("failed to terminate timed out NVLink Logical Partition creation workflow")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to terminate timed out NVLink Logical Partition creation workflow, Cloud and Site data may be de-synced: %s", serr), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to terminate timed out NVLink Logical Partition creation workflow, Cloud and Site data may be de-synced: %s", serr), nil)
 			}
 
 			logger.Info().Str("Workflow ID", wid).Msg("initiated termination of timed out NVLink Logical Partition creation workflow")
 
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to create NVLink Logical Partition, timeout occurred executing creation on Site: %s", err), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to create NVLink Logical Partition, timeout occurred executing creation on Site: %s", err), nil)
 		}
 
 		code, err := common.UnwrapWorkflowError(err)
 		logger.Error().Err(err).Msg("failed to create NVLink Logical Partition on Site")
-		return cerr.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to create NVLink Logical Partition on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to create NVLink Logical Partition on Site: %s", err), nil)
 	}
 
 	logger.Info().Str("Workflow ID", wid).Msg("completed NVLink Logical Partition creation workflow")
@@ -348,7 +326,7 @@ func (cibph CreateNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	err = tx.Commit()
 	if err != nil {
 		logger.Error().Err(err).Msg("error committing NVLink Logical Partition transaction to DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create NVLink Logical Partition, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create NVLink Logical Partition, DB error", nil)
 	}
 
 	// set committed so, deferred cleanup functions will do nothing
@@ -391,7 +369,7 @@ type GetAllNVLinkLogicalPartitionHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetAllNVLinkLogicalPartitionHandler initializes and returns a new handler for getting all NVLinkLogicalPartitions
@@ -400,7 +378,7 @@ func NewGetAllNVLinkLogicalPartitionHandler(dbSession *cdb.Session, tc temporalC
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -425,31 +403,12 @@ func NewGetAllNVLinkLogicalPartitionHandler(dbSession *cdb.Session, tc temporalC
 // @Success 200 {object} []model.APINVLinkLogicalPartition
 // @Router /v2/org/{org}/carbide/nvlink-logical-partition [get]
 func (gaibph GetAllNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "NVLinkLogicalPartition").Str("Handler", "GetAll").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gaibph.tracerSpan.CreateChildInContext(ctx, "GetAllNVLinkLogicalPartitionHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("NVLinkLogicalPartition", "GetAll", c, gaibph.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gaibph.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gaibph.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -460,14 +419,14 @@ func (gaibph GetAllNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Tenant Admins are allowed to retrieve NVLinkLogicalPartitions
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	// Validate pagination request
@@ -475,14 +434,14 @@ func (gaibph GetAllNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	err = c.Bind(&pageRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding pagination request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request pagination data", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request pagination data", nil)
 	}
 
 	// Validate request attributes
 	err = pageRequest.Validate(cdbm.NVLinkLogicalPartitionOrderByFields)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error validating pagination request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate pagination request data", err)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate pagination request data", err)
 	}
 
 	// Validate tenant for org
@@ -490,10 +449,10 @@ func (gaibph GetAllNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	if err != nil {
 		if err == common.ErrOrgTenantNotFound {
 			logger.Warn().Err(err).Msg("Org does not have a Tenant associated")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
 		}
 		logger.Error().Err(err).Msg("unable to retrieve tenant for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve tenant for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve tenant for org", nil)
 	}
 
 	// Get site ID from query param
@@ -504,7 +463,7 @@ func (gaibph GetAllNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 		site, err := common.GetSiteFromIDString(ctx, nil, siteIDStr, gaibph.dbSession)
 		if err != nil {
 			logger.Warn().Err(err).Msg("error getting site in request")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Site specified in query param, invalid ID or DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Site specified in query param, invalid ID or DB error", nil)
 		}
 		siteIDs = append(siteIDs, site.ID)
 
@@ -512,10 +471,10 @@ func (gaibph GetAllNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 		_, err = tsDAO.GetByTenantIDAndSiteID(ctx, nil, tenant.ID, site.ID, nil)
 		if err != nil {
 			if err == cdb.ErrDoesNotExist {
-				return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant does not have access to this Site", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant does not have access to this Site", nil)
 			}
 			logger.Error().Err(err).Msg("error retrieving TenantSite from DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to determine Tenant access to Site, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to determine Tenant access to Site, DB error", nil)
 		}
 	}
 
@@ -524,7 +483,7 @@ func (gaibph GetAllNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	qIncludeRelations, errMsg := common.GetAndValidateQueryRelations(qParams, cdbm.NVLinkLogicalPartitionRelatedEntities)
 	if errMsg != "" {
 		logger.Warn().Msg(errMsg)
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
 	}
 
 	// Get query text for full text search from query param
@@ -545,7 +504,7 @@ func (gaibph GetAllNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 		_, ok := cdbm.NVLinkLogicalPartitionStatusMap[statusQuery]
 		if !ok {
 			logger.Warn().Msg(fmt.Sprintf("invalid value in status query: %v", statusQuery))
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Status value in query", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Status value in query", nil)
 		}
 		statuses = append(statuses, statusQuery)
 	}
@@ -556,7 +515,7 @@ func (gaibph GetAllNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	if qin != "" {
 		includeInterfaces, err = strconv.ParseBool(qin)
 		if err != nil {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid value specified for `includeInterfaces` query param", err)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid value specified for `includeInterfaces` query param", err)
 		}
 		gaibph.tracerSpan.SetAttribute(handlerSpan, attribute.Bool("includeInterfaces", includeInterfaces), logger)
 	}
@@ -567,7 +526,7 @@ func (gaibph GetAllNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	if qvp != "" {
 		includeVpcs, err = strconv.ParseBool(qvp)
 		if err != nil {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid value specified for `includeVpcs` query param", err)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid value specified for `includeVpcs` query param", err)
 		}
 		gaibph.tracerSpan.SetAttribute(handlerSpan, attribute.Bool("includeVpcs", includeVpcs), logger)
 	}
@@ -578,7 +537,7 @@ func (gaibph GetAllNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	if qinlps != "" {
 		includeStats, err = strconv.ParseBool(qinlps)
 		if err != nil {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid value specified for `includeStats` query param", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid value specified for `includeStats` query param", nil)
 		}
 		gaibph.tracerSpan.SetAttribute(handlerSpan, attribute.Bool("includeStats", includeStats), logger)
 	}
@@ -601,7 +560,7 @@ func (gaibph GetAllNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	)
 	if err != nil {
 		logger.Error().Err(err).Msg("error getting NVLink Logical Partitions from db")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve NVLink Logical Partitions, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve NVLink Logical Partitions, DB error", nil)
 	}
 
 	nvllpIDs := []uuid.UUID{}
@@ -615,7 +574,7 @@ func (gaibph GetAllNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 		dbnvlifcs, _, err := nvlifcDAO.GetAll(ctx, nil, cdbm.NVLinkInterfaceFilterInput{NVLinkLogicalPartitionIDs: nvllpIDs}, paginator.PageInput{}, []string{})
 		if err != nil {
 			logger.Error().Err(err).Msg("error retrieving NVLinkInterfaces from DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve NVLink Interfaces for NVLink Logical Partitions, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve NVLink Interfaces for NVLink Logical Partitions, DB error", nil)
 		}
 
 		for _, nvlifc := range dbnvlifcs {
@@ -630,7 +589,7 @@ func (gaibph GetAllNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 		dbvpc, _, err := vpcDAO.GetAll(ctx, nil, cdbm.VpcFilterInput{NVLinkLogicalPartitionIDs: nvllpIDs}, paginator.PageInput{}, []string{})
 		if err != nil {
 			logger.Error().Err(err).Msg("error retrieving VPCs from DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve VPCs for NVLink Logical Partitions, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve VPCs for NVLink Logical Partitions, DB error", nil)
 		}
 
 		for _, vpc := range dbvpc {
@@ -648,7 +607,7 @@ func (gaibph GetAllNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 		nvllpStats, err = common.GetNVLinkLogicalPartitionCountStats(ctx, nil, gaibph.dbSession, logger, nvllpIDs)
 		if err != nil {
 			logger.Error().Err(err).Msg("error retrieving NVLinkLogicalPartition stats from DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve NVLink Logical Partition stats, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve NVLink Logical Partition stats, DB error", nil)
 		}
 	}
 
@@ -662,7 +621,7 @@ func (gaibph GetAllNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	ssds, serr := sdDAO.GetRecentByEntityIDs(ctx, nil, sdEntityIDs, common.RECENT_STATUS_DETAIL_COUNT)
 	if serr != nil {
 		logger.Warn().Err(serr).Msg("error retrieving Status Details for NVLink Logical Partitions from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve status history for NVLink Logical Partitions, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve status history for NVLink Logical Partitions, DB error", nil)
 	}
 
 	ssdMap := map[string][]cdbm.StatusDetail{}
@@ -701,7 +660,7 @@ func (gaibph GetAllNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	pageHeader, err := json.Marshal(pageReponse)
 	if err != nil {
 		logger.Error().Err(err).Msg("error marshaling pagination response")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to generate pagination response header", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to generate pagination response header", nil)
 	}
 
 	c.Response().Header().Set(pagination.ResponseHeaderName, string(pageHeader))
@@ -718,7 +677,7 @@ type GetNVLinkLogicalPartitionHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetNVLinkLogicalPartitionHandler initializes and returns a new handler to retrieve NVLinkLogicalPartition
@@ -727,7 +686,7 @@ func NewGetNVLinkLogicalPartitionHandler(dbSession *cdb.Session, tc temporalClie
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -746,31 +705,12 @@ func NewGetNVLinkLogicalPartitionHandler(dbSession *cdb.Session, tc temporalClie
 // @Success 200 {object} model.APINVLinkLogicalPartition
 // @Router /v2/org/{org}/carbide/nvlink-logical-partition/{id} [get]
 func (gibph GetNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "NVLinkLogicalPartition").Str("Handler", "Get").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gibph.tracerSpan.CreateChildInContext(ctx, "GetNVLinkLogicalPartitionHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("NVLinkLogicalPartition", "Get", c, gibph.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gibph.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gibph.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -781,14 +721,14 @@ func (gibph GetNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Tenant Admins are allowed to retrieve NVLinkLogicalPartition
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	// Get and validate includeRelation params
@@ -796,7 +736,7 @@ func (gibph GetNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	qIncludeRelations, errMsg := common.GetAndValidateQueryRelations(qParams, cdbm.NVLinkLogicalPartitionRelatedEntities)
 	if errMsg != "" {
 		logger.Warn().Msg(errMsg)
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
 	}
 
 	// Check `includeInterfaces` in query
@@ -805,7 +745,7 @@ func (gibph GetNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	if qin != "" {
 		includeInterfaces, err = strconv.ParseBool(qin)
 		if err != nil {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid value specified for `includeInterfaces` query param", err)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid value specified for `includeInterfaces` query param", err)
 		}
 	}
 
@@ -815,7 +755,7 @@ func (gibph GetNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	if qvp != "" {
 		includeVpcs, err = strconv.ParseBool(qvp)
 		if err != nil {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid value specified for `includeVpcs` query param", err)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid value specified for `includeVpcs` query param", err)
 		}
 	}
 
@@ -825,7 +765,7 @@ func (gibph GetNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	if qinlps != "" {
 		includeStats, err = strconv.ParseBool(qinlps)
 		if err != nil {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid value specified for `includeStats` query param", err)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid value specified for `includeStats` query param", err)
 		}
 		gibph.tracerSpan.SetAttribute(handlerSpan, attribute.Bool("includeStats", includeStats), logger)
 	}
@@ -838,7 +778,7 @@ func (gibph GetNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	nvllpID, err := uuid.Parse(nvllpStrID)
 	if err != nil {
 		logger.Warn().Err(err).Msg("invalid NVLink Logical Partition ID in URL")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "NVLink Logical Partition ID specified in URL is not valid", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "NVLink Logical Partition ID specified in URL is not valid", nil)
 	}
 
 	nvllpDAO := cdbm.NewNVLinkLogicalPartitionDAO(gibph.dbSession)
@@ -848,26 +788,26 @@ func (gibph GetNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	if err != nil {
 		if err == common.ErrOrgTenantNotFound {
 			logger.Warn().Err(err).Msg("Org does not have a Tenant associated")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
 		}
 		logger.Error().Err(err).Msg("unable to retrieve Tenant for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
 	}
 
 	// Check that NVLink Logical Partition exists
 	nvllp, err := nvllpDAO.GetByID(ctx, nil, nvllpID, qIncludeRelations)
 	if err != nil {
 		if err == cdb.ErrDoesNotExist {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find NVLink Logical Partition with specified ID", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find NVLink Logical Partition with specified ID", nil)
 		}
 
 		logger.Error().Err(err).Msg("error retrieving NVLink Logical Partition from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Could not retrieve NVLink Logical Partition", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Could not retrieve NVLink Logical Partition", nil)
 	}
 
 	if nvllp.TenantID != orgTenant.ID {
 		logger.Warn().Msg("NVLink Logical Partition is not owned by current org's Tenant")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "NVLink Logical Partition is not owned by current org's Tenant", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "NVLink Logical Partition is not owned by current org's Tenant", nil)
 	}
 
 	var dbnvlifcs []cdbm.NVLinkInterface
@@ -876,7 +816,7 @@ func (gibph GetNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 		dbnvlifcs, _, err = nvlifcDAO.GetAll(ctx, nil, cdbm.NVLinkInterfaceFilterInput{NVLinkLogicalPartitionIDs: []uuid.UUID{nvllp.ID}}, paginator.PageInput{}, []string{})
 		if err != nil {
 			logger.Error().Err(err).Msg("error retrieving NVLink Interfaces from DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve NVLink Interfaces for NVLink Logical Partition", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve NVLink Interfaces for NVLink Logical Partition", nil)
 		}
 	}
 
@@ -886,7 +826,7 @@ func (gibph GetNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 		dbvpc, _, err = vpcDAO.GetAll(ctx, nil, cdbm.VpcFilterInput{NVLinkLogicalPartitionIDs: []uuid.UUID{nvllp.ID}}, paginator.PageInput{}, []string{})
 		if err != nil {
 			logger.Error().Err(err).Msg("error retrieving VPCs from DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve VPCs for NVLink Logical Partition", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve VPCs for NVLink Logical Partition", nil)
 		}
 	}
 
@@ -895,7 +835,7 @@ func (gibph GetNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 		nvllpStatsMap, err = common.GetNVLinkLogicalPartitionCountStats(ctx, nil, gibph.dbSession, logger, []uuid.UUID{nvllp.ID})
 		if err != nil {
 			logger.Error().Err(err).Msg("error retrieving NVLinkLogicalPartition stats from DB")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve NVLink Logical Partition stats, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve NVLink Logical Partition stats, DB error", nil)
 		}
 	}
 
@@ -904,7 +844,7 @@ func (gibph GetNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	ssds, err := sdDAO.GetRecentByEntityIDs(ctx, nil, []string{nvllp.ID.String()}, common.RECENT_STATUS_DETAIL_COUNT)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Status Details for NVLink Logical Partition from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details for NVLink Logical Partition", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details for NVLink Logical Partition", nil)
 	}
 
 	// Send response
@@ -931,7 +871,7 @@ type UpdateNVLinkLogicalPartitionHandler struct {
 	tc         temporalClient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewUpdateNVLinkLogicalPartitionHandler initializes and returns a new handler for updating NVLinkLogicalPartition
@@ -941,7 +881,7 @@ func NewUpdateNVLinkLogicalPartitionHandler(dbSession *cdb.Session, tc temporalC
 		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -958,31 +898,12 @@ func NewUpdateNVLinkLogicalPartitionHandler(dbSession *cdb.Session, tc temporalC
 // @Success 200 {object} model.APINVLinkLogicalPartition
 // @Router /v2/org/{org}/carbide/nvlink-logical-partition/{id} [patch]
 func (uibph UpdateNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "NVLinkLogicalPartition").Str("Handler", "Update").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := uibph.tracerSpan.CreateChildInContext(ctx, "UpdateNVLinkLogicalPartitionHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("NVLinkLogicalPartition", "Update", c, uibph.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		uibph.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, uibph.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -993,14 +914,14 @@ func (uibph UpdateNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Tenant Admins are allowed to update NVLinkLogicalPartition
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	// Get IB Partition ID from URL
@@ -1011,7 +932,7 @@ func (uibph UpdateNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	nvllpID, err := uuid.Parse(nvllpStrID)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error parsing id in url into uuid")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid NVLink Logical Partition ID in URL", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid NVLink Logical Partition ID in URL", nil)
 	}
 
 	nvllpDAO := cdbm.NewNVLinkLogicalPartitionDAO(uibph.dbSession)
@@ -1022,13 +943,13 @@ func (uibph UpdateNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	err = c.Bind(&apiRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
 	}
 	// Validate request attributes
 	verr := apiRequest.Validate()
 	if verr != nil {
 		logger.Warn().Err(verr).Msg("error validating NVLink Logical Partition update request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating NVLink Logical Partition update request data", verr)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating NVLink Logical Partition update request data", verr)
 	}
 
 	// Validate the tenant for which this NVLinkLogical is being updated
@@ -1036,10 +957,10 @@ func (uibph UpdateNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	if err != nil {
 		if err == common.ErrOrgTenantNotFound {
 			logger.Warn().Err(err).Msg("Org does not have a Tenant associated")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
 		}
 		logger.Error().Err(err).Msg("unable to retrieve Tenant for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
 	}
 
 	// check that NVLinkLogical exists
@@ -1047,15 +968,15 @@ func (uibph UpdateNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving NVLink Logical Partition DB entity")
 		if err == cdb.ErrDoesNotExist {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find NVLink Logical Partition with ID specified in URL", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find NVLink Logical Partition with ID specified in URL", nil)
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Could not retrieve NVLink Logical Partition to update", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Could not retrieve NVLink Logical Partition to update", nil)
 	}
 
 	// verify tenant matches
 	if nvllp.TenantID != orgTenant.ID {
 		logger.Warn().Msg("NVLink Logical Partition is not owned by current org's Tenant")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "NVLink Logical Partition is not owned by current org's Tenant", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "NVLink Logical Partition is not owned by current org's Tenant", nil)
 	}
 
 	needsUpdate := false
@@ -1072,7 +993,7 @@ func (uibph UpdateNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	ssds, _, err := sdDAO.GetAllByEntityID(ctx, nil, nvllp.ID.String(), nil, cdb.GetIntPtr(pagination.MaxPageSize), nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Status Details for NVLink Logical Partition from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details for NVLink Logical Partition", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details for NVLink Logical Partition", nil)
 	}
 
 	if !needsUpdate {
@@ -1096,10 +1017,10 @@ func (uibph UpdateNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 		)
 		if serr != nil {
 			logger.Error().Err(serr).Msg("db error checking for name uniqueness of tenant's NVLink Logical Partition")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update NVLink Logical Partition due to DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update NVLink Logical Partition due to DB error", nil)
 		}
 		if tot > 0 {
-			return cerr.NewAPIErrorResponse(c, http.StatusConflict, "Another NVLink Logical Partition with specified name already exists for Tenant", validation.Errors{
+			return cutil.NewAPIErrorResponse(c, http.StatusConflict, "Another NVLink Logical Partition with specified name already exists for Tenant", validation.Errors{
 				"id": errors.New(nvllps[0].ID.String()),
 			})
 		}
@@ -1109,7 +1030,7 @@ func (uibph UpdateNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	tx, err := cdb.BeginTx(ctx, uibph.dbSession, &sql.TxOptions{})
 	if err != nil {
 		logger.Error().Err(err).Msg("error updating NVLink Logical Partition in DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update NVLink Logical Partition", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update NVLink Logical Partition", nil)
 	}
 	txCommitted := false
 	defer common.RollbackTx(ctx, tx, &txCommitted)
@@ -1125,7 +1046,7 @@ func (uibph UpdateNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	)
 	if err != nil {
 		logger.Error().Err(err).Msg("error updating NVLink Logical Partition in DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update NVLink Logical Partition", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update NVLink Logical Partition", nil)
 	}
 	logger.Info().Msg("done updating NVLink Logical Partition in DB")
 
@@ -1133,7 +1054,7 @@ func (uibph UpdateNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	stc, err := uibph.scp.GetClientByID(unvllp.SiteID)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
 	}
 
 	updateRequest := &cwssaws.NVLinkLogicalPartitionUpdateRequest{
@@ -1157,20 +1078,20 @@ func (uibph UpdateNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	workflowOptions := temporalClient.StartWorkflowOptions{
 		ID:                       "nvlink-logical-partition-update-" + unvllp.ID.String(),
 		TaskQueue:                queue.SiteTaskQueue,
-		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
 	}
 
 	logger.Info().Msg("triggering NVLink Logical Partition update")
 
 	// Add context deadlines
-	ctx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
+	ctx, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow
 	we, err := stc.ExecuteWorkflow(ctx, workflowOptions, "UpdateNVLinkLogicalPartition", updateRequest)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to schedule NVLink Logical Partition update workflow")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to schedule NVLink Logical Partition update on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to schedule NVLink Logical Partition update on Site: %s", err), nil)
 	}
 
 	wid := we.GetID()
@@ -1184,24 +1105,24 @@ func (uibph UpdateNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 			logger.Error().Err(err).Msg("failed to update NVLink Logical Partition, timeout occurred executing workflow on Site.")
 
 			// Create a new context deadlines
-			newctx, newcancel := context.WithTimeout(context.Background(), cwutil.WorkflowContextNewAfterTimeout)
+			newctx, newcancel := context.WithTimeout(context.Background(), cutil.WorkflowContextNewAfterTimeout)
 			defer newcancel()
 
 			// Initiate termination workflow
 			serr := stc.TerminateWorkflow(newctx, wid, "", "timeout occurred executing NVLink Logical Partition update workflow")
 			if serr != nil {
 				logger.Error().Err(serr).Msg("failed to terminate timed out NVLink Logical Partition update workflow")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to terminate timed out NVLink Logical Partition update workflow, Cloud and Site data may be de-synced: %s", serr), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to terminate timed out NVLink Logical Partition update workflow, Cloud and Site data may be de-synced: %s", serr), nil)
 			}
 
 			logger.Info().Str("Workflow ID", wid).Msg("initiated termination of timed out NVLink Logical Partition update workflow")
 
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to update NVLink Logical Partition, timeout occurred executing update on Site: %s", err), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to update NVLink Logical Partition, timeout occurred executing update on Site: %s", err), nil)
 		}
 
 		code, err := common.UnwrapWorkflowError(err)
 		logger.Error().Err(err).Msg("failed to execute NVLink Logical Partition update workflow")
-		return cerr.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to update NVLink Logical Partition on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to update NVLink Logical Partition on Site: %s", err), nil)
 	}
 
 	logger.Info().Str("Workflow ID", wid).Msg("completed NVLink Logical Partition update workflow")
@@ -1210,7 +1131,7 @@ func (uibph UpdateNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	err = tx.Commit()
 	if err != nil {
 		logger.Error().Err(err).Msg("error updating NVLink Logical Partition in DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update NVLink Logical Partition", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update NVLink Logical Partition", nil)
 	}
 	txCommitted = true
 
@@ -1228,7 +1149,7 @@ type DeleteNVLinkLogicalPartitionHandler struct {
 	tc         temporalClient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewDeleteNVLinkLogicalPartitionHandler initializes and returns a new handler for deleting NVLinkLogicalPartition
@@ -1238,7 +1159,7 @@ func NewDeleteNVLinkLogicalPartitionHandler(dbSession *cdb.Session, tc temporalC
 		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -1254,31 +1175,12 @@ func NewDeleteNVLinkLogicalPartitionHandler(dbSession *cdb.Session, tc temporalC
 // @Success 202
 // @Router /v2/org/{org}/carbide/nvlink-logical-partition/{id} [delete]
 func (dibph DeleteNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "NVLinkLogicalPartition").Str("Handler", "Delete").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := dibph.tracerSpan.CreateChildInContext(ctx, "DeleteNVLinkLogicalPartitionHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("NVLinkLogicalPartition", "Delete", c, dibph.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		dibph.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, dibph.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -1289,14 +1191,14 @@ func (dibph DeleteNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Tenant Admins are allowed to delete NVLinkLogicalPartition
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	// Get NVLink Logical Partition ID from URL param
@@ -1307,7 +1209,7 @@ func (dibph DeleteNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	nvllpID, err := uuid.Parse(nvllpStrID)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error parsing id in url into uuid")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid NVLink Logical Partition ID in URL", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid NVLink Logical Partition ID in URL", nil)
 	}
 
 	// Validate the tenant for which this NVLinkLogical is being updated
@@ -1315,10 +1217,10 @@ func (dibph DeleteNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	if err != nil {
 		if err == common.ErrOrgTenantNotFound {
 			logger.Warn().Err(err).Msg("Org does not have a Tenant associated")
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
 		}
 		logger.Error().Err(err).Msg("unable to retrieve Tenant for org")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
 	}
 
 	// Check that NVLink Logical Partition exists
@@ -1327,15 +1229,15 @@ func (dibph DeleteNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving NVLink Logical Partition DB entity")
 		if err == cdb.ErrDoesNotExist {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, "Could not retrieve NVLink Logical Partition to delete", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not retrieve NVLink Logical Partition to delete", nil)
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Could not retrieve NVLink Logical Partition to delete", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Could not retrieve NVLink Logical Partition to delete", nil)
 	}
 
 	// verify tenant matches
 	if nvllp.TenantID != orgTenant.ID {
 		logger.Warn().Msg("NVLink Logical Partition is not owned by current org's Tenant")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "NVLink Logical Partition is not owned by current org's Tenant", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "NVLink Logical Partition is not owned by current org's Tenant", nil)
 	}
 
 	// Verify that the NVLink Logical Partition is not being used by any VPC
@@ -1347,7 +1249,7 @@ func (dibph DeleteNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	vpcs, _, err := vpcDAO.GetAll(ctx, nil, vpcFilter, paginator.PageInput{}, nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving VPCs from DB for NVLink Logical Partition")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve VPCs for NVLink Logical Partition", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve VPCs for NVLink Logical Partition", nil)
 	}
 
 	var vpcIDs []string
@@ -1357,7 +1259,7 @@ func (dibph DeleteNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 
 	if len(vpcs) > 0 {
 		logger.Warn().Msg("NVLink Logical Partition is being used by one or more VPCs")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "NVLink Logical Partition is being used by one or more VPCs", validation.Errors{"vpcIds": errors.New(strings.Join(vpcIDs, ", "))})
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "NVLink Logical Partition is being used by one or more VPCs", validation.Errors{"vpcIds": errors.New(strings.Join(vpcIDs, ", "))})
 
 	}
 
@@ -1365,7 +1267,7 @@ func (dibph DeleteNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	tx, err := cdb.BeginTx(ctx, dibph.dbSession, &sql.TxOptions{})
 	if err != nil {
 		logger.Error().Err(err).Msg("unable to start transaction")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete NVLink Logical Partition", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete NVLink Logical Partition", nil)
 	}
 
 	// This variable is used in cleanup actions to indicate if this transaction committed
@@ -1383,7 +1285,7 @@ func (dibph DeleteNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	)
 	if err != nil {
 		logger.Error().Err(err).Msg("error updating NVLink Logical Partition in DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete NVLink Logical Partition, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete NVLink Logical Partition, DB error", nil)
 	}
 
 	// Create status detail
@@ -1398,7 +1300,7 @@ func (dibph DeleteNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	stc, err := dibph.scp.GetClientByID(nvllp.SiteID)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
 	}
 
 	deleteNvllpRequest := &cwssaws.NVLinkLogicalPartitionDeletionRequest{
@@ -1408,20 +1310,20 @@ func (dibph DeleteNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	workflowOptions := temporalClient.StartWorkflowOptions{
 		ID:                       "nvlink-logical-partition-delete-" + nvllp.ID.String(),
 		TaskQueue:                queue.SiteTaskQueue,
-		WorkflowExecutionTimeout: cwutil.WorkflowExecutionTimeout,
+		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
 	}
 
 	logger.Info().Msg("triggering NVLink Logical Partition deletion workflow")
 
 	// Add context deadlines
-	ctx, cancel := context.WithTimeout(ctx, cwutil.WorkflowContextTimeout)
+	ctx, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
 	defer cancel()
 
 	// Trigger Site workflow
 	we, err := stc.ExecuteWorkflow(ctx, workflowOptions, "DeleteNVLinkLogicalPartition", deleteNvllpRequest)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to schedule NVLink Logical Partition deletion workflow")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to schedule NVLink Logical Partition deletion on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to schedule NVLink Logical Partition deletion on Site: %s", err), nil)
 	}
 
 	wid := we.GetID()
@@ -1446,24 +1348,24 @@ func (dibph DeleteNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 			logger.Error().Err(err).Msg("failed to delete NVLink Logical Partition, timeout occurred executing workflow on Site.")
 
 			// Create a new context deadlines
-			newctx, newcancel := context.WithTimeout(context.Background(), cwutil.WorkflowContextNewAfterTimeout)
+			newctx, newcancel := context.WithTimeout(context.Background(), cutil.WorkflowContextNewAfterTimeout)
 			defer newcancel()
 
 			// Initiate termination workflow
 			serr := stc.TerminateWorkflow(newctx, wid, "", "timeout occurred executing NVLink Logical Partition deletion workflow")
 			if serr != nil {
 				logger.Error().Err(serr).Msg("failed to terminate timed out NVLink Logical Partition deletion workflow")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to terminate timed out NVLink Logical Partition deletion workflow, Cloud and Site data may be de-synced: %s", serr), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to terminate timed out NVLink Logical Partition deletion workflow, Cloud and Site data may be de-synced: %s", serr), nil)
 			}
 
 			logger.Info().Str("Workflow ID", wid).Msg("initiated termination of timed out NVLink Logical Partition deletion workflow")
 
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to delete NVLink Logical Partition, timeout occurred executing deletion on Site: %s", err), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to delete NVLink Logical Partition, timeout occurred executing deletion on Site: %s", err), nil)
 		}
 
 		code, err := common.UnwrapWorkflowError(err)
 		logger.Error().Err(err).Msg("failed to execute Temporal workflow to delete NVLink Logical Partition")
-		return cerr.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to delete NVLink Logical Partition on Site: %s", err), nil)
+		return cutil.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to delete NVLink Logical Partition on Site: %s", err), nil)
 	}
 
 	logger.Info().Str("Workflow ID", wid).Msg("completed NVLink Logical Partition deletion workflow")
@@ -1472,7 +1374,7 @@ func (dibph DeleteNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	err = tx.Commit()
 	if err != nil {
 		logger.Error().Err(err).Msg("error committing transaction")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete NVLink Logical Partition, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete NVLink Logical Partition, DB error", nil)
 	}
 	txCommitted = true
 

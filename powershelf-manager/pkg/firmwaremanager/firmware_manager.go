@@ -247,7 +247,7 @@ func (manager *Manager) handleOnePmcUpdate(ctx context.Context, pmc *pmc.PMC, up
 		currentFwVersion, err := getFwVersion(ctx, pmc, update.Component)
 		if err != nil {
 			// Do not transition to a failed state here b/c this may be transient. instead, wait for the timeout to handle updating that transition
-			return powershelf.FirmwareStateVerifying, fmt.Errorf("failed to query fw version of %v on PMC %v: %v", update.Component, pmc, err)
+			return powershelf.FirmwareStateVerifying, fmt.Errorf("failed to query fw version of %v on PMC %v: %w", update.Component, pmc, err)
 		} else {
 			if currentFwVersion.String() == update.VersionTo {
 				log.Printf("successfully updated firmware of of component %v for powershelf with PMC MAC %v from %v to %v", update.Component, pmc, update.VersionFrom, update.VersionTo)

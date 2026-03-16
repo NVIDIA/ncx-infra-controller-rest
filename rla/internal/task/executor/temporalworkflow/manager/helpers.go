@@ -19,11 +19,13 @@ package manager
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/rs/zerolog/log"
 	"go.temporal.io/api/enums/v1"
+	"go.temporal.io/api/serviceerror"
 	temporalclient "go.temporal.io/sdk/client"
 
 	taskcommon "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/common"
@@ -42,6 +44,17 @@ var (
 		enums.WORKFLOW_EXECUTION_STATUS_TIMED_OUT:        taskcommon.TaskStatusTerminated,
 	}
 )
+
+// ignoreNotFound returns nil if err is a Temporal NotFound error, otherwise
+// returns err unchanged. Use this when the absence of a workflow is an
+// acceptable outcome (e.g. it already completed before the call was made).
+func ignoreNotFound(err error) error {
+	var notFound *serviceerror.NotFound
+	if errors.As(err, &notFound) {
+		return nil
+	}
+	return err
+}
 
 func taskStatusFromTemporalWorkflowStatus(
 	workflowStatus enums.WorkflowExecutionStatus,
@@ -76,7 +89,7 @@ func executeWorkflow(
 		params.info,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to execute workflow: %v", err)
+		return nil, fmt.Errorf("failed to execute workflow: %w", err)
 	}
 
 	executionID := &common.ExecutionID{
@@ -89,14 +102,14 @@ func executeWorkflow(
 	encodedExecutionID, err := executionID.Encode()
 	if err != nil {
 		return nil, fmt.Errorf(
-			"failed to encode execution ID %s: %v", executionID.String(), err,
+			"failed to encode execution ID %s: %w", executionID.String(), err,
 		)
 	}
 
 	if !params.req.Async {
 		// For synchronous requests, block until the workflow is completed.
 		if err := r.Get(ctx, nil); err != nil {
-			return nil, fmt.Errorf("failed to get workflow result: %v", err)
+			return nil, fmt.Errorf("failed to get workflow result: %w", err)
 		}
 	}
 

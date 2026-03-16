@@ -20,13 +20,13 @@ var _ MappedNullable = &ComponentDiff{}
 
 // ComponentDiff A single component difference found during rack validation
 type ComponentDiff struct {
-	// Type of difference: DIFF_TYPE_ONLY_IN_EXPECTED, DIFF_TYPE_ONLY_IN_ACTUAL, or DIFF_TYPE_DRIFT
+	// Type of difference: DiffTypeOnlyInExpected, DiffTypeOnlyInActual, or DiffTypeDrift
 	Type *string `json:"type,omitempty"`
 	// ID of the component
 	ComponentId *string `json:"componentId,omitempty"`
 	Expected *RackComponent `json:"expected,omitempty"`
 	Actual *RackComponent `json:"actual,omitempty"`
-	// List of field differences (populated when type is DIFF_TYPE_DRIFT)
+	// List of field differences (populated when type is DiffTypeDrift)
 	FieldDiffs []FieldDiff `json:"fieldDiffs,omitempty"`
 }
 

@@ -413,7 +413,9 @@ func executeWaitBringUpAction(actx actionExecutionContext) error {
 			)
 		}
 
-		_ = workflow.Sleep(ctx, pollInterval)
+		if err := workflow.Sleep(ctx, pollInterval); err != nil {
+			return fmt.Errorf("workflow sleep interrupted: %w", err)
+		}
 
 		var result activity.GetBringUpStateResult
 		err := workflow.ExecuteActivity(

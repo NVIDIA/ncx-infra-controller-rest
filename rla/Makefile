@@ -26,11 +26,11 @@ gen-pb: ## Generate protobuf files
 	@echo "Successfully generated protobuf"
 
 gen-carbideapi-pb: ## Generate protobuf files for carbide-api access, only needed for new messages or fields that we will actually use
-	rm -rf internal/carbideapi/carbideproto/bare-metal-manager
-	git clone ssh://git@github.com:NVIDIA/bare-metal-manager.git
-	rm -f internal/carbideapigrpc/carbideproto/*.proto
-	cp bare-metal-manager/crates/rpc/proto/*.proto internal/carbideapi/carbideproto/
-	rm -rf metal-manager
+	rm -rf bare-metal-manager-core
+	git clone https://github.com/NVIDIA/bare-metal-manager-core.git
+	rm -f internal/carbideapi/carbideproto/*.proto
+	cp bare-metal-manager-core/crates/rpc/proto/*.proto internal/carbideapi/carbideproto/
+	rm -rf bare-metal-manager-core
 # The protodefs are a bit unclean, and we need to make some tweaks to make them usable.
 	cd internal/carbideapi && ./tweak_protodefs.sh
 # Specify version of buf for consistency in pipeline builds

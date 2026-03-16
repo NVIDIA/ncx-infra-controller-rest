@@ -62,10 +62,10 @@ func TestInventory(t *testing.T) {
 	serial1 := "serial1"
 	serial2 := "serial2"
 	serial3 := "serial3"
-	grpcMock.AddMachine(carbideapi.Machine{MachineID: "id1", ChassisSerial: &serial1})
-	grpcMock.AddMachine(carbideapi.Machine{MachineID: "id2", ChassisSerial: &serial2})
-	grpcMock.AddMachine(carbideapi.Machine{MachineID: "id3", ChassisSerial: &serial3})
-	grpcMock.AddMachine(carbideapi.Machine{MachineID: "id4", ChassisSerial: nil})
+	grpcMock.AddMachine(carbideapi.MachineDetail{MachineID: "id1", ChassisSerial: &serial1})
+	grpcMock.AddMachine(carbideapi.MachineDetail{MachineID: "id2", ChassisSerial: &serial2})
+	grpcMock.AddMachine(carbideapi.MachineDetail{MachineID: "id3", ChassisSerial: &serial3})
+	grpcMock.AddMachine(carbideapi.MachineDetail{MachineID: "id4", ChassisSerial: nil})
 	grpcMock.AddPowerState("id2", carbideapi.PowerStateOn)
 
 	// Create a rack (required for components due to NOT NULL constraint)
@@ -111,6 +111,62 @@ func TestInventory(t *testing.T) {
 		}
 	}
 	assert.Equal(t, 2, found)
+}
+
+// TestSyncFirmwareVersion verifies that syncMachines direct-writes firmware_version
+// from Carbide machine details to the component table.
+func TestSyncFirmwareVersion(t *testing.T) {
+	ctx := context.Background()
+
+	if os.Getenv("DB_PORT") == "" {
+		log.Warn().Msgf("Not running unit test due to no DB environment specified")
+		t.SkipNow()
+	}
+
+	lastUpdateMachineIDs = time.Time{}
+
+	dbConf, err := cdb.ConfigFromEnv()
+	assert.Nil(t, err)
+	pool, err := utils.UnitTestDB(ctx, t, dbConf)
+	assert.Nil(t, err)
+
+	cfg := config.UnitTestConfig()
+	grpcMock := carbideapi.NewMockClient()
+
+	serial1 := "fw-serial-1"
+	serial2 := "fw-serial-2"
+	grpcMock.AddMachine(carbideapi.MachineDetail{MachineID: "fw-id1", ChassisSerial: &serial1, FirmwareVersion: "2.0.0"})
+	grpcMock.AddMachine(carbideapi.MachineDetail{MachineID: "fw-id2", ChassisSerial: &serial2, FirmwareVersion: "3.1.0"})
+	grpcMock.AddPowerState("fw-id1", carbideapi.PowerStateOn)
+
+	rack := model.Rack{
+		Name:         "test-rack-fw",
+		Manufacturer: "TestMfg",
+		SerialNumber: "rack-serial-fw",
+	}
+	err = rack.Create(ctx, pool.DB)
+	assert.Nil(t, err)
+
+	c1 := model.Component{SerialNumber: "fw-serial-1", Manufacturer: "TestMfg", RackID: rack.ID, FirmwareVersion: "1.0.0"}
+	err = c1.Create(ctx, pool.DB)
+	assert.Nil(t, err)
+
+	c2 := model.Component{SerialNumber: "fw-serial-2", Manufacturer: "TestMfg", RackID: rack.ID, FirmwareVersion: "1.0.0"}
+	err = c2.Create(ctx, pool.DB)
+	assert.Nil(t, err)
+
+	psmMock := psmapi.NewMockClient()
+	runInventoryOne(ctx, &cfg, pool, grpcMock, psmMock)
+
+	var updated1 model.Component
+	err = pool.DB.NewSelect().Model(&updated1).Where("id = ?", c1.ID).Scan(ctx)
+	assert.Nil(t, err)
+	assert.Equal(t, "2.0.0", updated1.FirmwareVersion)
+
+	var updated2 model.Component
+	err = pool.DB.NewSelect().Model(&updated2).Where("id = ?", c2.ID).Scan(ctx)
+	assert.Nil(t, err)
+	assert.Equal(t, "3.1.0", updated2.FirmwareVersion)
 }
 
 // TestHandleExpectedPowershelves tests that expected powershelves are registered with PSM

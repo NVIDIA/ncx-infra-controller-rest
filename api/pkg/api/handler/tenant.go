@@ -23,11 +23,9 @@ import (
 	"fmt"
 	"net/http"
 
-	"go.opentelemetry.io/otel/attribute"
 	temporalClient "go.temporal.io/sdk/client"
 
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 
 	"github.com/labstack/echo/v4"
 
@@ -39,8 +37,7 @@ import (
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/handler/util/common"
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model"
 	auth "github.com/nvidia/bare-metal-manager-rest/auth/pkg/authorization"
-	cerr "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	sutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
+	cutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 )
 
 // ~~~~~ Create Handler ~~~~~ //
@@ -50,7 +47,7 @@ type CreateTenantHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewCreateTenantHandler initializes and returns a new handler for creating Tenant
@@ -59,7 +56,7 @@ func NewCreateTenantHandler(dbSession *cdb.Session, tc temporalClient.Client, cf
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -75,31 +72,12 @@ func NewCreateTenantHandler(dbSession *cdb.Session, tc temporalClient.Client, cf
 // @Success 201 {object} model.APITenant
 // @Router /v2/org/{org}/carbide/tenant [post]
 func (cth CreateTenantHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "Tenant").Str("Handler", "Create").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := cth.tracerSpan.CreateChildInContext(ctx, "CreateTenantHandler", logger)
+	org, dbUser, _, logger, handlerSpan := common.SetupHandler("Tenant", "Create", c, cth.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		cth.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, cth.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -110,17 +88,17 @@ func (cth CreateTenantHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Tenant Admins are allowed to interact with Tenant endpoints
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role with org, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
-	return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, model.ErrMsgTenantCreateEndpointDeprecated, nil)
+	return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, model.ErrMsgTenantCreateEndpointDeprecated, nil)
 }
 
 // ~~~~~ Get Current Handler ~~~~~ //
@@ -130,7 +108,7 @@ type GetCurrentTenantHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetCurrentTenantHandler initializes and returns a new handler to retrieve Tenant associate with the org
@@ -139,7 +117,7 @@ func NewGetCurrentTenantHandler(dbSession *cdb.Session, tc temporalClient.Client
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -154,31 +132,12 @@ func NewGetCurrentTenantHandler(dbSession *cdb.Session, tc temporalClient.Client
 // @Success 200 {object} model.APITenant
 // @Router /v2/org/{org}/carbide/tenant/current [get]
 func (gcth GetCurrentTenantHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "Tenant").Str("Handler", "GetCurrent").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gcth.tracerSpan.CreateChildInContext(ctx, "GetCurrentTenantHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("Tenant", "GetCurrent", c, gcth.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gcth.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gcth.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -189,7 +148,7 @@ func (gcth GetCurrentTenantHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 	userOrgDetails, _ := dbUser.OrgData.GetOrgByName(org)
 
@@ -197,7 +156,7 @@ func (gcth GetCurrentTenantHandler) Handle(c echo.Context) error {
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role with org, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	// Get Tenant for this org
@@ -208,14 +167,14 @@ func (gcth GetCurrentTenantHandler) Handle(c echo.Context) error {
 	tns, err := tnDAO.GetAllByOrg(ctx, nil, org, nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Tenant for this org")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current Tenant", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current Tenant", nil)
 	}
 
 	// Start a db tx
 	tx, err := cdb.BeginTx(ctx, gcth.dbSession, &sql.TxOptions{})
 	if err != nil {
 		logger.Error().Err(err).Msg("unable to start transaction")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current Tenant", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current Tenant", nil)
 	}
 	txCommitted := false
 	defer common.RollbackTx(ctx, tx, &txCommitted)
@@ -226,14 +185,14 @@ func (gcth GetCurrentTenantHandler) Handle(c echo.Context) error {
 		tn, serr = tnDAO.CreateFromParams(ctx, tx, userOrgDetails.Name, &userOrgDetails.DisplayName, org, nil, nil, dbUser)
 		if serr != nil {
 			logger.Error().Err(serr).Msg("error creating Tenant DB entity")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant", nil)
 		}
 
 		// Update Tenant Accounts if needed
 		err = updateTenantAccounts(ctx, gcth.dbSession, tx, logger, tn)
 		if err != nil {
 			logger.Error().Err(err).Msg("error updating Tenant Accounts")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant, could not update Tenant Accounts", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant, could not update Tenant Accounts", nil)
 		}
 	} else {
 		// Update Tenant if needed
@@ -242,7 +201,7 @@ func (gcth GetCurrentTenantHandler) Handle(c echo.Context) error {
 			tn, serr = tnDAO.UpdateFromParams(ctx, tx, tn.ID, nil, nil, cdb.GetStrPtr(userOrgDetails.DisplayName), nil)
 			if serr != nil {
 				logger.Error().Err(serr).Msg("error updating Tenant DB entity")
-				return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant", nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant", nil)
 			}
 		}
 	}
@@ -251,7 +210,7 @@ func (gcth GetCurrentTenantHandler) Handle(c echo.Context) error {
 	err = tx.Commit()
 	if err != nil {
 		logger.Error().Err(err).Msg("error committing subnet transaction to DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Tenant", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Tenant", nil)
 	}
 	// Set committed so, deferred cleanup functions will do nothing
 	txCommitted = true
@@ -271,7 +230,7 @@ type GetCurrentTenantStatsHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetCurrentTenantStatsHandler initializes and returns a new handler to retrieve Tenant stats associate with the org
@@ -280,7 +239,7 @@ func NewGetCurrentTenantStatsHandler(dbSession *cdb.Session, tc temporalClient.C
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -295,31 +254,12 @@ func NewGetCurrentTenantStatsHandler(dbSession *cdb.Session, tc temporalClient.C
 // @Success 200 {object} model.APITenantStats
 // @Router /v2/org/{org}/carbide/tenant/current/stats [get]
 func (gcth GetCurrentTenantStatsHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "Tenant").Str("Handler", "GetCurrentStats").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := gcth.tracerSpan.CreateChildInContext(ctx, "GetCurrentTenantStatsHandler", logger)
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("Tenant", "GetCurrentStats", c, gcth.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		gcth.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, gcth.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -330,14 +270,14 @@ func (gcth GetCurrentTenantStatsHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Tenant Admins are allowed to interact with Tenant endpoints
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role with org, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
 	// Get Tenant for this org
@@ -346,10 +286,10 @@ func (gcth GetCurrentTenantStatsHandler) Handle(c echo.Context) error {
 	tns, err := tnDAO.GetAllByOrg(ctx, nil, org, nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Tenant for this org")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant", nil)
 	}
 	if len(tns) == 0 {
-		return cerr.NewAPIErrorResponse(c, http.StatusNotFound,
+		return cutil.NewAPIErrorResponse(c, http.StatusNotFound,
 			fmt.Sprintf("Org '%v' does not have an Tenant", org), nil)
 	}
 
@@ -358,7 +298,7 @@ func (gcth GetCurrentTenantStatsHandler) Handle(c echo.Context) error {
 	vpcStatsMap, err := vpcDAO.GetCountByStatus(ctx, nil, nil, cdb.GetUUIDPtr(tns[0].ID), nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving VPC stats for this org's tenant")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Vpc stats", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Vpc stats", nil)
 	}
 
 	// Get Subnet stats for this org tenant
@@ -366,7 +306,7 @@ func (gcth GetCurrentTenantStatsHandler) Handle(c echo.Context) error {
 	subnetStatsMap, err := subnetDAO.GetCountByStatus(ctx, nil, cdb.GetUUIDPtr(tns[0].ID), nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Subnet stats for this org's tenant")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Subnet stats", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Subnet stats", nil)
 	}
 
 	// Get Instance stats for this org tenant
@@ -374,7 +314,7 @@ func (gcth GetCurrentTenantStatsHandler) Handle(c echo.Context) error {
 	instanceStatsMap, err := inDAO.GetCountByStatus(ctx, nil, cdb.GetUUIDPtr(tns[0].ID), nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Instance stats for this org's tenant")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Instance stats", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Instance stats", nil)
 	}
 
 	// Get TenantAccount stats for this org tenant
@@ -382,7 +322,7 @@ func (gcth GetCurrentTenantStatsHandler) Handle(c echo.Context) error {
 	taStatsMap, err := taDAO.GetCountByStatus(ctx, nil, nil, cdb.GetUUIDPtr(tns[0].ID))
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving TenantAccount stats for this org's tenant")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve TenantAccount stats", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve TenantAccount stats", nil)
 	}
 
 	// Create response
@@ -399,7 +339,7 @@ type UpdateCurrentTenantHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewUpdateCurrentTenantHandler initializes and returns a new handler for updating the current Tenant
@@ -408,7 +348,7 @@ func NewUpdateCurrentTenantHandler(dbSession *cdb.Session, tc temporalClient.Cli
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -424,31 +364,12 @@ func NewUpdateCurrentTenantHandler(dbSession *cdb.Session, tc temporalClient.Cli
 // @Success 200 {object} model.APITenant
 // @Router /v2/org/{org}/carbide/tenant/current [patch]
 func (ucth UpdateCurrentTenantHandler) Handle(c echo.Context) error {
-	// Get context
-	ctx := c.Request().Context()
-
-	// Get org
-	org := c.Param("orgName")
-
-	// Initialize logger
-	logger := log.With().Str("Model", "Tenant").Str("Handler", "UpdateCurrent").Str("Org", org).Logger()
-
-	logger.Info().Msg("started API handler")
-
-	// Create a child span and set the attributes for current request
-	newctx, handlerSpan := ucth.tracerSpan.CreateChildInContext(ctx, "UpdateCurrentTenantHandler", logger)
+	org, dbUser, _, logger, handlerSpan := common.SetupHandler("Tenant", "UpdateCurrent", c, ucth.tracerSpan)
 	if handlerSpan != nil {
-		// Set newly created span context as a current context
-		ctx = newctx
-
 		defer handlerSpan.End()
-
-		ucth.tracerSpan.SetAttribute(handlerSpan, attribute.String("org", org), logger)
 	}
-
-	dbUser, logger, err := common.GetUserAndEnrichLogger(c, logger, ucth.tracerSpan, handlerSpan)
-	if err != nil {
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org
@@ -459,17 +380,17 @@ func (ucth UpdateCurrentTenantHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Warn().Msg("could not validate org membership for user, access denied")
 		}
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Tenant Admins are allowed to interact with Tenant endpoints
 	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
 	if !ok {
 		logger.Warn().Msg("user does not have Tenant Admin role with org, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
 	}
 
-	return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, model.ErrMsgTenantUpdateEndpointDeprecated, nil)
+	return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, model.ErrMsgTenantUpdateEndpointDeprecated, nil)
 }
 
 // Utility functions

@@ -29,8 +29,7 @@ import (
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/handler/util/common"
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model"
 	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/pagination"
-	cerr "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	sutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
+	cutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
 	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
 	"github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
@@ -46,7 +45,7 @@ type GetAllSkuHandler struct {
 	dbSession  *cdb.Session
 	tc         tclient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetAllSkuHandler initializes and returns a new handler for getting all SKUs
@@ -55,7 +54,7 @@ func NewGetAllSkuHandler(dbSession *cdb.Session, tc tclient.Client, cfg *config.
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -81,34 +80,34 @@ func (gash GetAllSkuHandler) Handle(c echo.Context) error {
 	// Is DB user missing?
 	if dbUser == nil {
 		logger.Error().Msg("invalid User object found in request context")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org membership
 	if _, err := dbUser.OrgData.GetOrgByName(org); err != nil {
 		logger.Warn().Msg("could not validate org membership for user, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Provider Admins/Viewers or Tenant Admins with TargetedInstanceCreation capability are allowed to retrieve SKUs
 	infrastructureProvider, tenant, apiError := common.IsProviderOrTenant(ctx, logger, gash.dbSession, org, dbUser, true, true)
 	if apiError != nil {
-		return cerr.NewAPIErrorResponse(c, apiError.Code, apiError.Message, apiError.Data)
+		return cutil.NewAPIErrorResponse(c, apiError.Code, apiError.Message, apiError.Data)
 	}
 
 	// Get Site ID from query param - REQUIRED
 	siteIDStr := c.QueryParam("siteId")
 	if siteIDStr == "" {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Site ID must be specified in query parameter 'siteId'", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site ID must be specified in query parameter 'siteId'", nil)
 	}
 
 	site, err := common.GetSiteFromIDString(ctx, nil, siteIDStr, gash.dbSession)
 	if err != nil {
 		if errors.Is(err, cdb.ErrDoesNotExist) {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request data does not exist", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request data does not exist", nil)
 		}
 		logger.Error().Err(err).Msg("error retrieving Site from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site specified in request data, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site specified in request data, DB error", nil)
 	}
 
 	// Validate based on whether user is provider or tenant
@@ -116,13 +115,13 @@ func (gash GetAllSkuHandler) Handle(c echo.Context) error {
 		// Validate that site belongs to the organization's infrastructure provider
 		if site.InfrastructureProviderID != infrastructureProvider.ID {
 			logger.Warn().Msg("Site specified in request data does not belong to current org's Infrastructure Provider")
-			return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Site specified in request data is does not belong to current org", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Site specified in request data is does not belong to current org", nil)
 		}
 	} else if tenant != nil {
 		// Check if Tenant is privileged
 		if !tenant.Config.TargetedInstanceCreation {
 			logger.Warn().Msg("Tenant doesn't have targeted Instance creation capability, access denied")
-			return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant must have targeted Instance creation capability in order to retrieve SKUs", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant must have targeted Instance creation capability in order to retrieve SKUs", nil)
 		}
 
 		// Check if privileged Tenant has an account with Infrastructure Provider
@@ -133,12 +132,12 @@ func (gash GetAllSkuHandler) Handle(c echo.Context) error {
 		}, cdbp.PageInput{}, []string{})
 		if serr != nil {
 			logger.Error().Err(serr).Msg("error retrieving Tenant Account for Site")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error retrieving Tenant Account for Site", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error retrieving Tenant Account for Site", nil)
 		}
 
 		if taCount == 0 {
 			logger.Error().Msg("privileged Tenant doesn't have an account with Infrastructure Provider")
-			return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Privileged Tenant must have an account with Provider of Site specified in query", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Privileged Tenant must have an account with Provider of Site specified in query", nil)
 		}
 	}
 
@@ -151,14 +150,14 @@ func (gash GetAllSkuHandler) Handle(c echo.Context) error {
 	err = c.Bind(&pageRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding pagination request data into API model")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request pagination data", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request pagination data", nil)
 	}
 
 	// Validate pagination attributes
 	err = pageRequest.Validate(cdbm.SkuOrderByFields)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error validating pagination request data")
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate pagination request data", err)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate pagination request data", err)
 	}
 
 	// Get SKUs from DB
@@ -175,7 +174,7 @@ func (gash GetAllSkuHandler) Handle(c echo.Context) error {
 	)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving SKUs from db")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve SKUs, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve SKUs, DB error", nil)
 	}
 
 	// Create response
@@ -190,7 +189,7 @@ func (gash GetAllSkuHandler) Handle(c echo.Context) error {
 	pageHeader, err := json.Marshal(pageResponse)
 	if err != nil {
 		logger.Error().Err(err).Msg("error marshaling pagination response")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to generate pagination response header", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to generate pagination response header", nil)
 	}
 
 	c.Response().Header().Set(pagination.ResponseHeaderName, string(pageHeader))
@@ -207,7 +206,7 @@ type GetSkuHandler struct {
 	dbSession  *cdb.Session
 	tc         tclient.Client
 	cfg        *config.Config
-	tracerSpan *sutil.TracerSpan
+	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetSkuHandler initializes and returns a new handler to retrieve SKU
@@ -216,7 +215,7 @@ func NewGetSkuHandler(dbSession *cdb.Session, tc tclient.Client, cfg *config.Con
 		dbSession:  dbSession,
 		tc:         tc,
 		cfg:        cfg,
-		tracerSpan: sutil.NewTracerSpan(),
+		tracerSpan: cutil.NewTracerSpan(),
 	}
 }
 
@@ -239,19 +238,19 @@ func (gsh GetSkuHandler) Handle(c echo.Context) error {
 	// Is DB user missing?
 	if dbUser == nil {
 		logger.Error().Msg("invalid User object found in request context")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
 	// Validate org membership
 	if _, err := dbUser.OrgData.GetOrgByName(org); err != nil {
 		logger.Warn().Msg("could not validate org membership for user, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Validate role, only Provider Admins/Viewers or Tenant Admins with TargetedInstanceCreation capability are allowed to retrieve SKUs
 	infrastructureProvider, tenant, apiError := common.IsProviderOrTenant(ctx, logger, gsh.dbSession, org, dbUser, true, true)
 	if apiError != nil {
-		return cerr.NewAPIErrorResponse(c, apiError.Code, apiError.Message, apiError.Data)
+		return cutil.NewAPIErrorResponse(c, apiError.Code, apiError.Message, apiError.Data)
 	}
 
 	// Get SKU ID from URL param
@@ -266,10 +265,10 @@ func (gsh GetSkuHandler) Handle(c echo.Context) error {
 	sku, err := skuDAO.Get(ctx, nil, skuID)
 	if err != nil {
 		if errors.Is(err, cdb.ErrDoesNotExist) {
-			return cerr.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf("Could not find SKU with ID: %s", skuID), nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf("Could not find SKU with ID: %s", skuID), nil)
 		}
 		logger.Error().Err(err).Msg("error retrieving SKU from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve SKU, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve SKU, DB error", nil)
 	}
 
 	// Get Site for the SKU
@@ -277,7 +276,7 @@ func (gsh GetSkuHandler) Handle(c echo.Context) error {
 	site, err := siteDAO.GetByID(ctx, nil, sku.SiteID, nil, false)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Site from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site details for SKU, DB error", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site details for SKU, DB error", nil)
 	}
 
 	// Validate based on whether user is provider or tenant
@@ -285,13 +284,13 @@ func (gsh GetSkuHandler) Handle(c echo.Context) error {
 		// Validate that site belongs to the organization's infrastructure provider
 		if site.InfrastructureProviderID != infrastructureProvider.ID {
 			logger.Warn().Msg("SKU does not belong to a Site owned by org's Infrastructure Provider")
-			return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "SKU does not belong to a Site owned by current org", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "SKU does not belong to a Site owned by current org", nil)
 		}
 	} else if tenant != nil {
 		// Check if Tenant is privileged
 		if !tenant.Config.TargetedInstanceCreation {
 			logger.Warn().Msg("Tenant doesn't have targeted Instance creation capability, access denied")
-			return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant must have targeted Instance creation capability in order to retrieve SKU", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant must have targeted Instance creation capability in order to retrieve SKU", nil)
 		}
 
 		// Check if privileged Tenant has an account with Infrastructure Provider
@@ -302,12 +301,12 @@ func (gsh GetSkuHandler) Handle(c echo.Context) error {
 		}, cdbp.PageInput{}, []string{})
 		if serr != nil {
 			logger.Error().Err(serr).Msg("error retrieving Tenant Account for Site")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error retrieving Tenant Account for Site", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error retrieving Tenant Account for Site", nil)
 		}
 
 		if taCount == 0 {
 			logger.Error().Msg("privileged Tenant doesn't have an account with Infrastructure Provider")
-			return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Privileged Tenant must have an account with Provider of SKU's Site", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Privileged Tenant must have an account with Provider of SKU's Site", nil)
 		}
 	}
 

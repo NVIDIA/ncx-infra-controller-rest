@@ -63,7 +63,7 @@ func (pm *PmcManager) Stop(ctx context.Context) error {
 
 func (pm *PmcManager) Register(ctx context.Context, pmc *pmc.PMC) error {
 	if err := pm.registry.RegisterPmc(ctx, pmc); err != nil {
-		return fmt.Errorf("failed to register PMC (%s): %v", pmc.GetMac().String(), err)
+		return fmt.Errorf("failed to register PMC (%s): %w", pmc.GetMac().String(), err)
 	}
 
 	return pm.credentialManager.Put(ctx, pmc.GetMac(), pmc.GetCredential())
@@ -73,12 +73,12 @@ func (pm *PmcManager) Register(ctx context.Context, pmc *pmc.PMC) error {
 func (pm *PmcManager) GetPmc(ctx context.Context, mac net.HardwareAddr) (*pmc.PMC, error) {
 	pmc, err := pm.registry.GetPmc(ctx, mac)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get PMC (%s) from registry: %v", mac.String(), err)
+		return nil, fmt.Errorf("failed to get PMC (%s) from registry: %w", mac.String(), err)
 	}
 
 	creds, err := pm.credentialManager.Get(context.Background(), mac)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get credentials for PMC (%s): %v", mac.String(), err)
+		return nil, fmt.Errorf("failed to get credentials for PMC (%s): %w", mac.String(), err)
 	}
 
 	pmc.SetCredential(creds)
@@ -89,13 +89,13 @@ func (pm *PmcManager) GetPmc(ctx context.Context, mac net.HardwareAddr) (*pmc.PM
 func (pm *PmcManager) GetAllPmcs(ctx context.Context) ([]*pmc.PMC, error) {
 	pmcs, err := pm.registry.GetAllPmcs(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get PMCs from registry: %v", err)
+		return nil, fmt.Errorf("failed to get PMCs from registry: %w", err)
 	}
 
 	for _, pmc := range pmcs {
 		creds, err := pm.credentialManager.Get(context.Background(), pmc.MAC)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get credentials for PMC (%s): %v", pmc.MAC.String(), err)
+			return nil, fmt.Errorf("failed to get credentials for PMC (%s): %w", pmc.MAC.String(), err)
 		}
 		pmc.SetCredential(creds)
 	}
