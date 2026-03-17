@@ -1568,10 +1568,6 @@ func (mi ManageInstance) UpdateInstancesInDB(ctx context.Context, siteID uuid.UU
 	if len(nvlinkInterfacesToDelete) > 0 {
 		nvlifcDAO := cdbm.NewNVLinkInterfaceDAO(mi.dbSession)
 		for _, nvlifc := range nvlinkInterfacesToDelete {
-			// If the NVLink Interface was modified within stale inventory threshold, defer to next inventory update
-			if util.IsTimeWithinStaleInventoryThreshold(nvlifc.Updated) {
-				continue
-			}
 			serr := nvlifcDAO.Delete(ctx, nil, nvlifc.ID)
 			if serr != nil {
 				logger.Error().Err(serr).Str("NVLink Interface ID", nvlifc.ID.String()).Msg("failed to delete NVLink Interface from DB")
