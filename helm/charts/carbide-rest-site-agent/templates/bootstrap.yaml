@@ -99,7 +99,7 @@ spec:
               echo "Creating site via site-manager (uuid=$SITE_UUID)..."
               curl -sfk -X POST "$SITE_MANAGER_URL/v1/site" \
                 -H "Content-Type: application/json" \
-                -d "{\"siteuuid\":\"$SITE_UUID\"}" || true
+                -d "{\"siteuuid\":\"$SITE_UUID\"}"
 
               echo "Waiting for Site CR OTP..."
               SITE_NAME="site-$SITE_UUID"
