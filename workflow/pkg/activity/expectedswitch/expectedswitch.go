@@ -22,8 +22,8 @@ import (
 	"errors"
 	"reflect"
 
-	"github.com/google/uuid"
 	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/util"
+	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 
 	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"

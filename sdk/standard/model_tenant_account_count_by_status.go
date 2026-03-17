@@ -20,11 +20,11 @@ var _ MappedNullable = &TenantAccountCountByStatus{}
 
 // TenantAccountCountByStatus Describes counts of Tenant Accounts in various statuses
 type TenantAccountCountByStatus struct {
-	Total *int32 `json:"total,omitempty"`
+	Total   *int32 `json:"total,omitempty"`
 	Pending *int32 `json:"pending,omitempty"`
 	Invited *int32 `json:"invited,omitempty"`
-	Ready *int32 `json:"ready,omitempty"`
-	Error *int32 `json:"error,omitempty"`
+	Ready   *int32 `json:"ready,omitempty"`
+	Error   *int32 `json:"error,omitempty"`
 }
 
 // NewTenantAccountCountByStatus instantiates a new TenantAccountCountByStatus object
@@ -205,7 +205,7 @@ func (o *TenantAccountCountByStatus) SetError(v int32) {
 }
 
 func (o TenantAccountCountByStatus) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -267,5 +267,3 @@ func (v *NullableTenantAccountCountByStatus) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

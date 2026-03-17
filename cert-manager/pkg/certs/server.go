@@ -22,8 +22,8 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/getsentry/sentry-go"
 	"github.com/NVIDIA/ncx-infra-controller-rest/cert-manager/pkg/core"
+	"github.com/getsentry/sentry-go"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 

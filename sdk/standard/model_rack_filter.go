@@ -74,7 +74,7 @@ func (o *RackFilter) SetNames(v []string) {
 }
 
 func (o RackFilter) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -124,5 +124,3 @@ func (v *NullableRackFilter) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

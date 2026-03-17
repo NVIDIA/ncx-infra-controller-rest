@@ -21,9 +21,9 @@ type DpuExtensionServiceStatus string
 
 // List of DpuExtensionServiceStatus
 const (
-	DPUEXTENSIONSERVICESTATUS_PENDING DpuExtensionServiceStatus = "Pending"
-	DPUEXTENSIONSERVICESTATUS_READY DpuExtensionServiceStatus = "Ready"
-	DPUEXTENSIONSERVICESTATUS_ERROR DpuExtensionServiceStatus = "Error"
+	DPUEXTENSIONSERVICESTATUS_PENDING  DpuExtensionServiceStatus = "Pending"
+	DPUEXTENSIONSERVICESTATUS_READY    DpuExtensionServiceStatus = "Ready"
+	DPUEXTENSIONSERVICESTATUS_ERROR    DpuExtensionServiceStatus = "Error"
 	DPUEXTENSIONSERVICESTATUS_DELETING DpuExtensionServiceStatus = "Deleting"
 )
 
@@ -113,4 +113,3 @@ func (v *NullableDpuExtensionServiceStatus) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-

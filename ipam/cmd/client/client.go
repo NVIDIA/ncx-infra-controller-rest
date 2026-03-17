@@ -7,10 +7,10 @@ import (
 	"os"
 
 	"connectrpc.com/connect"
-	compress "github.com/klauspost/connect-compress/v2"
-	"github.com/metal-stack/v"
 	v1 "github.com/NVIDIA/ncx-infra-controller-rest/ipam/api/v1"
 	"github.com/NVIDIA/ncx-infra-controller-rest/ipam/api/v1/apiv1connect"
+	compress "github.com/klauspost/connect-compress/v2"
+	"github.com/metal-stack/v"
 	"github.com/urfave/cli/v2"
 )
 

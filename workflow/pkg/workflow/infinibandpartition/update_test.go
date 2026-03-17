@@ -21,8 +21,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/google/uuid"
 	ibpActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/infinibandpartition"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"go.temporal.io/sdk/temporal"

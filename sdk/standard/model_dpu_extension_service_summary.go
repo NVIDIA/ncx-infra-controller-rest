@@ -177,6 +177,7 @@ func (o *DpuExtensionServiceSummary) HasLatestVersion() bool {
 func (o *DpuExtensionServiceSummary) SetLatestVersion(v string) {
 	o.LatestVersion.Set(&v)
 }
+
 // SetLatestVersionNil sets the value for LatestVersion to be an explicit nil
 func (o *DpuExtensionServiceSummary) SetLatestVersionNil() {
 	o.LatestVersion.Set(nil)
@@ -220,7 +221,7 @@ func (o *DpuExtensionServiceSummary) SetStatus(v DpuExtensionServiceStatus) {
 }
 
 func (o DpuExtensionServiceSummary) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -282,5 +283,3 @@ func (v *NullableDpuExtensionServiceSummary) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

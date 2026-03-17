@@ -23,9 +23,9 @@ import (
 	"sort"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/common"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
+	"github.com/google/uuid"
 )
 
 // Current rule definition version

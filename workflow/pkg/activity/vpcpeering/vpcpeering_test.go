@@ -24,11 +24,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
 	cdbu "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/util"
 	sc "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/client/site"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/uptrace/bun/extra/bundebug"
 	"go.temporal.io/sdk/testsuite"

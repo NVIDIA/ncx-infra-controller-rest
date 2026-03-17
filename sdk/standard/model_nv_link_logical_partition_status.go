@@ -21,12 +21,12 @@ type NVLinkLogicalPartitionStatus string
 
 // List of NVLinkLogicalPartitionStatus
 const (
-	NVLINKLOGICALPARTITIONSTATUS_PENDING NVLinkLogicalPartitionStatus = "Pending"
+	NVLINKLOGICALPARTITIONSTATUS_PENDING      NVLinkLogicalPartitionStatus = "Pending"
 	NVLINKLOGICALPARTITIONSTATUS_PROVISIONING NVLinkLogicalPartitionStatus = "Provisioning"
-	NVLINKLOGICALPARTITIONSTATUS_CONFIGURING NVLinkLogicalPartitionStatus = "Configuring"
-	NVLINKLOGICALPARTITIONSTATUS_READY NVLinkLogicalPartitionStatus = "Ready"
-	NVLINKLOGICALPARTITIONSTATUS_DELETING NVLinkLogicalPartitionStatus = "Deleting"
-	NVLINKLOGICALPARTITIONSTATUS_ERROR NVLinkLogicalPartitionStatus = "Error"
+	NVLINKLOGICALPARTITIONSTATUS_CONFIGURING  NVLinkLogicalPartitionStatus = "Configuring"
+	NVLINKLOGICALPARTITIONSTATUS_READY        NVLinkLogicalPartitionStatus = "Ready"
+	NVLINKLOGICALPARTITIONSTATUS_DELETING     NVLinkLogicalPartitionStatus = "Deleting"
+	NVLINKLOGICALPARTITIONSTATUS_ERROR        NVLinkLogicalPartitionStatus = "Error"
 )
 
 // All allowed values of NVLinkLogicalPartitionStatus enum
@@ -117,4 +117,3 @@ func (v *NullableNVLinkLogicalPartitionStatus) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-

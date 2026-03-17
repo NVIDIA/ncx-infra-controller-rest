@@ -23,14 +23,14 @@ type MachineInstanceTypeStats struct {
 	// Unique identifier for the InstanceType
 	Id *string `json:"id,omitempty"`
 	// Name of the InstanceType
-	Name *string `json:"name,omitempty"`
+	Name                 *string                 `json:"name,omitempty"`
 	AssignedMachineStats *MachineStatusBreakdown `json:"assignedMachineStats,omitempty"`
 	// Number of Machines of this Instance Type allocated to Tenants
 	Allocated *int32 `json:"allocated,omitempty"`
 	// Number of Ready Machines of this Instance Type available for additional allocation to Tenants
-	MaxAllocatable *int32 `json:"maxAllocatable,omitempty"`
+	MaxAllocatable   *int32                  `json:"maxAllocatable,omitempty"`
 	UsedMachineStats *MachineStatusBreakdown `json:"usedMachineStats,omitempty"`
-	Tenants []InstanceTypeStats `json:"tenants,omitempty"`
+	Tenants          []InstanceTypeStats     `json:"tenants,omitempty"`
 }
 
 // NewMachineInstanceTypeStats instantiates a new MachineInstanceTypeStats object
@@ -275,7 +275,7 @@ func (o *MachineInstanceTypeStats) SetTenants(v []InstanceTypeStats) {
 }
 
 func (o MachineInstanceTypeStats) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -343,5 +343,3 @@ func (v *NullableMachineInstanceTypeStats) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

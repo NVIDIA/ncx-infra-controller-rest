@@ -21,12 +21,12 @@ var _ MappedNullable = &Deprecation{}
 
 // Deprecation Details of a particular deprecation in NCX Infra Controller API
 type Deprecation struct {
-	Attribute NullableString `json:"attribute,omitempty"`
-	QueryParam NullableString `json:"queryParam,omitempty"`
-	Endpoint NullableString `json:"endpoint,omitempty"`
-	ReplacedBy NullableString `json:"replacedBy,omitempty"`
-	TakeActionBy *time.Time `json:"takeActionBy,omitempty"`
-	Notice *string `json:"notice,omitempty"`
+	Attribute    NullableString `json:"attribute,omitempty"`
+	QueryParam   NullableString `json:"queryParam,omitempty"`
+	Endpoint     NullableString `json:"endpoint,omitempty"`
+	ReplacedBy   NullableString `json:"replacedBy,omitempty"`
+	TakeActionBy *time.Time     `json:"takeActionBy,omitempty"`
+	Notice       *string        `json:"notice,omitempty"`
 }
 
 // NewDeprecation instantiates a new Deprecation object
@@ -78,6 +78,7 @@ func (o *Deprecation) HasAttribute() bool {
 func (o *Deprecation) SetAttribute(v string) {
 	o.Attribute.Set(&v)
 }
+
 // SetAttributeNil sets the value for Attribute to be an explicit nil
 func (o *Deprecation) SetAttributeNil() {
 	o.Attribute.Set(nil)
@@ -120,6 +121,7 @@ func (o *Deprecation) HasQueryParam() bool {
 func (o *Deprecation) SetQueryParam(v string) {
 	o.QueryParam.Set(&v)
 }
+
 // SetQueryParamNil sets the value for QueryParam to be an explicit nil
 func (o *Deprecation) SetQueryParamNil() {
 	o.QueryParam.Set(nil)
@@ -162,6 +164,7 @@ func (o *Deprecation) HasEndpoint() bool {
 func (o *Deprecation) SetEndpoint(v string) {
 	o.Endpoint.Set(&v)
 }
+
 // SetEndpointNil sets the value for Endpoint to be an explicit nil
 func (o *Deprecation) SetEndpointNil() {
 	o.Endpoint.Set(nil)
@@ -204,6 +207,7 @@ func (o *Deprecation) HasReplacedBy() bool {
 func (o *Deprecation) SetReplacedBy(v string) {
 	o.ReplacedBy.Set(&v)
 }
+
 // SetReplacedByNil sets the value for ReplacedBy to be an explicit nil
 func (o *Deprecation) SetReplacedByNil() {
 	o.ReplacedBy.Set(nil)
@@ -279,7 +283,7 @@ func (o *Deprecation) SetNotice(v string) {
 }
 
 func (o Deprecation) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -344,5 +348,3 @@ func (v *NullableDeprecation) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

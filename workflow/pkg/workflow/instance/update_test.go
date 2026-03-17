@@ -21,9 +21,9 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/google/uuid"
 	cwm "github.com/NVIDIA/ncx-infra-controller-rest/workflow/internal/metrics"
 	instanceActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/instance"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"go.temporal.io/sdk/temporal"

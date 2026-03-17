@@ -20,7 +20,7 @@ var _ MappedNullable = &SiteMachineStatsByHealth{}
 
 // SiteMachineStatsByHealth Machine stats for a Site by health
 type SiteMachineStatsByHealth struct {
-	Healthy *int32 `json:"healthy,omitempty"`
+	Healthy   *int32 `json:"healthy,omitempty"`
 	Unhealthy *int32 `json:"unhealthy,omitempty"`
 }
 
@@ -106,7 +106,7 @@ func (o *SiteMachineStatsByHealth) SetUnhealthy(v int32) {
 }
 
 func (o SiteMachineStatsByHealth) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -159,5 +159,3 @@ func (v *NullableSiteMachineStatsByHealth) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

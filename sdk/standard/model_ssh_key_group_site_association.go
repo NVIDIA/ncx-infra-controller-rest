@@ -21,10 +21,10 @@ var _ MappedNullable = &SshKeyGroupSiteAssociation{}
 
 // SshKeyGroupSiteAssociation Describes the relationship between an SSH Key Group and a Site
 type SshKeyGroupSiteAssociation struct {
-	Site *SiteSummary `json:"site,omitempty"`
+	Site   *SiteSummary                      `json:"site,omitempty"`
 	Status *SshKeyGroupSiteAssociationStatus `json:"status,omitempty"`
 	// Version of the Key Group on Site
-	Version *string `json:"version,omitempty"`
+	Version *string    `json:"version,omitempty"`
 	Created *time.Time `json:"created,omitempty"`
 	Updated *time.Time `json:"updated,omitempty"`
 }
@@ -207,7 +207,7 @@ func (o *SshKeyGroupSiteAssociation) SetUpdated(v time.Time) {
 }
 
 func (o SshKeyGroupSiteAssociation) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -269,5 +269,3 @@ func (v *NullableSshKeyGroupSiteAssociation) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

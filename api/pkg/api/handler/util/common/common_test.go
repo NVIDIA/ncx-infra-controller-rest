@@ -27,8 +27,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/google/uuid"
 	swe "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/error"
+	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/uptrace/bun/extra/bundebug"

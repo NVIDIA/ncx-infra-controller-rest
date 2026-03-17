@@ -20,8 +20,8 @@ package deviceinfo
 import (
 	"fmt"
 
-	"github.com/google/uuid"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/utils"
+	"github.com/google/uuid"
 )
 
 // SerialInfo represents serial number information of a device which is

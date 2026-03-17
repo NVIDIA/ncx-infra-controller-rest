@@ -20,8 +20,8 @@ package vpc
 import (
 	"testing"
 
-	"github.com/google/uuid"
 	wflows "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
 

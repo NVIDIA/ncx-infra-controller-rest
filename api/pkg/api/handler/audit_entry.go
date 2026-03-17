@@ -24,9 +24,6 @@ import (
 	"net/http"
 	"strconv"
 
-	goset "github.com/deckarep/golang-set/v2"
-	"github.com/google/uuid"
-	"github.com/labstack/echo/v4"
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/handler/util/common"
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model"
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/pagination"
@@ -35,6 +32,9 @@ import (
 	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
 	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/paginator"
+	goset "github.com/deckarep/golang-set/v2"
+	"github.com/google/uuid"
+	"github.com/labstack/echo/v4"
 	"go.opentelemetry.io/otel/attribute"
 )
 

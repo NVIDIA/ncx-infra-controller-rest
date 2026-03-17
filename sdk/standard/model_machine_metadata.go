@@ -20,10 +20,10 @@ var _ MappedNullable = &MachineMetadata{}
 
 // MachineMetadata Describes metadata for various Machine components
 type MachineMetadata struct {
-	DmiData *MachineDMIData `json:"dmiData,omitempty"`
-	BmcInfo *MachineBMCInfo `json:"bmcInfo,omitempty"`
-	Gpus []MachineGPUInfo `json:"gpus,omitempty"`
-	NetworkInterfaces []MachineNetworkInterface `json:"networkInterfaces,omitempty"`
+	DmiData              *MachineDMIData              `json:"dmiData,omitempty"`
+	BmcInfo              *MachineBMCInfo              `json:"bmcInfo,omitempty"`
+	Gpus                 []MachineGPUInfo             `json:"gpus,omitempty"`
+	NetworkInterfaces    []MachineNetworkInterface    `json:"networkInterfaces,omitempty"`
 	InfinibandInterfaces []MachineInfiniBandInterface `json:"infinibandInterfaces,omitempty"`
 }
 
@@ -205,7 +205,7 @@ func (o *MachineMetadata) SetInfinibandInterfaces(v []MachineInfiniBandInterface
 }
 
 func (o MachineMetadata) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -267,5 +267,3 @@ func (v *NullableMachineMetadata) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

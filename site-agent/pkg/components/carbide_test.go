@@ -22,10 +22,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/carbide"
 	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/utils"
 	wflows "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel"
 )

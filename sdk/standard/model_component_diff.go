@@ -23,9 +23,9 @@ type ComponentDiff struct {
 	// Type of difference: DiffTypeOnlyInExpected, DiffTypeOnlyInActual, or DiffTypeDrift
 	Type *string `json:"type,omitempty"`
 	// ID of the component
-	ComponentId *string `json:"componentId,omitempty"`
-	Expected *RackComponent `json:"expected,omitempty"`
-	Actual *RackComponent `json:"actual,omitempty"`
+	ComponentId *string        `json:"componentId,omitempty"`
+	Expected    *RackComponent `json:"expected,omitempty"`
+	Actual      *RackComponent `json:"actual,omitempty"`
 	// List of field differences (populated when type is DiffTypeDrift)
 	FieldDiffs []FieldDiff `json:"fieldDiffs,omitempty"`
 }
@@ -208,7 +208,7 @@ func (o *ComponentDiff) SetFieldDiffs(v []FieldDiff) {
 }
 
 func (o ComponentDiff) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -270,5 +270,3 @@ func (v *NullableComponentDiff) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

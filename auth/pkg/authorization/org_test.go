@@ -21,11 +21,11 @@ import (
 	"context"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/NVIDIA/ncx-infra-controller-rest/auth/pkg/core/claim"
 	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
 	cdbu "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/util"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )
 

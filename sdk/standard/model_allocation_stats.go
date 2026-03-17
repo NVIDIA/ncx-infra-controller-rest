@@ -20,9 +20,9 @@ var _ MappedNullable = &AllocationStats{}
 
 // AllocationStats Stats for a single allocation within an instance type
 type AllocationStats struct {
-	Id *string `json:"id,omitempty"`
-	Name *string `json:"name,omitempty"`
-	Total *int32 `json:"total,omitempty"`
+	Id    *string `json:"id,omitempty"`
+	Name  *string `json:"name,omitempty"`
+	Total *int32  `json:"total,omitempty"`
 }
 
 // NewAllocationStats instantiates a new AllocationStats object
@@ -139,7 +139,7 @@ func (o *AllocationStats) SetTotal(v int32) {
 }
 
 func (o AllocationStats) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -195,5 +195,3 @@ func (v *NullableAllocationStats) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

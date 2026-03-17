@@ -21,12 +21,12 @@ type VpcStatus string
 
 // List of VpcStatus
 const (
-	VPCSTATUS_PENDING VpcStatus = "Pending"
+	VPCSTATUS_PENDING      VpcStatus = "Pending"
 	VPCSTATUS_PROVISIONING VpcStatus = "Provisioning"
-	VPCSTATUS_READY VpcStatus = "Ready"
-	VPCSTATUS_CONFIGURING VpcStatus = "Configuring"
-	VPCSTATUS_DELETING VpcStatus = "Deleting"
-	VPCSTATUS_ERROR VpcStatus = "Error"
+	VPCSTATUS_READY        VpcStatus = "Ready"
+	VPCSTATUS_CONFIGURING  VpcStatus = "Configuring"
+	VPCSTATUS_DELETING     VpcStatus = "Deleting"
+	VPCSTATUS_ERROR        VpcStatus = "Error"
 )
 
 // All allowed values of VpcStatus enum
@@ -117,4 +117,3 @@ func (v *NullableVpcStatus) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-

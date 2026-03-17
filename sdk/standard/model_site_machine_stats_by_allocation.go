@@ -20,9 +20,9 @@ var _ MappedNullable = &SiteMachineStatsByAllocation{}
 
 // SiteMachineStatsByAllocation Machine stats for a Site by allocation
 type SiteMachineStatsByAllocation struct {
-	AllocatedInUse *int32 `json:"allocatedInUse,omitempty"`
+	AllocatedInUse    *int32 `json:"allocatedInUse,omitempty"`
 	AllocatedNotInUse *int32 `json:"allocatedNotInUse,omitempty"`
-	Unallocated *int32 `json:"unallocated,omitempty"`
+	Unallocated       *int32 `json:"unallocated,omitempty"`
 }
 
 // NewSiteMachineStatsByAllocation instantiates a new SiteMachineStatsByAllocation object
@@ -139,7 +139,7 @@ func (o *SiteMachineStatsByAllocation) SetUnallocated(v int32) {
 }
 
 func (o SiteMachineStatsByAllocation) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -195,5 +195,3 @@ func (v *NullableSiteMachineStatsByAllocation) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

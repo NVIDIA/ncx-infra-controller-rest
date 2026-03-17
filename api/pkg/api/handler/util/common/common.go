@@ -31,8 +31,8 @@ import (
 	"strings"
 	"sync"
 
-	validation "github.com/go-ozzo/ozzo-validation/v4"
 	cutil "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/util"
+	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"

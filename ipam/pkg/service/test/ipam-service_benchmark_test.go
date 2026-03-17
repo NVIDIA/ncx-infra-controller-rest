@@ -11,11 +11,11 @@ import (
 
 	"connectrpc.com/connect"
 
-	compress "github.com/klauspost/connect-compress/v2"
 	goipam "github.com/NVIDIA/ncx-infra-controller-rest/ipam"
 	v1 "github.com/NVIDIA/ncx-infra-controller-rest/ipam/api/v1"
 	"github.com/NVIDIA/ncx-infra-controller-rest/ipam/api/v1/apiv1connect"
 	"github.com/NVIDIA/ncx-infra-controller-rest/ipam/pkg/service"
+	compress "github.com/klauspost/connect-compress/v2"
 )
 
 // BenchmarkGrpcImpact located in a separate package to prevent import cycles.

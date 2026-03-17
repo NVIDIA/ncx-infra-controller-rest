@@ -20,11 +20,11 @@ var _ MappedNullable = &SiteMachineStats{}
 
 // SiteMachineStats Machine stats for a Site
 type SiteMachineStats struct {
-	Total *int32 `json:"total,omitempty"`
-	TotalByStatus *SiteMachineStatsByStatus `json:"totalByStatus,omitempty"`
-	TotalByHealth *SiteMachineStatsByHealth `json:"totalByHealth,omitempty"`
+	Total                  *int32                             `json:"total,omitempty"`
+	TotalByStatus          *SiteMachineStatsByStatus          `json:"totalByStatus,omitempty"`
+	TotalByHealth          *SiteMachineStatsByHealth          `json:"totalByHealth,omitempty"`
 	TotalByStatusAndHealth *SiteMachineStatsByStatusAndHealth `json:"totalByStatusAndHealth,omitempty"`
-	TotalByAllocation *SiteMachineStatsByAllocation `json:"totalByAllocation,omitempty"`
+	TotalByAllocation      *SiteMachineStatsByAllocation      `json:"totalByAllocation,omitempty"`
 }
 
 // NewSiteMachineStats instantiates a new SiteMachineStats object
@@ -205,7 +205,7 @@ func (o *SiteMachineStats) SetTotalByAllocation(v SiteMachineStatsByAllocation) 
 }
 
 func (o SiteMachineStats) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -267,5 +267,3 @@ func (v *NullableSiteMachineStats) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

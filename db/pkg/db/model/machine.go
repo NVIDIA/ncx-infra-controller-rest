@@ -25,11 +25,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
-	"github.com/mitchellh/mapstructure"
 	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/paginator"
 	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
+	"github.com/google/uuid"
+	"github.com/mitchellh/mapstructure"
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/uptrace/bun"

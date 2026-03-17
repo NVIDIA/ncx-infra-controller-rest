@@ -20,12 +20,12 @@ var _ MappedNullable = &InstanceCountByStatus{}
 
 // InstanceCountByStatus Describes count of Instances in various statuses
 type InstanceCountByStatus struct {
-	Total *int32 `json:"total,omitempty"`
-	Pending *int32 `json:"pending,omitempty"`
+	Total        *int32 `json:"total,omitempty"`
+	Pending      *int32 `json:"pending,omitempty"`
 	Provisioning *int32 `json:"provisioning,omitempty"`
-	Ready *int32 `json:"ready,omitempty"`
-	Terminating *int32 `json:"terminating,omitempty"`
-	Error *int32 `json:"error,omitempty"`
+	Ready        *int32 `json:"ready,omitempty"`
+	Terminating  *int32 `json:"terminating,omitempty"`
+	Error        *int32 `json:"error,omitempty"`
 }
 
 // NewInstanceCountByStatus instantiates a new InstanceCountByStatus object
@@ -238,7 +238,7 @@ func (o *InstanceCountByStatus) SetError(v int32) {
 }
 
 func (o InstanceCountByStatus) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -303,5 +303,3 @@ func (v *NullableInstanceCountByStatus) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

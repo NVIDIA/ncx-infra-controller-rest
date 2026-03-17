@@ -21,8 +21,8 @@ var _ MappedNullable = &TenantStats{}
 // TenantStats Provide operational stats for Tenant
 type TenantStats struct {
 	Instance *InstanceCountByStatus `json:"instance,omitempty"`
-	Vpc *VpcCountByStatus `json:"vpc,omitempty"`
-	Subnet *SubnetCountByStatus `json:"subnet,omitempty"`
+	Vpc      *VpcCountByStatus      `json:"vpc,omitempty"`
+	Subnet   *SubnetCountByStatus   `json:"subnet,omitempty"`
 }
 
 // NewTenantStats instantiates a new TenantStats object
@@ -139,7 +139,7 @@ func (o *TenantStats) SetSubnet(v SubnetCountByStatus) {
 }
 
 func (o TenantStats) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -195,5 +195,3 @@ func (v *NullableTenantStats) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

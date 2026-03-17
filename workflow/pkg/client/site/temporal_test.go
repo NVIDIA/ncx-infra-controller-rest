@@ -22,9 +22,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/google/uuid"
 	cconfig "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/config"
 	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/internal/config"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	temporalClient "go.temporal.io/sdk/client"
 )

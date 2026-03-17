@@ -12,8 +12,8 @@ Contact: carbide-dev@exchange.nvidia.com
 package standard
 
 import (
-	"encoding/json"
 	"bytes"
+	"encoding/json"
 	"fmt"
 )
 
@@ -22,10 +22,10 @@ var _ MappedNullable = &AllocationConstraintCreateRequest{}
 
 // AllocationConstraintCreateRequest Request data to create an AllocationConstraint
 type AllocationConstraintCreateRequest struct {
-	ResourceType *string `json:"resourceType,omitempty"`
-	ResourceTypeId string `json:"resourceTypeId"`
-	ConstraintType string `json:"constraintType"`
-	ConstraintValue int32 `json:"constraintValue"`
+	ResourceType    *string `json:"resourceType,omitempty"`
+	ResourceTypeId  string  `json:"resourceTypeId"`
+	ConstraintType  string  `json:"constraintType"`
+	ConstraintValue int32   `json:"constraintValue"`
 }
 
 type _AllocationConstraintCreateRequest AllocationConstraintCreateRequest
@@ -155,7 +155,7 @@ func (o *AllocationConstraintCreateRequest) SetConstraintValue(v int32) {
 }
 
 func (o AllocationConstraintCreateRequest) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -188,10 +188,10 @@ func (o *AllocationConstraintCreateRequest) UnmarshalJSON(data []byte) (err erro
 	err = json.Unmarshal(data, &allProperties)
 
 	if err != nil {
-		return err;
+		return err
 	}
 
-	for _, requiredProperty := range(requiredProperties) {
+	for _, requiredProperty := range requiredProperties {
 		if _, exists := allProperties[requiredProperty]; !exists {
 			return fmt.Errorf("no value given for required property %v", requiredProperty)
 		}
@@ -247,5 +247,3 @@ func (v *NullableAllocationConstraintCreateRequest) UnmarshalJSON(src []byte) er
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

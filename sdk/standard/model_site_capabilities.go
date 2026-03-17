@@ -20,10 +20,10 @@ var _ MappedNullable = &SiteCapabilities{}
 
 // SiteCapabilities Boolean flags to indicate features supported by a Site
 type SiteCapabilities struct {
-	NativeNetworking *bool `json:"nativeNetworking,omitempty"`
-	NetworkSecurityGroup *bool `json:"networkSecurityGroup,omitempty"`
-	NvLinkPartition *bool `json:"nvLinkPartition,omitempty"`
-	RackLevelAdministration *bool `json:"rackLevelAdministration,omitempty"`
+	NativeNetworking          *bool `json:"nativeNetworking,omitempty"`
+	NetworkSecurityGroup      *bool `json:"networkSecurityGroup,omitempty"`
+	NvLinkPartition           *bool `json:"nvLinkPartition,omitempty"`
+	RackLevelAdministration   *bool `json:"rackLevelAdministration,omitempty"`
 	ImageBasedOperatingSystem *bool `json:"imageBasedOperatingSystem,omitempty"`
 }
 
@@ -205,7 +205,7 @@ func (o *SiteCapabilities) SetImageBasedOperatingSystem(v bool) {
 }
 
 func (o SiteCapabilities) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -267,5 +267,3 @@ func (v *NullableSiteCapabilities) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

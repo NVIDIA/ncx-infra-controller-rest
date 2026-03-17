@@ -22,9 +22,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/util"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"

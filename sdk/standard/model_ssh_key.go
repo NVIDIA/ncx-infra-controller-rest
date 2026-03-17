@@ -22,9 +22,9 @@ var _ MappedNullable = &SshKey{}
 // SshKey Details of SSH public key
 type SshKey struct {
 	// Unique identifier for the key
-	Id *string `json:"id,omitempty"`
-	Name *string `json:"name,omitempty"`
-	Org *string `json:"org,omitempty"`
+	Id       *string `json:"id,omitempty"`
+	Name     *string `json:"name,omitempty"`
+	Org      *string `json:"org,omitempty"`
 	TenantId *string `json:"tenantId,omitempty"`
 	// SHA256 fingerprint of the public key
 	Fingerprint *string `json:"fingerprint,omitempty"`
@@ -276,7 +276,7 @@ func (o *SshKey) SetUpdated(v time.Time) {
 }
 
 func (o SshKey) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -344,5 +344,3 @@ func (v *NullableSshKey) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

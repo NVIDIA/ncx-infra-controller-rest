@@ -21,9 +21,9 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/labstack/echo/v4"
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/internal/config"
 	ccu "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/util"
+	"github.com/labstack/echo/v4"
 )
 
 // NotFoundHandler returns a middleware that returns a 404 status code for unmatched routes

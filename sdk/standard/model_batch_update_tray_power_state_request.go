@@ -12,8 +12,8 @@ Contact: carbide-dev@exchange.nvidia.com
 package standard
 
 import (
-	"encoding/json"
 	"bytes"
+	"encoding/json"
 	"fmt"
 )
 
@@ -23,7 +23,7 @@ var _ MappedNullable = &BatchUpdateTrayPowerStateRequest{}
 // BatchUpdateTrayPowerStateRequest Request body for batch tray power control operations
 type BatchUpdateTrayPowerStateRequest struct {
 	// ID of the Site
-	SiteId string `json:"siteId"`
+	SiteId string      `json:"siteId"`
 	Filter *TrayFilter `json:"filter,omitempty"`
 	// Target power state
 	State string `json:"state"`
@@ -131,7 +131,7 @@ func (o *BatchUpdateTrayPowerStateRequest) SetState(v string) {
 }
 
 func (o BatchUpdateTrayPowerStateRequest) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -162,10 +162,10 @@ func (o *BatchUpdateTrayPowerStateRequest) UnmarshalJSON(data []byte) (err error
 	err = json.Unmarshal(data, &allProperties)
 
 	if err != nil {
-		return err;
+		return err
 	}
 
-	for _, requiredProperty := range(requiredProperties) {
+	for _, requiredProperty := range requiredProperties {
 		if _, exists := allProperties[requiredProperty]; !exists {
 			return fmt.Errorf("no value given for required property %v", requiredProperty)
 		}
@@ -221,5 +221,3 @@ func (v *NullableBatchUpdateTrayPowerStateRequest) UnmarshalJSON(src []byte) err
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

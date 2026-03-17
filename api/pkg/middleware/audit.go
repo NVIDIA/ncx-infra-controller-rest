@@ -20,12 +20,12 @@ package middleware
 import (
 	"encoding/json"
 
-	"github.com/google/uuid"
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/metadata"
 	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
+	"github.com/google/uuid"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"github.com/rs/zerolog/log"
 )
 

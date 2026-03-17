@@ -12,8 +12,8 @@ Contact: carbide-dev@exchange.nvidia.com
 package standard
 
 import (
-	"encoding/json"
 	"bytes"
+	"encoding/json"
 	"fmt"
 )
 
@@ -23,7 +23,7 @@ var _ MappedNullable = &BatchBringUpRackRequest{}
 // BatchBringUpRackRequest Request body for batch rack bring up operations
 type BatchBringUpRackRequest struct {
 	// ID of the Site
-	SiteId string `json:"siteId"`
+	SiteId string      `json:"siteId"`
 	Filter *RackFilter `json:"filter,omitempty"`
 	// Optional description for the bring up operation
 	Description *string `json:"description,omitempty"`
@@ -138,7 +138,7 @@ func (o *BatchBringUpRackRequest) SetDescription(v string) {
 }
 
 func (o BatchBringUpRackRequest) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -170,10 +170,10 @@ func (o *BatchBringUpRackRequest) UnmarshalJSON(data []byte) (err error) {
 	err = json.Unmarshal(data, &allProperties)
 
 	if err != nil {
-		return err;
+		return err
 	}
 
-	for _, requiredProperty := range(requiredProperties) {
+	for _, requiredProperty := range requiredProperties {
 		if _, exists := allProperties[requiredProperty]; !exists {
 			return fmt.Errorf("no value given for required property %v", requiredProperty)
 		}
@@ -229,5 +229,3 @@ func (v *NullableBatchBringUpRackRequest) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

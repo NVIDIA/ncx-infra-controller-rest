@@ -18,9 +18,9 @@
 package subnet
 
 import (
-	"github.com/google/uuid"
 	swa "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/activity"
 	sww "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/workflow"
+	"github.com/google/uuid"
 	"go.temporal.io/sdk/activity"
 )
 

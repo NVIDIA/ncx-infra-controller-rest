@@ -21,11 +21,11 @@ var _ MappedNullable = &MachineInstanceType{}
 
 // MachineInstanceType Associates a machine with an Instance Type
 type MachineInstanceType struct {
-	Id *string `json:"id,omitempty"`
-	MachineId *string `json:"machineId,omitempty"`
-	InstanceTypeId *string `json:"instanceTypeId,omitempty"`
-	Created *time.Time `json:"created,omitempty"`
-	Updated *time.Time `json:"updated,omitempty"`
+	Id             *string    `json:"id,omitempty"`
+	MachineId      *string    `json:"machineId,omitempty"`
+	InstanceTypeId *string    `json:"instanceTypeId,omitempty"`
+	Created        *time.Time `json:"created,omitempty"`
+	Updated        *time.Time `json:"updated,omitempty"`
 }
 
 // NewMachineInstanceType instantiates a new MachineInstanceType object
@@ -206,7 +206,7 @@ func (o *MachineInstanceType) SetUpdated(v time.Time) {
 }
 
 func (o MachineInstanceType) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -268,5 +268,3 @@ func (v *NullableMachineInstanceType) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

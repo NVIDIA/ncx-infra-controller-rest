@@ -18,10 +18,10 @@
 package model
 
 import (
-	"github.com/google/uuid"
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model/util"
 	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"net/url"
 	"testing"

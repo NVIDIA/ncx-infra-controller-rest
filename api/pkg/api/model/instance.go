@@ -23,13 +23,13 @@ import (
 	"fmt"
 	"time"
 
-	validation "github.com/go-ozzo/ozzo-validation/v4"
-	validationis "github.com/go-ozzo/ozzo-validation/v4/is"
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/internal/config"
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model/util"
 	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
+	validation "github.com/go-ozzo/ozzo-validation/v4"
+	validationis "github.com/go-ozzo/ozzo-validation/v4/is"
 	"gopkg.in/yaml.v3"
 
 	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"

@@ -23,9 +23,9 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/labstack/echo/v4"
 	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
+	"github.com/labstack/echo/v4"
 
 	"go.opentelemetry.io/otel/attribute"
 	temporalClient "go.temporal.io/sdk/client"

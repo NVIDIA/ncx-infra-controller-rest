@@ -20,12 +20,12 @@ var _ MappedNullable = &InstanceTypeStats{}
 
 // InstanceTypeStats Stats for an instance type including allocation details
 type InstanceTypeStats struct {
-	Id *string `json:"id,omitempty"`
-	Name *string `json:"name,omitempty"`
-	Allocated *int32 `json:"allocated,omitempty"`
+	Id               *string                 `json:"id,omitempty"`
+	Name             *string                 `json:"name,omitempty"`
+	Allocated        *int32                  `json:"allocated,omitempty"`
 	UsedMachineStats *MachineStatusBreakdown `json:"usedMachineStats,omitempty"`
-	MaxAllocatable *int32 `json:"maxAllocatable,omitempty"`
-	Allocations []AllocationStats `json:"allocations,omitempty"`
+	MaxAllocatable   *int32                  `json:"maxAllocatable,omitempty"`
+	Allocations      []AllocationStats       `json:"allocations,omitempty"`
 }
 
 // NewInstanceTypeStats instantiates a new InstanceTypeStats object
@@ -238,7 +238,7 @@ func (o *InstanceTypeStats) SetAllocations(v []AllocationStats) {
 }
 
 func (o InstanceTypeStats) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -303,5 +303,3 @@ func (v *NullableInstanceTypeStats) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

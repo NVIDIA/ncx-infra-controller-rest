@@ -358,6 +358,7 @@ func (o *AuditEntry) HasUserID() bool {
 func (o *AuditEntry) SetUserID(v string) {
 	o.UserID.Set(&v)
 }
+
 // SetUserIDNil sets the value for UserID to be an explicit nil
 func (o *AuditEntry) SetUserIDNil() {
 	o.UserID.Set(nil)
@@ -561,7 +562,7 @@ func (o *AuditEntry) SetApiVersion(v string) {
 }
 
 func (o AuditEntry) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -653,5 +654,3 @@ func (v *NullableAuditEntry) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

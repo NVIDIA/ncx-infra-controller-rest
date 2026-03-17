@@ -20,9 +20,9 @@ var _ MappedNullable = &MachineBMCInfo{}
 
 // MachineBMCInfo Describes BMC information of a Machine
 type MachineBMCInfo struct {
-	Ip *string `json:"ip,omitempty"`
-	Mac *string `json:"mac,omitempty"`
-	Version *string `json:"version,omitempty"`
+	Ip               *string `json:"ip,omitempty"`
+	Mac              *string `json:"mac,omitempty"`
+	Version          *string `json:"version,omitempty"`
 	FirmwareRevision *string `json:"firmwareRevision,omitempty"`
 }
 
@@ -172,7 +172,7 @@ func (o *MachineBMCInfo) SetFirmwareRevision(v string) {
 }
 
 func (o MachineBMCInfo) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -231,5 +231,3 @@ func (v *NullableMachineBMCInfo) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

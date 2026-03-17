@@ -29,8 +29,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/google/uuid"
-	"github.com/labstack/echo/v4"
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/internal/config"
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/handler/util/common"
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model"
@@ -44,6 +42,8 @@ import (
 	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/paginator"
 	cdbu "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/util"
 	swe "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/error"
+	"github.com/google/uuid"
+	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"

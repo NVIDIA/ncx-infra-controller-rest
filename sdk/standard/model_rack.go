@@ -31,8 +31,8 @@ type Rack struct {
 	// Serial number of the Rack
 	SerialNumber *string `json:"serialNumber,omitempty"`
 	// Description of the Rack
-	Description *string `json:"description,omitempty"`
-	Location *RackLocation `json:"location,omitempty"`
+	Description *string       `json:"description,omitempty"`
+	Location    *RackLocation `json:"location,omitempty"`
 	// Components within the Rack. Only returned when includeComponents is true.
 	Components []RackComponent `json:"components,omitempty"`
 }
@@ -311,7 +311,7 @@ func (o *Rack) SetComponents(v []RackComponent) {
 }
 
 func (o Rack) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -382,5 +382,3 @@ func (v *NullableRack) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

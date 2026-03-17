@@ -8,11 +8,11 @@ import (
 
 	"connectrpc.com/connect"
 	"connectrpc.com/otelconnect"
-	compress "github.com/klauspost/connect-compress/v2"
-	"github.com/metal-stack/v"
 	goipam "github.com/NVIDIA/ncx-infra-controller-rest/ipam"
 	"github.com/NVIDIA/ncx-infra-controller-rest/ipam/api/v1/apiv1connect"
 	"github.com/NVIDIA/ncx-infra-controller-rest/ipam/pkg/service"
+	compress "github.com/klauspost/connect-compress/v2"
+	"github.com/metal-stack/v"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/sdk/metric"

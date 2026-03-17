@@ -21,8 +21,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/google/uuid"
 	dbquery "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/db/query"
+	"github.com/google/uuid"
 	"github.com/uptrace/bun"
 )
 

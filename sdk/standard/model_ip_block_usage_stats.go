@@ -210,7 +210,7 @@ func (o *IpBlockUsageStats) SetAcquiredPrefixes(v int64) {
 }
 
 func (o IpBlockUsageStats) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -272,5 +272,3 @@ func (v *NullableIpBlockUsageStats) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

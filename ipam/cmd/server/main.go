@@ -7,8 +7,8 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/metal-stack/v"
 	goipam "github.com/NVIDIA/ncx-infra-controller-rest/ipam"
+	"github.com/metal-stack/v"
 	"github.com/urfave/cli/v2"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )

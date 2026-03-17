@@ -150,6 +150,7 @@ func (o *Sku) HasDeviceType() bool {
 func (o *Sku) SetDeviceType(v string) {
 	o.DeviceType.Set(&v)
 }
+
 // SetDeviceTypeNil sets the value for DeviceType to be an explicit nil
 func (o *Sku) SetDeviceTypeNil() {
 	o.DeviceType.Set(nil)
@@ -289,7 +290,7 @@ func (o *Sku) SetUpdated(v time.Time) {
 }
 
 func (o Sku) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -357,5 +358,3 @@ func (v *NullableSku) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

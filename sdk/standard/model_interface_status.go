@@ -21,11 +21,11 @@ type InterfaceStatus string
 
 // List of InterfaceStatus
 const (
-	INTERFACESTATUS_PENDING InterfaceStatus = "Pending"
+	INTERFACESTATUS_PENDING      InterfaceStatus = "Pending"
 	INTERFACESTATUS_PROVISIONING InterfaceStatus = "Provisioning"
-	INTERFACESTATUS_READY InterfaceStatus = "Ready"
-	INTERFACESTATUS_DELETING InterfaceStatus = "Deleting"
-	INTERFACESTATUS_ERROR InterfaceStatus = "Error"
+	INTERFACESTATUS_READY        InterfaceStatus = "Ready"
+	INTERFACESTATUS_DELETING     InterfaceStatus = "Deleting"
+	INTERFACESTATUS_ERROR        InterfaceStatus = "Error"
 )
 
 // All allowed values of InterfaceStatus enum
@@ -115,4 +115,3 @@ func (v *NullableInterfaceStatus) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-

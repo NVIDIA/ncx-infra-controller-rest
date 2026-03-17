@@ -23,9 +23,9 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/paginator"
+	"github.com/google/uuid"
 
 	"github.com/uptrace/bun"
 

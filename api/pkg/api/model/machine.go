@@ -23,8 +23,8 @@ import (
 
 	validationis "github.com/go-ozzo/ozzo-validation/v4/is"
 
-	validation "github.com/go-ozzo/ozzo-validation/v4"
 	camu "github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model/util"
+	validation "github.com/go-ozzo/ozzo-validation/v4"
 
 	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"

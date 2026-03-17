@@ -94,11 +94,11 @@ migrate:
 
 fmt-go:
 	go fmt ./...
-	if git diff --quiet; then
-		echo "go fmt was clean"
-	else
-		echo "go fmt was unclean. Please commit the changes."
-		exit 1
+	@if git diff --quiet; then \
+		echo "go fmt was clean"; \
+	else \
+		echo "go fmt was unclean. Please commit the changes."; \
+		exit 1; \
 	fi
 
 lint-go:

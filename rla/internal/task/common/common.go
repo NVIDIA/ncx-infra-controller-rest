@@ -20,9 +20,9 @@ package common
 import (
 	"fmt"
 
-	"github.com/google/uuid"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/deviceinfo"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
+	"github.com/google/uuid"
 )
 
 type TaskType string

@@ -22,14 +22,14 @@ var _ MappedNullable = &SiteSummary{}
 type SiteSummary struct {
 	Id *string `json:"id,omitempty"`
 	// Name of the Site
-	Name *string `json:"name,omitempty"`
+	Name                     *string `json:"name,omitempty"`
 	InfrastructureProviderId *string `json:"infrastructureProviderId,omitempty"`
 	// Indicates if Serial Console is enabled for the Site by the Provider
 	IsSerialConsoleEnabled *bool `json:"isSerialConsoleEnabled,omitempty"`
 	// Indicates if the Site is currently reachable from Cloud
-	IsOnline *bool `json:"isOnline,omitempty"`
+	IsOnline     *bool             `json:"isOnline,omitempty"`
 	Capabilities *SiteCapabilities `json:"capabilities,omitempty"`
-	Status *SiteStatus `json:"status,omitempty"`
+	Status       *SiteStatus       `json:"status,omitempty"`
 }
 
 // NewSiteSummary instantiates a new SiteSummary object
@@ -274,7 +274,7 @@ func (o *SiteSummary) SetStatus(v SiteStatus) {
 }
 
 func (o SiteSummary) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -342,5 +342,3 @@ func (v *NullableSiteSummary) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

@@ -12,8 +12,8 @@ Contact: carbide-dev@exchange.nvidia.com
 package standard
 
 import (
-	"encoding/json"
 	"bytes"
+	"encoding/json"
 	"fmt"
 )
 
@@ -23,7 +23,7 @@ var _ MappedNullable = &BatchTrayFirmwareUpdateRequest{}
 // BatchTrayFirmwareUpdateRequest Request body for batch tray firmware update operations
 type BatchTrayFirmwareUpdateRequest struct {
 	// ID of the Site
-	SiteId string `json:"siteId"`
+	SiteId string      `json:"siteId"`
 	Filter *TrayFilter `json:"filter,omitempty"`
 	// Target firmware version.
 	Version *string `json:"version,omitempty"`
@@ -138,7 +138,7 @@ func (o *BatchTrayFirmwareUpdateRequest) SetVersion(v string) {
 }
 
 func (o BatchTrayFirmwareUpdateRequest) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -170,10 +170,10 @@ func (o *BatchTrayFirmwareUpdateRequest) UnmarshalJSON(data []byte) (err error) 
 	err = json.Unmarshal(data, &allProperties)
 
 	if err != nil {
-		return err;
+		return err
 	}
 
-	for _, requiredProperty := range(requiredProperties) {
+	for _, requiredProperty := range requiredProperties {
 		if _, exists := allProperties[requiredProperty]; !exists {
 			return fmt.Errorf("no value given for required property %v", requiredProperty)
 		}
@@ -229,5 +229,3 @@ func (v *NullableBatchTrayFirmwareUpdateRequest) UnmarshalJSON(src []byte) error
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

@@ -20,8 +20,8 @@ package nvldomain
 import (
 	"errors"
 
-	"github.com/google/uuid"
 	identifier "github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/Identifier"
+	"github.com/google/uuid"
 )
 
 type NVLDomain struct {

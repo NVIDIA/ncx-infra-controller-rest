@@ -12,8 +12,8 @@ Contact: carbide-dev@exchange.nvidia.com
 package standard
 
 import (
-	"encoding/json"
 	"bytes"
+	"encoding/json"
 	"fmt"
 )
 
@@ -22,10 +22,10 @@ var _ MappedNullable = &SshKeyGroupCreateRequest{}
 
 // SshKeyGroupCreateRequest Request data to create an SSH Key Group
 type SshKeyGroupCreateRequest struct {
-	Name string `json:"name"`
-	Description *string `json:"description,omitempty"`
-	SiteIds []string `json:"siteIds,omitempty"`
-	SshKeyIds []string `json:"sshKeyIds,omitempty"`
+	Name        string   `json:"name"`
+	Description *string  `json:"description,omitempty"`
+	SiteIds     []string `json:"siteIds,omitempty"`
+	SshKeyIds   []string `json:"sshKeyIds,omitempty"`
 }
 
 type _SshKeyGroupCreateRequest SshKeyGroupCreateRequest
@@ -169,7 +169,7 @@ func (o *SshKeyGroupCreateRequest) SetSshKeyIds(v []string) {
 }
 
 func (o SshKeyGroupCreateRequest) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -204,10 +204,10 @@ func (o *SshKeyGroupCreateRequest) UnmarshalJSON(data []byte) (err error) {
 	err = json.Unmarshal(data, &allProperties)
 
 	if err != nil {
-		return err;
+		return err
 	}
 
-	for _, requiredProperty := range(requiredProperties) {
+	for _, requiredProperty := range requiredProperties {
 		if _, exists := allProperties[requiredProperty]; !exists {
 			return fmt.Errorf("no value given for required property %v", requiredProperty)
 		}
@@ -263,5 +263,3 @@ func (v *NullableSshKeyGroupCreateRequest) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

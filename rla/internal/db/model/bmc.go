@@ -20,8 +20,8 @@ package model
 import (
 	"context"
 
-	"github.com/google/uuid"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
+	"github.com/google/uuid"
 	"github.com/uptrace/bun"
 )
 

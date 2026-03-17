@@ -20,13 +20,13 @@ var _ MappedNullable = &MachineNetworkInterface{}
 
 // MachineNetworkInterface Describes information about an Ethernet Interface of a Machine
 type MachineNetworkInterface struct {
-	MacAddress *string `json:"macAddress,omitempty"`
-	Vendor *string `json:"vendor,omitempty"`
-	Device *string `json:"device,omitempty"`
-	Path *string `json:"path,omitempty"`
-	NumaNode *int32 `json:"numaNode,omitempty"`
+	MacAddress  *string `json:"macAddress,omitempty"`
+	Vendor      *string `json:"vendor,omitempty"`
+	Device      *string `json:"device,omitempty"`
+	Path        *string `json:"path,omitempty"`
+	NumaNode    *int32  `json:"numaNode,omitempty"`
 	Description *string `json:"description,omitempty"`
-	Slot *string `json:"slot,omitempty"`
+	Slot        *string `json:"slot,omitempty"`
 }
 
 // NewMachineNetworkInterface instantiates a new MachineNetworkInterface object
@@ -271,7 +271,7 @@ func (o *MachineNetworkInterface) SetSlot(v string) {
 }
 
 func (o MachineNetworkInterface) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -339,5 +339,3 @@ func (v *NullableMachineNetworkInterface) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

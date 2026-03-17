@@ -21,10 +21,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/google/uuid"
 	cClient "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/grpc/client"
 	"github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/util"
 	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"

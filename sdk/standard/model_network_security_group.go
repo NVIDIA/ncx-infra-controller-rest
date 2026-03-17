@@ -21,18 +21,18 @@ var _ MappedNullable = &NetworkSecurityGroup{}
 
 // NetworkSecurityGroup Network Security Group is an aggregate of security policies
 type NetworkSecurityGroup struct {
-	Id *string `json:"id,omitempty"`
-	Name *string `json:"name,omitempty"`
-	Description *string `json:"description,omitempty"`
-	SiteId *string `json:"siteId,omitempty"`
-	TenantId *string `json:"tenantId,omitempty"`
-	Status *NetworkSecurityGroupStatus `json:"status,omitempty"`
-	StatusHistory []StatusDetail `json:"statusHistory,omitempty"`
-	StatefulEgress *bool `json:"statefulEgress,omitempty"`
-	Rules []NetworkSecurityGroupRule `json:"rules,omitempty"`
-	Labels map[string]string `json:"labels,omitempty"`
-	Created *time.Time `json:"created,omitempty"`
-	Updated *time.Time `json:"updated,omitempty"`
+	Id             *string                     `json:"id,omitempty"`
+	Name           *string                     `json:"name,omitempty"`
+	Description    *string                     `json:"description,omitempty"`
+	SiteId         *string                     `json:"siteId,omitempty"`
+	TenantId       *string                     `json:"tenantId,omitempty"`
+	Status         *NetworkSecurityGroupStatus `json:"status,omitempty"`
+	StatusHistory  []StatusDetail              `json:"statusHistory,omitempty"`
+	StatefulEgress *bool                       `json:"statefulEgress,omitempty"`
+	Rules          []NetworkSecurityGroupRule  `json:"rules,omitempty"`
+	Labels         map[string]string           `json:"labels,omitempty"`
+	Created        *time.Time                  `json:"created,omitempty"`
+	Updated        *time.Time                  `json:"updated,omitempty"`
 }
 
 // NewNetworkSecurityGroup instantiates a new NetworkSecurityGroup object
@@ -437,7 +437,7 @@ func (o *NetworkSecurityGroup) SetUpdated(v time.Time) {
 }
 
 func (o NetworkSecurityGroup) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -520,5 +520,3 @@ func (v *NullableNetworkSecurityGroup) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

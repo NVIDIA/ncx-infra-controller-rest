@@ -22,11 +22,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model/util"
 	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
 	ipam "github.com/NVIDIA/ncx-infra-controller-rest/ipam"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
 

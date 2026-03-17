@@ -20,8 +20,8 @@ var _ MappedNullable = &InfrastructureProviderStats{}
 
 // InfrastructureProviderStats Provide operational stats for Infrastructure Provider
 type InfrastructureProviderStats struct {
-	Machine *MachineCountByStatus `json:"machine,omitempty"`
-	IpBlock *IpBlockCountByStatus `json:"ipBlock,omitempty"`
+	Machine       *MachineCountByStatus       `json:"machine,omitempty"`
+	IpBlock       *IpBlockCountByStatus       `json:"ipBlock,omitempty"`
 	TenantAccount *TenantAccountCountByStatus `json:"tenantAccount,omitempty"`
 }
 
@@ -139,7 +139,7 @@ func (o *InfrastructureProviderStats) SetTenantAccount(v TenantAccountCountBySta
 }
 
 func (o InfrastructureProviderStats) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -195,5 +195,3 @@ func (v *NullableInfrastructureProviderStats) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

@@ -12,8 +12,8 @@ Contact: carbide-dev@exchange.nvidia.com
 package standard
 
 import (
-	"encoding/json"
 	"bytes"
+	"encoding/json"
 	"fmt"
 )
 
@@ -22,13 +22,13 @@ var _ MappedNullable = &NetworkSecurityGroupCreateRequest{}
 
 // NetworkSecurityGroupCreateRequest Request data to create a Network Security Group
 type NetworkSecurityGroupCreateRequest struct {
-	Name string `json:"name"`
+	Name        string  `json:"name"`
 	Description *string `json:"description,omitempty"`
-	SiteId string `json:"siteId"`
+	SiteId      string  `json:"siteId"`
 	// Egress rules with protocol and destination ports defined but without source ports defined should automatically be made stateful.
-	StatefulEgress *bool `json:"statefulEgress,omitempty"`
-	Rules []NetworkSecurityGroupRule `json:"rules,omitempty"`
-	Labels map[string]string `json:"labels,omitempty"`
+	StatefulEgress *bool                      `json:"statefulEgress,omitempty"`
+	Rules          []NetworkSecurityGroupRule `json:"rules,omitempty"`
+	Labels         map[string]string          `json:"labels,omitempty"`
 }
 
 type _NetworkSecurityGroupCreateRequest NetworkSecurityGroupCreateRequest
@@ -229,7 +229,7 @@ func (o *NetworkSecurityGroupCreateRequest) SetLabels(v map[string]string) {
 }
 
 func (o NetworkSecurityGroupCreateRequest) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -269,10 +269,10 @@ func (o *NetworkSecurityGroupCreateRequest) UnmarshalJSON(data []byte) (err erro
 	err = json.Unmarshal(data, &allProperties)
 
 	if err != nil {
-		return err;
+		return err
 	}
 
-	for _, requiredProperty := range(requiredProperties) {
+	for _, requiredProperty := range requiredProperties {
 		if _, exists := allProperties[requiredProperty]; !exists {
 			return fmt.Errorf("no value given for required property %v", requiredProperty)
 		}
@@ -328,5 +328,3 @@ func (v *NullableNetworkSecurityGroupCreateRequest) UnmarshalJSON(src []byte) er
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

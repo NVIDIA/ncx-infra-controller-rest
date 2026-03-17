@@ -22,8 +22,8 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	"github.com/google/uuid"
 
 	stracer "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/tracer"
 	"github.com/uptrace/bun"

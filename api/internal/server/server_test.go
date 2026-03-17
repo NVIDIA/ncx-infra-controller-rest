@@ -27,7 +27,6 @@ import (
 
 	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/paginator"
 
-	echo "github.com/labstack/echo/v4"
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/internal/config"
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/handler/util/common"
 	_ "github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model"
@@ -36,6 +35,7 @@ import (
 	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
 	cdbu "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/util"
+	echo "github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	temporalClient "go.temporal.io/sdk/client"
 	tmocks "go.temporal.io/sdk/mocks"

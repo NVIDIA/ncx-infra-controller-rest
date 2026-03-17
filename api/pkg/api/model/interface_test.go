@@ -22,9 +22,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
+	"github.com/google/uuid"
 )
 
 func TestNewAPIInterface(t *testing.T) {

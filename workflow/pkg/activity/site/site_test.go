@@ -30,8 +30,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/golang/mock/gomock"
-	"github.com/google/uuid"
 	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
 	cdbu "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/util"
@@ -39,6 +37,8 @@ import (
 	sc "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/client/site"
 	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/queue"
 	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/util"
+	"github.com/golang/mock/gomock"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/uptrace/bun/extra/bundebug"

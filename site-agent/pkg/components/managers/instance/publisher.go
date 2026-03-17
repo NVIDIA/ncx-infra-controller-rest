@@ -18,8 +18,8 @@
 package instance
 
 import (
-	"github.com/google/uuid"
 	sww "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/workflow"
+	"github.com/google/uuid"
 	"go.temporal.io/sdk/activity"
 
 	swa "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/activity"
