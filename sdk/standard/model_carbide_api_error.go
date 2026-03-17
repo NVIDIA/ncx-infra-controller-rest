@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -18,7 +18,7 @@ import (
 // checks if the CarbideAPIError type satisfies the MappedNullable interface at compile time
 var _ MappedNullable = &CarbideAPIError{}
 
-// CarbideAPIError Describes the error response from NVIDIA Bare Metal Manager REST API
+// CarbideAPIError Describes the error response from NCX Infra Controller REST API
 type CarbideAPIError struct {
 	// Source of the error. Only 'carbide' is supported
 	Source *string `json:"source,omitempty"`

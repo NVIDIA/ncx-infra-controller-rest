@@ -19,10 +19,10 @@ package service
 import (
 	"os"
 
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/credentials"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/pmcregistry"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/powershelfmanager"
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/credentials"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/pmcregistry"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/powershelfmanager"
 )
 
 // Config captures runtime settings for running the gRPC service, including the public port,

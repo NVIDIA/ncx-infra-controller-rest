@@ -27,12 +27,12 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	cloudutils "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
-	"github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
-	cdbu "github.com/nvidia/bare-metal-manager-rest/db/pkg/util"
-	"github.com/nvidia/bare-metal-manager-rest/workflow/internal/config"
+	cloudutils "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/util"
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
+	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/paginator"
+	cdbu "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/util"
+	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/uptrace/bun/extra/bundebug"
 )

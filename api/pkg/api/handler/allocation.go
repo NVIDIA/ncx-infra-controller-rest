@@ -34,21 +34,21 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 
-	cutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
-	cdbp "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
-	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/queue"
+	cutil "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/util"
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
+	cdbp "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/paginator"
+	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/queue"
 
-	"github.com/nvidia/bare-metal-manager-rest/api/internal/config"
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/handler/util/common"
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model"
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/pagination"
-	sc "github.com/nvidia/bare-metal-manager-rest/api/pkg/client/site"
-	auth "github.com/nvidia/bare-metal-manager-rest/auth/pkg/authorization"
-	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/internal/config"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/handler/util/common"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/pagination"
+	sc "github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/client/site"
+	auth "github.com/NVIDIA/ncx-infra-controller-rest/auth/pkg/authorization"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 
-	"github.com/nvidia/bare-metal-manager-rest/db/pkg/db/ipam"
+	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/ipam"
 )
 
 // ~~~~~ Create Handler ~~~~~ //

@@ -19,7 +19,7 @@ package mlx_device;
 
 import "google/protobuf/timestamp.proto";
 
-option go_package = "github.com/nvidia/bare-metal-manager-rest/workflow-schema/proto";
+option go_package = "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/proto";
 
 // MlxDeviceReport represents a complete device discovery report
 // with metadata and filtered device results.

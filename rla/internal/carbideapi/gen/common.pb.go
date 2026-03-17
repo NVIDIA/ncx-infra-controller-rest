@@ -1164,7 +1164,7 @@ const file_common_proto_rawDesc = "" +
 	"\x13ComputeAllocationId\x12\x14\n" +
 	"\x05value\x18\x01 \x01(\tR\x05valueB\x98\x01\n" +
 	"\n" +
-	"com.commonB\vCommonProtoP\x01ZEgithub.com/nvidia/bare-metal-manager-rest/rla/internal/carbideapigrpc\xa2\x02\x03CXX\xaa\x02\x06Common\xca\x02\x06Common\xe2\x02\x12Common\\GPBMetadata\xea\x02\x06Commonb\x06proto3"
+	"com.commonB\vCommonProtoP\x01ZEgithub.com/NVIDIA/ncx-infra-controller-rest/rla/internal/carbideapigrpc\xa2\x02\x03CXX\xaa\x02\x06Common\xca\x02\x06Common\xe2\x02\x12Common\\GPBMetadata\xea\x02\x06Commonb\x06proto3"
 
 var (
 	file_common_proto_rawDescOnce sync.Once

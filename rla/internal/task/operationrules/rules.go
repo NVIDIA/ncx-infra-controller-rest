@@ -24,8 +24,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/common"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/common"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
 )
 
 // Current rule definition version

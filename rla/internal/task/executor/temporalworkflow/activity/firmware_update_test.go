@@ -24,7 +24,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operations"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operations"
 )
 
 func TestSetFirmwareUpdateTimeWindowActivity(t *testing.T) {

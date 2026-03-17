@@ -24,7 +24,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/client"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/client"
 )
 
 var ruleSetDefaultCmd = &cobra.Command{

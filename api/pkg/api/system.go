@@ -20,7 +20,7 @@ package api
 import (
 	"net/http"
 
-	apiHandler "github.com/nvidia/bare-metal-manager-rest/api/pkg/api/handler"
+	apiHandler "github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/handler"
 )
 
 // NewSystemAPIRoutes returns API routes that provide system level  functions

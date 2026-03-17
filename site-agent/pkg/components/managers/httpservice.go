@@ -23,8 +23,8 @@ import (
 	"net/http"
 	"os"
 
-	computils "github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/components/utils"
-	wflows "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
+	computils "github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/utils"
+	wflows "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 	"github.com/rs/zerolog/log"
 	"go.temporal.io/sdk/client"
 )

@@ -27,9 +27,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	"github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
-	"github.com/nvidia/bare-metal-manager-rest/db/pkg/util"
+	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/paginator"
+	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/util"
 	"github.com/stretchr/testify/assert"
 )
 

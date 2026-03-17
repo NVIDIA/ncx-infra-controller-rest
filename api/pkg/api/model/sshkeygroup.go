@@ -22,8 +22,8 @@ import (
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/google/uuid"
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model/util"
-	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model/util"
+	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
 )
 
 // APISSHKeyGroupCreateRequest is the data structure to capture instance request to create a new SSHKeyGroup

@@ -23,10 +23,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	"github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
-	stracer "github.com/nvidia/bare-metal-manager-rest/db/pkg/tracer"
-	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
+	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/paginator"
+	stracer "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/tracer"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 	"github.com/uptrace/bun"
 	"google.golang.org/protobuf/encoding/protojson"
 )

@@ -20,8 +20,8 @@ package workflowtypes
 import (
 	"context"
 
-	computils "github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/components/common"
-	wflows "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
+	computils "github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/common"
+	wflows "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
 	"go.uber.org/atomic"

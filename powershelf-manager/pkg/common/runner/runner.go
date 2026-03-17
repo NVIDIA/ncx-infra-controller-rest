@@ -17,8 +17,8 @@
 package runner
 
 import (
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/perfstat"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/util"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/common/perfstat"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/common/util"
 	"sync/atomic"
 	"time"
 

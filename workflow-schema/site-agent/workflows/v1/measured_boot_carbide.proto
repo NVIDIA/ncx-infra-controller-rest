@@ -19,7 +19,7 @@ package measured_boot;
 
 import "google/protobuf/timestamp.proto";
 
-option go_package = "github.com/nvidia/bare-metal-manager-rest/workflow-schema/proto";
+option go_package = "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/proto";
 
 ////////////////////////////////////////////////////////////////////////////////
 // RPC messages for Bundles

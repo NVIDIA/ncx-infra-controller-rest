@@ -30,7 +30,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
-	csmtypes "github.com/nvidia/bare-metal-manager-rest/site-manager/pkg/types"
+	csmtypes "github.com/NVIDIA/ncx-infra-controller-rest/site-manager/pkg/types"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

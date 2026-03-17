@@ -66,9 +66,9 @@ rla:
 	BUILD_TIME=$$(date -u +"%Y-%m-%dT%H:%M:%SZ") && \
 	GIT_COMMIT=$$(git rev-parse --short HEAD 2>/dev/null || echo "unknown") && \
 	go build -C build \
-		-ldflags "-X 'github.com/nvidia/bare-metal-manager-rest/rla/pkg/metadata.Version=$${VERSION}' \
-		          -X 'github.com/nvidia/bare-metal-manager-rest/rla/pkg/metadata.BuildTime=$${BUILD_TIME}' \
-		          -X 'github.com/nvidia/bare-metal-manager-rest/rla/pkg/metadata.GitCommit=$${GIT_COMMIT}'" \
+		-ldflags "-X 'github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/metadata.Version=$${VERSION}' \
+		          -X 'github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/metadata.BuildTime=$${BUILD_TIME}' \
+		          -X 'github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/metadata.GitCommit=$${GIT_COMMIT}'" \
 		..
 
 container: rla

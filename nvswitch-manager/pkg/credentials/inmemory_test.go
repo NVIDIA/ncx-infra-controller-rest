@@ -22,7 +22,7 @@ import (
 	"net"
 	"testing"
 
-	"github.com/nvidia/bare-metal-manager-rest/nvswitch-manager/pkg/common/credential"
+	"github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/pkg/common/credential"
 
 	"github.com/stretchr/testify/assert"
 )

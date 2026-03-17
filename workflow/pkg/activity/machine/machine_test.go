@@ -26,24 +26,24 @@ import (
 	"testing"
 	"time"
 
-	cdbp "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
-	"github.com/nvidia/bare-metal-manager-rest/workflow/internal/config"
-	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/util"
+	cdbp "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/paginator"
+	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/internal/config"
+	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/util"
 
-	sc "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/client/site"
+	sc "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/client/site"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/uptrace/bun/extra/bundebug"
 
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
-	cdbu "github.com/nvidia/bare-metal-manager-rest/db/pkg/util"
-	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
+	cdbu "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/util"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/google/uuid"
 
-	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
+	cwutil "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/util"
 )
 
 // testTemporalSiteClientPool Building site client pool

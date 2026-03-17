@@ -25,9 +25,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/components/managers/carbide"
-	"github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/components/managers/subnet"
-	wflows "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
+	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/carbide"
+	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/subnet"
+	wflows "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"go.opentelemetry.io/otel"

@@ -31,7 +31,7 @@ import (
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/testsuite"
 
-	instanceActivity "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/activity/instance"
+	instanceActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/instance"
 )
 
 type RebootInstanceTestSuite struct {

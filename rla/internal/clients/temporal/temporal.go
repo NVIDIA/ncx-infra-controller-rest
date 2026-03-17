@@ -25,7 +25,7 @@ import (
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/converter"
 
-	"github.com/nvidia/bare-metal-manager-rest/common/pkg/endpoint"
+	"github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/endpoint"
 )
 
 const (

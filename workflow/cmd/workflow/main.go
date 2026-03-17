@@ -43,75 +43,75 @@ import (
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 
-	"github.com/nvidia/bare-metal-manager-rest/workflow/internal/config"
+	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/internal/config"
 
-	cwm "github.com/nvidia/bare-metal-manager-rest/workflow/internal/metrics"
-	cwfh "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/health"
-	cwfn "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/namespace"
+	cwm "github.com/NVIDIA/ncx-infra-controller-rest/workflow/internal/metrics"
+	cwfh "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/health"
+	cwfn "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/namespace"
 
-	sc "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/client/site"
+	sc "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/client/site"
 
-	machineActivity "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/activity/machine"
-	machineWorkflow "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/workflow/machine"
+	machineActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/machine"
+	machineWorkflow "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/workflow/machine"
 
-	vpcActivity "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/activity/vpc"
-	vpcWorkflow "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/workflow/vpc"
+	vpcActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/vpc"
+	vpcWorkflow "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/workflow/vpc"
 
-	subnetActivity "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/activity/subnet"
-	subnetWorkflow "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/workflow/subnet"
+	subnetActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/subnet"
+	subnetWorkflow "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/workflow/subnet"
 
-	instanceActivity "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/activity/instance"
-	instanceWorkflow "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/workflow/instance"
+	instanceActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/instance"
+	instanceWorkflow "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/workflow/instance"
 
-	userActivity "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/activity/user"
-	userWorkflow "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/workflow/user"
+	userActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/user"
+	userWorkflow "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/workflow/user"
 
-	siteActivity "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/activity/site"
-	siteWorkflow "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/workflow/site"
+	siteActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/site"
+	siteWorkflow "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/workflow/site"
 
-	sshKeyGroupActivity "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/activity/sshkeygroup"
-	sshKeyGroupWorkflow "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/workflow/sshkeygroup"
+	sshKeyGroupActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/sshkeygroup"
+	sshKeyGroupWorkflow "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/workflow/sshkeygroup"
 
-	ibpActivity "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/activity/infinibandpartition"
-	ibpWorkflow "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/workflow/infinibandpartition"
+	ibpActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/infinibandpartition"
+	ibpWorkflow "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/workflow/infinibandpartition"
 
-	expectedMachineActivity "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/activity/expectedmachine"
-	expectedMachineWorkflow "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/workflow/expectedmachine"
+	expectedMachineActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/expectedmachine"
+	expectedMachineWorkflow "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/workflow/expectedmachine"
 
-	expectedPowerShelfActivity "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/activity/expectedpowershelf"
-	expectedPowerShelfWorkflow "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/workflow/expectedpowershelf"
+	expectedPowerShelfActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/expectedpowershelf"
+	expectedPowerShelfWorkflow "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/workflow/expectedpowershelf"
 
-	expectedSwitchActivity "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/activity/expectedswitch"
-	expectedSwitchWorkflow "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/workflow/expectedswitch"
+	expectedSwitchActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/expectedswitch"
+	expectedSwitchWorkflow "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/workflow/expectedswitch"
 
-	tenantActivity "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/activity/tenant"
-	tenantWorkflow "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/workflow/tenant"
+	tenantActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/tenant"
+	tenantWorkflow "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/workflow/tenant"
 
-	instanceTypeActivity "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/activity/instancetype"
-	instanceTypeWorkflow "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/workflow/instancetype"
+	instanceTypeActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/instancetype"
+	instanceTypeWorkflow "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/workflow/instancetype"
 
-	networkSecurityGroupActivity "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/activity/networksecuritygroup"
-	networkSecurityGroupWorkflow "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/workflow/networksecuritygroup"
+	networkSecurityGroupActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/networksecuritygroup"
+	networkSecurityGroupWorkflow "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/workflow/networksecuritygroup"
 
-	osImageActivity "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/activity/operatingsystem"
-	osImageWorkflow "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/workflow/operatingsystem"
+	osImageActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/operatingsystem"
+	osImageWorkflow "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/workflow/operatingsystem"
 
-	skuActivity "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/activity/sku"
-	skuWorkflow "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/workflow/sku"
+	skuActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/sku"
+	skuWorkflow "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/workflow/sku"
 
-	vpcPrefixActivity "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/activity/vpcprefix"
-	vpcPrefixWorkflow "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/workflow/vpcprefix"
+	vpcPrefixActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/vpcprefix"
+	vpcPrefixWorkflow "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/workflow/vpcprefix"
 
-	vpcPeeringActivity "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/activity/vpcpeering"
-	vpcPeeringWorkflow "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/workflow/vpcpeering"
+	vpcPeeringActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/vpcpeering"
+	vpcPeeringWorkflow "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/workflow/vpcpeering"
 
-	dpuExtensionServiceActivity "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/activity/dpuextensionservice"
-	dpuExtensionServiceWorkflow "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/workflow/dpuextensionservice"
+	dpuExtensionServiceActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/dpuextensionservice"
+	dpuExtensionServiceWorkflow "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/workflow/dpuextensionservice"
 
-	nvLinkLogicalPartitionActivity "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/activity/nvlinklogicalpartition"
-	nvLinkLogicalPartitionWorkflow "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/workflow/nvlinklogicalpartition"
+	nvLinkLogicalPartitionActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/nvlinklogicalpartition"
+	nvLinkLogicalPartitionWorkflow "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/workflow/nvlinklogicalpartition"
 )
 
 const (

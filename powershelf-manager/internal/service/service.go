@@ -29,9 +29,9 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/internal/certs"
-	pb "github.com/nvidia/bare-metal-manager-rest/powershelf-manager/internal/proto/v1"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/powershelfmanager"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/internal/certs"
+	pb "github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/internal/proto/v1"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/powershelfmanager"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"

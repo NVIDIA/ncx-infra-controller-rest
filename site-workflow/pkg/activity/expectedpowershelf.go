@@ -31,9 +31,9 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	swe "github.com/nvidia/bare-metal-manager-rest/site-workflow/pkg/error"
-	cclient "github.com/nvidia/bare-metal-manager-rest/site-workflow/pkg/grpc/client"
-	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
+	swe "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/error"
+	cclient "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/grpc/client"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 )
 
 // ManageExpectedPowerShelfInventory is an activity wrapper for Expected Power Shelf inventory collection and publishing

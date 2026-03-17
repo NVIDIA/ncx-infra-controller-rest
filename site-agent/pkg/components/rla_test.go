@@ -23,8 +23,8 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/components/managers/rla"
-	rlav1 "github.com/nvidia/bare-metal-manager-rest/workflow-schema/rla/protobuf/v1"
+	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/rla"
+	rlav1 "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/rla/protobuf/v1"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel"
 )

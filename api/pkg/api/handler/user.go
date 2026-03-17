@@ -23,12 +23,12 @@ import (
 
 	"github.com/labstack/echo/v4"
 
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/handler/util/common"
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model"
-	auth "github.com/nvidia/bare-metal-manager-rest/auth/pkg/authorization"
-	cutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/handler/util/common"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model"
+	auth "github.com/NVIDIA/ncx-infra-controller-rest/auth/pkg/authorization"
+	cutil "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/util"
 )
 
 // GetUserHandler is an API Handler to return information about the current user

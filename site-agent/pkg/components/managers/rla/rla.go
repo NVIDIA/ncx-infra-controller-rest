@@ -20,7 +20,7 @@ package rla
 import (
 	"fmt"
 
-	computils "github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/components/utils"
+	computils "github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

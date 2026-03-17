@@ -23,7 +23,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/nvidia/bare-metal-manager-rest/sdk/standard"
+	"github.com/NVIDIA/ncx-infra-controller-rest/sdk/standard"
 )
 
 // IpBlock represents a simplified IP block

@@ -24,8 +24,8 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	testutil "github.com/nvidia/bare-metal-manager-rest/auth/pkg/testing"
-	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
+	testutil "github.com/NVIDIA/ncx-infra-controller-rest/auth/pkg/testing"
+	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
 	"github.com/stretchr/testify/assert"
 )
 

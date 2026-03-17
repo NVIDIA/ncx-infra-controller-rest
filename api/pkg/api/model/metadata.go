@@ -18,7 +18,7 @@
 package model
 
 import (
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/metadata"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/metadata"
 )
 
 // APIMetadata is a data structure to capture Forge API system information

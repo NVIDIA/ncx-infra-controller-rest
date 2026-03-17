@@ -21,7 +21,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
+	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 	"github.com/uptrace/bun"
 )
 

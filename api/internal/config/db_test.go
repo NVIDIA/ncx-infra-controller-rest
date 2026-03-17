@@ -21,7 +21,7 @@ import (
 	"reflect"
 	"testing"
 
-	cconfig "github.com/nvidia/bare-metal-manager-rest/common/pkg/config"
+	cconfig "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/config"
 )
 
 func TestNewDBConfig(t *testing.T) {

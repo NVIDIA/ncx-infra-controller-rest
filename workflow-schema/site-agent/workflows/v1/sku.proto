@@ -22,7 +22,7 @@ import "google/protobuf/timestamp.proto";
 import "workflow.proto";
 import "forge_carbide.proto";
 
-option go_package = "github.com/nvidia/bare-metal-manager-rest/workflow-schema/proto";
+option go_package = "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/proto";
 
 // SkuInventory - inventory info of all SKUs periodically collected
 message SkuInventory {

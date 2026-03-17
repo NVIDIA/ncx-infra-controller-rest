@@ -29,7 +29,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/viper"
 
-	cconfig "github.com/nvidia/bare-metal-manager-rest/common/pkg/config"
+	cconfig "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/config"
 )
 
 const (

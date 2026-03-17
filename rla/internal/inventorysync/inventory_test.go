@@ -28,13 +28,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/uptrace/bun"
 
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/carbideapi"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/common/utils"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/config"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/db/model"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/psmapi"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/carbideapi"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/common/utils"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/config"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/db/model"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/psmapi"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
 )
 
 // TestInventory is the main test for the inventory package

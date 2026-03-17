@@ -118,9 +118,9 @@ import (
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
 
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/componentmanager/common"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/component"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/rack"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/componentmanager/common"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/inventoryobjects/component"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/inventoryobjects/rack"
 )
 
 const (

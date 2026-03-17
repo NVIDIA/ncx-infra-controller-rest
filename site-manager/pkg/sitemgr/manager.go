@@ -31,9 +31,9 @@ import (
 	"time"
 
 	"github.com/getsentry/sentry-go"
-	"github.com/nvidia/bare-metal-manager-rest/cert-manager/pkg/certs"
-	"github.com/nvidia/bare-metal-manager-rest/cert-manager/pkg/core"
-	crdclient "github.com/nvidia/bare-metal-manager-rest/site-manager/pkg/client/clientset/versioned"
+	"github.com/NVIDIA/ncx-infra-controller-rest/cert-manager/pkg/certs"
+	"github.com/NVIDIA/ncx-infra-controller-rest/cert-manager/pkg/core"
+	crdclient "github.com/NVIDIA/ncx-infra-controller-rest/site-manager/pkg/client/clientset/versioned"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"

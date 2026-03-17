@@ -20,8 +20,8 @@ package elektratypes
 import (
 	"os"
 
-	"github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/conftypes"
-	"github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/datatypes/managertypes"
+	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/conftypes"
+	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/datatypes/managertypes"
 	"github.com/rs/zerolog"
 	"go.uber.org/atomic"
 )

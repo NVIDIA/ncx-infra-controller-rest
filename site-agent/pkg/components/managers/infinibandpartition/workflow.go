@@ -20,11 +20,11 @@ package infinibandpartition
 import (
 	"context"
 	"fmt"
-	common "github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/components/common"
-	workflowtypes "github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/datatypes/managertypes/workflow"
-	wflows "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
+	common "github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/common"
+	workflowtypes "github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/datatypes/managertypes/workflow"
+	wflows "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 
-	"github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/conftypes"
+	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/conftypes"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/workflow"
 )

@@ -28,9 +28,9 @@ import (
 	"go.temporal.io/api/serviceerror"
 	temporalclient "go.temporal.io/sdk/client"
 
-	taskcommon "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/common"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/executor/temporalworkflow/common"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/task"
+	taskcommon "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/common"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor/temporalworkflow/common"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/task"
 )
 
 var (

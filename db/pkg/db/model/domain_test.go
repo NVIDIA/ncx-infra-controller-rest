@@ -26,9 +26,9 @@ import (
 	otrace "go.opentelemetry.io/otel/trace"
 
 	"github.com/google/uuid"
-	"github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	stracer "github.com/nvidia/bare-metal-manager-rest/db/pkg/tracer"
-	"github.com/nvidia/bare-metal-manager-rest/db/pkg/util"
+	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	stracer "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/tracer"
+	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/util"
 	"github.com/uptrace/bun/extra/bundebug"
 )
 

@@ -28,8 +28,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
-	"github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/conftypes"
-	"github.com/nvidia/bare-metal-manager-rest/site-workflow/pkg/grpc/client"
+	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/conftypes"
+	"github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/grpc/client"
 	"github.com/rs/zerolog/log"
 )
 

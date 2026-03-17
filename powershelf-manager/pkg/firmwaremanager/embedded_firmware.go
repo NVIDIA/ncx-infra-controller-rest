@@ -19,7 +19,7 @@ package firmwaremanager
 import (
 	"embed"
 	"fmt"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/vendor"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/common/vendor"
 	"io/fs"
 	"strings"
 

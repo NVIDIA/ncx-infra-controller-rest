@@ -240,7 +240,7 @@ const file_machine_proto_rawDesc = "" +
 	"\x10inventory_status\x18\x03 \x01(\x0e2\x1d.workflows.v1.InventoryStatusR\x0finventoryStatus\x12\x1d\n" +
 	"\n" +
 	"status_msg\x18\x04 \x01(\tR\tstatusMsg\x12B\n" +
-	"\x0einventory_page\x18\x05 \x01(\v2\x1b.workflows.v1.InventoryPageR\rinventoryPageBAZ?github.com/nvidia/bare-metal-manager-rest/workflow-schema/protob\x06proto3"
+	"\x0einventory_page\x18\x05 \x01(\v2\x1b.workflows.v1.InventoryPageR\rinventoryPageBCZAgithub.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/protob\x06proto3"
 
 var (
 	file_machine_proto_rawDescOnce sync.Once

@@ -141,7 +141,7 @@ const file_expectedswitch_proto_rawDesc = "" +
 	"\ttimestamp\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12B\n" +
 	"\x11expected_switches\x18\x04 \x03(\v2\x15.forge.ExpectedSwitchR\x10expectedSwitches\x12B\n" +
 	"\x0einventory_page\x18\x05 \x01(\v2\x1b.workflows.v1.InventoryPageR\rinventoryPage\x12D\n" +
-	"\x0flinked_switches\x18\x06 \x03(\v2\x1b.forge.LinkedExpectedSwitchR\x0elinkedSwitchesBAZ?github.com/nvidia/bare-metal-manager-rest/workflow-schema/protob\x06proto3"
+	"\x0flinked_switches\x18\x06 \x03(\v2\x1b.forge.LinkedExpectedSwitchR\x0elinkedSwitchesBCZAgithub.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/protob\x06proto3"
 
 var (
 	file_expectedswitch_proto_rawDescOnce sync.Once

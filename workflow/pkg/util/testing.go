@@ -30,12 +30,12 @@ import (
 
 	"github.com/uptrace/bun/extra/bundebug"
 
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
-	sc "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/client/site"
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
+	sc "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/client/site"
 
-	"github.com/nvidia/bare-metal-manager-rest/db/pkg/util"
-	"github.com/nvidia/bare-metal-manager-rest/workflow/internal/config"
+	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/util"
+	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/internal/config"
 )
 
 // TestInitDB init DB

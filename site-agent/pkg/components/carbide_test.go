@@ -23,9 +23,9 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/components/managers/carbide"
-	"github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/components/utils"
-	wflows "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
+	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/carbide"
+	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/utils"
+	wflows "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel"
 )

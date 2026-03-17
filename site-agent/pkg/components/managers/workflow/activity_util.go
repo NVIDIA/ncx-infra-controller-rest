@@ -21,9 +21,9 @@ import (
 	"context"
 	"fmt"
 
-	common "github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/components/common"
-	workflowtypes "github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/datatypes/managertypes/workflow"
-	wflows "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
+	common "github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/common"
+	workflowtypes "github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/datatypes/managertypes/workflow"
+	wflows "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"

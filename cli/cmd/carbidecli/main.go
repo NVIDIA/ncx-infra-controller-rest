@@ -21,9 +21,9 @@ import (
 	"fmt"
 	"os"
 
-	carbidecli "github.com/nvidia/bare-metal-manager-rest/cli/pkg"
-	"github.com/nvidia/bare-metal-manager-rest/cli/tui"
-	"github.com/nvidia/bare-metal-manager-rest/openapi"
+	carbidecli "github.com/NVIDIA/ncx-infra-controller-rest/cli/pkg"
+	"github.com/NVIDIA/ncx-infra-controller-rest/cli/tui"
+	"github.com/NVIDIA/ncx-infra-controller-rest/openapi"
 	cli "github.com/urfave/cli/v2"
 )
 

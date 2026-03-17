@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-module github.com/nvidia/bare-metal-manager-rest
+module github.com/NVIDIA/ncx-infra-controller-rest
 
 go 1.25.4
 
@@ -53,7 +53,6 @@ require (
 	github.com/lib/pq v1.10.9
 	github.com/metal-stack/v v1.0.3
 	github.com/mitchellh/mapstructure v1.5.0
-	github.com/nvidia/bare-metal-manager-rest/sdk/standard v0.0.0-20260304175325-be952ed871c6
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/client_model v0.6.2

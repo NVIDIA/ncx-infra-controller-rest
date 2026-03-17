@@ -31,7 +31,7 @@ import (
 
 	tmocks "go.temporal.io/sdk/mocks"
 
-	ibpActivity "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/activity/infinibandpartition"
+	ibpActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/infinibandpartition"
 )
 
 type DeleteInfiniBandPartitionTestSuite struct {

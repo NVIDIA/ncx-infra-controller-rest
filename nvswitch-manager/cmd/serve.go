@@ -24,11 +24,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	svc "github.com/nvidia/bare-metal-manager-rest/nvswitch-manager/internal/service"
-	"github.com/nvidia/bare-metal-manager-rest/nvswitch-manager/pkg/common/credential"
-	"github.com/nvidia/bare-metal-manager-rest/nvswitch-manager/pkg/credentials"
-	"github.com/nvidia/bare-metal-manager-rest/nvswitch-manager/pkg/db"
-	"github.com/nvidia/bare-metal-manager-rest/nvswitch-manager/pkg/nvswitchmanager"
+	svc "github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/internal/service"
+	"github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/pkg/common/credential"
+	"github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/pkg/credentials"
+	"github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/pkg/db"
+	"github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/pkg/nvswitchmanager"
 )
 
 // getEnvOrDefault returns the value of an environment variable or a default value.

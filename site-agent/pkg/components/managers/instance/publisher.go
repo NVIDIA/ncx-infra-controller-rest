@@ -19,10 +19,10 @@ package instance
 
 import (
 	"github.com/google/uuid"
-	sww "github.com/nvidia/bare-metal-manager-rest/site-workflow/pkg/workflow"
+	sww "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/workflow"
 	"go.temporal.io/sdk/activity"
 
-	swa "github.com/nvidia/bare-metal-manager-rest/site-workflow/pkg/activity"
+	swa "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/activity"
 )
 
 // RegisterPublisher registers the InstanceWorkflows with the Temporal client

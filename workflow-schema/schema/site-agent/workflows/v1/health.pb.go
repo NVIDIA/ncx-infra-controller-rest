@@ -233,7 +233,7 @@ const file_health_proto_rawDesc = "" +
 	"\aUNKNOWN\x10\x00\x12\x06\n" +
 	"\x02UP\x10\x01\x12\b\n" +
 	"\x04DOWN\x10\x02\x12\t\n" +
-	"\x05ERROR\x10\x03BAZ?github.com/nvidia/bare-metal-manager-rest/workflow-schema/protob\x06proto3"
+	"\x05ERROR\x10\x03BCZAgithub.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/protob\x06proto3"
 
 var (
 	file_health_proto_rawDescOnce sync.Once

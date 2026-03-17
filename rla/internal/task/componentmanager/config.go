@@ -25,10 +25,10 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/componentmanager/providers/carbide"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/componentmanager/providers/nvswitchmanager"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/componentmanager/providers/psm"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/componentmanager/providers/carbide"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/componentmanager/providers/nvswitchmanager"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/componentmanager/providers/psm"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
 )
 
 // ProviderConfig holds the configuration for API providers.

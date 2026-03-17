@@ -12,8 +12,8 @@
 package main
 
 import (
-	"github.com/nvidia/bare-metal-manager-rest/nvswitch-manager/cmd"
-	"github.com/nvidia/bare-metal-manager-rest/nvswitch-manager/pkg/common/log"
+	"github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/cmd"
+	"github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/pkg/common/log"
 )
 
 func main() {

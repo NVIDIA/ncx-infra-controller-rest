@@ -17,7 +17,7 @@
 
 package client
 
-import wflows "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
+import wflows "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 
 // ComputeGetter is the interface for compute workflows
 type ComputeGetter interface {

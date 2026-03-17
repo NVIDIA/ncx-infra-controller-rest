@@ -22,7 +22,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/objects/powershelf"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/objects/powershelf"
 
 	"github.com/uptrace/bun"
 )

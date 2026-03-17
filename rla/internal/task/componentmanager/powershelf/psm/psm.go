@@ -24,12 +24,12 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/psmapi"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/componentmanager"
-	psmprovider "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/componentmanager/providers/psm"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/executor/temporalworkflow/common"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operations"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/psmapi"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/componentmanager"
+	psmprovider "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/componentmanager/providers/psm"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor/temporalworkflow/common"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operations"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
 )
 
 const (

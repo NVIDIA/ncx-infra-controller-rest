@@ -23,13 +23,13 @@ import (
 	"testing"
 	"time"
 
-	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	"github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
-	"github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
-	sc "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/client/site"
-	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/queue"
+	cwutil "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/util"
+	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
+	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/paginator"
+	sc "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/client/site"
+	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/queue"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -38,11 +38,11 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/nvidia/bare-metal-manager-rest/workflow/internal/config"
-	cwm "github.com/nvidia/bare-metal-manager-rest/workflow/internal/metrics"
-	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/util"
+	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/internal/config"
+	cwm "github.com/NVIDIA/ncx-infra-controller-rest/workflow/internal/metrics"
+	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/util"
 
-	cwsv1 "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
+	cwsv1 "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 
 	"os"
 

@@ -25,15 +25,15 @@ import (
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
-	cdbp "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
+	cdbp "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/paginator"
 
-	sc "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/client/site"
+	sc "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/client/site"
 
-	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 
-	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
+	cwutil "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/util"
 )
 
 // ManageVpcPeering is an activity wrapper for managing VPC Peering lifecycle

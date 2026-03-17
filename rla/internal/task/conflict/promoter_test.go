@@ -26,8 +26,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	taskcommon "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/common"
-	taskdef "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/task"
+	taskcommon "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/common"
+	taskdef "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/task"
 )
 
 func TestPromoterConfig_ApplyDefaults(t *testing.T) {

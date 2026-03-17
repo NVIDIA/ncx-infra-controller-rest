@@ -18,9 +18,9 @@ package firmwaremanager
 
 import (
 	"context"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/vendor"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/objects/pmc"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/redfish"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/common/vendor"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/objects/pmc"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/redfish"
 	"net/http"
 	"strings"
 

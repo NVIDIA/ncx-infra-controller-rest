@@ -21,7 +21,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 
-	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
+	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
 )
 
 // ~~~~~ Machine GPU Stats ~~~~~ //

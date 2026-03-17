@@ -1,3 +1,3 @@
-module github.com/nvidia/bare-metal-manager-rest/sdk/standard
+module github.com/NVIDIA/ncx-infra-controller-rest/sdk/standard
 
-go 1.25
+go 1.25.4

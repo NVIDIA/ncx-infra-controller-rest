@@ -22,7 +22,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	dbquery "github.com/nvidia/bare-metal-manager-rest/rla/internal/db/query"
+	dbquery "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/db/query"
 	"github.com/uptrace/bun"
 )
 
