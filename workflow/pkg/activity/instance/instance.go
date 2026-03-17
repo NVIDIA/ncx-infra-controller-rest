@@ -1371,15 +1371,18 @@ func (mi ManageInstance) UpdateInstancesInDB(ctx context.Context, siteID uuid.UU
 				continue
 			}
 
-			// Check if GPU GUID/Partition combo for deleting Interface is reported in controller status
+			// Check if GPU GUID/Partition combo for deleting Interface is reported in controller status.
+			// If the GUID was never populated, we can't safely prove absence yet.
+			if nvlifc.GpuGUID == nil || *nvlifc.GpuGUID == "" {
+				continue
+			}
+
 			comboReported := false
-			if nvlifc.GpuGUID != nil {
-				for _, gpuStatus := range controllerInstance.Status.Nvlink.GpuStatuses {
-					if gpuStatus != nil && gpuStatus.GpuGuid != nil && gpuStatus.LogicalPartitionId != nil {
-						if *gpuStatus.GpuGuid == *nvlifc.GpuGUID && gpuStatus.LogicalPartitionId.Value == nvlifc.NVLinkLogicalPartitionID.String() {
-							comboReported = true
-							break
-						}
+			for _, gpuStatus := range controllerInstance.Status.Nvlink.GpuStatuses {
+				if gpuStatus != nil && gpuStatus.GpuGuid != nil && gpuStatus.LogicalPartitionId != nil {
+					if *gpuStatus.GpuGuid == *nvlifc.GpuGUID && gpuStatus.LogicalPartitionId.Value == nvlifc.NVLinkLogicalPartitionID.String() {
+						comboReported = true
+						break
 					}
 				}
 			}
@@ -1391,20 +1394,20 @@ func (mi ManageInstance) UpdateInstancesInDB(ctx context.Context, siteID uuid.UU
 			}
 
 			// Combo is reported - check if we have another interface with the same combo in Pending state
-			hasPendingWithSameCombo := false
+			hasPendingOrReadyWithSameCombo := false
 			for _, otherNvlifc := range nvlinkInterfaces {
 				if otherNvlifc.ID == nvlifc.ID {
 					continue
 				}
-				if otherNvlifc.Status == cdbm.NVLinkInterfaceStatusPending &&
+				if (otherNvlifc.Status == cdbm.NVLinkInterfaceStatusPending || otherNvlifc.Status == cdbm.NVLinkInterfaceStatusReady) &&
 					otherNvlifc.GpuGUID != nil && *otherNvlifc.GpuGUID == *nvlifc.GpuGUID &&
 					otherNvlifc.NVLinkLogicalPartitionID == nvlifc.NVLinkLogicalPartitionID {
-					hasPendingWithSameCombo = true
+					hasPendingOrReadyWithSameCombo = true
 					break
 				}
 			}
 
-			if hasPendingWithSameCombo {
+			if hasPendingOrReadyWithSameCombo {
 				nvlinkInterfacesToDelete = append(nvlinkInterfacesToDelete, nvlifc)
 			}
 		}
