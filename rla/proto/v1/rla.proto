@@ -320,6 +320,8 @@ message Task {
     optional google.protobuf.Timestamp queue_expires_at = 10;
     google.protobuf.Timestamp created_at = 11;
     optional google.protobuf.Timestamp finished_at = 12;
+    optional UUID applied_rule_id = 13;
+    google.protobuf.Timestamp updated_at = 14;
 }
 
 message CreateExpectedRackRequest {

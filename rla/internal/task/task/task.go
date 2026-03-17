@@ -53,6 +53,7 @@ type Task struct {
 	Message        string
 	AppliedRuleID  *uuid.UUID // The ID of the operation rule that was applied
 	CreatedAt      time.Time
+	UpdatedAt      time.Time
 	FinishedAt     *time.Time
 
 	// QueueExpiresAt is the deadline for a waiting task to be promoted.

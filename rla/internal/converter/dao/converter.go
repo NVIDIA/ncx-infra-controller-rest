@@ -192,6 +192,7 @@ func TaskFrom(dao *model.Task) *taskdef.Task {
 		Message:        dao.Message,
 		AppliedRuleID:  dao.AppliedRuleID,
 		CreatedAt:      dao.CreatedAt,
+		UpdatedAt:      dao.UpdatedAt,
 		FinishedAt:     dao.FinishedAt,
 		QueueExpiresAt: dao.QueueExpiresAt,
 	}

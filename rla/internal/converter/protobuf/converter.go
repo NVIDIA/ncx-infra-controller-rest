@@ -457,6 +457,10 @@ func TaskTo(task *taskdef.Task) *pb.Task {
 		Status:         TaskStatusTo(task.Status),
 		Message:        task.Message,
 		CreatedAt:      timestamppb.New(task.CreatedAt),
+		UpdatedAt:      timestamppb.New(task.UpdatedAt),
+	}
+	if task.AppliedRuleID != nil {
+		pbTask.AppliedRuleId = UUIDTo(*task.AppliedRuleID)
 	}
 	if task.FinishedAt != nil {
 		pbTask.FinishedAt = timestamppb.New(*task.FinishedAt)
