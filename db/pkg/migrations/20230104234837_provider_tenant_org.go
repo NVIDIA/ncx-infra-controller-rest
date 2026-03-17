@@ -22,7 +22,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
+	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
 	"github.com/uptrace/bun"
 )
 

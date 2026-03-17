@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -44,21 +44,21 @@ type Machine struct {
 	// Product name of the Machine
 	ProductName *string `json:"productName,omitempty"`
 	// Serial number of the Machine, only visible to Provider
-	SerialNumber *string `json:"serialNumber,omitempty"`
+	SerialNumber        *string             `json:"serialNumber,omitempty"`
 	MachineCapabilities []MachineCapability `json:"machineCapabilities,omitempty"`
-	MachineInterfaces []MachineInterface `json:"machineInterfaces,omitempty"`
+	MachineInterfaces   []MachineInterface  `json:"machineInterfaces,omitempty"`
 	// If the Machine is in maintenance mode, this message will typically describe the reason and how long it is expected to be in maintenance
 	MaintenanceMessage NullableString `json:"maintenanceMessage,omitempty"`
-	Health *MachineHealth `json:"health,omitempty"`
+	Health             *MachineHealth `json:"health,omitempty"`
 	// Only available to Providers. Returned if includeMetadata query param is specified. Otherwise attribute is omitted from response.
-	Metadata *MachineMetadata `json:"metadata,omitempty"`
-	Labels map[string]string `json:"labels,omitempty"`
-	Status *MachineStatus `json:"status,omitempty"`
+	Metadata *MachineMetadata  `json:"metadata,omitempty"`
+	Labels   map[string]string `json:"labels,omitempty"`
+	Status   *MachineStatus    `json:"status,omitempty"`
 	// Indicates whether the machine is usable by or currently in use by a tenant.
-	IsUsableByTenant *bool `json:"isUsableByTenant,omitempty"`
-	StatusHistory []StatusDetail `json:"statusHistory,omitempty"`
-	Created *time.Time `json:"created,omitempty"`
-	Updated *time.Time `json:"updated,omitempty"`
+	IsUsableByTenant *bool          `json:"isUsableByTenant,omitempty"`
+	StatusHistory    []StatusDetail `json:"statusHistory,omitempty"`
+	Created          *time.Time     `json:"created,omitempty"`
+	Updated          *time.Time     `json:"updated,omitempty"`
 }
 
 // NewMachine instantiates a new Machine object
@@ -206,6 +206,7 @@ func (o *Machine) HasInstanceTypeId() bool {
 func (o *Machine) SetInstanceTypeId(v string) {
 	o.InstanceTypeId.Set(&v)
 }
+
 // SetInstanceTypeIdNil sets the value for InstanceTypeId to be an explicit nil
 func (o *Machine) SetInstanceTypeIdNil() {
 	o.InstanceTypeId.Set(nil)
@@ -248,6 +249,7 @@ func (o *Machine) HasInstanceId() bool {
 func (o *Machine) SetInstanceId(v string) {
 	o.InstanceId.Set(&v)
 }
+
 // SetInstanceIdNil sets the value for InstanceId to be an explicit nil
 func (o *Machine) SetInstanceIdNil() {
 	o.InstanceId.Set(nil)
@@ -290,6 +292,7 @@ func (o *Machine) HasTenantId() bool {
 func (o *Machine) SetTenantId(v string) {
 	o.TenantId.Set(&v)
 }
+
 // SetTenantIdNil sets the value for TenantId to be an explicit nil
 func (o *Machine) SetTenantIdNil() {
 	o.TenantId.Set(nil)
@@ -396,6 +399,7 @@ func (o *Machine) HasHwSkuDeviceType() bool {
 func (o *Machine) SetHwSkuDeviceType(v string) {
 	o.HwSkuDeviceType.Set(&v)
 }
+
 // SetHwSkuDeviceTypeNil sets the value for HwSkuDeviceType to be an explicit nil
 func (o *Machine) SetHwSkuDeviceTypeNil() {
 	o.HwSkuDeviceType.Set(nil)
@@ -598,6 +602,7 @@ func (o *Machine) HasMaintenanceMessage() bool {
 func (o *Machine) SetMaintenanceMessage(v string) {
 	o.MaintenanceMessage.Set(&v)
 }
+
 // SetMaintenanceMessageNil sets the value for MaintenanceMessage to be an explicit nil
 func (o *Machine) SetMaintenanceMessageNil() {
 	o.MaintenanceMessage.Set(nil)
@@ -865,7 +870,7 @@ func (o *Machine) SetUpdated(v time.Time) {
 }
 
 func (o Machine) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -981,5 +986,3 @@ func (v *NullableMachine) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

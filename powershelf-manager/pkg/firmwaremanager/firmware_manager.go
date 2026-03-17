@@ -27,14 +27,14 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/runner"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/vendor"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/db/model"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/objects/pmc"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/objects/powershelf"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/pmcmanager"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/redfish"
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/common/runner"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/common/vendor"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/db/model"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/objects/pmc"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/objects/powershelf"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/pmcmanager"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/redfish"
 )
 
 const redfishTimeout = time.Minute * 1

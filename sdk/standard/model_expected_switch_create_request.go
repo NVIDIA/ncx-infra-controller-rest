@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -12,8 +12,8 @@ Contact: carbide-dev@exchange.nvidia.com
 package standard
 
 import (
-	"encoding/json"
 	"bytes"
+	"encoding/json"
 	"fmt"
 )
 
@@ -142,6 +142,7 @@ func (o *ExpectedSwitchCreateRequest) HasDefaultBmcUsername() bool {
 func (o *ExpectedSwitchCreateRequest) SetDefaultBmcUsername(v string) {
 	o.DefaultBmcUsername.Set(&v)
 }
+
 // SetDefaultBmcUsernameNil sets the value for DefaultBmcUsername to be an explicit nil
 func (o *ExpectedSwitchCreateRequest) SetDefaultBmcUsernameNil() {
 	o.DefaultBmcUsername.Set(nil)
@@ -184,6 +185,7 @@ func (o *ExpectedSwitchCreateRequest) HasDefaultBmcPassword() bool {
 func (o *ExpectedSwitchCreateRequest) SetDefaultBmcPassword(v string) {
 	o.DefaultBmcPassword.Set(&v)
 }
+
 // SetDefaultBmcPasswordNil sets the value for DefaultBmcPassword to be an explicit nil
 func (o *ExpectedSwitchCreateRequest) SetDefaultBmcPasswordNil() {
 	o.DefaultBmcPassword.Set(nil)
@@ -250,6 +252,7 @@ func (o *ExpectedSwitchCreateRequest) HasNvOsUsername() bool {
 func (o *ExpectedSwitchCreateRequest) SetNvOsUsername(v string) {
 	o.NvOsUsername.Set(&v)
 }
+
 // SetNvOsUsernameNil sets the value for NvOsUsername to be an explicit nil
 func (o *ExpectedSwitchCreateRequest) SetNvOsUsernameNil() {
 	o.NvOsUsername.Set(nil)
@@ -292,6 +295,7 @@ func (o *ExpectedSwitchCreateRequest) HasNvOsPassword() bool {
 func (o *ExpectedSwitchCreateRequest) SetNvOsPassword(v string) {
 	o.NvOsPassword.Set(&v)
 }
+
 // SetNvOsPasswordNil sets the value for NvOsPassword to be an explicit nil
 func (o *ExpectedSwitchCreateRequest) SetNvOsPasswordNil() {
 	o.NvOsPassword.Set(nil)
@@ -335,7 +339,7 @@ func (o *ExpectedSwitchCreateRequest) SetLabels(v map[string]string) {
 }
 
 func (o ExpectedSwitchCreateRequest) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -380,10 +384,10 @@ func (o *ExpectedSwitchCreateRequest) UnmarshalJSON(data []byte) (err error) {
 	err = json.Unmarshal(data, &allProperties)
 
 	if err != nil {
-		return err;
+		return err
 	}
 
-	for _, requiredProperty := range(requiredProperties) {
+	for _, requiredProperty := range requiredProperties {
 		if _, exists := allProperties[requiredProperty]; !exists {
 			return fmt.Errorf("no value given for required property %v", requiredProperty)
 		}
@@ -439,5 +443,3 @@ func (v *NullableExpectedSwitchCreateRequest) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

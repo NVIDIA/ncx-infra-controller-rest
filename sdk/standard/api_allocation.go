@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -20,14 +20,13 @@ import (
 	"strings"
 )
 
-
 // AllocationAPIService AllocationAPI service
 type AllocationAPIService service
 
 type ApiCreateAllocationRequest struct {
-	ctx context.Context
-	ApiService *AllocationAPIService
-	org string
+	ctx                     context.Context
+	ApiService              *AllocationAPIService
+	org                     string
 	allocationCreateRequest *AllocationCreateRequest
 }
 
@@ -49,26 +48,27 @@ Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_
 
 Tenant management of Allocation is not supported in MVP.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @return ApiCreateAllocationRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@return ApiCreateAllocationRequest
 */
 func (a *AllocationAPIService) CreateAllocation(ctx context.Context, org string) ApiCreateAllocationRequest {
 	return ApiCreateAllocationRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ctx:        ctx,
+		org:        org,
 	}
 }
 
 // Execute executes the request
-//  @return Allocation
+//
+//	@return Allocation
 func (a *AllocationAPIService) CreateAllocationExecute(r ApiCreateAllocationRequest) (*Allocation, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodPost
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *Allocation
+		localVarHTTPMethod  = http.MethodPost
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *Allocation
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "AllocationAPIService.CreateAllocation")
@@ -131,8 +131,8 @@ func (a *AllocationAPIService) CreateAllocationExecute(r ApiCreateAllocationRequ
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
@@ -142,8 +142,8 @@ func (a *AllocationAPIService) CreateAllocationExecute(r ApiCreateAllocationRequ
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -161,10 +161,10 @@ func (a *AllocationAPIService) CreateAllocationExecute(r ApiCreateAllocationRequ
 }
 
 type ApiCreateAllocationConstraintRequest struct {
-	ctx context.Context
-	ApiService *AllocationAPIService
-	org string
-	allocationId string
+	ctx                               context.Context
+	ApiService                        *AllocationAPIService
+	org                               string
+	allocationId                      string
 	allocationConstraintCreateRequest *AllocationConstraintCreateRequest
 }
 
@@ -184,28 +184,29 @@ Create an Allocation Constraint for a given Allocation ID.
 
 Org must have an Infrastructure Provider entity and specified Allocation must have been created by the Provider. User must have `FORGE_PROVIDER_ADMIN` role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @param allocationId ID of the Allocation
- @return ApiCreateAllocationConstraintRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@param allocationId ID of the Allocation
+	@return ApiCreateAllocationConstraintRequest
 */
 func (a *AllocationAPIService) CreateAllocationConstraint(ctx context.Context, org string, allocationId string) ApiCreateAllocationConstraintRequest {
 	return ApiCreateAllocationConstraintRequest{
-		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ApiService:   a,
+		ctx:          ctx,
+		org:          org,
 		allocationId: allocationId,
 	}
 }
 
 // Execute executes the request
-//  @return AllocationConstraint
+//
+//	@return AllocationConstraint
 func (a *AllocationAPIService) CreateAllocationConstraintExecute(r ApiCreateAllocationConstraintRequest) (*AllocationConstraint, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodPost
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *AllocationConstraint
+		localVarHTTPMethod  = http.MethodPost
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *AllocationConstraint
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "AllocationAPIService.CreateAllocationConstraint")
@@ -269,8 +270,8 @@ func (a *AllocationAPIService) CreateAllocationConstraintExecute(r ApiCreateAllo
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
@@ -280,8 +281,8 @@ func (a *AllocationAPIService) CreateAllocationConstraintExecute(r ApiCreateAllo
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -299,9 +300,9 @@ func (a *AllocationAPIService) CreateAllocationConstraintExecute(r ApiCreateAllo
 }
 
 type ApiDeleteAllocationRequest struct {
-	ctx context.Context
-	ApiService *AllocationAPIService
-	org string
+	ctx          context.Context
+	ApiService   *AllocationAPIService
+	org          string
 	allocationId string
 }
 
@@ -318,16 +319,16 @@ Org must have an Infrastructure Provider entity, specified Allocation must be cr
 
 Tenant management of Allocation is not supported in MVP.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @param allocationId ID of the Allocation
- @return ApiDeleteAllocationRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@param allocationId ID of the Allocation
+	@return ApiDeleteAllocationRequest
 */
 func (a *AllocationAPIService) DeleteAllocation(ctx context.Context, org string, allocationId string) ApiDeleteAllocationRequest {
 	return ApiDeleteAllocationRequest{
-		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ApiService:   a,
+		ctx:          ctx,
+		org:          org,
 		allocationId: allocationId,
 	}
 }
@@ -335,9 +336,9 @@ func (a *AllocationAPIService) DeleteAllocation(ctx context.Context, org string,
 // Execute executes the request
 func (a *AllocationAPIService) DeleteAllocationExecute(r ApiDeleteAllocationRequest) (*http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodDelete
-		localVarPostBody     interface{}
-		formFiles            []formFile
+		localVarHTTPMethod = http.MethodDelete
+		localVarPostBody   interface{}
+		formFiles          []formFile
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "AllocationAPIService.DeleteAllocation")
@@ -399,10 +400,10 @@ func (a *AllocationAPIService) DeleteAllocationExecute(r ApiDeleteAllocationRequ
 }
 
 type ApiDeleteAllocationConstraintRequest struct {
-	ctx context.Context
-	ApiService *AllocationAPIService
-	org string
-	allocationId string
+	ctx                    context.Context
+	ApiService             *AllocationAPIService
+	org                    string
+	allocationId           string
 	allocationConstraintId string
 }
 
@@ -413,23 +414,22 @@ func (r ApiDeleteAllocationConstraintRequest) Execute() (*http.Response, error) 
 /*
 DeleteAllocationConstraint Delete Allocation Constraint
 
-Delete an existing Allocation Constraint by ID
+# Delete an existing Allocation Constraint by ID
 
 Org must have an Infrastructure Provider. Specified Allocation must have been created by the Provider and requesting user must have `FORGE_PROVIDER_ADMIN` role.
 
-
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @param allocationId ID of the Allocation
- @param allocationConstraintId ID of the Allocation Constraint
- @return ApiDeleteAllocationConstraintRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@param allocationId ID of the Allocation
+	@param allocationConstraintId ID of the Allocation Constraint
+	@return ApiDeleteAllocationConstraintRequest
 */
 func (a *AllocationAPIService) DeleteAllocationConstraint(ctx context.Context, org string, allocationId string, allocationConstraintId string) ApiDeleteAllocationConstraintRequest {
 	return ApiDeleteAllocationConstraintRequest{
-		ApiService: a,
-		ctx: ctx,
-		org: org,
-		allocationId: allocationId,
+		ApiService:             a,
+		ctx:                    ctx,
+		org:                    org,
+		allocationId:           allocationId,
 		allocationConstraintId: allocationConstraintId,
 	}
 }
@@ -437,9 +437,9 @@ func (a *AllocationAPIService) DeleteAllocationConstraint(ctx context.Context, o
 // Execute executes the request
 func (a *AllocationAPIService) DeleteAllocationConstraintExecute(r ApiDeleteAllocationConstraintRequest) (*http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodDelete
-		localVarPostBody     interface{}
-		formFiles            []formFile
+		localVarHTTPMethod = http.MethodDelete
+		localVarPostBody   interface{}
+		formFiles          []formFile
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "AllocationAPIService.DeleteAllocationConstraint")
@@ -502,23 +502,23 @@ func (a *AllocationAPIService) DeleteAllocationConstraintExecute(r ApiDeleteAllo
 }
 
 type ApiGetAllAllocationRequest struct {
-	ctx context.Context
-	ApiService *AllocationAPIService
-	org string
+	ctx                      context.Context
+	ApiService               *AllocationAPIService
+	org                      string
 	infrastructureProviderId *string
-	tenantId *string
-	siteId *string
-	id *string
-	resourceType *string
-	status *string
-	resourceTypeId *string
-	constraintType *string
-	constraintValue *int32
-	query *string
-	includeRelation *string
-	pageNumber *int32
-	pageSize *int32
-	orderBy *string
+	tenantId                 *string
+	siteId                   *string
+	id                       *string
+	resourceType             *string
+	status                   *string
+	resourceTypeId           *string
+	constraintType           *string
+	constraintValue          *int32
+	query                    *string
+	includeRelation          *string
+	pageNumber               *int32
+	pageSize                 *int32
+	orderBy                  *string
 }
 
 // Filter Allocations by Infrastructure Provider ID
@@ -620,26 +620,27 @@ If `infrastructureProviderId` query param is provided, then org must have an Inf
 
 If `tenantId` query param is provided, then org must have a Tenant entity and its ID should match the query param value. User must have `FORGE_TENANT_ADMIN` role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @return ApiGetAllAllocationRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@return ApiGetAllAllocationRequest
 */
 func (a *AllocationAPIService) GetAllAllocation(ctx context.Context, org string) ApiGetAllAllocationRequest {
 	return ApiGetAllAllocationRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ctx:        ctx,
+		org:        org,
 	}
 }
 
 // Execute executes the request
-//  @return []Allocation
+//
+//	@return []Allocation
 func (a *AllocationAPIService) GetAllAllocationExecute(r ApiGetAllAllocationRequest) ([]Allocation, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodGet
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  []Allocation
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue []Allocation
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "AllocationAPIService.GetAllAllocation")
@@ -746,8 +747,8 @@ func (a *AllocationAPIService) GetAllAllocationExecute(r ApiGetAllAllocationRequ
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -765,13 +766,13 @@ func (a *AllocationAPIService) GetAllAllocationExecute(r ApiGetAllAllocationRequ
 }
 
 type ApiGetAllAllocationConstraintRequest struct {
-	ctx context.Context
-	ApiService *AllocationAPIService
-	org string
+	ctx          context.Context
+	ApiService   *AllocationAPIService
+	org          string
 	allocationId string
-	pageNumber *int32
-	pageSize *int32
-	orderBy *string
+	pageNumber   *int32
+	pageSize     *int32
+	orderBy      *string
 }
 
 // Page number for pagination query
@@ -805,28 +806,29 @@ If org has an Infrastructure Provider entity, then specified Allocation must hav
 
 If org does not have an Infrastructure Provider entity but has a Tenant entity, then specified Allocation must belong to the Tenant and requesting user must have `FORGE_TENANT_ADMIN` role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @param allocationId ID of the Allocation
- @return ApiGetAllAllocationConstraintRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@param allocationId ID of the Allocation
+	@return ApiGetAllAllocationConstraintRequest
 */
 func (a *AllocationAPIService) GetAllAllocationConstraint(ctx context.Context, org string, allocationId string) ApiGetAllAllocationConstraintRequest {
 	return ApiGetAllAllocationConstraintRequest{
-		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ApiService:   a,
+		ctx:          ctx,
+		org:          org,
 		allocationId: allocationId,
 	}
 }
 
 // Execute executes the request
-//  @return []AllocationConstraint
+//
+//	@return []AllocationConstraint
 func (a *AllocationAPIService) GetAllAllocationConstraintExecute(r ApiGetAllAllocationConstraintRequest) ([]AllocationConstraint, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodGet
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  []AllocationConstraint
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue []AllocationConstraint
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "AllocationAPIService.GetAllAllocationConstraint")
@@ -901,8 +903,8 @@ func (a *AllocationAPIService) GetAllAllocationConstraintExecute(r ApiGetAllAllo
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -920,13 +922,13 @@ func (a *AllocationAPIService) GetAllAllocationConstraintExecute(r ApiGetAllAllo
 }
 
 type ApiGetAllocationRequest struct {
-	ctx context.Context
-	ApiService *AllocationAPIService
-	org string
-	allocationId string
+	ctx                      context.Context
+	ApiService               *AllocationAPIService
+	org                      string
+	allocationId             string
 	infrastructureProviderId *string
-	tenantId *string
-	includeRelation *string
+	tenantId                 *string
+	includeRelation          *string
 }
 
 // Filter Allocations by Infrastructure Provider ID
@@ -954,34 +956,35 @@ func (r ApiGetAllocationRequest) Execute() (*Allocation, *http.Response, error) 
 /*
 GetAllocation Retrieve Allocation
 
-Retrieve Allocation by ID
+# Retrieve Allocation by ID
 
 Allocation must belong either to the Provider associated with the org or the Tenant associated with the org.
 
 User must have `FORGE_PROVIDER_ADMIN`, `FORGE_TENANT_ADMIN` role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @param allocationId ID of the Allocation
- @return ApiGetAllocationRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@param allocationId ID of the Allocation
+	@return ApiGetAllocationRequest
 */
 func (a *AllocationAPIService) GetAllocation(ctx context.Context, org string, allocationId string) ApiGetAllocationRequest {
 	return ApiGetAllocationRequest{
-		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ApiService:   a,
+		ctx:          ctx,
+		org:          org,
 		allocationId: allocationId,
 	}
 }
 
 // Execute executes the request
-//  @return Allocation
+//
+//	@return Allocation
 func (a *AllocationAPIService) GetAllocationExecute(r ApiGetAllocationRequest) (*Allocation, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodGet
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *Allocation
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *Allocation
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "AllocationAPIService.GetAllocation")
@@ -1052,8 +1055,8 @@ func (a *AllocationAPIService) GetAllocationExecute(r ApiGetAllocationRequest) (
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -1071,10 +1074,10 @@ func (a *AllocationAPIService) GetAllocationExecute(r ApiGetAllocationRequest) (
 }
 
 type ApiGetAllocationConstraintRequest struct {
-	ctx context.Context
-	ApiService *AllocationAPIService
-	org string
-	allocationId string
+	ctx                    context.Context
+	ApiService             *AllocationAPIService
+	org                    string
+	allocationId           string
 	allocationConstraintId string
 }
 
@@ -1091,30 +1094,31 @@ If org has an Infrastructure Provider entity, then specified Allocation must hav
 
 If org does not have an Infrastructure Provider entity but has a Tenant entity, then specified Allocation must belong to the Tenant and requesting user must have `FORGE_TENANT_ADMIN` role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @param allocationId ID of the Allocation
- @param allocationConstraintId ID of the Allocation Constraint
- @return ApiGetAllocationConstraintRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@param allocationId ID of the Allocation
+	@param allocationConstraintId ID of the Allocation Constraint
+	@return ApiGetAllocationConstraintRequest
 */
 func (a *AllocationAPIService) GetAllocationConstraint(ctx context.Context, org string, allocationId string, allocationConstraintId string) ApiGetAllocationConstraintRequest {
 	return ApiGetAllocationConstraintRequest{
-		ApiService: a,
-		ctx: ctx,
-		org: org,
-		allocationId: allocationId,
+		ApiService:             a,
+		ctx:                    ctx,
+		org:                    org,
+		allocationId:           allocationId,
 		allocationConstraintId: allocationConstraintId,
 	}
 }
 
 // Execute executes the request
-//  @return []AllocationConstraint
+//
+//	@return []AllocationConstraint
 func (a *AllocationAPIService) GetAllocationConstraintExecute(r ApiGetAllocationConstraintRequest) ([]AllocationConstraint, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodGet
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  []AllocationConstraint
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue []AllocationConstraint
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "AllocationAPIService.GetAllocationConstraint")
@@ -1177,8 +1181,8 @@ func (a *AllocationAPIService) GetAllocationConstraintExecute(r ApiGetAllocation
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -1196,10 +1200,10 @@ func (a *AllocationAPIService) GetAllocationConstraintExecute(r ApiGetAllocation
 }
 
 type ApiUpdateAllocationRequest struct {
-	ctx context.Context
-	ApiService *AllocationAPIService
-	org string
-	allocationId string
+	ctx                     context.Context
+	ApiService              *AllocationAPIService
+	org                     string
+	allocationId            string
 	allocationUpdateRequest *AllocationUpdateRequest
 }
 
@@ -1215,34 +1219,35 @@ func (r ApiUpdateAllocationRequest) Execute() (*Allocation, *http.Response, erro
 /*
 UpdateAllocation Update Allocation
 
-Update an existing Allocation
+# Update an existing Allocation
 
 Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` role. Provider must own the Allocation.
 
 Tenant management of Allocation is not supported in MVP.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @param allocationId ID of the Allocation
- @return ApiUpdateAllocationRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@param allocationId ID of the Allocation
+	@return ApiUpdateAllocationRequest
 */
 func (a *AllocationAPIService) UpdateAllocation(ctx context.Context, org string, allocationId string) ApiUpdateAllocationRequest {
 	return ApiUpdateAllocationRequest{
-		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ApiService:   a,
+		ctx:          ctx,
+		org:          org,
 		allocationId: allocationId,
 	}
 }
 
 // Execute executes the request
-//  @return Allocation
+//
+//	@return Allocation
 func (a *AllocationAPIService) UpdateAllocationExecute(r ApiUpdateAllocationRequest) (*Allocation, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodPatch
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *Allocation
+		localVarHTTPMethod  = http.MethodPatch
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *Allocation
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "AllocationAPIService.UpdateAllocation")
@@ -1315,11 +1320,11 @@ func (a *AllocationAPIService) UpdateAllocationExecute(r ApiUpdateAllocationRequ
 }
 
 type ApiUpdateAllocationConstraintRequest struct {
-	ctx context.Context
-	ApiService *AllocationAPIService
-	org string
-	allocationId string
-	allocationConstraintId string
+	ctx                               context.Context
+	ApiService                        *AllocationAPIService
+	org                               string
+	allocationId                      string
+	allocationConstraintId            string
 	allocationConstraintUpdateRequest *AllocationConstraintUpdateRequest
 }
 
@@ -1335,7 +1340,7 @@ func (r ApiUpdateAllocationConstraintRequest) Execute() (*AllocationConstraint, 
 /*
 UpdateAllocationConstraint Update Allocation Constraint
 
-Update an existing Allocation Constraint by ID
+# Update an existing Allocation Constraint by ID
 
 Org must have an Infrastructure Provider. Specified Allocation must have been created by the Provider and requesting user must have `FORGE_PROVIDER_ADMIN` role.
 
@@ -1345,31 +1350,31 @@ In case of InstanceType resource, `constraintValue` can be incremented anytime, 
 
 In case of IPBlock resource, `constraintValue` can not be modified if Tenant resources are using IPs from the block.
 
-
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @param allocationId ID of the Allocation
- @param allocationConstraintId ID of the Allocation Constraint
- @return ApiUpdateAllocationConstraintRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@param allocationId ID of the Allocation
+	@param allocationConstraintId ID of the Allocation Constraint
+	@return ApiUpdateAllocationConstraintRequest
 */
 func (a *AllocationAPIService) UpdateAllocationConstraint(ctx context.Context, org string, allocationId string, allocationConstraintId string) ApiUpdateAllocationConstraintRequest {
 	return ApiUpdateAllocationConstraintRequest{
-		ApiService: a,
-		ctx: ctx,
-		org: org,
-		allocationId: allocationId,
+		ApiService:             a,
+		ctx:                    ctx,
+		org:                    org,
+		allocationId:           allocationId,
 		allocationConstraintId: allocationConstraintId,
 	}
 }
 
 // Execute executes the request
-//  @return AllocationConstraint
+//
+//	@return AllocationConstraint
 func (a *AllocationAPIService) UpdateAllocationConstraintExecute(r ApiUpdateAllocationConstraintRequest) (*AllocationConstraint, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodPatch
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *AllocationConstraint
+		localVarHTTPMethod  = http.MethodPatch
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *AllocationConstraint
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "AllocationAPIService.UpdateAllocationConstraint")

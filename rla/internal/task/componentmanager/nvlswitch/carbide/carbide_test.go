@@ -24,10 +24,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/carbideapi"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/executor/temporalworkflow/common"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operations"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/carbideapi"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor/temporalworkflow/common"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operations"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
 )
 
 func TestInjectExpectation(t *testing.T) {

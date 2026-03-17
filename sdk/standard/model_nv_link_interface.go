@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -21,7 +21,7 @@ var _ MappedNullable = &NVLinkInterface{}
 
 // NVLinkInterface Defines an interface created by associating a GPU of an Instance with an NVLink Logical Partition
 type NVLinkInterface struct {
-	Id *string `json:"id,omitempty"`
+	Id         *string `json:"id,omitempty"`
 	InstanceId *string `json:"instanceId,omitempty"`
 	// ID of the NVLink Logical Partition associated with this interface
 	NvLinkLogicalPartitionId *string `json:"nvLinkLogicalPartitionId,omitempty"`
@@ -30,10 +30,10 @@ type NVLinkInterface struct {
 	// Index of the device, used to identify the GPU associated with this Interface
 	DeviceInstance *int32 `json:"deviceInstance,omitempty"`
 	// Unique ID of the GPU
-	GpuGuid *string `json:"gpuGuid,omitempty"`
-	Status *NVLinkInterfaceStatus `json:"status,omitempty"`
-	Created *time.Time `json:"created,omitempty"`
-	Updated *time.Time `json:"updated,omitempty"`
+	GpuGuid *string                `json:"gpuGuid,omitempty"`
+	Status  *NVLinkInterfaceStatus `json:"status,omitempty"`
+	Created *time.Time             `json:"created,omitempty"`
+	Updated *time.Time             `json:"updated,omitempty"`
 }
 
 // NewNVLinkInterface instantiates a new NVLinkInterface object
@@ -342,7 +342,7 @@ func (o *NVLinkInterface) SetUpdated(v time.Time) {
 }
 
 func (o NVLinkInterface) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -416,5 +416,3 @@ func (v *NullableNVLinkInterface) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

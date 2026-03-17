@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -12,8 +12,8 @@ Contact: carbide-dev@exchange.nvidia.com
 package standard
 
 import (
-	"encoding/json"
 	"bytes"
+	"encoding/json"
 	"fmt"
 )
 
@@ -45,8 +45,8 @@ type BatchInstanceCreateRequest struct {
 	// When set to true, the iPXE script specified by OS or overridden here will always be run when rebooting the Instances. OS must be of iPXE type.
 	AlwaysBootWithCustomIpxe *bool `json:"alwaysBootWithCustomIpxe,omitempty"`
 	// When set to true, the Instances will be enabled with the Phone Home service.
-	PhoneHomeEnabled *bool `json:"phoneHomeEnabled,omitempty"`
-	Labels map[string]string `json:"labels,omitempty"`
+	PhoneHomeEnabled *bool             `json:"phoneHomeEnabled,omitempty"`
+	Labels           map[string]string `json:"labels,omitempty"`
 	// Interface configuration shared across all instances. At least one interface must be specified. Either Subnet or VPC Prefix interfaces allowed, only one of the Subnets or VPC Prefixes can be attached over Physical interface.
 	Interfaces []InterfaceCreateRequest `json:"interfaces"`
 	// InfiniBand interface configuration shared across all instances
@@ -170,6 +170,7 @@ func (o *BatchInstanceCreateRequest) HasDescription() bool {
 func (o *BatchInstanceCreateRequest) SetDescription(v string) {
 	o.Description.Set(&v)
 }
+
 // SetDescriptionNil sets the value for Description to be an explicit nil
 func (o *BatchInstanceCreateRequest) SetDescriptionNil() {
 	o.Description.Set(nil)
@@ -284,6 +285,7 @@ func (o *BatchInstanceCreateRequest) HasUserData() bool {
 func (o *BatchInstanceCreateRequest) SetUserData(v string) {
 	o.UserData.Set(&v)
 }
+
 // SetUserDataNil sets the value for UserData to be an explicit nil
 func (o *BatchInstanceCreateRequest) SetUserDataNil() {
 	o.UserData.Set(nil)
@@ -326,6 +328,7 @@ func (o *BatchInstanceCreateRequest) HasOperatingSystemId() bool {
 func (o *BatchInstanceCreateRequest) SetOperatingSystemId(v string) {
 	o.OperatingSystemId.Set(&v)
 }
+
 // SetOperatingSystemIdNil sets the value for OperatingSystemId to be an explicit nil
 func (o *BatchInstanceCreateRequest) SetOperatingSystemIdNil() {
 	o.OperatingSystemId.Set(nil)
@@ -368,6 +371,7 @@ func (o *BatchInstanceCreateRequest) HasNetworkSecurityGroupId() bool {
 func (o *BatchInstanceCreateRequest) SetNetworkSecurityGroupId(v string) {
 	o.NetworkSecurityGroupId.Set(&v)
 }
+
 // SetNetworkSecurityGroupIdNil sets the value for NetworkSecurityGroupId to be an explicit nil
 func (o *BatchInstanceCreateRequest) SetNetworkSecurityGroupIdNil() {
 	o.NetworkSecurityGroupId.Set(nil)
@@ -410,6 +414,7 @@ func (o *BatchInstanceCreateRequest) HasIpxeScript() bool {
 func (o *BatchInstanceCreateRequest) SetIpxeScript(v string) {
 	o.IpxeScript.Set(&v)
 }
+
 // SetIpxeScriptNil sets the value for IpxeScript to be an explicit nil
 func (o *BatchInstanceCreateRequest) SetIpxeScriptNil() {
 	o.IpxeScript.Set(nil)
@@ -701,7 +706,7 @@ func (o *BatchInstanceCreateRequest) SetTopologyOptimized(v bool) {
 }
 
 func (o BatchInstanceCreateRequest) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -776,10 +781,10 @@ func (o *BatchInstanceCreateRequest) UnmarshalJSON(data []byte) (err error) {
 	err = json.Unmarshal(data, &allProperties)
 
 	if err != nil {
-		return err;
+		return err
 	}
 
-	for _, requiredProperty := range(requiredProperties) {
+	for _, requiredProperty := range requiredProperties {
 		if _, exists := allProperties[requiredProperty]; !exists {
 			return fmt.Errorf("no value given for required property %v", requiredProperty)
 		}
@@ -835,5 +840,3 @@ func (v *NullableBatchInstanceCreateRequest) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

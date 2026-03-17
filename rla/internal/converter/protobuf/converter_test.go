@@ -24,15 +24,15 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/nvidia/bare-metal-manager-rest/common/pkg/credential"
-	dbquery "github.com/nvidia/bare-metal-manager-rest/rla/internal/db/query"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/deviceinfo"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/location"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/bmc"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/component"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/rack"
-	pb "github.com/nvidia/bare-metal-manager-rest/rla/pkg/proto/v1"
+	"github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/credential"
+	dbquery "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/db/query"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/deviceinfo"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/location"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/inventoryobjects/bmc"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/inventoryobjects/component"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/inventoryobjects/rack"
+	pb "github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/proto/v1"
 )
 
 func TestUUIDFrom(t *testing.T) {

@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -21,12 +21,12 @@ type InfiniBandPartitionStatus string
 
 // List of InfiniBandPartitionStatus
 const (
-	INFINIBANDPARTITIONSTATUS_PENDING InfiniBandPartitionStatus = "Pending"
+	INFINIBANDPARTITIONSTATUS_PENDING      InfiniBandPartitionStatus = "Pending"
 	INFINIBANDPARTITIONSTATUS_PROVISIONING InfiniBandPartitionStatus = "Provisioning"
-	INFINIBANDPARTITIONSTATUS_READY InfiniBandPartitionStatus = "Ready"
-	INFINIBANDPARTITIONSTATUS_CONFIGURING InfiniBandPartitionStatus = "Configuring"
-	INFINIBANDPARTITIONSTATUS_DELETING InfiniBandPartitionStatus = "Deleting"
-	INFINIBANDPARTITIONSTATUS_ERROR InfiniBandPartitionStatus = "Error"
+	INFINIBANDPARTITIONSTATUS_READY        InfiniBandPartitionStatus = "Ready"
+	INFINIBANDPARTITIONSTATUS_CONFIGURING  InfiniBandPartitionStatus = "Configuring"
+	INFINIBANDPARTITIONSTATUS_DELETING     InfiniBandPartitionStatus = "Deleting"
+	INFINIBANDPARTITIONSTATUS_ERROR        InfiniBandPartitionStatus = "Error"
 )
 
 // All allowed values of InfiniBandPartitionStatus enum
@@ -117,4 +117,3 @@ func (v *NullableInfiniBandPartitionStatus) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-

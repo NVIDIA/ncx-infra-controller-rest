@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -21,19 +21,19 @@ var _ MappedNullable = &MachineInterface{}
 
 // MachineInterface Describes an interface attached to a machine
 type MachineInterface struct {
-	Id *string `json:"id,omitempty"`
-	MachineId *string `json:"machineId,omitempty"`
-	ControllerInterfaceId *string `json:"controllerInterfaceId,omitempty"`
-	ControllerSegmentId *string `json:"controllerSegmentId,omitempty"`
-	AttachedDpuMachineID NullableString `json:"attachedDpuMachineID,omitempty"`
-	SubnetId NullableString `json:"subnetId,omitempty"`
-	Hostname *string `json:"hostname,omitempty"`
-	IsPrimary *bool `json:"isPrimary,omitempty"`
-	MacAddress *string `json:"macAddress,omitempty"`
+	Id                    *string        `json:"id,omitempty"`
+	MachineId             *string        `json:"machineId,omitempty"`
+	ControllerInterfaceId *string        `json:"controllerInterfaceId,omitempty"`
+	ControllerSegmentId   *string        `json:"controllerSegmentId,omitempty"`
+	AttachedDpuMachineID  NullableString `json:"attachedDpuMachineID,omitempty"`
+	SubnetId              NullableString `json:"subnetId,omitempty"`
+	Hostname              *string        `json:"hostname,omitempty"`
+	IsPrimary             *bool          `json:"isPrimary,omitempty"`
+	MacAddress            *string        `json:"macAddress,omitempty"`
 	// Array of IP addresses
-	IpAddresses []string `json:"ipAddresses,omitempty"`
-	Created *time.Time `json:"created,omitempty"`
-	Updated *time.Time `json:"updated,omitempty"`
+	IpAddresses []string   `json:"ipAddresses,omitempty"`
+	Created     *time.Time `json:"created,omitempty"`
+	Updated     *time.Time `json:"updated,omitempty"`
 }
 
 // NewMachineInterface instantiates a new MachineInterface object
@@ -213,6 +213,7 @@ func (o *MachineInterface) HasAttachedDpuMachineID() bool {
 func (o *MachineInterface) SetAttachedDpuMachineID(v string) {
 	o.AttachedDpuMachineID.Set(&v)
 }
+
 // SetAttachedDpuMachineIDNil sets the value for AttachedDpuMachineID to be an explicit nil
 func (o *MachineInterface) SetAttachedDpuMachineIDNil() {
 	o.AttachedDpuMachineID.Set(nil)
@@ -255,6 +256,7 @@ func (o *MachineInterface) HasSubnetId() bool {
 func (o *MachineInterface) SetSubnetId(v string) {
 	o.SubnetId.Set(&v)
 }
+
 // SetSubnetIdNil sets the value for SubnetId to be an explicit nil
 func (o *MachineInterface) SetSubnetIdNil() {
 	o.SubnetId.Set(nil)
@@ -458,7 +460,7 @@ func (o *MachineInterface) SetUpdated(v time.Time) {
 }
 
 func (o MachineInterface) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -541,5 +543,3 @@ func (v *NullableMachineInterface) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

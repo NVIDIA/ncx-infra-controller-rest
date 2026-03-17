@@ -24,11 +24,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	otrace "go.opentelemetry.io/otel/trace"
 
+	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/paginator"
+	stracer "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/tracer"
+	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/util"
 	"github.com/google/uuid"
-	"github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	"github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
-	stracer "github.com/nvidia/bare-metal-manager-rest/db/pkg/tracer"
-	"github.com/nvidia/bare-metal-manager-rest/db/pkg/util"
 	"github.com/uptrace/bun/extra/bundebug"
 )
 

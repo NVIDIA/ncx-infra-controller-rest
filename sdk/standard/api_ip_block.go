@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -20,14 +20,13 @@ import (
 	"strings"
 )
 
-
 // IPBlockAPIService IPBlockAPI service
 type IPBlockAPIService service
 
 type ApiCreateIpblockRequest struct {
-	ctx context.Context
-	ApiService *IPBlockAPIService
-	org string
+	ctx                  context.Context
+	ApiService           *IPBlockAPIService
+	org                  string
 	ipBlockCreateRequest *IpBlockCreateRequest
 }
 
@@ -49,26 +48,27 @@ Only Infrastructure Providers can create a root IP Block. User must have `FORGE_
 
 Tenant IP Blocks are created via Allocation.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @return ApiCreateIpblockRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@return ApiCreateIpblockRequest
 */
 func (a *IPBlockAPIService) CreateIpblock(ctx context.Context, org string) ApiCreateIpblockRequest {
 	return ApiCreateIpblockRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ctx:        ctx,
+		org:        org,
 	}
 }
 
 // Execute executes the request
-//  @return IpBlock
+//
+//	@return IpBlock
 func (a *IPBlockAPIService) CreateIpblockExecute(r ApiCreateIpblockRequest) (*IpBlock, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodPost
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *IpBlock
+		localVarHTTPMethod  = http.MethodPost
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *IpBlock
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "IPBlockAPIService.CreateIpblock")
@@ -131,8 +131,8 @@ func (a *IPBlockAPIService) CreateIpblockExecute(r ApiCreateIpblockRequest) (*Ip
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
@@ -142,8 +142,8 @@ func (a *IPBlockAPIService) CreateIpblockExecute(r ApiCreateIpblockRequest) (*Ip
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -161,10 +161,10 @@ func (a *IPBlockAPIService) CreateIpblockExecute(r ApiCreateIpblockRequest) (*Ip
 }
 
 type ApiDeleteIpblockRequest struct {
-	ctx context.Context
+	ctx        context.Context
 	ApiService *IPBlockAPIService
-	org string
-	ipBlockId string
+	org        string
+	ipBlockId  string
 }
 
 func (r ApiDeleteIpblockRequest) Execute() (*http.Response, error) {
@@ -174,32 +174,32 @@ func (r ApiDeleteIpblockRequest) Execute() (*http.Response, error) {
 /*
 DeleteIpblock Delete IP Block
 
-Delete an IP block
+# Delete an IP block
 
 Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` role. Only root IP Blocks can be deleted if there are no allocations associated with it.
 
 Tenant IP Blocks are managed via Allocation.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @param ipBlockId ID of the IP Block
- @return ApiDeleteIpblockRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@param ipBlockId ID of the IP Block
+	@return ApiDeleteIpblockRequest
 */
 func (a *IPBlockAPIService) DeleteIpblock(ctx context.Context, org string, ipBlockId string) ApiDeleteIpblockRequest {
 	return ApiDeleteIpblockRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
-		ipBlockId: ipBlockId,
+		ctx:        ctx,
+		org:        org,
+		ipBlockId:  ipBlockId,
 	}
 }
 
 // Execute executes the request
 func (a *IPBlockAPIService) DeleteIpblockExecute(r ApiDeleteIpblockRequest) (*http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodDelete
-		localVarPostBody     interface{}
-		formFiles            []formFile
+		localVarHTTPMethod = http.MethodDelete
+		localVarPostBody   interface{}
+		formFiles          []formFile
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "IPBlockAPIService.DeleteIpblock")
@@ -261,8 +261,8 @@ func (a *IPBlockAPIService) DeleteIpblockExecute(r ApiDeleteIpblockRequest) (*ht
 				newErr.error = err.Error()
 				return localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 			return localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
@@ -272,8 +272,8 @@ func (a *IPBlockAPIService) DeleteIpblockExecute(r ApiDeleteIpblockRequest) (*ht
 				newErr.error = err.Error()
 				return localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarHTTPResponse, newErr
 	}
@@ -282,16 +282,16 @@ func (a *IPBlockAPIService) DeleteIpblockExecute(r ApiDeleteIpblockRequest) (*ht
 }
 
 type ApiGetAllDerivedIpblockRequest struct {
-	ctx context.Context
-	ApiService *IPBlockAPIService
-	org string
-	ipBlockId string
-	status *string
-	query *string
+	ctx             context.Context
+	ApiService      *IPBlockAPIService
+	org             string
+	ipBlockId       string
+	status          *string
+	query           *string
 	includeRelation *string
-	pageNumber *int32
-	pageSize *int32
-	orderBy *string
+	pageNumber      *int32
+	pageSize        *int32
+	orderBy         *string
 }
 
 // Filter IP Blocks by Status
@@ -343,28 +343,29 @@ The IP Block in URL must belong to the Infrastructure Provider associated with t
 
 User must have `FORGE_PROVIDER_ADMIN` role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @param ipBlockId ID of the IP Block
- @return ApiGetAllDerivedIpblockRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@param ipBlockId ID of the IP Block
+	@return ApiGetAllDerivedIpblockRequest
 */
 func (a *IPBlockAPIService) GetAllDerivedIpblock(ctx context.Context, org string, ipBlockId string) ApiGetAllDerivedIpblockRequest {
 	return ApiGetAllDerivedIpblockRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
-		ipBlockId: ipBlockId,
+		ctx:        ctx,
+		org:        org,
+		ipBlockId:  ipBlockId,
 	}
 }
 
 // Execute executes the request
-//  @return []IpBlock
+//
+//	@return []IpBlock
 func (a *IPBlockAPIService) GetAllDerivedIpblockExecute(r ApiGetAllDerivedIpblockRequest) ([]IpBlock, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodGet
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  []IpBlock
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue []IpBlock
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "IPBlockAPIService.GetAllDerivedIpblock")
@@ -448,8 +449,8 @@ func (a *IPBlockAPIService) GetAllDerivedIpblockExecute(r ApiGetAllDerivedIpbloc
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -467,19 +468,19 @@ func (a *IPBlockAPIService) GetAllDerivedIpblockExecute(r ApiGetAllDerivedIpbloc
 }
 
 type ApiGetAllIpblockRequest struct {
-	ctx context.Context
-	ApiService *IPBlockAPIService
-	org string
+	ctx                      context.Context
+	ApiService               *IPBlockAPIService
+	org                      string
 	infrastructureProviderId *string
-	tenantId *string
-	siteId *string
-	status *string
-	includeUsageStats *bool
-	query *string
-	includeRelation *string
-	pageNumber *int32
-	pageSize *int32
-	orderBy *string
+	tenantId                 *string
+	siteId                   *string
+	status                   *string
+	includeUsageStats        *bool
+	query                    *string
+	includeRelation          *string
+	pageNumber               *int32
+	pageSize                 *int32
+	orderBy                  *string
 }
 
 // Filter IP Blocks by Infrastructure Provider ID
@@ -553,26 +554,27 @@ Retrieve all IP blocks for the org.
 
 User must have `FORGE_PROVIDER_ADMIN` or `FORGE_TENANT_ADMIN` role. `infrastructureProviderId` or `tenantId` query param may be required for older API versions.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @return ApiGetAllIpblockRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@return ApiGetAllIpblockRequest
 */
 func (a *IPBlockAPIService) GetAllIpblock(ctx context.Context, org string) ApiGetAllIpblockRequest {
 	return ApiGetAllIpblockRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ctx:        ctx,
+		org:        org,
 	}
 }
 
 // Execute executes the request
-//  @return []IpBlock
+//
+//	@return []IpBlock
 func (a *IPBlockAPIService) GetAllIpblockExecute(r ApiGetAllIpblockRequest) ([]IpBlock, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodGet
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  []IpBlock
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue []IpBlock
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "IPBlockAPIService.GetAllIpblock")
@@ -667,8 +669,8 @@ func (a *IPBlockAPIService) GetAllIpblockExecute(r ApiGetAllIpblockRequest) ([]I
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -686,14 +688,14 @@ func (a *IPBlockAPIService) GetAllIpblockExecute(r ApiGetAllIpblockRequest) ([]I
 }
 
 type ApiGetIpblockRequest struct {
-	ctx context.Context
-	ApiService *IPBlockAPIService
-	org string
-	ipBlockId string
+	ctx                      context.Context
+	ApiService               *IPBlockAPIService
+	org                      string
+	ipBlockId                string
 	infrastructureProviderId *string
-	tenantId *string
-	includeUsageStats *bool
-	includeRelation *string
+	tenantId                 *string
+	includeUsageStats        *bool
+	includeRelation          *string
 }
 
 // Filter IP Blocks by Infrastructure Provider ID
@@ -731,28 +733,29 @@ Retrieve an IP Block by ID.
 
 User must have `FORGE_PROVIDER_ADMIN` or `FORGE_TENANT_ADMIN` role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @param ipBlockId ID of the IP Block
- @return ApiGetIpblockRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@param ipBlockId ID of the IP Block
+	@return ApiGetIpblockRequest
 */
 func (a *IPBlockAPIService) GetIpblock(ctx context.Context, org string, ipBlockId string) ApiGetIpblockRequest {
 	return ApiGetIpblockRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
-		ipBlockId: ipBlockId,
+		ctx:        ctx,
+		org:        org,
+		ipBlockId:  ipBlockId,
 	}
 }
 
 // Execute executes the request
-//  @return IpBlock
+//
+//	@return IpBlock
 func (a *IPBlockAPIService) GetIpblockExecute(r ApiGetIpblockRequest) (*IpBlock, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodGet
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *IpBlock
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *IpBlock
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "IPBlockAPIService.GetIpblock")
@@ -826,8 +829,8 @@ func (a *IPBlockAPIService) GetIpblockExecute(r ApiGetIpblockRequest) (*IpBlock,
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -845,10 +848,10 @@ func (a *IPBlockAPIService) GetIpblockExecute(r ApiGetIpblockRequest) (*IpBlock,
 }
 
 type ApiUpdateIpblockRequest struct {
-	ctx context.Context
-	ApiService *IPBlockAPIService
-	org string
-	ipBlockId string
+	ctx                  context.Context
+	ApiService           *IPBlockAPIService
+	org                  string
+	ipBlockId            string
 	ipBlockUpdateRequest *IpBlockUpdateRequest
 }
 
@@ -864,34 +867,35 @@ func (r ApiUpdateIpblockRequest) Execute() (*IpBlock, *http.Response, error) {
 /*
 UpdateIpblock Update IP Block
 
-Update an existing IP Block
+# Update an existing IP Block
 
 Org must have an Infrastructure Provider. Specified IP Block must have been created by the Provider and requesting user must have `FORGE_PROVIDER_ADMIN` role. Only root IP Blocks can be patched.
 
 Tenant IP Blocks are managed via Allocation.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @param ipBlockId ID of the IP Block
- @return ApiUpdateIpblockRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@param ipBlockId ID of the IP Block
+	@return ApiUpdateIpblockRequest
 */
 func (a *IPBlockAPIService) UpdateIpblock(ctx context.Context, org string, ipBlockId string) ApiUpdateIpblockRequest {
 	return ApiUpdateIpblockRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
-		ipBlockId: ipBlockId,
+		ctx:        ctx,
+		org:        org,
+		ipBlockId:  ipBlockId,
 	}
 }
 
 // Execute executes the request
-//  @return IpBlock
+//
+//	@return IpBlock
 func (a *IPBlockAPIService) UpdateIpblockExecute(r ApiUpdateIpblockRequest) (*IpBlock, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodPatch
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *IpBlock
+		localVarHTTPMethod  = http.MethodPatch
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *IpBlock
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "IPBlockAPIService.UpdateIpblock")

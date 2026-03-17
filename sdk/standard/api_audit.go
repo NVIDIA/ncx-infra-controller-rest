@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -20,18 +20,17 @@ import (
 	"strings"
 )
 
-
 // AuditAPIService AuditAPI service
 type AuditAPIService service
 
 type ApiGetAllAuditEntryRequest struct {
-	ctx context.Context
+	ctx        context.Context
 	ApiService *AuditAPIService
-	org string
+	org        string
 	failedOnly *bool
 	pageNumber *int32
-	pageSize *int32
-	orderBy *string
+	pageSize   *int32
+	orderBy    *string
 }
 
 // Return only audit log entries that have failed status code (&gt;&#x3D; 400)
@@ -65,31 +64,31 @@ func (r ApiGetAllAuditEntryRequest) Execute() ([]AuditEntry, *http.Response, err
 /*
 GetAllAuditEntry Retrieve all Audit Log Entries
 
-Get all Audit Log entries
+# Get all Audit Log entries
 
 User must have `FORGE_PROVIDER_ADMIN` or `FORGE_TENANT_ADMIN` authorization role.
 
-
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @return ApiGetAllAuditEntryRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@return ApiGetAllAuditEntryRequest
 */
 func (a *AuditAPIService) GetAllAuditEntry(ctx context.Context, org string) ApiGetAllAuditEntryRequest {
 	return ApiGetAllAuditEntryRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ctx:        ctx,
+		org:        org,
 	}
 }
 
 // Execute executes the request
-//  @return []AuditEntry
+//
+//	@return []AuditEntry
 func (a *AuditAPIService) GetAllAuditEntryExecute(r ApiGetAllAuditEntryRequest) ([]AuditEntry, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodGet
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  []AuditEntry
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue []AuditEntry
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "AuditAPIService.GetAllAuditEntry")
@@ -166,8 +165,8 @@ func (a *AuditAPIService) GetAllAuditEntryExecute(r ApiGetAllAuditEntryRequest) 
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -185,9 +184,9 @@ func (a *AuditAPIService) GetAllAuditEntryExecute(r ApiGetAllAuditEntryRequest) 
 }
 
 type ApiGetAuditEntryRequest struct {
-	ctx context.Context
-	ApiService *AuditAPIService
-	org string
+	ctx          context.Context
+	ApiService   *AuditAPIService
+	org          string
 	auditEntryId string
 }
 
@@ -198,32 +197,33 @@ func (r ApiGetAuditEntryRequest) Execute() (*AuditEntry, *http.Response, error) 
 /*
 GetAuditEntry Retrieve Audit Log Entry
 
-Retrieve a specific Audit Log Entry by ID
+# Retrieve a specific Audit Log Entry by ID
 
 User must have `FORGE_PROVIDER_ADMIN` or `FORGE_TENANT_ADMIN` authorization role
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @param auditEntryId ID of the Audit Log Entry
- @return ApiGetAuditEntryRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@param auditEntryId ID of the Audit Log Entry
+	@return ApiGetAuditEntryRequest
 */
 func (a *AuditAPIService) GetAuditEntry(ctx context.Context, org string, auditEntryId string) ApiGetAuditEntryRequest {
 	return ApiGetAuditEntryRequest{
-		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ApiService:   a,
+		ctx:          ctx,
+		org:          org,
 		auditEntryId: auditEntryId,
 	}
 }
 
 // Execute executes the request
-//  @return AuditEntry
+//
+//	@return AuditEntry
 func (a *AuditAPIService) GetAuditEntryExecute(r ApiGetAuditEntryRequest) (*AuditEntry, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodGet
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *AuditEntry
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *AuditEntry
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "AuditAPIService.GetAuditEntry")
@@ -285,8 +285,8 @@ func (a *AuditAPIService) GetAuditEntryExecute(r ApiGetAuditEntryRequest) (*Audi
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}

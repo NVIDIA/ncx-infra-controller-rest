@@ -24,11 +24,11 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/nvidia/bare-metal-manager-rest/common/pkg/credential"
-	pb "github.com/nvidia/bare-metal-manager-rest/powershelf-manager/internal/proto/v1"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/converter/protobuf"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/objects/pmc"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/powershelfmanager"
+	"github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/credential"
+	pb "github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/internal/proto/v1"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/converter/protobuf"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/objects/pmc"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/powershelfmanager"
 
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"

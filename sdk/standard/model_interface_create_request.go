@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -20,7 +20,7 @@ var _ MappedNullable = &InterfaceCreateRequest{}
 
 // InterfaceCreateRequest Request data to create an Interface for an Instance by associating it with a Subnet or VPC Prefix.  If VPC specified in request has FNN virtualization type, then all interfaces must specify VPC Prefix.  If the VPC has Ethernet network virtualization type then all interfaces must specify Subnet.
 type InterfaceCreateRequest struct {
-	SubnetId *string `json:"subnetId,omitempty"`
+	SubnetId    *string `json:"subnetId,omitempty"`
 	VpcPrefixId *string `json:"vpcPrefixId,omitempty"`
 	// Specifies whether this Subnet or VPC Prefix should be attached to the Instance over physical interface.
 	IsPhysical *bool `json:"isPhysical,omitempty"`
@@ -241,6 +241,7 @@ func (o *InterfaceCreateRequest) HasVirtualFunctionId() bool {
 func (o *InterfaceCreateRequest) SetVirtualFunctionId(v int32) {
 	o.VirtualFunctionId.Set(&v)
 }
+
 // SetVirtualFunctionIdNil sets the value for VirtualFunctionId to be an explicit nil
 func (o *InterfaceCreateRequest) SetVirtualFunctionIdNil() {
 	o.VirtualFunctionId.Set(nil)
@@ -252,7 +253,7 @@ func (o *InterfaceCreateRequest) UnsetVirtualFunctionId() {
 }
 
 func (o InterfaceCreateRequest) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -317,5 +318,3 @@ func (v *NullableInterfaceCreateRequest) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

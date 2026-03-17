@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -21,14 +21,14 @@ type InstanceStatus string
 
 // List of InstanceStatus
 const (
-	INSTANCESTATUS_PENDING InstanceStatus = "Pending"
+	INSTANCESTATUS_PENDING      InstanceStatus = "Pending"
 	INSTANCESTATUS_PROVISIONING InstanceStatus = "Provisioning"
-	INSTANCESTATUS_CONFIGURING InstanceStatus = "Configuring"
-	INSTANCESTATUS_READY InstanceStatus = "Ready"
-	INSTANCESTATUS_UPDATING InstanceStatus = "Updating"
-	INSTANCESTATUS_REBOOTING InstanceStatus = "Rebooting"
-	INSTANCESTATUS_TERMINATING InstanceStatus = "Terminating"
-	INSTANCESTATUS_ERROR InstanceStatus = "Error"
+	INSTANCESTATUS_CONFIGURING  InstanceStatus = "Configuring"
+	INSTANCESTATUS_READY        InstanceStatus = "Ready"
+	INSTANCESTATUS_UPDATING     InstanceStatus = "Updating"
+	INSTANCESTATUS_REBOOTING    InstanceStatus = "Rebooting"
+	INSTANCESTATUS_TERMINATING  InstanceStatus = "Terminating"
+	INSTANCESTATUS_ERROR        InstanceStatus = "Error"
 )
 
 // All allowed values of InstanceStatus enum
@@ -121,4 +121,3 @@ func (v *NullableInstanceStatus) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-

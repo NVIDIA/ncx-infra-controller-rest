@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -145,6 +145,7 @@ func (o *VpcUpdateRequest) HasNetworkSecurityGroupId() bool {
 func (o *VpcUpdateRequest) SetNetworkSecurityGroupId(v string) {
 	o.NetworkSecurityGroupId.Set(&v)
 }
+
 // SetNetworkSecurityGroupIdNil sets the value for NetworkSecurityGroupId to be an explicit nil
 func (o *VpcUpdateRequest) SetNetworkSecurityGroupIdNil() {
 	o.NetworkSecurityGroupId.Set(nil)
@@ -187,6 +188,7 @@ func (o *VpcUpdateRequest) HasNvLinkLogicalPartitionId() bool {
 func (o *VpcUpdateRequest) SetNvLinkLogicalPartitionId(v string) {
 	o.NvLinkLogicalPartitionId.Set(&v)
 }
+
 // SetNvLinkLogicalPartitionIdNil sets the value for NvLinkLogicalPartitionId to be an explicit nil
 func (o *VpcUpdateRequest) SetNvLinkLogicalPartitionIdNil() {
 	o.NvLinkLogicalPartitionId.Set(nil)
@@ -230,7 +232,7 @@ func (o *VpcUpdateRequest) SetLabels(v map[string]string) {
 }
 
 func (o VpcUpdateRequest) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -292,5 +294,3 @@ func (v *NullableVpcUpdateRequest) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

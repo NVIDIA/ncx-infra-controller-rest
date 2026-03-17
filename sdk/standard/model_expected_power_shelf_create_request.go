@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -12,8 +12,8 @@ Contact: carbide-dev@exchange.nvidia.com
 package standard
 
 import (
-	"encoding/json"
 	"bytes"
+	"encoding/json"
 	"fmt"
 )
 
@@ -140,6 +140,7 @@ func (o *ExpectedPowerShelfCreateRequest) HasDefaultBmcUsername() bool {
 func (o *ExpectedPowerShelfCreateRequest) SetDefaultBmcUsername(v string) {
 	o.DefaultBmcUsername.Set(&v)
 }
+
 // SetDefaultBmcUsernameNil sets the value for DefaultBmcUsername to be an explicit nil
 func (o *ExpectedPowerShelfCreateRequest) SetDefaultBmcUsernameNil() {
 	o.DefaultBmcUsername.Set(nil)
@@ -182,6 +183,7 @@ func (o *ExpectedPowerShelfCreateRequest) HasDefaultBmcPassword() bool {
 func (o *ExpectedPowerShelfCreateRequest) SetDefaultBmcPassword(v string) {
 	o.DefaultBmcPassword.Set(&v)
 }
+
 // SetDefaultBmcPasswordNil sets the value for DefaultBmcPassword to be an explicit nil
 func (o *ExpectedPowerShelfCreateRequest) SetDefaultBmcPasswordNil() {
 	o.DefaultBmcPassword.Set(nil)
@@ -248,6 +250,7 @@ func (o *ExpectedPowerShelfCreateRequest) HasIpAddress() bool {
 func (o *ExpectedPowerShelfCreateRequest) SetIpAddress(v string) {
 	o.IpAddress.Set(&v)
 }
+
 // SetIpAddressNil sets the value for IpAddress to be an explicit nil
 func (o *ExpectedPowerShelfCreateRequest) SetIpAddressNil() {
 	o.IpAddress.Set(nil)
@@ -291,7 +294,7 @@ func (o *ExpectedPowerShelfCreateRequest) SetLabels(v map[string]string) {
 }
 
 func (o ExpectedPowerShelfCreateRequest) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -333,10 +336,10 @@ func (o *ExpectedPowerShelfCreateRequest) UnmarshalJSON(data []byte) (err error)
 	err = json.Unmarshal(data, &allProperties)
 
 	if err != nil {
-		return err;
+		return err
 	}
 
-	for _, requiredProperty := range(requiredProperties) {
+	for _, requiredProperty := range requiredProperties {
 		if _, exists := allProperties[requiredProperty]; !exists {
 			return fmt.Errorf("no value given for required property %v", requiredProperty)
 		}
@@ -392,5 +395,3 @@ func (v *NullableExpectedPowerShelfCreateRequest) UnmarshalJSON(src []byte) erro
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

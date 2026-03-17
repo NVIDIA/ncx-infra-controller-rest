@@ -20,8 +20,8 @@ package managerapi
 import (
 	"context"
 
-	wflowtypes "github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/datatypes/managertypes/workflow"
-	wflows "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
+	wflowtypes "github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/datatypes/managertypes/workflow"
+	wflows "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 	"go.temporal.io/sdk/workflow"
 )
 

@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -25,8 +25,8 @@ type TenantInstanceTypeStats struct {
 	// Organization name for the Tenant
 	Org *string `json:"org,omitempty"`
 	// Display name for the Tenant's organization
-	OrgDisplayName *string `json:"orgDisplayName,omitempty"`
-	InstanceTypes []InstanceTypeStats `json:"instanceTypes,omitempty"`
+	OrgDisplayName *string             `json:"orgDisplayName,omitempty"`
+	InstanceTypes  []InstanceTypeStats `json:"instanceTypes,omitempty"`
 }
 
 // NewTenantInstanceTypeStats instantiates a new TenantInstanceTypeStats object
@@ -175,7 +175,7 @@ func (o *TenantInstanceTypeStats) SetInstanceTypes(v []InstanceTypeStats) {
 }
 
 func (o TenantInstanceTypeStats) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -234,5 +234,3 @@ func (v *NullableTenantInstanceTypeStats) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

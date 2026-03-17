@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -21,11 +21,11 @@ type InfiniBandInterfaceStatus string
 
 // List of InfiniBandInterfaceStatus
 const (
-	INFINIBANDINTERFACESTATUS_PENDING InfiniBandInterfaceStatus = "Pending"
+	INFINIBANDINTERFACESTATUS_PENDING      InfiniBandInterfaceStatus = "Pending"
 	INFINIBANDINTERFACESTATUS_PROVISIONING InfiniBandInterfaceStatus = "Provisioning"
-	INFINIBANDINTERFACESTATUS_READY InfiniBandInterfaceStatus = "Ready"
-	INFINIBANDINTERFACESTATUS_DELETING InfiniBandInterfaceStatus = "Deleting"
-	INFINIBANDINTERFACESTATUS_ERROR InfiniBandInterfaceStatus = "Error"
+	INFINIBANDINTERFACESTATUS_READY        InfiniBandInterfaceStatus = "Ready"
+	INFINIBANDINTERFACESTATUS_DELETING     InfiniBandInterfaceStatus = "Deleting"
+	INFINIBANDINTERFACESTATUS_ERROR        InfiniBandInterfaceStatus = "Error"
 )
 
 // All allowed values of InfiniBandInterfaceStatus enum
@@ -115,4 +115,3 @@ func (v *NullableInfiniBandInterfaceStatus) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-

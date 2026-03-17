@@ -27,15 +27,15 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/reflection"
 
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/certs"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/db/migrations"
-	inventorymanager "github.com/nvidia/bare-metal-manager-rest/rla/internal/inventory/manager"
-	inventorystore "github.com/nvidia/bare-metal-manager-rest/rla/internal/inventory/store"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/inventorysync"
-	taskmanager "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/manager"
-	taskstore "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/store"
-	pb "github.com/nvidia/bare-metal-manager-rest/rla/pkg/proto/v1"
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/certs"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/db/migrations"
+	inventorymanager "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/inventory/manager"
+	inventorystore "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/inventory/store"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/inventorysync"
+	taskmanager "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/manager"
+	taskstore "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/store"
+	pb "github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/proto/v1"
 )
 
 type Service struct {

@@ -22,11 +22,11 @@ import (
 	"testing"
 	"time"
 
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/google/uuid"
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
-	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/proto"
 )

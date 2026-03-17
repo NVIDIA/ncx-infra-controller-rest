@@ -26,7 +26,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/nvidia/bare-metal-manager-rest/nvswitch-manager/pkg/common/credential"
+	"github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/pkg/common/credential"
 
 	vault "github.com/hashicorp/vault/api"
 	log "github.com/sirupsen/logrus"

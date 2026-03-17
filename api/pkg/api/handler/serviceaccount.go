@@ -20,15 +20,15 @@ package handler
 import (
 	"net/http"
 
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/internal/config"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/handler/util/common"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model"
+	cutil "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/util"
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
+	cdbp "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/paginator"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
-	"github.com/nvidia/bare-metal-manager-rest/api/internal/config"
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/handler/util/common"
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model"
-	cutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
-	cdbp "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
 )
 
 // GetCurrentServiceAccountHandler is the API Handler for getting the current Service Account

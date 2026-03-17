@@ -30,9 +30,9 @@ import (
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
 
-	cloudutils "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	userActivity "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/activity/user"
-	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/queue"
+	cloudutils "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/util"
+	userActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/user"
+	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/queue"
 )
 
 const (

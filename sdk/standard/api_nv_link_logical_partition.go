@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -20,14 +20,13 @@ import (
 	"strings"
 )
 
-
 // NVLinkLogicalPartitionAPIService NVLinkLogicalPartitionAPI service
 type NVLinkLogicalPartitionAPIService service
 
 type ApiCreateNvlinkLogicalPartitionRequest struct {
-	ctx context.Context
-	ApiService *NVLinkLogicalPartitionAPIService
-	org string
+	ctx                                 context.Context
+	ApiService                          *NVLinkLogicalPartitionAPIService
+	org                                 string
 	nVLinkLogicalPartitionCreateRequest *NVLinkLogicalPartitionCreateRequest
 }
 
@@ -47,26 +46,27 @@ Create an NVLink Logical Partition for the org.
 
 Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` NGC role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the NGC Org
- @return ApiCreateNvlinkLogicalPartitionRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the NGC Org
+	@return ApiCreateNvlinkLogicalPartitionRequest
 */
 func (a *NVLinkLogicalPartitionAPIService) CreateNvlinkLogicalPartition(ctx context.Context, org string) ApiCreateNvlinkLogicalPartitionRequest {
 	return ApiCreateNvlinkLogicalPartitionRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ctx:        ctx,
+		org:        org,
 	}
 }
 
 // Execute executes the request
-//  @return NVLinkLogicalPartition
+//
+//	@return NVLinkLogicalPartition
 func (a *NVLinkLogicalPartitionAPIService) CreateNvlinkLogicalPartitionExecute(r ApiCreateNvlinkLogicalPartitionRequest) (*NVLinkLogicalPartition, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodPost
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *NVLinkLogicalPartition
+		localVarHTTPMethod  = http.MethodPost
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *NVLinkLogicalPartition
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "NVLinkLogicalPartitionAPIService.CreateNvlinkLogicalPartition")
@@ -129,8 +129,8 @@ func (a *NVLinkLogicalPartitionAPIService) CreateNvlinkLogicalPartitionExecute(r
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
@@ -140,8 +140,8 @@ func (a *NVLinkLogicalPartitionAPIService) CreateNvlinkLogicalPartitionExecute(r
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -159,9 +159,9 @@ func (a *NVLinkLogicalPartitionAPIService) CreateNvlinkLogicalPartitionExecute(r
 }
 
 type ApiDeleteNvlinkLogicalPartitionRequest struct {
-	ctx context.Context
-	ApiService *NVLinkLogicalPartitionAPIService
-	org string
+	ctx                      context.Context
+	ApiService               *NVLinkLogicalPartitionAPIService
+	org                      string
 	nvLinkLogicalPartitionId string
 }
 
@@ -172,20 +172,20 @@ func (r ApiDeleteNvlinkLogicalPartitionRequest) Execute() (*http.Response, error
 /*
 DeleteNvlinkLogicalPartition Delete NVLink Logical Partition
 
-Delete an NVLink Logical Partition by ID
+# Delete an NVLink Logical Partition by ID
 
 Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` NGC role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the NGC Org
- @param nvLinkLogicalPartitionId ID of the NVLink Logical Partition
- @return ApiDeleteNvlinkLogicalPartitionRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the NGC Org
+	@param nvLinkLogicalPartitionId ID of the NVLink Logical Partition
+	@return ApiDeleteNvlinkLogicalPartitionRequest
 */
 func (a *NVLinkLogicalPartitionAPIService) DeleteNvlinkLogicalPartition(ctx context.Context, org string, nvLinkLogicalPartitionId string) ApiDeleteNvlinkLogicalPartitionRequest {
 	return ApiDeleteNvlinkLogicalPartitionRequest{
-		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ApiService:               a,
+		ctx:                      ctx,
+		org:                      org,
 		nvLinkLogicalPartitionId: nvLinkLogicalPartitionId,
 	}
 }
@@ -193,9 +193,9 @@ func (a *NVLinkLogicalPartitionAPIService) DeleteNvlinkLogicalPartition(ctx cont
 // Execute executes the request
 func (a *NVLinkLogicalPartitionAPIService) DeleteNvlinkLogicalPartitionExecute(r ApiDeleteNvlinkLogicalPartitionRequest) (*http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodDelete
-		localVarPostBody     interface{}
-		formFiles            []formFile
+		localVarHTTPMethod = http.MethodDelete
+		localVarPostBody   interface{}
+		formFiles          []formFile
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "NVLinkLogicalPartitionAPIService.DeleteNvlinkLogicalPartition")
@@ -257,8 +257,8 @@ func (a *NVLinkLogicalPartitionAPIService) DeleteNvlinkLogicalPartitionExecute(r
 				newErr.error = err.Error()
 				return localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarHTTPResponse, newErr
 	}
@@ -267,18 +267,18 @@ func (a *NVLinkLogicalPartitionAPIService) DeleteNvlinkLogicalPartitionExecute(r
 }
 
 type ApiGetAllNvlinkInterfaceRequest struct {
-	ctx context.Context
-	ApiService *NVLinkLogicalPartitionAPIService
-	org string
-	status *string
-	siteId *string
-	instanceId *string
+	ctx                      context.Context
+	ApiService               *NVLinkLogicalPartitionAPIService
+	org                      string
+	status                   *string
+	siteId                   *string
+	instanceId               *string
 	nvLinkLogicalPartitionId *string
-	nvLinkDomainId *string
-	includeRelation *string
-	pageNumber *int32
-	pageSize *int32
-	orderBy *string
+	nvLinkDomainId           *string
+	includeRelation          *string
+	pageNumber               *int32
+	pageSize                 *int32
+	orderBy                  *string
 }
 
 // Filter NVLink Interfaces by Status. Can be specified multiple times to filter on more than one status.
@@ -342,30 +342,31 @@ func (r ApiGetAllNvlinkInterfaceRequest) Execute() ([]NVLinkInterface, *http.Res
 /*
 GetAllNvlinkInterface Retrieve all NVLink Interfaces
 
-Get all NVLink Interfaces
+# Get all NVLink Interfaces
 
 Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` NGC role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the NGC Org
- @return ApiGetAllNvlinkInterfaceRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the NGC Org
+	@return ApiGetAllNvlinkInterfaceRequest
 */
 func (a *NVLinkLogicalPartitionAPIService) GetAllNvlinkInterface(ctx context.Context, org string) ApiGetAllNvlinkInterfaceRequest {
 	return ApiGetAllNvlinkInterfaceRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ctx:        ctx,
+		org:        org,
 	}
 }
 
 // Execute executes the request
-//  @return []NVLinkInterface
+//
+//	@return []NVLinkInterface
 func (a *NVLinkLogicalPartitionAPIService) GetAllNvlinkInterfaceExecute(r ApiGetAllNvlinkInterfaceRequest) ([]NVLinkInterface, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodGet
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  []NVLinkInterface
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue []NVLinkInterface
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "NVLinkLogicalPartitionAPIService.GetAllNvlinkInterface")
@@ -457,8 +458,8 @@ func (a *NVLinkLogicalPartitionAPIService) GetAllNvlinkInterfaceExecute(r ApiGet
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -476,19 +477,19 @@ func (a *NVLinkLogicalPartitionAPIService) GetAllNvlinkInterfaceExecute(r ApiGet
 }
 
 type ApiGetAllNvlinkLogicalPartitionRequest struct {
-	ctx context.Context
-	ApiService *NVLinkLogicalPartitionAPIService
-	org string
-	siteId *string
-	status *string
-	query *string
+	ctx               context.Context
+	ApiService        *NVLinkLogicalPartitionAPIService
+	org               string
+	siteId            *string
+	status            *string
+	query             *string
 	includeInterfaces *bool
-	includeStats *bool
-	includeVpcs *bool
-	includeRelation *string
-	pageNumber *int32
-	pageSize *int32
-	orderBy *string
+	includeStats      *bool
+	includeVpcs       *bool
+	includeRelation   *string
+	pageNumber        *int32
+	pageSize          *int32
+	orderBy           *string
 }
 
 // Filter NVLink Logical Partitions by Site
@@ -558,30 +559,31 @@ func (r ApiGetAllNvlinkLogicalPartitionRequest) Execute() ([]NVLinkLogicalPartit
 /*
 GetAllNvlinkLogicalPartition Retrieve all NVLink Logical Partitions
 
-Retrieve all NVLink Logical Partitions for the org
+# Retrieve all NVLink Logical Partitions for the org
 
 Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the NGC Org
- @return ApiGetAllNvlinkLogicalPartitionRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the NGC Org
+	@return ApiGetAllNvlinkLogicalPartitionRequest
 */
 func (a *NVLinkLogicalPartitionAPIService) GetAllNvlinkLogicalPartition(ctx context.Context, org string) ApiGetAllNvlinkLogicalPartitionRequest {
 	return ApiGetAllNvlinkLogicalPartitionRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ctx:        ctx,
+		org:        org,
 	}
 }
 
 // Execute executes the request
-//  @return []NVLinkLogicalPartition
+//
+//	@return []NVLinkLogicalPartition
 func (a *NVLinkLogicalPartitionAPIService) GetAllNvlinkLogicalPartitionExecute(r ApiGetAllNvlinkLogicalPartitionRequest) ([]NVLinkLogicalPartition, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodGet
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  []NVLinkLogicalPartition
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue []NVLinkLogicalPartition
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "NVLinkLogicalPartitionAPIService.GetAllNvlinkLogicalPartition")
@@ -676,8 +678,8 @@ func (a *NVLinkLogicalPartitionAPIService) GetAllNvlinkLogicalPartitionExecute(r
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -695,14 +697,14 @@ func (a *NVLinkLogicalPartitionAPIService) GetAllNvlinkLogicalPartitionExecute(r
 }
 
 type ApiGetNvlinkLogicalPartitionRequest struct {
-	ctx context.Context
-	ApiService *NVLinkLogicalPartitionAPIService
-	org string
+	ctx                      context.Context
+	ApiService               *NVLinkLogicalPartitionAPIService
+	org                      string
 	nvLinkLogicalPartitionId string
-	includeInterfaces *string
-	includeStats *bool
-	includeVpcs *bool
-	includeRelation *string
+	includeInterfaces        *string
+	includeStats             *bool
+	includeVpcs              *bool
+	includeRelation          *string
 }
 
 // Include all attached NVLink Interfaces in response
@@ -736,32 +738,33 @@ func (r ApiGetNvlinkLogicalPartitionRequest) Execute() (*NVLinkLogicalPartition,
 /*
 GetNvlinkLogicalPartition Retrieve NVLink Logical Partition
 
-Retrieve a specific NVLink Logical Partition by ID
+# Retrieve a specific NVLink Logical Partition by ID
 
 Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` NGC role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the NGC Org
- @param nvLinkLogicalPartitionId ID of the NVLink Logical Partition
- @return ApiGetNvlinkLogicalPartitionRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the NGC Org
+	@param nvLinkLogicalPartitionId ID of the NVLink Logical Partition
+	@return ApiGetNvlinkLogicalPartitionRequest
 */
 func (a *NVLinkLogicalPartitionAPIService) GetNvlinkLogicalPartition(ctx context.Context, org string, nvLinkLogicalPartitionId string) ApiGetNvlinkLogicalPartitionRequest {
 	return ApiGetNvlinkLogicalPartitionRequest{
-		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ApiService:               a,
+		ctx:                      ctx,
+		org:                      org,
 		nvLinkLogicalPartitionId: nvLinkLogicalPartitionId,
 	}
 }
 
 // Execute executes the request
-//  @return NVLinkLogicalPartition
+//
+//	@return NVLinkLogicalPartition
 func (a *NVLinkLogicalPartitionAPIService) GetNvlinkLogicalPartitionExecute(r ApiGetNvlinkLogicalPartitionRequest) (*NVLinkLogicalPartition, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodGet
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *NVLinkLogicalPartition
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *NVLinkLogicalPartition
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "NVLinkLogicalPartitionAPIService.GetNvlinkLogicalPartition")
@@ -835,8 +838,8 @@ func (a *NVLinkLogicalPartitionAPIService) GetNvlinkLogicalPartitionExecute(r Ap
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -854,10 +857,10 @@ func (a *NVLinkLogicalPartitionAPIService) GetNvlinkLogicalPartitionExecute(r Ap
 }
 
 type ApiUpdateNvlinkLogicalPartitionRequest struct {
-	ctx context.Context
-	ApiService *NVLinkLogicalPartitionAPIService
-	org string
-	nvLinkLogicalPartitionId string
+	ctx                                 context.Context
+	ApiService                          *NVLinkLogicalPartitionAPIService
+	org                                 string
+	nvLinkLogicalPartitionId            string
 	nVLinkLogicalPartitionUpdateRequest *NVLinkLogicalPartitionUpdateRequest
 }
 
@@ -873,32 +876,33 @@ func (r ApiUpdateNvlinkLogicalPartitionRequest) Execute() (*NVLinkLogicalPartiti
 /*
 UpdateNvlinkLogicalPartition Update NVLink Logical Partition
 
-Update a specific NVLink Logical Partition
+# Update a specific NVLink Logical Partition
 
 Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` NGC role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the NGC Org
- @param nvLinkLogicalPartitionId ID of the NVLink Logical Partition
- @return ApiUpdateNvlinkLogicalPartitionRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the NGC Org
+	@param nvLinkLogicalPartitionId ID of the NVLink Logical Partition
+	@return ApiUpdateNvlinkLogicalPartitionRequest
 */
 func (a *NVLinkLogicalPartitionAPIService) UpdateNvlinkLogicalPartition(ctx context.Context, org string, nvLinkLogicalPartitionId string) ApiUpdateNvlinkLogicalPartitionRequest {
 	return ApiUpdateNvlinkLogicalPartitionRequest{
-		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ApiService:               a,
+		ctx:                      ctx,
+		org:                      org,
 		nvLinkLogicalPartitionId: nvLinkLogicalPartitionId,
 	}
 }
 
 // Execute executes the request
-//  @return NVLinkLogicalPartition
+//
+//	@return NVLinkLogicalPartition
 func (a *NVLinkLogicalPartitionAPIService) UpdateNvlinkLogicalPartitionExecute(r ApiUpdateNvlinkLogicalPartitionRequest) (*NVLinkLogicalPartition, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodPatch
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *NVLinkLogicalPartition
+		localVarHTTPMethod  = http.MethodPatch
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *NVLinkLogicalPartition
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "NVLinkLogicalPartitionAPIService.UpdateNvlinkLogicalPartition")
@@ -962,8 +966,8 @@ func (a *NVLinkLogicalPartitionAPIService) UpdateNvlinkLogicalPartitionExecute(r
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
@@ -973,8 +977,8 @@ func (a *NVLinkLogicalPartitionAPIService) UpdateNvlinkLogicalPartitionExecute(r
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}

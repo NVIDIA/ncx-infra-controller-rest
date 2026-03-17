@@ -25,15 +25,15 @@ import (
 
 	tClient "go.temporal.io/sdk/client"
 
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 
-	"github.com/nvidia/bare-metal-manager-rest/api/internal/config"
-	capis "github.com/nvidia/bare-metal-manager-rest/api/internal/server"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/internal/config"
+	capis "github.com/NVIDIA/ncx-infra-controller-rest/api/internal/server"
 
-	sc "github.com/nvidia/bare-metal-manager-rest/api/pkg/client/site"
+	sc "github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/client/site"
 
 	// Imports for API doc generation
-	_ "github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model"
+	_ "github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model"
 )
 
 const (

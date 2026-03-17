@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -20,15 +20,14 @@ import (
 	"strings"
 )
 
-
 // RackAPIService RackAPI service
 type RackAPIService service
 
 type ApiBringupRackRequest struct {
-	ctx context.Context
-	ApiService *RackAPIService
-	org string
-	id string
+	ctx                context.Context
+	ApiService         *RackAPIService
+	org                string
+	id                 string
 	bringUpRackRequest *BringUpRackRequest
 }
 
@@ -48,28 +47,29 @@ Bring up a Rack identified by Rack UUID.
 
 Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` authorization role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @param id ID of the Rack
- @return ApiBringupRackRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@param id ID of the Rack
+	@return ApiBringupRackRequest
 */
 func (a *RackAPIService) BringupRack(ctx context.Context, org string, id string) ApiBringupRackRequest {
 	return ApiBringupRackRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
-		id: id,
+		ctx:        ctx,
+		org:        org,
+		id:         id,
 	}
 }
 
 // Execute executes the request
-//  @return BringUpRackResponse
+//
+//	@return BringUpRackResponse
 func (a *RackAPIService) BringupRackExecute(r ApiBringupRackRequest) (*BringUpRackResponse, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodPost
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *BringUpRackResponse
+		localVarHTTPMethod  = http.MethodPost
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *BringUpRackResponse
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "RackAPIService.BringupRack")
@@ -136,8 +136,8 @@ func (a *RackAPIService) BringupRackExecute(r ApiBringupRackRequest) (*BringUpRa
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
@@ -147,8 +147,8 @@ func (a *RackAPIService) BringupRackExecute(r ApiBringupRackRequest) (*BringUpRa
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -166,9 +166,9 @@ func (a *RackAPIService) BringupRackExecute(r ApiBringupRackRequest) (*BringUpRa
 }
 
 type ApiBringupRacksRequest struct {
-	ctx context.Context
-	ApiService *RackAPIService
-	org string
+	ctx                     context.Context
+	ApiService              *RackAPIService
+	org                     string
 	batchBringUpRackRequest *BatchBringUpRackRequest
 }
 
@@ -188,26 +188,27 @@ Bring up Racks with optional name filter. If no filter is specified, targets all
 
 Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` authorization role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @return ApiBringupRacksRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@return ApiBringupRacksRequest
 */
 func (a *RackAPIService) BringupRacks(ctx context.Context, org string) ApiBringupRacksRequest {
 	return ApiBringupRacksRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ctx:        ctx,
+		org:        org,
 	}
 }
 
 // Execute executes the request
-//  @return BringUpRackResponse
+//
+//	@return BringUpRackResponse
 func (a *RackAPIService) BringupRacksExecute(r ApiBringupRacksRequest) (*BringUpRackResponse, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodPost
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *BringUpRackResponse
+		localVarHTTPMethod  = http.MethodPost
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *BringUpRackResponse
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "RackAPIService.BringupRacks")
@@ -273,8 +274,8 @@ func (a *RackAPIService) BringupRacksExecute(r ApiBringupRacksRequest) (*BringUp
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
@@ -284,8 +285,8 @@ func (a *RackAPIService) BringupRacksExecute(r ApiBringupRacksRequest) (*BringUp
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -303,10 +304,10 @@ func (a *RackAPIService) BringupRacksExecute(r ApiBringupRacksRequest) (*BringUp
 }
 
 type ApiFirmwareUpdateRackRequest struct {
-	ctx context.Context
-	ApiService *RackAPIService
-	org string
-	id string
+	ctx                   context.Context
+	ApiService            *RackAPIService
+	org                   string
+	id                    string
 	firmwareUpdateRequest *FirmwareUpdateRequest
 }
 
@@ -326,28 +327,29 @@ Update firmware on a Rack identified by Rack UUID.
 
 Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` authorization role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @param id ID of the Rack
- @return ApiFirmwareUpdateRackRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@param id ID of the Rack
+	@return ApiFirmwareUpdateRackRequest
 */
 func (a *RackAPIService) FirmwareUpdateRack(ctx context.Context, org string, id string) ApiFirmwareUpdateRackRequest {
 	return ApiFirmwareUpdateRackRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
-		id: id,
+		ctx:        ctx,
+		org:        org,
+		id:         id,
 	}
 }
 
 // Execute executes the request
-//  @return FirmwareUpdateResponse
+//
+//	@return FirmwareUpdateResponse
 func (a *RackAPIService) FirmwareUpdateRackExecute(r ApiFirmwareUpdateRackRequest) (*FirmwareUpdateResponse, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodPatch
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *FirmwareUpdateResponse
+		localVarHTTPMethod  = http.MethodPatch
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *FirmwareUpdateResponse
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "RackAPIService.FirmwareUpdateRack")
@@ -414,8 +416,8 @@ func (a *RackAPIService) FirmwareUpdateRackExecute(r ApiFirmwareUpdateRackReques
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
@@ -425,8 +427,8 @@ func (a *RackAPIService) FirmwareUpdateRackExecute(r ApiFirmwareUpdateRackReques
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -444,9 +446,9 @@ func (a *RackAPIService) FirmwareUpdateRackExecute(r ApiFirmwareUpdateRackReques
 }
 
 type ApiFirmwareUpdateRacksRequest struct {
-	ctx context.Context
-	ApiService *RackAPIService
-	org string
+	ctx                            context.Context
+	ApiService                     *RackAPIService
+	org                            string
 	batchRackFirmwareUpdateRequest *BatchRackFirmwareUpdateRequest
 }
 
@@ -466,26 +468,27 @@ Update firmware on Racks with optional name filter. If no filter is specified, t
 
 Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` authorization role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @return ApiFirmwareUpdateRacksRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@return ApiFirmwareUpdateRacksRequest
 */
 func (a *RackAPIService) FirmwareUpdateRacks(ctx context.Context, org string) ApiFirmwareUpdateRacksRequest {
 	return ApiFirmwareUpdateRacksRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ctx:        ctx,
+		org:        org,
 	}
 }
 
 // Execute executes the request
-//  @return FirmwareUpdateResponse
+//
+//	@return FirmwareUpdateResponse
 func (a *RackAPIService) FirmwareUpdateRacksExecute(r ApiFirmwareUpdateRacksRequest) (*FirmwareUpdateResponse, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodPatch
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *FirmwareUpdateResponse
+		localVarHTTPMethod  = http.MethodPatch
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *FirmwareUpdateResponse
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "RackAPIService.FirmwareUpdateRacks")
@@ -551,8 +554,8 @@ func (a *RackAPIService) FirmwareUpdateRacksExecute(r ApiFirmwareUpdateRacksRequ
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
@@ -562,8 +565,8 @@ func (a *RackAPIService) FirmwareUpdateRacksExecute(r ApiFirmwareUpdateRacksRequ
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -581,16 +584,16 @@ func (a *RackAPIService) FirmwareUpdateRacksExecute(r ApiFirmwareUpdateRacksRequ
 }
 
 type ApiGetAllRackRequest struct {
-	ctx context.Context
-	ApiService *RackAPIService
-	siteId *string
-	org string
+	ctx               context.Context
+	ApiService        *RackAPIService
+	siteId            *string
+	org               string
 	includeComponents *bool
-	name *string
-	manufacturer *string
-	pageNumber *int32
-	pageSize *int32
-	orderBy *string
+	name              *string
+	manufacturer      *string
+	pageNumber        *int32
+	pageSize          *int32
+	orderBy           *string
 }
 
 // ID of the Site to retrieve Racks from
@@ -646,26 +649,27 @@ Get all Racks for the specified Site.
 
 Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` authorization role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @return ApiGetAllRackRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@return ApiGetAllRackRequest
 */
 func (a *RackAPIService) GetAllRack(ctx context.Context, org string) ApiGetAllRackRequest {
 	return ApiGetAllRackRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ctx:        ctx,
+		org:        org,
 	}
 }
 
 // Execute executes the request
-//  @return []Rack
+//
+//	@return []Rack
 func (a *RackAPIService) GetAllRackExecute(r ApiGetAllRackRequest) ([]Rack, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodGet
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  []Rack
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue []Rack
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "RackAPIService.GetAllRack")
@@ -752,8 +756,8 @@ func (a *RackAPIService) GetAllRackExecute(r ApiGetAllRackRequest) ([]Rack, *htt
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -771,11 +775,11 @@ func (a *RackAPIService) GetAllRackExecute(r ApiGetAllRackRequest) ([]Rack, *htt
 }
 
 type ApiGetRackRequest struct {
-	ctx context.Context
-	ApiService *RackAPIService
-	siteId *string
-	org string
-	id string
+	ctx               context.Context
+	ApiService        *RackAPIService
+	siteId            *string
+	org               string
+	id                string
 	includeComponents *bool
 }
 
@@ -802,28 +806,29 @@ Get a Rack by ID.
 
 Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` authorization role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @param id ID of the Rack
- @return ApiGetRackRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@param id ID of the Rack
+	@return ApiGetRackRequest
 */
 func (a *RackAPIService) GetRack(ctx context.Context, org string, id string) ApiGetRackRequest {
 	return ApiGetRackRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
-		id: id,
+		ctx:        ctx,
+		org:        org,
+		id:         id,
 	}
 }
 
 // Execute executes the request
-//  @return Rack
+//
+//	@return Rack
 func (a *RackAPIService) GetRackExecute(r ApiGetRackRequest) (*Rack, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodGet
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *Rack
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *Rack
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "RackAPIService.GetRack")
@@ -892,8 +897,8 @@ func (a *RackAPIService) GetRackExecute(r ApiGetRackRequest) (*Rack, *http.Respo
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 404 {
@@ -903,8 +908,8 @@ func (a *RackAPIService) GetRackExecute(r ApiGetRackRequest) (*Rack, *http.Respo
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -922,10 +927,10 @@ func (a *RackAPIService) GetRackExecute(r ApiGetRackRequest) (*Rack, *http.Respo
 }
 
 type ApiPowerControlRackRequest struct {
-	ctx context.Context
-	ApiService *RackAPIService
-	org string
-	id string
+	ctx                     context.Context
+	ApiService              *RackAPIService
+	org                     string
+	id                      string
 	updatePowerStateRequest *UpdatePowerStateRequest
 }
 
@@ -947,28 +952,29 @@ Supported power states: `on`, `off`, `cycle`, `forceoff`, `forcecycle`.
 
 Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` authorization role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @param id ID of the Rack
- @return ApiPowerControlRackRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@param id ID of the Rack
+	@return ApiPowerControlRackRequest
 */
 func (a *RackAPIService) PowerControlRack(ctx context.Context, org string, id string) ApiPowerControlRackRequest {
 	return ApiPowerControlRackRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
-		id: id,
+		ctx:        ctx,
+		org:        org,
+		id:         id,
 	}
 }
 
 // Execute executes the request
-//  @return UpdatePowerStateResponse
+//
+//	@return UpdatePowerStateResponse
 func (a *RackAPIService) PowerControlRackExecute(r ApiPowerControlRackRequest) (*UpdatePowerStateResponse, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodPatch
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *UpdatePowerStateResponse
+		localVarHTTPMethod  = http.MethodPatch
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *UpdatePowerStateResponse
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "RackAPIService.PowerControlRack")
@@ -1035,8 +1041,8 @@ func (a *RackAPIService) PowerControlRackExecute(r ApiPowerControlRackRequest) (
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
@@ -1046,8 +1052,8 @@ func (a *RackAPIService) PowerControlRackExecute(r ApiPowerControlRackRequest) (
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -1065,9 +1071,9 @@ func (a *RackAPIService) PowerControlRackExecute(r ApiPowerControlRackRequest) (
 }
 
 type ApiPowerControlRacksRequest struct {
-	ctx context.Context
-	ApiService *RackAPIService
-	org string
+	ctx                              context.Context
+	ApiService                       *RackAPIService
+	org                              string
 	batchUpdateRackPowerStateRequest *BatchUpdateRackPowerStateRequest
 }
 
@@ -1089,26 +1095,27 @@ Supported power states: `on`, `off`, `cycle`, `forceoff`, `forcecycle`.
 
 Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` authorization role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @return ApiPowerControlRacksRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@return ApiPowerControlRacksRequest
 */
 func (a *RackAPIService) PowerControlRacks(ctx context.Context, org string) ApiPowerControlRacksRequest {
 	return ApiPowerControlRacksRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ctx:        ctx,
+		org:        org,
 	}
 }
 
 // Execute executes the request
-//  @return UpdatePowerStateResponse
+//
+//	@return UpdatePowerStateResponse
 func (a *RackAPIService) PowerControlRacksExecute(r ApiPowerControlRacksRequest) (*UpdatePowerStateResponse, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodPatch
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *UpdatePowerStateResponse
+		localVarHTTPMethod  = http.MethodPatch
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *UpdatePowerStateResponse
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "RackAPIService.PowerControlRacks")
@@ -1174,8 +1181,8 @@ func (a *RackAPIService) PowerControlRacksExecute(r ApiPowerControlRacksRequest)
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
@@ -1185,8 +1192,8 @@ func (a *RackAPIService) PowerControlRacksExecute(r ApiPowerControlRacksRequest)
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -1204,11 +1211,11 @@ func (a *RackAPIService) PowerControlRacksExecute(r ApiPowerControlRacksRequest)
 }
 
 type ApiValidateRackRequest struct {
-	ctx context.Context
+	ctx        context.Context
 	ApiService *RackAPIService
-	siteId *string
-	org string
-	id string
+	siteId     *string
+	org        string
+	id         string
 }
 
 // ID of the Site
@@ -1230,28 +1237,29 @@ Compares the rack's expected component configuration against the actual state. R
 
 Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` authorization role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @param id ID of the Rack
- @return ApiValidateRackRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@param id ID of the Rack
+	@return ApiValidateRackRequest
 */
 func (a *RackAPIService) ValidateRack(ctx context.Context, org string, id string) ApiValidateRackRequest {
 	return ApiValidateRackRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
-		id: id,
+		ctx:        ctx,
+		org:        org,
+		id:         id,
 	}
 }
 
 // Execute executes the request
-//  @return RackValidationResult
+//
+//	@return RackValidationResult
 func (a *RackAPIService) ValidateRackExecute(r ApiValidateRackRequest) (*RackValidationResult, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodGet
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *RackValidationResult
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *RackValidationResult
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "RackAPIService.ValidateRack")
@@ -1317,8 +1325,8 @@ func (a *RackAPIService) ValidateRackExecute(r ApiValidateRackRequest) (*RackVal
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
@@ -1328,8 +1336,8 @@ func (a *RackAPIService) ValidateRackExecute(r ApiValidateRackRequest) (*RackVal
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -1347,11 +1355,11 @@ func (a *RackAPIService) ValidateRackExecute(r ApiValidateRackRequest) (*RackVal
 }
 
 type ApiValidateRacksRequest struct {
-	ctx context.Context
-	ApiService *RackAPIService
-	siteId *string
-	org string
-	name *string
+	ctx          context.Context
+	ApiService   *RackAPIService
+	siteId       *string
+	org          string
+	name         *string
 	manufacturer *string
 }
 
@@ -1388,26 +1396,27 @@ Compares the expected component configuration against the actual state. Returns 
 
 Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` authorization role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @return ApiValidateRacksRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@return ApiValidateRacksRequest
 */
 func (a *RackAPIService) ValidateRacks(ctx context.Context, org string) ApiValidateRacksRequest {
 	return ApiValidateRacksRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ctx:        ctx,
+		org:        org,
 	}
 }
 
 // Execute executes the request
-//  @return RackValidationResult
+//
+//	@return RackValidationResult
 func (a *RackAPIService) ValidateRacksExecute(r ApiValidateRacksRequest) (*RackValidationResult, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodGet
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *RackValidationResult
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *RackValidationResult
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "RackAPIService.ValidateRacks")
@@ -1478,8 +1487,8 @@ func (a *RackAPIService) ValidateRacksExecute(r ApiValidateRacksRequest) (*RackV
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
@@ -1489,8 +1498,8 @@ func (a *RackAPIService) ValidateRacksExecute(r ApiValidateRacksRequest) (*RackV
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}

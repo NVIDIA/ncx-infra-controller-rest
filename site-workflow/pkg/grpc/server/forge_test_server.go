@@ -33,7 +33,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 )
 
 var (

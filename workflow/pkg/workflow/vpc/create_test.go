@@ -30,7 +30,7 @@ import (
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/testsuite"
 
-	vpcActivity "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/activity/vpc"
+	vpcActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/vpc"
 )
 
 type CreateVpcTestSuite struct {

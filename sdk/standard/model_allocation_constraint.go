@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -21,18 +21,18 @@ var _ MappedNullable = &AllocationConstraint{}
 
 // AllocationConstraint Constraints an allocation by specifying limits for different resource types
 type AllocationConstraint struct {
-	Id *string `json:"id,omitempty"`
-	AllocationId *string `json:"allocationId,omitempty"`
-	ResourceType *string `json:"resourceType,omitempty"`
-	ResourceTypeId *string `json:"resourceTypeId,omitempty"`
-	ConstraintType *string `json:"constraintType,omitempty"`
-	ConstraintValue *int32 `json:"constraintValue,omitempty"`
+	Id              *string `json:"id,omitempty"`
+	AllocationId    *string `json:"allocationId,omitempty"`
+	ResourceType    *string `json:"resourceType,omitempty"`
+	ResourceTypeId  *string `json:"resourceTypeId,omitempty"`
+	ConstraintType  *string `json:"constraintType,omitempty"`
+	ConstraintValue *int32  `json:"constraintValue,omitempty"`
 	// Populated with resulting IP Block ID when resource type is IP Block
-	DerivedResourceId NullableString `json:"derivedResourceId,omitempty"`
-	InstanceType *InstanceTypeSummary `json:"instanceType,omitempty"`
-	IpBlock *IpBlockSummary `json:"ipBlock,omitempty"`
-	Created *time.Time `json:"created,omitempty"`
-	Updated *time.Time `json:"updated,omitempty"`
+	DerivedResourceId NullableString       `json:"derivedResourceId,omitempty"`
+	InstanceType      *InstanceTypeSummary `json:"instanceType,omitempty"`
+	IpBlock           *IpBlockSummary      `json:"ipBlock,omitempty"`
+	Created           *time.Time           `json:"created,omitempty"`
+	Updated           *time.Time           `json:"updated,omitempty"`
 }
 
 // NewAllocationConstraint instantiates a new AllocationConstraint object
@@ -276,6 +276,7 @@ func (o *AllocationConstraint) HasDerivedResourceId() bool {
 func (o *AllocationConstraint) SetDerivedResourceId(v string) {
 	o.DerivedResourceId.Set(&v)
 }
+
 // SetDerivedResourceIdNil sets the value for DerivedResourceId to be an explicit nil
 func (o *AllocationConstraint) SetDerivedResourceIdNil() {
 	o.DerivedResourceId.Set(nil)
@@ -415,7 +416,7 @@ func (o *AllocationConstraint) SetUpdated(v time.Time) {
 }
 
 func (o AllocationConstraint) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -495,5 +496,3 @@ func (v *NullableAllocationConstraint) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -12,8 +12,8 @@ Contact: carbide-dev@exchange.nvidia.com
 package standard
 
 import (
-	"encoding/json"
 	"bytes"
+	"encoding/json"
 	"fmt"
 )
 
@@ -207,6 +207,7 @@ func (o *VpcCreateRequest) HasNetworkVirtualizationType() bool {
 func (o *VpcCreateRequest) SetNetworkVirtualizationType(v string) {
 	o.NetworkVirtualizationType.Set(&v)
 }
+
 // SetNetworkVirtualizationTypeNil sets the value for NetworkVirtualizationType to be an explicit nil
 func (o *VpcCreateRequest) SetNetworkVirtualizationTypeNil() {
 	o.NetworkVirtualizationType.Set(nil)
@@ -249,6 +250,7 @@ func (o *VpcCreateRequest) HasNetworkSecurityGroupId() bool {
 func (o *VpcCreateRequest) SetNetworkSecurityGroupId(v string) {
 	o.NetworkSecurityGroupId.Set(&v)
 }
+
 // SetNetworkSecurityGroupIdNil sets the value for NetworkSecurityGroupId to be an explicit nil
 func (o *VpcCreateRequest) SetNetworkSecurityGroupIdNil() {
 	o.NetworkSecurityGroupId.Set(nil)
@@ -291,6 +293,7 @@ func (o *VpcCreateRequest) HasVni() bool {
 func (o *VpcCreateRequest) SetVni(v int32) {
 	o.Vni.Set(&v)
 }
+
 // SetVniNil sets the value for Vni to be an explicit nil
 func (o *VpcCreateRequest) SetVniNil() {
 	o.Vni.Set(nil)
@@ -333,6 +336,7 @@ func (o *VpcCreateRequest) HasNvLinkLogicalPartitionId() bool {
 func (o *VpcCreateRequest) SetNvLinkLogicalPartitionId(v string) {
 	o.NvLinkLogicalPartitionId.Set(&v)
 }
+
 // SetNvLinkLogicalPartitionIdNil sets the value for NvLinkLogicalPartitionId to be an explicit nil
 func (o *VpcCreateRequest) SetNvLinkLogicalPartitionIdNil() {
 	o.NvLinkLogicalPartitionId.Set(nil)
@@ -376,7 +380,7 @@ func (o *VpcCreateRequest) SetLabels(v map[string]string) {
 }
 
 func (o VpcCreateRequest) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -425,10 +429,10 @@ func (o *VpcCreateRequest) UnmarshalJSON(data []byte) (err error) {
 	err = json.Unmarshal(data, &allProperties)
 
 	if err != nil {
-		return err;
+		return err
 	}
 
-	for _, requiredProperty := range(requiredProperties) {
+	for _, requiredProperty := range requiredProperties {
 		if _, exists := allProperties[requiredProperty]; !exists {
 			return fmt.Errorf("no value given for required property %v", requiredProperty)
 		}
@@ -484,5 +488,3 @@ func (v *NullableVpcCreateRequest) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

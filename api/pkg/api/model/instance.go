@@ -23,16 +23,16 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/internal/config"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model/util"
+	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	validationis "github.com/go-ozzo/ozzo-validation/v4/is"
-	"github.com/nvidia/bare-metal-manager-rest/api/internal/config"
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model/util"
-	"github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
 	"gopkg.in/yaml.v3"
 
-	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 )
 
 const (

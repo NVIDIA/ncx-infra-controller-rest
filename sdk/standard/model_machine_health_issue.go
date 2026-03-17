@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -141,6 +141,7 @@ func (o *MachineHealthIssue) HasDetails() bool {
 func (o *MachineHealthIssue) SetDetails(v string) {
 	o.Details.Set(&v)
 }
+
 // SetDetailsNil sets the value for Details to be an explicit nil
 func (o *MachineHealthIssue) SetDetailsNil() {
 	o.Details.Set(nil)
@@ -152,7 +153,7 @@ func (o *MachineHealthIssue) UnsetDetails() {
 }
 
 func (o MachineHealthIssue) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -208,5 +209,3 @@ func (v *NullableMachineHealthIssue) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

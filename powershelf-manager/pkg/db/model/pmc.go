@@ -19,7 +19,7 @@ package model
 import (
 	"context"
 	"errors"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/vendor"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/common/vendor"
 
 	"github.com/uptrace/bun"
 )

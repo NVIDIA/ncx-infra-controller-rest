@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -87,6 +87,7 @@ func (o *ExpectedSwitchUpdateRequest) HasId() bool {
 func (o *ExpectedSwitchUpdateRequest) SetId(v string) {
 	o.Id.Set(&v)
 }
+
 // SetIdNil sets the value for Id to be an explicit nil
 func (o *ExpectedSwitchUpdateRequest) SetIdNil() {
 	o.Id.Set(nil)
@@ -129,6 +130,7 @@ func (o *ExpectedSwitchUpdateRequest) HasBmcMacAddress() bool {
 func (o *ExpectedSwitchUpdateRequest) SetBmcMacAddress(v string) {
 	o.BmcMacAddress.Set(&v)
 }
+
 // SetBmcMacAddressNil sets the value for BmcMacAddress to be an explicit nil
 func (o *ExpectedSwitchUpdateRequest) SetBmcMacAddressNil() {
 	o.BmcMacAddress.Set(nil)
@@ -171,6 +173,7 @@ func (o *ExpectedSwitchUpdateRequest) HasDefaultBmcUsername() bool {
 func (o *ExpectedSwitchUpdateRequest) SetDefaultBmcUsername(v string) {
 	o.DefaultBmcUsername.Set(&v)
 }
+
 // SetDefaultBmcUsernameNil sets the value for DefaultBmcUsername to be an explicit nil
 func (o *ExpectedSwitchUpdateRequest) SetDefaultBmcUsernameNil() {
 	o.DefaultBmcUsername.Set(nil)
@@ -213,6 +216,7 @@ func (o *ExpectedSwitchUpdateRequest) HasDefaultBmcPassword() bool {
 func (o *ExpectedSwitchUpdateRequest) SetDefaultBmcPassword(v string) {
 	o.DefaultBmcPassword.Set(&v)
 }
+
 // SetDefaultBmcPasswordNil sets the value for DefaultBmcPassword to be an explicit nil
 func (o *ExpectedSwitchUpdateRequest) SetDefaultBmcPasswordNil() {
 	o.DefaultBmcPassword.Set(nil)
@@ -255,6 +259,7 @@ func (o *ExpectedSwitchUpdateRequest) HasSwitchSerialNumber() bool {
 func (o *ExpectedSwitchUpdateRequest) SetSwitchSerialNumber(v string) {
 	o.SwitchSerialNumber.Set(&v)
 }
+
 // SetSwitchSerialNumberNil sets the value for SwitchSerialNumber to be an explicit nil
 func (o *ExpectedSwitchUpdateRequest) SetSwitchSerialNumberNil() {
 	o.SwitchSerialNumber.Set(nil)
@@ -297,6 +302,7 @@ func (o *ExpectedSwitchUpdateRequest) HasNvOsUsername() bool {
 func (o *ExpectedSwitchUpdateRequest) SetNvOsUsername(v string) {
 	o.NvOsUsername.Set(&v)
 }
+
 // SetNvOsUsernameNil sets the value for NvOsUsername to be an explicit nil
 func (o *ExpectedSwitchUpdateRequest) SetNvOsUsernameNil() {
 	o.NvOsUsername.Set(nil)
@@ -339,6 +345,7 @@ func (o *ExpectedSwitchUpdateRequest) HasNvOsPassword() bool {
 func (o *ExpectedSwitchUpdateRequest) SetNvOsPassword(v string) {
 	o.NvOsPassword.Set(&v)
 }
+
 // SetNvOsPasswordNil sets the value for NvOsPassword to be an explicit nil
 func (o *ExpectedSwitchUpdateRequest) SetNvOsPasswordNil() {
 	o.NvOsPassword.Set(nil)
@@ -382,7 +389,7 @@ func (o *ExpectedSwitchUpdateRequest) SetLabels(v map[string]string) {
 }
 
 func (o ExpectedSwitchUpdateRequest) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -453,5 +460,3 @@ func (v *NullableExpectedSwitchUpdateRequest) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

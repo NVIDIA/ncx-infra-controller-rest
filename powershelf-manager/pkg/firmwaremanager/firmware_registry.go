@@ -21,12 +21,12 @@ import (
 	"fmt"
 	"net"
 
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/errors"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/converter/dao"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/db/migrations"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/db/model"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/objects/powershelf"
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/common/errors"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/converter/dao"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/db/migrations"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/db/model"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/objects/powershelf"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/uptrace/bun"

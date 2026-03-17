@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -20,14 +20,13 @@ import (
 	"strings"
 )
 
-
 // SSHKeyGroupAPIService SSHKeyGroupAPI service
 type SSHKeyGroupAPIService service
 
 type ApiCreateSshKeyGroupRequest struct {
-	ctx context.Context
-	ApiService *SSHKeyGroupAPIService
-	org string
+	ctx                      context.Context
+	ApiService               *SSHKeyGroupAPIService
+	org                      string
 	sshKeyGroupCreateRequest *SshKeyGroupCreateRequest
 }
 
@@ -47,26 +46,27 @@ Create an SSH Key Group for the current Tenant.
 
 Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` authorization role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @return ApiCreateSshKeyGroupRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@return ApiCreateSshKeyGroupRequest
 */
 func (a *SSHKeyGroupAPIService) CreateSshKeyGroup(ctx context.Context, org string) ApiCreateSshKeyGroupRequest {
 	return ApiCreateSshKeyGroupRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ctx:        ctx,
+		org:        org,
 	}
 }
 
 // Execute executes the request
-//  @return SshKeyGroup
+//
+//	@return SshKeyGroup
 func (a *SSHKeyGroupAPIService) CreateSshKeyGroupExecute(r ApiCreateSshKeyGroupRequest) (*SshKeyGroup, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodPost
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *SshKeyGroup
+		localVarHTTPMethod  = http.MethodPost
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *SshKeyGroup
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "SSHKeyGroupAPIService.CreateSshKeyGroup")
@@ -129,8 +129,8 @@ func (a *SSHKeyGroupAPIService) CreateSshKeyGroupExecute(r ApiCreateSshKeyGroupR
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
@@ -140,8 +140,8 @@ func (a *SSHKeyGroupAPIService) CreateSshKeyGroupExecute(r ApiCreateSshKeyGroupR
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -159,9 +159,9 @@ func (a *SSHKeyGroupAPIService) CreateSshKeyGroupExecute(r ApiCreateSshKeyGroupR
 }
 
 type ApiDeleteSshKeyGroupRequest struct {
-	ctx context.Context
-	ApiService *SSHKeyGroupAPIService
-	org string
+	ctx           context.Context
+	ApiService    *SSHKeyGroupAPIService
+	org           string
 	sshKeyGroupId string
 }
 
@@ -178,16 +178,16 @@ SSH Key Group must be owned by current Tenant. All Sites associated must be onli
 
 Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` authorization role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @param sshKeyGroupId ID of the SSH Key Group
- @return ApiDeleteSshKeyGroupRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@param sshKeyGroupId ID of the SSH Key Group
+	@return ApiDeleteSshKeyGroupRequest
 */
 func (a *SSHKeyGroupAPIService) DeleteSshKeyGroup(ctx context.Context, org string, sshKeyGroupId string) ApiDeleteSshKeyGroupRequest {
 	return ApiDeleteSshKeyGroupRequest{
-		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ApiService:    a,
+		ctx:           ctx,
+		org:           org,
 		sshKeyGroupId: sshKeyGroupId,
 	}
 }
@@ -195,9 +195,9 @@ func (a *SSHKeyGroupAPIService) DeleteSshKeyGroup(ctx context.Context, org strin
 // Execute executes the request
 func (a *SSHKeyGroupAPIService) DeleteSshKeyGroupExecute(r ApiDeleteSshKeyGroupRequest) (*http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodDelete
-		localVarPostBody     interface{}
-		formFiles            []formFile
+		localVarHTTPMethod = http.MethodDelete
+		localVarPostBody   interface{}
+		formFiles          []formFile
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "SSHKeyGroupAPIService.DeleteSshKeyGroup")
@@ -259,8 +259,8 @@ func (a *SSHKeyGroupAPIService) DeleteSshKeyGroupExecute(r ApiDeleteSshKeyGroupR
 				newErr.error = err.Error()
 				return localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarHTTPResponse, newErr
 	}
@@ -269,17 +269,17 @@ func (a *SSHKeyGroupAPIService) DeleteSshKeyGroupExecute(r ApiDeleteSshKeyGroupR
 }
 
 type ApiGetAllSshKeyGroupRequest struct {
-	ctx context.Context
-	ApiService *SSHKeyGroupAPIService
-	org string
-	siteId *string
-	instanceId *string
-	status *string
-	query *string
+	ctx             context.Context
+	ApiService      *SSHKeyGroupAPIService
+	org             string
+	siteId          *string
+	instanceId      *string
+	status          *string
+	query           *string
 	includeRelation *string
-	pageNumber *int32
-	pageSize *int32
-	orderBy *string
+	pageNumber      *int32
+	pageSize        *int32
+	orderBy         *string
 }
 
 // Filter SSH Key Groups by Site ID
@@ -341,26 +341,27 @@ Retrieve all SSH Key Groups for the current Tenant.
 
 Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` authorization role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @return ApiGetAllSshKeyGroupRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@return ApiGetAllSshKeyGroupRequest
 */
 func (a *SSHKeyGroupAPIService) GetAllSshKeyGroup(ctx context.Context, org string) ApiGetAllSshKeyGroupRequest {
 	return ApiGetAllSshKeyGroupRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ctx:        ctx,
+		org:        org,
 	}
 }
 
 // Execute executes the request
-//  @return []SshKeyGroup
+//
+//	@return []SshKeyGroup
 func (a *SSHKeyGroupAPIService) GetAllSshKeyGroupExecute(r ApiGetAllSshKeyGroupRequest) ([]SshKeyGroup, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodGet
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  []SshKeyGroup
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue []SshKeyGroup
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "SSHKeyGroupAPIService.GetAllSshKeyGroup")
@@ -449,8 +450,8 @@ func (a *SSHKeyGroupAPIService) GetAllSshKeyGroupExecute(r ApiGetAllSshKeyGroupR
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -468,9 +469,9 @@ func (a *SSHKeyGroupAPIService) GetAllSshKeyGroupExecute(r ApiGetAllSshKeyGroupR
 }
 
 type ApiGetSshKeyGroupRequest struct {
-	ctx context.Context
-	ApiService *SSHKeyGroupAPIService
-	org string
+	ctx           context.Context
+	ApiService    *SSHKeyGroupAPIService
+	org           string
 	sshKeyGroupId string
 }
 
@@ -481,34 +482,35 @@ func (r ApiGetSshKeyGroupRequest) Execute() (*SshKeyGroup, *http.Response, error
 /*
 GetSshKeyGroup Retrieve an SSH Key Group
 
-Retrieve an SSH Key Group for the current Tenant by ID
+# Retrieve an SSH Key Group for the current Tenant by ID
 
 SSH Key Group must be owned by current Tenant.
 
 Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` authorization role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @param sshKeyGroupId ID of the SSH Key Group
- @return ApiGetSshKeyGroupRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@param sshKeyGroupId ID of the SSH Key Group
+	@return ApiGetSshKeyGroupRequest
 */
 func (a *SSHKeyGroupAPIService) GetSshKeyGroup(ctx context.Context, org string, sshKeyGroupId string) ApiGetSshKeyGroupRequest {
 	return ApiGetSshKeyGroupRequest{
-		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ApiService:    a,
+		ctx:           ctx,
+		org:           org,
 		sshKeyGroupId: sshKeyGroupId,
 	}
 }
 
 // Execute executes the request
-//  @return SshKeyGroup
+//
+//	@return SshKeyGroup
 func (a *SSHKeyGroupAPIService) GetSshKeyGroupExecute(r ApiGetSshKeyGroupRequest) (*SshKeyGroup, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodGet
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *SshKeyGroup
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *SshKeyGroup
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "SSHKeyGroupAPIService.GetSshKeyGroup")
@@ -570,8 +572,8 @@ func (a *SSHKeyGroupAPIService) GetSshKeyGroupExecute(r ApiGetSshKeyGroupRequest
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -589,10 +591,10 @@ func (a *SSHKeyGroupAPIService) GetSshKeyGroupExecute(r ApiGetSshKeyGroupRequest
 }
 
 type ApiUpdateSshKeyGroupRequest struct {
-	ctx context.Context
-	ApiService *SSHKeyGroupAPIService
-	org string
-	sshKeyGroupId string
+	ctx                      context.Context
+	ApiService               *SSHKeyGroupAPIService
+	org                      string
+	sshKeyGroupId            string
 	sshKeyGroupUpdateRequest *SshKeyGroupUpdateRequest
 }
 
@@ -614,28 +616,29 @@ SSH Key Group must be owned by current Tenant. All Sites being added or removed 
 
 Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` authorization role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @param sshKeyGroupId ID of the SSH Key Group
- @return ApiUpdateSshKeyGroupRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@param sshKeyGroupId ID of the SSH Key Group
+	@return ApiUpdateSshKeyGroupRequest
 */
 func (a *SSHKeyGroupAPIService) UpdateSshKeyGroup(ctx context.Context, org string, sshKeyGroupId string) ApiUpdateSshKeyGroupRequest {
 	return ApiUpdateSshKeyGroupRequest{
-		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ApiService:    a,
+		ctx:           ctx,
+		org:           org,
 		sshKeyGroupId: sshKeyGroupId,
 	}
 }
 
 // Execute executes the request
-//  @return SshKeyGroup
+//
+//	@return SshKeyGroup
 func (a *SSHKeyGroupAPIService) UpdateSshKeyGroupExecute(r ApiUpdateSshKeyGroupRequest) (*SshKeyGroup, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodPatch
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *SshKeyGroup
+		localVarHTTPMethod  = http.MethodPatch
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *SshKeyGroup
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "SSHKeyGroupAPIService.UpdateSshKeyGroup")
@@ -699,8 +702,8 @@ func (a *SSHKeyGroupAPIService) UpdateSshKeyGroupExecute(r ApiUpdateSshKeyGroupR
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
@@ -710,8 +713,8 @@ func (a *SSHKeyGroupAPIService) UpdateSshKeyGroupExecute(r ApiUpdateSshKeyGroupR
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}

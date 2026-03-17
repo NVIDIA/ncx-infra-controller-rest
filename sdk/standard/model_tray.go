@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -39,8 +39,8 @@ type Tray struct {
 	// Firmware version of the tray
 	FirmwareVersion *string `json:"firmwareVersion,omitempty"`
 	// Current power state of the tray
-	PowerState *string `json:"powerState,omitempty"`
-	Position *TrayPosition `json:"position,omitempty"`
+	PowerState *string       `json:"powerState,omitempty"`
+	Position   *TrayPosition `json:"position,omitempty"`
 	// BMC (Baseboard Management Controller) entries for the tray
 	Bmcs []BMCInfo `json:"bmcs,omitempty"`
 	// ID of the rack this tray belongs to
@@ -481,7 +481,7 @@ func (o *Tray) SetRackId(v string) {
 }
 
 func (o Tray) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -567,5 +567,3 @@ func (v *NullableTray) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

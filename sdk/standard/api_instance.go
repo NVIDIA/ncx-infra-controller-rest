@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -20,14 +20,13 @@ import (
 	"strings"
 )
 
-
 // InstanceAPIService InstanceAPI service
 type InstanceAPIService service
 
 type ApiBatchCreateInstanceRequest struct {
-	ctx context.Context
-	ApiService *InstanceAPIService
-	org string
+	ctx                        context.Context
+	ApiService                 *InstanceAPIService
+	org                        string
 	batchInstanceCreateRequest *BatchInstanceCreateRequest
 }
 
@@ -55,27 +54,27 @@ Instance names are automatically generated using the `namePrefix` with a random 
 
 Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` authorization role.
 
-
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @return ApiBatchCreateInstanceRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@return ApiBatchCreateInstanceRequest
 */
 func (a *InstanceAPIService) BatchCreateInstance(ctx context.Context, org string) ApiBatchCreateInstanceRequest {
 	return ApiBatchCreateInstanceRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ctx:        ctx,
+		org:        org,
 	}
 }
 
 // Execute executes the request
-//  @return []Instance
+//
+//	@return []Instance
 func (a *InstanceAPIService) BatchCreateInstanceExecute(r ApiBatchCreateInstanceRequest) ([]Instance, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodPost
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  []Instance
+		localVarHTTPMethod  = http.MethodPost
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue []Instance
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "InstanceAPIService.BatchCreateInstance")
@@ -138,8 +137,8 @@ func (a *InstanceAPIService) BatchCreateInstanceExecute(r ApiBatchCreateInstance
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
@@ -149,8 +148,8 @@ func (a *InstanceAPIService) BatchCreateInstanceExecute(r ApiBatchCreateInstance
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -168,9 +167,9 @@ func (a *InstanceAPIService) BatchCreateInstanceExecute(r ApiBatchCreateInstance
 }
 
 type ApiCreateInstanceRequest struct {
-	ctx context.Context
-	ApiService *InstanceAPIService
-	org string
+	ctx                   context.Context
+	ApiService            *InstanceAPIService
+	org                   string
 	instanceCreateRequest *InstanceCreateRequest
 }
 
@@ -190,27 +189,27 @@ Create an Instance for Tenant.
 
 Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` authorization role.
 
-
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @return ApiCreateInstanceRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@return ApiCreateInstanceRequest
 */
 func (a *InstanceAPIService) CreateInstance(ctx context.Context, org string) ApiCreateInstanceRequest {
 	return ApiCreateInstanceRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ctx:        ctx,
+		org:        org,
 	}
 }
 
 // Execute executes the request
-//  @return Instance
+//
+//	@return Instance
 func (a *InstanceAPIService) CreateInstanceExecute(r ApiCreateInstanceRequest) (*Instance, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodPost
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *Instance
+		localVarHTTPMethod  = http.MethodPost
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *Instance
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "InstanceAPIService.CreateInstance")
@@ -273,8 +272,8 @@ func (a *InstanceAPIService) CreateInstanceExecute(r ApiCreateInstanceRequest) (
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
@@ -284,8 +283,8 @@ func (a *InstanceAPIService) CreateInstanceExecute(r ApiCreateInstanceRequest) (
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -303,10 +302,10 @@ func (a *InstanceAPIService) CreateInstanceExecute(r ApiCreateInstanceRequest) (
 }
 
 type ApiDeleteInstanceRequest struct {
-	ctx context.Context
-	ApiService *InstanceAPIService
-	org string
-	instanceId string
+	ctx                   context.Context
+	ApiService            *InstanceAPIService
+	org                   string
+	instanceId            string
 	instanceDeleteRequest *InstanceDeleteRequest
 }
 
@@ -323,20 +322,20 @@ func (r ApiDeleteInstanceRequest) Execute() (*http.Response, error) {
 /*
 DeleteInstance Delete Instance
 
-Delete an Instance by ID
+# Delete an Instance by ID
 
 Org must have a Tenant entity. Instance must belong to Tenant. User must have `FORGE_TENANT_ADMIN` authorization role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @param instanceId ID of the Instance
- @return ApiDeleteInstanceRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@param instanceId ID of the Instance
+	@return ApiDeleteInstanceRequest
 */
 func (a *InstanceAPIService) DeleteInstance(ctx context.Context, org string, instanceId string) ApiDeleteInstanceRequest {
 	return ApiDeleteInstanceRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ctx:        ctx,
+		org:        org,
 		instanceId: instanceId,
 	}
 }
@@ -344,9 +343,9 @@ func (a *InstanceAPIService) DeleteInstance(ctx context.Context, org string, ins
 // Execute executes the request
 func (a *InstanceAPIService) DeleteInstanceExecute(r ApiDeleteInstanceRequest) (*http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodDelete
-		localVarPostBody     interface{}
-		formFiles            []formFile
+		localVarHTTPMethod = http.MethodDelete
+		localVarPostBody   interface{}
+		formFiles          []formFile
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "InstanceAPIService.DeleteInstance")
@@ -410,24 +409,24 @@ func (a *InstanceAPIService) DeleteInstanceExecute(r ApiDeleteInstanceRequest) (
 }
 
 type ApiGetAllInstanceRequest struct {
-	ctx context.Context
-	ApiService *InstanceAPIService
-	org string
+	ctx                      context.Context
+	ApiService               *InstanceAPIService
+	org                      string
 	infrastructureProviderId *string
-	siteId *string
-	vpcId *string
-	instanceTypeId *string
-	operatingSystemId *string
-	machineId *string
-	name *string
-	status *string
-	ipAddress *string
-	query *string
-	includeRelation *string
-	pageNumber *int32
-	pageSize *int32
-	orderBy *string
-	networkSecurityGroupId *string
+	siteId                   *string
+	vpcId                    *string
+	instanceTypeId           *string
+	operatingSystemId        *string
+	machineId                *string
+	name                     *string
+	status                   *string
+	ipAddress                *string
+	query                    *string
+	includeRelation          *string
+	pageNumber               *int32
+	pageSize                 *int32
+	orderBy                  *string
+	networkSecurityGroupId   *string
 }
 
 // Filter by Infrastructure Provider ID
@@ -531,27 +530,27 @@ Get all Instances for Tenant.
 
 Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` authorization role.
 
-
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @return ApiGetAllInstanceRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@return ApiGetAllInstanceRequest
 */
 func (a *InstanceAPIService) GetAllInstance(ctx context.Context, org string) ApiGetAllInstanceRequest {
 	return ApiGetAllInstanceRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ctx:        ctx,
+		org:        org,
 	}
 }
 
 // Execute executes the request
-//  @return []Instance
+//
+//	@return []Instance
 func (a *InstanceAPIService) GetAllInstanceExecute(r ApiGetAllInstanceRequest) ([]Instance, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodGet
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  []Instance
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue []Instance
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "InstanceAPIService.GetAllInstance")
@@ -661,8 +660,8 @@ func (a *InstanceAPIService) GetAllInstanceExecute(r ApiGetAllInstanceRequest) (
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -680,15 +679,15 @@ func (a *InstanceAPIService) GetAllInstanceExecute(r ApiGetAllInstanceRequest) (
 }
 
 type ApiGetAllInstanceInfinibandInterfaceRequest struct {
-	ctx context.Context
-	ApiService *InstanceAPIService
-	org string
-	instanceId string
-	status *string
+	ctx             context.Context
+	ApiService      *InstanceAPIService
+	org             string
+	instanceId      string
+	status          *string
 	includeRelation *string
-	pageNumber *int32
-	pageSize *int32
-	orderBy *string
+	pageNumber      *int32
+	pageSize        *int32
+	orderBy         *string
 }
 
 // Filter InfiniBand Interfaces by Status
@@ -728,32 +727,33 @@ func (r ApiGetAllInstanceInfinibandInterfaceRequest) Execute() ([]InfiniBandInte
 /*
 GetAllInstanceInfinibandInterface Retrieve all Instance InfiniBand Interfaces
 
-Get all InfiniBand Interfaces for an Instance
+# Get all InfiniBand Interfaces for an Instance
 
 Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` authorization role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @param instanceId ID of the Instance
- @return ApiGetAllInstanceInfinibandInterfaceRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@param instanceId ID of the Instance
+	@return ApiGetAllInstanceInfinibandInterfaceRequest
 */
 func (a *InstanceAPIService) GetAllInstanceInfinibandInterface(ctx context.Context, org string, instanceId string) ApiGetAllInstanceInfinibandInterfaceRequest {
 	return ApiGetAllInstanceInfinibandInterfaceRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ctx:        ctx,
+		org:        org,
 		instanceId: instanceId,
 	}
 }
 
 // Execute executes the request
-//  @return []InfiniBandInterface
+//
+//	@return []InfiniBandInterface
 func (a *InstanceAPIService) GetAllInstanceInfinibandInterfaceExecute(r ApiGetAllInstanceInfinibandInterfaceRequest) ([]InfiniBandInterface, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodGet
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  []InfiniBandInterface
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue []InfiniBandInterface
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "InstanceAPIService.GetAllInstanceInfinibandInterface")
@@ -834,8 +834,8 @@ func (a *InstanceAPIService) GetAllInstanceInfinibandInterfaceExecute(r ApiGetAl
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -853,15 +853,15 @@ func (a *InstanceAPIService) GetAllInstanceInfinibandInterfaceExecute(r ApiGetAl
 }
 
 type ApiGetAllInstanceNvlinkInterfaceRequest struct {
-	ctx context.Context
-	ApiService *InstanceAPIService
-	org string
-	instanceId string
-	status *string
+	ctx             context.Context
+	ApiService      *InstanceAPIService
+	org             string
+	instanceId      string
+	status          *string
 	includeRelation *string
-	pageNumber *int32
-	pageSize *int32
-	orderBy *string
+	pageNumber      *int32
+	pageSize        *int32
+	orderBy         *string
 }
 
 // Filter NVLink Interfaces by Status. Can be specified multiple times to filter on more than one status.
@@ -901,32 +901,33 @@ func (r ApiGetAllInstanceNvlinkInterfaceRequest) Execute() ([]NVLinkInterface, *
 /*
 GetAllInstanceNvlinkInterface Retrieve all Instance NVLink Interfaces
 
-Get all NVLink Interfaces for an Instance
+# Get all NVLink Interfaces for an Instance
 
 Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` authorization role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @param instanceId ID of the Instance
- @return ApiGetAllInstanceNvlinkInterfaceRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@param instanceId ID of the Instance
+	@return ApiGetAllInstanceNvlinkInterfaceRequest
 */
 func (a *InstanceAPIService) GetAllInstanceNvlinkInterface(ctx context.Context, org string, instanceId string) ApiGetAllInstanceNvlinkInterfaceRequest {
 	return ApiGetAllInstanceNvlinkInterfaceRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ctx:        ctx,
+		org:        org,
 		instanceId: instanceId,
 	}
 }
 
 // Execute executes the request
-//  @return []NVLinkInterface
+//
+//	@return []NVLinkInterface
 func (a *InstanceAPIService) GetAllInstanceNvlinkInterfaceExecute(r ApiGetAllInstanceNvlinkInterfaceRequest) ([]NVLinkInterface, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodGet
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  []NVLinkInterface
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue []NVLinkInterface
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "InstanceAPIService.GetAllInstanceNvlinkInterface")
@@ -1007,8 +1008,8 @@ func (a *InstanceAPIService) GetAllInstanceNvlinkInterfaceExecute(r ApiGetAllIns
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -1026,15 +1027,15 @@ func (a *InstanceAPIService) GetAllInstanceNvlinkInterfaceExecute(r ApiGetAllIns
 }
 
 type ApiGetAllInterfaceRequest struct {
-	ctx context.Context
-	ApiService *InstanceAPIService
-	org string
-	instanceId string
-	status *string
+	ctx             context.Context
+	ApiService      *InstanceAPIService
+	org             string
+	instanceId      string
+	status          *string
 	includeRelation *string
-	pageNumber *int32
-	pageSize *int32
-	orderBy *string
+	pageNumber      *int32
+	pageSize        *int32
+	orderBy         *string
 }
 
 // Filter Interfaces by Status
@@ -1074,32 +1075,33 @@ func (r ApiGetAllInterfaceRequest) Execute() ([]Interface, *http.Response, error
 /*
 GetAllInterface Retrieve all Interfaces
 
-Get all Interfaces for an Instance
+# Get all Interfaces for an Instance
 
 Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` authorization role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @param instanceId ID of the Instance
- @return ApiGetAllInterfaceRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@param instanceId ID of the Instance
+	@return ApiGetAllInterfaceRequest
 */
 func (a *InstanceAPIService) GetAllInterface(ctx context.Context, org string, instanceId string) ApiGetAllInterfaceRequest {
 	return ApiGetAllInterfaceRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ctx:        ctx,
+		org:        org,
 		instanceId: instanceId,
 	}
 }
 
 // Execute executes the request
-//  @return []Interface
+//
+//	@return []Interface
 func (a *InstanceAPIService) GetAllInterfaceExecute(r ApiGetAllInterfaceRequest) ([]Interface, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodGet
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  []Interface
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue []Interface
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "InstanceAPIService.GetAllInterface")
@@ -1180,8 +1182,8 @@ func (a *InstanceAPIService) GetAllInterfaceExecute(r ApiGetAllInterfaceRequest)
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -1199,10 +1201,10 @@ func (a *InstanceAPIService) GetAllInterfaceExecute(r ApiGetAllInterfaceRequest)
 }
 
 type ApiGetInstanceRequest struct {
-	ctx context.Context
-	ApiService *InstanceAPIService
-	org string
-	instanceId string
+	ctx             context.Context
+	ApiService      *InstanceAPIService
+	org             string
+	instanceId      string
 	includeRelation *string
 }
 
@@ -1219,33 +1221,33 @@ func (r ApiGetInstanceRequest) Execute() (*Instance, *http.Response, error) {
 /*
 GetInstance Retrieve Instance
 
-Get an Instance by ID
+# Get an Instance by ID
 
 Org must have a Tenant entity. Instance must belong to Tenant. User must have `FORGE_TENANT_ADMIN` authorization role.
 
-
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @param instanceId ID of the Instance
- @return ApiGetInstanceRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@param instanceId ID of the Instance
+	@return ApiGetInstanceRequest
 */
 func (a *InstanceAPIService) GetInstance(ctx context.Context, org string, instanceId string) ApiGetInstanceRequest {
 	return ApiGetInstanceRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ctx:        ctx,
+		org:        org,
 		instanceId: instanceId,
 	}
 }
 
 // Execute executes the request
-//  @return Instance
+//
+//	@return Instance
 func (a *InstanceAPIService) GetInstanceExecute(r ApiGetInstanceRequest) (*Instance, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodGet
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *Instance
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *Instance
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "InstanceAPIService.GetInstance")
@@ -1310,8 +1312,8 @@ func (a *InstanceAPIService) GetInstanceExecute(r ApiGetInstanceRequest) (*Insta
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -1329,13 +1331,13 @@ func (a *InstanceAPIService) GetInstanceExecute(r ApiGetInstanceRequest) (*Insta
 }
 
 type ApiGetInstanceStatusHistoryRequest struct {
-	ctx context.Context
+	ctx        context.Context
 	ApiService *InstanceAPIService
-	org string
+	org        string
 	instanceId string
 	pageNumber *int32
-	pageSize *int32
-	orderBy *string
+	pageSize   *int32
+	orderBy    *string
 }
 
 // Page number for pagination query
@@ -1363,33 +1365,33 @@ func (r ApiGetInstanceStatusHistoryRequest) Execute() ([]StatusDetail, *http.Res
 /*
 GetInstanceStatusHistory Retrieve Instance status history
 
-Get Instance status history
+# Get Instance status history
 
 Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` authorization role.
 
-
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @param instanceId ID of the Instance
- @return ApiGetInstanceStatusHistoryRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@param instanceId ID of the Instance
+	@return ApiGetInstanceStatusHistoryRequest
 */
 func (a *InstanceAPIService) GetInstanceStatusHistory(ctx context.Context, org string, instanceId string) ApiGetInstanceStatusHistoryRequest {
 	return ApiGetInstanceStatusHistoryRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ctx:        ctx,
+		org:        org,
 		instanceId: instanceId,
 	}
 }
 
 // Execute executes the request
-//  @return []StatusDetail
+//
+//	@return []StatusDetail
 func (a *InstanceAPIService) GetInstanceStatusHistoryExecute(r ApiGetInstanceStatusHistoryRequest) ([]StatusDetail, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodGet
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  []StatusDetail
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue []StatusDetail
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "InstanceAPIService.GetInstanceStatusHistory")
@@ -1460,8 +1462,8 @@ func (a *InstanceAPIService) GetInstanceStatusHistoryExecute(r ApiGetInstanceSta
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -1479,14 +1481,13 @@ func (a *InstanceAPIService) GetInstanceStatusHistoryExecute(r ApiGetInstanceSta
 }
 
 type ApiUpdateInstanceRequest struct {
-	ctx context.Context
-	ApiService *InstanceAPIService
-	org string
-	instanceId string
+	ctx                   context.Context
+	ApiService            *InstanceAPIService
+	org                   string
+	instanceId            string
 	instanceUpdateRequest *InstanceUpdateRequest
 }
 
-// 
 func (r ApiUpdateInstanceRequest) InstanceUpdateRequest(instanceUpdateRequest InstanceUpdateRequest) ApiUpdateInstanceRequest {
 	r.instanceUpdateRequest = &instanceUpdateRequest
 	return r
@@ -1499,32 +1500,33 @@ func (r ApiUpdateInstanceRequest) Execute() (*Instance, *http.Response, error) {
 /*
 UpdateInstance Update Instance
 
-Update an Instance by ID
+# Update an Instance by ID
 
 Org must have a Tenant entity. Instance must belong to Tenant. User must have `FORGE_TENANT_ADMIN` authorization role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @param instanceId ID of the Instance
- @return ApiUpdateInstanceRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@param instanceId ID of the Instance
+	@return ApiUpdateInstanceRequest
 */
 func (a *InstanceAPIService) UpdateInstance(ctx context.Context, org string, instanceId string) ApiUpdateInstanceRequest {
 	return ApiUpdateInstanceRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ctx:        ctx,
+		org:        org,
 		instanceId: instanceId,
 	}
 }
 
 // Execute executes the request
-//  @return Instance
+//
+//	@return Instance
 func (a *InstanceAPIService) UpdateInstanceExecute(r ApiUpdateInstanceRequest) (*Instance, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodPatch
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *Instance
+		localVarHTTPMethod  = http.MethodPatch
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *Instance
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "InstanceAPIService.UpdateInstance")
@@ -1588,8 +1590,8 @@ func (a *InstanceAPIService) UpdateInstanceExecute(r ApiUpdateInstanceRequest) (
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
@@ -1599,8 +1601,8 @@ func (a *InstanceAPIService) UpdateInstanceExecute(r ApiUpdateInstanceRequest) (
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}

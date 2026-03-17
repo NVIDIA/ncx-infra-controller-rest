@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -21,10 +21,10 @@ type SshKeyGroupSiteAssociationStatus string
 
 // List of SshKeyGroupSiteAssociationStatus
 const (
-	SSHKEYGROUPSITEASSOCIATIONSTATUS_SYNCING SshKeyGroupSiteAssociationStatus = "Syncing"
-	SSHKEYGROUPSITEASSOCIATIONSTATUS_SYNCED SshKeyGroupSiteAssociationStatus = "Synced"
-	SSHKEYGROUPSITEASSOCIATIONSTATUS_PENDING SshKeyGroupSiteAssociationStatus = "Pending"
-	SSHKEYGROUPSITEASSOCIATIONSTATUS_ERROR SshKeyGroupSiteAssociationStatus = "Error"
+	SSHKEYGROUPSITEASSOCIATIONSTATUS_SYNCING  SshKeyGroupSiteAssociationStatus = "Syncing"
+	SSHKEYGROUPSITEASSOCIATIONSTATUS_SYNCED   SshKeyGroupSiteAssociationStatus = "Synced"
+	SSHKEYGROUPSITEASSOCIATIONSTATUS_PENDING  SshKeyGroupSiteAssociationStatus = "Pending"
+	SSHKEYGROUPSITEASSOCIATIONSTATUS_ERROR    SshKeyGroupSiteAssociationStatus = "Error"
 	SSHKEYGROUPSITEASSOCIATIONSTATUS_DELETING SshKeyGroupSiteAssociationStatus = "Deleting"
 )
 
@@ -115,4 +115,3 @@ func (v *NullableSshKeyGroupSiteAssociationStatus) UnmarshalJSON(src []byte) err
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-

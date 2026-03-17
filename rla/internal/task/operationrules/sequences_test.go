@@ -20,7 +20,7 @@ package operationrules
 import (
 	"testing"
 
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/common"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/common"
 )
 
 func TestIsValidOperation(t *testing.T) {

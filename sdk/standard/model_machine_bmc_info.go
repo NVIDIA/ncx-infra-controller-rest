@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -20,9 +20,9 @@ var _ MappedNullable = &MachineBMCInfo{}
 
 // MachineBMCInfo Describes BMC information of a Machine
 type MachineBMCInfo struct {
-	Ip *string `json:"ip,omitempty"`
-	Mac *string `json:"mac,omitempty"`
-	Version *string `json:"version,omitempty"`
+	Ip               *string `json:"ip,omitempty"`
+	Mac              *string `json:"mac,omitempty"`
+	Version          *string `json:"version,omitempty"`
 	FirmwareRevision *string `json:"firmwareRevision,omitempty"`
 }
 
@@ -172,7 +172,7 @@ func (o *MachineBMCInfo) SetFirmwareRevision(v string) {
 }
 
 func (o MachineBMCInfo) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -231,5 +231,3 @@ func (v *NullableMachineBMCInfo) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

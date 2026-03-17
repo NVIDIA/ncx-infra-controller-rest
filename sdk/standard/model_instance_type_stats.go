@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -20,12 +20,12 @@ var _ MappedNullable = &InstanceTypeStats{}
 
 // InstanceTypeStats Stats for an instance type including allocation details
 type InstanceTypeStats struct {
-	Id *string `json:"id,omitempty"`
-	Name *string `json:"name,omitempty"`
-	Allocated *int32 `json:"allocated,omitempty"`
+	Id               *string                 `json:"id,omitempty"`
+	Name             *string                 `json:"name,omitempty"`
+	Allocated        *int32                  `json:"allocated,omitempty"`
 	UsedMachineStats *MachineStatusBreakdown `json:"usedMachineStats,omitempty"`
-	MaxAllocatable *int32 `json:"maxAllocatable,omitempty"`
-	Allocations []AllocationStats `json:"allocations,omitempty"`
+	MaxAllocatable   *int32                  `json:"maxAllocatable,omitempty"`
+	Allocations      []AllocationStats       `json:"allocations,omitempty"`
 }
 
 // NewInstanceTypeStats instantiates a new InstanceTypeStats object
@@ -238,7 +238,7 @@ func (o *InstanceTypeStats) SetAllocations(v []AllocationStats) {
 }
 
 func (o InstanceTypeStats) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -303,5 +303,3 @@ func (v *NullableInstanceTypeStats) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

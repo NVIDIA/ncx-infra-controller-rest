@@ -24,9 +24,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/util"
+	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
 	"github.com/labstack/echo/v4"
-	"github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
 	"github.com/rs/zerolog"
 )
 

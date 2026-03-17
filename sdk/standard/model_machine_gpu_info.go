@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -20,14 +20,14 @@ var _ MappedNullable = &MachineGPUInfo{}
 
 // MachineGPUInfo Describes information about GPU of a Machine
 type MachineGPUInfo struct {
-	Name *string `json:"name,omitempty"`
-	Serial *string `json:"serial,omitempty"`
-	DriverVersion *string `json:"driverVersion,omitempty"`
-	VbiosVersion *string `json:"vbiosVersion,omitempty"`
+	Name           *string `json:"name,omitempty"`
+	Serial         *string `json:"serial,omitempty"`
+	DriverVersion  *string `json:"driverVersion,omitempty"`
+	VbiosVersion   *string `json:"vbiosVersion,omitempty"`
 	InforomVersion *string `json:"inforomVersion,omitempty"`
-	TotalMemory *string `json:"totalMemory,omitempty"`
-	Frequency *string `json:"frequency,omitempty"`
-	PciBusId *string `json:"pciBusId,omitempty"`
+	TotalMemory    *string `json:"totalMemory,omitempty"`
+	Frequency      *string `json:"frequency,omitempty"`
+	PciBusId       *string `json:"pciBusId,omitempty"`
 }
 
 // NewMachineGPUInfo instantiates a new MachineGPUInfo object
@@ -304,7 +304,7 @@ func (o *MachineGPUInfo) SetPciBusId(v string) {
 }
 
 func (o MachineGPUInfo) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -375,5 +375,3 @@ func (v *NullableMachineGPUInfo) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

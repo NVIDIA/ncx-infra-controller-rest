@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -21,11 +21,11 @@ type NetworkSecurityGroupStatus string
 
 // List of NetworkSecurityGroupStatus
 const (
-	NETWORKSECURITYGROUPSTATUS_PENDING NetworkSecurityGroupStatus = "Pending"
+	NETWORKSECURITYGROUPSTATUS_PENDING      NetworkSecurityGroupStatus = "Pending"
 	NETWORKSECURITYGROUPSTATUS_PROVISIONING NetworkSecurityGroupStatus = "Provisioning"
-	NETWORKSECURITYGROUPSTATUS_READY NetworkSecurityGroupStatus = "Ready"
-	NETWORKSECURITYGROUPSTATUS_DELETING NetworkSecurityGroupStatus = "Deleting"
-	NETWORKSECURITYGROUPSTATUS_ERROR NetworkSecurityGroupStatus = "Error"
+	NETWORKSECURITYGROUPSTATUS_READY        NetworkSecurityGroupStatus = "Ready"
+	NETWORKSECURITYGROUPSTATUS_DELETING     NetworkSecurityGroupStatus = "Deleting"
+	NETWORKSECURITYGROUPSTATUS_ERROR        NetworkSecurityGroupStatus = "Error"
 )
 
 // All allowed values of NetworkSecurityGroupStatus enum
@@ -115,4 +115,3 @@ func (v *NullableNetworkSecurityGroupStatus) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-

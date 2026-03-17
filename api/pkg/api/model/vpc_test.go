@@ -22,10 +22,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model/util"
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
 	"github.com/google/uuid"
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model/util"
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
 	"github.com/stretchr/testify/assert"
 )
 

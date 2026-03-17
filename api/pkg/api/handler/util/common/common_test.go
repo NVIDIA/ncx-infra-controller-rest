@@ -27,8 +27,8 @@ import (
 	"os"
 	"testing"
 
+	swe "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/error"
 	"github.com/google/uuid"
-	swe "github.com/nvidia/bare-metal-manager-rest/site-workflow/pkg/error"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/uptrace/bun/extra/bundebug"
@@ -36,11 +36,11 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	cam "github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model"
-	cerr "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
-	cdbu "github.com/nvidia/bare-metal-manager-rest/db/pkg/util"
+	cam "github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model"
+	cerr "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/util"
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
+	cdbu "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/util"
 )
 
 func testCommonInitDB(t *testing.T) *cdb.Session {

@@ -20,7 +20,7 @@ package operations
 import (
 	"testing"
 
-	taskcommon "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/common"
+	taskcommon "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/common"
 )
 
 func TestPowerOperationCodeString(t *testing.T) {

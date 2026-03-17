@@ -22,14 +22,14 @@ import (
 	"fmt"
 	"time"
 
-	computils "github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/components/common"
+	computils "github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/common"
 
-	"github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/components/utils"
+	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/utils"
 
-	workflowtypes "github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/datatypes/managertypes/workflow"
-	wflows "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
+	workflowtypes "github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/datatypes/managertypes/workflow"
+	wflows "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 
-	"github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/conftypes"
+	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/conftypes"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/workflow"
 	"google.golang.org/protobuf/types/known/timestamppb"

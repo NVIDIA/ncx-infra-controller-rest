@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -20,14 +20,13 @@ import (
 	"strings"
 )
 
-
 // SSHKeyAPIService SSHKeyAPI service
 type SSHKeyAPIService service
 
 type ApiCreateSshKeyRequest struct {
-	ctx context.Context
-	ApiService *SSHKeyAPIService
-	org string
+	ctx                 context.Context
+	ApiService          *SSHKeyAPIService
+	org                 string
 	sshKeyCreateRequest *SshKeyCreateRequest
 }
 
@@ -47,26 +46,27 @@ Create an SSH Key for the current Tenant. If an SSH Key Group is specified, all 
 
 Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` authorization role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @return ApiCreateSshKeyRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@return ApiCreateSshKeyRequest
 */
 func (a *SSHKeyAPIService) CreateSshKey(ctx context.Context, org string) ApiCreateSshKeyRequest {
 	return ApiCreateSshKeyRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ctx:        ctx,
+		org:        org,
 	}
 }
 
 // Execute executes the request
-//  @return SshKey
+//
+//	@return SshKey
 func (a *SSHKeyAPIService) CreateSshKeyExecute(r ApiCreateSshKeyRequest) (*SshKey, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodPost
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *SshKey
+		localVarHTTPMethod  = http.MethodPost
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *SshKey
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "SSHKeyAPIService.CreateSshKey")
@@ -129,8 +129,8 @@ func (a *SSHKeyAPIService) CreateSshKeyExecute(r ApiCreateSshKeyRequest) (*SshKe
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
@@ -140,8 +140,8 @@ func (a *SSHKeyAPIService) CreateSshKeyExecute(r ApiCreateSshKeyRequest) (*SshKe
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -159,10 +159,10 @@ func (a *SSHKeyAPIService) CreateSshKeyExecute(r ApiCreateSshKeyRequest) (*SshKe
 }
 
 type ApiDeleteSshKeyRequest struct {
-	ctx context.Context
+	ctx        context.Context
 	ApiService *SSHKeyAPIService
-	org string
-	sshKeyId string
+	org        string
+	sshKeyId   string
 }
 
 func (r ApiDeleteSshKeyRequest) Execute() (*http.Response, error) {
@@ -178,26 +178,26 @@ SSH Key must be owned by current Tenant. All Site associated with the SSH Key Gr
 
 Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` authorization role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @param sshKeyId ID of the SSH Key
- @return ApiDeleteSshKeyRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@param sshKeyId ID of the SSH Key
+	@return ApiDeleteSshKeyRequest
 */
 func (a *SSHKeyAPIService) DeleteSshKey(ctx context.Context, org string, sshKeyId string) ApiDeleteSshKeyRequest {
 	return ApiDeleteSshKeyRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
-		sshKeyId: sshKeyId,
+		ctx:        ctx,
+		org:        org,
+		sshKeyId:   sshKeyId,
 	}
 }
 
 // Execute executes the request
 func (a *SSHKeyAPIService) DeleteSshKeyExecute(r ApiDeleteSshKeyRequest) (*http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodDelete
-		localVarPostBody     interface{}
-		formFiles            []formFile
+		localVarHTTPMethod = http.MethodDelete
+		localVarPostBody   interface{}
+		formFiles          []formFile
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "SSHKeyAPIService.DeleteSshKey")
@@ -259,8 +259,8 @@ func (a *SSHKeyAPIService) DeleteSshKeyExecute(r ApiDeleteSshKeyRequest) (*http.
 				newErr.error = err.Error()
 				return localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarHTTPResponse, newErr
 	}
@@ -269,15 +269,15 @@ func (a *SSHKeyAPIService) DeleteSshKeyExecute(r ApiDeleteSshKeyRequest) (*http.
 }
 
 type ApiGetAllSshKeyRequest struct {
-	ctx context.Context
-	ApiService *SSHKeyAPIService
-	org string
-	sshKeyGroupId *string
-	query *string
+	ctx             context.Context
+	ApiService      *SSHKeyAPIService
+	org             string
+	sshKeyGroupId   *string
+	query           *string
 	includeRelation *string
-	pageNumber *int32
-	pageSize *int32
-	orderBy *string
+	pageNumber      *int32
+	pageSize        *int32
+	orderBy         *string
 }
 
 // ID of the SSH Key Group
@@ -327,26 +327,27 @@ Retrieve all SSH Keys for the current Tenant.
 
 Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` authorization role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @return ApiGetAllSshKeyRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@return ApiGetAllSshKeyRequest
 */
 func (a *SSHKeyAPIService) GetAllSshKey(ctx context.Context, org string) ApiGetAllSshKeyRequest {
 	return ApiGetAllSshKeyRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ctx:        ctx,
+		org:        org,
 	}
 }
 
 // Execute executes the request
-//  @return []SshKey
+//
+//	@return []SshKey
 func (a *SSHKeyAPIService) GetAllSshKeyExecute(r ApiGetAllSshKeyRequest) ([]SshKey, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodGet
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  []SshKey
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue []SshKey
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "SSHKeyAPIService.GetAllSshKey")
@@ -429,8 +430,8 @@ func (a *SSHKeyAPIService) GetAllSshKeyExecute(r ApiGetAllSshKeyRequest) ([]SshK
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -448,10 +449,10 @@ func (a *SSHKeyAPIService) GetAllSshKeyExecute(r ApiGetAllSshKeyRequest) ([]SshK
 }
 
 type ApiGetSshKeyRequest struct {
-	ctx context.Context
+	ctx        context.Context
 	ApiService *SSHKeyAPIService
-	org string
-	sshKeyId string
+	org        string
+	sshKeyId   string
 }
 
 func (r ApiGetSshKeyRequest) Execute() (*SshKey, *http.Response, error) {
@@ -461,34 +462,35 @@ func (r ApiGetSshKeyRequest) Execute() (*SshKey, *http.Response, error) {
 /*
 GetSshKey Retrieve an SSH key
 
-Retrieve an SSH key for the current Tenant by ID
+# Retrieve an SSH key for the current Tenant by ID
 
 SSH Key must be owned by current Tenant.
 
 Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` authorization role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @param sshKeyId ID of the SSH Key
- @return ApiGetSshKeyRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@param sshKeyId ID of the SSH Key
+	@return ApiGetSshKeyRequest
 */
 func (a *SSHKeyAPIService) GetSshKey(ctx context.Context, org string, sshKeyId string) ApiGetSshKeyRequest {
 	return ApiGetSshKeyRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
-		sshKeyId: sshKeyId,
+		ctx:        ctx,
+		org:        org,
+		sshKeyId:   sshKeyId,
 	}
 }
 
 // Execute executes the request
-//  @return SshKey
+//
+//	@return SshKey
 func (a *SSHKeyAPIService) GetSshKeyExecute(r ApiGetSshKeyRequest) (*SshKey, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodGet
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *SshKey
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *SshKey
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "SSHKeyAPIService.GetSshKey")
@@ -550,8 +552,8 @@ func (a *SSHKeyAPIService) GetSshKeyExecute(r ApiGetSshKeyRequest) (*SshKey, *ht
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -569,10 +571,10 @@ func (a *SSHKeyAPIService) GetSshKeyExecute(r ApiGetSshKeyRequest) (*SshKey, *ht
 }
 
 type ApiUpdateSshKeyRequest struct {
-	ctx context.Context
-	ApiService *SSHKeyAPIService
-	org string
-	sshKeyId string
+	ctx                 context.Context
+	ApiService          *SSHKeyAPIService
+	org                 string
+	sshKeyId            string
 	sshKeyUpdateRequest *SshKeyUpdateRequest
 }
 
@@ -596,28 +598,29 @@ Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` authorization
 
 To add this SSH Key to various SSH Key Groups or remove it from an SSH Key Group, please use SSH Key Group update endpoint.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @param sshKeyId ID of the SSH Key
- @return ApiUpdateSshKeyRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@param sshKeyId ID of the SSH Key
+	@return ApiUpdateSshKeyRequest
 */
 func (a *SSHKeyAPIService) UpdateSshKey(ctx context.Context, org string, sshKeyId string) ApiUpdateSshKeyRequest {
 	return ApiUpdateSshKeyRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
-		sshKeyId: sshKeyId,
+		ctx:        ctx,
+		org:        org,
+		sshKeyId:   sshKeyId,
 	}
 }
 
 // Execute executes the request
-//  @return SshKey
+//
+//	@return SshKey
 func (a *SSHKeyAPIService) UpdateSshKeyExecute(r ApiUpdateSshKeyRequest) (*SshKey, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodPatch
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *SshKey
+		localVarHTTPMethod  = http.MethodPatch
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *SshKey
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "SSHKeyAPIService.UpdateSshKey")
@@ -681,8 +684,8 @@ func (a *SSHKeyAPIService) UpdateSshKeyExecute(r ApiUpdateSshKeyRequest) (*SshKe
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
@@ -692,8 +695,8 @@ func (a *SSHKeyAPIService) UpdateSshKeyExecute(r ApiUpdateSshKeyRequest) (*SshKe
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}

@@ -12,9 +12,9 @@ import (
 	"testing"
 
 	"connectrpc.com/connect"
-	goipam "github.com/nvidia/bare-metal-manager-rest/ipam"
-	v1 "github.com/nvidia/bare-metal-manager-rest/ipam/api/v1"
-	"github.com/nvidia/bare-metal-manager-rest/ipam/api/v1/apiv1connect"
+	goipam "github.com/NVIDIA/ncx-infra-controller-rest/ipam"
+	v1 "github.com/NVIDIA/ncx-infra-controller-rest/ipam/api/v1"
+	"github.com/NVIDIA/ncx-infra-controller-rest/ipam/api/v1/apiv1connect"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

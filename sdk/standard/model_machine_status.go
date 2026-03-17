@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -21,14 +21,14 @@ type MachineStatus string
 
 // List of MachineStatus
 const (
-	MACHINESTATUS_INITIALIZING MachineStatus = "Initializing"
-	MACHINESTATUS_READY MachineStatus = "Ready"
-	MACHINESTATUS_RESET MachineStatus = "Reset"
-	MACHINESTATUS_MAINTENANCE MachineStatus = "Maintenance"
-	MACHINESTATUS_IN_USE MachineStatus = "InUse"
-	MACHINESTATUS_ERROR MachineStatus = "Error"
+	MACHINESTATUS_INITIALIZING   MachineStatus = "Initializing"
+	MACHINESTATUS_READY          MachineStatus = "Ready"
+	MACHINESTATUS_RESET          MachineStatus = "Reset"
+	MACHINESTATUS_MAINTENANCE    MachineStatus = "Maintenance"
+	MACHINESTATUS_IN_USE         MachineStatus = "InUse"
+	MACHINESTATUS_ERROR          MachineStatus = "Error"
 	MACHINESTATUS_DECOMMISSIONED MachineStatus = "Decommissioned"
-	MACHINESTATUS_UNKNOWN MachineStatus = "Unknown"
+	MACHINESTATUS_UNKNOWN        MachineStatus = "Unknown"
 )
 
 // All allowed values of MachineStatus enum
@@ -121,4 +121,3 @@ func (v *NullableMachineStatus) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-

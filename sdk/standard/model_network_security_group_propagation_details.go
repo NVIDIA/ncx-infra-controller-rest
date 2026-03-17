@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -21,12 +21,12 @@ var _ MappedNullable = &NetworkSecurityGroupPropagationDetails{}
 // NetworkSecurityGroupPropagationDetails The Network Security Group propagation details for a VPC or Instance
 type NetworkSecurityGroupPropagationDetails struct {
 	// The VPC or Instance ID
-	Id *string `json:"id,omitempty"`
-	DetailedStatus *string `json:"detailedStatus,omitempty"`
-	Status *NetworkSecurityGroupPropagationStatus `json:"status,omitempty"`
-	Details NullableString `json:"details,omitempty"`
-	UnpropagatedInstanceIds []string `json:"unpropagatedInstanceIds,omitempty"`
-	RelatedInstanceIds []string `json:"relatedInstanceIds,omitempty"`
+	Id                      *string                                `json:"id,omitempty"`
+	DetailedStatus          *string                                `json:"detailedStatus,omitempty"`
+	Status                  *NetworkSecurityGroupPropagationStatus `json:"status,omitempty"`
+	Details                 NullableString                         `json:"details,omitempty"`
+	UnpropagatedInstanceIds []string                               `json:"unpropagatedInstanceIds,omitempty"`
+	RelatedInstanceIds      []string                               `json:"relatedInstanceIds,omitempty"`
 }
 
 // NewNetworkSecurityGroupPropagationDetails instantiates a new NetworkSecurityGroupPropagationDetails object
@@ -174,6 +174,7 @@ func (o *NetworkSecurityGroupPropagationDetails) HasDetails() bool {
 func (o *NetworkSecurityGroupPropagationDetails) SetDetails(v string) {
 	o.Details.Set(&v)
 }
+
 // SetDetailsNil sets the value for Details to be an explicit nil
 func (o *NetworkSecurityGroupPropagationDetails) SetDetailsNil() {
 	o.Details.Set(nil)
@@ -249,7 +250,7 @@ func (o *NetworkSecurityGroupPropagationDetails) SetRelatedInstanceIds(v []strin
 }
 
 func (o NetworkSecurityGroupPropagationDetails) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -314,5 +315,3 @@ func (v *NullableNetworkSecurityGroupPropagationDetails) UnmarshalJSON(src []byt
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -21,9 +21,9 @@ type DpuExtensionServiceStatus string
 
 // List of DpuExtensionServiceStatus
 const (
-	DPUEXTENSIONSERVICESTATUS_PENDING DpuExtensionServiceStatus = "Pending"
-	DPUEXTENSIONSERVICESTATUS_READY DpuExtensionServiceStatus = "Ready"
-	DPUEXTENSIONSERVICESTATUS_ERROR DpuExtensionServiceStatus = "Error"
+	DPUEXTENSIONSERVICESTATUS_PENDING  DpuExtensionServiceStatus = "Pending"
+	DPUEXTENSIONSERVICESTATUS_READY    DpuExtensionServiceStatus = "Ready"
+	DPUEXTENSIONSERVICESTATUS_ERROR    DpuExtensionServiceStatus = "Error"
 	DPUEXTENSIONSERVICESTATUS_DELETING DpuExtensionServiceStatus = "Deleting"
 )
 
@@ -113,4 +113,3 @@ func (v *NullableDpuExtensionServiceStatus) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-

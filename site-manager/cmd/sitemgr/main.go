@@ -22,8 +22,8 @@ import (
 	"context"
 	"os"
 
-	"github.com/nvidia/bare-metal-manager-rest/cert-manager/pkg/core"
-	"github.com/nvidia/bare-metal-manager-rest/site-manager/pkg/sitemgr"
+	"github.com/NVIDIA/ncx-infra-controller-rest/cert-manager/pkg/core"
+	"github.com/NVIDIA/ncx-infra-controller-rest/site-manager/pkg/sitemgr"
 	cli "github.com/urfave/cli/v2"
 )
 

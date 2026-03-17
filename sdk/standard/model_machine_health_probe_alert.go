@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -115,6 +115,7 @@ func (o *MachineHealthProbeAlert) HasTarget() bool {
 func (o *MachineHealthProbeAlert) SetTarget(v string) {
 	o.Target.Set(&v)
 }
+
 // SetTargetNil sets the value for Target to be an explicit nil
 func (o *MachineHealthProbeAlert) SetTargetNil() {
 	o.Target.Set(nil)
@@ -157,6 +158,7 @@ func (o *MachineHealthProbeAlert) HasInAlertSince() bool {
 func (o *MachineHealthProbeAlert) SetInAlertSince(v string) {
 	o.InAlertSince.Set(&v)
 }
+
 // SetInAlertSinceNil sets the value for InAlertSince to be an explicit nil
 func (o *MachineHealthProbeAlert) SetInAlertSinceNil() {
 	o.InAlertSince.Set(nil)
@@ -231,6 +233,7 @@ func (o *MachineHealthProbeAlert) HasTenantMessage() bool {
 func (o *MachineHealthProbeAlert) SetTenantMessage(v string) {
 	o.TenantMessage.Set(&v)
 }
+
 // SetTenantMessageNil sets the value for TenantMessage to be an explicit nil
 func (o *MachineHealthProbeAlert) SetTenantMessageNil() {
 	o.TenantMessage.Set(nil)
@@ -274,7 +277,7 @@ func (o *MachineHealthProbeAlert) SetClassifications(v []string) {
 }
 
 func (o MachineHealthProbeAlert) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -339,5 +342,3 @@ func (v *NullableMachineHealthProbeAlert) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

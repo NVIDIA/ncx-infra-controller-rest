@@ -21,10 +21,10 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/deviceinfo"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/inventoryobjects/bmc"
 	"github.com/google/uuid"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/deviceinfo"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/bmc"
 )
 
 // Component represents a hardware component with various properties and

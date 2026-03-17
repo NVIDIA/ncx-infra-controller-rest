@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -21,8 +21,8 @@ var _ MappedNullable = &StatusDetail{}
 
 // StatusDetail Describes the details of a status transition for a resource
 type StatusDetail struct {
-	Status *string `json:"status,omitempty"`
-	Message *string `json:"message,omitempty"`
+	Status  *string    `json:"status,omitempty"`
+	Message *string    `json:"message,omitempty"`
 	Created *time.Time `json:"created,omitempty"`
 	Updated *time.Time `json:"updated,omitempty"`
 }
@@ -173,7 +173,7 @@ func (o *StatusDetail) SetUpdated(v time.Time) {
 }
 
 func (o StatusDetail) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -232,5 +232,3 @@ func (v *NullableStatusDetail) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

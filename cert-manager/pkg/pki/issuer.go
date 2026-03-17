@@ -21,7 +21,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/nvidia/bare-metal-manager-rest/cert-manager/pkg/types"
+	"github.com/NVIDIA/ncx-infra-controller-rest/cert-manager/pkg/types"
 )
 
 // NativeCertificateIssuer implements types.CertificateIssuer using native Go crypto

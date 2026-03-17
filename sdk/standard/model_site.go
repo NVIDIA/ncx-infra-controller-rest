@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -19,14 +19,14 @@ import (
 // checks if the Site type satisfies the MappedNullable interface at compile time
 var _ MappedNullable = &Site{}
 
-// Site Site is a datacenter that is running NVIDIA Bare Metal Manager services
+// Site Site is a datacenter that is running NCX Infra Controller services
 type Site struct {
 	Id *string `json:"id,omitempty"`
 	// Name of the Site
 	Name *string `json:"name,omitempty"`
 	// Optional description for the Site
-	Description *string `json:"description,omitempty"`
-	Org *string `json:"org,omitempty"`
+	Description              *string `json:"description,omitempty"`
+	Org                      *string `json:"org,omitempty"`
 	InfrastructureProviderId *string `json:"infrastructureProviderId,omitempty"`
 	// Version of the Site Controller software
 	SiteControllerVersion *string `json:"siteControllerVersion,omitempty"`
@@ -36,7 +36,7 @@ type Site struct {
 	RegistrationToken *string `json:"registrationToken,omitempty"`
 	// Date/time when registration token  expires. Value only exposed to Provider
 	RegistrationTokenExpiration *time.Time `json:"registrationTokenExpiration,omitempty"`
-	SerialConsoleHostname *string `json:"serialConsoleHostname,omitempty"`
+	SerialConsoleHostname       *string    `json:"serialConsoleHostname,omitempty"`
 	// Indicates if Serial Console is enabled for the Site by the Provider
 	IsSerialConsoleEnabled *bool `json:"isSerialConsoleEnabled,omitempty"`
 	// Maximum idle time in seconds before Serial Console is disconnected
@@ -46,15 +46,15 @@ type Site struct {
 	// Only visible to Tenant retrieving the Site. Indicates if Serial Console access using SSH Keys is enabled by Tenant
 	IsSerialConsoleSSHKeysEnabled *bool `json:"isSerialConsoleSSHKeysEnabled,omitempty"`
 	// Indicates if the Site is currently reachable from Cloud
-	IsOnline *bool `json:"isOnline,omitempty"`
-	Status *SiteStatus `json:"status,omitempty"`
-	StatusHistory []StatusDetail `json:"statusHistory,omitempty"`
-	Created *time.Time `json:"created,omitempty"`
-	Updated *time.Time `json:"updated,omitempty"`
-	Location *SiteLocation `json:"location,omitempty"`
-	Contact *SiteContact `json:"contact,omitempty"`
-	Capabilities *SiteCapabilities `json:"capabilities,omitempty"`
-	MachineStats *SiteMachineStats `json:"machineStats,omitempty"`
+	IsOnline      *bool             `json:"isOnline,omitempty"`
+	Status        *SiteStatus       `json:"status,omitempty"`
+	StatusHistory []StatusDetail    `json:"statusHistory,omitempty"`
+	Created       *time.Time        `json:"created,omitempty"`
+	Updated       *time.Time        `json:"updated,omitempty"`
+	Location      *SiteLocation     `json:"location,omitempty"`
+	Contact       *SiteContact      `json:"contact,omitempty"`
+	Capabilities  *SiteCapabilities `json:"capabilities,omitempty"`
+	MachineStats  *SiteMachineStats `json:"machineStats,omitempty"`
 }
 
 // NewSite instantiates a new Site object
@@ -458,6 +458,7 @@ func (o *Site) HasSerialConsoleIdleTimeout() bool {
 func (o *Site) SetSerialConsoleIdleTimeout(v int32) {
 	o.SerialConsoleIdleTimeout.Set(&v)
 }
+
 // SetSerialConsoleIdleTimeoutNil sets the value for SerialConsoleIdleTimeout to be an explicit nil
 func (o *Site) SetSerialConsoleIdleTimeoutNil() {
 	o.SerialConsoleIdleTimeout.Set(nil)
@@ -500,6 +501,7 @@ func (o *Site) HasSerialConsoleMaxSessionLength() bool {
 func (o *Site) SetSerialConsoleMaxSessionLength(v int32) {
 	o.SerialConsoleMaxSessionLength.Set(&v)
 }
+
 // SetSerialConsoleMaxSessionLengthNil sets the value for SerialConsoleMaxSessionLength to be an explicit nil
 func (o *Site) SetSerialConsoleMaxSessionLengthNil() {
 	o.SerialConsoleMaxSessionLength.Set(nil)
@@ -831,7 +833,7 @@ func (o *Site) SetMachineStats(v SiteMachineStats) {
 }
 
 func (o Site) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -947,5 +949,3 @@ func (v *NullableSite) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

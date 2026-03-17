@@ -24,7 +24,7 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/nvidia/bare-metal-manager-rest/nvswitch-manager/pkg/common/credential"
+	"github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/pkg/common/credential"
 )
 
 // Config represents the configuration needed to connect to a database.

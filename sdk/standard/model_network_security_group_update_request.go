@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -20,13 +20,13 @@ var _ MappedNullable = &NetworkSecurityGroupUpdateRequest{}
 
 // NetworkSecurityGroupUpdateRequest Request data to update a Network Security Group
 type NetworkSecurityGroupUpdateRequest struct {
-	Name NullableString `json:"name,omitempty"`
+	Name        NullableString `json:"name,omitempty"`
 	Description NullableString `json:"description,omitempty"`
 	// Egress rules with protocol and destination ports defined but without source ports defined should automatically be made stateful.
 	StatefulEgress *bool `json:"statefulEgress,omitempty"`
-	// Update rules of the NetworkSecurityGroup. The rules will be entirely replaced by those sent in the request. Any rules not included in the request will be removed. To retain existing rules, first fetch them and include them. 
-	Rules []NetworkSecurityGroupRule `json:"rules,omitempty"`
-	Labels map[string]string `json:"labels,omitempty"`
+	// Update rules of the NetworkSecurityGroup. The rules will be entirely replaced by those sent in the request. Any rules not included in the request will be removed. To retain existing rules, first fetch them and include them.
+	Rules  []NetworkSecurityGroupRule `json:"rules,omitempty"`
+	Labels map[string]string          `json:"labels,omitempty"`
 }
 
 // NewNetworkSecurityGroupUpdateRequest instantiates a new NetworkSecurityGroupUpdateRequest object
@@ -78,6 +78,7 @@ func (o *NetworkSecurityGroupUpdateRequest) HasName() bool {
 func (o *NetworkSecurityGroupUpdateRequest) SetName(v string) {
 	o.Name.Set(&v)
 }
+
 // SetNameNil sets the value for Name to be an explicit nil
 func (o *NetworkSecurityGroupUpdateRequest) SetNameNil() {
 	o.Name.Set(nil)
@@ -120,6 +121,7 @@ func (o *NetworkSecurityGroupUpdateRequest) HasDescription() bool {
 func (o *NetworkSecurityGroupUpdateRequest) SetDescription(v string) {
 	o.Description.Set(&v)
 }
+
 // SetDescriptionNil sets the value for Description to be an explicit nil
 func (o *NetworkSecurityGroupUpdateRequest) SetDescriptionNil() {
 	o.Description.Set(nil)
@@ -227,7 +229,7 @@ func (o *NetworkSecurityGroupUpdateRequest) SetLabels(v map[string]string) {
 }
 
 func (o NetworkSecurityGroupUpdateRequest) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -289,5 +291,3 @@ func (v *NullableNetworkSecurityGroupUpdateRequest) UnmarshalJSON(src []byte) er
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

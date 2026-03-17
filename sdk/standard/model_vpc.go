@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -300,6 +300,7 @@ func (o *VPC) HasControllerVpcId() bool {
 func (o *VPC) SetControllerVpcId(v string) {
 	o.ControllerVpcId.Set(&v)
 }
+
 // SetControllerVpcIdNil sets the value for ControllerVpcId to be an explicit nil
 func (o *VPC) SetControllerVpcIdNil() {
 	o.ControllerVpcId.Set(nil)
@@ -374,6 +375,7 @@ func (o *VPC) HasRequestedVni() bool {
 func (o *VPC) SetRequestedVni(v int32) {
 	o.RequestedVni.Set(&v)
 }
+
 // SetRequestedVniNil sets the value for RequestedVni to be an explicit nil
 func (o *VPC) SetRequestedVniNil() {
 	o.RequestedVni.Set(nil)
@@ -416,6 +418,7 @@ func (o *VPC) HasVni() bool {
 func (o *VPC) SetVni(v int32) {
 	o.Vni.Set(&v)
 }
+
 // SetVniNil sets the value for Vni to be an explicit nil
 func (o *VPC) SetVniNil() {
 	o.Vni.Set(nil)
@@ -458,6 +461,7 @@ func (o *VPC) HasNetworkSecurityGroupId() bool {
 func (o *VPC) SetNetworkSecurityGroupId(v string) {
 	o.NetworkSecurityGroupId.Set(&v)
 }
+
 // SetNetworkSecurityGroupIdNil sets the value for NetworkSecurityGroupId to be an explicit nil
 func (o *VPC) SetNetworkSecurityGroupIdNil() {
 	o.NetworkSecurityGroupId.Set(nil)
@@ -532,6 +536,7 @@ func (o *VPC) HasNvLinkLogicalPartitionId() bool {
 func (o *VPC) SetNvLinkLogicalPartitionId(v string) {
 	o.NvLinkLogicalPartitionId.Set(&v)
 }
+
 // SetNvLinkLogicalPartitionIdNil sets the value for NvLinkLogicalPartitionId to be an explicit nil
 func (o *VPC) SetNvLinkLogicalPartitionIdNil() {
 	o.NvLinkLogicalPartitionId.Set(nil)
@@ -703,7 +708,7 @@ func (o *VPC) SetUpdated(v time.Time) {
 }
 
 func (o VPC) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -804,5 +809,3 @@ func (v *NullableVPC) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

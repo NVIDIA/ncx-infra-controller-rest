@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -85,6 +85,7 @@ func (o *ExpectedPowerShelfUpdateRequest) HasId() bool {
 func (o *ExpectedPowerShelfUpdateRequest) SetId(v string) {
 	o.Id.Set(&v)
 }
+
 // SetIdNil sets the value for Id to be an explicit nil
 func (o *ExpectedPowerShelfUpdateRequest) SetIdNil() {
 	o.Id.Set(nil)
@@ -127,6 +128,7 @@ func (o *ExpectedPowerShelfUpdateRequest) HasBmcMacAddress() bool {
 func (o *ExpectedPowerShelfUpdateRequest) SetBmcMacAddress(v string) {
 	o.BmcMacAddress.Set(&v)
 }
+
 // SetBmcMacAddressNil sets the value for BmcMacAddress to be an explicit nil
 func (o *ExpectedPowerShelfUpdateRequest) SetBmcMacAddressNil() {
 	o.BmcMacAddress.Set(nil)
@@ -169,6 +171,7 @@ func (o *ExpectedPowerShelfUpdateRequest) HasDefaultBmcUsername() bool {
 func (o *ExpectedPowerShelfUpdateRequest) SetDefaultBmcUsername(v string) {
 	o.DefaultBmcUsername.Set(&v)
 }
+
 // SetDefaultBmcUsernameNil sets the value for DefaultBmcUsername to be an explicit nil
 func (o *ExpectedPowerShelfUpdateRequest) SetDefaultBmcUsernameNil() {
 	o.DefaultBmcUsername.Set(nil)
@@ -211,6 +214,7 @@ func (o *ExpectedPowerShelfUpdateRequest) HasDefaultBmcPassword() bool {
 func (o *ExpectedPowerShelfUpdateRequest) SetDefaultBmcPassword(v string) {
 	o.DefaultBmcPassword.Set(&v)
 }
+
 // SetDefaultBmcPasswordNil sets the value for DefaultBmcPassword to be an explicit nil
 func (o *ExpectedPowerShelfUpdateRequest) SetDefaultBmcPasswordNil() {
 	o.DefaultBmcPassword.Set(nil)
@@ -253,6 +257,7 @@ func (o *ExpectedPowerShelfUpdateRequest) HasShelfSerialNumber() bool {
 func (o *ExpectedPowerShelfUpdateRequest) SetShelfSerialNumber(v string) {
 	o.ShelfSerialNumber.Set(&v)
 }
+
 // SetShelfSerialNumberNil sets the value for ShelfSerialNumber to be an explicit nil
 func (o *ExpectedPowerShelfUpdateRequest) SetShelfSerialNumberNil() {
 	o.ShelfSerialNumber.Set(nil)
@@ -295,6 +300,7 @@ func (o *ExpectedPowerShelfUpdateRequest) HasIpAddress() bool {
 func (o *ExpectedPowerShelfUpdateRequest) SetIpAddress(v string) {
 	o.IpAddress.Set(&v)
 }
+
 // SetIpAddressNil sets the value for IpAddress to be an explicit nil
 func (o *ExpectedPowerShelfUpdateRequest) SetIpAddressNil() {
 	o.IpAddress.Set(nil)
@@ -338,7 +344,7 @@ func (o *ExpectedPowerShelfUpdateRequest) SetLabels(v map[string]string) {
 }
 
 func (o ExpectedPowerShelfUpdateRequest) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -406,5 +412,3 @@ func (v *NullableExpectedPowerShelfUpdateRequest) UnmarshalJSON(src []byte) erro
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

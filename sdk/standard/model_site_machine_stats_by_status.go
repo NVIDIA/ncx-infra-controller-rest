@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -21,13 +21,13 @@ var _ MappedNullable = &SiteMachineStatsByStatus{}
 // SiteMachineStatsByStatus Machine stats for a Site by status
 type SiteMachineStatsByStatus struct {
 	Decommissioned *int32 `json:"Decommissioned,omitempty"`
-	Error *int32 `json:"Error,omitempty"`
-	Initializing *int32 `json:"Initializing,omitempty"`
-	InUse *int32 `json:"InUse,omitempty"`
-	Maintenance *int32 `json:"Maintenance,omitempty"`
-	Ready *int32 `json:"Ready,omitempty"`
-	Reset *int32 `json:"Reset,omitempty"`
-	Unknown *int32 `json:"Unknown,omitempty"`
+	Error          *int32 `json:"Error,omitempty"`
+	Initializing   *int32 `json:"Initializing,omitempty"`
+	InUse          *int32 `json:"InUse,omitempty"`
+	Maintenance    *int32 `json:"Maintenance,omitempty"`
+	Ready          *int32 `json:"Ready,omitempty"`
+	Reset          *int32 `json:"Reset,omitempty"`
+	Unknown        *int32 `json:"Unknown,omitempty"`
 }
 
 // NewSiteMachineStatsByStatus instantiates a new SiteMachineStatsByStatus object
@@ -304,7 +304,7 @@ func (o *SiteMachineStatsByStatus) SetUnknown(v int32) {
 }
 
 func (o SiteMachineStatsByStatus) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -375,5 +375,3 @@ func (v *NullableSiteMachineStatsByStatus) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

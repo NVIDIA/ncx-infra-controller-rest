@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -35,9 +35,9 @@ type SiteUpdateRequest struct {
 	// Maximum length of Serial Console session in seconds. Can only be updated by Provider
 	SerialConsoleMaxSessionLength *int32 `json:"serialConsoleMaxSessionLength,omitempty"`
 	// Enable/disable Serial Console access using SSH Keys. Can only be updated by Tenant
-	IsSerialConsoleSSHKeysEnabled *bool `json:"isSerialConsoleSSHKeysEnabled,omitempty"`
-	Location *SiteLocation `json:"location,omitempty"`
-	Contact *SiteContact `json:"contact,omitempty"`
+	IsSerialConsoleSSHKeysEnabled *bool         `json:"isSerialConsoleSSHKeysEnabled,omitempty"`
+	Location                      *SiteLocation `json:"location,omitempty"`
+	Contact                       *SiteContact  `json:"contact,omitempty"`
 }
 
 // NewSiteUpdateRequest instantiates a new SiteUpdateRequest object
@@ -378,7 +378,7 @@ func (o *SiteUpdateRequest) SetContact(v SiteContact) {
 }
 
 func (o SiteUpdateRequest) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -455,5 +455,3 @@ func (v *NullableSiteUpdateRequest) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

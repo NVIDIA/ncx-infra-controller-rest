@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -32,31 +32,31 @@ type Instance struct {
 	// ID of the Infrastructure Provider that owns the Site where the Instance is located
 	InfrastructureProviderId *string `json:"infrastructureProviderId,omitempty"`
 	// ID of the Site where the Instance is located
-	SiteId *string `json:"siteId,omitempty"`
-	InstanceTypeId *string `json:"instanceTypeId,omitempty"`
-	VpcId *string `json:"vpcId,omitempty"`
-	MachineId NullableString `json:"machineId,omitempty"`
-	OperatingSystemId *string `json:"operatingSystemId,omitempty"`
+	SiteId                 *string        `json:"siteId,omitempty"`
+	InstanceTypeId         *string        `json:"instanceTypeId,omitempty"`
+	VpcId                  *string        `json:"vpcId,omitempty"`
+	MachineId              NullableString `json:"machineId,omitempty"`
+	OperatingSystemId      *string        `json:"operatingSystemId,omitempty"`
 	NetworkSecurityGroupId NullableString `json:"networkSecurityGroupId,omitempty"`
 	// Propagation details for the attached Network Security Group
 	NetworkSecurityGroupPropagationDetails *NetworkSecurityGroupPropagationDetails `json:"networkSecurityGroupPropagationDetails,omitempty"`
 	// Indicates if the Network Security Group is inherited from VPC
-	NetworkSecurityGroupInherited *bool `json:"networkSecurityGroupInherited,omitempty"`
-	ControllerInstanceId NullableString `json:"controllerInstanceId,omitempty"`
-	IpxeScript NullableString `json:"ipxeScript,omitempty"`
+	NetworkSecurityGroupInherited *bool          `json:"networkSecurityGroupInherited,omitempty"`
+	ControllerInstanceId          NullableString `json:"controllerInstanceId,omitempty"`
+	IpxeScript                    NullableString `json:"ipxeScript,omitempty"`
 	// Indicates whether the Instance should always execute custom iPXE script when rebooting
 	AlwaysBootWithCustomIpxe *bool `json:"alwaysBootWithCustomIpxe,omitempty"`
 	// Indicates whether the Phone Home service should be enabled or disabled for Instance
-	PhoneHomeEnabled *bool `json:"phoneHomeEnabled,omitempty"`
-	UserData NullableString `json:"userData,omitempty"`
-	Labels map[string]string `json:"labels,omitempty"`
+	PhoneHomeEnabled *bool             `json:"phoneHomeEnabled,omitempty"`
+	UserData         NullableString    `json:"userData,omitempty"`
+	Labels           map[string]string `json:"labels,omitempty"`
 	// Indicates whether an update is available for the Instance. Updates can be applied on reboot
 	IsUpdatePending *bool `json:"isUpdatePending,omitempty"`
 	// Serial Console URL for the Instance. Format: ssh://<id>@siteSerialConsoleHostname
-	SerialConsoleUrl NullableString `json:"serialConsoleUrl,omitempty"`
-	Interfaces []Interface `json:"interfaces,omitempty"`
+	SerialConsoleUrl     NullableString        `json:"serialConsoleUrl,omitempty"`
+	Interfaces           []Interface           `json:"interfaces,omitempty"`
 	InfinibandInterfaces []InfiniBandInterface `json:"infinibandInterfaces,omitempty"`
-	NvLinkInterfaces []NVLinkInterface `json:"nvLinkInterfaces,omitempty"`
+	NvLinkInterfaces     []NVLinkInterface     `json:"nvLinkInterfaces,omitempty"`
 	// DPU Extension Services deployed on DPUs of this Instance
 	DpuExtensionServiceDeployments []DpuExtensionServiceDeployment `json:"dpuExtensionServiceDeployments,omitempty"`
 	// IDs of SSH Key Groups associated with this Instance
@@ -64,12 +64,12 @@ type Instance struct {
 	// IDs of SSH Key Groups associated with this Instance
 	SshKeyGroups []SshKeyGroup `json:"sshKeyGroups,omitempty"`
 	// base64 encoded TPM EK Certificate associated with this Instance
-	TpmEkCertificate NullableString `json:"tpmEkCertificate,omitempty"`
-	Status *InstanceStatus `json:"status,omitempty"`
-	StatusHistory []StatusDetail `json:"statusHistory,omitempty"`
-	Deprecations []Deprecation `json:"deprecations,omitempty"`
-	Created *time.Time `json:"created,omitempty"`
-	Updated *time.Time `json:"updated,omitempty"`
+	TpmEkCertificate NullableString  `json:"tpmEkCertificate,omitempty"`
+	Status           *InstanceStatus `json:"status,omitempty"`
+	StatusHistory    []StatusDetail  `json:"statusHistory,omitempty"`
+	Deprecations     []Deprecation   `json:"deprecations,omitempty"`
+	Created          *time.Time      `json:"created,omitempty"`
+	Updated          *time.Time      `json:"updated,omitempty"`
 }
 
 // NewInstance instantiates a new Instance object
@@ -377,6 +377,7 @@ func (o *Instance) HasMachineId() bool {
 func (o *Instance) SetMachineId(v string) {
 	o.MachineId.Set(&v)
 }
+
 // SetMachineIdNil sets the value for MachineId to be an explicit nil
 func (o *Instance) SetMachineIdNil() {
 	o.MachineId.Set(nil)
@@ -451,6 +452,7 @@ func (o *Instance) HasNetworkSecurityGroupId() bool {
 func (o *Instance) SetNetworkSecurityGroupId(v string) {
 	o.NetworkSecurityGroupId.Set(&v)
 }
+
 // SetNetworkSecurityGroupIdNil sets the value for NetworkSecurityGroupId to be an explicit nil
 func (o *Instance) SetNetworkSecurityGroupIdNil() {
 	o.NetworkSecurityGroupId.Set(nil)
@@ -557,6 +559,7 @@ func (o *Instance) HasControllerInstanceId() bool {
 func (o *Instance) SetControllerInstanceId(v string) {
 	o.ControllerInstanceId.Set(&v)
 }
+
 // SetControllerInstanceIdNil sets the value for ControllerInstanceId to be an explicit nil
 func (o *Instance) SetControllerInstanceIdNil() {
 	o.ControllerInstanceId.Set(nil)
@@ -599,6 +602,7 @@ func (o *Instance) HasIpxeScript() bool {
 func (o *Instance) SetIpxeScript(v string) {
 	o.IpxeScript.Set(&v)
 }
+
 // SetIpxeScriptNil sets the value for IpxeScript to be an explicit nil
 func (o *Instance) SetIpxeScriptNil() {
 	o.IpxeScript.Set(nil)
@@ -705,6 +709,7 @@ func (o *Instance) HasUserData() bool {
 func (o *Instance) SetUserData(v string) {
 	o.UserData.Set(&v)
 }
+
 // SetUserDataNil sets the value for UserData to be an explicit nil
 func (o *Instance) SetUserDataNil() {
 	o.UserData.Set(nil)
@@ -811,6 +816,7 @@ func (o *Instance) HasSerialConsoleUrl() bool {
 func (o *Instance) SetSerialConsoleUrl(v string) {
 	o.SerialConsoleUrl.Set(&v)
 }
+
 // SetSerialConsoleUrlNil sets the value for SerialConsoleUrl to be an explicit nil
 func (o *Instance) SetSerialConsoleUrlNil() {
 	o.SerialConsoleUrl.Set(nil)
@@ -1045,6 +1051,7 @@ func (o *Instance) HasTpmEkCertificate() bool {
 func (o *Instance) SetTpmEkCertificate(v string) {
 	o.TpmEkCertificate.Set(&v)
 }
+
 // SetTpmEkCertificateNil sets the value for TpmEkCertificate to be an explicit nil
 func (o *Instance) SetTpmEkCertificateNil() {
 	o.TpmEkCertificate.Set(nil)
@@ -1216,7 +1223,7 @@ func (o *Instance) SetUpdated(v time.Time) {
 }
 
 func (o Instance) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -1362,5 +1369,3 @@ func (v *NullableInstance) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

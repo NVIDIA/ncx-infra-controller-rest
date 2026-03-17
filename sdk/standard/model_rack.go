@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -31,8 +31,8 @@ type Rack struct {
 	// Serial number of the Rack
 	SerialNumber *string `json:"serialNumber,omitempty"`
 	// Description of the Rack
-	Description *string `json:"description,omitempty"`
-	Location *RackLocation `json:"location,omitempty"`
+	Description *string       `json:"description,omitempty"`
+	Location    *RackLocation `json:"location,omitempty"`
 	// Components within the Rack. Only returned when includeComponents is true.
 	Components []RackComponent `json:"components,omitempty"`
 }
@@ -311,7 +311,7 @@ func (o *Rack) SetComponents(v []RackComponent) {
 }
 
 func (o Rack) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -382,5 +382,3 @@ func (v *NullableRack) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -20,13 +20,13 @@ var _ MappedNullable = &MachineStatusBreakdown{}
 
 // MachineStatusBreakdown Machine counts broken down by status
 type MachineStatusBreakdown struct {
-	Total *int32 `json:"total,omitempty"`
+	Total        *int32 `json:"total,omitempty"`
 	Initializing *int32 `json:"initializing,omitempty"`
-	Ready *int32 `json:"ready,omitempty"`
-	InUse *int32 `json:"inUse,omitempty"`
-	Error *int32 `json:"error,omitempty"`
-	Maintenance *int32 `json:"maintenance,omitempty"`
-	Unknown *int32 `json:"unknown,omitempty"`
+	Ready        *int32 `json:"ready,omitempty"`
+	InUse        *int32 `json:"inUse,omitempty"`
+	Error        *int32 `json:"error,omitempty"`
+	Maintenance  *int32 `json:"maintenance,omitempty"`
+	Unknown      *int32 `json:"unknown,omitempty"`
 }
 
 // NewMachineStatusBreakdown instantiates a new MachineStatusBreakdown object
@@ -271,7 +271,7 @@ func (o *MachineStatusBreakdown) SetUnknown(v int32) {
 }
 
 func (o MachineStatusBreakdown) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -339,5 +339,3 @@ func (v *NullableMachineStatusBreakdown) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

@@ -30,12 +30,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	oteltrace "go.opentelemetry.io/otel/trace"
 
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/handler/util/common"
-	"github.com/nvidia/bare-metal-manager-rest/common/pkg/otelecho"
-	sutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
-	cdbu "github.com/nvidia/bare-metal-manager-rest/db/pkg/util"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/handler/util/common"
+	"github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/otelecho"
+	sutil "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/util"
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
+	cdbu "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/util"
 )
 
 func TestNewGetUserHandler(t *testing.T) {

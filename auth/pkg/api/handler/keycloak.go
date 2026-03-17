@@ -23,10 +23,10 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog/log"
 
-	cam "github.com/nvidia/bare-metal-manager-rest/auth/pkg/api/model"
-	caa "github.com/nvidia/bare-metal-manager-rest/auth/pkg/authentication"
+	cam "github.com/NVIDIA/ncx-infra-controller-rest/auth/pkg/api/model"
+	caa "github.com/NVIDIA/ncx-infra-controller-rest/auth/pkg/authentication"
 
-	ccu "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
+	ccu "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/util"
 )
 
 // LoginHandler is the API Handler for user authentication with OAuth2 flow

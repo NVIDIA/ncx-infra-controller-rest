@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -21,22 +21,22 @@ var _ MappedNullable = &InfiniBandPartition{}
 
 // InfiniBandPartition InfiniBand Partitions are network segments utilizing InfiniBand topology
 type InfiniBandPartition struct {
-	Id *string `json:"id,omitempty"`
-	Name *string `json:"name,omitempty"`
-	Description *string `json:"description,omitempty"`
-	SiteId *string `json:"siteId,omitempty"`
-	TenantId *string `json:"tenantId,omitempty"`
-	ControllerIBPartitionId NullableString `json:"controllerIBPartitionId,omitempty"`
-	PartitionKey NullableString `json:"partitionKey,omitempty"`
-	PartitionName NullableString `json:"partitionName,omitempty"`
-	ServiceLevel NullableInt32 `json:"serviceLevel,omitempty"`
-	RateLimit NullableFloat32 `json:"rateLimit,omitempty"`
-	Mtu NullableInt32 `json:"mtu,omitempty"`
-	EnableSharp *bool `json:"enableSharp,omitempty"`
-	Status *InfiniBandPartitionStatus `json:"status,omitempty"`
-	StatusHistory []StatusDetail `json:"statusHistory,omitempty"`
-	Created *time.Time `json:"created,omitempty"`
-	Updated *time.Time `json:"updated,omitempty"`
+	Id                      *string                    `json:"id,omitempty"`
+	Name                    *string                    `json:"name,omitempty"`
+	Description             *string                    `json:"description,omitempty"`
+	SiteId                  *string                    `json:"siteId,omitempty"`
+	TenantId                *string                    `json:"tenantId,omitempty"`
+	ControllerIBPartitionId NullableString             `json:"controllerIBPartitionId,omitempty"`
+	PartitionKey            NullableString             `json:"partitionKey,omitempty"`
+	PartitionName           NullableString             `json:"partitionName,omitempty"`
+	ServiceLevel            NullableInt32              `json:"serviceLevel,omitempty"`
+	RateLimit               NullableFloat32            `json:"rateLimit,omitempty"`
+	Mtu                     NullableInt32              `json:"mtu,omitempty"`
+	EnableSharp             *bool                      `json:"enableSharp,omitempty"`
+	Status                  *InfiniBandPartitionStatus `json:"status,omitempty"`
+	StatusHistory           []StatusDetail             `json:"statusHistory,omitempty"`
+	Created                 *time.Time                 `json:"created,omitempty"`
+	Updated                 *time.Time                 `json:"updated,omitempty"`
 }
 
 // NewInfiniBandPartition instantiates a new InfiniBandPartition object
@@ -248,6 +248,7 @@ func (o *InfiniBandPartition) HasControllerIBPartitionId() bool {
 func (o *InfiniBandPartition) SetControllerIBPartitionId(v string) {
 	o.ControllerIBPartitionId.Set(&v)
 }
+
 // SetControllerIBPartitionIdNil sets the value for ControllerIBPartitionId to be an explicit nil
 func (o *InfiniBandPartition) SetControllerIBPartitionIdNil() {
 	o.ControllerIBPartitionId.Set(nil)
@@ -290,6 +291,7 @@ func (o *InfiniBandPartition) HasPartitionKey() bool {
 func (o *InfiniBandPartition) SetPartitionKey(v string) {
 	o.PartitionKey.Set(&v)
 }
+
 // SetPartitionKeyNil sets the value for PartitionKey to be an explicit nil
 func (o *InfiniBandPartition) SetPartitionKeyNil() {
 	o.PartitionKey.Set(nil)
@@ -332,6 +334,7 @@ func (o *InfiniBandPartition) HasPartitionName() bool {
 func (o *InfiniBandPartition) SetPartitionName(v string) {
 	o.PartitionName.Set(&v)
 }
+
 // SetPartitionNameNil sets the value for PartitionName to be an explicit nil
 func (o *InfiniBandPartition) SetPartitionNameNil() {
 	o.PartitionName.Set(nil)
@@ -374,6 +377,7 @@ func (o *InfiniBandPartition) HasServiceLevel() bool {
 func (o *InfiniBandPartition) SetServiceLevel(v int32) {
 	o.ServiceLevel.Set(&v)
 }
+
 // SetServiceLevelNil sets the value for ServiceLevel to be an explicit nil
 func (o *InfiniBandPartition) SetServiceLevelNil() {
 	o.ServiceLevel.Set(nil)
@@ -416,6 +420,7 @@ func (o *InfiniBandPartition) HasRateLimit() bool {
 func (o *InfiniBandPartition) SetRateLimit(v float32) {
 	o.RateLimit.Set(&v)
 }
+
 // SetRateLimitNil sets the value for RateLimit to be an explicit nil
 func (o *InfiniBandPartition) SetRateLimitNil() {
 	o.RateLimit.Set(nil)
@@ -458,6 +463,7 @@ func (o *InfiniBandPartition) HasMtu() bool {
 func (o *InfiniBandPartition) SetMtu(v int32) {
 	o.Mtu.Set(&v)
 }
+
 // SetMtuNil sets the value for Mtu to be an explicit nil
 func (o *InfiniBandPartition) SetMtuNil() {
 	o.Mtu.Set(nil)
@@ -629,7 +635,7 @@ func (o *InfiniBandPartition) SetUpdated(v time.Time) {
 }
 
 func (o InfiniBandPartition) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -724,5 +730,3 @@ func (v *NullableInfiniBandPartition) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

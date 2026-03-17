@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -20,12 +20,12 @@ var _ MappedNullable = &IpBlockCountByStatus{}
 
 // IpBlockCountByStatus Describes counts of IP Blocks in various statuses
 type IpBlockCountByStatus struct {
-	Total *int32 `json:"total,omitempty"`
-	Pending *int32 `json:"pending,omitempty"`
+	Total        *int32 `json:"total,omitempty"`
+	Pending      *int32 `json:"pending,omitempty"`
 	Provisioning *int32 `json:"provisioning,omitempty"`
-	Ready *int32 `json:"ready,omitempty"`
-	Deleting *int32 `json:"deleting,omitempty"`
-	Error *int32 `json:"error,omitempty"`
+	Ready        *int32 `json:"ready,omitempty"`
+	Deleting     *int32 `json:"deleting,omitempty"`
+	Error        *int32 `json:"error,omitempty"`
 }
 
 // NewIpBlockCountByStatus instantiates a new IpBlockCountByStatus object
@@ -238,7 +238,7 @@ func (o *IpBlockCountByStatus) SetError(v int32) {
 }
 
 func (o IpBlockCountByStatus) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -303,5 +303,3 @@ func (v *NullableIpBlockCountByStatus) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

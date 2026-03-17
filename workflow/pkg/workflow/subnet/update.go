@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"time"
 
-	cwm "github.com/nvidia/bare-metal-manager-rest/workflow/internal/metrics"
+	cwm "github.com/NVIDIA/ncx-infra-controller-rest/workflow/internal/metrics"
 
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
@@ -29,9 +29,9 @@ import (
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
 
-	subnetActivity "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/activity/subnet"
+	subnetActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/subnet"
 
-	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 )
 
 // UpdateSubnetInfo is a Temporal workflow that Site Agent calls to update Subnet information

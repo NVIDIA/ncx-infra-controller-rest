@@ -18,8 +18,8 @@
 package activity
 
 import (
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/componentmanager"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/componentmanager"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
 )
 
 var cmRegistry *componentmanager.Registry

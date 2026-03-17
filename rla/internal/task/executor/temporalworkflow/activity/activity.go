@@ -25,11 +25,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/carbideapi"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/componentmanager"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/executor/temporalworkflow/common"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operations"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/task"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/carbideapi"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/componentmanager"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor/temporalworkflow/common"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operations"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/task"
 )
 
 var taskStatusUpdater task.TaskStatusUpdater

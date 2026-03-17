@@ -29,8 +29,8 @@ import (
 
 	"go.temporal.io/sdk/client"
 
-	vpcActivity "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/activity/vpc"
-	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/queue"
+	vpcActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/vpc"
+	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/queue"
 )
 
 // DeleteVpc is a Temporal workflow to delete an existing VPC via Site Agent

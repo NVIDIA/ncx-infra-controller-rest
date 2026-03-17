@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -12,8 +12,8 @@ Contact: carbide-dev@exchange.nvidia.com
 package standard
 
 import (
-	"encoding/json"
 	"bytes"
+	"encoding/json"
 	"fmt"
 )
 
@@ -37,15 +37,15 @@ type InstanceCreateRequest struct {
 	// Can only be specified if allowOverride is set to true in Operating System
 	UserData NullableString `json:"userData,omitempty"`
 	// Must be specified if iPXE Script field is empty
-	OperatingSystemId NullableString `json:"operatingSystemId,omitempty"`
+	OperatingSystemId      NullableString `json:"operatingSystemId,omitempty"`
 	NetworkSecurityGroupId NullableString `json:"networkSecurityGroupId,omitempty"`
 	// Override iPXE script specified in OS, must be specified if Operating System is not specified
 	IpxeScript NullableString `json:"ipxeScript,omitempty"`
 	// When set to true, the iPXE script specified by OS or overridden here will always be run when rebooting the Instance. OS must be of iPXE type.
 	AlwaysBootWithCustomIpxe *bool `json:"alwaysBootWithCustomIpxe,omitempty"`
 	// When set to true, the Instance will be enabled with the Phone Home service.
-	PhoneHomeEnabled *bool `json:"phoneHomeEnabled,omitempty"`
-	Labels map[string]string `json:"labels,omitempty"`
+	PhoneHomeEnabled *bool             `json:"phoneHomeEnabled,omitempty"`
+	Labels           map[string]string `json:"labels,omitempty"`
 	// At least one interface must be specified. Either Subnet or VPC Prefix interfaces allowed. Only one of the Subnets or VPC Prefixes can be attached over Physical interface. If only one Subnet is specified, then it will be attached over physical interface regardless of the value of isPhysical. In case of VPC Prefix, isPhysical will always be true
 	Interfaces []InterfaceCreateRequest `json:"interfaces"`
 	// Associate one or more Partitions with this Instance
@@ -139,6 +139,7 @@ func (o *InstanceCreateRequest) HasDescription() bool {
 func (o *InstanceCreateRequest) SetDescription(v string) {
 	o.Description.Set(&v)
 }
+
 // SetDescriptionNil sets the value for Description to be an explicit nil
 func (o *InstanceCreateRequest) SetDescriptionNil() {
 	o.Description.Set(nil)
@@ -293,6 +294,7 @@ func (o *InstanceCreateRequest) HasUserData() bool {
 func (o *InstanceCreateRequest) SetUserData(v string) {
 	o.UserData.Set(&v)
 }
+
 // SetUserDataNil sets the value for UserData to be an explicit nil
 func (o *InstanceCreateRequest) SetUserDataNil() {
 	o.UserData.Set(nil)
@@ -335,6 +337,7 @@ func (o *InstanceCreateRequest) HasOperatingSystemId() bool {
 func (o *InstanceCreateRequest) SetOperatingSystemId(v string) {
 	o.OperatingSystemId.Set(&v)
 }
+
 // SetOperatingSystemIdNil sets the value for OperatingSystemId to be an explicit nil
 func (o *InstanceCreateRequest) SetOperatingSystemIdNil() {
 	o.OperatingSystemId.Set(nil)
@@ -377,6 +380,7 @@ func (o *InstanceCreateRequest) HasNetworkSecurityGroupId() bool {
 func (o *InstanceCreateRequest) SetNetworkSecurityGroupId(v string) {
 	o.NetworkSecurityGroupId.Set(&v)
 }
+
 // SetNetworkSecurityGroupIdNil sets the value for NetworkSecurityGroupId to be an explicit nil
 func (o *InstanceCreateRequest) SetNetworkSecurityGroupIdNil() {
 	o.NetworkSecurityGroupId.Set(nil)
@@ -419,6 +423,7 @@ func (o *InstanceCreateRequest) HasIpxeScript() bool {
 func (o *InstanceCreateRequest) SetIpxeScript(v string) {
 	o.IpxeScript.Set(&v)
 }
+
 // SetIpxeScriptNil sets the value for IpxeScript to be an explicit nil
 func (o *InstanceCreateRequest) SetIpxeScriptNil() {
 	o.IpxeScript.Set(nil)
@@ -710,7 +715,7 @@ func (o *InstanceCreateRequest) SetAllowUnhealthyMachine(v bool) {
 }
 
 func (o InstanceCreateRequest) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -787,10 +792,10 @@ func (o *InstanceCreateRequest) UnmarshalJSON(data []byte) (err error) {
 	err = json.Unmarshal(data, &allProperties)
 
 	if err != nil {
-		return err;
+		return err
 	}
 
-	for _, requiredProperty := range(requiredProperties) {
+	for _, requiredProperty := range requiredProperties {
 		if _, exists := allProperties[requiredProperty]; !exists {
 			return fmt.Errorf("no value given for required property %v", requiredProperty)
 		}
@@ -846,5 +851,3 @@ func (v *NullableInstanceCreateRequest) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

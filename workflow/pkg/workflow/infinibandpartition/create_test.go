@@ -30,7 +30,7 @@ import (
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/testsuite"
 
-	ibpActivity "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/activity/infinibandpartition"
+	ibpActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/infinibandpartition"
 )
 
 type CreateInfiniBandPartitionTestSuite struct {

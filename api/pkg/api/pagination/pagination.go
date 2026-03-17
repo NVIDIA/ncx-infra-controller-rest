@@ -24,8 +24,8 @@ import (
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	cdbp "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	cdbp "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/paginator"
 )
 
 const (

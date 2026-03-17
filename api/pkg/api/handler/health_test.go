@@ -23,8 +23,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model"
 	"github.com/labstack/echo/v4"
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model"
 	"github.com/stretchr/testify/assert"
 )
 

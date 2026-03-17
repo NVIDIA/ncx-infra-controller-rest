@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -12,8 +12,8 @@ Contact: carbide-dev@exchange.nvidia.com
 package standard
 
 import (
-	"encoding/json"
 	"bytes"
+	"encoding/json"
 	"fmt"
 )
 
@@ -25,7 +25,7 @@ type VpcPrefixCreateRequest struct {
 	// Human readable name for the VPC Prefix
 	Name string `json:"name"`
 	// ID of the VPC
-	VpcId string `json:"vpcId"`
+	VpcId     string  `json:"vpcId"`
 	IpBlockId *string `json:"ipBlockId,omitempty"`
 	// Prefix length for the VPC Prefix. Valid range is 8 to 31, and max usable value depends on prefix length of parent IP Block.
 	PrefixLength int32 `json:"prefixLength"`
@@ -158,7 +158,7 @@ func (o *VpcPrefixCreateRequest) SetPrefixLength(v int32) {
 }
 
 func (o VpcPrefixCreateRequest) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -191,10 +191,10 @@ func (o *VpcPrefixCreateRequest) UnmarshalJSON(data []byte) (err error) {
 	err = json.Unmarshal(data, &allProperties)
 
 	if err != nil {
-		return err;
+		return err
 	}
 
-	for _, requiredProperty := range(requiredProperties) {
+	for _, requiredProperty := range requiredProperties {
 		if _, exists := allProperties[requiredProperty]; !exists {
 			return fmt.Errorf("no value given for required property %v", requiredProperty)
 		}
@@ -250,5 +250,3 @@ func (v *NullableVpcPrefixCreateRequest) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

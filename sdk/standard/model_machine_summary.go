@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -34,7 +34,7 @@ type MachineSummary struct {
 	ProductName NullableString `json:"productName,omitempty"`
 	// If the Machine is in maintenance mode, this message will typically describe the reason and how long it is expected to be in maintenance
 	MaintenanceMessage NullableString `json:"maintenanceMessage,omitempty"`
-	Status *MachineStatus `json:"status,omitempty"`
+	Status             *MachineStatus `json:"status,omitempty"`
 }
 
 // NewMachineSummary instantiates a new MachineSummary object
@@ -150,6 +150,7 @@ func (o *MachineSummary) HasControllerMachineType() bool {
 func (o *MachineSummary) SetControllerMachineType(v string) {
 	o.ControllerMachineType.Set(&v)
 }
+
 // SetControllerMachineTypeNil sets the value for ControllerMachineType to be an explicit nil
 func (o *MachineSummary) SetControllerMachineTypeNil() {
 	o.ControllerMachineType.Set(nil)
@@ -192,6 +193,7 @@ func (o *MachineSummary) HasHwSkuDeviceType() bool {
 func (o *MachineSummary) SetHwSkuDeviceType(v string) {
 	o.HwSkuDeviceType.Set(&v)
 }
+
 // SetHwSkuDeviceTypeNil sets the value for HwSkuDeviceType to be an explicit nil
 func (o *MachineSummary) SetHwSkuDeviceTypeNil() {
 	o.HwSkuDeviceType.Set(nil)
@@ -234,6 +236,7 @@ func (o *MachineSummary) HasVendor() bool {
 func (o *MachineSummary) SetVendor(v string) {
 	o.Vendor.Set(&v)
 }
+
 // SetVendorNil sets the value for Vendor to be an explicit nil
 func (o *MachineSummary) SetVendorNil() {
 	o.Vendor.Set(nil)
@@ -276,6 +279,7 @@ func (o *MachineSummary) HasProductName() bool {
 func (o *MachineSummary) SetProductName(v string) {
 	o.ProductName.Set(&v)
 }
+
 // SetProductNameNil sets the value for ProductName to be an explicit nil
 func (o *MachineSummary) SetProductNameNil() {
 	o.ProductName.Set(nil)
@@ -318,6 +322,7 @@ func (o *MachineSummary) HasMaintenanceMessage() bool {
 func (o *MachineSummary) SetMaintenanceMessage(v string) {
 	o.MaintenanceMessage.Set(&v)
 }
+
 // SetMaintenanceMessageNil sets the value for MaintenanceMessage to be an explicit nil
 func (o *MachineSummary) SetMaintenanceMessageNil() {
 	o.MaintenanceMessage.Set(nil)
@@ -361,7 +366,7 @@ func (o *MachineSummary) SetStatus(v MachineStatus) {
 }
 
 func (o MachineSummary) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -432,5 +437,3 @@ func (v *NullableMachineSummary) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

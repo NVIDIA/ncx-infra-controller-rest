@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -151,6 +151,7 @@ func (o *InstanceTypeCapabilityCreateRequest) HasFrequency() bool {
 func (o *InstanceTypeCapabilityCreateRequest) SetFrequency(v string) {
 	o.Frequency.Set(&v)
 }
+
 // SetFrequencyNil sets the value for Frequency to be an explicit nil
 func (o *InstanceTypeCapabilityCreateRequest) SetFrequencyNil() {
 	o.Frequency.Set(nil)
@@ -193,6 +194,7 @@ func (o *InstanceTypeCapabilityCreateRequest) HasCapacity() bool {
 func (o *InstanceTypeCapabilityCreateRequest) SetCapacity(v string) {
 	o.Capacity.Set(&v)
 }
+
 // SetCapacityNil sets the value for Capacity to be an explicit nil
 func (o *InstanceTypeCapabilityCreateRequest) SetCapacityNil() {
 	o.Capacity.Set(nil)
@@ -235,6 +237,7 @@ func (o *InstanceTypeCapabilityCreateRequest) HasVendor() bool {
 func (o *InstanceTypeCapabilityCreateRequest) SetVendor(v string) {
 	o.Vendor.Set(&v)
 }
+
 // SetVendorNil sets the value for Vendor to be an explicit nil
 func (o *InstanceTypeCapabilityCreateRequest) SetVendorNil() {
 	o.Vendor.Set(nil)
@@ -277,6 +280,7 @@ func (o *InstanceTypeCapabilityCreateRequest) HasCount() bool {
 func (o *InstanceTypeCapabilityCreateRequest) SetCount(v int32) {
 	o.Count.Set(&v)
 }
+
 // SetCountNil sets the value for Count to be an explicit nil
 func (o *InstanceTypeCapabilityCreateRequest) SetCountNil() {
 	o.Count.Set(nil)
@@ -351,6 +355,7 @@ func (o *InstanceTypeCapabilityCreateRequest) HasDeviceType() bool {
 func (o *InstanceTypeCapabilityCreateRequest) SetDeviceType(v string) {
 	o.DeviceType.Set(&v)
 }
+
 // SetDeviceTypeNil sets the value for DeviceType to be an explicit nil
 func (o *InstanceTypeCapabilityCreateRequest) SetDeviceTypeNil() {
 	o.DeviceType.Set(nil)
@@ -362,7 +367,7 @@ func (o *InstanceTypeCapabilityCreateRequest) UnsetDeviceType() {
 }
 
 func (o InstanceTypeCapabilityCreateRequest) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -433,5 +438,3 @@ func (v *NullableInstanceTypeCapabilityCreateRequest) UnmarshalJSON(src []byte) 
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

@@ -21,9 +21,9 @@ import (
 	"errors"
 	"testing"
 
+	cwm "github.com/NVIDIA/ncx-infra-controller-rest/workflow/internal/metrics"
+	vpcActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/vpc"
 	"github.com/google/uuid"
-	cwm "github.com/nvidia/bare-metal-manager-rest/workflow/internal/metrics"
-	vpcActivity "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/activity/vpc"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
@@ -31,7 +31,7 @@ import (
 	"go.temporal.io/sdk/testsuite"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 )
 
 type UpdateVpcTestSuite struct {

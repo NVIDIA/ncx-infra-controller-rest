@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -21,24 +21,24 @@ var _ MappedNullable = &IpBlock{}
 
 // IpBlock IP block contains information about an IPv4 address pool owned by the Infrastructure Provider and assigned as an overlay network for a particular Site. It is equivalent to Network Resource in product terminology.
 type IpBlock struct {
-	Id *string `json:"id,omitempty"`
-	Name *string `json:"name,omitempty"`
-	Description *string `json:"description,omitempty"`
-	SiteId *string `json:"siteId,omitempty"`
-	InfrastructureProviderId *string `json:"infrastructureProviderId,omitempty"`
-	TenantId NullableString `json:"tenantId,omitempty"`
-	RoutingType *string `json:"routingType,omitempty"`
+	Id                       *string        `json:"id,omitempty"`
+	Name                     *string        `json:"name,omitempty"`
+	Description              *string        `json:"description,omitempty"`
+	SiteId                   *string        `json:"siteId,omitempty"`
+	InfrastructureProviderId *string        `json:"infrastructureProviderId,omitempty"`
+	TenantId                 NullableString `json:"tenantId,omitempty"`
+	RoutingType              *string        `json:"routingType,omitempty"`
 	// Either IPv4 or IPv6 address
 	Prefix *string `json:"prefix,omitempty"`
 	// Min: 1, Max: 32 for ipv4, 128 for ipv6
-	PrefixLength *int32 `json:"prefixLength,omitempty"`
-	ProtocolVersion *string `json:"protocolVersion,omitempty"`
-	UsageStats *IpBlockUsageStats `json:"usageStats,omitempty"`
-	Status *IpBlockStatus `json:"status,omitempty"`
-	StatusHistory []StatusDetail `json:"statusHistory,omitempty"`
-	Deprecations []Deprecation `json:"deprecations,omitempty"`
-	Created *time.Time `json:"created,omitempty"`
-	Updated *time.Time `json:"updated,omitempty"`
+	PrefixLength    *int32             `json:"prefixLength,omitempty"`
+	ProtocolVersion *string            `json:"protocolVersion,omitempty"`
+	UsageStats      *IpBlockUsageStats `json:"usageStats,omitempty"`
+	Status          *IpBlockStatus     `json:"status,omitempty"`
+	StatusHistory   []StatusDetail     `json:"statusHistory,omitempty"`
+	Deprecations    []Deprecation      `json:"deprecations,omitempty"`
+	Created         *time.Time         `json:"created,omitempty"`
+	Updated         *time.Time         `json:"updated,omitempty"`
 }
 
 // NewIpBlock instantiates a new IpBlock object
@@ -250,6 +250,7 @@ func (o *IpBlock) HasTenantId() bool {
 func (o *IpBlock) SetTenantId(v string) {
 	o.TenantId.Set(&v)
 }
+
 // SetTenantIdNil sets the value for TenantId to be an explicit nil
 func (o *IpBlock) SetTenantIdNil() {
 	o.TenantId.Set(nil)
@@ -581,7 +582,7 @@ func (o *IpBlock) SetUpdated(v time.Time) {
 }
 
 func (o IpBlock) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -676,5 +677,3 @@ func (v *NullableIpBlock) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

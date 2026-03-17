@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -20,14 +20,13 @@ import (
 	"strings"
 )
 
-
 // SiteAPIService SiteAPI service
 type SiteAPIService service
 
 type ApiCreateSiteRequest struct {
-	ctx context.Context
-	ApiService *SiteAPIService
-	org string
+	ctx               context.Context
+	ApiService        *SiteAPIService
+	org               string
 	siteCreateRequest *SiteCreateRequest
 }
 
@@ -49,26 +48,27 @@ Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_
 
 Tenant cannot create a Site.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @return ApiCreateSiteRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@return ApiCreateSiteRequest
 */
 func (a *SiteAPIService) CreateSite(ctx context.Context, org string) ApiCreateSiteRequest {
 	return ApiCreateSiteRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ctx:        ctx,
+		org:        org,
 	}
 }
 
 // Execute executes the request
-//  @return Site
+//
+//	@return Site
 func (a *SiteAPIService) CreateSiteExecute(r ApiCreateSiteRequest) (*Site, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodPost
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *Site
+		localVarHTTPMethod  = http.MethodPost
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *Site
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "SiteAPIService.CreateSite")
@@ -131,8 +131,8 @@ func (a *SiteAPIService) CreateSiteExecute(r ApiCreateSiteRequest) (*Site, *http
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
@@ -142,8 +142,8 @@ func (a *SiteAPIService) CreateSiteExecute(r ApiCreateSiteRequest) (*Site, *http
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -161,10 +161,10 @@ func (a *SiteAPIService) CreateSiteExecute(r ApiCreateSiteRequest) (*Site, *http
 }
 
 type ApiDeleteSiteRequest struct {
-	ctx context.Context
-	ApiService *SiteAPIService
-	org string
-	siteId string
+	ctx           context.Context
+	ApiService    *SiteAPIService
+	org           string
+	siteId        string
 	purgeMachines *bool
 }
 
@@ -181,32 +181,32 @@ func (r ApiDeleteSiteRequest) Execute() (*http.Response, error) {
 /*
 DeleteSite Delete Site
 
-Delete a specific Site
+# Delete a specific Site
 
 Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` authorization role.
 
 Site can only be deleted if all Allocations have been deleted.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @param siteId ID of the Site
- @return ApiDeleteSiteRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@param siteId ID of the Site
+	@return ApiDeleteSiteRequest
 */
 func (a *SiteAPIService) DeleteSite(ctx context.Context, org string, siteId string) ApiDeleteSiteRequest {
 	return ApiDeleteSiteRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
-		siteId: siteId,
+		ctx:        ctx,
+		org:        org,
+		siteId:     siteId,
 	}
 }
 
 // Execute executes the request
 func (a *SiteAPIService) DeleteSiteExecute(r ApiDeleteSiteRequest) (*http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodDelete
-		localVarPostBody     interface{}
-		formFiles            []formFile
+		localVarHTTPMethod = http.MethodDelete
+		localVarPostBody   interface{}
+		formFiles          []formFile
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "SiteAPIService.DeleteSite")
@@ -271,22 +271,22 @@ func (a *SiteAPIService) DeleteSiteExecute(r ApiDeleteSiteRequest) (*http.Respon
 }
 
 type ApiGetAllSiteRequest struct {
-	ctx context.Context
-	ApiService *SiteAPIService
-	org string
-	infrastructureProviderId *string
-	tenantId *string
-	status *string
-	isNativeNetworkingEnabled *bool
-	isNetworkSecurityGroupEnabled *bool
-	isNVLinkPartitionEnabled *bool
+	ctx                              context.Context
+	ApiService                       *SiteAPIService
+	org                              string
+	infrastructureProviderId         *string
+	tenantId                         *string
+	status                           *string
+	isNativeNetworkingEnabled        *bool
+	isNetworkSecurityGroupEnabled    *bool
+	isNVLinkPartitionEnabled         *bool
 	isRackLevelAdministrationEnabled *bool
-	includeMachineStats *bool
-	query *string
-	includeRelation *string
-	pageNumber *int32
-	pageSize *int32
-	orderBy *string
+	includeMachineStats              *bool
+	query                            *string
+	includeRelation                  *string
+	pageNumber                       *int32
+	pageSize                         *int32
+	orderBy                          *string
 }
 
 // Filter Sites by Infrastructure Provider ID
@@ -378,26 +378,27 @@ Retrieve all Sites for org.
 
 User must have `FORGE_PROVIDER_ADMIN` or `FORGE_TENANT_ADMIN` role. `infrastructureProviderId` or `tenantId` query param may be required for older API versions.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @return ApiGetAllSiteRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@return ApiGetAllSiteRequest
 */
 func (a *SiteAPIService) GetAllSite(ctx context.Context, org string) ApiGetAllSiteRequest {
 	return ApiGetAllSiteRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ctx:        ctx,
+		org:        org,
 	}
 }
 
 // Execute executes the request
-//  @return []Site
+//
+//	@return []Site
 func (a *SiteAPIService) GetAllSiteExecute(r ApiGetAllSiteRequest) ([]Site, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodGet
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  []Site
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue []Site
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "SiteAPIService.GetAllSite")
@@ -501,8 +502,8 @@ func (a *SiteAPIService) GetAllSiteExecute(r ApiGetAllSiteRequest) ([]Site, *htt
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -520,10 +521,10 @@ func (a *SiteAPIService) GetAllSiteExecute(r ApiGetAllSiteRequest) ([]Site, *htt
 }
 
 type ApiGetSiteRequest struct {
-	ctx context.Context
+	ctx        context.Context
 	ApiService *SiteAPIService
-	org string
-	siteId string
+	org        string
+	siteId     string
 }
 
 func (r ApiGetSiteRequest) Execute() (*Site, *http.Response, error) {
@@ -537,28 +538,29 @@ Retrieve a specific Site by ID.
 
 User must have `FORGE_PROVIDER_ADMIN` or `FORGE_TENANT_ADMIN` role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @param siteId ID of the Site
- @return ApiGetSiteRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@param siteId ID of the Site
+	@return ApiGetSiteRequest
 */
 func (a *SiteAPIService) GetSite(ctx context.Context, org string, siteId string) ApiGetSiteRequest {
 	return ApiGetSiteRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
-		siteId: siteId,
+		ctx:        ctx,
+		org:        org,
+		siteId:     siteId,
 	}
 }
 
 // Execute executes the request
-//  @return Site
+//
+//	@return Site
 func (a *SiteAPIService) GetSiteExecute(r ApiGetSiteRequest) (*Site, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodGet
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *Site
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *Site
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "SiteAPIService.GetSite")
@@ -620,8 +622,8 @@ func (a *SiteAPIService) GetSiteExecute(r ApiGetSiteRequest) (*Site, *http.Respo
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -639,13 +641,13 @@ func (a *SiteAPIService) GetSiteExecute(r ApiGetSiteRequest) (*Site, *http.Respo
 }
 
 type ApiGetSiteStatusHistoryRequest struct {
-	ctx context.Context
+	ctx        context.Context
 	ApiService *SiteAPIService
-	org string
-	siteId string
+	org        string
+	siteId     string
 	pageNumber *int32
-	pageSize *int32
-	orderBy *string
+	pageSize   *int32
+	orderBy    *string
 }
 
 // Page number for pagination query
@@ -673,7 +675,7 @@ func (r ApiGetSiteStatusHistoryRequest) Execute() ([]StatusDetail, *http.Respons
 /*
 GetSiteStatusHistory Retrieve Site status history
 
-Retrieve a specific Site status history
+# Retrieve a specific Site status history
 
 Either `infrastructureProviderId` or `tenantId` query param must be specified.
 
@@ -681,28 +683,29 @@ If `infrastructureProviderId` query param is provided, then org must have an Inf
 
 If `tenantId` query param is provided, then org must have a Tenant entity and its ID should match the query param value. User must have `FORGE_TENANT_ADMIN` role. The Tenant must have an allocation with the Site.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @param siteId ID of the Site
- @return ApiGetSiteStatusHistoryRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@param siteId ID of the Site
+	@return ApiGetSiteStatusHistoryRequest
 */
 func (a *SiteAPIService) GetSiteStatusHistory(ctx context.Context, org string, siteId string) ApiGetSiteStatusHistoryRequest {
 	return ApiGetSiteStatusHistoryRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
-		siteId: siteId,
+		ctx:        ctx,
+		org:        org,
+		siteId:     siteId,
 	}
 }
 
 // Execute executes the request
-//  @return []StatusDetail
+//
+//	@return []StatusDetail
 func (a *SiteAPIService) GetSiteStatusHistoryExecute(r ApiGetSiteStatusHistoryRequest) ([]StatusDetail, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodGet
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  []StatusDetail
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue []StatusDetail
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "SiteAPIService.GetSiteStatusHistory")
@@ -773,8 +776,8 @@ func (a *SiteAPIService) GetSiteStatusHistoryExecute(r ApiGetSiteStatusHistoryRe
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -792,10 +795,10 @@ func (a *SiteAPIService) GetSiteStatusHistoryExecute(r ApiGetSiteStatusHistoryRe
 }
 
 type ApiUpdateSiteRequest struct {
-	ctx context.Context
-	ApiService *SiteAPIService
-	org string
-	siteId string
+	ctx               context.Context
+	ApiService        *SiteAPIService
+	org               string
+	siteId            string
 	siteUpdateRequest *SiteUpdateRequest
 }
 
@@ -811,7 +814,7 @@ func (r ApiUpdateSiteRequest) Execute() (*Site, *http.Response, error) {
 /*
 UpdateSite Update Site
 
-Update a specific Site
+# Update a specific Site
 
 Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` or `FORGE_TENANT_ADMIN` authorization role.
 
@@ -819,28 +822,29 @@ Infrastructure Provider updating the Site must be the owner of the Site.
 
 Tenant updating the Site must have access to the Site and can only update Tenant specific attributes.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @param siteId ID of the Site
- @return ApiUpdateSiteRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@param siteId ID of the Site
+	@return ApiUpdateSiteRequest
 */
 func (a *SiteAPIService) UpdateSite(ctx context.Context, org string, siteId string) ApiUpdateSiteRequest {
 	return ApiUpdateSiteRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
-		siteId: siteId,
+		ctx:        ctx,
+		org:        org,
+		siteId:     siteId,
 	}
 }
 
 // Execute executes the request
-//  @return Site
+//
+//	@return Site
 func (a *SiteAPIService) UpdateSiteExecute(r ApiUpdateSiteRequest) (*Site, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodPatch
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *Site
+		localVarHTTPMethod  = http.MethodPatch
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *Site
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "SiteAPIService.UpdateSite")

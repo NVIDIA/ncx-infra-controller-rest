@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -66,9 +66,9 @@ type ServerVariable struct {
 
 // ServerConfiguration stores the information about a server
 type ServerConfiguration struct {
-	URL string
+	URL         string
 	Description string
-	Variables map[string]ServerVariable
+	Variables   map[string]ServerVariable
 }
 
 // ServerConfigurations stores multiple ServerConfiguration items
@@ -89,17 +89,16 @@ type Configuration struct {
 // NewConfiguration returns a new Configuration object
 func NewConfiguration() *Configuration {
 	cfg := &Configuration{
-		DefaultHeader:    make(map[string]string),
-		UserAgent:        "OpenAPI-Generator/1.0.0/go",
-		Debug:            false,
-		Servers:          ServerConfigurations{
+		DefaultHeader: make(map[string]string),
+		UserAgent:     "OpenAPI-Generator/1.0.0/go",
+		Debug:         false,
+		Servers: ServerConfigurations{
 			{
-				URL: "https://carbide-rest-api.carbide.svc.cluster.local",
+				URL:         "https://carbide-rest-api.carbide.svc.cluster.local",
 				Description: "Kubernetes Cluster",
 			},
 		},
-		OperationServers: map[string]ServerConfigurations{
-		},
+		OperationServers: map[string]ServerConfigurations{},
 	}
 	return cfg
 }

@@ -27,10 +27,10 @@ import (
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
 
-	cwm "github.com/nvidia/bare-metal-manager-rest/workflow/internal/metrics"
-	vpcActivity "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/activity/vpc"
+	cwm "github.com/NVIDIA/ncx-infra-controller-rest/workflow/internal/metrics"
+	vpcActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/vpc"
 
-	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 )
 
 // UpdateVpcInfo is a Temporal workflow that Site Agent calls to update VPC information

@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -21,12 +21,12 @@ type NVLinkLogicalPartitionStatus string
 
 // List of NVLinkLogicalPartitionStatus
 const (
-	NVLINKLOGICALPARTITIONSTATUS_PENDING NVLinkLogicalPartitionStatus = "Pending"
+	NVLINKLOGICALPARTITIONSTATUS_PENDING      NVLinkLogicalPartitionStatus = "Pending"
 	NVLINKLOGICALPARTITIONSTATUS_PROVISIONING NVLinkLogicalPartitionStatus = "Provisioning"
-	NVLINKLOGICALPARTITIONSTATUS_CONFIGURING NVLinkLogicalPartitionStatus = "Configuring"
-	NVLINKLOGICALPARTITIONSTATUS_READY NVLinkLogicalPartitionStatus = "Ready"
-	NVLINKLOGICALPARTITIONSTATUS_DELETING NVLinkLogicalPartitionStatus = "Deleting"
-	NVLINKLOGICALPARTITIONSTATUS_ERROR NVLinkLogicalPartitionStatus = "Error"
+	NVLINKLOGICALPARTITIONSTATUS_CONFIGURING  NVLinkLogicalPartitionStatus = "Configuring"
+	NVLINKLOGICALPARTITIONSTATUS_READY        NVLinkLogicalPartitionStatus = "Ready"
+	NVLINKLOGICALPARTITIONSTATUS_DELETING     NVLinkLogicalPartitionStatus = "Deleting"
+	NVLINKLOGICALPARTITIONSTATUS_ERROR        NVLinkLogicalPartitionStatus = "Error"
 )
 
 // All allowed values of NVLinkLogicalPartitionStatus enum
@@ -117,4 +117,3 @@ func (v *NullableNVLinkLogicalPartitionStatus) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-

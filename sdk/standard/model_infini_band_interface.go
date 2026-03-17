@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -21,20 +21,20 @@ var _ MappedNullable = &InfiniBandInterface{}
 
 // InfiniBandInterface Defines an interface created by associating an Instance with an InfiniBand Partition
 type InfiniBandInterface struct {
-	Id *string `json:"id,omitempty"`
+	Id         *string `json:"id,omitempty"`
 	InstanceId *string `json:"instanceId,omitempty"`
 	// ID of the InfiniBand Partition associated with this interface
 	PartitionId *string `json:"partitionId,omitempty"`
 	// Name of the InfiniBand device associated with this interface
-	Device *string `json:"device,omitempty"`
-	DeviceInstance *int32 `json:"deviceInstance,omitempty"`
+	Device         *string `json:"device,omitempty"`
+	DeviceInstance *int32  `json:"deviceInstance,omitempty"`
 	// Indicates whether this is a physical interface
-	IsPhysical *bool `json:"isPhysical,omitempty"`
-	VirtualFunctionId NullableInt32 `json:"virtualFunctionId,omitempty"`
-	Guid NullableString `json:"guid,omitempty"`
-	Status *InfiniBandInterfaceStatus `json:"status,omitempty"`
-	Created *time.Time `json:"created,omitempty"`
-	Updated *time.Time `json:"updated,omitempty"`
+	IsPhysical        *bool                      `json:"isPhysical,omitempty"`
+	VirtualFunctionId NullableInt32              `json:"virtualFunctionId,omitempty"`
+	Guid              NullableString             `json:"guid,omitempty"`
+	Status            *InfiniBandInterfaceStatus `json:"status,omitempty"`
+	Created           *time.Time                 `json:"created,omitempty"`
+	Updated           *time.Time                 `json:"updated,omitempty"`
 }
 
 // NewInfiniBandInterface instantiates a new InfiniBandInterface object
@@ -278,6 +278,7 @@ func (o *InfiniBandInterface) HasVirtualFunctionId() bool {
 func (o *InfiniBandInterface) SetVirtualFunctionId(v int32) {
 	o.VirtualFunctionId.Set(&v)
 }
+
 // SetVirtualFunctionIdNil sets the value for VirtualFunctionId to be an explicit nil
 func (o *InfiniBandInterface) SetVirtualFunctionIdNil() {
 	o.VirtualFunctionId.Set(nil)
@@ -320,6 +321,7 @@ func (o *InfiniBandInterface) HasGuid() bool {
 func (o *InfiniBandInterface) SetGuid(v string) {
 	o.Guid.Set(&v)
 }
+
 // SetGuidNil sets the value for Guid to be an explicit nil
 func (o *InfiniBandInterface) SetGuidNil() {
 	o.Guid.Set(nil)
@@ -427,7 +429,7 @@ func (o *InfiniBandInterface) SetUpdated(v time.Time) {
 }
 
 func (o InfiniBandInterface) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -507,5 +509,3 @@ func (v *NullableInfiniBandInterface) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

@@ -1,4 +1,3 @@
-//
 // SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -81,12 +80,12 @@ const (
 	Forge_FindInstanceByMachineID_FullMethodName                  = "/forge.Forge/FindInstanceByMachineID"
 	Forge_GetManagedHostNetworkConfig_FullMethodName              = "/forge.Forge/GetManagedHostNetworkConfig"
 	Forge_RecordDpuNetworkStatus_FullMethodName                   = "/forge.Forge/RecordDpuNetworkStatus"
-	Forge_RecordHardwareHealthReport_FullMethodName               = "/forge.Forge/RecordHardwareHealthReport"
-	Forge_GetHardwareHealthReport_FullMethodName                  = "/forge.Forge/GetHardwareHealthReport"
-	Forge_RecordLogParserHealthReport_FullMethodName              = "/forge.Forge/RecordLogParserHealthReport"
 	Forge_ListHealthReportOverrides_FullMethodName                = "/forge.Forge/ListHealthReportOverrides"
 	Forge_InsertHealthReportOverride_FullMethodName               = "/forge.Forge/InsertHealthReportOverride"
 	Forge_RemoveHealthReportOverride_FullMethodName               = "/forge.Forge/RemoveHealthReportOverride"
+	Forge_ListRackHealthReportOverrides_FullMethodName            = "/forge.Forge/ListRackHealthReportOverrides"
+	Forge_InsertRackHealthReportOverride_FullMethodName           = "/forge.Forge/InsertRackHealthReportOverride"
+	Forge_RemoveRackHealthReportOverride_FullMethodName           = "/forge.Forge/RemoveRackHealthReportOverride"
 	Forge_DpuAgentUpgradeCheck_FullMethodName                     = "/forge.Forge/DpuAgentUpgradeCheck"
 	Forge_DpuAgentUpgradePolicyAction_FullMethodName              = "/forge.Forge/DpuAgentUpgradePolicyAction"
 	Forge_LookupRecordLegacy_FullMethodName                       = "/forge.Forge/LookupRecordLegacy"
@@ -106,6 +105,7 @@ const (
 	Forge_FindMachineStateHistories_FullMethodName                = "/forge.Forge/FindMachineStateHistories"
 	Forge_FindMachineHealthHistories_FullMethodName               = "/forge.Forge/FindMachineHealthHistories"
 	Forge_FindPowerShelfStateHistories_FullMethodName             = "/forge.Forge/FindPowerShelfStateHistories"
+	Forge_FindRackStateHistories_FullMethodName                   = "/forge.Forge/FindRackStateHistories"
 	Forge_FindSwitchStateHistories_FullMethodName                 = "/forge.Forge/FindSwitchStateHistories"
 	Forge_FindTenantOrganizationIds_FullMethodName                = "/forge.Forge/FindTenantOrganizationIds"
 	Forge_FindTenantsByOrganizationIds_FullMethodName             = "/forge.Forge/FindTenantsByOrganizationIds"
@@ -148,12 +148,14 @@ const (
 	Forge_AdminListResourcePools_FullMethodName                   = "/forge.Forge/AdminListResourcePools"
 	Forge_AdminGrowResourcePool_FullMethodName                    = "/forge.Forge/AdminGrowResourcePool"
 	Forge_UpdateMachineMetadata_FullMethodName                    = "/forge.Forge/UpdateMachineMetadata"
+	Forge_UpdateMachineNvLinkInfo_FullMethodName                  = "/forge.Forge/UpdateMachineNvLinkInfo"
 	Forge_SetMaintenance_FullMethodName                           = "/forge.Forge/SetMaintenance"
 	Forge_SetDynamicConfig_FullMethodName                         = "/forge.Forge/SetDynamicConfig"
 	Forge_TriggerDpuReprovisioning_FullMethodName                 = "/forge.Forge/TriggerDpuReprovisioning"
 	Forge_ListDpuWaitingForReprovisioning_FullMethodName          = "/forge.Forge/ListDpuWaitingForReprovisioning"
 	Forge_TriggerHostReprovisioning_FullMethodName                = "/forge.Forge/TriggerHostReprovisioning"
 	Forge_ListHostsWaitingForReprovisioning_FullMethodName        = "/forge.Forge/ListHostsWaitingForReprovisioning"
+	Forge_MarkManualFirmwareUpgradeComplete_FullMethodName        = "/forge.Forge/MarkManualFirmwareUpgradeComplete"
 	Forge_GetDpuInfoList_FullMethodName                           = "/forge.Forge/GetDpuInfoList"
 	Forge_GetMachineBootOverride_FullMethodName                   = "/forge.Forge/GetMachineBootOverride"
 	Forge_SetMachineBootOverride_FullMethodName                   = "/forge.Forge/SetMachineBootOverride"
@@ -180,6 +182,8 @@ const (
 	Forge_ListRackFirmware_FullMethodName                         = "/forge.Forge/ListRackFirmware"
 	Forge_DeleteRackFirmware_FullMethodName                       = "/forge.Forge/DeleteRackFirmware"
 	Forge_ApplyRackFirmware_FullMethodName                        = "/forge.Forge/ApplyRackFirmware"
+	Forge_GetRackFirmwareJobStatus_FullMethodName                 = "/forge.Forge/GetRackFirmwareJobStatus"
+	Forge_GetRackFirmwareHistory_FullMethodName                   = "/forge.Forge/GetRackFirmwareHistory"
 	Forge_ReplaceAllExpectedMachines_FullMethodName               = "/forge.Forge/ReplaceAllExpectedMachines"
 	Forge_DeleteAllExpectedMachines_FullMethodName                = "/forge.Forge/DeleteAllExpectedMachines"
 	Forge_GetAllExpectedMachinesLinked_FullMethodName             = "/forge.Forge/GetAllExpectedMachinesLinked"
@@ -323,6 +327,7 @@ const (
 	Forge_GetAllDpaInterfaceIds_FullMethodName                    = "/forge.Forge/GetAllDpaInterfaceIds"
 	Forge_FindDpaInterfacesByIds_FullMethodName                   = "/forge.Forge/FindDpaInterfacesByIds"
 	Forge_CreateDpaInterface_FullMethodName                       = "/forge.Forge/CreateDpaInterface"
+	Forge_EnsureDpaInterface_FullMethodName                       = "/forge.Forge/EnsureDpaInterface"
 	Forge_DeleteDpaInterface_FullMethodName                       = "/forge.Forge/DeleteDpaInterface"
 	Forge_SetDpaNetworkObservationStatus_FullMethodName           = "/forge.Forge/SetDpaNetworkObservationStatus"
 	Forge_GetPowerOptions_FullMethodName                          = "/forge.Forge/GetPowerOptions"
@@ -331,6 +336,11 @@ const (
 	Forge_DetermineMachineIngestionState_FullMethodName           = "/forge.Forge/DetermineMachineIngestionState"
 	Forge_GetRack_FullMethodName                                  = "/forge.Forge/GetRack"
 	Forge_DeleteRack_FullMethodName                               = "/forge.Forge/DeleteRack"
+	Forge_CreateComputeAllocation_FullMethodName                  = "/forge.Forge/CreateComputeAllocation"
+	Forge_FindComputeAllocationIds_FullMethodName                 = "/forge.Forge/FindComputeAllocationIds"
+	Forge_FindComputeAllocationsByIds_FullMethodName              = "/forge.Forge/FindComputeAllocationsByIds"
+	Forge_UpdateComputeAllocation_FullMethodName                  = "/forge.Forge/UpdateComputeAllocation"
+	Forge_DeleteComputeAllocation_FullMethodName                  = "/forge.Forge/DeleteComputeAllocation"
 	Forge_SetFirmwareUpdateTimeWindow_FullMethodName              = "/forge.Forge/SetFirmwareUpdateTimeWindow"
 	Forge_ListHostFirmware_FullMethodName                         = "/forge.Forge/ListHostFirmware"
 	Forge_PublishMlxDeviceReport_FullMethodName                   = "/forge.Forge/PublishMlxDeviceReport"
@@ -359,6 +369,7 @@ const (
 	Forge_CancelMachineAttestation_FullMethodName                 = "/forge.Forge/CancelMachineAttestation"
 	Forge_FindMachineIdsUnderAttestation_FullMethodName           = "/forge.Forge/FindMachineIdsUnderAttestation"
 	Forge_FindMachinesUnderAttestation_FullMethodName             = "/forge.Forge/FindMachinesUnderAttestation"
+	Forge_SignMachineIdentity_FullMethodName                      = "/forge.Forge/SignMachineIdentity"
 	Forge_ScoutStream_FullMethodName                              = "/forge.Forge/ScoutStream"
 	Forge_ScoutStreamShowConnections_FullMethodName               = "/forge.Forge/ScoutStreamShowConnections"
 	Forge_ScoutStreamDisconnect_FullMethodName                    = "/forge.Forge/ScoutStreamDisconnect"
@@ -478,15 +489,18 @@ type ForgeClient interface {
 	// forge-dpu-agent -> carbide-api
 	GetManagedHostNetworkConfig(ctx context.Context, in *ManagedHostNetworkConfigRequest, opts ...grpc.CallOption) (*ManagedHostNetworkConfigResponse, error)
 	RecordDpuNetworkStatus(ctx context.Context, in *DpuNetworkStatus, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	RecordHardwareHealthReport(ctx context.Context, in *HardwareHealthReport, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	GetHardwareHealthReport(ctx context.Context, in *MachineId, opts ...grpc.CallOption) (*OptionalHealthReport, error)
-	RecordLogParserHealthReport(ctx context.Context, in *HardwareHealthReport, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Lists all overrides that have been placed on a Machine health status
 	ListHealthReportOverrides(ctx context.Context, in *MachineId, opts ...grpc.CallOption) (*ListHealthReportOverrideResponse, error)
 	// Adds a new override for a Machines health status
 	InsertHealthReportOverride(ctx context.Context, in *InsertHealthReportOverrideRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Removes a health report override
 	RemoveHealthReportOverride(ctx context.Context, in *RemoveHealthReportOverrideRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Lists all overrides that have been placed on a Rack health status
+	ListRackHealthReportOverrides(ctx context.Context, in *ListRackHealthReportOverridesRequest, opts ...grpc.CallOption) (*ListHealthReportOverrideResponse, error)
+	// Adds a new health report override for a Rack
+	InsertRackHealthReportOverride(ctx context.Context, in *InsertRackHealthReportOverrideRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Removes a health report override for a Rack
+	RemoveRackHealthReportOverride(ctx context.Context, in *RemoveRackHealthReportOverrideRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	DpuAgentUpgradeCheck(ctx context.Context, in *DpuAgentUpgradeCheckRequest, opts ...grpc.CallOption) (*DpuAgentUpgradeCheckResponse, error)
 	DpuAgentUpgradePolicyAction(ctx context.Context, in *DpuAgentUpgradePolicyRequest, opts ...grpc.CallOption) (*DpuAgentUpgradePolicyResponse, error)
 	// Deprecated: Do not use.
@@ -513,6 +527,7 @@ type ForgeClient interface {
 	FindMachineStateHistories(ctx context.Context, in *MachineStateHistoriesRequest, opts ...grpc.CallOption) (*MachineStateHistories, error)
 	FindMachineHealthHistories(ctx context.Context, in *MachineHealthHistoriesRequest, opts ...grpc.CallOption) (*MachineHealthHistories, error)
 	FindPowerShelfStateHistories(ctx context.Context, in *PowerShelfStateHistoriesRequest, opts ...grpc.CallOption) (*PowerShelfStateHistories, error)
+	FindRackStateHistories(ctx context.Context, in *RackStateHistoriesRequest, opts ...grpc.CallOption) (*RackStateHistories, error)
 	FindSwitchStateHistories(ctx context.Context, in *SwitchStateHistoriesRequest, opts ...grpc.CallOption) (*SwitchStateHistories, error)
 	FindTenantOrganizationIds(ctx context.Context, in *TenantSearchFilter, opts ...grpc.CallOption) (*TenantOrganizationIdList, error)
 	FindTenantsByOrganizationIds(ctx context.Context, in *TenantByOrganizationIdsRequest, opts ...grpc.CallOption) (*TenantList, error)
@@ -588,6 +603,8 @@ type ForgeClient interface {
 	AdminGrowResourcePool(ctx context.Context, in *GrowResourcePoolRequest, opts ...grpc.CallOption) (*GrowResourcePoolResponse, error)
 	// Update the Metadata of a Machine
 	UpdateMachineMetadata(ctx context.Context, in *MachineMetadataUpdateRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Update the NVLink Info of a Machine
+	UpdateMachineNvLinkInfo(ctx context.Context, in *UpdateMachineNvLinkInfoRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Maintenance mode operations: enable, disable
 	SetMaintenance(ctx context.Context, in *MaintenanceRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Set a dynamic feature, like RUST_LOG
@@ -600,6 +617,9 @@ type ForgeClient interface {
 	TriggerHostReprovisioning(ctx context.Context, in *HostReprovisioningRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// List hosts waiting for reprovisioning
 	ListHostsWaitingForReprovisioning(ctx context.Context, in *HostReprovisioningListRequest, opts ...grpc.CallOption) (*HostReprovisioningListResponse, error)
+	// TODO: Remove when manual upgrade feature is removed
+	// Mark host as having completed manual firmware upgrade
+	MarkManualFirmwareUpgradeComplete(ctx context.Context, in *MachineId, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetDpuInfoList(ctx context.Context, in *GetDpuInfoListRequest, opts ...grpc.CallOption) (*GetDpuInfoListResponse, error)
 	GetMachineBootOverride(ctx context.Context, in *MachineInterfaceId, opts ...grpc.CallOption) (*MachineBootOverride, error)
 	SetMachineBootOverride(ctx context.Context, in *MachineBootOverride, opts ...grpc.CallOption) (*emptypb.Empty, error)
@@ -645,6 +665,10 @@ type ForgeClient interface {
 	DeleteRackFirmware(ctx context.Context, in *RackFirmwareDeleteRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Apply firmware to all devices in a rack
 	ApplyRackFirmware(ctx context.Context, in *RackFirmwareApplyRequest, opts ...grpc.CallOption) (*RackFirmwareApplyResponse, error)
+	// Check the status of an async firmware update job
+	GetRackFirmwareJobStatus(ctx context.Context, in *RackFirmwareJobStatusRequest, opts ...grpc.CallOption) (*RackFirmwareJobStatusResponse, error)
+	// Get the history of rack firmware apply operations
+	GetRackFirmwareHistory(ctx context.Context, in *RackFirmwareHistoryRequest, opts ...grpc.CallOption) (*RackFirmwareHistoryResponse, error)
 	// Replace all expected machines in site
 	ReplaceAllExpectedMachines(ctx context.Context, in *ExpectedMachineList, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Delete all expected machines in site
@@ -856,6 +880,7 @@ type ForgeClient interface {
 	FindDpaInterfacesByIds(ctx context.Context, in *DpaInterfacesByIdsRequest, opts ...grpc.CallOption) (*DpaInterfaceList, error)
 	// XXX TODO XXX Remove the calls below, as they are only for debug testing
 	CreateDpaInterface(ctx context.Context, in *DpaInterfaceCreationRequest, opts ...grpc.CallOption) (*DpaInterface, error)
+	EnsureDpaInterface(ctx context.Context, in *DpaInterfaceCreationRequest, opts ...grpc.CallOption) (*DpaInterface, error)
 	DeleteDpaInterface(ctx context.Context, in *DpaInterfaceDeletionRequest, opts ...grpc.CallOption) (*DpaInterfaceDeletionResult, error)
 	SetDpaNetworkObservationStatus(ctx context.Context, in *DpaNetworkObservationSetRequest, opts ...grpc.CallOption) (*DpaInterface, error)
 	// Power Options
@@ -866,6 +891,12 @@ type ForgeClient interface {
 	// Rack
 	GetRack(ctx context.Context, in *GetRackRequest, opts ...grpc.CallOption) (*GetRackResponse, error)
 	DeleteRack(ctx context.Context, in *DeleteRackRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Compute Allocations
+	CreateComputeAllocation(ctx context.Context, in *CreateComputeAllocationRequest, opts ...grpc.CallOption) (*CreateComputeAllocationResponse, error)
+	FindComputeAllocationIds(ctx context.Context, in *FindComputeAllocationIdsRequest, opts ...grpc.CallOption) (*FindComputeAllocationIdsResponse, error)
+	FindComputeAllocationsByIds(ctx context.Context, in *FindComputeAllocationsByIdsRequest, opts ...grpc.CallOption) (*FindComputeAllocationsByIdsResponse, error)
+	UpdateComputeAllocation(ctx context.Context, in *UpdateComputeAllocationRequest, opts ...grpc.CallOption) (*UpdateComputeAllocationResponse, error)
+	DeleteComputeAllocation(ctx context.Context, in *DeleteComputeAllocationRequest, opts ...grpc.CallOption) (*DeleteComputeAllocationResponse, error)
 	SetFirmwareUpdateTimeWindow(ctx context.Context, in *SetFirmwareUpdateTimeWindowRequest, opts ...grpc.CallOption) (*SetFirmwareUpdateTimeWindowResponse, error)
 	ListHostFirmware(ctx context.Context, in *ListHostFirmwareRequest, opts ...grpc.CallOption) (*ListHostFirmwareResponse, error)
 	PublishMlxDeviceReport(ctx context.Context, in *PublishMlxDeviceReportRequest, opts ...grpc.CallOption) (*PublishMlxDeviceReportResponse, error)
@@ -901,6 +932,9 @@ type ForgeClient interface {
 	CancelMachineAttestation(ctx context.Context, in *AttestationData, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	FindMachineIdsUnderAttestation(ctx context.Context, in *AttestationIdsRequest, opts ...grpc.CallOption) (*MachineIdList, error)
 	FindMachinesUnderAttestation(ctx context.Context, in *AttestationMachineList, opts ...grpc.CallOption) (*AttestationResponse, error)
+	// SPIFFE Machine Identity APIs
+	// Signs a JWT-SVID token for machine identity
+	SignMachineIdentity(ctx context.Context, in *MachineIdentityRequest, opts ...grpc.CallOption) (*MachineIdentityResponse, error)
 	// ScoutStream establishes a bidirectional streaming connection between
 	// scout agents and carbide-api. The initial use-case for this is for
 	// Mellanox device management using forge-admin-cli, but there's an
@@ -1463,36 +1497,6 @@ func (c *forgeClient) RecordDpuNetworkStatus(ctx context.Context, in *DpuNetwork
 	return out, nil
 }
 
-func (c *forgeClient) RecordHardwareHealthReport(ctx context.Context, in *HardwareHealthReport, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, Forge_RecordHardwareHealthReport_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *forgeClient) GetHardwareHealthReport(ctx context.Context, in *MachineId, opts ...grpc.CallOption) (*OptionalHealthReport, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(OptionalHealthReport)
-	err := c.cc.Invoke(ctx, Forge_GetHardwareHealthReport_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *forgeClient) RecordLogParserHealthReport(ctx context.Context, in *HardwareHealthReport, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, Forge_RecordLogParserHealthReport_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *forgeClient) ListHealthReportOverrides(ctx context.Context, in *MachineId, opts ...grpc.CallOption) (*ListHealthReportOverrideResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListHealthReportOverrideResponse)
@@ -1517,6 +1521,36 @@ func (c *forgeClient) RemoveHealthReportOverride(ctx context.Context, in *Remove
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, Forge_RemoveHealthReportOverride_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *forgeClient) ListRackHealthReportOverrides(ctx context.Context, in *ListRackHealthReportOverridesRequest, opts ...grpc.CallOption) (*ListHealthReportOverrideResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListHealthReportOverrideResponse)
+	err := c.cc.Invoke(ctx, Forge_ListRackHealthReportOverrides_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *forgeClient) InsertRackHealthReportOverride(ctx context.Context, in *InsertRackHealthReportOverrideRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Forge_InsertRackHealthReportOverride_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *forgeClient) RemoveRackHealthReportOverride(ctx context.Context, in *RemoveRackHealthReportOverrideRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Forge_RemoveRackHealthReportOverride_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1708,6 +1742,16 @@ func (c *forgeClient) FindPowerShelfStateHistories(ctx context.Context, in *Powe
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(PowerShelfStateHistories)
 	err := c.cc.Invoke(ctx, Forge_FindPowerShelfStateHistories_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *forgeClient) FindRackStateHistories(ctx context.Context, in *RackStateHistoriesRequest, opts ...grpc.CallOption) (*RackStateHistories, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RackStateHistories)
+	err := c.cc.Invoke(ctx, Forge_FindRackStateHistories_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -2134,6 +2178,16 @@ func (c *forgeClient) UpdateMachineMetadata(ctx context.Context, in *MachineMeta
 	return out, nil
 }
 
+func (c *forgeClient) UpdateMachineNvLinkInfo(ctx context.Context, in *UpdateMachineNvLinkInfoRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Forge_UpdateMachineNvLinkInfo_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *forgeClient) SetMaintenance(ctx context.Context, in *MaintenanceRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(emptypb.Empty)
@@ -2188,6 +2242,16 @@ func (c *forgeClient) ListHostsWaitingForReprovisioning(ctx context.Context, in 
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(HostReprovisioningListResponse)
 	err := c.cc.Invoke(ctx, Forge_ListHostsWaitingForReprovisioning_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *forgeClient) MarkManualFirmwareUpgradeComplete(ctx context.Context, in *MachineId, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Forge_MarkManualFirmwareUpgradeComplete_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -2448,6 +2512,26 @@ func (c *forgeClient) ApplyRackFirmware(ctx context.Context, in *RackFirmwareApp
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(RackFirmwareApplyResponse)
 	err := c.cc.Invoke(ctx, Forge_ApplyRackFirmware_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *forgeClient) GetRackFirmwareJobStatus(ctx context.Context, in *RackFirmwareJobStatusRequest, opts ...grpc.CallOption) (*RackFirmwareJobStatusResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RackFirmwareJobStatusResponse)
+	err := c.cc.Invoke(ctx, Forge_GetRackFirmwareJobStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *forgeClient) GetRackFirmwareHistory(ctx context.Context, in *RackFirmwareHistoryRequest, opts ...grpc.CallOption) (*RackFirmwareHistoryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RackFirmwareHistoryResponse)
+	err := c.cc.Invoke(ctx, Forge_GetRackFirmwareHistory_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -3884,6 +3968,16 @@ func (c *forgeClient) CreateDpaInterface(ctx context.Context, in *DpaInterfaceCr
 	return out, nil
 }
 
+func (c *forgeClient) EnsureDpaInterface(ctx context.Context, in *DpaInterfaceCreationRequest, opts ...grpc.CallOption) (*DpaInterface, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DpaInterface)
+	err := c.cc.Invoke(ctx, Forge_EnsureDpaInterface_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *forgeClient) DeleteDpaInterface(ctx context.Context, in *DpaInterfaceDeletionRequest, opts ...grpc.CallOption) (*DpaInterfaceDeletionResult, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(DpaInterfaceDeletionResult)
@@ -3958,6 +4052,56 @@ func (c *forgeClient) DeleteRack(ctx context.Context, in *DeleteRackRequest, opt
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, Forge_DeleteRack_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *forgeClient) CreateComputeAllocation(ctx context.Context, in *CreateComputeAllocationRequest, opts ...grpc.CallOption) (*CreateComputeAllocationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateComputeAllocationResponse)
+	err := c.cc.Invoke(ctx, Forge_CreateComputeAllocation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *forgeClient) FindComputeAllocationIds(ctx context.Context, in *FindComputeAllocationIdsRequest, opts ...grpc.CallOption) (*FindComputeAllocationIdsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(FindComputeAllocationIdsResponse)
+	err := c.cc.Invoke(ctx, Forge_FindComputeAllocationIds_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *forgeClient) FindComputeAllocationsByIds(ctx context.Context, in *FindComputeAllocationsByIdsRequest, opts ...grpc.CallOption) (*FindComputeAllocationsByIdsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(FindComputeAllocationsByIdsResponse)
+	err := c.cc.Invoke(ctx, Forge_FindComputeAllocationsByIds_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *forgeClient) UpdateComputeAllocation(ctx context.Context, in *UpdateComputeAllocationRequest, opts ...grpc.CallOption) (*UpdateComputeAllocationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateComputeAllocationResponse)
+	err := c.cc.Invoke(ctx, Forge_UpdateComputeAllocation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *forgeClient) DeleteComputeAllocation(ctx context.Context, in *DeleteComputeAllocationRequest, opts ...grpc.CallOption) (*DeleteComputeAllocationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteComputeAllocationResponse)
+	err := c.cc.Invoke(ctx, Forge_DeleteComputeAllocation_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -4238,6 +4382,16 @@ func (c *forgeClient) FindMachinesUnderAttestation(ctx context.Context, in *Atte
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(AttestationResponse)
 	err := c.cc.Invoke(ctx, Forge_FindMachinesUnderAttestation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *forgeClient) SignMachineIdentity(ctx context.Context, in *MachineIdentityRequest, opts ...grpc.CallOption) (*MachineIdentityResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MachineIdentityResponse)
+	err := c.cc.Invoke(ctx, Forge_SignMachineIdentity_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -4652,15 +4806,18 @@ type ForgeServer interface {
 	// forge-dpu-agent -> carbide-api
 	GetManagedHostNetworkConfig(context.Context, *ManagedHostNetworkConfigRequest) (*ManagedHostNetworkConfigResponse, error)
 	RecordDpuNetworkStatus(context.Context, *DpuNetworkStatus) (*emptypb.Empty, error)
-	RecordHardwareHealthReport(context.Context, *HardwareHealthReport) (*emptypb.Empty, error)
-	GetHardwareHealthReport(context.Context, *MachineId) (*OptionalHealthReport, error)
-	RecordLogParserHealthReport(context.Context, *HardwareHealthReport) (*emptypb.Empty, error)
 	// Lists all overrides that have been placed on a Machine health status
 	ListHealthReportOverrides(context.Context, *MachineId) (*ListHealthReportOverrideResponse, error)
 	// Adds a new override for a Machines health status
 	InsertHealthReportOverride(context.Context, *InsertHealthReportOverrideRequest) (*emptypb.Empty, error)
 	// Removes a health report override
 	RemoveHealthReportOverride(context.Context, *RemoveHealthReportOverrideRequest) (*emptypb.Empty, error)
+	// Lists all overrides that have been placed on a Rack health status
+	ListRackHealthReportOverrides(context.Context, *ListRackHealthReportOverridesRequest) (*ListHealthReportOverrideResponse, error)
+	// Adds a new health report override for a Rack
+	InsertRackHealthReportOverride(context.Context, *InsertRackHealthReportOverrideRequest) (*emptypb.Empty, error)
+	// Removes a health report override for a Rack
+	RemoveRackHealthReportOverride(context.Context, *RemoveRackHealthReportOverrideRequest) (*emptypb.Empty, error)
 	DpuAgentUpgradeCheck(context.Context, *DpuAgentUpgradeCheckRequest) (*DpuAgentUpgradeCheckResponse, error)
 	DpuAgentUpgradePolicyAction(context.Context, *DpuAgentUpgradePolicyRequest) (*DpuAgentUpgradePolicyResponse, error)
 	// Deprecated: Do not use.
@@ -4687,6 +4844,7 @@ type ForgeServer interface {
 	FindMachineStateHistories(context.Context, *MachineStateHistoriesRequest) (*MachineStateHistories, error)
 	FindMachineHealthHistories(context.Context, *MachineHealthHistoriesRequest) (*MachineHealthHistories, error)
 	FindPowerShelfStateHistories(context.Context, *PowerShelfStateHistoriesRequest) (*PowerShelfStateHistories, error)
+	FindRackStateHistories(context.Context, *RackStateHistoriesRequest) (*RackStateHistories, error)
 	FindSwitchStateHistories(context.Context, *SwitchStateHistoriesRequest) (*SwitchStateHistories, error)
 	FindTenantOrganizationIds(context.Context, *TenantSearchFilter) (*TenantOrganizationIdList, error)
 	FindTenantsByOrganizationIds(context.Context, *TenantByOrganizationIdsRequest) (*TenantList, error)
@@ -4762,6 +4920,8 @@ type ForgeServer interface {
 	AdminGrowResourcePool(context.Context, *GrowResourcePoolRequest) (*GrowResourcePoolResponse, error)
 	// Update the Metadata of a Machine
 	UpdateMachineMetadata(context.Context, *MachineMetadataUpdateRequest) (*emptypb.Empty, error)
+	// Update the NVLink Info of a Machine
+	UpdateMachineNvLinkInfo(context.Context, *UpdateMachineNvLinkInfoRequest) (*emptypb.Empty, error)
 	// Maintenance mode operations: enable, disable
 	SetMaintenance(context.Context, *MaintenanceRequest) (*emptypb.Empty, error)
 	// Set a dynamic feature, like RUST_LOG
@@ -4774,6 +4934,9 @@ type ForgeServer interface {
 	TriggerHostReprovisioning(context.Context, *HostReprovisioningRequest) (*emptypb.Empty, error)
 	// List hosts waiting for reprovisioning
 	ListHostsWaitingForReprovisioning(context.Context, *HostReprovisioningListRequest) (*HostReprovisioningListResponse, error)
+	// TODO: Remove when manual upgrade feature is removed
+	// Mark host as having completed manual firmware upgrade
+	MarkManualFirmwareUpgradeComplete(context.Context, *MachineId) (*emptypb.Empty, error)
 	GetDpuInfoList(context.Context, *GetDpuInfoListRequest) (*GetDpuInfoListResponse, error)
 	GetMachineBootOverride(context.Context, *MachineInterfaceId) (*MachineBootOverride, error)
 	SetMachineBootOverride(context.Context, *MachineBootOverride) (*emptypb.Empty, error)
@@ -4819,6 +4982,10 @@ type ForgeServer interface {
 	DeleteRackFirmware(context.Context, *RackFirmwareDeleteRequest) (*emptypb.Empty, error)
 	// Apply firmware to all devices in a rack
 	ApplyRackFirmware(context.Context, *RackFirmwareApplyRequest) (*RackFirmwareApplyResponse, error)
+	// Check the status of an async firmware update job
+	GetRackFirmwareJobStatus(context.Context, *RackFirmwareJobStatusRequest) (*RackFirmwareJobStatusResponse, error)
+	// Get the history of rack firmware apply operations
+	GetRackFirmwareHistory(context.Context, *RackFirmwareHistoryRequest) (*RackFirmwareHistoryResponse, error)
 	// Replace all expected machines in site
 	ReplaceAllExpectedMachines(context.Context, *ExpectedMachineList) (*emptypb.Empty, error)
 	// Delete all expected machines in site
@@ -5030,6 +5197,7 @@ type ForgeServer interface {
 	FindDpaInterfacesByIds(context.Context, *DpaInterfacesByIdsRequest) (*DpaInterfaceList, error)
 	// XXX TODO XXX Remove the calls below, as they are only for debug testing
 	CreateDpaInterface(context.Context, *DpaInterfaceCreationRequest) (*DpaInterface, error)
+	EnsureDpaInterface(context.Context, *DpaInterfaceCreationRequest) (*DpaInterface, error)
 	DeleteDpaInterface(context.Context, *DpaInterfaceDeletionRequest) (*DpaInterfaceDeletionResult, error)
 	SetDpaNetworkObservationStatus(context.Context, *DpaNetworkObservationSetRequest) (*DpaInterface, error)
 	// Power Options
@@ -5040,6 +5208,12 @@ type ForgeServer interface {
 	// Rack
 	GetRack(context.Context, *GetRackRequest) (*GetRackResponse, error)
 	DeleteRack(context.Context, *DeleteRackRequest) (*emptypb.Empty, error)
+	// Compute Allocations
+	CreateComputeAllocation(context.Context, *CreateComputeAllocationRequest) (*CreateComputeAllocationResponse, error)
+	FindComputeAllocationIds(context.Context, *FindComputeAllocationIdsRequest) (*FindComputeAllocationIdsResponse, error)
+	FindComputeAllocationsByIds(context.Context, *FindComputeAllocationsByIdsRequest) (*FindComputeAllocationsByIdsResponse, error)
+	UpdateComputeAllocation(context.Context, *UpdateComputeAllocationRequest) (*UpdateComputeAllocationResponse, error)
+	DeleteComputeAllocation(context.Context, *DeleteComputeAllocationRequest) (*DeleteComputeAllocationResponse, error)
 	SetFirmwareUpdateTimeWindow(context.Context, *SetFirmwareUpdateTimeWindowRequest) (*SetFirmwareUpdateTimeWindowResponse, error)
 	ListHostFirmware(context.Context, *ListHostFirmwareRequest) (*ListHostFirmwareResponse, error)
 	PublishMlxDeviceReport(context.Context, *PublishMlxDeviceReportRequest) (*PublishMlxDeviceReportResponse, error)
@@ -5075,6 +5249,9 @@ type ForgeServer interface {
 	CancelMachineAttestation(context.Context, *AttestationData) (*emptypb.Empty, error)
 	FindMachineIdsUnderAttestation(context.Context, *AttestationIdsRequest) (*MachineIdList, error)
 	FindMachinesUnderAttestation(context.Context, *AttestationMachineList) (*AttestationResponse, error)
+	// SPIFFE Machine Identity APIs
+	// Signs a JWT-SVID token for machine identity
+	SignMachineIdentity(context.Context, *MachineIdentityRequest) (*MachineIdentityResponse, error)
 	// ScoutStream establishes a bidirectional streaming connection between
 	// scout agents and carbide-api. The initial use-case for this is for
 	// Mellanox device management using forge-admin-cli, but there's an
@@ -5317,15 +5494,6 @@ func (UnimplementedForgeServer) GetManagedHostNetworkConfig(context.Context, *Ma
 func (UnimplementedForgeServer) RecordDpuNetworkStatus(context.Context, *DpuNetworkStatus) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method RecordDpuNetworkStatus not implemented")
 }
-func (UnimplementedForgeServer) RecordHardwareHealthReport(context.Context, *HardwareHealthReport) (*emptypb.Empty, error) {
-	return nil, status.Error(codes.Unimplemented, "method RecordHardwareHealthReport not implemented")
-}
-func (UnimplementedForgeServer) GetHardwareHealthReport(context.Context, *MachineId) (*OptionalHealthReport, error) {
-	return nil, status.Error(codes.Unimplemented, "method GetHardwareHealthReport not implemented")
-}
-func (UnimplementedForgeServer) RecordLogParserHealthReport(context.Context, *HardwareHealthReport) (*emptypb.Empty, error) {
-	return nil, status.Error(codes.Unimplemented, "method RecordLogParserHealthReport not implemented")
-}
 func (UnimplementedForgeServer) ListHealthReportOverrides(context.Context, *MachineId) (*ListHealthReportOverrideResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListHealthReportOverrides not implemented")
 }
@@ -5334,6 +5502,15 @@ func (UnimplementedForgeServer) InsertHealthReportOverride(context.Context, *Ins
 }
 func (UnimplementedForgeServer) RemoveHealthReportOverride(context.Context, *RemoveHealthReportOverrideRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method RemoveHealthReportOverride not implemented")
+}
+func (UnimplementedForgeServer) ListRackHealthReportOverrides(context.Context, *ListRackHealthReportOverridesRequest) (*ListHealthReportOverrideResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListRackHealthReportOverrides not implemented")
+}
+func (UnimplementedForgeServer) InsertRackHealthReportOverride(context.Context, *InsertRackHealthReportOverrideRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method InsertRackHealthReportOverride not implemented")
+}
+func (UnimplementedForgeServer) RemoveRackHealthReportOverride(context.Context, *RemoveRackHealthReportOverrideRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method RemoveRackHealthReportOverride not implemented")
 }
 func (UnimplementedForgeServer) DpuAgentUpgradeCheck(context.Context, *DpuAgentUpgradeCheckRequest) (*DpuAgentUpgradeCheckResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DpuAgentUpgradeCheck not implemented")
@@ -5391,6 +5568,9 @@ func (UnimplementedForgeServer) FindMachineHealthHistories(context.Context, *Mac
 }
 func (UnimplementedForgeServer) FindPowerShelfStateHistories(context.Context, *PowerShelfStateHistoriesRequest) (*PowerShelfStateHistories, error) {
 	return nil, status.Error(codes.Unimplemented, "method FindPowerShelfStateHistories not implemented")
+}
+func (UnimplementedForgeServer) FindRackStateHistories(context.Context, *RackStateHistoriesRequest) (*RackStateHistories, error) {
+	return nil, status.Error(codes.Unimplemented, "method FindRackStateHistories not implemented")
 }
 func (UnimplementedForgeServer) FindSwitchStateHistories(context.Context, *SwitchStateHistoriesRequest) (*SwitchStateHistories, error) {
 	return nil, status.Error(codes.Unimplemented, "method FindSwitchStateHistories not implemented")
@@ -5518,6 +5698,9 @@ func (UnimplementedForgeServer) AdminGrowResourcePool(context.Context, *GrowReso
 func (UnimplementedForgeServer) UpdateMachineMetadata(context.Context, *MachineMetadataUpdateRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateMachineMetadata not implemented")
 }
+func (UnimplementedForgeServer) UpdateMachineNvLinkInfo(context.Context, *UpdateMachineNvLinkInfoRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateMachineNvLinkInfo not implemented")
+}
 func (UnimplementedForgeServer) SetMaintenance(context.Context, *MaintenanceRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method SetMaintenance not implemented")
 }
@@ -5535,6 +5718,9 @@ func (UnimplementedForgeServer) TriggerHostReprovisioning(context.Context, *Host
 }
 func (UnimplementedForgeServer) ListHostsWaitingForReprovisioning(context.Context, *HostReprovisioningListRequest) (*HostReprovisioningListResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListHostsWaitingForReprovisioning not implemented")
+}
+func (UnimplementedForgeServer) MarkManualFirmwareUpgradeComplete(context.Context, *MachineId) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method MarkManualFirmwareUpgradeComplete not implemented")
 }
 func (UnimplementedForgeServer) GetDpuInfoList(context.Context, *GetDpuInfoListRequest) (*GetDpuInfoListResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetDpuInfoList not implemented")
@@ -5613,6 +5799,12 @@ func (UnimplementedForgeServer) DeleteRackFirmware(context.Context, *RackFirmwar
 }
 func (UnimplementedForgeServer) ApplyRackFirmware(context.Context, *RackFirmwareApplyRequest) (*RackFirmwareApplyResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ApplyRackFirmware not implemented")
+}
+func (UnimplementedForgeServer) GetRackFirmwareJobStatus(context.Context, *RackFirmwareJobStatusRequest) (*RackFirmwareJobStatusResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetRackFirmwareJobStatus not implemented")
+}
+func (UnimplementedForgeServer) GetRackFirmwareHistory(context.Context, *RackFirmwareHistoryRequest) (*RackFirmwareHistoryResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetRackFirmwareHistory not implemented")
 }
 func (UnimplementedForgeServer) ReplaceAllExpectedMachines(context.Context, *ExpectedMachineList) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method ReplaceAllExpectedMachines not implemented")
@@ -6043,6 +6235,9 @@ func (UnimplementedForgeServer) FindDpaInterfacesByIds(context.Context, *DpaInte
 func (UnimplementedForgeServer) CreateDpaInterface(context.Context, *DpaInterfaceCreationRequest) (*DpaInterface, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateDpaInterface not implemented")
 }
+func (UnimplementedForgeServer) EnsureDpaInterface(context.Context, *DpaInterfaceCreationRequest) (*DpaInterface, error) {
+	return nil, status.Error(codes.Unimplemented, "method EnsureDpaInterface not implemented")
+}
 func (UnimplementedForgeServer) DeleteDpaInterface(context.Context, *DpaInterfaceDeletionRequest) (*DpaInterfaceDeletionResult, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteDpaInterface not implemented")
 }
@@ -6066,6 +6261,21 @@ func (UnimplementedForgeServer) GetRack(context.Context, *GetRackRequest) (*GetR
 }
 func (UnimplementedForgeServer) DeleteRack(context.Context, *DeleteRackRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteRack not implemented")
+}
+func (UnimplementedForgeServer) CreateComputeAllocation(context.Context, *CreateComputeAllocationRequest) (*CreateComputeAllocationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateComputeAllocation not implemented")
+}
+func (UnimplementedForgeServer) FindComputeAllocationIds(context.Context, *FindComputeAllocationIdsRequest) (*FindComputeAllocationIdsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method FindComputeAllocationIds not implemented")
+}
+func (UnimplementedForgeServer) FindComputeAllocationsByIds(context.Context, *FindComputeAllocationsByIdsRequest) (*FindComputeAllocationsByIdsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method FindComputeAllocationsByIds not implemented")
+}
+func (UnimplementedForgeServer) UpdateComputeAllocation(context.Context, *UpdateComputeAllocationRequest) (*UpdateComputeAllocationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateComputeAllocation not implemented")
+}
+func (UnimplementedForgeServer) DeleteComputeAllocation(context.Context, *DeleteComputeAllocationRequest) (*DeleteComputeAllocationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteComputeAllocation not implemented")
 }
 func (UnimplementedForgeServer) SetFirmwareUpdateTimeWindow(context.Context, *SetFirmwareUpdateTimeWindowRequest) (*SetFirmwareUpdateTimeWindowResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SetFirmwareUpdateTimeWindow not implemented")
@@ -6150,6 +6360,9 @@ func (UnimplementedForgeServer) FindMachineIdsUnderAttestation(context.Context, 
 }
 func (UnimplementedForgeServer) FindMachinesUnderAttestation(context.Context, *AttestationMachineList) (*AttestationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method FindMachinesUnderAttestation not implemented")
+}
+func (UnimplementedForgeServer) SignMachineIdentity(context.Context, *MachineIdentityRequest) (*MachineIdentityResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SignMachineIdentity not implemented")
 }
 func (UnimplementedForgeServer) ScoutStream(grpc.BidiStreamingServer[ScoutStreamApiBoundMessage, ScoutStreamScoutBoundMessage]) error {
 	return status.Error(codes.Unimplemented, "method ScoutStream not implemented")
@@ -7077,60 +7290,6 @@ func _Forge_RecordDpuNetworkStatus_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Forge_RecordHardwareHealthReport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(HardwareHealthReport)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ForgeServer).RecordHardwareHealthReport(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Forge_RecordHardwareHealthReport_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ForgeServer).RecordHardwareHealthReport(ctx, req.(*HardwareHealthReport))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Forge_GetHardwareHealthReport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MachineId)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ForgeServer).GetHardwareHealthReport(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Forge_GetHardwareHealthReport_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ForgeServer).GetHardwareHealthReport(ctx, req.(*MachineId))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Forge_RecordLogParserHealthReport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(HardwareHealthReport)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ForgeServer).RecordLogParserHealthReport(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Forge_RecordLogParserHealthReport_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ForgeServer).RecordLogParserHealthReport(ctx, req.(*HardwareHealthReport))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _Forge_ListHealthReportOverrides_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(MachineId)
 	if err := dec(in); err != nil {
@@ -7181,6 +7340,60 @@ func _Forge_RemoveHealthReportOverride_Handler(srv interface{}, ctx context.Cont
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ForgeServer).RemoveHealthReportOverride(ctx, req.(*RemoveHealthReportOverrideRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Forge_ListRackHealthReportOverrides_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListRackHealthReportOverridesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ForgeServer).ListRackHealthReportOverrides(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Forge_ListRackHealthReportOverrides_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ForgeServer).ListRackHealthReportOverrides(ctx, req.(*ListRackHealthReportOverridesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Forge_InsertRackHealthReportOverride_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InsertRackHealthReportOverrideRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ForgeServer).InsertRackHealthReportOverride(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Forge_InsertRackHealthReportOverride_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ForgeServer).InsertRackHealthReportOverride(ctx, req.(*InsertRackHealthReportOverrideRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Forge_RemoveRackHealthReportOverride_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RemoveRackHealthReportOverrideRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ForgeServer).RemoveRackHealthReportOverride(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Forge_RemoveRackHealthReportOverride_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ForgeServer).RemoveRackHealthReportOverride(ctx, req.(*RemoveRackHealthReportOverrideRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -7523,6 +7736,24 @@ func _Forge_FindPowerShelfStateHistories_Handler(srv interface{}, ctx context.Co
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ForgeServer).FindPowerShelfStateHistories(ctx, req.(*PowerShelfStateHistoriesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Forge_FindRackStateHistories_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RackStateHistoriesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ForgeServer).FindRackStateHistories(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Forge_FindRackStateHistories_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ForgeServer).FindRackStateHistories(ctx, req.(*RackStateHistoriesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -8283,6 +8514,24 @@ func _Forge_UpdateMachineMetadata_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Forge_UpdateMachineNvLinkInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateMachineNvLinkInfoRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ForgeServer).UpdateMachineNvLinkInfo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Forge_UpdateMachineNvLinkInfo_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ForgeServer).UpdateMachineNvLinkInfo(ctx, req.(*UpdateMachineNvLinkInfoRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Forge_SetMaintenance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(MaintenanceRequest)
 	if err := dec(in); err != nil {
@@ -8387,6 +8636,24 @@ func _Forge_ListHostsWaitingForReprovisioning_Handler(srv interface{}, ctx conte
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ForgeServer).ListHostsWaitingForReprovisioning(ctx, req.(*HostReprovisioningListRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Forge_MarkManualFirmwareUpgradeComplete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MachineId)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ForgeServer).MarkManualFirmwareUpgradeComplete(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Forge_MarkManualFirmwareUpgradeComplete_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ForgeServer).MarkManualFirmwareUpgradeComplete(ctx, req.(*MachineId))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -8855,6 +9122,42 @@ func _Forge_ApplyRackFirmware_Handler(srv interface{}, ctx context.Context, dec 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ForgeServer).ApplyRackFirmware(ctx, req.(*RackFirmwareApplyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Forge_GetRackFirmwareJobStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RackFirmwareJobStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ForgeServer).GetRackFirmwareJobStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Forge_GetRackFirmwareJobStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ForgeServer).GetRackFirmwareJobStatus(ctx, req.(*RackFirmwareJobStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Forge_GetRackFirmwareHistory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RackFirmwareHistoryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ForgeServer).GetRackFirmwareHistory(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Forge_GetRackFirmwareHistory_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ForgeServer).GetRackFirmwareHistory(ctx, req.(*RackFirmwareHistoryRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -11433,6 +11736,24 @@ func _Forge_CreateDpaInterface_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Forge_EnsureDpaInterface_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DpaInterfaceCreationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ForgeServer).EnsureDpaInterface(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Forge_EnsureDpaInterface_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ForgeServer).EnsureDpaInterface(ctx, req.(*DpaInterfaceCreationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Forge_DeleteDpaInterface_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(DpaInterfaceDeletionRequest)
 	if err := dec(in); err != nil {
@@ -11573,6 +11894,96 @@ func _Forge_DeleteRack_Handler(srv interface{}, ctx context.Context, dec func(in
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ForgeServer).DeleteRack(ctx, req.(*DeleteRackRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Forge_CreateComputeAllocation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateComputeAllocationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ForgeServer).CreateComputeAllocation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Forge_CreateComputeAllocation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ForgeServer).CreateComputeAllocation(ctx, req.(*CreateComputeAllocationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Forge_FindComputeAllocationIds_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FindComputeAllocationIdsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ForgeServer).FindComputeAllocationIds(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Forge_FindComputeAllocationIds_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ForgeServer).FindComputeAllocationIds(ctx, req.(*FindComputeAllocationIdsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Forge_FindComputeAllocationsByIds_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FindComputeAllocationsByIdsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ForgeServer).FindComputeAllocationsByIds(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Forge_FindComputeAllocationsByIds_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ForgeServer).FindComputeAllocationsByIds(ctx, req.(*FindComputeAllocationsByIdsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Forge_UpdateComputeAllocation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateComputeAllocationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ForgeServer).UpdateComputeAllocation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Forge_UpdateComputeAllocation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ForgeServer).UpdateComputeAllocation(ctx, req.(*UpdateComputeAllocationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Forge_DeleteComputeAllocation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteComputeAllocationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ForgeServer).DeleteComputeAllocation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Forge_DeleteComputeAllocation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ForgeServer).DeleteComputeAllocation(ctx, req.(*DeleteComputeAllocationRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -12077,6 +12488,24 @@ func _Forge_FindMachinesUnderAttestation_Handler(srv interface{}, ctx context.Co
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ForgeServer).FindMachinesUnderAttestation(ctx, req.(*AttestationMachineList))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Forge_SignMachineIdentity_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MachineIdentityRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ForgeServer).SignMachineIdentity(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Forge_SignMachineIdentity_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ForgeServer).SignMachineIdentity(ctx, req.(*MachineIdentityRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -12834,18 +13263,6 @@ var Forge_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Forge_RecordDpuNetworkStatus_Handler,
 		},
 		{
-			MethodName: "RecordHardwareHealthReport",
-			Handler:    _Forge_RecordHardwareHealthReport_Handler,
-		},
-		{
-			MethodName: "GetHardwareHealthReport",
-			Handler:    _Forge_GetHardwareHealthReport_Handler,
-		},
-		{
-			MethodName: "RecordLogParserHealthReport",
-			Handler:    _Forge_RecordLogParserHealthReport_Handler,
-		},
-		{
 			MethodName: "ListHealthReportOverrides",
 			Handler:    _Forge_ListHealthReportOverrides_Handler,
 		},
@@ -12856,6 +13273,18 @@ var Forge_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RemoveHealthReportOverride",
 			Handler:    _Forge_RemoveHealthReportOverride_Handler,
+		},
+		{
+			MethodName: "ListRackHealthReportOverrides",
+			Handler:    _Forge_ListRackHealthReportOverrides_Handler,
+		},
+		{
+			MethodName: "InsertRackHealthReportOverride",
+			Handler:    _Forge_InsertRackHealthReportOverride_Handler,
+		},
+		{
+			MethodName: "RemoveRackHealthReportOverride",
+			Handler:    _Forge_RemoveRackHealthReportOverride_Handler,
 		},
 		{
 			MethodName: "DpuAgentUpgradeCheck",
@@ -12932,6 +13361,10 @@ var Forge_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "FindPowerShelfStateHistories",
 			Handler:    _Forge_FindPowerShelfStateHistories_Handler,
+		},
+		{
+			MethodName: "FindRackStateHistories",
+			Handler:    _Forge_FindRackStateHistories_Handler,
 		},
 		{
 			MethodName: "FindSwitchStateHistories",
@@ -13102,6 +13535,10 @@ var Forge_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Forge_UpdateMachineMetadata_Handler,
 		},
 		{
+			MethodName: "UpdateMachineNvLinkInfo",
+			Handler:    _Forge_UpdateMachineNvLinkInfo_Handler,
+		},
+		{
 			MethodName: "SetMaintenance",
 			Handler:    _Forge_SetMaintenance_Handler,
 		},
@@ -13124,6 +13561,10 @@ var Forge_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListHostsWaitingForReprovisioning",
 			Handler:    _Forge_ListHostsWaitingForReprovisioning_Handler,
+		},
+		{
+			MethodName: "MarkManualFirmwareUpgradeComplete",
+			Handler:    _Forge_MarkManualFirmwareUpgradeComplete_Handler,
 		},
 		{
 			MethodName: "GetDpuInfoList",
@@ -13228,6 +13669,14 @@ var Forge_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ApplyRackFirmware",
 			Handler:    _Forge_ApplyRackFirmware_Handler,
+		},
+		{
+			MethodName: "GetRackFirmwareJobStatus",
+			Handler:    _Forge_GetRackFirmwareJobStatus_Handler,
+		},
+		{
+			MethodName: "GetRackFirmwareHistory",
+			Handler:    _Forge_GetRackFirmwareHistory_Handler,
 		},
 		{
 			MethodName: "ReplaceAllExpectedMachines",
@@ -13802,6 +14251,10 @@ var Forge_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Forge_CreateDpaInterface_Handler,
 		},
 		{
+			MethodName: "EnsureDpaInterface",
+			Handler:    _Forge_EnsureDpaInterface_Handler,
+		},
+		{
 			MethodName: "DeleteDpaInterface",
 			Handler:    _Forge_DeleteDpaInterface_Handler,
 		},
@@ -13832,6 +14285,26 @@ var Forge_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteRack",
 			Handler:    _Forge_DeleteRack_Handler,
+		},
+		{
+			MethodName: "CreateComputeAllocation",
+			Handler:    _Forge_CreateComputeAllocation_Handler,
+		},
+		{
+			MethodName: "FindComputeAllocationIds",
+			Handler:    _Forge_FindComputeAllocationIds_Handler,
+		},
+		{
+			MethodName: "FindComputeAllocationsByIds",
+			Handler:    _Forge_FindComputeAllocationsByIds_Handler,
+		},
+		{
+			MethodName: "UpdateComputeAllocation",
+			Handler:    _Forge_UpdateComputeAllocation_Handler,
+		},
+		{
+			MethodName: "DeleteComputeAllocation",
+			Handler:    _Forge_DeleteComputeAllocation_Handler,
 		},
 		{
 			MethodName: "SetFirmwareUpdateTimeWindow",
@@ -13944,6 +14417,10 @@ var Forge_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "FindMachinesUnderAttestation",
 			Handler:    _Forge_FindMachinesUnderAttestation_Handler,
+		},
+		{
+			MethodName: "SignMachineIdentity",
+			Handler:    _Forge_SignMachineIdentity_Handler,
 		},
 		{
 			MethodName: "ScoutStreamShowConnections",

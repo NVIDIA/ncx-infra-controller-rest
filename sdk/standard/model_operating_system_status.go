@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -21,13 +21,13 @@ type OperatingSystemStatus string
 
 // List of OperatingSystemStatus
 const (
-	OPERATINGSYSTEMSTATUS_PENDING OperatingSystemStatus = "Pending"
+	OPERATINGSYSTEMSTATUS_PENDING      OperatingSystemStatus = "Pending"
 	OPERATINGSYSTEMSTATUS_PROVISIONING OperatingSystemStatus = "Provisioning"
-	OPERATINGSYSTEMSTATUS_SYNCING OperatingSystemStatus = "Syncing"
-	OPERATINGSYSTEMSTATUS_READY OperatingSystemStatus = "Ready"
-	OPERATINGSYSTEMSTATUS_DELETING OperatingSystemStatus = "Deleting"
-	OPERATINGSYSTEMSTATUS_ERROR OperatingSystemStatus = "Error"
-	OPERATINGSYSTEMSTATUS_DEACTIVATED OperatingSystemStatus = "Deactivated"
+	OPERATINGSYSTEMSTATUS_SYNCING      OperatingSystemStatus = "Syncing"
+	OPERATINGSYSTEMSTATUS_READY        OperatingSystemStatus = "Ready"
+	OPERATINGSYSTEMSTATUS_DELETING     OperatingSystemStatus = "Deleting"
+	OPERATINGSYSTEMSTATUS_ERROR        OperatingSystemStatus = "Error"
+	OPERATINGSYSTEMSTATUS_DEACTIVATED  OperatingSystemStatus = "Deactivated"
 )
 
 // All allowed values of OperatingSystemStatus enum
@@ -119,4 +119,3 @@ func (v *NullableOperatingSystemStatus) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-

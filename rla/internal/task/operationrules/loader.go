@@ -23,8 +23,8 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/common"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/common"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
 )
 
 type RuleLoader interface {

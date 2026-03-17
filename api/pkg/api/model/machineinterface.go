@@ -20,8 +20,8 @@ package model
 import (
 	"time"
 
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model/util"
-	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model/util"
+	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
 )
 
 // APIMachineInterface is the data structure to capture API representation of a MachineInterface

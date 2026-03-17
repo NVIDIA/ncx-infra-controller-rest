@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -21,30 +21,30 @@ var _ MappedNullable = &Subnet{}
 
 // Subnet Subnets are network grouping constructs for baremetal machines.
 type Subnet struct {
-	Id *string `json:"id,omitempty"`
-	Name *string `json:"name,omitempty"`
-	Description *string `json:"description,omitempty"`
-	SiteId *string `json:"siteId,omitempty"`
-	VpcId *string `json:"vpcId,omitempty"`
-	TenantId *string `json:"tenantId,omitempty"`
+	Id                         *string        `json:"id,omitempty"`
+	Name                       *string        `json:"name,omitempty"`
+	Description                *string        `json:"description,omitempty"`
+	SiteId                     *string        `json:"siteId,omitempty"`
+	VpcId                      *string        `json:"vpcId,omitempty"`
+	TenantId                   *string        `json:"tenantId,omitempty"`
 	ControllerNetworkSegmentId NullableString `json:"controllerNetworkSegmentId,omitempty"`
 	// The prefix that gets assigned to the subnet if ipv4 block is chosen
-	Ipv4Prefix NullableString `json:"ipv4Prefix,omitempty"`
+	Ipv4Prefix  NullableString `json:"ipv4Prefix,omitempty"`
 	Ipv4BlockId NullableString `json:"ipv4BlockId,omitempty"`
 	Ipv4Gateway NullableString `json:"ipv4Gateway,omitempty"`
-	Ipv6Prefix NullableString `json:"ipv6Prefix,omitempty"`
+	Ipv6Prefix  NullableString `json:"ipv6Prefix,omitempty"`
 	Ipv6BlockId NullableString `json:"ipv6BlockId,omitempty"`
 	Ipv6Gateway NullableString `json:"ipv6Gateway,omitempty"`
 	// Maximum Transmission Unit size in bytes. This property is system-determined and read-only.
 	Mtu *int32 `json:"mtu,omitempty"`
 	// Max value depends on prefix length of parent IP Block
-	PrefixLength *int32 `json:"prefixLength,omitempty"`
-	RoutingType *string `json:"routingType,omitempty"`
-	Status *SubnetStatus `json:"status,omitempty"`
+	PrefixLength  *int32         `json:"prefixLength,omitempty"`
+	RoutingType   *string        `json:"routingType,omitempty"`
+	Status        *SubnetStatus  `json:"status,omitempty"`
 	StatusHistory []StatusDetail `json:"statusHistory,omitempty"`
-	Created *time.Time `json:"created,omitempty"`
-	Updated *time.Time `json:"updated,omitempty"`
-	Deprecations []Deprecation `json:"deprecations,omitempty"`
+	Created       *time.Time     `json:"created,omitempty"`
+	Updated       *time.Time     `json:"updated,omitempty"`
+	Deprecations  []Deprecation  `json:"deprecations,omitempty"`
 }
 
 // NewSubnet instantiates a new Subnet object
@@ -288,6 +288,7 @@ func (o *Subnet) HasControllerNetworkSegmentId() bool {
 func (o *Subnet) SetControllerNetworkSegmentId(v string) {
 	o.ControllerNetworkSegmentId.Set(&v)
 }
+
 // SetControllerNetworkSegmentIdNil sets the value for ControllerNetworkSegmentId to be an explicit nil
 func (o *Subnet) SetControllerNetworkSegmentIdNil() {
 	o.ControllerNetworkSegmentId.Set(nil)
@@ -330,6 +331,7 @@ func (o *Subnet) HasIpv4Prefix() bool {
 func (o *Subnet) SetIpv4Prefix(v string) {
 	o.Ipv4Prefix.Set(&v)
 }
+
 // SetIpv4PrefixNil sets the value for Ipv4Prefix to be an explicit nil
 func (o *Subnet) SetIpv4PrefixNil() {
 	o.Ipv4Prefix.Set(nil)
@@ -372,6 +374,7 @@ func (o *Subnet) HasIpv4BlockId() bool {
 func (o *Subnet) SetIpv4BlockId(v string) {
 	o.Ipv4BlockId.Set(&v)
 }
+
 // SetIpv4BlockIdNil sets the value for Ipv4BlockId to be an explicit nil
 func (o *Subnet) SetIpv4BlockIdNil() {
 	o.Ipv4BlockId.Set(nil)
@@ -414,6 +417,7 @@ func (o *Subnet) HasIpv4Gateway() bool {
 func (o *Subnet) SetIpv4Gateway(v string) {
 	o.Ipv4Gateway.Set(&v)
 }
+
 // SetIpv4GatewayNil sets the value for Ipv4Gateway to be an explicit nil
 func (o *Subnet) SetIpv4GatewayNil() {
 	o.Ipv4Gateway.Set(nil)
@@ -456,6 +460,7 @@ func (o *Subnet) HasIpv6Prefix() bool {
 func (o *Subnet) SetIpv6Prefix(v string) {
 	o.Ipv6Prefix.Set(&v)
 }
+
 // SetIpv6PrefixNil sets the value for Ipv6Prefix to be an explicit nil
 func (o *Subnet) SetIpv6PrefixNil() {
 	o.Ipv6Prefix.Set(nil)
@@ -498,6 +503,7 @@ func (o *Subnet) HasIpv6BlockId() bool {
 func (o *Subnet) SetIpv6BlockId(v string) {
 	o.Ipv6BlockId.Set(&v)
 }
+
 // SetIpv6BlockIdNil sets the value for Ipv6BlockId to be an explicit nil
 func (o *Subnet) SetIpv6BlockIdNil() {
 	o.Ipv6BlockId.Set(nil)
@@ -540,6 +546,7 @@ func (o *Subnet) HasIpv6Gateway() bool {
 func (o *Subnet) SetIpv6Gateway(v string) {
 	o.Ipv6Gateway.Set(&v)
 }
+
 // SetIpv6GatewayNil sets the value for Ipv6Gateway to be an explicit nil
 func (o *Subnet) SetIpv6GatewayNil() {
 	o.Ipv6Gateway.Set(nil)
@@ -807,7 +814,7 @@ func (o *Subnet) SetDeprecations(v []Deprecation) {
 }
 
 func (o Subnet) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -917,5 +924,3 @@ func (v *NullableSubnet) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

@@ -20,7 +20,7 @@ package managerapi
 import (
 	"context"
 
-	"github.com/nvidia/bare-metal-manager-rest/site-workflow/pkg/grpc/client"
+	"github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/grpc/client"
 )
 
 // RLAExpansion - RLA Expansion

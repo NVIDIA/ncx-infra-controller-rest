@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -12,8 +12,8 @@ Contact: carbide-dev@exchange.nvidia.com
 package standard
 
 import (
-	"encoding/json"
 	"bytes"
+	"encoding/json"
 	"fmt"
 )
 
@@ -142,6 +142,7 @@ func (o *ExpectedMachineCreateRequest) HasBmcUsername() bool {
 func (o *ExpectedMachineCreateRequest) SetBmcUsername(v string) {
 	o.BmcUsername.Set(&v)
 }
+
 // SetBmcUsernameNil sets the value for BmcUsername to be an explicit nil
 func (o *ExpectedMachineCreateRequest) SetBmcUsernameNil() {
 	o.BmcUsername.Set(nil)
@@ -184,6 +185,7 @@ func (o *ExpectedMachineCreateRequest) HasBmcPassword() bool {
 func (o *ExpectedMachineCreateRequest) SetBmcPassword(v string) {
 	o.BmcPassword.Set(&v)
 }
+
 // SetBmcPasswordNil sets the value for BmcPassword to be an explicit nil
 func (o *ExpectedMachineCreateRequest) SetBmcPasswordNil() {
 	o.BmcPassword.Set(nil)
@@ -283,6 +285,7 @@ func (o *ExpectedMachineCreateRequest) HasSkuId() bool {
 func (o *ExpectedMachineCreateRequest) SetSkuId(v string) {
 	o.SkuId.Set(&v)
 }
+
 // SetSkuIdNil sets the value for SkuId to be an explicit nil
 func (o *ExpectedMachineCreateRequest) SetSkuIdNil() {
 	o.SkuId.Set(nil)
@@ -326,7 +329,7 @@ func (o *ExpectedMachineCreateRequest) SetLabels(v map[string]string) {
 }
 
 func (o ExpectedMachineCreateRequest) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -371,10 +374,10 @@ func (o *ExpectedMachineCreateRequest) UnmarshalJSON(data []byte) (err error) {
 	err = json.Unmarshal(data, &allProperties)
 
 	if err != nil {
-		return err;
+		return err
 	}
 
-	for _, requiredProperty := range(requiredProperties) {
+	for _, requiredProperty := range requiredProperties {
 		if _, exists := allProperties[requiredProperty]; !exists {
 			return fmt.Errorf("no value given for required property %v", requiredProperty)
 		}
@@ -430,5 +433,3 @@ func (v *NullableExpectedMachineCreateRequest) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

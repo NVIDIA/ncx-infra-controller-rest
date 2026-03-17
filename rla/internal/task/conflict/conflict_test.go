@@ -26,9 +26,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/operation"
-	taskcommon "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/common"
-	taskdef "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/task"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/operation"
+	taskcommon "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/common"
+	taskdef "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/task"
 )
 
 // makeTask is a test helper that constructs a minimal Task for conflict tests.

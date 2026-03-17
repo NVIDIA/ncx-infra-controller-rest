@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -256,6 +256,7 @@ func (o *ExpectedMachine) HasSkuId() bool {
 func (o *ExpectedMachine) SetSkuId(v string) {
 	o.SkuId.Set(&v)
 }
+
 // SetSkuIdNil sets the value for SkuId to be an explicit nil
 func (o *ExpectedMachine) SetSkuIdNil() {
 	o.SkuId.Set(nil)
@@ -330,6 +331,7 @@ func (o *ExpectedMachine) HasMachineId() bool {
 func (o *ExpectedMachine) SetMachineId(v string) {
 	o.MachineId.Set(&v)
 }
+
 // SetMachineIdNil sets the value for MachineId to be an explicit nil
 func (o *ExpectedMachine) SetMachineIdNil() {
 	o.MachineId.Set(nil)
@@ -469,7 +471,7 @@ func (o *ExpectedMachine) SetUpdated(v time.Time) {
 }
 
 func (o ExpectedMachine) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -552,5 +554,3 @@ func (v *NullableExpectedMachine) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

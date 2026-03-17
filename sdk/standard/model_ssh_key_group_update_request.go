@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -12,8 +12,8 @@ Contact: carbide-dev@exchange.nvidia.com
 package standard
 
 import (
-	"encoding/json"
 	"bytes"
+	"encoding/json"
 	"fmt"
 )
 
@@ -22,7 +22,7 @@ var _ MappedNullable = &SshKeyGroupUpdateRequest{}
 
 // SshKeyGroupUpdateRequest Request data to update an SSH Key Group
 type SshKeyGroupUpdateRequest struct {
-	Name NullableString `json:"name,omitempty"`
+	Name        NullableString `json:"name,omitempty"`
 	Description NullableString `json:"description,omitempty"`
 	// When specified, replaces existing Site associations
 	SiteIds []string `json:"siteIds,omitempty"`
@@ -84,6 +84,7 @@ func (o *SshKeyGroupUpdateRequest) HasName() bool {
 func (o *SshKeyGroupUpdateRequest) SetName(v string) {
 	o.Name.Set(&v)
 }
+
 // SetNameNil sets the value for Name to be an explicit nil
 func (o *SshKeyGroupUpdateRequest) SetNameNil() {
 	o.Name.Set(nil)
@@ -126,6 +127,7 @@ func (o *SshKeyGroupUpdateRequest) HasDescription() bool {
 func (o *SshKeyGroupUpdateRequest) SetDescription(v string) {
 	o.Description.Set(&v)
 }
+
 // SetDescriptionNil sets the value for Description to be an explicit nil
 func (o *SshKeyGroupUpdateRequest) SetDescriptionNil() {
 	o.Description.Set(nil)
@@ -225,7 +227,7 @@ func (o *SshKeyGroupUpdateRequest) SetVersion(v string) {
 }
 
 func (o SshKeyGroupUpdateRequest) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -263,10 +265,10 @@ func (o *SshKeyGroupUpdateRequest) UnmarshalJSON(data []byte) (err error) {
 	err = json.Unmarshal(data, &allProperties)
 
 	if err != nil {
-		return err;
+		return err
 	}
 
-	for _, requiredProperty := range(requiredProperties) {
+	for _, requiredProperty := range requiredProperties {
 		if _, exists := allProperties[requiredProperty]; !exists {
 			return fmt.Errorf("no value given for required property %v", requiredProperty)
 		}
@@ -322,5 +324,3 @@ func (v *NullableSshKeyGroupUpdateRequest) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

@@ -19,9 +19,9 @@ package cmd
 
 import (
 	"context"
-	"github.com/nvidia/bare-metal-manager-rest/nvswitch-manager/pkg/db"
-	"github.com/nvidia/bare-metal-manager-rest/nvswitch-manager/pkg/db/migrations"
-	"github.com/nvidia/bare-metal-manager-rest/nvswitch-manager/pkg/db/postgres"
+	"github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/pkg/db"
+	"github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/pkg/db/migrations"
+	"github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/pkg/db/postgres"
 	"time"
 
 	log "github.com/sirupsen/logrus"

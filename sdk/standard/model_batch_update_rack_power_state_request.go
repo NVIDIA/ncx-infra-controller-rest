@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -12,8 +12,8 @@ Contact: carbide-dev@exchange.nvidia.com
 package standard
 
 import (
-	"encoding/json"
 	"bytes"
+	"encoding/json"
 	"fmt"
 )
 
@@ -23,7 +23,7 @@ var _ MappedNullable = &BatchUpdateRackPowerStateRequest{}
 // BatchUpdateRackPowerStateRequest Request body for batch rack power control operations
 type BatchUpdateRackPowerStateRequest struct {
 	// ID of the Site
-	SiteId string `json:"siteId"`
+	SiteId string      `json:"siteId"`
 	Filter *RackFilter `json:"filter,omitempty"`
 	// Target power state
 	State string `json:"state"`
@@ -131,7 +131,7 @@ func (o *BatchUpdateRackPowerStateRequest) SetState(v string) {
 }
 
 func (o BatchUpdateRackPowerStateRequest) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -162,10 +162,10 @@ func (o *BatchUpdateRackPowerStateRequest) UnmarshalJSON(data []byte) (err error
 	err = json.Unmarshal(data, &allProperties)
 
 	if err != nil {
-		return err;
+		return err
 	}
 
-	for _, requiredProperty := range(requiredProperties) {
+	for _, requiredProperty := range requiredProperties {
 		if _, exists := allProperties[requiredProperty]; !exists {
 			return fmt.Errorf("no value given for required property %v", requiredProperty)
 		}
@@ -221,5 +221,3 @@ func (v *NullableBatchUpdateRackPowerStateRequest) UnmarshalJSON(src []byte) err
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

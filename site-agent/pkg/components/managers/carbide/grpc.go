@@ -20,9 +20,9 @@ package carbide
 import (
 	"sync"
 
+	computils "github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/utils"
+	"github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/grpc/client"
 	"github.com/gogo/status"
-	computils "github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/components/utils"
-	"github.com/nvidia/bare-metal-manager-rest/site-workflow/pkg/grpc/client"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc/codes"
 )

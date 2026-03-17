@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -20,14 +20,14 @@ var _ MappedNullable = &MachineCountByStatus{}
 
 // MachineCountByStatus Describes count of Machines in various statuses
 type MachineCountByStatus struct {
-	Total *int32 `json:"total,omitempty"`
-	Initializing *int32 `json:"initializing,omitempty"`
-	Reset *int32 `json:"reset,omitempty"`
-	Assigned *int32 `json:"assigned,omitempty"`
-	Ready *int32 `json:"ready,omitempty"`
-	Error *int32 `json:"error,omitempty"`
+	Total          *int32 `json:"total,omitempty"`
+	Initializing   *int32 `json:"initializing,omitempty"`
+	Reset          *int32 `json:"reset,omitempty"`
+	Assigned       *int32 `json:"assigned,omitempty"`
+	Ready          *int32 `json:"ready,omitempty"`
+	Error          *int32 `json:"error,omitempty"`
 	Decommissioned *int32 `json:"decommissioned,omitempty"`
-	Unknown *int32 `json:"unknown,omitempty"`
+	Unknown        *int32 `json:"unknown,omitempty"`
 }
 
 // NewMachineCountByStatus instantiates a new MachineCountByStatus object
@@ -304,7 +304,7 @@ func (o *MachineCountByStatus) SetUnknown(v int32) {
 }
 
 func (o MachineCountByStatus) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -375,5 +375,3 @@ func (v *NullableMachineCountByStatus) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

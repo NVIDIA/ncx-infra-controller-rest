@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -20,18 +20,16 @@ import (
 	"strings"
 )
 
-
 // VPCAPIService VPCAPI service
 type VPCAPIService service
 
 type ApiCreateVpcRequest struct {
-	ctx context.Context
-	ApiService *VPCAPIService
-	org string
+	ctx              context.Context
+	ApiService       *VPCAPIService
+	org              string
 	vpcCreateRequest *VpcCreateRequest
 }
 
-// 
 func (r ApiCreateVpcRequest) VpcCreateRequest(vpcCreateRequest VpcCreateRequest) ApiCreateVpcRequest {
 	r.vpcCreateRequest = &vpcCreateRequest
 	return r
@@ -48,26 +46,27 @@ Create a VPC for the org.
 
 Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` authorization role
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @return ApiCreateVpcRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@return ApiCreateVpcRequest
 */
 func (a *VPCAPIService) CreateVpc(ctx context.Context, org string) ApiCreateVpcRequest {
 	return ApiCreateVpcRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ctx:        ctx,
+		org:        org,
 	}
 }
 
 // Execute executes the request
-//  @return VPC
+//
+//	@return VPC
 func (a *VPCAPIService) CreateVpcExecute(r ApiCreateVpcRequest) (*VPC, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodPost
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *VPC
+		localVarHTTPMethod  = http.MethodPost
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *VPC
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "VPCAPIService.CreateVpc")
@@ -130,8 +129,8 @@ func (a *VPCAPIService) CreateVpcExecute(r ApiCreateVpcRequest) (*VPC, *http.Res
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
@@ -141,8 +140,8 @@ func (a *VPCAPIService) CreateVpcExecute(r ApiCreateVpcRequest) (*VPC, *http.Res
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -160,10 +159,10 @@ func (a *VPCAPIService) CreateVpcExecute(r ApiCreateVpcRequest) (*VPC, *http.Res
 }
 
 type ApiDeleteVpcRequest struct {
-	ctx context.Context
+	ctx        context.Context
 	ApiService *VPCAPIService
-	org string
-	vpcId string
+	org        string
+	vpcId      string
 }
 
 func (r ApiDeleteVpcRequest) Execute() (*http.Response, error) {
@@ -177,26 +176,26 @@ Delete a specific VPC by ID.
 
 Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` authorization role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @param vpcId ID of the VPC
- @return ApiDeleteVpcRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@param vpcId ID of the VPC
+	@return ApiDeleteVpcRequest
 */
 func (a *VPCAPIService) DeleteVpc(ctx context.Context, org string, vpcId string) ApiDeleteVpcRequest {
 	return ApiDeleteVpcRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
-		vpcId: vpcId,
+		ctx:        ctx,
+		org:        org,
+		vpcId:      vpcId,
 	}
 }
 
 // Execute executes the request
 func (a *VPCAPIService) DeleteVpcExecute(r ApiDeleteVpcRequest) (*http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodDelete
-		localVarPostBody     interface{}
-		formFiles            []formFile
+		localVarHTTPMethod = http.MethodDelete
+		localVarPostBody   interface{}
+		formFiles          []formFile
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "VPCAPIService.DeleteVpc")
@@ -258,8 +257,8 @@ func (a *VPCAPIService) DeleteVpcExecute(r ApiDeleteVpcRequest) (*http.Response,
 				newErr.error = err.Error()
 				return localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarHTTPResponse, newErr
 	}
@@ -268,16 +267,16 @@ func (a *VPCAPIService) DeleteVpcExecute(r ApiDeleteVpcRequest) (*http.Response,
 }
 
 type ApiGetAllVpcRequest struct {
-	ctx context.Context
-	ApiService *VPCAPIService
-	org string
-	siteId *string
-	status *string
-	query *string
-	includeRelation *string
-	pageNumber *int32
-	pageSize *int32
-	orderBy *string
+	ctx                    context.Context
+	ApiService             *VPCAPIService
+	org                    string
+	siteId                 *string
+	status                 *string
+	query                  *string
+	includeRelation        *string
+	pageNumber             *int32
+	pageSize               *int32
+	orderBy                *string
 	networkSecurityGroupId *string
 }
 
@@ -340,26 +339,27 @@ Retrieve all VPCs for the org.
 
 Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` authorization role
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @return ApiGetAllVpcRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@return ApiGetAllVpcRequest
 */
 func (a *VPCAPIService) GetAllVpc(ctx context.Context, org string) ApiGetAllVpcRequest {
 	return ApiGetAllVpcRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ctx:        ctx,
+		org:        org,
 	}
 }
 
 // Execute executes the request
-//  @return []VPC
+//
+//	@return []VPC
 func (a *VPCAPIService) GetAllVpcExecute(r ApiGetAllVpcRequest) ([]VPC, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodGet
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  []VPC
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue []VPC
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "VPCAPIService.GetAllVpc")
@@ -448,8 +448,8 @@ func (a *VPCAPIService) GetAllVpcExecute(r ApiGetAllVpcRequest) ([]VPC, *http.Re
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -467,10 +467,10 @@ func (a *VPCAPIService) GetAllVpcExecute(r ApiGetAllVpcRequest) ([]VPC, *http.Re
 }
 
 type ApiGetVpcRequest struct {
-	ctx context.Context
-	ApiService *VPCAPIService
-	org string
-	vpcId string
+	ctx             context.Context
+	ApiService      *VPCAPIService
+	org             string
+	vpcId           string
 	includeRelation *string
 }
 
@@ -491,28 +491,29 @@ Retrieve a specific VPC by ID.
 
 Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @param vpcId ID of the VPC
- @return ApiGetVpcRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@param vpcId ID of the VPC
+	@return ApiGetVpcRequest
 */
 func (a *VPCAPIService) GetVpc(ctx context.Context, org string, vpcId string) ApiGetVpcRequest {
 	return ApiGetVpcRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
-		vpcId: vpcId,
+		ctx:        ctx,
+		org:        org,
+		vpcId:      vpcId,
 	}
 }
 
 // Execute executes the request
-//  @return VPC
+//
+//	@return VPC
 func (a *VPCAPIService) GetVpcExecute(r ApiGetVpcRequest) (*VPC, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodGet
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *VPC
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *VPC
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "VPCAPIService.GetVpc")
@@ -577,8 +578,8 @@ func (a *VPCAPIService) GetVpcExecute(r ApiGetVpcRequest) (*VPC, *http.Response,
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -596,10 +597,10 @@ func (a *VPCAPIService) GetVpcExecute(r ApiGetVpcRequest) (*VPC, *http.Response,
 }
 
 type ApiUpdateVpcRequest struct {
-	ctx context.Context
-	ApiService *VPCAPIService
-	org string
-	vpcId string
+	ctx              context.Context
+	ApiService       *VPCAPIService
+	org              string
+	vpcId            string
 	vpcUpdateRequest *VpcUpdateRequest
 }
 
@@ -615,32 +616,33 @@ func (r ApiUpdateVpcRequest) Execute() (*VPC, *http.Response, error) {
 /*
 UpdateVpc Update VPC
 
-Update an existing VPC
+# Update an existing VPC
 
 Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` authorization role
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @param vpcId ID of the VPC
- @return ApiUpdateVpcRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@param vpcId ID of the VPC
+	@return ApiUpdateVpcRequest
 */
 func (a *VPCAPIService) UpdateVpc(ctx context.Context, org string, vpcId string) ApiUpdateVpcRequest {
 	return ApiUpdateVpcRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
-		vpcId: vpcId,
+		ctx:        ctx,
+		org:        org,
+		vpcId:      vpcId,
 	}
 }
 
 // Execute executes the request
-//  @return VPC
+//
+//	@return VPC
 func (a *VPCAPIService) UpdateVpcExecute(r ApiUpdateVpcRequest) (*VPC, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodPatch
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *VPC
+		localVarHTTPMethod  = http.MethodPatch
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *VPC
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "VPCAPIService.UpdateVpc")
@@ -704,8 +706,8 @@ func (a *VPCAPIService) UpdateVpcExecute(r ApiUpdateVpcRequest) (*VPC, *http.Res
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
@@ -715,8 +717,8 @@ func (a *VPCAPIService) UpdateVpcExecute(r ApiUpdateVpcRequest) (*VPC, *http.Res
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -734,10 +736,10 @@ func (a *VPCAPIService) UpdateVpcExecute(r ApiUpdateVpcRequest) (*VPC, *http.Res
 }
 
 type ApiUpdateVpcVirtualizationRequest struct {
-	ctx context.Context
-	ApiService *VPCAPIService
-	org string
-	vpcId string
+	ctx                            context.Context
+	ApiService                     *VPCAPIService
+	org                            string
+	vpcId                          string
 	vpcVirtualizationUpdateRequest *VpcVirtualizationUpdateRequest
 }
 
@@ -753,34 +755,35 @@ func (r ApiUpdateVpcVirtualizationRequest) Execute() (*VPC, *http.Response, erro
 /*
 UpdateVpcVirtualization Update VPC Virtualization
 
-Update network virtualization type for a VPC
+# Update network virtualization type for a VPC
 
 Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` authorization role
 
 Tenant must own the VPC
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @param vpcId ID of the VPC
- @return ApiUpdateVpcVirtualizationRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@param vpcId ID of the VPC
+	@return ApiUpdateVpcVirtualizationRequest
 */
 func (a *VPCAPIService) UpdateVpcVirtualization(ctx context.Context, org string, vpcId string) ApiUpdateVpcVirtualizationRequest {
 	return ApiUpdateVpcVirtualizationRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
-		vpcId: vpcId,
+		ctx:        ctx,
+		org:        org,
+		vpcId:      vpcId,
 	}
 }
 
 // Execute executes the request
-//  @return VPC
+//
+//	@return VPC
 func (a *VPCAPIService) UpdateVpcVirtualizationExecute(r ApiUpdateVpcVirtualizationRequest) (*VPC, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodPatch
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *VPC
+		localVarHTTPMethod  = http.MethodPatch
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *VPC
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "VPCAPIService.UpdateVpcVirtualization")
@@ -844,8 +847,8 @@ func (a *VPCAPIService) UpdateVpcVirtualizationExecute(r ApiUpdateVpcVirtualizat
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
@@ -855,8 +858,8 @@ func (a *VPCAPIService) UpdateVpcVirtualizationExecute(r ApiUpdateVpcVirtualizat
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}

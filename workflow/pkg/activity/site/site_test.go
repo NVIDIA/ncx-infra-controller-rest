@@ -30,15 +30,15 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
+	cdbu "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/util"
+	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/internal/config"
+	sc "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/client/site"
+	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/queue"
+	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/util"
 	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
-	cdbu "github.com/nvidia/bare-metal-manager-rest/db/pkg/util"
-	"github.com/nvidia/bare-metal-manager-rest/workflow/internal/config"
-	sc "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/client/site"
-	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/queue"
-	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/uptrace/bun/extra/bundebug"
@@ -54,7 +54,7 @@ import (
 	twsv1mock "go.temporal.io/api/workflowservicemock/v1"
 	tmocks "go.temporal.io/sdk/mocks"
 
-	cwsv1 "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
+	cwsv1 "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 )
 
 // testTemporalSiteClientPool Building site client pool

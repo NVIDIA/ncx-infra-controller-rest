@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -20,15 +20,14 @@ import (
 	"strings"
 )
 
-
 // TrayAPIService TrayAPI service
 type TrayAPIService service
 
 type ApiFirmwareUpdateTrayRequest struct {
-	ctx context.Context
-	ApiService *TrayAPIService
-	org string
-	id string
+	ctx                   context.Context
+	ApiService            *TrayAPIService
+	org                   string
+	id                    string
 	firmwareUpdateRequest *FirmwareUpdateRequest
 }
 
@@ -48,28 +47,29 @@ Update firmware on a Tray identified by Tray UUID.
 
 Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` authorization role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @param id ID of the Tray
- @return ApiFirmwareUpdateTrayRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@param id ID of the Tray
+	@return ApiFirmwareUpdateTrayRequest
 */
 func (a *TrayAPIService) FirmwareUpdateTray(ctx context.Context, org string, id string) ApiFirmwareUpdateTrayRequest {
 	return ApiFirmwareUpdateTrayRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
-		id: id,
+		ctx:        ctx,
+		org:        org,
+		id:         id,
 	}
 }
 
 // Execute executes the request
-//  @return FirmwareUpdateResponse
+//
+//	@return FirmwareUpdateResponse
 func (a *TrayAPIService) FirmwareUpdateTrayExecute(r ApiFirmwareUpdateTrayRequest) (*FirmwareUpdateResponse, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodPatch
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *FirmwareUpdateResponse
+		localVarHTTPMethod  = http.MethodPatch
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *FirmwareUpdateResponse
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "TrayAPIService.FirmwareUpdateTray")
@@ -136,8 +136,8 @@ func (a *TrayAPIService) FirmwareUpdateTrayExecute(r ApiFirmwareUpdateTrayReques
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
@@ -147,8 +147,8 @@ func (a *TrayAPIService) FirmwareUpdateTrayExecute(r ApiFirmwareUpdateTrayReques
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -166,9 +166,9 @@ func (a *TrayAPIService) FirmwareUpdateTrayExecute(r ApiFirmwareUpdateTrayReques
 }
 
 type ApiFirmwareUpdateTraysRequest struct {
-	ctx context.Context
-	ApiService *TrayAPIService
-	org string
+	ctx                            context.Context
+	ApiService                     *TrayAPIService
+	org                            string
 	batchTrayFirmwareUpdateRequest *BatchTrayFirmwareUpdateRequest
 }
 
@@ -193,26 +193,27 @@ Update firmware on Trays with optional filters. If no filter is specified, targe
 
 Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` authorization role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @return ApiFirmwareUpdateTraysRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@return ApiFirmwareUpdateTraysRequest
 */
 func (a *TrayAPIService) FirmwareUpdateTrays(ctx context.Context, org string) ApiFirmwareUpdateTraysRequest {
 	return ApiFirmwareUpdateTraysRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ctx:        ctx,
+		org:        org,
 	}
 }
 
 // Execute executes the request
-//  @return FirmwareUpdateResponse
+//
+//	@return FirmwareUpdateResponse
 func (a *TrayAPIService) FirmwareUpdateTraysExecute(r ApiFirmwareUpdateTraysRequest) (*FirmwareUpdateResponse, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodPatch
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *FirmwareUpdateResponse
+		localVarHTTPMethod  = http.MethodPatch
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *FirmwareUpdateResponse
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "TrayAPIService.FirmwareUpdateTrays")
@@ -278,8 +279,8 @@ func (a *TrayAPIService) FirmwareUpdateTraysExecute(r ApiFirmwareUpdateTraysRequ
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
@@ -289,8 +290,8 @@ func (a *TrayAPIService) FirmwareUpdateTraysExecute(r ApiFirmwareUpdateTraysRequ
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -308,18 +309,18 @@ func (a *TrayAPIService) FirmwareUpdateTraysExecute(r ApiFirmwareUpdateTraysRequ
 }
 
 type ApiGetAllTrayRequest struct {
-	ctx context.Context
-	ApiService *TrayAPIService
-	siteId *string
-	org string
-	rackId *string
-	rackName *string
-	type_ *string
+	ctx         context.Context
+	ApiService  *TrayAPIService
+	siteId      *string
+	org         string
+	rackId      *string
+	rackName    *string
+	type_       *string
 	componentId *string
-	id *string
-	pageNumber *int32
-	pageSize *int32
-	orderBy *string
+	id          *string
+	pageNumber  *int32
+	pageSize    *int32
+	orderBy     *string
 }
 
 // ID of the Site to retrieve Trays from
@@ -392,26 +393,27 @@ Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_
 - `rackId`/`rackName` cannot be combined with `id`/`componentId` (rack-level vs component-level targeting)
 - `componentId` requires `type` to be specified
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @return ApiGetAllTrayRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@return ApiGetAllTrayRequest
 */
 func (a *TrayAPIService) GetAllTray(ctx context.Context, org string) ApiGetAllTrayRequest {
 	return ApiGetAllTrayRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ctx:        ctx,
+		org:        org,
 	}
 }
 
 // Execute executes the request
-//  @return []Tray
+//
+//	@return []Tray
 func (a *TrayAPIService) GetAllTrayExecute(r ApiGetAllTrayRequest) ([]Tray, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodGet
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  []Tray
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue []Tray
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "TrayAPIService.GetAllTray")
@@ -504,8 +506,8 @@ func (a *TrayAPIService) GetAllTrayExecute(r ApiGetAllTrayRequest) ([]Tray, *htt
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -523,11 +525,11 @@ func (a *TrayAPIService) GetAllTrayExecute(r ApiGetAllTrayRequest) ([]Tray, *htt
 }
 
 type ApiGetTrayRequest struct {
-	ctx context.Context
+	ctx        context.Context
 	ApiService *TrayAPIService
-	siteId *string
-	org string
-	id string
+	siteId     *string
+	org        string
+	id         string
 }
 
 // ID of the Site
@@ -547,28 +549,29 @@ Get a Tray by ID.
 
 Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` authorization role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @param id ID of the Tray
- @return ApiGetTrayRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@param id ID of the Tray
+	@return ApiGetTrayRequest
 */
 func (a *TrayAPIService) GetTray(ctx context.Context, org string, id string) ApiGetTrayRequest {
 	return ApiGetTrayRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
-		id: id,
+		ctx:        ctx,
+		org:        org,
+		id:         id,
 	}
 }
 
 // Execute executes the request
-//  @return Tray
+//
+//	@return Tray
 func (a *TrayAPIService) GetTrayExecute(r ApiGetTrayRequest) (*Tray, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodGet
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *Tray
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *Tray
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "TrayAPIService.GetTray")
@@ -634,8 +637,8 @@ func (a *TrayAPIService) GetTrayExecute(r ApiGetTrayRequest) (*Tray, *http.Respo
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 404 {
@@ -645,8 +648,8 @@ func (a *TrayAPIService) GetTrayExecute(r ApiGetTrayRequest) (*Tray, *http.Respo
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -664,10 +667,10 @@ func (a *TrayAPIService) GetTrayExecute(r ApiGetTrayRequest) (*Tray, *http.Respo
 }
 
 type ApiPowerControlTrayRequest struct {
-	ctx context.Context
-	ApiService *TrayAPIService
-	org string
-	id string
+	ctx                     context.Context
+	ApiService              *TrayAPIService
+	org                     string
+	id                      string
 	updatePowerStateRequest *UpdatePowerStateRequest
 }
 
@@ -689,28 +692,29 @@ Supported power states: `on`, `off`, `cycle`, `forceoff`, `forcecycle`.
 
 Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` authorization role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @param id ID of the Tray
- @return ApiPowerControlTrayRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@param id ID of the Tray
+	@return ApiPowerControlTrayRequest
 */
 func (a *TrayAPIService) PowerControlTray(ctx context.Context, org string, id string) ApiPowerControlTrayRequest {
 	return ApiPowerControlTrayRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
-		id: id,
+		ctx:        ctx,
+		org:        org,
+		id:         id,
 	}
 }
 
 // Execute executes the request
-//  @return UpdatePowerStateResponse
+//
+//	@return UpdatePowerStateResponse
 func (a *TrayAPIService) PowerControlTrayExecute(r ApiPowerControlTrayRequest) (*UpdatePowerStateResponse, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodPatch
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *UpdatePowerStateResponse
+		localVarHTTPMethod  = http.MethodPatch
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *UpdatePowerStateResponse
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "TrayAPIService.PowerControlTray")
@@ -777,8 +781,8 @@ func (a *TrayAPIService) PowerControlTrayExecute(r ApiPowerControlTrayRequest) (
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
@@ -788,8 +792,8 @@ func (a *TrayAPIService) PowerControlTrayExecute(r ApiPowerControlTrayRequest) (
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -807,9 +811,9 @@ func (a *TrayAPIService) PowerControlTrayExecute(r ApiPowerControlTrayRequest) (
 }
 
 type ApiPowerControlTraysRequest struct {
-	ctx context.Context
-	ApiService *TrayAPIService
-	org string
+	ctx                              context.Context
+	ApiService                       *TrayAPIService
+	org                              string
 	batchUpdateTrayPowerStateRequest *BatchUpdateTrayPowerStateRequest
 }
 
@@ -836,26 +840,27 @@ Supported power states: `on`, `off`, `cycle`, `forceoff`, `forcecycle`.
 
 Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` authorization role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @return ApiPowerControlTraysRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@return ApiPowerControlTraysRequest
 */
 func (a *TrayAPIService) PowerControlTrays(ctx context.Context, org string) ApiPowerControlTraysRequest {
 	return ApiPowerControlTraysRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ctx:        ctx,
+		org:        org,
 	}
 }
 
 // Execute executes the request
-//  @return UpdatePowerStateResponse
+//
+//	@return UpdatePowerStateResponse
 func (a *TrayAPIService) PowerControlTraysExecute(r ApiPowerControlTraysRequest) (*UpdatePowerStateResponse, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodPatch
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *UpdatePowerStateResponse
+		localVarHTTPMethod  = http.MethodPatch
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *UpdatePowerStateResponse
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "TrayAPIService.PowerControlTrays")
@@ -921,8 +926,8 @@ func (a *TrayAPIService) PowerControlTraysExecute(r ApiPowerControlTraysRequest)
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
@@ -932,8 +937,8 @@ func (a *TrayAPIService) PowerControlTraysExecute(r ApiPowerControlTraysRequest)
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -951,11 +956,11 @@ func (a *TrayAPIService) PowerControlTraysExecute(r ApiPowerControlTraysRequest)
 }
 
 type ApiValidateTrayRequest struct {
-	ctx context.Context
+	ctx        context.Context
 	ApiService *TrayAPIService
-	siteId *string
-	org string
-	id string
+	siteId     *string
+	org        string
+	id         string
 }
 
 // ID of the Site
@@ -977,28 +982,29 @@ Compares the expected component configuration against the actual state. Returns 
 
 Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` authorization role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @param id ID of the Tray
- @return ApiValidateTrayRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@param id ID of the Tray
+	@return ApiValidateTrayRequest
 */
 func (a *TrayAPIService) ValidateTray(ctx context.Context, org string, id string) ApiValidateTrayRequest {
 	return ApiValidateTrayRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
-		id: id,
+		ctx:        ctx,
+		org:        org,
+		id:         id,
 	}
 }
 
 // Execute executes the request
-//  @return RackValidationResult
+//
+//	@return RackValidationResult
 func (a *TrayAPIService) ValidateTrayExecute(r ApiValidateTrayRequest) (*RackValidationResult, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodGet
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *RackValidationResult
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *RackValidationResult
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "TrayAPIService.ValidateTray")
@@ -1064,8 +1070,8 @@ func (a *TrayAPIService) ValidateTrayExecute(r ApiValidateTrayRequest) (*RackVal
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
@@ -1075,8 +1081,8 @@ func (a *TrayAPIService) ValidateTrayExecute(r ApiValidateTrayRequest) (*RackVal
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -1094,16 +1100,16 @@ func (a *TrayAPIService) ValidateTrayExecute(r ApiValidateTrayRequest) (*RackVal
 }
 
 type ApiValidateTraysRequest struct {
-	ctx context.Context
-	ApiService *TrayAPIService
-	siteId *string
-	org string
-	rackId *string
-	rackName *string
-	name *string
+	ctx          context.Context
+	ApiService   *TrayAPIService
+	siteId       *string
+	org          string
+	rackId       *string
+	rackName     *string
+	name         *string
 	manufacturer *string
-	type_ *string
-	componentId *string
+	type_        *string
+	componentId  *string
 }
 
 // ID of the Site
@@ -1163,26 +1169,27 @@ Compares the expected component configuration against the actual state. Returns 
 
 Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` authorization role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @return ApiValidateTraysRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@return ApiValidateTraysRequest
 */
 func (a *TrayAPIService) ValidateTrays(ctx context.Context, org string) ApiValidateTraysRequest {
 	return ApiValidateTraysRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ctx:        ctx,
+		org:        org,
 	}
 }
 
 // Execute executes the request
-//  @return RackValidationResult
+//
+//	@return RackValidationResult
 func (a *TrayAPIService) ValidateTraysExecute(r ApiValidateTraysRequest) (*RackValidationResult, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodGet
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *RackValidationResult
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *RackValidationResult
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "TrayAPIService.ValidateTrays")
@@ -1265,8 +1272,8 @@ func (a *TrayAPIService) ValidateTraysExecute(r ApiValidateTraysRequest) (*RackV
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
@@ -1276,8 +1283,8 @@ func (a *TrayAPIService) ValidateTraysExecute(r ApiValidateTraysRequest) (*RackV
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}

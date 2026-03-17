@@ -29,14 +29,14 @@ import (
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/testsuite"
 
-	taskcommon "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/common"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/executor/temporalworkflow/common"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operationrules"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operations"
-	taskdef "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/task"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/deviceinfo"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/component"
+	taskcommon "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/common"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor/temporalworkflow/common"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operationrules"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operations"
+	taskdef "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/task"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/deviceinfo"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/inventoryobjects/component"
 )
 
 // mockPowerControl is a mock activity function for testing

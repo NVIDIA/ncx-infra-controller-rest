@@ -811,7 +811,7 @@ const file_mlx_device_carbide_proto_rawDesc = "" +
 	"\x16MATCH_MODE_UNSPECIFIED\x10\x00\x12\x14\n" +
 	"\x10MATCH_MODE_REGEX\x10\x01\x12\x14\n" +
 	"\x10MATCH_MODE_EXACT\x10\x02\x12\x15\n" +
-	"\x11MATCH_MODE_PREFIX\x10\x03BAZ?github.com/nvidia/bare-metal-manager-rest/workflow-schema/protob\x06proto3"
+	"\x11MATCH_MODE_PREFIX\x10\x03BCZAgithub.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/protob\x06proto3"
 
 var (
 	file_mlx_device_carbide_proto_rawDescOnce sync.Once

@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -21,11 +21,11 @@ var _ MappedNullable = &InfrastructureProvider{}
 
 // InfrastructureProvider Infrastructure providers own and manage datacenters
 type InfrastructureProvider struct {
-	Id *string `json:"id,omitempty"`
-	Org *string `json:"org,omitempty"`
-	OrgDisplayName *string `json:"orgDisplayName,omitempty"`
-	Created *time.Time `json:"created,omitempty"`
-	Updated *time.Time `json:"updated,omitempty"`
+	Id             *string    `json:"id,omitempty"`
+	Org            *string    `json:"org,omitempty"`
+	OrgDisplayName *string    `json:"orgDisplayName,omitempty"`
+	Created        *time.Time `json:"created,omitempty"`
+	Updated        *time.Time `json:"updated,omitempty"`
 }
 
 // NewInfrastructureProvider instantiates a new InfrastructureProvider object
@@ -206,7 +206,7 @@ func (o *InfrastructureProvider) SetUpdated(v time.Time) {
 }
 
 func (o InfrastructureProvider) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -268,5 +268,3 @@ func (v *NullableInfrastructureProvider) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

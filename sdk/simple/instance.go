@@ -21,7 +21,7 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/nvidia/bare-metal-manager-rest/sdk/standard"
+	"github.com/NVIDIA/ncx-infra-controller-rest/sdk/standard"
 )
 
 // InstanceCreateRequest represents a simplified request to create an Instance

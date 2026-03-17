@@ -94,11 +94,11 @@ migrate:
 
 fmt-go:
 	go fmt ./...
-	if git diff --quiet; then
-		echo "go fmt was clean"
-	else
-		echo "go fmt was unclean. Please commit the changes."
-		exit 1
+	@if git diff --quiet; then \
+		echo "go fmt was clean"; \
+	else \
+		echo "go fmt was unclean. Please commit the changes."; \
+		exit 1; \
 	fi
 
 lint-go:
@@ -224,7 +224,7 @@ carbide-proto:
 	@for file in carbide-core/rpc/proto/*.proto; do \
 		cp "$$file" "workflow-schema/site-agent/workflows/v1/$$(basename "$$file" .proto)_carbide.proto"; \
 		echo "Copied: $$file"; \
-		./workflow-schema/scripts/add-go-package-option.sh "workflow-schema/site-agent/workflows/v1/$$(basename "$$file" .proto)_carbide.proto" "github.com/nvidia/bare-metal-manager-rest/workflow-schema/proto"; \
+		./workflow-schema/scripts/add-go-package-option.sh "workflow-schema/site-agent/workflows/v1/$$(basename "$$file" .proto)_carbide.proto" "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/proto"; \
 	done
 	rm -rf carbide-core
 
@@ -238,7 +238,7 @@ rla-proto:
 	for file in "$${RLA_DIR}"/proto/v1/*.proto; do \
 		cp "$$file" "workflow-schema/rla/proto/v1/"; \
 		echo "Copied: $$file"; \
-		./workflow-schema/scripts/add-go-package-option.sh "workflow-schema/rla/proto/v1/$$(basename "$$file")" "github.com/nvidia/bare-metal-manager-rest/workflow-schema/rla"; \
+		./workflow-schema/scripts/add-go-package-option.sh "workflow-schema/rla/proto/v1/$$(basename "$$file")" "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/rla"; \
 	done
 
 rla-protogen:

@@ -18,8 +18,8 @@
 package managerapi
 
 import (
-	"github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/conftypes"
-	"github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/datatypes/elektratypes"
+	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/conftypes"
+	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/datatypes/elektratypes"
 )
 
 // ManagerHdl - local handle to be assigned

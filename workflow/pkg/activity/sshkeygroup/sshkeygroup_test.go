@@ -24,19 +24,19 @@ import (
 	"testing"
 	"time"
 
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
-	cdbp "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
-	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
-	sc "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/client/site"
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
+	cdbp "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/paginator"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
+	sc "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/client/site"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/google/uuid"
 
-	"github.com/nvidia/bare-metal-manager-rest/workflow/internal/config"
-	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/util"
+	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/internal/config"
+	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/util"
 
 	"os"
 
@@ -45,7 +45,7 @@ import (
 
 	"go.temporal.io/sdk/testsuite"
 
-	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
+	cwutil "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/util"
 )
 
 func TestManageSSHKeyGroup_SyncSSHKeyGroupViaSiteAgent(t *testing.T) {

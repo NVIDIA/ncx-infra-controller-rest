@@ -28,7 +28,7 @@ import (
 
 	"net"
 
-	wflows "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
+	wflows "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 	"go.opentelemetry.io/otel"
 
 	"github.com/rs/zerolog/log"

@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -35,7 +35,7 @@ type InstanceUpdateRequest struct {
 	// The iPXE script content to be used for booting.
 	IpxeScript NullableString `json:"ipxeScript,omitempty"`
 	// Specify a new list of SSH Key Group IDs that will provide Serial over LAN and SSH access.  This will overwrite an existing list.
-	SshKeyGroupIds []string `json:"sshKeyGroupIds,omitempty"`
+	SshKeyGroupIds         []string       `json:"sshKeyGroupIds,omitempty"`
 	NetworkSecurityGroupId NullableString `json:"networkSecurityGroupId,omitempty"`
 	// Any user-data to be sent to the booting OS.  For example, cloud-init data.
 	UserData NullableString `json:"userData,omitempty"`
@@ -104,6 +104,7 @@ func (o *InstanceUpdateRequest) HasName() bool {
 func (o *InstanceUpdateRequest) SetName(v string) {
 	o.Name.Set(&v)
 }
+
 // SetNameNil sets the value for Name to be an explicit nil
 func (o *InstanceUpdateRequest) SetNameNil() {
 	o.Name.Set(nil)
@@ -146,6 +147,7 @@ func (o *InstanceUpdateRequest) HasDescription() bool {
 func (o *InstanceUpdateRequest) SetDescription(v string) {
 	o.Description.Set(&v)
 }
+
 // SetDescriptionNil sets the value for Description to be an explicit nil
 func (o *InstanceUpdateRequest) SetDescriptionNil() {
 	o.Description.Set(nil)
@@ -188,6 +190,7 @@ func (o *InstanceUpdateRequest) HasTriggerReboot() bool {
 func (o *InstanceUpdateRequest) SetTriggerReboot(v bool) {
 	o.TriggerReboot.Set(&v)
 }
+
 // SetTriggerRebootNil sets the value for TriggerReboot to be an explicit nil
 func (o *InstanceUpdateRequest) SetTriggerRebootNil() {
 	o.TriggerReboot.Set(nil)
@@ -230,6 +233,7 @@ func (o *InstanceUpdateRequest) HasRebootWithCustomIpxe() bool {
 func (o *InstanceUpdateRequest) SetRebootWithCustomIpxe(v bool) {
 	o.RebootWithCustomIpxe.Set(&v)
 }
+
 // SetRebootWithCustomIpxeNil sets the value for RebootWithCustomIpxe to be an explicit nil
 func (o *InstanceUpdateRequest) SetRebootWithCustomIpxeNil() {
 	o.RebootWithCustomIpxe.Set(nil)
@@ -272,6 +276,7 @@ func (o *InstanceUpdateRequest) HasApplyUpdatesOnReboot() bool {
 func (o *InstanceUpdateRequest) SetApplyUpdatesOnReboot(v bool) {
 	o.ApplyUpdatesOnReboot.Set(&v)
 }
+
 // SetApplyUpdatesOnRebootNil sets the value for ApplyUpdatesOnReboot to be an explicit nil
 func (o *InstanceUpdateRequest) SetApplyUpdatesOnRebootNil() {
 	o.ApplyUpdatesOnReboot.Set(nil)
@@ -314,6 +319,7 @@ func (o *InstanceUpdateRequest) HasOperatingSystemId() bool {
 func (o *InstanceUpdateRequest) SetOperatingSystemId(v string) {
 	o.OperatingSystemId.Set(&v)
 }
+
 // SetOperatingSystemIdNil sets the value for OperatingSystemId to be an explicit nil
 func (o *InstanceUpdateRequest) SetOperatingSystemIdNil() {
 	o.OperatingSystemId.Set(nil)
@@ -356,6 +362,7 @@ func (o *InstanceUpdateRequest) HasIpxeScript() bool {
 func (o *InstanceUpdateRequest) SetIpxeScript(v string) {
 	o.IpxeScript.Set(&v)
 }
+
 // SetIpxeScriptNil sets the value for IpxeScript to be an explicit nil
 func (o *InstanceUpdateRequest) SetIpxeScriptNil() {
 	o.IpxeScript.Set(nil)
@@ -430,6 +437,7 @@ func (o *InstanceUpdateRequest) HasNetworkSecurityGroupId() bool {
 func (o *InstanceUpdateRequest) SetNetworkSecurityGroupId(v string) {
 	o.NetworkSecurityGroupId.Set(&v)
 }
+
 // SetNetworkSecurityGroupIdNil sets the value for NetworkSecurityGroupId to be an explicit nil
 func (o *InstanceUpdateRequest) SetNetworkSecurityGroupIdNil() {
 	o.NetworkSecurityGroupId.Set(nil)
@@ -472,6 +480,7 @@ func (o *InstanceUpdateRequest) HasUserData() bool {
 func (o *InstanceUpdateRequest) SetUserData(v string) {
 	o.UserData.Set(&v)
 }
+
 // SetUserDataNil sets the value for UserData to be an explicit nil
 func (o *InstanceUpdateRequest) SetUserDataNil() {
 	o.UserData.Set(nil)
@@ -514,6 +523,7 @@ func (o *InstanceUpdateRequest) HasAlwaysBootWithCustomIpxe() bool {
 func (o *InstanceUpdateRequest) SetAlwaysBootWithCustomIpxe(v bool) {
 	o.AlwaysBootWithCustomIpxe.Set(&v)
 }
+
 // SetAlwaysBootWithCustomIpxeNil sets the value for AlwaysBootWithCustomIpxe to be an explicit nil
 func (o *InstanceUpdateRequest) SetAlwaysBootWithCustomIpxeNil() {
 	o.AlwaysBootWithCustomIpxe.Set(nil)
@@ -556,6 +566,7 @@ func (o *InstanceUpdateRequest) HasPhoneHomeEnabled() bool {
 func (o *InstanceUpdateRequest) SetPhoneHomeEnabled(v bool) {
 	o.PhoneHomeEnabled.Set(&v)
 }
+
 // SetPhoneHomeEnabledNil sets the value for PhoneHomeEnabled to be an explicit nil
 func (o *InstanceUpdateRequest) SetPhoneHomeEnabledNil() {
 	o.PhoneHomeEnabled.Set(nil)
@@ -727,7 +738,7 @@ func (o *InstanceUpdateRequest) SetDpuExtensionServiceDeployments(v []DpuExtensi
 }
 
 func (o InstanceUpdateRequest) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -825,5 +836,3 @@ func (v *NullableInstanceUpdateRequest) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

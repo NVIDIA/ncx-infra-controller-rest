@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -20,14 +20,13 @@ import (
 	"strings"
 )
 
-
 // InfrastructureProviderAPIService InfrastructureProviderAPI service
 type InfrastructureProviderAPIService service
 
 type ApiGetCurrentInfrastructureProviderRequest struct {
-	ctx context.Context
+	ctx        context.Context
 	ApiService *InfrastructureProviderAPIService
-	org string
+	org        string
 }
 
 func (r ApiGetCurrentInfrastructureProviderRequest) Execute() (*InfrastructureProvider, *http.Response, error) {
@@ -41,26 +40,27 @@ Retrieve Infrastructure Provider entity for current Org.
 
 User must have `FORGE_PROVIDER_ADMIN` authorization role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @return ApiGetCurrentInfrastructureProviderRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@return ApiGetCurrentInfrastructureProviderRequest
 */
 func (a *InfrastructureProviderAPIService) GetCurrentInfrastructureProvider(ctx context.Context, org string) ApiGetCurrentInfrastructureProviderRequest {
 	return ApiGetCurrentInfrastructureProviderRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ctx:        ctx,
+		org:        org,
 	}
 }
 
 // Execute executes the request
-//  @return InfrastructureProvider
+//
+//	@return InfrastructureProvider
 func (a *InfrastructureProviderAPIService) GetCurrentInfrastructureProviderExecute(r ApiGetCurrentInfrastructureProviderRequest) (*InfrastructureProvider, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodGet
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *InfrastructureProvider
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *InfrastructureProvider
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "InfrastructureProviderAPIService.GetCurrentInfrastructureProvider")
@@ -121,8 +121,8 @@ func (a *InfrastructureProviderAPIService) GetCurrentInfrastructureProviderExecu
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -140,9 +140,9 @@ func (a *InfrastructureProviderAPIService) GetCurrentInfrastructureProviderExecu
 }
 
 type ApiGetCurrentInfrastructureProviderStatsRequest struct {
-	ctx context.Context
+	ctx        context.Context
 	ApiService *InfrastructureProviderAPIService
-	org string
+	org        string
 }
 
 func (r ApiGetCurrentInfrastructureProviderStatsRequest) Execute() (*InfrastructureProviderStats, *http.Response, error) {
@@ -156,26 +156,27 @@ Retrieve stats for current Infrastructure Provider.
 
 User must have `FORGE_PROVIDER_ADMIN` authorization role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @return ApiGetCurrentInfrastructureProviderStatsRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@return ApiGetCurrentInfrastructureProviderStatsRequest
 */
 func (a *InfrastructureProviderAPIService) GetCurrentInfrastructureProviderStats(ctx context.Context, org string) ApiGetCurrentInfrastructureProviderStatsRequest {
 	return ApiGetCurrentInfrastructureProviderStatsRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ctx:        ctx,
+		org:        org,
 	}
 }
 
 // Execute executes the request
-//  @return InfrastructureProviderStats
+//
+//	@return InfrastructureProviderStats
 func (a *InfrastructureProviderAPIService) GetCurrentInfrastructureProviderStatsExecute(r ApiGetCurrentInfrastructureProviderStatsRequest) (*InfrastructureProviderStats, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodGet
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *InfrastructureProviderStats
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *InfrastructureProviderStats
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "InfrastructureProviderAPIService.GetCurrentInfrastructureProviderStats")
@@ -236,8 +237,8 @@ func (a *InfrastructureProviderAPIService) GetCurrentInfrastructureProviderStats
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}

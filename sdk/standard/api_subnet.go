@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -20,14 +20,13 @@ import (
 	"strings"
 )
 
-
 // SubnetAPIService SubnetAPI service
 type SubnetAPIService service
 
 type ApiCreateSubnetRequest struct {
-	ctx context.Context
-	ApiService *SubnetAPIService
-	org string
+	ctx                 context.Context
+	ApiService          *SubnetAPIService
+	org                 string
 	subnetCreateRequest *SubnetCreateRequest
 }
 
@@ -49,26 +48,27 @@ Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` authorization
 
 At least 1 IPv4 IP block or 1 IPv6 IP block must be specified.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @return ApiCreateSubnetRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@return ApiCreateSubnetRequest
 */
 func (a *SubnetAPIService) CreateSubnet(ctx context.Context, org string) ApiCreateSubnetRequest {
 	return ApiCreateSubnetRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ctx:        ctx,
+		org:        org,
 	}
 }
 
 // Execute executes the request
-//  @return Subnet
+//
+//	@return Subnet
 func (a *SubnetAPIService) CreateSubnetExecute(r ApiCreateSubnetRequest) (*Subnet, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodPost
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *Subnet
+		localVarHTTPMethod  = http.MethodPost
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *Subnet
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "SubnetAPIService.CreateSubnet")
@@ -131,8 +131,8 @@ func (a *SubnetAPIService) CreateSubnetExecute(r ApiCreateSubnetRequest) (*Subne
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
@@ -142,8 +142,8 @@ func (a *SubnetAPIService) CreateSubnetExecute(r ApiCreateSubnetRequest) (*Subne
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -161,10 +161,10 @@ func (a *SubnetAPIService) CreateSubnetExecute(r ApiCreateSubnetRequest) (*Subne
 }
 
 type ApiDeleteSubnetRequest struct {
-	ctx context.Context
+	ctx        context.Context
 	ApiService *SubnetAPIService
-	org string
-	subnetId string
+	org        string
+	subnetId   string
 }
 
 func (r ApiDeleteSubnetRequest) Execute() (*http.Response, error) {
@@ -178,26 +178,26 @@ Delete a specific Subnet by ID.
 
 Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @param subnetId ID of the Subnet
- @return ApiDeleteSubnetRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@param subnetId ID of the Subnet
+	@return ApiDeleteSubnetRequest
 */
 func (a *SubnetAPIService) DeleteSubnet(ctx context.Context, org string, subnetId string) ApiDeleteSubnetRequest {
 	return ApiDeleteSubnetRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
-		subnetId: subnetId,
+		ctx:        ctx,
+		org:        org,
+		subnetId:   subnetId,
 	}
 }
 
 // Execute executes the request
 func (a *SubnetAPIService) DeleteSubnetExecute(r ApiDeleteSubnetRequest) (*http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodDelete
-		localVarPostBody     interface{}
-		formFiles            []formFile
+		localVarHTTPMethod = http.MethodDelete
+		localVarPostBody   interface{}
+		formFiles          []formFile
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "SubnetAPIService.DeleteSubnet")
@@ -259,8 +259,8 @@ func (a *SubnetAPIService) DeleteSubnetExecute(r ApiDeleteSubnetRequest) (*http.
 				newErr.error = err.Error()
 				return localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarHTTPResponse, newErr
 	}
@@ -269,17 +269,17 @@ func (a *SubnetAPIService) DeleteSubnetExecute(r ApiDeleteSubnetRequest) (*http.
 }
 
 type ApiGetAllSubnetRequest struct {
-	ctx context.Context
-	ApiService *SubnetAPIService
-	org string
-	siteId *string
-	vpcId *string
-	status *string
-	query *string
+	ctx             context.Context
+	ApiService      *SubnetAPIService
+	org             string
+	siteId          *string
+	vpcId           *string
+	status          *string
+	query           *string
 	includeRelation *string
-	pageNumber *int32
-	pageSize *int32
-	orderBy *string
+	pageNumber      *int32
+	pageSize        *int32
+	orderBy         *string
 }
 
 // Filter subnets by Site, required if vpcId query param is not specified
@@ -337,30 +337,31 @@ func (r ApiGetAllSubnetRequest) Execute() ([]Subnet, *http.Response, error) {
 /*
 GetAllSubnet Retrieve all Subnets
 
-Retrieve all Subnets for the org
+# Retrieve all Subnets for the org
 
 Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @return ApiGetAllSubnetRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@return ApiGetAllSubnetRequest
 */
 func (a *SubnetAPIService) GetAllSubnet(ctx context.Context, org string) ApiGetAllSubnetRequest {
 	return ApiGetAllSubnetRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ctx:        ctx,
+		org:        org,
 	}
 }
 
 // Execute executes the request
-//  @return []Subnet
+//
+//	@return []Subnet
 func (a *SubnetAPIService) GetAllSubnetExecute(r ApiGetAllSubnetRequest) ([]Subnet, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodGet
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  []Subnet
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue []Subnet
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "SubnetAPIService.GetAllSubnet")
@@ -449,8 +450,8 @@ func (a *SubnetAPIService) GetAllSubnetExecute(r ApiGetAllSubnetRequest) ([]Subn
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -468,10 +469,10 @@ func (a *SubnetAPIService) GetAllSubnetExecute(r ApiGetAllSubnetRequest) ([]Subn
 }
 
 type ApiGetSubnetRequest struct {
-	ctx context.Context
-	ApiService *SubnetAPIService
-	org string
-	subnetId string
+	ctx             context.Context
+	ApiService      *SubnetAPIService
+	org             string
+	subnetId        string
 	includeRelation *string
 }
 
@@ -488,32 +489,33 @@ func (r ApiGetSubnetRequest) Execute() (*Subnet, *http.Response, error) {
 /*
 GetSubnet Retrieve Subnet
 
-Retrieve a specific Subnet
+# Retrieve a specific Subnet
 
 Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @param subnetId ID of the Subnet
- @return ApiGetSubnetRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@param subnetId ID of the Subnet
+	@return ApiGetSubnetRequest
 */
 func (a *SubnetAPIService) GetSubnet(ctx context.Context, org string, subnetId string) ApiGetSubnetRequest {
 	return ApiGetSubnetRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
-		subnetId: subnetId,
+		ctx:        ctx,
+		org:        org,
+		subnetId:   subnetId,
 	}
 }
 
 // Execute executes the request
-//  @return Subnet
+//
+//	@return Subnet
 func (a *SubnetAPIService) GetSubnetExecute(r ApiGetSubnetRequest) (*Subnet, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodGet
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *Subnet
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *Subnet
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "SubnetAPIService.GetSubnet")
@@ -578,8 +580,8 @@ func (a *SubnetAPIService) GetSubnetExecute(r ApiGetSubnetRequest) (*Subnet, *ht
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -597,10 +599,10 @@ func (a *SubnetAPIService) GetSubnetExecute(r ApiGetSubnetRequest) (*Subnet, *ht
 }
 
 type ApiUpdateSubnetRequest struct {
-	ctx context.Context
-	ApiService *SubnetAPIService
-	org string
-	subnetId string
+	ctx                 context.Context
+	ApiService          *SubnetAPIService
+	org                 string
+	subnetId            string
 	subnetUpdateRequest *SubnetUpdateRequest
 }
 
@@ -616,33 +618,33 @@ func (r ApiUpdateSubnetRequest) Execute() (*Subnet, *http.Response, error) {
 /*
 UpdateSubnet Update Subnet
 
-Update an existing Subnet
+# Update an existing Subnet
 
 Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` authorization role.
 
-
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @param subnetId ID of the Subnet
- @return ApiUpdateSubnetRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@param subnetId ID of the Subnet
+	@return ApiUpdateSubnetRequest
 */
 func (a *SubnetAPIService) UpdateSubnet(ctx context.Context, org string, subnetId string) ApiUpdateSubnetRequest {
 	return ApiUpdateSubnetRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
-		subnetId: subnetId,
+		ctx:        ctx,
+		org:        org,
+		subnetId:   subnetId,
 	}
 }
 
 // Execute executes the request
-//  @return Subnet
+//
+//	@return Subnet
 func (a *SubnetAPIService) UpdateSubnetExecute(r ApiUpdateSubnetRequest) (*Subnet, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodPatch
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *Subnet
+		localVarHTTPMethod  = http.MethodPatch
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *Subnet
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "SubnetAPIService.UpdateSubnet")
@@ -706,8 +708,8 @@ func (a *SubnetAPIService) UpdateSubnetExecute(r ApiUpdateSubnetRequest) (*Subne
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
@@ -717,8 +719,8 @@ func (a *SubnetAPIService) UpdateSubnetExecute(r ApiUpdateSubnetRequest) (*Subne
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}

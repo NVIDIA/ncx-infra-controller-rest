@@ -22,7 +22,7 @@ import (
 	"strings"
 	"testing"
 
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 
 	"github.com/stretchr/testify/assert"
 )

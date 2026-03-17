@@ -1,7 +1,7 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.0.6
 Contact: carbide-dev@exchange.nvidia.com
@@ -20,14 +20,14 @@ var _ MappedNullable = &IpBlockSummary{}
 
 // IpBlockSummary Describes a subset of core attributes of an IP block
 type IpBlockSummary struct {
-	Id *string `json:"id,omitempty"`
-	Name *string `json:"name,omitempty"`
+	Id          *string `json:"id,omitempty"`
+	Name        *string `json:"name,omitempty"`
 	RoutingType *string `json:"routingType,omitempty"`
 	// Either IPv4 or IPv6 address
 	Prefix *string `json:"prefix,omitempty"`
 	// Min: 1, Max: 32 for ipv4, 128 for ipv6
-	PrefixLength *int32 `json:"prefixLength,omitempty"`
-	Status *IpBlockStatus `json:"status,omitempty"`
+	PrefixLength *int32         `json:"prefixLength,omitempty"`
+	Status       *IpBlockStatus `json:"status,omitempty"`
 }
 
 // NewIpBlockSummary instantiates a new IpBlockSummary object
@@ -240,7 +240,7 @@ func (o *IpBlockSummary) SetStatus(v IpBlockStatus) {
 }
 
 func (o IpBlockSummary) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -305,5 +305,3 @@ func (v *NullableIpBlockSummary) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-
