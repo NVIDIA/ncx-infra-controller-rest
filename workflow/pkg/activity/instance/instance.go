@@ -1371,24 +1371,23 @@ func (mi ManageInstance) UpdateInstancesInDB(ctx context.Context, siteID uuid.UU
 				continue
 			}
 
-			// Check if GPU GUID/Partition combo for deleting Interface is reported in controller status.
-			// If the GUID was never populated, we can't safely prove absence yet.
-			if nvlifc.GpuGUID == nil || *nvlifc.GpuGUID == "" {
-				continue
-			}
-
+			// Check if GPU GUID/Partition combo for deleting Interface is reported in controller status
 			comboReported := false
-			for _, gpuStatus := range controllerInstance.Status.Nvlink.GpuStatuses {
-				if gpuStatus != nil && gpuStatus.GpuGuid != nil && gpuStatus.LogicalPartitionId != nil {
-					if *gpuStatus.GpuGuid == *nvlifc.GpuGUID && gpuStatus.LogicalPartitionId.Value == nvlifc.NVLinkLogicalPartitionID.String() {
-						comboReported = true
-						break
+			if nvlifc.GpuGUID != nil && *nvlifc.GpuGUID != "" {
+				for _, gpuStatus := range controllerInstance.Status.Nvlink.GpuStatuses {
+					if gpuStatus != nil && gpuStatus.GpuGuid != nil && gpuStatus.LogicalPartitionId != nil {
+						if *gpuStatus.GpuGuid == *nvlifc.GpuGUID && gpuStatus.LogicalPartitionId.Value == nvlifc.NVLinkLogicalPartitionID.String() {
+							comboReported = true
+							break
+						}
 					}
 				}
 			}
 
 			if !comboReported {
-				// GPU GUID/Partition combo is not reported in controller status, safe to remove
+				// Combo not reported — safe to remove. Interfaces with nil/empty GpuGUID also
+				// land here because they can never match a reported status entry; since configs
+				// are confirmed synced above, absence from the controller is authoritative.
 				nvlinkInterfacesToDelete = append(nvlinkInterfacesToDelete, nvlifc)
 				continue
 			}
