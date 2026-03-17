@@ -456,6 +456,10 @@ func TaskTo(task *taskdef.Task) *pb.Task {
 		ExecutionId:    task.ExecutionID,
 		Status:         TaskStatusTo(task.Status),
 		Message:        task.Message,
+		CreatedAt:      timestamppb.New(task.CreatedAt),
+	}
+	if task.FinishedAt != nil {
+		pbTask.FinishedAt = timestamppb.New(*task.FinishedAt)
 	}
 	if task.QueueExpiresAt != nil {
 		pbTask.QueueExpiresAt = timestamppb.New(*task.QueueExpiresAt)

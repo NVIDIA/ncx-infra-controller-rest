@@ -318,6 +318,8 @@ message Task {
     string message = 9;
     // queue_expires_at is set only for waiting tasks; absent for all other statuses.
     optional google.protobuf.Timestamp queue_expires_at = 10;
+    google.protobuf.Timestamp created_at = 11;
+    optional google.protobuf.Timestamp finished_at = 12;
 }
 
 message CreateExpectedRackRequest {
