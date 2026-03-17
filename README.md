@@ -11,7 +11,7 @@ In deployments, NCX Infra Controller REST requires [NCX Infra Controller Core](h
 
 The REST layer can be deployed in the datacenter with NCX Infra Controller Core, or deployed anywhere in Cloud and allow Site Agent to connect from the datacenter. Multiple NCX Infra Controller Cores running in different datacenters can also connect to NCX Infra Controller REST through respective Site Agents.
 
-View latest OpenAPI schema on [Github pages](https://nvidia.github.io/bare-metal-manager-rest/).
+View latest OpenAPI schema on [Github pages](https://nvidia.github.io/ncx-infra-controller-rest/).
 
 ## Prerequisites
 
@@ -182,7 +182,7 @@ az acr login --name myregistry
 2. Build and push:
 
 ```bash
-REGISTRY=my-registry.example.com/bare-metal-manager-rest
+REGISTRY=my-registry.example.com/ncx-infra-controller-rest
 TAG=v1.0.0
 
 make docker-build IMAGE_REGISTRY=$REGISTRY IMAGE_TAG=$TAG
