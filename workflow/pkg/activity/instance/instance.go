@@ -1270,14 +1270,12 @@ func (mi ManageInstance) UpdateInstancesInDB(ctx context.Context, siteID uuid.UU
 		}
 
 		nvlinkInterfaceMap := map[string]*cdbm.NVLinkInterface{}
+		deletingNVLinkInterfaces := []*cdbm.NVLinkInterface{}
 		for _, nvlinkInterface := range nvlinkInterfaces {
 			curNvlinkInterface := nvlinkInterface
-			// If the InfiniBand Interface is in Deleting state, add it into list of InfiniBand Interfaces to be deleted
 			if nvlinkInterface.Status == cdbm.NVLinkInterfaceStatusDeleting {
-				if updatedInstanceStatus != nil && *updatedInstanceStatus == cdbm.InstanceStatusReady {
-					nvlinkInterfacesToDelete = append(nvlinkInterfacesToDelete, &curNvlinkInterface)
-					continue
-				}
+				deletingNVLinkInterfaces = append(deletingNVLinkInterfaces, &curNvlinkInterface)
+				continue
 			}
 			// Construct a map of NVLink Interface ID to NVLink Interface
 			// using the Device and Gpu Index as the key
@@ -1359,6 +1357,55 @@ func (mi ManageInstance) UpdateInstancesInDB(ctx context.Context, siteID uuid.UU
 						slogger.Error().Err(serr).Str("NVLink Interface ID", nvlifc.ID.String()).Msg("failed to update NVLink Interface in DB")
 					}
 				}
+			}
+		}
+
+		// Determine which NVLink Interfaces in Deleting state can be removed
+		for _, nvlifc := range deletingNVLinkInterfaces {
+			if util.IsTimeWithinStaleInventoryThreshold(nvlifc.Updated) {
+				continue
+			}
+
+			if controllerInstance.Config.Nvlink == nil || controllerInstance.Status.Nvlink == nil ||
+				controllerInstance.Status.Nvlink.ConfigsSynced != cwsv1.SyncState_SYNCED {
+				continue
+			}
+
+			// Check if GPU GUID/Partition combo for deleting Interface is reported in controller status
+			comboReported := false
+			if nvlifc.GpuGUID != nil {
+				for _, gpuStatus := range controllerInstance.Status.Nvlink.GpuStatuses {
+					if gpuStatus != nil && gpuStatus.GpuGuid != nil && gpuStatus.LogicalPartitionId != nil {
+						if *gpuStatus.GpuGuid == *nvlifc.GpuGUID && gpuStatus.LogicalPartitionId.Value == nvlifc.NVLinkLogicalPartitionID.String() {
+							comboReported = true
+							break
+						}
+					}
+				}
+			}
+
+			if !comboReported {
+				// GPU GUID/Partition combo is not reported in controller status, safe to remove
+				nvlinkInterfacesToDelete = append(nvlinkInterfacesToDelete, nvlifc)
+				continue
+			}
+
+			// Combo is reported - check if we have another interface with the same combo in Pending state
+			hasPendingWithSameCombo := false
+			for _, otherNvlifc := range nvlinkInterfaces {
+				if otherNvlifc.ID == nvlifc.ID {
+					continue
+				}
+				if otherNvlifc.Status == cdbm.NVLinkInterfaceStatusPending &&
+					otherNvlifc.GpuGUID != nil && *otherNvlifc.GpuGUID == *nvlifc.GpuGUID &&
+					otherNvlifc.NVLinkLogicalPartitionID == nvlifc.NVLinkLogicalPartitionID {
+					hasPendingWithSameCombo = true
+					break
+				}
+			}
+
+			if hasPendingWithSameCombo {
+				nvlinkInterfacesToDelete = append(nvlinkInterfacesToDelete, nvlifc)
 			}
 		}
 
