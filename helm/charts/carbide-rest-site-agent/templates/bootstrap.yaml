@@ -29,7 +29,7 @@ rules:
     verbs: ["get", "create", "delete"]
   - apiGroups: ["forge.nvidia.io"]
     resources: ["sites"]
-    verbs: ["get", "list", "watch"]
+    verbs: ["get"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -122,6 +122,10 @@ spec:
 
               CACERT=$(kubectl get secret {{ .Values.bootstrap.siteManagerTLSSecret }} \
                 -n "$NAMESPACE" -o jsonpath='{.data.ca\.crt}' 2>/dev/null | base64 -d || true)
+              if [ -z "$CACERT" ]; then
+                echo "ERROR: missing ca.crt in secret {{ .Values.bootstrap.siteManagerTLSSecret }}"
+                exit 1
+              fi
 
               echo "Creating {{ .Values.secrets.siteRegistration }} secret..."
               kubectl delete secret {{ .Values.secrets.siteRegistration }} -n "$NAMESPACE" --ignore-not-found
