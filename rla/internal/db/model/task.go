@@ -53,6 +53,7 @@ type Task struct {
 	AppliedRuleID  *uuid.UUID              `bun:"applied_rule_id,type:uuid"` // Which operation rule was applied
 	CreatedAt      time.Time               `bun:"created_at,nullzero,notnull,default:current_timestamp"`
 	UpdatedAt      time.Time               `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	StartedAt      *time.Time              `bun:"started_at"`
 	FinishedAt     *time.Time              `bun:"finished_at"`
 	// QueueExpiresAt is set only for waiting tasks. After this time, the Promoter
 	// will discard the task instead of promoting it.
@@ -99,6 +100,9 @@ func (t *Task) UpdateTaskStatus(
 	t.Status = status
 	t.Message = message
 	t.UpdatedAt = time.Now().UTC()
+	if status == taskcommon.TaskStatusRunning && t.StartedAt == nil {
+		t.StartedAt = &t.UpdatedAt
+	}
 	if status.IsFinished() {
 		t.FinishedAt = &t.UpdatedAt
 	} else {
@@ -107,7 +111,7 @@ func (t *Task) UpdateTaskStatus(
 
 	_, err := idb.NewUpdate().
 		Model(t).
-		Column("status", "message", "updated_at", "finished_at").
+		Column("status", "message", "updated_at", "started_at", "finished_at").
 		Where("id = ?", t.ID).
 		Exec(ctx)
 
