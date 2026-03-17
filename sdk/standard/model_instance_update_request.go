@@ -42,8 +42,8 @@ type InstanceUpdateRequest struct {
 	// Whether the custom iPXE data should be used for every boot.
 	AlwaysBootWithCustomIpxe NullableBool `json:"alwaysBootWithCustomIpxe,omitempty"`
 	// Indicates whether the Phone Home service should be enabled or disabled for Instance
-	PhoneHomeEnabled NullableBool `json:"phoneHomeEnabled,omitempty"`
-	Labels map[string]string `json:"labels,omitempty"`
+	PhoneHomeEnabled NullableBool      `json:"phoneHomeEnabled,omitempty"`
+	Labels           map[string]string `json:"labels,omitempty"`
 	// Update Interfaces of the Instance
 	Interfaces []InterfaceCreateRequest `json:"interfaces,omitempty"`
 	// Update InfiniBand Interfaces of the Instance

@@ -35,8 +35,8 @@ type ExpectedSwitchCreateRequest struct {
 	// NvOS username for the Expected Switch
 	NvOsUsername NullableString `json:"nvOsUsername,omitempty"`
 	// NvOS password for the Expected Switch
-	NvOsPassword NullableString `json:"nvOsPassword,omitempty"`
-	Labels map[string]string `json:"labels,omitempty"`
+	NvOsPassword NullableString    `json:"nvOsPassword,omitempty"`
+	Labels       map[string]string `json:"labels,omitempty"`
 }
 
 type _ExpectedSwitchCreateRequest ExpectedSwitchCreateRequest

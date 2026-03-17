@@ -38,8 +38,8 @@ type ExpectedMachine struct {
 	// Optional ID of the Machine associated with this Expected Machine
 	MachineId NullableString `json:"machineId,omitempty"`
 	// Machine information for this Expected Machine (populated when includeRelation=Machine is specified)
-	Machine *MachineSummary `json:"machine,omitempty"`
-	Labels map[string]string `json:"labels,omitempty"`
+	Machine *MachineSummary   `json:"machine,omitempty"`
+	Labels  map[string]string `json:"labels,omitempty"`
 	// ISO 8601 datetime when the Expected Machine was created
 	Created *time.Time `json:"created,omitempty"`
 	// ISO 8601 datetime when the Expected Machine was last updated

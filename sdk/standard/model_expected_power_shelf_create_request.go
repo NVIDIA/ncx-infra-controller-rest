@@ -33,8 +33,8 @@ type ExpectedPowerShelfCreateRequest struct {
 	// Serial number of the Expected Power Shelf
 	ShelfSerialNumber string `json:"shelfSerialNumber"`
 	// IP address of the Expected Power Shelf
-	IpAddress NullableString `json:"ipAddress,omitempty"`
-	Labels map[string]string `json:"labels,omitempty"`
+	IpAddress NullableString    `json:"ipAddress,omitempty"`
+	Labels    map[string]string `json:"labels,omitempty"`
 }
 
 type _ExpectedPowerShelfCreateRequest ExpectedPowerShelfCreateRequest
