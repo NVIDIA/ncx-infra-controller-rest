@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 ---
 name: Bug report
-about: Create a bug report to help us improve Carbide
+about: Create a bug report to help us improve NCX Infra Controller REST
 title: "[BUG]"
 labels: "? - Needs Triage, bug"
 assignees: ''
@@ -23,7 +23,7 @@ A clear and concise description of what you expected to happen.
 
 **Environment details (please complete the following information):**
  - Environment location: [Bare-metal, Docker, Kubernetes]
- - Method of Carbide install: [source]
+ - Method of NCX Infra Controller REST install: [source]
 
 **Additional context**
 Add any other context about the problem here.

@@ -11,7 +11,7 @@ In deployments, NCX Infra Controller REST requires [NCX Infra Controller Core](h
 
 The REST layer can be deployed in the datacenter with NCX Infra Controller Core, or deployed anywhere in Cloud and allow Site Agent to connect from the datacenter. Multiple NCX Infra Controller Cores running in different datacenters can also connect to NCX Infra Controller REST through respective Site Agents.
 
-View latest OpenAPI schema on [Github pages](https://nvidia.github.io/ncx-infra-controller-rest/).
+View latest OpenAPI schema on [GitHub pages](https://nvidia.github.io/ncx-infra-controller-rest/).
 
 ## Prerequisites
 

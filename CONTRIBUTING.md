@@ -117,7 +117,7 @@ Developers must first fork the upstream [NCX Infra Controller REST repository](h
 
 ```bash
 git clone https://github.com/<your-username>/ncx-infra-controller-rest.git
-cd carbide-rest
+cd ncx-infra-controller-rest
 ```
 
 ### 3. Add Upstream Remote

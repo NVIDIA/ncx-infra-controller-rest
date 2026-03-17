@@ -27,9 +27,9 @@ Then access the schema at:
 
     http://127.0.0.1:8090
 
-# Updating Github Pages
+# Updating GitHub Pages
 
-In order to update the Github pages to reflect schema changes, you must include rendered HTML changes in your PR.
+In order to update the GitHub pages to reflect schema changes, you must include rendered HTML changes in your PR.
 
 To modify the rendered HTML, run:
 

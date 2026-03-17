@@ -8,7 +8,7 @@
 - [ ] **Chore** - Modification or removal of existing functionality (chore:)
 - [ ] **Refactor** - Refactoring of existing functionality (refactor:)
 - [ ] **Docs** - Changes in documentation or OpenAPI schema (docs:)
-- [ ] **CI** - Changes in Github workflows. Requires additional scrutiny (ci:)
+- [ ] **CI** - Changes in GitHub workflows. Requires additional scrutiny (ci:)
 - [ ] **Version** - Issuing a new release version (version:)
 
 ## Services Affected

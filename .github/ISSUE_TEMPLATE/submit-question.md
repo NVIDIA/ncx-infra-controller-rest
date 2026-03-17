@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 ---
 name: Submit question
-about: Ask a general question about Carbide
+about: Ask a general question about NCX Infra Controller REST
 title: "[QST]"
 labels: "? - Needs Triage, question"
 assignees: ''
