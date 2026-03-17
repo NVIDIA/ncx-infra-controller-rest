@@ -3,7 +3,7 @@ NCX Infra Controller REST API
 
 NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
-API version: 1.0.6
+API version: 1.1.0
 Contact: carbide-dev@exchange.nvidia.com
 */
 
@@ -35,8 +35,9 @@ type ExpectedSwitchCreateRequest struct {
 	// NvOS username for the Expected Switch
 	NvOsUsername NullableString `json:"nvOsUsername,omitempty"`
 	// NvOS password for the Expected Switch
-	NvOsPassword NullableString    `json:"nvOsPassword,omitempty"`
-	Labels       map[string]string `json:"labels,omitempty"`
+	NvOsPassword NullableString `json:"nvOsPassword,omitempty"`
+	// User-defined key-value pairs for organizing and categorizing Expected Switches
+	Labels map[string]string `json:"labels,omitempty"`
 }
 
 type _ExpectedSwitchCreateRequest ExpectedSwitchCreateRequest

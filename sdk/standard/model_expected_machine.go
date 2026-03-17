@@ -3,7 +3,7 @@ NCX Infra Controller REST API
 
 NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
-API version: 1.0.6
+API version: 1.1.0
 Contact: carbide-dev@exchange.nvidia.com
 */
 
@@ -38,8 +38,9 @@ type ExpectedMachine struct {
 	// Optional ID of the Machine associated with this Expected Machine
 	MachineId NullableString `json:"machineId,omitempty"`
 	// Machine information for this Expected Machine (populated when includeRelation=Machine is specified)
-	Machine *MachineSummary   `json:"machine,omitempty"`
-	Labels  map[string]string `json:"labels,omitempty"`
+	Machine *MachineSummary `json:"machine,omitempty"`
+	// User-defined key-value pairs for organizing and categorizing Expected Machines
+	Labels map[string]string `json:"labels,omitempty"`
 	// ISO 8601 datetime when the Expected Machine was created
 	Created *time.Time `json:"created,omitempty"`
 	// ISO 8601 datetime when the Expected Machine was last updated

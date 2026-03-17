@@ -3,7 +3,7 @@ NCX Infra Controller REST API
 
 NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
-API version: 1.0.6
+API version: 1.1.0
 Contact: carbide-dev@exchange.nvidia.com
 */
 
@@ -28,8 +28,9 @@ type ExpectedSwitch struct {
 	// MAC address of the Expected Switch's BMC (Baseboard Management Controller)
 	BmcMacAddress *string `json:"bmcMacAddress,omitempty" validate:"regexp=^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$"`
 	// Serial number of the Expected Switch
-	SwitchSerialNumber *string           `json:"switchSerialNumber,omitempty"`
-	Labels             map[string]string `json:"labels,omitempty"`
+	SwitchSerialNumber *string `json:"switchSerialNumber,omitempty"`
+	// User-defined key-value pairs for organizing and categorizing Expected Switches
+	Labels map[string]string `json:"labels,omitempty"`
 	// ISO 8601 datetime when the Expected Switch was created
 	Created *time.Time `json:"created,omitempty"`
 	// ISO 8601 datetime when the Expected Switch was last updated

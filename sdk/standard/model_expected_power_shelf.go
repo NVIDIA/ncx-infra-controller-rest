@@ -3,7 +3,7 @@ NCX Infra Controller REST API
 
 NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
-API version: 1.0.6
+API version: 1.1.0
 Contact: carbide-dev@exchange.nvidia.com
 */
 
@@ -30,8 +30,9 @@ type ExpectedPowerShelf struct {
 	// Serial number of the Expected Power Shelf
 	ShelfSerialNumber *string `json:"shelfSerialNumber,omitempty"`
 	// IP address of the Expected Power Shelf
-	IpAddress NullableString    `json:"ipAddress,omitempty"`
-	Labels    map[string]string `json:"labels,omitempty"`
+	IpAddress NullableString `json:"ipAddress,omitempty"`
+	// User-defined key-value pairs for organizing and categorizing Expected Power Shelves
+	Labels map[string]string `json:"labels,omitempty"`
 	// ISO 8601 datetime when the Expected Power Shelf was created
 	Created *time.Time `json:"created,omitempty"`
 	// ISO 8601 datetime when the Expected Power Shelf was last updated

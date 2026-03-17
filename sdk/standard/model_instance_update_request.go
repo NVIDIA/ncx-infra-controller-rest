@@ -3,7 +3,7 @@ NCX Infra Controller REST API
 
 NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
-API version: 1.0.6
+API version: 1.1.0
 Contact: carbide-dev@exchange.nvidia.com
 */
 
@@ -42,8 +42,9 @@ type InstanceUpdateRequest struct {
 	// Whether the custom iPXE data should be used for every boot.
 	AlwaysBootWithCustomIpxe NullableBool `json:"alwaysBootWithCustomIpxe,omitempty"`
 	// Indicates whether the Phone Home service should be enabled or disabled for Instance
-	PhoneHomeEnabled NullableBool      `json:"phoneHomeEnabled,omitempty"`
-	Labels           map[string]string `json:"labels,omitempty"`
+	PhoneHomeEnabled NullableBool `json:"phoneHomeEnabled,omitempty"`
+	// Update labels of the Instance. The labels will be entirely replaced by those sent in the request. Any labels not included in the request will be removed. To retain existing labels, first fetch them and include them along with this request.
+	Labels map[string]string `json:"labels,omitempty"`
 	// Update Interfaces of the Instance
 	Interfaces []InterfaceCreateRequest `json:"interfaces,omitempty"`
 	// Update InfiniBand Interfaces of the Instance

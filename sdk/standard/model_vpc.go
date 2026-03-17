@@ -3,7 +3,7 @@ NCX Infra Controller REST API
 
 NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
-API version: 1.0.6
+API version: 1.1.0
 Contact: carbide-dev@exchange.nvidia.com
 */
 
@@ -46,8 +46,9 @@ type VPC struct {
 	// Propagation details for the attached Network Security Group
 	NetworkSecurityGroupPropagationDetails *NetworkSecurityGroupPropagationDetails `json:"networkSecurityGroupPropagationDetails,omitempty"`
 	// ID of the default NVLink Logical Partition that GPUs for all Instances in the VPC will attach to
-	NvLinkLogicalPartitionId NullableString    `json:"nvLinkLogicalPartitionId,omitempty"`
-	Labels                   map[string]string `json:"labels,omitempty"`
+	NvLinkLogicalPartitionId NullableString `json:"nvLinkLogicalPartitionId,omitempty"`
+	// String key value pairs describing VPC labels
+	Labels map[string]string `json:"labels,omitempty"`
 	// Status of the VPC
 	Status *VpcStatus `json:"status,omitempty"`
 	// History of status changes for the VPC
