@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 
 A collection of microservices that comprise the management backend for NCX Infra Controller, exposed as a REST API.
 
-In deployments, NCX Infra Controller REST requires [NCX Infra Controller Core](https://github.com/NVIDIA/bare-metal-manager-core) to function.
+In deployments, NCX Infra Controller REST requires [NCX Infra Controller Core](https://github.com/NVIDIA/ncx-infra-controller-core) to function.
 
 The REST layer can be deployed in the datacenter with NCX Infra Controller Core, or deployed anywhere in Cloud and allow Site Agent to connect from the datacenter. Multiple NCX Infra Controller Cores running in different datacenters can also connect to NCX Infra Controller REST through respective Site Agents.
 
