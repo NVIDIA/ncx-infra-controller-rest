@@ -146,30 +146,6 @@ func (m *Manager) GetPowerStatus(
 	return result, nil
 }
 
-// FirmwareControl simulates firmware operations.
-func (m *Manager) FirmwareControl(
-	ctx context.Context,
-	target common.Target,
-	info operations.FirmwareControlTaskInfo,
-) error {
-	log.Debug().
-		Str("component_type", m.componentType.String()).
-		Str("target", target.String()).
-		Str("operation", info.Operation.String()).
-		Str("target_version", info.TargetVersion).
-		Msg("Mock: FirmwareControl")
-
-	time.Sleep(m.delay)
-
-	log.Info().
-		Str("component_type", m.componentType.String()).
-		Str("target", target.String()).
-		Str("operation", info.Operation.String()).
-		Msg("Mock: FirmwareControl completed")
-
-	return nil
-}
-
 // StartFirmwareUpdate simulates initiating firmware update without waiting for completion.
 func (m *Manager) StartFirmwareUpdate(
 	ctx context.Context,
@@ -192,15 +168,15 @@ func (m *Manager) StartFirmwareUpdate(
 	return nil
 }
 
-// AllowBringUpAndPowerOn simulates opening the power-on gate.
-func (m *Manager) AllowBringUpAndPowerOn(
+// AllowBringUp simulates opening the power-on gate.
+func (m *Manager) AllowBringUp(
 	ctx context.Context,
 	target common.Target,
 ) error {
 	log.Debug().
 		Str("component_type", m.componentType.String()).
 		Str("target", target.String()).
-		Msg("Mock: AllowBringUpAndPowerOn")
+		Msg("Mock: AllowBringUp")
 	time.Sleep(m.delay)
 	return nil
 }

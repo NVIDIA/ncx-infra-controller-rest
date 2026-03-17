@@ -37,14 +37,6 @@ import (
 	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
 )
 
-// mockSetFirmwareUpdateTimeWindowForFirmwareControl is a mock activity function for testing
-func mockSetFirmwareUpdateTimeWindowForFirmwareControl(
-	ctx context.Context,
-	req operations.SetFirmwareUpdateTimeWindowRequest,
-) error {
-	return nil
-}
-
 // mockUpdateTaskStatusForFirmwareControl is a mock activity for updating task status
 func mockUpdateTaskStatusForFirmwareControl(ctx context.Context, arg *task.TaskStatusUpdate) error {
 	return nil
@@ -187,9 +179,6 @@ func TestFirmwareControlWorkflow(t *testing.T) {
 
 			env.RegisterWorkflow(GenericComponentStepWorkflow)
 
-			env.RegisterActivityWithOptions(mockSetFirmwareUpdateTimeWindowForFirmwareControl, activity.RegisterOptions{
-				Name: "SetFirmwareUpdateTimeWindow",
-			})
 			env.RegisterActivityWithOptions(mockUpdateTaskStatusForFirmwareControl, activity.RegisterOptions{
 				Name: "UpdateTaskStatus",
 			})
@@ -206,7 +195,6 @@ func TestFirmwareControlWorkflow(t *testing.T) {
 				Name: "GetPowerStatus",
 			})
 
-			env.OnActivity(mockSetFirmwareUpdateTimeWindowForFirmwareControl, mock.Anything, mock.Anything).Return(tc.activityError)
 			env.OnActivity(mockUpdateTaskStatusForFirmwareControl, mock.Anything, mock.Anything).Return(nil)
 			env.OnActivity(mockStartFirmwareUpdate, mock.Anything, mock.Anything, mock.Anything).Return(tc.activityError)
 			env.OnActivity(mockGetFirmwareUpdateStatus, mock.Anything, mock.Anything).Return(

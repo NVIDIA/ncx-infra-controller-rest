@@ -223,31 +223,6 @@ func carbidePowerStateToOperationsPowerStatus(state carbideapi.PowerState) opera
 	}
 }
 
-// FirmwareControl performs firmware operations on an NVLink switch.
-func (m *Manager) FirmwareControl(
-	ctx context.Context,
-	target common.Target,
-	info operations.FirmwareControlTaskInfo,
-) error {
-	// TODO: Implement firmware control
-	switch info.Operation {
-	case operations.FirmwareOperationUpgrade:
-		// Implement firmware upgrade
-		return fmt.Errorf("firmware upgrade not yet implemented for NVLSwitch")
-	case operations.FirmwareOperationDowngrade:
-		// Implement firmware downgrade
-		return fmt.Errorf("firmware downgrade not yet implemented for NVLSwitch")
-	case operations.FirmwareOperationRollback:
-		// Implement firmware rollback
-		return fmt.Errorf("firmware rollback not yet implemented for NVLSwitch")
-	case operations.FirmwareOperationVersion:
-		// Implement firmware version
-		return fmt.Errorf("firmware version not yet implemented for NVLSwitch")
-	default:
-		return fmt.Errorf("unknown firmware operation: %v", info.Operation)
-	}
-}
-
 // StartFirmwareUpdate schedules a firmware update via Carbide's SetFirmwareUpdateTimeWindow API.
 // This sets the time window during which Carbide will automatically perform the firmware update.
 // Returns immediately after the schedule request is accepted.
@@ -301,15 +276,15 @@ func (m *Manager) GetFirmwareUpdateStatus(ctx context.Context, target common.Tar
 	return result, nil
 }
 
-// AllowBringUpAndPowerOn opens the Carbide power-on gate
+// AllowBringUp opens the Carbide power-on gate
 // for each NVLSwitch. Placeholder for now.
-func (m *Manager) AllowBringUpAndPowerOn(
+func (m *Manager) AllowBringUp(
 	ctx context.Context,
 	target common.Target,
 ) error {
 	log.Info().
 		Str("components", target.String()).
-		Msg("NVLSwitch AllowBringUpAndPowerOn: placeholder")
+		Msg("NVLSwitch AllowBringUp: placeholder")
 	return nil
 }
 

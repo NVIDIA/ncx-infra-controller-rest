@@ -239,31 +239,6 @@ func carbidePowerStateToOperationsPowerStatus(state carbideapi.PowerState) opera
 	}
 }
 
-// FirmwareControl performs firmware operations on a compute node.
-func (m *Manager) FirmwareControl(
-	ctx context.Context,
-	target common.Target,
-	info operations.FirmwareControlTaskInfo,
-) error {
-	// TODO: Implement firmware control
-	switch info.Operation {
-	case operations.FirmwareOperationUpgrade:
-		// Implement firmware upgrade
-		return fmt.Errorf("firmware upgrade not yet implemented for compute")
-	case operations.FirmwareOperationDowngrade:
-		// Implement firmware downgrade
-		return fmt.Errorf("firmware downgrade not yet implemented for compute")
-	case operations.FirmwareOperationRollback:
-		// Implement firmware rollback
-		return fmt.Errorf("firmware rollback not yet implemented for compute")
-	case operations.FirmwareOperationVersion:
-		// Implement firmware version
-		return fmt.Errorf("firmware version not yet implemented for compute")
-	default:
-		return fmt.Errorf("unknown firmware operation: %v", info.Operation)
-	}
-}
-
 // StartFirmwareUpdate schedules a firmware update via Carbide's SetFirmwareUpdateTimeWindow API.
 // This sets the time window during which Carbide will automatically perform the firmware update.
 // Returns immediately after the schedule request is accepted.
@@ -320,15 +295,15 @@ func (m *Manager) GetFirmwareUpdateStatus(ctx context.Context, target common.Tar
 	return result, nil
 }
 
-// AllowBringUpAndPowerOn opens the Carbide power-on gate for
+// AllowBringUp opens the Carbide power-on gate for
 // each compute component, allowing bring-up and power on.
-func (m *Manager) AllowBringUpAndPowerOn(
+func (m *Manager) AllowBringUp(
 	ctx context.Context,
 	target common.Target,
 ) error {
 	log.Debug().
 		Str("components", target.String()).
-		Msg("AllowBringUpAndPowerOn for compute")
+		Msg("AllowBringUp for compute")
 
 	if m.carbideClient == nil {
 		return fmt.Errorf("carbide client is not configured")
@@ -343,13 +318,13 @@ func (m *Manager) AllowBringUpAndPowerOn(
 			ctx, componentID, "",
 		); err != nil {
 			return fmt.Errorf(
-				"AllowBringUpAndPowerOn failed for %s: %w",
+				"AllowBringUp failed for %s: %w",
 				componentID, err,
 			)
 		}
 		log.Info().
 			Str("component_id", componentID).
-			Msg("AllowBringUpAndPowerOn succeeded")
+			Msg("AllowBringUp succeeded")
 	}
 
 	return nil

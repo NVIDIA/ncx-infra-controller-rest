@@ -20,12 +20,9 @@ package activity
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
-	"github.com/rs/zerolog/log"
 
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/carbideapi"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/componentmanager"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/executor/temporalworkflow/common"
 	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operations"
@@ -77,19 +74,6 @@ func GetPowerStatus(
 	return cm.GetPowerStatus(ctx, target)
 }
 
-func FirmwareControl(
-	ctx context.Context,
-	target common.Target,
-	info operations.FirmwareControlTaskInfo,
-) error {
-	cm, err := validAndGetComponentManager(target)
-	if err != nil {
-		return err
-	}
-
-	return cm.FirmwareControl(ctx, target, info)
-}
-
 // UpdateTaskStatus is a Temporal activity that updates task status by ID.
 func UpdateTaskStatus(
 	ctx context.Context,
@@ -111,18 +95,16 @@ func GetAllActivities() []any {
 		InjectExpectation,
 		PowerControl,
 		GetPowerStatus,
-		FirmwareControl,
 		UpdateTaskStatus,
-		SetFirmwareUpdateTimeWindow,
 		StartFirmwareUpdate,
 		GetFirmwareUpdateStatus,
-		AllowBringUpAndPowerOn,
+		AllowBringUp,
 		GetBringUpState,
 	}
 }
 
-// AllowBringUpAndPowerOn opens the power-on gate for the target components.
-func AllowBringUpAndPowerOn(
+// AllowBringUp opens the power-on gate for the target components.
+func AllowBringUp(
 	ctx context.Context,
 	target common.Target,
 ) error {
@@ -131,7 +113,7 @@ func AllowBringUpAndPowerOn(
 		return err
 	}
 
-	return cm.AllowBringUpAndPowerOn(ctx, target)
+	return cm.AllowBringUp(ctx, target)
 }
 
 // GetBringUpStateResult is the result of GetBringUpState.
@@ -205,37 +187,4 @@ func validAndGetComponentManager(
 	}
 
 	return GetComponentManager(target.Type), nil
-}
-
-// SetFirmwareUpdateTimeWindow sets the firmware update time window for the given components.
-func SetFirmwareUpdateTimeWindow(
-	ctx context.Context,
-	req operations.SetFirmwareUpdateTimeWindowRequest,
-) error {
-	if len(req.ComponentIDs) == 0 {
-		log.Warn().Msg("No component IDs provided for SetFirmwareUpdateTimeWindow")
-		return nil
-	}
-
-	log.Info().
-		Strs("component_ids", req.ComponentIDs).
-		Time("start_time", req.StartTime).
-		Time("end_time", req.EndTime).
-		Msg("Setting firmware update time window")
-
-	client, err := carbideapi.NewClient(time.Minute * 5)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to create API client")
-		return err
-	}
-
-	// Component manager API uses machine_id terminology
-	err = client.SetFirmwareUpdateTimeWindow(ctx, req.ComponentIDs, req.StartTime, req.EndTime)
-	if err != nil {
-		log.Error().Err(err).Strs("component_ids", req.ComponentIDs).Msg("Failed to set firmware update time window")
-		return err
-	}
-
-	log.Info().Strs("component_ids", req.ComponentIDs).Msg("Successfully set firmware update time window")
-	return nil
 }

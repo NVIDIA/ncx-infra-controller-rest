@@ -421,7 +421,7 @@ func TestGenericComponentStepWorkflow_AllowBringUpAndWait(t *testing.T) {
 	}
 
 	env.RegisterActivityWithOptions(mockAllowBringUp,
-		activity.RegisterOptions{Name: "AllowBringUpAndPowerOn"})
+		activity.RegisterOptions{Name: "AllowBringUp"})
 	env.RegisterActivityWithOptions(mockGetBringUp,
 		activity.RegisterOptions{Name: "GetBringUpState"})
 

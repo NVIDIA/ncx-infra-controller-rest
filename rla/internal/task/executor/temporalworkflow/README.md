@@ -91,10 +91,12 @@ func GetAllActivities() []any {
 	return []any{
 		InjectExpectation,
 		PowerControl,
-		FirmwareControl,
-		Status,
-		FirmwareVersion,
-		PowerStatus,
+		GetPowerStatus,
+		UpdateTaskStatus,
+		StartFirmwareUpdate,
+		GetFirmwareUpdateStatus,
+		AllowBringUp,
+		GetBringUpState,
 		HealthCheck,  // Add your new activity here
 	}
 }

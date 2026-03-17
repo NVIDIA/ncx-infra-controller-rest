@@ -74,7 +74,11 @@ type ComponentManager interface {
     Type() devicetypes.ComponentType
     InjectExpectation(ctx, target, info) error
     PowerControl(ctx, target, info) error
-    FirmwareControl(ctx, target, info) error
+    StartFirmwareUpdate(ctx, target, info) error
+    GetFirmwareUpdateStatus(ctx, target) (map, error)
+    GetPowerStatus(ctx, target) (map, error)
+    AllowBringUp(ctx, target) error
+    GetBringUpState(ctx, target) (map, error)
 }
 ```
 
@@ -299,9 +303,9 @@ func (m *Manager) PowerControl(ctx context.Context, target common.Target, info o
     // Implementation here
 }
 
-// FirmwareControl implements ComponentManager.
-func (m *Manager) FirmwareControl(ctx context.Context, target common.Target, info operations.FirmwareControlTaskInfo) error {
-    // Implementation here
+// StartFirmwareUpdate implements ComponentManager.
+func (m *Manager) StartFirmwareUpdate(ctx context.Context, target common.Target, info operations.FirmwareControlTaskInfo) error {
+    // Implementation here — initiate firmware update, return immediately
 }
 ```
 

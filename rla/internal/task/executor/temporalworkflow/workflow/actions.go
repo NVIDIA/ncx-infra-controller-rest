@@ -379,7 +379,7 @@ func verifyPowerStatus(
 // executeAllowBringUpAction opens the power-on gate for the target components.
 func executeAllowBringUpAction(actx actionExecutionContext) error {
 	return workflow.ExecuteActivity(
-		actx.workflowContext, "AllowBringUpAndPowerOn", actx.target,
+		actx.workflowContext, "AllowBringUp", actx.target,
 	).Get(actx.workflowContext, nil)
 }
 

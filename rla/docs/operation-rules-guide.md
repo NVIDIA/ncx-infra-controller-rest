@@ -798,7 +798,7 @@ function:
 | `GetPowerStatus` | `executeGetPowerStatusAction` | `workflow.ExecuteActivity("GetPowerStatus")` |
 | `VerifyPowerStatus` | `executeVerifyPowerStatusAction` | polling loop (see below) |
 | `VerifyReachability` | `executeVerifyReachabilityAction` | polling loop (see below) |
-| `AllowBringUp` | `executeAllowBringUpAction` | `workflow.ExecuteActivity("AllowBringUpAndPowerOn")` |
+| `AllowBringUp` | `executeAllowBringUpAction` | `workflow.ExecuteActivity("AllowBringUp")` |
 | `WaitBringUp` | `executeWaitBringUpAction` | polling loop on `GetBringUpState` |
 
 `Sleep` is a workflow timer, not an activity. It survives worker restarts and

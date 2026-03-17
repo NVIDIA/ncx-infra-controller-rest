@@ -235,79 +235,6 @@ func powerShelfToPowerStatus(ps psmapi.PowerShelf) operations.PowerStatus {
 	return operations.PowerStatusUnknown
 }
 
-// FirmwareControl performs firmware operations on a power shelf.
-func (m *Manager) FirmwareControl(
-	ctx context.Context,
-	target common.Target,
-	info operations.FirmwareControlTaskInfo,
-) error {
-	log.Debug().
-		Str("components", target.String()).
-		Str("operation", fmt.Sprintf("%v", info.Operation)).
-		Str("target_version", info.TargetVersion).
-		Msg("Firmware control request received")
-
-	if m.psmClient == nil {
-		return fmt.Errorf("psm client is not configured")
-	}
-
-	if err := target.Validate(); err != nil {
-		return fmt.Errorf("target is invalid: %w", err)
-	}
-
-	pmcMacs := target.ComponentIDs
-
-	switch info.Operation {
-	case operations.FirmwareOperationUpgrade:
-		// Create firmware update request for PMC component
-		updateReqs := make([]psmapi.UpdatePowershelfFirmwareRequest, 0, len(pmcMacs))
-		for _, componentID := range pmcMacs {
-			updateReqs = append(
-				updateReqs,
-				psmapi.UpdatePowershelfFirmwareRequest{
-					PMCMACAddress: componentID,
-					Components: []psmapi.UpdateComponentFirmwareRequest{
-						{
-							Component: psmapi.PowershelfComponentPMC,
-							UpgradeTo: psmapi.FirmwareVersion{Version: info.TargetVersion},
-						},
-					},
-				},
-			)
-		}
-
-		responses, err := m.psmClient.UpdateFirmware(ctx, updateReqs)
-		if err != nil {
-			return fmt.Errorf("firmware upgrade failed: %w", err)
-		}
-
-		for _, response := range responses {
-			for _, component := range response.Components {
-				if component.Status != psmapi.StatusSuccess {
-					return fmt.Errorf("firmware upgrade failed: %s", component.Error)
-				} else {
-					log.Info().
-						Str("pmc_mac", response.PMCMACAddress).
-						Str("component", component.Component.String()).
-						Str("target_version", info.TargetVersion).
-						Msg("Firmware upgrade initiated successfully")
-				}
-			}
-		}
-
-		return nil
-
-	case operations.FirmwareOperationDowngrade:
-		return fmt.Errorf("firmware downgrade not yet supported by PSM")
-
-	case operations.FirmwareOperationRollback:
-		return fmt.Errorf("firmware rollback not yet supported by PSM")
-
-	default:
-		return fmt.Errorf("unknown firmware operation: %v", info.Operation)
-	}
-}
-
 // GetPowershelf retrieves detailed powershelf information by PMC MAC address.
 func (m *Manager) GetPowershelf(ctx context.Context, pmcMac string) (*psmapi.PowerShelf, error) {
 	if m.psmClient == nil {
@@ -402,13 +329,13 @@ func (m *Manager) StartFirmwareUpdate(ctx context.Context, target common.Target,
 	return nil
 }
 
-// AllowBringUpAndPowerOn is not applicable to power shelves.
-func (m *Manager) AllowBringUpAndPowerOn(
+// AllowBringUp is not applicable to power shelves.
+func (m *Manager) AllowBringUp(
 	ctx context.Context,
 	target common.Target,
 ) error {
 	return fmt.Errorf(
-		"AllowBringUpAndPowerOn not supported for PowerShelf",
+		"AllowBringUp not supported for PowerShelf",
 	)
 }
 
