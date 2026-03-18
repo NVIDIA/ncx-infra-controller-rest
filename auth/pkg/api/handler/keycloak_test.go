@@ -30,9 +30,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	cam "github.com/nvidia/bare-metal-manager-rest/auth/pkg/api/model"
-	caa "github.com/nvidia/bare-metal-manager-rest/auth/pkg/authentication"
-	"github.com/nvidia/bare-metal-manager-rest/auth/pkg/config"
+	cam "github.com/NVIDIA/ncx-infra-controller-rest/auth/pkg/api/model"
+	caa "github.com/NVIDIA/ncx-infra-controller-rest/auth/pkg/authentication"
+	"github.com/NVIDIA/ncx-infra-controller-rest/auth/pkg/config"
 )
 
 var (

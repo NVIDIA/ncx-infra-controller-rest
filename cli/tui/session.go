@@ -24,7 +24,7 @@ import (
 	"strconv"
 	"strings"
 
-	carbidecli "github.com/nvidia/bare-metal-manager-rest/cli/pkg"
+	carbidecli "github.com/NVIDIA/ncx-infra-controller-rest/cli/pkg"
 )
 
 // LoginFunc is a callback to perform login and return a new token.

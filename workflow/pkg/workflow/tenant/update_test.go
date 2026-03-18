@@ -21,15 +21,15 @@ import (
 	"errors"
 	"testing"
 
+	tenantActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/tenant"
 	"github.com/google/uuid"
-	tenantActivity "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/activity/tenant"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/testsuite"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 )
 
 type UpdateTenantTestSuite struct {

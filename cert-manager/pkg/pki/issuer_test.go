@@ -24,7 +24,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/nvidia/bare-metal-manager-rest/cert-manager/pkg/types"
+	"github.com/NVIDIA/ncx-infra-controller-rest/cert-manager/pkg/types"
 )
 
 // createTestCA creates a temporary CA for testing and returns paths to cert and key files

@@ -41345,7 +41345,7 @@ const file_forge_carbide_proto_rawDesc = "" +
 	"\x1cCreateNVLinkLogicalPartition\x12,.forge.NVLinkLogicalPartitionCreationRequest\x1a\x1d.forge.NVLinkLogicalPartition\x12u\n" +
 	"\x1cUpdateNVLinkLogicalPartition\x12*.forge.NVLinkLogicalPartitionUpdateRequest\x1a).forge.NVLinkLogicalPartitionUpdateResult\x12y\n" +
 	"\x1cDeleteNVLinkLogicalPartition\x12,.forge.NVLinkLogicalPartitionDeletionRequest\x1a+.forge.NVLinkLogicalPartitionDeletionResult\x12_\n" +
-	" NVLinkLogicalPartitionsForTenant\x12\x18.forge.TenantSearchQuery\x1a!.forge.NVLinkLogicalPartitionListBAZ?github.com/nvidia/bare-metal-manager-rest/workflow-schema/protob\x06proto3"
+	" NVLinkLogicalPartitionsForTenant\x12\x18.forge.TenantSearchQuery\x1a!.forge.NVLinkLogicalPartitionListBCZAgithub.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/protob\x06proto3"
 
 var (
 	file_forge_carbide_proto_rawDescOnce sync.Once

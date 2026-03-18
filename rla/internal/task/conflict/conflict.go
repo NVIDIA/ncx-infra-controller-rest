@@ -30,8 +30,8 @@ import (
 
 	"github.com/google/uuid"
 
-	taskstore "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/store"
-	taskdef "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/task"
+	taskstore "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/store"
+	taskdef "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/task"
 )
 
 // OperationSpec matches an operation by type and code.

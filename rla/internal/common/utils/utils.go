@@ -23,9 +23,9 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	dbtestutil "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/testutil"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/db/migrations"
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	dbtestutil "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/testutil"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/db/migrations"
 )
 
 func UnitTestDB(ctx context.Context, t *testing.T, dbConf cdb.Config) (*cdb.Session, error) {

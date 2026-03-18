@@ -22,17 +22,17 @@ import (
 	"reflect"
 	"testing"
 
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
-	"github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
-	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
-	sc "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/client/site"
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
+	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/paginator"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
+	sc "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/client/site"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/google/uuid"
 
-	"github.com/nvidia/bare-metal-manager-rest/workflow/internal/config"
-	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/util"
+	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/internal/config"
+	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/util"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"os"

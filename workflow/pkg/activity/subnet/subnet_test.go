@@ -24,15 +24,15 @@ import (
 	"testing"
 	"time"
 
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	"github.com/nvidia/bare-metal-manager-rest/db/pkg/db/ipam"
-	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
-	cdbu "github.com/nvidia/bare-metal-manager-rest/db/pkg/util"
-	cipam "github.com/nvidia/bare-metal-manager-rest/ipam"
-	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
-	cwsv1 "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
-	sc "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/client/site"
-	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/queue"
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/ipam"
+	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
+	cdbu "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/util"
+	cipam "github.com/NVIDIA/ncx-infra-controller-rest/ipam"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
+	cwsv1 "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
+	sc "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/client/site"
+	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/queue"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -41,7 +41,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/nvidia/bare-metal-manager-rest/workflow/internal/config"
+	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/internal/config"
 
 	"os"
 
@@ -52,10 +52,10 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 
-	cwm "github.com/nvidia/bare-metal-manager-rest/workflow/internal/metrics"
-	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/util"
+	cwm "github.com/NVIDIA/ncx-infra-controller-rest/workflow/internal/metrics"
+	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/util"
 
-	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
+	cwutil "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/util"
 )
 
 // testTemporalSiteClientPool Building site client pool

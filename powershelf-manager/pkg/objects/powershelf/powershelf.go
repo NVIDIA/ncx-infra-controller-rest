@@ -17,8 +17,8 @@
 package powershelf
 
 import (
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/objects/pmc"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/objects/powersupply"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/objects/pmc"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/objects/powersupply"
 
 	gofish "github.com/stmcginnis/gofish/redfish"
 )

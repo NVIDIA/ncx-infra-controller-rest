@@ -18,9 +18,9 @@
 package processors
 
 import (
-	"github.com/nvidia/bare-metal-manager-rest/auth/pkg/config"
-	commonConfig "github.com/nvidia/bare-metal-manager-rest/common/pkg/config"
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
+	"github.com/NVIDIA/ncx-infra-controller-rest/auth/pkg/config"
+	commonConfig "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/config"
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 	temporalClient "go.temporal.io/sdk/client"
 )
 

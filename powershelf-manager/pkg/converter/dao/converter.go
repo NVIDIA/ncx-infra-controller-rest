@@ -20,9 +20,9 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/db/model"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/objects/pmc"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/objects/powershelf"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/db/model"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/objects/pmc"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/objects/powershelf"
 )
 
 // PmcTo converts a domain PMC to a database model.

@@ -30,7 +30,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/datatypes/elektratypes"
+	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/datatypes/elektratypes"
 
 	"github.com/rs/zerolog/log"
 	"google.golang.org/protobuf/types/known/timestamppb"

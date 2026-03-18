@@ -37,7 +37,7 @@ import (
 	"go.temporal.io/sdk/interceptor"
 	"go.temporal.io/sdk/worker"
 
-	computils "github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/components/utils"
+	computils "github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/utils"
 )
 
 // Orchestrator - Workflow Orchestrator

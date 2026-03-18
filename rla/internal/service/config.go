@@ -22,12 +22,12 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/nvidia/bare-metal-manager-rest/common/pkg/endpoint"
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/carbideapi"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/clients/temporal"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/psmapi"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/executor"
+	"github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/endpoint"
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/carbideapi"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/clients/temporal"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/psmapi"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor"
 )
 
 const (

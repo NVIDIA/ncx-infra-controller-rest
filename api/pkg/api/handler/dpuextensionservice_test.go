@@ -27,23 +27,23 @@ import (
 	"testing"
 	"time"
 
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/handler/util/common"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/pagination"
+	sc "github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/client/site"
+	"github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/otelecho"
+	sutil "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/util"
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/handler/util/common"
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model"
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/pagination"
-	sc "github.com/nvidia/bare-metal-manager-rest/api/pkg/client/site"
-	"github.com/nvidia/bare-metal-manager-rest/common/pkg/otelecho"
-	sutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	temporalClient "go.temporal.io/sdk/client"
 	tmocks "go.temporal.io/sdk/mocks"
 
-	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 )
 
 // TestCreateDpuExtensionServiceHandler_Handle tests the Create DPU Extension Service handler

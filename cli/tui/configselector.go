@@ -26,7 +26,7 @@ import (
 
 	"golang.org/x/term"
 
-	carbidecli "github.com/nvidia/bare-metal-manager-rest/cli/pkg"
+	carbidecli "github.com/NVIDIA/ncx-infra-controller-rest/cli/pkg"
 )
 
 // ChooseConfigFile scans ~/.carbide for config*.yaml files and shows an interactive

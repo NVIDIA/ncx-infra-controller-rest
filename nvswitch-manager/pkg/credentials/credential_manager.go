@@ -20,7 +20,7 @@ package credentials
 import (
 	"context"
 	"fmt"
-	"github.com/nvidia/bare-metal-manager-rest/nvswitch-manager/pkg/common/credential"
+	"github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/pkg/common/credential"
 	"net"
 
 	log "github.com/sirupsen/logrus"

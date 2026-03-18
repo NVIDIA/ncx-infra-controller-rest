@@ -26,13 +26,13 @@ import (
 
 	"github.com/google/uuid"
 
-	dbquery "github.com/nvidia/bare-metal-manager-rest/rla/internal/db/query"
-	inventorystore "github.com/nvidia/bare-metal-manager-rest/rla/internal/inventory/store"
-	identifier "github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/Identifier"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/component"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/nvldomain"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/rack"
+	dbquery "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/db/query"
+	inventorystore "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/inventory/store"
+	identifier "github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/Identifier"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/inventoryobjects/component"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/inventoryobjects/nvldomain"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/inventoryobjects/rack"
 )
 
 // Re-export for convenience

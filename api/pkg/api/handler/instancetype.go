@@ -35,25 +35,25 @@ import (
 
 	"github.com/labstack/echo/v4"
 
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
-	cdbp "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
-	swe "github.com/nvidia/bare-metal-manager-rest/site-workflow/pkg/error"
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
+	cdbp "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/paginator"
+	swe "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/error"
 
-	cwma "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/activity/machine"
-	cwu "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/util"
+	cwma "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/machine"
+	cwu "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/util"
 
-	"github.com/nvidia/bare-metal-manager-rest/api/internal/config"
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/handler/util"
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/handler/util/common"
-	ch "github.com/nvidia/bare-metal-manager-rest/api/pkg/api/handler/util/common"
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model"
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/pagination"
-	sc "github.com/nvidia/bare-metal-manager-rest/api/pkg/client/site"
-	auth "github.com/nvidia/bare-metal-manager-rest/auth/pkg/authorization"
-	cutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
-	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/queue"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/internal/config"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/handler/util"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/handler/util/common"
+	ch "github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/handler/util/common"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/pagination"
+	sc "github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/client/site"
+	auth "github.com/NVIDIA/ncx-infra-controller-rest/auth/pkg/authorization"
+	cutil "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/util"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
+	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/queue"
 )
 
 // ~~~~~ Create Handler ~~~~~ //

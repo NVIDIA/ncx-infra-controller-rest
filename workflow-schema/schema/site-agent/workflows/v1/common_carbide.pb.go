@@ -1070,7 +1070,7 @@ const file_common_carbide_proto_rawDesc = "" +
 	"\fPowerShelfId\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"\x1a\n" +
 	"\bSwitchId\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02idBAZ?github.com/nvidia/bare-metal-manager-rest/workflow-schema/protob\x06proto3"
+	"\x02id\x18\x01 \x01(\tR\x02idBCZAgithub.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/protob\x06proto3"
 
 var (
 	file_common_carbide_proto_rawDescOnce sync.Once

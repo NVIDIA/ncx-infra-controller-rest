@@ -20,9 +20,9 @@ package elektra
 import (
 	zlog "github.com/rs/zerolog/log"
 
-	"github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/components/config"
-	"github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/components/managers"
-	"github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/datatypes/elektratypes"
+	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/config"
+	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers"
+	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/datatypes/elektratypes"
 )
 
 // Interface - Managers' interface

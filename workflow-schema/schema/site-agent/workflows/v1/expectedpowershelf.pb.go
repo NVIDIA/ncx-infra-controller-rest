@@ -141,7 +141,7 @@ const file_expectedpowershelf_proto_rawDesc = "" +
 	"\ttimestamp\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12O\n" +
 	"\x16expected_power_shelves\x18\x04 \x03(\v2\x19.forge.ExpectedPowerShelfR\x14expectedPowerShelves\x12B\n" +
 	"\x0einventory_page\x18\x05 \x01(\v2\x1b.workflows.v1.InventoryPageR\rinventoryPage\x12Q\n" +
-	"\x14linked_power_shelves\x18\x06 \x03(\v2\x1f.forge.LinkedExpectedPowerShelfR\x12linkedPowerShelvesBAZ?github.com/nvidia/bare-metal-manager-rest/workflow-schema/protob\x06proto3"
+	"\x14linked_power_shelves\x18\x06 \x03(\v2\x1f.forge.LinkedExpectedPowerShelfR\x12linkedPowerShelvesBCZAgithub.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/protob\x06proto3"
 
 var (
 	file_expectedpowershelf_proto_rawDescOnce sync.Once

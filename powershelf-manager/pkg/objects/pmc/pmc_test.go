@@ -20,8 +20,8 @@ import (
 	"net"
 	"testing"
 
-	"github.com/nvidia/bare-metal-manager-rest/common/pkg/credential"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/vendor"
+	"github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/credential"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/common/vendor"
 
 	"github.com/stretchr/testify/assert"
 )

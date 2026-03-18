@@ -23,11 +23,11 @@ import (
 	"math"
 	"time"
 
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model/util"
+	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	validationis "github.com/go-ozzo/ozzo-validation/v4/is"
 	"github.com/google/uuid"
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model/util"
-	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
 )
 
 const (

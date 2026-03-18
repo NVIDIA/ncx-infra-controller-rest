@@ -18,9 +18,9 @@
 package model
 
 import (
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model/util"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 	validation "github.com/go-ozzo/ozzo-validation/v4"
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model/util"
-	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
 	"time"
 )
 

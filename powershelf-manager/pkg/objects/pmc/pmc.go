@@ -22,8 +22,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/nvidia/bare-metal-manager-rest/common/pkg/credential"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/vendor"
+	"github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/credential"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/common/vendor"
 )
 
 // PMC specifies the information for a PMC which includes MAC address, IP

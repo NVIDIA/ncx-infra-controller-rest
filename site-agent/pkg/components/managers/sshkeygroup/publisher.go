@@ -18,9 +18,9 @@
 package sshkeygroup
 
 import (
+	swa "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/activity"
+	sww "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/workflow"
 	"github.com/google/uuid"
-	swa "github.com/nvidia/bare-metal-manager-rest/site-workflow/pkg/activity"
-	sww "github.com/nvidia/bare-metal-manager-rest/site-workflow/pkg/workflow"
 	"go.temporal.io/sdk/activity"
 )
 

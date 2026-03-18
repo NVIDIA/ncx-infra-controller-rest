@@ -23,8 +23,8 @@ import (
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
 
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operations"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/task"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operations"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/task"
 )
 
 var (

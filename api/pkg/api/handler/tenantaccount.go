@@ -23,22 +23,22 @@ import (
 	"fmt"
 	"net/http"
 
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
 	"github.com/labstack/echo/v4"
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
 
 	"go.opentelemetry.io/otel/attribute"
 	temporalClient "go.temporal.io/sdk/client"
 
 	"github.com/google/uuid"
 
-	"github.com/nvidia/bare-metal-manager-rest/api/internal/config"
-	common "github.com/nvidia/bare-metal-manager-rest/api/pkg/api/handler/util/common"
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model"
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/pagination"
-	auth "github.com/nvidia/bare-metal-manager-rest/auth/pkg/authorization"
-	cutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	cdbp "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/internal/config"
+	common "github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/handler/util/common"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/pagination"
+	auth "github.com/NVIDIA/ncx-infra-controller-rest/auth/pkg/authorization"
+	cutil "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/util"
+	cdbp "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/paginator"
 )
 
 // ~~~~~ Create Handler ~~~~~ //

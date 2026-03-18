@@ -26,11 +26,11 @@ gen-pb: ## Generate protobuf files
 	@echo "Successfully generated protobuf"
 
 gen-carbideapi-pb: ## Generate protobuf files for carbide-api access, only needed for new messages or fields that we will actually use
-	rm -rf bare-metal-manager-core
-	git clone https://github.com/NVIDIA/bare-metal-manager-core.git
+	rm -rf ncx-infra-controller-core
+	git clone https://github.com/NVIDIA/ncx-infra-controller-core.git
 	rm -f internal/carbideapi/carbideproto/*.proto
-	cp bare-metal-manager-core/crates/rpc/proto/*.proto internal/carbideapi/carbideproto/
-	rm -rf bare-metal-manager-core
+	cp ncx-infra-controller-core/crates/rpc/proto/*.proto internal/carbideapi/carbideproto/
+	rm -rf ncx-infra-controller-core
 # The protodefs are a bit unclean, and we need to make some tweaks to make them usable.
 	cd internal/carbideapi && ./tweak_protodefs.sh
 # Specify version of buf for consistency in pipeline builds
@@ -40,7 +40,7 @@ gen-carbideapi-pb: ## Generate protobuf files for carbide-api access, only neede
 	cd internal/carbideapi && buf generate
 
 gen-psmapi-pb: ## Generate protobuf files for PSM client access
-	cp powershelf_manager/internal/proto/v1/powershelf-manager.proto internal/psmapi/psmproto/
+	cp ../powershelf-manager/internal/proto/v1/powershelf-manager.proto internal/psmapi/psmproto/
 # Specify version of buf for consistency in pipeline builds
 	which buf || go install github.com/bufbuild/buf/cmd/buf@v1.57.2
 	cd internal/psmapi && buf generate
@@ -66,9 +66,9 @@ rla:
 	BUILD_TIME=$$(date -u +"%Y-%m-%dT%H:%M:%SZ") && \
 	GIT_COMMIT=$$(git rev-parse --short HEAD 2>/dev/null || echo "unknown") && \
 	go build -C build \
-		-ldflags "-X 'github.com/nvidia/bare-metal-manager-rest/rla/pkg/metadata.Version=$${VERSION}' \
-		          -X 'github.com/nvidia/bare-metal-manager-rest/rla/pkg/metadata.BuildTime=$${BUILD_TIME}' \
-		          -X 'github.com/nvidia/bare-metal-manager-rest/rla/pkg/metadata.GitCommit=$${GIT_COMMIT}'" \
+		-ldflags "-X 'github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/metadata.Version=$${VERSION}' \
+		          -X 'github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/metadata.BuildTime=$${BUILD_TIME}' \
+		          -X 'github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/metadata.GitCommit=$${GIT_COMMIT}'" \
 		..
 
 container: rla

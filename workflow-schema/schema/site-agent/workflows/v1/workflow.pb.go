@@ -500,7 +500,7 @@ const file_workflow_proto_rawDesc = "" +
 	"\x0fInventoryStatus\x12 \n" +
 	"\x1cINVENTORY_STATUS_UNSPECIFIED\x10\x00\x12\x1c\n" +
 	"\x18INVENTORY_STATUS_SUCCESS\x10\x01\x12\x1b\n" +
-	"\x17INVENTORY_STATUS_FAILED\x10\x02BAZ?github.com/nvidia/bare-metal-manager-rest/workflow-schema/protob\x06proto3"
+	"\x17INVENTORY_STATUS_FAILED\x10\x02BCZAgithub.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/protob\x06proto3"
 
 var (
 	file_workflow_proto_rawDescOnce sync.Once

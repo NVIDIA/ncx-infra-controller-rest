@@ -32,7 +32,7 @@ import "measured_boot_carbide.proto";
 import "mlx_device_carbide.proto";
 import "site_explorer_carbide.proto";
 
-option go_package = "github.com/nvidia/bare-metal-manager-rest/workflow-schema/proto";
+option go_package = "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/proto";
 
 service Forge {
   // What version of Forge is this service running? Matches `--version` command line.

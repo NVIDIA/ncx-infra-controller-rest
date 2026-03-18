@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 ---
 name: Submit question
-about: Ask a general question about Carbide
+about: Ask a general question about NCX Infra Controller REST
 title: "[QST]"
 labels: "? - Needs Triage, question"
 assignees: ''
@@ -16,4 +16,4 @@ assignees: ''
 
 
 -----
-By submitting this issue, you agree to follow our [code of conduct](https://github.com/bare-metal-manager-rest/blob/main/CODE_OF_CONDUCT.md) and our [contributing guidelines](https://github.com/bare-metal-manager-rest/blob/main/CONTRIBUTING.md).
+By submitting this issue, you agree to follow our [code of conduct](https://github.com/NVIDIA/ncx-infra-controller-rest/blob/main/CODE_OF_CONDUCT.md) and our [contributing guidelines](https://github.com/NVIDIA/ncx-infra-controller-rest/blob/main/CONTRIBUTING.md).

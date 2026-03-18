@@ -31,7 +31,7 @@ import (
 
 	tmocks "go.temporal.io/sdk/mocks"
 
-	subnetActivity "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/activity/subnet"
+	subnetActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/subnet"
 )
 
 type DeleteSubnetTestSuite struct {

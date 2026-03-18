@@ -49042,9 +49042,9 @@ const file_forge_proto_rawDesc = "" +
 	"\n" +
 	"NmxmBrowse\x12\x18.forge.NmxmBrowseRequest\x1a\x19.forge.NmxmBrowseResponse\x12F\n" +
 	"\x0eModifyDPFState\x12\x1c.forge.ModifyDPFStateRequest\x1a\x16.google.protobuf.Empty\x12A\n" +
-	"\vGetDPFState\x12\x19.forge.GetDPFStateRequest\x1a\x17.forge.DPFStateResponseB\x92\x01\n" +
+	"\vGetDPFState\x12\x19.forge.GetDPFStateRequest\x1a\x17.forge.DPFStateResponseB\x94\x01\n" +
 	"\tcom.forgeB\n" +
-	"ForgeProtoP\x01ZEgithub.com/nvidia/bare-metal-manager-rest/rla/internal/carbideapigrpc\xa2\x02\x03FXX\xaa\x02\x05Forge\xca\x02\x05Forge\xe2\x02\x11Forge\\GPBMetadata\xea\x02\x05Forgeb\x06proto3"
+	"ForgeProtoP\x01ZGgithub.com/NVIDIA/ncx-infra-controller-rest/rla/internal/carbideapigrpc\xa2\x02\x03FXX\xaa\x02\x05Forge\xca\x02\x05Forge\xe2\x02\x11Forge\\GPBMetadata\xea\x02\x05Forgeb\x06proto3"
 
 var (
 	file_forge_proto_rawDescOnce sync.Once

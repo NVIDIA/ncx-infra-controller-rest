@@ -18,8 +18,8 @@
 package expectedswitch
 
 import (
-	swa "github.com/nvidia/bare-metal-manager-rest/site-workflow/pkg/activity"
-	sww "github.com/nvidia/bare-metal-manager-rest/site-workflow/pkg/workflow"
+	swa "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/activity"
+	sww "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/workflow"
 )
 
 // RegisterSubscriber registers the ExpectedSwitchWorkflows with the Temporal client

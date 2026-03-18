@@ -14,10 +14,10 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"github.com/nvidia/bare-metal-manager-rest/nvswitch-manager/pkg/common/credential"
-	"github.com/nvidia/bare-metal-manager-rest/nvswitch-manager/pkg/common/secretstring"
-	"github.com/nvidia/bare-metal-manager-rest/nvswitch-manager/pkg/objects/nvos"
-	"github.com/nvidia/bare-metal-manager-rest/nvswitch-manager/pkg/sshclient"
+	"github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/pkg/common/credential"
+	"github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/pkg/common/secretstring"
+	"github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/pkg/objects/nvos"
+	"github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/pkg/sshclient"
 	"strings"
 
 	log "github.com/sirupsen/logrus"

@@ -25,12 +25,12 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/handler/util/common"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model"
+	cauth "github.com/NVIDIA/ncx-infra-controller-rest/auth/pkg/config"
+	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/handler/util/common"
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model"
-	cauth "github.com/nvidia/bare-metal-manager-rest/auth/pkg/config"
-	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

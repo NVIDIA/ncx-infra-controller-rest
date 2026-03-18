@@ -133,7 +133,7 @@ const file_nvlinklogicalpartition_proto_rawDesc = "" +
 	"\n" +
 	"partitions\x18\x04 \x03(\v2\x1d.forge.NVLinkLogicalPartitionR\n" +
 	"partitions\x12B\n" +
-	"\x0einventory_page\x18\x05 \x01(\v2\x1b.workflows.v1.InventoryPageR\rinventoryPageBAZ?github.com/nvidia/bare-metal-manager-rest/workflow-schema/protob\x06proto3"
+	"\x0einventory_page\x18\x05 \x01(\v2\x1b.workflows.v1.InventoryPageR\rinventoryPageBCZAgithub.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/protob\x06proto3"
 
 var (
 	file_nvlinklogicalpartition_proto_rawDescOnce sync.Once

@@ -34,14 +34,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/nvidia/bare-metal-manager-rest/auth/pkg/api/model"
-	"github.com/nvidia/bare-metal-manager-rest/auth/pkg/config"
-	"github.com/nvidia/bare-metal-manager-rest/auth/pkg/core/claim"
-	"github.com/nvidia/bare-metal-manager-rest/auth/pkg/processors"
-	testutil "github.com/nvidia/bare-metal-manager-rest/auth/pkg/testing"
-	commonConfig "github.com/nvidia/bare-metal-manager-rest/common/pkg/config"
-	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
-	cdbu "github.com/nvidia/bare-metal-manager-rest/db/pkg/util"
+	"github.com/NVIDIA/ncx-infra-controller-rest/auth/pkg/api/model"
+	"github.com/NVIDIA/ncx-infra-controller-rest/auth/pkg/config"
+	"github.com/NVIDIA/ncx-infra-controller-rest/auth/pkg/core/claim"
+	"github.com/NVIDIA/ncx-infra-controller-rest/auth/pkg/processors"
+	testutil "github.com/NVIDIA/ncx-infra-controller-rest/auth/pkg/testing"
+	commonConfig "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/config"
+	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
+	cdbu "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/util"
 	tmocks "go.temporal.io/sdk/mocks"
 )
 

@@ -22,9 +22,9 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/internal/config"
+	cconfig "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/config"
 	"github.com/google/uuid"
-	"github.com/nvidia/bare-metal-manager-rest/api/internal/config"
-	cconfig "github.com/nvidia/bare-metal-manager-rest/common/pkg/config"
 	"github.com/stretchr/testify/assert"
 
 	temporalClient "go.temporal.io/sdk/client"

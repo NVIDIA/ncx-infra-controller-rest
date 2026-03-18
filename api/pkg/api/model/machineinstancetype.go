@@ -22,7 +22,7 @@ import (
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 
-	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
+	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
 )
 
 // APIMachineInstanceTypeCreateRequest is the data structure to capture user request to create a new MachineInstanceType

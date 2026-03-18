@@ -32,7 +32,7 @@ import (
 
 	tmocks "go.temporal.io/sdk/mocks"
 
-	instanceActivity "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/activity/instance"
+	instanceActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/instance"
 )
 
 type DeleteInstanceTestSuite struct {

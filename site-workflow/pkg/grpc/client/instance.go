@@ -22,8 +22,8 @@ import (
 	"errors"
 	"os"
 
+	wflows "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 	"github.com/gogo/status"
-	wflows "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel"
 	"google.golang.org/grpc/codes"

@@ -21,13 +21,13 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/credentials"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/firmwaremanager"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/inventorymanager"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/objects/pmc"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/objects/powershelf"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/pmcmanager"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/pmcregistry"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/credentials"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/firmwaremanager"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/inventorymanager"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/objects/pmc"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/objects/powershelf"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/pmcmanager"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/pmcregistry"
 
 	log "github.com/sirupsen/logrus"
 )

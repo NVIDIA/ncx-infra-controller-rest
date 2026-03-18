@@ -31,7 +31,7 @@ import (
 
 	tmocks "go.temporal.io/sdk/mocks"
 
-	vpcActivity "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/activity/vpc"
+	vpcActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/vpc"
 )
 
 type DeleteVpcTestSuite struct {

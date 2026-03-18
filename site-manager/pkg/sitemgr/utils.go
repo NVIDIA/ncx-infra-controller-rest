@@ -30,7 +30,7 @@ import (
 	"strings"
 	"time"
 
-	csmtypes "github.com/nvidia/bare-metal-manager-rest/site-manager/pkg/types"
+	csmtypes "github.com/NVIDIA/ncx-infra-controller-rest/site-manager/pkg/types"
 )
 
 const (

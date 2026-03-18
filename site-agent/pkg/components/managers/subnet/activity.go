@@ -21,7 +21,7 @@ import (
 	"context"
 	"errors"
 
-	wflows "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
+	wflows "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 	"go.temporal.io/sdk/temporal"
 )
 

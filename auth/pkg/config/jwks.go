@@ -24,12 +24,12 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/NVIDIA/ncx-infra-controller-rest/auth/pkg/core"
+	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
 	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/go-jose/go-jose/v4"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
-	"github.com/nvidia/bare-metal-manager-rest/auth/pkg/core"
-	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
 	"github.com/pkg/errors"
 )
 

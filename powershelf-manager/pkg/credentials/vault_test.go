@@ -26,7 +26,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/nvidia/bare-metal-manager-rest/common/pkg/credential"
+	"github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/credential"
 
 	"github.com/stretchr/testify/assert"
 )

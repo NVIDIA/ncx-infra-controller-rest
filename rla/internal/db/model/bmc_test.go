@@ -20,8 +20,8 @@ package model
 import (
 	"testing"
 
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
 	"github.com/google/uuid"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
 	"github.com/stretchr/testify/assert"
 )
 

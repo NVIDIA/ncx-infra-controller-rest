@@ -25,13 +25,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	inventorymanager "github.com/nvidia/bare-metal-manager-rest/rla/internal/inventory/manager"
-	inventorystore "github.com/nvidia/bare-metal-manager-rest/rla/internal/inventory/store"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/deviceinfo"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/component"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/rack"
-	pb "github.com/nvidia/bare-metal-manager-rest/rla/pkg/proto/v1"
+	inventorymanager "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/inventory/manager"
+	inventorystore "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/inventory/store"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/deviceinfo"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/inventoryobjects/component"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/inventoryobjects/rack"
+	pb "github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/proto/v1"
 )
 
 // --- Minimal mock for inventorymanager.Manager ---

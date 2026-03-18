@@ -29,8 +29,8 @@ import (
 
 	"go.temporal.io/sdk/client"
 
-	ibpActivity "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/activity/infinibandpartition"
-	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/queue"
+	ibpActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/infinibandpartition"
+	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/queue"
 )
 
 // CreateInfiniBandPartition is a Temporal workflow to create a new InfiniBandPartition via Site Agent

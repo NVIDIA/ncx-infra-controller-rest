@@ -20,7 +20,7 @@ package carbidecli
 import (
 	"testing"
 
-	"github.com/nvidia/bare-metal-manager-rest/openapi"
+	"github.com/NVIDIA/ncx-infra-controller-rest/openapi"
 )
 
 func TestParseSpec_EmbeddedSpec(t *testing.T) {

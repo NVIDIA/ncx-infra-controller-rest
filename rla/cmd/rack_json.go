@@ -26,7 +26,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/types"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/types"
 )
 
 // rackInput is the JSON input structure for rack commands.

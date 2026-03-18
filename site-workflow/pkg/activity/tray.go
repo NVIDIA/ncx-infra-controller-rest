@@ -22,9 +22,9 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	swe "github.com/nvidia/bare-metal-manager-rest/site-workflow/pkg/error"
-	cClient "github.com/nvidia/bare-metal-manager-rest/site-workflow/pkg/grpc/client"
-	rlav1 "github.com/nvidia/bare-metal-manager-rest/workflow-schema/rla/protobuf/v1"
+	swe "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/error"
+	cClient "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/grpc/client"
+	rlav1 "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/rla/protobuf/v1"
 	"go.temporal.io/sdk/temporal"
 )
 

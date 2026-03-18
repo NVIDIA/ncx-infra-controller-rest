@@ -2232,7 +2232,7 @@ const file_site_explorer_carbide_proto_rawDesc = "" +
 	"\x16InternalLockdownStatus\x12\v\n" +
 	"\aENABLED\x10\x00\x12\v\n" +
 	"\aPARTIAL\x10\x01\x12\f\n" +
-	"\bDISABLED\x10\x02BAZ?github.com/nvidia/bare-metal-manager-rest/workflow-schema/protob\x06proto3"
+	"\bDISABLED\x10\x02BCZAgithub.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/protob\x06proto3"
 
 var (
 	file_site_explorer_carbide_proto_rawDescOnce sync.Once
