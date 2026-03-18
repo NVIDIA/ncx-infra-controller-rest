@@ -96,34 +96,45 @@ spec:
                 exit 0
               fi
 
-              echo "Creating site via site-manager (uuid=$SITE_UUID)..."
-              curl -sfk -X POST "$SITE_MANAGER_URL/v1/site" \
-                -H "Content-Type: application/json" \
-                -d "{\"siteuuid\":\"$SITE_UUID\"}"
+              echo "Fetching CA certificate from {{ .Values.bootstrap.siteManagerTLSSecret }}..."
+              CACERT=$(kubectl get secret {{ .Values.bootstrap.siteManagerTLSSecret }} \
+                -n "$NAMESPACE" -o jsonpath='{.data.ca\.crt}' | base64 -d)
+              if [ -z "$CACERT" ]; then
+                echo "ERROR: missing ca.crt in secret {{ .Values.bootstrap.siteManagerTLSSecret }}"
+                exit 1
+              fi
+              echo "$CACERT" > /tmp/site-manager-ca.crt
 
-              echo "Waiting for Site CR OTP..."
+              echo "Creating site via site-manager (uuid=$SITE_UUID)..."
+              HTTP_CODE=$(curl -s --cacert /tmp/site-manager-ca.crt -X POST "$SITE_MANAGER_URL/v1/site" \
+                -H "Content-Type: application/json" \
+                -d "{\"siteuuid\":\"$SITE_UUID\"}" \
+                -o /dev/null -w "%{http_code}")
+              if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "201" ]; then
+                echo "Site created (HTTP $HTTP_CODE)"
+              elif [ "$HTTP_CODE" = "400" ] || [ "$HTTP_CODE" = "409" ]; then
+                echo "Site already exists (HTTP $HTTP_CODE) — continuing to fetch OTP"
+              else
+                echo "ERROR: unexpected HTTP status $HTTP_CODE from site-manager"
+                exit 1
+              fi
+
+              echo "Waiting for Site CR OTP (up to 3 min)..."
               SITE_NAME="site-$SITE_UUID"
               OTP=""
-              for i in $(seq 1 60); do
+              for i in $(seq 1 36); do
                 OTP=$(kubectl get site "$SITE_NAME" -n "$NAMESPACE" \
                   -o jsonpath='{.status.otp.passcode}' 2>/dev/null || true)
                 if [ -n "$OTP" ]; then
                   echo "OTP acquired"
                   break
                 fi
-                echo "Waiting for OTP ($i/60)..."
+                echo "Waiting for OTP ($i/36)..."
                 sleep 5
               done
 
               if [ -z "$OTP" ]; then
                 echo "ERROR: Timed out waiting for OTP from Site CR"
-                exit 1
-              fi
-
-              CACERT=$(kubectl get secret {{ .Values.bootstrap.siteManagerTLSSecret }} \
-                -n "$NAMESPACE" -o jsonpath='{.data.ca\.crt}' 2>/dev/null | base64 -d || true)
-              if [ -z "$CACERT" ]; then
-                echo "ERROR: missing ca.crt in secret {{ .Values.bootstrap.siteManagerTLSSecret }}"
                 exit 1
               fi
 
