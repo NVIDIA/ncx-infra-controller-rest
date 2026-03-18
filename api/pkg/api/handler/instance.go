@@ -463,7 +463,12 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("VPC: %v specified in request must have Ethernet network virtualization type in order to create Subnet based interfaces", vpc.ID), nil)
 			}
 
-			dbInterfaces = append(dbInterfaces, cdbm.Interface{SubnetID: &subnetID, IsPhysical: ifc.IsPhysical, Status: cdbm.InterfaceStatusPending})
+			dbInterfaces = append(dbInterfaces, cdbm.Interface{
+				SubnetID:           &subnetID,
+				IsPhysical:         ifc.IsPhysical,
+				RequestedIpAddress: nil, // RequestedIpAddress requires a VPC prefix, and model validation enforces this.
+				Status:             cdbm.InterfaceStatusPending,
+			})
 		}
 
 		if ifc.VpcPrefixID != nil {
@@ -500,12 +505,13 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 			}
 
 			dbInterfaces = append(dbInterfaces, cdbm.Interface{
-				VpcPrefixID:       &vpcPrefixID,
-				Device:            ifc.Device,
-				DeviceInstance:    ifc.DeviceInstance,
-				VirtualFunctionID: ifc.VirtualFunctionID,
-				IsPhysical:        ifc.IsPhysical,
-				Status:            cdbm.InterfaceStatusPending,
+				VpcPrefixID:        &vpcPrefixID,
+				RequestedIpAddress: ifc.IPAddress,
+				Device:             ifc.Device,
+				DeviceInstance:     ifc.DeviceInstance,
+				VirtualFunctionID:  ifc.VirtualFunctionID,
+				IsPhysical:         ifc.IsPhysical,
+				Status:             cdbm.InterfaceStatusPending,
 			})
 		}
 	}
@@ -1210,15 +1216,16 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 	ifcDAO := cdbm.NewInterfaceDAO(cih.dbSession)
 	for _, dbifc := range dbInterfaces {
 		input := cdbm.InterfaceCreateInput{
-			InstanceID:        instance.ID,
-			SubnetID:          dbifc.SubnetID,
-			VpcPrefixID:       dbifc.VpcPrefixID,
-			Device:            dbifc.Device,
-			DeviceInstance:    dbifc.DeviceInstance,
-			VirtualFunctionID: dbifc.VirtualFunctionID,
-			IsPhysical:        dbifc.IsPhysical,
-			Status:            dbifc.Status,
-			CreatedBy:         dbUser.ID,
+			InstanceID:         instance.ID,
+			SubnetID:           dbifc.SubnetID,
+			VpcPrefixID:        dbifc.VpcPrefixID,
+			Device:             dbifc.Device,
+			DeviceInstance:     dbifc.DeviceInstance,
+			VirtualFunctionID:  dbifc.VirtualFunctionID,
+			RequestedIpAddress: dbifc.RequestedIpAddress,
+			IsPhysical:         dbifc.IsPhysical,
+			Status:             dbifc.Status,
+			CreatedBy:          dbUser.ID,
 		}
 
 		retifc, serr := ifcDAO.Create(ctx, tx, input)
@@ -1268,6 +1275,10 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 				vfID := uint32(*dbifc.VirtualFunctionID)
 				interfaceConfig.VirtualFunctionId = &vfID
 			}
+		}
+
+		if dbifc.RequestedIpAddress != nil {
+			interfaceConfig.IpAddress = dbifc.RequestedIpAddress
 		}
 
 		interfaceConfigs = append(interfaceConfigs, interfaceConfig)
@@ -2204,7 +2215,12 @@ func (uih UpdateInstanceHandler) Handle(c echo.Context) error {
 				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("VPC: %v specified in request must have Ethernet network virtualization type in order to create Subnet based interfaces", instance.VpcID), nil)
 			}
 
-			dbInterfaces = append(dbInterfaces, cdbm.Interface{SubnetID: &subnetID, IsPhysical: ifc.IsPhysical, Status: cdbm.InterfaceStatusPending})
+			dbInterfaces = append(dbInterfaces, cdbm.Interface{
+				SubnetID:           &subnetID,
+				IsPhysical:         ifc.IsPhysical,
+				RequestedIpAddress: nil, // RequestedIpAddress requires a VPC prefix, and model validation enforces this.
+				Status:             cdbm.InterfaceStatusPending,
+			})
 		}
 
 		if ifc.VpcPrefixID != nil {
@@ -2240,12 +2256,13 @@ func (uih UpdateInstanceHandler) Handle(c echo.Context) error {
 			}
 
 			dbInterfaces = append(dbInterfaces, cdbm.Interface{
-				VpcPrefixID:       &vpcPrefixID,
-				Device:            ifc.Device,
-				DeviceInstance:    ifc.DeviceInstance,
-				VirtualFunctionID: ifc.VirtualFunctionID,
-				IsPhysical:        ifc.IsPhysical,
-				Status:            cdbm.InterfaceStatusPending})
+				VpcPrefixID:        &vpcPrefixID,
+				RequestedIpAddress: ifc.IPAddress,
+				Device:             ifc.Device,
+				DeviceInstance:     ifc.DeviceInstance,
+				VirtualFunctionID:  ifc.VirtualFunctionID,
+				IsPhysical:         ifc.IsPhysical,
+				Status:             cdbm.InterfaceStatusPending})
 		}
 	}
 
@@ -2756,15 +2773,16 @@ func (uih UpdateInstanceHandler) Handle(c echo.Context) error {
 	if len(apiRequest.Interfaces) > 0 {
 		for _, dbifc := range dbInterfaces {
 			input := cdbm.InterfaceCreateInput{
-				InstanceID:        instance.ID,
-				SubnetID:          dbifc.SubnetID,
-				VpcPrefixID:       dbifc.VpcPrefixID,
-				Device:            dbifc.Device,
-				DeviceInstance:    dbifc.DeviceInstance,
-				VirtualFunctionID: dbifc.VirtualFunctionID,
-				IsPhysical:        dbifc.IsPhysical,
-				Status:            dbifc.Status,
-				CreatedBy:         dbUser.ID,
+				InstanceID:         instance.ID,
+				SubnetID:           dbifc.SubnetID,
+				VpcPrefixID:        dbifc.VpcPrefixID,
+				Device:             dbifc.Device,
+				DeviceInstance:     dbifc.DeviceInstance,
+				VirtualFunctionID:  dbifc.VirtualFunctionID,
+				RequestedIpAddress: dbifc.RequestedIpAddress,
+				IsPhysical:         dbifc.IsPhysical,
+				Status:             dbifc.Status,
+				CreatedBy:          dbUser.ID,
 			}
 
 			dbifc, serr := ifcDAO.Create(ctx, tx, input)
@@ -3056,6 +3074,10 @@ func (uih UpdateInstanceHandler) Handle(c echo.Context) error {
 				vfID := uint32(*ifc.VirtualFunctionID)
 				interfaceConfig.VirtualFunctionId = &vfID
 			}
+		}
+
+		if ifc.RequestedIpAddress != nil {
+			interfaceConfig.IpAddress = ifc.RequestedIpAddress
 		}
 
 		interfaceConfigs[i] = interfaceConfig

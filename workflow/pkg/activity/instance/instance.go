@@ -1051,12 +1051,24 @@ func (mi ManageInstance) UpdateInstancesInDB(ctx context.Context, siteID uuid.UU
 						deviceInstance = cdb.GetIntPtr(int(interfaceStatus.DeviceInstance))
 					}
 
+					requestedIpAddress := interfaceConfig.IpAddress
+					// If the -rest side has a requested IP, but -core side does not,
+					// then a config change may have been done directly in -core.
+					// Clear the field in the DB.
+					if ifc.RequestedIpAddress != nil && interfaceConfig.IpAddress == nil {
+						_, serr := interfaceDAO.Clear(ctx, nil, cdbm.InterfaceClearInput{InterfaceID: ifc.ID, RequestedIpAddress: true})
+						if serr != nil {
+							slogger.Error().Err(serr).Str("Interface ID", ifc.ID.String()).Msg("failed to update Interface in DB")
+							continue
+						}
+					}
+
 					var status *string
 					if controllerInstance.Status.Network.ConfigsSynced == cwsv1.SyncState_SYNCED {
 						status = cdb.GetStrPtr(cdbm.InterfaceStatusReady)
 					}
 
-					_, serr := interfaceDAO.Update(ctx, nil, cdbm.InterfaceUpdateInput{InterfaceID: ifc.ID, Device: device, DeviceInstance: deviceInstance, VirtualFunctionID: vfID, MacAddress: macAddress, IpAddresses: ipAddresses, Status: status})
+					_, serr := interfaceDAO.Update(ctx, nil, cdbm.InterfaceUpdateInput{InterfaceID: ifc.ID, Device: device, DeviceInstance: deviceInstance, VirtualFunctionID: vfID, RequestedIpAddress: requestedIpAddress, MacAddress: macAddress, IpAddresses: ipAddresses, Status: status})
 					if serr != nil {
 						slogger.Error().Err(serr).Str("Interface ID", ifc.ID.String()).Msg("failed to update Interface in DB")
 					}
