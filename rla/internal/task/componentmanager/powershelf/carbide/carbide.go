@@ -24,13 +24,13 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/carbideapi"
-	pb "github.com/nvidia/bare-metal-manager-rest/rla/internal/carbideapi/gen"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/componentmanager"
-	carbideprovider "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/componentmanager/providers/carbide"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/executor/temporalworkflow/common"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operations"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/carbideapi"
+	pb "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/carbideapi/gen"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/componentmanager"
+	carbideprovider "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/componentmanager/providers/carbide"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor/temporalworkflow/common"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operations"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
 )
 
 const (

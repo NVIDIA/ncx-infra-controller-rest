@@ -21,7 +21,7 @@ import (
 	"context"
 	"time"
 
-	pb "github.com/nvidia/bare-metal-manager-rest/rla/internal/carbideapi/gen"
+	pb "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/carbideapi/gen"
 )
 
 type mockClient struct {

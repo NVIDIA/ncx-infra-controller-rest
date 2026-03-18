@@ -18,8 +18,8 @@
 package carbide
 
 import (
-	pb "github.com/nvidia/bare-metal-manager-rest/rla/internal/carbideapi/gen"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operations"
+	pb "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/carbideapi/gen"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operations"
 )
 
 // ExtractPowerState derives an operations.PowerStatus from the first

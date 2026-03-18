@@ -24,7 +24,7 @@ import (
 	"context"
 	"time"
 
-	pb "github.com/nvidia/bare-metal-manager-rest/rla/internal/carbideapi/gen"
+	pb "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/carbideapi/gen"
 )
 
 // Client allow us to have both a real implemenation and a mock implementation for unit tests which can be switched transparently

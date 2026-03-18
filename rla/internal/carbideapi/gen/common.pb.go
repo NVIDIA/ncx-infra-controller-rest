@@ -1221,7 +1221,6 @@ const file_common_proto_rawDesc = "" +
 	"\x0eNVLinkDomainId\x12\x14\n" +
 	"\x05value\x18\x01 \x01(\tR\x05value\"+\n" +
 	"\x13ComputeAllocationId\x12\x14\n" +
-	"\x05value\x18\x01 \x01(\tR\x05valueB\x9a\x01\n" +
 	"\x05value\x18\x01 \x01(\tR\x05value*\xfc\x01\n" +
 	"\x12SystemPowerControl\x12\x1b\n" +
 	"\x17SYSTEM_POWER_CONTROL_ON\x10\x00\x12*\n" +
@@ -1229,7 +1228,7 @@ const file_common_proto_rawDesc = "" +
 	"\x1eSYSTEM_POWER_CONTROL_FORCE_OFF\x10\x02\x12)\n" +
 	"%SYSTEM_POWER_CONTROL_GRACEFUL_RESTART\x10\x03\x12&\n" +
 	"\"SYSTEM_POWER_CONTROL_FORCE_RESTART\x10\x04\x12&\n" +
-	"\"SYSTEM_POWER_CONTROL_AC_POWERCYCLE\x10\x05B\x98\x01\n" +
+	"\"SYSTEM_POWER_CONTROL_AC_POWERCYCLE\x10\x05B\x9a\x01\n" +
 	"\n" +
 	"com.commonB\vCommonProtoP\x01ZGgithub.com/NVIDIA/ncx-infra-controller-rest/rla/internal/carbideapigrpc\xa2\x02\x03CXX\xaa\x02\x06Common\xca\x02\x06Common\xe2\x02\x12Common\\GPBMetadata\xea\x02\x06Commonb\x06proto3"
 
@@ -1246,7 +1245,7 @@ func file_common_proto_rawDescGZIP() []byte {
 }
 
 var file_common_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_common_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
+var file_common_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
 var file_common_proto_goTypes = []any{
 	(SystemPowerControl)(0),          // 0: common.SystemPowerControl
 	(*MachineId)(nil),                // 1: common.MachineId
@@ -1254,24 +1253,25 @@ var file_common_proto_goTypes = []any{
 	(*StringList)(nil),               // 3: common.StringList
 	(*UUID)(nil),                     // 4: common.UUID
 	(*PowerShelfId)(nil),             // 5: common.PowerShelfId
-	(*SwitchId)(nil),                 // 6: common.SwitchId
-	(*Uint32List)(nil),               // 7: common.Uint32List
-	(*RouteTarget)(nil),              // 8: common.RouteTarget
-	(*DomainId)(nil),                 // 9: common.DomainId
-	(*MachineInterfaceId)(nil),       // 10: common.MachineInterfaceId
-	(*VpcId)(nil),                    // 11: common.VpcId
-	(*VpcPrefixId)(nil),              // 12: common.VpcPrefixId
-	(*VpcPeeringId)(nil),             // 13: common.VpcPeeringId
-	(*IBPartitionId)(nil),            // 14: common.IBPartitionId
-	(*InstanceId)(nil),               // 15: common.InstanceId
-	(*NetworkSegmentId)(nil),         // 16: common.NetworkSegmentId
-	(*DpaInterfaceId)(nil),           // 17: common.DpaInterfaceId
-	(*NetworkPrefixId)(nil),          // 18: common.NetworkPrefixId
-	(*RemediationId)(nil),            // 19: common.RemediationId
-	(*NVLinkPartitionId)(nil),        // 20: common.NVLinkPartitionId
-	(*NVLinkLogicalPartitionId)(nil), // 21: common.NVLinkLogicalPartitionId
-	(*NVLinkDomainId)(nil),           // 22: common.NVLinkDomainId
-	(*ComputeAllocationId)(nil),      // 23: common.ComputeAllocationId
+	(*RackId)(nil),                   // 6: common.RackId
+	(*SwitchId)(nil),                 // 7: common.SwitchId
+	(*Uint32List)(nil),               // 8: common.Uint32List
+	(*RouteTarget)(nil),              // 9: common.RouteTarget
+	(*DomainId)(nil),                 // 10: common.DomainId
+	(*MachineInterfaceId)(nil),       // 11: common.MachineInterfaceId
+	(*VpcId)(nil),                    // 12: common.VpcId
+	(*VpcPrefixId)(nil),              // 13: common.VpcPrefixId
+	(*VpcPeeringId)(nil),             // 14: common.VpcPeeringId
+	(*IBPartitionId)(nil),            // 15: common.IBPartitionId
+	(*InstanceId)(nil),               // 16: common.InstanceId
+	(*NetworkSegmentId)(nil),         // 17: common.NetworkSegmentId
+	(*DpaInterfaceId)(nil),           // 18: common.DpaInterfaceId
+	(*NetworkPrefixId)(nil),          // 19: common.NetworkPrefixId
+	(*RemediationId)(nil),            // 20: common.RemediationId
+	(*NVLinkPartitionId)(nil),        // 21: common.NVLinkPartitionId
+	(*NVLinkLogicalPartitionId)(nil), // 22: common.NVLinkLogicalPartitionId
+	(*NVLinkDomainId)(nil),           // 23: common.NVLinkDomainId
+	(*ComputeAllocationId)(nil),      // 24: common.ComputeAllocationId
 }
 var file_common_proto_depIdxs = []int32{
 	1, // 0: common.MachineIdList.machine_ids:type_name -> common.MachineId
