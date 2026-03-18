@@ -63,6 +63,8 @@ metadata:
     helm.sh/hook-weight: "0"
     helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
 spec:
+  backoffLimit: 3
+  activeDeadlineSeconds: 300
   template:
     spec:
       restartPolicy: OnFailure
@@ -106,7 +108,7 @@ spec:
               echo "$CACERT" > /tmp/site-manager-ca.crt
 
               echo "Creating site via site-manager (uuid=$SITE_UUID)..."
-              HTTP_CODE=$(curl -s --cacert /tmp/site-manager-ca.crt -X POST "$SITE_MANAGER_URL/v1/site" \
+              HTTP_CODE=$(curl -s --connect-timeout 10 --max-time 30 --cacert /tmp/site-manager-ca.crt -X POST "$SITE_MANAGER_URL/v1/site" \
                 -H "Content-Type: application/json" \
                 -d "{\"siteuuid\":\"$SITE_UUID\"}" \
                 -o /dev/null -w "%{http_code}")
