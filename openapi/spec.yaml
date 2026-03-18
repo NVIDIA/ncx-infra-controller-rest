@@ -16,7 +16,7 @@
 openapi: 3.1.0
 info:
   title: NCX Infra Controller REST API
-  version: 1.0.6
+  version: 1.1.0
   summary: NCX Infra Controller REST API is the centralized RESTful gateway to access NCX Infra Controller service
   description: 'NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.'
   license:
@@ -14784,7 +14784,7 @@ components:
             $ref: '#/components/schemas/DpuExtensionServiceDeploymentRequest'
         nvLinkInterfaces:
           type: array
-          description: Associate one or more NVLink Logical Partitions with this Instance
+          description: Define Interfaces to associate Instance GPUs with NVLink Logical Partitions. A subset of GPUs may be specified (it is not required to include all GPUs). Each item references one GPU index (`deviceInstance`) and one NVLink Logical Partition. Different interfaces may reference different NVLink Logical Partitions.
           items:
             $ref: '#/components/schemas/NVLinkInterfaceCreateRequest'
         sshKeyGroupIds:
@@ -14924,7 +14924,7 @@ components:
             $ref: '#/components/schemas/DpuExtensionServiceDeploymentRequest'
         nvLinkInterfaces:
           type: array
-          description: NVLink interface configuration shared across all instances
+          description: NVLink interface configuration shared across all instances. A subset of GPUs may be specified. Each item references one GPU index (`deviceInstance`) and one NVLink Logical Partition. Different interfaces may reference different NVLink Logical Partitions.
           items:
             $ref: '#/components/schemas/NVLinkInterfaceCreateRequest'
         sshKeyGroupIds:
@@ -15091,7 +15091,7 @@ components:
             $ref: '#/components/schemas/InfiniBandInterfaceCreateRequest'
         nvLinkInterfaces:
           type: array
-          description: Update NVLink Interfaces of the Instance
+          description: Update NVLink Interfaces of the Instance. A subset of GPUs may be specified. Each item references one GPU index (`deviceInstance`) and one NVLink Logical Partition. Different interfaces may reference different NVLink Logical Partitions.
           items:
             $ref: '#/components/schemas/NVLinkInterfaceCreateRequest'
         dpuExtensionServiceDeployments:
@@ -15464,7 +15464,7 @@ components:
           deviceInstance: 0
         - nvLinklogicalPartitionId: 4f4decba-7d7f-46b9-9e5f-e5d71c2e0666
           deviceInstance: 1
-      description: Request data to create an NVLink Interface for an Instance by associating it with an NVLink Logical Partition
+      description: Request data to create an NVLink Interface for an Instance by associating a specific GPU index with an NVLink Logical Partition.
       properties:
         nvLinklogicalPartitionId:
           type: string
@@ -15472,7 +15472,8 @@ components:
           description: ID of the NVLink Logical Partition the Interface should attach to
         deviceInstance:
           type: integer
-          description: 'Index of the device, used to identify which GPU to attache the Partition to'
+          minimum: 0
+          description: GPU index for this NVLink interface. Must be non-negative, unique within the request, and within the GPU count exposed by the selected Machine or Instance Type.
     MachineCapability:
       title: MachineCapability
       type: object

@@ -630,6 +630,7 @@ generate-sdk:
 	@echo "Client generated in sdk/standard/"
 	cd sdk/standard && go build ./...
 	@echo "Client compiles successfully"
+	go fmt ./sdk/standard/...
 
 # =============================================================================
 # OpenAPI Spec Validation

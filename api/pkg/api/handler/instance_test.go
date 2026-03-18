@@ -814,6 +814,9 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 	nvllpDefault := testBuildNVLinkLogicalPartition(t, dbSession, "test-nvllp-default", cdb.GetStrPtr("Test NVLink Logical Partition"), tnOrg, st1, tn1, cdb.GetStrPtr(cdbm.NVLinkLogicalPartitionStatusReady), false)
 	assert.NotNil(t, nvllpDefault)
 
+	nvllpNotDefault := testBuildNVLinkLogicalPartition(t, dbSession, "test-nvllp-not-default", cdb.GetStrPtr("Test NVLink Logical Partition"), tnOrg, st1, tn1, cdb.GetStrPtr(cdbm.NVLinkLogicalPartitionStatusReady), false)
+	assert.NotNil(t, nvllpNotDefault)
+
 	vpc1 := testInstanceBuildVPC(t, dbSession, "test-vpc-1", ip, tn1, st1, cdb.GetUUIDPtr(uuid.New()), nil, cdb.GetStrPtr(cdbm.VpcEthernetVirtualizer), cdb.GetUUIDPtr(nvllpDefault.ID), cdbm.VpcStatusReady, tnu1)
 	assert.NotNil(t, vpc1)
 
@@ -1114,6 +1117,9 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 	nvllp1 := testBuildNVLinkLogicalPartition(t, dbSession, "test-nvllp-1", cdb.GetStrPtr("Test NVLink Logical Partition"), tnOrg, st1, tn1, cdb.GetStrPtr(cdbm.NVLinkLogicalPartitionStatusReady), false)
 	assert.NotNil(t, nvllp1)
 
+	nvllp2 := testBuildNVLinkLogicalPartition(t, dbSession, "test-nvllp-2", cdb.GetStrPtr("Test NVLink Logical Partition"), tnOrg, st1, tn1, cdb.GetStrPtr(cdbm.NVLinkLogicalPartitionStatusReady), false)
+	assert.NotNil(t, nvllp2)
+
 	e := echo.New()
 	cfg := common.GetTestConfig()
 	tc := &tmocks.Client{}
@@ -1188,16 +1194,16 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 		cfg       *config.Config
 	}
 	type args struct {
-		reqData                            *model.APIInstanceCreateRequest
-		reqOrg                             string
-		reqUser                            *cdbm.User
-		reqMachine                         *cdbm.Machine
-		reqDefaultNVLinkLogicalPartitionID *uuid.UUID
-		reqNVLinkMachineCapabilities       *cdbm.MachineCapability
-		respCode                           int
-		respMessage                        string
-		respUserDataContains               *string
-		respUserData                       *string
+		reqData                      *model.APIInstanceCreateRequest
+		reqOrg                       string
+		reqUser                      *cdbm.User
+		reqMachine                   *cdbm.Machine
+		reqNVLinkLogicalPartitionIDs []string
+		reqNVLinkMachineCapabilities *cdbm.MachineCapability
+		respCode                     int
+		respMessage                  string
+		respUserDataContains         *string
+		respUserData                 *string
 	}
 	tests := []struct {
 		name               string
@@ -1262,22 +1268,18 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 							DeviceInstance:           2,
 							NVLinkLogicalPartitionID: nvllpDefault.ID.String(),
 						},
-						{
-							DeviceInstance:           3,
-							NVLinkLogicalPartitionID: nvllpDefault.ID.String(),
-						},
 					},
 					Labels: map[string]string{
 						"GPUType": mcNvlType.Name,
 					},
 				},
-				reqMachine:                         nil, // We randomize machines.  Any instance type with multiple valid machines can't be tested for a known machine.
-				reqDefaultNVLinkLogicalPartitionID: &nvllpDefault.ID,
-				reqNVLinkMachineCapabilities:       mcNvlType,
-				reqOrg:                             tnOrg,
-				reqUser:                            tnu1,
-				respCode:                           http.StatusCreated,
-				respMessage:                        "",
+				reqMachine:                   nil, // We randomize machines.  Any instance type with multiple valid machines can't be tested for a known machine.
+				reqNVLinkLogicalPartitionIDs: []string{nvllpDefault.ID.String()},
+				reqNVLinkMachineCapabilities: mcNvlType,
+				reqOrg:                       tnOrg,
+				reqUser:                      tnu1,
+				respCode:                     http.StatusCreated,
+				respMessage:                  "",
 			},
 			wantErr:            false,
 			verifyChildSpanner: true,
@@ -1339,7 +1341,8 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 			fields: fields{
 				dbSession: dbSession,
 				tc:        tc,
-				cfg:       cfg,
+
+				cfg: cfg,
 			},
 			args: args{
 				reqData: &model.APIInstanceCreateRequest{
@@ -1584,7 +1587,7 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 							DeviceInstance:           2,
 						},
 						{
-							NVLinkLogicalPartitionID: nvllp1.ID.String(),
+							NVLinkLogicalPartitionID: nvllp2.ID.String(),
 							DeviceInstance:           3,
 						},
 					},
@@ -3065,13 +3068,10 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 				assert.Equal(t, len(tt.args.reqData.NVLinkInterfaces), len(rst.NVLinkInterfaces))
 				for i, nvlifc := range rst.NVLinkInterfaces {
 					assert.Equal(t, tt.args.reqData.NVLinkInterfaces[i].DeviceInstance, nvlifc.DeviceInstance)
-				}
-			}
-
-			if tt.args.reqDefaultNVLinkLogicalPartitionID != nil {
-				assert.Equal(t, len(rst.NVLinkInterfaces), *tt.args.reqNVLinkMachineCapabilities.Count)
-				for i, nvlifc := range rst.NVLinkInterfaces {
-					assert.Equal(t, nvlifc.DeviceInstance, i)
+					expectedPartitionID := tt.args.reqData.NVLinkInterfaces[i].NVLinkLogicalPartitionID
+					assert.Equal(t, expectedPartitionID, nvlifc.NVLinkLogicalPartitionID,
+						"NVLink interface for DeviceInstance %d: expected partition %s, got %s",
+						nvlifc.DeviceInstance, expectedPartitionID, nvlifc.NVLinkLogicalPartitionID)
 				}
 			}
 
@@ -3421,10 +3421,10 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 	instnvlifc2 := testInstanceBuildInstanceNVLinkInterface(t, dbSession, st3.ID, inst13.ID, nvllp1.ID, cdb.GetUUIDPtr(uuid.New()), cdb.GetStrPtr("NVIDIA GB200"), 1, cdbm.NVLinkInterfaceStatusReady)
 	assert.NotNil(t, instnvlifc2)
 
-	instnvlifc3 := testInstanceBuildInstanceNVLinkInterface(t, dbSession, st3.ID, inst13.ID, nvllp1.ID, cdb.GetUUIDPtr(uuid.New()), cdb.GetStrPtr("NVIDIA GB200"), 2, cdbm.NVLinkInterfaceStatusReady)
+	instnvlifc3 := testInstanceBuildInstanceNVLinkInterface(t, dbSession, st3.ID, inst13.ID, nvllp2.ID, cdb.GetUUIDPtr(uuid.New()), cdb.GetStrPtr("NVIDIA GB200"), 2, cdbm.NVLinkInterfaceStatusReady)
 	assert.NotNil(t, instnvlifc3)
 
-	instnvlifc4 := testInstanceBuildInstanceNVLinkInterface(t, dbSession, st3.ID, inst13.ID, nvllp1.ID, cdb.GetUUIDPtr(uuid.New()), cdb.GetStrPtr("NVIDIA GB200"), 3, cdbm.NVLinkInterfaceStatusReady)
+	instnvlifc4 := testInstanceBuildInstanceNVLinkInterface(t, dbSession, st3.ID, inst13.ID, nvllp2.ID, cdb.GetUUIDPtr(uuid.New()), cdb.GetStrPtr("NVIDIA GB200"), 3, cdbm.NVLinkInterfaceStatusReady)
 	assert.NotNil(t, instnvlifc4)
 
 	mc6 := testInstanceBuildMachine(t, dbSession, ip.ID, st2.ID, cdb.GetBoolPtr(false), nil)
@@ -4742,7 +4742,7 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 			verifyChildSpanner:          true,
 		},
 		{
-			name: "test Instance update API endpoint failure with update existing NVLink interfaces with same NVLink Logical Partition ID",
+			name: "test Instance update API endpoint success with NVLink interface update to same partition (no-op update allowed)",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        tc,
@@ -4760,29 +4760,20 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 						{
 							NVLinkLogicalPartitionID: nvllp1.ID.String(),
 							DeviceInstance:           1,
-						},
-						{
-							NVLinkLogicalPartitionID: nvllp1.ID.String(),
-							DeviceInstance:           2,
-						},
-						{
-							NVLinkLogicalPartitionID: nvllp1.ID.String(),
-							DeviceInstance:           3,
 						},
 					},
 				},
 				reqInstance: inst13.ID.String(),
 				reqOrg:      tnOrg1,
 				reqUser:     tnu1,
-				respCode:    http.StatusBadRequest,
-				respMessage: cdb.GetStrPtr(fmt.Sprintf("NVLink Interfaces of this Instance are already connected to NVLink Logical Partition: %v", nvllp1.ID.String())),
+				respCode:    http.StatusOK,
 			},
 			wantErr:                     false,
 			verifySiteControllerRequest: true,
 			verifyChildSpanner:          true,
 		},
 		{
-			name: "test Instance update API endpoint success with NVLink interface update ",
+			name: "test Instance update API endpoint success with NVLink interface update with different NVLink Logical Partition IDs",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        tc,
@@ -4802,11 +4793,11 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 							DeviceInstance:           1,
 						},
 						{
-							NVLinkLogicalPartitionID: nvllp2.ID.String(),
+							NVLinkLogicalPartitionID: nvllp1.ID.String(),
 							DeviceInstance:           2,
 						},
 						{
-							NVLinkLogicalPartitionID: nvllp2.ID.String(),
+							NVLinkLogicalPartitionID: nvllp1.ID.String(),
 							DeviceInstance:           3,
 						},
 					},
@@ -5112,110 +5103,113 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 			}
 
 			if tt.verifySiteControllerRequest {
+				// Collect the last matching ExecuteWorkflow call for this instance
+				// (multiple tests may trigger calls for the same instance; verify only against the current test's call)
+				var siteReq *cwssaws.InstanceConfigUpdateRequest
 				for _, call := range ttscm.Calls {
 					if call.Method == "ExecuteWorkflow" && call.Arguments[2] == "UpdateInstance" {
-						siteReq := call.Arguments[3].(*cwssaws.InstanceConfigUpdateRequest)
+						req := call.Arguments[3].(*cwssaws.InstanceConfigUpdateRequest)
+						if req.InstanceId.Value == tt.args.reqInstance {
+							siteReq = req
+						}
+					}
+				}
+				if siteReq != nil {
+					// Verify the number of interfaces in the request as pending status
+					// which is the number of interfaces in the request
+					var reqInsIfcs []cdbm.Interface
+					if tt.args.respNoOfInterfaces != nil {
+						reqInsIfcs, _, _ = ifcDAO.GetAll(ec.Request().Context(), nil, cdbm.InterfaceFilterInput{InstanceIDs: []uuid.UUID{reqIns.ID}, Statuses: []string{cdbm.InterfaceStatusPending}}, cdbp.PageInput{}, nil)
+					} else {
+						reqInsIfcs, _, _ = ifcDAO.GetAll(ec.Request().Context(), nil, cdbm.InterfaceFilterInput{InstanceIDs: []uuid.UUID{reqIns.ID}}, cdbp.PageInput{}, nil)
+					}
 
-						if siteReq.InstanceId.Value != tt.args.reqInstance {
-							continue
+					assert.Equal(t, len(reqInsIfcs), len(siteReq.Config.Network.Interfaces))
+
+					for i, siteIfc := range siteReq.Config.Network.Interfaces {
+						assert.NotNil(t, siteIfc, "encountered nil interface entry")
+
+						if siteIfc == nil || (siteIfc.NetworkSegmentId == nil && siteIfc.NetworkDetails == nil) {
+							assert.Fail(t, "encountered nil interface/segment entry for Site Controller request")
 						}
 
-						// Verify the number of interfaces in the request as pending status
-						// which is the number of interfaces in the request
-						var reqInsIfcs []cdbm.Interface
-						if tt.args.respNoOfInterfaces != nil {
-							reqInsIfcs, _, _ = ifcDAO.GetAll(ec.Request().Context(), nil, cdbm.InterfaceFilterInput{InstanceIDs: []uuid.UUID{reqIns.ID}, Statuses: []string{cdbm.InterfaceStatusPending}}, cdbp.PageInput{}, nil)
-						} else {
-							reqInsIfcs, _, _ = ifcDAO.GetAll(ec.Request().Context(), nil, cdbm.InterfaceFilterInput{InstanceIDs: []uuid.UUID{reqIns.ID}}, cdbp.PageInput{}, nil)
+						// Subnet case if we have both NetworkSegmentId and NetworkDetails
+						if siteIfc.NetworkSegmentId != nil && siteIfc.NetworkDetails != nil {
+							ifcNd, ok := siteIfc.NetworkDetails.(*cwssaws.InstanceInterfaceConfig_SegmentId)
+							assert.True(t, ok)
+							assert.Equal(t, ifcNd.SegmentId, siteIfc.NetworkSegmentId)
+
+							//Make sure order is same as the request received
+							assert.Equal(t, siteIfc.NetworkSegmentId.Value, reqInsIfcs[i].SubnetID.String())
 						}
 
-						assert.Equal(t, len(reqInsIfcs), len(siteReq.Config.Network.Interfaces))
+						// VpcPrefix case if we have only NetworkDetails
+						if siteIfc.NetworkDetails != nil && siteIfc.NetworkSegmentId == nil {
+							ifcNd, ok := siteIfc.NetworkDetails.(*cwssaws.InstanceInterfaceConfig_VpcPrefixId)
+							assert.True(t, ok)
+							assert.Equal(t, ifcNd.VpcPrefixId.Value, siteIfc.NetworkDetails.(*cwssaws.InstanceInterfaceConfig_VpcPrefixId).VpcPrefixId.Value)
 
-						for i, siteIfc := range siteReq.Config.Network.Interfaces {
-							assert.NotNil(t, siteIfc, "encountered nil interface entry")
-
-							if siteIfc == nil || (siteIfc.NetworkSegmentId == nil && siteIfc.NetworkDetails == nil) {
-								assert.Fail(t, "encountered nil interface/segment entry for Site Controller request")
-							}
-
-							// Subnet case if we have both NetworkSegmentId and NetworkDetails
-							if siteIfc.NetworkSegmentId != nil && siteIfc.NetworkDetails != nil {
-								ifcNd, ok := siteIfc.NetworkDetails.(*cwssaws.InstanceInterfaceConfig_SegmentId)
-								assert.True(t, ok)
-								assert.Equal(t, ifcNd.SegmentId, siteIfc.NetworkSegmentId)
-
-								//Make sure order is same as the request received
-								assert.Equal(t, siteIfc.NetworkSegmentId.Value, reqInsIfcs[i].SubnetID.String())
-							}
-
-							// VpcPrefix case if we have only NetworkDetails
-							if siteIfc.NetworkDetails != nil && siteIfc.NetworkSegmentId == nil {
-								ifcNd, ok := siteIfc.NetworkDetails.(*cwssaws.InstanceInterfaceConfig_VpcPrefixId)
-								assert.True(t, ok)
-								assert.Equal(t, ifcNd.VpcPrefixId.Value, siteIfc.NetworkDetails.(*cwssaws.InstanceInterfaceConfig_VpcPrefixId).VpcPrefixId.Value)
-
-								//Make sure order is same as the request received
-								assert.Equal(t, ifcNd.VpcPrefixId.Value, reqInsIfcs[i].VpcPrefixID.String())
-							}
-
-							// Check if Device and DeviceInstance are present
-							if reqInsIfcs[i].Device != nil && reqInsIfcs[i].DeviceInstance != nil {
-								assert.Equal(t, siteIfc.Device, reqInsIfcs[i].Device)
-								assert.Equal(t, siteIfc.DeviceInstance, uint32(*reqInsIfcs[i].DeviceInstance))
-							}
-
-							// Check if VirtualFunctionId is present
-							if reqInsIfcs[i].VirtualFunctionID != nil {
-								assert.Equal(t, siteIfc.VirtualFunctionId, reqInsIfcs[i].VirtualFunctionID)
-							}
+							//Make sure order is same as the request received
+							assert.Equal(t, ifcNd.VpcPrefixId.Value, reqInsIfcs[i].VpcPrefixID.String())
 						}
 
-						// Verify the InfiniBand Interfaces are in the Site Controller request
-						if len(tt.args.reqData.InfiniBandInterfaces) > 0 {
-							assert.Equal(t, len(siteReq.Config.Infiniband.IbInterfaces), len(tt.args.reqData.InfiniBandInterfaces))
-
-							// Make sure order to should be same as the request received
-							for i := range siteReq.Config.Infiniband.IbInterfaces {
-								assert.Equal(t, siteReq.Config.Infiniband.IbInterfaces[i].IbPartitionId.Value, tt.args.reqData.InfiniBandInterfaces[i].InfiniBandPartitionID)
-							}
+						// Check if Device and DeviceInstance are present
+						if reqInsIfcs[i].Device != nil && reqInsIfcs[i].DeviceInstance != nil {
+							assert.Equal(t, siteIfc.Device, reqInsIfcs[i].Device)
+							assert.Equal(t, siteIfc.DeviceInstance, uint32(*reqInsIfcs[i].DeviceInstance))
 						}
 
-						// Verify the NVLink Interfaces are in the Site Controller request
-						if len(tt.args.reqData.NVLinkInterfaces) > 0 {
-							assert.Equal(t, len(siteReq.Config.Nvlink.GpuConfigs), len(tt.args.reqData.NVLinkInterfaces))
+						// Check if VirtualFunctionId is present
+						if reqInsIfcs[i].VirtualFunctionID != nil {
+							assert.Equal(t, siteIfc.VirtualFunctionId, reqInsIfcs[i].VirtualFunctionID)
+						}
+					}
 
-							// Make sure order to should be same as the request received
-							for i := range siteReq.Config.Nvlink.GpuConfigs {
-								assert.Equal(t, siteReq.Config.Nvlink.GpuConfigs[i].LogicalPartitionId.Value, tt.args.reqData.NVLinkInterfaces[i].NVLinkLogicalPartitionID)
-							}
+					// Verify the InfiniBand Interfaces are in the Site Controller request
+					if len(tt.args.reqData.InfiniBandInterfaces) > 0 {
+						assert.Equal(t, len(siteReq.Config.Infiniband.IbInterfaces), len(tt.args.reqData.InfiniBandInterfaces))
+
+						// Make sure order to should be same as the request received
+						for i := range siteReq.Config.Infiniband.IbInterfaces {
+							assert.Equal(t, siteReq.Config.Infiniband.IbInterfaces[i].IbPartitionId.Value, tt.args.reqData.InfiniBandInterfaces[i].InfiniBandPartitionID)
+						}
+					}
+
+					// Verify the NVLink Interfaces are in the Site Controller request
+					if len(tt.args.reqData.NVLinkInterfaces) > 0 {
+						assert.Equal(t, len(siteReq.Config.Nvlink.GpuConfigs), len(tt.args.reqData.NVLinkInterfaces))
+
+						// Make sure order to should be same as the request received
+						for i := range siteReq.Config.Nvlink.GpuConfigs {
+							assert.Equal(t, siteReq.Config.Nvlink.GpuConfigs[i].LogicalPartitionId.Value, tt.args.reqData.NVLinkInterfaces[i].NVLinkLogicalPartitionID)
+						}
+					}
+
+					// Verify the DPU Extension Service Deployments are in the Site Controller request
+					if len(tt.args.reqData.DpuExtensionServiceDeployments) > 0 {
+						assert.Equal(t, len(tt.args.reqData.DpuExtensionServiceDeployments), len(siteReq.Config.DpuExtensionServices.ServiceConfigs), siteReq.Config.DpuExtensionServices.ServiceConfigs)
+
+						// Make sure order to should be same as the request received
+						for i := range siteReq.Config.DpuExtensionServices.ServiceConfigs {
+							assert.Equal(t, siteReq.Config.DpuExtensionServices.ServiceConfigs[i].ServiceId, tt.args.reqData.DpuExtensionServiceDeployments[i].DpuExtensionServiceID)
+						}
+					}
+
+					if tt.args.reqData.SSHKeyGroupIDs != nil {
+						// Verify the length of the set of SKGs for the instance match
+						// the length of the set sent to Carbide
+						assert.Equal(t, len(rst.SSHKeyGroups), len(siteReq.Config.Tenant.TenantKeysetIds))
+
+						// Build a map for some lookups
+						keygroups := map[string]bool{}
+						for _, skg := range rst.SSHKeyGroups {
+							keygroups[skg.ID] = true
 						}
 
-						// Verify the DPU Extension Service Deployments are in the Site Controller request
-						if len(tt.args.reqData.DpuExtensionServiceDeployments) > 0 {
-							assert.Equal(t, len(tt.args.reqData.DpuExtensionServiceDeployments), len(siteReq.Config.DpuExtensionServices.ServiceConfigs), siteReq.Config.DpuExtensionServices.ServiceConfigs)
-
-							// Make sure order to should be same as the request received
-							for i := range siteReq.Config.DpuExtensionServices.ServiceConfigs {
-								assert.Equal(t, siteReq.Config.DpuExtensionServices.ServiceConfigs[i].ServiceId, tt.args.reqData.DpuExtensionServiceDeployments[i].DpuExtensionServiceID)
-							}
-						}
-
-						if tt.args.reqData.SSHKeyGroupIDs != nil {
-							// Verify the length of the set of SKGs for the instance match
-							// the length of the set sent to Carbide
-							assert.Equal(t, len(rst.SSHKeyGroups), len(siteReq.Config.Tenant.TenantKeysetIds))
-
-							// Build a map for some lookups
-							keygroups := map[string]bool{}
-							for _, skg := range rst.SSHKeyGroups {
-								keygroups[skg.ID] = true
-							}
-
-							// Check that each skgID sent to Carbide matches one in
-							// the current set for the Instance.
-							for _, kgSummary := range siteReq.Config.Tenant.TenantKeysetIds {
-								assert.Equal(t, true, keygroups[kgSummary], "%s not found in %+v", kgSummary, keygroups)
-							}
+						// Check that each skgID sent to Carbide matches one in
+						// the current set for the Instance.
+						for _, kgSummary := range siteReq.Config.Tenant.TenantKeysetIds {
+							assert.Equal(t, true, keygroups[kgSummary], "%s not found in %+v", kgSummary, keygroups)
 						}
 					}
 				}

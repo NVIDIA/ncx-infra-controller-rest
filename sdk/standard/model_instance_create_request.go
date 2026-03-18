@@ -3,7 +3,7 @@ NCX Infra Controller REST API
 
 NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
-API version: 1.0.6
+API version: 1.1.0
 Contact: carbide-dev@exchange.nvidia.com
 */
 
@@ -52,7 +52,7 @@ type InstanceCreateRequest struct {
 	InfinibandInterfaces []InfiniBandInterfaceCreateRequest `json:"infinibandInterfaces,omitempty"`
 	// DPU Extension Services to deploy to the DPUs of this Instance
 	DpuExtensionServiceDeployments []DpuExtensionServiceDeploymentRequest `json:"dpuExtensionServiceDeployments,omitempty"`
-	// Associate one or more NVLink Logical Partitions with this Instance
+	// Define Interfaces to associate Instance GPUs with NVLink Logical Partitions. A subset of GPUs may be specified (it is not required to include all GPUs). Each item references one GPU index (`deviceInstance`) and one NVLink Logical Partition. Different interfaces may reference different NVLink Logical Partitions.
 	NvLinkInterfaces []NVLinkInterfaceCreateRequest `json:"nvLinkInterfaces,omitempty"`
 	// Specify list of SSH Key Group IDs that will provide Serial over LAN access
 	SshKeyGroupIds []string `json:"sshKeyGroupIds,omitempty"`

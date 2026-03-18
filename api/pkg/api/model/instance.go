@@ -317,21 +317,38 @@ func ValidateDpuExtensionServiceDeployments(desdrs []APIDpuExtensionServiceDeplo
 	return nil
 }
 
-// ValidateNVLinkInterfaces validates the NVLink interfaces for Instance create/update request
+// ValidateNVLinkInterfaces validates the NVLink interfaces for Instance create/update request.
+// A subset of GPUs may be specified; specifying more interfaces than GPUs is not allowed.
+// Each DeviceInstance (GPU index) must be unique and within the valid range for the machine.
 func ValidateNVLinkInterfaces(itNvlCaps []cdbm.MachineCapability, nvlifcs []APINVLinkInterfaceCreateOrUpdateRequest) error {
 	for _, itNvlCap := range itNvlCaps {
-		if itNvlCap.Count != nil {
-			// Validate that the number of NVLink Interfaces matches the number of GPU indexes
-			// Tenant need to send all the Devive Instance (GPU Indexes) in the request
-			if len(nvlifcs) != *itNvlCap.Count {
-				return validation.Errors{
-					"nvLinkInterfaces": errors.New("number of NVLink Interfaces must match the number of GPU indexes"),
-				}
+		if itNvlCap.Count == nil {
+			continue
+		}
+		gpuCount := *itNvlCap.Count
+
+		if len(nvlifcs) > gpuCount {
+			return validation.Errors{
+				"nvLinkInterfaces": fmt.Errorf("number of NVLink Interfaces (%d) exceeds the number of available GPU indexes (%d)", len(nvlifcs), gpuCount),
 			}
 		}
+
+		// Validate each DeviceInstance is within range and unique
+		seen := make(map[int]bool, len(nvlifcs))
+		for _, nvlifc := range nvlifcs {
+			if nvlifc.DeviceInstance < 0 || nvlifc.DeviceInstance >= gpuCount {
+				return validation.Errors{
+					"nvLinkInterfaces": fmt.Errorf("deviceInstance: %d is out of available range [0, %d]", nvlifc.DeviceInstance, gpuCount),
+				}
+			}
+			if seen[nvlifc.DeviceInstance] {
+				return validation.Errors{
+					"nvLinkInterfaces": fmt.Errorf("duplicate deviceInstance: %d specified in NVLink Interfaces", nvlifc.DeviceInstance),
+				}
+			}
+			seen[nvlifc.DeviceInstance] = true
+		}
 	}
-	// Already validated range of Device Instance (GPU Indexes) in NVLinkInterfaces request validation function
-	// No need to validate again here
 	return nil
 }
 
@@ -493,22 +510,11 @@ func (icr APIInstanceCreateRequest) Validate() error {
 	}
 
 	// Validate NVLink interfaces
-	// Make sure NVLink Logical Partition ID is valid and same for all NVLink Interfaces
-	var nvllPartitionID *string
+	// Make sure NVLink Logical Partition ID is valid
 	for _, nvlifc := range icr.NVLinkInterfaces {
 		err = nvlifc.Validate()
 		if err != nil {
 			return err
-		}
-
-		// If first NVLink Interface, set the NVLink Logical Partition ID
-		// Otherwise, validate that it matches the previous NVLink Logical Partition ID
-		if nvllPartitionID == nil {
-			nvllPartitionID = cdb.GetStrPtr(nvlifc.NVLinkLogicalPartitionID)
-		} else if *nvllPartitionID != nvlifc.NVLinkLogicalPartitionID {
-			return validation.Errors{
-				"nvLinkInterfaces": errors.New("all the NVLink Interfaces must have same NVLink Logical Partition"),
-			}
 		}
 	}
 
@@ -844,22 +850,11 @@ func (bicr APIBatchInstanceCreateRequest) Validate() error {
 	}
 
 	// Validate NVLink interfaces
-	// Make sure NVLink Logical Partition ID is valid and same for all NVLink Interfaces
-	var nvllPartitionID *string
+	// Make sure NVLink Logical Partition ID is valid
 	for _, nvlifc := range bicr.NVLinkInterfaces {
 		err = nvlifc.Validate()
 		if err != nil {
 			return err
-		}
-
-		// If first NVLink Interface, set the NVLink Logical Partition ID
-		// Otherwise, validate that it matches the previous NVLink Logical Partition ID
-		if nvllPartitionID == nil {
-			nvllPartitionID = cdb.GetStrPtr(nvlifc.NVLinkLogicalPartitionID)
-		} else if *nvllPartitionID != nvlifc.NVLinkLogicalPartitionID {
-			return validation.Errors{
-				"nvLinkInterfaces": errors.New("all the NVLink Interfaces must have same NVLink Logical Partition"),
-			}
 		}
 	}
 
@@ -1469,19 +1464,10 @@ func (iur APIInstanceUpdateRequest) Validate() error {
 	}
 
 	// Validate NVLink interfaces
-	var nvllPartitionID *string
 	for _, nvlic := range iur.NVLinkInterfaces {
 		err = nvlic.Validate()
 		if err != nil {
 			return err
-		}
-
-		if nvllPartitionID == nil {
-			nvllPartitionID = cdb.GetStrPtr(nvlic.NVLinkLogicalPartitionID)
-		} else if *nvllPartitionID != nvlic.NVLinkLogicalPartitionID {
-			return validation.Errors{
-				"nvLinkInterfaces": errors.New("all the NVLink Interfaces must have same NVLink Logical Partition"),
-			}
 		}
 	}
 
