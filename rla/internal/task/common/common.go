@@ -100,6 +100,34 @@ type OperationRuleListOptions struct {
 	IsDefault     *bool
 }
 
+// TaskAttributes holds flexible task metadata stored as a single jsonb
+// column. New fields can be added here without requiring a DB migration.
+type TaskAttributes struct {
+	// ComponentsByType maps each targeted component type to its UUIDs.
+	// Nil means the task targets no specific components.
+	ComponentsByType map[devicetypes.ComponentType][]uuid.UUID `json:"components_by_type,omitempty"` //nolint
+}
+
+// AllComponentUUIDs returns a flat slice of all component UUIDs across every
+// component type, in no guaranteed order.
+func (a TaskAttributes) AllComponentUUIDs() []uuid.UUID {
+	total := 0
+	for _, ids := range a.ComponentsByType {
+		total += len(ids)
+	}
+
+	if total == 0 {
+		return nil
+	}
+
+	uuids := make([]uuid.UUID, 0, total)
+	for _, ids := range a.ComponentsByType {
+		uuids = append(uuids, ids...)
+	}
+
+	return uuids //nolint:gocritic
+}
+
 type ComponentInfo struct {
 	Type        devicetypes.ComponentType
 	DeviceInfo  deviceinfo.DeviceInfo

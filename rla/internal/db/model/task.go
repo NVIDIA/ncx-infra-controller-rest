@@ -40,22 +40,22 @@ var defaultTaskPagination = dbquery.Pagination{
 type Task struct {
 	bun.BaseModel `bun:"table:task,alias:t"`
 
-	ID             uuid.UUID               `bun:"id,pk,type:uuid,default:gen_random_uuid()"`
-	Type           taskcommon.TaskType     `bun:"type,type:varchar(64),notnull"`
-	ExecutorType   taskcommon.ExecutorType `bun:"executor_type,type:varchar(64),nullzero"`
-	Information    json.RawMessage         `bun:"information,type:jsonb,json_use_number"`
-	Description    string                  `bun:"description,nullzero"`
-	RackID         uuid.UUID               `bun:"rack_id,type:uuid,notnull"`  // The rack this task operates on
-	ComponentUUIDs []uuid.UUID             `bun:"component_uuids,type:jsonb"` // Component UUIDs in this rack
-	ExecutionID    string                  `bun:"execution_id,notnull"`
-	Status         taskcommon.TaskStatus   `bun:"status,type:varchar(32),notnull"`
-	Message        string                  `bun:"message,nullzero"`
-	AppliedRuleID  *uuid.UUID              `bun:"applied_rule_id,type:uuid"` // Which operation rule was applied
-	CreatedAt      time.Time               `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt      time.Time               `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
-	FinishedAt     *time.Time              `bun:"finished_at"`
-	// QueueExpiresAt is set only for waiting tasks. After this time, the Promoter
-	// will discard the task instead of promoting it.
+	ID            uuid.UUID                 `bun:"id,pk,type:uuid,default:gen_random_uuid()"`
+	Type          taskcommon.TaskType       `bun:"type,type:varchar(64),notnull"`
+	ExecutorType  taskcommon.ExecutorType   `bun:"executor_type,type:varchar(64),nullzero"`
+	Information   json.RawMessage           `bun:"information,type:jsonb,json_use_number"`
+	Description   string                    `bun:"description,nullzero"`
+	RackID        uuid.UUID                 `bun:"rack_id,type:uuid,notnull"`
+	Attributes    taskcommon.TaskAttributes `bun:"attributes,type:jsonb"` //nolint
+	ExecutionID   string                    `bun:"execution_id,notnull"`
+	Status        taskcommon.TaskStatus     `bun:"status,type:varchar(32),notnull"`
+	Message       string                    `bun:"message,nullzero"`
+	AppliedRuleID *uuid.UUID                `bun:"applied_rule_id,type:uuid"`
+	CreatedAt     time.Time                 `bun:"created_at,nullzero,notnull,default:current_timestamp"`
+	UpdatedAt     time.Time                 `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	FinishedAt    *time.Time                `bun:"finished_at"`
+	// QueueExpiresAt is set only for waiting tasks. After this time, the
+	// Promoter will discard the task instead of promoting it.
 	QueueExpiresAt *time.Time `bun:"queue_expires_at"`
 }
 
