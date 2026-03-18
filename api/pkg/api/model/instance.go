@@ -834,6 +834,13 @@ func (bicr APIBatchInstanceCreateRequest) Validate() error {
 	if err != nil {
 		return err
 	}
+	for _, ifc := range bicr.Interfaces {
+		if ifc.IPAddress != nil {
+			return validation.Errors{
+				"interfaces": errors.New("batch instance create does not support `ipAddress` on interfaces"),
+			}
+		}
+	}
 
 	// Validate InfiniBand Interfaces
 	for _, ibic := range bicr.InfiniBandInterfaces {

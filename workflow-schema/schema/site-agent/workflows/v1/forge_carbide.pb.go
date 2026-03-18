@@ -10479,8 +10479,12 @@ type InstanceInterfaceConfig struct {
 	// then this value is set and specifies the virtual function ID that is configured
 	// for this network interface.
 	VirtualFunctionId *uint32 `protobuf:"varint,9,opt,name=virtual_function_id,json=virtualFunctionId,proto3,oneof" json:"virtual_function_id,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// Explicit _host_ IP address requested for the interface.
+	// Only allowed when VPC prefix is used.
+	// Must match VPC prefix defined for the interface.
+	IpAddress     *string `protobuf:"bytes,10,opt,name=ip_address,json=ipAddress,proto3,oneof" json:"ip_address,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *InstanceInterfaceConfig) Reset() {
@@ -10571,6 +10575,13 @@ func (x *InstanceInterfaceConfig) GetVirtualFunctionId() uint32 {
 		return *x.VirtualFunctionId
 	}
 	return 0
+}
+
+func (x *InstanceInterfaceConfig) GetIpAddress() string {
+	if x != nil && x.IpAddress != nil {
+		return *x.IpAddress
+	}
+	return ""
 }
 
 type isInstanceInterfaceConfig_NetworkDetails interface {
@@ -38359,7 +38370,7 @@ const file_forge_carbide_proto_rawDesc = "" +
 	"\x16user_approval_received\x18\x05 \x01(\bR\x14userApprovalReceived\"\x11\n" +
 	"\x06Module\x12\a\n" +
 	"\x03Dpu\x10\x00B\x16\n" +
-	"\x14_update_triggered_at\"\xcb\x03\n" +
+	"\x14_update_triggered_at\"\xfe\x03\n" +
 	"\x17InstanceInterfaceConfig\x12A\n" +
 	"\rfunction_type\x18\x01 \x01(\x0e2\x1c.forge.InterfaceFunctionTypeR\ffunctionType\x12F\n" +
 	"\x12network_segment_id\x18\x03 \x01(\v2\x18.common.NetworkSegmentIdR\x10networkSegmentId\x129\n" +
@@ -38368,10 +38379,14 @@ const file_forge_carbide_proto_rawDesc = "" +
 	"\rvpc_prefix_id\x18\x06 \x01(\v2\x13.common.VpcPrefixIdH\x00R\vvpcPrefixId\x12\x1b\n" +
 	"\x06device\x18\a \x01(\tH\x01R\x06device\x88\x01\x01\x12'\n" +
 	"\x0fdevice_instance\x18\b \x01(\rR\x0edeviceInstance\x123\n" +
-	"\x13virtual_function_id\x18\t \x01(\rH\x02R\x11virtualFunctionId\x88\x01\x01B\x11\n" +
+	"\x13virtual_function_id\x18\t \x01(\rH\x02R\x11virtualFunctionId\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"ip_address\x18\n" +
+	" \x01(\tH\x03R\tipAddress\x88\x01\x01B\x11\n" +
 	"\x0fnetwork_detailsB\t\n" +
 	"\a_deviceB\x16\n" +
-	"\x14_virtual_function_id\"\xd9\x02\n" +
+	"\x14_virtual_function_idB\r\n" +
+	"\v_ip_address\"\xd9\x02\n" +
 	"\x19InstanceIBInterfaceConfig\x12\x16\n" +
 	"\x06device\x18\x01 \x01(\tR\x06device\x12\x1b\n" +
 	"\x06vendor\x18\x02 \x01(\tH\x00R\x06vendor\x88\x01\x01\x12'\n" +

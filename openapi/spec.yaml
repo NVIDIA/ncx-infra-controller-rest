@@ -14804,7 +14804,7 @@ components:
     BatchInstanceCreateRequest:
       title: BatchInstanceCreateRequest
       type: object
-      description: Request data to batch create multiple Instances with topology-optimized machine allocation
+      description: Request data to batch create multiple Instances with topology-optimized machine allocation. Explicit interface `ipAddress` values are not supported in batch requests.
       examples:
         - namePrefix: gpu-worker
           count: 4
@@ -14909,7 +14909,7 @@ components:
           $ref: '#/components/schemas/Labels'
         interfaces:
           type: array
-          description: 'Interface configuration shared across all instances. At least one interface must be specified. Either Subnet or VPC Prefix interfaces allowed, only one of the Subnets or VPC Prefixes can be attached over Physical interface.'
+          description: 'Interface configuration shared across all instances. At least one interface must be specified. Either Subnet or VPC Prefix interfaces allowed, only one of the Subnets or VPC Prefixes can be attached over Physical interface. Interface `ipAddress` is not supported for batch instance creation requests.'
           items:
             $ref: '#/components/schemas/InterfaceCreateRequest'
         infinibandInterfaces:
@@ -15159,6 +15159,7 @@ components:
         - id: 94c4c8c0-c3c4-4a52-9518-3e165b1de036
           instanceId: 371ddf80-a7ff-4ff6-9a37-0557cec8b9be
           vpcPrefixId: 1f232bf0-7b90-456e-b9b0-38d9fea4171a
+          requestedIpAddress: 10.0.0.191
           isPhysical: true
           device: MT42822 BlueField-2 integrated ConnectX-6 Dx network controller
           deviceInstance: 0
@@ -15172,6 +15173,7 @@ components:
         - id: 45d89d4f-2dde-4fc5-a20d-9f96faa4e9fa
           instanceId: 371ddf80-a7ff-4ff6-9a37-0557cec8b9be
           vpcPrefixId: d89d8cc6-d66e-4bf2-bf62-40238837cc90
+          requestedIpAddress: 10.0.0.193
           isPhysical: false
           device: MT42822 BlueField-2 integrated ConnectX-6 Dx network controller
           deviceInstance: 0
@@ -15185,6 +15187,7 @@ components:
         - id: 236ee9d1-5f61-4aaa-abf3-0f72693e1189
           instanceId: 371ddf80-a7ff-4ff6-9a37-0557cec8b9be
           vpcPrefixId: d5dd56e2-1b0b-4913-927e-b5896d7aca7b
+          requestedIpAddress: 10.0.0.195
           isPhysical: true
           device: MT42822 BlueField-2 integrated ConnectX-6 Dx network controller
           deviceInstance: 1
@@ -15240,6 +15243,11 @@ components:
           description: A list of IPv4 or IPv6 addresses
           items:
             type: string
+        requestedIpAddress:
+          type:
+            - string
+            - 'null'
+          description: Explicitly requested IP address for the interface. This is only used for VPC Prefix based interfaces and is not valid for Subnet based interfaces. The least-significant host bit must be 1.
         status:
           $ref: '#/components/schemas/InterfaceStatus'
         created:
@@ -15267,6 +15275,7 @@ components:
         - subnetId: 1f232bf0-7b90-456e-b9b0-38d9fea4171a
           isPhysical: true
         - vpcPrefixId: 000bc42b-f946-472e-83d4-ddf7e365e148
+          ipAddress: 10.0.0.11
           isPhysical: true
       description: |-
         Request data to create an Interface for an Instance by associating it with a Subnet or VPC Prefix.
@@ -15281,6 +15290,11 @@ components:
         vpcPrefixId:
           type: string
           format: uuid
+        ipAddress:
+          type:
+            - string
+            - 'null'
+          description: Explicitly requested IP address for the interface. It cannot be specified for Subnet based interfaces. The least-significant host bit must be 1.
         isPhysical:
           type: boolean
           description: Specifies whether this Subnet or VPC Prefix should be attached to the Instance over physical interface.

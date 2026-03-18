@@ -187,14 +187,26 @@ func toStandardInstanceUpdateRequest(request InstanceUpdateRequest) standard.Ins
 	if request.UserData != nil {
 		apiReq.UserData.Set(request.UserData)
 	}
-	for _, ib := range request.InfinibandInterfaces {
-		apiReq.InfinibandInterfaces = append(apiReq.InfinibandInterfaces, toStandardInfiniBandInterface(ib))
+	// Only set slice fields when provided so partial updates do not reset other attributes.
+	// When the caller passes nil, no array must be sent so the server skips the field entirely.
+	// But if the caller passes an empty array (not nil) we must also pass an empty array.
+	if request.InfinibandInterfaces != nil {
+		apiReq.InfinibandInterfaces = make([]standard.InfiniBandInterfaceCreateRequest, 0, len(request.InfinibandInterfaces))
+		for _, ib := range request.InfinibandInterfaces {
+			apiReq.InfinibandInterfaces = append(apiReq.InfinibandInterfaces, toStandardInfiniBandInterface(ib))
+		}
 	}
-	for _, nv := range request.NVLinkInterfaces {
-		apiReq.NvLinkInterfaces = append(apiReq.NvLinkInterfaces, toStandardNVLinkInterface(nv))
+	if request.NVLinkInterfaces != nil {
+		apiReq.NvLinkInterfaces = make([]standard.NVLinkInterfaceCreateRequest, 0, len(request.NVLinkInterfaces))
+		for _, nv := range request.NVLinkInterfaces {
+			apiReq.NvLinkInterfaces = append(apiReq.NvLinkInterfaces, toStandardNVLinkInterface(nv))
+		}
 	}
-	for _, d := range request.DpuExtensionServiceDeployments {
-		apiReq.DpuExtensionServiceDeployments = append(apiReq.DpuExtensionServiceDeployments, toStandardDpuExtensionDeployment(d))
+	if request.DpuExtensionServiceDeployments != nil {
+		apiReq.DpuExtensionServiceDeployments = make([]standard.DpuExtensionServiceDeploymentRequest, 0, len(request.DpuExtensionServiceDeployments))
+		for _, d := range request.DpuExtensionServiceDeployments {
+			apiReq.DpuExtensionServiceDeployments = append(apiReq.DpuExtensionServiceDeployments, toStandardDpuExtensionDeployment(d))
+		}
 	}
 	return apiReq
 }
