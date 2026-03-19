@@ -105,7 +105,7 @@ func TestPowerControl(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestStartFirmwareUpdate(t *testing.T) {
+func TestFirmwareControl(t *testing.T) {
 	m := New(carbideapi.NewMockClient())
 
 	target := common.Target{
@@ -113,13 +113,13 @@ func TestStartFirmwareUpdate(t *testing.T) {
 		ComponentIDs: []string{"switch-1"},
 	}
 
-	err := m.StartFirmwareUpdate(context.Background(), target, operations.FirmwareControlTaskInfo{
+	err := m.FirmwareControl(context.Background(), target, operations.FirmwareControlTaskInfo{
 		TargetVersion: "2.0.0",
 	})
 	assert.NoError(t, err)
 }
 
-func TestGetFirmwareUpdateStatus(t *testing.T) {
+func TestGetFirmwareStatus(t *testing.T) {
 	m := New(carbideapi.NewMockClient())
 
 	target := common.Target{
@@ -127,7 +127,7 @@ func TestGetFirmwareUpdateStatus(t *testing.T) {
 		ComponentIDs: []string{"switch-1"},
 	}
 
-	statuses, err := m.GetFirmwareUpdateStatus(context.Background(), target)
+	statuses, err := m.GetFirmwareStatus(context.Background(), target)
 	assert.NoError(t, err)
 	assert.NotNil(t, statuses)
 }

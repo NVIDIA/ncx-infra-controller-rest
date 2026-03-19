@@ -288,23 +288,23 @@ func (m *Manager) GetFirmwareStatus(ctx context.Context, target common.Target) (
 	return result, nil
 }
 
-func (m *Manager) AllowBringUpAndPowerOn(
+func (m *Manager) BringUpControl(
 	ctx context.Context,
 	target common.Target,
 ) error {
 	log.Info().
 		Str("components", target.String()).
-		Msg("NVLSwitch AllowBringUpAndPowerOn: placeholder")
+		Msg("NVLSwitch BringUpControl: placeholder")
 	return nil
 }
 
-func (m *Manager) GetBringUpState(
+func (m *Manager) GetBringUpStatus(
 	ctx context.Context,
 	target common.Target,
 ) (map[string]operations.MachineBringUpState, error) {
 	log.Info().
 		Str("components", target.String()).
-		Msg("NVLSwitch GetBringUpState: placeholder")
+		Msg("NVLSwitch GetBringUpStatus: placeholder")
 
 	result := make(
 		map[string]operations.MachineBringUpState,

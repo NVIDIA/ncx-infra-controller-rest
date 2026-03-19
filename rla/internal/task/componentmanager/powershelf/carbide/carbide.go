@@ -193,14 +193,6 @@ func (m *Manager) FirmwareControl(
 	target common.Target,
 	info operations.FirmwareControlTaskInfo,
 ) error {
-	return fmt.Errorf("FirmwareControl not yet implemented for PowerShelf via Carbide; use StartFirmwareUpdate")
-}
-
-func (m *Manager) StartFirmwareUpdate(
-	ctx context.Context,
-	target common.Target,
-	info operations.FirmwareControlTaskInfo,
-) error {
 	log.Debug().
 		Str("components", target.String()).
 		Str("target_version", info.TargetVersion).
@@ -237,13 +229,13 @@ func (m *Manager) StartFirmwareUpdate(
 	return nil
 }
 
-func (m *Manager) GetFirmwareUpdateStatus(
+func (m *Manager) GetFirmwareStatus(
 	ctx context.Context,
 	target common.Target,
 ) (map[string]operations.FirmwareUpdateStatus, error) {
 	log.Debug().
 		Str("components", target.String()).
-		Msg("GetFirmwareUpdateStatus for PowerShelf via Carbide")
+		Msg("GetFirmwareStatus for PowerShelf via Carbide")
 
 	if err := target.Validate(); err != nil {
 		return nil, fmt.Errorf("target is invalid: %w", err)
@@ -272,16 +264,16 @@ func (m *Manager) GetFirmwareUpdateStatus(
 	return result, nil
 }
 
-func (m *Manager) AllowBringUpAndPowerOn(
+func (m *Manager) BringUpControl(
 	ctx context.Context,
 	target common.Target,
 ) error {
-	return fmt.Errorf("AllowBringUpAndPowerOn not supported for PowerShelf")
+	return fmt.Errorf("BringUpControl not supported for PowerShelf")
 }
 
-func (m *Manager) GetBringUpState(
+func (m *Manager) GetBringUpStatus(
 	ctx context.Context,
 	target common.Target,
 ) (map[string]operations.MachineBringUpState, error) {
-	return nil, fmt.Errorf("GetBringUpState not supported for PowerShelf")
+	return nil, fmt.Errorf("GetBringUpStatus not supported for PowerShelf")
 }
