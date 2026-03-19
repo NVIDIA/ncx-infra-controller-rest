@@ -78,7 +78,7 @@ spec:
             - name: NAMESPACE
               value: {{ include "carbide-rest-site-agent.namespace" . }}
             - name: SITE_MANAGER_URL
-              value: "https://{{ .Values.envConfig.CARBIDE_ADDRESS }}"
+              value: "https://{{ .Values.bootstrap.siteManager.address }}"
           command:
             - /bin/sh
             - -c
@@ -98,11 +98,11 @@ spec:
                 exit 0
               fi
 
-              echo "Fetching CA certificate from {{ .Values.bootstrap.siteManagerTLSSecret }}..."
-              CACERT=$(kubectl get secret {{ .Values.bootstrap.siteManagerTLSSecret }} \
+              echo "Fetching CA certificate from {{ .Values.bootstrap.siteManager.tlsSecret }}..."
+              CACERT=$(kubectl get secret {{ .Values.bootstrap.siteManager.tlsSecret }} \
                 -n "$NAMESPACE" -o jsonpath='{.data.ca\.crt}' | base64 -d)
               if [ -z "$CACERT" ]; then
-                echo "ERROR: missing ca.crt in secret {{ .Values.bootstrap.siteManagerTLSSecret }}"
+                echo "ERROR: missing ca.crt in secret {{ .Values.bootstrap.siteManager.tlsSecret }}"
                 exit 1
               fi
               echo "$CACERT" > /tmp/site-manager-ca.crt
@@ -146,7 +146,7 @@ spec:
                 -n "$NAMESPACE" \
                 --from-literal=site-uuid="$SITE_UUID" \
                 --from-literal=otp="$OTP" \
-                --from-literal=creds-url="https://{{ .Values.envConfig.CARBIDE_ADDRESS }}/v1/sitecreds" \
+                --from-literal=creds-url="https://{{ .Values.bootstrap.siteManager.address }}/v1/sitecreds" \
                 --from-literal=cacert="$CACERT"
 
               echo "=== Bootstrap complete ==="

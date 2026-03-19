@@ -60,7 +60,9 @@ bootstrap:
   # Requires envConfig.CLUSTER_ID to be set.
   enabled: false
   image: alpine/k8s:1.29.4
-  siteManagerTLSSecret: site-manager-tls
+  siteManager:
+    address: carbide-rest-site-manager.carbide-rest
+    tlsSecret: site-manager-tls
 
 envConfig:
   ESA_PORT: "8080"
