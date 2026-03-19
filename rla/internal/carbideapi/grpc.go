@@ -398,7 +398,7 @@ func (c *grpcClient) AddExpectedPowerShelf(ctx context.Context, req AddExpectedP
 	}
 
 	if req.RackID != "" {
-		pbReq.RackId = &req.RackID
+		pbReq.RackId = &pb.RackId{Id: req.RackID}
 	}
 
 	_, err := c.gclient.AddExpectedPowerShelf(ctx, pbReq)
@@ -439,7 +439,7 @@ func (c *grpcClient) GetComponentInventory(ctx context.Context, req *pb.GetCompo
 	return c.gclient.GetComponentInventory(ctx, req)
 }
 
-func (c *grpcClient) AddMachine(machine Machine) {
+func (c *grpcClient) AddMachine(machine MachineDetail) {
 	panic("Not a unit test")
 }
 
