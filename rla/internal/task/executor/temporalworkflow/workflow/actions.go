@@ -190,7 +190,7 @@ func executeFirmwareControlAction(actx actionExecutionContext) error {
 
 	// Start firmware update (Temporal deserializes operationInfo at activity level)
 	if err := workflow.ExecuteActivity(
-		ctx, "StartFirmwareUpdate", target, actx.operationInfo,
+		ctx, "FirmwareControl", target, actx.operationInfo,
 	).Get(ctx, nil); err != nil {
 		return fmt.Errorf("failed to start firmware update: %w", err)
 	}

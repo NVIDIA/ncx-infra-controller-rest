@@ -351,7 +351,7 @@ type ComponentManager interface {
     GetPowerStatus(ctx, target) (map[string]PowerStatus, error)
 
     // Firmware flow (async start + poll)
-    StartFirmwareUpdate(ctx, target, info) error
+    FirmwareControl(ctx, target, info) error
     GetFirmwareUpdateStatus(ctx, target) (map[string]FirmwareUpdateStatus, error)
 
     // BringUp flow

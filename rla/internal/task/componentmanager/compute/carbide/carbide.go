@@ -239,10 +239,10 @@ func carbidePowerStateToOperationsPowerStatus(state carbideapi.PowerState) opera
 	}
 }
 
-// StartFirmwareUpdate schedules a firmware update via Carbide's SetFirmwareUpdateTimeWindow API.
+// FirmwareControl schedules a firmware update via Carbide's SetFirmwareUpdateTimeWindow API.
 // This sets the time window during which Carbide will automatically perform the firmware update.
 // Returns immediately after the schedule request is accepted.
-func (m *Manager) StartFirmwareUpdate(ctx context.Context, target common.Target, info operations.FirmwareControlTaskInfo) error {
+func (m *Manager) FirmwareControl(ctx context.Context, target common.Target, info operations.FirmwareControlTaskInfo) error {
 	log.Debug().
 		Str("components", target.String()).
 		Str("target_version", info.TargetVersion).

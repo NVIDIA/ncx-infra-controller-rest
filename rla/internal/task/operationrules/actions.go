@@ -87,7 +87,7 @@ var actionRegistry = map[string]actionSpec{
 		optionalParams:       []string{ParamOperation, ParamPollInterval, ParamPollTimeout},
 		requiresPollInterval: false,
 		requiresTimeout:      false,
-		implementation:       "activity.StartFirmwareUpdate + activity.GetFirmwareUpdateStatus (async start + poll)",
+		implementation:       "activity.FirmwareControl + activity.GetFirmwareUpdateStatus (async start + poll)",
 		description:          "Start firmware update and poll for completion (upgrade/downgrade)",
 		validateParams:       nil,
 	},

@@ -96,7 +96,7 @@ func GetAllActivities() []any {
 		PowerControl,
 		GetPowerStatus,
 		UpdateTaskStatus,
-		StartFirmwareUpdate,
+		FirmwareControl,
 		GetFirmwareUpdateStatus,
 		AllowBringUp,
 		GetBringUpState,
@@ -140,9 +140,9 @@ func GetBringUpState(
 	return &GetBringUpStateResult{States: states}, nil
 }
 
-// StartFirmwareUpdate initiates firmware update without waiting for completion.
+// FirmwareControl initiates firmware update without waiting for completion.
 // This activity returns immediately after the update request is accepted.
-func StartFirmwareUpdate(
+func FirmwareControl(
 	ctx context.Context,
 	target common.Target,
 	info operations.FirmwareControlTaskInfo,
@@ -152,7 +152,7 @@ func StartFirmwareUpdate(
 		return err
 	}
 
-	return cm.StartFirmwareUpdate(ctx, target, info)
+	return cm.FirmwareControl(ctx, target, info)
 }
 
 // GetFirmwareUpdateStatusResult is the result of GetFirmwareUpdateStatus activity.

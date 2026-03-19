@@ -479,7 +479,7 @@ func TestGenericComponentStepWorkflow_FirmwareControlAction(t *testing.T) {
 	}
 
 	env.RegisterActivityWithOptions(mockStart,
-		activity.RegisterOptions{Name: "StartFirmwareUpdate"})
+		activity.RegisterOptions{Name: "FirmwareControl"})
 	env.RegisterActivityWithOptions(mockStatus,
 		activity.RegisterOptions{Name: "GetFirmwareUpdateStatus"})
 

@@ -146,8 +146,8 @@ func (m *Manager) GetPowerStatus(
 	return result, nil
 }
 
-// StartFirmwareUpdate simulates initiating firmware update without waiting for completion.
-func (m *Manager) StartFirmwareUpdate(
+// FirmwareControl simulates initiating firmware update without waiting for completion.
+func (m *Manager) FirmwareControl(
 	ctx context.Context,
 	target common.Target,
 	info operations.FirmwareControlTaskInfo,
@@ -156,14 +156,14 @@ func (m *Manager) StartFirmwareUpdate(
 		Str("component_type", m.componentType.String()).
 		Str("target", target.String()).
 		Str("target_version", info.TargetVersion).
-		Msg("Mock: StartFirmwareUpdate")
+		Msg("Mock: FirmwareControl")
 
 	time.Sleep(m.delay)
 
 	log.Info().
 		Str("component_type", m.componentType.String()).
 		Str("target", target.String()).
-		Msg("Mock: StartFirmwareUpdate completed")
+		Msg("Mock: FirmwareControl completed")
 
 	return nil
 }

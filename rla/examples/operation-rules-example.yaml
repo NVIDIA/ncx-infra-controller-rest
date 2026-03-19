@@ -746,7 +746,7 @@ rules:
 #
 # 5. FirmwareControl
 #    - Starts firmware update and polls for completion (async start + poll)
-#    - Calls StartFirmwareUpdate, then polls GetFirmwareUpdateStatus
+#    - Calls FirmwareControl, then polls GetFirmwareUpdateStatus
 #    - Optional parameters:
 #      - poll_interval: Time between status polls (default: "2m")
 #      - poll_timeout: Max time to wait for completion (default: "30m")

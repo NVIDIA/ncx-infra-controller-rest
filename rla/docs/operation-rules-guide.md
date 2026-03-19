@@ -134,7 +134,7 @@ main_operation:
 ### FirmwareControl
 
 Starts a firmware update and polls for completion (async start + poll pattern).
-Calls `StartFirmwareUpdate` to initiate, then repeatedly calls
+Calls `FirmwareControl` to initiate, then repeatedly calls
 `GetFirmwareUpdateStatus` until all components complete or the poll timeout
 expires.
 
@@ -794,7 +794,7 @@ function:
 |--------|----------|--------------------|
 | `Sleep` | `executeSleepAction` | `workflow.Sleep()` — durable timer |
 | `PowerControl` | `executePowerControlAction` | `workflow.ExecuteActivity("PowerControl")` |
-| `FirmwareControl` | `executeFirmwareControlAction` | `StartFirmwareUpdate` + poll `GetFirmwareUpdateStatus` |
+| `FirmwareControl` | `executeFirmwareControlAction` | `FirmwareControl` + poll `GetFirmwareUpdateStatus` |
 | `GetPowerStatus` | `executeGetPowerStatusAction` | `workflow.ExecuteActivity("GetPowerStatus")` |
 | `VerifyPowerStatus` | `executeVerifyPowerStatusAction` | polling loop (see below) |
 | `VerifyReachability` | `executeVerifyReachabilityAction` | polling loop (see below) |

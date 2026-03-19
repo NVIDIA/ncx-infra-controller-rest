@@ -38,9 +38,9 @@ type ComponentManager interface {
 	PowerControl(ctx context.Context, target common.Target, info operations.PowerControlTaskInfo) error           //nolint
 	GetPowerStatus(ctx context.Context, target common.Target) (map[string]operations.PowerStatus, error)          //nolint
 
-	// StartFirmwareUpdate initiates firmware update without waiting for completion.
+	// FirmwareControl initiates firmware update without waiting for completion.
 	// Returns immediately after the update request is accepted.
-	StartFirmwareUpdate(ctx context.Context, target common.Target, info operations.FirmwareControlTaskInfo) error //nolint
+	FirmwareControl(ctx context.Context, target common.Target, info operations.FirmwareControlTaskInfo) error //nolint
 
 	// GetFirmwareUpdateStatus returns the current status of firmware updates for the target components.
 	// Returns a map of component ID to FirmwareUpdateStatus.

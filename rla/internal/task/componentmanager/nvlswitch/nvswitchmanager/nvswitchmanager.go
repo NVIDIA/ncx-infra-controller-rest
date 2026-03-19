@@ -149,9 +149,9 @@ func mapPowerOperation(op operations.PowerOperation) (nsmapi.PowerAction, error)
 	}
 }
 
-// StartFirmwareUpdate initiates firmware update without waiting for completion.
+// FirmwareControl initiates firmware update without waiting for completion.
 // Returns immediately after the update request is accepted.
-func (m *Manager) StartFirmwareUpdate(ctx context.Context, target common.Target, info operations.FirmwareControlTaskInfo) error {
+func (m *Manager) FirmwareControl(ctx context.Context, target common.Target, info operations.FirmwareControlTaskInfo) error {
 	log.Debug().
 		Str("components", target.String()).
 		Str("operation", fmt.Sprintf("%v", info.Operation)).

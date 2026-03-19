@@ -93,7 +93,7 @@ func GetAllActivities() []any {
 		PowerControl,
 		GetPowerStatus,
 		UpdateTaskStatus,
-		StartFirmwareUpdate,
+		FirmwareControl,
 		GetFirmwareUpdateStatus,
 		AllowBringUp,
 		GetBringUpState,
