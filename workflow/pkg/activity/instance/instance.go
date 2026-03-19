@@ -995,8 +995,8 @@ func (mi ManageInstance) UpdateInstancesInDB(ctx context.Context, siteID uuid.UU
 
 			}
 
+			// Update DB cache for each Interface based on the Interface Config and Status
 			for idx, interfaceConfig := range controllerInstance.Config.Network.Interfaces {
-
 				var ok bool
 				var ifc *cdbm.Interface
 
@@ -1075,10 +1075,10 @@ func (mi ManageInstance) UpdateInstancesInDB(ctx context.Context, siteID uuid.UU
 				}
 			}
 		} else {
-			slogger.Error().Err(err).Msg("site controller Instance is missing network config and or status")
+			slogger.Error().Err(err).Msg("Site Controller Instance is missing Network Config and/or Status")
 		}
 
-		// Process/update InfiniBand Interfaces in DB
+		// Populate a map of existing InfiniBand Interfaces by key
 		ibiDAO := cdbm.NewInfiniBandInterfaceDAO(mi.dbSession)
 		infiniBandInterfaces, _, serr := ibiDAO.GetAll(
 			ctx,
@@ -1090,7 +1090,7 @@ func (mi ManageInstance) UpdateInstancesInDB(ctx context.Context, siteID uuid.UU
 			[]string{cdbm.InfiniBandPartitionRelationName},
 		)
 		if serr != nil {
-			slogger.Error().Err(serr).Msg("failed to get InfiniBand Interfaces for Instance from DB")
+			slogger.Error().Err(serr).Msg("Failed to get InfiniBand Interfaces for Instance, DB error")
 			continue
 		}
 
@@ -1116,7 +1116,7 @@ func (mi ManageInstance) UpdateInstancesInDB(ctx context.Context, siteID uuid.UU
 					},
 				)
 				if serr != nil {
-					slogger.Error().Err(serr).Str("InfiniBand Interface ID", curIbIfc.ID.String()).Msg("failed to update InfiniBand Interface in DB")
+					slogger.Error().Err(serr).Str("InfiniBand Interface ID", curIbIfc.ID.String()).Msg("Failed to update InfiniBand Interface, DB error")
 				}
 			} else {
 				// Construct a map of InfiniBand Interface ID to InfiniBand Interface
@@ -1277,14 +1277,20 @@ func (mi ManageInstance) UpdateInstancesInDB(ctx context.Context, siteID uuid.UU
 				deletingNVLinkInterfaces = append(deletingNVLinkInterfaces, &curNvlifc)
 				continue
 			}
-			// Construct a map of NVLink Interface ID to NVLink Interface
-			// using the Device and Gpu Index as the key
+			// Construct a map of NVLink Interface ID to NVLink Interface using Logical Partition ID and DeviceInstance as the key
 			nvlifcKey := fmt.Sprintf("%s-%d", nvlifc.NVLinkLogicalPartitionID.String(), nvlifc.DeviceInstance)
 			nvLinkInterfaceMap[nvlifcKey] = &curNvlifc
 		}
 
-		if controllerInstance.Config.Nvlink != nil && controllerInstance.Status.Nvlink != nil {
+		if controllerInstance.Config.Nvlink != nil {
+			// Check an update DB cache for each NVLink Interface based on the GPU Config and Status
+			configStatusMismatch := false
 			for idx, nvLinkGpuConfig := range controllerInstance.Config.Nvlink.GpuConfigs {
+				if nvLinkGpuConfig == nil {
+					logger.Warn().Int("Index", idx).Msg("NVLink GPU Config is nil, skipping update")
+					continue
+				}
+
 				nvlifcKey := fmt.Sprintf("%s-%d", nvLinkGpuConfig.LogicalPartitionId.Value, nvLinkGpuConfig.DeviceInstance)
 				nvlifc, ok := nvLinkInterfaceMap[nvlifcKey]
 				if !ok {
@@ -1292,105 +1298,87 @@ func (mi ManageInstance) UpdateInstancesInDB(ctx context.Context, siteID uuid.UU
 					continue
 				}
 
-				// It will make sure no panic and we can access the GpuStatuses
-				if idx < len(controllerInstance.Status.Nvlink.GpuStatuses) {
-					nvLinkGpuStatus := controllerInstance.Status.Nvlink.GpuStatuses[idx]
-					if nvLinkGpuStatus != nil {
-						// If GpuStatuses may not be ordered identically to GpuConfigs; guard against
-						// a positional mismatch by confirming the LogicalPartitionId matches.
-						if nvlifc.NVLinkLogicalPartitionID.String() != nvLinkGpuStatus.LogicalPartitionId.Value {
-							continue
-						}
+				if configStatusMismatch {
+					// We've already logged the warning
+					continue
+				}
 
-						var gpuGuid *string
-						if nvLinkGpuStatus.GpuGuid != nil && (nvlifc.GpuGUID == nil || *nvlifc.GpuGUID != *nvLinkGpuStatus.GpuGuid) {
-							gpuGuid = nvLinkGpuStatus.GpuGuid
-						}
+				if controllerInstance.Status.Nvlink == nil || len(controllerInstance.Status.Nvlink.GpuStatuses) == 0 || (len(controllerInstance.Config.Nvlink.GpuConfigs) != len(controllerInstance.Status.Nvlink.GpuStatuses)) {
+					configStatusMismatch = true
+					// We cannot reliably determine which NVLink Interface to update based on the index, so we skip updating
+					logger.Warn().Msgf("NVLink GPU Status entry count: %d, does not match GPU Config entry count: %d", len(controllerInstance.Status.Nvlink.GpuStatuses), len(controllerInstance.Config.Nvlink.GpuConfigs))
+					continue
+				}
 
-						var nvLinkDomainID *uuid.UUID
-						if nvLinkGpuStatus.DomainId != nil {
-							domainID, serr := uuid.Parse(nvLinkGpuStatus.DomainId.Value)
-							if serr != nil {
-								slogger.Warn().Err(serr).Msg("failed to parse NVLink Domain ID, not a valid UUID")
-							} else if nvlifc.NVLinkDomainID == nil || *nvlifc.NVLinkDomainID != domainID {
-								nvLinkDomainID = &domainID
-							}
-						}
+				nvLinkGpuStatus := controllerInstance.Status.Nvlink.GpuStatuses[idx]
 
-						var status *string
-						if controllerInstance.Status.Nvlink.ConfigsSynced == cwsv1.SyncState_SYNCED && nvlifc.Status != cdbm.NVLinkInterfaceStatusReady {
-							status = cdb.GetStrPtr(cdbm.NVLinkInterfaceStatusReady)
-						}
+				if nvLinkGpuStatus == nil {
+					logger.Warn().Int("Index", idx).Msg("NVLink GPU Status is nil, skipping update")
+					continue
+				}
 
-						if gpuGuid == nil && status == nil && nvLinkDomainID == nil {
-							continue
-						}
+				// Double check if config/status is in sync
+				if nvLinkGpuConfig.LogicalPartitionId.GetValue() != nvLinkGpuStatus.LogicalPartitionId.GetValue() {
+					logger.Warn().Int("Index", idx).Msgf("NVLink Logical Partition ID mismatch. Config: %s, Status: %s", nvLinkGpuConfig.LogicalPartitionId.GetValue(), nvLinkGpuStatus.LogicalPartitionId.GetValue())
+					continue
+				}
 
-						_, serr = nvlifcDAO.Update(
-							ctx,
-							nil,
-							cdbm.NVLinkInterfaceUpdateInput{
-								NVLinkInterfaceID: nvlifc.ID,
-								GpuGUID:           gpuGuid,
-								NVLinkDomainID:    nvLinkDomainID,
-								Status:            status,
-							},
-						)
+				needsUpdate := false
+				var gpuGuid *string
+				if nvLinkGpuStatus.GpuGuid != nil && (nvlifc.GpuGUID == nil || *nvlifc.GpuGUID != *nvLinkGpuStatus.GpuGuid) {
+					gpuGuid = nvLinkGpuStatus.GpuGuid
+					needsUpdate = true
+				}
 
-						if serr != nil {
-							slogger.Error().Err(serr).Str("NVLink Interface ID", nvlifc.ID.String()).Msg("failed to update NVLink Interface in DB")
-						}
+				var nvLinkDomainID *uuid.UUID
+				if nvLinkGpuStatus.DomainId != nil {
+					domainID, serr := uuid.Parse(nvLinkGpuStatus.DomainId.Value)
+					if serr != nil {
+						slogger.Warn().Int("Index", idx).Err(serr).Msg("Failed to parse NVLink Domain ID from GPU Status, invalid UUID")
+					} else if nvlifc.NVLinkDomainID == nil || *nvlifc.NVLinkDomainID != domainID {
+						nvLinkDomainID = &domainID
+						needsUpdate = true
 					}
+				}
+
+				var status *string
+				if controllerInstance.Status.Nvlink.ConfigsSynced == cwsv1.SyncState_SYNCED && nvlifc.Status != cdbm.NVLinkInterfaceStatusReady {
+					status = cdb.GetStrPtr(cdbm.NVLinkInterfaceStatusReady)
+					needsUpdate = true
+				}
+
+				if !needsUpdate {
+					continue
+				}
+
+				_, serr = nvlifcDAO.Update(ctx, nil, cdbm.NVLinkInterfaceUpdateInput{
+					NVLinkInterfaceID: nvlifc.ID,
+					GpuGUID:           gpuGuid,
+					NVLinkDomainID:    nvLinkDomainID,
+					Status:            status,
+				})
+
+				if serr != nil {
+					slogger.Error().Err(serr).Str("NVLink Interface ID", nvlifc.ID.String()).Msg("Failed to update NVLink Interface, DB error")
 				}
 			}
 		}
 
-		// Determine which NVLink Interfaces in Deleting state can be removed
-		if controllerInstance.Config.Nvlink != nil && controllerInstance.Status.Nvlink != nil &&
-			controllerInstance.Status.Nvlink.ConfigsSynced == cwsv1.SyncState_SYNCED {
+		// Determine which NVLink Interfaces in Deleting state can be deleted
+		// If the NVLink Config and Status are empty, we can delete all NVLink Interfaces currently in Deleting state
+		isNVLinkConfigStatusEmpty := len(controllerInstance.Config.GetNvlink().GetGpuConfigs()) == 0 && len(controllerInstance.Status.GetNvlink().GetGpuStatuses()) == 0
+		// If the NVLink Config and Status are synced, we can delete all eligible NVLink Interfaces currently in Deleting state
+		isNVLinkConfigSynced := controllerInstance.Status.Nvlink != nil && controllerInstance.Status.Nvlink.ConfigsSynced == cwsv1.SyncState_SYNCED
 
-			// Build a set of GPU GUID/Partition by key reported by the controller
-			reportedNVLinkInterfacesByKey := map[string]bool{}
-			for _, gpuStatus := range controllerInstance.Status.Nvlink.GpuStatuses {
-				if gpuStatus != nil && gpuStatus.GpuGuid != nil && gpuStatus.LogicalPartitionId != nil {
-					nvLinkInterfaceKey := fmt.Sprintf("%s:%s", *gpuStatus.GpuGuid, gpuStatus.LogicalPartitionId.Value)
-					reportedNVLinkInterfacesByKey[nvLinkInterfaceKey] = true
-				}
-			}
-
-			// Build a set of Pending/Ready interface by key for duplicate detection
-			pendingOrReadyNVLinkInterfacesByKey := map[string]bool{}
-			for _, nvlifc := range nvLinkInterfaces {
-				if (nvlifc.Status == cdbm.NVLinkInterfaceStatusPending || nvlifc.Status == cdbm.NVLinkInterfaceStatusReady) &&
-					nvlifc.GpuGUID != nil && *nvlifc.GpuGUID != "" {
-					nvLinkInterfaceKey := fmt.Sprintf("%s:%s", *nvlifc.GpuGUID, nvlifc.NVLinkLogicalPartitionID.String())
-					pendingOrReadyNVLinkInterfacesByKey[nvLinkInterfaceKey] = true
-				}
-			}
-
+		if isNVLinkConfigStatusEmpty || isNVLinkConfigSynced {
 			for _, nvlifc := range deletingNVLinkInterfaces {
 				if util.IsTimeWithinStaleInventoryThreshold(nvlifc.Updated) {
+					// If the NVLink Interface was modified within stale inventory threshold, defer to next inventory update
 					continue
 				}
 
-				nvLinkInterfaceKey := ""
-				if nvlifc.GpuGUID != nil && *nvlifc.GpuGUID != "" {
-					nvLinkInterfaceKey = fmt.Sprintf("%s:%s", *nvlifc.GpuGUID, nvlifc.NVLinkLogicalPartitionID.String())
-				}
-
-				if nvLinkInterfaceKey == "" || !reportedNVLinkInterfacesByKey[nvLinkInterfaceKey] {
-					// NVLink Interface not reported — safe to remove. Interfaces with nil/empty GpuGUID also
-					// land here because they can never match a reported status entry; since configs
-					// are confirmed synced above, absence from the controller is authoritative.
-					nvLinkInterfacesToDelete = append(nvLinkInterfacesToDelete, nvlifc)
-					continue
-				}
-
-				// If the NVLink Interface is Pending or Ready and the GpuGUID is the same as the one in the controller status,
-				// we can delete it because it is a duplicate with different status
-				if pendingOrReadyNVLinkInterfacesByKey[nvLinkInterfaceKey] {
-					nvLinkInterfacesToDelete = append(nvLinkInterfacesToDelete, nvlifc)
-				}
+				// Continue with deletion
+				nvLinkInterfacesToDelete = append(nvLinkInterfacesToDelete, nvlifc)
 			}
 		}
 
@@ -1528,34 +1516,35 @@ func (mi ManageInstance) UpdateInstancesInDB(ctx context.Context, siteID uuid.UU
 		}
 	}
 
-	// When Instance is in Ready state, we can delete the interfaces which are in Deleting state
+	// Delete eligible Interfaces which are in Deleting state
 	if len(ethernetInterfacesToDelete) > 0 {
 		interfaceDAO := cdbm.NewInterfaceDAO(mi.dbSession)
 		for _, ifc := range ethernetInterfacesToDelete {
 			serr := interfaceDAO.Delete(ctx, nil, ifc.ID)
 			if serr != nil {
-				logger.Error().Err(serr).Str("Interface ID", ifc.ID.String()).Msg("failed to delete Interface from DB")
+				logger.Error().Err(serr).Str("Interface ID", ifc.ID.String()).Msg("Failed to delete Interface, DB error")
 			}
 		}
 	}
 
-	// When Instance is in Ready state, we can delete the InfiniBand Interfaces which are in Deleting state
+	// Delete eligible InfiniBand Interfaces which are in Deleting state
 	if len(infiniBandInterfacesToDelete) > 0 {
 		ibifcDAO := cdbm.NewInfiniBandInterfaceDAO(mi.dbSession)
 		for _, ibfc := range infiniBandInterfacesToDelete {
 			serr := ibifcDAO.Delete(ctx, nil, ibfc.ID)
 			if serr != nil {
-				logger.Error().Err(serr).Str("InfiniBand Interface ID", ibfc.ID.String()).Msg("failed to delete InfiniBand Interface from DB")
+				logger.Error().Err(serr).Str("InfiniBand Interface ID", ibfc.ID.String()).Msg("Failed to delete InfiniBand Interface, DB error")
 			}
 		}
 	}
 
+	// Delete eligible NVLink Interfaces which are in Deleting state
 	if len(nvLinkInterfacesToDelete) > 0 {
 		nvlifcDAO := cdbm.NewNVLinkInterfaceDAO(mi.dbSession)
 		for _, nvlifc := range nvLinkInterfacesToDelete {
 			serr := nvlifcDAO.Delete(ctx, nil, nvlifc.ID)
 			if serr != nil {
-				logger.Error().Err(serr).Str("NVLink Interface ID", nvlifc.ID.String()).Msg("failed to delete NVLink Interface from DB")
+				logger.Error().Err(serr).Str("NVLink Interface ID", nvlifc.ID.String()).Msg("Failed to delete NVLink Interface, DB error")
 			}
 		}
 	}
