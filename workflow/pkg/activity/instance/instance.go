@@ -1279,111 +1279,118 @@ func (mi ManageInstance) UpdateInstancesInDB(ctx context.Context, siteID uuid.UU
 			}
 			// Construct a map of NVLink Interface ID to NVLink Interface
 			// using the Device and Gpu Index as the key
-			nvlifcKey := fmt.Sprintf("%d", nvlifc.DeviceInstance)
+			nvlifcKey := fmt.Sprintf("%s-%d", nvlifc.NVLinkLogicalPartitionID.String(), nvlifc.DeviceInstance)
 			nvLinkInterfaceMap[nvlifcKey] = &curNvlifc
 		}
 
 		if controllerInstance.Config.Nvlink != nil && controllerInstance.Status.Nvlink != nil {
 			for idx, nvLinkGpuConfig := range controllerInstance.Config.Nvlink.GpuConfigs {
-				nvlifcKey := fmt.Sprintf("%d", nvLinkGpuConfig.DeviceInstance)
+				nvlifcKey := fmt.Sprintf("%s-%d", nvLinkGpuConfig.LogicalPartitionId.Value, nvLinkGpuConfig.DeviceInstance)
 				nvlifc, ok := nvLinkInterfaceMap[nvlifcKey]
 				if !ok {
 					logger.Warn().Str("NVLink Interface Key", nvlifcKey).Msg("NVLink Interface does not exist in DB, possibly created directly on Site")
 					continue
 				}
 
-				nvLinkGpuStatus := controllerInstance.Status.Nvlink.GpuStatuses[idx]
-				if nvLinkGpuStatus != nil {
-					var gpuGuid *string
-					if nvLinkGpuStatus.GpuGuid != nil && (nvlifc.GpuGUID == nil || *nvlifc.GpuGUID != *nvLinkGpuStatus.GpuGuid) {
-						gpuGuid = nvLinkGpuStatus.GpuGuid
-					}
-
-					var nvLinkDomainID *uuid.UUID
-					if nvLinkGpuStatus.DomainId != nil {
-						domainID, serr := uuid.Parse(nvLinkGpuStatus.DomainId.Value)
-						if serr != nil {
-							slogger.Warn().Err(serr).Msg("failed to parse NVLink Domain ID, not a valid UUID")
-						} else if nvlifc.NVLinkDomainID == nil || *nvlifc.NVLinkDomainID != domainID {
-							nvLinkDomainID = &domainID
+				// It will make sure no panic and we can access the GpuStatuses
+				if idx < len(controllerInstance.Status.Nvlink.GpuStatuses) {
+					nvLinkGpuStatus := controllerInstance.Status.Nvlink.GpuStatuses[idx]
+					if nvLinkGpuStatus != nil {
+						// If GpuStatuses may not be ordered identically to GpuConfigs; guard against
+						// a positional mismatch by confirming the LogicalPartitionId matches.
+						if nvlifc.NVLinkLogicalPartitionID.String() != nvLinkGpuStatus.LogicalPartitionId.Value {
+							continue
 						}
-					}
 
-					var status *string
-					if controllerInstance.Status.Nvlink.ConfigsSynced == cwsv1.SyncState_SYNCED && nvlifc.Status != cdbm.NVLinkInterfaceStatusReady {
-						status = cdb.GetStrPtr(cdbm.NVLinkInterfaceStatusReady)
-					}
+						var gpuGuid *string
+						if nvLinkGpuStatus.GpuGuid != nil && (nvlifc.GpuGUID == nil || *nvlifc.GpuGUID != *nvLinkGpuStatus.GpuGuid) {
+							gpuGuid = nvLinkGpuStatus.GpuGuid
+						}
 
-					if gpuGuid == nil && status == nil && nvLinkDomainID == nil {
-						continue
-					}
+						var nvLinkDomainID *uuid.UUID
+						if nvLinkGpuStatus.DomainId != nil {
+							domainID, serr := uuid.Parse(nvLinkGpuStatus.DomainId.Value)
+							if serr != nil {
+								slogger.Warn().Err(serr).Msg("failed to parse NVLink Domain ID, not a valid UUID")
+							} else if nvlifc.NVLinkDomainID == nil || *nvlifc.NVLinkDomainID != domainID {
+								nvLinkDomainID = &domainID
+							}
+						}
 
-					_, serr = nvlifcDAO.Update(
-						ctx,
-						nil,
-						cdbm.NVLinkInterfaceUpdateInput{
-							NVLinkInterfaceID: nvlifc.ID,
-							GpuGUID:           gpuGuid,
-							NVLinkDomainID:    nvLinkDomainID,
-							Status:            status,
-						},
-					)
+						var status *string
+						if controllerInstance.Status.Nvlink.ConfigsSynced == cwsv1.SyncState_SYNCED && nvlifc.Status != cdbm.NVLinkInterfaceStatusReady {
+							status = cdb.GetStrPtr(cdbm.NVLinkInterfaceStatusReady)
+						}
 
-					if serr != nil {
-						slogger.Error().Err(serr).Str("NVLink Interface ID", nvlifc.ID.String()).Msg("failed to update NVLink Interface in DB")
+						if gpuGuid == nil && status == nil && nvLinkDomainID == nil {
+							continue
+						}
+
+						_, serr = nvlifcDAO.Update(
+							ctx,
+							nil,
+							cdbm.NVLinkInterfaceUpdateInput{
+								NVLinkInterfaceID: nvlifc.ID,
+								GpuGUID:           gpuGuid,
+								NVLinkDomainID:    nvLinkDomainID,
+								Status:            status,
+							},
+						)
+
+						if serr != nil {
+							slogger.Error().Err(serr).Str("NVLink Interface ID", nvlifc.ID.String()).Msg("failed to update NVLink Interface in DB")
+						}
 					}
 				}
 			}
 		}
 
 		// Determine which NVLink Interfaces in Deleting state can be removed
-		for _, nvlifc := range deletingNVLinkInterfaces {
-			if util.IsTimeWithinStaleInventoryThreshold(nvlifc.Updated) {
-				continue
-			}
+		if controllerInstance.Config.Nvlink != nil && controllerInstance.Status.Nvlink != nil &&
+			controllerInstance.Status.Nvlink.ConfigsSynced == cwsv1.SyncState_SYNCED {
 
-			if controllerInstance.Config.Nvlink == nil || controllerInstance.Status.Nvlink == nil ||
-				controllerInstance.Status.Nvlink.ConfigsSynced != cwsv1.SyncState_SYNCED {
-				continue
-			}
-
-			// Check if GPU GUID/Partition combo for deleting Interface is reported in controller status
-			comboReported := false
-			if nvlifc.GpuGUID != nil && *nvlifc.GpuGUID != "" {
-				for _, gpuStatus := range controllerInstance.Status.Nvlink.GpuStatuses {
-					if gpuStatus != nil && gpuStatus.GpuGuid != nil && gpuStatus.LogicalPartitionId != nil {
-						if *gpuStatus.GpuGuid == *nvlifc.GpuGUID && gpuStatus.LogicalPartitionId.Value == nvlifc.NVLinkLogicalPartitionID.String() {
-							comboReported = true
-							break
-						}
-					}
+			// Build a set of GPU GUID/Partition by key reported by the controller
+			reportedNVLinkInterfacesByKey := map[string]bool{}
+			for _, gpuStatus := range controllerInstance.Status.Nvlink.GpuStatuses {
+				if gpuStatus != nil && gpuStatus.GpuGuid != nil && gpuStatus.LogicalPartitionId != nil {
+					nvLinkInterfaceKey := fmt.Sprintf("%s:%s", *gpuStatus.GpuGuid, gpuStatus.LogicalPartitionId.Value)
+					reportedNVLinkInterfacesByKey[nvLinkInterfaceKey] = true
 				}
 			}
 
-			if !comboReported {
-				// Combo not reported — safe to remove. Interfaces with nil/empty GpuGUID also
-				// land here because they can never match a reported status entry; since configs
-				// are confirmed synced above, absence from the controller is authoritative.
-				nvLinkInterfacesToDelete = append(nvLinkInterfacesToDelete, nvlifc)
-				continue
+			// Build a set of Pending/Ready interface by key for duplicate detection
+			pendingOrReadyNVLinkInterfacesByKey := map[string]bool{}
+			for _, nvlifc := range nvLinkInterfaces {
+				if (nvlifc.Status == cdbm.NVLinkInterfaceStatusPending || nvlifc.Status == cdbm.NVLinkInterfaceStatusReady) &&
+					nvlifc.GpuGUID != nil && *nvlifc.GpuGUID != "" {
+					nvLinkInterfaceKey := fmt.Sprintf("%s:%s", *nvlifc.GpuGUID, nvlifc.NVLinkLogicalPartitionID.String())
+					pendingOrReadyNVLinkInterfacesByKey[nvLinkInterfaceKey] = true
+				}
 			}
 
-			// Combo is reported - check if we have another interface with the same combo in Pending state
-			hasPendingOrReadyWithSameCombo := false
-			for _, otherNvlifc := range nvLinkInterfaces {
-				if otherNvlifc.ID == nvlifc.ID {
+			for _, nvlifc := range deletingNVLinkInterfaces {
+				if util.IsTimeWithinStaleInventoryThreshold(nvlifc.Updated) {
 					continue
 				}
-				if (otherNvlifc.Status == cdbm.NVLinkInterfaceStatusPending || otherNvlifc.Status == cdbm.NVLinkInterfaceStatusReady) &&
-					otherNvlifc.GpuGUID != nil && *otherNvlifc.GpuGUID == *nvlifc.GpuGUID &&
-					otherNvlifc.NVLinkLogicalPartitionID == nvlifc.NVLinkLogicalPartitionID {
-					hasPendingOrReadyWithSameCombo = true
-					break
-				}
-			}
 
-			if hasPendingOrReadyWithSameCombo {
-				nvLinkInterfacesToDelete = append(nvLinkInterfacesToDelete, nvlifc)
+				nvLinkInterfaceKey := ""
+				if nvlifc.GpuGUID != nil && *nvlifc.GpuGUID != "" {
+					nvLinkInterfaceKey = fmt.Sprintf("%s:%s", *nvlifc.GpuGUID, nvlifc.NVLinkLogicalPartitionID.String())
+				}
+
+				if nvLinkInterfaceKey == "" || !reportedNVLinkInterfacesByKey[nvLinkInterfaceKey] {
+					// NVLink Interface not reported — safe to remove. Interfaces with nil/empty GpuGUID also
+					// land here because they can never match a reported status entry; since configs
+					// are confirmed synced above, absence from the controller is authoritative.
+					nvLinkInterfacesToDelete = append(nvLinkInterfacesToDelete, nvlifc)
+					continue
+				}
+
+				// If the NVLink Interface is Pending or Ready and the GpuGUID is the same as the one in the controller status,
+				// we can delete it because it is a duplicate with different status
+				if pendingOrReadyNVLinkInterfacesByKey[nvLinkInterfaceKey] {
+					nvLinkInterfacesToDelete = append(nvLinkInterfacesToDelete, nvlifc)
+				}
 			}
 		}
 
