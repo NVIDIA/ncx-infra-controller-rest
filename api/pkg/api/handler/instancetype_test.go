@@ -160,6 +160,64 @@ func TestCreateInstanceTypeHandler_Handle(t *testing.T) {
 		},
 	}
 
+	itcrValidGPUNVLink := &model.APIInstanceTypeCreateRequest{
+		Name:        "gpu-nvlink.large",
+		Description: cdb.GetStrPtr("Instance type with GPU NVLink capability"),
+		SiteID:      st.ID.String(),
+		MachineCapabilities: []model.APIMachineCapability{
+			{
+				Type:       cdbm.MachineCapabilityTypeGPU,
+				Name:       "NVIDIA GB200",
+				Capacity:   cdb.GetStrPtr("189471 MiB"),
+				Frequency:  cdb.GetStrPtr("2062 MHz"),
+				DeviceType: cdb.GetStrPtr(cdbm.MachineCapabilityDeviceTypeNVLink),
+				Count:      cdb.GetIntPtr(4),
+			},
+		},
+	}
+
+	itcrInvalidGPUDeviceType := &model.APIInstanceTypeCreateRequest{
+		Name:        "gpu-bad-device.large",
+		Description: cdb.GetStrPtr("Instance type with unsupported GPU device type"),
+		SiteID:      st.ID.String(),
+		MachineCapabilities: []model.APIMachineCapability{
+			{
+				Type:       cdbm.MachineCapabilityTypeGPU,
+				Name:       "NVIDIA GB200",
+				DeviceType: cdb.GetStrPtr("DPU"),
+				Count:      cdb.GetIntPtr(4),
+			},
+		},
+	}
+
+	itcrInvalidNetworkDeviceType := &model.APIInstanceTypeCreateRequest{
+		Name:        "network-bad-device.large",
+		Description: cdb.GetStrPtr("Instance type with unsupported Network device type"),
+		SiteID:      st.ID.String(),
+		MachineCapabilities: []model.APIMachineCapability{
+			{
+				Type:       cdbm.MachineCapabilityTypeNetwork,
+				Name:       "MT43244 BlueField-3 integrated ConnectX-7 network controller",
+				DeviceType: cdb.GetStrPtr("NVLink"),
+				Count:      cdb.GetIntPtr(2),
+			},
+		},
+	}
+
+	itcrInvalidCPUDeviceType := &model.APIInstanceTypeCreateRequest{
+		Name:        "cpu-with-device-type.large",
+		Description: cdb.GetStrPtr("Instance type with device type on unsupported capability"),
+		SiteID:      st.ID.String(),
+		MachineCapabilities: []model.APIMachineCapability{
+			{
+				Type:       cdbm.MachineCapabilityTypeCPU,
+				Name:       "Intel Xeon Gold 6354",
+				DeviceType: cdb.GetStrPtr("DPU"),
+				Count:      cdb.GetIntPtr(2),
+			},
+		},
+	}
+
 	itcrValidWithoutMachineCapabilities := &model.APIInstanceTypeCreateRequest{
 		Name:        "x2.large.missing.mc",
 		Description: cdb.GetStrPtr("Test Description"),
@@ -425,6 +483,67 @@ func TestCreateInstanceTypeHandler_Handle(t *testing.T) {
 			},
 			wantErr:  false,
 			respCode: http.StatusBadRequest,
+		},
+		{
+			name: "test create Instance Type API endpoint with valid GPU NVLink device type",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        &tmocks.Client{},
+				scp:       scp,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: itcrValidGPUNVLink,
+			},
+			wantErr:                     false,
+			respCode:                    http.StatusCreated,
+			expectedResourcesCount:      2,
+			expectedMachineCapabilities: 1,
+		},
+		{
+			name: "test create Instance Type API endpoint with unsupported GPU device type",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        &tmocks.Client{},
+				scp:       scp,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: itcrInvalidGPUDeviceType,
+			},
+			wantErr:  false,
+			respCode: http.StatusBadRequest,
+			errMsg:   "Unsupported Device Type specified for GPU Capability",
+		},
+		{
+			name: "test create Instance Type API endpoint with unsupported Network device type",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        &tmocks.Client{},
+				scp:       scp,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: itcrInvalidNetworkDeviceType,
+			},
+			wantErr:  false,
+			respCode: http.StatusBadRequest,
+			errMsg:   "Unsupported Device Type specified for Network Capability",
+		},
+		{
+			name: "test create Instance Type API endpoint with device type on unsupported capability type",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        &tmocks.Client{},
+				scp:       scp,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: itcrInvalidCPUDeviceType,
+			},
+			wantErr:  false,
+			respCode: http.StatusBadRequest,
+			errMsg:   "Unsupported Device Type: DPU specified for Capability type CPU",
 		},
 	}
 	for _, tt := range tests {

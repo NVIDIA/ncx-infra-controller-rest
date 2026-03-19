@@ -19,6 +19,7 @@ package model
 
 import (
 	"errors"
+	"net/netip"
 	"time"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
@@ -34,6 +35,8 @@ type APIInterfaceCreateOrUpdateRequest struct {
 	SubnetID *string `json:"subnetId"`
 	// VpcPrefixID is the ID of the VpcPrefix
 	VpcPrefixID *string `json:"vpcPrefixId"`
+	// IPAddress is the explicitly requested IP address for the Interface
+	IPAddress *string `json:"ipAddress"`
 	// Device is the device name of the Interface
 	Device *string `json:"device"`
 	// DeviceInstance is the ID of the DeviceInstance
@@ -48,6 +51,25 @@ func (ifcr APIInterfaceCreateOrUpdateRequest) IsMultiEthernetInterface() bool {
 	return ifcr.Device != nil && ifcr.DeviceInstance != nil
 }
 
+func validateInterfaceRequestedIpAddressHostBit(value any) error {
+	ipStr, ok := value.(*string)
+	if !ok || ipStr == nil {
+		return nil
+	}
+
+	addr, err := netip.ParseAddr(*ipStr)
+	if err != nil {
+		return errors.New("ipAddress must be a valid IPv4 or IPv6 address")
+	}
+
+	ipBytes := addr.AsSlice()
+	if len(ipBytes) == 0 || ipBytes[len(ipBytes)-1]&0x01 == 0 {
+		return errors.New("ipAddress must have a final host bit of 1")
+	}
+
+	return nil
+}
+
 // Validate ensure the values passed in request are acceptable
 func (ifcr APIInterfaceCreateOrUpdateRequest) Validate() error {
 	err := validation.ValidateStruct(&ifcr,
@@ -55,6 +77,9 @@ func (ifcr APIInterfaceCreateOrUpdateRequest) Validate() error {
 			validationis.UUID.Error(validationErrorInvalidUUID)),
 		validation.Field(&ifcr.VpcPrefixID,
 			validationis.UUID.Error(validationErrorInvalidUUID)),
+		validation.Field(&ifcr.IPAddress,
+			validation.When(ifcr.IPAddress != nil, validation.By(validateInterfaceRequestedIpAddressHostBit)),
+		),
 		validation.Field(&ifcr.DeviceInstance,
 			validation.Min(0).Error("deviceInstance must be equal or greater than 0")),
 		validation.Field(&ifcr.VirtualFunctionID,
@@ -65,6 +90,12 @@ func (ifcr APIInterfaceCreateOrUpdateRequest) Validate() error {
 	if ifcr.SubnetID != nil && ifcr.VpcPrefixID != nil {
 		return validation.Errors{
 			"subnetId": errors.New("`subnetId` and `vpcPrefixId` cannot be specified together"),
+		}
+	}
+
+	if ifcr.IPAddress != nil && ifcr.SubnetID != nil {
+		return validation.Errors{
+			"ipAddress": errors.New("cannot be specified for Subnet based Interfaces"),
 		}
 	}
 
@@ -130,6 +161,8 @@ type APIInterface struct {
 	MacAddress *string `json:"macAddress"`
 	// IPAddresses is the list of IP addresses assigned to the Interface
 	IPAddresses []string `json:"ipAddresses"`
+	// RequestedIpAddress is the explicitly requested IP address for the Interface
+	RequestedIpAddress *string `json:"requestedIpAddress"`
 	// Status is the status of the Interface
 	Status string `json:"status"`
 	// Created is the date and time the entity was created
@@ -141,14 +174,15 @@ type APIInterface struct {
 // NewAPIInterface creates a new APIInterface
 func NewAPIInterface(dbis *cdbm.Interface) *APIInterface {
 	apiInterface := &APIInterface{
-		ID:          dbis.ID.String(),
-		InstanceID:  dbis.InstanceID.String(),
-		IsPhysical:  dbis.IsPhysical,
-		MacAddress:  dbis.MacAddress,
-		IPAddresses: dbis.IPAddresses,
-		Status:      dbis.Status,
-		Created:     dbis.Created,
-		Updated:     dbis.Updated,
+		ID:                 dbis.ID.String(),
+		InstanceID:         dbis.InstanceID.String(),
+		IsPhysical:         dbis.IsPhysical,
+		MacAddress:         dbis.MacAddress,
+		IPAddresses:        dbis.IPAddresses,
+		RequestedIpAddress: dbis.RequestedIpAddress,
+		Status:             dbis.Status,
+		Created:            dbis.Created,
+		Updated:            dbis.Updated,
 	}
 
 	if dbis.Instance != nil {

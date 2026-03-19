@@ -1515,6 +1515,7 @@ func TestManageInstance_UpdateInstancesInDB(t *testing.T) {
 	var vfID uint32 = 1
 	macAddress := "2F-FC-34-AE-9C-2A"
 	ipAddresses := []string{"200.32.11.190", "51aa:f78b:ffb0:1c58:7bee:b9e7:bf35:0962"}
+	requestedIpAddress := "10.0.0.15"
 
 	// Instance 10 is already set to Error/marked as missing, no new status details is created for it when it's reported missing again
 	instance10, err := instanceDAO.Create(
@@ -1688,6 +1689,8 @@ func TestManageInstance_UpdateInstancesInDB(t *testing.T) {
 
 	ifcvpc_pending := util.TestBuildInterface(t, dbSession, &instance15.ID, nil, &vpcPrefix2.ID, true, nil, nil, nil, &tnu.ID, cdbm.InterfaceStatusPending)
 	assert.NotNil(t, ifcvpc_pending)
+	_, err = cdbm.NewInterfaceDAO(dbSession).Update(ctx, nil, cdbm.InterfaceUpdateInput{InterfaceID: ifcvpc_pending.ID, RequestedIpAddress: &requestedIpAddress})
+	assert.Nil(t, err)
 
 	// Instance 16 starts with an initial TPM EK certificate and gets updated with a new certificate value
 	machine16 := util.TestBuildMachine(t, dbSession, ip.ID, site.ID, nil, cdb.GetBoolPtr(true), cdbm.MachineStatusReady)
@@ -2010,7 +2013,8 @@ func TestManageInstance_UpdateInstancesInDB(t *testing.T) {
 								NetworkDetails: &cwsv1.InstanceInterfaceConfig_VpcPrefixId{
 									VpcPrefixId: &cwsv1.VpcPrefixId{Value: vpcPrefix1.ID.String()},
 								},
-								Device: cdb.GetStrPtr("MT43244 BlueField-3 integrated ConnectX-7 network controller"),
+								Device:    cdb.GetStrPtr("MT43244 BlueField-3 integrated ConnectX-7 network controller"),
+								IpAddress: &requestedIpAddress,
 							},
 							{
 								FunctionType:     cwsv1.InterfaceFunctionType_VIRTUAL_FUNCTION,
@@ -2387,6 +2391,7 @@ func TestManageInstance_UpdateInstancesInDB(t *testing.T) {
 		unchangedInstances                    []*cdbm.Instance
 		deletingInterfaces                    []*cdbm.Interface
 		readyInterfaces                       []*cdbm.Interface
+		clearedRequestedIpInterfaces          []*cdbm.Interface
 		vpcPrefixInterfaces                   []*cdbm.Interface
 		multiDPUInterfaces                    []*cdbm.Interface
 		deletedInfiniBandInterfaces           []*cdbm.InfiniBandInterface
@@ -2424,6 +2429,7 @@ func TestManageInstance_UpdateInstancesInDB(t *testing.T) {
 			unchangedInstances:              []*cdbm.Instance{instance13, instance14},
 			deletingInterfaces:              []*cdbm.Interface{ifcvpc_deleting},
 			readyInterfaces:                 []*cdbm.Interface{ifcvpc_pending},
+			clearedRequestedIpInterfaces:    []*cdbm.Interface{ifcvpc_pending},
 			deletedInfiniBandInterfaces:     []*cdbm.InfiniBandInterface{ibInterface3, ibInterface18_1, ibInterface18_2, ibInterface18_3},
 			readyInfiniBandInterfaces:       []*cdbm.InfiniBandInterface{ibInterface1, ibInterface2},
 			multiDPUInterfaces:              []*cdbm.Interface{ifcvpc0, ifcvpc1, ifcvpc0_1, ifcvpc1_1},
@@ -2655,6 +2661,8 @@ func TestManageInstance_UpdateInstancesInDB(t *testing.T) {
 					assert.Equal(t, vpcPrefix1.ID, *ifcvpc.VpcPrefixID)
 				}
 				assert.True(t, ifcvpc.IsPhysical)
+				require.NotNil(t, ifcvpc.RequestedIpAddress)
+				assert.Equal(t, requestedIpAddress, *ifcvpc.RequestedIpAddress)
 				assert.Equal(t, macAddress, *ifcvpc.MacAddress)
 				assert.Equal(t, ipAddresses, ifcvpc.IPAddresses)
 				assert.Equal(t, cdbm.InterfaceStatusReady, ifcvpc.Status)
@@ -2814,6 +2822,12 @@ func TestManageInstance_UpdateInstancesInDB(t *testing.T) {
 				inteface, err := ifcDAO.GetByID(ctx, nil, ifc.ID, nil)
 				assert.Nil(t, err)
 				assert.Equal(t, cdbm.InterfaceStatusReady, inteface.Status)
+			}
+
+			for _, ifc := range tc.clearedRequestedIpInterfaces {
+				inteface, err := ifcDAO.GetByID(ctx, nil, ifc.ID, nil)
+				assert.Nil(t, err)
+				assert.Nil(t, inteface.RequestedIpAddress)
 			}
 
 			if tc.deletedInfiniBandInterfaces != nil {

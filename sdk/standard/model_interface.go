@@ -34,10 +34,12 @@ type Interface struct {
 	VirtualFunctionId NullableInt32  `json:"virtualFunctionId,omitempty"`
 	MacAddress        NullableString `json:"macAddress,omitempty"`
 	// A list of IPv4 or IPv6 addresses
-	IpAddresses []string         `json:"ipAddresses,omitempty"`
-	Status      *InterfaceStatus `json:"status,omitempty"`
-	Created     *time.Time       `json:"created,omitempty"`
-	Updated     *time.Time       `json:"updated,omitempty"`
+	IpAddresses []string `json:"ipAddresses,omitempty"`
+	// Explicitly requested IP address for the interface. This is only used for VPC Prefix based interfaces and is not valid for Subnet based interfaces. The least-significant host bit must be 1.
+	RequestedIpAddress NullableString   `json:"requestedIpAddress,omitempty"`
+	Status             *InterfaceStatus `json:"status,omitempty"`
+	Created            *time.Time       `json:"created,omitempty"`
+	Updated            *time.Time       `json:"updated,omitempty"`
 }
 
 // NewInterface instantiates a new Interface object
@@ -443,6 +445,49 @@ func (o *Interface) SetIpAddresses(v []string) {
 	o.IpAddresses = v
 }
 
+// GetRequestedIpAddress returns the RequestedIpAddress field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *Interface) GetRequestedIpAddress() string {
+	if o == nil || IsNil(o.RequestedIpAddress.Get()) {
+		var ret string
+		return ret
+	}
+	return *o.RequestedIpAddress.Get()
+}
+
+// GetRequestedIpAddressOk returns a tuple with the RequestedIpAddress field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *Interface) GetRequestedIpAddressOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return o.RequestedIpAddress.Get(), o.RequestedIpAddress.IsSet()
+}
+
+// HasRequestedIpAddress returns a boolean if a field has been set.
+func (o *Interface) HasRequestedIpAddress() bool {
+	if o != nil && o.RequestedIpAddress.IsSet() {
+		return true
+	}
+
+	return false
+}
+
+// SetRequestedIpAddress gets a reference to the given NullableString and assigns it to the RequestedIpAddress field.
+func (o *Interface) SetRequestedIpAddress(v string) {
+	o.RequestedIpAddress.Set(&v)
+}
+
+// SetRequestedIpAddressNil sets the value for RequestedIpAddress to be an explicit nil
+func (o *Interface) SetRequestedIpAddressNil() {
+	o.RequestedIpAddress.Set(nil)
+}
+
+// UnsetRequestedIpAddress ensures that no value is present for RequestedIpAddress, not even an explicit nil
+func (o *Interface) UnsetRequestedIpAddress() {
+	o.RequestedIpAddress.Unset()
+}
+
 // GetStatus returns the Status field value if set, zero value otherwise.
 func (o *Interface) GetStatus() InterfaceStatus {
 	if o == nil || IsNil(o.Status) {
@@ -578,6 +623,9 @@ func (o Interface) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.IpAddresses) {
 		toSerialize["ipAddresses"] = o.IpAddresses
+	}
+	if o.RequestedIpAddress.IsSet() {
+		toSerialize["requestedIpAddress"] = o.RequestedIpAddress.Get()
 	}
 	if !IsNil(o.Status) {
 		toSerialize["status"] = o.Status

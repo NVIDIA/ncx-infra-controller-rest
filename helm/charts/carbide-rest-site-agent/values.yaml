@@ -54,6 +54,16 @@ certificate:
 rbac:
   create: true
 
+bootstrap:
+  # Set to true to enable the pre-install/pre-upgrade Helm hook that registers
+  # this site with carbide-rest-site-manager and creates the site-registration secret.
+  # Requires envConfig.CLUSTER_ID to be set.
+  enabled: false
+  image: alpine/k8s:1.29.4
+  siteManager:
+    address: carbide-rest-site-manager.carbide-rest
+    tlsSecret: site-manager-tls
+
 envConfig:
   ESA_PORT: "8080"
   METRICS_PORT: "2112"

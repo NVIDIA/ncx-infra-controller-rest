@@ -3043,6 +3043,10 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 					assert.Equal(t, rst.Interfaces[0].VpcPrefixID, tt.args.reqData.Interfaces[0].VpcPrefixID)
 				}
 
+				if tt.args.reqData.Interfaces[0].IPAddress != nil {
+					assert.Equal(t, rst.Interfaces[0].RequestedIpAddress, tt.args.reqData.Interfaces[0].IPAddress)
+				}
+
 			}
 			// Test that first Interface entry is physical
 			assert.True(t, rst.Interfaces[0].IsPhysical)
@@ -5042,6 +5046,10 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 						assert.Equal(t, ifcs[i].VirtualFunctionID, tt.args.reqData.Interfaces[i].VirtualFunctionID)
 					}
 
+					if tt.args.reqData.Interfaces[i].IPAddress != nil {
+						assert.Equal(t, tt.args.reqData.Interfaces[i].IPAddress, ifcs[i].RequestedIpAddress)
+					}
+
 					assert.Equal(t, cdbm.InterfaceStatusPending, ifcs[i].Status)
 				}
 			}
@@ -5162,6 +5170,10 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 						// Check if VirtualFunctionId is present
 						if reqInsIfcs[i].VirtualFunctionID != nil {
 							assert.Equal(t, siteIfc.VirtualFunctionId, reqInsIfcs[i].VirtualFunctionID)
+						}
+
+						if reqInsIfcs[i].RequestedIpAddress != nil {
+							assert.Equal(t, siteIfc.IpAddress, reqInsIfcs[i].RequestedIpAddress)
 						}
 					}
 

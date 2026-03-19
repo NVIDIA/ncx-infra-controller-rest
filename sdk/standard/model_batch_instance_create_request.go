@@ -20,7 +20,7 @@ import (
 // checks if the BatchInstanceCreateRequest type satisfies the MappedNullable interface at compile time
 var _ MappedNullable = &BatchInstanceCreateRequest{}
 
-// BatchInstanceCreateRequest Request data to batch create multiple Instances with topology-optimized machine allocation
+// BatchInstanceCreateRequest Request data to batch create multiple Instances with topology-optimized machine allocation. Explicit interface `ipAddress` values are not supported in batch requests.
 type BatchInstanceCreateRequest struct {
 	// Prefix for instance names. Instances will be named with this prefix followed by a random 6-character suffix (e.g., \"worker\" becomes \"worker-abc123\")
 	NamePrefix string `json:"namePrefix"`
@@ -47,7 +47,7 @@ type BatchInstanceCreateRequest struct {
 	// When set to true, the Instances will be enabled with the Phone Home service.
 	PhoneHomeEnabled *bool             `json:"phoneHomeEnabled,omitempty"`
 	Labels           map[string]string `json:"labels,omitempty"`
-	// Interface configuration shared across all instances. At least one interface must be specified. Either Subnet or VPC Prefix interfaces allowed, only one of the Subnets or VPC Prefixes can be attached over Physical interface.
+	// Interface configuration shared across all instances. At least one interface must be specified. Either Subnet or VPC Prefix interfaces allowed, only one of the Subnets or VPC Prefixes can be attached over Physical interface. Interface `ipAddress` is not supported for batch instance creation requests.
 	Interfaces []InterfaceCreateRequest `json:"interfaces"`
 	// InfiniBand interface configuration shared across all instances
 	InfinibandInterfaces []InfiniBandInterfaceCreateRequest `json:"infinibandInterfaces,omitempty"`

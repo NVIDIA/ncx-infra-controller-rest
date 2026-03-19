@@ -1270,15 +1270,16 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 	for _, inst := range updatedInstances {
 		for _, dbifc := range dbInterfaces {
 			ifcInputs = append(ifcInputs, cdbm.InterfaceCreateInput{
-				InstanceID:        inst.ID,
-				SubnetID:          dbifc.SubnetID,
-				VpcPrefixID:       dbifc.VpcPrefixID,
-				Device:            dbifc.Device,
-				DeviceInstance:    dbifc.DeviceInstance,
-				VirtualFunctionID: dbifc.VirtualFunctionID,
-				IsPhysical:        dbifc.IsPhysical,
-				Status:            cdbm.InterfaceStatusPending,
-				CreatedBy:         dbUser.ID,
+				InstanceID:         inst.ID,
+				SubnetID:           dbifc.SubnetID,
+				VpcPrefixID:        dbifc.VpcPrefixID,
+				Device:             dbifc.Device,
+				DeviceInstance:     dbifc.DeviceInstance,
+				VirtualFunctionID:  dbifc.VirtualFunctionID,
+				RequestedIpAddress: dbifc.RequestedIpAddress,
+				IsPhysical:         dbifc.IsPhysical,
+				Status:             cdbm.InterfaceStatusPending,
+				CreatedBy:          dbUser.ID,
 			})
 		}
 	}

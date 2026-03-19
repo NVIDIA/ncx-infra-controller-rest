@@ -88,6 +88,7 @@ type Interface struct {
 	DeviceInstance     *int              `bun:"device_instance"`
 	IsPhysical         bool              `bun:"is_physical,notnull"`
 	VirtualFunctionID  *int              `bun:"virtual_function_id"`
+	RequestedIpAddress *string           `bun:"requested_ip_address"`
 	MacAddress         *string           `bun:"mac_address"`
 	IPAddresses        []string          `bun:"ip_addresses,type:text[]"`
 	Status             string            `bun:"status,notnull"`
@@ -99,29 +100,31 @@ type Interface struct {
 
 // InterfaceCreateInput input parameters for Create method
 type InterfaceCreateInput struct {
-	InstanceID        uuid.UUID
-	SubnetID          *uuid.UUID
-	VpcPrefixID       *uuid.UUID
-	IsPhysical        bool
-	Device            *string
-	DeviceInstance    *int
-	VirtualFunctionID *int
-	Status            string
-	CreatedBy         uuid.UUID
+	InstanceID         uuid.UUID
+	SubnetID           *uuid.UUID
+	VpcPrefixID        *uuid.UUID
+	IsPhysical         bool
+	Device             *string
+	DeviceInstance     *int
+	VirtualFunctionID  *int
+	RequestedIpAddress *string
+	Status             string
+	CreatedBy          uuid.UUID
 }
 
 // InterfaceUpdateInput input parameters for Update method
 type InterfaceUpdateInput struct {
-	InterfaceID       uuid.UUID
-	InstanceID        *uuid.UUID
-	SubnetID          *uuid.UUID
-	VpcPrefixID       *uuid.UUID
-	Device            *string
-	DeviceInstance    *int
-	VirtualFunctionID *int
-	MacAddress        *string
-	IpAddresses       []string
-	Status            *string
+	InterfaceID        uuid.UUID
+	InstanceID         *uuid.UUID
+	SubnetID           *uuid.UUID
+	VpcPrefixID        *uuid.UUID
+	Device             *string
+	DeviceInstance     *int
+	VirtualFunctionID  *int
+	RequestedIpAddress *string
+	MacAddress         *string
+	IpAddresses        []string
+	Status             *string
 }
 
 // InterfaceFilterInput input parameters for Filter method
@@ -134,6 +137,12 @@ type InterfaceFilterInput struct {
 	IsPhysical     *bool
 	Statuses       []string
 	IPAddresses    []string
+}
+
+// InterfaceClearInput input parameters for Clear method
+type InterfaceClearInput struct {
+	InterfaceID        uuid.UUID
+	RequestedIpAddress bool
 }
 
 var _ bun.BeforeAppendModelHook = (*Interface)(nil)
@@ -172,6 +181,8 @@ type InterfaceDAO interface {
 	GetAll(ctx context.Context, tx *db.Tx, filter InterfaceFilterInput, page paginator.PageInput, includeRelations []string) ([]Interface, int, error)
 	//
 	Update(ctx context.Context, tx *db.Tx, input InterfaceUpdateInput) (*Interface, error)
+	//
+	Clear(ctx context.Context, tx *db.Tx, input InterfaceClearInput) (*Interface, error)
 	//
 	Delete(ctx context.Context, tx *db.Tx, id uuid.UUID) error
 }
@@ -411,6 +422,14 @@ func (ifcd InterfaceSQLDAO) Update(ctx context.Context, tx *db.Tx, input Interfa
 			ifcd.tracerSpan.SetAttribute(interfaceDAOSpan, "virtual_function_id", *input.VirtualFunctionID)
 		}
 	}
+	if input.RequestedIpAddress != nil {
+		is.RequestedIpAddress = input.RequestedIpAddress
+		updatedFields = append(updatedFields, "requested_ip_address")
+
+		if interfaceDAOSpan != nil {
+			ifcd.tracerSpan.SetAttribute(interfaceDAOSpan, "requested_ip_address", *input.RequestedIpAddress)
+		}
+	}
 	if input.MacAddress != nil {
 		is.MacAddress = input.MacAddress
 		updatedFields = append(updatedFields, "mac_address")
@@ -499,16 +518,17 @@ func (ifcd InterfaceSQLDAO) CreateMultiple(ctx context.Context, tx *db.Tx, input
 
 	for _, input := range inputs {
 		is := Interface{
-			ID:                uuid.New(),
-			InstanceID:        input.InstanceID,
-			SubnetID:          input.SubnetID,
-			VpcPrefixID:       input.VpcPrefixID,
-			Device:            input.Device,
-			DeviceInstance:    input.DeviceInstance,
-			VirtualFunctionID: input.VirtualFunctionID,
-			IsPhysical:        input.IsPhysical,
-			Status:            input.Status,
-			CreatedBy:         input.CreatedBy,
+			ID:                 uuid.New(),
+			InstanceID:         input.InstanceID,
+			SubnetID:           input.SubnetID,
+			VpcPrefixID:        input.VpcPrefixID,
+			Device:             input.Device,
+			DeviceInstance:     input.DeviceInstance,
+			VirtualFunctionID:  input.VirtualFunctionID,
+			RequestedIpAddress: input.RequestedIpAddress,
+			IsPhysical:         input.IsPhysical,
+			Status:             input.Status,
+			CreatedBy:          input.CreatedBy,
 		}
 		interfaces = append(interfaces, is)
 		ids = append(ids, is.ID)
@@ -549,4 +569,42 @@ func NewInterfaceDAO(dbSession *db.Session) InterfaceDAO {
 		dbSession:  dbSession,
 		tracerSpan: stracer.NewTracerSpan(),
 	}
+}
+
+// Clear sets parameters of an existing Interface to null values in db.
+// Since there are 2 operations (UPDATE, SELECT), this must be within
+// a transaction.
+func (ifcd InterfaceSQLDAO) Clear(ctx context.Context, tx *db.Tx, input InterfaceClearInput) (*Interface, error) {
+	// Create a child span and set the attributes for current request
+	ctx, interfaceDAOSpan := ifcd.tracerSpan.CreateChildInCurrentContext(ctx, "InterfaceDAO.Clear")
+	if interfaceDAOSpan != nil {
+		defer interfaceDAOSpan.End()
+		ifcd.tracerSpan.SetAttribute(interfaceDAOSpan, "id", input.InterfaceID.String())
+	}
+
+	i := &Interface{
+		ID: input.InterfaceID,
+	}
+
+	updatedFields := []string{}
+
+	if input.RequestedIpAddress {
+		i.RequestedIpAddress = nil
+		updatedFields = append(updatedFields, "requested_ip_address")
+	}
+
+	if len(updatedFields) > 0 {
+		updatedFields = append(updatedFields, "updated")
+
+		_, err := db.GetIDB(tx, ifcd.dbSession).NewUpdate().Model(i).Column(updatedFields...).Where("id = ?", input.InterfaceID).Exec(ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	nv, err := ifcd.GetByID(ctx, tx, i.ID, nil)
+	if err != nil {
+		return nil, err
+	}
+	return nv, nil
 }

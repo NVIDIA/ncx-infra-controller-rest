@@ -25,6 +25,7 @@ import (
 	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewAPIInterface(t *testing.T) {
@@ -38,6 +39,7 @@ func TestNewAPIInterface(t *testing.T) {
 		SubnetID:           cdb.GetUUIDPtr(uuid.New()),
 		VpcPrefixID:        nil,
 		MachineInterfaceID: cdb.GetUUIDPtr(uuid.New()),
+		RequestedIpAddress: cdb.GetStrPtr("192.0.2.10"),
 		Created:            time.Now(),
 		Updated:            time.Now(),
 	}
@@ -53,12 +55,13 @@ func TestNewAPIInterface(t *testing.T) {
 				dbis: dbis,
 			},
 			want: &APIInterface{
-				ID:         dbis.ID.String(),
-				InstanceID: dbis.InstanceID.String(),
-				SubnetID:   cdb.GetStrPtr(dbis.SubnetID.String()),
-				Status:     dbis.Status,
-				Created:    dbis.Created,
-				Updated:    dbis.Updated,
+				ID:                 dbis.ID.String(),
+				InstanceID:         dbis.InstanceID.String(),
+				SubnetID:           cdb.GetStrPtr(dbis.SubnetID.String()),
+				RequestedIpAddress: cdb.GetStrPtr("192.0.2.10"),
+				Status:             dbis.Status,
+				Created:            dbis.Created,
+				Updated:            dbis.Updated,
 			},
 		},
 	}
@@ -75,6 +78,7 @@ func TestAPIInterfaceCreateRequest_Validate(t *testing.T) {
 	type fields struct {
 		SubnetID    *string
 		VpcPrefixID *string
+		IPAddress   *string
 		IsPhysical  bool
 		Device      *string
 
@@ -82,9 +86,10 @@ func TestAPIInterfaceCreateRequest_Validate(t *testing.T) {
 		VirtualFunctionID *int
 	}
 	tests := []struct {
-		name    string
-		fields  fields
-		wantErr bool
+		name             string
+		fields           fields
+		wantErr          bool
+		wantErrorMessage string
 	}{
 		{
 			name: "test valid Interface Subnet request",
@@ -97,6 +102,7 @@ func TestAPIInterfaceCreateRequest_Validate(t *testing.T) {
 			name: "test valid Interface VpcPrefix request",
 			fields: fields{
 				VpcPrefixID: cdb.GetStrPtr(uuid.New().String()),
+				IPAddress:   cdb.GetStrPtr("192.0.2.11"),
 				IsPhysical:  true,
 			},
 			wantErr: false,
@@ -148,6 +154,7 @@ func TestAPIInterfaceCreateRequest_Validate(t *testing.T) {
 			name: "test invalid Interface device and deviceInterface request",
 			fields: fields{
 				VpcPrefixID:       cdb.GetStrPtr(uuid.New().String()),
+				IPAddress:         cdb.GetStrPtr("192.0.2.11"),
 				IsPhysical:        false,
 				Device:            cdb.GetStrPtr("test-device"),
 				DeviceInstance:    cdb.GetIntPtr(1),
@@ -183,6 +190,39 @@ func TestAPIInterfaceCreateRequest_Validate(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "test invalid Interface ipAddress with subnet request",
+			fields: fields{
+				SubnetID:  cdb.GetStrPtr(uuid.New().String()),
+				IPAddress: cdb.GetStrPtr("192.0.2.11"),
+			},
+			wantErr:          true,
+			wantErrorMessage: "cannot be specified for Subnet based Interfaces",
+		},
+		{
+			name: "test invalid Interface ipAddress without subnet or vpc prefix request",
+			fields: fields{
+				IPAddress: cdb.GetStrPtr("192.0.2.11"),
+			},
+			wantErr:          true,
+			wantErrorMessage: "either `subnetId` or `vpcPrefixId` must be specified",
+		},
+		{
+			name: "test invalid Interface ipAddress with final host bit 0",
+			fields: fields{
+				VpcPrefixID: cdb.GetStrPtr(uuid.New().String()),
+				IPAddress:   cdb.GetStrPtr("192.0.2.10"),
+			},
+			wantErr: true,
+		},
+		{
+			name: "test invalid Interface ipAddress request",
+			fields: fields{
+				VpcPrefixID: cdb.GetStrPtr(uuid.New().String()),
+				IPAddress:   cdb.GetStrPtr("not-an-ip"),
+			},
+			wantErr: true,
+		},
+		{
 			name: "test invalid Interface device and deviceInterface request",
 			fields: fields{
 				Device:         cdb.GetStrPtr("test-device"),
@@ -205,12 +245,18 @@ func TestAPIInterfaceCreateRequest_Validate(t *testing.T) {
 			iscr := APIInterfaceCreateOrUpdateRequest{
 				SubnetID:       tt.fields.SubnetID,
 				VpcPrefixID:    tt.fields.VpcPrefixID,
+				IPAddress:      tt.fields.IPAddress,
 				IsPhysical:     tt.fields.IsPhysical,
 				Device:         tt.fields.Device,
 				DeviceInstance: tt.fields.DeviceInstance,
 			}
-			if err := iscr.Validate(); (err != nil) != tt.wantErr {
+			err := iscr.Validate()
+			if (err != nil) != tt.wantErr {
 				t.Errorf("APIInterfaceCreateOrUpdateRequest.Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			if tt.wantErrorMessage != "" && err != nil {
+				assert.Contains(t, err.Error(), tt.wantErrorMessage)
 			}
 		})
 	}
