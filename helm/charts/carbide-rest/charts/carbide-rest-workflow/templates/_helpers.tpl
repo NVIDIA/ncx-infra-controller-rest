@@ -20,3 +20,22 @@ app.kubernetes.io/name: carbide-rest-workflow
 {{- define "carbide-rest-workflow.image" -}}
 {{ .Values.global.image.repository }}/{{ .Values.image.name }}:{{ .Values.global.image.tag }}
 {{- end }}
+
+{{- define "carbide-rest-workflow.dbCredsVolumeMount" -}}
+{{- if .Values.secrets.dbCreds }}
+- name: db-creds
+  mountPath: /var/secrets/db
+  readOnly: true
+{{- end }}
+{{- end }}
+
+{{- define "carbide-rest-workflow.dbCredsVolume" -}}
+{{- if .Values.secrets.dbCreds }}
+- name: db-creds
+  secret:
+    secretName: {{ .Values.secrets.dbCreds }}
+    items:
+      - key: password
+        path: password
+{{- end }}
+{{- end }}

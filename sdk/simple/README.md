@@ -1,6 +1,6 @@
 # Simple SDK
 
-The Simple SDK provides a simplified, high-level interface to the Bare Metal Manager REST API. It wraps the [standard SDK](../standard) with a cleaner API and automatic metadata management.
+The Simple SDK provides a simplified, high-level interface to the NCX Infra Controller REST API. It wraps the [standard SDK](../standard) with a cleaner API and automatic metadata management.
 
 ## Features
 
@@ -36,13 +36,13 @@ The simple SDK depends on the [standard SDK](../standard), which is generated fr
 In your project's `go.mod`:
 
 ```bash
-go get github.com/nvidia/bare-metal-manager-rest/sdk/simple
+go get github.com/NVIDIA/ncx-infra-controller-rest/sdk/simple
 ```
 
 For local development, use a `replace` directive:
 
 ```go
-replace github.com/nvidia/bare-metal-manager-rest => /path/to/bare-metal-manager-rest
+replace github.com/NVIDIA/ncx-infra-controller-rest => /path/to/ncx-infra-controller-rest
 ```
 
 ### Local development (kind)
@@ -74,7 +74,7 @@ import (
     "fmt"
     "log"
 
-    "github.com/nvidia/bare-metal-manager-rest/sdk/simple"
+    "github.com/NVIDIA/ncx-infra-controller-rest/sdk/simple"
 )
 
 func main() {
@@ -141,7 +141,7 @@ import (
     "fmt"
     "log"
 
-    "github.com/nvidia/bare-metal-manager-rest/sdk/simple"
+    "github.com/NVIDIA/ncx-infra-controller-rest/sdk/simple"
 )
 
 func main() {
@@ -181,7 +181,7 @@ func main() {
 
 ```go
 import (
-    "github.com/nvidia/bare-metal-manager-rest/sdk/simple"
+    "github.com/NVIDIA/ncx-infra-controller-rest/sdk/simple"
 )
 
 client, err := simple.NewClient(simple.ClientConfig{

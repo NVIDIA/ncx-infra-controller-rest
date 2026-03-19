@@ -21,10 +21,10 @@ import (
 	"errors"
 	"testing"
 
+	iActivity "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/activity"
+	"github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/util"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 	"github.com/google/uuid"
-	iActivity "github.com/nvidia/bare-metal-manager-rest/site-workflow/pkg/activity"
-	"github.com/nvidia/bare-metal-manager-rest/site-workflow/pkg/util"
-	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"go.temporal.io/sdk/temporal"

@@ -28,11 +28,11 @@ import (
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/testsuite"
 
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/executor/temporalworkflow/common"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operations"
-	taskdef "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/task"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/component"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor/temporalworkflow/common"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operations"
+	taskdef "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/task"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/inventoryobjects/component"
 )
 
 func mockInjectExpectation(
@@ -118,8 +118,8 @@ func TestInjectExpectationWorkflow(t *testing.T) {
 
 			info := &operations.InjectExpectationTaskInfo{}
 			reqInfo := taskdef.ExecutionInfo{
-				TaskID: uuid.New(),
-				Rack:   buildTestRack(tc.components),
+				TaskID:     uuid.New(),
+				Components: toWorkflowComponents(tc.components),
 			}
 
 			env.ExecuteWorkflow(InjectExpectation, reqInfo, info)

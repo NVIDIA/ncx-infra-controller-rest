@@ -23,11 +23,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/internal/config"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model/util"
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
 	"github.com/google/uuid"
-	"github.com/nvidia/bare-metal-manager-rest/api/internal/config"
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model/util"
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -875,7 +875,7 @@ func TestAPIInstanceCreateRequest_Validate(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "test invalid Instance create request, NVLink Interfaces specified but all the NVLink Interfaces does not have same NVLink Logical Partition",
+			name: "test invalid Instance create request, NVLink Interfaces specified with device instance out of range",
 			fields: fields{
 				Name:              "test-name",
 				TenantID:          uuid.NewString(),
@@ -887,11 +887,7 @@ func TestAPIInstanceCreateRequest_Validate(t *testing.T) {
 				NVLinkInterfaces: []APINVLinkInterfaceCreateOrUpdateRequest{
 					{
 						NVLinkLogicalPartitionID: uuid.NewString(),
-						DeviceInstance:           0,
-					},
-					{
-						NVLinkLogicalPartitionID: uuid.NewString(),
-						DeviceInstance:           1,
+						DeviceInstance:           4,
 					},
 				},
 				Interfaces: []APIInterfaceCreateOrUpdateRequest{
@@ -900,7 +896,8 @@ func TestAPIInstanceCreateRequest_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantErr: true,
+			wantErr:          true,
+			wantErrorMessage: "deviceInstance: deviceInstance must be between 0 and 3",
 		},
 	}
 	for _, tt := range tests {
@@ -935,6 +932,64 @@ func TestAPIInstanceCreateRequest_Validate(t *testing.T) {
 				if tt.fields.Interfaces != nil {
 					assert.True(t, tt.fields.Interfaces[0].IsPhysical)
 				}
+			}
+		})
+	}
+}
+
+func TestAPIBatchInstanceCreateRequest_Validate(t *testing.T) {
+	tests := []struct {
+		name             string
+		req              APIBatchInstanceCreateRequest
+		wantErr          bool
+		wantErrorMessage string
+	}{
+		{
+			name: "succeeds without requested interface ip",
+			req: APIBatchInstanceCreateRequest{
+				NamePrefix:     "test-batch",
+				Count:          2,
+				TenantID:       uuid.NewString(),
+				InstanceTypeID: uuid.NewString(),
+				VpcID:          uuid.NewString(),
+				IpxeScript:     cdb.GetStrPtr("test ipxe"),
+				Interfaces: []APIInterfaceCreateOrUpdateRequest{
+					{SubnetID: cdb.GetStrPtr(uuid.NewString())},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "fails when any interface uses requested ip",
+			req: APIBatchInstanceCreateRequest{
+				NamePrefix:     "test-batch",
+				Count:          2,
+				TenantID:       uuid.NewString(),
+				InstanceTypeID: uuid.NewString(),
+				VpcID:          uuid.NewString(),
+				IpxeScript:     cdb.GetStrPtr("test ipxe"),
+				Interfaces: []APIInterfaceCreateOrUpdateRequest{
+					{
+						VpcPrefixID: cdb.GetStrPtr(uuid.NewString()),
+						IPAddress:   cdb.GetStrPtr("10.0.0.11"),
+					},
+				},
+			},
+			wantErr:          true,
+			wantErrorMessage: "batch instance create does not support `ipAddress` on interfaces",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.req.Validate()
+			if (err != nil) != tt.wantErr {
+				marshalledErr, _ := json.Marshal(err)
+				t.Errorf("APIBatchInstanceCreateRequest.Validate() error = %v, wantErr %v", string(marshalledErr), tt.wantErr)
+			}
+
+			if tt.wantErrorMessage != "" && err != nil {
+				assert.Contains(t, err.Error(), tt.wantErrorMessage)
 			}
 		})
 	}
@@ -1343,6 +1398,7 @@ func TestAPIInstanceUpdateRequest_Validate(t *testing.T) {
 		AlwaysBootWithCustomIpxe *bool
 		Interfaces               []APIInterfaceCreateOrUpdateRequest
 		InfiniBandInterfaces     []APIInfiniBandInterfaceCreateOrUpdateRequest
+		NVLinkInterfaces         []APINVLinkInterfaceCreateOrUpdateRequest
 		SSHKeyGroupIDs           []string
 		NetworkSecurityGroupID   *string
 	}
@@ -1486,6 +1542,26 @@ func TestAPIInstanceUpdateRequest_Validate(t *testing.T) {
 			wantErr:           true,
 			wantUpdateRequest: cdb.GetBoolPtr(true),
 		},
+		{
+			name: "test invalid Instance update request, NVLink Interfaces specified with device instance out of range",
+			fields: fields{
+				Name:        cdb.GetStrPtr("test-invalid-nvlink-interfaces-device-instance-out-of-range"),
+				Description: cdb.GetStrPtr("Test description"),
+				NVLinkInterfaces: []APINVLinkInterfaceCreateOrUpdateRequest{
+					{
+						NVLinkLogicalPartitionID: uuid.NewString(),
+						DeviceInstance:           4,
+					},
+				},
+				Interfaces: []APIInterfaceCreateOrUpdateRequest{
+					{
+						VpcPrefixID: cdb.GetStrPtr(uuid.NewString()),
+					},
+				},
+			},
+			wantErr:           true,
+			wantUpdateRequest: cdb.GetBoolPtr(true),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1503,6 +1579,7 @@ func TestAPIInstanceUpdateRequest_Validate(t *testing.T) {
 				AlwaysBootWithCustomIpxe: tt.fields.AlwaysBootWithCustomIpxe,
 				Interfaces:               tt.fields.Interfaces,
 				InfiniBandInterfaces:     tt.fields.InfiniBandInterfaces,
+				NVLinkInterfaces:         tt.fields.NVLinkInterfaces,
 				SSHKeyGroupIDs:           tt.fields.SSHKeyGroupIDs,
 				NetworkSecurityGroupID:   tt.fields.NetworkSecurityGroupID,
 			}

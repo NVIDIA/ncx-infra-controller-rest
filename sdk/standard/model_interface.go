@@ -1,9 +1,9 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
-API version: 1.0.6
+API version: 1.1.0
 Contact: carbide-dev@exchange.nvidia.com
 */
 
@@ -21,23 +21,25 @@ var _ MappedNullable = &Interface{}
 
 // Interface Associates an Instance with a Subnet
 type Interface struct {
-	Id *string `json:"id,omitempty"`
-	InstanceId *string `json:"instanceId,omitempty"`
-	SubnetId NullableString `json:"subnetId,omitempty"`
+	Id          *string        `json:"id,omitempty"`
+	InstanceId  *string        `json:"instanceId,omitempty"`
+	SubnetId    NullableString `json:"subnetId,omitempty"`
 	VpcPrefixId NullableString `json:"vpcPrefixId,omitempty"`
-	IsPhysical *bool `json:"isPhysical,omitempty"`
+	IsPhysical  *bool          `json:"isPhysical,omitempty"`
 	// Name of the device to use
 	Device NullableString `json:"device,omitempty"`
 	// Index of the device, used to identify which interface card to attache the Partition to
 	DeviceInstance NullableInt32 `json:"deviceInstance,omitempty"`
 	// Must be specified if isPhysical is false
-	VirtualFunctionId NullableInt32 `json:"virtualFunctionId,omitempty"`
-	MacAddress NullableString `json:"macAddress,omitempty"`
+	VirtualFunctionId NullableInt32  `json:"virtualFunctionId,omitempty"`
+	MacAddress        NullableString `json:"macAddress,omitempty"`
 	// A list of IPv4 or IPv6 addresses
 	IpAddresses []string `json:"ipAddresses,omitempty"`
-	Status *InterfaceStatus `json:"status,omitempty"`
-	Created *time.Time `json:"created,omitempty"`
-	Updated *time.Time `json:"updated,omitempty"`
+	// Explicitly requested IP address for the interface. This is only used for VPC Prefix based interfaces and is not valid for Subnet based interfaces. The least-significant host bit must be 1.
+	RequestedIpAddress NullableString   `json:"requestedIpAddress,omitempty"`
+	Status             *InterfaceStatus `json:"status,omitempty"`
+	Created            *time.Time       `json:"created,omitempty"`
+	Updated            *time.Time       `json:"updated,omitempty"`
 }
 
 // NewInterface instantiates a new Interface object
@@ -153,6 +155,7 @@ func (o *Interface) HasSubnetId() bool {
 func (o *Interface) SetSubnetId(v string) {
 	o.SubnetId.Set(&v)
 }
+
 // SetSubnetIdNil sets the value for SubnetId to be an explicit nil
 func (o *Interface) SetSubnetIdNil() {
 	o.SubnetId.Set(nil)
@@ -195,6 +198,7 @@ func (o *Interface) HasVpcPrefixId() bool {
 func (o *Interface) SetVpcPrefixId(v string) {
 	o.VpcPrefixId.Set(&v)
 }
+
 // SetVpcPrefixIdNil sets the value for VpcPrefixId to be an explicit nil
 func (o *Interface) SetVpcPrefixIdNil() {
 	o.VpcPrefixId.Set(nil)
@@ -269,6 +273,7 @@ func (o *Interface) HasDevice() bool {
 func (o *Interface) SetDevice(v string) {
 	o.Device.Set(&v)
 }
+
 // SetDeviceNil sets the value for Device to be an explicit nil
 func (o *Interface) SetDeviceNil() {
 	o.Device.Set(nil)
@@ -311,6 +316,7 @@ func (o *Interface) HasDeviceInstance() bool {
 func (o *Interface) SetDeviceInstance(v int32) {
 	o.DeviceInstance.Set(&v)
 }
+
 // SetDeviceInstanceNil sets the value for DeviceInstance to be an explicit nil
 func (o *Interface) SetDeviceInstanceNil() {
 	o.DeviceInstance.Set(nil)
@@ -353,6 +359,7 @@ func (o *Interface) HasVirtualFunctionId() bool {
 func (o *Interface) SetVirtualFunctionId(v int32) {
 	o.VirtualFunctionId.Set(&v)
 }
+
 // SetVirtualFunctionIdNil sets the value for VirtualFunctionId to be an explicit nil
 func (o *Interface) SetVirtualFunctionIdNil() {
 	o.VirtualFunctionId.Set(nil)
@@ -395,6 +402,7 @@ func (o *Interface) HasMacAddress() bool {
 func (o *Interface) SetMacAddress(v string) {
 	o.MacAddress.Set(&v)
 }
+
 // SetMacAddressNil sets the value for MacAddress to be an explicit nil
 func (o *Interface) SetMacAddressNil() {
 	o.MacAddress.Set(nil)
@@ -435,6 +443,49 @@ func (o *Interface) HasIpAddresses() bool {
 // SetIpAddresses gets a reference to the given []string and assigns it to the IpAddresses field.
 func (o *Interface) SetIpAddresses(v []string) {
 	o.IpAddresses = v
+}
+
+// GetRequestedIpAddress returns the RequestedIpAddress field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *Interface) GetRequestedIpAddress() string {
+	if o == nil || IsNil(o.RequestedIpAddress.Get()) {
+		var ret string
+		return ret
+	}
+	return *o.RequestedIpAddress.Get()
+}
+
+// GetRequestedIpAddressOk returns a tuple with the RequestedIpAddress field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *Interface) GetRequestedIpAddressOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return o.RequestedIpAddress.Get(), o.RequestedIpAddress.IsSet()
+}
+
+// HasRequestedIpAddress returns a boolean if a field has been set.
+func (o *Interface) HasRequestedIpAddress() bool {
+	if o != nil && o.RequestedIpAddress.IsSet() {
+		return true
+	}
+
+	return false
+}
+
+// SetRequestedIpAddress gets a reference to the given NullableString and assigns it to the RequestedIpAddress field.
+func (o *Interface) SetRequestedIpAddress(v string) {
+	o.RequestedIpAddress.Set(&v)
+}
+
+// SetRequestedIpAddressNil sets the value for RequestedIpAddress to be an explicit nil
+func (o *Interface) SetRequestedIpAddressNil() {
+	o.RequestedIpAddress.Set(nil)
+}
+
+// UnsetRequestedIpAddress ensures that no value is present for RequestedIpAddress, not even an explicit nil
+func (o *Interface) UnsetRequestedIpAddress() {
+	o.RequestedIpAddress.Unset()
 }
 
 // GetStatus returns the Status field value if set, zero value otherwise.
@@ -534,7 +585,7 @@ func (o *Interface) SetUpdated(v time.Time) {
 }
 
 func (o Interface) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -572,6 +623,9 @@ func (o Interface) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.IpAddresses) {
 		toSerialize["ipAddresses"] = o.IpAddresses
+	}
+	if o.RequestedIpAddress.IsSet() {
+		toSerialize["requestedIpAddress"] = o.RequestedIpAddress.Get()
 	}
 	if !IsNil(o.Status) {
 		toSerialize["status"] = o.Status
@@ -620,5 +674,3 @@ func (v *NullableInterface) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

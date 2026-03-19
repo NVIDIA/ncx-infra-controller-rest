@@ -22,7 +22,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/nvidia/bare-metal-manager-rest/cert-manager/pkg/core"
+	"github.com/NVIDIA/ncx-infra-controller-rest/cert-manager/pkg/core"
 )
 
 type pkiCloudCertificateHandler struct {

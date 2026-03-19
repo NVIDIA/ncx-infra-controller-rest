@@ -75,6 +75,8 @@ type ComponentManager interface {
     InjectExpectation(ctx, target, info) error
     PowerControl(ctx, target, info) error
     FirmwareControl(ctx, target, info) error
+    GetFirmwareStatus(ctx, target) (map, error)
+    GetPowerStatus(ctx, target) (map, error)
 }
 ```
 
@@ -134,7 +136,7 @@ package myapi
 import (
     "time"
     "github.com/rs/zerolog/log"
-    "github.com/nvidia/bare-metal-manager-rest/rla/internal/myapi"  // Your API client
+    "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/myapi"  // Your API client
 )
 
 const (
@@ -185,7 +187,7 @@ Update `internal/task/componentmanager/config.go`:
 ```go
 import (
     // ... existing imports
-    "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/componentmanager/providers/myapi"
+    "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/componentmanager/providers/myapi"
 )
 
 type ProviderConfig struct {
@@ -213,7 +215,7 @@ Update `cmd/serve.go` in `initProviderRegistry()`:
 
 ```go
 import (
-    "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/componentmanager/providers/myapi"
+    "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/componentmanager/providers/myapi"
 )
 
 func initProviderRegistry(config componentmanager.Config) (...) {
@@ -248,11 +250,11 @@ import (
     "context"
     "fmt"
 
-    "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/componentmanager"
-    myapiprovider "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/componentmanager/providers/myapi"
-    "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/executor/temporalworkflow/common"
-    "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operations"
-    "github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
+    "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/componentmanager"
+    myapiprovider "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/componentmanager/providers/myapi"
+    "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor/temporalworkflow/common"
+    "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operations"
+    "github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
 )
 
 const ImplementationName = "myimpl"
@@ -301,7 +303,7 @@ func (m *Manager) PowerControl(ctx context.Context, target common.Target, info o
 
 // FirmwareControl implements ComponentManager.
 func (m *Manager) FirmwareControl(ctx context.Context, target common.Target, info operations.FirmwareControlTaskInfo) error {
-    // Implementation here
+    // Implementation here — initiate firmware update, return immediately
 }
 ```
 
@@ -311,7 +313,7 @@ Update `cmd/serve.go` in `initComponentManagerRegistry()`:
 
 ```go
 import (
-    myimpl "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/componentmanager/compute/myimpl"
+    myimpl "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/componentmanager/compute/myimpl"
 )
 
 func initComponentManagerRegistry(...) (*componentmanager.Registry, error) {

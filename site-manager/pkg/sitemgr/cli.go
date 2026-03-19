@@ -23,7 +23,7 @@ import (
 	"github.com/sirupsen/logrus"
 	cli "github.com/urfave/cli/v2"
 
-	"github.com/nvidia/bare-metal-manager-rest/cert-manager/pkg/core"
+	"github.com/NVIDIA/ncx-infra-controller-rest/cert-manager/pkg/core"
 )
 
 const (

@@ -20,8 +20,8 @@ package operatingsystem
 import (
 	"github.com/google/uuid"
 
-	swa "github.com/nvidia/bare-metal-manager-rest/site-workflow/pkg/activity"
-	sww "github.com/nvidia/bare-metal-manager-rest/site-workflow/pkg/workflow"
+	swa "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/activity"
+	sww "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/workflow"
 )
 
 // RegisterPublisher registers the OsImage Workflows with the Temporal client

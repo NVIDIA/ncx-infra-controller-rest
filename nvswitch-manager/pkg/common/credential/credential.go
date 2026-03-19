@@ -19,7 +19,7 @@ package credential
 
 import (
 	"errors"
-	"github.com/nvidia/bare-metal-manager-rest/nvswitch-manager/pkg/common/secretstring"
+	"github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/pkg/common/secretstring"
 	"os"
 	"strings"
 )

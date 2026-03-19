@@ -746,7 +746,7 @@ rules:
 #
 # 5. FirmwareControl
 #    - Starts firmware update and polls for completion (async start + poll)
-#    - Calls StartFirmwareUpdate, then polls GetFirmwareUpdateStatus
+#    - Calls FirmwareControl, then polls GetFirmwareStatus
 #    - Optional parameters:
 #      - poll_interval: Time between status polls (default: "2m")
 #      - poll_timeout: Max time to wait for completion (default: "30m")
@@ -757,12 +757,12 @@ rules:
 #    - Returns map of component IDs to power status
 #    - No required parameters
 #
-# 7. AllowBringUp (bring-up only)
-#    - Opens the Carbide power-on gate for target components
+# 7. BringUpControl (bring-up only)
+#    - Opens the power-on gate for target components
 #    - No required parameters
 #
 # 8. WaitBringUp (bring-up only)
-#    - Polls GetBringUpState until all components reach MachineCreated state
+#    - Polls GetBringUpStatus until all components reach MachineCreated state
 #    - Required fields:
 #      - timeout: Maximum time to wait (e.g., "15m")
 #      - poll_interval: Time between polls (e.g., "30s")
@@ -782,9 +782,9 @@ rules:
   # Stage 3: Compute     — open gate, wait bring-up, verify, reboot, verify again
   #
   # Actions used:
-  #   InjectExpectation — register components with Carbide/PSM
-  #   AllowBringUp      — open Carbide power-on gate
-  #   WaitBringUp       — poll Carbide until ingestion complete
+  #   InjectExpectation — register components with component managers
+  #   BringUpControl    — open power-on gate
+  #   WaitBringUp       — poll until ingestion complete
   #   VerifyReachability with require_all — wait for all PMCs
 
   - name: Default Rack Bring-Up
@@ -852,7 +852,7 @@ rules:
           initial_interval: 10s
           backoff_coefficient: 2.0
         pre_operation:
-          - name: AllowBringUp
+          - name: BringUpControl
           - name: WaitBringUp
             timeout: 15m
             poll_interval: 30s

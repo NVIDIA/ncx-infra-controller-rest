@@ -21,12 +21,12 @@ import (
 
 	gofish "github.com/stmcginnis/gofish/redfish"
 
-	"github.com/nvidia/bare-metal-manager-rest/common/pkg/credential"
-	pb "github.com/nvidia/bare-metal-manager-rest/powershelf-manager/internal/proto/v1"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/common/vendor"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/objects/pmc"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/objects/powershelf"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/objects/powersupply"
+	"github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/credential"
+	pb "github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/internal/proto/v1"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/common/vendor"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/objects/pmc"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/objects/powershelf"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/objects/powersupply"
 )
 
 var pmcTypeToMap map[vendor.VendorCode]pb.PMCVendor

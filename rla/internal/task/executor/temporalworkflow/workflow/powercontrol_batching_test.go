@@ -29,12 +29,12 @@ import (
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/testsuite"
 
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/executor/temporalworkflow/common"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operationrules"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operations"
-	taskdef "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/task"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/component"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor/temporalworkflow/common"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operationrules"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operations"
+	taskdef "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/task"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/inventoryobjects/component"
 )
 
 // TestPowerControlWorkflowWithBatching tests the new workflow-level batching implementation
@@ -116,7 +116,7 @@ func TestPowerControlWorkflowWithBatching(t *testing.T) {
 		info := operations.PowerControlTaskInfo{Operation: operations.PowerOperationPowerOn}
 		reqInfo := taskdef.ExecutionInfo{
 			TaskID:         uuid.New(),
-			Rack:           buildTestRack(components),
+			Components:     toWorkflowComponents(components),
 			RuleDefinition: ruleDef,
 		}
 
@@ -203,7 +203,7 @@ func TestPowerControlWorkflowWithBatching(t *testing.T) {
 		info := operations.PowerControlTaskInfo{Operation: operations.PowerOperationPowerOn}
 		reqInfo := taskdef.ExecutionInfo{
 			TaskID:         uuid.New(),
-			Rack:           buildTestRack(components),
+			Components:     toWorkflowComponents(components),
 			RuleDefinition: ruleDef,
 		}
 
@@ -277,7 +277,7 @@ func TestPowerControlWorkflowWithBatching(t *testing.T) {
 		info := operations.PowerControlTaskInfo{Operation: operations.PowerOperationPowerOn}
 		reqInfo := taskdef.ExecutionInfo{
 			TaskID:         uuid.New(),
-			Rack:           buildTestRack(components),
+			Components:     toWorkflowComponents(components),
 			RuleDefinition: ruleDef,
 		}
 
@@ -340,7 +340,7 @@ func TestPowerControlWorkflowWithBatching(t *testing.T) {
 		info := operations.PowerControlTaskInfo{Operation: operations.PowerOperationPowerOn}
 		reqInfo := taskdef.ExecutionInfo{
 			TaskID:         uuid.New(),
-			Rack:           buildTestRack(components),
+			Components:     toWorkflowComponents(components),
 			RuleDefinition: ruleDef,
 		}
 

@@ -35,25 +35,25 @@ import (
 
 	"github.com/labstack/echo/v4"
 
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
-	cdbp "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
-	swe "github.com/nvidia/bare-metal-manager-rest/site-workflow/pkg/error"
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
+	cdbp "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/paginator"
+	swe "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/error"
 
-	cwma "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/activity/machine"
-	cwu "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/util"
+	cwma "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/machine"
+	cwu "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/util"
 
-	"github.com/nvidia/bare-metal-manager-rest/api/internal/config"
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/handler/util"
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/handler/util/common"
-	ch "github.com/nvidia/bare-metal-manager-rest/api/pkg/api/handler/util/common"
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model"
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/pagination"
-	sc "github.com/nvidia/bare-metal-manager-rest/api/pkg/client/site"
-	auth "github.com/nvidia/bare-metal-manager-rest/auth/pkg/authorization"
-	cutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
-	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/queue"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/internal/config"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/handler/util"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/handler/util/common"
+	ch "github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/handler/util/common"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/pagination"
+	sc "github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/client/site"
+	auth "github.com/NVIDIA/ncx-infra-controller-rest/auth/pkg/authorization"
+	cutil "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/util"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
+	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/queue"
 )
 
 // ~~~~~ Create Handler ~~~~~ //
@@ -324,16 +324,24 @@ func (cith CreateInstanceTypeHandler) Handle(c echo.Context) error {
 		// Validate device type for network capabilities
 		var deviceType *cwssaws.MachineCapabilityDeviceType
 		if machineCap.DeviceType != nil {
-			if machineCap.Type == cdbm.MachineCapabilityTypeNetwork {
+			switch machineCap.Type {
+			case cdbm.MachineCapabilityTypeNetwork:
 				// For Network Capability, we only support DPU
 				if *machineCap.DeviceType != cdbm.MachineCapabilityDeviceTypeDPU {
 					logger.Error().Str("Device Type", *machineCap.DeviceType).Msg("unsupported Device Type specified for Network Capability")
 					return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Unsupported Device Type specified for Network Capability "+*machineCap.DeviceType, nil)
 				}
 				deviceType = cwssaws.MachineCapabilityDeviceType_MACHINE_CAPABILITY_DEVICE_TYPE_DPU.Enum()
-			} else {
+			case cdbm.MachineCapabilityTypeGPU:
+				// For GPU Capability, we only support NVLink
+				if *machineCap.DeviceType != cdbm.MachineCapabilityDeviceTypeNVLink {
+					logger.Error().Str("Device Type", *machineCap.DeviceType).Msg("unsupported Device Type specified for GPU Capability")
+					return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Unsupported Device Type specified for GPU Capability "+*machineCap.DeviceType, nil)
+				}
+				deviceType = cwssaws.MachineCapabilityDeviceType_MACHINE_CAPABILITY_DEVICE_TYPE_NVLINK.Enum()
+			default:
 				logger.Error().Str("Capability Type", machineCap.Type).Str("Device Type", *machineCap.DeviceType).Msg("unsupported Device Type specified for Capability Type")
-				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Unsupported Device Type: %s specified for Capability type %s", *machineCap.DeviceType, machineCap.Type), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Unsupported Device Type: %s specified for Capability type %s", *machineCap.DeviceType, machineCap.Type), nil)
 			}
 		}
 
@@ -1344,19 +1352,28 @@ func (uith UpdateInstanceTypeHandler) Handle(c echo.Context) error {
 		// Update device type for network capabilities if provided
 		// Since we are validating the device type in the API model,
 		// we can safely set the device type to DPU for network capabilities
-		// as currently we only support DPU device type for network capabilities
+		// as currently we only support DPU device type for network capabilities.
+		// Similarly, for GPU capabilities, we only support NVLink device type.
 		var deviceType *cwssaws.MachineCapabilityDeviceType
 		if machineCap.DeviceType != nil {
-			if machineCap.Type == cdbm.MachineCapabilityTypeNetwork {
+			switch machineCap.Type {
+			case cdbm.MachineCapabilityTypeNetwork:
 				// For Network Capability, we only support DPU
 				if *machineCap.DeviceType != cdbm.MachineCapabilityDeviceTypeDPU {
 					logger.Error().Str("Device Type", *machineCap.DeviceType).Msg("unsupported Device Type specified for Network Capability")
-					return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Unsupported Device Type specified for Network Capability "+*machineCap.DeviceType, nil)
+					return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Unsupported Device Type specified for Network Capability "+*machineCap.DeviceType, nil)
 				}
 				deviceType = cwssaws.MachineCapabilityDeviceType_MACHINE_CAPABILITY_DEVICE_TYPE_DPU.Enum()
-			} else {
+			case cdbm.MachineCapabilityTypeGPU:
+				// For GPU Capability, we only support NVLink
+				if *machineCap.DeviceType != cdbm.MachineCapabilityDeviceTypeNVLink {
+					logger.Error().Str("Device Type", *machineCap.DeviceType).Msg("unsupported Device Type specified for GPU Capability")
+					return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Unsupported Device Type specified for GPU Capability "+*machineCap.DeviceType, nil)
+				}
+				deviceType = cwssaws.MachineCapabilityDeviceType_MACHINE_CAPABILITY_DEVICE_TYPE_NVLINK.Enum()
+			default:
 				logger.Error().Str("Capability Type", machineCap.Type).Str("Device Type", *machineCap.DeviceType).Msg("unsupported Device Type specified for Capability Type")
-				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Unsupported Device Type: %s specified for Capability type %s", *machineCap.DeviceType, machineCap.Type), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Unsupported Device Type: %s specified for Capability type %s", *machineCap.DeviceType, machineCap.Type), nil)
 			}
 		}
 

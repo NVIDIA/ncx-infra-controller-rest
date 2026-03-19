@@ -20,7 +20,7 @@ package model
 import (
 	"testing"
 
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/metadata"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/metadata"
 	"github.com/stretchr/testify/assert"
 )
 

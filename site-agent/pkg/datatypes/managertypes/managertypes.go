@@ -18,11 +18,11 @@
 package managertypes
 
 import (
-	bootstraptypes "github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/datatypes/managertypes/bootstrap"
-	carbidetypes "github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/datatypes/managertypes/carbide"
-	healthtypes "github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/datatypes/managertypes/health"
-	rlatypes "github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/datatypes/managertypes/rla"
-	workflowtypes "github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/datatypes/managertypes/workflow"
+	bootstraptypes "github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/datatypes/managertypes/bootstrap"
+	carbidetypes "github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/datatypes/managertypes/carbide"
+	healthtypes "github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/datatypes/managertypes/health"
+	rlatypes "github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/datatypes/managertypes/rla"
+	workflowtypes "github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/datatypes/managertypes/workflow"
 )
 
 // Managers - manager ds

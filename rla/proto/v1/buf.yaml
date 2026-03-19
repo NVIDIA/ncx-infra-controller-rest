@@ -14,7 +14,7 @@
 # limitations under the License.
 
 version: v1
-name: github.com/nvidia/bare-metal-manager-rest/rla
+name: github.com/NVIDIA/ncx-infra-controller-rest/rla
 lint:
   use:
     - DEFAULT

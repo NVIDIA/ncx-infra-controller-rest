@@ -29,28 +29,24 @@ import (
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/testsuite"
 
-	activitypkg "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/executor/temporalworkflow/activity"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/executor/temporalworkflow/common"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operationrules"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operations"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/task"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/deviceinfo"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/location"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/component"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/rack"
+	activitypkg "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor/temporalworkflow/activity"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor/temporalworkflow/common"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operationrules"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operations"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/task"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
 )
 
 func mockUpdateTaskStatusForBringUp(ctx context.Context, arg *task.TaskStatusUpdate) error {
 	return nil
 }
 
-func mockAllowBringUpAndPowerOn(ctx context.Context, target common.Target) error {
+func mockBringUpControl(ctx context.Context, target common.Target) error {
 	return nil
 }
 
-func mockGetBringUpState(ctx context.Context, target common.Target) (*activitypkg.GetBringUpStateResult, error) {
-	return &activitypkg.GetBringUpStateResult{
+func mockGetBringUpStatus(ctx context.Context, target common.Target) (*activitypkg.GetBringUpStatusResult, error) {
+	return &activitypkg.GetBringUpStatusResult{
 		States: map[string]operations.MachineBringUpState{},
 	}, nil
 }
@@ -98,7 +94,7 @@ func createBringUpTestRuleDef() *operationrules.RuleDefinition {
 				MaxParallel:   0,
 				Timeout:       10 * time.Minute,
 				MainOperation: operationrules.ActionConfig{
-					Name: operationrules.ActionAllowBringUp,
+					Name: operationrules.ActionBringUpControl,
 				},
 				PostOperation: []operationrules.ActionConfig{
 					{
@@ -112,17 +108,17 @@ func createBringUpTestRuleDef() *operationrules.RuleDefinition {
 	}
 }
 
-func createBringUpTestRack() *rack.Rack {
-	r := rack.New(deviceinfo.DeviceInfo{ID: uuid.New(), Name: "test-rack"}, location.Location{})
-	r.AddComponent(component.Component{
-		ComponentID: "ps-1",
-		Type:        devicetypes.ComponentTypePowerShelf,
-	})
-	r.AddComponent(component.Component{
-		ComponentID: "compute-1",
-		Type:        devicetypes.ComponentTypeCompute,
-	})
-	return r
+func createBringUpTestComponents() []task.WorkflowComponent {
+	return []task.WorkflowComponent{
+		{
+			ComponentID: "ps-1",
+			Type:        devicetypes.ComponentTypePowerShelf,
+		},
+		{
+			ComponentID: "compute-1",
+			Type:        devicetypes.ComponentTypeCompute,
+		},
+	}
 }
 
 func registerBringUpActivities(env *testsuite.TestWorkflowEnvironment) {
@@ -133,10 +129,10 @@ func registerBringUpActivities(env *testsuite.TestWorkflowEnvironment) {
 		activity.RegisterOptions{Name: "PowerControl"})
 	env.RegisterActivityWithOptions(mockGetPowerStatus,
 		activity.RegisterOptions{Name: "GetPowerStatus"})
-	env.RegisterActivityWithOptions(mockAllowBringUpAndPowerOn,
-		activity.RegisterOptions{Name: "AllowBringUpAndPowerOn"})
-	env.RegisterActivityWithOptions(mockGetBringUpState,
-		activity.RegisterOptions{Name: "GetBringUpState"})
+	env.RegisterActivityWithOptions(mockBringUpControl,
+		activity.RegisterOptions{Name: "BringUpControl"})
+	env.RegisterActivityWithOptions(mockGetBringUpStatus,
+		activity.RegisterOptions{Name: "GetBringUpStatus"})
 }
 
 func TestBringUpWorkflow(t *testing.T) {
@@ -152,9 +148,9 @@ func TestBringUpWorkflow(t *testing.T) {
 					map[string]operations.PowerStatus{
 						"ps-1": operations.PowerStatusOn,
 					}, nil)
-				env.OnActivity(mockAllowBringUpAndPowerOn, mock.Anything, mock.Anything).Return(nil)
-				env.OnActivity(mockGetBringUpState, mock.Anything, mock.Anything).Return(
-					&activitypkg.GetBringUpStateResult{
+				env.OnActivity(mockBringUpControl, mock.Anything, mock.Anything).Return(nil)
+				env.OnActivity(mockGetBringUpStatus, mock.Anything, mock.Anything).Return(
+					&activitypkg.GetBringUpStatusResult{
 						States: map[string]operations.MachineBringUpState{
 							"compute-1": operations.MachineBringUpStateMachineCreated,
 						},
@@ -185,7 +181,7 @@ func TestBringUpWorkflow(t *testing.T) {
 
 			reqInfo := task.ExecutionInfo{
 				TaskID:         uuid.New(),
-				Rack:           createBringUpTestRack(),
+				Components:     createBringUpTestComponents(),
 				RuleDefinition: createBringUpTestRuleDef(),
 			}
 			info := &operations.BringUpTaskInfo{}
@@ -226,19 +222,11 @@ func TestBringUpWorkflowWithIngestion(t *testing.T) {
 	env.OnActivity(mockUpdateTaskStatusForBringUp, mock.Anything, mock.Anything).Return(nil)
 	env.OnActivity(mockInjectExpectation, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-	testRack := rack.New(deviceinfo.DeviceInfo{ID: uuid.New(), Name: "test-rack"}, location.Location{})
-	testRack.AddComponent(component.Component{
-		ComponentID: "ps-1",
-		Type:        devicetypes.ComponentTypePowerShelf,
-	})
-	testRack.AddComponent(component.Component{
-		ComponentID: "compute-1",
-		Type:        devicetypes.ComponentTypeCompute,
-	})
-	testRack.AddComponent(component.Component{
-		ComponentID: "switch-1",
-		Type:        devicetypes.ComponentTypeNVLSwitch,
-	})
+	testComponents := []task.WorkflowComponent{
+		{ComponentID: "ps-1", Type: devicetypes.ComponentTypePowerShelf},
+		{ComponentID: "compute-1", Type: devicetypes.ComponentTypeCompute},
+		{ComponentID: "switch-1", Type: devicetypes.ComponentTypeNVLSwitch},
+	}
 
 	ingestRule := &operationrules.RuleDefinition{
 		Version: "v1",
@@ -275,7 +263,7 @@ func TestBringUpWorkflowWithIngestion(t *testing.T) {
 
 	reqInfo := task.ExecutionInfo{
 		TaskID:         uuid.New(),
-		Rack:           testRack,
+		Components:     testComponents,
 		RuleDefinition: ingestRule,
 	}
 	info := &operations.BringUpTaskInfo{}
@@ -290,13 +278,9 @@ func TestBringUpWorkflowEmptyRack(t *testing.T) {
 	testSuite := &testsuite.WorkflowTestSuite{}
 	env := testSuite.NewTestWorkflowEnvironment()
 
-	emptyRack := rack.New(
-		deviceinfo.DeviceInfo{ID: uuid.New(), Name: "empty-rack"},
-		location.Location{},
-	)
 	reqInfo := task.ExecutionInfo{
 		TaskID:         uuid.New(),
-		Rack:           emptyRack,
+		Components:     []task.WorkflowComponent{},
 		RuleDefinition: createBringUpTestRuleDef(),
 	}
 	info := &operations.BringUpTaskInfo{}

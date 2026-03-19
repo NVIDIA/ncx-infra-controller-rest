@@ -21,14 +21,14 @@ import (
 	"errors"
 	"testing"
 
+	instanceTypeActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/instancetype"
 	"github.com/google/uuid"
-	instanceTypeActivity "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/activity/instancetype"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/testsuite"
 
-	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 )
 
 type UpdateInstanceTypeTestSuite struct {

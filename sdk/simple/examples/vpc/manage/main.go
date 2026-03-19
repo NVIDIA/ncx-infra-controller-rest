@@ -23,7 +23,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/nvidia/bare-metal-manager-rest/sdk/simple"
+	"github.com/NVIDIA/ncx-infra-controller-rest/sdk/simple"
 )
 
 func main() {

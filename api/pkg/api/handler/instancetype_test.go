@@ -42,19 +42,19 @@ import (
 	tmocks "go.temporal.io/sdk/mocks"
 	tp "go.temporal.io/sdk/temporal"
 
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
-	cdbp "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
-	swe "github.com/nvidia/bare-metal-manager-rest/site-workflow/pkg/error"
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
+	cdbp "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/paginator"
+	swe "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/error"
 
-	"github.com/nvidia/bare-metal-manager-rest/api/internal/config"
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model"
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/pagination"
-	sc "github.com/nvidia/bare-metal-manager-rest/api/pkg/client/site"
-	"github.com/nvidia/bare-metal-manager-rest/common/pkg/otelecho"
-	sutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/internal/config"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/pagination"
+	sc "github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/client/site"
+	"github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/otelecho"
+	sutil "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/util"
 
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/handler/util/common"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/handler/util/common"
 )
 
 func TestCreateInstanceTypeHandler_Handle(t *testing.T) {
@@ -156,6 +156,64 @@ func TestCreateInstanceTypeHandler_Handle(t *testing.T) {
 				Capacity:        cdb.GetStrPtr("32GB"),
 				Count:           cdb.GetIntPtr(4),
 				InactiveDevices: []int{1, 3},
+			},
+		},
+	}
+
+	itcrValidGPUNVLink := &model.APIInstanceTypeCreateRequest{
+		Name:        "gpu-nvlink.large",
+		Description: cdb.GetStrPtr("Instance type with GPU NVLink capability"),
+		SiteID:      st.ID.String(),
+		MachineCapabilities: []model.APIMachineCapability{
+			{
+				Type:       cdbm.MachineCapabilityTypeGPU,
+				Name:       "NVIDIA GB200",
+				Capacity:   cdb.GetStrPtr("189471 MiB"),
+				Frequency:  cdb.GetStrPtr("2062 MHz"),
+				DeviceType: cdb.GetStrPtr(cdbm.MachineCapabilityDeviceTypeNVLink),
+				Count:      cdb.GetIntPtr(4),
+			},
+		},
+	}
+
+	itcrInvalidGPUDeviceType := &model.APIInstanceTypeCreateRequest{
+		Name:        "gpu-bad-device.large",
+		Description: cdb.GetStrPtr("Instance type with unsupported GPU device type"),
+		SiteID:      st.ID.String(),
+		MachineCapabilities: []model.APIMachineCapability{
+			{
+				Type:       cdbm.MachineCapabilityTypeGPU,
+				Name:       "NVIDIA GB200",
+				DeviceType: cdb.GetStrPtr("DPU"),
+				Count:      cdb.GetIntPtr(4),
+			},
+		},
+	}
+
+	itcrInvalidNetworkDeviceType := &model.APIInstanceTypeCreateRequest{
+		Name:        "network-bad-device.large",
+		Description: cdb.GetStrPtr("Instance type with unsupported Network device type"),
+		SiteID:      st.ID.String(),
+		MachineCapabilities: []model.APIMachineCapability{
+			{
+				Type:       cdbm.MachineCapabilityTypeNetwork,
+				Name:       "MT43244 BlueField-3 integrated ConnectX-7 network controller",
+				DeviceType: cdb.GetStrPtr(cdbm.MachineCapabilityDeviceTypeNVLink),
+				Count:      cdb.GetIntPtr(2),
+			},
+		},
+	}
+
+	itcrInvalidCPUDeviceType := &model.APIInstanceTypeCreateRequest{
+		Name:        "cpu-with-device-type.large",
+		Description: cdb.GetStrPtr("Instance type with device type on unsupported capability"),
+		SiteID:      st.ID.String(),
+		MachineCapabilities: []model.APIMachineCapability{
+			{
+				Type:       cdbm.MachineCapabilityTypeCPU,
+				Name:       "Intel Xeon Gold 6354",
+				DeviceType: cdb.GetStrPtr(cdbm.MachineCapabilityDeviceTypeDPU),
+				Count:      cdb.GetIntPtr(2),
 			},
 		},
 	}
@@ -425,6 +483,67 @@ func TestCreateInstanceTypeHandler_Handle(t *testing.T) {
 			},
 			wantErr:  false,
 			respCode: http.StatusBadRequest,
+		},
+		{
+			name: "test create Instance Type API endpoint with valid GPU NVLink device type",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        &tmocks.Client{},
+				scp:       scp,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: itcrValidGPUNVLink,
+			},
+			wantErr:                     false,
+			respCode:                    http.StatusCreated,
+			expectedResourcesCount:      2,
+			expectedMachineCapabilities: 1,
+		},
+		{
+			name: "test create Instance Type API endpoint with unsupported GPU device type",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        &tmocks.Client{},
+				scp:       scp,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: itcrInvalidGPUDeviceType,
+			},
+			wantErr:  false,
+			respCode: http.StatusBadRequest,
+			errMsg:   "Unsupported Device Type specified for GPU Capability",
+		},
+		{
+			name: "test create Instance Type API endpoint with unsupported Network device type",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        &tmocks.Client{},
+				scp:       scp,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: itcrInvalidNetworkDeviceType,
+			},
+			wantErr:  false,
+			respCode: http.StatusBadRequest,
+			errMsg:   "Unsupported Device Type specified for Network Capability",
+		},
+		{
+			name: "test create Instance Type API endpoint with device type on unsupported capability type",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        &tmocks.Client{},
+				scp:       scp,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: itcrInvalidCPUDeviceType,
+			},
+			wantErr:  false,
+			respCode: http.StatusBadRequest,
+			errMsg:   "Unsupported Device Type: DPU specified for Capability type CPU",
 		},
 	}
 	for _, tt := range tests {
@@ -1698,6 +1817,7 @@ func TestUpdateInstanceTypeHandler_Handle(t *testing.T) {
 		fields             fields
 		args               args
 		wantRespCode       int
+		errMsg             string
 		verifyChildSpanner bool
 	}{
 		{
@@ -1969,8 +2089,174 @@ func TestUpdateInstanceTypeHandler_Handle(t *testing.T) {
 						{
 							Type:       "Network",
 							Name:       "MT43244 BlueField-3 integrated ConnectX-7 network controller",
-							DeviceType: cdb.GetStrPtr("DPU"),
+							DeviceType: cdb.GetStrPtr(cdbm.MachineCapabilityDeviceTypeDPU),
 							Count:      cdb.GetIntPtr(2),
+						},
+					},
+				},
+			},
+			wantRespCode: http.StatusOK,
+		},
+		{
+			name: "test Instance Type update success with GPU NVLink device type",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        &tmocks.Client{},
+				scp:       scp,
+				cfg:       cfg,
+			},
+			args: args{
+				user:           ipu,
+				org:            org,
+				instanceTypeID: it2.ID,
+				reqData: &model.APIInstanceTypeUpdateRequest{
+					MachineCapabilities: []model.APIMachineCapability{
+						{
+							Type:       cdbm.MachineCapabilityTypeGPU,
+							Name:       "NVIDIA GB200",
+							Capacity:   cdb.GetStrPtr("189471 MiB"),
+							Frequency:  cdb.GetStrPtr("2062 MHz"),
+							DeviceType: cdb.GetStrPtr(cdbm.MachineCapabilityDeviceTypeNVLink),
+							Count:      cdb.GetIntPtr(4),
+						},
+					},
+				},
+			},
+			wantRespCode: http.StatusOK,
+		},
+		{
+			name: "test Instance Type update fail with unsupported GPU device type DPU",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        &tmocks.Client{},
+				scp:       scp,
+				cfg:       cfg,
+			},
+			args: args{
+				user:           ipu,
+				org:            org,
+				instanceTypeID: it2.ID,
+				reqData: &model.APIInstanceTypeUpdateRequest{
+					MachineCapabilities: []model.APIMachineCapability{
+						{
+							Type:       cdbm.MachineCapabilityTypeGPU,
+							Name:       "NVIDIA GB200",
+							DeviceType: cdb.GetStrPtr(cdbm.MachineCapabilityDeviceTypeDPU),
+							Count:      cdb.GetIntPtr(4),
+						},
+					},
+				},
+			},
+			wantRespCode: http.StatusBadRequest,
+			errMsg:       "Unsupported Device Type specified for GPU Capability",
+		},
+		{
+			name: "test Instance Type update fail with NVLink device type on Network capability",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        &tmocks.Client{},
+				scp:       scp,
+				cfg:       cfg,
+			},
+			args: args{
+				user:           ipu,
+				org:            org,
+				instanceTypeID: it2.ID,
+				reqData: &model.APIInstanceTypeUpdateRequest{
+					MachineCapabilities: []model.APIMachineCapability{
+						{
+							Type:       cdbm.MachineCapabilityTypeNetwork,
+							Name:       "MT43244 BlueField-3 integrated ConnectX-7 network controller",
+							DeviceType: cdb.GetStrPtr(cdbm.MachineCapabilityDeviceTypeNVLink),
+							Count:      cdb.GetIntPtr(2),
+						},
+					},
+				},
+			},
+			wantRespCode: http.StatusBadRequest,
+			errMsg:       "Unsupported Device Type specified for Network Capability",
+		},
+		{
+			name: "test Instance Type update fail with device type on CPU capability",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        &tmocks.Client{},
+				scp:       scp,
+				cfg:       cfg,
+			},
+			args: args{
+				user:           ipu,
+				org:            org,
+				instanceTypeID: it2.ID,
+				reqData: &model.APIInstanceTypeUpdateRequest{
+					MachineCapabilities: []model.APIMachineCapability{
+						{
+							Type:       cdbm.MachineCapabilityTypeCPU,
+							Name:       "Intel Xeon Gold 6354",
+							DeviceType: cdb.GetStrPtr(cdbm.MachineCapabilityDeviceTypeDPU),
+							Count:      cdb.GetIntPtr(2),
+						},
+					},
+				},
+			},
+			wantRespCode: http.StatusBadRequest,
+			errMsg:       "Unsupported Device Type: DPU specified for Capability type CPU",
+		},
+		{
+			name: "test Instance Type update success with mixed capabilities including valid device types",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        &tmocks.Client{},
+				scp:       scp,
+				cfg:       cfg,
+			},
+			args: args{
+				user:           ipu,
+				org:            org,
+				instanceTypeID: it2.ID,
+				reqData: &model.APIInstanceTypeUpdateRequest{
+					MachineCapabilities: []model.APIMachineCapability{
+						{
+							Type:       cdbm.MachineCapabilityTypeNetwork,
+							Name:       "MT43244 BlueField-3 integrated ConnectX-7 network controller",
+							DeviceType: cdb.GetStrPtr(cdbm.MachineCapabilityDeviceTypeDPU),
+							Count:      cdb.GetIntPtr(2),
+						},
+						{
+							Type:       cdbm.MachineCapabilityTypeGPU,
+							Name:       "NVIDIA GB200",
+							Capacity:   cdb.GetStrPtr("189471 MiB"),
+							DeviceType: cdb.GetStrPtr(cdbm.MachineCapabilityDeviceTypeNVLink),
+							Count:      cdb.GetIntPtr(4),
+						},
+						{
+							Type:  cdbm.MachineCapabilityTypeCPU,
+							Name:  "Intel Xeon Gold 6354",
+							Count: cdb.GetIntPtr(2),
+						},
+					},
+				},
+			},
+			wantRespCode: http.StatusOK,
+		},
+		{
+			name: "test Instance Type update success with Network capability without device type",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        &tmocks.Client{},
+				scp:       scp,
+				cfg:       cfg,
+			},
+			args: args{
+				user:           ipu,
+				org:            org,
+				instanceTypeID: it2.ID,
+				reqData: &model.APIInstanceTypeUpdateRequest{
+					MachineCapabilities: []model.APIMachineCapability{
+						{
+							Type:  cdbm.MachineCapabilityTypeNetwork,
+							Name:  "MT43244 BlueField-3 integrated ConnectX-7 network controller",
+							Count: cdb.GetIntPtr(2),
 						},
 					},
 				},
@@ -2009,6 +2295,10 @@ func TestUpdateInstanceTypeHandler_Handle(t *testing.T) {
 			assert.NoError(t, err)
 
 			require.Equal(t, tt.wantRespCode, rec.Code)
+
+			if tt.errMsg != "" {
+				assert.Contains(t, rec.Body.String(), tt.errMsg)
+			}
 
 			if rec.Code != http.StatusOK {
 				return

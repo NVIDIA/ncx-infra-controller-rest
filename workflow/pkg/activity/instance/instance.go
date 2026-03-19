@@ -31,22 +31,22 @@ import (
 
 	"go.temporal.io/sdk/client"
 
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
-	"github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
-	cdbp "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
+	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/paginator"
+	cdbp "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/paginator"
 
-	sc "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/client/site"
-	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/queue"
-	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/util"
+	sc "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/client/site"
+	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/queue"
+	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/util"
 
-	cwsv1 "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
-	"github.com/nvidia/bare-metal-manager-rest/workflow/internal/config"
-	cwm "github.com/nvidia/bare-metal-manager-rest/workflow/internal/metrics"
+	cwsv1 "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
+	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/internal/config"
+	cwm "github.com/NVIDIA/ncx-infra-controller-rest/workflow/internal/metrics"
 
 	"github.com/prometheus/client_golang/prometheus"
 
-	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
+	cwutil "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/util"
 )
 
 // ManageInstance is an activity wrapper for managing Instance lifecycle that allows
@@ -1051,12 +1051,24 @@ func (mi ManageInstance) UpdateInstancesInDB(ctx context.Context, siteID uuid.UU
 						deviceInstance = cdb.GetIntPtr(int(interfaceStatus.DeviceInstance))
 					}
 
+					requestedIpAddress := interfaceConfig.IpAddress
+					// If the -rest side has a requested IP, but -core side does not,
+					// then a config change may have been done directly in -core.
+					// Clear the field in the DB.
+					if ifc.RequestedIpAddress != nil && interfaceConfig.IpAddress == nil {
+						_, serr := interfaceDAO.Clear(ctx, nil, cdbm.InterfaceClearInput{InterfaceID: ifc.ID, RequestedIpAddress: true})
+						if serr != nil {
+							slogger.Error().Err(serr).Str("Interface ID", ifc.ID.String()).Msg("failed to update Interface in DB")
+							continue
+						}
+					}
+
 					var status *string
 					if controllerInstance.Status.Network.ConfigsSynced == cwsv1.SyncState_SYNCED {
 						status = cdb.GetStrPtr(cdbm.InterfaceStatusReady)
 					}
 
-					_, serr := interfaceDAO.Update(ctx, nil, cdbm.InterfaceUpdateInput{InterfaceID: ifc.ID, Device: device, DeviceInstance: deviceInstance, VirtualFunctionID: vfID, MacAddress: macAddress, IpAddresses: ipAddresses, Status: status})
+					_, serr := interfaceDAO.Update(ctx, nil, cdbm.InterfaceUpdateInput{InterfaceID: ifc.ID, Device: device, DeviceInstance: deviceInstance, VirtualFunctionID: vfID, RequestedIpAddress: requestedIpAddress, MacAddress: macAddress, IpAddresses: ipAddresses, Status: status})
 					if serr != nil {
 						slogger.Error().Err(serr).Str("Interface ID", ifc.ID.String()).Msg("failed to update Interface in DB")
 					}

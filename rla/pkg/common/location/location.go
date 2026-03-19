@@ -20,7 +20,7 @@ package location
 import (
 	"encoding/json"
 
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/utils"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/utils"
 	"github.com/rs/zerolog/log"
 )
 

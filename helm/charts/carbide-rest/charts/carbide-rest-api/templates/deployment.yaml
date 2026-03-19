@@ -46,6 +46,11 @@ spec:
             - name: temporal-tls-certs
               mountPath: /var/secrets/temporal/certs
               readOnly: true
+            {{- if .Values.secrets.dbCreds }}
+            - name: db-creds
+              mountPath: /var/secrets/db
+              readOnly: true
+            {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           readinessProbe:
@@ -81,3 +86,11 @@ spec:
         - name: temporal-tls-certs
           secret:
             secretName: {{ .Values.secrets.temporalClientCerts }}
+        {{- if .Values.secrets.dbCreds }}
+        - name: db-creds
+          secret:
+            secretName: {{ .Values.secrets.dbCreds }}
+            items:
+              - key: password
+                path: password
+        {{- end }}

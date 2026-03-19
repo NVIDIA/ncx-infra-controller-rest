@@ -10479,8 +10479,12 @@ type InstanceInterfaceConfig struct {
 	// then this value is set and specifies the virtual function ID that is configured
 	// for this network interface.
 	VirtualFunctionId *uint32 `protobuf:"varint,9,opt,name=virtual_function_id,json=virtualFunctionId,proto3,oneof" json:"virtual_function_id,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// Explicit _host_ IP address requested for the interface.
+	// Only allowed when VPC prefix is used.
+	// Must match VPC prefix defined for the interface.
+	IpAddress     *string `protobuf:"bytes,10,opt,name=ip_address,json=ipAddress,proto3,oneof" json:"ip_address,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *InstanceInterfaceConfig) Reset() {
@@ -10571,6 +10575,13 @@ func (x *InstanceInterfaceConfig) GetVirtualFunctionId() uint32 {
 		return *x.VirtualFunctionId
 	}
 	return 0
+}
+
+func (x *InstanceInterfaceConfig) GetIpAddress() string {
+	if x != nil && x.IpAddress != nil {
+		return *x.IpAddress
+	}
+	return ""
 }
 
 type isInstanceInterfaceConfig_NetworkDetails interface {
@@ -24214,9 +24225,9 @@ type ExpectedPowerShelf struct {
 	Metadata *Metadata `protobuf:"bytes,6,opt,name=metadata,proto3" json:"metadata,omitempty"`
 	RackId   *string   `protobuf:"bytes,7,opt,name=rack_id,json=rackId,proto3,oneof" json:"rack_id,omitempty"`
 	// Unique identifier for the expected power shelf. When omitted, server generates one.
-	Id            *UUID `protobuf:"bytes,8,opt,name=id,proto3,oneof" json:"id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	ExpectedPowerShelfId *UUID `protobuf:"bytes,8,opt,name=expected_power_shelf_id,json=expectedPowerShelfId,proto3,oneof" json:"expected_power_shelf_id,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *ExpectedPowerShelf) Reset() {
@@ -24298,9 +24309,9 @@ func (x *ExpectedPowerShelf) GetRackId() string {
 	return ""
 }
 
-func (x *ExpectedPowerShelf) GetId() *UUID {
+func (x *ExpectedPowerShelf) GetExpectedPowerShelfId() *UUID {
 	if x != nil {
-		return x.Id
+		return x.ExpectedPowerShelfId
 	}
 	return nil
 }
@@ -24309,9 +24320,9 @@ type ExpectedPowerShelfRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	BmcMacAddress string                 `protobuf:"bytes,1,opt,name=bmc_mac_address,json=bmcMacAddress,proto3" json:"bmc_mac_address,omitempty"`
 	// Optional unique identifier for selecting an expected power shelf.
-	Id            *UUID `protobuf:"bytes,2,opt,name=id,proto3,oneof" json:"id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	ExpectedPowerShelfId *UUID `protobuf:"bytes,2,opt,name=expected_power_shelf_id,json=expectedPowerShelfId,proto3,oneof" json:"expected_power_shelf_id,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *ExpectedPowerShelfRequest) Reset() {
@@ -24351,9 +24362,9 @@ func (x *ExpectedPowerShelfRequest) GetBmcMacAddress() string {
 	return ""
 }
 
-func (x *ExpectedPowerShelfRequest) GetId() *UUID {
+func (x *ExpectedPowerShelfRequest) GetExpectedPowerShelfId() *UUID {
 	if x != nil {
-		return x.Id
+		return x.ExpectedPowerShelfId
 	}
 	return nil
 }
@@ -24527,9 +24538,9 @@ type ExpectedSwitch struct {
 	NvosUsername *string   `protobuf:"bytes,7,opt,name=nvos_username,json=nvosUsername,proto3,oneof" json:"nvos_username,omitempty"`
 	NvosPassword *string   `protobuf:"bytes,8,opt,name=nvos_password,json=nvosPassword,proto3,oneof" json:"nvos_password,omitempty"`
 	// Unique identifier for the expected switch. When omitted, server generates one.
-	Id            *UUID `protobuf:"bytes,9,opt,name=id,proto3,oneof" json:"id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	ExpectedSwitchId *UUID `protobuf:"bytes,9,opt,name=expected_switch_id,json=expectedSwitchId,proto3,oneof" json:"expected_switch_id,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *ExpectedSwitch) Reset() {
@@ -24618,9 +24629,9 @@ func (x *ExpectedSwitch) GetNvosPassword() string {
 	return ""
 }
 
-func (x *ExpectedSwitch) GetId() *UUID {
+func (x *ExpectedSwitch) GetExpectedSwitchId() *UUID {
 	if x != nil {
-		return x.Id
+		return x.ExpectedSwitchId
 	}
 	return nil
 }
@@ -24629,9 +24640,9 @@ type ExpectedSwitchRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	BmcMacAddress string                 `protobuf:"bytes,1,opt,name=bmc_mac_address,json=bmcMacAddress,proto3" json:"bmc_mac_address,omitempty"`
 	// Optional unique identifier for selecting an expected switch.
-	Id            *UUID `protobuf:"bytes,2,opt,name=id,proto3,oneof" json:"id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	ExpectedSwitchId *UUID `protobuf:"bytes,2,opt,name=expected_switch_id,json=expectedSwitchId,proto3,oneof" json:"expected_switch_id,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *ExpectedSwitchRequest) Reset() {
@@ -24671,9 +24682,9 @@ func (x *ExpectedSwitchRequest) GetBmcMacAddress() string {
 	return ""
 }
 
-func (x *ExpectedSwitchRequest) GetId() *UUID {
+func (x *ExpectedSwitchRequest) GetExpectedSwitchId() *UUID {
 	if x != nil {
-		return x.Id
+		return x.ExpectedSwitchId
 	}
 	return nil
 }
@@ -38359,7 +38370,7 @@ const file_forge_carbide_proto_rawDesc = "" +
 	"\x16user_approval_received\x18\x05 \x01(\bR\x14userApprovalReceived\"\x11\n" +
 	"\x06Module\x12\a\n" +
 	"\x03Dpu\x10\x00B\x16\n" +
-	"\x14_update_triggered_at\"\xcb\x03\n" +
+	"\x14_update_triggered_at\"\xfe\x03\n" +
 	"\x17InstanceInterfaceConfig\x12A\n" +
 	"\rfunction_type\x18\x01 \x01(\x0e2\x1c.forge.InterfaceFunctionTypeR\ffunctionType\x12F\n" +
 	"\x12network_segment_id\x18\x03 \x01(\v2\x18.common.NetworkSegmentIdR\x10networkSegmentId\x129\n" +
@@ -38368,10 +38379,14 @@ const file_forge_carbide_proto_rawDesc = "" +
 	"\rvpc_prefix_id\x18\x06 \x01(\v2\x13.common.VpcPrefixIdH\x00R\vvpcPrefixId\x12\x1b\n" +
 	"\x06device\x18\a \x01(\tH\x01R\x06device\x88\x01\x01\x12'\n" +
 	"\x0fdevice_instance\x18\b \x01(\rR\x0edeviceInstance\x123\n" +
-	"\x13virtual_function_id\x18\t \x01(\rH\x02R\x11virtualFunctionId\x88\x01\x01B\x11\n" +
+	"\x13virtual_function_id\x18\t \x01(\rH\x02R\x11virtualFunctionId\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"ip_address\x18\n" +
+	" \x01(\tH\x03R\tipAddress\x88\x01\x01B\x11\n" +
 	"\x0fnetwork_detailsB\t\n" +
 	"\a_deviceB\x16\n" +
-	"\x14_virtual_function_id\"\xd9\x02\n" +
+	"\x14_virtual_function_idB\r\n" +
+	"\v_ip_address\"\xd9\x02\n" +
 	"\x19InstanceIBInterfaceConfig\x12\x16\n" +
 	"\x06device\x18\x01 \x01(\tR\x06device\x12\x1b\n" +
 	"\x06vendor\x18\x02 \x01(\tH\x00R\x06vendor\x88\x01\x01\x12'\n" +
@@ -39631,7 +39646,7 @@ const file_forge_carbide_proto_rawDesc = "" +
 	"\x0e_error_messageB\x13\n" +
 	"\x11_expected_machine\"h\n" +
 	"%BatchExpectedMachineOperationResponse\x12?\n" +
-	"\aresults\x18\x01 \x03(\v2%.forge.ExpectedMachineOperationResultR\aresults\"\xd2\x02\n" +
+	"\aresults\x18\x01 \x03(\v2%.forge.ExpectedMachineOperationResultR\aresults\"\x8e\x03\n" +
 	"\x12ExpectedPowerShelf\x12&\n" +
 	"\x0fbmc_mac_address\x18\x01 \x01(\tR\rbmcMacAddress\x12!\n" +
 	"\fbmc_username\x18\x02 \x01(\tR\vbmcUsername\x12!\n" +
@@ -39640,15 +39655,15 @@ const file_forge_carbide_proto_rawDesc = "" +
 	"\n" +
 	"ip_address\x18\x05 \x01(\tR\tipAddress\x12+\n" +
 	"\bmetadata\x18\x06 \x01(\v2\x0f.forge.MetadataR\bmetadata\x12\x1c\n" +
-	"\arack_id\x18\a \x01(\tH\x00R\x06rackId\x88\x01\x01\x12!\n" +
-	"\x02id\x18\b \x01(\v2\f.common.UUIDH\x01R\x02id\x88\x01\x01B\n" +
+	"\arack_id\x18\a \x01(\tH\x00R\x06rackId\x88\x01\x01\x12H\n" +
+	"\x17expected_power_shelf_id\x18\b \x01(\v2\f.common.UUIDH\x01R\x14expectedPowerShelfId\x88\x01\x01B\n" +
 	"\n" +
-	"\b_rack_idB\x05\n" +
-	"\x03_id\"m\n" +
+	"\b_rack_idB\x1a\n" +
+	"\x18_expected_power_shelf_id\"\xa9\x01\n" +
 	"\x19ExpectedPowerShelfRequest\x12&\n" +
-	"\x0fbmc_mac_address\x18\x01 \x01(\tR\rbmcMacAddress\x12!\n" +
-	"\x02id\x18\x02 \x01(\v2\f.common.UUIDH\x00R\x02id\x88\x01\x01B\x05\n" +
-	"\x03_id\"i\n" +
+	"\x0fbmc_mac_address\x18\x01 \x01(\tR\rbmcMacAddress\x12H\n" +
+	"\x17expected_power_shelf_id\x18\x02 \x01(\v2\f.common.UUIDH\x00R\x14expectedPowerShelfId\x88\x01\x01B\x1a\n" +
+	"\x18_expected_power_shelf_id\"i\n" +
 	"\x16ExpectedPowerShelfList\x12O\n" +
 	"\x16expected_power_shelves\x18\x01 \x03(\v2\x19.forge.ExpectedPowerShelfR\x14expectedPowerShelves\"u\n" +
 	"\x1cLinkedExpectedPowerShelfList\x12U\n" +
@@ -39659,7 +39674,7 @@ const file_forge_carbide_proto_rawDesc = "" +
 	"\x0epower_shelf_id\x18\x03 \x01(\v2\x14.common.PowerShelfIdH\x00R\fpowerShelfId\x88\x01\x01\x12H\n" +
 	"\x17expected_power_shelf_id\x18\x04 \x01(\v2\f.common.UUIDH\x01R\x14expectedPowerShelfId\x88\x01\x01B\x11\n" +
 	"\x0f_power_shelf_idB\x1a\n" +
-	"\x18_expected_power_shelf_id\"\xa9\x03\n" +
+	"\x18_expected_power_shelf_id\"\xd7\x03\n" +
 	"\x0eExpectedSwitch\x12&\n" +
 	"\x0fbmc_mac_address\x18\x01 \x01(\tR\rbmcMacAddress\x12!\n" +
 	"\fbmc_username\x18\x02 \x01(\tR\vbmcUsername\x12!\n" +
@@ -39668,17 +39683,17 @@ const file_forge_carbide_proto_rawDesc = "" +
 	"\bmetadata\x18\x05 \x01(\v2\x0f.forge.MetadataR\bmetadata\x12\x1c\n" +
 	"\arack_id\x18\x06 \x01(\tH\x00R\x06rackId\x88\x01\x01\x12(\n" +
 	"\rnvos_username\x18\a \x01(\tH\x01R\fnvosUsername\x88\x01\x01\x12(\n" +
-	"\rnvos_password\x18\b \x01(\tH\x02R\fnvosPassword\x88\x01\x01\x12!\n" +
-	"\x02id\x18\t \x01(\v2\f.common.UUIDH\x03R\x02id\x88\x01\x01B\n" +
+	"\rnvos_password\x18\b \x01(\tH\x02R\fnvosPassword\x88\x01\x01\x12?\n" +
+	"\x12expected_switch_id\x18\t \x01(\v2\f.common.UUIDH\x03R\x10expectedSwitchId\x88\x01\x01B\n" +
 	"\n" +
 	"\b_rack_idB\x10\n" +
 	"\x0e_nvos_usernameB\x10\n" +
-	"\x0e_nvos_passwordB\x05\n" +
-	"\x03_id\"i\n" +
+	"\x0e_nvos_passwordB\x15\n" +
+	"\x13_expected_switch_id\"\x97\x01\n" +
 	"\x15ExpectedSwitchRequest\x12&\n" +
-	"\x0fbmc_mac_address\x18\x01 \x01(\tR\rbmcMacAddress\x12!\n" +
-	"\x02id\x18\x02 \x01(\v2\f.common.UUIDH\x00R\x02id\x88\x01\x01B\x05\n" +
-	"\x03_id\"X\n" +
+	"\x0fbmc_mac_address\x18\x01 \x01(\tR\rbmcMacAddress\x12?\n" +
+	"\x12expected_switch_id\x18\x02 \x01(\v2\f.common.UUIDH\x00R\x10expectedSwitchId\x88\x01\x01B\x15\n" +
+	"\x13_expected_switch_id\"X\n" +
 	"\x12ExpectedSwitchList\x12B\n" +
 	"\x11expected_switches\x18\x01 \x03(\v2\x15.forge.ExpectedSwitchR\x10expectedSwitches\"d\n" +
 	"\x18LinkedExpectedSwitchList\x12H\n" +
@@ -41345,7 +41360,7 @@ const file_forge_carbide_proto_rawDesc = "" +
 	"\x1cCreateNVLinkLogicalPartition\x12,.forge.NVLinkLogicalPartitionCreationRequest\x1a\x1d.forge.NVLinkLogicalPartition\x12u\n" +
 	"\x1cUpdateNVLinkLogicalPartition\x12*.forge.NVLinkLogicalPartitionUpdateRequest\x1a).forge.NVLinkLogicalPartitionUpdateResult\x12y\n" +
 	"\x1cDeleteNVLinkLogicalPartition\x12,.forge.NVLinkLogicalPartitionDeletionRequest\x1a+.forge.NVLinkLogicalPartitionDeletionResult\x12_\n" +
-	" NVLinkLogicalPartitionsForTenant\x12\x18.forge.TenantSearchQuery\x1a!.forge.NVLinkLogicalPartitionListBAZ?github.com/nvidia/bare-metal-manager-rest/workflow-schema/protob\x06proto3"
+	" NVLinkLogicalPartitionsForTenant\x12\x18.forge.TenantSearchQuery\x1a!.forge.NVLinkLogicalPartitionListBCZAgithub.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/protob\x06proto3"
 
 var (
 	file_forge_carbide_proto_rawDescOnce sync.Once
@@ -42564,15 +42579,15 @@ var file_forge_carbide_proto_depIdxs = []int32{
 	395, // 433: forge.ExpectedMachineOperationResult.expected_machine:type_name -> forge.ExpectedMachine
 	401, // 434: forge.BatchExpectedMachineOperationResponse.results:type_name -> forge.ExpectedMachineOperationResult
 	149, // 435: forge.ExpectedPowerShelf.metadata:type_name -> forge.Metadata
-	649, // 436: forge.ExpectedPowerShelf.id:type_name -> common.UUID
-	649, // 437: forge.ExpectedPowerShelfRequest.id:type_name -> common.UUID
+	649, // 436: forge.ExpectedPowerShelf.expected_power_shelf_id:type_name -> common.UUID
+	649, // 437: forge.ExpectedPowerShelfRequest.expected_power_shelf_id:type_name -> common.UUID
 	403, // 438: forge.ExpectedPowerShelfList.expected_power_shelves:type_name -> forge.ExpectedPowerShelf
 	407, // 439: forge.LinkedExpectedPowerShelfList.expected_power_shelves:type_name -> forge.LinkedExpectedPowerShelf
 	658, // 440: forge.LinkedExpectedPowerShelf.power_shelf_id:type_name -> common.PowerShelfId
 	649, // 441: forge.LinkedExpectedPowerShelf.expected_power_shelf_id:type_name -> common.UUID
 	149, // 442: forge.ExpectedSwitch.metadata:type_name -> forge.Metadata
-	649, // 443: forge.ExpectedSwitch.id:type_name -> common.UUID
-	649, // 444: forge.ExpectedSwitchRequest.id:type_name -> common.UUID
+	649, // 443: forge.ExpectedSwitch.expected_switch_id:type_name -> common.UUID
+	649, // 444: forge.ExpectedSwitchRequest.expected_switch_id:type_name -> common.UUID
 	408, // 445: forge.ExpectedSwitchList.expected_switches:type_name -> forge.ExpectedSwitch
 	412, // 446: forge.LinkedExpectedSwitchList.expected_switches:type_name -> forge.LinkedExpectedSwitch
 	659, // 447: forge.LinkedExpectedSwitch.switch_id:type_name -> common.SwitchId

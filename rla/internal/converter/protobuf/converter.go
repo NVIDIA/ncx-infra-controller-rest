@@ -21,25 +21,26 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"time"
 
 	"github.com/google/uuid"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"github.com/nvidia/bare-metal-manager-rest/common/pkg/credential"
-	dbquery "github.com/nvidia/bare-metal-manager-rest/rla/internal/db/query"
-	taskcommon "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/common"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operationrules"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operations"
-	taskdef "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/task"
-	identifier "github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/Identifier"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/deviceinfo"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/location"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/bmc"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/component"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/nvldomain"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/rack"
-	pb "github.com/nvidia/bare-metal-manager-rest/rla/pkg/proto/v1"
+	dbquery "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/db/query"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/operation"
+	taskcommon "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/common"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operationrules"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operations"
+	taskdef "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/task"
+	identifier "github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/Identifier"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/deviceinfo"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/location"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/inventoryobjects/bmc"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/inventoryobjects/component"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/inventoryobjects/nvldomain"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/inventoryobjects/rack"
+	pb "github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/proto/v1"
 )
 
 var (
@@ -189,12 +190,6 @@ func BMCFrom(bi *pb.BMCInfo) (devicetypes.BMCType, *bmc.BMC) {
 
 	if ip := bi.GetIpAddress(); ip != "" {
 		bmc.IP = net.ParseIP(ip)
-	}
-
-	if bi.User != nil && bi.Password != nil {
-		// Create a new credential only if the user and password are not nil.
-		nc := credential.New(*bi.User, *bi.Password)
-		bmc.Credential = &nc
 	}
 
 	return BMCTypeFrom(bi.Type), &bmc
@@ -400,6 +395,10 @@ func TaskStatusFrom(status pb.TaskStatus) taskcommon.TaskStatus {
 		return taskcommon.TaskStatusCompleted
 	case pb.TaskStatus_TASK_STATUS_FAILED:
 		return taskcommon.TaskStatusFailed
+	case pb.TaskStatus_TASK_STATUS_TERMINATED:
+		return taskcommon.TaskStatusTerminated
+	case pb.TaskStatus_TASK_STATUS_WAITING:
+		return taskcommon.TaskStatusWaiting
 	default:
 		return taskcommon.TaskStatusUnknown
 	}
@@ -415,6 +414,10 @@ func TaskStatusTo(status taskcommon.TaskStatus) pb.TaskStatus {
 		return pb.TaskStatus_TASK_STATUS_COMPLETED
 	case taskcommon.TaskStatusFailed:
 		return pb.TaskStatus_TASK_STATUS_FAILED
+	case taskcommon.TaskStatusTerminated:
+		return pb.TaskStatus_TASK_STATUS_TERMINATED
+	case taskcommon.TaskStatusWaiting:
+		return pb.TaskStatus_TASK_STATUS_WAITING
 	default:
 		return pb.TaskStatus_TASK_STATUS_UNKNOWN
 	}
@@ -436,7 +439,7 @@ func TaskTo(task *taskdef.Task) *pb.Task {
 		opStr = operation.Description()
 	}
 
-	return &pb.Task{
+	pbTask := &pb.Task{
 		Id:             UUIDTo(task.ID),
 		Operation:      opStr,
 		RackId:         UUIDTo(task.RackID),
@@ -446,7 +449,22 @@ func TaskTo(task *taskdef.Task) *pb.Task {
 		ExecutionId:    task.ExecutionID,
 		Status:         TaskStatusTo(task.Status),
 		Message:        task.Message,
+		CreatedAt:      timestamppb.New(task.CreatedAt),
+		UpdatedAt:      timestamppb.New(task.UpdatedAt),
 	}
+	if task.AppliedRuleID != nil {
+		pbTask.AppliedRuleId = UUIDTo(*task.AppliedRuleID)
+	}
+	if task.StartedAt != nil {
+		pbTask.StartedAt = timestamppb.New(*task.StartedAt)
+	}
+	if task.FinishedAt != nil {
+		pbTask.FinishedAt = timestamppb.New(*task.FinishedAt)
+	}
+	if task.QueueExpiresAt != nil {
+		pbTask.QueueExpiresAt = timestamppb.New(*task.QueueExpiresAt)
+	}
+	return pbTask
 }
 
 // ComponentTypeTo converts an internal ComponentType to a protobuf
@@ -554,10 +572,6 @@ func BMCTo(t devicetypes.BMCType, b *bmc.BMC) *pb.BMCInfo {
 	if b.IP != nil {
 		ip := b.IP.String()
 		bmcProto.IpAddress = &ip
-	}
-
-	if b.Credential != nil {
-		bmcProto.User, bmcProto.Password = b.Credential.Retrieve()
 	}
 
 	return &bmcProto
@@ -897,4 +911,24 @@ func RackRuleAssociationFromProto(pbAssoc *pb.RackRuleAssociation) *operationrul
 	}
 
 	return assoc
+}
+
+// QueueOptionsFrom converts a proto QueueOptions message to the two fields
+// used on operation.Request. A nil opts is handled safely — both return
+// values will be their zero values (reject on conflict, server default timeout).
+func QueueOptionsFrom(opts *pb.QueueOptions) (strategy operation.ConflictStrategy, timeout time.Duration) {
+	if opts == nil {
+		return operation.ConflictStrategyReject, 0
+	}
+
+	if s := opts.GetQueueTimeoutSeconds(); s > 0 {
+		timeout = time.Duration(s) * time.Second
+	}
+
+	switch opts.GetConflictStrategy() {
+	case pb.ConflictStrategy_CONFLICT_STRATEGY_QUEUE:
+		return operation.ConflictStrategyQueue, timeout
+	default:
+		return operation.ConflictStrategyReject, timeout
+	}
 }

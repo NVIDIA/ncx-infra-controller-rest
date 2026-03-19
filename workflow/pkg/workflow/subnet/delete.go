@@ -29,8 +29,8 @@ import (
 
 	"go.temporal.io/sdk/client"
 
-	subnetActivity "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/activity/subnet"
-	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/queue"
+	subnetActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/subnet"
+	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/queue"
 )
 
 // DeleteSubnet is a Temporal workflow to delete an existing Subnet via Site Agent

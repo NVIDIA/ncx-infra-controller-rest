@@ -20,8 +20,8 @@ package operationrules
 import (
 	"time"
 
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/common"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/common"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
 )
 
 // hardcodedRuleMap contains pre-built default rules, initialized once at startup
@@ -924,7 +924,7 @@ func buildBringUpRule() *OperationRule {
 					},
 					PreOperation: []ActionConfig{
 						{
-							Name: ActionAllowBringUp,
+							Name: ActionBringUpControl,
 						},
 						{
 							Name:         ActionWaitBringUp,

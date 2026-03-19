@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 
 ## Overview
 
-Define the code of conduct followed and enforced for NVIDIA Bare Metal Manager.
+Define the code of conduct followed and enforced for NCX Infra Controller.
 
 ### Intended audience
 

@@ -18,7 +18,7 @@
 package nvswitchmanager
 
 import (
-	"github.com/nvidia/bare-metal-manager-rest/nvswitch-manager/pkg/credentials"
+	"github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/pkg/credentials"
 
 	"github.com/uptrace/bun"
 )

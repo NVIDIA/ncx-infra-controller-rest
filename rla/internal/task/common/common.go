@@ -20,9 +20,9 @@ package common
 import (
 	"fmt"
 
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/deviceinfo"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
 	"github.com/google/uuid"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/deviceinfo"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
 )
 
 type TaskType string
@@ -78,6 +78,9 @@ const (
 	TaskStatusCompleted  TaskStatus = "completed"
 	TaskStatusFailed     TaskStatus = "failed"
 	TaskStatusTerminated TaskStatus = "terminated"
+	// TaskStatusWaiting means the task was queued due to a conflict and is
+	// waiting for the rack to become available. It is NOT a finished state.
+	TaskStatusWaiting TaskStatus = "waiting"
 )
 
 func (s TaskStatus) IsFinished() bool {

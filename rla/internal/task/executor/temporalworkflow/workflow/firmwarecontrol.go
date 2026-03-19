@@ -25,8 +25,8 @@ import (
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
 
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operations"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/task"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operations"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/task"
 )
 
 var firmwareControlActivityOptions = workflow.ActivityOptions{
@@ -47,7 +47,7 @@ func FirmwareControl(
 	reqInfo task.ExecutionInfo,
 	info *operations.FirmwareControlTaskInfo,
 ) error {
-	if reqInfo.Rack == nil || len(reqInfo.Rack.Components) == 0 {
+	if len(reqInfo.Components) == 0 {
 		return fmt.Errorf("no components provided")
 	}
 

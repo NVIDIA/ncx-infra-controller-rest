@@ -3,15 +3,15 @@ SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All 
 SPDX-License-Identifier: Apache-2.0
 -->
 
-# NVIDIA Bare Metal Manager REST API
+# NCX Infra Controller REST API
 
-A collection of microservices that comprise the management backend for NVIDIA Bare Metal Manager, exposed as a REST API.
+A collection of microservices that comprise the management backend for NCX Infra Controller, exposed as a REST API.
 
-In deployments, NVIDIA Bare Metal Manager REST requires [NVIDIA Bare Metal Manager Core](https://github.com/NVIDIA/bare-metal-manager-core) to function.
+In deployments, NCX Infra Controller REST requires [NCX Infra Controller Core](https://github.com/NVIDIA/ncx-infra-controller-core) to function.
 
-The REST layer can be deployed in the datacenter with Bare Metal Manager Core, or deployed anywhere in Cloud and allow Site Agent to connect from the datacenter. Multiple Bare Metal Manager Cores running in different datacenters can also connect to Bare Metal Manager REST through respective Site Agents.
+The REST layer can be deployed in the datacenter with NCX Infra Controller Core, or deployed anywhere in Cloud and allow Site Agent to connect from the datacenter. Multiple NCX Infra Controller Cores running in different datacenters can also connect to NCX Infra Controller REST through respective Site Agents.
 
-View latest OpenAPI schema on [Github pages](https://nvidia.github.io/bare-metal-manager-rest/).
+View latest OpenAPI schema on [GitHub pages](https://nvidia.github.io/ncx-infra-controller-rest/).
 
 ## Prerequisites
 
@@ -43,13 +43,19 @@ Test database configuration:
 make kind-reset
 ```
 
-This command:
+This deploys the full stack via **Helm charts** (default). It:
 1. Creates a Kind Kubernetes cluster
 2. Builds all Docker images
-3. Deploys all services (PostgreSQL, Temporal, Keycloak, cert-manager, etc.)
-4. Runs database migrations
-5. Configures PKI and site-agent
-6. Deploys a mock Bare Metal Manager Core
+3. Sets up infrastructure (PostgreSQL, Temporal, Keycloak, cert-manager, etc.)
+4. Deploys app services via Helm umbrella chart
+5. Bootstraps and deploys site-agent
+6. Deploys a mock NCX Infra Controller Core
+
+To deploy via **Kustomize overlays** instead:
+
+```bash
+make kind-reset-kustomize
+```
 
 Once complete, services are available at:
 
@@ -63,12 +69,19 @@ Once complete, services are available at:
 Other useful commands:
 
 ```bash
-make kind-status    # Check pod status
-make kind-logs      # Tail API logs
-make kind-redeploy  # Rebuild and restart after code changes
-make kind-verify    # Run health checks
-make kind-down      # Tear down cluster
+make kind-status         # Check pod status
+make kind-logs           # Tail API logs
+make kind-redeploy       # Rebuild and restart after code changes (Kustomize)
+make helm-redeploy       # Rebuild and restart after code changes (Helm)
+make kind-verify         # Run health checks
+make helm-verify         # Check Helm deployment rollout status
+make helm-uninstall      # Uninstall Helm releases
+make kind-down           # Tear down cluster
 ```
+
+### Production Cluster Deployment
+
+See **[Deployment QuickStart Guide](deploy/README.md)** for a concise bring-up guide, and **[Detailed Installation Guide](deploy/INSTALLATION.md)** for the full step-by-step reference with per-component explanations.
 
 ## CLI
 
@@ -169,7 +182,7 @@ az acr login --name myregistry
 2. Build and push:
 
 ```bash
-REGISTRY=my-registry.example.com/bare-metal-manager-rest
+REGISTRY=my-registry.example.com/ncx-infra-controller-rest
 TAG=v1.0.0
 
 make docker-build IMAGE_REGISTRY=$REGISTRY IMAGE_TAG=$TAG

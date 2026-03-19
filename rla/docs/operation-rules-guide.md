@@ -134,8 +134,8 @@ main_operation:
 ### FirmwareControl
 
 Starts a firmware update and polls for completion (async start + poll pattern).
-Calls `StartFirmwareUpdate` to initiate, then repeatedly calls
-`GetFirmwareUpdateStatus` until all components complete or the poll timeout
+Calls `FirmwareControl` to initiate, then repeatedly calls
+`GetFirmwareStatus` until all components complete or the poll timeout
 expires.
 
 ```yaml
@@ -157,21 +157,21 @@ main_operation:
 
 ---
 
-### AllowBringUp
+### BringUpControl
 
-Opens the Carbide power-on gate for target components. No parameters required.
+Opens the power-on gate for target components. No parameters required.
 
 ```yaml
 main_operation:
-  name: AllowBringUp
+  name: BringUpControl
 ```
 
 ---
 
 ### WaitBringUp
 
-Polls `GetBringUpState` until all components reach the `MachineCreated` state
-(ingestion complete). Used as a post-operation after `AllowBringUp`.
+Polls `GetBringUpStatus` until all components reach the `MachineCreated` state
+(ingestion complete). Used as a post-operation after `BringUpControl`.
 
 ```yaml
 post_operation:
@@ -686,7 +686,7 @@ uses this as its default rule.
       "max_parallel": 0,
       "timeout": "30m",
       "pre_operation": [
-        { "name": "AllowBringUp" },
+        { "name": "BringUpControl" },
         { "name": "WaitBringUp", "timeout": "15m", "poll_interval": "30s" },
         { "name": "VerifyPowerStatus", "timeout": "10m", "poll_interval": "15s", "parameters": { "expected_status": "on" } }
       ],
@@ -794,12 +794,12 @@ function:
 |--------|----------|--------------------|
 | `Sleep` | `executeSleepAction` | `workflow.Sleep()` — durable timer |
 | `PowerControl` | `executePowerControlAction` | `workflow.ExecuteActivity("PowerControl")` |
-| `FirmwareControl` | `executeFirmwareControlAction` | `StartFirmwareUpdate` + poll `GetFirmwareUpdateStatus` |
+| `FirmwareControl` | `executeFirmwareControlAction` | `FirmwareControl` + poll `GetFirmwareStatus` |
 | `GetPowerStatus` | `executeGetPowerStatusAction` | `workflow.ExecuteActivity("GetPowerStatus")` |
 | `VerifyPowerStatus` | `executeVerifyPowerStatusAction` | polling loop (see below) |
 | `VerifyReachability` | `executeVerifyReachabilityAction` | polling loop (see below) |
-| `AllowBringUp` | `executeAllowBringUpAction` | `workflow.ExecuteActivity("AllowBringUpAndPowerOn")` |
-| `WaitBringUp` | `executeWaitBringUpAction` | polling loop on `GetBringUpState` |
+| `BringUpControl` | `executeBringUpControlAction` | `workflow.ExecuteActivity("BringUpControl")` |
+| `WaitBringUp` | `executeWaitBringUpAction` | polling loop on `GetBringUpStatus` |
 
 `Sleep` is a workflow timer, not an activity. It survives worker restarts and
 does not consume an activity slot.

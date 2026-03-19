@@ -27,9 +27,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/nvidia/bare-metal-manager-rest/nvswitch-manager/pkg/db"
-	"github.com/nvidia/bare-metal-manager-rest/nvswitch-manager/pkg/db/postgres"
-	"github.com/nvidia/bare-metal-manager-rest/nvswitch-manager/pkg/db/testutil"
+	"github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/pkg/db"
+	"github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/pkg/db/postgres"
+	"github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/pkg/db/testutil"
 )
 
 // skipIfNoDatabase skips the test if database environment variables are not set.

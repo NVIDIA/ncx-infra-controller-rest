@@ -24,10 +24,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/carbide"
+	ibp "github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/infinibandpartition"
+	wflows "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 	"github.com/google/uuid"
-	"github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/components/managers/carbide"
-	ibp "github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/components/managers/infinibandpartition"
-	wflows "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"go.opentelemetry.io/otel"
@@ -35,7 +35,7 @@ import (
 	"go.temporal.io/sdk/testsuite"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	computils "github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/components/utils"
+	computils "github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/utils"
 	log "github.com/rs/zerolog/log"
 )
 

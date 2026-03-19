@@ -22,8 +22,8 @@ import (
 
 	"github.com/google/uuid"
 
-	pb "github.com/nvidia/bare-metal-manager-rest/rla/pkg/proto/v1"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/types"
+	pb "github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/proto/v1"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/types"
 )
 
 // Proto to types conversions
@@ -119,9 +119,7 @@ func bmcFromProto(b *pb.BMCInfo) types.BMC {
 	}
 
 	bmc := types.BMC{
-		Type:     bmcTypeFromProto(b.GetType()),
-		User:     b.GetUser(),
-		Password: b.GetPassword(),
+		Type: bmcTypeFromProto(b.GetType()),
 	}
 
 	if mac := b.GetMacAddress(); mac != "" {
@@ -380,14 +378,6 @@ func bmcToProto(b *types.BMC) *pb.BMCInfo {
 	if b.IP != nil {
 		ip := b.IP.String()
 		info.IpAddress = &ip
-	}
-
-	if b.User != "" {
-		info.User = &b.User
-	}
-
-	if b.Password != "" {
-		info.Password = &b.Password
 	}
 
 	return info

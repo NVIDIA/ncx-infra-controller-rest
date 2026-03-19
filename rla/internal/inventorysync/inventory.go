@@ -27,12 +27,12 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/uptrace/bun"
 
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/carbideapi"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/config"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/db/model"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/psmapi"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/carbideapi"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/config"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/db/model"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/psmapi"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
 )
 
 // RunInventory will loop and handle various inventory monitoring tasks
@@ -86,9 +86,13 @@ var lastUpdateMachineIDs time.Time
 func runInventoryOne(ctx context.Context, config *config.Config, pool *cdb.Session, carbideClient carbideapi.Client, psmClient psmapi.Client) {
 	var allDrifts []model.ComponentDrift
 
-	// Sync machines (compute nodes, NVSwitches, etc.) against Carbide
+	// Sync machines against Carbide
 	machineDrifts := syncMachines(ctx, config, pool, carbideClient)
 	allDrifts = append(allDrifts, machineDrifts...)
+
+	// TODO: Sync NVL switches against Carbide
+
+	// TODO: Sync powershelves against Carbide
 
 	// Sync powershelves against PSM
 	powershelfDrifts := syncPowershelves(ctx, pool, carbideClient, psmClient)
@@ -106,23 +110,34 @@ func runInventoryOne(ctx context.Context, config *config.Config, pool *cdb.Sessi
 	time.Sleep(config.InventoryRunFrequency)
 }
 
+func isMachineComponentType(t string) bool {
+	return t == devicetypes.ComponentTypeToString(devicetypes.ComponentTypeCompute)
+}
+
 // ---------------------------------------------------------------------------
-// syncMachines: sync non-PowerShelf components against Carbide
+// syncMachines: sync machine components against Carbide
 // ---------------------------------------------------------------------------
+//
+// Carbide API calls (3 round-trips):
+//   - GetMachines (FindMachineIds + FindMachinesByIds): serial matching,
+//     firmware_version direct-write, and drift comparison data
+//   - GetPowerStates: power_state direct-write
+//   - GetMachinePositionInfo: position validation fields for drift comparison
 //
 // Flow:
-//  1. DB: get all non-PowerShelf components
-//  2. Carbide GetMachines: match by serial → direct-write external_id
-//  3. Carbide GetPowerStates: direct-write power_state
-//  4. Carbide FindMachinesByIds + GetMachinePositionInfo: compare validation fields
-//  5. Return drifts
+//  1. DB: get all machine components
+//  2. Carbide GetMachines: fetch all machine details (reused for steps 3, 5, and drift)
+//  3. Match by serial → direct-write external_id
+//  4. Carbide GetPowerStates: direct-write power_state
+//  5. Direct-write firmware_version (from step 2 data)
+//  6. Carbide GetMachinePositionInfo: compare validation fields, return drifts
 //
-// Validation fields (always compared): slot_id, tray_index, host_id, firmware_version, serial_number
-// Direct-write fields (written, NOT compared): external_id, power_state
+// Validation fields (compared for drift): slot_id, tray_index, host_id, serial_number
+// Direct-write fields (written to DB, not compared): external_id, power_state, firmware_version
 func syncMachines(ctx context.Context, config *config.Config, pool *cdb.Session, carbideClient carbideapi.Client) []model.ComponentDrift {
 	log.Debug().Msg("Syncing machines...")
 
-	// Step 1: Get all components from DB, filter out PowerShelves
+	// Step 1: Get all machine components from DB
 	allComponents, err := model.GetAllComponents(ctx, pool.DB)
 	if err != nil {
 		log.Error().Msgf("Unable to retrieve components from db: %v", err)
@@ -131,7 +146,7 @@ func syncMachines(ctx context.Context, config *config.Config, pool *cdb.Session,
 
 	var components []model.Component
 	for _, c := range allComponents {
-		if c.Type != devicetypes.ComponentTypePowerShelf.String() {
+		if isMachineComponentType(c.Type) {
 			components = append(components, c)
 		}
 	}
@@ -140,10 +155,22 @@ func syncMachines(ctx context.Context, config *config.Config, pool *cdb.Session,
 		return nil
 	}
 
-	// Step 2: Direct-write external_id by serial matching (respecting frequency config)
-	syncMachineIDs(ctx, config, pool, carbideClient, components)
+	// Step 2: Fetch all machine details from Carbide
+	allMachineDetails, err := carbideClient.GetMachines(ctx)
+	if err != nil {
+		log.Error().Msgf("Unable to retrieve machine details from Carbide: %v", err)
+		return nil
+	}
 
-	// Re-read components to pick up any external_id updates from step 2
+	detailByID := make(map[string]carbideapi.MachineDetail)
+	for _, d := range allMachineDetails {
+		detailByID[d.MachineID] = d
+	}
+
+	// Step 3: Direct-write external_id by serial matching
+	syncMachineIDs(ctx, config, pool, allMachineDetails, components)
+
+	// Re-read components to pick up any external_id updates
 	allComponents, err = model.GetAllComponents(ctx, pool.DB)
 	if err != nil {
 		log.Error().Msgf("Unable to re-read components from db after machine ID update: %v", err)
@@ -151,12 +178,12 @@ func syncMachines(ctx context.Context, config *config.Config, pool *cdb.Session,
 	}
 	components = components[:0]
 	for _, c := range allComponents {
-		if c.Type != devicetypes.ComponentTypePowerShelf.String() {
+		if isMachineComponentType(c.Type) {
 			components = append(components, c)
 		}
 	}
 
-	// Collect machine IDs for Carbide queries
+	// Build lookup maps for matched components
 	var machineIDs []string
 	componentsByExternalID := make(map[string]*model.Component)
 	for i := range components {
@@ -167,40 +194,28 @@ func syncMachines(ctx context.Context, config *config.Config, pool *cdb.Session,
 		}
 	}
 
-	// Step 3: Direct-write power_state
-	if len(machineIDs) > 0 {
-		syncPowerStates(ctx, pool, carbideClient, machineIDs, componentsByExternalID)
+	if len(machineIDs) == 0 {
+		return buildDriftsForUnmatchedComponents(components, allMachineDetails)
 	}
 
-	// Step 4: Fetch machine details and positions for drift detection
-	var machineDetails []carbideapi.MachineDetail
-	var machinePositions []carbideapi.MachinePosition
+	// Step 4: Direct-write power_state (requires separate Carbide API)
+	syncPowerStates(ctx, pool, carbideClient, machineIDs, componentsByExternalID)
 
-	if len(machineIDs) > 0 {
-		machineDetails, err = carbideClient.FindMachinesByIds(ctx, machineIDs)
-		if err != nil {
-			log.Error().Msgf("Unable to retrieve machine details from Carbide: %v", err)
-			return nil
-		}
+	// Step 5: Direct-write firmware_version (from pre-fetched details, no extra API call)
+	syncFirmwareVersions(ctx, pool, detailByID, componentsByExternalID)
 
-		machinePositions, err = carbideClient.GetMachinePositionInfo(ctx, machineIDs)
-		if err != nil {
-			log.Error().Msgf("Unable to retrieve machine positions from Carbide: %v", err)
-			return nil
-		}
+	// Step 6: Fetch positions and build drift records (requires separate Carbide API)
+	machinePositions, err := carbideClient.GetMachinePositionInfo(ctx, machineIDs)
+	if err != nil {
+		log.Error().Msgf("Unable to retrieve machine positions from Carbide: %v", err)
+		return nil
 	}
 
-	// Build lookup maps
-	detailByID := make(map[string]carbideapi.MachineDetail)
-	for _, d := range machineDetails {
-		detailByID[d.MachineID] = d
-	}
 	positionByID := make(map[string]carbideapi.MachinePosition)
 	for _, p := range machinePositions {
 		positionByID[p.MachineID] = p
 	}
 
-	// Step 5: Compare and build drift records
 	now := time.Now()
 	var drifts []model.ComponentDrift
 
@@ -208,7 +223,6 @@ func syncMachines(ctx context.Context, config *config.Config, pool *cdb.Session,
 		comp := &components[i]
 
 		if comp.ComponentID == nil || *comp.ComponentID == "" {
-			// Component has no external_id — cannot look up in Carbide
 			compID := comp.ID
 			drifts = append(drifts, model.ComponentDrift{
 				ComponentID: &compID,
@@ -222,10 +236,9 @@ func syncMachines(ctx context.Context, config *config.Config, pool *cdb.Session,
 
 		externalID := *comp.ComponentID
 		detail, foundDetail := detailByID[externalID]
-		position := positionByID[externalID] // zero value is fine if not found
+		position, foundPosition := positionByID[externalID]
 
 		if !foundDetail {
-			// Component has external_id but Carbide doesn't know about it
 			compID := comp.ID
 			drifts = append(drifts, model.ComponentDrift{
 				ComponentID: &compID,
@@ -237,8 +250,11 @@ func syncMachines(ctx context.Context, config *config.Config, pool *cdb.Session,
 			continue
 		}
 
-		// Compare validation fields
-		fieldDiffs := compareMachineFieldsForDrift(comp, detail, position)
+		var posPtr *carbideapi.MachinePosition
+		if foundPosition {
+			posPtr = &position
+		}
+		fieldDiffs := compareMachineFieldsForDrift(comp, detail, posPtr)
 		if len(fieldDiffs) > 0 {
 			compID := comp.ID
 			drifts = append(drifts, model.ComponentDrift{
@@ -252,7 +268,7 @@ func syncMachines(ctx context.Context, config *config.Config, pool *cdb.Session,
 	}
 
 	// Detect missing_in_expected: machines in Carbide but not in local DB
-	for _, detail := range machineDetails {
+	for _, detail := range allMachineDetails {
 		if _, found := componentsByExternalID[detail.MachineID]; !found {
 			extID := detail.MachineID
 			drifts = append(drifts, model.ComponentDrift{
@@ -269,12 +285,42 @@ func syncMachines(ctx context.Context, config *config.Config, pool *cdb.Session,
 	return drifts
 }
 
-// syncMachineIDs matches components by serial number against Carbide machines
-// and direct-writes the external_id. Respects UpdateMachineIDsFrequency config.
-func syncMachineIDs(ctx context.Context, config *config.Config, pool *cdb.Session, carbideClient carbideapi.Client, components []model.Component) {
+// buildDriftsForUnmatchedComponents returns missing_in_actual drifts for all
+// components that have no external_id, plus missing_in_expected drifts for
+// every Carbide machine (since no DB component has an external_id, none can
+// match).
+func buildDriftsForUnmatchedComponents(components []model.Component, allMachineDetails []carbideapi.MachineDetail) []model.ComponentDrift {
+	now := time.Now()
+	var drifts []model.ComponentDrift
+	for i := range components {
+		if components[i].ComponentID == nil || *components[i].ComponentID == "" {
+			compID := components[i].ID
+			drifts = append(drifts, model.ComponentDrift{
+				ComponentID: &compID,
+				DriftType:   model.DriftTypeMissingInActual,
+				Diffs:       []model.FieldDiff{},
+				CheckedAt:   now,
+			})
+		}
+	}
+	for _, detail := range allMachineDetails {
+		extID := detail.MachineID
+		drifts = append(drifts, model.ComponentDrift{
+			ComponentID: nil,
+			ExternalID:  &extID,
+			DriftType:   model.DriftTypeMissingInExpected,
+			Diffs:       []model.FieldDiff{},
+			CheckedAt:   now,
+		})
+	}
+	return drifts
+}
+
+// syncMachineIDs matches components by serial number against pre-fetched Carbide
+// machine details and direct-writes the external_id. Respects UpdateMachineIDsFrequency config.
+func syncMachineIDs(ctx context.Context, config *config.Config, pool *cdb.Session, allDetails []carbideapi.MachineDetail, components []model.Component) {
 	shouldUpdate := false
 	if config.UpdateMachineIDsFrequency == 0 {
-		// A frequency of zero means to do it only once on startup
 		if lastUpdateMachineIDs.IsZero() {
 			shouldUpdate = true
 		}
@@ -288,10 +334,9 @@ func syncMachineIDs(ctx context.Context, config *config.Config, pool *cdb.Sessio
 		return
 	}
 
-	// If we already found everything, don't bother to recheck
 	missingMachine := false
 	for _, cur := range components {
-		if cur.ComponentID == nil {
+		if cur.ComponentID == nil || *cur.ComponentID == "" {
 			missingMachine = true
 			break
 		}
@@ -301,19 +346,13 @@ func syncMachineIDs(ctx context.Context, config *config.Config, pool *cdb.Sessio
 		return
 	}
 
-	machines, err := carbideClient.GetMachines(ctx)
-	if err != nil {
-		log.Error().Msgf("Unable to retrieve machines from carbide-api: %v", err)
-		return
-	}
-
 	containersBySerial := make(map[string]model.Component)
 	for _, cur := range components {
 		containersBySerial[cur.SerialNumber] = cur
 	}
 
 	var toUpdate []model.Component
-	for _, cur := range machines {
+	for _, cur := range allDetails {
 		if cur.ChassisSerial == nil {
 			continue
 		}
@@ -342,7 +381,6 @@ func syncMachineIDs(ctx context.Context, config *config.Config, pool *cdb.Sessio
 		log.Info().Msgf("Updated %d machine ID(s)", len(toUpdate))
 	}
 
-	// lastUpdateMachineIDs is the last time we ran successfully, not necessarily when we last actually changed something
 	lastUpdateMachineIDs = time.Now()
 }
 
@@ -379,49 +417,85 @@ func syncPowerStates(ctx context.Context, pool *cdb.Session, carbideClient carbi
 	}
 }
 
+// syncFirmwareVersions direct-writes firmware_version from Carbide machine details to component table.
+func syncFirmwareVersions(ctx context.Context, pool *cdb.Session, detailByID map[string]carbideapi.MachineDetail, componentsByExternalID map[string]*model.Component) {
+	var toUpdate []model.Component
+	for machineID, detail := range detailByID {
+		if comp, ok := componentsByExternalID[machineID]; ok {
+			if detail.FirmwareVersion != "" && comp.FirmwareVersion != detail.FirmwareVersion {
+				comp.FirmwareVersion = detail.FirmwareVersion
+				toUpdate = append(toUpdate, *comp)
+			}
+		}
+	}
+
+	if len(toUpdate) > 0 {
+		if err := pool.RunInTx(ctx, func(ctx context.Context, tx bun.Tx) error {
+			for _, cur := range toUpdate {
+				if err := cur.SetFirmwareVersionByComponentID(ctx, tx); err != nil {
+					return fmt.Errorf("unable to update firmware version: %w", err)
+				}
+			}
+			return nil
+		}); err != nil {
+			log.Error().Msgf("Unable to update components with firmware version: %v", err)
+		}
+	}
+}
+
 // compareMachineFieldsForDrift compares validation fields between expected (DB) and actual (Carbide).
-// Validation fields: slot_id, tray_index, host_id, firmware_version, serial_number.
+// Validation fields: slot_id, tray_index, host_id, serial_number.
 func compareMachineFieldsForDrift(
 	expected *model.Component,
 	actual carbideapi.MachineDetail,
-	position carbideapi.MachinePosition,
+	position *carbideapi.MachinePosition,
 ) []model.FieldDiff {
 	var diffs []model.FieldDiff
 
-	// Compare position.slot_id
-	if position.PhysicalSlotNum != nil && expected.SlotID != int(*position.PhysicalSlotNum) {
-		diffs = append(diffs, model.FieldDiff{
-			FieldName:     "slot_id",
-			ExpectedValue: fmt.Sprintf("%d", expected.SlotID),
-			ActualValue:   fmt.Sprintf("%d", *position.PhysicalSlotNum),
-		})
-	}
-
-	// Compare position.tray_index
-	if position.ComputeTrayIndex != nil && expected.TrayIndex != int(*position.ComputeTrayIndex) {
-		diffs = append(diffs, model.FieldDiff{
-			FieldName:     "tray_index",
-			ExpectedValue: fmt.Sprintf("%d", expected.TrayIndex),
-			ActualValue:   fmt.Sprintf("%d", *position.ComputeTrayIndex),
-		})
-	}
-
-	// Compare position.host_id
-	if position.TopologyID != nil && expected.HostID != int(*position.TopologyID) {
-		diffs = append(diffs, model.FieldDiff{
-			FieldName:     "host_id",
-			ExpectedValue: fmt.Sprintf("%d", expected.HostID),
-			ActualValue:   fmt.Sprintf("%d", *position.TopologyID),
-		})
-	}
-
-	// Compare firmware_version
-	if actual.FirmwareVersion != "" && expected.FirmwareVersion != actual.FirmwareVersion {
-		diffs = append(diffs, model.FieldDiff{
-			FieldName:     "firmware_version",
-			ExpectedValue: expected.FirmwareVersion,
-			ActualValue:   actual.FirmwareVersion,
-		})
+	if position != nil {
+		if position.PhysicalSlotNum != nil && expected.SlotID != int(*position.PhysicalSlotNum) {
+			diffs = append(diffs, model.FieldDiff{
+				FieldName:     "slot_id",
+				ExpectedValue: fmt.Sprintf("%d", expected.SlotID),
+				ActualValue:   fmt.Sprintf("%d", *position.PhysicalSlotNum),
+			})
+		}
+		if position.ComputeTrayIndex != nil && expected.TrayIndex != int(*position.ComputeTrayIndex) {
+			diffs = append(diffs, model.FieldDiff{
+				FieldName:     "tray_index",
+				ExpectedValue: fmt.Sprintf("%d", expected.TrayIndex),
+				ActualValue:   fmt.Sprintf("%d", *position.ComputeTrayIndex),
+			})
+		}
+		if position.TopologyID != nil && expected.HostID != int(*position.TopologyID) {
+			diffs = append(diffs, model.FieldDiff{
+				FieldName:     "host_id",
+				ExpectedValue: fmt.Sprintf("%d", expected.HostID),
+				ActualValue:   fmt.Sprintf("%d", *position.TopologyID),
+			})
+		}
+	} else {
+		if expected.SlotID != 0 {
+			diffs = append(diffs, model.FieldDiff{
+				FieldName:     "slot_id",
+				ExpectedValue: fmt.Sprintf("%d", expected.SlotID),
+				ActualValue:   "<missing>",
+			})
+		}
+		if expected.TrayIndex != 0 {
+			diffs = append(diffs, model.FieldDiff{
+				FieldName:     "tray_index",
+				ExpectedValue: fmt.Sprintf("%d", expected.TrayIndex),
+				ActualValue:   "<missing>",
+			})
+		}
+		if expected.HostID != 0 {
+			diffs = append(diffs, model.FieldDiff{
+				FieldName:     "host_id",
+				ExpectedValue: fmt.Sprintf("%d", expected.HostID),
+				ActualValue:   "<missing>",
+			})
+		}
 	}
 
 	// Compare serial_number (chassis_serial)

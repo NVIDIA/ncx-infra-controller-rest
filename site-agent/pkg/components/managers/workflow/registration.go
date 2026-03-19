@@ -21,7 +21,7 @@ import (
 	"errors"
 	"reflect"
 
-	"github.com/nvidia/bare-metal-manager-rest/site-agent/pkg/components/utils"
+	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/utils"
 )
 
 // AddWorkflow - Register all the resource workflow functions here

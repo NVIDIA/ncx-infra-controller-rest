@@ -1,9 +1,9 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
-API version: 1.0.6
+API version: 1.1.0
 Contact: carbide-dev@exchange.nvidia.com
 */
 
@@ -18,11 +18,11 @@ import (
 // checks if the NVLinkInterfaceCreateRequest type satisfies the MappedNullable interface at compile time
 var _ MappedNullable = &NVLinkInterfaceCreateRequest{}
 
-// NVLinkInterfaceCreateRequest Request data to create an NVLink Interface for an Instance by associating it with an NVLink Logical Partition
+// NVLinkInterfaceCreateRequest Request data to create an NVLink Interface for an Instance by associating a specific GPU index with an NVLink Logical Partition.
 type NVLinkInterfaceCreateRequest struct {
 	// ID of the NVLink Logical Partition the Interface should attach to
 	NvLinklogicalPartitionId *string `json:"nvLinklogicalPartitionId,omitempty"`
-	// Index of the device, used to identify which GPU to attache the Partition to
+	// GPU index for this NVLink interface. Must be non-negative, unique within the request, and within the GPU count exposed by the selected Machine or Instance Type.
 	DeviceInstance *int32 `json:"deviceInstance,omitempty"`
 }
 
@@ -108,7 +108,7 @@ func (o *NVLinkInterfaceCreateRequest) SetDeviceInstance(v int32) {
 }
 
 func (o NVLinkInterfaceCreateRequest) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -161,5 +161,3 @@ func (v *NullableNVLinkInterfaceCreateRequest) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

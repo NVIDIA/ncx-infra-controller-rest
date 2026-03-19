@@ -16,7 +16,7 @@
  */
 package main
 
-import "github.com/nvidia/bare-metal-manager-rest/rla/cmd"
+import "github.com/NVIDIA/ncx-infra-controller-rest/rla/cmd"
 
 func main() {
 	cmd.Execute()

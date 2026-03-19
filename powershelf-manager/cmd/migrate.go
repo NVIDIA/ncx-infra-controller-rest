@@ -23,9 +23,9 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/nvidia/bare-metal-manager-rest/common/pkg/credential"
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	"github.com/nvidia/bare-metal-manager-rest/powershelf-manager/pkg/db/migrations"
+	"github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/credential"
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/db/migrations"
 )
 
 var (

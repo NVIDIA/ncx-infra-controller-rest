@@ -25,21 +25,21 @@ import (
 	"math"
 	"net/http"
 
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/internal/config"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/handler/util/common"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model/util"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/pagination"
+	sc "github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/client/site"
+	cutil "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/util"
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
+	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/paginator"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
+	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/queue"
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
-	"github.com/nvidia/bare-metal-manager-rest/api/internal/config"
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/handler/util/common"
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model"
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model/util"
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/pagination"
-	sc "github.com/nvidia/bare-metal-manager-rest/api/pkg/client/site"
-	cutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
-	"github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
-	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
-	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/queue"
 	"go.opentelemetry.io/otel/attribute"
 	tclient "go.temporal.io/sdk/client"
 )
@@ -192,9 +192,9 @@ func (cepsh CreateExpectedPowerShelfHandler) Handle(c echo.Context) error {
 	// Build the create request for workflow
 	// BMC credentials come from API request since they're not stored in DB
 	createExpectedPowerShelfRequest := &cwssaws.ExpectedPowerShelf{
-		Id:                &cwssaws.UUID{Value: expectedPowerShelf.ID.String()},
-		BmcMacAddress:     expectedPowerShelf.BmcMacAddress,
-		ShelfSerialNumber: expectedPowerShelf.ShelfSerialNumber,
+		ExpectedPowerShelfId: &cwssaws.UUID{Value: expectedPowerShelf.ID.String()},
+		BmcMacAddress:        expectedPowerShelf.BmcMacAddress,
+		ShelfSerialNumber:    expectedPowerShelf.ShelfSerialNumber,
 	}
 
 	if expectedPowerShelf.IpAddress != nil {
@@ -665,9 +665,9 @@ func (uepsh UpdateExpectedPowerShelfHandler) Handle(c echo.Context) error {
 	// Build the update request for workflow
 	// BMC credentials come from API request since they're not stored in DB
 	updateExpectedPowerShelfRequest := &cwssaws.ExpectedPowerShelf{
-		Id:                &cwssaws.UUID{Value: expectedPowerShelf.ID.String()},
-		BmcMacAddress:     updatedExpectedPowerShelf.BmcMacAddress,
-		ShelfSerialNumber: updatedExpectedPowerShelf.ShelfSerialNumber,
+		ExpectedPowerShelfId: &cwssaws.UUID{Value: expectedPowerShelf.ID.String()},
+		BmcMacAddress:        updatedExpectedPowerShelf.BmcMacAddress,
+		ShelfSerialNumber:    updatedExpectedPowerShelf.ShelfSerialNumber,
 	}
 
 	if updatedExpectedPowerShelf.IpAddress != nil {
@@ -834,8 +834,8 @@ func (depsh DeleteExpectedPowerShelfHandler) Handle(c echo.Context) error {
 
 	// Build the delete request for workflow
 	deleteExpectedPowerShelfRequest := &cwssaws.ExpectedPowerShelfRequest{
-		Id:            &cwssaws.UUID{Value: expectedPowerShelf.ID.String()},
-		BmcMacAddress: expectedPowerShelf.BmcMacAddress,
+		ExpectedPowerShelfId: &cwssaws.UUID{Value: expectedPowerShelf.ID.String()},
+		BmcMacAddress:        expectedPowerShelf.BmcMacAddress,
 	}
 
 	logger.Info().Msg("triggering ExpectedPowerShelf delete workflow")

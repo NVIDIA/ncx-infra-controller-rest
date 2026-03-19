@@ -23,7 +23,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/nvidia/bare-metal-manager-rest/sdk/standard"
+	"github.com/NVIDIA/ncx-infra-controller-rest/sdk/standard"
 )
 
 // ClientInterface defines the methods for the simple SDK Client

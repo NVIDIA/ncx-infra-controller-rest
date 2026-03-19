@@ -20,9 +20,9 @@ package executor
 import (
 	"context"
 
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/common"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operations"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/task"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/common"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operations"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/task"
 )
 
 type Executor interface {
@@ -34,6 +34,7 @@ type Executor interface {
 	InjectExpectation(ctx context.Context, req *task.ExecutionRequest, info operations.InjectExpectationTaskInfo) (*task.ExecutionResponse, error) //nolint
 	BringUp(ctx context.Context, req *task.ExecutionRequest, info operations.BringUpTaskInfo) (*task.ExecutionResponse, error)                     //nolint
 	CheckStatus(ctx context.Context, executionID string) (common.TaskStatus, error)
+	TerminateTask(ctx context.Context, executionID string, reason string) error
 }
 
 type ExecutorConfig interface {

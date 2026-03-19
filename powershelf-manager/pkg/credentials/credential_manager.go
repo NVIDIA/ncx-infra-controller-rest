@@ -23,7 +23,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/nvidia/bare-metal-manager-rest/common/pkg/credential"
+	"github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/credential"
 )
 
 // CredentialManager defines a key-value store for PMC credentials keyed by MAC address.

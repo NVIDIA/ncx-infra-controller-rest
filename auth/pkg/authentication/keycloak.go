@@ -26,8 +26,8 @@ import (
 	"github.com/Nerzal/gocloak/v13"
 	"github.com/rs/zerolog/log"
 
-	"github.com/nvidia/bare-metal-manager-rest/auth/pkg/api/model"
-	"github.com/nvidia/bare-metal-manager-rest/auth/pkg/config"
+	"github.com/NVIDIA/ncx-infra-controller-rest/auth/pkg/api/model"
+	"github.com/NVIDIA/ncx-infra-controller-rest/auth/pkg/config"
 )
 
 const (

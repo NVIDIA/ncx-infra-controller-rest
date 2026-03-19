@@ -29,16 +29,16 @@ import (
 
 	"github.com/labstack/echo/v4"
 
-	cutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
-	"github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
+	cutil "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/util"
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
+	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/paginator"
 
-	"github.com/nvidia/bare-metal-manager-rest/api/internal/config"
-	common "github.com/nvidia/bare-metal-manager-rest/api/pkg/api/handler/util/common"
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model"
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/pagination"
-	auth "github.com/nvidia/bare-metal-manager-rest/auth/pkg/authorization"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/internal/config"
+	common "github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/handler/util/common"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/pagination"
+	auth "github.com/NVIDIA/ncx-infra-controller-rest/auth/pkg/authorization"
 )
 
 // ~~~~~ GetAll Interface Handler ~~~~~ //

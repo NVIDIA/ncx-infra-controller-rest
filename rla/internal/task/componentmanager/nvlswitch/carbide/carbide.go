@@ -25,12 +25,12 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/carbideapi"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/componentmanager"
-	carbideprovider "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/componentmanager/providers/carbide"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/executor/temporalworkflow/common"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operations"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/carbideapi"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/componentmanager"
+	carbideprovider "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/componentmanager/providers/carbide"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor/temporalworkflow/common"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operations"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
 )
 
 const (
@@ -223,35 +223,10 @@ func carbidePowerStateToOperationsPowerStatus(state carbideapi.PowerState) opera
 	}
 }
 
-// FirmwareControl performs firmware operations on an NVLink switch.
-func (m *Manager) FirmwareControl(
-	ctx context.Context,
-	target common.Target,
-	info operations.FirmwareControlTaskInfo,
-) error {
-	// TODO: Implement firmware control
-	switch info.Operation {
-	case operations.FirmwareOperationUpgrade:
-		// Implement firmware upgrade
-		return fmt.Errorf("firmware upgrade not yet implemented for NVLSwitch")
-	case operations.FirmwareOperationDowngrade:
-		// Implement firmware downgrade
-		return fmt.Errorf("firmware downgrade not yet implemented for NVLSwitch")
-	case operations.FirmwareOperationRollback:
-		// Implement firmware rollback
-		return fmt.Errorf("firmware rollback not yet implemented for NVLSwitch")
-	case operations.FirmwareOperationVersion:
-		// Implement firmware version
-		return fmt.Errorf("firmware version not yet implemented for NVLSwitch")
-	default:
-		return fmt.Errorf("unknown firmware operation: %v", info.Operation)
-	}
-}
-
-// StartFirmwareUpdate schedules a firmware update via Carbide's SetFirmwareUpdateTimeWindow API.
+// FirmwareControl schedules a firmware update via Carbide's SetFirmwareUpdateTimeWindow API.
 // This sets the time window during which Carbide will automatically perform the firmware update.
 // Returns immediately after the schedule request is accepted.
-func (m *Manager) StartFirmwareUpdate(ctx context.Context, target common.Target, info operations.FirmwareControlTaskInfo) error {
+func (m *Manager) FirmwareControl(ctx context.Context, target common.Target, info operations.FirmwareControlTaskInfo) error {
 	log.Debug().
 		Str("components", target.String()).
 		Str("target_version", info.TargetVersion).
@@ -281,14 +256,14 @@ func (m *Manager) StartFirmwareUpdate(ctx context.Context, target common.Target,
 	return nil
 }
 
-// GetFirmwareUpdateStatus returns the current status of firmware updates for the target components.
+// GetFirmwareStatus returns the current status of firmware updates for the target components.
 // Carbide does not have a dedicated firmware update status API; we read the current firmware version
 // to determine if the update completed.
 // TODO: Implement proper status checking once Carbide exposes a firmware update status API.
-func (m *Manager) GetFirmwareUpdateStatus(ctx context.Context, target common.Target) (map[string]operations.FirmwareUpdateStatus, error) { //nolint
+func (m *Manager) GetFirmwareStatus(ctx context.Context, target common.Target) (map[string]operations.FirmwareUpdateStatus, error) { //nolint
 	log.Debug().
 		Str("components", target.String()).
-		Msg("GetFirmwareUpdateStatus called for NVLSwitch")
+		Msg("GetFirmwareStatus called for NVLSwitch")
 
 	result := make(map[string]operations.FirmwareUpdateStatus, len(target.ComponentIDs))
 	for _, id := range target.ComponentIDs {
@@ -298,37 +273,5 @@ func (m *Manager) GetFirmwareUpdateStatus(ctx context.Context, target common.Tar
 		}
 	}
 
-	return result, nil
-}
-
-// AllowBringUpAndPowerOn opens the Carbide power-on gate
-// for each NVLSwitch. Placeholder for now.
-func (m *Manager) AllowBringUpAndPowerOn(
-	ctx context.Context,
-	target common.Target,
-) error {
-	log.Info().
-		Str("components", target.String()).
-		Msg("NVLSwitch AllowBringUpAndPowerOn: placeholder")
-	return nil
-}
-
-// GetBringUpState returns the bring-up state for each
-// NVLSwitch. Placeholder for now.
-func (m *Manager) GetBringUpState(
-	ctx context.Context,
-	target common.Target,
-) (map[string]operations.MachineBringUpState, error) {
-	log.Info().
-		Str("components", target.String()).
-		Msg("NVLSwitch GetBringUpState: placeholder")
-
-	result := make(
-		map[string]operations.MachineBringUpState,
-		len(target.ComponentIDs),
-	)
-	for _, id := range target.ComponentIDs {
-		result[id] = operations.MachineBringUpStateMachineCreated
-	}
 	return result, nil
 }

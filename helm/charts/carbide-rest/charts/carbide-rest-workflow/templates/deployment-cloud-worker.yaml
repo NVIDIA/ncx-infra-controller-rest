@@ -53,6 +53,7 @@ spec:
             - name: temporal-tls-certs
               mountPath: /var/secrets/temporal/certs
               readOnly: true
+            {{- include "carbide-rest-workflow.dbCredsVolumeMount" . | nindent 12 }}
           livenessProbe:
             httpGet:
               path: /healthz
@@ -87,3 +88,4 @@ spec:
         - name: temporal-tls-certs
           secret:
             secretName: {{ .Values.secrets.temporalClientCerts }}
+        {{- include "carbide-rest-workflow.dbCredsVolume" . | nindent 8 }}

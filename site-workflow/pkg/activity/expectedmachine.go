@@ -31,9 +31,9 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	swe "github.com/nvidia/bare-metal-manager-rest/site-workflow/pkg/error"
-	cclient "github.com/nvidia/bare-metal-manager-rest/site-workflow/pkg/grpc/client"
-	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
+	swe "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/error"
+	cclient "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/grpc/client"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 )
 
 // ManageExpectedMachineInventory is an activity wrapper for Expected Machine inventory collection and publishing
@@ -276,7 +276,7 @@ func (mem *ManageExpectedMachine) CreateExpectedMachineOnSite(ctx context.Contex
 	// Validate request
 	if request == nil {
 		err = errors.New("received empty create Expected Machine request")
-	} else if id := request.GetId(); id == nil || (*id).String() == "" {
+	} else if request.GetId().GetValue() == "" {
 		err = errors.New("received create Expected Machine request without required id field")
 	} else if request.GetBmcMacAddress() == "" || request.GetChassisSerialNumber() == "" {
 		err = errors.New("received create Expected Machine request with missing MAC or serial")
@@ -316,7 +316,7 @@ func (mem *ManageExpectedMachine) UpdateExpectedMachineOnSite(ctx context.Contex
 	// Validate request
 	if request == nil {
 		err = errors.New("received empty update Expected Machine request")
-	} else if id := request.GetId(); id == nil || (*id).String() == "" {
+	} else if request.GetId().GetValue() == "" {
 		err = errors.New("received update Expected Machine request without required id field")
 	} else if request.GetBmcMacAddress() == "" || request.GetChassisSerialNumber() == "" {
 		err = errors.New("received update Expected Machine request with missing MAC or serial")
@@ -355,7 +355,7 @@ func (mem *ManageExpectedMachine) DeleteExpectedMachineOnSite(ctx context.Contex
 	// Validate request
 	if request == nil {
 		err = errors.New("received empty delete Expected Machine request")
-	} else if id := request.GetId(); id == nil || (*id).String() == "" {
+	} else if request.GetId().GetValue() == "" {
 		err = errors.New("received delete Expected Machine request without required id field")
 	}
 

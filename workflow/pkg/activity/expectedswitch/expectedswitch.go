@@ -22,17 +22,17 @@ import (
 	"errors"
 	"reflect"
 
+	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/util"
 	"github.com/google/uuid"
-	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/util"
 	"github.com/rs/zerolog/log"
 
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
-	cdbp "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
+	cdbp "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/paginator"
 
-	sc "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/client/site"
+	sc "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/client/site"
 
-	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 )
 
 // ManageExpectedSwitch is an activity wrapper for managing ExpectedSwitch lifecycle that allows
@@ -137,7 +137,7 @@ func (mei ManageExpectedSwitch) UpdateExpectedSwitchesInDB(ctx context.Context, 
 		if res == nil {
 			logger.Error().Msg("received nil Expected Switch entry, skipping processing")
 			continue
-		} else if res.Id == nil {
+		} else if res.ExpectedSwitchId == nil {
 			mac := "unknown"
 			if res.BmcMacAddress != "" {
 				mac = res.BmcMacAddress
@@ -145,9 +145,9 @@ func (mei ManageExpectedSwitch) UpdateExpectedSwitchesInDB(ctx context.Context, 
 			logger.Error().Str("MAC", mac).Msg("received Expected Switch entry from Site without UUID set, skipping processing")
 			continue
 		}
-		esID, perr := uuid.Parse(res.Id.Value)
+		esID, perr := uuid.Parse(res.ExpectedSwitchId.Value)
 		if perr != nil || esID == uuid.Nil {
-			logger.Error().Str("ID", res.Id.Value).Msg("received Expected Switch entry from Site with invalid UUID, skipping processing")
+			logger.Error().Str("ID", res.ExpectedSwitchId.Value).Msg("received Expected Switch entry from Site with invalid UUID, skipping processing")
 			continue
 		}
 		reportedIDs[esID] = true

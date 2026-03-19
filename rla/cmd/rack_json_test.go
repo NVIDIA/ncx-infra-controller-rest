@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/types"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/types"
 )
 
 func TestReadRackJSONData(t *testing.T) {
@@ -207,9 +207,7 @@ func TestParseRackJSON(t *testing.T) {
 					"bmcs": [{
 						"type": "host",
 						"mac": "aa:bb:cc:dd:ee:ff",
-						"ip": "192.168.1.1",
-						"user": "admin",
-						"password": "secret"
+						"ip": "192.168.1.1"
 					}]
 				}]
 			}`,
@@ -223,8 +221,6 @@ func TestParseRackJSON(t *testing.T) {
 				assert.Equal(
 					t, "192.168.1.1", bmc.IP.String(),
 				)
-				assert.Equal(t, "admin", bmc.User)
-				assert.Equal(t, "secret", bmc.Password)
 			},
 		},
 		"component with dpu bmc and no ip": {

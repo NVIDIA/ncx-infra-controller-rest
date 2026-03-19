@@ -34,16 +34,16 @@ import (
 	"github.com/uptrace/bun/extra/bundebug"
 	tmocks "go.temporal.io/sdk/mocks"
 
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
-	cdbu "github.com/nvidia/bare-metal-manager-rest/db/pkg/util"
-	"github.com/nvidia/bare-metal-manager-rest/workflow/internal/config"
-	sc "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/client/site"
-	cwu "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/util"
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
+	cdbu "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/util"
+	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/internal/config"
+	sc "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/client/site"
+	cwu "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/util"
 
-	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 
-	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
+	cwutil "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/util"
 )
 
 // testTemporalSiteClientPool Building site client pool

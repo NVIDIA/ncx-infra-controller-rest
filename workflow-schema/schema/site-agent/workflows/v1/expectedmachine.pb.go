@@ -141,7 +141,7 @@ const file_expectedmachine_proto_rawDesc = "" +
 	"\ttimestamp\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12C\n" +
 	"\x11expected_machines\x18\x04 \x03(\v2\x16.forge.ExpectedMachineR\x10expectedMachines\x12B\n" +
 	"\x0einventory_page\x18\x05 \x01(\v2\x1b.workflows.v1.InventoryPageR\rinventoryPage\x12E\n" +
-	"\x0flinked_machines\x18\x06 \x03(\v2\x1c.forge.LinkedExpectedMachineR\x0elinkedMachinesBAZ?github.com/nvidia/bare-metal-manager-rest/workflow-schema/protob\x06proto3"
+	"\x0flinked_machines\x18\x06 \x03(\v2\x1c.forge.LinkedExpectedMachineR\x0elinkedMachinesBCZAgithub.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/protob\x06proto3"
 
 var (
 	file_expectedmachine_proto_rawDescOnce sync.Once

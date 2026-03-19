@@ -28,12 +28,12 @@ import (
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
 
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/alert"
-	taskcommon "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/common"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/executor/temporalworkflow/common"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operationrules"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/task"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/alert"
+	taskcommon "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/common"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor/temporalworkflow/common"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operationrules"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/task"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
 )
 
 // sendAlert logs an alert. Best-effort, never blocks the workflow.
@@ -90,16 +90,20 @@ func updateFinishedTaskStatus(
 	return err
 }
 
-func buildTargets(info *task.ExecutionInfo) map[devicetypes.ComponentType]common.Target {
-	if info.Rack == nil {
-		return nil
+func buildTargets(
+	info *task.ExecutionInfo,
+) map[devicetypes.ComponentType]common.Target {
+	if info == nil {
+		// This is unreachable code, but just in case, handle it anyway.
+		// Returns a non-nil map to avoid nil pointer dereferences.
+		return map[devicetypes.ComponentType]common.Target{}
 	}
 
 	// Group component IDs by type
 	mapOnType := make(map[devicetypes.ComponentType][]string)
-	for _, c := range info.Rack.Components {
+	for _, c := range info.Components {
 		// NOTE: we skip checking if the component ID is empty, because it's
-		// possible that the component ID is not set up for local testing case.
+		// possible that the component ID is not set up for local testing.
 		mapOnType[c.Type] = append(mapOnType[c.Type], c.ComponentID)
 	}
 

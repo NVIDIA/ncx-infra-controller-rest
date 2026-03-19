@@ -33,7 +33,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 )
 
 var (
@@ -1135,7 +1135,7 @@ func (f *ForgeServerImpl) UpdateExpectedMachines(ctx context.Context, req *cwssa
 
 // AddExpectedPowerShelf implements interface ForgeServer
 func (f *ForgeServerImpl) AddExpectedPowerShelf(ctx context.Context, req *cwssaws.ExpectedPowerShelf) (*emptypb.Empty, error) {
-	if req == nil || req.Id == nil || req.Id.Value == "" {
+	if req == nil || req.ExpectedPowerShelfId == nil || req.ExpectedPowerShelfId.Value == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "ID not provided for AddExpectedPowerShelf")
 	}
 	if req.BmcMacAddress == "" {
@@ -1144,13 +1144,13 @@ func (f *ForgeServerImpl) AddExpectedPowerShelf(ctx context.Context, req *cwssaw
 	if req.ShelfSerialNumber == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "Shelf Serial Number not provided for AddExpectedPowerShelf")
 	}
-	f.eps[req.Id.Value] = req
+	f.eps[req.ExpectedPowerShelfId.Value] = req
 	return &emptypb.Empty{}, nil
 }
 
 // UpdateExpectedPowerShelf implements interface ForgeServer
 func (f *ForgeServerImpl) UpdateExpectedPowerShelf(ctx context.Context, req *cwssaws.ExpectedPowerShelf) (*emptypb.Empty, error) {
-	if req == nil || req.Id == nil || req.Id.Value == "" {
+	if req == nil || req.ExpectedPowerShelfId == nil || req.ExpectedPowerShelfId.Value == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "ID not provided for UpdateExpectedPowerShelf")
 	}
 	if req.BmcMacAddress == "" {
@@ -1159,33 +1159,33 @@ func (f *ForgeServerImpl) UpdateExpectedPowerShelf(ctx context.Context, req *cws
 	if req.ShelfSerialNumber == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "Shelf Serial Number not provided for UpdateExpectedPowerShelf")
 	}
-	if _, ok := f.eps[req.Id.Value]; !ok {
-		return nil, status.Errorf(codes.NotFound, "ExpectedPowerShelf with ID %q not found", req.Id.Value)
+	if _, ok := f.eps[req.ExpectedPowerShelfId.Value]; !ok {
+		return nil, status.Errorf(codes.NotFound, "ExpectedPowerShelf with ID %q not found", req.ExpectedPowerShelfId.Value)
 	}
-	f.eps[req.Id.Value] = req
+	f.eps[req.ExpectedPowerShelfId.Value] = req
 	return &emptypb.Empty{}, nil
 }
 
 // DeleteExpectedPowerShelf implements interface ForgeServer
 func (f *ForgeServerImpl) DeleteExpectedPowerShelf(ctx context.Context, req *cwssaws.ExpectedPowerShelfRequest) (*emptypb.Empty, error) {
-	if req == nil || req.Id == nil || req.Id.Value == "" {
+	if req == nil || req.ExpectedPowerShelfId == nil || req.ExpectedPowerShelfId.Value == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "ID not provided for DeleteExpectedPowerShelf")
 	}
-	if _, ok := f.eps[req.Id.Value]; !ok {
-		return nil, status.Errorf(codes.NotFound, "ExpectedPowerShelf with ID %q not found", req.Id.Value)
+	if _, ok := f.eps[req.ExpectedPowerShelfId.Value]; !ok {
+		return nil, status.Errorf(codes.NotFound, "ExpectedPowerShelf with ID %q not found", req.ExpectedPowerShelfId.Value)
 	}
-	delete(f.eps, req.Id.Value)
+	delete(f.eps, req.ExpectedPowerShelfId.Value)
 	return &emptypb.Empty{}, nil
 }
 
 // GetExpectedPowerShelf implements interface ForgeServer
 func (f *ForgeServerImpl) GetExpectedPowerShelf(ctx context.Context, req *cwssaws.ExpectedPowerShelfRequest) (*cwssaws.ExpectedPowerShelf, error) {
-	if req == nil || req.Id == nil || req.Id.Value == "" {
+	if req == nil || req.ExpectedPowerShelfId == nil || req.ExpectedPowerShelfId.Value == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "ID not provided for GetExpectedPowerShelf")
 	}
-	eps, ok := f.eps[req.Id.Value]
+	eps, ok := f.eps[req.ExpectedPowerShelfId.Value]
 	if !ok {
-		return nil, status.Errorf(codes.NotFound, "ExpectedPowerShelf with ID %q not found", req.Id.Value)
+		return nil, status.Errorf(codes.NotFound, "ExpectedPowerShelf with ID %q not found", req.ExpectedPowerShelfId.Value)
 	}
 	return eps, nil
 }
@@ -1201,7 +1201,7 @@ func (f *ForgeServerImpl) GetAllExpectedPowerShelves(ctx context.Context, req *e
 
 // AddExpectedSwitch implements interface ForgeServer
 func (f *ForgeServerImpl) AddExpectedSwitch(ctx context.Context, req *cwssaws.ExpectedSwitch) (*emptypb.Empty, error) {
-	if req == nil || req.Id == nil || req.Id.Value == "" {
+	if req == nil || req.ExpectedSwitchId == nil || req.ExpectedSwitchId.Value == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "ID not provided for AddExpectedSwitch")
 	}
 	if req.BmcMacAddress == "" {
@@ -1210,13 +1210,13 @@ func (f *ForgeServerImpl) AddExpectedSwitch(ctx context.Context, req *cwssaws.Ex
 	if req.SwitchSerialNumber == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "Switch Serial Number not provided for AddExpectedSwitch")
 	}
-	f.es[req.Id.Value] = req
+	f.es[req.ExpectedSwitchId.Value] = req
 	return &emptypb.Empty{}, nil
 }
 
 // UpdateExpectedSwitch implements interface ForgeServer
 func (f *ForgeServerImpl) UpdateExpectedSwitch(ctx context.Context, req *cwssaws.ExpectedSwitch) (*emptypb.Empty, error) {
-	if req == nil || req.Id == nil || req.Id.Value == "" {
+	if req == nil || req.ExpectedSwitchId == nil || req.ExpectedSwitchId.Value == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "ID not provided for UpdateExpectedSwitch")
 	}
 	if req.BmcMacAddress == "" {
@@ -1225,33 +1225,33 @@ func (f *ForgeServerImpl) UpdateExpectedSwitch(ctx context.Context, req *cwssaws
 	if req.SwitchSerialNumber == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "Switch Serial Number not provided for UpdateExpectedSwitch")
 	}
-	if _, ok := f.es[req.Id.Value]; !ok {
-		return nil, status.Errorf(codes.NotFound, "ExpectedSwitch with ID %q not found", req.Id.Value)
+	if _, ok := f.es[req.ExpectedSwitchId.Value]; !ok {
+		return nil, status.Errorf(codes.NotFound, "ExpectedSwitch with ID %q not found", req.ExpectedSwitchId.Value)
 	}
-	f.es[req.Id.Value] = req
+	f.es[req.ExpectedSwitchId.Value] = req
 	return &emptypb.Empty{}, nil
 }
 
 // DeleteExpectedSwitch implements interface ForgeServer
 func (f *ForgeServerImpl) DeleteExpectedSwitch(ctx context.Context, req *cwssaws.ExpectedSwitchRequest) (*emptypb.Empty, error) {
-	if req == nil || req.Id == nil || req.Id.Value == "" {
+	if req == nil || req.ExpectedSwitchId == nil || req.ExpectedSwitchId.Value == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "ID not provided for DeleteExpectedSwitch")
 	}
-	if _, ok := f.es[req.Id.Value]; !ok {
-		return nil, status.Errorf(codes.NotFound, "ExpectedSwitch with ID %q not found", req.Id.Value)
+	if _, ok := f.es[req.ExpectedSwitchId.Value]; !ok {
+		return nil, status.Errorf(codes.NotFound, "ExpectedSwitch with ID %q not found", req.ExpectedSwitchId.Value)
 	}
-	delete(f.es, req.Id.Value)
+	delete(f.es, req.ExpectedSwitchId.Value)
 	return &emptypb.Empty{}, nil
 }
 
 // GetExpectedSwitch implements interface ForgeServer
 func (f *ForgeServerImpl) GetExpectedSwitch(ctx context.Context, req *cwssaws.ExpectedSwitchRequest) (*cwssaws.ExpectedSwitch, error) {
-	if req == nil || req.Id == nil || req.Id.Value == "" {
+	if req == nil || req.ExpectedSwitchId == nil || req.ExpectedSwitchId.Value == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "ID not provided for GetExpectedSwitch")
 	}
-	es, ok := f.es[req.Id.Value]
+	es, ok := f.es[req.ExpectedSwitchId.Value]
 	if !ok {
-		return nil, status.Errorf(codes.NotFound, "ExpectedSwitch with ID %q not found", req.Id.Value)
+		return nil, status.Errorf(codes.NotFound, "ExpectedSwitch with ID %q not found", req.ExpectedSwitchId.Value)
 	}
 	return es, nil
 }

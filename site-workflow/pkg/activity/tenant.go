@@ -27,11 +27,11 @@ import (
 
 	"go.temporal.io/sdk/temporal"
 
-	cClient "github.com/nvidia/bare-metal-manager-rest/site-workflow/pkg/grpc/client"
+	cClient "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/grpc/client"
 
-	swe "github.com/nvidia/bare-metal-manager-rest/site-workflow/pkg/error"
+	swe "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/error"
 
-	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 )
 
 // ManageTenant is activity to manage a Tenant on Site

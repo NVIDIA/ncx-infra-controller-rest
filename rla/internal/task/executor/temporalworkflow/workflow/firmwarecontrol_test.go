@@ -29,39 +29,27 @@ import (
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/testsuite"
 
-	activitypkg "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/executor/temporalworkflow/activity"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/executor/temporalworkflow/common"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operationrules"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/operations"
-	"github.com/nvidia/bare-metal-manager-rest/rla/internal/task/task"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/deviceinfo"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/devicetypes"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/common/location"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/component"
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/inventoryobjects/rack"
+	activitypkg "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor/temporalworkflow/activity"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor/temporalworkflow/common"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operationrules"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operations"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/task"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
 )
-
-// mockSetFirmwareUpdateTimeWindowForFirmwareControl is a mock activity function for testing
-func mockSetFirmwareUpdateTimeWindowForFirmwareControl(
-	ctx context.Context,
-	req operations.SetFirmwareUpdateTimeWindowRequest,
-) error {
-	return nil
-}
 
 // mockUpdateTaskStatusForFirmwareControl is a mock activity for updating task status
 func mockUpdateTaskStatusForFirmwareControl(ctx context.Context, arg *task.TaskStatusUpdate) error {
 	return nil
 }
 
-// mockStartFirmwareUpdate is a mock activity for starting firmware update
-func mockStartFirmwareUpdate(ctx context.Context, target common.Target, info operations.FirmwareControlTaskInfo) error {
+// mockFirmwareControl is a mock activity for starting firmware update
+func mockFirmwareControl(ctx context.Context, target common.Target, info operations.FirmwareControlTaskInfo) error {
 	return nil
 }
 
-// mockGetFirmwareUpdateStatus is a mock activity for getting firmware update status
-func mockGetFirmwareUpdateStatus(ctx context.Context, target common.Target) (*activitypkg.GetFirmwareUpdateStatusResult, error) {
-	return &activitypkg.GetFirmwareUpdateStatusResult{
+// mockGetFirmwareStatus is a mock activity for getting firmware update status
+func mockGetFirmwareStatus(ctx context.Context, target common.Target) (*activitypkg.GetFirmwareStatusResult, error) {
+	return &activitypkg.GetFirmwareStatusResult{
 		Statuses: map[string]operations.FirmwareUpdateStatus{},
 	}, nil
 }
@@ -126,17 +114,19 @@ func createFirmwareTestRuleDef() *operationrules.RuleDefinition {
 	}
 }
 
-// createTestRackForFirmwareControl creates a test rack with components having the given external IDs.
-// externalIDs are the external component IDs used for activity calls.
-func createTestRackForFirmwareControl(externalIDs ...string) *rack.Rack {
-	r := rack.New(deviceinfo.DeviceInfo{ID: uuid.New(), Name: "test-rack"}, location.Location{})
-	for _, extID := range externalIDs {
-		r.AddComponent(component.Component{
-			ComponentID: extID,
+// firmwareTestComponents creates WorkflowComponent slices for firmware tests.
+// Each ID becomes a Compute component.
+func firmwareTestComponents(
+	externalIDs ...string,
+) []task.WorkflowComponent {
+	comps := make([]task.WorkflowComponent, len(externalIDs))
+	for i, id := range externalIDs {
+		comps[i] = task.WorkflowComponent{
+			ComponentID: id,
 			Type:        devicetypes.ComponentTypeCompute,
-		})
+		}
 	}
-	return r
+	return comps
 }
 
 func TestFirmwareControlWorkflow(t *testing.T) {
@@ -148,7 +138,7 @@ func TestFirmwareControlWorkflow(t *testing.T) {
 	}
 	baseReqInfo := task.ExecutionInfo{
 		TaskID:         uuid.New(),
-		Rack:           createTestRackForFirmwareControl("comp1", "comp2"),
+		Components:     firmwareTestComponents("comp1", "comp2"),
 		RuleDefinition: createFirmwareTestRuleDef(),
 	}
 
@@ -173,7 +163,7 @@ func TestFirmwareControlWorkflow(t *testing.T) {
 		"single machine success": {
 			reqInfo: task.ExecutionInfo{
 				TaskID:         uuid.New(),
-				Rack:           createTestRackForFirmwareControl("single-component"),
+				Components:     firmwareTestComponents("single-component"),
 				RuleDefinition: createFirmwareTestRuleDef(),
 			},
 			info:          baseInfo,
@@ -189,17 +179,14 @@ func TestFirmwareControlWorkflow(t *testing.T) {
 
 			env.RegisterWorkflow(GenericComponentStepWorkflow)
 
-			env.RegisterActivityWithOptions(mockSetFirmwareUpdateTimeWindowForFirmwareControl, activity.RegisterOptions{
-				Name: "SetFirmwareUpdateTimeWindow",
-			})
 			env.RegisterActivityWithOptions(mockUpdateTaskStatusForFirmwareControl, activity.RegisterOptions{
 				Name: "UpdateTaskStatus",
 			})
-			env.RegisterActivityWithOptions(mockStartFirmwareUpdate, activity.RegisterOptions{
-				Name: "StartFirmwareUpdate",
+			env.RegisterActivityWithOptions(mockFirmwareControl, activity.RegisterOptions{
+				Name: "FirmwareControl",
 			})
-			env.RegisterActivityWithOptions(mockGetFirmwareUpdateStatus, activity.RegisterOptions{
-				Name: "GetFirmwareUpdateStatus",
+			env.RegisterActivityWithOptions(mockGetFirmwareStatus, activity.RegisterOptions{
+				Name: "GetFirmwareStatus",
 			})
 			env.RegisterActivityWithOptions(mockPowerControl, activity.RegisterOptions{
 				Name: "PowerControl",
@@ -208,11 +195,10 @@ func TestFirmwareControlWorkflow(t *testing.T) {
 				Name: "GetPowerStatus",
 			})
 
-			env.OnActivity(mockSetFirmwareUpdateTimeWindowForFirmwareControl, mock.Anything, mock.Anything).Return(tc.activityError)
 			env.OnActivity(mockUpdateTaskStatusForFirmwareControl, mock.Anything, mock.Anything).Return(nil)
-			env.OnActivity(mockStartFirmwareUpdate, mock.Anything, mock.Anything, mock.Anything).Return(tc.activityError)
-			env.OnActivity(mockGetFirmwareUpdateStatus, mock.Anything, mock.Anything).Return(
-				&activitypkg.GetFirmwareUpdateStatusResult{
+			env.OnActivity(mockFirmwareControl, mock.Anything, mock.Anything, mock.Anything).Return(tc.activityError)
+			env.OnActivity(mockGetFirmwareStatus, mock.Anything, mock.Anything).Return(
+				&activitypkg.GetFirmwareStatusResult{
 					Statuses: map[string]operations.FirmwareUpdateStatus{
 						"comp1": {ComponentID: "comp1", State: operations.FirmwareUpdateStateCompleted},
 						"comp2": {ComponentID: "comp2", State: operations.FirmwareUpdateStateCompleted},
@@ -240,11 +226,10 @@ func TestFirmwareControlWorkflowEmptyComponents(t *testing.T) {
 	env := testSuite.NewTestWorkflowEnvironment()
 
 	now := time.Now()
-	// Create rack with no components
-	emptyRack := rack.New(deviceinfo.DeviceInfo{ID: uuid.New(), Name: "empty-rack"}, location.Location{})
+	// Empty Components slice — no components to operate on
 	reqInfo := task.ExecutionInfo{
-		TaskID: uuid.New(),
-		Rack:   emptyRack,
+		TaskID:     uuid.New(),
+		Components: []task.WorkflowComponent{},
 	}
 	info := &operations.FirmwareControlTaskInfo{
 		Operation: operations.FirmwareOperationUpgrade,
@@ -263,13 +248,10 @@ func TestFirmwareControlWorkflowNoComponentIDs(t *testing.T) {
 	env := testSuite.NewTestWorkflowEnvironment()
 
 	now := time.Now()
-	// Components without ComponentID
-	r := rack.New(deviceinfo.DeviceInfo{ID: uuid.New(), Name: "test-rack"}, location.Location{})
-	r.AddComponent(component.Component{}) // Component without ComponentID
-	r.AddComponent(component.Component{}) // Component without ComponentID
+	// nil Components slice — treated as no components
 	reqInfo := task.ExecutionInfo{
 		TaskID:         uuid.New(),
-		Rack:           r,
+		Components:     nil,
 		RuleDefinition: createFirmwareTestRuleDef(),
 	}
 	info := &operations.FirmwareControlTaskInfo{
@@ -281,5 +263,5 @@ func TestFirmwareControlWorkflowNoComponentIDs(t *testing.T) {
 	env.ExecuteWorkflow(FirmwareControl, reqInfo, info)
 
 	assert.True(t, env.IsWorkflowCompleted())
-	assert.Error(t, env.GetWorkflowError()) // Should error because no component IDs
+	assert.Error(t, env.GetWorkflowError()) // Should error because no components
 }

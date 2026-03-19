@@ -21,7 +21,7 @@ import "workflow.proto";
 import "forge_carbide.proto";
 import "google/protobuf/timestamp.proto";
 
-option go_package = "github.com/nvidia/bare-metal-manager-rest/workflow-schema/proto";
+option go_package = "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/proto";
 
 // NetworkSecurityGroupInventory - inventory info for all NetworkSecurityGroups periodically collected
 message NetworkSecurityGroupInventory {

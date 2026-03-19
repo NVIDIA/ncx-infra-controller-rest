@@ -24,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/util"
+	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/util"
 	"go.temporal.io/sdk/testsuite"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -32,16 +32,16 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/uptrace/bun/extra/bundebug"
 
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
-	cdbp "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
-	cdbu "github.com/nvidia/bare-metal-manager-rest/db/pkg/util"
-	"github.com/nvidia/bare-metal-manager-rest/workflow/internal/config"
-	sc "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/client/site"
-	cwu "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/util"
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
+	cdbp "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/paginator"
+	cdbu "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/util"
+	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/internal/config"
+	sc "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/client/site"
+	cwu "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/util"
 
-	cwutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
+	cwutil "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/util"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 )
 
 // testTemporalSiteClientPool Building site client pool
@@ -147,7 +147,7 @@ func TestManageExpectedSwitch_UpdateExpectedSwitchesInDB(t *testing.T) {
 
 	for i := 0; i < 34; i++ {
 		ctrlExpectedSwitch := &cwssaws.ExpectedSwitch{
-			Id:                 &cwssaws.UUID{Value: pagedExpectedSwitches[i].ID.String()},
+			ExpectedSwitchId:   &cwssaws.UUID{Value: pagedExpectedSwitches[i].ID.String()},
 			BmcMacAddress:      pagedExpectedSwitches[i].BmcMacAddress,
 			SwitchSerialNumber: pagedExpectedSwitches[i].SwitchSerialNumber,
 		}
@@ -369,7 +369,7 @@ func TestManageExpectedSwitch_UpdateExpectedSwitchesInDB(t *testing.T) {
 				expectedSwitchInventory: &cwssaws.ExpectedSwitchInventory{
 					ExpectedSwitches: []*cwssaws.ExpectedSwitch{
 						{
-							Id:                 &cwssaws.UUID{Value: uuid.New().String()},
+							ExpectedSwitchId:   &cwssaws.UUID{Value: uuid.New().String()},
 							BmcMacAddress:      "00:11:22:33:44:FF",
 							SwitchSerialNumber: "SW-SN-NEW-1",
 							Metadata: &cwssaws.Metadata{
@@ -421,7 +421,7 @@ func TestManageExpectedSwitch_UpdateExpectedSwitchesInDB(t *testing.T) {
 				// Find the corresponding controller switch
 				var ctrlES *cwssaws.ExpectedSwitch
 				for _, ces := range tt.args.expectedSwitchInventory.ExpectedSwitches {
-					if ces.Id.Value == es.ID.String() {
+					if ces.ExpectedSwitchId.Value == es.ID.String() {
 						ctrlES = ces
 						break
 					}
@@ -450,7 +450,7 @@ func TestManageExpectedSwitch_UpdateExpectedSwitchesInDB(t *testing.T) {
 
 			// Verify newly created switches have correct labels
 			for _, ces := range tt.args.expectedSwitchInventory.ExpectedSwitches {
-				esID, perr := uuid.Parse(ces.Id.Value)
+				esID, perr := uuid.Parse(ces.ExpectedSwitchId.Value)
 				assert.NoError(t, perr)
 				created := switchesByID[esID]
 				if created != nil {

@@ -26,7 +26,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/nvidia/bare-metal-manager-rest/rla/pkg/types"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/types"
 )
 
 // rackInput is the JSON input structure for rack commands.
@@ -69,11 +69,9 @@ type rackComponentInput struct {
 }
 
 type rackBMCInput struct {
-	Type     string `json:"type"`
-	MAC      string `json:"mac"`
-	IP       string `json:"ip"`
-	User     string `json:"user"`
-	Password string `json:"password"`
+	Type string `json:"type"`
+	MAC  string `json:"mac"`
+	IP   string `json:"ip"`
 }
 
 // readRackJSONData returns JSON bytes from a file path or an inline string.
@@ -183,10 +181,7 @@ func parseRackComponentInput(
 }
 
 func parseRackBMCInput(bi rackBMCInput) (types.BMC, error) {
-	bmc := types.BMC{
-		User:     bi.User,
-		Password: bi.Password,
-	}
+	var bmc types.BMC
 
 	bmc.Type = parseBMCTypeToTypes(bi.Type)
 	if bmc.Type == types.BMCTypeUnknown {

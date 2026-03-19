@@ -21,8 +21,8 @@ import (
 	"errors"
 	"testing"
 
-	iActivity "github.com/nvidia/bare-metal-manager-rest/site-workflow/pkg/activity"
-	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
+	iActivity "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/activity"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"go.temporal.io/sdk/temporal"
@@ -98,9 +98,9 @@ func (cepsts *CreateExpectedPowerShelfTestSuite) Test_CreateExpectedPowerShelf_S
 	var expectedPowerShelfManager iActivity.ManageExpectedPowerShelf
 
 	request := &cwssaws.ExpectedPowerShelf{
-		Id:                &cwssaws.UUID{Value: "test-create-workflow-001"},
-		BmcMacAddress:     "00:11:22:33:44:55",
-		ShelfSerialNumber: "SHELF-001",
+		ExpectedPowerShelfId: &cwssaws.UUID{Value: "test-create-workflow-001"},
+		BmcMacAddress:        "00:11:22:33:44:55",
+		ShelfSerialNumber:    "SHELF-001",
 	}
 
 	// Mock CreateExpectedPowerShelfOnSite activity
@@ -117,9 +117,9 @@ func (cepsts *CreateExpectedPowerShelfTestSuite) Test_CreateExpectedPowerShelf_F
 	var expectedPowerShelfManager iActivity.ManageExpectedPowerShelf
 
 	request := &cwssaws.ExpectedPowerShelf{
-		Id:                &cwssaws.UUID{Value: "test-create-workflow-001"},
-		BmcMacAddress:     "00:11:22:33:44:55",
-		ShelfSerialNumber: "SHELF-001",
+		ExpectedPowerShelfId: &cwssaws.UUID{Value: "test-create-workflow-001"},
+		BmcMacAddress:        "00:11:22:33:44:55",
+		ShelfSerialNumber:    "SHELF-001",
 	}
 
 	errMsg := "Site Controller communication error"
@@ -157,9 +157,9 @@ func (uepsts *UpdateExpectedPowerShelfTestSuite) Test_UpdateExpectedPowerShelf_S
 	var expectedPowerShelfManager iActivity.ManageExpectedPowerShelf
 
 	request := &cwssaws.ExpectedPowerShelf{
-		Id:                &cwssaws.UUID{Value: "test-update-workflow-001"},
-		BmcMacAddress:     "00:11:22:33:44:55",
-		ShelfSerialNumber: "SHELF-001",
+		ExpectedPowerShelfId: &cwssaws.UUID{Value: "test-update-workflow-001"},
+		BmcMacAddress:        "00:11:22:33:44:55",
+		ShelfSerialNumber:    "SHELF-001",
 	}
 
 	// Mock UpdateExpectedPowerShelfOnSite activity
@@ -176,9 +176,9 @@ func (uepsts *UpdateExpectedPowerShelfTestSuite) Test_UpdateExpectedPowerShelf_F
 	var expectedPowerShelfManager iActivity.ManageExpectedPowerShelf
 
 	request := &cwssaws.ExpectedPowerShelf{
-		Id:                &cwssaws.UUID{Value: "test-update-workflow-001"},
-		BmcMacAddress:     "00:11:22:33:44:55",
-		ShelfSerialNumber: "SHELF-001",
+		ExpectedPowerShelfId: &cwssaws.UUID{Value: "test-update-workflow-001"},
+		BmcMacAddress:        "00:11:22:33:44:55",
+		ShelfSerialNumber:    "SHELF-001",
 	}
 
 	errMsg := "Site Controller communication error"
@@ -216,8 +216,8 @@ func (depsts *DeleteExpectedPowerShelfTestSuite) Test_DeleteExpectedPowerShelf_S
 	var expectedPowerShelfManager iActivity.ManageExpectedPowerShelf
 
 	request := &cwssaws.ExpectedPowerShelfRequest{
-		Id:            &cwssaws.UUID{Value: "test-delete-workflow-001"},
-		BmcMacAddress: "00:11:22:33:44:55",
+		ExpectedPowerShelfId: &cwssaws.UUID{Value: "test-delete-workflow-001"},
+		BmcMacAddress:        "00:11:22:33:44:55",
 	}
 
 	// Mock DeleteExpectedPowerShelfOnSite activity
@@ -234,8 +234,8 @@ func (depsts *DeleteExpectedPowerShelfTestSuite) Test_DeleteExpectedPowerShelf_F
 	var expectedPowerShelfManager iActivity.ManageExpectedPowerShelf
 
 	request := &cwssaws.ExpectedPowerShelfRequest{
-		Id:            &cwssaws.UUID{Value: "test-delete-workflow-001"},
-		BmcMacAddress: "00:11:22:33:44:55",
+		ExpectedPowerShelfId: &cwssaws.UUID{Value: "test-delete-workflow-001"},
+		BmcMacAddress:        "00:11:22:33:44:55",
 	}
 
 	errMsg := "Site Controller communication error"

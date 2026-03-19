@@ -26,16 +26,16 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/internal/config"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/handler/util/common"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model"
+	sc "github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/client/site"
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
+	cdbu "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/util"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
-	"github.com/nvidia/bare-metal-manager-rest/api/internal/config"
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/handler/util/common"
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model"
-	sc "github.com/nvidia/bare-metal-manager-rest/api/pkg/client/site"
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
-	cdbu "github.com/nvidia/bare-metal-manager-rest/db/pkg/util"
-	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/uptrace/bun/extra/bundebug"
@@ -130,6 +130,9 @@ func TestBatchCreateInstanceHandler_Handle(t *testing.T) {
 	// VPC and Subnet
 	vpc1 := testInstanceBuildVPC(t, dbSession, "test-vpc-1", ip, tn1, st1, cdb.GetUUIDPtr(uuid.New()), nil, cdb.GetStrPtr(cdbm.VpcEthernetVirtualizer), nil, cdbm.VpcStatusReady, tnu1)
 	subnet1 := testInstanceBuildSubnet(t, dbSession, "test-subnet-1", tn1, vpc1, cdb.GetUUIDPtr(uuid.New()), cdbm.SubnetStatusReady, tnu1)
+	ipbVpcPrefix := common.TestBuildVpcPrefixIPBlock(t, dbSession, "testipb-vpcprefix", st1, ip, &tn1.ID, cdbm.IPBlockRoutingTypeDatacenterOnly, "10.0.0.0", 24, cdbm.IPBlockProtocolVersionV4, false, cdbm.IPBlockStatusReady, tnu1)
+	vpcFNN := testInstanceBuildVPC(t, dbSession, "test-vpc-fnn-1", ip, tn1, st1, cdb.GetUUIDPtr(uuid.New()), nil, cdb.GetStrPtr(cdbm.VpcFNN), nil, cdbm.VpcStatusReady, tnu1)
+	vpcPrefix1 := common.TestBuildVPCPrefix(t, dbSession, "test-vpcprefix-1", st1, tn1, vpcFNN.ID, &ipbVpcPrefix.ID, cdb.GetStrPtr("10.0.0.0/24"), cdb.GetIntPtr(24), cdbm.VpcPrefixStatusReady, tnu1)
 
 	// InfiniBand Partition for testing InfiniBand Interfaces
 	ibp1 := testBuildIBPartition(t, dbSession, "test-ibp-1", tnOrg, st1, tn1, cdb.GetUUIDPtr(uuid.New()), cdb.GetStrPtr(cdbm.InfiniBandPartitionStatusReady), false)
@@ -386,6 +389,36 @@ func TestBatchCreateInstanceHandler_Handle(t *testing.T) {
 				reqOrg:   tnOrg,
 				reqUser:  tnu1,
 				respCode: http.StatusCreated,
+			},
+			wantErr: false,
+		},
+		{
+			name: "test batch instance create API endpoint rejects requested IP on interfaces",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				scp:       scp,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIBatchInstanceCreateRequest{
+					NamePrefix:     "test-batch-vpcprefix-ip",
+					Count:          2,
+					TenantID:       tn1.ID.String(),
+					InstanceTypeID: ist1.ID.String(),
+					VpcID:          vpcFNN.ID.String(),
+					IpxeScript:     cdb.GetStrPtr("test script"),
+					Interfaces: []model.APIInterfaceCreateOrUpdateRequest{
+						{
+							VpcPrefixID: cdb.GetStrPtr(vpcPrefix1.ID.String()),
+							IPAddress:   cdb.GetStrPtr("10.0.0.11"),
+						},
+					},
+				},
+				reqOrg:   tnOrg,
+				reqUser:  tnu1,
+				respCode: http.StatusBadRequest,
+				respMsg:  "batch instance create does not support `ipAddress` on interfaces",
 			},
 			wantErr: false,
 		},
@@ -817,7 +850,7 @@ func TestBatchCreateInstanceHandler_Handle(t *testing.T) {
 				reqOrg:   tnOrg,
 				reqUser:  tnu1,
 				respCode: http.StatusBadRequest,
-				respMsg:  "Could not find DpuExtensionService",
+				respMsg:  "Could not find DPU Extension Service",
 			},
 			wantErr: false,
 		},
@@ -899,7 +932,7 @@ func TestBatchCreateInstanceHandler_Handle(t *testing.T) {
 				reqOrg:   tnOrg,
 				reqUser:  tnu1,
 				respCode: http.StatusBadRequest,
-				respMsg:  "Unable to parse `operatingSystemId` specified",
+				respMsg:  `"operatingSystemId":"must be a valid UUID"`,
 			},
 			wantErr: false,
 		},
@@ -982,6 +1015,9 @@ func TestBatchCreateInstanceHandler_Handle(t *testing.T) {
 			} else {
 				// Check response code
 				assert.Equal(t, tt.args.respCode, rec.Code, "Response body: %s", rec.Body.String())
+				if tt.args.respMsg != "" {
+					assert.Contains(t, rec.Body.String(), tt.args.respMsg)
+				}
 
 				// For successful creations, verify response structure
 				if rec.Code == http.StatusCreated {
@@ -1035,4 +1071,5 @@ func TestBatchCreateInstanceHandler_Handle(t *testing.T) {
 		_ = bcih.Handle(ec)
 		assert.Equal(t, http.StatusForbidden, rec.Code, "Expected quota exceeded error, got: %s", rec.Body.String())
 	})
+
 }

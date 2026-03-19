@@ -31,8 +31,8 @@ import (
 	"strings"
 	"sync"
 
+	cutil "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/util"
 	validation "github.com/go-ozzo/ozzo-validation/v4"
-	cutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -47,17 +47,17 @@ import (
 
 	tclient "go.temporal.io/sdk/client"
 
-	auth "github.com/nvidia/bare-metal-manager-rest/auth/pkg/authorization"
+	auth "github.com/NVIDIA/ncx-infra-controller-rest/auth/pkg/authorization"
 
 	temporalEnums "go.temporal.io/api/enums/v1"
 
-	cam "github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model"
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
-	cdbp "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
-	swe "github.com/nvidia/bare-metal-manager-rest/site-workflow/pkg/error"
-	rlav1 "github.com/nvidia/bare-metal-manager-rest/workflow-schema/rla/protobuf/v1"
-	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/queue"
+	cam "github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model"
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
+	cdbp "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/paginator"
+	swe "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/error"
+	rlav1 "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/rla/protobuf/v1"
+	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/queue"
 )
 
 const (

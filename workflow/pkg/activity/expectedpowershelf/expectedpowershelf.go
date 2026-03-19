@@ -22,17 +22,17 @@ import (
 	"errors"
 	"reflect"
 
+	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/util"
 	"github.com/google/uuid"
-	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/util"
 	"github.com/rs/zerolog/log"
 
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
-	cdbp "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
+	cdbp "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/paginator"
 
-	sc "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/client/site"
+	sc "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/client/site"
 
-	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 )
 
 // ManageExpectedPowerShelf is an activity wrapper for managing ExpectedPowerShelf lifecycle that allows
@@ -137,7 +137,7 @@ func (mei ManageExpectedPowerShelf) UpdateExpectedPowerShelvesInDB(ctx context.C
 		if reps == nil {
 			logger.Error().Msg("received nil Expected Power Shelf entry, skipping processing")
 			continue
-		} else if reps.Id == nil {
+		} else if reps.ExpectedPowerShelfId == nil {
 			mac := "unknown"
 			if reps.BmcMacAddress != "" {
 				mac = reps.BmcMacAddress
@@ -145,9 +145,9 @@ func (mei ManageExpectedPowerShelf) UpdateExpectedPowerShelvesInDB(ctx context.C
 			logger.Error().Str("MAC", mac).Msg("received Expected Power Shelf entry from Site without UUID set, skipping processing")
 			continue
 		}
-		epsID, perr := uuid.Parse(reps.Id.Value)
+		epsID, perr := uuid.Parse(reps.ExpectedPowerShelfId.Value)
 		if perr != nil || epsID == uuid.Nil {
-			logger.Error().Str("ID", reps.Id.Value).Msg("received Expected Power Shelf entry from Site with invalid UUID, skipping processing")
+			logger.Error().Str("ID", reps.ExpectedPowerShelfId.Value).Msg("received Expected Power Shelf entry from Site with invalid UUID, skipping processing")
 			continue
 		}
 		reportedIDs[epsID] = true

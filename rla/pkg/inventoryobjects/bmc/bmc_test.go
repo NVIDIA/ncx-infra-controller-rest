@@ -23,7 +23,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/nvidia/bare-metal-manager-rest/common/pkg/credential"
+	"github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/credential"
 )
 
 func TestNew(t *testing.T) {

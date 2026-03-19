@@ -23,11 +23,11 @@ import (
 
 	validationis "github.com/go-ozzo/ozzo-validation/v4/is"
 
+	camu "github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model/util"
 	validation "github.com/go-ozzo/ozzo-validation/v4"
-	camu "github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model/util"
 
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
 )
 
 const (

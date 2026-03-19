@@ -26,8 +26,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/uptrace/bun"
 
-	dbquery "github.com/nvidia/bare-metal-manager-rest/rla/internal/db/query"
-	taskcommon "github.com/nvidia/bare-metal-manager-rest/rla/internal/task/common"
+	dbquery "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/db/query"
+	taskcommon "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/common"
 )
 
 var defaultTaskPagination = dbquery.Pagination{
@@ -50,10 +50,14 @@ type Task struct {
 	ExecutionID    string                  `bun:"execution_id,notnull"`
 	Status         taskcommon.TaskStatus   `bun:"status,type:varchar(32),notnull"`
 	Message        string                  `bun:"message,nullzero"`
-	AppliedRuleID  *uuid.UUID              `bun:"applied_rule_id,type:uuid"` // Which opeation rule was applied
+	AppliedRuleID  *uuid.UUID              `bun:"applied_rule_id,type:uuid"` // Which operation rule was applied
 	CreatedAt      time.Time               `bun:"created_at,nullzero,notnull,default:current_timestamp"`
 	UpdatedAt      time.Time               `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	StartedAt      *time.Time              `bun:"started_at"`
 	FinishedAt     *time.Time              `bun:"finished_at"`
+	// QueueExpiresAt is set only for waiting tasks. After this time, the Promoter
+	// will discard the task instead of promoting it.
+	QueueExpiresAt *time.Time `bun:"queue_expires_at"`
 }
 
 // Create inserts the task record into the backing store.
@@ -96,6 +100,9 @@ func (t *Task) UpdateTaskStatus(
 	t.Status = status
 	t.Message = message
 	t.UpdatedAt = time.Now().UTC()
+	if status == taskcommon.TaskStatusRunning && t.StartedAt == nil {
+		t.StartedAt = &t.UpdatedAt
+	}
 	if status.IsFinished() {
 		t.FinishedAt = &t.UpdatedAt
 	} else {
@@ -104,7 +111,7 @@ func (t *Task) UpdateTaskStatus(
 
 	_, err := idb.NewUpdate().
 		Model(t).
-		Column("status", "message", "updated_at", "finished_at").
+		Column("status", "message", "updated_at", "started_at", "finished_at").
 		Where("id = ?", t.ID).
 		Exec(ctx)
 
@@ -145,6 +152,7 @@ func taskListOptionsToFilterable(
 			Column:   "status",
 			Operator: dbquery.OperatorIn,
 			Value: []taskcommon.TaskStatus{
+				taskcommon.TaskStatusWaiting,
 				taskcommon.TaskStatusPending,
 				taskcommon.TaskStatusRunning,
 			},
@@ -171,6 +179,52 @@ func GetTask(ctx context.Context, idb bun.IDB, id uuid.UUID) (*Task, error) {
 		return nil, err
 	}
 	return &task, nil
+}
+
+// ListTasksForRackByStatus returns tasks for a rack matching any of the given
+// statuses, ordered oldest-first.
+func ListTasksForRackByStatus(
+	ctx context.Context,
+	idb bun.IDB,
+	rackID uuid.UUID,
+	statuses []taskcommon.TaskStatus,
+) ([]Task, error) {
+	var tasks []Task
+	err := idb.NewSelect().
+		Model(&tasks).
+		Where("rack_id = ?", rackID).
+		Where("status IN (?)", bun.In(statuses)).
+		OrderExpr("created_at ASC").
+		Scan(ctx)
+	return tasks, err
+}
+
+// ListRacksWithWaitingTasks returns the distinct rack IDs that have at least
+// one task in the waiting state.
+func ListRacksWithWaitingTasks(
+	ctx context.Context,
+	idb bun.IDB,
+) ([]uuid.UUID, error) {
+	var rackIDs []uuid.UUID
+	err := idb.NewSelect().
+		TableExpr("task").
+		ColumnExpr("DISTINCT rack_id").
+		Where("status = ?", taskcommon.TaskStatusWaiting).
+		Scan(ctx, &rackIDs)
+	return rackIDs, err
+}
+
+// CountWaitingTasksForRack returns the count of waiting tasks for a rack.
+func CountWaitingTasksForRack(
+	ctx context.Context,
+	idb bun.IDB,
+	rackID uuid.UUID,
+) (int, error) {
+	return idb.NewSelect().
+		TableExpr("task").
+		Where("rack_id = ?", rackID).
+		Where("status = ?", taskcommon.TaskStatusWaiting).
+		Count(ctx)
 }
 
 // ListTasks returns all tasks that match the given criteria.

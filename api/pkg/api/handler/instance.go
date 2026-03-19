@@ -38,19 +38,19 @@ import (
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 
-	"github.com/nvidia/bare-metal-manager-rest/api/internal/config"
-	common "github.com/nvidia/bare-metal-manager-rest/api/pkg/api/handler/util/common"
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model"
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/pagination"
-	sc "github.com/nvidia/bare-metal-manager-rest/api/pkg/client/site"
-	auth "github.com/nvidia/bare-metal-manager-rest/auth/pkg/authorization"
-	cutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
-	cdbp "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
-	swe "github.com/nvidia/bare-metal-manager-rest/site-workflow/pkg/error"
-	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
-	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/queue"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/internal/config"
+	common "github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/handler/util/common"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/pagination"
+	sc "github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/client/site"
+	auth "github.com/NVIDIA/ncx-infra-controller-rest/auth/pkg/authorization"
+	cutil "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/util"
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
+	cdbp "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/paginator"
+	swe "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/error"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
+	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/queue"
 )
 
 // ~~~~~ Create Handler ~~~~~ //
@@ -463,7 +463,12 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("VPC: %v specified in request must have Ethernet network virtualization type in order to create Subnet based interfaces", vpc.ID), nil)
 			}
 
-			dbInterfaces = append(dbInterfaces, cdbm.Interface{SubnetID: &subnetID, IsPhysical: ifc.IsPhysical, Status: cdbm.InterfaceStatusPending})
+			dbInterfaces = append(dbInterfaces, cdbm.Interface{
+				SubnetID:           &subnetID,
+				IsPhysical:         ifc.IsPhysical,
+				RequestedIpAddress: nil, // RequestedIpAddress requires a VPC prefix, and model validation enforces this.
+				Status:             cdbm.InterfaceStatusPending,
+			})
 		}
 
 		if ifc.VpcPrefixID != nil {
@@ -500,12 +505,13 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 			}
 
 			dbInterfaces = append(dbInterfaces, cdbm.Interface{
-				VpcPrefixID:       &vpcPrefixID,
-				Device:            ifc.Device,
-				DeviceInstance:    ifc.DeviceInstance,
-				VirtualFunctionID: ifc.VirtualFunctionID,
-				IsPhysical:        ifc.IsPhysical,
-				Status:            cdbm.InterfaceStatusPending,
+				VpcPrefixID:        &vpcPrefixID,
+				RequestedIpAddress: ifc.IPAddress,
+				Device:             ifc.Device,
+				DeviceInstance:     ifc.DeviceInstance,
+				VirtualFunctionID:  ifc.VirtualFunctionID,
+				IsPhysical:         ifc.IsPhysical,
+				Status:             cdbm.InterfaceStatusPending,
 			})
 		}
 	}
@@ -1210,15 +1216,16 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 	ifcDAO := cdbm.NewInterfaceDAO(cih.dbSession)
 	for _, dbifc := range dbInterfaces {
 		input := cdbm.InterfaceCreateInput{
-			InstanceID:        instance.ID,
-			SubnetID:          dbifc.SubnetID,
-			VpcPrefixID:       dbifc.VpcPrefixID,
-			Device:            dbifc.Device,
-			DeviceInstance:    dbifc.DeviceInstance,
-			VirtualFunctionID: dbifc.VirtualFunctionID,
-			IsPhysical:        dbifc.IsPhysical,
-			Status:            dbifc.Status,
-			CreatedBy:         dbUser.ID,
+			InstanceID:         instance.ID,
+			SubnetID:           dbifc.SubnetID,
+			VpcPrefixID:        dbifc.VpcPrefixID,
+			Device:             dbifc.Device,
+			DeviceInstance:     dbifc.DeviceInstance,
+			VirtualFunctionID:  dbifc.VirtualFunctionID,
+			RequestedIpAddress: dbifc.RequestedIpAddress,
+			IsPhysical:         dbifc.IsPhysical,
+			Status:             dbifc.Status,
+			CreatedBy:          dbUser.ID,
 		}
 
 		retifc, serr := ifcDAO.Create(ctx, tx, input)
@@ -1268,6 +1275,10 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 				vfID := uint32(*dbifc.VirtualFunctionID)
 				interfaceConfig.VirtualFunctionId = &vfID
 			}
+		}
+
+		if dbifc.RequestedIpAddress != nil {
+			interfaceConfig.IpAddress = dbifc.RequestedIpAddress
 		}
 
 		interfaceConfigs = append(interfaceConfigs, interfaceConfig)
@@ -2204,7 +2215,12 @@ func (uih UpdateInstanceHandler) Handle(c echo.Context) error {
 				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("VPC: %v specified in request must have Ethernet network virtualization type in order to create Subnet based interfaces", instance.VpcID), nil)
 			}
 
-			dbInterfaces = append(dbInterfaces, cdbm.Interface{SubnetID: &subnetID, IsPhysical: ifc.IsPhysical, Status: cdbm.InterfaceStatusPending})
+			dbInterfaces = append(dbInterfaces, cdbm.Interface{
+				SubnetID:           &subnetID,
+				IsPhysical:         ifc.IsPhysical,
+				RequestedIpAddress: nil, // RequestedIpAddress requires a VPC prefix, and model validation enforces this.
+				Status:             cdbm.InterfaceStatusPending,
+			})
 		}
 
 		if ifc.VpcPrefixID != nil {
@@ -2240,12 +2256,13 @@ func (uih UpdateInstanceHandler) Handle(c echo.Context) error {
 			}
 
 			dbInterfaces = append(dbInterfaces, cdbm.Interface{
-				VpcPrefixID:       &vpcPrefixID,
-				Device:            ifc.Device,
-				DeviceInstance:    ifc.DeviceInstance,
-				VirtualFunctionID: ifc.VirtualFunctionID,
-				IsPhysical:        ifc.IsPhysical,
-				Status:            cdbm.InterfaceStatusPending})
+				VpcPrefixID:        &vpcPrefixID,
+				RequestedIpAddress: ifc.IPAddress,
+				Device:             ifc.Device,
+				DeviceInstance:     ifc.DeviceInstance,
+				VirtualFunctionID:  ifc.VirtualFunctionID,
+				IsPhysical:         ifc.IsPhysical,
+				Status:             cdbm.InterfaceStatusPending})
 		}
 	}
 
@@ -2422,18 +2439,12 @@ func (uih UpdateInstanceHandler) Handle(c echo.Context) error {
 		}
 	}
 
-	existingNvllpIDMap := make(map[uuid.UUID]bool)
 	if len(apiRequest.NVLinkInterfaces) > 0 {
 		nvlIfcDAO := cdbm.NewNVLinkInterfaceDAO(uih.dbSession)
 		nvlIfcs, _, err := nvlIfcDAO.GetAll(ctx, nil, cdbm.NVLinkInterfaceFilterInput{InstanceIDs: []uuid.UUID{instance.ID}}, cdbp.PageInput{}, nil)
 		if err != nil {
 			logger.Error().Err(err).Msg("error retrieving NVLink Interfaces from DB for Instance")
 			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve NVLink Interfaces for Instance", nil)
-		}
-
-		// Existing NVLink Logical Partition IDs
-		for _, nvlIfc := range nvlIfcs {
-			existingNvllpIDMap[nvlIfc.NVLinkLogicalPartitionID] = true
 		}
 
 		// Discard if VPC has default NVLink Logical Partition specified and NVLink Interfaces are exists
@@ -2450,15 +2461,11 @@ func (uih UpdateInstanceHandler) Handle(c echo.Context) error {
 			logger.Warn().Err(err).Msg("error parsing NVLink Logical Partition id in instance NVLink Interface request")
 			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("NVLink Logical Partition ID: %v specified in request data is not valid", nvlifc.NVLinkLogicalPartitionID), nil)
 		}
-
-		// Discard if NVLink Logical Partition is already present for the Instance
-		if _, ok := existingNvllpIDMap[nvllpID]; ok {
-			logger.Warn().Msg(fmt.Sprintf("NVLink Interfaces of this Instance are already connected to NVLink Logical Partition: %v", nvllpID))
-			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("NVLink Interfaces of this Instance are already connected to NVLink Logical Partition: %v", nvllpID), nil)
-		}
-
 		nvllpIDs = append(nvllpIDs, nvllpID)
 	}
+
+	// Deduplicate partition IDs before the batch fetch (multiple GPUs may share the same partition)
+	nvllpIDs = goset.NewSet(nvllpIDs...).ToSlice()
 
 	// Batch fetch NVLink Logical Partitions from DB
 	nvllpDAO := cdbm.NewNVLinkLogicalPartitionDAO(uih.dbSession)
@@ -2482,7 +2489,7 @@ func (uih UpdateInstanceHandler) Handle(c echo.Context) error {
 		nvllp, ok := nvllpIDMap[nvllpID]
 		if !ok {
 			logger.Error().Msg("error retrieving NVLink Logical Partition from DB by ID")
-			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve NVLink Logical Partition with ID specified in request data, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Could not find NVLink Logical Partition with ID: %s specified in request data", nvllpID), nil)
 		}
 
 		if nvllp.SiteID != instance.SiteID {
@@ -2766,15 +2773,16 @@ func (uih UpdateInstanceHandler) Handle(c echo.Context) error {
 	if len(apiRequest.Interfaces) > 0 {
 		for _, dbifc := range dbInterfaces {
 			input := cdbm.InterfaceCreateInput{
-				InstanceID:        instance.ID,
-				SubnetID:          dbifc.SubnetID,
-				VpcPrefixID:       dbifc.VpcPrefixID,
-				Device:            dbifc.Device,
-				DeviceInstance:    dbifc.DeviceInstance,
-				VirtualFunctionID: dbifc.VirtualFunctionID,
-				IsPhysical:        dbifc.IsPhysical,
-				Status:            dbifc.Status,
-				CreatedBy:         dbUser.ID,
+				InstanceID:         instance.ID,
+				SubnetID:           dbifc.SubnetID,
+				VpcPrefixID:        dbifc.VpcPrefixID,
+				Device:             dbifc.Device,
+				DeviceInstance:     dbifc.DeviceInstance,
+				VirtualFunctionID:  dbifc.VirtualFunctionID,
+				RequestedIpAddress: dbifc.RequestedIpAddress,
+				IsPhysical:         dbifc.IsPhysical,
+				Status:             dbifc.Status,
+				CreatedBy:          dbUser.ID,
 			}
 
 			dbifc, serr := ifcDAO.Create(ctx, tx, input)
@@ -3066,6 +3074,10 @@ func (uih UpdateInstanceHandler) Handle(c echo.Context) error {
 				vfID := uint32(*ifc.VirtualFunctionID)
 				interfaceConfig.VirtualFunctionId = &vfID
 			}
+		}
+
+		if ifc.RequestedIpAddress != nil {
+			interfaceConfig.IpAddress = ifc.RequestedIpAddress
 		}
 
 		interfaceConfigs[i] = interfaceConfig

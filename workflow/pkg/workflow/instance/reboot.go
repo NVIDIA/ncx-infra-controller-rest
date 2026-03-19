@@ -29,8 +29,8 @@ import (
 
 	"go.temporal.io/sdk/client"
 
-	instanceActivity "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/activity/instance"
-	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/queue"
+	instanceActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/instance"
+	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/queue"
 )
 
 // RebootInstance is a Temporal workflow to reboot a machine associated with Instance via Site Agent

@@ -21,9 +21,9 @@ import (
 	"context"
 	"testing"
 
+	cClient "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/grpc/client"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 	"github.com/google/uuid"
-	cClient "github.com/nvidia/bare-metal-manager-rest/site-workflow/pkg/grpc/client"
-	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	tmocks "go.temporal.io/sdk/mocks"
@@ -160,7 +160,7 @@ func TestManageExpectedSwitch_CreateExpectedSwitchOnSite(t *testing.T) {
 			args: args{
 				ctx: context.Background(),
 				request: &cwssaws.ExpectedSwitch{
-					Id:                 &cwssaws.UUID{Value: "test-switch-001"},
+					ExpectedSwitchId:   &cwssaws.UUID{Value: "test-switch-001"},
 					BmcMacAddress:      "00:11:22:33:44:55",
 					SwitchSerialNumber: "SWITCH-123456789",
 				},
@@ -175,7 +175,7 @@ func TestManageExpectedSwitch_CreateExpectedSwitchOnSite(t *testing.T) {
 			args: args{
 				ctx: context.Background(),
 				request: &cwssaws.ExpectedSwitch{
-					Id:                 &cwssaws.UUID{Value: "test-switch-002"},
+					ExpectedSwitchId:   &cwssaws.UUID{Value: "test-switch-002"},
 					BmcMacAddress:      "",
 					SwitchSerialNumber: "SWITCH-123456789",
 				},
@@ -190,7 +190,7 @@ func TestManageExpectedSwitch_CreateExpectedSwitchOnSite(t *testing.T) {
 			args: args{
 				ctx: context.Background(),
 				request: &cwssaws.ExpectedSwitch{
-					Id:                 &cwssaws.UUID{Value: "test-switch-003"},
+					ExpectedSwitchId:   &cwssaws.UUID{Value: "test-switch-003"},
 					BmcMacAddress:      "00:11:22:33:44:55",
 					SwitchSerialNumber: "",
 				},
@@ -205,7 +205,7 @@ func TestManageExpectedSwitch_CreateExpectedSwitchOnSite(t *testing.T) {
 			args: args{
 				ctx: context.Background(),
 				request: &cwssaws.ExpectedSwitch{
-					Id:                 nil,
+					ExpectedSwitchId:   nil,
 					BmcMacAddress:      "00:11:22:33:44:55",
 					SwitchSerialNumber: "SWITCH-123456789",
 				},
@@ -220,7 +220,7 @@ func TestManageExpectedSwitch_CreateExpectedSwitchOnSite(t *testing.T) {
 			args: args{
 				ctx: context.Background(),
 				request: &cwssaws.ExpectedSwitch{
-					Id:                 &cwssaws.UUID{Value: "test-switch-004"},
+					ExpectedSwitchId:   &cwssaws.UUID{Value: "test-switch-004"},
 					BmcMacAddress:      "",
 					SwitchSerialNumber: "",
 				},
@@ -279,7 +279,7 @@ func TestManageExpectedSwitch_UpdateExpectedSwitchOnSite(t *testing.T) {
 			args: args{
 				ctx: context.Background(),
 				request: &cwssaws.ExpectedSwitch{
-					Id:                 &cwssaws.UUID{Value: "test-update-001"},
+					ExpectedSwitchId:   &cwssaws.UUID{Value: "test-update-001"},
 					BmcMacAddress:      "00:11:22:33:44:55",
 					SwitchSerialNumber: "SWITCH-123456789",
 				},
@@ -294,7 +294,7 @@ func TestManageExpectedSwitch_UpdateExpectedSwitchOnSite(t *testing.T) {
 			args: args{
 				ctx: context.Background(),
 				request: &cwssaws.ExpectedSwitch{
-					Id:                 nil,
+					ExpectedSwitchId:   nil,
 					BmcMacAddress:      "00:11:22:33:44:55",
 					SwitchSerialNumber: "SWITCH-123456789",
 				},
@@ -309,7 +309,7 @@ func TestManageExpectedSwitch_UpdateExpectedSwitchOnSite(t *testing.T) {
 			args: args{
 				ctx: context.Background(),
 				request: &cwssaws.ExpectedSwitch{
-					Id:                 &cwssaws.UUID{Value: "test-update-002"},
+					ExpectedSwitchId:   &cwssaws.UUID{Value: "test-update-002"},
 					BmcMacAddress:      "",
 					SwitchSerialNumber: "SWITCH-123456789",
 				},
@@ -324,7 +324,7 @@ func TestManageExpectedSwitch_UpdateExpectedSwitchOnSite(t *testing.T) {
 			args: args{
 				ctx: context.Background(),
 				request: &cwssaws.ExpectedSwitch{
-					Id:                 &cwssaws.UUID{Value: "test-update-003"},
+					ExpectedSwitchId:   &cwssaws.UUID{Value: "test-update-003"},
 					BmcMacAddress:      "00:11:22:33:44:55",
 					SwitchSerialNumber: "",
 				},
@@ -339,7 +339,7 @@ func TestManageExpectedSwitch_UpdateExpectedSwitchOnSite(t *testing.T) {
 			args: args{
 				ctx: context.Background(),
 				request: &cwssaws.ExpectedSwitch{
-					Id:                 &cwssaws.UUID{Value: "test-update-004"},
+					ExpectedSwitchId:   &cwssaws.UUID{Value: "test-update-004"},
 					BmcMacAddress:      "",
 					SwitchSerialNumber: "",
 				},
@@ -398,8 +398,8 @@ func TestManageExpectedSwitch_DeleteExpectedSwitchOnSite(t *testing.T) {
 			args: args{
 				ctx: context.Background(),
 				request: &cwssaws.ExpectedSwitchRequest{
-					Id:            &cwssaws.UUID{Value: "test-delete-001"},
-					BmcMacAddress: "00:11:22:33:44:55",
+					ExpectedSwitchId: &cwssaws.UUID{Value: "test-delete-001"},
+					BmcMacAddress:    "00:11:22:33:44:55",
 				},
 			},
 			wantErr: false,
@@ -412,8 +412,8 @@ func TestManageExpectedSwitch_DeleteExpectedSwitchOnSite(t *testing.T) {
 			args: args{
 				ctx: context.Background(),
 				request: &cwssaws.ExpectedSwitchRequest{
-					Id:            nil,
-					BmcMacAddress: "00:11:22:33:44:55",
+					ExpectedSwitchId: nil,
+					BmcMacAddress:    "00:11:22:33:44:55",
 				},
 			},
 			wantErr: true,
@@ -426,8 +426,8 @@ func TestManageExpectedSwitch_DeleteExpectedSwitchOnSite(t *testing.T) {
 			args: args{
 				ctx: context.Background(),
 				request: &cwssaws.ExpectedSwitchRequest{
-					Id:            &cwssaws.UUID{Value: "test-delete-002"},
-					BmcMacAddress: "",
+					ExpectedSwitchId: &cwssaws.UUID{Value: "test-delete-002"},
+					BmcMacAddress:    "",
 				},
 			},
 			wantErr: false,

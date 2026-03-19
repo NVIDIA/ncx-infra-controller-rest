@@ -44,4 +44,4 @@ List any steps you have taken:
 
 
 -----
-By submitting this issue, you agree to follow our [code of conduct](https://github.com/bare-metal-manager-rest/blob/main/CODE_OF_CONDUCT.md) and our [contributing guidelines](https://github.com/bare-metal-manager-rest/blob/main/CONTRIBUTING.md).
+By submitting this issue, you agree to follow our [code of conduct](https://github.com/NVIDIA/ncx-infra-controller-rest/blob/main/CODE_OF_CONDUCT.md) and our [contributing guidelines](https://github.com/NVIDIA/ncx-infra-controller-rest/blob/main/CONTRIBUTING.md).

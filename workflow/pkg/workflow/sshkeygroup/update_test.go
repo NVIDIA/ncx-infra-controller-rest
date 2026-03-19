@@ -29,10 +29,10 @@ import (
 	"go.temporal.io/sdk/testsuite"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 
-	sshKeyGroupActivity "github.com/nvidia/bare-metal-manager-rest/workflow/pkg/activity/sshkeygroup"
+	sshKeyGroupActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/sshkeygroup"
 )
 
 type UpdateSSHKeyGroupTestSuite struct {

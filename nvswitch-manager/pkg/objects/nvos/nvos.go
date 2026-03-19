@@ -19,7 +19,7 @@ package nvos
 
 import (
 	"fmt"
-	"github.com/nvidia/bare-metal-manager-rest/nvswitch-manager/pkg/common/credential"
+	"github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/pkg/common/credential"
 	"net"
 	"regexp"
 	"strings"

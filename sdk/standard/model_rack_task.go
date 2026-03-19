@@ -1,9 +1,9 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
-API version: 1.0.6
+API version: 1.1.0
 Contact: carbide-dev@exchange.nvidia.com
 */
 
@@ -19,7 +19,7 @@ import (
 // checks if the RackTask type satisfies the MappedNullable interface at compile time
 var _ MappedNullable = &RackTask{}
 
-// RackTask An RLA task representing an asynchronous operation on rack infrastructure.
+// RackTask A task representing an asynchronous operation on rack infrastructure.
 type RackTask struct {
 	// Unique identifier of the task.
 	Id *string `json:"id,omitempty"`
@@ -279,7 +279,7 @@ func (o *RackTask) SetMetadata(v map[string]string) {
 }
 
 func (o RackTask) MarshalJSON() ([]byte, error) {
-	toSerialize,err := o.ToMap()
+	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -347,5 +347,3 @@ func (v *NullableRackTask) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

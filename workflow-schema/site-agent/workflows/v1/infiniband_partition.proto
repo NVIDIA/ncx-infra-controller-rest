@@ -23,7 +23,7 @@ import "workflow.proto";
 import "common_carbide.proto";
 import "forge_carbide.proto";
 
-option go_package = "github.com/nvidia/bare-metal-manager-rest/workflow-schema/proto";
+option go_package = "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/proto";
 
 // CreateInfiniBandPartitionRequest - request parameters for InfiniBandPartition creation
 message CreateInfiniBandPartitionRequest {

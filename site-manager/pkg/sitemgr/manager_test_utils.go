@@ -30,12 +30,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/NVIDIA/ncx-infra-controller-rest/cert-manager/pkg/certs"
+	"github.com/NVIDIA/ncx-infra-controller-rest/cert-manager/pkg/core"
+	fakecrdclient "github.com/NVIDIA/ncx-infra-controller-rest/site-manager/pkg/client/clientset/versioned/fake"
+	crdsv1 "github.com/NVIDIA/ncx-infra-controller-rest/site-manager/pkg/crds/v1"
+	"github.com/NVIDIA/ncx-infra-controller-rest/site-manager/pkg/types"
 	"github.com/gorilla/mux"
-	"github.com/nvidia/bare-metal-manager-rest/cert-manager/pkg/certs"
-	"github.com/nvidia/bare-metal-manager-rest/cert-manager/pkg/core"
-	fakecrdclient "github.com/nvidia/bare-metal-manager-rest/site-manager/pkg/client/clientset/versioned/fake"
-	crdsv1 "github.com/nvidia/bare-metal-manager-rest/site-manager/pkg/crds/v1"
-	"github.com/nvidia/bare-metal-manager-rest/site-manager/pkg/types"
 )
 
 const (

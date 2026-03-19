@@ -20,7 +20,7 @@ package carbideapi
 import (
 	"time"
 
-	pb "github.com/nvidia/bare-metal-manager-rest/rla/internal/carbideapi/gen"
+	pb "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/carbideapi/gen"
 )
 
 // model.go abstracts the raw grpc definitions away.  Don't bother implementing fields you don't think you'll use.
@@ -33,12 +33,6 @@ func stringsToMachineIds(machineIds []string) (ret []*pb.MachineId) {
 		ret = append(ret, &pb.MachineId{Id: cur})
 	}
 	return ret
-}
-
-// Machine represents an individual host or DPU (basic info)
-type Machine struct {
-	MachineID     string
-	ChassisSerial *string
 }
 
 // MachineDetail represents detailed machine information from Carbide
@@ -60,17 +54,6 @@ type MachinePosition struct {
 	PhysicalSlotNum  *int32
 	ComputeTrayIndex *int32
 	TopologyID       *int32
-}
-
-func machineFromPb(machine *pb.Machine) Machine {
-	var chassisSerial *string
-	if machine.DiscoveryInfo != nil && machine.DiscoveryInfo.DmiData != nil {
-		chassisSerialStr := machine.DiscoveryInfo.DmiData.ChassisSerial
-		chassisSerial = &chassisSerialStr
-	} else {
-		chassisSerial = nil
-	}
-	return Machine{MachineID: machine.Id.Id, ChassisSerial: chassisSerial}
 }
 
 func machineDetailFromPb(machine *pb.Machine) MachineDetail {

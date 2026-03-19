@@ -25,21 +25,21 @@ import (
 	"math"
 	"net/http"
 
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/internal/config"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/handler/util/common"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model/util"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/pagination"
+	sc "github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/client/site"
+	cutil "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/util"
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
+	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/paginator"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
+	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/queue"
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
-	"github.com/nvidia/bare-metal-manager-rest/api/internal/config"
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/handler/util/common"
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model"
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model/util"
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/pagination"
-	sc "github.com/nvidia/bare-metal-manager-rest/api/pkg/client/site"
-	cutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
-	"github.com/nvidia/bare-metal-manager-rest/db/pkg/db/paginator"
-	cwssaws "github.com/nvidia/bare-metal-manager-rest/workflow-schema/schema/site-agent/workflows/v1"
-	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/queue"
 	"go.opentelemetry.io/otel/attribute"
 	tclient "go.temporal.io/sdk/client"
 )
@@ -191,7 +191,7 @@ func (cesh CreateExpectedSwitchHandler) Handle(c echo.Context) error {
 	// Build the create request for workflow
 	// NVOS credentials come from API request since they're not stored in DB
 	createExpectedSwitchRequest := &cwssaws.ExpectedSwitch{
-		Id:                 &cwssaws.UUID{Value: expectedSwitch.ID.String()},
+		ExpectedSwitchId:   &cwssaws.UUID{Value: expectedSwitch.ID.String()},
 		BmcMacAddress:      expectedSwitch.BmcMacAddress,
 		SwitchSerialNumber: expectedSwitch.SwitchSerialNumber,
 	}
@@ -667,7 +667,7 @@ func (uesh UpdateExpectedSwitchHandler) Handle(c echo.Context) error {
 	// Build the update request for workflow
 	// NVOS credentials come from API request since they're not stored in DB
 	updateExpectedSwitchRequest := &cwssaws.ExpectedSwitch{
-		Id:                 &cwssaws.UUID{Value: expectedSwitch.ID.String()},
+		ExpectedSwitchId:   &cwssaws.UUID{Value: expectedSwitch.ID.String()},
 		BmcMacAddress:      updatedExpectedSwitch.BmcMacAddress,
 		SwitchSerialNumber: updatedExpectedSwitch.SwitchSerialNumber,
 	}
@@ -840,8 +840,8 @@ func (desh DeleteExpectedSwitchHandler) Handle(c echo.Context) error {
 
 	// Build the delete request for workflow
 	deleteExpectedSwitchRequest := &cwssaws.ExpectedSwitchRequest{
-		Id:            &cwssaws.UUID{Value: expectedSwitch.ID.String()},
-		BmcMacAddress: expectedSwitch.BmcMacAddress,
+		ExpectedSwitchId: &cwssaws.UUID{Value: expectedSwitch.ID.String()},
+		BmcMacAddress:    expectedSwitch.BmcMacAddress,
 	}
 
 	logger.Info().Msg("triggering ExpectedSwitch delete workflow")
