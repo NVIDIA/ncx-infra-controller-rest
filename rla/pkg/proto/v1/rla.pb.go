@@ -957,8 +957,6 @@ type BMCInfo struct {
 	Type          BMCType                `protobuf:"varint,1,opt,name=type,proto3,enum=v1.BMCType" json:"type,omitempty"`
 	MacAddress    string                 `protobuf:"bytes,2,opt,name=mac_address,json=macAddress,proto3" json:"mac_address,omitempty"`
 	IpAddress     *string                `protobuf:"bytes,3,opt,name=ip_address,json=ipAddress,proto3,oneof" json:"ip_address,omitempty"`
-	User          *string                `protobuf:"bytes,4,opt,name=user,proto3,oneof" json:"user,omitempty"`
-	Password      *string                `protobuf:"bytes,5,opt,name=password,proto3,oneof" json:"password,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1010,20 +1008,6 @@ func (x *BMCInfo) GetMacAddress() string {
 func (x *BMCInfo) GetIpAddress() string {
 	if x != nil && x.IpAddress != nil {
 		return *x.IpAddress
-	}
-	return ""
-}
-
-func (x *BMCInfo) GetUser() string {
-	if x != nil && x.User != nil {
-		return *x.User
-	}
-	return ""
-}
-
-func (x *BMCInfo) GetPassword() string {
-	if x != nil && x.Password != nil {
-		return *x.Password
 	}
 	return ""
 }
@@ -5728,18 +5712,14 @@ const file_rla_proto_rawDesc = "" +
 	"\bposition\x18\x04 \x01(\tR\bposition\"[\n" +
 	"\x10DeviceSerialInfo\x12\"\n" +
 	"\fmanufacturer\x18\x01 \x01(\tR\fmanufacturer\x12#\n" +
-	"\rserial_number\x18\x02 \x01(\tR\fserialNumber\"\xce\x01\n" +
+	"\rserial_number\x18\x02 \x01(\tR\fserialNumber\"~\n" +
 	"\aBMCInfo\x12\x1f\n" +
 	"\x04type\x18\x01 \x01(\x0e2\v.v1.BMCTypeR\x04type\x12\x1f\n" +
 	"\vmac_address\x18\x02 \x01(\tR\n" +
 	"macAddress\x12\"\n" +
 	"\n" +
-	"ip_address\x18\x03 \x01(\tH\x00R\tipAddress\x88\x01\x01\x12\x17\n" +
-	"\x04user\x18\x04 \x01(\tH\x01R\x04user\x88\x01\x01\x12\x1f\n" +
-	"\bpassword\x18\x05 \x01(\tH\x02R\bpassword\x88\x01\x01B\r\n" +
-	"\v_ip_addressB\a\n" +
-	"\x05_userB\v\n" +
-	"\t_password\"[\n" +
+	"ip_address\x18\x03 \x01(\tH\x00R\tipAddress\x88\x01\x01B\r\n" +
+	"\v_ip_address\"[\n" +
 	"\fRackPosition\x12\x17\n" +
 	"\aslot_id\x18\x01 \x01(\x05R\x06slotId\x12\x19\n" +
 	"\btray_idx\x18\x02 \x01(\x05R\atrayIdx\x12\x17\n" +
@@ -6236,7 +6216,7 @@ const file_rla_proto_rawDesc = "" +
 	"\x15AssociateRuleWithRack\x12 .v1.AssociateRuleWithRackRequest\x1a\x16.google.protobuf.Empty\x12W\n" +
 	"\x18DisassociateRuleFromRack\x12#.v1.DisassociateRuleFromRackRequest\x1a\x16.google.protobuf.Empty\x12_\n" +
 	"\x16GetRackRuleAssociation\x12!.v1.GetRackRuleAssociationRequest\x1a\".v1.GetRackRuleAssociationResponse\x12e\n" +
-	"\x18ListRackRuleAssociations\x12#.v1.ListRackRuleAssociationsRequest\x1a$.v1.ListRackRuleAssociationsResponseB<Z:github.com/nvidia/bare-metal-manager-rest/rla/pkg/proto/v1b\x06proto3"
+	"\x18ListRackRuleAssociations\x12#.v1.ListRackRuleAssociationsRequest\x1a$.v1.ListRackRuleAssociationsResponseB>Z<github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/proto/v1b\x06proto3"
 
 var (
 	file_rla_proto_rawDescOnce sync.Once

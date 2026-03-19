@@ -26,7 +26,6 @@ import (
 	"github.com/google/uuid"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/credential"
 	dbquery "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/db/query"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/operation"
 	taskcommon "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/common"
@@ -191,12 +190,6 @@ func BMCFrom(bi *pb.BMCInfo) (devicetypes.BMCType, *bmc.BMC) {
 
 	if ip := bi.GetIpAddress(); ip != "" {
 		bmc.IP = net.ParseIP(ip)
-	}
-
-	if bi.User != nil && bi.Password != nil {
-		// Create a new credential only if the user and password are not nil.
-		nc := credential.New(*bi.User, *bi.Password)
-		bmc.Credential = &nc
 	}
 
 	return BMCTypeFrom(bi.Type), &bmc
@@ -579,10 +572,6 @@ func BMCTo(t devicetypes.BMCType, b *bmc.BMC) *pb.BMCInfo {
 	if b.IP != nil {
 		ip := b.IP.String()
 		bmcProto.IpAddress = &ip
-	}
-
-	if b.Credential != nil {
-		bmcProto.User, bmcProto.Password = b.Credential.Retrieve()
 	}
 
 	return &bmcProto
