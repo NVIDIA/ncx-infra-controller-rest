@@ -28,6 +28,7 @@ import (
 
 	taskcommon "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/common"
 	taskdef "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/task"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
 )
 
 func TestPromoterConfig_ApplyDefaults(t *testing.T) {
@@ -176,17 +177,21 @@ func TestPromoter_ProcessRack(t *testing.T) {
 			wantPromotedCount: 1,
 		},
 		{
-			name: "no promotion when rack has active tasks",
+			name: "no promotion when rack has conflicting active task",
 			setupStore: func(s *mockStore, rackID uuid.UUID) {
-				waiting := &taskdef.Task{
-					ID:             uuid.New(),
-					RackID:         rackID,
-					QueueExpiresAt: &future,
-					Status:         taskcommon.TaskStatusWaiting,
-				}
+				waiting := makeTaskWithType(
+					rackID,
+					taskcommon.TaskTypePowerControl, "power_on",
+					devicetypes.ComponentTypePowerShelf, uuid.New(),
+				)
+				waiting.QueueExpiresAt = &future
+				waiting.Status = taskcommon.TaskStatusWaiting
 				s.waitingTasks[rackID] = []*taskdef.Task{waiting}
 				s.activeTasks[rackID] = []*taskdef.Task{
-					makeTask(rackID, taskcommon.TaskTypePowerControl, "power_on"),
+					makeTaskWithType(rackID,
+						taskcommon.TaskTypePowerControl, "power_on",
+						devicetypes.ComponentTypePowerShelf,
+						uuid.New()),
 				}
 			},
 			wantStatusUpdates: nil,
@@ -216,26 +221,61 @@ func TestPromoter_ProcessRack(t *testing.T) {
 			wantPromotedCount: 1,
 		},
 		{
-			name: "FIFO — only oldest promoted when multiple waiting",
+			name: "FIFO — only oldest promoted when ops conflict",
 			setupStore: func(s *mockStore, rackID uuid.UUID) {
-				older := &taskdef.Task{
-					ID:             uuid.New(),
-					RackID:         rackID,
-					QueueExpiresAt: &future,
-					Status:         taskcommon.TaskStatusWaiting,
+				// Both are PowerShelf power_control: they conflict
+				// at rack scope. Older is promoted; newer blocks
+				// the queue so nothing behind it runs.
+				older := makeTaskWithType(
+					rackID,
+					taskcommon.TaskTypePowerControl, "power_on",
+					devicetypes.ComponentTypePowerShelf, uuid.New(),
+				)
+				older.QueueExpiresAt = &future
+				older.Status = taskcommon.TaskStatusWaiting
+				newer := makeTaskWithType(
+					rackID,
+					taskcommon.TaskTypePowerControl, "power_on",
+					devicetypes.ComponentTypePowerShelf, uuid.New(),
+				)
+				newer.QueueExpiresAt = &future
+				newer.Status = taskcommon.TaskStatusWaiting
+				s.waitingTasks[rackID] = []*taskdef.Task{
+					older, newer,
 				}
-				newer := &taskdef.Task{
-					ID:             uuid.New(),
-					RackID:         rackID,
-					QueueExpiresAt: &future,
-					Status:         taskcommon.TaskStatusWaiting,
-				}
-				s.waitingTasks[rackID] = []*taskdef.Task{older, newer}
 			},
 			wantStatusUpdates: []taskdef.TaskStatusUpdate{
 				{Status: taskcommon.TaskStatusPending},
 			},
 			wantPromotedCount: 1,
+		},
+		{
+			name: "multiple non-conflicting tasks promoted in one pass",
+			setupStore: func(s *mockStore, rackID uuid.UUID) {
+				// inject_expectation does not appear in any
+				// builtinRule pair, so two such tasks
+				// can be promoted simultaneously.
+				t1 := makeTask(
+					rackID,
+					taskcommon.TaskTypeInjectExpectation,
+					"inject",
+				)
+				t1.QueueExpiresAt = &future
+				t1.Status = taskcommon.TaskStatusWaiting
+				t2 := makeTask(
+					rackID,
+					taskcommon.TaskTypeInjectExpectation,
+					"inject",
+				)
+				t2.QueueExpiresAt = &future
+				t2.Status = taskcommon.TaskStatusWaiting
+				s.waitingTasks[rackID] = []*taskdef.Task{t1, t2}
+			},
+			wantStatusUpdates: []taskdef.TaskStatusUpdate{
+				{Status: taskcommon.TaskStatusPending},
+				{Status: taskcommon.TaskStatusPending},
+			},
+			wantPromotedCount: 2,
 		},
 		{
 			name: "list waiting error — no panics, no updates",

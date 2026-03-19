@@ -155,6 +155,7 @@ func RackFrom(dao *model.Rack) *rack.Rack {
 	}
 }
 
+// NVLDomainFrom converts a DAO NVLDomain model to its domain object.
 func NVLDomainFrom(dao *model.NVLDomain) *nvldomain.NVLDomain {
 	if dao == nil {
 		return nil
@@ -184,7 +185,7 @@ func TaskFrom(dao *model.Task) *taskdef.Task {
 			Info: dao.Information,
 		},
 		RackID:         dao.RackID,
-		ComponentUUIDs: dao.ComponentUUIDs,
+		Attributes:     dao.Attributes,
 		Description:    dao.Description,
 		ExecutorType:   dao.ExecutorType,
 		ExecutionID:    dao.ExecutionID,
@@ -304,6 +305,7 @@ func NVLDomainTo(n *nvldomain.NVLDomain) *model.NVLDomain {
 	}
 }
 
+// TaskTo converts a task domain object to its DAO model.
 func TaskTo(task *taskdef.Task) *model.Task {
 	if task == nil {
 		return nil
@@ -315,7 +317,7 @@ func TaskTo(task *taskdef.Task) *model.Task {
 		Information:    task.Operation.Info,
 		Description:    task.Description,
 		RackID:         task.RackID,
-		ComponentUUIDs: task.ComponentUUIDs,
+		Attributes:     task.Attributes,
 		ExecutorType:   task.ExecutorType,
 		ExecutionID:    task.ExecutionID,
 		Status:         task.Status,

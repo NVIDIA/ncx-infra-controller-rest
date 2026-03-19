@@ -34,7 +34,7 @@ import (
 // -- ID: The unique identifier of the task.
 // -- Operation: The operation to be performed by the task.
 // -- RackID: The rack this task operates on (1 task = 1 rack).
-// -- ComponentUUIDs: The component UUIDs in this rack.
+// -- Attributes: Flexible metadata including targeted components by type.
 // -- Description: The description of the task provided by the user.
 // -- ExecutorType: The type of executor to be used for the task.
 // -- ExecutionID: The identifier of the execution of the task.
@@ -42,16 +42,16 @@ import (
 // -- Message: Status message or error details.
 // -- AppliedRuleID: The ID of the operation rule that was applied (if any).
 type Task struct {
-	ID             uuid.UUID
-	Operation      operation.Wrapper
-	RackID         uuid.UUID   // The rack this task operates on (1 task = 1 rack)
-	ComponentUUIDs []uuid.UUID // Component UUIDs in this rack
-	Description    string
-	ExecutorType   taskcommon.ExecutorType
-	ExecutionID    string
-	Status         taskcommon.TaskStatus
-	Message        string
-	AppliedRuleID  *uuid.UUID // The ID of the operation rule that was applied
+	ID            uuid.UUID
+	Operation     operation.Wrapper
+	RackID        uuid.UUID // The rack this task operates on (1 task = 1 rack)
+	Attributes    taskcommon.TaskAttributes
+	Description   string
+	ExecutorType  taskcommon.ExecutorType
+	ExecutionID   string
+	Status        taskcommon.TaskStatus
+	Message       string
+	AppliedRuleID *uuid.UUID // The ID of the operation rule that was applied
 
 	// QueueExpiresAt is the deadline for a waiting task to be promoted.
 	// After this time the Promoter terminates the task automatically.
@@ -75,15 +75,18 @@ type ExecutionInfo struct {
 	RuleDefinition *operationrules.RuleDefinition
 }
 
+// ExecutionRequest holds the parameters for submitting a task for execution.
 type ExecutionRequest struct {
 	Info  ExecutionInfo
 	Async bool
 }
 
+// ExecutionResponse holds the result of a task execution submission.
 type ExecutionResponse struct {
 	ExecutionID string
 }
 
+// Validate returns an error if the ExecutionRequest is missing required fields.
 func (r *ExecutionRequest) Validate() error {
 	if r == nil {
 		return fmt.Errorf("request is nil")
@@ -100,6 +103,7 @@ func (r *ExecutionRequest) Validate() error {
 	return nil
 }
 
+// IsValid reports whether the ExecutionResponse contains a non-empty execution ID.
 func (r *ExecutionResponse) IsValid() bool {
 	if r == nil {
 		return false
@@ -112,12 +116,15 @@ func (r *ExecutionResponse) IsValid() bool {
 	return true
 }
 
+// TaskStatusUpdate carries the fields needed to update a task's status.
 type TaskStatusUpdate struct {
 	ID      uuid.UUID
 	Status  taskcommon.TaskStatus
 	Message string
 }
 
+// TaskStatusUpdater is implemented by any store that can persist task status changes.
 type TaskStatusUpdater interface {
+	// UpdateTaskStatus persists the status change described by arg.
 	UpdateTaskStatus(ctx context.Context, arg *TaskStatusUpdate) error
 }
