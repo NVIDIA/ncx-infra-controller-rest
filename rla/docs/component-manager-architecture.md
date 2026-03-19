@@ -75,10 +75,8 @@ type ComponentManager interface {
     InjectExpectation(ctx, target, info) error
     PowerControl(ctx, target, info) error
     FirmwareControl(ctx, target, info) error
-    GetFirmwareUpdateStatus(ctx, target) (map, error)
+    GetFirmwareStatus(ctx, target) (map, error)
     GetPowerStatus(ctx, target) (map, error)
-    AllowBringUp(ctx, target) error
-    GetBringUpState(ctx, target) (map, error)
 }
 ```
 

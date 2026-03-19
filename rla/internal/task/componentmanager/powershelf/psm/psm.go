@@ -329,29 +329,9 @@ func (m *Manager) FirmwareControl(ctx context.Context, target common.Target, inf
 	return nil
 }
 
-// AllowBringUp is not applicable to power shelves.
-func (m *Manager) AllowBringUp(
-	ctx context.Context,
-	target common.Target,
-) error {
-	return fmt.Errorf(
-		"AllowBringUp not supported for PowerShelf",
-	)
-}
-
-// GetBringUpState is not applicable to power shelves.
-func (m *Manager) GetBringUpState(
-	ctx context.Context,
-	target common.Target,
-) (map[string]operations.MachineBringUpState, error) {
-	return nil, fmt.Errorf(
-		"GetBringUpState not supported for PowerShelf",
-	)
-}
-
-// GetFirmwareUpdateStatus returns the current status of firmware updates for the target components.
+// GetFirmwareStatus returns the current status of firmware updates for the target components.
 // Returns a map of component ID to FirmwareUpdateStatus.
-func (m *Manager) GetFirmwareUpdateStatus(ctx context.Context, target common.Target) (map[string]operations.FirmwareUpdateStatus, error) {
+func (m *Manager) GetFirmwareStatus(ctx context.Context, target common.Target) (map[string]operations.FirmwareUpdateStatus, error) {
 	log.Debug().
 		Str("components", target.String()).
 		Msg("Getting firmware update status")

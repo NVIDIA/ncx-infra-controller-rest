@@ -168,28 +168,28 @@ func (m *Manager) FirmwareControl(
 	return nil
 }
 
-// AllowBringUp simulates opening the power-on gate.
-func (m *Manager) AllowBringUp(
+// BringUp simulates opening the bring-up gate.
+func (m *Manager) BringUp(
 	ctx context.Context,
 	target common.Target,
 ) error {
 	log.Debug().
 		Str("component_type", m.componentType.String()).
 		Str("target", target.String()).
-		Msg("Mock: AllowBringUp")
+		Msg("Mock: BringUp")
 	time.Sleep(m.delay)
 	return nil
 }
 
-// GetBringUpState simulates getting bring-up state.
-func (m *Manager) GetBringUpState(
+// GetBringUpStatus simulates getting bring-up status.
+func (m *Manager) GetBringUpStatus(
 	ctx context.Context,
 	target common.Target,
 ) (map[string]operations.MachineBringUpState, error) {
 	log.Debug().
 		Str("component_type", m.componentType.String()).
 		Str("target", target.String()).
-		Msg("Mock: GetBringUpState")
+		Msg("Mock: GetBringUpStatus")
 	time.Sleep(m.delay)
 
 	result := make(
@@ -202,15 +202,15 @@ func (m *Manager) GetBringUpState(
 	return result, nil
 }
 
-// GetFirmwareUpdateStatus simulates getting firmware update status.
-func (m *Manager) GetFirmwareUpdateStatus(
+// GetFirmwareStatus simulates getting firmware update status.
+func (m *Manager) GetFirmwareStatus(
 	ctx context.Context,
 	target common.Target,
 ) (map[string]operations.FirmwareUpdateStatus, error) {
 	log.Debug().
 		Str("component_type", m.componentType.String()).
 		Str("target", target.String()).
-		Msg("Mock: GetFirmwareUpdateStatus")
+		Msg("Mock: GetFirmwareStatus")
 
 	time.Sleep(m.delay)
 
@@ -227,7 +227,7 @@ func (m *Manager) GetFirmwareUpdateStatus(
 		Str("component_type", m.componentType.String()).
 		Str("target", target.String()).
 		Int("component_count", len(result)).
-		Msg("Mock: GetFirmwareUpdateStatus completed")
+		Msg("Mock: GetFirmwareStatus completed")
 
 	return result, nil
 }

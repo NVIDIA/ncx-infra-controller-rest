@@ -47,9 +47,9 @@ func mockFirmwareControl(ctx context.Context, target common.Target, info operati
 	return nil
 }
 
-// mockGetFirmwareUpdateStatus is a mock activity for getting firmware update status
-func mockGetFirmwareUpdateStatus(ctx context.Context, target common.Target) (*activitypkg.GetFirmwareUpdateStatusResult, error) {
-	return &activitypkg.GetFirmwareUpdateStatusResult{
+// mockGetFirmwareStatus is a mock activity for getting firmware update status
+func mockGetFirmwareStatus(ctx context.Context, target common.Target) (*activitypkg.GetFirmwareStatusResult, error) {
+	return &activitypkg.GetFirmwareStatusResult{
 		Statuses: map[string]operations.FirmwareUpdateStatus{},
 	}, nil
 }
@@ -185,8 +185,8 @@ func TestFirmwareControlWorkflow(t *testing.T) {
 			env.RegisterActivityWithOptions(mockFirmwareControl, activity.RegisterOptions{
 				Name: "FirmwareControl",
 			})
-			env.RegisterActivityWithOptions(mockGetFirmwareUpdateStatus, activity.RegisterOptions{
-				Name: "GetFirmwareUpdateStatus",
+			env.RegisterActivityWithOptions(mockGetFirmwareStatus, activity.RegisterOptions{
+				Name: "GetFirmwareStatus",
 			})
 			env.RegisterActivityWithOptions(mockPowerControl, activity.RegisterOptions{
 				Name: "PowerControl",
@@ -197,8 +197,8 @@ func TestFirmwareControlWorkflow(t *testing.T) {
 
 			env.OnActivity(mockUpdateTaskStatusForFirmwareControl, mock.Anything, mock.Anything).Return(nil)
 			env.OnActivity(mockFirmwareControl, mock.Anything, mock.Anything, mock.Anything).Return(tc.activityError)
-			env.OnActivity(mockGetFirmwareUpdateStatus, mock.Anything, mock.Anything).Return(
-				&activitypkg.GetFirmwareUpdateStatusResult{
+			env.OnActivity(mockGetFirmwareStatus, mock.Anything, mock.Anything).Return(
+				&activitypkg.GetFirmwareStatusResult{
 					Statuses: map[string]operations.FirmwareUpdateStatus{
 						"comp1": {ComponentID: "comp1", State: operations.FirmwareUpdateStateCompleted},
 						"comp2": {ComponentID: "comp2", State: operations.FirmwareUpdateStateCompleted},

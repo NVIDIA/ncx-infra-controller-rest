@@ -195,29 +195,9 @@ func (m *Manager) GetPowerStatus(
 	)
 }
 
-// AllowBringUp is not applicable to NVLink switches.
-func (m *Manager) AllowBringUp(
-	_ context.Context,
-	_ common.Target,
-) error {
-	return fmt.Errorf(
-		"AllowBringUp not supported for NV-Switch Manager",
-	)
-}
-
-// GetBringUpState is not applicable to NVLink switches.
-func (m *Manager) GetBringUpState(
-	_ context.Context,
-	_ common.Target,
-) (map[string]operations.MachineBringUpState, error) {
-	return nil, fmt.Errorf(
-		"GetBringUpState not supported for NV-Switch Manager",
-	)
-}
-
-// GetFirmwareUpdateStatus returns the current status of firmware updates for the target components.
+// GetFirmwareStatus returns the current status of firmware updates for the target components.
 // Returns a map of component ID (switch UUID) to FirmwareUpdateStatus.
-func (m *Manager) GetFirmwareUpdateStatus(ctx context.Context, target common.Target) (map[string]operations.FirmwareUpdateStatus, error) {
+func (m *Manager) GetFirmwareStatus(ctx context.Context, target common.Target) (map[string]operations.FirmwareUpdateStatus, error) {
 	log.Debug().
 		Str("components", target.String()).
 		Msg("Getting firmware update status")

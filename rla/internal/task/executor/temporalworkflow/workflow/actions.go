@@ -51,8 +51,8 @@ var actionExecutorRegistry = map[string]actionExecutor{
 	operationrules.ActionVerifyReachability: executeVerifyReachabilityAction,
 	operationrules.ActionGetPowerStatus:     executeGetPowerStatusAction,
 	operationrules.ActionFirmwareControl:    executeFirmwareControlAction,
-	operationrules.ActionAllowBringUp:       executeAllowBringUpAction,
-	operationrules.ActionWaitBringUp:        executeWaitBringUpAction,
+	operationrules.ActionBringUp:     executeBringUpAction,
+	operationrules.ActionWaitBringUp: executeWaitBringUpAction,
 	operationrules.ActionInjectExpectation:  executeInjectExpectationAction,
 }
 
@@ -231,9 +231,9 @@ func executeFirmwareControlAction(actx actionExecutionContext) error {
 			return fmt.Errorf("workflow sleep interrupted: %w", err)
 		}
 
-		var result activity.GetFirmwareUpdateStatusResult
+		var result activity.GetFirmwareStatusResult
 		err := workflow.ExecuteActivity(
-			ctx, "GetFirmwareUpdateStatus", target,
+			ctx, "GetFirmwareStatus", target,
 		).Get(ctx, &result)
 		if err != nil {
 			log.Warn().Err(err).
@@ -376,14 +376,14 @@ func verifyPowerStatus(
 	}
 }
 
-// executeAllowBringUpAction opens the power-on gate for the target components.
-func executeAllowBringUpAction(actx actionExecutionContext) error {
+// executeBringUpAction opens the bring-up gate for the target components.
+func executeBringUpAction(actx actionExecutionContext) error {
 	return workflow.ExecuteActivity(
-		actx.workflowContext, "AllowBringUp", actx.target,
+		actx.workflowContext, "BringUp", actx.target,
 	).Get(actx.workflowContext, nil)
 }
 
-// executeWaitBringUpAction polls GetBringUpState until all components reach
+// executeWaitBringUpAction polls GetBringUpStatus until all components reach
 // the MachineBringUpStateMachineCreated state. Uses config.Timeout and
 // config.PollInterval.
 func executeWaitBringUpAction(actx actionExecutionContext) error {
@@ -417,9 +417,9 @@ func executeWaitBringUpAction(actx actionExecutionContext) error {
 			return fmt.Errorf("workflow sleep interrupted: %w", err)
 		}
 
-		var result activity.GetBringUpStateResult
+		var result activity.GetBringUpStatusResult
 		err := workflow.ExecuteActivity(
-			ctx, "GetBringUpState", target,
+			ctx, "GetBringUpStatus", target,
 		).Get(ctx, &result)
 		if err != nil {
 			log.Warn().Err(err).Msg("Failed to get bring-up state, will retry")

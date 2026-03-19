@@ -42,16 +42,21 @@ type ComponentManager interface {
 	// Returns immediately after the update request is accepted.
 	FirmwareControl(ctx context.Context, target common.Target, info operations.FirmwareControlTaskInfo) error //nolint
 
-	// GetFirmwareUpdateStatus returns the current status of firmware updates for the target components.
+	// GetFirmwareStatus returns the current status of firmware updates for the target components.
 	// Returns a map of component ID to FirmwareUpdateStatus.
-	GetFirmwareUpdateStatus(ctx context.Context, target common.Target) (map[string]operations.FirmwareUpdateStatus, error) //nolint
+	GetFirmwareStatus(ctx context.Context, target common.Target) (map[string]operations.FirmwareUpdateStatus, error) //nolint
+}
 
-	// AllowBringUp opens the power-on gate for the target components.
-	AllowBringUp(ctx context.Context, target common.Target) error //nolint
+// BringUpCapable is an optional interface for component managers that support
+// bring-up gate operations (e.g. Carbide ingestion). Not all component types
+// need this — only those with a bring-up gate concept.
+type BringUpCapable interface {
+	// BringUp opens the bring-up gate for the target components.
+	BringUp(ctx context.Context, target common.Target) error
 
-	// GetBringUpState returns the bring-up state for each target component.
+	// GetBringUpStatus returns the bring-up state for each target component.
 	// Returns a map of component ID to MachineBringUpState.
-	GetBringUpState(ctx context.Context, target common.Target) (map[string]operations.MachineBringUpState, error) //nolint
+	GetBringUpStatus(ctx context.Context, target common.Target) (map[string]operations.MachineBringUpState, error)
 }
 
 // ManagerFactory is a function that creates a ComponentManager instance.

@@ -352,11 +352,8 @@ type ComponentManager interface {
 
     // Firmware flow (async start + poll)
     FirmwareControl(ctx, target, info) error
-    GetFirmwareUpdateStatus(ctx, target) (map[string]FirmwareUpdateStatus, error)
+    GetFirmwareStatus(ctx, target) (map[string]FirmwareUpdateStatus, error)
 
-    // BringUp flow
-    AllowBringUp(ctx, target) error
-    GetBringUpState(ctx, target) (map[string]MachineBringUpState, error)
 }
 ```
 

@@ -256,14 +256,14 @@ func (m *Manager) FirmwareControl(ctx context.Context, target common.Target, inf
 	return nil
 }
 
-// GetFirmwareUpdateStatus returns the current status of firmware updates for the target components.
+// GetFirmwareStatus returns the current status of firmware updates for the target components.
 // Carbide does not have a dedicated firmware update status API; we read the current firmware version
 // to determine if the update completed.
 // TODO: Implement proper status checking once Carbide exposes a firmware update status API.
-func (m *Manager) GetFirmwareUpdateStatus(ctx context.Context, target common.Target) (map[string]operations.FirmwareUpdateStatus, error) { //nolint
+func (m *Manager) GetFirmwareStatus(ctx context.Context, target common.Target) (map[string]operations.FirmwareUpdateStatus, error) { //nolint
 	log.Debug().
 		Str("components", target.String()).
-		Msg("GetFirmwareUpdateStatus called for NVLSwitch")
+		Msg("GetFirmwareStatus called for NVLSwitch")
 
 	result := make(map[string]operations.FirmwareUpdateStatus, len(target.ComponentIDs))
 	for _, id := range target.ComponentIDs {
@@ -276,34 +276,3 @@ func (m *Manager) GetFirmwareUpdateStatus(ctx context.Context, target common.Tar
 	return result, nil
 }
 
-// AllowBringUp opens the Carbide power-on gate
-// for each NVLSwitch. Placeholder for now.
-func (m *Manager) AllowBringUp(
-	ctx context.Context,
-	target common.Target,
-) error {
-	log.Info().
-		Str("components", target.String()).
-		Msg("NVLSwitch AllowBringUp: placeholder")
-	return nil
-}
-
-// GetBringUpState returns the bring-up state for each
-// NVLSwitch. Placeholder for now.
-func (m *Manager) GetBringUpState(
-	ctx context.Context,
-	target common.Target,
-) (map[string]operations.MachineBringUpState, error) {
-	log.Info().
-		Str("components", target.String()).
-		Msg("NVLSwitch GetBringUpState: placeholder")
-
-	result := make(
-		map[string]operations.MachineBringUpState,
-		len(target.ComponentIDs),
-	)
-	for _, id := range target.ComponentIDs {
-		result[id] = operations.MachineBringUpStateMachineCreated
-	}
-	return result, nil
-}
