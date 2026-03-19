@@ -31,7 +31,6 @@ import (
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -57,20 +56,15 @@ func NewClient(grpcTimeout time.Duration) (Client, error) {
 		return nil, errors.New("CARBIDE_API_URL not set, cannot make connections to carbide-api")
 	}
 
-	var dialOpt grpc.DialOption
 	tlsConfig, _, err := certs.TLSConfig()
 	if err != nil {
 		if err == certs.ErrNotPresent {
-			log.Warn().Msg("Certs not present, using plaintext (insecure) connection to carbide-api")
-			dialOpt = grpc.WithTransportCredentials(insecure.NewCredentials())
-		} else {
-			return nil, err
+			return nil, errors.New("Certificates not present, unable to authenticate with carbide-api")
 		}
-	} else {
-		dialOpt = grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig))
+		return nil, err
 	}
 
-	conn, err := grpc.NewClient(carbideURL, dialOpt)
+	conn, err := grpc.NewClient(carbideURL, grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)))
 	if err != nil {
 		return nil, fmt.Errorf("Unable to connect to carbide-api: %w", err)
 	}
