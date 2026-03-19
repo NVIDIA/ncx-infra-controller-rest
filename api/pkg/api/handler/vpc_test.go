@@ -1210,6 +1210,48 @@ func TestUpdateVPCHandler_Handle(t *testing.T) {
 			wantErr:            false,
 			verifyChildSpanner: true,
 		},
+		{
+			name: "test VPC update to clear NVLink Logical Partition ID - success",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIVpcUpdateRequest{
+					Name:                     cdb.GetStrPtr("test-vpc"),
+					Description:              cdb.GetStrPtr("Test VPC Description"),
+					NVLinkLogicalPartitionID: cdb.GetStrPtr(""),
+				},
+				reqVPCID: vpc.ID.String(),
+				reqVPC:   vpc,
+				reqOrg:   tnOrg,
+				reqUser:  tnu,
+				respCode: http.StatusOK,
+			},
+			wantErr: false,
+		},
+		{
+			name: "test VPC update to set NVLink Logical Partition ID after clearing - success",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIVpcUpdateRequest{
+					Name:                     cdb.GetStrPtr("test-vpc"),
+					Description:              cdb.GetStrPtr("Test VPC Description"),
+					NVLinkLogicalPartitionID: cdb.GetStrPtr(nvllp1.ID.String()),
+				},
+				reqVPCID: vpc.ID.String(),
+				reqVPC:   vpc,
+				reqOrg:   tnOrg,
+				reqUser:  tnu,
+				respCode: http.StatusOK,
+			},
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1265,7 +1307,11 @@ func TestUpdateVPCHandler_Handle(t *testing.T) {
 			assert.NotEqual(t, rst.Updated.String(), tt.args.reqVPC.Updated.String())
 
 			if tt.args.reqData.NVLinkLogicalPartitionID != nil {
-				assert.Equal(t, *rst.NVLinkLogicalPartitionID, *tt.args.reqData.NVLinkLogicalPartitionID)
+				if *tt.args.reqData.NVLinkLogicalPartitionID == "" {
+					assert.Nil(t, rst.NVLinkLogicalPartitionID)
+				} else {
+					assert.Equal(t, *rst.NVLinkLogicalPartitionID, *tt.args.reqData.NVLinkLogicalPartitionID)
+				}
 			}
 
 			if tt.args.reqData.Labels != nil {
