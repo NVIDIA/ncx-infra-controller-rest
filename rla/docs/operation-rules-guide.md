@@ -159,7 +159,7 @@ main_operation:
 
 ### BringUp
 
-Opens the Carbide power-on gate for target components. No parameters required.
+Opens the power-on gate for target components. No parameters required.
 
 ```yaml
 main_operation:

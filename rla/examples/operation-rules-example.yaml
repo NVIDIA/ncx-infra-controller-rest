@@ -758,7 +758,7 @@ rules:
 #    - No required parameters
 #
 # 7. BringUp (bring-up only)
-#    - Opens the Carbide power-on gate for target components
+#    - Opens the power-on gate for target components
 #    - No required parameters
 #
 # 8. WaitBringUp (bring-up only)
@@ -782,9 +782,9 @@ rules:
   # Stage 3: Compute     — open gate, wait bring-up, verify, reboot, verify again
   #
   # Actions used:
-  #   InjectExpectation — register components with Carbide/PSM
-  #   BringUp           — open Carbide power-on gate
-  #   WaitBringUp       — poll Carbide until ingestion complete
+  #   InjectExpectation — register components with component managers
+  #   BringUp           — open power-on gate
+  #   WaitBringUp       — poll until ingestion complete
   #   VerifyReachability with require_all — wait for all PMCs
 
   - name: Default Rack Bring-Up
