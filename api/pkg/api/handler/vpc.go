@@ -820,9 +820,9 @@ func (uvh UpdateVPCHandler) Handle(c echo.Context) error {
 		NetworkSecurityGroupId: vpc.NetworkSecurityGroupID,
 	}
 
-	// Add default NVLink Logical Partition ID if it is present
-	if vpc.NVLinkLogicalPartitionID != nil {
-		if vpc.NVLinkLogicalPartitionID.String() != "" {
+	// Propagate the NVLink Logical Partition ID change to the site controller
+	if apiRequest.NVLinkLogicalPartitionID != nil {
+		if *apiRequest.NVLinkLogicalPartitionID != "" {
 			updateVpcRequest.DefaultNvlinkLogicalPartitionId = &cwssaws.NVLinkLogicalPartitionId{Value: vpc.NVLinkLogicalPartitionID.String()}
 		} else {
 			updateVpcRequest.DefaultNvlinkLogicalPartitionId = &cwssaws.NVLinkLogicalPartitionId{Value: ""}

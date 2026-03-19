@@ -42,6 +42,7 @@ import (
 	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/paginator"
 	cdbu "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/util"
 	swe "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/error"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
@@ -844,6 +845,9 @@ func TestUpdateVPCHandler_Handle(t *testing.T) {
 	nvllp1 := testBuildNVLinkLogicalPartition(t, dbSession, "test-nvllp-1", cdb.GetStrPtr("Test NVLink Logical Partition"), tnOrg, st, tn, cdb.GetStrPtr(cdbm.NVLinkLogicalPartitionStatusReady), false)
 	assert.NotNil(t, nvllp1)
 
+	nvllp2 := testBuildNVLinkLogicalPartition(t, dbSession, "test-nvllp-2", cdb.GetStrPtr("Test NVLink Logical Partition 2"), tnOrg, st, tn, cdb.GetStrPtr(cdbm.NVLinkLogicalPartitionStatusReady), false)
+	assert.NotNil(t, nvllp2)
+
 	vpc := testVPCBuildVPC(t, dbSession, "test-vpc", ip, tn, st, cdb.GetStrPtr(cdbm.VpcEthernetVirtualizer), cdb.GetUUIDPtr(nvllp1.ID), map[string]string{"zone": "west1"}, cdbm.VpcStatusReady, tnu)
 	assert.NotNil(t, vpc)
 
@@ -927,11 +931,12 @@ func TestUpdateVPCHandler_Handle(t *testing.T) {
 	tst.Mock.On("TerminateWorkflow", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	tests := []struct {
-		name               string
-		fields             fields
-		args               args
-		wantErr            bool
-		verifyChildSpanner bool
+		name                         string
+		fields                       fields
+		args                         args
+		wantErr                      bool
+		verifyChildSpanner           bool
+		expectedNVLinkPartitionValue *string
 	}{
 		{
 			name: "test VPC update success",
@@ -1229,7 +1234,8 @@ func TestUpdateVPCHandler_Handle(t *testing.T) {
 				reqUser:  tnu,
 				respCode: http.StatusOK,
 			},
-			wantErr: false,
+			wantErr:                      false,
+			expectedNVLinkPartitionValue: cdb.GetStrPtr(""),
 		},
 		{
 			name: "test VPC update to set NVLink Logical Partition ID after clearing - success",
@@ -1242,7 +1248,7 @@ func TestUpdateVPCHandler_Handle(t *testing.T) {
 				reqData: &model.APIVpcUpdateRequest{
 					Name:                     cdb.GetStrPtr("test-vpc"),
 					Description:              cdb.GetStrPtr("Test VPC Description"),
-					NVLinkLogicalPartitionID: cdb.GetStrPtr(nvllp1.ID.String()),
+					NVLinkLogicalPartitionID: cdb.GetStrPtr(nvllp2.ID.String()),
 				},
 				reqVPCID: vpc.ID.String(),
 				reqVPC:   vpc,
@@ -1250,7 +1256,8 @@ func TestUpdateVPCHandler_Handle(t *testing.T) {
 				reqUser:  tnu,
 				respCode: http.StatusOK,
 			},
-			wantErr: false,
+			wantErr:                      false,
+			expectedNVLinkPartitionValue: cdb.GetStrPtr(nvllp2.ID.String()),
 		},
 	}
 	for _, tt := range tests {
@@ -1316,6 +1323,22 @@ func TestUpdateVPCHandler_Handle(t *testing.T) {
 
 			if tt.args.reqData.Labels != nil {
 				assert.Equal(t, len(rst.Labels), len(tt.args.reqData.Labels))
+			}
+
+			if tt.expectedNVLinkPartitionValue != nil {
+				var lastUpdateVPCReq *cwssaws.VpcUpdateRequest
+				for i := len(tsc.Mock.Calls) - 1; i >= 0; i-- {
+					call := tsc.Mock.Calls[i]
+					if call.Method == "ExecuteWorkflow" && len(call.Arguments) >= 4 {
+						if wfName, ok := call.Arguments[2].(string); ok && wfName == "UpdateVPC" {
+							lastUpdateVPCReq, _ = call.Arguments[3].(*cwssaws.VpcUpdateRequest)
+							break
+						}
+					}
+				}
+				require.NotNil(t, lastUpdateVPCReq, "UpdateVPC workflow should have been called")
+				require.NotNil(t, lastUpdateVPCReq.DefaultNvlinkLogicalPartitionId, "DefaultNvlinkLogicalPartitionId should be set in workflow request")
+				assert.Equal(t, *tt.expectedNVLinkPartitionValue, lastUpdateVPCReq.DefaultNvlinkLogicalPartitionId.Value)
 			}
 
 			if tt.verifyChildSpanner {
