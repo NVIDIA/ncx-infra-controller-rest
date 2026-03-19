@@ -168,15 +168,15 @@ func (m *Manager) FirmwareControl(
 	return nil
 }
 
-// BringUp simulates opening the bring-up gate.
-func (m *Manager) BringUp(
+// BringUpControl simulates opening the bring-up gate.
+func (m *Manager) BringUpControl(
 	ctx context.Context,
 	target common.Target,
 ) error {
 	log.Debug().
 		Str("component_type", m.componentType.String()).
 		Str("target", target.String()).
-		Msg("Mock: BringUp")
+		Msg("Mock: BringUpControl")
 	time.Sleep(m.delay)
 	return nil
 }

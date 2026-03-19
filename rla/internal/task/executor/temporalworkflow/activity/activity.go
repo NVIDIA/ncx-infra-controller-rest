@@ -98,14 +98,13 @@ func GetAllActivities() []any {
 		UpdateTaskStatus,
 		FirmwareControl,
 		GetFirmwareStatus,
-		BringUp,
+		BringUpControl,
 		GetBringUpStatus,
 	}
 }
 
-// BringUp opens the bring-up gate for the target components.
-// The underlying ComponentManager must implement BringUpCapable.
-func BringUp(
+// BringUpControl opens the power-on gate for the target components.
+func BringUpControl(
 	ctx context.Context,
 	target common.Target,
 ) error {
@@ -114,12 +113,12 @@ func BringUp(
 		return err
 	}
 
-	buc, ok := cm.(componentmanager.BringUpCapable)
+	buc, ok := cm.(componentmanager.BringUpController)
 	if !ok {
-		return fmt.Errorf("component manager for %s does not support BringUp", target.Type)
+		return fmt.Errorf("component manager for %s does not support BringUpControl", target.Type)
 	}
 
-	return buc.BringUp(ctx, target)
+	return buc.BringUpControl(ctx, target)
 }
 
 // GetBringUpStatusResult is the result of GetBringUpStatus activity.
@@ -128,7 +127,6 @@ type GetBringUpStatusResult struct {
 }
 
 // GetBringUpStatus returns the bring-up state for target components.
-// The underlying ComponentManager must implement BringUpCapable.
 func GetBringUpStatus(
 	ctx context.Context,
 	target common.Target,
@@ -138,7 +136,7 @@ func GetBringUpStatus(
 		return nil, err
 	}
 
-	buc, ok := cm.(componentmanager.BringUpCapable)
+	buc, ok := cm.(componentmanager.BringUpController)
 	if !ok {
 		return nil, fmt.Errorf("component manager for %s does not support GetBringUpStatus", target.Type)
 	}

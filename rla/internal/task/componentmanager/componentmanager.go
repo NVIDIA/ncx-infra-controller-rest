@@ -47,15 +47,10 @@ type ComponentManager interface {
 	GetFirmwareStatus(ctx context.Context, target common.Target) (map[string]operations.FirmwareUpdateStatus, error) //nolint
 }
 
-// BringUpCapable is an optional interface for component managers that support
-// bring-up gate operations (e.g. Carbide ingestion). Not all component types
-// need this — only those with a bring-up gate concept.
-type BringUpCapable interface {
-	// BringUp opens the bring-up gate for the target components.
-	BringUp(ctx context.Context, target common.Target) error
-
-	// GetBringUpStatus returns the bring-up state for each target component.
-	// Returns a map of component ID to MachineBringUpState.
+// BringUpController is an optional interface for component managers that support
+// bring-up operations.
+type BringUpController interface {
+	BringUpControl(ctx context.Context, target common.Target) error
 	GetBringUpStatus(ctx context.Context, target common.Target) (map[string]operations.MachineBringUpState, error)
 }
 

@@ -413,19 +413,19 @@ func TestGenericComponentStepWorkflow_BringUpAndWait(t *testing.T) {
 	testSuite := &testsuite.WorkflowTestSuite{}
 	env := testSuite.NewTestWorkflowEnvironment()
 
-	mockBringUp := func(ctx context.Context, target common.Target) error {
+	mockBringUpControl := func(ctx context.Context, target common.Target) error {
 		return nil
 	}
 	mockGetBringUpStatus := func(ctx context.Context, target common.Target) (*activitypkg.GetBringUpStatusResult, error) {
 		return nil, nil
 	}
 
-	env.RegisterActivityWithOptions(mockBringUp,
-		activity.RegisterOptions{Name: "BringUp"})
+	env.RegisterActivityWithOptions(mockBringUpControl,
+		activity.RegisterOptions{Name: "BringUpControl"})
 	env.RegisterActivityWithOptions(mockGetBringUpStatus,
 		activity.RegisterOptions{Name: "GetBringUpStatus"})
 
-	env.OnActivity(mockBringUp, mock.Anything, mock.Anything).Return(nil)
+	env.OnActivity(mockBringUpControl, mock.Anything, mock.Anything).Return(nil)
 	env.OnActivity(mockGetBringUpStatus, mock.Anything, mock.Anything).Return(
 		&activitypkg.GetBringUpStatusResult{
 			States: map[string]operations.MachineBringUpState{
@@ -439,7 +439,7 @@ func TestGenericComponentStepWorkflow_BringUpAndWait(t *testing.T) {
 		MaxParallel:   0,
 		Timeout:       10 * time.Minute,
 		MainOperation: operationrules.ActionConfig{
-			Name: operationrules.ActionBringUp,
+			Name: operationrules.ActionBringUpControl,
 		},
 		PostOperation: []operationrules.ActionConfig{
 			{

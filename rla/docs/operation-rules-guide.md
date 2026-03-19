@@ -157,13 +157,13 @@ main_operation:
 
 ---
 
-### BringUp
+### BringUpControl
 
 Opens the power-on gate for target components. No parameters required.
 
 ```yaml
 main_operation:
-  name: BringUp
+  name: BringUpControl
 ```
 
 ---
@@ -171,7 +171,7 @@ main_operation:
 ### WaitBringUp
 
 Polls `GetBringUpStatus` until all components reach the `MachineCreated` state
-(ingestion complete). Used as a post-operation after `BringUp`.
+(ingestion complete). Used as a post-operation after `BringUpControl`.
 
 ```yaml
 post_operation:
@@ -686,7 +686,7 @@ uses this as its default rule.
       "max_parallel": 0,
       "timeout": "30m",
       "pre_operation": [
-        { "name": "BringUp" },
+        { "name": "BringUpControl" },
         { "name": "WaitBringUp", "timeout": "15m", "poll_interval": "30s" },
         { "name": "VerifyPowerStatus", "timeout": "10m", "poll_interval": "15s", "parameters": { "expected_status": "on" } }
       ],
@@ -798,7 +798,7 @@ function:
 | `GetPowerStatus` | `executeGetPowerStatusAction` | `workflow.ExecuteActivity("GetPowerStatus")` |
 | `VerifyPowerStatus` | `executeVerifyPowerStatusAction` | polling loop (see below) |
 | `VerifyReachability` | `executeVerifyReachabilityAction` | polling loop (see below) |
-| `BringUp` | `executeBringUpAction` | `workflow.ExecuteActivity("BringUp")` |
+| `BringUpControl` | `executeBringUpControlAction` | `workflow.ExecuteActivity("BringUpControl")` |
 | `WaitBringUp` | `executeWaitBringUpAction` | polling loop on `GetBringUpStatus` |
 
 `Sleep` is a workflow timer, not an activity. It survives worker restarts and

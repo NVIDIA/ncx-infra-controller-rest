@@ -51,7 +51,7 @@ var actionExecutorRegistry = map[string]actionExecutor{
 	operationrules.ActionVerifyReachability: executeVerifyReachabilityAction,
 	operationrules.ActionGetPowerStatus:     executeGetPowerStatusAction,
 	operationrules.ActionFirmwareControl:    executeFirmwareControlAction,
-	operationrules.ActionBringUp:     executeBringUpAction,
+	operationrules.ActionBringUpControl: executeBringUpControlAction,
 	operationrules.ActionWaitBringUp: executeWaitBringUpAction,
 	operationrules.ActionInjectExpectation:  executeInjectExpectationAction,
 }
@@ -376,10 +376,10 @@ func verifyPowerStatus(
 	}
 }
 
-// executeBringUpAction opens the bring-up gate for the target components.
-func executeBringUpAction(actx actionExecutionContext) error {
+// executeBringUpControlAction opens the power-on gate for the target components.
+func executeBringUpControlAction(actx actionExecutionContext) error {
 	return workflow.ExecuteActivity(
-		actx.workflowContext, "BringUp", actx.target,
+		actx.workflowContext, "BringUpControl", actx.target,
 	).Get(actx.workflowContext, nil)
 }
 

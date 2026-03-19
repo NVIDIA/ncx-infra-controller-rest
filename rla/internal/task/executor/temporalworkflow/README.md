@@ -95,7 +95,7 @@ func GetAllActivities() []any {
 		UpdateTaskStatus,
 		FirmwareControl,
 		GetFirmwareStatus,
-		BringUp,
+		BringUpControl,
 		GetBringUpStatus,
 		HealthCheck,  // Add your new activity here
 	}

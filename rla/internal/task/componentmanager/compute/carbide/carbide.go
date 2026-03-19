@@ -295,15 +295,15 @@ func (m *Manager) GetFirmwareStatus(ctx context.Context, target common.Target) (
 	return result, nil
 }
 
-// BringUp opens the Carbide power-on gate for
+// BringUpControl opens the Carbide power-on gate for
 // each compute component, allowing bring-up and power on.
-func (m *Manager) BringUp(
+func (m *Manager) BringUpControl(
 	ctx context.Context,
 	target common.Target,
 ) error {
 	log.Debug().
 		Str("components", target.String()).
-		Msg("BringUp for compute")
+		Msg("BringUpControl for compute")
 
 	if m.carbideClient == nil {
 		return fmt.Errorf("carbide client is not configured")
@@ -318,13 +318,13 @@ func (m *Manager) BringUp(
 			ctx, componentID, "",
 		); err != nil {
 			return fmt.Errorf(
-				"BringUp failed for %s: %w",
+				"BringUpControl failed for %s: %w",
 				componentID, err,
 			)
 		}
 		log.Info().
 			Str("component_id", componentID).
-			Msg("BringUp succeeded")
+			Msg("BringUpControl succeeded")
 	}
 
 	return nil

@@ -757,7 +757,7 @@ rules:
 #    - Returns map of component IDs to power status
 #    - No required parameters
 #
-# 7. BringUp (bring-up only)
+# 7. BringUpControl (bring-up only)
 #    - Opens the power-on gate for target components
 #    - No required parameters
 #
@@ -783,7 +783,7 @@ rules:
   #
   # Actions used:
   #   InjectExpectation — register components with component managers
-  #   BringUp           — open power-on gate
+  #   BringUpControl    — open power-on gate
   #   WaitBringUp       — poll until ingestion complete
   #   VerifyReachability with require_all — wait for all PMCs
 
@@ -852,7 +852,7 @@ rules:
           initial_interval: 10s
           backoff_coefficient: 2.0
         pre_operation:
-          - name: BringUp
+          - name: BringUpControl
           - name: WaitBringUp
             timeout: 15m
             poll_interval: 30s

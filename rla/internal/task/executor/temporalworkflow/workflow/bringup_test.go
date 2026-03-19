@@ -41,7 +41,7 @@ func mockUpdateTaskStatusForBringUp(ctx context.Context, arg *task.TaskStatusUpd
 	return nil
 }
 
-func mockBringUp(ctx context.Context, target common.Target) error {
+func mockBringUpControl(ctx context.Context, target common.Target) error {
 	return nil
 }
 
@@ -94,7 +94,7 @@ func createBringUpTestRuleDef() *operationrules.RuleDefinition {
 				MaxParallel:   0,
 				Timeout:       10 * time.Minute,
 				MainOperation: operationrules.ActionConfig{
-					Name: operationrules.ActionBringUp,
+					Name: operationrules.ActionBringUpControl,
 				},
 				PostOperation: []operationrules.ActionConfig{
 					{
@@ -129,8 +129,8 @@ func registerBringUpActivities(env *testsuite.TestWorkflowEnvironment) {
 		activity.RegisterOptions{Name: "PowerControl"})
 	env.RegisterActivityWithOptions(mockGetPowerStatus,
 		activity.RegisterOptions{Name: "GetPowerStatus"})
-	env.RegisterActivityWithOptions(mockBringUp,
-		activity.RegisterOptions{Name: "BringUp"})
+	env.RegisterActivityWithOptions(mockBringUpControl,
+		activity.RegisterOptions{Name: "BringUpControl"})
 	env.RegisterActivityWithOptions(mockGetBringUpStatus,
 		activity.RegisterOptions{Name: "GetBringUpStatus"})
 }
@@ -148,7 +148,7 @@ func TestBringUpWorkflow(t *testing.T) {
 					map[string]operations.PowerStatus{
 						"ps-1": operations.PowerStatusOn,
 					}, nil)
-				env.OnActivity(mockBringUp, mock.Anything, mock.Anything).Return(nil)
+				env.OnActivity(mockBringUpControl, mock.Anything, mock.Anything).Return(nil)
 				env.OnActivity(mockGetBringUpStatus, mock.Anything, mock.Anything).Return(
 					&activitypkg.GetBringUpStatusResult{
 						States: map[string]operations.MachineBringUpState{
