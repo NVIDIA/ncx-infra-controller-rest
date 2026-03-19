@@ -226,8 +226,10 @@ func (m *Manager) FirmwareControl(ctx context.Context, target common.Target, inf
 	}
 
 	req := &pb.UpdateComponentFirmwareRequest{
-		Target: &pb.UpdateComponentFirmwareRequest_SwitchIds{
-			SwitchIds: switchIDsProto(target.ComponentIDs),
+		Target: &pb.UpdateComponentFirmwareRequest_Switches{
+			Switches: &pb.UpdateSwitchFirmwareTarget{
+				SwitchIds: switchIDsProto(target.ComponentIDs),
+			},
 		},
 		TargetVersion: info.TargetVersion,
 	}

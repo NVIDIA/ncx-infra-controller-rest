@@ -211,8 +211,10 @@ func (m *Manager) StartFirmwareUpdate(
 	}
 
 	req := &pb.UpdateComponentFirmwareRequest{
-		Target: &pb.UpdateComponentFirmwareRequest_PowerShelfIds{
-			PowerShelfIds: powerShelfIDsProto(target.ComponentIDs),
+		Target: &pb.UpdateComponentFirmwareRequest_PowerShelves{
+			PowerShelves: &pb.UpdatePowerShelfFirmwareTarget{
+				PowerShelfIds: powerShelfIDsProto(target.ComponentIDs),
+			},
 		},
 		TargetVersion: info.TargetVersion,
 	}

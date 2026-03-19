@@ -40,31 +40,40 @@ const (
 type SystemPowerControl int32
 
 const (
-	SystemPowerControl_SYSTEM_POWER_CONTROL_ON                SystemPowerControl = 0
-	SystemPowerControl_SYSTEM_POWER_CONTROL_GRACEFUL_SHUTDOWN SystemPowerControl = 1
-	SystemPowerControl_SYSTEM_POWER_CONTROL_FORCE_OFF         SystemPowerControl = 2
-	SystemPowerControl_SYSTEM_POWER_CONTROL_GRACEFUL_RESTART  SystemPowerControl = 3
-	SystemPowerControl_SYSTEM_POWER_CONTROL_FORCE_RESTART     SystemPowerControl = 4
-	SystemPowerControl_SYSTEM_POWER_CONTROL_AC_POWERCYCLE     SystemPowerControl = 5
+	SystemPowerControl_SYSTEM_POWER_CONTROL_UNKNOWN SystemPowerControl = 0
+	// Power on a machine
+	SystemPowerControl_SYSTEM_POWER_CONTROL_ON SystemPowerControl = 1
+	// Graceful host shutdown
+	SystemPowerControl_SYSTEM_POWER_CONTROL_GRACEFUL_SHUTDOWN SystemPowerControl = 2
+	// Forcefully powers a machine off
+	SystemPowerControl_SYSTEM_POWER_CONTROL_FORCE_OFF SystemPowerControl = 3
+	// Graceful restart. Asks the OS to restart via ACPI
+	SystemPowerControl_SYSTEM_POWER_CONTROL_GRACEFUL_RESTART SystemPowerControl = 4
+	// Force restart. This is equivalent to pressing the reset button on the front panel.
+	SystemPowerControl_SYSTEM_POWER_CONTROL_FORCE_RESTART SystemPowerControl = 5
+	// AC powercycle. This is equivalent to unplugging and reconnecting power cables. Not supported on Vikings.
+	SystemPowerControl_SYSTEM_POWER_CONTROL_AC_POWERCYCLE SystemPowerControl = 6
 )
 
 // Enum value maps for SystemPowerControl.
 var (
 	SystemPowerControl_name = map[int32]string{
-		0: "SYSTEM_POWER_CONTROL_ON",
-		1: "SYSTEM_POWER_CONTROL_GRACEFUL_SHUTDOWN",
-		2: "SYSTEM_POWER_CONTROL_FORCE_OFF",
-		3: "SYSTEM_POWER_CONTROL_GRACEFUL_RESTART",
-		4: "SYSTEM_POWER_CONTROL_FORCE_RESTART",
-		5: "SYSTEM_POWER_CONTROL_AC_POWERCYCLE",
+		0: "SYSTEM_POWER_CONTROL_UNKNOWN",
+		1: "SYSTEM_POWER_CONTROL_ON",
+		2: "SYSTEM_POWER_CONTROL_GRACEFUL_SHUTDOWN",
+		3: "SYSTEM_POWER_CONTROL_FORCE_OFF",
+		4: "SYSTEM_POWER_CONTROL_GRACEFUL_RESTART",
+		5: "SYSTEM_POWER_CONTROL_FORCE_RESTART",
+		6: "SYSTEM_POWER_CONTROL_AC_POWERCYCLE",
 	}
 	SystemPowerControl_value = map[string]int32{
-		"SYSTEM_POWER_CONTROL_ON":                0,
-		"SYSTEM_POWER_CONTROL_GRACEFUL_SHUTDOWN": 1,
-		"SYSTEM_POWER_CONTROL_FORCE_OFF":         2,
-		"SYSTEM_POWER_CONTROL_GRACEFUL_RESTART":  3,
-		"SYSTEM_POWER_CONTROL_FORCE_RESTART":     4,
-		"SYSTEM_POWER_CONTROL_AC_POWERCYCLE":     5,
+		"SYSTEM_POWER_CONTROL_UNKNOWN":           0,
+		"SYSTEM_POWER_CONTROL_ON":                1,
+		"SYSTEM_POWER_CONTROL_GRACEFUL_SHUTDOWN": 2,
+		"SYSTEM_POWER_CONTROL_FORCE_OFF":         3,
+		"SYSTEM_POWER_CONTROL_GRACEFUL_RESTART":  4,
+		"SYSTEM_POWER_CONTROL_FORCE_RESTART":     5,
+		"SYSTEM_POWER_CONTROL_AC_POWERCYCLE":     6,
 	}
 )
 
@@ -1221,14 +1230,15 @@ const file_common_proto_rawDesc = "" +
 	"\x0eNVLinkDomainId\x12\x14\n" +
 	"\x05value\x18\x01 \x01(\tR\x05value\"+\n" +
 	"\x13ComputeAllocationId\x12\x14\n" +
-	"\x05value\x18\x01 \x01(\tR\x05value*\xfc\x01\n" +
-	"\x12SystemPowerControl\x12\x1b\n" +
-	"\x17SYSTEM_POWER_CONTROL_ON\x10\x00\x12*\n" +
-	"&SYSTEM_POWER_CONTROL_GRACEFUL_SHUTDOWN\x10\x01\x12\"\n" +
-	"\x1eSYSTEM_POWER_CONTROL_FORCE_OFF\x10\x02\x12)\n" +
-	"%SYSTEM_POWER_CONTROL_GRACEFUL_RESTART\x10\x03\x12&\n" +
-	"\"SYSTEM_POWER_CONTROL_FORCE_RESTART\x10\x04\x12&\n" +
-	"\"SYSTEM_POWER_CONTROL_AC_POWERCYCLE\x10\x05B\x9a\x01\n" +
+	"\x05value\x18\x01 \x01(\tR\x05value*\x9e\x02\n" +
+	"\x12SystemPowerControl\x12 \n" +
+	"\x1cSYSTEM_POWER_CONTROL_UNKNOWN\x10\x00\x12\x1b\n" +
+	"\x17SYSTEM_POWER_CONTROL_ON\x10\x01\x12*\n" +
+	"&SYSTEM_POWER_CONTROL_GRACEFUL_SHUTDOWN\x10\x02\x12\"\n" +
+	"\x1eSYSTEM_POWER_CONTROL_FORCE_OFF\x10\x03\x12)\n" +
+	"%SYSTEM_POWER_CONTROL_GRACEFUL_RESTART\x10\x04\x12&\n" +
+	"\"SYSTEM_POWER_CONTROL_FORCE_RESTART\x10\x05\x12&\n" +
+	"\"SYSTEM_POWER_CONTROL_AC_POWERCYCLE\x10\x06B\x9a\x01\n" +
 	"\n" +
 	"com.commonB\vCommonProtoP\x01ZGgithub.com/NVIDIA/ncx-infra-controller-rest/rla/internal/carbideapigrpc\xa2\x02\x03CXX\xaa\x02\x06Common\xca\x02\x06Common\xe2\x02\x12Common\\GPBMetadata\xea\x02\x06Commonb\x06proto3"
 
