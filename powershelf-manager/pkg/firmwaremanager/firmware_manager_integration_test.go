@@ -57,11 +57,6 @@ func skipIfNoDatabase(t *testing.T) {
 	}
 }
 
-// testRegistry wraps the firmware Registry for testing with direct database access
-type testRegistry struct {
-	session *cdb.Session
-}
-
 // setupTestDB creates a fresh test database with migrations applied
 func setupTestDB(t *testing.T) (*cdb.Session, func()) {
 	t.Helper()
@@ -123,12 +118,12 @@ func TestIntegration_FirmwareManager_CanUpdate(t *testing.T) {
 	pmcMgr := pmcmanager.New(pmcRegistry, credMgr)
 
 	// Create firmware manager with test database
-	registry := &Registry{session: session}
+	store := &PostgresStore{session: session}
 	manager := &Manager{
-		firmwareUpdater:  make(map[vendor.Vendor]*FirmwareUpdater),
-		fwUpdateRegistry: registry,
-		pmcManager:       pmcMgr,
-		dryRun:           true,
+		firmwareUpdater: make(map[vendor.Vendor]*FirmwareUpdater),
+		store:           store,
+		pmcManager:      pmcMgr,
+		dryRun:          true,
 	}
 
 	// Add Liteon updater
@@ -176,10 +171,10 @@ func TestIntegration_FirmwareManager_SetUpdateState(t *testing.T) {
 	require.NoError(t, tx.Commit())
 
 	// Create firmware manager
-	registry := &Registry{session: session}
+	store := &PostgresStore{session: session}
 	manager := &Manager{
-		fwUpdateRegistry: registry,
-		dryRun:           true,
+		store:  store,
+		dryRun: true,
 	}
 
 	// Create a firmware update in Queued state
@@ -188,7 +183,8 @@ func TestIntegration_FirmwareManager_SetUpdateState(t *testing.T) {
 	assert.Equal(t, powershelf.FirmwareStateQueued, fu.State)
 
 	// Transition to Verifying
-	err = manager.SetUpdateState(ctx, *fu, powershelf.FirmwareStateVerifying, "")
+	rec := modelToRecord(fu)
+	err = manager.SetUpdateState(ctx, rec, powershelf.FirmwareStateVerifying, "")
 	assert.NoError(t, err)
 
 	// Verify state changed
@@ -197,7 +193,8 @@ func TestIntegration_FirmwareManager_SetUpdateState(t *testing.T) {
 	assert.Equal(t, powershelf.FirmwareStateVerifying, retrieved.State)
 
 	// Transition to Completed
-	err = manager.SetUpdateState(ctx, *retrieved, powershelf.FirmwareStateCompleted, "")
+	rec = modelToRecord(retrieved)
+	err = manager.SetUpdateState(ctx, rec, powershelf.FirmwareStateCompleted, "")
 	assert.NoError(t, err)
 
 	// Verify terminal state
@@ -231,10 +228,10 @@ func TestIntegration_FirmwareManager_SetUpdateState_WithError(t *testing.T) {
 	require.NoError(t, tx.Commit())
 
 	// Create firmware manager
-	registry := &Registry{session: session}
+	store := &PostgresStore{session: session}
 	manager := &Manager{
-		fwUpdateRegistry: registry,
-		dryRun:           true,
+		store:  store,
+		dryRun: true,
 	}
 
 	// Create a firmware update
@@ -243,7 +240,8 @@ func TestIntegration_FirmwareManager_SetUpdateState_WithError(t *testing.T) {
 
 	// Transition to Failed with error message
 	errMsg := "connection timeout to PMC"
-	err = manager.SetUpdateState(ctx, *fu, powershelf.FirmwareStateFailed, errMsg)
+	rec := modelToRecord(fu)
+	err = manager.SetUpdateState(ctx, rec, powershelf.FirmwareStateFailed, errMsg)
 	assert.NoError(t, err)
 
 	// Verify error message was stored
@@ -284,10 +282,10 @@ func TestIntegration_FirmwareManager_GetPendingUpdates(t *testing.T) {
 	}
 
 	// Create firmware manager
-	registry := &Registry{session: session}
+	store := &PostgresStore{session: session}
 	manager := &Manager{
-		fwUpdateRegistry: registry,
-		dryRun:           true,
+		store:  store,
+		dryRun: true,
 	}
 
 	// Create firmware updates for all PMCs
@@ -304,13 +302,15 @@ func TestIntegration_FirmwareManager_GetPendingUpdates(t *testing.T) {
 	// Mark one as completed
 	fu, err := model.GetFirmwareUpdate(ctx, session.DB, pmcs[0].GetMac(), powershelf.PMC)
 	require.NoError(t, err)
-	err = manager.SetUpdateState(ctx, *fu, powershelf.FirmwareStateCompleted, "")
+	rec := modelToRecord(fu)
+	err = manager.SetUpdateState(ctx, rec, powershelf.FirmwareStateCompleted, "")
 	require.NoError(t, err)
 
 	// Mark one as failed
 	fu2, err := model.GetFirmwareUpdate(ctx, session.DB, pmcs[1].GetMac(), powershelf.PMC)
 	require.NoError(t, err)
-	err = manager.SetUpdateState(ctx, *fu2, powershelf.FirmwareStateFailed, "test error")
+	rec2 := modelToRecord(fu2)
+	err = manager.SetUpdateState(ctx, rec2, powershelf.FirmwareStateFailed, "test error")
 	require.NoError(t, err)
 
 	// Get pending updates again - should only be 1
@@ -404,10 +404,10 @@ func TestIntegration_FirmwareManager_MultipleComponents(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create firmware manager
-	registry := &Registry{session: session}
+	store := &PostgresStore{session: session}
 	manager := &Manager{
-		fwUpdateRegistry: registry,
-		dryRun:           true,
+		store:  store,
+		dryRun: true,
 	}
 
 	// Get all pending updates
@@ -418,7 +418,8 @@ func TestIntegration_FirmwareManager_MultipleComponents(t *testing.T) {
 	// Complete one component
 	pmcFu, err := model.GetFirmwareUpdate(ctx, session.DB, testPmc.GetMac(), powershelf.PMC)
 	require.NoError(t, err)
-	err = manager.SetUpdateState(ctx, *pmcFu, powershelf.FirmwareStateCompleted, "")
+	rec := modelToRecord(pmcFu)
+	err = manager.SetUpdateState(ctx, rec, powershelf.FirmwareStateCompleted, "")
 	require.NoError(t, err)
 
 	// Should still have PSU update pending
@@ -452,10 +453,10 @@ func TestIntegration_FirmwareManager_StateTransitionTimestamps(t *testing.T) {
 	require.NoError(t, tx.Commit())
 
 	// Create firmware manager
-	registry := &Registry{session: session}
+	store := &PostgresStore{session: session}
 	manager := &Manager{
-		fwUpdateRegistry: registry,
-		dryRun:           true,
+		store:  store,
+		dryRun: true,
 	}
 
 	// Create firmware update
@@ -469,7 +470,8 @@ func TestIntegration_FirmwareManager_StateTransitionTimestamps(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 
 	// Transition state
-	err = manager.SetUpdateState(ctx, *fu, powershelf.FirmwareStateVerifying, "")
+	rec := modelToRecord(fu)
+	err = manager.SetUpdateState(ctx, rec, powershelf.FirmwareStateVerifying, "")
 	require.NoError(t, err)
 
 	// Retrieve and check timestamps
@@ -526,10 +528,10 @@ func TestIntegration_FirmwareManager_TerminalStateCheck(t *testing.T) {
 			require.NoError(t, tx.Commit())
 
 			// Create firmware manager
-			registry := &Registry{session: session}
+			store := &PostgresStore{session: session}
 			manager := &Manager{
-				fwUpdateRegistry: registry,
-				dryRun:           true,
+				store:  store,
+				dryRun: true,
 			}
 
 			// Create and transition firmware update
@@ -537,7 +539,8 @@ func TestIntegration_FirmwareManager_TerminalStateCheck(t *testing.T) {
 			require.NoError(t, err)
 
 			if tc.finalState != powershelf.FirmwareStateQueued {
-				err = manager.SetUpdateState(ctx, *fu, tc.finalState, "")
+				rec := modelToRecord(fu)
+				err = manager.SetUpdateState(ctx, rec, tc.finalState, "")
 				require.NoError(t, err)
 			}
 
