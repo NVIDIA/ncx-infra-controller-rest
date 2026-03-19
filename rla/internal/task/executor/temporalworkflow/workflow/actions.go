@@ -51,8 +51,8 @@ var actionExecutorRegistry = map[string]actionExecutor{
 	operationrules.ActionVerifyReachability: executeVerifyReachabilityAction,
 	operationrules.ActionGetPowerStatus:     executeGetPowerStatusAction,
 	operationrules.ActionFirmwareControl:    executeFirmwareControlAction,
-	operationrules.ActionBringUpControl: executeBringUpControlAction,
-	operationrules.ActionWaitBringUp: executeWaitBringUpAction,
+	operationrules.ActionBringUpControl:     executeBringUpControlAction,
+	operationrules.ActionWaitBringUp:        executeWaitBringUpAction,
 	operationrules.ActionInjectExpectation:  executeInjectExpectationAction,
 }
 

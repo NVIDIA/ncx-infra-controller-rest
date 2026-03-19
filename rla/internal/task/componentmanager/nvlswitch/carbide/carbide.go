@@ -275,4 +275,3 @@ func (m *Manager) GetFirmwareStatus(ctx context.Context, target common.Target) (
 
 	return result, nil
 }
-

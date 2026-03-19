@@ -42,8 +42,8 @@ const (
 	ActionVerifyFirmwareVersion = "VerifyFirmwareVersion"
 
 	// Bring-up specific actions
-	ActionBringUpControl = "BringUpControl"
-	ActionWaitBringUp = "WaitBringUp"
+	ActionBringUpControl    = "BringUpControl"
+	ActionWaitBringUp       = "WaitBringUp"
 	ActionInjectExpectation = "InjectExpectation"
 )
 
