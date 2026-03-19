@@ -220,7 +220,11 @@ func (vpsd VpcPeeringSQLDAO) setQueryWithFilter(filter VpcPeeringFilterInput, qu
 	}
 
 	if len(filter.VpcIDs) > 0 {
-		query = query.Where("(vp.vpc1_id IN (?) OR vp.vpc2_id IN (?))", bun.In(filter.VpcIDs), bun.In(filter.VpcIDs))
+		query = query.WhereGroup(" AND ", func(q *bun.SelectQuery) *bun.SelectQuery {
+			return q.
+				WhereOr("vp.vpc1_id IN (?)", bun.In(filter.VpcIDs)).
+				WhereOr("vp.vpc2_id IN (?)", bun.In(filter.VpcIDs))
+		})
 		vpsd.tracerSpan.SetAttribute(vpDAOSpan, "vpc_ids", filter.VpcIDs)
 	}
 

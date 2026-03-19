@@ -110,6 +110,11 @@ func TestCreateVpcPeeringHandler_Handle(t *testing.T) {
 	ts2 := common.TestBuildTenantSite(t, dbSession, tn2, st1, tnu2)
 	assert.NotNil(t, ts2)
 
+	ta1 := common.TestBuildTenantAccount(t, dbSession, ip, &tn1.ID, tn1.Org, cdbm.TenantAccountStatusReady, ipu)
+	assert.NotNil(t, ta1)
+	ta2 := common.TestBuildTenantAccount(t, dbSession, ip, &tn2.ID, tn2.Org, cdbm.TenantAccountStatusReady, ipu)
+	assert.NotNil(t, ta2)
+
 	// VPCs must be in Ready state for create peering to succeed
 	vpc1 := common.TestBuildVPC(t, dbSession, "vpc-1", ip, tn1, st1, nil, nil, cdbm.VpcStatusReady, tnu1)
 	vpc2 := common.TestBuildVPC(t, dbSession, "vpc-2", ip, tn1, st1, nil, nil, cdbm.VpcStatusReady, tnu1)
@@ -629,6 +634,12 @@ func TestGetVpcPeeringHandler_Handle(t *testing.T) {
 	vp23 := common.TestBuildVpcPeering(t, dbSession, vpc2.ID, vpc3.ID, st1.ID, true, ipu.ID)
 	vp45 := common.TestBuildVpcPeering(t, dbSession, vpc4.ID, vpc5.ID, st2.ID, false, tnu2.ID)
 
+	// Create tenant accounts for multi-tenant peerings
+	ta1 := common.TestBuildTenantAccount(t, dbSession, ip, &tn1.ID, tn1.Org, cdbm.TenantAccountStatusReady, ipu)
+	assert.NotNil(t, ta1)
+	ta2 := common.TestBuildTenantAccount(t, dbSession, ip, &tn2.ID, tn2.Org, cdbm.TenantAccountStatusReady, ipu)
+	assert.NotNil(t, ta2)
+
 	tracer, _, ctx := common.TestCommonTraceProviderSetup(t, ctx)
 	mockTC := &tmocks.Client{}
 	cfg := common.GetTestConfig()
@@ -764,8 +775,10 @@ func TestDeleteVpcPeeringHandler_Handle(t *testing.T) {
 
 	common.TestSetupSchema(t, dbSession)
 
-	ipOrg := "test-provider-org"
+	ipOrg := "test-provider-org-1"
 	ipOrgRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipOrg2 := "test-provider-org-2"
+
 	tnOrg1 := "test-tenant-org-1"
 	tnOrg2 := "test-tenant-org-2"
 	tnOrgRoles := []string{"FORGE_TENANT_ADMIN"}
@@ -773,8 +786,8 @@ func TestDeleteVpcPeeringHandler_Handle(t *testing.T) {
 
 	ipu := common.TestBuildUser(t, dbSession, uuid.New().String(), ipOrg, ipOrgRoles)
 	ip := common.TestBuildInfrastructureProvider(t, dbSession, "test-infrastructure-provider", ipOrg, ipu)
-	ipu2 := common.TestBuildUser(t, dbSession, uuid.New().String(), ipOrg, ipOrgRoles)
-	ip2 := common.TestBuildInfrastructureProvider(t, dbSession, "test-infrastructure-provider-2", ipOrg, ipu2)
+	ipu2 := common.TestBuildUser(t, dbSession, uuid.New().String(), ipOrg2, ipOrgRoles)
+	ip2 := common.TestBuildInfrastructureProvider(t, dbSession, "test-infrastructure-provider-2", ipOrg2, ipu2)
 
 	// Create sites and update them to Registered status
 	st1 := common.TestBuildSite(t, dbSession, ip, "test-site-1", ipu)
@@ -799,6 +812,13 @@ func TestDeleteVpcPeeringHandler_Handle(t *testing.T) {
 	assert.NotNil(t, t2s1)
 	t2s2 := common.TestBuildTenantSite(t, dbSession, tn2, st2, tnu2)
 	assert.NotNil(t, t2s2)
+
+	// Provider-admin deletion of multi-tenant peerings now requires tenant accounts
+	// for both tenants with the provider of the peering site.
+	ta1 := common.TestBuildTenantAccount(t, dbSession, ip, &tn1.ID, tn1.Org, cdbm.TenantAccountStatusReady, ipu)
+	assert.NotNil(t, ta1)
+	ta2 := common.TestBuildTenantAccount(t, dbSession, ip, &tn2.ID, tn2.Org, cdbm.TenantAccountStatusReady, ipu)
+	assert.NotNil(t, ta2)
 
 	// VPCs must be in Ready state for create peering to succeed
 	vpc1 := common.TestBuildVPC(t, dbSession, "vpc-1", ip, tn1, st1, nil, nil, cdbm.VpcStatusReady, tnu1)
