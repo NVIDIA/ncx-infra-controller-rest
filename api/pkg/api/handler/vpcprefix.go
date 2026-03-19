@@ -1010,7 +1010,7 @@ func (dsh DeleteVpcPrefixHandler) Handle(c echo.Context) error {
 	}
 
 	if ifcCount > 0 {
-		logger.Warn().Msg("Interfaces exist for vpcPrefix, cannot delete it")
+		logger.Warn().Msg("could not delete VPC Prefix, one or more Instance Interfaces are using it")
 		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "VPC Prefix is being used by one or more Instances and cannot be deleted", nil)
 	}
 
@@ -1062,14 +1062,13 @@ func (dsh DeleteVpcPrefixHandler) Handle(c echo.Context) error {
 	}
 
 	workflowOptions := temporalClient.StartWorkflowOptions{
-		ID:        "vpcprefix-delete-" + vpcPrefix.ID.String(),
+		ID:        "vpc-prefix-delete-" + vpcPrefix.ID.String(),
 		TaskQueue: queue.SiteTaskQueue,
 	}
 
 	logger.Info().Msg("triggering VPC prefix delete workflow")
 
 	// Trigger Site workflow to delete VPC prefix VPC prefix
-	// TODO: Once Site Agent offers DeleteVpcPrefix re-registered as VpcPrefixVpcPrefix then update workflow name here
 	we, err := stc.ExecuteWorkflow(ctx, workflowOptions, "DeleteVpcPrefix", deleteVpcPrefixRequest)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to synchronously start Temporal workflow to delete VPC prefix")
