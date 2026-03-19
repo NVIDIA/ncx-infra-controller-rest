@@ -82,13 +82,13 @@ func (m *Manager) InjectExpectation(
 	target common.Target,
 	info operations.InjectExpectationTaskInfo,
 ) error {
+	if m.carbideClient == nil {
+		return fmt.Errorf("carbide client is not configured")
+	}
+
 	var req carbideapi.AddExpectedPowerShelfRequest
 	if err := json.Unmarshal(info.Info, &req); err != nil {
 		return fmt.Errorf("failed to unmarshal AddExpectedPowerShelfRequest: %w", err)
-	}
-
-	if m.carbideClient == nil {
-		return fmt.Errorf("carbide client is not configured")
 	}
 
 	if err := m.carbideClient.AddExpectedPowerShelf(ctx, req); err != nil {
@@ -263,28 +263,11 @@ func (m *Manager) GetFirmwareUpdateStatus(
 		compID := s.GetResult().GetComponentId()
 		result[compID] = operations.FirmwareUpdateStatus{
 			ComponentID: compID,
-			State:       mapFirmwareState(s.GetState()),
+			State:       carbideprovider.MapFirmwareState(s.GetState()),
 		}
 	}
 
 	return result, nil
-}
-
-func mapFirmwareState(state pb.FirmwareUpdateState) operations.FirmwareUpdateState {
-	switch state {
-	case pb.FirmwareUpdateState_FW_STATE_QUEUED:
-		return operations.FirmwareUpdateStateQueued
-	case pb.FirmwareUpdateState_FW_STATE_IN_PROGRESS:
-		return operations.FirmwareUpdateStateQueued // closest available state
-	case pb.FirmwareUpdateState_FW_STATE_VERIFYING:
-		return operations.FirmwareUpdateStateVerifying
-	case pb.FirmwareUpdateState_FW_STATE_COMPLETED:
-		return operations.FirmwareUpdateStateCompleted
-	case pb.FirmwareUpdateState_FW_STATE_FAILED, pb.FirmwareUpdateState_FW_STATE_CANCELLED:
-		return operations.FirmwareUpdateStateFailed
-	default:
-		return operations.FirmwareUpdateStateUnknown
-	}
 }
 
 func (m *Manager) AllowBringUpAndPowerOn(

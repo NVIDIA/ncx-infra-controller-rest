@@ -135,7 +135,7 @@ func (m *Manager) PowerControl(
 		action = pb.SystemPowerControl_SYSTEM_POWER_CONTROL_GRACEFUL_SHUTDOWN
 	case operations.PowerOperationForcePowerOff:
 		action = pb.SystemPowerControl_SYSTEM_POWER_CONTROL_FORCE_OFF
-	case operations.PowerOperationRestart:
+	case operations.PowerOperationRestart, operations.PowerOperationWarmReset:
 		action = pb.SystemPowerControl_SYSTEM_POWER_CONTROL_GRACEFUL_RESTART
 	case operations.PowerOperationForceRestart:
 		action = pb.SystemPowerControl_SYSTEM_POWER_CONTROL_FORCE_RESTART
@@ -279,28 +279,11 @@ func (m *Manager) GetFirmwareStatus(ctx context.Context, target common.Target) (
 		compID := s.GetResult().GetComponentId()
 		result[compID] = operations.FirmwareUpdateStatus{
 			ComponentID: compID,
-			State:       mapFirmwareState(s.GetState()),
+			State:       carbideprovider.MapFirmwareState(s.GetState()),
 		}
 	}
 
 	return result, nil
-}
-
-func mapFirmwareState(state pb.FirmwareUpdateState) operations.FirmwareUpdateState {
-	switch state {
-	case pb.FirmwareUpdateState_FW_STATE_QUEUED:
-		return operations.FirmwareUpdateStateQueued
-	case pb.FirmwareUpdateState_FW_STATE_IN_PROGRESS:
-		return operations.FirmwareUpdateStateQueued
-	case pb.FirmwareUpdateState_FW_STATE_VERIFYING:
-		return operations.FirmwareUpdateStateVerifying
-	case pb.FirmwareUpdateState_FW_STATE_COMPLETED:
-		return operations.FirmwareUpdateStateCompleted
-	case pb.FirmwareUpdateState_FW_STATE_FAILED, pb.FirmwareUpdateState_FW_STATE_CANCELLED:
-		return operations.FirmwareUpdateStateFailed
-	default:
-		return operations.FirmwareUpdateStateUnknown
-	}
 }
 
 func (m *Manager) AllowBringUpAndPowerOn(
