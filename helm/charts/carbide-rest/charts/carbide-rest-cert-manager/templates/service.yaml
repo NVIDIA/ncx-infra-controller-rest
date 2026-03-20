@@ -9,10 +9,10 @@ spec:
   type: {{ .Values.service.type }}
   ports:
     - port: {{ .Values.service.httpsPort }}
-      targetPort: {{ .Values.service.httpsPort }}
+      targetPort: {{ .Values.config.tlsPort }}
       name: https
     - port: {{ .Values.service.httpPort }}
-      targetPort: {{ .Values.service.httpPort }}
+      targetPort: {{ .Values.config.insecurePort }}
       name: http
   selector:
     {{- include "carbide-rest-cert-manager.selectorLabels" . | nindent 4 }}

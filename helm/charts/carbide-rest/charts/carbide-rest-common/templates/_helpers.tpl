@@ -16,4 +16,5 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 app.kubernetes.io/part-of: carbide-rest
 app.kubernetes.io/name: carbide-rest-common
 app.kubernetes.io/component: common
+app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}

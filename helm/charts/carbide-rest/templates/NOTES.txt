@@ -23,7 +23,9 @@ Components deployed:
 Prerequisites (must exist before install):
   - PostgreSQL database
   - Temporal server with cloud and site namespaces
+{{- if index .Values "carbide-rest-api" "config" "keycloak" "enabled" }}
   - Keycloak authentication server
+{{- end }}
   - cert-manager.io with ClusterIssuer "{{ .Values.global.certificate.issuerRef.name }}"
 {{- if not (index .Values "carbide-rest-common" "enabled") }}
   - Secrets: db-creds, keycloak-client-secret, temporal-encryption-key, temporal-client-cloud-certs

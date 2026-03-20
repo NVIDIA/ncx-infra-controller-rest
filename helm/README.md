@@ -86,7 +86,7 @@ carbide-rest-api:
       serviceAccount: true
 ```
 
-This also requires a `keycloak-client-secret` Kubernetes Secret in the target namespace.
+If `carbide-rest-common.enabled=false`, you must pre-create a `keycloak-client-secret` Kubernetes Secret in the target namespace.
 
 > **Note:** If neither method is configured, `helm install` will fail with a validation error.
 

@@ -14,9 +14,11 @@ metadata:
   labels:
     {{- include "carbide-rest-cert-manager.labels" . | nindent 4 }}
 rules:
+  # credsmgr reads/writes Kubernetes Secrets to store issued site credentials
   - apiGroups: [""]
     resources: ["secrets"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # credsmgr reads ConfigMaps for runtime configuration
   - apiGroups: [""]
     resources: ["configmaps"]
     verbs: ["get", "list", "watch"]

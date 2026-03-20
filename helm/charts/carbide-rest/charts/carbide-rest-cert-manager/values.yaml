@@ -14,7 +14,7 @@ config:
   tlsPort: 8000
   insecurePort: 8001
   caBaseDns: "carbide.local"
-  debug: true
+  debug: false
 
 secrets:
   caSigningSecret: ca-signing-secret

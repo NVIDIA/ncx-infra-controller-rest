@@ -16,6 +16,7 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 app.kubernetes.io/part-of: carbide-rest
 app.kubernetes.io/name: carbide-rest-cert-manager
 app.kubernetes.io/component: cert-manager
+app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{- define "carbide-rest-cert-manager.selectorLabels" -}}

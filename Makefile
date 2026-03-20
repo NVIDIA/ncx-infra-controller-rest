@@ -447,6 +447,14 @@ kind-reset-infra: docker-build-local
 kind-reset-kustomize: kind-reset-infra
 	@echo "Deploying app services via Kustomize overlays..."
 
+	@echo "Setting up common secrets..."
+	kubectl apply -k deploy/kustomize/base/common
+	kubectl -n carbide-rest wait --for=condition=Ready certificate/temporal-client-cloud-cert --timeout=240s || true
+
+	@echo "Setting up Carbide REST Cert Manager (credsmgr)..."
+	kubectl apply -k deploy/kustomize/overlays/cert-manager
+	kubectl -n carbide-rest rollout status deployment/carbide-rest-cert-manager --timeout=240s
+
 	@echo "Waiting for Carbide REST Site Manager..."
 	kubectl apply -k deploy/kustomize/overlays/site-manager
 	kubectl -n carbide-rest rollout status deployment/carbide-rest-site-manager --timeout=240s
