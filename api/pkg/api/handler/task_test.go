@@ -26,14 +26,14 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/handler/util/common"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model"
+	sc "github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/client/site"
+	"github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/otelecho"
+	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
+	rlav1 "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/rla/protobuf/v1"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/handler/util/common"
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model"
-	sc "github.com/nvidia/bare-metal-manager-rest/api/pkg/client/site"
-	"github.com/nvidia/bare-metal-manager-rest/common/pkg/otelecho"
-	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
-	rlav1 "github.com/nvidia/bare-metal-manager-rest/workflow-schema/rla/protobuf/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -125,10 +125,10 @@ func TestGetTaskHandler_Handle(t *testing.T) {
 			expectedStatus: http.StatusPreconditionFailed,
 		},
 		{
-			name:     "failure - missing siteId",
-			reqOrg:   org,
-			user:     providerUser,
-			taskUUID: taskUUID,
+			name:        "failure - missing siteId",
+			reqOrg:      org,
+			user:        providerUser,
+			taskUUID:    taskUUID,
 			queryParams: map[string]string{
 				// no siteId
 			},
@@ -167,7 +167,7 @@ func TestGetTaskHandler_Handle(t *testing.T) {
 					resp.Tasks = tt.mockTasks
 				}).Return(nil)
 			}
-			mockTemporalClient.Mock.On("ExecuteWorkflow", mock.Anything, mock.Anything, "GetTaskByID", mock.Anything).Return(mockWorkflowRun, nil)
+			mockTemporalClient.Mock.On("ExecuteWorkflow", mock.Anything, mock.Anything, "GetTask", mock.Anything).Return(mockWorkflowRun, nil)
 			scp.IDClientMap[site.ID.String()] = mockTemporalClient
 
 			q := url.Values{}
@@ -181,7 +181,7 @@ func TestGetTaskHandler_Handle(t *testing.T) {
 			rec := httptest.NewRecorder()
 
 			ec := e.NewContext(req, rec)
-			ec.SetParamNames("orgName", "uuid")
+			ec.SetParamNames("orgName", "id")
 			ec.SetParamValues(tt.reqOrg, tt.taskUUID)
 			ec.Set("user", tt.user)
 
@@ -203,9 +203,10 @@ func TestGetTaskHandler_Handle(t *testing.T) {
 			err = json.Unmarshal(rec.Body.Bytes(), &apiTask)
 			assert.NoError(t, err)
 			assert.Equal(t, taskUUID, apiTask.ID)
-			assert.Equal(t, "running", apiTask.Status)
+			assert.Equal(t, "Running", apiTask.Status)
 			assert.Equal(t, "Power on rack", apiTask.Description)
 			assert.Equal(t, "Processing", apiTask.Message)
 		})
 	}
 }
+

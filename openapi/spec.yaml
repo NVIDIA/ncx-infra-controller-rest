@@ -9592,7 +9592,7 @@ paths:
           $ref: '#/components/responses/ForbiddenError'
       tags:
         - Rack
-  '/v2/org/{org}/carbide/rack/task/{uuid}':
+  '/v2/org/{org}/carbide/rack/task/{id}':
     parameters:
       - schema:
           type: string
@@ -9603,7 +9603,7 @@ paths:
       - schema:
           type: string
           format: uuid
-        name: uuid
+        name: id
         in: path
         required: true
         description: UUID of the Task
@@ -9633,7 +9633,7 @@ paths:
                 example-1:
                   value:
                     id: 550e8400-e29b-41d4-a716-446655440000
-                    status: running
+                    status: Running
                     description: Power on rack components
                     message: 'Processing 3 of 5 components'
         '403':
@@ -16087,34 +16087,39 @@ components:
         status:
           type: string
           enum:
-            - unknown
-            - pending
-            - running
-            - succeeded
-            - failed
+            - Unknown
+            - Pending
+            - Waiting
+            - Running
+            - Succeeded
+            - Failed
+            - Terminated
           description: Current state of the task.
         description:
           type: string
           description: Human-readable description provided when the task was created.
-        startTime:
+        created:
+          type: string
+          format: date-time
+          description: Timestamp when the task was created.
+        updated:
+          type: string
+          format: date-time
+          description: Timestamp when the task was last updated.
+        started:
           type: string
           format: date-time
           description: Timestamp when the task started execution.
-        endTime:
+        finished:
           type: string
           format: date-time
-          description: Timestamp when the task finished (succeeded, failed or canceled).
+          description: Timestamp when the task finished (succeeded, failed or terminated).
         message:
           type: string
           description: Optional status or error message describing the current state or result.
-        metadata:
-          type: object
-          additionalProperties:
-            type: string
-          description: Extensible key-value data for additional task details.
       examples:
         - id: 550e8400-e29b-41d4-a716-446655440000
-          status: running
+          status: Running
           description: Power on rack components
           message: 'Processing 3 of 5 components'
     BatchTrayFirmwareUpdateRequest:

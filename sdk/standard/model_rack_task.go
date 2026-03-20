@@ -27,14 +27,16 @@ type RackTask struct {
 	Status *string `json:"status,omitempty"`
 	// Human-readable description provided when the task was created.
 	Description *string `json:"description,omitempty"`
+	// Timestamp when the task was created.
+	Created *time.Time `json:"created,omitempty"`
+	// Timestamp when the task was last updated.
+	Updated *time.Time `json:"updated,omitempty"`
 	// Timestamp when the task started execution.
-	StartTime *time.Time `json:"startTime,omitempty"`
-	// Timestamp when the task finished (succeeded, failed or canceled).
-	EndTime *time.Time `json:"endTime,omitempty"`
+	Started *time.Time `json:"started,omitempty"`
+	// Timestamp when the task finished (succeeded, failed or terminated).
+	Finished *time.Time `json:"finished,omitempty"`
 	// Optional status or error message describing the current state or result.
 	Message *string `json:"message,omitempty"`
-	// Extensible key-value data for additional task details.
-	Metadata map[string]string `json:"metadata,omitempty"`
 }
 
 // NewRackTask instantiates a new RackTask object
@@ -150,68 +152,132 @@ func (o *RackTask) SetDescription(v string) {
 	o.Description = &v
 }
 
-// GetStartTime returns the StartTime field value if set, zero value otherwise.
-func (o *RackTask) GetStartTime() time.Time {
-	if o == nil || IsNil(o.StartTime) {
+// GetCreated returns the Created field value if set, zero value otherwise.
+func (o *RackTask) GetCreated() time.Time {
+	if o == nil || IsNil(o.Created) {
 		var ret time.Time
 		return ret
 	}
-	return *o.StartTime
+	return *o.Created
 }
 
-// GetStartTimeOk returns a tuple with the StartTime field value if set, nil otherwise
+// GetCreatedOk returns a tuple with the Created field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *RackTask) GetStartTimeOk() (*time.Time, bool) {
-	if o == nil || IsNil(o.StartTime) {
+func (o *RackTask) GetCreatedOk() (*time.Time, bool) {
+	if o == nil || IsNil(o.Created) {
 		return nil, false
 	}
-	return o.StartTime, true
+	return o.Created, true
 }
 
-// HasStartTime returns a boolean if a field has been set.
-func (o *RackTask) HasStartTime() bool {
-	if o != nil && !IsNil(o.StartTime) {
+// HasCreated returns a boolean if a field has been set.
+func (o *RackTask) HasCreated() bool {
+	if o != nil && !IsNil(o.Created) {
 		return true
 	}
 
 	return false
 }
 
-// SetStartTime gets a reference to the given time.Time and assigns it to the StartTime field.
-func (o *RackTask) SetStartTime(v time.Time) {
-	o.StartTime = &v
+// SetCreated gets a reference to the given time.Time and assigns it to the Created field.
+func (o *RackTask) SetCreated(v time.Time) {
+	o.Created = &v
 }
 
-// GetEndTime returns the EndTime field value if set, zero value otherwise.
-func (o *RackTask) GetEndTime() time.Time {
-	if o == nil || IsNil(o.EndTime) {
+// GetUpdated returns the Updated field value if set, zero value otherwise.
+func (o *RackTask) GetUpdated() time.Time {
+	if o == nil || IsNil(o.Updated) {
 		var ret time.Time
 		return ret
 	}
-	return *o.EndTime
+	return *o.Updated
 }
 
-// GetEndTimeOk returns a tuple with the EndTime field value if set, nil otherwise
+// GetUpdatedOk returns a tuple with the Updated field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *RackTask) GetEndTimeOk() (*time.Time, bool) {
-	if o == nil || IsNil(o.EndTime) {
+func (o *RackTask) GetUpdatedOk() (*time.Time, bool) {
+	if o == nil || IsNil(o.Updated) {
 		return nil, false
 	}
-	return o.EndTime, true
+	return o.Updated, true
 }
 
-// HasEndTime returns a boolean if a field has been set.
-func (o *RackTask) HasEndTime() bool {
-	if o != nil && !IsNil(o.EndTime) {
+// HasUpdated returns a boolean if a field has been set.
+func (o *RackTask) HasUpdated() bool {
+	if o != nil && !IsNil(o.Updated) {
 		return true
 	}
 
 	return false
 }
 
-// SetEndTime gets a reference to the given time.Time and assigns it to the EndTime field.
-func (o *RackTask) SetEndTime(v time.Time) {
-	o.EndTime = &v
+// SetUpdated gets a reference to the given time.Time and assigns it to the Updated field.
+func (o *RackTask) SetUpdated(v time.Time) {
+	o.Updated = &v
+}
+
+// GetStarted returns the Started field value if set, zero value otherwise.
+func (o *RackTask) GetStarted() time.Time {
+	if o == nil || IsNil(o.Started) {
+		var ret time.Time
+		return ret
+	}
+	return *o.Started
+}
+
+// GetStartedOk returns a tuple with the Started field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *RackTask) GetStartedOk() (*time.Time, bool) {
+	if o == nil || IsNil(o.Started) {
+		return nil, false
+	}
+	return o.Started, true
+}
+
+// HasStarted returns a boolean if a field has been set.
+func (o *RackTask) HasStarted() bool {
+	if o != nil && !IsNil(o.Started) {
+		return true
+	}
+
+	return false
+}
+
+// SetStarted gets a reference to the given time.Time and assigns it to the Started field.
+func (o *RackTask) SetStarted(v time.Time) {
+	o.Started = &v
+}
+
+// GetFinished returns the Finished field value if set, zero value otherwise.
+func (o *RackTask) GetFinished() time.Time {
+	if o == nil || IsNil(o.Finished) {
+		var ret time.Time
+		return ret
+	}
+	return *o.Finished
+}
+
+// GetFinishedOk returns a tuple with the Finished field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *RackTask) GetFinishedOk() (*time.Time, bool) {
+	if o == nil || IsNil(o.Finished) {
+		return nil, false
+	}
+	return o.Finished, true
+}
+
+// HasFinished returns a boolean if a field has been set.
+func (o *RackTask) HasFinished() bool {
+	if o != nil && !IsNil(o.Finished) {
+		return true
+	}
+
+	return false
+}
+
+// SetFinished gets a reference to the given time.Time and assigns it to the Finished field.
+func (o *RackTask) SetFinished(v time.Time) {
+	o.Finished = &v
 }
 
 // GetMessage returns the Message field value if set, zero value otherwise.
@@ -246,38 +312,6 @@ func (o *RackTask) SetMessage(v string) {
 	o.Message = &v
 }
 
-// GetMetadata returns the Metadata field value if set, zero value otherwise.
-func (o *RackTask) GetMetadata() map[string]string {
-	if o == nil || IsNil(o.Metadata) {
-		var ret map[string]string
-		return ret
-	}
-	return o.Metadata
-}
-
-// GetMetadataOk returns a tuple with the Metadata field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *RackTask) GetMetadataOk() (map[string]string, bool) {
-	if o == nil || IsNil(o.Metadata) {
-		return map[string]string{}, false
-	}
-	return o.Metadata, true
-}
-
-// HasMetadata returns a boolean if a field has been set.
-func (o *RackTask) HasMetadata() bool {
-	if o != nil && !IsNil(o.Metadata) {
-		return true
-	}
-
-	return false
-}
-
-// SetMetadata gets a reference to the given map[string]string and assigns it to the Metadata field.
-func (o *RackTask) SetMetadata(v map[string]string) {
-	o.Metadata = v
-}
-
 func (o RackTask) MarshalJSON() ([]byte, error) {
 	toSerialize, err := o.ToMap()
 	if err != nil {
@@ -297,17 +331,20 @@ func (o RackTask) ToMap() (map[string]interface{}, error) {
 	if !IsNil(o.Description) {
 		toSerialize["description"] = o.Description
 	}
-	if !IsNil(o.StartTime) {
-		toSerialize["startTime"] = o.StartTime
+	if !IsNil(o.Created) {
+		toSerialize["created"] = o.Created
 	}
-	if !IsNil(o.EndTime) {
-		toSerialize["endTime"] = o.EndTime
+	if !IsNil(o.Updated) {
+		toSerialize["updated"] = o.Updated
+	}
+	if !IsNil(o.Started) {
+		toSerialize["started"] = o.Started
+	}
+	if !IsNil(o.Finished) {
+		toSerialize["finished"] = o.Finished
 	}
 	if !IsNil(o.Message) {
 		toSerialize["message"] = o.Message
-	}
-	if !IsNil(o.Metadata) {
-		toSerialize["metadata"] = o.Metadata
 	}
 	return toSerialize, nil
 }

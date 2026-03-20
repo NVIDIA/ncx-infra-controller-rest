@@ -19,9 +19,11 @@ package model
 
 import (
 	"testing"
+	"time"
 
-	rlav1 "github.com/nvidia/bare-metal-manager-rest/workflow-schema/rla/protobuf/v1"
+	rlav1 "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/rla/protobuf/v1"
 	"github.com/stretchr/testify/assert"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func TestNewAPITask(t *testing.T) {
@@ -117,6 +119,30 @@ func TestNewAPITask(t *testing.T) {
 				Description: "Orphan task",
 			},
 		},
+		{
+			name: "task with terminated status",
+			task: &rlav1.Task{
+				Id:      &rlav1.UUID{Id: "task-005"},
+				Status:  rlav1.TaskStatus_TASK_STATUS_TERMINATED,
+				Message: "Expired: queue timeout reached",
+			},
+			expected: &APITask{
+				ID:      "task-005",
+				Status:  "terminated",
+				Message: "Expired: queue timeout reached",
+			},
+		},
+		{
+			name: "task with waiting status",
+			task: &rlav1.Task{
+				Id:     &rlav1.UUID{Id: "task-006"},
+				Status: rlav1.TaskStatus_TASK_STATUS_WAITING,
+			},
+			expected: &APITask{
+				ID:     "task-006",
+				Status: "waiting",
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -127,11 +153,35 @@ func TestNewAPITask(t *testing.T) {
 			assert.Equal(t, tt.expected.Status, result.Status)
 			assert.Equal(t, tt.expected.Description, result.Description)
 			assert.Equal(t, tt.expected.Message, result.Message)
-			assert.Empty(t, result.StartTime)
-			assert.Empty(t, result.EndTime)
-			assert.Nil(t, result.Metadata)
+			assert.Nil(t, result.StartedAt)
+			assert.Nil(t, result.FinishedAt)
 		})
 	}
+}
+
+func TestNewAPITask_Timestamps(t *testing.T) {
+	createdTime := time.Date(2026, 1, 1, 9, 0, 0, 0, time.UTC)
+	updatedTime := time.Date(2026, 1, 1, 9, 30, 0, 0, time.UTC)
+	startTime := time.Date(2026, 1, 1, 10, 0, 0, 0, time.UTC)
+	endTime := time.Date(2026, 1, 1, 11, 0, 0, 0, time.UTC)
+
+	task := &rlav1.Task{
+		Id:         &rlav1.UUID{Id: "task-ts"},
+		Status:     rlav1.TaskStatus_TASK_STATUS_COMPLETED,
+		CreatedAt:  timestamppb.New(createdTime),
+		UpdatedAt:  timestamppb.New(updatedTime),
+		StartedAt:  timestamppb.New(startTime),
+		FinishedAt: timestamppb.New(endTime),
+	}
+
+	result := NewAPITask(task)
+
+	assert.True(t, result.CreatedAt.Equal(createdTime))
+	assert.True(t, result.UpdatedAt.Equal(updatedTime))
+	assert.NotNil(t, result.StartedAt)
+	assert.NotNil(t, result.FinishedAt)
+	assert.True(t, result.StartedAt.Equal(startTime))
+	assert.True(t, result.FinishedAt.Equal(endTime))
 }
 
 func TestAPIGetTaskRequest_Validate(t *testing.T) {

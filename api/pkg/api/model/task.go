@@ -19,27 +19,31 @@ package model
 
 import (
 	"fmt"
+	"time"
 
-	rlav1 "github.com/nvidia/bare-metal-manager-rest/workflow-schema/rla/protobuf/v1"
+	rlav1 "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/rla/protobuf/v1"
 )
 
 var ProtoToAPITaskStatusName = map[rlav1.TaskStatus]string{
-	rlav1.TaskStatus_TASK_STATUS_UNKNOWN:   "unknown",
-	rlav1.TaskStatus_TASK_STATUS_PENDING:   "pending",
-	rlav1.TaskStatus_TASK_STATUS_RUNNING:   "running",
-	rlav1.TaskStatus_TASK_STATUS_COMPLETED: "succeeded",
-	rlav1.TaskStatus_TASK_STATUS_FAILED:    "failed",
+	rlav1.TaskStatus_TASK_STATUS_UNKNOWN:    "Unknown",
+	rlav1.TaskStatus_TASK_STATUS_PENDING:    "Pending",
+	rlav1.TaskStatus_TASK_STATUS_RUNNING:    "Running",
+	rlav1.TaskStatus_TASK_STATUS_COMPLETED:  "Succeeded",
+	rlav1.TaskStatus_TASK_STATUS_FAILED:     "Failed",
+	rlav1.TaskStatus_TASK_STATUS_TERMINATED: "Terminated",
+	rlav1.TaskStatus_TASK_STATUS_WAITING:    "Waiting",
 }
 
 // APITask is the API response model for a task.
 type APITask struct {
-	ID          string            `json:"id"`
-	Status      string            `json:"status"`
-	Description string            `json:"description"`
-	StartTime   string            `json:"startTime"`
-	EndTime     string            `json:"endTime"`
-	Message     string            `json:"message"`
-	Metadata    map[string]string `json:"metadata"`
+	ID          string     `json:"id"`
+	Status      string     `json:"status"`
+	Description string     `json:"description"`
+	Created     time.Time  `json:"created"`
+	Updated     time.Time  `json:"updated"`
+	Started     *time.Time `json:"started"`
+	Finished    *time.Time `json:"finished"`
+	Message     string     `json:"message"`
 }
 
 func (t *APITask) FromProto(task *rlav1.Task) {
@@ -49,9 +53,19 @@ func (t *APITask) FromProto(task *rlav1.Task) {
 	if task.GetId() != nil {
 		t.ID = task.GetId().GetId()
 	}
-	t.Status = enumOr(ProtoToAPITaskStatusName, task.GetStatus(), "unknown")
+	t.Status = enumOr(ProtoToAPITaskStatusName, task.GetStatus(), "Unknown")
 	t.Description = task.GetDescription()
 	t.Message = task.GetMessage()
+	t.Created = task.GetCreatedAt().AsTime().UTC()
+	t.Updated = task.GetUpdatedAt().AsTime().UTC()
+	if ts := task.GetStartedAt(); ts != nil {
+		v := ts.AsTime().UTC()
+		t.Started = &v
+	}
+	if ts := task.GetFinishedAt(); ts != nil {
+		v := ts.AsTime().UTC()
+		t.Finished = &v
+	}
 }
 
 func NewAPITask(task *rlav1.Task) *APITask {
@@ -71,3 +85,4 @@ func (r *APIGetTaskRequest) Validate() error {
 	}
 	return nil
 }
+

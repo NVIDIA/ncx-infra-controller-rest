@@ -803,3 +803,4 @@ func TestManageRack_UpgradeFirmware(t *testing.T) {
 		})
 	}
 }
+

@@ -272,9 +272,9 @@ func BringUpRack(ctx workflow.Context, request *rlav1.BringUpRackRequest) (*rlav
 	return &response, nil
 }
 
-// GetTaskByID is a workflow to get a task by its UUID
-func GetTaskByID(ctx workflow.Context, request *rlav1.GetTasksByIDsRequest) (*rlav1.GetTasksByIDsResponse, error) {
-	logger := log.With().Str("Workflow", "Task").Str("Action", "GetByID").Logger()
+// GetTask is a workflow to get a task by its UUID
+func GetTask(ctx workflow.Context, request *rlav1.GetTasksByIDsRequest) (*rlav1.GetTasksByIDsResponse, error) {
+	logger := log.With().Str("Workflow", "Rack").Str("Action", "GetTask").Logger()
 
 	logger.Info().Msg("Starting workflow")
 
@@ -296,7 +296,7 @@ func GetTaskByID(ctx workflow.Context, request *rlav1.GetTasksByIDsRequest) (*rl
 
 	err := workflow.ExecuteActivity(ctx, rackManager.GetTaskByID, request).Get(ctx, &response)
 	if err != nil {
-		logger.Error().Err(err).Str("Activity", "GetTaskByID").Msg("Failed to execute activity from workflow")
+		logger.Error().Err(err).Str("Activity", "GetTask").Msg("Failed to execute activity from workflow")
 		return nil, err
 	}
 

@@ -931,7 +931,7 @@ type ApiGetRackTaskRequest struct {
 	ApiService *RackAPIService
 	siteId     *string
 	org        string
-	uuid       string
+	id         string
 }
 
 // ID of the Site
@@ -953,15 +953,15 @@ Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
-	@param uuid UUID of the Task
+	@param id UUID of the Task
 	@return ApiGetRackTaskRequest
 */
-func (a *RackAPIService) GetRackTask(ctx context.Context, org string, uuid string) ApiGetRackTaskRequest {
+func (a *RackAPIService) GetRackTask(ctx context.Context, org string, id string) ApiGetRackTaskRequest {
 	return ApiGetRackTaskRequest{
 		ApiService: a,
 		ctx:        ctx,
 		org:        org,
-		uuid:       uuid,
+		id:         id,
 	}
 }
 
@@ -981,9 +981,9 @@ func (a *RackAPIService) GetRackTaskExecute(r ApiGetRackTaskRequest) (*RackTask,
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/rack/task/{uuid}"
+	localVarPath := localBasePath + "/v2/org/{org}/carbide/rack/task/{id}"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
-	localVarPath = strings.Replace(localVarPath, "{"+"uuid"+"}", url.PathEscape(parameterValueToString(r.uuid, "uuid")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterValueToString(r.id, "id")), -1)
 
 	localVarHeaderParams := make(map[string]string)
 	localVarQueryParams := url.Values{}

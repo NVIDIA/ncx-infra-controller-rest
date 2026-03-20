@@ -23,21 +23,22 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	temporalEnums "go.temporal.io/api/enums/v1"
 	tClient "go.temporal.io/sdk/client"
 	tp "go.temporal.io/sdk/temporal"
 
-	"github.com/nvidia/bare-metal-manager-rest/api/internal/config"
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/handler/util/common"
-	"github.com/nvidia/bare-metal-manager-rest/api/pkg/api/model"
-	sc "github.com/nvidia/bare-metal-manager-rest/api/pkg/client/site"
-	auth "github.com/nvidia/bare-metal-manager-rest/auth/pkg/authorization"
-	cutil "github.com/nvidia/bare-metal-manager-rest/common/pkg/util"
-	cdb "github.com/nvidia/bare-metal-manager-rest/db/pkg/db"
-	cdbm "github.com/nvidia/bare-metal-manager-rest/db/pkg/db/model"
-	rlav1 "github.com/nvidia/bare-metal-manager-rest/workflow-schema/rla/protobuf/v1"
-	"github.com/nvidia/bare-metal-manager-rest/workflow/pkg/queue"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/internal/config"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/handler/util/common"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model"
+	sc "github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/client/site"
+	auth "github.com/NVIDIA/ncx-infra-controller-rest/auth/pkg/authorization"
+	cutil "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/util"
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
+	rlav1 "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/rla/protobuf/v1"
+	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/queue"
 )
 
 // ~~~~~ Get Task Handler ~~~~~ //
@@ -70,10 +71,10 @@ func NewGetTaskHandler(dbSession *cdb.Session, tc tClient.Client, scp *sc.Client
 // @Produce json
 // @Security ApiKeyAuth
 // @Param org path string true "Name of NGC organization"
-// @Param uuid path string true "UUID of the Task"
+// @Param id path string true "UUID of the Task"
 // @Param siteId query string true "ID of the Site"
 // @Success 200 {object} model.APITask
-// @Router /v2/org/{org}/carbide/rack/task/{uuid} [get]
+// @Router /v2/org/{org}/carbide/rack/task/{id} [get]
 func (gth GetTaskHandler) Handle(c echo.Context) error {
 	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("Task", "Get", c, gth.tracerSpan)
 	if handlerSpan != nil {
@@ -118,7 +119,10 @@ func (gth GetTaskHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Infrastructure Provider for org", nil)
 	}
 
-	taskUUID := c.Param("uuid")
+	taskID := c.Param("id")
+	if _, err := uuid.Parse(taskID); err != nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Task ID specified in URL", nil)
+	}
 
 	site, err := common.GetSiteFromIDString(ctx, nil, apiRequest.SiteID, gth.dbSession)
 	if err != nil {
@@ -153,11 +157,11 @@ func (gth GetTaskHandler) Handle(c echo.Context) error {
 	}
 
 	rlaRequest := &rlav1.GetTasksByIDsRequest{
-		TaskIds: []*rlav1.UUID{{Id: taskUUID}},
+		TaskIds: []*rlav1.UUID{{Id: taskID}},
 	}
 
 	workflowOptions := tClient.StartWorkflowOptions{
-		ID:                       fmt.Sprintf("task-get-%s", taskUUID),
+		ID:                       fmt.Sprintf("task-get-%s", taskID),
 		WorkflowIDReusePolicy:    temporalEnums.WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE,
 		WorkflowIDConflictPolicy: temporalEnums.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING,
 		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
@@ -167,9 +171,9 @@ func (gth GetTaskHandler) Handle(c echo.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
 	defer cancel()
 
-	we, err := stc.ExecuteWorkflow(ctx, workflowOptions, "GetTaskByID", rlaRequest)
+	we, err := stc.ExecuteWorkflow(ctx, workflowOptions, "GetTask", rlaRequest)
 	if err != nil {
-		logger.Error().Err(err).Msg("failed to execute GetTaskByID workflow")
+		logger.Error().Err(err).Msg("failed to execute GetTask workflow")
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to get Task details", nil)
 	}
 
@@ -178,10 +182,10 @@ func (gth GetTaskHandler) Handle(c echo.Context) error {
 	if err != nil {
 		var timeoutErr *tp.TimeoutError
 		if errors.As(err, &timeoutErr) || err == context.DeadlineExceeded || ctx.Err() != nil {
-			return common.TerminateWorkflowOnTimeOut(c, logger, stc, fmt.Sprintf("task-get-%s", taskUUID), err, "Task", "GetTaskByID")
+			return common.TerminateWorkflowOnTimeOut(c, logger, stc, fmt.Sprintf("task-get-%s", taskID), err, "Task", "GetTask")
 		}
 		code, err := common.UnwrapWorkflowError(err)
-		logger.Error().Err(err).Msg("failed to get result from GetTaskByID workflow")
+		logger.Error().Err(err).Msg("failed to get result from GetTask workflow")
 		return cutil.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to get Task details: %s", err), nil)
 	}
 
