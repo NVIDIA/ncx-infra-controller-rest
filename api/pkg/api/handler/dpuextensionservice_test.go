@@ -83,17 +83,42 @@ func TestCreateDpuExtensionServiceHandler_Handle(t *testing.T) {
 	tracer, _, ctx := common.TestCommonTraceProviderSetup(t, ctx)
 
 	// Mock Temporal client
-
 	version := "V1-T1761856992374052"
 	createdTime := time.Now().UTC().Round(time.Microsecond)
+	obsName := "busybox-metrics"
+	expectedObservability := &model.APIDpuExtensionServiceObservability{
+		Configs: []model.APIDpuExtensionServiceObservabilityConfig{
+			{
+				Name: &obsName,
+				Prometheus: &model.APIDpuExtensionServiceObservabilityConfigPrometheus{
+					ScrapeIntervalSeconds: 30,
+					Endpoint:              "busybox:9090",
+				},
+			},
+		},
+	}
 	versionInfo := &cwssaws.DpuExtensionServiceVersionInfo{
 		Version:       version,
 		Data:          "apiVersion: v1\nkind: Pod",
 		HasCredential: true,
 		Created:       createdTime.Format(model.DpuExtensionServiceTimeFormat),
+		Observability: &cwssaws.DpuExtensionServiceObservability{
+			Configs: []*cwssaws.DpuExtensionServiceObservabilityConfig{
+				{
+					Name: &obsName,
+					Config: &cwssaws.DpuExtensionServiceObservabilityConfig_Prometheus{
+						Prometheus: &cwssaws.DpuExtensionServiceObservabilityConfigPrometheus{
+							ScrapeIntervalSeconds: 30,
+							Endpoint:              "busybox:9090",
+						},
+					},
+				},
+			},
+		},
 	}
 	mockTC := &tmocks.Client{}
 	mockWorkflowRun := &tmocks.WorkflowRun{}
+	var capturedCreateRequest *cwssaws.CreateDpuExtensionServiceRequest
 	mockWorkflowRun.On("Get", mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
 		arg := args.Get(1)
 		if ptr, ok := arg.(**cwssaws.DpuExtensionService); ok {
@@ -104,7 +129,9 @@ func TestCreateDpuExtensionServiceHandler_Handle(t *testing.T) {
 		}
 	}).Return(nil)
 	mockWorkflowRun.On("GetID").Return("test-workflow-id")
-	mockTC.On("ExecuteWorkflow", mock.Anything, mock.Anything, "CreateDpuExtensionService", mock.Anything).Return(mockWorkflowRun, nil)
+	mockTC.On("ExecuteWorkflow", mock.Anything, mock.Anything, "CreateDpuExtensionService", mock.Anything).Run(func(args mock.Arguments) {
+		capturedCreateRequest = args.Get(3).(*cwssaws.CreateDpuExtensionServiceRequest)
+	}).Return(mockWorkflowRun, nil)
 
 	// Mock Site Client Pool
 	mockSCP := &sc.ClientPool{
@@ -124,6 +151,7 @@ func TestCreateDpuExtensionServiceHandler_Handle(t *testing.T) {
 			Username:    cdb.GetStrPtr("testuser"),
 			Password:    cdb.GetStrPtr("testpass"),
 		},
+		Observability: expectedObservability,
 	}
 	okBodyBytes, _ := json.Marshal(okBody)
 
@@ -242,6 +270,15 @@ func TestCreateDpuExtensionServiceHandler_Handle(t *testing.T) {
 				assert.Equal(t, version, *apiDES.Version)
 				assert.Equal(t, []string{version}, apiDES.ActiveVersions)
 				assert.Equal(t, createdTime, apiDES.VersionInfo.Created)
+				require.NotNil(t, capturedCreateRequest)
+				assert.Equal(t, okBody.Name, capturedCreateRequest.ServiceName)
+				assert.Equal(t, okBody.Data, capturedCreateRequest.Data)
+				require.NotNil(t, capturedCreateRequest.Credential)
+				assert.Equal(t, okBody.Credentials.RegistryURL, capturedCreateRequest.Credential.RegistryUrl)
+				require.NotNil(t, capturedCreateRequest.Observability)
+				assert.Equal(t, expectedObservability.Configs[0].Prometheus.Endpoint, capturedCreateRequest.Observability.Configs[0].GetPrometheus().Endpoint)
+				require.NotNil(t, apiDES.VersionInfo.Observability)
+				assert.Equal(t, expectedObservability.Configs[0].Prometheus.Endpoint, apiDES.VersionInfo.Observability.Configs[0].Prometheus.Endpoint)
 			}
 		})
 	}
@@ -618,15 +655,29 @@ func TestUpdateDpuExtensionServiceHandler_Handle(t *testing.T) {
 	// Mock Temporal client
 	version := "V1-T1761856992374065"
 	createdTime := time.Now().UTC().Round(time.Microsecond)
+	updateObsName := "service-logs"
 	versionInfo := &cwssaws.DpuExtensionServiceVersionInfo{
 		Version:       version,
 		Data:          "apiVersion: v1\nkind: Pod",
 		HasCredential: true,
 		Created:       createdTime.Format(model.DpuExtensionServiceTimeFormat),
+		Observability: &cwssaws.DpuExtensionServiceObservability{
+			Configs: []*cwssaws.DpuExtensionServiceObservabilityConfig{
+				{
+					Name: &updateObsName,
+					Config: &cwssaws.DpuExtensionServiceObservabilityConfig_Logging{
+						Logging: &cwssaws.DpuExtensionServiceObservabilityConfigLogging{
+							Path: "/var/log/service.log",
+						},
+					},
+				},
+			},
+		},
 	}
 
 	mockTC := &tmocks.Client{}
 	mockWorkflowRun := &tmocks.WorkflowRun{}
+	var capturedUpdateRequest *cwssaws.UpdateDpuExtensionServiceRequest
 	mockWorkflowRun.On("Get", mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
 		arg := args.Get(1)
 		if ptr, ok := arg.(**cwssaws.DpuExtensionService); ok {
@@ -637,7 +688,9 @@ func TestUpdateDpuExtensionServiceHandler_Handle(t *testing.T) {
 		}
 	}).Return(nil)
 	mockWorkflowRun.On("GetID").Return("test-workflow-id")
-	mockTC.On("ExecuteWorkflow", mock.Anything, mock.Anything, "UpdateDpuExtensionService", mock.Anything).Return(mockWorkflowRun, nil)
+	mockTC.On("ExecuteWorkflow", mock.Anything, mock.Anything, "UpdateDpuExtensionService", mock.Anything).Run(func(args mock.Arguments) {
+		capturedUpdateRequest = args.Get(3).(*cwssaws.UpdateDpuExtensionServiceRequest)
+	}).Return(mockWorkflowRun, nil)
 
 	// Mock Site Client Pool
 	mockSCP := &sc.ClientPool{
@@ -660,12 +713,23 @@ func TestUpdateDpuExtensionServiceHandler_Handle(t *testing.T) {
 	invalidBodyBytes := []byte(`{"name": ""}`)
 
 	okBody2 := model.APIDpuExtensionServiceUpdateRequest{
+		Name:        cdb.GetStrPtr("updated-service-name-2"),
 		Description: cdb.GetStrPtr("Updated Description"),
 		Data:        cdb.GetStrPtr("apiVersion: v1\nkind: Pod\nmetadata:\n  name: updated-service"),
 		Credentials: &model.APIDpuExtensionServiceCredentials{
 			RegistryURL: "https://registry.hub.docker.com",
 			Username:    cdb.GetStrPtr("testuser"),
 			Password:    cdb.GetStrPtr("testpass"),
+		},
+		Observability: &model.APIDpuExtensionServiceObservability{
+			Configs: []model.APIDpuExtensionServiceObservabilityConfig{
+				{
+					Name: &updateObsName,
+					Logging: &model.APIDpuExtensionServiceObservabilityConfigLogging{
+						Path: "/var/log/service.log",
+					},
+				},
+			},
 		},
 	}
 	okBody2Bytes, _ := json.Marshal(okBody2)
@@ -755,6 +819,25 @@ func TestUpdateDpuExtensionServiceHandler_Handle(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			dpuExtensionServiceID := tt.dpuExtensionServiceID
+			if strings.Contains(tt.name, "success updating DPU Extension Service") {
+				freshService := common.TestBuildDpuExtensionService(
+					t,
+					dbSession,
+					"service-"+uuid.NewString(),
+					model.DpuExtensionServiceTypeKubernetesPod,
+					tn1,
+					st1,
+					"V1-T1761856992374052",
+					cdbm.DpuExtensionServiceStatusReady,
+					tnu1,
+				)
+				require.NotNil(t, freshService)
+				dpuExtensionServiceID = freshService.ID.String()
+			}
+
+			capturedUpdateRequest = nil
+
 			udesh := UpdateDpuExtensionServiceHandler{
 				dbSession:  dbSession,
 				tc:         mockTC,
@@ -771,7 +854,7 @@ func TestUpdateDpuExtensionServiceHandler_Handle(t *testing.T) {
 
 			ec := e.NewContext(req, rec)
 			ec.SetParamNames("orgName", "id")
-			ec.SetParamValues(tt.reqOrgName, tt.dpuExtensionServiceID)
+			ec.SetParamValues(tt.reqOrgName, dpuExtensionServiceID)
 			ec.Set("user", tt.user)
 
 			testCtx := context.WithValue(ctx, otelecho.TracerKey, tracer)
@@ -786,11 +869,27 @@ func TestUpdateDpuExtensionServiceHandler_Handle(t *testing.T) {
 				var apiDES model.APIDpuExtensionService
 				err := json.Unmarshal(rec.Body.Bytes(), &apiDES)
 				require.NoError(t, err)
-				assert.Equal(t, *okBody.Name, apiDES.Name)
-				assert.Equal(t, *okBody.Description, *apiDES.Description)
+				if strings.Contains(tt.name, "data/credentials") {
+					assert.Equal(t, *okBody2.Name, apiDES.Name)
+					assert.Equal(t, *okBody2.Description, *apiDES.Description)
+					require.NotNil(t, capturedUpdateRequest)
+					require.NotNil(t, capturedUpdateRequest.ServiceName)
+					assert.Equal(t, *okBody2.Name, *capturedUpdateRequest.ServiceName)
+					assert.Equal(t, *okBody2.Data, capturedUpdateRequest.Data)
+					require.NotNil(t, capturedUpdateRequest.Observability)
+					assert.Equal(t, *okBody2.Observability.Configs[0].Name, *capturedUpdateRequest.Observability.Configs[0].Name)
+					assert.Equal(t, okBody2.Observability.Configs[0].Logging.Path, capturedUpdateRequest.Observability.Configs[0].GetLogging().Path)
+				} else {
+					assert.Equal(t, *okBody.Name, apiDES.Name)
+					assert.Equal(t, *okBody.Description, *apiDES.Description)
+					require.NotNil(t, capturedUpdateRequest)
+					assert.Equal(t, *okBody.Name, *capturedUpdateRequest.ServiceName)
+				}
 				assert.Equal(t, version, *apiDES.Version)
 				assert.Equal(t, createdTime, apiDES.VersionInfo.Created)
 				assert.Equal(t, []string{version}, apiDES.ActiveVersions)
+				require.NotNil(t, apiDES.VersionInfo.Observability)
+				assert.Equal(t, "/var/log/service.log", apiDES.VersionInfo.Observability.Configs[0].Logging.Path)
 			}
 		})
 	}
@@ -1000,6 +1099,7 @@ func TestGetDpuExtensionServiceVersionHandler_Handle(t *testing.T) {
 	// Mock version info response
 	version := "V1-T1761856992374052"
 	createdTime := time.Now().UTC().Round(time.Microsecond)
+	versionObsName := "version-metrics"
 	mockVersionInfo := &cwssaws.DpuExtensionServiceVersionInfoList{
 		VersionInfos: []*cwssaws.DpuExtensionServiceVersionInfo{
 			{
@@ -1007,6 +1107,19 @@ func TestGetDpuExtensionServiceVersionHandler_Handle(t *testing.T) {
 				Data:          "apiVersion: v1\nkind: Pod",
 				HasCredential: true,
 				Created:       createdTime.Format(model.DpuExtensionServiceTimeFormat),
+				Observability: &cwssaws.DpuExtensionServiceObservability{
+					Configs: []*cwssaws.DpuExtensionServiceObservabilityConfig{
+						{
+							Name: &versionObsName,
+							Config: &cwssaws.DpuExtensionServiceObservabilityConfig_Prometheus{
+								Prometheus: &cwssaws.DpuExtensionServiceObservabilityConfigPrometheus{
+									ScrapeIntervalSeconds: 60,
+									Endpoint:              "service:9090",
+								},
+							},
+						},
+					},
+				},
 			},
 		},
 	}
@@ -1119,6 +1232,8 @@ func TestGetDpuExtensionServiceVersionHandler_Handle(t *testing.T) {
 				assert.NotNil(t, apiVersionInfo.Version)
 				assert.Equal(t, version, apiVersionInfo.Version)
 				assert.Equal(t, createdTime, apiVersionInfo.Created)
+				require.NotNil(t, apiVersionInfo.Observability)
+				assert.Equal(t, "service:9090", apiVersionInfo.Observability.Configs[0].Prometheus.Endpoint)
 			}
 		})
 	}
