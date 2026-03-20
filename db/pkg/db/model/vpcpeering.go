@@ -73,6 +73,9 @@ type VpcPeering struct {
 
 	IsMultiTenant bool `bun:"is_multi_tenant,notnull"`
 
+	InfrastructureProviderID *uuid.UUID `bun:"infrastructure_provider_id,type:uuid"`
+	TenantID                 *uuid.UUID `bun:"tenant_id,type:uuid"`
+
 	Status string `bun:"status,notnull"`
 
 	Created   time.Time  `bun:"created,nullzero,notnull,default:current_timestamp"`
@@ -85,16 +88,20 @@ type VpcPeeringCreateInput struct {
 	Vpc1ID uuid.UUID
 	Vpc2ID uuid.UUID
 
-	SiteID        uuid.UUID
-	IsMultiTenant bool
-	CreatedByID   uuid.UUID
+	SiteID                   uuid.UUID
+	IsMultiTenant            bool
+	InfrastructureProviderID *uuid.UUID
+	TenantID                 *uuid.UUID
+	CreatedByID              uuid.UUID
 }
 
 type VpcPeeringFilterInput struct {
-	IDs      []uuid.UUID
-	VpcIDs   []uuid.UUID // Return record if vpc1_id IN (VpcIDs) OR vpc2_id IN (VpcIDs)
-	SiteIDs  []uuid.UUID
-	Statuses []string
+	IDs                      []uuid.UUID
+	VpcIDs                   []uuid.UUID // Return record if vpc1_id IN (VpcIDs) OR vpc2_id IN (VpcIDs)
+	SiteIDs                  []uuid.UUID
+	InfrastructureProviderID *uuid.UUID
+	TenantID                 *uuid.UUID
+	Statuses                 []string
 }
 
 func (vp *VpcPeering) BeforeCreateTable(ctx context.Context, query *bun.CreateTableQuery) error {
@@ -102,7 +109,9 @@ func (vp *VpcPeering) BeforeCreateTable(ctx context.Context, query *bun.CreateTa
 	query.
 		ForeignKey(`("vpc1_id") REFERENCES "vpc" ("id")`).
 		ForeignKey(`("vpc2_id") REFERENCES "vpc" ("id")`).
-		ForeignKey(`("site_id") REFERENCES "site" ("id")`)
+		ForeignKey(`("site_id") REFERENCES "site" ("id")`).
+		ForeignKey(`("infrastructure_provider_id") REFERENCES "infrastructure_provider" ("id")`).
+		ForeignKey(`("tenant_id") REFERENCES "tenant" ("id")`)
 
 	return nil
 }
@@ -148,15 +157,17 @@ func (vpsd VpcPeeringSQLDAO) Create(
 	}
 
 	vp := &VpcPeering{
-		ID:            uuid.New(),
-		Vpc1ID:        vpc1ID,
-		Vpc2ID:        vpc2ID,
-		SiteID:        input.SiteID,
-		IsMultiTenant: input.IsMultiTenant,
-		Status:        VpcPeeringStatusPending,
-		Created:       db.GetCurTime(),
-		Updated:       db.GetCurTime(),
-		CreatedBy:     input.CreatedByID,
+		ID:                       uuid.New(),
+		Vpc1ID:                   vpc1ID,
+		Vpc2ID:                   vpc2ID,
+		SiteID:                   input.SiteID,
+		IsMultiTenant:            input.IsMultiTenant,
+		InfrastructureProviderID: input.InfrastructureProviderID,
+		TenantID:                 input.TenantID,
+		Status:                   VpcPeeringStatusPending,
+		Created:                  db.GetCurTime(),
+		Updated:                  db.GetCurTime(),
+		CreatedBy:                input.CreatedByID,
 	}
 
 	_, err := db.GetIDB(tx, vpsd.dbSession).NewInsert().Model(vp).Exec(ctx)
@@ -236,6 +247,27 @@ func (vpsd VpcPeeringSQLDAO) setQueryWithFilter(filter VpcPeeringFilterInput, qu
 	if filter.SiteIDs != nil {
 		query = query.Where("vp.site_id IN (?)", bun.In(filter.SiteIDs))
 		vpsd.tracerSpan.SetAttribute(vpDAOSpan, "site_ids", filter.SiteIDs)
+	}
+
+	if filter.InfrastructureProviderID != nil && filter.TenantID != nil {
+		query = query.WhereGroup(" AND ", func(q *bun.SelectQuery) *bun.SelectQuery {
+			return q.
+				WhereOr("vp.infrastructure_provider_id = ?", *filter.InfrastructureProviderID).
+				WhereOr("vp.vpc1_id IN (SELECT id FROM vpc WHERE tenant_id = ?)", *filter.TenantID).
+				WhereOr("vp.vpc2_id IN (SELECT id FROM vpc WHERE tenant_id = ?)", *filter.TenantID)
+		})
+		vpsd.tracerSpan.SetAttribute(vpDAOSpan, "infrastructure_provider_id", filter.InfrastructureProviderID.String())
+		vpsd.tracerSpan.SetAttribute(vpDAOSpan, "tenant_id", filter.TenantID.String())
+	} else if filter.InfrastructureProviderID != nil {
+		query = query.Where("vp.infrastructure_provider_id = ?", *filter.InfrastructureProviderID)
+		vpsd.tracerSpan.SetAttribute(vpDAOSpan, "infrastructure_provider_id", filter.InfrastructureProviderID.String())
+	} else if filter.TenantID != nil {
+		query = query.WhereGroup(" AND ", func(q *bun.SelectQuery) *bun.SelectQuery {
+			return q.
+				WhereOr("vp.vpc1_id IN (SELECT id FROM vpc WHERE tenant_id = ?)", *filter.TenantID).
+				WhereOr("vp.vpc2_id IN (SELECT id FROM vpc WHERE tenant_id = ?)", *filter.TenantID)
+		})
+		vpsd.tracerSpan.SetAttribute(vpDAOSpan, "tenant_id", filter.TenantID.String())
 	}
 
 	return query, nil

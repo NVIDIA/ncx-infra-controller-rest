@@ -122,7 +122,7 @@ func TestCreateVpcPeeringHandler_Handle(t *testing.T) {
 	vpc4 := common.TestBuildVPC(t, dbSession, "vpc-4", ip, tn2, st1, nil, nil, cdbm.VpcStatusReady, tnu2)
 
 	// Existing peering vpc1-vpc2 for duplicate test
-	existingVP := common.TestBuildVpcPeering(t, dbSession, vpc1.ID, vpc2.ID, st1.ID, false, tnu1.ID)
+	existingVP := common.TestBuildVpcPeering(t, dbSession, vpc1.ID, vpc2.ID, st1.ID, nil, &tn1.ID, false, tnu1.ID)
 	assert.NotNil(t, existingVP)
 
 	// OTEL Spanner configuration
@@ -357,65 +357,71 @@ func TestGetAllVpcPeeringHandler_Handle(t *testing.T) {
 
 	common.TestSetupSchema(t, dbSession)
 
-	ipOrg := "test-provider-org"
+	ipOrg := "test-provider-org-1"
 	ipOrgRoles := []string{"FORGE_PROVIDER_ADMIN"}
+
+	ipOrg2 := "test-provider-org-2"
+	ipOrgRoles2 := []string{"FORGE_PROVIDER_ADMIN", "FORGE_TENANT_ADMIN"}
+
 	tnOrg1 := "test-tenant-org-1"
 	tnOrg2 := "test-tenant-org-2"
 	tnOrgRoles := []string{"FORGE_TENANT_ADMIN"}
 	tnOrgRolesForbidden := []string{"FORGE_TENANT_USER"}
 
+	// Provider users
+	// ip is a provider admin, ip2 is a provider tenant admin
 	ipu := common.TestBuildUser(t, dbSession, uuid.New().String(), ipOrg, ipOrgRoles)
-	ip := common.TestBuildInfrastructureProvider(t, dbSession, "test-infrastructure-provider", ipOrg, ipu)
-	ipu2 := common.TestBuildUser(t, dbSession, uuid.New().String(), ipOrg, ipOrgRoles)
-	ip2 := common.TestBuildInfrastructureProvider(t, dbSession, "test-infrastructure-provider-2", ipOrg, ipu2)
+	ip := common.TestBuildInfrastructureProvider(t, dbSession, "test-infrastructure-provider-1", ipOrg, ipu)
+	ipu2 := common.TestBuildUser(t, dbSession, uuid.New().String(), ipOrg2, ipOrgRoles2)
+	ip2 := common.TestBuildInfrastructureProvider(t, dbSession, "test-infrastructure-provider-2", ipOrg2, ipu2)
 
-	// Create sites and update them to Registered status
-	st1 := common.TestBuildSite(t, dbSession, ip, "test-site-1", ipu)
-	st2 := common.TestBuildSite(t, dbSession, ip, "test-site-2", ipu)
-	st1.Status = cdbm.SiteStatusRegistered
-	st2.Status = cdbm.SiteStatusRegistered
-	_, err := dbSession.DB.NewUpdate().Model(st1).Where("id = ?", st1.ID).Exec(context.Background())
-	assert.Nil(t, err)
-	_, err = dbSession.DB.NewUpdate().Model(st2).Where("id = ?", st2.ID).Exec(context.Background())
-	assert.Nil(t, err)
-	st3 := common.TestBuildSite(t, dbSession, ip2, "test-site-3", ipu2)
-	st3.Status = cdbm.SiteStatusRegistered
-	_, err = dbSession.DB.NewUpdate().Model(st3).Where("id = ?", st3.ID).Exec(context.Background())
-	assert.Nil(t, err)
+	// Sites
+	st1 := common.TestBuildSite(t, dbSession, ip, "site-1", ipu)
+	st2 := common.TestBuildSite(t, dbSession, ip, "site-2", ipu2)
+	st3 := common.TestBuildSite(t, dbSession, ip2, "site-3", ipu2)
+	for _, st := range []*cdbm.Site{st1, st2, st3} {
+		st.Status = cdbm.SiteStatusRegistered
+		_, err := dbSession.DB.NewUpdate().Model(st).Where("id = ?", st.ID).Exec(context.Background())
+		assert.Nil(t, err)
+	}
 
-	// Build tenants for multi-tenant peering test
+	// Tenants/users
 	tnu1 := common.TestBuildUser(t, dbSession, uuid.New().String(), tnOrg1, tnOrgRoles)
 	tnu1Forbidden := common.TestBuildUser(t, dbSession, uuid.New().String(), tnOrg1, tnOrgRolesForbidden)
-	tn1 := common.TestBuildTenant(t, dbSession, "test-tenant", tnOrg1, tnu1)
-	t1s1 := common.TestBuildTenantSite(t, dbSession, tn1, st1, tnu1)
-	t1s2 := common.TestBuildTenantSite(t, dbSession, tn1, st2, tnu1)
-	assert.NotNil(t, t1s1)
-	assert.NotNil(t, t1s2)
+	tn1 := common.TestBuildTenant(t, dbSession, "tenant-1", tnOrg1, tnu1)
+	common.TestBuildTenantSite(t, dbSession, tn1, st1, tnu1)
+	common.TestBuildTenantSite(t, dbSession, tn1, st2, tnu1)
 
 	tnu2 := common.TestBuildUser(t, dbSession, uuid.New().String(), tnOrg2, tnOrgRoles)
-	tn2 := common.TestBuildTenant(t, dbSession, "test-tenant-2", tnOrg2, tnu2)
-	t2s1 := common.TestBuildTenantSite(t, dbSession, tn2, st1, tnu2)
-	assert.NotNil(t, t2s1)
-	t2s2 := common.TestBuildTenantSite(t, dbSession, tn2, st2, tnu2)
-	assert.NotNil(t, t2s2)
+	tn2 := common.TestBuildTenant(t, dbSession, "tenant-2", tnOrg2, tnu2)
+	common.TestBuildTenantSite(t, dbSession, tn2, st1, tnu2)
+	common.TestBuildTenantSite(t, dbSession, tn2, st2, tnu2)
+	common.TestBuildTenantSite(t, dbSession, tn2, st3, tnu2)
 
-	// VPCs must be in Ready state for create peering to succeed
+	// Tenant for provider+tenant admin user in provider org.
+	tnProvider := common.TestBuildTenant(t, dbSession, "tenant-provider", ipOrg2, ipu2)
+	common.TestBuildTenantSite(t, dbSession, tnProvider, st1, ipu2)
+
+	// VPCs
 	vpc1 := common.TestBuildVPC(t, dbSession, "vpc-1", ip, tn1, st1, nil, nil, cdbm.VpcStatusReady, tnu1)
 	vpc2 := common.TestBuildVPC(t, dbSession, "vpc-2", ip, tn1, st1, nil, nil, cdbm.VpcStatusReady, tnu1)
 	vpc3 := common.TestBuildVPC(t, dbSession, "vpc-3", ip, tn1, st1, nil, nil, cdbm.VpcStatusReady, tnu1)
 	vpc4 := common.TestBuildVPC(t, dbSession, "vpc-4", ip, tn2, st1, nil, nil, cdbm.VpcStatusReady, tnu2)
-	vpc5 := common.TestBuildVPC(t, dbSession, "vpc-5", ip, tn2, st2, nil, nil, cdbm.VpcStatusReady, tnu2)
+	vpc5 := common.TestBuildVPC(t, dbSession, "vpc-5", ip, tn1, st2, nil, nil, cdbm.VpcStatusReady, tnu1)
 	vpc6 := common.TestBuildVPC(t, dbSession, "vpc-6", ip, tn2, st2, nil, nil, cdbm.VpcStatusReady, tnu2)
+	vpc7 := common.TestBuildVPC(t, dbSession, "vpc-7", ip, tnProvider, st1, nil, nil, cdbm.VpcStatusReady, ipu2)
+	vpc8 := common.TestBuildVPC(t, dbSession, "vpc-8", ip, tnProvider, st1, nil, nil, cdbm.VpcStatusReady, ipu2)
 
-	// Create peerings between VPCs
-	// Single-tenant peering needs to be created by the tenant admin
-	_ = common.TestBuildVpcPeering(t, dbSession, vpc1.ID, vpc2.ID, st1.ID, false, tnu1.ID)
-	_ = common.TestBuildVpcPeering(t, dbSession, vpc1.ID, vpc3.ID, st1.ID, false, tnu1.ID)
-	_ = common.TestBuildVpcPeering(t, dbSession, vpc5.ID, vpc6.ID, st2.ID, false, tnu2.ID)
-	// Multi-tenant peering needs to be created by the provider admin
-	_ = common.TestBuildVpcPeering(t, dbSession, vpc1.ID, vpc4.ID, st1.ID, true, ipu.ID)
-	_ = common.TestBuildVpcPeering(t, dbSession, vpc2.ID, vpc4.ID, st1.ID, true, ipu.ID)
-	_ = common.TestBuildVpcPeering(t, dbSession, vpc3.ID, vpc4.ID, st1.ID, true, ipu.ID)
+	// Tenant-created peerings
+	_ = common.TestBuildVpcPeering(t, dbSession, vpc1.ID, vpc2.ID, st1.ID, nil, &tn1.ID, false, tnu1.ID)
+	_ = common.TestBuildVpcPeering(t, dbSession, vpc1.ID, vpc3.ID, st1.ID, nil, &tn1.ID, false, tnu1.ID)
+	_ = common.TestBuildVpcPeering(t, dbSession, vpc7.ID, vpc8.ID, st1.ID, nil, &tnProvider.ID, false, ipu2.ID)
+
+	// Provider-created peerings
+	_ = common.TestBuildVpcPeering(t, dbSession, vpc1.ID, vpc4.ID, st1.ID, &ip.ID, nil, true, ipu.ID)
+	_ = common.TestBuildVpcPeering(t, dbSession, vpc2.ID, vpc4.ID, st1.ID, &ip.ID, nil, true, ipu.ID)
+	_ = common.TestBuildVpcPeering(t, dbSession, vpc3.ID, vpc4.ID, st1.ID, &ip.ID, nil, true, ipu.ID)
+	_ = common.TestBuildVpcPeering(t, dbSession, vpc5.ID, vpc6.ID, st2.ID, &ip2.ID, nil, true, ipu2.ID)
 
 	tracer, _, ctx := common.TestCommonTraceProviderSetup(t, ctx)
 	mockTC := &tmocks.Client{}
@@ -426,103 +432,129 @@ func TestGetAllVpcPeeringHandler_Handle(t *testing.T) {
 		reqOrgName         string
 		queryParams        map[string]string
 		user               *cdbm.User
-		expectedErr        bool
 		expectedStatus     int
 		expectedCount      int
 		validatePagination bool
 	}{
 		{
-			name:           "error when siteId query param is missing",
-			reqOrgName:     tnOrg1,
-			queryParams:    map[string]string{},
-			user:           tnu1,
-			expectedErr:    true,
-			expectedStatus: http.StatusBadRequest,
-		},
-		{
 			name:           "error when user not found in request context",
 			reqOrgName:     tnOrg1,
 			queryParams:    map[string]string{"siteId": st1.ID.String()},
 			user:           nil,
-			expectedErr:    true,
 			expectedStatus: http.StatusInternalServerError,
 		},
 		{
 			name:           "error when user does not belong to org",
 			reqOrgName:     "SomeOtherOrg",
 			user:           tnu1,
-			expectedErr:    true,
 			expectedStatus: http.StatusForbidden,
 		},
 		{
 			name:           "error when user role is forbidden",
 			reqOrgName:     tnOrg1,
 			user:           tnu1Forbidden,
-			expectedErr:    true,
 			expectedStatus: http.StatusForbidden,
 		},
 		{
-			name:           "Tenant Admin 1 success listing peerings in site 1",
+			name:           "error when siteId does not exist",
 			reqOrgName:     tnOrg1,
-			queryParams:    map[string]string{"siteId": st1.ID.String()},
-			user:           tnu1,
-			expectedStatus: http.StatusOK,
-			expectedCount:  5,
-		},
-		{
-			name:           "Tenant Admin 2 success listing peerings in site 1",
-			reqOrgName:     tnOrg2,
-			queryParams:    map[string]string{"siteId": st1.ID.String()},
-			user:           tnu2,
-			expectedStatus: http.StatusOK,
-			expectedCount:  3,
-		},
-		{
-			name:               "Tenant Admin with no VPCs gets empty list",
-			reqOrgName:         tnOrg1,
-			queryParams:        map[string]string{"siteId": st2.ID.String()},
-			user:               tnu1,
-			expectedStatus:     http.StatusOK,
-			expectedCount:      0,
-			validatePagination: true,
-		},
-		{
-			name:           "Tenant Admin 1 error when siteId is site tenant has no access to",
-			reqOrgName:     tnOrg1,
-			queryParams:    map[string]string{"siteId": st3.ID.String()},
+			queryParams:    map[string]string{"siteId": uuid.New().String()},
 			user:           tnu1,
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
-			name:           "Tenant Admin 2 success listing peerings in site 2",
-			reqOrgName:     tnOrg2,
-			queryParams:    map[string]string{"siteId": st2.ID.String()},
-			user:           tnu2,
-			expectedStatus: http.StatusOK,
-			expectedCount:  1,
+			name:               "tenant admin 1 lists across all sites when siteId omitted",
+			reqOrgName:         tnOrg1,
+			user:               tnu1,
+			expectedStatus:     http.StatusOK,
+			expectedCount:      6,
+			validatePagination: true,
 		},
 		{
-			name:           "Provider Admin success listing all peerings in site 1",
-			reqOrgName:     ipOrg,
+			name:           "tenant admin 1 lists peerings in site 1",
+			reqOrgName:     tnOrg1,
 			queryParams:    map[string]string{"siteId": st1.ID.String()},
-			user:           ipu,
+			user:           tnu1,
 			expectedStatus: http.StatusOK,
 			expectedCount:  5,
 		},
 		{
-			name:           "Provider Admin success listing all peerings in site 2",
+			name:               "tenant admin 2 lists across all sites when siteId omitted",
+			reqOrgName:         tnOrg2,
+			user:               tnu2,
+			expectedStatus:     http.StatusOK,
+			expectedCount:      4,
+			validatePagination: true,
+		},
+		{
+			name:               "tenant admin 2 lists peerings in site 1",
+			reqOrgName:         tnOrg2,
+			queryParams:        map[string]string{"siteId": st1.ID.String()},
+			user:               tnu2,
+			expectedStatus:     http.StatusOK,
+			expectedCount:      3,
+			validatePagination: true,
+		},
+		{
+			name:               "tenant admin 2 lists peerings in site 2",
+			reqOrgName:         tnOrg2,
+			queryParams:        map[string]string{"siteId": st2.ID.String()},
+			user:               tnu2,
+			expectedStatus:     http.StatusOK,
+			expectedCount:      1,
+			validatePagination: true,
+		},
+		{
+			name:           "tenant admin 1 error list peerings in site 3",
+			reqOrgName:     tnOrg1,
+			queryParams:    map[string]string{"siteId": st3.ID.String()},
+			user:           tnu1,
+			expectedStatus: http.StatusForbidden,
+		},
+		{
+			name:           "provider admin lists provider-created peerings across all sites",
+			reqOrgName:     ipOrg,
+			user:           ipu,
+			expectedStatus: http.StatusOK,
+			expectedCount:  3,
+		},
+		{
+			name:           "provider admin lists provider-created peerings in site 1",
+			reqOrgName:     ipOrg,
+			queryParams:    map[string]string{"siteId": st1.ID.String()},
+			user:           ipu,
+			expectedStatus: http.StatusOK,
+			expectedCount:  3,
+		},
+		{
+			name:           "provider admin gets empty list in site 2",
 			reqOrgName:     ipOrg,
 			queryParams:    map[string]string{"siteId": st2.ID.String()},
 			user:           ipu,
 			expectedStatus: http.StatusOK,
-			expectedCount:  1,
+			expectedCount:  0,
 		},
 		{
-			name:           "Provider Admin error when siteId is not their site",
+			name:           "provider admin forbidden for other provider site",
 			reqOrgName:     ipOrg,
 			queryParams:    map[string]string{"siteId": st3.ID.String()},
 			user:           ipu,
 			expectedStatus: http.StatusForbidden,
+		},
+		{
+			name:           "provider and tenant admin lists all peerings across all sites",
+			reqOrgName:     ipOrg2,
+			user:           ipu2,
+			expectedStatus: http.StatusOK,
+			expectedCount:  2,
+		},
+		{
+			name:           "provider and tenant admin lists peering in site 1",
+			reqOrgName:     ipOrg2,
+			queryParams:    map[string]string{"siteId": st1.ID.String()},
+			user:           ipu2,
+			expectedStatus: http.StatusOK,
+			expectedCount:  1,
 		},
 	}
 
@@ -586,59 +618,69 @@ func TestGetVpcPeeringHandler_Handle(t *testing.T) {
 
 	common.TestSetupSchema(t, dbSession)
 
-	ipOrg := "test-provider-org"
+	ipOrg := "test-provider-org-1"
 	ipOrgRoles := []string{"FORGE_PROVIDER_ADMIN"}
+
+	ipOrg2 := "test-provider-org-2"
+	ipOrgRoles2 := []string{"FORGE_PROVIDER_ADMIN", "FORGE_TENANT_ADMIN"}
+
 	tnOrg1 := "test-tenant-org-1"
 	tnOrg2 := "test-tenant-org-2"
 	tnOrgRoles := []string{"FORGE_TENANT_ADMIN"}
 	tnOrgRolesForbidden := []string{"FORGE_TENANT_USER"}
 
+	// Provider users
+	// ip is a provider admin, ip2 is a provider tenant admin
 	ipu := common.TestBuildUser(t, dbSession, uuid.New().String(), ipOrg, ipOrgRoles)
-	ip := common.TestBuildInfrastructureProvider(t, dbSession, "test-infrastructure-provider", ipOrg, ipu)
-	ipu2 := common.TestBuildUser(t, dbSession, uuid.New().String(), ipOrg, ipOrgRoles)
-	ip2 := common.TestBuildInfrastructureProvider(t, dbSession, "test-infrastructure-provider-2", ipOrg, ipu2)
+	ip := common.TestBuildInfrastructureProvider(t, dbSession, "test-infrastructure-provider-1", ipOrg, ipu)
+	ipu2 := common.TestBuildUser(t, dbSession, uuid.New().String(), ipOrg2, ipOrgRoles2)
+	ip2 := common.TestBuildInfrastructureProvider(t, dbSession, "test-infrastructure-provider-2", ipOrg2, ipu2)
 
-	// Create sites and update them to Registered status
-	st1 := common.TestBuildSite(t, dbSession, ip, "test-site-1", ipu)
-	st1.Status = cdbm.SiteStatusRegistered
-	_, err := dbSession.DB.NewUpdate().Model(st1).Where("id = ?", st1.ID).Exec(context.Background())
-	assert.Nil(t, err)
-	st2 := common.TestBuildSite(t, dbSession, ip2, "test-site-2", ipu2)
-	st2.Status = cdbm.SiteStatusRegistered
-	_, err = dbSession.DB.NewUpdate().Model(st2).Where("id = ?", st2.ID).Exec(context.Background())
-	assert.Nil(t, err)
+	// Sites
+	st1 := common.TestBuildSite(t, dbSession, ip, "site-1", ipu)
+	st2 := common.TestBuildSite(t, dbSession, ip, "site-2", ipu2)
+	st3 := common.TestBuildSite(t, dbSession, ip2, "site-3", ipu2)
+	for _, st := range []*cdbm.Site{st1, st2, st3} {
+		st.Status = cdbm.SiteStatusRegistered
+		_, err := dbSession.DB.NewUpdate().Model(st).Where("id = ?", st.ID).Exec(context.Background())
+		assert.Nil(t, err)
+	}
 
-	// Build tenants for multi-tenant peering test
+	// Tenants/users
 	tnu1 := common.TestBuildUser(t, dbSession, uuid.New().String(), tnOrg1, tnOrgRoles)
 	tnu1Forbidden := common.TestBuildUser(t, dbSession, uuid.New().String(), tnOrg1, tnOrgRolesForbidden)
-	tn1 := common.TestBuildTenant(t, dbSession, "test-tenant", tnOrg1, tnu1)
-	t1s1 := common.TestBuildTenantSite(t, dbSession, tn1, st1, tnu1)
-	assert.NotNil(t, t1s1)
+	tn1 := common.TestBuildTenant(t, dbSession, "tenant-1", tnOrg1, tnu1)
+	common.TestBuildTenantSite(t, dbSession, tn1, st1, tnu1)
+	common.TestBuildTenantSite(t, dbSession, tn1, st2, tnu1)
 
 	tnu2 := common.TestBuildUser(t, dbSession, uuid.New().String(), tnOrg2, tnOrgRoles)
-	tn2 := common.TestBuildTenant(t, dbSession, "test-tenant-2", tnOrg2, tnu2)
-	t2s1 := common.TestBuildTenantSite(t, dbSession, tn2, st1, tnu2)
-	assert.NotNil(t, t2s1)
-	t2s2 := common.TestBuildTenantSite(t, dbSession, tn2, st2, tnu2)
-	assert.NotNil(t, t2s2)
+	tn2 := common.TestBuildTenant(t, dbSession, "tenant-2", tnOrg2, tnu2)
+	common.TestBuildTenantSite(t, dbSession, tn2, st1, tnu2)
+	common.TestBuildTenantSite(t, dbSession, tn2, st2, tnu2)
+	common.TestBuildTenantSite(t, dbSession, tn2, st3, tnu2)
 
-	// VPCs must be in Ready state for create peering to succeed
+	// Tenant for provider+tenant admin user in provider org.
+	tnProvider := common.TestBuildTenant(t, dbSession, "tenant-provider", ipOrg2, ipu2)
+	common.TestBuildTenantSite(t, dbSession, tnProvider, st1, ipu2)
+
+	// VPCs
 	vpc1 := common.TestBuildVPC(t, dbSession, "vpc-1", ip, tn1, st1, nil, nil, cdbm.VpcStatusReady, tnu1)
 	vpc2 := common.TestBuildVPC(t, dbSession, "vpc-2", ip, tn1, st1, nil, nil, cdbm.VpcStatusReady, tnu1)
-	vpc3 := common.TestBuildVPC(t, dbSession, "vpc-3", ip, tn2, st1, nil, nil, cdbm.VpcStatusReady, tnu2)
-	vpc4 := common.TestBuildVPC(t, dbSession, "vpc-6", ip2, tn2, st2, nil, nil, cdbm.VpcStatusReady, tnu2)
-	vpc5 := common.TestBuildVPC(t, dbSession, "vpc-7", ip2, tn2, st2, nil, nil, cdbm.VpcStatusReady, tnu2)
+	vpc3 := common.TestBuildVPC(t, dbSession, "vpc-3", ip, tn1, st1, nil, nil, cdbm.VpcStatusReady, tnu1)
+	vpc4 := common.TestBuildVPC(t, dbSession, "vpc-4", ip, tn2, st1, nil, nil, cdbm.VpcStatusReady, tnu2)
+	vpc5 := common.TestBuildVPC(t, dbSession, "vpc-5", ip, tn1, st2, nil, nil, cdbm.VpcStatusReady, tnu1)
+	vpc6 := common.TestBuildVPC(t, dbSession, "vpc-6", ip, tn2, st2, nil, nil, cdbm.VpcStatusReady, tnu2)
+	vpc7 := common.TestBuildVPC(t, dbSession, "vpc-7", ip, tnProvider, st1, nil, nil, cdbm.VpcStatusReady, ipu2)
+	vpc8 := common.TestBuildVPC(t, dbSession, "vpc-8", ip, tnProvider, st1, nil, nil, cdbm.VpcStatusReady, ipu2)
 
-	// Create peerings between VPCs
-	vp12 := common.TestBuildVpcPeering(t, dbSession, vpc1.ID, vpc2.ID, st1.ID, false, tnu1.ID)
-	vp23 := common.TestBuildVpcPeering(t, dbSession, vpc2.ID, vpc3.ID, st1.ID, true, ipu.ID)
-	vp45 := common.TestBuildVpcPeering(t, dbSession, vpc4.ID, vpc5.ID, st2.ID, false, tnu2.ID)
+	// Tenant-created peerings
+	vp12 := common.TestBuildVpcPeering(t, dbSession, vpc1.ID, vpc2.ID, st1.ID, nil, &tn1.ID, false, tnu1.ID)
+	vp13 := common.TestBuildVpcPeering(t, dbSession, vpc1.ID, vpc3.ID, st1.ID, nil, &tn1.ID, false, tnu1.ID)
+	vp78 := common.TestBuildVpcPeering(t, dbSession, vpc7.ID, vpc8.ID, st1.ID, nil, &tnProvider.ID, false, ipu2.ID)
 
-	// Create tenant accounts for multi-tenant peerings
-	ta1 := common.TestBuildTenantAccount(t, dbSession, ip, &tn1.ID, tn1.Org, cdbm.TenantAccountStatusReady, ipu)
-	assert.NotNil(t, ta1)
-	ta2 := common.TestBuildTenantAccount(t, dbSession, ip, &tn2.ID, tn2.Org, cdbm.TenantAccountStatusReady, ipu)
-	assert.NotNil(t, ta2)
+	// Provider-created peerings
+	vp14 := common.TestBuildVpcPeering(t, dbSession, vpc1.ID, vpc4.ID, st1.ID, &ip.ID, nil, true, ipu.ID)
+	vp56 := common.TestBuildVpcPeering(t, dbSession, vpc5.ID, vpc6.ID, st2.ID, &ip2.ID, nil, true, ipu2.ID)
 
 	tracer, _, ctx := common.TestCommonTraceProviderSetup(t, ctx)
 	mockTC := &tmocks.Client{}
@@ -649,7 +691,6 @@ func TestGetVpcPeeringHandler_Handle(t *testing.T) {
 		reqOrgName     string
 		peeringID      string
 		user           *cdbm.User
-		expectedErr    bool
 		expectedStatus int
 		expectedID     string
 	}{
@@ -658,7 +699,6 @@ func TestGetVpcPeeringHandler_Handle(t *testing.T) {
 			reqOrgName:     tnOrg1,
 			peeringID:      vp12.ID.String(),
 			user:           nil,
-			expectedErr:    true,
 			expectedStatus: http.StatusInternalServerError,
 		},
 		{
@@ -666,7 +706,6 @@ func TestGetVpcPeeringHandler_Handle(t *testing.T) {
 			reqOrgName:     "SomeOtherOrg",
 			peeringID:      vp12.ID.String(),
 			user:           tnu1,
-			expectedErr:    true,
 			expectedStatus: http.StatusForbidden,
 		},
 		{
@@ -674,7 +713,6 @@ func TestGetVpcPeeringHandler_Handle(t *testing.T) {
 			reqOrgName:     tnOrg1,
 			peeringID:      vp12.ID.String(),
 			user:           tnu1Forbidden,
-			expectedErr:    true,
 			expectedStatus: http.StatusForbidden,
 		},
 		{
@@ -682,7 +720,6 @@ func TestGetVpcPeeringHandler_Handle(t *testing.T) {
 			reqOrgName:     tnOrg1,
 			peeringID:      "not-a-uuid",
 			user:           tnu1,
-			expectedErr:    true,
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
@@ -690,18 +727,17 @@ func TestGetVpcPeeringHandler_Handle(t *testing.T) {
 			reqOrgName:     tnOrg1,
 			peeringID:      uuid.New().String(),
 			user:           tnu1,
-			expectedErr:    true,
 			expectedStatus: http.StatusNotFound,
 		},
 		{
-			name:           "Tenant Admin error when neither VPC belongs to tenant",
+			name:           "tenant admin forbidden when neither VPC belongs to tenant",
 			reqOrgName:     tnOrg2,
 			peeringID:      vp12.ID.String(),
 			user:           tnu2,
 			expectedStatus: http.StatusForbidden,
 		},
 		{
-			name:           "Tenant Admin success when both VPC belongs to tenant",
+			name:           "tenant admin success when both VPCs belong to tenant",
 			reqOrgName:     tnOrg1,
 			peeringID:      vp12.ID.String(),
 			user:           tnu1,
@@ -709,26 +745,56 @@ func TestGetVpcPeeringHandler_Handle(t *testing.T) {
 			expectedID:     vp12.ID.String(),
 		},
 		{
-			name:           "Tenant Admin success when peering has other tenant's VPC (multi-tenant)",
+			name:           "tenant admin success when one VPC belongs to tenant",
 			reqOrgName:     tnOrg1,
-			peeringID:      vp23.ID.String(),
+			peeringID:      vp14.ID.String(),
 			user:           tnu1,
 			expectedStatus: http.StatusOK,
-			expectedID:     vp23.ID.String(),
+			expectedID:     vp14.ID.String(),
 		},
 		{
-			name:           "Provider Admin success when peering is in site they provide",
+			name:           "provider admin success for provider-created peering",
+			reqOrgName:     ipOrg,
+			peeringID:      vp14.ID.String(),
+			user:           ipu,
+			expectedStatus: http.StatusOK,
+			expectedID:     vp14.ID.String(),
+		},
+		{
+			name:           "provider admin forbidden for tenant-created peering",
 			reqOrgName:     ipOrg,
 			peeringID:      vp12.ID.String(),
 			user:           ipu,
-			expectedStatus: http.StatusOK,
-			expectedID:     vp12.ID.String(),
+			expectedStatus: http.StatusForbidden,
 		},
 		{
-			name:           "Provider Admin forbidden when peering is in another provider's site",
+			name:           "provider admin forbidden for peering created by other provider",
 			reqOrgName:     ipOrg,
-			peeringID:      vp45.ID.String(),
+			peeringID:      vp56.ID.String(),
 			user:           ipu,
+			expectedStatus: http.StatusForbidden,
+		},
+		{
+			name:           "both tenant admin and provider admin success through provider path",
+			reqOrgName:     ipOrg2,
+			peeringID:      vp56.ID.String(),
+			user:           ipu2,
+			expectedStatus: http.StatusOK,
+			expectedID:     vp56.ID.String(),
+		},
+		{
+			name:           "both tenant admin and provider admin success through tenant path",
+			reqOrgName:     ipOrg2,
+			peeringID:      vp78.ID.String(),
+			user:           ipu2,
+			expectedStatus: http.StatusOK,
+			expectedID:     vp78.ID.String(),
+		},
+		{
+			name:           "both tenant admin and provider admin forbidden when neither path matches",
+			reqOrgName:     ipOrg2,
+			peeringID:      vp13.ID.String(),
+			user:           ipu2,
 			expectedStatus: http.StatusForbidden,
 		},
 	}
@@ -758,7 +824,7 @@ func TestGetVpcPeeringHandler_Handle(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, tt.expectedStatus, rec.Code)
 
-			if tt.expectedStatus == http.StatusOK && tt.expectedID != "" {
+			if tt.expectedStatus == http.StatusOK {
 				var apiVP model.APIVpcPeering
 				err := json.Unmarshal(rec.Body.Bytes(), &apiVP)
 				require.NoError(t, err)
@@ -813,24 +879,17 @@ func TestDeleteVpcPeeringHandler_Handle(t *testing.T) {
 	t2s2 := common.TestBuildTenantSite(t, dbSession, tn2, st2, tnu2)
 	assert.NotNil(t, t2s2)
 
-	// Provider-admin deletion of multi-tenant peerings now requires tenant accounts
-	// for both tenants with the provider of the peering site.
-	ta1 := common.TestBuildTenantAccount(t, dbSession, ip, &tn1.ID, tn1.Org, cdbm.TenantAccountStatusReady, ipu)
-	assert.NotNil(t, ta1)
-	ta2 := common.TestBuildTenantAccount(t, dbSession, ip, &tn2.ID, tn2.Org, cdbm.TenantAccountStatusReady, ipu)
-	assert.NotNil(t, ta2)
-
 	// VPCs must be in Ready state for create peering to succeed
 	vpc1 := common.TestBuildVPC(t, dbSession, "vpc-1", ip, tn1, st1, nil, nil, cdbm.VpcStatusReady, tnu1)
 	vpc2 := common.TestBuildVPC(t, dbSession, "vpc-2", ip, tn1, st1, nil, nil, cdbm.VpcStatusReady, tnu1)
 	vpc3 := common.TestBuildVPC(t, dbSession, "vpc-3", ip, tn2, st1, nil, nil, cdbm.VpcStatusReady, tnu2)
-	vpc4 := common.TestBuildVPC(t, dbSession, "vpc-6", ip2, tn2, st2, nil, nil, cdbm.VpcStatusReady, tnu2)
-	vpc5 := common.TestBuildVPC(t, dbSession, "vpc-7", ip2, tn2, st2, nil, nil, cdbm.VpcStatusReady, tnu2)
+	vpc4 := common.TestBuildVPC(t, dbSession, "vpc-4", ip2, tn2, st2, nil, nil, cdbm.VpcStatusReady, tnu2)
+	vpc5 := common.TestBuildVPC(t, dbSession, "vpc-5", ip2, tn2, st2, nil, nil, cdbm.VpcStatusReady, tnu2)
 
 	// Create peerings between VPCs
-	vp12 := common.TestBuildVpcPeering(t, dbSession, vpc1.ID, vpc2.ID, st1.ID, false, tnu1.ID)
-	vp23 := common.TestBuildVpcPeering(t, dbSession, vpc2.ID, vpc3.ID, st1.ID, true, ipu.ID)
-	vp45 := common.TestBuildVpcPeering(t, dbSession, vpc4.ID, vpc5.ID, st2.ID, false, tnu2.ID)
+	vp12 := common.TestBuildVpcPeering(t, dbSession, vpc1.ID, vpc2.ID, st1.ID, nil, &tn1.ID, false, tnu1.ID)
+	vp23 := common.TestBuildVpcPeering(t, dbSession, vpc2.ID, vpc3.ID, st1.ID, &ip.ID, nil, true, ipu.ID)
+	vp45 := common.TestBuildVpcPeering(t, dbSession, vpc4.ID, vpc5.ID, st2.ID, nil, &tn2.ID, false, tnu2.ID)
 
 	tracer, _, ctx := common.TestCommonTraceProviderSetup(t, ctx)
 

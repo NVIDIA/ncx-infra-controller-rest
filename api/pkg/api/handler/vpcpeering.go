@@ -191,7 +191,7 @@ func (cvph CreateVpcPeeringHandler) Handle(c echo.Context) error {
 	providerAuthorized := false
 	if infrastructureProvider != nil {
 		// Provider Admin creating multi-tenant peerings requires both tenants to have
-		// Tenant Accounts with the Provider.
+		// Tenant Accounts with the Provider and both tenants must have access to the Site.
 		if site.InfrastructureProviderID == infrastructureProvider.ID && isMultiTenant {
 			taDAO := cdbm.NewTenantAccountDAO(cvph.dbSession)
 			_, taCount, err := taDAO.GetAll(ctx, nil, cdbm.TenantAccountFilterInput{
@@ -203,8 +203,27 @@ func (cvph CreateVpcPeeringHandler) Handle(c echo.Context) error {
 				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to validate Tenant Accounts for tenants of the VPC peering, DB error", nil)
 			}
 			if taCount == 2 {
-				logger.Info().Msg("Provider is authorized to create multi-tenant VPC peering")
-				providerAuthorized = true
+				tsDAO := cdbm.NewTenantSiteDAO(cvph.dbSession)
+				tenantSites, _, serr := tsDAO.GetAll(
+					ctx,
+					nil,
+					cdbm.TenantSiteFilterInput{
+						TenantIDs: []uuid.UUID{vpc1.TenantID, vpc2.TenantID},
+						SiteIDs:   []uuid.UUID{site.ID},
+					},
+					cdbp.PageInput{},
+					nil,
+				)
+				if serr != nil {
+					logger.Error().Err(serr).Msg("error retrieving TenantSite for tenants of the VPC peering")
+					return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to validate Site access for tenants of the VPC peering, DB error", nil)
+				}
+				if len(tenantSites) == 2 {
+					logger.Info().Msg("Provider is authorized to create multi-tenant VPC peering")
+					providerAuthorized = true
+				} else {
+					logger.Warn().Msg("Not all tenants have access to Site specified in request")
+				}
 			} else {
 				logger.Warn().Msg("Not all tenants have Tenant Accounts with the Provider")
 			}
@@ -249,6 +268,16 @@ func (cvph CreateVpcPeeringHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have access to create the VPC peering", nil)
 	}
 
+	var infrastructureProviderID *uuid.UUID
+	if providerAuthorized && infrastructureProvider != nil {
+		infrastructureProviderID = &infrastructureProvider.ID
+	}
+
+	var tenantID *uuid.UUID
+	if tenantAuthorized && tenant != nil {
+		tenantID = &tenant.ID
+	}
+
 	// Start a db tx
 	tx, err := cdb.BeginTx(ctx, cvph.dbSession, &sql.TxOptions{})
 	if err != nil {
@@ -266,11 +295,13 @@ func (cvph CreateVpcPeeringHandler) Handle(c echo.Context) error {
 		ctx,
 		tx,
 		cdbm.VpcPeeringCreateInput{
-			Vpc1ID:        vpc1ID,
-			Vpc2ID:        vpc2ID,
-			SiteID:        site.ID,
-			IsMultiTenant: isMultiTenant,
-			CreatedByID:   dbUser.ID,
+			Vpc1ID:                   vpc1ID,
+			Vpc2ID:                   vpc2ID,
+			SiteID:                   site.ID,
+			IsMultiTenant:            isMultiTenant,
+			InfrastructureProviderID: infrastructureProviderID,
+			TenantID:                 tenantID,
+			CreatedByID:              dbUser.ID,
 		},
 	)
 	if err != nil {
@@ -409,7 +440,7 @@ func NewGetAllVpcPeeringHandler(dbSession *cdb.Session, tc tclient.Client, cfg *
 // @Produce json
 // @Security ApiKeyAuth
 // @Param org path string true "Name of NGC organization"
-// @Param siteId query string true "Site ID"
+// @Param siteId query string false "Site ID"
 // @Param pageNumber query integer false "Page number of results returned"
 // @Param pageSize query integer false "Number of results per page"
 // @Param orderBy query string false "Order by field"
@@ -433,25 +464,52 @@ func (gavph GetAllVpcPeeringHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, apiError.Code, apiError.Message, apiError.Data)
 	}
 
-	var filterInput cdbm.VpcPeeringFilterInput
-
 	siteIDStr := c.QueryParam("siteId")
-	if siteIDStr == "" {
-		logger.Warn().Msg("siteId query parameter is required to list VPC peerings")
-		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "siteId query parameter is required to list VPC peerings", nil)
-	}
+	var siteID *uuid.UUID
+	var err error
+	if siteIDStr != "" {
+		providerSiteAuthorized := false
+		tenantSiteAuthorized := false
 
-	site, err := common.GetSiteFromIDString(ctx, nil, siteIDStr, gavph.dbSession)
-	if err != nil {
-		if errors.Is(err, cdb.ErrDoesNotExist) {
-			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in query does not exist", nil)
+		site, err := common.GetSiteFromIDString(ctx, nil, siteIDStr, gavph.dbSession)
+		if err != nil {
+			if errors.Is(err, cdb.ErrDoesNotExist) {
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in query does not exist", nil)
+			}
+			logger.Error().Err(err).Msg("error retrieving Site from DB")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site specified in query, DB error", nil)
 		}
-		logger.Error().Err(err).Msg("error retrieving Site from DB")
-		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site specified in query, DB error", nil)
-	}
+		siteID = &site.ID
+		gavph.tracerSpan.SetAttribute(handlerSpan, attribute.String("site_id", siteIDStr), logger)
 
-	filterInput = cdbm.VpcPeeringFilterInput{SiteIDs: []uuid.UUID{site.ID}}
-	gavph.tracerSpan.SetAttribute(handlerSpan, attribute.String("site_id", siteIDStr), logger)
+		if infrastructureProvider != nil {
+			providerSiteAuthorized = site.InfrastructureProviderID == infrastructureProvider.ID
+		}
+
+		if tenant != nil {
+			tsDAO := cdbm.NewTenantSiteDAO(gavph.dbSession)
+			tenantSites, _, err := tsDAO.GetAll(
+				ctx,
+				nil,
+				cdbm.TenantSiteFilterInput{
+					TenantIDs: []uuid.UUID{tenant.ID},
+					SiteIDs:   []uuid.UUID{site.ID},
+				},
+				paginator.PageInput{Limit: cdb.GetIntPtr(1)},
+				nil,
+			)
+			if err != nil {
+				logger.Error().Err(err).Msg("error retrieving TenantSite from DB")
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to validate Site access for Tenant, DB error", nil)
+			}
+			tenantSiteAuthorized = len(tenantSites) > 0
+		}
+
+		if !providerSiteAuthorized && !tenantSiteAuthorized {
+			logger.Warn().Msg("User does not have access to the Site")
+			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have access to the Site", nil)
+		}
+	}
 
 	// Validate pagination request early so defaults are initialized before any early returns.
 	pageRequest := pagination.PageRequest{}
@@ -468,54 +526,22 @@ func (gavph GetAllVpcPeeringHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate pagination request data", err)
 	}
 
-	if infrastructureProvider != nil {
-		if site.InfrastructureProviderID != infrastructureProvider.ID {
-			logger.Warn().Str("site_id", site.ID.String()).Str("provider_id", infrastructureProvider.ID.String()).Msg("Site does not belong to the Infrastructure Provider for this org")
-			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Site does not belong to the Infrastructure Provider for this org", nil)
-		}
-	} else if tenant != nil {
-		// Tenant Admin: tenant must have access to the site
-		tsDAO := cdbm.NewTenantSiteDAO(gavph.dbSession)
-		tenantSites, _, err := tsDAO.GetAll(
-			ctx, nil,
-			cdbm.TenantSiteFilterInput{TenantIDs: []uuid.UUID{tenant.ID}, SiteIDs: []uuid.UUID{site.ID}},
-			paginator.PageInput{Limit: cdb.GetIntPtr(1)},
-			nil,
-		)
-		if err != nil {
-			logger.Error().Err(err).Msg("error retrieving TenantSite from DB")
-			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to validate Site access for Tenant, DB error", nil)
-		}
-		if len(tenantSites) == 0 {
-			logger.Warn().Msg("Tenant does not have access to Site specified in query")
-			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Tenant does not have access to Site specified in query", nil)
-		}
-
-		// Retrieve all VPCs for the tenant that are on the site
-		vpcFilter := cdbm.VpcFilterInput{TenantIDs: []uuid.UUID{tenant.ID}}
-		vpcFilter.SiteIDs = []uuid.UUID{site.ID}
-		gavph.tracerSpan.SetAttribute(handlerSpan, attribute.String("site_id", siteIDStr), logger)
-		vpcDAO := cdbm.NewVpcDAO(gavph.dbSession)
-		vpcs, _, err := vpcDAO.GetAll(ctx, nil, vpcFilter, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
-		if err != nil {
-			logger.Error().Err(err).Msg("error retrieving tenant VPCs from DB")
-			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve VPCs for tenant", nil)
-		}
-		tenantVpcIDs := make([]uuid.UUID, 0, len(vpcs))
-		for _, v := range vpcs {
-			tenantVpcIDs = append(tenantVpcIDs, v.ID)
-		}
-		filterInput.VpcIDs = tenantVpcIDs
-
-		if len(tenantVpcIDs) == 0 {
-			pageResponse := pagination.NewPageResponse(*pageRequest.PageNumber, *pageRequest.PageSize, 0, pageRequest.OrderByStr)
-			pageHeader, _ := json.Marshal(pageResponse)
-			c.Response().Header().Set(pagination.ResponseHeaderName, string(pageHeader))
-			return c.JSON(http.StatusOK, []model.APIVpcPeering{})
-		}
+	vpcPeeringDAO := cdbm.NewVpcPeeringDAO(gavph.dbSession)
+	filterInput := cdbm.VpcPeeringFilterInput{
+		InfrastructureProviderID: nil,
+		TenantID:                 nil,
 	}
 
-	vpcPeeringDAO := cdbm.NewVpcPeeringDAO(gavph.dbSession)
+	if infrastructureProvider != nil {
+		filterInput.InfrastructureProviderID = &infrastructureProvider.ID
+	}
+	if tenant != nil {
+		filterInput.TenantID = &tenant.ID
+	}
+	if siteID != nil {
+		filterInput.SiteIDs = []uuid.UUID{*siteID}
+	}
+
 	vpcPeeringPageInput := cdbp.PageInput{
 		Limit:   pageRequest.Limit,
 		Offset:  pageRequest.Offset,
@@ -619,48 +645,32 @@ func (gvph GetVpcPeeringHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve VPC peering", nil)
 	}
 
-	// Get two VPCs of the VPC peering
-	vpcDAO := cdbm.NewVpcDAO(gvph.dbSession)
-	vpc1, err := vpcDAO.GetByID(ctx, nil, vpcPeering.Vpc1ID, nil)
-	if err != nil {
-		if err == cdb.ErrDoesNotExist {
-			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf("Could not find VPC with ID: %s", vpcPeering.Vpc1ID.String()), nil)
-		}
-		logger.Error().Err(err).Msg("error retrieving VPC 1 of VPC peering from DB")
-		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to retrieve VPC 1 with ID: %s, DB error", vpcPeering.Vpc1ID.String()), nil)
-	}
-	vpc2, err := vpcDAO.GetByID(ctx, nil, vpcPeering.Vpc2ID, nil)
-	if err != nil {
-		if err == cdb.ErrDoesNotExist {
-			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf("Could not find VPC with ID: %s", vpcPeering.Vpc2ID.String()), nil)
-		}
-		logger.Error().Err(err).Msg("error retrieving VPC 2 of VPC peering from DB")
-		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to retrieve VPC 2 with ID: %s, DB error", vpcPeering.Vpc2ID.String()), nil)
-	}
-
 	// Validate if user is authorized to get the VPC peering
-	providerAuthorized := false
-	if infrastructureProvider != nil {
-		// If user is a Provider Admin, validate the VPC peering is in a site provided by this org.
-		site, err := common.GetSiteFromIDString(ctx, nil, vpcPeering.SiteID.String(), gvph.dbSession)
-		if err != nil {
-			if errors.Is(err, cdb.ErrDoesNotExist) {
-				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Could not find site of the VPC peering", nil)
-			}
-			logger.Error().Err(err).Msg("error retrieving site for VPC peering")
-			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve VPC peering", nil)
-		}
-
-		if site.InfrastructureProviderID == infrastructureProvider.ID {
-			// @TODO: should we check if both VPCs belong to tenants that have Tenant Accounts with the Provider?
-			providerAuthorized = true
-		}
-	}
+	providerAuthorized := infrastructureProvider != nil && vpcPeering.InfrastructureProviderID != nil && *vpcPeering.InfrastructureProviderID == infrastructureProvider.ID
 
 	// For a tenant to be able to get a VPC peering, at least one of the VPCs of the VPC peering
 	// must belong to the tenant
 	tenantAuthorized := false
 	if tenant != nil {
+		// Get two VPCs of the VPC peering
+		vpcDAO := cdbm.NewVpcDAO(gvph.dbSession)
+		vpc1, err := vpcDAO.GetByID(ctx, nil, vpcPeering.Vpc1ID, nil)
+		if err != nil {
+			if err == cdb.ErrDoesNotExist {
+				return cutil.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf("Could not find VPC with ID: %s", vpcPeering.Vpc1ID.String()), nil)
+			}
+			logger.Error().Err(err).Msg("error retrieving VPC 1 of VPC peering from DB")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to retrieve VPC 1 with ID: %s, DB error", vpcPeering.Vpc1ID.String()), nil)
+		}
+		vpc2, err := vpcDAO.GetByID(ctx, nil, vpcPeering.Vpc2ID, nil)
+		if err != nil {
+			if err == cdb.ErrDoesNotExist {
+				return cutil.NewAPIErrorResponse(c, http.StatusNotFound, fmt.Sprintf("Could not find VPC with ID: %s", vpcPeering.Vpc2ID.String()), nil)
+			}
+			logger.Error().Err(err).Msg("error retrieving VPC 2 of VPC peering from DB")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to retrieve VPC 2 with ID: %s, DB error", vpcPeering.Vpc2ID.String()), nil)
+		}
+
 		if vpc1.TenantID == tenant.ID || vpc2.TenantID == tenant.ID {
 			logger.Info().Msg("Tenant is authorized to get single-tenant VPC peering")
 			tenantAuthorized = true
@@ -782,8 +792,9 @@ func (dvph DeleteVpcPeeringHandler) Handle(c echo.Context) error {
 	// Validate if user is authorized to delete the VPC peering
 	providerAuthorized := false
 	if infrastructureProvider != nil {
-		// The VPC peering must be in a site provided by this org and be a multi-tenant VPC peering
-		// where both tenants have Tenant Accounts with the Provider
+		// Provider Admin can delete peerings in sites provided by this org.
+		// The deletion operation is not gated on TenantAccount/TenantSite checks to avoid
+		// blocking cleanup.
 		site, err := common.GetSiteFromIDString(ctx, nil, vpcPeering.SiteID.String(), dvph.dbSession)
 		if err != nil {
 			if errors.Is(err, cdb.ErrDoesNotExist) {
@@ -794,22 +805,8 @@ func (dvph DeleteVpcPeeringHandler) Handle(c echo.Context) error {
 		}
 
 		if site.InfrastructureProviderID == infrastructureProvider.ID && isMultiTenant {
-			// Check if both tenants of the VPC peering have Tenant Accounts with the Provider
-			taDAO := cdbm.NewTenantAccountDAO(dvph.dbSession)
-			_, taCount, err := taDAO.GetAll(ctx, nil, cdbm.TenantAccountFilterInput{
-				InfrastructureProviderID: &infrastructureProvider.ID,
-				TenantIDs:                []uuid.UUID{vpc1.TenantID, vpc2.TenantID},
-			}, cdbp.PageInput{}, nil)
-			if err != nil {
-				logger.Error().Err(err).Msg("error retrieving Tenant Accounts for tenants of the VPC peering")
-				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to validate Tenant Accounts for tenants of the VPC peering, DB error", nil)
-			}
-			if taCount == 2 {
-				logger.Info().Msg("Provider is authorized to delete multi-tenant VPC peering")
-				providerAuthorized = true
-			} else {
-				logger.Warn().Msg("Not all tenants have Tenant Accounts with the Provider")
-			}
+			logger.Info().Msg("Provider is authorized to delete VPC peering in provided site")
+			providerAuthorized = true
 		}
 	}
 

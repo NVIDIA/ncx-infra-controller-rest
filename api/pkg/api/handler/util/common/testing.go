@@ -568,14 +568,16 @@ func TestBuildStatusDetail(t *testing.T, dbSession *cdb.Session, entityID string
 }
 
 // TestBuildVpcPeering creates a test VPC peering between two VPCs
-func TestBuildVpcPeering(t *testing.T, dbSession *cdb.Session, vpc1ID, vpc2ID uuid.UUID, siteID uuid.UUID, isMultiTenant bool, createdByID uuid.UUID) *cdbm.VpcPeering {
+func TestBuildVpcPeering(t *testing.T, dbSession *cdb.Session, vpc1ID, vpc2ID uuid.UUID, siteID uuid.UUID, infrastructureProviderID *uuid.UUID, tenantID *uuid.UUID, isMultiTenant bool, createdByID uuid.UUID) *cdbm.VpcPeering {
 	vpDAO := cdbm.NewVpcPeeringDAO(dbSession)
 	vp, err := vpDAO.Create(context.Background(), nil, cdbm.VpcPeeringCreateInput{
-		Vpc1ID:        vpc1ID,
-		Vpc2ID:        vpc2ID,
-		SiteID:        siteID,
-		IsMultiTenant: isMultiTenant,
-		CreatedByID:   createdByID,
+		Vpc1ID:                   vpc1ID,
+		Vpc2ID:                   vpc2ID,
+		SiteID:                   siteID,
+		InfrastructureProviderID: infrastructureProviderID,
+		TenantID:                 tenantID,
+		IsMultiTenant:            isMultiTenant,
+		CreatedByID:              createdByID,
 	})
 	assert.Nil(t, err)
 	return vp
