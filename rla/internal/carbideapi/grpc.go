@@ -378,6 +378,61 @@ func (c *grpcClient) AddExpectedSwitch(ctx context.Context, req AddExpectedSwitc
 	return nil
 }
 
+// AddExpectedPowerShelf registers an expected power shelf with Carbide.
+func (c *grpcClient) AddExpectedPowerShelf(ctx context.Context, req AddExpectedPowerShelfRequest) error {
+	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
+	defer cancel()
+
+	pbReq := &pb.ExpectedPowerShelf{
+		BmcMacAddress:     req.BMCMACAddress,
+		BmcUsername:       req.BMCUsername,
+		BmcPassword:       req.BMCPassword,
+		ShelfSerialNumber: req.ShelfSerialNumber,
+		IpAddress:         req.IPAddress,
+	}
+
+	if req.RackID != "" {
+		pbReq.RackId = &pb.RackId{Id: req.RackID}
+	}
+
+	_, err := c.gclient.AddExpectedPowerShelf(ctx, pbReq)
+	if err != nil {
+		return fmt.Errorf("failed to add expected power shelf (bmc_mac=%s): %w", req.BMCMACAddress, err)
+	}
+
+	return nil
+}
+
+func (c *grpcClient) ComponentPowerControl(ctx context.Context, req *pb.ComponentPowerControlRequest) (*pb.ComponentPowerControlResponse, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
+	defer cancel()
+	return c.gclient.ComponentPowerControl(ctx, req)
+}
+
+func (c *grpcClient) UpdateComponentFirmware(ctx context.Context, req *pb.UpdateComponentFirmwareRequest) (*pb.UpdateComponentFirmwareResponse, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
+	defer cancel()
+	return c.gclient.UpdateComponentFirmware(ctx, req)
+}
+
+func (c *grpcClient) GetComponentFirmwareStatus(ctx context.Context, req *pb.GetComponentFirmwareStatusRequest) (*pb.GetComponentFirmwareStatusResponse, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
+	defer cancel()
+	return c.gclient.GetComponentFirmwareStatus(ctx, req)
+}
+
+func (c *grpcClient) ListComponentFirmwareVersions(ctx context.Context, req *pb.ListComponentFirmwareVersionsRequest) (*pb.ListComponentFirmwareVersionsResponse, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
+	defer cancel()
+	return c.gclient.ListComponentFirmwareVersions(ctx, req)
+}
+
+func (c *grpcClient) GetComponentInventory(ctx context.Context, req *pb.GetComponentInventoryRequest) (*pb.GetComponentInventoryResponse, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
+	defer cancel()
+	return c.gclient.GetComponentInventory(ctx, req)
+}
+
 func (c *grpcClient) AddMachine(machine MachineDetail) {
 	panic("Not a unit test")
 }

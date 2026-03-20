@@ -581,7 +581,7 @@ func testCreateVpcPrefix(t *testing.T, dbSession *cdb.Session, scp *sc.ClientPoo
 	}
 	err := cipbh.Handle(ec)
 	assert.Nil(t, err)
-	assert.Equal(t, rec.Code, http.StatusCreated)
+	assert.Equal(t, http.StatusCreated, rec.Code)
 	rsp := &model.APIVpcPrefix{}
 	err = json.Unmarshal(rec.Body.Bytes(), rsp)
 	assert.Nil(t, err)
@@ -1537,10 +1537,20 @@ func TestVpcPrefixHandler_Delete(t *testing.T) {
 	site2 := testIPBlockBuildSite(t, dbSession, ip2, "testSite2", cdbm.SiteStatusRegistered, true, ipu)
 	assert.NotNil(t, site2)
 
-	tenant1 := testMachineBuildTenant(t, dbSession, tnOrg1, "t1")
-	tenant2 := testMachineBuildTenant(t, dbSession, tnOrg2, "t2")
+	tn1 := testMachineBuildTenant(t, dbSession, tnOrg1, "tenant-1")
+	tn2 := testMachineBuildTenant(t, dbSession, tnOrg2, "tenant-2")
 
-	vpc1 := testVpcPrefixBuildVpc(t, dbSession, ip, tenant1, site, tnOrg1, "testVPC", cdb.GetStrPtr(cdbm.VpcFNN), cdbm.VpcStatusReady, cdb.GetUUIDPtr(uuid.New()))
+	_ = common.TestBuildTenantSite(t, dbSession, tn1, site, tnu)
+
+	al1 := common.TestBuildAllocation(t, dbSession, site, tn1, "test-allocation-1", ipu)
+	it1 := common.TestBuildInstanceType(t, dbSession, "test-instance-type-1", cdb.GetUUIDPtr(uuid.New()), site, nil, ipu)
+	alc1 := common.TestBuildAllocationConstraint(t, dbSession, al1, it1, nil, 5, ipu)
+
+	m1 := common.TestBuildMachine(t, dbSession, ip, site, &it1.ID, cdb.GetStrPtr("test-controller-machine-type"), cdbm.MachineStatusReady)
+	_ = common.TestBuildMachineInstanceType(t, dbSession, m1, it1)
+
+	os1 := common.TestBuildOperatingSystem(t, dbSession, "test-operating-system-1", tn1, cdbm.OperatingSystemStatusReady, tnu)
+	vpc1 := testVpcPrefixBuildVpc(t, dbSession, ip, tn1, site, tnOrg1, "test-vpc-1", cdb.GetStrPtr(cdbm.VpcFNN), cdbm.VpcStatusReady, cdb.GetUUIDPtr(uuid.New()))
 
 	cfg := common.GetTestConfig()
 
@@ -1549,13 +1559,10 @@ func TestVpcPrefixHandler_Delete(t *testing.T) {
 	// Mock per-Site client for st1
 	tsc := &tmocks.Client{}
 
-	// Prepare client pool for sync calls
-	// to site(s).
+	// Prepare client pool for sync calls to Site
 	tcfg, _ := cfg.GetTemporalConfig()
 
-	//
-	// Timeout mocking
-	//
+	// Temporal workflow timeout mocking
 	scpWithTimeout := sc.NewClientPool(tcfg)
 	tscWithTimeout := &tmocks.Client{}
 
@@ -1572,26 +1579,24 @@ func TestVpcPrefixHandler_Delete(t *testing.T) {
 
 	tscWithTimeout.Mock.On("TerminateWorkflow", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-	//
-	// Carbide not-found mocking
-	//
-	scpWithCarbideNotFound := sc.NewClientPool(tcfg)
-	tscWithCarbideNotFound := &tmocks.Client{}
+	// Temporal workflow Core gRPC error mock
+	scpWithCoreGRPCError := sc.NewClientPool(tcfg)
+	tscWithCoreGRPCError := &tmocks.Client{}
 
-	scpWithCarbideNotFound.IDClientMap[site.ID.String()] = tscWithCarbideNotFound
-	scpWithCarbideNotFound.IDClientMap[site2.ID.String()] = tscWithCarbideNotFound
+	scpWithCoreGRPCError.IDClientMap[site.ID.String()] = tscWithCoreGRPCError
+	scpWithCoreGRPCError.IDClientMap[site2.ID.String()] = tscWithCoreGRPCError
 
-	wrunWithCarbideNotFound := &tmocks.WorkflowRun{}
-	wrunWithCarbideNotFound.On("GetID").Return("workflow-WithCarbideNotFound")
+	wrunWithCoreGRPCError := &tmocks.WorkflowRun{}
+	wrunWithCoreGRPCError.On("GetID").Return("workflow-with-core-grpc-error")
 
-	wrunWithCarbideNotFound.Mock.On("Get", mock.Anything, mock.Anything).Return(tp.NewNonRetryableApplicationError("Carbide went bananas", swe.ErrTypeCarbideObjectNotFound, errors.New("Carbide went bananas")))
+	wrunWithCoreGRPCError.Mock.On("Get", mock.Anything, mock.Anything).Return(tp.NewNonRetryableApplicationError("core gRPC failed precondition", swe.ErrTypeCarbideFailedPrecondition, errors.New("core gRPC failed precondition")))
 
-	tscWithCarbideNotFound.Mock.On("ExecuteWorkflow", mock.Anything, mock.AnythingOfType("internal.StartWorkflowOptions"),
-		"DeleteVpcPrefix", mock.Anything).Return(wrunWithCarbideNotFound, nil)
+	tscWithCoreGRPCError.Mock.On("ExecuteWorkflow", mock.Anything, mock.AnythingOfType("internal.StartWorkflowOptions"),
+		"DeleteVpcPrefix", mock.Anything).Return(wrunWithCoreGRPCError, nil)
 
-	tscWithCarbideNotFound.Mock.On("TerminateWorkflow", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	tscWithCoreGRPCError.Mock.On("TerminateWorkflow", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-	// Normal mocks
+	// Temporal workflow success mocking
 	tempClient := &tmocks.Client{}
 	scp := sc.NewClientPool(tcfg)
 	scp.IDClientMap[site.ID.String()] = tsc
@@ -1610,28 +1615,39 @@ func TestVpcPrefixHandler_Delete(t *testing.T) {
 	tsc.Mock.On("ExecuteWorkflow", mock.Anything, mock.AnythingOfType("internal.StartWorkflowOptions"),
 		"DeleteVpcPrefix", mock.Anything).Return(wrun, nil)
 
-	ipb1 := testIPBlockBuildIPBlock(t, dbSession, "testipb", site, ip, &tenant1.ID, cdbm.IPBlockRoutingTypeDatacenterOnly, "192.168.0.0", 16, cdbm.IPBlockProtocolVersionV4, false, cdbm.IPBlockStatusReady, ipu)
+	ipb1 := testIPBlockBuildIPBlock(t, dbSession, "test-ip-block-1", site, ip, &tn1.ID, cdbm.IPBlockRoutingTypeDatacenterOnly, "192.168.0.0", 16, cdbm.IPBlockProtocolVersionV4, false, cdbm.IPBlockStatusReady, ipu)
 	parentPref1, err := ipam.CreateIpamEntryForIPBlock(ctx, ipamStorage, ipb1.Prefix, ipb1.PrefixLength, ipb1.RoutingType, ipb1.InfrastructureProviderID.String(), ipb1.SiteID.String())
 	assert.Nil(t, err)
 	assert.NotNil(t, parentPref1)
-	ipb2 := testIPBlockBuildIPBlock(t, dbSession, "testipb", site2, ip2, &tenant2.ID, cdbm.IPBlockRoutingTypeDatacenterOnly, "192.168.0.0", 16, cdbm.IPBlockProtocolVersionV4, false, cdbm.IPBlockStatusReady, ipu)
-	parentPref2, err := ipam.CreateIpamEntryForIPBlock(ctx, ipamStorage, ipb2.Prefix, ipb2.PrefixLength, ipb2.RoutingType, ipb2.InfrastructureProviderID.String(), ipb2.SiteID.String())
-	assert.Nil(t, err)
-	assert.NotNil(t, parentPref2)
 
-	ipbFG := testIPBlockBuildIPBlock(t, dbSession, "testipbfg", site, ip, &tenant1.ID, cdbm.IPBlockRoutingTypeDatacenterOnly, "192.170.0.0", 16, cdbm.IPBlockProtocolVersionV4, false, cdbm.IPBlockStatusReady, ipu)
-	parentPrefFG, err := ipam.CreateIpamEntryForIPBlock(ctx, ipamStorage, ipbFG.Prefix, ipbFG.PrefixLength, ipbFG.RoutingType, ipbFG.InfrastructureProviderID.String(), ipbFG.SiteID.String())
+	ipb2 := testIPBlockBuildIPBlock(t, dbSession, "test-ip-block-2", site2, ip2, &tn2.ID, cdbm.IPBlockRoutingTypeDatacenterOnly, "192.168.0.0", 16, cdbm.IPBlockProtocolVersionV4, false, cdbm.IPBlockStatusReady, ipu)
+	_, err = ipam.CreateIpamEntryForIPBlock(ctx, ipamStorage, ipb2.Prefix, ipb2.PrefixLength, ipb2.RoutingType, ipb2.InfrastructureProviderID.String(), ipb2.SiteID.String())
 	assert.Nil(t, err)
-	assert.NotNil(t, parentPrefFG)
+
+	ipbFG := testIPBlockBuildIPBlock(t, dbSession, "test-ip-block-full-grant", site, ip, &tn1.ID, cdbm.IPBlockRoutingTypeDatacenterOnly, "192.170.0.0", 16, cdbm.IPBlockProtocolVersionV4, false, cdbm.IPBlockStatusReady, ipu)
+	_, err = ipam.CreateIpamEntryForIPBlock(ctx, ipamStorage, ipbFG.Prefix, ipbFG.PrefixLength, ipbFG.RoutingType, ipbFG.InfrastructureProviderID.String(), ipbFG.SiteID.String())
+	assert.Nil(t, err)
+
 	prefixLen := 24
-	okBody, err := json.Marshal(model.APIVpcPrefixCreateRequest{Name: "ok1", VpcID: vpc1.ID.String(), IPBlockID: cdb.GetStrPtr(ipb1.ID.String()), PrefixLength: prefixLen})
+
+	okBody, err := json.Marshal(model.APIVpcPrefixCreateRequest{Name: "test-vpc-prefix-1", VpcID: vpc1.ID.String(), IPBlockID: cdb.GetStrPtr(ipb1.ID.String()), PrefixLength: prefixLen})
 	assert.Nil(t, err)
 
-	okBodyFG, err := json.Marshal(model.APIVpcPrefixCreateRequest{Name: "okFG", VpcID: vpc1.ID.String(), IPBlockID: cdb.GetStrPtr(ipbFG.ID.String()), PrefixLength: prefixLen})
+	okBody2, err := json.Marshal(model.APIVpcPrefixCreateRequest{Name: "test-vpc-prefix-2", VpcID: vpc1.ID.String(), IPBlockID: cdb.GetStrPtr(ipb1.ID.String()), PrefixLength: prefixLen})
 	assert.Nil(t, err)
 
-	vpcprefix := testCreateVpcPrefix(t, dbSession, scp, ipamStorage, tnu, tnOrg1, string(okBody))
-	vpcprefixFG := testCreateVpcPrefix(t, dbSession, scp, ipamStorage, tnu, tnOrg1, string(okBodyFG))
+	okBodyFG, err := json.Marshal(model.APIVpcPrefixCreateRequest{Name: "test-vpc-prefix-full-grant", VpcID: vpc1.ID.String(), IPBlockID: cdb.GetStrPtr(ipbFG.ID.String()), PrefixLength: prefixLen})
+	assert.Nil(t, err)
+
+	vpcp1 := testCreateVpcPrefix(t, dbSession, scp, ipamStorage, tnu, tnOrg1, string(okBody))
+
+	vpcp2 := testCreateVpcPrefix(t, dbSession, scp, ipamStorage, tnu, tnOrg1, string(okBody2))
+	vpcp2ID := uuid.MustParse(vpcp2.ID)
+
+	vpcp1FG := testCreateVpcPrefix(t, dbSession, scp, ipamStorage, tnu, tnOrg1, string(okBodyFG))
+
+	ins1 := common.TestBuildInstance(t, dbSession, "test-instance-1", al1.ID, alc1.ID, tn1.ID, ip.ID, site.ID, it1.ID, vpc1.ID, cdb.GetStrPtr(m1.ID), os1.ID)
+	common.TestBuildInterface(t, dbSession, ins1.ID, nil, &vpcp2ID, true, nil, nil, nil, cdb.GetStrPtr(cdbm.InterfaceStatusReady), tnu)
 
 	// OTEL Spanner configuration
 	tracer, _, ctx := common.TestCommonTraceProviderSetup(t, ctx)
@@ -1644,6 +1660,7 @@ func TestVpcPrefixHandler_Delete(t *testing.T) {
 		allocation         *model.APIAllocation
 		expectedErr        bool
 		expectedStatus     int
+		expectedErrorMsg   *string
 		deleteInstanceID   *uuid.UUID
 		deleteVpcPrefixID  *uuid.UUID
 		verifyChildSpanner bool
@@ -1654,7 +1671,7 @@ func TestVpcPrefixHandler_Delete(t *testing.T) {
 			name:           "error when user not found in request context",
 			reqOrgName:     tnOrg1,
 			user:           nil,
-			id:             vpcprefix.ID,
+			id:             vpcp1.ID,
 			expectedErr:    true,
 			expectedStatus: http.StatusInternalServerError,
 		},
@@ -1662,7 +1679,7 @@ func TestVpcPrefixHandler_Delete(t *testing.T) {
 			name:           "error when user not found in org",
 			reqOrgName:     "SomeOrg",
 			user:           tnu,
-			id:             vpcprefix.ID,
+			id:             vpcp1.ID,
 			expectedErr:    true,
 			expectedStatus: http.StatusForbidden,
 		},
@@ -1678,7 +1695,7 @@ func TestVpcPrefixHandler_Delete(t *testing.T) {
 			name:           "error when specified org does not have tenant",
 			reqOrgName:     tnOrg3,
 			user:           tnu,
-			id:             vpcprefix.ID,
+			id:             vpcp1.ID,
 			expectedErr:    true,
 			expectedStatus: http.StatusBadRequest,
 		},
@@ -1694,15 +1711,15 @@ func TestVpcPrefixHandler_Delete(t *testing.T) {
 			name:           "error when vpcprefix tenant does not match org",
 			reqOrgName:     tnOrg2,
 			user:           tnu,
-			id:             vpcprefix.ID,
+			id:             vpcp1.ID,
 			expectedErr:    true,
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
-			name:               "workflow timeout failure",
+			name:               "error when Temporal workflow timeout occurs",
 			reqOrgName:         tnOrg1,
 			user:               tnu,
-			id:                 vpcprefix.ID,
+			id:                 vpcp1.ID,
 			expectedErr:        true,
 			expectedStatus:     http.StatusInternalServerError,
 			verifyChildSpanner: true,
@@ -1710,30 +1727,39 @@ func TestVpcPrefixHandler_Delete(t *testing.T) {
 			tClient:            tscWithTimeout,
 		},
 		{
-			name:               "carbide not-found success",
+			name:               "error when Temporal workflow core gRPC precondition error occurs",
 			reqOrgName:         tnOrg1,
 			user:               tnu,
-			id:                 vpcprefix.ID,
+			id:                 vpcp1.ID,
+			expectedErr:        true,
+			expectedStatus:     http.StatusPreconditionFailed,
+			verifyChildSpanner: true,
+			clientPool:         scpWithCoreGRPCError,
+			tClient:            tscWithCoreGRPCError,
+		},
+		{
+			name:             "error when VPC Prefix is used by an Instance Interface",
+			reqOrgName:       tnOrg1,
+			user:             tnu,
+			id:               vpcp2.ID,
+			expectedErr:      true,
+			expectedStatus:   http.StatusBadRequest,
+			expectedErrorMsg: cdb.GetStrPtr("VPC Prefix is being used by one or more Instances and cannot be deleted"),
+		},
+		{
+			name:               "success when deleting VPC Prefix",
+			reqOrgName:         tnOrg1,
+			user:               tnu,
+			id:                 vpcp1.ID,
 			expectedErr:        false,
 			expectedStatus:     http.StatusAccepted,
 			verifyChildSpanner: true,
-			clientPool:         scpWithCarbideNotFound,
-			tClient:            tscWithCarbideNotFound,
 		},
 		{
-			name:               "success case",
-			reqOrgName:         tnOrg1,
-			user:               tnu,
-			id:                 vpcprefix.ID,
-			expectedErr:        false,
-			expectedStatus:     http.StatusAccepted,
-			verifyChildSpanner: true,
-		},
-		{
-			name:           "success case with full grant",
+			name:           "success when deleting VPC Prefix with full grant",
 			reqOrgName:     tnOrg1,
 			user:           tnu,
-			id:             vpcprefixFG.ID,
+			id:             vpcp1FG.ID,
 			expectedErr:    false,
 			expectedStatus: http.StatusAccepted,
 		},
@@ -1777,9 +1803,15 @@ func TestVpcPrefixHandler_Delete(t *testing.T) {
 			}
 			err := dsh.Handle(ec)
 			assert.Nil(t, err)
+
 			assert.Equal(t, tc.expectedErr, rec.Code != http.StatusAccepted)
 			assert.Equal(t, tc.expectedStatus, rec.Code)
-			if !tc.expectedErr {
+
+			if tc.expectedErr {
+				if tc.expectedErrorMsg != nil {
+					assert.Contains(t, rec.Body.String(), *tc.expectedErrorMsg)
+				}
+			} else {
 				vpDAO := cdbm.NewVpcPrefixDAO(dbSession)
 				id1, err := uuid.Parse(tc.id)
 				assert.Nil(t, err)

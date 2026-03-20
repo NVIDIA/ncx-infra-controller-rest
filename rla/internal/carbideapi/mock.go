@@ -20,6 +20,8 @@ package carbideapi
 import (
 	"context"
 	"time"
+
+	pb "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/carbideapi/gen"
 )
 
 type mockClient struct {
@@ -139,4 +141,28 @@ func (c *mockClient) AddExpectedMachine(ctx context.Context, req AddExpectedMach
 
 func (c *mockClient) AddExpectedSwitch(ctx context.Context, req AddExpectedSwitchRequest) error {
 	return nil
+}
+
+func (c *mockClient) AddExpectedPowerShelf(ctx context.Context, req AddExpectedPowerShelfRequest) error {
+	return nil
+}
+
+func (c *mockClient) ComponentPowerControl(ctx context.Context, req *pb.ComponentPowerControlRequest) (*pb.ComponentPowerControlResponse, error) {
+	return &pb.ComponentPowerControlResponse{}, nil
+}
+
+func (c *mockClient) UpdateComponentFirmware(ctx context.Context, req *pb.UpdateComponentFirmwareRequest) (*pb.UpdateComponentFirmwareResponse, error) {
+	return &pb.UpdateComponentFirmwareResponse{}, nil
+}
+
+func (c *mockClient) GetComponentFirmwareStatus(ctx context.Context, req *pb.GetComponentFirmwareStatusRequest) (*pb.GetComponentFirmwareStatusResponse, error) {
+	return &pb.GetComponentFirmwareStatusResponse{}, nil
+}
+
+func (c *mockClient) ListComponentFirmwareVersions(ctx context.Context, req *pb.ListComponentFirmwareVersionsRequest) (*pb.ListComponentFirmwareVersionsResponse, error) {
+	return &pb.ListComponentFirmwareVersionsResponse{}, nil
+}
+
+func (c *mockClient) GetComponentInventory(ctx context.Context, req *pb.GetComponentInventoryRequest) (*pb.GetComponentInventoryResponse, error) {
+	return &pb.GetComponentInventoryResponse{}, nil
 }

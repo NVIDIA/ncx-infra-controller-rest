@@ -18,7 +18,6 @@ package firmwaremanager
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"net"
@@ -27,10 +26,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/common/runner"
 	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/common/vendor"
-	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/db/model"
 	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/objects/pmc"
 	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/objects/powershelf"
 	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/pmcmanager"
@@ -43,25 +40,20 @@ const waiterSleep = time.Second * 30
 
 // Manager aggregates per-vendor FirmwareUpdater instances and exposes a vendor-agnostic API for firmware operations.
 type Manager struct {
-	firmwareUpdater  map[vendor.Vendor]*FirmwareUpdater
-	fwUpdateRegistry *Registry
-	pmcManager       *pmcmanager.PmcManager
-	runner           *runner.Runner
-	dryRun           bool
+	firmwareUpdater map[vendor.Vendor]*FirmwareUpdater
+	store           FirmwareUpdateStore
+	pmcManager      *pmcmanager.PmcManager
+	runner          *runner.Runner
+	dryRun          bool
 }
 
-// New constructs a Manager by creating updaters for all supported vendors.
-func New(ctx context.Context, c cdb.Config, pmcManager *pmcmanager.PmcManager, dryRun bool) (*Manager, error) {
-	registry, err := newRegistry(ctx, c)
-	if err != nil {
-		return nil, err
-	}
-
+// New constructs a Manager with the given FirmwareUpdateStore backend.
+func New(store FirmwareUpdateStore, pmcManager *pmcmanager.PmcManager, dryRun bool) (*Manager, error) {
 	manager := Manager{
-		firmwareUpdater:  make(map[vendor.Vendor]*FirmwareUpdater),
-		fwUpdateRegistry: registry,
-		pmcManager:       pmcManager,
-		dryRun:           dryRun,
+		firmwareUpdater: make(map[vendor.Vendor]*FirmwareUpdater),
+		store:           store,
+		pmcManager:      pmcManager,
+		dryRun:          dryRun,
 	}
 
 	for v := range vendor.VendorCodeMax {
@@ -89,7 +81,11 @@ func (manager *Manager) SetDryRun(dryRun bool) {
 
 // GetFirmwareUpdate returns the status of a firmware update for the specified PMC MAC and component.
 func (manager *Manager) GetFirmwareUpdate(ctx context.Context, mac net.HardwareAddr, component powershelf.Component) (*powershelf.FirmwareUpdate, error) {
-	return manager.fwUpdateRegistry.GetFwUpdate(ctx, mac, component)
+	rec, err := manager.store.Get(ctx, mac, component)
+	if err != nil {
+		return nil, err
+	}
+	return recordToDomain(rec), nil
 }
 
 // Summary returns a human-readable summary of supported ranges and rules for all vendors.
@@ -133,21 +129,21 @@ func (manager *Manager) Upgrade(ctx context.Context, pmc *pmc.PMC, component pow
 		return fmt.Errorf("cannot update %v for %v from %v to %v", component, pmc, currentFwVersion.String(), targetVersion)
 	}
 
-	_, err = model.NewFirmwareUpdate(ctx, manager.fwUpdateRegistry.session.DB, pmc.MAC, component, currentFwVersion.String(), targetVersion)
+	_, err = manager.store.CreateOrReplace(ctx, pmc.MAC, component, currentFwVersion.String(), targetVersion)
 	return err
 }
 
-// CanUpdate returns whether a PMC’s current firmware is within the supported range.
+// CanUpdate returns whether a PMC's current firmware is within the supported range.
 func (manager *Manager) CanUpdate(ctx context.Context, pmc *pmc.PMC, component powershelf.Component, targetVersion string) (bool, error) {
-	update, err := model.GetFirmwareUpdate(ctx, manager.fwUpdateRegistry.session.DB, pmc.MAC, component)
+	rec, err := manager.store.Get(ctx, pmc.MAC, component)
 	if err != nil {
 		// if there isnt a pendinging firmware update, we can proceed
-		if !errors.Is(err, sql.ErrNoRows) {
+		if !errors.Is(err, ErrNotFound) {
 			return false, err
 		}
 	}
 
-	if update != nil && !update.IsTerminal() {
+	if rec != nil && !rec.IsTerminal() {
 		return false, nil
 	}
 
@@ -164,7 +160,7 @@ func (manager *Manager) CanUpdate(ctx context.Context, pmc *pmc.PMC, component p
 	return updater.canUpdatePmc(ctx, pmc, targetFwVersion)
 }
 
-// CanUpdate returns whether a PMC’s current firmware is within the supported range.
+// ListAvailableFirmware returns the available firmware upgrades for a PMC.
 func (manager *Manager) ListAvailableFirmware(ctx context.Context, pmc *pmc.PMC) ([]FirmwareUpgrade, error) {
 	updater, err := manager.getUpdater(pmc)
 	if err != nil {
@@ -206,21 +202,21 @@ func getFwVersion(ctx context.Context, pmc *pmc.PMC, component powershelf.Compon
 	}
 }
 
-func (manager *Manager) getPendingFwUpdates(ctx context.Context) ([]model.FirmwareUpdate, error) {
+func (manager *Manager) getPendingFwUpdates(ctx context.Context) ([]*FirmwareUpdateRecord, error) {
 	dbCtx, cancel := context.WithTimeout(ctx, dbTimeout)
 	defer cancel()
 
-	return model.GetAllPendingFirmwareUpdates(dbCtx, manager.fwUpdateRegistry.session.DB)
+	return manager.store.GetAllPending(dbCtx)
 }
 
-func (manager *Manager) SetUpdateState(ctx context.Context, update model.FirmwareUpdate, newState powershelf.FirmwareState, errMsg string) error {
+func (manager *Manager) SetUpdateState(ctx context.Context, rec *FirmwareUpdateRecord, newState powershelf.FirmwareState, errMsg string) error {
 	dbCtx, cancel := context.WithTimeout(ctx, dbTimeout)
 	defer cancel()
 
-	return update.UpdateFirmwareUpdateState(dbCtx, manager.fwUpdateRegistry.session.DB, newState, errMsg)
+	return manager.store.SetState(dbCtx, rec.PmcMacAddress, rec.Component, newState, errMsg)
 }
 
-func (manager *Manager) handleOnePmcUpdate(ctx context.Context, pmc *pmc.PMC, update model.FirmwareUpdate) (powershelf.FirmwareState, error) {
+func (manager *Manager) handleOnePmcUpdate(ctx context.Context, pmc *pmc.PMC, update *FirmwareUpdateRecord) (powershelf.FirmwareState, error) {
 	ctx, cancel := context.WithTimeout(ctx, redfishTimeout)
 	defer cancel()
 
@@ -264,12 +260,12 @@ func (manager *Manager) handleOnePmcUpdate(ctx context.Context, pmc *pmc.PMC, up
 	}
 }
 
-func (manager *Manager) handleOneUpdate(ctx context.Context, update model.FirmwareUpdate) {
+func (manager *Manager) handleOneUpdate(ctx context.Context, update *FirmwareUpdateRecord) {
 	var nextState powershelf.FirmwareState
 	var err error
 	timeSincelastStateTransition := time.Since(update.LastTransitionTime)
 	timeSincelastUpdate := time.Since(update.UpdatedAt)
-	mac := update.PmcMacAddress.HardwareAddr()
+	mac := update.PmcMacAddress
 	log.Printf("Handling update of %v in powershelf with PMC MAC %v at state %v from version %v to version %v (Time Since Last State Transition: %v; Last Update: %v)", update.Component, mac, update.State, update.VersionFrom, update.VersionTo, timeSincelastStateTransition, timeSincelastUpdate)
 
 	pmc, err := manager.pmcManager.GetPmc(context.Background(), mac)
@@ -330,4 +326,19 @@ func fwRunner(ctx interface{}, task interface{}) {
 	}
 
 	log.Printf("Firmare Runner: finished handling %v pending updates in %s", len(updates), time.Since(start))
+}
+
+func recordToDomain(rec *FirmwareUpdateRecord) *powershelf.FirmwareUpdate {
+	if rec == nil {
+		return nil
+	}
+	return &powershelf.FirmwareUpdate{
+		PmcMacAddress: rec.PmcMacAddress.String(),
+		Component:     rec.Component,
+		VersionFrom:   rec.VersionFrom,
+		VersionTo:     rec.VersionTo,
+		State:         rec.State,
+		JobID:         rec.JobID,
+		ErrorMessage:  rec.ErrorMessage,
+	}
 }

@@ -40,11 +40,12 @@ func TestInjectExpectation(t *testing.T) {
 		"success": {
 			client: carbideapi.NewMockClient(),
 			info: operations.InjectExpectationTaskInfo{
-				Info: mustMarshal(t, carbideapi.AddExpectedSwitchRequest{
-					BMCMACAddress:      "aa:bb:cc:dd:ee:ff",
-					BMCUsername:        "admin",
-					BMCPassword:        "password",
-					SwitchSerialNumber: "SW-SN-001",
+				Info: mustMarshal(t, carbideapi.AddExpectedPowerShelfRequest{
+					BMCMACAddress:     "11:22:33:44:55:66",
+					BMCUsername:       "admin",
+					BMCPassword:       "password",
+					ShelfSerialNumber: "PS-SN-001",
+					IPAddress:         "10.0.0.50",
 				}),
 			},
 			expectError: false,
@@ -60,8 +61,8 @@ func TestInjectExpectation(t *testing.T) {
 		"nil client returns error": {
 			client: nil,
 			info: operations.InjectExpectationTaskInfo{
-				Info: mustMarshal(t, carbideapi.AddExpectedSwitchRequest{
-					BMCMACAddress: "aa:bb:cc:dd:ee:ff",
+				Info: mustMarshal(t, carbideapi.AddExpectedPowerShelfRequest{
+					BMCMACAddress: "11:22:33:44:55:66",
 				}),
 			},
 			expectError: true,
@@ -74,8 +75,8 @@ func TestInjectExpectation(t *testing.T) {
 			m := New(tc.client)
 
 			target := common.Target{
-				Type:         devicetypes.ComponentTypeNVLSwitch,
-				ComponentIDs: []string{"switch-1"},
+				Type:         devicetypes.ComponentTypePowerShelf,
+				ComponentIDs: []string{"ps-1"},
 			}
 
 			err := m.InjectExpectation(context.Background(), target, tc.info)
@@ -95,8 +96,8 @@ func TestPowerControl(t *testing.T) {
 	m := New(carbideapi.NewMockClient())
 
 	target := common.Target{
-		Type:         devicetypes.ComponentTypeNVLSwitch,
-		ComponentIDs: []string{"switch-1", "switch-2"},
+		Type:         devicetypes.ComponentTypePowerShelf,
+		ComponentIDs: []string{"ps-1", "ps-2"},
 	}
 
 	err := m.PowerControl(context.Background(), target, operations.PowerControlTaskInfo{
@@ -109,12 +110,12 @@ func TestFirmwareControl(t *testing.T) {
 	m := New(carbideapi.NewMockClient())
 
 	target := common.Target{
-		Type:         devicetypes.ComponentTypeNVLSwitch,
-		ComponentIDs: []string{"switch-1"},
+		Type:         devicetypes.ComponentTypePowerShelf,
+		ComponentIDs: []string{"ps-1"},
 	}
 
 	err := m.FirmwareControl(context.Background(), target, operations.FirmwareControlTaskInfo{
-		TargetVersion: "2.0.0",
+		TargetVersion: "1.2.3",
 	})
 	assert.NoError(t, err)
 }
@@ -123,8 +124,8 @@ func TestGetFirmwareStatus(t *testing.T) {
 	m := New(carbideapi.NewMockClient())
 
 	target := common.Target{
-		Type:         devicetypes.ComponentTypeNVLSwitch,
-		ComponentIDs: []string{"switch-1"},
+		Type:         devicetypes.ComponentTypePowerShelf,
+		ComponentIDs: []string{"ps-1"},
 	}
 
 	statuses, err := m.GetFirmwareStatus(context.Background(), target)

@@ -70,7 +70,23 @@ func New(ctx context.Context, c Config) (*PowershelfManager, error) {
 	}
 
 	pmcManager := pmcmanager.New(registry, credentialManager)
-	firmwareManager, err := firmwaremanager.New(ctx, c.PmcRegistryConf.DSConf, pmcManager, false)
+
+	var fwStore firmwaremanager.FirmwareUpdateStore
+	switch c.DSType {
+	case DatastoreTypePersistent:
+		log.Printf("Initializing firmware manager with a PostgreSQL store")
+		fwStore, err = firmwaremanager.NewPostgresStore(ctx, c.PmcRegistryConf.DSConf)
+		if err != nil {
+			return nil, fmt.Errorf("failed to initialize firmware postgres store (conf: %v): %w", c, err)
+		}
+	case DatastoreTypeInMemory:
+		log.Printf("Initializing firmware manager with an in-memory store (updates will not persist across restarts)")
+		fwStore = firmwaremanager.NewInMemoryStore()
+	default:
+		return nil, fmt.Errorf("unsupported datastore type for firmware manager: %v", c.DSType)
+	}
+
+	firmwareManager, err := firmwaremanager.New(fwStore, pmcManager, false)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize firmware manager (conf: %v): %w", c, err)
 	}
