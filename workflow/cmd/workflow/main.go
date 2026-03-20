@@ -101,6 +101,9 @@ import (
 	skuActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/sku"
 	skuWorkflow "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/workflow/sku"
 
+	ipxeTemplateActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/ipxetemplate"
+	ipxeTemplateWorkflow "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/workflow/ipxetemplate"
+
 	vpcPrefixActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/vpcprefix"
 	vpcPrefixWorkflow "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/workflow/vpcprefix"
 
@@ -335,6 +338,12 @@ func main() {
 		// SKU workflow
 		w.RegisterWorkflow(skuWorkflow.UpdateSkuInventory)
 
+		// iPXE Template workflow
+		w.RegisterWorkflow(ipxeTemplateWorkflow.UpdateIpxeTemplateInventory)
+
+		// OS Definition workflow (in the operatingsystem package alongside OsImage)
+		w.RegisterWorkflow(osImageWorkflow.UpdateOperatingSystemInventory)
+
 		// DPU Extension Service workflow
 		w.RegisterWorkflow(dpuExtensionServiceWorkflow.UpdateDpuExtensionServiceInventory)
 
@@ -398,6 +407,14 @@ func main() {
 	// SKU activities
 	skuManager := skuActivity.NewManageSku(dbSession, siteClientPool)
 	w.RegisterActivity(&skuManager)
+
+	// iPXE Template activities
+	ipxeTemplateManager := ipxeTemplateActivity.NewManageIpxeTemplate(dbSession, siteClientPool)
+	w.RegisterActivity(&ipxeTemplateManager)
+
+	// OS Definition activities (registered via the operatingsystem package)
+	osDefinitionManager := osImageActivity.NewManageOperatingSystemSync(dbSession, siteClientPool)
+	w.RegisterActivity(&osDefinitionManager)
 
 	// DPU Extension Service activities
 	dpuExtensionServiceManager := dpuExtensionServiceActivity.NewManageDpuExtensionService(dbSession, siteClientPool)
