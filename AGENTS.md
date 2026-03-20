@@ -19,7 +19,7 @@ for on-site hardware operations.
 - REST API for hardware inventory, provisioning, and lifecycle orchestration
 - Multi-tenant site and instance management
 - Temporal-based cloud and site workflow orchestration
-- On-site agent (`elektra`) for datacenter-local operations
+- On-site agent for datacenter-local operations
 - IP address management (IPAM)
 - Authentication and authorization (Keycloak, JWT, service accounts)
 - Native PKI certificate management
@@ -27,7 +27,7 @@ for on-site hardware operations.
 
 ## Repository Structure
 
-```
+```text
 ncx-infra-controller-rest/
 ├── api/                  # Main REST API server (Echo-based)
 ├── auth/                 # Authentication (Keycloak, JWT, service accounts)
