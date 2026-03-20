@@ -49,7 +49,7 @@ func TestNewAPITask(t *testing.T) {
 			},
 			expected: &APITask{
 				ID:          "task-123",
-				Status:      "running",
+				Status:      "Running",
 				Description: "Power on rack components",
 				Message:     "Processing 3 of 5 components",
 			},
@@ -63,7 +63,7 @@ func TestNewAPITask(t *testing.T) {
 			},
 			expected: &APITask{
 				ID:          "task-001",
-				Status:      "pending",
+				Status:      "Pending",
 				Description: "Firmware upgrade",
 			},
 		},
@@ -77,7 +77,7 @@ func TestNewAPITask(t *testing.T) {
 			},
 			expected: &APITask{
 				ID:          "task-002",
-				Status:      "succeeded",
+				Status:      "Succeeded",
 				Description: "Bring up rack",
 				Message:     "All components ready",
 			},
@@ -92,7 +92,7 @@ func TestNewAPITask(t *testing.T) {
 			},
 			expected: &APITask{
 				ID:          "task-003",
-				Status:      "failed",
+				Status:      "Failed",
 				Description: "Power off rack",
 				Message:     "BMC unreachable",
 			},
@@ -105,7 +105,7 @@ func TestNewAPITask(t *testing.T) {
 			},
 			expected: &APITask{
 				ID:     "task-004",
-				Status: "unknown",
+				Status: "Unknown",
 			},
 		},
 		{
@@ -115,7 +115,7 @@ func TestNewAPITask(t *testing.T) {
 				Status:      rlav1.TaskStatus_TASK_STATUS_PENDING,
 			},
 			expected: &APITask{
-				Status:      "pending",
+				Status:      "Pending",
 				Description: "Orphan task",
 			},
 		},
@@ -128,7 +128,7 @@ func TestNewAPITask(t *testing.T) {
 			},
 			expected: &APITask{
 				ID:      "task-005",
-				Status:  "terminated",
+				Status:  "Terminated",
 				Message: "Expired: queue timeout reached",
 			},
 		},
@@ -140,7 +140,7 @@ func TestNewAPITask(t *testing.T) {
 			},
 			expected: &APITask{
 				ID:     "task-006",
-				Status: "waiting",
+				Status: "Waiting",
 			},
 		},
 	}
@@ -153,8 +153,8 @@ func TestNewAPITask(t *testing.T) {
 			assert.Equal(t, tt.expected.Status, result.Status)
 			assert.Equal(t, tt.expected.Description, result.Description)
 			assert.Equal(t, tt.expected.Message, result.Message)
-			assert.Nil(t, result.StartedAt)
-			assert.Nil(t, result.FinishedAt)
+			assert.Nil(t, result.Started)
+			assert.Nil(t, result.Finished)
 		})
 	}
 }
@@ -176,12 +176,12 @@ func TestNewAPITask_Timestamps(t *testing.T) {
 
 	result := NewAPITask(task)
 
-	assert.True(t, result.CreatedAt.Equal(createdTime))
-	assert.True(t, result.UpdatedAt.Equal(updatedTime))
-	assert.NotNil(t, result.StartedAt)
-	assert.NotNil(t, result.FinishedAt)
-	assert.True(t, result.StartedAt.Equal(startTime))
-	assert.True(t, result.FinishedAt.Equal(endTime))
+	assert.True(t, result.Created.Equal(createdTime))
+	assert.True(t, result.Updated.Equal(updatedTime))
+	assert.NotNil(t, result.Started)
+	assert.NotNil(t, result.Finished)
+	assert.True(t, result.Started.Equal(startTime))
+	assert.True(t, result.Finished.Equal(endTime))
 }
 
 func TestAPIGetTaskRequest_Validate(t *testing.T) {

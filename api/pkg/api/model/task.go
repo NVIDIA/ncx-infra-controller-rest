@@ -85,4 +85,3 @@ func (r *APIGetTaskRequest) Validate() error {
 	}
 	return nil
 }
-

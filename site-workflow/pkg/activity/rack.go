@@ -344,4 +344,3 @@ func (mr *ManageRack) UpgradeFirmware(ctx context.Context, request *rlav1.Upgrad
 
 	return response, nil
 }
-
