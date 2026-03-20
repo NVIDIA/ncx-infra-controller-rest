@@ -243,6 +243,8 @@ func InitAPIServer(cfg *config.Config, dbSession *cdb.Session, tc tsdkClient.Cli
 	routeGroup := e.Group("/" + cfg.GetAPIRouteVersion())
 	// Add logging
 	routeGroup.Use(middleware.Logger())
+	// Add middleware to set the API name
+	routeGroup.Use(middleware.APIName(cfg.GetAPIName()))
 	// Add middleware to handle unmatched routes, must be added before audit or auth middleware
 	routeGroup.Use(middleware.NotFoundHandler(cfg))
 
