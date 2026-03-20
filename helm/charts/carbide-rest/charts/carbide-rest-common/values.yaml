@@ -1,0 +1,26 @@
+nameOverride: ""
+namespaceOverride: ""
+
+secrets:
+  dbCreds:
+    # -- DB password. Replace with real credentials in production.
+    password: "forge"
+  keycloakClientSecret:
+    # -- Keycloak client secret. Replace in production.
+    value: "carbide-local-secret"
+  temporalEncryptionKey:
+    # -- Temporal payload encryption key. Replace in production.
+    value: "local-dev"
+  imagePullSecret:
+    # -- base64-encoded docker config JSON. Default is empty auth placeholder.
+    dockerconfigjson: ""
+
+certificate:
+  temporalClientCloud:
+    duration: 2160h
+    renewBefore: 360h
+    dnsNames:
+      - temporal-client
+      - carbide-rest-api
+      - cloud-worker
+      - site-worker
