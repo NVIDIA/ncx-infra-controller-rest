@@ -196,7 +196,7 @@ func TestVpcPeeringSQLDAO_GetAll(t *testing.T) {
 		paramOrderBy *paginator.OrderBy
 
 		ids      []uuid.UUID
-		vpcID    *uuid.UUID
+		vpcIDs   []uuid.UUID
 		siteIDs  []uuid.UUID
 		statuses []string
 
@@ -210,7 +210,7 @@ func TestVpcPeeringSQLDAO_GetAll(t *testing.T) {
 		{
 			desc:               "GetAll with no filters",
 			ids:                nil,
-			vpcID:              nil,
+			vpcIDs:             nil,
 			siteIDs:            nil,
 			statuses:           nil,
 			expectError:        false,
@@ -220,7 +220,7 @@ func TestVpcPeeringSQLDAO_GetAll(t *testing.T) {
 		{
 			desc:               "GetAll with filters on IDs",
 			ids:                []uuid.UUID{vp12.ID, vp13.ID},
-			vpcID:              nil,
+			vpcIDs:             nil,
 			siteIDs:            nil,
 			statuses:           nil,
 			expectError:        false,
@@ -228,29 +228,19 @@ func TestVpcPeeringSQLDAO_GetAll(t *testing.T) {
 			verifyChildSpanner: true,
 		},
 		{
-			desc:               "GetAll with filters on VpcID",
+			desc:               "GetAll with filters on VpcIDs",
 			ids:                nil,
-			vpcID:              &vpc2.ID,
+			vpcIDs:             []uuid.UUID{vpc1.ID},
 			siteIDs:            nil,
 			statuses:           nil,
 			expectError:        false,
 			expectCount:        2,
-			verifyChildSpanner: true,
-		},
-		{
-			desc:               "GetAll with filters on ID and VpcID",
-			ids:                []uuid.UUID{vp12.ID},
-			vpcID:              &vpc2.ID,
-			siteIDs:            nil,
-			statuses:           nil,
-			expectError:        false,
-			expectCount:        1,
 			verifyChildSpanner: true,
 		},
 		{
 			desc:               "GetAll with filters on pending statuses",
 			ids:                nil,
-			vpcID:              nil,
+			vpcIDs:             nil,
 			siteIDs:            nil,
 			statuses:           []string{VpcPeeringStatusPending},
 			expectError:        false,
@@ -260,7 +250,7 @@ func TestVpcPeeringSQLDAO_GetAll(t *testing.T) {
 		{
 			desc:               "GetAll with filters on deleting statuses",
 			ids:                nil,
-			vpcID:              nil,
+			vpcIDs:             nil,
 			statuses:           []string{VpcPeeringStatusDeleting},
 			expectError:        false,
 			expectCount:        0,
@@ -269,7 +259,7 @@ func TestVpcPeeringSQLDAO_GetAll(t *testing.T) {
 		{
 			desc:               "GetAll with empty IDs",
 			ids:                []uuid.UUID{},
-			vpcID:              nil,
+			vpcIDs:             nil,
 			statuses:           []string{VpcPeeringStatusDeleting},
 			expectError:        false,
 			expectCount:        0,
@@ -278,7 +268,7 @@ func TestVpcPeeringSQLDAO_GetAll(t *testing.T) {
 		{
 			desc:               "GetAll with empty statuses",
 			ids:                nil,
-			vpcID:              nil,
+			vpcIDs:             nil,
 			statuses:           []string{},
 			expectError:        false,
 			expectCount:        0,
@@ -287,7 +277,7 @@ func TestVpcPeeringSQLDAO_GetAll(t *testing.T) {
 		{
 			desc:               "GetAll with empty site IDs",
 			ids:                nil,
-			vpcID:              nil,
+			vpcIDs:             nil,
 			siteIDs:            []uuid.UUID{},
 			statuses:           nil,
 			expectError:        false,
@@ -301,7 +291,7 @@ func TestVpcPeeringSQLDAO_GetAll(t *testing.T) {
 			got, count, err := vpsd.GetAll(
 				ctx,
 				nil,
-				VpcPeeringFilterInput{IDs: tc.ids, VpcID: tc.vpcID, SiteIDs: tc.siteIDs, Statuses: tc.statuses},
+				VpcPeeringFilterInput{IDs: tc.ids, VpcIDs: tc.vpcIDs, SiteIDs: tc.siteIDs, Statuses: tc.statuses},
 				paginator.PageInput{Offset: tc.paramOffset, Limit: tc.paramLimit, OrderBy: tc.paramOrderBy}, tc.includeRelations)
 			assert.Equal(t, tc.expectError, err != nil)
 			if !tc.expectError {

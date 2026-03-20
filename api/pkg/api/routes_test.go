@@ -54,6 +54,7 @@ func TestNewAPIRoutes(t *testing.T) {
 		"tenant-account":           5,
 		"site":                     6,
 		"vpc":                      6,
+		"vpcpeering":               4,
 		"vpcprefix":                5,
 		"ip-block":                 6,
 		"instance":                 8,
