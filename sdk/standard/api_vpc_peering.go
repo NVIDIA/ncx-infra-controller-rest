@@ -1,9 +1,9 @@
 /*
-NVIDIA Bare Metal Manager REST API
+NCX Infra Controller REST API
 
-NVIDIA Bare Metal Manager REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Bare Metal Manager datacenters, also referred to as Sites.
+NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
 
-API version: 1.0.6
+API version: 1.1.0
 Contact: carbide-dev@exchange.nvidia.com
 */
 
@@ -20,14 +20,13 @@ import (
 	"strings"
 )
 
-
 // VPCPeeringAPIService VPCPeeringAPI service
 type VPCPeeringAPIService service
 
 type ApiCreateVpcPeeringRequest struct {
-	ctx context.Context
-	ApiService *VPCPeeringAPIService
-	org string
+	ctx                     context.Context
+	ApiService              *VPCPeeringAPIService
+	org                     string
 	vpcPeeringCreateRequest *VpcPeeringCreateRequest
 }
 
@@ -50,26 +49,27 @@ Provider Admin can create multi-tenant peerings (VPCs from different tenants).
 
 User must have `FORGE_TENANT_ADMIN` or `FORGE_PROVIDER_ADMIN` role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @return ApiCreateVpcPeeringRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@return ApiCreateVpcPeeringRequest
 */
 func (a *VPCPeeringAPIService) CreateVpcPeering(ctx context.Context, org string) ApiCreateVpcPeeringRequest {
 	return ApiCreateVpcPeeringRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ctx:        ctx,
+		org:        org,
 	}
 }
 
 // Execute executes the request
-//  @return VpcPeering
+//
+//	@return VpcPeering
 func (a *VPCPeeringAPIService) CreateVpcPeeringExecute(r ApiCreateVpcPeeringRequest) (*VpcPeering, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodPost
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *VpcPeering
+		localVarHTTPMethod  = http.MethodPost
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *VpcPeering
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "VPCPeeringAPIService.CreateVpcPeering")
@@ -135,8 +135,8 @@ func (a *VPCPeeringAPIService) CreateVpcPeeringExecute(r ApiCreateVpcPeeringRequ
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
@@ -146,8 +146,8 @@ func (a *VPCPeeringAPIService) CreateVpcPeeringExecute(r ApiCreateVpcPeeringRequ
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 404 {
@@ -157,8 +157,8 @@ func (a *VPCPeeringAPIService) CreateVpcPeeringExecute(r ApiCreateVpcPeeringRequ
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -176,10 +176,10 @@ func (a *VPCPeeringAPIService) CreateVpcPeeringExecute(r ApiCreateVpcPeeringRequ
 }
 
 type ApiDeleteVpcPeeringRequest struct {
-	ctx context.Context
+	ctx        context.Context
 	ApiService *VPCPeeringAPIService
-	org string
-	id string
+	org        string
+	id         string
 }
 
 func (r ApiDeleteVpcPeeringRequest) Execute() (*http.Response, error) {
@@ -196,26 +196,26 @@ Provider Admin can delete only multi-tenant peerings in sites they provide.
 
 User must have `FORGE_TENANT_ADMIN` or `FORGE_PROVIDER_ADMIN` role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @param id VPC Peering ID
- @return ApiDeleteVpcPeeringRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@param id VPC Peering ID
+	@return ApiDeleteVpcPeeringRequest
 */
 func (a *VPCPeeringAPIService) DeleteVpcPeering(ctx context.Context, org string, id string) ApiDeleteVpcPeeringRequest {
 	return ApiDeleteVpcPeeringRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
-		id: id,
+		ctx:        ctx,
+		org:        org,
+		id:         id,
 	}
 }
 
 // Execute executes the request
 func (a *VPCPeeringAPIService) DeleteVpcPeeringExecute(r ApiDeleteVpcPeeringRequest) (*http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodDelete
-		localVarPostBody     interface{}
-		formFiles            []formFile
+		localVarHTTPMethod = http.MethodDelete
+		localVarPostBody   interface{}
+		formFiles          []formFile
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "VPCPeeringAPIService.DeleteVpcPeering")
@@ -277,8 +277,8 @@ func (a *VPCPeeringAPIService) DeleteVpcPeeringExecute(r ApiDeleteVpcPeeringRequ
 				newErr.error = err.Error()
 				return localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 			return localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 404 {
@@ -288,8 +288,8 @@ func (a *VPCPeeringAPIService) DeleteVpcPeeringExecute(r ApiDeleteVpcPeeringRequ
 				newErr.error = err.Error()
 				return localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarHTTPResponse, newErr
 	}
@@ -298,13 +298,13 @@ func (a *VPCPeeringAPIService) DeleteVpcPeeringExecute(r ApiDeleteVpcPeeringRequ
 }
 
 type ApiGetAllVpcPeeringRequest struct {
-	ctx context.Context
+	ctx        context.Context
 	ApiService *VPCPeeringAPIService
-	siteId *string
-	org string
+	siteId     *string
+	org        string
 	pageNumber *int32
-	pageSize *int32
-	orderBy *string
+	pageSize   *int32
+	orderBy    *string
 }
 
 // Site ID (required for Provider Admin; optional for Tenant Admin to scope results)
@@ -338,31 +338,32 @@ func (r ApiGetAllVpcPeeringRequest) Execute() ([]VpcPeering, *http.Response, err
 /*
 GetAllVpcPeering Retrieve all VPC peerings
 
-Get all VPC peerings. 
+Get all VPC peerings.
 Tenant Admin can get all peerings where the tenant owns at least one VPC.
 Provider Admin can get all peerings in a site.
 User must have `FORGE_TENANT_ADMIN` or `FORGE_PROVIDER_ADMIN` role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @return ApiGetAllVpcPeeringRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@return ApiGetAllVpcPeeringRequest
 */
 func (a *VPCPeeringAPIService) GetAllVpcPeering(ctx context.Context, org string) ApiGetAllVpcPeeringRequest {
 	return ApiGetAllVpcPeeringRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
+		ctx:        ctx,
+		org:        org,
 	}
 }
 
 // Execute executes the request
-//  @return []VpcPeering
+//
+//	@return []VpcPeering
 func (a *VPCPeeringAPIService) GetAllVpcPeeringExecute(r ApiGetAllVpcPeeringRequest) ([]VpcPeering, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodGet
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  []VpcPeering
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue []VpcPeering
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "VPCPeeringAPIService.GetAllVpcPeering")
@@ -440,8 +441,8 @@ func (a *VPCPeeringAPIService) GetAllVpcPeeringExecute(r ApiGetAllVpcPeeringRequ
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
@@ -451,8 +452,8 @@ func (a *VPCPeeringAPIService) GetAllVpcPeeringExecute(r ApiGetAllVpcPeeringRequ
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -470,10 +471,10 @@ func (a *VPCPeeringAPIService) GetAllVpcPeeringExecute(r ApiGetAllVpcPeeringRequ
 }
 
 type ApiGetVpcPeeringRequest struct {
-	ctx context.Context
+	ctx        context.Context
 	ApiService *VPCPeeringAPIService
-	org string
-	id string
+	org        string
+	id         string
 }
 
 func (r ApiGetVpcPeeringRequest) Execute() (*VpcPeering, *http.Response, error) {
@@ -490,28 +491,29 @@ Provider Admin can get a peering if it is in a site provided by their org.
 
 User must have `FORGE_TENANT_ADMIN` or `FORGE_PROVIDER_ADMIN` role.
 
- @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param org Name of the Org
- @param id VPC Peering ID
- @return ApiGetVpcPeeringRequest
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param org Name of the Org
+	@param id VPC Peering ID
+	@return ApiGetVpcPeeringRequest
 */
 func (a *VPCPeeringAPIService) GetVpcPeering(ctx context.Context, org string, id string) ApiGetVpcPeeringRequest {
 	return ApiGetVpcPeeringRequest{
 		ApiService: a,
-		ctx: ctx,
-		org: org,
-		id: id,
+		ctx:        ctx,
+		org:        org,
+		id:         id,
 	}
 }
 
 // Execute executes the request
-//  @return VpcPeering
+//
+//	@return VpcPeering
 func (a *VPCPeeringAPIService) GetVpcPeeringExecute(r ApiGetVpcPeeringRequest) (*VpcPeering, *http.Response, error) {
 	var (
-		localVarHTTPMethod   = http.MethodGet
-		localVarPostBody     interface{}
-		formFiles            []formFile
-		localVarReturnValue  *VpcPeering
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *VpcPeering
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "VPCPeeringAPIService.GetVpcPeering")
@@ -573,8 +575,8 @@ func (a *VPCPeeringAPIService) GetVpcPeeringExecute(r ApiGetVpcPeeringRequest) (
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 404 {
@@ -584,8 +586,8 @@ func (a *VPCPeeringAPIService) GetVpcPeeringExecute(r ApiGetVpcPeeringRequest) (
 				newErr.error = err.Error()
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
