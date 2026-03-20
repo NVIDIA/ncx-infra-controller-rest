@@ -18,7 +18,6 @@ package firmwaremanager
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"net"
 	"sync"
@@ -78,7 +77,7 @@ func (s *InMemoryStore) Get(_ context.Context, mac net.HardwareAddr, component p
 	key := fwUpdateKey{mac: mac.String(), component: component}
 	rec, ok := s.updates[key]
 	if !ok {
-		return nil, sql.ErrNoRows
+		return nil, ErrNotFound
 	}
 
 	copy := *rec

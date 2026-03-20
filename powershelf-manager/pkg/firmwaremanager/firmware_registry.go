@@ -18,6 +18,8 @@ package firmwaremanager
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"net"
 
@@ -73,6 +75,9 @@ func (ps *PostgresStore) CreateOrReplace(ctx context.Context, mac net.HardwareAd
 func (ps *PostgresStore) Get(ctx context.Context, mac net.HardwareAddr, component powershelf.Component) (*FirmwareUpdateRecord, error) {
 	fu, err := model.GetFirmwareUpdate(ctx, ps.session.DB, mac, component)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
 		return nil, err
 	}
 	return modelToRecord(fu), nil
@@ -91,11 +96,7 @@ func (ps *PostgresStore) GetAllPending(ctx context.Context) ([]*FirmwareUpdateRe
 }
 
 func (ps *PostgresStore) SetState(ctx context.Context, mac net.HardwareAddr, component powershelf.Component, newState powershelf.FirmwareState, errMsg string) error {
-	fu, err := model.GetFirmwareUpdate(ctx, ps.session.DB, mac, component)
-	if err != nil {
-		return err
-	}
-	return fu.UpdateFirmwareUpdateState(ctx, ps.session.DB, newState, errMsg)
+	return model.SetFirmwareUpdateState(ctx, ps.session.DB, mac, component, newState, errMsg)
 }
 
 func modelToRecord(fu *model.FirmwareUpdate) *FirmwareUpdateRecord {

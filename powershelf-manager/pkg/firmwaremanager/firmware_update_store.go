@@ -18,11 +18,16 @@ package firmwaremanager
 
 import (
 	"context"
+	"errors"
 	"net"
 	"time"
 
 	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/objects/powershelf"
 )
+
+// ErrNotFound is returned by Get when no firmware update record exists for
+// the requested (mac, component) key.
+var ErrNotFound = errors.New("firmware update not found")
 
 // FirmwareUpdateStore abstracts firmware update persistence so the Manager can
 // operate against either a Postgres-backed or in-memory backend.
@@ -34,7 +39,7 @@ type FirmwareUpdateStore interface {
 	CreateOrReplace(ctx context.Context, mac net.HardwareAddr, component powershelf.Component, versionFrom, versionTo string) (*FirmwareUpdateRecord, error)
 
 	// Get retrieves the firmware update for (mac, component).
-	// Returns sql.ErrNoRows if no record exists.
+	// Returns ErrNotFound if no record exists.
 	Get(ctx context.Context, mac net.HardwareAddr, component powershelf.Component) (*FirmwareUpdateRecord, error)
 
 	// GetAllPending returns all non-terminal firmware updates.

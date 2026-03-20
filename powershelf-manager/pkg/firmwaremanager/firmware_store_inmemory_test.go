@@ -18,7 +18,6 @@ package firmwaremanager
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"net"
 	"sync"
@@ -44,8 +43,8 @@ func TestInMemoryStore_GetMiss_ReturnsSqlErrNoRows(t *testing.T) {
 	_, err := store.Get(ctx, testMAC1, powershelf.PMC)
 
 	require.Error(t, err)
-	assert.True(t, errors.Is(err, sql.ErrNoRows),
-		"Get on empty store must return sql.ErrNoRows, got: %v", err)
+	assert.True(t, errors.Is(err, ErrNotFound),
+		"Get on empty store must return ErrNotFound, got: %v", err)
 }
 
 func TestInMemoryStore_GetMiss_WrongComponent(t *testing.T) {
@@ -57,7 +56,7 @@ func TestInMemoryStore_GetMiss_WrongComponent(t *testing.T) {
 
 	_, err = store.Get(ctx, testMAC1, powershelf.PSU)
 	require.Error(t, err)
-	assert.True(t, errors.Is(err, sql.ErrNoRows))
+	assert.True(t, errors.Is(err, ErrNotFound))
 }
 
 func TestInMemoryStore_GetMiss_WrongMAC(t *testing.T) {
@@ -69,7 +68,7 @@ func TestInMemoryStore_GetMiss_WrongMAC(t *testing.T) {
 
 	_, err = store.Get(ctx, testMAC2, powershelf.PMC)
 	require.Error(t, err)
-	assert.True(t, errors.Is(err, sql.ErrNoRows))
+	assert.True(t, errors.Is(err, ErrNotFound))
 }
 
 // --- CreateOrReplace ---

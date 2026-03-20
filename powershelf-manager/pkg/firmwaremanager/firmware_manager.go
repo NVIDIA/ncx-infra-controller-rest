@@ -18,7 +18,6 @@ package firmwaremanager
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"net"
@@ -139,7 +138,7 @@ func (manager *Manager) CanUpdate(ctx context.Context, pmc *pmc.PMC, component p
 	rec, err := manager.store.Get(ctx, pmc.MAC, component)
 	if err != nil {
 		// if there isnt a pendinging firmware update, we can proceed
-		if !errors.Is(err, sql.ErrNoRows) {
+		if !errors.Is(err, ErrNotFound) {
 			return false, err
 		}
 	}
