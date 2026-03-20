@@ -43,6 +43,7 @@ func TestNewAPIErrorResponse(t *testing.T) {
 	rec := httptest.NewRecorder()
 
 	ec := e.NewContext(req, rec)
+	ec.Set(APINameContextKey, "test")
 
 	tests := []struct {
 		name string
@@ -62,6 +63,8 @@ func TestNewAPIErrorResponse(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := NewAPIErrorResponse(tt.args.c, tt.args.status, tt.args.message, tt.args.data)
 			assert.NoError(t, err)
+
+			assert.Contains(t, rec.Body.String(), `"source":"test"`)
 		})
 	}
 }
