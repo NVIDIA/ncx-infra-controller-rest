@@ -407,27 +407,27 @@ func TestGenericComponentStepWorkflow_VerifyReachabilityRequireAll(t *testing.T)
 	assert.NoError(t, env.GetWorkflowError())
 }
 
-// TestGenericComponentStepWorkflow_AllowBringUpAndWait tests AllowBringUp as
+// TestGenericComponentStepWorkflow_BringUpAndWait tests BringUp as
 // MainOperation and WaitBringUp as PostOperation.
-func TestGenericComponentStepWorkflow_AllowBringUpAndWait(t *testing.T) {
+func TestGenericComponentStepWorkflow_BringUpAndWait(t *testing.T) {
 	testSuite := &testsuite.WorkflowTestSuite{}
 	env := testSuite.NewTestWorkflowEnvironment()
 
-	mockAllowBringUp := func(ctx context.Context, target common.Target) error {
+	mockBringUpControl := func(ctx context.Context, target common.Target) error {
 		return nil
 	}
-	mockGetBringUp := func(ctx context.Context, target common.Target) (*activitypkg.GetBringUpStateResult, error) {
+	mockGetBringUpStatus := func(ctx context.Context, target common.Target) (*activitypkg.GetBringUpStatusResult, error) {
 		return nil, nil
 	}
 
-	env.RegisterActivityWithOptions(mockAllowBringUp,
-		activity.RegisterOptions{Name: "AllowBringUpAndPowerOn"})
-	env.RegisterActivityWithOptions(mockGetBringUp,
-		activity.RegisterOptions{Name: "GetBringUpState"})
+	env.RegisterActivityWithOptions(mockBringUpControl,
+		activity.RegisterOptions{Name: "BringUpControl"})
+	env.RegisterActivityWithOptions(mockGetBringUpStatus,
+		activity.RegisterOptions{Name: "GetBringUpStatus"})
 
-	env.OnActivity(mockAllowBringUp, mock.Anything, mock.Anything).Return(nil)
-	env.OnActivity(mockGetBringUp, mock.Anything, mock.Anything).Return(
-		&activitypkg.GetBringUpStateResult{
+	env.OnActivity(mockBringUpControl, mock.Anything, mock.Anything).Return(nil)
+	env.OnActivity(mockGetBringUpStatus, mock.Anything, mock.Anything).Return(
+		&activitypkg.GetBringUpStatusResult{
 			States: map[string]operations.MachineBringUpState{
 				"compute-1": operations.MachineBringUpStateMachineCreated,
 			},
@@ -439,7 +439,7 @@ func TestGenericComponentStepWorkflow_AllowBringUpAndWait(t *testing.T) {
 		MaxParallel:   0,
 		Timeout:       10 * time.Minute,
 		MainOperation: operationrules.ActionConfig{
-			Name: operationrules.ActionAllowBringUp,
+			Name: operationrules.ActionBringUpControl,
 		},
 		PostOperation: []operationrules.ActionConfig{
 			{
@@ -474,18 +474,18 @@ func TestGenericComponentStepWorkflow_FirmwareControlAction(t *testing.T) {
 	mockStart := func(ctx context.Context, target common.Target, info operations.FirmwareControlTaskInfo) error {
 		return nil
 	}
-	mockStatus := func(ctx context.Context, target common.Target) (*activitypkg.GetFirmwareUpdateStatusResult, error) {
+	mockStatus := func(ctx context.Context, target common.Target) (*activitypkg.GetFirmwareStatusResult, error) {
 		return nil, nil
 	}
 
 	env.RegisterActivityWithOptions(mockStart,
-		activity.RegisterOptions{Name: "StartFirmwareUpdate"})
+		activity.RegisterOptions{Name: "FirmwareControl"})
 	env.RegisterActivityWithOptions(mockStatus,
-		activity.RegisterOptions{Name: "GetFirmwareUpdateStatus"})
+		activity.RegisterOptions{Name: "GetFirmwareStatus"})
 
 	env.OnActivity(mockStart, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	env.OnActivity(mockStatus, mock.Anything, mock.Anything).Return(
-		&activitypkg.GetFirmwareUpdateStatusResult{
+		&activitypkg.GetFirmwareStatusResult{
 			Statuses: map[string]operations.FirmwareUpdateStatus{
 				"compute-1": {
 					ComponentID: "compute-1",

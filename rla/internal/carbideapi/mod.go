@@ -23,6 +23,8 @@ package carbideapi
 import (
 	"context"
 	"time"
+
+	pb "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/carbideapi/gen"
 )
 
 // Client allow us to have both a real implemenation and a mock implementation for unit tests which can be switched transparently
@@ -61,6 +63,24 @@ type Client interface {
 
 	// AddExpectedSwitch registers an expected switch with Carbide for ingestion.
 	AddExpectedSwitch(ctx context.Context, req AddExpectedSwitchRequest) error
+
+	// AddExpectedPowerShelf registers an expected power shelf with Carbide for ingestion.
+	AddExpectedPowerShelf(ctx context.Context, req AddExpectedPowerShelfRequest) error
+
+	// ComponentPowerControl performs power control on component targets (switches, power shelves).
+	ComponentPowerControl(ctx context.Context, req *pb.ComponentPowerControlRequest) (*pb.ComponentPowerControlResponse, error)
+
+	// UpdateComponentFirmware queues firmware updates for component targets.
+	UpdateComponentFirmware(ctx context.Context, req *pb.UpdateComponentFirmwareRequest) (*pb.UpdateComponentFirmwareResponse, error)
+
+	// GetComponentFirmwareStatus returns firmware update status for component targets.
+	GetComponentFirmwareStatus(ctx context.Context, req *pb.GetComponentFirmwareStatusRequest) (*pb.GetComponentFirmwareStatusResponse, error)
+
+	// ListComponentFirmwareVersions lists available firmware versions for component targets.
+	ListComponentFirmwareVersions(ctx context.Context, req *pb.ListComponentFirmwareVersionsRequest) (*pb.ListComponentFirmwareVersionsResponse, error)
+
+	// GetComponentInventory retrieves inventory (including site exploration reports) for component targets.
+	GetComponentInventory(ctx context.Context, req *pb.GetComponentInventoryRequest) (*pb.GetComponentInventoryResponse, error)
 
 	// The following are only valid in the mock environment and should only be called by unit tests
 	AddMachine(MachineDetail)

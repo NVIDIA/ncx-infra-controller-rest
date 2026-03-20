@@ -24,7 +24,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/credential"
 	dbquery "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/db/query"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/deviceinfo"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
@@ -241,7 +240,6 @@ func TestRackPositionConverter(t *testing.T) {
 }
 
 func TestBMCFrom(t *testing.T) {
-	// Helper functions for test setup
 	stringPtr := func(s string) *string {
 		return &s
 	}
@@ -254,14 +252,8 @@ func TestBMCFrom(t *testing.T) {
 		return mac
 	}
 
-	credentialPtr := func(cred credential.Credential) *credential.Credential {
-		return &cred
-	}
-
 	sharedMac := "00:1a:2b:3c:4d:5e"
 	sharedIp := "192.168.1.1"
-	sharedUser := "admin"
-	sharedPassword := "password"
 
 	testCases := map[string]struct {
 		name          string
@@ -278,26 +270,20 @@ func TestBMCFrom(t *testing.T) {
 				Type:       pb.BMCType_BMC_TYPE_HOST,
 				MacAddress: sharedMac,
 				IpAddress:  stringPtr(sharedIp),
-				User:       stringPtr(sharedUser),
-				Password:   stringPtr(sharedPassword),
 			},
 			expectedType: devicetypes.BMCTypeHost,
 			expectedBMC: &bmc.BMC{
-				MAC:        mustParseMAC(sharedMac),
-				IP:         net.ParseIP(sharedIp),
-				Credential: credentialPtr(credential.New(sharedUser, sharedPassword)),
+				MAC: mustParseMAC(sharedMac),
+				IP:  net.ParseIP(sharedIp),
 			},
 			source: &bmc.BMC{
-				MAC:        mustParseMAC(sharedMac),
-				IP:         net.ParseIP(sharedIp),
-				Credential: credentialPtr(credential.New(sharedUser, sharedPassword)),
+				MAC: mustParseMAC(sharedMac),
+				IP:  net.ParseIP(sharedIp),
 			},
 			expectedProto: &pb.BMCInfo{
 				Type:       pb.BMCType_BMC_TYPE_HOST,
 				MacAddress: sharedMac,
 				IpAddress:  stringPtr(sharedIp),
-				User:       stringPtr(sharedUser),
-				Password:   stringPtr(sharedPassword),
 			},
 			testBMCTo:     true,
 			testBMCToType: devicetypes.BMCTypeHost,
@@ -307,26 +293,20 @@ func TestBMCFrom(t *testing.T) {
 				Type:       pb.BMCType_BMC_TYPE_DPU,
 				MacAddress: sharedMac,
 				IpAddress:  stringPtr(sharedIp),
-				User:       stringPtr(sharedUser),
-				Password:   stringPtr(sharedPassword),
 			},
 			expectedType: devicetypes.BMCTypeDPU,
 			expectedBMC: &bmc.BMC{
-				MAC:        mustParseMAC(sharedMac),
-				IP:         net.ParseIP(sharedIp),
-				Credential: credentialPtr(credential.New(sharedUser, sharedPassword)),
+				MAC: mustParseMAC(sharedMac),
+				IP:  net.ParseIP(sharedIp),
 			},
 			source: &bmc.BMC{
-				MAC:        mustParseMAC(sharedMac),
-				IP:         net.ParseIP(sharedIp),
-				Credential: credentialPtr(credential.New(sharedUser, sharedPassword)),
+				MAC: mustParseMAC(sharedMac),
+				IP:  net.ParseIP(sharedIp),
 			},
 			expectedProto: &pb.BMCInfo{
 				Type:       pb.BMCType_BMC_TYPE_DPU,
 				MacAddress: sharedMac,
 				IpAddress:  stringPtr(sharedIp),
-				User:       stringPtr(sharedUser),
-				Password:   stringPtr(sharedPassword),
 			},
 			testBMCTo:     true,
 			testBMCToType: devicetypes.BMCTypeDPU,
@@ -363,15 +343,11 @@ func TestBMCFrom(t *testing.T) {
 			sourceP: &pb.BMCInfo{
 				Type:       pb.BMCType_BMC_TYPE_HOST,
 				MacAddress: "invalid-mac-address",
-				User:       stringPtr(sharedUser),
-				Password:   stringPtr(sharedPassword),
 			},
 			expectedType: devicetypes.BMCTypeHost,
 			expectedBMC: &bmc.BMC{
-				MAC:        nil,                                                       // Invalid MAC results in nil
-				Credential: credentialPtr(credential.New(sharedUser, sharedPassword)), //nolint
+				MAC: nil,
 			},
-			// Can't test BMCTo with invalid MAC as it would cause issues
 			testBMCTo: false,
 		},
 		"empty MAC address": {
@@ -381,7 +357,7 @@ func TestBMCFrom(t *testing.T) {
 			},
 			expectedType: devicetypes.BMCTypeHost,
 			expectedBMC: &bmc.BMC{
-				MAC: nil, // Empty MAC results in nil
+				MAC: nil,
 			},
 			testBMCTo: false,
 		},
@@ -417,9 +393,9 @@ func TestBMCFrom(t *testing.T) {
 			expectedType: devicetypes.BMCTypeHost,
 			expectedBMC: &bmc.BMC{
 				MAC: mustParseMAC(sharedMac),
-				IP:  nil, // Empty IP string results in nil
+				IP:  nil,
 			},
-			testBMCTo: false, // Can't reconstruct empty IP string from nil
+			testBMCTo: false,
 		},
 		"invalid IP address": {
 			sourceP: &pb.BMCInfo{
@@ -430,7 +406,7 @@ func TestBMCFrom(t *testing.T) {
 			expectedType: devicetypes.BMCTypeHost,
 			expectedBMC: &bmc.BMC{
 				MAC: mustParseMAC(sharedMac),
-				IP:  nil, // Invalid IP results in nil
+				IP:  nil,
 			},
 			testBMCTo: false,
 		},
@@ -457,100 +433,50 @@ func TestBMCFrom(t *testing.T) {
 			testBMCTo:     true,
 			testBMCToType: devicetypes.BMCTypeHost,
 		},
-		"nil credentials": {
+		"BMC without credentials": {
 			sourceP: &pb.BMCInfo{
 				Type:       pb.BMCType_BMC_TYPE_HOST,
 				MacAddress: sharedMac,
-				User:       nil,
-				Password:   nil,
 			},
 			expectedType: devicetypes.BMCTypeHost,
 			expectedBMC: &bmc.BMC{
-				MAC:        mustParseMAC(sharedMac),
-				Credential: nil,
+				MAC: mustParseMAC(sharedMac),
 			},
 			source: &bmc.BMC{
-				MAC:        mustParseMAC(sharedMac),
-				Credential: nil,
+				MAC: mustParseMAC(sharedMac),
 			},
 			expectedProto: &pb.BMCInfo{
 				Type:       pb.BMCType_BMC_TYPE_HOST,
 				MacAddress: sharedMac,
-				User:       nil,
-				Password:   nil,
 			},
 			testBMCTo:     true,
 			testBMCToType: devicetypes.BMCTypeHost,
 		},
-		"partial credentials - only user": {
-			sourceP: &pb.BMCInfo{
-				Type:       pb.BMCType_BMC_TYPE_HOST,
-				MacAddress: sharedMac,
-				User:       stringPtr("testuser"),
-				Password:   nil,
-			},
-			expectedType: devicetypes.BMCTypeHost,
-			expectedBMC: &bmc.BMC{
-				MAC:        mustParseMAC(sharedMac),
-				Credential: nil, // BMCFrom requires both user and password
-			},
-			testBMCTo: false, // Can't reconstruct partial credentials
-		},
-		"partial credentials - only password": {
-			sourceP: &pb.BMCInfo{
-				Type:       pb.BMCType_BMC_TYPE_HOST,
-				MacAddress: sharedMac,
-				User:       nil,
-				Password:   stringPtr("testpass"),
-			},
-			expectedType: devicetypes.BMCTypeHost,
-			expectedBMC: &bmc.BMC{
-				MAC:        mustParseMAC(sharedMac),
-				Credential: nil, // BMCFrom requires both user and password
-			},
-			testBMCTo: false, // Can't reconstruct partial credentials
-		},
-		"empty credentials": {
-			sourceP: &pb.BMCInfo{
-				Type:       pb.BMCType_BMC_TYPE_HOST,
-				MacAddress: sharedMac,
-				User:       stringPtr(""),
-				Password:   stringPtr(""),
-			},
-			expectedType: devicetypes.BMCTypeHost,
-			expectedBMC: &bmc.BMC{
-				MAC:        mustParseMAC(sharedMac),
-				Credential: credentialPtr(credential.New("", "")),
-			},
-			// Can't test BMCTo with empty credentials as they're converted to nil (invalid)
-			testBMCTo: false,
-		},
 		"different MAC formats": {
 			sourceP: &pb.BMCInfo{
 				Type:       pb.BMCType_BMC_TYPE_DPU,
-				MacAddress: "AA-BB-CC-DD-EE-FF", // Different format
+				MacAddress: "AA-BB-CC-DD-EE-FF",
 			},
 			expectedType: devicetypes.BMCTypeDPU,
 			expectedBMC: &bmc.BMC{
 				MAC: mustParseMAC("AA-BB-CC-DD-EE-FF"),
 			},
-			// Test that BMCTo normalizes to colon format
 			source: &bmc.BMC{
 				MAC: mustParseMAC("AA-BB-CC-DD-EE-FF"),
 			},
 			expectedProto: &pb.BMCInfo{
 				Type:       pb.BMCType_BMC_TYPE_DPU,
-				MacAddress: "aa:bb:cc:dd:ee:ff", // Normalized to lowercase with colons
+				MacAddress: "aa:bb:cc:dd:ee:ff",
 			},
 			testBMCTo:     true,
 			testBMCToType: devicetypes.BMCTypeDPU,
 		},
 		"invalid BMC type": {
 			sourceP: &pb.BMCInfo{
-				Type:       pb.BMCType(-1), // Invalid type
+				Type:       pb.BMCType(-1),
 				MacAddress: sharedMac,
 			},
-			expectedType: devicetypes.BMCTypeUnknown, // Should default to unknown
+			expectedType: devicetypes.BMCTypeUnknown,
 			expectedBMC: &bmc.BMC{
 				MAC: mustParseMAC(sharedMac),
 			},
@@ -560,12 +486,10 @@ func TestBMCFrom(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			// Test BMCFrom conversion
 			convertedType, converted := BMCFrom(tc.sourceP)
 			assert.Equal(t, tc.expectedType, convertedType, "BMCFrom should return expected type") //nolint
 			assert.Equal(t, tc.expectedBMC, converted, "BMCFrom should return expected BMC")       //nolint
 
-			// Test BMCTo conversion if applicable
 			if tc.testBMCTo && tc.source != nil {
 				convertedProto := BMCTo(tc.testBMCToType, tc.source)
 				assert.Equal(t, tc.expectedProto, convertedProto, "BMCTo should return expected protobuf BMC") //nolint

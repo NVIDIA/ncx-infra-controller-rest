@@ -160,7 +160,7 @@ The powershelf component manager (`internal/componentmanager/powershelf/`) uses 
 
 - **Registration**: Register powershelves with PSM
 - **PowerControl**: Power on/off/reset powershelves
-- **FirmwareControl**: Upgrade/downgrade powershelf firmware
+- **FirmwareControl**: Upgrade/downgrade powershelf firmware (async start + poll)
 - **Status**: Check powershelf health status
 - **FirmwareVersion**: Get current firmware version
 - **PowerStatus**: Get current power state

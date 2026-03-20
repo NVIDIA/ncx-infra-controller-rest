@@ -51,7 +51,7 @@ var actionExecutorRegistry = map[string]actionExecutor{
 	operationrules.ActionVerifyReachability: executeVerifyReachabilityAction,
 	operationrules.ActionGetPowerStatus:     executeGetPowerStatusAction,
 	operationrules.ActionFirmwareControl:    executeFirmwareControlAction,
-	operationrules.ActionAllowBringUp:       executeAllowBringUpAction,
+	operationrules.ActionBringUpControl:     executeBringUpControlAction,
 	operationrules.ActionWaitBringUp:        executeWaitBringUpAction,
 	operationrules.ActionInjectExpectation:  executeInjectExpectationAction,
 }
@@ -190,7 +190,7 @@ func executeFirmwareControlAction(actx actionExecutionContext) error {
 
 	// Start firmware update (Temporal deserializes operationInfo at activity level)
 	if err := workflow.ExecuteActivity(
-		ctx, "StartFirmwareUpdate", target, actx.operationInfo,
+		ctx, "FirmwareControl", target, actx.operationInfo,
 	).Get(ctx, nil); err != nil {
 		return fmt.Errorf("failed to start firmware update: %w", err)
 	}
@@ -231,9 +231,9 @@ func executeFirmwareControlAction(actx actionExecutionContext) error {
 			return fmt.Errorf("workflow sleep interrupted: %w", err)
 		}
 
-		var result activity.GetFirmwareUpdateStatusResult
+		var result activity.GetFirmwareStatusResult
 		err := workflow.ExecuteActivity(
-			ctx, "GetFirmwareUpdateStatus", target,
+			ctx, "GetFirmwareStatus", target,
 		).Get(ctx, &result)
 		if err != nil {
 			log.Warn().Err(err).
@@ -376,14 +376,14 @@ func verifyPowerStatus(
 	}
 }
 
-// executeAllowBringUpAction opens the power-on gate for the target components.
-func executeAllowBringUpAction(actx actionExecutionContext) error {
+// executeBringUpControlAction opens the power-on gate for the target components.
+func executeBringUpControlAction(actx actionExecutionContext) error {
 	return workflow.ExecuteActivity(
-		actx.workflowContext, "AllowBringUpAndPowerOn", actx.target,
+		actx.workflowContext, "BringUpControl", actx.target,
 	).Get(actx.workflowContext, nil)
 }
 
-// executeWaitBringUpAction polls GetBringUpState until all components reach
+// executeWaitBringUpAction polls GetBringUpStatus until all components reach
 // the MachineBringUpStateMachineCreated state. Uses config.Timeout and
 // config.PollInterval.
 func executeWaitBringUpAction(actx actionExecutionContext) error {
@@ -417,9 +417,9 @@ func executeWaitBringUpAction(actx actionExecutionContext) error {
 			return fmt.Errorf("workflow sleep interrupted: %w", err)
 		}
 
-		var result activity.GetBringUpStateResult
+		var result activity.GetBringUpStatusResult
 		err := workflow.ExecuteActivity(
-			ctx, "GetBringUpState", target,
+			ctx, "GetBringUpStatus", target,
 		).Get(ctx, &result)
 		if err != nil {
 			log.Warn().Err(err).Msg("Failed to get bring-up state, will retry")

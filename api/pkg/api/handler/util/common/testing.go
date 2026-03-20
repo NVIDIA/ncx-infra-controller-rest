@@ -693,3 +693,25 @@ func TestBuildDpuExtensionServiceDeployment(t *testing.T, dbSession *cdb.Session
 
 	return desd
 }
+
+func TestBuildInterface(t *testing.T, dbSession *cdb.Session, instanceID uuid.UUID, subnetID *uuid.UUID, vpcPrefixID *uuid.UUID, isPhysical bool, device *string, deviceInstance *int, vfID *int, status *string, user *cdbm.User) *cdbm.Interface {
+	iiDAO := cdbm.NewInterfaceDAO(dbSession)
+
+	if status == nil {
+		status = cdb.GetStrPtr(cdbm.InterfaceStatusPending)
+	}
+
+	ii, err := iiDAO.Create(context.Background(), nil, cdbm.InterfaceCreateInput{
+		InstanceID:        instanceID,
+		SubnetID:          subnetID,
+		VpcPrefixID:       vpcPrefixID,
+		IsPhysical:        isPhysical,
+		Device:            device,
+		DeviceInstance:    deviceInstance,
+		VirtualFunctionID: vfID,
+		Status:            *status,
+		CreatedBy:         user.ID,
+	})
+	assert.Nil(t, err)
+	return ii
+}

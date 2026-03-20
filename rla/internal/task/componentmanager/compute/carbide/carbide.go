@@ -239,35 +239,10 @@ func carbidePowerStateToOperationsPowerStatus(state carbideapi.PowerState) opera
 	}
 }
 
-// FirmwareControl performs firmware operations on a compute node.
-func (m *Manager) FirmwareControl(
-	ctx context.Context,
-	target common.Target,
-	info operations.FirmwareControlTaskInfo,
-) error {
-	// TODO: Implement firmware control
-	switch info.Operation {
-	case operations.FirmwareOperationUpgrade:
-		// Implement firmware upgrade
-		return fmt.Errorf("firmware upgrade not yet implemented for compute")
-	case operations.FirmwareOperationDowngrade:
-		// Implement firmware downgrade
-		return fmt.Errorf("firmware downgrade not yet implemented for compute")
-	case operations.FirmwareOperationRollback:
-		// Implement firmware rollback
-		return fmt.Errorf("firmware rollback not yet implemented for compute")
-	case operations.FirmwareOperationVersion:
-		// Implement firmware version
-		return fmt.Errorf("firmware version not yet implemented for compute")
-	default:
-		return fmt.Errorf("unknown firmware operation: %v", info.Operation)
-	}
-}
-
-// StartFirmwareUpdate schedules a firmware update via Carbide's SetFirmwareUpdateTimeWindow API.
+// FirmwareControl schedules a firmware update via Carbide's SetFirmwareUpdateTimeWindow API.
 // This sets the time window during which Carbide will automatically perform the firmware update.
 // Returns immediately after the schedule request is accepted.
-func (m *Manager) StartFirmwareUpdate(ctx context.Context, target common.Target, info operations.FirmwareControlTaskInfo) error {
+func (m *Manager) FirmwareControl(ctx context.Context, target common.Target, info operations.FirmwareControlTaskInfo) error {
 	log.Debug().
 		Str("components", target.String()).
 		Str("target_version", info.TargetVersion).
@@ -297,14 +272,14 @@ func (m *Manager) StartFirmwareUpdate(ctx context.Context, target common.Target,
 	return nil
 }
 
-// GetFirmwareUpdateStatus returns the current status of firmware updates for the target components.
+// GetFirmwareStatus returns the current status of firmware updates for the target components.
 // Carbide does not have a dedicated firmware update status API; we read the current firmware version
 // to determine if the update completed.
 // TODO: Implement proper status checking once Carbide exposes a firmware update status API.
-func (m *Manager) GetFirmwareUpdateStatus(ctx context.Context, target common.Target) (map[string]operations.FirmwareUpdateStatus, error) { //nolint
+func (m *Manager) GetFirmwareStatus(ctx context.Context, target common.Target) (map[string]operations.FirmwareUpdateStatus, error) { //nolint
 	log.Debug().
 		Str("components", target.String()).
-		Msg("GetFirmwareUpdateStatus called for compute")
+		Msg("GetFirmwareStatus called for compute")
 
 	// Carbide doesn't have a firmware update status API. Return unknown status for all components.
 	// The workflow polling will rely on timeout to determine completion.
@@ -320,15 +295,15 @@ func (m *Manager) GetFirmwareUpdateStatus(ctx context.Context, target common.Tar
 	return result, nil
 }
 
-// AllowBringUpAndPowerOn opens the Carbide power-on gate for
+// BringUpControl opens the Carbide power-on gate for
 // each compute component, allowing bring-up and power on.
-func (m *Manager) AllowBringUpAndPowerOn(
+func (m *Manager) BringUpControl(
 	ctx context.Context,
 	target common.Target,
 ) error {
 	log.Debug().
 		Str("components", target.String()).
-		Msg("AllowBringUpAndPowerOn for compute")
+		Msg("BringUpControl for compute")
 
 	if m.carbideClient == nil {
 		return fmt.Errorf("carbide client is not configured")
@@ -343,27 +318,27 @@ func (m *Manager) AllowBringUpAndPowerOn(
 			ctx, componentID, "",
 		); err != nil {
 			return fmt.Errorf(
-				"AllowBringUpAndPowerOn failed for %s: %w",
+				"BringUpControl failed for %s: %w",
 				componentID, err,
 			)
 		}
 		log.Info().
 			Str("component_id", componentID).
-			Msg("AllowBringUpAndPowerOn succeeded")
+			Msg("BringUpControl succeeded")
 	}
 
 	return nil
 }
 
-// GetBringUpState returns the bring-up state for each
+// GetBringUpStatus returns the bring-up state for each
 // compute component via Carbide.
-func (m *Manager) GetBringUpState(
+func (m *Manager) GetBringUpStatus(
 	ctx context.Context,
 	target common.Target,
 ) (map[string]operations.MachineBringUpState, error) {
 	log.Debug().
 		Str("components", target.String()).
-		Msg("GetBringUpState for compute")
+		Msg("GetBringUpStatus for compute")
 
 	if m.carbideClient == nil {
 		return nil, fmt.Errorf("carbide client is not configured")
@@ -383,7 +358,7 @@ func (m *Manager) GetBringUpState(
 		)
 		if err != nil {
 			return nil, fmt.Errorf(
-				"GetBringUpState failed for %s: %w",
+				"GetBringUpStatus failed for %s: %w",
 				componentID, err,
 			)
 		}
