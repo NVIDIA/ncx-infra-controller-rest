@@ -12,8 +12,9 @@ secrets:
     # -- Temporal payload encryption key. Replace in production.
     value: "local-dev"
   imagePullSecret:
-    # -- base64-encoded docker config JSON. Default is empty auth placeholder.
-    dockerconfigjson: ""
+    # -- base64-encoded docker config JSON. Default is valid empty auth placeholder ({"auths":{}}).
+    # Replace with real credentials for private registries.
+    dockerconfigjson: "eyJhdXRocyI6e319"
 
 certificate:
   temporalClientCloud:
