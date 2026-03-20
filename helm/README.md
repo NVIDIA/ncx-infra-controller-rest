@@ -86,7 +86,10 @@ carbide-rest-api:
       serviceAccount: true
 ```
 
-If `carbide-rest-common.enabled=false`, you must pre-create a `keycloak-client-secret` Kubernetes Secret in the target namespace.
+If `carbide-rest-common.enabled=false`, you must pre-create the following resources in the target namespace before install:
+- Secrets: `db-creds`, `temporal-encryption-key`, `image-pull-secret`
+- `keycloak-client-secret` (when Keycloak authentication is enabled)
+- The `temporal-client-cloud-cert` Certificate (or its resulting TLS Secret) consumed by the workflow workers
 
 > **Note:** If neither method is configured, `helm install` will fail with a validation error.
 

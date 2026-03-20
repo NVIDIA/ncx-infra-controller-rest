@@ -25,7 +25,7 @@ spec:
         fsGroup: 65534
       containers:
         - name: cert-manager
-          image: {{ include "carbide-rest-cert-manager.image" . }}
+          image: "{{ include "carbide-rest-cert-manager.image" . }}"
           imagePullPolicy: {{ .Values.global.image.pullPolicy }}
           securityContext:
             readOnlyRootFilesystem: true

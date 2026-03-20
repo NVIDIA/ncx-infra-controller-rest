@@ -2,6 +2,8 @@ nameOverride: ""
 namespaceOverride: ""
 
 secrets:
+  # -- Set to false to skip Secret creation (e.g. when migrating from Kustomize with pre-existing Secrets).
+  create: true
   dbCreds:
     # -- DB password. Replace with real credentials in production.
     password: "forge"
