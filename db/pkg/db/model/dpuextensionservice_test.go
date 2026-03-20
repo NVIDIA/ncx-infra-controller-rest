@@ -28,6 +28,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	otrace "go.opentelemetry.io/otel/trace"
+
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 )
 
 // reset the tables needed for DpuExtensionService tests
@@ -67,11 +69,27 @@ func TestDpuExtensionServiceSQLDAO_Create(t *testing.T) {
 	_, _, ctx = testCommonTraceProviderSetup(t, ctx)
 
 	version := "V1-T1761856992374052"
+	obsName := "service-metrics"
 	versionInfo := &DpuExtensionServiceVersionInfo{
 		Version:        version,
 		Data:           "test-data",
 		HasCredentials: true,
 		Created:        db.GetCurTime(),
+		Observability: &DpuExtensionServiceObservability{
+			DpuExtensionServiceObservability: &cwssaws.DpuExtensionServiceObservability{
+				Configs: []*cwssaws.DpuExtensionServiceObservabilityConfig{
+					{
+						Name: &obsName,
+						Config: &cwssaws.DpuExtensionServiceObservabilityConfig_Prometheus{
+							Prometheus: &cwssaws.DpuExtensionServiceObservabilityConfigPrometheus{
+								ScrapeIntervalSeconds: 30,
+								Endpoint:              "http://service:9090/metrics",
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 	description := "Test DPU extension service"
 
@@ -169,6 +187,9 @@ func TestDpuExtensionServiceSQLDAO_Create(t *testing.T) {
 					}
 					if input.ActiveVersions != nil {
 						assert.Equal(t, input.ActiveVersions, des.ActiveVersions)
+					}
+					if input.VersionInfo != nil && input.VersionInfo.Observability != nil {
+						assert.Equal(t, input.VersionInfo.Observability.GetConfigs()[0].GetPrometheus().Endpoint, des.VersionInfo.Observability.GetConfigs()[0].GetPrometheus().Endpoint)
 					}
 				}
 
@@ -560,11 +581,26 @@ func TestDpuExtensionServiceSQLDAO_Update(t *testing.T) {
 	_, _, ctx = testCommonTraceProviderSetup(t, ctx)
 
 	newVersion := "V1-T1761856992374053"
+	newObsName := "updated-metrics"
 	newVersionInfo := &DpuExtensionServiceVersionInfo{
 		Version:        newVersion,
 		Data:           "updated-data",
 		HasCredentials: true,
 		Created:        db.GetCurTime(),
+		Observability: &DpuExtensionServiceObservability{
+			DpuExtensionServiceObservability: &cwssaws.DpuExtensionServiceObservability{
+				Configs: []*cwssaws.DpuExtensionServiceObservabilityConfig{
+					{
+						Name: &newObsName,
+						Config: &cwssaws.DpuExtensionServiceObservabilityConfig_Logging{
+							Logging: &cwssaws.DpuExtensionServiceObservabilityConfigLogging{
+								Path: "/var/log/service.log",
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 	updatedDescription := "Updated description"
 
@@ -672,6 +708,7 @@ func TestDpuExtensionServiceSQLDAO_Update(t *testing.T) {
 				if tc.input.VersionInfo != nil {
 					assert.Equal(t, tc.input.VersionInfo.Version, got.VersionInfo.Version)
 					assert.Equal(t, tc.input.VersionInfo.Data, got.VersionInfo.Data)
+					assert.Equal(t, tc.input.VersionInfo.Observability, got.VersionInfo.Observability)
 				}
 				if tc.input.ActiveVersions != nil {
 					assert.Equal(t, tc.input.ActiveVersions, got.ActiveVersions)

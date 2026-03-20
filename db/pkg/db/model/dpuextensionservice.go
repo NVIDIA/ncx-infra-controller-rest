@@ -27,6 +27,9 @@ import (
 	stracer "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/tracer"
 	"github.com/google/uuid"
 	"github.com/uptrace/bun"
+	"google.golang.org/protobuf/encoding/protojson"
+
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 )
 
 const (
@@ -77,10 +80,40 @@ var (
 
 // DpuExtensionServiceVersionInfo is a data structure to capture information for a specific DPU Extension Service version
 type DpuExtensionServiceVersionInfo struct {
-	Version        string    `json:"version"`
-	Data           string    `json:"data"`
-	HasCredentials bool      `json:"has_credentials"`
-	Created        time.Time `json:"created"`
+	Version        string                            `json:"version"`
+	Data           string                            `json:"data"`
+	HasCredentials bool                              `json:"has_credentials"`
+	Created        time.Time                         `json:"created"`
+	Observability  *DpuExtensionServiceObservability `json:"observability,omitempty"`
+}
+
+// A light wrapper around the protobuf so
+// that we can implement our own marshal/unmarshal
+// that understands how to work with protobuf messages
+type DpuExtensionServiceObservability struct {
+	*cwssaws.DpuExtensionServiceObservability
+}
+
+func (o *DpuExtensionServiceObservability) UnmarshalJSON(b []byte) error {
+	if o.DpuExtensionServiceObservability == nil {
+		o.DpuExtensionServiceObservability = &cwssaws.DpuExtensionServiceObservability{}
+	}
+
+	// protoJsonUnmarshalOptions is set to ignore unknown fields.
+	// This means a record created on site that uses a new feature
+	// won't break things in cloud,
+	// BUT it also means that a user could
+	// create something on site and then update it in cloud without realizing
+	// that the new property for the new feature isn't in the cloud data.
+	// If they then save the change, the record on site would lose the detail.
+	// NOTE: Similar to what we do in other places (e.g., NSGs), we aren't
+	// ignoring the error here because the wrapper is on the entire observability
+	// object and not individual configs.
+	return protoJsonUnmarshalOptions.Unmarshal(b, o)
+}
+
+func (o *DpuExtensionServiceObservability) MarshalJSON() ([]byte, error) {
+	return protojson.Marshal(o)
 }
 
 // DpuExtensionService represents a DPU extension service
