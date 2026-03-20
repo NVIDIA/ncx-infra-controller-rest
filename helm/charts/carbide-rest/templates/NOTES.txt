@@ -27,6 +27,9 @@ Prerequisites (must exist before install):
   - Keycloak authentication server
 {{- end }}
   - cert-manager.io with ClusterIssuer "{{ .Values.global.certificate.issuerRef.name }}"
+{{- if index .Values "carbide-rest-cert-manager" "enabled" }}
+  - Secret: ca-signing-secret (CA cert+key — provisioned by Vault or setup-local.sh)
+{{- end }}
 {{- if not (index .Values "carbide-rest-common" "enabled") }}
   - Secrets: db-creds, keycloak-client-secret, temporal-encryption-key, temporal-client-cloud-certs
     (carbide-rest-common is disabled — pre-create these secrets before install)

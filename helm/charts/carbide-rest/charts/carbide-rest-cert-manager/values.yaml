@@ -17,6 +17,10 @@ config:
   debug: false
 
 secrets:
+  # -- Name of the Secret containing the CA signing cert and key (tls.crt / tls.key).
+  # This Secret must exist before deploying this chart — it is NOT created by any sub-chart.
+  # In production it is typically provisioned by Vault agent injection.
+  # For local dev, it is created by make kind-reset-infra (setup-local.sh).
   caSigningSecret: ca-signing-secret
 
 service:
