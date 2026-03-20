@@ -36,6 +36,73 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type SystemPowerControl int32
+
+const (
+	SystemPowerControl_SYSTEM_POWER_CONTROL_UNKNOWN SystemPowerControl = 0
+	// Power on a machine
+	SystemPowerControl_SYSTEM_POWER_CONTROL_ON SystemPowerControl = 1
+	// Graceful host shutdown
+	SystemPowerControl_SYSTEM_POWER_CONTROL_GRACEFUL_SHUTDOWN SystemPowerControl = 2
+	// Forcefully powers a machine off
+	SystemPowerControl_SYSTEM_POWER_CONTROL_FORCE_OFF SystemPowerControl = 3
+	// Graceful restart. Asks the OS to restart via ACPI
+	SystemPowerControl_SYSTEM_POWER_CONTROL_GRACEFUL_RESTART SystemPowerControl = 4
+	// Force restart. This is equivalent to pressing the reset button on the front panel.
+	SystemPowerControl_SYSTEM_POWER_CONTROL_FORCE_RESTART SystemPowerControl = 5
+	// AC powercycle. This is equivalent to unplugging and reconnecting power cables. Not supported on Vikings.
+	SystemPowerControl_SYSTEM_POWER_CONTROL_AC_POWERCYCLE SystemPowerControl = 6
+)
+
+// Enum value maps for SystemPowerControl.
+var (
+	SystemPowerControl_name = map[int32]string{
+		0: "SYSTEM_POWER_CONTROL_UNKNOWN",
+		1: "SYSTEM_POWER_CONTROL_ON",
+		2: "SYSTEM_POWER_CONTROL_GRACEFUL_SHUTDOWN",
+		3: "SYSTEM_POWER_CONTROL_FORCE_OFF",
+		4: "SYSTEM_POWER_CONTROL_GRACEFUL_RESTART",
+		5: "SYSTEM_POWER_CONTROL_FORCE_RESTART",
+		6: "SYSTEM_POWER_CONTROL_AC_POWERCYCLE",
+	}
+	SystemPowerControl_value = map[string]int32{
+		"SYSTEM_POWER_CONTROL_UNKNOWN":           0,
+		"SYSTEM_POWER_CONTROL_ON":                1,
+		"SYSTEM_POWER_CONTROL_GRACEFUL_SHUTDOWN": 2,
+		"SYSTEM_POWER_CONTROL_FORCE_OFF":         3,
+		"SYSTEM_POWER_CONTROL_GRACEFUL_RESTART":  4,
+		"SYSTEM_POWER_CONTROL_FORCE_RESTART":     5,
+		"SYSTEM_POWER_CONTROL_AC_POWERCYCLE":     6,
+	}
+)
+
+func (x SystemPowerControl) Enum() *SystemPowerControl {
+	p := new(SystemPowerControl)
+	*p = x
+	return p
+}
+
+func (x SystemPowerControl) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (SystemPowerControl) Descriptor() protoreflect.EnumDescriptor {
+	return file_common_proto_enumTypes[0].Descriptor()
+}
+
+func (SystemPowerControl) Type() protoreflect.EnumType {
+	return &file_common_proto_enumTypes[0]
+}
+
+func (x SystemPowerControl) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use SystemPowerControl.Descriptor instead.
+func (SystemPowerControl) EnumDescriptor() ([]byte, []int) {
+	return file_common_proto_rawDescGZIP(), []int{0}
+}
+
 type MachineId struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -1162,7 +1229,15 @@ const file_common_proto_rawDesc = "" +
 	"\x0eNVLinkDomainId\x12\x14\n" +
 	"\x05value\x18\x01 \x01(\tR\x05value\"+\n" +
 	"\x13ComputeAllocationId\x12\x14\n" +
-	"\x05value\x18\x01 \x01(\tR\x05valueB\x9a\x01\n" +
+	"\x05value\x18\x01 \x01(\tR\x05value*\x9e\x02\n" +
+	"\x12SystemPowerControl\x12 \n" +
+	"\x1cSYSTEM_POWER_CONTROL_UNKNOWN\x10\x00\x12\x1b\n" +
+	"\x17SYSTEM_POWER_CONTROL_ON\x10\x01\x12*\n" +
+	"&SYSTEM_POWER_CONTROL_GRACEFUL_SHUTDOWN\x10\x02\x12\"\n" +
+	"\x1eSYSTEM_POWER_CONTROL_FORCE_OFF\x10\x03\x12)\n" +
+	"%SYSTEM_POWER_CONTROL_GRACEFUL_RESTART\x10\x04\x12&\n" +
+	"\"SYSTEM_POWER_CONTROL_FORCE_RESTART\x10\x05\x12&\n" +
+	"\"SYSTEM_POWER_CONTROL_AC_POWERCYCLE\x10\x06B\x9a\x01\n" +
 	"\n" +
 	"com.commonB\vCommonProtoP\x01ZGgithub.com/NVIDIA/ncx-infra-controller-rest/rla/internal/carbideapigrpc\xa2\x02\x03CXX\xaa\x02\x06Common\xca\x02\x06Common\xe2\x02\x12Common\\GPBMetadata\xea\x02\x06Commonb\x06proto3"
 
@@ -1178,35 +1253,37 @@ func file_common_proto_rawDescGZIP() []byte {
 	return file_common_proto_rawDescData
 }
 
+var file_common_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_common_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
 var file_common_proto_goTypes = []any{
-	(*MachineId)(nil),                // 0: common.MachineId
-	(*MachineIdList)(nil),            // 1: common.MachineIdList
-	(*StringList)(nil),               // 2: common.StringList
-	(*UUID)(nil),                     // 3: common.UUID
-	(*PowerShelfId)(nil),             // 4: common.PowerShelfId
-	(*RackId)(nil),                   // 5: common.RackId
-	(*SwitchId)(nil),                 // 6: common.SwitchId
-	(*Uint32List)(nil),               // 7: common.Uint32List
-	(*RouteTarget)(nil),              // 8: common.RouteTarget
-	(*DomainId)(nil),                 // 9: common.DomainId
-	(*MachineInterfaceId)(nil),       // 10: common.MachineInterfaceId
-	(*VpcId)(nil),                    // 11: common.VpcId
-	(*VpcPrefixId)(nil),              // 12: common.VpcPrefixId
-	(*VpcPeeringId)(nil),             // 13: common.VpcPeeringId
-	(*IBPartitionId)(nil),            // 14: common.IBPartitionId
-	(*InstanceId)(nil),               // 15: common.InstanceId
-	(*NetworkSegmentId)(nil),         // 16: common.NetworkSegmentId
-	(*DpaInterfaceId)(nil),           // 17: common.DpaInterfaceId
-	(*NetworkPrefixId)(nil),          // 18: common.NetworkPrefixId
-	(*RemediationId)(nil),            // 19: common.RemediationId
-	(*NVLinkPartitionId)(nil),        // 20: common.NVLinkPartitionId
-	(*NVLinkLogicalPartitionId)(nil), // 21: common.NVLinkLogicalPartitionId
-	(*NVLinkDomainId)(nil),           // 22: common.NVLinkDomainId
-	(*ComputeAllocationId)(nil),      // 23: common.ComputeAllocationId
+	(SystemPowerControl)(0),          // 0: common.SystemPowerControl
+	(*MachineId)(nil),                // 1: common.MachineId
+	(*MachineIdList)(nil),            // 2: common.MachineIdList
+	(*StringList)(nil),               // 3: common.StringList
+	(*UUID)(nil),                     // 4: common.UUID
+	(*PowerShelfId)(nil),             // 5: common.PowerShelfId
+	(*RackId)(nil),                   // 6: common.RackId
+	(*SwitchId)(nil),                 // 7: common.SwitchId
+	(*Uint32List)(nil),               // 8: common.Uint32List
+	(*RouteTarget)(nil),              // 9: common.RouteTarget
+	(*DomainId)(nil),                 // 10: common.DomainId
+	(*MachineInterfaceId)(nil),       // 11: common.MachineInterfaceId
+	(*VpcId)(nil),                    // 12: common.VpcId
+	(*VpcPrefixId)(nil),              // 13: common.VpcPrefixId
+	(*VpcPeeringId)(nil),             // 14: common.VpcPeeringId
+	(*IBPartitionId)(nil),            // 15: common.IBPartitionId
+	(*InstanceId)(nil),               // 16: common.InstanceId
+	(*NetworkSegmentId)(nil),         // 17: common.NetworkSegmentId
+	(*DpaInterfaceId)(nil),           // 18: common.DpaInterfaceId
+	(*NetworkPrefixId)(nil),          // 19: common.NetworkPrefixId
+	(*RemediationId)(nil),            // 20: common.RemediationId
+	(*NVLinkPartitionId)(nil),        // 21: common.NVLinkPartitionId
+	(*NVLinkLogicalPartitionId)(nil), // 22: common.NVLinkLogicalPartitionId
+	(*NVLinkDomainId)(nil),           // 23: common.NVLinkDomainId
+	(*ComputeAllocationId)(nil),      // 24: common.ComputeAllocationId
 }
 var file_common_proto_depIdxs = []int32{
-	0, // 0: common.MachineIdList.machine_ids:type_name -> common.MachineId
+	1, // 0: common.MachineIdList.machine_ids:type_name -> common.MachineId
 	1, // [1:1] is the sub-list for method output_type
 	1, // [1:1] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
@@ -1224,13 +1301,14 @@ func file_common_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_common_proto_rawDesc), len(file_common_proto_rawDesc)),
-			NumEnums:      0,
+			NumEnums:      1,
 			NumMessages:   24,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_common_proto_goTypes,
 		DependencyIndexes: file_common_proto_depIdxs,
+		EnumInfos:         file_common_proto_enumTypes,
 		MessageInfos:      file_common_proto_msgTypes,
 	}.Build()
 	File_common_proto = out.File

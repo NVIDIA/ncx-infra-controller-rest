@@ -39,6 +39,7 @@ import (
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/componentmanager/mock"
 	nvlswitchcarbide "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/componentmanager/nvlswitch/carbide"
 	nvlswitchnsm "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/componentmanager/nvlswitch/nvswitchmanager"
+	powershelfcarbide "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/componentmanager/powershelf/carbide"
 	powershelfpsm "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/componentmanager/powershelf/psm"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/componentmanager/providers/carbide"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/componentmanager/providers/nvswitchmanager"
@@ -150,6 +151,7 @@ func initComponentManagerRegistry(config componentmanager.Config, providerRegist
 	computecarbide.Register(registry, computePowerDelay)
 	nvlswitchcarbide.Register(registry)
 	nvlswitchnsm.Register(registry)
+	powershelfcarbide.Register(registry)
 	powershelfpsm.Register(registry)
 	mock.RegisterAll(registry)
 
