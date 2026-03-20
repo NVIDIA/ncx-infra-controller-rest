@@ -22,6 +22,7 @@ import (
 	"time"
 
 	cwm "github.com/NVIDIA/ncx-infra-controller-rest/workflow/internal/metrics"
+	osActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/operatingsystem"
 
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
@@ -30,7 +31,6 @@ import (
 	"go.temporal.io/sdk/workflow"
 
 	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
-	osImageActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/operatingsystem"
 )
 
 // UpdateOsImageInventory is a workflow called by Site Agent to update image based Operating System for a Site
@@ -63,7 +63,7 @@ func UpdateOsImageInventory(ctx workflow.Context, siteID string, osImageInventor
 
 	ctx = workflow.WithActivityOptions(ctx, options)
 
-	var osImageManager osImageActivity.ManageOsImage
+	var osImageManager osActivity.ManageOsImage
 
 	var osImageIDs []uuid.UUID
 
@@ -92,5 +92,49 @@ func UpdateOsImageInventory(ctx workflow.Context, siteID string, osImageInventor
 	logger.Info().Msg("completing workflow")
 
 	// Return original error from inventory activity, if any
+	return err
+}
+
+// UpdateOperatingSystemInventory is a workflow called by the Site Agent to reconcile Operating Systems
+// synced from carbide-core into the operating_system table.
+func UpdateOperatingSystemInventory(ctx workflow.Context, siteID string, inventory *cwssaws.OperatingSystemInventory) (err error) {
+	logger := log.With().Str("Workflow", "UpdateOperatingSystemInventory").Str("Site ID", siteID).Logger()
+
+	startTime := time.Now()
+
+	logger.Info().Msg("Starting workflow")
+
+	parsedSiteID, err := uuid.Parse(siteID)
+	if err != nil {
+		logger.Warn().Err(err).Msgf("workflow triggered with invalid site ID: %s", siteID)
+		return err
+	}
+
+	retrypolicy := &temporal.RetryPolicy{
+		InitialInterval:    5 * time.Second,
+		BackoffCoefficient: 2.0,
+		MaximumInterval:    30 * time.Second,
+		MaximumAttempts:    2,
+	}
+	options := workflow.ActivityOptions{
+		StartToCloseTimeout: 30 * time.Second,
+		RetryPolicy:         retrypolicy,
+	}
+	ctx = workflow.WithActivityOptions(ctx, options)
+
+	var osSyncManager osActivity.ManageOperatingSystemSync
+
+	err = workflow.ExecuteActivity(ctx, osSyncManager.UpdateOperatingSystemsInDB, parsedSiteID, inventory).Get(ctx, nil)
+	if err != nil {
+		logger.Warn().Err(err).Msg("Failed to execute activity: UpdateOperatingSystemsInDB")
+	}
+
+	logger.Info().Msg("Completing workflow")
+
+	var inventoryMetricsManager cwm.ManageInventoryMetrics
+	if merr := workflow.ExecuteActivity(ctx, inventoryMetricsManager.RecordLatency, parsedSiteID, "UpdateOperatingSystemInventory", err != nil, time.Since(startTime)).Get(ctx, nil); merr != nil {
+		logger.Warn().Err(merr).Msg("Failed to execute activity: RecordLatency")
+	}
+
 	return err
 }
