@@ -121,6 +121,27 @@ func (fu *FirmwareUpdate) Get(
 	return &retFwUpdate, nil
 }
 
+// SetFirmwareUpdateState transitions a firmware update identified by (pmcMac, comp)
+// to newState with an optional error message in a single UPDATE (no prior SELECT).
+func SetFirmwareUpdateState(ctx context.Context, db bun.IDB, pmcMac net.HardwareAddr, comp powershelf.Component, newState powershelf.FirmwareState, errMsg string) error {
+	now := time.Now()
+	fu := &FirmwareUpdate{
+		PmcMacAddress:      MacAddr(pmcMac),
+		Component:          comp,
+		State:              newState,
+		ErrorMessage:       errMsg,
+		LastTransitionTime: now,
+		UpdatedAt:          now,
+	}
+
+	_, err := db.NewUpdate().
+		Model(fu).
+		Column("state", "last_transition_time", "error_message", "updated_at").
+		WherePK().
+		Exec(ctx)
+	return err
+}
+
 // UpdateFirmwareUpdateState sets the state and optional error message for a FirmwareUpdate.
 // Only updates LastTransitionTime if the state actually changes.
 func (fu *FirmwareUpdate) UpdateFirmwareUpdateState(ctx context.Context, db bun.IDB, newState powershelf.FirmwareState, errMsg string) error {

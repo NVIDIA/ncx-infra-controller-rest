@@ -18,98 +18,97 @@ package firmwaremanager
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"net"
 
 	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
-	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/common/errors"
-	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/converter/dao"
 	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/db/migrations"
 	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/db/model"
 	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/objects/powershelf"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/uptrace/bun"
 )
 
-type Registry struct {
+var _ FirmwareUpdateStore = (*PostgresStore)(nil)
+
+// PostgresStore is a Postgres-backed implementation of FirmwareUpdateStore.
+type PostgresStore struct {
 	session *cdb.Session
 }
 
-// newRegistry initializes connectivity to Postgres and runs any pending migrations.
-func newRegistry(ctx context.Context, c cdb.Config) (*Registry, error) {
+// NewPostgresStore initializes connectivity to Postgres and runs any pending migrations.
+func NewPostgresStore(ctx context.Context, c cdb.Config) (*PostgresStore, error) {
 	session, err := cdb.NewSessionFromConfig(ctx, c)
 	if err != nil {
 		return nil, err
 	}
 
-	// Run migrations automatically at startup to ensure schema is up to date
 	if err := migrations.MigrateWithDB(ctx, session.DB); err != nil {
 		session.Close()
-
 		return nil, fmt.Errorf("failed to run migrations: %w", err)
 	}
 
-	return &Registry{session}, nil
+	return &PostgresStore{session}, nil
 }
 
-// Start starts the PostgresStore instance. Currently, it is no-op.
-func (ps *Registry) Start(ctx context.Context) error {
-	log.Printf("Starting PostgresQL FW Register")
+func (ps *PostgresStore) Start(ctx context.Context) error {
+	log.Printf("Starting PostgresQL FW Store")
 	return nil
 }
 
-// Stop stops the PostgresStore instance by closing the PostgresQL connection.
-func (ps *Registry) Stop(ctx context.Context) error {
-	log.Printf("Stopping PostgresQL FW Register")
+func (ps *PostgresStore) Stop(ctx context.Context) error {
+	log.Printf("Stopping PostgresQL FW Store")
 	ps.session.Close()
 	return nil
 }
 
-func (ps *Registry) runInTx(
-	ctx context.Context,
-	operation func(ctx context.Context, tx bun.Tx) error,
-) error {
-	if err := ps.session.RunInTx(ctx, operation); err != nil {
-		if !errors.IsGRPCError(err) {
-			err = errors.GRPCErrorInternal(err.Error())
-		}
-
-		return err
-	}
-
-	return nil
-}
-
-// QueueFwUpdate creates a FirmwareUpdate row, mapping domain → DAO.
-func (ps *Registry) QueueFwUpdate(ctx context.Context, fwUpdate *powershelf.FirmwareUpdate) error {
-	operation := func(ctx context.Context, tx bun.Tx) error {
-		fwUpdateDao, err := dao.FirmwareUpdateTo(fwUpdate)
-		if err != nil {
-			log.Printf("failed to convert fw update: %v", err)
-			return errors.GRPCErrorInternal(err.Error())
-		}
-
-		if err := fwUpdateDao.Create(ctx, tx); err != nil {
-			log.Printf("failed to create fw update entry: %s", fwUpdateDao.PmcMacAddress.String())
-			return errors.GRPCErrorInternal(err.Error())
-		}
-
-		return nil
-	}
-
-	return ps.runInTx(ctx, operation)
-}
-
-func (ps *Registry) GetFwUpdate(
-	ctx context.Context,
-	mac net.HardwareAddr,
-	component powershelf.Component,
-) (*powershelf.FirmwareUpdate, error) {
-	fwUpdate, err := model.GetFirmwareUpdate(ctx, ps.session.DB, mac, component)
+func (ps *PostgresStore) CreateOrReplace(ctx context.Context, mac net.HardwareAddr, component powershelf.Component, versionFrom, versionTo string) (*FirmwareUpdateRecord, error) {
+	fu, err := model.NewFirmwareUpdate(ctx, ps.session.DB, mac, component, versionFrom, versionTo)
 	if err != nil {
 		return nil, err
 	}
+	return modelToRecord(fu), nil
+}
 
-	return dao.FirmwareUpdateFrom(fwUpdate), nil
+func (ps *PostgresStore) Get(ctx context.Context, mac net.HardwareAddr, component powershelf.Component) (*FirmwareUpdateRecord, error) {
+	fu, err := model.GetFirmwareUpdate(ctx, ps.session.DB, mac, component)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return modelToRecord(fu), nil
+}
+
+func (ps *PostgresStore) GetAllPending(ctx context.Context) ([]*FirmwareUpdateRecord, error) {
+	updates, err := model.GetAllPendingFirmwareUpdates(ctx, ps.session.DB)
+	if err != nil {
+		return nil, err
+	}
+	records := make([]*FirmwareUpdateRecord, len(updates))
+	for i := range updates {
+		records[i] = modelToRecord(&updates[i])
+	}
+	return records, nil
+}
+
+func (ps *PostgresStore) SetState(ctx context.Context, mac net.HardwareAddr, component powershelf.Component, newState powershelf.FirmwareState, errMsg string) error {
+	return model.SetFirmwareUpdateState(ctx, ps.session.DB, mac, component, newState, errMsg)
+}
+
+func modelToRecord(fu *model.FirmwareUpdate) *FirmwareUpdateRecord {
+	return &FirmwareUpdateRecord{
+		PmcMacAddress:      net.HardwareAddr(fu.PmcMacAddress),
+		Component:          fu.Component,
+		VersionFrom:        fu.VersionFrom,
+		VersionTo:          fu.VersionTo,
+		State:              fu.State,
+		JobID:              fu.JobID,
+		ErrorMessage:       fu.ErrorMessage,
+		LastTransitionTime: fu.LastTransitionTime,
+		UpdatedAt:          fu.UpdatedAt,
+	}
 }
