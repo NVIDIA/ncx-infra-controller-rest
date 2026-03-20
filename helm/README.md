@@ -13,10 +13,15 @@ Helm charts for deploying the Carbide REST API platform services.
 
 | Sub-Chart | Description |
 |-----------|-------------|
+| `carbide-rest-common` | Common secrets and certificates (created by Helm) |
+| `carbide-rest-cert-manager` | Carbide credential manager service (credsmgr) |
 | `carbide-rest-api` | REST API server (port 8388) |
 | `carbide-rest-workflow` | Temporal workers (cloud-worker + site-worker) |
 | `carbide-rest-site-manager` | Site lifecycle manager (TLS on port 8100) |
 | `carbide-rest-db` | Database migration job (Bun ORM, idempotent) |
+
+> `carbide-rest-common` creates the secrets (`db-creds`, `temporal-encryption-key`, `image-pull-secret`,
+> `keycloak-client-secret`) and the `temporal-client-cloud-cert` Certificate as part of the Helm install.
 
 ## Prerequisites
 
@@ -24,9 +29,8 @@ The following must be running before installing charts:
 
 - **PostgreSQL** database
 - **Temporal** server with `cloud` and `site` namespaces
-- **cert-manager** with ClusterIssuer `carbide-rest-ca-issuer`
-- **Secrets**: `db-creds`, `temporal-encryption-key`, `temporal-client-cloud-certs`
-- **Keycloak** (optional) — only if using Keycloak for authentication; also requires `keycloak-client-secret`
+- **cert-manager.io** with ClusterIssuer `carbide-rest-ca-issuer`
+- **Keycloak** (optional) — only if using Keycloak for authentication
 
 > The Site CRD (`sites.forge.nvidia.io`) is bundled in `carbide-rest-site-manager/crds/` and installed automatically by Helm.
 
@@ -82,7 +86,10 @@ carbide-rest-api:
       serviceAccount: true
 ```
 
-This also requires a `keycloak-client-secret` Kubernetes Secret in the target namespace.
+If `carbide-rest-common.enabled=false`, you must pre-create the following resources in the target namespace before install:
+- Secrets: `db-creds`, `temporal-encryption-key`, `image-pull-secret`
+- `keycloak-client-secret` (when Keycloak authentication is enabled)
+- The `temporal-client-cloud-cert` Certificate (or its resulting TLS Secret) consumed by the workflow workers
 
 > **Note:** If neither method is configured, `helm install` will fail with a validation error.
 
