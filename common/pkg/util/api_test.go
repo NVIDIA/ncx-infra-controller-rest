@@ -42,27 +42,26 @@ func TestNewAPIErrorResponse(t *testing.T) {
 	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	rec := httptest.NewRecorder()
 
+	ec := e.NewContext(req, rec)
+
 	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
+		name string
+		args args
 	}{
 		{
 			name: "initialize and return error response",
 			args: args{
-				c:       e.NewContext(req, rec),
+				c:       ec,
 				status:  400,
 				message: "bad request",
 				data:    errors.New("bad request"),
 			},
-			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := NewAPIErrorResponse(tt.args.c, tt.args.status, tt.args.message, tt.args.data); (err != nil) != tt.wantErr {
-				t.Errorf("NewAPIErrorResponse() error = %v, wantErr %v", err, tt.wantErr)
-			}
+			err := NewAPIErrorResponse(tt.args.c, tt.args.status, tt.args.message, tt.args.data)
+			assert.NoError(t, err)
 		})
 	}
 }
@@ -104,6 +103,7 @@ func TestDefaultHTTPErrorHandler(t *testing.T) {
 			rec := httptest.NewRecorder()
 
 			ec := e.NewContext(req, rec)
+			ec.Set("apiName", "test")
 
 			DefaultHTTPErrorHandler(tt.args.err, ec)
 
@@ -114,7 +114,7 @@ func TestDefaultHTTPErrorHandler(t *testing.T) {
 			err := json.Unmarshal(rec.Body.Bytes(), rst)
 			assert.NoError(t, err)
 
-			assert.Equal(t, APIErrorSourceForge, rst.Source)
+			assert.Equal(t, "test", rst.Source)
 			assert.Equal(t, tt.expectedMessage, rst.Message)
 		})
 	}
