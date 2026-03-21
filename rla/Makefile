@@ -62,7 +62,7 @@ gen-doc: ## Generate gRPC API documentation (Markdown for GitLab, HTML for local
 
 rla:
 	mkdir -p build
-	VERSION=$$(cat ../VERSION 2>/dev/null || echo "dev") && \
+	VERSION=$$(grep -v -e '^#' -e "^$$" ../VERSION) && \
 	BUILD_TIME=$$(date -u +"%Y-%m-%dT%H:%M:%SZ") && \
 	GIT_COMMIT=$$(git rev-parse --short HEAD 2>/dev/null || echo "unknown") && \
 	go build -C build \
@@ -72,7 +72,7 @@ rla:
 		..
 
 container: rla
-	docker build -t carbide-rla:$$(cat ../VERSION)-$(CURDATE)-$$(git rev-parse HEAD) -t carbide-rla:latest .
+	docker build -t carbide-rla:$$(grep -v -e '^#' -e "^$$" ../VERSION)-$(CURDATE)-$$(git rev-parse HEAD) -t carbide-rla:latest .
 
 # test-local runs tests locally with a postgres container
 # Requires: ./scripts/start-test-postgres.sh to be running
@@ -83,11 +83,5 @@ test-local:
 	go vet ./...
 	DB_ADDR=localhost DB_PORT=30432 DB_USER=postgres DB_PASSWORD=postgres DB_DATABASE=rla_test go run . db migrate
 	DB_ADDR=localhost DB_PORT=30432 DB_USER=postgres DB_PASSWORD=postgres DB_DATABASE=rla_test go test -v -p 1 ./...
-
-# test runs tests in a docker container with PostgreSQL (used by CI)
-# Includes: go fmt, go vet, migrations, and go test
-test:
-	DOCKER_BUILDKIT=1 docker build --no-cache -f Dockerfile.test -t carbide-rla-test:$$(cat ../VERSION)-$(CURDATE)-$(CI_COMMIT_SHORT_SHA) .
-	docker rmi carbide-rla-test:$$(cat version)-$(CURDATE)-$(CI_COMMIT_SHORT_SHA)
 
 .PHONY: gen-pb gen-psmapi-pb gen-nsmapi-pb gen-doc rla container releasecontainer runcontainer releasetest test test-local
