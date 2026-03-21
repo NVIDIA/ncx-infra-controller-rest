@@ -70,9 +70,9 @@ func (api *API) RegisterSubscriber() error {
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.UpgradeFirmware)
 	ManagerAccess.Data.EB.Log.Info().Msg("RLA: successfully registered UpgradeFirmware workflow")
 
-	// GetTask
-	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.GetTask)
-	ManagerAccess.Data.EB.Log.Info().Msg("RLA: successfully registered GetTask workflow")
+	// GetRackTask
+	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.GetRackTask)
+	ManagerAccess.Data.EB.Log.Info().Msg("RLA: successfully registered GetRackTask workflow")
 
 	/// Register rack activities
 

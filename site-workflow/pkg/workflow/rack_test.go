@@ -790,23 +790,23 @@ func TestBringUpRackTestSuite(t *testing.T) {
 	suite.Run(t, new(BringUpRackTestSuite))
 }
 
-// GetTaskTestSuite tests the GetTask workflow
-type GetTaskTestSuite struct {
+// GetRackTaskTestSuite tests the GetRackTask workflow
+type GetRackTaskTestSuite struct {
 	suite.Suite
 	testsuite.WorkflowTestSuite
 
 	env *testsuite.TestWorkflowEnvironment
 }
 
-func (s *GetTaskTestSuite) SetupTest() {
+func (s *GetRackTaskTestSuite) SetupTest() {
 	s.env = s.NewTestWorkflowEnvironment()
 }
 
-func (s *GetTaskTestSuite) AfterTest(suiteName, testName string) {
+func (s *GetRackTaskTestSuite) AfterTest(suiteName, testName string) {
 	s.env.AssertExpectations(s.T())
 }
 
-func (s *GetTaskTestSuite) Test_GetTask_Success() {
+func (s *GetRackTaskTestSuite) Test_GetRackTask_Success() {
 	var rackManager rActivity.ManageRack
 
 	taskID := "test-task-id"
@@ -829,7 +829,7 @@ func (s *GetTaskTestSuite) Test_GetTask_Success() {
 	s.env.RegisterActivity(rackManager.GetTaskByID)
 	s.env.OnActivity(rackManager.GetTaskByID, mock.Anything, mock.Anything).Return(expectedResponse, nil)
 
-	s.env.ExecuteWorkflow(GetTask, request)
+	s.env.ExecuteWorkflow(GetRackTask, request)
 	s.True(s.env.IsWorkflowCompleted())
 	s.NoError(s.env.GetWorkflowError())
 
@@ -839,7 +839,7 @@ func (s *GetTaskTestSuite) Test_GetTask_Success() {
 	s.Equal(taskID, response.GetTasks()[0].GetId().GetId())
 }
 
-func (s *GetTaskTestSuite) Test_GetTask_EmptyResult() {
+func (s *GetRackTaskTestSuite) Test_GetRackTask_EmptyResult() {
 	var rackManager rActivity.ManageRack
 
 	request := &rlav1.GetTasksByIDsRequest{
@@ -853,7 +853,7 @@ func (s *GetTaskTestSuite) Test_GetTask_EmptyResult() {
 	s.env.RegisterActivity(rackManager.GetTaskByID)
 	s.env.OnActivity(rackManager.GetTaskByID, mock.Anything, mock.Anything).Return(expectedResponse, nil)
 
-	s.env.ExecuteWorkflow(GetTask, request)
+	s.env.ExecuteWorkflow(GetRackTask, request)
 	s.True(s.env.IsWorkflowCompleted())
 	s.NoError(s.env.GetWorkflowError())
 
@@ -862,7 +862,7 @@ func (s *GetTaskTestSuite) Test_GetTask_EmptyResult() {
 	s.Equal(0, len(response.GetTasks()))
 }
 
-func (s *GetTaskTestSuite) Test_GetTask_ActivityFails() {
+func (s *GetRackTaskTestSuite) Test_GetRackTask_ActivityFails() {
 	var rackManager rActivity.ManageRack
 
 	request := &rlav1.GetTasksByIDsRequest{
@@ -874,7 +874,7 @@ func (s *GetTaskTestSuite) Test_GetTask_ActivityFails() {
 	s.env.RegisterActivity(rackManager.GetTaskByID)
 	s.env.OnActivity(rackManager.GetTaskByID, mock.Anything, mock.Anything).Return(nil, errors.New(errMsg))
 
-	s.env.ExecuteWorkflow(GetTask, request)
+	s.env.ExecuteWorkflow(GetRackTask, request)
 	s.True(s.env.IsWorkflowCompleted())
 	err := s.env.GetWorkflowError()
 	s.Error(err)
@@ -884,8 +884,8 @@ func (s *GetTaskTestSuite) Test_GetTask_ActivityFails() {
 	s.Equal(errMsg, applicationErr.Error())
 }
 
-func TestGetTaskTestSuite(t *testing.T) {
-	suite.Run(t, new(GetTaskTestSuite))
+func TestGetRackTaskTestSuite(t *testing.T) {
+	suite.Run(t, new(GetRackTaskTestSuite))
 }
 
 // UpgradeFirmwareTestSuite tests the UpgradeFirmware workflow

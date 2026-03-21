@@ -167,7 +167,7 @@ func TestGetTaskHandler_Handle(t *testing.T) {
 					resp.Tasks = tt.mockTasks
 				}).Return(nil)
 			}
-			mockTemporalClient.Mock.On("ExecuteWorkflow", mock.Anything, mock.Anything, "GetTask", mock.Anything).Return(mockWorkflowRun, nil)
+			mockTemporalClient.Mock.On("ExecuteWorkflow", mock.Anything, mock.Anything, "GetRackTask", mock.Anything).Return(mockWorkflowRun, nil)
 			scp.IDClientMap[site.ID.String()] = mockTemporalClient
 
 			q := url.Values{}
@@ -199,7 +199,7 @@ func TestGetTaskHandler_Handle(t *testing.T) {
 				return
 			}
 
-			var apiTask model.APITask
+			var apiTask model.APIRackTask
 			err = json.Unmarshal(rec.Body.Bytes(), &apiTask)
 			assert.NoError(t, err)
 			assert.Equal(t, taskUUID, apiTask.ID)

@@ -26,16 +26,16 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func TestNewAPITask(t *testing.T) {
+func TestNewAPIRackTask(t *testing.T) {
 	tests := []struct {
 		name     string
 		task     *rlav1.Task
-		expected *APITask
+		expected *APIRackTask
 	}{
 		{
-			name:     "nil task returns empty APITask",
+			name:     "nil task returns empty APIRackTask",
 			task:     nil,
-			expected: &APITask{},
+			expected: &APIRackTask{},
 		},
 		{
 			name: "task with all fields",
@@ -47,7 +47,7 @@ func TestNewAPITask(t *testing.T) {
 				Status:      rlav1.TaskStatus_TASK_STATUS_RUNNING,
 				Message:     "Processing 3 of 5 components",
 			},
-			expected: &APITask{
+			expected: &APIRackTask{
 				ID:          "task-123",
 				Status:      "Running",
 				Description: "Power on rack components",
@@ -61,7 +61,7 @@ func TestNewAPITask(t *testing.T) {
 				Description: "Firmware upgrade",
 				Status:      rlav1.TaskStatus_TASK_STATUS_PENDING,
 			},
-			expected: &APITask{
+			expected: &APIRackTask{
 				ID:          "task-001",
 				Status:      "Pending",
 				Description: "Firmware upgrade",
@@ -75,7 +75,7 @@ func TestNewAPITask(t *testing.T) {
 				Status:      rlav1.TaskStatus_TASK_STATUS_COMPLETED,
 				Message:     "All components ready",
 			},
-			expected: &APITask{
+			expected: &APIRackTask{
 				ID:          "task-002",
 				Status:      "Succeeded",
 				Description: "Bring up rack",
@@ -90,7 +90,7 @@ func TestNewAPITask(t *testing.T) {
 				Status:      rlav1.TaskStatus_TASK_STATUS_FAILED,
 				Message:     "BMC unreachable",
 			},
-			expected: &APITask{
+			expected: &APIRackTask{
 				ID:          "task-003",
 				Status:      "Failed",
 				Description: "Power off rack",
@@ -103,7 +103,7 @@ func TestNewAPITask(t *testing.T) {
 				Id:     &rlav1.UUID{Id: "task-004"},
 				Status: rlav1.TaskStatus_TASK_STATUS_UNKNOWN,
 			},
-			expected: &APITask{
+			expected: &APIRackTask{
 				ID:     "task-004",
 				Status: "Unknown",
 			},
@@ -114,7 +114,7 @@ func TestNewAPITask(t *testing.T) {
 				Description: "Orphan task",
 				Status:      rlav1.TaskStatus_TASK_STATUS_PENDING,
 			},
-			expected: &APITask{
+			expected: &APIRackTask{
 				Status:      "Pending",
 				Description: "Orphan task",
 			},
@@ -126,7 +126,7 @@ func TestNewAPITask(t *testing.T) {
 				Status:  rlav1.TaskStatus_TASK_STATUS_TERMINATED,
 				Message: "Expired: queue timeout reached",
 			},
-			expected: &APITask{
+			expected: &APIRackTask{
 				ID:      "task-005",
 				Status:  "Terminated",
 				Message: "Expired: queue timeout reached",
@@ -138,7 +138,7 @@ func TestNewAPITask(t *testing.T) {
 				Id:     &rlav1.UUID{Id: "task-006"},
 				Status: rlav1.TaskStatus_TASK_STATUS_WAITING,
 			},
-			expected: &APITask{
+			expected: &APIRackTask{
 				ID:     "task-006",
 				Status: "Waiting",
 			},
@@ -147,7 +147,7 @@ func TestNewAPITask(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := NewAPITask(tt.task)
+			result := NewAPIRackTask(tt.task)
 			assert.NotNil(t, result)
 			assert.Equal(t, tt.expected.ID, result.ID)
 			assert.Equal(t, tt.expected.Status, result.Status)
@@ -159,7 +159,7 @@ func TestNewAPITask(t *testing.T) {
 	}
 }
 
-func TestNewAPITask_Timestamps(t *testing.T) {
+func TestNewAPIRackTask_Timestamps(t *testing.T) {
 	createdTime := time.Date(2026, 1, 1, 9, 0, 0, 0, time.UTC)
 	updatedTime := time.Date(2026, 1, 1, 9, 30, 0, 0, time.UTC)
 	startTime := time.Date(2026, 1, 1, 10, 0, 0, 0, time.UTC)
@@ -174,7 +174,7 @@ func TestNewAPITask_Timestamps(t *testing.T) {
 		FinishedAt: timestamppb.New(endTime),
 	}
 
-	result := NewAPITask(task)
+	result := NewAPIRackTask(task)
 
 	assert.True(t, result.Created.Equal(createdTime))
 	assert.True(t, result.Updated.Equal(updatedTime))

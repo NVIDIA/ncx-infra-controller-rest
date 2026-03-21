@@ -27,16 +27,16 @@ type RackTask struct {
 	Status *string `json:"status,omitempty"`
 	// Human-readable description provided when the task was created.
 	Description *string `json:"description,omitempty"`
-	// Timestamp when the task was created.
-	Created *time.Time `json:"created,omitempty"`
-	// Timestamp when the task was last updated.
-	Updated *time.Time `json:"updated,omitempty"`
+	// Optional status or error message describing the current state or result.
+	Message *string `json:"message,omitempty"`
 	// Timestamp when the task started execution.
 	Started *time.Time `json:"started,omitempty"`
 	// Timestamp when the task finished (succeeded, failed or terminated).
 	Finished *time.Time `json:"finished,omitempty"`
-	// Optional status or error message describing the current state or result.
-	Message *string `json:"message,omitempty"`
+	// Timestamp when the task was created.
+	Created *time.Time `json:"created,omitempty"`
+	// Timestamp when the task was last updated.
+	Updated *time.Time `json:"updated,omitempty"`
 }
 
 // NewRackTask instantiates a new RackTask object
@@ -152,68 +152,36 @@ func (o *RackTask) SetDescription(v string) {
 	o.Description = &v
 }
 
-// GetCreated returns the Created field value if set, zero value otherwise.
-func (o *RackTask) GetCreated() time.Time {
-	if o == nil || IsNil(o.Created) {
-		var ret time.Time
+// GetMessage returns the Message field value if set, zero value otherwise.
+func (o *RackTask) GetMessage() string {
+	if o == nil || IsNil(o.Message) {
+		var ret string
 		return ret
 	}
-	return *o.Created
+	return *o.Message
 }
 
-// GetCreatedOk returns a tuple with the Created field value if set, nil otherwise
+// GetMessageOk returns a tuple with the Message field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *RackTask) GetCreatedOk() (*time.Time, bool) {
-	if o == nil || IsNil(o.Created) {
+func (o *RackTask) GetMessageOk() (*string, bool) {
+	if o == nil || IsNil(o.Message) {
 		return nil, false
 	}
-	return o.Created, true
+	return o.Message, true
 }
 
-// HasCreated returns a boolean if a field has been set.
-func (o *RackTask) HasCreated() bool {
-	if o != nil && !IsNil(o.Created) {
+// HasMessage returns a boolean if a field has been set.
+func (o *RackTask) HasMessage() bool {
+	if o != nil && !IsNil(o.Message) {
 		return true
 	}
 
 	return false
 }
 
-// SetCreated gets a reference to the given time.Time and assigns it to the Created field.
-func (o *RackTask) SetCreated(v time.Time) {
-	o.Created = &v
-}
-
-// GetUpdated returns the Updated field value if set, zero value otherwise.
-func (o *RackTask) GetUpdated() time.Time {
-	if o == nil || IsNil(o.Updated) {
-		var ret time.Time
-		return ret
-	}
-	return *o.Updated
-}
-
-// GetUpdatedOk returns a tuple with the Updated field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *RackTask) GetUpdatedOk() (*time.Time, bool) {
-	if o == nil || IsNil(o.Updated) {
-		return nil, false
-	}
-	return o.Updated, true
-}
-
-// HasUpdated returns a boolean if a field has been set.
-func (o *RackTask) HasUpdated() bool {
-	if o != nil && !IsNil(o.Updated) {
-		return true
-	}
-
-	return false
-}
-
-// SetUpdated gets a reference to the given time.Time and assigns it to the Updated field.
-func (o *RackTask) SetUpdated(v time.Time) {
-	o.Updated = &v
+// SetMessage gets a reference to the given string and assigns it to the Message field.
+func (o *RackTask) SetMessage(v string) {
+	o.Message = &v
 }
 
 // GetStarted returns the Started field value if set, zero value otherwise.
@@ -280,36 +248,68 @@ func (o *RackTask) SetFinished(v time.Time) {
 	o.Finished = &v
 }
 
-// GetMessage returns the Message field value if set, zero value otherwise.
-func (o *RackTask) GetMessage() string {
-	if o == nil || IsNil(o.Message) {
-		var ret string
+// GetCreated returns the Created field value if set, zero value otherwise.
+func (o *RackTask) GetCreated() time.Time {
+	if o == nil || IsNil(o.Created) {
+		var ret time.Time
 		return ret
 	}
-	return *o.Message
+	return *o.Created
 }
 
-// GetMessageOk returns a tuple with the Message field value if set, nil otherwise
+// GetCreatedOk returns a tuple with the Created field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *RackTask) GetMessageOk() (*string, bool) {
-	if o == nil || IsNil(o.Message) {
+func (o *RackTask) GetCreatedOk() (*time.Time, bool) {
+	if o == nil || IsNil(o.Created) {
 		return nil, false
 	}
-	return o.Message, true
+	return o.Created, true
 }
 
-// HasMessage returns a boolean if a field has been set.
-func (o *RackTask) HasMessage() bool {
-	if o != nil && !IsNil(o.Message) {
+// HasCreated returns a boolean if a field has been set.
+func (o *RackTask) HasCreated() bool {
+	if o != nil && !IsNil(o.Created) {
 		return true
 	}
 
 	return false
 }
 
-// SetMessage gets a reference to the given string and assigns it to the Message field.
-func (o *RackTask) SetMessage(v string) {
-	o.Message = &v
+// SetCreated gets a reference to the given time.Time and assigns it to the Created field.
+func (o *RackTask) SetCreated(v time.Time) {
+	o.Created = &v
+}
+
+// GetUpdated returns the Updated field value if set, zero value otherwise.
+func (o *RackTask) GetUpdated() time.Time {
+	if o == nil || IsNil(o.Updated) {
+		var ret time.Time
+		return ret
+	}
+	return *o.Updated
+}
+
+// GetUpdatedOk returns a tuple with the Updated field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *RackTask) GetUpdatedOk() (*time.Time, bool) {
+	if o == nil || IsNil(o.Updated) {
+		return nil, false
+	}
+	return o.Updated, true
+}
+
+// HasUpdated returns a boolean if a field has been set.
+func (o *RackTask) HasUpdated() bool {
+	if o != nil && !IsNil(o.Updated) {
+		return true
+	}
+
+	return false
+}
+
+// SetUpdated gets a reference to the given time.Time and assigns it to the Updated field.
+func (o *RackTask) SetUpdated(v time.Time) {
+	o.Updated = &v
 }
 
 func (o RackTask) MarshalJSON() ([]byte, error) {
@@ -331,11 +331,8 @@ func (o RackTask) ToMap() (map[string]interface{}, error) {
 	if !IsNil(o.Description) {
 		toSerialize["description"] = o.Description
 	}
-	if !IsNil(o.Created) {
-		toSerialize["created"] = o.Created
-	}
-	if !IsNil(o.Updated) {
-		toSerialize["updated"] = o.Updated
+	if !IsNil(o.Message) {
+		toSerialize["message"] = o.Message
 	}
 	if !IsNil(o.Started) {
 		toSerialize["started"] = o.Started
@@ -343,8 +340,11 @@ func (o RackTask) ToMap() (map[string]interface{}, error) {
 	if !IsNil(o.Finished) {
 		toSerialize["finished"] = o.Finished
 	}
-	if !IsNil(o.Message) {
-		toSerialize["message"] = o.Message
+	if !IsNil(o.Created) {
+		toSerialize["created"] = o.Created
+	}
+	if !IsNil(o.Updated) {
+		toSerialize["updated"] = o.Updated
 	}
 	return toSerialize, nil
 }

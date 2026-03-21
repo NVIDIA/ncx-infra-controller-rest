@@ -934,7 +934,7 @@ type ApiGetRackTaskRequest struct {
 	id         string
 }
 
-// ID of the Site
+// ID of the Site that owns the task (tasks are site-scoped).
 func (r ApiGetRackTaskRequest) SiteId(siteId string) ApiGetRackTaskRequest {
 	r.siteId = &siteId
 	return r
@@ -949,6 +949,7 @@ GetRackTask Retrieve a Task
 
 Get a Task by UUID.
 
+Tasks are site-scoped; `siteId` must be the Site where the task was created.
 Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` authorization role.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
@@ -1031,6 +1032,17 @@ func (a *RackAPIService) GetRackTaskExecute(r ApiGetRackTaskRequest) (*RackTask,
 		newErr := &GenericOpenAPIError{
 			body:  localVarBody,
 			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 400 {
+			var v CarbideAPIError
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
 			var v CarbideAPIError

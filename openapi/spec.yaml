@@ -9613,6 +9613,7 @@ paths:
       description: |-
         Get a Task by UUID.
 
+        Tasks are site-scoped; `siteId` must be the Site where the task was created.
         Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` authorization role.
       parameters:
         - schema:
@@ -9621,7 +9622,7 @@ paths:
           name: siteId
           in: query
           required: true
-          description: ID of the Site
+          description: ID of the Site that owns the task (tasks are site-scoped).
       responses:
         '200':
           description: OK
@@ -9636,6 +9637,8 @@ paths:
                     status: Running
                     description: Power on rack components
                     message: 'Processing 3 of 5 components'
+        '400':
+          $ref: '#/components/responses/ValidationError'
         '403':
           $ref: '#/components/responses/ForbiddenError'
         '404':
@@ -16098,14 +16101,9 @@ components:
         description:
           type: string
           description: Human-readable description provided when the task was created.
-        created:
+        message:
           type: string
-          format: date-time
-          description: Timestamp when the task was created.
-        updated:
-          type: string
-          format: date-time
-          description: Timestamp when the task was last updated.
+          description: Optional status or error message describing the current state or result.
         started:
           type: string
           format: date-time
@@ -16114,9 +16112,14 @@ components:
           type: string
           format: date-time
           description: Timestamp when the task finished (succeeded, failed or terminated).
-        message:
+        created:
           type: string
-          description: Optional status or error message describing the current state or result.
+          format: date-time
+          description: Timestamp when the task was created.
+        updated:
+          type: string
+          format: date-time
+          description: Timestamp when the task was last updated.
       examples:
         - id: 550e8400-e29b-41d4-a716-446655440000
           status: Running

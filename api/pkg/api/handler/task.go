@@ -73,7 +73,7 @@ func NewGetTaskHandler(dbSession *cdb.Session, tc tClient.Client, scp *sc.Client
 // @Param org path string true "Name of NGC organization"
 // @Param id path string true "UUID of the Task"
 // @Param siteId query string true "ID of the Site"
-// @Success 200 {object} model.APITask
+// @Success 200 {object} model.APIRackTask
 // @Router /v2/org/{org}/carbide/rack/task/{id} [get]
 func (gth GetTaskHandler) Handle(c echo.Context) error {
 	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("Task", "Get", c, gth.tracerSpan)
@@ -171,10 +171,10 @@ func (gth GetTaskHandler) Handle(c echo.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
 	defer cancel()
 
-	we, err := stc.ExecuteWorkflow(ctx, workflowOptions, "GetTask", rlaRequest)
+	we, err := stc.ExecuteWorkflow(ctx, workflowOptions, "GetRackTask", rlaRequest)
 	if err != nil {
-		logger.Error().Err(err).Msg("failed to execute GetTask workflow")
-		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to get Task details", nil)
+		logger.Error().Err(err).Msg("failed to schedule GetRackTask workflow")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to schedule Task retrieval workflow", nil)
 	}
 
 	var rlaResponse rlav1.GetTasksByIDsResponse
@@ -182,11 +182,11 @@ func (gth GetTaskHandler) Handle(c echo.Context) error {
 	if err != nil {
 		var timeoutErr *tp.TimeoutError
 		if errors.As(err, &timeoutErr) || err == context.DeadlineExceeded || ctx.Err() != nil {
-			return common.TerminateWorkflowOnTimeOut(c, logger, stc, fmt.Sprintf("task-get-%s", taskID), err, "Task", "GetTask")
+			return common.TerminateWorkflowOnTimeOut(c, logger, stc, fmt.Sprintf("task-get-%s", taskID), err, "Task", "GetRackTask")
 		}
-		code, err := common.UnwrapWorkflowError(err)
-		logger.Error().Err(err).Msg("failed to get result from GetTask workflow")
-		return cutil.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to get Task details: %s", err), nil)
+		code, unwrapErr := common.UnwrapWorkflowError(err)
+		logger.Error().Err(unwrapErr).Msg("failed to get result from GetRackTask workflow")
+		return cutil.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to execute Task retrieval workflow on Site: %s", unwrapErr), nil)
 	}
 
 	tasks := rlaResponse.GetTasks()
@@ -194,7 +194,7 @@ func (gth GetTaskHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Task not found", nil)
 	}
 
-	apiTask := model.NewAPITask(tasks[0])
+	apiTask := model.NewAPIRackTask(tasks[0])
 
 	logger.Info().Msg("finishing API handler")
 

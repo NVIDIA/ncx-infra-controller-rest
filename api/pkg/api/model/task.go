@@ -24,7 +24,7 @@ import (
 	rlav1 "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/rla/protobuf/v1"
 )
 
-var ProtoToAPITaskStatusName = map[rlav1.TaskStatus]string{
+var ProtoToAPIRackTaskStatusName = map[rlav1.TaskStatus]string{
 	rlav1.TaskStatus_TASK_STATUS_UNKNOWN:    "Unknown",
 	rlav1.TaskStatus_TASK_STATUS_PENDING:    "Pending",
 	rlav1.TaskStatus_TASK_STATUS_RUNNING:    "Running",
@@ -34,30 +34,28 @@ var ProtoToAPITaskStatusName = map[rlav1.TaskStatus]string{
 	rlav1.TaskStatus_TASK_STATUS_WAITING:    "Waiting",
 }
 
-// APITask is the API response model for a task.
-type APITask struct {
+// APIRackTask is the API response model for a rack task (OpenAPI schema RackTask).
+type APIRackTask struct {
 	ID          string     `json:"id"`
 	Status      string     `json:"status"`
 	Description string     `json:"description"`
-	Created     time.Time  `json:"created"`
-	Updated     time.Time  `json:"updated"`
+	Message     string     `json:"message"`
 	Started     *time.Time `json:"started"`
 	Finished    *time.Time `json:"finished"`
-	Message     string     `json:"message"`
+	Created     time.Time  `json:"created"`
+	Updated     time.Time  `json:"updated"`
 }
 
-func (t *APITask) FromProto(task *rlav1.Task) {
+func (t *APIRackTask) FromProto(task *rlav1.Task) {
 	if task == nil {
 		return
 	}
 	if task.GetId() != nil {
 		t.ID = task.GetId().GetId()
 	}
-	t.Status = enumOr(ProtoToAPITaskStatusName, task.GetStatus(), "Unknown")
+	t.Status = enumOr(ProtoToAPIRackTaskStatusName, task.GetStatus(), "Unknown")
 	t.Description = task.GetDescription()
 	t.Message = task.GetMessage()
-	t.Created = task.GetCreatedAt().AsTime().UTC()
-	t.Updated = task.GetUpdatedAt().AsTime().UTC()
 	if ts := task.GetStartedAt(); ts != nil {
 		v := ts.AsTime().UTC()
 		t.Started = &v
@@ -66,10 +64,12 @@ func (t *APITask) FromProto(task *rlav1.Task) {
 		v := ts.AsTime().UTC()
 		t.Finished = &v
 	}
+	t.Created = task.GetCreatedAt().AsTime().UTC()
+	t.Updated = task.GetUpdatedAt().AsTime().UTC()
 }
 
-func NewAPITask(task *rlav1.Task) *APITask {
-	t := &APITask{}
+func NewAPIRackTask(task *rlav1.Task) *APIRackTask {
+	t := &APIRackTask{}
 	t.FromProto(task)
 	return t
 }
