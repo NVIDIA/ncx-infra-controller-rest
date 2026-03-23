@@ -50,6 +50,8 @@ func AllCommands() []Command {
 
 		{Name: "instance list", Description: "List all instances", Run: cmdInstanceList},
 		{Name: "instance get", Description: "Get instance details", Run: cmdInstanceGet},
+		{Name: "instance create", Description: "Create an instance", Run: cmdInstanceCreate},
+		{Name: "instance delete", Description: "Delete an instance", Run: cmdInstanceDelete},
 
 		{Name: "machine list", Description: "List machines", Run: cmdMachineList},
 		{Name: "machine get", Description: "Get machine details", Run: cmdMachineGet},
@@ -152,6 +154,49 @@ func appendScopeFlags(s *Session, parts []string) []string {
 		}
 	}
 	return out
+}
+
+func fetchMachinesWithSiteFallback(s *Session, missingSitePrompt string) ([]NamedItem, error) {
+	items, err := s.Resolver.Fetch(context.Background(), "machine")
+	if err == nil {
+		return items, nil
+	}
+	if s.Scope.SiteID == "" && strings.Contains(err.Error(), "400") {
+		fmt.Printf("%s %s\n", Dim("Note:"), missingSitePrompt)
+		site, resolveErr := s.Resolver.Resolve(context.Background(), "site", "Site")
+		if resolveErr != nil {
+			return nil, resolveErr
+		}
+		s.Scope.SiteID = site.ID
+		s.Scope.SiteName = site.Name
+		s.Cache.InvalidateFiltered()
+		return s.Resolver.Fetch(context.Background(), "machine")
+	}
+	return nil, err
+}
+
+func setSiteScopeFromID(s *Session, siteID string) {
+	siteID = strings.TrimSpace(siteID)
+	if siteID == "" || s.Scope.SiteID == siteID {
+		return
+	}
+	s.Scope.SiteID = siteID
+	s.Scope.SiteName = s.Resolver.ResolveID("site", siteID)
+	s.Cache.InvalidateFiltered()
+}
+
+func readyMachineItemsForSite(machines []NamedItem, siteID string) []SelectItem {
+	siteID = strings.TrimSpace(siteID)
+	readyItems := make([]SelectItem, 0, len(machines))
+	for _, m := range machines {
+		if siteID != "" && strings.TrimSpace(m.Extra["siteId"]) != siteID {
+			continue
+		}
+		if strings.EqualFold(strings.TrimSpace(m.Status), "Ready") {
+			readyItems = append(readyItems, SelectItem{Label: m.Name, ID: m.ID})
+		}
+	}
+	return readyItems
 }
 
 // -- List commands --
@@ -277,26 +322,11 @@ func cmdInstanceList(s *Session, _ []string) error {
 }
 
 func cmdMachineList(s *Session, _ []string) error {
-	items, err := s.Resolver.Fetch(context.Background(), "machine")
-	if err != nil {
-		if s.Scope.SiteID == "" && strings.Contains(err.Error(), "400") {
-			fmt.Printf("%s Machine listing requires a site filter. Select a site.\n", Dim("Note:"))
-			site, resolveErr := s.Resolver.Resolve(context.Background(), "site", "Site")
-			if resolveErr != nil {
-				return resolveErr
-			}
-			s.Scope.SiteID = site.ID
-			s.Scope.SiteName = site.Name
-			s.Cache.InvalidateFiltered()
-			items, err = s.Resolver.Fetch(context.Background(), "machine")
-			if err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
-	}
 	LogCmd(s, "machine", "list")
+	items, err := fetchMachinesWithSiteFallback(s, "Machine listing requires a site filter. Select a site.")
+	if err != nil {
+		return err
+	}
 
 	// Warm VPC cache so names resolve, then build machine→vpc map via instances.
 	_, _ = s.Resolver.Fetch(context.Background(), "vpc")
@@ -622,6 +652,90 @@ func cmdInstanceGet(s *Session, args []string) error {
 	}
 	LogCmd(s, "instance", "get", item.ID)
 	return getAndPrint(s, "/v2/org/{org}/carbide/instance/{id}", item.ID)
+}
+
+func cmdInstanceCreate(s *Session, _ []string) error {
+	vpc, err := s.Resolver.Resolve(context.Background(), "vpc", "VPC")
+	if err != nil {
+		return err
+	}
+	vpcSiteID := strings.TrimSpace(vpc.Extra["siteId"])
+	setSiteScopeFromID(s, vpcSiteID)
+
+	machines, err := fetchMachinesWithSiteFallback(s, "Machine listing requires a site filter. Select a site.")
+	if err != nil {
+		return fmt.Errorf("fetching machines: %w", err)
+	}
+	readyItems := readyMachineItemsForSite(machines, vpcSiteID)
+	if len(readyItems) == 0 {
+		if vpcSiteID != "" {
+			return fmt.Errorf("no machines in Ready state available for selected VPC site")
+		}
+		return fmt.Errorf("no machines in Ready state available")
+	}
+	machine, err := Select("Machine", readyItems)
+	if err != nil {
+		return err
+	}
+	name, err := PromptText("Instance name", true)
+	if err != nil {
+		return err
+	}
+
+	var osID *string
+	osList, osErr := s.Resolver.Fetch(context.Background(), "operating-system")
+	if osErr == nil && len(osList) > 0 {
+		useOS, confirmErr := PromptConfirm("Select an operating system?")
+		if confirmErr != nil {
+			return confirmErr
+		}
+		if useOS {
+			osItem, selectErr := s.Resolver.Resolve(context.Background(), "operating-system", "Operating System")
+			if selectErr != nil {
+				return selectErr
+			}
+			osID = &osItem.ID
+		}
+	}
+
+	body := map[string]interface{}{
+		"name":      name,
+		"machineId": machine.ID,
+		"vpcId":     vpc.ID,
+	}
+	if osID != nil {
+		body["operatingSystemId"] = *osID
+	}
+	LogCmd(s, "instance", "create", "--name", name, "--machine-id", machine.ID, "--vpc-id", vpc.ID)
+	bodyJSON, _ := json.Marshal(body)
+	resp, _, err := s.Client.Do("POST", "/v2/org/{org}/carbide/instance", nil, nil, bodyJSON)
+	if err != nil {
+		return fmt.Errorf("creating instance: %w", err)
+	}
+	s.Cache.Invalidate("instance")
+	var created map[string]interface{}
+	json.Unmarshal(resp, &created)
+	fmt.Printf("%s Instance created: %s (%s)\n", Green("OK"), str(created, "name"), str(created, "id"))
+	return nil
+}
+
+func cmdInstanceDelete(s *Session, args []string) error {
+	item, err := s.Resolver.ResolveWithArgs(context.Background(), "instance", "Instance to delete", args)
+	if err != nil {
+		return err
+	}
+	ok, err := PromptConfirm(fmt.Sprintf("Delete instance %s (%s)?", item.Name, item.ID))
+	if err != nil || !ok {
+		return err
+	}
+	LogCmd(s, "instance", "delete", item.ID)
+	_, _, err = s.Client.Do("DELETE", "/v2/org/{org}/carbide/instance/{id}", map[string]string{"id": item.ID}, nil, nil)
+	if err != nil {
+		return fmt.Errorf("deleting instance: %w", err)
+	}
+	s.Cache.Invalidate("instance")
+	fmt.Printf("%s Instance deleted: %s\n", Green("OK"), item.Name)
+	return nil
 }
 
 func cmdMachineGet(s *Session, args []string) error {
