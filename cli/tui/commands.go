@@ -50,6 +50,8 @@ func AllCommands() []Command {
 
 		{Name: "instance list", Description: "List all instances", Run: cmdInstanceList},
 		{Name: "instance get", Description: "Get instance details", Run: cmdInstanceGet},
+		{Name: "instance create", Description: "Create an instance on a machine", Run: cmdInstanceCreate},
+		{Name: "instance delete", Description: "Delete an instance", Run: cmdInstanceDelete},
 
 		{Name: "machine list", Description: "List machines", Run: cmdMachineList},
 		{Name: "machine get", Description: "Get machine details", Run: cmdMachineGet},
@@ -624,6 +626,89 @@ func cmdInstanceGet(s *Session, args []string) error {
 	return getAndPrint(s, "/v2/org/{org}/carbide/instance/{id}", item.ID)
 }
 
+func cmdInstanceCreate(s *Session, _ []string) error {
+	vpc, err := s.Resolver.Resolve(context.Background(), "vpc", "VPC")
+	if err != nil {
+		return err
+	}
+	machines, err := s.Resolver.Fetch(context.Background(), "machine")
+	if err != nil {
+		return fmt.Errorf("fetching machines: %w", err)
+	}
+	var readyItems []SelectItem
+	for _, m := range machines {
+		if strings.EqualFold(m.Status, "Ready") {
+			readyItems = append(readyItems, SelectItem{Label: m.Name, ID: m.ID})
+		}
+	}
+	if len(readyItems) == 0 {
+		return fmt.Errorf("no machines in Ready state available")
+	}
+	machine, err := Select("Machine", readyItems)
+	if err != nil {
+		return err
+	}
+	name, err := PromptText("Instance name", true)
+	if err != nil {
+		return err
+	}
+
+	var osID *string
+	osList, osErr := s.Resolver.Fetch(context.Background(), "operating-system")
+	if osErr == nil && len(osList) > 0 {
+		useOS, confirmErr := PromptConfirm("Select an operating system?")
+		if confirmErr != nil {
+			return confirmErr
+		}
+		if useOS {
+			osItem, selectErr := s.Resolver.Resolve(context.Background(), "operating-system", "Operating System")
+			if selectErr != nil {
+				return selectErr
+			}
+			osID = &osItem.ID
+		}
+	}
+
+	body := map[string]interface{}{
+		"name":      name,
+		"machineId": machine.ID,
+		"vpcId":     vpc.ID,
+	}
+	if osID != nil {
+		body["operatingSystemId"] = *osID
+	}
+	LogCmd(s, "instance", "create", "--name", name, "--machine-id", machine.ID, "--vpc-id", vpc.ID)
+	bodyJSON, _ := json.Marshal(body)
+	resp, _, err := s.Client.Do("POST", "/v2/org/{org}/carbide/instance", nil, nil, bodyJSON)
+	if err != nil {
+		return fmt.Errorf("creating instance: %w", err)
+	}
+	s.Cache.Invalidate("instance")
+	var created map[string]interface{}
+	json.Unmarshal(resp, &created)
+	fmt.Printf("%s Instance created: %s (%s)\n", Green("OK"), str(created, "name"), str(created, "id"))
+	return nil
+}
+
+func cmdInstanceDelete(s *Session, args []string) error {
+	item, err := s.Resolver.ResolveWithArgs(context.Background(), "instance", "Instance to delete", args)
+	if err != nil {
+		return err
+	}
+	ok, err := PromptConfirm(fmt.Sprintf("Delete instance %s (%s)?", item.Name, item.ID))
+	if err != nil || !ok {
+		return err
+	}
+	LogCmd(s, "instance", "delete", item.ID)
+	_, _, err = s.Client.Do("DELETE", "/v2/org/{org}/carbide/instance/{id}", map[string]string{"id": item.ID}, nil, nil)
+	if err != nil {
+		return fmt.Errorf("deleting instance: %w", err)
+	}
+	s.Cache.Invalidate("instance")
+	fmt.Printf("%s Instance deleted: %s\n", Green("OK"), item.Name)
+	return nil
+}
+
 func cmdMachineGet(s *Session, args []string) error {
 	item, err := s.Resolver.ResolveWithArgs(context.Background(), "machine", "Machine", args)
 	if err != nil {
@@ -873,6 +958,12 @@ func cmdHelp(_ *Session, _ []string) error {
 	fmt.Fprintln(tw, "scope clear\tClear all scope filters")
 	fmt.Fprintln(tw, "exit\tExit interactive mode")
 	tw.Flush()
+	fmt.Printf("\n%s\n", Bold("KEYBINDINGS"))
+	fmt.Println("  Ctrl+C    Clear current line")
+	fmt.Println("  Ctrl+D    Quit interactive mode")
+	fmt.Println("  Esc       Cancel current selection")
+	fmt.Println("  Tab       Accept suggestion")
+	fmt.Println("  Up/Down   Navigate suggestions or history")
 	fmt.Println()
 	return nil
 }
