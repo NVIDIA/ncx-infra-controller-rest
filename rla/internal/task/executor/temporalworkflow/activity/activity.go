@@ -20,12 +20,9 @@ package activity
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
-	"github.com/rs/zerolog/log"
 
-	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/carbideapi"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/componentmanager"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor/temporalworkflow/common"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operations"
@@ -77,19 +74,6 @@ func GetPowerStatus(
 	return cm.GetPowerStatus(ctx, target)
 }
 
-func FirmwareControl(
-	ctx context.Context,
-	target common.Target,
-	info operations.FirmwareControlTaskInfo,
-) error {
-	cm, err := validAndGetComponentManager(target)
-	if err != nil {
-		return err
-	}
-
-	return cm.FirmwareControl(ctx, target, info)
-}
-
 // UpdateTaskStatus is a Temporal activity that updates task status by ID.
 func UpdateTaskStatus(
 	ctx context.Context,
@@ -111,18 +95,16 @@ func GetAllActivities() []any {
 		InjectExpectation,
 		PowerControl,
 		GetPowerStatus,
-		FirmwareControl,
 		UpdateTaskStatus,
-		SetFirmwareUpdateTimeWindow,
-		StartFirmwareUpdate,
-		GetFirmwareUpdateStatus,
-		AllowBringUpAndPowerOn,
-		GetBringUpState,
+		FirmwareControl,
+		GetFirmwareStatus,
+		BringUpControl,
+		GetBringUpStatus,
 	}
 }
 
-// AllowBringUpAndPowerOn opens the power-on gate for the target components.
-func AllowBringUpAndPowerOn(
+// BringUpControl opens the power-on gate for the target components.
+func BringUpControl(
 	ctx context.Context,
 	target common.Target,
 ) error {
@@ -131,36 +113,45 @@ func AllowBringUpAndPowerOn(
 		return err
 	}
 
-	return cm.AllowBringUpAndPowerOn(ctx, target)
+	buc, ok := cm.(componentmanager.BringUpController)
+	if !ok {
+		return fmt.Errorf("component manager for %s does not support BringUpControl", target.Type)
+	}
+
+	return buc.BringUpControl(ctx, target)
 }
 
-// GetBringUpStateResult is the result of GetBringUpState.
-type GetBringUpStateResult struct {
+// GetBringUpStatusResult is the result of GetBringUpStatus activity.
+type GetBringUpStatusResult struct {
 	States map[string]operations.MachineBringUpState
 }
 
-// GetBringUpState returns the bring-up state for target
-// components.
-func GetBringUpState(
+// GetBringUpStatus returns the bring-up state for target components.
+func GetBringUpStatus(
 	ctx context.Context,
 	target common.Target,
-) (*GetBringUpStateResult, error) {
+) (*GetBringUpStatusResult, error) {
 	cm, err := validAndGetComponentManager(target)
 	if err != nil {
 		return nil, err
 	}
 
-	states, err := cm.GetBringUpState(ctx, target)
+	buc, ok := cm.(componentmanager.BringUpController)
+	if !ok {
+		return nil, fmt.Errorf("component manager for %s does not support GetBringUpStatus", target.Type)
+	}
+
+	states, err := buc.GetBringUpStatus(ctx, target)
 	if err != nil {
 		return nil, err
 	}
 
-	return &GetBringUpStateResult{States: states}, nil
+	return &GetBringUpStatusResult{States: states}, nil
 }
 
-// StartFirmwareUpdate initiates firmware update without waiting for completion.
+// FirmwareControl initiates firmware update without waiting for completion.
 // This activity returns immediately after the update request is accepted.
-func StartFirmwareUpdate(
+func FirmwareControl(
 	ctx context.Context,
 	target common.Target,
 	info operations.FirmwareControlTaskInfo,
@@ -170,31 +161,31 @@ func StartFirmwareUpdate(
 		return err
 	}
 
-	return cm.StartFirmwareUpdate(ctx, target, info)
+	return cm.FirmwareControl(ctx, target, info)
 }
 
-// GetFirmwareUpdateStatusResult is the result of GetFirmwareUpdateStatus activity.
-type GetFirmwareUpdateStatusResult struct {
+// GetFirmwareStatusResult is the result of GetFirmwareStatus activity.
+type GetFirmwareStatusResult struct {
 	Statuses map[string]operations.FirmwareUpdateStatus
 }
 
-// GetFirmwareUpdateStatus returns the current status of firmware updates.
+// GetFirmwareStatus returns the current status of firmware updates.
 // This activity is designed to be called repeatedly in a polling loop.
-func GetFirmwareUpdateStatus(
+func GetFirmwareStatus(
 	ctx context.Context,
 	target common.Target,
-) (*GetFirmwareUpdateStatusResult, error) {
+) (*GetFirmwareStatusResult, error) {
 	cm, err := validAndGetComponentManager(target)
 	if err != nil {
 		return nil, err
 	}
 
-	statuses, err := cm.GetFirmwareUpdateStatus(ctx, target)
+	statuses, err := cm.GetFirmwareStatus(ctx, target)
 	if err != nil {
 		return nil, err
 	}
 
-	return &GetFirmwareUpdateStatusResult{Statuses: statuses}, nil
+	return &GetFirmwareStatusResult{Statuses: statuses}, nil
 }
 
 func validAndGetComponentManager(
@@ -205,37 +196,4 @@ func validAndGetComponentManager(
 	}
 
 	return GetComponentManager(target.Type), nil
-}
-
-// SetFirmwareUpdateTimeWindow sets the firmware update time window for the given components.
-func SetFirmwareUpdateTimeWindow(
-	ctx context.Context,
-	req operations.SetFirmwareUpdateTimeWindowRequest,
-) error {
-	if len(req.ComponentIDs) == 0 {
-		log.Warn().Msg("No component IDs provided for SetFirmwareUpdateTimeWindow")
-		return nil
-	}
-
-	log.Info().
-		Strs("component_ids", req.ComponentIDs).
-		Time("start_time", req.StartTime).
-		Time("end_time", req.EndTime).
-		Msg("Setting firmware update time window")
-
-	client, err := carbideapi.NewClient(time.Minute * 5)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to create API client")
-		return err
-	}
-
-	// Component manager API uses machine_id terminology
-	err = client.SetFirmwareUpdateTimeWindow(ctx, req.ComponentIDs, req.StartTime, req.EndTime)
-	if err != nil {
-		log.Error().Err(err).Strs("component_ids", req.ComponentIDs).Msg("Failed to set firmware update time window")
-		return err
-	}
-
-	log.Info().Strs("component_ids", req.ComponentIDs).Msg("Successfully set firmware update time window")
-	return nil
 }

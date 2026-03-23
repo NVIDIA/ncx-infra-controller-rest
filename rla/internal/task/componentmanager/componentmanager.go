@@ -37,22 +37,21 @@ type ComponentManager interface {
 	InjectExpectation(ctx context.Context, target common.Target, info operations.InjectExpectationTaskInfo) error //nolint
 	PowerControl(ctx context.Context, target common.Target, info operations.PowerControlTaskInfo) error           //nolint
 	GetPowerStatus(ctx context.Context, target common.Target) (map[string]operations.PowerStatus, error)          //nolint
-	FirmwareControl(ctx context.Context, target common.Target, info operations.FirmwareControlTaskInfo) error     //nolint
 
-	// StartFirmwareUpdate initiates firmware update without waiting for completion.
+	// FirmwareControl initiates firmware update without waiting for completion.
 	// Returns immediately after the update request is accepted.
-	StartFirmwareUpdate(ctx context.Context, target common.Target, info operations.FirmwareControlTaskInfo) error //nolint
+	FirmwareControl(ctx context.Context, target common.Target, info operations.FirmwareControlTaskInfo) error //nolint
 
-	// GetFirmwareUpdateStatus returns the current status of firmware updates for the target components.
+	// GetFirmwareStatus returns the current status of firmware updates for the target components.
 	// Returns a map of component ID to FirmwareUpdateStatus.
-	GetFirmwareUpdateStatus(ctx context.Context, target common.Target) (map[string]operations.FirmwareUpdateStatus, error) //nolint
+	GetFirmwareStatus(ctx context.Context, target common.Target) (map[string]operations.FirmwareUpdateStatus, error) //nolint
+}
 
-	// AllowBringUpAndPowerOn opens the power-on gate for the target components.
-	AllowBringUpAndPowerOn(ctx context.Context, target common.Target) error //nolint
-
-	// GetBringUpState returns the bring-up state for each target component.
-	// Returns a map of component ID to MachineBringUpState.
-	GetBringUpState(ctx context.Context, target common.Target) (map[string]operations.MachineBringUpState, error) //nolint
+// BringUpController is an optional interface for component managers that support
+// bring-up operations.
+type BringUpController interface {
+	BringUpControl(ctx context.Context, target common.Target) error
+	GetBringUpStatus(ctx context.Context, target common.Target) (map[string]operations.MachineBringUpState, error)
 }
 
 // ManagerFactory is a function that creates a ComponentManager instance.

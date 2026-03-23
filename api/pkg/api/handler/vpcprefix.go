@@ -1001,21 +1001,18 @@ func (dsh DeleteVpcPrefixHandler) Handle(c echo.Context) error {
 	}
 
 	// Verify no instances are using the VPC prefix
-	// TODO: Instance support need to add soon
-	/*
-		isDAO := cdbm.NewInterfaceDAO(dsh.dbSession)
+	ifcDAO := cdbm.NewInterfaceDAO(dsh.dbSession)
 
-		_, ifcCount, err := isDAO.GetAll(ctx, nil, nil, &vpcPrefix.ID, nil, nil, nil, nil, cdb.GetIntPtr(0), nil)
-		if err != nil {
-			logger.Error().Err(err).Msg("error retrieving Interfaces for VPC prefix from DB")
-			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Interfaces for vpcPrefix, DB error", nil)
-		}
+	_, ifcCount, err := ifcDAO.GetAll(ctx, nil, cdbm.InterfaceFilterInput{VpcPrefixID: &vpcPrefix.ID}, cdbp.PageInput{Limit: cdb.GetIntPtr(0)}, nil)
+	if err != nil {
+		logger.Error().Err(err).Msg("error retrieving Interfaces for VPC prefix from DB")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve check for active Interfaces using VPC Prefix, DB error", nil)
+	}
 
-		if ifcCount > 0 {
-			logger.Warn().Msg("Interfaces exist for vpcPrefix, cannot delete it")
-			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "VPC prefix is being used by one or more Instances and cannot be deleted", nil)
-		}
-	*/
+	if ifcCount > 0 {
+		logger.Warn().Msg("could not delete VPC Prefix, one or more Instance Interfaces are using it")
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "VPC Prefix is being used by one or more Instances and cannot be deleted", nil)
+	}
 
 	// Start a db tx
 	tx, err := cdb.BeginTx(ctx, dsh.dbSession, &sql.TxOptions{})
@@ -1065,14 +1062,13 @@ func (dsh DeleteVpcPrefixHandler) Handle(c echo.Context) error {
 	}
 
 	workflowOptions := temporalClient.StartWorkflowOptions{
-		ID:        "vpcprefix-delete-" + vpcPrefix.ID.String(),
+		ID:        "vpc-prefix-delete-" + vpcPrefix.ID.String(),
 		TaskQueue: queue.SiteTaskQueue,
 	}
 
 	logger.Info().Msg("triggering VPC prefix delete workflow")
 
 	// Trigger Site workflow to delete VPC prefix VPC prefix
-	// TODO: Once Site Agent offers DeleteVpcPrefix re-registered as VpcPrefixVpcPrefix then update workflow name here
 	we, err := stc.ExecuteWorkflow(ctx, workflowOptions, "DeleteVpcPrefix", deleteVpcPrefixRequest)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to synchronously start Temporal workflow to delete VPC prefix")

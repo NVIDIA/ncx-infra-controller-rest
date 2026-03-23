@@ -272,6 +272,39 @@ func BringUpRack(ctx workflow.Context, request *rlav1.BringUpRackRequest) (*rlav
 	return &response, nil
 }
 
+// GetRackTask is a workflow to get a rack task by its UUID
+func GetRackTask(ctx workflow.Context, request *rlav1.GetTasksByIDsRequest) (*rlav1.GetTasksByIDsResponse, error) {
+	logger := log.With().Str("Workflow", "Rack").Str("Action", "GetRackTask").Logger()
+
+	logger.Info().Msg("Starting workflow")
+
+	retrypolicy := &temporal.RetryPolicy{
+		InitialInterval:    1 * time.Second,
+		BackoffCoefficient: 2.0,
+		MaximumInterval:    10 * time.Second,
+		MaximumAttempts:    2,
+	}
+	options := workflow.ActivityOptions{
+		StartToCloseTimeout: 2 * time.Minute,
+		RetryPolicy:         retrypolicy,
+	}
+
+	ctx = workflow.WithActivityOptions(ctx, options)
+
+	var rackManager activity.ManageRack
+	var response rlav1.GetTasksByIDsResponse
+
+	err := workflow.ExecuteActivity(ctx, rackManager.GetTaskByID, request).Get(ctx, &response)
+	if err != nil {
+		logger.Error().Err(err).Str("Activity", "GetTaskByID").Msg("Failed to execute activity from workflow")
+		return nil, err
+	}
+
+	logger.Info().Int("TaskCount", len(response.GetTasks())).Msg("Completing workflow")
+
+	return &response, nil
+}
+
 // UpgradeFirmware is a workflow to upgrade firmware on racks or components via RLA
 func UpgradeFirmware(ctx workflow.Context, request *rlav1.UpgradeFirmwareRequest) (*rlav1.SubmitTaskResponse, error) {
 	logger := log.With().Str("Workflow", "Rack").Str("Action", "UpgradeFirmware").Logger()

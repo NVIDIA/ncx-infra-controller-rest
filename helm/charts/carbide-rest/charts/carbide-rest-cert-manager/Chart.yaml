@@ -1,0 +1,10 @@
+apiVersion: v2
+name: carbide-rest-cert-manager
+description: Helm chart for the Carbide REST certificate manager (credsmgr)
+type: application
+version: 0.1.0
+appVersion: "latest"
+keywords:
+  - carbide
+  - rest
+  - cert-manager

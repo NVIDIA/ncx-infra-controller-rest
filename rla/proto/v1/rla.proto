@@ -117,8 +117,6 @@ message BMCInfo {
     BMCType type = 1;
     string mac_address = 2;
     optional string ip_address = 3;
-    optional string user = 4;
-    optional string password = 5;
 }
 
 message RackPosition {
@@ -318,6 +316,11 @@ message Task {
     string message = 9;
     // queue_expires_at is set only for waiting tasks; absent for all other statuses.
     optional google.protobuf.Timestamp queue_expires_at = 10;
+    google.protobuf.Timestamp created_at = 11;
+    optional google.protobuf.Timestamp finished_at = 12;
+    optional UUID applied_rule_id = 13;
+    google.protobuf.Timestamp updated_at = 14;
+    optional google.protobuf.Timestamp started_at = 15;
 }
 
 message CreateExpectedRackRequest {

@@ -61,6 +61,10 @@ service RLA {
     rpc ListTasks(ListTasksRequest) returns (ListTasksResponse);
     rpc GetTasksByIDs(GetTasksByIDsRequest) returns (GetTasksByIDsResponse);
 
+    // Cancel a task (waiting tasks are terminated immediately; running tasks
+    // have their Temporal workflow terminated).
+    rpc CancelTask(CancelTaskRequest) returns (CancelTaskResponse);
+
     // Operation rules management
     rpc CreateOperationRule(CreateOperationRuleRequest) returns (CreateOperationRuleResponse);
     rpc UpdateOperationRule(UpdateOperationRuleRequest) returns (google.protobuf.Empty);
@@ -111,8 +115,6 @@ message BMCInfo {
     BMCType type = 1;
     string mac_address = 2;
     optional string ip_address = 3;
-    optional string user = 4;
-    optional string password = 5;
 }
 
 message RackPosition {
@@ -187,6 +189,11 @@ enum TaskStatus {
     TASK_STATUS_RUNNING = 2;
     TASK_STATUS_COMPLETED = 3;
     TASK_STATUS_FAILED = 4;
+    TASK_STATUS_TERMINATED = 5;
+    // TASK_STATUS_WAITING means the task was queued because a conflicting task
+    // is active on the rack. It will be promoted automatically when the rack
+    // becomes available, or can be cancelled explicitly via CancelTask.
+    TASK_STATUS_WAITING = 6;
 }
 
 enum TaskExecutorType {
@@ -305,6 +312,13 @@ message Task {
     string execution_id = 7;
     TaskStatus status = 8;
     string message = 9;
+    // queue_expires_at is set only for waiting tasks; absent for all other statuses.
+    optional google.protobuf.Timestamp queue_expires_at = 10;
+    google.protobuf.Timestamp created_at = 11;
+    optional google.protobuf.Timestamp finished_at = 12;
+    optional UUID applied_rule_id = 13;
+    google.protobuf.Timestamp updated_at = 14;
+    optional google.protobuf.Timestamp started_at = 15;
 }
 
 message CreateExpectedRackRequest {
@@ -400,11 +414,12 @@ message GetRacksForNVLDomainResponse {
 }
 
 message UpgradeFirmwareRequest {
-    OperationTargetSpec target_spec = 1;             // required: identifies components to upgrade
-    optional string target_version = 2;              // optional: target firmware version
+    OperationTargetSpec target_spec = 1;                // required: identifies components to upgrade
+    optional string target_version = 2;                 // optional: target firmware version
     optional google.protobuf.Timestamp start_time = 3;  // optional: scheduled start time
     optional google.protobuf.Timestamp end_time = 4;    // optional: scheduled end time
-    string description = 5;                          // optional: task description
+    string description = 5;                             // optional: task description
+    optional QueueOptions queue_options = 6;
 }
 
 // GetComponents - retrieves components from local database
@@ -496,21 +511,47 @@ message SubmitTaskResponse {
     repeated UUID task_ids = 1;  // Multiple task IDs (1 task per rack)
 }
 
+// ConflictStrategy controls how a task behaves when a conflict is detected.
+enum ConflictStrategy {
+    // CONFLICT_STRATEGY_UNSPECIFIED defaults to REJECT.
+    // Wire value 0 preserves backward compatibility with the former bool false (reject).
+    CONFLICT_STRATEGY_UNSPECIFIED = 0;
+    // CONFLICT_STRATEGY_QUEUE queues the task until the conflicting task completes.
+    // Wire value 1 preserves backward compatibility with the former bool true (queue).
+    CONFLICT_STRATEGY_QUEUE = 1;
+    // CONFLICT_STRATEGY_REJECT immediately rejects the task when a conflict is detected.
+    CONFLICT_STRATEGY_REJECT = 2;
+}
+
+// QueueOptions controls how a task behaves when a conflict is detected.
+message QueueOptions {
+    // How to handle the task when a conflict is detected.
+    // Defaults to CONFLICT_STRATEGY_REJECT (wire value 0).
+    ConflictStrategy conflict_strategy = 1;
+    // How long (seconds) to wait in queue before expiring.
+    // 0 means use the server default (~1h). Only relevant when
+    // conflict_strategy is CONFLICT_STRATEGY_QUEUE.
+    int32 queue_timeout_seconds = 2;
+}
+
 message PowerOnRackRequest {
     OperationTargetSpec target_spec = 1;  // Flexible targeting: rack(s) with optional type filter, or specific components
     string description = 2;               // optional task description
+    optional QueueOptions queue_options = 3;
 }
 
 message PowerOffRackRequest {
     OperationTargetSpec target_spec = 1;  // Flexible targeting: rack(s) with optional type filter, or specific components
     bool forced = 2;
     string description = 3;               // optional task description
+    optional QueueOptions queue_options = 4;
 }
 
 message PowerResetRackRequest {
     OperationTargetSpec target_spec = 1;  // Flexible targeting: rack(s) with optional type filter, or specific components
     bool forced = 2;
     string description = 3;               // optional task description
+    optional QueueOptions queue_options = 4;
 }
 
 message BringUpRackRequest {
@@ -541,6 +582,14 @@ message GetTasksByIDsRequest {
 
 message GetTasksByIDsResponse {
     repeated Task tasks = 1;
+}
+
+message CancelTaskRequest {
+    UUID task_id = 1;
+}
+
+message CancelTaskResponse {
+    Task task = 1;
 }
 
 // Version API messages

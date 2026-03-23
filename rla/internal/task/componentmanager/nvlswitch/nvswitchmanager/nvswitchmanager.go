@@ -123,64 +123,6 @@ func (m *Manager) PowerControl(
 	return nil
 }
 
-// FirmwareControl performs firmware operations on NVLink switches via the NV-Switch Manager API.
-func (m *Manager) FirmwareControl(
-	ctx context.Context,
-	target common.Target,
-	info operations.FirmwareControlTaskInfo,
-) error {
-	log.Debug().Msgf(
-		"NVLSwitch (nvswitchmanager) firmware control %s op %s activity received",
-		target.String(),
-		info.Operation.String(),
-	)
-
-	if m.nsmClient == nil {
-		return fmt.Errorf("NV-Switch Manager client is not configured")
-	}
-
-	if err := target.Validate(); err != nil {
-		return fmt.Errorf("target is invalid: %w", err)
-	}
-
-	switch info.Operation {
-	case operations.FirmwareOperationUpgrade:
-		return m.firmwareUpgrade(ctx, target, info)
-	case operations.FirmwareOperationVersion:
-		return fmt.Errorf("firmware version not currently supported by NV-Switch Manager")
-	case operations.FirmwareOperationDowngrade:
-		return fmt.Errorf("firmware downgrade not supported by NV-Switch Manager; use upgrade with the desired target version")
-	case operations.FirmwareOperationRollback:
-		return fmt.Errorf("firmware rollback not supported by NV-Switch Manager; use upgrade with the desired target version")
-	default:
-		return fmt.Errorf("unknown firmware operation: %v", info.Operation)
-	}
-}
-
-func (m *Manager) firmwareUpgrade(ctx context.Context, target common.Target, info operations.FirmwareControlTaskInfo) error {
-	if info.TargetVersion == "" {
-		return fmt.Errorf("target_version (bundle version) is required for firmware upgrade")
-	}
-
-	updates, err := m.nsmClient.QueueUpdates(ctx, target.ComponentIDs, info.TargetVersion, nil)
-	if err != nil {
-		return fmt.Errorf("failed to queue firmware updates via NV-Switch Manager: %w", err)
-	}
-
-	for _, update := range updates {
-		if update.ErrorMessage != "" {
-			return fmt.Errorf("firmware update failed for switch %s: %s", update.SwitchUUID, update.ErrorMessage)
-		}
-		log.Info().
-			Str("switch_uuid", update.SwitchUUID).
-			Str("bundle_version", info.TargetVersion).
-			Str("update_id", update.ID).
-			Msg("Firmware update queued via NV-Switch Manager")
-	}
-
-	return nil
-}
-
 // mapPowerOperation maps RLA's PowerOperation to NV-Switch Manager's PowerAction.
 func mapPowerOperation(op operations.PowerOperation) (nsmapi.PowerAction, error) {
 	switch op {
@@ -207,9 +149,9 @@ func mapPowerOperation(op operations.PowerOperation) (nsmapi.PowerAction, error)
 	}
 }
 
-// StartFirmwareUpdate initiates firmware update without waiting for completion.
+// FirmwareControl initiates firmware update without waiting for completion.
 // Returns immediately after the update request is accepted.
-func (m *Manager) StartFirmwareUpdate(ctx context.Context, target common.Target, info operations.FirmwareControlTaskInfo) error {
+func (m *Manager) FirmwareControl(ctx context.Context, target common.Target, info operations.FirmwareControlTaskInfo) error {
 	log.Debug().
 		Str("components", target.String()).
 		Str("operation", fmt.Sprintf("%v", info.Operation)).
@@ -253,29 +195,9 @@ func (m *Manager) GetPowerStatus(
 	)
 }
 
-// AllowBringUpAndPowerOn is not applicable to NVLink switches.
-func (m *Manager) AllowBringUpAndPowerOn(
-	_ context.Context,
-	_ common.Target,
-) error {
-	return fmt.Errorf(
-		"AllowBringUpAndPowerOn not supported for NV-Switch Manager",
-	)
-}
-
-// GetBringUpState is not applicable to NVLink switches.
-func (m *Manager) GetBringUpState(
-	_ context.Context,
-	_ common.Target,
-) (map[string]operations.MachineBringUpState, error) {
-	return nil, fmt.Errorf(
-		"GetBringUpState not supported for NV-Switch Manager",
-	)
-}
-
-// GetFirmwareUpdateStatus returns the current status of firmware updates for the target components.
+// GetFirmwareStatus returns the current status of firmware updates for the target components.
 // Returns a map of component ID (switch UUID) to FirmwareUpdateStatus.
-func (m *Manager) GetFirmwareUpdateStatus(ctx context.Context, target common.Target) (map[string]operations.FirmwareUpdateStatus, error) {
+func (m *Manager) GetFirmwareStatus(ctx context.Context, target common.Target) (map[string]operations.FirmwareUpdateStatus, error) {
 	log.Debug().
 		Str("components", target.String()).
 		Msg("Getting firmware update status")

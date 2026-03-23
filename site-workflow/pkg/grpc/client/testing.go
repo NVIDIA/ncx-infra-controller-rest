@@ -1696,6 +1696,17 @@ func (c *MockRLAClient) GetTasksByIDs(ctx context.Context, in *rlav1.GetTasksByI
 	return out, nil
 }
 
+func (c *MockRLAClient) CancelTask(ctx context.Context, in *rlav1.CancelTaskRequest, opts ...grpc.CallOption) (*rlav1.CancelTaskResponse, error) {
+	out := &rlav1.CancelTaskResponse{}
+	if in != nil && in.GetTaskId() != nil {
+		out.Task = &rlav1.Task{
+			Id:     in.GetTaskId(),
+			Status: rlav1.TaskStatus_TASK_STATUS_FAILED,
+		}
+	}
+	return out, nil
+}
+
 // NewMockRlaClient creates a new mock RlaClient that can be used with RlaAtomicClient.SwapClient
 func NewMockRlaClient() *RlaClient {
 	return &RlaClient{

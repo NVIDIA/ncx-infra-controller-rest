@@ -937,6 +937,64 @@ func TestAPIInstanceCreateRequest_Validate(t *testing.T) {
 	}
 }
 
+func TestAPIBatchInstanceCreateRequest_Validate(t *testing.T) {
+	tests := []struct {
+		name             string
+		req              APIBatchInstanceCreateRequest
+		wantErr          bool
+		wantErrorMessage string
+	}{
+		{
+			name: "succeeds without requested interface ip",
+			req: APIBatchInstanceCreateRequest{
+				NamePrefix:     "test-batch",
+				Count:          2,
+				TenantID:       uuid.NewString(),
+				InstanceTypeID: uuid.NewString(),
+				VpcID:          uuid.NewString(),
+				IpxeScript:     cdb.GetStrPtr("test ipxe"),
+				Interfaces: []APIInterfaceCreateOrUpdateRequest{
+					{SubnetID: cdb.GetStrPtr(uuid.NewString())},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "fails when any interface uses requested ip",
+			req: APIBatchInstanceCreateRequest{
+				NamePrefix:     "test-batch",
+				Count:          2,
+				TenantID:       uuid.NewString(),
+				InstanceTypeID: uuid.NewString(),
+				VpcID:          uuid.NewString(),
+				IpxeScript:     cdb.GetStrPtr("test ipxe"),
+				Interfaces: []APIInterfaceCreateOrUpdateRequest{
+					{
+						VpcPrefixID: cdb.GetStrPtr(uuid.NewString()),
+						IPAddress:   cdb.GetStrPtr("10.0.0.11"),
+					},
+				},
+			},
+			wantErr:          true,
+			wantErrorMessage: "batch instance create does not support `ipAddress` on interfaces",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.req.Validate()
+			if (err != nil) != tt.wantErr {
+				marshalledErr, _ := json.Marshal(err)
+				t.Errorf("APIBatchInstanceCreateRequest.Validate() error = %v, wantErr %v", string(marshalledErr), tt.wantErr)
+			}
+
+			if tt.wantErrorMessage != "" && err != nil {
+				assert.Contains(t, err.Error(), tt.wantErrorMessage)
+			}
+		})
+	}
+}
+
 func TestAPIInstanceCreateRequest_ValidateAndSetOperatingSystemData(t *testing.T) {
 
 	cfg1 := config.NewConfig()

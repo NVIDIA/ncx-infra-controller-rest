@@ -241,6 +241,17 @@ type AddExpectedMachineRequest struct {
 	PauseIngestionAndPowerOn *bool    `json:"default_pause_ingestion_and_poweron,omitempty"`
 }
 
+// AddExpectedPowerShelfRequest contains the parameters for registering
+// an expected power shelf with Carbide.
+type AddExpectedPowerShelfRequest struct {
+	BMCMACAddress     string `json:"bmc_mac_address"`
+	BMCUsername       string `json:"bmc_username"`
+	BMCPassword       string `json:"bmc_password"`
+	ShelfSerialNumber string `json:"shelf_serial_number,omitempty"`
+	IPAddress         string `json:"ip_address,omitempty"`
+	RackID            string `json:"rack_id,omitempty"`
+}
+
 // AddExpectedSwitchRequest contains the parameters for registering
 // an expected switch with Carbide.
 type AddExpectedSwitchRequest struct {

@@ -15,8 +15,9 @@
 
 name: Documentation - New Documentation Request
 description: Request additions to NCX Infra Controller REST documentation
-title: "[DOC]: "
+title: "docs: "
 labels: ["doc"]
+type: Documentation
 
 body:
   - type: markdown
@@ -44,13 +45,6 @@ body:
     validations:
       required: true
 
-  - type: textarea
-    id: search_locs
-    attributes:
-      label: Where have you looked?
-      placeholder: |
-       https://github.com/NVIDIA/ncx-infra-controller-rest/blob/main/README.md
-
   - type: checkboxes
     id: terms
     attributes:
@@ -59,5 +53,5 @@ body:
       options:
         - label: I agree to follow NCX Infra Controller's Code of Conduct
           required: true
-        - label: I have searched the project's documentation and have found no duplicates for this bug report
+        - label: I have searched the [open documentation issues](https://github.com/NVIDIA/ncx-infra-controller-rest/issues?q=is%3Aopen+is%3Aissue+type:Documentation) and have found no duplicates for this documentation issue
           required: true

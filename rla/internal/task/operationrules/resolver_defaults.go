@@ -924,7 +924,7 @@ func buildBringUpRule() *OperationRule {
 					},
 					PreOperation: []ActionConfig{
 						{
-							Name: ActionAllowBringUp,
+							Name: ActionBringUpControl,
 						},
 						{
 							Name:         ActionWaitBringUp,

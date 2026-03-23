@@ -91,6 +91,47 @@ func TestInjectExpectation(t *testing.T) {
 	}
 }
 
+func TestPowerControl(t *testing.T) {
+	m := New(carbideapi.NewMockClient())
+
+	target := common.Target{
+		Type:         devicetypes.ComponentTypeNVLSwitch,
+		ComponentIDs: []string{"switch-1", "switch-2"},
+	}
+
+	err := m.PowerControl(context.Background(), target, operations.PowerControlTaskInfo{
+		Operation: operations.PowerOperationPowerOn,
+	})
+	assert.NoError(t, err)
+}
+
+func TestFirmwareControl(t *testing.T) {
+	m := New(carbideapi.NewMockClient())
+
+	target := common.Target{
+		Type:         devicetypes.ComponentTypeNVLSwitch,
+		ComponentIDs: []string{"switch-1"},
+	}
+
+	err := m.FirmwareControl(context.Background(), target, operations.FirmwareControlTaskInfo{
+		TargetVersion: "2.0.0",
+	})
+	assert.NoError(t, err)
+}
+
+func TestGetFirmwareStatus(t *testing.T) {
+	m := New(carbideapi.NewMockClient())
+
+	target := common.Target{
+		Type:         devicetypes.ComponentTypeNVLSwitch,
+		ComponentIDs: []string{"switch-1"},
+	}
+
+	statuses, err := m.GetFirmwareStatus(context.Background(), target)
+	assert.NoError(t, err)
+	assert.NotNil(t, statuses)
+}
+
 func mustMarshal(t *testing.T, v any) json.RawMessage {
 	t.Helper()
 	data, err := json.Marshal(v)
