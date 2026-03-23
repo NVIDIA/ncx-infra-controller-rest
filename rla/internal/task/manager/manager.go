@@ -37,6 +37,7 @@ import (
 	taskstore "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/store"
 	taskdef "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/task"
 	identifier "github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/Identifier"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/inventoryobjects/rack"
 )
 
@@ -73,6 +74,7 @@ func (c *Config) applyDefaults() {
 	}
 }
 
+// Validate returns an error if the Config is missing required fields.
 func (c *Config) Validate() error {
 	if c == nil {
 		return fmt.Errorf("configuration is nil")
@@ -100,7 +102,7 @@ type Manager struct {
 	taskStore        taskstore.Store      // For task persistence
 	executor         executor.Executor
 	ruleResolver     *operationrules.Resolver // Resolves operation rules (created internally)
-	conflictResolver *conflict.ConflictResolver
+	conflictResolver *conflict.Resolver
 	promoter         *conflict.Promoter
 
 	maxWaitingPerRack   int
@@ -126,7 +128,7 @@ func New(ctx context.Context, conf *Config) (*Manager, error) {
 
 	// Create rule resolver internally (queries DB for operation rules)
 	ruleResolver := operationrules.NewResolver(conf.TaskStore)
-	conflictResolver := conflict.NewConflictResolver(conf.TaskStore)
+	conflictResolver := conflict.NewResolver(conf.TaskStore)
 
 	m := &Manager{
 		inventoryStore:      conf.InventoryStore,
@@ -239,21 +241,26 @@ func (m *Manager) createAndExecuteTask(
 	req *operation.Request,
 	targetRack *rack.Rack,
 ) (uuid.UUID, error) {
-	// Extract component UUIDs for tracking
-	componentUUIDs := make([]uuid.UUID, 0, len(targetRack.Components))
+	// Build component map by type for fine-grained conflict detection.
+	compsByType := make(
+		map[devicetypes.ComponentType][]uuid.UUID,
+		len(targetRack.Components),
+	)
 	for _, c := range targetRack.Components {
-		componentUUIDs = append(componentUUIDs, c.Info.ID)
+		compsByType[c.Type] = append(compsByType[c.Type], c.Info.ID)
 	}
 
 	// Build the task record (status and rule are determined below).
 	task := taskdef.Task{
-		ID:             uuid.New(),
-		Operation:      req.Operation,
-		RackID:         targetRack.Info.ID,
-		ComponentUUIDs: componentUUIDs,
-		Description:    req.Description,
-		ExecutorType:   taskcommon.ExecutorTypeUnknown,
-		ExecutionID:    "",
+		ID:        uuid.New(),
+		Operation: req.Operation,
+		RackID:    targetRack.Info.ID,
+		Attributes: taskcommon.TaskAttributes{
+			ComponentsByType: compsByType,
+		},
+		Description:  req.Description,
+		ExecutorType: taskcommon.ExecutorTypeUnknown,
+		ExecutionID:  "",
 	}
 
 	// Check for conflicts inside a transaction to avoid a race between the
@@ -262,12 +269,7 @@ func (m *Manager) createAndExecuteTask(
 		ctx,
 		func(txCtx context.Context) error {
 			hasConflict, err := m.conflictResolver.HasConflict(
-				txCtx,
-				conflict.OperationSpec{
-					OperationType: string(req.Operation.Type),
-					OperationCode: req.Operation.Code,
-				},
-				targetRack.Info.ID,
+				txCtx, &task,
 			)
 			if err != nil {
 				return err
@@ -444,7 +446,7 @@ func (m *Manager) CancelTask(ctx context.Context, taskID uuid.UUID) error {
 }
 
 // loadRackForTask re-fetches the rack for a task and filters its component
-// list to only those tracked in task.ComponentUUIDs.
+// list to only those tracked in task.Attributes.
 func (m *Manager) loadRackForTask(
 	ctx context.Context,
 	task *taskdef.Task,
@@ -459,8 +461,9 @@ func (m *Manager) loadRackForTask(
 	}
 
 	// Filter to the components originally targeted by the task.
-	uuidSet := make(map[uuid.UUID]struct{}, len(task.ComponentUUIDs))
-	for _, id := range task.ComponentUUIDs {
+	allUUIDs := task.Attributes.AllComponentUUIDs()
+	uuidSet := make(map[uuid.UUID]struct{}, len(allUUIDs))
+	for _, id := range allUUIDs {
 		uuidSet[id] = struct{}{}
 	}
 
