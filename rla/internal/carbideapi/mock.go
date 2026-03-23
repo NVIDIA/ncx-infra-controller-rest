@@ -53,6 +53,10 @@ func (c *mockClient) GetMachines(ctx context.Context) ([]MachineDetail, error) {
 	return result, nil
 }
 
+func (c *mockClient) GetLeakingMachineIds(ctx context.Context) ([]*MachineId, error) {
+	return nil, nil
+}
+
 func (c *mockClient) GetPowerStates(ctx context.Context, machineIds []string) (ret []MachinePowerState, err error) {
 	for _, cur := range machineIds {
 		if state, ok := c.powerStates[cur]; ok {

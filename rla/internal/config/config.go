@@ -36,11 +36,18 @@ type Config struct {
 	UpdateMachineIDsFrequency time.Duration `yaml:"update_machine_ids_frequency"`
 	GRPCTimeout               time.Duration `yaml:"grpc_timeout"`
 	DisableInventory          bool          `yaml:"disable_inventory"`
+	LeakDetectionInterval     time.Duration `yaml:"leak_detection_interval"`
+	DisableLeakDetection      bool          `yaml:"disable_leak_detection"`
 }
 
 // defaultConfig sets up the default values used when something is not specified
 func defaultConfig() Config {
-	return Config{InventoryRunFrequency: time.Minute, GRPCTimeout: time.Minute, UpdateMachineIDsFrequency: time.Hour}
+	return Config{InventoryRunFrequency: time.Minute,
+		GRPCTimeout:               time.Minute,
+		UpdateMachineIDsFrequency: time.Hour,
+		LeakDetectionInterval:     time.Minute,
+		DisableLeakDetection:      false,
+	}
 }
 
 // ReadConfig reads a configuration file if present and returns a Config with the details.  A config file with

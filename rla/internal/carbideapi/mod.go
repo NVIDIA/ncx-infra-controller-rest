@@ -31,6 +31,7 @@ import (
 type Client interface {
 	Version(ctx context.Context) (string, error)
 	GetMachines(ctx context.Context) ([]MachineDetail, error)
+	GetLeakingMachineIds(ctx context.Context) ([]*MachineId, error)
 	GetPowerStates(ctx context.Context, machineIds []string) (ret []MachinePowerState, err error)
 	SetFirmwareUpdateTimeWindow(ctx context.Context, machineIds []string, startTime, endTime time.Time) error
 	// FindInterfaces returns all machine interfaces known by carbide-api, keyed by MAC address

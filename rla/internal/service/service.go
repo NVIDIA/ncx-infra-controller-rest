@@ -33,6 +33,7 @@ import (
 	inventorymanager "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/inventory/manager"
 	inventorystore "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/inventory/store"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/inventorysync"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/leakdetection"
 	taskmanager "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/manager"
 	taskstore "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/store"
 	pb "github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/proto/v1"
@@ -115,6 +116,8 @@ func (s *Service) Start(ctx context.Context) error {
 	}
 
 	go inventorysync.RunInventory(ctx, &s.conf.DBConf)
+
+	go leakdetection.RunLeakDetection(ctx, &s.conf.DBConf)
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", s.conf.Port))
 	if err != nil {

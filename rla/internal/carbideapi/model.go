@@ -25,6 +25,8 @@ import (
 
 // model.go abstracts the raw grpc definitions away.  Don't bother implementing fields you don't think you'll use.
 
+type MachineId = pb.MachineId
+
 func stringsToMachineIds(machineIds []string) (ret []*pb.MachineId) {
 	if len(machineIds) == 0 {
 		return nil
