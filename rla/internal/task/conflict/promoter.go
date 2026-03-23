@@ -189,17 +189,15 @@ func (p *Promoter) sweepAllRacks(ctx context.Context) {
 }
 
 // processRack fetches all waiting tasks for a rack once, terminates expired
-// ones, then promotes eligible candidates in FIFO order stopping at the first
-// conflict.
+// ones, then promotes eligible candidates using the builtinRule.
 //
-// For the current exclusive rule (V1), this promotes at most one task per
-// event since the promoted task immediately occupies the rack. The loop
-// structure is V2-ready: once pair-based rules are introduced, multiple
-// non-conflicting tasks can be promoted in a single pass.
-//
-// TODO(V2): inject ConflictResolver so the conflict check inside the
-// transaction uses ConflictRule.Conflicts() instead of the hardcoded
-// exclusive-mode check (len(workingActive) > 0).
+// Candidates are evaluated in FIFO order. Promotion continues as long as
+// consecutive candidates do not conflict with the current active set
+// (including tasks promoted earlier in this pass). The loop stops at the
+// first conflicting candidate — tasks behind it are not promoted even if
+// they would not conflict themselves. This preserves strict submission
+// ordering at the cost of some parallelism, which is the right trade-off
+// for hardware operations where users expect sequential execution.
 func (p *Promoter) processRack(ctx context.Context, rackID uuid.UUID) {
 	waiting, err := p.store.ListWaitingTasksForRack(ctx, rackID)
 	if err != nil {
@@ -232,8 +230,8 @@ func (p *Promoter) processRack(ctx context.Context, rackID uuid.UUID) {
 		return
 	}
 
-	// Atomically fetch the active set and promote candidates in FIFO order,
-	// stopping at the first conflict.
+	// Atomically fetch the active set and promote candidates in FIFO
+	// order, stopping at the first conflict.
 	var toExecute []*taskdef.Task
 	txErr := p.store.RunInTransaction(ctx, func(txCtx context.Context) error {
 		toExecute = nil // reset on retry
@@ -243,24 +241,28 @@ func (p *Promoter) processRack(ctx context.Context, rackID uuid.UUID) {
 			return err
 		}
 
-		// workingActive grows as candidates are promoted within this round,
-		// so each subsequent candidate is checked against an up-to-date set.
-		// TODO(V2): replace len(workingActive) > 0 with
-		//   ConflictRule.Conflicts(candidateOp, workingActive).
-		workingActive := len(active)
+		// workingActive grows as candidates are promoted within this
+		// pass, so each subsequent candidate is checked against an
+		// up-to-date effective active set.
+		workingActive := make([]*taskdef.Task, len(active))
+		copy(workingActive, active)
 		for _, candidate := range candidates {
-			if workingActive > 0 {
-				break // FIFO: stop at first conflict
+			if builtinRule.Conflicts(candidate, workingActive) {
+				break // stop; preserve FIFO ordering
 			}
-			if err := p.store.UpdateTaskStatus(txCtx, &taskdef.TaskStatusUpdate{
-				ID:      candidate.ID,
-				Status:  taskcommon.TaskStatusPending,
-				Message: "Promoted: rack is now available",
-			}); err != nil {
+
+			if err := p.store.UpdateTaskStatus(txCtx,
+				&taskdef.TaskStatusUpdate{
+					ID:     candidate.ID,
+					Status: taskcommon.TaskStatusPending,
+					Message: "Promoted: no conflicting" +
+						" active tasks",
+				},
+			); err != nil {
 				return err
 			}
 			toExecute = append(toExecute, candidate)
-			workingActive++
+			workingActive = append(workingActive, candidate)
 		}
 		return nil
 	})
