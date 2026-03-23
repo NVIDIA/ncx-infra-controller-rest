@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/internal/config"
+	sc "github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/client/site"
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/handler/util/common"
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model"
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/pagination"
@@ -461,7 +462,9 @@ func TestCreateSiteHandler_Handle(t *testing.T) {
 			ec.SetParamValues(ip.Org)
 			ec.Set("user", ipu)
 
-			csh := NewCreateSiteHandler(tt.fields.dbSession, tt.fields.tc, tt.fields.tnc, tt.fields.cfg)
+			tcfg, _ := tt.fields.cfg.GetTemporalConfig()
+			scp := sc.NewClientPool(tcfg)
+			csh := NewCreateSiteHandler(tt.fields.dbSession, tt.fields.tc, tt.fields.tnc, scp, tt.fields.cfg)
 
 			if tt.siteMgrDisabled {
 				tt.fields.cfg.SetSiteManagerEnabled(false)
@@ -2297,6 +2300,7 @@ func TestNewCreateSiteHandler(t *testing.T) {
 		dbSession *cdb.Session
 		tc        temporalClient.Client
 		tnc       temporalClient.NamespaceClient
+		scp       *sc.ClientPool
 		cfg       *config.Config
 	}
 
@@ -2305,6 +2309,8 @@ func TestNewCreateSiteHandler(t *testing.T) {
 	tc := &tmocks.Client{}
 	tnc := &tmocks.NamespaceClient{}
 	cfg := common.GetTestConfig()
+	tcfg, _ := cfg.GetTemporalConfig()
+	scp := sc.NewClientPool(tcfg)
 
 	tests := []struct {
 		name string
@@ -2317,12 +2323,14 @@ func TestNewCreateSiteHandler(t *testing.T) {
 				dbSession: dbSession,
 				tc:        tc,
 				tnc:       tnc,
+				scp:       scp,
 				cfg:       cfg,
 			},
 			want: CreateSiteHandler{
 				dbSession:  dbSession,
 				tc:         tc,
 				tnc:        tnc,
+				scp:        scp,
 				cfg:        cfg,
 				tracerSpan: sutil.NewTracerSpan(),
 			},
@@ -2330,7 +2338,7 @@ func TestNewCreateSiteHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NewCreateSiteHandler(tt.args.dbSession, tt.args.tc, tt.args.tnc, tt.args.cfg); !reflect.DeepEqual(got, tt.want) {
+			if got := NewCreateSiteHandler(tt.args.dbSession, tt.args.tc, tt.args.tnc, tt.args.scp, tt.args.cfg); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("NewCreateSiteHandler() = %v, want %v", got, tt.want)
 			}
 		})

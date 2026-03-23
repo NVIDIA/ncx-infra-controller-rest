@@ -20,6 +20,7 @@ package activity
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	swe "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/error"
@@ -27,6 +28,7 @@ import (
 	cClient "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/grpc/client"
 	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 	"github.com/rs/zerolog/log"
+	tClient "go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/temporal"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -236,4 +238,170 @@ func osImageFindFallback(ctx context.Context, carbideClient *cClient.CarbideClie
 		ids = append(ids, it.GetAttributes().Id)
 	}
 	return ids, items.GetImages(), nil
+}
+
+// ManageOperatingSystemInventory is an activity wrapper for Operating System inventory collection and publishing
+type ManageOperatingSystemInventory struct {
+	config ManageInventoryConfig
+}
+
+// DiscoverOperatingSystemInventory collects Operating System inventory from carbide-core and publishes
+// it to the cloud Temporal queue for reconciliation with the operating_system table.
+func (m *ManageOperatingSystemInventory) DiscoverOperatingSystemInventory(ctx context.Context) error {
+	logger := log.With().Str("Activity", "DiscoverOperatingSystemInventory").Logger()
+	logger.Info().Msg("Starting activity")
+
+	workflowOptions := tClient.StartWorkflowOptions{
+		ID:        fmt.Sprintf("update-operating-system-inventory-%s", m.config.SiteID.String()),
+		TaskQueue: m.config.TemporalPublishQueue,
+	}
+	workflowName := "UpdateOperatingSystemInventory"
+
+	carbideClient := m.config.CarbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return cClient.ErrClientNotConnected
+	}
+	forgeClient := carbideClient.Carbide()
+
+	publishError := func(msg string, cause error) error {
+		inv := &cwssaws.OperatingSystemInventory{
+			InventoryStatus: cwssaws.InventoryStatus_INVENTORY_STATUS_FAILED,
+			StatusMsg:       cause.Error(),
+			Timestamp:       timestamppb.Now(),
+		}
+		if _, execErr := m.config.TemporalPublishClient.ExecuteWorkflow(context.Background(), workflowOptions, workflowName, m.config.SiteID, inv); execErr != nil {
+			logger.Error().Err(execErr).Msg("Failed to publish inventory error to Cloud")
+			return execErr
+		}
+		return cause
+	}
+
+	// Step 1: fetch all active OS definition IDs from carbide-core.
+	idList, err := forgeClient.FindOperatingSystemIds(ctx, &cwssaws.OperatingSystemSearchFilter{})
+	if err != nil {
+		logger.Warn().Err(err).Msg("Failed to retrieve OS definition IDs from carbide-core")
+		return publishError("Failed to retrieve OS definition IDs from carbide-core", err)
+	}
+
+	// Step 2: fetch full definitions for all returned IDs.
+	var osDefs []*cwssaws.OperatingSystemDefinition
+	if len(idList.GetIds()) > 0 {
+		osList, ferr := forgeClient.FindOperatingSystemsByIds(ctx, &cwssaws.OperatingSystemsByIdsRequest{
+			Ids: idList.GetIds(),
+		})
+		if ferr != nil {
+			logger.Warn().Err(ferr).Msg("Failed to retrieve OS definitions by IDs from carbide-core")
+			return publishError("Failed to retrieve OS definitions by IDs from carbide-core", ferr)
+		}
+		osDefs = osList.GetOperatingSystems()
+	}
+
+	inventory := &cwssaws.OperatingSystemInventory{
+		InventoryStatus:  cwssaws.InventoryStatus_INVENTORY_STATUS_SUCCESS,
+		StatusMsg:        "Successfully retrieved from carbide-core",
+		Timestamp:        timestamppb.Now(),
+		OperatingSystems: osDefs,
+	}
+
+	if _, err = m.config.TemporalPublishClient.ExecuteWorkflow(context.Background(), workflowOptions, workflowName, m.config.SiteID, inventory); err != nil {
+		logger.Error().Err(err).Msg("Failed to publish OS definition inventory to Cloud")
+		return err
+	}
+
+	logger.Info().Msgf("Published %d Operating Systems to Cloud", len(osDefs))
+	logger.Info().Msg("Completed activity")
+	return nil
+}
+
+// NewManageOperatingSystemInventory returns a ManageOperatingSystemInventory activity
+func NewManageOperatingSystemInventory(config ManageInventoryConfig) ManageOperatingSystemInventory {
+	return ManageOperatingSystemInventory{config: config}
+}
+
+// CreateOperatingSystemOnSite creates an Operating System in carbide-core via gRPC.
+// request.Id must be pre-set to the carbide-rest primary key so both sides share the same UUID.
+func (mos *ManageOperatingSystem) CreateOperatingSystemOnSite(ctx context.Context, request *cwssaws.CreateOperatingSystemRequest) (string, error) {
+	logger := log.With().Str("Activity", "CreateOperatingSystemOnSite").Logger()
+	logger.Info().Msg("Starting activity")
+
+	if request == nil {
+		err := errors.New("received empty create OS definition request")
+		return "", temporal.NewNonRetryableApplicationError(err.Error(), swe.ErrTypeInvalidRequest, err)
+	}
+	if request.Name == "" {
+		err := errors.New("received create OS definition request missing Name")
+		return "", temporal.NewNonRetryableApplicationError(err.Error(), swe.ErrTypeInvalidRequest, err)
+	}
+
+	carbideClient := mos.CarbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return "", client.ErrClientNotConnected
+	}
+
+	if _, err := carbideClient.Carbide().CreateOperatingSystem(ctx, request); err != nil {
+		logger.Warn().Err(err).Msg("Failed to create Operating System in carbide-core")
+		return "", swe.WrapErr(err)
+	}
+
+	idStr := request.GetId().GetValue()
+	logger.Info().Str("ID", idStr).Msg("Completed activity")
+	return idStr, nil
+}
+
+// UpdateOperatingSystemOnSite updates an existing Operating System in carbide-core via gRPC
+func (mos *ManageOperatingSystem) UpdateOperatingSystemOnSite(ctx context.Context, request *cwssaws.UpdateOperatingSystemRequest) error {
+	logger := log.With().Str("Activity", "UpdateOperatingSystemOnSite").Logger()
+	logger.Info().Msg("Starting activity")
+
+	if request == nil {
+		err := errors.New("received empty update OS definition request")
+		return temporal.NewNonRetryableApplicationError(err.Error(), swe.ErrTypeInvalidRequest, err)
+	}
+	if request.GetId().GetValue() == "" {
+		err := errors.New("received update OS definition request missing ID")
+		return temporal.NewNonRetryableApplicationError(err.Error(), swe.ErrTypeInvalidRequest, err)
+	}
+
+	carbideClient := mos.CarbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return client.ErrClientNotConnected
+	}
+
+	_, err := carbideClient.Carbide().UpdateOperatingSystem(ctx, request)
+	if err != nil {
+		logger.Warn().Err(err).Msg("Failed to update Operating System in carbide-core")
+		return swe.WrapErr(err)
+	}
+
+	logger.Info().Msg("Completed activity")
+	return nil
+}
+
+// DeleteOperatingSystemOnSite deletes an Operating System from carbide-core via gRPC
+func (mos *ManageOperatingSystem) DeleteOperatingSystemOnSite(ctx context.Context, request *cwssaws.DeleteOperatingSystemRequest) error {
+	logger := log.With().Str("Activity", "DeleteOperatingSystemOnSite").Logger()
+	logger.Info().Msg("Starting activity")
+
+	if request == nil {
+		err := errors.New("received empty delete OS definition request")
+		return temporal.NewNonRetryableApplicationError(err.Error(), swe.ErrTypeInvalidRequest, err)
+	}
+	if request.GetId().GetValue() == "" {
+		err := errors.New("received delete OS definition request missing ID")
+		return temporal.NewNonRetryableApplicationError(err.Error(), swe.ErrTypeInvalidRequest, err)
+	}
+
+	carbideClient := mos.CarbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return client.ErrClientNotConnected
+	}
+
+	_, err := carbideClient.Carbide().DeleteOperatingSystem(ctx, request)
+	if err != nil {
+		logger.Warn().Err(err).Msg("Failed to delete Operating System from carbide-core")
+		return swe.WrapErr(err)
+	}
+
+	logger.Info().Msg("Completed activity")
+	return nil
 }
