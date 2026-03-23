@@ -156,6 +156,49 @@ func appendScopeFlags(s *Session, parts []string) []string {
 	return out
 }
 
+func fetchMachinesWithSiteFallback(s *Session, missingSitePrompt string) ([]NamedItem, error) {
+	items, err := s.Resolver.Fetch(context.Background(), "machine")
+	if err == nil {
+		return items, nil
+	}
+	if s.Scope.SiteID == "" && strings.Contains(err.Error(), "400") {
+		fmt.Printf("%s %s\n", Dim("Note:"), missingSitePrompt)
+		site, resolveErr := s.Resolver.Resolve(context.Background(), "site", "Site")
+		if resolveErr != nil {
+			return nil, resolveErr
+		}
+		s.Scope.SiteID = site.ID
+		s.Scope.SiteName = site.Name
+		s.Cache.InvalidateFiltered()
+		return s.Resolver.Fetch(context.Background(), "machine")
+	}
+	return nil, err
+}
+
+func setSiteScopeFromID(s *Session, siteID string) {
+	siteID = strings.TrimSpace(siteID)
+	if siteID == "" || s.Scope.SiteID == siteID {
+		return
+	}
+	s.Scope.SiteID = siteID
+	s.Scope.SiteName = s.Resolver.ResolveID("site", siteID)
+	s.Cache.InvalidateFiltered()
+}
+
+func readyMachineItemsForSite(machines []NamedItem, siteID string) []SelectItem {
+	siteID = strings.TrimSpace(siteID)
+	readyItems := make([]SelectItem, 0, len(machines))
+	for _, m := range machines {
+		if siteID != "" && strings.TrimSpace(m.Extra["siteId"]) != siteID {
+			continue
+		}
+		if strings.EqualFold(strings.TrimSpace(m.Status), "Ready") {
+			readyItems = append(readyItems, SelectItem{Label: m.Name, ID: m.ID})
+		}
+	}
+	return readyItems
+}
+
 // -- List commands --
 
 func cmdSiteList(s *Session, _ []string) error {
@@ -279,24 +322,9 @@ func cmdInstanceList(s *Session, _ []string) error {
 }
 
 func cmdMachineList(s *Session, _ []string) error {
-	items, err := s.Resolver.Fetch(context.Background(), "machine")
+	items, err := fetchMachinesWithSiteFallback(s, "Machine listing requires a site filter. Select a site.")
 	if err != nil {
-		if s.Scope.SiteID == "" && strings.Contains(err.Error(), "400") {
-			fmt.Printf("%s Machine listing requires a site filter. Select a site.\n", Dim("Note:"))
-			site, resolveErr := s.Resolver.Resolve(context.Background(), "site", "Site")
-			if resolveErr != nil {
-				return resolveErr
-			}
-			s.Scope.SiteID = site.ID
-			s.Scope.SiteName = site.Name
-			s.Cache.InvalidateFiltered()
-			items, err = s.Resolver.Fetch(context.Background(), "machine")
-			if err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
+		return err
 	}
 	LogCmd(s, "machine", "list")
 
@@ -631,17 +659,18 @@ func cmdInstanceCreate(s *Session, _ []string) error {
 	if err != nil {
 		return err
 	}
-	machines, err := s.Resolver.Fetch(context.Background(), "machine")
+	vpcSiteID := strings.TrimSpace(vpc.Extra["siteId"])
+	setSiteScopeFromID(s, vpcSiteID)
+
+	machines, err := fetchMachinesWithSiteFallback(s, "Machine listing requires a site filter. Select a site.")
 	if err != nil {
 		return fmt.Errorf("fetching machines: %w", err)
 	}
-	var readyItems []SelectItem
-	for _, m := range machines {
-		if strings.EqualFold(m.Status, "Ready") {
-			readyItems = append(readyItems, SelectItem{Label: m.Name, ID: m.ID})
-		}
-	}
+	readyItems := readyMachineItemsForSite(machines, vpcSiteID)
 	if len(readyItems) == 0 {
+		if vpcSiteID != "" {
+			return fmt.Errorf("no machines in Ready state available for selected VPC site")
+		}
 		return fmt.Errorf("no machines in Ready state available")
 	}
 	machine, err := Select("Machine", readyItems)
