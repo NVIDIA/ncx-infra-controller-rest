@@ -57,7 +57,7 @@ ncx-infra-controller-rest/
 
 ## Technology Stack
 
-- **Language:** Go 1.25.4 or later (module `github.com/NVIDIA/ncx-infra-controller-rest`)
+- **Language:** Go (version specified in `go.mod`; module `github.com/NVIDIA/ncx-infra-controller-rest`)
 - **HTTP framework:** Echo v4 (with middleware for CORS, auth, rate limiting, audit)
 - **Database:** PostgreSQL via pgx v5 (connection pool) and Bun ORM (queries, migrations)
 - **Workflow engine:** Temporal (cloud and site workflows/activities)
