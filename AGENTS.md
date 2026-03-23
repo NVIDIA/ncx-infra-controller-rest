@@ -218,7 +218,9 @@ All commits **must** meet the following signing requirement:
 ## CI / CD
 
 The primary CI workflow (`.github/workflows/main-build.yml`) runs on pushes
-to `main`, feature/fix/chore branches, and version tags. It performs:
+to `main`, `feat/**`, `fix/**`, `chore/**`, `hotfix/**`, `version/**`,
+and `pull-request/[0-9]+` branches, as well as `v*.*.*` tags and manual
+`workflow_dispatch`. It performs:
 
 - Style checks (`go fmt`, `revive`, `go vet`)
 - Lint (`golangci-lint`)
