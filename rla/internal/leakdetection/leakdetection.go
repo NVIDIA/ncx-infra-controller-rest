@@ -34,7 +34,7 @@ import (
 func RunLeakDetection(ctx context.Context, dbConf *cdb.Config) {
 	config := config.ReadConfig()
 	if config.DisableLeakDetection {
-		log.Info().Msg("Inventory disabled by configuration")
+		log.Info().Msg("Leak detection disabled by configuration")
 		return
 	}
 
