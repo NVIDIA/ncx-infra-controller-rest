@@ -57,6 +57,9 @@ tags:
     description: Allocation operations
   - name: VPC
     description: VPC operations
+  - name: VPC Peering
+    description: |- 
+      VPC Peerings are network connections between two VPCs on the same site.
   - name: VPC Prefix
     description: |-
       VPC Prefixes are networking constructs that connect a set of bare metal machines.
@@ -2543,6 +2546,197 @@ paths:
               Example 1:
                 value:
                   networkVirtualizationType: FNN
+  '/v2/org/{org}/carbide/vpc-peering':
+    parameters:
+      - schema:
+          type: string
+        name: org
+        in: path
+        required: true
+        description: Name of the Org
+    get:
+      summary: Retrieve all VPC peerings
+      tags:
+        - VPC Peering
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VpcPeering'
+          headers:
+            X-Pagination:
+              schema:
+                type: string
+                example: '{"pageNumber":1,"pageSize":20,"total":30,"orderBy": "CREATED_DESC"}'
+              description: Pagination result in JSON format
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+      operationId: get-all-vpc-peering
+      description: |-
+        Get all VPC peerings. 
+        Tenant Admin can get all peerings where the tenant owns at least one VPC.
+        Provider Admin can get all peerings in a site.
+        User must have `FORGE_TENANT_ADMIN` or `FORGE_PROVIDER_ADMIN` role.
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          in: query
+          name: siteId
+          required: false
+          description: Optional Site ID filter. If provided, caller must have access to the specified Site.
+        - schema:
+            type: integer
+            example: 1
+            default: 1
+            minimum: 1
+          in: query
+          name: pageNumber
+          description: Page number for pagination query
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            example: 20
+          in: query
+          name: pageSize
+          description: Page size for pagination query
+        - schema:
+            type: string
+          in: query
+          name: orderBy
+          description: Ordering for pagination query
+        - schema:
+            type: boolean
+          in: query
+          name: isMultiTenant
+          required: false
+          description: Optional filter by peering tenancy type (single-tenant or multi-tenant).
+        - schema:
+            type: string
+            enum:
+              - Vpc1
+              - Vpc2
+              - Site
+          in: query
+          name: includeRelation
+          required: false
+          description: Related entity to expand
+    post:
+      summary: Create VPC peering
+      tags:
+        - VPC Peering
+      operationId: create-vpc-peering
+      description: |-
+        Create a VPC peering between two VPCs on the same site.
+
+        Tenant Admin can create single-tenant peerings (both VPCs belong to their tenant).
+        Provider Admin can create multi-tenant peerings (VPCs from different tenants).
+
+        User must have `FORGE_TENANT_ADMIN` or `FORGE_PROVIDER_ADMIN` role.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VpcPeeringCreateRequest'
+            examples:
+              example-1:
+                value:
+                  vpc1Id: 497f6eca-6276-4993-bfeb-53cbbbba6f08
+                  vpc2Id: 34f5c98e-f430-457b-a812-92637d0c6fd0
+                  siteId: 72771e6a-6f5e-4de4-a5b9-1266c4197811
+        required: true
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VpcPeering'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+  '/v2/org/{org}/carbide/vpc-peering/{id}':
+    parameters:
+      - schema:
+          type: string
+        name: org
+        in: path
+        required: true
+        description: Name of the Org
+      - schema:
+          type: string
+          format: uuid
+        name: id
+        in: path
+        required: true
+        description: VPC Peering ID
+    get:
+      summary: Retrieve a VPC peering
+      tags:
+        - VPC Peering
+      operationId: get-vpc-peering
+      description: |-
+        Get details of a VPC peering by ID.
+
+        Tenant Admin can get a peering if at least one VPC belongs to their tenant.
+        Provider Admin can get a peering if it is in a site provided by their org.
+
+        User must have `FORGE_TENANT_ADMIN` or `FORGE_PROVIDER_ADMIN` role.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VpcPeering'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+      parameters:
+        - schema:
+            type: string
+            enum:
+              - Vpc1
+              - Vpc2
+              - Site
+          in: query
+          name: includeRelation
+          required: false
+          description: Related entity to expand
+    delete:
+      summary: Delete a VPC peering
+      tags:
+        - VPC Peering
+      operationId: delete-vpc-peering
+      description: |-
+        Delete a VPC peering by ID.
+
+        Tenant Admin can delete only peerings where both VPCs belong to their tenant.
+        Provider Admin can delete only multi-tenant peerings in sites they provide.
+
+        User must have `FORGE_TENANT_ADMIN` or `FORGE_PROVIDER_ADMIN` role.
+      responses:
+        '204':
+          description: No Content
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
   '/v2/org/{org}/carbide/vpc-prefix':
     parameters:
       - schema:
@@ -12851,6 +13045,81 @@ components:
           enum:
             - FNN
           description: Network virtualization type of the VPC. Can only be updated to `FNN`
+    VpcPeeringCreateRequest:
+      title: VpcPeeringCreateRequest
+      type: object
+      description: Request data to create a VPC peering between two VPCs, the ordering of VPCs is not important
+      required:
+        - vpc1Id
+        - vpc2Id
+        - siteId
+      properties:
+        vpc1Id:
+          type: string
+          format: uuid
+          description: ID of the first VPC in the peering
+        vpc2Id:
+          type: string
+          format: uuid
+          description: ID of the second VPC to peer with
+        siteId:
+          type: string
+          format: uuid
+          description: ID of the Site where the peering exists
+    VpcPeering:
+      title: VpcPeering
+      type: object
+      description: VPC peering connection between two VPCs on the same site
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Unique identifier of the VPC peering
+        vpc1Id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: ID of the first VPC in the peering
+        vpc2Id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: ID of the second VPC in the peering
+        siteId:
+          type: string
+          format: uuid
+          readOnly: true
+          description: ID of the Site where the peering exists
+        isMultiTenant:
+          type: boolean
+          readOnly: true
+          description: Indicates if this is a multi-tenant peering (VPCs from different tenants)
+        status:
+          $ref: '#/components/schemas/VpcPeeringStatus'
+          readOnly: true
+          description: Status of the VPC peering
+        created:
+          type: string
+          format: date-time
+          readOnly: true
+          description: Date and time when the VPC peering was created
+        updated:
+          type: string
+          format: date-time
+          readOnly: true
+          description: Date and time when the VPC peering was last updated
+    VpcPeeringStatus:
+      title: VpcPeeringStatus
+      type: string
+      description: Status values for VPC peering objects
+      enum:
+        - Pending
+        - Configuring
+        - Requested
+        - Ready
+        - Deleting
+        - Error
     VpcPrefix:
       title: VpcPrefix
       type: object
