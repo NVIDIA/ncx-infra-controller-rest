@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
 	"strings"
 	"text/tabwriter"
 )
@@ -55,6 +56,9 @@ func AllCommands() []Command {
 		{Name: "subnet create", Description: "Create a subnet", Run: cmdSubnetCreate},
 		{Name: "subnet update", Description: "Update a subnet", Run: cmdSubnetUpdate},
 		{Name: "subnet delete", Description: "Delete a subnet", Run: cmdSubnetDelete},
+
+		{Name: "instance-type list", Description: "List instance types", Run: cmdInstanceTypeList},
+		{Name: "instance-type get", Description: "Get instance type details", Run: cmdInstanceTypeGet},
 
 		{Name: "instance list", Description: "List all instances", Run: cmdInstanceList},
 		{Name: "instance get", Description: "Get instance details", Run: cmdInstanceGet},
@@ -169,7 +173,7 @@ func appendScopeFlags(s *Session, parts []string) []string {
 	scopeVpcID := strings.TrimSpace(s.Scope.VpcID)
 	switch resource {
 	case "vpc", "allocation", "ip-block", "operating-system", "ssh-key-group",
-		"network-security-group", "sku", "rack", "expected-machine",
+		"network-security-group", "sku", "rack", "expected-machine", "instance-type",
 		"dpu-extension-service", "infiniband-partition", "nvlink-logical-partition":
 		if scopeSiteID != "" {
 			out = append(out, "--site-id", scopeSiteID)
@@ -450,11 +454,16 @@ func cmdSiteDelete(s *Session, args []string) error {
 	return nil
 }
 
-func cmdVPCList(s *Session, _ []string) error {
+func cmdVPCList(s *Session, args []string) error {
 	LogCmd(s, "vpc", "list")
 	items, err := s.Resolver.Fetch(context.Background(), "vpc")
 	if err != nil {
 		return err
+	}
+	_, cmdLabels, sortKey := parseLabelArgs(args)
+	items = filterByLabels(items, mergeLabels(s.Scope.LabelFilters, cmdLabels))
+	if sortKey != "" {
+		sortByLabelKey(items, sortKey)
 	}
 	siteNameByID := map[string]string{}
 	if sites, err := s.Resolver.Fetch(context.Background(), "site"); err == nil {
@@ -464,14 +473,14 @@ func cmdVPCList(s *Session, _ []string) error {
 	}
 	fmt.Fprintf(os.Stderr, "%d items\n", len(items))
 	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
-	fmt.Fprintln(tw, "NAME\tSTATUS\tSITE\tID")
+	fmt.Fprintln(tw, "NAME\tSTATUS\tSITE\tLABELS\tID")
 	for _, item := range items {
 		siteID := item.Extra["siteId"]
 		siteName := strings.TrimSpace(siteNameByID[siteID])
 		if siteName == "" {
 			siteName = siteID
 		}
-		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", item.Name, item.Status, siteName, item.ID)
+		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n", item.Name, item.Status, siteName, formatLabels(item.Labels, 60), item.ID)
 	}
 	return tw.Flush()
 }
@@ -749,34 +758,66 @@ func cmdSubnetDelete(s *Session, args []string) error {
 	return nil
 }
 
-func cmdInstanceList(s *Session, _ []string) error {
+func cmdInstanceTypeList(s *Session, args []string) error {
+	LogCmd(s, "instance-type", "list")
+	items, err := s.Resolver.Fetch(context.Background(), "instance-type")
+	if err != nil {
+		return err
+	}
+	_, cmdLabels, sortKey := parseLabelArgs(args)
+	items = filterByLabels(items, mergeLabels(s.Scope.LabelFilters, cmdLabels))
+	if sortKey != "" {
+		sortByLabelKey(items, sortKey)
+	}
+	fmt.Fprintf(os.Stderr, "%d items\n", len(items))
+	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
+	fmt.Fprintln(tw, "NAME\tSTATUS\tLABELS\tID")
+	for _, item := range items {
+		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", item.Name, item.Status, formatLabels(item.Labels, 60), item.ID)
+	}
+	return tw.Flush()
+}
+
+func cmdInstanceTypeGet(s *Session, args []string) error {
+	item, err := s.Resolver.ResolveWithArgs(context.Background(), "instance-type", "Instance Type", args)
+	if err != nil {
+		return err
+	}
+	LogCmd(s, "instance-type", "get", item.ID)
+	return getAndPrint(s, "/v2/org/{org}/carbide/instance/type/{id}", item.ID)
+}
+
+func cmdInstanceList(s *Session, args []string) error {
 	LogCmd(s, "instance", "list")
-	// Warm VPC and site caches so IDs resolve to names.
 	_, _ = s.Resolver.Fetch(context.Background(), "vpc")
 	_, _ = s.Resolver.Fetch(context.Background(), "site")
 	items, err := s.Resolver.Fetch(context.Background(), "instance")
 	if err != nil {
 		return err
 	}
+	_, cmdLabels, sortKey := parseLabelArgs(args)
+	items = filterByLabels(items, mergeLabels(s.Scope.LabelFilters, cmdLabels))
+	if sortKey != "" {
+		sortByLabelKey(items, sortKey)
+	}
 	fmt.Fprintf(os.Stderr, "%d items\n", len(items))
 	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
-	fmt.Fprintln(tw, "NAME\tSTATUS\tVPC\tSITE\tID")
+	fmt.Fprintln(tw, "NAME\tSTATUS\tVPC\tSITE\tLABELS\tID")
 	for _, item := range items {
 		vpcName := s.Resolver.ResolveID("vpc", item.Extra["vpcId"])
 		siteName := s.Resolver.ResolveID("site", item.Extra["siteId"])
-		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n", item.Name, item.Status, vpcName, siteName, item.ID)
+		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n", item.Name, item.Status, vpcName, siteName, formatLabels(item.Labels, 60), item.ID)
 	}
 	return tw.Flush()
 }
 
-func cmdMachineList(s *Session, _ []string) error {
+func cmdMachineList(s *Session, args []string) error {
 	LogCmd(s, "machine", "list")
 	items, err := fetchMachinesWithSiteFallback(s, "Machine listing requires a site filter. Select a site.")
 	if err != nil {
 		return err
 	}
 
-	// Warm VPC cache so names resolve, then build machine→vpc map via instances.
 	_, _ = s.Resolver.Fetch(context.Background(), "vpc")
 	vpcNamesByMachineID := s.buildMachineVPCNames(context.Background())
 
@@ -790,16 +831,22 @@ func cmdMachineList(s *Session, _ []string) error {
 		items = filtered
 	}
 
+	_, cmdLabels, sortKey := parseLabelArgs(args)
+	items = filterByLabels(items, mergeLabels(s.Scope.LabelFilters, cmdLabels))
+	if sortKey != "" {
+		sortByLabelKey(items, sortKey)
+	}
+
 	fmt.Fprintf(os.Stderr, "%d items\n", len(items))
 	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
-	fmt.Fprintln(tw, "NAME\tSTATUS\tSITE\tVPC\tID")
+	fmt.Fprintln(tw, "NAME\tSTATUS\tSITE\tVPC\tLABELS\tID")
 	for _, item := range items {
 		siteName := s.Resolver.ResolveID("site", item.Extra["siteId"])
 		vpcNames := strings.TrimSpace(vpcNamesByMachineID[item.ID])
 		if vpcNames == "" {
 			vpcNames = "-"
 		}
-		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n", item.Name, item.Status, siteName, vpcNames, item.ID)
+		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n", item.Name, item.Status, siteName, vpcNames, formatLabels(item.Labels, 60), item.ID)
 	}
 	return tw.Flush()
 }
@@ -1413,13 +1460,24 @@ func cmdIPBlockDelete(s *Session, args []string) error {
 	return nil
 }
 
-func cmdNSGList(s *Session, _ []string) error {
+func cmdNSGList(s *Session, args []string) error {
 	LogCmd(s, "network-security-group", "list")
 	items, err := s.Resolver.Fetch(context.Background(), "network-security-group")
 	if err != nil {
 		return err
 	}
-	return printResourceTable(os.Stdout, "NAME", "STATUS", "ID", items)
+	_, cmdLabels, sortKey := parseLabelArgs(args)
+	items = filterByLabels(items, mergeLabels(s.Scope.LabelFilters, cmdLabels))
+	if sortKey != "" {
+		sortByLabelKey(items, sortKey)
+	}
+	fmt.Fprintf(os.Stderr, "%d items\n", len(items))
+	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
+	fmt.Fprintln(tw, "NAME\tSTATUS\tLABELS\tID")
+	for _, item := range items {
+		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", item.Name, item.Status, formatLabels(item.Labels, 60), item.ID)
+	}
+	return tw.Flush()
 }
 
 func cmdNSGCreate(s *Session, _ []string) error {
@@ -1732,28 +1790,44 @@ func cmdTenantAccountDelete(s *Session, args []string) error {
 	return nil
 }
 
-func cmdExpectedMachineList(s *Session, _ []string) error {
+func cmdExpectedMachineList(s *Session, args []string) error {
 	LogCmd(s, "expected-machine", "list")
 	items, err := s.Resolver.Fetch(context.Background(), "expected-machine")
 	if err != nil {
 		return err
 	}
+	_, cmdLabels, sortKey := parseLabelArgs(args)
+	items = filterByLabels(items, mergeLabels(s.Scope.LabelFilters, cmdLabels))
+	if sortKey != "" {
+		sortByLabelKey(items, sortKey)
+	}
 	fmt.Fprintf(os.Stderr, "%d items\n", len(items))
 	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
-	fmt.Fprintln(tw, "SITE ID\tBMC MAC\tCHASSIS SN\tID")
+	fmt.Fprintln(tw, "SITE ID\tBMC MAC\tCHASSIS SN\tLABELS\tID")
 	for _, item := range items {
-		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", item.Extra["siteId"], item.Extra["bmcMacAddress"], item.Extra["chassisSerialNumber"], item.ID)
+		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n", item.Extra["siteId"], item.Extra["bmcMacAddress"], item.Extra["chassisSerialNumber"], formatLabels(item.Labels, 60), item.ID)
 	}
 	return tw.Flush()
 }
 
-func cmdInfiniBandPartitionList(s *Session, _ []string) error {
+func cmdInfiniBandPartitionList(s *Session, args []string) error {
 	LogCmd(s, "infiniband-partition", "list")
 	items, err := s.Resolver.Fetch(context.Background(), "infiniband-partition")
 	if err != nil {
 		return err
 	}
-	return printResourceTable(os.Stdout, "NAME", "STATUS", "ID", items)
+	_, cmdLabels, sortKey := parseLabelArgs(args)
+	items = filterByLabels(items, mergeLabels(s.Scope.LabelFilters, cmdLabels))
+	if sortKey != "" {
+		sortByLabelKey(items, sortKey)
+	}
+	fmt.Fprintf(os.Stderr, "%d items\n", len(items))
+	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
+	fmt.Fprintln(tw, "NAME\tSTATUS\tLABELS\tID")
+	for _, item := range items {
+		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", item.Name, item.Status, formatLabels(item.Labels, 60), item.ID)
+	}
+	return tw.Flush()
 }
 
 func cmdNVLinkLogicalPartitionList(s *Session, _ []string) error {
@@ -2250,6 +2324,98 @@ func printDetailJSON(w io.Writer, data []byte) error {
 	}
 	fmt.Fprintln(w, string(pretty))
 	return nil
+}
+
+func formatLabels(labels map[string]string, maxWidth int) string {
+	if len(labels) == 0 {
+		return ""
+	}
+	keys := make([]string, 0, len(labels))
+	for k := range labels {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	parts := make([]string, 0, len(keys))
+	for _, k := range keys {
+		parts = append(parts, k+"="+labels[k])
+	}
+	s := strings.Join(parts, ", ")
+	if maxWidth > 0 && len(s) > maxWidth {
+		return s[:maxWidth-3] + "..."
+	}
+	return s
+}
+
+func filterByLabels(items []NamedItem, filters map[string]string) []NamedItem {
+	if len(filters) == 0 {
+		return items
+	}
+	result := make([]NamedItem, 0, len(items))
+	for _, item := range items {
+		match := true
+		for k, v := range filters {
+			if item.Labels[k] != v {
+				match = false
+				break
+			}
+		}
+		if match {
+			result = append(result, item)
+		}
+	}
+	return result
+}
+
+func sortByLabelKey(items []NamedItem, key string) {
+	sort.SliceStable(items, func(i, j int) bool {
+		vi, oki := items[i].Labels[key]
+		vj, okj := items[j].Labels[key]
+		if !oki && !okj {
+			return false
+		}
+		if !oki {
+			return false
+		}
+		if !okj {
+			return true
+		}
+		return vi < vj
+	})
+}
+
+// parseLabelArgs extracts --label key=value and --sort-label key from args.
+// Returns the remaining args, label filters, and sort-label key.
+func parseLabelArgs(args []string) (remaining []string, labels map[string]string, sortKey string) {
+	labels = map[string]string{}
+	for i := 0; i < len(args); i++ {
+		if args[i] == "--label" && i+1 < len(args) {
+			i++
+			if k, v, ok := strings.Cut(args[i], "="); ok {
+				labels[k] = v
+			}
+		} else if args[i] == "--sort-label" && i+1 < len(args) {
+			i++
+			sortKey = args[i]
+		} else {
+			remaining = append(remaining, args[i])
+		}
+	}
+	return remaining, labels, sortKey
+}
+
+// mergeLabels combines scope label filters with per-command label filters.
+func mergeLabels(scope, cmd map[string]string) map[string]string {
+	if len(scope) == 0 && len(cmd) == 0 {
+		return nil
+	}
+	merged := make(map[string]string, len(scope)+len(cmd))
+	for k, v := range scope {
+		merged[k] = v
+	}
+	for k, v := range cmd {
+		merged[k] = v
+	}
+	return merged
 }
 
 func printResourceTable(w io.Writer, col1, col2, col3 string, items []NamedItem) error {

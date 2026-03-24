@@ -401,6 +401,234 @@ func TestSetSiteScopeFromID_NoChangeKeepsFilteredCache(t *testing.T) {
 	}
 }
 
+// --- Label support tests ---
+
+func TestExtractLabels(t *testing.T) {
+	t.Run("valid map", func(t *testing.T) {
+		m := map[string]interface{}{
+			"labels": map[string]interface{}{"env": "prod", "rack": "A3"},
+		}
+		got := extractLabels(m)
+		if len(got) != 2 || got["env"] != "prod" || got["rack"] != "A3" {
+			t.Fatalf("unexpected labels: %v", got)
+		}
+	})
+	t.Run("nil labels", func(t *testing.T) {
+		m := map[string]interface{}{"name": "test"}
+		got := extractLabels(m)
+		if got != nil {
+			t.Fatalf("expected nil, got %v", got)
+		}
+	})
+	t.Run("non-string values ignored", func(t *testing.T) {
+		m := map[string]interface{}{
+			"labels": map[string]interface{}{"env": "prod", "count": 42},
+		}
+		got := extractLabels(m)
+		if len(got) != 1 || got["env"] != "prod" {
+			t.Fatalf("expected only string values, got %v", got)
+		}
+	})
+	t.Run("empty map", func(t *testing.T) {
+		m := map[string]interface{}{
+			"labels": map[string]interface{}{},
+		}
+		got := extractLabels(m)
+		if got != nil {
+			t.Fatalf("expected nil for empty map, got %v", got)
+		}
+	})
+}
+
+func TestFormatLabels(t *testing.T) {
+	t.Run("empty", func(t *testing.T) {
+		if got := formatLabels(nil, 60); got != "" {
+			t.Fatalf("expected empty, got %q", got)
+		}
+	})
+	t.Run("single", func(t *testing.T) {
+		got := formatLabels(map[string]string{"env": "prod"}, 60)
+		if got != "env=prod" {
+			t.Fatalf("expected %q, got %q", "env=prod", got)
+		}
+	})
+	t.Run("multiple sorted", func(t *testing.T) {
+		got := formatLabels(map[string]string{"rack": "A3", "env": "prod"}, 60)
+		if got != "env=prod, rack=A3" {
+			t.Fatalf("expected %q, got %q", "env=prod, rack=A3", got)
+		}
+	})
+	t.Run("truncation", func(t *testing.T) {
+		got := formatLabels(map[string]string{"env": "production", "rack": "A3"}, 15)
+		if len(got) > 15 {
+			t.Fatalf("expected max 15 chars, got %d: %q", len(got), got)
+		}
+		if !strings.HasSuffix(got, "...") {
+			t.Fatalf("expected truncation suffix, got %q", got)
+		}
+	})
+	t.Run("no truncation when fits", func(t *testing.T) {
+		got := formatLabels(map[string]string{"a": "b"}, 60)
+		if strings.HasSuffix(got, "...") {
+			t.Fatalf("should not truncate short label: %q", got)
+		}
+	})
+}
+
+func TestFilterByLabels(t *testing.T) {
+	items := []NamedItem{
+		{Name: "a", Labels: map[string]string{"env": "prod", "rack": "A3"}},
+		{Name: "b", Labels: map[string]string{"env": "dev"}},
+		{Name: "c", Labels: nil},
+		{Name: "d", Labels: map[string]string{"env": "prod", "rack": "B1"}},
+	}
+
+	t.Run("no filters", func(t *testing.T) {
+		got := filterByLabels(items, nil)
+		if len(got) != 4 {
+			t.Fatalf("expected 4 items, got %d", len(got))
+		}
+	})
+	t.Run("single match", func(t *testing.T) {
+		got := filterByLabels(items, map[string]string{"env": "dev"})
+		if len(got) != 1 || got[0].Name != "b" {
+			t.Fatalf("expected [b], got %v", got)
+		}
+	})
+	t.Run("multi-key AND", func(t *testing.T) {
+		got := filterByLabels(items, map[string]string{"env": "prod", "rack": "A3"})
+		if len(got) != 1 || got[0].Name != "a" {
+			t.Fatalf("expected [a], got %v", got)
+		}
+	})
+	t.Run("no match", func(t *testing.T) {
+		got := filterByLabels(items, map[string]string{"env": "staging"})
+		if len(got) != 0 {
+			t.Fatalf("expected 0 items, got %d", len(got))
+		}
+	})
+	t.Run("nil labels handled", func(t *testing.T) {
+		got := filterByLabels(items, map[string]string{"env": "prod"})
+		for _, item := range got {
+			if item.Labels == nil {
+				t.Fatal("nil-label item should not pass filter")
+			}
+		}
+	})
+}
+
+func TestSortByLabelKey(t *testing.T) {
+	t.Run("ascending sort", func(t *testing.T) {
+		items := []NamedItem{
+			{Name: "c", Labels: map[string]string{"rack": "C1"}},
+			{Name: "a", Labels: map[string]string{"rack": "A1"}},
+			{Name: "b", Labels: map[string]string{"rack": "B1"}},
+		}
+		sortByLabelKey(items, "rack")
+		if items[0].Name != "a" || items[1].Name != "b" || items[2].Name != "c" {
+			t.Fatalf("unexpected order: %s %s %s", items[0].Name, items[1].Name, items[2].Name)
+		}
+	})
+	t.Run("missing keys sort last", func(t *testing.T) {
+		items := []NamedItem{
+			{Name: "no-label", Labels: nil},
+			{Name: "has-label", Labels: map[string]string{"rack": "A1"}},
+		}
+		sortByLabelKey(items, "rack")
+		if items[0].Name != "has-label" || items[1].Name != "no-label" {
+			t.Fatalf("expected has-label first, got %s %s", items[0].Name, items[1].Name)
+		}
+	})
+	t.Run("stable order for equal values", func(t *testing.T) {
+		items := []NamedItem{
+			{Name: "first", Labels: map[string]string{"rack": "A1"}},
+			{Name: "second", Labels: map[string]string{"rack": "A1"}},
+		}
+		sortByLabelKey(items, "rack")
+		if items[0].Name != "first" || items[1].Name != "second" {
+			t.Fatalf("stable sort violated: %s %s", items[0].Name, items[1].Name)
+		}
+	})
+}
+
+func TestParseLabelArgs(t *testing.T) {
+	t.Run("label and sort-label", func(t *testing.T) {
+		remaining, labels, sortKey := parseLabelArgs([]string{"--label", "env=prod", "--sort-label", "rack", "extra"})
+		if len(remaining) != 1 || remaining[0] != "extra" {
+			t.Fatalf("unexpected remaining: %v", remaining)
+		}
+		if labels["env"] != "prod" {
+			t.Fatalf("expected env=prod, got %v", labels)
+		}
+		if sortKey != "rack" {
+			t.Fatalf("expected sort key rack, got %q", sortKey)
+		}
+	})
+	t.Run("no label args", func(t *testing.T) {
+		remaining, labels, sortKey := parseLabelArgs([]string{"foo", "bar"})
+		if len(remaining) != 2 {
+			t.Fatalf("expected 2 remaining, got %d", len(remaining))
+		}
+		if len(labels) != 0 {
+			t.Fatalf("expected no labels, got %v", labels)
+		}
+		if sortKey != "" {
+			t.Fatalf("expected no sort key, got %q", sortKey)
+		}
+	})
+	t.Run("multiple labels AND", func(t *testing.T) {
+		_, labels, _ := parseLabelArgs([]string{"--label", "env=prod", "--label", "rack=A3"})
+		if len(labels) != 2 || labels["env"] != "prod" || labels["rack"] != "A3" {
+			t.Fatalf("expected two labels, got %v", labels)
+		}
+	})
+}
+
+func TestMergeLabels(t *testing.T) {
+	t.Run("both nil", func(t *testing.T) {
+		if got := mergeLabels(nil, nil); got != nil {
+			t.Fatalf("expected nil, got %v", got)
+		}
+	})
+	t.Run("cmd overrides scope", func(t *testing.T) {
+		scope := map[string]string{"env": "dev"}
+		cmd := map[string]string{"env": "prod"}
+		got := mergeLabels(scope, cmd)
+		if got["env"] != "prod" {
+			t.Fatalf("expected cmd to override scope, got %v", got)
+		}
+	})
+	t.Run("combines unique keys", func(t *testing.T) {
+		scope := map[string]string{"env": "prod"}
+		cmd := map[string]string{"rack": "A3"}
+		got := mergeLabels(scope, cmd)
+		if len(got) != 2 || got["env"] != "prod" || got["rack"] != "A3" {
+			t.Fatalf("expected merged labels, got %v", got)
+		}
+	})
+}
+
+func TestInvalidateFilteredIncludesInstanceType(t *testing.T) {
+	c := NewCache()
+	c.Set("instance-type", []NamedItem{{Name: "it1", ID: "1"}})
+	c.InvalidateFiltered()
+	if got := c.Get("instance-type"); got != nil {
+		t.Fatal("expected instance-type cache to be invalidated by InvalidateFiltered")
+	}
+}
+
+func TestAppendScopeFlagsIncludesInstanceType(t *testing.T) {
+	s := &Session{
+		Scope: Scope{SiteID: "site-1"},
+		Cache: NewCache(),
+	}
+	s.Resolver = NewResolver(s.Cache)
+	got := appendScopeFlags(s, []string{"instance-type", "list"})
+	if !contains(got, "--site-id") {
+		t.Fatal("expected instance-type to receive --site-id scope flag")
+	}
+}
+
 // --- Helpers ---
 
 func captureStdout(f func()) string {
