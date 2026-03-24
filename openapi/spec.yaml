@@ -24,7 +24,6 @@ info:
     url: 'https://www.apache.org/licenses/LICENSE-2.0'
   contact:
     name: NCX Infra Controller Dev Team
-    email: carbide-dev@exchange.nvidia.com
 servers:
   - url: 'https://carbide-rest-api.carbide.svc.cluster.local'
     description: Kubernetes Cluster
