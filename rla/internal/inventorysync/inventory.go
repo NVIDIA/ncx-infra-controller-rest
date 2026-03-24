@@ -31,6 +31,7 @@ import (
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/carbideapi"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/config"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/db/model"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/nsmapi"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/psmapi"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
 )
@@ -66,6 +67,15 @@ func RunInventory(ctx context.Context, dbConf *cdb.Config) {
 		defer psmClient.Close()
 	}
 
+	nsmClient, err := nsmapi.NewClient(config.GRPCTimeout)
+	if err != nil {
+		log.Error().Msgf("Unable to create NSM GRPC client (NSM_API_URL: %v): %v", os.Getenv("NSM_API_URL"), err)
+	}
+
+	if nsmClient != nil {
+		defer nsmClient.Close()
+	}
+
 	pool, err := cdb.NewSessionFromConfig(ctx, *dbConf)
 	if err != nil {
 		log.Fatal().Msgf("Unable to create database pool: %v", err)
@@ -74,7 +84,7 @@ func RunInventory(ctx context.Context, dbConf *cdb.Config) {
 	log.Info().Msg("Starting inventory monitoring loop")
 
 	for {
-		runInventoryOne(ctx, &config, pool, carbideClient, psmClient)
+		runInventoryOne(ctx, &config, pool, carbideClient, psmClient, nsmClient)
 	}
 }
 
@@ -83,16 +93,16 @@ var lastUpdateMachineIDs time.Time
 // runInventoryOne is a single iteration for RunInventory.
 // It syncs each resource type against its external source, collects all drifts,
 // and persists them in one shot.
-func runInventoryOne(ctx context.Context, config *config.Config, pool *cdb.Session, carbideClient carbideapi.Client, psmClient psmapi.Client) {
+func runInventoryOne(ctx context.Context, config *config.Config, pool *cdb.Session, carbideClient carbideapi.Client, psmClient psmapi.Client, nsmClient nsmapi.Client) {
 	var allDrifts []model.ComponentDrift
 
 	// Sync machines against Carbide
 	machineDrifts := syncMachines(ctx, config, pool, carbideClient)
 	allDrifts = append(allDrifts, machineDrifts...)
 
-	// TODO: Sync NVL switches against Carbide
-
-	// TODO: Sync powershelves against Carbide
+	// Sync NVL switches against NSM
+	nvlSwitchDrifts := syncNVSwitches(ctx, pool, carbideClient, nsmClient)
+	allDrifts = append(allDrifts, nvlSwitchDrifts...)
 
 	// Sync powershelves against PSM
 	powershelfDrifts := syncPowershelves(ctx, pool, carbideClient, psmClient)
@@ -508,6 +518,168 @@ func compareMachineFieldsForDrift(
 	}
 
 	return diffs
+}
+
+// ---------------------------------------------------------------------------
+// syncNVSwitches: sync NVLSwitch components against NSM
+// ---------------------------------------------------------------------------
+//
+// NSM API calls (1-2 round-trips):
+//   - GetNVSwitches: get registered switches (firmware_version direct-write)
+//   - RegisterNVSwitches: register un-registered DHCPed switches
+//
+// Carbide API calls (1 round-trip):
+//   - FindInterfaces: check which BMCs have DHCPed
+//
+// Flow:
+//  1. DB: get all NVLSwitch components with BMCs
+//  2. NSM GetNVSwitches: get registered switches
+//  3. Carbide FindInterfaces: check which BMCs have DHCPed
+//  4. Direct-write: firmware_version (from NSM)
+//  5. Register un-registered DHCPed switches with NSM
+//  6. Return drifts (missing_in_actual for unregistered switches)
+
+// Default factory credentials for NVSwitch BMCs
+const (
+	nvswitchDefaultUsername = "root"
+	nvswitchDefaultPassword = "0penBmc"
+)
+
+func syncNVSwitches(ctx context.Context, pool *cdb.Session, carbideClient carbideapi.Client, nsmClient nsmapi.Client) []model.ComponentDrift {
+	if nsmClient == nil {
+		log.Debug().Msg("NSM client not available, skipping NVSwitch sync")
+		return nil
+	}
+
+	log.Debug().Msg("Syncing NV switches...")
+
+	// Step 1: Get all NVLSwitch components with their BMCs
+	expectedSwitches, err := model.GetComponentsByType(ctx, pool.DB, devicetypes.ComponentTypeNVLSwitch)
+	if err != nil {
+		log.Error().Msgf("Unable to retrieve NVLSwitch components from db: %v", err)
+		return nil
+	}
+
+	if len(expectedSwitches) == 0 {
+		return nil
+	}
+
+	// Build map from BMC MAC to component.
+	// Each NVLSwitch should have exactly one BMC.
+	expectedByBmcMac := make(map[string]*model.Component)
+	for i := range expectedSwitches {
+		sw := &expectedSwitches[i]
+		if len(sw.BMCs) != 1 {
+			log.Error().Msgf("NVLSwitch %s has %d BMCs, expected exactly 1; skipping", sw.SerialNumber, len(sw.BMCs))
+			continue
+		}
+
+		bmcMacAddr, err := net.ParseMAC(sw.BMCs[0].MacAddress)
+		if err != nil || bmcMacAddr == nil {
+			log.Error().Msgf("NVLSwitch %s has invalid BMC MAC address %s; skipping", sw.SerialNumber, sw.BMCs[0].MacAddress)
+			continue
+		}
+
+		expectedByBmcMac[sw.BMCs[0].MacAddress] = sw
+	}
+
+	// Step 2: Get registered switches from NSM
+	registeredSwitches, err := nsmClient.GetNVSwitches(ctx, nil)
+	if err != nil {
+		log.Error().Msgf("Unable to retrieve registered switches from NSM: %v", err)
+		return nil
+	}
+
+	registeredByMac := make(map[string]nsmapi.NVSwitchTray)
+	for _, sw := range registeredSwitches {
+		if sw.BMCMACAddress != "" {
+			registeredByMac[sw.BMCMACAddress] = sw
+		}
+	}
+
+	// Step 3: Get machine interfaces from Carbide to check DHCP status
+	interfacesByMac, err := carbideClient.FindInterfaces(ctx)
+	if err != nil {
+		log.Error().Msgf("Unable to retrieve interfaces from carbide-api: %v", err)
+		return nil
+	}
+
+	// Steps 4 & 5: Process each expected NVLSwitch
+	now := time.Now()
+	var drifts []model.ComponentDrift
+	var toRegister []nsmapi.RegisterNVSwitchRequest
+
+	for bmcMac, nvswitch := range expectedByBmcMac {
+		// Already registered with NSM — direct-write firmware_version
+		if registeredSW, isRegistered := registeredByMac[bmcMac]; isRegistered {
+			needsUpdate := false
+
+			if registeredSW.BMCFirmware != "" && nvswitch.FirmwareVersion != registeredSW.BMCFirmware {
+				nvswitch.FirmwareVersion = registeredSW.BMCFirmware
+				needsUpdate = true
+				log.Info().Msgf("Updating firmware version for NVLSwitch %s to %s", bmcMac, registeredSW.BMCFirmware)
+			}
+
+			if needsUpdate {
+				if err := nvswitch.Patch(ctx, pool.DB); err != nil {
+					log.Error().Msgf("Unable to update NVLSwitch %s: %v", bmcMac, err)
+				}
+			}
+
+			// TODO: add field-level drift detection for NVLSwitches (serial_number, etc.)
+			continue
+		}
+
+		// Not registered with NSM — check if DHCPed, register if possible
+		iface, found := interfacesByMac[bmcMac]
+		if !found || len(iface.Addresses) == 0 {
+			log.Warn().Msgf("NVLSwitch BMC %s has not DHCPed yet", bmcMac)
+			compID := nvswitch.ID
+			drifts = append(drifts, model.ComponentDrift{
+				ComponentID: &compID,
+				ExternalID:  nil,
+				DriftType:   model.DriftTypeMissingInActual,
+				Diffs:       []model.FieldDiff{},
+				CheckedAt:   now,
+			})
+			continue
+		}
+
+		if len(iface.Addresses) > 1 {
+			log.Error().Msgf("NVLSwitch BMC %s has multiple IP addresses assigned (%v), skipping registration", bmcMac, iface.Addresses)
+			continue
+		}
+
+		ipAddress := iface.Addresses[0]
+		log.Info().Msgf("NVLSwitch BMC %s has DHCPed with IP %s, registering with NSM", bmcMac, ipAddress)
+
+		toRegister = append(toRegister, nsmapi.RegisterNVSwitchRequest{
+			BMCMACAddress:  bmcMac,
+			BMCIPAddress:   ipAddress,
+			BMCCredentials: nsmapi.Credentials{Username: nvswitchDefaultUsername, Password: nvswitchDefaultPassword},
+		})
+	}
+
+	// Register un-registered switches with NSM
+	if len(toRegister) > 0 {
+		responses, err := nsmClient.RegisterNVSwitches(ctx, toRegister)
+		if err != nil {
+			log.Error().Msgf("Unable to register NVLSwitches with NSM: %v", err)
+		} else {
+			for _, resp := range responses {
+				if resp.Status != nsmapi.StatusSuccess {
+					log.Error().Msgf("Failed to register NVLSwitch with NSM (uuid=%s): %s", resp.UUID, resp.Error)
+				} else if resp.IsNew {
+					log.Info().Msgf("Successfully registered new NVLSwitch with NSM (uuid=%s)", resp.UUID)
+				} else {
+					log.Debug().Msgf("NVLSwitch was already registered with NSM (uuid=%s)", resp.UUID)
+				}
+			}
+		}
+	}
+
+	log.Info().Msgf("NVLSwitch sync: %d drift(s) out of %d expected", len(drifts), len(expectedSwitches))
+	return drifts
 }
 
 // ---------------------------------------------------------------------------

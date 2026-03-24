@@ -33,6 +33,7 @@ import (
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/common/utils"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/config"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/db/model"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/nsmapi"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/psmapi"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
 )
@@ -86,7 +87,8 @@ func TestInventory(t *testing.T) {
 	assert.Nil(t, err)
 
 	psmMock := psmapi.NewMockClient()
-	runInventoryOne(ctx, &cfg, pool, grpcMock, psmMock)
+	nsmMock := nsmapi.NewMockClient()
+	runInventoryOne(ctx, &cfg, pool, grpcMock, psmMock, nsmMock)
 
 	rows, err := pool.DB.Query("SELECT serial_number, power_state FROM component;")
 	assert.NotNil(t, rows)
@@ -156,7 +158,8 @@ func TestSyncFirmwareVersion(t *testing.T) {
 	assert.Nil(t, err)
 
 	psmMock := psmapi.NewMockClient()
-	runInventoryOne(ctx, &cfg, pool, grpcMock, psmMock)
+	nsmMock := nsmapi.NewMockClient()
+	runInventoryOne(ctx, &cfg, pool, grpcMock, psmMock, nsmMock)
 
 	var updated1 model.Component
 	err = pool.DB.NewSelect().Model(&updated1).Where("id = ?", c1.ID).Scan(ctx)
@@ -428,7 +431,8 @@ func TestHandleExpectedPowershelves(t *testing.T) {
 
 	// Run the inventory loop
 	cfg := config.UnitTestConfig()
-	runInventoryOne(ctx, &cfg, pool, carbideMock, psmMock)
+	nsmMock := nsmapi.NewMockClient()
+	runInventoryOne(ctx, &cfg, pool, carbideMock, psmMock, nsmMock)
 
 	// Verify that only expected PMCs that have DHCPed were registered with PSM
 	registeredPowershelves, err := psmMock.GetPowershelves(ctx, []string{})
