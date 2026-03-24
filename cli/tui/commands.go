@@ -2340,7 +2340,7 @@ func formatLabels(labels map[string]string, maxWidth int) string {
 		parts = append(parts, k+"="+labels[k])
 	}
 	s := strings.Join(parts, ", ")
-	if maxWidth > 0 && len(s) > maxWidth {
+	if maxWidth > 3 && len(s) > maxWidth {
 		return s[:maxWidth-3] + "..."
 	}
 	return s
