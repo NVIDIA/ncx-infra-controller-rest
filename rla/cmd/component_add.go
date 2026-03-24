@@ -46,10 +46,10 @@ var (
 	addBmcMAC          string
 	addBmcIP           string
 	addBmcType         string
-	addHost            string
-	addPort            int
 )
 
+// newAddCmd returns a configured cobra.Command for adding a new component
+// to an existing rack in the inventory.
 func newAddCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "add",
@@ -102,8 +102,6 @@ Examples:
 	cmd.Flags().StringVar(&addBmcMAC, "bmc-mac", "", "BMC MAC address")
 	cmd.Flags().StringVar(&addBmcIP, "bmc-ip", "", "BMC IP address")
 	cmd.Flags().StringVar(&addBmcType, "bmc-type", "host", "BMC type: host, dpu")
-	cmd.Flags().StringVar(&addHost, "host", "localhost", "RLA server host")
-	cmd.Flags().IntVar(&addPort, "port", 50051, "RLA server port")
 
 	_ = cmd.MarkFlagRequired("rack-id")
 	_ = cmd.MarkFlagRequired("name")
@@ -118,6 +116,8 @@ func init() {
 	componentCmd.AddCommand(newAddCmd())
 }
 
+// doAddComponent builds a types.Component from the CLI flags and calls
+// AddComponent via the gRPC client, printing the created component as JSON.
 func doAddComponent() {
 	rackID, err := uuid.Parse(addRackID)
 	if err != nil {
@@ -168,10 +168,7 @@ func doAddComponent() {
 		comp.BMCs = []types.BMC{bmc}
 	}
 
-	c, err := client.New(client.Config{
-		Host: addHost,
-		Port: addPort,
-	})
+	c, err := client.New(newGlobalClientConfig())
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to create client")
 	}

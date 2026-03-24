@@ -41,8 +41,6 @@ Example:
 }
 
 var (
-	assocHost   string
-	assocPort   int
 	assocRackID string
 	assocRuleID string
 )
@@ -50,8 +48,6 @@ var (
 func init() {
 	ruleCmd.AddCommand(ruleAssociateCmd)
 
-	ruleAssociateCmd.Flags().StringVar(&assocHost, "host", "localhost", "RLA service host")
-	ruleAssociateCmd.Flags().IntVar(&assocPort, "port", 50051, "RLA service port")
 	ruleAssociateCmd.Flags().StringVar(&assocRackID, "rack-id", "", "Rack ID (required)")
 	ruleAssociateCmd.Flags().StringVar(&assocRuleID, "rule-id", "", "Rule ID (required)")
 
@@ -59,11 +55,10 @@ func init() {
 	ruleAssociateCmd.MarkFlagRequired("rule-id")
 }
 
+// runRuleAssociate is the RunE handler for ruleAssociateCmd. It parses the
+// rack and rule IDs from flags and calls AssociateRuleWithRack via the client.
 func runRuleAssociate(cmd *cobra.Command, args []string) error {
-	rlaClient, err := client.New(client.Config{
-		Host: assocHost,
-		Port: assocPort,
-	})
+	rlaClient, err := client.New(newGlobalClientConfig())
 	if err != nil {
 		return fmt.Errorf("failed to create client: %w", err)
 	}

@@ -76,8 +76,6 @@ Examples:
 	expectedComponentIDs  string
 	expectedComponentType string
 	expectedOutput        string
-	expectedHost          string
-	expectedPort          int
 )
 
 func init() {
@@ -88,10 +86,11 @@ func init() {
 	expectedCmd.Flags().StringVar(&expectedComponentIDs, "component-ids", "", "Comma-separated list of component IDs")
 	expectedCmd.Flags().StringVarP(&expectedComponentType, "type", "t", "", "Component type: compute, nvlswitch, powershelf, torswitch, ums, cdu")
 	expectedCmd.Flags().StringVarP(&expectedOutput, "output", "o", "json", "Output format: json, table")
-	expectedCmd.Flags().StringVar(&expectedHost, "host", "localhost", "RLA server host")
-	expectedCmd.Flags().IntVar(&expectedPort, "port", 50051, "RLA server port")
 }
 
+// doGetExpectedComponents validates the CLI inputs, calls the appropriate
+// GetExpectedComponents client method, and prints the result in the requested
+// output format.
 func doGetExpectedComponents() {
 	// Validate input - exactly one of rack-ids, rack-names, or component-ids must be provided
 	optionCount := 0
@@ -121,10 +120,7 @@ func doGetExpectedComponents() {
 	componentType := parseComponentTypeToTypes(expectedComponentType)
 
 	// Create client
-	c, err := client.New(client.Config{
-		Host: expectedHost,
-		Port: expectedPort,
-	})
+	c, err := client.New(newGlobalClientConfig())
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to create client")
 	}
@@ -174,6 +170,7 @@ func doGetExpectedComponents() {
 	}
 }
 
+// outputExpectedJSON prints the GetExpectedComponentsResult as indented JSON to stdout.
 func outputExpectedJSON(result *client.GetExpectedComponentsResult) {
 	output := struct {
 		Total      int         `json:"total"`
@@ -190,6 +187,8 @@ func outputExpectedJSON(result *client.GetExpectedComponentsResult) {
 	fmt.Println(string(data))
 }
 
+// outputExpectedTable prints the GetExpectedComponentsResult as a human-readable
+// table to stdout.
 func outputExpectedTable(result *client.GetExpectedComponentsResult) {
 	fmt.Printf("Total: %d components\n", result.Total)
 	fmt.Println(strings.Repeat("-", 100))

@@ -37,8 +37,6 @@ var ruleListCmd = &cobra.Command{
 }
 
 var (
-	listHost          string
-	listPort          int
 	listOperationType string
 	listIsDefault     bool
 	listOffset        int32
@@ -48,19 +46,16 @@ var (
 func init() {
 	ruleCmd.AddCommand(ruleListCmd)
 
-	ruleListCmd.Flags().StringVar(&listHost, "host", "localhost", "RLA service host")
-	ruleListCmd.Flags().IntVar(&listPort, "port", 50051, "RLA service port")
 	ruleListCmd.Flags().StringVar(&listOperationType, "operation-type", "", "Filter by operation type (power_control, firmware_control)")
 	ruleListCmd.Flags().BoolVar(&listIsDefault, "default-only", false, "Show only default rules")
 	ruleListCmd.Flags().Int32Var(&listOffset, "offset", 0, "Pagination offset")
 	ruleListCmd.Flags().Int32Var(&listLimit, "limit", 100, "Pagination limit")
 }
 
+// runRuleList is the RunE handler for ruleListCmd. It calls ListOperationRules
+// with any provided filters and prints the results as a tab-aligned table.
 func runRuleList(cmd *cobra.Command, args []string) error {
-	rlaClient, err := client.New(client.Config{
-		Host: listHost,
-		Port: listPort,
-	})
+	rlaClient, err := client.New(newGlobalClientConfig())
 	if err != nil {
 		return fmt.Errorf("failed to create client: %w", err)
 	}

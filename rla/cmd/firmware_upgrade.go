@@ -77,8 +77,6 @@ Examples:
 	firmwareUpgradeComponentType string
 	firmwareUpgradeStartTime     string
 	firmwareUpgradeEndTime       string
-	firmwareUpgradeHost          string
-	firmwareUpgradePort          int
 )
 
 func init() {
@@ -90,8 +88,6 @@ func init() {
 	firmwareUpgradeCmd.Flags().StringVarP(&firmwareUpgradeComponentType, "type", "t", "", "Component type: compute, nvlswitch, powershelf (required for rack-ids/rack-names)")
 	firmwareUpgradeCmd.Flags().StringVarP(&firmwareUpgradeStartTime, "start", "s", "", "Start time (default: now)")
 	firmwareUpgradeCmd.Flags().StringVarP(&firmwareUpgradeEndTime, "end", "e", "", "End time (default: start + 24h)")
-	firmwareUpgradeCmd.Flags().StringVar(&firmwareUpgradeHost, "host", "localhost", "RLA service host")
-	firmwareUpgradeCmd.Flags().IntVarP(&firmwareUpgradePort, "port", "p", defaultServicePort, "RLA service port")
 }
 
 // parseTimeString parses time string in the following formats:
@@ -113,6 +109,9 @@ func parseTimeString(s string) (time.Time, error) {
 	return time.Time{}, fmt.Errorf("unable to parse time '%s': expected format 2025-01-02T03:04:05 or 2025-01-02T03:04:05+0000", s)
 }
 
+// doFirmwareUpgrade validates the CLI inputs, resolves the upgrade time window,
+// and calls the appropriate UpgradeFirmware client method based on whether the
+// caller specified rack IDs, rack names, or component IDs.
 func doFirmwareUpgrade() {
 	// Validate inputs - only one of the three options can be specified
 	hasRackIDs := firmwareUpgradeRackIDs != ""
@@ -175,10 +174,7 @@ func doFirmwareUpgrade() {
 	ctx := context.Background()
 
 	// Create RLA client
-	rlaClient, err := client.New(client.Config{
-		Host: firmwareUpgradeHost,
-		Port: firmwareUpgradePort,
-	})
+	rlaClient, err := client.New(newGlobalClientConfig())
 	if err != nil {
 		log.Fatal().Msgf("Failed to create RLA client: %v", err)
 	}

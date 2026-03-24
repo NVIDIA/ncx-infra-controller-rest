@@ -21,6 +21,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// powerCmd is the parent command for power management subcommands.
 var powerCmd = &cobra.Command{
 	Use:   "power",
 	Short: "Power operations",

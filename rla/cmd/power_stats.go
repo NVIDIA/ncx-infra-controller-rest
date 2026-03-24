@@ -53,6 +53,4 @@ func init() {
 	powerStatsCmd.Flags().String("component-ids", "", "Comma-separated list of component IDs")
 	powerStatsCmd.Flags().StringP("type", "t", "", "Component type: compute, nvlswitch, powershelf")
 	powerStatsCmd.Flags().StringP("output", "o", "json", "Output format: json, table")
-	powerStatsCmd.Flags().String("host", "localhost", "RLA server host")
-	powerStatsCmd.Flags().Int("port", 50051, "RLA server port")
 }

@@ -37,10 +37,10 @@ var (
 	updateHostID          int
 	updateDescription     string
 	updateRackID          string
-	updateHost            string
-	updatePort            int
 )
 
+// newUpdateCmd returns a configured cobra.Command for patching a component's
+// fields (firmware version, position, description, or rack assignment).
 func newUpdateCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update",
@@ -83,8 +83,6 @@ Examples:
 	cmd.Flags().IntVar(&updateHostID, "host-id", 0, "New host ID")
 	cmd.Flags().StringVar(&updateDescription, "description", "", "New description (JSON string)")
 	cmd.Flags().StringVar(&updateRackID, "rack-id", "", "Re-assign to a different rack (UUID)")
-	cmd.Flags().StringVar(&updateHost, "host", "localhost", "RLA server host")
-	cmd.Flags().IntVar(&updatePort, "port", 50051, "RLA server port")
 
 	_ = cmd.MarkFlagRequired("id")
 
@@ -95,6 +93,8 @@ func init() {
 	componentCmd.AddCommand(newUpdateCmd())
 }
 
+// doUpdateComponent builds a PatchComponentOpts from the changed flags and
+// calls PatchComponent via the gRPC client, printing the updated component as JSON.
 func doUpdateComponent(cmd *cobra.Command) {
 	// Parse component ID
 	compID, err := uuid.Parse(updateComponentID)
@@ -148,10 +148,7 @@ func doUpdateComponent(cmd *cobra.Command) {
 	}
 
 	// Create client
-	c, err := client.New(client.Config{
-		Host: updateHost,
-		Port: updatePort,
-	})
+	c, err := client.New(newGlobalClientConfig())
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to create client")
 	}

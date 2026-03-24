@@ -36,8 +36,6 @@ var ruleDisassociateCmd = &cobra.Command{
 }
 
 var (
-	disassocHost      string
-	disassocPort      int
 	disassocRackID    string
 	disassocOpType    string
 	disassocOperation string
@@ -46,8 +44,6 @@ var (
 func init() {
 	ruleCmd.AddCommand(ruleDisassociateCmd)
 
-	ruleDisassociateCmd.Flags().StringVar(&disassocHost, "host", "localhost", "RLA service host")
-	ruleDisassociateCmd.Flags().IntVar(&disassocPort, "port", 50051, "RLA service port")
 	ruleDisassociateCmd.Flags().StringVar(&disassocRackID, "rack-id", "", "Rack ID (required)")
 	ruleDisassociateCmd.Flags().StringVar(&disassocOpType, "operation-type", "", "Operation type: power_control or firmware_control (required)")
 	ruleDisassociateCmd.Flags().StringVar(&disassocOperation, "operation", "", "Operation code: power_on, power_off, upgrade, etc. (required)")
@@ -57,6 +53,9 @@ func init() {
 	ruleDisassociateCmd.MarkFlagRequired("operation")
 }
 
+// runRuleDisassociate is the RunE handler for ruleDisassociateCmd. It parses
+// the rack ID, operation type, and operation code from flags and calls
+// DisassociateRuleFromRack via the client.
 func runRuleDisassociate(cmd *cobra.Command, args []string) error {
 	var opType types.OperationType
 	switch disassocOpType {
@@ -73,10 +72,7 @@ func runRuleDisassociate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid rack ID: %w", err)
 	}
 
-	rlaClient, err := client.New(client.Config{
-		Host: disassocHost,
-		Port: disassocPort,
-	})
+	rlaClient, err := client.New(newGlobalClientConfig())
 	if err != nil {
 		return fmt.Errorf("failed to create client: %w", err)
 	}

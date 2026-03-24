@@ -56,8 +56,6 @@ Examples:
 	ingestRackIDs     string
 	ingestRackNames   string
 	ingestDescription string
-	ingestHost        string
-	ingestPort        int
 )
 
 func init() {
@@ -66,10 +64,10 @@ func init() {
 	ingestCmd.Flags().StringVar(&ingestRackIDs, "rack-ids", "", "Comma-separated list of rack UUIDs")
 	ingestCmd.Flags().StringVar(&ingestRackNames, "rack-names", "", "Comma-separated list of rack names")
 	ingestCmd.Flags().StringVar(&ingestDescription, "description", "", "Task description")
-	ingestCmd.Flags().StringVar(&ingestHost, "host", "localhost", "RLA service host")
-	ingestCmd.Flags().IntVarP(&ingestPort, "port", "p", defaultServicePort, "RLA service port")
 }
 
+// doIngest validates the CLI inputs and calls IngestRackByRackIDs or
+// IngestRackByRackNames via the gRPC client, logging the submitted task IDs.
 func doIngest() {
 	hasRackIDs := ingestRackIDs != ""
 	hasRackNames := ingestRackNames != ""
@@ -83,10 +81,7 @@ func doIngest() {
 
 	ctx := context.Background()
 
-	rlaClient, err := client.New(client.Config{
-		Host: ingestHost,
-		Port: ingestPort,
-	})
+	rlaClient, err := client.New(newGlobalClientConfig())
 	if err != nil {
 		log.Fatal().Msgf("Failed to create RLA client: %v", err)
 	}

@@ -45,6 +45,7 @@ import (
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/componentmanager/providers/nvswitchmanager"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/componentmanager/providers/psm"
 	temporalmanager "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor/temporalworkflow/manager"
+	pkgcerts "github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/certs"
 )
 
 const (
@@ -56,11 +57,23 @@ var (
 	port               int
 	componentMgrConfig string
 
+	// clientOnlyFlags are the global persistent flags that apply only to
+	// client commands. They are hidden from serve's help and rejected if set.
+	clientOnlyFlags = []string{flagHost, flagPort}
+
 	// serveCmd represents the serve command
 	serveCmd = &cobra.Command{
 		Use:   "serve",
 		Short: "Start the RLA gPRC server",
 		Long:  `Start the gRPC server to allow other services to manage the racks`,
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			for _, name := range clientOnlyFlags {
+				if cmd.Root().PersistentFlags().Changed(name) {
+					return fmt.Errorf("--%s is not applicable to 'rla serve'", name)
+				}
+			}
+			return nil
+		},
 		Run: func(cmd *cobra.Command, args []string) {
 			doServe()
 		},
@@ -70,7 +83,12 @@ var (
 func init() {
 	rootCmd.AddCommand(serveCmd)
 
-	serveCmd.Flags().IntVarP(&port, "port", "p", defaultServicePort, "Port for the gRPC server") //nolint
+	// Hide client-only persistent flags from serve's help output.
+	for _, name := range clientOnlyFlags {
+		_ = serveCmd.InheritedFlags().MarkHidden(name)
+	}
+
+	serveCmd.Flags().IntVarP(&port, "listen-port", "p", defaultServicePort, "Port for the gRPC server") //nolint
 	// Component manager config: priority is CLI flag > env var > default prod config
 	serveCmd.Flags().StringVarP(&componentMgrConfig, "component-config", "c", "", "Path to component manager config file (YAML)") //nolint
 }
@@ -207,8 +225,9 @@ func loadComponentManagerConfig() (componentmanager.Config, error) {
 	return componentmanager.DefaultProdConfig(), nil
 }
 
-// createOperationRulesLoader creates a rule loader from configuration file.
-// Returns a loader that will be used by the resolver to load rules during Start().
+// doServe is the main entry point for the serve subcommand. It loads all
+// configuration, initialises provider and component manager registries, builds
+// the service, and blocks until a termination signal is received.
 func doServe() {
 	dbConf, err := cdb.ConfigFromEnv()
 	if err != nil {
@@ -286,6 +305,11 @@ func doServe() {
 			ExecutorConf:  &temporalManagerConf,
 			CarbideClient: clients.carbide,
 			PSMClient:     clients.psm,
+			CertConfig: pkgcerts.Config{
+				CACert:  globalCACert,
+				TLSCert: globalTLSCert,
+				TLSKey:  globalTLSKey,
+			},
 		},
 	)
 
