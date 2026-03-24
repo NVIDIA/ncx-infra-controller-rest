@@ -75,8 +75,6 @@ Examples:
 	diffComponentIDs  string
 	diffComponentType string
 	diffOutput        string
-	diffHost          string
-	diffPort          int
 )
 
 func init() {
@@ -87,10 +85,11 @@ func init() {
 	diffCmd.Flags().StringVar(&diffComponentIDs, "component-ids", "", "Comma-separated list of component IDs")
 	diffCmd.Flags().StringVarP(&diffComponentType, "type", "t", "", "Component type (required): compute")
 	diffCmd.Flags().StringVarP(&diffOutput, "output", "o", "json", "Output format: json, table")
-	diffCmd.Flags().StringVar(&diffHost, "host", "localhost", "RLA server host")
-	diffCmd.Flags().IntVar(&diffPort, "port", 50051, "RLA server port")
 }
 
+// doDiffComponents validates the CLI inputs, calls the appropriate
+// ValidateComponents client method, and prints the result in the requested
+// output format.
 func doDiffComponents() {
 	// Validate input - exactly one of rack-ids, rack-names, or component-ids must be provided
 	optionCount := 0
@@ -123,10 +122,7 @@ func doDiffComponents() {
 	}
 
 	// Create client
-	c, err := client.New(client.Config{
-		Host: diffHost,
-		Port: diffPort,
-	})
+	c, err := client.New(newGlobalClientConfig())
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to create client")
 	}
@@ -176,6 +172,7 @@ func doDiffComponents() {
 	}
 }
 
+// outputDiffJSON prints the ValidateComponentsResult as indented JSON to stdout.
 func outputDiffJSON(result *client.ValidateComponentsResult) {
 	output := struct {
 		TotalDiffs          int                    `json:"total_diffs"`
@@ -200,6 +197,8 @@ func outputDiffJSON(result *client.ValidateComponentsResult) {
 	fmt.Println(string(data))
 }
 
+// outputDiffTable prints the ValidateComponentsResult as a human-readable
+// table with a summary header and per-diff rows to stdout.
 func outputDiffTable(result *client.ValidateComponentsResult) {
 	// Summary
 	fmt.Println("Summary:")

@@ -21,6 +21,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// ruleCmd is the parent command for operation rule management subcommands.
 var ruleCmd = &cobra.Command{
 	Use:   "rule",
 	Short: "Operation rule management",

@@ -31,7 +31,7 @@ import (
 var (
 	rollBack string
 
-	// migrateCmd represents the migrate command
+	// migrateCmd is the subcommand that runs database migrations.
 	migrateCmd = &cobra.Command{
 		Use:   "migrate",
 		Short: "Run the db migration",
@@ -48,6 +48,9 @@ func init() {
 	migrateCmd.Flags().StringVarP(&rollBack, "rollback", "r", "", "Roll back the schema to the way it was at the specified time.  This is the application time, not from the ID.  Format 2006-01-02T15:04:05")
 }
 
+// doMigration connects to the database and runs pending migrations. If the
+// --rollback flag is set, it rolls back the schema to the specified time
+// instead of migrating forward.
 func doMigration() {
 	dbConf, err := cdb.ConfigFromEnv()
 	if err != nil {

@@ -37,18 +37,13 @@ var ruleGetCmd = &cobra.Command{
 	RunE:  runRuleGet,
 }
 
-var (
-	getHost string
-	getPort int
-)
-
 func init() {
 	ruleCmd.AddCommand(ruleGetCmd)
-
-	ruleGetCmd.Flags().StringVar(&getHost, "host", "localhost", "RLA service host")
-	ruleGetCmd.Flags().IntVar(&getPort, "port", 50051, "RLA service port")
 }
 
+// runRuleGet is the RunE handler for ruleGetCmd. It parses the rule ID from
+// the positional argument, fetches the rule via the client, and prints its
+// details to stdout.
 func runRuleGet(cmd *cobra.Command, args []string) error {
 	ruleIDStr := args[0]
 
@@ -57,10 +52,7 @@ func runRuleGet(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid rule ID: %w", err)
 	}
 
-	rlaClient, err := client.New(client.Config{
-		Host: getHost,
-		Port: getPort,
-	})
+	rlaClient, err := client.New(newGlobalClientConfig())
 	if err != nil {
 		return fmt.Errorf("failed to create client: %w", err)
 	}

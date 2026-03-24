@@ -25,6 +25,7 @@ import (
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/types"
 )
 
+// componentCmd is the parent command for component operation subcommands.
 var componentCmd = &cobra.Command{
 	Use:   "component",
 	Short: "Component operations",

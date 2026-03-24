@@ -48,6 +48,7 @@ type rackInput struct {
 	Components []rackComponentInput `json:"components"`
 }
 
+// rackComponentInput is the JSON input structure for a single component within a rack definition.
 type rackComponentInput struct {
 	Type            string `json:"type"`
 	FirmwareVersion string `json:"firmware_version"`
@@ -68,6 +69,7 @@ type rackComponentInput struct {
 	BMCs []rackBMCInput `json:"bmcs"`
 }
 
+// rackBMCInput is the JSON input structure for a BMC entry within a component definition.
 type rackBMCInput struct {
 	Type string `json:"type"`
 	MAC  string `json:"mac"`
@@ -130,6 +132,8 @@ func parseRackJSON(data []byte) (*types.Rack, error) {
 	return &rack, nil
 }
 
+// parseRackComponentInput converts a rackComponentInput to a types.Component,
+// validating the component type and BMC fields in the process.
 func parseRackComponentInput(
 	ci rackComponentInput,
 ) (types.Component, error) {
@@ -180,6 +184,8 @@ func parseRackComponentInput(
 	return comp, nil
 }
 
+// parseRackBMCInput converts a rackBMCInput to a types.BMC, validating
+// the MAC address and IP address fields if present.
 func parseRackBMCInput(bi rackBMCInput) (types.BMC, error) {
 	var bmc types.BMC
 
@@ -210,6 +216,9 @@ func parseRackBMCInput(bi rackBMCInput) (types.BMC, error) {
 	return bmc, nil
 }
 
+// parseBMCTypeToTypes converts a BMC type string (e.g. "host", "dpu") to
+// types.BMCType. An empty string is treated as "host". An unrecognised value
+// returns types.BMCTypeUnknown.
 func parseBMCTypeToTypes(s string) types.BMCType {
 	switch strings.ToLower(s) {
 	case "host", "":

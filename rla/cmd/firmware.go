@@ -21,6 +21,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// firmwareCmd is the parent command for firmware management subcommands.
 var firmwareCmd = &cobra.Command{
 	Use:   "firmware",
 	Short: "Firmware operations",

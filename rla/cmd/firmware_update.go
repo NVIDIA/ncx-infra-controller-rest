@@ -53,6 +53,4 @@ func init() {
 	firmwareUpdateCmd.Flags().String("component-ids", "", "Comma-separated list of component IDs")
 	firmwareUpdateCmd.Flags().StringP("type", "t", "", "Component type: compute, nvlswitch, powershelf")
 	firmwareUpdateCmd.Flags().StringP("version", "v", "", "Target firmware version")
-	firmwareUpdateCmd.Flags().String("host", "localhost", "RLA server host")
-	firmwareUpdateCmd.Flags().Int("port", 50051, "RLA server port")
 }

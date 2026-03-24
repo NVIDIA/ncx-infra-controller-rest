@@ -53,6 +53,4 @@ func init() {
 	firmwareVersionCmd.Flags().String("component-ids", "", "Comma-separated list of component IDs")
 	firmwareVersionCmd.Flags().StringP("type", "t", "", "Component type: compute, nvlswitch, powershelf")
 	firmwareVersionCmd.Flags().StringP("output", "o", "json", "Output format: json, table")
-	firmwareVersionCmd.Flags().String("host", "localhost", "RLA server host")
-	firmwareVersionCmd.Flags().Int("port", 50051, "RLA server port")
 }
