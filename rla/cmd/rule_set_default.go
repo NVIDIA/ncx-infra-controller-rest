@@ -43,31 +43,26 @@ Example:
 }
 
 var (
-	setDefaultHost   string
-	setDefaultPort   int
 	setDefaultRuleID string
 )
 
 func init() {
 	ruleCmd.AddCommand(ruleSetDefaultCmd)
 
-	ruleSetDefaultCmd.Flags().StringVar(&setDefaultHost, "host", "localhost", "RLA service host")
-	ruleSetDefaultCmd.Flags().IntVar(&setDefaultPort, "port", 50051, "RLA service port")
 	ruleSetDefaultCmd.Flags().StringVar(&setDefaultRuleID, "id", "", "Rule ID (required)")
 
 	ruleSetDefaultCmd.MarkFlagRequired("id")
 }
 
+// runRuleSetDefault is the RunE handler for ruleSetDefaultCmd. It parses the
+// rule ID from the --id flag and calls SetRuleAsDefault via the client.
 func runRuleSetDefault(cmd *cobra.Command, args []string) error {
 	ruleID, err := uuid.Parse(setDefaultRuleID)
 	if err != nil {
 		return fmt.Errorf("invalid rule ID: %w", err)
 	}
 
-	rlaClient, err := client.New(client.Config{
-		Host: setDefaultHost,
-		Port: setDefaultPort,
-	})
+	rlaClient, err := client.New(newGlobalClientConfig())
 	if err != nil {
 		return fmt.Errorf("failed to create client: %w", err)
 	}

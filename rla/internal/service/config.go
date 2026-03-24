@@ -28,9 +28,11 @@ import (
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/clients/temporal"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/psmapi"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor"
+	pkgcerts "github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/certs"
 )
 
 const (
+	// DefaultPort is the default port the RLA gRPC server listens on.
 	DefaultPort = 50051
 )
 
@@ -45,8 +47,16 @@ type Config struct {
 	ExecutorConf  executor.ExecutorConfig
 	CarbideClient carbideapi.Client
 	PSMClient     psmapi.Client
+
+	// CertConfig holds certificate file paths for the gRPC server listener.
+	// When set, these take precedence over CERTDIR / the k8s default.
+	// Either all three fields must be set or none.
+	CertConfig pkgcerts.Config
 }
 
+// BuildTemporalConfigFromEnv builds a Temporal client configuration from
+// environment variables: TEMPORAL_HOST, TEMPORAL_PORT, TEMPORAL_NAMESPACE,
+// TEMPORAL_CERT_PATH, TEMPORAL_ENABLE_TLS, and TEMPORAL_SERVER_NAME.
 func BuildTemporalConfigFromEnv() (*temporal.Config, error) {
 	host := os.Getenv("TEMPORAL_HOST")
 	if host == "" {

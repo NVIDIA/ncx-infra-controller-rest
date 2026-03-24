@@ -20,6 +20,8 @@ package client
 import (
 	"errors"
 	"fmt"
+
+	pkgcerts "github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/certs"
 )
 
 // Config represents the configuration needed to create a new RLA service
@@ -27,6 +29,11 @@ import (
 type Config struct {
 	Host string
 	Port int
+
+	// CertConfig holds certificate file paths for mTLS. Either all three
+	// fields must be set (mTLS enabled) or all must be empty (insecure).
+	// Providing only some is a validation error.
+	CertConfig pkgcerts.Config
 }
 
 // Validate checks if the config fields are set correctly.
@@ -39,7 +46,7 @@ func (c *Config) Validate() error {
 		return errors.New("port must be within (0, 65535]")
 	}
 
-	return nil
+	return c.CertConfig.Validate()
 }
 
 // Target builds the target string for connecting to RLA gRPC server.

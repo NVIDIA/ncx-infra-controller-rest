@@ -30,10 +30,10 @@ import (
 
 var (
 	deleteComponentID string
-	deleteHost        string
-	deletePort        int
 )
 
+// newDeleteCmd returns a configured cobra.Command for soft-deleting a component
+// from the inventory by UUID.
 func newDeleteCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete",
@@ -52,8 +52,6 @@ Examples:
 	}
 
 	cmd.Flags().StringVar(&deleteComponentID, "id", "", "Component UUID (required)")
-	cmd.Flags().StringVar(&deleteHost, "host", "localhost", "RLA server host")
-	cmd.Flags().IntVar(&deletePort, "port", 50051, "RLA server port")
 
 	_ = cmd.MarkFlagRequired("id")
 
@@ -64,16 +62,15 @@ func init() {
 	componentCmd.AddCommand(newDeleteCmd())
 }
 
+// doDeleteComponent parses the component UUID from the flag and calls
+// DeleteComponent via the gRPC client.
 func doDeleteComponent() {
 	compID, err := uuid.Parse(deleteComponentID)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Invalid component UUID")
 	}
 
-	c, err := client.New(client.Config{
-		Host: deleteHost,
-		Port: deletePort,
-	})
+	c, err := client.New(newGlobalClientConfig())
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to create client")
 	}

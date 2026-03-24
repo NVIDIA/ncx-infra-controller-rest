@@ -15,45 +15,98 @@
  * limitations under the License.
  */
 
+// Package certs provides TLS configuration resolution using deployment-specific
+// defaults: the CERTDIR environment variable and the Kubernetes SPIFFE secret
+// path. For explicit path-based loading, use pkg/certs.
 package certs
 
 import (
 	"crypto/tls"
-	"crypto/x509"
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
+
+	pkgcerts "github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/certs"
 )
 
-var ErrNotPresent = errors.New("Certificates are not present")
+// Default certificate directory and file names for the Kubernetes SPIFFE
+// workload identity secret mount.
+const (
+	defaultCertDir  = "/var/run/secrets/spiffe.io"
+	defaultCACert   = "ca.crt"
+	defaultCertFile = "tls.crt"
+	defaultKeyFile  = "tls.key"
+)
 
-func TLSConfig() (tlsConfig *tls.Config, certDir string, err error) {
-	certDir = os.Getenv("CERTDIR")
+// ErrNotPresent is returned when no certificate files are found at the
+// resolved directory. Callers may use errors.Is(err, ErrNotPresent) to
+// detect this case and fall back to non-mTLS.
+var ErrNotPresent = errors.New("certificates are not present")
+
+// ResolveServer returns a server-side TLS config and source description. If c
+// has explicit paths set, uses them via pkg/certs.ServerTLSConfig; otherwise
+// falls back to the CERTDIR env var / k8s default via ServerTLSConfig.
+func ResolveServer(c pkgcerts.Config) (*tls.Config, string, error) {
+	if err := c.Validate(); err != nil {
+		return nil, "", err
+	}
+
+	if c.IsSet() {
+		tlsConfig, err := c.ServerTLSConfig()
+		return tlsConfig, c.CACert, err
+	}
+
+	return ServerTLSConfig()
+}
+
+// TLSConfig resolves cert paths from the CERTDIR environment variable, falling
+// back to the k8s default /var/run/secrets/spiffe.io, and returns a client-side
+// tls.Config. Returns ErrNotPresent if no cert files are found.
+func TLSConfig() (*tls.Config, string, error) {
+	return tlsConfigFromDir(
+		func(c pkgcerts.Config) (*tls.Config, error) {
+			return c.TLSConfig()
+		},
+	)
+}
+
+// ServerTLSConfig resolves cert paths from the CERTDIR environment variable,
+// falling back to the k8s default /var/run/secrets/spiffe.io, and returns a
+// server-side tls.Config. Returns ErrNotPresent if no cert files are found.
+func ServerTLSConfig() (*tls.Config, string, error) {
+	return tlsConfigFromDir(
+		func(c pkgcerts.Config) (*tls.Config, error) {
+			return c.ServerTLSConfig()
+		},
+	)
+}
+
+// tlsConfigFromDir resolves the cert directory from CERTDIR (falling back to
+// defaultCertDir), builds a pkgcerts.Config with the standard file names, and
+// calls build to produce the tls.Config. Returns ErrNotPresent if any cert
+// file is missing, or a wrapped error for other load failures.
+func tlsConfigFromDir(
+	build func(pkgcerts.Config) (*tls.Config, error),
+) (*tls.Config, string, error) {
+	certDir := os.Getenv("CERTDIR")
 	if certDir == "" {
-		// Cert directory in k8s
-		certDir = "/var/run/secrets/spiffe.io"
+		certDir = defaultCertDir
 	}
 
-	caCert, err := os.ReadFile(certDir + "/ca.crt")
+	tlsConfig, err := build(
+		pkgcerts.Config{
+			CACert:  filepath.Join(certDir, defaultCACert),
+			TLSCert: filepath.Join(certDir, defaultCertFile),
+			TLSKey:  filepath.Join(certDir, defaultKeyFile),
+		},
+	)
 	if err != nil {
-		return nil, certDir, ErrNotPresent
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, certDir, ErrNotPresent
+		}
+		return nil, certDir, fmt.Errorf("loading certs from %q: %w", certDir, err)
 	}
 
-	clientCert, err := tls.LoadX509KeyPair(certDir+"/tls.crt", certDir+"/tls.key")
-	if err != nil {
-		return nil, certDir, fmt.Errorf("Invalid certs present: %w", err)
-	}
-
-	certPool := x509.NewCertPool()
-	if !certPool.AppendCertsFromPEM(caCert) {
-		return nil, certDir, fmt.Errorf("Invalid CA cert present: %w", err)
-	}
-
-	return &tls.Config{
-		Certificates: []tls.Certificate{clientCert},
-		RootCAs:      certPool,
-		ClientAuth:   tls.RequireAndVerifyClientCert,
-		ClientCAs:    certPool,
-	}, certDir, nil
-
+	return tlsConfig, certDir, nil
 }

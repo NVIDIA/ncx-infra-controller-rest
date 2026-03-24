@@ -29,6 +29,7 @@ import (
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -42,16 +43,25 @@ type Client struct {
 	conn   *grpc.ClientConn
 }
 
-// New creates a new client with the given configuration.
+// New creates a new RLA gRPC client. If CertConfig is set, the connection uses
+// mTLS; otherwise it falls back to insecure (plaintext) transport.
 func New(c Config) (*Client, error) {
 	if err := c.Validate(); err != nil {
 		return nil, err
 	}
 
-	conn, err := grpc.NewClient(
-		c.Target(),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
+	var creds credentials.TransportCredentials
+	if c.CertConfig.IsSet() {
+		tlsConfig, err := c.CertConfig.TLSConfig()
+		if err != nil {
+			return nil, fmt.Errorf("failed to build TLS config: %w", err)
+		}
+		creds = credentials.NewTLS(tlsConfig)
+	} else {
+		creds = insecure.NewCredentials()
+	}
+
+	conn, err := grpc.NewClient(c.Target(), grpc.WithTransportCredentials(creds))
 	if err != nil {
 		return nil, err
 	}
@@ -743,6 +753,8 @@ func (c *Client) GetExpectedComponentsByComponentIDs(
 	return convertGetComponentsResponse(rsp), nil
 }
 
+// convertGetComponentsResponse converts a protobuf GetComponentsResponse into
+// a GetExpectedComponentsResult.
 func convertGetComponentsResponse(rsp *pb.GetComponentsResponse) *GetExpectedComponentsResult {
 	components := make([]*types.Component, 0, len(rsp.Components))
 	for _, c := range rsp.Components {
@@ -858,6 +870,8 @@ func (c *Client) ValidateComponentsByComponentIDs(
 	return convertValidateComponentsResponse(rsp), nil
 }
 
+// convertValidateComponentsResponse converts a protobuf ValidateComponentsResponse
+// into a ValidateComponentsResult.
 func convertValidateComponentsResponse(rsp *pb.ValidateComponentsResponse) *ValidateComponentsResult {
 	diffs := make([]*types.ComponentDiff, 0, len(rsp.Diffs))
 	for _, d := range rsp.Diffs {

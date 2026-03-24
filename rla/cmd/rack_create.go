@@ -31,10 +31,10 @@ import (
 var (
 	rackCreateFile string
 	rackCreateJSON string
-	rackCreateHost string
-	rackCreatePort int
 )
 
+// newRackCreateCmd returns a configured cobra.Command for creating a new
+// expected rack from a JSON file or inline JSON string.
 func newRackCreateCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create",
@@ -66,15 +66,6 @@ Examples:
 		&rackCreateJSON, "json", "j", "",
 		"Inline JSON string containing rack definition",
 	)
-	cmd.Flags().StringVar(
-		&rackCreateHost, "host", "localhost",
-		"RLA server host",
-	)
-	cmd.Flags().IntVar(
-		&rackCreatePort, "port", 50051,
-		"RLA server port",
-	)
-
 	cmd.MarkFlagsOneRequired("file", "json")
 	cmd.MarkFlagsMutuallyExclusive("file", "json")
 
@@ -85,6 +76,8 @@ func init() {
 	rackCmd.AddCommand(newRackCreateCmd())
 }
 
+// doCreateRack reads the rack JSON input, parses it, and calls CreateExpectedRack
+// via the gRPC client, printing the newly created rack's UUID on success.
 func doCreateRack() {
 	data, err := readRackJSONData(rackCreateFile, rackCreateJSON)
 	if err != nil {
@@ -96,10 +89,7 @@ func doCreateRack() {
 		log.Fatal().Err(err).Msg("Failed to parse rack JSON")
 	}
 
-	c, err := client.New(client.Config{
-		Host: rackCreateHost,
-		Port: rackCreatePort,
-	})
+	c, err := client.New(newGlobalClientConfig())
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to create client")
 	}

@@ -21,6 +21,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// inventoryCmd is the parent command for rack inventory management subcommands.
 var inventoryCmd = &cobra.Command{
 	Use:   "inventory",
 	Short: "Inventory management",
