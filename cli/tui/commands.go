@@ -1841,7 +1841,12 @@ func cmdInstanceCreate(s *Session, _ []string) error {
 	vpcSiteID := strings.TrimSpace(vpc.Extra["siteId"])
 	setSiteScopeFromID(s, vpcSiteID)
 
+	// Temporarily clear VPC scope so fetchMachines returns all site machines
+	// rather than filtering to machines already assigned to a prior VPC.
+	savedVpcID, savedVpcName := s.Scope.VpcID, s.Scope.VpcName
+	s.Scope.VpcID, s.Scope.VpcName = "", ""
 	machines, err := fetchMachinesWithSiteFallback(s, "Machine listing requires a site filter. Select a site.")
+	s.Scope.VpcID, s.Scope.VpcName = savedVpcID, savedVpcName
 	if err != nil {
 		return fmt.Errorf("fetching machines: %w", err)
 	}
@@ -1892,6 +1897,7 @@ func cmdInstanceCreate(s *Session, _ []string) error {
 		return fmt.Errorf("creating instance: %w", err)
 	}
 	s.Cache.Invalidate("instance")
+	s.Cache.InvalidateFiltered()
 	var created map[string]interface{}
 	json.Unmarshal(resp, &created)
 	fmt.Printf("%s Instance created: %s (%s)\n", Green("OK"), str(created, "name"), str(created, "id"))
@@ -1913,6 +1919,7 @@ func cmdInstanceDelete(s *Session, args []string) error {
 		return fmt.Errorf("deleting instance: %w", err)
 	}
 	s.Cache.Invalidate("instance")
+	s.Cache.InvalidateFiltered()
 	fmt.Printf("%s Instance deleted: %s\n", Green("OK"), item.Name)
 	return nil
 }
