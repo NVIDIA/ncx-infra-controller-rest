@@ -36,6 +36,8 @@ import (
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
 )
 
+const driftFieldSerialNumber = "serial_number"
+
 // RunInventory will loop and handle various inventory monitoring tasks
 func RunInventory(ctx context.Context, dbConf *cdb.Config) {
 	config := config.ReadConfig()
@@ -511,7 +513,7 @@ func compareMachineFieldsForDrift(
 	// Compare serial_number (chassis_serial)
 	if actual.ChassisSerial != nil && expected.SerialNumber != *actual.ChassisSerial {
 		diffs = append(diffs, model.FieldDiff{
-			FieldName:     "serial_number",
+			FieldName:     driftFieldSerialNumber,
 			ExpectedValue: expected.SerialNumber,
 			ActualValue:   *actual.ChassisSerial,
 		})
@@ -528,22 +530,18 @@ func compareMachineFieldsForDrift(
 //   - GetNVSwitches: get registered switches (firmware_version direct-write)
 //   - RegisterNVSwitches: register un-registered DHCPed switches
 //
-// Carbide API calls (1 round-trip):
-//   - FindInterfaces: check which BMCs have DHCPed
+// Carbide API calls (2 round-trips):
+//   - GetAllExpectedSwitches: get credentials + NVOS MAC from metadata
+//   - FindInterfaces: check which BMCs/NVOS hosts have DHCPed
 //
 // Flow:
 //  1. DB: get all NVLSwitch components with BMCs
 //  2. NSM GetNVSwitches: get registered switches
-//  3. Carbide FindInterfaces: check which BMCs have DHCPed
-//  4. Direct-write: firmware_version (from NSM)
-//  5. Register un-registered DHCPed switches with NSM
-//  6. Return drifts (missing_in_actual for unregistered switches)
-
-// Default factory credentials for NVSwitch BMCs
-const (
-	nvswitchDefaultUsername = "root"
-	nvswitchDefaultPassword = "0penBmc"
-)
+//  3. Carbide GetAllExpectedSwitches: get credentials and NVOS MAC (metadata label "host_mac_address")
+//  4. Carbide FindInterfaces: check which BMCs/NVOS hosts have DHCPed
+//  5. Direct-write: firmware_version (from NSM)
+//  6. Register un-registered DHCPed switches with NSM (BMC + NVOS subsystems)
+//  7. Return drifts (missing_in_actual for unregistered switches)
 
 func syncNVSwitches(ctx context.Context, pool *cdb.Session, carbideClient carbideapi.Client, nsmClient nsmapi.Client) []model.ComponentDrift {
 	if nsmClient == nil {
@@ -597,43 +595,74 @@ func syncNVSwitches(ctx context.Context, pool *cdb.Session, carbideClient carbid
 		}
 	}
 
-	// Step 3: Get machine interfaces from Carbide to check DHCP status
+	// Step 3: Get expected switches from Carbide for NVOS MAC metadata
+	carbideByBmcMac, err := carbideClient.GetAllExpectedSwitches(ctx)
+	if err != nil {
+		log.Error().Msgf("Unable to retrieve expected switches from carbide-api: %v", err)
+		return nil
+	}
+
+	// Step 4: Get machine interfaces from Carbide to check DHCP status
 	interfacesByMac, err := carbideClient.FindInterfaces(ctx)
 	if err != nil {
 		log.Error().Msgf("Unable to retrieve interfaces from carbide-api: %v", err)
 		return nil
 	}
 
-	// Steps 4 & 5: Process each expected NVLSwitch
+	// Steps 5-7: Process each expected NVLSwitch
 	now := time.Now()
 	var drifts []model.ComponentDrift
 	var toRegister []nsmapi.RegisterNVSwitchRequest
 
 	for bmcMac, nvswitch := range expectedByBmcMac {
-		// Already registered with NSM — direct-write firmware_version
+		nvswitchID := nvswitch.ID.String()
+
+		// Already registered with NSM — direct-write external_id and firmware_version
 		if registeredSW, isRegistered := registeredByMac[bmcMac]; isRegistered {
 			needsUpdate := false
+
+			if registeredSW.UUID != "" && (nvswitch.ComponentID == nil || *nvswitch.ComponentID != registeredSW.UUID) {
+				nsmUUID := registeredSW.UUID
+				nvswitch.ComponentID = &nsmUUID
+				needsUpdate = true
+				log.Info().Msgf("NVLSwitch %s (BMC %s): setting external_id to NSM UUID %s", nvswitchID, bmcMac, nsmUUID)
+			}
 
 			if registeredSW.BMCFirmware != "" && nvswitch.FirmwareVersion != registeredSW.BMCFirmware {
 				nvswitch.FirmwareVersion = registeredSW.BMCFirmware
 				needsUpdate = true
-				log.Info().Msgf("Updating firmware version for NVLSwitch %s to %s", bmcMac, registeredSW.BMCFirmware)
+				log.Info().Msgf("NVLSwitch %s (BMC %s): updating firmware version to %s", nvswitchID, bmcMac, registeredSW.BMCFirmware)
 			}
 
 			if needsUpdate {
 				if err := nvswitch.Patch(ctx, pool.DB); err != nil {
-					log.Error().Msgf("Unable to update NVLSwitch %s: %v", bmcMac, err)
+					log.Error().Msgf("NVLSwitch %s (BMC %s): unable to update: %v", nvswitchID, bmcMac, err)
 				}
 			}
 
-			// TODO: add field-level drift detection for NVLSwitches (serial_number, etc.)
+			// Drift detection: compare chassis serial from NSM against expected serial in DB
+			if registeredSW.ChassisSerial != "" && nvswitch.SerialNumber != registeredSW.ChassisSerial {
+				compID := nvswitch.ID
+				drifts = append(drifts, model.ComponentDrift{
+					ComponentID: &compID,
+					ExternalID:  &registeredSW.UUID,
+					DriftType:   model.DriftTypeMismatch,
+					Diffs: []model.FieldDiff{{
+						FieldName:     driftFieldSerialNumber,
+						ExpectedValue: nvswitch.SerialNumber,
+						ActualValue:   registeredSW.ChassisSerial,
+					}},
+					CheckedAt: now,
+				})
+			}
+
 			continue
 		}
 
-		// Not registered with NSM — check if DHCPed, register if possible
-		iface, found := interfacesByMac[bmcMac]
-		if !found || len(iface.Addresses) == 0 {
-			log.Warn().Msgf("NVLSwitch BMC %s has not DHCPed yet", bmcMac)
+		// Not registered with NSM — check if BMC has DHCPed
+		bmcIface, found := interfacesByMac[bmcMac]
+		if !found || len(bmcIface.Addresses) == 0 {
+			log.Warn().Msgf("NVLSwitch %s (BMC %s): BMC has not DHCPed yet", nvswitchID, bmcMac)
 			compID := nvswitch.ID
 			drifts = append(drifts, model.ComponentDrift{
 				ComponentID: &compID,
@@ -645,18 +674,53 @@ func syncNVSwitches(ctx context.Context, pool *cdb.Session, carbideClient carbid
 			continue
 		}
 
-		if len(iface.Addresses) > 1 {
-			log.Error().Msgf("NVLSwitch BMC %s has multiple IP addresses assigned (%v), skipping registration", bmcMac, iface.Addresses)
+		if len(bmcIface.Addresses) > 1 {
+			log.Error().Msgf("NVLSwitch %s (BMC %s): multiple IP addresses assigned (%v), skipping registration", nvswitchID, bmcMac, bmcIface.Addresses)
 			continue
 		}
 
-		ipAddress := iface.Addresses[0]
-		log.Info().Msgf("NVLSwitch BMC %s has DHCPed with IP %s, registering with NSM", bmcMac, ipAddress)
+		bmcIP := bmcIface.Addresses[0]
+
+		carbideES, hasCarbideInfo := carbideByBmcMac[bmcMac]
+		if !hasCarbideInfo {
+			log.Warn().Msgf("NVLSwitch %s (BMC %s): not found in Carbide expected switches, skipping registration", nvswitchID, bmcMac)
+			continue
+		}
+
+		nvosMac, hasNvosMac := carbideES.Metadata["host_mac_address"]
+		if !hasNvosMac || nvosMac == "" {
+			log.Warn().Msgf("NVLSwitch %s (BMC %s): no host_mac_address in Carbide metadata, skipping registration", nvswitchID, bmcMac)
+			continue
+		}
+
+		nvosIface, nvosFound := interfacesByMac[nvosMac]
+		if !nvosFound || len(nvosIface.Addresses) == 0 {
+			log.Warn().Msgf("NVLSwitch %s (BMC %s): NVOS %s has not DHCPed yet, skipping registration", nvswitchID, bmcMac, nvosMac)
+			compID := nvswitch.ID
+			drifts = append(drifts, model.ComponentDrift{
+				ComponentID: &compID,
+				ExternalID:  nil,
+				DriftType:   model.DriftTypeMissingInActual,
+				Diffs:       []model.FieldDiff{},
+				CheckedAt:   now,
+			})
+			continue
+		}
+
+		if len(nvosIface.Addresses) > 1 {
+			log.Error().Msgf("NVLSwitch %s (BMC %s): NVOS %s has multiple IP addresses (%v), skipping registration", nvswitchID, bmcMac, nvosMac, nvosIface.Addresses)
+			continue
+		}
+
+		nvosIP := nvosIface.Addresses[0]
+
+		log.Info().Msgf("NVLSwitch %s (BMC %s, IP %s) + NVOS %s (IP %s): registering with NSM", nvswitchID, bmcMac, bmcIP, nvosMac, nvosIP)
 
 		toRegister = append(toRegister, nsmapi.RegisterNVSwitchRequest{
 			BMCMACAddress:  bmcMac,
-			BMCIPAddress:   ipAddress,
-			BMCCredentials: nsmapi.Credentials{Username: nvswitchDefaultUsername, Password: nvswitchDefaultPassword},
+			BMCIPAddress:   bmcIP,
+			NVOSMACAddress: nvosMac,
+			NVOSIPAddress:  nvosIP,
 		})
 	}
 
@@ -770,9 +834,16 @@ func syncPowershelves(ctx context.Context, pool *cdb.Session, carbideClient carb
 	var toRegister []psmapi.RegisterPowershelfRequest
 
 	for pmcMac, powershelf := range expectedByPmcMac {
-		// Already registered with PSM — direct-write firmware_version + power_state
+		// Already registered with PSM — direct-write external_id, firmware_version + power_state
 		if registeredPS, isRegistered := registeredByMac[pmcMac]; isRegistered {
 			needsUpdate := false
+
+			if powershelf.ComponentID == nil || *powershelf.ComponentID != pmcMac {
+				extID := pmcMac
+				powershelf.ComponentID = &extID
+				needsUpdate = true
+				log.Info().Msgf("Setting external_id for powershelf %s to PMC MAC", pmcMac)
+			}
 
 			// Direct-write: firmware_version
 			if registeredPS.PMC.FirmwareVersion != "" && powershelf.FirmwareVersion != registeredPS.PMC.FirmwareVersion {

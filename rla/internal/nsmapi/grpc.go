@@ -102,18 +102,13 @@ func (c *grpcClient) RegisterNVSwitches(ctx context.Context, requests []Register
 		pbRequests = append(pbRequests, &pb.RegisterNVSwitchRequest{
 			Vendor: pb.Vendor_VENDOR_NVIDIA,
 			Bmc: &pb.Subsystem{
-				MacAddress:  req.BMCMACAddress,
-				IpAddress:   req.BMCIPAddress,
-				Credentials: &pb.Credentials{Username: req.BMCCredentials.Username, Password: req.BMCCredentials.Password},
-				Port:        req.BMCPort,
+				MacAddress: req.BMCMACAddress,
+				IpAddress:  req.BMCIPAddress,
 			},
 			Nvos: &pb.Subsystem{
-				MacAddress:  req.NVOSMACAddress,
-				IpAddress:   req.NVOSIPAddress,
-				Credentials: &pb.Credentials{Username: req.NVOSCredentials.Username, Password: req.NVOSCredentials.Password},
-				Port:        req.NVOSPort,
+				MacAddress: req.NVOSMACAddress,
+				IpAddress:  req.NVOSIPAddress,
 			},
-			RackId: req.RackID,
 		})
 	}
 

@@ -270,16 +270,16 @@ func firmwareUpdateInfoFromPb(info *pb.FirmwareUpdateInfo) FirmwareUpdateInfo {
 
 // NVSwitchTray represents a complete NV-Switch tray registered with NSM.
 type NVSwitchTray struct {
-	UUID            string
-	BMCMACAddress   string
-	BMCIPAddress    string
-	BMCFirmware     string
-	NVOSVersion     string
-	CPLDVersion     string
-	ChassisSerial   string
-	ChassisModel    string
+	UUID                string
+	BMCMACAddress       string
+	BMCIPAddress        string
+	BMCFirmware         string
+	NVOSVersion         string
+	CPLDVersion         string
+	ChassisSerial       string
+	ChassisModel        string
 	ChassisManufacturer string
-	RackID          string
+	RackID              string
 }
 
 func nvSwitchTrayFromPb(tray *pb.NVSwitchTray) NVSwitchTray {
@@ -305,22 +305,13 @@ func nvSwitchTrayFromPb(tray *pb.NVSwitchTray) NVSwitchTray {
 }
 
 // RegisterNVSwitchRequest contains the information needed to register an NV-Switch.
+// Credentials are omitted; Carbide writes them to Vault and NSM looks them up
+// by MAC address at the time of use.
 type RegisterNVSwitchRequest struct {
 	BMCMACAddress  string
 	BMCIPAddress   string
-	BMCCredentials Credentials
-	BMCPort        int32
-	NVOSMACAddress  string
-	NVOSIPAddress   string
-	NVOSCredentials Credentials
-	NVOSPort        int32
-	RackID          string
-}
-
-// Credentials wraps a username and password.
-type Credentials struct {
-	Username string
-	Password string
+	NVOSMACAddress string
+	NVOSIPAddress  string
 }
 
 // RegisterNVSwitchResponse contains the result of registering an NV-Switch.

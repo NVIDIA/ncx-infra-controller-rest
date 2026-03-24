@@ -28,8 +28,9 @@ type mockClient struct {
 	machines                    map[string]MachineDetail
 	powerStates                 map[string]PowerState
 	machineInterfaces           map[string]MachineInterface
-	firmwareUpdateTimeWindowErr error // If set, SetFirmwareUpdateTimeWindow will return this error
-	adminPowerControlErr        error // If set, AdminPowerControl will return this error
+	expectedSwitches            map[string]ExpectedSwitchInfo // keyed by BMC MAC
+	firmwareUpdateTimeWindowErr error                         // If set, SetFirmwareUpdateTimeWindow will return this error
+	adminPowerControlErr        error                         // If set, AdminPowerControl will return this error
 }
 
 // NewMockClient returns a "GRPC" client that returns mock values so it can be used in unit tests.
@@ -38,6 +39,7 @@ func NewMockClient() Client {
 		machines:          map[string]MachineDetail{},
 		powerStates:       map[string]PowerState{},
 		machineInterfaces: map[string]MachineInterface{},
+		expectedSwitches:  map[string]ExpectedSwitchInfo{},
 	}
 }
 
@@ -143,6 +145,14 @@ func (c *mockClient) AddExpectedMachine(ctx context.Context, req AddExpectedMach
 	return nil
 }
 
+func (c *mockClient) GetAllExpectedSwitches(ctx context.Context) (map[string]ExpectedSwitchInfo, error) {
+	results := make(map[string]ExpectedSwitchInfo)
+	for mac, es := range c.expectedSwitches {
+		results[mac] = es
+	}
+	return results, nil
+}
+
 func (c *mockClient) AddExpectedSwitch(ctx context.Context, req AddExpectedSwitchRequest) error {
 	return nil
 }
@@ -169,4 +179,8 @@ func (c *mockClient) ListComponentFirmwareVersions(ctx context.Context, req *pb.
 
 func (c *mockClient) GetComponentInventory(ctx context.Context, req *pb.GetComponentInventoryRequest) (*pb.GetComponentInventoryResponse, error) {
 	return &pb.GetComponentInventoryResponse{}, nil
+}
+
+func (c *mockClient) AddExpectedSwitchInfo(info ExpectedSwitchInfo) {
+	c.expectedSwitches[info.BMCMACAddress] = info
 }

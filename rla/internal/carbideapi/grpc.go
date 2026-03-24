@@ -31,6 +31,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -371,6 +372,26 @@ func (c *grpcClient) AddExpectedMachine(ctx context.Context, req AddExpectedMach
 	return nil
 }
 
+// GetAllExpectedSwitches returns all expected switches from Carbide, keyed by BMC MAC address.
+func (c *grpcClient) GetAllExpectedSwitches(ctx context.Context) (map[string]ExpectedSwitchInfo, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
+	defer cancel()
+
+	resp, err := c.gclient.GetAllExpectedSwitches(ctx, &emptypb.Empty{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get all expected switches: %w", err)
+	}
+
+	results := make(map[string]ExpectedSwitchInfo)
+	for _, es := range resp.GetExpectedSwitches() {
+		info := expectedSwitchInfoFromPb(es)
+		if info.BMCMACAddress != "" {
+			results[info.BMCMACAddress] = info
+		}
+	}
+	return results, nil
+}
+
 // AddExpectedSwitch registers an expected switch with Carbide.
 func (c *grpcClient) AddExpectedSwitch(ctx context.Context, req AddExpectedSwitchRequest) error {
 	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
@@ -475,5 +496,9 @@ func (c *grpcClient) SetAdminPowerControlError(err error) {
 }
 
 func (c *grpcClient) AddMachineInterface(iface MachineInterface) {
+	panic("Not a unit test")
+}
+
+func (c *grpcClient) AddExpectedSwitchInfo(info ExpectedSwitchInfo) {
 	panic("Not a unit test")
 }
