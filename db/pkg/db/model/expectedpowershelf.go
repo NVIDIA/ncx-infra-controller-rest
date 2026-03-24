@@ -63,6 +63,15 @@ type ExpectedPowerShelf struct {
 	BmcMacAddress     string            `bun:"bmc_mac_address,notnull"`
 	ShelfSerialNumber string            `bun:"shelf_serial_number,notnull"`
 	IpAddress         *string           `bun:"ip_address"`
+	RackID            *string           `bun:"rack_id"`
+	Name              *string           `bun:"name"`
+	Manufacturer      *string           `bun:"manufacturer"`
+	Model             *string           `bun:"model"`
+	Description       *string           `bun:"description"`
+	FirmwareVersion   *string           `bun:"firmware_version"`
+	SlotID            *int32            `bun:"slot_id"`
+	TrayIdx           *int32            `bun:"tray_idx"`
+	HostID            *int32            `bun:"host_id"`
 	Labels            map[string]string `bun:"labels,type:jsonb"`
 	Created           time.Time         `bun:"created,nullzero,notnull,default:current_timestamp"`
 	Updated           time.Time         `bun:"updated,nullzero,notnull,default:current_timestamp"`
@@ -76,6 +85,15 @@ type ExpectedPowerShelfCreateInput struct {
 	BmcMacAddress        string
 	ShelfSerialNumber    string
 	IpAddress            *string
+	RackID               *string
+	Name                 *string
+	Manufacturer         *string
+	Model                *string
+	Description          *string
+	FirmwareVersion      *string
+	SlotID               *int32
+	TrayIdx              *int32
+	HostID               *int32
 	Labels               map[string]string
 	CreatedBy            uuid.UUID
 }
@@ -86,6 +104,15 @@ type ExpectedPowerShelfUpdateInput struct {
 	BmcMacAddress        *string
 	ShelfSerialNumber    *string
 	IpAddress            *string
+	RackID               *string
+	Name                 *string
+	Manufacturer         *string
+	Model                *string
+	Description          *string
+	FirmwareVersion      *string
+	SlotID               *int32
+	TrayIdx              *int32
+	HostID               *int32
 	Labels               map[string]string
 }
 
@@ -93,6 +120,15 @@ type ExpectedPowerShelfUpdateInput struct {
 type ExpectedPowerShelfClearInput struct {
 	ExpectedPowerShelfID uuid.UUID
 	IpAddress            bool
+	RackID               bool
+	Name                 bool
+	Manufacturer         bool
+	Model                bool
+	Description          bool
+	FirmwareVersion      bool
+	SlotID               bool
+	TrayIdx              bool
+	HostID               bool
 	Labels               bool
 }
 
@@ -169,6 +205,15 @@ func (epsd ExpectedPowerShelfSQLDAO) Create(ctx context.Context, tx *db.Tx, inpu
 		BmcMacAddress:     input.BmcMacAddress,
 		ShelfSerialNumber: input.ShelfSerialNumber,
 		IpAddress:         input.IpAddress,
+		RackID:            input.RackID,
+		Name:              input.Name,
+		Manufacturer:      input.Manufacturer,
+		Model:             input.Model,
+		Description:       input.Description,
+		FirmwareVersion:   input.FirmwareVersion,
+		SlotID:            input.SlotID,
+		TrayIdx:           input.TrayIdx,
+		HostID:            input.HostID,
 		Labels:            input.Labels,
 		CreatedBy:         input.CreatedBy,
 	}
@@ -356,6 +401,42 @@ func (epsd ExpectedPowerShelfSQLDAO) Update(ctx context.Context, tx *db.Tx, inpu
 		eps.IpAddress = input.IpAddress
 		columnsSet["ip_address"] = true
 	}
+	if input.RackID != nil {
+		eps.RackID = input.RackID
+		columnsSet["rack_id"] = true
+	}
+	if input.Name != nil {
+		eps.Name = input.Name
+		columnsSet["name"] = true
+	}
+	if input.Manufacturer != nil {
+		eps.Manufacturer = input.Manufacturer
+		columnsSet["manufacturer"] = true
+	}
+	if input.Model != nil {
+		eps.Model = input.Model
+		columnsSet["model"] = true
+	}
+	if input.Description != nil {
+		eps.Description = input.Description
+		columnsSet["description"] = true
+	}
+	if input.FirmwareVersion != nil {
+		eps.FirmwareVersion = input.FirmwareVersion
+		columnsSet["firmware_version"] = true
+	}
+	if input.SlotID != nil {
+		eps.SlotID = input.SlotID
+		columnsSet["slot_id"] = true
+	}
+	if input.TrayIdx != nil {
+		eps.TrayIdx = input.TrayIdx
+		columnsSet["tray_idx"] = true
+	}
+	if input.HostID != nil {
+		eps.HostID = input.HostID
+		columnsSet["host_id"] = true
+	}
 	if input.Labels != nil {
 		eps.Labels = input.Labels
 		columnsSet["labels"] = true
@@ -409,6 +490,42 @@ func (epsd ExpectedPowerShelfSQLDAO) Clear(ctx context.Context, tx *db.Tx, input
 	if input.IpAddress {
 		eps.IpAddress = nil
 		updatedFields = append(updatedFields, "ip_address")
+	}
+	if input.RackID {
+		eps.RackID = nil
+		updatedFields = append(updatedFields, "rack_id")
+	}
+	if input.Name {
+		eps.Name = nil
+		updatedFields = append(updatedFields, "name")
+	}
+	if input.Manufacturer {
+		eps.Manufacturer = nil
+		updatedFields = append(updatedFields, "manufacturer")
+	}
+	if input.Model {
+		eps.Model = nil
+		updatedFields = append(updatedFields, "model")
+	}
+	if input.Description {
+		eps.Description = nil
+		updatedFields = append(updatedFields, "description")
+	}
+	if input.FirmwareVersion {
+		eps.FirmwareVersion = nil
+		updatedFields = append(updatedFields, "firmware_version")
+	}
+	if input.SlotID {
+		eps.SlotID = nil
+		updatedFields = append(updatedFields, "slot_id")
+	}
+	if input.TrayIdx {
+		eps.TrayIdx = nil
+		updatedFields = append(updatedFields, "tray_idx")
+	}
+	if input.HostID {
+		eps.HostID = nil
+		updatedFields = append(updatedFields, "host_id")
 	}
 	if input.Labels {
 		eps.Labels = nil

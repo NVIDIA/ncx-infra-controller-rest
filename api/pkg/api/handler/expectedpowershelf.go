@@ -180,6 +180,15 @@ func (cepsh CreateExpectedPowerShelfHandler) Handle(c echo.Context) error {
 			BmcMacAddress:        apiRequest.BmcMacAddress,
 			ShelfSerialNumber:    apiRequest.ShelfSerialNumber,
 			IpAddress:            apiRequest.IpAddress,
+			RackID:               apiRequest.RackID,
+			Name:                 apiRequest.Name,
+			Manufacturer:         apiRequest.Manufacturer,
+			Model:                apiRequest.Model,
+			Description:          apiRequest.Description,
+			FirmwareVersion:      apiRequest.FirmwareVersion,
+			SlotID:               apiRequest.SlotID,
+			TrayIdx:              apiRequest.TrayIdx,
+			HostID:               apiRequest.HostID,
 			Labels:               apiRequest.Labels,
 			CreatedBy:            dbUser.ID,
 		},
@@ -199,6 +208,42 @@ func (cepsh CreateExpectedPowerShelfHandler) Handle(c echo.Context) error {
 
 	if expectedPowerShelf.IpAddress != nil {
 		createExpectedPowerShelfRequest.IpAddress = *expectedPowerShelf.IpAddress
+	}
+
+	if expectedPowerShelf.RackID != nil {
+		createExpectedPowerShelfRequest.RackId = &cwssaws.RackId{Id: *expectedPowerShelf.RackID}
+	}
+
+	if expectedPowerShelf.Name != nil {
+		createExpectedPowerShelfRequest.Name = expectedPowerShelf.Name
+	}
+
+	if expectedPowerShelf.Manufacturer != nil {
+		createExpectedPowerShelfRequest.Manufacturer = expectedPowerShelf.Manufacturer
+	}
+
+	if expectedPowerShelf.Model != nil {
+		createExpectedPowerShelfRequest.Model = expectedPowerShelf.Model
+	}
+
+	if expectedPowerShelf.Description != nil {
+		createExpectedPowerShelfRequest.Description = expectedPowerShelf.Description
+	}
+
+	if expectedPowerShelf.FirmwareVersion != nil {
+		createExpectedPowerShelfRequest.FirmwareVersion = expectedPowerShelf.FirmwareVersion
+	}
+
+	if expectedPowerShelf.SlotID != nil {
+		createExpectedPowerShelfRequest.SlotId = expectedPowerShelf.SlotID
+	}
+
+	if expectedPowerShelf.TrayIdx != nil {
+		createExpectedPowerShelfRequest.TrayIdx = expectedPowerShelf.TrayIdx
+	}
+
+	if expectedPowerShelf.HostID != nil {
+		createExpectedPowerShelfRequest.HostId = expectedPowerShelf.HostID
 	}
 
 	if apiRequest.DefaultBmcUsername != nil {
@@ -654,6 +699,15 @@ func (uepsh UpdateExpectedPowerShelfHandler) Handle(c echo.Context) error {
 			BmcMacAddress:        apiRequest.BmcMacAddress,
 			ShelfSerialNumber:    apiRequest.ShelfSerialNumber,
 			IpAddress:            apiRequest.IpAddress,
+			RackID:               apiRequest.RackID,
+			Name:                 apiRequest.Name,
+			Manufacturer:         apiRequest.Manufacturer,
+			Model:                apiRequest.Model,
+			Description:          apiRequest.Description,
+			FirmwareVersion:      apiRequest.FirmwareVersion,
+			SlotID:               apiRequest.SlotID,
+			TrayIdx:              apiRequest.TrayIdx,
+			HostID:               apiRequest.HostID,
 			Labels:               apiRequest.Labels,
 		},
 	)
@@ -672,6 +726,42 @@ func (uepsh UpdateExpectedPowerShelfHandler) Handle(c echo.Context) error {
 
 	if updatedExpectedPowerShelf.IpAddress != nil {
 		updateExpectedPowerShelfRequest.IpAddress = *updatedExpectedPowerShelf.IpAddress
+	}
+
+	if updatedExpectedPowerShelf.RackID != nil {
+		updateExpectedPowerShelfRequest.RackId = &cwssaws.RackId{Id: *updatedExpectedPowerShelf.RackID}
+	}
+
+	if updatedExpectedPowerShelf.Name != nil {
+		updateExpectedPowerShelfRequest.Name = updatedExpectedPowerShelf.Name
+	}
+
+	if updatedExpectedPowerShelf.Manufacturer != nil {
+		updateExpectedPowerShelfRequest.Manufacturer = updatedExpectedPowerShelf.Manufacturer
+	}
+
+	if updatedExpectedPowerShelf.Model != nil {
+		updateExpectedPowerShelfRequest.Model = updatedExpectedPowerShelf.Model
+	}
+
+	if updatedExpectedPowerShelf.Description != nil {
+		updateExpectedPowerShelfRequest.Description = updatedExpectedPowerShelf.Description
+	}
+
+	if updatedExpectedPowerShelf.FirmwareVersion != nil {
+		updateExpectedPowerShelfRequest.FirmwareVersion = updatedExpectedPowerShelf.FirmwareVersion
+	}
+
+	if updatedExpectedPowerShelf.SlotID != nil {
+		updateExpectedPowerShelfRequest.SlotId = updatedExpectedPowerShelf.SlotID
+	}
+
+	if updatedExpectedPowerShelf.TrayIdx != nil {
+		updateExpectedPowerShelfRequest.TrayIdx = updatedExpectedPowerShelf.TrayIdx
+	}
+
+	if updatedExpectedPowerShelf.HostID != nil {
+		updateExpectedPowerShelfRequest.HostId = updatedExpectedPowerShelf.HostID
 	}
 
 	if apiRequest.DefaultBmcUsername != nil {

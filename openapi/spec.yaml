@@ -17203,6 +17203,8 @@ components:
             - DPU-002
           skuId: lenovo.sr650v2.cpu.1
           machineId: fm100ht4v4mce2qstjnl8970nnj3ie6ecek4mtjn27pea4kre5gsa49jg0g
+          rackId: rack-01
+          manufacturer: Lenovo
           labels:
             environment: production
             rack: A1
@@ -17247,6 +17249,54 @@ components:
         machine:
           $ref: '#/components/schemas/MachineSummary'
           description: Machine information for this Expected Machine (populated when includeRelation=Machine is specified)
+        rackId:
+          type:
+            - string
+            - 'null'
+          description: Optional rack identifier for this component
+        name:
+          type:
+            - string
+            - 'null'
+          description: Display name for this component
+        manufacturer:
+          type:
+            - string
+            - 'null'
+          description: Manufacturer of this component
+        model:
+          type:
+            - string
+            - 'null'
+          description: Model of this component
+        description:
+          type:
+            - string
+            - 'null'
+          description: Description of this component
+        firmwareVersion:
+          type:
+            - string
+            - 'null'
+          description: Firmware version of this component
+        slotId:
+          type:
+            - integer
+            - 'null'
+          format: int32
+          description: Slot ID within the rack
+        trayIdx:
+          type:
+            - integer
+            - 'null'
+          format: int32
+          description: Tray index within the rack
+        hostId:
+          type:
+            - integer
+            - 'null'
+          format: int32
+          description: Host ID within the tray
         labels:
           $ref: '#/components/schemas/Labels'
           description: User-defined key-value pairs for organizing and categorizing Expected Machines
@@ -17277,6 +17327,8 @@ components:
             - DPU-001
             - DPU-002
           skuId: lenovo.sr650v2.cpu.1
+          rackId: rack-01
+          manufacturer: Lenovo
           labels:
             environment: production
             rack: A1
@@ -17318,6 +17370,54 @@ components:
             - string
             - 'null'
           description: Optional ID of the SKU to associate with this Expected Machine
+        rackId:
+          type:
+            - string
+            - 'null'
+          description: Optional rack identifier for this component
+        name:
+          type:
+            - string
+            - 'null'
+          description: Display name for this component
+        manufacturer:
+          type:
+            - string
+            - 'null'
+          description: Manufacturer of this component
+        model:
+          type:
+            - string
+            - 'null'
+          description: Model of this component
+        description:
+          type:
+            - string
+            - 'null'
+          description: Description of this component
+        firmwareVersion:
+          type:
+            - string
+            - 'null'
+          description: Firmware version of this component
+        slotId:
+          type:
+            - integer
+            - 'null'
+          format: int32
+          description: Slot ID within the rack
+        trayIdx:
+          type:
+            - integer
+            - 'null'
+          format: int32
+          description: Tray index within the rack
+        hostId:
+          type:
+            - integer
+            - 'null'
+          format: int32
+          description: Host ID within the tray
         labels:
           $ref: '#/components/schemas/Labels'
           description: User-defined key-value pairs for organizing and categorizing Expected Machines
@@ -17341,6 +17441,8 @@ components:
           bmcPassword: newpassword123
           chassisSerialNumber: CHASSIS-54321
           skuId: sku-xyz789
+          rackId: rack-02
+          manufacturer: Lenovo
           labels:
             environment: staging
             rack: B2
@@ -17393,6 +17495,54 @@ components:
             - string
             - 'null'
           description: Optional ID of the SKU to associate with this Expected Machine
+        rackId:
+          type:
+            - string
+            - 'null'
+          description: Optional rack identifier for this component
+        name:
+          type:
+            - string
+            - 'null'
+          description: Display name for this component
+        manufacturer:
+          type:
+            - string
+            - 'null'
+          description: Manufacturer of this component
+        model:
+          type:
+            - string
+            - 'null'
+          description: Model of this component
+        description:
+          type:
+            - string
+            - 'null'
+          description: Description of this component
+        firmwareVersion:
+          type:
+            - string
+            - 'null'
+          description: Firmware version of this component
+        slotId:
+          type:
+            - integer
+            - 'null'
+          format: int32
+          description: Slot ID within the rack
+        trayIdx:
+          type:
+            - integer
+            - 'null'
+          format: int32
+          description: Tray index within the rack
+        hostId:
+          type:
+            - integer
+            - 'null'
+          format: int32
+          description: Host ID within the tray
         labels:
           $ref: '#/components/schemas/Labels'
           description: User-defined key-value pairs for organizing and categorizing Expected Machines
@@ -17409,6 +17559,8 @@ components:
           bmcMacAddress: '00:1A:2B:3C:4D:5E'
           shelfSerialNumber: SHELF-12345
           ipAddress: '192.168.1.100'
+          rackId: rack-01
+          manufacturer: Delta
           labels:
             environment: production
             rack: A1
@@ -17437,6 +17589,54 @@ components:
             - string
             - 'null'
           description: IP address of the Expected Power Shelf
+        rackId:
+          type:
+            - string
+            - 'null'
+          description: Optional rack identifier for this component
+        name:
+          type:
+            - string
+            - 'null'
+          description: Display name for this component
+        manufacturer:
+          type:
+            - string
+            - 'null'
+          description: Manufacturer of this component
+        model:
+          type:
+            - string
+            - 'null'
+          description: Model of this component
+        description:
+          type:
+            - string
+            - 'null'
+          description: Description of this component
+        firmwareVersion:
+          type:
+            - string
+            - 'null'
+          description: Firmware version of this component
+        slotId:
+          type:
+            - integer
+            - 'null'
+          format: int32
+          description: Slot ID within the rack
+        trayIdx:
+          type:
+            - integer
+            - 'null'
+          format: int32
+          description: Tray index within the rack
+        hostId:
+          type:
+            - integer
+            - 'null'
+          format: int32
+          description: Host ID within the tray
         labels:
           $ref: '#/components/schemas/Labels'
           description: User-defined key-value pairs for organizing and categorizing Expected Power Shelves
@@ -17464,6 +17664,8 @@ components:
           defaultBmcPassword: password123
           shelfSerialNumber: SHELF-12345
           ipAddress: '192.168.1.100'
+          rackId: rack-01
+          manufacturer: Delta
           labels:
             environment: production
             rack: A1
@@ -17498,6 +17700,54 @@ components:
             - string
             - 'null'
           description: IP address of the Expected Power Shelf
+        rackId:
+          type:
+            - string
+            - 'null'
+          description: Optional rack identifier for this component
+        name:
+          type:
+            - string
+            - 'null'
+          description: Display name for this component
+        manufacturer:
+          type:
+            - string
+            - 'null'
+          description: Manufacturer of this component
+        model:
+          type:
+            - string
+            - 'null'
+          description: Model of this component
+        description:
+          type:
+            - string
+            - 'null'
+          description: Description of this component
+        firmwareVersion:
+          type:
+            - string
+            - 'null'
+          description: Firmware version of this component
+        slotId:
+          type:
+            - integer
+            - 'null'
+          format: int32
+          description: Slot ID within the rack
+        trayIdx:
+          type:
+            - integer
+            - 'null'
+          format: int32
+          description: Tray index within the rack
+        hostId:
+          type:
+            - integer
+            - 'null'
+          format: int32
+          description: Host ID within the tray
         labels:
           $ref: '#/components/schemas/Labels'
           description: User-defined key-value pairs for organizing and categorizing Expected Power Shelves
@@ -17517,6 +17767,8 @@ components:
           defaultBmcPassword: newpassword123
           shelfSerialNumber: SHELF-54321
           ipAddress: '192.168.1.200'
+          rackId: rack-02
+          manufacturer: Delta
           labels:
             environment: staging
             rack: B2
@@ -17557,6 +17809,54 @@ components:
             - string
             - 'null'
           description: IP address of the Expected Power Shelf
+        rackId:
+          type:
+            - string
+            - 'null'
+          description: Optional rack identifier for this component
+        name:
+          type:
+            - string
+            - 'null'
+          description: Display name for this component
+        manufacturer:
+          type:
+            - string
+            - 'null'
+          description: Manufacturer of this component
+        model:
+          type:
+            - string
+            - 'null'
+          description: Model of this component
+        description:
+          type:
+            - string
+            - 'null'
+          description: Description of this component
+        firmwareVersion:
+          type:
+            - string
+            - 'null'
+          description: Firmware version of this component
+        slotId:
+          type:
+            - integer
+            - 'null'
+          format: int32
+          description: Slot ID within the rack
+        trayIdx:
+          type:
+            - integer
+            - 'null'
+          format: int32
+          description: Tray index within the rack
+        hostId:
+          type:
+            - integer
+            - 'null'
+          format: int32
+          description: Host ID within the tray
         labels:
           $ref: '#/components/schemas/Labels'
           description: User-defined key-value pairs for organizing and categorizing Expected Power Shelves
@@ -17572,6 +17872,8 @@ components:
           siteId: f97df110-f4de-492e-8849-4a6af68026b0
           bmcMacAddress: '00:1A:2B:3C:4D:5E'
           switchSerialNumber: SWITCH-12345
+          rackId: rack-01
+          manufacturer: NVIDIA
           labels:
             environment: production
             rack: A1
@@ -17595,6 +17897,54 @@ components:
         switchSerialNumber:
           type: string
           description: Serial number of the Expected Switch
+        rackId:
+          type:
+            - string
+            - 'null'
+          description: Optional rack identifier for this component
+        name:
+          type:
+            - string
+            - 'null'
+          description: Display name for this component
+        manufacturer:
+          type:
+            - string
+            - 'null'
+          description: Manufacturer of this component
+        model:
+          type:
+            - string
+            - 'null'
+          description: Model of this component
+        description:
+          type:
+            - string
+            - 'null'
+          description: Description of this component
+        firmwareVersion:
+          type:
+            - string
+            - 'null'
+          description: Firmware version of this component
+        slotId:
+          type:
+            - integer
+            - 'null'
+          format: int32
+          description: Slot ID within the rack
+        trayIdx:
+          type:
+            - integer
+            - 'null'
+          format: int32
+          description: Tray index within the rack
+        hostId:
+          type:
+            - integer
+            - 'null'
+          format: int32
+          description: Host ID within the tray
         labels:
           $ref: '#/components/schemas/Labels'
           description: User-defined key-value pairs for organizing and categorizing Expected Switches
@@ -17623,6 +17973,8 @@ components:
           switchSerialNumber: SWITCH-12345
           nvOsUsername: nvadmin
           nvOsPassword: nvpassword123
+          rackId: rack-01
+          manufacturer: NVIDIA
           labels:
             environment: production
             rack: A1
@@ -17662,6 +18014,54 @@ components:
             - string
             - 'null'
           description: NvOS password for the Expected Switch
+        rackId:
+          type:
+            - string
+            - 'null'
+          description: Optional rack identifier for this component
+        name:
+          type:
+            - string
+            - 'null'
+          description: Display name for this component
+        manufacturer:
+          type:
+            - string
+            - 'null'
+          description: Manufacturer of this component
+        model:
+          type:
+            - string
+            - 'null'
+          description: Model of this component
+        description:
+          type:
+            - string
+            - 'null'
+          description: Description of this component
+        firmwareVersion:
+          type:
+            - string
+            - 'null'
+          description: Firmware version of this component
+        slotId:
+          type:
+            - integer
+            - 'null'
+          format: int32
+          description: Slot ID within the rack
+        trayIdx:
+          type:
+            - integer
+            - 'null'
+          format: int32
+          description: Tray index within the rack
+        hostId:
+          type:
+            - integer
+            - 'null'
+          format: int32
+          description: Host ID within the tray
         labels:
           $ref: '#/components/schemas/Labels'
           description: User-defined key-value pairs for organizing and categorizing Expected Switches
@@ -17682,6 +18082,8 @@ components:
           switchSerialNumber: SWITCH-54321
           nvOsUsername: newnvadmin
           nvOsPassword: newnvpassword123
+          rackId: rack-02
+          manufacturer: NVIDIA
           labels:
             environment: staging
             rack: B2
@@ -17727,6 +18129,54 @@ components:
             - string
             - 'null'
           description: NvOS password for the Expected Switch
+        rackId:
+          type:
+            - string
+            - 'null'
+          description: Optional rack identifier for this component
+        name:
+          type:
+            - string
+            - 'null'
+          description: Display name for this component
+        manufacturer:
+          type:
+            - string
+            - 'null'
+          description: Manufacturer of this component
+        model:
+          type:
+            - string
+            - 'null'
+          description: Model of this component
+        description:
+          type:
+            - string
+            - 'null'
+          description: Description of this component
+        firmwareVersion:
+          type:
+            - string
+            - 'null'
+          description: Firmware version of this component
+        slotId:
+          type:
+            - integer
+            - 'null'
+          format: int32
+          description: Slot ID within the rack
+        trayIdx:
+          type:
+            - integer
+            - 'null'
+          format: int32
+          description: Tray index within the rack
+        hostId:
+          type:
+            - integer
+            - 'null'
+          format: int32
+          description: Host ID within the tray
         labels:
           $ref: '#/components/schemas/Labels'
           description: User-defined key-value pairs for organizing and categorizing Expected Switches

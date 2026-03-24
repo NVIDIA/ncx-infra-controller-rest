@@ -62,6 +62,15 @@ type ExpectedSwitch struct {
 	Site               *Site             `bun:"rel:belongs-to,join:site_id=id"`
 	BmcMacAddress      string            `bun:"bmc_mac_address,notnull"`
 	SwitchSerialNumber string            `bun:"switch_serial_number,notnull"`
+	RackID             *string           `bun:"rack_id"`
+	Name               *string           `bun:"name"`
+	Manufacturer       *string           `bun:"manufacturer"`
+	Model              *string           `bun:"model"`
+	Description        *string           `bun:"description"`
+	FirmwareVersion    *string           `bun:"firmware_version"`
+	SlotID             *int32            `bun:"slot_id"`
+	TrayIdx            *int32            `bun:"tray_idx"`
+	HostID             *int32            `bun:"host_id"`
 	Labels             map[string]string `bun:"labels,type:jsonb"`
 	Created            time.Time         `bun:"created,nullzero,notnull,default:current_timestamp"`
 	Updated            time.Time         `bun:"updated,nullzero,notnull,default:current_timestamp"`
@@ -74,6 +83,15 @@ type ExpectedSwitchCreateInput struct {
 	SiteID             uuid.UUID
 	BmcMacAddress      string
 	SwitchSerialNumber string
+	RackID             *string
+	Name               *string
+	Manufacturer       *string
+	Model              *string
+	Description        *string
+	FirmwareVersion    *string
+	SlotID             *int32
+	TrayIdx            *int32
+	HostID             *int32
 	Labels             map[string]string
 	CreatedBy          uuid.UUID
 }
@@ -83,12 +101,30 @@ type ExpectedSwitchUpdateInput struct {
 	ExpectedSwitchID   uuid.UUID
 	BmcMacAddress      *string
 	SwitchSerialNumber *string
+	RackID             *string
+	Name               *string
+	Manufacturer       *string
+	Model              *string
+	Description        *string
+	FirmwareVersion    *string
+	SlotID             *int32
+	TrayIdx            *int32
+	HostID             *int32
 	Labels             map[string]string
 }
 
 // ExpectedSwitchClearInput input parameters for Clear method
 type ExpectedSwitchClearInput struct {
 	ExpectedSwitchID uuid.UUID
+	RackID           bool
+	Name             bool
+	Manufacturer     bool
+	Model            bool
+	Description      bool
+	FirmwareVersion  bool
+	SlotID           bool
+	TrayIdx          bool
+	HostID           bool
 	Labels           bool
 }
 
@@ -164,6 +200,15 @@ func (essd ExpectedSwitchSQLDAO) Create(ctx context.Context, tx *db.Tx, input Ex
 		SiteID:             input.SiteID,
 		BmcMacAddress:      input.BmcMacAddress,
 		SwitchSerialNumber: input.SwitchSerialNumber,
+		RackID:             input.RackID,
+		Name:               input.Name,
+		Manufacturer:       input.Manufacturer,
+		Model:              input.Model,
+		Description:        input.Description,
+		FirmwareVersion:    input.FirmwareVersion,
+		SlotID:             input.SlotID,
+		TrayIdx:            input.TrayIdx,
+		HostID:             input.HostID,
 		Labels:             input.Labels,
 		CreatedBy:          input.CreatedBy,
 	}
@@ -346,6 +391,42 @@ func (essd ExpectedSwitchSQLDAO) Update(ctx context.Context, tx *db.Tx, input Ex
 		es.SwitchSerialNumber = *input.SwitchSerialNumber
 		columnsSet["switch_serial_number"] = true
 	}
+	if input.RackID != nil {
+		es.RackID = input.RackID
+		columnsSet["rack_id"] = true
+	}
+	if input.Name != nil {
+		es.Name = input.Name
+		columnsSet["name"] = true
+	}
+	if input.Manufacturer != nil {
+		es.Manufacturer = input.Manufacturer
+		columnsSet["manufacturer"] = true
+	}
+	if input.Model != nil {
+		es.Model = input.Model
+		columnsSet["model"] = true
+	}
+	if input.Description != nil {
+		es.Description = input.Description
+		columnsSet["description"] = true
+	}
+	if input.FirmwareVersion != nil {
+		es.FirmwareVersion = input.FirmwareVersion
+		columnsSet["firmware_version"] = true
+	}
+	if input.SlotID != nil {
+		es.SlotID = input.SlotID
+		columnsSet["slot_id"] = true
+	}
+	if input.TrayIdx != nil {
+		es.TrayIdx = input.TrayIdx
+		columnsSet["tray_idx"] = true
+	}
+	if input.HostID != nil {
+		es.HostID = input.HostID
+		columnsSet["host_id"] = true
+	}
 	if input.Labels != nil {
 		es.Labels = input.Labels
 		columnsSet["labels"] = true
@@ -396,6 +477,42 @@ func (essd ExpectedSwitchSQLDAO) Clear(ctx context.Context, tx *db.Tx, input Exp
 	}
 
 	updatedFields := []string{}
+	if input.RackID {
+		es.RackID = nil
+		updatedFields = append(updatedFields, "rack_id")
+	}
+	if input.Name {
+		es.Name = nil
+		updatedFields = append(updatedFields, "name")
+	}
+	if input.Manufacturer {
+		es.Manufacturer = nil
+		updatedFields = append(updatedFields, "manufacturer")
+	}
+	if input.Model {
+		es.Model = nil
+		updatedFields = append(updatedFields, "model")
+	}
+	if input.Description {
+		es.Description = nil
+		updatedFields = append(updatedFields, "description")
+	}
+	if input.FirmwareVersion {
+		es.FirmwareVersion = nil
+		updatedFields = append(updatedFields, "firmware_version")
+	}
+	if input.SlotID {
+		es.SlotID = nil
+		updatedFields = append(updatedFields, "slot_id")
+	}
+	if input.TrayIdx {
+		es.TrayIdx = nil
+		updatedFields = append(updatedFields, "tray_idx")
+	}
+	if input.HostID {
+		es.HostID = nil
+		updatedFields = append(updatedFields, "host_id")
+	}
 	if input.Labels {
 		es.Labels = nil
 		updatedFields = append(updatedFields, "labels")

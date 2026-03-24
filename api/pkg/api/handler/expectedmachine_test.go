@@ -329,6 +329,24 @@ func TestCreateExpectedMachineHandler_Handle(t *testing.T) {
 			expectedStatus: http.StatusUnprocessableEntity,
 		},
 		{
+			name: "successful creation with rackId",
+			requestBody: model.APIExpectedMachineCreateRequest{
+				SiteID:              site.ID.String(),
+				BmcMacAddress:       "00:11:22:33:44:BB",
+				DefaultBmcUsername:  cdb.GetStrPtr("admin"),
+				DefaultBmcPassword:  cdb.GetStrPtr("password"),
+				ChassisSerialNumber: "CHASSIS-RACK-001",
+				RackID:              cdb.GetStrPtr("test-rack-001"),
+				Labels:              map[string]string{"env": "rack-test"},
+			},
+			setupContext: func(c echo.Context) {
+				c.Set("user", createMockUser(org))
+				c.SetParamNames("orgName")
+				c.SetParamValues(org)
+			},
+			expectedStatus: http.StatusCreated,
+		},
+		{
 			name: "duplicate MAC address should return 409",
 			requestBody: model.APIExpectedMachineCreateRequest{
 				SiteID:                   site.ID.String(),
@@ -374,13 +392,20 @@ func TestCreateExpectedMachineHandler_Handle(t *testing.T) {
 				t.Errorf("Response: %v", rec.Body.String())
 			}
 
-			// For successful creations, verify labels are returned in response
-			if tt.expectedStatus == http.StatusCreated && tt.requestBody.Labels != nil {
+			// For successful creations, verify labels and rackId are returned in response
+			if tt.expectedStatus == http.StatusCreated {
 				var response model.APIExpectedMachine
 				err := json.Unmarshal(rec.Body.Bytes(), &response)
 				assert.Nil(t, err)
-				assert.NotNil(t, response.Labels, "Labels should not be nil in response")
-				assert.Equal(t, tt.requestBody.Labels, response.Labels, "Labels in response should match request")
+				if tt.requestBody.Labels != nil {
+					assert.NotNil(t, response.Labels, "Labels should not be nil in response")
+					assert.Equal(t, tt.requestBody.Labels, response.Labels, "Labels in response should match request")
+				}
+				if tt.requestBody.RackID != nil {
+					if assert.NotNil(t, response.RackID, "RackID should not be nil in response") {
+						assert.Equal(t, *tt.requestBody.RackID, *response.RackID, "RackID in response should match request")
+					}
+				}
 			}
 		})
 	}

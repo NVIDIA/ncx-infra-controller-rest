@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	cClient "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/grpc/client"
+	rlav1 "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/rla/protobuf/v1"
 	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -241,7 +242,7 @@ func TestManageExpectedSwitch_CreateExpectedSwitchOnSite(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mm := NewManageExpectedSwitch(tt.fields.CarbideAtomicClient)
+			mm := NewManageExpectedSwitch(tt.fields.CarbideAtomicClient, nil)
 			err := mm.CreateExpectedSwitchOnSite(tt.args.ctx, tt.args.request)
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -360,7 +361,7 @@ func TestManageExpectedSwitch_UpdateExpectedSwitchOnSite(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mm := NewManageExpectedSwitch(tt.fields.CarbideAtomicClient)
+			mm := NewManageExpectedSwitch(tt.fields.CarbideAtomicClient, nil)
 			err := mm.UpdateExpectedSwitchOnSite(tt.args.ctx, tt.args.request)
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -446,7 +447,7 @@ func TestManageExpectedSwitch_DeleteExpectedSwitchOnSite(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mm := NewManageExpectedSwitch(tt.fields.CarbideAtomicClient)
+			mm := NewManageExpectedSwitch(tt.fields.CarbideAtomicClient, nil)
 			err := mm.DeleteExpectedSwitchOnSite(tt.args.ctx, tt.args.request)
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -455,4 +456,77 @@ func TestManageExpectedSwitch_DeleteExpectedSwitchOnSite(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestManageExpectedSwitch_CreateExpectedSwitchOnRLA(t *testing.T) {
+	t.Run("nil RLA client skips gracefully", func(t *testing.T) {
+		mm := ManageExpectedSwitch{RlaAtomicClient: nil}
+		err := mm.CreateExpectedSwitchOnRLA(context.Background(), &cwssaws.ExpectedSwitch{
+			ExpectedSwitchId: &cwssaws.UUID{Value: uuid.NewString()}, BmcMacAddress: "00:11:22:33:44:55", SwitchSerialNumber: "SW001",
+		})
+		assert.NoError(t, err)
+	})
+
+	t.Run("nil RLA client connection skips gracefully", func(t *testing.T) {
+		mm := ManageExpectedSwitch{RlaAtomicClient: cClient.NewRlaAtomicClient(&cClient.RlaClientConfig{})}
+		err := mm.CreateExpectedSwitchOnRLA(context.Background(), &cwssaws.ExpectedSwitch{
+			ExpectedSwitchId: &cwssaws.UUID{Value: uuid.NewString()}, BmcMacAddress: "00:11:22:33:44:55", SwitchSerialNumber: "SW001",
+		})
+		assert.NoError(t, err)
+	})
+}
+
+func Test_expectedSwitchToRLAComponent(t *testing.T) {
+	strPtr := func(s string) *string { return &s }
+	int32Ptr := func(i int32) *int32 { return &i }
+
+	t.Run("maps all fields correctly", func(t *testing.T) {
+		es := &cwssaws.ExpectedSwitch{
+			ExpectedSwitchId:   &cwssaws.UUID{Value: "es-001"},
+			BmcMacAddress:      "AA:BB:CC:DD:EE:FF",
+			SwitchSerialNumber: "SW-001",
+			RackId:             &cwssaws.RackId{Id: "rack-001"},
+			Name:               strPtr("nvl-switch-1"),
+			Manufacturer:       strPtr("NVIDIA"),
+			Model:              strPtr("NVL-400"),
+			Description:        strPtr("NVLink switch"),
+			FirmwareVersion:    strPtr("v3.0.0"),
+			SlotId:             int32Ptr(4),
+			TrayIdx:            int32Ptr(1),
+			HostId:             int32Ptr(0),
+		}
+		component := expectedSwitchToRLAComponent(es)
+		assert.Equal(t, rlav1.ComponentType_COMPONENT_TYPE_NVLSWITCH, component.Type)
+		assert.Equal(t, "es-001", component.Info.Id.Id)
+		assert.Equal(t, "SW-001", component.Info.SerialNumber)
+		assert.Equal(t, "nvl-switch-1", component.Info.Name)
+		assert.Equal(t, "NVIDIA", component.Info.Manufacturer)
+		assert.Equal(t, "NVL-400", *component.Info.Model)
+		assert.Equal(t, "NVLink switch", *component.Info.Description)
+		assert.Equal(t, "es-001", component.ComponentId)
+		assert.Equal(t, "v3.0.0", component.FirmwareVersion)
+		assert.NotNil(t, component.Position)
+		assert.Equal(t, int32(4), component.Position.SlotId)
+		assert.Equal(t, int32(1), component.Position.TrayIdx)
+		if assert.Len(t, component.Bmcs, 1) {
+			assert.Equal(t, "AA:BB:CC:DD:EE:FF", component.Bmcs[0].MacAddress)
+		}
+		assert.NotNil(t, component.RackId)
+		assert.Equal(t, "rack-001", component.RackId.Id)
+	})
+
+	t.Run("handles minimal fields (nil optionals)", func(t *testing.T) {
+		es := &cwssaws.ExpectedSwitch{
+			ExpectedSwitchId: &cwssaws.UUID{Value: "es-002"}, BmcMacAddress: "11:22:33:44:55:66",
+			SwitchSerialNumber: "SW-002",
+		}
+		component := expectedSwitchToRLAComponent(es)
+		assert.Equal(t, rlav1.ComponentType_COMPONENT_TYPE_NVLSWITCH, component.Type)
+		assert.Empty(t, component.Info.Name)
+		assert.Empty(t, component.Info.Manufacturer)
+		assert.Nil(t, component.Info.Model)
+		assert.Empty(t, component.FirmwareVersion)
+		assert.Nil(t, component.Position)
+		assert.Nil(t, component.RackId)
+	})
 }
