@@ -767,57 +767,42 @@ rules:
 #      - timeout: Maximum time to wait (e.g., "15m")
 #      - poll_interval: Time between polls (e.g., "30s")
 #
-# 9. InjectExpectation (ingestion / bring-up)
+# 9. InjectExpectation (ingestion)
 #    - Registers expected component configurations with their respective
 #      component manager services
 #    - No required parameters — uses the component Target from the step
-#    - Used as the initial stage in full bring-up rules, and as the sole
-#      action in ingestion-only rules
+#    - Conceptually the first phase of a full rack bring-up, but executed
+#      as a separate ingestion-only rule via IngestRack API
 #
   # ===========================================
-  # Bring-Up - Full Rack Bring-Up Sequence
+  # Bring-Up - Rack Bring-Up Sequence
   # ===========================================
-  # Stage 1: Ingestion   — register all component types with component manager services (parallel)
-  # Stage 2: PowerShelf  — wait PMC ready, turn on PSUs, verify
-  # Stage 3: Compute     — open gate, wait bring-up, verify, reboot, verify again
+  # A complete rack bring-up has two phases:
+  #   1. Ingestion  — register components with component manager services (IngestRack API)
+  #   2. Power + verification — this rule (BringUpRack API)
+  #
+  # The two phases are decoupled so ingestion can run independently (e.g. pre-register
+  # components before the physical rack is powered).
+  #
+  # This rule covers phase 2 only:
+  #   Stage 1: PowerShelf  — wait PMC ready, turn on PSUs, verify
+  #   Stage 2: Compute     — open gate, wait bring-up, verify, reboot, verify again
   #
   # Actions used:
-  #   InjectExpectation — register components with component managers
   #   BringUpControl    — open power-on gate
   #   WaitBringUp       — poll until ingestion complete
   #   VerifyReachability with require_all — wait for all PMCs
 
   - name: Default Rack Bring-Up
     description: >
-      Full rack bring-up: ingestion, powershelf power-on, compute bring-up.
+      Rack bring-up phase 2: powershelf power-on, compute bring-up.
+      Phase 1 (ingestion) is handled separately via IngestRack API.
     operation_type: bring_up
     operation: bring_up
     steps:
-      # === Stage 1: Ingestion (all component types in parallel) ===
+      # === Stage 1: PowerShelf ===
       - component_type: powershelf
         stage: 1
-        max_parallel: 0
-        timeout: 10m
-        main_operation:
-          name: InjectExpectation
-
-      - component_type: compute
-        stage: 1
-        max_parallel: 0
-        timeout: 10m
-        main_operation:
-          name: InjectExpectation
-
-      - component_type: nvlswitch
-        stage: 1
-        max_parallel: 0
-        timeout: 10m
-        main_operation:
-          name: InjectExpectation
-
-      # === Stage 2: PowerShelf ===
-      - component_type: powershelf
-        stage: 2
         max_parallel: 0
         timeout: 20m
         retry:
@@ -842,9 +827,9 @@ rules:
             parameters:
               expected_status: "on"
 
-      # === Stage 3: Compute ===
+      # === Stage 2: Compute ===
       - component_type: compute
-        stage: 3
+        stage: 2
         max_parallel: 0
         timeout: 30m
         retry:
