@@ -35,7 +35,7 @@ import (
 // --- mock taskmanager.Manager ---
 
 type mockManager struct {
-	requests []*operation.Request
+	requests  []*operation.Request
 	submitErr error
 	cancelErr error
 }
