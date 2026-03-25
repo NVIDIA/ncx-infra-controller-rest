@@ -643,6 +643,17 @@ service Forge {
   rpc DeleteNVLinkLogicalPartition(NVLinkLogicalPartitionDeletionRequest) returns (NVLinkLogicalPartitionDeletionResult);
   // Find all Logical partitions under a specified tenant
   rpc NVLinkLogicalPartitionsForTenant(TenantSearchQuery) returns (NVLinkLogicalPartitionList);
+
+  // iPXE Templates
+  rpc ListIpxeScriptTemplates(ListIpxeScriptTemplatesRequest) returns (ListIpxeScriptTemplatesResponse);
+
+  // Operating System Definitions (from carbide-core)
+  rpc FindOperatingSystemIds(OperatingSystemSearchFilter) returns (OperatingSystemIdList);
+  rpc FindOperatingSystemsByIds(OperatingSystemsByIdsRequest) returns (OperatingSystemList);
+  rpc CreateOperatingSystem(CreateOperatingSystemRequest) returns (OperatingSystemDefinition);
+  rpc GetOperatingSystem(common.UUID) returns (OperatingSystemDefinition);
+  rpc UpdateOperatingSystem(UpdateOperatingSystemRequest) returns (OperatingSystemDefinition);
+  rpc DeleteOperatingSystem(DeleteOperatingSystemRequest) returns (DeleteOperatingSystemResponse);
 }
 
 message TpmCaAddedCaStatus{
@@ -5680,3 +5691,153 @@ message NVLinkLogicalPartitionUpdateRequest {
 
 message NVLinkLogicalPartitionUpdateResult {
 }
+
+// IpxeScriptTemplateScope - scope of an iPXE script template
+enum IpxeScriptTemplateScope {
+  INTERNAL = 0;  // Carbide-core usage only
+  PUBLIC = 1;    // Usable by tenant
+}
+
+// IpxeScriptTemplate - an iPXE script template definition
+message IpxeScriptTemplate {
+  string name = 1;
+  string template = 2;
+  repeated string required_params = 3;
+  string description = 4;
+  repeated string reserved_params = 5;
+  repeated string required_artifacts = 6;
+  IpxeScriptTemplateScope scope = 7;
+}
+
+// ListIpxeScriptTemplatesRequest - request to list all iPXE script templates
+message ListIpxeScriptTemplatesRequest {}
+
+// ListIpxeScriptTemplatesResponse - response containing all iPXE script templates
+message ListIpxeScriptTemplatesResponse {
+  repeated IpxeScriptTemplate templates = 1;
+}
+
+// IpxeOsParameter - a parameter for an iPXE OS definition
+message IpxeOsParameter {
+  string name = 1;
+  string value = 2;
+}
+
+// ArtifactCacheStrategy - caching strategy for an artifact.
+// Values match carbide-core's ArtifactCacheStrategy enum for correct wire encoding.
+enum ArtifactCacheStrategy {
+  CACHE_AS_NEEDED = 0; // Download and cache locally if possible (default)
+  LOCAL_ONLY = 1;      // URL is only usable locally; no caching applicable
+  CACHED_ONLY = 2;     // Artifact must be cached locally or is unusable
+  REMOTE_ONLY = 3;     // Always fetch from remote URL, never cache locally
+}
+
+// OsScope - scope of an Operating System definition for sync purposes.
+// Values match carbide-core's OsScope enum.
+enum OsScope {
+  OS_SCOPE_LOCAL = 0;   // Single local site only, sync bidirectional
+  OS_SCOPE_LIMITED = 1; // Multi-site (fixed list), rest overrides core during sync
+  OS_SCOPE_GLOBAL = 2;  // Multi-site (any), rest overrides core during sync
+}
+
+// OperatingSystemType - type of an Operating System definition.
+// Values match carbide-core's OperatingSystemType enum for correct wire encoding.
+enum OperatingSystemType {
+  OS_TYPE_UNSPECIFIED = 0;
+  OS_TYPE_IPXE = 1;               // Raw inline iPXE script
+  OS_TYPE_IPXE_OS_DEFINITION = 2; // iPXE OS using an iPXE template
+}
+
+// IpxeOsArtifact - an artifact (kernel, initrd, ISO, …) for an iPXE OS definition
+message IpxeOsArtifact {
+  string name = 1;
+  string url = 2;
+  optional string sha = 3;
+  optional string auth_type = 4;
+  optional string auth_token = 5;
+  ArtifactCacheStrategy cache_strategy = 6;
+  optional string local_url = 7;
+}
+
+// OperatingSystemDefinition - an OS definition stored in carbide-core (CRUD resource, table operating_systems).
+// Only active (non-deleted) records are returned by the Find RPCs.
+message OperatingSystemDefinition {
+  common.UUID id = 1;
+  string name = 2;
+  optional string description = 3;
+  string tenant_organization_id = 4;
+  OperatingSystemType type = 5;
+  TenantState status = 6; // lifecycle state; only a subset of TenantState values apply
+  bool is_active = 7;
+  bool allow_override = 8;
+  bool phone_home_enabled = 9;
+  optional string user_data = 10;
+  string created = 11;
+  string updated = 12;
+  optional string ipxe_script = 20;
+  optional string ipxe_template_name = 22;
+  repeated IpxeOsParameter ipxe_parameters = 23;
+  repeated IpxeOsArtifact ipxe_artifacts = 24;
+  optional string ipxe_definition_hash = 25;
+}
+
+// OperatingSystemSearchFilter - filter for FindOperatingSystemIds
+message OperatingSystemSearchFilter {
+  optional string tenant_organization_id = 1;
+}
+
+// OperatingSystemIdList - list of OS definition IDs returned by FindOperatingSystemIds
+message OperatingSystemIdList {
+  repeated common.UUID ids = 1;
+}
+
+// OperatingSystemsByIdsRequest - request to fetch full OS definitions by IDs
+message OperatingSystemsByIdsRequest {
+  repeated common.UUID ids = 1;
+}
+
+// OperatingSystemList - list of full OS definitions returned by FindOperatingSystemsByIds
+message OperatingSystemList {
+  repeated OperatingSystemDefinition operating_systems = 1;
+}
+
+// CreateOperatingSystemRequest - request to create an OS definition in carbide-core.
+// id must be set to the carbide-rest primary key so both sides share the same UUID.
+message CreateOperatingSystemRequest {
+  string name = 1;
+  optional string description = 2;
+  string tenant_organization_id = 3;
+  bool is_active = 4;
+  bool allow_override = 5;
+  bool phone_home_enabled = 6;
+  optional string user_data = 7;
+  optional common.UUID id = 8; // carbide-rest primary key; set so both sides share the same UUID
+  optional string ipxe_script = 20;
+  optional string ipxe_template_name = 22;
+  repeated IpxeOsParameter ipxe_parameters = 23;
+  repeated IpxeOsArtifact ipxe_artifacts = 24;
+}
+
+// UpdateOperatingSystemRequest - request to update an OS definition in carbide-core
+message UpdateOperatingSystemRequest {
+  common.UUID id = 1;
+  optional string name = 2;
+  optional string description = 3;
+  optional bool is_active = 4;
+  optional bool allow_override = 5;
+  optional bool phone_home_enabled = 6;
+  optional string user_data = 7;
+  optional string ipxe_script = 20;
+  optional string ipxe_template_name = 22;
+  repeated IpxeOsParameter ipxe_parameters = 23;
+  repeated IpxeOsArtifact ipxe_artifacts = 24;
+  optional string ipxe_definition_hash = 25; // if provided, used as-is; otherwise recomputed
+}
+
+// DeleteOperatingSystemRequest - request to delete an OS definition from carbide-core
+message DeleteOperatingSystemRequest {
+  common.UUID id = 1;
+}
+
+// DeleteOperatingSystemResponse - response from deleting an OS definition
+message DeleteOperatingSystemResponse {}

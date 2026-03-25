@@ -88,131 +88,180 @@ var (
 	}
 )
 
+// OperatingSystemIpxeParameter holds a single iPXE parameter name/value pair (stored as JSONB).
+// These are only populated for iPXE-based OS definitions synced from carbide-core.
+type OperatingSystemIpxeParameter struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
+// OperatingSystemIpxeArtifact holds a single iPXE artifact descriptor (stored as JSONB).
+// These are only populated for iPXE-based OS definitions synced from carbide-core.
+type OperatingSystemIpxeArtifact struct {
+	Name          string  `json:"name"`
+	URL           string  `json:"url"`
+	SHA           *string `json:"sha,omitempty"`
+	AuthType      *string `json:"auth_type,omitempty"`
+	AuthToken     *string `json:"auth_token,omitempty"`
+	CacheStrategy string  `json:"cache_strategy"`
+	LocalURL      *string `json:"local_url,omitempty"`
+}
+
 // OperatingSystem describes the attributes of the operating system
 // that can be used on instances
 type OperatingSystem struct {
 	bun.BaseModel `bun:"table:operating_system,alias:os"`
 
-	ID                          uuid.UUID               `bun:"type:uuid,pk"`
-	Name                        string                  `bun:"name,notnull"`
-	Description                 *string                 `bun:"description"`
-	Org                         string                  `bun:"org,notnull"`
-	InfrastructureProviderID    *uuid.UUID              `bun:"infrastructure_provider_id,type:uuid"`
-	InfrastructureProvider      *InfrastructureProvider `bun:"rel:belongs-to,join:infrastructure_provider_id=id"`
-	TenantID                    *uuid.UUID              `bun:"tenant_id,type:uuid"`
-	Tenant                      *Tenant                 `bun:"rel:belongs-to,join:tenant_id=id"`
-	ControllerOperatingSystemID *uuid.UUID              `bun:"controller_operating_system_id,type:uuid"`
-	Version                     *string                 `bun:"version"`
-	Type                        string                  `bun:"type,notnull"`
-	ImageURL                    *string                 `bun:"image_url"`
-	ImageSHA                    *string                 `bun:"image_sha"`
-	ImageAuthType               *string                 `bun:"image_auth_type"`
-	ImageAuthToken              *string                 `bun:"image_auth_token"`
-	ImageDisk                   *string                 `bun:"image_disk"`
-	RootFsID                    *string                 `bun:"root_fs_id"`
-	RootFsLabel                 *string                 `bun:"root_fs_label"`
-	IpxeScript                  *string                 `bun:"ipxe_script"`
-	UserData                    *string                 `bun:"user_data"`
-	IsCloudInit                 bool                    `bun:"is_cloud_init,notnull"`
-	AllowOverride               bool                    `bun:"allow_override,notnull"`
-	EnableBlockStorage          bool                    `bun:"enable_block_storage,notnull"`
-	PhoneHomeEnabled            bool                    `bun:"phone_home_enabled,notnull"`
-	IsActive                    bool                    `bun:"is_active,notnull"`
-	DeactivationNote            *string                 `bun:"deactivation_note"` // Note for deactivation, if any
-	Status                      string                  `bun:"status,notnull"`
-	Created                     time.Time               `bun:"created,nullzero,notnull,default:current_timestamp"`
-	Updated                     time.Time               `bun:"updated,nullzero,notnull,default:current_timestamp"`
-	Deleted                     *time.Time              `bun:"deleted,soft_delete"`
-	CreatedBy                   uuid.UUID               `bun:"type:uuid,notnull"`
+	ID                       uuid.UUID               `bun:"type:uuid,pk"`
+	Name                     string                  `bun:"name,notnull"`
+	Description              *string                 `bun:"description"`
+	Org                      string                  `bun:"org,notnull"`
+	InfrastructureProviderID *uuid.UUID              `bun:"infrastructure_provider_id,type:uuid"`
+	InfrastructureProvider   *InfrastructureProvider `bun:"rel:belongs-to,join:infrastructure_provider_id=id"`
+	TenantID                 *uuid.UUID              `bun:"tenant_id,type:uuid"`
+	Tenant                   *Tenant                 `bun:"rel:belongs-to,join:tenant_id=id"`
+	Version                  *string                 `bun:"version"`
+	Type                     string                  `bun:"type,notnull"`
+	ImageURL                 *string                 `bun:"image_url"`
+	ImageSHA                 *string                 `bun:"image_sha"`
+	ImageAuthType            *string                 `bun:"image_auth_type"`
+	ImageAuthToken           *string                 `bun:"image_auth_token"`
+	ImageDisk                *string                 `bun:"image_disk"`
+	RootFsID                 *string                 `bun:"root_fs_id"`
+	RootFsLabel              *string                 `bun:"root_fs_label"`
+	IpxeScript               *string                 `bun:"ipxe_script"`
+	UserData                 *string                 `bun:"user_data"`
+	IsCloudInit              bool                    `bun:"is_cloud_init,notnull"`
+	AllowOverride            bool                    `bun:"allow_override,notnull"`
+	EnableBlockStorage       bool                    `bun:"enable_block_storage,notnull"`
+	PhoneHomeEnabled         bool                    `bun:"phone_home_enabled,notnull"`
+	IsActive                 bool                    `bun:"is_active,notnull"`
+	DeactivationNote         *string                 `bun:"deactivation_note"` // Note for deactivation, if any
+	Status                   string                  `bun:"status,notnull"`
+	Created                  time.Time               `bun:"created,nullzero,notnull,default:current_timestamp"`
+	Updated                  time.Time               `bun:"updated,nullzero,notnull,default:current_timestamp"`
+	Deleted                  *time.Time              `bun:"deleted,soft_delete"`
+	CreatedBy                uuid.UUID               `bun:"type:uuid,notnull"`
+	// iPXE fields populated for OS definitions synced from carbide-core (type = iPXE)
+	IpxeTemplateName *string                        `bun:"ipxe_template_name"`
+	IpxeParameters   []OperatingSystemIpxeParameter `bun:"ipxe_parameters,type:jsonb"`
+	IpxeArtifacts    []OperatingSystemIpxeArtifact  `bun:"ipxe_artifacts,type:jsonb"`
+	DefinitionHash   *string                        `bun:"definition_hash"`
+	// Scope controls synchronization direction between carbide-rest and carbide-core.
+	// Nil / "local" means bidirectional (most-recently-updated wins).
+	// "global" and "limited" mean carbide-rest is the source of truth.
+	// Only meaningful for iPXE-type OSes.
+	Scope *string `bun:"scope"`
 }
 
 // OperatingSystemCreateInput input parameters for Create method
 type OperatingSystemCreateInput struct {
-	Name                        string
-	Description                 *string
-	Org                         string
-	InfrastructureProviderID    *uuid.UUID
-	TenantID                    *uuid.UUID
-	ControllerOperatingSystemID *uuid.UUID
-	Version                     *string
-	OsType                      string
-	ImageURL                    *string
-	ImageSHA                    *string
-	ImageAuthType               *string
-	ImageAuthToken              *string
-	ImageDisk                   *string
-	RootFsId                    *string
-	RootFsLabel                 *string
-	IpxeScript                  *string
-	UserData                    *string
-	IsCloudInit                 bool
-	AllowOverride               bool
-	EnableBlockStorage          bool
-	PhoneHomeEnabled            bool
-	Status                      string
-	CreatedBy                   uuid.UUID
+	// ID optionally pre-specifies the primary key. When set (e.g. during inventory sync from
+	// carbide-core), the same UUID is used on both sides. When zero, a new UUID is generated.
+	ID                       uuid.UUID
+	Name                     string
+	Description              *string
+	Org                      string
+	InfrastructureProviderID *uuid.UUID
+	TenantID                 *uuid.UUID
+	Version                  *string
+	OsType                   string
+	ImageURL                 *string
+	ImageSHA                 *string
+	ImageAuthType            *string
+	ImageAuthToken           *string
+	ImageDisk                *string
+	RootFsId                 *string
+	RootFsLabel              *string
+	IpxeScript               *string
+	UserData                 *string
+	IsCloudInit              bool
+	AllowOverride            bool
+	EnableBlockStorage       bool
+	PhoneHomeEnabled         bool
+	Status                   string
+	CreatedBy                uuid.UUID
+	// iPXE definition fields (for carbide-core synced iPXE OS definitions)
+	IpxeTemplateName *string
+	IpxeParameters   []OperatingSystemIpxeParameter
+	IpxeArtifacts    []OperatingSystemIpxeArtifact
+	DefinitionHash   *string
+	Scope            *string
 }
 
 // OperatingSystemUpdateInput input parameters for Update method
 type OperatingSystemUpdateInput struct {
-	OperatingSystemId           uuid.UUID
-	Name                        *string
-	Description                 *string
-	Org                         *string
-	InfrastructureProviderID    *uuid.UUID
-	TenantID                    *uuid.UUID
-	ControllerOperatingSystemID *uuid.UUID
-	Version                     *string
-	OsType                      *string
-	ImageURL                    *string
-	ImageSHA                    *string
-	ImageAuthType               *string
-	ImageAuthToken              *string
-	ImageDisk                   *string
-	RootFsId                    *string
-	RootFsLabel                 *string
-	IpxeScript                  *string
-	UserData                    *string
-	IsCloudInit                 *bool
-	AllowOverride               *bool
-	EnableBlockStorage          *bool
-	PhoneHomeEnabled            *bool
-	IsActive                    *bool
-	DeactivationNote            *string
-	Status                      *string
+	OperatingSystemId        uuid.UUID
+	Name                     *string
+	Description              *string
+	Org                      *string
+	InfrastructureProviderID *uuid.UUID
+	TenantID                 *uuid.UUID
+	Version                  *string
+	OsType                   *string
+	ImageURL                 *string
+	ImageSHA                 *string
+	ImageAuthType            *string
+	ImageAuthToken           *string
+	ImageDisk                *string
+	RootFsId                 *string
+	RootFsLabel              *string
+	IpxeScript               *string
+	UserData                 *string
+	IsCloudInit              *bool
+	AllowOverride            *bool
+	EnableBlockStorage       *bool
+	PhoneHomeEnabled         *bool
+	IsActive                 *bool
+	DeactivationNote         *string
+	Status                   *string
+	// iPXE definition fields (for carbide-core synced iPXE OS definitions)
+	IpxeTemplateName *string
+	IpxeParameters   *[]OperatingSystemIpxeParameter
+	IpxeArtifacts    *[]OperatingSystemIpxeArtifact
+	DefinitionHash   *string
+	Scope            *string
 }
 
 // OperatingSystemClearInput input parameters for Clear method
 type OperatingSystemClearInput struct {
-	OperatingSystemId           uuid.UUID
-	Description                 bool
-	InfrastructureProviderID    bool
-	TenantID                    bool
-	ControllerOperatingSystemID bool
-	Version                     bool
-	ImageURL                    bool
-	ImageSHA                    bool
-	ImageAuthType               bool
-	ImageAuthToken              bool
-	ImageDisk                   bool
-	RootFsId                    bool
-	RootFsLabel                 bool
-	IpxeScript                  bool
-	UserData                    bool
-	DeactivationNote            bool
+	OperatingSystemId        uuid.UUID
+	Description              bool
+	InfrastructureProviderID bool
+	TenantID                 bool
+	Version                  bool
+	ImageURL                 bool
+	ImageSHA                 bool
+	ImageAuthType            bool
+	ImageAuthToken           bool
+	ImageDisk                bool
+	RootFsId                 bool
+	RootFsLabel              bool
+	IpxeScript               bool
+	UserData                 bool
+	DeactivationNote         bool
 }
 
 type OperatingSystemFilterInput struct {
 	InfrastructureProviderID *uuid.UUID
 	TenantIDs                []uuid.UUID
-	SiteIDs                  []uuid.UUID
-	Names                    []string
-	Orgs                     []string
-	OsTypes                  []string
-	Statuses                 []string
-	SearchQuery              *string
-	OperatingSystemIds       []uuid.UUID
-	IsActive                 *bool
+	// InfrastructureProviderIDs, when set together with TenantIDs, widens the result set with
+	// an OR: the query returns OSes owned by any of the given tenants OR any of the given providers.
+	// When used alone (without TenantIDs) it is an AND filter like the other fields.
+	InfrastructureProviderIDs []uuid.UUID
+	SiteIDs                   []uuid.UUID
+	Names                     []string
+	Orgs                      []string
+	OsTypes                   []string
+	Statuses                  []string
+	SearchQuery               *string
+	OperatingSystemIds        []uuid.UUID
+	IsActive                  *bool
+	// Scopes filters by the scope field (e.g. "global", "limited", "local").
+	Scopes []string
+	// IncludeDeleted includes soft-deleted records in the result.
+	// Used by the inventory sync to detect and propagate deletions from carbide-core.
+	IncludeDeleted bool
 }
 
 var _ bun.BeforeAppendModelHook = (*OperatingSystem)(nil)
@@ -274,34 +323,42 @@ func (ossd OperatingSystemSQLDAO) Create(ctx context.Context, tx *db.Tx, input O
 		ossd.tracerSpan.SetAttribute(operatingSystemSQLDAOSpan, "name", input.Name)
 	}
 
+	id := input.ID
+	if id == uuid.Nil {
+		id = uuid.New()
+	}
 	os := &OperatingSystem{
-		ID:                          uuid.New(),
-		Name:                        input.Name,
-		Description:                 input.Description,
-		Org:                         input.Org,
-		InfrastructureProviderID:    input.InfrastructureProviderID,
-		TenantID:                    input.TenantID,
-		ControllerOperatingSystemID: input.ControllerOperatingSystemID,
-		Version:                     input.Version,
-		Type:                        input.OsType,
-		ImageURL:                    input.ImageURL,
-		ImageSHA:                    input.ImageSHA,
-		ImageAuthType:               input.ImageAuthType,
-		ImageAuthToken:              input.ImageAuthToken,
-		ImageDisk:                   input.ImageDisk,
-		RootFsID:                    input.RootFsId,
-		RootFsLabel:                 input.RootFsLabel,
-		IpxeScript:                  input.IpxeScript,
-		UserData:                    input.UserData,
-		IsCloudInit:                 input.IsCloudInit,
-		AllowOverride:               input.AllowOverride,
-		EnableBlockStorage:          input.EnableBlockStorage,
-		PhoneHomeEnabled:            input.PhoneHomeEnabled,
+		ID:                       id,
+		Name:                     input.Name,
+		Description:              input.Description,
+		Org:                      input.Org,
+		InfrastructureProviderID: input.InfrastructureProviderID,
+		TenantID:                 input.TenantID,
+		Version:                  input.Version,
+		Type:                     input.OsType,
+		ImageURL:                 input.ImageURL,
+		ImageSHA:                 input.ImageSHA,
+		ImageAuthType:            input.ImageAuthType,
+		ImageAuthToken:           input.ImageAuthToken,
+		ImageDisk:                input.ImageDisk,
+		RootFsID:                 input.RootFsId,
+		RootFsLabel:              input.RootFsLabel,
+		IpxeScript:               input.IpxeScript,
+		UserData:                 input.UserData,
+		IsCloudInit:              input.IsCloudInit,
+		AllowOverride:            input.AllowOverride,
+		EnableBlockStorage:       input.EnableBlockStorage,
+		PhoneHomeEnabled:         input.PhoneHomeEnabled,
 		// WARNING: there is a bug in 'bun' and we cannot use non-nullable AND default=true at this time:
 		IsActive:         true, // input.IsActive,
 		DeactivationNote: nil,  //input.DeactivationNote,
 		Status:           input.Status,
 		CreatedBy:        input.CreatedBy,
+		IpxeTemplateName: input.IpxeTemplateName,
+		IpxeParameters:   input.IpxeParameters,
+		IpxeArtifacts:    input.IpxeArtifacts,
+		DefinitionHash:   input.DefinitionHash,
+		Scope:            input.Scope,
 	}
 
 	_, err := db.GetIDB(tx, ossd.dbSession).NewInsert().Model(os).Exec(ctx)
@@ -379,9 +436,23 @@ func (ossd OperatingSystemSQLDAO) GetAll(ctx context.Context, tx *db.Tx, filter 
 		query = query.Where("os.infrastructure_provider_id = ?", *filter.InfrastructureProviderID)
 		ossd.tracerSpan.SetAttribute(operatingSystemSQLDAOSpan, "infrastructure_provider_id", filter.InfrastructureProviderID.String())
 	}
-	if filter.TenantIDs != nil {
+	// When both TenantIDs and InfrastructureProviderIDs are set, widen the result with OR so that
+	// tenant admins and provider admins can see all OSes belonging to either their tenant or their
+	// provider. When only TenantIDs is set it behaves as a plain AND filter (legacy behaviour).
+	switch {
+	case len(filter.TenantIDs) > 0 && len(filter.InfrastructureProviderIDs) > 0:
+		query = query.WhereGroup(" AND ", func(q *bun.SelectQuery) *bun.SelectQuery {
+			return q.
+				Where("os.tenant_id IN (?)", bun.In(filter.TenantIDs)).
+				WhereOr("os.infrastructure_provider_id IN (?)", bun.In(filter.InfrastructureProviderIDs))
+		})
+		ossd.tracerSpan.SetAttribute(operatingSystemSQLDAOSpan, "tenant_or_provider", filter.TenantIDs)
+	case len(filter.TenantIDs) > 0:
 		query = query.Where("os.tenant_id IN (?)", bun.In(filter.TenantIDs))
 		ossd.tracerSpan.SetAttribute(operatingSystemSQLDAOSpan, "tenant_id", filter.TenantIDs)
+	case len(filter.InfrastructureProviderIDs) > 0:
+		query = query.Where("os.infrastructure_provider_id IN (?)", bun.In(filter.InfrastructureProviderIDs))
+		ossd.tracerSpan.SetAttribute(operatingSystemSQLDAOSpan, "infrastructure_provider_ids", filter.InfrastructureProviderIDs)
 	}
 	if filter.OsTypes != nil {
 		query = query.Where("os.type IN (?)", bun.In(filter.OsTypes))
@@ -416,6 +487,13 @@ func (ossd OperatingSystemSQLDAO) GetAll(ctx context.Context, tx *db.Tx, filter 
 	if filter.IsActive != nil {
 		query = query.Where("os.is_active = ?", *filter.IsActive)
 		ossd.tracerSpan.SetAttribute(operatingSystemSQLDAOSpan, "is_active", *filter.IsActive)
+	}
+	if filter.Scopes != nil {
+		query = query.Where("os.scope IN (?)", bun.In(filter.Scopes))
+		ossd.tracerSpan.SetAttribute(operatingSystemSQLDAOSpan, "scopes", filter.Scopes)
+	}
+	if filter.IncludeDeleted {
+		query = query.WhereAllWithDeleted()
 	}
 
 	for _, relation := range includeRelations {
@@ -482,11 +560,6 @@ func (ossd OperatingSystemSQLDAO) Update(ctx context.Context, tx *db.Tx, input O
 		it.TenantID = input.TenantID
 		updatedFields = append(updatedFields, "tenant_id")
 		ossd.tracerSpan.SetAttribute(operatingSystemSQLDAOSpan, "tenant_id", input.TenantID.String())
-	}
-	if input.ControllerOperatingSystemID != nil {
-		it.ControllerOperatingSystemID = input.ControllerOperatingSystemID
-		updatedFields = append(updatedFields, "controller_operating_system_id")
-		ossd.tracerSpan.SetAttribute(operatingSystemSQLDAOSpan, "controller_operating_system_id", input.ControllerOperatingSystemID.String())
 	}
 	if input.Version != nil {
 		it.Version = input.Version
@@ -578,6 +651,26 @@ func (ossd OperatingSystemSQLDAO) Update(ctx context.Context, tx *db.Tx, input O
 		updatedFields = append(updatedFields, "status")
 		ossd.tracerSpan.SetAttribute(operatingSystemSQLDAOSpan, "status", *input.Status)
 	}
+	if input.IpxeTemplateName != nil {
+		it.IpxeTemplateName = input.IpxeTemplateName
+		updatedFields = append(updatedFields, "ipxe_template_name")
+	}
+	if input.IpxeParameters != nil {
+		it.IpxeParameters = *input.IpxeParameters
+		updatedFields = append(updatedFields, "ipxe_parameters")
+	}
+	if input.IpxeArtifacts != nil {
+		it.IpxeArtifacts = *input.IpxeArtifacts
+		updatedFields = append(updatedFields, "ipxe_artifacts")
+	}
+	if input.DefinitionHash != nil {
+		it.DefinitionHash = input.DefinitionHash
+		updatedFields = append(updatedFields, "definition_hash")
+	}
+	if input.Scope != nil {
+		it.Scope = input.Scope
+		updatedFields = append(updatedFields, "scope")
+	}
 
 	if len(updatedFields) > 0 {
 		updatedFields = append(updatedFields, "updated")
@@ -625,10 +718,6 @@ func (ossd OperatingSystemSQLDAO) Clear(ctx context.Context, tx *db.Tx, input Op
 	if input.TenantID {
 		it.TenantID = nil
 		updatedFields = append(updatedFields, "tenant_id")
-	}
-	if input.ControllerOperatingSystemID {
-		it.ControllerOperatingSystemID = nil
-		updatedFields = append(updatedFields, "controller_operating_system_id")
 	}
 	if input.Version {
 		it.Version = nil
