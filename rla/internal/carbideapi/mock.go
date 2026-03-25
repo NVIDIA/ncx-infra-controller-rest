@@ -30,8 +30,9 @@ type mockClient struct {
 	powerStates                 map[string]PowerState
 	machineInterfaces           map[string]MachineInterface
 	expectedSwitches            map[string]ExpectedSwitchInfo // keyed by BMC MAC
-	firmwareUpdateTimeWindowErr error                         // If set, SetFirmwareUpdateTimeWindow will return this error
-	adminPowerControlErr        error                         // If set, AdminPowerControl will return this error
+	leakingMachineIds           []string
+	firmwareUpdateTimeWindowErr error // If set, SetFirmwareUpdateTimeWindow will return this error
+	adminPowerControlErr        error // If set, AdminPowerControl will return this error
 }
 
 // NewMockClient returns a "GRPC" client that returns mock values so it can be used in unit tests.
@@ -57,7 +58,11 @@ func (c *mockClient) GetMachines(ctx context.Context) ([]MachineDetail, error) {
 }
 
 func (c *mockClient) GetLeakingMachineIds(ctx context.Context) ([]string, error) {
-	return nil, nil
+	return c.leakingMachineIds, nil
+}
+
+func (c *mockClient) SetLeakingMachineIds(ids []string) {
+	c.leakingMachineIds = ids
 }
 
 func (c *mockClient) GetPowerStates(ctx context.Context, machineIds []string) (ret []MachinePowerState, err error) {
