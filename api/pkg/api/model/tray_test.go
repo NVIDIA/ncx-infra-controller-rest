@@ -463,14 +463,11 @@ func TestAPITrayGetAllRequest_ToProto(t *testing.T) {
 		validate func(t *testing.T, req *rlav1.GetComponentsRequest)
 	}{
 		{
-			name:    "empty request - defaults to supported types",
+			name:    "empty request - no TargetSpec, queries all components",
 			request: &APITrayGetAllRequest{},
 			validate: func(t *testing.T, req *rlav1.GetComponentsRequest) {
-				require.NotNil(t, req.TargetSpec)
-				rackTargets := req.TargetSpec.GetRacks()
-				require.NotNil(t, rackTargets)
-				require.Len(t, rackTargets.Targets, 1)
-				assert.ElementsMatch(t, ValidProtoComponentTypes, rackTargets.Targets[0].ComponentTypes)
+				assert.Nil(t, req.TargetSpec)
+				assert.Empty(t, req.Filters)
 			},
 		},
 		{
@@ -502,16 +499,15 @@ func TestAPITrayGetAllRequest_ToProto(t *testing.T) {
 			},
 		},
 		{
-			name: "type only - rack-level targeting with component type",
+			name: "type only - no TargetSpec, type passed as filter",
 			request: &APITrayGetAllRequest{
 				Type: &trayType,
 			},
 			validate: func(t *testing.T, req *rlav1.GetComponentsRequest) {
-				require.NotNil(t, req.TargetSpec)
-				rackTargets := req.TargetSpec.GetRacks()
-				require.NotNil(t, rackTargets)
-				require.Len(t, rackTargets.Targets, 1)
-				assert.Contains(t, rackTargets.Targets[0].ComponentTypes, rlav1.ComponentType_COMPONENT_TYPE_COMPUTE)
+				assert.Nil(t, req.TargetSpec)
+				require.Len(t, req.Filters, 1)
+				assert.Equal(t, rlav1.ComponentFilterField_COMPONENT_FILTER_FIELD_TYPE, req.Filters[0].GetComponentField())
+				assert.Contains(t, req.Filters[0].GetQueryInfo().GetPatterns(), "compute")
 			},
 		},
 		{
