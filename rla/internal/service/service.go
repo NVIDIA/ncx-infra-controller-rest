@@ -48,7 +48,7 @@ type Service struct {
 	session          *cdb.Session
 	inventoryManager inventorymanager.Manager
 	taskStore        taskstore.Store
-	taskManager      *taskmanager.Manager
+	taskManager      taskmanager.Manager
 }
 
 // New creates and initialises a Service from the provided Config. It opens the
@@ -123,7 +123,7 @@ func (s *Service) Start(ctx context.Context) error {
 
 	go inventorysync.RunInventory(ctx, &s.conf.DBConf)
 
-	go leakdetection.RunLeakDetection(ctx)
+	go leakdetection.RunLeakDetection(ctx, s.taskManager)
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", s.conf.Port))
 	if err != nil {
