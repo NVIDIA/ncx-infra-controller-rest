@@ -14684,6 +14684,8 @@ components:
           siteId: 60189e9c-7d12-438c-b9ca-6998d9c364b1
           instanceTypeId: 41e36058-8403-4086-a9b8-39cb5bc9cb98
           vpcId: ebcd2d2a-deca-4ac4-b079-d7a97fff8a6b
+          secondaryVpcIds:
+            - 5e28ad7c-5fb7-46d6-a28a-fc0ba6fdc4a3
           machineId: fm100ht4v4mce2qstjnl8970nnj3ie6ecek4mtjn27pea4kre5gsa49jg0g
           operatingSystemId: eaeb86ee-c435-444e-9e01-8346f67f194b
           controllerInstanceId: null
@@ -14794,6 +14796,12 @@ components:
         vpcId:
           type: string
           format: uuid
+        secondaryVpcIds:
+          type: array
+          description: IDs of VPCs attached to the Instance through non-primary interfaces
+          items:
+            type: string
+            format: uuid
         machineId:
           type:
             - string

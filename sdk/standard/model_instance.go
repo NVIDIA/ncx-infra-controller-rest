@@ -31,9 +31,11 @@ type Instance struct {
 	// ID of the Infrastructure Provider that owns the Site where the Instance is located
 	InfrastructureProviderId *string `json:"infrastructureProviderId,omitempty"`
 	// ID of the Site where the Instance is located
-	SiteId                 *string        `json:"siteId,omitempty"`
-	InstanceTypeId         *string        `json:"instanceTypeId,omitempty"`
-	VpcId                  *string        `json:"vpcId,omitempty"`
+	SiteId         *string `json:"siteId,omitempty"`
+	InstanceTypeId *string `json:"instanceTypeId,omitempty"`
+	VpcId          *string `json:"vpcId,omitempty"`
+	// IDs of VPCs attached to the Instance through non-primary interfaces
+	SecondaryVpcIds        []string       `json:"secondaryVpcIds,omitempty"`
 	MachineId              NullableString `json:"machineId,omitempty"`
 	OperatingSystemId      *string        `json:"operatingSystemId,omitempty"`
 	NetworkSecurityGroupId NullableString `json:"networkSecurityGroupId,omitempty"`
@@ -342,6 +344,38 @@ func (o *Instance) HasVpcId() bool {
 // SetVpcId gets a reference to the given string and assigns it to the VpcId field.
 func (o *Instance) SetVpcId(v string) {
 	o.VpcId = &v
+}
+
+// GetSecondaryVpcIds returns the SecondaryVpcIds field value if set, zero value otherwise.
+func (o *Instance) GetSecondaryVpcIds() []string {
+	if o == nil || IsNil(o.SecondaryVpcIds) {
+		var ret []string
+		return ret
+	}
+	return o.SecondaryVpcIds
+}
+
+// GetSecondaryVpcIdsOk returns a tuple with the SecondaryVpcIds field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *Instance) GetSecondaryVpcIdsOk() ([]string, bool) {
+	if o == nil || IsNil(o.SecondaryVpcIds) {
+		return nil, false
+	}
+	return o.SecondaryVpcIds, true
+}
+
+// HasSecondaryVpcIds returns a boolean if a field has been set.
+func (o *Instance) HasSecondaryVpcIds() bool {
+	if o != nil && !IsNil(o.SecondaryVpcIds) {
+		return true
+	}
+
+	return false
+}
+
+// SetSecondaryVpcIds gets a reference to the given []string and assigns it to the SecondaryVpcIds field.
+func (o *Instance) SetSecondaryVpcIds(v []string) {
+	o.SecondaryVpcIds = v
 }
 
 // GetMachineId returns the MachineId field value if set, zero value otherwise (both if not set or set to explicit null).
@@ -1254,6 +1288,9 @@ func (o Instance) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.VpcId) {
 		toSerialize["vpcId"] = o.VpcId
+	}
+	if !IsNil(o.SecondaryVpcIds) {
+		toSerialize["secondaryVpcIds"] = o.SecondaryVpcIds
 	}
 	if o.MachineId.IsSet() {
 		toSerialize["machineId"] = o.MachineId.Get()

@@ -28,6 +28,7 @@ import (
 	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
+	goset "github.com/deckarep/golang-set/v2"
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	validationis "github.com/go-ozzo/ozzo-validation/v4/is"
 	"gopkg.in/yaml.v3"
@@ -1609,6 +1610,9 @@ type APIInstance struct {
 	VpcID string `json:"vpcId"`
 	// Vpc is the summary of the VPC
 	Vpc *APIVpcSummary `json:"vpc,omitempty"`
+	// SecondaryVpcIDs is a list of VPC IDs, aside from the primary VPC ID of the instance,
+	// to which the instance is attached via its additional interfaces.
+	SecondaryVpcIDs []string `json:"secondaryVpcIds,omitempty"`
 	// MachineID is the ID of the Machine
 	MachineID *string `json:"machineId"`
 	// Machine is the summary of the Machine
@@ -1748,10 +1752,19 @@ func NewAPIInstance(dbinst *cdbm.Instance, dbSite *cdbm.Site, dbiss []cdbm.Inter
 
 	apiInstance.Status = getAggregatedInstanceStatus(dbinst.Status, dbinst.PowerStatus)
 
+	secondaryVpcIDs := goset.NewSet[string]()
+
 	apiInstance.Interfaces = []APIInterface{}
 	for _, dbis := range dbiss {
 		curis := dbis
 		apiInstance.Interfaces = append(apiInstance.Interfaces, *NewAPIInterface(&curis))
+		if dbis.VpcPrefix != nil && dbis.VpcPrefix.VpcID != dbinst.VpcID {
+			secondaryVpcIDs.Add(dbis.VpcPrefix.VpcID.String())
+		}
+	}
+
+	if secondaryVpcIDs.Cardinality() > 0 {
+		apiInstance.SecondaryVpcIDs = secondaryVpcIDs.ToSlice()
 	}
 
 	apiInstance.InfiniBandInterfaces = []APIInfiniBandInterface{}
