@@ -1284,6 +1284,7 @@ func (c *MockForgeClient) CreateDpuExtensionService(ctx context.Context, in *wfl
 		Version:       generateSiteVersion(),
 		Data:          "test data",
 		HasCredential: false,
+		Observability: in.Observability,
 	}
 
 	serviceID := uuid.NewString()
@@ -1312,6 +1313,7 @@ func (c *MockForgeClient) UpdateDpuExtensionService(ctx context.Context, in *wfl
 		Version:       generateSiteVersion(),
 		Data:          "test data",
 		HasCredential: false,
+		Observability: in.Observability,
 	}
 
 	out := &wflows.DpuExtensionService{
