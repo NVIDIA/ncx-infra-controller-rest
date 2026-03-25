@@ -252,6 +252,32 @@ type AddExpectedPowerShelfRequest struct {
 	RackID            string `json:"rack_id,omitempty"`
 }
 
+// ExpectedSwitchInfo represents an expected switch retrieved from Carbide,
+// including metadata labels (e.g., "host_mac_address" for the NVOS MAC).
+// Credentials are omitted; Carbide configures them in Vault and NSM
+// queries Vault by MAC address.
+type ExpectedSwitchInfo struct {
+	BMCMACAddress      string
+	SwitchSerialNumber string
+	Metadata           map[string]string
+}
+
+func expectedSwitchInfoFromPb(es *pb.ExpectedSwitch) ExpectedSwitchInfo {
+	info := ExpectedSwitchInfo{
+		BMCMACAddress:      es.GetBmcMacAddress(),
+		SwitchSerialNumber: es.GetSwitchSerialNumber(),
+		Metadata:           make(map[string]string),
+	}
+	if es.GetMetadata() != nil {
+		for _, label := range es.GetMetadata().GetLabels() {
+			if label.Value != nil {
+				info.Metadata[label.GetKey()] = label.GetValue()
+			}
+		}
+	}
+	return info
+}
+
 // AddExpectedSwitchRequest contains the parameters for registering
 // an expected switch with Carbide.
 type AddExpectedSwitchRequest struct {

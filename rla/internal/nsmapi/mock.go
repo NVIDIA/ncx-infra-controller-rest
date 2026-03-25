@@ -20,18 +20,83 @@ import (
 	"context"
 	"time"
 
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/common/utils"
 	"github.com/google/uuid"
 )
 
-type mockClient struct{}
+type mockClient struct {
+	switches map[string]NVSwitchTray // keyed by BMC MAC
+}
 
 // NewMockClient returns a gRPC client that returns mock values so it can be used in unit tests.
 func NewMockClient() Client {
-	return &mockClient{}
+	return &mockClient{
+		switches: make(map[string]NVSwitchTray),
+	}
 }
 
 func (c *mockClient) Close() error {
 	return nil
+}
+
+func (c *mockClient) GetNVSwitches(_ context.Context, uuids []string) ([]NVSwitchTray, error) {
+	if len(uuids) == 0 {
+		results := make([]NVSwitchTray, 0, len(c.switches))
+		for _, sw := range c.switches {
+			results = append(results, sw)
+		}
+		return results, nil
+	}
+	uuidSet := make(map[string]struct{}, len(uuids))
+	for _, u := range uuids {
+		uuidSet[u] = struct{}{}
+	}
+	var results []NVSwitchTray
+	for _, sw := range c.switches {
+		if _, ok := uuidSet[sw.UUID]; ok {
+			results = append(results, sw)
+		}
+	}
+	return results, nil
+}
+
+func (c *mockClient) RegisterNVSwitches(_ context.Context, requests []RegisterNVSwitchRequest) ([]RegisterNVSwitchResponse, error) {
+	var results []RegisterNVSwitchResponse
+	for _, req := range requests {
+		key := utils.NormalizeMAC(req.BMCMACAddress)
+		if existing, ok := c.switches[key]; ok {
+			results = append(results, RegisterNVSwitchResponse{
+				UUID:   existing.UUID,
+				IsNew:  false,
+				Status: StatusSuccess,
+			})
+		} else {
+			newUUID := uuid.New().String()
+			c.switches[key] = NVSwitchTray{
+				UUID:          newUUID,
+				BMCMACAddress: req.BMCMACAddress,
+				BMCIPAddress:  req.BMCIPAddress,
+			}
+			results = append(results, RegisterNVSwitchResponse{
+				UUID:   newUUID,
+				IsNew:  true,
+				Status: StatusSuccess,
+			})
+		}
+	}
+	return results, nil
+}
+
+func (c *mockClient) AddNVSwitch(sw NVSwitchTray) {
+	c.switches[utils.NormalizeMAC(sw.BMCMACAddress)] = sw
+}
+
+func (c *mockClient) SetNVSwitchFirmware(bmcMAC string, firmware string) {
+	key := utils.NormalizeMAC(bmcMAC)
+	if sw, ok := c.switches[key]; ok {
+		sw.BMCFirmware = firmware
+		c.switches[key] = sw
+	}
 }
 
 func (c *mockClient) PowerControl(_ context.Context, uuids []string, _ PowerAction) ([]PowerControlResult, error) {

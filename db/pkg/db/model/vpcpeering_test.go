@@ -48,10 +48,13 @@ func TestVpcPeeringSQLDAO_Create(t *testing.T) {
 	testVpcPeeringSetupSchema(t, dbSession)
 	ip := testInstanceBuildInfrastructureProvider(t, dbSession, "testIP")
 	site := testInstanceBuildSite(t, dbSession, ip, "testSite")
-	tenant := testInstanceBuildTenant(t, dbSession, "testTenant")
-	vpc1 := testInstanceBuildVpc(t, dbSession, ip, site, tenant, "testVpc1")
-	vpc2 := testInstanceBuildVpc(t, dbSession, ip, site, tenant, "testVpc2")
-	vpc3 := testInstanceBuildVpc(t, dbSession, ip, site, tenant, "testVpc3")
+	tenant1 := testInstanceBuildTenant(t, dbSession, "testTenant1")
+	tenant2 := testInstanceBuildTenant(t, dbSession, "testTenant2")
+	user := testInstanceBuildUser(t, dbSession, "testUser")
+	vpc1 := testInstanceBuildVpc(t, dbSession, ip, site, tenant1, "testVpc1")
+	vpc2 := testInstanceBuildVpc(t, dbSession, ip, site, tenant1, "testVpc2")
+	vpc3 := testInstanceBuildVpc(t, dbSession, ip, site, tenant1, "testVpc3")
+	vpc4 := testInstanceBuildVpc(t, dbSession, ip, site, tenant2, "testVpc4")
 
 	vpsd := NewVpcPeeringDAO(dbSession)
 
@@ -67,13 +70,13 @@ func TestVpcPeeringSQLDAO_Create(t *testing.T) {
 			desc: "Create multiple VPC peerings",
 			vps: []VpcPeering{
 				{
-					Vpc1ID: vpc1.ID, Vpc2ID: vpc2.ID, SiteID: site.ID, IsMultiTenant: false, CreatedBy: tenant.ID,
+					Vpc1ID: vpc1.ID, Vpc2ID: vpc2.ID, SiteID: site.ID, IsMultiTenant: false, CreatedBy: user.ID,
 				},
 				{
-					Vpc1ID: vpc1.ID, Vpc2ID: vpc3.ID, SiteID: site.ID, IsMultiTenant: false, CreatedBy: tenant.ID,
+					Vpc1ID: vpc1.ID, Vpc2ID: vpc3.ID, SiteID: site.ID, IsMultiTenant: false, CreatedBy: user.ID,
 				},
 				{
-					Vpc1ID: vpc2.ID, Vpc2ID: vpc3.ID, SiteID: site.ID, IsMultiTenant: false, CreatedBy: tenant.ID,
+					Vpc1ID: vpc2.ID, Vpc2ID: vpc3.ID, SiteID: site.ID, IsMultiTenant: false, CreatedBy: user.ID,
 				},
 			},
 			expectError:        false,
@@ -83,7 +86,17 @@ func TestVpcPeeringSQLDAO_Create(t *testing.T) {
 			desc: "Create succeeds with IsMultiTenant=true",
 			vps: []VpcPeering{
 				{
-					Vpc1ID: vpc1.ID, Vpc2ID: vpc2.ID, SiteID: site.ID, IsMultiTenant: true, CreatedBy: tenant.ID,
+					Vpc1ID: vpc1.ID, Vpc2ID: vpc4.ID, SiteID: site.ID, IsMultiTenant: true, InfrastructureProviderID: &ip.ID, CreatedBy: user.ID,
+				},
+			},
+			expectError:        false,
+			verifyChildSpanner: true,
+		},
+		{
+			desc: "Create succeeds with TenantID set",
+			vps: []VpcPeering{
+				{
+					Vpc1ID: vpc1.ID, Vpc2ID: vpc2.ID, SiteID: site.ID, IsMultiTenant: false, TenantID: &tenant1.ID, CreatedBy: user.ID,
 				},
 			},
 			expectError:        false,
@@ -93,7 +106,7 @@ func TestVpcPeeringSQLDAO_Create(t *testing.T) {
 			desc: "Create fails due to constraint that two VPC ids cannot be the same",
 			vps: []VpcPeering{
 				{
-					Vpc1ID: vpc1.ID, Vpc2ID: vpc1.ID, SiteID: site.ID, IsMultiTenant: false, CreatedBy: tenant.ID,
+					Vpc1ID: vpc1.ID, Vpc2ID: vpc1.ID, SiteID: site.ID, IsMultiTenant: false, CreatedBy: user.ID,
 				},
 			},
 			expectError:        true,
@@ -103,7 +116,7 @@ func TestVpcPeeringSQLDAO_Create(t *testing.T) {
 			desc: "Create fails due to foreign key constraint on Vpc1ID",
 			vps: []VpcPeering{
 				{
-					Vpc1ID: mockID, Vpc2ID: vpc1.ID, SiteID: site.ID, IsMultiTenant: false, CreatedBy: tenant.ID,
+					Vpc1ID: mockID, Vpc2ID: vpc1.ID, SiteID: site.ID, IsMultiTenant: false, CreatedBy: user.ID,
 				},
 			},
 			expectError: true,
@@ -112,11 +125,29 @@ func TestVpcPeeringSQLDAO_Create(t *testing.T) {
 			desc: "Create fails due to foreign key constraint on Vpc2ID",
 			vps: []VpcPeering{
 				{
-					Vpc1ID: vpc1.ID, Vpc2ID: mockID, SiteID: site.ID, IsMultiTenant: false, CreatedBy: tenant.ID,
+					Vpc1ID: vpc1.ID, Vpc2ID: mockID, SiteID: site.ID, IsMultiTenant: false, CreatedBy: user.ID,
 				},
 			},
 			expectError:        true,
 			verifyChildSpanner: true,
+		},
+		{
+			desc: "Create fails due to foreign key constraint on InfrastructureProviderID",
+			vps: []VpcPeering{
+				{
+					Vpc1ID: vpc1.ID, Vpc2ID: vpc2.ID, SiteID: site.ID, IsMultiTenant: true, InfrastructureProviderID: &mockID, CreatedBy: user.ID,
+				},
+			},
+			expectError: true,
+		},
+		{
+			desc: "Create fails due to foreign key constraint on TenantID",
+			vps: []VpcPeering{
+				{
+					Vpc1ID: vpc1.ID, Vpc2ID: vpc2.ID, SiteID: site.ID, IsMultiTenant: false, TenantID: &mockID, CreatedBy: user.ID,
+				},
+			},
+			expectError: true,
 		},
 	}
 
@@ -125,17 +156,21 @@ func TestVpcPeeringSQLDAO_Create(t *testing.T) {
 
 			for _, i := range tc.vps {
 				got, err := vpsd.Create(ctx, nil, VpcPeeringCreateInput{
-					Vpc1ID:        i.Vpc1ID,
-					Vpc2ID:        i.Vpc2ID,
-					SiteID:        i.SiteID,
-					IsMultiTenant: i.IsMultiTenant,
-					CreatedByID:   i.CreatedBy,
+					Vpc1ID:                   i.Vpc1ID,
+					Vpc2ID:                   i.Vpc2ID,
+					SiteID:                   i.SiteID,
+					IsMultiTenant:            i.IsMultiTenant,
+					InfrastructureProviderID: i.InfrastructureProviderID,
+					TenantID:                 i.TenantID,
+					CreatedByID:              i.CreatedBy,
 				})
 				assert.Equal(t, tc.expectError, err != nil)
 				if !tc.expectError {
 					assert.NotNil(t, got)
 					assert.Equal(t, i.SiteID, got.SiteID)
 					assert.Equal(t, i.IsMultiTenant, got.IsMultiTenant)
+					assert.Equal(t, i.InfrastructureProviderID, got.InfrastructureProviderID)
+					assert.Equal(t, i.TenantID, got.TenantID)
 					assert.Equal(t, i.CreatedBy, got.CreatedBy)
 				}
 				if tc.verifyChildSpanner {
@@ -157,29 +192,42 @@ func TestVpcPeeringSQLDAO_GetAll(t *testing.T) {
 	testVpcPeeringSetupSchema(t, dbSession)
 	ip := testInstanceBuildInfrastructureProvider(t, dbSession, "testIP")
 	site := testInstanceBuildSite(t, dbSession, ip, "testSite")
+	user := testInstanceBuildUser(t, dbSession, "testUser")
 	tenant := testInstanceBuildTenant(t, dbSession, "testTenant")
+	tenant2 := testInstanceBuildTenant(t, dbSession, "testTenant2")
 	vpc1 := testInstanceBuildVpc(t, dbSession, ip, site, tenant, "testVpc1")
 	vpc2 := testInstanceBuildVpc(t, dbSession, ip, site, tenant, "testVpc2")
 	vpc3 := testInstanceBuildVpc(t, dbSession, ip, site, tenant, "testVpc3")
+	vpc4 := testInstanceBuildVpc(t, dbSession, ip, site, tenant2, "testVpc4")
 
 	vpsd := NewVpcPeeringDAO(dbSession)
 
 	_, _, ctx = testCommonTraceProviderSetup(t, ctx)
 
 	vp12, err := vpsd.Create(ctx, nil, VpcPeeringCreateInput{
-		Vpc1ID: vpc1.ID,
-		Vpc2ID: vpc2.ID,
-		SiteID: site.ID,
+		Vpc1ID:                   vpc1.ID,
+		Vpc2ID:                   vpc2.ID,
+		SiteID:                   site.ID,
+		IsMultiTenant:            false,
+		InfrastructureProviderID: nil,
+		TenantID:                 &tenant.ID,
+		CreatedByID:              user.ID,
 	})
 	assert.Nil(t, err)
 	assert.NotNil(t, vp12)
+
 	vp13, err := vpsd.Create(ctx, nil, VpcPeeringCreateInput{
-		Vpc1ID: vpc1.ID,
-		Vpc2ID: vpc3.ID,
-		SiteID: site.ID,
+		Vpc1ID:                   vpc1.ID,
+		Vpc2ID:                   vpc3.ID,
+		SiteID:                   site.ID,
+		IsMultiTenant:            false,
+		InfrastructureProviderID: nil,
+		TenantID:                 &tenant.ID,
+		CreatedByID:              user.ID,
 	})
 	assert.Nil(t, err)
 	assert.NotNil(t, vp13)
+
 	vp23, err := vpsd.Create(ctx, nil, VpcPeeringCreateInput{
 		Vpc1ID: vpc2.ID,
 		Vpc2ID: vpc3.ID,
@@ -188,6 +236,18 @@ func TestVpcPeeringSQLDAO_GetAll(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, vp23)
 
+	vp14, err := vpsd.Create(ctx, nil, VpcPeeringCreateInput{
+		Vpc1ID:                   vpc1.ID,
+		Vpc2ID:                   vpc4.ID,
+		SiteID:                   site.ID,
+		IsMultiTenant:            true,
+		InfrastructureProviderID: &ip.ID,
+		TenantID:                 nil,
+		CreatedByID:              user.ID,
+	})
+	assert.Nil(t, err)
+	assert.NotNil(t, vp14)
+
 	tests := []struct {
 		desc string
 
@@ -195,10 +255,13 @@ func TestVpcPeeringSQLDAO_GetAll(t *testing.T) {
 		paramLimit   *int
 		paramOrderBy *paginator.OrderBy
 
-		ids      []uuid.UUID
-		vpcID    *uuid.UUID
-		siteIDs  []uuid.UUID
-		statuses []string
+		ids                       []uuid.UUID
+		vpcIDs                    []uuid.UUID
+		siteIDs                   []uuid.UUID
+		isMultiTenant             *bool
+		infrastructureProviderIDs []uuid.UUID
+		tenantIDs                 []uuid.UUID
+		statuses                  []string
 
 		expectError bool
 		expectCount int
@@ -210,7 +273,27 @@ func TestVpcPeeringSQLDAO_GetAll(t *testing.T) {
 		{
 			desc:               "GetAll with no filters",
 			ids:                nil,
-			vpcID:              nil,
+			vpcIDs:             nil,
+			siteIDs:            nil,
+			statuses:           nil,
+			expectError:        false,
+			expectCount:        4,
+			verifyChildSpanner: true,
+		},
+		{
+			desc:               "GetAll with filters on IDs",
+			ids:                []uuid.UUID{vp12.ID, vp13.ID},
+			vpcIDs:             nil,
+			siteIDs:            nil,
+			statuses:           nil,
+			expectError:        false,
+			expectCount:        2,
+			verifyChildSpanner: true,
+		},
+		{
+			desc:               "GetAll with filters on VpcIDs",
+			ids:                nil,
+			vpcIDs:             []uuid.UUID{vpc1.ID},
 			siteIDs:            nil,
 			statuses:           nil,
 			expectError:        false,
@@ -218,31 +301,32 @@ func TestVpcPeeringSQLDAO_GetAll(t *testing.T) {
 			verifyChildSpanner: true,
 		},
 		{
-			desc:               "GetAll with filters on IDs",
-			ids:                []uuid.UUID{vp12.ID, vp13.ID},
-			vpcID:              nil,
-			siteIDs:            nil,
-			statuses:           nil,
-			expectError:        false,
-			expectCount:        2,
-			verifyChildSpanner: true,
+			desc:                      "GetAll with filters on IsMultiTenant",
+			isMultiTenant:             db.GetBoolPtr(true),
+			infrastructureProviderIDs: nil,
+			tenantIDs:                 nil,
+			expectError:               false,
+			expectCount:               1,
+			verifyChildSpanner:        true,
 		},
 		{
-			desc:               "GetAll with filters on VpcID",
-			ids:                nil,
-			vpcID:              &vpc2.ID,
-			siteIDs:            nil,
-			statuses:           nil,
-			expectError:        false,
-			expectCount:        2,
-			verifyChildSpanner: true,
+			desc:                      "GetAll with filters on InfrastructureProviderIDs",
+			infrastructureProviderIDs: []uuid.UUID{ip.ID},
+			expectError:               false,
+			expectCount:               1,
+			verifyChildSpanner:        true,
 		},
 		{
-			desc:               "GetAll with filters on ID and VpcID",
-			ids:                []uuid.UUID{vp12.ID},
-			vpcID:              &vpc2.ID,
-			siteIDs:            nil,
-			statuses:           nil,
+			desc:                      "GetAll with filters on TenantIDs and InfrastructureProviderIDs",
+			tenantIDs:                 []uuid.UUID{tenant.ID},
+			infrastructureProviderIDs: []uuid.UUID{ip.ID},
+			expectError:               false,
+			expectCount:               4,
+			verifyChildSpanner:        true,
+		},
+		{
+			desc:               "GetAll with filters on TenantIDs",
+			tenantIDs:          []uuid.UUID{tenant2.ID},
 			expectError:        false,
 			expectCount:        1,
 			verifyChildSpanner: true,
@@ -250,17 +334,17 @@ func TestVpcPeeringSQLDAO_GetAll(t *testing.T) {
 		{
 			desc:               "GetAll with filters on pending statuses",
 			ids:                nil,
-			vpcID:              nil,
+			vpcIDs:             nil,
 			siteIDs:            nil,
 			statuses:           []string{VpcPeeringStatusPending},
 			expectError:        false,
-			expectCount:        3,
+			expectCount:        4,
 			verifyChildSpanner: true,
 		},
 		{
 			desc:               "GetAll with filters on deleting statuses",
 			ids:                nil,
-			vpcID:              nil,
+			vpcIDs:             nil,
 			statuses:           []string{VpcPeeringStatusDeleting},
 			expectError:        false,
 			expectCount:        0,
@@ -269,7 +353,7 @@ func TestVpcPeeringSQLDAO_GetAll(t *testing.T) {
 		{
 			desc:               "GetAll with empty IDs",
 			ids:                []uuid.UUID{},
-			vpcID:              nil,
+			vpcIDs:             nil,
 			statuses:           []string{VpcPeeringStatusDeleting},
 			expectError:        false,
 			expectCount:        0,
@@ -278,7 +362,7 @@ func TestVpcPeeringSQLDAO_GetAll(t *testing.T) {
 		{
 			desc:               "GetAll with empty statuses",
 			ids:                nil,
-			vpcID:              nil,
+			vpcIDs:             nil,
 			statuses:           []string{},
 			expectError:        false,
 			expectCount:        0,
@@ -287,7 +371,7 @@ func TestVpcPeeringSQLDAO_GetAll(t *testing.T) {
 		{
 			desc:               "GetAll with empty site IDs",
 			ids:                nil,
-			vpcID:              nil,
+			vpcIDs:             nil,
 			siteIDs:            []uuid.UUID{},
 			statuses:           nil,
 			expectError:        false,
@@ -301,7 +385,15 @@ func TestVpcPeeringSQLDAO_GetAll(t *testing.T) {
 			got, count, err := vpsd.GetAll(
 				ctx,
 				nil,
-				VpcPeeringFilterInput{IDs: tc.ids, VpcID: tc.vpcID, SiteIDs: tc.siteIDs, Statuses: tc.statuses},
+				VpcPeeringFilterInput{
+					IDs:                       tc.ids,
+					VpcIDs:                    tc.vpcIDs,
+					SiteIDs:                   tc.siteIDs,
+					IsMultiTenant:             tc.isMultiTenant,
+					InfrastructureProviderIDs: tc.infrastructureProviderIDs,
+					TenantIDs:                 tc.tenantIDs,
+					Statuses:                  tc.statuses,
+				},
 				paginator.PageInput{Offset: tc.paramOffset, Limit: tc.paramLimit, OrderBy: tc.paramOrderBy}, tc.includeRelations)
 			assert.Equal(t, tc.expectError, err != nil)
 			if !tc.expectError {
