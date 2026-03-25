@@ -33,6 +33,7 @@ import (
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/common/utils"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/config"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/db/model"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/nsmapi"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/psmapi"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
 )
@@ -86,7 +87,8 @@ func TestInventory(t *testing.T) {
 	assert.Nil(t, err)
 
 	psmMock := psmapi.NewMockClient()
-	runInventoryOne(ctx, &cfg, pool, grpcMock, psmMock)
+	nsmMock := nsmapi.NewMockClient()
+	runInventoryOne(ctx, &cfg, pool, grpcMock, psmMock, nsmMock)
 
 	rows, err := pool.DB.Query("SELECT serial_number, power_state FROM component;")
 	assert.NotNil(t, rows)
@@ -156,7 +158,8 @@ func TestSyncFirmwareVersion(t *testing.T) {
 	assert.Nil(t, err)
 
 	psmMock := psmapi.NewMockClient()
-	runInventoryOne(ctx, &cfg, pool, grpcMock, psmMock)
+	nsmMock := nsmapi.NewMockClient()
+	runInventoryOne(ctx, &cfg, pool, grpcMock, psmMock, nsmMock)
 
 	var updated1 model.Component
 	err = pool.DB.NewSelect().Model(&updated1).Where("id = ?", c1.ID).Scan(ctx)
@@ -428,7 +431,8 @@ func TestHandleExpectedPowershelves(t *testing.T) {
 
 	// Run the inventory loop
 	cfg := config.UnitTestConfig()
-	runInventoryOne(ctx, &cfg, pool, carbideMock, psmMock)
+	nsmMock := nsmapi.NewMockClient()
+	runInventoryOne(ctx, &cfg, pool, carbideMock, psmMock, nsmMock)
 
 	// Verify that only expected PMCs that have DHCPed were registered with PSM
 	registeredPowershelves, err := psmMock.GetPowershelves(ctx, []string{})
@@ -492,4 +496,387 @@ func TestHandleExpectedPowershelves(t *testing.T) {
 	// PMC 7: Should NOT be registered (multiple IP addresses)
 	_, ok = registeredByMac["aa:bb:cc:dd:ee:07"]
 	assert.False(t, ok, "PMC 7 should NOT be registered (multiple IP addresses)")
+}
+
+// TestHandleExpectedNVSwitches tests that expected NVLSwitches are registered with NSM
+func TestHandleExpectedNVSwitches(t *testing.T) {
+	ctx := context.Background()
+
+	if os.Getenv("DB_PORT") == "" {
+		log.Warn().Msgf("Not running unit test due to no DB environment specified")
+		t.SkipNow()
+	}
+
+	lastUpdateMachineIDs = time.Time{}
+
+	dbConf, err := cdb.ConfigFromEnv()
+	assert.Nil(t, err)
+	pool, err := utils.UnitTestDB(ctx, t, dbConf)
+	assert.Nil(t, err)
+
+	carbideMock := carbideapi.NewMockClient()
+	nsmMock := nsmapi.NewMockClient()
+	psmMock := psmapi.NewMockClient()
+
+	rack := model.Rack{
+		Name:         "test-rack",
+		Manufacturer: "TestMfg",
+		SerialNumber: "rack-serial-001",
+	}
+	err = rack.Create(ctx, pool.DB)
+	assert.Nil(t, err)
+
+	// --- SW1: Happy path, BMC + NVOS DHCPed, should be newly registered ---
+	sw1 := model.Component{
+		Name:         "nvlswitch-1",
+		Type:         devicetypes.ComponentTypeToString(devicetypes.ComponentTypeNVLSwitch),
+		Manufacturer: "NVMfg",
+		SerialNumber: "sw-serial-001",
+		RackID:       rack.ID,
+	}
+	err = sw1.Create(ctx, pool.DB)
+	assert.Nil(t, err)
+
+	bmc1 := model.BMC{
+		MacAddress:  "aa:bb:cc:11:11:01",
+		Type:        devicetypes.BMCTypeHost.String(),
+		ComponentID: sw1.ID,
+	}
+	err = pool.RunInTx(ctx, func(ctx context.Context, tx bun.Tx) error {
+		return bmc1.Create(ctx, tx)
+	})
+	assert.Nil(t, err)
+
+	// --- SW2: Happy path, second new registration ---
+	sw2 := model.Component{
+		Name:         "nvlswitch-2",
+		Type:         devicetypes.ComponentTypeToString(devicetypes.ComponentTypeNVLSwitch),
+		Manufacturer: "NVMfg",
+		SerialNumber: "sw-serial-002",
+		RackID:       rack.ID,
+	}
+	err = sw2.Create(ctx, pool.DB)
+	assert.Nil(t, err)
+
+	bmc2 := model.BMC{
+		MacAddress:  "aa:bb:cc:11:11:02",
+		Type:        devicetypes.BMCTypeHost.String(),
+		ComponentID: sw2.ID,
+	}
+	err = pool.RunInTx(ctx, func(ctx context.Context, tx bun.Tx) error {
+		return bmc2.Create(ctx, tx)
+	})
+	assert.Nil(t, err)
+
+	// --- SW3: BMC has NOT DHCPed — should NOT register, produces missing_in_actual drift ---
+	sw3 := model.Component{
+		Name:         "nvlswitch-3",
+		Type:         devicetypes.ComponentTypeToString(devicetypes.ComponentTypeNVLSwitch),
+		Manufacturer: "NVMfg",
+		SerialNumber: "sw-serial-003",
+		RackID:       rack.ID,
+	}
+	err = sw3.Create(ctx, pool.DB)
+	assert.Nil(t, err)
+
+	bmc3 := model.BMC{
+		MacAddress:  "aa:bb:cc:11:11:03",
+		Type:        devicetypes.BMCTypeHost.String(),
+		ComponentID: sw3.ID,
+	}
+	err = pool.RunInTx(ctx, func(ctx context.Context, tx bun.Tx) error {
+		return bmc3.Create(ctx, tx)
+	})
+	assert.Nil(t, err)
+
+	// --- SW4: BMC DHCPed but NVOS NOT DHCPed — should NOT register, produces missing_in_actual drift ---
+	sw4 := model.Component{
+		Name:         "nvlswitch-4",
+		Type:         devicetypes.ComponentTypeToString(devicetypes.ComponentTypeNVLSwitch),
+		Manufacturer: "NVMfg",
+		SerialNumber: "sw-serial-004",
+		RackID:       rack.ID,
+	}
+	err = sw4.Create(ctx, pool.DB)
+	assert.Nil(t, err)
+
+	bmc4 := model.BMC{
+		MacAddress:  "aa:bb:cc:11:11:04",
+		Type:        devicetypes.BMCTypeHost.String(),
+		ComponentID: sw4.ID,
+	}
+	err = pool.RunInTx(ctx, func(ctx context.Context, tx bun.Tx) error {
+		return bmc4.Create(ctx, tx)
+	})
+	assert.Nil(t, err)
+
+	// --- SW5: Not in Carbide expected switches — should NOT register ---
+	sw5 := model.Component{
+		Name:         "nvlswitch-5",
+		Type:         devicetypes.ComponentTypeToString(devicetypes.ComponentTypeNVLSwitch),
+		Manufacturer: "NVMfg",
+		SerialNumber: "sw-serial-005",
+		RackID:       rack.ID,
+	}
+	err = sw5.Create(ctx, pool.DB)
+	assert.Nil(t, err)
+
+	bmc5 := model.BMC{
+		MacAddress:  "aa:bb:cc:11:11:05",
+		Type:        devicetypes.BMCTypeHost.String(),
+		ComponentID: sw5.ID,
+	}
+	err = pool.RunInTx(ctx, func(ctx context.Context, tx bun.Tx) error {
+		return bmc5.Create(ctx, tx)
+	})
+	assert.Nil(t, err)
+
+	// --- SW6: BMC has multiple IPs — should NOT register ---
+	sw6 := model.Component{
+		Name:         "nvlswitch-6",
+		Type:         devicetypes.ComponentTypeToString(devicetypes.ComponentTypeNVLSwitch),
+		Manufacturer: "NVMfg",
+		SerialNumber: "sw-serial-006",
+		RackID:       rack.ID,
+	}
+	err = sw6.Create(ctx, pool.DB)
+	assert.Nil(t, err)
+
+	bmc6 := model.BMC{
+		MacAddress:  "aa:bb:cc:11:11:06",
+		Type:        devicetypes.BMCTypeHost.String(),
+		ComponentID: sw6.ID,
+	}
+	err = pool.RunInTx(ctx, func(ctx context.Context, tx bun.Tx) error {
+		return bmc6.Create(ctx, tx)
+	})
+	assert.Nil(t, err)
+
+	// --- SW7: Already registered with NSM — should direct-write firmware_version + external_id, serial mismatch drift ---
+	sw7 := model.Component{
+		Name:            "nvlswitch-7",
+		Type:            devicetypes.ComponentTypeToString(devicetypes.ComponentTypeNVLSwitch),
+		Manufacturer:    "NVMfg",
+		SerialNumber:    "sw-serial-007",
+		RackID:          rack.ID,
+		FirmwareVersion: "1.0.0",
+	}
+	err = sw7.Create(ctx, pool.DB)
+	assert.Nil(t, err)
+
+	bmc7 := model.BMC{
+		MacAddress:  "aa:bb:cc:11:11:07",
+		Type:        devicetypes.BMCTypeHost.String(),
+		ComponentID: sw7.ID,
+	}
+	err = pool.RunInTx(ctx, func(ctx context.Context, tx bun.Tx) error {
+		return bmc7.Create(ctx, tx)
+	})
+	assert.Nil(t, err)
+
+	nsmMock.AddNVSwitch(nsmapi.NVSwitchTray{
+		UUID:          "nsm-uuid-sw7",
+		BMCMACAddress: "aa:bb:cc:11:11:07",
+		BMCIPAddress:  "10.0.0.207",
+		BMCFirmware:   "2.0.0",
+		ChassisSerial: "actual-serial-007", // Different from DB serial to trigger drift
+	})
+
+	// --- Carbide expected switches (metadata with host_mac_address for NVOS) ---
+	// SW1-SW4 and SW6 have expected switch entries; SW5 intentionally omitted
+	carbideMock.AddExpectedSwitchInfo(carbideapi.ExpectedSwitchInfo{
+		BMCMACAddress: "aa:bb:cc:11:11:01",
+		Metadata:      map[string]string{"host_mac_address": "dd:ee:ff:11:11:01"},
+	})
+	carbideMock.AddExpectedSwitchInfo(carbideapi.ExpectedSwitchInfo{
+		BMCMACAddress: "aa:bb:cc:11:11:02",
+		Metadata:      map[string]string{"host_mac_address": "dd:ee:ff:11:11:02"},
+	})
+	carbideMock.AddExpectedSwitchInfo(carbideapi.ExpectedSwitchInfo{
+		BMCMACAddress: "aa:bb:cc:11:11:03",
+		Metadata:      map[string]string{"host_mac_address": "dd:ee:ff:11:11:03"},
+	})
+	carbideMock.AddExpectedSwitchInfo(carbideapi.ExpectedSwitchInfo{
+		BMCMACAddress: "aa:bb:cc:11:11:04",
+		Metadata:      map[string]string{"host_mac_address": "dd:ee:ff:11:11:04"},
+	})
+	carbideMock.AddExpectedSwitchInfo(carbideapi.ExpectedSwitchInfo{
+		BMCMACAddress: "aa:bb:cc:11:11:06",
+		Metadata:      map[string]string{"host_mac_address": "dd:ee:ff:11:11:06"},
+	})
+	carbideMock.AddExpectedSwitchInfo(carbideapi.ExpectedSwitchInfo{
+		BMCMACAddress: "aa:bb:cc:11:11:07",
+		Metadata:      map[string]string{"host_mac_address": "dd:ee:ff:11:11:07"},
+	})
+
+	// --- Carbide machine interfaces (DHCP status) ---
+	// SW1: BMC DHCPed, NVOS DHCPed
+	carbideMock.AddMachineInterface(carbideapi.MachineInterface{
+		MacAddress: "aa:bb:cc:11:11:01",
+		Addresses:  []string{"10.0.0.101"},
+	})
+	carbideMock.AddMachineInterface(carbideapi.MachineInterface{
+		MacAddress: "dd:ee:ff:11:11:01",
+		Addresses:  []string{"10.0.1.101"},
+	})
+
+	// SW2: BMC DHCPed, NVOS DHCPed
+	carbideMock.AddMachineInterface(carbideapi.MachineInterface{
+		MacAddress: "aa:bb:cc:11:11:02",
+		Addresses:  []string{"10.0.0.102"},
+	})
+	carbideMock.AddMachineInterface(carbideapi.MachineInterface{
+		MacAddress: "dd:ee:ff:11:11:02",
+		Addresses:  []string{"10.0.1.102"},
+	})
+
+	// SW3: BMC NOT DHCPed (no interface entry)
+
+	// SW4: BMC DHCPed, NVOS NOT DHCPed
+	carbideMock.AddMachineInterface(carbideapi.MachineInterface{
+		MacAddress: "aa:bb:cc:11:11:04",
+		Addresses:  []string{"10.0.0.104"},
+	})
+	// NVOS for SW4 intentionally absent
+
+	// SW5: BMC DHCPed (but not in expected switches, so won't look up NVOS)
+	carbideMock.AddMachineInterface(carbideapi.MachineInterface{
+		MacAddress: "aa:bb:cc:11:11:05",
+		Addresses:  []string{"10.0.0.105"},
+	})
+
+	// SW6: BMC has multiple IPs
+	carbideMock.AddMachineInterface(carbideapi.MachineInterface{
+		MacAddress: "aa:bb:cc:11:11:06",
+		Addresses:  []string{"10.0.0.106", "10.0.0.116"},
+	})
+
+	// Verify pre-registered state
+	preRegistered, err := nsmMock.GetNVSwitches(ctx, nil)
+	assert.Nil(t, err)
+	assert.Equal(t, 1, len(preRegistered), "Should have 1 pre-registered switch (SW7)")
+
+	// Run the inventory loop
+	cfg := config.UnitTestConfig()
+	runInventoryOne(ctx, &cfg, pool, carbideMock, psmMock, nsmMock)
+
+	// --- Verify NSM registrations ---
+	registeredSwitches, err := nsmMock.GetNVSwitches(ctx, nil)
+	assert.Nil(t, err)
+
+	// Should have 3 total: SW7 (pre-registered) + SW1, SW2 (newly registered)
+	assert.Equal(t, 3, len(registeredSwitches))
+
+	registeredByMac := make(map[string]nsmapi.NVSwitchTray)
+	for _, sw := range registeredSwitches {
+		registeredByMac[sw.BMCMACAddress] = sw
+	}
+
+	// SW1 registered with correct BMC IP
+	sw1Registered, ok := registeredByMac["aa:bb:cc:11:11:01"]
+	assert.True(t, ok, "SW1 should be registered")
+	assert.Equal(t, "10.0.0.101", sw1Registered.BMCIPAddress)
+
+	// SW2 registered with correct BMC IP
+	sw2Registered, ok := registeredByMac["aa:bb:cc:11:11:02"]
+	assert.True(t, ok, "SW2 should be registered")
+	assert.Equal(t, "10.0.0.102", sw2Registered.BMCIPAddress)
+
+	// SW3 NOT registered (BMC not DHCPed)
+	_, ok = registeredByMac["aa:bb:cc:11:11:03"]
+	assert.False(t, ok, "SW3 should NOT be registered (BMC not DHCPed)")
+
+	// SW4 NOT registered (NVOS not DHCPed)
+	_, ok = registeredByMac["aa:bb:cc:11:11:04"]
+	assert.False(t, ok, "SW4 should NOT be registered (NVOS not DHCPed)")
+
+	// SW5 NOT registered (not in Carbide expected switches)
+	_, ok = registeredByMac["aa:bb:cc:11:11:05"]
+	assert.False(t, ok, "SW5 should NOT be registered (not in Carbide expected switches)")
+
+	// SW6 NOT registered (multiple BMC IPs)
+	_, ok = registeredByMac["aa:bb:cc:11:11:06"]
+	assert.False(t, ok, "SW6 should NOT be registered (multiple BMC IPs)")
+
+	// --- Verify direct-write updates for SW7 (pre-registered) ---
+	var updatedSw7 model.Component
+	err = pool.DB.NewSelect().Model(&updatedSw7).Where("id = ?", sw7.ID).Scan(ctx)
+	assert.Nil(t, err)
+	assert.Equal(t, "2.0.0", updatedSw7.FirmwareVersion, "SW7 firmware version should be updated from NSM")
+	assert.NotNil(t, updatedSw7.ComponentID, "SW7 external_id should be set")
+	assert.Equal(t, "nsm-uuid-sw7", *updatedSw7.ComponentID, "SW7 external_id should match NSM UUID")
+
+	// SW1 and SW2 should NOT have external_id or firmware_version yet (just registered, not synced)
+	var preSw1 model.Component
+	err = pool.DB.NewSelect().Model(&preSw1).Where("id = ?", sw1.ID).Scan(ctx)
+	assert.Nil(t, err)
+	assert.Nil(t, preSw1.ComponentID, "SW1 external_id should not be set before second cycle")
+	assert.Empty(t, preSw1.FirmwareVersion, "SW1 firmware version should not be set before second cycle")
+
+	var preSw2 model.Component
+	err = pool.DB.NewSelect().Model(&preSw2).Where("id = ?", sw2.ID).Scan(ctx)
+	assert.Nil(t, err)
+	assert.Nil(t, preSw2.ComponentID, "SW2 external_id should not be set before second cycle")
+	assert.Empty(t, preSw2.FirmwareVersion, "SW2 firmware version should not be set before second cycle")
+
+	// --- Second inventory cycle: SW1 and SW2 are now registered in NSM ---
+	// Simulate NSM having discovered firmware versions after registration
+	nsmMock.SetNVSwitchFirmware("aa:bb:cc:11:11:01", "3.0.0")
+	nsmMock.SetNVSwitchFirmware("aa:bb:cc:11:11:02", "3.1.0")
+
+	runInventoryOne(ctx, &cfg, pool, carbideMock, psmMock, nsmMock)
+
+	// SW1: external_id and firmware_version should now be set
+	var updatedSw1 model.Component
+	err = pool.DB.NewSelect().Model(&updatedSw1).Where("id = ?", sw1.ID).Scan(ctx)
+	assert.Nil(t, err)
+	assert.NotNil(t, updatedSw1.ComponentID, "SW1 external_id should be set after second cycle")
+	assert.Equal(t, sw1Registered.UUID, *updatedSw1.ComponentID, "SW1 external_id should match NSM UUID")
+	assert.Equal(t, "3.0.0", updatedSw1.FirmwareVersion, "SW1 firmware version should be updated from NSM")
+
+	// SW2: external_id and firmware_version should now be set
+	var updatedSw2 model.Component
+	err = pool.DB.NewSelect().Model(&updatedSw2).Where("id = ?", sw2.ID).Scan(ctx)
+	assert.Nil(t, err)
+	assert.NotNil(t, updatedSw2.ComponentID, "SW2 external_id should be set after second cycle")
+	assert.Equal(t, sw2Registered.UUID, *updatedSw2.ComponentID, "SW2 external_id should match NSM UUID")
+	assert.Equal(t, "3.1.0", updatedSw2.FirmwareVersion, "SW2 firmware version should be updated from NSM")
+
+	// --- Verify drift records ---
+	allDrifts, err := model.GetAllDrifts(ctx, pool.DB)
+	assert.Nil(t, err)
+
+	driftByComponentID := make(map[string]model.ComponentDrift)
+	for _, d := range allDrifts {
+		if d.ComponentID != nil {
+			driftByComponentID[d.ComponentID.String()] = d
+		}
+	}
+
+	// SW3: missing_in_actual (BMC not DHCPed)
+	sw3Drift, hasSw3Drift := driftByComponentID[sw3.ID.String()]
+	assert.True(t, hasSw3Drift, "SW3 should have a drift record")
+	if hasSw3Drift {
+		assert.Equal(t, model.DriftTypeMissingInActual, sw3Drift.DriftType)
+	}
+
+	// SW4: missing_in_actual (NVOS not DHCPed)
+	sw4Drift, hasSw4Drift := driftByComponentID[sw4.ID.String()]
+	assert.True(t, hasSw4Drift, "SW4 should have a drift record")
+	if hasSw4Drift {
+		assert.Equal(t, model.DriftTypeMissingInActual, sw4Drift.DriftType)
+	}
+
+	// SW7: mismatch drift (serial_number differs between DB and NSM)
+	sw7Drift, hasSw7Drift := driftByComponentID[sw7.ID.String()]
+	assert.True(t, hasSw7Drift, "SW7 should have a drift record (serial mismatch)")
+	if hasSw7Drift {
+		assert.Equal(t, model.DriftTypeMismatch, sw7Drift.DriftType)
+		assert.Equal(t, 1, len(sw7Drift.Diffs))
+		if len(sw7Drift.Diffs) > 0 {
+			assert.Equal(t, "serial_number", sw7Drift.Diffs[0].FieldName)
+			assert.Equal(t, "sw-serial-007", sw7Drift.Diffs[0].ExpectedValue)
+			assert.Equal(t, "actual-serial-007", sw7Drift.Diffs[0].ActualValue)
+		}
+	}
 }

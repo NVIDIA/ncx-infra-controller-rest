@@ -104,6 +104,8 @@ type APIClient struct {
 
 	VPCAPI *VPCAPIService
 
+	VPCPeeringAPI *VPCPeeringAPIService
+
 	VPCPrefixAPI *VPCPrefixAPIService
 }
 
@@ -151,6 +153,7 @@ func NewAPIClient(cfg *Configuration) *APIClient {
 	c.TrayAPI = (*TrayAPIService)(&c.common)
 	c.UserAPI = (*UserAPIService)(&c.common)
 	c.VPCAPI = (*VPCAPIService)(&c.common)
+	c.VPCPeeringAPI = (*VPCPeeringAPIService)(&c.common)
 	c.VPCPrefixAPI = (*VPCPrefixAPIService)(&c.common)
 
 	return c
