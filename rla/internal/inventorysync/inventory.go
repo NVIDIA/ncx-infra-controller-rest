@@ -29,6 +29,7 @@ import (
 
 	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/carbideapi"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/common/utils"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/config"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/db/model"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/nsmapi"
@@ -578,7 +579,7 @@ func syncNVSwitches(ctx context.Context, pool *cdb.Session, carbideClient carbid
 			continue
 		}
 
-		expectedByBmcMac[sw.BMCs[0].MacAddress] = sw
+		expectedByBmcMac[bmcMacAddr.String()] = sw
 	}
 
 	// Step 2: Get registered switches from NSM
@@ -591,7 +592,7 @@ func syncNVSwitches(ctx context.Context, pool *cdb.Session, carbideClient carbid
 	registeredByMac := make(map[string]nsmapi.NVSwitchTray)
 	for _, sw := range registeredSwitches {
 		if sw.BMCMACAddress != "" {
-			registeredByMac[sw.BMCMACAddress] = sw
+			registeredByMac[utils.NormalizeMAC(sw.BMCMACAddress)] = sw
 		}
 	}
 
@@ -687,11 +688,12 @@ func syncNVSwitches(ctx context.Context, pool *cdb.Session, carbideClient carbid
 			continue
 		}
 
-		nvosMac, hasNvosMac := carbideES.Metadata["host_mac_address"]
-		if !hasNvosMac || nvosMac == "" {
+		nvosMacRaw, hasNvosMac := carbideES.Metadata["host_mac_address"]
+		if !hasNvosMac || nvosMacRaw == "" {
 			log.Warn().Msgf("NVLSwitch %s (BMC %s): no host_mac_address in Carbide metadata, skipping registration", nvswitchID, bmcMac)
 			continue
 		}
+		nvosMac := utils.NormalizeMAC(nvosMacRaw)
 
 		nvosIface, nvosFound := interfacesByMac[nvosMac]
 		if !nvosFound || len(nvosIface.Addresses) == 0 {
@@ -800,7 +802,7 @@ func syncPowershelves(ctx context.Context, pool *cdb.Session, carbideClient carb
 			continue
 		}
 
-		expectedByPmcMac[ps.BMCs[0].MacAddress] = ps
+		expectedByPmcMac[pmcMacAddr.String()] = ps
 	}
 
 	// Get list of expected PMC MACs
@@ -818,7 +820,7 @@ func syncPowershelves(ctx context.Context, pool *cdb.Session, carbideClient carb
 
 	registeredByMac := make(map[string]psmapi.PowerShelf)
 	for _, ps := range registeredPowershelves {
-		registeredByMac[ps.PMC.MACAddress] = ps
+		registeredByMac[utils.NormalizeMAC(ps.PMC.MACAddress)] = ps
 	}
 
 	// Step 3: Get machine interfaces from Carbide to check DHCP status

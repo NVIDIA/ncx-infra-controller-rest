@@ -28,6 +28,7 @@ import (
 
 	pb "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/carbideapi/gen"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/certs"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/common/utils"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -229,7 +230,7 @@ func (c *grpcClient) FindInterfaces(ctx context.Context) (map[string]MachineInte
 	interfaces := make(map[string]MachineInterface)
 	for _, iface := range res.Interfaces {
 		mi := machineInterfaceFromPb(iface)
-		interfaces[mi.MacAddress] = mi
+		interfaces[utils.NormalizeMAC(mi.MacAddress)] = mi
 	}
 	return interfaces, nil
 }
@@ -386,7 +387,7 @@ func (c *grpcClient) GetAllExpectedSwitches(ctx context.Context) (map[string]Exp
 	for _, es := range resp.GetExpectedSwitches() {
 		info := expectedSwitchInfoFromPb(es)
 		if info.BMCMACAddress != "" {
-			results[info.BMCMACAddress] = info
+			results[utils.NormalizeMAC(info.BMCMACAddress)] = info
 		}
 	}
 	return results, nil

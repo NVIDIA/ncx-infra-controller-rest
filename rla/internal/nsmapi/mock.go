@@ -20,6 +20,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/common/utils"
 	"github.com/google/uuid"
 )
 
@@ -62,7 +63,8 @@ func (c *mockClient) GetNVSwitches(_ context.Context, uuids []string) ([]NVSwitc
 func (c *mockClient) RegisterNVSwitches(_ context.Context, requests []RegisterNVSwitchRequest) ([]RegisterNVSwitchResponse, error) {
 	var results []RegisterNVSwitchResponse
 	for _, req := range requests {
-		if existing, ok := c.switches[req.BMCMACAddress]; ok {
+		key := utils.NormalizeMAC(req.BMCMACAddress)
+		if existing, ok := c.switches[key]; ok {
 			results = append(results, RegisterNVSwitchResponse{
 				UUID:   existing.UUID,
 				IsNew:  false,
@@ -70,7 +72,7 @@ func (c *mockClient) RegisterNVSwitches(_ context.Context, requests []RegisterNV
 			})
 		} else {
 			newUUID := uuid.New().String()
-			c.switches[req.BMCMACAddress] = NVSwitchTray{
+			c.switches[key] = NVSwitchTray{
 				UUID:          newUUID,
 				BMCMACAddress: req.BMCMACAddress,
 				BMCIPAddress:  req.BMCIPAddress,
@@ -86,7 +88,15 @@ func (c *mockClient) RegisterNVSwitches(_ context.Context, requests []RegisterNV
 }
 
 func (c *mockClient) AddNVSwitch(sw NVSwitchTray) {
-	c.switches[sw.BMCMACAddress] = sw
+	c.switches[utils.NormalizeMAC(sw.BMCMACAddress)] = sw
+}
+
+func (c *mockClient) SetNVSwitchFirmware(bmcMAC string, firmware string) {
+	key := utils.NormalizeMAC(bmcMAC)
+	if sw, ok := c.switches[key]; ok {
+		sw.BMCFirmware = firmware
+		c.switches[key] = sw
+	}
 }
 
 func (c *mockClient) PowerControl(_ context.Context, uuids []string, _ PowerAction) ([]PowerControlResult, error) {

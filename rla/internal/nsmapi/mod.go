@@ -49,4 +49,5 @@ type Client interface {
 
 	// The following are only valid in the mock environment and should only be called by unit tests.
 	AddNVSwitch(NVSwitchTray)
+	SetNVSwitchFirmware(bmcMAC string, firmware string)
 }

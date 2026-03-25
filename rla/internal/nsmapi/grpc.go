@@ -130,6 +130,10 @@ func (c *grpcClient) AddNVSwitch(_ NVSwitchTray) {
 	panic("Not a unit test")
 }
 
+func (c *grpcClient) SetNVSwitchFirmware(_ string, _ string) {
+	panic("Not a unit test")
+}
+
 // PowerControl performs a power action on the specified NV-Switch trays.
 func (c *grpcClient) PowerControl(ctx context.Context, uuids []string, action PowerAction) ([]PowerControlResult, error) {
 	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
