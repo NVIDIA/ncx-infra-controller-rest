@@ -19,6 +19,7 @@ package utils
 
 import (
 	"context"
+	"net"
 	"testing"
 
 	"github.com/rs/zerolog/log"
@@ -40,4 +41,18 @@ func UnitTestDB(ctx context.Context, t *testing.T, dbConf cdb.Config) (*cdb.Sess
 	err = migrations.MigrateWithDB(ctx, session.DB)
 
 	return session, err
+}
+
+// NormalizeMAC parses a MAC address string and returns its canonical
+// lowercase colon-separated form (e.g. "aa:bb:cc:dd:ee:ff").
+// Handles colon-separated, hyphen-separated, and dot-separated (Cisco)
+// formats, as well as mixed casing.
+// If the input is not a valid MAC, it is returned unchanged so that
+// downstream validation can report the real error.
+func NormalizeMAC(mac string) string {
+	hw, err := net.ParseMAC(mac)
+	if err != nil {
+		return mac
+	}
+	return hw.String()
 }

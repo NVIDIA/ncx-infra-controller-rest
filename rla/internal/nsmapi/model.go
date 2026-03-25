@@ -268,6 +268,69 @@ func firmwareUpdateInfoFromPb(info *pb.FirmwareUpdateInfo) FirmwareUpdateInfo {
 	return result
 }
 
+// NVSwitchTray represents a complete NV-Switch tray registered with NSM.
+type NVSwitchTray struct {
+	UUID                string
+	BMCMACAddress       string
+	BMCIPAddress        string
+	BMCFirmware         string
+	NVOSVersion         string
+	CPLDVersion         string
+	ChassisSerial       string
+	ChassisModel        string
+	ChassisManufacturer string
+	RackID              string
+}
+
+func nvSwitchTrayFromPb(tray *pb.NVSwitchTray) NVSwitchTray {
+	result := NVSwitchTray{
+		UUID:        tray.GetUuid(),
+		CPLDVersion: tray.GetCpldVersion(),
+		RackID:      tray.GetRackId(),
+	}
+	if bmc := tray.GetBmc(); bmc != nil {
+		result.BMCMACAddress = bmc.GetMacAddress()
+		result.BMCIPAddress = bmc.GetIpAddress()
+		result.BMCFirmware = bmc.GetFirmwareVersion()
+	}
+	if nvos := tray.GetNvos(); nvos != nil {
+		result.NVOSVersion = nvos.GetVersion()
+	}
+	if chassis := tray.GetChassis(); chassis != nil {
+		result.ChassisSerial = chassis.GetSerialNumber()
+		result.ChassisModel = chassis.GetModel()
+		result.ChassisManufacturer = chassis.GetManufacturer()
+	}
+	return result
+}
+
+// RegisterNVSwitchRequest contains the information needed to register an NV-Switch.
+// Credentials are omitted; Carbide writes them to Vault and NSM looks them up
+// by MAC address at the time of use.
+type RegisterNVSwitchRequest struct {
+	BMCMACAddress  string
+	BMCIPAddress   string
+	NVOSMACAddress string
+	NVOSIPAddress  string
+}
+
+// RegisterNVSwitchResponse contains the result of registering an NV-Switch.
+type RegisterNVSwitchResponse struct {
+	UUID   string
+	IsNew  bool
+	Status StatusCode
+	Error  string
+}
+
+func registerNVSwitchResponseFromPb(resp *pb.RegisterNVSwitchResponse) RegisterNVSwitchResponse {
+	return RegisterNVSwitchResponse{
+		UUID:   resp.GetUuid(),
+		IsNew:  resp.GetIsNew(),
+		Status: statusCodeFromPb(resp.GetStatus()),
+		Error:  resp.GetError(),
+	}
+}
+
 // ComponentInfo describes a component within a firmware bundle.
 type ComponentInfo struct {
 	Name     string

@@ -73,6 +73,67 @@ func (c *grpcClient) Close() error {
 	return nil
 }
 
+// GetNVSwitches returns NV-Switch information for the specified switch UUIDs.
+func (c *grpcClient) GetNVSwitches(ctx context.Context, uuids []string) ([]NVSwitchTray, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
+	defer cancel()
+
+	resp, err := c.client.GetNVSwitches(ctx, &pb.NVSwitchRequest{
+		Uuids: uuids,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var results []NVSwitchTray
+	for _, tray := range resp.GetNvswitches() {
+		results = append(results, nvSwitchTrayFromPb(tray))
+	}
+	return results, nil
+}
+
+// RegisterNVSwitches registers NV-Switch trays and returns service-generated UUIDs.
+func (c *grpcClient) RegisterNVSwitches(ctx context.Context, requests []RegisterNVSwitchRequest) ([]RegisterNVSwitchResponse, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
+	defer cancel()
+
+	pbRequests := make([]*pb.RegisterNVSwitchRequest, 0, len(requests))
+	for _, req := range requests {
+		pbRequests = append(pbRequests, &pb.RegisterNVSwitchRequest{
+			Vendor: pb.Vendor_VENDOR_NVIDIA,
+			Bmc: &pb.Subsystem{
+				MacAddress: req.BMCMACAddress,
+				IpAddress:  req.BMCIPAddress,
+			},
+			Nvos: &pb.Subsystem{
+				MacAddress: req.NVOSMACAddress,
+				IpAddress:  req.NVOSIPAddress,
+			},
+		})
+	}
+
+	resp, err := c.client.RegisterNVSwitches(ctx, &pb.RegisterNVSwitchesRequest{
+		RegistrationRequests: pbRequests,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var results []RegisterNVSwitchResponse
+	for _, r := range resp.GetResponses() {
+		results = append(results, registerNVSwitchResponseFromPb(r))
+	}
+	return results, nil
+}
+
+func (c *grpcClient) AddNVSwitch(_ NVSwitchTray) {
+	panic("Not a unit test")
+}
+
+func (c *grpcClient) SetNVSwitchFirmware(_ string, _ string) {
+	panic("Not a unit test")
+}
+
 // PowerControl performs a power action on the specified NV-Switch trays.
 func (c *grpcClient) PowerControl(ctx context.Context, uuids []string, action PowerAction) ([]PowerControlResult, error) {
 	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)

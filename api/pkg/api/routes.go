@@ -218,6 +218,28 @@ func NewAPIRoutes(dbSession *cdb.Session, tc tClient.Client, tnc tClient.Namespa
 			Handler: apiHandler.NewDeleteVpcPrefixHandler(dbSession, tc, scp, cfg),
 		},
 
+		// VPC Peering endpoints
+		{
+			Path:    apiPathPrefix + "/vpc-peering",
+			Method:  http.MethodPost,
+			Handler: apiHandler.NewCreateVpcPeeringHandler(dbSession, tc, scp, cfg),
+		},
+		{
+			Path:    apiPathPrefix + "/vpc-peering",
+			Method:  http.MethodGet,
+			Handler: apiHandler.NewGetAllVpcPeeringHandler(dbSession, tc, cfg),
+		},
+		{
+			Path:    apiPathPrefix + "/vpc-peering/:id",
+			Method:  http.MethodGet,
+			Handler: apiHandler.NewGetVpcPeeringHandler(dbSession, tc, cfg),
+		},
+		{
+			Path:    apiPathPrefix + "/vpc-peering/:id",
+			Method:  http.MethodDelete,
+			Handler: apiHandler.NewDeleteVpcPeeringHandler(dbSession, tc, scp, cfg),
+		},
+
 		// IPBlock endpoints
 		{
 			Path:    apiPathPrefix + "/ipblock",
