@@ -185,7 +185,7 @@ func TestNewAPITray(t *testing.T) {
 			},
 		},
 		{
-			name: "tray with minimal info",
+			name: "tray with minimal info and explicit type",
 			comp: &rlav1.Component{
 				Type: rlav1.ComponentType_COMPONENT_TYPE_COMPUTE,
 				Info: &rlav1.DeviceInfo{
@@ -195,6 +195,18 @@ func TestNewAPITray(t *testing.T) {
 			want: &APITray{
 				ID:   "minimal-tray",
 				Type: "compute",
+			},
+		},
+		{
+			name: "tray with unspecified type falls back to unknown",
+			comp: &rlav1.Component{
+				Info: &rlav1.DeviceInfo{
+					Id: &rlav1.UUID{Id: "untyped-tray"},
+				},
+			},
+			want: &APITray{
+				ID:   "untyped-tray",
+				Type: "unknown",
 			},
 		},
 		{

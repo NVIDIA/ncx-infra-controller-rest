@@ -40,6 +40,7 @@ var APIToProtoComponentTypeName = map[string]string{
 
 // ProtoToAPIComponentTypeName maps protobuf ComponentType to API tray type strings.
 var ProtoToAPIComponentTypeName = map[rlav1.ComponentType]string{
+	rlav1.ComponentType_COMPONENT_TYPE_UNKNOWN:    "unknown",
 	rlav1.ComponentType_COMPONENT_TYPE_COMPUTE:    "compute",
 	rlav1.ComponentType_COMPONENT_TYPE_NVLSWITCH:  "switch",
 	rlav1.ComponentType_COMPONENT_TYPE_POWERSHELF: "powershelf",
@@ -576,7 +577,7 @@ func (at *APITray) FromProto(comp *rlav1.Component) {
 		return
 	}
 
-	at.Type = enumOr(ProtoToAPIComponentTypeName, comp.GetType(), "compute")
+	at.Type = enumOr(ProtoToAPIComponentTypeName, comp.GetType(), "unknown")
 	at.FirmwareVersion = comp.GetFirmwareVersion()
 	at.PowerState = comp.GetPowerState()
 	at.ComponentID = comp.GetComponentId()
