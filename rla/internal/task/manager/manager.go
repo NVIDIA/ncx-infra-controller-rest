@@ -95,9 +95,17 @@ func (c *Config) Validate() error {
 	return c.ExecutorConfig.Validate()
 }
 
-// Manager maintains unfinished tasks, schedules them via temporal workflows,
+// Manager defines the public interface for task lifecycle management.
+type Manager interface {
+	Start(ctx context.Context) error
+	Stop(ctx context.Context)
+	SubmitTask(ctx context.Context, req *operation.Request) ([]uuid.UUID, error)
+	CancelTask(ctx context.Context, taskID uuid.UUID) error
+}
+
+// ManagerImpl maintains unfinished tasks, schedules them via temporal workflows,
 // and monitors their progress.
-type Manager struct {
+type ManagerImpl struct {
 	inventoryStore   inventorystore.Store // For rack/component lookups
 	taskStore        taskstore.Store      // For task persistence
 	executor         executor.Executor
@@ -115,7 +123,7 @@ type Manager struct {
 }
 
 // New creates a new task manager.
-func New(ctx context.Context, conf *Config) (*Manager, error) {
+func New(ctx context.Context, conf *Config) (*ManagerImpl, error) {
 	if err := conf.Validate(); err != nil {
 		return nil, err
 	}
@@ -130,7 +138,7 @@ func New(ctx context.Context, conf *Config) (*Manager, error) {
 	ruleResolver := operationrules.NewResolver(conf.TaskStore)
 	conflictResolver := conflict.NewResolver(conf.TaskStore)
 
-	m := &Manager{
+	m := &ManagerImpl{
 		inventoryStore:      conf.InventoryStore,
 		executor:            exec,
 		ruleResolver:        ruleResolver,
@@ -156,7 +164,7 @@ func New(ctx context.Context, conf *Config) (*Manager, error) {
 }
 
 // Start starts the task manager to make it ready to accept tasks.
-func (m *Manager) Start(ctx context.Context) error {
+func (m *ManagerImpl) Start(ctx context.Context) error {
 	var startErr error
 
 	m.startOnce.Do(func() {
@@ -181,7 +189,7 @@ func (m *Manager) Start(ctx context.Context) error {
 }
 
 // Stop shuts down the manager and waits for all routines to finish.
-func (m *Manager) Stop(ctx context.Context) {
+func (m *ManagerImpl) Stop(ctx context.Context) {
 	m.stopOnce.Do(func() {
 		if m.cancel != nil {
 			m.cancel()
@@ -199,7 +207,7 @@ func (m *Manager) Stop(ctx context.Context) {
 // operation.Request can contain multiple racks. Task Manager resolves identifiers,
 // splits by rack, and creates one Task per rack.
 // Returns a list of created task IDs.
-func (m *Manager) SubmitTask(
+func (m *ManagerImpl) SubmitTask(
 	ctx context.Context,
 	req *operation.Request,
 ) ([]uuid.UUID, error) {
@@ -236,7 +244,7 @@ func (m *Manager) SubmitTask(
 }
 
 // createAndExecuteTask creates a task for a single rack and executes it.
-func (m *Manager) createAndExecuteTask(
+func (m *ManagerImpl) createAndExecuteTask(
 	ctx context.Context,
 	req *operation.Request,
 	targetRack *rack.Rack,
@@ -329,7 +337,7 @@ func (m *Manager) createAndExecuteTask(
 
 // promoteTask is invoked by the Promoter to execute a previously waiting task
 // that has been promoted to pending.
-func (m *Manager) promoteTask(ctx context.Context, taskID uuid.UUID) error {
+func (m *ManagerImpl) promoteTask(ctx context.Context, taskID uuid.UUID) error {
 	task, err := m.taskStore.GetTask(ctx, taskID)
 	if err != nil {
 		return fmt.Errorf("promoteTask: failed to load task %s: %w", taskID, err)
@@ -347,7 +355,7 @@ func (m *Manager) promoteTask(ctx context.Context, taskID uuid.UUID) error {
 // and updates the task record with the execution result. It is shared by the
 // immediate-execution path in createAndExecuteTask and the promotion path in
 // promoteTask.
-func (m *Manager) resolveAndExecuteTask(
+func (m *ManagerImpl) resolveAndExecuteTask(
 	ctx context.Context,
 	task *taskdef.Task,
 	targetRack *rack.Rack,
@@ -407,7 +415,7 @@ func (m *Manager) resolveAndExecuteTask(
 // Pending/running tasks have their Temporal workflow terminated.
 // Already-terminated tasks return nil (idempotent).
 // Completed or failed tasks return an error.
-func (m *Manager) CancelTask(ctx context.Context, taskID uuid.UUID) error {
+func (m *ManagerImpl) CancelTask(ctx context.Context, taskID uuid.UUID) error {
 	task, err := m.taskStore.GetTask(ctx, taskID)
 	if err != nil {
 		return fmt.Errorf("failed to get task %s: %w", taskID, err)
@@ -447,7 +455,7 @@ func (m *Manager) CancelTask(ctx context.Context, taskID uuid.UUID) error {
 
 // loadRackForTask re-fetches the rack for a task and filters its component
 // list to only those tracked in task.Attributes.
-func (m *Manager) loadRackForTask(
+func (m *ManagerImpl) loadRackForTask(
 	ctx context.Context,
 	task *taskdef.Task,
 ) (*rack.Rack, error) {
@@ -494,7 +502,7 @@ func workflowComponentsFrom(
 	return comps
 }
 
-func (m *Manager) executeTask(
+func (m *ManagerImpl) executeTask(
 	ctx context.Context,
 	task *taskdef.Task,
 	targetRack *rack.Rack,
@@ -543,7 +551,7 @@ func (m *Manager) executeTask(
 	}
 }
 
-func (m *Manager) getReqExpiresAt(req *operation.Request) *time.Time {
+func (m *ManagerImpl) getReqExpiresAt(req *operation.Request) *time.Time {
 	timeout := req.QueueTimeout
 	if timeout <= 0 {
 		timeout = m.defaultQueueTimeout
