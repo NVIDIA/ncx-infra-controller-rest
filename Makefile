@@ -448,9 +448,11 @@ kind-reset-infra: docker-build-local
 	kubectl apply -k deploy/kustomize/base/keycloak
 	kubectl -n carbide-rest rollout status deployment/keycloak --timeout=240s
 
-	@echo "Setting up Carbide Mock Core (dev only, not in Helm chart)..."
-	kubectl apply -k deploy/kustomize/overlays/mock-core
-	kubectl -n carbide-rest rollout status deployment/carbide-rest-mock-core --timeout=240s
+	@if [ "$(LOCAL_CORE)" != "true" ]; then \
+		echo "Setting up Carbide Mock Core (dev only, not in Helm chart)..." ; \
+		kubectl apply -k deploy/kustomize/overlays/mock-core ; \
+		kubectl -n carbide-rest rollout status deployment/carbide-rest-mock-core --timeout=240s ; \
+	fi
 
 	@echo ""
 	@echo "================================================================================"
@@ -525,9 +527,9 @@ kind-reset-kustomize: kind-reset-infra
 			echo "Resolved $$CORE_HOST → $$IPV4 (using IPv4 to avoid Go IPv6-first dialer issue)" ; \
 			CORE_HOST="$$IPV4" ; \
 		fi ; \
-		echo "Patching site-agent ConfigMap: CARBIDE_ADDRESS=$$CORE_HOST:$(LOCAL_CORE_PORT), CARBIDE_SEC_OPT=1 (ServerTLS)..." ; \
+		echo "Patching site-agent ConfigMap: CARBIDE_ADDRESS=$$CORE_HOST:$(LOCAL_CORE_PORT), CARBIDE_SEC_OPT=1, SKIP_GRPC_SERVER_AUTH=true..." ; \
 		kubectl -n carbide-rest patch configmap carbide-rest-site-agent-config --type merge \
-			-p "{\"data\":{\"CARBIDE_ADDRESS\":\"$$CORE_HOST:$(LOCAL_CORE_PORT)\",\"CARBIDE_SEC_OPT\":\"1\"}}" ; \
+			-p "{\"data\":{\"CARBIDE_ADDRESS\":\"$$CORE_HOST:$(LOCAL_CORE_PORT)\",\"CARBIDE_SEC_OPT\":\"1\",\"SKIP_GRPC_SERVER_AUTH\":\"true\"}}" ; \
 		echo "Restarting site-agent to pick up new CARBIDE_ADDRESS and certs..." ; \
 		kubectl -n carbide-rest rollout restart statefulset/carbide-rest-site-agent ; \
 		kubectl -n carbide-rest rollout status statefulset/carbide-rest-site-agent --timeout=120s ; \
@@ -605,7 +607,9 @@ helm-deploy:
 helm-deploy-site-agent:
 	@echo "Installing site-agent chart (will CrashLoop until bootstrapped)..."
 	helm upgrade --install carbide-rest-site-agent $(SITE_AGENT_CHART)/ \
-		--namespace carbide-rest $(HELM_SET) --timeout 1m || true
+		--namespace carbide-rest $(HELM_SET) \
+		$(if $(filter true,$(LOCAL_CORE)),--set certificate.enabled=false) \
+		--timeout 1m || true
 	@echo "Running site bootstrap (setup-local.sh site-agent)..."
 	./scripts/setup-local.sh site-agent
 	@if [ "$(LOCAL_CORE)" = "true" ]; then \
@@ -626,9 +630,9 @@ helm-deploy-site-agent:
 			echo "Resolved $$CORE_HOST → $$IPV4 (using IPv4 to avoid Go IPv6-first dialer issue)" ; \
 			CORE_HOST="$$IPV4" ; \
 		fi ; \
-		echo "Patching site-agent ConfigMap: CARBIDE_ADDRESS=$$CORE_HOST:$(LOCAL_CORE_PORT), CARBIDE_SEC_OPT=1 (ServerTLS)..." ; \
+		echo "Patching site-agent ConfigMap: CARBIDE_ADDRESS=$$CORE_HOST:$(LOCAL_CORE_PORT), CARBIDE_SEC_OPT=1, SKIP_GRPC_SERVER_AUTH=true..." ; \
 		kubectl -n carbide-rest patch configmap carbide-rest-site-agent-config --type merge \
-			-p "{\"data\":{\"CARBIDE_ADDRESS\":\"$$CORE_HOST:$(LOCAL_CORE_PORT)\",\"CARBIDE_SEC_OPT\":\"1\"}}" ; \
+			-p "{\"data\":{\"CARBIDE_ADDRESS\":\"$$CORE_HOST:$(LOCAL_CORE_PORT)\",\"CARBIDE_SEC_OPT\":\"1\",\"SKIP_GRPC_SERVER_AUTH\":\"true\"}}" ; \
 		echo "Restarting site-agent to pick up new CARBIDE_ADDRESS and certs..." ; \
 		kubectl -n carbide-rest rollout restart statefulset/carbide-rest-site-agent ; \
 	fi
