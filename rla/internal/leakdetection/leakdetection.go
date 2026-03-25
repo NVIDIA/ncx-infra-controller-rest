@@ -119,6 +119,10 @@ func submitPowerOffTask(ctx context.Context, taskMgr taskmanager.Manager, machin
 		return fmt.Errorf("failed to submit task: %w", err)
 	}
 
+	if len(taskIDs) == 0 {
+		return fmt.Errorf("failed to create any power-off tasks for leaking machine %s", machineID)
+	}
+
 	log.Info().
 		Str("machine_id", machineID).
 		Int("task_count", len(taskIDs)).

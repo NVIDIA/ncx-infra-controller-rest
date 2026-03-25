@@ -503,3 +503,7 @@ func (c *grpcClient) AddMachineInterface(iface MachineInterface) {
 func (c *grpcClient) AddExpectedSwitchInfo(info ExpectedSwitchInfo) {
 	panic("Not a unit test")
 }
+
+func (c *grpcClient) SetLeakingMachineIds(ids []string) {
+	panic("Not a unit test")
+}

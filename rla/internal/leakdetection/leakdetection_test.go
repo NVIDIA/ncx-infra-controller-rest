@@ -35,9 +35,10 @@ import (
 // --- mock taskmanager.Manager ---
 
 type mockManager struct {
-	requests  []*operation.Request
-	submitErr error
-	cancelErr error
+	requests       []*operation.Request
+	submitErr      error
+	cancelErr      error
+	returnNoTaskID bool
 }
 
 func (m *mockManager) Start(_ context.Context) error { return nil }
@@ -47,6 +48,9 @@ func (m *mockManager) SubmitTask(_ context.Context, req *operation.Request) ([]u
 	m.requests = append(m.requests, req)
 	if m.submitErr != nil {
 		return nil, m.submitErr
+	}
+	if m.returnNoTaskID {
+		return nil, nil
 	}
 	return []uuid.UUID{uuid.New()}, nil
 }
@@ -85,6 +89,15 @@ func TestSubmitPowerOffTask_Success(t *testing.T) {
 	assert.Contains(t, req.Description, machineID)
 }
 
+func TestSubmitPowerOffTask_NoTasksCreated(t *testing.T) {
+	ctx := context.Background()
+	mgr := &mockManager{returnNoTaskID: true}
+
+	err := submitPowerOffTask(ctx, mgr, "machine-xyz")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to create any power-off tasks")
+}
+
 func TestSubmitPowerOffTask_SubmitError(t *testing.T) {
 	ctx := context.Background()
 	mgr := &mockManager{submitErr: errors.New("submit failed")}
@@ -107,17 +120,16 @@ func TestRunLeakDetectionOne_NoLeaks(t *testing.T) {
 
 func TestRunLeakDetectionOne_SubmitsTaskPerMachine(t *testing.T) {
 	ctx := context.Background()
+	cfg := &config.Config{}
 	mgr := &mockManager{}
 
-	// Mock carbide returns no leaking machines, so test multi-machine
-	// path directly via submitPowerOffTask.
 	machines := []string{"machine-1", "machine-2", "machine-3"}
-	for _, m := range machines {
-		err := submitPowerOffTask(ctx, mgr, m)
-		require.NoError(t, err)
-	}
-	require.Len(t, mgr.requests, 3)
+	carbideClient := carbideapi.NewMockClient()
+	carbideClient.SetLeakingMachineIds(machines)
 
+	runLeakDetectionOne(ctx, cfg, carbideClient, mgr)
+
+	require.Len(t, mgr.requests, 3)
 	for i, m := range machines {
 		assert.Equal(t, m, mgr.requests[i].TargetSpec.Components[0].External.ID)
 	}
@@ -127,8 +139,11 @@ func TestRunLeakDetectionOne_ContinuesOnSubmitError(t *testing.T) {
 	ctx := context.Background()
 	cfg := &config.Config{}
 	carbideClient := carbideapi.NewMockClient()
+	carbideClient.SetLeakingMachineIds([]string{"machine-a", "machine-b"})
 	mgr := &mockManager{submitErr: errors.New("always fails")}
 
-	// Should not panic even when submission fails.
 	runLeakDetectionOne(ctx, cfg, carbideClient, mgr)
+
+	// Verify all machines were attempted despite errors
+	require.Len(t, mgr.requests, 2)
 }
