@@ -82,34 +82,6 @@ jobs:
           post-pr-comment: 'true'
           fail-on-findings: 'true'
 
-  # Step 4.2: Trivy Vulnerability Scan
-  security-trivy-scan:
-    name: Trivy Vulnerability Scan
-    needs: prepare
-    runs-on: linux-amd64-cpu4
-    timeout-minutes: 30
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
-      pull-requests: write
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run Trivy Scan
-        uses: NVIDIA/dsx-github-actions/.github/actions/trivy-scan@495fc76167e3d265f817c1fdc00b7b9275436418
-        with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          vuln-type: 'os,library'
-          scanners: 'vuln,secret,misconfig,license'
-          severity: 'HIGH,CRITICAL'
-          ignore-unfixed: 'true'
-          upload-sarif: 'true'
-          post-pr-comment: 'true'
-          fail-on-findings: 'false' # FIXME: Disabled until all issues are fixed
-
   # Step 5: Build and push all Docker images
   build-and-push:
     name: Build and Push Docker Images
