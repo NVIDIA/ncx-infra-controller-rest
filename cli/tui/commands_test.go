@@ -524,9 +524,12 @@ func TestSortByLabelKey(t *testing.T) {
 			{Name: "a", Labels: map[string]string{"rack": "A1"}},
 			{Name: "b", Labels: map[string]string{"rack": "B1"}},
 		}
-		sortByLabelKey(items, "rack")
-		if items[0].Name != "a" || items[1].Name != "b" || items[2].Name != "c" {
-			t.Fatalf("unexpected order: %s %s %s", items[0].Name, items[1].Name, items[2].Name)
+		sorted := sortByLabelKey(items, "rack")
+		if sorted[0].Name != "a" || sorted[1].Name != "b" || sorted[2].Name != "c" {
+			t.Fatalf("unexpected order: %s %s %s", sorted[0].Name, sorted[1].Name, sorted[2].Name)
+		}
+		if items[0].Name != "c" {
+			t.Fatal("sortByLabelKey must not mutate the original slice")
 		}
 	})
 	t.Run("missing keys sort last", func(t *testing.T) {
@@ -534,9 +537,9 @@ func TestSortByLabelKey(t *testing.T) {
 			{Name: "no-label", Labels: nil},
 			{Name: "has-label", Labels: map[string]string{"rack": "A1"}},
 		}
-		sortByLabelKey(items, "rack")
-		if items[0].Name != "has-label" || items[1].Name != "no-label" {
-			t.Fatalf("expected has-label first, got %s %s", items[0].Name, items[1].Name)
+		sorted := sortByLabelKey(items, "rack")
+		if sorted[0].Name != "has-label" || sorted[1].Name != "no-label" {
+			t.Fatalf("expected has-label first, got %s %s", sorted[0].Name, sorted[1].Name)
 		}
 	})
 	t.Run("stable order for equal values", func(t *testing.T) {
@@ -544,16 +547,19 @@ func TestSortByLabelKey(t *testing.T) {
 			{Name: "first", Labels: map[string]string{"rack": "A1"}},
 			{Name: "second", Labels: map[string]string{"rack": "A1"}},
 		}
-		sortByLabelKey(items, "rack")
-		if items[0].Name != "first" || items[1].Name != "second" {
-			t.Fatalf("stable sort violated: %s %s", items[0].Name, items[1].Name)
+		sorted := sortByLabelKey(items, "rack")
+		if sorted[0].Name != "first" || sorted[1].Name != "second" {
+			t.Fatalf("stable sort violated: %s %s", sorted[0].Name, sorted[1].Name)
 		}
 	})
 }
 
 func TestParseLabelArgs(t *testing.T) {
 	t.Run("label and sort-label", func(t *testing.T) {
-		remaining, labels, sortKey := parseLabelArgs([]string{"--label", "env=prod", "--sort-label", "rack", "extra"})
+		remaining, labels, sortKey, err := parseLabelArgs([]string{"--label", "env=prod", "--sort-label", "rack", "extra"})
+		if err != nil {
+			t.Fatal(err)
+		}
 		if len(remaining) != 1 || remaining[0] != "extra" {
 			t.Fatalf("unexpected remaining: %v", remaining)
 		}
@@ -565,7 +571,10 @@ func TestParseLabelArgs(t *testing.T) {
 		}
 	})
 	t.Run("no label args", func(t *testing.T) {
-		remaining, labels, sortKey := parseLabelArgs([]string{"foo", "bar"})
+		remaining, labels, sortKey, err := parseLabelArgs([]string{"foo", "bar"})
+		if err != nil {
+			t.Fatal(err)
+		}
 		if len(remaining) != 2 {
 			t.Fatalf("expected 2 remaining, got %d", len(remaining))
 		}
@@ -577,9 +586,30 @@ func TestParseLabelArgs(t *testing.T) {
 		}
 	})
 	t.Run("multiple labels AND", func(t *testing.T) {
-		_, labels, _ := parseLabelArgs([]string{"--label", "env=prod", "--label", "rack=A3"})
+		_, labels, _, err := parseLabelArgs([]string{"--label", "env=prod", "--label", "rack=A3"})
+		if err != nil {
+			t.Fatal(err)
+		}
 		if len(labels) != 2 || labels["env"] != "prod" || labels["rack"] != "A3" {
 			t.Fatalf("expected two labels, got %v", labels)
+		}
+	})
+	t.Run("label without equals", func(t *testing.T) {
+		_, _, _, err := parseLabelArgs([]string{"--label", "env"})
+		if err == nil {
+			t.Fatal("expected error for --label without '='")
+		}
+	})
+	t.Run("dangling sort-label", func(t *testing.T) {
+		_, _, _, err := parseLabelArgs([]string{"--sort-label"})
+		if err == nil {
+			t.Fatal("expected error for dangling --sort-label")
+		}
+	})
+	t.Run("dangling label flag", func(t *testing.T) {
+		_, _, _, err := parseLabelArgs([]string{"--label"})
+		if err == nil {
+			t.Fatal("expected error for dangling --label")
 		}
 	})
 }

@@ -202,8 +202,15 @@ func fetchMachinesWithSiteFallback(s *Session, missingSitePrompt string) ([]Name
 		}
 		s.Scope.SiteID = site.ID
 		s.Scope.SiteName = site.Name
+
+		savedVpcID, savedVpcName := s.Scope.VpcID, s.Scope.VpcName
+		s.Scope.VpcID = ""
+		s.Scope.VpcName = ""
 		s.Cache.InvalidateFiltered()
-		return s.Resolver.Fetch(context.Background(), "machine")
+		items, err = s.Resolver.Fetch(context.Background(), "machine")
+		s.Scope.VpcID = savedVpcID
+		s.Scope.VpcName = savedVpcName
+		return items, err
 	}
 	return nil, err
 }
@@ -460,10 +467,13 @@ func cmdVPCList(s *Session, args []string) error {
 	if err != nil {
 		return err
 	}
-	_, cmdLabels, sortKey := parseLabelArgs(args)
+	_, cmdLabels, sortKey, err := parseLabelArgs(args)
+	if err != nil {
+		return err
+	}
 	items = filterByLabels(items, mergeLabels(s.Scope.LabelFilters, cmdLabels))
 	if sortKey != "" {
-		sortByLabelKey(items, sortKey)
+		items = sortByLabelKey(items, sortKey)
 	}
 	siteNameByID := map[string]string{}
 	if sites, err := s.Resolver.Fetch(context.Background(), "site"); err == nil {
@@ -764,10 +774,13 @@ func cmdInstanceTypeList(s *Session, args []string) error {
 	if err != nil {
 		return err
 	}
-	_, cmdLabels, sortKey := parseLabelArgs(args)
+	_, cmdLabels, sortKey, err := parseLabelArgs(args)
+	if err != nil {
+		return err
+	}
 	items = filterByLabels(items, mergeLabels(s.Scope.LabelFilters, cmdLabels))
 	if sortKey != "" {
-		sortByLabelKey(items, sortKey)
+		items = sortByLabelKey(items, sortKey)
 	}
 	fmt.Fprintf(os.Stderr, "%d items\n", len(items))
 	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
@@ -795,10 +808,13 @@ func cmdInstanceList(s *Session, args []string) error {
 	if err != nil {
 		return err
 	}
-	_, cmdLabels, sortKey := parseLabelArgs(args)
+	_, cmdLabels, sortKey, err := parseLabelArgs(args)
+	if err != nil {
+		return err
+	}
 	items = filterByLabels(items, mergeLabels(s.Scope.LabelFilters, cmdLabels))
 	if sortKey != "" {
-		sortByLabelKey(items, sortKey)
+		items = sortByLabelKey(items, sortKey)
 	}
 	fmt.Fprintf(os.Stderr, "%d items\n", len(items))
 	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
@@ -831,10 +847,13 @@ func cmdMachineList(s *Session, args []string) error {
 		items = filtered
 	}
 
-	_, cmdLabels, sortKey := parseLabelArgs(args)
+	_, cmdLabels, sortKey, err := parseLabelArgs(args)
+	if err != nil {
+		return err
+	}
 	items = filterByLabels(items, mergeLabels(s.Scope.LabelFilters, cmdLabels))
 	if sortKey != "" {
-		sortByLabelKey(items, sortKey)
+		items = sortByLabelKey(items, sortKey)
 	}
 
 	fmt.Fprintf(os.Stderr, "%d items\n", len(items))
@@ -1466,10 +1485,13 @@ func cmdNSGList(s *Session, args []string) error {
 	if err != nil {
 		return err
 	}
-	_, cmdLabels, sortKey := parseLabelArgs(args)
+	_, cmdLabels, sortKey, err := parseLabelArgs(args)
+	if err != nil {
+		return err
+	}
 	items = filterByLabels(items, mergeLabels(s.Scope.LabelFilters, cmdLabels))
 	if sortKey != "" {
-		sortByLabelKey(items, sortKey)
+		items = sortByLabelKey(items, sortKey)
 	}
 	fmt.Fprintf(os.Stderr, "%d items\n", len(items))
 	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
@@ -1750,11 +1772,11 @@ func cmdTenantAccountCreate(s *Session, _ []string) error {
 }
 
 func cmdTenantAccountUpdate(s *Session, args []string) error {
-	item, err := s.Resolver.ResolveWithArgs(context.Background(), "tenant-account", "Tenant Account to update", args)
+	item, err := s.Resolver.ResolveWithArgs(context.Background(), "tenant-account", "Tenant Account to accept", args)
 	if err != nil {
 		return err
 	}
-	ok, err := PromptConfirm(fmt.Sprintf("Update tenant account %s (%s)?", item.Name, item.ID))
+	ok, err := PromptConfirm(fmt.Sprintf("Accept invitation for tenant account %s (%s)?", item.Name, item.ID))
 	if err != nil || !ok {
 		return err
 	}
@@ -1762,12 +1784,12 @@ func cmdTenantAccountUpdate(s *Session, args []string) error {
 	bodyJSON, _ := json.Marshal(map[string]interface{}{})
 	resp, _, err := s.Client.Do("PATCH", "/v2/org/{org}/carbide/tenant-account/{id}", map[string]string{"id": item.ID}, nil, bodyJSON)
 	if err != nil {
-		return fmt.Errorf("updating tenant account: %w", err)
+		return fmt.Errorf("accepting tenant account invitation: %w", err)
 	}
 	s.Cache.Invalidate("tenant-account")
 	var updated map[string]interface{}
 	json.Unmarshal(resp, &updated)
-	fmt.Printf("%s Tenant account updated: %s (%s)\n", Green("OK"), str(updated, "tenantOrg"), str(updated, "id"))
+	fmt.Printf("%s Tenant account accepted: %s (%s)\n", Green("OK"), str(updated, "tenantOrg"), str(updated, "id"))
 	return nil
 }
 
@@ -1796,10 +1818,13 @@ func cmdExpectedMachineList(s *Session, args []string) error {
 	if err != nil {
 		return err
 	}
-	_, cmdLabels, sortKey := parseLabelArgs(args)
+	_, cmdLabels, sortKey, err := parseLabelArgs(args)
+	if err != nil {
+		return err
+	}
 	items = filterByLabels(items, mergeLabels(s.Scope.LabelFilters, cmdLabels))
 	if sortKey != "" {
-		sortByLabelKey(items, sortKey)
+		items = sortByLabelKey(items, sortKey)
 	}
 	fmt.Fprintf(os.Stderr, "%d items\n", len(items))
 	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
@@ -1816,10 +1841,13 @@ func cmdInfiniBandPartitionList(s *Session, args []string) error {
 	if err != nil {
 		return err
 	}
-	_, cmdLabels, sortKey := parseLabelArgs(args)
+	_, cmdLabels, sortKey, err := parseLabelArgs(args)
+	if err != nil {
+		return err
+	}
 	items = filterByLabels(items, mergeLabels(s.Scope.LabelFilters, cmdLabels))
 	if sortKey != "" {
-		sortByLabelKey(items, sortKey)
+		items = sortByLabelKey(items, sortKey)
 	}
 	fmt.Fprintf(os.Stderr, "%d items\n", len(items))
 	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
@@ -1966,6 +1994,7 @@ func cmdInstanceCreate(s *Session, _ []string) error {
 		return fmt.Errorf("creating instance: %w", err)
 	}
 	s.Cache.Invalidate("instance")
+	s.Cache.InvalidateFiltered()
 	var created map[string]interface{}
 	json.Unmarshal(resp, &created)
 	fmt.Printf("%s Instance created: %s (%s)\n", Green("OK"), str(created, "name"), str(created, "id"))
@@ -1987,6 +2016,7 @@ func cmdInstanceDelete(s *Session, args []string) error {
 		return fmt.Errorf("deleting instance: %w", err)
 	}
 	s.Cache.Invalidate("instance")
+	s.Cache.InvalidateFiltered()
 	fmt.Printf("%s Instance deleted: %s\n", Green("OK"), item.Name)
 	return nil
 }
@@ -2237,6 +2267,8 @@ func cmdHelp(_ *Session, _ []string) error {
 	fmt.Fprintln(tw, "scope\tShow current scope filters")
 	fmt.Fprintln(tw, "scope site [name]\tSet site scope (filters lists)")
 	fmt.Fprintln(tw, "scope vpc [name]\tSet VPC scope (filters lists)")
+	fmt.Fprintln(tw, "scope label key=value\tAdd a label filter")
+	fmt.Fprintln(tw, "scope label clear\tClear all label filters")
 	fmt.Fprintln(tw, "scope clear\tClear all scope filters")
 	fmt.Fprintln(tw, "exit\tExit interactive mode")
 	tw.Flush()
@@ -2366,10 +2398,12 @@ func filterByLabels(items []NamedItem, filters map[string]string) []NamedItem {
 	return result
 }
 
-func sortByLabelKey(items []NamedItem, key string) {
-	sort.SliceStable(items, func(i, j int) bool {
-		vi, oki := items[i].Labels[key]
-		vj, okj := items[j].Labels[key]
+func sortByLabelKey(items []NamedItem, key string) []NamedItem {
+	sorted := make([]NamedItem, len(items))
+	copy(sorted, items)
+	sort.SliceStable(sorted, func(i, j int) bool {
+		vi, oki := sorted[i].Labels[key]
+		vj, okj := sorted[j].Labels[key]
 		if !oki && !okj {
 			return false
 		}
@@ -2381,26 +2415,36 @@ func sortByLabelKey(items []NamedItem, key string) {
 		}
 		return vi < vj
 	})
+	return sorted
 }
 
 // parseLabelArgs extracts --label key=value and --sort-label key from args.
-// Returns the remaining args, label filters, and sort-label key.
-func parseLabelArgs(args []string) (remaining []string, labels map[string]string, sortKey string) {
+// Returns the remaining args, label filters, sort-label key, and an error
+// if a --label value is missing "=" or --sort-label has no following token.
+func parseLabelArgs(args []string) (remaining []string, labels map[string]string, sortKey string, err error) {
 	labels = map[string]string{}
 	for i := 0; i < len(args); i++ {
-		if args[i] == "--label" && i+1 < len(args) {
+		if args[i] == "--label" {
+			if i+1 >= len(args) {
+				return nil, nil, "", fmt.Errorf("--label requires a key=value argument")
+			}
 			i++
 			if k, v, ok := strings.Cut(args[i], "="); ok {
 				labels[k] = v
+			} else {
+				return nil, nil, "", fmt.Errorf("--label value %q must contain '='", args[i])
 			}
-		} else if args[i] == "--sort-label" && i+1 < len(args) {
+		} else if args[i] == "--sort-label" {
+			if i+1 >= len(args) {
+				return nil, nil, "", fmt.Errorf("--sort-label requires a key argument")
+			}
 			i++
 			sortKey = args[i]
 		} else {
 			remaining = append(remaining, args[i])
 		}
 	}
-	return remaining, labels, sortKey
+	return remaining, labels, sortKey, nil
 }
 
 // mergeLabels combines scope label filters with per-command label filters.
