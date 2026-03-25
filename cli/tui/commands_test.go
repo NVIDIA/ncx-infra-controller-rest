@@ -24,6 +24,9 @@ import (
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // --- Upstream tests ---
@@ -354,12 +357,9 @@ func TestReadyMachineItemsForSite_FiltersByStatusAndSite(t *testing.T) {
 	}
 
 	got := readyMachineItemsForSite(machines, "site-a")
-	if len(got) != 2 {
-		t.Fatalf("got %d ready machines, want 2", len(got))
-	}
-	if got[0].ID != "1" || got[1].ID != "2" {
-		t.Fatalf("unexpected machine IDs: got [%s, %s], want [1, 2]", got[0].ID, got[1].ID)
-	}
+	require.Len(t, got, 2)
+	assert.Equal(t, "1", got[0].ID)
+	assert.Equal(t, "2", got[1].ID)
 }
 
 func TestSetSiteScopeFromID_UpdatesScopeAndInvalidatesFiltered(t *testing.T) {
@@ -367,38 +367,33 @@ func TestSetSiteScopeFromID_UpdatesScopeAndInvalidatesFiltered(t *testing.T) {
 	c.Set("site", []NamedItem{{Name: "Site Two", ID: "site-2"}})
 	c.Set("machine", []NamedItem{{Name: "m1", ID: "1"}})
 	s := &Session{
-		Scope:    Scope{SiteID: "site-1", SiteName: "Site One"},
+		Scope:    Scope{SiteID: "site-1", SiteName: "Site One", VpcID: "vpc-1", VpcName: "VPC One"},
 		Cache:    c,
 		Resolver: NewResolver(c),
 	}
 
 	setSiteScopeFromID(s, "site-2")
 
-	if s.Scope.SiteID != "site-2" {
-		t.Fatalf("scope site id not updated, got %q", s.Scope.SiteID)
-	}
-	if s.Scope.SiteName != "Site Two" {
-		t.Fatalf("scope site name not updated, got %q", s.Scope.SiteName)
-	}
-	if got := c.Get("machine"); got != nil {
-		t.Fatalf("expected filtered cache to be invalidated, machine cache still present: %+v", got)
-	}
+	assert.Equal(t, "site-2", s.Scope.SiteID)
+	assert.Equal(t, "Site Two", s.Scope.SiteName)
+	assert.Empty(t, s.Scope.VpcID, "VPC scope must be cleared when site changes")
+	assert.Empty(t, s.Scope.VpcName, "VPC name must be cleared when site changes")
+	assert.Nil(t, c.Get("machine"), "filtered cache must be invalidated")
 }
 
 func TestSetSiteScopeFromID_NoChangeKeepsFilteredCache(t *testing.T) {
 	c := NewCache()
 	c.Set("machine", []NamedItem{{Name: "m1", ID: "1"}})
 	s := &Session{
-		Scope:    Scope{SiteID: "site-1", SiteName: "Site One"},
+		Scope:    Scope{SiteID: "site-1", SiteName: "Site One", VpcID: "vpc-1"},
 		Cache:    c,
 		Resolver: NewResolver(c),
 	}
 
 	setSiteScopeFromID(s, "site-1")
 
-	if got := c.Get("machine"); got == nil {
-		t.Fatal("expected machine cache to remain when scope site does not change")
-	}
+	assert.NotNil(t, c.Get("machine"), "machine cache should remain when scope site does not change")
+	assert.Equal(t, "vpc-1", s.Scope.VpcID, "VPC scope should remain when site does not change")
 }
 
 // --- Label support tests ---
@@ -409,69 +404,48 @@ func TestExtractLabels(t *testing.T) {
 			"labels": map[string]interface{}{"env": "prod", "rack": "A3"},
 		}
 		got := extractLabels(m)
-		if len(got) != 2 || got["env"] != "prod" || got["rack"] != "A3" {
-			t.Fatalf("unexpected labels: %v", got)
-		}
+		require.Len(t, got, 2)
+		assert.Equal(t, "prod", got["env"])
+		assert.Equal(t, "A3", got["rack"])
 	})
 	t.Run("nil labels", func(t *testing.T) {
 		m := map[string]interface{}{"name": "test"}
-		got := extractLabels(m)
-		if got != nil {
-			t.Fatalf("expected nil, got %v", got)
-		}
+		assert.Nil(t, extractLabels(m))
 	})
 	t.Run("non-string values ignored", func(t *testing.T) {
 		m := map[string]interface{}{
 			"labels": map[string]interface{}{"env": "prod", "count": 42},
 		}
 		got := extractLabels(m)
-		if len(got) != 1 || got["env"] != "prod" {
-			t.Fatalf("expected only string values, got %v", got)
-		}
+		require.Len(t, got, 1)
+		assert.Equal(t, "prod", got["env"])
 	})
 	t.Run("empty map", func(t *testing.T) {
 		m := map[string]interface{}{
 			"labels": map[string]interface{}{},
 		}
-		got := extractLabels(m)
-		if got != nil {
-			t.Fatalf("expected nil for empty map, got %v", got)
-		}
+		assert.Nil(t, extractLabels(m))
 	})
 }
 
 func TestFormatLabels(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
-		if got := formatLabels(nil, 60); got != "" {
-			t.Fatalf("expected empty, got %q", got)
-		}
+		assert.Equal(t, "", formatLabels(nil, 60))
 	})
 	t.Run("single", func(t *testing.T) {
-		got := formatLabels(map[string]string{"env": "prod"}, 60)
-		if got != "env=prod" {
-			t.Fatalf("expected %q, got %q", "env=prod", got)
-		}
+		assert.Equal(t, "env=prod", formatLabels(map[string]string{"env": "prod"}, 60))
 	})
 	t.Run("multiple sorted", func(t *testing.T) {
-		got := formatLabels(map[string]string{"rack": "A3", "env": "prod"}, 60)
-		if got != "env=prod, rack=A3" {
-			t.Fatalf("expected %q, got %q", "env=prod, rack=A3", got)
-		}
+		assert.Equal(t, "env=prod, rack=A3", formatLabels(map[string]string{"rack": "A3", "env": "prod"}, 60))
 	})
 	t.Run("truncation", func(t *testing.T) {
 		got := formatLabels(map[string]string{"env": "production", "rack": "A3"}, 15)
-		if len(got) > 15 {
-			t.Fatalf("expected max 15 chars, got %d: %q", len(got), got)
-		}
-		if !strings.HasSuffix(got, "...") {
-			t.Fatalf("expected truncation suffix, got %q", got)
-		}
+		assert.LessOrEqual(t, len(got), 15)
+		assert.True(t, strings.HasSuffix(got, "..."), "expected truncation suffix, got %q", got)
 	})
 	t.Run("no truncation when fits", func(t *testing.T) {
 		got := formatLabels(map[string]string{"a": "b"}, 60)
-		if strings.HasSuffix(got, "...") {
-			t.Fatalf("should not truncate short label: %q", got)
-		}
+		assert.False(t, strings.HasSuffix(got, "..."), "should not truncate short label: %q", got)
 	})
 }
 
@@ -484,35 +458,25 @@ func TestFilterByLabels(t *testing.T) {
 	}
 
 	t.Run("no filters", func(t *testing.T) {
-		got := filterByLabels(items, nil)
-		if len(got) != 4 {
-			t.Fatalf("expected 4 items, got %d", len(got))
-		}
+		assert.Len(t, filterByLabels(items, nil), 4)
 	})
 	t.Run("single match", func(t *testing.T) {
 		got := filterByLabels(items, map[string]string{"env": "dev"})
-		if len(got) != 1 || got[0].Name != "b" {
-			t.Fatalf("expected [b], got %v", got)
-		}
+		require.Len(t, got, 1)
+		assert.Equal(t, "b", got[0].Name)
 	})
 	t.Run("multi-key AND", func(t *testing.T) {
 		got := filterByLabels(items, map[string]string{"env": "prod", "rack": "A3"})
-		if len(got) != 1 || got[0].Name != "a" {
-			t.Fatalf("expected [a], got %v", got)
-		}
+		require.Len(t, got, 1)
+		assert.Equal(t, "a", got[0].Name)
 	})
 	t.Run("no match", func(t *testing.T) {
-		got := filterByLabels(items, map[string]string{"env": "staging"})
-		if len(got) != 0 {
-			t.Fatalf("expected 0 items, got %d", len(got))
-		}
+		assert.Empty(t, filterByLabels(items, map[string]string{"env": "staging"}))
 	})
 	t.Run("nil labels handled", func(t *testing.T) {
 		got := filterByLabels(items, map[string]string{"env": "prod"})
 		for _, item := range got {
-			if item.Labels == nil {
-				t.Fatal("nil-label item should not pass filter")
-			}
+			assert.NotNil(t, item.Labels, "nil-label item should not pass filter")
 		}
 	})
 }
@@ -525,12 +489,11 @@ func TestSortByLabelKey(t *testing.T) {
 			{Name: "b", Labels: map[string]string{"rack": "B1"}},
 		}
 		sorted := sortByLabelKey(items, "rack")
-		if sorted[0].Name != "a" || sorted[1].Name != "b" || sorted[2].Name != "c" {
-			t.Fatalf("unexpected order: %s %s %s", sorted[0].Name, sorted[1].Name, sorted[2].Name)
-		}
-		if items[0].Name != "c" {
-			t.Fatal("sortByLabelKey must not mutate the original slice")
-		}
+		require.Len(t, sorted, 3)
+		assert.Equal(t, "a", sorted[0].Name)
+		assert.Equal(t, "b", sorted[1].Name)
+		assert.Equal(t, "c", sorted[2].Name)
+		assert.Equal(t, "c", items[0].Name, "sortByLabelKey must not mutate the original slice")
 	})
 	t.Run("missing keys sort last", func(t *testing.T) {
 		items := []NamedItem{
@@ -538,9 +501,8 @@ func TestSortByLabelKey(t *testing.T) {
 			{Name: "has-label", Labels: map[string]string{"rack": "A1"}},
 		}
 		sorted := sortByLabelKey(items, "rack")
-		if sorted[0].Name != "has-label" || sorted[1].Name != "no-label" {
-			t.Fatalf("expected has-label first, got %s %s", sorted[0].Name, sorted[1].Name)
-		}
+		assert.Equal(t, "has-label", sorted[0].Name)
+		assert.Equal(t, "no-label", sorted[1].Name)
 	})
 	t.Run("stable order for equal values", func(t *testing.T) {
 		items := []NamedItem{
@@ -548,93 +510,85 @@ func TestSortByLabelKey(t *testing.T) {
 			{Name: "second", Labels: map[string]string{"rack": "A1"}},
 		}
 		sorted := sortByLabelKey(items, "rack")
-		if sorted[0].Name != "first" || sorted[1].Name != "second" {
-			t.Fatalf("stable sort violated: %s %s", sorted[0].Name, sorted[1].Name)
-		}
+		assert.Equal(t, "first", sorted[0].Name)
+		assert.Equal(t, "second", sorted[1].Name)
 	})
 }
 
 func TestParseLabelArgs(t *testing.T) {
 	t.Run("label and sort-label", func(t *testing.T) {
 		remaining, labels, sortKey, err := parseLabelArgs([]string{"--label", "env=prod", "--sort-label", "rack", "extra"})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if len(remaining) != 1 || remaining[0] != "extra" {
-			t.Fatalf("unexpected remaining: %v", remaining)
-		}
-		if labels["env"] != "prod" {
-			t.Fatalf("expected env=prod, got %v", labels)
-		}
-		if sortKey != "rack" {
-			t.Fatalf("expected sort key rack, got %q", sortKey)
-		}
+		require.NoError(t, err)
+		assert.Equal(t, []string{"extra"}, remaining)
+		assert.Equal(t, "prod", labels["env"])
+		assert.Equal(t, "rack", sortKey)
 	})
 	t.Run("no label args", func(t *testing.T) {
 		remaining, labels, sortKey, err := parseLabelArgs([]string{"foo", "bar"})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if len(remaining) != 2 {
-			t.Fatalf("expected 2 remaining, got %d", len(remaining))
-		}
-		if len(labels) != 0 {
-			t.Fatalf("expected no labels, got %v", labels)
-		}
-		if sortKey != "" {
-			t.Fatalf("expected no sort key, got %q", sortKey)
-		}
+		require.NoError(t, err)
+		assert.Len(t, remaining, 2)
+		assert.Empty(t, labels)
+		assert.Empty(t, sortKey)
 	})
 	t.Run("multiple labels AND", func(t *testing.T) {
 		_, labels, _, err := parseLabelArgs([]string{"--label", "env=prod", "--label", "rack=A3"})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if len(labels) != 2 || labels["env"] != "prod" || labels["rack"] != "A3" {
-			t.Fatalf("expected two labels, got %v", labels)
-		}
+		require.NoError(t, err)
+		require.Len(t, labels, 2)
+		assert.Equal(t, "prod", labels["env"])
+		assert.Equal(t, "A3", labels["rack"])
 	})
 	t.Run("label without equals", func(t *testing.T) {
 		_, _, _, err := parseLabelArgs([]string{"--label", "env"})
-		if err == nil {
-			t.Fatal("expected error for --label without '='")
-		}
+		assert.Error(t, err)
 	})
 	t.Run("dangling sort-label", func(t *testing.T) {
 		_, _, _, err := parseLabelArgs([]string{"--sort-label"})
-		if err == nil {
-			t.Fatal("expected error for dangling --sort-label")
-		}
+		assert.Error(t, err)
 	})
 	t.Run("dangling label flag", func(t *testing.T) {
 		_, _, _, err := parseLabelArgs([]string{"--label"})
-		if err == nil {
-			t.Fatal("expected error for dangling --label")
-		}
+		assert.Error(t, err)
+	})
+	t.Run("conflicting same-key labels", func(t *testing.T) {
+		_, _, _, err := parseLabelArgs([]string{"--label", "env=prod", "--label", "env=dev"})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "conflicting")
+	})
+	t.Run("duplicate same-value labels accepted", func(t *testing.T) {
+		_, labels, _, err := parseLabelArgs([]string{"--label", "env=prod", "--label", "env=prod"})
+		require.NoError(t, err)
+		assert.Equal(t, "prod", labels["env"])
 	})
 }
 
 func TestMergeLabels(t *testing.T) {
 	t.Run("both nil", func(t *testing.T) {
-		if got := mergeLabels(nil, nil); got != nil {
-			t.Fatalf("expected nil, got %v", got)
-		}
+		got, err := mergeLabels(nil, nil)
+		require.NoError(t, err)
+		assert.Nil(t, got)
 	})
-	t.Run("cmd overrides scope", func(t *testing.T) {
+	t.Run("conflicting scope and cmd", func(t *testing.T) {
 		scope := map[string]string{"env": "dev"}
 		cmd := map[string]string{"env": "prod"}
-		got := mergeLabels(scope, cmd)
-		if got["env"] != "prod" {
-			t.Fatalf("expected cmd to override scope, got %v", got)
-		}
+		_, err := mergeLabels(scope, cmd)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "conflicts")
+	})
+	t.Run("same value allowed", func(t *testing.T) {
+		scope := map[string]string{"env": "prod"}
+		cmd := map[string]string{"env": "prod"}
+		got, err := mergeLabels(scope, cmd)
+		require.NoError(t, err)
+		assert.Equal(t, "prod", got["env"])
 	})
 	t.Run("combines unique keys", func(t *testing.T) {
 		scope := map[string]string{"env": "prod"}
 		cmd := map[string]string{"rack": "A3"}
-		got := mergeLabels(scope, cmd)
-		if len(got) != 2 || got["env"] != "prod" || got["rack"] != "A3" {
-			t.Fatalf("expected merged labels, got %v", got)
-		}
+		got, err := mergeLabels(scope, cmd)
+		require.NoError(t, err)
+		require.Len(t, got, 2)
+		assert.Equal(t, "prod", got["env"])
+		assert.Equal(t, "A3", got["rack"])
 	})
 }
 
@@ -642,9 +596,7 @@ func TestInvalidateFilteredIncludesInstanceType(t *testing.T) {
 	c := NewCache()
 	c.Set("instance-type", []NamedItem{{Name: "it1", ID: "1"}})
 	c.InvalidateFiltered()
-	if got := c.Get("instance-type"); got != nil {
-		t.Fatal("expected instance-type cache to be invalidated by InvalidateFiltered")
-	}
+	assert.Nil(t, c.Get("instance-type"), "instance-type cache should be invalidated by InvalidateFiltered")
 }
 
 func TestAppendScopeFlagsIncludesInstanceType(t *testing.T) {
@@ -654,9 +606,32 @@ func TestAppendScopeFlagsIncludesInstanceType(t *testing.T) {
 	}
 	s.Resolver = NewResolver(s.Cache)
 	got := appendScopeFlags(s, []string{"instance-type", "list"})
-	if !contains(got, "--site-id") {
-		t.Fatal("expected instance-type to receive --site-id scope flag")
+	assert.True(t, contains(got, "--site-id"), "instance-type should receive --site-id scope flag")
+}
+
+func TestVPCFilteringDoesNotMutateCachedSlice(t *testing.T) {
+	original := []NamedItem{
+		{Name: "m1", ID: "1"},
+		{Name: "m2", ID: "2"},
+		{Name: "m3", ID: "3"},
 	}
+	cached := make([]NamedItem, len(original))
+	copy(cached, original)
+
+	vpcMembers := map[string]string{"1": "vpc-a"}
+	filtered := make([]NamedItem, 0, len(cached))
+	for _, item := range cached {
+		if _, ok := vpcMembers[item.ID]; ok {
+			filtered = append(filtered, item)
+		}
+	}
+
+	require.Len(t, filtered, 1)
+	assert.Equal(t, "m1", filtered[0].Name)
+	require.Len(t, cached, 3, "cached slice must not be truncated by filtering")
+	assert.Equal(t, "m1", cached[0].Name)
+	assert.Equal(t, "m2", cached[1].Name)
+	assert.Equal(t, "m3", cached[2].Name)
 }
 
 // --- Helpers ---

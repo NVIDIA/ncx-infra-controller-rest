@@ -222,6 +222,8 @@ func setSiteScopeFromID(s *Session, siteID string) {
 	}
 	s.Scope.SiteID = siteID
 	s.Scope.SiteName = s.Resolver.ResolveID("site", siteID)
+	s.Scope.VpcID = ""
+	s.Scope.VpcName = ""
 	s.Cache.InvalidateFiltered()
 }
 
@@ -471,7 +473,11 @@ func cmdVPCList(s *Session, args []string) error {
 	if err != nil {
 		return err
 	}
-	items = filterByLabels(items, mergeLabels(s.Scope.LabelFilters, cmdLabels))
+	merged, mergeErr := mergeLabels(s.Scope.LabelFilters, cmdLabels)
+	if mergeErr != nil {
+		return mergeErr
+	}
+	items = filterByLabels(items, merged)
 	if sortKey != "" {
 		items = sortByLabelKey(items, sortKey)
 	}
@@ -778,7 +784,11 @@ func cmdInstanceTypeList(s *Session, args []string) error {
 	if err != nil {
 		return err
 	}
-	items = filterByLabels(items, mergeLabels(s.Scope.LabelFilters, cmdLabels))
+	merged, mergeErr := mergeLabels(s.Scope.LabelFilters, cmdLabels)
+	if mergeErr != nil {
+		return mergeErr
+	}
+	items = filterByLabels(items, merged)
 	if sortKey != "" {
 		items = sortByLabelKey(items, sortKey)
 	}
@@ -812,7 +822,11 @@ func cmdInstanceList(s *Session, args []string) error {
 	if err != nil {
 		return err
 	}
-	items = filterByLabels(items, mergeLabels(s.Scope.LabelFilters, cmdLabels))
+	merged, mergeErr := mergeLabels(s.Scope.LabelFilters, cmdLabels)
+	if mergeErr != nil {
+		return mergeErr
+	}
+	items = filterByLabels(items, merged)
 	if sortKey != "" {
 		items = sortByLabelKey(items, sortKey)
 	}
@@ -838,7 +852,7 @@ func cmdMachineList(s *Session, args []string) error {
 	vpcNamesByMachineID := s.buildMachineVPCNames(context.Background())
 
 	if s.Scope.VpcID != "" {
-		filtered := items[:0]
+		filtered := make([]NamedItem, 0, len(items))
 		for _, item := range items {
 			if _, ok := vpcNamesByMachineID[item.ID]; ok {
 				filtered = append(filtered, item)
@@ -851,7 +865,11 @@ func cmdMachineList(s *Session, args []string) error {
 	if err != nil {
 		return err
 	}
-	items = filterByLabels(items, mergeLabels(s.Scope.LabelFilters, cmdLabels))
+	merged, mergeErr := mergeLabels(s.Scope.LabelFilters, cmdLabels)
+	if mergeErr != nil {
+		return mergeErr
+	}
+	items = filterByLabels(items, merged)
 	if sortKey != "" {
 		items = sortByLabelKey(items, sortKey)
 	}
@@ -1489,7 +1507,11 @@ func cmdNSGList(s *Session, args []string) error {
 	if err != nil {
 		return err
 	}
-	items = filterByLabels(items, mergeLabels(s.Scope.LabelFilters, cmdLabels))
+	merged, mergeErr := mergeLabels(s.Scope.LabelFilters, cmdLabels)
+	if mergeErr != nil {
+		return mergeErr
+	}
+	items = filterByLabels(items, merged)
 	if sortKey != "" {
 		items = sortByLabelKey(items, sortKey)
 	}
@@ -1822,7 +1844,11 @@ func cmdExpectedMachineList(s *Session, args []string) error {
 	if err != nil {
 		return err
 	}
-	items = filterByLabels(items, mergeLabels(s.Scope.LabelFilters, cmdLabels))
+	merged, mergeErr := mergeLabels(s.Scope.LabelFilters, cmdLabels)
+	if mergeErr != nil {
+		return mergeErr
+	}
+	items = filterByLabels(items, merged)
 	if sortKey != "" {
 		items = sortByLabelKey(items, sortKey)
 	}
@@ -1845,7 +1871,11 @@ func cmdInfiniBandPartitionList(s *Session, args []string) error {
 	if err != nil {
 		return err
 	}
-	items = filterByLabels(items, mergeLabels(s.Scope.LabelFilters, cmdLabels))
+	merged, mergeErr := mergeLabels(s.Scope.LabelFilters, cmdLabels)
+	if mergeErr != nil {
+		return mergeErr
+	}
+	items = filterByLabels(items, merged)
 	if sortKey != "" {
 		items = sortByLabelKey(items, sortKey)
 	}
@@ -2430,6 +2460,9 @@ func parseLabelArgs(args []string) (remaining []string, labels map[string]string
 			}
 			i++
 			if k, v, ok := strings.Cut(args[i], "="); ok {
+				if prev, exists := labels[k]; exists && prev != v {
+					return nil, nil, "", fmt.Errorf("conflicting --label filters for %q", k)
+				}
 				labels[k] = v
 			} else {
 				return nil, nil, "", fmt.Errorf("--label value %q must contain '='", args[i])
@@ -2448,18 +2481,22 @@ func parseLabelArgs(args []string) (remaining []string, labels map[string]string
 }
 
 // mergeLabels combines scope label filters with per-command label filters.
-func mergeLabels(scope, cmd map[string]string) map[string]string {
+// Returns an error if a command-level label conflicts with a scope label.
+func mergeLabels(scope, cmd map[string]string) (map[string]string, error) {
 	if len(scope) == 0 && len(cmd) == 0 {
-		return nil
+		return nil, nil
 	}
 	merged := make(map[string]string, len(scope)+len(cmd))
 	for k, v := range scope {
 		merged[k] = v
 	}
 	for k, v := range cmd {
+		if prev, exists := merged[k]; exists && prev != v {
+			return nil, fmt.Errorf("--label %s=%s conflicts with scope label %s=%s", k, v, k, prev)
+		}
 		merged[k] = v
 	}
-	return merged
+	return merged, nil
 }
 
 func printResourceTable(w io.Writer, col1, col2, col3 string, items []NamedItem) error {
