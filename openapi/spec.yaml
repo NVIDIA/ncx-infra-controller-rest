@@ -18613,7 +18613,7 @@ components:
           type: string
           enum:
             - Public
-            - Datacenter Only
+            - DatacenterOnly
         prefix:
           type: string
           description: Either IPv4 or IPv6 address
