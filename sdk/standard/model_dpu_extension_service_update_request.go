@@ -27,6 +27,8 @@ type DpuExtensionServiceUpdateRequest struct {
 	Data *string `json:"data,omitempty"`
 	// Credentials to download resources specified in DPU Extension Service data
 	Credentials *DpuExtensionServiceCredentials `json:"credentials,omitempty"`
+	// Observability configuration for the DPU Extension Service version
+	Observability *DpuExtensionServiceObservability `json:"observability,omitempty"`
 }
 
 // NewDpuExtensionServiceUpdateRequest instantiates a new DpuExtensionServiceUpdateRequest object
@@ -174,6 +176,38 @@ func (o *DpuExtensionServiceUpdateRequest) SetCredentials(v DpuExtensionServiceC
 	o.Credentials = &v
 }
 
+// GetObservability returns the Observability field value if set, zero value otherwise.
+func (o *DpuExtensionServiceUpdateRequest) GetObservability() DpuExtensionServiceObservability {
+	if o == nil || IsNil(o.Observability) {
+		var ret DpuExtensionServiceObservability
+		return ret
+	}
+	return *o.Observability
+}
+
+// GetObservabilityOk returns a tuple with the Observability field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *DpuExtensionServiceUpdateRequest) GetObservabilityOk() (*DpuExtensionServiceObservability, bool) {
+	if o == nil || IsNil(o.Observability) {
+		return nil, false
+	}
+	return o.Observability, true
+}
+
+// HasObservability returns a boolean if a field has been set.
+func (o *DpuExtensionServiceUpdateRequest) HasObservability() bool {
+	if o != nil && !IsNil(o.Observability) {
+		return true
+	}
+
+	return false
+}
+
+// SetObservability gets a reference to the given DpuExtensionServiceObservability and assigns it to the Observability field.
+func (o *DpuExtensionServiceUpdateRequest) SetObservability(v DpuExtensionServiceObservability) {
+	o.Observability = &v
+}
+
 func (o DpuExtensionServiceUpdateRequest) MarshalJSON() ([]byte, error) {
 	toSerialize, err := o.ToMap()
 	if err != nil {
@@ -195,6 +229,9 @@ func (o DpuExtensionServiceUpdateRequest) ToMap() (map[string]interface{}, error
 	}
 	if !IsNil(o.Credentials) {
 		toSerialize["credentials"] = o.Credentials
+	}
+	if !IsNil(o.Observability) {
+		toSerialize["observability"] = o.Observability
 	}
 	return toSerialize, nil
 }
