@@ -20,6 +20,8 @@ package psmapi
 import (
 	"context"
 	"time"
+
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/common/utils"
 )
 
 type mockClient struct {
@@ -35,18 +37,16 @@ func (c *mockClient) Close() error {
 	return nil
 }
 
-func (c *mockClient) GetPowershelves(ctx context.Context, pmcMacs []string) ([]PowerShelf, error) {
+func (c *mockClient) GetPowershelves(_ context.Context, pmcMacs []string) ([]PowerShelf, error) {
 	var result []PowerShelf
 
 	if len(pmcMacs) == 0 {
-		// Return all powershelves
 		for _, ps := range c.powershelves {
 			result = append(result, ps)
 		}
 	} else {
-		// Return only requested powershelves
 		for _, mac := range pmcMacs {
-			if ps, ok := c.powershelves[mac]; ok {
+			if ps, ok := c.powershelves[utils.NormalizeMAC(mac)]; ok {
 				result = append(result, ps)
 			}
 		}
@@ -55,15 +55,16 @@ func (c *mockClient) GetPowershelves(ctx context.Context, pmcMacs []string) ([]P
 	return result, nil
 }
 
-func (c *mockClient) RegisterPowershelves(ctx context.Context, requests []RegisterPowershelfRequest) ([]RegisterPowershelfResponse, error) {
+func (c *mockClient) RegisterPowershelves(_ context.Context, requests []RegisterPowershelfRequest) ([]RegisterPowershelfResponse, error) {
 	var result []RegisterPowershelfResponse
 
 	for _, req := range requests {
-		_, exists := c.powershelves[req.PMCMACAddress]
+		key := utils.NormalizeMAC(req.PMCMACAddress)
+		_, exists := c.powershelves[key]
 		isNew := !exists
 
 		if isNew {
-			c.powershelves[req.PMCMACAddress] = PowerShelf{
+			c.powershelves[key] = PowerShelf{
 				PMC: PowerManagementController{
 					MACAddress: req.PMCMACAddress,
 					IPAddress:  req.PMCIPAddress,
@@ -159,5 +160,5 @@ func (c *mockClient) SetDryRun(ctx context.Context, dryRun bool) error {
 }
 
 func (c *mockClient) AddPowershelf(ps PowerShelf) {
-	c.powershelves[ps.PMC.MACAddress] = ps
+	c.powershelves[utils.NormalizeMAC(ps.PMC.MACAddress)] = ps
 }
