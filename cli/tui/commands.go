@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
 	"strings"
 	"text/tabwriter"
 )
@@ -39,41 +40,69 @@ func AllCommands() []Command {
 	return []Command{
 		{Name: "site list", Description: "List all sites", Run: cmdSiteList},
 		{Name: "site get", Description: "Get site details", Run: cmdSiteGet},
+		{Name: "site create", Description: "Create a site", Run: cmdSiteCreate},
+		{Name: "site update", Description: "Update a site", Run: cmdSiteUpdate},
+		{Name: "site delete", Description: "Delete a site", Run: cmdSiteDelete},
 
 		{Name: "vpc list", Description: "List all VPCs", Run: cmdVPCList},
 		{Name: "vpc get", Description: "Get VPC details", Run: cmdVPCGet},
 		{Name: "vpc create", Description: "Create a VPC", Run: cmdVPCCreate},
+		{Name: "vpc update", Description: "Update a VPC", Run: cmdVPCUpdate},
+		{Name: "vpc virtualization update", Description: "Update VPC virtualization", Run: cmdVPCVirtualizationUpdate},
 		{Name: "vpc delete", Description: "Delete a VPC", Run: cmdVPCDelete},
 
 		{Name: "subnet list", Description: "List all subnets", Run: cmdSubnetList},
 		{Name: "subnet get", Description: "Get subnet details", Run: cmdSubnetGet},
+		{Name: "subnet create", Description: "Create a subnet", Run: cmdSubnetCreate},
+		{Name: "subnet update", Description: "Update a subnet", Run: cmdSubnetUpdate},
+		{Name: "subnet delete", Description: "Delete a subnet", Run: cmdSubnetDelete},
+
+		{Name: "instance-type list", Description: "List instance types", Run: cmdInstanceTypeList},
+		{Name: "instance-type get", Description: "Get instance type details", Run: cmdInstanceTypeGet},
 
 		{Name: "instance list", Description: "List all instances", Run: cmdInstanceList},
 		{Name: "instance get", Description: "Get instance details", Run: cmdInstanceGet},
+		{Name: "instance create", Description: "Create an instance", Run: cmdInstanceCreate},
+		{Name: "instance delete", Description: "Delete an instance", Run: cmdInstanceDelete},
 
 		{Name: "machine list", Description: "List machines", Run: cmdMachineList},
 		{Name: "machine get", Description: "Get machine details", Run: cmdMachineGet},
 
 		{Name: "operating-system list", Description: "List operating systems", Run: cmdOSList},
 		{Name: "operating-system get", Description: "Get operating system details", Run: cmdOSGet},
+		{Name: "operating-system create", Description: "Create an operating system", Run: cmdOSCreate},
+		{Name: "operating-system update", Description: "Update an operating system", Run: cmdOSUpdate},
+		{Name: "operating-system delete", Description: "Delete an operating system", Run: cmdOSDelete},
 
 		{Name: "ssh-key-group list", Description: "List SSH key groups", Run: cmdSSHKeyGroupList},
 		{Name: "ssh-key-group get", Description: "Get SSH key group details", Run: cmdSSHKeyGroupGet},
+		{Name: "ssh-key-group create", Description: "Create an SSH key group", Run: cmdSSHKeyGroupCreate},
+		{Name: "ssh-key-group update", Description: "Update an SSH key group", Run: cmdSSHKeyGroupUpdate},
+		{Name: "ssh-key-group delete", Description: "Delete an SSH key group", Run: cmdSSHKeyGroupDelete},
 
 		{Name: "ssh-key list", Description: "List SSH keys", Run: cmdSSHKeyList},
 		{Name: "ssh-key get", Description: "Get SSH key details", Run: cmdSSHKeyGet},
+		{Name: "ssh-key create", Description: "Create an SSH key", Run: cmdSSHKeyCreate},
+		{Name: "ssh-key update", Description: "Update an SSH key", Run: cmdSSHKeyUpdate},
+		{Name: "ssh-key delete", Description: "Delete an SSH key", Run: cmdSSHKeyDelete},
 
 		{Name: "allocation list", Description: "List allocations", Run: cmdAllocationList},
 		{Name: "allocation get", Description: "Get allocation details", Run: cmdAllocationGet},
+		{Name: "allocation create", Description: "Create an allocation", Run: cmdAllocationCreate},
+		{Name: "allocation update", Description: "Update an allocation", Run: cmdAllocationUpdate},
 		{Name: "allocation delete", Description: "Delete an allocation", Run: cmdAllocationDelete},
 
 		{Name: "ip-block list", Description: "List IP blocks", Run: cmdIPBlockList},
 		{Name: "ip-block get", Description: "Get IP block details", Run: cmdIPBlockGet},
 		{Name: "ip-block create", Description: "Create an IP block", Run: cmdIPBlockCreate},
+		{Name: "ip-block update", Description: "Update an IP block", Run: cmdIPBlockUpdate},
 		{Name: "ip-block delete", Description: "Delete an IP block", Run: cmdIPBlockDelete},
 
 		{Name: "network-security-group list", Description: "List network security groups", Run: cmdNSGList},
 		{Name: "network-security-group get", Description: "Get network security group details", Run: cmdNSGGet},
+		{Name: "network-security-group create", Description: "Create a network security group", Run: cmdNSGCreate},
+		{Name: "network-security-group update", Description: "Update a network security group", Run: cmdNSGUpdate},
+		{Name: "network-security-group delete", Description: "Delete a network security group", Run: cmdNSGDelete},
 
 		{Name: "sku list", Description: "List SKUs", Run: cmdSKUList},
 		{Name: "sku get", Description: "Get SKU details", Run: cmdSKUGet},
@@ -83,9 +112,15 @@ func AllCommands() []Command {
 
 		{Name: "vpc-prefix list", Description: "List VPC prefixes", Run: cmdVPCPrefixList},
 		{Name: "vpc-prefix get", Description: "Get VPC prefix details", Run: cmdVPCPrefixGet},
+		{Name: "vpc-prefix create", Description: "Create a VPC prefix", Run: cmdVPCPrefixCreate},
+		{Name: "vpc-prefix update", Description: "Update a VPC prefix", Run: cmdVPCPrefixUpdate},
+		{Name: "vpc-prefix delete", Description: "Delete a VPC prefix", Run: cmdVPCPrefixDelete},
 
 		{Name: "tenant-account list", Description: "List tenant accounts", Run: cmdTenantAccountList},
 		{Name: "tenant-account get", Description: "Get tenant account details", Run: cmdTenantAccountGet},
+		{Name: "tenant-account create", Description: "Create a tenant account", Run: cmdTenantAccountCreate},
+		{Name: "tenant-account update", Description: "Update a tenant account", Run: cmdTenantAccountUpdate},
+		{Name: "tenant-account delete", Description: "Delete a tenant account", Run: cmdTenantAccountDelete},
 
 		{Name: "expected-machine list", Description: "List expected machines", Run: cmdExpectedMachineList},
 		{Name: "expected-machine get", Description: "Get expected machine details", Run: cmdExpectedMachineGet},
@@ -138,7 +173,7 @@ func appendScopeFlags(s *Session, parts []string) []string {
 	scopeVpcID := strings.TrimSpace(s.Scope.VpcID)
 	switch resource {
 	case "vpc", "allocation", "ip-block", "operating-system", "ssh-key-group",
-		"network-security-group", "sku", "rack", "expected-machine",
+		"network-security-group", "sku", "rack", "expected-machine", "instance-type",
 		"dpu-extension-service", "infiniband-partition", "nvlink-logical-partition":
 		if scopeSiteID != "" {
 			out = append(out, "--site-id", scopeSiteID)
@@ -154,6 +189,58 @@ func appendScopeFlags(s *Session, parts []string) []string {
 	return out
 }
 
+func fetchMachinesWithSiteFallback(s *Session, missingSitePrompt string) ([]NamedItem, error) {
+	items, err := s.Resolver.Fetch(context.Background(), "machine")
+	if err == nil {
+		return items, nil
+	}
+	if s.Scope.SiteID == "" && strings.Contains(err.Error(), "400") {
+		fmt.Printf("%s %s\n", Dim("Note:"), missingSitePrompt)
+		site, resolveErr := s.Resolver.Resolve(context.Background(), "site", "Site")
+		if resolveErr != nil {
+			return nil, resolveErr
+		}
+		s.Scope.SiteID = site.ID
+		s.Scope.SiteName = site.Name
+
+		savedVpcID, savedVpcName := s.Scope.VpcID, s.Scope.VpcName
+		s.Scope.VpcID = ""
+		s.Scope.VpcName = ""
+		s.Cache.InvalidateFiltered()
+		items, err = s.Resolver.Fetch(context.Background(), "machine")
+		s.Scope.VpcID = savedVpcID
+		s.Scope.VpcName = savedVpcName
+		return items, err
+	}
+	return nil, err
+}
+
+func setSiteScopeFromID(s *Session, siteID string) {
+	siteID = strings.TrimSpace(siteID)
+	if siteID == "" || s.Scope.SiteID == siteID {
+		return
+	}
+	s.Scope.SiteID = siteID
+	s.Scope.SiteName = s.Resolver.ResolveID("site", siteID)
+	s.Scope.VpcID = ""
+	s.Scope.VpcName = ""
+	s.Cache.InvalidateFiltered()
+}
+
+func readyMachineItemsForSite(machines []NamedItem, siteID string) []SelectItem {
+	siteID = strings.TrimSpace(siteID)
+	readyItems := make([]SelectItem, 0, len(machines))
+	for _, m := range machines {
+		if siteID != "" && strings.TrimSpace(m.Extra["siteId"]) != siteID {
+			continue
+		}
+		if strings.EqualFold(strings.TrimSpace(m.Status), "Ready") {
+			readyItems = append(readyItems, SelectItem{Label: m.Name, ID: m.ID})
+		}
+	}
+	return readyItems
+}
+
 // -- List commands --
 
 func cmdSiteList(s *Session, _ []string) error {
@@ -165,11 +252,234 @@ func cmdSiteList(s *Session, _ []string) error {
 	return printResourceTable(os.Stdout, "NAME", "STATUS", "ID", items)
 }
 
-func cmdVPCList(s *Session, _ []string) error {
+func cmdSiteCreate(s *Session, _ []string) error {
+	name, err := PromptText("Site name", true)
+	if err != nil {
+		return err
+	}
+	desc, err := PromptText("Description (optional)", false)
+	if err != nil {
+		return err
+	}
+	serialConsoleHostname, err := PromptText("Serial console hostname (optional)", false)
+	if err != nil {
+		return err
+	}
+	city, err := PromptText("Location city (optional)", false)
+	if err != nil {
+		return err
+	}
+	state, err := PromptText("Location state (optional)", false)
+	if err != nil {
+		return err
+	}
+	country, err := PromptText("Location country (optional)", false)
+	if err != nil {
+		return err
+	}
+	contactEmail, err := PromptText("Contact email (optional)", false)
+	if err != nil {
+		return err
+	}
+
+	body := map[string]interface{}{
+		"name": name,
+	}
+	if strings.TrimSpace(desc) != "" {
+		body["description"] = strings.TrimSpace(desc)
+	}
+	if strings.TrimSpace(serialConsoleHostname) != "" {
+		body["serialConsoleHostname"] = strings.TrimSpace(serialConsoleHostname)
+	}
+	location := map[string]interface{}{}
+	if strings.TrimSpace(city) != "" {
+		location["city"] = strings.TrimSpace(city)
+	}
+	if strings.TrimSpace(state) != "" {
+		location["state"] = strings.TrimSpace(state)
+	}
+	if strings.TrimSpace(country) != "" {
+		location["country"] = strings.TrimSpace(country)
+	}
+	if len(location) > 0 {
+		body["location"] = location
+	}
+	if strings.TrimSpace(contactEmail) != "" {
+		body["contact"] = map[string]interface{}{"email": strings.TrimSpace(contactEmail)}
+	}
+
+	LogCmd(s, "site", "create", "--name", name)
+	bodyJSON, _ := json.Marshal(body)
+	resp, _, err := s.Client.Do("POST", "/v2/org/{org}/carbide/site", nil, nil, bodyJSON)
+	if err != nil {
+		return fmt.Errorf("creating site: %w", err)
+	}
+	s.Cache.Invalidate("site")
+	s.Cache.InvalidateFiltered()
+	var created map[string]interface{}
+	json.Unmarshal(resp, &created)
+	fmt.Printf("%s Site created: %s (%s)\n", Green("OK"), str(created, "name"), str(created, "id"))
+	return nil
+}
+
+func cmdSiteUpdate(s *Session, args []string) error {
+	item, err := s.Resolver.ResolveWithArgs(context.Background(), "site", "Site to update", args)
+	if err != nil {
+		return err
+	}
+	name, err := PromptText("Site name (optional)", false)
+	if err != nil {
+		return err
+	}
+	desc, err := PromptText("Description (optional)", false)
+	if err != nil {
+		return err
+	}
+	serialConsoleHostname, err := PromptText("Serial console hostname (optional)", false)
+	if err != nil {
+		return err
+	}
+	renewTokenText, err := PromptText("Renew registration token? (true/false, blank to keep)", false)
+	if err != nil {
+		return err
+	}
+	serialEnabledText, err := PromptText("Serial console enabled? (true/false, blank to keep)", false)
+	if err != nil {
+		return err
+	}
+	sshKeysEnabledText, err := PromptText("Serial console SSH keys enabled? (true/false, blank to keep)", false)
+	if err != nil {
+		return err
+	}
+	idleTimeoutText, err := PromptText("Serial console idle timeout seconds (optional)", false)
+	if err != nil {
+		return err
+	}
+	maxSessionText, err := PromptText("Serial console max session length seconds (optional)", false)
+	if err != nil {
+		return err
+	}
+	city, err := PromptText("Location city (optional)", false)
+	if err != nil {
+		return err
+	}
+	state, err := PromptText("Location state (optional)", false)
+	if err != nil {
+		return err
+	}
+	country, err := PromptText("Location country (optional)", false)
+	if err != nil {
+		return err
+	}
+	contactEmail, err := PromptText("Contact email (optional)", false)
+	if err != nil {
+		return err
+	}
+
+	body := map[string]interface{}{}
+	if strings.TrimSpace(name) != "" {
+		body["name"] = strings.TrimSpace(name)
+	}
+	if strings.TrimSpace(desc) != "" {
+		body["description"] = strings.TrimSpace(desc)
+	}
+	if strings.TrimSpace(serialConsoleHostname) != "" {
+		body["serialConsoleHostname"] = strings.TrimSpace(serialConsoleHostname)
+	}
+	if v, ok := parseOptionalBool(renewTokenText); ok {
+		body["renewRegistrationToken"] = v
+	}
+	if v, ok := parseOptionalBool(serialEnabledText); ok {
+		body["isSerialConsoleEnabled"] = v
+	}
+	if v, ok := parseOptionalBool(sshKeysEnabledText); ok {
+		body["isSerialConsoleSSHKeysEnabled"] = v
+	}
+	if v, ok := parseOptionalInt(idleTimeoutText); ok {
+		body["serialConsoleIdleTimeout"] = v
+	}
+	if v, ok := parseOptionalInt(maxSessionText); ok {
+		body["serialConsoleMaxSessionLength"] = v
+	}
+	location := map[string]interface{}{}
+	if strings.TrimSpace(city) != "" {
+		location["city"] = strings.TrimSpace(city)
+	}
+	if strings.TrimSpace(state) != "" {
+		location["state"] = strings.TrimSpace(state)
+	}
+	if strings.TrimSpace(country) != "" {
+		location["country"] = strings.TrimSpace(country)
+	}
+	if len(location) > 0 {
+		body["location"] = location
+	}
+	if strings.TrimSpace(contactEmail) != "" {
+		body["contact"] = map[string]interface{}{"email": strings.TrimSpace(contactEmail)}
+	}
+	if len(body) == 0 {
+		return fmt.Errorf("no updates provided")
+	}
+
+	LogCmd(s, "site", "update", item.ID)
+	bodyJSON, _ := json.Marshal(body)
+	resp, _, err := s.Client.Do("PATCH", "/v2/org/{org}/carbide/site/{id}", map[string]string{"id": item.ID}, nil, bodyJSON)
+	if err != nil {
+		return fmt.Errorf("updating site: %w", err)
+	}
+	s.Cache.Invalidate("site")
+	s.Cache.InvalidateFiltered()
+	var updated map[string]interface{}
+	json.Unmarshal(resp, &updated)
+	fmt.Printf("%s Site updated: %s (%s)\n", Green("OK"), str(updated, "name"), str(updated, "id"))
+	return nil
+}
+
+func cmdSiteDelete(s *Session, args []string) error {
+	item, err := s.Resolver.ResolveWithArgs(context.Background(), "site", "Site to delete", args)
+	if err != nil {
+		return err
+	}
+	ok, err := PromptConfirm(fmt.Sprintf("Delete site %s (%s)?", item.Name, item.ID))
+	if err != nil || !ok {
+		return err
+	}
+	purgeMachines, err := PromptConfirm("Purge machine data as part of delete?")
+	if err != nil {
+		return err
+	}
+	query := map[string]string{}
+	if purgeMachines {
+		query["purgeMachines"] = "true"
+	}
+	LogCmd(s, "site", "delete", item.ID)
+	_, _, err = s.Client.Do("DELETE", "/v2/org/{org}/carbide/site/{id}", map[string]string{"id": item.ID}, query, nil)
+	if err != nil {
+		return fmt.Errorf("deleting site: %w", err)
+	}
+	s.Cache.Invalidate("site")
+	s.Cache.InvalidateFiltered()
+	fmt.Printf("%s Site delete requested: %s\n", Green("OK"), item.Name)
+	return nil
+}
+
+func cmdVPCList(s *Session, args []string) error {
 	LogCmd(s, "vpc", "list")
 	items, err := s.Resolver.Fetch(context.Background(), "vpc")
 	if err != nil {
 		return err
+	}
+	_, cmdLabels, sortKey, err := parseLabelArgs(args)
+	if err != nil {
+		return err
+	}
+	merged, mergeErr := mergeLabels(s.Scope.LabelFilters, cmdLabels)
+	if mergeErr != nil {
+		return mergeErr
+	}
+	items = filterByLabels(items, merged)
+	if sortKey != "" {
+		items = sortByLabelKey(items, sortKey)
 	}
 	siteNameByID := map[string]string{}
 	if sites, err := s.Resolver.Fetch(context.Background(), "site"); err == nil {
@@ -179,14 +489,14 @@ func cmdVPCList(s *Session, _ []string) error {
 	}
 	fmt.Fprintf(os.Stderr, "%d items\n", len(items))
 	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
-	fmt.Fprintln(tw, "NAME\tSTATUS\tSITE\tID")
+	fmt.Fprintln(tw, "NAME\tSTATUS\tSITE\tLABELS\tID")
 	for _, item := range items {
 		siteID := item.Extra["siteId"]
 		siteName := strings.TrimSpace(siteNameByID[siteID])
 		if siteName == "" {
 			siteName = siteID
 		}
-		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", item.Name, item.Status, siteName, item.ID)
+		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n", item.Name, item.Status, siteName, formatLabels(item.Labels, 60), item.ID)
 	}
 	return tw.Flush()
 }
@@ -218,6 +528,86 @@ func cmdVPCCreate(s *Session, _ []string) error {
 	var created map[string]interface{}
 	json.Unmarshal(resp, &created)
 	fmt.Printf("%s VPC created: %s (%s)\n", Green("OK"), str(created, "name"), str(created, "id"))
+	return nil
+}
+
+func cmdVPCUpdate(s *Session, args []string) error {
+	vpc, err := s.Resolver.ResolveWithArgs(context.Background(), "vpc", "VPC to update", args)
+	if err != nil {
+		return err
+	}
+	name, err := PromptText("VPC name (optional)", false)
+	if err != nil {
+		return err
+	}
+	desc, err := PromptText("Description (optional)", false)
+	if err != nil {
+		return err
+	}
+	body := map[string]interface{}{}
+	if strings.TrimSpace(name) != "" {
+		body["name"] = strings.TrimSpace(name)
+	}
+	if strings.TrimSpace(desc) != "" {
+		body["description"] = strings.TrimSpace(desc)
+	}
+	if len(body) == 0 {
+		return fmt.Errorf("no updates provided")
+	}
+	LogCmd(s, "vpc", "update", vpc.ID)
+	bodyJSON, _ := json.Marshal(body)
+	resp, _, err := s.Client.Do("PATCH", "/v2/org/{org}/carbide/vpc/{id}", map[string]string{"id": vpc.ID}, nil, bodyJSON)
+	if err != nil {
+		return fmt.Errorf("updating VPC: %w", err)
+	}
+	s.Cache.Invalidate("vpc")
+	s.Cache.InvalidateFiltered()
+	var updated map[string]interface{}
+	json.Unmarshal(resp, &updated)
+	fmt.Printf("%s VPC updated: %s (%s)\n", Green("OK"), str(updated, "name"), str(updated, "id"))
+	return nil
+}
+
+func cmdVPCVirtualizationUpdate(s *Session, args []string) error {
+	vpc, err := s.Resolver.ResolveWithArgs(context.Background(), "vpc", "VPC to update virtualization", args)
+	if err != nil {
+		return err
+	}
+	virtType, err := PromptText("Network virtualization type (ETHERNET_VIRTUALIZER or FNN)", true)
+	if err != nil {
+		return err
+	}
+	virtType = strings.ToUpper(strings.TrimSpace(virtType))
+	if virtType != "ETHERNET_VIRTUALIZER" && virtType != "FNN" {
+		return fmt.Errorf("network virtualization type must be ETHERNET_VIRTUALIZER or FNN")
+	}
+	body := map[string]interface{}{
+		"networkVirtualizationType": virtType,
+	}
+	if virtType == "FNN" {
+		useNVLink, err := PromptConfirm("Select NVLink logical partition?")
+		if err != nil {
+			return err
+		}
+		if useNVLink {
+			item, err := s.Resolver.Resolve(context.Background(), "nvlink-logical-partition", "NVLink Logical Partition")
+			if err != nil {
+				return err
+			}
+			body["nvLinkLogicalPartitionId"] = item.ID
+		}
+	}
+	LogCmd(s, "vpc", "virtualization", "update", vpc.ID, "--network-virtualization-type", virtType)
+	bodyJSON, _ := json.Marshal(body)
+	resp, _, err := s.Client.Do("PATCH", "/v2/org/{org}/carbide/vpc/{id}/virtualization", map[string]string{"id": vpc.ID}, nil, bodyJSON)
+	if err != nil {
+		return fmt.Errorf("updating VPC virtualization: %w", err)
+	}
+	s.Cache.Invalidate("vpc")
+	s.Cache.InvalidateFiltered()
+	var updated map[string]interface{}
+	json.Unmarshal(resp, &updated)
+	fmt.Printf("%s VPC virtualization update submitted: %s (%s)\n", Green("OK"), str(updated, "name"), str(updated, "id"))
 	return nil
 }
 
@@ -256,54 +646,213 @@ func cmdSubnetList(s *Session, _ []string) error {
 	return tw.Flush()
 }
 
-func cmdInstanceList(s *Session, _ []string) error {
+func cmdSubnetCreate(s *Session, _ []string) error {
+	vpc, err := s.Resolver.Resolve(context.Background(), "vpc", "VPC")
+	if err != nil {
+		return err
+	}
+	vpcSiteID := strings.TrimSpace(vpc.Extra["siteId"])
+	setSiteScopeFromID(s, vpcSiteID)
+
+	name, err := PromptText("Subnet name", true)
+	if err != nil {
+		return err
+	}
+	desc, err := PromptText("Description (optional)", false)
+	if err != nil {
+		return err
+	}
+	prefixLenText, err := PromptText("Prefix length (1-32)", true)
+	if err != nil {
+		return err
+	}
+	var prefixLen int
+	fmt.Sscanf(prefixLenText, "%d", &prefixLen)
+	if prefixLen < 1 || prefixLen > 32 {
+		return fmt.Errorf("prefix length must be between 1 and 32")
+	}
+
+	ipBlocks, err := s.Resolver.Fetch(context.Background(), "ip-block")
+	if err != nil {
+		return fmt.Errorf("fetching IP blocks: %w", err)
+	}
+	blockItems := make([]SelectItem, 0, len(ipBlocks))
+	for _, block := range ipBlocks {
+		if vpcSiteID != "" && strings.TrimSpace(block.Extra["siteId"]) != vpcSiteID {
+			continue
+		}
+		blockItems = append(blockItems, SelectItem{Label: block.Name, ID: block.ID})
+	}
+	if len(blockItems) == 0 {
+		if vpcSiteID != "" {
+			return fmt.Errorf("no IP blocks available for selected VPC site")
+		}
+		return fmt.Errorf("no IP blocks available")
+	}
+	block, err := Select("IPv4 Block", blockItems)
+	if err != nil {
+		return err
+	}
+
+	body := map[string]interface{}{
+		"name":         name,
+		"vpcId":        vpc.ID,
+		"ipv4BlockId":  block.ID,
+		"prefixLength": prefixLen,
+	}
+	if strings.TrimSpace(desc) != "" {
+		body["description"] = strings.TrimSpace(desc)
+	}
+	LogCmd(s, "subnet", "create", "--name", name, "--vpc-id", vpc.ID, "--ipv4-block-id", block.ID, "--prefix-length", prefixLenText)
+	bodyJSON, _ := json.Marshal(body)
+	resp, _, err := s.Client.Do("POST", "/v2/org/{org}/carbide/subnet", nil, nil, bodyJSON)
+	if err != nil {
+		return fmt.Errorf("creating subnet: %w", err)
+	}
+	s.Cache.Invalidate("subnet")
+	s.Cache.InvalidateFiltered()
+	var created map[string]interface{}
+	json.Unmarshal(resp, &created)
+	fmt.Printf("%s Subnet created: %s (%s)\n", Green("OK"), str(created, "name"), str(created, "id"))
+	return nil
+}
+
+func cmdSubnetUpdate(s *Session, args []string) error {
+	subnet, err := s.Resolver.ResolveWithArgs(context.Background(), "subnet", "Subnet to update", args)
+	if err != nil {
+		return err
+	}
+	name, err := PromptText("Subnet name (optional)", false)
+	if err != nil {
+		return err
+	}
+	desc, err := PromptText("Description (optional)", false)
+	if err != nil {
+		return err
+	}
+	body := map[string]interface{}{}
+	if strings.TrimSpace(name) != "" {
+		body["name"] = strings.TrimSpace(name)
+	}
+	if strings.TrimSpace(desc) != "" {
+		body["description"] = strings.TrimSpace(desc)
+	}
+	if len(body) == 0 {
+		return fmt.Errorf("no updates provided")
+	}
+	LogCmd(s, "subnet", "update", subnet.ID)
+	bodyJSON, _ := json.Marshal(body)
+	resp, _, err := s.Client.Do("PATCH", "/v2/org/{org}/carbide/subnet/{id}", map[string]string{"id": subnet.ID}, nil, bodyJSON)
+	if err != nil {
+		return fmt.Errorf("updating subnet: %w", err)
+	}
+	s.Cache.Invalidate("subnet")
+	s.Cache.InvalidateFiltered()
+	var updated map[string]interface{}
+	json.Unmarshal(resp, &updated)
+	fmt.Printf("%s Subnet updated: %s (%s)\n", Green("OK"), str(updated, "name"), str(updated, "id"))
+	return nil
+}
+
+func cmdSubnetDelete(s *Session, args []string) error {
+	subnet, err := s.Resolver.ResolveWithArgs(context.Background(), "subnet", "Subnet to delete", args)
+	if err != nil {
+		return err
+	}
+	ok, err := PromptConfirm(fmt.Sprintf("Delete subnet %s (%s)?", subnet.Name, subnet.ID))
+	if err != nil || !ok {
+		return err
+	}
+	LogCmd(s, "subnet", "delete", subnet.ID)
+	_, _, err = s.Client.Do("DELETE", "/v2/org/{org}/carbide/subnet/{id}", map[string]string{"id": subnet.ID}, nil, nil)
+	if err != nil {
+		return fmt.Errorf("deleting subnet: %w", err)
+	}
+	s.Cache.Invalidate("subnet")
+	s.Cache.InvalidateFiltered()
+	fmt.Printf("%s Subnet deleted: %s\n", Green("OK"), subnet.Name)
+	return nil
+}
+
+func cmdInstanceTypeList(s *Session, args []string) error {
+	LogCmd(s, "instance-type", "list")
+	items, err := s.Resolver.Fetch(context.Background(), "instance-type")
+	if err != nil {
+		return err
+	}
+	_, cmdLabels, sortKey, err := parseLabelArgs(args)
+	if err != nil {
+		return err
+	}
+	merged, mergeErr := mergeLabels(s.Scope.LabelFilters, cmdLabels)
+	if mergeErr != nil {
+		return mergeErr
+	}
+	items = filterByLabels(items, merged)
+	if sortKey != "" {
+		items = sortByLabelKey(items, sortKey)
+	}
+	fmt.Fprintf(os.Stderr, "%d items\n", len(items))
+	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
+	fmt.Fprintln(tw, "NAME\tSTATUS\tLABELS\tID")
+	for _, item := range items {
+		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", item.Name, item.Status, formatLabels(item.Labels, 60), item.ID)
+	}
+	return tw.Flush()
+}
+
+func cmdInstanceTypeGet(s *Session, args []string) error {
+	item, err := s.Resolver.ResolveWithArgs(context.Background(), "instance-type", "Instance Type", args)
+	if err != nil {
+		return err
+	}
+	LogCmd(s, "instance-type", "get", item.ID)
+	return getAndPrint(s, "/v2/org/{org}/carbide/instance/type/{id}", item.ID)
+}
+
+func cmdInstanceList(s *Session, args []string) error {
 	LogCmd(s, "instance", "list")
-	// Warm VPC and site caches so IDs resolve to names.
 	_, _ = s.Resolver.Fetch(context.Background(), "vpc")
 	_, _ = s.Resolver.Fetch(context.Background(), "site")
 	items, err := s.Resolver.Fetch(context.Background(), "instance")
 	if err != nil {
 		return err
 	}
+	_, cmdLabels, sortKey, err := parseLabelArgs(args)
+	if err != nil {
+		return err
+	}
+	merged, mergeErr := mergeLabels(s.Scope.LabelFilters, cmdLabels)
+	if mergeErr != nil {
+		return mergeErr
+	}
+	items = filterByLabels(items, merged)
+	if sortKey != "" {
+		items = sortByLabelKey(items, sortKey)
+	}
 	fmt.Fprintf(os.Stderr, "%d items\n", len(items))
 	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
-	fmt.Fprintln(tw, "NAME\tSTATUS\tVPC\tSITE\tID")
+	fmt.Fprintln(tw, "NAME\tSTATUS\tVPC\tSITE\tLABELS\tID")
 	for _, item := range items {
 		vpcName := s.Resolver.ResolveID("vpc", item.Extra["vpcId"])
 		siteName := s.Resolver.ResolveID("site", item.Extra["siteId"])
-		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n", item.Name, item.Status, vpcName, siteName, item.ID)
+		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n", item.Name, item.Status, vpcName, siteName, formatLabels(item.Labels, 60), item.ID)
 	}
 	return tw.Flush()
 }
 
-func cmdMachineList(s *Session, _ []string) error {
-	items, err := s.Resolver.Fetch(context.Background(), "machine")
-	if err != nil {
-		if s.Scope.SiteID == "" && strings.Contains(err.Error(), "400") {
-			fmt.Printf("%s Machine listing requires a site filter. Select a site.\n", Dim("Note:"))
-			site, resolveErr := s.Resolver.Resolve(context.Background(), "site", "Site")
-			if resolveErr != nil {
-				return resolveErr
-			}
-			s.Scope.SiteID = site.ID
-			s.Scope.SiteName = site.Name
-			s.Cache.InvalidateFiltered()
-			items, err = s.Resolver.Fetch(context.Background(), "machine")
-			if err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
-	}
+func cmdMachineList(s *Session, args []string) error {
 	LogCmd(s, "machine", "list")
+	items, err := fetchMachinesWithSiteFallback(s, "Machine listing requires a site filter. Select a site.")
+	if err != nil {
+		return err
+	}
 
-	// Warm VPC cache so names resolve, then build machine→vpc map via instances.
 	_, _ = s.Resolver.Fetch(context.Background(), "vpc")
 	vpcNamesByMachineID := s.buildMachineVPCNames(context.Background())
 
 	if s.Scope.VpcID != "" {
-		filtered := items[:0]
+		filtered := make([]NamedItem, 0, len(items))
 		for _, item := range items {
 			if _, ok := vpcNamesByMachineID[item.ID]; ok {
 				filtered = append(filtered, item)
@@ -312,16 +861,29 @@ func cmdMachineList(s *Session, _ []string) error {
 		items = filtered
 	}
 
+	_, cmdLabels, sortKey, err := parseLabelArgs(args)
+	if err != nil {
+		return err
+	}
+	merged, mergeErr := mergeLabels(s.Scope.LabelFilters, cmdLabels)
+	if mergeErr != nil {
+		return mergeErr
+	}
+	items = filterByLabels(items, merged)
+	if sortKey != "" {
+		items = sortByLabelKey(items, sortKey)
+	}
+
 	fmt.Fprintf(os.Stderr, "%d items\n", len(items))
 	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
-	fmt.Fprintln(tw, "NAME\tSTATUS\tSITE\tVPC\tID")
+	fmt.Fprintln(tw, "NAME\tSTATUS\tSITE\tVPC\tLABELS\tID")
 	for _, item := range items {
 		siteName := s.Resolver.ResolveID("site", item.Extra["siteId"])
 		vpcNames := strings.TrimSpace(vpcNamesByMachineID[item.ID])
 		if vpcNames == "" {
 			vpcNames = "-"
 		}
-		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n", item.Name, item.Status, siteName, vpcNames, item.ID)
+		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n", item.Name, item.Status, siteName, vpcNames, formatLabels(item.Labels, 60), item.ID)
 	}
 	return tw.Flush()
 }
@@ -335,6 +897,169 @@ func cmdOSList(s *Session, _ []string) error {
 	return printResourceTable(os.Stdout, "NAME", "STATUS", "ID", items)
 }
 
+func cmdOSCreate(s *Session, _ []string) error {
+	name, err := PromptText("Operating system name", true)
+	if err != nil {
+		return err
+	}
+	desc, err := PromptText("Description (optional)", false)
+	if err != nil {
+		return err
+	}
+	tenantID, err := s.getTenantID(context.Background())
+	if err != nil {
+		return fmt.Errorf("resolving tenant id: %w", err)
+	}
+	ipxeScript, err := PromptText("iPXE script or URL", true)
+	if err != nil {
+		return err
+	}
+	userData, err := PromptText("User data (optional)", false)
+	if err != nil {
+		return err
+	}
+	isCloudInit, err := PromptConfirm("Cloud-init enabled?")
+	if err != nil {
+		return err
+	}
+	allowOverride, err := PromptConfirm("Allow override at instance creation?")
+	if err != nil {
+		return err
+	}
+	phoneHomeEnabled, err := PromptConfirm("Enable phone home?")
+	if err != nil {
+		return err
+	}
+	body := map[string]interface{}{
+		"name":             name,
+		"tenantId":         tenantID,
+		"ipxeScript":       ipxeScript,
+		"isCloudInit":      isCloudInit,
+		"allowOverride":    allowOverride,
+		"phoneHomeEnabled": phoneHomeEnabled,
+	}
+	if strings.TrimSpace(desc) != "" {
+		body["description"] = strings.TrimSpace(desc)
+	}
+	if strings.TrimSpace(userData) != "" {
+		body["userData"] = strings.TrimSpace(userData)
+	}
+	LogCmd(s, "operating-system", "create", "--name", name)
+	bodyJSON, _ := json.Marshal(body)
+	resp, _, err := s.Client.Do("POST", "/v2/org/{org}/carbide/operating-system", nil, nil, bodyJSON)
+	if err != nil {
+		return fmt.Errorf("creating operating system: %w", err)
+	}
+	s.Cache.Invalidate("operating-system")
+	s.Cache.InvalidateFiltered()
+	var created map[string]interface{}
+	json.Unmarshal(resp, &created)
+	fmt.Printf("%s Operating system created: %s (%s)\n", Green("OK"), str(created, "name"), str(created, "id"))
+	return nil
+}
+
+func cmdOSUpdate(s *Session, args []string) error {
+	item, err := s.Resolver.ResolveWithArgs(context.Background(), "operating-system", "Operating System to update", args)
+	if err != nil {
+		return err
+	}
+	name, err := PromptText("Operating system name (optional)", false)
+	if err != nil {
+		return err
+	}
+	desc, err := PromptText("Description (optional)", false)
+	if err != nil {
+		return err
+	}
+	ipxeScript, err := PromptText("iPXE script or URL (optional)", false)
+	if err != nil {
+		return err
+	}
+	userData, err := PromptText("User data (optional)", false)
+	if err != nil {
+		return err
+	}
+	allowOverrideText, err := PromptText("Allow override? (true/false, blank to keep)", false)
+	if err != nil {
+		return err
+	}
+	phoneHomeText, err := PromptText("Phone home enabled? (true/false, blank to keep)", false)
+	if err != nil {
+		return err
+	}
+	activeText, err := PromptText("Set active? (true/false, blank to keep)", false)
+	if err != nil {
+		return err
+	}
+
+	body := map[string]interface{}{}
+	if strings.TrimSpace(name) != "" {
+		body["name"] = strings.TrimSpace(name)
+	}
+	if strings.TrimSpace(desc) != "" {
+		body["description"] = strings.TrimSpace(desc)
+	}
+	if strings.TrimSpace(ipxeScript) != "" {
+		body["ipxeScript"] = strings.TrimSpace(ipxeScript)
+	}
+	if strings.TrimSpace(userData) != "" {
+		body["userData"] = strings.TrimSpace(userData)
+	}
+	if v, ok := parseOptionalBool(allowOverrideText); ok {
+		body["allowOverride"] = v
+	}
+	if v, ok := parseOptionalBool(phoneHomeText); ok {
+		body["phoneHomeEnabled"] = v
+	}
+	if v, ok := parseOptionalBool(activeText); ok {
+		body["isActive"] = v
+		if !v {
+			note, err := PromptText("Deactivation note (optional)", false)
+			if err != nil {
+				return err
+			}
+			if strings.TrimSpace(note) != "" {
+				body["deactivationNote"] = strings.TrimSpace(note)
+			}
+		}
+	}
+	if len(body) == 0 {
+		return fmt.Errorf("no updates provided")
+	}
+	LogCmd(s, "operating-system", "update", item.ID)
+	bodyJSON, _ := json.Marshal(body)
+	resp, _, err := s.Client.Do("PATCH", "/v2/org/{org}/carbide/operating-system/{id}", map[string]string{"id": item.ID}, nil, bodyJSON)
+	if err != nil {
+		return fmt.Errorf("updating operating system: %w", err)
+	}
+	s.Cache.Invalidate("operating-system")
+	s.Cache.InvalidateFiltered()
+	var updated map[string]interface{}
+	json.Unmarshal(resp, &updated)
+	fmt.Printf("%s Operating system updated: %s (%s)\n", Green("OK"), str(updated, "name"), str(updated, "id"))
+	return nil
+}
+
+func cmdOSDelete(s *Session, args []string) error {
+	item, err := s.Resolver.ResolveWithArgs(context.Background(), "operating-system", "Operating System to delete", args)
+	if err != nil {
+		return err
+	}
+	ok, err := PromptConfirm(fmt.Sprintf("Delete operating system %s (%s)?", item.Name, item.ID))
+	if err != nil || !ok {
+		return err
+	}
+	LogCmd(s, "operating-system", "delete", item.ID)
+	_, _, err = s.Client.Do("DELETE", "/v2/org/{org}/carbide/operating-system/{id}", map[string]string{"id": item.ID}, nil, nil)
+	if err != nil {
+		return fmt.Errorf("deleting operating system: %w", err)
+	}
+	s.Cache.Invalidate("operating-system")
+	s.Cache.InvalidateFiltered()
+	fmt.Printf("%s Operating system deleted: %s\n", Green("OK"), item.Name)
+	return nil
+}
+
 func cmdSSHKeyGroupList(s *Session, _ []string) error {
 	LogCmd(s, "ssh-key-group", "list")
 	items, err := s.Resolver.Fetch(context.Background(), "ssh-key-group")
@@ -342,6 +1067,129 @@ func cmdSSHKeyGroupList(s *Session, _ []string) error {
 		return err
 	}
 	return printResourceTable(os.Stdout, "NAME", "STATUS", "ID", items)
+}
+
+func cmdSSHKeyGroupCreate(s *Session, _ []string) error {
+	name, err := PromptText("SSH key group name", true)
+	if err != nil {
+		return err
+	}
+	desc, err := PromptText("Description (optional)", false)
+	if err != nil {
+		return err
+	}
+
+	siteIDsText, err := PromptText("Site IDs (comma-separated, optional)", false)
+	if err != nil {
+		return err
+	}
+	sshKeyIDsText, err := PromptText("SSH key IDs (comma-separated, optional)", false)
+	if err != nil {
+		return err
+	}
+
+	body := map[string]interface{}{"name": name}
+	if strings.TrimSpace(desc) != "" {
+		body["description"] = strings.TrimSpace(desc)
+	}
+	if siteIDs := splitCommaSeparated(siteIDsText); len(siteIDs) > 0 {
+		body["siteIds"] = siteIDs
+	}
+	if sshKeyIDs := splitCommaSeparated(sshKeyIDsText); len(sshKeyIDs) > 0 {
+		body["sshKeyIds"] = sshKeyIDs
+	}
+
+	LogCmd(s, "ssh-key-group", "create", "--name", name)
+	bodyJSON, _ := json.Marshal(body)
+	resp, _, err := s.Client.Do("POST", "/v2/org/{org}/carbide/ssh-key-group", nil, nil, bodyJSON)
+	if err != nil {
+		return fmt.Errorf("creating SSH key group: %w", err)
+	}
+	s.Cache.Invalidate("ssh-key-group")
+	s.Cache.InvalidateFiltered()
+	var created map[string]interface{}
+	json.Unmarshal(resp, &created)
+	fmt.Printf("%s SSH key group created: %s (%s)\n", Green("OK"), str(created, "name"), str(created, "id"))
+	return nil
+}
+
+func cmdSSHKeyGroupUpdate(s *Session, args []string) error {
+	item, err := s.Resolver.ResolveWithArgs(context.Background(), "ssh-key-group", "SSH Key Group to update", args)
+	if err != nil {
+		return err
+	}
+	name, err := PromptText("SSH key group name (optional)", false)
+	if err != nil {
+		return err
+	}
+	desc, err := PromptText("Description (optional)", false)
+	if err != nil {
+		return err
+	}
+	siteIDsText, err := PromptText("Replace site IDs (comma-separated, blank to keep)", false)
+	if err != nil {
+		return err
+	}
+	sshKeyIDsText, err := PromptText("Replace SSH key IDs (comma-separated, blank to keep)", false)
+	if err != nil {
+		return err
+	}
+
+	version := rawFieldString(item.Raw, "version")
+	if strings.TrimSpace(version) == "" {
+		version, err = PromptText("Version", true)
+		if err != nil {
+			return err
+		}
+	}
+	body := map[string]interface{}{
+		"version": version,
+	}
+	if strings.TrimSpace(name) != "" {
+		body["name"] = strings.TrimSpace(name)
+	}
+	if strings.TrimSpace(desc) != "" {
+		body["description"] = strings.TrimSpace(desc)
+	}
+	if strings.TrimSpace(siteIDsText) != "" {
+		body["siteIds"] = splitCommaSeparated(siteIDsText)
+	}
+	if strings.TrimSpace(sshKeyIDsText) != "" {
+		body["sshKeyIds"] = splitCommaSeparated(sshKeyIDsText)
+	}
+
+	LogCmd(s, "ssh-key-group", "update", item.ID)
+	bodyJSON, _ := json.Marshal(body)
+	resp, _, err := s.Client.Do("PATCH", "/v2/org/{org}/carbide/ssh-key-group/{id}", map[string]string{"id": item.ID}, nil, bodyJSON)
+	if err != nil {
+		return fmt.Errorf("updating SSH key group: %w", err)
+	}
+	s.Cache.Invalidate("ssh-key-group")
+	s.Cache.InvalidateFiltered()
+	var updated map[string]interface{}
+	json.Unmarshal(resp, &updated)
+	fmt.Printf("%s SSH key group updated: %s (%s)\n", Green("OK"), str(updated, "name"), str(updated, "id"))
+	return nil
+}
+
+func cmdSSHKeyGroupDelete(s *Session, args []string) error {
+	item, err := s.Resolver.ResolveWithArgs(context.Background(), "ssh-key-group", "SSH Key Group to delete", args)
+	if err != nil {
+		return err
+	}
+	ok, err := PromptConfirm(fmt.Sprintf("Delete SSH key group %s (%s)?", item.Name, item.ID))
+	if err != nil || !ok {
+		return err
+	}
+	LogCmd(s, "ssh-key-group", "delete", item.ID)
+	_, _, err = s.Client.Do("DELETE", "/v2/org/{org}/carbide/ssh-key-group/{id}", map[string]string{"id": item.ID}, nil, nil)
+	if err != nil {
+		return fmt.Errorf("deleting SSH key group: %w", err)
+	}
+	s.Cache.Invalidate("ssh-key-group")
+	s.Cache.InvalidateFiltered()
+	fmt.Printf("%s SSH key group deleted: %s\n", Green("OK"), item.Name)
+	return nil
 }
 
 func cmdSSHKeyList(s *Session, _ []string) error {
@@ -359,6 +1207,89 @@ func cmdSSHKeyList(s *Session, _ []string) error {
 	return tw.Flush()
 }
 
+func cmdSSHKeyCreate(s *Session, _ []string) error {
+	name, err := PromptText("SSH key name", true)
+	if err != nil {
+		return err
+	}
+	publicKey, err := PromptText("Public key", true)
+	if err != nil {
+		return err
+	}
+	sshKeyGroupID, err := PromptText("SSH key group ID (optional)", false)
+	if err != nil {
+		return err
+	}
+	body := map[string]interface{}{
+		"name":      name,
+		"publicKey": publicKey,
+	}
+	if strings.TrimSpace(sshKeyGroupID) != "" {
+		body["sshKeyGroupId"] = strings.TrimSpace(sshKeyGroupID)
+	}
+	LogCmd(s, "ssh-key", "create", "--name", name)
+	bodyJSON, _ := json.Marshal(body)
+	resp, _, err := s.Client.Do("POST", "/v2/org/{org}/carbide/ssh-key", nil, nil, bodyJSON)
+	if err != nil {
+		return fmt.Errorf("creating SSH key: %w", err)
+	}
+	s.Cache.Invalidate("ssh-key")
+	s.Cache.Invalidate("ssh-key-group")
+	s.Cache.InvalidateFiltered()
+	var created map[string]interface{}
+	json.Unmarshal(resp, &created)
+	fmt.Printf("%s SSH key created: %s (%s)\n", Green("OK"), str(created, "name"), str(created, "id"))
+	return nil
+}
+
+func cmdSSHKeyUpdate(s *Session, args []string) error {
+	item, err := s.Resolver.ResolveWithArgs(context.Background(), "ssh-key", "SSH Key to update", args)
+	if err != nil {
+		return err
+	}
+	name, err := PromptText("SSH key name", true)
+	if err != nil {
+		return err
+	}
+	body := map[string]interface{}{
+		"name": strings.TrimSpace(name),
+	}
+	LogCmd(s, "ssh-key", "update", item.ID, "--name", strings.TrimSpace(name))
+	bodyJSON, _ := json.Marshal(body)
+	resp, _, err := s.Client.Do("PATCH", "/v2/org/{org}/carbide/ssh-key/{id}", map[string]string{"id": item.ID}, nil, bodyJSON)
+	if err != nil {
+		return fmt.Errorf("updating SSH key: %w", err)
+	}
+	s.Cache.Invalidate("ssh-key")
+	s.Cache.Invalidate("ssh-key-group")
+	s.Cache.InvalidateFiltered()
+	var updated map[string]interface{}
+	json.Unmarshal(resp, &updated)
+	fmt.Printf("%s SSH key updated: %s (%s)\n", Green("OK"), str(updated, "name"), str(updated, "id"))
+	return nil
+}
+
+func cmdSSHKeyDelete(s *Session, args []string) error {
+	item, err := s.Resolver.ResolveWithArgs(context.Background(), "ssh-key", "SSH Key to delete", args)
+	if err != nil {
+		return err
+	}
+	ok, err := PromptConfirm(fmt.Sprintf("Delete SSH key %s (%s)?", item.Name, item.ID))
+	if err != nil || !ok {
+		return err
+	}
+	LogCmd(s, "ssh-key", "delete", item.ID)
+	_, _, err = s.Client.Do("DELETE", "/v2/org/{org}/carbide/ssh-key/{id}", map[string]string{"id": item.ID}, nil, nil)
+	if err != nil {
+		return fmt.Errorf("deleting SSH key: %w", err)
+	}
+	s.Cache.Invalidate("ssh-key")
+	s.Cache.Invalidate("ssh-key-group")
+	s.Cache.InvalidateFiltered()
+	fmt.Printf("%s SSH key deleted: %s\n", Green("OK"), item.Name)
+	return nil
+}
+
 func cmdAllocationList(s *Session, _ []string) error {
 	LogCmd(s, "allocation", "list")
 	items, err := s.Resolver.Fetch(context.Background(), "allocation")
@@ -373,6 +1304,82 @@ func cmdAllocationList(s *Session, _ []string) error {
 		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", item.Name, item.Status, siteName, item.ID)
 	}
 	return tw.Flush()
+}
+
+func cmdAllocationCreate(s *Session, _ []string) error {
+	site, err := s.Resolver.Resolve(context.Background(), "site", "Site")
+	if err != nil {
+		return err
+	}
+	name, err := PromptText("Allocation name", true)
+	if err != nil {
+		return err
+	}
+	desc, err := PromptText("Description (optional)", false)
+	if err != nil {
+		return err
+	}
+	tenantID, err := PromptText("Tenant ID", true)
+	if err != nil {
+		return err
+	}
+	body := map[string]interface{}{
+		"name":     name,
+		"siteId":   site.ID,
+		"tenantId": strings.TrimSpace(tenantID),
+	}
+	if strings.TrimSpace(desc) != "" {
+		body["description"] = strings.TrimSpace(desc)
+	}
+	LogCmd(s, "allocation", "create", "--name", name, "--site-id", site.ID, "--tenant-id", strings.TrimSpace(tenantID))
+	bodyJSON, _ := json.Marshal(body)
+	resp, _, err := s.Client.Do("POST", "/v2/org/{org}/carbide/allocation", nil, nil, bodyJSON)
+	if err != nil {
+		return fmt.Errorf("creating allocation: %w", err)
+	}
+	s.Cache.Invalidate("allocation")
+	s.Cache.InvalidateFiltered()
+	var created map[string]interface{}
+	json.Unmarshal(resp, &created)
+	fmt.Printf("%s Allocation created: %s (%s)\n", Green("OK"), str(created, "name"), str(created, "id"))
+	return nil
+}
+
+func cmdAllocationUpdate(s *Session, args []string) error {
+	item, err := s.Resolver.ResolveWithArgs(context.Background(), "allocation", "Allocation to update", args)
+	if err != nil {
+		return err
+	}
+	name, err := PromptText("Allocation name (optional)", false)
+	if err != nil {
+		return err
+	}
+	desc, err := PromptText("Description (optional)", false)
+	if err != nil {
+		return err
+	}
+	body := map[string]interface{}{}
+	if strings.TrimSpace(name) != "" {
+		body["name"] = strings.TrimSpace(name)
+	}
+	if strings.TrimSpace(desc) != "" {
+		body["description"] = strings.TrimSpace(desc)
+	}
+	if len(body) == 0 {
+		return fmt.Errorf("no updates provided")
+	}
+	LogCmd(s, "allocation", "update", item.ID)
+	bodyJSON, _ := json.Marshal(body)
+	resp, _, err := s.Client.Do("PATCH", "/v2/org/{org}/carbide/allocation/{id}", map[string]string{"id": item.ID}, nil, bodyJSON)
+	if err != nil {
+		return fmt.Errorf("updating allocation: %w", err)
+	}
+	s.Cache.Invalidate("allocation")
+	s.Cache.InvalidateFiltered()
+	var updated map[string]interface{}
+	json.Unmarshal(resp, &updated)
+	fmt.Printf("%s Allocation updated: %s (%s)\n", Green("OK"), str(updated, "name"), str(updated, "id"))
+	return nil
 }
 
 func cmdIPBlockList(s *Session, _ []string) error {
@@ -434,6 +1441,43 @@ func cmdIPBlockCreate(s *Session, _ []string) error {
 	return nil
 }
 
+func cmdIPBlockUpdate(s *Session, args []string) error {
+	block, err := s.Resolver.ResolveWithArgs(context.Background(), "ip-block", "IP Block to update", args)
+	if err != nil {
+		return err
+	}
+	name, err := PromptText("IP block name (optional)", false)
+	if err != nil {
+		return err
+	}
+	desc, err := PromptText("Description (optional)", false)
+	if err != nil {
+		return err
+	}
+	body := map[string]interface{}{}
+	if strings.TrimSpace(name) != "" {
+		body["name"] = strings.TrimSpace(name)
+	}
+	if strings.TrimSpace(desc) != "" {
+		body["description"] = strings.TrimSpace(desc)
+	}
+	if len(body) == 0 {
+		return fmt.Errorf("no updates provided")
+	}
+	LogCmd(s, "ip-block", "update", block.ID)
+	bodyJSON, _ := json.Marshal(body)
+	resp, _, err := s.Client.Do("PATCH", "/v2/org/{org}/carbide/ip-block/{id}", map[string]string{"id": block.ID}, nil, bodyJSON)
+	if err != nil {
+		return fmt.Errorf("updating IP block: %w", err)
+	}
+	s.Cache.Invalidate("ip-block")
+	s.Cache.InvalidateFiltered()
+	var updated map[string]interface{}
+	json.Unmarshal(resp, &updated)
+	fmt.Printf("%s IP block updated: %s (%s)\n", Green("OK"), str(updated, "name"), str(updated, "id"))
+	return nil
+}
+
 func cmdIPBlockDelete(s *Session, args []string) error {
 	block, err := s.Resolver.ResolveWithArgs(context.Background(), "ip-block", "IP Block to delete", args)
 	if err != nil {
@@ -453,13 +1497,119 @@ func cmdIPBlockDelete(s *Session, args []string) error {
 	return nil
 }
 
-func cmdNSGList(s *Session, _ []string) error {
+func cmdNSGList(s *Session, args []string) error {
 	LogCmd(s, "network-security-group", "list")
 	items, err := s.Resolver.Fetch(context.Background(), "network-security-group")
 	if err != nil {
 		return err
 	}
-	return printResourceTable(os.Stdout, "NAME", "STATUS", "ID", items)
+	_, cmdLabels, sortKey, err := parseLabelArgs(args)
+	if err != nil {
+		return err
+	}
+	merged, mergeErr := mergeLabels(s.Scope.LabelFilters, cmdLabels)
+	if mergeErr != nil {
+		return mergeErr
+	}
+	items = filterByLabels(items, merged)
+	if sortKey != "" {
+		items = sortByLabelKey(items, sortKey)
+	}
+	fmt.Fprintf(os.Stderr, "%d items\n", len(items))
+	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
+	fmt.Fprintln(tw, "NAME\tSTATUS\tLABELS\tID")
+	for _, item := range items {
+		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", item.Name, item.Status, formatLabels(item.Labels, 60), item.ID)
+	}
+	return tw.Flush()
+}
+
+func cmdNSGCreate(s *Session, _ []string) error {
+	site, err := s.Resolver.Resolve(context.Background(), "site", "Site")
+	if err != nil {
+		return err
+	}
+	name, err := PromptText("Network security group name", true)
+	if err != nil {
+		return err
+	}
+	desc, err := PromptText("Description (optional)", false)
+	if err != nil {
+		return err
+	}
+	body := map[string]interface{}{"name": name, "siteId": site.ID}
+	if strings.TrimSpace(desc) != "" {
+		body["description"] = strings.TrimSpace(desc)
+	}
+	LogCmd(s, "network-security-group", "create", "--name", name, "--site-id", site.ID)
+	bodyJSON, _ := json.Marshal(body)
+	resp, _, err := s.Client.Do("POST", "/v2/org/{org}/carbide/network-security-group", nil, nil, bodyJSON)
+	if err != nil {
+		return fmt.Errorf("creating network security group: %w", err)
+	}
+	s.Cache.Invalidate("network-security-group")
+	s.Cache.InvalidateFiltered()
+	var created map[string]interface{}
+	json.Unmarshal(resp, &created)
+	fmt.Printf("%s Network security group created: %s (%s)\n", Green("OK"), str(created, "name"), str(created, "id"))
+	return nil
+}
+
+func cmdNSGUpdate(s *Session, args []string) error {
+	nsg, err := s.Resolver.ResolveWithArgs(context.Background(), "network-security-group", "Network Security Group to update", args)
+	if err != nil {
+		return err
+	}
+	name, err := PromptText("Network security group name (optional)", false)
+	if err != nil {
+		return err
+	}
+	desc, err := PromptText("Description (optional)", false)
+	if err != nil {
+		return err
+	}
+	body := map[string]interface{}{}
+	if strings.TrimSpace(name) != "" {
+		body["name"] = strings.TrimSpace(name)
+	}
+	if strings.TrimSpace(desc) != "" {
+		body["description"] = strings.TrimSpace(desc)
+	}
+	if len(body) == 0 {
+		return fmt.Errorf("no updates provided")
+	}
+	LogCmd(s, "network-security-group", "update", nsg.ID)
+	bodyJSON, _ := json.Marshal(body)
+	resp, _, err := s.Client.Do("PATCH", "/v2/org/{org}/carbide/network-security-group/{id}", map[string]string{"id": nsg.ID}, nil, bodyJSON)
+	if err != nil {
+		return fmt.Errorf("updating network security group: %w", err)
+	}
+	s.Cache.Invalidate("network-security-group")
+	s.Cache.InvalidateFiltered()
+	var updated map[string]interface{}
+	json.Unmarshal(resp, &updated)
+	fmt.Printf("%s Network security group updated: %s (%s)\n", Green("OK"), str(updated, "name"), str(updated, "id"))
+	return nil
+}
+
+func cmdNSGDelete(s *Session, args []string) error {
+	nsg, err := s.Resolver.ResolveWithArgs(context.Background(), "network-security-group", "Network Security Group to delete", args)
+	if err != nil {
+		return err
+	}
+	ok, err := PromptConfirm(fmt.Sprintf("Delete network security group %s (%s)?", nsg.Name, nsg.ID))
+	if err != nil || !ok {
+		return err
+	}
+	LogCmd(s, "network-security-group", "delete", nsg.ID)
+	_, _, err = s.Client.Do("DELETE", "/v2/org/{org}/carbide/network-security-group/{id}", map[string]string{"id": nsg.ID}, nil, nil)
+	if err != nil {
+		return fmt.Errorf("deleting network security group: %w", err)
+	}
+	s.Cache.Invalidate("network-security-group")
+	s.Cache.InvalidateFiltered()
+	fmt.Printf("%s Network security group deleted: %s\n", Green("OK"), nsg.Name)
+	return nil
 }
 
 func cmdSKUList(s *Session, _ []string) error {
@@ -508,6 +1658,100 @@ func cmdVPCPrefixList(s *Session, _ []string) error {
 	return tw.Flush()
 }
 
+func cmdVPCPrefixCreate(s *Session, _ []string) error {
+	vpc, err := s.Resolver.Resolve(context.Background(), "vpc", "VPC")
+	if err != nil {
+		return err
+	}
+	vpcSiteID := strings.TrimSpace(vpc.Extra["siteId"])
+	setSiteScopeFromID(s, vpcSiteID)
+
+	name, err := PromptText("VPC prefix name", true)
+	if err != nil {
+		return err
+	}
+	prefixLenText, err := PromptText("Prefix length (8-31)", true)
+	if err != nil {
+		return err
+	}
+	var prefixLen int
+	fmt.Sscanf(prefixLenText, "%d", &prefixLen)
+	if prefixLen < 8 || prefixLen > 31 {
+		return fmt.Errorf("prefix length must be between 8 and 31")
+	}
+	ipBlockID, err := PromptText("IP block ID (optional)", false)
+	if err != nil {
+		return err
+	}
+
+	body := map[string]interface{}{
+		"name":         name,
+		"vpcId":        vpc.ID,
+		"prefixLength": prefixLen,
+	}
+	if strings.TrimSpace(ipBlockID) != "" {
+		body["ipBlockId"] = strings.TrimSpace(ipBlockID)
+	}
+	LogCmd(s, "vpc-prefix", "create", "--name", name, "--vpc-id", vpc.ID, "--prefix-length", prefixLenText)
+	bodyJSON, _ := json.Marshal(body)
+	resp, _, err := s.Client.Do("POST", "/v2/org/{org}/carbide/vpc-prefix", nil, nil, bodyJSON)
+	if err != nil {
+		return fmt.Errorf("creating VPC prefix: %w", err)
+	}
+	s.Cache.Invalidate("vpc-prefix")
+	s.Cache.InvalidateFiltered()
+	var created map[string]interface{}
+	json.Unmarshal(resp, &created)
+	fmt.Printf("%s VPC prefix created: %s (%s)\n", Green("OK"), str(created, "name"), str(created, "id"))
+	return nil
+}
+
+func cmdVPCPrefixUpdate(s *Session, args []string) error {
+	item, err := s.Resolver.ResolveWithArgs(context.Background(), "vpc-prefix", "VPC Prefix to update", args)
+	if err != nil {
+		return err
+	}
+	name, err := PromptText("VPC prefix name", true)
+	if err != nil {
+		return err
+	}
+	body := map[string]interface{}{
+		"name": strings.TrimSpace(name),
+	}
+	LogCmd(s, "vpc-prefix", "update", item.ID, "--name", strings.TrimSpace(name))
+	bodyJSON, _ := json.Marshal(body)
+	resp, _, err := s.Client.Do("PATCH", "/v2/org/{org}/carbide/vpc-prefix/{id}", map[string]string{"id": item.ID}, nil, bodyJSON)
+	if err != nil {
+		return fmt.Errorf("updating VPC prefix: %w", err)
+	}
+	s.Cache.Invalidate("vpc-prefix")
+	s.Cache.InvalidateFiltered()
+	var updated map[string]interface{}
+	json.Unmarshal(resp, &updated)
+	fmt.Printf("%s VPC prefix updated: %s (%s)\n", Green("OK"), str(updated, "name"), str(updated, "id"))
+	return nil
+}
+
+func cmdVPCPrefixDelete(s *Session, args []string) error {
+	item, err := s.Resolver.ResolveWithArgs(context.Background(), "vpc-prefix", "VPC Prefix to delete", args)
+	if err != nil {
+		return err
+	}
+	ok, err := PromptConfirm(fmt.Sprintf("Delete VPC prefix %s (%s)?", item.Name, item.ID))
+	if err != nil || !ok {
+		return err
+	}
+	LogCmd(s, "vpc-prefix", "delete", item.ID)
+	_, _, err = s.Client.Do("DELETE", "/v2/org/{org}/carbide/vpc-prefix/{id}", map[string]string{"id": item.ID}, nil, nil)
+	if err != nil {
+		return fmt.Errorf("deleting VPC prefix: %w", err)
+	}
+	s.Cache.Invalidate("vpc-prefix")
+	s.Cache.InvalidateFiltered()
+	fmt.Printf("%s VPC prefix deleted: %s\n", Green("OK"), item.Name)
+	return nil
+}
+
 func cmdTenantAccountList(s *Session, _ []string) error {
 	LogCmd(s, "tenant-account", "list")
 	items, err := s.Resolver.Fetch(context.Background(), "tenant-account")
@@ -523,28 +1767,125 @@ func cmdTenantAccountList(s *Session, _ []string) error {
 	return tw.Flush()
 }
 
-func cmdExpectedMachineList(s *Session, _ []string) error {
+func cmdTenantAccountCreate(s *Session, _ []string) error {
+	infrastructureProviderID, err := PromptText("Infrastructure provider ID", true)
+	if err != nil {
+		return err
+	}
+	tenantOrg, err := PromptText("Tenant org", true)
+	if err != nil {
+		return err
+	}
+	body := map[string]interface{}{
+		"infrastructureProviderId": strings.TrimSpace(infrastructureProviderID),
+		"tenantOrg":                strings.TrimSpace(tenantOrg),
+	}
+	LogCmd(s, "tenant-account", "create", "--tenant-org", strings.TrimSpace(tenantOrg))
+	bodyJSON, _ := json.Marshal(body)
+	resp, _, err := s.Client.Do("POST", "/v2/org/{org}/carbide/tenant-account", nil, nil, bodyJSON)
+	if err != nil {
+		return fmt.Errorf("creating tenant account: %w", err)
+	}
+	s.Cache.Invalidate("tenant-account")
+	var created map[string]interface{}
+	json.Unmarshal(resp, &created)
+	fmt.Printf("%s Tenant account created: %s (%s)\n", Green("OK"), str(created, "tenantOrg"), str(created, "id"))
+	return nil
+}
+
+func cmdTenantAccountUpdate(s *Session, args []string) error {
+	item, err := s.Resolver.ResolveWithArgs(context.Background(), "tenant-account", "Tenant Account to accept", args)
+	if err != nil {
+		return err
+	}
+	ok, err := PromptConfirm(fmt.Sprintf("Accept invitation for tenant account %s (%s)?", item.Name, item.ID))
+	if err != nil || !ok {
+		return err
+	}
+	LogCmd(s, "tenant-account", "update", item.ID)
+	bodyJSON, _ := json.Marshal(map[string]interface{}{})
+	resp, _, err := s.Client.Do("PATCH", "/v2/org/{org}/carbide/tenant-account/{id}", map[string]string{"id": item.ID}, nil, bodyJSON)
+	if err != nil {
+		return fmt.Errorf("accepting tenant account invitation: %w", err)
+	}
+	s.Cache.Invalidate("tenant-account")
+	var updated map[string]interface{}
+	json.Unmarshal(resp, &updated)
+	fmt.Printf("%s Tenant account accepted: %s (%s)\n", Green("OK"), str(updated, "tenantOrg"), str(updated, "id"))
+	return nil
+}
+
+func cmdTenantAccountDelete(s *Session, args []string) error {
+	item, err := s.Resolver.ResolveWithArgs(context.Background(), "tenant-account", "Tenant Account to delete", args)
+	if err != nil {
+		return err
+	}
+	ok, err := PromptConfirm(fmt.Sprintf("Delete tenant account %s (%s)?", item.Name, item.ID))
+	if err != nil || !ok {
+		return err
+	}
+	LogCmd(s, "tenant-account", "delete", item.ID)
+	_, _, err = s.Client.Do("DELETE", "/v2/org/{org}/carbide/tenant-account/{id}", map[string]string{"id": item.ID}, nil, nil)
+	if err != nil {
+		return fmt.Errorf("deleting tenant account: %w", err)
+	}
+	s.Cache.Invalidate("tenant-account")
+	fmt.Printf("%s Tenant account deleted: %s\n", Green("OK"), item.Name)
+	return nil
+}
+
+func cmdExpectedMachineList(s *Session, args []string) error {
 	LogCmd(s, "expected-machine", "list")
 	items, err := s.Resolver.Fetch(context.Background(), "expected-machine")
 	if err != nil {
 		return err
 	}
+	_, cmdLabels, sortKey, err := parseLabelArgs(args)
+	if err != nil {
+		return err
+	}
+	merged, mergeErr := mergeLabels(s.Scope.LabelFilters, cmdLabels)
+	if mergeErr != nil {
+		return mergeErr
+	}
+	items = filterByLabels(items, merged)
+	if sortKey != "" {
+		items = sortByLabelKey(items, sortKey)
+	}
 	fmt.Fprintf(os.Stderr, "%d items\n", len(items))
 	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
-	fmt.Fprintln(tw, "SITE ID\tBMC MAC\tCHASSIS SN\tID")
+	fmt.Fprintln(tw, "SITE ID\tBMC MAC\tCHASSIS SN\tLABELS\tID")
 	for _, item := range items {
-		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", item.Extra["siteId"], item.Extra["bmcMacAddress"], item.Extra["chassisSerialNumber"], item.ID)
+		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n", item.Extra["siteId"], item.Extra["bmcMacAddress"], item.Extra["chassisSerialNumber"], formatLabels(item.Labels, 60), item.ID)
 	}
 	return tw.Flush()
 }
 
-func cmdInfiniBandPartitionList(s *Session, _ []string) error {
+func cmdInfiniBandPartitionList(s *Session, args []string) error {
 	LogCmd(s, "infiniband-partition", "list")
 	items, err := s.Resolver.Fetch(context.Background(), "infiniband-partition")
 	if err != nil {
 		return err
 	}
-	return printResourceTable(os.Stdout, "NAME", "STATUS", "ID", items)
+	_, cmdLabels, sortKey, err := parseLabelArgs(args)
+	if err != nil {
+		return err
+	}
+	merged, mergeErr := mergeLabels(s.Scope.LabelFilters, cmdLabels)
+	if mergeErr != nil {
+		return mergeErr
+	}
+	items = filterByLabels(items, merged)
+	if sortKey != "" {
+		items = sortByLabelKey(items, sortKey)
+	}
+	fmt.Fprintf(os.Stderr, "%d items\n", len(items))
+	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
+	fmt.Fprintln(tw, "NAME\tSTATUS\tLABELS\tID")
+	for _, item := range items {
+		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", item.Name, item.Status, formatLabels(item.Labels, 60), item.ID)
+	}
+	return tw.Flush()
 }
 
 func cmdNVLinkLogicalPartitionList(s *Session, _ []string) error {
@@ -622,6 +1963,92 @@ func cmdInstanceGet(s *Session, args []string) error {
 	}
 	LogCmd(s, "instance", "get", item.ID)
 	return getAndPrint(s, "/v2/org/{org}/carbide/instance/{id}", item.ID)
+}
+
+func cmdInstanceCreate(s *Session, _ []string) error {
+	vpc, err := s.Resolver.Resolve(context.Background(), "vpc", "VPC")
+	if err != nil {
+		return err
+	}
+	vpcSiteID := strings.TrimSpace(vpc.Extra["siteId"])
+	setSiteScopeFromID(s, vpcSiteID)
+
+	machines, err := fetchMachinesWithSiteFallback(s, "Machine listing requires a site filter. Select a site.")
+	if err != nil {
+		return fmt.Errorf("fetching machines: %w", err)
+	}
+	readyItems := readyMachineItemsForSite(machines, vpcSiteID)
+	if len(readyItems) == 0 {
+		if vpcSiteID != "" {
+			return fmt.Errorf("no machines in Ready state available for selected VPC site")
+		}
+		return fmt.Errorf("no machines in Ready state available")
+	}
+	machine, err := Select("Machine", readyItems)
+	if err != nil {
+		return err
+	}
+	name, err := PromptText("Instance name", true)
+	if err != nil {
+		return err
+	}
+
+	var osID *string
+	osList, osErr := s.Resolver.Fetch(context.Background(), "operating-system")
+	if osErr == nil && len(osList) > 0 {
+		useOS, confirmErr := PromptConfirm("Select an operating system?")
+		if confirmErr != nil {
+			return confirmErr
+		}
+		if useOS {
+			osItem, selectErr := s.Resolver.Resolve(context.Background(), "operating-system", "Operating System")
+			if selectErr != nil {
+				return selectErr
+			}
+			osID = &osItem.ID
+		}
+	}
+
+	body := map[string]interface{}{
+		"name":      name,
+		"machineId": machine.ID,
+		"vpcId":     vpc.ID,
+	}
+	if osID != nil {
+		body["operatingSystemId"] = *osID
+	}
+	LogCmd(s, "instance", "create", "--name", name, "--machine-id", machine.ID, "--vpc-id", vpc.ID)
+	bodyJSON, _ := json.Marshal(body)
+	resp, _, err := s.Client.Do("POST", "/v2/org/{org}/carbide/instance", nil, nil, bodyJSON)
+	if err != nil {
+		return fmt.Errorf("creating instance: %w", err)
+	}
+	s.Cache.Invalidate("instance")
+	s.Cache.InvalidateFiltered()
+	var created map[string]interface{}
+	json.Unmarshal(resp, &created)
+	fmt.Printf("%s Instance created: %s (%s)\n", Green("OK"), str(created, "name"), str(created, "id"))
+	return nil
+}
+
+func cmdInstanceDelete(s *Session, args []string) error {
+	item, err := s.Resolver.ResolveWithArgs(context.Background(), "instance", "Instance to delete", args)
+	if err != nil {
+		return err
+	}
+	ok, err := PromptConfirm(fmt.Sprintf("Delete instance %s (%s)?", item.Name, item.ID))
+	if err != nil || !ok {
+		return err
+	}
+	LogCmd(s, "instance", "delete", item.ID)
+	_, _, err = s.Client.Do("DELETE", "/v2/org/{org}/carbide/instance/{id}", map[string]string{"id": item.ID}, nil, nil)
+	if err != nil {
+		return fmt.Errorf("deleting instance: %w", err)
+	}
+	s.Cache.Invalidate("instance")
+	s.Cache.InvalidateFiltered()
+	fmt.Printf("%s Instance deleted: %s\n", Green("OK"), item.Name)
+	return nil
 }
 
 func cmdMachineGet(s *Session, args []string) error {
@@ -870,6 +2297,8 @@ func cmdHelp(_ *Session, _ []string) error {
 	fmt.Fprintln(tw, "scope\tShow current scope filters")
 	fmt.Fprintln(tw, "scope site [name]\tSet site scope (filters lists)")
 	fmt.Fprintln(tw, "scope vpc [name]\tSet VPC scope (filters lists)")
+	fmt.Fprintln(tw, "scope label key=value\tAdd a label filter")
+	fmt.Fprintln(tw, "scope label clear\tClear all label filters")
 	fmt.Fprintln(tw, "scope clear\tClear all scope filters")
 	fmt.Fprintln(tw, "exit\tExit interactive mode")
 	tw.Flush()
@@ -878,6 +2307,63 @@ func cmdHelp(_ *Session, _ []string) error {
 }
 
 // -- Helpers --
+
+func splitCommaSeparated(input string) []string {
+	trimmed := strings.TrimSpace(input)
+	if trimmed == "" {
+		return nil
+	}
+	parts := strings.Split(trimmed, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		v := strings.TrimSpace(p)
+		if v != "" {
+			out = append(out, v)
+		}
+	}
+	return out
+}
+
+func parseOptionalBool(input string) (bool, bool) {
+	switch strings.ToLower(strings.TrimSpace(input)) {
+	case "":
+		return false, false
+	case "true", "t", "yes", "y", "1":
+		return true, true
+	case "false", "f", "no", "n", "0":
+		return false, true
+	default:
+		return false, false
+	}
+}
+
+func parseOptionalInt(input string) (int, bool) {
+	trimmed := strings.TrimSpace(input)
+	if trimmed == "" {
+		return 0, false
+	}
+	var out int
+	if _, err := fmt.Sscanf(trimmed, "%d", &out); err != nil {
+		return 0, false
+	}
+	return out, true
+}
+
+func rawFieldString(raw interface{}, key string) string {
+	m, ok := raw.(map[string]interface{})
+	if !ok {
+		return ""
+	}
+	v, ok := m[key]
+	if !ok {
+		return ""
+	}
+	s, ok := v.(string)
+	if !ok {
+		return ""
+	}
+	return strings.TrimSpace(s)
+}
 
 func getAndPrint(s *Session, path, id string) error {
 	body, _, err := s.Client.Do("GET", path, map[string]string{"id": id}, nil, nil)
@@ -900,6 +2386,117 @@ func printDetailJSON(w io.Writer, data []byte) error {
 	}
 	fmt.Fprintln(w, string(pretty))
 	return nil
+}
+
+func formatLabels(labels map[string]string, maxWidth int) string {
+	if len(labels) == 0 {
+		return ""
+	}
+	keys := make([]string, 0, len(labels))
+	for k := range labels {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	parts := make([]string, 0, len(keys))
+	for _, k := range keys {
+		parts = append(parts, k+"="+labels[k])
+	}
+	s := strings.Join(parts, ", ")
+	if maxWidth > 3 && len(s) > maxWidth {
+		return s[:maxWidth-3] + "..."
+	}
+	return s
+}
+
+func filterByLabels(items []NamedItem, filters map[string]string) []NamedItem {
+	if len(filters) == 0 {
+		return items
+	}
+	result := make([]NamedItem, 0, len(items))
+	for _, item := range items {
+		match := true
+		for k, v := range filters {
+			if item.Labels[k] != v {
+				match = false
+				break
+			}
+		}
+		if match {
+			result = append(result, item)
+		}
+	}
+	return result
+}
+
+func sortByLabelKey(items []NamedItem, key string) []NamedItem {
+	sorted := make([]NamedItem, len(items))
+	copy(sorted, items)
+	sort.SliceStable(sorted, func(i, j int) bool {
+		vi, oki := sorted[i].Labels[key]
+		vj, okj := sorted[j].Labels[key]
+		if !oki && !okj {
+			return false
+		}
+		if !oki {
+			return false
+		}
+		if !okj {
+			return true
+		}
+		return vi < vj
+	})
+	return sorted
+}
+
+// parseLabelArgs extracts --label key=value and --sort-label key from args.
+// Returns the remaining args, label filters, sort-label key, and an error
+// if a --label value is missing "=" or --sort-label has no following token.
+func parseLabelArgs(args []string) (remaining []string, labels map[string]string, sortKey string, err error) {
+	labels = map[string]string{}
+	for i := 0; i < len(args); i++ {
+		if args[i] == "--label" {
+			if i+1 >= len(args) {
+				return nil, nil, "", fmt.Errorf("--label requires a key=value argument")
+			}
+			i++
+			if k, v, ok := strings.Cut(args[i], "="); ok {
+				if prev, exists := labels[k]; exists && prev != v {
+					return nil, nil, "", fmt.Errorf("conflicting --label filters for %q", k)
+				}
+				labels[k] = v
+			} else {
+				return nil, nil, "", fmt.Errorf("--label value %q must contain '='", args[i])
+			}
+		} else if args[i] == "--sort-label" {
+			if i+1 >= len(args) {
+				return nil, nil, "", fmt.Errorf("--sort-label requires a key argument")
+			}
+			i++
+			sortKey = args[i]
+		} else {
+			remaining = append(remaining, args[i])
+		}
+	}
+	return remaining, labels, sortKey, nil
+}
+
+// mergeLabels combines scope label filters with per-command label filters.
+// Returns an error if a command-level label conflicts with a scope label.
+func mergeLabels(scope, cmd map[string]string) (map[string]string, error) {
+	if len(scope) == 0 && len(cmd) == 0 {
+		return nil, nil
+	}
+	merged := make(map[string]string, len(scope)+len(cmd))
+	for k, v := range scope {
+		merged[k] = v
+	}
+	for k, v := range cmd {
+		if prev, exists := merged[k]; exists && prev != v {
+			return nil, fmt.Errorf("--label %s=%s conflicts with scope label %s=%s", k, v, k, prev)
+		}
+		merged[k] = v
+	}
+	return merged, nil
 }
 
 func printResourceTable(w io.Writer, col1, col2, col3 string, items []NamedItem) error {

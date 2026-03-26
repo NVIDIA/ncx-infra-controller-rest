@@ -32,29 +32,51 @@ const maxHistory = 100
 // argResourceMap maps command names to the resource type whose names should
 // be offered as argument completions.
 var argResourceMap = map[string]string{
-	"site get":                     "site",
-	"vpc get":                      "vpc",
-	"vpc delete":                   "vpc",
-	"subnet get":                   "subnet",
-	"instance get":                 "instance",
-	"allocation get":               "allocation",
-	"allocation delete":            "allocation",
-	"audit get":                    "audit",
-	"machine get":                  "machine",
-	"ip-block get":                 "ip-block",
-	"ip-block delete":              "ip-block",
-	"operating-system get":         "operating-system",
-	"ssh-key-group get":            "ssh-key-group",
-	"ssh-key get":                  "ssh-key",
-	"sku get":                      "sku",
-	"rack get":                     "rack",
-	"vpc-prefix get":               "vpc-prefix",
-	"tenant-account get":           "tenant-account",
-	"expected-machine get":         "expected-machine",
-	"dpu-extension-service get":    "dpu-extension-service",
-	"infiniband-partition get":     "infiniband-partition",
-	"nvlink-logical-partition get": "nvlink-logical-partition",
-	"network-security-group get":   "network-security-group",
+	"site get":                      "site",
+	"site update":                   "site",
+	"site delete":                   "site",
+	"vpc get":                       "vpc",
+	"vpc update":                    "vpc",
+	"vpc virtualization update":     "vpc",
+	"vpc delete":                    "vpc",
+	"subnet get":                    "subnet",
+	"subnet update":                 "subnet",
+	"subnet delete":                 "subnet",
+	"instance-type get":             "instance-type",
+	"instance get":                  "instance",
+	"instance delete":               "instance",
+	"allocation get":                "allocation",
+	"allocation update":             "allocation",
+	"allocation delete":             "allocation",
+	"audit get":                     "audit",
+	"machine get":                   "machine",
+	"ip-block get":                  "ip-block",
+	"ip-block update":               "ip-block",
+	"ip-block delete":               "ip-block",
+	"operating-system get":          "operating-system",
+	"operating-system update":       "operating-system",
+	"operating-system delete":       "operating-system",
+	"ssh-key-group get":             "ssh-key-group",
+	"ssh-key-group update":          "ssh-key-group",
+	"ssh-key-group delete":          "ssh-key-group",
+	"ssh-key get":                   "ssh-key",
+	"ssh-key update":                "ssh-key",
+	"ssh-key delete":                "ssh-key",
+	"sku get":                       "sku",
+	"rack get":                      "rack",
+	"vpc-prefix get":                "vpc-prefix",
+	"vpc-prefix update":             "vpc-prefix",
+	"vpc-prefix delete":             "vpc-prefix",
+	"tenant-account get":            "tenant-account",
+	"tenant-account update":         "tenant-account",
+	"tenant-account delete":         "tenant-account",
+	"expected-machine get":          "expected-machine",
+	"dpu-extension-service get":     "dpu-extension-service",
+	"infiniband-partition get":      "infiniband-partition",
+	"nvlink-logical-partition get":  "nvlink-logical-partition",
+	"network-security-group get":    "network-security-group",
+	"network-security-group update": "network-security-group",
+	"network-security-group delete": "network-security-group",
 }
 
 var history []string
@@ -70,7 +92,7 @@ func RunREPL(s *Session) error {
 		cmdMap[cmd.Name] = cmd
 	}
 	cmdNames = append(cmdNames, "org", "org list", "org set",
-		"scope", "scope site", "scope vpc", "scope clear",
+		"scope", "scope site", "scope vpc", "scope label", "scope label clear", "scope clear",
 		"exit", "quit")
 
 	fmt.Printf("\n%s\n", Bold("Carbide Interactive Mode"))
@@ -127,14 +149,17 @@ func RunREPL(s *Session) error {
 		}
 
 		if line == "scope" {
-			if s.Scope.SiteID == "" && s.Scope.VpcID == "" {
+			if s.Scope.SiteID == "" && s.Scope.VpcID == "" && len(s.Scope.LabelFilters) == 0 {
 				fmt.Println("No scope set. All list commands return unfiltered results.")
 			} else {
 				if s.Scope.SiteName != "" {
-					fmt.Printf("  site: %s (%s)\n", Cyan(s.Scope.SiteName), s.Scope.SiteID)
+					fmt.Printf("  site:   %s (%s)\n", Cyan(s.Scope.SiteName), s.Scope.SiteID)
 				}
 				if s.Scope.VpcName != "" {
-					fmt.Printf("  vpc:  %s (%s)\n", Cyan(s.Scope.VpcName), s.Scope.VpcID)
+					fmt.Printf("  vpc:    %s (%s)\n", Cyan(s.Scope.VpcName), s.Scope.VpcID)
+				}
+				for k, v := range s.Scope.LabelFilters {
+					fmt.Printf("  label:  %s=%s\n", k, Cyan(v))
 				}
 			}
 			fmt.Println()
@@ -145,6 +170,33 @@ func RunREPL(s *Session) error {
 			s.Cache.InvalidateFiltered()
 			fmt.Println("Scope cleared.")
 			fmt.Println()
+			continue
+		}
+		if line == "scope label clear" {
+			s.Scope.LabelFilters = nil
+			fmt.Println("Label filters cleared.")
+			fmt.Println()
+			continue
+		}
+		if strings.HasPrefix(line, "scope label clear ") {
+			key := strings.TrimSpace(line[len("scope label clear "):])
+			if key != "" {
+				delete(s.Scope.LabelFilters, key)
+				fmt.Printf("Label filter %q removed.\n\n", key)
+			}
+			continue
+		}
+		if strings.HasPrefix(line, "scope label ") {
+			kv := strings.TrimSpace(line[len("scope label "):])
+			if k, v, ok := strings.Cut(kv, "="); ok && k != "" {
+				if s.Scope.LabelFilters == nil {
+					s.Scope.LabelFilters = map[string]string{}
+				}
+				s.Scope.LabelFilters[k] = v
+				fmt.Printf("Label filter set: %s=%s\n\n", k, Cyan(v))
+			} else {
+				fmt.Fprintf(os.Stderr, "%s expected format: scope label key=value\n\n", Red("Error:"))
+			}
 			continue
 		}
 		if line == "scope site" || strings.HasPrefix(line, "scope site ") {

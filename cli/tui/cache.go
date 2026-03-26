@@ -24,6 +24,7 @@ type NamedItem struct {
 	Name   string
 	ID     string
 	Status string
+	Labels map[string]string
 	Extra  map[string]string
 	Raw    interface{}
 }
@@ -67,7 +68,7 @@ func (c *Cache) InvalidateAll() {
 }
 
 func (c *Cache) InvalidateFiltered() {
-	for _, rt := range []string{"vpc", "subnet", "instance",
+	for _, rt := range []string{"vpc", "subnet", "instance", "instance-type",
 		"allocation", "machine", "ip-block", "operating-system",
 		"ssh-key-group", "network-security-group",
 		"vpc-prefix", "rack", "expected-machine", "sku",
