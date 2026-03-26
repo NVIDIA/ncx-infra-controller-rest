@@ -340,6 +340,11 @@ func (gatah GetAllTenantAccountHandler) Handle(c echo.Context) error {
 		status = &statusQuery
 	}
 
+	searchQueryStr := c.QueryParam("query")
+	if searchQueryStr != "" {
+		gatah.tracerSpan.SetAttribute(handlerSpan, attribute.String("query", searchQueryStr), logger)
+	}
+
 	var infrastructureProviderID *uuid.UUID
 
 	// Validate infrastructure provider id if provided
@@ -426,11 +431,16 @@ func (gatah GetAllTenantAccountHandler) Handle(c echo.Context) error {
 		statuses = []string{*status}
 	}
 
-	tas, total, err := taDAO.GetAll(ctx, nil, cdbm.TenantAccountFilterInput{
+	filter := cdbm.TenantAccountFilterInput{
 		InfrastructureProviderID: infrastructureProviderID,
 		TenantIDs:                tenantIDs,
 		Statuses:                 statuses,
-	}, cdbp.PageInput{
+	}
+	if searchQueryStr != "" {
+		filter.SearchQuery = &searchQueryStr
+	}
+
+	tas, total, err := taDAO.GetAll(ctx, nil, filter, cdbp.PageInput{
 		Offset:  pageRequest.Offset,
 		Limit:   pageRequest.Limit,
 		OrderBy: pageRequest.OrderBy,
