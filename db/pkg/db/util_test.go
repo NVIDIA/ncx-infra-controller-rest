@@ -219,6 +219,61 @@ func TestGetStringToUint64Hash(t *testing.T) {
 	assert.Equal(t, h1, h2)
 }
 
+func TestGetStringToTsQuery(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name:  "single word",
+			input: "hello",
+			want:  "hello",
+		},
+		{
+			name:  "single space between words",
+			input: "hello world",
+			want:  "hello | world",
+		},
+		{
+			name:  "double space between words",
+			input: "hello  world",
+			want:  "hello | world",
+		},
+		{
+			name:  "multiple spaces between words",
+			input: "hello    world   foo",
+			want:  "hello | world | foo",
+		},
+		{
+			name:  "whitespace only",
+			input: "   ",
+			want:  "   ",
+		},
+		{
+			name:  "empty string",
+			input: "",
+			want:  "",
+		},
+		{
+			name:  "already has OR operator",
+			input: "hello | world",
+			want:  "hello | world",
+		},
+		{
+			name:  "already has AND operator",
+			input: "hello & world",
+			want:  "hello & world",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := GetStringToTsQuery(tt.input)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
 func TestCompareStringSlicesIgnoreOrder(t *testing.T) {
 	tests := []struct {
 		name string

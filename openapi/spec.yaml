@@ -410,6 +410,11 @@ paths:
           description: Filter TenantAccounts by Tenant ID
         - schema:
             type: string
+          in: query
+          name: query
+          description: 'Search string to filter Tenant Accounts by account number, tenant org, or tenant org display name'
+        - schema:
+            type: string
             enum:
               - InfrastructureProvider
               - Tenant
