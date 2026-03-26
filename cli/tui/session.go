@@ -298,6 +298,29 @@ func (s *Session) fetchMachines(_ context.Context) ([]NamedItem, error) {
 	if err != nil {
 		return nil, err
 	}
+	if s.Scope.VpcID != "" {
+		instanceQuery := map[string]string{"vpcId": s.Scope.VpcID}
+		if s.Scope.SiteID != "" {
+			instanceQuery["siteId"] = s.Scope.SiteID
+		}
+		instances, err := s.fetchAll("/v2/org/{org}/carbide/instance", instanceQuery)
+		if err != nil {
+			return nil, err
+		}
+		allowedMachineIDs := make(map[string]struct{}, len(instances))
+		for _, inst := range instances {
+			if machineID := str(inst, "machineId"); machineID != "" {
+				allowedMachineIDs[machineID] = struct{}{}
+			}
+		}
+		filtered := make([]map[string]interface{}, 0, len(items))
+		for _, m := range items {
+			if _, ok := allowedMachineIDs[str(m, "id")]; ok {
+				filtered = append(filtered, m)
+			}
+		}
+		items = filtered
+	}
 	result := make([]NamedItem, len(items))
 	for i, m := range items {
 		name := machineDisplayName(m)
