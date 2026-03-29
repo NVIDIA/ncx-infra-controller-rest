@@ -281,6 +281,9 @@ func TestManageMachine_UpdateMachinesInDB(t *testing.T) {
 	assert.NotNil(t, m)
 	testMachineBuildStatusDetail(t, dbSession, m.ID, cdbm.MachineStatusInitializing, cdb.GetStrPtr("Machine is being initialized"))
 	m2 := testMachineBuildMachine(t, dbSession, ip2.ID, site.ID, nil, cdb.GetStrPtr("mcType"), false, nil, false, nil, nil)
+	setupMDAO := cdbm.NewMachineDAO(dbSession)
+	_, err := setupMDAO.Update(context.Background(), nil, cdbm.MachineUpdateInput{MachineID: m2.ID, IsUsableByTenant: cdb.GetBoolPtr(true)})
+	assert.Nil(t, err)
 	testMachineBuildStatusDetail(t, dbSession, m2.ID, cdbm.MachineStatusInitializing, cdb.GetStrPtr("Machine is being initialized"))
 	m3 := testMachineBuildMachine(t, dbSession, ip2.ID, site.ID, nil, nil, false, nil, false, nil, cdb.GetStrPtr(cdbm.MachineStatusError))
 	testMachineBuildStatusDetail(t, dbSession, m3.ID, cdbm.MachineStatusError, cdb.GetStrPtr("Machine is missing on Site"))
@@ -312,7 +315,7 @@ func TestManageMachine_UpdateMachinesInDB(t *testing.T) {
 	assert.NotNil(t, mc4)
 	// Add capability entry to test resetting of inactive devices
 	mc14 := testMachineBuildMachineCapability(t, dbSession, &m14.ID, cdbm.MachineCapabilityTypeInfiniBand, "MT2910 Family [ConnectX-7]", nil, cdb.GetIntPtr(2))
-	_, err := mcDAO.Update(context.Background(), nil, cdbm.MachineCapabilityUpdateInput{
+	_, err = mcDAO.Update(context.Background(), nil, cdbm.MachineCapabilityUpdateInput{
 		ID:              mc14.ID,
 		InactiveDevices: []int{1, 2},
 	})
@@ -1128,6 +1131,7 @@ func TestManageMachine_UpdateMachinesInDB(t *testing.T) {
 				assert.Nil(t, serr)
 				assert.Equal(t, um2.Status, cdbm.MachineStatusError)
 				assert.Equal(t, um2.IsMissingOnSite, true)
+				assert.Equal(t, um2.IsUsableByTenant, false)
 
 				// Machine 3 should have only 1 status detail (Error)
 				_, m3sdCount, serr := sdDAO.GetAllByEntityID(tt.args.ctx, nil, m3.ID, nil, nil, nil)
