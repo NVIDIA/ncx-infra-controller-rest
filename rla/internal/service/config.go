@@ -24,9 +24,7 @@ import (
 
 	"github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/endpoint"
 	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
-	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/carbideapi"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/clients/temporal"
-	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/psmapi"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor"
 	pkgcerts "github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/certs"
 )
@@ -39,14 +37,10 @@ const (
 // Config holds the service configuration.
 // It uses interfaces to abstract implementation details:
 //   - ExecutorConfig: abstracts the task executor (e.g., Temporal)
-//   - CarbideClient: abstracts the hardware management API client
-//   - PSMClient: abstracts the powershelf manager API client
 type Config struct {
-	Port          int
-	DBConf        cdb.Config
-	ExecutorConf  executor.ExecutorConfig
-	CarbideClient carbideapi.Client
-	PSMClient     psmapi.Client
+	Port         int
+	DBConf       cdb.Config
+	ExecutorConf executor.ExecutorConfig
 
 	// CertConfig holds certificate file paths for the gRPC server listener.
 	// When set, these take precedence over CERTDIR / the k8s default.

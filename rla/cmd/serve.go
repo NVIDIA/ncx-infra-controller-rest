@@ -246,7 +246,7 @@ func doServe() {
 	}
 
 	// Initialize provider registry (creates API clients based on config)
-	providerRegistry, clients, err := initProviderRegistry(cmConfig)
+	providerRegistry, _, err := initProviderRegistry(cmConfig)
 	if err != nil {
 		log.Fatal().Msgf("failed to initialize provider registry: %v", err)
 	}
@@ -300,11 +300,9 @@ func doServe() {
 	service, err := svc.New(
 		ctx,
 		svc.Config{
-			Port:          port,
-			DBConf:        dbConf,
-			ExecutorConf:  &temporalManagerConf,
-			CarbideClient: clients.carbide,
-			PSMClient:     clients.psm,
+			Port:         port,
+			DBConf:       dbConf,
+			ExecutorConf: &temporalManagerConf,
 			CertConfig: pkgcerts.Config{
 				CACert:  globalCACert,
 				TLSCert: globalTLSCert,
