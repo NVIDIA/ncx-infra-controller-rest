@@ -1603,16 +1603,14 @@ func (rs *RLAServerImpl) ValidateComponents(
 
 	// Apply pagination to diffs
 	totalDiffs := int32(len(diffs))
-	if pg != nil {
-		start := pg.Offset
-		end := start + pg.Limit
-		if start > len(diffs) {
-			diffs = []*pb.ComponentDiff{}
-		} else if end > len(diffs) {
-			diffs = diffs[start:]
-		} else {
-			diffs = diffs[start:end]
-		}
+	start := pg.Offset
+	end := start + pg.Limit
+	if start > len(diffs) {
+		diffs = []*pb.ComponentDiff{}
+	} else if end > len(diffs) {
+		diffs = diffs[start:]
+	} else {
+		diffs = diffs[start:end]
 	}
 
 	return &pb.ValidateComponentsResponse{
