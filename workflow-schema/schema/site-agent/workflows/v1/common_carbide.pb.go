@@ -973,6 +973,50 @@ func (x *PowerShelfId) GetId() string {
 	return ""
 }
 
+type RackId struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RackId) Reset() {
+	*x = RackId{}
+	mi := &file_common_carbide_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RackId) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RackId) ProtoMessage() {}
+
+func (x *RackId) ProtoReflect() protoreflect.Message {
+	mi := &file_common_carbide_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RackId.ProtoReflect.Descriptor instead.
+func (*RackId) Descriptor() ([]byte, []int) {
+	return file_common_carbide_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *RackId) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
 type SwitchId struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -982,7 +1026,7 @@ type SwitchId struct {
 
 func (x *SwitchId) Reset() {
 	*x = SwitchId{}
-	mi := &file_common_carbide_proto_msgTypes[21]
+	mi := &file_common_carbide_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -994,7 +1038,7 @@ func (x *SwitchId) String() string {
 func (*SwitchId) ProtoMessage() {}
 
 func (x *SwitchId) ProtoReflect() protoreflect.Message {
-	mi := &file_common_carbide_proto_msgTypes[21]
+	mi := &file_common_carbide_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1007,7 +1051,7 @@ func (x *SwitchId) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SwitchId.ProtoReflect.Descriptor instead.
 func (*SwitchId) Descriptor() ([]byte, []int) {
-	return file_common_carbide_proto_rawDescGZIP(), []int{21}
+	return file_common_carbide_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *SwitchId) GetId() string {
@@ -1068,6 +1112,8 @@ const file_common_carbide_proto_rawDesc = "" +
 	"\x0eNVLinkDomainId\x12\x14\n" +
 	"\x05value\x18\x01 \x01(\tR\x05value\"\x1e\n" +
 	"\fPowerShelfId\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\x18\n" +
+	"\x06RackId\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"\x1a\n" +
 	"\bSwitchId\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02idBCZAgithub.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/protob\x06proto3"
@@ -1084,7 +1130,7 @@ func file_common_carbide_proto_rawDescGZIP() []byte {
 	return file_common_carbide_proto_rawDescData
 }
 
-var file_common_carbide_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
+var file_common_carbide_proto_msgTypes = make([]protoimpl.MessageInfo, 23)
 var file_common_carbide_proto_goTypes = []any{
 	(*MachineId)(nil),                // 0: common.MachineId
 	(*MachineIdList)(nil),            // 1: common.MachineIdList
@@ -1107,7 +1153,8 @@ var file_common_carbide_proto_goTypes = []any{
 	(*NVLinkLogicalPartitionId)(nil), // 18: common.NVLinkLogicalPartitionId
 	(*NVLinkDomainId)(nil),           // 19: common.NVLinkDomainId
 	(*PowerShelfId)(nil),             // 20: common.PowerShelfId
-	(*SwitchId)(nil),                 // 21: common.SwitchId
+	(*RackId)(nil),                   // 21: common.RackId
+	(*SwitchId)(nil),                 // 22: common.SwitchId
 }
 var file_common_carbide_proto_depIdxs = []int32{
 	0, // 0: common.MachineIdList.machine_ids:type_name -> common.MachineId
@@ -1129,7 +1176,7 @@ func file_common_carbide_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_common_carbide_proto_rawDesc), len(file_common_carbide_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   22,
+			NumMessages:   23,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

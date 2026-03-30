@@ -33,6 +33,24 @@ type ExpectedPowerShelfCreateRequest struct {
 	ShelfSerialNumber string `json:"shelfSerialNumber"`
 	// IP address of the Expected Power Shelf
 	IpAddress NullableString `json:"ipAddress,omitempty"`
+	// Optional rack identifier for this component
+	RackId NullableString `json:"rackId,omitempty"`
+	// Display name for this component
+	Name NullableString `json:"name,omitempty"`
+	// Manufacturer of this component
+	Manufacturer NullableString `json:"manufacturer,omitempty"`
+	// Model of this component
+	Model NullableString `json:"model,omitempty"`
+	// Description of this component
+	Description NullableString `json:"description,omitempty"`
+	// Firmware version of this component
+	FirmwareVersion NullableString `json:"firmwareVersion,omitempty"`
+	// Slot ID within the rack
+	SlotId NullableInt32 `json:"slotId,omitempty"`
+	// Tray index within the rack
+	TrayIdx NullableInt32 `json:"trayIdx,omitempty"`
+	// Host ID within the tray
+	HostId NullableInt32 `json:"hostId,omitempty"`
 	// User-defined key-value pairs for organizing and categorizing Expected Power Shelves
 	Labels map[string]string `json:"labels,omitempty"`
 }
@@ -260,6 +278,393 @@ func (o *ExpectedPowerShelfCreateRequest) UnsetIpAddress() {
 	o.IpAddress.Unset()
 }
 
+// GetRackId returns the RackId field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *ExpectedPowerShelfCreateRequest) GetRackId() string {
+	if o == nil || IsNil(o.RackId.Get()) {
+		var ret string
+		return ret
+	}
+	return *o.RackId.Get()
+}
+
+// GetRackIdOk returns a tuple with the RackId field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *ExpectedPowerShelfCreateRequest) GetRackIdOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return o.RackId.Get(), o.RackId.IsSet()
+}
+
+// HasRackId returns a boolean if a field has been set.
+func (o *ExpectedPowerShelfCreateRequest) HasRackId() bool {
+	if o != nil && o.RackId.IsSet() {
+		return true
+	}
+
+	return false
+}
+
+// SetRackId gets a reference to the given NullableString and assigns it to the RackId field.
+func (o *ExpectedPowerShelfCreateRequest) SetRackId(v string) {
+	o.RackId.Set(&v)
+}
+
+// SetRackIdNil sets the value for RackId to be an explicit nil
+func (o *ExpectedPowerShelfCreateRequest) SetRackIdNil() {
+	o.RackId.Set(nil)
+}
+
+// UnsetRackId ensures that no value is present for RackId, not even an explicit nil
+func (o *ExpectedPowerShelfCreateRequest) UnsetRackId() {
+	o.RackId.Unset()
+}
+
+// GetName returns the Name field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *ExpectedPowerShelfCreateRequest) GetName() string {
+	if o == nil || IsNil(o.Name.Get()) {
+		var ret string
+		return ret
+	}
+	return *o.Name.Get()
+}
+
+// GetNameOk returns a tuple with the Name field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *ExpectedPowerShelfCreateRequest) GetNameOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return o.Name.Get(), o.Name.IsSet()
+}
+
+// HasName returns a boolean if a field has been set.
+func (o *ExpectedPowerShelfCreateRequest) HasName() bool {
+	if o != nil && o.Name.IsSet() {
+		return true
+	}
+
+	return false
+}
+
+// SetName gets a reference to the given NullableString and assigns it to the Name field.
+func (o *ExpectedPowerShelfCreateRequest) SetName(v string) {
+	o.Name.Set(&v)
+}
+
+// SetNameNil sets the value for Name to be an explicit nil
+func (o *ExpectedPowerShelfCreateRequest) SetNameNil() {
+	o.Name.Set(nil)
+}
+
+// UnsetName ensures that no value is present for Name, not even an explicit nil
+func (o *ExpectedPowerShelfCreateRequest) UnsetName() {
+	o.Name.Unset()
+}
+
+// GetManufacturer returns the Manufacturer field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *ExpectedPowerShelfCreateRequest) GetManufacturer() string {
+	if o == nil || IsNil(o.Manufacturer.Get()) {
+		var ret string
+		return ret
+	}
+	return *o.Manufacturer.Get()
+}
+
+// GetManufacturerOk returns a tuple with the Manufacturer field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *ExpectedPowerShelfCreateRequest) GetManufacturerOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return o.Manufacturer.Get(), o.Manufacturer.IsSet()
+}
+
+// HasManufacturer returns a boolean if a field has been set.
+func (o *ExpectedPowerShelfCreateRequest) HasManufacturer() bool {
+	if o != nil && o.Manufacturer.IsSet() {
+		return true
+	}
+
+	return false
+}
+
+// SetManufacturer gets a reference to the given NullableString and assigns it to the Manufacturer field.
+func (o *ExpectedPowerShelfCreateRequest) SetManufacturer(v string) {
+	o.Manufacturer.Set(&v)
+}
+
+// SetManufacturerNil sets the value for Manufacturer to be an explicit nil
+func (o *ExpectedPowerShelfCreateRequest) SetManufacturerNil() {
+	o.Manufacturer.Set(nil)
+}
+
+// UnsetManufacturer ensures that no value is present for Manufacturer, not even an explicit nil
+func (o *ExpectedPowerShelfCreateRequest) UnsetManufacturer() {
+	o.Manufacturer.Unset()
+}
+
+// GetModel returns the Model field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *ExpectedPowerShelfCreateRequest) GetModel() string {
+	if o == nil || IsNil(o.Model.Get()) {
+		var ret string
+		return ret
+	}
+	return *o.Model.Get()
+}
+
+// GetModelOk returns a tuple with the Model field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *ExpectedPowerShelfCreateRequest) GetModelOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return o.Model.Get(), o.Model.IsSet()
+}
+
+// HasModel returns a boolean if a field has been set.
+func (o *ExpectedPowerShelfCreateRequest) HasModel() bool {
+	if o != nil && o.Model.IsSet() {
+		return true
+	}
+
+	return false
+}
+
+// SetModel gets a reference to the given NullableString and assigns it to the Model field.
+func (o *ExpectedPowerShelfCreateRequest) SetModel(v string) {
+	o.Model.Set(&v)
+}
+
+// SetModelNil sets the value for Model to be an explicit nil
+func (o *ExpectedPowerShelfCreateRequest) SetModelNil() {
+	o.Model.Set(nil)
+}
+
+// UnsetModel ensures that no value is present for Model, not even an explicit nil
+func (o *ExpectedPowerShelfCreateRequest) UnsetModel() {
+	o.Model.Unset()
+}
+
+// GetDescription returns the Description field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *ExpectedPowerShelfCreateRequest) GetDescription() string {
+	if o == nil || IsNil(o.Description.Get()) {
+		var ret string
+		return ret
+	}
+	return *o.Description.Get()
+}
+
+// GetDescriptionOk returns a tuple with the Description field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *ExpectedPowerShelfCreateRequest) GetDescriptionOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return o.Description.Get(), o.Description.IsSet()
+}
+
+// HasDescription returns a boolean if a field has been set.
+func (o *ExpectedPowerShelfCreateRequest) HasDescription() bool {
+	if o != nil && o.Description.IsSet() {
+		return true
+	}
+
+	return false
+}
+
+// SetDescription gets a reference to the given NullableString and assigns it to the Description field.
+func (o *ExpectedPowerShelfCreateRequest) SetDescription(v string) {
+	o.Description.Set(&v)
+}
+
+// SetDescriptionNil sets the value for Description to be an explicit nil
+func (o *ExpectedPowerShelfCreateRequest) SetDescriptionNil() {
+	o.Description.Set(nil)
+}
+
+// UnsetDescription ensures that no value is present for Description, not even an explicit nil
+func (o *ExpectedPowerShelfCreateRequest) UnsetDescription() {
+	o.Description.Unset()
+}
+
+// GetFirmwareVersion returns the FirmwareVersion field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *ExpectedPowerShelfCreateRequest) GetFirmwareVersion() string {
+	if o == nil || IsNil(o.FirmwareVersion.Get()) {
+		var ret string
+		return ret
+	}
+	return *o.FirmwareVersion.Get()
+}
+
+// GetFirmwareVersionOk returns a tuple with the FirmwareVersion field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *ExpectedPowerShelfCreateRequest) GetFirmwareVersionOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return o.FirmwareVersion.Get(), o.FirmwareVersion.IsSet()
+}
+
+// HasFirmwareVersion returns a boolean if a field has been set.
+func (o *ExpectedPowerShelfCreateRequest) HasFirmwareVersion() bool {
+	if o != nil && o.FirmwareVersion.IsSet() {
+		return true
+	}
+
+	return false
+}
+
+// SetFirmwareVersion gets a reference to the given NullableString and assigns it to the FirmwareVersion field.
+func (o *ExpectedPowerShelfCreateRequest) SetFirmwareVersion(v string) {
+	o.FirmwareVersion.Set(&v)
+}
+
+// SetFirmwareVersionNil sets the value for FirmwareVersion to be an explicit nil
+func (o *ExpectedPowerShelfCreateRequest) SetFirmwareVersionNil() {
+	o.FirmwareVersion.Set(nil)
+}
+
+// UnsetFirmwareVersion ensures that no value is present for FirmwareVersion, not even an explicit nil
+func (o *ExpectedPowerShelfCreateRequest) UnsetFirmwareVersion() {
+	o.FirmwareVersion.Unset()
+}
+
+// GetSlotId returns the SlotId field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *ExpectedPowerShelfCreateRequest) GetSlotId() int32 {
+	if o == nil || IsNil(o.SlotId.Get()) {
+		var ret int32
+		return ret
+	}
+	return *o.SlotId.Get()
+}
+
+// GetSlotIdOk returns a tuple with the SlotId field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *ExpectedPowerShelfCreateRequest) GetSlotIdOk() (*int32, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return o.SlotId.Get(), o.SlotId.IsSet()
+}
+
+// HasSlotId returns a boolean if a field has been set.
+func (o *ExpectedPowerShelfCreateRequest) HasSlotId() bool {
+	if o != nil && o.SlotId.IsSet() {
+		return true
+	}
+
+	return false
+}
+
+// SetSlotId gets a reference to the given NullableInt32 and assigns it to the SlotId field.
+func (o *ExpectedPowerShelfCreateRequest) SetSlotId(v int32) {
+	o.SlotId.Set(&v)
+}
+
+// SetSlotIdNil sets the value for SlotId to be an explicit nil
+func (o *ExpectedPowerShelfCreateRequest) SetSlotIdNil() {
+	o.SlotId.Set(nil)
+}
+
+// UnsetSlotId ensures that no value is present for SlotId, not even an explicit nil
+func (o *ExpectedPowerShelfCreateRequest) UnsetSlotId() {
+	o.SlotId.Unset()
+}
+
+// GetTrayIdx returns the TrayIdx field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *ExpectedPowerShelfCreateRequest) GetTrayIdx() int32 {
+	if o == nil || IsNil(o.TrayIdx.Get()) {
+		var ret int32
+		return ret
+	}
+	return *o.TrayIdx.Get()
+}
+
+// GetTrayIdxOk returns a tuple with the TrayIdx field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *ExpectedPowerShelfCreateRequest) GetTrayIdxOk() (*int32, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return o.TrayIdx.Get(), o.TrayIdx.IsSet()
+}
+
+// HasTrayIdx returns a boolean if a field has been set.
+func (o *ExpectedPowerShelfCreateRequest) HasTrayIdx() bool {
+	if o != nil && o.TrayIdx.IsSet() {
+		return true
+	}
+
+	return false
+}
+
+// SetTrayIdx gets a reference to the given NullableInt32 and assigns it to the TrayIdx field.
+func (o *ExpectedPowerShelfCreateRequest) SetTrayIdx(v int32) {
+	o.TrayIdx.Set(&v)
+}
+
+// SetTrayIdxNil sets the value for TrayIdx to be an explicit nil
+func (o *ExpectedPowerShelfCreateRequest) SetTrayIdxNil() {
+	o.TrayIdx.Set(nil)
+}
+
+// UnsetTrayIdx ensures that no value is present for TrayIdx, not even an explicit nil
+func (o *ExpectedPowerShelfCreateRequest) UnsetTrayIdx() {
+	o.TrayIdx.Unset()
+}
+
+// GetHostId returns the HostId field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *ExpectedPowerShelfCreateRequest) GetHostId() int32 {
+	if o == nil || IsNil(o.HostId.Get()) {
+		var ret int32
+		return ret
+	}
+	return *o.HostId.Get()
+}
+
+// GetHostIdOk returns a tuple with the HostId field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *ExpectedPowerShelfCreateRequest) GetHostIdOk() (*int32, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return o.HostId.Get(), o.HostId.IsSet()
+}
+
+// HasHostId returns a boolean if a field has been set.
+func (o *ExpectedPowerShelfCreateRequest) HasHostId() bool {
+	if o != nil && o.HostId.IsSet() {
+		return true
+	}
+
+	return false
+}
+
+// SetHostId gets a reference to the given NullableInt32 and assigns it to the HostId field.
+func (o *ExpectedPowerShelfCreateRequest) SetHostId(v int32) {
+	o.HostId.Set(&v)
+}
+
+// SetHostIdNil sets the value for HostId to be an explicit nil
+func (o *ExpectedPowerShelfCreateRequest) SetHostIdNil() {
+	o.HostId.Set(nil)
+}
+
+// UnsetHostId ensures that no value is present for HostId, not even an explicit nil
+func (o *ExpectedPowerShelfCreateRequest) UnsetHostId() {
+	o.HostId.Unset()
+}
+
 // GetLabels returns the Labels field value if set, zero value otherwise.
 func (o *ExpectedPowerShelfCreateRequest) GetLabels() map[string]string {
 	if o == nil || IsNil(o.Labels) {
@@ -313,6 +718,33 @@ func (o ExpectedPowerShelfCreateRequest) ToMap() (map[string]interface{}, error)
 	toSerialize["shelfSerialNumber"] = o.ShelfSerialNumber
 	if o.IpAddress.IsSet() {
 		toSerialize["ipAddress"] = o.IpAddress.Get()
+	}
+	if o.RackId.IsSet() {
+		toSerialize["rackId"] = o.RackId.Get()
+	}
+	if o.Name.IsSet() {
+		toSerialize["name"] = o.Name.Get()
+	}
+	if o.Manufacturer.IsSet() {
+		toSerialize["manufacturer"] = o.Manufacturer.Get()
+	}
+	if o.Model.IsSet() {
+		toSerialize["model"] = o.Model.Get()
+	}
+	if o.Description.IsSet() {
+		toSerialize["description"] = o.Description.Get()
+	}
+	if o.FirmwareVersion.IsSet() {
+		toSerialize["firmwareVersion"] = o.FirmwareVersion.Get()
+	}
+	if o.SlotId.IsSet() {
+		toSerialize["slotId"] = o.SlotId.Get()
+	}
+	if o.TrayIdx.IsSet() {
+		toSerialize["trayIdx"] = o.TrayIdx.Get()
+	}
+	if o.HostId.IsSet() {
+		toSerialize["hostId"] = o.HostId.Get()
 	}
 	if !IsNil(o.Labels) {
 		toSerialize["labels"] = o.Labels

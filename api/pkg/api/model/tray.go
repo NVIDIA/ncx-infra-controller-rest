@@ -40,6 +40,7 @@ var APIToProtoComponentTypeName = map[string]string{
 
 // ProtoToAPIComponentTypeName maps protobuf ComponentType to API tray type strings.
 var ProtoToAPIComponentTypeName = map[rlav1.ComponentType]string{
+	rlav1.ComponentType_COMPONENT_TYPE_UNKNOWN:    "unknown",
 	rlav1.ComponentType_COMPONENT_TYPE_COMPUTE:    "compute",
 	rlav1.ComponentType_COMPONENT_TYPE_NVLSWITCH:  "switch",
 	rlav1.ComponentType_COMPONENT_TYPE_POWERSHELF: "powershelf",
@@ -336,34 +337,46 @@ func (r *APITrayGetAllRequest) ToProto() *rlav1.GetComponentsRequest {
 		return rlaRequest
 	}
 
-	rackTarget := &rlav1.RackTarget{}
-
-	if r.RackID != nil {
-		rackTarget.Identifier = &rlav1.RackTarget_Id{
-			Id: &rlav1.UUID{Id: *r.RackID},
-		}
-	} else if r.RackName != nil {
-		rackTarget.Identifier = &rlav1.RackTarget_Name{
-			Name: *r.RackName,
-		}
-	}
-
-	if r.Type != nil {
-		if protoName, ok := APIToProtoComponentTypeName[*r.Type]; ok {
-			rackTarget.ComponentTypes = []rlav1.ComponentType{
-				rlav1.ComponentType(rlav1.ComponentType_value[protoName]),
+	// When a specific rack is identified, use TargetSpec with a RackTarget.
+	// When no rack identifier is provided, omit TargetSpec entirely so RLA
+	// queries all components, and pass Type as a filter instead.
+	if r.RackID != nil || r.RackName != nil {
+		rackTarget := &rlav1.RackTarget{}
+		if r.RackID != nil {
+			rackTarget.Identifier = &rlav1.RackTarget_Id{
+				Id: &rlav1.UUID{Id: *r.RackID},
+			}
+		} else {
+			rackTarget.Identifier = &rlav1.RackTarget_Name{
+				Name: *r.RackName,
 			}
 		}
-	} else {
-		rackTarget.ComponentTypes = ValidProtoComponentTypes
+
+		if r.Type != nil {
+			if protoName, ok := APIToProtoComponentTypeName[*r.Type]; ok {
+				rackTarget.ComponentTypes = []rlav1.ComponentType{
+					rlav1.ComponentType(rlav1.ComponentType_value[protoName]),
+				}
+			}
+		} else {
+			rackTarget.ComponentTypes = ValidProtoComponentTypes
+		}
+
+		rlaRequest.TargetSpec = &rlav1.OperationTargetSpec{
+			Targets: &rlav1.OperationTargetSpec_Racks{
+				Racks: &rlav1.RackTargets{
+					Targets: []*rlav1.RackTarget{rackTarget},
+				},
+			},
+		}
+		return rlaRequest
 	}
 
-	rlaRequest.TargetSpec = &rlav1.OperationTargetSpec{
-		Targets: &rlav1.OperationTargetSpec_Racks{
-			Racks: &rlav1.RackTargets{
-				Targets: []*rlav1.RackTarget{rackTarget},
-			},
-		},
+	// No rack or component targeting — query all components via filters.
+	if r.Type != nil {
+		if f := GetProtoTrayFilter("type", []string{*r.Type}); f != nil {
+			rlaRequest.Filters = append(rlaRequest.Filters, f)
+		}
 	}
 
 	return rlaRequest
@@ -564,7 +577,7 @@ func (at *APITray) FromProto(comp *rlav1.Component) {
 		return
 	}
 
-	at.Type = enumOr(ProtoToAPIComponentTypeName, comp.GetType(), "compute")
+	at.Type = enumOr(ProtoToAPIComponentTypeName, comp.GetType(), "unknown")
 	at.FirmwareVersion = comp.GetFirmwareVersion()
 	at.PowerState = comp.GetPowerState()
 	at.ComponentID = comp.GetComponentId()

@@ -33,6 +33,7 @@ import (
 
 	swe "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/error"
 	cclient "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/grpc/client"
+	rlav1 "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/rla/protobuf/v1"
 	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 )
 
@@ -256,12 +257,14 @@ func NewManageExpectedMachineInventory(siteID uuid.UUID, carbideAtomicClient *cc
 // ManageExpectedMachine is an activity wrapper for Expected Machine management
 type ManageExpectedMachine struct {
 	CarbideAtomicClient *cclient.CarbideAtomicClient
+	RlaAtomicClient     *cclient.RlaAtomicClient
 }
 
 // NewManageExpectedMachine returns a new ManageExpectedMachine client
-func NewManageExpectedMachine(carbideClient *cclient.CarbideAtomicClient) ManageExpectedMachine {
+func NewManageExpectedMachine(carbideClient *cclient.CarbideAtomicClient, rlaClient *cclient.RlaAtomicClient) ManageExpectedMachine {
 	return ManageExpectedMachine{
 		CarbideAtomicClient: carbideClient,
+		RlaAtomicClient:     rlaClient,
 	}
 }
 
@@ -432,6 +435,142 @@ func (mem *ManageExpectedMachine) CreateExpectedMachinesOnSite(ctx context.Conte
 		Msg("Completed activity")
 
 	return response, nil
+}
+
+// CreateExpectedMachineOnRLA creates an Expected Machine as a component in RLA via AddComponent
+func (mem *ManageExpectedMachine) CreateExpectedMachineOnRLA(ctx context.Context, request *cwssaws.ExpectedMachine) error {
+	logger := log.With().Str("Activity", "CreateExpectedMachineOnRLA").Logger()
+
+	logger.Info().Msg("Starting activity")
+
+	// Validate request
+	if request == nil {
+		return temporal.NewNonRetryableApplicationError("received empty create Expected Machine request for RLA", swe.ErrTypeInvalidRequest, errors.New("nil request"))
+	}
+
+	// If RLA client is not configured, skip gracefully
+	if mem.RlaAtomicClient == nil {
+		logger.Warn().Msg("RLA client not configured, skipping RLA component creation")
+		return nil
+	}
+
+	rlaClient := mem.RlaAtomicClient.GetClient()
+	if rlaClient == nil {
+		logger.Warn().Msg("RLA client not connected, skipping RLA component creation")
+		return nil
+	}
+
+	component := expectedMachineToRLAComponent(request)
+	_, err := rlaClient.Rla().AddComponent(ctx, &rlav1.AddComponentRequest{Component: component})
+	if err != nil {
+		logger.Warn().Err(err).Msg("Failed to create Expected Machine component on RLA")
+		return swe.WrapErr(err)
+	}
+
+	logger.Info().Msg("Completed activity")
+	return nil
+}
+
+// CreateExpectedMachinesOnRLA creates multiple Expected Machines as components in RLA via AddComponent
+func (mem *ManageExpectedMachine) CreateExpectedMachinesOnRLA(ctx context.Context, request *cwssaws.BatchExpectedMachineOperationRequest) error {
+	logger := log.With().Str("Activity", "CreateExpectedMachinesOnRLA").Logger()
+
+	logger.Info().Msg("Starting activity")
+
+	// If RLA client is not configured, skip gracefully
+	if mem.RlaAtomicClient == nil {
+		logger.Warn().Msg("RLA client not configured, skipping RLA component creation")
+		return nil
+	}
+
+	rlaClient := mem.RlaAtomicClient.GetClient()
+	if rlaClient == nil {
+		logger.Warn().Msg("RLA client not connected, skipping RLA component creation")
+		return nil
+	}
+
+	rla := rlaClient.Rla()
+	machines := request.GetExpectedMachines().GetExpectedMachines()
+	successes := 0
+	failures := 0
+
+	// TODO(chet): Work with RLA team to add batch support so we don't have to loop here.
+	for _, machine := range machines {
+		component := expectedMachineToRLAComponent(machine)
+		_, err := rla.AddComponent(ctx, &rlav1.AddComponentRequest{Component: component})
+		if err != nil {
+			logger.Warn().Err(err).Str("ID", machine.GetId().GetValue()).Msg("Failed to create Expected Machine component on RLA")
+			failures++
+		} else {
+			successes++
+		}
+	}
+
+	logger.Info().
+		Int("Total", len(machines)).
+		Int("Succeeded", successes).
+		Int("Failed", failures).
+		Msg("Completed activity")
+
+	return nil
+}
+
+// expectedMachineToRLAComponent converts a Forge ExpectedMachine proto to an RLA Component proto
+func expectedMachineToRLAComponent(em *cwssaws.ExpectedMachine) *rlav1.Component {
+	component := &rlav1.Component{
+		Type: rlav1.ComponentType_COMPONENT_TYPE_COMPUTE,
+		Info: &rlav1.DeviceInfo{
+			Id:           &rlav1.UUID{Id: em.GetId().GetValue()},
+			SerialNumber: em.GetChassisSerialNumber(),
+		},
+		Bmcs: []*rlav1.BMCInfo{
+			{
+				Type:       rlav1.BMCType_BMC_TYPE_HOST,
+				MacAddress: em.GetBmcMacAddress(),
+			},
+		},
+		ComponentId: em.GetId().GetValue(),
+	}
+
+	// DeviceInfo fields
+	if name := em.GetName(); name != "" {
+		component.Info.Name = name
+	}
+	if manufacturer := em.GetManufacturer(); manufacturer != "" {
+		component.Info.Manufacturer = manufacturer
+	}
+	if em.Model != nil {
+		component.Info.Model = em.Model
+	}
+	if em.Description != nil {
+		component.Info.Description = em.Description
+	}
+
+	// Firmware version
+	if fv := em.GetFirmwareVersion(); fv != "" {
+		component.FirmwareVersion = fv
+	}
+
+	// Rack position
+	if em.SlotId != nil || em.TrayIdx != nil || em.HostId != nil {
+		pos := &rlav1.RackPosition{}
+		if em.SlotId != nil {
+			pos.SlotId = *em.SlotId
+		}
+		if em.TrayIdx != nil {
+			pos.TrayIdx = *em.TrayIdx
+		}
+		if em.HostId != nil {
+			pos.HostId = *em.HostId
+		}
+		component.Position = pos
+	}
+
+	if rackID := em.GetRackId().GetId(); rackID != "" {
+		component.RackId = &rlav1.UUID{Id: rackID}
+	}
+
+	return component
 }
 
 // UpdateExpectedMachinesOnSite updates multiple Expected Machines on Carbide using the batch endpoint

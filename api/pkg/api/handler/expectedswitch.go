@@ -179,6 +179,15 @@ func (cesh CreateExpectedSwitchHandler) Handle(c echo.Context) error {
 			SiteID:             site.ID,
 			BmcMacAddress:      apiRequest.BmcMacAddress,
 			SwitchSerialNumber: apiRequest.SwitchSerialNumber,
+			RackID:             apiRequest.RackID,
+			Name:               apiRequest.Name,
+			Manufacturer:       apiRequest.Manufacturer,
+			Model:              apiRequest.Model,
+			Description:        apiRequest.Description,
+			FirmwareVersion:    apiRequest.FirmwareVersion,
+			SlotID:             apiRequest.SlotID,
+			TrayIdx:            apiRequest.TrayIdx,
+			HostID:             apiRequest.HostID,
 			Labels:             apiRequest.Labels,
 			CreatedBy:          dbUser.ID,
 		},
@@ -194,6 +203,42 @@ func (cesh CreateExpectedSwitchHandler) Handle(c echo.Context) error {
 		ExpectedSwitchId:   &cwssaws.UUID{Value: expectedSwitch.ID.String()},
 		BmcMacAddress:      expectedSwitch.BmcMacAddress,
 		SwitchSerialNumber: expectedSwitch.SwitchSerialNumber,
+	}
+
+	if expectedSwitch.RackID != nil {
+		createExpectedSwitchRequest.RackId = &cwssaws.RackId{Id: *expectedSwitch.RackID}
+	}
+
+	if expectedSwitch.Name != nil {
+		createExpectedSwitchRequest.Name = expectedSwitch.Name
+	}
+
+	if expectedSwitch.Manufacturer != nil {
+		createExpectedSwitchRequest.Manufacturer = expectedSwitch.Manufacturer
+	}
+
+	if expectedSwitch.Model != nil {
+		createExpectedSwitchRequest.Model = expectedSwitch.Model
+	}
+
+	if expectedSwitch.Description != nil {
+		createExpectedSwitchRequest.Description = expectedSwitch.Description
+	}
+
+	if expectedSwitch.FirmwareVersion != nil {
+		createExpectedSwitchRequest.FirmwareVersion = expectedSwitch.FirmwareVersion
+	}
+
+	if expectedSwitch.SlotID != nil {
+		createExpectedSwitchRequest.SlotId = expectedSwitch.SlotID
+	}
+
+	if expectedSwitch.TrayIdx != nil {
+		createExpectedSwitchRequest.TrayIdx = expectedSwitch.TrayIdx
+	}
+
+	if expectedSwitch.HostID != nil {
+		createExpectedSwitchRequest.HostId = expectedSwitch.HostID
 	}
 
 	if apiRequest.DefaultBmcUsername != nil {
@@ -656,6 +701,15 @@ func (uesh UpdateExpectedSwitchHandler) Handle(c echo.Context) error {
 			ExpectedSwitchID:   expectedSwitch.ID,
 			BmcMacAddress:      apiRequest.BmcMacAddress,
 			SwitchSerialNumber: apiRequest.SwitchSerialNumber,
+			RackID:             apiRequest.RackID,
+			Name:               apiRequest.Name,
+			Manufacturer:       apiRequest.Manufacturer,
+			Model:              apiRequest.Model,
+			Description:        apiRequest.Description,
+			FirmwareVersion:    apiRequest.FirmwareVersion,
+			SlotID:             apiRequest.SlotID,
+			TrayIdx:            apiRequest.TrayIdx,
+			HostID:             apiRequest.HostID,
 			Labels:             apiRequest.Labels,
 		},
 	)
@@ -670,6 +724,42 @@ func (uesh UpdateExpectedSwitchHandler) Handle(c echo.Context) error {
 		ExpectedSwitchId:   &cwssaws.UUID{Value: expectedSwitch.ID.String()},
 		BmcMacAddress:      updatedExpectedSwitch.BmcMacAddress,
 		SwitchSerialNumber: updatedExpectedSwitch.SwitchSerialNumber,
+	}
+
+	if updatedExpectedSwitch.RackID != nil {
+		updateExpectedSwitchRequest.RackId = &cwssaws.RackId{Id: *updatedExpectedSwitch.RackID}
+	}
+
+	if updatedExpectedSwitch.Name != nil {
+		updateExpectedSwitchRequest.Name = updatedExpectedSwitch.Name
+	}
+
+	if updatedExpectedSwitch.Manufacturer != nil {
+		updateExpectedSwitchRequest.Manufacturer = updatedExpectedSwitch.Manufacturer
+	}
+
+	if updatedExpectedSwitch.Model != nil {
+		updateExpectedSwitchRequest.Model = updatedExpectedSwitch.Model
+	}
+
+	if updatedExpectedSwitch.Description != nil {
+		updateExpectedSwitchRequest.Description = updatedExpectedSwitch.Description
+	}
+
+	if updatedExpectedSwitch.FirmwareVersion != nil {
+		updateExpectedSwitchRequest.FirmwareVersion = updatedExpectedSwitch.FirmwareVersion
+	}
+
+	if updatedExpectedSwitch.SlotID != nil {
+		updateExpectedSwitchRequest.SlotId = updatedExpectedSwitch.SlotID
+	}
+
+	if updatedExpectedSwitch.TrayIdx != nil {
+		updateExpectedSwitchRequest.TrayIdx = updatedExpectedSwitch.TrayIdx
+	}
+
+	if updatedExpectedSwitch.HostID != nil {
+		updateExpectedSwitchRequest.HostId = updatedExpectedSwitch.HostID
 	}
 
 	if apiRequest.DefaultBmcUsername != nil {

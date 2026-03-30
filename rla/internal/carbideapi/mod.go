@@ -94,4 +94,5 @@ type Client interface {
 	SetAdminPowerControlError(err error)
 	AddMachineInterface(iface MachineInterface)
 	AddExpectedSwitchInfo(info ExpectedSwitchInfo)
+	SetLeakingMachineIds(ids []string)
 }
