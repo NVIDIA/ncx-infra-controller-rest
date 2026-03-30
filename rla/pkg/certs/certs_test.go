@@ -179,16 +179,24 @@ func TestConfig_Validate(t *testing.T) {
 func TestConfig_TLSConfig(t *testing.T) {
 	t.Run("valid certs", func(t *testing.T) {
 		caFile, certFile, keyFile := generateTestCerts(t)
-		tlsConfig, err := Config{CACert: caFile, TLSCert: certFile, TLSKey: keyFile}.TLSConfig()
+		tlsConfig, err := Config{CACert: caFile, TLSCert: certFile, TLSKey: keyFile}.TLSConfig("")
 		require.NoError(t, err)
 		assert.NotNil(t, tlsConfig.RootCAs)
 		assert.NotNil(t, tlsConfig.GetClientCertificate)
 		assert.Equal(t, tls.NoClientCert, tlsConfig.ClientAuth) // client config: no ClientAuth
+		assert.Empty(t, tlsConfig.ServerName)
+	})
+
+	t.Run("server name is set", func(t *testing.T) {
+		caFile, certFile, keyFile := generateTestCerts(t)
+		tlsConfig, err := Config{CACert: caFile, TLSCert: certFile, TLSKey: keyFile}.TLSConfig("temporal.example.com")
+		require.NoError(t, err)
+		assert.Equal(t, "temporal.example.com", tlsConfig.ServerName)
 	})
 
 	t.Run("non-existent ca cert", func(t *testing.T) {
 		_, certFile, keyFile := generateTestCerts(t)
-		_, err := Config{CACert: "/nonexistent/ca.crt", TLSCert: certFile, TLSKey: keyFile}.TLSConfig()
+		_, err := Config{CACert: "/nonexistent/ca.crt", TLSCert: certFile, TLSKey: keyFile}.TLSConfig("")
 		require.Error(t, err)
 		assert.ErrorIs(t, err, os.ErrNotExist)
 	})
@@ -198,13 +206,13 @@ func TestConfig_TLSConfig(t *testing.T) {
 		badCA := filepath.Join(dir, "ca.crt")
 		require.NoError(t, os.WriteFile(badCA, []byte("not a certificate"), 0600))
 		_, certFile, keyFile := generateTestCerts(t)
-		_, err := Config{CACert: badCA, TLSCert: certFile, TLSKey: keyFile}.TLSConfig()
+		_, err := Config{CACert: badCA, TLSCert: certFile, TLSKey: keyFile}.TLSConfig("")
 		require.Error(t, err)
 	})
 
 	t.Run("non-existent client cert", func(t *testing.T) {
 		caFile, _, keyFile := generateTestCerts(t)
-		_, err := Config{CACert: caFile, TLSCert: "/nonexistent/tls.crt", TLSKey: keyFile}.TLSConfig()
+		_, err := Config{CACert: caFile, TLSCert: "/nonexistent/tls.crt", TLSKey: keyFile}.TLSConfig("")
 		require.Error(t, err)
 	})
 }
