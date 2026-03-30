@@ -21,6 +21,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// dbCmd is the parent command for database management subcommands.
 var dbCmd = &cobra.Command{
 	Use:   "db",
 	Short: "Database operations",

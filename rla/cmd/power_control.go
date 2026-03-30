@@ -84,8 +84,6 @@ Examples:
 	powerControlComponentIDs  string
 	powerControlComponentType string
 	powerControlOp            string
-	powerControlHost          string
-	powerControlPort          int
 )
 
 func init() {
@@ -96,12 +94,12 @@ func init() {
 	powerControlCmd.Flags().StringVar(&powerControlComponentIDs, "component-ids", "", "Comma-separated list of component IDs")
 	powerControlCmd.Flags().StringVarP(&powerControlComponentType, "type", "t", "", "Component type: compute, nvlswitch, powershelf (required for rack-ids/rack-names)")
 	powerControlCmd.Flags().StringVar(&powerControlOp, "op", "", "Power operation: on, off, force-off, reset, force-reset, ac-powercycle")
-	powerControlCmd.Flags().StringVar(&powerControlHost, "host", "localhost", "RLA service host")
-	powerControlCmd.Flags().IntVarP(&powerControlPort, "port", "p", defaultServicePort, "RLA service port")
 
 	powerControlCmd.MarkFlagRequired("op") //nolint
 }
 
+// parsePowerOpToTypes converts a power operation string (e.g. "on", "force-off",
+// "cold-reset") to types.PowerControlOp. Returns an empty string for unrecognised values.
 func parsePowerOpToTypes(op string) types.PowerControlOp {
 	switch strings.ToLower(op) {
 	// Power On
@@ -129,6 +127,9 @@ func parsePowerOpToTypes(op string) types.PowerControlOp {
 	}
 }
 
+// doPowerControl validates the CLI inputs and calls the appropriate
+// PowerControl client method based on whether the caller specified rack IDs,
+// rack names, or component IDs.
 func doPowerControl() {
 	// Validate inputs - only one of the options can be specified
 	hasRackIDs := powerControlRackIDs != ""
@@ -169,10 +170,7 @@ func doPowerControl() {
 	ctx := context.Background()
 
 	// Create RLA client
-	rlaClient, err := client.New(client.Config{
-		Host: powerControlHost,
-		Port: powerControlPort,
-	})
+	rlaClient, err := client.New(newGlobalClientConfig())
 	if err != nil {
 		log.Fatal().Msgf("Failed to create RLA client: %v", err)
 	}

@@ -19,6 +19,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 
@@ -33,20 +34,26 @@ import (
 	inventorymanager "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/inventory/manager"
 	inventorystore "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/inventory/store"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/inventorysync"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/leakdetection"
 	taskmanager "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/manager"
 	taskstore "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/store"
 	pb "github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/proto/v1"
 )
 
+// Service is the top-level RLA service. It owns the gRPC server, database
+// session, inventory manager, and task manager and coordinates their lifecycles.
 type Service struct {
 	conf             Config
 	grpcServer       *grpc.Server
 	session          *cdb.Session
 	inventoryManager inventorymanager.Manager
 	taskStore        taskstore.Store
-	taskManager      *taskmanager.Manager
+	taskManager      taskmanager.Manager
 }
 
+// New creates and initialises a Service from the provided Config. It opens the
+// database connection, runs pending migrations, and wires up the inventory and
+// task managers. The returned service is ready to Start.
 func New(ctx context.Context, c Config) (*Service, error) {
 	// 1. Create shared PostgreSQL connection
 	session, err := cdb.NewSessionFromConfig(ctx, c.DBConf)
@@ -79,10 +86,7 @@ func New(ctx context.Context, c Config) (*Service, error) {
 		},
 	)
 	if err != nil {
-		// XXX -- ignore the error for now until we have access to the temporal server
-		// in the real deployment.
-		log.Error().Err(err).Msg("failed to create task manager (ignore the error for now)")
-		taskManager = nil
+		return nil, fmt.Errorf("failed to create task manager: %w", err)
 	}
 
 	return &Service{
@@ -94,6 +98,9 @@ func New(ctx context.Context, c Config) (*Service, error) {
 	}, nil
 }
 
+// Start starts the inventory manager, task manager, and inventory sync
+// goroutine, then begins serving gRPC requests on the configured port.
+// It blocks until the gRPC server stops.
 func (s *Service) Start(ctx context.Context) error {
 	log.Logger = log.With().Caller().Logger()
 
@@ -116,6 +123,8 @@ func (s *Service) Start(ctx context.Context) error {
 
 	go inventorysync.RunInventory(ctx, &s.conf.DBConf)
 
+	go leakdetection.RunLeakDetection(ctx, s.taskManager)
+
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", s.conf.Port))
 	if err != nil {
 		return err
@@ -125,8 +134,6 @@ func (s *Service) Start(ctx context.Context) error {
 		s.inventoryManager,
 		s.taskManager,
 		s.taskStore,
-		s.conf.CarbideClient,
-		s.conf.PSMClient,
 	)
 	if err != nil {
 		return err
@@ -147,6 +154,8 @@ func (s *Service) Start(ctx context.Context) error {
 	return nil
 }
 
+// Stop gracefully shuts down the gRPC server, task manager, inventory manager,
+// and database session.
 func (s *Service) Stop(ctx context.Context) {
 	log.Info().Msg("Starting graceful shutdown now...")
 
@@ -161,15 +170,20 @@ func (s *Service) Stop(ctx context.Context) {
 	}
 }
 
+// certOption resolves the TLS configuration for the gRPC server listener.
+// If explicit certificate paths are set in the config they take precedence;
+// otherwise CERTDIR / the k8s SPIFFE default is used. Returns an empty
+// ServerOption (no TLS) when no certificates are found.
 func (s *Service) certOption() grpc.ServerOption {
-	tlsConfig, certDir, err := certs.TLSConfig()
+	tlsConfig, source, err := certs.ResolveServer(s.conf.CertConfig)
 	if err != nil {
-		if err == certs.ErrNotPresent {
+		if errors.Is(err, certs.ErrNotPresent) {
 			log.Info().Msg("Certs not present, using non-mTLS")
 			return grpc.EmptyServerOption{}
 		}
 		log.Fatal().Msg(err.Error())
 	}
-	log.Info().Msgf("Using certificates from %s", certDir)
+
+	log.Info().Msgf("Using certificates from %s", source)
 	return grpc.Creds(credentials.NewTLS(tlsConfig))
 }

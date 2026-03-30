@@ -24,29 +24,33 @@ import (
 
 	"github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/endpoint"
 	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
-	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/carbideapi"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/clients/temporal"
-	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/psmapi"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor"
+	pkgcerts "github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/certs"
 )
 
 const (
+	// DefaultPort is the default port the RLA gRPC server listens on.
 	DefaultPort = 50051
 )
 
 // Config holds the service configuration.
 // It uses interfaces to abstract implementation details:
 //   - ExecutorConfig: abstracts the task executor (e.g., Temporal)
-//   - CarbideClient: abstracts the hardware management API client
-//   - PSMClient: abstracts the powershelf manager API client
 type Config struct {
-	Port          int
-	DBConf        cdb.Config
-	ExecutorConf  executor.ExecutorConfig
-	CarbideClient carbideapi.Client
-	PSMClient     psmapi.Client
+	Port         int
+	DBConf       cdb.Config
+	ExecutorConf executor.ExecutorConfig
+
+	// CertConfig holds certificate file paths for the gRPC server listener.
+	// When set, these take precedence over CERTDIR / the k8s default.
+	// Either all three fields must be set or none.
+	CertConfig pkgcerts.Config
 }
 
+// BuildTemporalConfigFromEnv builds a Temporal client configuration from
+// environment variables: TEMPORAL_HOST, TEMPORAL_PORT, TEMPORAL_NAMESPACE,
+// TEMPORAL_CERT_PATH, TEMPORAL_ENABLE_TLS, and TEMPORAL_SERVER_NAME.
 func BuildTemporalConfigFromEnv() (*temporal.Config, error) {
 	host := os.Getenv("TEMPORAL_HOST")
 	if host == "" {

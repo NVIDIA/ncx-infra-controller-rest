@@ -241,6 +241,43 @@ type AddExpectedMachineRequest struct {
 	PauseIngestionAndPowerOn *bool    `json:"default_pause_ingestion_and_poweron,omitempty"`
 }
 
+// AddExpectedPowerShelfRequest contains the parameters for registering
+// an expected power shelf with Carbide.
+type AddExpectedPowerShelfRequest struct {
+	BMCMACAddress     string `json:"bmc_mac_address"`
+	BMCUsername       string `json:"bmc_username"`
+	BMCPassword       string `json:"bmc_password"`
+	ShelfSerialNumber string `json:"shelf_serial_number,omitempty"`
+	IPAddress         string `json:"ip_address,omitempty"`
+	RackID            string `json:"rack_id,omitempty"`
+}
+
+// ExpectedSwitchInfo represents an expected switch retrieved from Carbide,
+// including metadata labels (e.g., "host_mac_address" for the NVOS MAC).
+// Credentials are omitted; Carbide configures them in Vault and NSM
+// queries Vault by MAC address.
+type ExpectedSwitchInfo struct {
+	BMCMACAddress      string
+	SwitchSerialNumber string
+	Metadata           map[string]string
+}
+
+func expectedSwitchInfoFromPb(es *pb.ExpectedSwitch) ExpectedSwitchInfo {
+	info := ExpectedSwitchInfo{
+		BMCMACAddress:      es.GetBmcMacAddress(),
+		SwitchSerialNumber: es.GetSwitchSerialNumber(),
+		Metadata:           make(map[string]string),
+	}
+	if es.GetMetadata() != nil {
+		for _, label := range es.GetMetadata().GetLabels() {
+			if label.Value != nil {
+				info.Metadata[label.GetKey()] = label.GetValue()
+			}
+		}
+	}
+	return info
+}
+
 // AddExpectedSwitchRequest contains the parameters for registering
 // an expected switch with Carbide.
 type AddExpectedSwitchRequest struct {

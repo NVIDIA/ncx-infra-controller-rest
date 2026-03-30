@@ -54,6 +54,7 @@ func TestNewAPIRoutes(t *testing.T) {
 		"tenant-account":           5,
 		"site":                     6,
 		"vpc":                      6,
+		"vpcpeering":               4,
 		"vpcprefix":                5,
 		"ip-block":                 6,
 		"instance":                 8,
@@ -80,7 +81,7 @@ func TestNewAPIRoutes(t *testing.T) {
 		"machine-validation":       11,
 		"dpu-extension-service":    7,
 		"sku":                      2,
-		"rack":                     10,
+		"rack":                     11,
 		"tray":                     8,
 		"stats":                    4,
 	}

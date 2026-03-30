@@ -23,12 +23,15 @@ package carbideapi
 import (
 	"context"
 	"time"
+
+	pb "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/carbideapi/gen"
 )
 
 // Client allow us to have both a real implemenation and a mock implementation for unit tests which can be switched transparently
 type Client interface {
 	Version(ctx context.Context) (string, error)
 	GetMachines(ctx context.Context) ([]MachineDetail, error)
+	GetLeakingMachineIds(ctx context.Context) ([]string, error)
 	GetPowerStates(ctx context.Context, machineIds []string) (ret []MachinePowerState, err error)
 	SetFirmwareUpdateTimeWindow(ctx context.Context, machineIds []string, startTime, endTime time.Time) error
 	// FindInterfaces returns all machine interfaces known by carbide-api, keyed by MAC address
@@ -59,8 +62,30 @@ type Client interface {
 	// AddExpectedMachine registers an expected machine with Carbide for ingestion.
 	AddExpectedMachine(ctx context.Context, req AddExpectedMachineRequest) error
 
+	// GetAllExpectedSwitches returns all expected switches registered with Carbide,
+	// keyed by BMC MAC address, including metadata (e.g., "host_mac_address" for the NVOS MAC).
+	GetAllExpectedSwitches(ctx context.Context) (map[string]ExpectedSwitchInfo, error)
+
 	// AddExpectedSwitch registers an expected switch with Carbide for ingestion.
 	AddExpectedSwitch(ctx context.Context, req AddExpectedSwitchRequest) error
+
+	// AddExpectedPowerShelf registers an expected power shelf with Carbide for ingestion.
+	AddExpectedPowerShelf(ctx context.Context, req AddExpectedPowerShelfRequest) error
+
+	// ComponentPowerControl performs power control on component targets (switches, power shelves).
+	ComponentPowerControl(ctx context.Context, req *pb.ComponentPowerControlRequest) (*pb.ComponentPowerControlResponse, error)
+
+	// UpdateComponentFirmware queues firmware updates for component targets.
+	UpdateComponentFirmware(ctx context.Context, req *pb.UpdateComponentFirmwareRequest) (*pb.UpdateComponentFirmwareResponse, error)
+
+	// GetComponentFirmwareStatus returns firmware update status for component targets.
+	GetComponentFirmwareStatus(ctx context.Context, req *pb.GetComponentFirmwareStatusRequest) (*pb.GetComponentFirmwareStatusResponse, error)
+
+	// ListComponentFirmwareVersions lists available firmware versions for component targets.
+	ListComponentFirmwareVersions(ctx context.Context, req *pb.ListComponentFirmwareVersionsRequest) (*pb.ListComponentFirmwareVersionsResponse, error)
+
+	// GetComponentInventory retrieves inventory (including site exploration reports) for component targets.
+	GetComponentInventory(ctx context.Context, req *pb.GetComponentInventoryRequest) (*pb.GetComponentInventoryResponse, error)
 
 	// The following are only valid in the mock environment and should only be called by unit tests
 	AddMachine(MachineDetail)
@@ -68,4 +93,6 @@ type Client interface {
 	SetFirmwareUpdateTimeWindowError(err error)
 	SetAdminPowerControlError(err error)
 	AddMachineInterface(iface MachineInterface)
+	AddExpectedSwitchInfo(info ExpectedSwitchInfo)
+	SetLeakingMachineIds(ids []string)
 }

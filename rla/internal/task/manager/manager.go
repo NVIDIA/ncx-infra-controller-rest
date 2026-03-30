@@ -37,6 +37,7 @@ import (
 	taskstore "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/store"
 	taskdef "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/task"
 	identifier "github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/Identifier"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/inventoryobjects/rack"
 )
 
@@ -73,6 +74,7 @@ func (c *Config) applyDefaults() {
 	}
 }
 
+// Validate returns an error if the Config is missing required fields.
 func (c *Config) Validate() error {
 	if c == nil {
 		return fmt.Errorf("configuration is nil")
@@ -93,14 +95,22 @@ func (c *Config) Validate() error {
 	return c.ExecutorConfig.Validate()
 }
 
-// Manager maintains unfinished tasks, schedules them via temporal workflows,
+// Manager defines the public interface for task lifecycle management.
+type Manager interface {
+	Start(ctx context.Context) error
+	Stop(ctx context.Context)
+	SubmitTask(ctx context.Context, req *operation.Request) ([]uuid.UUID, error)
+	CancelTask(ctx context.Context, taskID uuid.UUID) error
+}
+
+// ManagerImpl maintains unfinished tasks, schedules them via temporal workflows,
 // and monitors their progress.
-type Manager struct {
+type ManagerImpl struct {
 	inventoryStore   inventorystore.Store // For rack/component lookups
 	taskStore        taskstore.Store      // For task persistence
 	executor         executor.Executor
 	ruleResolver     *operationrules.Resolver // Resolves operation rules (created internally)
-	conflictResolver *conflict.ConflictResolver
+	conflictResolver *conflict.Resolver
 	promoter         *conflict.Promoter
 
 	maxWaitingPerRack   int
@@ -113,7 +123,7 @@ type Manager struct {
 }
 
 // New creates a new task manager.
-func New(ctx context.Context, conf *Config) (*Manager, error) {
+func New(ctx context.Context, conf *Config) (*ManagerImpl, error) {
 	if err := conf.Validate(); err != nil {
 		return nil, err
 	}
@@ -126,9 +136,9 @@ func New(ctx context.Context, conf *Config) (*Manager, error) {
 
 	// Create rule resolver internally (queries DB for operation rules)
 	ruleResolver := operationrules.NewResolver(conf.TaskStore)
-	conflictResolver := conflict.NewConflictResolver(conf.TaskStore)
+	conflictResolver := conflict.NewResolver(conf.TaskStore)
 
-	m := &Manager{
+	m := &ManagerImpl{
 		inventoryStore:      conf.InventoryStore,
 		executor:            exec,
 		ruleResolver:        ruleResolver,
@@ -154,7 +164,7 @@ func New(ctx context.Context, conf *Config) (*Manager, error) {
 }
 
 // Start starts the task manager to make it ready to accept tasks.
-func (m *Manager) Start(ctx context.Context) error {
+func (m *ManagerImpl) Start(ctx context.Context) error {
 	var startErr error
 
 	m.startOnce.Do(func() {
@@ -179,7 +189,7 @@ func (m *Manager) Start(ctx context.Context) error {
 }
 
 // Stop shuts down the manager and waits for all routines to finish.
-func (m *Manager) Stop(ctx context.Context) {
+func (m *ManagerImpl) Stop(ctx context.Context) {
 	m.stopOnce.Do(func() {
 		if m.cancel != nil {
 			m.cancel()
@@ -197,7 +207,7 @@ func (m *Manager) Stop(ctx context.Context) {
 // operation.Request can contain multiple racks. Task Manager resolves identifiers,
 // splits by rack, and creates one Task per rack.
 // Returns a list of created task IDs.
-func (m *Manager) SubmitTask(
+func (m *ManagerImpl) SubmitTask(
 	ctx context.Context,
 	req *operation.Request,
 ) ([]uuid.UUID, error) {
@@ -234,26 +244,31 @@ func (m *Manager) SubmitTask(
 }
 
 // createAndExecuteTask creates a task for a single rack and executes it.
-func (m *Manager) createAndExecuteTask(
+func (m *ManagerImpl) createAndExecuteTask(
 	ctx context.Context,
 	req *operation.Request,
 	targetRack *rack.Rack,
 ) (uuid.UUID, error) {
-	// Extract component UUIDs for tracking
-	componentUUIDs := make([]uuid.UUID, 0, len(targetRack.Components))
+	// Build component map by type for fine-grained conflict detection.
+	compsByType := make(
+		map[devicetypes.ComponentType][]uuid.UUID,
+		len(targetRack.Components),
+	)
 	for _, c := range targetRack.Components {
-		componentUUIDs = append(componentUUIDs, c.Info.ID)
+		compsByType[c.Type] = append(compsByType[c.Type], c.Info.ID)
 	}
 
 	// Build the task record (status and rule are determined below).
 	task := taskdef.Task{
-		ID:             uuid.New(),
-		Operation:      req.Operation,
-		RackID:         targetRack.Info.ID,
-		ComponentUUIDs: componentUUIDs,
-		Description:    req.Description,
-		ExecutorType:   taskcommon.ExecutorTypeUnknown,
-		ExecutionID:    "",
+		ID:        uuid.New(),
+		Operation: req.Operation,
+		RackID:    targetRack.Info.ID,
+		Attributes: taskcommon.TaskAttributes{
+			ComponentsByType: compsByType,
+		},
+		Description:  req.Description,
+		ExecutorType: taskcommon.ExecutorTypeUnknown,
+		ExecutionID:  "",
 	}
 
 	// Check for conflicts inside a transaction to avoid a race between the
@@ -262,12 +277,7 @@ func (m *Manager) createAndExecuteTask(
 		ctx,
 		func(txCtx context.Context) error {
 			hasConflict, err := m.conflictResolver.HasConflict(
-				txCtx,
-				conflict.OperationSpec{
-					OperationType: string(req.Operation.Type),
-					OperationCode: req.Operation.Code,
-				},
-				targetRack.Info.ID,
+				txCtx, &task,
 			)
 			if err != nil {
 				return err
@@ -327,7 +337,7 @@ func (m *Manager) createAndExecuteTask(
 
 // promoteTask is invoked by the Promoter to execute a previously waiting task
 // that has been promoted to pending.
-func (m *Manager) promoteTask(ctx context.Context, taskID uuid.UUID) error {
+func (m *ManagerImpl) promoteTask(ctx context.Context, taskID uuid.UUID) error {
 	task, err := m.taskStore.GetTask(ctx, taskID)
 	if err != nil {
 		return fmt.Errorf("promoteTask: failed to load task %s: %w", taskID, err)
@@ -345,7 +355,7 @@ func (m *Manager) promoteTask(ctx context.Context, taskID uuid.UUID) error {
 // and updates the task record with the execution result. It is shared by the
 // immediate-execution path in createAndExecuteTask and the promotion path in
 // promoteTask.
-func (m *Manager) resolveAndExecuteTask(
+func (m *ManagerImpl) resolveAndExecuteTask(
 	ctx context.Context,
 	task *taskdef.Task,
 	targetRack *rack.Rack,
@@ -405,7 +415,7 @@ func (m *Manager) resolveAndExecuteTask(
 // Pending/running tasks have their Temporal workflow terminated.
 // Already-terminated tasks return nil (idempotent).
 // Completed or failed tasks return an error.
-func (m *Manager) CancelTask(ctx context.Context, taskID uuid.UUID) error {
+func (m *ManagerImpl) CancelTask(ctx context.Context, taskID uuid.UUID) error {
 	task, err := m.taskStore.GetTask(ctx, taskID)
 	if err != nil {
 		return fmt.Errorf("failed to get task %s: %w", taskID, err)
@@ -444,8 +454,8 @@ func (m *Manager) CancelTask(ctx context.Context, taskID uuid.UUID) error {
 }
 
 // loadRackForTask re-fetches the rack for a task and filters its component
-// list to only those tracked in task.ComponentUUIDs.
-func (m *Manager) loadRackForTask(
+// list to only those tracked in task.Attributes.
+func (m *ManagerImpl) loadRackForTask(
 	ctx context.Context,
 	task *taskdef.Task,
 ) (*rack.Rack, error) {
@@ -459,8 +469,9 @@ func (m *Manager) loadRackForTask(
 	}
 
 	// Filter to the components originally targeted by the task.
-	uuidSet := make(map[uuid.UUID]struct{}, len(task.ComponentUUIDs))
-	for _, id := range task.ComponentUUIDs {
+	allUUIDs := task.Attributes.AllComponentUUIDs()
+	uuidSet := make(map[uuid.UUID]struct{}, len(allUUIDs))
+	for _, id := range allUUIDs {
 		uuidSet[id] = struct{}{}
 	}
 
@@ -491,7 +502,7 @@ func workflowComponentsFrom(
 	return comps
 }
 
-func (m *Manager) executeTask(
+func (m *ManagerImpl) executeTask(
 	ctx context.Context,
 	task *taskdef.Task,
 	targetRack *rack.Rack,
@@ -540,7 +551,7 @@ func (m *Manager) executeTask(
 	}
 }
 
-func (m *Manager) getReqExpiresAt(req *operation.Request) *time.Time {
+func (m *ManagerImpl) getReqExpiresAt(req *operation.Request) *time.Time {
 	timeout := req.QueueTimeout
 	if timeout <= 0 {
 		timeout = m.defaultQueueTimeout

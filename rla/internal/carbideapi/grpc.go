@@ -28,9 +28,11 @@ import (
 
 	pb "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/carbideapi/gen"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/certs"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/common/utils"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -102,6 +104,31 @@ func (c *grpcClient) GetMachines(ctx context.Context) ([]MachineDetail, error) {
 		result = append(result, machineDetailFromPb(machine))
 	}
 	return result, nil
+}
+
+// GetMachines retrieves all machines known by carbide-api
+// (FindMachineIds + FindMachinesByIds).
+func (c *grpcClient) GetLeakingMachineIds(ctx context.Context) ([]string, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
+	defer cancel()
+
+	alert := "hardware-health.tray-leak-detection"
+	powerState := "on"
+	searchConfig := pb.MachineSearchConfig{
+		OnlyWithHealthAlert: &alert,
+		OnlyWithPowerState:  &powerState,
+	}
+
+	machineIDs, err := c.gclient.FindMachineIds(ctx, &searchConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	ids := make([]string, 0, len(machineIDs.GetMachineIds()))
+	for _, machineID := range machineIDs.GetMachineIds() {
+		ids = append(ids, machineID.GetId())
+	}
+	return ids, nil
 }
 
 // Version returns the version string of carbide-api, mainly as a "ping"
@@ -203,7 +230,7 @@ func (c *grpcClient) FindInterfaces(ctx context.Context) (map[string]MachineInte
 	interfaces := make(map[string]MachineInterface)
 	for _, iface := range res.Interfaces {
 		mi := machineInterfaceFromPb(iface)
-		interfaces[mi.MacAddress] = mi
+		interfaces[utils.NormalizeMAC(mi.MacAddress)] = mi
 	}
 	return interfaces, nil
 }
@@ -346,6 +373,26 @@ func (c *grpcClient) AddExpectedMachine(ctx context.Context, req AddExpectedMach
 	return nil
 }
 
+// GetAllExpectedSwitches returns all expected switches from Carbide, keyed by BMC MAC address.
+func (c *grpcClient) GetAllExpectedSwitches(ctx context.Context) (map[string]ExpectedSwitchInfo, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
+	defer cancel()
+
+	resp, err := c.gclient.GetAllExpectedSwitches(ctx, &emptypb.Empty{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get all expected switches: %w", err)
+	}
+
+	results := make(map[string]ExpectedSwitchInfo)
+	for _, es := range resp.GetExpectedSwitches() {
+		info := expectedSwitchInfoFromPb(es)
+		if info.BMCMACAddress != "" {
+			results[utils.NormalizeMAC(info.BMCMACAddress)] = info
+		}
+	}
+	return results, nil
+}
+
 // AddExpectedSwitch registers an expected switch with Carbide.
 func (c *grpcClient) AddExpectedSwitch(ctx context.Context, req AddExpectedSwitchRequest) error {
 	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
@@ -378,6 +425,61 @@ func (c *grpcClient) AddExpectedSwitch(ctx context.Context, req AddExpectedSwitc
 	return nil
 }
 
+// AddExpectedPowerShelf registers an expected power shelf with Carbide.
+func (c *grpcClient) AddExpectedPowerShelf(ctx context.Context, req AddExpectedPowerShelfRequest) error {
+	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
+	defer cancel()
+
+	pbReq := &pb.ExpectedPowerShelf{
+		BmcMacAddress:     req.BMCMACAddress,
+		BmcUsername:       req.BMCUsername,
+		BmcPassword:       req.BMCPassword,
+		ShelfSerialNumber: req.ShelfSerialNumber,
+		IpAddress:         req.IPAddress,
+	}
+
+	if req.RackID != "" {
+		pbReq.RackId = &pb.RackId{Id: req.RackID}
+	}
+
+	_, err := c.gclient.AddExpectedPowerShelf(ctx, pbReq)
+	if err != nil {
+		return fmt.Errorf("failed to add expected power shelf (bmc_mac=%s): %w", req.BMCMACAddress, err)
+	}
+
+	return nil
+}
+
+func (c *grpcClient) ComponentPowerControl(ctx context.Context, req *pb.ComponentPowerControlRequest) (*pb.ComponentPowerControlResponse, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
+	defer cancel()
+	return c.gclient.ComponentPowerControl(ctx, req)
+}
+
+func (c *grpcClient) UpdateComponentFirmware(ctx context.Context, req *pb.UpdateComponentFirmwareRequest) (*pb.UpdateComponentFirmwareResponse, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
+	defer cancel()
+	return c.gclient.UpdateComponentFirmware(ctx, req)
+}
+
+func (c *grpcClient) GetComponentFirmwareStatus(ctx context.Context, req *pb.GetComponentFirmwareStatusRequest) (*pb.GetComponentFirmwareStatusResponse, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
+	defer cancel()
+	return c.gclient.GetComponentFirmwareStatus(ctx, req)
+}
+
+func (c *grpcClient) ListComponentFirmwareVersions(ctx context.Context, req *pb.ListComponentFirmwareVersionsRequest) (*pb.ListComponentFirmwareVersionsResponse, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
+	defer cancel()
+	return c.gclient.ListComponentFirmwareVersions(ctx, req)
+}
+
+func (c *grpcClient) GetComponentInventory(ctx context.Context, req *pb.GetComponentInventoryRequest) (*pb.GetComponentInventoryResponse, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
+	defer cancel()
+	return c.gclient.GetComponentInventory(ctx, req)
+}
+
 func (c *grpcClient) AddMachine(machine MachineDetail) {
 	panic("Not a unit test")
 }
@@ -395,5 +497,13 @@ func (c *grpcClient) SetAdminPowerControlError(err error) {
 }
 
 func (c *grpcClient) AddMachineInterface(iface MachineInterface) {
+	panic("Not a unit test")
+}
+
+func (c *grpcClient) AddExpectedSwitchInfo(info ExpectedSwitchInfo) {
+	panic("Not a unit test")
+}
+
+func (c *grpcClient) SetLeakingMachineIds(ids []string) {
 	panic("Not a unit test")
 }

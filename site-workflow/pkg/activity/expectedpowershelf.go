@@ -33,6 +33,7 @@ import (
 
 	swe "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/error"
 	cclient "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/grpc/client"
+	rlav1 "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/rla/protobuf/v1"
 	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 )
 
@@ -253,12 +254,14 @@ func NewManageExpectedPowerShelfInventory(siteID uuid.UUID, carbideAtomicClient 
 // ManageExpectedPowerShelf is an activity wrapper for Expected Power Shelf management
 type ManageExpectedPowerShelf struct {
 	CarbideAtomicClient *cclient.CarbideAtomicClient
+	RlaAtomicClient     *cclient.RlaAtomicClient
 }
 
 // NewManageExpectedPowerShelf returns a new ManageExpectedPowerShelf client
-func NewManageExpectedPowerShelf(carbideClient *cclient.CarbideAtomicClient) ManageExpectedPowerShelf {
+func NewManageExpectedPowerShelf(carbideClient *cclient.CarbideAtomicClient, rlaClient *cclient.RlaAtomicClient) ManageExpectedPowerShelf {
 	return ManageExpectedPowerShelf{
 		CarbideAtomicClient: carbideClient,
+		RlaAtomicClient:     rlaClient,
 	}
 }
 
@@ -333,6 +336,103 @@ func (meps *ManageExpectedPowerShelf) UpdateExpectedPowerShelfOnSite(ctx context
 	logger.Info().Msg("Completed activity")
 
 	return nil
+}
+
+// CreateExpectedPowerShelfOnRLA creates an Expected Power Shelf as a component in RLA via AddComponent
+func (meps *ManageExpectedPowerShelf) CreateExpectedPowerShelfOnRLA(ctx context.Context, request *cwssaws.ExpectedPowerShelf) error {
+	logger := log.With().Str("Activity", "CreateExpectedPowerShelfOnRLA").Logger()
+
+	logger.Info().Msg("Starting activity")
+
+	// Validate request
+	if request == nil {
+		return temporal.NewNonRetryableApplicationError("received empty create Expected Power Shelf request for RLA", swe.ErrTypeInvalidRequest, errors.New("nil request"))
+	}
+
+	// If RLA client is not configured, skip gracefully
+	if meps.RlaAtomicClient == nil {
+		logger.Warn().Msg("RLA client not configured, skipping RLA component creation")
+		return nil
+	}
+
+	rlaClient := meps.RlaAtomicClient.GetClient()
+	if rlaClient == nil {
+		logger.Warn().Msg("RLA client not connected, skipping RLA component creation")
+		return nil
+	}
+
+	component := expectedPowerShelfToRLAComponent(request)
+	_, err := rlaClient.Rla().AddComponent(ctx, &rlav1.AddComponentRequest{Component: component})
+	if err != nil {
+		logger.Warn().Err(err).Msg("Failed to create Expected Power Shelf component on RLA")
+		return swe.WrapErr(err)
+	}
+
+	logger.Info().Msg("Completed activity")
+	return nil
+}
+
+// expectedPowerShelfToRLAComponent converts a Forge ExpectedPowerShelf proto to an RLA Component proto
+func expectedPowerShelfToRLAComponent(eps *cwssaws.ExpectedPowerShelf) *rlav1.Component {
+	component := &rlav1.Component{
+		Type: rlav1.ComponentType_COMPONENT_TYPE_POWERSHELF,
+		Info: &rlav1.DeviceInfo{
+			Id:           &rlav1.UUID{Id: eps.GetExpectedPowerShelfId().GetValue()},
+			SerialNumber: eps.GetShelfSerialNumber(),
+		},
+		Bmcs: []*rlav1.BMCInfo{
+			{
+				Type:       rlav1.BMCType_BMC_TYPE_HOST,
+				MacAddress: eps.GetBmcMacAddress(),
+			},
+		},
+		ComponentId: eps.GetExpectedPowerShelfId().GetValue(),
+	}
+
+	// DeviceInfo fields
+	if name := eps.GetName(); name != "" {
+		component.Info.Name = name
+	}
+	if manufacturer := eps.GetManufacturer(); manufacturer != "" {
+		component.Info.Manufacturer = manufacturer
+	}
+	if eps.Model != nil {
+		component.Info.Model = eps.Model
+	}
+	if eps.Description != nil {
+		component.Info.Description = eps.Description
+	}
+
+	// Firmware version
+	if fv := eps.GetFirmwareVersion(); fv != "" {
+		component.FirmwareVersion = fv
+	}
+
+	// Rack position
+	if eps.SlotId != nil || eps.TrayIdx != nil || eps.HostId != nil {
+		pos := &rlav1.RackPosition{}
+		if eps.SlotId != nil {
+			pos.SlotId = *eps.SlotId
+		}
+		if eps.TrayIdx != nil {
+			pos.TrayIdx = *eps.TrayIdx
+		}
+		if eps.HostId != nil {
+			pos.HostId = *eps.HostId
+		}
+		component.Position = pos
+	}
+
+	if eps.GetIpAddress() != "" {
+		ipAddr := eps.GetIpAddress()
+		component.Bmcs[0].IpAddress = &ipAddr
+	}
+
+	if rackID := eps.GetRackId().GetId(); rackID != "" {
+		component.RackId = &rlav1.UUID{Id: rackID}
+	}
+
+	return component
 }
 
 // DeleteExpectedPowerShelfOnSite deletes Expected Power Shelf on Carbide

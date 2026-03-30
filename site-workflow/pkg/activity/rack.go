@@ -277,6 +277,41 @@ func (mr *ManageRack) BringUpRack(ctx context.Context, request *rlav1.BringUpRac
 	return response, nil
 }
 
+// GetTaskByID retrieves a task by its UUID from RLA
+func (mr *ManageRack) GetTaskByID(ctx context.Context, request *rlav1.GetTasksByIDsRequest) (*rlav1.GetTasksByIDsResponse, error) {
+	logger := log.With().Str("Activity", "GetTaskByID").Logger()
+	logger.Info().Msg("Starting activity")
+
+	var err error
+
+	switch {
+	case request == nil:
+		err = errors.New("received empty get task request")
+	case len(request.GetTaskIds()) == 0:
+		err = errors.New("received get task request without task IDs")
+	}
+
+	if err != nil {
+		return nil, temporal.NewNonRetryableApplicationError(err.Error(), swe.ErrTypeInvalidRequest, err)
+	}
+
+	rlaClient := mr.RlaAtomicClient.GetClient()
+	if rlaClient == nil {
+		return nil, cClient.ErrClientNotConnected
+	}
+	rla := rlaClient.Rla()
+
+	response, err := rla.GetTasksByIDs(ctx, request)
+	if err != nil {
+		logger.Warn().Err(err).Msg("Failed to get task by ID using RLA API")
+		return nil, swe.WrapErr(err)
+	}
+
+	logger.Info().Int("TaskCount", len(response.GetTasks())).Msg("Completed activity")
+
+	return response, nil
+}
+
 // UpgradeFirmware upgrades firmware on racks or components via RLA
 func (mr *ManageRack) UpgradeFirmware(ctx context.Context, request *rlav1.UpgradeFirmwareRequest) (*rlav1.SubmitTaskResponse, error) {
 	logger := log.With().Str("Activity", "UpgradeFirmware").Logger()

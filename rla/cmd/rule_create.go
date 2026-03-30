@@ -60,8 +60,6 @@ The --overwrite flag will replace existing rules with the same operation_type an
 }
 
 var (
-	createHost        string
-	createPort        int
 	createName        string
 	createDescription string
 	createOpType      string
@@ -75,10 +73,6 @@ var (
 
 func init() {
 	ruleCmd.AddCommand(ruleCreateCmd)
-
-	// Common flags
-	ruleCreateCmd.Flags().StringVar(&createHost, "host", "localhost", "RLA service host")
-	ruleCreateCmd.Flags().IntVar(&createPort, "port", 50051, "RLA service port")
 
 	// Single rule mode flags
 	ruleCreateCmd.Flags().StringVar(&createName, "name", "", "Rule name (required for single mode)")
@@ -101,6 +95,8 @@ func init() {
 	ruleCreateCmd.MarkFlagsMutuallyExclusive("is-default", "from-yaml")
 }
 
+// runRuleCreate is the RunE handler for ruleCreateCmd. It dispatches to
+// createRulesFromYAML (batch mode) or createSingleRule (single mode).
 func runRuleCreate(cmd *cobra.Command, args []string) error {
 	if createFromYAML != "" {
 		return createRulesFromYAML()
@@ -108,6 +104,8 @@ func runRuleCreate(cmd *cobra.Command, args []string) error {
 	return createSingleRule()
 }
 
+// createSingleRule creates one operation rule using the individual flag values
+// (--name, --operation-type, --operation, --rule-file).
 func createSingleRule() error {
 	// Validate required flags for single mode
 	if createName == "" {
@@ -146,10 +144,7 @@ func createSingleRule() error {
 		return fmt.Errorf("invalid operation type: %s (must be power_control or firmware_control)", createOpType)
 	}
 
-	rlaClient, err := client.New(client.Config{
-		Host: createHost,
-		Port: createPort,
-	})
+	rlaClient, err := client.New(newGlobalClientConfig())
 	if err != nil {
 		return fmt.Errorf("failed to create client: %w", err)
 	}
@@ -175,6 +170,8 @@ func createSingleRule() error {
 	return nil
 }
 
+// createRulesFromYAML loads rules from the YAML file specified by --from-yaml
+// and creates each rule via the gRPC client. Supports --dry-run and --overwrite.
 func createRulesFromYAML() error {
 	// Validate flags
 	if createOverwrite && createFromYAML == "" {
@@ -205,10 +202,7 @@ func createRulesFromYAML() error {
 	}
 
 	// Create client
-	rlaClient, err := client.New(client.Config{
-		Host: createHost,
-		Port: createPort,
-	})
+	rlaClient, err := client.New(newGlobalClientConfig())
 	if err != nil {
 		return fmt.Errorf("failed to create client: %w", err)
 	}
@@ -283,6 +277,8 @@ func createRulesFromYAML() error {
 	return nil
 }
 
+// showDryRunOutput prints a preview of the rules that would be created,
+// without making any API calls.
 func showDryRunOutput(rules map[taskcommon.TaskType]map[string]*operationrules.OperationRule) error {
 	fmt.Println("✅ Validation successful!")
 	fmt.Println()
@@ -317,6 +313,8 @@ func showDryRunOutput(rules map[taskcommon.TaskType]map[string]*operationrules.O
 	return nil
 }
 
+// findExistingRule searches the server's rule list for a rule matching the
+// given operation type and operation code. Returns nil if none is found.
 func findExistingRule(ctx context.Context, rlaClient *client.Client, opType taskcommon.TaskType, operation string) *types.OperationRule {
 	// List all rules and find matching one
 	rules, _, err := rlaClient.ListOperationRules(ctx, nil, nil, nil, nil)
@@ -334,6 +332,8 @@ func findExistingRule(ctx context.Context, rlaClient *client.Client, opType task
 	return nil
 }
 
+// taskTypeToOperationType converts a taskcommon.TaskType to the corresponding
+// types.OperationType used in the RLA API.
 func taskTypeToOperationType(taskType taskcommon.TaskType) types.OperationType {
 	switch taskType {
 	case taskcommon.TaskTypePowerControl:

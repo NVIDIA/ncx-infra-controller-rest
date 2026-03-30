@@ -1,0 +1,29 @@
+nameOverride: ""
+namespaceOverride: ""
+
+secrets:
+  # -- Set to false to skip Secret creation (e.g. when migrating from Kustomize with pre-existing Secrets).
+  create: true
+  dbCreds:
+    # -- DB password. Replace with real credentials in production.
+    password: "forge"
+  keycloakClientSecret:
+    # -- Keycloak client secret. Replace in production.
+    value: "carbide-local-secret"
+  temporalEncryptionKey:
+    # -- Temporal payload encryption key. Replace in production.
+    value: "local-dev"
+  imagePullSecret:
+    # -- base64-encoded docker config JSON. Default is valid empty auth placeholder ({"auths":{}}).
+    # Replace with real credentials for private registries.
+    dockerconfigjson: "eyJhdXRocyI6e319"
+
+certificate:
+  temporalClientCloud:
+    duration: 2160h
+    renewBefore: 360h
+    dnsNames:
+      - temporal-client
+      - carbide-rest-api
+      - cloud-worker
+      - site-worker

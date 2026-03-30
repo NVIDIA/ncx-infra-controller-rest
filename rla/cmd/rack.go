@@ -21,6 +21,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// rackCmd is the parent command for rack inventory subcommands.
 var rackCmd = &cobra.Command{
 	Use:   "rack",
 	Short: "Rack operations",

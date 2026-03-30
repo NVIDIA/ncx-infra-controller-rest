@@ -324,16 +324,24 @@ func (cith CreateInstanceTypeHandler) Handle(c echo.Context) error {
 		// Validate device type for network capabilities
 		var deviceType *cwssaws.MachineCapabilityDeviceType
 		if machineCap.DeviceType != nil {
-			if machineCap.Type == cdbm.MachineCapabilityTypeNetwork {
+			switch machineCap.Type {
+			case cdbm.MachineCapabilityTypeNetwork:
 				// For Network Capability, we only support DPU
 				if *machineCap.DeviceType != cdbm.MachineCapabilityDeviceTypeDPU {
 					logger.Error().Str("Device Type", *machineCap.DeviceType).Msg("unsupported Device Type specified for Network Capability")
 					return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Unsupported Device Type specified for Network Capability "+*machineCap.DeviceType, nil)
 				}
 				deviceType = cwssaws.MachineCapabilityDeviceType_MACHINE_CAPABILITY_DEVICE_TYPE_DPU.Enum()
-			} else {
+			case cdbm.MachineCapabilityTypeGPU:
+				// For GPU Capability, we only support NVLink
+				if *machineCap.DeviceType != cdbm.MachineCapabilityDeviceTypeNVLink {
+					logger.Error().Str("Device Type", *machineCap.DeviceType).Msg("unsupported Device Type specified for GPU Capability")
+					return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Unsupported Device Type specified for GPU Capability "+*machineCap.DeviceType, nil)
+				}
+				deviceType = cwssaws.MachineCapabilityDeviceType_MACHINE_CAPABILITY_DEVICE_TYPE_NVLINK.Enum()
+			default:
 				logger.Error().Str("Capability Type", machineCap.Type).Str("Device Type", *machineCap.DeviceType).Msg("unsupported Device Type specified for Capability Type")
-				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Unsupported Device Type: %s specified for Capability type %s", *machineCap.DeviceType, machineCap.Type), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Unsupported Device Type: %s specified for Capability type %s", *machineCap.DeviceType, machineCap.Type), nil)
 			}
 		}
 
@@ -1344,19 +1352,28 @@ func (uith UpdateInstanceTypeHandler) Handle(c echo.Context) error {
 		// Update device type for network capabilities if provided
 		// Since we are validating the device type in the API model,
 		// we can safely set the device type to DPU for network capabilities
-		// as currently we only support DPU device type for network capabilities
+		// as currently we only support DPU device type for network capabilities.
+		// Similarly, for GPU capabilities, we only support NVLink device type.
 		var deviceType *cwssaws.MachineCapabilityDeviceType
 		if machineCap.DeviceType != nil {
-			if machineCap.Type == cdbm.MachineCapabilityTypeNetwork {
+			switch machineCap.Type {
+			case cdbm.MachineCapabilityTypeNetwork:
 				// For Network Capability, we only support DPU
 				if *machineCap.DeviceType != cdbm.MachineCapabilityDeviceTypeDPU {
 					logger.Error().Str("Device Type", *machineCap.DeviceType).Msg("unsupported Device Type specified for Network Capability")
-					return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Unsupported Device Type specified for Network Capability "+*machineCap.DeviceType, nil)
+					return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Unsupported Device Type specified for Network Capability "+*machineCap.DeviceType, nil)
 				}
 				deviceType = cwssaws.MachineCapabilityDeviceType_MACHINE_CAPABILITY_DEVICE_TYPE_DPU.Enum()
-			} else {
+			case cdbm.MachineCapabilityTypeGPU:
+				// For GPU Capability, we only support NVLink
+				if *machineCap.DeviceType != cdbm.MachineCapabilityDeviceTypeNVLink {
+					logger.Error().Str("Device Type", *machineCap.DeviceType).Msg("unsupported Device Type specified for GPU Capability")
+					return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Unsupported Device Type specified for GPU Capability "+*machineCap.DeviceType, nil)
+				}
+				deviceType = cwssaws.MachineCapabilityDeviceType_MACHINE_CAPABILITY_DEVICE_TYPE_NVLINK.Enum()
+			default:
 				logger.Error().Str("Capability Type", machineCap.Type).Str("Device Type", *machineCap.DeviceType).Msg("unsupported Device Type specified for Capability Type")
-				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Unsupported Device Type: %s specified for Capability type %s", *machineCap.DeviceType, machineCap.Type), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Unsupported Device Type: %s specified for Capability type %s", *machineCap.DeviceType, machineCap.Type), nil)
 			}
 		}
 

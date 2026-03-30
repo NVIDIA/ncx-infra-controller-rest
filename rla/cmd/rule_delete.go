@@ -35,18 +35,12 @@ var ruleDeleteCmd = &cobra.Command{
 	RunE:  runRuleDelete,
 }
 
-var (
-	ruleDeleteHost string
-	ruleDeletePort int
-)
-
 func init() {
 	ruleCmd.AddCommand(ruleDeleteCmd)
-
-	ruleDeleteCmd.Flags().StringVar(&ruleDeleteHost, "host", "localhost", "RLA service host")
-	ruleDeleteCmd.Flags().IntVar(&ruleDeletePort, "port", 50051, "RLA service port")
 }
 
+// runRuleDelete is the RunE handler for ruleDeleteCmd. It parses the rule ID
+// from the positional argument and calls DeleteOperationRule via the client.
 func runRuleDelete(cmd *cobra.Command, args []string) error {
 	ruleIDStr := args[0]
 
@@ -55,10 +49,7 @@ func runRuleDelete(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid rule ID: %w", err)
 	}
 
-	rlaClient, err := client.New(client.Config{
-		Host: ruleDeleteHost,
-		Port: ruleDeletePort,
-	})
+	rlaClient, err := client.New(newGlobalClientConfig())
 	if err != nil {
 		return fmt.Errorf("failed to create client: %w", err)
 	}

@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	cClient "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/grpc/client"
+	rlav1 "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/rla/protobuf/v1"
 	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -275,7 +276,7 @@ func TestManageExpectedMachine_CreateExpectedMachineOnSite(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mm := NewManageExpectedMachine(tt.fields.CarbideAtomicClient)
+			mm := NewManageExpectedMachine(tt.fields.CarbideAtomicClient, nil)
 			err := mm.CreateExpectedMachineOnSite(tt.args.ctx, tt.args.request)
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -394,7 +395,7 @@ func TestManageExpectedMachine_UpdateExpectedMachineOnSite(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mm := NewManageExpectedMachine(tt.fields.CarbideAtomicClient)
+			mm := NewManageExpectedMachine(tt.fields.CarbideAtomicClient, nil)
 			err := mm.UpdateExpectedMachineOnSite(tt.args.ctx, tt.args.request)
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -480,7 +481,7 @@ func TestManageExpectedMachine_DeleteExpectedMachineOnSite(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mm := NewManageExpectedMachine(tt.fields.CarbideAtomicClient)
+			mm := NewManageExpectedMachine(tt.fields.CarbideAtomicClient, nil)
 			err := mm.DeleteExpectedMachineOnSite(tt.args.ctx, tt.args.request)
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -566,7 +567,7 @@ func TestManageExpectedMachine_CreateExpectedMachinesOnSite(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mm := NewManageExpectedMachine(tt.fields.CarbideAtomicClient)
+			mm := NewManageExpectedMachine(tt.fields.CarbideAtomicClient, nil)
 			response, err := mm.CreateExpectedMachinesOnSite(tt.args.ctx, tt.args.request)
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -663,7 +664,7 @@ func TestManageExpectedMachine_UpdateExpectedMachinesOnSite(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mm := NewManageExpectedMachine(tt.fields.CarbideAtomicClient)
+			mm := NewManageExpectedMachine(tt.fields.CarbideAtomicClient, nil)
 			response, err := mm.UpdateExpectedMachinesOnSite(tt.args.ctx, tt.args.request)
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -683,4 +684,127 @@ func TestManageExpectedMachine_UpdateExpectedMachinesOnSite(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestManageExpectedMachine_CreateExpectedMachineOnRLA(t *testing.T) {
+	t.Run("nil RLA client skips gracefully", func(t *testing.T) {
+		mm := ManageExpectedMachine{RlaAtomicClient: nil}
+		err := mm.CreateExpectedMachineOnRLA(context.Background(), &cwssaws.ExpectedMachine{
+			Id: &cwssaws.UUID{Value: uuid.NewString()}, BmcMacAddress: "00:11:22:33:44:55", ChassisSerialNumber: "SN001",
+		})
+		assert.NoError(t, err)
+	})
+
+	t.Run("nil RLA client connection skips gracefully", func(t *testing.T) {
+		mm := ManageExpectedMachine{RlaAtomicClient: cClient.NewRlaAtomicClient(&cClient.RlaClientConfig{})}
+		err := mm.CreateExpectedMachineOnRLA(context.Background(), &cwssaws.ExpectedMachine{
+			Id: &cwssaws.UUID{Value: uuid.NewString()}, BmcMacAddress: "00:11:22:33:44:55", ChassisSerialNumber: "SN001",
+		})
+		assert.NoError(t, err)
+	})
+}
+
+func TestManageExpectedMachine_CreateExpectedMachinesOnRLA(t *testing.T) {
+	t.Run("nil RLA client skips gracefully", func(t *testing.T) {
+		mm := ManageExpectedMachine{RlaAtomicClient: nil}
+		err := mm.CreateExpectedMachinesOnRLA(context.Background(), &cwssaws.BatchExpectedMachineOperationRequest{
+			ExpectedMachines: &cwssaws.ExpectedMachineList{
+				ExpectedMachines: []*cwssaws.ExpectedMachine{
+					{Id: &cwssaws.UUID{Value: uuid.NewString()}, BmcMacAddress: "00:11:22:33:44:55", ChassisSerialNumber: "SN001"},
+				},
+			},
+		})
+		assert.NoError(t, err)
+	})
+
+	t.Run("nil RLA client connection skips gracefully", func(t *testing.T) {
+		mm := ManageExpectedMachine{RlaAtomicClient: cClient.NewRlaAtomicClient(&cClient.RlaClientConfig{})}
+		err := mm.CreateExpectedMachinesOnRLA(context.Background(), &cwssaws.BatchExpectedMachineOperationRequest{
+			ExpectedMachines: &cwssaws.ExpectedMachineList{
+				ExpectedMachines: []*cwssaws.ExpectedMachine{
+					{Id: &cwssaws.UUID{Value: uuid.NewString()}, BmcMacAddress: "00:11:22:33:44:55", ChassisSerialNumber: "SN001"},
+				},
+			},
+		})
+		assert.NoError(t, err)
+	})
+}
+
+func Test_expectedMachineToRLAComponent(t *testing.T) {
+	strPtr := func(s string) *string { return &s }
+	int32Ptr := func(i int32) *int32 { return &i }
+
+	t.Run("maps all fields correctly", func(t *testing.T) {
+		em := &cwssaws.ExpectedMachine{
+			Id:                  &cwssaws.UUID{Value: "em-001"},
+			BmcMacAddress:       "AA:BB:CC:DD:EE:FF",
+			ChassisSerialNumber: "CHASSIS-001",
+			RackId:              &cwssaws.RackId{Id: "rack-001"},
+			Name:                strPtr("compute-node-1"),
+			Manufacturer:        strPtr("NVIDIA"),
+			Model:               strPtr("DGX-H100"),
+			Description:         strPtr("GPU compute node"),
+			FirmwareVersion:     strPtr("v2.1.0"),
+			SlotId:              int32Ptr(1),
+			TrayIdx:             int32Ptr(2),
+			HostId:              int32Ptr(3),
+		}
+		component := expectedMachineToRLAComponent(em)
+		assert.Equal(t, rlav1.ComponentType_COMPONENT_TYPE_COMPUTE, component.Type)
+		assert.Equal(t, "em-001", component.Info.Id.Id)
+		assert.Equal(t, "CHASSIS-001", component.Info.SerialNumber)
+		assert.Equal(t, "compute-node-1", component.Info.Name)
+		assert.Equal(t, "NVIDIA", component.Info.Manufacturer)
+		assert.Equal(t, "DGX-H100", *component.Info.Model)
+		assert.Equal(t, "GPU compute node", *component.Info.Description)
+		assert.Equal(t, "em-001", component.ComponentId)
+		assert.Equal(t, "v2.1.0", component.FirmwareVersion)
+		assert.NotNil(t, component.Position)
+		assert.Equal(t, int32(1), component.Position.SlotId)
+		assert.Equal(t, int32(2), component.Position.TrayIdx)
+		assert.Equal(t, int32(3), component.Position.HostId)
+		if assert.Len(t, component.Bmcs, 1) {
+			assert.Equal(t, rlav1.BMCType_BMC_TYPE_HOST, component.Bmcs[0].Type)
+			assert.Equal(t, "AA:BB:CC:DD:EE:FF", component.Bmcs[0].MacAddress)
+		}
+		assert.NotNil(t, component.RackId)
+		assert.Equal(t, "rack-001", component.RackId.Id)
+	})
+
+	t.Run("handles minimal fields (nil optionals)", func(t *testing.T) {
+		em := &cwssaws.ExpectedMachine{
+			Id: &cwssaws.UUID{Value: "em-002"}, BmcMacAddress: "11:22:33:44:55:66", ChassisSerialNumber: "CHASSIS-002",
+		}
+		component := expectedMachineToRLAComponent(em)
+		assert.Equal(t, rlav1.ComponentType_COMPONENT_TYPE_COMPUTE, component.Type)
+		assert.Equal(t, "em-002", component.ComponentId)
+		assert.Empty(t, component.Info.Name)
+		assert.Empty(t, component.Info.Manufacturer)
+		assert.Nil(t, component.Info.Model)
+		assert.Nil(t, component.Info.Description)
+		assert.Empty(t, component.FirmwareVersion)
+		assert.Nil(t, component.Position)
+		assert.Nil(t, component.RackId)
+	})
+
+	t.Run("ignores empty rack_id wrapper", func(t *testing.T) {
+		em := &cwssaws.ExpectedMachine{
+			Id: &cwssaws.UUID{Value: "em-003"}, BmcMacAddress: "22:33:44:55:66:77",
+			ChassisSerialNumber: "CHASSIS-003", RackId: &cwssaws.RackId{Id: ""},
+		}
+		component := expectedMachineToRLAComponent(em)
+		assert.Nil(t, component.RackId)
+	})
+
+	t.Run("partial position fields", func(t *testing.T) {
+		em := &cwssaws.ExpectedMachine{
+			Id: &cwssaws.UUID{Value: "em-004"}, BmcMacAddress: "33:44:55:66:77:88",
+			ChassisSerialNumber: "CHASSIS-004", SlotId: int32Ptr(5),
+		}
+		component := expectedMachineToRLAComponent(em)
+		assert.NotNil(t, component.Position)
+		assert.Equal(t, int32(5), component.Position.SlotId)
+		assert.Equal(t, int32(0), component.Position.TrayIdx)
+		assert.Equal(t, int32(0), component.Position.HostId)
+	})
 }

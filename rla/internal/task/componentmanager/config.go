@@ -240,7 +240,7 @@ func DefaultProdConfig() Config {
 		ComponentManagers: map[devicetypes.ComponentType]string{
 			devicetypes.ComponentTypeCompute:    carbide.ProviderName,
 			devicetypes.ComponentTypeNVLSwitch:  carbide.ProviderName,
-			devicetypes.ComponentTypePowerShelf: psm.ProviderName,
+			devicetypes.ComponentTypePowerShelf: carbide.ProviderName,
 		},
 		Providers: ProviderConfig{
 			Carbide: &carbide.Config{

@@ -1160,6 +1160,9 @@ message VpcPeeringList {
 message VpcPeeringCreationRequest {
   common.VpcId vpc_id = 1;
   common.VpcId peer_vpc_id = 2;
+
+  // The desired ID for this VPC peering. If the ID is not provided, a random one will be generated.
+  optional common.VpcPeeringId id = 3; 
 }
 
 message VpcPeeringSearchFilter {
@@ -1948,6 +1951,11 @@ message InstanceInterfaceConfig {
   // then this value is set and specifies the virtual function ID that is configured
   // for this network interface.
   optional uint32 virtual_function_id = 9;
+
+  // Explicit _host_ IP address requested for the interface.
+  // Only allowed when VPC prefix is used.
+  // Must match VPC prefix defined for the interface.
+  optional string ip_address = 10;
 }
 
 // The configuration that a customer desires for an instances IB interface
@@ -4088,6 +4096,16 @@ message ExpectedMachine {
   optional string sku_id =  7;
   // Unique identifier for the expected machine. When omitted, server generates one.
   optional common.UUID id = 8;
+  reserved 9; // host_nics in carbide-core, not used in REST
+  optional common.RackId rack_id = 10;
+  optional string name = 11;
+  optional string manufacturer = 12;
+  optional string model = 13;
+  optional string description = 14;
+  optional string firmware_version = 15;
+  optional int32 slot_id = 16;
+  optional int32 tray_idx = 17;
+  optional int32 host_id = 18;
 }
 
 message ExpectedMachineRequest {
@@ -4146,9 +4164,17 @@ message ExpectedPowerShelf {
   string ip_address = 5;
   // Metadata that will automatically get associated with a newly created PowerShelf
   Metadata metadata = 6;
-  optional string rack_id = 7;
+  optional common.RackId rack_id = 7;
   // Unique identifier for the expected power shelf. When omitted, server generates one.
   optional common.UUID expected_power_shelf_id = 8;
+  optional string name = 9;
+  optional string manufacturer = 10;
+  optional string model = 11;
+  optional string description = 12;
+  optional string firmware_version = 13;
+  optional int32 slot_id = 14;
+  optional int32 tray_idx = 15;
+  optional int32 host_id = 16;
 }
 
 message ExpectedPowerShelfRequest {
@@ -4180,11 +4206,19 @@ message ExpectedSwitch {
   string switch_serial_number = 4;
   // Metadata that will automatically get associated with a newly created Switch
   Metadata metadata = 5;
-  optional string rack_id = 6;
+  optional common.RackId rack_id = 6;
   optional string nvos_username = 7;
   optional string nvos_password = 8;
   // Unique identifier for the expected switch. When omitted, server generates one.
   optional common.UUID expected_switch_id = 9;
+  optional string name = 10;
+  optional string manufacturer = 11;
+  optional string model = 12;
+  optional string description = 13;
+  optional string firmware_version = 14;
+  optional int32 slot_id = 15;
+  optional int32 tray_idx = 16;
+  optional int32 host_id = 17;
 }
 
 message ExpectedSwitchRequest {

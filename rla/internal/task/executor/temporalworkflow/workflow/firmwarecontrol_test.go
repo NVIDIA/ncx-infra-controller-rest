@@ -37,27 +37,19 @@ import (
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
 )
 
-// mockSetFirmwareUpdateTimeWindowForFirmwareControl is a mock activity function for testing
-func mockSetFirmwareUpdateTimeWindowForFirmwareControl(
-	ctx context.Context,
-	req operations.SetFirmwareUpdateTimeWindowRequest,
-) error {
-	return nil
-}
-
 // mockUpdateTaskStatusForFirmwareControl is a mock activity for updating task status
 func mockUpdateTaskStatusForFirmwareControl(ctx context.Context, arg *task.TaskStatusUpdate) error {
 	return nil
 }
 
-// mockStartFirmwareUpdate is a mock activity for starting firmware update
-func mockStartFirmwareUpdate(ctx context.Context, target common.Target, info operations.FirmwareControlTaskInfo) error {
+// mockFirmwareControl is a mock activity for starting firmware update
+func mockFirmwareControl(ctx context.Context, target common.Target, info operations.FirmwareControlTaskInfo) error {
 	return nil
 }
 
-// mockGetFirmwareUpdateStatus is a mock activity for getting firmware update status
-func mockGetFirmwareUpdateStatus(ctx context.Context, target common.Target) (*activitypkg.GetFirmwareUpdateStatusResult, error) {
-	return &activitypkg.GetFirmwareUpdateStatusResult{
+// mockGetFirmwareStatus is a mock activity for getting firmware update status
+func mockGetFirmwareStatus(ctx context.Context, target common.Target) (*activitypkg.GetFirmwareStatusResult, error) {
+	return &activitypkg.GetFirmwareStatusResult{
 		Statuses: map[string]operations.FirmwareUpdateStatus{},
 	}, nil
 }
@@ -187,17 +179,14 @@ func TestFirmwareControlWorkflow(t *testing.T) {
 
 			env.RegisterWorkflow(GenericComponentStepWorkflow)
 
-			env.RegisterActivityWithOptions(mockSetFirmwareUpdateTimeWindowForFirmwareControl, activity.RegisterOptions{
-				Name: "SetFirmwareUpdateTimeWindow",
-			})
 			env.RegisterActivityWithOptions(mockUpdateTaskStatusForFirmwareControl, activity.RegisterOptions{
 				Name: "UpdateTaskStatus",
 			})
-			env.RegisterActivityWithOptions(mockStartFirmwareUpdate, activity.RegisterOptions{
-				Name: "StartFirmwareUpdate",
+			env.RegisterActivityWithOptions(mockFirmwareControl, activity.RegisterOptions{
+				Name: "FirmwareControl",
 			})
-			env.RegisterActivityWithOptions(mockGetFirmwareUpdateStatus, activity.RegisterOptions{
-				Name: "GetFirmwareUpdateStatus",
+			env.RegisterActivityWithOptions(mockGetFirmwareStatus, activity.RegisterOptions{
+				Name: "GetFirmwareStatus",
 			})
 			env.RegisterActivityWithOptions(mockPowerControl, activity.RegisterOptions{
 				Name: "PowerControl",
@@ -206,11 +195,10 @@ func TestFirmwareControlWorkflow(t *testing.T) {
 				Name: "GetPowerStatus",
 			})
 
-			env.OnActivity(mockSetFirmwareUpdateTimeWindowForFirmwareControl, mock.Anything, mock.Anything).Return(tc.activityError)
 			env.OnActivity(mockUpdateTaskStatusForFirmwareControl, mock.Anything, mock.Anything).Return(nil)
-			env.OnActivity(mockStartFirmwareUpdate, mock.Anything, mock.Anything, mock.Anything).Return(tc.activityError)
-			env.OnActivity(mockGetFirmwareUpdateStatus, mock.Anything, mock.Anything).Return(
-				&activitypkg.GetFirmwareUpdateStatusResult{
+			env.OnActivity(mockFirmwareControl, mock.Anything, mock.Anything, mock.Anything).Return(tc.activityError)
+			env.OnActivity(mockGetFirmwareStatus, mock.Anything, mock.Anything).Return(
+				&activitypkg.GetFirmwareStatusResult{
 					Statuses: map[string]operations.FirmwareUpdateStatus{
 						"comp1": {ComponentID: "comp1", State: operations.FirmwareUpdateStateCompleted},
 						"comp2": {ComponentID: "comp2", State: operations.FirmwareUpdateStateCompleted},

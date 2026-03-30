@@ -61,6 +61,7 @@ const (
 	RLA_PowerResetRack_FullMethodName           = "/v1.RLA/PowerResetRack"
 	RLA_ListTasks_FullMethodName                = "/v1.RLA/ListTasks"
 	RLA_GetTasksByIDs_FullMethodName            = "/v1.RLA/GetTasksByIDs"
+	RLA_CancelTask_FullMethodName               = "/v1.RLA/CancelTask"
 	RLA_CreateOperationRule_FullMethodName      = "/v1.RLA/CreateOperationRule"
 	RLA_UpdateOperationRule_FullMethodName      = "/v1.RLA/UpdateOperationRule"
 	RLA_DeleteOperationRule_FullMethodName      = "/v1.RLA/DeleteOperationRule"
@@ -109,6 +110,9 @@ type RLAClient interface {
 	// Query for tasks
 	ListTasks(ctx context.Context, in *ListTasksRequest, opts ...grpc.CallOption) (*ListTasksResponse, error)
 	GetTasksByIDs(ctx context.Context, in *GetTasksByIDsRequest, opts ...grpc.CallOption) (*GetTasksByIDsResponse, error)
+	// Cancel a task (waiting tasks are terminated immediately; running tasks
+	// have their Temporal workflow terminated).
+	CancelTask(ctx context.Context, in *CancelTaskRequest, opts ...grpc.CallOption) (*CancelTaskResponse, error)
 	// Operation rules management
 	CreateOperationRule(ctx context.Context, in *CreateOperationRuleRequest, opts ...grpc.CallOption) (*CreateOperationRuleResponse, error)
 	UpdateOperationRule(ctx context.Context, in *UpdateOperationRuleRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
@@ -391,6 +395,16 @@ func (c *rLAClient) GetTasksByIDs(ctx context.Context, in *GetTasksByIDsRequest,
 	return out, nil
 }
 
+func (c *rLAClient) CancelTask(ctx context.Context, in *CancelTaskRequest, opts ...grpc.CallOption) (*CancelTaskResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CancelTaskResponse)
+	err := c.cc.Invoke(ctx, RLA_CancelTask_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *rLAClient) CreateOperationRule(ctx context.Context, in *CreateOperationRuleRequest, opts ...grpc.CallOption) (*CreateOperationRuleResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CreateOperationRuleResponse)
@@ -527,6 +541,9 @@ type RLAServer interface {
 	// Query for tasks
 	ListTasks(context.Context, *ListTasksRequest) (*ListTasksResponse, error)
 	GetTasksByIDs(context.Context, *GetTasksByIDsRequest) (*GetTasksByIDsResponse, error)
+	// Cancel a task (waiting tasks are terminated immediately; running tasks
+	// have their Temporal workflow terminated).
+	CancelTask(context.Context, *CancelTaskRequest) (*CancelTaskResponse, error)
 	// Operation rules management
 	CreateOperationRule(context.Context, *CreateOperationRuleRequest) (*CreateOperationRuleResponse, error)
 	UpdateOperationRule(context.Context, *UpdateOperationRuleRequest) (*emptypb.Empty, error)
@@ -625,6 +642,9 @@ func (UnimplementedRLAServer) ListTasks(context.Context, *ListTasksRequest) (*Li
 }
 func (UnimplementedRLAServer) GetTasksByIDs(context.Context, *GetTasksByIDsRequest) (*GetTasksByIDsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetTasksByIDs not implemented")
+}
+func (UnimplementedRLAServer) CancelTask(context.Context, *CancelTaskRequest) (*CancelTaskResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CancelTask not implemented")
 }
 func (UnimplementedRLAServer) CreateOperationRule(context.Context, *CreateOperationRuleRequest) (*CreateOperationRuleResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateOperationRule not implemented")
@@ -1144,6 +1164,24 @@ func _RLA_GetTasksByIDs_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
+func _RLA_CancelTask_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CancelTaskRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RLAServer).CancelTask(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: RLA_CancelTask_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RLAServer).CancelTask(ctx, req.(*CancelTaskRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _RLA_CreateOperationRule_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateOperationRuleRequest)
 	if err := dec(in); err != nil {
@@ -1434,6 +1472,10 @@ var RLA_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetTasksByIDs",
 			Handler:    _RLA_GetTasksByIDs_Handler,
+		},
+		{
+			MethodName: "CancelTask",
+			Handler:    _RLA_CancelTask_Handler,
 		},
 		{
 			MethodName: "CreateOperationRule",

@@ -17,197 +17,310 @@
 
 // Package conflict provides data-driven task conflict detection for RLA.
 //
-// The core abstraction is ConflictRule, a declarative struct that defines which
-// operation pairs cannot coexist and at what scope (dimension). A single
-// EvaluateConflict function interprets the rule — no interface hierarchy needed.
+// The core abstraction is Rule, a declarative struct that defines which
+// operation pairs cannot coexist and at what scope.
+// Rule.Conflicts() evaluates the rule against a set of active tasks.
 //
-// V1 default: exclusive access per rack (any active task blocks a new one).
-// Future: per-pair scoping, configurable allowed-pairs, DB-backed rules.
+// Conflict semantics are intrinsic to what operations do to shared hardware
+// and are therefore defined in code, not configurable by users. The built-in
+// rule (builtinRule) captures these semantics as explicit operation pairs.
+//
+// Convention: any new TaskType or ComponentType added to the codebase MUST be
+// assessed and the appropriate pairs added to builtinRule in the same PR.
 package conflict
 
 import (
 	"context"
 
-	"github.com/google/uuid"
-
+	taskcommon "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/common"
 	taskstore "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/store"
 	taskdef "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/task"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
+	"github.com/google/uuid"
 )
 
-// OperationSpec matches an operation by type and code.
-// The wildcard value "*" matches any value in that field.
-type OperationSpec struct {
-	OperationType string // e.g. "power_control", "*"
-	OperationCode string // e.g. "power_on", "*"
+// builtinRule is the code-defined selective conflict policy for RLA.
+// Only explicitly listed operation pairs conflict; everything else may coexist.
+//
+// All active tasks passed to Conflicts() are already pre-filtered to the same
+// rack by ListActiveTasksForRack, so rack-level scoping is implicit.
+// RequireComponentOverlap is only needed when operations are isolated to their
+// targeted components and parallel execution on disjoint sets is safe.
+//
+// ComponentType assignment rationale:
+//   - PowerShelf power ops have RequireComponentOverlap=false (rack-level):
+//     cutting power to a shelf affects all components regardless of UUIDs.
+//   - Compute / NVLSwitch power and firmware ops use
+//     RequireComponentOverlap=true: isolated to their targeted components.
+//   - BringUp has RequireComponentOverlap=false (rack-level): comprehensive.
+//   - ComponentTypeUnknown (zero value) acts as a wildcard — matches any
+//     component type including tasks with nil ComponentsByType (old tasks).
+//
+// IMPORTANT: when adding a new TaskType or ComponentType, update this table
+// in the same PR after assessing which operations it cannot coexist with.
+var builtinRule = &Rule{ //nolint
+	ConflictingPairs: []Entry{
+		// PowerShelf power ops block all power ops on the rack: cutting
+		// power to a shelf affects every component.
+		{
+			A: OperationSpec{
+				OperationType: string(taskcommon.TaskTypePowerControl),
+				ComponentType: devicetypes.ComponentTypePowerShelf,
+			},
+			B: OperationSpec{
+				OperationType: string(taskcommon.TaskTypePowerControl),
+			},
+		},
+		// PowerShelf power ops block all firmware upgrades on the rack:
+		// unsafe to flash any component while shelf power is in flux.
+		{
+			A: OperationSpec{
+				OperationType: string(taskcommon.TaskTypePowerControl),
+				ComponentType: devicetypes.ComponentTypePowerShelf,
+			},
+			B: OperationSpec{
+				OperationType: string(
+					taskcommon.TaskTypeFirmwareControl),
+			},
+		},
+		// Compute power ops block each other on overlapping components.
+		{
+			A: OperationSpec{
+				OperationType: string(taskcommon.TaskTypePowerControl),
+				ComponentType: devicetypes.ComponentTypeCompute,
+			},
+			B: OperationSpec{
+				OperationType: string(taskcommon.TaskTypePowerControl),
+				ComponentType: devicetypes.ComponentTypeCompute,
+			},
+			RequireComponentOverlap: true,
+		},
+		// NVLSwitch power ops block each other on overlapping components.
+		{
+			A: OperationSpec{
+				OperationType: string(taskcommon.TaskTypePowerControl),
+				ComponentType: devicetypes.ComponentTypeNVLSwitch,
+			},
+			B: OperationSpec{
+				OperationType: string(taskcommon.TaskTypePowerControl),
+				ComponentType: devicetypes.ComponentTypeNVLSwitch,
+			},
+			RequireComponentOverlap: true,
+		},
+		// Compute power ops block firmware upgrades on overlapping
+		// compute components.
+		{
+			A: OperationSpec{
+				OperationType: string(taskcommon.TaskTypePowerControl),
+				ComponentType: devicetypes.ComponentTypeCompute,
+			},
+			B: OperationSpec{
+				OperationType: string(
+					taskcommon.TaskTypeFirmwareControl),
+				ComponentType: devicetypes.ComponentTypeCompute,
+			},
+			RequireComponentOverlap: true,
+		},
+		// NVLSwitch power ops block firmware upgrades on overlapping
+		// NVLSwitch components.
+		{
+			A: OperationSpec{
+				OperationType: string(taskcommon.TaskTypePowerControl),
+				ComponentType: devicetypes.ComponentTypeNVLSwitch,
+			},
+			B: OperationSpec{
+				OperationType: string(
+					taskcommon.TaskTypeFirmwareControl),
+				ComponentType: devicetypes.ComponentTypeNVLSwitch,
+			},
+			RequireComponentOverlap: true,
+		},
+		// Firmware upgrades block each other on overlapping components
+		// regardless of component type: flashing the same hardware
+		// concurrently is unsafe.
+		{
+			A: OperationSpec{
+				OperationType: string(
+					taskcommon.TaskTypeFirmwareControl),
+			},
+			B: OperationSpec{
+				OperationType: string(
+					taskcommon.TaskTypeFirmwareControl),
+			},
+			RequireComponentOverlap: true,
+		},
+		// BringUp is comprehensive and blocks all other operations.
+		{
+			A: OperationSpec{
+				OperationType: string(taskcommon.TaskTypeBringUp),
+			},
+			B: OperationSpec{
+				OperationType: "*",
+			},
+		},
+	},
 }
 
-// Matches returns true if this spec matches the given operation.
+// OperationSpec matches an operation by type, code, and component type.
+// The wildcard value "*" matches any string field; ComponentTypeUnknown (0)
+// matches any component type (including tasks with nil ComponentsByType).
+type OperationSpec struct {
+	OperationType string                    // e.g. "power_control", "*"
+	OperationCode string                    // e.g. "power_on", "*"; "" = wildcard
+	ComponentType devicetypes.ComponentType // ComponentTypeUnknown = wildcard
+}
+
+// Matches returns true if this spec matches the given operation type and code.
+// ComponentType is NOT checked here — it is evaluated separately against the
+// task's Attributes.ComponentsByType in Rule.Conflicts().
 func (s OperationSpec) Matches(op OperationSpec) bool {
 	typeMatch := s.OperationType == "*" || s.OperationType == op.OperationType
-	codeMatch := s.OperationCode == "*" || s.OperationCode == op.OperationCode
+	codeMatch := s.OperationCode == "" ||
+		s.OperationCode == "*" ||
+		s.OperationCode == op.OperationCode
 	return typeMatch && codeMatch
 }
 
-// ConflictDimension defines the scope for conflict checking via an extractor
-// function. Two tasks are "in scope" only when their extracted key sets share
-// at least one element.
-type ConflictDimension struct {
-	// Name is used for logging and configuration (e.g. "rack").
-	Name string
-	// ExtractKeys returns the set of scope keys for a task.
-	// For DimensionRack this is always a single element (the rack UUID).
-	// For DimensionComponentUUID it returns all targeted component UUIDs.
-	ExtractKeys func(t *taskdef.Task) []string
-}
-
-// Overlaps returns true when tasks a and b share at least one scope key.
-func (d *ConflictDimension) Overlaps(a, b *taskdef.Task) bool {
-	keysA := d.ExtractKeys(a)
-	keysB := d.ExtractKeys(b)
-	setB := make(map[string]struct{}, len(keysB))
-	for _, k := range keysB {
-		setB[k] = struct{}{}
-	}
-	for _, k := range keysA {
-		if _, ok := setB[k]; ok {
-			return true
-		}
-	}
-	return false
-}
-
-// Built-in dimensions.
-var (
-	// DimensionRack: tasks conflict when they target the same rack.
-	// This is the default and most common scope for conflict detection.
-	DimensionRack = &ConflictDimension{
-		Name: "rack",
-		ExtractKeys: func(t *taskdef.Task) []string {
-			return []string{t.RackID.String()}
-		},
-	}
-
-	// DimensionComponentUUID: tasks conflict when they target at least one
-	// common component UUID. Requires ComponentUUIDs to be populated.
-	DimensionComponentUUID = &ConflictDimension{
-		Name: "component_uuid",
-		ExtractKeys: func(t *taskdef.Task) []string {
-			keys := make([]string, len(t.ComponentUUIDs))
-			for i, id := range t.ComponentUUIDs {
-				keys[i] = id.String()
-			}
-			return keys
-		},
-	}
-)
-
-// ConflictEntry is a symmetric pair of operations that cannot coexist
-// when the scope condition is satisfied.
-type ConflictEntry struct {
+// Entry is a symmetric pair of operations that cannot coexist when the scope
+// condition is satisfied.
+type Entry struct {
 	A OperationSpec
 	B OperationSpec
-	// Scope overrides the rule-level RequireOverlapOn for this specific pair.
-	// If nil, inherits RequireOverlapOn from the parent ConflictRule.
-	Scope *ConflictDimension
+
+	// RequireComponentOverlap narrows conflict detection to task pairs
+	// that share at least one component UUID. When false, any two
+	// matching tasks on the same rack conflict (rack pre-filtering by
+	// ListActiveTasksForRack makes an explicit rack check unnecessary).
+	RequireComponentOverlap bool
 }
 
-// Matches returns true if (p, q) or (q, p) matches (A, B).
-// ConflictEntry is symmetric — the order of A and B does not matter.
-func (e ConflictEntry) Matches(p, q OperationSpec) bool {
-	return (e.A.Matches(p) && e.B.Matches(q)) ||
-		(e.A.Matches(q) && e.B.Matches(p))
-}
-
-// ConflictRule declaratively defines when operations conflict.
+// Rule declaratively defines when operations conflict.
 // Empty ConflictingPairs means exclusive mode: any active task is a conflict.
-type ConflictRule struct {
-	// RequireOverlapOn is the default dimension for scope checking.
-	// Nil defaults to DimensionRack.
-	RequireOverlapOn *ConflictDimension
-
+type Rule struct {
 	// ConflictingPairs lists operation pairs that cannot coexist within
-	// the scope. Each entry is symmetric — the order of A and B does not
-	// matter. Empty = all operations conflict (exclusive mode).
-	ConflictingPairs []ConflictEntry
+	// the scope. Each entry is evaluated symmetrically. Empty = all
+	// active operations conflict (exclusive mode).
+	ConflictingPairs []Entry
 
 	// AtomicAcrossRacks: when true, conflict checking spans all racks in
-	// the same task group. V2 feature — currently always false.
+	// the same task group — the entire multi-rack operation is rejected or
+	// queued as a unit if any rack has a conflict. For V3 in the future,
+	// currently always false.
 	AtomicAcrossRacks bool
 }
 
-// Conflicts returns true if incomingOp conflicts with any of the active tasks
-// under this rule.
+// Conflicts returns true if the incoming task conflicts with any of the active
+// tasks under this rule. A conflict requires:
+//  1. The operation pair matches a ConflictingPairs entry (type, code, and
+//     component type all match for the respective tasks).
+//  2. If RequireComponentOverlap is true, the two tasks must share at least
+//     one component UUID.
 //
-// Exclusive mode (empty ConflictingPairs): any active task is a conflict.
-// Pair mode: conflict only when an active task's operation matches one of
-// the listed ConflictEntry pairs.
-func (r *ConflictRule) Conflicts(
-	incomingOp OperationSpec,
+// All tasks in activeTasks are assumed to be on the same rack as incoming
+// (pre-filtered by ListActiveTasksForRack).
+//
+// Special case: empty ConflictingPairs is exclusive mode — any active task
+// is a conflict.
+func (r *Rule) Conflicts(
+	incoming *taskdef.Task,
 	activeTasks []*taskdef.Task,
 ) bool {
 	if len(r.ConflictingPairs) == 0 {
 		return len(activeTasks) > 0
 	}
 
-	for _, activeTask := range activeTasks {
+	incomingOp := OperationSpec{
+		OperationType: string(incoming.Operation.Type),
+		OperationCode: incoming.Operation.Code,
+	}
+
+	for _, active := range activeTasks {
 		activeOp := OperationSpec{
-			OperationType: string(activeTask.Operation.Type),
-			OperationCode: activeTask.Operation.Code,
+			OperationType: string(active.Operation.Type),
+			OperationCode: active.Operation.Code,
 		}
 		for _, entry := range r.ConflictingPairs {
-			if entry.Matches(incomingOp, activeOp) {
+			// Forward: A qualifies incoming, B qualifies active.
+			forward := entry.A.Matches(incomingOp) &&
+				hasComponentType(incoming, entry.A.ComponentType) &&
+				entry.B.Matches(activeOp) &&
+				hasComponentType(active, entry.B.ComponentType)
+
+			// Reverse: symmetric — A qualifies active, B qualifies incoming.
+			reverse := entry.A.Matches(activeOp) &&
+				hasComponentType(active, entry.A.ComponentType) &&
+				entry.B.Matches(incomingOp) &&
+				hasComponentType(incoming, entry.B.ComponentType)
+
+			if (forward || reverse) &&
+				(!entry.RequireComponentOverlap ||
+					componentUUIDsOverlap(incoming, active)) {
 				return true
 			}
 		}
 	}
+
 	return false
 }
 
-// defaultConflictRule is the V1 default: exclusive access per rack.
-// Any active task on the rack blocks a new one.
-var defaultConflictRule = &ConflictRule{
-	RequireOverlapOn: DimensionRack,
-	// ConflictingPairs is nil → exclusive mode
+// componentUUIDsOverlap returns true when tasks a and b share at least one
+// component UUID across all component types.
+func componentUUIDsOverlap(a, b *taskdef.Task) bool {
+	uuidsA := a.Attributes.AllComponentUUIDs()
+	if len(uuidsA) == 0 {
+		return false
+	}
+
+	setA := make(map[uuid.UUID]struct{}, len(uuidsA))
+	for _, id := range uuidsA {
+		setA[id] = struct{}{}
+	}
+
+	for _, id := range b.Attributes.AllComponentUUIDs() {
+		if _, ok := setA[id]; ok {
+			return true
+		}
+	}
+
+	return false
 }
 
-// ConflictResolver determines whether an incoming operation conflicts with
-// active tasks on a rack. It fetches the applicable rule and evaluates it.
-// V1: always applies the hardcoded exclusive default rule.
-// V2: will query DB for a rack-specific or global default rule.
-type ConflictResolver struct {
+// hasComponentType returns true if task t includes at least one component of
+// the given type. ComponentTypeUnknown in the entry spec is a wildcard —
+// it matches any task regardless of component type.
+func hasComponentType(
+	t *taskdef.Task,
+	ct devicetypes.ComponentType,
+) bool {
+	if ct == devicetypes.ComponentTypeUnknown {
+		return true // entry wildcard
+	}
+	return len(t.Attributes.ComponentsByType[ct]) > 0
+}
+
+// Resolver determines whether an incoming operation conflicts with active
+// tasks on a rack using the code-defined builtinRule.
+type Resolver struct {
 	store taskstore.Store
 }
 
-// NewConflictResolver creates a new ConflictResolver backed by the given store.
-func NewConflictResolver(store taskstore.Store) *ConflictResolver {
-	return &ConflictResolver{store: store}
+// NewResolver creates a new Resolver backed by the given store.
+func NewResolver(store taskstore.Store) *Resolver {
+	return &Resolver{store: store}
 }
 
-// ruleFor returns the conflict rule for the given rack.
-// V1 always returns the exclusive default rule.
-func (r *ConflictResolver) ruleFor(
-	_ context.Context,
-	_ uuid.UUID,
-) (*ConflictRule, error) {
-	return defaultConflictRule, nil
-}
-
-// HasConflict returns true if incomingOp would conflict with an existing
-// active task on rackID under the applicable conflict rule.
-func (r *ConflictResolver) HasConflict(
+// HasConflict returns true if the incoming task would conflict with any
+// existing active task on the same rack under the builtin conflict rule.
+func (r *Resolver) HasConflict(
 	ctx context.Context,
-	incomingOp OperationSpec,
-	rackID uuid.UUID,
+	incoming *taskdef.Task,
 ) (bool, error) {
-	rule, err := r.ruleFor(ctx, rackID)
+	activeTasks, err := r.store.ListActiveTasksForRack(
+		ctx, incoming.RackID,
+	)
 	if err != nil {
 		return false, err
 	}
 
-	activeTasks, err := r.store.ListActiveTasksForRack(ctx, rackID)
-	if err != nil {
-		return false, err
-	}
-
-	return rule.Conflicts(incomingOp, activeTasks), nil
+	return builtinRule.Conflicts(incoming, activeTasks), nil
 }

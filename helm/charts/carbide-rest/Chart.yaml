@@ -2,7 +2,7 @@ apiVersion: v2
 name: carbide-rest
 description: Umbrella chart for the Carbide REST API platform
 type: application
-version: 0.1.4
+version: 0.1.5
 appVersion: "1.1.0"
 keywords:
   - carbide
@@ -12,6 +12,12 @@ keywords:
   - umbrella
 
 dependencies:
+  - name: carbide-rest-common
+    version: "0.1.0"
+    condition: carbide-rest-common.enabled
+  - name: carbide-rest-cert-manager
+    version: "0.1.0"
+    condition: carbide-rest-cert-manager.enabled
   - name: carbide-rest-api
     version: "0.1.0"
     condition: carbide-rest-api.enabled

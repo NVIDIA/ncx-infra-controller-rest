@@ -828,8 +828,10 @@ func buildForcePowerOffRule() *OperationRule {
 	}
 }
 
-// buildBringUpRule creates the hardcoded default rule for
-// rack bring-up.
+// buildBringUpRule creates the hardcoded default rule for rack bring-up.
+// A complete bring-up is two phases: (1) ingestion via IngestRack API, then
+// (2) power + verification (this rule). The phases are decoupled so ingestion
+// can run independently.
 //
 // Stage 1: PowerShelf — wait PMC ready, turn on PSUs, verify
 // Stage 2: Compute    — open gate, wait bring-up, verify,
@@ -838,44 +840,16 @@ func buildForcePowerOffRule() *OperationRule {
 func buildBringUpRule() *OperationRule {
 	return &OperationRule{
 		Name:          "Hardcoded Default Bring-Up",
-		Description:   "Fallback rule for full rack bring-up (ingestion + power + verification)",
+		Description:   "Fallback rule for rack bring-up (power + verification)",
 		OperationType: common.TaskTypeBringUp,
 		OperationCode: SequenceBringUp,
 		RuleDefinition: RuleDefinition{
 			Version: CurrentRuleDefinitionVersion,
 			Steps: []SequenceStep{
-				// === Stage 1: Ingestion — register components with component manager services ===
+				// === Stage 1: PowerShelf — verify reachability, power on, verify ===
 				{
 					ComponentType: devicetypes.ComponentTypePowerShelf,
 					Stage:         1,
-					MaxParallel:   0,
-					Timeout:       10 * time.Minute,
-					MainOperation: ActionConfig{
-						Name: ActionInjectExpectation,
-					},
-				},
-				{
-					ComponentType: devicetypes.ComponentTypeCompute,
-					Stage:         1, // Parallel with PowerShelf
-					MaxParallel:   0,
-					Timeout:       10 * time.Minute,
-					MainOperation: ActionConfig{
-						Name: ActionInjectExpectation,
-					},
-				},
-				{
-					ComponentType: devicetypes.ComponentTypeNVLSwitch,
-					Stage:         1, // Parallel with others
-					MaxParallel:   0,
-					Timeout:       10 * time.Minute,
-					MainOperation: ActionConfig{
-						Name: ActionInjectExpectation,
-					},
-				},
-				// === Stage 2: PowerShelf — verify reachability, power on, verify ===
-				{
-					ComponentType: devicetypes.ComponentTypePowerShelf,
-					Stage:         2,
 					MaxParallel:   0,
 					Timeout:       20 * time.Minute,
 					RetryPolicy: &RetryPolicy{
@@ -911,10 +885,10 @@ func buildBringUpRule() *OperationRule {
 						},
 					},
 				},
-				// === Stage 3: Compute — allow, wait, verify, reboot, verify ===
+				// === Stage 2: Compute — allow, wait, verify, reboot, verify ===
 				{
 					ComponentType: devicetypes.ComponentTypeCompute,
-					Stage:         3,
+					Stage:         2,
 					MaxParallel:   0,
 					Timeout:       30 * time.Minute,
 					RetryPolicy: &RetryPolicy{
@@ -924,7 +898,7 @@ func buildBringUpRule() *OperationRule {
 					},
 					PreOperation: []ActionConfig{
 						{
-							Name: ActionAllowBringUp,
+							Name: ActionBringUpControl,
 						},
 						{
 							Name:         ActionWaitBringUp,

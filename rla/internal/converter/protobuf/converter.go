@@ -26,7 +26,6 @@ import (
 	"github.com/google/uuid"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/credential"
 	dbquery "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/db/query"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/operation"
 	taskcommon "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/common"
@@ -193,12 +192,6 @@ func BMCFrom(bi *pb.BMCInfo) (devicetypes.BMCType, *bmc.BMC) {
 		bmc.IP = net.ParseIP(ip)
 	}
 
-	if bi.User != nil && bi.Password != nil {
-		// Create a new credential only if the user and password are not nil.
-		nc := credential.New(*bi.User, *bi.Password)
-		bmc.Credential = &nc
-	}
-
 	return BMCTypeFrom(bi.Type), &bmc
 }
 
@@ -244,9 +237,10 @@ func RackFrom(r *pb.Rack) *rack.Rack {
 	}
 }
 
+// PaginationFrom converts a protobuf Pagination to an internal Pagination.
 func PaginationFrom(pg *pb.Pagination) *dbquery.Pagination {
 	if pg == nil {
-		return nil
+		return dbquery.DefaultPagination()
 	}
 
 	return &dbquery.Pagination{
@@ -255,6 +249,7 @@ func PaginationFrom(pg *pb.Pagination) *dbquery.Pagination {
 	}
 }
 
+// StringQueryInfoFrom converts a protobuf StringQueryInfo to an internal StringQueryInfo.
 func StringQueryInfoFrom(info *pb.StringQueryInfo) *dbquery.StringQueryInfo {
 	if info == nil {
 		return nil
@@ -329,6 +324,7 @@ func componentFilterFieldToColumn(field pb.ComponentFilterField) string {
 	}
 }
 
+// IdentifierFrom converts a protobuf Identifier to an internal Identifier.
 func IdentifierFrom(info *pb.Identifier) *identifier.Identifier {
 	if info == nil {
 		return nil
@@ -337,6 +333,7 @@ func IdentifierFrom(info *pb.Identifier) *identifier.Identifier {
 	return identifier.New(UUIDFrom(info.GetId()), info.GetName())
 }
 
+// NVLDomainFrom converts a protobuf NVLDomain to an internal NVLDomain.
 func NVLDomainFrom(info *pb.NVLDomain) *nvldomain.NVLDomain {
 	if info == nil || info.GetIdentifier() == nil {
 		return nil
@@ -347,6 +344,7 @@ func NVLDomainFrom(info *pb.NVLDomain) *nvldomain.NVLDomain {
 	}
 }
 
+// PowerControlOpFrom converts a protobuf PowerControlOp to an internal PowerOperation.
 func PowerControlOpFrom(op pb.PowerControlOp) operations.PowerOperation {
 	switch op {
 	// Power On
@@ -374,6 +372,7 @@ func PowerControlOpFrom(op pb.PowerControlOp) operations.PowerOperation {
 	}
 }
 
+// TaskExecutorTypeFrom converts a protobuf TaskExecutorType to an internal ExecutorType.
 func TaskExecutorTypeFrom(et pb.TaskExecutorType) taskcommon.ExecutorType {
 	switch et {
 	case pb.TaskExecutorType_TASK_EXECUTOR_TYPE_TEMPORAL:
@@ -383,6 +382,7 @@ func TaskExecutorTypeFrom(et pb.TaskExecutorType) taskcommon.ExecutorType {
 	}
 }
 
+// TaskExecutorTypeTo converts an internal ExecutorType to a protobuf TaskExecutorType.
 func TaskExecutorTypeTo(et taskcommon.ExecutorType) pb.TaskExecutorType {
 	switch et {
 	case taskcommon.ExecutorTypeTemporal:
@@ -392,6 +392,7 @@ func TaskExecutorTypeTo(et taskcommon.ExecutorType) pb.TaskExecutorType {
 	}
 }
 
+// TaskStatusFrom converts a protobuf TaskStatus to an internal TaskStatus.
 func TaskStatusFrom(status pb.TaskStatus) taskcommon.TaskStatus {
 	switch status {
 	case pb.TaskStatus_TASK_STATUS_PENDING:
@@ -411,6 +412,7 @@ func TaskStatusFrom(status pb.TaskStatus) taskcommon.TaskStatus {
 	}
 }
 
+// TaskStatusTo converts an internal TaskStatus to a protobuf TaskStatus.
 func TaskStatusTo(status taskcommon.TaskStatus) pb.TaskStatus {
 	switch status {
 	case taskcommon.TaskStatusPending:
@@ -435,11 +437,6 @@ func TaskTo(task *taskdef.Task) *pb.Task {
 		return nil
 	}
 
-	componentIDs := make([]*pb.UUID, 0, len(task.ComponentUUIDs))
-	for _, id := range task.ComponentUUIDs {
-		componentIDs = append(componentIDs, UUIDTo(id))
-	}
-
 	var opStr string
 	operation, err := operations.New(task.Operation.Type, task.Operation.Info)
 	if err == nil {
@@ -450,16 +447,29 @@ func TaskTo(task *taskdef.Task) *pb.Task {
 		Id:             UUIDTo(task.ID),
 		Operation:      opStr,
 		RackId:         UUIDTo(task.RackID),
-		ComponentUuids: componentIDs,
+		ComponentUuids: UUIDsTo(task.Attributes.AllComponentUUIDs()),
 		Description:    task.Description,
 		ExecutorType:   TaskExecutorTypeTo(task.ExecutorType),
 		ExecutionId:    task.ExecutionID,
 		Status:         TaskStatusTo(task.Status),
 		Message:        task.Message,
+		CreatedAt:      timestamppb.New(task.CreatedAt),
+		UpdatedAt:      timestamppb.New(task.UpdatedAt),
 	}
+	if task.AppliedRuleID != nil {
+		pbTask.AppliedRuleId = UUIDTo(*task.AppliedRuleID)
+	}
+	if task.StartedAt != nil {
+		pbTask.StartedAt = timestamppb.New(*task.StartedAt)
+	}
+	if task.FinishedAt != nil {
+		pbTask.FinishedAt = timestamppb.New(*task.FinishedAt)
+	}
+
 	if task.QueueExpiresAt != nil {
 		pbTask.QueueExpiresAt = timestamppb.New(*task.QueueExpiresAt)
 	}
+
 	return pbTask
 }
 
@@ -570,10 +580,6 @@ func BMCTo(t devicetypes.BMCType, b *bmc.BMC) *pb.BMCInfo {
 		bmcProto.IpAddress = &ip
 	}
 
-	if b.Credential != nil {
-		bmcProto.User, bmcProto.Password = b.Credential.Retrieve()
-	}
-
 	return &bmcProto
 }
 
@@ -620,6 +626,7 @@ func RackTo(r *rack.Rack) *pb.Rack {
 	}
 }
 
+// PaginationTo converts an internal Pagination to a protobuf Pagination.
 func PaginationTo(pg *dbquery.Pagination) *pb.Pagination {
 	if pg == nil {
 		return nil
@@ -631,6 +638,7 @@ func PaginationTo(pg *dbquery.Pagination) *pb.Pagination {
 	}
 }
 
+// StringQueryInfoTo converts an internal StringQueryInfo to a protobuf StringQueryInfo.
 func StringQueryInfoTo(info *dbquery.StringQueryInfo) *pb.StringQueryInfo {
 	if info == nil {
 		return nil
@@ -675,8 +683,8 @@ func OrderByFrom(ob *pb.OrderBy) *dbquery.OrderBy {
 type QueryType int
 
 const (
-	QueryTypeRack QueryType = iota
-	QueryTypeComponent
+	QueryTypeRack      QueryType = iota // QueryTypeRack identifies a rack-scoped query.
+	QueryTypeComponent                  // QueryTypeComponent identifies a component-scoped query.
 )
 
 // OrderByTo converts an internal OrderBy to a protobuf OrderBy
@@ -797,6 +805,7 @@ func NVLDomainTo(info *nvldomain.NVLDomain) *pb.NVLDomain {
 // Operation Rule Converters
 // ========================================
 
+// OperationTypeToProto converts an internal TaskType to a protobuf OperationType.
 func OperationTypeToProto(opType taskcommon.TaskType) pb.OperationType {
 	switch opType {
 	case taskcommon.TaskTypePowerControl:
@@ -808,6 +817,7 @@ func OperationTypeToProto(opType taskcommon.TaskType) pb.OperationType {
 	}
 }
 
+// OperationTypeFromProto converts a protobuf OperationType to an internal TaskType.
 func OperationTypeFromProto(opType pb.OperationType) taskcommon.TaskType {
 	switch opType {
 	case pb.OperationType_OPERATION_TYPE_POWER_CONTROL:
@@ -819,6 +829,7 @@ func OperationTypeFromProto(opType pb.OperationType) taskcommon.TaskType {
 	}
 }
 
+// OperationRuleTo converts an internal OperationRule to its protobuf representation.
 func OperationRuleTo(rule *operationrules.OperationRule) (*pb.OperationRule, error) {
 	if rule == nil {
 		return nil, nil
@@ -843,6 +854,7 @@ func OperationRuleTo(rule *operationrules.OperationRule) (*pb.OperationRule, err
 	}, nil
 }
 
+// OperationRuleFromProto converts a protobuf OperationRule to its internal representation.
 func OperationRuleFromProto(pbRule *pb.OperationRule) (*operationrules.OperationRule, error) {
 	if pbRule == nil {
 		return nil, nil

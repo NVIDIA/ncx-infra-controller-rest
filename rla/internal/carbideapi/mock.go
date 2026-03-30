@@ -20,12 +20,17 @@ package carbideapi
 import (
 	"context"
 	"time"
+
+	pb "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/carbideapi/gen"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/common/utils"
 )
 
 type mockClient struct {
 	machines                    map[string]MachineDetail
 	powerStates                 map[string]PowerState
 	machineInterfaces           map[string]MachineInterface
+	expectedSwitches            map[string]ExpectedSwitchInfo // keyed by BMC MAC
+	leakingMachineIds           []string
 	firmwareUpdateTimeWindowErr error // If set, SetFirmwareUpdateTimeWindow will return this error
 	adminPowerControlErr        error // If set, AdminPowerControl will return this error
 }
@@ -36,6 +41,7 @@ func NewMockClient() Client {
 		machines:          map[string]MachineDetail{},
 		powerStates:       map[string]PowerState{},
 		machineInterfaces: map[string]MachineInterface{},
+		expectedSwitches:  map[string]ExpectedSwitchInfo{},
 	}
 }
 
@@ -49,6 +55,14 @@ func (c *mockClient) GetMachines(ctx context.Context) ([]MachineDetail, error) {
 		result = append(result, m)
 	}
 	return result, nil
+}
+
+func (c *mockClient) GetLeakingMachineIds(ctx context.Context) ([]string, error) {
+	return c.leakingMachineIds, nil
+}
+
+func (c *mockClient) SetLeakingMachineIds(ids []string) {
+	c.leakingMachineIds = ids
 }
 
 func (c *mockClient) GetPowerStates(ctx context.Context, machineIds []string) (ret []MachinePowerState, err error) {
@@ -90,7 +104,6 @@ func (c *mockClient) SetAdminPowerControlError(err error) {
 }
 
 func (c *mockClient) FindInterfaces(ctx context.Context) (map[string]MachineInterface, error) {
-	// Return a copy of the map
 	interfaces := make(map[string]MachineInterface)
 	for mac, iface := range c.machineInterfaces {
 		interfaces[mac] = iface
@@ -99,7 +112,7 @@ func (c *mockClient) FindInterfaces(ctx context.Context) (map[string]MachineInte
 }
 
 func (c *mockClient) AddMachineInterface(iface MachineInterface) {
-	c.machineInterfaces[iface.MacAddress] = iface
+	c.machineInterfaces[utils.NormalizeMAC(iface.MacAddress)] = iface
 }
 
 func (c *mockClient) FindMachinesByIds(ctx context.Context, machineIds []string) ([]MachineDetail, error) {
@@ -137,6 +150,42 @@ func (c *mockClient) AddExpectedMachine(ctx context.Context, req AddExpectedMach
 	return nil
 }
 
+func (c *mockClient) GetAllExpectedSwitches(_ context.Context) (map[string]ExpectedSwitchInfo, error) {
+	results := make(map[string]ExpectedSwitchInfo)
+	for mac, es := range c.expectedSwitches {
+		results[mac] = es
+	}
+	return results, nil
+}
+
 func (c *mockClient) AddExpectedSwitch(ctx context.Context, req AddExpectedSwitchRequest) error {
 	return nil
+}
+
+func (c *mockClient) AddExpectedPowerShelf(ctx context.Context, req AddExpectedPowerShelfRequest) error {
+	return nil
+}
+
+func (c *mockClient) ComponentPowerControl(ctx context.Context, req *pb.ComponentPowerControlRequest) (*pb.ComponentPowerControlResponse, error) {
+	return &pb.ComponentPowerControlResponse{}, nil
+}
+
+func (c *mockClient) UpdateComponentFirmware(ctx context.Context, req *pb.UpdateComponentFirmwareRequest) (*pb.UpdateComponentFirmwareResponse, error) {
+	return &pb.UpdateComponentFirmwareResponse{}, nil
+}
+
+func (c *mockClient) GetComponentFirmwareStatus(ctx context.Context, req *pb.GetComponentFirmwareStatusRequest) (*pb.GetComponentFirmwareStatusResponse, error) {
+	return &pb.GetComponentFirmwareStatusResponse{}, nil
+}
+
+func (c *mockClient) ListComponentFirmwareVersions(ctx context.Context, req *pb.ListComponentFirmwareVersionsRequest) (*pb.ListComponentFirmwareVersionsResponse, error) {
+	return &pb.ListComponentFirmwareVersionsResponse{}, nil
+}
+
+func (c *mockClient) GetComponentInventory(ctx context.Context, req *pb.GetComponentInventoryRequest) (*pb.GetComponentInventoryResponse, error) {
+	return &pb.GetComponentInventoryResponse{}, nil
+}
+
+func (c *mockClient) AddExpectedSwitchInfo(info ExpectedSwitchInfo) {
+	c.expectedSwitches[utils.NormalizeMAC(info.BMCMACAddress)] = info
 }

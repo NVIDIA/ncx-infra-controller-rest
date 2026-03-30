@@ -107,6 +107,10 @@ func (cepsts *CreateExpectedPowerShelfTestSuite) Test_CreateExpectedPowerShelf_S
 	cepsts.env.RegisterActivity(expectedPowerShelfManager.CreateExpectedPowerShelfOnSite)
 	cepsts.env.OnActivity(expectedPowerShelfManager.CreateExpectedPowerShelfOnSite, mock.Anything, mock.Anything).Return(nil)
 
+	// Mock CreateExpectedPowerShelfOnRLA activity
+	cepsts.env.RegisterActivity(expectedPowerShelfManager.CreateExpectedPowerShelfOnRLA)
+	cepsts.env.OnActivity(expectedPowerShelfManager.CreateExpectedPowerShelfOnRLA, mock.Anything, mock.Anything).Return(nil)
+
 	// Execute CreateExpectedPowerShelf workflow
 	cepsts.env.ExecuteWorkflow(CreateExpectedPowerShelf, request)
 	cepsts.True(cepsts.env.IsWorkflowCompleted())
@@ -127,6 +131,9 @@ func (cepsts *CreateExpectedPowerShelfTestSuite) Test_CreateExpectedPowerShelf_F
 	// Mock CreateExpectedPowerShelfOnSite activity
 	cepsts.env.RegisterActivity(expectedPowerShelfManager.CreateExpectedPowerShelfOnSite)
 	cepsts.env.OnActivity(expectedPowerShelfManager.CreateExpectedPowerShelfOnSite, mock.Anything, mock.Anything).Return(errors.New(errMsg))
+
+	// Register CreateExpectedPowerShelfOnRLA activity (not called when Core fails)
+	cepsts.env.RegisterActivity(expectedPowerShelfManager.CreateExpectedPowerShelfOnRLA)
 
 	// execute CreateExpectedPowerShelf workflow
 	cepsts.env.ExecuteWorkflow(CreateExpectedPowerShelf, request)

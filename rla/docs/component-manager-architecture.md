@@ -75,6 +75,8 @@ type ComponentManager interface {
     InjectExpectation(ctx, target, info) error
     PowerControl(ctx, target, info) error
     FirmwareControl(ctx, target, info) error
+    GetFirmwareStatus(ctx, target) (map, error)
+    GetPowerStatus(ctx, target) (map, error)
 }
 ```
 
@@ -301,7 +303,7 @@ func (m *Manager) PowerControl(ctx context.Context, target common.Target, info o
 
 // FirmwareControl implements ComponentManager.
 func (m *Manager) FirmwareControl(ctx context.Context, target common.Target, info operations.FirmwareControlTaskInfo) error {
-    // Implementation here
+    // Implementation here — initiate firmware update, return immediately
 }
 ```
 

@@ -70,6 +70,10 @@ func (api *API) RegisterSubscriber() error {
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.UpgradeFirmware)
 	ManagerAccess.Data.EB.Log.Info().Msg("RLA: successfully registered UpgradeFirmware workflow")
 
+	// GetRackTask
+	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.GetRackTask)
+	ManagerAccess.Data.EB.Log.Info().Msg("RLA: successfully registered GetRackTask workflow")
+
 	/// Register rack activities
 
 	// GetRack activity
@@ -103,6 +107,10 @@ func (api *API) RegisterSubscriber() error {
 	// UpgradeFirmware activity
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(rackManager.UpgradeFirmware)
 	ManagerAccess.Data.EB.Log.Info().Msg("RLA: successfully registered UpgradeFirmware activity")
+
+	// GetTaskByID activity
+	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(rackManager.GetTaskByID)
+	ManagerAccess.Data.EB.Log.Info().Msg("RLA: successfully registered GetTaskByID activity")
 
 	// Register the tray subscribers here
 	ManagerAccess.Data.EB.Log.Info().Msg("RLA: Registering the tray workflows")

@@ -15,15 +15,35 @@
  * limitations under the License.
  */
 
-/*
-Copyright © 2025 NAME HERE <EMAIL ADDRESS>
-*/
+// Package cmd implements the rla CLI commands using Cobra. It provides
+// subcommands for rack, component, firmware, power, rule, and ingest
+// operations, as well as a serve subcommand that starts the gRPC server.
 package cmd
 
 import (
 	"os"
 
 	"github.com/spf13/cobra"
+
+	pkgcerts "github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/certs"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/client"
+)
+
+// Flag names for the global persistent flags.
+const (
+	flagHost = "host"
+	flagPort = "port"
+)
+
+// Global persistent flags inherited by all subcommands. Host and port
+// configure the gRPC client target; cert flags configure mTLS for both client
+// commands and the serve listener.
+var (
+	globalHost    string
+	globalPort    int
+	globalCACert  string
+	globalTLSCert string
+	globalTLSKey  string
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -43,13 +63,23 @@ func Execute() {
 }
 
 func init() {
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
+	rootCmd.PersistentFlags().StringVarP(&globalHost, flagHost, "H", "localhost", "RLA server host")
+	rootCmd.PersistentFlags().IntVarP(&globalPort, flagPort, "P", 50051, "RLA server port")
+	rootCmd.PersistentFlags().StringVar(&globalCACert, "ca-cert", "", "Path to CA certificate file")
+	rootCmd.PersistentFlags().StringVar(&globalTLSCert, "tls-cert", "", "Path to TLS certificate file")
+	rootCmd.PersistentFlags().StringVar(&globalTLSKey, "tls-key", "", "Path to TLS private key file")
+	rootCmd.MarkFlagsRequiredTogether("ca-cert", "tls-cert", "tls-key")
+}
 
-	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.rla.yaml)")
-
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	// rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+// newGlobalClientConfig builds a client.Config from the global persistent flags.
+func newGlobalClientConfig() client.Config {
+	return client.Config{
+		Host: globalHost,
+		Port: globalPort,
+		CertConfig: pkgcerts.Config{
+			CACert:  globalCACert,
+			TLSCert: globalTLSCert,
+			TLSKey:  globalTLSKey,
+		},
+	}
 }

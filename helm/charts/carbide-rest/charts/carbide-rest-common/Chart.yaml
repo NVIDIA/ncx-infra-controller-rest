@@ -1,0 +1,10 @@
+apiVersion: v2
+name: carbide-rest-common
+description: Helm chart for Carbide REST common secrets and certificates
+type: application
+version: 0.1.0
+appVersion: "latest"
+keywords:
+  - carbide
+  - rest
+  - common

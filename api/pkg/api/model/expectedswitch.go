@@ -46,6 +46,24 @@ type APIExpectedSwitchCreateRequest struct {
 	NvOsUsername *string `json:"nvOsUsername"`
 	// NvOsPassword is the NVOS password of the expected switch
 	NvOsPassword *string `json:"nvOsPassword"`
+	// RackID is the optional rack identifier
+	RackID *string `json:"rackId"`
+	// Name is the optional name of the expected switch
+	Name *string `json:"name"`
+	// Manufacturer is the optional manufacturer of the expected switch
+	Manufacturer *string `json:"manufacturer"`
+	// Model is the optional model of the expected switch
+	Model *string `json:"model"`
+	// Description is the optional description of the expected switch
+	Description *string `json:"description"`
+	// FirmwareVersion is the optional firmware version of the expected switch
+	FirmwareVersion *string `json:"firmwareVersion"`
+	// SlotID is the optional slot identifier
+	SlotID *int32 `json:"slotId"`
+	// TrayIdx is the optional tray index
+	TrayIdx *int32 `json:"trayIdx"`
+	// HostID is the optional host identifier
+	HostID *int32 `json:"hostId"`
 	// Labels is the labels of the expected switch
 	Labels map[string]string `json:"labels"`
 }
@@ -67,6 +85,18 @@ func (escr *APIExpectedSwitchCreateRequest) Validate() error {
 			validation.Required.Error(validationErrorValueRequired),
 			validation.Match(util.NotAllWhitespaceRegexp).Error("Switch serial number consists only of whitespace"),
 			validation.Length(1, 32).Error("Switch serial number must be 32 characters or less")),
+		validation.Field(&escr.RackID,
+			validation.NilOrNotEmpty.Error("RackID cannot be empty")),
+		validation.Field(&escr.Name,
+			validation.NilOrNotEmpty.Error("Name cannot be empty")),
+		validation.Field(&escr.Manufacturer,
+			validation.NilOrNotEmpty.Error("Manufacturer cannot be empty")),
+		validation.Field(&escr.Model,
+			validation.NilOrNotEmpty.Error("Model cannot be empty")),
+		validation.Field(&escr.Description,
+			validation.NilOrNotEmpty.Error("Description cannot be empty")),
+		validation.Field(&escr.FirmwareVersion,
+			validation.NilOrNotEmpty.Error("FirmwareVersion cannot be empty")),
 	)
 
 	if err != nil {
@@ -123,6 +153,24 @@ type APIExpectedSwitchUpdateRequest struct {
 	NvOsUsername *string `json:"nvOsUsername"`
 	// NvOsPassword is the NVOS password of the expected switch
 	NvOsPassword *string `json:"nvOsPassword"`
+	// RackID is the optional rack identifier
+	RackID *string `json:"rackId"`
+	// Name is the optional name of the expected switch
+	Name *string `json:"name"`
+	// Manufacturer is the optional manufacturer of the expected switch
+	Manufacturer *string `json:"manufacturer"`
+	// Model is the optional model of the expected switch
+	Model *string `json:"model"`
+	// Description is the optional description of the expected switch
+	Description *string `json:"description"`
+	// FirmwareVersion is the optional firmware version of the expected switch
+	FirmwareVersion *string `json:"firmwareVersion"`
+	// SlotID is the optional slot identifier
+	SlotID *int32 `json:"slotId"`
+	// TrayIdx is the optional tray index
+	TrayIdx *int32 `json:"trayIdx"`
+	// HostID is the optional host identifier
+	HostID *int32 `json:"hostId"`
 	// Labels is the labels of the expected switch
 	Labels map[string]string `json:"labels"`
 }
@@ -158,6 +206,18 @@ func (esur *APIExpectedSwitchUpdateRequest) Validate() error {
 			validation.When(esur.SwitchSerialNumber != nil && *esur.SwitchSerialNumber != "",
 				validation.Match(util.NotAllWhitespaceRegexp).Error("Switch Serial Number consists only of whitespace")),
 			validation.Length(1, 32).Error("Switch Serial Number must be 1-32 characters")),
+		validation.Field(&esur.RackID,
+			validation.NilOrNotEmpty.Error("RackID cannot be empty")),
+		validation.Field(&esur.Name,
+			validation.NilOrNotEmpty.Error("Name cannot be empty")),
+		validation.Field(&esur.Manufacturer,
+			validation.NilOrNotEmpty.Error("Manufacturer cannot be empty")),
+		validation.Field(&esur.Model,
+			validation.NilOrNotEmpty.Error("Model cannot be empty")),
+		validation.Field(&esur.Description,
+			validation.NilOrNotEmpty.Error("Description cannot be empty")),
+		validation.Field(&esur.FirmwareVersion,
+			validation.NilOrNotEmpty.Error("FirmwareVersion cannot be empty")),
 	)
 
 	if err != nil {
@@ -210,6 +270,24 @@ type APIExpectedSwitch struct {
 	Site *APISite `json:"site,omitempty"`
 	// SwitchSerialNumber is the serial number of the expected switch
 	SwitchSerialNumber string `json:"switchSerialNumber"`
+	// RackID is the optional rack identifier
+	RackID *string `json:"rackId"`
+	// Name is the optional name of the expected switch
+	Name *string `json:"name"`
+	// Manufacturer is the optional manufacturer of the expected switch
+	Manufacturer *string `json:"manufacturer"`
+	// Model is the optional model of the expected switch
+	Model *string `json:"model"`
+	// Description is the optional description of the expected switch
+	Description *string `json:"description"`
+	// FirmwareVersion is the optional firmware version of the expected switch
+	FirmwareVersion *string `json:"firmwareVersion"`
+	// SlotID is the optional slot identifier
+	SlotID *int32 `json:"slotId"`
+	// TrayIdx is the optional tray index
+	TrayIdx *int32 `json:"trayIdx"`
+	// HostID is the optional host identifier
+	HostID *int32 `json:"hostId"`
 	// Labels is the labels of the expected switch
 	Labels map[string]string `json:"labels"`
 	// Created indicates the ISO datetime string for when the ExpectedSwitch was created
@@ -225,6 +303,15 @@ func NewAPIExpectedSwitch(dbModel *cdbm.ExpectedSwitch) *APIExpectedSwitch {
 		BmcMacAddress:      dbModel.BmcMacAddress,
 		SiteID:             dbModel.SiteID,
 		SwitchSerialNumber: dbModel.SwitchSerialNumber,
+		RackID:             dbModel.RackID,
+		Name:               dbModel.Name,
+		Manufacturer:       dbModel.Manufacturer,
+		Model:              dbModel.Model,
+		Description:        dbModel.Description,
+		FirmwareVersion:    dbModel.FirmwareVersion,
+		SlotID:             dbModel.SlotID,
+		TrayIdx:            dbModel.TrayIdx,
+		HostID:             dbModel.HostID,
 		Labels:             dbModel.Labels,
 		Created:            dbModel.Created,
 		Updated:            dbModel.Updated,

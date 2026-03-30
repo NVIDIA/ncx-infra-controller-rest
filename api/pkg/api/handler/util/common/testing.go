@@ -168,6 +168,9 @@ func TestSetupSchema(t *testing.T, dbSession *cdb.Session) {
 	// create Status Details table
 	err = dbSession.DB.ResetModel(context.Background(), (*cdbm.StatusDetail)(nil))
 	assert.Nil(t, err)
+	// create VpcPeering table
+	err = dbSession.DB.ResetModel(context.Background(), (*cdbm.VpcPeering)(nil))
+	assert.Nil(t, err)
 	// create AuditEntry table
 	err = dbSession.DB.ResetModel(context.Background(), (*cdbm.AuditEntry)(nil))
 	assert.Nil(t, err)
@@ -564,6 +567,22 @@ func TestBuildStatusDetail(t *testing.T, dbSession *cdb.Session, entityID string
 	assert.Equal(t, status, ssd.Status)
 }
 
+// TestBuildVpcPeering creates a test VPC peering between two VPCs
+func TestBuildVpcPeering(t *testing.T, dbSession *cdb.Session, vpc1ID, vpc2ID uuid.UUID, siteID uuid.UUID, infrastructureProviderID *uuid.UUID, tenantID *uuid.UUID, isMultiTenant bool, createdByID uuid.UUID) *cdbm.VpcPeering {
+	vpDAO := cdbm.NewVpcPeeringDAO(dbSession)
+	vp, err := vpDAO.Create(context.Background(), nil, cdbm.VpcPeeringCreateInput{
+		Vpc1ID:                   vpc1ID,
+		Vpc2ID:                   vpc2ID,
+		SiteID:                   siteID,
+		InfrastructureProviderID: infrastructureProviderID,
+		TenantID:                 tenantID,
+		IsMultiTenant:            isMultiTenant,
+		CreatedByID:              createdByID,
+	})
+	assert.Nil(t, err)
+	return vp
+}
+
 // TestCommonTraceProviderSetup creates a test provider and spanner
 func TestCommonTraceProviderSetup(t *testing.T, ctx context.Context) (trace.Tracer, trace.SpanContext, context.Context) {
 	// OTEL spanner configuration
@@ -692,4 +711,26 @@ func TestBuildDpuExtensionServiceDeployment(t *testing.T, dbSession *cdb.Session
 	assert.Nil(t, err)
 
 	return desd
+}
+
+func TestBuildInterface(t *testing.T, dbSession *cdb.Session, instanceID uuid.UUID, subnetID *uuid.UUID, vpcPrefixID *uuid.UUID, isPhysical bool, device *string, deviceInstance *int, vfID *int, status *string, user *cdbm.User) *cdbm.Interface {
+	iiDAO := cdbm.NewInterfaceDAO(dbSession)
+
+	if status == nil {
+		status = cdb.GetStrPtr(cdbm.InterfaceStatusPending)
+	}
+
+	ii, err := iiDAO.Create(context.Background(), nil, cdbm.InterfaceCreateInput{
+		InstanceID:        instanceID,
+		SubnetID:          subnetID,
+		VpcPrefixID:       vpcPrefixID,
+		IsPhysical:        isPhysical,
+		Device:            device,
+		DeviceInstance:    deviceInstance,
+		VirtualFunctionID: vfID,
+		Status:            *status,
+		CreatedBy:         user.ID,
+	})
+	assert.Nil(t, err)
+	return ii
 }

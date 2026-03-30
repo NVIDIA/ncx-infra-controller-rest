@@ -342,9 +342,18 @@ See [Component Manager Architecture](component-manager-architecture.md) for deta
 ```go
 type ComponentManager interface {
     Type() devicetypes.ComponentType
-    InjectExpectation(ctx context.Context, target common.Target, info operations.InjectExpectationTaskInfo) error
-    PowerControl(ctx context.Context, target common.Target, info operations.PowerControlTaskInfo) error
-    FirmwareControl(ctx context.Context, target common.Target, info operations.FirmwareControlTaskInfo) error
+
+    // Inject expectation
+    InjectExpectation(ctx, target, info) error
+
+    // Power flow
+    PowerControl(ctx, target, info) error
+    GetPowerStatus(ctx, target) (map[string]PowerStatus, error)
+
+    // Firmware flow (async start + poll)
+    FirmwareControl(ctx, target, info) error
+    GetFirmwareStatus(ctx, target) (map[string]FirmwareUpdateStatus, error)
+
 }
 ```
 

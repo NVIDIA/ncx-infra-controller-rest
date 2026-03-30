@@ -26,6 +26,7 @@ import (
 	stracer "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/tracer"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	otrace "go.opentelemetry.io/otel/trace"
 )
 
@@ -191,12 +192,13 @@ func TestInterfaceSQLDAO_Create(t *testing.T) {
 			desc: "create one with subnet",
 			iss: []Interface{
 				{
-					ID:         uuid.New(),
-					InstanceID: i1.ID,
-					SubnetID:   &subnet.ID,
-					IsPhysical: true,
-					Status:     InterfaceStatusPending,
-					CreatedBy:  user.ID,
+					ID:                 uuid.New(),
+					InstanceID:         i1.ID,
+					SubnetID:           &subnet.ID,
+					RequestedIpAddress: db.GetStrPtr("192.0.2.10"),
+					IsPhysical:         true,
+					Status:             InterfaceStatusPending,
+					CreatedBy:          user.ID,
 				},
 			},
 			expectError:        false,
@@ -206,12 +208,13 @@ func TestInterfaceSQLDAO_Create(t *testing.T) {
 			desc: "create one with vpcprefix",
 			iss: []Interface{
 				{
-					ID:          uuid.New(),
-					InstanceID:  i1.ID,
-					VpcPrefixID: &vpcPrefix.ID,
-					IsPhysical:  false,
-					Status:      InterfaceStatusPending,
-					CreatedBy:   user.ID,
+					ID:                 uuid.New(),
+					InstanceID:         i1.ID,
+					VpcPrefixID:        &vpcPrefix.ID,
+					RequestedIpAddress: db.GetStrPtr("192.0.2.11"),
+					IsPhysical:         false,
+					Status:             InterfaceStatusPending,
+					CreatedBy:          user.ID,
 				},
 			},
 			expectError:        false,
@@ -284,30 +287,39 @@ func TestInterfaceSQLDAO_Create(t *testing.T) {
 			for _, i := range tc.iss {
 
 				input := InterfaceCreateInput{
-					InstanceID:        i.InstanceID,
-					SubnetID:          i.SubnetID,
-					VpcPrefixID:       i.VpcPrefixID,
-					Device:            i.Device,
-					DeviceInstance:    i.DeviceInstance,
-					IsPhysical:        i.IsPhysical,
-					VirtualFunctionID: i.VirtualFunctionID,
-					Status:            i.Status,
-					CreatedBy:         i.CreatedBy,
+					InstanceID:         i.InstanceID,
+					SubnetID:           i.SubnetID,
+					VpcPrefixID:        i.VpcPrefixID,
+					Device:             i.Device,
+					DeviceInstance:     i.DeviceInstance,
+					IsPhysical:         i.IsPhysical,
+					VirtualFunctionID:  i.VirtualFunctionID,
+					RequestedIpAddress: i.RequestedIpAddress,
+					Status:             i.Status,
+					CreatedBy:          i.CreatedBy,
 				}
 
 				got, err := ifcd.Create(ctx, nil, input)
 				assert.Equal(t, tc.expectError, err != nil)
 				if !tc.expectError {
 					assert.NotNil(t, got)
+					persisted, err := ifcd.GetByID(ctx, nil, got.ID, nil)
+					require.NoError(t, err)
+					require.NotNil(t, persisted)
 					if i.Device != nil {
 						assert.Equal(t, *i.Device, *got.Device)
+						assert.Equal(t, *i.Device, *persisted.Device)
 					}
 					if i.DeviceInstance != nil {
 						assert.Equal(t, *i.DeviceInstance, *got.DeviceInstance)
+						assert.Equal(t, *i.DeviceInstance, *persisted.DeviceInstance)
 					}
 					if i.VirtualFunctionID != nil {
 						assert.Equal(t, *i.VirtualFunctionID, *got.VirtualFunctionID)
+						assert.Equal(t, *i.VirtualFunctionID, *persisted.VirtualFunctionID)
 					}
+					assert.Equal(t, i.RequestedIpAddress, got.RequestedIpAddress)
+					assert.Equal(t, i.RequestedIpAddress, persisted.RequestedIpAddress)
 				}
 			}
 
@@ -922,6 +934,145 @@ func TestInterfaceSQLDAO_GetAll(t *testing.T) {
 	}
 }
 
+func TestInterfaceSQLDAO_Clear(t *testing.T) {
+	ctx := context.Background()
+	dbSession := testInstanceInitDB(t)
+	defer dbSession.Close()
+	testInterfaceSetupSchema(t, dbSession)
+	ip := testInstanceBuildInfrastructureProvider(t, dbSession, "testIP")
+	site := testInstanceBuildSite(t, dbSession, ip, "testSite")
+	tenant := testInstanceBuildTenant(t, dbSession, "testTenant")
+	vpc := testInstanceBuildVpc(t, dbSession, ip, site, tenant, "testVpc")
+	instanceType := testInstanceBuildInstanceType(t, dbSession, ip, "testInstanceType")
+	machine := testMachineBuildMachine(t, dbSession, ip.ID, site.ID, db.GetUUIDPtr(instanceType.ID), db.GetStrPtr("mcTypeTest"))
+	allocation := testInstanceBuildAllocation(t, dbSession, ip, tenant, site, "testAllocation")
+	allocationConstraint := testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
+	operatingSystem := testInstanceBuildOperatingSystem(t, dbSession, "testOS")
+	user := testInstanceBuildUser(t, dbSession, "testUser")
+	isd := NewInstanceDAO(dbSession)
+
+	instance, err := isd.Create(
+		ctx, nil,
+		InstanceCreateInput{
+			Name:                     "test1",
+			AllocationID:             &allocation.ID,
+			AllocationConstraintID:   &allocationConstraint.ID,
+			TenantID:                 tenant.ID,
+			InfrastructureProviderID: ip.ID,
+			SiteID:                   site.ID,
+			InstanceTypeID:           &instanceType.ID,
+			VpcID:                    vpc.ID,
+			MachineID:                &machine.ID,
+			Hostname:                 db.GetStrPtr("test.com"),
+			OperatingSystemID:        db.GetUUIDPtr(operatingSystem.ID),
+			IpxeScript:               db.GetStrPtr("ipxe"),
+			AlwaysBootWithCustomIpxe: true,
+			UserData:                 db.GetStrPtr("userdata"),
+			Labels:                   map[string]string{},
+			Status:                   InstanceStatusPending,
+			CreatedBy:                user.ID,
+		},
+	)
+	assert.Nil(t, err)
+
+	domain := testSubnetBuildDomain(t, dbSession, "testDomain")
+	ipv4Block := testSubnetBuildIPBlock(t, dbSession, &site.ID, &ip.ID, "ipv4Block", db.GetUUIDPtr(user.ID))
+	ipv6Block := testSubnetBuildIPBlock(t, dbSession, &site.ID, &ip.ID, "ipv6Block", db.GetUUIDPtr(user.ID))
+	dummyUUID := uuid.New()
+
+	ssd := NewSubnetDAO(dbSession)
+	ipv4Prefix := "192.0.2.0/24"
+	ipv4Gateway := "192.0.2.1"
+	ipv6Prefix := "2001:db8:abcd:0012::0/24"
+	ipv6Gateway := "2001:db8:abcd:0012::1"
+	subnet, err := ssd.Create(ctx, nil, SubnetCreateInput{
+		Name:                       "test",
+		Description:                db.GetStrPtr("test"),
+		Org:                        "test",
+		SiteID:                     site.ID,
+		VpcID:                      vpc.ID,
+		DomainID:                   &domain.ID,
+		TenantID:                   tenant.ID,
+		ControllerNetworkSegmentID: &dummyUUID,
+		RoutingType:                &ipv4Block.RoutingType,
+		IPv4Prefix:                 &ipv4Prefix,
+		IPv4Gateway:                &ipv4Gateway,
+		IPv4BlockID:                &ipv4Block.ID,
+		IPv6Prefix:                 &ipv6Prefix,
+		IPv6Gateway:                &ipv6Gateway,
+		IPv6BlockID:                &ipv6Block.ID,
+		PrefixLength:               8,
+		Status:                     SubnetStatusPending,
+		CreatedBy:                  user.ID,
+	})
+	assert.Nil(t, err)
+
+	ifcd := NewInterfaceDAO(dbSession)
+	requestedIpAddress := db.GetStrPtr("192.0.2.11")
+	ifc, err := ifcd.Create(ctx, nil, InterfaceCreateInput{
+		InstanceID:         instance.ID,
+		SubnetID:           &subnet.ID,
+		IsPhysical:         true,
+		RequestedIpAddress: requestedIpAddress,
+		Status:             InterfaceStatusPending,
+		CreatedBy:          user.ID,
+	})
+	assert.Nil(t, err)
+	assert.NotNil(t, ifc)
+
+	badSession, err := db.NewSession(context.Background(), "localhost", 1234, "postgres", "postgres", "postgres", "")
+	assert.Nil(t, err)
+	badDAO := NewInterfaceDAO(badSession)
+
+	_, _, ctx = testCommonTraceProviderSetup(t, ctx)
+
+	tests := []struct {
+		desc               string
+		dao                InterfaceDAO
+		input              InterfaceClearInput
+		expectError        bool
+		expectRequestedIP  *string
+		verifyChildSpanner bool
+	}{
+		{
+			desc:               "error clearing requested ip address",
+			dao:                badDAO,
+			input:              InterfaceClearInput{InterfaceID: ifc.ID, RequestedIpAddress: true},
+			expectError:        true,
+			expectRequestedIP:  requestedIpAddress,
+			verifyChildSpanner: true,
+		},
+		{
+			desc:               "can clear requested ip address",
+			dao:                ifcd,
+			input:              InterfaceClearInput{InterfaceID: ifc.ID, RequestedIpAddress: true},
+			expectError:        false,
+			expectRequestedIP:  nil,
+			verifyChildSpanner: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.desc, func(t *testing.T) {
+			got, err := tc.dao.Clear(ctx, nil, tc.input)
+			require.Equal(t, tc.expectError, err != nil, err)
+
+			if tc.expectError {
+				return
+			}
+
+			assert.Equal(t, tc.expectRequestedIP, got.RequestedIpAddress)
+
+			if tc.verifyChildSpanner {
+				span := otrace.SpanFromContext(ctx)
+				assert.True(t, span.SpanContext().IsValid())
+				_, ok := ctx.Value(stracer.TracerKey).(otrace.Tracer)
+				assert.True(t, ok)
+			}
+		})
+	}
+}
+
 func TestInterfaceSQLDAO_Update(t *testing.T) {
 	ctx := context.Background()
 	dbSession := testInstanceInitDB(t)
@@ -1108,89 +1259,97 @@ func TestInterfaceSQLDAO_Update(t *testing.T) {
 	_, _, ctx = testCommonTraceProviderSetup(t, ctx)
 
 	tests := []struct {
-		desc                   string
-		id                     uuid.UUID
-		paramInstanceID        *uuid.UUID
-		paramSubnetID          *uuid.UUID
-		paramVpcPrefixID       *uuid.UUID
-		paramDevice            *string
-		paramDeviceInstance    *int
-		paramVirtualFunctionID *int
-		paramMacAddress        *string
-		paramIPAddresses       []string
-		paramStatus            *string
+		desc                    string
+		id                      uuid.UUID
+		paramInstanceID         *uuid.UUID
+		paramSubnetID           *uuid.UUID
+		paramVpcPrefixID        *uuid.UUID
+		paramDevice             *string
+		paramDeviceInstance     *int
+		paramVirtualFunctionID  *int
+		paramRequestedIpAddress *string
+		paramMacAddress         *string
+		paramIPAddresses        []string
+		paramStatus             *string
 
-		expectedInstanceID        *uuid.UUID
-		expectedSubnetID          *uuid.UUID
-		expectedVpcPrefixID       *uuid.UUID
-		expectedDevice            *string
-		expectedDeviceInstance    *int
-		expectedVirtualFunctionID *int
-		expectedMacAddress        *string
-		expectedIPAddresses       []string
-		expectedStatus            *string
+		expectedInstanceID         *uuid.UUID
+		expectedSubnetID           *uuid.UUID
+		expectedVpcPrefixID        *uuid.UUID
+		expectedDevice             *string
+		expectedDeviceInstance     *int
+		expectedVirtualFunctionID  *int
+		expectedRequestedIpAddress *string
+		expectedMacAddress         *string
+		expectedIPAddresses        []string
+		expectedStatus             *string
 
 		expectError        bool
 		verifyChildSpanner bool
 	}{
 		{
-			desc:                   "success wth subnet fields updated",
-			id:                     ifc.ID,
-			paramInstanceID:        &i2.ID,
-			paramSubnetID:          &subnet2.ID,
-			paramVirtualFunctionID: &vfID,
-			paramMacAddress:        &macAddress,
-			paramIPAddresses:       ipAddresses,
-			paramStatus:            db.GetStrPtr(InterfaceStatusReady),
+			desc:                    "success wth subnet fields updated",
+			id:                      ifc.ID,
+			paramInstanceID:         &i2.ID,
+			paramSubnetID:           &subnet2.ID,
+			paramVirtualFunctionID:  &vfID,
+			paramRequestedIpAddress: db.GetStrPtr("192.0.2.21"),
+			paramMacAddress:         &macAddress,
+			paramIPAddresses:        ipAddresses,
+			paramStatus:             db.GetStrPtr(InterfaceStatusReady),
 
-			expectedInstanceID:        &i2.ID,
-			expectedSubnetID:          &subnet2.ID,
-			expectedVirtualFunctionID: &vfID,
-			expectedMacAddress:        &macAddress,
-			expectedIPAddresses:       ipAddresses,
-			expectedStatus:            db.GetStrPtr(InterfaceStatusReady),
-
-			expectError:        false,
-			verifyChildSpanner: true,
-		},
-		{
-			desc:                   "success wth vpcprefix fields updated",
-			id:                     ifc1.ID,
-			paramInstanceID:        &i2.ID,
-			paramVpcPrefixID:       &vpcPrefix2.ID,
-			paramVirtualFunctionID: &vfID,
-			paramMacAddress:        &macAddress,
-			paramIPAddresses:       ipAddresses,
-			paramStatus:            db.GetStrPtr(InterfaceStatusReady),
-
-			expectedInstanceID:        &i2.ID,
-			expectedVpcPrefixID:       &vpcPrefix2.ID,
-			expectedVirtualFunctionID: &vfID,
-			expectedMacAddress:        &macAddress,
-			expectedIPAddresses:       ipAddresses,
-			expectedStatus:            db.GetStrPtr(InterfaceStatusReady),
+			expectedInstanceID:         &i2.ID,
+			expectedSubnetID:           &subnet2.ID,
+			expectedVirtualFunctionID:  &vfID,
+			expectedRequestedIpAddress: db.GetStrPtr("192.0.2.21"),
+			expectedMacAddress:         &macAddress,
+			expectedIPAddresses:        ipAddresses,
+			expectedStatus:             db.GetStrPtr(InterfaceStatusReady),
 
 			expectError:        false,
 			verifyChildSpanner: true,
 		},
 		{
-			desc:                   "success wth device fields updated",
-			paramInstanceID:        &i2.ID,
-			id:                     ifc1.ID,
-			paramDevice:            db.GetStrPtr("MT43344 BlueField-3 integrated ConnectX-7 network controller"),
-			paramDeviceInstance:    db.GetIntPtr(1),
-			paramVirtualFunctionID: &vfID,
-			paramMacAddress:        &macAddress,
-			paramIPAddresses:       ipAddresses,
-			paramStatus:            db.GetStrPtr(InterfaceStatusReady),
+			desc:                    "success wth vpcprefix fields updated",
+			id:                      ifc1.ID,
+			paramInstanceID:         &i2.ID,
+			paramVpcPrefixID:        &vpcPrefix2.ID,
+			paramVirtualFunctionID:  &vfID,
+			paramRequestedIpAddress: db.GetStrPtr("192.0.2.31"),
+			paramMacAddress:         &macAddress,
+			paramIPAddresses:        ipAddresses,
+			paramStatus:             db.GetStrPtr(InterfaceStatusReady),
 
-			expectedInstanceID:        &i2.ID,
-			expectedDevice:            db.GetStrPtr("MT43344 BlueField-3 integrated ConnectX-7 network controller"),
-			expectedDeviceInstance:    db.GetIntPtr(1),
-			expectedVirtualFunctionID: &vfID,
-			expectedMacAddress:        &macAddress,
-			expectedIPAddresses:       ipAddresses,
-			expectedStatus:            db.GetStrPtr(InterfaceStatusReady),
+			expectedInstanceID:         &i2.ID,
+			expectedVpcPrefixID:        &vpcPrefix2.ID,
+			expectedVirtualFunctionID:  &vfID,
+			expectedRequestedIpAddress: db.GetStrPtr("192.0.2.31"),
+			expectedMacAddress:         &macAddress,
+			expectedIPAddresses:        ipAddresses,
+			expectedStatus:             db.GetStrPtr(InterfaceStatusReady),
+
+			expectError:        false,
+			verifyChildSpanner: true,
+		},
+		{
+			desc:                    "success wth device fields updated",
+			paramInstanceID:         &i2.ID,
+			id:                      ifc1.ID,
+			paramDevice:             db.GetStrPtr("MT43344 BlueField-3 integrated ConnectX-7 network controller"),
+			paramDeviceInstance:     db.GetIntPtr(1),
+			paramVirtualFunctionID:  &vfID,
+			paramRequestedIpAddress: db.GetStrPtr("192.0.2.41"),
+			paramMacAddress:         &macAddress,
+			paramIPAddresses:        ipAddresses,
+			paramStatus:             db.GetStrPtr(InterfaceStatusReady),
+
+			expectedInstanceID:         &i2.ID,
+			expectedDevice:             db.GetStrPtr("MT43344 BlueField-3 integrated ConnectX-7 network controller"),
+			expectedDeviceInstance:     db.GetIntPtr(1),
+			expectedVirtualFunctionID:  &vfID,
+			expectedRequestedIpAddress: db.GetStrPtr("192.0.2.41"),
+			expectedMacAddress:         &macAddress,
+			expectedIPAddresses:        ipAddresses,
+			expectedStatus:             db.GetStrPtr(InterfaceStatusReady),
 
 			expectError:        false,
 			verifyChildSpanner: true,
@@ -1205,21 +1364,23 @@ func TestInterfaceSQLDAO_Update(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.desc, func(t *testing.T) {
 			input := InterfaceUpdateInput{
-				InterfaceID:       tc.id,
-				InstanceID:        tc.paramInstanceID,
-				SubnetID:          tc.paramSubnetID,
-				VpcPrefixID:       tc.paramVpcPrefixID,
-				Device:            tc.paramDevice,
-				DeviceInstance:    tc.paramDeviceInstance,
-				VirtualFunctionID: tc.paramVirtualFunctionID,
-				MacAddress:        tc.paramMacAddress,
-				IpAddresses:       tc.paramIPAddresses,
-				Status:            tc.paramStatus,
+				InterfaceID:        tc.id,
+				InstanceID:         tc.paramInstanceID,
+				SubnetID:           tc.paramSubnetID,
+				VpcPrefixID:        tc.paramVpcPrefixID,
+				Device:             tc.paramDevice,
+				DeviceInstance:     tc.paramDeviceInstance,
+				VirtualFunctionID:  tc.paramVirtualFunctionID,
+				RequestedIpAddress: tc.paramRequestedIpAddress,
+				MacAddress:         tc.paramMacAddress,
+				IpAddresses:        tc.paramIPAddresses,
+				Status:             tc.paramStatus,
 			}
 			got, err := ifcd.Update(ctx, nil, input)
 			assert.Equal(t, tc.expectError, err != nil)
 			if err == nil {
 				assert.EqualValues(t, tc.id, got.ID)
+				require.NoError(t, err)
 
 				assert.Equal(t, *tc.expectedInstanceID, got.InstanceID)
 				if tc.expectedSubnetID != nil {
@@ -1229,6 +1390,7 @@ func TestInterfaceSQLDAO_Update(t *testing.T) {
 					assert.Equal(t, *tc.expectedVpcPrefixID, *got.VpcPrefixID)
 				}
 				assert.Equal(t, *tc.expectedVirtualFunctionID, *got.VirtualFunctionID)
+				assert.Equal(t, tc.expectedRequestedIpAddress, got.RequestedIpAddress)
 				assert.Equal(t, *tc.expectedMacAddress, *got.MacAddress)
 				assert.Equal(t, tc.expectedIPAddresses, got.IPAddresses)
 				assert.Equal(t, *tc.expectedStatus, got.Status)

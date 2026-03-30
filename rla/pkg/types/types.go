@@ -51,11 +51,9 @@ type InRackPosition struct {
 
 // BMC represents BMC (Baseboard Management Controller) information.
 type BMC struct {
-	Type     BMCType
-	MAC      net.HardwareAddr
-	IP       net.IP
-	User     string
-	Password string
+	Type BMCType
+	MAC  net.HardwareAddr
+	IP   net.IP
 }
 
 // Component represents a rack component (compute node, switch, etc.).

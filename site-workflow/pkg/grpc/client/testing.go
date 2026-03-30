@@ -1606,6 +1606,51 @@ func (c *MockRLAClient) ValidateComponents(ctx context.Context, in *rlav1.Valida
 	return out, nil
 }
 
+/* Component mutation mock methods */
+func (c *MockRLAClient) AddComponent(ctx context.Context, in *rlav1.AddComponentRequest, opts ...grpc.CallOption) (*rlav1.AddComponentResponse, error) {
+	// Check for error injection via context
+	if err, ok := ctx.Value("wantError").(error); ok {
+		return nil, err
+	}
+
+	// Check for custom response via context
+	if resp, ok := ctx.Value("wantResponse").(*rlav1.AddComponentResponse); ok {
+		return resp, nil
+	}
+
+	out := &rlav1.AddComponentResponse{
+		Component: &rlav1.Component{},
+	}
+	return out, nil
+}
+
+func (c *MockRLAClient) PatchComponent(ctx context.Context, in *rlav1.PatchComponentRequest, opts ...grpc.CallOption) (*rlav1.PatchComponentResponse, error) {
+	// Check for error injection via context
+	if err, ok := ctx.Value("wantError").(error); ok {
+		return nil, err
+	}
+
+	// Check for custom response via context
+	if resp, ok := ctx.Value("wantResponse").(*rlav1.PatchComponentResponse); ok {
+		return resp, nil
+	}
+
+	out := &rlav1.PatchComponentResponse{
+		Component: &rlav1.Component{},
+	}
+	return out, nil
+}
+
+func (c *MockRLAClient) DeleteComponent(ctx context.Context, in *rlav1.DeleteComponentRequest, opts ...grpc.CallOption) (*rlav1.DeleteComponentResponse, error) {
+	// Check for error injection via context
+	if err, ok := ctx.Value("wantError").(error); ok {
+		return nil, err
+	}
+
+	out := &rlav1.DeleteComponentResponse{}
+	return out, nil
+}
+
 /* NVL Domain mock methods */
 func (c *MockRLAClient) CreateNVLDomain(ctx context.Context, in *rlav1.CreateNVLDomainRequest, opts ...grpc.CallOption) (*rlav1.CreateNVLDomainResponse, error) {
 	out := &rlav1.CreateNVLDomainResponse{
@@ -1675,6 +1720,13 @@ func (c *MockRLAClient) BringUpRack(ctx context.Context, in *rlav1.BringUpRackRe
 	return out, nil
 }
 
+func (c *MockRLAClient) IngestRack(ctx context.Context, in *rlav1.IngestRackRequest, opts ...grpc.CallOption) (*rlav1.SubmitTaskResponse, error) {
+	out := &rlav1.SubmitTaskResponse{
+		TaskIds: []*rlav1.UUID{{Id: uuid.NewString()}},
+	}
+	return out, nil
+}
+
 func (c *MockRLAClient) ListTasks(ctx context.Context, in *rlav1.ListTasksRequest, opts ...grpc.CallOption) (*rlav1.ListTasksResponse, error) {
 	out := &rlav1.ListTasksResponse{
 		Tasks: []*rlav1.Task{},
@@ -1692,6 +1744,76 @@ func (c *MockRLAClient) GetTasksByIDs(ctx context.Context, in *rlav1.GetTasksByI
 				Id: taskID,
 			})
 		}
+	}
+	return out, nil
+}
+
+func (c *MockRLAClient) CancelTask(ctx context.Context, in *rlav1.CancelTaskRequest, opts ...grpc.CallOption) (*rlav1.CancelTaskResponse, error) {
+	out := &rlav1.CancelTaskResponse{}
+	if in != nil && in.GetTaskId() != nil {
+		out.Task = &rlav1.Task{
+			Id:     in.GetTaskId(),
+			Status: rlav1.TaskStatus_TASK_STATUS_FAILED,
+		}
+	}
+	return out, nil
+}
+
+/* Operation rule mock methods */
+func (c *MockRLAClient) CreateOperationRule(ctx context.Context, in *rlav1.CreateOperationRuleRequest, opts ...grpc.CallOption) (*rlav1.CreateOperationRuleResponse, error) {
+	out := &rlav1.CreateOperationRuleResponse{
+		Id: &rlav1.UUID{Id: uuid.NewString()},
+	}
+	return out, nil
+}
+
+func (c *MockRLAClient) UpdateOperationRule(ctx context.Context, in *rlav1.UpdateOperationRuleRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	return out, nil
+}
+
+func (c *MockRLAClient) DeleteOperationRule(ctx context.Context, in *rlav1.DeleteOperationRuleRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	return out, nil
+}
+
+func (c *MockRLAClient) GetOperationRule(ctx context.Context, in *rlav1.GetOperationRuleRequest, opts ...grpc.CallOption) (*rlav1.OperationRule, error) {
+	out := &rlav1.OperationRule{}
+	return out, nil
+}
+
+func (c *MockRLAClient) ListOperationRules(ctx context.Context, in *rlav1.ListOperationRulesRequest, opts ...grpc.CallOption) (*rlav1.ListOperationRulesResponse, error) {
+	out := &rlav1.ListOperationRulesResponse{
+		Rules:      []*rlav1.OperationRule{},
+		TotalCount: 0,
+	}
+	return out, nil
+}
+
+func (c *MockRLAClient) SetRuleAsDefault(ctx context.Context, in *rlav1.SetRuleAsDefaultRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	return out, nil
+}
+
+/* Rack-rule association mock methods */
+func (c *MockRLAClient) AssociateRuleWithRack(ctx context.Context, in *rlav1.AssociateRuleWithRackRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	return out, nil
+}
+
+func (c *MockRLAClient) DisassociateRuleFromRack(ctx context.Context, in *rlav1.DisassociateRuleFromRackRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	return out, nil
+}
+
+func (c *MockRLAClient) GetRackRuleAssociation(ctx context.Context, in *rlav1.GetRackRuleAssociationRequest, opts ...grpc.CallOption) (*rlav1.GetRackRuleAssociationResponse, error) {
+	out := &rlav1.GetRackRuleAssociationResponse{}
+	return out, nil
+}
+
+func (c *MockRLAClient) ListRackRuleAssociations(ctx context.Context, in *rlav1.ListRackRuleAssociationsRequest, opts ...grpc.CallOption) (*rlav1.ListRackRuleAssociationsResponse, error) {
+	out := &rlav1.ListRackRuleAssociationsResponse{
+		Associations: []*rlav1.RackRuleAssociation{},
 	}
 	return out, nil
 }

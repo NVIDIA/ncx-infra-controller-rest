@@ -20,7 +20,6 @@ package location
 import (
 	"encoding/json"
 
-	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/utils"
 	"github.com/rs/zerolog/log"
 )
 
@@ -51,22 +50,32 @@ func New(b []byte) Location {
 	return loc
 }
 
-// IsValid returns true if the location is valid. A location is valid if all
-// fields are not empty.
-func (loc *Location) IsValid() bool {
-	return loc != nil &&
-		loc.Region != "" && loc.DataCenter != "" &&
-		loc.Room != "" && loc.Position != ""
-}
-
-// ToMap converts the Location to a map[string]any. It returns nil if the
-// location is invalid or not marshable.
+// ToMap converts the Location to a map[string]any, including only non-empty
+// fields. Returns nil if loc is nil or all fields are empty.
 func (loc *Location) ToMap() map[string]any {
-	if !loc.IsValid() {
+	if loc == nil {
 		return nil
 	}
 
-	return utils.StringToMap(loc.Encode())
+	m := make(map[string]any)
+	if loc.Region != "" {
+		m["region"] = loc.Region
+	}
+	if loc.DataCenter != "" {
+		m["data_center"] = loc.DataCenter
+	}
+	if loc.Room != "" {
+		m["room"] = loc.Room
+	}
+	if loc.Position != "" {
+		m["position"] = loc.Position
+	}
+
+	if len(m) == 0 {
+		return nil
+	}
+
+	return m
 }
 
 // Encode serializes the Location to a JSON string. It returns ""
