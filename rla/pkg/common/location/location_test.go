@@ -119,4 +119,3 @@ func TestLocation_ToMap(t *testing.T) {
 		})
 	}
 }
-
