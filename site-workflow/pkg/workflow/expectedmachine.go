@@ -64,7 +64,8 @@ func DiscoverExpectedMachineInventory(ctx workflow.Context) error {
 	return nil
 }
 
-// CreateExpectedMachine is a workflow to create new Expected Machines using the CreateExpectedMachineOnSite activity
+// CreateExpectedMachine is a workflow to create new Expected Machines using the CreateExpectedMachineOnSite activity,
+// then also creates the component in RLA via CreateExpectedMachineOnRLA.
 func CreateExpectedMachine(ctx workflow.Context, request *cwssaws.ExpectedMachine) error {
 	logger := log.With().Str("Workflow", "ExpectedMachine").Str("Action", "Create").Str("ID", request.GetId().GetValue()).Str("Expected MAC address", request.BmcMacAddress).Str("Serial", request.ChassisSerialNumber).Logger()
 
@@ -88,10 +89,17 @@ func CreateExpectedMachine(ctx workflow.Context, request *cwssaws.ExpectedMachin
 
 	var expectedMachineManager activity.ManageExpectedMachine
 
+	// Write to Core first
 	err := workflow.ExecuteActivity(ctx, expectedMachineManager.CreateExpectedMachineOnSite, request).Get(ctx, nil)
 	if err != nil {
 		logger.Error().Err(err).Str("Activity", "CreateExpectedMachineOnSite").Msg("Failed to execute activity from workflow")
 		return err
+	}
+
+	// Then write to RLA (best-effort: log warning but don't fail the workflow)
+	err = workflow.ExecuteActivity(ctx, expectedMachineManager.CreateExpectedMachineOnRLA, request).Get(ctx, nil)
+	if err != nil {
+		logger.Warn().Err(err).Str("Activity", "CreateExpectedMachineOnRLA").Msg("Failed to create component on RLA, Core write succeeded")
 	}
 
 	logger.Info().Msg("completing workflow")
@@ -100,6 +108,7 @@ func CreateExpectedMachine(ctx workflow.Context, request *cwssaws.ExpectedMachin
 }
 
 // UpdateExpectedMachine is a workflow to update Expected Machines using the UpdateExpectedMachineOnSite activity
+// TODO: Add RLA PatchComponent dual-write when update/delete RLA support is implemented
 func UpdateExpectedMachine(ctx workflow.Context, request *cwssaws.ExpectedMachine) error {
 	logger := log.With().Str("Workflow", "ExpectedMachine").Str("Action", "Update").Str("ID", request.GetId().GetValue()).Str("Expected MAC address", request.BmcMacAddress).Str("Serial", request.ChassisSerialNumber).Logger()
 
@@ -134,7 +143,8 @@ func UpdateExpectedMachine(ctx workflow.Context, request *cwssaws.ExpectedMachin
 	return nil
 }
 
-// CreateExpectedMachines is a workflow to create multiple Expected Machines using the CreateExpectedMachinesOnSite activity
+// CreateExpectedMachines is a workflow to create multiple Expected Machines using the CreateExpectedMachinesOnSite activity,
+// then also creates the components in RLA via CreateExpectedMachinesOnRLA.
 func CreateExpectedMachines(ctx workflow.Context, request *cwssaws.BatchExpectedMachineOperationRequest) (*cwssaws.BatchExpectedMachineOperationResponse, error) {
 	logger := log.With().Str("Workflow", "ExpectedMachines").Str("Action", "Create").Int("Count", len(request.GetExpectedMachines().GetExpectedMachines())).Logger()
 
@@ -160,10 +170,17 @@ func CreateExpectedMachines(ctx workflow.Context, request *cwssaws.BatchExpected
 	var expectedMachineManager activity.ManageExpectedMachine
 	var response cwssaws.BatchExpectedMachineOperationResponse
 
+	// Write to Core first
 	err := workflow.ExecuteActivity(ctx, expectedMachineManager.CreateExpectedMachinesOnSite, request).Get(ctx, &response)
 	if err != nil {
 		logger.Error().Err(err).Str("Activity", "CreateExpectedMachinesOnSite").Msg("Failed to execute activity from workflow")
 		return nil, err
+	}
+
+	// Then write to RLA (best-effort: log warning but don't fail the workflow)
+	err = workflow.ExecuteActivity(ctx, expectedMachineManager.CreateExpectedMachinesOnRLA, request).Get(ctx, nil)
+	if err != nil {
+		logger.Warn().Err(err).Str("Activity", "CreateExpectedMachinesOnRLA").Msg("Failed to create components on RLA, Core write succeeded")
 	}
 
 	logger.Info().Msg("completing workflow")
@@ -209,6 +226,7 @@ func UpdateExpectedMachines(ctx workflow.Context, request *cwssaws.BatchExpected
 }
 
 // DeleteExpectedMachine is a workflow to Delete Expected Machines using the DeleteExpectedMachineOnSite activity
+// TODO: Add RLA DeleteComponent dual-write when update/delete RLA support is implemented
 func DeleteExpectedMachine(ctx workflow.Context, request *cwssaws.ExpectedMachineRequest) error {
 	logger := log.With().Str("Workflow", "ExpectedMachine").Str("Action", "Delete").Str("ID", request.GetId().GetValue()).Str("optional MAC address", request.BmcMacAddress).Logger()
 

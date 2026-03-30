@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	cClient "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/grpc/client"
+	rlav1 "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/rla/protobuf/v1"
 	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -241,7 +242,7 @@ func TestManageExpectedPowerShelf_CreateExpectedPowerShelfOnSite(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mm := NewManageExpectedPowerShelf(tt.fields.CarbideAtomicClient)
+			mm := NewManageExpectedPowerShelf(tt.fields.CarbideAtomicClient, nil)
 			err := mm.CreateExpectedPowerShelfOnSite(tt.args.ctx, tt.args.request)
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -360,7 +361,7 @@ func TestManageExpectedPowerShelf_UpdateExpectedPowerShelfOnSite(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mm := NewManageExpectedPowerShelf(tt.fields.CarbideAtomicClient)
+			mm := NewManageExpectedPowerShelf(tt.fields.CarbideAtomicClient, nil)
 			err := mm.UpdateExpectedPowerShelfOnSite(tt.args.ctx, tt.args.request)
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -446,7 +447,7 @@ func TestManageExpectedPowerShelf_DeleteExpectedPowerShelfOnSite(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mm := NewManageExpectedPowerShelf(tt.fields.CarbideAtomicClient)
+			mm := NewManageExpectedPowerShelf(tt.fields.CarbideAtomicClient, nil)
 			err := mm.DeleteExpectedPowerShelfOnSite(tt.args.ctx, tt.args.request)
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -455,4 +456,82 @@ func TestManageExpectedPowerShelf_DeleteExpectedPowerShelfOnSite(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestManageExpectedPowerShelf_CreateExpectedPowerShelfOnRLA(t *testing.T) {
+	t.Run("nil RLA client skips gracefully", func(t *testing.T) {
+		mm := ManageExpectedPowerShelf{RlaAtomicClient: nil}
+		err := mm.CreateExpectedPowerShelfOnRLA(context.Background(), &cwssaws.ExpectedPowerShelf{
+			ExpectedPowerShelfId: &cwssaws.UUID{Value: uuid.NewString()}, BmcMacAddress: "00:11:22:33:44:55", ShelfSerialNumber: "SHELF001",
+		})
+		assert.NoError(t, err)
+	})
+
+	t.Run("nil RLA client connection skips gracefully", func(t *testing.T) {
+		mm := ManageExpectedPowerShelf{RlaAtomicClient: cClient.NewRlaAtomicClient(&cClient.RlaClientConfig{})}
+		err := mm.CreateExpectedPowerShelfOnRLA(context.Background(), &cwssaws.ExpectedPowerShelf{
+			ExpectedPowerShelfId: &cwssaws.UUID{Value: uuid.NewString()}, BmcMacAddress: "00:11:22:33:44:55", ShelfSerialNumber: "SHELF001",
+		})
+		assert.NoError(t, err)
+	})
+}
+
+func Test_expectedPowerShelfToRLAComponent(t *testing.T) {
+	strPtr := func(s string) *string { return &s }
+	int32Ptr := func(i int32) *int32 { return &i }
+
+	t.Run("maps all fields correctly", func(t *testing.T) {
+		eps := &cwssaws.ExpectedPowerShelf{
+			ExpectedPowerShelfId: &cwssaws.UUID{Value: "eps-001"},
+			BmcMacAddress:        "AA:BB:CC:DD:EE:FF",
+			ShelfSerialNumber:    "SHELF-001",
+			IpAddress:            "10.0.0.1",
+			RackId:               &cwssaws.RackId{Id: "rack-001"},
+			Name:                 strPtr("pdu-shelf-1"),
+			Manufacturer:         strPtr("Vertiv"),
+			Model:                strPtr("GXT5-3000"),
+			Description:          strPtr("Power distribution shelf"),
+			FirmwareVersion:      strPtr("v1.5.0"),
+			SlotId:               int32Ptr(10),
+			TrayIdx:              int32Ptr(0),
+			HostId:               int32Ptr(0),
+		}
+		component := expectedPowerShelfToRLAComponent(eps)
+		assert.Equal(t, rlav1.ComponentType_COMPONENT_TYPE_POWERSHELF, component.Type)
+		assert.Equal(t, "eps-001", component.Info.Id.Id)
+		assert.Equal(t, "SHELF-001", component.Info.SerialNumber)
+		assert.Equal(t, "pdu-shelf-1", component.Info.Name)
+		assert.Equal(t, "Vertiv", component.Info.Manufacturer)
+		assert.Equal(t, "GXT5-3000", *component.Info.Model)
+		assert.Equal(t, "Power distribution shelf", *component.Info.Description)
+		assert.Equal(t, "eps-001", component.ComponentId)
+		assert.Equal(t, "v1.5.0", component.FirmwareVersion)
+		assert.NotNil(t, component.Position)
+		assert.Equal(t, int32(10), component.Position.SlotId)
+		if assert.Len(t, component.Bmcs, 1) {
+			assert.Equal(t, "AA:BB:CC:DD:EE:FF", component.Bmcs[0].MacAddress)
+			assert.NotNil(t, component.Bmcs[0].IpAddress)
+			assert.Equal(t, "10.0.0.1", *component.Bmcs[0].IpAddress)
+		}
+		assert.NotNil(t, component.RackId)
+		assert.Equal(t, "rack-001", component.RackId.Id)
+	})
+
+	t.Run("handles minimal fields (nil optionals)", func(t *testing.T) {
+		eps := &cwssaws.ExpectedPowerShelf{
+			ExpectedPowerShelfId: &cwssaws.UUID{Value: "eps-002"}, BmcMacAddress: "11:22:33:44:55:66",
+			ShelfSerialNumber: "SHELF-002",
+		}
+		component := expectedPowerShelfToRLAComponent(eps)
+		assert.Equal(t, rlav1.ComponentType_COMPONENT_TYPE_POWERSHELF, component.Type)
+		assert.Empty(t, component.Info.Name)
+		assert.Empty(t, component.Info.Manufacturer)
+		assert.Nil(t, component.Info.Model)
+		assert.Empty(t, component.FirmwareVersion)
+		assert.Nil(t, component.Position)
+		assert.Nil(t, component.RackId)
+		if assert.Len(t, component.Bmcs, 1) {
+			assert.Nil(t, component.Bmcs[0].IpAddress)
+		}
+	})
 }

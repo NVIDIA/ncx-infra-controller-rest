@@ -244,6 +244,15 @@ func (cemh CreateExpectedMachineHandler) Handle(c echo.Context) error {
 			ChassisSerialNumber:      apiRequest.ChassisSerialNumber,
 			SkuID:                    apiRequest.SkuID,
 			FallbackDpuSerialNumbers: apiRequest.FallbackDPUSerialNumbers,
+			RackID:                   apiRequest.RackID,
+			Name:                     apiRequest.Name,
+			Manufacturer:             apiRequest.Manufacturer,
+			Model:                    apiRequest.Model,
+			Description:              apiRequest.Description,
+			FirmwareVersion:          apiRequest.FirmwareVersion,
+			SlotID:                   apiRequest.SlotID,
+			TrayIdx:                  apiRequest.TrayIdx,
+			HostID:                   apiRequest.HostID,
 			Labels:                   apiRequest.Labels,
 			CreatedBy:                dbUser.ID,
 		},
@@ -261,6 +270,42 @@ func (cemh CreateExpectedMachineHandler) Handle(c echo.Context) error {
 		ChassisSerialNumber:      expectedMachine.ChassisSerialNumber,
 		FallbackDpuSerialNumbers: expectedMachine.FallbackDpuSerialNumbers,
 		SkuId:                    expectedMachine.SkuID,
+	}
+
+	if expectedMachine.RackID != nil {
+		createExpectedMachineRequest.RackId = &cwssaws.RackId{Id: *expectedMachine.RackID}
+	}
+
+	if expectedMachine.Name != nil {
+		createExpectedMachineRequest.Name = expectedMachine.Name
+	}
+
+	if expectedMachine.Manufacturer != nil {
+		createExpectedMachineRequest.Manufacturer = expectedMachine.Manufacturer
+	}
+
+	if expectedMachine.Model != nil {
+		createExpectedMachineRequest.Model = expectedMachine.Model
+	}
+
+	if expectedMachine.Description != nil {
+		createExpectedMachineRequest.Description = expectedMachine.Description
+	}
+
+	if expectedMachine.FirmwareVersion != nil {
+		createExpectedMachineRequest.FirmwareVersion = expectedMachine.FirmwareVersion
+	}
+
+	if expectedMachine.SlotID != nil {
+		createExpectedMachineRequest.SlotId = expectedMachine.SlotID
+	}
+
+	if expectedMachine.TrayIdx != nil {
+		createExpectedMachineRequest.TrayIdx = expectedMachine.TrayIdx
+	}
+
+	if expectedMachine.HostID != nil {
+		createExpectedMachineRequest.HostId = expectedMachine.HostID
 	}
 
 	if apiRequest.DefaultBmcUsername != nil {
@@ -731,6 +776,15 @@ func (uemh UpdateExpectedMachineHandler) Handle(c echo.Context) error {
 			ChassisSerialNumber:      apiRequest.ChassisSerialNumber,
 			SkuID:                    apiRequest.SkuID,
 			FallbackDpuSerialNumbers: apiRequest.FallbackDPUSerialNumbers,
+			RackID:                   apiRequest.RackID,
+			Name:                     apiRequest.Name,
+			Manufacturer:             apiRequest.Manufacturer,
+			Model:                    apiRequest.Model,
+			Description:              apiRequest.Description,
+			FirmwareVersion:          apiRequest.FirmwareVersion,
+			SlotID:                   apiRequest.SlotID,
+			TrayIdx:                  apiRequest.TrayIdx,
+			HostID:                   apiRequest.HostID,
 			Labels:                   apiRequest.Labels,
 		},
 	)
@@ -747,6 +801,42 @@ func (uemh UpdateExpectedMachineHandler) Handle(c echo.Context) error {
 		ChassisSerialNumber:      updatedExpectedMachine.ChassisSerialNumber,
 		FallbackDpuSerialNumbers: updatedExpectedMachine.FallbackDpuSerialNumbers,
 		SkuId:                    updatedExpectedMachine.SkuID,
+	}
+
+	if updatedExpectedMachine.RackID != nil {
+		updateExpectedMachineRequest.RackId = &cwssaws.RackId{Id: *updatedExpectedMachine.RackID}
+	}
+
+	if updatedExpectedMachine.Name != nil {
+		updateExpectedMachineRequest.Name = updatedExpectedMachine.Name
+	}
+
+	if updatedExpectedMachine.Manufacturer != nil {
+		updateExpectedMachineRequest.Manufacturer = updatedExpectedMachine.Manufacturer
+	}
+
+	if updatedExpectedMachine.Model != nil {
+		updateExpectedMachineRequest.Model = updatedExpectedMachine.Model
+	}
+
+	if updatedExpectedMachine.Description != nil {
+		updateExpectedMachineRequest.Description = updatedExpectedMachine.Description
+	}
+
+	if updatedExpectedMachine.FirmwareVersion != nil {
+		updateExpectedMachineRequest.FirmwareVersion = updatedExpectedMachine.FirmwareVersion
+	}
+
+	if updatedExpectedMachine.SlotID != nil {
+		updateExpectedMachineRequest.SlotId = updatedExpectedMachine.SlotID
+	}
+
+	if updatedExpectedMachine.TrayIdx != nil {
+		updateExpectedMachineRequest.TrayIdx = updatedExpectedMachine.TrayIdx
+	}
+
+	if updatedExpectedMachine.HostID != nil {
+		updateExpectedMachineRequest.HostId = updatedExpectedMachine.HostID
 	}
 
 	if apiRequest.DefaultBmcUsername != nil {
@@ -1183,6 +1273,15 @@ func (cemh CreateExpectedMachinesHandler) Handle(c echo.Context) error {
 			ChassisSerialNumber:      machineReq.ChassisSerialNumber,
 			SkuID:                    machineReq.SkuID,
 			FallbackDpuSerialNumbers: machineReq.FallbackDPUSerialNumbers,
+			RackID:                   machineReq.RackID,
+			Name:                     machineReq.Name,
+			Manufacturer:             machineReq.Manufacturer,
+			Model:                    machineReq.Model,
+			Description:              machineReq.Description,
+			FirmwareVersion:          machineReq.FirmwareVersion,
+			SlotID:                   machineReq.SlotID,
+			TrayIdx:                  machineReq.TrayIdx,
+			HostID:                   machineReq.HostID,
 			Labels:                   machineReq.Labels,
 			CreatedBy:                dbUser.ID,
 		})
@@ -1202,6 +1301,42 @@ func (cemh CreateExpectedMachinesHandler) Handle(c echo.Context) error {
 			ChassisSerialNumber:      createdMachine.ChassisSerialNumber,
 			FallbackDpuSerialNumbers: createdMachine.FallbackDpuSerialNumbers,
 			SkuId:                    createdMachine.SkuID,
+		}
+
+		if createdMachine.RackID != nil {
+			workflowMachine.RackId = &cwssaws.RackId{Id: *createdMachine.RackID}
+		}
+
+		if createdMachine.Name != nil {
+			workflowMachine.Name = createdMachine.Name
+		}
+
+		if createdMachine.Manufacturer != nil {
+			workflowMachine.Manufacturer = createdMachine.Manufacturer
+		}
+
+		if createdMachine.Model != nil {
+			workflowMachine.Model = createdMachine.Model
+		}
+
+		if createdMachine.Description != nil {
+			workflowMachine.Description = createdMachine.Description
+		}
+
+		if createdMachine.FirmwareVersion != nil {
+			workflowMachine.FirmwareVersion = createdMachine.FirmwareVersion
+		}
+
+		if createdMachine.SlotID != nil {
+			workflowMachine.SlotId = createdMachine.SlotID
+		}
+
+		if createdMachine.TrayIdx != nil {
+			workflowMachine.TrayIdx = createdMachine.TrayIdx
+		}
+
+		if createdMachine.HostID != nil {
+			workflowMachine.HostId = createdMachine.HostID
 		}
 
 		if apiRequests[i].DefaultBmcUsername != nil {
@@ -1622,6 +1757,15 @@ func (uemh UpdateExpectedMachinesHandler) Handle(c echo.Context) error {
 			ChassisSerialNumber:      machineReq.ChassisSerialNumber,
 			SkuID:                    machineReq.SkuID,
 			FallbackDpuSerialNumbers: machineReq.FallbackDPUSerialNumbers,
+			RackID:                   machineReq.RackID,
+			Name:                     machineReq.Name,
+			Manufacturer:             machineReq.Manufacturer,
+			Model:                    machineReq.Model,
+			Description:              machineReq.Description,
+			FirmwareVersion:          machineReq.FirmwareVersion,
+			SlotID:                   machineReq.SlotID,
+			TrayIdx:                  machineReq.TrayIdx,
+			HostID:                   machineReq.HostID,
 			Labels:                   machineReq.Labels,
 		})
 	}
@@ -1641,6 +1785,42 @@ func (uemh UpdateExpectedMachinesHandler) Handle(c echo.Context) error {
 			ChassisSerialNumber:      updatedMachine.ChassisSerialNumber,
 			FallbackDpuSerialNumbers: updatedMachine.FallbackDpuSerialNumbers,
 			SkuId:                    updatedMachine.SkuID,
+		}
+
+		if updatedMachine.RackID != nil {
+			workflowMachine.RackId = &cwssaws.RackId{Id: *updatedMachine.RackID}
+		}
+
+		if updatedMachine.Name != nil {
+			workflowMachine.Name = updatedMachine.Name
+		}
+
+		if updatedMachine.Manufacturer != nil {
+			workflowMachine.Manufacturer = updatedMachine.Manufacturer
+		}
+
+		if updatedMachine.Model != nil {
+			workflowMachine.Model = updatedMachine.Model
+		}
+
+		if updatedMachine.Description != nil {
+			workflowMachine.Description = updatedMachine.Description
+		}
+
+		if updatedMachine.FirmwareVersion != nil {
+			workflowMachine.FirmwareVersion = updatedMachine.FirmwareVersion
+		}
+
+		if updatedMachine.SlotID != nil {
+			workflowMachine.SlotId = updatedMachine.SlotID
+		}
+
+		if updatedMachine.TrayIdx != nil {
+			workflowMachine.TrayIdx = updatedMachine.TrayIdx
+		}
+
+		if updatedMachine.HostID != nil {
+			workflowMachine.HostId = updatedMachine.HostID
 		}
 
 		if apiRequests[i].DefaultBmcUsername != nil {

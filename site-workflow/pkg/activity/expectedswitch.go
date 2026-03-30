@@ -33,6 +33,7 @@ import (
 
 	swe "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/error"
 	cclient "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/grpc/client"
+	rlav1 "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/rla/protobuf/v1"
 	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 )
 
@@ -253,12 +254,14 @@ func NewManageExpectedSwitchInventory(siteID uuid.UUID, carbideAtomicClient *ccl
 // ManageExpectedSwitch is an activity wrapper for Expected Switch management
 type ManageExpectedSwitch struct {
 	CarbideAtomicClient *cclient.CarbideAtomicClient
+	RlaAtomicClient     *cclient.RlaAtomicClient
 }
 
 // NewManageExpectedSwitch returns a new ManageExpectedSwitch client
-func NewManageExpectedSwitch(carbideClient *cclient.CarbideAtomicClient) ManageExpectedSwitch {
+func NewManageExpectedSwitch(carbideClient *cclient.CarbideAtomicClient, rlaClient *cclient.RlaAtomicClient) ManageExpectedSwitch {
 	return ManageExpectedSwitch{
 		CarbideAtomicClient: carbideClient,
+		RlaAtomicClient:     rlaClient,
 	}
 }
 
@@ -333,6 +336,98 @@ func (mes *ManageExpectedSwitch) UpdateExpectedSwitchOnSite(ctx context.Context,
 	logger.Info().Msg("Completed activity")
 
 	return nil
+}
+
+// CreateExpectedSwitchOnRLA creates an Expected Switch as a component in RLA via AddComponent
+func (mes *ManageExpectedSwitch) CreateExpectedSwitchOnRLA(ctx context.Context, request *cwssaws.ExpectedSwitch) error {
+	logger := log.With().Str("Activity", "CreateExpectedSwitchOnRLA").Logger()
+
+	logger.Info().Msg("Starting activity")
+
+	// Validate request
+	if request == nil {
+		return temporal.NewNonRetryableApplicationError("received empty create Expected Switch request for RLA", swe.ErrTypeInvalidRequest, errors.New("nil request"))
+	}
+
+	// If RLA client is not configured, skip gracefully
+	if mes.RlaAtomicClient == nil {
+		logger.Warn().Msg("RLA client not configured, skipping RLA component creation")
+		return nil
+	}
+
+	rlaClient := mes.RlaAtomicClient.GetClient()
+	if rlaClient == nil {
+		logger.Warn().Msg("RLA client not connected, skipping RLA component creation")
+		return nil
+	}
+
+	component := expectedSwitchToRLAComponent(request)
+	_, err := rlaClient.Rla().AddComponent(ctx, &rlav1.AddComponentRequest{Component: component})
+	if err != nil {
+		logger.Warn().Err(err).Msg("Failed to create Expected Switch component on RLA")
+		return swe.WrapErr(err)
+	}
+
+	logger.Info().Msg("Completed activity")
+	return nil
+}
+
+// expectedSwitchToRLAComponent converts a Forge ExpectedSwitch proto to an RLA Component proto
+func expectedSwitchToRLAComponent(es *cwssaws.ExpectedSwitch) *rlav1.Component {
+	component := &rlav1.Component{
+		Type: rlav1.ComponentType_COMPONENT_TYPE_NVLSWITCH,
+		Info: &rlav1.DeviceInfo{
+			Id:           &rlav1.UUID{Id: es.GetExpectedSwitchId().GetValue()},
+			SerialNumber: es.GetSwitchSerialNumber(),
+		},
+		Bmcs: []*rlav1.BMCInfo{
+			{
+				Type:       rlav1.BMCType_BMC_TYPE_HOST,
+				MacAddress: es.GetBmcMacAddress(),
+			},
+		},
+		ComponentId: es.GetExpectedSwitchId().GetValue(),
+	}
+
+	// DeviceInfo fields
+	if name := es.GetName(); name != "" {
+		component.Info.Name = name
+	}
+	if manufacturer := es.GetManufacturer(); manufacturer != "" {
+		component.Info.Manufacturer = manufacturer
+	}
+	if es.Model != nil {
+		component.Info.Model = es.Model
+	}
+	if es.Description != nil {
+		component.Info.Description = es.Description
+	}
+
+	// Firmware version
+	if fv := es.GetFirmwareVersion(); fv != "" {
+		component.FirmwareVersion = fv
+	}
+
+	// Rack position
+	if es.SlotId != nil || es.TrayIdx != nil || es.HostId != nil {
+		pos := &rlav1.RackPosition{}
+		if es.SlotId != nil {
+			pos.SlotId = *es.SlotId
+		}
+		if es.TrayIdx != nil {
+			pos.TrayIdx = *es.TrayIdx
+		}
+		if es.HostId != nil {
+			pos.HostId = *es.HostId
+		}
+		component.Position = pos
+	}
+
+	if rackID := es.GetRackId().GetId(); rackID != "" {
+		component.RackId = &rlav1.UUID{Id: rackID}
+	}
+
+	return component
 }
 
 // DeleteExpectedSwitchOnSite deletes Expected Switch on Carbide

@@ -70,6 +70,15 @@ type ExpectedMachine struct {
 	MachineID                *string           `bun:"machine_id"`
 	Machine                  *Machine          `bun:"rel:belongs-to,join:machine_id=id"`
 	FallbackDpuSerialNumbers []string          `bun:"fallback_dpu_serial_numbers,array"`
+	RackID                   *string           `bun:"rack_id"`
+	Name                     *string           `bun:"name"`
+	Manufacturer             *string           `bun:"manufacturer"`
+	Model                    *string           `bun:"model"`
+	Description              *string           `bun:"description"`
+	FirmwareVersion          *string           `bun:"firmware_version"`
+	SlotID                   *int32            `bun:"slot_id"`
+	TrayIdx                  *int32            `bun:"tray_idx"`
+	HostID                   *int32            `bun:"host_id"`
 	Labels                   map[string]string `bun:"labels,type:jsonb"`
 	Created                  time.Time         `bun:"created,nullzero,notnull,default:current_timestamp"`
 	Updated                  time.Time         `bun:"updated,nullzero,notnull,default:current_timestamp"`
@@ -85,6 +94,15 @@ type ExpectedMachineCreateInput struct {
 	SkuID                    *string
 	MachineID                *string
 	FallbackDpuSerialNumbers []string
+	RackID                   *string
+	Name                     *string
+	Manufacturer             *string
+	Model                    *string
+	Description              *string
+	FirmwareVersion          *string
+	SlotID                   *int32
+	TrayIdx                  *int32
+	HostID                   *int32
 	Labels                   map[string]string
 	CreatedBy                uuid.UUID
 }
@@ -97,6 +115,15 @@ type ExpectedMachineUpdateInput struct {
 	SkuID                    *string
 	MachineID                *string
 	FallbackDpuSerialNumbers []string
+	RackID                   *string
+	Name                     *string
+	Manufacturer             *string
+	Model                    *string
+	Description              *string
+	FirmwareVersion          *string
+	SlotID                   *int32
+	TrayIdx                  *int32
+	HostID                   *int32
 	Labels                   map[string]string
 }
 
@@ -106,6 +133,15 @@ type ExpectedMachineClearInput struct {
 	SkuID                    bool
 	MachineID                bool
 	FallbackDpuSerialNumbers bool
+	RackID                   bool
+	Name                     bool
+	Manufacturer             bool
+	Model                    bool
+	Description              bool
+	FirmwareVersion          bool
+	SlotID                   bool
+	TrayIdx                  bool
+	HostID                   bool
 	Labels                   bool
 }
 
@@ -220,6 +256,15 @@ func (emsd ExpectedMachineSQLDAO) CreateMultiple(ctx context.Context, tx *db.Tx,
 			SkuID:                    input.SkuID,
 			MachineID:                input.MachineID,
 			FallbackDpuSerialNumbers: input.FallbackDpuSerialNumbers,
+			RackID:                   input.RackID,
+			Name:                     input.Name,
+			Manufacturer:             input.Manufacturer,
+			Model:                    input.Model,
+			Description:              input.Description,
+			FirmwareVersion:          input.FirmwareVersion,
+			SlotID:                   input.SlotID,
+			TrayIdx:                  input.TrayIdx,
+			HostID:                   input.HostID,
 			Labels:                   input.Labels,
 			CreatedBy:                input.CreatedBy,
 		}
@@ -482,6 +527,42 @@ func (emsd ExpectedMachineSQLDAO) UpdateMultiple(ctx context.Context, tx *db.Tx,
 			em.MachineID = input.MachineID
 			columnsSet["machine_id"] = true
 		}
+		if input.RackID != nil {
+			em.RackID = input.RackID
+			columnsSet["rack_id"] = true
+		}
+		if input.Name != nil {
+			em.Name = input.Name
+			columnsSet["name"] = true
+		}
+		if input.Manufacturer != nil {
+			em.Manufacturer = input.Manufacturer
+			columnsSet["manufacturer"] = true
+		}
+		if input.Model != nil {
+			em.Model = input.Model
+			columnsSet["model"] = true
+		}
+		if input.Description != nil {
+			em.Description = input.Description
+			columnsSet["description"] = true
+		}
+		if input.FirmwareVersion != nil {
+			em.FirmwareVersion = input.FirmwareVersion
+			columnsSet["firmware_version"] = true
+		}
+		if input.SlotID != nil {
+			em.SlotID = input.SlotID
+			columnsSet["slot_id"] = true
+		}
+		if input.TrayIdx != nil {
+			em.TrayIdx = input.TrayIdx
+			columnsSet["tray_idx"] = true
+		}
+		if input.HostID != nil {
+			em.HostID = input.HostID
+			columnsSet["host_id"] = true
+		}
 
 		expectedMachines = append(expectedMachines, em)
 		ids = append(ids, input.ExpectedMachineID)
@@ -561,6 +642,42 @@ func (emsd ExpectedMachineSQLDAO) Clear(ctx context.Context, tx *db.Tx, input Ex
 	if input.FallbackDpuSerialNumbers {
 		em.FallbackDpuSerialNumbers = nil
 		updatedFields = append(updatedFields, "fallback_dpu_serial_numbers")
+	}
+	if input.RackID {
+		em.RackID = nil
+		updatedFields = append(updatedFields, "rack_id")
+	}
+	if input.Name {
+		em.Name = nil
+		updatedFields = append(updatedFields, "name")
+	}
+	if input.Manufacturer {
+		em.Manufacturer = nil
+		updatedFields = append(updatedFields, "manufacturer")
+	}
+	if input.Model {
+		em.Model = nil
+		updatedFields = append(updatedFields, "model")
+	}
+	if input.Description {
+		em.Description = nil
+		updatedFields = append(updatedFields, "description")
+	}
+	if input.FirmwareVersion {
+		em.FirmwareVersion = nil
+		updatedFields = append(updatedFields, "firmware_version")
+	}
+	if input.SlotID {
+		em.SlotID = nil
+		updatedFields = append(updatedFields, "slot_id")
+	}
+	if input.TrayIdx {
+		em.TrayIdx = nil
+		updatedFields = append(updatedFields, "tray_idx")
+	}
+	if input.HostID {
+		em.HostID = nil
+		updatedFields = append(updatedFields, "host_id")
 	}
 	if input.Labels {
 		em.Labels = nil

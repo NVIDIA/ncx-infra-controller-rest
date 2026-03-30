@@ -468,6 +468,97 @@ func (r *RlaServerImpl) GetComponents(ctx context.Context, req *rlav1.GetCompone
 	}, nil
 }
 
+// AddComponent implements interface RLAServer
+func (r *RlaServerImpl) AddComponent(ctx context.Context, req *rlav1.AddComponentRequest) (*rlav1.AddComponentResponse, error) {
+	if req == nil || req.Component == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
+	}
+
+	if req.Component.RackId == nil || req.Component.RackId.Id == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "component.rack_id must be set")
+	}
+
+	componentID := req.Component.ComponentId
+	if componentID == "" {
+		componentID = uuid.NewString()
+	}
+
+	component := &rlav1.Component{
+		Type:            req.Component.Type,
+		Info:            req.Component.Info,
+		FirmwareVersion: req.Component.FirmwareVersion,
+		Position:        req.Component.Position,
+		Bmcs:            req.Component.Bmcs,
+		ComponentId:     componentID,
+		RackId:          req.Component.RackId,
+		PowerState:      req.Component.PowerState,
+	}
+
+	r.components[componentID] = component
+
+	return &rlav1.AddComponentResponse{
+		Component: component,
+	}, nil
+}
+
+// PatchComponent implements interface RLAServer
+func (r *RlaServerImpl) PatchComponent(ctx context.Context, req *rlav1.PatchComponentRequest) (*rlav1.PatchComponentResponse, error) {
+	if req == nil || req.Id == nil || req.Id.Id == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
+	}
+
+	// Find component by UUID
+	var comp *rlav1.Component
+	for _, c := range r.components {
+		if c.Info != nil && c.Info.Id != nil && c.Info.Id.Id == req.Id.Id {
+			comp = c
+			break
+		}
+	}
+
+	if comp == nil {
+		return nil, status.Errorf(codes.NotFound, "Component with ID not found")
+	}
+
+	// Apply patch fields
+	if req.FirmwareVersion != nil {
+		comp.FirmwareVersion = *req.FirmwareVersion
+	}
+	if req.Position != nil {
+		comp.Position = req.Position
+	}
+	if req.RackId != nil {
+		comp.RackId = req.RackId
+	}
+
+	return &rlav1.PatchComponentResponse{
+		Component: comp,
+	}, nil
+}
+
+// DeleteComponent implements interface RLAServer
+func (r *RlaServerImpl) DeleteComponent(ctx context.Context, req *rlav1.DeleteComponentRequest) (*rlav1.DeleteComponentResponse, error) {
+	if req == nil || req.Id == nil || req.Id.Id == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
+	}
+
+	// Find and delete component by UUID
+	found := false
+	for key, comp := range r.components {
+		if comp.Info != nil && comp.Info.Id != nil && comp.Info.Id.Id == req.Id.Id {
+			delete(r.components, key)
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		return nil, status.Errorf(codes.NotFound, "Component with ID not found")
+	}
+
+	return &rlav1.DeleteComponentResponse{}, nil
+}
+
 // ValidateComponents implements interface RLAServer
 func (r *RlaServerImpl) ValidateComponents(ctx context.Context, req *rlav1.ValidateComponentsRequest) (*rlav1.ValidateComponentsResponse, error) {
 	if req == nil || req.TargetSpec == nil {

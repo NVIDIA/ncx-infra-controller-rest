@@ -59,7 +59,7 @@ import (
 // handling protobuf conversion and delegating business logic to the InventoryManager.
 type RLAServerImpl struct {
 	inventoryManager          inventorymanager.Manager // Business logic manager for inventory operations
-	taskManager               *taskmanager.Manager     // Task manager for orchestrating task lifecycle
+	taskManager               taskmanager.Manager      // Task manager for orchestrating task lifecycle
 	taskStore                 taskstore.Store          // Task store for task queries
 	carbideClient             carbideapi.Client        // Carbide API client for actual component data
 	psmClient                 psmapi.Client            // PSM API client for powershelf operations
@@ -81,7 +81,7 @@ type RLAServerImpl struct {
 //   - error: Always nil in current implementation, reserved for future error handling
 func newServerImplementation(
 	inventoryManager inventorymanager.Manager,
-	taskManager *taskmanager.Manager,
+	taskManager taskmanager.Manager,
 	taskStore taskstore.Store,
 	carbideClient carbideapi.Client,
 	psmClient psmapi.Client,
