@@ -317,6 +317,55 @@ func TestPatchComponent_RackReassign(t *testing.T) {
 	assert.Equal(t, newRackID, updated.RackID)
 }
 
+// --- GetComponents Tests ---
+
+func TestGetComponents_TargetSpecNoPagination(t *testing.T) {
+	mgr := newMockManager()
+	rackID, _ := setupValidateTestData(mgr)
+	server := &RLAServerImpl{inventoryManager: mgr}
+
+	resp, err := server.GetComponents(context.Background(), &pb.GetComponentsRequest{
+		TargetSpec: &pb.OperationTargetSpec{
+			Targets: &pb.OperationTargetSpec_Racks{
+				Racks: &pb.RackTargets{
+					Targets: []*pb.RackTarget{
+						{Identifier: &pb.RackTarget_Id{Id: &pb.UUID{Id: rackID.String()}}},
+					},
+				},
+			},
+		},
+	})
+
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	assert.Equal(t, int32(3), resp.Total)
+	assert.Equal(t, 3, len(resp.Components))
+}
+
+func TestGetComponents_TargetSpecWithPagination(t *testing.T) {
+	mgr := newMockManager()
+	rackID, _ := setupValidateTestData(mgr)
+	server := &RLAServerImpl{inventoryManager: mgr}
+
+	resp, err := server.GetComponents(context.Background(), &pb.GetComponentsRequest{
+		TargetSpec: &pb.OperationTargetSpec{
+			Targets: &pb.OperationTargetSpec_Racks{
+				Racks: &pb.RackTargets{
+					Targets: []*pb.RackTarget{
+						{Identifier: &pb.RackTarget_Id{Id: &pb.UUID{Id: rackID.String()}}},
+					},
+				},
+			},
+		},
+		Pagination: &pb.Pagination{Offset: 0, Limit: 2},
+	})
+
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	assert.Equal(t, int32(3), resp.Total)
+	assert.Equal(t, 2, len(resp.Components))
+}
+
 // --- ValidateComponents Tests ---
 
 // helper to build a rack with components for validate tests
