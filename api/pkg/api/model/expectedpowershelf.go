@@ -44,6 +44,24 @@ type APIExpectedPowerShelfCreateRequest struct {
 	ShelfSerialNumber string `json:"shelfSerialNumber"`
 	// IpAddress is the IP address of the expected power shelf
 	IpAddress *string `json:"ipAddress"`
+	// RackID is the optional rack identifier
+	RackID *string `json:"rackId"`
+	// Name is the optional name of the expected power shelf
+	Name *string `json:"name"`
+	// Manufacturer is the optional manufacturer of the expected power shelf
+	Manufacturer *string `json:"manufacturer"`
+	// Model is the optional model of the expected power shelf
+	Model *string `json:"model"`
+	// Description is the optional description of the expected power shelf
+	Description *string `json:"description"`
+	// FirmwareVersion is the optional firmware version of the expected power shelf
+	FirmwareVersion *string `json:"firmwareVersion"`
+	// SlotID is the optional slot identifier
+	SlotID *int32 `json:"slotId"`
+	// TrayIdx is the optional tray index
+	TrayIdx *int32 `json:"trayIdx"`
+	// HostID is the optional host identifier
+	HostID *int32 `json:"hostId"`
 	// Labels is the labels of the expected power shelf
 	Labels map[string]string `json:"labels"`
 }
@@ -65,6 +83,18 @@ func (epcr *APIExpectedPowerShelfCreateRequest) Validate() error {
 			validation.Required.Error(validationErrorValueRequired),
 			validation.Match(util.NotAllWhitespaceRegexp).Error("Shelf serial number consists only of whitespace"),
 			validation.Length(1, 32).Error("Shelf serial number must be 32 characters or less")),
+		validation.Field(&epcr.RackID,
+			validation.NilOrNotEmpty.Error("RackID cannot be empty")),
+		validation.Field(&epcr.Name,
+			validation.NilOrNotEmpty.Error("Name cannot be empty")),
+		validation.Field(&epcr.Manufacturer,
+			validation.NilOrNotEmpty.Error("Manufacturer cannot be empty")),
+		validation.Field(&epcr.Model,
+			validation.NilOrNotEmpty.Error("Model cannot be empty")),
+		validation.Field(&epcr.Description,
+			validation.NilOrNotEmpty.Error("Description cannot be empty")),
+		validation.Field(&epcr.FirmwareVersion,
+			validation.NilOrNotEmpty.Error("FirmwareVersion cannot be empty")),
 	)
 
 	if err != nil {
@@ -119,6 +149,24 @@ type APIExpectedPowerShelfUpdateRequest struct {
 	ShelfSerialNumber *string `json:"shelfSerialNumber"`
 	// IpAddress is the IP address of the expected power shelf
 	IpAddress *string `json:"ipAddress"`
+	// RackID is the optional rack identifier
+	RackID *string `json:"rackId"`
+	// Name is the optional name of the expected power shelf
+	Name *string `json:"name"`
+	// Manufacturer is the optional manufacturer of the expected power shelf
+	Manufacturer *string `json:"manufacturer"`
+	// Model is the optional model of the expected power shelf
+	Model *string `json:"model"`
+	// Description is the optional description of the expected power shelf
+	Description *string `json:"description"`
+	// FirmwareVersion is the optional firmware version of the expected power shelf
+	FirmwareVersion *string `json:"firmwareVersion"`
+	// SlotID is the optional slot identifier
+	SlotID *int32 `json:"slotId"`
+	// TrayIdx is the optional tray index
+	TrayIdx *int32 `json:"trayIdx"`
+	// HostID is the optional host identifier
+	HostID *int32 `json:"hostId"`
 	// Labels is the labels of the expected power shelf
 	Labels map[string]string `json:"labels"`
 }
@@ -154,6 +202,18 @@ func (epur *APIExpectedPowerShelfUpdateRequest) Validate() error {
 			validation.When(epur.ShelfSerialNumber != nil && *epur.ShelfSerialNumber != "",
 				validation.Match(util.NotAllWhitespaceRegexp).Error("Shelf Serial Number consists only of whitespace")),
 			validation.Length(1, 32).Error("Shelf Serial Number must be 1-32 characters")),
+		validation.Field(&epur.RackID,
+			validation.NilOrNotEmpty.Error("RackID cannot be empty")),
+		validation.Field(&epur.Name,
+			validation.NilOrNotEmpty.Error("Name cannot be empty")),
+		validation.Field(&epur.Manufacturer,
+			validation.NilOrNotEmpty.Error("Manufacturer cannot be empty")),
+		validation.Field(&epur.Model,
+			validation.NilOrNotEmpty.Error("Model cannot be empty")),
+		validation.Field(&epur.Description,
+			validation.NilOrNotEmpty.Error("Description cannot be empty")),
+		validation.Field(&epur.FirmwareVersion,
+			validation.NilOrNotEmpty.Error("FirmwareVersion cannot be empty")),
 	)
 
 	if err != nil {
@@ -208,6 +268,24 @@ type APIExpectedPowerShelf struct {
 	ShelfSerialNumber string `json:"shelfSerialNumber"`
 	// IpAddress is the IP address of the expected power shelf
 	IpAddress *string `json:"ipAddress"`
+	// RackID is the optional rack identifier
+	RackID *string `json:"rackId"`
+	// Name is the optional name of the expected power shelf
+	Name *string `json:"name"`
+	// Manufacturer is the optional manufacturer of the expected power shelf
+	Manufacturer *string `json:"manufacturer"`
+	// Model is the optional model of the expected power shelf
+	Model *string `json:"model"`
+	// Description is the optional description of the expected power shelf
+	Description *string `json:"description"`
+	// FirmwareVersion is the optional firmware version of the expected power shelf
+	FirmwareVersion *string `json:"firmwareVersion"`
+	// SlotID is the optional slot identifier
+	SlotID *int32 `json:"slotId"`
+	// TrayIdx is the optional tray index
+	TrayIdx *int32 `json:"trayIdx"`
+	// HostID is the optional host identifier
+	HostID *int32 `json:"hostId"`
 	// Labels is the labels of the expected power shelf
 	Labels map[string]string `json:"labels"`
 	// Created indicates the ISO datetime string for when the ExpectedPowerShelf was created
@@ -224,6 +302,15 @@ func NewAPIExpectedPowerShelf(dbModel *cdbm.ExpectedPowerShelf) *APIExpectedPowe
 		SiteID:            dbModel.SiteID,
 		ShelfSerialNumber: dbModel.ShelfSerialNumber,
 		IpAddress:         dbModel.IpAddress,
+		RackID:            dbModel.RackID,
+		Name:              dbModel.Name,
+		Manufacturer:      dbModel.Manufacturer,
+		Model:             dbModel.Model,
+		Description:       dbModel.Description,
+		FirmwareVersion:   dbModel.FirmwareVersion,
+		SlotID:            dbModel.SlotID,
+		TrayIdx:           dbModel.TrayIdx,
+		HostID:            dbModel.HostID,
 		Labels:            dbModel.Labels,
 		Created:           dbModel.Created,
 		Updated:           dbModel.Updated,

@@ -49,11 +49,15 @@ func (api *API) RegisterSubscriber() error {
 	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedMachine: successfully registered the UpdateExpectedMachines workflow")
 
 	// Register activities
-	expectedMachineManager := swa.NewManageExpectedMachine(ManagerAccess.Data.EB.Managers.Carbide.Client)
+	expectedMachineManager := swa.NewManageExpectedMachine(ManagerAccess.Data.EB.Managers.Carbide.Client, ManagerAccess.Data.EB.Managers.RLA.Client)
 
 	// Register CreateExpectedMachineOnSite activity
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(expectedMachineManager.CreateExpectedMachineOnSite)
 	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedMachine: successfully registered the CreateExpectedMachineOnSite activity")
+
+	// Register CreateExpectedMachineOnRLA activity
+	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(expectedMachineManager.CreateExpectedMachineOnRLA)
+	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedMachine: successfully registered the CreateExpectedMachineOnRLA activity")
 
 	// Register UpdateExpectedMachineOnSite activity
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(expectedMachineManager.UpdateExpectedMachineOnSite)
@@ -66,6 +70,10 @@ func (api *API) RegisterSubscriber() error {
 	// Register CreateExpectedMachinesOnSite activity (plural)
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(expectedMachineManager.CreateExpectedMachinesOnSite)
 	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedMachine: successfully registered the CreateExpectedMachinesOnSite activity")
+
+	// Register CreateExpectedMachinesOnRLA activity (plural)
+	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(expectedMachineManager.CreateExpectedMachinesOnRLA)
+	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedMachine: successfully registered the CreateExpectedMachinesOnRLA activity")
 
 	// Register UpdateExpectedMachinesOnSite activity (plural)
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(expectedMachineManager.UpdateExpectedMachinesOnSite)

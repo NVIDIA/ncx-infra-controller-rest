@@ -106,6 +106,10 @@ func (cemts *CreateExpectedMachineTestSuite) Test_CreateExpectedMachine_Success(
 	cemts.env.RegisterActivity(expectedMachineManager.CreateExpectedMachineOnSite)
 	cemts.env.OnActivity(expectedMachineManager.CreateExpectedMachineOnSite, mock.Anything, mock.Anything).Return(nil)
 
+	// Mock CreateExpectedMachineOnRLA activity
+	cemts.env.RegisterActivity(expectedMachineManager.CreateExpectedMachineOnRLA)
+	cemts.env.OnActivity(expectedMachineManager.CreateExpectedMachineOnRLA, mock.Anything, mock.Anything).Return(nil)
+
 	// Execute CreateExpectedMachine workflow
 	cemts.env.ExecuteWorkflow(CreateExpectedMachine, request)
 	cemts.True(cemts.env.IsWorkflowCompleted())
@@ -126,10 +130,35 @@ func (cemts *CreateExpectedMachineTestSuite) Test_CreateExpectedMachine_Failure(
 	cemts.env.RegisterActivity(expectedMachineManager.CreateExpectedMachineOnSite)
 	cemts.env.OnActivity(expectedMachineManager.CreateExpectedMachineOnSite, mock.Anything, mock.Anything).Return(errors.New(errMsg))
 
+	// Register CreateExpectedMachineOnRLA activity (not called when Core fails)
+	cemts.env.RegisterActivity(expectedMachineManager.CreateExpectedMachineOnRLA)
+
 	// execute CreateExpectedMachine workflow
 	cemts.env.ExecuteWorkflow(CreateExpectedMachine, request)
 	cemts.True(cemts.env.IsWorkflowCompleted())
 	cemts.Error(cemts.env.GetWorkflowError())
+}
+
+func (cemts *CreateExpectedMachineTestSuite) Test_CreateExpectedMachine_CoreSuccess_RLAFailure() {
+	var expectedMachineManager iActivity.ManageExpectedMachine
+
+	request := &cwssaws.ExpectedMachine{
+		Id:            &cwssaws.UUID{Value: "test-create-workflow-001"},
+		BmcMacAddress: "00:11:22:33:44:55",
+	}
+
+	// Mock CreateExpectedMachineOnSite activity to succeed
+	cemts.env.RegisterActivity(expectedMachineManager.CreateExpectedMachineOnSite)
+	cemts.env.OnActivity(expectedMachineManager.CreateExpectedMachineOnSite, mock.Anything, mock.Anything).Return(nil)
+
+	// Mock CreateExpectedMachineOnRLA activity to fail (best-effort, should not fail the workflow)
+	cemts.env.RegisterActivity(expectedMachineManager.CreateExpectedMachineOnRLA)
+	cemts.env.OnActivity(expectedMachineManager.CreateExpectedMachineOnRLA, mock.Anything, mock.Anything).Return(errors.New("RLA communication error"))
+
+	// Execute CreateExpectedMachine workflow
+	cemts.env.ExecuteWorkflow(CreateExpectedMachine, request)
+	cemts.True(cemts.env.IsWorkflowCompleted())
+	cemts.NoError(cemts.env.GetWorkflowError())
 }
 
 func TestCreateExpectedMachineTestSuite(t *testing.T) {
@@ -308,6 +337,10 @@ func (cemts *CreateExpectedMachinesTestSuite) Test_CreateExpectedMachines_Succes
 	cemts.env.RegisterActivity(expectedMachineManager.CreateExpectedMachinesOnSite)
 	cemts.env.OnActivity(expectedMachineManager.CreateExpectedMachinesOnSite, mock.Anything, mock.Anything).Return(expectedResponse, nil)
 
+	// Mock CreateExpectedMachinesOnRLA activity
+	cemts.env.RegisterActivity(expectedMachineManager.CreateExpectedMachinesOnRLA)
+	cemts.env.OnActivity(expectedMachineManager.CreateExpectedMachinesOnRLA, mock.Anything, mock.Anything).Return(nil)
+
 	// Execute CreateExpectedMachines workflow
 	cemts.env.ExecuteWorkflow(CreateExpectedMachines, request)
 	cemts.True(cemts.env.IsWorkflowCompleted())
@@ -374,6 +407,10 @@ func (cemts *CreateExpectedMachinesTestSuite) Test_CreateExpectedMachines_Partia
 	cemts.env.RegisterActivity(expectedMachineManager.CreateExpectedMachinesOnSite)
 	cemts.env.OnActivity(expectedMachineManager.CreateExpectedMachinesOnSite, mock.Anything, mock.Anything).Return(expectedResponse, nil)
 
+	// Mock CreateExpectedMachinesOnRLA activity
+	cemts.env.RegisterActivity(expectedMachineManager.CreateExpectedMachinesOnRLA)
+	cemts.env.OnActivity(expectedMachineManager.CreateExpectedMachinesOnRLA, mock.Anything, mock.Anything).Return(nil)
+
 	// Execute CreateExpectedMachines workflow
 	cemts.env.ExecuteWorkflow(CreateExpectedMachines, request)
 	cemts.True(cemts.env.IsWorkflowCompleted())
@@ -414,6 +451,9 @@ func (cemts *CreateExpectedMachinesTestSuite) Test_CreateExpectedMachines_Failur
 	// Mock CreateExpectedMachinesOnSite activity
 	cemts.env.RegisterActivity(expectedMachineManager.CreateExpectedMachinesOnSite)
 	cemts.env.OnActivity(expectedMachineManager.CreateExpectedMachinesOnSite, mock.Anything, mock.Anything).Return(nil, errors.New(errMsg))
+
+	// Register CreateExpectedMachinesOnRLA activity (not called when Core fails)
+	cemts.env.RegisterActivity(expectedMachineManager.CreateExpectedMachinesOnRLA)
 
 	// execute CreateExpectedMachines workflow
 	cemts.env.ExecuteWorkflow(CreateExpectedMachines, request)

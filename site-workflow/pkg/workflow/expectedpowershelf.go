@@ -64,7 +64,8 @@ func DiscoverExpectedPowerShelfInventory(ctx workflow.Context) error {
 	return nil
 }
 
-// CreateExpectedPowerShelf is a workflow to create a new Expected Power Shelf using the CreateExpectedPowerShelfOnSite activity
+// CreateExpectedPowerShelf is a workflow to create a new Expected Power Shelf using the CreateExpectedPowerShelfOnSite activity,
+// then also creates the component in RLA via CreateExpectedPowerShelfOnRLA.
 func CreateExpectedPowerShelf(ctx workflow.Context, request *cwssaws.ExpectedPowerShelf) error {
 	logger := log.With().Str("Workflow", "ExpectedPowerShelf").Str("Action", "Create").Str("ID", request.GetExpectedPowerShelfId().GetValue()).Str("Expected MAC address", request.BmcMacAddress).Str("Serial", request.ShelfSerialNumber).Logger()
 
@@ -88,10 +89,17 @@ func CreateExpectedPowerShelf(ctx workflow.Context, request *cwssaws.ExpectedPow
 
 	var expectedPowerShelfManager activity.ManageExpectedPowerShelf
 
+	// Write to Core first
 	err := workflow.ExecuteActivity(ctx, expectedPowerShelfManager.CreateExpectedPowerShelfOnSite, request).Get(ctx, nil)
 	if err != nil {
 		logger.Error().Err(err).Str("Activity", "CreateExpectedPowerShelfOnSite").Msg("Failed to execute activity from workflow")
 		return err
+	}
+
+	// Then write to RLA (best-effort: log warning but don't fail the workflow)
+	err = workflow.ExecuteActivity(ctx, expectedPowerShelfManager.CreateExpectedPowerShelfOnRLA, request).Get(ctx, nil)
+	if err != nil {
+		logger.Warn().Err(err).Str("Activity", "CreateExpectedPowerShelfOnRLA").Msg("Failed to create component on RLA, Core write succeeded")
 	}
 
 	logger.Info().Msg("completing workflow")
@@ -100,6 +108,7 @@ func CreateExpectedPowerShelf(ctx workflow.Context, request *cwssaws.ExpectedPow
 }
 
 // UpdateExpectedPowerShelf is a workflow to update an Expected Power Shelf using the UpdateExpectedPowerShelfOnSite activity
+// TODO: Add RLA PatchComponent dual-write when update/delete RLA support is implemented
 func UpdateExpectedPowerShelf(ctx workflow.Context, request *cwssaws.ExpectedPowerShelf) error {
 	logger := log.With().Str("Workflow", "ExpectedPowerShelf").Str("Action", "Update").Str("ID", request.GetExpectedPowerShelfId().GetValue()).Str("Expected MAC address", request.BmcMacAddress).Str("Serial", request.ShelfSerialNumber).Logger()
 
@@ -135,6 +144,7 @@ func UpdateExpectedPowerShelf(ctx workflow.Context, request *cwssaws.ExpectedPow
 }
 
 // DeleteExpectedPowerShelf is a workflow to Delete an Expected Power Shelf using the DeleteExpectedPowerShelfOnSite activity
+// TODO: Add RLA DeleteComponent dual-write when update/delete RLA support is implemented
 func DeleteExpectedPowerShelf(ctx workflow.Context, request *cwssaws.ExpectedPowerShelfRequest) error {
 	logger := log.With().Str("Workflow", "ExpectedPowerShelf").Str("Action", "Delete").Str("ID", request.GetExpectedPowerShelfId().GetValue()).Str("optional MAC address", request.BmcMacAddress).Logger()
 

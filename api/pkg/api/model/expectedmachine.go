@@ -51,6 +51,24 @@ type APIExpectedMachineCreateRequest struct {
 	FallbackDPUSerialNumbers []string `json:"fallbackDPUSerialNumbers"`
 	// SkuId is the optional UUID for an SKU
 	SkuID *string `json:"skuId"`
+	// RackID is the optional rack identifier
+	RackID *string `json:"rackId"`
+	// Name is the optional name of the expected machine
+	Name *string `json:"name"`
+	// Manufacturer is the optional manufacturer of the expected machine
+	Manufacturer *string `json:"manufacturer"`
+	// Model is the optional model of the expected machine
+	Model *string `json:"model"`
+	// Description is the optional description of the expected machine
+	Description *string `json:"description"`
+	// FirmwareVersion is the optional firmware version of the expected machine
+	FirmwareVersion *string `json:"firmwareVersion"`
+	// SlotID is the optional slot identifier
+	SlotID *int32 `json:"slotId"`
+	// TrayIdx is the optional tray index
+	TrayIdx *int32 `json:"trayIdx"`
+	// HostID is the optional host identifier
+	HostID *int32 `json:"hostId"`
 	// Labels is the labels of the expected machine
 	Labels map[string]string `json:"labels"`
 }
@@ -73,6 +91,18 @@ func (emcr *APIExpectedMachineCreateRequest) Validate() error {
 			validation.Length(1, 32).Error("Chassis serial number must be 32 characters or less")),
 		validation.Field(&emcr.SkuID,
 			validation.NilOrNotEmpty.Error("SkuID cannot be empty")),
+		validation.Field(&emcr.RackID,
+			validation.NilOrNotEmpty.Error("RackID cannot be empty")),
+		validation.Field(&emcr.Name,
+			validation.NilOrNotEmpty.Error("Name cannot be empty")),
+		validation.Field(&emcr.Manufacturer,
+			validation.NilOrNotEmpty.Error("Manufacturer cannot be empty")),
+		validation.Field(&emcr.Model,
+			validation.NilOrNotEmpty.Error("Model cannot be empty")),
+		validation.Field(&emcr.Description,
+			validation.NilOrNotEmpty.Error("Description cannot be empty")),
+		validation.Field(&emcr.FirmwareVersion,
+			validation.NilOrNotEmpty.Error("FirmwareVersion cannot be empty")),
 	)
 
 	if err != nil {
@@ -129,6 +159,24 @@ type APIExpectedMachineUpdateRequest struct {
 	FallbackDPUSerialNumbers []string `json:"fallbackDPUSerialNumbers"`
 	// SkuId is the optional UUID for an SKU
 	SkuID *string `json:"skuId"`
+	// RackID is the optional rack identifier
+	RackID *string `json:"rackId"`
+	// Name is the optional name of the expected machine
+	Name *string `json:"name"`
+	// Manufacturer is the optional manufacturer of the expected machine
+	Manufacturer *string `json:"manufacturer"`
+	// Model is the optional model of the expected machine
+	Model *string `json:"model"`
+	// Description is the optional description of the expected machine
+	Description *string `json:"description"`
+	// FirmwareVersion is the optional firmware version of the expected machine
+	FirmwareVersion *string `json:"firmwareVersion"`
+	// SlotID is the optional slot identifier
+	SlotID *int32 `json:"slotId"`
+	// TrayIdx is the optional tray index
+	TrayIdx *int32 `json:"trayIdx"`
+	// HostID is the optional host identifier
+	HostID *int32 `json:"hostId"`
 	// Labels is the labels of the expected machine
 	Labels map[string]string `json:"labels"`
 }
@@ -166,6 +214,18 @@ func (emur *APIExpectedMachineUpdateRequest) Validate() error {
 			validation.Length(1, 32).Error("Chassis Serial Number must be 1-32 characters")),
 		validation.Field(&emur.SkuID,
 			validation.NilOrNotEmpty.Error("SkuID cannot be empty")),
+		validation.Field(&emur.RackID,
+			validation.NilOrNotEmpty.Error("RackID cannot be empty")),
+		validation.Field(&emur.Name,
+			validation.NilOrNotEmpty.Error("Name cannot be empty")),
+		validation.Field(&emur.Manufacturer,
+			validation.NilOrNotEmpty.Error("Manufacturer cannot be empty")),
+		validation.Field(&emur.Model,
+			validation.NilOrNotEmpty.Error("Model cannot be empty")),
+		validation.Field(&emur.Description,
+			validation.NilOrNotEmpty.Error("Description cannot be empty")),
+		validation.Field(&emur.FirmwareVersion,
+			validation.NilOrNotEmpty.Error("FirmwareVersion cannot be empty")),
 	)
 
 	if err != nil {
@@ -228,6 +288,24 @@ type APIExpectedMachine struct {
 	MachineID *string `json:"machineId"`
 	// Machine is the optional Machine information associated with this Expected Machine
 	Machine *APIMachineSummary `json:"machine,omitempty"`
+	// RackID is the optional rack identifier
+	RackID *string `json:"rackId"`
+	// Name is the optional name of the expected machine
+	Name *string `json:"name"`
+	// Manufacturer is the optional manufacturer of the expected machine
+	Manufacturer *string `json:"manufacturer"`
+	// Model is the optional model of the expected machine
+	Model *string `json:"model"`
+	// Description is the optional description of the expected machine
+	Description *string `json:"description"`
+	// FirmwareVersion is the optional firmware version of the expected machine
+	FirmwareVersion *string `json:"firmwareVersion"`
+	// SlotID is the optional slot identifier
+	SlotID *int32 `json:"slotId"`
+	// TrayIdx is the optional tray index
+	TrayIdx *int32 `json:"trayIdx"`
+	// HostID is the optional host identifier
+	HostID *int32 `json:"hostId"`
 	// Labels is the labels of the expected machine
 	Labels map[string]string `json:"labels"`
 	// Created indicates the ISO datetime string for when the ExpectedMachine was created
@@ -246,6 +324,15 @@ func NewAPIExpectedMachine(dibp *cdbm.ExpectedMachine) *APIExpectedMachine {
 		FallbackDPUSerialNumbers: dibp.FallbackDpuSerialNumbers,
 		SkuID:                    dibp.SkuID,
 		MachineID:                dibp.MachineID,
+		RackID:                   dibp.RackID,
+		Name:                     dibp.Name,
+		Manufacturer:             dibp.Manufacturer,
+		Model:                    dibp.Model,
+		Description:              dibp.Description,
+		FirmwareVersion:          dibp.FirmwareVersion,
+		SlotID:                   dibp.SlotID,
+		TrayIdx:                  dibp.TrayIdx,
+		HostID:                   dibp.HostID,
 		Labels:                   dibp.Labels,
 		Created:                  dibp.Created,
 		Updated:                  dibp.Updated,

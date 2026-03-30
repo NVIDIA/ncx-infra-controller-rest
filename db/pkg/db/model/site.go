@@ -72,13 +72,6 @@ type SiteConfig struct {
 	MaxNetworkSecurityGroupRuleCount *int `json:"max_network_security_group_rule_count"`
 }
 
-// DEPRECATED - We're moving to SiteConfig
-type SiteCapabilities struct {
-	NetworkSecurityGroup             bool `json:"network_security_group"`
-	NativeNetworking                 bool `json:"native_networking"`
-	MaxNetworkSecurityGroupRuleCount *int `json:"max_network_security_group_rule_count"`
-}
-
 // Site represents entries in the site table
 type Site struct {
 	bun.BaseModel `bun:"table:site,alias:st"`
@@ -109,8 +102,6 @@ type Site struct {
 	Contact                       *SiteContact            `bun:"contact"`  // since this is a json object, type of the column will be JSONB automatically
 	AgentCertExpiry               *time.Time              `bun:"agent_cert_expiry"`
 	Config                        *SiteConfig             `bun:"config,type:jsonb"`
-	// DEPRECATED - We're moving to SiteConfig
-	Capabilities *SiteCapabilities `bun:"capabilities,type:jsonb"`
 }
 
 type SiteLocation struct {

@@ -107,6 +107,10 @@ func (cests *CreateExpectedSwitchTestSuite) Test_CreateExpectedSwitch_Success() 
 	cests.env.RegisterActivity(expectedSwitchManager.CreateExpectedSwitchOnSite)
 	cests.env.OnActivity(expectedSwitchManager.CreateExpectedSwitchOnSite, mock.Anything, mock.Anything).Return(nil)
 
+	// Mock CreateExpectedSwitchOnRLA activity
+	cests.env.RegisterActivity(expectedSwitchManager.CreateExpectedSwitchOnRLA)
+	cests.env.OnActivity(expectedSwitchManager.CreateExpectedSwitchOnRLA, mock.Anything, mock.Anything).Return(nil)
+
 	// Execute CreateExpectedSwitch workflow
 	cests.env.ExecuteWorkflow(CreateExpectedSwitch, request)
 	cests.True(cests.env.IsWorkflowCompleted())
@@ -127,6 +131,9 @@ func (cests *CreateExpectedSwitchTestSuite) Test_CreateExpectedSwitch_Failure() 
 	// Mock CreateExpectedSwitchOnSite activity
 	cests.env.RegisterActivity(expectedSwitchManager.CreateExpectedSwitchOnSite)
 	cests.env.OnActivity(expectedSwitchManager.CreateExpectedSwitchOnSite, mock.Anything, mock.Anything).Return(errors.New(errMsg))
+
+	// Register CreateExpectedSwitchOnRLA activity (not called when Core fails)
+	cests.env.RegisterActivity(expectedSwitchManager.CreateExpectedSwitchOnRLA)
 
 	// execute CreateExpectedSwitch workflow
 	cests.env.ExecuteWorkflow(CreateExpectedSwitch, request)
