@@ -28,10 +28,17 @@ const (
 
 type OrderDirection string
 
+const DefaultPaginationLimit = 100
+
 type Pagination struct {
 	Offset int `json:"offset"`
 	Limit  int `json:"limit"`
 	Total  int `json:"total"`
+}
+
+// DefaultPagination returns a Pagination with offset 0 and the default limit.
+func DefaultPagination() *Pagination {
+	return &Pagination{Offset: 0, Limit: DefaultPaginationLimit}
 }
 
 func (p *Pagination) Validate() error {

@@ -29,18 +29,15 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/google/uuid"
 	"google.golang.org/protobuf/types/known/emptypb"
 
-	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/carbideapi"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/converter/protobuf"
 	dbquery "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/db/query"
 	inventorymanager "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/inventory/manager"
 
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/operation"
-	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/psmapi"
 	taskcommon "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/common"
 	taskmanager "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/manager"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operationrules"
@@ -61,8 +58,6 @@ type RLAServerImpl struct {
 	inventoryManager          inventorymanager.Manager // Business logic manager for inventory operations
 	taskManager               taskmanager.Manager      // Task manager for orchestrating task lifecycle
 	taskStore                 taskstore.Store          // Task store for task queries
-	carbideClient             carbideapi.Client        // Carbide API client for actual component data
-	psmClient                 psmapi.Client            // PSM API client for powershelf operations
 	pb.UnimplementedRLAServer                          // Embedded protobuf server interface for forward compatibility
 }
 
@@ -73,8 +68,6 @@ type RLAServerImpl struct {
 //   - inventoryManager: The inventory manager instance for handling rack and component topology
 //   - taskManager: The Task manager for orchestrating task lifecycle
 //   - taskStore: The task store for task queries
-//   - carbideClient: The Carbide API client for actual component data
-//   - psmClient: The PSM API client for powershelf operations
 //
 // Returns:
 //   - *RLAServerImpl: A new server implementation instance
@@ -83,15 +76,11 @@ func newServerImplementation(
 	inventoryManager inventorymanager.Manager,
 	taskManager taskmanager.Manager,
 	taskStore taskstore.Store,
-	carbideClient carbideapi.Client,
-	psmClient psmapi.Client,
 ) (*RLAServerImpl, error) {
 	return &RLAServerImpl{
 		inventoryManager: inventoryManager,
 		taskManager:      taskManager,
 		taskStore:        taskStore,
-		carbideClient:    carbideClient,
-		psmClient:        psmClient,
 	}, nil
 }
 
@@ -1420,20 +1409,6 @@ func (rs *RLAServerImpl) GetComponents(
 	}, nil
 }
 
-// powerStateToString converts a PowerState to a string representation
-func powerStateToString(ps carbideapi.PowerState) string {
-	switch ps {
-	case carbideapi.PowerStateOn:
-		return "on"
-	case carbideapi.PowerStateOff:
-		return "off"
-	case carbideapi.PowerStateDisabled:
-		return "disabled"
-	default:
-		return "unknown"
-	}
-}
-
 // ValidateComponents returns pre-computed drifts between expected (local DB) and actual
 // (source system) components. Results are computed asynchronously by the inventory loop,
 // so this API returns quickly without calling external systems.
@@ -1603,16 +1578,14 @@ func (rs *RLAServerImpl) ValidateComponents(
 
 	// Apply pagination to diffs
 	totalDiffs := int32(len(diffs))
-	if pg != nil {
-		start := pg.Offset
-		end := start + pg.Limit
-		if start > len(diffs) {
-			diffs = []*pb.ComponentDiff{}
-		} else if end > len(diffs) {
-			diffs = diffs[start:]
-		} else {
-			diffs = diffs[start:end]
-		}
+	start := pg.Offset
+	end := start + pg.Limit
+	if start > len(diffs) {
+		diffs = []*pb.ComponentDiff{}
+	} else if end > len(diffs) {
+		diffs = diffs[start:]
+	} else {
+		diffs = diffs[start:end]
 	}
 
 	return &pb.ValidateComponentsResponse{
@@ -1623,65 +1596,6 @@ func (rs *RLAServerImpl) ValidateComponents(
 		DriftCount:          driftCount,
 		MatchCount:          matchCount,
 	}, nil
-}
-
-// compareComponentFields compares expected and actual component fields and returns differences.
-// Does not compare frequently changing fields like power_state and health_status.
-func compareComponentFields(
-	expected *component.Component,
-	actual carbideapi.MachineDetail,
-	position carbideapi.MachinePosition,
-) []*pb.FieldDiff {
-	var diffs []*pb.FieldDiff
-
-	// Compare position.slot_id
-	if position.PhysicalSlotNum != nil && expected.Position.SlotID != int(*position.PhysicalSlotNum) {
-		diffs = append(diffs, &pb.FieldDiff{
-			FieldName:     "position.slot_id",
-			ExpectedValue: fmt.Sprintf("%d", expected.Position.SlotID),
-			ActualValue:   fmt.Sprintf("%d", *position.PhysicalSlotNum),
-		})
-	}
-
-	// Compare position.tray_idx
-	if position.ComputeTrayIndex != nil && expected.Position.TrayIndex != int(*position.ComputeTrayIndex) {
-		diffs = append(diffs, &pb.FieldDiff{
-			FieldName:     "position.tray_idx",
-			ExpectedValue: fmt.Sprintf("%d", expected.Position.TrayIndex),
-			ActualValue:   fmt.Sprintf("%d", *position.ComputeTrayIndex),
-		})
-	}
-
-	// Compare position.host_id
-	if position.TopologyID != nil && expected.Position.HostID != int(*position.TopologyID) {
-		diffs = append(diffs, &pb.FieldDiff{
-			FieldName:     "position.host_id",
-			ExpectedValue: fmt.Sprintf("%d", expected.Position.HostID),
-			ActualValue:   fmt.Sprintf("%d", *position.TopologyID),
-		})
-	}
-
-	// Compare firmware_version
-	if expected.FirmwareVersion != "" && actual.FirmwareVersion != "" &&
-		expected.FirmwareVersion != actual.FirmwareVersion {
-		diffs = append(diffs, &pb.FieldDiff{
-			FieldName:     "firmware_version",
-			ExpectedValue: expected.FirmwareVersion,
-			ActualValue:   actual.FirmwareVersion,
-		})
-	}
-
-	// Compare serial_number (chassis_serial)
-	if actual.ChassisSerial != nil && expected.Info.SerialNumber != "" &&
-		expected.Info.SerialNumber != *actual.ChassisSerial {
-		diffs = append(diffs, &pb.FieldDiff{
-			FieldName:     "serial_number",
-			ExpectedValue: expected.Info.SerialNumber,
-			ActualValue:   *actual.ChassisSerial,
-		})
-	}
-
-	return diffs
 }
 
 // applyComponentFilters applies filters to a list of components in memory.
@@ -1863,20 +1777,6 @@ func (rs *RLAServerImpl) sortComponents(components []*component.Component, order
 	}
 
 	return nil
-}
-
-// now returns the current time (extracted for testing)
-var now = time.Now
-
-// extractComponentsByType extracts components of the specified type from a rack
-func extractComponentsByType(r *rack.Rack, compType devicetypes.ComponentType) []*component.Component {
-	var result []*component.Component
-	for i := range r.Components {
-		if r.Components[i].Type == compType {
-			result = append(result, &r.Components[i])
-		}
-	}
-	return result
 }
 
 // extractComponentsByTypes extracts components matching any of the specified types from a rack.

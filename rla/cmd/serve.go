@@ -31,8 +31,6 @@ import (
 
 	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/carbideapi"
-	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/nsmapi"
-	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/psmapi"
 	svc "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/service"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/componentmanager"
 	computecarbide "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/componentmanager/compute/carbide"
@@ -93,18 +91,9 @@ func init() {
 	serveCmd.Flags().StringVarP(&componentMgrConfig, "component-config", "c", "", "Path to component manager config file (YAML)") //nolint
 }
 
-// providerClients holds the API clients extracted from providers for use by the service.
-type providerClients struct {
-	carbide carbideapi.Client
-	psm     psmapi.Client
-	nsm     nsmapi.Client
-}
-
 // initProviderRegistry creates and initializes the provider registry based on configuration.
-// It returns the registry and the underlying clients for use by the service layer.
-func initProviderRegistry(config componentmanager.Config) (*componentmanager.ProviderRegistry, providerClients, error) {
+func initProviderRegistry(config componentmanager.Config) (*componentmanager.ProviderRegistry, error) {
 	providerRegistry := componentmanager.NewProviderRegistry()
-	var clients providerClients
 
 	// Initialize Carbide provider if configured
 	if config.Providers.Carbide != nil {
@@ -112,7 +101,6 @@ func initProviderRegistry(config componentmanager.Config) (*componentmanager.Pro
 		if err != nil {
 			log.Warn().Err(err).Msg("Unable to create Carbide GRPC client (power control may not work)")
 		} else {
-			clients.carbide = carbideProvider.Client()
 			providerRegistry.Register(carbideProvider)
 			log.Info().
 				Dur("timeout", config.Providers.Carbide.Timeout).
@@ -126,7 +114,6 @@ func initProviderRegistry(config componentmanager.Config) (*componentmanager.Pro
 		if err != nil {
 			log.Warn().Err(err).Msg("Unable to create PSM client (powershelf operations may not work)")
 		} else {
-			clients.psm = psmProvider.Client()
 			providerRegistry.Register(psmProvider)
 			log.Info().
 				Dur("timeout", config.Providers.PSM.Timeout).
@@ -140,7 +127,6 @@ func initProviderRegistry(config componentmanager.Config) (*componentmanager.Pro
 		if err != nil {
 			log.Warn().Err(err).Msg("Unable to create NV-Switch Manager client (NVLSwitch operations may not work)")
 		} else {
-			clients.nsm = nsmProvider.Client()
 			providerRegistry.Register(nsmProvider)
 			log.Info().
 				Dur("timeout", config.Providers.NVSwitchManager.Timeout).
@@ -154,7 +140,7 @@ func initProviderRegistry(config componentmanager.Config) (*componentmanager.Pro
 		Strs("providers", registeredProviders).
 		Msg("Provider registry initialized")
 
-	return providerRegistry, clients, nil
+	return providerRegistry, nil
 }
 
 // initComponentManagerRegistry creates and initializes the component manager registry.
@@ -246,7 +232,7 @@ func doServe() {
 	}
 
 	// Initialize provider registry (creates API clients based on config)
-	providerRegistry, clients, err := initProviderRegistry(cmConfig)
+	providerRegistry, err := initProviderRegistry(cmConfig)
 	if err != nil {
 		log.Fatal().Msgf("failed to initialize provider registry: %v", err)
 	}
@@ -300,11 +286,9 @@ func doServe() {
 	service, err := svc.New(
 		ctx,
 		svc.Config{
-			Port:          port,
-			DBConf:        dbConf,
-			ExecutorConf:  &temporalManagerConf,
-			CarbideClient: clients.carbide,
-			PSMClient:     clients.psm,
+			Port:         port,
+			DBConf:       dbConf,
+			ExecutorConf: &temporalManagerConf,
 			CertConfig: pkgcerts.Config{
 				CACert:  globalCACert,
 				TLSCert: globalTLSCert,
