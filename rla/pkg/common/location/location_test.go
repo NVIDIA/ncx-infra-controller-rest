@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestLocation(t *testing.T) {
@@ -46,133 +47,75 @@ func TestLocation(t *testing.T) {
 	assert.Equal(t, "", unknownLoc.Position)
 }
 
-func TestLocation_IsValid(t *testing.T) {
-	testCases := map[string]struct {
-		location    *Location
-		expected    bool
-		description string
+func TestLocation_ToMap(t *testing.T) {
+	tests := map[string]struct {
+		loc      *Location
+		expected map[string]any
 	}{
-		"valid location with all fields populated": {
-			location: &Location{
-				Region:     "NA",
-				DataCenter: "DC1",
-				Room:       "Room1",
-				Position:   "Rack-A1",
-			},
-			expected:    true,
-			description: "should return true when all fields are non-empty",
-		},
 		"nil location": {
-			location:    nil,
-			expected:    false,
-			description: "should return false for nil location",
-		},
-		"empty region": {
-			location: &Location{
-				Region:     "",
-				DataCenter: "DC1",
-				Room:       "Room1",
-				Position:   "Rack-A1",
-			},
-			expected:    false,
-			description: "should return false when region is empty",
-		},
-		"empty data center": {
-			location: &Location{
-				Region:     "NA",
-				DataCenter: "",
-				Room:       "Room1",
-				Position:   "Rack-A1",
-			},
-			expected:    false,
-			description: "should return false when data center is empty",
-		},
-		"empty room": {
-			location: &Location{
-				Region:     "NA",
-				DataCenter: "DC1",
-				Room:       "",
-				Position:   "Rack-A1",
-			},
-			expected:    false,
-			description: "should return false when room is empty",
-		},
-		"empty position": {
-			location: &Location{
-				Region:     "NA",
-				DataCenter: "DC1",
-				Room:       "Room1",
-				Position:   "",
-			},
-			expected:    false,
-			description: "should return false when position is empty",
+			loc:      nil,
+			expected: nil,
 		},
 		"all fields empty": {
-			location: &Location{
-				Region:     "",
-				DataCenter: "",
-				Room:       "",
-				Position:   "",
-			},
-			expected:    false,
-			description: "should return false when all fields are empty",
+			loc:      &Location{},
+			expected: nil,
 		},
-		"multiple empty fields": {
-			location: &Location{
+		"all fields populated": {
+			loc: &Location{
 				Region:     "NA",
-				DataCenter: "",
-				Room:       "",
-				Position:   "Rack-A1",
-			},
-			expected:    false,
-			description: "should return false when multiple fields are empty",
-		},
-		"whitespace-only fields": {
-			location: &Location{
-				Region:     " ",
 				DataCenter: "DC1",
 				Room:       "Room1",
 				Position:   "Rack-A1",
 			},
-			expected:    true,
-			description: "should return true for whitespace-only fields (whitespace is considered non-empty)",
-		},
-		"single character fields": {
-			location: &Location{
-				Region:     "A",
-				DataCenter: "1",
-				Room:       "B",
-				Position:   "2",
+			expected: map[string]any{
+				"region":      "NA",
+				"data_center": "DC1",
+				"room":        "Room1",
+				"position":    "Rack-A1",
 			},
-			expected:    true,
-			description: "should return true for single character fields",
 		},
-		"special characters in fields": {
-			location: &Location{
-				Region:     "US-WEST",
-				DataCenter: "DC_1",
-				Room:       "Room-2A",
-				Position:   "Rack#001",
+		"only region": {
+			loc: &Location{Region: "EU"},
+			expected: map[string]any{
+				"region": "EU",
 			},
-			expected:    true,
-			description: "should return true for fields with special characters",
 		},
-		"unicode characters in fields": {
-			location: &Location{
-				Region:     "亚洲",
-				DataCenter: "数据中心1",
-				Room:       "机房1",
-				Position:   "位置A",
+		"region and room": {
+			loc: &Location{Region: "NA", Room: "Room1"},
+			expected: map[string]any{
+				"region": "NA",
+				"room":   "Room1",
 			},
-			expected:    true,
-			description: "should return true for fields with unicode characters",
+		},
+		"only position": {
+			loc: &Location{Position: "Rack-B2"},
+			expected: map[string]any{
+				"position": "Rack-B2",
+			},
+		},
+		"three of four fields": {
+			loc: &Location{
+				Region:     "APAC",
+				DataCenter: "DC3",
+				Room:       "Server-Room-7",
+			},
+			expected: map[string]any{
+				"region":      "APAC",
+				"data_center": "DC3",
+				"room":        "Server-Room-7",
+			},
 		},
 	}
 
-	for name, tc := range testCases {
+	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			result := tc.location.IsValid()
-			assert.Equal(t, tc.expected, result, tc.description)
+			result := tc.loc.ToMap()
+			if tc.expected == nil {
+				assert.Nil(t, result)
+			} else {
+				require.NotNil(t, result)
+				assert.Equal(t, tc.expected, result)
+			}
 		})
 	}
 }

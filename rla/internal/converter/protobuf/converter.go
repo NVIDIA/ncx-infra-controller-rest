@@ -240,7 +240,7 @@ func RackFrom(r *pb.Rack) *rack.Rack {
 // PaginationFrom converts a protobuf Pagination to an internal Pagination.
 func PaginationFrom(pg *pb.Pagination) *dbquery.Pagination {
 	if pg == nil {
-		return nil
+		return dbquery.DefaultPagination()
 	}
 
 	return &dbquery.Pagination{
