@@ -1,0 +1,71 @@
+package standard
+
+import (
+	"context"
+	"io"
+	"net/http"
+	"strings"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func TestRewriteAPINamePath(t *testing.T) {
+	t.Run("default api name leaves path unchanged", func(t *testing.T) {
+		path := "/v2/org/test-org/carbide/metadata"
+		assert.Equal(t, path, rewriteAPINamePath(path, ""))
+		assert.Equal(t, path, rewriteAPINamePath(path, "carbide"))
+	})
+
+	t.Run("custom api name rewrites org scoped paths", func(t *testing.T) {
+		assert.Equal(
+			t,
+			"/v2/org/test-org/forge/metadata",
+			rewriteAPINamePath("/v2/org/test-org/carbide/metadata", "forge"),
+		)
+	})
+
+	t.Run("non matching paths are left unchanged", func(t *testing.T) {
+		path := "/healthz"
+		assert.Equal(t, path, rewriteAPINamePath(path, "forge"))
+	})
+}
+
+func TestSetAPINameRewritesGeneratedRequests(t *testing.T) {
+	transport := &captureTransport{}
+
+	cfg := NewConfiguration()
+	cfg.Servers = ServerConfigurations{
+		{URL: "https://example.com", Description: "test"},
+	}
+	cfg.HTTPClient = &http.Client{Transport: transport}
+	cfg.SetAPIName("forge")
+
+	client := NewAPIClient(cfg)
+	_, _, err := client.MetadataAPI.GetMetadata(context.Background(), "test-org").Execute()
+	require.NoError(t, err)
+
+	require.NotNil(t, transport.req)
+	assert.Equal(t, "/v2/org/test-org/forge/metadata", transport.req.URL.Path)
+	assert.Equal(t, "forge", cfg.GetAPIName())
+}
+
+type captureTransport struct {
+	req *http.Request
+}
+
+func (t *captureTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	reqCopy := req.Clone(req.Context())
+	urlCopy := *req.URL
+	reqCopy.URL = &urlCopy
+	t.req = reqCopy
+
+	return &http.Response{
+		StatusCode: http.StatusOK,
+		Header: http.Header{
+			"Content-Type": []string{"application/json"},
+		},
+		Body: io.NopCloser(strings.NewReader(`{"version":"0.2.86"}`)),
+	}, nil
+}
