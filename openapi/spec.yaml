@@ -16,7 +16,7 @@
 openapi: 3.1.0
 info:
   title: NCX Infra Controller REST API
-  version: 1.1.0
+  version: 1.2.0
   summary: NCX Infra Controller REST API is the centralized RESTful gateway to access NCX Infra Controller service
   description: 'NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.'
   license:
@@ -58,7 +58,7 @@ tags:
   - name: VPC
     description: VPC operations
   - name: VPC Peering
-    description: |- 
+    description: |-
       VPC Peerings are network connections between two VPCs on the same site.
   - name: VPC Prefix
     description: |-
@@ -2579,7 +2579,7 @@ paths:
           $ref: '#/components/responses/ForbiddenError'
       operationId: get-all-vpc-peering
       description: |-
-        Get all VPC peerings. 
+        Get all VPC peerings.
         Tenant Admin can get all peerings where the tenant owns at least one VPC.
         Provider Admin can get all peerings in a site.
         User must have `FORGE_TENANT_ADMIN` or `FORGE_PROVIDER_ADMIN` role.
