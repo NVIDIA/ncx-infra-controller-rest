@@ -99,7 +99,8 @@ func RunREPL(s *Session) error {
 	if s.ConfigPath != "" {
 		fmt.Printf("Config: %s\n", Dim(s.ConfigPath))
 	}
-	fmt.Printf("Start typing a command. %s to quit.\n\n", Bold("Ctrl+D"))
+	fmt.Printf("Type a command or %s. %s clears line, %s cancels selections, %s quits.\n\n",
+		Bold("help"), Bold("Ctrl+C"), Bold("Esc"), Bold("Ctrl+D"))
 
 	for {
 		line, err := readLineWithSuggestions(s, cmdNames)

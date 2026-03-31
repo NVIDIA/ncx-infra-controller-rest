@@ -58,7 +58,7 @@ func AllCommands() []Command {
 
 		{Name: "instance list", Description: "List all instances", Run: cmdInstanceList},
 		{Name: "instance get", Description: "Get instance details", Run: cmdInstanceGet},
-		{Name: "instance create", Description: "Create an instance", Run: cmdInstanceCreate},
+		{Name: "instance create", Description: "Create an instance on a machine", Run: cmdInstanceCreate},
 		{Name: "instance delete", Description: "Delete an instance", Run: cmdInstanceDelete},
 
 		{Name: "machine list", Description: "List machines", Run: cmdMachineList},
@@ -770,11 +770,11 @@ func cmdInstanceList(s *Session, _ []string) error {
 }
 
 func cmdMachineList(s *Session, _ []string) error {
-	LogCmd(s, "machine", "list")
 	items, err := fetchMachinesWithSiteFallback(s, "Machine listing requires a site filter. Select a site.")
 	if err != nil {
 		return err
 	}
+	LogCmd(s, "machine", "list")
 
 	// Warm VPC cache so names resolve, then build machine→vpc map via instances.
 	_, _ = s.Resolver.Fetch(context.Background(), "vpc")
@@ -2173,6 +2173,12 @@ func cmdHelp(_ *Session, _ []string) error {
 	fmt.Fprintln(tw, "scope clear\tClear all scope filters")
 	fmt.Fprintln(tw, "exit\tExit interactive mode")
 	tw.Flush()
+	fmt.Printf("\n%s\n", Bold("KEYBINDINGS"))
+	fmt.Println("  Ctrl+C    Clear current line")
+	fmt.Println("  Ctrl+D    Quit interactive mode")
+	fmt.Println("  Esc       Cancel current selection")
+	fmt.Println("  Tab       Accept suggestion")
+	fmt.Println("  Up/Down   Navigate suggestions or history")
 	fmt.Println()
 	return nil
 }
