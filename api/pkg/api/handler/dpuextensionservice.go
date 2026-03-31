@@ -24,7 +24,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
@@ -252,6 +251,10 @@ func (cdesh CreateDpuExtensionServiceHandler) Handle(c echo.Context) error {
 		}
 	}
 
+	if apiRequest.Observability != nil {
+		createDpuExtensionServiceRequest.Observability = apiRequest.Observability.ToProto()
+	}
+
 	logger.Info().Msg("triggering DPU Extension Service create workflow on Site")
 
 	// Create workflow options
@@ -313,19 +316,8 @@ func (cdesh CreateDpuExtensionServiceHandler) Handle(c echo.Context) error {
 	if controllerDpuExtensionService != nil && controllerDpuExtensionService.LatestVersionInfo != nil {
 		version := controllerDpuExtensionService.LatestVersionInfo.Version
 		activeVersions := controllerDpuExtensionService.ActiveVersions
-
-		versionInfo := &cdbm.DpuExtensionServiceVersionInfo{
-			Version:        controllerDpuExtensionService.LatestVersionInfo.Version,
-			Data:           controllerDpuExtensionService.LatestVersionInfo.Data,
-			HasCredentials: controllerDpuExtensionService.LatestVersionInfo.HasCredential,
-		}
-
-		created, err := time.Parse(model.DpuExtensionServiceTimeFormat, controllerDpuExtensionService.LatestVersionInfo.Created)
-		if err != nil {
-			created = dpuExtensionService.Created
-		}
-
-		versionInfo.Created = created
+		versionInfo := &cdbm.DpuExtensionServiceVersionInfo{}
+		versionInfo.FromProto(controllerDpuExtensionService.LatestVersionInfo, dpuExtensionService.Created)
 		status := cdbm.DpuExtensionServiceStatusReady
 
 		updatedDpuExtensionService, err = desDAO.Update(ctx, nil, cdbm.DpuExtensionServiceUpdateInput{
@@ -864,6 +856,10 @@ func (udesh UpdateDpuExtensionServiceHandler) Handle(c echo.Context) error {
 		}
 	}
 
+	if apiRequest.Observability != nil {
+		updateDpuExtensionServiceRequest.Observability = apiRequest.Observability.ToProto()
+	}
+
 	logger.Info().Msg("triggering DPU Extension Service update workflow on Site")
 
 	workflowOptions := tclient.StartWorkflowOptions{
@@ -924,17 +920,8 @@ func (udesh UpdateDpuExtensionServiceHandler) Handle(c echo.Context) error {
 	if controllerDpuExtensionService != nil && controllerDpuExtensionService.LatestVersionInfo != nil {
 		version := controllerDpuExtensionService.LatestVersionInfo.Version
 		activeVersions := controllerDpuExtensionService.ActiveVersions
-		versionInfo := &cdbm.DpuExtensionServiceVersionInfo{
-			Version:        controllerDpuExtensionService.LatestVersionInfo.Version,
-			Data:           controllerDpuExtensionService.LatestVersionInfo.Data,
-			HasCredentials: controllerDpuExtensionService.LatestVersionInfo.HasCredential,
-		}
-
-		created, err := time.Parse(model.DpuExtensionServiceTimeFormat, controllerDpuExtensionService.LatestVersionInfo.Created)
-		if err != nil {
-			created = updatedDpuExtensionService.Updated
-		}
-		versionInfo.Created = created
+		versionInfo := &cdbm.DpuExtensionServiceVersionInfo{}
+		versionInfo.FromProto(controllerDpuExtensionService.LatestVersionInfo, updatedDpuExtensionService.Updated)
 		status := cdbm.DpuExtensionServiceStatusReady
 
 		reUpdatedDpuExtensionService, err = desDAO.Update(ctx, nil, cdbm.DpuExtensionServiceUpdateInput{
@@ -1290,19 +1277,8 @@ func (gdesvh GetDpuExtensionServiceVersionHandler) Handle(c echo.Context) error 
 
 	versionInfo := versionInfos.VersionInfos[0]
 
-	created, err := time.Parse(model.DpuExtensionServiceTimeFormat, versionInfo.Created)
-	if err != nil {
-		// NOTE: This is not accurate but without a timestamp, this is the best approximation
-		created = dpuExtensionService.Updated
-	}
-
-	// Create response
-	apiVersionInfo := &model.APIDpuExtensionServiceVersionInfo{
-		Version:        versionInfo.Version,
-		Data:           versionInfo.Data,
-		HasCredentials: versionInfo.HasCredential,
-		Created:        created,
-	}
+	apiVersionInfo := &model.APIDpuExtensionServiceVersionInfo{}
+	apiVersionInfo.FromProto(versionInfo, dpuExtensionService.Updated)
 
 	logger.Info().Msg("finishing API handler")
 
@@ -1589,18 +1565,9 @@ func (ddesvh DeleteDpuExtensionServiceVersionHandler) Handle(c echo.Context) err
 		controllerVersionInfo := controllerVersionInfos.VersionInfos[0]
 
 		if controllerVersionInfo != nil {
-			created, err := time.Parse(model.DpuExtensionServiceTimeFormat, controllerVersionInfo.Created)
-			if err != nil {
-				// NOTE: This is not accurate but without a timestamp, this is the best approximation
-				created = dpuExtensionService.Updated
-			}
-
-			versionInfo := &cdbm.DpuExtensionServiceVersionInfo{
-				Version:        remainingVersions[0],
-				Data:           controllerVersionInfo.Data,
-				HasCredentials: controllerVersionInfo.HasCredential,
-				Created:        created,
-			}
+			versionInfo := &cdbm.DpuExtensionServiceVersionInfo{}
+			versionInfo.FromProto(controllerVersionInfo, dpuExtensionService.Updated)
+			versionInfo.Version = remainingVersions[0]
 
 			_, err = desDAO.Update(ctx, nil, cdbm.DpuExtensionServiceUpdateInput{
 				DpuExtensionServiceID: dpuExtensionService.ID,
