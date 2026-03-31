@@ -345,6 +345,62 @@ func TestInvalidateFiltered_ListMatchesAppendScopeFlags(t *testing.T) {
 	}
 }
 
+func TestReadyMachineItemsForSite_FiltersByStatusAndSite(t *testing.T) {
+	machines := []NamedItem{
+		{Name: "m1", ID: "1", Status: "Ready", Extra: map[string]string{"siteId": "site-a"}},
+		{Name: "m2", ID: "2", Status: "ready", Extra: map[string]string{"siteId": "site-a"}},
+		{Name: "m3", ID: "3", Status: "NotReady", Extra: map[string]string{"siteId": "site-a"}},
+		{Name: "m4", ID: "4", Status: "Ready", Extra: map[string]string{"siteId": "site-b"}},
+	}
+
+	got := readyMachineItemsForSite(machines, "site-a")
+	if len(got) != 2 {
+		t.Fatalf("got %d ready machines, want 2", len(got))
+	}
+	if got[0].ID != "1" || got[1].ID != "2" {
+		t.Fatalf("unexpected machine IDs: got [%s, %s], want [1, 2]", got[0].ID, got[1].ID)
+	}
+}
+
+func TestSetSiteScopeFromID_UpdatesScopeAndInvalidatesFiltered(t *testing.T) {
+	c := NewCache()
+	c.Set("site", []NamedItem{{Name: "Site Two", ID: "site-2"}})
+	c.Set("machine", []NamedItem{{Name: "m1", ID: "1"}})
+	s := &Session{
+		Scope:    Scope{SiteID: "site-1", SiteName: "Site One"},
+		Cache:    c,
+		Resolver: NewResolver(c),
+	}
+
+	setSiteScopeFromID(s, "site-2")
+
+	if s.Scope.SiteID != "site-2" {
+		t.Fatalf("scope site id not updated, got %q", s.Scope.SiteID)
+	}
+	if s.Scope.SiteName != "Site Two" {
+		t.Fatalf("scope site name not updated, got %q", s.Scope.SiteName)
+	}
+	if got := c.Get("machine"); got != nil {
+		t.Fatalf("expected filtered cache to be invalidated, machine cache still present: %+v", got)
+	}
+}
+
+func TestSetSiteScopeFromID_NoChangeKeepsFilteredCache(t *testing.T) {
+	c := NewCache()
+	c.Set("machine", []NamedItem{{Name: "m1", ID: "1"}})
+	s := &Session{
+		Scope:    Scope{SiteID: "site-1", SiteName: "Site One"},
+		Cache:    c,
+		Resolver: NewResolver(c),
+	}
+
+	setSiteScopeFromID(s, "site-1")
+
+	if got := c.Get("machine"); got == nil {
+		t.Fatal("expected machine cache to remain when scope site does not change")
+	}
+}
+
 // --- Helpers ---
 
 func captureStdout(f func()) string {

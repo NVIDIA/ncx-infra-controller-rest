@@ -70,7 +70,7 @@ func Select(label string, items []SelectItem) (*SelectItem, error) {
 		}
 
 		switch {
-		case key.Char == KeyCtrlC || key.Char == KeyCtrlD:
+		case key.Char == KeyCtrlC || key.Char == KeyCtrlD || key.Char == KeyEscape:
 			MoveUp(prevRenderedLines)
 			MoveToColumn(1)
 			ClearDown()

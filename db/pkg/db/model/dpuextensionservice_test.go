@@ -21,6 +21,7 @@ import (
 	"context"
 	"database/sql"
 	"testing"
+	"time"
 
 	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/paginator"
@@ -28,7 +29,81 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	otrace "go.opentelemetry.io/otel/trace"
+
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 )
+
+func TestDpuExtensionServiceVersionInfo_FromProto(t *testing.T) {
+	fallbackTime := db.GetCurTime()
+	obsName := "service-metrics"
+
+	tests := []struct {
+		desc                string
+		protoVersionInfo    *cwssaws.DpuExtensionServiceVersionInfo
+		expectedCreatedTime time.Time
+	}{
+		{
+			desc: "parses created timestamp and observability from proto",
+			protoVersionInfo: &cwssaws.DpuExtensionServiceVersionInfo{
+				Version:       "V1-T1761856992374052",
+				Data:          "apiVersion: v1\nkind: Pod",
+				HasCredential: true,
+				Created:       "2026-03-31 12:34:56.123456 UTC",
+				Observability: &cwssaws.DpuExtensionServiceObservability{
+					Configs: []*cwssaws.DpuExtensionServiceObservabilityConfig{
+						{
+							Name: &obsName,
+							Config: &cwssaws.DpuExtensionServiceObservabilityConfig_Prometheus{
+								Prometheus: &cwssaws.DpuExtensionServiceObservabilityConfigPrometheus{
+									ScrapeIntervalSeconds: 30,
+									Endpoint:              "service:9090",
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedCreatedTime: time.Date(2026, 3, 31, 12, 34, 56, 123456000, time.UTC),
+		},
+		{
+			desc: "falls back to provided time when created timestamp is invalid",
+			protoVersionInfo: &cwssaws.DpuExtensionServiceVersionInfo{
+				Version:       "V2-T1761856992374053",
+				Data:          "apiVersion: v1\nkind: Pod",
+				HasCredential: false,
+				Created:       "not-a-time",
+			},
+			expectedCreatedTime: fallbackTime,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.desc, func(t *testing.T) {
+			got := &DpuExtensionServiceVersionInfo{}
+
+			got.FromProto(tc.protoVersionInfo, fallbackTime)
+
+			assert.Equal(t, tc.protoVersionInfo.Version, got.Version)
+			assert.Equal(t, tc.protoVersionInfo.Data, got.Data)
+			assert.Equal(t, tc.protoVersionInfo.HasCredential, got.HasCredentials)
+			assert.Equal(t, tc.expectedCreatedTime, got.Created)
+
+			if tc.protoVersionInfo.Observability == nil {
+				assert.Nil(t, got.Observability)
+				return
+			}
+
+			if assert.NotNil(t, got.Observability) &&
+				assert.Len(t, tc.protoVersionInfo.Observability.Configs, 1) &&
+				assert.Len(t, got.Observability.Configs, 1) {
+				assert.Equal(t,
+					tc.protoVersionInfo.Observability.Configs[0].GetPrometheus().GetEndpoint(),
+					got.Observability.Configs[0].GetPrometheus().GetEndpoint(),
+				)
+			}
+		})
+	}
+}
 
 // reset the tables needed for DpuExtensionService tests
 func testDpuExtensionServiceSetupSchema(t *testing.T, dbSession *db.Session) {
@@ -67,11 +142,27 @@ func TestDpuExtensionServiceSQLDAO_Create(t *testing.T) {
 	_, _, ctx = testCommonTraceProviderSetup(t, ctx)
 
 	version := "V1-T1761856992374052"
+	obsName := "service-metrics"
 	versionInfo := &DpuExtensionServiceVersionInfo{
 		Version:        version,
 		Data:           "test-data",
 		HasCredentials: true,
 		Created:        db.GetCurTime(),
+		Observability: &DpuExtensionServiceObservability{
+			DpuExtensionServiceObservability: &cwssaws.DpuExtensionServiceObservability{
+				Configs: []*cwssaws.DpuExtensionServiceObservabilityConfig{
+					{
+						Name: &obsName,
+						Config: &cwssaws.DpuExtensionServiceObservabilityConfig_Prometheus{
+							Prometheus: &cwssaws.DpuExtensionServiceObservabilityConfigPrometheus{
+								ScrapeIntervalSeconds: 30,
+								Endpoint:              "http://service:9090/metrics",
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 	description := "Test DPU extension service"
 
@@ -169,6 +260,9 @@ func TestDpuExtensionServiceSQLDAO_Create(t *testing.T) {
 					}
 					if input.ActiveVersions != nil {
 						assert.Equal(t, input.ActiveVersions, des.ActiveVersions)
+					}
+					if input.VersionInfo != nil && input.VersionInfo.Observability != nil {
+						assert.Equal(t, input.VersionInfo.Observability.GetConfigs()[0].GetPrometheus().Endpoint, des.VersionInfo.Observability.GetConfigs()[0].GetPrometheus().Endpoint)
 					}
 				}
 
@@ -560,11 +654,26 @@ func TestDpuExtensionServiceSQLDAO_Update(t *testing.T) {
 	_, _, ctx = testCommonTraceProviderSetup(t, ctx)
 
 	newVersion := "V1-T1761856992374053"
+	newObsName := "updated-metrics"
 	newVersionInfo := &DpuExtensionServiceVersionInfo{
 		Version:        newVersion,
 		Data:           "updated-data",
 		HasCredentials: true,
 		Created:        db.GetCurTime(),
+		Observability: &DpuExtensionServiceObservability{
+			DpuExtensionServiceObservability: &cwssaws.DpuExtensionServiceObservability{
+				Configs: []*cwssaws.DpuExtensionServiceObservabilityConfig{
+					{
+						Name: &newObsName,
+						Config: &cwssaws.DpuExtensionServiceObservabilityConfig_Logging{
+							Logging: &cwssaws.DpuExtensionServiceObservabilityConfigLogging{
+								Path: "/var/log/service.log",
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 	updatedDescription := "Updated description"
 
@@ -672,6 +781,7 @@ func TestDpuExtensionServiceSQLDAO_Update(t *testing.T) {
 				if tc.input.VersionInfo != nil {
 					assert.Equal(t, tc.input.VersionInfo.Version, got.VersionInfo.Version)
 					assert.Equal(t, tc.input.VersionInfo.Data, got.VersionInfo.Data)
+					assert.Equal(t, tc.input.VersionInfo.Observability, got.VersionInfo.Observability)
 				}
 				if tc.input.ActiveVersions != nil {
 					assert.Equal(t, tc.input.ActiveVersions, got.ActiveVersions)

@@ -66,7 +66,8 @@ func ResolveServer(c pkgcerts.Config) (*tls.Config, string, error) {
 func TLSConfig() (*tls.Config, string, error) {
 	return tlsConfigFromDir(
 		func(c pkgcerts.Config) (*tls.Config, error) {
-			return c.TLSConfig()
+			// Pass empty server name: gRPC derives it from the dial URL's hostname.
+			return c.TLSConfig("")
 		},
 	)
 }

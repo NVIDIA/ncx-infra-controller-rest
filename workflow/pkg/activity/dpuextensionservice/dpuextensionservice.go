@@ -27,6 +27,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"go.temporal.io/sdk/temporal"
+	"google.golang.org/protobuf/proto"
 
 	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
@@ -148,6 +149,11 @@ func (mde ManageDpuExtensionService) UpdateDpuExtensionServicesInDB(ctx context.
 			latestVersion := controllerDpuExtensionService.LatestVersionInfo.Version
 			data := controllerDpuExtensionService.LatestVersionInfo.Data
 			hasCredentials := controllerDpuExtensionService.LatestVersionInfo.HasCredential
+			controllerObservability := controllerDpuExtensionService.GetLatestVersionInfo().Observability
+			var dbObservability *cwssaws.DpuExtensionServiceObservability
+			if dpuExtensionService.VersionInfo != nil && dpuExtensionService.VersionInfo.Observability != nil {
+				dbObservability = dpuExtensionService.VersionInfo.Observability.DpuExtensionServiceObservability
+			}
 
 			created, err := time.Parse(DpuExtensionServiceTimeFormat, controllerDpuExtensionService.LatestVersionInfo.Created)
 			if err != nil {
@@ -164,15 +170,26 @@ func (mde ManageDpuExtensionService) UpdateDpuExtensionServicesInDB(ctx context.
 				dpuExtensionService.VersionInfo.Version != latestVersion ||
 				dpuExtensionService.VersionInfo.Data != data ||
 				dpuExtensionService.VersionInfo.HasCredentials != hasCredentials ||
-				dpuExtensionService.VersionInfo.Created != created {
+				dpuExtensionService.VersionInfo.Created != created ||
+				!proto.Equal(dbObservability, controllerObservability) {
+
+				var observability *cdbm.DpuExtensionServiceObservability
+				// If response from -core is non-nil, wrap it so we can store it.
+				if controllerObservability != nil {
+					observability = &cdbm.DpuExtensionServiceObservability{
+						DpuExtensionServiceObservability: controllerObservability,
+					}
+				}
 
 				versionInfo = &cdbm.DpuExtensionServiceVersionInfo{
 					Version:        latestVersion,
 					Data:           data,
 					HasCredentials: hasCredentials,
 					Created:        created,
+					Observability:  observability,
 				}
 			}
+
 		}
 
 		var activeVersions []string
