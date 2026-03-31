@@ -32,10 +32,11 @@ type LoginFunc func() (string, error)
 
 // Scope holds the current filter context for the interactive session.
 type Scope struct {
-	SiteID   string
-	SiteName string
-	VpcID    string
-	VpcName  string
+	SiteID       string
+	SiteName     string
+	VpcID        string
+	VpcName      string
+	LabelFilters map[string]string
 }
 
 // Session holds the shared state for an interactive TUI session.
@@ -103,6 +104,7 @@ func (s *Session) registerFetchers() {
 	s.Resolver.RegisterFetcher("expected-machine", s.fetchExpectedMachines)
 	s.Resolver.RegisterFetcher("infiniband-partition", s.fetchInfiniBandPartitions)
 	s.Resolver.RegisterFetcher("nvlink-logical-partition", s.fetchNVLinkLogicalPartitions)
+	s.Resolver.RegisterFetcher("instance-type", s.fetchInstanceTypes)
 	s.Resolver.RegisterFetcher("dpu-extension-service", s.fetchDPUExtensionServices)
 }
 
@@ -137,6 +139,21 @@ func (s *Session) fetchAll(path string, extraQuery map[string]string) ([]map[str
 		}
 	}
 	return all, nil
+}
+
+// extractLabels pulls a map[string]string from the "labels" field of a raw JSON object.
+func extractLabels(m map[string]interface{}) map[string]string {
+	raw, ok := m["labels"].(map[string]interface{})
+	if !ok || len(raw) == 0 {
+		return nil
+	}
+	labels := make(map[string]string, len(raw))
+	for k, v := range raw {
+		if s, ok := v.(string); ok {
+			labels[k] = s
+		}
+	}
+	return labels
 }
 
 // str extracts a string field from a raw JSON object.
@@ -239,7 +256,8 @@ func (s *Session) fetchVPCs(_ context.Context) ([]NamedItem, error) {
 	for i, m := range items {
 		result[i] = NamedItem{
 			Name: str(m, "name"), ID: str(m, "id"), Status: str(m, "status"),
-			Extra: map[string]string{"siteId": str(m, "siteId")}, Raw: m,
+			Labels: extractLabels(m),
+			Extra:  map[string]string{"siteId": str(m, "siteId")}, Raw: m,
 		}
 	}
 	return result, nil
@@ -283,7 +301,8 @@ func (s *Session) fetchInstances(_ context.Context) ([]NamedItem, error) {
 	for i, m := range items {
 		result[i] = NamedItem{
 			Name: str(m, "name"), ID: str(m, "id"), Status: str(m, "status"),
-			Extra: map[string]string{"vpcId": str(m, "vpcId"), "siteId": str(m, "siteId")}, Raw: m,
+			Labels: extractLabels(m),
+			Extra:  map[string]string{"vpcId": str(m, "vpcId"), "siteId": str(m, "siteId")}, Raw: m,
 		}
 	}
 	return result, nil
@@ -326,7 +345,8 @@ func (s *Session) fetchMachines(_ context.Context) ([]NamedItem, error) {
 		name := machineDisplayName(m)
 		result[i] = NamedItem{
 			Name: name, ID: str(m, "id"), Status: str(m, "status"),
-			Extra: map[string]string{"siteId": str(m, "siteId")}, Raw: m,
+			Labels: extractLabels(m),
+			Extra:  map[string]string{"siteId": str(m, "siteId")}, Raw: m,
 		}
 	}
 	return result, nil
@@ -430,7 +450,10 @@ func (s *Session) fetchNSGs(_ context.Context) ([]NamedItem, error) {
 	}
 	result := make([]NamedItem, len(items))
 	for i, m := range items {
-		result[i] = NamedItem{Name: str(m, "name"), ID: str(m, "id"), Status: str(m, "status"), Raw: m}
+		result[i] = NamedItem{
+			Name: str(m, "name"), ID: str(m, "id"), Status: str(m, "status"),
+			Labels: extractLabels(m), Raw: m,
+		}
 	}
 	return result, nil
 }
@@ -588,6 +611,7 @@ func (s *Session) fetchExpectedMachines(_ context.Context) ([]NamedItem, error) 
 		}
 		result[i] = NamedItem{
 			Name: name, ID: str(m, "id"),
+			Labels: extractLabels(m),
 			Extra: map[string]string{
 				"siteId":              str(m, "siteId"),
 				"bmcMacAddress":       str(m, "bmcMacAddress"),
@@ -612,7 +636,8 @@ func (s *Session) fetchInfiniBandPartitions(_ context.Context) ([]NamedItem, err
 	for i, m := range items {
 		result[i] = NamedItem{
 			Name: str(m, "name"), ID: str(m, "id"), Status: str(m, "status"),
-			Extra: map[string]string{"siteId": str(m, "siteId")}, Raw: m,
+			Labels: extractLabels(m),
+			Extra:  map[string]string{"siteId": str(m, "siteId")}, Raw: m,
 		}
 	}
 	return result, nil
@@ -632,6 +657,26 @@ func (s *Session) fetchNVLinkLogicalPartitions(_ context.Context) ([]NamedItem, 
 		result[i] = NamedItem{
 			Name: str(m, "name"), ID: str(m, "id"), Status: str(m, "status"),
 			Extra: map[string]string{"siteId": str(m, "siteId")}, Raw: m,
+		}
+	}
+	return result, nil
+}
+
+func (s *Session) fetchInstanceTypes(_ context.Context) ([]NamedItem, error) {
+	q := map[string]string{}
+	if s.Scope.SiteID != "" {
+		q["siteId"] = s.Scope.SiteID
+	}
+	items, err := s.fetchAll("/v2/org/{org}/carbide/instance/type", q)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]NamedItem, len(items))
+	for i, m := range items {
+		result[i] = NamedItem{
+			Name: str(m, "name"), ID: str(m, "id"), Status: str(m, "status"),
+			Labels: extractLabels(m),
+			Extra:  map[string]string{"siteId": str(m, "siteId")}, Raw: m,
 		}
 	}
 	return result, nil
