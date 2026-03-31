@@ -289,6 +289,7 @@ func doServe() {
 			Port:         port,
 			DBConf:       dbConf,
 			ExecutorConf: &temporalManagerConf,
+			CMConfig:     cmConfig,
 			CertConfig: pkgcerts.Config{
 				CACert:  globalCACert,
 				TLSCert: globalTLSCert,
