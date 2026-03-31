@@ -306,6 +306,298 @@ func TestManageOsImage_DeleteOsImageOnSite(t *testing.T) {
 	}
 }
 
+func TestManageOperatingSystem_CreateOperatingSystemOnSite(t *testing.T) {
+	mockCarbide := cClient.NewMockCarbideClient()
+	carbideAtomicClient := cClient.NewCarbideAtomicClient(&cClient.CarbideClientConfig{})
+	carbideAtomicClient.SwapClient(mockCarbide)
+
+	validID := &cwssaws.UUID{Value: uuid.NewString()}
+
+	type fields struct {
+		CarbideAtomicClient *cClient.CarbideAtomicClient
+	}
+	type args struct {
+		ctx     context.Context
+		request *cwssaws.CreateOperatingSystemRequest
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			name:   "success - creates OS in carbide-core",
+			fields: fields{CarbideAtomicClient: carbideAtomicClient},
+			args: args{
+				ctx: context.Background(),
+				request: &cwssaws.CreateOperatingSystemRequest{
+					Id:                   validID,
+					Name:                 "test-os",
+					TenantOrganizationId: "TestOrg",
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name:   "fails - nil request",
+			fields: fields{CarbideAtomicClient: carbideAtomicClient},
+			args: args{
+				ctx:     context.Background(),
+				request: nil,
+			},
+			wantErr: true,
+		},
+		{
+			name:   "fails - missing Name",
+			fields: fields{CarbideAtomicClient: carbideAtomicClient},
+			args: args{
+				ctx: context.Background(),
+				request: &cwssaws.CreateOperatingSystemRequest{
+					Id:                   validID,
+					TenantOrganizationId: "TestOrg",
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mos := NewManageOperatingSystem(tt.fields.CarbideAtomicClient)
+			_, err := mos.CreateOperatingSystemOnSite(tt.args.ctx, tt.args.request)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestManageOperatingSystem_UpdateOperatingSystemOnSite(t *testing.T) {
+	mockCarbide := cClient.NewMockCarbideClient()
+	carbideAtomicClient := cClient.NewCarbideAtomicClient(&cClient.CarbideClientConfig{})
+	carbideAtomicClient.SwapClient(mockCarbide)
+
+	validID := &cwssaws.UUID{Value: uuid.NewString()}
+
+	type fields struct {
+		CarbideAtomicClient *cClient.CarbideAtomicClient
+	}
+	type args struct {
+		ctx     context.Context
+		request *cwssaws.UpdateOperatingSystemRequest
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			name:   "success - updates OS in carbide-core",
+			fields: fields{CarbideAtomicClient: carbideAtomicClient},
+			args: args{
+				ctx: context.Background(),
+				request: &cwssaws.UpdateOperatingSystemRequest{
+					Id: validID,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name:   "fails - nil request",
+			fields: fields{CarbideAtomicClient: carbideAtomicClient},
+			args: args{
+				ctx:     context.Background(),
+				request: nil,
+			},
+			wantErr: true,
+		},
+		{
+			name:   "fails - missing ID",
+			fields: fields{CarbideAtomicClient: carbideAtomicClient},
+			args: args{
+				ctx:     context.Background(),
+				request: &cwssaws.UpdateOperatingSystemRequest{},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mos := NewManageOperatingSystem(tt.fields.CarbideAtomicClient)
+			err := mos.UpdateOperatingSystemOnSite(tt.args.ctx, tt.args.request)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestManageOperatingSystem_DeleteOperatingSystemOnSite(t *testing.T) {
+	mockCarbide := cClient.NewMockCarbideClient()
+	carbideAtomicClient := cClient.NewCarbideAtomicClient(&cClient.CarbideClientConfig{})
+	carbideAtomicClient.SwapClient(mockCarbide)
+
+	validID := &cwssaws.UUID{Value: uuid.NewString()}
+
+	type fields struct {
+		CarbideAtomicClient *cClient.CarbideAtomicClient
+	}
+	type args struct {
+		ctx     context.Context
+		request *cwssaws.DeleteOperatingSystemRequest
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			name:   "success - deletes OS from carbide-core",
+			fields: fields{CarbideAtomicClient: carbideAtomicClient},
+			args: args{
+				ctx: context.Background(),
+				request: &cwssaws.DeleteOperatingSystemRequest{
+					Id: validID,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name:   "fails - nil request",
+			fields: fields{CarbideAtomicClient: carbideAtomicClient},
+			args: args{
+				ctx:     context.Background(),
+				request: nil,
+			},
+			wantErr: true,
+		},
+		{
+			name:   "fails - missing ID",
+			fields: fields{CarbideAtomicClient: carbideAtomicClient},
+			args: args{
+				ctx:     context.Background(),
+				request: &cwssaws.DeleteOperatingSystemRequest{},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mos := NewManageOperatingSystem(tt.fields.CarbideAtomicClient)
+			err := mos.DeleteOperatingSystemOnSite(tt.args.ctx, tt.args.request)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestManageOperatingSystemInventory_DiscoverOperatingSystemInventory(t *testing.T) {
+	mockCarbide := cClient.NewMockCarbideClient()
+	carbideAtomicClient := cClient.NewCarbideAtomicClient(&cClient.CarbideClientConfig{})
+	carbideAtomicClient.SwapClient(mockCarbide)
+
+	wid := "test-os-workflow-id"
+	wrun := &tmocks.WorkflowRun{}
+	wrun.On("GetID").Return(wid)
+
+	type fields struct {
+		siteID              uuid.UUID
+		carbideAtomicClient *cClient.CarbideAtomicClient
+		publishQueue        string
+	}
+	type args struct {
+		wantOSCount int
+		wantError   error
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "success - empty inventory published",
+			fields: fields{
+				siteID:              uuid.New(),
+				carbideAtomicClient: carbideAtomicClient,
+				publishQueue:        "test-queue",
+			},
+			args:    args{wantOSCount: 0},
+			wantErr: false,
+		},
+		{
+			name: "success - non-empty inventory published",
+			fields: fields{
+				siteID:              uuid.New(),
+				carbideAtomicClient: carbideAtomicClient,
+				publishQueue:        "test-queue",
+			},
+			args:    args{wantOSCount: 5},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tc := &tmocks.Client{}
+			tc.Mock.On("ExecuteWorkflow", mock.Anything, mock.AnythingOfType("internal.StartWorkflowOptions"),
+				mock.AnythingOfType("string"), mock.AnythingOfType("uuid.UUID"), mock.Anything).Return(wrun, nil)
+
+			inv := NewManageOperatingSystemInventory(ManageInventoryConfig{
+				SiteID:                tt.fields.siteID,
+				CarbideAtomicClient:   tt.fields.carbideAtomicClient,
+				TemporalPublishClient: tc,
+				TemporalPublishQueue:  tt.fields.publishQueue,
+			})
+
+			ctx := context.Background()
+			ctx = context.WithValue(ctx, "wantCount", tt.args.wantOSCount)
+
+			err := inv.DiscoverOperatingSystemInventory(ctx)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				tc.AssertCalled(t, "ExecuteWorkflow", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+
+				inventory, ok := tc.Calls[0].Arguments[4].(*cwssaws.OperatingSystemInventory)
+				assert.True(t, ok, "expected OperatingSystemInventory argument")
+				assert.Equal(t, cwssaws.InventoryStatus_INVENTORY_STATUS_SUCCESS, inventory.GetInventoryStatus())
+				assert.Len(t, inventory.GetOperatingSystems(), tt.args.wantOSCount)
+			}
+		})
+	}
+}
+
+func TestManageOperatingSystemInventory_DiscoverOperatingSystemInventory_NilClient(t *testing.T) {
+	// Simulate the case where the gRPC client is not yet connected (nil).
+	// Before the fix this caused a nil pointer dereference panic.
+	carbideAtomicClient := cClient.NewCarbideAtomicClient(&cClient.CarbideClientConfig{})
+	// deliberately do NOT swap in a real client — value stays nil
+
+	tc := &tmocks.Client{}
+
+	inv := NewManageOperatingSystemInventory(ManageInventoryConfig{
+		SiteID:                uuid.New(),
+		CarbideAtomicClient:   carbideAtomicClient,
+		TemporalPublishClient: tc,
+		TemporalPublishQueue:  "test-queue",
+	})
+
+	err := inv.DiscoverOperatingSystemInventory(context.Background())
+	assert.ErrorIs(t, err, cClient.ErrClientNotConnected)
+	tc.AssertNumberOfCalls(t, "ExecuteWorkflow", 0)
+}
+
 func TestManageOsImageInventory_DiscoverOsImageInventory(t *testing.T) {
 	mockCarbide := cClient.NewMockCarbideClient()
 

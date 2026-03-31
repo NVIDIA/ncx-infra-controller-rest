@@ -99,7 +99,15 @@ tags:
   - name: NVLink Logical Partition
     description: NVLink Logical Partitions provide networking support for high-performance computing that features very high throughput and very low latency for GPU to GPU communication.
   - name: Operating System
-    description: Operating System operations
+    description: |-
+      Operating System operations.
+
+      Operating Systems can be iPXE script-based, iPXE template-based, or Image-based. iPXE template-based OS definitions use a named template from carbide-core with parameters and artifacts.
+  - name: iPXE Template
+    description: |-
+      iPXE Templates are boot script templates propagated from bare-metal-manager-core. They are read-only in the REST API.
+
+      Templates define the iPXE boot script structure with variable placeholders for parameters and artifact references. They can be used when creating iPXE template-based Operating System definitions.
   - name: Instance Type
     description: |-
       Instance Types allow grouping two or more Machines into a pool which can be specified when creating an Instance.
@@ -7693,13 +7701,17 @@ paths:
       description: |-
         Create an Operating System for the org.
 
-        Either `infrastructureProviderId` or `tenantId` must be provided in request data. Both cannot be provided at the same time.
+        Either `infrastructureProviderId` or `tenantId` must be provided in request data. Both cannot be provided at the same time. For iPXE template-based OS definitions, Provider Admin may omit `tenantId` and have ownership resolved automatically.
 
         If `infrastructureProviderId` is provided in request data, then org must have an Infrastructure Provider entity and its ID should match the query param value. User must have `FORGE_PROVIDER_ADMIN` role.
 
         If `tenantId` is provided in request data, then org must have a Tenant entity and its ID should match the query param value. User must have `FORGE_TENANT_ADMIN` role.
 
-        Only Tenants are allowed to create Operating System for MVP.
+        Provider Admins can create iPXE template-based Operating Systems (using `ipxeTemplateName`). Tenants can create iPXE script-based or Image-based Operating Systems.
+
+        `ipxeScript`, `ipxeTemplateName`, and `imageUrl` are mutually exclusive — only one may be specified. When `ipxeTemplateName` is used, `ipxeParameters` and `ipxeArtifacts` can be provided to configure the template.
+
+        The `scope` field controls synchronization direction for iPXE OSes: `local` (bidirectional, default), `global` (rest-to-core for all sites), or `limited` (rest-to-core for sites in `siteIds`).
       requestBody:
         content:
           application/json:
@@ -8002,6 +8014,169 @@ paths:
                   name: ubuntu-22.04-lts
                   description: Ubuntu 22.04 LTS
                   allowOverride: true
+  '/v2/org/{org}/carbide/ipxe-template':
+    parameters:
+      - schema:
+          type: string
+        name: org
+        in: path
+        required: true
+        description: Name of the Org
+    get:
+      summary: Retrieve all iPXE Templates
+      tags:
+        - iPXE Template
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/IpxeTemplate'
+              examples:
+                example-1:
+                  value:
+                    - id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                      siteId: 4b36152c-f48d-4bcc-a722-0fd8e2ad209a
+                      name: ubuntu-autoinstall
+                      template: |-
+                        #!ipxe
+                        kernel {{.kernel}} autoinstall ds=nocloud-net
+                        initrd {{.initrd}}
+                        boot || imgfree
+                         shell
+                      requiredParams:
+                        - hostname
+                      reservedParams:
+                        - kernel
+                        - initrd
+                      requiredArtifacts:
+                        - kernel
+                        - initrd
+                      scope: public
+                      created: '2025-10-15T10:30:00Z'
+                      updated: '2025-10-15T10:30:00Z'
+          headers:
+            X-Pagination:
+              schema:
+                type: string
+                example: '{"pageNumber":1,"pageSize":20,"total":5,"orderBy": "CREATED_DESC"}'
+              description: Pagination result in JSON format
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+      operationId: get-all-ipxe-template
+      description: |-
+        Retrieve all iPXE templates propagated from bare-metal-manager-core for a given site.
+
+        The `siteId` query parameter is required. Templates are propagated one-way from core and are read-only.
+
+        Provider Admins/Viewers can access templates for their provider's sites. Tenant Admins with TargetedInstanceCreation capability can access templates for sites they have a Tenant Account on.
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          in: query
+          name: siteId
+          required: true
+          description: ID of the Site whose templates to retrieve
+        - schema:
+            type: string
+            enum:
+              - internal
+              - public
+          in: query
+          name: scope
+          description: Filter templates by scope
+        - schema:
+            type: integer
+            example: 1
+            default: 1
+            minimum: 1
+          in: query
+          name: pageNumber
+          description: Page number for pagination query
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            example: 20
+          in: query
+          name: pageSize
+          description: Page size for pagination query
+        - schema:
+            type: string
+            enum:
+              - NAME_ASC
+              - NAME_DESC
+              - CREATED_ASC
+              - CREATED_DESC
+              - UPDATED_ASC
+              - UPDATED_DESC
+          in: query
+          name: orderBy
+          description: Ordering for pagination query
+  '/v2/org/{org}/carbide/ipxe-template/{id}':
+    parameters:
+      - schema:
+          type: string
+        name: org
+        in: path
+        required: true
+        description: Name of the Org
+      - schema:
+          type: string
+          format: uuid
+        name: id
+        in: path
+        required: true
+        description: ID of the iPXE Template
+    get:
+      summary: Retrieve iPXE Template
+      tags:
+        - iPXE Template
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IpxeTemplate'
+              examples:
+                example-1:
+                  value:
+                    id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                    siteId: 4b36152c-f48d-4bcc-a722-0fd8e2ad209a
+                    name: ubuntu-autoinstall
+                    template: |-
+                      #!ipxe
+                      kernel {{.kernel}} autoinstall ds=nocloud-net
+                      initrd {{.initrd}}
+                      boot || imgfree
+                       shell
+                    requiredParams:
+                      - hostname
+                    reservedParams:
+                      - kernel
+                      - initrd
+                    requiredArtifacts:
+                      - kernel
+                      - initrd
+                    scope: public
+                    created: '2025-10-15T10:30:00Z'
+                    updated: '2025-10-15T10:30:00Z'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+      operationId: get-ipxe-template
+      description: |-
+        Retrieve an iPXE template by ID.
+
+        Provider Admins/Viewers can access templates for their provider's sites. Tenant Admins with TargetedInstanceCreation capability can access templates for sites they have a Tenant Account on.
   '/v2/org/{org}/carbide/machine':
     parameters:
       - schema:
@@ -13927,7 +14102,31 @@ components:
           type:
             - string
             - 'null'
-          description: 'iPXE script or URL, only applicable for iPXE based Operating System'
+          description: 'iPXE script or URL, only applicable for iPXE based Operating System. Mutually exclusive with ipxeTemplateName'
+        ipxeTemplateName:
+          type:
+            - string
+            - 'null'
+          description: 'Name of the iPXE template used by this Operating System. Mutually exclusive with ipxeScript'
+        ipxeParameters:
+          type: array
+          description: Parameters passed to the iPXE template for variable substitution
+          items:
+            $ref: '#/components/schemas/IpxeOsParameter'
+        ipxeArtifacts:
+          type: array
+          description: 'Artifacts (kernel, initrd, etc.) for the iPXE OS definition'
+          items:
+            $ref: '#/components/schemas/IpxeOsArtifact'
+        scope:
+          type:
+            - string
+            - 'null'
+          description: 'Synchronization scope. Only meaningful for iPXE template-based OSes'
+          enum:
+            - local
+            - global
+            - limited
         userData:
           type:
             - string
@@ -14091,12 +14290,36 @@ components:
           items:
             type: string
             format: uuid
-          description: 'Specified only one Site if an Operating System is Image based, more than one Site is not supported"'
+          description: 'For Image-based OS, specify exactly one Site. For limited-scope iPXE OS, specify the target provider sites'
         ipxeScript:
           type:
             - string
             - 'null'
-          description: 'iPXE script or URL, only applicable for iPXE based OS. Cannot be specified if imageUrl is specified'
+          description: 'iPXE script or URL, only applicable for iPXE based OS. Mutually exclusive with ipxeTemplateName and imageUrl'
+        ipxeTemplateName:
+          type:
+            - string
+            - 'null'
+          description: 'Name of an iPXE template to use. Mutually exclusive with ipxeScript and imageUrl. Only Provider Admin can create template-based OSes'
+        ipxeParameters:
+          type: array
+          description: Parameters to pass to the iPXE template for variable substitution
+          items:
+            $ref: '#/components/schemas/IpxeOsParameter'
+        ipxeArtifacts:
+          type: array
+          description: 'Artifacts (kernel, initrd, etc.) required for the iPXE OS definition'
+          items:
+            $ref: '#/components/schemas/IpxeOsArtifact'
+        scope:
+          type:
+            - string
+            - 'null'
+          description: 'Synchronization scope for iPXE template-based OS. Defaults to local if omitted'
+          enum:
+            - local
+            - global
+            - limited
         imageUrl:
           type:
             - string
@@ -14189,7 +14412,31 @@ components:
           type:
             - string
             - 'null'
-          description: 'iPXE script or URL, only applicable for iPXE based OS. Cannot be specified if imageUrl is specified'
+          description: 'iPXE script or URL, only applicable for iPXE based OS. Mutually exclusive with ipxeTemplateName and imageUrl'
+        ipxeTemplateName:
+          type:
+            - string
+            - 'null'
+          description: Name of an iPXE template to use. Mutually exclusive with ipxeScript and imageUrl
+        ipxeParameters:
+          type: array
+          description: Parameters to pass to the iPXE template. If omitted the existing parameters are kept; if set to an empty array the parameters are cleared
+          items:
+            $ref: '#/components/schemas/IpxeOsParameter'
+        ipxeArtifacts:
+          type: array
+          description: 'Artifacts for the iPXE OS definition. If omitted the existing artifacts are kept; if set to an empty array the artifacts are cleared'
+          items:
+            $ref: '#/components/schemas/IpxeOsArtifact'
+        scope:
+          type:
+            - string
+            - 'null'
+          description: Synchronization scope for iPXE template-based OS
+          enum:
+            - local
+            - global
+            - limited
         imageUrl:
           type:
             - string
@@ -14256,6 +14503,110 @@ components:
             - string
             - 'null'
           description: Optional deactivation note if OS is inactive
+    IpxeOsParameter:
+      title: IpxeOsParameter
+      type: object
+      description: A key-value parameter passed to an iPXE template for variable substitution
+      properties:
+        name:
+          type: string
+          description: Parameter name referenced in the iPXE template
+        value:
+          type: string
+          description: Parameter value substituted into the iPXE template
+      required:
+        - name
+        - value
+    IpxeOsArtifact:
+      title: IpxeOsArtifact
+      type: object
+      description: 'An artifact (kernel, initrd, ISO, etc.) required by an iPXE OS definition'
+      properties:
+        name:
+          type: string
+          description: 'Artifact identifier referenced by the iPXE template (e.g. kernel, initrd)'
+        url:
+          type: string
+          format: uri
+          description: Remote URL from where the artifact can be retrieved
+        sha:
+          type:
+            - string
+            - 'null'
+          description: SHA hash of the artifact for integrity verification
+        auth_type:
+          type:
+            - string
+            - 'null'
+          description: 'Authentication type for the artifact URL (e.g. Basic, Bearer)'
+        auth_token:
+          type:
+            - string
+            - 'null'
+          description: Auth token to retrieve the artifact from the URL
+        cache_strategy:
+          type: string
+          description: Strategy for caching the artifact on sites
+          enum:
+            - CACHE_AS_NEEDED
+            - LOCAL_ONLY
+            - CACHED_ONLY
+            - REMOTE_ONLY
+      required:
+        - name
+        - url
+        - cache_strategy
+    IpxeTemplate:
+      title: IpxeTemplate
+      type: object
+      description: An iPXE boot template that can be used to create template-based Operating System definitions
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for this iPXE template entry
+          readOnly: true
+        siteId:
+          type: string
+          format: uuid
+          description: ID of the Site this template was retrieved from
+        name:
+          type: string
+          description: 'Unique template name (e.g. ubuntu-autoinstall, kernel-initrd)'
+        template:
+          type: string
+          description: Raw iPXE script content with template variables
+        requiredParams:
+          type: array
+          description: Parameters that must be provided to render the template
+          items:
+            type: string
+        reservedParams:
+          type: array
+          description: Parameters reserved by the template that cannot be user-supplied
+          items:
+            type: string
+        requiredArtifacts:
+          type: array
+          description: 'Artifact names (e.g. kernel, initrd) required for the template'
+          items:
+            type: string
+        scope:
+          type: string
+          description: 'Visibility of this template: internal or public'
+          enum:
+            - internal
+            - public
+        created:
+          type: string
+          format: date-time
+          description: Date/time when the template was created
+          readOnly: true
+        updated:
+          type: string
+          format: date-time
+          description: Date/time when the template was last updated
+          readOnly: true
     InstanceType:
       title: InstanceType
       type: object

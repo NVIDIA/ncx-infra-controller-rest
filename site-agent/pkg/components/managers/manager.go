@@ -38,6 +38,7 @@ import (
 	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/infinibandpartition"
 	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/instance"
 	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/instancetype"
+	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/ipxetemplate"
 	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/machine"
 	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/managerapi"
 	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/networksecuritygroup"
@@ -81,6 +82,7 @@ func NewAPIHandlers() {
 		ExpectedPowerShelf:     &expectedpowershelf.API{},
 		ExpectedSwitch:         &expectedswitch.API{},
 		SKU:                    &sku.API{},
+		IpxeTemplate:           &ipxetemplate.API{},
 		DpuExtensionService:    &dpuextensionservice.API{},
 		NVLinkLogicalPartition: &nvlinklogicalpartition.API{},
 		RLA:                    &rla.API{},
@@ -126,6 +128,7 @@ func (Managers *Manager) NewInstance() {
 	Managers.ExpectedPowerShelf()
 	Managers.ExpectedSwitch()
 	Managers.SKU()
+	Managers.IpxeTemplate()
 	Managers.DpuExtensionService()
 	Managers.NVLinkLogicalPartition()
 	Managers.RLA()
@@ -174,6 +177,7 @@ func (Managers *Manager) Init() {
 	Managers.ExpectedPowerShelf().Init()
 	Managers.ExpectedSwitch().Init()
 	Managers.SKU().Init()
+	Managers.IpxeTemplate().Init()
 	Managers.DpuExtensionService().Init()
 	Managers.NVLinkLogicalPartition().Init()
 	Managers.RLA().Init()

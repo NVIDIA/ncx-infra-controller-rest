@@ -38,6 +38,13 @@ const (
 	errMsgExactlyOneRootFsField                      = "exactly one of 'rootFsId' and 'rootFsLabel' must be specified"
 	errMsgOnlyOneRootFsField                         = "only one of 'rootFsId' and 'rootFsLabel' may be specified"
 	errMsgNotEmpty                                   = "cannot be empty"
+
+	// OsScopeLocal is the default scope: bidirectional sync, most-recently-updated wins.
+	OsScopeLocal = "local"
+	// OsScopeGlobal means carbide-rest is the source of truth for all provider sites.
+	OsScopeGlobal = "global"
+	// OsScopeLimited means carbide-rest is the source of truth for a fixed list of sites.
+	OsScopeLimited = "limited"
 )
 
 // APIOperatingSystemCreateRequest is the data structure to capture user request to create a new OperatingSystem
@@ -78,6 +85,16 @@ type APIOperatingSystemCreateRequest struct {
 	AllowOverride bool `json:"allowOverride"`
 	// EnableBlockStorage indicates whether the Operating System image will be stored remotely via block storage
 	EnableBlockStorage bool `json:"enableBlockStorage"`
+	// IpxeTemplateName is the name of the iPXE template to use (alternative to a raw ipxeScript)
+	IpxeTemplateName *string `json:"ipxeTemplateName"`
+	// IpxeParameters are the parameters to pass to the iPXE template
+	IpxeParameters []cdbm.OperatingSystemIpxeParameter `json:"ipxeParameters"`
+	// IpxeArtifacts are the artifacts (kernel, initrd, ISO, …) for the iPXE OS definition
+	IpxeArtifacts []cdbm.OperatingSystemIpxeArtifact `json:"ipxeArtifacts"`
+	// Scope controls the synchronization direction between carbide-rest and carbide-core.
+	// Allowed values: "local" (default, bidirectional), "global" (rest→core, all sites),
+	// "limited" (rest→core, specific sites listed in siteIds). Only meaningful for iPXE OSes.
+	Scope *string `json:"scope"`
 }
 
 // Validate ensure the values passed in request are acceptable
@@ -92,28 +109,41 @@ func (oscr APIOperatingSystemCreateRequest) Validate() error {
 			// infrastructure provider id must be nil
 			validation.Nil.Error(validationErrorInfrastructureProviderIDExpectNil)),
 		validation.Field(&oscr.TenantID,
-			// NOTE: TenantID is required for now as only Tenants can create Operating Systems
-			validation.Required.Error(validationErrorValueRequired),
-			validationis.UUID.Error(validationErrorInvalidUUID)),
+			// TenantID is optional: if provided it must be a valid UUID and match the org's tenant.
+			// Provider Admin-created OSes may omit it; the handler resolves ownership from the role.
+			validation.When(oscr.TenantID != nil, validationis.UUID.Error(validationErrorInvalidUUID))),
 	)
 	if err != nil {
 		return err
 	}
 
-	// Make sure siteIds only required in case of image is OS based
-	if oscr.IpxeScript != nil && len(oscr.SiteIDs) > 0 {
+	isIpxe := oscr.IpxeScript != nil || oscr.IpxeTemplateName != nil
+
+	if oscr.IpxeScript != nil && oscr.IpxeTemplateName != nil {
 		return validation.Errors{
-			"siteIds": errors.New("cannot be specified for iPXE based Operating Systems"),
+			"ipxeTemplateName": errors.New("ipxeScript and ipxeTemplateName are mutually exclusive"),
 		}
 	}
 
-	if oscr.IpxeScript != nil && oscr.ImageURL != nil {
+	if isIpxe && oscr.ImageURL != nil {
 		return validation.Errors{
 			"imageURL": errors.New("cannot be specified for iPXE based Operating Systems"),
 		}
-	} else if oscr.IpxeScript == nil && oscr.ImageURL == nil {
+	}
+	// siteIds are only allowed for limited-scope iPXE OSes (indicating which sites receive the OS).
+	if isIpxe && len(oscr.SiteIDs) > 0 && (oscr.Scope == nil || *oscr.Scope != OsScopeLimited) {
 		return validation.Errors{
-			validationCommonErrorField: errors.New("either imageURL or ipxeScript must be specified"),
+			"siteIds": errors.New("siteIds can only be specified for iPXE based Operating Systems with scope 'limited'"),
+		}
+	}
+	if isIpxe && oscr.Scope != nil && *oscr.Scope == OsScopeLimited && len(oscr.SiteIDs) == 0 {
+		return validation.Errors{
+			"siteIds": errors.New("at least one siteId must be specified when scope is 'limited'"),
+		}
+	}
+	if !isIpxe && oscr.ImageURL == nil {
+		return validation.Errors{
+			validationCommonErrorField: errors.New("one of imageURL, ipxeScript, or ipxeTemplateName must be specified"),
 		}
 	}
 
@@ -156,9 +186,9 @@ func (oscr APIOperatingSystemCreateRequest) Validate() error {
 			}
 		}
 	} else {
+		// iPXE-based OS: siteIds cannot be specified (mutually exclusive with ipxeScript/ipxeTemplateName).
+		// Image-specific fields must not be set.
 		err = validation.ValidateStruct(&oscr,
-			validation.Field(&oscr.SiteIDs,
-				validation.Nil.Error("siteIds cannot be specified if imageURL is not specified")),
 			validation.Field(&oscr.ImageSHA,
 				validation.Nil.Error("imageSHA cannot be specified if imageURL is not specified")),
 			validation.Field(&oscr.ImageAuthType,
@@ -174,13 +204,33 @@ func (oscr APIOperatingSystemCreateRequest) Validate() error {
 		)
 	}
 
-	if oscr.IpxeScript != nil {
+	if oscr.Scope != nil {
+		switch *oscr.Scope {
+		case OsScopeLocal, OsScopeGlobal, OsScopeLimited:
+			// valid
+		default:
+			return validation.Errors{
+				"scope": errors.New("scope must be one of 'local', 'global', or 'limited'"),
+			}
+		}
+		if !isIpxe {
+			return validation.Errors{
+				"scope": errors.New("scope can only be specified for iPXE based Operating Systems"),
+			}
+		}
+	}
+
+	if isIpxe {
 		err = validation.ValidateStruct(&oscr,
-			validation.Field(&oscr.IpxeScript,
-				validation.Required.Error(validationErrorValueRequired)),
 			validation.Field(&oscr.EnableBlockStorage,
-				validation.Empty.Error("enableBlockStorage must be false if ipxeScript is specified")),
+				validation.Empty.Error("enableBlockStorage must be false for iPXE based Operating Systems")),
 		)
+		if oscr.IpxeScript != nil {
+			err = validation.ValidateStruct(&oscr,
+				validation.Field(&oscr.IpxeScript,
+					validation.Required.Error(validationErrorValueRequired)),
+			)
+		}
 	}
 
 	return err
@@ -277,6 +327,16 @@ type APIOperatingSystemUpdateRequest struct {
 	IsActive *bool `json:"isActive"`
 	// DeactivationNote is the deactivation note if any
 	DeactivationNote *string `json:"deactivationNote"`
+	// IpxeTemplateName is the name of the iPXE template to use (alternative to a raw ipxeScript)
+	IpxeTemplateName *string `json:"ipxeTemplateName"`
+	// IpxeParameters are the parameters to pass to the iPXE template
+	IpxeParameters *[]cdbm.OperatingSystemIpxeParameter `json:"ipxeParameters"`
+	// IpxeArtifacts are the artifacts (kernel, initrd, ISO, …) for the iPXE OS definition
+	IpxeArtifacts *[]cdbm.OperatingSystemIpxeArtifact `json:"ipxeArtifacts"`
+	// Scope controls the synchronization direction between carbide-rest and carbide-core.
+	// Allowed values: "local" (default, bidirectional), "global" (rest→core, all sites),
+	// "limited" (rest→core, specific sites listed in siteIds). Only meaningful for iPXE OSes.
+	Scope *string `json:"scope"`
 }
 
 // Validate ensure the values passed in request are acceptable
@@ -312,7 +372,13 @@ func (osur APIOperatingSystemUpdateRequest) Validate(existingOS *cdbm.OperatingS
 		}
 	}
 
-	if osur.IpxeScript != nil && osur.ImageURL != nil {
+	if osur.IpxeScript != nil && osur.IpxeTemplateName != nil {
+		return validation.Errors{
+			"ipxeTemplateName": errors.New("ipxeScript and ipxeTemplateName are mutually exclusive"),
+		}
+	}
+
+	if (osur.IpxeScript != nil || osur.IpxeTemplateName != nil) && osur.ImageURL != nil {
 		return validation.Errors{
 			"imageURL": errors.New("cannot be specified for iPXE based Operating Systems"),
 		}
@@ -326,6 +392,10 @@ func (osur APIOperatingSystemUpdateRequest) Validate(existingOS *cdbm.OperatingS
 	} else if existingOS.Type == cdbm.OperatingSystemTypeImage && osur.IpxeScript != nil {
 		return validation.Errors{
 			"ipxeScript": errors.New("unable to set iPXE script for image based Operating System"),
+		}
+	} else if existingOS.Type == cdbm.OperatingSystemTypeImage && osur.IpxeTemplateName != nil {
+		return validation.Errors{
+			"ipxeTemplateName": errors.New("unable to set iPXE template for image based Operating System"),
 		}
 	}
 
@@ -392,6 +462,23 @@ func (osur APIOperatingSystemUpdateRequest) Validate(existingOS *cdbm.OperatingS
 				validation.Required.Error(validationErrorValueRequired)),
 		)
 	}
+
+	if osur.Scope != nil {
+		switch *osur.Scope {
+		case OsScopeLocal, OsScopeGlobal, OsScopeLimited:
+			// valid
+		default:
+			return validation.Errors{
+				"scope": errors.New("scope must be one of 'local', 'global', or 'limited'"),
+			}
+		}
+		if existingOS.Type != cdbm.OperatingSystemTypeIPXE {
+			return validation.Errors{
+				"scope": errors.New("scope can only be specified for iPXE based Operating Systems"),
+			}
+		}
+	}
+
 	return err
 }
 
@@ -536,8 +623,14 @@ type APIOperatingSystem struct {
 	RootFsID *string `json:"rootFsId"`
 	// RootFsLabel is root fs id for the Operating System image type
 	RootFsLabel *string `json:"rootFsLabel"`
-	// IpxeScript is the ipxe ocript for the Operating System
+	// IpxeScript is the ipxe script for the Operating System
 	IpxeScript *string `json:"ipxeScript"`
+	// IpxeTemplateName is the name of the iPXE template used by this Operating System
+	IpxeTemplateName *string `json:"ipxeTemplateName"`
+	// IpxeParameters are the parameters passed to the iPXE template
+	IpxeParameters []cdbm.OperatingSystemIpxeParameter `json:"ipxeParameters"`
+	// IpxeArtifacts are the artifacts (kernel, initrd, ISO, …) for the iPXE OS definition
+	IpxeArtifacts []cdbm.OperatingSystemIpxeArtifact `json:"ipxeArtifacts"`
 	// PhoneHomeEnabled is an attribute which is specified by user if Operating System needs to be enabled for phone home or not
 	PhoneHomeEnabled bool `json:"phoneHomeEnabled"`
 	// UserData is the user data for the Operating System
@@ -558,6 +651,9 @@ type APIOperatingSystem struct {
 	StatusHistory []APIStatusDetail `json:"statusHistory"`
 	// SiteAssociations is the list of Sites associated with the Operating System
 	SiteAssociations []APIOperatingSystemSiteAssociation `json:"siteAssociations"`
+	// Scope controls the synchronization direction between carbide-rest and carbide-core.
+	// One of "local" (default), "global", or "limited". Only meaningful for iPXE OSes.
+	Scope *string `json:"scope"`
 	// CreatedAt indicates the ISO datetime string for when the entity was created
 	Created time.Time `json:"created"`
 	// UpdatedAt indicates the ISO datetime string for when the entity was last updated
@@ -579,6 +675,9 @@ func NewAPIOperatingSystem(dbOS *cdbm.OperatingSystem, dbsds []cdbm.StatusDetail
 		RootFsID:           dbOS.RootFsID,
 		RootFsLabel:        dbOS.RootFsLabel,
 		IpxeScript:         dbOS.IpxeScript,
+		IpxeTemplateName:   dbOS.IpxeTemplateName,
+		IpxeParameters:     dbOS.IpxeParameters,
+		IpxeArtifacts:      dbOS.IpxeArtifacts,
 		PhoneHomeEnabled:   dbOS.PhoneHomeEnabled,
 		UserData:           dbOS.UserData,
 		IsCloudInit:        dbOS.IsCloudInit,
@@ -587,6 +686,7 @@ func NewAPIOperatingSystem(dbOS *cdbm.OperatingSystem, dbsds []cdbm.StatusDetail
 		IsActive:           dbOS.IsActive,
 		DeactivationNote:   dbOS.DeactivationNote,
 		Status:             dbOS.Status,
+		Scope:              dbOS.Scope,
 		Created:            dbOS.Created,
 		Updated:            dbOS.Updated,
 	}
