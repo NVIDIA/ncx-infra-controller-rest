@@ -256,6 +256,57 @@ func (rs *RLAServerImpl) DeleteComponent(
 	return &pb.DeleteComponentResponse{}, nil
 }
 
+// DeleteRack soft-deletes a rack and all its components.
+func (rs *RLAServerImpl) DeleteRack(
+	ctx context.Context,
+	req *pb.DeleteRackRequest,
+) (*pb.DeleteRackResponse, error) {
+	rackID := protobuf.UUIDFrom(req.GetId())
+	if rackID == uuid.Nil {
+		return nil, errors.New("rack id is required")
+	}
+
+	if err := rs.inventoryManager.DeleteRack(ctx, rackID); err != nil {
+		return nil, fmt.Errorf("failed to delete rack: %w", err)
+	}
+
+	return &pb.DeleteRackResponse{}, nil
+}
+
+// PurgeRack permanently removes a soft-deleted rack and its components.
+func (rs *RLAServerImpl) PurgeRack(
+	ctx context.Context,
+	req *pb.PurgeRackRequest,
+) (*pb.PurgeRackResponse, error) {
+	rackID := protobuf.UUIDFrom(req.GetId())
+	if rackID == uuid.Nil {
+		return nil, errors.New("rack id is required")
+	}
+
+	if err := rs.inventoryManager.PurgeRack(ctx, rackID); err != nil {
+		return nil, fmt.Errorf("failed to purge rack: %w", err)
+	}
+
+	return &pb.PurgeRackResponse{}, nil
+}
+
+// PurgeComponent permanently removes a soft-deleted component.
+func (rs *RLAServerImpl) PurgeComponent(
+	ctx context.Context,
+	req *pb.PurgeComponentRequest,
+) (*pb.PurgeComponentResponse, error) {
+	compID := protobuf.UUIDFrom(req.GetId())
+	if compID == uuid.Nil {
+		return nil, errors.New("component id is required")
+	}
+
+	if err := rs.inventoryManager.PurgeComponent(ctx, compID); err != nil {
+		return nil, fmt.Errorf("failed to purge component: %w", err)
+	}
+
+	return &pb.PurgeComponentResponse{}, nil
+}
+
 // PatchComponent updates a single component's patchable fields.
 func (rs *RLAServerImpl) PatchComponent(
 	ctx context.Context,
@@ -292,6 +343,10 @@ func (rs *RLAServerImpl) PatchComponent(
 		if rackID != uuid.Nil {
 			existing.RackID = rackID
 		}
+	}
+
+	if len(req.GetBmcs()) > 0 {
+		existing.BmcsByType = protobuf.BMCsFrom(req.GetBmcs())
 	}
 
 	// Persist the update

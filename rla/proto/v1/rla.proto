@@ -24,50 +24,49 @@ import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
 
 service RLA {
-    // What version of RLA is this service running?
+    // Version
     rpc Version(VersionRequest) returns (BuildInfo);
 
+    // Rack CRUD
     rpc CreateExpectedRack(CreateExpectedRackRequest) returns (CreateExpectedRackResponse);
-    rpc PatchRack(PatchRackRequest) returns (PatchRackResponse);
     rpc GetRackInfoByID(GetRackInfoByIDRequest) returns (GetRackInfoResponse);
     rpc GetRackInfoBySerial(GetRackInfoBySerialRequest) returns (GetRackInfoResponse);
+    rpc GetListOfRacks(GetListOfRacksRequest) returns (GetListOfRacksResponse);
+    rpc PatchRack(PatchRackRequest) returns (PatchRackResponse);
+    rpc DeleteRack(DeleteRackRequest) returns (DeleteRackResponse);
+    rpc PurgeRack(PurgeRackRequest) returns (PurgeRackResponse);
+
+    // Rack operations
+    rpc UpgradeFirmware(UpgradeFirmwareRequest) returns (SubmitTaskResponse);
+    rpc BringUpRack(BringUpRackRequest) returns (SubmitTaskResponse);
+    rpc IngestRack(IngestRackRequest) returns (SubmitTaskResponse);
+    rpc PowerOnRack(PowerOnRackRequest) returns (SubmitTaskResponse);
+    rpc PowerOffRack(PowerOffRackRequest) returns (SubmitTaskResponse);
+    rpc PowerResetRack(PowerResetRackRequest) returns (SubmitTaskResponse);
+
+    // Component CRUD
     rpc GetComponentInfoByID(GetComponentInfoByIDRequest) returns (GetComponentInfoResponse);
     rpc GetComponentInfoBySerial(GetComponentInfoBySerialRequest) returns (GetComponentInfoResponse);
-    rpc GetListOfRacks(GetListOfRacksRequest) returns (GetListOfRacksResponse);
-    rpc CreateNVLDomain(CreateNVLDomainRequest) returns (CreateNVLDomainResponse);
-    rpc AttachRacksToNVLDomain(AttachRacksToNVLDomainRequest) returns (google.protobuf.Empty);
-    rpc DetachRacksFromNVLDomain(DetachRacksFromNVLDomainRequest) returns (google.protobuf.Empty);
-    rpc GetListOfNVLDomains(GetListOfNVLDomainsRequest) returns (GetListOfNVLDomainsResponse);
-    rpc GetRacksForNVLDomain(GetRacksForNVLDomainRequest) returns (GetRacksForNVLDomainResponse);
-    rpc UpgradeFirmware(UpgradeFirmwareRequest) returns (SubmitTaskResponse);
-
-    // Bring up rack: power on, configure, and validate a new rack
-    rpc BringUpRack(BringUpRackRequest) returns (SubmitTaskResponse);
-
-    // Ingest rack: inject expected component configurations to component manager services
-    rpc IngestRack(IngestRackRequest) returns (SubmitTaskResponse);
-
-    // Components APIs
     rpc GetComponents(GetComponentsRequest) returns (GetComponentsResponse);
     rpc ValidateComponents(ValidateComponentsRequest) returns (ValidateComponentsResponse);
     rpc AddComponent(AddComponentRequest) returns (AddComponentResponse);
     rpc PatchComponent(PatchComponentRequest) returns (PatchComponentResponse);
     rpc DeleteComponent(DeleteComponentRequest) returns (DeleteComponentResponse);
+    rpc PurgeComponent(PurgeComponentRequest) returns (PurgeComponentResponse);
 
-    // Power control a rack or a rack's specified components
-    rpc PowerOnRack(PowerOnRackRequest) returns (SubmitTaskResponse);
-    rpc PowerOffRack(PowerOffRackRequest) returns (SubmitTaskResponse);
-    rpc PowerResetRack(PowerResetRackRequest) returns (SubmitTaskResponse);
+    // NVL Domain
+    rpc CreateNVLDomain(CreateNVLDomainRequest) returns (CreateNVLDomainResponse);
+    rpc AttachRacksToNVLDomain(AttachRacksToNVLDomainRequest) returns (google.protobuf.Empty);
+    rpc DetachRacksFromNVLDomain(DetachRacksFromNVLDomainRequest) returns (google.protobuf.Empty);
+    rpc GetListOfNVLDomains(GetListOfNVLDomainsRequest) returns (GetListOfNVLDomainsResponse);
+    rpc GetRacksForNVLDomain(GetRacksForNVLDomainRequest) returns (GetRacksForNVLDomainResponse);
 
-    // Query for tasks
+    // Tasks
     rpc ListTasks(ListTasksRequest) returns (ListTasksResponse);
     rpc GetTasksByIDs(GetTasksByIDsRequest) returns (GetTasksByIDsResponse);
-
-    // Cancel a task (waiting tasks are terminated immediately; running tasks
-    // have their Temporal workflow terminated).
     rpc CancelTask(CancelTaskRequest) returns (CancelTaskResponse);
 
-    // Operation rules management
+    // Operation rules
     rpc CreateOperationRule(CreateOperationRuleRequest) returns (CreateOperationRuleResponse);
     rpc UpdateOperationRule(UpdateOperationRuleRequest) returns (google.protobuf.Empty);
     rpc DeleteOperationRule(DeleteOperationRuleRequest) returns (google.protobuf.Empty);
@@ -496,6 +495,27 @@ message DeleteComponentRequest {
 
 message DeleteComponentResponse {}
 
+// DeleteRack - soft-delete a rack and cascade to its components
+message DeleteRackRequest {
+    UUID id = 1;  // Required: rack UUID to soft-delete
+}
+
+message DeleteRackResponse {}
+
+// PurgeRack - permanently remove a soft-deleted rack and its components
+message PurgeRackRequest {
+    UUID id = 1;  // Required: rack UUID to purge (must already be soft-deleted)
+}
+
+message PurgeRackResponse {}
+
+// PurgeComponent - permanently remove a soft-deleted component
+message PurgeComponentRequest {
+    UUID id = 1;  // Required: component UUID to purge (must already be soft-deleted)
+}
+
+message PurgeComponentResponse {}
+
 // PatchComponent - update a single component's fields
 message PatchComponentRequest {
     UUID id = 1;                          // Required: component UUID
@@ -503,6 +523,7 @@ message PatchComponentRequest {
     optional RackPosition position = 3;   // Update slot_id, tray_idx, host_id
     optional string description = 4;      // Update description (JSON string)
     optional UUID rack_id = 5;            // Re-assign to a different rack
+    repeated BMCInfo bmcs = 6;            // Update BMCs (matched by MAC address; create if new)
 }
 
 message PatchComponentResponse {

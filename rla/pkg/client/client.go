@@ -970,6 +970,39 @@ func (c *Client) DeleteComponent(
 	return err
 }
 
+// DeleteRack soft-deletes a rack and all its components by UUID.
+func (c *Client) DeleteRack(
+	ctx context.Context,
+	rackID uuid.UUID,
+) error {
+	_, err := c.client.DeleteRack(ctx, &pb.DeleteRackRequest{
+		Id: uuidToProto(rackID),
+	})
+	return err
+}
+
+// PurgeRack permanently removes a soft-deleted rack and its components.
+func (c *Client) PurgeRack(
+	ctx context.Context,
+	rackID uuid.UUID,
+) error {
+	_, err := c.client.PurgeRack(ctx, &pb.PurgeRackRequest{
+		Id: uuidToProto(rackID),
+	})
+	return err
+}
+
+// PurgeComponent permanently removes a soft-deleted component.
+func (c *Client) PurgeComponent(
+	ctx context.Context,
+	componentID uuid.UUID,
+) error {
+	_, err := c.client.PurgeComponent(ctx, &pb.PurgeComponentRequest{
+		Id: uuidToProto(componentID),
+	})
+	return err
+}
+
 // PatchComponentOpts contains the optional fields for patching a component.
 type PatchComponentOpts struct {
 	FirmwareVersion *string
@@ -978,6 +1011,7 @@ type PatchComponentOpts struct {
 	HostID          *int32
 	Description     *string
 	RackID          *uuid.UUID
+	BMCs            []types.BMC
 }
 
 // PatchComponent updates a single component's fields.
@@ -1013,6 +1047,13 @@ func (c *Client) PatchComponent(
 
 	if opts.RackID != nil {
 		req.RackId = uuidToProto(*opts.RackID)
+	}
+
+	if len(opts.BMCs) > 0 {
+		req.Bmcs = make([]*pb.BMCInfo, 0, len(opts.BMCs))
+		for i := range opts.BMCs {
+			req.Bmcs = append(req.Bmcs, bmcToProto(&opts.BMCs[i]))
+		}
 	}
 
 	rsp, err := c.client.PatchComponent(ctx, req)
