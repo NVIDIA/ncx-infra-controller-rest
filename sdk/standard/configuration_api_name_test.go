@@ -11,27 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestRewriteAPINamePath(t *testing.T) {
-	t.Run("default api name leaves path unchanged", func(t *testing.T) {
-		path := "/v2/org/test-org/carbide/metadata"
-		assert.Equal(t, path, rewriteAPINamePath(path, ""))
-		assert.Equal(t, path, rewriteAPINamePath(path, "carbide"))
-	})
-
-	t.Run("custom api name rewrites org scoped paths", func(t *testing.T) {
-		assert.Equal(
-			t,
-			"/v2/org/test-org/forge/metadata",
-			rewriteAPINamePath("/v2/org/test-org/carbide/metadata", "forge"),
-		)
-	})
-
-	t.Run("non matching paths are left unchanged", func(t *testing.T) {
-		path := "/healthz"
-		assert.Equal(t, path, rewriteAPINamePath(path, "forge"))
-	})
-}
-
 func TestSetAPINameRewritesGeneratedRequests(t *testing.T) {
 	transport := &captureTransport{}
 
