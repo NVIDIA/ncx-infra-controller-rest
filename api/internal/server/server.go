@@ -126,6 +126,9 @@ func InitAPIServer(cfg *config.Config, dbSession *cdb.Session, tc tsdkClient.Cli
 	// Add header read timeout to prevent SLOWLORIS attacks
 	e.Server.ReadHeaderTimeout = 3 * time.Second
 
+	// Add middleware to set the API name
+	e.Use(middleware.APIName(cfg.GetAPIName()))
+
 	// General middlewares
 	e.Use(echoMiddleware.Recover())
 
