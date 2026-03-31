@@ -134,8 +134,6 @@ func (s *Service) Start(ctx context.Context) error {
 		s.inventoryManager,
 		s.taskManager,
 		s.taskStore,
-		s.conf.CarbideClient,
-		s.conf.PSMClient,
 	)
 	if err != nil {
 		return err

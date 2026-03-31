@@ -62,7 +62,7 @@ func AllCommands() []Command {
 
 		{Name: "instance list", Description: "List all instances", Run: cmdInstanceList},
 		{Name: "instance get", Description: "Get instance details", Run: cmdInstanceGet},
-		{Name: "instance create", Description: "Create an instance", Run: cmdInstanceCreate},
+		{Name: "instance create", Description: "Create an instance on a machine", Run: cmdInstanceCreate},
 		{Name: "instance delete", Description: "Delete an instance", Run: cmdInstanceDelete},
 
 		{Name: "machine list", Description: "List machines", Run: cmdMachineList},
@@ -190,6 +190,20 @@ func appendScopeFlags(s *Session, parts []string) []string {
 }
 
 func fetchMachinesWithSiteFallback(s *Session, missingSitePrompt string) ([]NamedItem, error) {
+	savedSiteID := s.Scope.SiteID
+	savedVpcID, savedVpcName := s.Scope.VpcID, s.Scope.VpcName
+
+	s.Scope.VpcID = ""
+	s.Scope.VpcName = ""
+	s.Cache.InvalidateFiltered()
+	defer func() {
+		if s.Scope.SiteID == savedSiteID {
+			s.Scope.VpcID = savedVpcID
+			s.Scope.VpcName = savedVpcName
+		}
+		s.Cache.InvalidateFiltered()
+	}()
+
 	items, err := s.Resolver.Fetch(context.Background(), "machine")
 	if err == nil {
 		return items, nil
@@ -202,15 +216,8 @@ func fetchMachinesWithSiteFallback(s *Session, missingSitePrompt string) ([]Name
 		}
 		s.Scope.SiteID = site.ID
 		s.Scope.SiteName = site.Name
-
-		savedVpcID, savedVpcName := s.Scope.VpcID, s.Scope.VpcName
-		s.Scope.VpcID = ""
-		s.Scope.VpcName = ""
 		s.Cache.InvalidateFiltered()
-		items, err = s.Resolver.Fetch(context.Background(), "machine")
-		s.Scope.VpcID = savedVpcID
-		s.Scope.VpcName = savedVpcName
-		return items, err
+		return s.Resolver.Fetch(context.Background(), "machine")
 	}
 	return nil, err
 }
@@ -2302,6 +2309,12 @@ func cmdHelp(_ *Session, _ []string) error {
 	fmt.Fprintln(tw, "scope clear\tClear all scope filters")
 	fmt.Fprintln(tw, "exit\tExit interactive mode")
 	tw.Flush()
+	fmt.Printf("\n%s\n", Bold("KEYBINDINGS"))
+	fmt.Println("  Ctrl+C    Clear current line")
+	fmt.Println("  Ctrl+D    Quit interactive mode")
+	fmt.Println("  Esc       Cancel current selection")
+	fmt.Println("  Tab       Accept suggestion")
+	fmt.Println("  Up/Down   Navigate suggestions or history")
 	fmt.Println()
 	return nil
 }
