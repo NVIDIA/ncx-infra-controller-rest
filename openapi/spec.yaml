@@ -19229,6 +19229,12 @@ components:
             data: 'apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: busybox-deployment\n  labels:\n    app: busybox\nspec:\n  replicas: 1 # You can adjust the number of desired replicas here\n  selector:\n    matchLabels:\n      app: busybox\n  template:\n    metadata:\n      labels:\n        app: busybox\n    spec:\n      containers:\n      - name: busybox-container\n        image: busybox:latest # You can specify a different BusyBox image tag\n        command: ["sh", "-c", "echo \''BusyBox container running\'' && sleep 3600"]'
             hasCredentials: true
             created: '2019-08-24T14:15:22Z'
+            observability:
+              configs:
+                - name: busybox-metrics
+                  prometheus:
+                    scrapeIntervalSeconds: 30
+                    endpoint: busybox:9090
           activeVersions:
             - V1-T1761857134382532
             - V1-T1761856992374052
@@ -19352,6 +19358,12 @@ components:
           data: 'apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: busybox-deployment\n  labels:\n    app: busybox\nspec:\n  replicas: 1 # You can adjust the number of desired replicas here\n  selector:\n    matchLabels:\n      app: busybox\n  template:\n    metadata:\n      labels:\n        app: busybox\n    spec:\n      containers:\n      - name: busybox-container\n        image: busybox:latest # You can specify a different BusyBox image tag\n        command: ["sh", "-c", "echo \''BusyBox container running\'' && sleep 3600"]'
           hasCredentials: true
           created: '2019-08-24T14:15:22Z'
+          observability:
+            configs:
+              - name: busybox-metrics
+                prometheus:
+                  scrapeIntervalSeconds: 30
+                  endpoint: busybox:9090
       properties:
         version:
           type:
@@ -19369,6 +19381,9 @@ components:
           format: date-time
           description: Date/time when this version of the DPU Extension Service was created
           readOnly: true
+        observability:
+          $ref: '#/components/schemas/DpuExtensionServiceObservability'
+          description: Observability configuration for this DPU Extension Service version
     DpuExtensionServiceCreateRequest:
       title: DpuExtensionServiceCreateRequest
       type: object
@@ -19383,6 +19398,12 @@ components:
             registryUrl: 'https://registry.hub.docker.com'
             username: johndoe
             password: password123
+          observability:
+            configs:
+              - name: busybox-metrics
+                prometheus:
+                  scrapeIntervalSeconds: 30
+                  endpoint: busybox:9090
       properties:
         name:
           type: string
@@ -19407,6 +19428,9 @@ components:
         credentials:
           $ref: '#/components/schemas/DpuExtensionServiceCredentials'
           description: Credentials to download resources specified in DPU Extension Service data
+        observability:
+          $ref: '#/components/schemas/DpuExtensionServiceObservability'
+          description: Observability configuration for the DPU Extension Service version
       required:
         - name
         - serviceType
@@ -19423,6 +19447,11 @@ components:
             registryUrl: 'https://registry.hub.docker.com'
             username: johndoe
             password: password123
+          observability:
+            configs:
+              - name: busybox-logs
+                logging:
+                  path: /var/log/busybox.log
       properties:
         name:
           type: string
@@ -19436,6 +19465,9 @@ components:
         credentials:
           $ref: '#/components/schemas/DpuExtensionServiceCredentials'
           description: Credentials to download resources specified in DPU Extension Service data
+        observability:
+          $ref: '#/components/schemas/DpuExtensionServiceObservability'
+          description: Observability configuration for the DPU Extension Service version
     DpuExtensionServiceCredentials:
       title: DpuExtensionServiceCredentials
       type: object
@@ -19458,6 +19490,72 @@ components:
             - string
             - 'null'
           description: Password for the registry. Must be specified if registry URL is specified
+    DpuExtensionServiceObservability:
+      title: DpuExtensionServiceObservability
+      type: object
+      description: Observability configuration for a DPU Extension Service version
+      examples:
+        - configs:
+            - name: busybox-metrics
+              prometheus:
+                scrapeIntervalSeconds: 30
+                endpoint: busybox:9090
+            - name: busybox-logs
+              logging:
+                path: /var/log/busybox.log
+      properties:
+        configs:
+          type: array
+          maxItems: 20
+          description: Observability configurations to apply to the service version
+          items:
+            $ref: '#/components/schemas/DpuExtensionServiceObservabilityConfig'
+    DpuExtensionServiceObservabilityConfig:
+      title: DpuExtensionServiceObservabilityConfig
+      type: object
+      description: A single observability configuration for a DPU Extension Service version
+      properties:
+        name:
+          type:
+            - string
+            - 'null'
+          description: Optional name of the service or component being monitored
+        prometheus:
+          $ref: '#/components/schemas/DpuExtensionServiceObservabilityPrometheus'
+        logging:
+          $ref: '#/components/schemas/DpuExtensionServiceObservabilityLogging'
+      oneOf:
+        - required:
+            - prometheus
+        - required:
+            - logging
+    DpuExtensionServiceObservabilityPrometheus:
+      title: DpuExtensionServiceObservabilityPrometheus
+      type: object
+      description: Prometheus scrape configuration for a DPU Extension Service version
+      properties:
+        scrapeIntervalSeconds:
+          type: integer
+          format: uint32
+          minimum: 0
+          maximum: 4294967295
+          description: How often Prometheus should scrape the endpoint
+        endpoint:
+          type: string
+          description: Prometheus scrape endpoint
+      required:
+        - scrapeIntervalSeconds
+        - endpoint
+    DpuExtensionServiceObservabilityLogging:
+      title: DpuExtensionServiceObservabilityLogging
+      type: object
+      description: Logging configuration for a DPU Extension Service version
+      properties:
+        path:
+          type: string
+          description: Path to the log file to collect
+      required:
+        - path
     DpuExtensionServiceDeployment:
       title: DpuExtensionServiceDeployment
       type: object

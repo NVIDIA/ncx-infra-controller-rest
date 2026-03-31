@@ -95,6 +95,7 @@ func testDpuExtensionServiceSetupSchema(t *testing.T, dbSession *cdb.Session) {
 
 func TestManageDpuExtensionService_UpdateDpuExtensionServicesInDB(t *testing.T) {
 	ctx := context.Background()
+	obsName := "service-metrics"
 
 	dbSession := testDpuExtensionServiceInitDB(t)
 	defer dbSession.Close()
@@ -123,7 +124,26 @@ func TestManageDpuExtensionService_UpdateDpuExtensionServicesInDB(t *testing.T) 
 		HasCredentials: false,
 		Created:        time.Now().UTC().Round(time.Microsecond),
 	}, []string{version1}, cdbm.DpuExtensionServiceStatusPending, user)
-	dpuExtensionService2 := util.TestBuildDpuExtensionService(t, dbSession, "test-dpu-extension-service-2", st, tenant, cdbm.DpuExtensionServiceServiceTypeKubernetesPod, cdb.GetStrPtr(version1), nil, []string{}, cdbm.DpuExtensionServiceStatusPending, user)
+	dpuExtensionService2 := util.TestBuildDpuExtensionService(t, dbSession, "test-dpu-extension-service-2", st, tenant, cdbm.DpuExtensionServiceServiceTypeKubernetesPod, cdb.GetStrPtr(version1), &cdbm.DpuExtensionServiceVersionInfo{
+		Version:        version1,
+		Data:           "test-data",
+		HasCredentials: false,
+		Created:        time.Now().UTC().Round(time.Microsecond),
+		Observability: &cdbm.DpuExtensionServiceObservability{
+			DpuExtensionServiceObservability: &cwssaws.DpuExtensionServiceObservability{
+				Configs: []*cwssaws.DpuExtensionServiceObservabilityConfig{
+					{
+						Name: &obsName,
+						Config: &cwssaws.DpuExtensionServiceObservabilityConfig_Logging{
+							Logging: &cwssaws.DpuExtensionServiceObservabilityConfigLogging{
+								Path: "/var/log/service.log",
+							},
+						},
+					},
+				},
+			},
+		},
+	}, []string{}, cdbm.DpuExtensionServiceStatusPending, user)
 	dpuExtensionService3 := util.TestBuildDpuExtensionService(t, dbSession, "test-dpu-extension-service-3", st, tenant, cdbm.DpuExtensionServiceServiceTypeKubernetesPod, cdb.GetStrPtr(version1), nil, []string{}, cdbm.DpuExtensionServiceStatusReady, user)
 	dpuExtensionService4 := util.TestBuildDpuExtensionService(t, dbSession, "test-dpu-extension-service-4", st, tenant, cdbm.DpuExtensionServiceServiceTypeKubernetesPod, nil, nil, []string{}, cdbm.DpuExtensionServiceStatusPending, user)
 	dpuExtensionService5 := util.TestBuildDpuExtensionService(t, dbSession, "test-dpu-extension-service-5", st, tenant, cdbm.DpuExtensionServiceServiceTypeKubernetesPod, nil, nil, []string{}, cdbm.DpuExtensionServiceStatusDeleting, user)
@@ -223,6 +243,19 @@ func TestManageDpuExtensionService_UpdateDpuExtensionServicesInDB(t *testing.T) 
 								Data:          "test-data",
 								Created:       time.Now().UTC().Round(time.Microsecond).Format(DpuExtensionServiceTimeFormat),
 								HasCredential: false,
+								Observability: &cwssaws.DpuExtensionServiceObservability{
+									Configs: []*cwssaws.DpuExtensionServiceObservabilityConfig{
+										{
+											Name: &obsName,
+											Config: &cwssaws.DpuExtensionServiceObservabilityConfig_Prometheus{
+												Prometheus: &cwssaws.DpuExtensionServiceObservabilityConfigPrometheus{
+													ScrapeIntervalSeconds: 15,
+													Endpoint:              "http://service-1:9090/metrics",
+												},
+											},
+										},
+									},
+								},
 							},
 							ActiveVersions: []string{"V1-T1761856992374052"},
 						},
@@ -382,6 +415,11 @@ func TestManageDpuExtensionService_UpdateDpuExtensionServicesInDB(t *testing.T) 
 						assert.Equal(t, controllerDes.LatestVersionInfo.Data, updatedDpuExtService.VersionInfo.Data)
 						assert.Equal(t, controllerDes.LatestVersionInfo.HasCredential, updatedDpuExtService.VersionInfo.HasCredentials)
 						assert.Equal(t, controllerDes.LatestVersionInfo.Created, updatedDpuExtService.VersionInfo.Created.Format(DpuExtensionServiceTimeFormat))
+						if controllerDes.LatestVersionInfo.Observability != nil {
+							assert.Equal(t, controllerDes.LatestVersionInfo.GetObservability().Configs[0].GetPrometheus().Endpoint, updatedDpuExtService.VersionInfo.Observability.GetConfigs()[0].GetPrometheus().Endpoint)
+						} else {
+							assert.Nil(t, updatedDpuExtService.VersionInfo.Observability)
+						}
 						assert.Equal(t, controllerDes.ActiveVersions, updatedDpuExtService.ActiveVersions)
 					}
 				}
