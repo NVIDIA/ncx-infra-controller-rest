@@ -1980,7 +1980,12 @@ func cmdInstanceCreate(s *Session, _ []string) error {
 	vpcSiteID := strings.TrimSpace(vpc.Extra["siteId"])
 	setSiteScopeFromID(s, vpcSiteID)
 
+	// Temporarily clear VPC scope so fetchMachines returns all site machines
+	// rather than filtering to machines already assigned to a prior VPC.
+	savedVpcID, savedVpcName := s.Scope.VpcID, s.Scope.VpcName
+	s.Scope.VpcID, s.Scope.VpcName = "", ""
 	machines, err := fetchMachinesWithSiteFallback(s, "Machine listing requires a site filter. Select a site.")
+	s.Scope.VpcID, s.Scope.VpcName = savedVpcID, savedVpcName
 	if err != nil {
 		return fmt.Errorf("fetching machines: %w", err)
 	}
