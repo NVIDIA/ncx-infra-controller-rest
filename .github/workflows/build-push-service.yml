@@ -125,6 +125,7 @@ jobs:
             TAGS="${TAGS},${{ inputs.target_registry }}/${{ inputs.service_name }}:${{ inputs.branch_sha_tag }}"
           fi
 
+          TAGS="${TAGS#,}"
           echo "tags=$TAGS" >> $GITHUB_OUTPUT
 
       - name: Build and push ${{ inputs.service_name }} (multi-arch)
