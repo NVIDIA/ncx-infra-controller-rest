@@ -208,8 +208,14 @@ func (cd *Component) Delete(ctx context.Context, idb bun.IDB) error {
 
 // ForceDelete permanently removes the component row from the database.
 func (cd *Component) ForceDelete(ctx context.Context, idb bun.IDB) error {
-	_, err := idb.NewDelete().Model(cd).Where("id = ?", cd.ID).ForceDelete().Exec(ctx)
-	return err
+	res, err := idb.NewDelete().Model(cd).Where("id = ?", cd.ID).ForceDelete().Exec(ctx)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return errors.New("no rows deleted")
+	}
+	return nil
 }
 
 // BuildPatch builds a patched component from the current component

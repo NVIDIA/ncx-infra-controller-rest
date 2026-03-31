@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
@@ -60,7 +61,7 @@ Patchable fields (at least one required):
   --host-id          : New host ID (position)
   --description      : New description (JSON string)
   --rack-id          : Re-assign to a different rack (UUID)
-  --bmcs             : BMCs as JSON array, e.g. [{"type":"HMC","mac":"aa:bb:cc:dd:ee:ff","ip":"10.0.0.1"}]
+  --bmcs             : BMCs as JSON array, e.g. [{"type":"HOST","mac":"aa:bb:cc:dd:ee:ff","ip":"10.0.0.1"}]
 
 Examples:
   # Update firmware version
@@ -73,7 +74,7 @@ Examples:
   rla component update --id "uuid" --rack-id "new-rack-uuid"
 
   # Update BMC information
-  rla component update --id "uuid" --bmcs '[{"type":"HMC","mac":"aa:bb:cc:dd:ee:ff","ip":"10.0.0.1"}]'
+  rla component update --id "uuid" --bmcs '[{"type":"HOST","mac":"aa:bb:cc:dd:ee:ff","ip":"10.0.0.1"}]'
 
   # Update multiple fields at once
   rla component update --id "uuid" --firmware-version "2.0.0" --slot-id 3
@@ -90,7 +91,7 @@ Examples:
 	cmd.Flags().IntVar(&updateHostID, "host-id", 0, "New host ID")
 	cmd.Flags().StringVar(&updateDescription, "description", "", "New description (JSON string)")
 	cmd.Flags().StringVar(&updateRackID, "rack-id", "", "Re-assign to a different rack (UUID)")
-	cmd.Flags().StringVar(&updateBMCs, "bmcs", "", `BMCs as JSON array, e.g. [{"type":"HMC","mac":"aa:bb:cc:dd:ee:ff","ip":"10.0.0.1"}]`)
+	cmd.Flags().StringVar(&updateBMCs, "bmcs", "", `BMCs as JSON array, e.g. [{"type":"HOST","mac":"aa:bb:cc:dd:ee:ff","ip":"10.0.0.1"}]`)
 
 	_ = cmd.MarkFlagRequired("id")
 
@@ -162,7 +163,13 @@ func doUpdateComponent(cmd *cobra.Command) {
 		}
 		bmcs := make([]types.BMC, 0, len(rawBMCs))
 		for _, rb := range rawBMCs {
-			b := types.BMC{Type: types.BMCType(rb.Type)}
+			bt := types.BMCType(strings.ToUpper(rb.Type))
+			switch bt {
+			case types.BMCTypeHost, types.BMCTypeDPU:
+			default:
+				log.Fatal().Msgf("Invalid BMC type %q (allowed: HOST, DPU)", rb.Type)
+			}
+			b := types.BMC{Type: bt}
 			if rb.MAC != "" {
 				b.MAC, err = net.ParseMAC(rb.MAC)
 				if err != nil {

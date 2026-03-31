@@ -1019,7 +1019,7 @@ func (s *PostgresStore) DeleteRack(ctx context.Context, id uuid.UUID) error {
 	operation := func(ctx context.Context, tx bun.Tx) error {
 		rackDAO := &model.Rack{ID: id}
 		if _, err := rackDAO.Get(ctx, tx, false); err != nil {
-			return errors.GRPCErrorNotFound(fmt.Sprintf("rack %s not found", id))
+			return s.checkDBGetError(err, fmt.Sprintf("rack %s", id))
 		}
 
 		// Soft-delete all components belonging to this rack.
@@ -1041,7 +1041,7 @@ func (s *PostgresStore) PurgeRack(ctx context.Context, id uuid.UUID) error {
 		rackDAO := &model.Rack{ID: id}
 		r, err := rackDAO.GetIncludingDeleted(ctx, tx)
 		if err != nil {
-			return errors.GRPCErrorNotFound(fmt.Sprintf("rack %s not found", id))
+			return s.checkDBGetError(err, fmt.Sprintf("rack %s", id))
 		}
 		if r.DeletedAt == nil {
 			return errors.GRPCErrorPreconditionFailed(
@@ -1073,7 +1073,7 @@ func (s *PostgresStore) PurgeComponent(ctx context.Context, id uuid.UUID) error 
 	compDAO := &model.Component{ID: id}
 	c, err := compDAO.GetIncludingDeleted(ctx, s.pg.DB)
 	if err != nil {
-		return errors.GRPCErrorNotFound(fmt.Sprintf("component %s not found", id))
+		return s.checkDBGetError(err, fmt.Sprintf("component %s", id))
 	}
 	if c.DeletedAt == nil {
 		return errors.GRPCErrorPreconditionFailed(
