@@ -92,7 +92,7 @@ func (c Config) loadCerts() (*x509.CertPool, tls.Certificate, error) {
 // connection with "certificate required". GetClientCertificate bypasses this
 // matching and unconditionally returns the certificate, leaving verification to
 // the server.
-func (c Config) TLSConfig() (*tls.Config, error) {
+func (c Config) TLSConfig(serverName string) (*tls.Config, error) {
 	certPool, cert, err := c.loadCerts()
 	if err != nil {
 		return nil, err
@@ -103,7 +103,8 @@ func (c Config) TLSConfig() (*tls.Config, error) {
 		GetClientCertificate: func(*tls.CertificateRequestInfo) (*tls.Certificate, error) {
 			return &cert, nil
 		},
-		RootCAs: certPool,
+		RootCAs:    certPool,
+		ServerName: serverName,
 	}, nil
 }
 

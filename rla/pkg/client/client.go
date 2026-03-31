@@ -52,7 +52,7 @@ func New(c Config) (*Client, error) {
 
 	var creds credentials.TransportCredentials
 	if c.CertConfig.IsSet() {
-		tlsConfig, err := c.CertConfig.TLSConfig()
+		tlsConfig, err := c.CertConfig.TLSConfig(c.ServerName)
 		if err != nil {
 			return nil, fmt.Errorf("failed to build TLS config: %w", err)
 		}
