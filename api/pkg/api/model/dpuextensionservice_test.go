@@ -27,6 +27,8 @@ import (
 	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 )
 
 func TestAPIDpuExtensionServiceCreateRequest_Validate(t *testing.T) {
@@ -69,6 +71,39 @@ func TestAPIDpuExtensionServiceCreateRequest_Validate(t *testing.T) {
 					RegistryURL: "https://registry.hub.docker.com",
 					Username:    cdb.GetStrPtr("testuser"),
 					Password:    cdb.GetStrPtr("testpass"),
+				},
+			},
+			expectErr: false,
+		},
+		{
+			desc: "ok when observability is provided",
+			obj: APIDpuExtensionServiceCreateRequest{
+				Name:        "test-service",
+				ServiceType: DpuExtensionServiceTypeKubernetesPod,
+				SiteID:      validUUID,
+				Data:        "apiVersion: v1\nkind: Pod\nmetadata:\n  name: test",
+				Observability: &APIDpuExtensionServiceObservability{
+					Configs: []APIDpuExtensionServiceObservabilityConfig{
+						{
+							Prometheus: &APIDpuExtensionServiceObservabilityConfigPrometheus{
+								ScrapeIntervalSeconds: 30,
+								Endpoint:              "busybox:9090",
+							},
+						},
+					},
+				},
+			},
+			expectErr: false,
+		},
+		{
+			desc: "ok when observability is provided as an empty config list",
+			obj: APIDpuExtensionServiceCreateRequest{
+				Name:        "test-service",
+				ServiceType: DpuExtensionServiceTypeKubernetesPod,
+				SiteID:      validUUID,
+				Data:        "apiVersion: v1\nkind: Pod\nmetadata:\n  name: test",
+				Observability: &APIDpuExtensionServiceObservability{
+					Configs: []APIDpuExtensionServiceObservabilityConfig{},
 				},
 			},
 			expectErr: false,
@@ -202,6 +237,180 @@ func TestAPIDpuExtensionServiceCreateRequest_Validate(t *testing.T) {
 			},
 			expectErr: true,
 		},
+		{
+			desc: "ok when observability configs contain different oneof variants across entries",
+			obj: APIDpuExtensionServiceCreateRequest{
+				Name:        "test-service",
+				ServiceType: DpuExtensionServiceTypeKubernetesPod,
+				SiteID:      validUUID,
+				Data:        "apiVersion: v1\nkind: Pod\nmetadata:\n  name: test",
+				Observability: &APIDpuExtensionServiceObservability{
+					Configs: []APIDpuExtensionServiceObservabilityConfig{
+						{
+							Prometheus: &APIDpuExtensionServiceObservabilityConfigPrometheus{
+								ScrapeIntervalSeconds: 30,
+								Endpoint:              "busybox:9090",
+							},
+						},
+						{
+							Logging: &APIDpuExtensionServiceObservabilityConfigLogging{
+								Path: "/var/log/busybox.log",
+							},
+						},
+					},
+				},
+			},
+			expectErr: false,
+		},
+		{
+			desc: "error when a single observability config contains both prometheus and logging",
+			obj: APIDpuExtensionServiceCreateRequest{
+				Name:        "test-service",
+				ServiceType: DpuExtensionServiceTypeKubernetesPod,
+				SiteID:      validUUID,
+				Data:        "apiVersion: v1\nkind: Pod\nmetadata:\n  name: test",
+				Observability: &APIDpuExtensionServiceObservability{
+					Configs: []APIDpuExtensionServiceObservabilityConfig{
+						{
+							Prometheus: &APIDpuExtensionServiceObservabilityConfigPrometheus{
+								ScrapeIntervalSeconds: 30,
+								Endpoint:              "busybox:9090",
+							},
+							Logging: &APIDpuExtensionServiceObservabilityConfigLogging{
+								Path: "/var/log/busybox.log",
+							},
+						},
+					},
+				},
+			},
+			expectErr: true,
+		},
+		{
+			desc: "error when observability contains too many configs",
+			obj: APIDpuExtensionServiceCreateRequest{
+				Name:        "test-service",
+				ServiceType: DpuExtensionServiceTypeKubernetesPod,
+				SiteID:      validUUID,
+				Data:        "apiVersion: v1\nkind: Pod\nmetadata:\n  name: test",
+				Observability: &APIDpuExtensionServiceObservability{
+					Configs: func() []APIDpuExtensionServiceObservabilityConfig {
+						configs := make([]APIDpuExtensionServiceObservabilityConfig, DpuExtensionServiceMaxObservabilityConfigs+1)
+						for i := range configs {
+							configs[i] = APIDpuExtensionServiceObservabilityConfig{
+								Prometheus: &APIDpuExtensionServiceObservabilityConfigPrometheus{
+									ScrapeIntervalSeconds: 30,
+									Endpoint:              "busybox:9090",
+								},
+							}
+						}
+						return configs
+					}(),
+				},
+			},
+			expectErr: true,
+		},
+		{
+			desc: "error when observability config name is too long",
+			obj: APIDpuExtensionServiceCreateRequest{
+				Name:        "test-service",
+				ServiceType: DpuExtensionServiceTypeKubernetesPod,
+				SiteID:      validUUID,
+				Data:        "apiVersion: v1\nkind: Pod\nmetadata:\n  name: test",
+				Observability: &APIDpuExtensionServiceObservability{
+					Configs: []APIDpuExtensionServiceObservabilityConfig{
+						{
+							Name: cdb.GetStrPtr(strings.Repeat("a", DpuExtensionServiceMaxObservabilityConfigNameLength+1)),
+							Prometheus: &APIDpuExtensionServiceObservabilityConfigPrometheus{
+								ScrapeIntervalSeconds: 30,
+								Endpoint:              "busybox:9090",
+							},
+						},
+					},
+				},
+			},
+			expectErr: true,
+		},
+		{
+			desc: "error when observability config name is empty",
+			obj: APIDpuExtensionServiceCreateRequest{
+				Name:        "test-service",
+				ServiceType: DpuExtensionServiceTypeKubernetesPod,
+				SiteID:      validUUID,
+				Data:        "apiVersion: v1\nkind: Pod\nmetadata:\n  name: test",
+				Observability: &APIDpuExtensionServiceObservability{
+					Configs: []APIDpuExtensionServiceObservabilityConfig{
+						{
+							Name: cdb.GetStrPtr(""),
+							Prometheus: &APIDpuExtensionServiceObservabilityConfigPrometheus{
+								ScrapeIntervalSeconds: 30,
+								Endpoint:              "busybox:9090",
+							},
+						},
+					},
+				},
+			},
+			expectErr: true,
+		},
+		{
+			desc: "error when observability config name is whitespace only",
+			obj: APIDpuExtensionServiceCreateRequest{
+				Name:        "test-service",
+				ServiceType: DpuExtensionServiceTypeKubernetesPod,
+				SiteID:      validUUID,
+				Data:        "apiVersion: v1\nkind: Pod\nmetadata:\n  name: test",
+				Observability: &APIDpuExtensionServiceObservability{
+					Configs: []APIDpuExtensionServiceObservabilityConfig{
+						{
+							Name: cdb.GetStrPtr("   "),
+							Prometheus: &APIDpuExtensionServiceObservabilityConfigPrometheus{
+								ScrapeIntervalSeconds: 30,
+								Endpoint:              "busybox:9090",
+							},
+						},
+					},
+				},
+			},
+			expectErr: true,
+		},
+		{
+			desc: "error when observability endpoint contains invalid characters",
+			obj: APIDpuExtensionServiceCreateRequest{
+				Name:        "test-service",
+				ServiceType: DpuExtensionServiceTypeKubernetesPod,
+				SiteID:      validUUID,
+				Data:        "apiVersion: v1\nkind: Pod\nmetadata:\n  name: test",
+				Observability: &APIDpuExtensionServiceObservability{
+					Configs: []APIDpuExtensionServiceObservabilityConfig{
+						{
+							Prometheus: &APIDpuExtensionServiceObservabilityConfigPrometheus{
+								ScrapeIntervalSeconds: 30,
+								Endpoint:              "http://busybox:9090/metrics",
+							},
+						},
+					},
+				},
+			},
+			expectErr: true,
+		},
+		{
+			desc: "error when observability path contains invalid characters",
+			obj: APIDpuExtensionServiceCreateRequest{
+				Name:        "test-service",
+				ServiceType: DpuExtensionServiceTypeKubernetesPod,
+				SiteID:      validUUID,
+				Data:        "apiVersion: v1\nkind: Pod\nmetadata:\n  name: test",
+				Observability: &APIDpuExtensionServiceObservability{
+					Configs: []APIDpuExtensionServiceObservabilityConfig{
+						{
+							Logging: &APIDpuExtensionServiceObservabilityConfigLogging{
+								Path: "/var/log/busybox$.log",
+							},
+						},
+					},
+				},
+			},
+			expectErr: true,
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.desc, func(t *testing.T) {
@@ -262,6 +471,30 @@ func TestAPIDpuExtensionServiceUpdateRequest_Validate(t *testing.T) {
 			expectErr: false,
 		},
 		{
+			desc: "ok when observability is updated",
+			obj: APIDpuExtensionServiceUpdateRequest{
+				Observability: &APIDpuExtensionServiceObservability{
+					Configs: []APIDpuExtensionServiceObservabilityConfig{
+						{
+							Logging: &APIDpuExtensionServiceObservabilityConfigLogging{
+								Path: "/var/log/busybox.log",
+							},
+						},
+					},
+				},
+			},
+			expectErr: false,
+		},
+		{
+			desc: "ok when observability is updated to an empty config list",
+			obj: APIDpuExtensionServiceUpdateRequest{
+				Observability: &APIDpuExtensionServiceObservability{
+					Configs: []APIDpuExtensionServiceObservabilityConfig{},
+				},
+			},
+			expectErr: false,
+		},
+		{
 			desc: "error when name is empty string",
 			obj: APIDpuExtensionServiceUpdateRequest{
 				Name: cdb.GetStrPtr(""),
@@ -316,6 +549,15 @@ func TestAPIDpuExtensionServiceUpdateRequest_Validate(t *testing.T) {
 					RegistryURL: "not-a-valid-url",
 					Username:    cdb.GetStrPtr("testuser"),
 					Password:    cdb.GetStrPtr("testpass"),
+				},
+			},
+			expectErr: true,
+		},
+		{
+			desc: "error when observability is missing config type",
+			obj: APIDpuExtensionServiceUpdateRequest{
+				Observability: &APIDpuExtensionServiceObservability{
+					Configs: []APIDpuExtensionServiceObservabilityConfig{{}},
 				},
 			},
 			expectErr: true,
@@ -409,6 +651,7 @@ func TestAPIDpuExtensionServiceCredentials_Validate(t *testing.T) {
 }
 
 func TestNewAPIDpuExtensionService(t *testing.T) {
+	obsName := "busybox-metrics"
 	dbdes := &cdbm.DpuExtensionService{
 		ID:          uuid.New(),
 		Name:        "test-service",
@@ -419,6 +662,21 @@ func TestNewAPIDpuExtensionService(t *testing.T) {
 			Data:           "apiVersion: v1\nkind: Pod",
 			HasCredentials: true,
 			Created:        time.Now(),
+			Observability: &cdbm.DpuExtensionServiceObservability{
+				DpuExtensionServiceObservability: &cwssaws.DpuExtensionServiceObservability{
+					Configs: []*cwssaws.DpuExtensionServiceObservabilityConfig{
+						{
+							Name: &obsName,
+							Config: &cwssaws.DpuExtensionServiceObservabilityConfig_Prometheus{
+								Prometheus: &cwssaws.DpuExtensionServiceObservabilityConfigPrometheus{
+									ScrapeIntervalSeconds: 30,
+									Endpoint:              "busybox:9090",
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 		Status:  cdbm.DpuExtensionServiceStatusReady,
 		Created: time.Now(),
@@ -460,6 +718,7 @@ func TestNewAPIDpuExtensionService(t *testing.T) {
 			assert.Equal(t, tc.dbdes.VersionInfo.Data, ades.VersionInfo.Data)
 			assert.Equal(t, tc.dbdes.VersionInfo.HasCredentials, ades.VersionInfo.HasCredentials)
 			assert.Equal(t, tc.dbdes.VersionInfo.Created, ades.VersionInfo.Created)
+			assert.Equal(t, tc.dbdes.VersionInfo.Observability.GetConfigs()[0].GetPrometheus().Endpoint, ades.VersionInfo.Observability.Configs[0].Prometheus.Endpoint)
 			assert.Equal(t, tc.dbdes.ActiveVersions, ades.ActiveVersions)
 			assert.Equal(t, tc.dbdes.Status, ades.Status)
 			assert.Equal(t, tc.dbdes.Created, ades.Created)
