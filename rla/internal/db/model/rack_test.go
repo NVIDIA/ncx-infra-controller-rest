@@ -18,11 +18,16 @@
 package model
 
 import (
+	"context"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+
+	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/common/utils"
 )
 
 type testRack struct {
@@ -200,4 +205,39 @@ func TestRackBuildPatch(t *testing.T) {
 			assert.Equal(t, tc.expected, result)
 		})
 	}
+}
+
+func TestRackForceDelete_Idempotent(t *testing.T) {
+	ctx := context.Background()
+
+	if os.Getenv("DB_PORT") == "" {
+		t.Skip("Skipping integration test: no DB environment specified")
+	}
+
+	dbConf, err := cdb.ConfigFromEnv()
+	assert.Nil(t, err)
+
+	pool, err := utils.UnitTestDB(ctx, t, dbConf)
+	assert.Nil(t, err)
+
+	rack := Rack{
+		Name:         "fd-rack",
+		Manufacturer: "TestMfg",
+		SerialNumber: "fd-rack-serial",
+	}
+	err = rack.Create(ctx, pool.DB)
+	assert.Nil(t, err)
+
+	// First ForceDelete succeeds (row exists).
+	err = rack.ForceDelete(ctx, pool.DB)
+	assert.Nil(t, err)
+
+	// Second ForceDelete on the same ID also succeeds (idempotent).
+	err = rack.ForceDelete(ctx, pool.DB)
+	assert.Nil(t, err)
+
+	// ForceDelete on a UUID that never existed also succeeds.
+	phantom := &Rack{ID: uuid.New()}
+	err = phantom.ForceDelete(ctx, pool.DB)
+	assert.Nil(t, err)
 }

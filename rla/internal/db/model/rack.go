@@ -19,7 +19,6 @@ package model
 
 import (
 	"context"
-	"database/sql"
 	"time"
 
 	"github.com/google/uuid"
@@ -135,14 +134,8 @@ func (rd *Rack) Delete(ctx context.Context, idb bun.IDB) error {
 // ForceDelete permanently removes the rack row from the database.
 // The rack must already be soft-deleted.
 func (rd *Rack) ForceDelete(ctx context.Context, idb bun.IDB) error {
-	res, err := idb.NewDelete().Model(rd).Where("id = ?", rd.ID).ForceDelete().Exec(ctx)
-	if err != nil {
-		return err
-	}
-	if n, _ := res.RowsAffected(); n == 0 {
-		return sql.ErrNoRows
-	}
-	return nil
+	_, err := idb.NewDelete().Model(rd).Where("id = ?", rd.ID).ForceDelete().Exec(ctx)
+	return err
 }
 
 func (rd *Rack) Patch(ctx context.Context, idb bun.IDB) error {
