@@ -18,6 +18,8 @@
 package ipxetemplate
 
 import (
+	"fmt"
+
 	"github.com/google/uuid"
 
 	swa "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/activity"
@@ -33,8 +35,12 @@ func (api *API) RegisterPublisher() error {
 	ManagerAccess.Data.EB.Log.Info().Msg("IpxeTemplate: successfully registered the DiscoverIpxeTemplateInventory workflow")
 
 	// Register the DiscoverIpxeTemplateInventory activity
+	siteID, err := uuid.Parse(ManagerAccess.Conf.EB.Temporal.ClusterID)
+	if err != nil {
+		return fmt.Errorf("IpxeTemplate: invalid ClusterID %q: %w", ManagerAccess.Conf.EB.Temporal.ClusterID, err)
+	}
 	inventoryManager := swa.NewManageIpxeTemplateInventory(swa.ManageInventoryConfig{
-		SiteID:                uuid.MustParse(ManagerAccess.Conf.EB.Temporal.ClusterID),
+		SiteID:                siteID,
 		CarbideAtomicClient:   ManagerAccess.Data.EB.Managers.Carbide.Client,
 		TemporalPublishClient: ManagerAccess.Data.EB.Managers.Workflow.Temporal.Publisher,
 		TemporalPublishQueue:  ManagerAccess.Conf.EB.Temporal.TemporalPublishQueue,

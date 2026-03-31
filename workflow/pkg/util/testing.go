@@ -162,6 +162,9 @@ func TestSetupSchema(t *testing.T, dbSession *cdb.Session) {
 	// create User table
 	err = dbSession.DB.ResetModel(context.Background(), (*cdbm.User)(nil))
 	assert.Nil(t, err)
+	// create IpxeTemplate table
+	err = dbSession.DB.ResetModel(context.Background(), (*cdbm.IpxeTemplate)(nil))
+	assert.Nil(t, err)
 }
 
 // TestBuildUser build user

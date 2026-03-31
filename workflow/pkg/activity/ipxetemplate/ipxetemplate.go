@@ -20,6 +20,7 @@ package ipxetemplate
 import (
 	"context"
 	"errors"
+	"fmt"
 	"reflect"
 
 	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
@@ -124,6 +125,7 @@ func (mit ManageIpxeTemplate) UpdateIpxeTemplatesInDB(ctx context.Context, siteI
 			}
 			if _, cerr := templateDAO.Create(ctx, nil, input); cerr != nil {
 				logger.Error().Err(cerr).Str("Name", reported.Name).Msg("Failed to create iPXE template in DB")
+				return fmt.Errorf("failed to create iPXE template %q: %w", reported.Name, cerr)
 			}
 			continue
 		}
@@ -144,6 +146,7 @@ func (mit ManageIpxeTemplate) UpdateIpxeTemplatesInDB(ctx context.Context, siteI
 			}
 			if _, uerr := templateDAO.Update(ctx, nil, input); uerr != nil {
 				logger.Error().Err(uerr).Str("Name", reported.Name).Msg("Failed to update iPXE template in DB")
+				return fmt.Errorf("failed to update iPXE template %q: %w", reported.Name, uerr)
 			}
 		}
 	}
@@ -160,6 +163,7 @@ func (mit ManageIpxeTemplate) UpdateIpxeTemplatesInDB(ctx context.Context, siteI
 			logger.Info().Str("Name", existing.Name).Msg("Deleting iPXE template from DB since it was no longer reported by Site Controller")
 			if derr := templateDAO.Delete(ctx, nil, existing.ID); derr != nil {
 				logger.Error().Err(derr).Str("Name", existing.Name).Msg("Failed to delete iPXE template from DB")
+				return fmt.Errorf("failed to delete iPXE template %q: %w", existing.Name, derr)
 			}
 		}
 	}

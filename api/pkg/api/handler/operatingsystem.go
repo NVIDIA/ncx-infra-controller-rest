@@ -1007,49 +1007,46 @@ func (gsh GetOperatingSystemHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details for OperatingSystem", nil)
 	}
 
-	dbossas := []cdbm.OperatingSystemSiteAssociation{}
+	// Get all OperatingSystemSiteAssociations (both Image and iPXE types may have them).
+	ossaDAO := cdbm.NewOperatingSystemSiteAssociationDAO(gsh.dbSession)
+	dbossas, _, err := ossaDAO.GetAll(
+		ctx,
+		nil,
+		cdbm.OperatingSystemSiteAssociationFilterInput{
+			OperatingSystemIDs: []uuid.UUID{os.ID},
+		},
+		cdbp.PageInput{
+			Limit: cdb.GetIntPtr(cdbp.TotalLimit),
+		},
+		[]string{cdbm.SiteRelationName},
+	)
+	if err != nil {
+		logger.Error().Err(err).Msg("error retrieving Operating System Site associations from DB")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Operating System Site associations from DB", nil)
+	}
+
+	// Get all TenantSite records for the Tenant
 	sttsmap := map[uuid.UUID]*cdbm.TenantSite{}
-	if os.Type == cdbm.OperatingSystemTypeImage {
-		// Get all OperatingSystemSiteAssociations
-		ossaDAO := cdbm.NewOperatingSystemSiteAssociationDAO(gsh.dbSession)
-		dbossas, _, err = ossaDAO.GetAll(
-			ctx,
-			nil,
-			cdbm.OperatingSystemSiteAssociationFilterInput{
-				OperatingSystemIDs: []uuid.UUID{os.ID},
-			},
-			cdbp.PageInput{
-				Limit: cdb.GetIntPtr(cdbp.TotalLimit),
-			},
-			[]string{cdbm.SiteRelationName},
-		)
-		if err != nil {
-			logger.Error().Err(err).Msg("error retrieving Operating System Site associations from DB")
-			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Operating System Site associations from DB", nil)
-		}
+	tsDAO := cdbm.NewTenantSiteDAO(gsh.dbSession)
+	tss, _, err := tsDAO.GetAll(
+		ctx,
+		nil,
+		cdbm.TenantSiteFilterInput{
+			TenantIDs: []uuid.UUID{tenant.ID},
+		},
+		cdbp.PageInput{
+			Limit: cdb.GetIntPtr(cdbp.TotalLimit),
+		},
+		nil,
+	)
+	if err != nil {
+		logger.Error().Err(err).Msg("db error retrieving TenantSite records for Tenant")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site associations for Tenant, DB error", nil)
+	}
 
-		// Get all TenantSite records for the Tenant
-		tsDAO := cdbm.NewTenantSiteDAO(gsh.dbSession)
-		tss, _, err := tsDAO.GetAll(
-			ctx,
-			nil,
-			cdbm.TenantSiteFilterInput{
-				TenantIDs: []uuid.UUID{tenant.ID},
-			},
-			cdbp.PageInput{
-				Limit: cdb.GetIntPtr(cdbp.TotalLimit),
-			},
-			nil,
-		)
-		if err != nil {
-			logger.Error().Err(err).Msg("db error retrieving TenantSite records for Tenant")
-			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site associations for Tenant, DB error", nil)
-		}
-
-		for _, ts := range tss {
-			cts := ts
-			sttsmap[ts.SiteID] = &cts
-		}
+	for _, ts := range tss {
+		cts := ts
+		sttsmap[ts.SiteID] = &cts
 	}
 
 	// Send response
@@ -1208,24 +1205,33 @@ func (ush UpdateOperatingSystemHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Operating System does not belong to your tenant or infrastructure provider", nil)
 	}
 
-	// check for name uniqueness for the tenant, ie, tenant cannot have another os with same name
+	// Check for name uniqueness within the owner's scope (provider or tenant).
 	if apiRequest.Name != nil && *apiRequest.Name != os.Name {
+		var uniquenessFilter cdbm.OperatingSystemFilterInput
+		if os.InfrastructureProviderID != nil {
+			uniquenessFilter = cdbm.OperatingSystemFilterInput{
+				InfrastructureProviderIDs: []uuid.UUID{*os.InfrastructureProviderID},
+				Names:                     []string{*apiRequest.Name},
+			}
+		} else {
+			uniquenessFilter = cdbm.OperatingSystemFilterInput{
+				TenantIDs: []uuid.UUID{tenant.ID},
+				Names:     []string{*apiRequest.Name},
+			}
+		}
 		oss, tot, serr := osDAO.GetAll(
 			ctx,
 			nil,
-			cdbm.OperatingSystemFilterInput{
-				TenantIDs: []uuid.UUID{tenant.ID},
-				Names:     []string{*apiRequest.Name},
-			},
+			uniquenessFilter,
 			cdbp.PageInput{},
 			nil,
 		)
 		if serr != nil {
-			logger.Error().Err(serr).Msg("db error checking for name uniqueness of tenant os")
+			logger.Error().Err(serr).Msg("db error checking for name uniqueness of os")
 			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update OperatingSystem due to DB error", nil)
 		}
 		if tot > 0 {
-			return cutil.NewAPIErrorResponse(c, http.StatusConflict, "Another Operating System with specified name already exists for Tenant", validation.Errors{
+			return cutil.NewAPIErrorResponse(c, http.StatusConflict, "Another Operating System with specified name already exists", validation.Errors{
 				"id": errors.New(oss[0].ID.String()),
 			})
 		}

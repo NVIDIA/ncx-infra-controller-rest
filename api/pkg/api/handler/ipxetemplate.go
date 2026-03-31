@@ -147,8 +147,10 @@ func (h GetAllIpxeTemplateHandler) Handle(c echo.Context) error {
 		SiteIDs: []uuid.UUID{site.ID},
 	}
 
-	// Optional scope filter
-	if scopeStr := c.QueryParam("scope"); scopeStr != "" {
+	if tenantAllowed && !providerAllowed {
+		// Tenants may only see PUBLIC templates; ignore any scope query param.
+		filterInput.Scopes = []string{cdbm.IpxeTemplateScopePublic}
+	} else if scopeStr := c.QueryParam("scope"); scopeStr != "" {
 		filterInput.Scopes = []string{scopeStr}
 	}
 
@@ -308,6 +310,11 @@ func (h GetIpxeTemplateHandler) Handle(c echo.Context) error {
 	if !providerAllowed && !tenantAllowed {
 		logger.Warn().Msg("neither provider nor tenant authorization succeeded for Site access")
 		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Current org is not authorized to access the iPXE template's Site", nil)
+	}
+
+	if tenantAllowed && !providerAllowed && tmpl.Scope == cdbm.IpxeTemplateScopeInternal {
+		logger.Warn().Msg("tenant attempted to access an internal iPXE template")
+		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Current org is not authorized to access this iPXE template", nil)
 	}
 
 	logger.Info().Msg("finishing API handler")

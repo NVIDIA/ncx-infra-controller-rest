@@ -29,10 +29,18 @@ type OperatingSystemCreateRequest struct {
 	InfrastructureProviderId NullableString `json:"infrastructureProviderId,omitempty"`
 	// Specified if a Tenant owns the Operating System
 	TenantId NullableString `json:"tenantId,omitempty"`
-	// Specified only one Site if an Operating System is Image based, more than one Site is not supported\"
+	// For Image-based OS, specify exactly one Site. For limited-scope iPXE OS, specify the target provider sites
 	SiteIds []string `json:"siteIds,omitempty"`
-	// iPXE script or URL, only applicable for iPXE based OS. Cannot be specified if imageUrl is specified
+	// iPXE script or URL, only applicable for iPXE based OS. Mutually exclusive with ipxeTemplateName and imageUrl
 	IpxeScript NullableString `json:"ipxeScript,omitempty"`
+	// Name of an iPXE template to use. Mutually exclusive with ipxeScript and imageUrl. Only Provider Admin can create template-based OSes
+	IpxeTemplateName NullableString `json:"ipxeTemplateName,omitempty"`
+	// Parameters to pass to the iPXE template for variable substitution
+	IpxeParameters []IpxeOsParameter `json:"ipxeParameters,omitempty"`
+	// Artifacts (kernel, initrd, etc.) required for the iPXE OS definition
+	IpxeArtifacts []IpxeOsArtifact `json:"ipxeArtifacts,omitempty"`
+	// Synchronization scope for iPXE template-based OS. Defaults to local if omitted
+	Scope NullableString `json:"scope,omitempty"`
 	// Original URL from where the Operating System image can be retreived from, required for image based OS. Cannot be specified if ipxeScript is specified
 	ImageUrl NullableString `json:"imageUrl,omitempty"`
 	// SHA hash of the image file, required for image based OS
@@ -292,6 +300,156 @@ func (o *OperatingSystemCreateRequest) SetIpxeScriptNil() {
 // UnsetIpxeScript ensures that no value is present for IpxeScript, not even an explicit nil
 func (o *OperatingSystemCreateRequest) UnsetIpxeScript() {
 	o.IpxeScript.Unset()
+}
+
+// GetIpxeTemplateName returns the IpxeTemplateName field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *OperatingSystemCreateRequest) GetIpxeTemplateName() string {
+	if o == nil || IsNil(o.IpxeTemplateName.Get()) {
+		var ret string
+		return ret
+	}
+	return *o.IpxeTemplateName.Get()
+}
+
+// GetIpxeTemplateNameOk returns a tuple with the IpxeTemplateName field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *OperatingSystemCreateRequest) GetIpxeTemplateNameOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return o.IpxeTemplateName.Get(), o.IpxeTemplateName.IsSet()
+}
+
+// HasIpxeTemplateName returns a boolean if a field has been set.
+func (o *OperatingSystemCreateRequest) HasIpxeTemplateName() bool {
+	if o != nil && o.IpxeTemplateName.IsSet() {
+		return true
+	}
+
+	return false
+}
+
+// SetIpxeTemplateName gets a reference to the given NullableString and assigns it to the IpxeTemplateName field.
+func (o *OperatingSystemCreateRequest) SetIpxeTemplateName(v string) {
+	o.IpxeTemplateName.Set(&v)
+}
+
+// SetIpxeTemplateNameNil sets the value for IpxeTemplateName to be an explicit nil
+func (o *OperatingSystemCreateRequest) SetIpxeTemplateNameNil() {
+	o.IpxeTemplateName.Set(nil)
+}
+
+// UnsetIpxeTemplateName ensures that no value is present for IpxeTemplateName, not even an explicit nil
+func (o *OperatingSystemCreateRequest) UnsetIpxeTemplateName() {
+	o.IpxeTemplateName.Unset()
+}
+
+// GetIpxeParameters returns the IpxeParameters field value if set, zero value otherwise.
+func (o *OperatingSystemCreateRequest) GetIpxeParameters() []IpxeOsParameter {
+	if o == nil || IsNil(o.IpxeParameters) {
+		var ret []IpxeOsParameter
+		return ret
+	}
+	return o.IpxeParameters
+}
+
+// GetIpxeParametersOk returns a tuple with the IpxeParameters field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *OperatingSystemCreateRequest) GetIpxeParametersOk() ([]IpxeOsParameter, bool) {
+	if o == nil || IsNil(o.IpxeParameters) {
+		return nil, false
+	}
+	return o.IpxeParameters, true
+}
+
+// HasIpxeParameters returns a boolean if a field has been set.
+func (o *OperatingSystemCreateRequest) HasIpxeParameters() bool {
+	if o != nil && !IsNil(o.IpxeParameters) {
+		return true
+	}
+
+	return false
+}
+
+// SetIpxeParameters gets a reference to the given []IpxeOsParameter and assigns it to the IpxeParameters field.
+func (o *OperatingSystemCreateRequest) SetIpxeParameters(v []IpxeOsParameter) {
+	o.IpxeParameters = v
+}
+
+// GetIpxeArtifacts returns the IpxeArtifacts field value if set, zero value otherwise.
+func (o *OperatingSystemCreateRequest) GetIpxeArtifacts() []IpxeOsArtifact {
+	if o == nil || IsNil(o.IpxeArtifacts) {
+		var ret []IpxeOsArtifact
+		return ret
+	}
+	return o.IpxeArtifacts
+}
+
+// GetIpxeArtifactsOk returns a tuple with the IpxeArtifacts field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *OperatingSystemCreateRequest) GetIpxeArtifactsOk() ([]IpxeOsArtifact, bool) {
+	if o == nil || IsNil(o.IpxeArtifacts) {
+		return nil, false
+	}
+	return o.IpxeArtifacts, true
+}
+
+// HasIpxeArtifacts returns a boolean if a field has been set.
+func (o *OperatingSystemCreateRequest) HasIpxeArtifacts() bool {
+	if o != nil && !IsNil(o.IpxeArtifacts) {
+		return true
+	}
+
+	return false
+}
+
+// SetIpxeArtifacts gets a reference to the given []IpxeOsArtifact and assigns it to the IpxeArtifacts field.
+func (o *OperatingSystemCreateRequest) SetIpxeArtifacts(v []IpxeOsArtifact) {
+	o.IpxeArtifacts = v
+}
+
+// GetScope returns the Scope field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *OperatingSystemCreateRequest) GetScope() string {
+	if o == nil || IsNil(o.Scope.Get()) {
+		var ret string
+		return ret
+	}
+	return *o.Scope.Get()
+}
+
+// GetScopeOk returns a tuple with the Scope field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *OperatingSystemCreateRequest) GetScopeOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return o.Scope.Get(), o.Scope.IsSet()
+}
+
+// HasScope returns a boolean if a field has been set.
+func (o *OperatingSystemCreateRequest) HasScope() bool {
+	if o != nil && o.Scope.IsSet() {
+		return true
+	}
+
+	return false
+}
+
+// SetScope gets a reference to the given NullableString and assigns it to the Scope field.
+func (o *OperatingSystemCreateRequest) SetScope(v string) {
+	o.Scope.Set(&v)
+}
+
+// SetScopeNil sets the value for Scope to be an explicit nil
+func (o *OperatingSystemCreateRequest) SetScopeNil() {
+	o.Scope.Set(nil)
+}
+
+// UnsetScope ensures that no value is present for Scope, not even an explicit nil
+func (o *OperatingSystemCreateRequest) UnsetScope() {
+	o.Scope.Unset()
 }
 
 // GetImageUrl returns the ImageUrl field value if set, zero value otherwise (both if not set or set to explicit null).
@@ -770,6 +928,18 @@ func (o OperatingSystemCreateRequest) ToMap() (map[string]interface{}, error) {
 	}
 	if o.IpxeScript.IsSet() {
 		toSerialize["ipxeScript"] = o.IpxeScript.Get()
+	}
+	if o.IpxeTemplateName.IsSet() {
+		toSerialize["ipxeTemplateName"] = o.IpxeTemplateName.Get()
+	}
+	if !IsNil(o.IpxeParameters) {
+		toSerialize["ipxeParameters"] = o.IpxeParameters
+	}
+	if !IsNil(o.IpxeArtifacts) {
+		toSerialize["ipxeArtifacts"] = o.IpxeArtifacts
+	}
+	if o.Scope.IsSet() {
+		toSerialize["scope"] = o.Scope.Get()
 	}
 	if o.ImageUrl.IsSet() {
 		toSerialize["imageUrl"] = o.ImageUrl.Get()

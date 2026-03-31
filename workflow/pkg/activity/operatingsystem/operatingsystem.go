@@ -561,16 +561,17 @@ func (mod ManageOperatingSystemSync) UpdateOperatingSystemsInDB(ctx context.Cont
 				Status:                   tenantStateToRestStatus(reported.Status),
 			}); cerr != nil {
 				logger.Error().Err(cerr).Str("ID", reported.GetId().GetValue()).Msg("Failed to create Operating System in DB")
-			} else if !reported.IsActive {
-				// bun ORM hardcodes is_active=true on INSERT; correct it with an update.
-				inactive := false
-				if _, uerr := osDAO.Update(ctx, nil, cdbm.OperatingSystemUpdateInput{
-					OperatingSystemId: osID,
-					IsActive:          &inactive,
-				}); uerr != nil {
-					logger.Error().Err(uerr).Str("ID", reported.GetId().GetValue()).Msg("Failed to set is_active=false after create")
-				}
+		} else if !reported.IsActive {
+			// bun ORM hardcodes is_active=true on INSERT; correct it with an update.
+			inactive := false
+			if _, uerr := osDAO.Update(ctx, nil, cdbm.OperatingSystemUpdateInput{
+				OperatingSystemId: osID,
+				IsActive:          &inactive,
+			}); uerr != nil {
+				logger.Error().Err(uerr).Str("ID", reported.GetId().GetValue()).Msg("Failed to set is_active=false after create")
+				return uerr
 			}
+		}
 			continue
 		}
 
@@ -589,7 +590,12 @@ func (mod ManageOperatingSystemSync) UpdateOperatingSystemsInDB(ctx context.Cont
 			coreStatus := tenantStateToRestStatus(reported.Status)
 			ossaDAO := cdbm.NewOperatingSystemSiteAssociationDAO(mod.dbSession)
 			ossa, ossaErr := ossaDAO.GetByOperatingSystemIDAndSiteID(ctx, nil, osID, siteID, nil)
-			if ossaErr == nil && ossa != nil {
+			if ossaErr != nil {
+				if !errors.Is(ossaErr, cdb.ErrDoesNotExist) {
+					logger.Error().Err(ossaErr).Str("osID", osID.String()).Msg("Failed to look up OSSA for global/limited OS")
+					return ossaErr
+				}
+			} else if ossa != nil {
 				if _, uerr := ossaDAO.Update(ctx, nil, cdbm.OperatingSystemSiteAssociationUpdateInput{
 					OperatingSystemSiteAssociationID: ossa.ID,
 					CoreStatus:                       &coreStatus,
@@ -607,7 +613,9 @@ func (mod ManageOperatingSystemSync) UpdateOperatingSystemsInDB(ctx context.Cont
 		// infrastructure_provider_id (before this ownership model was established).
 		needsProviderBackfill := cur.InfrastructureProviderID == nil
 		needsOrgBackfill := cur.Org == "" && localOrg != ""
-		if coreUpdated.After(cur.Updated) || needsProviderBackfill || needsOrgBackfill {
+		needsIsActiveCorrection := cur.IsActive != reported.IsActive
+		needsTenantClear := cur.TenantID != nil
+		if coreUpdated.After(cur.Updated) || needsProviderBackfill || needsOrgBackfill || needsIsActiveCorrection || needsTenantClear {
 			coreStatus := tenantStateToRestStatus(reported.Status)
 			updateInput := cdbm.OperatingSystemUpdateInput{
 				OperatingSystemId:        cur.ID,
@@ -640,6 +648,7 @@ func (mod ManageOperatingSystemSync) UpdateOperatingSystemsInDB(ctx context.Cont
 					TenantID:          true,
 				}); cerr != nil {
 					logger.Error().Err(cerr).Str("ID", reported.GetId().GetValue()).Msg("Failed to clear tenant_id from provider-owned OS")
+					return cerr
 				}
 			}
 		}

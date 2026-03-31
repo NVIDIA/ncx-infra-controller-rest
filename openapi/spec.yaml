@@ -8046,7 +8046,7 @@ paths:
                         kernel {{.kernel}} autoinstall ds=nocloud-net
                         initrd {{.initrd}}
                         boot || imgfree
-                         shell
+                        shell
                       requiredParams:
                         - hostname
                       reservedParams:
@@ -8156,7 +8156,7 @@ paths:
                       kernel {{.kernel}} autoinstall ds=nocloud-net
                       initrd {{.initrd}}
                       boot || imgfree
-                       shell
+                      shell
                     requiredParams:
                       - hostname
                     reservedParams:
