@@ -153,36 +153,9 @@ func doUpdateComponent(cmd *cobra.Command) {
 	}
 
 	if updateBMCs != "" {
-		var rawBMCs []struct {
-			Type string `json:"type"`
-			MAC  string `json:"mac"`
-			IP   string `json:"ip"`
-		}
-		if err := json.Unmarshal([]byte(updateBMCs), &rawBMCs); err != nil {
-			log.Fatal().Err(err).Msg("Invalid --bmcs JSON")
-		}
-		bmcs := make([]types.BMC, 0, len(rawBMCs))
-		for _, rb := range rawBMCs {
-			bt := types.BMCType(strings.ToUpper(rb.Type))
-			switch bt {
-			case types.BMCTypeHost, types.BMCTypeDPU:
-			default:
-				log.Fatal().Msgf("Invalid BMC type %q (allowed: HOST, DPU)", rb.Type)
-			}
-			b := types.BMC{Type: bt}
-			if rb.MAC != "" {
-				b.MAC, err = net.ParseMAC(rb.MAC)
-				if err != nil {
-					log.Fatal().Err(err).Msgf("Invalid MAC address %q", rb.MAC)
-				}
-			}
-			if rb.IP != "" {
-				b.IP = net.ParseIP(rb.IP)
-				if b.IP == nil {
-					log.Fatal().Msgf("Invalid IP address %q", rb.IP)
-				}
-			}
-			bmcs = append(bmcs, b)
+		bmcs, err := parseBMCsFromJSON(updateBMCs)
+		if err != nil {
+			log.Fatal().Err(err).Msg("Invalid --bmcs input")
 		}
 		opts.BMCs = bmcs
 		hasUpdate = true
@@ -211,4 +184,44 @@ func doUpdateComponent(cmd *cobra.Command) {
 		log.Fatal().Err(err).Msg("Failed to marshal JSON")
 	}
 	fmt.Println(string(data))
+}
+
+// parseBMCsFromJSON parses a JSON array of BMC objects, validates each entry's
+// type (HOST or DPU), MAC address, and IP address, and returns typed BMC values.
+func parseBMCsFromJSON(input string) ([]types.BMC, error) {
+	var rawBMCs []struct {
+		Type string `json:"type"`
+		MAC  string `json:"mac"`
+		IP   string `json:"ip"`
+	}
+	if err := json.Unmarshal([]byte(input), &rawBMCs); err != nil {
+		return nil, fmt.Errorf("invalid JSON: %w", err)
+	}
+
+	bmcs := make([]types.BMC, 0, len(rawBMCs))
+	for _, rb := range rawBMCs {
+		bt := types.BMCType(strings.ToUpper(rb.Type))
+		switch bt {
+		case types.BMCTypeHost, types.BMCTypeDPU:
+		default:
+			return nil, fmt.Errorf("invalid BMC type %q (allowed: HOST, DPU)", rb.Type)
+		}
+
+		b := types.BMC{Type: bt}
+		if rb.MAC != "" {
+			mac, err := net.ParseMAC(rb.MAC)
+			if err != nil {
+				return nil, fmt.Errorf("invalid MAC address %q: %w", rb.MAC, err)
+			}
+			b.MAC = mac
+		}
+		if rb.IP != "" {
+			b.IP = net.ParseIP(rb.IP)
+			if b.IP == nil {
+				return nil, fmt.Errorf("invalid IP address %q", rb.IP)
+			}
+		}
+		bmcs = append(bmcs, b)
+	}
+	return bmcs, nil
 }
