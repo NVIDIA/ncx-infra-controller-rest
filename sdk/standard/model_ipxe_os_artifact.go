@@ -28,11 +28,11 @@ type IpxeOsArtifact struct {
 	// SHA hash of the artifact for integrity verification
 	Sha NullableString `json:"sha,omitempty"`
 	// Authentication type for the artifact URL (e.g. Basic, Bearer)
-	AuthType NullableString `json:"auth_type,omitempty"`
+	AuthType NullableString `json:"authType,omitempty"`
 	// Auth token to retrieve the artifact from the URL
-	AuthToken NullableString `json:"auth_token,omitempty"`
+	AuthToken NullableString `json:"authToken,omitempty"`
 	// Strategy for caching the artifact on sites
-	CacheStrategy string `json:"cache_strategy"`
+	CacheStrategy string `json:"cacheStrategy"`
 }
 
 type _IpxeOsArtifact IpxeOsArtifact
@@ -274,12 +274,12 @@ func (o IpxeOsArtifact) ToMap() (map[string]interface{}, error) {
 		toSerialize["sha"] = o.Sha.Get()
 	}
 	if o.AuthType.IsSet() {
-		toSerialize["auth_type"] = o.AuthType.Get()
+		toSerialize["authType"] = o.AuthType.Get()
 	}
 	if o.AuthToken.IsSet() {
-		toSerialize["auth_token"] = o.AuthToken.Get()
+		toSerialize["authToken"] = o.AuthToken.Get()
 	}
-	toSerialize["cache_strategy"] = o.CacheStrategy
+	toSerialize["cacheStrategy"] = o.CacheStrategy
 	return toSerialize, nil
 }
 
@@ -290,7 +290,7 @@ func (o *IpxeOsArtifact) UnmarshalJSON(data []byte) (err error) {
 	requiredProperties := []string{
 		"name",
 		"url",
-		"cache_strategy",
+		"cacheStrategy",
 	}
 
 	allProperties := make(map[string]interface{})

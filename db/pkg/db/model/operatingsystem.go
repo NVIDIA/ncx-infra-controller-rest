@@ -108,9 +108,9 @@ type OperatingSystemIpxeArtifact struct {
 	Name          string  `json:"name"`
 	URL           string  `json:"url"`
 	SHA           *string `json:"sha,omitempty"`
-	AuthType      *string `json:"auth_type,omitempty"`
-	AuthToken     *string `json:"auth_token,omitempty"`
-	CacheStrategy string  `json:"cache_strategy"`
+	AuthType      *string `json:"authType,omitempty"`
+	AuthToken     *string `json:"authToken,omitempty"`
+	CacheStrategy string  `json:"cacheStrategy"`
 	LocalURL      *string `json:"local_url,omitempty"`
 }
 

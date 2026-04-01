@@ -14534,17 +14534,17 @@ components:
             - string
             - 'null'
           description: SHA hash of the artifact for integrity verification
-        auth_type:
+        authType:
           type:
             - string
             - 'null'
           description: 'Authentication type for the artifact URL (e.g. Basic, Bearer)'
-        auth_token:
+        authToken:
           type:
             - string
             - 'null'
           description: Auth token to retrieve the artifact from the URL
-        cache_strategy:
+        cacheStrategy:
           type: string
           description: Strategy for caching the artifact on sites
           enum:
@@ -14555,7 +14555,7 @@ components:
       required:
         - name
         - url
-        - cache_strategy
+        - cacheStrategy
     IpxeTemplate:
       title: IpxeTemplate
       type: object
