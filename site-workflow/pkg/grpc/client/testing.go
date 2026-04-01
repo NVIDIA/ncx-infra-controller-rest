@@ -1243,12 +1243,12 @@ func (c *MockForgeClient) GetAllExpectedSwitchesLinked(ctx context.Context, in *
 }
 
 /* iPXE Template mock methods */
-func (c *MockForgeClient) ListIpxeScriptTemplates(ctx context.Context, in *wflows.ListIpxeScriptTemplatesRequest, opts ...grpc.CallOption) (*wflows.ListIpxeScriptTemplatesResponse, error) {
+func (c *MockForgeClient) ListIpxeScriptTemplates(ctx context.Context, in *wflows.ListIpxeScriptTemplatesRequest, opts ...grpc.CallOption) (*wflows.IpxeScriptTemplateList, error) {
 	if err, ok := ctx.Value("wantError").(error); ok {
 		return nil, err
 	}
 
-	out := &wflows.ListIpxeScriptTemplatesResponse{}
+	out := &wflows.IpxeScriptTemplateList{}
 
 	count, ok := ctx.Value("wantCount").(int)
 	if ok {
@@ -1273,7 +1273,7 @@ func (c *MockForgeClient) FindOperatingSystemIds(ctx context.Context, in *wflows
 	count, ok := ctx.Value("wantCount").(int)
 	if ok {
 		for i := 0; i < count; i++ {
-			out.Ids = append(out.Ids, &wflows.UUID{Value: uuid.New().String()})
+			out.Ids = append(out.Ids, &wflows.OperatingSystemId{Value: uuid.New().String()})
 		}
 	}
 	return out, nil
@@ -1301,7 +1301,7 @@ func (c *MockForgeClient) GetOperatingSystem(ctx context.Context, in *wflows.UUI
 		return nil, err
 	}
 	return &wflows.OperatingSystemDefinition{
-		Id:   in,
+		Id:   &wflows.OperatingSystemId{Value: in.GetValue()},
 		Name: "mock-os",
 		Type: wflows.OperatingSystemType_OS_TYPE_IPXE,
 	}, nil

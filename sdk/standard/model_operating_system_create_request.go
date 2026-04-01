@@ -36,9 +36,9 @@ type OperatingSystemCreateRequest struct {
 	// Name of an iPXE template to use. Mutually exclusive with ipxeScript and imageUrl. Only Provider Admin can create template-based OSes
 	IpxeTemplateName NullableString `json:"ipxeTemplateName,omitempty"`
 	// Parameters to pass to the iPXE template for variable substitution
-	IpxeParameters []IpxeOsParameter `json:"ipxeParameters,omitempty"`
+	IpxeParameters []IpxeScriptParameter `json:"ipxeParameters,omitempty"`
 	// Artifacts (kernel, initrd, etc.) required for the iPXE OS definition
-	IpxeArtifacts []IpxeOsArtifact `json:"ipxeArtifacts,omitempty"`
+	IpxeArtifacts []IpxeScriptArtifact `json:"ipxeArtifacts,omitempty"`
 	// Synchronization scope for iPXE template-based OS. Defaults to local if omitted
 	Scope NullableString `json:"scope,omitempty"`
 	// Original URL from where the Operating System image can be retreived from, required for image based OS. Cannot be specified if ipxeScript is specified
@@ -346,9 +346,9 @@ func (o *OperatingSystemCreateRequest) UnsetIpxeTemplateName() {
 }
 
 // GetIpxeParameters returns the IpxeParameters field value if set, zero value otherwise.
-func (o *OperatingSystemCreateRequest) GetIpxeParameters() []IpxeOsParameter {
+func (o *OperatingSystemCreateRequest) GetIpxeParameters() []IpxeScriptParameter {
 	if o == nil || IsNil(o.IpxeParameters) {
-		var ret []IpxeOsParameter
+		var ret []IpxeScriptParameter
 		return ret
 	}
 	return o.IpxeParameters
@@ -356,7 +356,7 @@ func (o *OperatingSystemCreateRequest) GetIpxeParameters() []IpxeOsParameter {
 
 // GetIpxeParametersOk returns a tuple with the IpxeParameters field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *OperatingSystemCreateRequest) GetIpxeParametersOk() ([]IpxeOsParameter, bool) {
+func (o *OperatingSystemCreateRequest) GetIpxeParametersOk() ([]IpxeScriptParameter, bool) {
 	if o == nil || IsNil(o.IpxeParameters) {
 		return nil, false
 	}
@@ -372,15 +372,15 @@ func (o *OperatingSystemCreateRequest) HasIpxeParameters() bool {
 	return false
 }
 
-// SetIpxeParameters gets a reference to the given []IpxeOsParameter and assigns it to the IpxeParameters field.
-func (o *OperatingSystemCreateRequest) SetIpxeParameters(v []IpxeOsParameter) {
+// SetIpxeParameters gets a reference to the given []IpxeScriptParameter and assigns it to the IpxeParameters field.
+func (o *OperatingSystemCreateRequest) SetIpxeParameters(v []IpxeScriptParameter) {
 	o.IpxeParameters = v
 }
 
 // GetIpxeArtifacts returns the IpxeArtifacts field value if set, zero value otherwise.
-func (o *OperatingSystemCreateRequest) GetIpxeArtifacts() []IpxeOsArtifact {
+func (o *OperatingSystemCreateRequest) GetIpxeArtifacts() []IpxeScriptArtifact {
 	if o == nil || IsNil(o.IpxeArtifacts) {
-		var ret []IpxeOsArtifact
+		var ret []IpxeScriptArtifact
 		return ret
 	}
 	return o.IpxeArtifacts
@@ -388,7 +388,7 @@ func (o *OperatingSystemCreateRequest) GetIpxeArtifacts() []IpxeOsArtifact {
 
 // GetIpxeArtifactsOk returns a tuple with the IpxeArtifacts field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *OperatingSystemCreateRequest) GetIpxeArtifactsOk() ([]IpxeOsArtifact, bool) {
+func (o *OperatingSystemCreateRequest) GetIpxeArtifactsOk() ([]IpxeScriptArtifact, bool) {
 	if o == nil || IsNil(o.IpxeArtifacts) {
 		return nil, false
 	}
@@ -404,8 +404,8 @@ func (o *OperatingSystemCreateRequest) HasIpxeArtifacts() bool {
 	return false
 }
 
-// SetIpxeArtifacts gets a reference to the given []IpxeOsArtifact and assigns it to the IpxeArtifacts field.
-func (o *OperatingSystemCreateRequest) SetIpxeArtifacts(v []IpxeOsArtifact) {
+// SetIpxeArtifacts gets a reference to the given []IpxeScriptArtifact and assigns it to the IpxeArtifacts field.
+func (o *OperatingSystemCreateRequest) SetIpxeArtifacts(v []IpxeScriptArtifact) {
 	o.IpxeArtifacts = v
 }
 

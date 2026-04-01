@@ -736,19 +736,19 @@ func tenantStateToRestStatus(s cwssaws.TenantState) string {
 }
 
 // osTypeToString maps carbide-core's OperatingSystemType enum to the DB type string.
-// Both OS_TYPE_IPXE and OS_TYPE_IPXE_OS_DEFINITION map to the "iPXE" DB type; the
+// Both OS_TYPE_IPXE and OS_TYPE_TEMPLATED_IPXE map to the "iPXE" DB type; the
 // distinction between raw-script and template-based is carried by IpxeTemplateName.
 func osTypeToString(t cwssaws.OperatingSystemType) string {
 	switch t {
-	case cwssaws.OperatingSystemType_OS_TYPE_IPXE, cwssaws.OperatingSystemType_OS_TYPE_IPXE_OS_DEFINITION:
+	case cwssaws.OperatingSystemType_OS_TYPE_IPXE, cwssaws.OperatingSystemType_OS_TYPE_TEMPLATED_IPXE:
 		return cdbm.OperatingSystemTypeIPXE
 	default:
 		return cdbm.OperatingSystemTypeIPXE
 	}
 }
 
-// protoParamsToModel converts proto IpxeOsParameter slice to DB model slice
-func protoParamsToModel(params []*cwssaws.IpxeOsParameter) []cdbm.OperatingSystemIpxeParameter {
+// protoParamsToModel converts proto IpxeScriptParameter slice to DB model slice
+func protoParamsToModel(params []*cwssaws.IpxeScriptParameter) []cdbm.OperatingSystemIpxeParameter {
 	result := make([]cdbm.OperatingSystemIpxeParameter, 0, len(params))
 	for _, p := range params {
 		if p == nil {
@@ -759,8 +759,8 @@ func protoParamsToModel(params []*cwssaws.IpxeOsParameter) []cdbm.OperatingSyste
 	return result
 }
 
-// protoArtifactsToModel converts proto IpxeOsArtifact slice to DB model slice
-func protoArtifactsToModel(artifacts []*cwssaws.IpxeOsArtifact) []cdbm.OperatingSystemIpxeArtifact {
+// protoArtifactsToModel converts proto IpxeScriptArtifact slice to DB model slice
+func protoArtifactsToModel(artifacts []*cwssaws.IpxeScriptArtifact) []cdbm.OperatingSystemIpxeArtifact {
 	result := make([]cdbm.OperatingSystemIpxeArtifact, 0, len(artifacts))
 	for _, a := range artifacts {
 		if a == nil {

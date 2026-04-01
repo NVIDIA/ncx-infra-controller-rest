@@ -111,7 +111,7 @@ type OperatingSystemIpxeArtifact struct {
 	AuthType      *string `json:"authType,omitempty"`
 	AuthToken     *string `json:"authToken,omitempty"`
 	CacheStrategy string  `json:"cacheStrategy"`
-	LocalURL      *string `json:"local_url,omitempty"`
+	CachedURL     *string `json:"cached_url,omitempty"`
 }
 
 // OperatingSystem describes the attributes of the operating system

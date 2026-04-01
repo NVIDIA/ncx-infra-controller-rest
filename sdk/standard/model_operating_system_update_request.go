@@ -28,9 +28,9 @@ type OperatingSystemUpdateRequest struct {
 	// Name of an iPXE template to use. Mutually exclusive with ipxeScript and imageUrl
 	IpxeTemplateName NullableString `json:"ipxeTemplateName,omitempty"`
 	// Parameters to pass to the iPXE template. If omitted the existing parameters are kept; if set to an empty array the parameters are cleared
-	IpxeParameters []IpxeOsParameter `json:"ipxeParameters,omitempty"`
+	IpxeParameters []IpxeScriptParameter `json:"ipxeParameters,omitempty"`
 	// Artifacts for the iPXE OS definition. If omitted the existing artifacts are kept; if set to an empty array the artifacts are cleared
-	IpxeArtifacts []IpxeOsArtifact `json:"ipxeArtifacts,omitempty"`
+	IpxeArtifacts []IpxeScriptArtifact `json:"ipxeArtifacts,omitempty"`
 	// Synchronization scope for iPXE template-based OS
 	Scope NullableString `json:"scope,omitempty"`
 	// Original URL from where the Operating System image can be retreived from, required for image based OS
@@ -251,9 +251,9 @@ func (o *OperatingSystemUpdateRequest) UnsetIpxeTemplateName() {
 }
 
 // GetIpxeParameters returns the IpxeParameters field value if set, zero value otherwise.
-func (o *OperatingSystemUpdateRequest) GetIpxeParameters() []IpxeOsParameter {
+func (o *OperatingSystemUpdateRequest) GetIpxeParameters() []IpxeScriptParameter {
 	if o == nil || IsNil(o.IpxeParameters) {
-		var ret []IpxeOsParameter
+		var ret []IpxeScriptParameter
 		return ret
 	}
 	return o.IpxeParameters
@@ -261,7 +261,7 @@ func (o *OperatingSystemUpdateRequest) GetIpxeParameters() []IpxeOsParameter {
 
 // GetIpxeParametersOk returns a tuple with the IpxeParameters field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *OperatingSystemUpdateRequest) GetIpxeParametersOk() ([]IpxeOsParameter, bool) {
+func (o *OperatingSystemUpdateRequest) GetIpxeParametersOk() ([]IpxeScriptParameter, bool) {
 	if o == nil || IsNil(o.IpxeParameters) {
 		return nil, false
 	}
@@ -277,15 +277,15 @@ func (o *OperatingSystemUpdateRequest) HasIpxeParameters() bool {
 	return false
 }
 
-// SetIpxeParameters gets a reference to the given []IpxeOsParameter and assigns it to the IpxeParameters field.
-func (o *OperatingSystemUpdateRequest) SetIpxeParameters(v []IpxeOsParameter) {
+// SetIpxeParameters gets a reference to the given []IpxeScriptParameter and assigns it to the IpxeParameters field.
+func (o *OperatingSystemUpdateRequest) SetIpxeParameters(v []IpxeScriptParameter) {
 	o.IpxeParameters = v
 }
 
 // GetIpxeArtifacts returns the IpxeArtifacts field value if set, zero value otherwise.
-func (o *OperatingSystemUpdateRequest) GetIpxeArtifacts() []IpxeOsArtifact {
+func (o *OperatingSystemUpdateRequest) GetIpxeArtifacts() []IpxeScriptArtifact {
 	if o == nil || IsNil(o.IpxeArtifacts) {
-		var ret []IpxeOsArtifact
+		var ret []IpxeScriptArtifact
 		return ret
 	}
 	return o.IpxeArtifacts
@@ -293,7 +293,7 @@ func (o *OperatingSystemUpdateRequest) GetIpxeArtifacts() []IpxeOsArtifact {
 
 // GetIpxeArtifactsOk returns a tuple with the IpxeArtifacts field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *OperatingSystemUpdateRequest) GetIpxeArtifactsOk() ([]IpxeOsArtifact, bool) {
+func (o *OperatingSystemUpdateRequest) GetIpxeArtifactsOk() ([]IpxeScriptArtifact, bool) {
 	if o == nil || IsNil(o.IpxeArtifacts) {
 		return nil, false
 	}
@@ -309,8 +309,8 @@ func (o *OperatingSystemUpdateRequest) HasIpxeArtifacts() bool {
 	return false
 }
 
-// SetIpxeArtifacts gets a reference to the given []IpxeOsArtifact and assigns it to the IpxeArtifacts field.
-func (o *OperatingSystemUpdateRequest) SetIpxeArtifacts(v []IpxeOsArtifact) {
+// SetIpxeArtifacts gets a reference to the given []IpxeScriptArtifact and assigns it to the IpxeArtifacts field.
+func (o *OperatingSystemUpdateRequest) SetIpxeArtifacts(v []IpxeScriptArtifact) {
 	o.IpxeArtifacts = v
 }
 

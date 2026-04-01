@@ -16,11 +16,11 @@ import (
 	"fmt"
 )
 
-// checks if the IpxeOsArtifact type satisfies the MappedNullable interface at compile time
-var _ MappedNullable = &IpxeOsArtifact{}
+// checks if the IpxeScriptArtifact type satisfies the MappedNullable interface at compile time
+var _ MappedNullable = &IpxeScriptArtifact{}
 
-// IpxeOsArtifact An artifact (kernel, initrd, ISO, etc.) required by an iPXE OS definition
-type IpxeOsArtifact struct {
+// IpxeScriptArtifact An artifact (kernel, initrd, ISO, etc.) required by an iPXE OS definition
+type IpxeScriptArtifact struct {
 	// Artifact identifier referenced by the iPXE template (e.g. kernel, initrd)
 	Name string `json:"name"`
 	// Remote URL from where the artifact can be retrieved
@@ -35,30 +35,30 @@ type IpxeOsArtifact struct {
 	CacheStrategy string `json:"cacheStrategy"`
 }
 
-type _IpxeOsArtifact IpxeOsArtifact
+type _IpxeScriptArtifact IpxeScriptArtifact
 
-// NewIpxeOsArtifact instantiates a new IpxeOsArtifact object
+// NewIpxeScriptArtifact instantiates a new IpxeScriptArtifact object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewIpxeOsArtifact(name string, url string, cacheStrategy string) *IpxeOsArtifact {
-	this := IpxeOsArtifact{}
+func NewIpxeScriptArtifact(name string, url string, cacheStrategy string) *IpxeScriptArtifact {
+	this := IpxeScriptArtifact{}
 	this.Name = name
 	this.Url = url
 	this.CacheStrategy = cacheStrategy
 	return &this
 }
 
-// NewIpxeOsArtifactWithDefaults instantiates a new IpxeOsArtifact object
+// NewIpxeScriptArtifactWithDefaults instantiates a new IpxeScriptArtifact object
 // This constructor will only assign default values to properties that have it defined,
 // but it doesn't guarantee that properties required by API are set
-func NewIpxeOsArtifactWithDefaults() *IpxeOsArtifact {
-	this := IpxeOsArtifact{}
+func NewIpxeScriptArtifactWithDefaults() *IpxeScriptArtifact {
+	this := IpxeScriptArtifact{}
 	return &this
 }
 
 // GetName returns the Name field value
-func (o *IpxeOsArtifact) GetName() string {
+func (o *IpxeScriptArtifact) GetName() string {
 	if o == nil {
 		var ret string
 		return ret
@@ -69,7 +69,7 @@ func (o *IpxeOsArtifact) GetName() string {
 
 // GetNameOk returns a tuple with the Name field value
 // and a boolean to check if the value has been set.
-func (o *IpxeOsArtifact) GetNameOk() (*string, bool) {
+func (o *IpxeScriptArtifact) GetNameOk() (*string, bool) {
 	if o == nil {
 		return nil, false
 	}
@@ -77,12 +77,12 @@ func (o *IpxeOsArtifact) GetNameOk() (*string, bool) {
 }
 
 // SetName sets field value
-func (o *IpxeOsArtifact) SetName(v string) {
+func (o *IpxeScriptArtifact) SetName(v string) {
 	o.Name = v
 }
 
 // GetUrl returns the Url field value
-func (o *IpxeOsArtifact) GetUrl() string {
+func (o *IpxeScriptArtifact) GetUrl() string {
 	if o == nil {
 		var ret string
 		return ret
@@ -93,7 +93,7 @@ func (o *IpxeOsArtifact) GetUrl() string {
 
 // GetUrlOk returns a tuple with the Url field value
 // and a boolean to check if the value has been set.
-func (o *IpxeOsArtifact) GetUrlOk() (*string, bool) {
+func (o *IpxeScriptArtifact) GetUrlOk() (*string, bool) {
 	if o == nil {
 		return nil, false
 	}
@@ -101,12 +101,12 @@ func (o *IpxeOsArtifact) GetUrlOk() (*string, bool) {
 }
 
 // SetUrl sets field value
-func (o *IpxeOsArtifact) SetUrl(v string) {
+func (o *IpxeScriptArtifact) SetUrl(v string) {
 	o.Url = v
 }
 
 // GetSha returns the Sha field value if set, zero value otherwise (both if not set or set to explicit null).
-func (o *IpxeOsArtifact) GetSha() string {
+func (o *IpxeScriptArtifact) GetSha() string {
 	if o == nil || IsNil(o.Sha.Get()) {
 		var ret string
 		return ret
@@ -117,7 +117,7 @@ func (o *IpxeOsArtifact) GetSha() string {
 // GetShaOk returns a tuple with the Sha field value if set, nil otherwise
 // and a boolean to check if the value has been set.
 // NOTE: If the value is an explicit nil, `nil, true` will be returned
-func (o *IpxeOsArtifact) GetShaOk() (*string, bool) {
+func (o *IpxeScriptArtifact) GetShaOk() (*string, bool) {
 	if o == nil {
 		return nil, false
 	}
@@ -125,7 +125,7 @@ func (o *IpxeOsArtifact) GetShaOk() (*string, bool) {
 }
 
 // HasSha returns a boolean if a field has been set.
-func (o *IpxeOsArtifact) HasSha() bool {
+func (o *IpxeScriptArtifact) HasSha() bool {
 	if o != nil && o.Sha.IsSet() {
 		return true
 	}
@@ -134,22 +134,22 @@ func (o *IpxeOsArtifact) HasSha() bool {
 }
 
 // SetSha gets a reference to the given NullableString and assigns it to the Sha field.
-func (o *IpxeOsArtifact) SetSha(v string) {
+func (o *IpxeScriptArtifact) SetSha(v string) {
 	o.Sha.Set(&v)
 }
 
 // SetShaNil sets the value for Sha to be an explicit nil
-func (o *IpxeOsArtifact) SetShaNil() {
+func (o *IpxeScriptArtifact) SetShaNil() {
 	o.Sha.Set(nil)
 }
 
 // UnsetSha ensures that no value is present for Sha, not even an explicit nil
-func (o *IpxeOsArtifact) UnsetSha() {
+func (o *IpxeScriptArtifact) UnsetSha() {
 	o.Sha.Unset()
 }
 
 // GetAuthType returns the AuthType field value if set, zero value otherwise (both if not set or set to explicit null).
-func (o *IpxeOsArtifact) GetAuthType() string {
+func (o *IpxeScriptArtifact) GetAuthType() string {
 	if o == nil || IsNil(o.AuthType.Get()) {
 		var ret string
 		return ret
@@ -160,7 +160,7 @@ func (o *IpxeOsArtifact) GetAuthType() string {
 // GetAuthTypeOk returns a tuple with the AuthType field value if set, nil otherwise
 // and a boolean to check if the value has been set.
 // NOTE: If the value is an explicit nil, `nil, true` will be returned
-func (o *IpxeOsArtifact) GetAuthTypeOk() (*string, bool) {
+func (o *IpxeScriptArtifact) GetAuthTypeOk() (*string, bool) {
 	if o == nil {
 		return nil, false
 	}
@@ -168,7 +168,7 @@ func (o *IpxeOsArtifact) GetAuthTypeOk() (*string, bool) {
 }
 
 // HasAuthType returns a boolean if a field has been set.
-func (o *IpxeOsArtifact) HasAuthType() bool {
+func (o *IpxeScriptArtifact) HasAuthType() bool {
 	if o != nil && o.AuthType.IsSet() {
 		return true
 	}
@@ -177,22 +177,22 @@ func (o *IpxeOsArtifact) HasAuthType() bool {
 }
 
 // SetAuthType gets a reference to the given NullableString and assigns it to the AuthType field.
-func (o *IpxeOsArtifact) SetAuthType(v string) {
+func (o *IpxeScriptArtifact) SetAuthType(v string) {
 	o.AuthType.Set(&v)
 }
 
 // SetAuthTypeNil sets the value for AuthType to be an explicit nil
-func (o *IpxeOsArtifact) SetAuthTypeNil() {
+func (o *IpxeScriptArtifact) SetAuthTypeNil() {
 	o.AuthType.Set(nil)
 }
 
 // UnsetAuthType ensures that no value is present for AuthType, not even an explicit nil
-func (o *IpxeOsArtifact) UnsetAuthType() {
+func (o *IpxeScriptArtifact) UnsetAuthType() {
 	o.AuthType.Unset()
 }
 
 // GetAuthToken returns the AuthToken field value if set, zero value otherwise (both if not set or set to explicit null).
-func (o *IpxeOsArtifact) GetAuthToken() string {
+func (o *IpxeScriptArtifact) GetAuthToken() string {
 	if o == nil || IsNil(o.AuthToken.Get()) {
 		var ret string
 		return ret
@@ -203,7 +203,7 @@ func (o *IpxeOsArtifact) GetAuthToken() string {
 // GetAuthTokenOk returns a tuple with the AuthToken field value if set, nil otherwise
 // and a boolean to check if the value has been set.
 // NOTE: If the value is an explicit nil, `nil, true` will be returned
-func (o *IpxeOsArtifact) GetAuthTokenOk() (*string, bool) {
+func (o *IpxeScriptArtifact) GetAuthTokenOk() (*string, bool) {
 	if o == nil {
 		return nil, false
 	}
@@ -211,7 +211,7 @@ func (o *IpxeOsArtifact) GetAuthTokenOk() (*string, bool) {
 }
 
 // HasAuthToken returns a boolean if a field has been set.
-func (o *IpxeOsArtifact) HasAuthToken() bool {
+func (o *IpxeScriptArtifact) HasAuthToken() bool {
 	if o != nil && o.AuthToken.IsSet() {
 		return true
 	}
@@ -220,22 +220,22 @@ func (o *IpxeOsArtifact) HasAuthToken() bool {
 }
 
 // SetAuthToken gets a reference to the given NullableString and assigns it to the AuthToken field.
-func (o *IpxeOsArtifact) SetAuthToken(v string) {
+func (o *IpxeScriptArtifact) SetAuthToken(v string) {
 	o.AuthToken.Set(&v)
 }
 
 // SetAuthTokenNil sets the value for AuthToken to be an explicit nil
-func (o *IpxeOsArtifact) SetAuthTokenNil() {
+func (o *IpxeScriptArtifact) SetAuthTokenNil() {
 	o.AuthToken.Set(nil)
 }
 
 // UnsetAuthToken ensures that no value is present for AuthToken, not even an explicit nil
-func (o *IpxeOsArtifact) UnsetAuthToken() {
+func (o *IpxeScriptArtifact) UnsetAuthToken() {
 	o.AuthToken.Unset()
 }
 
 // GetCacheStrategy returns the CacheStrategy field value
-func (o *IpxeOsArtifact) GetCacheStrategy() string {
+func (o *IpxeScriptArtifact) GetCacheStrategy() string {
 	if o == nil {
 		var ret string
 		return ret
@@ -246,7 +246,7 @@ func (o *IpxeOsArtifact) GetCacheStrategy() string {
 
 // GetCacheStrategyOk returns a tuple with the CacheStrategy field value
 // and a boolean to check if the value has been set.
-func (o *IpxeOsArtifact) GetCacheStrategyOk() (*string, bool) {
+func (o *IpxeScriptArtifact) GetCacheStrategyOk() (*string, bool) {
 	if o == nil {
 		return nil, false
 	}
@@ -254,11 +254,11 @@ func (o *IpxeOsArtifact) GetCacheStrategyOk() (*string, bool) {
 }
 
 // SetCacheStrategy sets field value
-func (o *IpxeOsArtifact) SetCacheStrategy(v string) {
+func (o *IpxeScriptArtifact) SetCacheStrategy(v string) {
 	o.CacheStrategy = v
 }
 
-func (o IpxeOsArtifact) MarshalJSON() ([]byte, error) {
+func (o IpxeScriptArtifact) MarshalJSON() ([]byte, error) {
 	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
@@ -266,7 +266,7 @@ func (o IpxeOsArtifact) MarshalJSON() ([]byte, error) {
 	return json.Marshal(toSerialize)
 }
 
-func (o IpxeOsArtifact) ToMap() (map[string]interface{}, error) {
+func (o IpxeScriptArtifact) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
 	toSerialize["name"] = o.Name
 	toSerialize["url"] = o.Url
@@ -283,7 +283,7 @@ func (o IpxeOsArtifact) ToMap() (map[string]interface{}, error) {
 	return toSerialize, nil
 }
 
-func (o *IpxeOsArtifact) UnmarshalJSON(data []byte) (err error) {
+func (o *IpxeScriptArtifact) UnmarshalJSON(data []byte) (err error) {
 	// This validates that all required properties are included in the JSON object
 	// by unmarshalling the object into a generic map with string keys and checking
 	// that every required field exists as a key in the generic map.
@@ -307,53 +307,53 @@ func (o *IpxeOsArtifact) UnmarshalJSON(data []byte) (err error) {
 		}
 	}
 
-	varIpxeOsArtifact := _IpxeOsArtifact{}
+	varIpxeScriptArtifact := _IpxeScriptArtifact{}
 
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
-	err = decoder.Decode(&varIpxeOsArtifact)
+	err = decoder.Decode(&varIpxeScriptArtifact)
 
 	if err != nil {
 		return err
 	}
 
-	*o = IpxeOsArtifact(varIpxeOsArtifact)
+	*o = IpxeScriptArtifact(varIpxeScriptArtifact)
 
 	return err
 }
 
-type NullableIpxeOsArtifact struct {
-	value *IpxeOsArtifact
+type NullableIpxeScriptArtifact struct {
+	value *IpxeScriptArtifact
 	isSet bool
 }
 
-func (v NullableIpxeOsArtifact) Get() *IpxeOsArtifact {
+func (v NullableIpxeScriptArtifact) Get() *IpxeScriptArtifact {
 	return v.value
 }
 
-func (v *NullableIpxeOsArtifact) Set(val *IpxeOsArtifact) {
+func (v *NullableIpxeScriptArtifact) Set(val *IpxeScriptArtifact) {
 	v.value = val
 	v.isSet = true
 }
 
-func (v NullableIpxeOsArtifact) IsSet() bool {
+func (v NullableIpxeScriptArtifact) IsSet() bool {
 	return v.isSet
 }
 
-func (v *NullableIpxeOsArtifact) Unset() {
+func (v *NullableIpxeScriptArtifact) Unset() {
 	v.value = nil
 	v.isSet = false
 }
 
-func NewNullableIpxeOsArtifact(val *IpxeOsArtifact) *NullableIpxeOsArtifact {
-	return &NullableIpxeOsArtifact{value: val, isSet: true}
+func NewNullableIpxeScriptArtifact(val *IpxeScriptArtifact) *NullableIpxeScriptArtifact {
+	return &NullableIpxeScriptArtifact{value: val, isSet: true}
 }
 
-func (v NullableIpxeOsArtifact) MarshalJSON() ([]byte, error) {
+func (v NullableIpxeScriptArtifact) MarshalJSON() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 
-func (v *NullableIpxeOsArtifact) UnmarshalJSON(src []byte) error {
+func (v *NullableIpxeScriptArtifact) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }

@@ -390,7 +390,7 @@ func (csh CreateOperatingSystemHandler) Handle(c echo.Context) error {
 		IpxeScript:               apiRequest.IpxeScript,
 		IpxeTemplateName:         apiRequest.IpxeTemplateName,
 		IpxeParameters:           apiRequest.IpxeParameters,
-		IpxeArtifacts:            stripLocalURLFromArtifacts(apiRequest.IpxeArtifacts),
+		IpxeArtifacts:            stripCachedURLFromArtifacts(apiRequest.IpxeArtifacts),
 		UserData:                 apiRequest.UserData,
 		IsCloudInit:              apiRequest.IsCloudInit,
 		AllowOverride:            apiRequest.AllowOverride,
@@ -509,7 +509,7 @@ func (csh CreateOperatingSystemHandler) Handle(c echo.Context) error {
 			workflowName = "CreateOperatingSystem"
 			workflowIDPrefix = "ipxe-os-create-"
 			workflowInput = &cwssaws.CreateOperatingSystemRequest{
-				Id:                   &cwssaws.UUID{Value: os.ID.String()},
+				Id:                   &cwssaws.OperatingSystemId{Value: os.ID.String()},
 				Name:                 os.Name,
 				Description:          os.Description,
 				TenantOrganizationId: os.Org,
@@ -1347,7 +1347,7 @@ func (ush UpdateOperatingSystemHandler) Handle(c echo.Context) error {
 		IpxeScript:        apiRequest.IpxeScript,
 		IpxeTemplateName:  apiRequest.IpxeTemplateName,
 		IpxeParameters:    apiRequest.IpxeParameters,
-		IpxeArtifacts:     stripLocalURLFromArtifactsPtr(apiRequest.IpxeArtifacts),
+		IpxeArtifacts:     stripCachedURLFromArtifactsPtr(apiRequest.IpxeArtifacts),
 		UserData:          apiRequest.UserData,
 		IsCloudInit:       apiRequest.IsCloudInit,
 		AllowOverride:     apiRequest.AllowOverride,
@@ -1614,7 +1614,7 @@ func (ush UpdateOperatingSystemHandler) Handle(c echo.Context) error {
 			}
 
 			updateOsRequest := &cwssaws.UpdateOperatingSystemRequest{
-				Id:                 &cwssaws.UUID{Value: uos.ID.String()},
+				Id:                 &cwssaws.OperatingSystemId{Value: uos.ID.String()},
 				Name:               &uos.Name,
 				Description:        uos.Description,
 				IsActive:           &uos.IsActive,
@@ -1623,8 +1623,8 @@ func (ush UpdateOperatingSystemHandler) Handle(c echo.Context) error {
 				UserData:           uos.UserData,
 				IpxeScript:         uos.IpxeScript,
 				IpxeTemplateName:   uos.IpxeTemplateName,
-				IpxeParameters:     &cwssaws.IpxeOsParameters{Items: dbParamsToProto(uos.IpxeParameters)},
-				IpxeArtifacts:      &cwssaws.IpxeOsArtifacts{Items: dbArtifactsToProto(uos.IpxeArtifacts)},
+				IpxeParameters:     &cwssaws.IpxeScriptParameters{Items: dbParamsToProto(uos.IpxeParameters)},
+				IpxeArtifacts:      &cwssaws.IpxeScriptArtifacts{Items: dbArtifactsToProto(uos.IpxeArtifacts)},
 				IpxeDefinitionHash: uos.DefinitionHash,
 			}
 
@@ -1923,7 +1923,7 @@ func (dsh DeleteOperatingSystemHandler) Handle(c echo.Context) error {
 					workflowName = "DeleteOperatingSystem"
 					workflowID = "ipxe-os-delete-" + ossa.SiteID.String() + "-" + os.ID.String()
 					deleteOsRequest = &cwssaws.DeleteOperatingSystemRequest{
-						Id: &cwssaws.UUID{Value: os.ID.String()},
+						Id: &cwssaws.OperatingSystemId{Value: os.ID.String()},
 					}
 				}
 
@@ -2007,21 +2007,21 @@ func (dsh DeleteOperatingSystemHandler) Handle(c echo.Context) error {
 }
 
 // dbParamsToProto converts DB model iPXE parameters to the proto representation.
-func dbParamsToProto(params []cdbm.OperatingSystemIpxeParameter) []*cwssaws.IpxeOsParameter {
-	result := make([]*cwssaws.IpxeOsParameter, 0, len(params))
+func dbParamsToProto(params []cdbm.OperatingSystemIpxeParameter) []*cwssaws.IpxeScriptParameter {
+	result := make([]*cwssaws.IpxeScriptParameter, 0, len(params))
 	for _, p := range params {
-		result = append(result, &cwssaws.IpxeOsParameter{Name: p.Name, Value: p.Value})
+		result = append(result, &cwssaws.IpxeScriptParameter{Name: p.Name, Value: p.Value})
 	}
 	return result
 }
 
 // dbArtifactsToProto converts DB model iPXE artifacts to the proto representation.
 // CacheStrategy is stored as the proto enum's string name (e.g. "CACHE_AS_NEEDED").
-func dbArtifactsToProto(artifacts []cdbm.OperatingSystemIpxeArtifact) []*cwssaws.IpxeOsArtifact {
-	result := make([]*cwssaws.IpxeOsArtifact, 0, len(artifacts))
+func dbArtifactsToProto(artifacts []cdbm.OperatingSystemIpxeArtifact) []*cwssaws.IpxeScriptArtifact {
+	result := make([]*cwssaws.IpxeScriptArtifact, 0, len(artifacts))
 	for _, a := range artifacts {
-		strategy := cwssaws.ArtifactCacheStrategy(cwssaws.ArtifactCacheStrategy_value[a.CacheStrategy])
-		result = append(result, &cwssaws.IpxeOsArtifact{
+		strategy := cwssaws.IpxeScriptArtifactCacheStrategy(cwssaws.IpxeScriptArtifactCacheStrategy_value[a.CacheStrategy])
+		result = append(result, &cwssaws.IpxeScriptArtifact{
 			Name:          a.Name,
 			Url:           a.URL,
 			Sha:           a.SHA,
@@ -2033,20 +2033,20 @@ func dbArtifactsToProto(artifacts []cdbm.OperatingSystemIpxeArtifact) []*cwssaws
 	return result
 }
 
-// stripLocalURLFromArtifacts returns a copy with LocalURL cleared.
-// local_url is a core-only field that must never be stored in REST.
-func stripLocalURLFromArtifacts(artifacts []cdbm.OperatingSystemIpxeArtifact) []cdbm.OperatingSystemIpxeArtifact {
+// stripCachedURLFromArtifacts returns a copy with CachedURL cleared.
+// cached_url is a core-only field that must never be stored in REST.
+func stripCachedURLFromArtifacts(artifacts []cdbm.OperatingSystemIpxeArtifact) []cdbm.OperatingSystemIpxeArtifact {
 	for i := range artifacts {
-		artifacts[i].LocalURL = nil
+		artifacts[i].CachedURL = nil
 	}
 	return artifacts
 }
 
-// stripLocalURLFromArtifactsPtr is the pointer-to-slice variant for update requests.
-func stripLocalURLFromArtifactsPtr(artifacts *[]cdbm.OperatingSystemIpxeArtifact) *[]cdbm.OperatingSystemIpxeArtifact {
+// stripCachedURLFromArtifactsPtr is the pointer-to-slice variant for update requests.
+func stripCachedURLFromArtifactsPtr(artifacts *[]cdbm.OperatingSystemIpxeArtifact) *[]cdbm.OperatingSystemIpxeArtifact {
 	if artifacts == nil {
 		return nil
 	}
-	stripped := stripLocalURLFromArtifacts(*artifacts)
+	stripped := stripCachedURLFromArtifacts(*artifacts)
 	return &stripped
 }

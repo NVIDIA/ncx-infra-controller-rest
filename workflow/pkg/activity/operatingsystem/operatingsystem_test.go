@@ -382,7 +382,7 @@ func TestManageOperatingSystemSync_UpdateOperatingSystemsInDB(t *testing.T) {
 			Timestamp:       now,
 			OperatingSystems: []*cwssaws.OperatingSystemDefinition{
 				{
-					Id:                   &cwssaws.UUID{Value: newID.String()},
+					Id:                   &cwssaws.OperatingSystemId{Value: newID.String()},
 					Name:                 "core-os-create-test",
 					TenantOrganizationId: tnOrg,
 					Type:                 cwssaws.OperatingSystemType_OS_TYPE_IPXE,
@@ -429,7 +429,7 @@ func TestManageOperatingSystemSync_UpdateOperatingSystemsInDB(t *testing.T) {
 			Timestamp:       futureTime,
 			OperatingSystems: []*cwssaws.OperatingSystemDefinition{
 				{
-					Id:                   &cwssaws.UUID{Value: existingID.String()},
+					Id:                   &cwssaws.OperatingSystemId{Value: existingID.String()},
 					Name:                 "existing-os-updated",
 					TenantOrganizationId: tnOrg,
 					Type:                 cwssaws.OperatingSystemType_OS_TYPE_IPXE,
@@ -485,7 +485,7 @@ func TestManageOperatingSystemSync_UpdateOperatingSystemsInDB(t *testing.T) {
 			Timestamp:       futureTime,
 			OperatingSystems: []*cwssaws.OperatingSystemDefinition{
 				{
-					Id:                   &cwssaws.UUID{Value: globalID.String()},
+					Id:                   &cwssaws.OperatingSystemId{Value: globalID.String()},
 					Name:                 "global-os-changed-in-core",
 					TenantOrganizationId: tnOrg,
 					Type:                 cwssaws.OperatingSystemType_OS_TYPE_IPXE,
@@ -588,7 +588,7 @@ func TestManageOperatingSystemSync_UpdateOperatingSystemsInDB(t *testing.T) {
 			Timestamp:       futureTime,
 			OperatingSystems: []*cwssaws.OperatingSystemDefinition{
 				{
-					Id:                   &cwssaws.UUID{Value: deletedID.String()},
+					Id:                   &cwssaws.OperatingSystemId{Value: deletedID.String()},
 					Name:                 "already-deleted-os",
 					TenantOrganizationId: tnOrg,
 					Type:                 cwssaws.OperatingSystemType_OS_TYPE_IPXE,

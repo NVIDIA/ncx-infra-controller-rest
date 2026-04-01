@@ -443,7 +443,7 @@ func TestOperatingSystemSQLDAO_GetAll(t *testing.T) {
 
 	ossasSite2 := []OperatingSystemSiteAssociation{}
 	ossasSite3 := []OperatingSystemSiteAssociation{}
-	joinIpxeOss := []OperatingSystem{}
+	joinIpxeTemplatedScripts := []OperatingSystem{}
 
 	// iPXE image 1
 	os, _ := ossd.Create(
@@ -465,7 +465,7 @@ func TestOperatingSystemSQLDAO_GetAll(t *testing.T) {
 			Status:                   OperatingSystemStatusPending,
 			CreatedBy:                user.ID,
 		})
-	joinIpxeOss = append(joinIpxeOss, *os)
+	joinIpxeTemplatedScripts = append(joinIpxeTemplatedScripts, *os)
 
 	// iPXE image 2
 	os, _ = ossd.Create(
@@ -487,7 +487,7 @@ func TestOperatingSystemSQLDAO_GetAll(t *testing.T) {
 			Status:                   OperatingSystemStatusPending,
 			CreatedBy:                user.ID,
 		})
-	joinIpxeOss = append(joinIpxeOss, *os)
+	joinIpxeTemplatedScripts = append(joinIpxeTemplatedScripts, *os)
 
 	// OS Image 1 for site2
 	os, _ = ossd.Create(ctx, nil, OperatingSystemCreateInput{
@@ -770,7 +770,7 @@ func TestOperatingSystemSQLDAO_GetAll(t *testing.T) {
 			siteIDs:       []uuid.UUID{site.ID},
 			searchQuery:   nil,
 			expectedCount: paginator.DefaultLimit,
-			expectedTotal: db.GetIntPtr(totalCount + len(joinIpxeOss)),
+			expectedTotal: db.GetIntPtr(totalCount + len(joinIpxeTemplatedScripts)),
 			expectedError: false,
 		},
 		{
@@ -825,8 +825,8 @@ func TestOperatingSystemSQLDAO_GetAll(t *testing.T) {
 			tenantIDs:     nil,
 			osNames:       nil,
 			osTypes:       []string{OperatingSystemTypeIPXE},
-			expectedCount: totalCount/2 + len(joinIpxeOss),
-			expectedTotal: db.GetIntPtr(totalCount/2 + len(joinIpxeOss)),
+			expectedCount: totalCount/2 + len(joinIpxeTemplatedScripts),
+			expectedTotal: db.GetIntPtr(totalCount/2 + len(joinIpxeTemplatedScripts)),
 			expectedError: false,
 		},
 		{
@@ -907,8 +907,8 @@ func TestOperatingSystemSQLDAO_GetAll(t *testing.T) {
 			siteIDs:       []uuid.UUID{site3.ID},
 			osTypes:       nil,
 			searchQuery:   nil,
-			expectedCount: len(joinIpxeOss) + len(ossasSite3),
-			expectedTotal: db.GetIntPtr(len(joinIpxeOss) + len(ossasSite3)),
+			expectedCount: len(joinIpxeTemplatedScripts) + len(ossasSite3),
+			expectedTotal: db.GetIntPtr(len(joinIpxeTemplatedScripts) + len(ossasSite3)),
 			expectedError: false,
 		},
 		{

@@ -311,7 +311,7 @@ func TestManageOperatingSystem_CreateOperatingSystemOnSite(t *testing.T) {
 	carbideAtomicClient := cClient.NewCarbideAtomicClient(&cClient.CarbideClientConfig{})
 	carbideAtomicClient.SwapClient(mockCarbide)
 
-	validID := &cwssaws.UUID{Value: uuid.NewString()}
+	validID := &cwssaws.OperatingSystemId{Value: uuid.NewString()}
 
 	type fields struct {
 		CarbideAtomicClient *cClient.CarbideAtomicClient
@@ -379,7 +379,7 @@ func TestManageOperatingSystem_UpdateOperatingSystemOnSite(t *testing.T) {
 	carbideAtomicClient := cClient.NewCarbideAtomicClient(&cClient.CarbideClientConfig{})
 	carbideAtomicClient.SwapClient(mockCarbide)
 
-	validID := &cwssaws.UUID{Value: uuid.NewString()}
+	validID := &cwssaws.OperatingSystemId{Value: uuid.NewString()}
 
 	type fields struct {
 		CarbideAtomicClient *cClient.CarbideAtomicClient
@@ -442,7 +442,7 @@ func TestManageOperatingSystem_DeleteOperatingSystemOnSite(t *testing.T) {
 	carbideAtomicClient := cClient.NewCarbideAtomicClient(&cClient.CarbideClientConfig{})
 	carbideAtomicClient.SwapClient(mockCarbide)
 
-	validID := &cwssaws.UUID{Value: uuid.NewString()}
+	validID := &cwssaws.OperatingSystemId{Value: uuid.NewString()}
 
 	type fields struct {
 		CarbideAtomicClient *cClient.CarbideAtomicClient

@@ -14112,12 +14112,12 @@ components:
           type: array
           description: Parameters passed to the iPXE template for variable substitution
           items:
-            $ref: '#/components/schemas/IpxeOsParameter'
+            $ref: '#/components/schemas/IpxeScriptParameter'
         ipxeArtifacts:
           type: array
           description: 'Artifacts (kernel, initrd, etc.) for the iPXE OS definition'
           items:
-            $ref: '#/components/schemas/IpxeOsArtifact'
+            $ref: '#/components/schemas/IpxeScriptArtifact'
         scope:
           type:
             - string
@@ -14305,12 +14305,12 @@ components:
           type: array
           description: Parameters to pass to the iPXE template for variable substitution
           items:
-            $ref: '#/components/schemas/IpxeOsParameter'
+            $ref: '#/components/schemas/IpxeScriptParameter'
         ipxeArtifacts:
           type: array
           description: 'Artifacts (kernel, initrd, etc.) required for the iPXE OS definition'
           items:
-            $ref: '#/components/schemas/IpxeOsArtifact'
+            $ref: '#/components/schemas/IpxeScriptArtifact'
         scope:
           type:
             - string
@@ -14422,12 +14422,12 @@ components:
           type: array
           description: Parameters to pass to the iPXE template. If omitted the existing parameters are kept; if set to an empty array the parameters are cleared
           items:
-            $ref: '#/components/schemas/IpxeOsParameter'
+            $ref: '#/components/schemas/IpxeScriptParameter'
         ipxeArtifacts:
           type: array
           description: 'Artifacts for the iPXE OS definition. If omitted the existing artifacts are kept; if set to an empty array the artifacts are cleared'
           items:
-            $ref: '#/components/schemas/IpxeOsArtifact'
+            $ref: '#/components/schemas/IpxeScriptArtifact'
         scope:
           type:
             - string
@@ -14503,8 +14503,8 @@ components:
             - string
             - 'null'
           description: Optional deactivation note if OS is inactive
-    IpxeOsParameter:
-      title: IpxeOsParameter
+    IpxeScriptParameter:
+      title: IpxeScriptParameter
       type: object
       description: A key-value parameter passed to an iPXE template for variable substitution
       properties:
@@ -14517,8 +14517,8 @@ components:
       required:
         - name
         - value
-    IpxeOsArtifact:
-      title: IpxeOsArtifact
+    IpxeScriptArtifact:
+      title: IpxeScriptArtifact
       type: object
       description: 'An artifact (kernel, initrd, ISO, etc.) required by an iPXE OS definition'
       properties:

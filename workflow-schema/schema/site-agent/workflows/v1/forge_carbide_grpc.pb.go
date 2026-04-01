@@ -863,7 +863,7 @@ type ForgeClient interface {
 	// Find all Logical partitions under a specified tenant
 	NVLinkLogicalPartitionsForTenant(ctx context.Context, in *TenantSearchQuery, opts ...grpc.CallOption) (*NVLinkLogicalPartitionList, error)
 	// iPXE Templates
-	ListIpxeScriptTemplates(ctx context.Context, in *ListIpxeScriptTemplatesRequest, opts ...grpc.CallOption) (*ListIpxeScriptTemplatesResponse, error)
+	ListIpxeScriptTemplates(ctx context.Context, in *ListIpxeScriptTemplatesRequest, opts ...grpc.CallOption) (*IpxeScriptTemplateList, error)
 	// Operating System Definitions (from carbide-core)
 	FindOperatingSystemIds(ctx context.Context, in *OperatingSystemSearchFilter, opts ...grpc.CallOption) (*OperatingSystemIdList, error)
 	FindOperatingSystemsByIds(ctx context.Context, in *OperatingSystemsByIdsRequest, opts ...grpc.CallOption) (*OperatingSystemList, error)
@@ -4061,9 +4061,9 @@ func (c *forgeClient) NVLinkLogicalPartitionsForTenant(ctx context.Context, in *
 	return out, nil
 }
 
-func (c *forgeClient) ListIpxeScriptTemplates(ctx context.Context, in *ListIpxeScriptTemplatesRequest, opts ...grpc.CallOption) (*ListIpxeScriptTemplatesResponse, error) {
+func (c *forgeClient) ListIpxeScriptTemplates(ctx context.Context, in *ListIpxeScriptTemplatesRequest, opts ...grpc.CallOption) (*IpxeScriptTemplateList, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ListIpxeScriptTemplatesResponse)
+	out := new(IpxeScriptTemplateList)
 	err := c.cc.Invoke(ctx, Forge_ListIpxeScriptTemplates_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -4632,7 +4632,7 @@ type ForgeServer interface {
 	// Find all Logical partitions under a specified tenant
 	NVLinkLogicalPartitionsForTenant(context.Context, *TenantSearchQuery) (*NVLinkLogicalPartitionList, error)
 	// iPXE Templates
-	ListIpxeScriptTemplates(context.Context, *ListIpxeScriptTemplatesRequest) (*ListIpxeScriptTemplatesResponse, error)
+	ListIpxeScriptTemplates(context.Context, *ListIpxeScriptTemplatesRequest) (*IpxeScriptTemplateList, error)
 	// Operating System Definitions (from carbide-core)
 	FindOperatingSystemIds(context.Context, *OperatingSystemSearchFilter) (*OperatingSystemIdList, error)
 	FindOperatingSystemsByIds(context.Context, *OperatingSystemsByIdsRequest) (*OperatingSystemList, error)
@@ -5603,7 +5603,7 @@ func (UnimplementedForgeServer) DeleteNVLinkLogicalPartition(context.Context, *N
 func (UnimplementedForgeServer) NVLinkLogicalPartitionsForTenant(context.Context, *TenantSearchQuery) (*NVLinkLogicalPartitionList, error) {
 	return nil, status.Error(codes.Unimplemented, "method NVLinkLogicalPartitionsForTenant not implemented")
 }
-func (UnimplementedForgeServer) ListIpxeScriptTemplates(context.Context, *ListIpxeScriptTemplatesRequest) (*ListIpxeScriptTemplatesResponse, error) {
+func (UnimplementedForgeServer) ListIpxeScriptTemplates(context.Context, *ListIpxeScriptTemplatesRequest) (*IpxeScriptTemplateList, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListIpxeScriptTemplates not implemented")
 }
 func (UnimplementedForgeServer) FindOperatingSystemIds(context.Context, *OperatingSystemSearchFilter) (*OperatingSystemIdList, error) {

@@ -100,3 +100,6 @@ message RackId {
 message SwitchId {
   string id = 1;
 }
+message OperatingSystemId {
+  string value = 1;
+}

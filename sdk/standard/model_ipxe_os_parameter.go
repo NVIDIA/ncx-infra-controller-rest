@@ -16,40 +16,40 @@ import (
 	"fmt"
 )
 
-// checks if the IpxeOsParameter type satisfies the MappedNullable interface at compile time
-var _ MappedNullable = &IpxeOsParameter{}
+// checks if the IpxeScriptParameter type satisfies the MappedNullable interface at compile time
+var _ MappedNullable = &IpxeScriptParameter{}
 
-// IpxeOsParameter A key-value parameter passed to an iPXE template for variable substitution
-type IpxeOsParameter struct {
+// IpxeScriptParameter A key-value parameter passed to an iPXE template for variable substitution
+type IpxeScriptParameter struct {
 	// Parameter name referenced in the iPXE template
 	Name string `json:"name"`
 	// Parameter value substituted into the iPXE template
 	Value string `json:"value"`
 }
 
-type _IpxeOsParameter IpxeOsParameter
+type _IpxeScriptParameter IpxeScriptParameter
 
-// NewIpxeOsParameter instantiates a new IpxeOsParameter object
+// NewIpxeScriptParameter instantiates a new IpxeScriptParameter object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewIpxeOsParameter(name string, value string) *IpxeOsParameter {
-	this := IpxeOsParameter{}
+func NewIpxeScriptParameter(name string, value string) *IpxeScriptParameter {
+	this := IpxeScriptParameter{}
 	this.Name = name
 	this.Value = value
 	return &this
 }
 
-// NewIpxeOsParameterWithDefaults instantiates a new IpxeOsParameter object
+// NewIpxeScriptParameterWithDefaults instantiates a new IpxeScriptParameter object
 // This constructor will only assign default values to properties that have it defined,
 // but it doesn't guarantee that properties required by API are set
-func NewIpxeOsParameterWithDefaults() *IpxeOsParameter {
-	this := IpxeOsParameter{}
+func NewIpxeScriptParameterWithDefaults() *IpxeScriptParameter {
+	this := IpxeScriptParameter{}
 	return &this
 }
 
 // GetName returns the Name field value
-func (o *IpxeOsParameter) GetName() string {
+func (o *IpxeScriptParameter) GetName() string {
 	if o == nil {
 		var ret string
 		return ret
@@ -60,7 +60,7 @@ func (o *IpxeOsParameter) GetName() string {
 
 // GetNameOk returns a tuple with the Name field value
 // and a boolean to check if the value has been set.
-func (o *IpxeOsParameter) GetNameOk() (*string, bool) {
+func (o *IpxeScriptParameter) GetNameOk() (*string, bool) {
 	if o == nil {
 		return nil, false
 	}
@@ -68,12 +68,12 @@ func (o *IpxeOsParameter) GetNameOk() (*string, bool) {
 }
 
 // SetName sets field value
-func (o *IpxeOsParameter) SetName(v string) {
+func (o *IpxeScriptParameter) SetName(v string) {
 	o.Name = v
 }
 
 // GetValue returns the Value field value
-func (o *IpxeOsParameter) GetValue() string {
+func (o *IpxeScriptParameter) GetValue() string {
 	if o == nil {
 		var ret string
 		return ret
@@ -84,7 +84,7 @@ func (o *IpxeOsParameter) GetValue() string {
 
 // GetValueOk returns a tuple with the Value field value
 // and a boolean to check if the value has been set.
-func (o *IpxeOsParameter) GetValueOk() (*string, bool) {
+func (o *IpxeScriptParameter) GetValueOk() (*string, bool) {
 	if o == nil {
 		return nil, false
 	}
@@ -92,11 +92,11 @@ func (o *IpxeOsParameter) GetValueOk() (*string, bool) {
 }
 
 // SetValue sets field value
-func (o *IpxeOsParameter) SetValue(v string) {
+func (o *IpxeScriptParameter) SetValue(v string) {
 	o.Value = v
 }
 
-func (o IpxeOsParameter) MarshalJSON() ([]byte, error) {
+func (o IpxeScriptParameter) MarshalJSON() ([]byte, error) {
 	toSerialize, err := o.ToMap()
 	if err != nil {
 		return []byte{}, err
@@ -104,14 +104,14 @@ func (o IpxeOsParameter) MarshalJSON() ([]byte, error) {
 	return json.Marshal(toSerialize)
 }
 
-func (o IpxeOsParameter) ToMap() (map[string]interface{}, error) {
+func (o IpxeScriptParameter) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
 	toSerialize["name"] = o.Name
 	toSerialize["value"] = o.Value
 	return toSerialize, nil
 }
 
-func (o *IpxeOsParameter) UnmarshalJSON(data []byte) (err error) {
+func (o *IpxeScriptParameter) UnmarshalJSON(data []byte) (err error) {
 	// This validates that all required properties are included in the JSON object
 	// by unmarshalling the object into a generic map with string keys and checking
 	// that every required field exists as a key in the generic map.
@@ -134,53 +134,53 @@ func (o *IpxeOsParameter) UnmarshalJSON(data []byte) (err error) {
 		}
 	}
 
-	varIpxeOsParameter := _IpxeOsParameter{}
+	varIpxeScriptParameter := _IpxeScriptParameter{}
 
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
-	err = decoder.Decode(&varIpxeOsParameter)
+	err = decoder.Decode(&varIpxeScriptParameter)
 
 	if err != nil {
 		return err
 	}
 
-	*o = IpxeOsParameter(varIpxeOsParameter)
+	*o = IpxeScriptParameter(varIpxeScriptParameter)
 
 	return err
 }
 
-type NullableIpxeOsParameter struct {
-	value *IpxeOsParameter
+type NullableIpxeScriptParameter struct {
+	value *IpxeScriptParameter
 	isSet bool
 }
 
-func (v NullableIpxeOsParameter) Get() *IpxeOsParameter {
+func (v NullableIpxeScriptParameter) Get() *IpxeScriptParameter {
 	return v.value
 }
 
-func (v *NullableIpxeOsParameter) Set(val *IpxeOsParameter) {
+func (v *NullableIpxeScriptParameter) Set(val *IpxeScriptParameter) {
 	v.value = val
 	v.isSet = true
 }
 
-func (v NullableIpxeOsParameter) IsSet() bool {
+func (v NullableIpxeScriptParameter) IsSet() bool {
 	return v.isSet
 }
 
-func (v *NullableIpxeOsParameter) Unset() {
+func (v *NullableIpxeScriptParameter) Unset() {
 	v.value = nil
 	v.isSet = false
 }
 
-func NewNullableIpxeOsParameter(val *IpxeOsParameter) *NullableIpxeOsParameter {
-	return &NullableIpxeOsParameter{value: val, isSet: true}
+func NewNullableIpxeScriptParameter(val *IpxeScriptParameter) *NullableIpxeScriptParameter {
+	return &NullableIpxeScriptParameter{value: val, isSet: true}
 }
 
-func (v NullableIpxeOsParameter) MarshalJSON() ([]byte, error) {
+func (v NullableIpxeScriptParameter) MarshalJSON() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 
-func (v *NullableIpxeOsParameter) UnmarshalJSON(src []byte) error {
+func (v *NullableIpxeScriptParameter) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }

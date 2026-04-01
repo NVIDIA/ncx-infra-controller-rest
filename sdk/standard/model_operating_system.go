@@ -51,9 +51,9 @@ type OperatingSystem struct {
 	// Name of the iPXE template used by this Operating System. Mutually exclusive with ipxeScript
 	IpxeTemplateName NullableString `json:"ipxeTemplateName,omitempty"`
 	// Parameters passed to the iPXE template for variable substitution
-	IpxeParameters []IpxeOsParameter `json:"ipxeParameters,omitempty"`
+	IpxeParameters []IpxeScriptParameter `json:"ipxeParameters,omitempty"`
 	// Artifacts (kernel, initrd, etc.) for the iPXE OS definition
-	IpxeArtifacts []IpxeOsArtifact `json:"ipxeArtifacts,omitempty"`
+	IpxeArtifacts []IpxeScriptArtifact `json:"ipxeArtifacts,omitempty"`
 	// Synchronization scope. Only meaningful for iPXE template-based OSes
 	Scope NullableString `json:"scope,omitempty"`
 	// User data for the Operating System
@@ -699,9 +699,9 @@ func (o *OperatingSystem) UnsetIpxeTemplateName() {
 }
 
 // GetIpxeParameters returns the IpxeParameters field value if set, zero value otherwise.
-func (o *OperatingSystem) GetIpxeParameters() []IpxeOsParameter {
+func (o *OperatingSystem) GetIpxeParameters() []IpxeScriptParameter {
 	if o == nil || IsNil(o.IpxeParameters) {
-		var ret []IpxeOsParameter
+		var ret []IpxeScriptParameter
 		return ret
 	}
 	return o.IpxeParameters
@@ -709,7 +709,7 @@ func (o *OperatingSystem) GetIpxeParameters() []IpxeOsParameter {
 
 // GetIpxeParametersOk returns a tuple with the IpxeParameters field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *OperatingSystem) GetIpxeParametersOk() ([]IpxeOsParameter, bool) {
+func (o *OperatingSystem) GetIpxeParametersOk() ([]IpxeScriptParameter, bool) {
 	if o == nil || IsNil(o.IpxeParameters) {
 		return nil, false
 	}
@@ -725,15 +725,15 @@ func (o *OperatingSystem) HasIpxeParameters() bool {
 	return false
 }
 
-// SetIpxeParameters gets a reference to the given []IpxeOsParameter and assigns it to the IpxeParameters field.
-func (o *OperatingSystem) SetIpxeParameters(v []IpxeOsParameter) {
+// SetIpxeParameters gets a reference to the given []IpxeScriptParameter and assigns it to the IpxeParameters field.
+func (o *OperatingSystem) SetIpxeParameters(v []IpxeScriptParameter) {
 	o.IpxeParameters = v
 }
 
 // GetIpxeArtifacts returns the IpxeArtifacts field value if set, zero value otherwise.
-func (o *OperatingSystem) GetIpxeArtifacts() []IpxeOsArtifact {
+func (o *OperatingSystem) GetIpxeArtifacts() []IpxeScriptArtifact {
 	if o == nil || IsNil(o.IpxeArtifacts) {
-		var ret []IpxeOsArtifact
+		var ret []IpxeScriptArtifact
 		return ret
 	}
 	return o.IpxeArtifacts
@@ -741,7 +741,7 @@ func (o *OperatingSystem) GetIpxeArtifacts() []IpxeOsArtifact {
 
 // GetIpxeArtifactsOk returns a tuple with the IpxeArtifacts field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *OperatingSystem) GetIpxeArtifactsOk() ([]IpxeOsArtifact, bool) {
+func (o *OperatingSystem) GetIpxeArtifactsOk() ([]IpxeScriptArtifact, bool) {
 	if o == nil || IsNil(o.IpxeArtifacts) {
 		return nil, false
 	}
@@ -757,8 +757,8 @@ func (o *OperatingSystem) HasIpxeArtifacts() bool {
 	return false
 }
 
-// SetIpxeArtifacts gets a reference to the given []IpxeOsArtifact and assigns it to the IpxeArtifacts field.
-func (o *OperatingSystem) SetIpxeArtifacts(v []IpxeOsArtifact) {
+// SetIpxeArtifacts gets a reference to the given []IpxeScriptArtifact and assigns it to the IpxeArtifacts field.
+func (o *OperatingSystem) SetIpxeArtifacts(v []IpxeScriptArtifact) {
 	o.IpxeArtifacts = v
 }
 

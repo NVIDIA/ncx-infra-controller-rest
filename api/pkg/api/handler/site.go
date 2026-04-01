@@ -323,7 +323,7 @@ func (csh CreateSiteHandler) Handle(c echo.Context) error {
 		} else {
 			for _, gos := range globalOSes {
 				createReq := &cwssaws.CreateOperatingSystemRequest{
-					Id:                   &cwssaws.UUID{Value: gos.ID.String()},
+					Id:                   &cwssaws.OperatingSystemId{Value: gos.ID.String()},
 					Name:                 gos.Name,
 					Description:          gos.Description,
 					TenantOrganizationId: gos.Org,
