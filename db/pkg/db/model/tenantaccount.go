@@ -361,7 +361,7 @@ func (tasd TenantAccountSQLDAO) setQueryWithFilter(filter TenantAccountFilterInp
 		normalizedTokens := db.GetStrPtr(db.GetStringToTsQuery(*filter.SearchQuery))
 		query = query.WhereGroup(" AND ", func(q *bun.SelectQuery) *bun.SelectQuery {
 			return q.
-				Where("to_tsvector('english', (coalesce(ta.account_number, ' ') || ' ' || coalesce(ta.tenant_org, ' '))) @@ to_tsquery('english', ?)", *normalizedTokens).
+				Where("to_tsvector('english', ta.account_number || ' ' || ta.tenant_org) @@ to_tsquery('english', ?)", *normalizedTokens).
 				WhereOr("ta.account_number ILIKE ?", "%"+*filter.SearchQuery+"%").
 				WhereOr("ta.tenant_org ILIKE ?", "%"+*filter.SearchQuery+"%").
 				WhereOr("EXISTS (SELECT 1 FROM tenant WHERE tenant.id = ta.tenant_id AND tenant.deleted IS NULL AND tenant.org_display_name ILIKE ?)", "%"+*filter.SearchQuery+"%")
