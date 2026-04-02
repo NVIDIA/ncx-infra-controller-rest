@@ -167,18 +167,31 @@ func (m *Manager) PowerControl(
 		return fmt.Errorf("unknown power operation: %v", info.Operation)
 	}
 
-	for i, componentID := range target.ComponentIDs {
-		// Ensure the machine is in maintenance mode before power operations.
-		if err := m.carbideClient.SetMaintenance(
-			ctx, componentID, true, "rla-power-control",
-		); err != nil {
-			if isAlreadyInDesiredStateError(err) {
-				log.Debug().Str("component", componentID).
-					Msg("Machine already in maintenance mode")
-			} else {
+	// Track which components had health-report overrides inserted so we
+	// can clean them up after the power operation completes.
+	var overrideInserted []string
+
+	defer func() {
+		for _, componentID := range overrideInserted {
+			if err := m.carbideClient.RemoveHealthReportOverride(
+				ctx, componentID, "rla-power-control",
+			); err != nil {
 				log.Warn().Err(err).Str("component", componentID).
-					Msg("Failed to enable maintenance mode, proceeding anyway")
+					Msg("Failed to remove health report override after power control")
 			}
+		}
+	}()
+
+	for i, componentID := range target.ComponentIDs {
+		// Place a health-report override so Carbide marks the machine as
+		// under maintenance for the duration of the power operation.
+		if err := m.carbideClient.InsertHealthReportOverride(
+			ctx, componentID, "rla-power-control",
+		); err != nil {
+			log.Warn().Err(err).Str("component", componentID).
+				Msg("Failed to insert health report override, proceeding anyway")
+		} else {
+			overrideInserted = append(overrideInserted, componentID)
 		}
 
 		// Set Carbide's power-on gate (desired power state) before issuing the

@@ -166,7 +166,11 @@ func (c *mockClient) AddExpectedPowerShelf(ctx context.Context, req AddExpectedP
 	return nil
 }
 
-func (c *mockClient) SetMaintenance(ctx context.Context, machineID string, enable bool, reference string) error {
+func (c *mockClient) InsertHealthReportOverride(ctx context.Context, machineID string, source string) error {
+	return nil
+}
+
+func (c *mockClient) RemoveHealthReportOverride(ctx context.Context, machineID string, source string) error {
 	return nil
 }
 

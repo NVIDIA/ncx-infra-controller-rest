@@ -36,6 +36,11 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+const (
+	healthProbeIDMaintenance               = "Maintenance"
+	classificationSuppressExternalAlerting = "SuppressExternalAlerting"
+)
+
 type grpcClient struct {
 	gclient     pb.ForgeClient
 	grpcTimeout time.Duration
@@ -450,26 +455,44 @@ func (c *grpcClient) AddExpectedPowerShelf(ctx context.Context, req AddExpectedP
 	return nil
 }
 
-func (c *grpcClient) SetMaintenance(ctx context.Context, machineID string, enable bool, reference string) error {
+func (c *grpcClient) InsertHealthReportOverride(ctx context.Context, machineID string, source string) error {
 	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
 	defer cancel()
 
-	op := pb.MaintenanceOperation_Disable
-	if enable {
-		op = pb.MaintenanceOperation_Enable
+	req := &pb.InsertHealthReportOverrideRequest{
+		MachineId: &pb.MachineId{Id: machineID},
+		Override: &pb.HealthReportOverride{
+			Report: &pb.HealthReport{
+				Source: source,
+				Alerts: []*pb.HealthProbeAlert{{
+					Id:              healthProbeIDMaintenance,
+					Message:         "Machine under RLA-managed maintenance",
+					Classifications: []string{classificationSuppressExternalAlerting},
+				}},
+			},
+			Mode: pb.OverrideMode_Replace,
+		},
 	}
 
-	req := &pb.MaintenanceRequest{
-		Operation: op,
-		HostId:    &pb.MachineId{Id: machineID},
-	}
-	if reference != "" {
-		req.Reference = &reference
-	}
-
-	_, err := c.gclient.SetMaintenance(ctx, req)
+	_, err := c.gclient.InsertHealthReportOverride(ctx, req)
 	if err != nil {
-		return fmt.Errorf("failed to set maintenance for machine %s: %w", machineID, err)
+		return fmt.Errorf("failed to insert health report override for machine %s: %w", machineID, err)
+	}
+	return nil
+}
+
+func (c *grpcClient) RemoveHealthReportOverride(ctx context.Context, machineID string, source string) error {
+	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
+	defer cancel()
+
+	req := &pb.RemoveHealthReportOverrideRequest{
+		MachineId: &pb.MachineId{Id: machineID},
+		Source:    source,
+	}
+
+	_, err := c.gclient.RemoveHealthReportOverride(ctx, req)
+	if err != nil {
+		return fmt.Errorf("failed to remove health report override for machine %s: %w", machineID, err)
 	}
 	return nil
 }
