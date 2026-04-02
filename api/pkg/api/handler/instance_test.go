@@ -747,7 +747,7 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 	assert.NotNil(t, mcmissing)
 	testUpdateMachineToMissing(t, dbSession, mcmissing)
 
-	alc1 := testInstanceSiteBuildAllocationContraints(t, dbSession, al1, cdbm.AllocationResourceTypeInstanceType, ist1.ID, cdbm.AllocationConstraintTypeReserved, 8, ipu)
+	alc1 := testInstanceSiteBuildAllocationContraints(t, dbSession, al1, cdbm.AllocationResourceTypeInstanceType, ist1.ID, cdbm.AllocationConstraintTypeReserved, 9, ipu)
 	assert.NotNil(t, alc1)
 
 	mc1 := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
@@ -777,6 +777,9 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 	mc18 := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
 	assert.NotNil(t, mc18)
 
+	mc19 := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
+	assert.NotNil(t, mc19)
+
 	mcinst12 := testInstanceBuildMachineInstanceType(t, dbSession, mc12, ist1)
 	assert.NotNil(t, mcinst12)
 
@@ -797,6 +800,9 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 
 	mcinst18 := testInstanceBuildMachineInstanceType(t, dbSession, mc18, ist1)
 	assert.NotNil(t, mcinst18)
+
+	mcinst19 := testInstanceBuildMachineInstanceType(t, dbSession, mc19, ist1)
+	assert.NotNil(t, mcinst19)
 
 	// Tenant 1
 	os1 := testInstanceBuildOperatingSystem(t, dbSession, "test-operating-system-1", tn1, cdbm.OperatingSystemTypeIPXE, false, nil, true, cdbm.OperatingSystemStatusReady, tnu1)
@@ -832,6 +838,9 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 	vpcSiteNotReady := testInstanceBuildVPC(t, dbSession, "test-vpc-3", ip, tn1, stNotReady, cdb.GetUUIDPtr(uuid.New()), nil, cdb.GetStrPtr(cdbm.VpcEthernetVirtualizer), nil, cdbm.VpcStatusReady, tnu1)
 	assert.NotNil(t, vpcSiteNotReady)
 
+	vpcWithNVUE := testInstanceBuildVPC(t, dbSession, "test-vpc-nvue", ip, tn1, st1, cdb.GetUUIDPtr(uuid.New()), nil, cdb.GetStrPtr(cdbm.VpcEthernetVirtualizerWithNVUE), nil, cdbm.VpcStatusReady, tnu1)
+	assert.NotNil(t, vpcWithNVUE)
+
 	subnet1 := testInstanceBuildSubnet(t, dbSession, "test-subnet-1", tn1, vpc1, cdb.GetUUIDPtr(uuid.New()), cdbm.SubnetStatusReady, tnu1)
 	assert.NotNil(t, subnet1)
 
@@ -847,11 +856,20 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 	subnetSiteNotReady := testInstanceBuildSubnet(t, dbSession, "test-subnet-4", tn1, vpcSiteNotReady, nil, cdbm.SubnetStatusReady, tnu1)
 	assert.NotNil(t, subnetSiteNotReady)
 
+	subnetWithNVUE := testInstanceBuildSubnet(t, dbSession, "test-subnet-nvue", tn1, vpcWithNVUE, cdb.GetUUIDPtr(uuid.New()), cdbm.SubnetStatusReady, tnu1)
+	assert.NotNil(t, subnetWithNVUE)
+
 	subnetPending := testInstanceBuildSubnet(t, dbSession, "test-subnet-5", tn1, vpcSiteReady, nil, cdbm.SubnetStatusPending, tnu1)
 	assert.NotNil(t, subnetPending)
 
 	mci1 := testInstanceBuildMachineInterface(t, dbSession, subnet1.ID, mc1.ID)
 	assert.NotNil(t, mci1)
+
+	mciNVUE := testInstanceBuildMachineInterface(t, dbSession, subnetWithNVUE.ID, mc18.ID)
+	assert.NotNil(t, mciNVUE)
+
+	mci19 := testInstanceBuildMachineInterface(t, dbSession, subnet1.ID, mc19.ID)
+	assert.NotNil(t, mci19)
 
 	desd1 := common.TestBuildDpuExtensionService(t, dbSession, "test-dpu-extension-service-1", model.DpuExtensionServiceTypeKubernetesPod, tn1, st1, "V1-T1761856992374052", cdbm.DpuExtensionServiceStatusReady, tnu1)
 	assert.NotNil(t, desd1)
@@ -1331,6 +1349,35 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 				reqUser:    tnu1,
 				respCode:   http.StatusCreated,
 
+				respMessage: "",
+			},
+			wantErr:            false,
+			verifyChildSpanner: true,
+		},
+		{
+			name: "test Instance create API endpoint success with subnet interface on NVUE ethernet virtualizer",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIInstanceCreateRequest{
+					Name:              "Test Instance NVUE",
+					TenantID:          tn1.ID.String(),
+					InstanceTypeID:    cdb.GetStrPtr(ist1.ID.String()),
+					VpcID:             vpcWithNVUE.ID.String(),
+					OperatingSystemID: cdb.GetStrPtr(os1.ID.String()),
+					Interfaces: []model.APIInterfaceCreateOrUpdateRequest{
+						{
+							SubnetID: cdb.GetStrPtr(subnetWithNVUE.ID.String()),
+						},
+					},
+				},
+				reqMachine:  nil,
+				reqOrg:      tnOrg,
+				reqUser:     tnu1,
+				respCode:    http.StatusCreated,
 				respMessage: "",
 			},
 			wantErr:            false,
@@ -3301,6 +3348,9 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 	vpc3 := testInstanceBuildVPC(t, dbSession, "test-vpc-2", ip, tn2, st2, nil, nil, cdb.GetStrPtr(cdbm.VpcEthernetVirtualizer), nil, cdbm.VpcStatusPending, tnu2)
 	assert.NotNil(t, vpc3)
 
+	vpcWithNVUE := testInstanceBuildVPC(t, dbSession, "test-vpc-nvue", ip, tn1, st1, cdb.GetUUIDPtr(uuid.New()), nil, cdb.GetStrPtr(cdbm.VpcEthernetVirtualizerWithNVUE), nil, cdbm.VpcStatusReady, tnu1)
+	assert.NotNil(t, vpcWithNVUE)
+
 	subnet1 := testInstanceBuildSubnet(t, dbSession, "test-subnet-1", tn1, vpc1, cdb.GetUUIDPtr(uuid.New()), cdbm.SubnetStatusReady, tnu1)
 	assert.NotNil(t, subnet1)
 
@@ -3310,8 +3360,20 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 	subnet3 := testInstanceBuildSubnet(t, dbSession, "test-subnet-2", tn2, vpc3, nil, cdbm.SubnetStatusPending, tnu2)
 	assert.NotNil(t, subnet3)
 
+	subnetWithNVUE := testInstanceBuildSubnet(t, dbSession, "test-subnet-nvue", tn1, vpcWithNVUE, cdb.GetUUIDPtr(uuid.New()), cdbm.SubnetStatusReady, tnu1)
+	assert.NotNil(t, subnetWithNVUE)
+
+	subnetWithNVUE2 := testInstanceBuildSubnet(t, dbSession, "test-subnet-nvue-2", tn1, vpcWithNVUE, cdb.GetUUIDPtr(uuid.New()), cdbm.SubnetStatusReady, tnu1)
+	assert.NotNil(t, subnetWithNVUE2)
+
 	mci1 := testInstanceBuildMachineInterface(t, dbSession, subnet1.ID, mc1.ID)
 	assert.NotNil(t, mci1)
+
+	mciNVUE := testInstanceBuildMachineInterface(t, dbSession, subnetWithNVUE.ID, mc2.ID)
+	assert.NotNil(t, mciNVUE)
+
+	mciNVUE2 := testInstanceBuildMachineInterface(t, dbSession, subnetWithNVUE2.ID, mc2.ID)
+	assert.NotNil(t, mciNVUE2)
 
 	inst1 := testInstanceBuildInstance(t, dbSession, "test-instance-1", al1.ID, alc1.ID, tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1.ID, cdb.GetStrPtr(mc1.ID), &os2.ID, nil, cdbm.InstanceStatusReady)
 	assert.NotNil(t, inst1)
@@ -3351,8 +3413,14 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 	inst10 := testInstanceBuildInstance(t, dbSession, "test-instance-10", al1.ID, alc1.ID, tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1.ID, cdb.GetStrPtr(mc1.ID), &os2.ID, nil, cdbm.InstanceStatusReady)
 	assert.NotNil(t, inst10)
 
+	instNVUE := testInstanceBuildInstance(t, dbSession, "test-instance-nvue", al1.ID, alc1.ID, tn1.ID, ip.ID, st1.ID, &ist1.ID, vpcWithNVUE.ID, cdb.GetStrPtr(mc2.ID), &os2.ID, nil, cdbm.InstanceStatusReady)
+	assert.NotNil(t, instNVUE)
+
 	instsub1 := testInstanceBuildInstanceInterface(t, dbSession, inst1.ID, &subnet1.ID, nil, nil, cdbm.InterfaceStatusReady)
 	assert.NotNil(t, instsub1)
+
+	instNVUEIfc := testInstanceBuildInstanceInterface(t, dbSession, instNVUE.ID, &subnetWithNVUE.ID, nil, nil, cdbm.InterfaceStatusReady)
+	assert.NotNil(t, instNVUEIfc)
 
 	// Instance update with FNN VPC
 
@@ -4739,6 +4807,37 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 				ethInterfacesToDelete: []cdbm.Interface{
 					*instifc1,
 					*instifc2,
+				},
+			},
+			wantErr:                     false,
+			verifySiteControllerRequest: true,
+			verifyChildSpanner:          true,
+		},
+		{
+			name: "test Instance update API endpoint success with subnet interface on NVUE ethernet virtualizer",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				scp:       scp,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIInstanceUpdateRequest{
+					IpxeScript: os2.IpxeScript,
+					Interfaces: []model.APIInterfaceCreateOrUpdateRequest{
+						{
+							SubnetID:   cdb.GetStrPtr(subnetWithNVUE2.ID.String()),
+							IsPhysical: true,
+						},
+					},
+				},
+				reqInstance:        instNVUE.ID.String(),
+				reqOrg:             tnOrg1,
+				reqUser:            tnu1,
+				respCode:           http.StatusOK,
+				respNoOfInterfaces: cdb.GetIntPtr(1),
+				ethInterfacesToDelete: []cdbm.Interface{
+					*instNVUEIfc,
 				},
 			},
 			wantErr:                     false,
