@@ -38,6 +38,7 @@ service PowershelfManager {
 enum PMCVendor {
     PMC_TYPE_UNKNOWN = 0;
     PMC_TYPE_LITEON = 1;
+    PMC_TYPE_DELTA = 2;
 }
 
 // Credentials wraps around a username and password
