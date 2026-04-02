@@ -13605,6 +13605,7 @@ components:
         labels:
           type: object
           description: Labels of the InfiniBand Partition. Up to 10 key value pairs can be specified.
+          maxProperties: 10
           additionalProperties:
             type: string
             description: Value of the label
@@ -13628,6 +13629,7 @@ components:
         labels:
           type: object
           description: Update labels of the InfiniBand Partition. Up to 10 key value pairs can be specified. The labels will be entirely replaced by those sent in the request. Any labels not included in the request will be removed. To retain existing labels, first fetch them and include them along with this request.
+          maxProperties: 10
           additionalProperties:
             type: string
             description: Value of the label
