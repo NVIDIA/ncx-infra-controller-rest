@@ -43053,7 +43053,7 @@ const file_forge_carbide_proto_rawDesc = "" +
 	"\x13OperatingSystemType\x12\x17\n" +
 	"\x13OS_TYPE_UNSPECIFIED\x10\x00\x12\x10\n" +
 	"\fOS_TYPE_IPXE\x10\x01\x12\x1a\n" +
-	"\x16OS_TYPE_TEMPLATED_IPXE\x10\x022\x8a\xec\x01\n" +
+	"\x16OS_TYPE_TEMPLATED_IPXE\x10\x022\x97\xec\x01\n" +
 	"\x05Forge\x122\n" +
 	"\aVersion\x12\x15.forge.VersionRequest\x1a\x10.forge.BuildInfo\x12,\n" +
 	"\fCreateDomain\x12\r.forge.Domain\x1a\r.forge.Domain\x12,\n" +
@@ -43387,8 +43387,8 @@ const file_forge_carbide_proto_rawDesc = "" +
 	"\x17ListIpxeScriptTemplates\x12%.forge.ListIpxeScriptTemplatesRequest\x1a\x1d.forge.IpxeScriptTemplateList\x12Z\n" +
 	"\x16FindOperatingSystemIds\x12\".forge.OperatingSystemSearchFilter\x1a\x1c.forge.OperatingSystemIdList\x12\\\n" +
 	"\x19FindOperatingSystemsByIds\x12#.forge.OperatingSystemsByIdsRequest\x1a\x1a.forge.OperatingSystemList\x12^\n" +
-	"\x15CreateOperatingSystem\x12#.forge.CreateOperatingSystemRequest\x1a .forge.OperatingSystemDefinition\x12D\n" +
-	"\x12GetOperatingSystem\x12\f.common.UUID\x1a .forge.OperatingSystemDefinition\x12^\n" +
+	"\x15CreateOperatingSystem\x12#.forge.CreateOperatingSystemRequest\x1a .forge.OperatingSystemDefinition\x12Q\n" +
+	"\x12GetOperatingSystem\x12\x19.common.OperatingSystemId\x1a .forge.OperatingSystemDefinition\x12^\n" +
 	"\x15UpdateOperatingSystem\x12#.forge.UpdateOperatingSystemRequest\x1a .forge.OperatingSystemDefinition\x12b\n" +
 	"\x15DeleteOperatingSystem\x12#.forge.DeleteOperatingSystemRequest\x1a$.forge.DeleteOperatingSystemResponseBCZAgithub.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/protob\x06proto3"
 
@@ -45215,7 +45215,7 @@ var file_forge_carbide_proto_depIdxs = []int32{
 	635,  // 1013: forge.Forge.FindOperatingSystemIds:input_type -> forge.OperatingSystemSearchFilter
 	637,  // 1014: forge.Forge.FindOperatingSystemsByIds:input_type -> forge.OperatingSystemsByIdsRequest
 	639,  // 1015: forge.Forge.CreateOperatingSystem:input_type -> forge.CreateOperatingSystemRequest
-	673,  // 1016: forge.Forge.GetOperatingSystem:input_type -> common.UUID
+	689,  // 1016: forge.Forge.GetOperatingSystem:input_type -> common.OperatingSystemId
 	642,  // 1017: forge.Forge.UpdateOperatingSystem:input_type -> forge.UpdateOperatingSystemRequest
 	643,  // 1018: forge.Forge.DeleteOperatingSystem:input_type -> forge.DeleteOperatingSystemRequest
 	75,   // 1019: forge.Forge.Version:output_type -> forge.BuildInfo

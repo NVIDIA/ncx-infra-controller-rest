@@ -1296,7 +1296,7 @@ func (c *MockForgeClient) FindOperatingSystemsByIds(ctx context.Context, in *wfl
 	return out, nil
 }
 
-func (c *MockForgeClient) GetOperatingSystem(ctx context.Context, in *wflows.UUID, opts ...grpc.CallOption) (*wflows.OperatingSystemDefinition, error) {
+func (c *MockForgeClient) GetOperatingSystem(ctx context.Context, in *wflows.OperatingSystemId, opts ...grpc.CallOption) (*wflows.OperatingSystemDefinition, error) {
 	if err, ok := ctx.Value("wantError").(error); ok {
 		return nil, err
 	}

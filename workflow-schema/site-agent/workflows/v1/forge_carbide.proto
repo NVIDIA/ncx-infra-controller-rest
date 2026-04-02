@@ -651,7 +651,7 @@ service Forge {
   rpc FindOperatingSystemIds(OperatingSystemSearchFilter) returns (OperatingSystemIdList);
   rpc FindOperatingSystemsByIds(OperatingSystemsByIdsRequest) returns (OperatingSystemList);
   rpc CreateOperatingSystem(CreateOperatingSystemRequest) returns (OperatingSystemDefinition);
-  rpc GetOperatingSystem(common.UUID) returns (OperatingSystemDefinition);
+  rpc GetOperatingSystem(common.OperatingSystemId) returns (OperatingSystemDefinition);
   rpc UpdateOperatingSystem(UpdateOperatingSystemRequest) returns (OperatingSystemDefinition);
   rpc DeleteOperatingSystem(DeleteOperatingSystemRequest) returns (DeleteOperatingSystemResponse);
 }

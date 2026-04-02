@@ -868,7 +868,7 @@ type ForgeClient interface {
 	FindOperatingSystemIds(ctx context.Context, in *OperatingSystemSearchFilter, opts ...grpc.CallOption) (*OperatingSystemIdList, error)
 	FindOperatingSystemsByIds(ctx context.Context, in *OperatingSystemsByIdsRequest, opts ...grpc.CallOption) (*OperatingSystemList, error)
 	CreateOperatingSystem(ctx context.Context, in *CreateOperatingSystemRequest, opts ...grpc.CallOption) (*OperatingSystemDefinition, error)
-	GetOperatingSystem(ctx context.Context, in *UUID, opts ...grpc.CallOption) (*OperatingSystemDefinition, error)
+	GetOperatingSystem(ctx context.Context, in *OperatingSystemId, opts ...grpc.CallOption) (*OperatingSystemDefinition, error)
 	UpdateOperatingSystem(ctx context.Context, in *UpdateOperatingSystemRequest, opts ...grpc.CallOption) (*OperatingSystemDefinition, error)
 	DeleteOperatingSystem(ctx context.Context, in *DeleteOperatingSystemRequest, opts ...grpc.CallOption) (*DeleteOperatingSystemResponse, error)
 }
@@ -4101,7 +4101,7 @@ func (c *forgeClient) CreateOperatingSystem(ctx context.Context, in *CreateOpera
 	return out, nil
 }
 
-func (c *forgeClient) GetOperatingSystem(ctx context.Context, in *UUID, opts ...grpc.CallOption) (*OperatingSystemDefinition, error) {
+func (c *forgeClient) GetOperatingSystem(ctx context.Context, in *OperatingSystemId, opts ...grpc.CallOption) (*OperatingSystemDefinition, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(OperatingSystemDefinition)
 	err := c.cc.Invoke(ctx, Forge_GetOperatingSystem_FullMethodName, in, out, cOpts...)
@@ -4637,7 +4637,7 @@ type ForgeServer interface {
 	FindOperatingSystemIds(context.Context, *OperatingSystemSearchFilter) (*OperatingSystemIdList, error)
 	FindOperatingSystemsByIds(context.Context, *OperatingSystemsByIdsRequest) (*OperatingSystemList, error)
 	CreateOperatingSystem(context.Context, *CreateOperatingSystemRequest) (*OperatingSystemDefinition, error)
-	GetOperatingSystem(context.Context, *UUID) (*OperatingSystemDefinition, error)
+	GetOperatingSystem(context.Context, *OperatingSystemId) (*OperatingSystemDefinition, error)
 	UpdateOperatingSystem(context.Context, *UpdateOperatingSystemRequest) (*OperatingSystemDefinition, error)
 	DeleteOperatingSystem(context.Context, *DeleteOperatingSystemRequest) (*DeleteOperatingSystemResponse, error)
 }
@@ -5615,7 +5615,7 @@ func (UnimplementedForgeServer) FindOperatingSystemsByIds(context.Context, *Oper
 func (UnimplementedForgeServer) CreateOperatingSystem(context.Context, *CreateOperatingSystemRequest) (*OperatingSystemDefinition, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateOperatingSystem not implemented")
 }
-func (UnimplementedForgeServer) GetOperatingSystem(context.Context, *UUID) (*OperatingSystemDefinition, error) {
+func (UnimplementedForgeServer) GetOperatingSystem(context.Context, *OperatingSystemId) (*OperatingSystemDefinition, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetOperatingSystem not implemented")
 }
 func (UnimplementedForgeServer) UpdateOperatingSystem(context.Context, *UpdateOperatingSystemRequest) (*OperatingSystemDefinition, error) {
@@ -11441,7 +11441,7 @@ func _Forge_CreateOperatingSystem_Handler(srv interface{}, ctx context.Context, 
 }
 
 func _Forge_GetOperatingSystem_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UUID)
+	in := new(OperatingSystemId)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -11453,7 +11453,7 @@ func _Forge_GetOperatingSystem_Handler(srv interface{}, ctx context.Context, dec
 		FullMethod: Forge_GetOperatingSystem_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ForgeServer).GetOperatingSystem(ctx, req.(*UUID))
+		return srv.(ForgeServer).GetOperatingSystem(ctx, req.(*OperatingSystemId))
 	}
 	return interceptor(ctx, in, info, handler)
 }
