@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"os"
 
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
@@ -172,14 +173,17 @@ func (s *Service) Stop(ctx context.Context) {
 
 // certOption resolves the TLS configuration for the gRPC server listener.
 // If explicit certificate paths are set in the config they take precedence;
-// otherwise CERTDIR / the k8s SPIFFE default is used. Returns an empty
-// ServerOption (no TLS) when no certificates are found.
+// otherwise CERTDIR / the k8s SPIFFE default is used. The service refuses to
+// start without certificates unless ALLOW_INSECURE_GRPC=true is set.
 func (s *Service) certOption() grpc.ServerOption {
 	tlsConfig, source, err := certs.ResolveServer(s.conf.CertConfig)
 	if err != nil {
 		if errors.Is(err, certs.ErrNotPresent) {
-			log.Info().Msg("Certs not present, using non-mTLS")
-			return grpc.EmptyServerOption{}
+			if os.Getenv("ALLOW_INSECURE_GRPC") == "true" {
+				log.Warn().Msg("TLS certs not present, running without mTLS (ALLOW_INSECURE_GRPC=true)")
+				return grpc.EmptyServerOption{}
+			}
+			log.Fatal().Msg("TLS certificates required but not found; set ALLOW_INSECURE_GRPC=true for local development")
 		}
 		log.Fatal().Msg(err.Error())
 	}
