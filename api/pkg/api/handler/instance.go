@@ -2955,6 +2955,7 @@ func (uih UpdateInstanceHandler) Handle(c echo.Context) error {
 	}
 
 	if apiRequest.NVLinkInterfaces != nil {
+		nvllpIDs := goset.NewSet[uuid.UUID]()
 		for _, apiNvlIfc := range apiRequest.NVLinkInterfaces {
 			// NVLink Logical Partition
 			nvllPartitionID, err := uuid.Parse(apiNvlIfc.NVLinkLogicalPartitionID)
@@ -2962,12 +2963,26 @@ func (uih UpdateInstanceHandler) Handle(c echo.Context) error {
 				logger.Warn().Err(err).Msg("error parsing NVLink Logical Partition id in instance NVLink Interface request")
 				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("NVLink Logical Partition ID: %v specified in request data is not valid", apiNvlIfc.NVLinkLogicalPartitionID), nil)
 			}
+			nvllpIDs.Add(nvllPartitionID)
+		}
 
-			// Validate NVLink Logical Partition
-			nvllPartition, err := nvllpDAO.GetByID(ctx, nil, nvllPartitionID, nil)
+		nvllpIDMap := make(map[string]*cdbm.NVLinkLogicalPartition)
+
+		if nvllpIDs.Cardinality() > 0 {
+			nvllps, _, err := nvllpDAO.GetAll(ctx, nil, cdbm.NVLinkLogicalPartitionFilterInput{NVLinkLogicalPartitionIDs: nvllpIDs.ToSlice()}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
 			if err != nil {
-				logger.Error().Err(err).Msg("error retrieving NVLink Logical Partition from DB by ID")
-				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve NVLink Logical Partition with ID specified in request data, DB error", nil)
+				logger.Error().Err(err).Msg("error retrieving NVLink Logical Partitions from DB by IDs")
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve NVLink Logical Partitions specified in request data, DB error", nil)
+			}
+			for i := range nvllps {
+				nvllpIDMap[nvllps[i].ID.String()] = &nvllps[i]
+			}
+		}
+
+		for _, apiNvlIfc := range apiRequest.NVLinkInterfaces {
+			nvllPartition, ok := nvllpIDMap[apiNvlIfc.NVLinkLogicalPartitionID]
+			if !ok {
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Could not find NVLink Logical Partition with ID: %v specified in request data", apiNvlIfc.NVLinkLogicalPartitionID), nil)
 			}
 
 			newNvlIfc, err := nvlIfcDAO.Create(ctx, tx, cdbm.NVLinkInterfaceCreateInput{
