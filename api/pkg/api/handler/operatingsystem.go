@@ -689,11 +689,16 @@ func (gash GetAllOperatingSystemHandler) Handle(c echo.Context) error {
 	// We intentionally do NOT filter by Org here: the stored org on synced OSes reflects the
 	// carbide-rest tenant org at the time of sync, which is authoritative. TenantIDs already
 	// gives the correct per-tenant scope.
+	var providerID *uuid.UUID
+	if ip, iperr := common.GetInfrastructureProviderForOrg(ctx, nil, gash.dbSession, org); iperr == nil {
+		providerID = &ip.ID
+	}
+
 	filter := cdbm.OperatingSystemFilterInput{
 		TenantIDs: []uuid.UUID{tenant.ID},
 	}
-	if ip, iperr := common.GetInfrastructureProviderForOrg(ctx, nil, gash.dbSession, org); iperr == nil {
-		filter.InfrastructureProviderIDs = []uuid.UUID{ip.ID}
+	if providerID != nil {
+		filter.InfrastructureProviderIDs = []uuid.UUID{*providerID}
 	}
 
 	// Get and validate includeRelation params
@@ -716,14 +721,18 @@ func (gash GetAllOperatingSystemHandler) Handle(c echo.Context) error {
 				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve Site specified in query", nil)
 			}
 
-			// Determine if tenant has access to requested site
-			_, err = tsDAO.GetByTenantIDAndSiteID(ctx, nil, tenant.ID, site.ID, nil)
-			if err != nil {
-				if err == cdb.ErrDoesNotExist {
-					return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant is not associated with Site specified in query", nil)
+			// Determine if caller has access to the requested site.
+			// Tenant path: TenantSite association exists.
+			// Provider path: site belongs to the caller's infrastructure provider.
+			_, tsErr := tsDAO.GetByTenantIDAndSiteID(ctx, nil, tenant.ID, site.ID, nil)
+			if tsErr != nil {
+				if tsErr != cdb.ErrDoesNotExist {
+					logger.Warn().Err(tsErr).Msg("error retrieving Tenant Site association from DB")
+					return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to determine if Tenant has access to Site specified in query, DB error", nil)
 				}
-				logger.Warn().Err(err).Msg("error retrieving Tenant Site association from DB")
-				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to determine if Tenant has access to Site specified in query, DB error", nil)
+				if !isProviderAdmin || providerID == nil || site.InfrastructureProviderID != *providerID {
+					return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Caller is not associated with Site specified in query", nil)
+				}
 			}
 			filter.SiteIDs = append(filter.SiteIDs, site.ID)
 		}
@@ -990,7 +999,12 @@ func (gsh GetOperatingSystemHandler) Handle(c echo.Context) error {
 	ownedByTenant := os.TenantID != nil && *os.TenantID == tenant.ID
 	ownedByProvider := false
 	if os.InfrastructureProviderID != nil {
-		if ip, iperr := common.GetInfrastructureProviderForOrg(ctx, nil, gsh.dbSession, org); iperr == nil {
+		ip, iperr := common.GetInfrastructureProviderForOrg(ctx, nil, gsh.dbSession, org)
+		if iperr != nil && iperr != common.ErrOrgInstrastructureProviderNotFound {
+			logger.Error().Err(iperr).Msg("error retrieving Infrastructure Provider for org")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Infrastructure Provider for org", nil)
+		}
+		if iperr == nil {
 			ownedByProvider = *os.InfrastructureProviderID == ip.ID
 		}
 	}

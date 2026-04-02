@@ -14122,7 +14122,7 @@ components:
           type:
             - string
             - 'null'
-          description: 'Synchronization scope. Only meaningful for iPXE template-based OSes'
+          description: 'Synchronization scope. Only meaningful for iPXE-based OSes'
           enum:
             - local
             - global
@@ -14315,7 +14315,7 @@ components:
           type:
             - string
             - 'null'
-          description: 'Synchronization scope for iPXE template-based OS. Defaults to local if omitted'
+          description: 'Synchronization scope for iPXE-based OS. Defaults to local if omitted'
           enum:
             - local
             - global
@@ -14432,7 +14432,7 @@ components:
           type:
             - string
             - 'null'
-          description: Synchronization scope for iPXE template-based OS
+          description: Synchronization scope for iPXE-based OS
           enum:
             - local
             - global

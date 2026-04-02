@@ -561,17 +561,17 @@ func (mod ManageOperatingSystemSync) UpdateOperatingSystemsInDB(ctx context.Cont
 				Status:                   tenantStateToRestStatus(reported.Status),
 			}); cerr != nil {
 				logger.Error().Err(cerr).Str("ID", reported.GetId().GetValue()).Msg("Failed to create Operating System in DB")
-		} else if !reported.IsActive {
-			// bun ORM hardcodes is_active=true on INSERT; correct it with an update.
-			inactive := false
-			if _, uerr := osDAO.Update(ctx, nil, cdbm.OperatingSystemUpdateInput{
-				OperatingSystemId: osID,
-				IsActive:          &inactive,
-			}); uerr != nil {
-				logger.Error().Err(uerr).Str("ID", reported.GetId().GetValue()).Msg("Failed to set is_active=false after create")
-				return uerr
+			} else if !reported.IsActive {
+				// bun ORM hardcodes is_active=true on INSERT; correct it with an update.
+				inactive := false
+				if _, uerr := osDAO.Update(ctx, nil, cdbm.OperatingSystemUpdateInput{
+					OperatingSystemId: osID,
+					IsActive:          &inactive,
+				}); uerr != nil {
+					logger.Error().Err(uerr).Str("ID", reported.GetId().GetValue()).Msg("Failed to set is_active=false after create")
+					return uerr
+				}
 			}
-		}
 			continue
 		}
 

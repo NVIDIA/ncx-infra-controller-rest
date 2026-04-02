@@ -337,6 +337,9 @@ func (csh CreateSiteHandler) Handle(c echo.Context) error {
 					IpxeArtifacts:        dbArtifactsToProto(gos.IpxeArtifacts),
 				}
 
+				// Version is omitted from the workflow ID (unlike operatingsystem.go)
+				// because this is the initial push for a newly created site — the OSSA
+				// has no version yet and the site+os pair is inherently unique.
 				workflowOptions := tClient.StartWorkflowOptions{
 					ID:        "ipxe-os-create-" + st.ID.String() + "-" + gos.ID.String(),
 					TaskQueue: queue.SiteTaskQueue,

@@ -501,7 +501,7 @@ func (ossd OperatingSystemSQLDAO) GetAll(ctx context.Context, tx *db.Tx, filter 
 		ossd.tracerSpan.SetAttribute(operatingSystemSQLDAOSpan, "is_active", *filter.IsActive)
 	}
 	if filter.Scopes != nil {
-		query = query.Where("os.scope IN (?)", bun.In(filter.Scopes))
+		query = query.Where("COALESCE(os.scope, 'local') IN (?)", bun.In(filter.Scopes))
 		ossd.tracerSpan.SetAttribute(operatingSystemSQLDAOSpan, "scopes", filter.Scopes)
 	}
 	if filter.IncludeDeleted {
