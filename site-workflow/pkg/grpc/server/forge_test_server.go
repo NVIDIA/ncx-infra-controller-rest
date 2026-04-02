@@ -482,7 +482,7 @@ func (f *ForgeServerImpl) FindTenantKeysetsByIds(ctx context.Context, req *cwssa
 	return &response, nil
 }
 
-// UpdateIBPartition implements interface ForgeServer
+// CreateIBPartition implements interface ForgeServer
 func (f *ForgeServerImpl) CreateIBPartition(c context.Context, req *cwssaws.IBPartitionCreationRequest) (*cwssaws.IBPartition, error) {
 	if req == nil || req.Config == nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
@@ -505,6 +505,36 @@ func (f *ForgeServerImpl) CreateIBPartition(c context.Context, req *cwssaws.IBPa
 
 	f.ibp[nid] = nibp
 	return nibp, nil
+}
+
+// UpdateIBPartition implements interface ForgeServer
+func (f *ForgeServerImpl) UpdateIBPartition(c context.Context, req *cwssaws.IBPartitionUpdateRequest) (*cwssaws.IBPartition, error) {
+	if req == nil || req.Id == nil || req.Id.Value == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
+	}
+
+	ibp, ok := f.ibp[req.Id.Value]
+	if !ok {
+		return nil, status.Errorf(codes.NotFound, "IB Partition with ID %q not found", req.Id.Value)
+	}
+	if req.Config != nil {
+		if ibp.Config == nil {
+			ibp.Config = &cwssaws.IBPartitionConfig{}
+		}
+		if req.Config.Name != "" {
+			ibp.Config.Name = req.Config.Name
+		}
+		if req.Config.TenantOrganizationId != "" {
+			ibp.Config.TenantOrganizationId = req.Config.TenantOrganizationId
+		}
+		if req.Config.Pkey != nil {
+			ibp.Config.Pkey = req.Config.Pkey
+		}
+	}
+	if req.Metadata != nil {
+		ibp.Metadata = req.Metadata
+	}
+	return ibp, nil
 }
 
 // DeleteIBPartition implements interface ForgeServer
