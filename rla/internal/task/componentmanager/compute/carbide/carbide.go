@@ -21,9 +21,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/carbideapi"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/componentmanager"
@@ -165,14 +168,32 @@ func (m *Manager) PowerControl(
 	}
 
 	for i, componentID := range target.ComponentIDs {
+		// Ensure the machine is in maintenance mode before power operations.
+		if err := m.carbideClient.SetMaintenance(
+			ctx, componentID, true, "rla-power-control",
+		); err != nil {
+			if isAlreadyInDesiredStateError(err) {
+				log.Debug().Str("component", componentID).
+					Msg("Machine already in maintenance mode")
+			} else {
+				log.Warn().Err(err).Str("component", componentID).
+					Msg("Failed to enable maintenance mode, proceeding anyway")
+			}
+		}
+
 		// Set Carbide's power-on gate (desired power state) before issuing the
 		// actual power control command so the power manager doesn't conflict.
 		if err := m.carbideClient.UpdatePowerOption(
 			ctx, componentID, desiredPowerState,
 		); err != nil {
-			return fmt.Errorf(
-				"failed to update power option for %s: %w", componentID, err,
-			)
+			if isAlreadyInDesiredStateError(err) {
+				log.Debug().Str("component", componentID).
+					Msg("Power option already in desired state, skipping")
+			} else {
+				return fmt.Errorf(
+					"failed to update power option for %s: %w", componentID, err,
+				)
+			}
 		}
 
 		if err := m.carbideClient.AdminPowerControl(ctx, componentID, action); err != nil {
@@ -381,4 +402,13 @@ func carbideToBringUpState(
 	default:
 		return operations.MachineBringUpStateNotDiscovered
 	}
+}
+
+// isAlreadyInDesiredStateError returns true when Carbide reports that the
+// power option is already set to the requested state (idempotent no-op).
+func isAlreadyInDesiredStateError(err error) bool {
+	if s, ok := status.FromError(err); ok && s.Code() == codes.InvalidArgument {
+		return strings.Contains(s.Message(), "already set as")
+	}
+	return false
 }

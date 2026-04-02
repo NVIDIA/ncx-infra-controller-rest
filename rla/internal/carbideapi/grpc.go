@@ -450,6 +450,30 @@ func (c *grpcClient) AddExpectedPowerShelf(ctx context.Context, req AddExpectedP
 	return nil
 }
 
+func (c *grpcClient) SetMaintenance(ctx context.Context, machineID string, enable bool, reference string) error {
+	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
+	defer cancel()
+
+	op := pb.MaintenanceOperation_Disable
+	if enable {
+		op = pb.MaintenanceOperation_Enable
+	}
+
+	req := &pb.MaintenanceRequest{
+		Operation: op,
+		HostId:    &pb.MachineId{Id: machineID},
+	}
+	if reference != "" {
+		req.Reference = &reference
+	}
+
+	_, err := c.gclient.SetMaintenance(ctx, req)
+	if err != nil {
+		return fmt.Errorf("failed to set maintenance for machine %s: %w", machineID, err)
+	}
+	return nil
+}
+
 func (c *grpcClient) ComponentPowerControl(ctx context.Context, req *pb.ComponentPowerControlRequest) (*pb.ComponentPowerControlResponse, error) {
 	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
 	defer cancel()

@@ -72,6 +72,9 @@ type Client interface {
 	// AddExpectedPowerShelf registers an expected power shelf with Carbide for ingestion.
 	AddExpectedPowerShelf(ctx context.Context, req AddExpectedPowerShelfRequest) error
 
+	// SetMaintenance enables or disables maintenance mode for a machine.
+	SetMaintenance(ctx context.Context, machineID string, enable bool, reference string) error
+
 	// ComponentPowerControl performs power control on component targets (switches, power shelves).
 	ComponentPowerControl(ctx context.Context, req *pb.ComponentPowerControlRequest) (*pb.ComponentPowerControlResponse, error)
 

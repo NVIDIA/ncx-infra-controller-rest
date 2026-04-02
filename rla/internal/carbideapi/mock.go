@@ -166,6 +166,10 @@ func (c *mockClient) AddExpectedPowerShelf(ctx context.Context, req AddExpectedP
 	return nil
 }
 
+func (c *mockClient) SetMaintenance(ctx context.Context, machineID string, enable bool, reference string) error {
+	return nil
+}
+
 func (c *mockClient) ComponentPowerControl(ctx context.Context, req *pb.ComponentPowerControlRequest) (*pb.ComponentPowerControlResponse, error) {
 	return &pb.ComponentPowerControlResponse{}, nil
 }
