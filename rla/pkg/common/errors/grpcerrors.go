@@ -38,6 +38,10 @@ func GRPCErrorInternal(msg string) error {
 	return status.Error(codes.Internal, msg)
 }
 
+func GRPCErrorPreconditionFailed(msg string) error {
+	return status.Error(codes.FailedPrecondition, msg)
+}
+
 func IsGRPCError(err error) bool {
 	_, ok := status.FromError(err)
 	return ok

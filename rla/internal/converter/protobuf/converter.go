@@ -195,19 +195,25 @@ func BMCFrom(bi *pb.BMCInfo) (devicetypes.BMCType, *bmc.BMC) {
 	return BMCTypeFrom(bi.Type), &bmc
 }
 
+// BMCsFrom converts a slice of protobuf BMCInfo to the internal BMC map keyed by type.
+func BMCsFrom(pbBmcs []*pb.BMCInfo) map[devicetypes.BMCType][]bmc.BMC {
+	bmcsByType := make(map[devicetypes.BMCType][]bmc.BMC)
+	for _, bi := range pbBmcs {
+		t, b := BMCFrom(bi)
+		if b != nil {
+			bmcsByType[t] = append(bmcsByType[t], *b)
+		}
+	}
+	return bmcsByType
+}
+
 // ComponentFrom converts a protobuf Component to an internal Component
 func ComponentFrom(c *pb.Component) *component.Component {
 	if c == nil {
 		return nil
 	}
 
-	bmcsByType := make(map[devicetypes.BMCType][]bmc.BMC)
-	for _, bi := range c.GetBmcs() {
-		t, bmc := BMCFrom(bi)
-		if bmc != nil {
-			bmcsByType[t] = append(bmcsByType[t], *bmc)
-		}
-	}
+	bmcsByType := BMCsFrom(c.GetBmcs())
 
 	return &component.Component{
 		Type:            ComponentTypeFrom(c.GetType()),

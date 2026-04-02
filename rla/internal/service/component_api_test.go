@@ -19,6 +19,7 @@ package service
 
 import (
 	"context"
+	"net"
 	"testing"
 
 	"github.com/google/uuid"
@@ -29,6 +30,7 @@ import (
 	inventorystore "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/inventory/store"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/deviceinfo"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/inventoryobjects/bmc"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/inventoryobjects/component"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/inventoryobjects/rack"
 	pb "github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/proto/v1"
@@ -94,6 +96,30 @@ func (m *mockManager) PatchComponent(_ context.Context, comp *component.Componen
 }
 
 func (m *mockManager) DeleteComponent(_ context.Context, id uuid.UUID) error {
+	delete(m.components, id)
+	return nil
+}
+
+func (m *mockManager) DeleteRack(_ context.Context, id uuid.UUID) error {
+	if _, ok := m.racks[id]; !ok {
+		return assert.AnError
+	}
+	delete(m.racks, id)
+	return nil
+}
+
+func (m *mockManager) PurgeRack(_ context.Context, id uuid.UUID) error {
+	if _, ok := m.racks[id]; !ok {
+		return assert.AnError
+	}
+	delete(m.racks, id)
+	return nil
+}
+
+func (m *mockManager) PurgeComponent(_ context.Context, id uuid.UUID) error {
+	if _, ok := m.components[id]; !ok {
+		return assert.AnError
+	}
 	delete(m.components, id)
 	return nil
 }
@@ -315,6 +341,76 @@ func TestPatchComponent_RackReassign(t *testing.T) {
 
 	updated := mgr.components[compID]
 	assert.Equal(t, newRackID, updated.RackID)
+}
+
+func TestPatchComponent_WithBMCs(t *testing.T) {
+	mgr := newMockManager()
+	compID := uuid.New()
+	rackID := uuid.New()
+	mac, _ := net.ParseMAC("aa:bb:cc:dd:ee:ff")
+	mgr.components[compID] = &component.Component{
+		Type:   devicetypes.ComponentTypeCompute,
+		Info:   deviceinfo.DeviceInfo{ID: compID, Name: "node-01"},
+		RackID: rackID,
+		BmcsByType: map[devicetypes.BMCType][]bmc.BMC{
+			devicetypes.BMCTypeHost: {{MAC: mac, IP: net.ParseIP("10.0.0.1")}},
+		},
+	}
+
+	server := &RLAServerImpl{inventoryManager: mgr}
+
+	ip := "10.0.0.99"
+	req := &pb.PatchComponentRequest{
+		Id: &pb.UUID{Id: compID.String()},
+		Bmcs: []*pb.BMCInfo{
+			{
+				Type:       pb.BMCType_BMC_TYPE_HOST,
+				MacAddress: "aa:bb:cc:dd:ee:ff",
+				IpAddress:  &ip,
+			},
+		},
+	}
+
+	resp, err := server.PatchComponent(context.Background(), req)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+
+	updated := mgr.components[compID]
+	require.Len(t, updated.BmcsByType[devicetypes.BMCTypeHost], 1)
+	assert.Equal(t, "10.0.0.99", updated.BmcsByType[devicetypes.BMCTypeHost][0].IP.String())
+}
+
+func TestPatchComponent_BMCsNotProvidedPreservesExisting(t *testing.T) {
+	mgr := newMockManager()
+	compID := uuid.New()
+	rackID := uuid.New()
+	mac, _ := net.ParseMAC("aa:bb:cc:dd:ee:ff")
+	mgr.components[compID] = &component.Component{
+		Type:            devicetypes.ComponentTypeCompute,
+		Info:            deviceinfo.DeviceInfo{ID: compID, Name: "node-01"},
+		FirmwareVersion: "1.0.0",
+		RackID:          rackID,
+		BmcsByType: map[devicetypes.BMCType][]bmc.BMC{
+			devicetypes.BMCTypeHost: {{MAC: mac, IP: net.ParseIP("10.0.0.1")}},
+		},
+	}
+
+	server := &RLAServerImpl{inventoryManager: mgr}
+
+	newFW := "2.0.0"
+	req := &pb.PatchComponentRequest{
+		Id:              &pb.UUID{Id: compID.String()},
+		FirmwareVersion: &newFW,
+	}
+
+	resp, err := server.PatchComponent(context.Background(), req)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+
+	updated := mgr.components[compID]
+	assert.Equal(t, "2.0.0", updated.FirmwareVersion)
+	require.Len(t, updated.BmcsByType[devicetypes.BMCTypeHost], 1)
+	assert.Equal(t, "10.0.0.1", updated.BmcsByType[devicetypes.BMCTypeHost][0].IP.String())
 }
 
 // --- GetComponents Tests ---
@@ -635,4 +731,124 @@ func TestValidateComponents_FilterAndPaginationCombined(t *testing.T) {
 	require.NotNil(t, resp)
 	assert.Equal(t, int32(2), resp.TotalDiffs) // 2 compute drifts total
 	assert.Equal(t, 1, len(resp.Diffs))        // but only 1 returned (paginated)
+}
+
+// --- DeleteRack Tests ---
+
+func TestDeleteRack_Success(t *testing.T) {
+	mgr := newMockManager()
+	rackID := uuid.New()
+	mgr.racks[rackID] = &rack.Rack{Info: deviceinfo.DeviceInfo{ID: rackID, Name: "test-rack"}}
+
+	server := &RLAServerImpl{inventoryManager: mgr}
+
+	resp, err := server.DeleteRack(context.Background(), &pb.DeleteRackRequest{
+		Id: &pb.UUID{Id: rackID.String()},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+
+	_, exists := mgr.racks[rackID]
+	assert.False(t, exists)
+}
+
+func TestDeleteRack_MissingID(t *testing.T) {
+	mgr := newMockManager()
+	server := &RLAServerImpl{inventoryManager: mgr}
+
+	_, err := server.DeleteRack(context.Background(), &pb.DeleteRackRequest{})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "rack id is required")
+}
+
+func TestDeleteRack_NotFound(t *testing.T) {
+	mgr := newMockManager()
+	server := &RLAServerImpl{inventoryManager: mgr}
+
+	_, err := server.DeleteRack(context.Background(), &pb.DeleteRackRequest{
+		Id: &pb.UUID{Id: uuid.New().String()},
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to delete rack")
+}
+
+// --- PurgeRack Tests ---
+
+func TestPurgeRack_Success(t *testing.T) {
+	mgr := newMockManager()
+	rackID := uuid.New()
+	mgr.racks[rackID] = &rack.Rack{Info: deviceinfo.DeviceInfo{ID: rackID, Name: "test-rack"}}
+
+	server := &RLAServerImpl{inventoryManager: mgr}
+
+	resp, err := server.PurgeRack(context.Background(), &pb.PurgeRackRequest{
+		Id: &pb.UUID{Id: rackID.String()},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+
+	_, exists := mgr.racks[rackID]
+	assert.False(t, exists)
+}
+
+func TestPurgeRack_MissingID(t *testing.T) {
+	mgr := newMockManager()
+	server := &RLAServerImpl{inventoryManager: mgr}
+
+	_, err := server.PurgeRack(context.Background(), &pb.PurgeRackRequest{})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "rack id is required")
+}
+
+func TestPurgeRack_NotFound(t *testing.T) {
+	mgr := newMockManager()
+	server := &RLAServerImpl{inventoryManager: mgr}
+
+	_, err := server.PurgeRack(context.Background(), &pb.PurgeRackRequest{
+		Id: &pb.UUID{Id: uuid.New().String()},
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to purge rack")
+}
+
+// --- PurgeComponent Tests ---
+
+func TestPurgeComponent_Success(t *testing.T) {
+	mgr := newMockManager()
+	compID := uuid.New()
+	mgr.components[compID] = &component.Component{
+		Type: devicetypes.ComponentTypeCompute,
+		Info: deviceinfo.DeviceInfo{ID: compID, Name: "node-01"},
+	}
+
+	server := &RLAServerImpl{inventoryManager: mgr}
+
+	resp, err := server.PurgeComponent(context.Background(), &pb.PurgeComponentRequest{
+		Id: &pb.UUID{Id: compID.String()},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+
+	_, exists := mgr.components[compID]
+	assert.False(t, exists)
+}
+
+func TestPurgeComponent_MissingID(t *testing.T) {
+	mgr := newMockManager()
+	server := &RLAServerImpl{inventoryManager: mgr}
+
+	_, err := server.PurgeComponent(context.Background(), &pb.PurgeComponentRequest{})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "component id is required")
+}
+
+func TestPurgeComponent_NotFound(t *testing.T) {
+	mgr := newMockManager()
+	server := &RLAServerImpl{inventoryManager: mgr}
+
+	_, err := server.PurgeComponent(context.Background(), &pb.PurgeComponentRequest{
+		Id: &pb.UUID{Id: uuid.New().String()},
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to purge component")
 }

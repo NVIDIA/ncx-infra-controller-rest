@@ -65,6 +65,8 @@ type Store interface {
 	GetRackBySerial(ctx context.Context, manufacturer string, serial string, withComponents bool) (*rack.Rack, error)
 	GetRackByIdentifier(ctx context.Context, identifier identifier.Identifier, withComponents bool) (*rack.Rack, error)
 	PatchRack(ctx context.Context, rack *rack.Rack) (string, error)
+	DeleteRack(ctx context.Context, id uuid.UUID) error
+	PurgeRack(ctx context.Context, id uuid.UUID) error
 	GetListOfRacks(ctx context.Context, info dbquery.StringQueryInfo, manufacturerFilter *dbquery.StringQueryInfo, modelFilter *dbquery.StringQueryInfo, pagination *dbquery.Pagination, orderBy *dbquery.OrderBy, withComponents bool) ([]*rack.Rack, int32, error)
 
 	// Component operations
@@ -76,6 +78,7 @@ type Store interface {
 	AddComponent(ctx context.Context, comp *component.Component) (uuid.UUID, error)
 	PatchComponent(ctx context.Context, comp *component.Component) error
 	DeleteComponent(ctx context.Context, id uuid.UUID) error
+	PurgeComponent(ctx context.Context, id uuid.UUID) error
 
 	// Component drift operations
 	GetDriftsByComponentIDs(ctx context.Context, componentIDs []uuid.UUID) ([]ComponentDrift, error)

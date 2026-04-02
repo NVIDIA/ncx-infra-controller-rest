@@ -38,28 +38,31 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	RLA_Version_FullMethodName                  = "/v1.RLA/Version"
 	RLA_CreateExpectedRack_FullMethodName       = "/v1.RLA/CreateExpectedRack"
-	RLA_PatchRack_FullMethodName                = "/v1.RLA/PatchRack"
 	RLA_GetRackInfoByID_FullMethodName          = "/v1.RLA/GetRackInfoByID"
 	RLA_GetRackInfoBySerial_FullMethodName      = "/v1.RLA/GetRackInfoBySerial"
-	RLA_GetComponentInfoByID_FullMethodName     = "/v1.RLA/GetComponentInfoByID"
-	RLA_GetComponentInfoBySerial_FullMethodName = "/v1.RLA/GetComponentInfoBySerial"
 	RLA_GetListOfRacks_FullMethodName           = "/v1.RLA/GetListOfRacks"
-	RLA_CreateNVLDomain_FullMethodName          = "/v1.RLA/CreateNVLDomain"
-	RLA_AttachRacksToNVLDomain_FullMethodName   = "/v1.RLA/AttachRacksToNVLDomain"
-	RLA_DetachRacksFromNVLDomain_FullMethodName = "/v1.RLA/DetachRacksFromNVLDomain"
-	RLA_GetListOfNVLDomains_FullMethodName      = "/v1.RLA/GetListOfNVLDomains"
-	RLA_GetRacksForNVLDomain_FullMethodName     = "/v1.RLA/GetRacksForNVLDomain"
+	RLA_PatchRack_FullMethodName                = "/v1.RLA/PatchRack"
+	RLA_DeleteRack_FullMethodName               = "/v1.RLA/DeleteRack"
+	RLA_PurgeRack_FullMethodName                = "/v1.RLA/PurgeRack"
 	RLA_UpgradeFirmware_FullMethodName          = "/v1.RLA/UpgradeFirmware"
 	RLA_BringUpRack_FullMethodName              = "/v1.RLA/BringUpRack"
 	RLA_IngestRack_FullMethodName               = "/v1.RLA/IngestRack"
+	RLA_PowerOnRack_FullMethodName              = "/v1.RLA/PowerOnRack"
+	RLA_PowerOffRack_FullMethodName             = "/v1.RLA/PowerOffRack"
+	RLA_PowerResetRack_FullMethodName           = "/v1.RLA/PowerResetRack"
+	RLA_GetComponentInfoByID_FullMethodName     = "/v1.RLA/GetComponentInfoByID"
+	RLA_GetComponentInfoBySerial_FullMethodName = "/v1.RLA/GetComponentInfoBySerial"
 	RLA_GetComponents_FullMethodName            = "/v1.RLA/GetComponents"
 	RLA_ValidateComponents_FullMethodName       = "/v1.RLA/ValidateComponents"
 	RLA_AddComponent_FullMethodName             = "/v1.RLA/AddComponent"
 	RLA_PatchComponent_FullMethodName           = "/v1.RLA/PatchComponent"
 	RLA_DeleteComponent_FullMethodName          = "/v1.RLA/DeleteComponent"
-	RLA_PowerOnRack_FullMethodName              = "/v1.RLA/PowerOnRack"
-	RLA_PowerOffRack_FullMethodName             = "/v1.RLA/PowerOffRack"
-	RLA_PowerResetRack_FullMethodName           = "/v1.RLA/PowerResetRack"
+	RLA_PurgeComponent_FullMethodName           = "/v1.RLA/PurgeComponent"
+	RLA_CreateNVLDomain_FullMethodName          = "/v1.RLA/CreateNVLDomain"
+	RLA_AttachRacksToNVLDomain_FullMethodName   = "/v1.RLA/AttachRacksToNVLDomain"
+	RLA_DetachRacksFromNVLDomain_FullMethodName = "/v1.RLA/DetachRacksFromNVLDomain"
+	RLA_GetListOfNVLDomains_FullMethodName      = "/v1.RLA/GetListOfNVLDomains"
+	RLA_GetRacksForNVLDomain_FullMethodName     = "/v1.RLA/GetRacksForNVLDomain"
 	RLA_ListTasks_FullMethodName                = "/v1.RLA/ListTasks"
 	RLA_GetTasksByIDs_FullMethodName            = "/v1.RLA/GetTasksByIDs"
 	RLA_CancelTask_FullMethodName               = "/v1.RLA/CancelTask"
@@ -79,42 +82,43 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type RLAClient interface {
-	// What version of RLA is this service running?
+	// Version
 	Version(ctx context.Context, in *VersionRequest, opts ...grpc.CallOption) (*BuildInfo, error)
+	// Rack CRUD
 	CreateExpectedRack(ctx context.Context, in *CreateExpectedRackRequest, opts ...grpc.CallOption) (*CreateExpectedRackResponse, error)
-	PatchRack(ctx context.Context, in *PatchRackRequest, opts ...grpc.CallOption) (*PatchRackResponse, error)
 	GetRackInfoByID(ctx context.Context, in *GetRackInfoByIDRequest, opts ...grpc.CallOption) (*GetRackInfoResponse, error)
 	GetRackInfoBySerial(ctx context.Context, in *GetRackInfoBySerialRequest, opts ...grpc.CallOption) (*GetRackInfoResponse, error)
+	GetListOfRacks(ctx context.Context, in *GetListOfRacksRequest, opts ...grpc.CallOption) (*GetListOfRacksResponse, error)
+	PatchRack(ctx context.Context, in *PatchRackRequest, opts ...grpc.CallOption) (*PatchRackResponse, error)
+	DeleteRack(ctx context.Context, in *DeleteRackRequest, opts ...grpc.CallOption) (*DeleteRackResponse, error)
+	PurgeRack(ctx context.Context, in *PurgeRackRequest, opts ...grpc.CallOption) (*PurgeRackResponse, error)
+	// Rack operations
+	UpgradeFirmware(ctx context.Context, in *UpgradeFirmwareRequest, opts ...grpc.CallOption) (*SubmitTaskResponse, error)
+	BringUpRack(ctx context.Context, in *BringUpRackRequest, opts ...grpc.CallOption) (*SubmitTaskResponse, error)
+	IngestRack(ctx context.Context, in *IngestRackRequest, opts ...grpc.CallOption) (*SubmitTaskResponse, error)
+	PowerOnRack(ctx context.Context, in *PowerOnRackRequest, opts ...grpc.CallOption) (*SubmitTaskResponse, error)
+	PowerOffRack(ctx context.Context, in *PowerOffRackRequest, opts ...grpc.CallOption) (*SubmitTaskResponse, error)
+	PowerResetRack(ctx context.Context, in *PowerResetRackRequest, opts ...grpc.CallOption) (*SubmitTaskResponse, error)
+	// Component CRUD
 	GetComponentInfoByID(ctx context.Context, in *GetComponentInfoByIDRequest, opts ...grpc.CallOption) (*GetComponentInfoResponse, error)
 	GetComponentInfoBySerial(ctx context.Context, in *GetComponentInfoBySerialRequest, opts ...grpc.CallOption) (*GetComponentInfoResponse, error)
-	GetListOfRacks(ctx context.Context, in *GetListOfRacksRequest, opts ...grpc.CallOption) (*GetListOfRacksResponse, error)
-	CreateNVLDomain(ctx context.Context, in *CreateNVLDomainRequest, opts ...grpc.CallOption) (*CreateNVLDomainResponse, error)
-	AttachRacksToNVLDomain(ctx context.Context, in *AttachRacksToNVLDomainRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	DetachRacksFromNVLDomain(ctx context.Context, in *DetachRacksFromNVLDomainRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	GetListOfNVLDomains(ctx context.Context, in *GetListOfNVLDomainsRequest, opts ...grpc.CallOption) (*GetListOfNVLDomainsResponse, error)
-	GetRacksForNVLDomain(ctx context.Context, in *GetRacksForNVLDomainRequest, opts ...grpc.CallOption) (*GetRacksForNVLDomainResponse, error)
-	UpgradeFirmware(ctx context.Context, in *UpgradeFirmwareRequest, opts ...grpc.CallOption) (*SubmitTaskResponse, error)
-	// Bring up rack: power on, configure, and validate a new rack
-	BringUpRack(ctx context.Context, in *BringUpRackRequest, opts ...grpc.CallOption) (*SubmitTaskResponse, error)
-	// Ingest rack: inject expected component configurations to component manager services
-	IngestRack(ctx context.Context, in *IngestRackRequest, opts ...grpc.CallOption) (*SubmitTaskResponse, error)
-	// Components APIs
 	GetComponents(ctx context.Context, in *GetComponentsRequest, opts ...grpc.CallOption) (*GetComponentsResponse, error)
 	ValidateComponents(ctx context.Context, in *ValidateComponentsRequest, opts ...grpc.CallOption) (*ValidateComponentsResponse, error)
 	AddComponent(ctx context.Context, in *AddComponentRequest, opts ...grpc.CallOption) (*AddComponentResponse, error)
 	PatchComponent(ctx context.Context, in *PatchComponentRequest, opts ...grpc.CallOption) (*PatchComponentResponse, error)
 	DeleteComponent(ctx context.Context, in *DeleteComponentRequest, opts ...grpc.CallOption) (*DeleteComponentResponse, error)
-	// Power control a rack or a rack's specified components
-	PowerOnRack(ctx context.Context, in *PowerOnRackRequest, opts ...grpc.CallOption) (*SubmitTaskResponse, error)
-	PowerOffRack(ctx context.Context, in *PowerOffRackRequest, opts ...grpc.CallOption) (*SubmitTaskResponse, error)
-	PowerResetRack(ctx context.Context, in *PowerResetRackRequest, opts ...grpc.CallOption) (*SubmitTaskResponse, error)
-	// Query for tasks
+	PurgeComponent(ctx context.Context, in *PurgeComponentRequest, opts ...grpc.CallOption) (*PurgeComponentResponse, error)
+	// NVL Domain
+	CreateNVLDomain(ctx context.Context, in *CreateNVLDomainRequest, opts ...grpc.CallOption) (*CreateNVLDomainResponse, error)
+	AttachRacksToNVLDomain(ctx context.Context, in *AttachRacksToNVLDomainRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	DetachRacksFromNVLDomain(ctx context.Context, in *DetachRacksFromNVLDomainRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	GetListOfNVLDomains(ctx context.Context, in *GetListOfNVLDomainsRequest, opts ...grpc.CallOption) (*GetListOfNVLDomainsResponse, error)
+	GetRacksForNVLDomain(ctx context.Context, in *GetRacksForNVLDomainRequest, opts ...grpc.CallOption) (*GetRacksForNVLDomainResponse, error)
+	// Tasks
 	ListTasks(ctx context.Context, in *ListTasksRequest, opts ...grpc.CallOption) (*ListTasksResponse, error)
 	GetTasksByIDs(ctx context.Context, in *GetTasksByIDsRequest, opts ...grpc.CallOption) (*GetTasksByIDsResponse, error)
-	// Cancel a task (waiting tasks are terminated immediately; running tasks
-	// have their Temporal workflow terminated).
 	CancelTask(ctx context.Context, in *CancelTaskRequest, opts ...grpc.CallOption) (*CancelTaskResponse, error)
-	// Operation rules management
+	// Operation rules
 	CreateOperationRule(ctx context.Context, in *CreateOperationRuleRequest, opts ...grpc.CallOption) (*CreateOperationRuleResponse, error)
 	UpdateOperationRule(ctx context.Context, in *UpdateOperationRuleRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	DeleteOperationRule(ctx context.Context, in *DeleteOperationRuleRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
@@ -156,16 +160,6 @@ func (c *rLAClient) CreateExpectedRack(ctx context.Context, in *CreateExpectedRa
 	return out, nil
 }
 
-func (c *rLAClient) PatchRack(ctx context.Context, in *PatchRackRequest, opts ...grpc.CallOption) (*PatchRackResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(PatchRackResponse)
-	err := c.cc.Invoke(ctx, RLA_PatchRack_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *rLAClient) GetRackInfoByID(ctx context.Context, in *GetRackInfoByIDRequest, opts ...grpc.CallOption) (*GetRackInfoResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetRackInfoResponse)
@@ -186,26 +180,6 @@ func (c *rLAClient) GetRackInfoBySerial(ctx context.Context, in *GetRackInfoBySe
 	return out, nil
 }
 
-func (c *rLAClient) GetComponentInfoByID(ctx context.Context, in *GetComponentInfoByIDRequest, opts ...grpc.CallOption) (*GetComponentInfoResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetComponentInfoResponse)
-	err := c.cc.Invoke(ctx, RLA_GetComponentInfoByID_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *rLAClient) GetComponentInfoBySerial(ctx context.Context, in *GetComponentInfoBySerialRequest, opts ...grpc.CallOption) (*GetComponentInfoResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetComponentInfoResponse)
-	err := c.cc.Invoke(ctx, RLA_GetComponentInfoBySerial_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *rLAClient) GetListOfRacks(ctx context.Context, in *GetListOfRacksRequest, opts ...grpc.CallOption) (*GetListOfRacksResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetListOfRacksResponse)
@@ -216,50 +190,30 @@ func (c *rLAClient) GetListOfRacks(ctx context.Context, in *GetListOfRacksReques
 	return out, nil
 }
 
-func (c *rLAClient) CreateNVLDomain(ctx context.Context, in *CreateNVLDomainRequest, opts ...grpc.CallOption) (*CreateNVLDomainResponse, error) {
+func (c *rLAClient) PatchRack(ctx context.Context, in *PatchRackRequest, opts ...grpc.CallOption) (*PatchRackResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(CreateNVLDomainResponse)
-	err := c.cc.Invoke(ctx, RLA_CreateNVLDomain_FullMethodName, in, out, cOpts...)
+	out := new(PatchRackResponse)
+	err := c.cc.Invoke(ctx, RLA_PatchRack_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *rLAClient) AttachRacksToNVLDomain(ctx context.Context, in *AttachRacksToNVLDomainRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (c *rLAClient) DeleteRack(ctx context.Context, in *DeleteRackRequest, opts ...grpc.CallOption) (*DeleteRackResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, RLA_AttachRacksToNVLDomain_FullMethodName, in, out, cOpts...)
+	out := new(DeleteRackResponse)
+	err := c.cc.Invoke(ctx, RLA_DeleteRack_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *rLAClient) DetachRacksFromNVLDomain(ctx context.Context, in *DetachRacksFromNVLDomainRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (c *rLAClient) PurgeRack(ctx context.Context, in *PurgeRackRequest, opts ...grpc.CallOption) (*PurgeRackResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, RLA_DetachRacksFromNVLDomain_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *rLAClient) GetListOfNVLDomains(ctx context.Context, in *GetListOfNVLDomainsRequest, opts ...grpc.CallOption) (*GetListOfNVLDomainsResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetListOfNVLDomainsResponse)
-	err := c.cc.Invoke(ctx, RLA_GetListOfNVLDomains_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *rLAClient) GetRacksForNVLDomain(ctx context.Context, in *GetRacksForNVLDomainRequest, opts ...grpc.CallOption) (*GetRacksForNVLDomainResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetRacksForNVLDomainResponse)
-	err := c.cc.Invoke(ctx, RLA_GetRacksForNVLDomain_FullMethodName, in, out, cOpts...)
+	out := new(PurgeRackResponse)
+	err := c.cc.Invoke(ctx, RLA_PurgeRack_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -290,6 +244,56 @@ func (c *rLAClient) IngestRack(ctx context.Context, in *IngestRackRequest, opts 
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(SubmitTaskResponse)
 	err := c.cc.Invoke(ctx, RLA_IngestRack_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *rLAClient) PowerOnRack(ctx context.Context, in *PowerOnRackRequest, opts ...grpc.CallOption) (*SubmitTaskResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SubmitTaskResponse)
+	err := c.cc.Invoke(ctx, RLA_PowerOnRack_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *rLAClient) PowerOffRack(ctx context.Context, in *PowerOffRackRequest, opts ...grpc.CallOption) (*SubmitTaskResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SubmitTaskResponse)
+	err := c.cc.Invoke(ctx, RLA_PowerOffRack_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *rLAClient) PowerResetRack(ctx context.Context, in *PowerResetRackRequest, opts ...grpc.CallOption) (*SubmitTaskResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SubmitTaskResponse)
+	err := c.cc.Invoke(ctx, RLA_PowerResetRack_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *rLAClient) GetComponentInfoByID(ctx context.Context, in *GetComponentInfoByIDRequest, opts ...grpc.CallOption) (*GetComponentInfoResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetComponentInfoResponse)
+	err := c.cc.Invoke(ctx, RLA_GetComponentInfoByID_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *rLAClient) GetComponentInfoBySerial(ctx context.Context, in *GetComponentInfoBySerialRequest, opts ...grpc.CallOption) (*GetComponentInfoResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetComponentInfoResponse)
+	err := c.cc.Invoke(ctx, RLA_GetComponentInfoBySerial_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -346,30 +350,60 @@ func (c *rLAClient) DeleteComponent(ctx context.Context, in *DeleteComponentRequ
 	return out, nil
 }
 
-func (c *rLAClient) PowerOnRack(ctx context.Context, in *PowerOnRackRequest, opts ...grpc.CallOption) (*SubmitTaskResponse, error) {
+func (c *rLAClient) PurgeComponent(ctx context.Context, in *PurgeComponentRequest, opts ...grpc.CallOption) (*PurgeComponentResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SubmitTaskResponse)
-	err := c.cc.Invoke(ctx, RLA_PowerOnRack_FullMethodName, in, out, cOpts...)
+	out := new(PurgeComponentResponse)
+	err := c.cc.Invoke(ctx, RLA_PurgeComponent_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *rLAClient) PowerOffRack(ctx context.Context, in *PowerOffRackRequest, opts ...grpc.CallOption) (*SubmitTaskResponse, error) {
+func (c *rLAClient) CreateNVLDomain(ctx context.Context, in *CreateNVLDomainRequest, opts ...grpc.CallOption) (*CreateNVLDomainResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SubmitTaskResponse)
-	err := c.cc.Invoke(ctx, RLA_PowerOffRack_FullMethodName, in, out, cOpts...)
+	out := new(CreateNVLDomainResponse)
+	err := c.cc.Invoke(ctx, RLA_CreateNVLDomain_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *rLAClient) PowerResetRack(ctx context.Context, in *PowerResetRackRequest, opts ...grpc.CallOption) (*SubmitTaskResponse, error) {
+func (c *rLAClient) AttachRacksToNVLDomain(ctx context.Context, in *AttachRacksToNVLDomainRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SubmitTaskResponse)
-	err := c.cc.Invoke(ctx, RLA_PowerResetRack_FullMethodName, in, out, cOpts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, RLA_AttachRacksToNVLDomain_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *rLAClient) DetachRacksFromNVLDomain(ctx context.Context, in *DetachRacksFromNVLDomainRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, RLA_DetachRacksFromNVLDomain_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *rLAClient) GetListOfNVLDomains(ctx context.Context, in *GetListOfNVLDomainsRequest, opts ...grpc.CallOption) (*GetListOfNVLDomainsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetListOfNVLDomainsResponse)
+	err := c.cc.Invoke(ctx, RLA_GetListOfNVLDomains_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *rLAClient) GetRacksForNVLDomain(ctx context.Context, in *GetRacksForNVLDomainRequest, opts ...grpc.CallOption) (*GetRacksForNVLDomainResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetRacksForNVLDomainResponse)
+	err := c.cc.Invoke(ctx, RLA_GetRacksForNVLDomain_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -510,42 +544,43 @@ func (c *rLAClient) ListRackRuleAssociations(ctx context.Context, in *ListRackRu
 // All implementations must embed UnimplementedRLAServer
 // for forward compatibility.
 type RLAServer interface {
-	// What version of RLA is this service running?
+	// Version
 	Version(context.Context, *VersionRequest) (*BuildInfo, error)
+	// Rack CRUD
 	CreateExpectedRack(context.Context, *CreateExpectedRackRequest) (*CreateExpectedRackResponse, error)
-	PatchRack(context.Context, *PatchRackRequest) (*PatchRackResponse, error)
 	GetRackInfoByID(context.Context, *GetRackInfoByIDRequest) (*GetRackInfoResponse, error)
 	GetRackInfoBySerial(context.Context, *GetRackInfoBySerialRequest) (*GetRackInfoResponse, error)
+	GetListOfRacks(context.Context, *GetListOfRacksRequest) (*GetListOfRacksResponse, error)
+	PatchRack(context.Context, *PatchRackRequest) (*PatchRackResponse, error)
+	DeleteRack(context.Context, *DeleteRackRequest) (*DeleteRackResponse, error)
+	PurgeRack(context.Context, *PurgeRackRequest) (*PurgeRackResponse, error)
+	// Rack operations
+	UpgradeFirmware(context.Context, *UpgradeFirmwareRequest) (*SubmitTaskResponse, error)
+	BringUpRack(context.Context, *BringUpRackRequest) (*SubmitTaskResponse, error)
+	IngestRack(context.Context, *IngestRackRequest) (*SubmitTaskResponse, error)
+	PowerOnRack(context.Context, *PowerOnRackRequest) (*SubmitTaskResponse, error)
+	PowerOffRack(context.Context, *PowerOffRackRequest) (*SubmitTaskResponse, error)
+	PowerResetRack(context.Context, *PowerResetRackRequest) (*SubmitTaskResponse, error)
+	// Component CRUD
 	GetComponentInfoByID(context.Context, *GetComponentInfoByIDRequest) (*GetComponentInfoResponse, error)
 	GetComponentInfoBySerial(context.Context, *GetComponentInfoBySerialRequest) (*GetComponentInfoResponse, error)
-	GetListOfRacks(context.Context, *GetListOfRacksRequest) (*GetListOfRacksResponse, error)
-	CreateNVLDomain(context.Context, *CreateNVLDomainRequest) (*CreateNVLDomainResponse, error)
-	AttachRacksToNVLDomain(context.Context, *AttachRacksToNVLDomainRequest) (*emptypb.Empty, error)
-	DetachRacksFromNVLDomain(context.Context, *DetachRacksFromNVLDomainRequest) (*emptypb.Empty, error)
-	GetListOfNVLDomains(context.Context, *GetListOfNVLDomainsRequest) (*GetListOfNVLDomainsResponse, error)
-	GetRacksForNVLDomain(context.Context, *GetRacksForNVLDomainRequest) (*GetRacksForNVLDomainResponse, error)
-	UpgradeFirmware(context.Context, *UpgradeFirmwareRequest) (*SubmitTaskResponse, error)
-	// Bring up rack: power on, configure, and validate a new rack
-	BringUpRack(context.Context, *BringUpRackRequest) (*SubmitTaskResponse, error)
-	// Ingest rack: inject expected component configurations to component manager services
-	IngestRack(context.Context, *IngestRackRequest) (*SubmitTaskResponse, error)
-	// Components APIs
 	GetComponents(context.Context, *GetComponentsRequest) (*GetComponentsResponse, error)
 	ValidateComponents(context.Context, *ValidateComponentsRequest) (*ValidateComponentsResponse, error)
 	AddComponent(context.Context, *AddComponentRequest) (*AddComponentResponse, error)
 	PatchComponent(context.Context, *PatchComponentRequest) (*PatchComponentResponse, error)
 	DeleteComponent(context.Context, *DeleteComponentRequest) (*DeleteComponentResponse, error)
-	// Power control a rack or a rack's specified components
-	PowerOnRack(context.Context, *PowerOnRackRequest) (*SubmitTaskResponse, error)
-	PowerOffRack(context.Context, *PowerOffRackRequest) (*SubmitTaskResponse, error)
-	PowerResetRack(context.Context, *PowerResetRackRequest) (*SubmitTaskResponse, error)
-	// Query for tasks
+	PurgeComponent(context.Context, *PurgeComponentRequest) (*PurgeComponentResponse, error)
+	// NVL Domain
+	CreateNVLDomain(context.Context, *CreateNVLDomainRequest) (*CreateNVLDomainResponse, error)
+	AttachRacksToNVLDomain(context.Context, *AttachRacksToNVLDomainRequest) (*emptypb.Empty, error)
+	DetachRacksFromNVLDomain(context.Context, *DetachRacksFromNVLDomainRequest) (*emptypb.Empty, error)
+	GetListOfNVLDomains(context.Context, *GetListOfNVLDomainsRequest) (*GetListOfNVLDomainsResponse, error)
+	GetRacksForNVLDomain(context.Context, *GetRacksForNVLDomainRequest) (*GetRacksForNVLDomainResponse, error)
+	// Tasks
 	ListTasks(context.Context, *ListTasksRequest) (*ListTasksResponse, error)
 	GetTasksByIDs(context.Context, *GetTasksByIDsRequest) (*GetTasksByIDsResponse, error)
-	// Cancel a task (waiting tasks are terminated immediately; running tasks
-	// have their Temporal workflow terminated).
 	CancelTask(context.Context, *CancelTaskRequest) (*CancelTaskResponse, error)
-	// Operation rules management
+	// Operation rules
 	CreateOperationRule(context.Context, *CreateOperationRuleRequest) (*CreateOperationRuleResponse, error)
 	UpdateOperationRule(context.Context, *UpdateOperationRuleRequest) (*emptypb.Empty, error)
 	DeleteOperationRule(context.Context, *DeleteOperationRuleRequest) (*emptypb.Empty, error)
@@ -573,38 +608,23 @@ func (UnimplementedRLAServer) Version(context.Context, *VersionRequest) (*BuildI
 func (UnimplementedRLAServer) CreateExpectedRack(context.Context, *CreateExpectedRackRequest) (*CreateExpectedRackResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateExpectedRack not implemented")
 }
-func (UnimplementedRLAServer) PatchRack(context.Context, *PatchRackRequest) (*PatchRackResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method PatchRack not implemented")
-}
 func (UnimplementedRLAServer) GetRackInfoByID(context.Context, *GetRackInfoByIDRequest) (*GetRackInfoResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetRackInfoByID not implemented")
 }
 func (UnimplementedRLAServer) GetRackInfoBySerial(context.Context, *GetRackInfoBySerialRequest) (*GetRackInfoResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetRackInfoBySerial not implemented")
 }
-func (UnimplementedRLAServer) GetComponentInfoByID(context.Context, *GetComponentInfoByIDRequest) (*GetComponentInfoResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method GetComponentInfoByID not implemented")
-}
-func (UnimplementedRLAServer) GetComponentInfoBySerial(context.Context, *GetComponentInfoBySerialRequest) (*GetComponentInfoResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method GetComponentInfoBySerial not implemented")
-}
 func (UnimplementedRLAServer) GetListOfRacks(context.Context, *GetListOfRacksRequest) (*GetListOfRacksResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetListOfRacks not implemented")
 }
-func (UnimplementedRLAServer) CreateNVLDomain(context.Context, *CreateNVLDomainRequest) (*CreateNVLDomainResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method CreateNVLDomain not implemented")
+func (UnimplementedRLAServer) PatchRack(context.Context, *PatchRackRequest) (*PatchRackResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method PatchRack not implemented")
 }
-func (UnimplementedRLAServer) AttachRacksToNVLDomain(context.Context, *AttachRacksToNVLDomainRequest) (*emptypb.Empty, error) {
-	return nil, status.Error(codes.Unimplemented, "method AttachRacksToNVLDomain not implemented")
+func (UnimplementedRLAServer) DeleteRack(context.Context, *DeleteRackRequest) (*DeleteRackResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteRack not implemented")
 }
-func (UnimplementedRLAServer) DetachRacksFromNVLDomain(context.Context, *DetachRacksFromNVLDomainRequest) (*emptypb.Empty, error) {
-	return nil, status.Error(codes.Unimplemented, "method DetachRacksFromNVLDomain not implemented")
-}
-func (UnimplementedRLAServer) GetListOfNVLDomains(context.Context, *GetListOfNVLDomainsRequest) (*GetListOfNVLDomainsResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method GetListOfNVLDomains not implemented")
-}
-func (UnimplementedRLAServer) GetRacksForNVLDomain(context.Context, *GetRacksForNVLDomainRequest) (*GetRacksForNVLDomainResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method GetRacksForNVLDomain not implemented")
+func (UnimplementedRLAServer) PurgeRack(context.Context, *PurgeRackRequest) (*PurgeRackResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method PurgeRack not implemented")
 }
 func (UnimplementedRLAServer) UpgradeFirmware(context.Context, *UpgradeFirmwareRequest) (*SubmitTaskResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpgradeFirmware not implemented")
@@ -614,6 +634,21 @@ func (UnimplementedRLAServer) BringUpRack(context.Context, *BringUpRackRequest) 
 }
 func (UnimplementedRLAServer) IngestRack(context.Context, *IngestRackRequest) (*SubmitTaskResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method IngestRack not implemented")
+}
+func (UnimplementedRLAServer) PowerOnRack(context.Context, *PowerOnRackRequest) (*SubmitTaskResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method PowerOnRack not implemented")
+}
+func (UnimplementedRLAServer) PowerOffRack(context.Context, *PowerOffRackRequest) (*SubmitTaskResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method PowerOffRack not implemented")
+}
+func (UnimplementedRLAServer) PowerResetRack(context.Context, *PowerResetRackRequest) (*SubmitTaskResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method PowerResetRack not implemented")
+}
+func (UnimplementedRLAServer) GetComponentInfoByID(context.Context, *GetComponentInfoByIDRequest) (*GetComponentInfoResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetComponentInfoByID not implemented")
+}
+func (UnimplementedRLAServer) GetComponentInfoBySerial(context.Context, *GetComponentInfoBySerialRequest) (*GetComponentInfoResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetComponentInfoBySerial not implemented")
 }
 func (UnimplementedRLAServer) GetComponents(context.Context, *GetComponentsRequest) (*GetComponentsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetComponents not implemented")
@@ -630,14 +665,23 @@ func (UnimplementedRLAServer) PatchComponent(context.Context, *PatchComponentReq
 func (UnimplementedRLAServer) DeleteComponent(context.Context, *DeleteComponentRequest) (*DeleteComponentResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteComponent not implemented")
 }
-func (UnimplementedRLAServer) PowerOnRack(context.Context, *PowerOnRackRequest) (*SubmitTaskResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method PowerOnRack not implemented")
+func (UnimplementedRLAServer) PurgeComponent(context.Context, *PurgeComponentRequest) (*PurgeComponentResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method PurgeComponent not implemented")
 }
-func (UnimplementedRLAServer) PowerOffRack(context.Context, *PowerOffRackRequest) (*SubmitTaskResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method PowerOffRack not implemented")
+func (UnimplementedRLAServer) CreateNVLDomain(context.Context, *CreateNVLDomainRequest) (*CreateNVLDomainResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateNVLDomain not implemented")
 }
-func (UnimplementedRLAServer) PowerResetRack(context.Context, *PowerResetRackRequest) (*SubmitTaskResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method PowerResetRack not implemented")
+func (UnimplementedRLAServer) AttachRacksToNVLDomain(context.Context, *AttachRacksToNVLDomainRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method AttachRacksToNVLDomain not implemented")
+}
+func (UnimplementedRLAServer) DetachRacksFromNVLDomain(context.Context, *DetachRacksFromNVLDomainRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method DetachRacksFromNVLDomain not implemented")
+}
+func (UnimplementedRLAServer) GetListOfNVLDomains(context.Context, *GetListOfNVLDomainsRequest) (*GetListOfNVLDomainsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetListOfNVLDomains not implemented")
+}
+func (UnimplementedRLAServer) GetRacksForNVLDomain(context.Context, *GetRacksForNVLDomainRequest) (*GetRacksForNVLDomainResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetRacksForNVLDomain not implemented")
 }
 func (UnimplementedRLAServer) ListTasks(context.Context, *ListTasksRequest) (*ListTasksResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListTasks not implemented")
@@ -735,24 +779,6 @@ func _RLA_CreateExpectedRack_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
-func _RLA_PatchRack_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PatchRackRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(RLAServer).PatchRack(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: RLA_PatchRack_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RLAServer).PatchRack(ctx, req.(*PatchRackRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _RLA_GetRackInfoByID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetRackInfoByIDRequest)
 	if err := dec(in); err != nil {
@@ -789,42 +815,6 @@ func _RLA_GetRackInfoBySerial_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
-func _RLA_GetComponentInfoByID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetComponentInfoByIDRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(RLAServer).GetComponentInfoByID(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: RLA_GetComponentInfoByID_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RLAServer).GetComponentInfoByID(ctx, req.(*GetComponentInfoByIDRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _RLA_GetComponentInfoBySerial_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetComponentInfoBySerialRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(RLAServer).GetComponentInfoBySerial(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: RLA_GetComponentInfoBySerial_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RLAServer).GetComponentInfoBySerial(ctx, req.(*GetComponentInfoBySerialRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _RLA_GetListOfRacks_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetListOfRacksRequest)
 	if err := dec(in); err != nil {
@@ -843,92 +833,56 @@ func _RLA_GetListOfRacks_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
-func _RLA_CreateNVLDomain_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateNVLDomainRequest)
+func _RLA_PatchRack_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PatchRackRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(RLAServer).CreateNVLDomain(ctx, in)
+		return srv.(RLAServer).PatchRack(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: RLA_CreateNVLDomain_FullMethodName,
+		FullMethod: RLA_PatchRack_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RLAServer).CreateNVLDomain(ctx, req.(*CreateNVLDomainRequest))
+		return srv.(RLAServer).PatchRack(ctx, req.(*PatchRackRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _RLA_AttachRacksToNVLDomain_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(AttachRacksToNVLDomainRequest)
+func _RLA_DeleteRack_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteRackRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(RLAServer).AttachRacksToNVLDomain(ctx, in)
+		return srv.(RLAServer).DeleteRack(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: RLA_AttachRacksToNVLDomain_FullMethodName,
+		FullMethod: RLA_DeleteRack_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RLAServer).AttachRacksToNVLDomain(ctx, req.(*AttachRacksToNVLDomainRequest))
+		return srv.(RLAServer).DeleteRack(ctx, req.(*DeleteRackRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _RLA_DetachRacksFromNVLDomain_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DetachRacksFromNVLDomainRequest)
+func _RLA_PurgeRack_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PurgeRackRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(RLAServer).DetachRacksFromNVLDomain(ctx, in)
+		return srv.(RLAServer).PurgeRack(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: RLA_DetachRacksFromNVLDomain_FullMethodName,
+		FullMethod: RLA_PurgeRack_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RLAServer).DetachRacksFromNVLDomain(ctx, req.(*DetachRacksFromNVLDomainRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _RLA_GetListOfNVLDomains_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetListOfNVLDomainsRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(RLAServer).GetListOfNVLDomains(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: RLA_GetListOfNVLDomains_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RLAServer).GetListOfNVLDomains(ctx, req.(*GetListOfNVLDomainsRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _RLA_GetRacksForNVLDomain_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetRacksForNVLDomainRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(RLAServer).GetRacksForNVLDomain(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: RLA_GetRacksForNVLDomain_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RLAServer).GetRacksForNVLDomain(ctx, req.(*GetRacksForNVLDomainRequest))
+		return srv.(RLAServer).PurgeRack(ctx, req.(*PurgeRackRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -983,6 +937,96 @@ func _RLA_IngestRack_Handler(srv interface{}, ctx context.Context, dec func(inte
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(RLAServer).IngestRack(ctx, req.(*IngestRackRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _RLA_PowerOnRack_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PowerOnRackRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RLAServer).PowerOnRack(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: RLA_PowerOnRack_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RLAServer).PowerOnRack(ctx, req.(*PowerOnRackRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _RLA_PowerOffRack_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PowerOffRackRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RLAServer).PowerOffRack(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: RLA_PowerOffRack_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RLAServer).PowerOffRack(ctx, req.(*PowerOffRackRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _RLA_PowerResetRack_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PowerResetRackRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RLAServer).PowerResetRack(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: RLA_PowerResetRack_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RLAServer).PowerResetRack(ctx, req.(*PowerResetRackRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _RLA_GetComponentInfoByID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetComponentInfoByIDRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RLAServer).GetComponentInfoByID(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: RLA_GetComponentInfoByID_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RLAServer).GetComponentInfoByID(ctx, req.(*GetComponentInfoByIDRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _RLA_GetComponentInfoBySerial_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetComponentInfoBySerialRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RLAServer).GetComponentInfoBySerial(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: RLA_GetComponentInfoBySerial_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RLAServer).GetComponentInfoBySerial(ctx, req.(*GetComponentInfoBySerialRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1077,56 +1121,110 @@ func _RLA_DeleteComponent_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
-func _RLA_PowerOnRack_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PowerOnRackRequest)
+func _RLA_PurgeComponent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PurgeComponentRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(RLAServer).PowerOnRack(ctx, in)
+		return srv.(RLAServer).PurgeComponent(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: RLA_PowerOnRack_FullMethodName,
+		FullMethod: RLA_PurgeComponent_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RLAServer).PowerOnRack(ctx, req.(*PowerOnRackRequest))
+		return srv.(RLAServer).PurgeComponent(ctx, req.(*PurgeComponentRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _RLA_PowerOffRack_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PowerOffRackRequest)
+func _RLA_CreateNVLDomain_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateNVLDomainRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(RLAServer).PowerOffRack(ctx, in)
+		return srv.(RLAServer).CreateNVLDomain(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: RLA_PowerOffRack_FullMethodName,
+		FullMethod: RLA_CreateNVLDomain_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RLAServer).PowerOffRack(ctx, req.(*PowerOffRackRequest))
+		return srv.(RLAServer).CreateNVLDomain(ctx, req.(*CreateNVLDomainRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _RLA_PowerResetRack_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PowerResetRackRequest)
+func _RLA_AttachRacksToNVLDomain_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AttachRacksToNVLDomainRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(RLAServer).PowerResetRack(ctx, in)
+		return srv.(RLAServer).AttachRacksToNVLDomain(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: RLA_PowerResetRack_FullMethodName,
+		FullMethod: RLA_AttachRacksToNVLDomain_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RLAServer).PowerResetRack(ctx, req.(*PowerResetRackRequest))
+		return srv.(RLAServer).AttachRacksToNVLDomain(ctx, req.(*AttachRacksToNVLDomainRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _RLA_DetachRacksFromNVLDomain_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DetachRacksFromNVLDomainRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RLAServer).DetachRacksFromNVLDomain(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: RLA_DetachRacksFromNVLDomain_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RLAServer).DetachRacksFromNVLDomain(ctx, req.(*DetachRacksFromNVLDomainRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _RLA_GetListOfNVLDomains_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetListOfNVLDomainsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RLAServer).GetListOfNVLDomains(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: RLA_GetListOfNVLDomains_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RLAServer).GetListOfNVLDomains(ctx, req.(*GetListOfNVLDomainsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _RLA_GetRacksForNVLDomain_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetRacksForNVLDomainRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RLAServer).GetRacksForNVLDomain(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: RLA_GetRacksForNVLDomain_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RLAServer).GetRacksForNVLDomain(ctx, req.(*GetRacksForNVLDomainRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1381,10 +1479,6 @@ var RLA_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _RLA_CreateExpectedRack_Handler,
 		},
 		{
-			MethodName: "PatchRack",
-			Handler:    _RLA_PatchRack_Handler,
-		},
-		{
 			MethodName: "GetRackInfoByID",
 			Handler:    _RLA_GetRackInfoByID_Handler,
 		},
@@ -1393,36 +1487,20 @@ var RLA_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _RLA_GetRackInfoBySerial_Handler,
 		},
 		{
-			MethodName: "GetComponentInfoByID",
-			Handler:    _RLA_GetComponentInfoByID_Handler,
-		},
-		{
-			MethodName: "GetComponentInfoBySerial",
-			Handler:    _RLA_GetComponentInfoBySerial_Handler,
-		},
-		{
 			MethodName: "GetListOfRacks",
 			Handler:    _RLA_GetListOfRacks_Handler,
 		},
 		{
-			MethodName: "CreateNVLDomain",
-			Handler:    _RLA_CreateNVLDomain_Handler,
+			MethodName: "PatchRack",
+			Handler:    _RLA_PatchRack_Handler,
 		},
 		{
-			MethodName: "AttachRacksToNVLDomain",
-			Handler:    _RLA_AttachRacksToNVLDomain_Handler,
+			MethodName: "DeleteRack",
+			Handler:    _RLA_DeleteRack_Handler,
 		},
 		{
-			MethodName: "DetachRacksFromNVLDomain",
-			Handler:    _RLA_DetachRacksFromNVLDomain_Handler,
-		},
-		{
-			MethodName: "GetListOfNVLDomains",
-			Handler:    _RLA_GetListOfNVLDomains_Handler,
-		},
-		{
-			MethodName: "GetRacksForNVLDomain",
-			Handler:    _RLA_GetRacksForNVLDomain_Handler,
+			MethodName: "PurgeRack",
+			Handler:    _RLA_PurgeRack_Handler,
 		},
 		{
 			MethodName: "UpgradeFirmware",
@@ -1435,6 +1513,26 @@ var RLA_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "IngestRack",
 			Handler:    _RLA_IngestRack_Handler,
+		},
+		{
+			MethodName: "PowerOnRack",
+			Handler:    _RLA_PowerOnRack_Handler,
+		},
+		{
+			MethodName: "PowerOffRack",
+			Handler:    _RLA_PowerOffRack_Handler,
+		},
+		{
+			MethodName: "PowerResetRack",
+			Handler:    _RLA_PowerResetRack_Handler,
+		},
+		{
+			MethodName: "GetComponentInfoByID",
+			Handler:    _RLA_GetComponentInfoByID_Handler,
+		},
+		{
+			MethodName: "GetComponentInfoBySerial",
+			Handler:    _RLA_GetComponentInfoBySerial_Handler,
 		},
 		{
 			MethodName: "GetComponents",
@@ -1457,16 +1555,28 @@ var RLA_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _RLA_DeleteComponent_Handler,
 		},
 		{
-			MethodName: "PowerOnRack",
-			Handler:    _RLA_PowerOnRack_Handler,
+			MethodName: "PurgeComponent",
+			Handler:    _RLA_PurgeComponent_Handler,
 		},
 		{
-			MethodName: "PowerOffRack",
-			Handler:    _RLA_PowerOffRack_Handler,
+			MethodName: "CreateNVLDomain",
+			Handler:    _RLA_CreateNVLDomain_Handler,
 		},
 		{
-			MethodName: "PowerResetRack",
-			Handler:    _RLA_PowerResetRack_Handler,
+			MethodName: "AttachRacksToNVLDomain",
+			Handler:    _RLA_AttachRacksToNVLDomain_Handler,
+		},
+		{
+			MethodName: "DetachRacksFromNVLDomain",
+			Handler:    _RLA_DetachRacksFromNVLDomain_Handler,
+		},
+		{
+			MethodName: "GetListOfNVLDomains",
+			Handler:    _RLA_GetListOfNVLDomains_Handler,
+		},
+		{
+			MethodName: "GetRacksForNVLDomain",
+			Handler:    _RLA_GetRacksForNVLDomain_Handler,
 		},
 		{
 			MethodName: "ListTasks",
