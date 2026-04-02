@@ -168,12 +168,13 @@ type TenantAccountUpdateInput struct {
 	Status           *string
 }
 
-// TenantAccountFilterInput filtering options for GetAll and GetCount method
+// TenantAccountFilterInput filtering options for GetAll and GetCount method, including SearchQuery for filtering by account or tenant org
 type TenantAccountFilterInput struct {
 	InfrastructureProviderID *uuid.UUID
 	Statuses                 []string
 	TenantIDs                []uuid.UUID
 	TenantOrgs               []string
+	SearchQuery              *string
 }
 
 var _ bun.BeforeAppendModelHook = (*TenantAccount)(nil)
@@ -354,6 +355,18 @@ func (tasd TenantAccountSQLDAO) setQueryWithFilter(filter TenantAccountFilterInp
 			query = query.Where("ta.status IN (?)", bun.In(filter.Statuses))
 		}
 		tasd.tracerSpan.SetAttribute(tnaDAOSpan, "status", filter.Statuses)
+	}
+
+	if filter.SearchQuery != nil {
+		normalizedTokens := db.GetStrPtr(db.GetStringToTsQuery(*filter.SearchQuery))
+		query = query.WhereGroup(" AND ", func(q *bun.SelectQuery) *bun.SelectQuery {
+			return q.
+				Where("to_tsvector('english', ta.account_number || ' ' || ta.tenant_org) @@ to_tsquery('english', ?)", *normalizedTokens).
+				WhereOr("ta.account_number ILIKE ?", "%"+*filter.SearchQuery+"%").
+				WhereOr("ta.tenant_org ILIKE ?", "%"+*filter.SearchQuery+"%").
+				WhereOr("EXISTS (SELECT 1 FROM tenant WHERE tenant.id = ta.tenant_id AND tenant.deleted IS NULL AND tenant.org_display_name ILIKE ?)", "%"+*filter.SearchQuery+"%")
+		})
+		tasd.tracerSpan.SetAttribute(tnaDAOSpan, "search_query", *filter.SearchQuery)
 	}
 
 	return query, nil

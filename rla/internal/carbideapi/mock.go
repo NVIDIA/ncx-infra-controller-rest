@@ -190,6 +190,14 @@ func (c *mockClient) GetComponentInventory(ctx context.Context, req *pb.GetCompo
 	return &pb.GetComponentInventoryResponse{}, nil
 }
 
+func (c *mockClient) GetAllExpectedSwitchesLinked(_ context.Context) ([]LinkedExpectedSwitch, error) {
+	return nil, nil
+}
+
+func (c *mockClient) GetAllExpectedPowerShelvesLinked(_ context.Context) ([]LinkedExpectedPowerShelf, error) {
+	return nil, nil
+}
+
 func (c *mockClient) AddExpectedSwitchInfo(info ExpectedSwitchInfo) {
 	c.expectedSwitches[utils.NormalizeMAC(info.BMCMACAddress)] = info
 }

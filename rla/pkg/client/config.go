@@ -27,8 +27,9 @@ import (
 // Config represents the configuration needed to create a new RLA service
 // gRPC client.
 type Config struct {
-	Host string
-	Port int
+	Host       string
+	Port       int
+	ServerName string // overrides the server name used for TLS SNI and certificate verification
 
 	// CertConfig holds certificate file paths for mTLS. Either all three
 	// fields must be set (mTLS enabled) or all must be empty (insecure).

@@ -18,15 +18,16 @@
 package util
 
 import (
-	"github.com/labstack/echo/v4"
 	"net/http"
+
+	"github.com/labstack/echo/v4"
 )
 
 const (
-	// APIErrorSourceForge indicates that the error is reported from Forge
-	APIErrorSourceForge = "forge"
+	// APINameContextKey is the context key for the API name
+	APINameContextKey = "apiName"
 
-	// APIErrorInternalServer indicates an unexpected error is reported from Forge
+	// APIErrorInternalServer indicates an unexpected error is reported from the API
 	APIErrorInternalServer = "An unexpected error occurred while processing the request"
 
 	// APIErrorNotFound indicates that the requested path was not found
@@ -44,7 +45,7 @@ var (
 	ErrInternal = echo.ErrInternalServerError
 )
 
-// APIError respresents a structured Forge API error
+// APIError represents a structured API error
 type APIError struct {
 	Code    int    `json:"-"`
 	Source  string `json:"source"`
@@ -56,7 +57,6 @@ type APIError struct {
 func NewAPIError(code int, message string, data error) *APIError {
 	return &APIError{
 		Code:    code,
-		Source:  APIErrorSourceForge,
 		Message: message,
 		Data:    data,
 	}
@@ -65,9 +65,12 @@ func NewAPIError(code int, message string, data error) *APIError {
 // NewAPIErrorResponse SENDS an API error response given appropriate params
 // An error is returned to the caller if the send fails.
 func NewAPIErrorResponse(c echo.Context, code int, message string, data error) error {
+	apiNameIfc := c.Get(APINameContextKey)
+	apiName, _ := apiNameIfc.(string)
+
 	return c.JSON(code, APIError{
 		Code:    code,
-		Source:  APIErrorSourceForge,
+		Source:  apiName,
 		Message: message,
 		Data:    data,
 	})
@@ -75,7 +78,7 @@ func NewAPIErrorResponse(c echo.Context, code int, message string, data error) e
 
 // DefaultHTTPErrorHandler is the default HTTP error handler. It sends a structured error response
 //
-// NOTE: In case errors happens in middleware call-chain that is returning from handler (handler ran into unrecovered error):
+// NOTE: In case errors happens in middleware call-chain that is returning from handler (handler ran into un-recovered error):
 // When handler has already sent response (ala c.JSON()) and there is error in middleware that is returning from
 // handler, then the error that global error handler received will be ignored because we have already "committed" the
 // response and status code header has been sent to the client.

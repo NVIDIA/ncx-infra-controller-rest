@@ -103,6 +103,8 @@ type ClientConfig struct {
 	BaseURL string
 	// Org is the organization to use for the client. Select desired service org from const.go.
 	Org string
+	// APIName overrides the API path segment after /org/{org}/. Leave empty to use the default carbide path.
+	APIName string
 	// Token should contain a valid JWT
 	Token string
 	// Logger is the logger instance to use for SDK logging. If nil, a no-op logger will be used by default.
@@ -134,6 +136,7 @@ func (c *Client) Authenticate(ctx context.Context) error {
 	apiConfig.Servers = standard.ServerConfigurations{
 		{URL: c.Config.BaseURL, Description: "Local"},
 	}
+	apiConfig.SetAPIName(c.Config.APIName)
 
 	c.apiClient = standard.NewAPIClient(apiConfig)
 
@@ -674,6 +677,7 @@ func NewClientFromEnv() (*Client, error) {
 	config := ClientConfig{
 		BaseURL: os.Getenv("CARBIDE_BASE_URL"),
 		Org:     os.Getenv("CARBIDE_ORG"),
+		APIName: os.Getenv("CARBIDE_API_NAME"),
 		Token:   os.Getenv("CARBIDE_TOKEN"),
 	}
 	if config.Token == "" {

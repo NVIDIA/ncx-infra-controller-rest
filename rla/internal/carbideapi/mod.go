@@ -90,6 +90,18 @@ type Client interface {
 	// GetComponentInventory retrieves inventory (including site exploration reports) for component targets.
 	GetComponentInventory(ctx context.Context, req *pb.GetComponentInventoryRequest) (*pb.GetComponentInventoryResponse, error)
 
+	// GetAllExpectedSwitchesLinked returns expected switches linked to their
+	// explored endpoints and live Switch resources. Each entry includes the
+	// BMC MAC, Core's SwitchId (if the switch has been created), and the
+	// expected switch UUID.
+	GetAllExpectedSwitchesLinked(ctx context.Context) ([]LinkedExpectedSwitch, error)
+
+	// GetAllExpectedPowerShelvesLinked returns expected power shelves linked
+	// to their explored endpoints and live PowerShelf resources. Each entry
+	// includes the BMC/PMC MAC, Core's PowerShelfId (if the shelf has been
+	// created), and the expected power shelf UUID.
+	GetAllExpectedPowerShelvesLinked(ctx context.Context) ([]LinkedExpectedPowerShelf, error)
+
 	// The following are only valid in the mock environment and should only be called by unit tests
 	AddMachine(MachineDetail)
 	AddPowerState(machineID string, state PowerState)

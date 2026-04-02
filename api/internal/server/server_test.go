@@ -18,6 +18,7 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"net/http"
@@ -182,6 +183,34 @@ func Test_Audit(t *testing.T) {
 	assert.Equal(t, count, 1)
 	assert.Equal(t, entries[0].OrgName, "wdksahew1rqv")
 	assert.Equal(t, entries[0].StatusCode, 401)
+}
+
+func Test_BodyLimit(t *testing.T) {
+	cfg := common.GetTestConfig()
+	dbSession := cdbu.GetTestDBSession(t, true)
+	defer dbSession.Close()
+
+	tc := &tmocks.Client{}
+	tnc := &tmocks.NamespaceClient{}
+
+	tcfg, _ := cfg.GetTemporalConfig()
+	scp := sc.NewClientPool(tcfg)
+
+	srv := InitAPIServer(cfg, dbSession, tc, tnc, scp)
+
+	oversizedBody := make([]byte, 11<<20) // 11 MiB, exceeds the 10 MiB limit
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/%s/org/test-org/%s/site", cfg.GetAPIRouteVersion(), cfg.GetAPIName()), bytes.NewReader(oversizedBody))
+	req.Header.Set("Content-Type", "application/json")
+	srv.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusRequestEntityTooLarge, rec.Code)
+
+	normalBody := []byte(`{"name":"test"}`)
+	rec2 := httptest.NewRecorder()
+	req2 := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/%s/org/test-org/%s/site", cfg.GetAPIRouteVersion(), cfg.GetAPIName()), bytes.NewReader(normalBody))
+	req2.Header.Set("Content-Type", "application/json")
+	srv.ServeHTTP(rec2, req2)
+	assert.NotEqual(t, http.StatusRequestEntityTooLarge, rec2.Code)
 }
 
 func Test_NotFoundHandler(t *testing.T) {

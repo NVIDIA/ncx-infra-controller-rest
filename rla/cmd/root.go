@@ -39,11 +39,12 @@ const (
 // configure the gRPC client target; cert flags configure mTLS for both client
 // commands and the serve listener.
 var (
-	globalHost    string
-	globalPort    int
-	globalCACert  string
-	globalTLSCert string
-	globalTLSKey  string
+	globalHost       string
+	globalPort       int
+	globalCACert     string
+	globalTLSCert    string
+	globalTLSKey     string
+	globalServerName string
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -68,14 +69,16 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&globalCACert, "ca-cert", "", "Path to CA certificate file")
 	rootCmd.PersistentFlags().StringVar(&globalTLSCert, "tls-cert", "", "Path to TLS certificate file")
 	rootCmd.PersistentFlags().StringVar(&globalTLSKey, "tls-key", "", "Path to TLS private key file")
+	rootCmd.PersistentFlags().StringVar(&globalServerName, "server-name", "", "Server name for TLS verification; when empty, TLS uses the dial target hostname")
 	rootCmd.MarkFlagsRequiredTogether("ca-cert", "tls-cert", "tls-key")
 }
 
 // newGlobalClientConfig builds a client.Config from the global persistent flags.
 func newGlobalClientConfig() client.Config {
 	return client.Config{
-		Host: globalHost,
-		Port: globalPort,
+		Host:       globalHost,
+		Port:       globalPort,
+		ServerName: globalServerName,
 		CertConfig: pkgcerts.Config{
 			CACert:  globalCACert,
 			TLSCert: globalTLSCert,

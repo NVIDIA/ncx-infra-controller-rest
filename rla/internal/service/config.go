@@ -25,6 +25,7 @@ import (
 	"github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/endpoint"
 	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/clients/temporal"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/componentmanager"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor"
 	pkgcerts "github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/certs"
 )
@@ -41,6 +42,7 @@ type Config struct {
 	Port         int
 	DBConf       cdb.Config
 	ExecutorConf executor.ExecutorConfig
+	CMConfig     componentmanager.Config
 
 	// CertConfig holds certificate file paths for the gRPC server listener.
 	// When set, these take precedence over CERTDIR / the k8s default.
