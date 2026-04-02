@@ -275,6 +275,7 @@ type ApiGetAllTenantAccountRequest struct {
 	org                      string
 	infrastructureProviderId *string
 	tenantId                 *string
+	query                    *string
 	includeRelation          *string
 	pageNumber               *int32
 	pageSize                 *int32
@@ -290,6 +291,12 @@ func (r ApiGetAllTenantAccountRequest) InfrastructureProviderId(infrastructurePr
 // Filter TenantAccounts by Tenant ID
 func (r ApiGetAllTenantAccountRequest) TenantId(tenantId string) ApiGetAllTenantAccountRequest {
 	r.tenantId = &tenantId
+	return r
+}
+
+// Search string to filter Tenant Accounts by account number, tenant org, or tenant org display name
+func (r ApiGetAllTenantAccountRequest) Query(query string) ApiGetAllTenantAccountRequest {
+	r.query = &query
 	return r
 }
 
@@ -372,6 +379,9 @@ func (a *TenantAccountAPIService) GetAllTenantAccountExecute(r ApiGetAllTenantAc
 	}
 	if r.tenantId != nil {
 		parameterAddToHeaderOrQuery(localVarQueryParams, "tenantId", r.tenantId, "form", "")
+	}
+	if r.query != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "query", r.query, "form", "")
 	}
 	if r.includeRelation != nil {
 		parameterAddToHeaderOrQuery(localVarQueryParams, "includeRelation", r.includeRelation, "form", "")
