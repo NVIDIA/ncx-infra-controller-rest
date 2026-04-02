@@ -172,9 +172,16 @@ func (m *Manager) PowerControl(
 	var overrideInserted []string
 
 	defer func() {
+		// Use a detached context so cleanup is not blocked by the
+		// parent context being canceled or timed-out.
+		cleanupCtx, cancel := context.WithTimeout(
+			context.WithoutCancel(ctx), 30*time.Second,
+		)
+		defer cancel()
+
 		for _, componentID := range overrideInserted {
 			if err := m.carbideClient.RemoveHealthReportOverride(
-				ctx, componentID, "rla-power-control",
+				cleanupCtx, componentID, "rla-power-control",
 			); err != nil {
 				log.Warn().Err(err).Str("component", componentID).
 					Msg("Failed to remove health report override after power control")
