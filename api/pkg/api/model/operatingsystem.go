@@ -19,6 +19,7 @@ package model
 
 import (
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model/util"
@@ -117,9 +118,16 @@ func (oscr APIOperatingSystemCreateRequest) Validate() error {
 		return err
 	}
 
-	isIpxe := oscr.IpxeScript != nil || oscr.IpxeTemplateName != nil
+	hasTemplateName := oscr.IpxeTemplateName != nil && strings.TrimSpace(*oscr.IpxeTemplateName) != ""
+	isIpxe := oscr.IpxeScript != nil || hasTemplateName
 
-	if oscr.IpxeScript != nil && oscr.IpxeTemplateName != nil {
+	if oscr.IpxeTemplateName != nil && !hasTemplateName {
+		return validation.Errors{
+			"ipxeTemplateName": errors.New("must not be empty"),
+		}
+	}
+
+	if oscr.IpxeScript != nil && hasTemplateName {
 		return validation.Errors{
 			"ipxeTemplateName": errors.New("ipxeScript and ipxeTemplateName are mutually exclusive"),
 		}
@@ -375,6 +383,12 @@ func (osur APIOperatingSystemUpdateRequest) Validate(existingOS *cdbm.OperatingS
 	if osur.IpxeScript != nil && osur.IpxeTemplateName != nil {
 		return validation.Errors{
 			"ipxeTemplateName": errors.New("ipxeScript and ipxeTemplateName are mutually exclusive"),
+		}
+	}
+
+	if osur.IpxeTemplateName != nil && strings.TrimSpace(*osur.IpxeTemplateName) == "" {
+		return validation.Errors{
+			"ipxeTemplateName": errors.New("must not be empty"),
 		}
 	}
 
