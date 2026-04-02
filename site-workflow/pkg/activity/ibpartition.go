@@ -167,6 +167,43 @@ func (mibp *ManageInfiniBandPartition) CreateInfiniBandPartitionOnSite(ctx conte
 	return nil
 }
 
+// UpdateInfiniBandPartitionOnSite applies an IB partition update on the site Forge controller
+func (mibp *ManageInfiniBandPartition) UpdateInfiniBandPartitionOnSite(ctx context.Context, request *cwssaws.IBPartitionUpdateRequest) error {
+	logger := log.With().Str("Activity", "UpdateInfiniBandPartitionOnSite").Logger()
+
+	logger.Info().Msg("Starting activity")
+
+	var err error
+
+	if request == nil {
+		err = errors.New("received empty update InfiniBand Partition request")
+	} else if request.Id == nil || request.GetId().GetValue() == "" {
+		err = errors.New("received update InfiniBand Partition request without ID")
+	} else if request.GetConfig() == nil && request.GetMetadata() == nil {
+		err = errors.New("received update InfiniBand Partition request without config or metadata")
+	}
+
+	if err != nil {
+		return temporal.NewNonRetryableApplicationError(err.Error(), swe.ErrTypeInvalidRequest, err)
+	}
+
+	carbideClient := mibp.CarbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return client.ErrClientNotConnected
+	}
+	forgeClient := carbideClient.Carbide()
+
+	_, err = forgeClient.UpdateIBPartition(ctx, request)
+	if err != nil {
+		logger.Warn().Err(err).Msg("Failed to update InfiniBand Partition using Site Controller API")
+		return swe.WrapErr(err)
+	}
+
+	logger.Info().Msg("Completed activity")
+
+	return nil
+}
+
 // Function to delete InfiniBand Partition on Carbide
 func (mipb *ManageInfiniBandPartition) DeleteInfiniBandPartitionOnSite(ctx context.Context, request *cwssaws.IBPartitionDeletionRequest) error {
 	logger := log.With().Str("Activity", "DeleteInfiniBandPartitionOnSite").Logger()

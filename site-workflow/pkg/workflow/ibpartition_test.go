@@ -196,3 +196,62 @@ func (cipbv2ts *DeleteIBPartitionV2TestSuite) Test_DeleteIBPartitionV2_Failure()
 func TestDeleteIBPartitionV2TestSuite(t *testing.T) {
 	suite.Run(t, new(DeleteIBPartitionV2TestSuite))
 }
+
+type UpdateIBPartitionV2TestSuite struct {
+	suite.Suite
+	testsuite.WorkflowTestSuite
+
+	env *testsuite.TestWorkflowEnvironment
+}
+
+func (uibpv2ts *UpdateIBPartitionV2TestSuite) SetupTest() {
+	uibpv2ts.env = uibpv2ts.NewTestWorkflowEnvironment()
+}
+
+func (uibpv2ts *UpdateIBPartitionV2TestSuite) AfterTest(suiteName, testName string) {
+	uibpv2ts.env.AssertExpectations(uibpv2ts.T())
+}
+
+func (uibpv2ts *UpdateIBPartitionV2TestSuite) Test_UpdateIBPartitionV2_Success() {
+	var IBPartitionManager iActivity.ManageInfiniBandPartition
+
+	request := &cwssaws.IBPartitionUpdateRequest{
+		Id: &cwssaws.IBPartitionId{Value: "b410867c-655a-11ef-bc4a-0393098e5d09"},
+		Config: &cwssaws.IBPartitionConfig{
+			Name:                 "the_name",
+			TenantOrganizationId: "the_org",
+		},
+	}
+
+	uibpv2ts.env.RegisterActivity(IBPartitionManager.UpdateInfiniBandPartitionOnSite)
+	uibpv2ts.env.OnActivity(IBPartitionManager.UpdateInfiniBandPartitionOnSite, mock.Anything, mock.Anything).Return(nil)
+
+	uibpv2ts.env.ExecuteWorkflow(UpdateInfiniBandPartitionV2, request)
+	uibpv2ts.True(uibpv2ts.env.IsWorkflowCompleted())
+	uibpv2ts.NoError(uibpv2ts.env.GetWorkflowError())
+}
+
+func (uibpv2ts *UpdateIBPartitionV2TestSuite) Test_UpdateIBPartitionV2_Failure() {
+	var IBPartitionManager iActivity.ManageInfiniBandPartition
+
+	request := &cwssaws.IBPartitionUpdateRequest{
+		Id: &cwssaws.IBPartitionId{Value: "b410867c-655a-11ef-bc4a-0393098e5d09"},
+		Config: &cwssaws.IBPartitionConfig{
+			Name:                 "the_name",
+			TenantOrganizationId: "the_org",
+		},
+	}
+
+	errMsg := "Site Controller communication error"
+
+	uibpv2ts.env.RegisterActivity(IBPartitionManager.UpdateInfiniBandPartitionOnSite)
+	uibpv2ts.env.OnActivity(IBPartitionManager.UpdateInfiniBandPartitionOnSite, mock.Anything, mock.Anything).Return(errors.New(errMsg))
+
+	uibpv2ts.env.ExecuteWorkflow(UpdateInfiniBandPartitionV2, request)
+	uibpv2ts.True(uibpv2ts.env.IsWorkflowCompleted())
+	uibpv2ts.Error(uibpv2ts.env.GetWorkflowError())
+}
+
+func TestUpdateIBPartitionV2TestSuite(t *testing.T) {
+	suite.Run(t, new(UpdateIBPartitionV2TestSuite))
+}

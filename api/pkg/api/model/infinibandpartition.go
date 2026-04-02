@@ -32,6 +32,49 @@ var (
 	ErrValidationInfiniBandPartitionAssociation = errors.New("at least one security group association is required")
 )
 
+// validateInfiniBandPartitionLabels validates optional API label maps (count, keys, values).
+func validateInfiniBandPartitionLabels(labels map[string]string) error {
+	if labels == nil {
+		return nil
+	}
+	if len(labels) > util.LabelCountMax {
+		return validation.Errors{
+			"labels": util.ErrValidationLabelCount,
+		}
+	}
+
+	for key, value := range labels {
+		if key == "" {
+			return validation.Errors{
+				"labels": util.ErrValidationLabelKeyEmpty,
+			}
+		}
+
+		err := validation.Validate(key,
+			validation.Match(util.NotAllWhitespaceRegexp).Error("label key consists only of whitespace"),
+			validation.Length(1, 255).Error(validationErrorMapKeyLabelStringLength),
+		)
+		if err != nil {
+			return validation.Errors{
+				"labels": util.ErrValidationLabelKeyLength,
+			}
+		}
+
+		err = validation.Validate(value,
+			validation.When(value != "",
+				validation.Length(0, 255).Error(validationErrorMapValueLabelStringLength),
+			),
+		)
+		if err != nil {
+			return validation.Errors{
+				"labels": util.ErrValidationLabelValueLength,
+			}
+		}
+	}
+
+	return nil
+}
+
 // APIInfiniBandPartitionCreateRequest is the data structure to capture instance request to create a new InfiniBandPartition
 type APIInfiniBandPartitionCreateRequest struct {
 	// Name is the name of the InfiniBand Partition
@@ -60,49 +103,7 @@ func (ibpcr APIInfiniBandPartitionCreateRequest) Validate() error {
 		return err
 	}
 
-	// Labels validation
-	if ibpcr.Labels != nil {
-		if len(ibpcr.Labels) > util.LabelCountMax {
-			return validation.Errors{
-				"labels": util.ErrValidationLabelCount,
-			}
-		}
-
-		for key, value := range ibpcr.Labels {
-			if key == "" {
-				return validation.Errors{
-					"labels": util.ErrValidationLabelKeyEmpty,
-				}
-			}
-
-			// Key validation
-			err = validation.Validate(key,
-				validation.Match(util.NotAllWhitespaceRegexp).Error("label key consists only of whitespace"),
-				validation.Length(1, 255).Error(validationErrorMapKeyLabelStringLength),
-			)
-
-			if err != nil {
-				return validation.Errors{
-					"labels": util.ErrValidationLabelKeyLength,
-				}
-			}
-
-			// Value validation
-			err = validation.Validate(value,
-				validation.When(value != "",
-					validation.Length(0, 255).Error(validationErrorMapValueLabelStringLength),
-				),
-			)
-
-			if err != nil {
-				return validation.Errors{
-					"labels": util.ErrValidationLabelValueLength,
-				}
-			}
-		}
-	}
-
-	return err
+	return validateInfiniBandPartitionLabels(ibpcr.Labels)
 }
 
 // APIInfiniBandPartitionUpdateRequest is the data structure to capture user request to update a InfiniBandPartition
@@ -111,6 +112,8 @@ type APIInfiniBandPartitionUpdateRequest struct {
 	Name *string `json:"name"`
 	// Description is the description of the InfiniBand Partition
 	Description *string `json:"description"`
+	// Labels is the labels of the InfiniBand Partition
+	Labels map[string]string `json:"labels"`
 }
 
 // Validate ensure the values passed in request are acceptable
@@ -126,7 +129,7 @@ func (ibpur APIInfiniBandPartitionUpdateRequest) Validate() error {
 		return err
 	}
 
-	return err
+	return validateInfiniBandPartitionLabels(ibpur.Labels)
 }
 
 // APIInfiniBandPartition is the data structure to capture API representation of a InfiniBand Partition

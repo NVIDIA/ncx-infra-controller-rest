@@ -382,7 +382,7 @@ func NewAPIRoutes(dbSession *cdb.Session, tc tClient.Client, tnc tClient.Namespa
 		{
 			Path:    apiPathPrefix + "/infiniband-partition/:id",
 			Method:  http.MethodPatch,
-			Handler: apiHandler.NewUpdateInfiniBandPartitionHandler(dbSession, tc, cfg),
+			Handler: apiHandler.NewUpdateInfiniBandPartitionHandler(dbSession, tc, scp, cfg),
 		},
 		{
 			Path:    apiPathPrefix + "/infiniband-partition/:id",
