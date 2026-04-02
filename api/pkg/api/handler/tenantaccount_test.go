@@ -1153,6 +1153,7 @@ func TestTenantAccountHandler_GetAll(t *testing.T) {
 		queryIncludeRelations1            *string
 		queryIncludeRelations2            *string
 		queryStatus                       *string
+		querySearchQuery                  *string
 		pageNumber                        *int
 		pageSize                          *int
 		orderBy                           *string
@@ -1431,6 +1432,64 @@ func TestTenantAccountHandler_GetAll(t *testing.T) {
 			expectedCnt:                   0,
 			expectedAllocationCount:       1,
 		},
+		{
+			name:                          "success with provider-scoped search query matching account number",
+			reqOrgName:                    ipOrg1,
+			user:                          ipUser,
+			queryInfrastructureProviderID: cdb.GetStrPtr(ip1.ID.String()),
+			querySearchQuery:              cdb.GetStrPtr("test-tenant-account-00"),
+			expectedErr:                   false,
+			expectedStatus:                http.StatusOK,
+			expectedCnt:                   1,
+			expectedAllocationCount:       1,
+		},
+		{
+			name:                          "success with search query combined with status filter",
+			reqOrgName:                    ipOrg1,
+			user:                          ipUser,
+			queryInfrastructureProviderID: cdb.GetStrPtr(ip1.ID.String()),
+			querySearchQuery:              cdb.GetStrPtr("test-tenant-account-00"),
+			queryStatus:                   cdb.GetStrPtr(cdbm.TenantAccountStatusInvited),
+			expectedErr:                   false,
+			expectedStatus:                http.StatusOK,
+			expectedCnt:                   1,
+			expectedAllocationCount:       1,
+		},
+		{
+			name:                          "success with search query no matches",
+			reqOrgName:                    ipOrg1,
+			user:                          ipUser,
+			queryInfrastructureProviderID: cdb.GetStrPtr(ip1.ID.String()),
+			querySearchQuery:              cdb.GetStrPtr("nonexistent-query-xyz"),
+			expectedErr:                   false,
+			expectedStatus:                http.StatusOK,
+			expectedCnt:                   0,
+			expectedTotal:                 cdb.GetIntPtr(0),
+			expectedAllocationCount:       1,
+		},
+		{
+			name:                    "success with tenant-scoped search query matching account number",
+			reqOrgName:              tnOrgs[0],
+			user:                    tnUser,
+			queryTenantID:           cdb.GetStrPtr(tns[0].ID.String()),
+			querySearchQuery:        cdb.GetStrPtr("test-tenant-account-00"),
+			expectedErr:             false,
+			expectedStatus:          http.StatusOK,
+			expectedCnt:             1,
+			expectedAllocationCount: 1,
+		},
+		{
+			name:                    "success with tenant-scoped search query and status filter",
+			reqOrgName:              tnOrgs[0],
+			user:                    tnUser,
+			queryTenantID:           cdb.GetStrPtr(tns[0].ID.String()),
+			querySearchQuery:        cdb.GetStrPtr("test-tenant-account-00"),
+			queryStatus:             cdb.GetStrPtr(cdbm.TenantAccountStatusInvited),
+			expectedErr:             false,
+			expectedStatus:          http.StatusOK,
+			expectedCnt:             1,
+			expectedAllocationCount: 1,
+		},
 		//{
 		//	name:                              "success when sort by account number",
 		//	reqOrgName:                        ipOrg1,
@@ -1533,6 +1592,9 @@ func TestTenantAccountHandler_GetAll(t *testing.T) {
 			}
 			if tc.queryStatus != nil {
 				q.Add("status", *tc.queryStatus)
+			}
+			if tc.querySearchQuery != nil {
+				q.Add("query", *tc.querySearchQuery)
 			}
 			if tc.queryIncludeRelations1 != nil {
 				q.Add("includeRelation", *tc.queryIncludeRelations1)
