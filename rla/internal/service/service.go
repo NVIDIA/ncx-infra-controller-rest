@@ -121,7 +121,7 @@ func (s *Service) Start(ctx context.Context) error {
 		log.Info().Msg("Task manager started")
 	}
 
-	go inventorysync.RunInventory(ctx, &s.conf.DBConf)
+	go inventorysync.RunInventory(ctx, &s.conf.DBConf, s.conf.CMConfig)
 
 	go leakdetection.RunLeakDetection(ctx, s.taskManager)
 

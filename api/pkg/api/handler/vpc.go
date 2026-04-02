@@ -697,38 +697,42 @@ func (uvh UpdateVPCHandler) Handle(c echo.Context) error {
 			}
 		}
 
-		nvllpDAO := cdbm.NewNVLinkLogicalPartitionDAO(uvh.dbSession)
-		nvllpID, err := uuid.Parse(*apiRequest.NVLinkLogicalPartitionID)
-		if err != nil {
-			logger.Error().Err(err).Msg("error parsing NVLink Logical Partition ID specified in request data")
-			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid NVLink Logical Partition ID specified in request data", nil)
-		}
+		// If a new NVLink Logical Partition ID is specified, validate it.
+		// if it is empty then user wants
+		if *apiRequest.NVLinkLogicalPartitionID != "" {
+			nvllpDAO := cdbm.NewNVLinkLogicalPartitionDAO(uvh.dbSession)
+			nvllpID, err := uuid.Parse(*apiRequest.NVLinkLogicalPartitionID)
+			if err != nil {
+				logger.Error().Err(err).Msg("error parsing NVLink Logical Partition ID specified in request data")
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid NVLink Logical Partition ID specified in request data", nil)
+			}
 
-		nvllPartition, err := nvllpDAO.GetByID(ctx, nil, nvllpID, nil)
-		if err != nil {
-			logger.Error().Err(err).Msg("error retrieving NVLink Logical Partition with ID specified in request data")
-			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve NVLink Logical Partition with ID specified in request data", nil)
-		}
+			nvllPartition, err := nvllpDAO.GetByID(ctx, nil, nvllpID, nil)
+			if err != nil {
+				logger.Error().Err(err).Msg("error retrieving NVLink Logical Partition with ID specified in request data")
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve NVLink Logical Partition with ID specified in request data", nil)
+			}
 
-		// Verify that the NVLink Logical Partition is associated with the VPC's Site
-		if nvllPartition.SiteID != vpc.SiteID {
-			logger.Error().Msg("NVLink Logical Partition in request does not belong to Site")
-			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "NVLink Logical Partition with ID specified in request data does not belong to Site", nil)
-		}
+			// Verify that the NVLink Logical Partition is associated with the VPC's Site
+			if nvllPartition.SiteID != vpc.SiteID {
+				logger.Error().Msg("NVLink Logical Partition in request does not belong to Site")
+				return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "NVLink Logical Partition with ID specified in request data does not belong to Site", nil)
+			}
 
-		// Verify that the NVLink Logical Partition is in the Ready state
-		if nvllPartition.Status != cdbm.NVLinkLogicalPartitionStatusReady {
-			logger.Error().Msg("NVLink Logical Partition in request is not in Ready state")
-			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "NVLink Logical Partition with ID specified in request data is not in Ready state", nil)
-		}
+			// Verify that the NVLink Logical Partition is in the Ready state
+			if nvllPartition.Status != cdbm.NVLinkLogicalPartitionStatusReady {
+				logger.Error().Msg("NVLink Logical Partition in request is not in Ready state")
+				return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "NVLink Logical Partition with ID specified in request data is not in Ready state", nil)
+			}
 
-		// Verify that the NVLink Logical Partition is associated with the VPC's Tenant
-		if nvllPartition.TenantID != tenant.ID {
-			logger.Error().Msg("NVLink Logical Partition in request does not belong to Tenant")
-			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "NVLink Logical Partition with ID specified in request data does not belong to Tenant", nil)
-		}
+			// Verify that the NVLink Logical Partition is associated with the VPC's Tenant
+			if nvllPartition.TenantID != tenant.ID {
+				logger.Error().Msg("NVLink Logical Partition in request does not belong to Tenant")
+				return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "NVLink Logical Partition with ID specified in request data does not belong to Tenant", nil)
+			}
 
-		defaultNvllPartitionId = &nvllpID
+			defaultNvllPartitionId = &nvllpID
+		}
 	}
 
 	// Start a database transaction
@@ -780,6 +784,12 @@ func (uvh UpdateVPCHandler) Handle(c echo.Context) error {
 		shouldClear = true
 	}
 
+	// If this request is attempting to clear the NVLink Logical Partition ID, set it.
+	if apiRequest.NVLinkLogicalPartitionID != nil && *apiRequest.NVLinkLogicalPartitionID == "" {
+		clearInput.NVLinkLogicalPartitionID = true
+		shouldClear = true
+	}
+
 	// Clear it in the db if something should be cleared.
 	if shouldClear {
 		vpc, err = vpcDAO.Clear(ctx, tx, clearInput)
@@ -810,9 +820,13 @@ func (uvh UpdateVPCHandler) Handle(c echo.Context) error {
 		NetworkSecurityGroupId: vpc.NetworkSecurityGroupID,
 	}
 
-	// Add default NVLink Logical Partition ID if it is present
-	if defaultNvllPartitionId != nil {
-		updateVpcRequest.DefaultNvlinkLogicalPartitionId = &cwssaws.NVLinkLogicalPartitionId{Value: defaultNvllPartitionId.String()}
+	// Propagate the NVLink Logical Partition ID change to the site controller
+	if apiRequest.NVLinkLogicalPartitionID != nil {
+		if *apiRequest.NVLinkLogicalPartitionID != "" {
+			updateVpcRequest.DefaultNvlinkLogicalPartitionId = &cwssaws.NVLinkLogicalPartitionId{Value: vpc.NVLinkLogicalPartitionID.String()}
+		} else {
+			updateVpcRequest.DefaultNvlinkLogicalPartitionId = &cwssaws.NVLinkLogicalPartitionId{Value: ""}
+		}
 	}
 
 	workflowOptions := temporalClient.StartWorkflowOptions{

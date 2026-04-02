@@ -29,18 +29,20 @@ import (
 
 	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/carbideapi"
+	pb "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/carbideapi/gen"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/common/utils"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/config"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/db/model"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/nsmapi"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/psmapi"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/componentmanager"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
 )
 
 const driftFieldSerialNumber = "serial_number"
 
 // RunInventory will loop and handle various inventory monitoring tasks
-func RunInventory(ctx context.Context, dbConf *cdb.Config) {
+func RunInventory(ctx context.Context, dbConf *cdb.Config, cmConfig componentmanager.Config) {
 	config := config.ReadConfig()
 	if config.DisableInventory {
 		log.Info().Msg("Inventory disabled by configuration")
@@ -63,7 +65,6 @@ func RunInventory(ctx context.Context, dbConf *cdb.Config) {
 	psmClient, err := psmapi.NewClient(config.GRPCTimeout)
 	if err != nil {
 		log.Error().Msgf("Unable to create PSM GRPC client (PSM_API_URL: %v): %v", os.Getenv("PSM_API_URL"), err)
-		return
 	}
 
 	if psmClient != nil {
@@ -87,7 +88,7 @@ func RunInventory(ctx context.Context, dbConf *cdb.Config) {
 	log.Info().Msg("Starting inventory monitoring loop")
 
 	for {
-		runInventoryOne(ctx, &config, pool, carbideClient, psmClient, nsmClient)
+		runInventoryOne(ctx, &config, pool, carbideClient, psmClient, nsmClient, cmConfig)
 	}
 }
 
@@ -96,19 +97,29 @@ var lastUpdateMachineIDs time.Time
 // runInventoryOne is a single iteration for RunInventory.
 // It syncs each resource type against its external source, collects all drifts,
 // and persists them in one shot.
-func runInventoryOne(ctx context.Context, config *config.Config, pool *cdb.Session, carbideClient carbideapi.Client, psmClient psmapi.Client, nsmClient nsmapi.Client) {
+func runInventoryOne(ctx context.Context, config *config.Config, pool *cdb.Session, carbideClient carbideapi.Client, psmClient psmapi.Client, nsmClient nsmapi.Client, cmConfig componentmanager.Config) {
 	var allDrifts []model.ComponentDrift
 
 	// Sync machines against Carbide
 	machineDrifts := syncMachines(ctx, config, pool, carbideClient)
 	allDrifts = append(allDrifts, machineDrifts...)
 
-	// Sync NVL switches against NSM
-	nvlSwitchDrifts := syncNVSwitches(ctx, pool, carbideClient, nsmClient)
+	// Sync NVL switches: dispatch based on configured component manager
+	var nvlSwitchDrifts []model.ComponentDrift
+	if cmConfig.ComponentManagers[devicetypes.ComponentTypeNVLSwitch] == "carbide" {
+		nvlSwitchDrifts = syncNVSwitchesCarbide(ctx, pool, carbideClient)
+	} else {
+		nvlSwitchDrifts = syncNVSwitches(ctx, pool, carbideClient, nsmClient)
+	}
 	allDrifts = append(allDrifts, nvlSwitchDrifts...)
 
-	// Sync powershelves against PSM
-	powershelfDrifts := syncPowershelves(ctx, pool, carbideClient, psmClient)
+	// Sync powershelves: dispatch based on configured component manager
+	var powershelfDrifts []model.ComponentDrift
+	if cmConfig.ComponentManagers[devicetypes.ComponentTypePowerShelf] == "carbide" {
+		powershelfDrifts = syncPowershelvesCarbide(ctx, pool, carbideClient)
+	} else {
+		powershelfDrifts = syncPowershelves(ctx, pool, carbideClient, psmClient)
+	}
 	allDrifts = append(allDrifts, powershelfDrifts...)
 
 	// Persist all drifts atomically (replace entire table)
@@ -940,4 +951,333 @@ func syncPowershelves(ctx context.Context, pool *cdb.Session, carbideClient carb
 
 	log.Info().Msgf("Powershelf sync: %d drift(s) out of %d expected", len(drifts), len(expectedPowershelves))
 	return drifts
+}
+
+// ---------------------------------------------------------------------------
+// syncNVSwitchesCarbide: sync NVLSwitch components via Core (Carbide)
+// ---------------------------------------------------------------------------
+//
+// Uses Core's Forge API instead of talking directly to NSM.
+// Core's NSM backend auto-registers switches, so no registration step is needed.
+//
+// Carbide API calls (2 round-trips):
+//   - GetAllExpectedSwitchesLinked: discover Core switch IDs by BMC MAC
+//   - GetComponentInventory: get firmware, serial, power state from site explorer
+//
+// Flow:
+//  1. DB: get all NVLSwitch components with BMCs
+//  2. Carbide GetAllExpectedSwitchesLinked: map BMC MAC → Core SwitchId
+//  3. Direct-write external_id (Core's SwitchId) for matched components
+//  4. Carbide GetComponentInventory: extract firmware_version, serial_number, power_state
+//  5. Direct-write inventory fields to DB
+//  6. Return drifts (missing_in_actual for components without a Core SwitchId)
+
+func syncNVSwitchesCarbide(ctx context.Context, pool *cdb.Session, carbideClient carbideapi.Client) []model.ComponentDrift {
+	log.Debug().Msg("Syncing NV switches via Carbide...")
+
+	expectedSwitches, err := model.GetComponentsByType(ctx, pool.DB, devicetypes.ComponentTypeNVLSwitch)
+	if err != nil {
+		log.Error().Msgf("Unable to retrieve NVLSwitch components from db: %v", err)
+		return nil
+	}
+
+	if len(expectedSwitches) == 0 {
+		return nil
+	}
+
+	expectedByBmcMac := make(map[string]*model.Component)
+	for i := range expectedSwitches {
+		sw := &expectedSwitches[i]
+		if len(sw.BMCs) != 1 {
+			log.Error().Msgf("NVLSwitch %s has %d BMCs, expected exactly 1; skipping", sw.SerialNumber, len(sw.BMCs))
+			continue
+		}
+		bmcMacAddr, err := net.ParseMAC(sw.BMCs[0].MacAddress)
+		if err != nil || bmcMacAddr == nil {
+			log.Error().Msgf("NVLSwitch %s has invalid BMC MAC address %s; skipping", sw.SerialNumber, sw.BMCs[0].MacAddress)
+			continue
+		}
+		expectedByBmcMac[bmcMacAddr.String()] = sw
+	}
+
+	// ID discovery: map BMC MAC → Core SwitchId
+	linked, err := carbideClient.GetAllExpectedSwitchesLinked(ctx)
+	if err != nil {
+		log.Error().Msgf("Unable to retrieve linked expected switches from Carbide: %v", err)
+		return nil
+	}
+
+	linkedByMac := make(map[string]carbideapi.LinkedExpectedSwitch)
+	for _, les := range linked {
+		if les.BMCMACAddress != "" {
+			linkedByMac[utils.NormalizeMAC(les.BMCMACAddress)] = les
+		}
+	}
+
+	// Direct-write external_id for matched components
+	var switchIDs []*pb.SwitchId
+	componentsBySwitchID := make(map[string]*model.Component)
+
+	for bmcMac, sw := range expectedByBmcMac {
+		les, found := linkedByMac[bmcMac]
+		if !found || les.SwitchID == "" {
+			continue
+		}
+
+		if sw.ComponentID == nil || *sw.ComponentID != les.SwitchID {
+			switchID := les.SwitchID
+			sw.ComponentID = &switchID
+			if err := sw.Patch(ctx, pool.DB); err != nil {
+				log.Error().Msgf("NVLSwitch %s (BMC %s): unable to update external_id: %v", sw.ID, bmcMac, err)
+				continue
+			}
+			log.Info().Msgf("NVLSwitch %s (BMC %s): set external_id to Core SwitchId %s", sw.ID, bmcMac, switchID)
+		}
+
+		switchIDs = append(switchIDs, &pb.SwitchId{Id: les.SwitchID})
+		componentsBySwitchID[les.SwitchID] = sw
+	}
+
+	// Fetch inventory from Core for all matched switches
+	now := time.Now()
+	var drifts []model.ComponentDrift
+	if len(switchIDs) > 0 {
+		invResp, err := carbideClient.GetComponentInventory(ctx, &pb.GetComponentInventoryRequest{
+			Target: &pb.GetComponentInventoryRequest_SwitchIds{
+				SwitchIds: &pb.SwitchIdList{Ids: switchIDs},
+			},
+		})
+		if err != nil {
+			log.Error().Msgf("Unable to retrieve switch inventory from Carbide: %v", err)
+		} else {
+			drifts = append(drifts, applyInventoryToComponents(ctx, pool, invResp, componentsBySwitchID)...)
+		}
+	}
+
+	// Build drifts for components that don't have a Core SwitchId yet
+	for _, sw := range expectedByBmcMac {
+		if sw.ComponentID == nil || *sw.ComponentID == "" {
+			compID := sw.ID
+			drifts = append(drifts, model.ComponentDrift{
+				ComponentID: &compID,
+				ExternalID:  nil,
+				DriftType:   model.DriftTypeMissingInActual,
+				Diffs:       []model.FieldDiff{},
+				CheckedAt:   now,
+			})
+		}
+	}
+
+	log.Info().Msgf("NVLSwitch Carbide sync: %d drift(s) out of %d expected", len(drifts), len(expectedSwitches))
+	return drifts
+}
+
+// ---------------------------------------------------------------------------
+// syncPowershelvesCarbide: sync PowerShelf components via Core (Carbide)
+// ---------------------------------------------------------------------------
+//
+// Uses Core's Forge API instead of talking directly to PSM.
+// Core's PSM backend auto-registers power shelves, so no registration step is needed.
+//
+// Carbide API calls (2 round-trips):
+//   - GetAllExpectedPowerShelvesLinked: discover Core power shelf IDs by PMC MAC
+//   - GetComponentInventory: get firmware, power state from site explorer
+//
+// Flow:
+//  1. DB: get all PowerShelf components with PMCs
+//  2. Carbide GetAllExpectedPowerShelvesLinked: map PMC MAC → Core PowerShelfId
+//  3. Direct-write external_id (Core's PowerShelfId) for matched components
+//  4. Carbide GetComponentInventory: extract firmware_version, power_state
+//  5. Direct-write inventory fields to DB
+//  6. Return drifts (missing_in_actual for components without a Core PowerShelfId)
+
+func syncPowershelvesCarbide(ctx context.Context, pool *cdb.Session, carbideClient carbideapi.Client) []model.ComponentDrift {
+	log.Debug().Msg("Syncing powershelves via Carbide...")
+
+	expectedPowershelves, err := model.GetComponentsByType(ctx, pool.DB, devicetypes.ComponentTypePowerShelf)
+	if err != nil {
+		log.Error().Msgf("Unable to retrieve powershelf components from db: %v", err)
+		return nil
+	}
+
+	if len(expectedPowershelves) == 0 {
+		return nil
+	}
+
+	expectedByPmcMac := make(map[string]*model.Component)
+	for i := range expectedPowershelves {
+		ps := &expectedPowershelves[i]
+		if len(ps.BMCs) != 1 {
+			log.Error().Msgf("Powershelf %s has %d BMCs, expected exactly 1; skipping", ps.SerialNumber, len(ps.BMCs))
+			continue
+		}
+		pmcMacAddr, err := net.ParseMAC(ps.BMCs[0].MacAddress)
+		if err != nil || pmcMacAddr == nil {
+			log.Error().Msgf("Powershelf %s has invalid BMC MAC address %s; skipping", ps.SerialNumber, ps.BMCs[0].MacAddress)
+			continue
+		}
+		expectedByPmcMac[pmcMacAddr.String()] = ps
+	}
+
+	// ID discovery: map PMC MAC → Core PowerShelfId
+	linked, err := carbideClient.GetAllExpectedPowerShelvesLinked(ctx)
+	if err != nil {
+		log.Error().Msgf("Unable to retrieve linked expected power shelves from Carbide: %v", err)
+		return nil
+	}
+
+	linkedByMac := make(map[string]carbideapi.LinkedExpectedPowerShelf)
+	for _, leps := range linked {
+		if leps.BMCMACAddress != "" {
+			linkedByMac[utils.NormalizeMAC(leps.BMCMACAddress)] = leps
+		}
+	}
+
+	// Direct-write external_id for matched components
+	var shelfIDs []*pb.PowerShelfId
+	componentsByShelfID := make(map[string]*model.Component)
+
+	for pmcMac, ps := range expectedByPmcMac {
+		leps, found := linkedByMac[pmcMac]
+		if !found || leps.PowerShelfID == "" {
+			continue
+		}
+
+		if ps.ComponentID == nil || *ps.ComponentID != leps.PowerShelfID {
+			shelfID := leps.PowerShelfID
+			ps.ComponentID = &shelfID
+			if err := ps.Patch(ctx, pool.DB); err != nil {
+				log.Error().Msgf("Powershelf %s (PMC %s): unable to update external_id: %v", ps.ID, pmcMac, err)
+				continue
+			}
+			log.Info().Msgf("Powershelf %s (PMC %s): set external_id to Core PowerShelfId %s", ps.ID, pmcMac, shelfID)
+		}
+
+		shelfIDs = append(shelfIDs, &pb.PowerShelfId{Id: leps.PowerShelfID})
+		componentsByShelfID[leps.PowerShelfID] = ps
+	}
+
+	// Fetch inventory from Core for all matched power shelves
+	now := time.Now()
+	var drifts []model.ComponentDrift
+	if len(shelfIDs) > 0 {
+		invResp, err := carbideClient.GetComponentInventory(ctx, &pb.GetComponentInventoryRequest{
+			Target: &pb.GetComponentInventoryRequest_PowerShelfIds{
+				PowerShelfIds: &pb.PowerShelfIdList{Ids: shelfIDs},
+			},
+		})
+		if err != nil {
+			log.Error().Msgf("Unable to retrieve powershelf inventory from Carbide: %v", err)
+		} else {
+			drifts = append(drifts, applyInventoryToComponents(ctx, pool, invResp, componentsByShelfID)...)
+		}
+	}
+
+	// Build drifts for components that don't have a Core PowerShelfId yet
+	for _, ps := range expectedByPmcMac {
+		if ps.ComponentID == nil || *ps.ComponentID == "" {
+			compID := ps.ID
+			drifts = append(drifts, model.ComponentDrift{
+				ComponentID: &compID,
+				ExternalID:  nil,
+				DriftType:   model.DriftTypeMissingInActual,
+				Diffs:       []model.FieldDiff{},
+				CheckedAt:   now,
+			})
+		}
+	}
+
+	log.Info().Msgf("Powershelf Carbide sync: %d drift(s) out of %d expected", len(drifts), len(expectedPowershelves))
+	return drifts
+}
+
+// applyInventoryToComponents extracts firmware_version and power_state from
+// GetComponentInventoryResponse and direct-writes them to the matching
+// components. Serial numbers are compared (not overwritten) and returned as
+// drift records. componentsByID maps the component_id echoed back in each
+// ComponentResult to the DB component.
+func applyInventoryToComponents(ctx context.Context, pool *cdb.Session, resp *pb.GetComponentInventoryResponse, componentsByID map[string]*model.Component) []model.ComponentDrift {
+	now := time.Now()
+	var drifts []model.ComponentDrift
+
+	for _, entry := range resp.GetEntries() {
+		result := entry.GetResult()
+		if result == nil {
+			continue
+		}
+		comp, ok := componentsByID[result.GetComponentId()]
+		if !ok {
+			continue
+		}
+		if result.GetStatus() != pb.ComponentManagerStatusCode_COMPONENT_MANAGER_STATUS_CODE_SUCCESS {
+			log.Warn().Msgf("Component %s: inventory status %s: %s", result.GetComponentId(), result.GetStatus(), result.GetError())
+			continue
+		}
+
+		report := entry.GetReport()
+		if report == nil {
+			continue
+		}
+
+		needsUpdate := false
+
+		// Extract firmware_version from the "BMC image" inventory entry
+		for _, svc := range report.GetService() {
+			for _, inv := range svc.GetInventories() {
+				if inv.GetDescription() == "BMC image" {
+					if v := inv.GetVersion(); v != "" && comp.FirmwareVersion != v {
+						comp.FirmwareVersion = v
+						needsUpdate = true
+					}
+				}
+			}
+		}
+
+		// Compare serial_number from first Chassis entry (drift, not overwrite)
+		if chassisList := report.GetChassis(); len(chassisList) > 0 {
+			if sn := chassisList[0].GetSerialNumber(); sn != "" && comp.SerialNumber != sn {
+				compID := comp.ID
+				extID := result.GetComponentId()
+				drifts = append(drifts, model.ComponentDrift{
+					ComponentID: &compID,
+					ExternalID:  &extID,
+					DriftType:   model.DriftTypeMismatch,
+					Diffs: []model.FieldDiff{{
+						FieldName:     driftFieldSerialNumber,
+						ExpectedValue: comp.SerialNumber,
+						ActualValue:   sn,
+					}},
+					CheckedAt: now,
+				})
+			}
+		}
+
+		// Extract power_state from first ComputerSystem entry
+		if systems := report.GetSystems(); len(systems) > 0 {
+			ps := computerSystemPowerStateToCarbide(systems[0].GetPowerState())
+			if comp.PowerState == nil || *comp.PowerState != ps {
+				comp.PowerState = &ps
+				needsUpdate = true
+			}
+		}
+
+		if needsUpdate {
+			if err := comp.Patch(ctx, pool.DB); err != nil {
+				log.Error().Msgf("Component %s: unable to write inventory fields: %v", result.GetComponentId(), err)
+			}
+		}
+	}
+
+	return drifts
+}
+
+func computerSystemPowerStateToCarbide(ps pb.ComputerSystemPowerState) carbideapi.PowerState {
+	switch ps {
+	case pb.ComputerSystemPowerState_On, pb.ComputerSystemPowerState_PoweringOn:
+		return carbideapi.PowerStateOn
+	case pb.ComputerSystemPowerState_Off, pb.ComputerSystemPowerState_PoweringOff:
+		return carbideapi.PowerStateOff
+	default:
+		return carbideapi.PowerStateUnknown
+	}
 }

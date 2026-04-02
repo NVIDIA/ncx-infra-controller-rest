@@ -480,6 +480,38 @@ func (c *grpcClient) GetComponentInventory(ctx context.Context, req *pb.GetCompo
 	return c.gclient.GetComponentInventory(ctx, req)
 }
 
+func (c *grpcClient) GetAllExpectedSwitchesLinked(ctx context.Context) ([]LinkedExpectedSwitch, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
+	defer cancel()
+
+	resp, err := c.gclient.GetAllExpectedSwitchesLinked(ctx, &emptypb.Empty{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get all expected switches linked: %w", err)
+	}
+
+	var results []LinkedExpectedSwitch
+	for _, les := range resp.GetExpectedSwitches() {
+		results = append(results, linkedExpectedSwitchFromPb(les))
+	}
+	return results, nil
+}
+
+func (c *grpcClient) GetAllExpectedPowerShelvesLinked(ctx context.Context) ([]LinkedExpectedPowerShelf, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
+	defer cancel()
+
+	resp, err := c.gclient.GetAllExpectedPowerShelvesLinked(ctx, &emptypb.Empty{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get all expected power shelves linked: %w", err)
+	}
+
+	var results []LinkedExpectedPowerShelf
+	for _, leps := range resp.GetExpectedPowerShelves() {
+		results = append(results, linkedExpectedPowerShelfFromPb(leps))
+	}
+	return results, nil
+}
+
 func (c *grpcClient) AddMachine(machine MachineDetail) {
 	panic("Not a unit test")
 }
