@@ -138,6 +138,9 @@ func InitAPIServer(cfg *config.Config, dbSession *cdb.Session, tc tsdkClient.Cli
 	// Secure middleware configures echo with secure headers
 	e.Use(middleware.Secure())
 
+	// Limit request body size to prevent OOM from oversized payloads
+	e.Use(echoMiddleware.BodyLimit("10M"))
+
 	// Rate limiter middleware (if enabled)
 	rateLimiterConfig := cfg.GetRateLimiterConfig()
 	if rateLimiterConfig.Enabled {
