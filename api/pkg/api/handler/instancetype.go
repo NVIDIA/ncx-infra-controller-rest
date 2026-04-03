@@ -496,7 +496,7 @@ func NewGetAllInstanceTypeHandler(dbSession *cdb.Session, tc temporalClient.Clie
 
 // Handle godoc
 // @Summary Get all Instance Types
-// @Description Get all Instance Types from both Provider and Tenant perspectives for the org
+// @Description Get all Instance Types relevant to current org
 // @Tags instancetype
 // @Accept json
 // @Produce json
@@ -839,7 +839,7 @@ func NewGetInstanceTypeHandler(dbSession *cdb.Session, tc temporalClient.Client,
 
 // Handle godoc
 // @Summary Get details of an Instance Type
-// @Description Get details of a specific Instance Type from both Provider and Tenant perspectives
+// @Description Retrieve details of a specific Instance Type by ID
 // @Tags instancetype
 // @Accept json
 // @Produce json
