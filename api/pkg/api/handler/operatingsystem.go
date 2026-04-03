@@ -119,6 +119,9 @@ func (csh CreateOperatingSystemHandler) Handle(c echo.Context) error {
 		logger.Warn().Err(err).Msg("error binding request data into API model")
 		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
 	}
+	// ensure TenantID and InfrastructureProviderID from request are ignored
+	apiRequest.TenantID = nil
+	apiRequest.InfrastructureProviderID = nil
 	// Validate request attributes
 	verr := apiRequest.Validate()
 	if verr != nil {
