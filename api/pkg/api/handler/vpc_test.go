@@ -1369,7 +1369,7 @@ func TestUpdateVirtualizationVPCHandler_Handle(t *testing.T) {
 	dbSession := testSiteInitDB(t)
 	defer dbSession.Close()
 
-	testVPCSetupSchema(t, dbSession)
+	testInstanceSetupSchema(t, dbSession)
 
 	ipOrg := "test-provider-org"
 	ipOrgRoles := []string{"FORGE_PROVIDER_ADMIN"}
@@ -1417,6 +1417,18 @@ func TestUpdateVirtualizationVPCHandler_Handle(t *testing.T) {
 
 	vpc4 := testVPCBuildVPC(t, dbSession, "test-vpc-3", ip, tn, st2, cdb.GetStrPtr(cdbm.VpcFNN), nil, map[string]string{"zone": "west6"}, cdbm.VpcStatusReady, tnu)
 	assert.NotNil(t, vpc4)
+
+	vpcWithSubnet := testVPCBuildVPC(t, dbSession, "test-vpc-with-subnet", ip, tn, st, cdb.GetStrPtr(cdbm.VpcEthernetVirtualizer), nil, map[string]string{"zone": "west4"}, cdbm.VpcStatusReady, tnu)
+	assert.NotNil(t, vpcWithSubnet)
+	assert.NotNil(t, testVPCBuildSubnet(t, dbSession, "test-subnet", tn, vpcWithSubnet, tnu))
+
+	vpcWithInstance := testVPCBuildVPC(t, dbSession, "test-vpc-with-instance", ip, tn, st, cdb.GetStrPtr(cdbm.VpcEthernetVirtualizer), nil, map[string]string{"zone": "west5"}, cdbm.VpcStatusReady, tnu)
+	assert.NotNil(t, vpcWithInstance)
+	instanceType := testInstanceBuildInstanceType(t, dbSession, ip, "test-instance-type", st, cdbm.InstanceStatusReady)
+	assert.NotNil(t, instanceType)
+	allocationConstraint := testInstanceSiteBuildAllocationContraints(t, dbSession, al, cdbm.AllocationResourceTypeInstanceType, instanceType.ID, cdbm.AllocationConstraintTypeReserved, 1, tnu)
+	assert.NotNil(t, allocationConstraint)
+	assert.NotNil(t, testInstanceBuildInstance(t, dbSession, "test-instance", al.ID, allocationConstraint.ID, tn.ID, ip.ID, st.ID, &instanceType.ID, vpcWithInstance.ID, nil, nil, nil, cdbm.InstanceStatusReady))
 
 	e := echo.New()
 	cfg := common.GetTestConfig()
@@ -1563,6 +1575,48 @@ func TestUpdateVirtualizationVPCHandler_Handle(t *testing.T) {
 				reqUser:     tnu,
 				respCode:    http.StatusBadRequest,
 				respMessage: "VPC virtualization type is already set to FNN",
+			},
+			wantErr:            false,
+			verifyChildSpanner: true,
+		},
+		{
+			name: "test VPC virtualization update API endpoint fail when VPC has subnets",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIVpcVirtualizationUpdateRequest{
+					NetworkVirtualizationType: "FNN",
+				},
+				reqOrg:      tnOrg,
+				reqVPCID:    vpcWithSubnet.ID.String(),
+				reqVPC:      vpcWithSubnet,
+				reqUser:     tnu,
+				respCode:    http.StatusBadRequest,
+				respMessage: "VPC virtualization cannot be updated while subnets exist on the VPC",
+			},
+			wantErr:            false,
+			verifyChildSpanner: true,
+		},
+		{
+			name: "test VPC virtualization update API endpoint fail when VPC has instances",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIVpcVirtualizationUpdateRequest{
+					NetworkVirtualizationType: "FNN",
+				},
+				reqOrg:      tnOrg,
+				reqVPCID:    vpcWithInstance.ID.String(),
+				reqVPC:      vpcWithInstance,
+				reqUser:     tnu,
+				respCode:    http.StatusBadRequest,
+				respMessage: "VPC virtualization cannot be updated while instances exist on the VPC",
 			},
 			wantErr:            false,
 			verifyChildSpanner: true,
