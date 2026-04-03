@@ -39,6 +39,10 @@ import (
 const (
 	// ImplementationName is the name used to identify this implementation.
 	ImplementationName = "carbide"
+
+	// healthOverrideSource is the source tag written into health-report
+	// overrides so they can be matched on removal.
+	healthOverrideSource = "rla-power-control"
 )
 
 // Manager manages compute node components via the Carbide API.
@@ -173,15 +177,14 @@ func (m *Manager) PowerControl(
 
 	defer func() {
 		// Use a detached context so cleanup is not blocked by the
-		// parent context being canceled or timed-out.
-		cleanupCtx, cancel := context.WithTimeout(
-			context.WithoutCancel(ctx), 30*time.Second,
-		)
-		defer cancel()
+		// parent context being canceled or timed-out. Each individual
+		// gRPC call inside RemoveHealthReportOverride already applies
+		// the configured per-call timeout.
+		cleanupCtx := context.WithoutCancel(ctx)
 
 		for _, componentID := range overrideInserted {
 			if err := m.carbideClient.RemoveHealthReportOverride(
-				cleanupCtx, componentID, "rla-power-control",
+				cleanupCtx, componentID, healthOverrideSource,
 			); err != nil {
 				log.Warn().Err(err).Str("component", componentID).
 					Msg("Failed to remove health report override after power control")
@@ -193,7 +196,7 @@ func (m *Manager) PowerControl(
 		// Place a health-report override so Carbide marks the machine as
 		// under maintenance for the duration of the power operation.
 		if err := m.carbideClient.InsertHealthReportOverride(
-			ctx, componentID, "rla-power-control",
+			ctx, componentID, healthOverrideSource,
 		); err != nil {
 			log.Warn().Err(err).Str("component", componentID).
 				Msg("Failed to insert health report override, proceeding anyway")
@@ -208,6 +211,7 @@ func (m *Manager) PowerControl(
 		); err != nil {
 			if isAlreadyInDesiredStateError(err) {
 				log.Debug().Str("component", componentID).
+					Int("desired_state", int(desiredPowerState)).
 					Msg("Power option already in desired state, skipping")
 			} else {
 				return fmt.Errorf(
