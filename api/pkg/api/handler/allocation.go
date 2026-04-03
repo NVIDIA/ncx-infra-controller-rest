@@ -496,7 +496,7 @@ func NewGetAllAllocationHandler(dbSession *cdb.Session, tc temporalClient.Client
 
 // Handle godoc
 // @Summary Retrieve all Allocations
-// @Description Retrieve all Allocations from both Provider and Tenant perspectives for the org
+// @Description Retrieve all Allocations relevant to current org
 // @Tags Allocation
 // @Accept json
 // @Produce json
@@ -674,22 +674,6 @@ func (gaah GetAllAllocationHandler) Handle(c echo.Context) error {
 		}
 	}
 
-	var filterTenantIDs []uuid.UUID
-	if provider != nil {
-		if tenantIdQuery := qParams["tenantId"]; len(tenantIdQuery) > 0 {
-			for _, tenantId := range tenantIdQuery {
-				id, err := uuid.Parse(tenantId)
-				if err != nil {
-					logger.Warn().Err(err).Msg("error parsing tenantId in query into uuid")
-					return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Tenant ID in query", validation.Errors{
-						"tenantId": errors.New(tenantId),
-					})
-				}
-				filterTenantIDs = append(filterTenantIDs, id)
-			}
-		}
-	}
-
 	// Collect allocation IDs from both Provider and Tenant perspectives
 	aDAO := cdbm.NewAllocationDAO(gaah.dbSession)
 	mergedAllocationIDs := mapset.NewSet[uuid.UUID]()
@@ -706,6 +690,19 @@ func (gaah GetAllAllocationHandler) Handle(c echo.Context) error {
 	}
 
 	if provider != nil {
+		var filterTenantIDs []uuid.UUID
+		if tenantIdQuery := qParams["tenantId"]; len(tenantIdQuery) > 0 {
+			for _, tenantId := range tenantIdQuery {
+				id, err := uuid.Parse(tenantId)
+				if err != nil {
+					logger.Warn().Err(err).Msg("error parsing tenantId in query into uuid")
+					return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Invalid Tenant ID: %s in query", tenantId), validation.Errors{
+						"tenantId": errors.New(tenantId),
+					})
+				}
+				filterTenantIDs = append(filterTenantIDs, id)
+			}
+		}
 		providerFilter := sharedFilter
 		providerFilter.InfrastructureProviderID = &provider.ID
 		providerFilter.TenantIDs = filterTenantIDs
@@ -831,7 +828,7 @@ func NewGetAllocationHandler(dbSession *cdb.Session, tc temporalClient.Client, c
 
 // Handle godoc
 // @Summary Retrieve the Allocation
-// @Description Retrieve the Allocation from both Provider and Tenant perspectives
+// @Description Retrieve details of a specific Allocation by ID
 // @Tags Allocation
 // @Accept json
 // @Produce json
@@ -882,7 +879,7 @@ func (gah GetAllocationHandler) Handle(c echo.Context) error {
 			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find Allocation with specified ID", nil)
 		}
 		logger.Error().Err(err).Msg("error retrieving Allocation DB entity")
-		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Could not retrieve Allocation entity", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Allocation, DB error", nil)
 	}
 
 	// Check if Allocation is associated with Provider or Tenant
