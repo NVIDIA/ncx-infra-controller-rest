@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"os"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -161,14 +162,18 @@ func (s *Service) Stop(ctx context.Context) {
 	s.nsm.Stop(ctx)
 }
 
-// certOption returns the gRPC server option for TLS/mTLS if certificates are present.
-// Falls back to plaintext if certificates are not found.
+// certOption returns the gRPC server option for TLS/mTLS if certificates are
+// present. The service refuses to start without certificates unless
+// ALLOW_INSECURE_GRPC=true is set.
 func (s *Service) certOption() grpc.ServerOption {
 	tlsConfig, certDir, err := certs.TLSConfig()
 	if err != nil {
 		if err == certs.ErrNotPresent {
-			log.Printf("Certs not present, using non-mTLS (plaintext)")
-			return grpc.EmptyServerOption{}
+			if os.Getenv("ALLOW_INSECURE_GRPC") == "true" {
+				log.Warnf("TLS certs not present, running without mTLS (ALLOW_INSECURE_GRPC=true)")
+				return grpc.EmptyServerOption{}
+			}
+			log.Fatalf("TLS certificates required but not found; set ALLOW_INSECURE_GRPC=true for local development")
 		}
 		log.Fatalf("Failed to load TLS certificates: %v", err)
 	}
