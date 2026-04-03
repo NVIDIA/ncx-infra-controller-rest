@@ -26,18 +26,16 @@ import (
 	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/go-ozzo/ozzo-validation/v4/is"
-	validationis "github.com/go-ozzo/ozzo-validation/v4/is"
 	"github.com/google/uuid"
 	"gopkg.in/yaml.v3"
 )
 
 const (
-	validationErrorInfrastructureProviderIDExpectNil = "Specifying InfrastructureProviderID is currently not supported"
-	errMsgInvalidImageSHA                            = "not a valid SHA hash"
-	errMsgInvalidImageDiskPath                       = "not a valid disk path"
-	errMsgExactlyOneRootFsField                      = "exactly one of 'rootFsId' and 'rootFsLabel' must be specified"
-	errMsgOnlyOneRootFsField                         = "only one of 'rootFsId' and 'rootFsLabel' may be specified"
-	errMsgNotEmpty                                   = "cannot be empty"
+	errMsgInvalidImageSHA       = "not a valid SHA hash"
+	errMsgInvalidImageDiskPath  = "not a valid disk path"
+	errMsgExactlyOneRootFsField = "exactly one of 'rootFsId' and 'rootFsLabel' must be specified"
+	errMsgOnlyOneRootFsField    = "only one of 'rootFsId' and 'rootFsLabel' may be specified"
+	errMsgNotEmpty              = "cannot be empty"
 )
 
 // APIOperatingSystemCreateRequest is the data structure to capture user request to create a new OperatingSystem
@@ -88,13 +86,6 @@ func (oscr APIOperatingSystemCreateRequest) Validate() error {
 			validation.Required.Error(validationErrorStringLength),
 			validation.By(util.ValidateNameCharacters),
 			validation.Length(2, 256).Error(validationErrorStringLength)),
-		validation.Field(&oscr.InfrastructureProviderID,
-			// infrastructure provider id must be nil
-			validation.Nil.Error(validationErrorInfrastructureProviderIDExpectNil)),
-		validation.Field(&oscr.TenantID,
-			// NOTE: TenantID is required for now as only Tenants can create Operating Systems
-			validation.Required.Error(validationErrorValueRequired),
-			validationis.UUID.Error(validationErrorInvalidUUID)),
 	)
 	if err != nil {
 		return err

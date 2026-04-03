@@ -119,6 +119,9 @@ func (csh CreateOperatingSystemHandler) Handle(c echo.Context) error {
 		logger.Warn().Err(err).Msg("error binding request data into API model")
 		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
 	}
+	// ensure TenantID and InfrastructureProviderID from request are ignored
+	apiRequest.TenantID = nil
+	apiRequest.InfrastructureProviderID = nil
 	// Validate request attributes
 	verr := apiRequest.Validate()
 	if verr != nil {
@@ -142,16 +145,6 @@ func (csh CreateOperatingSystemHandler) Handle(c echo.Context) error {
 		}
 		logger.Error().Err(err).Msg("unable to retrieve tenant for org")
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve tenant for org", nil)
-	}
-	// verify tenant-id in request, the api validation ensures non-nil tenantID in request
-	apiTenant, err := common.GetTenantFromIDString(ctx, nil, *apiRequest.TenantID, csh.dbSession)
-	if err != nil {
-		logger.Warn().Err(err).Msg("error retrieving tenant from request")
-		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "TenantID in request is not valid", nil)
-	}
-	if apiTenant.ID != tenant.ID {
-		logger.Warn().Msg("tenant id in request does not match tenant in org")
-		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "TenantID in request does not match tenant in org", nil)
 	}
 
 	// check for name uniqueness for the tenant, ie, tenant cannot have another os with same name

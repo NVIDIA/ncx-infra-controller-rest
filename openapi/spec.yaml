@@ -14079,13 +14079,13 @@ components:
             - string
             - 'null'
           format: uuid
-          description: Specified if a Provider owns the Operating System
+          description: 'Obsolete. If provided will be ignored.'
         tenantId:
           type:
             - string
             - 'null'
           format: uuid
-          description: Specified if a Tenant owns the Operating System
+          description: 'Obsolete. If provided will be ignored.'
         siteIds:
           type: array
           items:

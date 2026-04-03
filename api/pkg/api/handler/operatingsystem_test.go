@@ -224,15 +224,7 @@ func TestOperatingSystemHandler_Create(t *testing.T) {
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
-			name:           "error when tenant doesnt exist for org",
-			reqOrgName:     tnOrg2,
-			reqBody:        string(okBody),
-			user:           tnu,
-			expectedErr:    true,
-			expectedStatus: http.StatusBadRequest,
-		},
-		{
-			name:           "error when tenant in request does not match that in org",
+			name:           "error when org does not have a tenant",
 			reqOrgName:     tnOrg3,
 			reqBody:        string(okBody),
 			user:           tnu,
@@ -355,7 +347,7 @@ func TestOperatingSystemHandler_Create(t *testing.T) {
 				assert.Nil(t, err)
 				// validate response fields
 				assert.Equal(t, len(rsp.StatusHistory), tc.expectedStatusHistoryCount)
-				assert.Equal(t, *rsp.TenantID, *tc.reqBodyModel.TenantID)
+				assert.Equal(t, tenant1.ID.String(), *rsp.TenantID)
 				if !tc.expectedImageURL {
 					assert.Equal(t, *rsp.IpxeScript, *tc.reqBodyModel.IpxeScript)
 					assert.Equal(t, *rsp.Type, "iPXE")
