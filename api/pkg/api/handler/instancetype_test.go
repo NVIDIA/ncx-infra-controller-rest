@@ -898,7 +898,7 @@ func TestGetAllInstanceTypeHandler_Handle(t *testing.T) {
 				user: ipu,
 			},
 			wantCount:      cdbp.DefaultLimit,
-			wantTotalCount: 2 * totalCount,
+			wantTotalCount: 2*totalCount + externalSiteITCount, // st+st2 ITs plus external site ITs for same provider ip
 			wantRespCode:   http.StatusOK,
 			wantErr:        false,
 		},
@@ -934,8 +934,9 @@ func TestGetAllInstanceTypeHandler_Handle(t *testing.T) {
 				org:  orgName,
 				user: orgUser,
 			},
-			wantCount:      orgITCount,
-			wantTotalCount: orgITCount,
+			// Provider path: orgSite (orgITCount) + orgSiteNoTenant (orgSiteNoTenantITCount). Tenant path: orgSite + externalSite. Union after dedup.
+			wantCount:      orgITCount + orgSiteNoTenantITCount + externalSiteITCount,
+			wantTotalCount: orgITCount + orgSiteNoTenantITCount + externalSiteITCount,
 			wantRespCode:   http.StatusOK,
 			wantErr:        false,
 		},
@@ -949,9 +950,8 @@ func TestGetAllInstanceTypeHandler_Handle(t *testing.T) {
 			// Setup: orgITCount=4 ITs total on orgSite, 1 has an AllocationConstraint for
 			// orgTenant (orgAllocatedIT), 3 do not.
 			//
-			// Expected: count=orgITCount (all 4 own ITs from provider query) — the
-			// tenant query with excludeUnallocated would filter to only orgAllocatedIT, but
-			// the provider query contributes all 4 and they all survive the merge.
+			// Expected: provider query contributes orgSite + orgSiteNoTenant ITs; tenant query with excludeUnallocated
+			// only adds the allocated IT (subset of orgSite). Merge union equals provider-side count.
 			name: "get all Instance Types for org with both provider and tenant roles with excludeUnallocated (provider query unaffected)",
 			fields: fields{
 				dbSession: dbSession,
@@ -965,8 +965,8 @@ func TestGetAllInstanceTypeHandler_Handle(t *testing.T) {
 				},
 				user: orgUser,
 			},
-			wantCount:      orgITCount,
-			wantTotalCount: orgITCount,
+			wantCount:      orgITCount + orgSiteNoTenantITCount,
+			wantTotalCount: orgITCount + orgSiteNoTenantITCount,
 			wantRespCode:   http.StatusOK,
 			wantErr:        false,
 		},

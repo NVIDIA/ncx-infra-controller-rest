@@ -774,10 +774,18 @@ func (gaith GetAllInstanceTypeHandler) Handle(c echo.Context) error {
 	}
 	var mit []cdbm.MachineInstanceType
 	if includeMachineAssignment {
-		mit, _, err = mitDAO.GetAll(ctx, nil, nil, itIDs, nil, nil, cdb.GetIntPtr(cdbp.TotalLimit), nil)
-		if err != nil {
-			logger.Error().Err(err).Msg("error retrieving Machine assignments for Instance Type")
-			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve  Machine assignments for Instance Type", nil)
+		mitIDs := make([]uuid.UUID, 0, len(its))
+		for i := range its {
+			if its[i].InfrastructureProviderID == provider.ID {
+				mitIDs = append(mitIDs, its[i].ID)
+			}
+		}
+		if len(mitIDs) > 0 {
+			mit, _, err = mitDAO.GetAll(ctx, nil, nil, mitIDs, nil, nil, cdb.GetIntPtr(cdbp.TotalLimit), nil)
+			if err != nil {
+				logger.Error().Err(err).Msg("error retrieving Machine assignments for Instance Type")
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve  Machine assignments for Instance Type", nil)
+			}
 		}
 	}
 	instanceTypeIDsToMachineInstanceTypeMap := map[uuid.UUID][]cdbm.MachineInstanceType{}
@@ -929,7 +937,9 @@ func (gith GetInstanceTypeHandler) Handle(c echo.Context) error {
 	tsDAO := cdbm.NewTenantSiteDAO(gith.dbSession)
 	var tenantID *uuid.UUID
 
-	if provider != nil && it.InfrastructureProviderID == provider.ID {
+	authorizedViaProvider := provider != nil && it.InfrastructureProviderID == provider.ID
+
+	if authorizedViaProvider {
 		// authorized via provider ownership — fall through
 	} else if tenant != nil && it.SiteID != nil {
 		_, err = tsDAO.GetByTenantIDAndSiteID(ctx, nil, tenant.ID, *it.SiteID, nil)
@@ -942,6 +952,10 @@ func (gith GetInstanceTypeHandler) Handle(c echo.Context) error {
 		tenantID = &tenant.ID
 	} else {
 		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Instance Type is not associated with org", nil)
+	}
+
+	if includeMachineAssignment && !authorizedViaProvider {
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Only Provider can specify query param `includeMachineAssignment`", nil)
 	}
 
 	// Get Instance Type status details
