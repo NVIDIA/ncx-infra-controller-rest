@@ -27,6 +27,7 @@ import (
 
 	temporalClient "go.temporal.io/sdk/client"
 
+	mapset "github.com/deckarep/golang-set/v2"
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/google/uuid"
 
@@ -495,15 +496,15 @@ func NewGetAllAllocationHandler(dbSession *cdb.Session, tc temporalClient.Client
 
 // Handle godoc
 // @Summary Retrieve all Allocations
-// @Description Retrieve all Allocations that Provider has created for a particular Site
+// @Description Retrieve all Allocations relevant to current org
 // @Tags Allocation
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
 // @Param org path string true "Name of NGC organization"
-// @Param infrastructureProviderId query string true "ID of InfrastructureProvider"
-// @Param tenantId query string true "ID of Tenant".
-// @Param siteId query string true "ID of Site"
+// @Param infrastructureProviderId query string false "Deprecated: ID of InfrastructureProvider"
+// @Param tenantId query string false "Filter by Tenant ID (Provider role only; for Tenant role the tenant is inferred from org membership and this param is ignored)"
+// @Param siteId query string false "ID of Site"
 // @Param resourceType query string false "Filter by resource type e.g. 'InstanceType', 'IPBlock'"
 // @Param resourceTypeId query string false "ID of ResourceType"
 // @Param status query string false "Filter by status" e.g. 'Pending', 'Error'"
@@ -526,21 +527,9 @@ func (gaah GetAllAllocationHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
-	// Validate org
-	ok, err := auth.ValidateOrgMembership(dbUser, org)
-	if !ok {
-		if err != nil {
-			logger.Error().Err(err).Msg("error validating org membership for User in request")
-		} else {
-			logger.Warn().Msg("could not validate org membership for user, access denied")
-		}
-		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
-	}
-
 	// Validate pagination request
-	// Bind request data to API model
 	pageRequest := pagination.PageRequest{}
-	err = c.Bind(&pageRequest)
+	err := c.Bind(&pageRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding pagination request data into API model")
 		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request pagination data", nil)
@@ -562,91 +551,13 @@ func (gaah GetAllAllocationHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, errStr, nil)
 	}
 
-	filter := cdbm.AllocationFilterInput{}
-	// Validate other query params
-	qInfrastructureProviderID := c.QueryParam("infrastructureProviderId")
-	tenantIdQuery := qParams["tenantId"]
-	if qInfrastructureProviderID == "" && len(tenantIdQuery) == 0 {
-		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, common.ErrMsgProviderOrTenantIDQueryRequired, nil)
+	provider, tenant, apiError := common.IsProviderOrTenant(ctx, logger, gaah.dbSession, org, dbUser, true, false)
+	if apiError != nil {
+		return cutil.NewAPIErrorResponse(c, apiError.Code, apiError.Message, apiError.Data)
 	}
 
-	// Validate infrastructure provider id if provided
-	if qInfrastructureProviderID != "" {
-		id, serr := uuid.Parse(qInfrastructureProviderID)
-		if serr != nil {
-			logger.Warn().Err(serr).Msg("error parsing infrastructureProviderId in query into uuid")
-			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Infrastructure Provider ID in query", nil)
-		}
-
-		filter.InfrastructureProviderID = &id
-	}
-
-	// Validate tenant id if provided
-	if len(tenantIdQuery) > 0 {
-		for _, tenantId := range tenantIdQuery {
-			id, serr := uuid.Parse(tenantId)
-			if serr != nil {
-				logger.Warn().Err(serr).Msg("error parsing tenantId in query into uuid")
-				tenantIdError := validation.Errors{
-					"tenantId": errors.New(tenantId),
-				}
-				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Tenant ID in query", tenantIdError)
-			}
-
-			filter.TenantIDs = append(filter.TenantIDs, id)
-		}
-	}
-
-	// The query params must match _either_ the org's Infrastructure Provider _or_ the org's Tenant
-	// This allows the cases where:
-	// - A Tenant associated with the org could be filtering on Infrastructure Provider by providing both param
-	// - An Infrastructure Provider associated with the org could be filtering on Tenant by providing both param
-	isAssociated := false
-	orgInfrastructureProvider, err := common.GetInfrastructureProviderForOrg(ctx, nil, gaah.dbSession, org)
-	if err != nil {
-		if err != common.ErrOrgInstrastructureProviderNotFound {
-			logger.Error().Err(err).Msg("error getting infrastructure provider for org")
-			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve infrastructure provider for org, DB error", nil)
-		}
-	} else if filter.InfrastructureProviderID != nil && orgInfrastructureProvider.ID == *filter.InfrastructureProviderID {
-		// Validate role
-		ok = auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole, auth.ProviderViewerRole)
-		if !ok {
-			logger.Warn().Msg("user does not have Provider Admin role, access denied")
-			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
-		}
-
-		isAssociated = true
-	}
-
-	// If the Infrastructure Provider in query does not belong to the org, then check if the Tenant in query belongs to the org
-	if !isAssociated {
-		orgTenant, err1 := common.GetTenantForOrg(ctx, nil, gaah.dbSession, org)
-		if err1 != nil {
-			if err1 != common.ErrOrgTenantNotFound {
-				logger.Error().Err(err1).Msg("error getting tenant for org")
-				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve tenant for org", nil)
-			}
-		} else {
-			for _, tenantID := range filter.TenantIDs {
-				if orgTenant.ID == tenantID {
-					// Validate role
-					ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
-					if !ok {
-						logger.Warn().Msg("user does not have Tenant Admin role, access denied")
-						return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
-					}
-
-					isAssociated = true
-				}
-			}
-		}
-	}
-	if !isAssociated {
-		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Either Infrastructure Provider or Tenant in query param must be associated with org", nil)
-	}
-
-	// now check siteID in query
+	// Parse optional filter query params
+	var siteIDs []uuid.UUID
 	if siteIdQuery := qParams["siteId"]; len(siteIdQuery) > 0 {
 		for _, siteId := range siteIdQuery {
 			site, err := common.GetSiteFromIDString(ctx, nil, siteId, gaah.dbSession)
@@ -657,17 +568,19 @@ func (gaah GetAllAllocationHandler) Handle(c echo.Context) error {
 				}
 				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to retrieve site from request", siteIdError)
 			}
-			filter.SiteIDs = append(filter.SiteIDs, site.ID)
+			siteIDs = append(siteIDs, site.ID)
 		}
 	}
 
 	// Get query text for full text search from query param
+	var searchQuery *string
 	if searchQueryStr := c.QueryParam("query"); searchQueryStr != "" {
-		filter.SearchQuery = &searchQueryStr
+		searchQuery = &searchQueryStr
 		gaah.tracerSpan.SetAttribute(handlerSpan, attribute.String("query", searchQueryStr), logger)
 	}
 
 	// Get status from query param
+	var statuses []string
 	if statusQuery := qParams["status"]; len(statusQuery) > 0 {
 		gaah.tracerSpan.SetAttribute(handlerSpan, attribute.StringSlice("status", statusQuery), logger)
 		for _, status := range statusQuery {
@@ -679,16 +592,17 @@ func (gaah GetAllAllocationHandler) Handle(c echo.Context) error {
 				}
 				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Status value in query", statusError)
 			}
-			filter.Statuses = append(filter.Statuses, status)
+			statuses = append(statuses, status)
 		}
 	}
 
 	// Get resource type for resources from query param
+	var resourceTypes []string
 	if resourceTypeQuery := qParams["resourceType"]; len(resourceTypeQuery) > 0 {
 		gaah.tracerSpan.SetAttribute(handlerSpan, attribute.StringSlice("resourceType", resourceTypeQuery), logger)
 		for _, resourceType := range resourceTypeQuery {
 			if cdbm.AllocationConstraintResourceTypes[resourceType] {
-				filter.ResourceTypes = append(filter.ResourceTypes, resourceType)
+				resourceTypes = append(resourceTypes, resourceType)
 			} else {
 				errStr := fmt.Sprintf("Invalid resourceType value in query: %v", resourceType)
 				logger.Warn().Msg(errStr)
@@ -698,6 +612,7 @@ func (gaah GetAllAllocationHandler) Handle(c echo.Context) error {
 	}
 
 	// Get resource type ID from query param
+	var resourceTypeIDs []uuid.UUID
 	if resourceTypeIdQuery := qParams["resourceTypeId"]; len(resourceTypeIdQuery) > 0 {
 		gaah.tracerSpan.SetAttribute(handlerSpan, attribute.StringSlice("resourceTypeId", resourceTypeIdQuery), logger)
 		for _, resourceTypeId := range resourceTypeIdQuery {
@@ -709,15 +624,16 @@ func (gaah GetAllAllocationHandler) Handle(c echo.Context) error {
 				}
 				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid ResourceType ID in query", resourceTypeIdError)
 			}
-			filter.ResourceTypeIDs = append(filter.ResourceTypeIDs, id)
+			resourceTypeIDs = append(resourceTypeIDs, id)
 		}
 	}
 
 	// Get constraint type from query param
+	var constraintTypes []string
 	if constraintTypeQuery := qParams["constraintType"]; len(constraintTypeQuery) > 0 {
 		for _, constraintType := range constraintTypeQuery {
 			if cdbm.AllocationConstraintTypeMap[constraintType] {
-				filter.ConstraintTypes = append(filter.ConstraintTypes, constraintType)
+				constraintTypes = append(constraintTypes, constraintType)
 			} else {
 				errStr := fmt.Sprintf("Invalid constraintType value in query: %v", constraintType)
 				logger.Warn().Msg(errStr)
@@ -726,7 +642,8 @@ func (gaah GetAllAllocationHandler) Handle(c echo.Context) error {
 		}
 	}
 
-	// Get constraint type from query param
+	// Get constraint value from query param
+	var constraintValues []int
 	if constraintValueQuery := qParams["constraintValue"]; len(constraintValueQuery) > 0 {
 		for _, constraintValue := range constraintValueQuery {
 			cv, err := strconv.Atoi(constraintValue)
@@ -737,11 +654,12 @@ func (gaah GetAllAllocationHandler) Handle(c echo.Context) error {
 				}
 				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Constraint Value in query", constraintValueError)
 			}
-			filter.ConstraintValues = append(filter.ConstraintValues, cv)
+			constraintValues = append(constraintValues, cv)
 		}
 	}
 
-	// Get constraint type from query param
+	// Get allocation ID from query param
+	var explicitAllocationIDs []uuid.UUID
 	if idQuery := qParams["id"]; len(idQuery) > 0 {
 		for _, id := range idQuery {
 			allocID, err := uuid.Parse(id)
@@ -752,13 +670,69 @@ func (gaah GetAllAllocationHandler) Handle(c echo.Context) error {
 				}
 				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Allocation ID in query", idError)
 			}
-			filter.AllocationIDs = append(filter.AllocationIDs, allocID)
+			explicitAllocationIDs = append(explicitAllocationIDs, allocID)
 		}
 	}
 
-	// Create response
+	// Collect allocation IDs from both Provider and Tenant perspectives
 	aDAO := cdbm.NewAllocationDAO(gaah.dbSession)
-	als, total, err := aDAO.GetAll(ctx, nil, filter, pageRequest.ConvertToDB(), qIncludeRelations)
+	mergedAllocationIDs := mapset.NewSet[uuid.UUID]()
+
+	sharedFilter := cdbm.AllocationFilterInput{
+		SiteIDs:          siteIDs,
+		Statuses:         statuses,
+		SearchQuery:      searchQuery,
+		ResourceTypes:    resourceTypes,
+		ResourceTypeIDs:  resourceTypeIDs,
+		ConstraintTypes:  constraintTypes,
+		ConstraintValues: constraintValues,
+		AllocationIDs:    explicitAllocationIDs,
+	}
+
+	if provider != nil {
+		var filterTenantIDs []uuid.UUID
+		if tenantIdQuery := qParams["tenantId"]; len(tenantIdQuery) > 0 {
+			for _, tenantId := range tenantIdQuery {
+				id, err := uuid.Parse(tenantId)
+				if err != nil {
+					logger.Warn().Err(err).Msg("error parsing tenantId in query into uuid")
+					return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Invalid Tenant ID: %s in query", tenantId), validation.Errors{
+						"tenantId": errors.New(tenantId),
+					})
+				}
+				filterTenantIDs = append(filterTenantIDs, id)
+			}
+		}
+		providerFilter := sharedFilter
+		providerFilter.InfrastructureProviderID = &provider.ID
+		providerFilter.TenantIDs = filterTenantIDs
+		providerAllocations, _, err := aDAO.GetAll(ctx, nil, providerFilter, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
+		if err != nil {
+			logger.Error().Err(err).Msg("error getting Allocations from Provider perspective")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Allocations, DB error", nil)
+		}
+		for _, al := range providerAllocations {
+			mergedAllocationIDs.Add(al.ID)
+		}
+	}
+
+	if tenant != nil {
+		tenantFilter := sharedFilter
+		tenantFilter.TenantIDs = []uuid.UUID{tenant.ID}
+		tenantAllocations, _, err := aDAO.GetAll(ctx, nil, tenantFilter, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
+		if err != nil {
+			logger.Error().Err(err).Msg("error getting Allocations from Tenant perspective")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Allocations, DB error", nil)
+		}
+		for _, al := range tenantAllocations {
+			mergedAllocationIDs.Add(al.ID)
+		}
+	}
+
+	// Final paginated query using the merged allocation IDs
+	allocations, total, err := aDAO.GetAll(ctx, nil, cdbm.AllocationFilterInput{
+		AllocationIDs: mergedAllocationIDs.ToSlice(),
+	}, pageRequest.ConvertToDB(), qIncludeRelations)
 	if err != nil {
 		logger.Error().Err(err).Msg("error getting Allocations from db")
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Allocations", nil)
@@ -768,7 +742,7 @@ func (gaah GetAllAllocationHandler) Handle(c echo.Context) error {
 	sdDAO := cdbm.NewStatusDetailDAO(gaah.dbSession)
 
 	var aids []uuid.UUID
-	for _, al := range als {
+	for _, al := range allocations {
 		aids = append(aids, al.ID)
 	}
 
@@ -810,7 +784,7 @@ func (gaah GetAllAllocationHandler) Handle(c echo.Context) error {
 		alcsMap[alc.AllocationID] = append(alcsMap[alc.AllocationID], alcd)
 	}
 
-	for _, al := range als {
+	for _, al := range allocations {
 		cural := al
 		apial := model.NewAPIAllocation(&cural, ssdMap[al.ID.String()], alcsMap[al.ID], alcsInstanceTypeMap, alcsIPBlockMap)
 		apials = append(apials, apial)
@@ -854,15 +828,15 @@ func NewGetAllocationHandler(dbSession *cdb.Session, tc temporalClient.Client, c
 
 // Handle godoc
 // @Summary Retrieve the Allocation
-// @Description Retrieve the Allocation
+// @Description Retrieve details of a specific Allocation by ID
 // @Tags Allocation
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
 // @Param org path string true "Name of NGC organization"
 // @Param id path string true "ID of Allocation"
-// @Param infrastructureProviderId query string true "ID of InfrastructureProvider"
-// @Param tenantId query string true "ID of Tenant"
+// @Param infrastructureProviderId query string false "Deprecated: ID of InfrastructureProvider"
+// @Param tenantId query string false "Deprecated: ID of Tenant"
 // @Param includeRelation query string false "Related entities to include in response e.g. 'InfrastructureProvider', 'Tenant', 'Site'"
 // @Success 200 {object} model.APIAllocation
 // @Router /v2/org/{org}/carbide/allocation/{id} [get]
@@ -875,17 +849,6 @@ func (gah GetAllocationHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
-	// Validate org
-	ok, err := auth.ValidateOrgMembership(dbUser, org)
-	if !ok {
-		if err != nil {
-			logger.Error().Err(err).Msg("error validating org membership for User in request")
-		} else {
-			logger.Warn().Msg("could not validate org membership for user, access denied")
-		}
-		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
-	}
-
 	// Get allocation ID from URL param
 	aStrID := c.Param("id")
 	aID, err := uuid.Parse(aStrID)
@@ -896,22 +859,6 @@ func (gah GetAllocationHandler) Handle(c echo.Context) error {
 
 	gah.tracerSpan.SetAttribute(handlerSpan, attribute.String("allocation_id", aStrID), logger)
 
-	aDAO := cdbm.NewAllocationDAO(gah.dbSession)
-	// Check that Allocation exists
-	a, err := aDAO.GetByID(ctx, nil, aID, nil)
-	if err != nil {
-		if err == cdb.ErrDoesNotExist {
-			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find Allocation with specified ID", nil)
-		}
-		logger.Error().Err(err).Msg("error retrieving Allocation DB entity")
-		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Could not retrieve Allocation entity", nil)
-	}
-
-	var infrastructureProviderID *uuid.UUID
-	var tenantID *uuid.UUID
-
-	// Get and validate query params
-
 	// Get and validate includeRelation params
 	qParams := c.QueryParams()
 	qIncludeRelations, errStr := common.GetAndValidateQueryRelations(qParams, cdbm.AllocationRelatedEntities)
@@ -920,86 +867,25 @@ func (gah GetAllocationHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, errStr, nil)
 	}
 
-	qInfrastructureProviderID := c.QueryParam("infrastructureProviderId")
-	qTenantID := c.QueryParam("tenantId")
-	if qInfrastructureProviderID == "" && qTenantID == "" {
-		errStr := "Either infrastructureProviderId or tenantId query param must be specified."
-		logger.Warn().Msg(errStr)
-		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, errStr, nil)
+	provider, tenant, apiError := common.IsProviderOrTenant(ctx, logger, gah.dbSession, org, dbUser, true, false)
+	if apiError != nil {
+		return cutil.NewAPIErrorResponse(c, apiError.Code, apiError.Message, apiError.Data)
 	}
 
-	// Validate infrastructure provider id if provided
-	if qInfrastructureProviderID != "" {
-		id, err1 := uuid.Parse(qInfrastructureProviderID)
-		if err1 != nil {
-			logger.Warn().Err(err1).Msg("error parsing infrastructureProviderId in query into uuid")
-			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Infrastructure Provider ID in query", nil)
-		}
-
-		// If the Infrastructure Provider ID in query is not the same as the one in the allocation, return an error
-		if id != a.InfrastructureProviderID {
-			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find Allocation with Infrastructure Provider in query", nil)
-		}
-		infrastructureProviderID = &id
-	}
-	// Validate tenant id if provided
-	if qTenantID != "" {
-		id, err1 := uuid.Parse(qTenantID)
-		if err1 != nil {
-			logger.Warn().Err(err1).Msg("error parsing tenantId in query into uuid")
-			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Tenant ID in query", nil)
-		}
-
-		// If the Tenant in query is not the same as the one in the Allocatioon, return an error
-		if id != a.TenantID {
-			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find Allocation matching Tenant in query", nil)
-		}
-
-		tenantID = &id
-	}
-
-	// The query params must match _either_ the org's Infrastructure Provider _or_ the org's Tenant
-	// This allows the cases where:
-	// - A Tenant associated with the org could be filtering on Infrastructure Provider by providing both param
-	// - An Infrastructure Provider associated with the org could be filtering on Tenant by providing both param
-	isAssociated := false
-	orgInfrastructureProvider, err := common.GetInfrastructureProviderForOrg(ctx, nil, gah.dbSession, org)
+	aDAO := cdbm.NewAllocationDAO(gah.dbSession)
+	a, err := aDAO.GetByID(ctx, nil, aID, nil)
 	if err != nil {
-		if err != common.ErrOrgInstrastructureProviderNotFound {
-			logger.Error().Err(err).Msg("error getting infrastructure provider for org")
-			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve infrastructure provider for org, DB error", nil)
+		if err == cdb.ErrDoesNotExist {
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find Allocation with specified ID", nil)
 		}
-	} else if infrastructureProviderID != nil && orgInfrastructureProvider.ID == *infrastructureProviderID {
-		// Validate role
-		ok = auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole, auth.ProviderViewerRole)
-		if !ok {
-			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
-		}
-
-		isAssociated = true
+		logger.Error().Err(err).Msg("error retrieving Allocation DB entity")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Allocation, DB error", nil)
 	}
 
-	// If the Infrastructure Provider in query does not belong to the org, then check if the Tenant in query belongs to the org
-	if !isAssociated {
-		orgTenant, err1 := common.GetTenantForOrg(ctx, nil, gah.dbSession, org)
-		if err1 != nil {
-			if err1 != common.ErrOrgTenantNotFound {
-				logger.Error().Err(err1).Msg("error getting tenant for org")
-				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant for org", nil)
-			}
-		} else if tenantID != nil && orgTenant.ID == *tenantID {
-			// Validate role
-			ok = auth.ValidateUserRoles(dbUser, org, nil, auth.TenantAdminRole)
-			if !ok {
-				return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Tenant Admin role with org", nil)
-			}
-
-			isAssociated = true
-		}
-	}
-
-	if !isAssociated {
-		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Either Infrastructure Provider or Tenant in query param must be associated with org", nil)
+	// Check if Allocation is associated with Provider or Tenant
+	if (provider == nil || provider.ID != a.InfrastructureProviderID) &&
+		(tenant == nil || tenant.ID != a.TenantID) {
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Allocation is not associated with org", nil)
 	}
 
 	a, err = aDAO.GetByID(ctx, nil, aID, qIncludeRelations)

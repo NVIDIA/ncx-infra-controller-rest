@@ -762,6 +762,62 @@ func TestGetAllInstanceTypeHandler_Handle(t *testing.T) {
 	ins3 := testInstanceBuildInstance(t, dbSession, "test-instance-3", al3.ID, alc3.ID, tn2.ID, ip.ID, st.ID, &its[0].ID, vpc2.ID, cdb.GetStrPtr(ms[0].ID), &os2.ID, nil, cdbm.InstanceStatusReady)
 	tn2inss = append(tn2inss, *ins3)
 
+	// Org with both Provider and Tenant roles: same org acts as its own infrastructure provider and tenant
+	orgName := "test-provider-and-tenant-org"
+	orgRoles := []string{"FORGE_PROVIDER_ADMIN", "FORGE_TENANT_ADMIN"}
+	orgUser := common.TestBuildUser(t, dbSession, uuid.NewString(), orgName, orgRoles)
+	orgProvider := common.TestBuildInfrastructureProvider(t, dbSession, "Test Org Provider", orgName, orgUser)
+	orgSite := common.TestBuildSite(t, dbSession, orgProvider, "Test Org Site", orgUser)
+	orgTenant := common.TestBuildTenant(t, dbSession, "test-org-tenant", orgName, orgUser)
+	common.TestBuildTenantSite(t, dbSession, orgTenant, orgSite, orgUser)
+
+	// Build 4 ITs owned by orgProvider: 1 allocated to orgTenant, 3 unallocated.
+	// orgProvider and orgTenant belong to the same org, so the user has both roles.
+	orgITCount := 4
+	var orgAllocatedIT *cdbm.InstanceType
+	for i := 0; i < orgITCount; i++ {
+		it := common.TestBuildInstanceType(t, dbSession, fmt.Sprintf("test-org-instance-type-%02d", i), cdb.GetUUIDPtr(uuid.New()), orgSite, map[string]string{
+			"name":        fmt.Sprintf("test-org-instance-type-%02d", i),
+			"description": fmt.Sprintf("Test Org Instance Type %02d", i),
+		}, orgUser)
+		common.TestBuildMachineCapability(t, dbSession, nil, &it.ID, cdbm.MachineCapabilityTypeCPU, "Intel Xeon E5-2650v2", cdb.GetStrPtr("3.0Hz"), nil, nil, cdb.GetIntPtr(2), cdb.GetStrPtr(""), nil)
+		if i == 0 {
+			orgAllocatedIT = it
+		}
+	}
+	// Create 2 machines for the allocated IT so the allocation constraint is satisfiable
+	orgM1 := common.TestBuildMachine(t, dbSession, orgProvider, orgSite, &orgAllocatedIT.ID, cdb.GetStrPtr("test-org-machine"), cdbm.MachineStatusReady)
+	orgM2 := common.TestBuildMachine(t, dbSession, orgProvider, orgSite, &orgAllocatedIT.ID, cdb.GetStrPtr("test-org-machine"), cdbm.MachineStatusReady)
+	common.TestBuildMachineInstanceType(t, dbSession, orgM1, orgAllocatedIT)
+	common.TestBuildMachineInstanceType(t, dbSession, orgM2, orgAllocatedIT)
+	orgAlloc := common.TestBuildAllocation(t, dbSession, orgSite, orgTenant, "test-org-allocation", orgUser)
+	common.TestBuildAllocationConstraint(t, dbSession, orgAlloc, orgAllocatedIT, nil, 1, orgUser)
+
+	// Create a site owned by a DIFFERENT provider (ip) but give orgTenant a TenantSite there.
+	// This exercises the dual-role bug fix: provider perspective should be skipped (site not owned
+	// by orgProvider), but tenant perspective should succeed.
+	externalSite := common.TestBuildSite(t, dbSession, ip, "External Site For Dual-Role Tenant", ipu)
+	common.TestBuildTenantSite(t, dbSession, orgTenant, externalSite, orgUser)
+	externalSiteITCount := 3
+	for i := 0; i < externalSiteITCount; i++ {
+		it := common.TestBuildInstanceType(t, dbSession, fmt.Sprintf("test-ext-site-it-%02d", i), cdb.GetUUIDPtr(uuid.New()), externalSite, map[string]string{
+			"name": fmt.Sprintf("test-ext-site-it-%02d", i),
+		}, ipu)
+		common.TestBuildMachineCapability(t, dbSession, nil, &it.ID, cdbm.MachineCapabilityTypeCPU, "Intel Xeon E5-2650v2", cdb.GetStrPtr("3.0Hz"), nil, nil, cdb.GetIntPtr(2), cdb.GetStrPtr(""), nil)
+	}
+
+	// Create a second site owned by orgProvider but where orgTenant does NOT have a TenantSite.
+	// This exercises the reverse dual-role scenario: tenant perspective should be skipped,
+	// but provider perspective should succeed.
+	orgSiteNoTenant := common.TestBuildSite(t, dbSession, orgProvider, "Org Site Without Tenant", orgUser)
+	orgSiteNoTenantITCount := 2
+	for i := 0; i < orgSiteNoTenantITCount; i++ {
+		it := common.TestBuildInstanceType(t, dbSession, fmt.Sprintf("test-org-no-tenant-it-%02d", i), cdb.GetUUIDPtr(uuid.New()), orgSiteNoTenant, map[string]string{
+			"name": fmt.Sprintf("test-org-no-tenant-it-%02d", i),
+		}, orgUser)
+		common.TestBuildMachineCapability(t, dbSession, nil, &it.ID, cdbm.MachineCapabilityTypeCPU, "Intel Xeon E5-2650v2", cdb.GetStrPtr("3.0Hz"), nil, nil, cdb.GetIntPtr(2), cdb.GetStrPtr(""), nil)
+	}
+
 	e := echo.New()
 
 	cfg := common.GetTestConfig()
@@ -842,7 +898,7 @@ func TestGetAllInstanceTypeHandler_Handle(t *testing.T) {
 				user: ipu,
 			},
 			wantCount:      cdbp.DefaultLimit,
-			wantTotalCount: 2 * totalCount,
+			wantTotalCount: 2*totalCount + externalSiteITCount, // st+st2 ITs plus external site ITs for same provider ip
 			wantRespCode:   http.StatusOK,
 			wantErr:        false,
 		},
@@ -859,6 +915,127 @@ func TestGetAllInstanceTypeHandler_Handle(t *testing.T) {
 			},
 			wantCount:      cdbp.DefaultLimit,
 			wantTotalCount: totalCount,
+			wantRespCode:   http.StatusOK,
+			wantErr:        false,
+		},
+		{
+			// Org has both Provider and Tenant roles. Every instance type
+			// belongs to a site owned by orgProvider and also accessible by orgTenant via TenantSite,
+			// so each instance type appears in both the provider and tenant DB queries.
+			// The mapset must deduplicate them so the response contains exactly orgITCount
+			// unique instance types, not 2×orgITCount.
+			name: "get all Instance Types for org with both provider and tenant roles (results deduplicated)",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        &tmocks.Client{},
+				cfg:       cfg,
+			},
+			args: args{
+				org:  orgName,
+				user: orgUser,
+			},
+			// Provider path: orgSite (orgITCount) + orgSiteNoTenant (orgSiteNoTenantITCount). Tenant path: orgSite + externalSite. Union after dedup.
+			wantCount:      orgITCount + orgSiteNoTenantITCount + externalSiteITCount,
+			wantTotalCount: orgITCount + orgSiteNoTenantITCount + externalSiteITCount,
+			wantRespCode:   http.StatusOK,
+			wantErr:        false,
+		},
+		{
+			// excludeUnallocated applies only to the tenant query, never the provider query.
+			// A user with both provider and tenant roles always sees their full owned inventory as a provider (including
+			// unallocated ITs), while the tenant query is filtered to only return ITs with an
+			// active allocation. For ITs the provider owns, excludeUnallocated has no effect —
+			// they appear from the provider query regardless.
+			//
+			// Setup: orgITCount=4 ITs total on orgSite, 1 has an AllocationConstraint for
+			// orgTenant (orgAllocatedIT), 3 do not.
+			//
+			// Expected: provider query contributes orgSite + orgSiteNoTenant ITs; tenant query with excludeUnallocated
+			// only adds the allocated IT (subset of orgSite). Merge union equals provider-side count.
+			name: "get all Instance Types for org with both provider and tenant roles with excludeUnallocated (provider query unaffected)",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        &tmocks.Client{},
+				cfg:       cfg,
+			},
+			args: args{
+				org: orgName,
+				query: url.Values{
+					"excludeUnallocated": []string{"true"},
+				},
+				user: orgUser,
+			},
+			wantCount:      orgITCount + orgSiteNoTenantITCount,
+			wantTotalCount: orgITCount + orgSiteNoTenantITCount,
+			wantRespCode:   http.StatusOK,
+			wantErr:        false,
+		},
+		{
+			// Dual-role user queries with siteId pointing to a site owned by a DIFFERENT provider.
+			// The provider perspective should be silently skipped (site not owned by orgProvider),
+			// while the tenant perspective succeeds via TenantSite association.
+			// Before the fix this returned 403 because the provider block's hard return killed the handler.
+			name: "get all Instance Types for dual-role org with siteId owned by different provider (tenant perspective succeeds)",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        &tmocks.Client{},
+				cfg:       cfg,
+			},
+			args: args{
+				org: orgName,
+				query: url.Values{
+					"siteId": []string{externalSite.ID.String()},
+				},
+				user: orgUser,
+			},
+			wantCount:      externalSiteITCount,
+			wantTotalCount: externalSiteITCount,
+			wantRespCode:   http.StatusOK,
+			wantErr:        false,
+		},
+		{
+			// Dual-role user queries with siteId pointing to a site owned by orgProvider,
+			// but where orgTenant does NOT have a TenantSite association.
+			// The tenant perspective should be silently skipped, while the provider
+			// perspective succeeds and returns instance types.
+			// Before the fix this returned 403 because the tenant block's hard return discarded provider results.
+			name: "get all Instance Types for dual-role org with siteId where tenant has no TenantSite (provider perspective succeeds)",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        &tmocks.Client{},
+				cfg:       cfg,
+			},
+			args: args{
+				org: orgName,
+				query: url.Values{
+					"siteId": []string{orgSiteNoTenant.ID.String()},
+				},
+				user: orgUser,
+			},
+			wantCount:      orgSiteNoTenantITCount,
+			wantTotalCount: orgSiteNoTenantITCount,
+			wantRespCode:   http.StatusOK,
+			wantErr:        false,
+		},
+		{
+			// Dual-role user queries with siteId pointing to a site that neither their
+			// provider owns nor their tenant has a TenantSite association with.
+			// Both perspectives should be skipped, resulting in an empty result set (200 OK, 0 items).
+			name: "get all Instance Types for dual-role org with siteId accessible by neither perspective (empty result)",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        &tmocks.Client{},
+				cfg:       cfg,
+			},
+			args: args{
+				org: orgName,
+				query: url.Values{
+					"siteId": []string{st3.ID.String()},
+				},
+				user: orgUser,
+			},
+			wantCount:      0,
+			wantTotalCount: 0,
 			wantRespCode:   http.StatusOK,
 			wantErr:        false,
 		},

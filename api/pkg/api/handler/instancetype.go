@@ -30,6 +30,7 @@ import (
 	temporalClient "go.temporal.io/sdk/client"
 	tp "go.temporal.io/sdk/temporal"
 
+	mapset "github.com/deckarep/golang-set/v2"
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/google/uuid"
 
@@ -495,19 +496,20 @@ func NewGetAllInstanceTypeHandler(dbSession *cdb.Session, tc temporalClient.Clie
 
 // Handle godoc
 // @Summary Get all Instance Types
-// @Description Get all Instance Types for a given Site
+// @Description Get all Instance Types relevant to current org
 // @Tags instancetype
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
 // @Param org path string true "Name of NGC organization"
-// @Param siteId query string true "ID of Site"
-// @Param infrastructureProviderId query string true "ID of Infrastructure Provider"
-// @Param tenantId query string true "ID of Tenant"
+// @Param siteId query string false "ID of Site"
+// @Param infrastructureProviderId query string false "Deprecated: ID of Infrastructure Provider"
+// @Param tenantId query string false "Deprecated: ID of Tenant"
 // @Param status query string false "Query input for status"
 // @Param query query string false "Query input for full text search"
 // @Param includeAllocationStats query boolean false "Allocation stats to include in response"
-// @Param includeMachineAssignment query boolean false "Machine associations entity to include in response"
+// @Param includeMachineAssignment query boolean false "Machine associations entity to include in response (Provider only)"
+// @Param excludeUnallocated query boolean false "Exclude unallocated Instance Types (Tenant only)"
 // @Param includeRelation query string false "Related entities to include in response e.g. 'InfrastructureProvider', 'Tenant', 'Site'"
 // @Param pageNumber query integer false "Page number of results returned"
 // @Param pageSize query integer false "Number of results per page"
@@ -523,21 +525,9 @@ func (gaith GetAllInstanceTypeHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
-	// Validate org
-	ok, err := auth.ValidateOrgMembership(dbUser, org)
-	if !ok {
-		if err != nil {
-			logger.Error().Err(err).Msg("error validating org membership for User in request")
-		} else {
-			logger.Warn().Msg("could not validate org membership for user, access denied")
-		}
-		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
-	}
-
-	// Validate paginantion request
-	// Bind request data to API model
+	// Validate pagination request
 	pageRequest := pagination.PageRequest{}
-	err = c.Bind(&pageRequest)
+	err := c.Bind(&pageRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding pagination request data into API model")
 		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request pagination data", nil)
@@ -631,95 +621,112 @@ func (gaith GetAllInstanceTypeHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
 	}
 
-	// Validate role, user must be either Provider or Tenant Admin to retrieve a Site
-	isProviderRequest, orgProvider, orgTenant, apiErr := common.GetIsProviderRequest(ctx, logger, gaith.dbSession, org, dbUser,
-		[]string{auth.ProviderAdminRole, auth.ProviderViewerRole}, []string{auth.TenantAdminRole}, c.QueryParams())
+	provider, tenant, apiErr := common.IsProviderOrTenant(ctx, logger, gaith.dbSession, org, dbUser, true, false)
 	if apiErr != nil {
-		return c.JSON(apiErr.Code, apiErr)
+		return cutil.NewAPIErrorResponse(c, apiErr.Code, apiErr.Message, apiErr.Data)
 	}
 
-	// Check Provider/Tenant's ability to make this request
-	tsDAO := cdbm.NewTenantSiteDAO(gaith.dbSession)
+	// Perspective-specific query param restrictions
+	if includeMachineAssignment && provider == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Only Provider can specify query param `includeMachineAssignment`", nil)
+	}
+	if excludeUnallocated && tenant == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Only Tenant can specify query param `excludeUnallocated`", nil)
+	}
 
-	var siteIDs []uuid.UUID
+	// Collect instance type IDs from both Provider and Tenant perspectives
+	itDAO := cdbm.NewInstanceTypeDAO(gaith.dbSession)
+	tsDAO := cdbm.NewTenantSiteDAO(gaith.dbSession)
+	mergedInstanceTypeIDs := mapset.NewSet[uuid.UUID]()
+
 	var tenantID *uuid.UUID
 
-	// We'll need this later to filter instance types by provider
-	// if the request is a provider request but they've _not_ specified
-	// site IDs.
-	var infrastructureProviderID *uuid.UUID
-
-	if isProviderRequest {
-		infrastructureProviderID = &orgProvider.ID
-		if st != nil {
-			// Check if Provider is associated with Site only if stID is available in the request.
-			if st.InfrastructureProviderID != orgProvider.ID {
-				return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Provider is not associated with Site specified in query", nil)
+	if provider != nil {
+		providerSiteMatch := st == nil || st.InfrastructureProviderID == provider.ID
+		if !providerSiteMatch {
+			logger.Info().Msg("skipping provider perspective: site not owned by provider")
+		} else {
+			var providerSiteIDs []uuid.UUID
+			if st != nil {
+				providerSiteIDs = []uuid.UUID{*stID}
 			}
 
-			siteIDs = []uuid.UUID{*stID}
+			providerFilter := cdbm.InstanceTypeFilterInput{
+				InfrastructureProviderID: &provider.ID,
+				SiteIDs:                  providerSiteIDs,
+				Status:                   status,
+				SearchQuery:              searchQuery,
+			}
+			providerInstanceTypes, _, err := itDAO.GetAll(ctx, nil, providerFilter, nil, nil, cdb.GetIntPtr(cdbp.TotalLimit), nil)
+			if err != nil {
+				logger.Error().Err(err).Msg("error retrieving Instance Types from Provider perspective")
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Instance Types, DB error", nil)
+			}
+			for _, it := range providerInstanceTypes {
+				mergedInstanceTypeIDs.Add(it.ID)
+			}
 		}
-	} else {
-		// for Tenants
+	}
+
+	if tenant != nil {
+		tenantID = &tenant.ID
+
+		var tenantSiteIDs []uuid.UUID
+		skipTenantQuery := false
 		if stID == nil {
-			// siteId has not been provided in the request
-			tss, _, err := tsDAO.GetAll(
-				ctx,
-				nil,
-				cdbm.TenantSiteFilterInput{
-					TenantIDs: []uuid.UUID{orgTenant.ID},
-				},
-				cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)},
-				nil,
-			)
+			tss, _, err := tsDAO.GetAll(ctx, nil, cdbm.TenantSiteFilterInput{
+				TenantIDs: []uuid.UUID{tenant.ID},
+			}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
 			if err != nil {
 				logger.Error().Err(err).Msg("error retrieving Tenant Site association from DB")
 				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant Site association", nil)
 			}
-
 			for _, ts := range tss {
-				siteIDs = append(siteIDs, ts.SiteID)
+				tenantSiteIDs = append(tenantSiteIDs, ts.SiteID)
+			}
+			if len(tenantSiteIDs) == 0 {
+				logger.Info().Msg("skipping tenant perspective: tenant has no site associations")
+				skipTenantQuery = true
 			}
 		} else {
-			// Check if Tenant is associated with Site
-			_, err = tsDAO.GetByTenantIDAndSiteID(ctx, nil, orgTenant.ID, *stID, nil)
+			_, err = tsDAO.GetByTenantIDAndSiteID(ctx, nil, tenant.ID, *stID, nil)
 			if err != nil {
 				if err == cdb.ErrDoesNotExist {
-					return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant is not associated with Site specified in query", nil)
+					logger.Info().Msg("skipping tenant perspective: tenant not associated with site")
+					skipTenantQuery = true
+				} else {
+					logger.Error().Err(err).Msg("error retrieving Tenant Site association from DB")
+					return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to determine if Tenant is associated with Site, DB error", nil)
 				}
-				logger.Error().Err(err).Msg("error retrieving Tenant Site association from DB")
-				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to determine if Tenant is associated with Site, DB error", nil)
+			} else {
+				tenantSiteIDs = []uuid.UUID{*stID}
 			}
-			siteIDs = []uuid.UUID{*stID}
 		}
 
-		// Check if `includeMachineAssignment` is being requested by Tenant Admin
-		if includeMachineAssignment {
-			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant cannot specify query param `includeMachineAssignment`", nil)
+		if !skipTenantQuery {
+			tenantFilter := cdbm.InstanceTypeFilterInput{
+				SiteIDs:     tenantSiteIDs,
+				Status:      status,
+				SearchQuery: searchQuery,
+			}
+			if excludeUnallocated {
+				tenantFilter.TenantIDs = []uuid.UUID{tenant.ID}
+			}
+			tenantInstanceTypes, _, err := itDAO.GetAll(ctx, nil, tenantFilter, nil, nil, cdb.GetIntPtr(cdbp.TotalLimit), nil)
+			if err != nil {
+				logger.Error().Err(err).Msg("error retrieving Instance Types from Tenant perspective")
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Instance Types, DB error", nil)
+			}
+			for _, it := range tenantInstanceTypes {
+				mergedInstanceTypeIDs.Add(it.ID)
+			}
 		}
-
-		tenantID = &orgTenant.ID
 	}
 
-	// Get all Instance Types
-	itDAO := cdbm.NewInstanceTypeDAO(gaith.dbSession)
-
-	// SiteIDs will be
-	// - Provider:
-	//		- If siteID not provided, we 'll return all sites associated with the Provider
-	//		- If siteID provided, we 'll return Instance Types for that Site
-	// - Tenant:
-	// 		- Either single siteID passed to the query
-	//		- All sites associated with the TenantID
-	filter := cdbm.InstanceTypeFilterInput{InfrastructureProviderID: infrastructureProviderID, SiteIDs: siteIDs, Status: status, SearchQuery: searchQuery}
-	if excludeUnallocated {
-		if tenantID == nil {
-			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Only Tenant can specify query param `excludeUnallocated`", nil)
-		}
-		filter.TenantIDs = []uuid.UUID{*tenantID}
-	}
-
-	its, total, err := itDAO.GetAll(ctx, nil, filter, qIncludeRelations, pageRequest.Offset, pageRequest.Limit, pageRequest.OrderBy)
+	// Final paginated query using the merged instance type IDs
+	its, total, err := itDAO.GetAll(ctx, nil, cdbm.InstanceTypeFilterInput{
+		InstanceTypeIDs: mergedInstanceTypeIDs.ToSlice(),
+	}, qIncludeRelations, pageRequest.Offset, pageRequest.Limit, pageRequest.OrderBy)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Instance Types for Site specified in query")
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Instance Types for Site in query", nil)
@@ -767,10 +774,18 @@ func (gaith GetAllInstanceTypeHandler) Handle(c echo.Context) error {
 	}
 	var mit []cdbm.MachineInstanceType
 	if includeMachineAssignment {
-		mit, _, err = mitDAO.GetAll(ctx, nil, nil, itIDs, nil, nil, cdb.GetIntPtr(cdbp.TotalLimit), nil)
-		if err != nil {
-			logger.Error().Err(err).Msg("error retrieving Machine assignments for Instance Type")
-			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve  Machine assignments for Instance Type", nil)
+		mitIDs := make([]uuid.UUID, 0, len(its))
+		for i := range its {
+			if its[i].InfrastructureProviderID == provider.ID {
+				mitIDs = append(mitIDs, its[i].ID)
+			}
+		}
+		if len(mitIDs) > 0 {
+			mit, _, err = mitDAO.GetAll(ctx, nil, nil, mitIDs, nil, nil, cdb.GetIntPtr(cdbp.TotalLimit), nil)
+			if err != nil {
+				logger.Error().Err(err).Msg("error retrieving Machine assignments for Instance Type")
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve  Machine assignments for Instance Type", nil)
+			}
 		}
 	}
 	instanceTypeIDsToMachineInstanceTypeMap := map[uuid.UUID][]cdbm.MachineInstanceType{}
@@ -836,7 +851,7 @@ func NewGetInstanceTypeHandler(dbSession *cdb.Session, tc temporalClient.Client,
 
 // Handle godoc
 // @Summary Get details of an Instance Type
-// @Description Get details of a specific Instance Type by ID
+// @Description Retrieve details of a specific Instance Type by ID
 // @Tags instancetype
 // @Accept json
 // @Produce json
@@ -844,7 +859,7 @@ func NewGetInstanceTypeHandler(dbSession *cdb.Session, tc temporalClient.Client,
 // @Param org path string true "Name of NGC organization"
 // @Param id query string true "ID of Instance Type"
 // @Param includeAllocationStats query boolean false "Allocation stats to include in response"
-// @Param includeMachineAssignment query boolean false "Machine associations entity to include in response"
+// @Param includeMachineAssignment query boolean false "Machine associations entity to include in response (Provider only)"
 // @Param includeRelation query string false "Related entities to include in response e.g. 'InfrastructureProvider', 'Site'"
 // @Success 200 {object} []model.APIInstanceType
 // @Router /v2/org/{org}/carbide/instance/type/{id} [get]
@@ -855,17 +870,6 @@ func (gith GetInstanceTypeHandler) Handle(c echo.Context) error {
 	}
 	if dbUser == nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
-	}
-
-	// Validate org
-	ok, err := auth.ValidateOrgMembership(dbUser, org)
-	if !ok {
-		if err != nil {
-			logger.Error().Err(err).Msg("error validating org membership for User in request")
-		} else {
-			logger.Warn().Msg("could not validate org membership for user, access denied")
-		}
-		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
 	}
 
 	// Get Instance Type ID
@@ -906,11 +910,13 @@ func (gith GetInstanceTypeHandler) Handle(c echo.Context) error {
 		}
 	}
 
-	// Validate role, user must be either Provider or Tenant Admin to retrieve a Site
-	isProviderRequest, orgProvider, orgTenant, apiErr := common.GetIsProviderRequest(ctx, logger, gith.dbSession, org, dbUser,
-		[]string{auth.ProviderAdminRole, auth.ProviderViewerRole}, []string{auth.TenantAdminRole}, c.QueryParams())
+	provider, tenant, apiErr := common.IsProviderOrTenant(ctx, logger, gith.dbSession, org, dbUser, true, false)
 	if apiErr != nil {
-		return c.JSON(apiErr.Code, apiErr)
+		return cutil.NewAPIErrorResponse(c, apiErr.Code, apiErr.Message, apiErr.Data)
+	}
+
+	if includeMachineAssignment && provider == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Only Provider can specify query param `includeMachineAssignment`", nil)
 	}
 
 	// Get Instance Type
@@ -925,33 +931,31 @@ func (gith GetInstanceTypeHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Instance Type", nil)
 	}
 
-	// Check Provider/Tenant's ability to make this request
+	// Check if Instance Type is associated with Provider or Tenant.
+	// Provider check is a direct ID comparison; tenant check requires a TenantSite DB lookup
+	// since tenants access instance types via site association, not direct ownership.
 	tsDAO := cdbm.NewTenantSiteDAO(gith.dbSession)
-
 	var tenantID *uuid.UUID
 
-	if isProviderRequest {
-		// Check if Provider is associated with Site
-		if it.InfrastructureProviderID != orgProvider.ID {
-			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Provider is not associated with this Instance Type", nil)
-		}
-	} else {
-		// Check if Tenant is associated with Site
-		_, err = tsDAO.GetByTenantIDAndSiteID(ctx, nil, orgTenant.ID, *it.SiteID, nil)
-		if err != nil {
-			if err == cdb.ErrDoesNotExist {
-				return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant is not associated with Site the Instance Type belongs to", nil)
-			}
+	authorizedViaProvider := provider != nil && it.InfrastructureProviderID == provider.ID
+
+	if authorizedViaProvider {
+		// authorized via provider ownership — fall through
+	} else if tenant != nil && it.SiteID != nil {
+		_, err = tsDAO.GetByTenantIDAndSiteID(ctx, nil, tenant.ID, *it.SiteID, nil)
+		if err == cdb.ErrDoesNotExist {
+			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Instance Type is not associated with org", nil)
+		} else if err != nil {
 			logger.Error().Err(err).Msg("error retrieving Tenant Site association from DB")
-			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to determine if Tenant ha saccess to Instance Type, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to determine if Tenant has access to Instance Type, DB error", nil)
 		}
+		tenantID = &tenant.ID
+	} else {
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Instance Type is not associated with org", nil)
+	}
 
-		// Check if `includeMachineAssignment` is being requested by Tenant Admin
-		if includeMachineAssignment {
-			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant cannot specify query param `includeMachineAssignment`", nil)
-		}
-
-		tenantID = &orgTenant.ID
+	if includeMachineAssignment && !authorizedViaProvider {
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Only Provider can specify query param `includeMachineAssignment`", nil)
 	}
 
 	// Get Instance Type status details

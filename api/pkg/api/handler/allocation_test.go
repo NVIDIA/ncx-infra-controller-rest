@@ -797,6 +797,30 @@ func TestAllocationHandler_GetAll(t *testing.T) {
 		common.TestBuildStatusDetail(t, dbSession, alID.String(), cdbm.AllocationStatusRegistered, cdb.GetStrPtr("Allocation is now registered"))
 	}
 
+	// Org with both Provider and Tenant roles: same org acts as its own infrastructure provider and tenant
+	orgName := "test-provider-and-tenant-org"
+	orgRoles := []string{"FORGE_PROVIDER_ADMIN", "FORGE_TENANT_ADMIN"}
+	orgUser := testMachineBuildUser(t, dbSession, uuid.New().String(), []string{orgName}, orgRoles)
+	orgProvider := common.TestBuildInfrastructureProvider(t, dbSession, "test-org-provider", orgName, orgUser)
+	orgSite := testIPBlockBuildSite(t, dbSession, orgProvider, "test-org-site", cdbm.SiteStatusRegistered, true, orgUser)
+	orgTenant := common.TestBuildTenantWithDisplayName(t, dbSession, "test-org-tenant", orgName, orgUser, "Test Org Tenant")
+
+	orgAllocCount := 5
+	for i := 0; i < orgAllocCount; i++ {
+		itTmp := testMachineBuildInstanceType(t, dbSession, orgProvider, orgSite, fmt.Sprintf("test-org-instance-type-%02d", i))
+		for j := 1; j <= 2; j++ {
+			mc := testInstanceBuildMachine(t, dbSession, orgProvider.ID, orgSite.ID, cdb.GetBoolPtr(false), nil)
+			mcinst := testInstanceBuildMachineInstanceType(t, dbSession, mc, itTmp)
+			assert.NotNil(t, mcinst)
+		}
+		acOrg := model.APIAllocationConstraintCreateRequest{ResourceType: cdbm.AllocationResourceTypeInstanceType, ResourceTypeID: itTmp.ID.String(), ConstraintType: cdbm.AllocationConstraintTypeReserved, ConstraintValue: 1}
+		orgBody, err := json.Marshal(model.APIAllocationCreateRequest{Name: fmt.Sprintf("org-allocation-%02d", i), Description: cdb.GetStrPtr(""), TenantID: orgTenant.ID.String(), SiteID: orgSite.ID.String(), AllocationConstraints: []model.APIAllocationConstraintCreateRequest{acOrg}})
+		assert.Nil(t, err)
+		orgAl := testCreateAllocation(t, dbSession, ipamStorage, orgUser, orgName, string(orgBody))
+		assert.NotNil(t, orgAl)
+		common.TestBuildStatusDetail(t, dbSession, orgAl.ID, cdbm.AllocationStatusRegistered, cdb.GetStrPtr("Allocation is now registered"))
+	}
+
 	// OTEL Spanner configuration
 	tracer, _, ctx := common.TestCommonTraceProviderSetup(t, ctx)
 
@@ -845,60 +869,27 @@ func TestAllocationHandler_GetAll(t *testing.T) {
 			expectedStatus: http.StatusForbidden,
 		},
 		{
-			name:           "error when infrastructure provider and tenant not specified",
+			name:           "success when no provider or tenant query params specified (inferred from org)",
 			reqOrgName:     tnOrg1,
 			user:           tnu,
 			querySiteIDs:   []string{site1.ID.String()},
-			expectedErr:    true,
-			expectedStatus: http.StatusBadRequest,
+			expectedErr:    false,
+			expectedStatus: http.StatusOK,
+			expectedCnt:    paginator.DefaultLimit,
+			expectedTotal:  &totalCount,
 		},
 		{
-			name:                          "error when infrastructure provider not valid uuid",
-			reqOrgName:                    ipOrg1,
-			user:                          ipu,
-			queryInfrastructureProviderID: cdb.GetStrPtr("non-uuid"),
-			expectedErr:                   true,
-			expectedStatus:                http.StatusBadRequest,
-		},
-		{
-			name:                          "error when infrastructure provider not found for org",
-			reqOrgName:                    ipOrg3,
-			user:                          ipu,
-			queryInfrastructureProviderID: cdb.GetStrPtr(ip.ID.String()),
-			expectedErr:                   true,
-			expectedStatus:                http.StatusBadRequest,
-		},
-		{
-			name:                          "error when infrastructure provider in url doesnt match org",
-			reqOrgName:                    ipOrg1,
-			user:                          ipu,
-			queryInfrastructureProviderID: cdb.GetStrPtr(uuid.New().String()),
-			expectedErr:                   true,
-			expectedStatus:                http.StatusBadRequest,
-		},
-		{
-			name:           "error when tenant id not valid uuid",
-			reqOrgName:     tnOrg1,
-			user:           tnu,
-			queryTenantIDs: []string{"non-uuid"},
-			expectedErr:    true,
-			expectedStatus: http.StatusBadRequest,
-		},
-		{
-			name:           "error when tenant not found for org",
-			reqOrgName:     tnOrg2,
-			user:           tnu,
-			queryTenantIDs: []string{tenant1.ID.String()},
-			expectedErr:    true,
-			expectedStatus: http.StatusBadRequest,
-		},
-		{
-			name:           "error when tenant id in url doesnt match org",
-			reqOrgName:     tnOrg1,
-			user:           tnu,
-			queryTenantIDs: []string{uuid.New().String()},
-			expectedErr:    true,
-			expectedStatus: http.StatusBadRequest,
+			// Org has both Provider and Tenant roles. Every allocation has
+			// InfrastructureProviderID = orgProvider and TenantID = orgTenant, so it appears in both
+			// the provider and tenant DB queries. The mapset must deduplicate them so the response
+			// contains exactly orgAllocCount unique allocations, not 2×orgAllocCount.
+			name:           "success when org has both provider and tenant roles (results deduplicated)",
+			reqOrgName:     orgName,
+			user:           orgUser,
+			expectedErr:    false,
+			expectedStatus: http.StatusOK,
+			expectedCnt:    orgAllocCount,
+			expectedTotal:  &orgAllocCount,
 		},
 		{
 			name:           "error when site id not valid uuid",
@@ -1565,7 +1556,7 @@ func TestAllocationHandler_GetByID(t *testing.T) {
 	assert.NotNil(t, site)
 
 	tenant1 := common.TestBuildTenant(t, dbSession, "test-tenant-1", tnOrg1, tnu)
-	tenant2 := common.TestBuildTenant(t, dbSession, "test-tenant-2", tnOrg2, tnu)
+	_ = common.TestBuildTenant(t, dbSession, "test-tenant-2", tnOrg2, tnu)
 
 	cfg := common.GetTestConfig()
 	tempClient := &tmocks.Client{}
@@ -1635,14 +1626,6 @@ func TestAllocationHandler_GetByID(t *testing.T) {
 			expectedStatus: http.StatusForbidden,
 		},
 		{
-			name:           "error when infrastructure provider and tenant not specified",
-			reqOrgName:     tnOrg1,
-			user:           tnu,
-			aID:            aIT.ID,
-			expectedErr:    true,
-			expectedStatus: http.StatusBadRequest,
-		},
-		{
 			name:           "error when allocation id is invalid uuid",
 			reqOrgName:     tnOrg1,
 			user:           tnu,
@@ -1659,85 +1642,20 @@ func TestAllocationHandler_GetByID(t *testing.T) {
 			expectedStatus: http.StatusNotFound,
 		},
 		{
-			name:                          "error when infrastructure provider not valid uuid",
-			reqOrgName:                    ipOrg1,
-			user:                          ipu,
-			aID:                           aIT.ID,
-			queryInfrastructureProviderID: cdb.GetStrPtr("non-uuid"),
-			expectedErr:                   true,
-			expectedStatus:                http.StatusBadRequest,
+			name:           "error when provider in org doesnt match allocation",
+			reqOrgName:     ipOrg2,
+			user:           ipu,
+			aID:            aIT.ID,
+			expectedErr:    true,
+			expectedStatus: http.StatusForbidden,
 		},
 		{
-			name:                          "error when infrastructure provider not found for org",
-			reqOrgName:                    ipOrg3,
-			user:                          ipu,
-			aID:                           aIT.ID,
-			queryInfrastructureProviderID: cdb.GetStrPtr(ip.ID.String()),
-			expectedErr:                   true,
-			expectedStatus:                http.StatusBadRequest,
-		},
-		{
-			name:                          "error when infrastructure provider in url doesnt match org",
-			reqOrgName:                    ipOrg1,
-			user:                          ipu,
-			aID:                           aIT.ID,
-			queryInfrastructureProviderID: cdb.GetStrPtr(uuid.New().String()),
-			expectedErr:                   true,
-			expectedStatus:                http.StatusNotFound,
-		},
-		{
-			name:                          "error when infrastructure provider in org doesnt match infrastructure provider in allocation",
-			reqOrgName:                    ipOrg2,
-			user:                          ipu,
-			aID:                           aIT.ID,
-			queryInfrastructureProviderID: cdb.GetStrPtr(ip2.ID.String()),
-			expectedErr:                   true,
-			expectedStatus:                http.StatusNotFound,
-		},
-		{
-			name:           "error when tenant id not valid uuid",
+			name:           "error when user does not have valid role",
 			reqOrgName:     ipOrg1,
-			user:           ipu,
+			user:           nru,
 			aID:            aIT.ID,
-			queryTenantID:  cdb.GetStrPtr("non-uuid"),
 			expectedErr:    true,
-			expectedStatus: http.StatusBadRequest,
-		},
-		{
-			name:           "error when tenant not found for org",
-			reqOrgName:     ipOrg3,
-			user:           ipu,
-			aID:            aIT.ID,
-			queryTenantID:  cdb.GetStrPtr(uuid.New().String()),
-			expectedErr:    true,
-			expectedStatus: http.StatusNotFound,
-		},
-		{
-			name:           "error when tenant id in url doesnt match tenant in org",
-			reqOrgName:     tnOrg1,
-			user:           tnu,
-			aID:            aIT.ID,
-			queryTenantID:  cdb.GetStrPtr(uuid.New().String()),
-			expectedErr:    true,
-			expectedStatus: http.StatusNotFound,
-		},
-		{
-			name:           "error when tenant in org doesnt match tenant in allocation",
-			reqOrgName:     tnOrg2,
-			user:           tnu,
-			aID:            aIT.ID,
-			queryTenantID:  cdb.GetStrPtr(tenant2.ID.String()),
-			expectedErr:    true,
-			expectedStatus: http.StatusNotFound,
-		},
-		{
-			name:                          "error when user does not have valid role",
-			reqOrgName:                    ipOrg1,
-			user:                          nru,
-			aID:                           aIT.ID,
-			queryInfrastructureProviderID: cdb.GetStrPtr(ip.ID.String()),
-			expectedErr:                   true,
-			expectedStatus:                http.StatusForbidden,
+			expectedStatus: http.StatusForbidden,
 		},
 		{
 			name:                          "success when infrastructure provider id is specified",
