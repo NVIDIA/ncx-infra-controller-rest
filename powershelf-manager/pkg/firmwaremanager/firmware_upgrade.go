@@ -51,7 +51,7 @@ type UpgradeRule interface {
 	summary() string
 }
 
-// LiteonUpgradeRule allows only direct upgrades where the device’s current version equals the edge’s source.
+// LiteonUpgradeRule allows only direct upgrades where the device's current version equals the edge's source.
 type LiteonUpgradeRule struct{}
 
 func (r LiteonUpgradeRule) isAllowed(currentFw firmwareVersion, upgrade FirmwareUpgrade) bool {
@@ -62,11 +62,24 @@ func (r LiteonUpgradeRule) summary() string {
 	return "Liteon upgrade rule: only direct upgrades supported"
 }
 
-// newUpgradeRule returns the vendor’s rule set or an error if the vendor is unsupported.
+// DeltaUpgradeRule allows only direct upgrades where the device's current version equals the edge's source.
+type DeltaUpgradeRule struct{}
+
+func (r DeltaUpgradeRule) isAllowed(currentFw firmwareVersion, upgrade FirmwareUpgrade) bool {
+	return currentFw.cmp(upgrade.from) == 0
+}
+
+func (r DeltaUpgradeRule) summary() string {
+	return "Delta upgrade rule: only direct upgrades supported"
+}
+
+// newUpgradeRule returns the vendor's rule set or an error if the vendor is unsupported.
 func newUpgradeRule(v vendor.Vendor) (UpgradeRule, error) {
 	switch v.Code {
 	case vendor.VendorCodeLiteon:
 		return LiteonUpgradeRule{}, nil
+	case vendor.VendorCodeDelta:
+		return DeltaUpgradeRule{}, nil
 	default:
 		return nil, v.IsSupported()
 	}
