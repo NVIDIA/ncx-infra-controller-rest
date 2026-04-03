@@ -684,6 +684,10 @@ func (gaith GetAllInstanceTypeHandler) Handle(c echo.Context) error {
 			for _, ts := range tss {
 				tenantSiteIDs = append(tenantSiteIDs, ts.SiteID)
 			}
+			if len(tenantSiteIDs) == 0 {
+				logger.Info().Msg("skipping tenant perspective: tenant has no site associations")
+				skipTenantQuery = true
+			}
 		} else {
 			_, err = tsDAO.GetByTenantIDAndSiteID(ctx, nil, tenant.ID, *stID, nil)
 			if err != nil {
