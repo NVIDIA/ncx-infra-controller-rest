@@ -74,6 +74,7 @@ type SSHKeyGroupInterface interface {
 // InfiniBandPartitionInterface - interface containing workflows for managing InfiniBandPartition configs
 type InfiniBandPartitionInterface interface {
 	CreateInfiniBandPartition(ctx workflow.Context, transactionID *wflows.TransactionID, resourceRequest *wflows.CreateInfiniBandPartitionRequest) (err error)
+	UpdateInfiniBandPartition(ctx workflow.Context, transactionID *wflows.TransactionID, resourceRequest *wflows.UpdateInfiniBandPartitionRequest) (err error)
 	GetInfiniBandPartition(ctx workflow.Context, transactionID *wflows.TransactionID, resourceRequest *wflows.GetInfiniBandPartitionRequest) (err error)
 	DeleteInfiniBandPartition(ctx workflow.Context, transactionID *wflows.TransactionID, resourceRequest *wflows.DeleteInfiniBandPartitionRequest) (err error)
 }
