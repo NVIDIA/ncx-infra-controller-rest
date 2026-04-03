@@ -20,6 +20,7 @@ package model
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 	"testing"
 	"time"
 
@@ -84,6 +85,37 @@ func TestNewAPIInstance(t *testing.T) {
 		Status:      cdbm.InterfaceStatusPending,
 		Created:     time.Now(),
 		Updated:     time.Now(),
+	}
+
+	secondaryVpcID1 := uuid.New()
+	secondaryVpcID2 := uuid.New()
+
+	dbis1Secondary1 := cdbm.Interface{
+		ID:          uuid.New(),
+		InstanceID:  dbi1.ID,
+		VpcPrefixID: cdb.GetUUIDPtr(uuid.New()),
+		VpcPrefix: &cdbm.VpcPrefix{
+			ID:    uuid.New(),
+			VpcID: secondaryVpcID1,
+		},
+		IsPhysical: false,
+		Status:     cdbm.InterfaceStatusPending,
+		Created:    time.Now(),
+		Updated:    time.Now(),
+	}
+
+	dbis1Secondary2 := cdbm.Interface{
+		ID:          uuid.New(),
+		InstanceID:  dbi1.ID,
+		VpcPrefixID: cdb.GetUUIDPtr(uuid.New()),
+		VpcPrefix: &cdbm.VpcPrefix{
+			ID:    uuid.New(),
+			VpcID: secondaryVpcID2,
+		},
+		IsPhysical: false,
+		Status:     cdbm.InterfaceStatusPending,
+		Created:    time.Now(),
+		Updated:    time.Now(),
 	}
 
 	dbibi1 := cdbm.InfiniBandInterface{
@@ -201,14 +233,15 @@ func TestNewAPIInstance(t *testing.T) {
 	}
 
 	type args struct {
-		dbic   *cdbm.Instance
-		dbs    *cdbm.Site
-		dbsds  []cdbm.StatusDetail
-		dbis   []cdbm.Interface
-		dbibi  []cdbm.InfiniBandInterface
-		dbdesd []cdbm.DpuExtensionServiceDeployment
-		dbnvl  []cdbm.NVLinkInterface
-		dbskg  []cdbm.SSHKeyGroup
+		dbic                    *cdbm.Instance
+		dbs                     *cdbm.Site
+		dbsds                   []cdbm.StatusDetail
+		dbis                    []cdbm.Interface
+		dbibi                   []cdbm.InfiniBandInterface
+		dbdesd                  []cdbm.DpuExtensionServiceDeployment
+		dbnvl                   []cdbm.NVLinkInterface
+		dbskg                   []cdbm.SSHKeyGroup
+		expectedSecondaryVpcIDs []string
 	}
 	tests := []struct {
 		name string
@@ -217,13 +250,14 @@ func TestNewAPIInstance(t *testing.T) {
 		{
 			name: "test new API Instance initializer",
 			args: args{
-				dbic:  dbi1,
-				dbs:   dbs,
-				dbsds: []cdbm.StatusDetail{dbsd1},
-				dbis:  []cdbm.Interface{dbis1},
-				dbibi: []cdbm.InfiniBandInterface{dbibi1},
-				dbnvl: []cdbm.NVLinkInterface{dbnvl1},
-				dbskg: []cdbm.SSHKeyGroup{dbskg, dbskg2},
+				dbic:                    dbi1,
+				dbs:                     dbs,
+				dbsds:                   []cdbm.StatusDetail{dbsd1},
+				dbis:                    []cdbm.Interface{dbis1, dbis1Secondary2, dbis1Secondary1},
+				dbibi:                   []cdbm.InfiniBandInterface{dbibi1},
+				dbnvl:                   []cdbm.NVLinkInterface{dbnvl1},
+				dbskg:                   []cdbm.SSHKeyGroup{dbskg, dbskg2},
+				expectedSecondaryVpcIDs: []string{secondaryVpcID1.String(), secondaryVpcID2.String()},
 			},
 		},
 		{
@@ -240,6 +274,11 @@ func TestNewAPIInstance(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := NewAPIInstance(tt.args.dbic, tt.args.dbs, tt.args.dbis, tt.args.dbibi, tt.args.dbdesd, tt.args.dbnvl, tt.args.dbskg, tt.args.dbsds)
+			marshalled, err := json.Marshal(got)
+			assert.NoError(t, err)
+			var roundTripped APIInstance
+			err = json.Unmarshal(marshalled, &roundTripped)
+			assert.NoError(t, err)
 
 			assert.Equal(t, tt.args.dbic.ID.String(), got.ID)
 			assert.Equal(t, tt.args.dbic.Name, got.Name)
@@ -264,6 +303,12 @@ func TestNewAPIInstance(t *testing.T) {
 
 			if got.Labels != nil {
 				assert.Equal(t, tt.args.dbic.Labels, got.Labels)
+			}
+
+			if tt.args.expectedSecondaryVpcIDs != nil {
+				expectedSecondaryVpcIDs := slices.Clone(tt.args.expectedSecondaryVpcIDs)
+				slices.Sort(expectedSecondaryVpcIDs)
+				assert.Equal(t, expectedSecondaryVpcIDs, roundTripped.SecondaryVpcIDs)
 			}
 
 			if tt.args.dbic.PowerStatus != nil && *tt.args.dbic.PowerStatus != cdbm.InstancePowerStatusBootCompleted {
@@ -341,6 +386,7 @@ func TestAPIInstanceCreateRequest_Validate(t *testing.T) {
 		AllocationID                   string
 		InstanceTypeID                 string
 		VpcID                          string
+		SecondaryVpcIDs                []string
 		OperatingSystemID              *string
 		IpxeScript                     *string
 		UserData                       *string
@@ -851,6 +897,24 @@ func TestAPIInstanceCreateRequest_Validate(t *testing.T) {
 			wantErrorMessage: "label key must contain at least 1 character and a maximum of 255 characters.",
 		},
 		{
+			name: "test invalid Instance create request, secondary VPCs require vpcPrefix interfaces",
+			fields: fields{
+				Name:              "test-name",
+				TenantID:          uuid.NewString(),
+				InstanceTypeID:    uuid.NewString(),
+				VpcID:             uuid.NewString(),
+				SecondaryVpcIDs:   []string{uuid.NewString()},
+				OperatingSystemID: cdb.GetStrPtr(uuid.NewString()),
+				Interfaces: []APIInterfaceCreateOrUpdateRequest{
+					{
+						SubnetID: cdb.GetStrPtr(uuid.NewString()),
+					},
+				},
+			},
+			wantErr:          true,
+			wantErrorMessage: "`secondaryVpcIds` can only be specified when `vpcPrefixId` is specified within `interfaces`",
+		},
+		{
 			name: "test valid Instance create request, NVLink Interfaces specified",
 			fields: fields{
 				Name:              "test-name",
@@ -908,6 +972,7 @@ func TestAPIInstanceCreateRequest_Validate(t *testing.T) {
 				TenantID:                       tt.fields.TenantID,
 				InstanceTypeID:                 &tt.fields.InstanceTypeID,
 				VpcID:                          tt.fields.VpcID,
+				SecondaryVpcIDs:                tt.fields.SecondaryVpcIDs,
 				OperatingSystemID:              tt.fields.OperatingSystemID,
 				IpxeScript:                     tt.fields.IpxeScript,
 				UserData:                       tt.fields.UserData,
@@ -1396,6 +1461,7 @@ func TestAPIInstanceUpdateRequest_Validate(t *testing.T) {
 		UserData                 *string
 		PhoneHomeEnabled         *bool
 		AlwaysBootWithCustomIpxe *bool
+		SecondaryVpcIDs          []string
 		Interfaces               []APIInterfaceCreateOrUpdateRequest
 		InfiniBandInterfaces     []APIInfiniBandInterfaceCreateOrUpdateRequest
 		NVLinkInterfaces         []APINVLinkInterfaceCreateOrUpdateRequest
@@ -1417,6 +1483,7 @@ func TestAPIInstanceUpdateRequest_Validate(t *testing.T) {
 				IpxeScript:        cdb.GetStrPtr("#ipxe\ndefault"),
 				OperatingSystemID: cdb.GetStrPtr(uuid.NewString()),
 				PhoneHomeEnabled:  cdb.GetBoolPtr(true),
+				SecondaryVpcIDs:   []string{uuid.NewString()},
 				Interfaces: []APIInterfaceCreateOrUpdateRequest{
 					{
 						VpcPrefixID: cdb.GetStrPtr(uuid.NewString()),
@@ -1562,6 +1629,27 @@ func TestAPIInstanceUpdateRequest_Validate(t *testing.T) {
 			wantErr:           true,
 			wantUpdateRequest: cdb.GetBoolPtr(true),
 		},
+		{
+			name: "test invalid Instance update request, secondary VPCs require interfaces",
+			fields: fields{
+				SecondaryVpcIDs: []string{uuid.NewString()},
+			},
+			wantErr:           true,
+			wantUpdateRequest: cdb.GetBoolPtr(true),
+		},
+		{
+			name: "test invalid Instance update request, secondary VPCs require vpcPrefix interfaces",
+			fields: fields{
+				SecondaryVpcIDs: []string{uuid.NewString()},
+				Interfaces: []APIInterfaceCreateOrUpdateRequest{
+					{
+						SubnetID: cdb.GetStrPtr(uuid.NewString()),
+					},
+				},
+			},
+			wantErr:           true,
+			wantUpdateRequest: cdb.GetBoolPtr(true),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1577,6 +1665,7 @@ func TestAPIInstanceUpdateRequest_Validate(t *testing.T) {
 				UserData:                 tt.fields.UserData,
 				PhoneHomeEnabled:         tt.fields.PhoneHomeEnabled,
 				AlwaysBootWithCustomIpxe: tt.fields.AlwaysBootWithCustomIpxe,
+				SecondaryVpcIDs:          tt.fields.SecondaryVpcIDs,
 				Interfaces:               tt.fields.Interfaces,
 				InfiniBandInterfaces:     tt.fields.InfiniBandInterfaces,
 				NVLinkInterfaces:         tt.fields.NVLinkInterfaces,

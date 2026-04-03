@@ -747,7 +747,7 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 	assert.NotNil(t, mcmissing)
 	testUpdateMachineToMissing(t, dbSession, mcmissing)
 
-	alc1 := testInstanceSiteBuildAllocationContraints(t, dbSession, al1, cdbm.AllocationResourceTypeInstanceType, ist1.ID, cdbm.AllocationConstraintTypeReserved, 8, ipu)
+	alc1 := testInstanceSiteBuildAllocationContraints(t, dbSession, al1, cdbm.AllocationResourceTypeInstanceType, ist1.ID, cdbm.AllocationConstraintTypeReserved, 9, ipu)
 	assert.NotNil(t, alc1)
 
 	mc1 := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
@@ -777,6 +777,12 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 	mc18 := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
 	assert.NotNil(t, mc18)
 
+	mc19 := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
+	assert.NotNil(t, mc19)
+
+	mc20 := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
+	assert.NotNil(t, mc20)
+
 	mcinst12 := testInstanceBuildMachineInstanceType(t, dbSession, mc12, ist1)
 	assert.NotNil(t, mcinst12)
 
@@ -797,6 +803,12 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 
 	mcinst18 := testInstanceBuildMachineInstanceType(t, dbSession, mc18, ist1)
 	assert.NotNil(t, mcinst18)
+
+	mcinst19 := testInstanceBuildMachineInstanceType(t, dbSession, mc19, ist1)
+	assert.NotNil(t, mcinst19)
+
+	mcinst20 := testInstanceBuildMachineInstanceType(t, dbSession, mc20, ist1)
+	assert.NotNil(t, mcinst20)
 
 	// Tenant 1
 	os1 := testInstanceBuildOperatingSystem(t, dbSession, "test-operating-system-1", tn1, cdbm.OperatingSystemTypeIPXE, false, nil, true, cdbm.OperatingSystemStatusReady, tnu1)
@@ -1098,16 +1110,22 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 	// FNN VPC
 	vpc9 := testInstanceBuildVPC(t, dbSession, "test-vpc-9", ip, tn1, st1, cdb.GetUUIDPtr(uuid.New()), nil, cdb.GetStrPtr(cdbm.VpcFNN), nil, cdbm.VpcStatusReady, tnu1)
 	assert.NotNil(t, vpc9)
+	vpc9Site2 := testInstanceBuildVPC(t, dbSession, "test-vpc-9-site-2", ip, tn1, st2, cdb.GetUUIDPtr(uuid.New()), nil, cdb.GetStrPtr(cdbm.VpcFNN), nil, cdbm.VpcStatusReady, tnu1)
+	assert.NotNil(t, vpc9Site2)
 
 	// VPC prefix
 	ipb1 := common.TestBuildVpcPrefixIPBlock(t, dbSession, "testipb", st1, ip, &tn1.ID, cdbm.IPBlockRoutingTypeDatacenterOnly, "192.168.0.0", 24, cdbm.IPBlockProtocolVersionV4, false, cdbm.IPBlockStatusReady, tnu1)
 	assert.NotNil(t, ipb1)
 	ipb5 := common.TestBuildVpcPrefixIPBlock(t, dbSession, "testipb", st1, ip, &tn1.ID, cdbm.IPBlockRoutingTypeDatacenterOnly, "192.169.0.0", 24, cdbm.IPBlockProtocolVersionV4, false, cdbm.IPBlockStatusReady, tnu1)
 	assert.NotNil(t, ipb5)
+	ipbSite2 := common.TestBuildVpcPrefixIPBlock(t, dbSession, "testipb-site2", st2, ip, &tn1.ID, cdbm.IPBlockRoutingTypeDatacenterOnly, "192.170.0.0", 24, cdbm.IPBlockProtocolVersionV4, false, cdbm.IPBlockStatusReady, tnu1)
+	assert.NotNil(t, ipbSite2)
 	vpcPrefix1 := common.TestBuildVPCPrefix(t, dbSession, "test-vpcprefix-1", st1, tn1, vpc9.ID, &ipb1.ID, cdb.GetStrPtr("192.168.0.0/24"), cdb.GetIntPtr(24), cdbm.VpcPrefixStatusReady, tnu1)
 	vpcPrefix3 := common.TestBuildVPCPrefix(t, dbSession, "test-vpcprefix-3", st1, tn1, vpc1.ID, &ipb1.ID, cdb.GetStrPtr("192.168.0.0/24"), cdb.GetIntPtr(24), cdbm.VpcPrefixStatusReady, tnu1)
 	vpcPrefix5 := common.TestBuildVPCPrefix(t, dbSession, "test-vpcprefix-5", st1, tn1, vpc9.ID, &ipb5.ID, cdb.GetStrPtr("192.168.0.0/24"), cdb.GetIntPtr(24), cdbm.VpcPrefixStatusReady, tnu1)
 	vpcPrefix7 := common.TestBuildVPCPrefix(t, dbSession, "test-vpcprefix-7", st1, tn1, vpc9.ID, &ipb5.ID, cdb.GetStrPtr("192.168.0.0/24"), cdb.GetIntPtr(24), cdbm.VpcPrefixStatusReady, tnu1)
+	vpcPrefixSite2 := common.TestBuildVPCPrefix(t, dbSession, "test-vpcprefix-site2", st2, tn1, vpc9Site2.ID, &ipbSite2.ID, cdb.GetStrPtr("192.170.0.0/24"), cdb.GetIntPtr(24), cdbm.VpcPrefixStatusReady, tnu1)
+	assert.NotNil(t, vpcPrefixSite2)
 	/*
 		inst4 := testInstanceBuildInstance(t, dbSession, "test-instance-9001", al5.ID, alc5.ID, tn5.ID, ip.ID, st4.ID, ist5.ID, vpc7.ID, nil, &os5.ID, nil, cdbm.InstanceStatusReady)
 		assert.NotNil(t, inst4)
@@ -1206,11 +1224,12 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 		respUserData                 *string
 	}
 	tests := []struct {
-		name               string
-		fields             fields
-		args               args
-		wantErr            bool
-		verifyChildSpanner bool
+		name                    string
+		fields                  fields
+		args                    args
+		expectedSecondaryVpcIDs []string
+		wantErr                 bool
+		verifyChildSpanner      bool
 	}{
 		{
 			name: "test Instance create API endpoint success with subnet interface and ssh key group iPXE script and Labels",
@@ -1285,6 +1304,183 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 			verifyChildSpanner: true,
 		},
 		{
+			name: "test Instance create API endpoint success with secondary VPC Prefix interface",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIInstanceCreateRequest{
+					Name:              "TestVpcPrefixInstanceSecondaryVpc",
+					Description:       cdb.GetStrPtr("Test VPC Prefix Instance Description Secondary VPC"),
+					TenantID:          tn1.ID.String(),
+					InstanceTypeID:    cdb.GetStrPtr(ist1.ID.String()),
+					VpcID:             vpc9.ID.String(),
+					SecondaryVpcIDs:   []string{vpc1.ID.String()},
+					OperatingSystemID: cdb.GetStrPtr(os1.ID.String()),
+					Interfaces: []model.APIInterfaceCreateOrUpdateRequest{
+						{
+							VpcPrefixID:    cdb.GetStrPtr(vpcPrefix1.ID.String()),
+							IsPhysical:     true,
+							Device:         cdb.GetStrPtr("MT42822 BlueField-2 integrated ConnectX-6 Dx network controller"),
+							DeviceInstance: cdb.GetIntPtr(0),
+						},
+						{
+							VpcPrefixID:    cdb.GetStrPtr(vpcPrefix3.ID.String()),
+							IsPhysical:     true,
+							Device:         cdb.GetStrPtr("MT42822 BlueField-2 integrated ConnectX-6 Dx network controller"),
+							DeviceInstance: cdb.GetIntPtr(1),
+						},
+					},
+				},
+				reqMachine: nil,
+				reqOrg:     tnOrg,
+				reqUser:    tnu1,
+				respCode:   http.StatusCreated,
+			},
+			expectedSecondaryVpcIDs: []string{vpc1.ID.String()},
+			wantErr:                 false,
+			verifyChildSpanner:      true,
+		},
+		{
+			name: "test Instance create API endpoint failed when requested secondary VPCs do not match interface VPCs",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIInstanceCreateRequest{
+					Name:              "TestVpcPrefixInstanceSecondaryVpcMismatch",
+					TenantID:          tn1.ID.String(),
+					InstanceTypeID:    cdb.GetStrPtr(ist1.ID.String()),
+					VpcID:             vpc9.ID.String(),
+					SecondaryVpcIDs:   []string{vpc1.ID.String()},
+					OperatingSystemID: cdb.GetStrPtr(os1.ID.String()),
+					Interfaces: []model.APIInterfaceCreateOrUpdateRequest{
+						{
+							VpcPrefixID:    cdb.GetStrPtr(vpcPrefix1.ID.String()),
+							IsPhysical:     true,
+							Device:         cdb.GetStrPtr("MT42822 BlueField-2 integrated ConnectX-6 Dx network controller"),
+							DeviceInstance: cdb.GetIntPtr(0),
+						},
+					},
+				},
+				reqMachine:  nil,
+				reqOrg:      tnOrg,
+				reqUser:     tnu1,
+				respCode:    http.StatusBadRequest,
+				respMessage: "One or more Interfaces in request data specify VPC Prefixes that do not belong to VPCs specified in `vpcId` or `secondaryVpcIds`",
+			},
+			wantErr: false,
+		},
+		{
+			name: "test Instance create API endpoint failed when an interface uses a VPC outside requested VPC IDs",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIInstanceCreateRequest{
+					Name:              "TestVpcPrefixInstanceUnexpectedVpc",
+					TenantID:          tn1.ID.String(),
+					InstanceTypeID:    cdb.GetStrPtr(ist1.ID.String()),
+					VpcID:             vpc9.ID.String(),
+					OperatingSystemID: cdb.GetStrPtr(os1.ID.String()),
+					Interfaces: []model.APIInterfaceCreateOrUpdateRequest{
+						{
+							VpcPrefixID:    cdb.GetStrPtr(vpcPrefix1.ID.String()),
+							IsPhysical:     true,
+							Device:         cdb.GetStrPtr("MT42822 BlueField-2 integrated ConnectX-6 Dx network controller"),
+							DeviceInstance: cdb.GetIntPtr(0),
+						},
+						{
+							VpcPrefixID:    cdb.GetStrPtr(vpcPrefix3.ID.String()),
+							IsPhysical:     true,
+							Device:         cdb.GetStrPtr("MT42822 BlueField-2 integrated ConnectX-6 Dx network controller"),
+							DeviceInstance: cdb.GetIntPtr(1),
+						},
+					},
+				},
+				reqMachine:  nil,
+				reqOrg:      tnOrg,
+				reqUser:     tnu1,
+				respCode:    http.StatusBadRequest,
+				respMessage: fmt.Sprintf("One or more Interfaces specify VPC Prefix: %s belonging to VPC: %s which is not specified in 'vpcId' or 'secondaryVpcIds'", vpcPrefix3.ID.String(), vpc1.ID.String()),
+			},
+			wantErr: false,
+		},
+		{
+			name: "test Instance create API endpoint failed when primary physical interface uses a VPC Prefix from another Site",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIInstanceCreateRequest{
+					Name:              "TestVpcPrefixPrimaryInterfaceWrongSite",
+					TenantID:          tn1.ID.String(),
+					InstanceTypeID:    cdb.GetStrPtr(ist1.ID.String()),
+					VpcID:             vpc9.ID.String(),
+					OperatingSystemID: cdb.GetStrPtr(os1.ID.String()),
+					Interfaces: []model.APIInterfaceCreateOrUpdateRequest{
+						{
+							VpcPrefixID:    cdb.GetStrPtr(vpcPrefixSite2.ID.String()),
+							IsPhysical:     true,
+							Device:         cdb.GetStrPtr("MT42822 BlueField-2 integrated ConnectX-6 Dx network controller"),
+							DeviceInstance: cdb.GetIntPtr(0),
+						},
+					},
+				},
+				reqMachine:  nil,
+				reqOrg:      tnOrg,
+				reqUser:     tnu1,
+				respCode:    http.StatusBadRequest,
+				respMessage: fmt.Sprintf("VPC Prefix: %v specified in request does not belong to Site", vpcPrefixSite2.ID.String()),
+			},
+			wantErr: false,
+		},
+		{
+			name: "test Instance create API endpoint failed when secondary interface uses a VPC Prefix from another Site",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIInstanceCreateRequest{
+					Name:              "TestVpcPrefixSecondaryInterfaceWrongSite",
+					TenantID:          tn1.ID.String(),
+					InstanceTypeID:    cdb.GetStrPtr(ist1.ID.String()),
+					VpcID:             vpc9.ID.String(),
+					OperatingSystemID: cdb.GetStrPtr(os1.ID.String()),
+					Interfaces: []model.APIInterfaceCreateOrUpdateRequest{
+						{
+							VpcPrefixID:    cdb.GetStrPtr(vpcPrefix1.ID.String()),
+							IsPhysical:     true,
+							Device:         cdb.GetStrPtr("MT42822 BlueField-2 integrated ConnectX-6 Dx network controller"),
+							DeviceInstance: cdb.GetIntPtr(0),
+						},
+						{
+							VpcPrefixID:    cdb.GetStrPtr(vpcPrefixSite2.ID.String()),
+							IsPhysical:     true,
+							Device:         cdb.GetStrPtr("MT42822 BlueField-2 integrated ConnectX-6 Dx network controller"),
+							DeviceInstance: cdb.GetIntPtr(1),
+						},
+					},
+				},
+				reqMachine:  nil,
+				reqOrg:      tnOrg,
+				reqUser:     tnu1,
+				respCode:    http.StatusBadRequest,
+				respMessage: fmt.Sprintf("VPC Prefix: %v specified in request does not belong to Site", vpcPrefixSite2.ID.String()),
+			},
+			wantErr: false,
+		},
+		{
 			name: "test Instance create API endpoint success with VPC Prefix interface and Labels",
 			fields: fields{
 				dbSession: dbSession,
@@ -1333,8 +1529,9 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 
 				respMessage: "",
 			},
-			wantErr:            false,
-			verifyChildSpanner: true,
+			expectedSecondaryVpcIDs: []string{},
+			wantErr:                 false,
+			verifyChildSpanner:      true,
 		},
 		{
 			name: "test Instance create API endpoint success, custom ipxeScript is specified without OS along with phonehome enabled",
@@ -2329,6 +2526,68 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "test Instance create API endpoint failed when primary physical interface uses a prefix from a secondary VPC",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIInstanceCreateRequest{
+					Name:              "TestVpcPrefixPrimaryInterfaceMustMatchVpc",
+					TenantID:          tn1.ID.String(),
+					InstanceTypeID:    cdb.GetStrPtr(ist1.ID.String()),
+					VpcID:             vpc9.ID.String(),
+					SecondaryVpcIDs:   []string{vpc1.ID.String()},
+					OperatingSystemID: cdb.GetStrPtr(os1.ID.String()),
+					Interfaces: []model.APIInterfaceCreateOrUpdateRequest{
+						{
+							VpcPrefixID:    cdb.GetStrPtr(vpcPrefix3.ID.String()),
+							IsPhysical:     true,
+							Device:         cdb.GetStrPtr("MT42822 BlueField-2 integrated ConnectX-6 Dx network controller"),
+							DeviceInstance: cdb.GetIntPtr(0),
+						},
+					},
+				},
+				reqMachine:  nil,
+				reqOrg:      tnOrg,
+				reqUser:     tnu1,
+				respCode:    http.StatusBadRequest,
+				respMessage: "The primary physical Interface for deviceInstance: 0 must use a VPC Prefix that belongs to VPC specified in `vpcId`",
+			},
+			wantErr: false,
+		},
+		{
+			name: "test Instance create API endpoint failed when primary physical interface uses a prefix from a secondary VPC without device info",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIInstanceCreateRequest{
+					Name:              "TestVpcPrefixPrimaryInterfaceMustMatchVpcNoDeviceInfo",
+					TenantID:          tn1.ID.String(),
+					InstanceTypeID:    cdb.GetStrPtr(ist1.ID.String()),
+					VpcID:             vpc9.ID.String(),
+					SecondaryVpcIDs:   []string{vpc1.ID.String()},
+					OperatingSystemID: cdb.GetStrPtr(os1.ID.String()),
+					Interfaces: []model.APIInterfaceCreateOrUpdateRequest{
+						{
+							VpcPrefixID: cdb.GetStrPtr(vpcPrefix3.ID.String()),
+							IsPhysical:  true,
+						},
+					},
+				},
+				reqMachine:  nil,
+				reqOrg:      tnOrg,
+				reqUser:     tnu1,
+				respCode:    http.StatusBadRequest,
+				respMessage: "The primary physical Interface must use a VPC Prefix that belongs to VPC specified in `vpcId`",
+			},
+			wantErr: false,
+		},
+		{
 			name: "test Instance create API endpoint failed, VPC Prefix is not ready",
 			fields: fields{
 				dbSession: dbSession,
@@ -3035,21 +3294,31 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 			}
 			assert.Equal(t, len(rst.StatusHistory), 1)
 			if len(tt.args.reqData.Interfaces) > 0 {
-				if tt.args.reqData.Interfaces[0].SubnetID != nil {
-					assert.Equal(t, rst.Interfaces[0].SubnetID, tt.args.reqData.Interfaces[0].SubnetID)
-				}
+				require.Len(t, rst.Interfaces, len(tt.args.reqData.Interfaces))
+				for i := range tt.args.reqData.Interfaces {
+					if tt.args.reqData.Interfaces[i].SubnetID != nil {
+						assert.Equal(t, tt.args.reqData.Interfaces[i].SubnetID, rst.Interfaces[i].SubnetID)
+					}
 
-				if tt.args.reqData.Interfaces[0].VpcPrefixID != nil {
-					assert.Equal(t, rst.Interfaces[0].VpcPrefixID, tt.args.reqData.Interfaces[0].VpcPrefixID)
-				}
+					if tt.args.reqData.Interfaces[i].VpcPrefixID != nil {
+						assert.Equal(t, tt.args.reqData.Interfaces[i].VpcPrefixID, rst.Interfaces[i].VpcPrefixID)
+					}
 
-				if tt.args.reqData.Interfaces[0].IPAddress != nil {
-					assert.Equal(t, rst.Interfaces[0].RequestedIpAddress, tt.args.reqData.Interfaces[0].IPAddress)
-				}
+					if tt.args.reqData.Interfaces[i].IPAddress != nil {
+						assert.Equal(t, tt.args.reqData.Interfaces[i].IPAddress, rst.Interfaces[i].RequestedIpAddress)
+					}
 
+					assert.Equal(t, tt.args.reqData.Interfaces[i].Device, rst.Interfaces[i].Device)
+					assert.Equal(t, tt.args.reqData.Interfaces[i].DeviceInstance, rst.Interfaces[i].DeviceInstance)
+					assert.Equal(t, tt.args.reqData.Interfaces[i].VirtualFunctionID, rst.Interfaces[i].VirtualFunctionID)
+
+					// Handle the fact that single-interface instance get normalized to have
+					// PF for the first interface.
+					if len(tt.args.reqData.Interfaces) > 1 {
+						assert.Equal(t, tt.args.reqData.Interfaces[i].IsPhysical, rst.Interfaces[i].IsPhysical)
+					}
+				}
 			}
-			// Test that first Interface entry is physical
-			assert.True(t, rst.Interfaces[0].IsPhysical)
 
 			if len(tsc.Calls) > 0 && len(tt.args.reqData.SSHKeyGroupIDs) > 0 {
 
@@ -3100,6 +3369,8 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 				assert.Equal(t, len(rst.Labels), len(tt.args.reqData.Labels))
 			}
 
+			assert.ElementsMatch(t, tt.expectedSecondaryVpcIDs, rst.SecondaryVpcIDs)
+
 			if tt.args.respUserData != nil {
 				assert.Equal(t, *tt.args.respUserData, *rst.UserData)
 			}
@@ -3142,6 +3413,7 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 			}
 		})
 	}
+
 }
 
 func resetInstanceStatus(t *testing.T, dbSession *cdb.Session, instanceID uuid.UUID, status string) {
@@ -3382,6 +3654,18 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 	assert.NotNil(t, ipb1)
 	vpcPrefix1 := common.TestBuildVPCPrefix(t, dbSession, "test-vpcprefix-1", st3, tn1, vpc4.ID, &ipb1.ID, cdb.GetStrPtr("192.168.0.0/24"), cdb.GetIntPtr(24), cdbm.VpcPrefixStatusReady, tnu1)
 	assert.NotNil(t, vpcPrefix1)
+	vpc4Site2 := testInstanceBuildVPC(t, dbSession, "test-vpc-4-site-2", ip, tn1, st2, nil, nil, cdb.GetStrPtr(cdbm.VpcFNN), nil, cdbm.VpcStatusReady, tnu1)
+	assert.NotNil(t, vpc4Site2)
+	ipbSite2 := common.TestBuildVpcPrefixIPBlock(t, dbSession, "testipb-site2-update", st2, ip, &tn1.ID, cdbm.IPBlockRoutingTypeDatacenterOnly, "192.173.0.0", 24, cdbm.IPBlockProtocolVersionV4, false, cdbm.IPBlockStatusReady, tnu1)
+	assert.NotNil(t, ipbSite2)
+	vpcPrefixSite2 := common.TestBuildVPCPrefix(t, dbSession, "test-vpcprefix-site2-update", st2, tn1, vpc4Site2.ID, &ipbSite2.ID, cdb.GetStrPtr("192.173.0.0/24"), cdb.GetIntPtr(24), cdbm.VpcPrefixStatusReady, tnu1)
+	assert.NotNil(t, vpcPrefixSite2)
+	vpc4Site3Secondary := testInstanceBuildVPC(t, dbSession, "test-vpc-4-site-3-secondary", ip, tn1, st3, nil, nil, cdb.GetStrPtr(cdbm.VpcFNN), nil, cdbm.VpcStatusReady, tnu1)
+	assert.NotNil(t, vpc4Site3Secondary)
+	ipbSite3Secondary := common.TestBuildVpcPrefixIPBlock(t, dbSession, "testipb-site3-secondary-update", st3, ip, &tn1.ID, cdbm.IPBlockRoutingTypeDatacenterOnly, "192.174.0.0", 24, cdbm.IPBlockProtocolVersionV4, false, cdbm.IPBlockStatusReady, tnu1)
+	assert.NotNil(t, ipbSite3Secondary)
+	vpcPrefixSite3Secondary := common.TestBuildVPCPrefix(t, dbSession, "test-vpcprefix-site3-secondary-update", st3, tn1, vpc4Site3Secondary.ID, &ipbSite3Secondary.ID, cdb.GetStrPtr("192.174.0.0/24"), cdb.GetIntPtr(24), cdbm.VpcPrefixStatusReady, tnu1)
+	assert.NotNil(t, vpcPrefixSite3Secondary)
 
 	ipb2 := common.TestBuildVpcPrefixIPBlock(t, dbSession, "testipb2", st3, ip, &tn1.ID, cdbm.IPBlockRoutingTypeDatacenterOnly, "192.172.0.0", 24, cdbm.IPBlockProtocolVersionV4, false, cdbm.IPBlockStatusReady, tnu2)
 	assert.NotNil(t, ipb2)
@@ -3404,6 +3688,69 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 
 	instifc2 := testInstanceBuildInstanceInterface(t, dbSession, inst12.ID, nil, &vpcPrefix2.ID, nil, cdbm.InterfaceStatusReady)
 	assert.NotNil(t, instifc2)
+
+	mc7 := testInstanceBuildMachine(t, dbSession, ip.ID, st3.ID, cdb.GetBoolPtr(false), nil)
+	assert.NotNil(t, mc7)
+	assert.NotNil(t, testInstanceBuildMachineInstanceType(t, dbSession, mc7, ist4))
+	mc8 := testInstanceBuildMachine(t, dbSession, ip.ID, st3.ID, cdb.GetBoolPtr(false), nil)
+	assert.NotNil(t, mc8)
+	assert.NotNil(t, testInstanceBuildMachineInstanceType(t, dbSession, mc8, ist4))
+	mc9 := testInstanceBuildMachine(t, dbSession, ip.ID, st3.ID, cdb.GetBoolPtr(false), nil)
+	assert.NotNil(t, mc9)
+	assert.NotNil(t, testInstanceBuildMachineInstanceType(t, dbSession, mc9, ist4))
+
+	buildNsgPropagationMultiVpcPair := func(primaryName, secondaryName, primaryPrefixName, secondaryPrefixName, primaryCIDR, secondaryCIDR string) (*cdbm.Vpc, *cdbm.Vpc, *cdbm.VpcPrefix, *cdbm.VpcPrefix) {
+		primary := testInstanceBuildVPC(t, dbSession, primaryName, ip, tn1, st3, nil, nil, cdb.GetStrPtr(cdbm.VpcFNN), nil, cdbm.VpcStatusReady, tnu1)
+		secondary := testInstanceBuildVPC(t, dbSession, secondaryName, ip, tn1, st3, nil, nil, cdb.GetStrPtr(cdbm.VpcFNN), nil, cdbm.VpcStatusReady, tnu1)
+		primaryIPB := common.TestBuildVpcPrefixIPBlock(t, dbSession, primaryPrefixName+"-ipb", st3, ip, &tn1.ID, cdbm.IPBlockRoutingTypeDatacenterOnly, primaryCIDR, 24, cdbm.IPBlockProtocolVersionV4, false, cdbm.IPBlockStatusReady, tnu1)
+		secondaryIPB := common.TestBuildVpcPrefixIPBlock(t, dbSession, secondaryPrefixName+"-ipb", st3, ip, &tn1.ID, cdbm.IPBlockRoutingTypeDatacenterOnly, secondaryCIDR, 24, cdbm.IPBlockProtocolVersionV4, false, cdbm.IPBlockStatusReady, tnu1)
+		primaryPrefix := common.TestBuildVPCPrefix(t, dbSession, primaryPrefixName, st3, tn1, primary.ID, &primaryIPB.ID, cdb.GetStrPtr(primaryCIDR+"/24"), cdb.GetIntPtr(24), cdbm.VpcPrefixStatusReady, tnu1)
+		secondaryPrefix := common.TestBuildVPCPrefix(t, dbSession, secondaryPrefixName, st3, tn1, secondary.ID, &secondaryIPB.ID, cdb.GetStrPtr(secondaryCIDR+"/24"), cdb.GetIntPtr(24), cdbm.VpcPrefixStatusReady, tnu1)
+		return primary, secondary, primaryPrefix, secondaryPrefix
+	}
+
+	vpcPrimaryFull, vpcSecondaryFull, vpcPrefixPrimaryFull, vpcPrefixSecondaryFull := buildNsgPropagationMultiVpcPair("test-update-vpc-primary-full", "test-update-vpc-secondary-full", "test-update-vpcprefix-full-primary", "test-update-vpcprefix-full-secondary", "192.175.0.0", "192.176.0.0")
+	vpcPrimaryNone, vpcSecondaryNone, vpcPrefixPrimaryNone, vpcPrefixSecondaryNone := buildNsgPropagationMultiVpcPair("test-update-vpc-primary-none", "test-update-vpc-secondary-none", "test-update-vpcprefix-none-primary", "test-update-vpcprefix-none-secondary", "192.177.0.0", "192.178.0.0")
+	vpcPrimaryPartial, vpcSecondaryPartial, vpcPrefixPrimaryPartial, vpcPrefixSecondaryPartial := buildNsgPropagationMultiVpcPair("test-update-vpc-primary-partial", "test-update-vpc-secondary-partial", "test-update-vpcprefix-partial-primary", "test-update-vpcprefix-partial-secondary", "192.179.0.0", "192.180.0.0")
+
+	instUpdateFull := testInstanceBuildInstance(t, dbSession, "test-instance-update-vpc-full", al3.ID, alc3.ID, tn1.ID, ip.ID, st3.ID, &ist4.ID, vpcPrimaryFull.ID, cdb.GetStrPtr(mc7.ID), &os2.ID, nil, cdbm.InstanceStatusReady)
+	assert.NotNil(t, instUpdateFull)
+	instUpdateNone := testInstanceBuildInstance(t, dbSession, "test-instance-update-vpc-none", al3.ID, alc3.ID, tn1.ID, ip.ID, st3.ID, &ist4.ID, vpcPrimaryNone.ID, cdb.GetStrPtr(mc8.ID), &os2.ID, nil, cdbm.InstanceStatusReady)
+	assert.NotNil(t, instUpdateNone)
+	instUpdateRebootFull := testInstanceBuildInstance(t, dbSession, "test-instance-update-vpc-reboot-full", al3.ID, alc3.ID, tn1.ID, ip.ID, st3.ID, &ist4.ID, vpcPrimaryFull.ID, cdb.GetStrPtr(mc7.ID), &os2.ID, nil, cdbm.InstanceStatusReady)
+	assert.NotNil(t, instUpdateRebootFull)
+	instUpdatePartial := testInstanceBuildInstance(t, dbSession, "test-instance-update-vpc-partial", al3.ID, alc3.ID, tn1.ID, ip.ID, st3.ID, &ist4.ID, vpcPrimaryPartial.ID, cdb.GetStrPtr(mc9.ID), &os2.ID, nil, cdbm.InstanceStatusReady)
+	assert.NotNil(t, instUpdatePartial)
+
+	assert.NotNil(t, testInstanceBuildInstanceInterface(t, dbSession, instUpdateFull.ID, nil, &vpcPrefixPrimaryFull.ID, nil, cdbm.InterfaceStatusReady))
+	assert.NotNil(t, testInstanceBuildInstanceInterface(t, dbSession, instUpdateNone.ID, nil, &vpcPrefixPrimaryNone.ID, nil, cdbm.InterfaceStatusReady))
+	assert.NotNil(t, testInstanceBuildInstanceInterface(t, dbSession, instUpdateRebootFull.ID, nil, &vpcPrefixPrimaryFull.ID, nil, cdbm.InterfaceStatusReady))
+	assert.NotNil(t, testInstanceBuildInstanceInterface(t, dbSession, instUpdatePartial.ID, nil, &vpcPrefixPrimaryPartial.ID, nil, cdbm.InterfaceStatusReady))
+
+	nsgTenant1Site3 := testBuildNetworkSecurityGroup(t, dbSession, "test-nsg-4", tn1, st3, cdbm.NetworkSecurityGroupStatusReady)
+	assert.NotNil(t, nsgTenant1Site3)
+
+	setVpcProp := func(vpc *cdbm.Vpc, related []string, unprop []string, status cwssaws.NetworkSecurityGroupPropagationStatus) {
+		vpc.NetworkSecurityGroupID = &nsgTenant1Site3.ID
+		vpc.NetworkSecurityGroupPropagationDetails = &cdbm.NetworkSecurityGroupPropagationDetails{
+			NetworkSecurityGroupPropagationObjectStatus: &cwssaws.NetworkSecurityGroupPropagationObjectStatus{
+				Id:                      vpc.ID.String(),
+				Status:                  status,
+				RelatedInstanceIds:      related,
+				UnpropagatedInstanceIds: unprop,
+			},
+		}
+		testUpdateVPC(t, dbSession, vpc)
+	}
+
+	setVpcProp(vpcPrimaryFull, []string{instUpdateFull.ID.String()}, []string{}, cwssaws.NetworkSecurityGroupPropagationStatus_NSG_PROP_STATUS_FULL)
+	setVpcProp(vpcSecondaryFull, []string{instUpdateFull.ID.String()}, []string{}, cwssaws.NetworkSecurityGroupPropagationStatus_NSG_PROP_STATUS_FULL)
+	setVpcProp(vpcPrimaryFull, []string{instUpdateRebootFull.ID.String()}, []string{}, cwssaws.NetworkSecurityGroupPropagationStatus_NSG_PROP_STATUS_FULL)
+	setVpcProp(vpcSecondaryFull, []string{instUpdateRebootFull.ID.String()}, []string{}, cwssaws.NetworkSecurityGroupPropagationStatus_NSG_PROP_STATUS_FULL)
+	setVpcProp(vpcPrimaryNone, []string{instUpdateNone.ID.String()}, []string{instUpdateNone.ID.String()}, cwssaws.NetworkSecurityGroupPropagationStatus_NSG_PROP_STATUS_NONE)
+	setVpcProp(vpcSecondaryNone, []string{instUpdateNone.ID.String()}, []string{instUpdateNone.ID.String()}, cwssaws.NetworkSecurityGroupPropagationStatus_NSG_PROP_STATUS_NONE)
+	setVpcProp(vpcPrimaryPartial, []string{instUpdatePartial.ID.String()}, []string{}, cwssaws.NetworkSecurityGroupPropagationStatus_NSG_PROP_STATUS_FULL)
+	setVpcProp(vpcSecondaryPartial, []string{instUpdatePartial.ID.String()}, []string{instUpdatePartial.ID.String()}, cwssaws.NetworkSecurityGroupPropagationStatus_NSG_PROP_STATUS_NONE)
 
 	// Add Network DPU capability to Instance Type
 	common.TestBuildMachineCapability(t, dbSession, nil, &ist4.ID, cdbm.MachineCapabilityTypeNetwork, "MT42822 BlueField-2 integrated ConnectX-6 Dx network controller", nil, nil, cdb.GetStrPtr("Mellanox Technologies"), cdb.GetIntPtr(2), cdb.GetStrPtr("DPU"), nil)
@@ -3607,21 +3954,25 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 	}
 
 	type args struct {
-		reqData                  *model.APIInstanceUpdateRequest
-		reqOrg                   string
-		reqUser                  *cdbm.User
-		reqInstance              string
-		cleanInstanceToStatus    string
-		respNoOfInterfaces       *int
-		respNoOfNVLinkInterfaces *int
-		ethInterfacesToDelete    []cdbm.Interface
-		ibInterfaceToDelete      []cdbm.InfiniBandInterface
-		nvlinkInterfacesToDelete []cdbm.NVLinkInterface
-		respCode                 int
-		respUserDataContains     *string
-		respUserData             *string
-		respMessage              *string
-		expectedDesdIDs          []string
+		reqData                               *model.APIInstanceUpdateRequest
+		reqOrg                                string
+		reqUser                               *cdbm.User
+		reqInstance                           string
+		cleanInstanceToStatus                 string
+		respNoOfInterfaces                    *int
+		respNoOfNVLinkInterfaces              *int
+		ethInterfacesToDelete                 []cdbm.Interface
+		ibInterfaceToDelete                   []cdbm.InfiniBandInterface
+		nvlinkInterfacesToDelete              []cdbm.NVLinkInterface
+		respCode                              int
+		respUserDataContains                  *string
+		respUserData                          *string
+		respMessage                           *string
+		expectedDesdIDs                       []string
+		expectedSecondaryVpcIDs               []string
+		expectedNetworkSecurityGroupInherited *bool
+		expectedPropagationDetailedStatus     *string
+		expectedPropagationStatus             *string
 	}
 
 	tests := []struct {
@@ -3629,6 +3980,7 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 		fields                      fields
 		args                        args
 		wantErr                     bool
+		expectedSecondaryVpcIDs     []string
 		verifySiteControllerRequest bool
 		verifyChildSpanner          bool
 	}{
@@ -4695,7 +5047,7 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 				reqOrg:             tnOrg1,
 				reqUser:            tnu1,
 				respCode:           http.StatusBadRequest,
-				respMessage:        cdb.GetStrPtr("Device and Device Instance cannot be specified if Instance Type doesn't have Network Capabilities with DPU device type"),
+				respMessage:        cdb.GetStrPtr("Device and Device Instance cannot be specified if Instance Type or Machine doesn't have Network Capability with DPU device type"),
 				respNoOfInterfaces: cdb.GetIntPtr(1),
 				ethInterfacesToDelete: []cdbm.Interface{
 					*instifc1,
@@ -4744,6 +5096,402 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 			wantErr:                     false,
 			verifySiteControllerRequest: true,
 			verifyChildSpanner:          true,
+		},
+		{
+			name: "test Instance update API endpoint success with secondary interface on a different allowed VPC",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				scp:       scp,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIInstanceUpdateRequest{
+					Name:        cdb.GetStrPtr("Test Instance Interface Update Success Multi VPC"),
+					Description: cdb.GetStrPtr("Test Instance Description Interface Update Success Multi VPC"),
+					IpxeScript:  os2.IpxeScript,
+					SecondaryVpcIDs: []string{
+						vpc4Site3Secondary.ID.String(),
+					},
+					Interfaces: []model.APIInterfaceCreateOrUpdateRequest{
+						{
+							VpcPrefixID:    cdb.GetStrPtr(vpcPrefix3.ID.String()),
+							IsPhysical:     true,
+							Device:         cdb.GetStrPtr("MT42822 BlueField-2 integrated ConnectX-6 Dx network controller"),
+							DeviceInstance: cdb.GetIntPtr(0),
+						},
+						{
+							VpcPrefixID:    cdb.GetStrPtr(vpcPrefixSite3Secondary.ID.String()),
+							IsPhysical:     true,
+							Device:         cdb.GetStrPtr("MT42822 BlueField-2 integrated ConnectX-6 Dx network controller"),
+							DeviceInstance: cdb.GetIntPtr(1),
+						},
+					},
+				},
+				reqInstance:        inst12.ID.String(),
+				reqOrg:             tnOrg1,
+				reqUser:            tnu1,
+				respCode:           http.StatusOK,
+				respNoOfInterfaces: cdb.GetIntPtr(2),
+				ethInterfacesToDelete: []cdbm.Interface{
+					*instifc1,
+					*instifc2,
+				},
+			},
+			expectedSecondaryVpcIDs:     []string{vpc4Site3Secondary.ID.String()},
+			wantErr:                     false,
+			verifySiteControllerRequest: true,
+			verifyChildSpanner:          true,
+		},
+		{
+			name: "test Instance update API endpoint inherited nsg propagation full state",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				scp:       scp,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIInstanceUpdateRequest{
+					IpxeScript: os2.IpxeScript,
+					SecondaryVpcIDs: []string{
+						vpcSecondaryFull.ID.String(),
+					},
+					Interfaces: []model.APIInterfaceCreateOrUpdateRequest{
+						{
+							VpcPrefixID:    cdb.GetStrPtr(vpcPrefixPrimaryFull.ID.String()),
+							IsPhysical:     true,
+							Device:         cdb.GetStrPtr("MT42822 BlueField-2 integrated ConnectX-6 Dx network controller"),
+							DeviceInstance: cdb.GetIntPtr(0),
+						},
+						{
+							VpcPrefixID:    cdb.GetStrPtr(vpcPrefixSecondaryFull.ID.String()),
+							IsPhysical:     true,
+							Device:         cdb.GetStrPtr("MT42822 BlueField-2 integrated ConnectX-6 Dx network controller"),
+							DeviceInstance: cdb.GetIntPtr(1),
+						},
+					},
+				},
+				reqInstance:                           instUpdateFull.ID.String(),
+				reqOrg:                                tnOrg1,
+				reqUser:                               tnu1,
+				respCode:                              http.StatusOK,
+				respNoOfInterfaces:                    cdb.GetIntPtr(2),
+				expectedSecondaryVpcIDs:               []string{vpcSecondaryFull.ID.String()},
+				expectedNetworkSecurityGroupInherited: cdb.GetBoolPtr(true),
+				expectedPropagationDetailedStatus:     cdb.GetStrPtr(model.APINetworkSecurityGroupPropagationDetailedStatusFull),
+				expectedPropagationStatus:             cdb.GetStrPtr(model.APINetworkSecurityGroupPropagationStatusSynchronized),
+			},
+			wantErr: false,
+		},
+		{
+			name: "test Instance update API endpoint inherited nsg propagation none state",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				scp:       scp,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIInstanceUpdateRequest{
+					IpxeScript: os2.IpxeScript,
+					SecondaryVpcIDs: []string{
+						vpcSecondaryNone.ID.String(),
+					},
+					Interfaces: []model.APIInterfaceCreateOrUpdateRequest{
+						{
+							VpcPrefixID:    cdb.GetStrPtr(vpcPrefixPrimaryNone.ID.String()),
+							IsPhysical:     true,
+							Device:         cdb.GetStrPtr("MT42822 BlueField-2 integrated ConnectX-6 Dx network controller"),
+							DeviceInstance: cdb.GetIntPtr(0),
+						},
+						{
+							VpcPrefixID:    cdb.GetStrPtr(vpcPrefixSecondaryNone.ID.String()),
+							IsPhysical:     true,
+							Device:         cdb.GetStrPtr("MT42822 BlueField-2 integrated ConnectX-6 Dx network controller"),
+							DeviceInstance: cdb.GetIntPtr(1),
+						},
+					},
+				},
+				reqInstance:                           instUpdateNone.ID.String(),
+				reqOrg:                                tnOrg1,
+				reqUser:                               tnu1,
+				respCode:                              http.StatusOK,
+				respNoOfInterfaces:                    cdb.GetIntPtr(2),
+				expectedSecondaryVpcIDs:               []string{vpcSecondaryNone.ID.String()},
+				expectedNetworkSecurityGroupInherited: cdb.GetBoolPtr(true),
+				expectedPropagationDetailedStatus:     cdb.GetStrPtr(model.APINetworkSecurityGroupPropagationDetailedStatusNone),
+				expectedPropagationStatus:             cdb.GetStrPtr(model.APINetworkSecurityGroupPropagationStatusSynchronizing),
+			},
+			wantErr: false,
+		},
+		{
+			name: "test Instance update API endpoint inherited nsg propagation partial state",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				scp:       scp,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIInstanceUpdateRequest{
+					IpxeScript: os2.IpxeScript,
+					SecondaryVpcIDs: []string{
+						vpcSecondaryPartial.ID.String(),
+					},
+					Interfaces: []model.APIInterfaceCreateOrUpdateRequest{
+						{
+							VpcPrefixID:    cdb.GetStrPtr(vpcPrefixPrimaryPartial.ID.String()),
+							IsPhysical:     true,
+							Device:         cdb.GetStrPtr("MT42822 BlueField-2 integrated ConnectX-6 Dx network controller"),
+							DeviceInstance: cdb.GetIntPtr(0),
+						},
+						{
+							VpcPrefixID:    cdb.GetStrPtr(vpcPrefixSecondaryPartial.ID.String()),
+							IsPhysical:     true,
+							Device:         cdb.GetStrPtr("MT42822 BlueField-2 integrated ConnectX-6 Dx network controller"),
+							DeviceInstance: cdb.GetIntPtr(1),
+						},
+					},
+				},
+				reqInstance:                           instUpdatePartial.ID.String(),
+				reqOrg:                                tnOrg1,
+				reqUser:                               tnu1,
+				respCode:                              http.StatusOK,
+				respNoOfInterfaces:                    cdb.GetIntPtr(2),
+				expectedSecondaryVpcIDs:               []string{vpcSecondaryPartial.ID.String()},
+				expectedNetworkSecurityGroupInherited: cdb.GetBoolPtr(true),
+				expectedPropagationDetailedStatus:     cdb.GetStrPtr(model.APINetworkSecurityGroupPropagationDetailedStatusPartial),
+				expectedPropagationStatus:             cdb.GetStrPtr(model.APINetworkSecurityGroupPropagationStatusSynchronizing),
+			},
+			wantErr: false,
+		},
+		{
+			name: "test Instance update API endpoint success with reboot trigger and inherited nsg propagation",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				scp:       scp,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIInstanceUpdateRequest{
+					TriggerReboot:        cdb.GetBoolPtr(true),
+					RebootWithCustomIpxe: cdb.GetBoolPtr(true),
+				},
+				reqInstance:                           instUpdateRebootFull.ID.String(),
+				cleanInstanceToStatus:                 instUpdateRebootFull.Status,
+				reqOrg:                                tnOrg1,
+				reqUser:                               tnu1,
+				respCode:                              http.StatusOK,
+				expectedNetworkSecurityGroupInherited: cdb.GetBoolPtr(true),
+				expectedPropagationDetailedStatus:     cdb.GetStrPtr(model.APINetworkSecurityGroupPropagationDetailedStatusFull),
+				expectedPropagationStatus:             cdb.GetStrPtr(model.APINetworkSecurityGroupPropagationStatusSynchronized),
+			},
+			wantErr: false,
+		},
+		{
+			name: "test Instance update API endpoint failed when requested secondary VPCs do not match interface VPCs",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				scp:       scp,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIInstanceUpdateRequest{
+					Name:        cdb.GetStrPtr("Test Instance Interface Update Secondary VPC Mismatch"),
+					Description: cdb.GetStrPtr("Test Instance Description Interface Update Secondary VPC Mismatch"),
+					IpxeScript:  os2.IpxeScript,
+					SecondaryVpcIDs: []string{
+						vpc4Site3Secondary.ID.String(),
+					},
+					Interfaces: []model.APIInterfaceCreateOrUpdateRequest{
+						{
+							VpcPrefixID:    cdb.GetStrPtr(vpcPrefix3.ID.String()),
+							IsPhysical:     true,
+							Device:         cdb.GetStrPtr("MT42822 BlueField-2 integrated ConnectX-6 Dx network controller"),
+							DeviceInstance: cdb.GetIntPtr(0),
+						},
+					},
+				},
+				reqInstance: inst12.ID.String(),
+				reqOrg:      tnOrg1,
+				reqUser:     tnu1,
+				respCode:    http.StatusBadRequest,
+				respMessage: cdb.GetStrPtr("One or more Interfaces in request data specify VPC Prefixes that do not belong to VPCs specified in `vpcId` or `secondaryVpcIds`"),
+			},
+			wantErr: false,
+		},
+		{
+			name: "test Instance update API endpoint failed when an interface uses a VPC outside requested VPC IDs",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				scp:       scp,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIInstanceUpdateRequest{
+					Name:        cdb.GetStrPtr("Test Instance Interface Update Unexpected VPC"),
+					Description: cdb.GetStrPtr("Test Instance Description Interface Update Unexpected VPC"),
+					IpxeScript:  os2.IpxeScript,
+					Interfaces: []model.APIInterfaceCreateOrUpdateRequest{
+						{
+							VpcPrefixID:    cdb.GetStrPtr(vpcPrefix3.ID.String()),
+							IsPhysical:     true,
+							Device:         cdb.GetStrPtr("MT42822 BlueField-2 integrated ConnectX-6 Dx network controller"),
+							DeviceInstance: cdb.GetIntPtr(0),
+						},
+						{
+							VpcPrefixID:    cdb.GetStrPtr(vpcPrefixSite3Secondary.ID.String()),
+							IsPhysical:     true,
+							Device:         cdb.GetStrPtr("MT42822 BlueField-2 integrated ConnectX-6 Dx network controller"),
+							DeviceInstance: cdb.GetIntPtr(1),
+						},
+					},
+				},
+				reqInstance: inst12.ID.String(),
+				reqOrg:      tnOrg1,
+				reqUser:     tnu1,
+				respCode:    http.StatusBadRequest,
+				respMessage: cdb.GetStrPtr(fmt.Sprintf("One or more Interfaces specify VPC Prefix: %s belonging to VPC: %s which is not specified in 'vpcId' or 'secondaryVpcIds'", vpcPrefixSite3Secondary.ID.String(), vpc4Site3Secondary.ID.String())),
+			},
+			wantErr: false,
+		},
+		{
+			name: "test Instance update API endpoint failed when primary physical interface uses a prefix from a secondary VPC",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				scp:       scp,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIInstanceUpdateRequest{
+					Name:        cdb.GetStrPtr("Test Instance Interface Update Primary Must Match VPC"),
+					Description: cdb.GetStrPtr("Test Instance Description Interface Update Primary Must Match VPC"),
+					IpxeScript:  os2.IpxeScript,
+					SecondaryVpcIDs: []string{
+						vpc4Site3Secondary.ID.String(),
+					},
+					Interfaces: []model.APIInterfaceCreateOrUpdateRequest{
+						{
+							VpcPrefixID:    cdb.GetStrPtr(vpcPrefixSite3Secondary.ID.String()),
+							IsPhysical:     true,
+							Device:         cdb.GetStrPtr("MT42822 BlueField-2 integrated ConnectX-6 Dx network controller"),
+							DeviceInstance: cdb.GetIntPtr(0),
+						},
+					},
+				},
+				reqInstance:        inst12.ID.String(),
+				reqOrg:             tnOrg1,
+				reqUser:            tnu1,
+				respCode:           http.StatusBadRequest,
+				respMessage:        cdb.GetStrPtr("The physical Interface for deviceInstance: 0 must use a VPC Prefix that belongs to VPC specified in `vpcId`"),
+				respNoOfInterfaces: cdb.GetIntPtr(1),
+			},
+			wantErr: false,
+		},
+		{
+			name: "test Instance update API endpoint failed when primary physical interface uses a prefix from a secondary VPC without device info",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				scp:       scp,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIInstanceUpdateRequest{
+					Name:        cdb.GetStrPtr("Test Instance Interface Update Primary Must Match VPC No Device Info"),
+					Description: cdb.GetStrPtr("Test Instance Description Interface Update Primary Must Match VPC No Device Info"),
+					IpxeScript:  os2.IpxeScript,
+					SecondaryVpcIDs: []string{
+						vpc4Site3Secondary.ID.String(),
+					},
+					Interfaces: []model.APIInterfaceCreateOrUpdateRequest{
+						{
+							VpcPrefixID: cdb.GetStrPtr(vpcPrefixSite3Secondary.ID.String()),
+							IsPhysical:  true,
+						},
+					},
+				},
+				reqInstance:        inst12.ID.String(),
+				reqOrg:             tnOrg1,
+				reqUser:            tnu1,
+				respCode:           http.StatusBadRequest,
+				respMessage:        cdb.GetStrPtr("The physical Interface must use a VPC Prefix that belongs to VPC specified in `vpcId`"),
+				respNoOfInterfaces: cdb.GetIntPtr(1),
+			},
+			wantErr: false,
+		},
+		{
+			name: "test Instance update API endpoint failed when primary interface uses a VPC Prefix from another Site",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				scp:       scp,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIInstanceUpdateRequest{
+					Name:        cdb.GetStrPtr("Test Instance Interface Wrong Site Primary"),
+					Description: cdb.GetStrPtr("Test Instance Description Interface Wrong Site Primary"),
+					IpxeScript:  os2.IpxeScript,
+					Interfaces: []model.APIInterfaceCreateOrUpdateRequest{
+						{
+							VpcPrefixID:    cdb.GetStrPtr(vpcPrefixSite2.ID.String()),
+							IsPhysical:     true,
+							Device:         cdb.GetStrPtr("MT42822 BlueField-2 integrated ConnectX-6 Dx network controller"),
+							DeviceInstance: cdb.GetIntPtr(0),
+						},
+					},
+				},
+				reqInstance:        inst12.ID.String(),
+				reqOrg:             tnOrg1,
+				reqUser:            tnu1,
+				respCode:           http.StatusBadRequest,
+				respMessage:        cdb.GetStrPtr(fmt.Sprintf("VPC Prefix: %v specified in request does not belong to Site", vpcPrefixSite2.ID.String())),
+				respNoOfInterfaces: cdb.GetIntPtr(1),
+			},
+			wantErr: false,
+		},
+		{
+			name: "test Instance update API endpoint failed when secondary interface uses a VPC Prefix from another Site",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				scp:       scp,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIInstanceUpdateRequest{
+					Name:        cdb.GetStrPtr("Test Instance Interface Wrong Site Secondary"),
+					Description: cdb.GetStrPtr("Test Instance Description Interface Wrong Site Secondary"),
+					IpxeScript:  os2.IpxeScript,
+					Interfaces: []model.APIInterfaceCreateOrUpdateRequest{
+						{
+							VpcPrefixID:    cdb.GetStrPtr(vpcPrefix3.ID.String()),
+							IsPhysical:     true,
+							Device:         cdb.GetStrPtr("MT42822 BlueField-2 integrated ConnectX-6 Dx network controller"),
+							DeviceInstance: cdb.GetIntPtr(0),
+						},
+						{
+							VpcPrefixID:    cdb.GetStrPtr(vpcPrefixSite2.ID.String()),
+							IsPhysical:     true,
+							Device:         cdb.GetStrPtr("MT42822 BlueField-2 integrated ConnectX-6 Dx network controller"),
+							DeviceInstance: cdb.GetIntPtr(1),
+						},
+					},
+				},
+				reqInstance:        inst12.ID.String(),
+				reqOrg:             tnOrg1,
+				reqUser:            tnu1,
+				respCode:           http.StatusBadRequest,
+				respMessage:        cdb.GetStrPtr(fmt.Sprintf("VPC Prefix: %v specified in request does not belong to Site", vpcPrefixSite2.ID.String())),
+				respNoOfInterfaces: cdb.GetIntPtr(1),
+			},
+			wantErr: false,
 		},
 		{
 			name: "test Instance update API endpoint success with NVLink interface update to same partition (no-op update allowed)",
@@ -4907,6 +5655,9 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 			}
 
 			require.Equal(t, tt.args.respCode, rec.Code)
+			if tt.args.respMessage != nil {
+				assert.Contains(t, rec.Body.String(), *tt.args.respMessage)
+			}
 			if tt.args.respCode != http.StatusOK {
 				return
 			}
@@ -4985,10 +5736,6 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 				assert.Equal(t, rst.Status, cdbm.InstancePowerStatusRebooting)
 			}
 
-			if tt.args.respMessage != nil {
-				assert.Contains(t, rec.Body.String(), *tt.args.respMessage)
-			}
-
 			if tt.args.expectedDesdIDs != nil {
 				assert.Equal(t, len(tt.args.expectedDesdIDs), len(rst.DpuExtensionServiceDeployments))
 
@@ -5052,6 +5799,24 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 
 					assert.Equal(t, cdbm.InterfaceStatusPending, ifcs[i].Status)
 				}
+			}
+
+			if tt.expectedSecondaryVpcIDs != nil {
+				assert.ElementsMatch(t, tt.expectedSecondaryVpcIDs, rst.SecondaryVpcIDs)
+			}
+
+			if tt.args.expectedNetworkSecurityGroupInherited != nil {
+				assert.Equal(t, *tt.args.expectedNetworkSecurityGroupInherited, rst.NetworkSecurityGroupInherited)
+			}
+
+			if tt.args.expectedPropagationDetailedStatus != nil {
+				require.NotNil(t, rst.NetworkSecurityGroupPropagationDetails)
+				assert.Equal(t, *tt.args.expectedPropagationDetailedStatus, rst.NetworkSecurityGroupPropagationDetails.DetailedStatus)
+			}
+
+			if tt.args.expectedPropagationStatus != nil {
+				require.NotNil(t, rst.NetworkSecurityGroupPropagationDetails)
+				assert.Equal(t, *tt.args.expectedPropagationStatus, rst.NetworkSecurityGroupPropagationDetails.Status)
 			}
 
 			if len(tt.args.ibInterfaceToDelete) > 0 && len(tt.args.reqData.InfiniBandInterfaces) > 0 {
@@ -5245,6 +6010,7 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 			}
 		})
 	}
+
 }
 
 func TestGetInstanceHandler_Handle(t *testing.T) {
@@ -5373,6 +6139,64 @@ func TestGetInstanceHandler_Handle(t *testing.T) {
 	inst3 := testInstanceBuildInstance(t, dbSession, "test-instance-4", al1.ID, alc1.ID, tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc2.ID, cdb.GetStrPtr(mc3.ID), &os1.ID, nil, cdbm.InstanceStatusReady)
 	assert.NotNil(t, inst3)
 
+	mc4 := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
+	assert.NotNil(t, mc4)
+	assert.NotNil(t, testInstanceBuildMachineInstanceType(t, dbSession, mc4, ist1))
+	mc5 := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
+	assert.NotNil(t, mc5)
+	assert.NotNil(t, testInstanceBuildMachineInstanceType(t, dbSession, mc5, ist1))
+	mc6 := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
+	assert.NotNil(t, mc6)
+	assert.NotNil(t, testInstanceBuildMachineInstanceType(t, dbSession, mc6, ist1))
+
+	buildMultiVpcPair := func(primaryName, secondaryName, primaryPrefixName, secondaryPrefixName, primaryCIDR, secondaryCIDR string) (*cdbm.Vpc, *cdbm.Vpc, *cdbm.VpcPrefix, *cdbm.VpcPrefix) {
+		primary := testInstanceBuildVPC(t, dbSession, primaryName, ip, tn1, st1, cdb.GetUUIDPtr(uuid.New()), nil, cdb.GetStrPtr(cdbm.VpcFNN), nil, cdbm.VpcStatusReady, tnu1)
+		secondary := testInstanceBuildVPC(t, dbSession, secondaryName, ip, tn1, st1, cdb.GetUUIDPtr(uuid.New()), nil, cdb.GetStrPtr(cdbm.VpcFNN), nil, cdbm.VpcStatusReady, tnu1)
+		primaryIPB := common.TestBuildVpcPrefixIPBlock(t, dbSession, primaryPrefixName+"-ipb", st1, ip, &tn1.ID, cdbm.IPBlockRoutingTypeDatacenterOnly, primaryCIDR[:len(primaryCIDR)-3], 24, cdbm.IPBlockProtocolVersionV4, false, cdbm.IPBlockStatusReady, tnu1)
+		secondaryIPB := common.TestBuildVpcPrefixIPBlock(t, dbSession, secondaryPrefixName+"-ipb", st1, ip, &tn1.ID, cdbm.IPBlockRoutingTypeDatacenterOnly, secondaryCIDR[:len(secondaryCIDR)-3], 24, cdbm.IPBlockProtocolVersionV4, false, cdbm.IPBlockStatusReady, tnu1)
+		primaryVP := common.TestBuildVPCPrefix(t, dbSession, primaryPrefixName, st1, tn1, primary.ID, &primaryIPB.ID, cdb.GetStrPtr(primaryCIDR), cdb.GetIntPtr(24), cdbm.VpcPrefixStatusReady, tnu1)
+		secondaryVP := common.TestBuildVPCPrefix(t, dbSession, secondaryPrefixName, st1, tn1, secondary.ID, &secondaryIPB.ID, cdb.GetStrPtr(secondaryCIDR), cdb.GetIntPtr(24), cdbm.VpcPrefixStatusReady, tnu1)
+		return primary, secondary, primaryVP, secondaryVP
+	}
+
+	vpcPrimaryFull, vpcSecondaryFull, vpcPrefixPrimaryFull, vpcPrefixSecondaryFull := buildMultiVpcPair("test-get-vpc-primary-full", "test-get-vpc-secondary-full", "test-get-vpcprefix-full-primary", "test-get-vpcprefix-full-secondary", "192.186.0.0/24", "192.189.0.0/24")
+	vpcPrimaryNone, vpcSecondaryNone, vpcPrefixPrimaryNone, vpcPrefixSecondaryNone := buildMultiVpcPair("test-get-vpc-primary-none", "test-get-vpc-secondary-none", "test-get-vpcprefix-none-primary", "test-get-vpcprefix-none-secondary", "192.187.0.0/24", "192.190.0.0/24")
+	vpcPrimaryPartial, vpcSecondaryPartial, vpcPrefixPrimaryPartial, vpcPrefixSecondaryPartial := buildMultiVpcPair("test-get-vpc-primary-partial", "test-get-vpc-secondary-partial", "test-get-vpcprefix-partial-primary", "test-get-vpcprefix-partial-secondary", "192.188.0.0/24", "192.191.0.0/24")
+
+	instFull := testInstanceBuildInstance(t, dbSession, "test-instance-get-vpc-full", al1.ID, alc1.ID, tn1.ID, ip.ID, st1.ID, &ist1.ID, vpcPrimaryFull.ID, cdb.GetStrPtr(mc4.ID), &os1.ID, nil, cdbm.InstanceStatusReady)
+	assert.NotNil(t, instFull)
+	instNone := testInstanceBuildInstance(t, dbSession, "test-instance-get-vpc-none", al1.ID, alc1.ID, tn1.ID, ip.ID, st1.ID, &ist1.ID, vpcPrimaryNone.ID, cdb.GetStrPtr(mc5.ID), &os1.ID, nil, cdbm.InstanceStatusReady)
+	assert.NotNil(t, instNone)
+	instPartial := testInstanceBuildInstance(t, dbSession, "test-instance-get-vpc-partial", al1.ID, alc1.ID, tn1.ID, ip.ID, st1.ID, &ist1.ID, vpcPrimaryPartial.ID, cdb.GetStrPtr(mc6.ID), &os1.ID, nil, cdbm.InstanceStatusReady)
+	assert.NotNil(t, instPartial)
+
+	assert.NotNil(t, testInstanceBuildInstanceInterface(t, dbSession, instFull.ID, nil, &vpcPrefixPrimaryFull.ID, nil, cdbm.InterfaceStatusPending))
+	assert.NotNil(t, testInstanceBuildInstanceInterface(t, dbSession, instFull.ID, nil, &vpcPrefixSecondaryFull.ID, nil, cdbm.InterfaceStatusPending))
+	assert.NotNil(t, testInstanceBuildInstanceInterface(t, dbSession, instNone.ID, nil, &vpcPrefixPrimaryNone.ID, nil, cdbm.InterfaceStatusPending))
+	assert.NotNil(t, testInstanceBuildInstanceInterface(t, dbSession, instNone.ID, nil, &vpcPrefixSecondaryNone.ID, nil, cdbm.InterfaceStatusPending))
+	assert.NotNil(t, testInstanceBuildInstanceInterface(t, dbSession, instPartial.ID, nil, &vpcPrefixPrimaryPartial.ID, nil, cdbm.InterfaceStatusPending))
+	assert.NotNil(t, testInstanceBuildInstanceInterface(t, dbSession, instPartial.ID, nil, &vpcPrefixSecondaryPartial.ID, nil, cdbm.InterfaceStatusPending))
+
+	setVpcProp := func(vpc *cdbm.Vpc, related []string, unprop []string, status cwssaws.NetworkSecurityGroupPropagationStatus) {
+		vpc.NetworkSecurityGroupID = &nsg1.ID
+		vpc.NetworkSecurityGroupPropagationDetails = &cdbm.NetworkSecurityGroupPropagationDetails{
+			NetworkSecurityGroupPropagationObjectStatus: &cwssaws.NetworkSecurityGroupPropagationObjectStatus{
+				Id:                      vpc.ID.String(),
+				Status:                  status,
+				RelatedInstanceIds:      related,
+				UnpropagatedInstanceIds: unprop,
+			},
+		}
+		testUpdateVPC(t, dbSession, vpc)
+	}
+
+	setVpcProp(vpcPrimaryFull, []string{instFull.ID.String()}, []string{}, cwssaws.NetworkSecurityGroupPropagationStatus_NSG_PROP_STATUS_FULL)
+	setVpcProp(vpcSecondaryFull, []string{instFull.ID.String()}, []string{}, cwssaws.NetworkSecurityGroupPropagationStatus_NSG_PROP_STATUS_FULL)
+	setVpcProp(vpcPrimaryNone, []string{instNone.ID.String()}, []string{instNone.ID.String()}, cwssaws.NetworkSecurityGroupPropagationStatus_NSG_PROP_STATUS_NONE)
+	setVpcProp(vpcSecondaryNone, []string{instNone.ID.String()}, []string{instNone.ID.String()}, cwssaws.NetworkSecurityGroupPropagationStatus_NSG_PROP_STATUS_NONE)
+	setVpcProp(vpcPrimaryPartial, []string{instPartial.ID.String()}, []string{}, cwssaws.NetworkSecurityGroupPropagationStatus_NSG_PROP_STATUS_FULL)
+	setVpcProp(vpcSecondaryPartial, []string{instPartial.ID.String()}, []string{instPartial.ID.String()}, cwssaws.NetworkSecurityGroupPropagationStatus_NSG_PROP_STATUS_NONE)
+
 	e := echo.New()
 	cfg := common.GetTestConfig()
 	tc := &tmocks.Client{}
@@ -5410,6 +6234,9 @@ func TestGetInstanceHandler_Handle(t *testing.T) {
 		expectedIBInterfaceID                   *string
 		expectedDpuExtensionServiceDeploymentID *string
 		expectedNetworkSecurityGroupInherited   *bool
+		expectedSecondaryVpcIDs                 []string
+		expectedPropagationDetailedStatus       *string
+		expectedPropagationStatus               *string
 		expectSubnet                            bool
 		verifyChildSpanner                      bool
 	}{
@@ -5468,6 +6295,69 @@ func TestGetInstanceHandler_Handle(t *testing.T) {
 				respCode:      http.StatusOK,
 			},
 			expectedNetworkSecurityGroupInherited: cdb.GetBoolPtr(true), // Because the VPC has an NSG and the instance does not.
+			wantErr:                               false,
+		},
+		{
+			name: "test Instance get API endpoint with inherited nsg propagated across all associated vpcs - success",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				reqInstance:   instFull,
+				reqInstanceID: instFull.ID.String(),
+				reqMachine:    mc4,
+				reqOrg:        tnOrg1,
+				reqUser:       tnu1,
+				respCode:      http.StatusOK,
+			},
+			expectedNetworkSecurityGroupInherited: cdb.GetBoolPtr(true),
+			expectedSecondaryVpcIDs:               []string{vpcSecondaryFull.ID.String()},
+			expectedPropagationDetailedStatus:     cdb.GetStrPtr(model.APINetworkSecurityGroupPropagationDetailedStatusFull),
+			expectedPropagationStatus:             cdb.GetStrPtr(model.APINetworkSecurityGroupPropagationStatusSynchronized),
+			wantErr:                               false,
+		},
+		{
+			name: "test Instance get API endpoint with inherited nsg unpropagated across all associated vpcs - success",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				reqInstance:   instNone,
+				reqInstanceID: instNone.ID.String(),
+				reqMachine:    mc5,
+				reqOrg:        tnOrg1,
+				reqUser:       tnu1,
+				respCode:      http.StatusOK,
+			},
+			expectedNetworkSecurityGroupInherited: cdb.GetBoolPtr(true),
+			expectedSecondaryVpcIDs:               []string{vpcSecondaryNone.ID.String()},
+			expectedPropagationDetailedStatus:     cdb.GetStrPtr(model.APINetworkSecurityGroupPropagationDetailedStatusNone),
+			expectedPropagationStatus:             cdb.GetStrPtr(model.APINetworkSecurityGroupPropagationStatusSynchronizing),
+			wantErr:                               false,
+		},
+		{
+			name: "test Instance get API endpoint with inherited nsg partially propagated across associated vpcs - success",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				reqInstance:   instPartial,
+				reqInstanceID: instPartial.ID.String(),
+				reqMachine:    mc6,
+				reqOrg:        tnOrg1,
+				reqUser:       tnu1,
+				respCode:      http.StatusOK,
+			},
+			expectedNetworkSecurityGroupInherited: cdb.GetBoolPtr(true),
+			expectedSecondaryVpcIDs:               []string{vpcSecondaryPartial.ID.String()},
+			expectedPropagationDetailedStatus:     cdb.GetStrPtr(model.APINetworkSecurityGroupPropagationDetailedStatusPartial),
+			expectedPropagationStatus:             cdb.GetStrPtr(model.APINetworkSecurityGroupPropagationStatusSynchronizing),
 			wantErr:                               false,
 		},
 		{
@@ -5718,6 +6608,20 @@ func TestGetInstanceHandler_Handle(t *testing.T) {
 				}
 			}
 
+			if tt.expectedSecondaryVpcIDs != nil {
+				assert.ElementsMatch(t, tt.expectedSecondaryVpcIDs, rst.SecondaryVpcIDs)
+			}
+
+			if tt.expectedPropagationDetailedStatus != nil {
+				require.NotNil(t, rst.NetworkSecurityGroupPropagationDetails)
+				assert.Equal(t, *tt.expectedPropagationDetailedStatus, rst.NetworkSecurityGroupPropagationDetails.DetailedStatus)
+			}
+
+			if tt.expectedPropagationStatus != nil {
+				require.NotNil(t, rst.NetworkSecurityGroupPropagationDetails)
+				assert.Equal(t, *tt.expectedPropagationStatus, rst.NetworkSecurityGroupPropagationDetails.Status)
+			}
+
 			if tt.expectedIBInterfaceID != nil {
 				assert.Equal(t, *tt.expectedIBInterfaceID, rst.InfiniBandInterfaces[0].ID)
 				assert.NotNil(t, rst.InfiniBandInterfaces[0].InfiniBandPartition)
@@ -5822,7 +6726,6 @@ func TestGetAllInstanceHandler_Handle(t *testing.T) {
 	assert.NotNil(t, mc2)
 	mc3 := testInstanceBuildMachineWithID(t, dbSession, ip.ID, st3.ID, cdb.GetBoolPtr(false), nil, "machine-3")
 	assert.NotNil(t, mc3)
-
 	mcinst1 := testInstanceBuildMachineInstanceType(t, dbSession, mc1, ist1)
 	assert.NotNil(t, mcinst1)
 	mcinst2 := testInstanceBuildMachineInstanceType(t, dbSession, mc2, ist2)
@@ -5914,6 +6817,69 @@ func TestGetAllInstanceHandler_Handle(t *testing.T) {
 	inst4 := testInstanceBuildInstance(t, dbSession, "test-instance-no-site-id", al4.ID, alc3.ID, tn1.ID, ip.ID, st3.ID, &ist4.ID, vpc4.ID, cdb.GetStrPtr(mc3.ID), &os2.ID, cdb.GetStrPtr("test-ipxe-script"), cdbm.InstanceStatusReady)
 	assert.NotNil(t, inst4)
 
+	mc4 := testInstanceBuildMachineWithID(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil, "machine-getall-4")
+	assert.NotNil(t, mc4)
+	assert.NotNil(t, testInstanceBuildMachineInstanceType(t, dbSession, mc4, ist2))
+	mc5 := testInstanceBuildMachineWithID(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil, "machine-getall-5")
+	assert.NotNil(t, mc5)
+	assert.NotNil(t, testInstanceBuildMachineInstanceType(t, dbSession, mc5, ist2))
+	mc6 := testInstanceBuildMachineWithID(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil, "machine-getall-6")
+	assert.NotNil(t, mc6)
+	assert.NotNil(t, testInstanceBuildMachineInstanceType(t, dbSession, mc6, ist2))
+
+	buildMultiVpcPair := func(primaryName, secondaryName, primaryPrefixName, secondaryPrefixName, primaryCIDR, secondaryCIDR string) (*cdbm.Vpc, *cdbm.Vpc, *cdbm.VpcPrefix, *cdbm.VpcPrefix) {
+		primary := testInstanceBuildVPC(t, dbSession, primaryName, ip, tn1, st1, cdb.GetUUIDPtr(uuid.New()), nil, cdb.GetStrPtr(cdbm.VpcFNN), nil, cdbm.VpcStatusReady, tnu1)
+		secondary := testInstanceBuildVPC(t, dbSession, secondaryName, ip, tn1, st1, cdb.GetUUIDPtr(uuid.New()), nil, cdb.GetStrPtr(cdbm.VpcFNN), nil, cdbm.VpcStatusReady, tnu1)
+		primaryIPB := common.TestBuildVpcPrefixIPBlock(t, dbSession, primaryPrefixName+"-ipb", st1, ip, &tn1.ID, cdbm.IPBlockRoutingTypeDatacenterOnly, primaryCIDR, 24, cdbm.IPBlockProtocolVersionV4, false, cdbm.IPBlockStatusReady, tnu1)
+		secondaryIPB := common.TestBuildVpcPrefixIPBlock(t, dbSession, secondaryPrefixName+"-ipb", st1, ip, &tn1.ID, cdbm.IPBlockRoutingTypeDatacenterOnly, secondaryCIDR, 24, cdbm.IPBlockProtocolVersionV4, false, cdbm.IPBlockStatusReady, tnu1)
+		primaryPrefix := common.TestBuildVPCPrefix(t, dbSession, primaryPrefixName, st1, tn1, primary.ID, &primaryIPB.ID, cdb.GetStrPtr(primaryCIDR+"/24"), cdb.GetIntPtr(24), cdbm.VpcPrefixStatusReady, tnu1)
+		secondaryPrefix := common.TestBuildVPCPrefix(t, dbSession, secondaryPrefixName, st1, tn1, secondary.ID, &secondaryIPB.ID, cdb.GetStrPtr(secondaryCIDR+"/24"), cdb.GetIntPtr(24), cdbm.VpcPrefixStatusReady, tnu1)
+		return primary, secondary, primaryPrefix, secondaryPrefix
+	}
+
+	vpcPrimaryFull, vpcSecondaryFull, vpcPrefixPrimaryFull, vpcPrefixSecondaryFull := buildMultiVpcPair("test-getall-vpc-primary-full", "test-getall-vpc-secondary-full", "test-getall-vpcprefix-full-primary", "test-getall-vpcprefix-full-secondary", "192.183.0.0", "192.186.0.0")
+	vpcPrimaryNone, vpcSecondaryNone, vpcPrefixPrimaryNone, vpcPrefixSecondaryNone := buildMultiVpcPair("test-getall-vpc-primary-none", "test-getall-vpc-secondary-none", "test-getall-vpcprefix-none-primary", "test-getall-vpcprefix-none-secondary", "192.184.0.0", "192.187.0.0")
+	vpcPrimaryPartial, vpcSecondaryPartial, vpcPrefixPrimaryPartial, vpcPrefixSecondaryPartial := buildMultiVpcPair("test-getall-vpc-primary-partial", "test-getall-vpc-secondary-partial", "test-getall-vpcprefix-partial-primary", "test-getall-vpcprefix-partial-secondary", "192.185.0.0", "192.188.0.0")
+
+	instFull := testInstanceBuildInstance(t, dbSession, "test-instance-vpc-full", al3.ID, alc2.ID, tn1.ID, ip.ID, st1.ID, &ist2.ID, vpcPrimaryFull.ID, cdb.GetStrPtr(mc4.ID), &os2.ID, cdb.GetStrPtr("test-ipxe-script"), cdbm.InstanceStatusReady)
+	assert.NotNil(t, instFull)
+	instNone := testInstanceBuildInstance(t, dbSession, "test-instance-vpc-none", al3.ID, alc2.ID, tn1.ID, ip.ID, st1.ID, &ist2.ID, vpcPrimaryNone.ID, cdb.GetStrPtr(mc5.ID), &os2.ID, cdb.GetStrPtr("test-ipxe-script"), cdbm.InstanceStatusReady)
+	assert.NotNil(t, instNone)
+	instPartial := testInstanceBuildInstance(t, dbSession, "test-instance-vpc-partial", al3.ID, alc2.ID, tn1.ID, ip.ID, st1.ID, &ist2.ID, vpcPrimaryPartial.ID, cdb.GetStrPtr(mc6.ID), &os2.ID, cdb.GetStrPtr("test-ipxe-script"), cdbm.InstanceStatusReady)
+	assert.NotNil(t, instPartial)
+	assert.NotNil(t, testInstanceBuildInstanceInterface(t, dbSession, instFull.ID, nil, &vpcPrefixPrimaryFull.ID, nil, cdbm.InterfaceStatusPending))
+	assert.NotNil(t, testInstanceBuildInstanceInterface(t, dbSession, instFull.ID, nil, &vpcPrefixSecondaryFull.ID, nil, cdbm.InterfaceStatusPending))
+	assert.NotNil(t, testInstanceBuildInstanceInterface(t, dbSession, instNone.ID, nil, &vpcPrefixPrimaryNone.ID, nil, cdbm.InterfaceStatusPending))
+	assert.NotNil(t, testInstanceBuildInstanceInterface(t, dbSession, instNone.ID, nil, &vpcPrefixSecondaryNone.ID, nil, cdbm.InterfaceStatusPending))
+	assert.NotNil(t, testInstanceBuildInstanceInterface(t, dbSession, instPartial.ID, nil, &vpcPrefixPrimaryPartial.ID, nil, cdbm.InterfaceStatusPending))
+	assert.NotNil(t, testInstanceBuildInstanceInterface(t, dbSession, instPartial.ID, nil, &vpcPrefixSecondaryPartial.ID, nil, cdbm.InterfaceStatusPending))
+	common.TestBuildStatusDetail(t, dbSession, instFull.ID.String(), cdbm.InstanceStatusPending, cdb.GetStrPtr("request received, pending processing"))
+	common.TestBuildStatusDetail(t, dbSession, instFull.ID.String(), cdbm.InstanceStatusProvisioning, cdb.GetStrPtr("Instance is being provisioned on Site"))
+	common.TestBuildStatusDetail(t, dbSession, instNone.ID.String(), cdbm.InstanceStatusPending, cdb.GetStrPtr("request received, pending processing"))
+	common.TestBuildStatusDetail(t, dbSession, instNone.ID.String(), cdbm.InstanceStatusProvisioning, cdb.GetStrPtr("Instance is being provisioned on Site"))
+	common.TestBuildStatusDetail(t, dbSession, instPartial.ID.String(), cdbm.InstanceStatusPending, cdb.GetStrPtr("request received, pending processing"))
+	common.TestBuildStatusDetail(t, dbSession, instPartial.ID.String(), cdbm.InstanceStatusProvisioning, cdb.GetStrPtr("Instance is being provisioned on Site"))
+
+	setVpcProp := func(vpc *cdbm.Vpc, related []string, unprop []string, status cwssaws.NetworkSecurityGroupPropagationStatus) {
+		vpc.NetworkSecurityGroupID = &nsg1.ID
+		vpc.NetworkSecurityGroupPropagationDetails = &cdbm.NetworkSecurityGroupPropagationDetails{
+			NetworkSecurityGroupPropagationObjectStatus: &cwssaws.NetworkSecurityGroupPropagationObjectStatus{
+				Id:                      vpc.ID.String(),
+				Status:                  status,
+				RelatedInstanceIds:      related,
+				UnpropagatedInstanceIds: unprop,
+			},
+		}
+		testUpdateVPC(t, dbSession, vpc)
+	}
+
+	setVpcProp(vpcPrimaryFull, []string{instFull.ID.String()}, []string{}, cwssaws.NetworkSecurityGroupPropagationStatus_NSG_PROP_STATUS_FULL)
+	setVpcProp(vpcSecondaryFull, []string{instFull.ID.String()}, []string{}, cwssaws.NetworkSecurityGroupPropagationStatus_NSG_PROP_STATUS_FULL)
+	setVpcProp(vpcPrimaryNone, []string{instNone.ID.String()}, []string{instNone.ID.String()}, cwssaws.NetworkSecurityGroupPropagationStatus_NSG_PROP_STATUS_NONE)
+	setVpcProp(vpcSecondaryNone, []string{instNone.ID.String()}, []string{instNone.ID.String()}, cwssaws.NetworkSecurityGroupPropagationStatus_NSG_PROP_STATUS_NONE)
+	setVpcProp(vpcPrimaryPartial, []string{instPartial.ID.String()}, []string{}, cwssaws.NetworkSecurityGroupPropagationStatus_NSG_PROP_STATUS_FULL)
+	setVpcProp(vpcSecondaryPartial, []string{instPartial.ID.String()}, []string{instPartial.ID.String()}, cwssaws.NetworkSecurityGroupPropagationStatus_NSG_PROP_STATUS_NONE)
+
 	// Setup instances with specific IP addresses for IP filtering tests
 	// Use instances from the array so they're both on st1 and will be on the same page
 	testUpdateInterfaceWithIPs(t, dbSession, instsubarr[0], []string{"192.168.1.100", "192.168.1.101"})
@@ -5963,8 +6929,14 @@ func TestGetAllInstanceHandler_Handle(t *testing.T) {
 		expectedMachineIDOverride                   *string
 		expectedAnyNetworkSecurityGroupInherited    bool
 		expectedAnyNetworkSecurityGroupNotInherited bool
-		expectSubnet                                bool
-		verifyChildSpanner                          bool
+		expectedNetworkSecurityGroupInheritedByName map[string]bool
+		expectedSecondaryVpcIDsByName               map[string][]string
+		expectedPropagationDetailsByName            map[string]struct {
+			DetailedStatus string
+			Status         string
+		}
+		expectSubnet       bool
+		verifyChildSpanner bool
 	}{
 		{
 			name: "test Instance getall API endpoint success with infrastructure provider ID",
@@ -5984,7 +6956,7 @@ func TestGetAllInstanceHandler_Handle(t *testing.T) {
 			wantErr:                                  false,
 			orderBy:                                  cdb.GetStrPtr("NAME_ASC"),
 			expectedCount:                            20,
-			expectedTotal:                            26,
+			expectedTotal:                            29,
 			expectedFirstEntryName:                   instarr[0].Name,
 			verifyChildSpanner:                       true,
 			expectedIBInterfaceID:                    cdb.GetStrPtr(ibi1.ID.String()),
@@ -6009,7 +6981,7 @@ func TestGetAllInstanceHandler_Handle(t *testing.T) {
 			wantErr:                false,
 			orderBy:                cdb.GetStrPtr("NAME_ASC"),
 			expectedCount:          20,
-			expectedTotal:          26,
+			expectedTotal:          29,
 			expectedFirstEntryName: instarr[0].Name,
 		},
 		{
@@ -6028,7 +7000,7 @@ func TestGetAllInstanceHandler_Handle(t *testing.T) {
 			wantErr:       false,
 			orderBy:       cdb.GetStrPtr("NAME_ASC"),
 			expectedCount: 20,
-			expectedTotal: 27,
+			expectedTotal: 30,
 		},
 		{
 			name: "test Instance getall API endpoint failure, org does not have a Tenant associated",
@@ -6117,7 +7089,7 @@ func TestGetAllInstanceHandler_Handle(t *testing.T) {
 			pageSize:               cdb.GetIntPtr(10),
 			orderBy:                cdb.GetStrPtr("NAME_ASC"),
 			expectedCount:          10,
-			expectedTotal:          26,
+			expectedTotal:          29,
 			expectedFirstEntryName: instarr[0].Name,
 			wantErr:                false,
 		},
@@ -6140,7 +7112,7 @@ func TestGetAllInstanceHandler_Handle(t *testing.T) {
 			pageSize:               cdb.GetIntPtr(10),
 			orderBy:                cdb.GetStrPtr("NAME_ASC"),
 			expectedCount:          10,
-			expectedTotal:          26,
+			expectedTotal:          29,
 			expectedFirstEntryName: instarr[10].Name,
 			wantErr:                false,
 			expectSubnet:           true,
@@ -6183,7 +7155,7 @@ func TestGetAllInstanceHandler_Handle(t *testing.T) {
 			wantErr:                false,
 			orderBy:                cdb.GetStrPtr("NAME_ASC"),
 			expectedCount:          20,
-			expectedTotal:          26,
+			expectedTotal:          29,
 			expectSubnet:           true,
 			expectedFirstEntryName: instarr[0].Name,
 
@@ -6222,7 +7194,7 @@ func TestGetAllInstanceHandler_Handle(t *testing.T) {
 			wantErr:       false,
 			orderBy:       cdb.GetStrPtr("NAME_ASC"),
 			expectedCount: 20,
-			expectedTotal: 26,
+			expectedTotal: 29,
 			expectSubnet:  true,
 		},
 		{
@@ -6336,8 +7308,8 @@ func TestGetAllInstanceHandler_Handle(t *testing.T) {
 				InstanceTypeIDs: []uuid.UUID{ist2.ID},
 			},
 			expectedMachineIDOverride: cdb.GetStrPtr(mc2.ID),
-			expectedCount:             1,
-			expectedTotal:             1,
+			expectedCount:             4,
+			expectedTotal:             4,
 		},
 		{
 			name: "test Instance getall API endpoint success with multiple instance type IDs",
@@ -6359,7 +7331,7 @@ func TestGetAllInstanceHandler_Handle(t *testing.T) {
 				InstanceTypeIDs: []uuid.UUID{ist1.ID, ist2.ID},
 			},
 			expectedCount: 20,
-			expectedTotal: 26,
+			expectedTotal: 29,
 		},
 		{
 			name: "test Instance getall API endpoint failure, non-existent instance type id in request",
@@ -6422,8 +7394,8 @@ func TestGetAllInstanceHandler_Handle(t *testing.T) {
 				OperatingSystemIDs: []uuid.UUID{os2.ID},
 			},
 			expectedMachineIDOverride: cdb.GetStrPtr(mc2.ID),
-			expectedCount:             1,
-			expectedTotal:             1,
+			expectedCount:             4,
+			expectedTotal:             4,
 		},
 		{
 			name: "test Instance getall API endpoint success with multiple operating system IDs",
@@ -6445,7 +7417,7 @@ func TestGetAllInstanceHandler_Handle(t *testing.T) {
 				OperatingSystemIDs: []uuid.UUID{os1.ID, os2.ID},
 			},
 			expectedCount: 20,
-			expectedTotal: 26,
+			expectedTotal: 29,
 		},
 		{
 			name: "test Instance getall API endpoint failure, non-existent operating system id in request",
@@ -6552,7 +7524,7 @@ func TestGetAllInstanceHandler_Handle(t *testing.T) {
 			},
 			wantErr:       false,
 			expectedCount: 20,
-			expectedTotal: 26,
+			expectedTotal: 29,
 		},
 		{
 			name: "test Instance getall API endpoint success with status search query",
@@ -6574,7 +7546,7 @@ func TestGetAllInstanceHandler_Handle(t *testing.T) {
 			},
 			wantErr:       false,
 			expectedCount: 20,
-			expectedTotal: 26,
+			expectedTotal: 29,
 		},
 		{
 			name: "test Instance getall API endpoint success with combination of name and status search query",
@@ -6596,7 +7568,7 @@ func TestGetAllInstanceHandler_Handle(t *testing.T) {
 			},
 			wantErr:       false,
 			expectedCount: 20,
-			expectedTotal: 26,
+			expectedTotal: 29,
 		},
 		{
 			name: "test Instance getall API endpoint success with status search query",
@@ -6640,7 +7612,7 @@ func TestGetAllInstanceHandler_Handle(t *testing.T) {
 			},
 			wantErr:       false,
 			expectedCount: 20,
-			expectedTotal: 26,
+			expectedTotal: 29,
 		},
 		{
 			name: "test Instance getall API endpoint success multiple statuses",
@@ -6662,7 +7634,7 @@ func TestGetAllInstanceHandler_Handle(t *testing.T) {
 			},
 			wantErr:       false,
 			expectedCount: 20,
-			expectedTotal: 26,
+			expectedTotal: 29,
 		},
 		{
 			name: "test Instance getall API endpoint success with name filter",
@@ -6687,6 +7659,123 @@ func TestGetAllInstanceHandler_Handle(t *testing.T) {
 			expectedTotal:             1,
 			expectedFirstEntryName:    "test-instance-vpc",
 			expectedMachineIDOverride: cdb.GetStrPtr(mc2.ID),
+		},
+		{
+			name: "test Instance getall API endpoint multi-vpc inherited nsg propagation full state",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				reqSiteIDs:                  []string{st1.ID.String()},
+				reqInfrastructureProviderID: ip.ID.String(),
+				reqOrg:                      tnOrg1,
+				reqUser:                     tnu1,
+				respCode:                    http.StatusOK,
+			},
+			filter: cdbm.InstanceFilterInput{
+				Names:  []string{"test-instance-vpc-full"},
+				VpcIDs: []uuid.UUID{vpcSecondaryFull.ID},
+			},
+			wantErr:                   false,
+			expectedCount:             1,
+			expectedTotal:             1,
+			expectedFirstEntryName:    "test-instance-vpc-full",
+			expectedMachineIDOverride: cdb.GetStrPtr(mc4.ID),
+			expectedNetworkSecurityGroupInheritedByName: map[string]bool{
+				"test-instance-vpc-full": true,
+			},
+			expectedSecondaryVpcIDsByName: map[string][]string{
+				"test-instance-vpc-full": {vpcSecondaryFull.ID.String()},
+			},
+			expectedPropagationDetailsByName: map[string]struct {
+				DetailedStatus string
+				Status         string
+			}{
+				"test-instance-vpc-full": {
+					DetailedStatus: model.APINetworkSecurityGroupPropagationDetailedStatusFull,
+					Status:         model.APINetworkSecurityGroupPropagationStatusSynchronized,
+				},
+			},
+		},
+		{
+			name: "test Instance getall API endpoint multi-vpc inherited nsg propagation none state",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				reqSiteIDs:                  []string{st1.ID.String()},
+				reqInfrastructureProviderID: ip.ID.String(),
+				reqOrg:                      tnOrg1,
+				reqUser:                     tnu1,
+				respCode:                    http.StatusOK,
+			},
+			filter: cdbm.InstanceFilterInput{
+				Names:  []string{"test-instance-vpc-none"},
+				VpcIDs: []uuid.UUID{vpcSecondaryNone.ID},
+			},
+			wantErr:                   false,
+			expectedCount:             1,
+			expectedTotal:             1,
+			expectedFirstEntryName:    "test-instance-vpc-none",
+			expectedMachineIDOverride: cdb.GetStrPtr(mc5.ID),
+			expectedNetworkSecurityGroupInheritedByName: map[string]bool{
+				"test-instance-vpc-none": true,
+			},
+			expectedSecondaryVpcIDsByName: map[string][]string{
+				"test-instance-vpc-none": {vpcSecondaryNone.ID.String()},
+			},
+			expectedPropagationDetailsByName: map[string]struct {
+				DetailedStatus string
+				Status         string
+			}{
+				"test-instance-vpc-none": {
+					DetailedStatus: model.APINetworkSecurityGroupPropagationDetailedStatusNone,
+					Status:         model.APINetworkSecurityGroupPropagationStatusSynchronizing,
+				},
+			},
+		},
+		{
+			name: "test Instance getall API endpoint multi-vpc inherited nsg propagation partial state",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				reqSiteIDs:                  []string{st1.ID.String()},
+				reqInfrastructureProviderID: ip.ID.String(),
+				reqOrg:                      tnOrg1,
+				reqUser:                     tnu1,
+				respCode:                    http.StatusOK,
+			},
+			filter: cdbm.InstanceFilterInput{
+				Names:  []string{"test-instance-vpc-partial"},
+				VpcIDs: []uuid.UUID{vpcSecondaryPartial.ID},
+			},
+			wantErr:                   false,
+			expectedCount:             1,
+			expectedTotal:             1,
+			expectedFirstEntryName:    "test-instance-vpc-partial",
+			expectedMachineIDOverride: cdb.GetStrPtr(mc6.ID),
+			expectedNetworkSecurityGroupInheritedByName: map[string]bool{
+				"test-instance-vpc-partial": true,
+			},
+			expectedSecondaryVpcIDsByName: map[string][]string{
+				"test-instance-vpc-partial": {vpcSecondaryPartial.ID.String()},
+			},
+			expectedPropagationDetailsByName: map[string]struct {
+				DetailedStatus string
+				Status         string
+			}{
+				"test-instance-vpc-partial": {
+					DetailedStatus: model.APINetworkSecurityGroupPropagationDetailedStatusPartial,
+					Status:         model.APINetworkSecurityGroupPropagationStatusSynchronizing,
+				},
+			},
 		},
 		{
 			name: "test Instance getall API endpoint success with single IP address filter",
@@ -6790,10 +7879,10 @@ func TestGetAllInstanceHandler_Handle(t *testing.T) {
 			pageSize:                  cdb.GetIntPtr(10),
 			orderBy:                   cdb.GetStrPtr("MACHINE_ID_DESC"),
 			expectedCount:             10,
-			expectedTotal:             26,
-			expectedFirstEntryName:    inst2.Name,
+			expectedTotal:             29,
+			expectedFirstEntryName:    "test-instance-vpc-partial",
 			wantErr:                   false,
-			expectedMachineIDOverride: &mc2.ID,
+			expectedMachineIDOverride: &mc6.ID,
 			expectedAnyNetworkSecurityGroupNotInherited: true,
 		},
 		{
@@ -6815,7 +7904,7 @@ func TestGetAllInstanceHandler_Handle(t *testing.T) {
 			pageSize:               cdb.GetIntPtr(10),
 			orderBy:                cdb.GetStrPtr("TENANT_ORG_DISPLAY_NAME_ASC"),
 			expectedCount:          10,
-			expectedTotal:          26,
+			expectedTotal:          29,
 			expectedFirstEntryName: instarr[0].Name,
 			wantErr:                false,
 		},
@@ -6838,7 +7927,7 @@ func TestGetAllInstanceHandler_Handle(t *testing.T) {
 			pageSize:               cdb.GetIntPtr(10),
 			orderBy:                cdb.GetStrPtr("INSTANCE_TYPE_NAME_ASC"),
 			expectedCount:          10,
-			expectedTotal:          26,
+			expectedTotal:          29,
 			expectedFirstEntryName: instarr[0].Name,
 			wantErr:                false,
 		},
@@ -6861,7 +7950,7 @@ func TestGetAllInstanceHandler_Handle(t *testing.T) {
 			pageSize:               cdb.GetIntPtr(10),
 			orderBy:                cdb.GetStrPtr("HAS_INFINIBAND_ASC"),
 			expectedCount:          10,
-			expectedTotal:          26,
+			expectedTotal:          29,
 			expectedFirstEntryName: instarr[0].Name,
 			wantErr:                false,
 		},
@@ -7077,6 +8166,32 @@ func TestGetAllInstanceHandler_Handle(t *testing.T) {
 
 			for _, apiInst := range rst {
 				assert.Equal(t, 2, len(apiInst.StatusHistory))
+			}
+
+			if tt.expectedSecondaryVpcIDsByName != nil {
+				for _, apiInst := range rst {
+					if expected, ok := tt.expectedSecondaryVpcIDsByName[apiInst.Name]; ok {
+						assert.ElementsMatch(t, expected, apiInst.SecondaryVpcIDs, apiInst.Name)
+					}
+				}
+			}
+
+			if tt.expectedNetworkSecurityGroupInheritedByName != nil {
+				for _, apiInst := range rst {
+					if expected, ok := tt.expectedNetworkSecurityGroupInheritedByName[apiInst.Name]; ok {
+						assert.Equal(t, expected, apiInst.NetworkSecurityGroupInherited, apiInst.Name)
+					}
+				}
+			}
+
+			if tt.expectedPropagationDetailsByName != nil {
+				for _, apiInst := range rst {
+					if expected, ok := tt.expectedPropagationDetailsByName[apiInst.Name]; ok {
+						require.NotNil(t, apiInst.NetworkSecurityGroupPropagationDetails, apiInst.Name)
+						assert.Equal(t, expected.DetailedStatus, apiInst.NetworkSecurityGroupPropagationDetails.DetailedStatus, apiInst.Name)
+						assert.Equal(t, expected.Status, apiInst.NetworkSecurityGroupPropagationDetails.Status, apiInst.Name)
+					}
+				}
 			}
 
 			if tt.expectedIBInterfaceID != nil {

@@ -33,6 +33,8 @@ type BatchInstanceCreateRequest struct {
 	InstanceTypeId string `json:"instanceTypeId"`
 	// ID of the VPC the Instances should belong to
 	VpcId string `json:"vpcId"`
+	// IDs of additional VPCs the Instances should attach to through non-primary interfaces. This field may only be specified when every entry in `interfaces` uses `vpcPrefixId`. IDs must be unique, must be valid UUIDs, and must not include the primary `vpcId`.
+	SecondaryVpcIds []string `json:"secondaryVpcIds,omitempty"`
 	// User data applied to all instances. Can only be specified if allowOverride is set to true in Operating System
 	UserData NullableString `json:"userData,omitempty"`
 	// Must be specified if iPXE Script field is empty
@@ -250,6 +252,38 @@ func (o *BatchInstanceCreateRequest) GetVpcIdOk() (*string, bool) {
 // SetVpcId sets field value
 func (o *BatchInstanceCreateRequest) SetVpcId(v string) {
 	o.VpcId = v
+}
+
+// GetSecondaryVpcIds returns the SecondaryVpcIds field value if set, zero value otherwise.
+func (o *BatchInstanceCreateRequest) GetSecondaryVpcIds() []string {
+	if o == nil || IsNil(o.SecondaryVpcIds) {
+		var ret []string
+		return ret
+	}
+	return o.SecondaryVpcIds
+}
+
+// GetSecondaryVpcIdsOk returns a tuple with the SecondaryVpcIds field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *BatchInstanceCreateRequest) GetSecondaryVpcIdsOk() ([]string, bool) {
+	if o == nil || IsNil(o.SecondaryVpcIds) {
+		return nil, false
+	}
+	return o.SecondaryVpcIds, true
+}
+
+// HasSecondaryVpcIds returns a boolean if a field has been set.
+func (o *BatchInstanceCreateRequest) HasSecondaryVpcIds() bool {
+	if o != nil && !IsNil(o.SecondaryVpcIds) {
+		return true
+	}
+
+	return false
+}
+
+// SetSecondaryVpcIds gets a reference to the given []string and assigns it to the SecondaryVpcIds field.
+func (o *BatchInstanceCreateRequest) SetSecondaryVpcIds(v []string) {
+	o.SecondaryVpcIds = v
 }
 
 // GetUserData returns the UserData field value if set, zero value otherwise (both if not set or set to explicit null).
@@ -722,6 +756,9 @@ func (o BatchInstanceCreateRequest) ToMap() (map[string]interface{}, error) {
 	toSerialize["tenantId"] = o.TenantId
 	toSerialize["instanceTypeId"] = o.InstanceTypeId
 	toSerialize["vpcId"] = o.VpcId
+	if !IsNil(o.SecondaryVpcIds) {
+		toSerialize["secondaryVpcIds"] = o.SecondaryVpcIds
+	}
 	if o.UserData.IsSet() {
 		toSerialize["userData"] = o.UserData.Get()
 	}
