@@ -235,21 +235,30 @@ var (
 )
 
 // credentialToMap converts a Credential to a map[string]interface{} suitable for Vault storage.
+// Uses Forge's credential format with a UsernamePassword wrapper.
 func credentialToMap(c *credential.Credential) map[string]interface{} {
 	return map[string]interface{}{
-		"username": c.User,
-		"password": c.Password.Value,
+		"UsernamePassword": map[string]interface{}{
+			"username": c.User,
+			"password": c.Password.Value,
+		},
 	}
 }
 
 // credentialFromMap converts a map[string]interface{} from Vault storage to a Credential.
+// Expects Forge's credential format: {"UsernamePassword": {"username": ..., "password": ...}}
 func credentialFromMap(data map[string]interface{}) (*credential.Credential, error) {
-	user, ok := data["username"].(string)
+	nested, ok := data["UsernamePassword"].(map[string]interface{})
+	if !ok {
+		return nil, errors.New("missing or invalid UsernamePassword field")
+	}
+
+	user, ok := nested["username"].(string)
 	if !ok {
 		return nil, errInvalidUsername
 	}
 
-	password, ok := data["password"].(string)
+	password, ok := nested["password"].(string)
 	if !ok {
 		return nil, errInvalidPassword
 	}
