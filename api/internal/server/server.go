@@ -124,7 +124,7 @@ func InitAPIServer(cfg *config.Config, dbSession *cdb.Session, tc tsdkClient.Cli
 	e.HTTPErrorHandler = cerr.DefaultHTTPErrorHandler
 
 	// Add timeouts to prevent SLOWLORIS attacks
-	e.Server.ReadHeaderTimeout = 5 * time.Second
+	e.Server.ReadHeaderTimeout = 3 * time.Second
 	e.Server.ReadTimeout = 60 * time.Second
 	e.Server.WriteTimeout = 60 * time.Second
 	e.Server.IdleTimeout = 120 * time.Second
