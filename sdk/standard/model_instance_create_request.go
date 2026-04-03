@@ -33,6 +33,8 @@ type InstanceCreateRequest struct {
 	MachineId *string `json:"machineId,omitempty"`
 	// ID of the VPC the Instance should belong to
 	VpcId string `json:"vpcId"`
+	// IDs of additional VPCs the Instance should attach to through non-primary interfaces. This field may only be specified when every entry in `interfaces` uses `vpcPrefixId`. IDs must be unique, must be valid UUIDs, and must not include the primary `vpcId`.
+	SecondaryVpcIds []string `json:"secondaryVpcIds,omitempty"`
 	// Can only be specified if allowOverride is set to true in Operating System
 	UserData NullableString `json:"userData,omitempty"`
 	// Must be specified if iPXE Script field is empty
@@ -259,6 +261,38 @@ func (o *InstanceCreateRequest) GetVpcIdOk() (*string, bool) {
 // SetVpcId sets field value
 func (o *InstanceCreateRequest) SetVpcId(v string) {
 	o.VpcId = v
+}
+
+// GetSecondaryVpcIds returns the SecondaryVpcIds field value if set, zero value otherwise.
+func (o *InstanceCreateRequest) GetSecondaryVpcIds() []string {
+	if o == nil || IsNil(o.SecondaryVpcIds) {
+		var ret []string
+		return ret
+	}
+	return o.SecondaryVpcIds
+}
+
+// GetSecondaryVpcIdsOk returns a tuple with the SecondaryVpcIds field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *InstanceCreateRequest) GetSecondaryVpcIdsOk() ([]string, bool) {
+	if o == nil || IsNil(o.SecondaryVpcIds) {
+		return nil, false
+	}
+	return o.SecondaryVpcIds, true
+}
+
+// HasSecondaryVpcIds returns a boolean if a field has been set.
+func (o *InstanceCreateRequest) HasSecondaryVpcIds() bool {
+	if o != nil && !IsNil(o.SecondaryVpcIds) {
+		return true
+	}
+
+	return false
+}
+
+// SetSecondaryVpcIds gets a reference to the given []string and assigns it to the SecondaryVpcIds field.
+func (o *InstanceCreateRequest) SetSecondaryVpcIds(v []string) {
+	o.SecondaryVpcIds = v
 }
 
 // GetUserData returns the UserData field value if set, zero value otherwise (both if not set or set to explicit null).
@@ -735,6 +769,9 @@ func (o InstanceCreateRequest) ToMap() (map[string]interface{}, error) {
 		toSerialize["machineId"] = o.MachineId
 	}
 	toSerialize["vpcId"] = o.VpcId
+	if !IsNil(o.SecondaryVpcIds) {
+		toSerialize["secondaryVpcIds"] = o.SecondaryVpcIds
+	}
 	if o.UserData.IsSet() {
 		toSerialize["userData"] = o.UserData.Get()
 	}

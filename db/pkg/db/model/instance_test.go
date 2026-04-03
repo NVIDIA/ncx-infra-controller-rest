@@ -70,6 +70,9 @@ func testInstanceSetupSchema(t *testing.T, dbSession *db.Session) {
 	// create IPBlock table
 	err = dbSession.DB.ResetModel(context.Background(), (*IPBlock)(nil))
 	assert.Nil(t, err)
+	// create VpcPrefix table
+	err = dbSession.DB.ResetModel(context.Background(), (*VpcPrefix)(nil))
+	assert.Nil(t, err)
 	// create Machine table
 	err = dbSession.DB.ResetModel(context.Background(), (*Machine)(nil))
 	assert.Nil(t, err)
@@ -84,6 +87,9 @@ func testInstanceSetupSchema(t *testing.T, dbSession *db.Session) {
 	assert.Nil(t, err)
 	// create Instance table
 	err = dbSession.DB.ResetModel(context.Background(), (*Instance)(nil))
+	assert.Nil(t, err)
+	// create Interface table
+	err = dbSession.DB.ResetModel(context.Background(), (*Interface)(nil))
 	assert.Nil(t, err)
 	// create SSHKey table
 	err = dbSession.DB.ResetModel(context.Background(), (*SSHKey)(nil))
@@ -877,6 +883,64 @@ func TestInstanceSQLDAO_GetAll(t *testing.T) {
 	networkSecurityGroup := testInstanceBuildNetworkSecurityGroup(t, dbSession, tenant, site, "testNetworkSecurityGroup")
 	instanceType2 := testInstanceBuildInstanceType(t, dbSession, ip, "testInstanceType2")
 	networkSecurityGroup2 := testInstanceBuildNetworkSecurityGroup(t, dbSession, tenant2, site2, "testNetworkSecurityGroup2")
+	ipBlock := &IPBlock{
+		ID:                       uuid.New(),
+		Name:                     "testIpBlock",
+		SiteID:                   site.ID,
+		InfrastructureProviderID: ip.ID,
+		TenantID:                 &tenant.ID,
+		RoutingType:              IPBlockRoutingTypeDatacenterOnly,
+		Prefix:                   "10.0.0.0",
+		PrefixLength:             24,
+		ProtocolVersion:          IPBlockProtocolVersionV4,
+		Status:                   IPBlockStatusReady,
+	}
+	_, err := dbSession.DB.NewInsert().Model(ipBlock).Exec(ctx)
+	assert.NoError(t, err)
+	ipBlock2 := &IPBlock{
+		ID:                       uuid.New(),
+		Name:                     "testIpBlock2",
+		SiteID:                   site2.ID,
+		InfrastructureProviderID: ip.ID,
+		TenantID:                 &tenant2.ID,
+		RoutingType:              IPBlockRoutingTypeDatacenterOnly,
+		Prefix:                   "10.1.0.0",
+		PrefixLength:             24,
+		ProtocolVersion:          IPBlockProtocolVersionV4,
+		Status:                   IPBlockStatusReady,
+	}
+	_, err = dbSession.DB.NewInsert().Model(ipBlock2).Exec(ctx)
+	assert.NoError(t, err)
+	vpcPrefix := &VpcPrefix{
+		ID:           uuid.New(),
+		Name:         "testVpcPrefix",
+		Org:          tenant.Org,
+		SiteID:       site.ID,
+		VpcID:        vpc.ID,
+		TenantID:     tenant.ID,
+		IPBlockID:    &ipBlock.ID,
+		Prefix:       "10.0.0.0/24",
+		PrefixLength: 24,
+		Status:       VpcPrefixStatusReady,
+		CreatedBy:    uuid.New(),
+	}
+	_, err = dbSession.DB.NewInsert().Model(vpcPrefix).Exec(ctx)
+	assert.NoError(t, err)
+	vpcPrefix2 := &VpcPrefix{
+		ID:           uuid.New(),
+		Name:         "testVpcPrefix2",
+		Org:          tenant2.Org,
+		SiteID:       site2.ID,
+		VpcID:        vpc2.ID,
+		TenantID:     tenant2.ID,
+		IPBlockID:    &ipBlock2.ID,
+		Prefix:       "10.1.0.0/24",
+		PrefixLength: 24,
+		Status:       VpcPrefixStatusReady,
+		CreatedBy:    uuid.New(),
+	}
+	_, err = dbSession.DB.NewInsert().Model(vpcPrefix2).Exec(ctx)
+	assert.NoError(t, err)
 	allocationConstraint := testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
 	testBuildAllocationConstraint(t, dbSession, allocation2, AllocationResourceTypeInstanceType, instanceType2.ID, AllocationConstraintTypeReserved, 10, uuid.New())
 
@@ -957,6 +1021,32 @@ func TestInstanceSQLDAO_GetAll(t *testing.T) {
 		assert.NotNil(t, instance)
 		instanceGroup2 = append(instanceGroup2, *instance)
 	}
+
+	ifcd := NewInterfaceDAO(dbSession)
+	_, err = ifcd.Create(ctx, nil, InterfaceCreateInput{
+		InstanceID:  instanceGroup1[0].ID,
+		VpcPrefixID: &vpcPrefix2.ID,
+		Status:      InterfaceStatusPending,
+		IsPhysical:  true,
+		CreatedBy:   user.ID,
+	})
+	assert.NoError(t, err)
+	_, err = ifcd.Create(ctx, nil, InterfaceCreateInput{
+		InstanceID:  instanceGroup1[0].ID,
+		VpcPrefixID: &vpcPrefix.ID,
+		Status:      InterfaceStatusPending,
+		IsPhysical:  false,
+		CreatedBy:   user.ID,
+	})
+	assert.NoError(t, err)
+	_, err = ifcd.Create(ctx, nil, InterfaceCreateInput{
+		InstanceID:  instanceGroup2[0].ID,
+		VpcPrefixID: &vpcPrefix.ID,
+		Status:      InterfaceStatusPending,
+		IsPhysical:  true,
+		CreatedBy:   user.ID,
+	})
+	assert.NoError(t, err)
 
 	// OTEL Spanner configuration
 	_, _, ctx = testCommonTraceProviderSetup(t, ctx)
@@ -1124,7 +1214,7 @@ func TestInstanceSQLDAO_GetAll(t *testing.T) {
 			filter: InstanceFilterInput{
 				VpcIDs: []uuid.UUID{vpc.ID},
 			},
-			expectedCount: totalCount / 2,
+			expectedCount: totalCount/2 + 1, // plus 1 because of the instance attached to the vpc via the secondary interface.
 			expectedError: false,
 		},
 		{
@@ -1133,6 +1223,17 @@ func TestInstanceSQLDAO_GetAll(t *testing.T) {
 				VpcIDs: []uuid.UUID{vpc.ID, vpc2.ID},
 			},
 			expectedCount: paginator.DefaultLimit,
+			expectedError: false,
+		},
+		{
+			desc: "GetAll with vpc filter returns instances attached through secondary VPC interfaces",
+			filter: InstanceFilterInput{
+				VpcIDs: []uuid.UUID{vpc2.ID},
+			},
+			PageInput: paginator.PageInput{
+				Limit: db.GetIntPtr(totalCount),
+			},
+			expectedCount: totalCount/2 + 1,
 			expectedError: false,
 		},
 		{
@@ -1516,6 +1617,64 @@ func TestInstanceSQLDAO_GetCount(t *testing.T) {
 	networkSecurityGroup2 := testInstanceBuildNetworkSecurityGroup(t, dbSession, tenant2, site2, "testNetworkSecurityGroup2")
 	allocationConstraint := testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
 	allocationConstraint2 := testBuildAllocationConstraint(t, dbSession, allocation2, AllocationResourceTypeInstanceType, instanceType2.ID, AllocationConstraintTypeReserved, 10, uuid.New())
+	ipBlock := &IPBlock{
+		ID:                       uuid.New(),
+		Name:                     "testIpBlock",
+		SiteID:                   site.ID,
+		InfrastructureProviderID: ip.ID,
+		TenantID:                 &tenant.ID,
+		RoutingType:              IPBlockRoutingTypeDatacenterOnly,
+		Prefix:                   "10.2.0.0",
+		PrefixLength:             24,
+		ProtocolVersion:          IPBlockProtocolVersionV4,
+		Status:                   IPBlockStatusReady,
+	}
+	_, err := dbSession.DB.NewInsert().Model(ipBlock).Exec(ctx)
+	assert.NoError(t, err)
+	ipBlock2 := &IPBlock{
+		ID:                       uuid.New(),
+		Name:                     "testIpBlock2",
+		SiteID:                   site2.ID,
+		InfrastructureProviderID: ip.ID,
+		TenantID:                 &tenant2.ID,
+		RoutingType:              IPBlockRoutingTypeDatacenterOnly,
+		Prefix:                   "10.3.0.0",
+		PrefixLength:             24,
+		ProtocolVersion:          IPBlockProtocolVersionV4,
+		Status:                   IPBlockStatusReady,
+	}
+	_, err = dbSession.DB.NewInsert().Model(ipBlock2).Exec(ctx)
+	assert.NoError(t, err)
+	vpcPrefix := &VpcPrefix{
+		ID:           uuid.New(),
+		Name:         "testVpcPrefix",
+		Org:          tenant.Org,
+		SiteID:       site.ID,
+		VpcID:        vpc.ID,
+		TenantID:     tenant.ID,
+		IPBlockID:    &ipBlock.ID,
+		Prefix:       "10.2.0.0/24",
+		PrefixLength: 24,
+		Status:       VpcPrefixStatusReady,
+		CreatedBy:    uuid.New(),
+	}
+	_, err = dbSession.DB.NewInsert().Model(vpcPrefix).Exec(ctx)
+	assert.NoError(t, err)
+	vpcPrefix2 := &VpcPrefix{
+		ID:           uuid.New(),
+		Name:         "testVpcPrefix2",
+		Org:          tenant2.Org,
+		SiteID:       site2.ID,
+		VpcID:        vpc2.ID,
+		TenantID:     tenant2.ID,
+		IPBlockID:    &ipBlock2.ID,
+		Prefix:       "10.3.0.0/24",
+		PrefixLength: 24,
+		Status:       VpcPrefixStatusReady,
+		CreatedBy:    uuid.New(),
+	}
+	_, err = dbSession.DB.NewInsert().Model(vpcPrefix2).Exec(ctx)
+	assert.NoError(t, err)
 
 	operatingSystem := testInstanceBuildOperatingSystem(t, dbSession, "testOS")
 	operatingSystem2 := testInstanceBuildOperatingSystem(t, dbSession, "testOS2")
@@ -1590,6 +1749,32 @@ func TestInstanceSQLDAO_GetCount(t *testing.T) {
 		assert.NotNil(t, instance)
 		instanceGroup2 = append(instanceGroup2, *instance)
 	}
+
+	ifcd := NewInterfaceDAO(dbSession)
+	_, err = ifcd.Create(ctx, nil, InterfaceCreateInput{
+		InstanceID:  instanceGroup1[0].ID,
+		VpcPrefixID: &vpcPrefix2.ID,
+		Status:      InterfaceStatusPending,
+		IsPhysical:  true,
+		CreatedBy:   user.ID,
+	})
+	assert.NoError(t, err)
+	_, err = ifcd.Create(ctx, nil, InterfaceCreateInput{
+		InstanceID:  instanceGroup1[0].ID,
+		VpcPrefixID: &vpcPrefix.ID,
+		Status:      InterfaceStatusPending,
+		IsPhysical:  false,
+		CreatedBy:   user.ID,
+	})
+	assert.NoError(t, err)
+	_, err = ifcd.Create(ctx, nil, InterfaceCreateInput{
+		InstanceID:  instanceGroup2[0].ID,
+		VpcPrefixID: &vpcPrefix.ID,
+		Status:      InterfaceStatusPending,
+		IsPhysical:  true,
+		CreatedBy:   user.ID,
+	})
+	assert.NoError(t, err)
 
 	// OTEL Spanner configuration
 	_, _, ctx = testCommonTraceProviderSetup(t, ctx)
@@ -1709,7 +1894,7 @@ func TestInstanceSQLDAO_GetCount(t *testing.T) {
 			filter: InstanceFilterInput{
 				VpcIDs: []uuid.UUID{vpc.ID},
 			},
-			expectedCount: totalCount / 2,
+			expectedCount: totalCount/2 + 1, // plus 1 because of the instance attached to the vpc via the secondary interface.
 			expectedError: false,
 		},
 		{
@@ -1718,6 +1903,14 @@ func TestInstanceSQLDAO_GetCount(t *testing.T) {
 				VpcIDs: []uuid.UUID{vpc.ID, vpc2.ID},
 			},
 			expectedCount: totalCount,
+			expectedError: false,
+		},
+		{
+			desc: "GetCount with vpc filter includes instances attached through secondary VPC interfaces",
+			filter: InstanceFilterInput{
+				VpcIDs: []uuid.UUID{vpc2.ID},
+			},
+			expectedCount: totalCount/2 + 1,
 			expectedError: false,
 		},
 		{

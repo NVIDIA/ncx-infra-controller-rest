@@ -44,6 +44,8 @@ type InstanceUpdateRequest struct {
 	PhoneHomeEnabled NullableBool `json:"phoneHomeEnabled,omitempty"`
 	// Update labels of the Instance. The labels will be entirely replaced by those sent in the request. Any labels not included in the request will be removed. To retain existing labels, first fetch them and include them along with this request.
 	Labels map[string]string `json:"labels,omitempty"`
+	// IDs of additional VPCs the Instance should attach to through non-primary interfaces. This field may only be specified when every entry in `interfaces` uses `vpcPrefixId`. IDs must be unique, must be valid UUIDs, and must not include the primary `vpcId`.
+	SecondaryVpcIds []string `json:"secondaryVpcIds,omitempty"`
 	// Update Interfaces of the Instance
 	Interfaces []InterfaceCreateRequest `json:"interfaces,omitempty"`
 	// Update InfiniBand Interfaces of the Instance
@@ -608,6 +610,38 @@ func (o *InstanceUpdateRequest) SetLabels(v map[string]string) {
 	o.Labels = v
 }
 
+// GetSecondaryVpcIds returns the SecondaryVpcIds field value if set, zero value otherwise.
+func (o *InstanceUpdateRequest) GetSecondaryVpcIds() []string {
+	if o == nil || IsNil(o.SecondaryVpcIds) {
+		var ret []string
+		return ret
+	}
+	return o.SecondaryVpcIds
+}
+
+// GetSecondaryVpcIdsOk returns a tuple with the SecondaryVpcIds field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *InstanceUpdateRequest) GetSecondaryVpcIdsOk() ([]string, bool) {
+	if o == nil || IsNil(o.SecondaryVpcIds) {
+		return nil, false
+	}
+	return o.SecondaryVpcIds, true
+}
+
+// HasSecondaryVpcIds returns a boolean if a field has been set.
+func (o *InstanceUpdateRequest) HasSecondaryVpcIds() bool {
+	if o != nil && !IsNil(o.SecondaryVpcIds) {
+		return true
+	}
+
+	return false
+}
+
+// SetSecondaryVpcIds gets a reference to the given []string and assigns it to the SecondaryVpcIds field.
+func (o *InstanceUpdateRequest) SetSecondaryVpcIds(v []string) {
+	o.SecondaryVpcIds = v
+}
+
 // GetInterfaces returns the Interfaces field value if set, zero value otherwise.
 func (o *InstanceUpdateRequest) GetInterfaces() []InterfaceCreateRequest {
 	if o == nil || IsNil(o.Interfaces) {
@@ -784,6 +818,9 @@ func (o InstanceUpdateRequest) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.Labels) {
 		toSerialize["labels"] = o.Labels
+	}
+	if !IsNil(o.SecondaryVpcIds) {
+		toSerialize["secondaryVpcIds"] = o.SecondaryVpcIds
 	}
 	if !IsNil(o.Interfaces) {
 		toSerialize["interfaces"] = o.Interfaces

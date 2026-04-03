@@ -520,10 +520,32 @@ func (isd InstanceSQLDAO) setQueryWithFilter(filter InstanceFilterInput, query *
 	}
 
 	if filter.VpcIDs != nil {
-		query = query.Where("i.vpc_id IN (?)", bun.In(filter.VpcIDs))
-		if instanceDAOSpan != nil {
-			isd.tracerSpan.SetAttribute(instanceDAOSpan, "vpc_ids", filter.VpcIDs)
-		}
+
+		// Attach interface data with an outer join.
+		// We seem to have a few scenarios (nvlink, ib, etc)
+		// where an instance could have a VPC but not have
+		// ethernet interfaces associated.
+		query = query.Join("LEFT OUTER JOIN interface ifc").
+			JoinOn("ifc.instance_id = i.id").
+			JoinOn("ifc.deleted IS NULL")
+
+		// Attach vpc_prefix data with an outer join
+		query = query.Join("LEFT OUTER JOIN vpc_prefix vp").
+			JoinOn("vp.id = ifc.vpc_prefix_id").
+			JoinOn("vp.deleted IS NULL")
+
+		isd.tracerSpan.SetAttribute(instanceDAOSpan, "vpc_ids", filter.VpcIDs)
+
+		// Filter on VPC IDs
+		// Match instances by either their primary VPC (`i.vpc_id`) or any
+		// interface-attached VPC prefix (`vp.vpc_id`).
+		// We need to check for both so that we cover legacy VPCs with network segments and
+		// VPCs with VPC prefixes.
+		query = query.Where("(vp.vpc_id IN (?) OR i.vpc_id IN (?))", bun.In(filter.VpcIDs), bun.In(filter.VpcIDs))
+
+		// Now boil everything down to only the unique instance records.
+		query = query.Distinct()
+
 	}
 
 	if filter.MachineIDs != nil {
@@ -586,7 +608,7 @@ func (isd InstanceSQLDAO) GetAll(ctx context.Context, tx *db.Tx, filter Instance
 
 	var instances []Instance
 
-	query := db.GetIDB(tx, isd.dbSession).NewSelect().Model(&instances)
+	query := db.GetIDB(tx, isd.dbSession).NewSelect().Model(&instances).ColumnExpr("i.*")
 
 	query, err := isd.setQueryWithFilter(filter, query, instanceDAOSpan)
 	if err != nil {
@@ -598,7 +620,7 @@ func (isd InstanceSQLDAO) GetAll(ctx context.Context, tx *db.Tx, filter Instance
 		multiOrderBy = append(multiOrderBy, page.OrderBy)
 		// handle sorting by presence of infiniband
 		if page.OrderBy.Field == instanceOrderByHasInfiniBandExt {
-			query = query.ColumnExpr("i.*").ColumnExpr("mc.type AS mc_type")
+			query = query.ColumnExpr("mc.type AS mc_type")
 			query = query.Join("LEFT JOIN machine_capability AS mc ON i.machine_id = mc.machine_id AND mc.type = 'InfiniBand'").Distinct()
 		}
 	}
