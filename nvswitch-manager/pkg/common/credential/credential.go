@@ -97,22 +97,31 @@ func (cred *Credential) Retrieve() (*string, *string) {
 	return &c.User, &c.Password.Value
 }
 
-// ToMap converts a Credential to a map[string]interface{} suitable for Vault storage
+// ToMap converts a Credential to a map[string]interface{} suitable for Vault storage.
+// Uses Forge's credential format with a UsernamePassword wrapper.
 func (c Credential) ToMap() map[string]interface{} {
 	return map[string]interface{}{
-		"username": c.User,
-		"password": c.Password.Value, // Store the actual password value in Vault
+		"UsernamePassword": map[string]interface{}{
+			"username": c.User,
+			"password": c.Password.Value,
+		},
 	}
 }
 
-// FromMap converts a map[string]interface{} from Vault storage to a Credential
+// FromMap converts a map[string]interface{} from Vault storage to a Credential.
+// Expects Forge's credential format: {"UsernamePassword": {"username": ..., "password": ...}}
 func FromMap(data map[string]interface{}) (*Credential, error) {
-	user, ok := data["username"].(string)
+	nested, ok := data["UsernamePassword"].(map[string]interface{})
+	if !ok {
+		return nil, errors.New("missing or invalid UsernamePassword field")
+	}
+
+	user, ok := nested["username"].(string)
 	if !ok {
 		return nil, errors.New("invalid username value")
 	}
 
-	password, ok := data["password"].(string)
+	password, ok := nested["password"].(string)
 	if !ok {
 		return nil, errors.New("invalid password value")
 	}
