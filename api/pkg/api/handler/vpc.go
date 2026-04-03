@@ -1035,6 +1035,28 @@ func (uvvh UpdateVPCVirtualizationHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "VPC does not belong to current Tenant", nil)
 	}
 
+	subnetDAO := cdbm.NewSubnetDAO(uvvh.dbSession)
+	subnetCountByStatus, err := subnetDAO.GetCountByStatus(ctx, nil, &tenant.ID, &vpc.ID)
+	if err != nil {
+		logger.Error().Err(err).Msg("error retrieving Subnets count from DB for VPC")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Subnets count for VPC", nil)
+	}
+
+	instanceDAO := cdbm.NewInstanceDAO(uvvh.dbSession)
+	instanceCount, err := instanceDAO.GetCount(ctx, nil, cdbm.InstanceFilterInput{VpcIDs: []uuid.UUID{vpc.ID}})
+	if err != nil {
+		logger.Error().Err(err).Msg("error retrieving Instances count from DB for VPC")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Instances count for VPC", nil)
+	}
+
+	if subnetCountByStatus["total"] > 0 {
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "VPC virtualization cannot be updated while subnets exist on the VPC", nil)
+	}
+
+	if instanceCount > 0 {
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "VPC virtualization cannot be updated while instances exist on the VPC", nil)
+	}
+
 	// Ensure that Tenant has access to Site
 	tsDAO := cdbm.NewTenantSiteDAO(uvvh.dbSession)
 	_, err = tsDAO.GetByTenantIDAndSiteID(ctx, nil, tenant.ID, vpc.SiteID, nil)
