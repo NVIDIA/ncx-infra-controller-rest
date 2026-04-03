@@ -133,7 +133,7 @@ func (csh CreateOperatingSystemHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating user data in Operating System creation request", verr)
 	}
 
-	// Validate the tenant for which this OperatingSystem is being created
+	// Derive the tenant from the org
 	tenant, err := common.GetTenantForOrg(ctx, nil, csh.dbSession, org)
 	if err != nil {
 		if err == common.ErrOrgTenantNotFound {
@@ -142,16 +142,6 @@ func (csh CreateOperatingSystemHandler) Handle(c echo.Context) error {
 		}
 		logger.Error().Err(err).Msg("unable to retrieve tenant for org")
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve tenant for org", nil)
-	}
-	// verify tenant-id in request, the api validation ensures non-nil tenantID in request
-	apiTenant, err := common.GetTenantFromIDString(ctx, nil, *apiRequest.TenantID, csh.dbSession)
-	if err != nil {
-		logger.Warn().Err(err).Msg("error retrieving tenant from request")
-		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "TenantID in request is not valid", nil)
-	}
-	if apiTenant.ID != tenant.ID {
-		logger.Warn().Msg("tenant id in request does not match tenant in org")
-		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "TenantID in request does not match tenant in org", nil)
 	}
 
 	// check for name uniqueness for the tenant, ie, tenant cannot have another os with same name

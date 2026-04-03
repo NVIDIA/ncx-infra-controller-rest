@@ -56,14 +56,14 @@ func TestAPIOperatingSystemCreateRequest_Validate(t *testing.T) {
 			expectErr: false,
 		},
 		{
-			desc:      "error when InfrastructID is not nil",
+			desc:      "ok when InfrastructureProviderID is not nil (ignored, derived from org)",
 			obj:       APIOperatingSystemCreateRequest{Name: "abc", InfrastructureProviderID: cdb.GetStrPtr(uuid.New().String()), TenantID: cdb.GetStrPtr(uuid.New().String()), IpxeScript: cdb.GetStrPtr("ipxe"), UserData: cdb.GetStrPtr("ud"), IsCloudInit: true, AllowOverride: false},
-			expectErr: true,
+			expectErr: false,
 		},
 		{
-			desc:      "error when TenantID is not valid uuid",
+			desc:      "ok when TenantID is not valid uuid (ignored, derived from org)",
 			obj:       APIOperatingSystemCreateRequest{Name: "abc", InfrastructureProviderID: nil, TenantID: cdb.GetStrPtr("bad-uuid"), IpxeScript: cdb.GetStrPtr("ipxe"), UserData: cdb.GetStrPtr("ud"), IsCloudInit: true, AllowOverride: false},
-			expectErr: true,
+			expectErr: false,
 		},
 		{
 			desc:      "error when IpxeScript is empty",
