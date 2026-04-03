@@ -25,7 +25,7 @@ reviews:
         compatibility, and expressiveness.
     - path: 'openapi/spec.yaml'
       instructions: >-
-        Review the OpenAPI specification, check for consistency and correctness, check fo spelling and grammar.
+        Review the OpenAPI specification, check for consistency and correctness, check for misspellings and grammatical errors.
     - path: '**/*.sh'
       instructions: >-
         Review the shell scripts, point out issues relative to security,
@@ -44,8 +44,7 @@ knowledge_base:
     filePatterns:
       - AGENTS.md
       - README.md
-      - .github/workflows/**
-      - Makefile
+      - CONTRIBUTING.md
 issue_enrichment:
   planning:
     enabled: true
