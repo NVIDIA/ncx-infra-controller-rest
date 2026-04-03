@@ -133,7 +133,7 @@ func (csh CreateOperatingSystemHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating user data in Operating System creation request", verr)
 	}
 
-	// Derive the tenant from the org
+	// Validate the tenant for which this OperatingSystem is being created
 	tenant, err := common.GetTenantForOrg(ctx, nil, csh.dbSession, org)
 	if err != nil {
 		if err == common.ErrOrgTenantNotFound {
