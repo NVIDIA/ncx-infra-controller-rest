@@ -38,6 +38,18 @@ message UUID {
   string value = 1;
 }
 
+message PowerShelfId {
+  string id = 1;
+}
+
+message RackId {
+  string id = 1;
+}
+
+message SwitchId {
+  string id = 1;
+}
+
 message Uint32List {
   repeated uint32 items = 1;
 }
@@ -82,21 +94,19 @@ message NetworkPrefixId {
 message RemediationId {
   string value = 1;
 }
+
 message NVLinkPartitionId {
   string value = 1;
 }
+
 message NVLinkLogicalPartitionId {
   string value = 1;
 }
+
 message NVLinkDomainId {
   string value = 1;
 }
-message PowerShelfId {
-  string id = 1;
-}
-message RackId {
-  string id = 1;
-}
-message SwitchId {
-  string id = 1;
+
+message ComputeAllocationId {
+  string value = 1;
 }
