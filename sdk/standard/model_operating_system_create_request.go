@@ -25,9 +25,9 @@ type OperatingSystemCreateRequest struct {
 	Name string `json:"name"`
 	// Optional description of the Operating System
 	Description *string `json:"description,omitempty"`
-	// Specified if a Provider owns the Operating System
+	// Obsolete. If provided will be ignored.
 	InfrastructureProviderId NullableString `json:"infrastructureProviderId,omitempty"`
-	// Specified if a Tenant owns the Operating System
+	// Obsolete. If provided will be ignored.
 	TenantId NullableString `json:"tenantId,omitempty"`
 	// Specified only one Site if an Operating System is Image based, more than one Site is not supported\"
 	SiteIds []string `json:"siteIds,omitempty"`
