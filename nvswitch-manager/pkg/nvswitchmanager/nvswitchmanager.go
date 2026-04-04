@@ -115,11 +115,15 @@ func (nm *NVSwitchManager) Get(ctx context.Context, id uuid.UUID) (*nvswitch.NVS
 		cred, err := nm.CredentialManager.GetBMC(ctx, tray.BMC.MAC)
 		if err == nil {
 			tray.BMC.Credential = cred
+		} else {
+			log.Warnf("Failed to load BMC credentials for switch %s (MAC %s): %v", id, tray.BMC.MAC, err)
 		}
 
 		nvosCred, err := nm.CredentialManager.GetNVOS(ctx, tray.BMC.MAC)
 		if err == nil && tray.NVOS != nil {
 			tray.NVOS.Credential = nvosCred
+		} else if tray.NVOS != nil {
+			log.Warnf("Failed to load NVOS credentials for switch %s (MAC %s): %v", id, tray.BMC.MAC, err)
 		}
 	}
 
