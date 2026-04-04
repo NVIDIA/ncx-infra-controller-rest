@@ -45,22 +45,6 @@ service Forge {
       returns (dns.DomainDeletionResult);
   rpc FindDomain(dns.DomainSearchQuery) returns (dns.DomainList);
 
-  // DEPRECATED Domain RPCs - for backward compatibility
-  // Use the non-Legacy versions above instead
-  rpc CreateDomainLegacy(DomainLegacy) returns (DomainLegacy) {
-    option deprecated = true;
-  }
-  rpc UpdateDomainLegacy(DomainLegacy) returns (DomainLegacy) {
-    option deprecated = true;
-  }
-  rpc DeleteDomainLegacy(DomainDeletionLegacy)
-      returns (DomainDeletionResultLegacy) {
-    option deprecated = true;
-  }
-  rpc FindDomainLegacy(DomainSearchQueryLegacy) returns (DomainListLegacy) {
-    option deprecated = true;
-  }
-
   // VPC
   rpc CreateVpc(VpcCreationRequest) returns (Vpc);
   rpc UpdateVpc(VpcUpdateRequest) returns (VpcUpdateResult);
@@ -1105,32 +1089,6 @@ message DnsRequest {
 
 message DnsReply {
   string reply = 1;
-}
-
-message DomainList {
-  repeated Domain domains = 1;
-}
-
-message Domain {
-  common.DomainId id = 1;
-  string name = 2;
-
-  google.protobuf.Timestamp created = 3;
-  google.protobuf.Timestamp updated = 4;
-  google.protobuf.Timestamp deleted = 5;
-}
-
-message DomainDeletion {
-  common.DomainId id = 1;
-}
-
-message DomainDeletionResult {
-
-}
-
-message DomainSearchQuery {
-  optional common.DomainId id = 1;
-  optional string name = 2;
 }
 
 message ConsoleInput {
@@ -6592,49 +6550,12 @@ message RoutingProfile {
   repeated common.RouteTarget route_targets_on_exports = 2;
 }
 
-// ============================================================================
-// LEGACY DNS/DOMAIN TYPES - DEPRECATED
-// These types are maintained for backward compatibility
-// New code should use the types defined in dns.proto
-// TODO : Remove these types after migration is complete
-// ============================================================================
-
-// DEPRECATED: Use dns.Domain instead
-message DomainLegacy {
-  common.DomainId id = 1;
-  string name = 2;
-  google.protobuf.Timestamp created = 3;
-  google.protobuf.Timestamp updated = 4;
-  google.protobuf.Timestamp deleted = 5;
-}
-
-// DEPRECATED: Use dns.DomainList instead
-message DomainListLegacy {
-  repeated DomainLegacy domains = 1;
-}
-
-// DEPRECATED: Use dns.DomainDeletionRequest instead
-message DomainDeletionLegacy {
-  common.DomainId id = 1;
-}
-
-// DEPRECATED: Use dns.DomainDeletionResult instead
-message DomainDeletionResultLegacy {
-
-}
-
-// DEPRECATED: Use dns.DomainSearchQuery instead
-message DomainSearchQueryLegacy {
-  optional common.DomainId id = 1;
-  optional string name = 2;
-}
-
 // Temporary wrapper around both domain types while we transition
 // TODO: Remove after migration is complete
 message PxeDomain {
   oneof domain {
     dns.Domain new_domain = 1;
-    Domain legacy_domain = 2;
+    dns.Domain legacy_domain = 2;
   }
 }
 

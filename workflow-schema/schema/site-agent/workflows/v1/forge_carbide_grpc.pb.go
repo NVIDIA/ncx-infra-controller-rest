@@ -41,10 +41,6 @@ const (
 	Forge_UpdateDomain_FullMethodName                             = "/forge.Forge/UpdateDomain"
 	Forge_DeleteDomain_FullMethodName                             = "/forge.Forge/DeleteDomain"
 	Forge_FindDomain_FullMethodName                               = "/forge.Forge/FindDomain"
-	Forge_CreateDomainLegacy_FullMethodName                       = "/forge.Forge/CreateDomainLegacy"
-	Forge_UpdateDomainLegacy_FullMethodName                       = "/forge.Forge/UpdateDomainLegacy"
-	Forge_DeleteDomainLegacy_FullMethodName                       = "/forge.Forge/DeleteDomainLegacy"
-	Forge_FindDomainLegacy_FullMethodName                         = "/forge.Forge/FindDomainLegacy"
 	Forge_CreateVpc_FullMethodName                                = "/forge.Forge/CreateVpc"
 	Forge_UpdateVpc_FullMethodName                                = "/forge.Forge/UpdateVpc"
 	Forge_UpdateVpcVirtualization_FullMethodName                  = "/forge.Forge/UpdateVpcVirtualization"
@@ -423,16 +419,6 @@ type ForgeClient interface {
 	UpdateDomain(ctx context.Context, in *proto.UpdateDomainRequest, opts ...grpc.CallOption) (*proto.Domain, error)
 	DeleteDomain(ctx context.Context, in *proto.DomainDeletionRequest, opts ...grpc.CallOption) (*proto.DomainDeletionResult, error)
 	FindDomain(ctx context.Context, in *proto.DomainSearchQuery, opts ...grpc.CallOption) (*proto.DomainList, error)
-	// Deprecated: Do not use.
-	// DEPRECATED Domain RPCs - for backward compatibility
-	// Use the non-Legacy versions above instead
-	CreateDomainLegacy(ctx context.Context, in *DomainLegacy, opts ...grpc.CallOption) (*DomainLegacy, error)
-	// Deprecated: Do not use.
-	UpdateDomainLegacy(ctx context.Context, in *DomainLegacy, opts ...grpc.CallOption) (*DomainLegacy, error)
-	// Deprecated: Do not use.
-	DeleteDomainLegacy(ctx context.Context, in *DomainDeletionLegacy, opts ...grpc.CallOption) (*DomainDeletionResultLegacy, error)
-	// Deprecated: Do not use.
-	FindDomainLegacy(ctx context.Context, in *DomainSearchQueryLegacy, opts ...grpc.CallOption) (*DomainListLegacy, error)
 	// VPC
 	CreateVpc(ctx context.Context, in *VpcCreationRequest, opts ...grpc.CallOption) (*Vpc, error)
 	UpdateVpc(ctx context.Context, in *VpcUpdateRequest, opts ...grpc.CallOption) (*VpcUpdateResult, error)
@@ -1106,50 +1092,6 @@ func (c *forgeClient) FindDomain(ctx context.Context, in *proto.DomainSearchQuer
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(proto.DomainList)
 	err := c.cc.Invoke(ctx, Forge_FindDomain_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-// Deprecated: Do not use.
-func (c *forgeClient) CreateDomainLegacy(ctx context.Context, in *DomainLegacy, opts ...grpc.CallOption) (*DomainLegacy, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(DomainLegacy)
-	err := c.cc.Invoke(ctx, Forge_CreateDomainLegacy_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-// Deprecated: Do not use.
-func (c *forgeClient) UpdateDomainLegacy(ctx context.Context, in *DomainLegacy, opts ...grpc.CallOption) (*DomainLegacy, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(DomainLegacy)
-	err := c.cc.Invoke(ctx, Forge_UpdateDomainLegacy_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-// Deprecated: Do not use.
-func (c *forgeClient) DeleteDomainLegacy(ctx context.Context, in *DomainDeletionLegacy, opts ...grpc.CallOption) (*DomainDeletionResultLegacy, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(DomainDeletionResultLegacy)
-	err := c.cc.Invoke(ctx, Forge_DeleteDomainLegacy_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-// Deprecated: Do not use.
-func (c *forgeClient) FindDomainLegacy(ctx context.Context, in *DomainSearchQueryLegacy, opts ...grpc.CallOption) (*DomainListLegacy, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(DomainListLegacy)
-	err := c.cc.Invoke(ctx, Forge_FindDomainLegacy_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -4821,16 +4763,6 @@ type ForgeServer interface {
 	UpdateDomain(context.Context, *proto.UpdateDomainRequest) (*proto.Domain, error)
 	DeleteDomain(context.Context, *proto.DomainDeletionRequest) (*proto.DomainDeletionResult, error)
 	FindDomain(context.Context, *proto.DomainSearchQuery) (*proto.DomainList, error)
-	// Deprecated: Do not use.
-	// DEPRECATED Domain RPCs - for backward compatibility
-	// Use the non-Legacy versions above instead
-	CreateDomainLegacy(context.Context, *DomainLegacy) (*DomainLegacy, error)
-	// Deprecated: Do not use.
-	UpdateDomainLegacy(context.Context, *DomainLegacy) (*DomainLegacy, error)
-	// Deprecated: Do not use.
-	DeleteDomainLegacy(context.Context, *DomainDeletionLegacy) (*DomainDeletionResultLegacy, error)
-	// Deprecated: Do not use.
-	FindDomainLegacy(context.Context, *DomainSearchQueryLegacy) (*DomainListLegacy, error)
 	// VPC
 	CreateVpc(context.Context, *VpcCreationRequest) (*Vpc, error)
 	UpdateVpc(context.Context, *VpcUpdateRequest) (*VpcUpdateResult, error)
@@ -5473,18 +5405,6 @@ func (UnimplementedForgeServer) DeleteDomain(context.Context, *proto.DomainDelet
 }
 func (UnimplementedForgeServer) FindDomain(context.Context, *proto.DomainSearchQuery) (*proto.DomainList, error) {
 	return nil, status.Error(codes.Unimplemented, "method FindDomain not implemented")
-}
-func (UnimplementedForgeServer) CreateDomainLegacy(context.Context, *DomainLegacy) (*DomainLegacy, error) {
-	return nil, status.Error(codes.Unimplemented, "method CreateDomainLegacy not implemented")
-}
-func (UnimplementedForgeServer) UpdateDomainLegacy(context.Context, *DomainLegacy) (*DomainLegacy, error) {
-	return nil, status.Error(codes.Unimplemented, "method UpdateDomainLegacy not implemented")
-}
-func (UnimplementedForgeServer) DeleteDomainLegacy(context.Context, *DomainDeletionLegacy) (*DomainDeletionResultLegacy, error) {
-	return nil, status.Error(codes.Unimplemented, "method DeleteDomainLegacy not implemented")
-}
-func (UnimplementedForgeServer) FindDomainLegacy(context.Context, *DomainSearchQueryLegacy) (*DomainListLegacy, error) {
-	return nil, status.Error(codes.Unimplemented, "method FindDomainLegacy not implemented")
 }
 func (UnimplementedForgeServer) CreateVpc(context.Context, *VpcCreationRequest) (*Vpc, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateVpc not implemented")
@@ -6687,78 +6607,6 @@ func _Forge_FindDomain_Handler(srv interface{}, ctx context.Context, dec func(in
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ForgeServer).FindDomain(ctx, req.(*proto.DomainSearchQuery))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Forge_CreateDomainLegacy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DomainLegacy)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ForgeServer).CreateDomainLegacy(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Forge_CreateDomainLegacy_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ForgeServer).CreateDomainLegacy(ctx, req.(*DomainLegacy))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Forge_UpdateDomainLegacy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DomainLegacy)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ForgeServer).UpdateDomainLegacy(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Forge_UpdateDomainLegacy_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ForgeServer).UpdateDomainLegacy(ctx, req.(*DomainLegacy))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Forge_DeleteDomainLegacy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DomainDeletionLegacy)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ForgeServer).DeleteDomainLegacy(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Forge_DeleteDomainLegacy_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ForgeServer).DeleteDomainLegacy(ctx, req.(*DomainDeletionLegacy))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Forge_FindDomainLegacy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DomainSearchQueryLegacy)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ForgeServer).FindDomainLegacy(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Forge_FindDomainLegacy_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ForgeServer).FindDomainLegacy(ctx, req.(*DomainSearchQueryLegacy))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -13348,22 +13196,6 @@ var Forge_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "FindDomain",
 			Handler:    _Forge_FindDomain_Handler,
-		},
-		{
-			MethodName: "CreateDomainLegacy",
-			Handler:    _Forge_CreateDomainLegacy_Handler,
-		},
-		{
-			MethodName: "UpdateDomainLegacy",
-			Handler:    _Forge_UpdateDomainLegacy_Handler,
-		},
-		{
-			MethodName: "DeleteDomainLegacy",
-			Handler:    _Forge_DeleteDomainLegacy_Handler,
-		},
-		{
-			MethodName: "FindDomainLegacy",
-			Handler:    _Forge_FindDomainLegacy_Handler,
 		},
 		{
 			MethodName: "CreateVpc",
