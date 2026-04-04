@@ -48,24 +48,7 @@ type InstanceInterface interface {
 	FindInstanceIDs(ctx context.Context, request *wflows.InstanceSearchFilter) (response *wflows.InstanceIdList, err error)
 	FindInstancesByIDs(ctx context.Context, request *wflows.InstancesByIdsRequest) (response *wflows.InstanceList, err error)
 
-	// DEPRECATED: use GetAllInstances instead
-	GetInstance(ctx context.Context, request *wflows.InstanceSearchQuery) (response *wflows.InstanceList, err error)
 	GetAllInstances(ctx context.Context, request *wflows.InstanceSearchFilter, pageSize int) (response *wflows.InstanceList, err error)
-}
-
-// DEPRECATED: use GetAllInstances instead
-func (instance *compute) GetInstance(ctx context.Context, request *wflows.InstanceSearchQuery) (response *wflows.InstanceList, err error) {
-	log.Info().Interface("request", request).Msg("GetInstance: received request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-GetInstance")
-	defer span.End()
-
-	response, err = instance.carbide.FindInstances(ctx, request)
-	if err != nil {
-		log.Error().Err(err).Msg("GetInstance: error")
-		return nil, err
-	}
-	log.Info().Int("InstanceListLen", len(response.Instances)).Msg("GetInstance: received result")
-	return response, err
 }
 
 func (instance *compute) GetAllInstances(ctx context.Context, request *wflows.InstanceSearchFilter, pageSize int) (response *wflows.InstanceList, err error) {
@@ -155,17 +138,25 @@ func (instance *compute) CreateInstance(ctx context.Context, request *wflows.Cre
 	carbideRequest.Config = &wflows.InstanceConfig{}
 	carbideRequest.Config.Tenant = &wflows.TenantConfig{
 		TenantOrganizationId: request.TenantOrg,
-		UserData:             request.UserData,
 		TenantKeysetIds:      request.TenantKeysetIds,
-		PhoneHomeEnabled:     request.PhoneHomeEnabled,
 	}
 
 	if request.CustomIpxe != nil {
-		carbideRequest.Config.Tenant.CustomIpxe = *request.CustomIpxe
+		carbideRequest.Config.Os = &wflows.OperatingSystem{
+			Variant: &wflows.OperatingSystem_Ipxe{
+				Ipxe: &wflows.InlineIpxe{
+					IpxeScript: *request.CustomIpxe,
+				},
+			},
+		}
+	}
+
+	if request.UserData != nil {
+		carbideRequest.Config.Os.UserData = request.UserData
 	}
 
 	if request.AlwaysBootWithCustomIpxe != nil {
-		carbideRequest.Config.Tenant.AlwaysBootWithCustomIpxe = *request.AlwaysBootWithCustomIpxe
+		carbideRequest.Config.Os.RunProvisioningInstructionsOnEveryBoot = *request.AlwaysBootWithCustomIpxe
 	}
 
 	carbideRequest.Config.Network = &wflows.InstanceNetworkConfig{}

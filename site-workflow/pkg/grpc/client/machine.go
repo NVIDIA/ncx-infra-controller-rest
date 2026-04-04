@@ -29,30 +29,9 @@ import (
 // MachineInterface grpc client interface
 type MachineInterface interface {
 	// Machine Interfaces
-	// DEPRECATED: use GetAllMachines instead
-	GetMachine(ctx context.Context, request *wflows.MachineSearchQuery) (response *wflows.MachineList, err error)
 	GetAllMachines(ctx context.Context, request *wflows.MachineSearchConfig, pageSize int) (response *wflows.MachineList, err error)
 	FindMachineIDs(ctx context.Context, request *wflows.MachineSearchConfig) (response *wflows.MachineIdList, err error)
 	FindMachinesByIDs(ctx context.Context, request *wflows.MachinesByIdsRequest) (response *wflows.MachineList, err error)
-	// CreateMachine() error
-	// UpdateMachine() error
-	// DeleteMachine() error
-}
-
-// DEPRECATED: use GetAllMachines instead
-func (machine *compute) GetMachine(ctx context.Context, request *wflows.MachineSearchQuery) (response *wflows.MachineList, err error) {
-	log.Info().Interface("request", request).Msg("GetMachine: received request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-GetMachine")
-	defer span.End()
-
-	response, err = machine.carbide.FindMachines(ctx, request)
-	if err != nil {
-		log.Error().Err(err).Msg("GetMachine: error")
-		return nil, err
-	}
-
-	log.Info().Int("MachineListLen", len(response.Machines)).Msg("GetMachine: received result")
-	return response, err
 }
 
 func (machine *compute) GetAllMachines(ctx context.Context, request *wflows.MachineSearchConfig, pageSize int) (response *wflows.MachineList, err error) {

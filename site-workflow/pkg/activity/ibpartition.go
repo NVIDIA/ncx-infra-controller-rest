@@ -46,7 +46,6 @@ func (mmi *ManageInfiniBandPartitionInventory) DiscoverInfiniBandPartitionInvent
 		internalFindIDs:        ibpFindIDs,
 		internalFindByIDs:      ibpFindByIDs,
 		internalPagedInventory: ibpPagedInventory,
-		internalFindFallback:   ibpFindFallback,
 	}
 	return inventoryImpl.CollectAndPublishInventory(ctx, &logger)
 }
@@ -96,18 +95,6 @@ func ibpPagedInventory(allItemIDs []*cwssaws.IBPartitionId, pagedItems []*cwssaw
 		inventory.InventoryPage.ItemIds = itemIDs
 	}
 	return inventory
-}
-
-func ibpFindFallback(ctx context.Context, carbideClient *cClient.CarbideClient) ([]*cwssaws.IBPartitionId, []*cwssaws.IBPartition, error) {
-	items, err := carbideClient.Networks().ListInfiniBandPartition(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
-	var ids []*cwssaws.IBPartitionId
-	for _, it := range items.GetIbPartitions() {
-		ids = append(ids, it.Id)
-	}
-	return ids, items.GetIbPartitions(), nil
 }
 
 // ManageInfiniBandPartition is an activity wrapper for InfiniBand Partition management
