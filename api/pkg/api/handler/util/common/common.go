@@ -119,14 +119,6 @@ func GetSiteNetworkSegmentID(s *cdbm.Subnet) *uuid.UUID {
 	}
 }
 
-func GetSiteOperatingSystemtID(o *cdbm.OperatingSystem) *uuid.UUID {
-	if o.ControllerOperatingSystemID != nil {
-		return o.ControllerOperatingSystemID
-	} else {
-		return &o.ID
-	}
-}
-
 // GetInfrastructureProviderForOrg gets the infrastructureProvider for org
 func GetInfrastructureProviderForOrg(ctx context.Context, tx *cdb.Tx, dbSession *cdb.Session, org string) (*cdbm.InfrastructureProvider, error) {
 	ipDAO := cdbm.NewInfrastructureProviderDAO(dbSession)

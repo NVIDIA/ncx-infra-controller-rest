@@ -43,6 +43,7 @@ import (
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/handler/util/common"
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model"
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/pagination"
+	sc "github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/client/site"
 	auth "github.com/NVIDIA/ncx-infra-controller-rest/auth/pkg/authorization"
 	cutil "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/util"
 	csm "github.com/NVIDIA/ncx-infra-controller-rest/site-manager/pkg/sitemgr"
@@ -51,6 +52,8 @@ import (
 	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
 	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/paginator"
 	cdbp "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/paginator"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
+	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/queue"
 	siteWorkflow "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/workflow/site"
 )
 
@@ -69,16 +72,18 @@ type CreateSiteHandler struct {
 	dbSession  *cdb.Session
 	tc         tClient.Client
 	tnc        tClient.NamespaceClient
+	scp        *sc.ClientPool
 	cfg        *config.Config
 	tracerSpan *cutil.TracerSpan
 }
 
 // NewCreateSiteHandler initializes and returns a new handler for creating Tenant
-func NewCreateSiteHandler(dbSession *cdb.Session, tc tClient.Client, tnc tClient.NamespaceClient, cfg *config.Config) CreateSiteHandler {
+func NewCreateSiteHandler(dbSession *cdb.Session, tc tClient.Client, tnc tClient.NamespaceClient, scp *sc.ClientPool, cfg *config.Config) CreateSiteHandler {
 	return CreateSiteHandler{
 		dbSession:  dbSession,
 		tc:         tc,
 		tnc:        tnc,
+		scp:        scp,
 		cfg:        cfg,
 		tracerSpan: cutil.NewTracerSpan(),
 	}
@@ -274,6 +279,79 @@ func (csh CreateSiteHandler) Handle(c echo.Context) error {
 	if err != nil {
 		logger.Error().Err(err).Msg("error creating Temporal namespace for Site")
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create workflow namespace for Site", nil)
+	}
+
+	// Auto-associate global-scoped iPXE OSes for this provider with the newly created site.
+	// This ensures that OSes marked scope="global" are automatically available on every new site
+	// added to the provider without requiring the user to update each OS individually.
+	ossaDAO := cdbm.NewOperatingSystemSiteAssociationDAO(csh.dbSession)
+	globalOSes, _, goserr := cdbm.NewOperatingSystemDAO(csh.dbSession).GetAll(
+		ctx, tx,
+		cdbm.OperatingSystemFilterInput{
+			InfrastructureProviderID: &ip.ID,
+			OsTypes:                  []string{cdbm.OperatingSystemTypeIPXE},
+			Scopes:                   []string{model.OsScopeGlobal},
+		},
+		cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)},
+		nil,
+	)
+	if goserr != nil {
+		logger.Error().Err(goserr).Msg("error retrieving global-scoped OSes for auto-expansion")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve global-scoped OSes, DB error", nil)
+	}
+	for _, gos := range globalOSes {
+		if _, aerr := ossaDAO.Create(ctx, tx, cdbm.OperatingSystemSiteAssociationCreateInput{
+			OperatingSystemID: gos.ID,
+			SiteID:            st.ID,
+			Status:            cdbm.OperatingSystemSiteAssociationStatusSyncing,
+			CreatedBy:         dbUser.ID,
+		}); aerr != nil {
+			logger.Error().Err(aerr).Str("osID", gos.ID.String()).Msg("Failed to auto-associate global OS with new site")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to associate global-scoped Operating Systems with new Site", nil)
+		}
+	}
+	if len(globalOSes) > 0 {
+		logger.Info().Int("count", len(globalOSes)).Msg("Auto-associated global-scoped OSes with new site")
+	}
+
+	// Push each global-scoped OS to the new site via the CreateOperatingSystem workflow.
+	// If the site-agent isn't ready yet, Temporal will retry automatically.
+	if len(globalOSes) > 0 {
+		stc, scperr := csh.scp.GetClientByID(st.ID)
+		if scperr != nil {
+			logger.Warn().Err(scperr).Msg("Site Temporal client not yet available; global-scoped OSes will sync on next inventory cycle")
+		} else {
+			for _, gos := range globalOSes {
+				createReq := &cwssaws.CreateOperatingSystemRequest{
+					Id:                   &cwssaws.OperatingSystemId{Value: gos.ID.String()},
+					Name:                 gos.Name,
+					Description:          gos.Description,
+					TenantOrganizationId: gos.Org,
+					IsActive:             gos.IsActive,
+					AllowOverride:        gos.AllowOverride,
+					PhoneHomeEnabled:     gos.PhoneHomeEnabled,
+					UserData:             gos.UserData,
+					IpxeScript:           gos.IpxeScript,
+					IpxeTemplateName:     gos.IpxeTemplateName,
+					IpxeParameters:       dbParamsToProto(gos.IpxeParameters),
+					IpxeArtifacts:        dbArtifactsToProto(gos.IpxeArtifacts),
+				}
+
+				// Version is omitted from the workflow ID (unlike operatingsystem.go)
+				// because this is the initial push for a newly created site — the OSSA
+				// has no version yet and the site+os pair is inherently unique.
+				workflowOptions := tClient.StartWorkflowOptions{
+					ID:        "ipxe-os-create-" + st.ID.String() + "-" + gos.ID.String(),
+					TaskQueue: queue.SiteTaskQueue,
+				}
+
+				if _, werr := stc.ExecuteWorkflow(ctx, workflowOptions, "CreateOperatingSystem", createReq); werr != nil {
+					logger.Warn().Err(werr).Str("osID", gos.ID.String()).Msg("Failed to trigger CreateOperatingSystem workflow for global OS on new site; will sync on next inventory cycle")
+				} else {
+					logger.Info().Str("osID", gos.ID.String()).Msg("Triggered CreateOperatingSystem workflow for global OS on new site")
+				}
+			}
+		}
 	}
 
 	err = tx.Commit()
