@@ -22,15 +22,15 @@
 package proto
 
 import (
-	proto "github.com/nvidia/bare-metal-manager-rest/workflow-schema/proto"
+	reflect "reflect"
+	sync "sync"
+	unsafe "unsafe"
+
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	durationpb "google.golang.org/protobuf/types/known/durationpb"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
-	reflect "reflect"
-	sync "sync"
-	unsafe "unsafe"
 )
 
 const (
@@ -42187,7 +42187,7 @@ func (x *PxeDomain) GetDomain() isPxeDomain_Domain {
 	return nil
 }
 
-func (x *PxeDomain) GetNewDomain() *proto.Domain {
+func (x *PxeDomain) GetNewDomain() *Domain {
 	if x != nil {
 		if x, ok := x.Domain.(*PxeDomain_NewDomain); ok {
 			return x.NewDomain
@@ -42196,7 +42196,7 @@ func (x *PxeDomain) GetNewDomain() *proto.Domain {
 	return nil
 }
 
-func (x *PxeDomain) GetLegacyDomain() *proto.Domain {
+func (x *PxeDomain) GetLegacyDomain() *Domain {
 	if x != nil {
 		if x, ok := x.Domain.(*PxeDomain_LegacyDomain); ok {
 			return x.LegacyDomain
@@ -42210,11 +42210,11 @@ type isPxeDomain_Domain interface {
 }
 
 type PxeDomain_NewDomain struct {
-	NewDomain *proto.Domain `protobuf:"bytes,1,opt,name=new_domain,json=newDomain,proto3,oneof"`
+	NewDomain *Domain `protobuf:"bytes,1,opt,name=new_domain,json=newDomain,proto3,oneof"`
 }
 
 type PxeDomain_LegacyDomain struct {
-	LegacyDomain *proto.Domain `protobuf:"bytes,2,opt,name=legacy_domain,json=legacyDomain,proto3,oneof"`
+	LegacyDomain *Domain `protobuf:"bytes,2,opt,name=legacy_domain,json=legacyDomain,proto3,oneof"`
 }
 
 func (*PxeDomain_NewDomain) isPxeDomain_Domain() {}
@@ -49648,14 +49648,14 @@ var file_forge_carbide_proto_goTypes = []any{
 	(*MlxDeviceConfigSetRequest)(nil),                    // 794: mlx_device.MlxDeviceConfigSetRequest
 	(*MlxDeviceConfigSyncRequest)(nil),                   // 795: mlx_device.MlxDeviceConfigSyncRequest
 	(*MlxDeviceConfigCompareRequest)(nil),                // 796: mlx_device.MlxDeviceConfigCompareRequest
-	(*proto.Domain)(nil),                                 // 797: dns.Domain
-	(*proto.CreateDomainRequest)(nil),                    // 798: dns.CreateDomainRequest
-	(*proto.UpdateDomainRequest)(nil),                    // 799: dns.UpdateDomainRequest
-	(*proto.DomainDeletionRequest)(nil),                  // 800: dns.DomainDeletionRequest
-	(*proto.DomainSearchQuery)(nil),                      // 801: dns.DomainSearchQuery
-	(*proto.DnsResourceRecordLookupRequest)(nil),         // 802: dns.DnsResourceRecordLookupRequest
-	(*proto.GetAllDomainsRequest)(nil),                   // 803: dns.GetAllDomainsRequest
-	(*proto.DomainMetadataRequest)(nil),                  // 804: dns.DomainMetadataRequest
+	(*Domain)(nil),                                       // 797: dns.Domain
+	(*CreateDomainRequest)(nil),                          // 798: dns.CreateDomainRequest
+	(*UpdateDomainRequest)(nil),                          // 799: dns.UpdateDomainRequest
+	(*DomainDeletionRequest)(nil),                        // 800: dns.DomainDeletionRequest
+	(*DomainSearchQuery)(nil),                            // 801: dns.DomainSearchQuery
+	(*DnsResourceRecordLookupRequest)(nil),               // 802: dns.DnsResourceRecordLookupRequest
+	(*GetAllDomainsRequest)(nil),                         // 803: dns.GetAllDomainsRequest
+	(*DomainMetadataRequest)(nil),                        // 804: dns.DomainMetadataRequest
 	(*MachineIdList)(nil),                                // 805: common.MachineIdList
 	(*ExploredEndpointSearchFilter)(nil),                 // 806: site_explorer.ExploredEndpointSearchFilter
 	(*ExploredEndpointsByIdsRequest)(nil),                // 807: site_explorer.ExploredEndpointsByIdsRequest
@@ -49722,11 +49722,11 @@ var file_forge_carbide_proto_goTypes = []any{
 	(*MlxAdminConfigSetRequest)(nil),                     // 868: mlx_device.MlxAdminConfigSetRequest
 	(*MlxAdminConfigSyncRequest)(nil),                    // 869: mlx_device.MlxAdminConfigSyncRequest
 	(*MlxAdminConfigCompareRequest)(nil),                 // 870: mlx_device.MlxAdminConfigCompareRequest
-	(*proto.DomainDeletionResult)(nil),                   // 871: dns.DomainDeletionResult
-	(*proto.DomainList)(nil),                             // 872: dns.DomainList
-	(*proto.DnsResourceRecordLookupResponse)(nil),        // 873: dns.DnsResourceRecordLookupResponse
-	(*proto.GetAllDomainsResponse)(nil),                  // 874: dns.GetAllDomainsResponse
-	(*proto.DomainMetadataResponse)(nil),                 // 875: dns.DomainMetadataResponse
+	(*DomainDeletionResult)(nil),                         // 871: dns.DomainDeletionResult
+	(*DomainList)(nil),                                   // 872: dns.DomainList
+	(*DnsResourceRecordLookupResponse)(nil),              // 873: dns.DnsResourceRecordLookupResponse
+	(*GetAllDomainsResponse)(nil),                        // 874: dns.GetAllDomainsResponse
+	(*DomainMetadataResponse)(nil),                       // 875: dns.DomainMetadataResponse
 	(*SiteExplorationReport)(nil),                        // 876: site_explorer.SiteExplorationReport
 	(*EndpointExplorationReport)(nil),                    // 877: site_explorer.EndpointExplorationReport
 	(*ExploredEndpointIdList)(nil),                       // 878: site_explorer.ExploredEndpointIdList

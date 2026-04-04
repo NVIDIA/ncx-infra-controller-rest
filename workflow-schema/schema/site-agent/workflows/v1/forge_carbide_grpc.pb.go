@@ -23,7 +23,7 @@ package proto
 
 import (
 	context "context"
-	proto "github.com/nvidia/bare-metal-manager-rest/workflow-schema/proto"
+
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -415,10 +415,10 @@ type ForgeClient interface {
 	// What version of Forge is this service running? Matches `--version` command line.
 	Version(ctx context.Context, in *VersionRequest, opts ...grpc.CallOption) (*BuildInfo, error)
 	// Domain
-	CreateDomain(ctx context.Context, in *proto.CreateDomainRequest, opts ...grpc.CallOption) (*proto.Domain, error)
-	UpdateDomain(ctx context.Context, in *proto.UpdateDomainRequest, opts ...grpc.CallOption) (*proto.Domain, error)
-	DeleteDomain(ctx context.Context, in *proto.DomainDeletionRequest, opts ...grpc.CallOption) (*proto.DomainDeletionResult, error)
-	FindDomain(ctx context.Context, in *proto.DomainSearchQuery, opts ...grpc.CallOption) (*proto.DomainList, error)
+	CreateDomain(ctx context.Context, in *CreateDomainRequest, opts ...grpc.CallOption) (*Domain, error)
+	UpdateDomain(ctx context.Context, in *UpdateDomainRequest, opts ...grpc.CallOption) (*Domain, error)
+	DeleteDomain(ctx context.Context, in *DomainDeletionRequest, opts ...grpc.CallOption) (*DomainDeletionResult, error)
+	FindDomain(ctx context.Context, in *DomainSearchQuery, opts ...grpc.CallOption) (*DomainList, error)
 	// VPC
 	CreateVpc(ctx context.Context, in *VpcCreationRequest, opts ...grpc.CallOption) (*Vpc, error)
 	UpdateVpc(ctx context.Context, in *VpcUpdateRequest, opts ...grpc.CallOption) (*VpcUpdateResult, error)
@@ -503,15 +503,15 @@ type ForgeClient interface {
 	DpuAgentUpgradeCheck(ctx context.Context, in *DpuAgentUpgradeCheckRequest, opts ...grpc.CallOption) (*DpuAgentUpgradeCheckResponse, error)
 	DpuAgentUpgradePolicyAction(ctx context.Context, in *DpuAgentUpgradePolicyRequest, opts ...grpc.CallOption) (*DpuAgentUpgradePolicyResponse, error)
 	// Looks up a DNS record for DNS names assigned by Forge
-	LookupRecord(ctx context.Context, in *proto.DnsResourceRecordLookupRequest, opts ...grpc.CallOption) (*proto.DnsResourceRecordLookupResponse, error)
+	LookupRecord(ctx context.Context, in *DnsResourceRecordLookupRequest, opts ...grpc.CallOption) (*DnsResourceRecordLookupResponse, error)
 	// Deprecated: Do not use.
 	// DEPRECATED DNS Lookup RPC - for backward compatibility
 	// Use LookupRecord with DnsResourceRecordLookupRequest instead
 	LookupRecordLegacy(ctx context.Context, in *DNSMessage_DNSQuestion, opts ...grpc.CallOption) (*DNSMessage_DNSResponse, error)
 	// Get all DNS domains
-	GetAllDomains(ctx context.Context, in *proto.GetAllDomainsRequest, opts ...grpc.CallOption) (*proto.GetAllDomainsResponse, error)
+	GetAllDomains(ctx context.Context, in *GetAllDomainsRequest, opts ...grpc.CallOption) (*GetAllDomainsResponse, error)
 	// Get metadata for a specific DNS domain
-	GetAllDomainMetadata(ctx context.Context, in *proto.DomainMetadataRequest, opts ...grpc.CallOption) (*proto.DomainMetadataResponse, error)
+	GetAllDomainMetadata(ctx context.Context, in *DomainMetadataRequest, opts ...grpc.CallOption) (*DomainMetadataResponse, error)
 	// Power Control
 	InvokeInstancePower(ctx context.Context, in *InstancePowerRequest, opts ...grpc.CallOption) (*InstancePowerResult, error)
 	ForgeAgentControl(ctx context.Context, in *ForgeAgentControlRequest, opts ...grpc.CallOption) (*ForgeAgentControlResponse, error)
@@ -1058,9 +1058,9 @@ func (c *forgeClient) Version(ctx context.Context, in *VersionRequest, opts ...g
 	return out, nil
 }
 
-func (c *forgeClient) CreateDomain(ctx context.Context, in *proto.CreateDomainRequest, opts ...grpc.CallOption) (*proto.Domain, error) {
+func (c *forgeClient) CreateDomain(ctx context.Context, in *CreateDomainRequest, opts ...grpc.CallOption) (*Domain, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(proto.Domain)
+	out := new(Domain)
 	err := c.cc.Invoke(ctx, Forge_CreateDomain_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -1068,9 +1068,9 @@ func (c *forgeClient) CreateDomain(ctx context.Context, in *proto.CreateDomainRe
 	return out, nil
 }
 
-func (c *forgeClient) UpdateDomain(ctx context.Context, in *proto.UpdateDomainRequest, opts ...grpc.CallOption) (*proto.Domain, error) {
+func (c *forgeClient) UpdateDomain(ctx context.Context, in *UpdateDomainRequest, opts ...grpc.CallOption) (*Domain, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(proto.Domain)
+	out := new(Domain)
 	err := c.cc.Invoke(ctx, Forge_UpdateDomain_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -1078,9 +1078,9 @@ func (c *forgeClient) UpdateDomain(ctx context.Context, in *proto.UpdateDomainRe
 	return out, nil
 }
 
-func (c *forgeClient) DeleteDomain(ctx context.Context, in *proto.DomainDeletionRequest, opts ...grpc.CallOption) (*proto.DomainDeletionResult, error) {
+func (c *forgeClient) DeleteDomain(ctx context.Context, in *DomainDeletionRequest, opts ...grpc.CallOption) (*DomainDeletionResult, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(proto.DomainDeletionResult)
+	out := new(DomainDeletionResult)
 	err := c.cc.Invoke(ctx, Forge_DeleteDomain_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -1088,9 +1088,9 @@ func (c *forgeClient) DeleteDomain(ctx context.Context, in *proto.DomainDeletion
 	return out, nil
 }
 
-func (c *forgeClient) FindDomain(ctx context.Context, in *proto.DomainSearchQuery, opts ...grpc.CallOption) (*proto.DomainList, error) {
+func (c *forgeClient) FindDomain(ctx context.Context, in *DomainSearchQuery, opts ...grpc.CallOption) (*DomainList, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(proto.DomainList)
+	out := new(DomainList)
 	err := c.cc.Invoke(ctx, Forge_FindDomain_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -1578,9 +1578,9 @@ func (c *forgeClient) DpuAgentUpgradePolicyAction(ctx context.Context, in *DpuAg
 	return out, nil
 }
 
-func (c *forgeClient) LookupRecord(ctx context.Context, in *proto.DnsResourceRecordLookupRequest, opts ...grpc.CallOption) (*proto.DnsResourceRecordLookupResponse, error) {
+func (c *forgeClient) LookupRecord(ctx context.Context, in *DnsResourceRecordLookupRequest, opts ...grpc.CallOption) (*DnsResourceRecordLookupResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(proto.DnsResourceRecordLookupResponse)
+	out := new(DnsResourceRecordLookupResponse)
 	err := c.cc.Invoke(ctx, Forge_LookupRecord_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -1599,9 +1599,9 @@ func (c *forgeClient) LookupRecordLegacy(ctx context.Context, in *DNSMessage_DNS
 	return out, nil
 }
 
-func (c *forgeClient) GetAllDomains(ctx context.Context, in *proto.GetAllDomainsRequest, opts ...grpc.CallOption) (*proto.GetAllDomainsResponse, error) {
+func (c *forgeClient) GetAllDomains(ctx context.Context, in *GetAllDomainsRequest, opts ...grpc.CallOption) (*GetAllDomainsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(proto.GetAllDomainsResponse)
+	out := new(GetAllDomainsResponse)
 	err := c.cc.Invoke(ctx, Forge_GetAllDomains_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -1609,9 +1609,9 @@ func (c *forgeClient) GetAllDomains(ctx context.Context, in *proto.GetAllDomains
 	return out, nil
 }
 
-func (c *forgeClient) GetAllDomainMetadata(ctx context.Context, in *proto.DomainMetadataRequest, opts ...grpc.CallOption) (*proto.DomainMetadataResponse, error) {
+func (c *forgeClient) GetAllDomainMetadata(ctx context.Context, in *DomainMetadataRequest, opts ...grpc.CallOption) (*DomainMetadataResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(proto.DomainMetadataResponse)
+	out := new(DomainMetadataResponse)
 	err := c.cc.Invoke(ctx, Forge_GetAllDomainMetadata_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -4759,10 +4759,10 @@ type ForgeServer interface {
 	// What version of Forge is this service running? Matches `--version` command line.
 	Version(context.Context, *VersionRequest) (*BuildInfo, error)
 	// Domain
-	CreateDomain(context.Context, *proto.CreateDomainRequest) (*proto.Domain, error)
-	UpdateDomain(context.Context, *proto.UpdateDomainRequest) (*proto.Domain, error)
-	DeleteDomain(context.Context, *proto.DomainDeletionRequest) (*proto.DomainDeletionResult, error)
-	FindDomain(context.Context, *proto.DomainSearchQuery) (*proto.DomainList, error)
+	CreateDomain(context.Context, *CreateDomainRequest) (*Domain, error)
+	UpdateDomain(context.Context, *UpdateDomainRequest) (*Domain, error)
+	DeleteDomain(context.Context, *DomainDeletionRequest) (*DomainDeletionResult, error)
+	FindDomain(context.Context, *DomainSearchQuery) (*DomainList, error)
 	// VPC
 	CreateVpc(context.Context, *VpcCreationRequest) (*Vpc, error)
 	UpdateVpc(context.Context, *VpcUpdateRequest) (*VpcUpdateResult, error)
@@ -4847,15 +4847,15 @@ type ForgeServer interface {
 	DpuAgentUpgradeCheck(context.Context, *DpuAgentUpgradeCheckRequest) (*DpuAgentUpgradeCheckResponse, error)
 	DpuAgentUpgradePolicyAction(context.Context, *DpuAgentUpgradePolicyRequest) (*DpuAgentUpgradePolicyResponse, error)
 	// Looks up a DNS record for DNS names assigned by Forge
-	LookupRecord(context.Context, *proto.DnsResourceRecordLookupRequest) (*proto.DnsResourceRecordLookupResponse, error)
+	LookupRecord(context.Context, *DnsResourceRecordLookupRequest) (*DnsResourceRecordLookupResponse, error)
 	// Deprecated: Do not use.
 	// DEPRECATED DNS Lookup RPC - for backward compatibility
 	// Use LookupRecord with DnsResourceRecordLookupRequest instead
 	LookupRecordLegacy(context.Context, *DNSMessage_DNSQuestion) (*DNSMessage_DNSResponse, error)
 	// Get all DNS domains
-	GetAllDomains(context.Context, *proto.GetAllDomainsRequest) (*proto.GetAllDomainsResponse, error)
+	GetAllDomains(context.Context, *GetAllDomainsRequest) (*GetAllDomainsResponse, error)
 	// Get metadata for a specific DNS domain
-	GetAllDomainMetadata(context.Context, *proto.DomainMetadataRequest) (*proto.DomainMetadataResponse, error)
+	GetAllDomainMetadata(context.Context, *DomainMetadataRequest) (*DomainMetadataResponse, error)
 	// Power Control
 	InvokeInstancePower(context.Context, *InstancePowerRequest) (*InstancePowerResult, error)
 	ForgeAgentControl(context.Context, *ForgeAgentControlRequest) (*ForgeAgentControlResponse, error)
@@ -5394,16 +5394,16 @@ type UnimplementedForgeServer struct{}
 func (UnimplementedForgeServer) Version(context.Context, *VersionRequest) (*BuildInfo, error) {
 	return nil, status.Error(codes.Unimplemented, "method Version not implemented")
 }
-func (UnimplementedForgeServer) CreateDomain(context.Context, *proto.CreateDomainRequest) (*proto.Domain, error) {
+func (UnimplementedForgeServer) CreateDomain(context.Context, *CreateDomainRequest) (*Domain, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateDomain not implemented")
 }
-func (UnimplementedForgeServer) UpdateDomain(context.Context, *proto.UpdateDomainRequest) (*proto.Domain, error) {
+func (UnimplementedForgeServer) UpdateDomain(context.Context, *UpdateDomainRequest) (*Domain, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateDomain not implemented")
 }
-func (UnimplementedForgeServer) DeleteDomain(context.Context, *proto.DomainDeletionRequest) (*proto.DomainDeletionResult, error) {
+func (UnimplementedForgeServer) DeleteDomain(context.Context, *DomainDeletionRequest) (*DomainDeletionResult, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteDomain not implemented")
 }
-func (UnimplementedForgeServer) FindDomain(context.Context, *proto.DomainSearchQuery) (*proto.DomainList, error) {
+func (UnimplementedForgeServer) FindDomain(context.Context, *DomainSearchQuery) (*DomainList, error) {
 	return nil, status.Error(codes.Unimplemented, "method FindDomain not implemented")
 }
 func (UnimplementedForgeServer) CreateVpc(context.Context, *VpcCreationRequest) (*Vpc, error) {
@@ -5550,16 +5550,16 @@ func (UnimplementedForgeServer) DpuAgentUpgradeCheck(context.Context, *DpuAgentU
 func (UnimplementedForgeServer) DpuAgentUpgradePolicyAction(context.Context, *DpuAgentUpgradePolicyRequest) (*DpuAgentUpgradePolicyResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DpuAgentUpgradePolicyAction not implemented")
 }
-func (UnimplementedForgeServer) LookupRecord(context.Context, *proto.DnsResourceRecordLookupRequest) (*proto.DnsResourceRecordLookupResponse, error) {
+func (UnimplementedForgeServer) LookupRecord(context.Context, *DnsResourceRecordLookupRequest) (*DnsResourceRecordLookupResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method LookupRecord not implemented")
 }
 func (UnimplementedForgeServer) LookupRecordLegacy(context.Context, *DNSMessage_DNSQuestion) (*DNSMessage_DNSResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method LookupRecordLegacy not implemented")
 }
-func (UnimplementedForgeServer) GetAllDomains(context.Context, *proto.GetAllDomainsRequest) (*proto.GetAllDomainsResponse, error) {
+func (UnimplementedForgeServer) GetAllDomains(context.Context, *GetAllDomainsRequest) (*GetAllDomainsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetAllDomains not implemented")
 }
-func (UnimplementedForgeServer) GetAllDomainMetadata(context.Context, *proto.DomainMetadataRequest) (*proto.DomainMetadataResponse, error) {
+func (UnimplementedForgeServer) GetAllDomainMetadata(context.Context, *DomainMetadataRequest) (*DomainMetadataResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetAllDomainMetadata not implemented")
 }
 func (UnimplementedForgeServer) InvokeInstancePower(context.Context, *InstancePowerRequest) (*InstancePowerResult, error) {
@@ -6540,7 +6540,7 @@ func _Forge_Version_Handler(srv interface{}, ctx context.Context, dec func(inter
 }
 
 func _Forge_CreateDomain_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(proto.CreateDomainRequest)
+	in := new(CreateDomainRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -6552,13 +6552,13 @@ func _Forge_CreateDomain_Handler(srv interface{}, ctx context.Context, dec func(
 		FullMethod: Forge_CreateDomain_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ForgeServer).CreateDomain(ctx, req.(*proto.CreateDomainRequest))
+		return srv.(ForgeServer).CreateDomain(ctx, req.(*CreateDomainRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _Forge_UpdateDomain_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(proto.UpdateDomainRequest)
+	in := new(UpdateDomainRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -6570,13 +6570,13 @@ func _Forge_UpdateDomain_Handler(srv interface{}, ctx context.Context, dec func(
 		FullMethod: Forge_UpdateDomain_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ForgeServer).UpdateDomain(ctx, req.(*proto.UpdateDomainRequest))
+		return srv.(ForgeServer).UpdateDomain(ctx, req.(*UpdateDomainRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _Forge_DeleteDomain_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(proto.DomainDeletionRequest)
+	in := new(DomainDeletionRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -6588,13 +6588,13 @@ func _Forge_DeleteDomain_Handler(srv interface{}, ctx context.Context, dec func(
 		FullMethod: Forge_DeleteDomain_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ForgeServer).DeleteDomain(ctx, req.(*proto.DomainDeletionRequest))
+		return srv.(ForgeServer).DeleteDomain(ctx, req.(*DomainDeletionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _Forge_FindDomain_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(proto.DomainSearchQuery)
+	in := new(DomainSearchQuery)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -6606,7 +6606,7 @@ func _Forge_FindDomain_Handler(srv interface{}, ctx context.Context, dec func(in
 		FullMethod: Forge_FindDomain_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ForgeServer).FindDomain(ctx, req.(*proto.DomainSearchQuery))
+		return srv.(ForgeServer).FindDomain(ctx, req.(*DomainSearchQuery))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -7476,7 +7476,7 @@ func _Forge_DpuAgentUpgradePolicyAction_Handler(srv interface{}, ctx context.Con
 }
 
 func _Forge_LookupRecord_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(proto.DnsResourceRecordLookupRequest)
+	in := new(DnsResourceRecordLookupRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -7488,7 +7488,7 @@ func _Forge_LookupRecord_Handler(srv interface{}, ctx context.Context, dec func(
 		FullMethod: Forge_LookupRecord_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ForgeServer).LookupRecord(ctx, req.(*proto.DnsResourceRecordLookupRequest))
+		return srv.(ForgeServer).LookupRecord(ctx, req.(*DnsResourceRecordLookupRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -7512,7 +7512,7 @@ func _Forge_LookupRecordLegacy_Handler(srv interface{}, ctx context.Context, dec
 }
 
 func _Forge_GetAllDomains_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(proto.GetAllDomainsRequest)
+	in := new(GetAllDomainsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -7524,13 +7524,13 @@ func _Forge_GetAllDomains_Handler(srv interface{}, ctx context.Context, dec func
 		FullMethod: Forge_GetAllDomains_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ForgeServer).GetAllDomains(ctx, req.(*proto.GetAllDomainsRequest))
+		return srv.(ForgeServer).GetAllDomains(ctx, req.(*GetAllDomainsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _Forge_GetAllDomainMetadata_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(proto.DomainMetadataRequest)
+	in := new(DomainMetadataRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -7542,7 +7542,7 @@ func _Forge_GetAllDomainMetadata_Handler(srv interface{}, ctx context.Context, d
 		FullMethod: Forge_GetAllDomainMetadata_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ForgeServer).GetAllDomainMetadata(ctx, req.(*proto.DomainMetadataRequest))
+		return srv.(ForgeServer).GetAllDomainMetadata(ctx, req.(*DomainMetadataRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
