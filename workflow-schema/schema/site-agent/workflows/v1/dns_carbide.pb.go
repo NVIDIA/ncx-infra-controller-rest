@@ -22,13 +22,13 @@
 package proto
 
 import (
-	proto "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/proto"
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -604,7 +604,7 @@ func (x *GetAllRecordsForDomainResponse) GetResult() []*DnsResourceRecord {
 
 type DomainInfo struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
-	Id             *proto.DomainId        `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Id             *DomainId              `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Zone           string                 `protobuf:"bytes,2,opt,name=zone,proto3" json:"zone,omitempty"`
 	Kind           string                 `protobuf:"bytes,3,opt,name=kind,proto3" json:"kind,omitempty"`
 	Serial         int32                  `protobuf:"varint,4,opt,name=serial,proto3" json:"serial,omitempty"`
@@ -644,7 +644,7 @@ func (*DomainInfo) Descriptor() ([]byte, []int) {
 	return file_dns_carbide_proto_rawDescGZIP(), []int{11}
 }
 
-func (x *DomainInfo) GetId() *proto.DomainId {
+func (x *DomainInfo) GetId() *DomainId {
 	if x != nil {
 		return x.Id
 	}
@@ -688,7 +688,7 @@ func (x *DomainInfo) GetNotifiedSerial() int32 {
 
 type Domain struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            *proto.DomainId        `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Id            *DomainId              `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 	Created       *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=created,proto3" json:"created,omitempty"`
 	Updated       *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=updated,proto3" json:"updated,omitempty"`
@@ -729,7 +729,7 @@ func (*Domain) Descriptor() ([]byte, []int) {
 	return file_dns_carbide_proto_rawDescGZIP(), []int{12}
 }
 
-func (x *Domain) GetId() *proto.DomainId {
+func (x *Domain) GetId() *DomainId {
 	if x != nil {
 		return x.Id
 	}
@@ -868,7 +868,7 @@ func (x *UpdateDomainRequest) GetDomain() *Domain {
 
 type DomainSearchQuery struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            *proto.DomainId        `protobuf:"bytes,1,opt,name=id,proto3,oneof" json:"id,omitempty"`
+	Id            *DomainId              `protobuf:"bytes,1,opt,name=id,proto3,oneof" json:"id,omitempty"`
 	Name          *string                `protobuf:"bytes,2,opt,name=name,proto3,oneof" json:"name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -904,7 +904,7 @@ func (*DomainSearchQuery) Descriptor() ([]byte, []int) {
 	return file_dns_carbide_proto_rawDescGZIP(), []int{15}
 }
 
-func (x *DomainSearchQuery) GetId() *proto.DomainId {
+func (x *DomainSearchQuery) GetId() *DomainId {
 	if x != nil {
 		return x.Id
 	}
@@ -920,7 +920,7 @@ func (x *DomainSearchQuery) GetName() string {
 
 type DomainDeletionRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            *proto.DomainId        `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Id            *DomainId              `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -955,7 +955,7 @@ func (*DomainDeletionRequest) Descriptor() ([]byte, []int) {
 	return file_dns_carbide_proto_rawDescGZIP(), []int{16}
 }
 
-func (x *DomainDeletionRequest) GetId() *proto.DomainId {
+func (x *DomainDeletionRequest) GetId() *DomainId {
 	if x != nil {
 		return x.Id
 	}
@@ -1075,7 +1075,7 @@ const file_dns_carbide_proto_rawDesc = "" +
 	"\x05_name\"9\n" +
 	"\x15DomainDeletionRequest\x12 \n" +
 	"\x02id\x18\x01 \x01(\v2\x10.common.DomainIdR\x02id\"\x16\n" +
-	"\x14DomainDeletionResultBAZ?github.com/nvidia/bare-metal-manager-rest/workflow-schema/protob\x06proto3"
+	"\x14DomainDeletionResultBCZAgithub.com/nvidia/ncx-infra-controller-rest/workflow-schema/protob\x06proto3"
 
 var (
 	file_dns_carbide_proto_rawDescOnce sync.Once
@@ -1109,7 +1109,7 @@ var file_dns_carbide_proto_goTypes = []any{
 	(*DomainSearchQuery)(nil),               // 15: dns.DomainSearchQuery
 	(*DomainDeletionRequest)(nil),           // 16: dns.DomainDeletionRequest
 	(*DomainDeletionResult)(nil),            // 17: dns.DomainDeletionResult
-	(*proto.DomainId)(nil),                  // 18: common.DomainId
+	(*DomainId)(nil),                        // 18: common.DomainId
 	(*timestamppb.Timestamp)(nil),           // 19: google.protobuf.Timestamp
 }
 var file_dns_carbide_proto_depIdxs = []int32{

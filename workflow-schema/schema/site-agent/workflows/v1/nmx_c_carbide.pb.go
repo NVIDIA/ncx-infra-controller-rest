@@ -8561,7 +8561,7 @@ const file_nmx_c_carbide_proto_rawDesc = "" +
 	"\x0fGetConnInfoList\x12\x1d.nmx_c.GetConnInfoListRequest\x1a\x1e.nmx_c.GetConnInfoListResponse\"\x00\x12S\n" +
 	"\x13GetConnInfoCombined\x12!.nmx_c.GetConnInfoCombinedRequest\x1a\x17.nmx_c.ConnInfoCombined\"\x00\x12J\n" +
 	"\rGetAdminState\x12\x1b.nmx_c.GetAdminStateRequest\x1a\x1c.nmx_c.GetAdminStateResponse\x12J\n" +
-	"\rSetAdminState\x12\x1b.nmx_c.SetAdminStateRequest\x1a\x1c.nmx_c.SetAdminStateResponseBAZ?github.com/nvidia/bare-metal-manager-rest/workflow-schema/protob\x06proto3"
+	"\rSetAdminState\x12\x1b.nmx_c.SetAdminStateRequest\x1a\x1c.nmx_c.SetAdminStateResponseBCZAgithub.com/nvidia/ncx-infra-controller-rest/workflow-schema/protob\x06proto3"
 
 var (
 	file_nmx_c_carbide_proto_rawDescOnce sync.Once
