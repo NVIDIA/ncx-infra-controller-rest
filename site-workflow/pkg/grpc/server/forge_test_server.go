@@ -255,30 +255,6 @@ func (f *ForgeServerImpl) FindNetworkSegmentsByIds(ctx context.Context, req *cws
 	return &response, nil
 }
 
-// FindNetworkSegments implements interface ForgeServer
-func (f *ForgeServerImpl) FindNetworkSegments(c context.Context, req *cwssaws.NetworkSegmentQuery) (*cwssaws.NetworkSegmentList, error) {
-	if req == nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
-	}
-
-	res := []*cwssaws.NetworkSegment{}
-
-	for _, ns := range f.ns {
-		res = append(res, ns)
-	}
-
-	if req.Id != nil {
-		ns, ok := f.ns[req.Id.Value]
-		if ok {
-			res = []*cwssaws.NetworkSegment{ns}
-		} else {
-			res = []*cwssaws.NetworkSegment{}
-		}
-	}
-
-	return &cwssaws.NetworkSegmentList{NetworkSegments: res}, nil
-}
-
 // CreateInstance implements interface ForgeServer
 func (f *ForgeServerImpl) AllocateInstance(ctx context.Context, req *cwssaws.InstanceAllocationRequest) (*cwssaws.Instance, error) {
 	if req == nil {
@@ -380,30 +356,6 @@ func (f *ForgeServerImpl) FindInstancesByIds(ctx context.Context, req *cwssaws.I
 	return &response, nil
 }
 
-// FindInstances implements interface ForgeServer
-func (f *ForgeServerImpl) FindInstances(c context.Context, req *cwssaws.InstanceSearchQuery) (*cwssaws.InstanceList, error) {
-	if req == nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
-	}
-
-	res := []*cwssaws.Instance{}
-
-	for _, ins := range f.ins {
-		res = append(res, ins)
-	}
-
-	if req.Id != nil {
-		ins, ok := f.ins[req.Id.Value]
-		if ok {
-			res = []*cwssaws.Instance{ins}
-		} else {
-			res = []*cwssaws.Instance{}
-		}
-	}
-
-	return &cwssaws.InstanceList{Instances: res}, nil
-}
-
 // InvokeInstancePower implements interface ForgeServer
 func (f *ForgeServerImpl) InvokeInstancePower(c context.Context, req *cwssaws.InstancePowerRequest) (*cwssaws.InstancePowerResult, error) {
 	if req == nil {
@@ -422,13 +374,464 @@ func (f *ForgeServerImpl) InvokeInstancePower(c context.Context, req *cwssaws.In
 	return nil, status.Errorf(codes.NotFound, "Machine with ID %q not found", req.MachineId.Id)
 }
 
-// FindMachines implements interface ForgeServer
-func (f *ForgeServerImpl) FindMachines(context.Context, *cwssaws.MachineSearchQuery) (*cwssaws.MachineList, error) {
+func (f *ForgeServerImpl) FindMachineIds(ctx context.Context, req *cwssaws.MachineSearchConfig) (*cwssaws.MachineIdList, error) {
+	if req == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
+	}
+	response := cwssaws.MachineIdList{}
+	for id := range f.m {
+		response.MachineIds = append(response.MachineIds, &cwssaws.MachineId{Id: id})
+	}
+
+	return &response, nil
+}
+
+func (f *ForgeServerImpl) SetMaintenance(context.Context, *cwssaws.MaintenanceRequest) (*emptypb.Empty, error) {
+	return &emptypb.Empty{}, nil
+}
+
+// CreateTenantKeyset implements interface ForgeServer
+func (f *ForgeServerImpl) CreateTenantKeyset(c context.Context, req *cwssaws.CreateTenantKeysetRequest) (*cwssaws.CreateTenantKeysetResponse, error) {
+	if req == nil || req.KeysetIdentifier == nil || req.KeysetIdentifier.KeysetId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
+	}
+
+	nid := DefaultTenantKeysetId
+	_, ok := f.tk[DefaultTenantKeysetId]
+	if ok {
+		// Default TenantKeyset already exists, create a new one with a different ID
+		nid = uuid.NewString()
+	}
+
+	ntk := &cwssaws.TenantKeyset{
+		KeysetIdentifier: &cwssaws.TenantKeysetIdentifier{
+			KeysetId: nid,
+		},
+		KeysetContent: req.KeysetContent,
+		Version:       req.Version,
+	}
+
+	f.tk[nid] = ntk
+
+	result := &cwssaws.CreateTenantKeysetResponse{
+		Keyset: ntk,
+	}
+
+	return result, nil
+}
+
+// UpdateTenantKeyset implements interface ForgeServer
+func (f *ForgeServerImpl) UpdateTenantKeyset(c context.Context, req *cwssaws.UpdateTenantKeysetRequest) (*cwssaws.UpdateTenantKeysetResponse, error) {
+	if req == nil || req.KeysetIdentifier == nil || req.KeysetIdentifier.KeysetId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
+	}
+
+	eid := req.KeysetIdentifier.KeysetId
+
+	_, ok := f.tk[eid]
+	if ok {
+		f.tk[eid].KeysetContent = req.KeysetContent
+		f.tk[eid].Version = req.Version
+
+		return &cwssaws.UpdateTenantKeysetResponse{}, nil
+	}
+
+	return nil, status.Errorf(codes.Internal, "TenantKeyset with ID not found")
+}
+
+// DeleteTenantKeyset implements interface ForgeServer
+func (f *ForgeServerImpl) DeleteTenantKeyset(c context.Context, req *cwssaws.DeleteTenantKeysetRequest) (*cwssaws.DeleteTenantKeysetResponse, error) {
+	if req == nil || req.KeysetIdentifier == nil || req.KeysetIdentifier.KeysetId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
+	}
+
+	eid := req.KeysetIdentifier.KeysetId
+
+	_, ok := f.tk[eid]
+	if ok {
+		delete(f.tk, eid)
+		return &cwssaws.DeleteTenantKeysetResponse{}, nil
+	}
+
+	return nil, status.Errorf(codes.NotFound, "TenantKeyset with ID %q not found", eid)
+}
+
+// FindTenantKeysetIds implements interface ForgeServer
+func (f *ForgeServerImpl) FindTenantKeysetIds(ctx context.Context, req *cwssaws.TenantKeysetSearchFilter) (*cwssaws.TenantKeysetIdList, error) {
+	if req == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
+	}
+	response := cwssaws.TenantKeysetIdList{}
+	for id := range f.tk {
+		response.KeysetIds = append(response.KeysetIds, &cwssaws.TenantKeysetIdentifier{KeysetId: id})
+	}
+	return &response, nil
+}
+
+// FindTenantKeysetsByIds implements interface ForgeServer
+func (f *ForgeServerImpl) FindTenantKeysetsByIds(ctx context.Context, req *cwssaws.TenantKeysetsByIdsRequest) (*cwssaws.TenantKeySetList, error) {
+	if req == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
+	}
+	response := cwssaws.TenantKeySetList{}
+	for _, id := range req.KeysetIds {
+		if obj, ok := f.tk[id.KeysetId]; ok {
+			response.Keyset = append(response.Keyset, obj)
+		}
+	}
+	return &response, nil
+}
+
+// UpdateIBPartition implements interface ForgeServer
+func (f *ForgeServerImpl) CreateIBPartition(c context.Context, req *cwssaws.IBPartitionCreationRequest) (*cwssaws.IBPartition, error) {
+	if req == nil || req.Config == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
+	}
+
+	nid := DefaultIBParitionId
+	_, ok := f.ibp[DefaultNetworkSegmentId]
+	if ok {
+		// Default IBPartition already exists, create a new one with a different ID
+		nid = uuid.NewString()
+	}
+
+	nibp := &cwssaws.IBPartition{
+		Id: &cwssaws.IBPartitionId{Value: nid},
+		Config: &cwssaws.IBPartitionConfig{
+			Name:                 req.Config.Name,
+			TenantOrganizationId: req.Config.TenantOrganizationId,
+		},
+	}
+
+	f.ibp[nid] = nibp
+	return nibp, nil
+}
+
+// DeleteIBPartition implements interface ForgeServer
+func (f *ForgeServerImpl) DeleteIBPartition(c context.Context, req *cwssaws.IBPartitionDeletionRequest) (*cwssaws.IBPartitionDeletionResult, error) {
+	if req == nil || req.Id == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
+	}
+
+	_, ok := f.ibp[req.Id.Value]
+
+	if ok {
+		delete(f.ibp, req.Id.Value)
+		return &cwssaws.IBPartitionDeletionResult{}, nil
+	}
+
+	return nil, status.Errorf(codes.NotFound, "IB Partition with ID %q not found", req.Id.Value)
+}
+
+// FindIBPartitionIds implements interface ForgeServer
+func (f *ForgeServerImpl) FindIBPartitionIds(ctx context.Context, req *cwssaws.IBPartitionSearchFilter) (*cwssaws.IBPartitionIdList, error) {
+	if req == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
+	}
+	response := cwssaws.IBPartitionIdList{}
+	for id := range f.ibp {
+		response.IbPartitionIds = append(response.IbPartitionIds, &cwssaws.IBPartitionId{Value: id})
+	}
+	return &response, nil
+}
+
+// FindIBPartitionsByIds implements interface ForgeServer
+func (f *ForgeServerImpl) FindIBPartitionsByIds(ctx context.Context, req *cwssaws.IBPartitionsByIdsRequest) (*cwssaws.IBPartitionList, error) {
+	if req == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
+	}
+	response := cwssaws.IBPartitionList{}
+	for _, id := range req.IbPartitionIds {
+		if obj, ok := f.ibp[id.GetValue()]; ok {
+			response.IbPartitions = append(response.IbPartitions, obj)
+		}
+	}
+	return &response, nil
+}
+
+// AddExpectedMachine implements interface ForgeServer
+func (f *ForgeServerImpl) AddExpectedMachine(ctx context.Context, req *cwssaws.ExpectedMachine) (*emptypb.Empty, error) {
+	if req == nil || req.Id == nil || req.Id.Value == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "ID not provided for AddExpectedMachine")
+	}
+	if req.BmcMacAddress == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "MAC address not provided for AddExpectedMachine")
+	}
+	if req.ChassisSerialNumber == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "Chassis Serial Number not provided for AddExpectedMachine")
+	}
+	f.em[req.Id.Value] = req
+	return &emptypb.Empty{}, nil
+}
+
+// UpdateExpectedMachine implements interface ForgeServer
+func (f *ForgeServerImpl) UpdateExpectedMachine(ctx context.Context, req *cwssaws.ExpectedMachine) (*emptypb.Empty, error) {
+	if req == nil || req.Id == nil || req.Id.Value == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "ID not provided for UpdateExpectedMachine")
+	}
+	if req.BmcMacAddress == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "MAC address not provided for UpdateExpectedMachine")
+	}
+	if req.ChassisSerialNumber == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "Chassis Serial Number not provided for UpdateExpectedMachine")
+	}
+	if _, ok := f.em[req.Id.Value]; !ok {
+		return nil, status.Errorf(codes.NotFound, "ExpectedMachine with ID %q not found", req.Id.Value)
+	}
+	f.em[req.Id.Value] = req
+	return &emptypb.Empty{}, nil
+}
+
+// DeleteExpectedMachine implements interface ForgeServer
+func (f *ForgeServerImpl) DeleteExpectedMachine(ctx context.Context, req *cwssaws.ExpectedMachineRequest) (*emptypb.Empty, error) {
+	if req == nil || req.Id == nil || req.Id.Value == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "ID not provided for DeleteExpectedMachine")
+	}
+	if _, ok := f.em[req.Id.Value]; !ok {
+		return nil, status.Errorf(codes.NotFound, "ExpectedMachine with ID %q not found", req.Id.Value)
+	}
+	delete(f.em, req.Id.Value)
+	return &emptypb.Empty{}, nil
+}
+
+// CreateExpectedMachines implements interface ForgeServer
+func (f *ForgeServerImpl) CreateExpectedMachines(ctx context.Context, req *cwssaws.BatchExpectedMachineOperationRequest) (*cwssaws.BatchExpectedMachineOperationResponse, error) {
+	if req == nil || req.GetExpectedMachines() == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid request for CreateExpectedMachines")
+	}
+	emList := req.GetExpectedMachines().GetExpectedMachines()
+	out := &cwssaws.BatchExpectedMachineOperationResponse{
+		Results: make([]*cwssaws.ExpectedMachineOperationResult, 0, len(emList)),
+	}
+	for _, em := range emList {
+		if em == nil {
+			msg := "nil expected machine entry"
+			out.Results = append(out.Results, &cwssaws.ExpectedMachineOperationResult{
+				Success:         false,
+				ErrorMessage:    &msg,
+				ExpectedMachine: nil,
+			})
+			continue
+		}
+		result := &cwssaws.ExpectedMachineOperationResult{
+			Id:              em.Id,
+			Success:         true,
+			ExpectedMachine: em,
+		}
+		if em.GetId() == nil || em.GetId().GetValue() == "" {
+			result.Success = false
+			msg := "ID not provided"
+			result.ErrorMessage = &msg
+			result.ExpectedMachine = nil
+		} else if em.GetBmcMacAddress() == "" {
+			result.Success = false
+			msg := "MAC address not provided"
+			result.ErrorMessage = &msg
+			result.ExpectedMachine = nil
+		} else if em.GetChassisSerialNumber() == "" {
+			result.Success = false
+			msg := "Chassis Serial Number not provided"
+			result.ErrorMessage = &msg
+			result.ExpectedMachine = nil
+		} else {
+			f.em[em.Id.Value] = em
+		}
+		out.Results = append(out.Results, result)
+	}
+	return out, nil
+}
+
+// UpdateExpectedMachines implements interface ForgeServer
+func (f *ForgeServerImpl) UpdateExpectedMachines(ctx context.Context, req *cwssaws.BatchExpectedMachineOperationRequest) (*cwssaws.BatchExpectedMachineOperationResponse, error) {
+	if req == nil || req.GetExpectedMachines() == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid request for UpdateExpectedMachines")
+	}
+	emList := req.GetExpectedMachines().GetExpectedMachines()
+	out := &cwssaws.BatchExpectedMachineOperationResponse{
+		Results: make([]*cwssaws.ExpectedMachineOperationResult, 0, len(emList)),
+	}
+	for _, em := range emList {
+		if em == nil {
+			msg := "nil expected machine entry"
+			out.Results = append(out.Results, &cwssaws.ExpectedMachineOperationResult{
+				Success:         false,
+				ErrorMessage:    &msg,
+				ExpectedMachine: nil,
+			})
+			continue
+		}
+		result := &cwssaws.ExpectedMachineOperationResult{
+			Id:              em.Id,
+			Success:         true,
+			ExpectedMachine: em,
+		}
+		if em.GetId() == nil || em.GetId().GetValue() == "" {
+			result.Success = false
+			msg := "ID not provided"
+			result.ErrorMessage = &msg
+			result.ExpectedMachine = nil
+		} else if em.GetBmcMacAddress() == "" {
+			result.Success = false
+			msg := "MAC address not provided"
+			result.ErrorMessage = &msg
+			result.ExpectedMachine = nil
+		} else if em.GetChassisSerialNumber() == "" {
+			result.Success = false
+			msg := "Chassis Serial Number not provided"
+			result.ErrorMessage = &msg
+			result.ExpectedMachine = nil
+		} else if _, ok := f.em[em.Id.Value]; !ok {
+			result.Success = false
+			msg := fmt.Sprintf("ExpectedMachine with ID %q not found", em.Id.Value)
+			result.ErrorMessage = &msg
+			result.ExpectedMachine = nil
+		} else {
+			f.em[em.Id.Value] = em
+		}
+		out.Results = append(out.Results, result)
+	}
+	return out, nil
+}
+
+// AddExpectedPowerShelf implements interface ForgeServer
+func (f *ForgeServerImpl) AddExpectedPowerShelf(ctx context.Context, req *cwssaws.ExpectedPowerShelf) (*emptypb.Empty, error) {
+	if req == nil || req.ExpectedPowerShelfId == nil || req.ExpectedPowerShelfId.Value == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "ID not provided for AddExpectedPowerShelf")
+	}
+	if req.BmcMacAddress == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "MAC address not provided for AddExpectedPowerShelf")
+	}
+	if req.ShelfSerialNumber == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "Shelf Serial Number not provided for AddExpectedPowerShelf")
+	}
+	f.eps[req.ExpectedPowerShelfId.Value] = req
+	return &emptypb.Empty{}, nil
+}
+
+// UpdateExpectedPowerShelf implements interface ForgeServer
+func (f *ForgeServerImpl) UpdateExpectedPowerShelf(ctx context.Context, req *cwssaws.ExpectedPowerShelf) (*emptypb.Empty, error) {
+	if req == nil || req.ExpectedPowerShelfId == nil || req.ExpectedPowerShelfId.Value == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "ID not provided for UpdateExpectedPowerShelf")
+	}
+	if req.BmcMacAddress == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "MAC address not provided for UpdateExpectedPowerShelf")
+	}
+	if req.ShelfSerialNumber == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "Shelf Serial Number not provided for UpdateExpectedPowerShelf")
+	}
+	if _, ok := f.eps[req.ExpectedPowerShelfId.Value]; !ok {
+		return nil, status.Errorf(codes.NotFound, "ExpectedPowerShelf with ID %q not found", req.ExpectedPowerShelfId.Value)
+	}
+	f.eps[req.ExpectedPowerShelfId.Value] = req
+	return &emptypb.Empty{}, nil
+}
+
+// DeleteExpectedPowerShelf implements interface ForgeServer
+func (f *ForgeServerImpl) DeleteExpectedPowerShelf(ctx context.Context, req *cwssaws.ExpectedPowerShelfRequest) (*emptypb.Empty, error) {
+	if req == nil || req.ExpectedPowerShelfId == nil || req.ExpectedPowerShelfId.Value == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "ID not provided for DeleteExpectedPowerShelf")
+	}
+	if _, ok := f.eps[req.ExpectedPowerShelfId.Value]; !ok {
+		return nil, status.Errorf(codes.NotFound, "ExpectedPowerShelf with ID %q not found", req.ExpectedPowerShelfId.Value)
+	}
+	delete(f.eps, req.ExpectedPowerShelfId.Value)
+	return &emptypb.Empty{}, nil
+}
+
+// GetExpectedPowerShelf implements interface ForgeServer
+func (f *ForgeServerImpl) GetExpectedPowerShelf(ctx context.Context, req *cwssaws.ExpectedPowerShelfRequest) (*cwssaws.ExpectedPowerShelf, error) {
+	if req == nil || req.ExpectedPowerShelfId == nil || req.ExpectedPowerShelfId.Value == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "ID not provided for GetExpectedPowerShelf")
+	}
+	eps, ok := f.eps[req.ExpectedPowerShelfId.Value]
+	if !ok {
+		return nil, status.Errorf(codes.NotFound, "ExpectedPowerShelf with ID %q not found", req.ExpectedPowerShelfId.Value)
+	}
+	return eps, nil
+}
+
+// GetAllExpectedPowerShelves implements interface ForgeServer
+func (f *ForgeServerImpl) GetAllExpectedPowerShelves(ctx context.Context, req *emptypb.Empty) (*cwssaws.ExpectedPowerShelfList, error) {
+	res := make([]*cwssaws.ExpectedPowerShelf, 0, len(f.eps))
+	for _, eps := range f.eps {
+		res = append(res, eps)
+	}
+	return &cwssaws.ExpectedPowerShelfList{ExpectedPowerShelves: res}, nil
+}
+
+// AddExpectedSwitch implements interface ForgeServer
+func (f *ForgeServerImpl) AddExpectedSwitch(ctx context.Context, req *cwssaws.ExpectedSwitch) (*emptypb.Empty, error) {
+	if req == nil || req.ExpectedSwitchId == nil || req.ExpectedSwitchId.Value == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "ID not provided for AddExpectedSwitch")
+	}
+	if req.BmcMacAddress == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "MAC address not provided for AddExpectedSwitch")
+	}
+	if req.SwitchSerialNumber == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "Switch Serial Number not provided for AddExpectedSwitch")
+	}
+	f.es[req.ExpectedSwitchId.Value] = req
+	return &emptypb.Empty{}, nil
+}
+
+// UpdateExpectedSwitch implements interface ForgeServer
+func (f *ForgeServerImpl) UpdateExpectedSwitch(ctx context.Context, req *cwssaws.ExpectedSwitch) (*emptypb.Empty, error) {
+	if req == nil || req.ExpectedSwitchId == nil || req.ExpectedSwitchId.Value == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "ID not provided for UpdateExpectedSwitch")
+	}
+	if req.BmcMacAddress == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "MAC address not provided for UpdateExpectedSwitch")
+	}
+	if req.SwitchSerialNumber == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "Switch Serial Number not provided for UpdateExpectedSwitch")
+	}
+	if _, ok := f.es[req.ExpectedSwitchId.Value]; !ok {
+		return nil, status.Errorf(codes.NotFound, "ExpectedSwitch with ID %q not found", req.ExpectedSwitchId.Value)
+	}
+	f.es[req.ExpectedSwitchId.Value] = req
+	return &emptypb.Empty{}, nil
+}
+
+// DeleteExpectedSwitch implements interface ForgeServer
+func (f *ForgeServerImpl) DeleteExpectedSwitch(ctx context.Context, req *cwssaws.ExpectedSwitchRequest) (*emptypb.Empty, error) {
+	if req == nil || req.ExpectedSwitchId == nil || req.ExpectedSwitchId.Value == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "ID not provided for DeleteExpectedSwitch")
+	}
+	if _, ok := f.es[req.ExpectedSwitchId.Value]; !ok {
+		return nil, status.Errorf(codes.NotFound, "ExpectedSwitch with ID %q not found", req.ExpectedSwitchId.Value)
+	}
+	delete(f.es, req.ExpectedSwitchId.Value)
+	return &emptypb.Empty{}, nil
+}
+
+// GetExpectedSwitch implements interface ForgeServer
+func (f *ForgeServerImpl) GetExpectedSwitch(ctx context.Context, req *cwssaws.ExpectedSwitchRequest) (*cwssaws.ExpectedSwitch, error) {
+	if req == nil || req.ExpectedSwitchId == nil || req.ExpectedSwitchId.Value == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "ID not provided for GetExpectedSwitch")
+	}
+	es, ok := f.es[req.ExpectedSwitchId.Value]
+	if !ok {
+		return nil, status.Errorf(codes.NotFound, "ExpectedSwitch with ID %q not found", req.ExpectedSwitchId.Value)
+	}
+	return es, nil
+}
+
+// GetAllExpectedSwitches implements interface ForgeServer
+func (f *ForgeServerImpl) GetAllExpectedSwitches(ctx context.Context, req *emptypb.Empty) (*cwssaws.ExpectedSwitchList, error) {
+	res := make([]*cwssaws.ExpectedSwitch, 0, len(f.es))
+	for _, es := range f.es {
+		res = append(res, es)
+	}
+	return &cwssaws.ExpectedSwitchList{ExpectedSwitches: res}, nil
+}
+
+// LoadTestMachines loads test machines into the server
+func (f *ForgeServerImpl) LoadTestMachines() {
 	nid := uuid.NewString()
 
 	var memSize uint32 = 16384
 
-	m := &cwssaws.Machine{
+	f.m[nid] = &cwssaws.Machine{
 		Id:    &cwssaws.MachineId{Id: nid},
 		State: "Ready",
 		Interfaces: []*cwssaws.MachineInterface{
@@ -766,503 +1169,6 @@ func (f *ForgeServerImpl) FindMachines(context.Context, *cwssaws.MachineSearchQu
 			},
 		},
 	}
-
-	return &cwssaws.MachineList{Machines: []*cwssaws.Machine{m}}, nil
-}
-
-func (f *ForgeServerImpl) SetMaintenance(context.Context, *cwssaws.MaintenanceRequest) (*emptypb.Empty, error) {
-	return &emptypb.Empty{}, nil
-}
-
-// CreateTenantKeyset implements interface ForgeServer
-func (f *ForgeServerImpl) CreateTenantKeyset(c context.Context, req *cwssaws.CreateTenantKeysetRequest) (*cwssaws.CreateTenantKeysetResponse, error) {
-	if req == nil || req.KeysetIdentifier == nil || req.KeysetIdentifier.KeysetId == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
-	}
-
-	nid := DefaultTenantKeysetId
-	_, ok := f.tk[DefaultTenantKeysetId]
-	if ok {
-		// Default TenantKeyset already exists, create a new one with a different ID
-		nid = uuid.NewString()
-	}
-
-	ntk := &cwssaws.TenantKeyset{
-		KeysetIdentifier: &cwssaws.TenantKeysetIdentifier{
-			KeysetId: nid,
-		},
-		KeysetContent: req.KeysetContent,
-		Version:       req.Version,
-	}
-
-	f.tk[nid] = ntk
-
-	result := &cwssaws.CreateTenantKeysetResponse{
-		Keyset: ntk,
-	}
-
-	return result, nil
-}
-
-// UpdateTenantKeyset implements interface ForgeServer
-func (f *ForgeServerImpl) UpdateTenantKeyset(c context.Context, req *cwssaws.UpdateTenantKeysetRequest) (*cwssaws.UpdateTenantKeysetResponse, error) {
-	if req == nil || req.KeysetIdentifier == nil || req.KeysetIdentifier.KeysetId == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
-	}
-
-	eid := req.KeysetIdentifier.KeysetId
-
-	_, ok := f.tk[eid]
-	if ok {
-		f.tk[eid].KeysetContent = req.KeysetContent
-		f.tk[eid].Version = req.Version
-
-		return &cwssaws.UpdateTenantKeysetResponse{}, nil
-	}
-
-	return nil, status.Errorf(codes.Internal, "TenantKeyset with ID not found")
-}
-
-// DeleteTenantKeyset implements interface ForgeServer
-func (f *ForgeServerImpl) DeleteTenantKeyset(c context.Context, req *cwssaws.DeleteTenantKeysetRequest) (*cwssaws.DeleteTenantKeysetResponse, error) {
-	if req == nil || req.KeysetIdentifier == nil || req.KeysetIdentifier.KeysetId == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
-	}
-
-	eid := req.KeysetIdentifier.KeysetId
-
-	_, ok := f.tk[eid]
-	if ok {
-		delete(f.tk, eid)
-		return &cwssaws.DeleteTenantKeysetResponse{}, nil
-	}
-
-	return nil, status.Errorf(codes.NotFound, "TenantKeyset with ID %q not found", eid)
-}
-
-// FindTenantKeysetIds implements interface ForgeServer
-func (f *ForgeServerImpl) FindTenantKeysetIds(ctx context.Context, req *cwssaws.TenantKeysetSearchFilter) (*cwssaws.TenantKeysetIdList, error) {
-	if req == nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
-	}
-	response := cwssaws.TenantKeysetIdList{}
-	for id := range f.tk {
-		response.KeysetIds = append(response.KeysetIds, &cwssaws.TenantKeysetIdentifier{KeysetId: id})
-	}
-	return &response, nil
-}
-
-// FindTenantKeysetsByIds implements interface ForgeServer
-func (f *ForgeServerImpl) FindTenantKeysetsByIds(ctx context.Context, req *cwssaws.TenantKeysetsByIdsRequest) (*cwssaws.TenantKeySetList, error) {
-	if req == nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
-	}
-	response := cwssaws.TenantKeySetList{}
-	for _, id := range req.KeysetIds {
-		if obj, ok := f.tk[id.KeysetId]; ok {
-			response.Keyset = append(response.Keyset, obj)
-		}
-	}
-	return &response, nil
-}
-
-// FindTenantKeyset implements interface ForgeServer
-func (f *ForgeServerImpl) FindTenantKeyset(c context.Context, req *cwssaws.FindTenantKeysetRequest) (*cwssaws.TenantKeySetList, error) {
-	if req == nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
-	}
-
-	res := []*cwssaws.TenantKeyset{}
-	for _, tk := range f.tk {
-		res = append(res, tk)
-	}
-
-	if req.KeysetId != nil {
-		tk, ok := f.tk[*req.KeysetId]
-		if ok {
-			res = []*cwssaws.TenantKeyset{tk}
-		} else {
-			res = []*cwssaws.TenantKeyset{}
-		}
-	}
-
-	if req.OrganizationId != nil {
-		filtered := []*cwssaws.TenantKeyset{}
-		for _, tk := range res {
-			if tk.KeysetIdentifier.OrganizationId == *req.OrganizationId {
-				filtered = append(filtered, tk)
-			}
-		}
-		res = filtered
-	}
-
-	return &cwssaws.TenantKeySetList{Keyset: res}, nil
-}
-
-// UpdateIBPartition implements interface ForgeServer
-func (f *ForgeServerImpl) CreateIBPartition(c context.Context, req *cwssaws.IBPartitionCreationRequest) (*cwssaws.IBPartition, error) {
-	if req == nil || req.Config == nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
-	}
-
-	nid := DefaultIBParitionId
-	_, ok := f.ibp[DefaultNetworkSegmentId]
-	if ok {
-		// Default IBPartition already exists, create a new one with a different ID
-		nid = uuid.NewString()
-	}
-
-	nibp := &cwssaws.IBPartition{
-		Id: &cwssaws.IBPartitionId{Value: nid},
-		Config: &cwssaws.IBPartitionConfig{
-			Name:                 req.Config.Name,
-			TenantOrganizationId: req.Config.TenantOrganizationId,
-		},
-	}
-
-	f.ibp[nid] = nibp
-	return nibp, nil
-}
-
-// DeleteIBPartition implements interface ForgeServer
-func (f *ForgeServerImpl) DeleteIBPartition(c context.Context, req *cwssaws.IBPartitionDeletionRequest) (*cwssaws.IBPartitionDeletionResult, error) {
-	if req == nil || req.Id == nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
-	}
-
-	_, ok := f.ibp[req.Id.Value]
-
-	if ok {
-		delete(f.ibp, req.Id.Value)
-		return &cwssaws.IBPartitionDeletionResult{}, nil
-	}
-
-	return nil, status.Errorf(codes.NotFound, "IB Partition with ID %q not found", req.Id.Value)
-}
-
-// FindIBPartitionIds implements interface ForgeServer
-func (f *ForgeServerImpl) FindIBPartitionIds(ctx context.Context, req *cwssaws.IBPartitionSearchFilter) (*cwssaws.IBPartitionIdList, error) {
-	if req == nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
-	}
-	response := cwssaws.IBPartitionIdList{}
-	for id := range f.ibp {
-		response.IbPartitionIds = append(response.IbPartitionIds, &cwssaws.IBPartitionId{Value: id})
-	}
-	return &response, nil
-}
-
-// FindIBPartitionsByIds implements interface ForgeServer
-func (f *ForgeServerImpl) FindIBPartitionsByIds(ctx context.Context, req *cwssaws.IBPartitionsByIdsRequest) (*cwssaws.IBPartitionList, error) {
-	if req == nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
-	}
-	response := cwssaws.IBPartitionList{}
-	for _, id := range req.IbPartitionIds {
-		if obj, ok := f.ibp[id.GetValue()]; ok {
-			response.IbPartitions = append(response.IbPartitions, obj)
-		}
-	}
-	return &response, nil
-}
-
-// CreateIBPartition implements interface ForgeServer
-func (f *ForgeServerImpl) FindIBPartitions(c context.Context, req *cwssaws.IBPartitionQuery) (*cwssaws.IBPartitionList, error) {
-	if req == nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
-	}
-
-	res := []*cwssaws.IBPartition{}
-	for _, ibp := range f.ibp {
-		res = append(res, ibp)
-	}
-
-	if req.Id != nil {
-		ibp, ok := f.ibp[req.Id.Value]
-		if ok {
-			res = []*cwssaws.IBPartition{ibp}
-		} else {
-			res = []*cwssaws.IBPartition{}
-		}
-	}
-
-	return &cwssaws.IBPartitionList{IbPartitions: res}, nil
-}
-
-// AddExpectedMachine implements interface ForgeServer
-func (f *ForgeServerImpl) AddExpectedMachine(ctx context.Context, req *cwssaws.ExpectedMachine) (*emptypb.Empty, error) {
-	if req == nil || req.Id == nil || req.Id.Value == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "ID not provided for AddExpectedMachine")
-	}
-	if req.BmcMacAddress == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "MAC address not provided for AddExpectedMachine")
-	}
-	if req.ChassisSerialNumber == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "Chassis Serial Number not provided for AddExpectedMachine")
-	}
-	f.em[req.Id.Value] = req
-	return &emptypb.Empty{}, nil
-}
-
-// UpdateExpectedMachine implements interface ForgeServer
-func (f *ForgeServerImpl) UpdateExpectedMachine(ctx context.Context, req *cwssaws.ExpectedMachine) (*emptypb.Empty, error) {
-	if req == nil || req.Id == nil || req.Id.Value == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "ID not provided for UpdateExpectedMachine")
-	}
-	if req.BmcMacAddress == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "MAC address not provided for UpdateExpectedMachine")
-	}
-	if req.ChassisSerialNumber == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "Chassis Serial Number not provided for UpdateExpectedMachine")
-	}
-	if _, ok := f.em[req.Id.Value]; !ok {
-		return nil, status.Errorf(codes.NotFound, "ExpectedMachine with ID %q not found", req.Id.Value)
-	}
-	f.em[req.Id.Value] = req
-	return &emptypb.Empty{}, nil
-}
-
-// DeleteExpectedMachine implements interface ForgeServer
-func (f *ForgeServerImpl) DeleteExpectedMachine(ctx context.Context, req *cwssaws.ExpectedMachineRequest) (*emptypb.Empty, error) {
-	if req == nil || req.Id == nil || req.Id.Value == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "ID not provided for DeleteExpectedMachine")
-	}
-	if _, ok := f.em[req.Id.Value]; !ok {
-		return nil, status.Errorf(codes.NotFound, "ExpectedMachine with ID %q not found", req.Id.Value)
-	}
-	delete(f.em, req.Id.Value)
-	return &emptypb.Empty{}, nil
-}
-
-// CreateExpectedMachines implements interface ForgeServer
-func (f *ForgeServerImpl) CreateExpectedMachines(ctx context.Context, req *cwssaws.BatchExpectedMachineOperationRequest) (*cwssaws.BatchExpectedMachineOperationResponse, error) {
-	if req == nil || req.GetExpectedMachines() == nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Invalid request for CreateExpectedMachines")
-	}
-	emList := req.GetExpectedMachines().GetExpectedMachines()
-	out := &cwssaws.BatchExpectedMachineOperationResponse{
-		Results: make([]*cwssaws.ExpectedMachineOperationResult, 0, len(emList)),
-	}
-	for _, em := range emList {
-		if em == nil {
-			msg := "nil expected machine entry"
-			out.Results = append(out.Results, &cwssaws.ExpectedMachineOperationResult{
-				Success:         false,
-				ErrorMessage:    &msg,
-				ExpectedMachine: nil,
-			})
-			continue
-		}
-		result := &cwssaws.ExpectedMachineOperationResult{
-			Id:              em.Id,
-			Success:         true,
-			ExpectedMachine: em,
-		}
-		if em.GetId() == nil || em.GetId().GetValue() == "" {
-			result.Success = false
-			msg := "ID not provided"
-			result.ErrorMessage = &msg
-			result.ExpectedMachine = nil
-		} else if em.GetBmcMacAddress() == "" {
-			result.Success = false
-			msg := "MAC address not provided"
-			result.ErrorMessage = &msg
-			result.ExpectedMachine = nil
-		} else if em.GetChassisSerialNumber() == "" {
-			result.Success = false
-			msg := "Chassis Serial Number not provided"
-			result.ErrorMessage = &msg
-			result.ExpectedMachine = nil
-		} else {
-			f.em[em.Id.Value] = em
-		}
-		out.Results = append(out.Results, result)
-	}
-	return out, nil
-}
-
-// UpdateExpectedMachines implements interface ForgeServer
-func (f *ForgeServerImpl) UpdateExpectedMachines(ctx context.Context, req *cwssaws.BatchExpectedMachineOperationRequest) (*cwssaws.BatchExpectedMachineOperationResponse, error) {
-	if req == nil || req.GetExpectedMachines() == nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Invalid request for UpdateExpectedMachines")
-	}
-	emList := req.GetExpectedMachines().GetExpectedMachines()
-	out := &cwssaws.BatchExpectedMachineOperationResponse{
-		Results: make([]*cwssaws.ExpectedMachineOperationResult, 0, len(emList)),
-	}
-	for _, em := range emList {
-		if em == nil {
-			msg := "nil expected machine entry"
-			out.Results = append(out.Results, &cwssaws.ExpectedMachineOperationResult{
-				Success:         false,
-				ErrorMessage:    &msg,
-				ExpectedMachine: nil,
-			})
-			continue
-		}
-		result := &cwssaws.ExpectedMachineOperationResult{
-			Id:              em.Id,
-			Success:         true,
-			ExpectedMachine: em,
-		}
-		if em.GetId() == nil || em.GetId().GetValue() == "" {
-			result.Success = false
-			msg := "ID not provided"
-			result.ErrorMessage = &msg
-			result.ExpectedMachine = nil
-		} else if em.GetBmcMacAddress() == "" {
-			result.Success = false
-			msg := "MAC address not provided"
-			result.ErrorMessage = &msg
-			result.ExpectedMachine = nil
-		} else if em.GetChassisSerialNumber() == "" {
-			result.Success = false
-			msg := "Chassis Serial Number not provided"
-			result.ErrorMessage = &msg
-			result.ExpectedMachine = nil
-		} else if _, ok := f.em[em.Id.Value]; !ok {
-			result.Success = false
-			msg := fmt.Sprintf("ExpectedMachine with ID %q not found", em.Id.Value)
-			result.ErrorMessage = &msg
-			result.ExpectedMachine = nil
-		} else {
-			f.em[em.Id.Value] = em
-		}
-		out.Results = append(out.Results, result)
-	}
-	return out, nil
-}
-
-// AddExpectedPowerShelf implements interface ForgeServer
-func (f *ForgeServerImpl) AddExpectedPowerShelf(ctx context.Context, req *cwssaws.ExpectedPowerShelf) (*emptypb.Empty, error) {
-	if req == nil || req.ExpectedPowerShelfId == nil || req.ExpectedPowerShelfId.Value == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "ID not provided for AddExpectedPowerShelf")
-	}
-	if req.BmcMacAddress == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "MAC address not provided for AddExpectedPowerShelf")
-	}
-	if req.ShelfSerialNumber == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "Shelf Serial Number not provided for AddExpectedPowerShelf")
-	}
-	f.eps[req.ExpectedPowerShelfId.Value] = req
-	return &emptypb.Empty{}, nil
-}
-
-// UpdateExpectedPowerShelf implements interface ForgeServer
-func (f *ForgeServerImpl) UpdateExpectedPowerShelf(ctx context.Context, req *cwssaws.ExpectedPowerShelf) (*emptypb.Empty, error) {
-	if req == nil || req.ExpectedPowerShelfId == nil || req.ExpectedPowerShelfId.Value == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "ID not provided for UpdateExpectedPowerShelf")
-	}
-	if req.BmcMacAddress == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "MAC address not provided for UpdateExpectedPowerShelf")
-	}
-	if req.ShelfSerialNumber == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "Shelf Serial Number not provided for UpdateExpectedPowerShelf")
-	}
-	if _, ok := f.eps[req.ExpectedPowerShelfId.Value]; !ok {
-		return nil, status.Errorf(codes.NotFound, "ExpectedPowerShelf with ID %q not found", req.ExpectedPowerShelfId.Value)
-	}
-	f.eps[req.ExpectedPowerShelfId.Value] = req
-	return &emptypb.Empty{}, nil
-}
-
-// DeleteExpectedPowerShelf implements interface ForgeServer
-func (f *ForgeServerImpl) DeleteExpectedPowerShelf(ctx context.Context, req *cwssaws.ExpectedPowerShelfRequest) (*emptypb.Empty, error) {
-	if req == nil || req.ExpectedPowerShelfId == nil || req.ExpectedPowerShelfId.Value == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "ID not provided for DeleteExpectedPowerShelf")
-	}
-	if _, ok := f.eps[req.ExpectedPowerShelfId.Value]; !ok {
-		return nil, status.Errorf(codes.NotFound, "ExpectedPowerShelf with ID %q not found", req.ExpectedPowerShelfId.Value)
-	}
-	delete(f.eps, req.ExpectedPowerShelfId.Value)
-	return &emptypb.Empty{}, nil
-}
-
-// GetExpectedPowerShelf implements interface ForgeServer
-func (f *ForgeServerImpl) GetExpectedPowerShelf(ctx context.Context, req *cwssaws.ExpectedPowerShelfRequest) (*cwssaws.ExpectedPowerShelf, error) {
-	if req == nil || req.ExpectedPowerShelfId == nil || req.ExpectedPowerShelfId.Value == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "ID not provided for GetExpectedPowerShelf")
-	}
-	eps, ok := f.eps[req.ExpectedPowerShelfId.Value]
-	if !ok {
-		return nil, status.Errorf(codes.NotFound, "ExpectedPowerShelf with ID %q not found", req.ExpectedPowerShelfId.Value)
-	}
-	return eps, nil
-}
-
-// GetAllExpectedPowerShelves implements interface ForgeServer
-func (f *ForgeServerImpl) GetAllExpectedPowerShelves(ctx context.Context, req *emptypb.Empty) (*cwssaws.ExpectedPowerShelfList, error) {
-	res := make([]*cwssaws.ExpectedPowerShelf, 0, len(f.eps))
-	for _, eps := range f.eps {
-		res = append(res, eps)
-	}
-	return &cwssaws.ExpectedPowerShelfList{ExpectedPowerShelves: res}, nil
-}
-
-// AddExpectedSwitch implements interface ForgeServer
-func (f *ForgeServerImpl) AddExpectedSwitch(ctx context.Context, req *cwssaws.ExpectedSwitch) (*emptypb.Empty, error) {
-	if req == nil || req.ExpectedSwitchId == nil || req.ExpectedSwitchId.Value == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "ID not provided for AddExpectedSwitch")
-	}
-	if req.BmcMacAddress == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "MAC address not provided for AddExpectedSwitch")
-	}
-	if req.SwitchSerialNumber == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "Switch Serial Number not provided for AddExpectedSwitch")
-	}
-	f.es[req.ExpectedSwitchId.Value] = req
-	return &emptypb.Empty{}, nil
-}
-
-// UpdateExpectedSwitch implements interface ForgeServer
-func (f *ForgeServerImpl) UpdateExpectedSwitch(ctx context.Context, req *cwssaws.ExpectedSwitch) (*emptypb.Empty, error) {
-	if req == nil || req.ExpectedSwitchId == nil || req.ExpectedSwitchId.Value == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "ID not provided for UpdateExpectedSwitch")
-	}
-	if req.BmcMacAddress == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "MAC address not provided for UpdateExpectedSwitch")
-	}
-	if req.SwitchSerialNumber == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "Switch Serial Number not provided for UpdateExpectedSwitch")
-	}
-	if _, ok := f.es[req.ExpectedSwitchId.Value]; !ok {
-		return nil, status.Errorf(codes.NotFound, "ExpectedSwitch with ID %q not found", req.ExpectedSwitchId.Value)
-	}
-	f.es[req.ExpectedSwitchId.Value] = req
-	return &emptypb.Empty{}, nil
-}
-
-// DeleteExpectedSwitch implements interface ForgeServer
-func (f *ForgeServerImpl) DeleteExpectedSwitch(ctx context.Context, req *cwssaws.ExpectedSwitchRequest) (*emptypb.Empty, error) {
-	if req == nil || req.ExpectedSwitchId == nil || req.ExpectedSwitchId.Value == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "ID not provided for DeleteExpectedSwitch")
-	}
-	if _, ok := f.es[req.ExpectedSwitchId.Value]; !ok {
-		return nil, status.Errorf(codes.NotFound, "ExpectedSwitch with ID %q not found", req.ExpectedSwitchId.Value)
-	}
-	delete(f.es, req.ExpectedSwitchId.Value)
-	return &emptypb.Empty{}, nil
-}
-
-// GetExpectedSwitch implements interface ForgeServer
-func (f *ForgeServerImpl) GetExpectedSwitch(ctx context.Context, req *cwssaws.ExpectedSwitchRequest) (*cwssaws.ExpectedSwitch, error) {
-	if req == nil || req.ExpectedSwitchId == nil || req.ExpectedSwitchId.Value == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "ID not provided for GetExpectedSwitch")
-	}
-	es, ok := f.es[req.ExpectedSwitchId.Value]
-	if !ok {
-		return nil, status.Errorf(codes.NotFound, "ExpectedSwitch with ID %q not found", req.ExpectedSwitchId.Value)
-	}
-	return es, nil
-}
-
-// GetAllExpectedSwitches implements interface ForgeServer
-func (f *ForgeServerImpl) GetAllExpectedSwitches(ctx context.Context, req *emptypb.Empty) (*cwssaws.ExpectedSwitchList, error) {
-	res := make([]*cwssaws.ExpectedSwitch, 0, len(f.es))
-	for _, es := range f.es {
-		res = append(res, es)
-	}
-	return &cwssaws.ExpectedSwitchList{ExpectedSwitches: res}, nil
 }
 
 // ForgeTest tests the grpc server
@@ -1274,7 +1180,8 @@ func ForgeTest(secs int) {
 
 	s := grpc.NewServer()
 	reflection.Register(s)
-	cwssaws.RegisterForgeServer(s, &ForgeServerImpl{
+
+	forgeServer := &ForgeServerImpl{
 		v:   make(map[string]*cwssaws.Vpc),
 		ns:  make(map[string]*cwssaws.NetworkSegment),
 		ins: make(map[string]*cwssaws.Instance),
@@ -1284,7 +1191,10 @@ func ForgeTest(secs int) {
 		em:  make(map[string]*cwssaws.ExpectedMachine),
 		eps: make(map[string]*cwssaws.ExpectedPowerShelf),
 		es:  make(map[string]*cwssaws.ExpectedSwitch),
-	})
+	}
+	forgeServer.LoadTestMachines()
+
+	cwssaws.RegisterForgeServer(s, forgeServer)
 
 	if secs != 0 {
 		timer := time.AfterFunc(time.Second*time.Duration(secs), func() {

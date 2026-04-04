@@ -126,8 +126,8 @@ func (s *CreateDeprecatedInstanceTestSuite) TestDeprecatedCreateInstanceWorkflow
 		MachineId:       &wflows.MachineId{Id: testInstance.MachineId.Id},
 		TenantOrg:       "test-tenant-org",
 		Interfaces:      testInstance.Config.Network.Interfaces,
-		CustomIpxe:      &testInstance.Config.Tenant.CustomIpxe,
-		UserData:        testInstance.Config.Tenant.UserData,
+		CustomIpxe:      &testInstance.Config.Os.GetIpxe().IpxeScript,
+		UserData:        testInstance.Config.Os.GetIpxe().UserData,
 		TenantKeysetIds: []string{uuid.NewString()},
 	}
 
@@ -165,8 +165,8 @@ func (s *CreateDeprecatedInstanceFailureTestSuite) TestDeprecatedCreateInstanceW
 		MachineId:       &wflows.MachineId{Id: uuid.NewString()},
 		TenantOrg:       "test-tenant-org",
 		Interfaces:      testInstance.Config.Network.Interfaces,
-		CustomIpxe:      &testInstance.Config.Tenant.CustomIpxe,
-		UserData:        testInstance.Config.Tenant.UserData,
+		CustomIpxe:      &testInstance.Config.Os.GetIpxe().IpxeScript,
+		UserData:        testInstance.Config.Os.GetIpxe().UserData,
 		TenantKeysetIds: []string{uuid.NewString()},
 	}
 
@@ -320,8 +320,6 @@ func TestInstanceWorkflows(t *testing.T) {
 		Config: &wflows.InstanceConfig{
 			Tenant: &wflows.TenantConfig{
 				TenantOrganizationId: "test-tenant-org",
-				CustomIpxe:           "sample-ipxe-script",
-				UserData:             &testUserData,
 			},
 			Network: &wflows.InstanceNetworkConfig{
 				Interfaces: []*wflows.InstanceInterfaceConfig{
@@ -338,7 +336,7 @@ func TestInstanceWorkflows(t *testing.T) {
 			Os: &wflows.OperatingSystem{
 				RunProvisioningInstructionsOnEveryBoot: true,
 				Variant: &wflows.OperatingSystem_Ipxe{
-					Ipxe: &wflows.IpxeOperatingSystem{
+					Ipxe: &wflows.InlineIpxe{
 						IpxeScript: "#!ipxe",
 					},
 				},
