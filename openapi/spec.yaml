@@ -7560,6 +7560,55 @@ paths:
                           updated: '2019-08-24T14:15:22Z'
                       created: '2019-08-24T14:15:22Z'
                       updated: '2019-08-24T14:15:22Z'
+                iPXE Template OS (global scope):
+                  value:
+                    - id: 7a1b2c3d-e4f5-6789-abcd-ef0123456789
+                      name: ubuntu-autoinstall-24.04
+                      description: Ubuntu 24.04 via iPXE template autoinstall
+                      infrastructureProviderId: 5f2cc306-76e9-4fca-9186-950c9ef9a74e
+                      tenantId: null
+                      type: iPXE
+                      ipxeScript: null
+                      ipxeTemplateName: ubuntu-autoinstall
+                      ipxeParameters:
+                        - name: kernel_args
+                          value: console=ttyS0,115200n8
+                      ipxeArtifacts:
+                        - name: kernel
+                          url: 'https://releases.ubuntu.com/24.04/netboot/amd64/linux'
+                          sha: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                          cacheStrategy: CACHE_AS_NEEDED
+                        - name: initrd
+                          url: 'https://releases.ubuntu.com/24.04/netboot/amd64/initrd'
+                          sha: d7a8fbb307d7809469ca9abcb0082e4f8d5651e46d3cdb762d02d0bf37c9e592
+                          cacheStrategy: CACHE_AS_NEEDED
+                        - name: autoinstall
+                          url: 'http://install.example.com/autoinstall.yaml'
+                          sha: 3c363836cf4e16666669a25da280a1865c2d2874c6e9e3460c40db9b5a811528
+                          cacheStrategy: REMOTE_ONLY
+                      scope: global
+                      userData: null
+                      isCloudInit: false
+                      phoneHomeEnabled: false
+                      allowOverride: false
+                      imageAuthToken: null
+                      imageAuthType: null
+                      imageDisk: null
+                      imageSha: null
+                      imageUrl: null
+                      rootFsId: null
+                      rootFsLabel: null
+                      siteAssociations: []
+                      isActive: true
+                      deactivationNote: null
+                      status: Pending
+                      statusHistory:
+                        - status: Pending
+                          message: 'Request received, pending processing'
+                          created: '2019-08-24T14:15:22Z'
+                          updated: '2019-08-24T14:15:22Z'
+                      created: '2019-08-24T14:15:22Z'
+                      updated: '2019-08-24T14:15:22Z'
           headers:
             X-Pagination:
               schema:
@@ -7694,6 +7743,55 @@ paths:
                         updated: '2019-08-24T14:15:22Z'
                     created: '2019-08-24T14:15:22Z'
                     updated: '2019-08-24T14:15:22Z'
+                iPXE Template OS (global scope):
+                  value:
+                    id: 7a1b2c3d-e4f5-6789-abcd-ef0123456789
+                    name: ubuntu-autoinstall-24.04
+                    description: Ubuntu 24.04 via iPXE template autoinstall
+                    infrastructureProviderId: 5f2cc306-76e9-4fca-9186-950c9ef9a74e
+                    tenantId: null
+                    type: iPXE
+                    ipxeScript: null
+                    ipxeTemplateName: ubuntu-autoinstall
+                    ipxeParameters:
+                      - name: kernel_args
+                        value: console=ttyS0,115200n8
+                    ipxeArtifacts:
+                      - name: kernel
+                        url: 'https://releases.ubuntu.com/24.04/netboot/amd64/linux'
+                        sha: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                        cacheStrategy: CACHE_AS_NEEDED
+                      - name: initrd
+                        url: 'https://releases.ubuntu.com/24.04/netboot/amd64/initrd'
+                        sha: d7a8fbb307d7809469ca9abcb0082e4f8d5651e46d3cdb762d02d0bf37c9e592
+                        cacheStrategy: CACHE_AS_NEEDED
+                      - name: autoinstall
+                        url: 'http://install.example.com/autoinstall.yaml'
+                        sha: 3c363836cf4e16666669a25da280a1865c2d2874c6e9e3460c40db9b5a811528
+                        cacheStrategy: REMOTE_ONLY
+                    scope: global
+                    userData: null
+                    isCloudInit: false
+                    phoneHomeEnabled: false
+                    allowOverride: false
+                    imageAuthToken: null
+                    imageAuthType: null
+                    imageDisk: null
+                    imageSha: null
+                    imageUrl: null
+                    rootFsId: null
+                    rootFsLabel: null
+                    siteAssociations: []
+                    isActive: true
+                    deactivationNote: null
+                    status: Pending
+                    statusHistory:
+                      - status: Pending
+                        message: 'Request received, pending processing'
+                        created: '2019-08-24T14:15:22Z'
+                        updated: '2019-08-24T14:15:22Z'
+                    created: '2019-08-24T14:15:22Z'
+                    updated: '2019-08-24T14:15:22Z'
         '400':
           $ref: '#/components/responses/ValidationError'
         '403':
@@ -7759,6 +7857,31 @@ paths:
                   rootFsLabel: null
                   userData: null
                   isCloudInit: true
+                  phoneHomeEnabled: false
+                  allowOverride: false
+              iPXE Template OS (global scope):
+                value:
+                  name: ubuntu-autoinstall-24.04
+                  description: Ubuntu 24.04 via iPXE template autoinstall
+                  ipxeTemplateName: ubuntu-autoinstall
+                  ipxeParameters:
+                    - name: kernel_args
+                      value: console=ttyS0,115200n8
+                  ipxeArtifacts:
+                    - name: kernel
+                      url: 'https://releases.ubuntu.com/24.04/netboot/amd64/linux'
+                      sha: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                      cacheStrategy: CACHE_AS_NEEDED
+                    - name: initrd
+                      url: 'https://releases.ubuntu.com/24.04/netboot/amd64/initrd'
+                      sha: d7a8fbb307d7809469ca9abcb0082e4f8d5651e46d3cdb762d02d0bf37c9e592
+                      cacheStrategy: CACHE_AS_NEEDED
+                    - name: autoinstall
+                      url: 'http://install.example.com/autoinstall.yaml'
+                      sha: 3c363836cf4e16666669a25da280a1865c2d2874c6e9e3460c40db9b5a811528
+                      cacheStrategy: REMOTE_ONLY
+                  scope: global
+                  isCloudInit: false
                   phoneHomeEnabled: false
                   allowOverride: false
       tags:

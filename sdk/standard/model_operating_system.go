@@ -54,7 +54,7 @@ type OperatingSystem struct {
 	IpxeParameters []IpxeScriptParameter `json:"ipxeParameters,omitempty"`
 	// Artifacts (kernel, initrd, etc.) for the iPXE OS definition
 	IpxeArtifacts []IpxeScriptArtifact `json:"ipxeArtifacts,omitempty"`
-	// Synchronization scope. Only meaningful for iPXE template-based OSes
+	// Synchronization scope. Only meaningful for iPXE-based OSes
 	Scope NullableString `json:"scope,omitempty"`
 	// User data for the Operating System
 	UserData NullableString `json:"userData,omitempty"`

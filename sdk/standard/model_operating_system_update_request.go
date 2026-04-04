@@ -31,7 +31,7 @@ type OperatingSystemUpdateRequest struct {
 	IpxeParameters []IpxeScriptParameter `json:"ipxeParameters,omitempty"`
 	// Artifacts for the iPXE OS definition. If omitted the existing artifacts are kept; if set to an empty array the artifacts are cleared
 	IpxeArtifacts []IpxeScriptArtifact `json:"ipxeArtifacts,omitempty"`
-	// Synchronization scope for iPXE template-based OS
+	// Synchronization scope for iPXE-based OS
 	Scope NullableString `json:"scope,omitempty"`
 	// Original URL from where the Operating System image can be retreived from, required for image based OS
 	ImageUrl NullableString `json:"imageUrl,omitempty"`

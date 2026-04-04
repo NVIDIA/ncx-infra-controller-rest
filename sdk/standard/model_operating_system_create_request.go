@@ -39,7 +39,7 @@ type OperatingSystemCreateRequest struct {
 	IpxeParameters []IpxeScriptParameter `json:"ipxeParameters,omitempty"`
 	// Artifacts (kernel, initrd, etc.) required for the iPXE OS definition
 	IpxeArtifacts []IpxeScriptArtifact `json:"ipxeArtifacts,omitempty"`
-	// Synchronization scope for iPXE template-based OS. Defaults to local if omitted
+	// Synchronization scope for iPXE-based OS. Defaults to local if omitted
 	Scope NullableString `json:"scope,omitempty"`
 	// Original URL from where the Operating System image can be retreived from, required for image based OS. Cannot be specified if ipxeScript is specified
 	ImageUrl NullableString `json:"imageUrl,omitempty"`
