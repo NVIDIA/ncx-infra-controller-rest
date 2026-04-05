@@ -244,6 +244,14 @@ func TestVaultManager_BMCPutGet(t *testing.T) {
 			getMAC:  "66:77:88:99:00:11",
 			wantErr: true,
 		},
+		"put with uppercase MAC and get with lowercase resolves correctly": {
+			putMAC:   "AA:BB:CC:DD:EE:FF",
+			putCred:  credential.New("admin", "secret"),
+			getMAC:   "aa:bb:cc:dd:ee:ff",
+			wantErr:  false,
+			wantUser: "admin",
+			wantPass: "secret",
+		},
 	}
 
 	for name, tc := range testCases {
@@ -299,6 +307,14 @@ func TestVaultManager_NVOSPutGet(t *testing.T) {
 			putCred: credential.New("user", "p"),
 			getMAC:  "66:77:88:99:00:11",
 			wantErr: true,
+		},
+		"put with uppercase MAC and get with lowercase resolves correctly": {
+			putMAC:   "AA:BB:CC:DD:EE:FF",
+			putCred:  credential.New("nvos_admin", "nvos_secret"),
+			getMAC:   "aa:bb:cc:dd:ee:ff",
+			wantErr:  false,
+			wantUser: "nvos_admin",
+			wantPass: "nvos_secret",
 		},
 	}
 
