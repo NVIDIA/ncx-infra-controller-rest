@@ -759,6 +759,7 @@ UpdateVpcVirtualization Update VPC Virtualization
 Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` authorization role
 
 Tenant must own the VPC
+Request is rejected if the VPC already has Subnets or Instances
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
