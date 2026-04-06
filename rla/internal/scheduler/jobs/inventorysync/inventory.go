@@ -21,7 +21,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"os"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -41,67 +40,23 @@ import (
 
 const driftFieldSerialNumber = "serial_number"
 
-// RunInventory will loop and handle various inventory monitoring tasks
-func RunInventory(ctx context.Context, dbConf *cdb.Config, cmConfig componentmanager.Config) {
-	config := config.ReadConfig()
-	if config.DisableInventory {
-		log.Info().Msg("Inventory disabled by configuration")
-		return
-	}
-
-	carbideClient, err := carbideapi.NewClient(config.GRPCTimeout)
-	if err != nil {
-		// Use whether CARBIDE_API_URL is set to determine if we're running in a production environment (fail hard) or not (just complain and do nothing)
-		// Note that this doesn't actually create a connection immediately, so it won't fail just because carbide-api hasn't started yet.
-		msg := fmt.Sprintf("Unable to create GRPC client (pre-connect): %v", err)
-		if os.Getenv("CARBIDE_API_URL") == "" {
-			log.Error().Msg(msg)
-			return
-		} else {
-			log.Fatal().Msg(msg)
-		}
-	}
-
-	psmClient, err := psmapi.NewClient(config.GRPCTimeout)
-	if err != nil {
-		log.Error().Msgf("Unable to create PSM GRPC client (PSM_API_URL: %v): %v", os.Getenv("PSM_API_URL"), err)
-	}
-
-	if psmClient != nil {
-		defer psmClient.Close()
-	}
-
-	nsmClient, err := nsmapi.NewClient(config.GRPCTimeout)
-	if err != nil {
-		log.Error().Msgf("Unable to create NSM GRPC client (NSM_API_URL: %v): %v", os.Getenv("NSM_API_URL"), err)
-	}
-
-	if nsmClient != nil {
-		defer nsmClient.Close()
-	}
-
-	pool, err := cdb.NewSessionFromConfig(ctx, *dbConf)
-	if err != nil {
-		log.Fatal().Msgf("Unable to create database pool: %v", err)
-	}
-
-	log.Info().Msg("Starting inventory monitoring loop")
-
-	for {
-		runInventoryOne(ctx, &config, pool, carbideClient, psmClient, nsmClient, cmConfig)
-	}
-}
-
-var lastUpdateMachineIDs time.Time
-
 // runInventoryOne is a single iteration for RunInventory.
 // It syncs each resource type against its external source, collects all drifts,
 // and persists them in one shot.
-func runInventoryOne(ctx context.Context, config *config.Config, pool *cdb.Session, carbideClient carbideapi.Client, psmClient psmapi.Client, nsmClient nsmapi.Client, cmConfig componentmanager.Config) {
+func runInventoryOne(
+	ctx context.Context,
+	config *config.Config,
+	pool *cdb.Session,
+	carbideClient carbideapi.Client,
+	psmClient psmapi.Client,
+	nsmClient nsmapi.Client,
+	cmConfig componentmanager.Config,
+	machineIDsLastSyncedAt *time.Time,
+) {
 	var allDrifts []model.ComponentDrift
 
 	// Sync machines against Carbide
-	machineDrifts := syncMachines(ctx, config, pool, carbideClient)
+	machineDrifts := syncMachines(ctx, config, pool, carbideClient, machineIDsLastSyncedAt)
 	allDrifts = append(allDrifts, machineDrifts...)
 
 	// Sync NVL switches: dispatch based on configured component manager
@@ -130,8 +85,6 @@ func runInventoryOne(ctx context.Context, config *config.Config, pool *cdb.Sessi
 	} else {
 		log.Info().Msgf("Drift detection complete: %d drift(s) detected", len(allDrifts))
 	}
-
-	time.Sleep(config.InventoryRunFrequency)
 }
 
 func isMachineComponentType(t string) bool {
@@ -158,7 +111,13 @@ func isMachineComponentType(t string) bool {
 //
 // Validation fields (compared for drift): slot_id, tray_index, host_id, serial_number
 // Direct-write fields (written to DB, not compared): external_id, power_state, firmware_version
-func syncMachines(ctx context.Context, config *config.Config, pool *cdb.Session, carbideClient carbideapi.Client) []model.ComponentDrift {
+func syncMachines(
+	ctx context.Context,
+	config *config.Config,
+	pool *cdb.Session,
+	carbideClient carbideapi.Client,
+	machineIDsLastSyncedAt *time.Time,
+) []model.ComponentDrift {
 	log.Debug().Msg("Syncing machines...")
 
 	// Step 1: Get all machine components from DB
@@ -192,7 +151,7 @@ func syncMachines(ctx context.Context, config *config.Config, pool *cdb.Session,
 	}
 
 	// Step 3: Direct-write external_id by serial matching
-	syncMachineIDs(ctx, config, pool, allMachineDetails, components)
+	syncMachineIDs(ctx, config, pool, allMachineDetails, components, machineIDsLastSyncedAt)
 
 	// Re-read components to pick up any external_id updates
 	allComponents, err = model.GetAllComponents(ctx, pool.DB)
@@ -313,7 +272,10 @@ func syncMachines(ctx context.Context, config *config.Config, pool *cdb.Session,
 // components that have no external_id, plus missing_in_expected drifts for
 // every Carbide machine (since no DB component has an external_id, none can
 // match).
-func buildDriftsForUnmatchedComponents(components []model.Component, allMachineDetails []carbideapi.MachineDetail) []model.ComponentDrift {
+func buildDriftsForUnmatchedComponents(
+	components []model.Component,
+	allMachineDetails []carbideapi.MachineDetail,
+) []model.ComponentDrift {
 	now := time.Now()
 	var drifts []model.ComponentDrift
 	for i := range components {
@@ -342,14 +304,21 @@ func buildDriftsForUnmatchedComponents(components []model.Component, allMachineD
 
 // syncMachineIDs matches components by serial number against pre-fetched Carbide
 // machine details and direct-writes the external_id. Respects UpdateMachineIDsFrequency config.
-func syncMachineIDs(ctx context.Context, config *config.Config, pool *cdb.Session, allDetails []carbideapi.MachineDetail, components []model.Component) {
+func syncMachineIDs(
+	ctx context.Context,
+	config *config.Config,
+	pool *cdb.Session,
+	allDetails []carbideapi.MachineDetail,
+	components []model.Component,
+	machineIDsLastSyncedAt *time.Time,
+) {
 	shouldUpdate := false
 	if config.UpdateMachineIDsFrequency == 0 {
-		if lastUpdateMachineIDs.IsZero() {
+		if machineIDsLastSyncedAt.IsZero() {
 			shouldUpdate = true
 		}
 	} else {
-		if lastUpdateMachineIDs.Before(time.Now().Add(-config.UpdateMachineIDsFrequency)) {
+		if machineIDsLastSyncedAt.Before(time.Now().Add(-config.UpdateMachineIDsFrequency)) {
 			shouldUpdate = true
 		}
 	}
@@ -366,7 +335,7 @@ func syncMachineIDs(ctx context.Context, config *config.Config, pool *cdb.Sessio
 		}
 	}
 	if !missingMachine {
-		lastUpdateMachineIDs = time.Now()
+		*machineIDsLastSyncedAt = time.Now()
 		return
 	}
 
@@ -405,11 +374,17 @@ func syncMachineIDs(ctx context.Context, config *config.Config, pool *cdb.Sessio
 		log.Info().Msgf("Updated %d machine ID(s)", len(toUpdate))
 	}
 
-	lastUpdateMachineIDs = time.Now()
+	*machineIDsLastSyncedAt = time.Now()
 }
 
 // syncPowerStates fetches power states from Carbide and direct-writes to component table.
-func syncPowerStates(ctx context.Context, pool *cdb.Session, carbideClient carbideapi.Client, machineIDs []string, componentsByExternalID map[string]*model.Component) {
+func syncPowerStates(
+	ctx context.Context,
+	pool *cdb.Session,
+	carbideClient carbideapi.Client,
+	machineIDs []string,
+	componentsByExternalID map[string]*model.Component,
+) {
 	machines, err := carbideClient.GetPowerStates(ctx, machineIDs)
 	if err != nil {
 		log.Error().Msgf("Unable to retrieve power states from carbide-api: %v", err)
@@ -442,7 +417,12 @@ func syncPowerStates(ctx context.Context, pool *cdb.Session, carbideClient carbi
 }
 
 // syncFirmwareVersions direct-writes firmware_version from Carbide machine details to component table.
-func syncFirmwareVersions(ctx context.Context, pool *cdb.Session, detailByID map[string]carbideapi.MachineDetail, componentsByExternalID map[string]*model.Component) {
+func syncFirmwareVersions(
+	ctx context.Context,
+	pool *cdb.Session,
+	detailByID map[string]carbideapi.MachineDetail,
+	componentsByExternalID map[string]*model.Component,
+) {
 	var toUpdate []model.Component
 	for machineID, detail := range detailByID {
 		if comp, ok := componentsByExternalID[machineID]; ok {
@@ -555,7 +535,12 @@ func compareMachineFieldsForDrift(
 //  6. Register un-registered DHCPed switches with NSM (BMC + NVOS subsystems)
 //  7. Return drifts (missing_in_actual for unregistered switches)
 
-func syncNVSwitches(ctx context.Context, pool *cdb.Session, carbideClient carbideapi.Client, nsmClient nsmapi.Client) []model.ComponentDrift {
+func syncNVSwitches(
+	ctx context.Context,
+	pool *cdb.Session,
+	carbideClient carbideapi.Client,
+	nsmClient nsmapi.Client,
+) []model.ComponentDrift {
 	if nsmClient == nil {
 		log.Debug().Msg("NSM client not available, skipping NVSwitch sync")
 		return nil
@@ -777,7 +762,12 @@ const (
 	powershelfDefaultPassword = "0penBmc"
 )
 
-func syncPowershelves(ctx context.Context, pool *cdb.Session, carbideClient carbideapi.Client, psmClient psmapi.Client) []model.ComponentDrift {
+func syncPowershelves(
+	ctx context.Context,
+	pool *cdb.Session,
+	carbideClient carbideapi.Client,
+	psmClient psmapi.Client,
+) []model.ComponentDrift {
 	if psmClient == nil {
 		log.Debug().Msg("PSM client not available, skipping powershelf sync")
 		return nil
@@ -972,7 +962,11 @@ func syncPowershelves(ctx context.Context, pool *cdb.Session, carbideClient carb
 //  5. Direct-write inventory fields to DB
 //  6. Return drifts (missing_in_actual for components without a Core SwitchId)
 
-func syncNVSwitchesCarbide(ctx context.Context, pool *cdb.Session, carbideClient carbideapi.Client) []model.ComponentDrift {
+func syncNVSwitchesCarbide(
+	ctx context.Context,
+	pool *cdb.Session,
+	carbideClient carbideapi.Client,
+) []model.ComponentDrift {
 	log.Debug().Msg("Syncing NV switches via Carbide...")
 
 	expectedSwitches, err := model.GetComponentsByType(ctx, pool.DB, devicetypes.ComponentTypeNVLSwitch)
@@ -1091,7 +1085,11 @@ func syncNVSwitchesCarbide(ctx context.Context, pool *cdb.Session, carbideClient
 //  5. Direct-write inventory fields to DB
 //  6. Return drifts (missing_in_actual for components without a Core PowerShelfId)
 
-func syncPowershelvesCarbide(ctx context.Context, pool *cdb.Session, carbideClient carbideapi.Client) []model.ComponentDrift {
+func syncPowershelvesCarbide(
+	ctx context.Context,
+	pool *cdb.Session,
+	carbideClient carbideapi.Client,
+) []model.ComponentDrift {
 	log.Debug().Msg("Syncing powershelves via Carbide...")
 
 	expectedPowershelves, err := model.GetComponentsByType(ctx, pool.DB, devicetypes.ComponentTypePowerShelf)
@@ -1196,7 +1194,12 @@ func syncPowershelvesCarbide(ctx context.Context, pool *cdb.Session, carbideClie
 // components. Serial numbers are compared (not overwritten) and returned as
 // drift records. componentsByID maps the component_id echoed back in each
 // ComponentResult to the DB component.
-func applyInventoryToComponents(ctx context.Context, pool *cdb.Session, resp *pb.GetComponentInventoryResponse, componentsByID map[string]*model.Component) []model.ComponentDrift {
+func applyInventoryToComponents(
+	ctx context.Context,
+	pool *cdb.Session,
+	resp *pb.GetComponentInventoryResponse,
+	componentsByID map[string]*model.Component,
+) []model.ComponentDrift {
 	now := time.Now()
 	var drifts []model.ComponentDrift
 
@@ -1271,7 +1274,9 @@ func applyInventoryToComponents(ctx context.Context, pool *cdb.Session, resp *pb
 	return drifts
 }
 
-func computerSystemPowerStateToCarbide(ps pb.ComputerSystemPowerState) carbideapi.PowerState {
+func computerSystemPowerStateToCarbide(
+	ps pb.ComputerSystemPowerState,
+) carbideapi.PowerState {
 	switch ps {
 	case pb.ComputerSystemPowerState_On, pb.ComputerSystemPowerState_PoweringOn:
 		return carbideapi.PowerStateOn
