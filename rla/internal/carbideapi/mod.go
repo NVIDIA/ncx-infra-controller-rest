@@ -106,8 +106,9 @@ type Client interface {
 	// created), and the expected power shelf UUID.
 	GetAllExpectedPowerShelvesLinked(ctx context.Context) ([]LinkedExpectedPowerShelf, error)
 
-	// GetDesiredFirmwareVersions returns the desired firmware versions
-	// configured in Core, keyed by (vendor, model).
+	// GetDesiredFirmwareVersions returns a slice of desired firmware version
+	// entries configured in Core. Each entry carries vendor and model fields;
+	// iterate the slice to find matching entries.
 	GetDesiredFirmwareVersions(ctx context.Context) ([]*pb.DesiredFirmwareVersionEntry, error)
 
 	// The following are only valid in the mock environment and should only be called by unit tests

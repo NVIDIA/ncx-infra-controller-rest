@@ -33,6 +33,7 @@ type mockClient struct {
 	leakingMachineIds           []string
 	firmwareUpdateTimeWindowErr error // If set, SetFirmwareUpdateTimeWindow will return this error
 	adminPowerControlErr        error // If set, AdminPowerControl will return this error
+	desiredFirmwareVersions     []*pb.DesiredFirmwareVersionEntry
 }
 
 // NewMockClient returns a "GRPC" client that returns mock values so it can be used in unit tests.
@@ -203,7 +204,7 @@ func (c *mockClient) GetAllExpectedPowerShelvesLinked(_ context.Context) ([]Link
 }
 
 func (c *mockClient) GetDesiredFirmwareVersions(_ context.Context) ([]*pb.DesiredFirmwareVersionEntry, error) {
-	return nil, nil
+	return c.desiredFirmwareVersions, nil
 }
 
 func (c *mockClient) AddExpectedSwitchInfo(info ExpectedSwitchInfo) {

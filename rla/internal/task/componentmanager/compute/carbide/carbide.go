@@ -309,11 +309,15 @@ func (m *Manager) FirmwareControl(ctx context.Context, target common.Target, inf
 
 	// Fail-fast: validate targetVersion against Core's desired firmware config.
 	if info.TargetVersion != "" {
+		parsedTarget, err := parseTargetVersion(info.TargetVersion)
+		if err != nil {
+			return fmt.Errorf("invalid TargetVersion: %w", err)
+		}
 		desiredEntries, err := m.carbideClient.GetDesiredFirmwareVersions(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to query desired firmware versions: %w", err)
 		}
-		if !isTargetVersionInDesired(info.TargetVersion, desiredEntries) {
+		if !isTargetVersionInDesired(parsedTarget, desiredEntries) {
 			return fmt.Errorf(
 				"target version %q does not match any desired firmware entry in Core; update cannot succeed",
 				info.TargetVersion,
@@ -321,23 +325,34 @@ func (m *Manager) FirmwareControl(ctx context.Context, target common.Target, inf
 		}
 	}
 
-	// Idempotent: skip if all machines already completed their firmware update.
+	// Idempotent: skip only when every requested machine was returned and all
+	// have UpdateComplete=true. A partial lookup must not suppress scheduling
+	// because some components may still need the update.
 	machines, err := m.carbideClient.FindMachinesByIds(ctx, target.ComponentIDs)
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to check machine update status, proceeding with schedule")
-	} else if allUpdateComplete(machines) {
+	} else if len(machines) == len(target.ComponentIDs) && allUpdateComplete(machines) {
 		log.Info().
 			Str("components", target.String()).
 			Msg("All machines already have UpdateComplete=true, skipping firmware schedule")
 		return nil
 	}
 
-	startTime := time.Unix(info.StartTime, 0)
-	endTime := time.Unix(info.EndTime, 0)
-
-	if info.StartTime == 0 || info.EndTime == 0 {
+	var startTime, endTime time.Time
+	switch {
+	case info.StartTime == 0 && info.EndTime == 0:
 		startTime = time.Now()
 		endTime = startTime.Add(24 * time.Hour)
+	case info.StartTime == 0 || info.EndTime == 0:
+		return fmt.Errorf("firmware window requires both start_time and end_time, got start=%d end=%d",
+			info.StartTime, info.EndTime)
+	default:
+		startTime = time.Unix(info.StartTime, 0)
+		endTime = time.Unix(info.EndTime, 0)
+		if !startTime.Before(endTime) {
+			return fmt.Errorf("firmware window start_time (%s) must be before end_time (%s)",
+				startTime.Format(time.RFC3339), endTime.Format(time.RFC3339))
+		}
 	}
 
 	if err := m.carbideClient.SetFirmwareUpdateTimeWindow(ctx, target.ComponentIDs, startTime, endTime); err != nil {
@@ -353,15 +368,20 @@ func (m *Manager) FirmwareControl(ctx context.Context, target common.Target, inf
 	return nil
 }
 
-// isTargetVersionInDesired checks whether the provided targetVersion JSON
-// string matches the component_versions of any desired firmware entry.
-// targetVersion is a JSON object with the same schema as
+// parseTargetVersion parses a targetVersion JSON string into a component
+// version map. targetVersion must be a JSON object with the same schema as
 // desired_firmware.versions->>'Versions', e.g. {"bmc":"7.10.30.00","uefi":"2.22.1"}.
-func isTargetVersionInDesired(targetVersion string, entries []*pb.DesiredFirmwareVersionEntry) bool {
+func parseTargetVersion(targetVersion string) (map[string]string, error) {
 	var target map[string]string
 	if err := json.Unmarshal([]byte(targetVersion), &target); err != nil {
-		return false
+		return nil, fmt.Errorf("target_version must be a JSON object: %w", err)
 	}
+	return target, nil
+}
+
+// isTargetVersionInDesired checks whether a pre-parsed component version map
+// matches the component_versions of any desired firmware entry.
+func isTargetVersionInDesired(target map[string]string, entries []*pb.DesiredFirmwareVersionEntry) bool {
 	for _, entry := range entries {
 		if versionsEqual(target, entry.GetComponentVersions()) {
 			return true
