@@ -41,8 +41,7 @@ service Forge {
   // Domain
   rpc CreateDomain(dns.CreateDomainRequest) returns (dns.Domain);
   rpc UpdateDomain(dns.UpdateDomainRequest) returns (dns.Domain);
-  rpc DeleteDomain(dns.DomainDeletionRequest)
-      returns (dns.DomainDeletionResult);
+  rpc DeleteDomain(dns.DomainDeletionRequest) returns (dns.DomainDeletionResult);
   rpc FindDomain(dns.DomainSearchQuery) returns (dns.DomainList);
 
   // VPC

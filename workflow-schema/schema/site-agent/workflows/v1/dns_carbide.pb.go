@@ -22,13 +22,12 @@
 package proto
 
 import (
-	reflect "reflect"
-	sync "sync"
-	unsafe "unsafe"
-
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
+	reflect "reflect"
+	sync "sync"
+	unsafe "unsafe"
 )
 
 const (
@@ -1075,7 +1074,7 @@ const file_dns_carbide_proto_rawDesc = "" +
 	"\x05_name\"9\n" +
 	"\x15DomainDeletionRequest\x12 \n" +
 	"\x02id\x18\x01 \x01(\v2\x10.common.DomainIdR\x02id\"\x16\n" +
-	"\x14DomainDeletionResultBCZAgithub.com/nvidia/ncx-infra-controller-rest/workflow-schema/protob\x06proto3"
+	"\x14DomainDeletionResultBCZAgithub.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/protob\x06proto3"
 
 var (
 	file_dns_carbide_proto_rawDescOnce sync.Once
@@ -1139,6 +1138,7 @@ func file_dns_carbide_proto_init() {
 	if File_dns_carbide_proto != nil {
 		return
 	}
+	file_common_carbide_proto_init()
 	file_dns_carbide_proto_msgTypes[0].OneofWrappers = []any{}
 	file_dns_carbide_proto_msgTypes[2].OneofWrappers = []any{}
 	file_dns_carbide_proto_msgTypes[11].OneofWrappers = []any{}
