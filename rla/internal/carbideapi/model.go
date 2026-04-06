@@ -44,6 +44,7 @@ type MachineDetail struct {
 	BmcIP               string
 	BmcMac              string
 	FirmwareVersion     string
+	UpdateComplete      bool
 	HealthStatus        string
 	LastObservationTime *time.Time
 }
@@ -58,9 +59,10 @@ type MachinePosition struct {
 
 func machineDetailFromPb(machine *pb.Machine) MachineDetail {
 	detail := MachineDetail{
-		MachineID:   machine.Id.Id,
-		State:       machine.State,
-		MachineType: machine.MachineType.String(),
+		MachineID:      machine.Id.Id,
+		State:          machine.State,
+		MachineType:    machine.MachineType.String(),
+		UpdateComplete: machine.UpdateComplete,
 	}
 
 	// Chassis serial

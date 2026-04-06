@@ -106,6 +106,10 @@ type Client interface {
 	// created), and the expected power shelf UUID.
 	GetAllExpectedPowerShelvesLinked(ctx context.Context) ([]LinkedExpectedPowerShelf, error)
 
+	// GetDesiredFirmwareVersions returns the desired firmware versions
+	// configured in Core, keyed by (vendor, model).
+	GetDesiredFirmwareVersions(ctx context.Context) ([]*pb.DesiredFirmwareVersionEntry, error)
+
 	// The following are only valid in the mock environment and should only be called by unit tests
 	AddMachine(MachineDetail)
 	AddPowerState(machineID string, state PowerState)

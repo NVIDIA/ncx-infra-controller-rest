@@ -559,6 +559,17 @@ func (c *grpcClient) GetAllExpectedPowerShelvesLinked(ctx context.Context) ([]Li
 	return results, nil
 }
 
+func (c *grpcClient) GetDesiredFirmwareVersions(ctx context.Context) ([]*pb.DesiredFirmwareVersionEntry, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
+	defer cancel()
+
+	resp, err := c.gclient.GetDesiredFirmwareVersions(ctx, &pb.GetDesiredFirmwareVersionsRequest{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get desired firmware versions: %w", err)
+	}
+	return resp.GetEntries(), nil
+}
+
 func (c *grpcClient) AddMachine(machine MachineDetail) {
 	panic("Not a unit test")
 }

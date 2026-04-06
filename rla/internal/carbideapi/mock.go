@@ -202,6 +202,10 @@ func (c *mockClient) GetAllExpectedPowerShelvesLinked(_ context.Context) ([]Link
 	return nil, nil
 }
 
+func (c *mockClient) GetDesiredFirmwareVersions(_ context.Context) ([]*pb.DesiredFirmwareVersionEntry, error) {
+	return nil, nil
+}
+
 func (c *mockClient) AddExpectedSwitchInfo(info ExpectedSwitchInfo) {
 	c.expectedSwitches[utils.NormalizeMAC(info.BMCMACAddress)] = info
 }
