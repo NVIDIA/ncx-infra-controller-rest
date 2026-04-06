@@ -6103,6 +6103,8 @@ func TestGetInstanceHandler_Handle(t *testing.T) {
 
 	subnet2 := testInstanceBuildSubnet(t, dbSession, "test-subnet-2", tn1, vpc1, nil, cdbm.SubnetStatusPending, tnu1)
 	assert.NotNil(t, subnet2)
+	subnet3 := testInstanceBuildSubnet(t, dbSession, "test-subnet-3", tn1, vpc2, cdb.GetUUIDPtr(uuid.New()), cdbm.SubnetStatusReady, tnu1)
+	assert.NotNil(t, subnet3)
 
 	mci1 := testInstanceBuildMachineInterface(t, dbSession, subnet1.ID, mc1.ID)
 	assert.NotNil(t, mci1)
@@ -6138,6 +6140,9 @@ func TestGetInstanceHandler_Handle(t *testing.T) {
 
 	inst3 := testInstanceBuildInstance(t, dbSession, "test-instance-4", al1.ID, alc1.ID, tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc2.ID, cdb.GetStrPtr(mc3.ID), &os1.ID, nil, cdbm.InstanceStatusReady)
 	assert.NotNil(t, inst3)
+	inst3WithIfc := testInstanceBuildInstance(t, dbSession, "test-instance-4-with-interface", al1.ID, alc1.ID, tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc2.ID, cdb.GetStrPtr(mc2.ID), &os1.ID, nil, cdbm.InstanceStatusReady)
+	assert.NotNil(t, inst3WithIfc)
+	assert.NotNil(t, testInstanceBuildInstanceInterface(t, dbSession, inst3WithIfc.ID, &subnet3.ID, nil, nil, cdbm.InterfaceStatusPending))
 
 	mc4 := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
 	assert.NotNil(t, mc4)
@@ -6294,7 +6299,27 @@ func TestGetInstanceHandler_Handle(t *testing.T) {
 				reqUser:       tnu1,
 				respCode:      http.StatusOK,
 			},
-			expectedNetworkSecurityGroupInherited: cdb.GetBoolPtr(true), // Because the VPC has an NSG and the instance does not.
+			expectedNetworkSecurityGroupInherited: cdb.GetBoolPtr(false),
+			wantErr:                               false,
+		},
+		{
+			name: "test Instance get API endpoint with inherited nsg and interface-derived VPC context - success",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				reqInstance:   inst3WithIfc,
+				reqInstanceID: inst3WithIfc.ID.String(),
+				reqMachine:    mc2,
+				reqOrg:        tnOrg1,
+				reqUser:       tnu1,
+				respCode:      http.StatusOK,
+			},
+			expectedNetworkSecurityGroupInherited: cdb.GetBoolPtr(true),
+			expectedPropagationDetailedStatus:     cdb.GetStrPtr(model.APINetworkSecurityGroupPropagationDetailedStatusNone),
+			expectedPropagationStatus:             cdb.GetStrPtr(model.APINetworkSecurityGroupPropagationStatusSynchronizing),
 			wantErr:                               false,
 		},
 		{
@@ -6601,25 +6626,23 @@ func TestGetInstanceHandler_Handle(t *testing.T) {
 
 			if tt.expectedNetworkSecurityGroupInherited != nil {
 				assert.Equal(t, *tt.expectedNetworkSecurityGroupInherited, rst.NetworkSecurityGroupInherited)
-
-				// If the NSG is inherited, we _always_ expect propagation details of some kind.
-				if *tt.expectedNetworkSecurityGroupInherited {
-					assert.NotNil(t, rst.NetworkSecurityGroupPropagationDetails)
-				}
 			}
 
 			if tt.expectedSecondaryVpcIDs != nil {
 				assert.ElementsMatch(t, tt.expectedSecondaryVpcIDs, rst.SecondaryVpcIDs)
 			}
 
-			if tt.expectedPropagationDetailedStatus != nil {
-				require.NotNil(t, rst.NetworkSecurityGroupPropagationDetails)
-				assert.Equal(t, *tt.expectedPropagationDetailedStatus, rst.NetworkSecurityGroupPropagationDetails.DetailedStatus)
-			}
+			if tt.expectedNetworkSecurityGroupInherited != nil && *tt.expectedNetworkSecurityGroupInherited {
+				if tt.expectedPropagationDetailedStatus != nil {
+					require.NotNil(t, rst.NetworkSecurityGroupPropagationDetails)
+					assert.Equal(t, *tt.expectedPropagationDetailedStatus, rst.NetworkSecurityGroupPropagationDetails.DetailedStatus)
+				}
 
-			if tt.expectedPropagationStatus != nil {
-				require.NotNil(t, rst.NetworkSecurityGroupPropagationDetails)
-				assert.Equal(t, *tt.expectedPropagationStatus, rst.NetworkSecurityGroupPropagationDetails.Status)
+				if tt.expectedPropagationStatus != nil {
+					assert.Equal(t, *tt.expectedPropagationStatus, rst.NetworkSecurityGroupPropagationDetails.Status)
+				}
+			} else {
+				assert.Nil(t, rst.NetworkSecurityGroupPropagationDetails)
 			}
 
 			if tt.expectedIBInterfaceID != nil {

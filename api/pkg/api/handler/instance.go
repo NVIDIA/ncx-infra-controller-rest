@@ -3460,22 +3460,32 @@ func (uih UpdateInstanceHandler) Handle(c echo.Context) error {
 // AttachVpcNsgPropagationDetailsToApiInstance attaches NSG propagation details to an APIInstance.
 // It returns NewAPIErrorResponse directly.
 func AttachVpcNsgPropagationDetailsToApiInstance(c echo.Context, ctx context.Context, logger *zerolog.Logger, dbSession *cdb.Session, instance *cdbm.Instance, interfaces []cdbm.Interface, apiInstance *model.APIInstance) error {
+
+	// If there are no ethernet interfaces, there is no VPC attachment to check for NSG
+	// propagation.
+	if len(interfaces) == 0 {
+		return nil
+	}
+
 	// Get _all_ the VPCs with which this Instance is associated.
 	// Only an instance in a primary VPC that uses FNN virtualization
 	// can span multiple VPCs, and the primary interface would still
 	// be within the primary VPC of the instance, so we can init
 	// the list with that.
-	vpcIDs := []uuid.UUID{instance.VpcID}
+	vpcIDs := goset.NewSet[uuid.UUID]()
 	for _, ifc := range interfaces {
-		if ifc.VpcPrefix != nil && ifc.VpcPrefix.VpcID != instance.VpcID {
-			// We could potentially still have dupes in here, but postgres is good at dealing with that.
-			vpcIDs = append(vpcIDs, ifc.VpcPrefix.VpcID)
+		if ifc.VpcPrefix != nil {
+			vpcIDs.Add(ifc.VpcPrefix.VpcID)
+		}
+
+		if ifc.Subnet != nil {
+			vpcIDs.Add(ifc.Subnet.VpcID)
 		}
 	}
 
 	vpcDAO := cdbm.NewVpcDAO(dbSession)
 
-	vpcs, _, err := vpcDAO.GetAll(ctx, nil, cdbm.VpcFilterInput{VpcIDs: vpcIDs}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
+	vpcs, _, err := vpcDAO.GetAll(ctx, nil, cdbm.VpcFilterInput{VpcIDs: vpcIDs.ToSlice()}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving VPC DB entity")
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve VPC for Instance", nil)
