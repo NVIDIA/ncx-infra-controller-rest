@@ -21,9 +21,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/carbideapi"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/componentmanager"
@@ -36,6 +39,10 @@ import (
 const (
 	// ImplementationName is the name used to identify this implementation.
 	ImplementationName = "carbide"
+
+	// healthOverrideSource is the source tag written into health-report
+	// overrides so they can be matched on removal.
+	healthOverrideSource = "rla-power-control"
 )
 
 // Manager manages compute node components via the Carbide API.
@@ -164,15 +171,53 @@ func (m *Manager) PowerControl(
 		return fmt.Errorf("unknown power operation: %v", info.Operation)
 	}
 
+	// Track which components had health-report overrides inserted so we
+	// can clean them up after the power operation completes.
+	var overrideInserted []string
+
+	defer func() {
+		// Use a detached context so cleanup is not blocked by the
+		// parent context being canceled or timed-out. Each individual
+		// gRPC call inside RemoveHealthReportOverride already applies
+		// the configured per-call timeout.
+		cleanupCtx := context.WithoutCancel(ctx)
+
+		for _, componentID := range overrideInserted {
+			if err := m.carbideClient.RemoveHealthReportOverride(
+				cleanupCtx, componentID, healthOverrideSource,
+			); err != nil {
+				log.Warn().Err(err).Str("component", componentID).
+					Msg("Failed to remove health report override after power control")
+			}
+		}
+	}()
+
 	for i, componentID := range target.ComponentIDs {
+		// Place a health-report override so Carbide marks the machine as
+		// under maintenance for the duration of the power operation.
+		if err := m.carbideClient.InsertHealthReportOverride(
+			ctx, componentID, healthOverrideSource,
+		); err != nil {
+			log.Warn().Err(err).Str("component", componentID).
+				Msg("Failed to insert health report override, proceeding anyway")
+		} else {
+			overrideInserted = append(overrideInserted, componentID)
+		}
+
 		// Set Carbide's power-on gate (desired power state) before issuing the
 		// actual power control command so the power manager doesn't conflict.
 		if err := m.carbideClient.UpdatePowerOption(
 			ctx, componentID, desiredPowerState,
 		); err != nil {
-			return fmt.Errorf(
-				"failed to update power option for %s: %w", componentID, err,
-			)
+			if isAlreadyInDesiredStateError(err) {
+				log.Debug().Str("component", componentID).
+					Int("desired_state", int(desiredPowerState)).
+					Msg("Power option already in desired state, skipping")
+			} else {
+				return fmt.Errorf(
+					"failed to update power option for %s: %w", componentID, err,
+				)
+			}
 		}
 
 		if err := m.carbideClient.AdminPowerControl(ctx, componentID, action); err != nil {
@@ -381,4 +426,13 @@ func carbideToBringUpState(
 	default:
 		return operations.MachineBringUpStateNotDiscovered
 	}
+}
+
+// isAlreadyInDesiredStateError returns true when Carbide reports that the
+// power option is already set to the requested state (idempotent no-op).
+func isAlreadyInDesiredStateError(err error) bool {
+	if s, ok := status.FromError(err); ok && s.Code() == codes.InvalidArgument {
+		return strings.Contains(s.Message(), "already set as")
+	}
+	return false
 }

@@ -66,6 +66,7 @@ func TestMemRegistryRegisterPmc(t *testing.T) {
 		inputPMC    *pmc.PMC
 		wantErr     bool
 		errContains string
+		wantIP      string
 	}{
 		"nil pmc returns error": {
 			setup:       func() *MemRegistry { return NewMemRegistry() },
@@ -77,17 +78,18 @@ func TestMemRegistryRegisterPmc(t *testing.T) {
 			setup:    func() *MemRegistry { return NewMemRegistry() },
 			inputPMC: makePMC(t, "00:11:22:33:44:55", "192.168.1.10"),
 			wantErr:  false,
+			wantIP:   "192.168.1.10",
 		},
-		"duplicate registration returns error": {
+		"duplicate registration upserts": {
 			setup: func() *MemRegistry {
 				reg := NewMemRegistry()
 				p := makePMC(t, "00:11:22:33:44:55", "192.168.1.10")
 				assert.NoError(t, reg.RegisterPmc(context.Background(), p))
 				return reg
 			},
-			inputPMC:    makePMC(t, "00:11:22:33:44:55", "192.168.1.10"),
-			wantErr:     true,
-			errContains: "already registered",
+			inputPMC: makePMC(t, "00:11:22:33:44:55", "192.168.1.20"),
+			wantErr:  false,
+			wantIP:   "192.168.1.20",
 		},
 	}
 
@@ -103,11 +105,11 @@ func TestMemRegistryRegisterPmc(t *testing.T) {
 				return
 			}
 			assert.NoError(t, err)
-			// verify stored
 			if tc.inputPMC != nil {
 				got, err := reg.GetPmc(context.Background(), tc.inputPMC.GetMac())
 				assert.NoError(t, err)
 				assert.Same(t, tc.inputPMC, got)
+				assert.Equal(t, tc.wantIP, got.GetIp().String())
 			}
 		})
 	}

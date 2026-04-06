@@ -72,6 +72,13 @@ type Client interface {
 	// AddExpectedPowerShelf registers an expected power shelf with Carbide for ingestion.
 	AddExpectedPowerShelf(ctx context.Context, req AddExpectedPowerShelfRequest) error
 
+	// InsertHealthReportOverride inserts a health-report override for a machine
+	// (replaces the deprecated SetMaintenance RPC).
+	InsertHealthReportOverride(ctx context.Context, machineID string, source string) error
+
+	// RemoveHealthReportOverride removes a previously inserted health-report override.
+	RemoveHealthReportOverride(ctx context.Context, machineID string, source string) error
+
 	// ComponentPowerControl performs power control on component targets (switches, power shelves).
 	ComponentPowerControl(ctx context.Context, req *pb.ComponentPowerControlRequest) (*pb.ComponentPowerControlResponse, error)
 

@@ -53,6 +53,8 @@ type Manager interface {
 	GetRackBySerial(ctx context.Context, manufacturer string, serial string, withComponents bool) (*rack.Rack, error)
 	GetRackByIdentifier(ctx context.Context, identifier identifier.Identifier, withComponents bool) (*rack.Rack, error)
 	PatchRack(ctx context.Context, rack *rack.Rack) (string, error)
+	DeleteRack(ctx context.Context, id uuid.UUID) error
+	PurgeRack(ctx context.Context, id uuid.UUID) error
 	GetListOfRacks(ctx context.Context, info dbquery.StringQueryInfo, manufacturerFilter *dbquery.StringQueryInfo, modelFilter *dbquery.StringQueryInfo, pagination *dbquery.Pagination, orderBy *dbquery.OrderBy, withComponents bool) ([]*rack.Rack, int32, error)
 
 	// Component operations
@@ -64,6 +66,7 @@ type Manager interface {
 	AddComponent(ctx context.Context, comp *component.Component) (uuid.UUID, error)
 	PatchComponent(ctx context.Context, comp *component.Component) error
 	DeleteComponent(ctx context.Context, id uuid.UUID) error
+	PurgeComponent(ctx context.Context, id uuid.UUID) error
 
 	// Component drift operations
 	GetDriftsByComponentIDs(ctx context.Context, componentIDs []uuid.UUID) ([]inventorystore.ComponentDrift, error)
@@ -207,9 +210,24 @@ func (m *ManagerImpl) PatchComponent(ctx context.Context, comp *component.Compon
 	return m.store.PatchComponent(ctx, comp)
 }
 
+// DeleteRack soft-deletes a rack and all its components.
+func (m *ManagerImpl) DeleteRack(ctx context.Context, id uuid.UUID) error {
+	return m.store.DeleteRack(ctx, id)
+}
+
+// PurgeRack permanently removes a soft-deleted rack and its components.
+func (m *ManagerImpl) PurgeRack(ctx context.Context, id uuid.UUID) error {
+	return m.store.PurgeRack(ctx, id)
+}
+
 // DeleteComponent soft-deletes a component by UUID.
 func (m *ManagerImpl) DeleteComponent(ctx context.Context, id uuid.UUID) error {
 	return m.store.DeleteComponent(ctx, id)
+}
+
+// PurgeComponent permanently removes a soft-deleted component.
+func (m *ManagerImpl) PurgeComponent(ctx context.Context, id uuid.UUID) error {
+	return m.store.PurgeComponent(ctx, id)
 }
 
 // GetDriftsByComponentIDs retrieves drift records for the given component UUIDs.

@@ -46,21 +46,18 @@ func newServerImplementation(psm *powershelfmanager.PowershelfManager) (*Powersh
 	}, nil
 }
 
-// registerPowershelf registers a powershelf by its PMC MAC/IP/Vendor and persists its credentials. Returns creation timestamp on success.
+// registerPowershelf registers a powershelf by its PMC MAC/IP/Vendor and optionally persists its credentials. Returns creation timestamp on success.
 func (s *PowershelfManagerServerImpl) registerPowershelf(
 	ctx context.Context,
 	req *pb.RegisterPowershelfRequest,
 ) *pb.RegisterPowershelfResponse {
-	if req.PmcCredentials == nil {
-		return &pb.RegisterPowershelfResponse{
-			PmcMacAddress: req.PmcMacAddress,
-			Status:        pb.StatusCode_INVALID_ARGUMENT,
-			Error:         "PMC credentials are required",
-		}
+	var cred *credential.Credential
+	if req.PmcCredentials != nil {
+		pmcCred := credential.New(req.PmcCredentials.Username, req.PmcCredentials.Password)
+		cred = &pmcCred
 	}
 
-	cred := credential.New(req.PmcCredentials.Username, req.PmcCredentials.Password)
-	pmc, err := pmc.New(req.PmcMacAddress, req.PmcIpAddress, protobuf.PMCVendorFrom(req.PmcVendor), &cred)
+	pmc, err := pmc.New(req.PmcMacAddress, req.PmcIpAddress, protobuf.PMCVendorFrom(req.PmcVendor), cred)
 	if err != nil {
 		return &pb.RegisterPowershelfResponse{
 			PmcMacAddress: req.PmcMacAddress,

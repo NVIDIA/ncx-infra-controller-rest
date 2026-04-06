@@ -88,6 +88,10 @@ func TestBatchCreateInstanceHandler_Handle(t *testing.T) {
 	st1 := testInstanceBuildSite(t, dbSession, ip, "test-site-1", cdbm.SiteStatusRegistered, true, ipu)
 	assert.NotNil(t, st1)
 
+	// Site 2 - ready site for cross-site VPC prefix validation
+	st2 := testInstanceBuildSite(t, dbSession, ip, "test-site-2", cdbm.SiteStatusRegistered, true, ipu)
+	assert.NotNil(t, st2)
+
 	// Tenant 1
 	tnu1 := testInstanceBuildUser(t, dbSession, "test-starfleet-id-2", tnOrg, tnOrgRoles)
 	tn1 := testInstanceBuildTenant(t, dbSession, "test-tenant-1", tnOrg, tnu1)
@@ -96,6 +100,8 @@ func TestBatchCreateInstanceHandler_Handle(t *testing.T) {
 	// Tenant-Site association
 	ts1 := testBuildTenantSiteAssociation(t, dbSession, tnOrg, tn1.ID, st1.ID, tnu1.ID)
 	assert.NotNil(t, ts1)
+	ts2 := testBuildTenantSiteAssociation(t, dbSession, tnOrg, tn1.ID, st2.ID, tnu1.ID)
+	assert.NotNil(t, ts2)
 
 	// Allocation for tenant 1
 	al1 := testInstanceSiteBuildAllocation(t, dbSession, st1, tn1, "test-allocation-1", ipu)
@@ -107,6 +113,7 @@ func TestBatchCreateInstanceHandler_Handle(t *testing.T) {
 
 	// Add InfiniBand capability to Instance Type 1 for InfiniBand interface tests
 	common.TestBuildMachineCapability(t, dbSession, nil, &ist1.ID, cdbm.MachineCapabilityTypeInfiniBand, "MT28908 Family [ConnectX-6]", nil, nil, cdb.GetStrPtr("Mellanox Technologies"), cdb.GetIntPtr(3), cdb.GetStrPtr(""), nil)
+	common.TestBuildMachineCapability(t, dbSession, nil, &ist1.ID, cdbm.MachineCapabilityTypeNetwork, "MT42822 BlueField-2 integrated ConnectX-6 Dx network controller", nil, nil, cdb.GetStrPtr("Mellanox Technologies"), cdb.GetIntPtr(2), cdb.GetStrPtr("DPU"), nil)
 
 	// Allocation constraint for ist1 with quota of 15
 	alc1 := testInstanceSiteBuildAllocationContraints(t, dbSession, al1, cdbm.AllocationResourceTypeInstanceType, ist1.ID, cdbm.AllocationConstraintTypeReserved, 15, ipu)
@@ -133,6 +140,13 @@ func TestBatchCreateInstanceHandler_Handle(t *testing.T) {
 	ipbVpcPrefix := common.TestBuildVpcPrefixIPBlock(t, dbSession, "testipb-vpcprefix", st1, ip, &tn1.ID, cdbm.IPBlockRoutingTypeDatacenterOnly, "10.0.0.0", 24, cdbm.IPBlockProtocolVersionV4, false, cdbm.IPBlockStatusReady, tnu1)
 	vpcFNN := testInstanceBuildVPC(t, dbSession, "test-vpc-fnn-1", ip, tn1, st1, cdb.GetUUIDPtr(uuid.New()), nil, cdb.GetStrPtr(cdbm.VpcFNN), nil, cdbm.VpcStatusReady, tnu1)
 	vpcPrefix1 := common.TestBuildVPCPrefix(t, dbSession, "test-vpcprefix-1", st1, tn1, vpcFNN.ID, &ipbVpcPrefix.ID, cdb.GetStrPtr("10.0.0.0/24"), cdb.GetIntPtr(24), cdbm.VpcPrefixStatusReady, tnu1)
+	ipbVpcPrefixSecondary := common.TestBuildVpcPrefixIPBlock(t, dbSession, "testipb-vpcprefix-secondary", st1, ip, &tn1.ID, cdbm.IPBlockRoutingTypeDatacenterOnly, "10.1.0.0", 24, cdbm.IPBlockProtocolVersionV4, false, cdbm.IPBlockStatusReady, tnu1)
+	vpcFNNSecondary := testInstanceBuildVPC(t, dbSession, "test-vpc-fnn-2", ip, tn1, st1, cdb.GetUUIDPtr(uuid.New()), nil, cdb.GetStrPtr(cdbm.VpcFNN), nil, cdbm.VpcStatusReady, tnu1)
+	vpcPrefixSecondary := common.TestBuildVPCPrefix(t, dbSession, "test-vpcprefix-secondary", st1, tn1, vpcFNNSecondary.ID, &ipbVpcPrefixSecondary.ID, cdb.GetStrPtr("10.1.0.0/24"), cdb.GetIntPtr(24), cdbm.VpcPrefixStatusReady, tnu1)
+	ipbVpcPrefixSite2 := common.TestBuildVpcPrefixIPBlock(t, dbSession, "testipb-vpcprefix-site2", st2, ip, &tn1.ID, cdbm.IPBlockRoutingTypeDatacenterOnly, "10.2.0.0", 24, cdbm.IPBlockProtocolVersionV4, false, cdbm.IPBlockStatusReady, tnu1)
+	vpcFNNSite2 := testInstanceBuildVPC(t, dbSession, "test-vpc-fnn-site-2", ip, tn1, st2, cdb.GetUUIDPtr(uuid.New()), nil, cdb.GetStrPtr(cdbm.VpcFNN), nil, cdbm.VpcStatusReady, tnu1)
+	vpcPrefixSite2 := common.TestBuildVPCPrefix(t, dbSession, "test-vpcprefix-site2", st2, tn1, vpcFNNSite2.ID, &ipbVpcPrefixSite2.ID, cdb.GetStrPtr("10.2.0.0/24"), cdb.GetIntPtr(24), cdbm.VpcPrefixStatusReady, tnu1)
+	assert.NotNil(t, vpcPrefixSite2)
 
 	// InfiniBand Partition for testing InfiniBand Interfaces
 	ibp1 := testBuildIBPartition(t, dbSession, "test-ibp-1", tnOrg, st1, tn1, cdb.GetUUIDPtr(uuid.New()), cdb.GetStrPtr(cdbm.InfiniBandPartitionStatusReady), false)
@@ -271,10 +285,11 @@ func TestBatchCreateInstanceHandler_Handle(t *testing.T) {
 	}
 
 	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		wantErr bool
+		name                    string
+		fields                  fields
+		args                    args
+		expectedSecondaryVpcIDs []string
+		wantErr                 bool
 	}{
 		{
 			name: "test batch instance create API endpoint succeeds with valid request",
@@ -419,6 +434,251 @@ func TestBatchCreateInstanceHandler_Handle(t *testing.T) {
 				reqUser:  tnu1,
 				respCode: http.StatusBadRequest,
 				respMsg:  "batch instance create does not support `ipAddress` on interfaces",
+			},
+			wantErr: false,
+		},
+		{
+			name: "test batch instance create API endpoint succeeds with secondary VPC Prefix interface",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				scp:       scp,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIBatchInstanceCreateRequest{
+					NamePrefix:      "test-batch-secondary-vpc",
+					Count:           2,
+					TenantID:        tn1.ID.String(),
+					InstanceTypeID:  ist1.ID.String(),
+					VpcID:           vpcFNN.ID.String(),
+					SecondaryVpcIDs: []string{vpcFNNSecondary.ID.String()},
+					IpxeScript:      cdb.GetStrPtr("test script"),
+					Interfaces: []model.APIInterfaceCreateOrUpdateRequest{
+						{
+							VpcPrefixID:    cdb.GetStrPtr(vpcPrefix1.ID.String()),
+							IsPhysical:     true,
+							Device:         cdb.GetStrPtr("MT42822 BlueField-2 integrated ConnectX-6 Dx network controller"),
+							DeviceInstance: cdb.GetIntPtr(0),
+						},
+						{
+							VpcPrefixID:    cdb.GetStrPtr(vpcPrefixSecondary.ID.String()),
+							IsPhysical:     true,
+							Device:         cdb.GetStrPtr("MT42822 BlueField-2 integrated ConnectX-6 Dx network controller"),
+							DeviceInstance: cdb.GetIntPtr(1),
+						},
+					},
+				},
+				reqOrg:   tnOrg,
+				reqUser:  tnu1,
+				respCode: http.StatusCreated,
+			},
+			expectedSecondaryVpcIDs: []string{vpcFNNSecondary.ID.String()},
+			wantErr:                 false,
+		},
+		{
+			name: "test batch instance create API endpoint fails when requested secondary VPCs do not match interface VPCs",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				scp:       scp,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIBatchInstanceCreateRequest{
+					NamePrefix:      "test-batch-secondary-vpc-mismatch",
+					Count:           2,
+					TenantID:        tn1.ID.String(),
+					InstanceTypeID:  ist1.ID.String(),
+					VpcID:           vpcFNN.ID.String(),
+					SecondaryVpcIDs: []string{vpcFNNSecondary.ID.String()},
+					IpxeScript:      cdb.GetStrPtr("test script"),
+					Interfaces: []model.APIInterfaceCreateOrUpdateRequest{
+						{
+							VpcPrefixID:    cdb.GetStrPtr(vpcPrefix1.ID.String()),
+							IsPhysical:     true,
+							Device:         cdb.GetStrPtr("MT42822 BlueField-2 integrated ConnectX-6 Dx network controller"),
+							DeviceInstance: cdb.GetIntPtr(0),
+						},
+					},
+				},
+				reqOrg:   tnOrg,
+				reqUser:  tnu1,
+				respCode: http.StatusBadRequest,
+				respMsg:  "One or more Interfaces in request data specify VPC Prefixes that do not belong to VPCs specified in `vpcId` or `secondaryVpcIds`",
+			},
+			wantErr: false,
+		},
+		{
+			name: "test batch instance create API endpoint fails when an interface uses a VPC outside requested VPC IDs",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				scp:       scp,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIBatchInstanceCreateRequest{
+					NamePrefix:     "test-batch-unexpected-vpc",
+					Count:          2,
+					TenantID:       tn1.ID.String(),
+					InstanceTypeID: ist1.ID.String(),
+					VpcID:          vpcFNN.ID.String(),
+					IpxeScript:     cdb.GetStrPtr("test script"),
+					Interfaces: []model.APIInterfaceCreateOrUpdateRequest{
+						{
+							VpcPrefixID:    cdb.GetStrPtr(vpcPrefix1.ID.String()),
+							IsPhysical:     true,
+							Device:         cdb.GetStrPtr("MT42822 BlueField-2 integrated ConnectX-6 Dx network controller"),
+							DeviceInstance: cdb.GetIntPtr(0),
+						},
+						{
+							VpcPrefixID:    cdb.GetStrPtr(vpcPrefixSecondary.ID.String()),
+							IsPhysical:     true,
+							Device:         cdb.GetStrPtr("MT42822 BlueField-2 integrated ConnectX-6 Dx network controller"),
+							DeviceInstance: cdb.GetIntPtr(1),
+						},
+					},
+				},
+				reqOrg:   tnOrg,
+				reqUser:  tnu1,
+				respCode: http.StatusBadRequest,
+				respMsg:  fmt.Sprintf("One or more Interfaces specify VPC Prefix: %s belonging to VPC: %s which is not specified in 'vpcId' or 'secondaryVpcIds'", vpcPrefixSecondary.ID.String(), vpcFNNSecondary.ID.String()),
+			},
+			wantErr: false,
+		},
+		{
+			name: "test batch instance create API endpoint fails when primary physical interface uses a prefix from a secondary VPC",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				scp:       scp,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIBatchInstanceCreateRequest{
+					NamePrefix:      "test-batch-primary-must-match-vpc",
+					Count:           2,
+					TenantID:        tn1.ID.String(),
+					InstanceTypeID:  ist1.ID.String(),
+					VpcID:           vpcFNN.ID.String(),
+					SecondaryVpcIDs: []string{vpcFNNSecondary.ID.String()},
+					IpxeScript:      cdb.GetStrPtr("test script"),
+					Interfaces: []model.APIInterfaceCreateOrUpdateRequest{
+						{
+							VpcPrefixID:    cdb.GetStrPtr(vpcPrefixSecondary.ID.String()),
+							IsPhysical:     true,
+							Device:         cdb.GetStrPtr("MT42822 BlueField-2 integrated ConnectX-6 Dx network controller"),
+							DeviceInstance: cdb.GetIntPtr(0),
+						},
+					},
+				},
+				reqOrg:   tnOrg,
+				reqUser:  tnu1,
+				respCode: http.StatusBadRequest,
+				respMsg:  "The primary physical Interface for deviceInstance: 0 must use a VPC Prefix that belongs to VPC specified in `vpcId`",
+			},
+			wantErr: false,
+		},
+		{
+			name: "test batch instance create API endpoint fails when primary physical interface uses a prefix from a secondary VPC without device info",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				scp:       scp,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIBatchInstanceCreateRequest{
+					NamePrefix:      "test-batch-primary-must-match-vpc-no-device",
+					Count:           2,
+					TenantID:        tn1.ID.String(),
+					InstanceTypeID:  ist1.ID.String(),
+					VpcID:           vpcFNN.ID.String(),
+					SecondaryVpcIDs: []string{vpcFNNSecondary.ID.String()},
+					IpxeScript:      cdb.GetStrPtr("test script"),
+					Interfaces: []model.APIInterfaceCreateOrUpdateRequest{
+						{
+							VpcPrefixID: cdb.GetStrPtr(vpcPrefixSecondary.ID.String()),
+							IsPhysical:  true,
+						},
+					},
+				},
+				reqOrg:   tnOrg,
+				reqUser:  tnu1,
+				respCode: http.StatusBadRequest,
+				respMsg:  "The primary physical Interface must use a VPC Prefix that belongs to VPC specified in `vpcId`",
+			},
+			wantErr: false,
+		},
+		{
+			name: "test batch instance create API endpoint fails when primary physical interface uses a VPC Prefix from another Site",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				scp:       scp,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIBatchInstanceCreateRequest{
+					NamePrefix:     "test-batch-prefix-wrong-site-primary",
+					Count:          2,
+					TenantID:       tn1.ID.String(),
+					InstanceTypeID: ist1.ID.String(),
+					VpcID:          vpcFNN.ID.String(),
+					IpxeScript:     cdb.GetStrPtr("test script"),
+					Interfaces: []model.APIInterfaceCreateOrUpdateRequest{
+						{
+							VpcPrefixID:    cdb.GetStrPtr(vpcPrefixSite2.ID.String()),
+							IsPhysical:     true,
+							Device:         cdb.GetStrPtr("MT42822 BlueField-2 integrated ConnectX-6 Dx network controller"),
+							DeviceInstance: cdb.GetIntPtr(0),
+						},
+					},
+				},
+				reqOrg:   tnOrg,
+				reqUser:  tnu1,
+				respCode: http.StatusBadRequest,
+				respMsg:  fmt.Sprintf("VPC Prefix: %s specified in request does not belong to Site", vpcPrefixSite2.ID.String()),
+			},
+			wantErr: false,
+		},
+		{
+			name: "test batch instance create API endpoint fails when secondary interface uses a VPC Prefix from another Site",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				scp:       scp,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIBatchInstanceCreateRequest{
+					NamePrefix:      "test-batch-prefix-wrong-site-secondary",
+					Count:           2,
+					TenantID:        tn1.ID.String(),
+					InstanceTypeID:  ist1.ID.String(),
+					VpcID:           vpcFNN.ID.String(),
+					SecondaryVpcIDs: []string{vpcFNNSecondary.ID.String()},
+					IpxeScript:      cdb.GetStrPtr("test script"),
+					Interfaces: []model.APIInterfaceCreateOrUpdateRequest{
+						{
+							VpcPrefixID:    cdb.GetStrPtr(vpcPrefix1.ID.String()),
+							IsPhysical:     true,
+							Device:         cdb.GetStrPtr("MT42822 BlueField-2 integrated ConnectX-6 Dx network controller"),
+							DeviceInstance: cdb.GetIntPtr(0),
+						},
+						{
+							VpcPrefixID:    cdb.GetStrPtr(vpcPrefixSite2.ID.String()),
+							IsPhysical:     true,
+							Device:         cdb.GetStrPtr("MT42822 BlueField-2 integrated ConnectX-6 Dx network controller"),
+							DeviceInstance: cdb.GetIntPtr(1),
+						},
+					},
+				},
+				reqOrg:   tnOrg,
+				reqUser:  tnu1,
+				respCode: http.StatusBadRequest,
+				respMsg:  fmt.Sprintf("VPC Prefix: %s specified in request does not belong to Site", vpcPrefixSite2.ID.String()),
 			},
 			wantErr: false,
 		},
@@ -1032,6 +1292,11 @@ func TestBatchCreateInstanceHandler_Handle(t *testing.T) {
 						expectedSuffix := fmt.Sprintf("-%d", i+1)
 						assert.True(t, strings.HasPrefix(inst.Name, expectedPrefix), "Instance %d name should start with %s, got %s", i, expectedPrefix, inst.Name)
 						assert.True(t, strings.HasSuffix(inst.Name, expectedSuffix), "Instance %d name should end with %s, got %s", i, expectedSuffix, inst.Name)
+						if tt.expectedSecondaryVpcIDs != nil {
+							assert.ElementsMatch(t, tt.expectedSecondaryVpcIDs, inst.SecondaryVpcIDs)
+						} else {
+							assert.Empty(t, inst.SecondaryVpcIDs)
+						}
 					}
 				}
 			}

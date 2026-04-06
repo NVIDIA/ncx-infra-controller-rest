@@ -36,6 +36,11 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+const (
+	healthProbeIDMaintenance               = "Maintenance"
+	classificationSuppressExternalAlerting = "SuppressExternalAlerting"
+)
+
 type grpcClient struct {
 	gclient     pb.ForgeClient
 	grpcTimeout time.Duration
@@ -447,6 +452,48 @@ func (c *grpcClient) AddExpectedPowerShelf(ctx context.Context, req AddExpectedP
 		return fmt.Errorf("failed to add expected power shelf (bmc_mac=%s): %w", req.BMCMACAddress, err)
 	}
 
+	return nil
+}
+
+func (c *grpcClient) InsertHealthReportOverride(ctx context.Context, machineID string, source string) error {
+	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
+	defer cancel()
+
+	req := &pb.InsertHealthReportOverrideRequest{
+		MachineId: &pb.MachineId{Id: machineID},
+		Override: &pb.HealthReportOverride{
+			Report: &pb.HealthReport{
+				Source: source,
+				Alerts: []*pb.HealthProbeAlert{{
+					Id:              healthProbeIDMaintenance,
+					Message:         "Machine under RLA-managed maintenance",
+					Classifications: []string{classificationSuppressExternalAlerting},
+				}},
+			},
+			Mode: pb.OverrideMode_Replace,
+		},
+	}
+
+	_, err := c.gclient.InsertHealthReportOverride(ctx, req)
+	if err != nil {
+		return fmt.Errorf("failed to insert health report override for machine %s: %w", machineID, err)
+	}
+	return nil
+}
+
+func (c *grpcClient) RemoveHealthReportOverride(ctx context.Context, machineID string, source string) error {
+	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
+	defer cancel()
+
+	req := &pb.RemoveHealthReportOverrideRequest{
+		MachineId: &pb.MachineId{Id: machineID},
+		Source:    source,
+	}
+
+	_, err := c.gclient.RemoveHealthReportOverride(ctx, req)
+	if err != nil {
+		return fmt.Errorf("failed to remove health report override for machine %s: %w", machineID, err)
+	}
 	return nil
 }
 

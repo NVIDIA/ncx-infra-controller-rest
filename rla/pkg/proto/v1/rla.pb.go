@@ -3826,6 +3826,249 @@ func (*DeleteComponentResponse) Descriptor() ([]byte, []int) {
 	return file_rla_proto_rawDescGZIP(), []int{51}
 }
 
+// DeleteRack - soft-delete a rack and cascade to its components
+type DeleteRackRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            *UUID                  `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"` // Required: rack UUID to soft-delete
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteRackRequest) Reset() {
+	*x = DeleteRackRequest{}
+	mi := &file_rla_proto_msgTypes[52]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteRackRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteRackRequest) ProtoMessage() {}
+
+func (x *DeleteRackRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_rla_proto_msgTypes[52]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteRackRequest.ProtoReflect.Descriptor instead.
+func (*DeleteRackRequest) Descriptor() ([]byte, []int) {
+	return file_rla_proto_rawDescGZIP(), []int{52}
+}
+
+func (x *DeleteRackRequest) GetId() *UUID {
+	if x != nil {
+		return x.Id
+	}
+	return nil
+}
+
+type DeleteRackResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteRackResponse) Reset() {
+	*x = DeleteRackResponse{}
+	mi := &file_rla_proto_msgTypes[53]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteRackResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteRackResponse) ProtoMessage() {}
+
+func (x *DeleteRackResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_rla_proto_msgTypes[53]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteRackResponse.ProtoReflect.Descriptor instead.
+func (*DeleteRackResponse) Descriptor() ([]byte, []int) {
+	return file_rla_proto_rawDescGZIP(), []int{53}
+}
+
+// PurgeRack - permanently remove a soft-deleted rack and its components
+type PurgeRackRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            *UUID                  `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"` // Required: rack UUID to purge (must already be soft-deleted)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PurgeRackRequest) Reset() {
+	*x = PurgeRackRequest{}
+	mi := &file_rla_proto_msgTypes[54]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PurgeRackRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PurgeRackRequest) ProtoMessage() {}
+
+func (x *PurgeRackRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_rla_proto_msgTypes[54]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PurgeRackRequest.ProtoReflect.Descriptor instead.
+func (*PurgeRackRequest) Descriptor() ([]byte, []int) {
+	return file_rla_proto_rawDescGZIP(), []int{54}
+}
+
+func (x *PurgeRackRequest) GetId() *UUID {
+	if x != nil {
+		return x.Id
+	}
+	return nil
+}
+
+type PurgeRackResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PurgeRackResponse) Reset() {
+	*x = PurgeRackResponse{}
+	mi := &file_rla_proto_msgTypes[55]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PurgeRackResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PurgeRackResponse) ProtoMessage() {}
+
+func (x *PurgeRackResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_rla_proto_msgTypes[55]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PurgeRackResponse.ProtoReflect.Descriptor instead.
+func (*PurgeRackResponse) Descriptor() ([]byte, []int) {
+	return file_rla_proto_rawDescGZIP(), []int{55}
+}
+
+// PurgeComponent - permanently remove a soft-deleted component
+type PurgeComponentRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            *UUID                  `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"` // Required: component UUID to purge (must already be soft-deleted)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PurgeComponentRequest) Reset() {
+	*x = PurgeComponentRequest{}
+	mi := &file_rla_proto_msgTypes[56]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PurgeComponentRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PurgeComponentRequest) ProtoMessage() {}
+
+func (x *PurgeComponentRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_rla_proto_msgTypes[56]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PurgeComponentRequest.ProtoReflect.Descriptor instead.
+func (*PurgeComponentRequest) Descriptor() ([]byte, []int) {
+	return file_rla_proto_rawDescGZIP(), []int{56}
+}
+
+func (x *PurgeComponentRequest) GetId() *UUID {
+	if x != nil {
+		return x.Id
+	}
+	return nil
+}
+
+type PurgeComponentResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PurgeComponentResponse) Reset() {
+	*x = PurgeComponentResponse{}
+	mi := &file_rla_proto_msgTypes[57]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PurgeComponentResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PurgeComponentResponse) ProtoMessage() {}
+
+func (x *PurgeComponentResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_rla_proto_msgTypes[57]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PurgeComponentResponse.ProtoReflect.Descriptor instead.
+func (*PurgeComponentResponse) Descriptor() ([]byte, []int) {
+	return file_rla_proto_rawDescGZIP(), []int{57}
+}
+
 // PatchComponent - update a single component's fields
 type PatchComponentRequest struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
@@ -3834,13 +4077,14 @@ type PatchComponentRequest struct {
 	Position        *RackPosition          `protobuf:"bytes,3,opt,name=position,proto3,oneof" json:"position,omitempty"`                                      // Update slot_id, tray_idx, host_id
 	Description     *string                `protobuf:"bytes,4,opt,name=description,proto3,oneof" json:"description,omitempty"`                                // Update description (JSON string)
 	RackId          *UUID                  `protobuf:"bytes,5,opt,name=rack_id,json=rackId,proto3,oneof" json:"rack_id,omitempty"`                            // Re-assign to a different rack
+	Bmcs            []*BMCInfo             `protobuf:"bytes,6,rep,name=bmcs,proto3" json:"bmcs,omitempty"`                                                    // Update BMCs (matched by MAC address; create if new)
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
 
 func (x *PatchComponentRequest) Reset() {
 	*x = PatchComponentRequest{}
-	mi := &file_rla_proto_msgTypes[52]
+	mi := &file_rla_proto_msgTypes[58]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3852,7 +4096,7 @@ func (x *PatchComponentRequest) String() string {
 func (*PatchComponentRequest) ProtoMessage() {}
 
 func (x *PatchComponentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rla_proto_msgTypes[52]
+	mi := &file_rla_proto_msgTypes[58]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3865,7 +4109,7 @@ func (x *PatchComponentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PatchComponentRequest.ProtoReflect.Descriptor instead.
 func (*PatchComponentRequest) Descriptor() ([]byte, []int) {
-	return file_rla_proto_rawDescGZIP(), []int{52}
+	return file_rla_proto_rawDescGZIP(), []int{58}
 }
 
 func (x *PatchComponentRequest) GetId() *UUID {
@@ -3903,6 +4147,13 @@ func (x *PatchComponentRequest) GetRackId() *UUID {
 	return nil
 }
 
+func (x *PatchComponentRequest) GetBmcs() []*BMCInfo {
+	if x != nil {
+		return x.Bmcs
+	}
+	return nil
+}
+
 type PatchComponentResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Component     *Component             `protobuf:"bytes,1,opt,name=component,proto3" json:"component,omitempty"` // The updated component
@@ -3912,7 +4163,7 @@ type PatchComponentResponse struct {
 
 func (x *PatchComponentResponse) Reset() {
 	*x = PatchComponentResponse{}
-	mi := &file_rla_proto_msgTypes[53]
+	mi := &file_rla_proto_msgTypes[59]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3924,7 +4175,7 @@ func (x *PatchComponentResponse) String() string {
 func (*PatchComponentResponse) ProtoMessage() {}
 
 func (x *PatchComponentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_rla_proto_msgTypes[53]
+	mi := &file_rla_proto_msgTypes[59]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3937,7 +4188,7 @@ func (x *PatchComponentResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PatchComponentResponse.ProtoReflect.Descriptor instead.
 func (*PatchComponentResponse) Descriptor() ([]byte, []int) {
-	return file_rla_proto_rawDescGZIP(), []int{53}
+	return file_rla_proto_rawDescGZIP(), []int{59}
 }
 
 func (x *PatchComponentResponse) GetComponent() *Component {
@@ -3956,7 +4207,7 @@ type SubmitTaskResponse struct {
 
 func (x *SubmitTaskResponse) Reset() {
 	*x = SubmitTaskResponse{}
-	mi := &file_rla_proto_msgTypes[54]
+	mi := &file_rla_proto_msgTypes[60]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3968,7 +4219,7 @@ func (x *SubmitTaskResponse) String() string {
 func (*SubmitTaskResponse) ProtoMessage() {}
 
 func (x *SubmitTaskResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_rla_proto_msgTypes[54]
+	mi := &file_rla_proto_msgTypes[60]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3981,7 +4232,7 @@ func (x *SubmitTaskResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubmitTaskResponse.ProtoReflect.Descriptor instead.
 func (*SubmitTaskResponse) Descriptor() ([]byte, []int) {
-	return file_rla_proto_rawDescGZIP(), []int{54}
+	return file_rla_proto_rawDescGZIP(), []int{60}
 }
 
 func (x *SubmitTaskResponse) GetTaskIds() []*UUID {
@@ -4007,7 +4258,7 @@ type QueueOptions struct {
 
 func (x *QueueOptions) Reset() {
 	*x = QueueOptions{}
-	mi := &file_rla_proto_msgTypes[55]
+	mi := &file_rla_proto_msgTypes[61]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4019,7 +4270,7 @@ func (x *QueueOptions) String() string {
 func (*QueueOptions) ProtoMessage() {}
 
 func (x *QueueOptions) ProtoReflect() protoreflect.Message {
-	mi := &file_rla_proto_msgTypes[55]
+	mi := &file_rla_proto_msgTypes[61]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4032,7 +4283,7 @@ func (x *QueueOptions) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use QueueOptions.ProtoReflect.Descriptor instead.
 func (*QueueOptions) Descriptor() ([]byte, []int) {
-	return file_rla_proto_rawDescGZIP(), []int{55}
+	return file_rla_proto_rawDescGZIP(), []int{61}
 }
 
 func (x *QueueOptions) GetConflictStrategy() ConflictStrategy {
@@ -4060,7 +4311,7 @@ type PowerOnRackRequest struct {
 
 func (x *PowerOnRackRequest) Reset() {
 	*x = PowerOnRackRequest{}
-	mi := &file_rla_proto_msgTypes[56]
+	mi := &file_rla_proto_msgTypes[62]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4072,7 +4323,7 @@ func (x *PowerOnRackRequest) String() string {
 func (*PowerOnRackRequest) ProtoMessage() {}
 
 func (x *PowerOnRackRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rla_proto_msgTypes[56]
+	mi := &file_rla_proto_msgTypes[62]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4085,7 +4336,7 @@ func (x *PowerOnRackRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PowerOnRackRequest.ProtoReflect.Descriptor instead.
 func (*PowerOnRackRequest) Descriptor() ([]byte, []int) {
-	return file_rla_proto_rawDescGZIP(), []int{56}
+	return file_rla_proto_rawDescGZIP(), []int{62}
 }
 
 func (x *PowerOnRackRequest) GetTargetSpec() *OperationTargetSpec {
@@ -4121,7 +4372,7 @@ type PowerOffRackRequest struct {
 
 func (x *PowerOffRackRequest) Reset() {
 	*x = PowerOffRackRequest{}
-	mi := &file_rla_proto_msgTypes[57]
+	mi := &file_rla_proto_msgTypes[63]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4133,7 +4384,7 @@ func (x *PowerOffRackRequest) String() string {
 func (*PowerOffRackRequest) ProtoMessage() {}
 
 func (x *PowerOffRackRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rla_proto_msgTypes[57]
+	mi := &file_rla_proto_msgTypes[63]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4146,7 +4397,7 @@ func (x *PowerOffRackRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PowerOffRackRequest.ProtoReflect.Descriptor instead.
 func (*PowerOffRackRequest) Descriptor() ([]byte, []int) {
-	return file_rla_proto_rawDescGZIP(), []int{57}
+	return file_rla_proto_rawDescGZIP(), []int{63}
 }
 
 func (x *PowerOffRackRequest) GetTargetSpec() *OperationTargetSpec {
@@ -4189,7 +4440,7 @@ type PowerResetRackRequest struct {
 
 func (x *PowerResetRackRequest) Reset() {
 	*x = PowerResetRackRequest{}
-	mi := &file_rla_proto_msgTypes[58]
+	mi := &file_rla_proto_msgTypes[64]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4201,7 +4452,7 @@ func (x *PowerResetRackRequest) String() string {
 func (*PowerResetRackRequest) ProtoMessage() {}
 
 func (x *PowerResetRackRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rla_proto_msgTypes[58]
+	mi := &file_rla_proto_msgTypes[64]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4214,7 +4465,7 @@ func (x *PowerResetRackRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PowerResetRackRequest.ProtoReflect.Descriptor instead.
 func (*PowerResetRackRequest) Descriptor() ([]byte, []int) {
-	return file_rla_proto_rawDescGZIP(), []int{58}
+	return file_rla_proto_rawDescGZIP(), []int{64}
 }
 
 func (x *PowerResetRackRequest) GetTargetSpec() *OperationTargetSpec {
@@ -4255,7 +4506,7 @@ type BringUpRackRequest struct {
 
 func (x *BringUpRackRequest) Reset() {
 	*x = BringUpRackRequest{}
-	mi := &file_rla_proto_msgTypes[59]
+	mi := &file_rla_proto_msgTypes[65]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4267,7 +4518,7 @@ func (x *BringUpRackRequest) String() string {
 func (*BringUpRackRequest) ProtoMessage() {}
 
 func (x *BringUpRackRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rla_proto_msgTypes[59]
+	mi := &file_rla_proto_msgTypes[65]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4280,7 +4531,7 @@ func (x *BringUpRackRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BringUpRackRequest.ProtoReflect.Descriptor instead.
 func (*BringUpRackRequest) Descriptor() ([]byte, []int) {
-	return file_rla_proto_rawDescGZIP(), []int{59}
+	return file_rla_proto_rawDescGZIP(), []int{65}
 }
 
 func (x *BringUpRackRequest) GetTargetSpec() *OperationTargetSpec {
@@ -4308,7 +4559,7 @@ type IngestRackRequest struct {
 
 func (x *IngestRackRequest) Reset() {
 	*x = IngestRackRequest{}
-	mi := &file_rla_proto_msgTypes[60]
+	mi := &file_rla_proto_msgTypes[66]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4320,7 +4571,7 @@ func (x *IngestRackRequest) String() string {
 func (*IngestRackRequest) ProtoMessage() {}
 
 func (x *IngestRackRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rla_proto_msgTypes[60]
+	mi := &file_rla_proto_msgTypes[66]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4333,7 +4584,7 @@ func (x *IngestRackRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IngestRackRequest.ProtoReflect.Descriptor instead.
 func (*IngestRackRequest) Descriptor() ([]byte, []int) {
-	return file_rla_proto_rawDescGZIP(), []int{60}
+	return file_rla_proto_rawDescGZIP(), []int{66}
 }
 
 func (x *IngestRackRequest) GetTargetSpec() *OperationTargetSpec {
@@ -4368,7 +4619,7 @@ type ListTasksRequest struct {
 
 func (x *ListTasksRequest) Reset() {
 	*x = ListTasksRequest{}
-	mi := &file_rla_proto_msgTypes[61]
+	mi := &file_rla_proto_msgTypes[67]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4380,7 +4631,7 @@ func (x *ListTasksRequest) String() string {
 func (*ListTasksRequest) ProtoMessage() {}
 
 func (x *ListTasksRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rla_proto_msgTypes[61]
+	mi := &file_rla_proto_msgTypes[67]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4393,7 +4644,7 @@ func (x *ListTasksRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTasksRequest.ProtoReflect.Descriptor instead.
 func (*ListTasksRequest) Descriptor() ([]byte, []int) {
-	return file_rla_proto_rawDescGZIP(), []int{61}
+	return file_rla_proto_rawDescGZIP(), []int{67}
 }
 
 func (x *ListTasksRequest) GetRackId() *UUID {
@@ -4427,7 +4678,7 @@ type ListTasksResponse struct {
 
 func (x *ListTasksResponse) Reset() {
 	*x = ListTasksResponse{}
-	mi := &file_rla_proto_msgTypes[62]
+	mi := &file_rla_proto_msgTypes[68]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4439,7 +4690,7 @@ func (x *ListTasksResponse) String() string {
 func (*ListTasksResponse) ProtoMessage() {}
 
 func (x *ListTasksResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_rla_proto_msgTypes[62]
+	mi := &file_rla_proto_msgTypes[68]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4452,7 +4703,7 @@ func (x *ListTasksResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTasksResponse.ProtoReflect.Descriptor instead.
 func (*ListTasksResponse) Descriptor() ([]byte, []int) {
-	return file_rla_proto_rawDescGZIP(), []int{62}
+	return file_rla_proto_rawDescGZIP(), []int{68}
 }
 
 func (x *ListTasksResponse) GetTasks() []*Task {
@@ -4478,7 +4729,7 @@ type GetTasksByIDsRequest struct {
 
 func (x *GetTasksByIDsRequest) Reset() {
 	*x = GetTasksByIDsRequest{}
-	mi := &file_rla_proto_msgTypes[63]
+	mi := &file_rla_proto_msgTypes[69]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4490,7 +4741,7 @@ func (x *GetTasksByIDsRequest) String() string {
 func (*GetTasksByIDsRequest) ProtoMessage() {}
 
 func (x *GetTasksByIDsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rla_proto_msgTypes[63]
+	mi := &file_rla_proto_msgTypes[69]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4503,7 +4754,7 @@ func (x *GetTasksByIDsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetTasksByIDsRequest.ProtoReflect.Descriptor instead.
 func (*GetTasksByIDsRequest) Descriptor() ([]byte, []int) {
-	return file_rla_proto_rawDescGZIP(), []int{63}
+	return file_rla_proto_rawDescGZIP(), []int{69}
 }
 
 func (x *GetTasksByIDsRequest) GetTaskIds() []*UUID {
@@ -4522,7 +4773,7 @@ type GetTasksByIDsResponse struct {
 
 func (x *GetTasksByIDsResponse) Reset() {
 	*x = GetTasksByIDsResponse{}
-	mi := &file_rla_proto_msgTypes[64]
+	mi := &file_rla_proto_msgTypes[70]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4534,7 +4785,7 @@ func (x *GetTasksByIDsResponse) String() string {
 func (*GetTasksByIDsResponse) ProtoMessage() {}
 
 func (x *GetTasksByIDsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_rla_proto_msgTypes[64]
+	mi := &file_rla_proto_msgTypes[70]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4547,7 +4798,7 @@ func (x *GetTasksByIDsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetTasksByIDsResponse.ProtoReflect.Descriptor instead.
 func (*GetTasksByIDsResponse) Descriptor() ([]byte, []int) {
-	return file_rla_proto_rawDescGZIP(), []int{64}
+	return file_rla_proto_rawDescGZIP(), []int{70}
 }
 
 func (x *GetTasksByIDsResponse) GetTasks() []*Task {
@@ -4566,7 +4817,7 @@ type CancelTaskRequest struct {
 
 func (x *CancelTaskRequest) Reset() {
 	*x = CancelTaskRequest{}
-	mi := &file_rla_proto_msgTypes[65]
+	mi := &file_rla_proto_msgTypes[71]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4578,7 +4829,7 @@ func (x *CancelTaskRequest) String() string {
 func (*CancelTaskRequest) ProtoMessage() {}
 
 func (x *CancelTaskRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rla_proto_msgTypes[65]
+	mi := &file_rla_proto_msgTypes[71]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4591,7 +4842,7 @@ func (x *CancelTaskRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelTaskRequest.ProtoReflect.Descriptor instead.
 func (*CancelTaskRequest) Descriptor() ([]byte, []int) {
-	return file_rla_proto_rawDescGZIP(), []int{65}
+	return file_rla_proto_rawDescGZIP(), []int{71}
 }
 
 func (x *CancelTaskRequest) GetTaskId() *UUID {
@@ -4610,7 +4861,7 @@ type CancelTaskResponse struct {
 
 func (x *CancelTaskResponse) Reset() {
 	*x = CancelTaskResponse{}
-	mi := &file_rla_proto_msgTypes[66]
+	mi := &file_rla_proto_msgTypes[72]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4622,7 +4873,7 @@ func (x *CancelTaskResponse) String() string {
 func (*CancelTaskResponse) ProtoMessage() {}
 
 func (x *CancelTaskResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_rla_proto_msgTypes[66]
+	mi := &file_rla_proto_msgTypes[72]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4635,7 +4886,7 @@ func (x *CancelTaskResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelTaskResponse.ProtoReflect.Descriptor instead.
 func (*CancelTaskResponse) Descriptor() ([]byte, []int) {
-	return file_rla_proto_rawDescGZIP(), []int{66}
+	return file_rla_proto_rawDescGZIP(), []int{72}
 }
 
 func (x *CancelTaskResponse) GetTask() *Task {
@@ -4654,7 +4905,7 @@ type VersionRequest struct {
 
 func (x *VersionRequest) Reset() {
 	*x = VersionRequest{}
-	mi := &file_rla_proto_msgTypes[67]
+	mi := &file_rla_proto_msgTypes[73]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4666,7 +4917,7 @@ func (x *VersionRequest) String() string {
 func (*VersionRequest) ProtoMessage() {}
 
 func (x *VersionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rla_proto_msgTypes[67]
+	mi := &file_rla_proto_msgTypes[73]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4679,7 +4930,7 @@ func (x *VersionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VersionRequest.ProtoReflect.Descriptor instead.
 func (*VersionRequest) Descriptor() ([]byte, []int) {
-	return file_rla_proto_rawDescGZIP(), []int{67}
+	return file_rla_proto_rawDescGZIP(), []int{73}
 }
 
 type BuildInfo struct {
@@ -4693,7 +4944,7 @@ type BuildInfo struct {
 
 func (x *BuildInfo) Reset() {
 	*x = BuildInfo{}
-	mi := &file_rla_proto_msgTypes[68]
+	mi := &file_rla_proto_msgTypes[74]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4705,7 +4956,7 @@ func (x *BuildInfo) String() string {
 func (*BuildInfo) ProtoMessage() {}
 
 func (x *BuildInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_rla_proto_msgTypes[68]
+	mi := &file_rla_proto_msgTypes[74]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4718,7 +4969,7 @@ func (x *BuildInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BuildInfo.ProtoReflect.Descriptor instead.
 func (*BuildInfo) Descriptor() ([]byte, []int) {
-	return file_rla_proto_rawDescGZIP(), []int{68}
+	return file_rla_proto_rawDescGZIP(), []int{74}
 }
 
 func (x *BuildInfo) GetVersion() string {
@@ -4759,7 +5010,7 @@ type OperationRule struct {
 
 func (x *OperationRule) Reset() {
 	*x = OperationRule{}
-	mi := &file_rla_proto_msgTypes[69]
+	mi := &file_rla_proto_msgTypes[75]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4771,7 +5022,7 @@ func (x *OperationRule) String() string {
 func (*OperationRule) ProtoMessage() {}
 
 func (x *OperationRule) ProtoReflect() protoreflect.Message {
-	mi := &file_rla_proto_msgTypes[69]
+	mi := &file_rla_proto_msgTypes[75]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4784,7 +5035,7 @@ func (x *OperationRule) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OperationRule.ProtoReflect.Descriptor instead.
 func (*OperationRule) Descriptor() ([]byte, []int) {
-	return file_rla_proto_rawDescGZIP(), []int{69}
+	return file_rla_proto_rawDescGZIP(), []int{75}
 }
 
 func (x *OperationRule) GetId() *UUID {
@@ -4864,7 +5115,7 @@ type CreateOperationRuleRequest struct {
 
 func (x *CreateOperationRuleRequest) Reset() {
 	*x = CreateOperationRuleRequest{}
-	mi := &file_rla_proto_msgTypes[70]
+	mi := &file_rla_proto_msgTypes[76]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4876,7 +5127,7 @@ func (x *CreateOperationRuleRequest) String() string {
 func (*CreateOperationRuleRequest) ProtoMessage() {}
 
 func (x *CreateOperationRuleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rla_proto_msgTypes[70]
+	mi := &file_rla_proto_msgTypes[76]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4889,7 +5140,7 @@ func (x *CreateOperationRuleRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateOperationRuleRequest.ProtoReflect.Descriptor instead.
 func (*CreateOperationRuleRequest) Descriptor() ([]byte, []int) {
-	return file_rla_proto_rawDescGZIP(), []int{70}
+	return file_rla_proto_rawDescGZIP(), []int{76}
 }
 
 func (x *CreateOperationRuleRequest) GetName() string {
@@ -4943,7 +5194,7 @@ type CreateOperationRuleResponse struct {
 
 func (x *CreateOperationRuleResponse) Reset() {
 	*x = CreateOperationRuleResponse{}
-	mi := &file_rla_proto_msgTypes[71]
+	mi := &file_rla_proto_msgTypes[77]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4955,7 +5206,7 @@ func (x *CreateOperationRuleResponse) String() string {
 func (*CreateOperationRuleResponse) ProtoMessage() {}
 
 func (x *CreateOperationRuleResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_rla_proto_msgTypes[71]
+	mi := &file_rla_proto_msgTypes[77]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4968,7 +5219,7 @@ func (x *CreateOperationRuleResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateOperationRuleResponse.ProtoReflect.Descriptor instead.
 func (*CreateOperationRuleResponse) Descriptor() ([]byte, []int) {
-	return file_rla_proto_rawDescGZIP(), []int{71}
+	return file_rla_proto_rawDescGZIP(), []int{77}
 }
 
 func (x *CreateOperationRuleResponse) GetId() *UUID {
@@ -4990,7 +5241,7 @@ type UpdateOperationRuleRequest struct {
 
 func (x *UpdateOperationRuleRequest) Reset() {
 	*x = UpdateOperationRuleRequest{}
-	mi := &file_rla_proto_msgTypes[72]
+	mi := &file_rla_proto_msgTypes[78]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5002,7 +5253,7 @@ func (x *UpdateOperationRuleRequest) String() string {
 func (*UpdateOperationRuleRequest) ProtoMessage() {}
 
 func (x *UpdateOperationRuleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rla_proto_msgTypes[72]
+	mi := &file_rla_proto_msgTypes[78]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5015,7 +5266,7 @@ func (x *UpdateOperationRuleRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateOperationRuleRequest.ProtoReflect.Descriptor instead.
 func (*UpdateOperationRuleRequest) Descriptor() ([]byte, []int) {
-	return file_rla_proto_rawDescGZIP(), []int{72}
+	return file_rla_proto_rawDescGZIP(), []int{78}
 }
 
 func (x *UpdateOperationRuleRequest) GetRuleId() *UUID {
@@ -5055,7 +5306,7 @@ type DeleteOperationRuleRequest struct {
 
 func (x *DeleteOperationRuleRequest) Reset() {
 	*x = DeleteOperationRuleRequest{}
-	mi := &file_rla_proto_msgTypes[73]
+	mi := &file_rla_proto_msgTypes[79]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5067,7 +5318,7 @@ func (x *DeleteOperationRuleRequest) String() string {
 func (*DeleteOperationRuleRequest) ProtoMessage() {}
 
 func (x *DeleteOperationRuleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rla_proto_msgTypes[73]
+	mi := &file_rla_proto_msgTypes[79]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5080,7 +5331,7 @@ func (x *DeleteOperationRuleRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteOperationRuleRequest.ProtoReflect.Descriptor instead.
 func (*DeleteOperationRuleRequest) Descriptor() ([]byte, []int) {
-	return file_rla_proto_rawDescGZIP(), []int{73}
+	return file_rla_proto_rawDescGZIP(), []int{79}
 }
 
 func (x *DeleteOperationRuleRequest) GetRuleId() *UUID {
@@ -5099,7 +5350,7 @@ type SetRuleAsDefaultRequest struct {
 
 func (x *SetRuleAsDefaultRequest) Reset() {
 	*x = SetRuleAsDefaultRequest{}
-	mi := &file_rla_proto_msgTypes[74]
+	mi := &file_rla_proto_msgTypes[80]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5111,7 +5362,7 @@ func (x *SetRuleAsDefaultRequest) String() string {
 func (*SetRuleAsDefaultRequest) ProtoMessage() {}
 
 func (x *SetRuleAsDefaultRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rla_proto_msgTypes[74]
+	mi := &file_rla_proto_msgTypes[80]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5124,7 +5375,7 @@ func (x *SetRuleAsDefaultRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetRuleAsDefaultRequest.ProtoReflect.Descriptor instead.
 func (*SetRuleAsDefaultRequest) Descriptor() ([]byte, []int) {
-	return file_rla_proto_rawDescGZIP(), []int{74}
+	return file_rla_proto_rawDescGZIP(), []int{80}
 }
 
 func (x *SetRuleAsDefaultRequest) GetRuleId() *UUID {
@@ -5143,7 +5394,7 @@ type GetOperationRuleRequest struct {
 
 func (x *GetOperationRuleRequest) Reset() {
 	*x = GetOperationRuleRequest{}
-	mi := &file_rla_proto_msgTypes[75]
+	mi := &file_rla_proto_msgTypes[81]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5155,7 +5406,7 @@ func (x *GetOperationRuleRequest) String() string {
 func (*GetOperationRuleRequest) ProtoMessage() {}
 
 func (x *GetOperationRuleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rla_proto_msgTypes[75]
+	mi := &file_rla_proto_msgTypes[81]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5168,7 +5419,7 @@ func (x *GetOperationRuleRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetOperationRuleRequest.ProtoReflect.Descriptor instead.
 func (*GetOperationRuleRequest) Descriptor() ([]byte, []int) {
-	return file_rla_proto_rawDescGZIP(), []int{75}
+	return file_rla_proto_rawDescGZIP(), []int{81}
 }
 
 func (x *GetOperationRuleRequest) GetRuleId() *UUID {
@@ -5190,7 +5441,7 @@ type ListOperationRulesRequest struct {
 
 func (x *ListOperationRulesRequest) Reset() {
 	*x = ListOperationRulesRequest{}
-	mi := &file_rla_proto_msgTypes[76]
+	mi := &file_rla_proto_msgTypes[82]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5202,7 +5453,7 @@ func (x *ListOperationRulesRequest) String() string {
 func (*ListOperationRulesRequest) ProtoMessage() {}
 
 func (x *ListOperationRulesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rla_proto_msgTypes[76]
+	mi := &file_rla_proto_msgTypes[82]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5215,7 +5466,7 @@ func (x *ListOperationRulesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListOperationRulesRequest.ProtoReflect.Descriptor instead.
 func (*ListOperationRulesRequest) Descriptor() ([]byte, []int) {
-	return file_rla_proto_rawDescGZIP(), []int{76}
+	return file_rla_proto_rawDescGZIP(), []int{82}
 }
 
 func (x *ListOperationRulesRequest) GetOperationType() OperationType {
@@ -5256,7 +5507,7 @@ type ListOperationRulesResponse struct {
 
 func (x *ListOperationRulesResponse) Reset() {
 	*x = ListOperationRulesResponse{}
-	mi := &file_rla_proto_msgTypes[77]
+	mi := &file_rla_proto_msgTypes[83]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5268,7 +5519,7 @@ func (x *ListOperationRulesResponse) String() string {
 func (*ListOperationRulesResponse) ProtoMessage() {}
 
 func (x *ListOperationRulesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_rla_proto_msgTypes[77]
+	mi := &file_rla_proto_msgTypes[83]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5281,7 +5532,7 @@ func (x *ListOperationRulesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListOperationRulesResponse.ProtoReflect.Descriptor instead.
 func (*ListOperationRulesResponse) Descriptor() ([]byte, []int) {
-	return file_rla_proto_rawDescGZIP(), []int{77}
+	return file_rla_proto_rawDescGZIP(), []int{83}
 }
 
 func (x *ListOperationRulesResponse) GetRules() []*OperationRule {
@@ -5308,7 +5559,7 @@ type AssociateRuleWithRackRequest struct {
 
 func (x *AssociateRuleWithRackRequest) Reset() {
 	*x = AssociateRuleWithRackRequest{}
-	mi := &file_rla_proto_msgTypes[78]
+	mi := &file_rla_proto_msgTypes[84]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5320,7 +5571,7 @@ func (x *AssociateRuleWithRackRequest) String() string {
 func (*AssociateRuleWithRackRequest) ProtoMessage() {}
 
 func (x *AssociateRuleWithRackRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rla_proto_msgTypes[78]
+	mi := &file_rla_proto_msgTypes[84]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5333,7 +5584,7 @@ func (x *AssociateRuleWithRackRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AssociateRuleWithRackRequest.ProtoReflect.Descriptor instead.
 func (*AssociateRuleWithRackRequest) Descriptor() ([]byte, []int) {
-	return file_rla_proto_rawDescGZIP(), []int{78}
+	return file_rla_proto_rawDescGZIP(), []int{84}
 }
 
 func (x *AssociateRuleWithRackRequest) GetRackId() *UUID {
@@ -5361,7 +5612,7 @@ type DisassociateRuleFromRackRequest struct {
 
 func (x *DisassociateRuleFromRackRequest) Reset() {
 	*x = DisassociateRuleFromRackRequest{}
-	mi := &file_rla_proto_msgTypes[79]
+	mi := &file_rla_proto_msgTypes[85]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5373,7 +5624,7 @@ func (x *DisassociateRuleFromRackRequest) String() string {
 func (*DisassociateRuleFromRackRequest) ProtoMessage() {}
 
 func (x *DisassociateRuleFromRackRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rla_proto_msgTypes[79]
+	mi := &file_rla_proto_msgTypes[85]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5386,7 +5637,7 @@ func (x *DisassociateRuleFromRackRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DisassociateRuleFromRackRequest.ProtoReflect.Descriptor instead.
 func (*DisassociateRuleFromRackRequest) Descriptor() ([]byte, []int) {
-	return file_rla_proto_rawDescGZIP(), []int{79}
+	return file_rla_proto_rawDescGZIP(), []int{85}
 }
 
 func (x *DisassociateRuleFromRackRequest) GetRackId() *UUID {
@@ -5421,7 +5672,7 @@ type GetRackRuleAssociationRequest struct {
 
 func (x *GetRackRuleAssociationRequest) Reset() {
 	*x = GetRackRuleAssociationRequest{}
-	mi := &file_rla_proto_msgTypes[80]
+	mi := &file_rla_proto_msgTypes[86]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5433,7 +5684,7 @@ func (x *GetRackRuleAssociationRequest) String() string {
 func (*GetRackRuleAssociationRequest) ProtoMessage() {}
 
 func (x *GetRackRuleAssociationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rla_proto_msgTypes[80]
+	mi := &file_rla_proto_msgTypes[86]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5446,7 +5697,7 @@ func (x *GetRackRuleAssociationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetRackRuleAssociationRequest.ProtoReflect.Descriptor instead.
 func (*GetRackRuleAssociationRequest) Descriptor() ([]byte, []int) {
-	return file_rla_proto_rawDescGZIP(), []int{80}
+	return file_rla_proto_rawDescGZIP(), []int{86}
 }
 
 func (x *GetRackRuleAssociationRequest) GetRackId() *UUID {
@@ -5479,7 +5730,7 @@ type GetRackRuleAssociationResponse struct {
 
 func (x *GetRackRuleAssociationResponse) Reset() {
 	*x = GetRackRuleAssociationResponse{}
-	mi := &file_rla_proto_msgTypes[81]
+	mi := &file_rla_proto_msgTypes[87]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5491,7 +5742,7 @@ func (x *GetRackRuleAssociationResponse) String() string {
 func (*GetRackRuleAssociationResponse) ProtoMessage() {}
 
 func (x *GetRackRuleAssociationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_rla_proto_msgTypes[81]
+	mi := &file_rla_proto_msgTypes[87]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5504,7 +5755,7 @@ func (x *GetRackRuleAssociationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetRackRuleAssociationResponse.ProtoReflect.Descriptor instead.
 func (*GetRackRuleAssociationResponse) Descriptor() ([]byte, []int) {
-	return file_rla_proto_rawDescGZIP(), []int{81}
+	return file_rla_proto_rawDescGZIP(), []int{87}
 }
 
 func (x *GetRackRuleAssociationResponse) GetRuleId() *UUID {
@@ -5523,7 +5774,7 @@ type ListRackRuleAssociationsRequest struct {
 
 func (x *ListRackRuleAssociationsRequest) Reset() {
 	*x = ListRackRuleAssociationsRequest{}
-	mi := &file_rla_proto_msgTypes[82]
+	mi := &file_rla_proto_msgTypes[88]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5535,7 +5786,7 @@ func (x *ListRackRuleAssociationsRequest) String() string {
 func (*ListRackRuleAssociationsRequest) ProtoMessage() {}
 
 func (x *ListRackRuleAssociationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rla_proto_msgTypes[82]
+	mi := &file_rla_proto_msgTypes[88]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5548,7 +5799,7 @@ func (x *ListRackRuleAssociationsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRackRuleAssociationsRequest.ProtoReflect.Descriptor instead.
 func (*ListRackRuleAssociationsRequest) Descriptor() ([]byte, []int) {
-	return file_rla_proto_rawDescGZIP(), []int{82}
+	return file_rla_proto_rawDescGZIP(), []int{88}
 }
 
 func (x *ListRackRuleAssociationsRequest) GetRackId() *UUID {
@@ -5572,7 +5823,7 @@ type RackRuleAssociation struct {
 
 func (x *RackRuleAssociation) Reset() {
 	*x = RackRuleAssociation{}
-	mi := &file_rla_proto_msgTypes[83]
+	mi := &file_rla_proto_msgTypes[89]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5584,7 +5835,7 @@ func (x *RackRuleAssociation) String() string {
 func (*RackRuleAssociation) ProtoMessage() {}
 
 func (x *RackRuleAssociation) ProtoReflect() protoreflect.Message {
-	mi := &file_rla_proto_msgTypes[83]
+	mi := &file_rla_proto_msgTypes[89]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5597,7 +5848,7 @@ func (x *RackRuleAssociation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RackRuleAssociation.ProtoReflect.Descriptor instead.
 func (*RackRuleAssociation) Descriptor() ([]byte, []int) {
-	return file_rla_proto_rawDescGZIP(), []int{83}
+	return file_rla_proto_rawDescGZIP(), []int{89}
 }
 
 func (x *RackRuleAssociation) GetRackId() *UUID {
@@ -5651,7 +5902,7 @@ type ListRackRuleAssociationsResponse struct {
 
 func (x *ListRackRuleAssociationsResponse) Reset() {
 	*x = ListRackRuleAssociationsResponse{}
-	mi := &file_rla_proto_msgTypes[84]
+	mi := &file_rla_proto_msgTypes[90]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5663,7 +5914,7 @@ func (x *ListRackRuleAssociationsResponse) String() string {
 func (*ListRackRuleAssociationsResponse) ProtoMessage() {}
 
 func (x *ListRackRuleAssociationsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_rla_proto_msgTypes[84]
+	mi := &file_rla_proto_msgTypes[90]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5676,7 +5927,7 @@ func (x *ListRackRuleAssociationsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRackRuleAssociationsResponse.ProtoReflect.Descriptor instead.
 func (*ListRackRuleAssociationsResponse) Descriptor() ([]byte, []int) {
-	return file_rla_proto_rawDescGZIP(), []int{84}
+	return file_rla_proto_rawDescGZIP(), []int{90}
 }
 
 func (x *ListRackRuleAssociationsResponse) GetAssociations() []*RackRuleAssociation {
@@ -5954,13 +6205,23 @@ const file_rla_proto_rawDesc = "" +
 	"\tcomponent\x18\x01 \x01(\v2\r.v1.ComponentR\tcomponent\"2\n" +
 	"\x16DeleteComponentRequest\x12\x18\n" +
 	"\x02id\x18\x01 \x01(\v2\b.v1.UUIDR\x02id\"\x19\n" +
-	"\x17DeleteComponentResponse\"\xa1\x02\n" +
+	"\x17DeleteComponentResponse\"-\n" +
+	"\x11DeleteRackRequest\x12\x18\n" +
+	"\x02id\x18\x01 \x01(\v2\b.v1.UUIDR\x02id\"\x14\n" +
+	"\x12DeleteRackResponse\",\n" +
+	"\x10PurgeRackRequest\x12\x18\n" +
+	"\x02id\x18\x01 \x01(\v2\b.v1.UUIDR\x02id\"\x13\n" +
+	"\x11PurgeRackResponse\"1\n" +
+	"\x15PurgeComponentRequest\x12\x18\n" +
+	"\x02id\x18\x01 \x01(\v2\b.v1.UUIDR\x02id\"\x18\n" +
+	"\x16PurgeComponentResponse\"\xc2\x02\n" +
 	"\x15PatchComponentRequest\x12\x18\n" +
 	"\x02id\x18\x01 \x01(\v2\b.v1.UUIDR\x02id\x12.\n" +
 	"\x10firmware_version\x18\x02 \x01(\tH\x00R\x0ffirmwareVersion\x88\x01\x01\x121\n" +
 	"\bposition\x18\x03 \x01(\v2\x10.v1.RackPositionH\x01R\bposition\x88\x01\x01\x12%\n" +
 	"\vdescription\x18\x04 \x01(\tH\x02R\vdescription\x88\x01\x01\x12&\n" +
-	"\arack_id\x18\x05 \x01(\v2\b.v1.UUIDH\x03R\x06rackId\x88\x01\x01B\x13\n" +
+	"\arack_id\x18\x05 \x01(\v2\b.v1.UUIDH\x03R\x06rackId\x88\x01\x01\x12\x1f\n" +
+	"\x04bmcs\x18\x06 \x03(\v2\v.v1.BMCInfoR\x04bmcsB\x13\n" +
 	"\x11_firmware_versionB\v\n" +
 	"\t_positionB\x0e\n" +
 	"\f_descriptionB\n" +
@@ -6176,33 +6437,37 @@ const file_rla_proto_rawDesc = "" +
 	"\rOperationType\x12\x1a\n" +
 	"\x16OPERATION_TYPE_UNKNOWN\x10\x00\x12 \n" +
 	"\x1cOPERATION_TYPE_POWER_CONTROL\x10\x01\x12#\n" +
-	"\x1fOPERATION_TYPE_FIRMWARE_CONTROL\x10\x022\x8a\x16\n" +
+	"\x1fOPERATION_TYPE_FIRMWARE_CONTROL\x10\x022\xca\x17\n" +
 	"\x03RLA\x12,\n" +
 	"\aVersion\x12\x12.v1.VersionRequest\x1a\r.v1.BuildInfo\x12S\n" +
-	"\x12CreateExpectedRack\x12\x1d.v1.CreateExpectedRackRequest\x1a\x1e.v1.CreateExpectedRackResponse\x128\n" +
-	"\tPatchRack\x12\x14.v1.PatchRackRequest\x1a\x15.v1.PatchRackResponse\x12F\n" +
+	"\x12CreateExpectedRack\x12\x1d.v1.CreateExpectedRackRequest\x1a\x1e.v1.CreateExpectedRackResponse\x12F\n" +
 	"\x0fGetRackInfoByID\x12\x1a.v1.GetRackInfoByIDRequest\x1a\x17.v1.GetRackInfoResponse\x12N\n" +
-	"\x13GetRackInfoBySerial\x12\x1e.v1.GetRackInfoBySerialRequest\x1a\x17.v1.GetRackInfoResponse\x12U\n" +
-	"\x14GetComponentInfoByID\x12\x1f.v1.GetComponentInfoByIDRequest\x1a\x1c.v1.GetComponentInfoResponse\x12]\n" +
-	"\x18GetComponentInfoBySerial\x12#.v1.GetComponentInfoBySerialRequest\x1a\x1c.v1.GetComponentInfoResponse\x12G\n" +
-	"\x0eGetListOfRacks\x12\x19.v1.GetListOfRacksRequest\x1a\x1a.v1.GetListOfRacksResponse\x12J\n" +
-	"\x0fCreateNVLDomain\x12\x1a.v1.CreateNVLDomainRequest\x1a\x1b.v1.CreateNVLDomainResponse\x12S\n" +
-	"\x16AttachRacksToNVLDomain\x12!.v1.AttachRacksToNVLDomainRequest\x1a\x16.google.protobuf.Empty\x12W\n" +
-	"\x18DetachRacksFromNVLDomain\x12#.v1.DetachRacksFromNVLDomainRequest\x1a\x16.google.protobuf.Empty\x12V\n" +
-	"\x13GetListOfNVLDomains\x12\x1e.v1.GetListOfNVLDomainsRequest\x1a\x1f.v1.GetListOfNVLDomainsResponse\x12Y\n" +
-	"\x14GetRacksForNVLDomain\x12\x1f.v1.GetRacksForNVLDomainRequest\x1a .v1.GetRacksForNVLDomainResponse\x12E\n" +
+	"\x13GetRackInfoBySerial\x12\x1e.v1.GetRackInfoBySerialRequest\x1a\x17.v1.GetRackInfoResponse\x12G\n" +
+	"\x0eGetListOfRacks\x12\x19.v1.GetListOfRacksRequest\x1a\x1a.v1.GetListOfRacksResponse\x128\n" +
+	"\tPatchRack\x12\x14.v1.PatchRackRequest\x1a\x15.v1.PatchRackResponse\x12;\n" +
+	"\n" +
+	"DeleteRack\x12\x15.v1.DeleteRackRequest\x1a\x16.v1.DeleteRackResponse\x128\n" +
+	"\tPurgeRack\x12\x14.v1.PurgeRackRequest\x1a\x15.v1.PurgeRackResponse\x12E\n" +
 	"\x0fUpgradeFirmware\x12\x1a.v1.UpgradeFirmwareRequest\x1a\x16.v1.SubmitTaskResponse\x12=\n" +
 	"\vBringUpRack\x12\x16.v1.BringUpRackRequest\x1a\x16.v1.SubmitTaskResponse\x12;\n" +
 	"\n" +
-	"IngestRack\x12\x15.v1.IngestRackRequest\x1a\x16.v1.SubmitTaskResponse\x12D\n" +
+	"IngestRack\x12\x15.v1.IngestRackRequest\x1a\x16.v1.SubmitTaskResponse\x12=\n" +
+	"\vPowerOnRack\x12\x16.v1.PowerOnRackRequest\x1a\x16.v1.SubmitTaskResponse\x12?\n" +
+	"\fPowerOffRack\x12\x17.v1.PowerOffRackRequest\x1a\x16.v1.SubmitTaskResponse\x12C\n" +
+	"\x0ePowerResetRack\x12\x19.v1.PowerResetRackRequest\x1a\x16.v1.SubmitTaskResponse\x12U\n" +
+	"\x14GetComponentInfoByID\x12\x1f.v1.GetComponentInfoByIDRequest\x1a\x1c.v1.GetComponentInfoResponse\x12]\n" +
+	"\x18GetComponentInfoBySerial\x12#.v1.GetComponentInfoBySerialRequest\x1a\x1c.v1.GetComponentInfoResponse\x12D\n" +
 	"\rGetComponents\x12\x18.v1.GetComponentsRequest\x1a\x19.v1.GetComponentsResponse\x12S\n" +
 	"\x12ValidateComponents\x12\x1d.v1.ValidateComponentsRequest\x1a\x1e.v1.ValidateComponentsResponse\x12A\n" +
 	"\fAddComponent\x12\x17.v1.AddComponentRequest\x1a\x18.v1.AddComponentResponse\x12G\n" +
 	"\x0ePatchComponent\x12\x19.v1.PatchComponentRequest\x1a\x1a.v1.PatchComponentResponse\x12J\n" +
-	"\x0fDeleteComponent\x12\x1a.v1.DeleteComponentRequest\x1a\x1b.v1.DeleteComponentResponse\x12=\n" +
-	"\vPowerOnRack\x12\x16.v1.PowerOnRackRequest\x1a\x16.v1.SubmitTaskResponse\x12?\n" +
-	"\fPowerOffRack\x12\x17.v1.PowerOffRackRequest\x1a\x16.v1.SubmitTaskResponse\x12C\n" +
-	"\x0ePowerResetRack\x12\x19.v1.PowerResetRackRequest\x1a\x16.v1.SubmitTaskResponse\x128\n" +
+	"\x0fDeleteComponent\x12\x1a.v1.DeleteComponentRequest\x1a\x1b.v1.DeleteComponentResponse\x12G\n" +
+	"\x0ePurgeComponent\x12\x19.v1.PurgeComponentRequest\x1a\x1a.v1.PurgeComponentResponse\x12J\n" +
+	"\x0fCreateNVLDomain\x12\x1a.v1.CreateNVLDomainRequest\x1a\x1b.v1.CreateNVLDomainResponse\x12S\n" +
+	"\x16AttachRacksToNVLDomain\x12!.v1.AttachRacksToNVLDomainRequest\x1a\x16.google.protobuf.Empty\x12W\n" +
+	"\x18DetachRacksFromNVLDomain\x12#.v1.DetachRacksFromNVLDomainRequest\x1a\x16.google.protobuf.Empty\x12V\n" +
+	"\x13GetListOfNVLDomains\x12\x1e.v1.GetListOfNVLDomainsRequest\x1a\x1f.v1.GetListOfNVLDomainsResponse\x12Y\n" +
+	"\x14GetRacksForNVLDomain\x12\x1f.v1.GetRacksForNVLDomainRequest\x1a .v1.GetRacksForNVLDomainResponse\x128\n" +
 	"\tListTasks\x12\x14.v1.ListTasksRequest\x1a\x15.v1.ListTasksResponse\x12D\n" +
 	"\rGetTasksByIDs\x12\x18.v1.GetTasksByIDsRequest\x1a\x19.v1.GetTasksByIDsResponse\x12;\n" +
 	"\n" +
@@ -6231,7 +6496,7 @@ func file_rla_proto_rawDescGZIP() []byte {
 }
 
 var file_rla_proto_enumTypes = make([]protoimpl.EnumInfo, 12)
-var file_rla_proto_msgTypes = make([]protoimpl.MessageInfo, 85)
+var file_rla_proto_msgTypes = make([]protoimpl.MessageInfo, 91)
 var file_rla_proto_goTypes = []any{
 	(BMCType)(0),                             // 0: v1.BMCType
 	(ComponentType)(0),                       // 1: v1.ComponentType
@@ -6297,41 +6562,47 @@ var file_rla_proto_goTypes = []any{
 	(*AddComponentResponse)(nil),             // 61: v1.AddComponentResponse
 	(*DeleteComponentRequest)(nil),           // 62: v1.DeleteComponentRequest
 	(*DeleteComponentResponse)(nil),          // 63: v1.DeleteComponentResponse
-	(*PatchComponentRequest)(nil),            // 64: v1.PatchComponentRequest
-	(*PatchComponentResponse)(nil),           // 65: v1.PatchComponentResponse
-	(*SubmitTaskResponse)(nil),               // 66: v1.SubmitTaskResponse
-	(*QueueOptions)(nil),                     // 67: v1.QueueOptions
-	(*PowerOnRackRequest)(nil),               // 68: v1.PowerOnRackRequest
-	(*PowerOffRackRequest)(nil),              // 69: v1.PowerOffRackRequest
-	(*PowerResetRackRequest)(nil),            // 70: v1.PowerResetRackRequest
-	(*BringUpRackRequest)(nil),               // 71: v1.BringUpRackRequest
-	(*IngestRackRequest)(nil),                // 72: v1.IngestRackRequest
-	(*ListTasksRequest)(nil),                 // 73: v1.ListTasksRequest
-	(*ListTasksResponse)(nil),                // 74: v1.ListTasksResponse
-	(*GetTasksByIDsRequest)(nil),             // 75: v1.GetTasksByIDsRequest
-	(*GetTasksByIDsResponse)(nil),            // 76: v1.GetTasksByIDsResponse
-	(*CancelTaskRequest)(nil),                // 77: v1.CancelTaskRequest
-	(*CancelTaskResponse)(nil),               // 78: v1.CancelTaskResponse
-	(*VersionRequest)(nil),                   // 79: v1.VersionRequest
-	(*BuildInfo)(nil),                        // 80: v1.BuildInfo
-	(*OperationRule)(nil),                    // 81: v1.OperationRule
-	(*CreateOperationRuleRequest)(nil),       // 82: v1.CreateOperationRuleRequest
-	(*CreateOperationRuleResponse)(nil),      // 83: v1.CreateOperationRuleResponse
-	(*UpdateOperationRuleRequest)(nil),       // 84: v1.UpdateOperationRuleRequest
-	(*DeleteOperationRuleRequest)(nil),       // 85: v1.DeleteOperationRuleRequest
-	(*SetRuleAsDefaultRequest)(nil),          // 86: v1.SetRuleAsDefaultRequest
-	(*GetOperationRuleRequest)(nil),          // 87: v1.GetOperationRuleRequest
-	(*ListOperationRulesRequest)(nil),        // 88: v1.ListOperationRulesRequest
-	(*ListOperationRulesResponse)(nil),       // 89: v1.ListOperationRulesResponse
-	(*AssociateRuleWithRackRequest)(nil),     // 90: v1.AssociateRuleWithRackRequest
-	(*DisassociateRuleFromRackRequest)(nil),  // 91: v1.DisassociateRuleFromRackRequest
-	(*GetRackRuleAssociationRequest)(nil),    // 92: v1.GetRackRuleAssociationRequest
-	(*GetRackRuleAssociationResponse)(nil),   // 93: v1.GetRackRuleAssociationResponse
-	(*ListRackRuleAssociationsRequest)(nil),  // 94: v1.ListRackRuleAssociationsRequest
-	(*RackRuleAssociation)(nil),              // 95: v1.RackRuleAssociation
-	(*ListRackRuleAssociationsResponse)(nil), // 96: v1.ListRackRuleAssociationsResponse
-	(*timestamppb.Timestamp)(nil),            // 97: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),                    // 98: google.protobuf.Empty
+	(*DeleteRackRequest)(nil),                // 64: v1.DeleteRackRequest
+	(*DeleteRackResponse)(nil),               // 65: v1.DeleteRackResponse
+	(*PurgeRackRequest)(nil),                 // 66: v1.PurgeRackRequest
+	(*PurgeRackResponse)(nil),                // 67: v1.PurgeRackResponse
+	(*PurgeComponentRequest)(nil),            // 68: v1.PurgeComponentRequest
+	(*PurgeComponentResponse)(nil),           // 69: v1.PurgeComponentResponse
+	(*PatchComponentRequest)(nil),            // 70: v1.PatchComponentRequest
+	(*PatchComponentResponse)(nil),           // 71: v1.PatchComponentResponse
+	(*SubmitTaskResponse)(nil),               // 72: v1.SubmitTaskResponse
+	(*QueueOptions)(nil),                     // 73: v1.QueueOptions
+	(*PowerOnRackRequest)(nil),               // 74: v1.PowerOnRackRequest
+	(*PowerOffRackRequest)(nil),              // 75: v1.PowerOffRackRequest
+	(*PowerResetRackRequest)(nil),            // 76: v1.PowerResetRackRequest
+	(*BringUpRackRequest)(nil),               // 77: v1.BringUpRackRequest
+	(*IngestRackRequest)(nil),                // 78: v1.IngestRackRequest
+	(*ListTasksRequest)(nil),                 // 79: v1.ListTasksRequest
+	(*ListTasksResponse)(nil),                // 80: v1.ListTasksResponse
+	(*GetTasksByIDsRequest)(nil),             // 81: v1.GetTasksByIDsRequest
+	(*GetTasksByIDsResponse)(nil),            // 82: v1.GetTasksByIDsResponse
+	(*CancelTaskRequest)(nil),                // 83: v1.CancelTaskRequest
+	(*CancelTaskResponse)(nil),               // 84: v1.CancelTaskResponse
+	(*VersionRequest)(nil),                   // 85: v1.VersionRequest
+	(*BuildInfo)(nil),                        // 86: v1.BuildInfo
+	(*OperationRule)(nil),                    // 87: v1.OperationRule
+	(*CreateOperationRuleRequest)(nil),       // 88: v1.CreateOperationRuleRequest
+	(*CreateOperationRuleResponse)(nil),      // 89: v1.CreateOperationRuleResponse
+	(*UpdateOperationRuleRequest)(nil),       // 90: v1.UpdateOperationRuleRequest
+	(*DeleteOperationRuleRequest)(nil),       // 91: v1.DeleteOperationRuleRequest
+	(*SetRuleAsDefaultRequest)(nil),          // 92: v1.SetRuleAsDefaultRequest
+	(*GetOperationRuleRequest)(nil),          // 93: v1.GetOperationRuleRequest
+	(*ListOperationRulesRequest)(nil),        // 94: v1.ListOperationRulesRequest
+	(*ListOperationRulesResponse)(nil),       // 95: v1.ListOperationRulesResponse
+	(*AssociateRuleWithRackRequest)(nil),     // 96: v1.AssociateRuleWithRackRequest
+	(*DisassociateRuleFromRackRequest)(nil),  // 97: v1.DisassociateRuleFromRackRequest
+	(*GetRackRuleAssociationRequest)(nil),    // 98: v1.GetRackRuleAssociationRequest
+	(*GetRackRuleAssociationResponse)(nil),   // 99: v1.GetRackRuleAssociationResponse
+	(*ListRackRuleAssociationsRequest)(nil),  // 100: v1.ListRackRuleAssociationsRequest
+	(*RackRuleAssociation)(nil),              // 101: v1.RackRuleAssociation
+	(*ListRackRuleAssociationsResponse)(nil), // 102: v1.ListRackRuleAssociationsResponse
+	(*timestamppb.Timestamp)(nil),            // 103: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),                    // 104: google.protobuf.Empty
 }
 var file_rla_proto_depIdxs = []int32{
 	12,  // 0: v1.DeviceInfo.id:type_name -> v1.UUID
@@ -6365,12 +6636,12 @@ var file_rla_proto_depIdxs = []int32{
 	12,  // 28: v1.Task.component_uuids:type_name -> v1.UUID
 	8,   // 29: v1.Task.executor_type:type_name -> v1.TaskExecutorType
 	7,   // 30: v1.Task.status:type_name -> v1.TaskStatus
-	97,  // 31: v1.Task.queue_expires_at:type_name -> google.protobuf.Timestamp
-	97,  // 32: v1.Task.created_at:type_name -> google.protobuf.Timestamp
-	97,  // 33: v1.Task.finished_at:type_name -> google.protobuf.Timestamp
+	103, // 31: v1.Task.queue_expires_at:type_name -> google.protobuf.Timestamp
+	103, // 32: v1.Task.created_at:type_name -> google.protobuf.Timestamp
+	103, // 33: v1.Task.finished_at:type_name -> google.protobuf.Timestamp
 	12,  // 34: v1.Task.applied_rule_id:type_name -> v1.UUID
-	97,  // 35: v1.Task.updated_at:type_name -> google.protobuf.Timestamp
-	97,  // 36: v1.Task.started_at:type_name -> google.protobuf.Timestamp
+	103, // 35: v1.Task.updated_at:type_name -> google.protobuf.Timestamp
+	103, // 36: v1.Task.started_at:type_name -> google.protobuf.Timestamp
 	19,  // 37: v1.CreateExpectedRackRequest.rack:type_name -> v1.Rack
 	12,  // 38: v1.CreateExpectedRackResponse.id:type_name -> v1.UUID
 	12,  // 39: v1.GetRackInfoByIDRequest.id:type_name -> v1.UUID
@@ -6396,9 +6667,9 @@ var file_rla_proto_depIdxs = []int32{
 	20,  // 59: v1.GetRacksForNVLDomainRequest.nvl_domain_identifier:type_name -> v1.Identifier
 	19,  // 60: v1.GetRacksForNVLDomainResponse.racks:type_name -> v1.Rack
 	21,  // 61: v1.UpgradeFirmwareRequest.target_spec:type_name -> v1.OperationTargetSpec
-	97,  // 62: v1.UpgradeFirmwareRequest.start_time:type_name -> google.protobuf.Timestamp
-	97,  // 63: v1.UpgradeFirmwareRequest.end_time:type_name -> google.protobuf.Timestamp
-	67,  // 64: v1.UpgradeFirmwareRequest.queue_options:type_name -> v1.QueueOptions
+	103, // 62: v1.UpgradeFirmwareRequest.start_time:type_name -> google.protobuf.Timestamp
+	103, // 63: v1.UpgradeFirmwareRequest.end_time:type_name -> google.protobuf.Timestamp
+	73,  // 64: v1.UpgradeFirmwareRequest.queue_options:type_name -> v1.QueueOptions
 	21,  // 65: v1.GetComponentsRequest.target_spec:type_name -> v1.OperationTargetSpec
 	30,  // 66: v1.GetComponentsRequest.filters:type_name -> v1.Filter
 	28,  // 67: v1.GetComponentsRequest.pagination:type_name -> v1.Pagination
@@ -6416,133 +6687,143 @@ var file_rla_proto_depIdxs = []int32{
 	18,  // 79: v1.AddComponentRequest.component:type_name -> v1.Component
 	18,  // 80: v1.AddComponentResponse.component:type_name -> v1.Component
 	12,  // 81: v1.DeleteComponentRequest.id:type_name -> v1.UUID
-	12,  // 82: v1.PatchComponentRequest.id:type_name -> v1.UUID
-	17,  // 83: v1.PatchComponentRequest.position:type_name -> v1.RackPosition
-	12,  // 84: v1.PatchComponentRequest.rack_id:type_name -> v1.UUID
-	18,  // 85: v1.PatchComponentResponse.component:type_name -> v1.Component
-	12,  // 86: v1.SubmitTaskResponse.task_ids:type_name -> v1.UUID
-	10,  // 87: v1.QueueOptions.conflict_strategy:type_name -> v1.ConflictStrategy
-	21,  // 88: v1.PowerOnRackRequest.target_spec:type_name -> v1.OperationTargetSpec
-	67,  // 89: v1.PowerOnRackRequest.queue_options:type_name -> v1.QueueOptions
-	21,  // 90: v1.PowerOffRackRequest.target_spec:type_name -> v1.OperationTargetSpec
-	67,  // 91: v1.PowerOffRackRequest.queue_options:type_name -> v1.QueueOptions
-	21,  // 92: v1.PowerResetRackRequest.target_spec:type_name -> v1.OperationTargetSpec
-	67,  // 93: v1.PowerResetRackRequest.queue_options:type_name -> v1.QueueOptions
-	21,  // 94: v1.BringUpRackRequest.target_spec:type_name -> v1.OperationTargetSpec
-	21,  // 95: v1.IngestRackRequest.target_spec:type_name -> v1.OperationTargetSpec
-	30,  // 96: v1.IngestRackRequest.filters:type_name -> v1.Filter
-	12,  // 97: v1.ListTasksRequest.rack_id:type_name -> v1.UUID
-	28,  // 98: v1.ListTasksRequest.pagination:type_name -> v1.Pagination
-	32,  // 99: v1.ListTasksResponse.tasks:type_name -> v1.Task
-	12,  // 100: v1.GetTasksByIDsRequest.task_ids:type_name -> v1.UUID
-	32,  // 101: v1.GetTasksByIDsResponse.tasks:type_name -> v1.Task
-	12,  // 102: v1.CancelTaskRequest.task_id:type_name -> v1.UUID
-	32,  // 103: v1.CancelTaskResponse.task:type_name -> v1.Task
-	12,  // 104: v1.OperationRule.id:type_name -> v1.UUID
-	11,  // 105: v1.OperationRule.operation_type:type_name -> v1.OperationType
-	97,  // 106: v1.OperationRule.created_at:type_name -> google.protobuf.Timestamp
-	97,  // 107: v1.OperationRule.updated_at:type_name -> google.protobuf.Timestamp
-	11,  // 108: v1.CreateOperationRuleRequest.operation_type:type_name -> v1.OperationType
-	12,  // 109: v1.CreateOperationRuleResponse.id:type_name -> v1.UUID
-	12,  // 110: v1.UpdateOperationRuleRequest.rule_id:type_name -> v1.UUID
-	12,  // 111: v1.DeleteOperationRuleRequest.rule_id:type_name -> v1.UUID
-	12,  // 112: v1.SetRuleAsDefaultRequest.rule_id:type_name -> v1.UUID
-	12,  // 113: v1.GetOperationRuleRequest.rule_id:type_name -> v1.UUID
-	11,  // 114: v1.ListOperationRulesRequest.operation_type:type_name -> v1.OperationType
-	81,  // 115: v1.ListOperationRulesResponse.rules:type_name -> v1.OperationRule
-	12,  // 116: v1.AssociateRuleWithRackRequest.rack_id:type_name -> v1.UUID
-	12,  // 117: v1.AssociateRuleWithRackRequest.rule_id:type_name -> v1.UUID
-	12,  // 118: v1.DisassociateRuleFromRackRequest.rack_id:type_name -> v1.UUID
-	11,  // 119: v1.DisassociateRuleFromRackRequest.operation_type:type_name -> v1.OperationType
-	12,  // 120: v1.GetRackRuleAssociationRequest.rack_id:type_name -> v1.UUID
-	11,  // 121: v1.GetRackRuleAssociationRequest.operation_type:type_name -> v1.OperationType
-	12,  // 122: v1.GetRackRuleAssociationResponse.rule_id:type_name -> v1.UUID
-	12,  // 123: v1.ListRackRuleAssociationsRequest.rack_id:type_name -> v1.UUID
-	12,  // 124: v1.RackRuleAssociation.rack_id:type_name -> v1.UUID
-	11,  // 125: v1.RackRuleAssociation.operation_type:type_name -> v1.OperationType
-	12,  // 126: v1.RackRuleAssociation.rule_id:type_name -> v1.UUID
-	97,  // 127: v1.RackRuleAssociation.created_at:type_name -> google.protobuf.Timestamp
-	97,  // 128: v1.RackRuleAssociation.updated_at:type_name -> google.protobuf.Timestamp
-	95,  // 129: v1.ListRackRuleAssociationsResponse.associations:type_name -> v1.RackRuleAssociation
-	79,  // 130: v1.RLA.Version:input_type -> v1.VersionRequest
-	33,  // 131: v1.RLA.CreateExpectedRack:input_type -> v1.CreateExpectedRackRequest
-	38,  // 132: v1.RLA.PatchRack:input_type -> v1.PatchRackRequest
-	35,  // 133: v1.RLA.GetRackInfoByID:input_type -> v1.GetRackInfoByIDRequest
-	36,  // 134: v1.RLA.GetRackInfoBySerial:input_type -> v1.GetRackInfoBySerialRequest
-	40,  // 135: v1.RLA.GetComponentInfoByID:input_type -> v1.GetComponentInfoByIDRequest
-	41,  // 136: v1.RLA.GetComponentInfoBySerial:input_type -> v1.GetComponentInfoBySerialRequest
-	43,  // 137: v1.RLA.GetListOfRacks:input_type -> v1.GetListOfRacksRequest
-	45,  // 138: v1.RLA.CreateNVLDomain:input_type -> v1.CreateNVLDomainRequest
-	47,  // 139: v1.RLA.AttachRacksToNVLDomain:input_type -> v1.AttachRacksToNVLDomainRequest
-	48,  // 140: v1.RLA.DetachRacksFromNVLDomain:input_type -> v1.DetachRacksFromNVLDomainRequest
-	49,  // 141: v1.RLA.GetListOfNVLDomains:input_type -> v1.GetListOfNVLDomainsRequest
-	51,  // 142: v1.RLA.GetRacksForNVLDomain:input_type -> v1.GetRacksForNVLDomainRequest
-	53,  // 143: v1.RLA.UpgradeFirmware:input_type -> v1.UpgradeFirmwareRequest
-	71,  // 144: v1.RLA.BringUpRack:input_type -> v1.BringUpRackRequest
-	72,  // 145: v1.RLA.IngestRack:input_type -> v1.IngestRackRequest
-	54,  // 146: v1.RLA.GetComponents:input_type -> v1.GetComponentsRequest
-	56,  // 147: v1.RLA.ValidateComponents:input_type -> v1.ValidateComponentsRequest
-	60,  // 148: v1.RLA.AddComponent:input_type -> v1.AddComponentRequest
-	64,  // 149: v1.RLA.PatchComponent:input_type -> v1.PatchComponentRequest
-	62,  // 150: v1.RLA.DeleteComponent:input_type -> v1.DeleteComponentRequest
-	68,  // 151: v1.RLA.PowerOnRack:input_type -> v1.PowerOnRackRequest
-	69,  // 152: v1.RLA.PowerOffRack:input_type -> v1.PowerOffRackRequest
-	70,  // 153: v1.RLA.PowerResetRack:input_type -> v1.PowerResetRackRequest
-	73,  // 154: v1.RLA.ListTasks:input_type -> v1.ListTasksRequest
-	75,  // 155: v1.RLA.GetTasksByIDs:input_type -> v1.GetTasksByIDsRequest
-	77,  // 156: v1.RLA.CancelTask:input_type -> v1.CancelTaskRequest
-	82,  // 157: v1.RLA.CreateOperationRule:input_type -> v1.CreateOperationRuleRequest
-	84,  // 158: v1.RLA.UpdateOperationRule:input_type -> v1.UpdateOperationRuleRequest
-	85,  // 159: v1.RLA.DeleteOperationRule:input_type -> v1.DeleteOperationRuleRequest
-	87,  // 160: v1.RLA.GetOperationRule:input_type -> v1.GetOperationRuleRequest
-	88,  // 161: v1.RLA.ListOperationRules:input_type -> v1.ListOperationRulesRequest
-	86,  // 162: v1.RLA.SetRuleAsDefault:input_type -> v1.SetRuleAsDefaultRequest
-	90,  // 163: v1.RLA.AssociateRuleWithRack:input_type -> v1.AssociateRuleWithRackRequest
-	91,  // 164: v1.RLA.DisassociateRuleFromRack:input_type -> v1.DisassociateRuleFromRackRequest
-	92,  // 165: v1.RLA.GetRackRuleAssociation:input_type -> v1.GetRackRuleAssociationRequest
-	94,  // 166: v1.RLA.ListRackRuleAssociations:input_type -> v1.ListRackRuleAssociationsRequest
-	80,  // 167: v1.RLA.Version:output_type -> v1.BuildInfo
-	34,  // 168: v1.RLA.CreateExpectedRack:output_type -> v1.CreateExpectedRackResponse
-	39,  // 169: v1.RLA.PatchRack:output_type -> v1.PatchRackResponse
-	37,  // 170: v1.RLA.GetRackInfoByID:output_type -> v1.GetRackInfoResponse
-	37,  // 171: v1.RLA.GetRackInfoBySerial:output_type -> v1.GetRackInfoResponse
-	42,  // 172: v1.RLA.GetComponentInfoByID:output_type -> v1.GetComponentInfoResponse
-	42,  // 173: v1.RLA.GetComponentInfoBySerial:output_type -> v1.GetComponentInfoResponse
-	44,  // 174: v1.RLA.GetListOfRacks:output_type -> v1.GetListOfRacksResponse
-	46,  // 175: v1.RLA.CreateNVLDomain:output_type -> v1.CreateNVLDomainResponse
-	98,  // 176: v1.RLA.AttachRacksToNVLDomain:output_type -> google.protobuf.Empty
-	98,  // 177: v1.RLA.DetachRacksFromNVLDomain:output_type -> google.protobuf.Empty
-	50,  // 178: v1.RLA.GetListOfNVLDomains:output_type -> v1.GetListOfNVLDomainsResponse
-	52,  // 179: v1.RLA.GetRacksForNVLDomain:output_type -> v1.GetRacksForNVLDomainResponse
-	66,  // 180: v1.RLA.UpgradeFirmware:output_type -> v1.SubmitTaskResponse
-	66,  // 181: v1.RLA.BringUpRack:output_type -> v1.SubmitTaskResponse
-	66,  // 182: v1.RLA.IngestRack:output_type -> v1.SubmitTaskResponse
-	55,  // 183: v1.RLA.GetComponents:output_type -> v1.GetComponentsResponse
-	57,  // 184: v1.RLA.ValidateComponents:output_type -> v1.ValidateComponentsResponse
-	61,  // 185: v1.RLA.AddComponent:output_type -> v1.AddComponentResponse
-	65,  // 186: v1.RLA.PatchComponent:output_type -> v1.PatchComponentResponse
-	63,  // 187: v1.RLA.DeleteComponent:output_type -> v1.DeleteComponentResponse
-	66,  // 188: v1.RLA.PowerOnRack:output_type -> v1.SubmitTaskResponse
-	66,  // 189: v1.RLA.PowerOffRack:output_type -> v1.SubmitTaskResponse
-	66,  // 190: v1.RLA.PowerResetRack:output_type -> v1.SubmitTaskResponse
-	74,  // 191: v1.RLA.ListTasks:output_type -> v1.ListTasksResponse
-	76,  // 192: v1.RLA.GetTasksByIDs:output_type -> v1.GetTasksByIDsResponse
-	78,  // 193: v1.RLA.CancelTask:output_type -> v1.CancelTaskResponse
-	83,  // 194: v1.RLA.CreateOperationRule:output_type -> v1.CreateOperationRuleResponse
-	98,  // 195: v1.RLA.UpdateOperationRule:output_type -> google.protobuf.Empty
-	98,  // 196: v1.RLA.DeleteOperationRule:output_type -> google.protobuf.Empty
-	81,  // 197: v1.RLA.GetOperationRule:output_type -> v1.OperationRule
-	89,  // 198: v1.RLA.ListOperationRules:output_type -> v1.ListOperationRulesResponse
-	98,  // 199: v1.RLA.SetRuleAsDefault:output_type -> google.protobuf.Empty
-	98,  // 200: v1.RLA.AssociateRuleWithRack:output_type -> google.protobuf.Empty
-	98,  // 201: v1.RLA.DisassociateRuleFromRack:output_type -> google.protobuf.Empty
-	93,  // 202: v1.RLA.GetRackRuleAssociation:output_type -> v1.GetRackRuleAssociationResponse
-	96,  // 203: v1.RLA.ListRackRuleAssociations:output_type -> v1.ListRackRuleAssociationsResponse
-	167, // [167:204] is the sub-list for method output_type
-	130, // [130:167] is the sub-list for method input_type
-	130, // [130:130] is the sub-list for extension type_name
-	130, // [130:130] is the sub-list for extension extendee
-	0,   // [0:130] is the sub-list for field type_name
+	12,  // 82: v1.DeleteRackRequest.id:type_name -> v1.UUID
+	12,  // 83: v1.PurgeRackRequest.id:type_name -> v1.UUID
+	12,  // 84: v1.PurgeComponentRequest.id:type_name -> v1.UUID
+	12,  // 85: v1.PatchComponentRequest.id:type_name -> v1.UUID
+	17,  // 86: v1.PatchComponentRequest.position:type_name -> v1.RackPosition
+	12,  // 87: v1.PatchComponentRequest.rack_id:type_name -> v1.UUID
+	16,  // 88: v1.PatchComponentRequest.bmcs:type_name -> v1.BMCInfo
+	18,  // 89: v1.PatchComponentResponse.component:type_name -> v1.Component
+	12,  // 90: v1.SubmitTaskResponse.task_ids:type_name -> v1.UUID
+	10,  // 91: v1.QueueOptions.conflict_strategy:type_name -> v1.ConflictStrategy
+	21,  // 92: v1.PowerOnRackRequest.target_spec:type_name -> v1.OperationTargetSpec
+	73,  // 93: v1.PowerOnRackRequest.queue_options:type_name -> v1.QueueOptions
+	21,  // 94: v1.PowerOffRackRequest.target_spec:type_name -> v1.OperationTargetSpec
+	73,  // 95: v1.PowerOffRackRequest.queue_options:type_name -> v1.QueueOptions
+	21,  // 96: v1.PowerResetRackRequest.target_spec:type_name -> v1.OperationTargetSpec
+	73,  // 97: v1.PowerResetRackRequest.queue_options:type_name -> v1.QueueOptions
+	21,  // 98: v1.BringUpRackRequest.target_spec:type_name -> v1.OperationTargetSpec
+	21,  // 99: v1.IngestRackRequest.target_spec:type_name -> v1.OperationTargetSpec
+	30,  // 100: v1.IngestRackRequest.filters:type_name -> v1.Filter
+	12,  // 101: v1.ListTasksRequest.rack_id:type_name -> v1.UUID
+	28,  // 102: v1.ListTasksRequest.pagination:type_name -> v1.Pagination
+	32,  // 103: v1.ListTasksResponse.tasks:type_name -> v1.Task
+	12,  // 104: v1.GetTasksByIDsRequest.task_ids:type_name -> v1.UUID
+	32,  // 105: v1.GetTasksByIDsResponse.tasks:type_name -> v1.Task
+	12,  // 106: v1.CancelTaskRequest.task_id:type_name -> v1.UUID
+	32,  // 107: v1.CancelTaskResponse.task:type_name -> v1.Task
+	12,  // 108: v1.OperationRule.id:type_name -> v1.UUID
+	11,  // 109: v1.OperationRule.operation_type:type_name -> v1.OperationType
+	103, // 110: v1.OperationRule.created_at:type_name -> google.protobuf.Timestamp
+	103, // 111: v1.OperationRule.updated_at:type_name -> google.protobuf.Timestamp
+	11,  // 112: v1.CreateOperationRuleRequest.operation_type:type_name -> v1.OperationType
+	12,  // 113: v1.CreateOperationRuleResponse.id:type_name -> v1.UUID
+	12,  // 114: v1.UpdateOperationRuleRequest.rule_id:type_name -> v1.UUID
+	12,  // 115: v1.DeleteOperationRuleRequest.rule_id:type_name -> v1.UUID
+	12,  // 116: v1.SetRuleAsDefaultRequest.rule_id:type_name -> v1.UUID
+	12,  // 117: v1.GetOperationRuleRequest.rule_id:type_name -> v1.UUID
+	11,  // 118: v1.ListOperationRulesRequest.operation_type:type_name -> v1.OperationType
+	87,  // 119: v1.ListOperationRulesResponse.rules:type_name -> v1.OperationRule
+	12,  // 120: v1.AssociateRuleWithRackRequest.rack_id:type_name -> v1.UUID
+	12,  // 121: v1.AssociateRuleWithRackRequest.rule_id:type_name -> v1.UUID
+	12,  // 122: v1.DisassociateRuleFromRackRequest.rack_id:type_name -> v1.UUID
+	11,  // 123: v1.DisassociateRuleFromRackRequest.operation_type:type_name -> v1.OperationType
+	12,  // 124: v1.GetRackRuleAssociationRequest.rack_id:type_name -> v1.UUID
+	11,  // 125: v1.GetRackRuleAssociationRequest.operation_type:type_name -> v1.OperationType
+	12,  // 126: v1.GetRackRuleAssociationResponse.rule_id:type_name -> v1.UUID
+	12,  // 127: v1.ListRackRuleAssociationsRequest.rack_id:type_name -> v1.UUID
+	12,  // 128: v1.RackRuleAssociation.rack_id:type_name -> v1.UUID
+	11,  // 129: v1.RackRuleAssociation.operation_type:type_name -> v1.OperationType
+	12,  // 130: v1.RackRuleAssociation.rule_id:type_name -> v1.UUID
+	103, // 131: v1.RackRuleAssociation.created_at:type_name -> google.protobuf.Timestamp
+	103, // 132: v1.RackRuleAssociation.updated_at:type_name -> google.protobuf.Timestamp
+	101, // 133: v1.ListRackRuleAssociationsResponse.associations:type_name -> v1.RackRuleAssociation
+	85,  // 134: v1.RLA.Version:input_type -> v1.VersionRequest
+	33,  // 135: v1.RLA.CreateExpectedRack:input_type -> v1.CreateExpectedRackRequest
+	35,  // 136: v1.RLA.GetRackInfoByID:input_type -> v1.GetRackInfoByIDRequest
+	36,  // 137: v1.RLA.GetRackInfoBySerial:input_type -> v1.GetRackInfoBySerialRequest
+	43,  // 138: v1.RLA.GetListOfRacks:input_type -> v1.GetListOfRacksRequest
+	38,  // 139: v1.RLA.PatchRack:input_type -> v1.PatchRackRequest
+	64,  // 140: v1.RLA.DeleteRack:input_type -> v1.DeleteRackRequest
+	66,  // 141: v1.RLA.PurgeRack:input_type -> v1.PurgeRackRequest
+	53,  // 142: v1.RLA.UpgradeFirmware:input_type -> v1.UpgradeFirmwareRequest
+	77,  // 143: v1.RLA.BringUpRack:input_type -> v1.BringUpRackRequest
+	78,  // 144: v1.RLA.IngestRack:input_type -> v1.IngestRackRequest
+	74,  // 145: v1.RLA.PowerOnRack:input_type -> v1.PowerOnRackRequest
+	75,  // 146: v1.RLA.PowerOffRack:input_type -> v1.PowerOffRackRequest
+	76,  // 147: v1.RLA.PowerResetRack:input_type -> v1.PowerResetRackRequest
+	40,  // 148: v1.RLA.GetComponentInfoByID:input_type -> v1.GetComponentInfoByIDRequest
+	41,  // 149: v1.RLA.GetComponentInfoBySerial:input_type -> v1.GetComponentInfoBySerialRequest
+	54,  // 150: v1.RLA.GetComponents:input_type -> v1.GetComponentsRequest
+	56,  // 151: v1.RLA.ValidateComponents:input_type -> v1.ValidateComponentsRequest
+	60,  // 152: v1.RLA.AddComponent:input_type -> v1.AddComponentRequest
+	70,  // 153: v1.RLA.PatchComponent:input_type -> v1.PatchComponentRequest
+	62,  // 154: v1.RLA.DeleteComponent:input_type -> v1.DeleteComponentRequest
+	68,  // 155: v1.RLA.PurgeComponent:input_type -> v1.PurgeComponentRequest
+	45,  // 156: v1.RLA.CreateNVLDomain:input_type -> v1.CreateNVLDomainRequest
+	47,  // 157: v1.RLA.AttachRacksToNVLDomain:input_type -> v1.AttachRacksToNVLDomainRequest
+	48,  // 158: v1.RLA.DetachRacksFromNVLDomain:input_type -> v1.DetachRacksFromNVLDomainRequest
+	49,  // 159: v1.RLA.GetListOfNVLDomains:input_type -> v1.GetListOfNVLDomainsRequest
+	51,  // 160: v1.RLA.GetRacksForNVLDomain:input_type -> v1.GetRacksForNVLDomainRequest
+	79,  // 161: v1.RLA.ListTasks:input_type -> v1.ListTasksRequest
+	81,  // 162: v1.RLA.GetTasksByIDs:input_type -> v1.GetTasksByIDsRequest
+	83,  // 163: v1.RLA.CancelTask:input_type -> v1.CancelTaskRequest
+	88,  // 164: v1.RLA.CreateOperationRule:input_type -> v1.CreateOperationRuleRequest
+	90,  // 165: v1.RLA.UpdateOperationRule:input_type -> v1.UpdateOperationRuleRequest
+	91,  // 166: v1.RLA.DeleteOperationRule:input_type -> v1.DeleteOperationRuleRequest
+	93,  // 167: v1.RLA.GetOperationRule:input_type -> v1.GetOperationRuleRequest
+	94,  // 168: v1.RLA.ListOperationRules:input_type -> v1.ListOperationRulesRequest
+	92,  // 169: v1.RLA.SetRuleAsDefault:input_type -> v1.SetRuleAsDefaultRequest
+	96,  // 170: v1.RLA.AssociateRuleWithRack:input_type -> v1.AssociateRuleWithRackRequest
+	97,  // 171: v1.RLA.DisassociateRuleFromRack:input_type -> v1.DisassociateRuleFromRackRequest
+	98,  // 172: v1.RLA.GetRackRuleAssociation:input_type -> v1.GetRackRuleAssociationRequest
+	100, // 173: v1.RLA.ListRackRuleAssociations:input_type -> v1.ListRackRuleAssociationsRequest
+	86,  // 174: v1.RLA.Version:output_type -> v1.BuildInfo
+	34,  // 175: v1.RLA.CreateExpectedRack:output_type -> v1.CreateExpectedRackResponse
+	37,  // 176: v1.RLA.GetRackInfoByID:output_type -> v1.GetRackInfoResponse
+	37,  // 177: v1.RLA.GetRackInfoBySerial:output_type -> v1.GetRackInfoResponse
+	44,  // 178: v1.RLA.GetListOfRacks:output_type -> v1.GetListOfRacksResponse
+	39,  // 179: v1.RLA.PatchRack:output_type -> v1.PatchRackResponse
+	65,  // 180: v1.RLA.DeleteRack:output_type -> v1.DeleteRackResponse
+	67,  // 181: v1.RLA.PurgeRack:output_type -> v1.PurgeRackResponse
+	72,  // 182: v1.RLA.UpgradeFirmware:output_type -> v1.SubmitTaskResponse
+	72,  // 183: v1.RLA.BringUpRack:output_type -> v1.SubmitTaskResponse
+	72,  // 184: v1.RLA.IngestRack:output_type -> v1.SubmitTaskResponse
+	72,  // 185: v1.RLA.PowerOnRack:output_type -> v1.SubmitTaskResponse
+	72,  // 186: v1.RLA.PowerOffRack:output_type -> v1.SubmitTaskResponse
+	72,  // 187: v1.RLA.PowerResetRack:output_type -> v1.SubmitTaskResponse
+	42,  // 188: v1.RLA.GetComponentInfoByID:output_type -> v1.GetComponentInfoResponse
+	42,  // 189: v1.RLA.GetComponentInfoBySerial:output_type -> v1.GetComponentInfoResponse
+	55,  // 190: v1.RLA.GetComponents:output_type -> v1.GetComponentsResponse
+	57,  // 191: v1.RLA.ValidateComponents:output_type -> v1.ValidateComponentsResponse
+	61,  // 192: v1.RLA.AddComponent:output_type -> v1.AddComponentResponse
+	71,  // 193: v1.RLA.PatchComponent:output_type -> v1.PatchComponentResponse
+	63,  // 194: v1.RLA.DeleteComponent:output_type -> v1.DeleteComponentResponse
+	69,  // 195: v1.RLA.PurgeComponent:output_type -> v1.PurgeComponentResponse
+	46,  // 196: v1.RLA.CreateNVLDomain:output_type -> v1.CreateNVLDomainResponse
+	104, // 197: v1.RLA.AttachRacksToNVLDomain:output_type -> google.protobuf.Empty
+	104, // 198: v1.RLA.DetachRacksFromNVLDomain:output_type -> google.protobuf.Empty
+	50,  // 199: v1.RLA.GetListOfNVLDomains:output_type -> v1.GetListOfNVLDomainsResponse
+	52,  // 200: v1.RLA.GetRacksForNVLDomain:output_type -> v1.GetRacksForNVLDomainResponse
+	80,  // 201: v1.RLA.ListTasks:output_type -> v1.ListTasksResponse
+	82,  // 202: v1.RLA.GetTasksByIDs:output_type -> v1.GetTasksByIDsResponse
+	84,  // 203: v1.RLA.CancelTask:output_type -> v1.CancelTaskResponse
+	89,  // 204: v1.RLA.CreateOperationRule:output_type -> v1.CreateOperationRuleResponse
+	104, // 205: v1.RLA.UpdateOperationRule:output_type -> google.protobuf.Empty
+	104, // 206: v1.RLA.DeleteOperationRule:output_type -> google.protobuf.Empty
+	87,  // 207: v1.RLA.GetOperationRule:output_type -> v1.OperationRule
+	95,  // 208: v1.RLA.ListOperationRules:output_type -> v1.ListOperationRulesResponse
+	104, // 209: v1.RLA.SetRuleAsDefault:output_type -> google.protobuf.Empty
+	104, // 210: v1.RLA.AssociateRuleWithRack:output_type -> google.protobuf.Empty
+	104, // 211: v1.RLA.DisassociateRuleFromRack:output_type -> google.protobuf.Empty
+	99,  // 212: v1.RLA.GetRackRuleAssociation:output_type -> v1.GetRackRuleAssociationResponse
+	102, // 213: v1.RLA.ListRackRuleAssociations:output_type -> v1.ListRackRuleAssociationsResponse
+	174, // [174:214] is the sub-list for method output_type
+	134, // [134:174] is the sub-list for method input_type
+	134, // [134:134] is the sub-list for extension type_name
+	134, // [134:134] is the sub-list for extension extendee
+	0,   // [0:134] is the sub-list for field type_name
 }
 
 func init() { file_rla_proto_init() }
@@ -6578,20 +6859,20 @@ func file_rla_proto_init() {
 	file_rla_proto_msgTypes[41].OneofWrappers = []any{}
 	file_rla_proto_msgTypes[42].OneofWrappers = []any{}
 	file_rla_proto_msgTypes[44].OneofWrappers = []any{}
-	file_rla_proto_msgTypes[52].OneofWrappers = []any{}
-	file_rla_proto_msgTypes[56].OneofWrappers = []any{}
-	file_rla_proto_msgTypes[57].OneofWrappers = []any{}
 	file_rla_proto_msgTypes[58].OneofWrappers = []any{}
-	file_rla_proto_msgTypes[61].OneofWrappers = []any{}
-	file_rla_proto_msgTypes[72].OneofWrappers = []any{}
-	file_rla_proto_msgTypes[76].OneofWrappers = []any{}
+	file_rla_proto_msgTypes[62].OneofWrappers = []any{}
+	file_rla_proto_msgTypes[63].OneofWrappers = []any{}
+	file_rla_proto_msgTypes[64].OneofWrappers = []any{}
+	file_rla_proto_msgTypes[67].OneofWrappers = []any{}
+	file_rla_proto_msgTypes[78].OneofWrappers = []any{}
+	file_rla_proto_msgTypes[82].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_rla_proto_rawDesc), len(file_rla_proto_rawDesc)),
 			NumEnums:      12,
-			NumMessages:   85,
+			NumMessages:   91,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -166,6 +166,14 @@ func (c *mockClient) AddExpectedPowerShelf(ctx context.Context, req AddExpectedP
 	return nil
 }
 
+func (c *mockClient) InsertHealthReportOverride(ctx context.Context, machineID string, source string) error {
+	return nil
+}
+
+func (c *mockClient) RemoveHealthReportOverride(ctx context.Context, machineID string, source string) error {
+	return nil
+}
+
 func (c *mockClient) ComponentPowerControl(ctx context.Context, req *pb.ComponentPowerControlRequest) (*pb.ComponentPowerControlResponse, error) {
 	return &pb.ComponentPowerControlResponse{}, nil
 }

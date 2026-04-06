@@ -200,6 +200,14 @@ func TestVaultManager_PutGet(t *testing.T) {
 			getMAC:  "66:77:88:99:00:11",
 			wantErr: true,
 		},
+		"put with uppercase MAC and get with lowercase resolves correctly": {
+			putMAC:   "AA:BB:CC:DD:EE:FF",
+			putCred:  newCred("admin", "secret"),
+			getMAC:   "aa:bb:cc:dd:ee:ff",
+			wantErr:  false,
+			wantUser: "admin",
+			wantPass: "secret",
+		},
 	}
 
 	for name, tc := range testCases {

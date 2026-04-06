@@ -112,6 +112,32 @@ func (rd *Rack) Get(
 	return &rack, nil
 }
 
+// GetIncludingDeleted retrieves a rack by ID regardless of soft-delete status.
+func (rd *Rack) GetIncludingDeleted(ctx context.Context, idb bun.IDB) (*Rack, error) {
+	var rack Rack
+	err := idb.NewSelect().Model(&rack).
+		Where("id = ?", rd.ID).
+		WhereAllWithDeleted().
+		Scan(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &rack, nil
+}
+
+// Delete soft-deletes the rack by setting deleted_at.
+func (rd *Rack) Delete(ctx context.Context, idb bun.IDB) error {
+	_, err := idb.NewDelete().Model(rd).Where("id = ?", rd.ID).Exec(ctx)
+	return err
+}
+
+// ForceDelete permanently removes the rack row from the database.
+// The rack must already be soft-deleted.
+func (rd *Rack) ForceDelete(ctx context.Context, idb bun.IDB) error {
+	_, err := idb.NewDelete().Model(rd).Where("id = ?", rd.ID).ForceDelete().Exec(ctx)
+	return err
+}
+
 func (rd *Rack) Patch(ctx context.Context, idb bun.IDB) error {
 	_, err := idb.NewUpdate().Model(rd).Where("id = ?", rd.ID).Exec(ctx)
 	return err

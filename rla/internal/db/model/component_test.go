@@ -340,3 +340,48 @@ func TestGetComponentsByType(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 0, len(switches))
 }
+
+func TestComponentForceDelete_Idempotent(t *testing.T) {
+	ctx := context.Background()
+
+	if os.Getenv("DB_PORT") == "" {
+		t.Skip("Skipping integration test: no DB environment specified")
+	}
+
+	dbConf, err := cdb.ConfigFromEnv()
+	assert.Nil(t, err)
+
+	pool, err := utils.UnitTestDB(ctx, t, dbConf)
+	assert.Nil(t, err)
+
+	rack := Rack{
+		Name:         "fd-rack",
+		Manufacturer: "TestMfg",
+		SerialNumber: "fd-rack-serial",
+	}
+	err = rack.Create(ctx, pool.DB)
+	assert.Nil(t, err)
+
+	comp := Component{
+		Name:         "fd-comp",
+		Type:         devicetypes.ComponentTypeToString(devicetypes.ComponentTypeCompute),
+		Manufacturer: "NVIDIA",
+		SerialNumber: "fd-comp-serial",
+		RackID:       rack.ID,
+	}
+	err = comp.Create(ctx, pool.DB)
+	assert.Nil(t, err)
+
+	// First ForceDelete succeeds (row exists).
+	err = comp.ForceDelete(ctx, pool.DB)
+	assert.Nil(t, err)
+
+	// Second ForceDelete on the same ID also succeeds (idempotent).
+	err = comp.ForceDelete(ctx, pool.DB)
+	assert.Nil(t, err)
+
+	// ForceDelete on a UUID that never existed also succeeds.
+	phantom := &Component{ID: uuid.New()}
+	err = phantom.ForceDelete(ctx, pool.DB)
+	assert.Nil(t, err)
+}

@@ -134,8 +134,11 @@ func (m *VaultCredentialManager) Stop(ctx context.Context) error {
 	return nil
 }
 
+// Uppercase the MAC to match Carbide Core's vault key convention (Rust's
+// MacAddress Display trait emits uppercase hex). Go's net.HardwareAddr.String()
+// emits lowercase, and vault paths are case-sensitive.
 func (m *VaultCredentialManager) getCredentialKey(mac net.HardwareAddr) string {
-	return fmt.Sprintf("%s/%s", credentialPath, mac.String())
+	return fmt.Sprintf("%s/%s", credentialPath, strings.ToUpper(mac.String()))
 }
 
 // Get retrieves and validates credentials for the given MAC from Vault.
@@ -143,24 +146,24 @@ func (m *VaultCredentialManager) Get(ctx context.Context, mac net.HardwareAddr) 
 	key := m.getCredentialKey(mac)
 	secret, err := m.client.Logical().Read(key)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("vault read at %q: %w", key, err)
 	}
 	if secret == nil || secret.Data == nil {
-		return nil, errors.New("credential not found")
+		return nil, fmt.Errorf("credential not found at vault path %q", key)
 	}
 
 	credData, ok := secret.Data["data"].(map[string]interface{})
 	if !ok {
-		return nil, fmt.Errorf("unexpected secret data format")
+		return nil, fmt.Errorf("unexpected secret data format at vault path %q", key)
 	}
 
 	cred, err := credentialFromMap(credData)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parsing credential at vault path %q: %w", key, err)
 	}
 
 	if cred == nil || !cred.IsValid() {
-		return nil, fmt.Errorf("retrieved invalid credential from vault")
+		return nil, fmt.Errorf("retrieved invalid credential from vault path %q", key)
 	}
 
 	return cred, nil
@@ -235,21 +238,30 @@ var (
 )
 
 // credentialToMap converts a Credential to a map[string]interface{} suitable for Vault storage.
+// Uses Forge's credential format with a UsernamePassword wrapper.
 func credentialToMap(c *credential.Credential) map[string]interface{} {
 	return map[string]interface{}{
-		"username": c.User,
-		"password": c.Password.Value,
+		"UsernamePassword": map[string]interface{}{
+			"username": c.User,
+			"password": c.Password.Value,
+		},
 	}
 }
 
 // credentialFromMap converts a map[string]interface{} from Vault storage to a Credential.
+// Expects Forge's credential format: {"UsernamePassword": {"username": ..., "password": ...}}
 func credentialFromMap(data map[string]interface{}) (*credential.Credential, error) {
-	user, ok := data["username"].(string)
+	nested, ok := data["UsernamePassword"].(map[string]interface{})
+	if !ok {
+		return nil, errors.New("missing or invalid UsernamePassword field")
+	}
+
+	user, ok := nested["username"].(string)
 	if !ok {
 		return nil, errInvalidUsername
 	}
 
-	password, ok := data["password"].(string)
+	password, ok := nested["password"].(string)
 	if !ok {
 		return nil, errInvalidPassword
 	}

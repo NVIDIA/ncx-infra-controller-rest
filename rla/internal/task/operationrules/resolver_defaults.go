@@ -87,8 +87,8 @@ func buildPowerOnRule() *OperationRule {
 						{
 							// Verify power status after operation
 							Name:         ActionVerifyPowerStatus,
-							Timeout:      15 * time.Second,
-							PollInterval: 5 * time.Second,
+							Timeout:      90 * time.Second,
+							PollInterval: 10 * time.Second,
 							Parameters: map[string]any{
 								ParamExpectedStatus: "on",
 							},
@@ -124,8 +124,8 @@ func buildPowerOnRule() *OperationRule {
 						{
 							// Verify power status
 							Name:         ActionVerifyPowerStatus,
-							Timeout:      15 * time.Second,
-							PollInterval: 5 * time.Second,
+							Timeout:      90 * time.Second,
+							PollInterval: 10 * time.Second,
 							Parameters: map[string]any{
 								ParamExpectedStatus: "on",
 							},
@@ -149,8 +149,8 @@ func buildPowerOnRule() *OperationRule {
 						{
 							// Verify power status
 							Name:         ActionVerifyPowerStatus,
-							Timeout:      15 * time.Second,
-							PollInterval: 5 * time.Second,
+							Timeout:      90 * time.Second,
+							PollInterval: 10 * time.Second,
 							Parameters: map[string]any{
 								ParamExpectedStatus: "on",
 							},
@@ -189,8 +189,8 @@ func buildPowerOffRule() *OperationRule {
 						{
 							// Verify power status after operation
 							Name:         ActionVerifyPowerStatus,
-							Timeout:      15 * time.Second,
-							PollInterval: 5 * time.Second,
+							Timeout:      90 * time.Second,
+							PollInterval: 10 * time.Second,
 							Parameters: map[string]any{
 								ParamExpectedStatus: "off",
 							},
@@ -214,8 +214,8 @@ func buildPowerOffRule() *OperationRule {
 						{
 							// Verify power status after operation
 							Name:         ActionVerifyPowerStatus,
-							Timeout:      15 * time.Second,
-							PollInterval: 5 * time.Second,
+							Timeout:      90 * time.Second,
+							PollInterval: 10 * time.Second,
 							Parameters: map[string]any{
 								ParamExpectedStatus: "off",
 							},
@@ -249,8 +249,8 @@ func buildPowerOffRule() *OperationRule {
 						{
 							// Verify power status after operation
 							Name:         ActionVerifyPowerStatus,
-							Timeout:      15 * time.Second,
-							PollInterval: 5 * time.Second,
+							Timeout:      90 * time.Second,
+							PollInterval: 10 * time.Second,
 							Parameters: map[string]any{
 								ParamExpectedStatus: "off",
 							},
@@ -290,8 +290,8 @@ func buildRestartRule() *OperationRule {
 						{
 							// Verify power status after operation
 							Name:         ActionVerifyPowerStatus,
-							Timeout:      15 * time.Second,
-							PollInterval: 5 * time.Second,
+							Timeout:      90 * time.Second,
+							PollInterval: 10 * time.Second,
 							Parameters: map[string]any{
 								ParamExpectedStatus: "off",
 							},
@@ -315,8 +315,8 @@ func buildRestartRule() *OperationRule {
 						{
 							// Verify power status after operation
 							Name:         ActionVerifyPowerStatus,
-							Timeout:      15 * time.Second,
-							PollInterval: 5 * time.Second,
+							Timeout:      90 * time.Second,
+							PollInterval: 10 * time.Second,
 							Parameters: map[string]any{
 								ParamExpectedStatus: "off",
 							},
@@ -340,8 +340,8 @@ func buildRestartRule() *OperationRule {
 						{
 							// Verify power status after operation
 							Name:         ActionVerifyPowerStatus,
-							Timeout:      15 * time.Second,
-							PollInterval: 5 * time.Second,
+							Timeout:      90 * time.Second,
+							PollInterval: 10 * time.Second,
 							Parameters: map[string]any{
 								ParamExpectedStatus: "off",
 							},
@@ -366,8 +366,8 @@ func buildRestartRule() *OperationRule {
 						{
 							// Verify power status after operation
 							Name:         ActionVerifyPowerStatus,
-							Timeout:      15 * time.Second,
-							PollInterval: 5 * time.Second,
+							Timeout:      90 * time.Second,
+							PollInterval: 10 * time.Second,
 							Parameters: map[string]any{
 								ParamExpectedStatus: "on",
 							},
@@ -404,8 +404,8 @@ func buildRestartRule() *OperationRule {
 						{
 							// Verify power status after operation
 							Name:         ActionVerifyPowerStatus,
-							Timeout:      15 * time.Second,
-							PollInterval: 5 * time.Second,
+							Timeout:      90 * time.Second,
+							PollInterval: 10 * time.Second,
 							Parameters: map[string]any{
 								ParamExpectedStatus: "on",
 							},
@@ -429,8 +429,8 @@ func buildRestartRule() *OperationRule {
 						{
 							// Verify power status after operation
 							Name:         ActionVerifyPowerStatus,
-							Timeout:      15 * time.Second,
-							PollInterval: 5 * time.Second,
+							Timeout:      90 * time.Second,
+							PollInterval: 10 * time.Second,
 							Parameters: map[string]any{
 								ParamExpectedStatus: "on",
 							},

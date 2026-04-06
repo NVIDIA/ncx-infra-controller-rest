@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/internal/config"
@@ -28,6 +29,7 @@ import (
 	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
+	goset "github.com/deckarep/golang-set/v2"
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	validationis "github.com/go-ozzo/ozzo-validation/v4/is"
 	"gopkg.in/yaml.v3"
@@ -364,6 +366,12 @@ type APIInstanceCreateRequest struct {
 	InstanceTypeID *string `json:"instanceTypeId"`
 	// VpcID is the ID of the VPC containing the Instance
 	VpcID string `json:"vpcId"`
+	// SecondaryVpcIDs lists additional VPC UUIDs for prefix-backed, non-primary
+	// network interfaces on the Instance. Validate() rejects this field unless
+	// every entry in Interfaces uses vpcPrefixId, and the create handler then
+	// verifies that the supplied UUIDs exactly match the VPCs resolved from those
+	// prefix-backed interfaces.
+	SecondaryVpcIDs []string `json:"secondaryVpcIds"`
 	// OperatingSystemID is the ID of the Operating System
 	OperatingSystemID *string `json:"operatingSystemId"`
 	// IpxeScript is the iPXE script for the Operating System
@@ -410,6 +418,12 @@ type APIBatchInstanceCreateRequest struct {
 	InstanceTypeID string `json:"instanceTypeId"`
 	// VpcID is the ID of the VPC containing the Instances
 	VpcID string `json:"vpcId"`
+	// SecondaryVpcIDs lists additional VPC UUIDs for prefix-backed, non-primary
+	// network interfaces on each Instance in the batch. Validate() rejects this
+	// field unless every entry in Interfaces uses vpcPrefixId, and batch create
+	// processing expects these UUIDs to align with the VPCs implied by those
+	// prefix-backed interfaces.
+	SecondaryVpcIDs []string `json:"secondaryVpcIds"`
 	// OperatingSystemID is the ID of the Operating System
 	OperatingSystemID *string `json:"operatingSystemId"`
 	// IpxeScript is the iPXE script for the Operating System
@@ -467,6 +481,16 @@ func (icr APIInstanceCreateRequest) Validate() error {
 
 	if err != nil {
 		return err
+	}
+
+	if icr.SecondaryVpcIDs != nil {
+		for _, iface := range icr.Interfaces {
+			if iface.VpcPrefixID == nil {
+				return validation.Errors{
+					"secondaryVpcIds": errors.New("`secondaryVpcIds` can only be specified when `vpcPrefixId` is specified within `interfaces`"),
+				}
+			}
+		}
 	}
 
 	// ensure we have one and only one of InstanceTypeID or MachineID
@@ -816,6 +840,16 @@ func (bicr APIBatchInstanceCreateRequest) Validate() error {
 		return err
 	}
 
+	if bicr.SecondaryVpcIDs != nil {
+		for _, iface := range bicr.Interfaces {
+			if iface.VpcPrefixID == nil {
+				return validation.Errors{
+					"secondaryVpcIds": errors.New("`secondaryVpcIds` can only be specified when `vpcPrefixId` is specified within `interfaces`"),
+				}
+			}
+		}
+	}
+
 	// Validate that either OperatingSystemID or IpxeScript is specified
 	if bicr.OperatingSystemID == nil {
 		if bicr.IpxeScript == nil {
@@ -1100,6 +1134,12 @@ type APIInstanceUpdateRequest struct {
 	PhoneHomeEnabled *bool `json:"phoneHomeEnabled"`
 	// AlwaysBootWithCustomIpxe is an attribute which is specified by user if instance boot with ipxe or not
 	AlwaysBootWithCustomIpxe *bool `json:"alwaysBootWithCustomIpxe"`
+	// SecondaryVpcIDs lists additional VPC IDs for prefix-backed, non-primary
+	// network interfaces on the Instance. This field will be rejected unless
+	// Interfaces is provided and non-empty and every entry in Interfaces uses
+	// vpcPrefixId. The update handler then verifies that the supplied UUIDs
+	// exactly match the VPCs resolved from those prefix-backed interfaces.
+	SecondaryVpcIDs []string `json:"secondaryVpcIds"`
 	// Interfaces is the list of Interfaces to update for the Instance
 	Interfaces []APIInterfaceCreateOrUpdateRequest `json:"interfaces"`
 	// InfiniBandInterfaces is the list of InfiniBandInterface to update for the Instance
@@ -1388,6 +1428,7 @@ func (iur *APIInstanceUpdateRequest) IsUpdateRequest() bool {
 		iur.UserData != nil ||
 		iur.PhoneHomeEnabled != nil ||
 		iur.AlwaysBootWithCustomIpxe != nil ||
+		iur.SecondaryVpcIDs != nil ||
 		iur.Interfaces != nil ||
 		iur.InfiniBandInterfaces != nil ||
 		iur.NVLinkInterfaces != nil ||
@@ -1425,6 +1466,22 @@ func (iur APIInstanceUpdateRequest) Validate() error {
 
 	if err != nil {
 		return err
+	}
+
+	if iur.SecondaryVpcIDs != nil {
+		if len(iur.Interfaces) == 0 {
+			return validation.Errors{
+				"secondaryVpcIds": errors.New("`secondaryVpcIds` can only be specified when `interfaces` is specified and non-empty"),
+			}
+		}
+
+		for _, iface := range iur.Interfaces {
+			if iface.VpcPrefixID == nil {
+				return validation.Errors{
+					"secondaryVpcIds": errors.New("`secondaryVpcIds` can only be specified when `vpcPrefixId` is specified within `interfaces`"),
+				}
+			}
+		}
 	}
 
 	if iur.IsRebootRequest() && iur.IsUpdateRequest() {
@@ -1609,6 +1666,10 @@ type APIInstance struct {
 	VpcID string `json:"vpcId"`
 	// Vpc is the summary of the VPC
 	Vpc *APIVpcSummary `json:"vpc,omitempty"`
+	// SecondaryVpcIDs lists non-primary VPC UUIDs derived from prefix-backed
+	// interfaces attached to the Instance. These values are populated from
+	// interface relations rather than stored directly on the Instance record.
+	SecondaryVpcIDs []string `json:"secondaryVpcIds"`
 	// MachineID is the ID of the Machine
 	MachineID *string `json:"machineId"`
 	// Machine is the summary of the Machine
@@ -1665,7 +1726,9 @@ type APIInstance struct {
 	Deprecations []APIDeprecation `json:"deprecations,omitempty"`
 }
 
-// NewAPIInstance accepts a DB layer Instance object returns an API layer object
+// NewAPIInstance accepts a DB layer Instance object returns an API layer object.
+// SecondaryVpcIDs are derived from interface relations, so callers must preload
+// Interface.VpcPrefix on prefix-backed interfaces when they want those IDs populated.
 func NewAPIInstance(dbinst *cdbm.Instance, dbSite *cdbm.Site, dbiss []cdbm.Interface, dbibis []cdbm.InfiniBandInterface, dbdesds []cdbm.DpuExtensionServiceDeployment, dbnvlis []cdbm.NVLinkInterface, dbskgs []cdbm.SSHKeyGroup, dbsds []cdbm.StatusDetail) *APIInstance {
 	var instanceTypeID *string
 	if dbinst.InstanceTypeID != nil {
@@ -1748,11 +1811,19 @@ func NewAPIInstance(dbinst *cdbm.Instance, dbSite *cdbm.Site, dbiss []cdbm.Inter
 
 	apiInstance.Status = getAggregatedInstanceStatus(dbinst.Status, dbinst.PowerStatus)
 
+	secondaryVpcIDs := goset.NewSet[string]()
+
 	apiInstance.Interfaces = []APIInterface{}
 	for _, dbis := range dbiss {
 		curis := dbis
 		apiInstance.Interfaces = append(apiInstance.Interfaces, *NewAPIInterface(&curis))
+		if dbis.VpcPrefix != nil && dbis.VpcPrefix.VpcID != dbinst.VpcID {
+			secondaryVpcIDs.Add(dbis.VpcPrefix.VpcID.String())
+		}
 	}
+
+	apiInstance.SecondaryVpcIDs = secondaryVpcIDs.ToSlice()
+	slices.Sort(apiInstance.SecondaryVpcIDs)
 
 	apiInstance.InfiniBandInterfaces = []APIInfiniBandInterface{}
 	for _, dbibi := range dbibis {
