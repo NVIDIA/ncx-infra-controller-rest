@@ -176,13 +176,25 @@ func TestIntegration_PostgresRegistry_DuplicateRegistration(t *testing.T) {
 
 	testPmc := createTestPMC(t, "00:11:22:33:44:55", "192.168.1.100", vendor.VendorCodeLiteon)
 
-	// First registration should succeed
 	err := registry.RegisterPmc(ctx, testPmc)
-	assert.NoError(t, err, "First registration should succeed")
+	require.NoError(t, err, "First registration should succeed")
 
-	// Second registration should upsert (same MAC)
+	// Re-register identical data — should be a no-op upsert.
 	err = registry.RegisterPmc(ctx, testPmc)
-	assert.NoError(t, err, "Duplicate registration should upsert")
+	assert.NoError(t, err, "Duplicate registration with same data should succeed")
+
+	got, err := registry.GetPmc(ctx, testPmc.GetMac())
+	require.NoError(t, err)
+	assert.Equal(t, "192.168.1.100", got.GetIp().String())
+
+	// Re-register with a changed IP — should update the stored row.
+	updatedPmc := createTestPMC(t, "00:11:22:33:44:55", "192.168.1.200", vendor.VendorCodeLiteon)
+	err = registry.RegisterPmc(ctx, updatedPmc)
+	require.NoError(t, err, "Duplicate registration with new IP should succeed")
+
+	got, err = registry.GetPmc(ctx, updatedPmc.GetMac())
+	require.NoError(t, err)
+	assert.Equal(t, "192.168.1.200", got.GetIp().String(), "IP should be updated after upsert")
 }
 
 func TestIntegration_PostgresRegistry_UniqueIPConstraint(t *testing.T) {

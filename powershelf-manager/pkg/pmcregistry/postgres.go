@@ -18,7 +18,6 @@ package pmcregistry
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"net"
 
@@ -90,53 +89,24 @@ func (ps *PostgresPmcRegistry) runInTx(
 	return nil
 }
 
-// RegisterPmc creates or updates a PMC row.
-// The select and resulting insert or update run in a single transaction to
-// avoid races when two concurrent calls register the same PMC.
+// RegisterPmc creates or updates a PMC row via INSERT … ON CONFLICT upsert,
+// which is safe under concurrent registrations of the same MAC.
 func (ps *PostgresPmcRegistry) RegisterPmc(ctx context.Context, pmc *pmc.PMC) error {
 	if pmc == nil {
 		return fmt.Errorf("cannot register nil PMC")
 	}
 
-	macAddr := model.MacAddr(pmc.GetMac())
+	pmcDao := dao.PmcTo(pmc)
 
-	return ps.session.DB.RunInTx(ctx, &sql.TxOptions{}, func(ctx context.Context, tx bun.Tx) error {
-		existing := &model.PMC{}
-		err := tx.NewSelect().
-			Model(existing).
-			Where("mac_address = ?", macAddr).
-			Scan(ctx)
-
-		if err == nil {
-			newIP := model.IPAddr(pmc.GetIp())
-			newVendor := pmc.GetVendor().Code
-
-			// Core re-registers PMCs on every operation as a precondition;
-			// skip the UPDATE when nothing changed to avoid unnecessary writes.
-			if net.IP(existing.IPAddress).Equal(net.IP(newIP)) && existing.Vendor == newVendor {
-				return nil
-			}
-
-			existing.IPAddress = newIP
-			existing.Vendor = newVendor
-
-			_, err = tx.NewUpdate().
-				Model(existing).
-				WherePK().
-				Exec(ctx)
-			if err != nil {
-				return fmt.Errorf("failed to update PMC: %w", err)
-			}
-			return nil
-		}
-
-		if err != sql.ErrNoRows {
-			return fmt.Errorf("failed to check existing PMC: %w", err)
-		}
-
-		pmcDao := dao.PmcTo(pmc)
-		if err := pmcDao.Create(ctx, tx); err != nil {
-			return fmt.Errorf("failed to insert PMC %s: %w", pmcDao.MacAddress, err)
+	return ps.runInTx(ctx, func(ctx context.Context, tx bun.Tx) error {
+		_, err := tx.NewInsert().
+			Model(pmcDao).
+			On("CONFLICT (mac_address) DO UPDATE").
+			Set("ip_address = EXCLUDED.ip_address").
+			Set("vendor = EXCLUDED.vendor").
+			Exec(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to upsert PMC %s: %w", pmcDao.MacAddress, err)
 		}
 		return nil
 	})
