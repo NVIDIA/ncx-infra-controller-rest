@@ -161,9 +161,56 @@ func buildActivityOptions(step operationrules.SequenceStep) workflow.ActivityOpt
 	return opts
 }
 
-// executeGenericStageParallel executes all steps in a stage concurrently for any operation type
-// Each component type in the stage runs as a child workflow (cross-type parallelism)
-// Within each type, components are batched according to max_parallel
+// childWorkflowEntry pairs a launched child workflow future with its component
+// type so that error attribution stays correct even when some steps are skipped.
+type childWorkflowEntry struct {
+	future        workflow.ChildWorkflowFuture
+	componentType devicetypes.ComponentType
+}
+
+// childWorkflowExecutionTimeout returns a child workflow execution timeout that
+// accommodates the full retry budget for activities, the pre/post operation
+// durations, and a fixed scheduling buffer.
+//
+// The child workflow runs: pre-ops → main-op (with retries) → post-ops
+// sequentially, so the budget must cover all three phases.
+func childWorkflowExecutionTimeout(step operationrules.SequenceStep) time.Duration {
+	base := step.Timeout
+	if base == 0 {
+		base = 30 * time.Minute
+	}
+
+	maxAttempts := 1
+	var maxBackoff time.Duration
+	if step.RetryPolicy != nil && step.RetryPolicy.MaxAttempts > 1 {
+		maxAttempts = step.RetryPolicy.MaxAttempts
+		if step.RetryPolicy.MaxInterval > 0 {
+			maxBackoff = step.RetryPolicy.MaxInterval
+		} else {
+			maxBackoff = step.RetryPolicy.InitialInterval
+		}
+	}
+
+	// Main operation: each attempt may take up to base, plus back-off between attempts.
+	mainBudget := base*time.Duration(maxAttempts) +
+		maxBackoff*time.Duration(maxAttempts-1)
+
+	// Pre/post operation budgets: sum the declared timeouts of each action.
+	// Actions without a timeout are assumed to be quick (covered by the buffer).
+	var actionBudget time.Duration
+	for _, a := range step.PreOperation {
+		actionBudget += a.Timeout
+	}
+	for _, a := range step.PostOperation {
+		actionBudget += a.Timeout
+	}
+
+	return mainBudget + actionBudget + 2*time.Minute
+}
+
+// executeGenericStageParallel executes all steps in a stage concurrently for any operation type.
+// Each component type in the stage runs as a child workflow (cross-type parallelism).
+// Within each type, components are batched according to the step's max_parallel setting.
 func executeGenericStageParallel(
 	ctx workflow.Context,
 	steps []operationrules.SequenceStep,
@@ -171,8 +218,11 @@ func executeGenericStageParallel(
 	activityName string,
 	activityInfo any,
 ) error {
-	// Launch child workflow for each component type in parallel
-	futures := make([]workflow.ChildWorkflowFuture, 0, len(steps))
+	// Launch a child workflow for each component type that has targets.
+	// Pair each future with its component type so error attribution is always
+	// correct even when some steps are skipped (skipped steps shrink the
+	// futures slice without a matching change to the steps slice).
+	futures := make([]childWorkflowEntry, 0, len(steps))
 
 	for _, step := range steps {
 		target, exists := typeToTargets[step.ComponentType]
@@ -190,18 +240,12 @@ func executeGenericStageParallel(
 			Str("activity", activityName).
 			Msg("Starting component step as child workflow")
 
-		// Execute each component type as a child workflow
-		// Use step.Timeout for child workflow (applies to entire pre+main+post)
-		childWorkflowTimeout := step.Timeout
-		if childWorkflowTimeout == 0 {
-			childWorkflowTimeout = 30 * time.Minute // Fallback default
-		}
-
 		childOptions := workflow.ChildWorkflowOptions{
 			WorkflowID: fmt.Sprintf("component-step-%s-%s",
 				workflow.GetInfo(ctx).WorkflowExecution.ID,
 				devicetypes.ComponentTypeToString(step.ComponentType)),
-			WorkflowExecutionTimeout: childWorkflowTimeout,
+			// Give the child workflow enough time to run all retry attempts.
+			WorkflowExecutionTimeout: childWorkflowExecutionTimeout(step),
 		}
 		childCtx := workflow.WithChildOptions(ctx, childOptions)
 
@@ -212,20 +256,23 @@ func executeGenericStageParallel(
 			target,
 			activityName,
 			activityInfo,
-			typeToTargets, // Pass allTargets for cross-component verification
+			typeToTargets,
 		)
-		futures = append(futures, future)
+		futures = append(futures, childWorkflowEntry{
+			future:        future,
+			componentType: step.ComponentType,
+		})
 	}
 
-	// Wait for all component type child workflows to complete
-	for i, future := range futures {
-		if err := future.Get(ctx, nil); err != nil {
+	// Wait for all child workflows and attribute any error to the correct type.
+	for _, entry := range futures {
+		if err := entry.future.Get(ctx, nil); err != nil {
 			return fmt.Errorf("component type %s failed: %w",
-				devicetypes.ComponentTypeToString(steps[i].ComponentType), err)
+				devicetypes.ComponentTypeToString(entry.componentType), err)
 		}
 
 		log.Info().
-			Str("component_type", devicetypes.ComponentTypeToString(steps[i].ComponentType)).
+			Str("component_type", devicetypes.ComponentTypeToString(entry.componentType)).
 			Msg("Component step completed successfully")
 	}
 
