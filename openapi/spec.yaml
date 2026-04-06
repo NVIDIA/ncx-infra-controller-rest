@@ -1087,7 +1087,7 @@ paths:
             format: uuid
           in: query
           name: tenantId
-          description: Filter Allocations by Tenant ID.  Can be specified multiple times to filter on more than one Tenant ID.
+          description: Filter Allocations by Tenant ID.
         - schema:
             type: string
             format: uuid
