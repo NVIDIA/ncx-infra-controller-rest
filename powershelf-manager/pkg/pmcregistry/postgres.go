@@ -89,20 +89,27 @@ func (ps *PostgresPmcRegistry) runInTx(
 	return nil
 }
 
-// RegisterPmc creates a PMC row, mapping domain → DAO.
+// RegisterPmc creates or updates a PMC row via INSERT … ON CONFLICT upsert,
+// which is safe under concurrent registrations of the same MAC.
 func (ps *PostgresPmcRegistry) RegisterPmc(ctx context.Context, pmc *pmc.PMC) error {
-	operation := func(ctx context.Context, tx bun.Tx) error {
-		pmcDao := dao.PmcTo(pmc)
-
-		if err := pmcDao.Create(ctx, tx); err != nil {
-			log.Printf("failed to create bmc entry: %s", pmcDao.MacAddress)
-			return errors.GRPCErrorInternal(err.Error())
-		}
-
-		return nil
+	if pmc == nil {
+		return fmt.Errorf("cannot register nil PMC")
 	}
 
-	return ps.runInTx(ctx, operation)
+	pmcDao := dao.PmcTo(pmc)
+
+	return ps.runInTx(ctx, func(ctx context.Context, tx bun.Tx) error {
+		_, err := tx.NewInsert().
+			Model(pmcDao).
+			On("CONFLICT (mac_address) DO UPDATE").
+			Set("ip_address = EXCLUDED.ip_address").
+			Set("vendor = EXCLUDED.vendor").
+			Exec(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to upsert PMC %s: %w", pmcDao.MacAddress, err)
+		}
+		return nil
+	})
 }
 
 // GetPmc queries by MAC and maps DAO → domain.

@@ -180,9 +180,9 @@ func TestIntegration_PostgresRegistry_DuplicateRegistration(t *testing.T) {
 	err := registry.RegisterPmc(ctx, testPmc)
 	assert.NoError(t, err, "First registration should succeed")
 
-	// Second registration should fail (duplicate MAC)
+	// Second registration should upsert (same MAC)
 	err = registry.RegisterPmc(ctx, testPmc)
-	assert.Error(t, err, "Duplicate registration should fail")
+	assert.NoError(t, err, "Duplicate registration should upsert")
 }
 
 func TestIntegration_PostgresRegistry_UniqueIPConstraint(t *testing.T) {

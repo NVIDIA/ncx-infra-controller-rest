@@ -66,7 +66,10 @@ func (pm *PmcManager) Register(ctx context.Context, pmc *pmc.PMC) error {
 		return fmt.Errorf("failed to register PMC (%s): %w", pmc.GetMac().String(), err)
 	}
 
-	return pm.credentialManager.Put(ctx, pmc.GetMac(), pmc.GetCredential())
+	if cred := pmc.GetCredential(); cred != nil {
+		return pm.credentialManager.Put(ctx, pmc.GetMac(), cred)
+	}
+	return nil
 }
 
 // GetPmc resolves a PMC by MAC from the registry and attaches its credential from the credential manager.
