@@ -67,6 +67,8 @@ func New(ctx context.Context, c Config) (*Service, error) {
 
 // Start begins the PowershelfManager, binds the gRPC server on the configured port, and serves until the listener is closed.
 func (s *Service) Start(ctx context.Context) error {
+	certOpt := s.certOption()
+
 	err := s.psm.Start(ctx)
 	if err != nil {
 		return err
@@ -83,7 +85,7 @@ func (s *Service) Start(ctx context.Context) error {
 	}
 
 	s.grpcServer = grpc.NewServer(
-		s.certOption(),
+		certOpt,
 		grpc.ChainUnaryInterceptor(
 			loggingUnaryInterceptor(),
 		),

@@ -105,6 +105,8 @@ func New(ctx context.Context, c Config) (*Service, error) {
 func (s *Service) Start(ctx context.Context) error {
 	log.Logger = log.With().Caller().Logger()
 
+	certOpt := s.certOption()
+
 	// Rule resolver is ready immediately (queries DB for rules)
 	log.Info().Msg("Rule resolver ready (will query DB for operation rules)")
 
@@ -140,7 +142,7 @@ func (s *Service) Start(ctx context.Context) error {
 		return err
 	}
 
-	s.grpcServer = grpc.NewServer(s.certOption())
+	s.grpcServer = grpc.NewServer(certOpt)
 
 	log.Info().Msg("gRPC server is running")
 
