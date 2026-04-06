@@ -2542,6 +2542,7 @@ paths:
         Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` authorization role
 
         Tenant must own the VPC
+        Request is rejected if the VPC already has Subnets or Instances
       requestBody:
         content:
           application/json:
@@ -13041,7 +13042,7 @@ components:
     VpcVirtualizationUpdateRequest:
       title: VpcVirtualizationUpdateRequest
       type: object
-      description: Request data to update network virtualization type for VPC
+      description: Request data to update network virtualization type for VPC. Requests are rejected if the VPC already has Subnets or Instances.
       examples:
         - networkVirtualizationType: FNN
       properties:

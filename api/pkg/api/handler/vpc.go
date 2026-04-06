@@ -1035,6 +1035,28 @@ func (uvvh UpdateVPCVirtualizationHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "VPC does not belong to current Tenant", nil)
 	}
 
+	subnetDAO := cdbm.NewSubnetDAO(uvvh.dbSession)
+	_, subnetCount, err := subnetDAO.GetAll(ctx, nil, cdbm.SubnetFilterInput{VpcIDs: []uuid.UUID{vpc.ID}}, cdbp.PageInput{Limit: cdb.GetIntPtr(0)}, nil)
+	if err != nil {
+		logger.Error().Err(err).Msg("error retrieving Subnets count from DB for VPC")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Subnets count for VPC", nil)
+	}
+
+	instanceDAO := cdbm.NewInstanceDAO(uvvh.dbSession)
+	instanceCount, err := instanceDAO.GetCount(ctx, nil, cdbm.InstanceFilterInput{VpcIDs: []uuid.UUID{vpc.ID}})
+	if err != nil {
+		logger.Error().Err(err).Msg("error retrieving Instances count from DB for VPC")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Instances count for VPC", nil)
+	}
+
+	if subnetCount > 0 {
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Virtualization Type cannot be changed while VPC contains one or more Subnets", nil)
+	}
+
+	if instanceCount > 0 {
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Virtualization Type cannot be changed while VPC contains one or more Instances", nil)
+	}
+
 	// Ensure that Tenant has access to Site
 	tsDAO := cdbm.NewTenantSiteDAO(uvvh.dbSession)
 	_, err = tsDAO.GetByTenantIDAndSiteID(ctx, nil, tenant.ID, vpc.SiteID, nil)

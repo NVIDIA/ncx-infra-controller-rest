@@ -17,7 +17,7 @@ import (
 // checks if the VpcVirtualizationUpdateRequest type satisfies the MappedNullable interface at compile time
 var _ MappedNullable = &VpcVirtualizationUpdateRequest{}
 
-// VpcVirtualizationUpdateRequest Request data to update network virtualization type for VPC
+// VpcVirtualizationUpdateRequest Request data to update network virtualization type for VPC. Requests are rejected if the VPC already has Subnets or Instances.
 type VpcVirtualizationUpdateRequest struct {
 	// Network virtualization type of the VPC. Can only be updated to `FNN`
 	NetworkVirtualizationType *string `json:"networkVirtualizationType,omitempty"`
