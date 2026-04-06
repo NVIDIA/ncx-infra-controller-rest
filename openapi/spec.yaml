@@ -4341,7 +4341,6 @@ paths:
                       labels:
                         environment: production
                         team: devops
-                        owner: test@example.com
                       status: Pending
                       statusHistory:
                         - status: Pending
@@ -4449,7 +4448,6 @@ paths:
                     labels:
                       environment: production
                       team: devops
-                      owner: test@example.com
                     status: Pending
                     statusHistory:
                       - status: Pending
@@ -4479,7 +4477,6 @@ paths:
                   labels:
                     environment: production
                     team: devops
-                    owner: test@example.com
       tags:
         - InfiniBand Partition
   '/v2/org/{org}/carbide/infiniband-partition/{infiniBandPartitionId}':
@@ -4523,7 +4520,6 @@ paths:
                     labels:
                       environment: production
                       team: devops
-                      owner: test@example.com
                     status: Pending
                     statusHistory:
                       - status: Pending
@@ -4628,7 +4624,6 @@ paths:
                   labels:
                     environment: production
                     team: devops
-                    owner: test@example.com
       tags:
         - InfiniBand Partition
   '/v2/org/{org}/carbide/nvlink-logical-partition':
@@ -13555,6 +13550,9 @@ components:
         enableSharp:
           type: boolean
           readOnly: true
+        labels:
+          $ref: '#/components/schemas/Labels'
+          description: String key value pairs describing InfiniBand Partition labels. Up to 10 key value pairs can be specified
         status:
           $ref: '#/components/schemas/InfiniBandPartitionStatus'
           readOnly: true
@@ -13603,12 +13601,8 @@ components:
           format: uuid
           description: ID of the Site the Partition should belong to
         labels:
-          type: object
-          description: Labels of the InfiniBand Partition. Up to 10 key value pairs can be specified.
-          maxProperties: 10
-          additionalProperties:
-            type: string
-            description: Value of the label
+          $ref: '#/components/schemas/Labels'
+          description: String key value pairs describing Partition labels. Up to 10 key value pairs can be specified
       required:
         - name
         - siteId
@@ -13627,12 +13621,8 @@ components:
         description:
           type: string
         labels:
-          type: object
-          description: Update labels of the InfiniBand Partition. Up to 10 key value pairs can be specified. The labels will be entirely replaced by those sent in the request. Any labels not included in the request will be removed. To retain existing labels, first fetch them and include them along with this request.
-          maxProperties: 10
-          additionalProperties:
-            type: string
-            description: Value of the label
+          $ref: '#/components/schemas/Labels'
+          description: String key value pairs describing Partition labels. Up to 10 key value pairs can be specified
       required:
         - name
     NVLinkLogicalPartition:
