@@ -34,8 +34,10 @@ import (
 // The mount path for the secrets engine
 const mountPath = "secrets"
 
-// The path for storing PMC credentials
-const credentialPath = mountPath + "/data/pmc"
+// PMC credentials use the same KV layout as Core site explorer and NSM:
+// secrets/data/machines/bmc/{mac}/root (mac uppercase; vault paths are case-sensitive).
+const bmcCredentialPath = mountPath + "/data/machines/bmc"
+const bmcCredentialSuffix = "root"
 
 // VaultConfig configures access to Vault (address and token). The token should be scoped minimally for KV operations.
 type VaultConfig struct {
@@ -138,7 +140,7 @@ func (m *VaultCredentialManager) Stop(ctx context.Context) error {
 // MacAddress Display trait emits uppercase hex). Go's net.HardwareAddr.String()
 // emits lowercase, and vault paths are case-sensitive.
 func (m *VaultCredentialManager) getCredentialKey(mac net.HardwareAddr) string {
-	return fmt.Sprintf("%s/%s", credentialPath, strings.ToUpper(mac.String()))
+	return fmt.Sprintf("%s/%s/%s", bmcCredentialPath, strings.ToUpper(mac.String()), bmcCredentialSuffix)
 }
 
 // Get retrieves and validates credentials for the given MAC from Vault.
@@ -197,9 +199,11 @@ func (m *VaultCredentialManager) Delete(ctx context.Context, mac net.HardwareAdd
 	return err
 }
 
-// Keys returns a list of PMC MACs for which credential manager has secrets for.
+// Keys returns a list of PMC MACs for which credential manager has BMC-root secrets.
+// KV v2 lists live under metadata/
 func (m *VaultCredentialManager) Keys(ctx context.Context) ([]net.HardwareAddr, error) {
-	secret, err := m.client.Logical().List(credentialPath)
+	listPath := strings.Replace(bmcCredentialPath, "/data/", "/metadata/", 1)
+	secret, err := m.client.Logical().List(listPath)
 	if err != nil {
 		return nil, err
 	}
@@ -218,15 +222,14 @@ func (m *VaultCredentialManager) Keys(ctx context.Context) ([]net.HardwareAddr, 
 		if !ok {
 			return nil, fmt.Errorf("unexpected key format: %v", key)
 		}
+		keyStr = strings.TrimSuffix(keyStr, "/")
 
 		mac, err := net.ParseMAC(keyStr)
 		if err != nil {
-			return nil, err
+			continue
 		}
 
-		if mac != nil {
-			macs = append(macs, mac)
-		}
+		macs = append(macs, mac)
 	}
 
 	return macs, nil
