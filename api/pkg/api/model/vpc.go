@@ -25,6 +25,7 @@ import (
 
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model/util"
 	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	validationis "github.com/go-ozzo/ozzo-validation/v4/is"
 	"github.com/google/uuid"
@@ -33,6 +34,31 @@ import (
 const (
 	// VpcMaxLabelCount is the maximum number of Labels allowed per VPC
 	VpcMaxLabelCount = 10
+	// APIVpcRoutingProfileTypeExternal is the API representation of the external routing profile type.
+	APIVpcRoutingProfileTypeExternal = "EXTERNAL"
+	// APIVpcRoutingProfileTypeInternal is the API representation of the internal routing profile type.
+	APIVpcRoutingProfileTypeInternal = "INTERNAL"
+	// APIVpcRoutingProfileTypePrivilegedInternal is the API representation of the privileged internal routing profile type.
+	APIVpcRoutingProfileTypePrivilegedInternal = "PRIVILEGED_INTERNAL"
+	// APIVpcRoutingProfileTypeMaintenance is the API representation of the maintenance routing profile type.
+	APIVpcRoutingProfileTypeMaintenance = "MAINTENANCE"
+)
+
+var (
+	// VpcRoutingProfileTypeProtobufFromAPI maps API routing profile type values to protobuf enum values.
+	VpcRoutingProfileTypeProtobufFromAPI = map[string]cwssaws.RoutingProfileType{
+		APIVpcRoutingProfileTypeExternal:           cwssaws.RoutingProfileType_ROUTING_PROFILE_TYPE_EXTERNAL,
+		APIVpcRoutingProfileTypeInternal:           cwssaws.RoutingProfileType_ROUTING_PROFILE_TYPE_INTERNAL,
+		APIVpcRoutingProfileTypePrivilegedInternal: cwssaws.RoutingProfileType_ROUTING_PROFILE_TYPE_PRIVILEGED_INTERNAL,
+		APIVpcRoutingProfileTypeMaintenance:        cwssaws.RoutingProfileType_ROUTING_PROFILE_TYPE_MAINTENANCE,
+	}
+	// VpcRoutingProfileTypeAPIFromProtobuf maps protobuf string values to API routing profile type values.
+	VpcRoutingProfileTypeAPIFromProtobuf = map[string]string{
+		cwssaws.RoutingProfileType_ROUTING_PROFILE_TYPE_EXTERNAL.String():            APIVpcRoutingProfileTypeExternal,
+		cwssaws.RoutingProfileType_ROUTING_PROFILE_TYPE_INTERNAL.String():            APIVpcRoutingProfileTypeInternal,
+		cwssaws.RoutingProfileType_ROUTING_PROFILE_TYPE_PRIVILEGED_INTERNAL.String(): APIVpcRoutingProfileTypePrivilegedInternal,
+		cwssaws.RoutingProfileType_ROUTING_PROFILE_TYPE_MAINTENANCE.String():         APIVpcRoutingProfileTypeMaintenance,
+	}
 )
 
 // APIVpcCreateRequest captures the request data for creating a new VPC
@@ -58,6 +84,9 @@ type APIVpcCreateRequest struct {
 	// The request will be rejected by the site if the VNI
 	// is not within a VNI range allowed for explicit requests.
 	Vni *int `json:"vni"`
+	// RoutingProfileType is the requested routing profile type for the VPC.
+	// This is only supported when `networkVirtualizationType` is FNN.
+	RoutingProfileType *string `json:"routingProfileType"`
 }
 
 // Validate ensure the values passed in create request are acceptable
@@ -91,9 +120,23 @@ func (ascr APIVpcCreateRequest) Validate() error {
 		}
 	}
 
+	if ascr.RoutingProfileType != nil {
+		if _, ok := VpcRoutingProfileTypeProtobufFromAPI[*ascr.RoutingProfileType]; !ok {
+			return validation.Errors{
+				"routingProfileType": fmt.Errorf("unsupported `routingProfileType`: %s", *ascr.RoutingProfileType),
+			}
+		}
+
+		if ascr.NetworkVirtualizationType != nil && *ascr.NetworkVirtualizationType != cdbm.VpcFNN {
+			return validation.Errors{
+				"routingProfileType": errors.New("`routingProfileType` is only supported when `networkVirtualizationType` is FNN"),
+			}
+		}
+	}
+
 	if ascr.Vni != nil && (*ascr.Vni < 0 || *ascr.Vni > math.MaxUint16) {
 		return validation.Errors{
-			"labels": fmt.Errorf("VNI must be an integer between 0 and %d", math.MaxUint16),
+			"vni": fmt.Errorf("VNI must be an integer between 0 and %d", math.MaxUint16),
 		}
 	}
 
@@ -298,11 +341,13 @@ type APIVpc struct {
 	Created time.Time `json:"created"`
 	// Updated indicates the ISO datetime string for when the VPC was last updated
 	Updated time.Time `json:"updated"`
+	// RoutingProfileType is the requested routing profile type for the VPC.
+	RoutingProfileType *string `json:"routingProfileType"`
 	// RequestedVni is the explicitly requested VPC VNI at creation time _if_ one was requested.
-	RequestedVni *int
+	RequestedVni *int `json:"requestedVni"`
 	// Vni is the active/actual VNI of the VPC, regardless of whether it was
 	// explicitly requested or auto-allocated.
-	Vni *int
+	Vni *int `json:"vni"`
 }
 
 // NewAPIVpc creates and returns a new APIVpc object
@@ -327,6 +372,13 @@ func NewAPIVpc(dbVpc cdbm.Vpc, dbsds []cdbm.StatusDetail) APIVpc {
 
 	if dbVpc.NetworkVirtualizationType != nil {
 		apivpc.NetworkVirtualizationType = dbVpc.NetworkVirtualizationType
+		if *dbVpc.NetworkVirtualizationType == cdbm.VpcFNN {
+			if dbVpc.RoutingProfileType != nil {
+				if apiValue, ok := VpcRoutingProfileTypeAPIFromProtobuf[*dbVpc.RoutingProfileType]; ok {
+					apivpc.RoutingProfileType = &apiValue
+				}
+			}
+		}
 	}
 
 	if dbVpc.ControllerVpcID != nil {

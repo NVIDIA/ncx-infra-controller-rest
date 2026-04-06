@@ -995,6 +995,13 @@ message VpcCreationRequest {
   // The requested VNI must be available in a resource-pool range that is not
   // marked for auto-assignment; otherwise, the request will be rejected.
   optional uint32 vni = 15;  
+
+  // Desired routing profile type for this VPC.
+  // The requested type must be equal to or less than
+  // type of the tenant.
+  // For example, an internal tenant can request internal or external VPCs,
+  // but an external tenant can only request external VPCs.
+  optional RoutingProfileType routing_profile_type = 16;
 }
 
 enum VpcVirtualizationType {
@@ -1005,6 +1012,14 @@ enum VpcVirtualizationType {
   FNN_CLASSIC = 3;
   FNN_L3 = 4;
   FNN = 5;
+}
+
+enum RoutingProfileType {
+  ROUTING_PROFILE_TYPE_EXTERNAL = 0;
+  ROUTING_PROFILE_TYPE_ADMIN = 1;
+  ROUTING_PROFILE_TYPE_INTERNAL = 2;
+  ROUTING_PROFILE_TYPE_PRIVILEGED_INTERNAL = 3;
+  ROUTING_PROFILE_TYPE_MAINTENANCE = 4;
 }
 
 message VpcUpdateRequest {
@@ -3542,13 +3557,14 @@ message Tenant {
   Metadata metadata = 2;
   // this string is used to verify that the client has the most updated "view" of a keyset when attempting to modify it
   string version = 3;
+  optional RoutingProfileType routing_profile_type = 4;
 }
 
 message CreateTenantRequest {
   // this organization ID must be globally unique
   string organization_id = 1;
   Metadata metadata = 2;
-
+  optional RoutingProfileType routing_profile_type = 3;
 }
 message CreateTenantResponse {
   Tenant tenant = 1;
@@ -3561,6 +3577,8 @@ message UpdateTenantRequest {
   // if this field is set and non-empty, the request will only update the tenant if the version matches the server's view,
   // otherwise it will return a concurrency related error.
   optional string if_version_match = 3;
+  // Updating will only be allowed if the tenant has no active VPCs
+  optional RoutingProfileType routing_profile_type = 4;
 }
 message UpdateTenantResponse {
   // the updated tenant after modification

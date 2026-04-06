@@ -520,13 +520,14 @@ type ApiGetAllAllocationRequest struct {
 	orderBy                  *string
 }
 
-// Filter Allocations by Infrastructure Provider ID
+// Filter Allocations by Infrastructure Provider ID.
+// Deprecated
 func (r ApiGetAllAllocationRequest) InfrastructureProviderId(infrastructureProviderId string) ApiGetAllAllocationRequest {
 	r.infrastructureProviderId = &infrastructureProviderId
 	return r
 }
 
-// Filter Allocations by Tenant ID.  Can be specified multiple times to filter on more than one Tenant ID.
+// Filter Allocations by Tenant ID.
 func (r ApiGetAllAllocationRequest) TenantId(tenantId string) ApiGetAllAllocationRequest {
 	r.tenantId = &tenantId
 	return r
@@ -613,11 +614,9 @@ GetAllAllocation Retrieve all Allocations
 
 Retrieve all Allocations for the org.
 
-Either `infrastructureProviderId` or `tenantId` query param must be specified.
+Provider and Tenant roles are inferred from the org's membership. User must have `FORGE_PROVIDER_ADMIN` or `FORGE_TENANT_ADMIN` role.
 
-If `infrastructureProviderId` query param is provided, then org must have an Infrastructure Provider entity and its ID should match the query param value. User must have `FORGE_PROVIDER_ADMIN` role.
-
-If `tenantId` query param is provided, then org must have a Tenant entity and its ID should match the query param value. User must have `FORGE_TENANT_ADMIN` role.
+Results are returned from both Provider and Tenant perspectives when the org has both roles.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -930,13 +929,15 @@ type ApiGetAllocationRequest struct {
 	includeRelation          *string
 }
 
-// Filter Allocations by Infrastructure Provider ID
+// Filter Allocations by Infrastructure Provider ID.
+// Deprecated
 func (r ApiGetAllocationRequest) InfrastructureProviderId(infrastructureProviderId string) ApiGetAllocationRequest {
 	r.infrastructureProviderId = &infrastructureProviderId
 	return r
 }
 
-// Filter Allocations by Tenant ID
+// Filter Allocations by Tenant ID.
+// Deprecated
 func (r ApiGetAllocationRequest) TenantId(tenantId string) ApiGetAllocationRequest {
 	r.tenantId = &tenantId
 	return r
@@ -957,9 +958,9 @@ GetAllocation Retrieve Allocation
 
 # Retrieve Allocation by ID
 
-Allocation must belong either to the Provider associated with the org or the Tenant associated with the org.
+Provider and Tenant roles are inferred from the org's membership. Allocation must belong to the Provider or Tenant associated with the org.
 
-User must have `FORGE_PROVIDER_ADMIN`, `FORGE_TENANT_ADMIN` role.
+User must have `FORGE_PROVIDER_ADMIN` or `FORGE_TENANT_ADMIN` role.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
