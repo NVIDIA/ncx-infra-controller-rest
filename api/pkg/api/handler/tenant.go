@@ -25,6 +25,7 @@ import (
 
 	temporalClient "go.temporal.io/sdk/client"
 
+	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 
 	"github.com/labstack/echo/v4"
@@ -391,6 +392,160 @@ func (ucth UpdateCurrentTenantHandler) Handle(c echo.Context) error {
 	}
 
 	return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, model.ErrMsgTenantUpdateEndpointDeprecated, nil)
+}
+
+// ~~~~~ Update Capabilities Handler ~~~~~ //
+
+// UpdateTenantCapabilitiesHandler is the API Handler for updating Tenant capabilities by Tenant ID.
+type UpdateTenantCapabilitiesHandler struct {
+	dbSession  *cdb.Session
+	tc         temporalClient.Client
+	cfg        *config.Config
+	tracerSpan *cutil.TracerSpan
+}
+
+// NewUpdateTenantCapabilitiesHandler initializes and returns a handler for updating Tenant capabilities.
+func NewUpdateTenantCapabilitiesHandler(dbSession *cdb.Session, tc temporalClient.Client, cfg *config.Config) UpdateTenantCapabilitiesHandler {
+	return UpdateTenantCapabilitiesHandler{
+		dbSession:  dbSession,
+		tc:         tc,
+		cfg:        cfg,
+		tracerSpan: cutil.NewTracerSpan(),
+	}
+}
+
+// Handle godoc
+// @Summary Update Tenant capabilities
+// @Description Update capabilities for a Tenant identified by ID. User must have FORGE_PROVIDER_ADMIN authorization role.
+// @Tags tenant
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param org path string true "Name of NGC organization"
+// @Param tenantId path string true "ID of Tenant"
+// @Param message body model.APITenantCapabilitiesUpdateRequest true "Tenant capabilities update request"
+// @Success 200 {object} model.APITenant
+// @Router /v2/org/{org}/carbide/tenant/{tenantId}/capabilities [patch]
+func (utch UpdateTenantCapabilitiesHandler) Handle(c echo.Context) error {
+	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("Tenant", "UpdateCapabilities", c, utch.tracerSpan)
+	if handlerSpan != nil {
+		defer handlerSpan.End()
+	}
+	if dbUser == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
+	}
+
+	ok, err := auth.ValidateOrgMembership(dbUser, org)
+	if !ok {
+		if err != nil {
+			logger.Error().Err(err).Msg("error validating org membership for User in request")
+		} else {
+			logger.Warn().Msg("could not validate org membership for user, access denied")
+		}
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
+	}
+
+	ok = auth.ValidateUserRoles(dbUser, org, nil, auth.ProviderAdminRole)
+	if !ok {
+		logger.Warn().Msg("user does not have Provider Admin role with org, access denied")
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "User does not have Provider Admin role with org", nil)
+	}
+
+	tenantIDStr := c.Param("tenantId")
+	tenantID, err := uuid.Parse(tenantIDStr)
+	if err != nil {
+		logger.Warn().Err(err).Msg("error parsing tenantId in URL into uuid")
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Tenant ID in URL", nil)
+	}
+
+	apiRequest := model.APITenantCapabilitiesUpdateRequest{}
+	err = c.Bind(&apiRequest)
+	if err != nil {
+		logger.Warn().Err(err).Msg("error binding Tenant capabilities update request data into API model")
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data", nil)
+	}
+
+	verr := apiRequest.Validate()
+	if verr != nil {
+		logger.Warn().Err(verr).Msg("error validating Tenant capabilities update request data")
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating Tenant capabilities update request data", verr)
+	}
+
+	tx, err := cdb.BeginTx(ctx, utch.dbSession, &sql.TxOptions{})
+	if err != nil {
+		logger.Error().Err(err).Msg("unable to start transaction")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Tenant capabilities", nil)
+	}
+	txCommitted := false
+	defer common.RollbackTx(ctx, tx, &txCommitted)
+
+	ip, err := common.GetInfrastructureProviderForOrg(ctx, tx, utch.dbSession, org)
+	if err != nil {
+		if err == common.ErrOrgInstrastructureProviderNotFound {
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Infrastructure Provider not found for org", nil)
+		}
+		logger.Error().Err(err).Msg("error getting infrastructure provider for org")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve infrastructure provider for org", nil)
+	}
+
+	taDAO := cdbm.NewTenantAccountDAO(utch.dbSession)
+	tas, _, err := taDAO.GetAll(ctx, tx, cdbm.TenantAccountFilterInput{
+		InfrastructureProviderID: &ip.ID,
+		TenantIDs:                []uuid.UUID{tenantID},
+	}, cdbp.PageInput{Limit: cdb.GetIntPtr(1)}, nil)
+	if err != nil {
+		logger.Error().Err(err).Msg("error retrieving TenantAccount for Infrastructure Provider and Tenant")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve TenantAccount", nil)
+	}
+
+	tnDAO := cdbm.NewTenantDAO(utch.dbSession)
+	if len(tas) == 0 {
+		_, err = tnDAO.GetByID(ctx, tx, tenantID, nil)
+		if err != nil {
+			if err == cdb.ErrDoesNotExist {
+				return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Tenant not found", nil)
+			}
+			logger.Error().Err(err).Msg("error retrieving Tenant")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant", nil)
+		}
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "No TenantAccount linking Infrastructure Provider to Tenant", nil)
+	}
+
+	tenant, err := tnDAO.GetByID(ctx, tx, tenantID, nil)
+	if err != nil {
+		if err == cdb.ErrDoesNotExist {
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Tenant not found", nil)
+		}
+		logger.Error().Err(err).Msg("error retrieving Tenant")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant", nil)
+	}
+
+	var merged *cdbm.TenantConfig
+	if apiRequest.TargetedInstanceCreation != nil {
+		base := cdbm.TenantConfig{}
+		if tenant.Config != nil {
+			base = *tenant.Config
+		}
+		base.TargetedInstanceCreation = *apiRequest.TargetedInstanceCreation
+		merged = &base
+	}
+
+	updated, err := tnDAO.UpdateFromParams(ctx, tx, tenant.ID, nil, nil, nil, merged)
+	if err != nil {
+		logger.Error().Err(err).Msg("error updating Tenant capabilities")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Tenant capabilities", nil)
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		logger.Error().Err(err).Msg("error committing transaction")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Tenant capabilities", nil)
+	}
+	txCommitted = true
+
+	logger.Info().Msg("finishing API handler")
+
+	return c.JSON(http.StatusOK, model.NewAPITenant(updated))
 }
 
 // Utility functions

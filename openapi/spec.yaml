@@ -333,6 +333,67 @@ paths:
 
         User must have `FORGE_TENANT_ADMIN` authorization role.
       parameters: []
+  '/v2/org/{org}/carbide/tenant/{tenantId}/capabilities':
+    parameters:
+      - schema:
+          type: string
+        name: org
+        in: path
+        required: true
+        description: Name of the Org
+      - schema:
+          type: string
+          format: uuid
+        name: tenantId
+        in: path
+        required: true
+        description: ID of the Tenant
+    patch:
+      summary: Update Tenant capabilities
+      tags:
+        - Tenant
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+              examples:
+                example-1:
+                  value:
+                    id: 497f6eca-6276-4993-bfeb-53cbbbba6f08
+                    org: qygdmg8oqik8
+                    orgDisplayName: Echo Corporation
+                    created: '2019-08-24T14:15:22Z'
+                    updated: '2019-08-24T14:15:22Z'
+                    capabilities:
+                      targetedInstanceCreation: true
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/GenericHttpError'
+      operationId: update-tenant-capabilities
+      description: |-
+        Update capabilities for a Tenant.
+
+        User must have `FORGE_PROVIDER_ADMIN` authorization role.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TenantCapabilitiesUpdateRequest'
+            examples:
+              example-1:
+                value:
+                  targetedInstanceCreation: true
+              example-2:
+                value: {}
+        description: Optional capability flags. An empty request body is accepted.
   '/v2/org/{org}/carbide/tenant/account':
     parameters:
       - schema:
@@ -12140,6 +12201,20 @@ components:
         No params needed, an empty request will suffice.
       examples:
         - {}
+    TenantCapabilitiesUpdateRequest:
+      title: TenantCapabilitiesUpdateRequest
+      type: object
+      description: |-
+        Request data to update Tenant capabilities.
+
+        No fields are required; an empty request body will suffice.
+      examples:
+        - {}
+        - targetedInstanceCreation: true
+      properties:
+        targetedInstanceCreation:
+          type: boolean
+          description: When true, enables targeted instance creation (Machine ID) for the Tenant.
     Site:
       title: Site
       type: object

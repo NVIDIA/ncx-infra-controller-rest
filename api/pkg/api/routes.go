@@ -96,6 +96,11 @@ func NewAPIRoutes(dbSession *cdb.Session, tc tClient.Client, tnc tClient.Namespa
 			Method:  http.MethodGet,
 			Handler: apiHandler.NewGetCurrentTenantStatsHandler(dbSession, tc, cfg),
 		},
+		{
+			Path:    apiPathPrefix + "/tenant/:tenantId/capabilities",
+			Method:  http.MethodPatch,
+			Handler: apiHandler.NewUpdateTenantCapabilitiesHandler(dbSession, tc, cfg),
+		},
 		// Tenant Instance Type Stats endpoint
 		{
 			Path:    apiPathPrefix + "/tenant/instance-type/stats",

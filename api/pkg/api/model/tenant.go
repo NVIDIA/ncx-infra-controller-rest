@@ -20,6 +20,8 @@ package model
 import (
 	"time"
 
+	validation "github.com/go-ozzo/ozzo-validation/v4"
+
 	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
 )
 
@@ -72,6 +74,17 @@ func tenantToAPITenantCapabilities(tenant *cdbm.Tenant) *APITenantCapabilities {
 		apiCaps.TargetedInstanceCreation = tenant.Config.TargetedInstanceCreation
 	}
 	return apiCaps
+}
+
+// APITenantCapabilitiesUpdateRequest is the data structure for PATCH Tenant capabilities.
+type APITenantCapabilitiesUpdateRequest struct {
+	// TargetedInstanceCreation toggles targeted instance creation when set.
+	TargetedInstanceCreation *bool `json:"targetedInstanceCreation"`
+}
+
+// Validate ensures request values are acceptable. Empty bodies are valid (patch semantics).
+func (r APITenantCapabilitiesUpdateRequest) Validate() error {
+	return validation.ValidateStruct(&r)
 }
 
 // APITenantSummary is the data structure to capture API representation of a Tenant Summary
