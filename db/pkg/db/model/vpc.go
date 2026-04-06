@@ -55,6 +55,14 @@ const (
 	VpcFNN                         = "FNN"
 )
 
+const (
+	// VpcRoutingProfileType* are the supported routing profile types for VPCs.
+	VpcRoutingProfileTypeExternal           = "ROUTING_PROFILE_TYPE_EXTERNAL"
+	VpcRoutingProfileTypeInternal           = "ROUTING_PROFILE_TYPE_INTERNAL"
+	VpcRoutingProfileTypePrivilegedInternal = "ROUTING_PROFILE_TYPE_PRIVILEGED_INTERNAL"
+	VpcRoutingProfileTypeMaintenance        = "ROUTING_PROFILE_TYPE_MAINTENANCE"
+)
+
 var (
 	// VpcOrderByFields is a list of valid order by fields for the Subnet model
 	VpcOrderByFields = []string{"name", "status", "created", "updated"}
@@ -80,6 +88,13 @@ var (
 		VpcEthernetVirtualizer: true,
 		VpcFNN:                 true,
 	}
+	// VpcRoutingProfileTypeMap is a list of supported routing profile types for the VPC model.
+	VpcRoutingProfileTypeMap = map[string]bool{
+		VpcRoutingProfileTypeExternal:           true,
+		VpcRoutingProfileTypeInternal:           true,
+		VpcRoutingProfileTypePrivilegedInternal: true,
+		VpcRoutingProfileTypeMaintenance:        true,
+	}
 )
 
 // Vpc represents entries in the vpc table
@@ -99,6 +114,7 @@ type Vpc struct {
 	NVLinkLogicalPartitionID               *uuid.UUID                              `bun:"nvlink_logical_partition_id,type:uuid"`
 	NVLinkLogicalPartition                 *NVLinkLogicalPartition                 `bun:"rel:belongs-to,join:nvlink_logical_partition_id=id"`
 	NetworkVirtualizationType              *string                                 `bun:"network_virtualization_type"`
+	RoutingProfileType                     *string                                 `bun:"routing_profile_type"`
 	ControllerVpcID                        *uuid.UUID                              `bun:"controller_vpc_id,type:uuid"`
 	ActiveVni                              *int                                    `bun:"active_vni,type:integer"`
 	NetworkSecurityGroupID                 *string                                 `bun:"network_security_group_id"`
@@ -125,6 +141,7 @@ type VpcCreateInput struct {
 	SiteID                                 uuid.UUID
 	NVLinkLogicalPartitionID               *uuid.UUID
 	NetworkVirtualizationType              *string
+	RoutingProfileType                     *string
 	ControllerVpcID                        *uuid.UUID
 	NetworkSecurityGroupID                 *string
 	NetworkSecurityGroupPropagationDetails *NetworkSecurityGroupPropagationDetails
@@ -140,6 +157,7 @@ type VpcUpdateInput struct {
 	Name                                   *string
 	Description                            *string
 	NetworkVirtualizationType              *string
+	RoutingProfileType                     *string
 	ControllerVpcID                        *uuid.UUID
 	ActiveVni                              *int
 	NVLinkLogicalPartitionID               *uuid.UUID
@@ -487,6 +505,7 @@ func (vsd VpcSQLDAO) Create(ctx context.Context, tx *db.Tx, input VpcCreateInput
 		SiteID:                                 input.SiteID,
 		NVLinkLogicalPartitionID:               input.NVLinkLogicalPartitionID,
 		NetworkVirtualizationType:              input.NetworkVirtualizationType,
+		RoutingProfileType:                     input.RoutingProfileType,
 		ControllerVpcID:                        input.ControllerVpcID,
 		NetworkSecurityGroupID:                 input.NetworkSecurityGroupID,
 		NetworkSecurityGroupPropagationDetails: input.NetworkSecurityGroupPropagationDetails,
@@ -554,6 +573,12 @@ func (vsd VpcSQLDAO) Update(ctx context.Context, tx *db.Tx, input VpcUpdateInput
 		v.ControllerVpcID = input.ControllerVpcID
 		updatedFields = append(updatedFields, "controller_vpc_id")
 		vsd.tracerSpan.SetAttribute(vpcDAOSpan, "controller_vpc_id", input.ControllerVpcID.String())
+	}
+
+	if input.RoutingProfileType != nil {
+		v.RoutingProfileType = input.RoutingProfileType
+		updatedFields = append(updatedFields, "routing_profile_type")
+		vsd.tracerSpan.SetAttribute(vpcDAOSpan, "routing_profile_type", *input.RoutingProfileType)
 	}
 
 	if input.ActiveVni != nil {

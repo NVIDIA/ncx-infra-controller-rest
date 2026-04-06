@@ -249,6 +249,13 @@ func (cvh CreateVPCHandler) Handle(c echo.Context) error {
 		}
 	}
 
+	if apiRequest.RoutingProfileType != nil && *networkVirtualizationType != cdbm.VpcFNN {
+		logger.Warn().Str("routingProfileType", *apiRequest.RoutingProfileType).Msg("`routingProfileType` is only supported when `networkVirtualizationType` is FNN")
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "`routingProfileType` is only supported when `networkVirtualizationType` is FNN", validation.Errors{
+			"routingProfileType": errors.New("`routingProfileType` is only supported when `networkVirtualizationType` is FNN"),
+		})
+	}
+
 	var defaultNvllPartitionId *uuid.UUID
 	if apiRequest.NVLinkLogicalPartitionID != nil {
 		if !siteConfig.NVLinkPartition {
@@ -293,6 +300,18 @@ func (cvh CreateVPCHandler) Handle(c echo.Context) error {
 		labels = apiRequest.Labels
 	}
 
+	var dbRoutingProfileType *string
+	var routingProfileType *cwssaws.RoutingProfileType
+	if apiRequest.RoutingProfileType != nil {
+		routingProfileTypeValue, ok := model.VpcRoutingProfileTypeProtobufFromAPI[*apiRequest.RoutingProfileType]
+		if !ok {
+			logger.Error().Str("routingProfileType", *apiRequest.RoutingProfileType).Msg("failed to convert routing profile type after validation passed")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("`routingProfileType` conversion failed for value %q despite passed validation", *apiRequest.RoutingProfileType), nil)
+		}
+		routingProfileType = &routingProfileTypeValue
+		dbRoutingProfileType = cdb.GetStrPtr(routingProfileTypeValue.String())
+	}
+
 	// Start a database transaction
 	tx, err := cdb.BeginTx(ctx, cvh.dbSession, &sql.TxOptions{})
 	if err != nil {
@@ -314,6 +333,7 @@ func (cvh CreateVPCHandler) Handle(c echo.Context) error {
 		TenantID:                  tenant.ID,
 		SiteID:                    site.ID,
 		NetworkVirtualizationType: networkVirtualizationType,
+		RoutingProfileType:        dbRoutingProfileType,
 		NVLinkLogicalPartitionID:  defaultNvllPartitionId,
 		Labels:                    labels,
 		Status:                    cdbm.VpcStatusReady,
@@ -379,6 +399,7 @@ func (cvh CreateVPCHandler) Handle(c echo.Context) error {
 		Name:                      vpc.Name,
 		TenantOrganizationId:      tenant.Org,
 		NetworkVirtualizationType: &nwvt,
+		RoutingProfileType:        routingProfileType,
 		NetworkSecurityGroupId:    vpc.NetworkSecurityGroupID,
 		Vni:                       vni,
 	}
