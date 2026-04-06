@@ -1291,6 +1291,10 @@ func (c *MockForgeClient) DeleteDpuExtensionService(ctx context.Context, in *wfl
 }
 
 func (c *MockForgeClient) FindDpuExtensionServiceIds(ctx context.Context, in *wflows.DpuExtensionServiceSearchFilter, opts ...grpc.CallOption) (*wflows.DpuExtensionServiceIdList, error) {
+	if err, ok := ctx.Value("wantError").(error); ok {
+		return nil, status.Error(status.Code(err), "failed to retrieve dpu extension service ids")
+	}
+
 	out := &wflows.DpuExtensionServiceIdList{}
 	count, ok := ctx.Value("wantCount").(int)
 	if ok {
