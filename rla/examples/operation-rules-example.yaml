@@ -66,8 +66,8 @@ rules:
         post_operation:
           # Verify power shelf status
           - name: VerifyPowerStatus
-            timeout: 30s
-            poll_interval: 5s
+            timeout: 90s
+            poll_interval: 10s
             parameters:
               expected_status: "on"
 
@@ -99,8 +99,8 @@ rules:
         post_operation:
           # Verify switch status
           - name: VerifyPowerStatus
-            timeout: 30s
-            poll_interval: 5s
+            timeout: 90s
+            poll_interval: 10s
             parameters:
               expected_status: "on"
 
@@ -125,8 +125,8 @@ rules:
         post_operation:
           # Verify compute node status
           - name: VerifyPowerStatus
-            timeout: 30s
-            poll_interval: 5s
+            timeout: 90s
+            poll_interval: 10s
             parameters:
               expected_status: "on"
 
@@ -150,8 +150,8 @@ rules:
 
         post_operation:
           - name: VerifyPowerStatus
-            timeout: 30s
-            poll_interval: 5s
+            timeout: 90s
+            poll_interval: 10s
             parameters:
               expected_status: "off"
 
@@ -174,8 +174,8 @@ rules:
 
         post_operation:
           - name: VerifyPowerStatus
-            timeout: 30s
-            poll_interval: 5s
+            timeout: 90s
+            poll_interval: 10s
             parameters:
               expected_status: "off"
 
@@ -204,8 +204,8 @@ rules:
 
         post_operation:
           - name: VerifyPowerStatus
-            timeout: 30s
-            poll_interval: 5s
+            timeout: 90s
+            poll_interval: 10s
             parameters:
               expected_status: "off"
 
@@ -457,8 +457,8 @@ rules:
 
         post_operation:
           - name: VerifyPowerStatus
-            timeout: 30s
-            poll_interval: 5s
+            timeout: 90s
+            poll_interval: 10s
             parameters:
               expected_status: "off"
 
@@ -477,8 +477,8 @@ rules:
 
         post_operation:
           - name: VerifyPowerStatus
-            timeout: 30s
-            poll_interval: 5s
+            timeout: 90s
+            poll_interval: 10s
             parameters:
               expected_status: "off"
 
@@ -497,8 +497,8 @@ rules:
 
         post_operation:
           - name: VerifyPowerStatus
-            timeout: 30s
-            poll_interval: 5s
+            timeout: 90s
+            poll_interval: 10s
             parameters:
               expected_status: "off"
 
@@ -524,8 +524,8 @@ rules:
 
         post_operation:
           - name: VerifyPowerStatus
-            timeout: 30s
-            poll_interval: 5s
+            timeout: 90s
+            poll_interval: 10s
             parameters:
               expected_status: "on"
 
@@ -554,8 +554,8 @@ rules:
 
         post_operation:
           - name: VerifyPowerStatus
-            timeout: 30s
-            poll_interval: 5s
+            timeout: 90s
+            poll_interval: 10s
             parameters:
               expected_status: "on"
 
@@ -578,8 +578,8 @@ rules:
 
         post_operation:
           - name: VerifyPowerStatus
-            timeout: 30s
-            poll_interval: 5s
+            timeout: 90s
+            poll_interval: 10s
             parameters:
               expected_status: "on"
 
@@ -902,7 +902,7 @@ rules:
 #   - Use verification in post_operation to confirm success
 #   - Include VerifyPowerStatus after PowerControl
 #   - Add VerifyReachability after powershelf power-on
-#   - Use appropriate timeouts for verification (30s-3m typical)
+#   - Use appropriate timeouts for verification (90s-3m typical)
 #
 # Forceful Operations:
 #   - Skip intermediate verification for speed
