@@ -78,16 +78,15 @@ func TestMemRegistryRegisterPmc(t *testing.T) {
 			inputPMC: makePMC(t, "00:11:22:33:44:55", "192.168.1.10"),
 			wantErr:  false,
 		},
-		"duplicate registration returns error": {
+		"duplicate registration upserts": {
 			setup: func() *MemRegistry {
 				reg := NewMemRegistry()
 				p := makePMC(t, "00:11:22:33:44:55", "192.168.1.10")
 				assert.NoError(t, reg.RegisterPmc(context.Background(), p))
 				return reg
 			},
-			inputPMC:    makePMC(t, "00:11:22:33:44:55", "192.168.1.10"),
-			wantErr:     true,
-			errContains: "already registered",
+			inputPMC: makePMC(t, "00:11:22:33:44:55", "192.168.1.20"),
+			wantErr:  false,
 		},
 	}
 

@@ -18,6 +18,7 @@ package pmcregistry
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"net"
 
@@ -89,20 +90,56 @@ func (ps *PostgresPmcRegistry) runInTx(
 	return nil
 }
 
-// RegisterPmc creates a PMC row, mapping domain → DAO.
+// RegisterPmc creates or updates a PMC row.
+// The select and resulting insert or update run in a single transaction to
+// avoid races when two concurrent calls register the same PMC.
 func (ps *PostgresPmcRegistry) RegisterPmc(ctx context.Context, pmc *pmc.PMC) error {
-	operation := func(ctx context.Context, tx bun.Tx) error {
-		pmcDao := dao.PmcTo(pmc)
-
-		if err := pmcDao.Create(ctx, tx); err != nil {
-			log.Printf("failed to create bmc entry: %s", pmcDao.MacAddress)
-			return errors.GRPCErrorInternal(err.Error())
-		}
-
-		return nil
+	if pmc == nil {
+		return fmt.Errorf("cannot register nil PMC")
 	}
 
-	return ps.runInTx(ctx, operation)
+	macAddr := model.MacAddr(pmc.GetMac())
+
+	return ps.session.DB.RunInTx(ctx, &sql.TxOptions{}, func(ctx context.Context, tx bun.Tx) error {
+		existing := &model.PMC{}
+		err := tx.NewSelect().
+			Model(existing).
+			Where("mac_address = ?", macAddr).
+			Scan(ctx)
+
+		if err == nil {
+			newIP := model.IPAddr(pmc.GetIp())
+			newVendor := pmc.GetVendor().Code
+
+			// Core re-registers PMCs on every operation as a precondition;
+			// skip the UPDATE when nothing changed to avoid unnecessary writes.
+			if net.IP(existing.IPAddress).Equal(net.IP(newIP)) && existing.Vendor == newVendor {
+				return nil
+			}
+
+			existing.IPAddress = newIP
+			existing.Vendor = newVendor
+
+			_, err = tx.NewUpdate().
+				Model(existing).
+				WherePK().
+				Exec(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to update PMC: %w", err)
+			}
+			return nil
+		}
+
+		if err != sql.ErrNoRows {
+			return fmt.Errorf("failed to check existing PMC: %w", err)
+		}
+
+		pmcDao := dao.PmcTo(pmc)
+		if err := pmcDao.Create(ctx, tx); err != nil {
+			return fmt.Errorf("failed to insert PMC %s: %w", pmcDao.MacAddress, err)
+		}
+		return nil
+	})
 }
 
 // GetPmc queries by MAC and maps DAO → domain.
