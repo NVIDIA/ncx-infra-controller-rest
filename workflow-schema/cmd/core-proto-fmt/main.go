@@ -344,7 +344,7 @@ func indentBlock(s string) string {
 }
 
 func main() {
-	workflowsDir := filepath.Join("..", "site-agent", "workflows", "v1")
+	workflowsDir := filepath.Join("..", "..", "site-agent", "workflows", "v1")
 	carbideProtoFiles := filepath.Join(workflowsDir, "*_carbide.proto")
 	protoFiles, err := filepath.Glob(carbideProtoFiles)
 	if err != nil {

@@ -237,7 +237,7 @@ core-proto-fetch:
 
 core-proto-fmt:
 	@echo "Formatting Core protobuf files"
-	cd workflow-schema/scripts && go run core-proto-fmt.go
+	cd workflow-schema/cmd/core-proto-fmt && go run main.go
 
 core-protogen:
 	echo "Generating protobuf for Core"
