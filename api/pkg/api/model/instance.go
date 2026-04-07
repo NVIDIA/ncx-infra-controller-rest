@@ -393,7 +393,7 @@ type APIInstanceCreateRequest struct {
 	NetworkSecurityGroupID *string `json:"networkSecurityGroupId"`
 	// MachineID is the ID of the Machine. Only MachineID or InstanceTypeID can be present
 	MachineID *string `json:"machineId"`
-	// AllowUnhealthyMachine is the flag to allow unhealthy machine when requesting s specific Machine ID
+	// AllowUnhealthyMachine is forwarded to the site workflow when a specific Machine ID is used; the API still requires that machine to be Ready.
 	AllowUnhealthyMachine *bool `json:"allowUnhealthyMachine"`
 }
 
