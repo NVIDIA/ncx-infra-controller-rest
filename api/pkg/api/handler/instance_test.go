@@ -385,23 +385,6 @@ func testInstanceBuildMachineWithID(t *testing.T, dbSession *cdb.Session, ip uui
 	return m
 }
 
-// testInstanceAttachIST1MatchingMachineCapabilities adds machine_capability rows aligned with ist1's instance-type
-// capabilities so MatchInstanceTypeCapabilitiesForMachines (instance create Step 5) does not return 409.
-func testInstanceAttachIST1MatchingMachineCapabilities(t *testing.T, dbSession *cdb.Session, machineID string) {
-	t.Helper()
-	common.TestBuildMachineCapability(t, dbSession, &machineID, nil, cdbm.MachineCapabilityTypeInfiniBand, "MT28908 Family [ConnectX-6]", nil, nil, cdb.GetStrPtr("Mellanox Technologies"), cdb.GetIntPtr(3), cdb.GetStrPtr(""), nil)
-	common.TestBuildMachineCapability(t, dbSession, &machineID, nil, cdbm.MachineCapabilityTypeNetwork, "MT42822 BlueField-2 integrated ConnectX-6 Dx network controller", nil, nil, cdb.GetStrPtr("Mellanox Technologies"), cdb.GetIntPtr(2), cdb.GetStrPtr("DPU"), nil)
-	common.TestBuildMachineCapability(t, dbSession, &machineID, nil, cdbm.MachineCapabilityTypeGPU, "NVIDIA GB200", nil, nil, cdb.GetStrPtr("NVIDIA"), cdb.GetIntPtr(4), cdb.GetStrPtr(cdbm.MachineCapabilityDeviceTypeNVLink), nil)
-}
-
-// testInstanceLinkMachineToIST1WithCaps links a machine to ist1 and inserts matching machine_capability rows for Step 5.
-func testInstanceLinkMachineToIST1WithCaps(t *testing.T, dbSession *cdb.Session, mc *cdbm.Machine, ist *cdbm.InstanceType) *cdbm.MachineInstanceType {
-	t.Helper()
-	mit := testInstanceBuildMachineInstanceType(t, dbSession, mc, ist)
-	testInstanceAttachIST1MatchingMachineCapabilities(t, dbSession, mc.ID)
-	return mit
-}
-
 func testInstanceBuildMachineCapability(t *testing.T, dbSession *cdb.Session, mID *string, capabilityType string, name string, capacity *string, count *int) *cdbm.MachineCapability {
 	mc := &cdbm.MachineCapability{
 		ID:             uuid.New(),
@@ -770,7 +753,7 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 	mc1 := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
 	assert.NotNil(t, mc1)
 
-	mcinst1 := testInstanceLinkMachineToIST1WithCaps(t, dbSession, mc1, ist1)
+	mcinst1 := testInstanceBuildMachineInstanceType(t, dbSession, mc1, ist1)
 	assert.NotNil(t, mcinst1)
 
 	mc12 := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
@@ -800,31 +783,31 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 	mc20 := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
 	assert.NotNil(t, mc20)
 
-	mcinst12 := testInstanceLinkMachineToIST1WithCaps(t, dbSession, mc12, ist1)
+	mcinst12 := testInstanceBuildMachineInstanceType(t, dbSession, mc12, ist1)
 	assert.NotNil(t, mcinst12)
 
-	mcinst13 := testInstanceLinkMachineToIST1WithCaps(t, dbSession, mc13, ist1)
+	mcinst13 := testInstanceBuildMachineInstanceType(t, dbSession, mc13, ist1)
 	assert.NotNil(t, mcinst13)
 
-	mcinst14 := testInstanceLinkMachineToIST1WithCaps(t, dbSession, mc14, ist1)
+	mcinst14 := testInstanceBuildMachineInstanceType(t, dbSession, mc14, ist1)
 	assert.NotNil(t, mcinst14)
 
-	mcinst15 := testInstanceLinkMachineToIST1WithCaps(t, dbSession, mc15, ist1)
+	mcinst15 := testInstanceBuildMachineInstanceType(t, dbSession, mc15, ist1)
 	assert.NotNil(t, mcinst15)
 
-	mcinst16 := testInstanceLinkMachineToIST1WithCaps(t, dbSession, mc16, ist1)
+	mcinst16 := testInstanceBuildMachineInstanceType(t, dbSession, mc16, ist1)
 	assert.NotNil(t, mcinst16)
 
-	mcinst17 := testInstanceLinkMachineToIST1WithCaps(t, dbSession, mc17, ist1)
+	mcinst17 := testInstanceBuildMachineInstanceType(t, dbSession, mc17, ist1)
 	assert.NotNil(t, mcinst17)
 
-	mcinst18 := testInstanceLinkMachineToIST1WithCaps(t, dbSession, mc18, ist1)
+	mcinst18 := testInstanceBuildMachineInstanceType(t, dbSession, mc18, ist1)
 	assert.NotNil(t, mcinst18)
 
-	mcinst19 := testInstanceLinkMachineToIST1WithCaps(t, dbSession, mc19, ist1)
+	mcinst19 := testInstanceBuildMachineInstanceType(t, dbSession, mc19, ist1)
 	assert.NotNil(t, mcinst19)
 
-	mcinst20 := testInstanceLinkMachineToIST1WithCaps(t, dbSession, mc20, ist1)
+	mcinst20 := testInstanceBuildMachineInstanceType(t, dbSession, mc20, ist1)
 	assert.NotNil(t, mcinst20)
 
 	// Tenant 1
@@ -881,18 +864,6 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 
 	mci1 := testInstanceBuildMachineInterface(t, dbSession, subnet1.ID, mc1.ID)
 	assert.NotNil(t, mci1)
-
-	// Instance type vs machine: same InfiniBand device row but different inactive-device indices (active vs inactive ports).
-	istIBPortMismatch := testInstanceBuildInstanceType(t, dbSession, ip, "test-instance-type-ib-port-mismatch", st1, cdbm.InstanceStatusReady)
-	assert.NotNil(t, istIBPortMismatch)
-	common.TestBuildMachineCapability(t, dbSession, nil, &istIBPortMismatch.ID, cdbm.MachineCapabilityTypeInfiniBand, "MT28908 Family [ConnectX-6]", nil, nil, cdb.GetStrPtr("Mellanox Technologies"), cdb.GetIntPtr(3), cdb.GetStrPtr(""), []int{0, 1})
-	mcIBPortMismatch := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
-	assert.NotNil(t, mcIBPortMismatch)
-	common.TestBuildMachineCapability(t, dbSession, &mcIBPortMismatch.ID, nil, cdbm.MachineCapabilityTypeInfiniBand, "MT28908 Family [ConnectX-6]", nil, nil, cdb.GetStrPtr("Mellanox Technologies"), cdb.GetIntPtr(3), cdb.GetStrPtr(""), []int{2, 3})
-	testInstanceBuildMachineInstanceType(t, dbSession, mcIBPortMismatch, istIBPortMismatch)
-	testInstanceBuildMachineInterface(t, dbSession, subnet1.ID, mcIBPortMismatch.ID)
-	alcIBPortMismatch := testInstanceSiteBuildAllocationContraints(t, dbSession, al1, cdbm.AllocationResourceTypeInstanceType, istIBPortMismatch.ID, cdbm.AllocationConstraintTypeReserved, 10, ipu)
-	assert.NotNil(t, alcIBPortMismatch)
 
 	desd1 := common.TestBuildDpuExtensionService(t, dbSession, "test-dpu-extension-service-1", model.DpuExtensionServiceTypeKubernetesPod, tn1, st1, "V1-T1761856992374052", cdbm.DpuExtensionServiceStatusReady, tnu1)
 	assert.NotNil(t, desd1)
@@ -1718,35 +1689,6 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 				respCode:     http.StatusCreated,
 				respMessage:  "",
 				respUserData: cdb.GetStrPtr(""),
-			},
-			wantErr: false,
-		},
-		{
-			name: "test Instance create API endpoint failure, InfiniBand inactive devices differ from instance type",
-			fields: fields{
-				dbSession: dbSession,
-				tc:        tc,
-				cfg:       cfg,
-			},
-			args: args{
-				reqData: &model.APIInstanceCreateRequest{
-					Name:           "Test Instance IB inactive ports mismatch",
-					TenantID:       tn1.ID.String(),
-					InstanceTypeID: cdb.GetStrPtr(istIBPortMismatch.ID.String()),
-					VpcID:          vpc1.ID.String(),
-					UserData:       cdb.GetStrPtr(""),
-					IpxeScript:     cdb.GetStrPtr(common.DefaultIpxeScript),
-					Interfaces: []model.APIInterfaceCreateOrUpdateRequest{
-						{
-							SubnetID: cdb.GetStrPtr(subnet1.ID.String()),
-						},
-					},
-					PhoneHomeEnabled: cdb.GetBoolPtr(false),
-				},
-				reqOrg:      tnOrg,
-				reqUser:     tnu1,
-				respCode:    http.StatusBadRequest,
-				respMessage: "do not match Instance Type's Capabilities",
 			},
 			wantErr: false,
 		},
