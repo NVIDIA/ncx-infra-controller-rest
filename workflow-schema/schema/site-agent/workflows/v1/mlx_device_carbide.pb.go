@@ -1,3 +1,4 @@
+//
 // SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -7415,7 +7416,7 @@ var File_mlx_device_carbide_proto protoreflect.FileDescriptor
 const file_mlx_device_carbide_proto_rawDesc = "" +
 	"\n" +
 	"\x18mlx_device_carbide.proto\x12\n" +
-	"mlx_device\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x14common_carbide.proto\"\xae\x01\n" +
+	"mlx_device\x1a\x14common_carbide.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xae\x01\n" +
 	"\x13MlxVariableRegistry\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12;\n" +
 	"\tvariables\x18\x02 \x03(\v2\x1d.mlx_device.MlxConfigVariableR\tvariables\x12:\n" +

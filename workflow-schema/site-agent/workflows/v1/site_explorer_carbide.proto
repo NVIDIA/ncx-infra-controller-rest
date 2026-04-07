@@ -1,17 +1,19 @@
-// SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-// SPDX-License-Identifier: Apache-2.0
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 syntax = "proto3";
 
@@ -164,7 +166,7 @@ message ComputerSystem {
   optional BootOrder boot_order = 14;
 }
 
-// WARNING: This enum conflicts with PowerState in forge.proto and must be renamed to ComputerSystemPowerState
+// WARNING: This enum conflicts with PowerState in forge_carbide.proto and must be renamed to ComputerSystemPowerState
 enum ComputerSystemPowerState {
   On = 0;
   Off = 1;
@@ -185,6 +187,8 @@ message EthernetInterface {
   optional string description = 2;
   optional bool interface_enabled = 3;
   optional string mac_address = 4;
+  // Redfish LinkStatus (e.g. LinkUp, LinkDown, NoLink)
+  optional string link_status = 5;
 }
 
 // `Chassis` definition. Matches redfish definition

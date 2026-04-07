@@ -1,17 +1,19 @@
-// SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-// SPDX-License-Identifier: Apache-2.0
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 syntax = "proto3";
 
@@ -20,12 +22,13 @@ package forge;
 // Don't forget to update build.rs to add the Serialize annotation for any new
 // message types!
 
-import "google/protobuf/duration.proto";
-import "google/protobuf/empty.proto";
-import "google/protobuf/timestamp.proto";
-
 import "common_carbide.proto";
 import "dns_carbide.proto";
+import "dpa_rpc_carbide.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
 import "health_carbide.proto";
 import "machine_discovery_carbide.proto";
 import "measured_boot_carbide.proto";
@@ -41,8 +44,25 @@ service Forge {
   // Domain
   rpc CreateDomain(dns.CreateDomainRequest) returns (dns.Domain);
   rpc UpdateDomain(dns.UpdateDomainRequest) returns (dns.Domain);
-  rpc DeleteDomain(dns.DomainDeletionRequest) returns (dns.DomainDeletionResult);
+  rpc DeleteDomain(dns.DomainDeletionRequest)
+      returns (dns.DomainDeletionResult);
   rpc FindDomain(dns.DomainSearchQuery) returns (dns.DomainList);
+
+  // DEPRECATED Domain RPCs - for backward compatibility
+  // Use the non-Legacy versions above instead
+  rpc CreateDomainLegacy(DomainLegacy) returns (DomainLegacy) {
+    option deprecated = true;
+  }
+  rpc UpdateDomainLegacy(DomainLegacy) returns (DomainLegacy) {
+    option deprecated = true;
+  }
+  rpc DeleteDomainLegacy(DomainDeletionLegacy)
+      returns (DomainDeletionResultLegacy) {
+    option deprecated = true;
+  }
+  rpc FindDomainLegacy(DomainSearchQueryLegacy) returns (DomainListLegacy) {
+    option deprecated = true;
+  }
 
   // VPC
   rpc CreateVpc(VpcCreationRequest) returns (Vpc);
@@ -78,16 +98,26 @@ service Forge {
   rpc FindIBPartitionsByIds(IBPartitionsByIdsRequest) returns (IBPartitionList);
   // Create a IB partition
   rpc CreateIBPartition(IBPartitionCreationRequest) returns (IBPartition);
+  // Update a IB partition
+  rpc UpdateIBPartition(IBPartitionUpdateRequest) returns (IBPartition);
   // Delete a IB partition
   rpc DeleteIBPartition(IBPartitionDeletionRequest) returns (IBPartitionDeletionResult);
   // Find all IB partitions under a specified tenant
   rpc IBPartitionsForTenant(TenantSearchQuery) returns (IBPartitionList);
 
   rpc FindPowerShelves(PowerShelfQuery) returns (PowerShelfList);
+  rpc FindPowerShelfIds(PowerShelfSearchFilter) returns (PowerShelfIdList);
+  rpc FindPowerShelvesByIds(PowerShelvesByIdsRequest) returns (PowerShelfList);
   rpc DeletePowerShelf(PowerShelfDeletionRequest) returns (PowerShelfDeletionResult);
+  // Force deletes a Power Shelf and optionally its associated interfaces from the database.
+  rpc AdminForceDeletePowerShelf(AdminForceDeletePowerShelfRequest) returns (AdminForceDeletePowerShelfResponse);
 
   rpc FindSwitches(SwitchQuery) returns (SwitchList);
+  rpc FindSwitchIds(SwitchSearchFilter) returns (SwitchIdList);
+  rpc FindSwitchesByIds(SwitchesByIdsRequest) returns (SwitchList);
   rpc DeleteSwitch(SwitchDeletionRequest) returns (SwitchDeletionResult);
+  // Force deletes a Switch and optionally its associated interfaces from the database.
+  rpc AdminForceDeleteSwitch(AdminForceDeleteSwitchRequest) returns (AdminForceDeleteSwitchResponse);
 
   // InfiniBand Fabrics
   // Returns the list of all InfiniBand fabrics available within the site
@@ -167,6 +197,11 @@ service Forge {
   // Invoked by forge-scout whenever a certain Machine can not be properly acted on
   rpc ReportForgeScoutError(ForgeScoutErrorReport) returns (ForgeScoutErrorReportResult);
   rpc DiscoverDhcp(DhcpDiscovery) returns (DhcpRecord);
+  rpc ExpireDhcpLease(ExpireDhcpLeaseRequest) returns (ExpireDhcpLeaseResponse);
+
+  rpc AssignStaticAddress(AssignStaticAddressRequest) returns (AssignStaticAddressResponse);
+  rpc RemoveStaticAddress(RemoveStaticAddressRequest) returns (RemoveStaticAddressResponse);
+  rpc FindInterfaceAddresses(FindInterfaceAddressesRequest) returns (FindInterfaceAddressesResponse);
 
   // PRIVILEGED: Find things
   rpc FindInterfaces(InterfaceSearchQuery) returns (InterfaceList);
@@ -175,7 +210,7 @@ service Forge {
   rpc FindMachineIds(MachineSearchConfig) returns (common.MachineIdList);
   rpc FindMachinesByIds(MachinesByIdsRequest) returns (MachineList);
   rpc FindMachineStateHistories(MachineStateHistoriesRequest) returns (MachineStateHistories);
-  rpc FindMachineHealthHistories(MachineHealthHistoriesRequest) returns (MachineHealthHistories);
+  rpc FindMachineHealthHistories(MachineHealthHistoriesRequest) returns (HealthHistories);
   rpc FindPowerShelfStateHistories(PowerShelfStateHistoriesRequest) returns (PowerShelfStateHistories);
   rpc FindRackStateHistories(RackStateHistoriesRequest) returns (RackStateHistories);
   rpc FindSwitchStateHistories(SwitchStateHistoriesRequest) returns (SwitchStateHistories);
@@ -211,10 +246,10 @@ service Forge {
 
   rpc ValidateTenantPublicKey(ValidateTenantPublicKeyRequest) returns (ValidateTenantPublicKeyResponse);
 
-  // Admin CLI actions
+  // Query for BMC Credentials
+  rpc GetBmcCredentials(GetBmcCredentialsRequest) returns (GetBmcCredentialsResponse);
 
-  // Query Vault for the DPU's SSH admin password
-  rpc GetDpuSSHCredential(CredentialRequest) returns (CredentialResponse);
+  // Admin CLI actions
 
   // List all machines network status (HBN), as reported by `forge-dpu-agent`
   rpc GetAllManagedHostNetworkStatus(ManagedHostNetworkStatusRequest) returns (ManagedHostNetworkStatusResponse);
@@ -268,6 +303,15 @@ service Forge {
 
   // Update the Metadata of a Machine
   rpc UpdateMachineMetadata(MachineMetadataUpdateRequest) returns (google.protobuf.Empty);
+
+  // Update the Metadata of a Rack
+  rpc UpdateRackMetadata(RackMetadataUpdateRequest) returns (google.protobuf.Empty);
+
+  // Update the Metadata of a Switch
+  rpc UpdateSwitchMetadata(SwitchMetadataUpdateRequest) returns (google.protobuf.Empty);
+
+  // Update the Metadata of a PowerShelf
+  rpc UpdatePowerShelfMetadata(PowerShelfMetadataUpdateRequest) returns (google.protobuf.Empty);
 
   // Update the NVLink Info of a Machine
   rpc UpdateMachineNvLinkInfo(UpdateMachineNvLinkInfoRequest) returns (google.protobuf.Empty);
@@ -397,6 +441,22 @@ service Forge {
   rpc DeleteAllExpectedSwitches(google.protobuf.Empty) returns (google.protobuf.Empty);
   // Expected switches connected to Explored Endpoints and switches
   rpc GetAllExpectedSwitchesLinked(google.protobuf.Empty) returns (LinkedExpectedSwitchList);
+
+  // Expected Rack Management
+  // Add expected rack
+  rpc AddExpectedRack(ExpectedRack) returns (google.protobuf.Empty);
+  // Delete expected rack
+  rpc DeleteExpectedRack(ExpectedRackRequest) returns (google.protobuf.Empty);
+  // Update an expected rack
+  rpc UpdateExpectedRack(ExpectedRack) returns (google.protobuf.Empty);
+  // Get a specific expected rack
+  rpc GetExpectedRack(ExpectedRackRequest) returns (ExpectedRack);
+  // Get all expected racks
+  rpc GetAllExpectedRacks(google.protobuf.Empty) returns (ExpectedRackList);
+  // Replace all expected racks in site
+  rpc ReplaceAllExpectedRacks(ExpectedRackList) returns (google.protobuf.Empty);
+  // Delete all expected racks in site
+  rpc DeleteAllExpectedRacks(google.protobuf.Empty) returns (google.protobuf.Empty);
 
   // Perform Attestation Procedure for Measured Boot
   rpc AttestQuote	(AttestQuoteRequest) returns (AttestQuoteResponse);
@@ -624,6 +684,9 @@ service Forge {
   rpc DetermineMachineIngestionState(BmcEndpointRequest) returns (MachineIngestionStateResponse);
 
   // Rack
+  rpc FindRackIds(RackSearchFilter) returns (RackIdList);
+  rpc FindRacksByIds(RacksByIdsRequest) returns (RackList);
+  // Deprecated: Use FindRackIds
   rpc GetRack(GetRackRequest) returns (GetRackResponse);
   rpc DeleteRack(DeleteRackRequest) returns (google.protobuf.Empty);
 
@@ -688,6 +751,17 @@ service Forge {
   // SPIFFE Machine Identity APIs
   // Signs a JWT-SVID token for machine identity
   rpc SignMachineIdentity(MachineIdentityRequest) returns (MachineIdentityResponse);
+  // Get, set, or delete per-org identity configuration (issuer, audiences, TTL, signing key)
+  rpc GetIdentityConfiguration(GetIdentityConfigRequest) returns (IdentityConfigResponse);
+  rpc SetIdentityConfiguration(IdentityConfigRequest) returns (IdentityConfigResponse);
+  rpc DeleteIdentityConfiguration(GetIdentityConfigRequest) returns (google.protobuf.Empty);
+  // Token delegation: get, set, or delete per-org token exchange config
+  rpc GetTokenDelegation(GetTokenDelegationRequest) returns (TokenDelegationResponse);
+  rpc SetTokenDelegation(TokenDelegationRequest) returns (TokenDelegationResponse);
+  rpc DeleteTokenDelegation(GetTokenDelegationRequest) returns (google.protobuf.Empty);
+  // Public discovery: JWKS and OpenID provider metadata (intended for unauthenticated fetch via REST gateway).
+  rpc GetJWKS(JwksRequest) returns (Jwks);
+  rpc GetOpenIDConfiguration(OpenIdConfigRequest) returns (OpenIdConfiguration);
 
   // ScoutStream establishes a bidirectional streaming connection between
   // scout agents and carbide-api. The initial use-case for this is for
@@ -799,6 +873,13 @@ service Forge {
 
   rpc ModifyDPFState(ModifyDPFStateRequest) returns (google.protobuf.Empty);
   rpc GetDPFState(GetDPFStateRequest) returns (DPFStateResponse);
+
+  // --- Component management (unified switch + power shelf operations) ---
+  rpc ComponentPowerControl(ComponentPowerControlRequest) returns (ComponentPowerControlResponse);
+  rpc GetComponentInventory(GetComponentInventoryRequest) returns (GetComponentInventoryResponse);
+  rpc UpdateComponentFirmware(UpdateComponentFirmwareRequest) returns (UpdateComponentFirmwareResponse);
+  rpc GetComponentFirmwareStatus(GetComponentFirmwareStatusRequest) returns (GetComponentFirmwareStatusResponse);
+  rpc ListComponentFirmwareVersions(ListComponentFirmwareVersionsRequest) returns (ListComponentFirmwareVersionsResponse);
 }
 
 message AttestationIdsRequest {
@@ -844,6 +925,120 @@ message MachineIdentityResponse {
   string issued_token_type = 2;
   string token_type = 3;
   string expires_in = 4;
+}
+
+// Identity configuration (per-org)
+message GetIdentityConfigRequest {
+  string organization_id = 1;
+}
+
+message IdentityConfig {
+  bool enabled = 1;
+  // JWT `iss` / OIDC issuer string: `https://` or `http://` URL (trust domain = host),
+  // `spiffe://<trust-domain>/...` (scheme ASCII case-insensitive), or bare DNS hostname / IP.
+  string issuer = 2;
+  string default_audience = 3;
+  repeated string allowed_audiences = 4;
+  uint32 token_ttl_sec = 5;
+  // When unset or empty, defaults to spiffe://<trust-domain-from-issuer>
+  optional string subject_prefix = 6;
+  bool rotate_key = 7;
+}
+
+message IdentityConfigRequest {
+  string organization_id = 1;
+  IdentityConfig config = 2;
+}
+
+message IdentityConfigResponse {
+  string organization_id = 1;
+  IdentityConfig config = 2;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+  string key_id = 10;
+}
+
+// Token delegation config (per-org token exchange for machine identity).
+// The structure used when CREATING or UPDATING a secret
+message ClientSecretBasic {
+  string client_id = 1;
+  string client_secret = 2;  // Required for input, never returned
+}
+
+// The structure used when RETRIEVING a secret configuration
+message ClientSecretBasicResponse {
+  string client_id = 1;
+  string client_secret_hash = 2;  // Returned to client, but never accepted as input
+}
+
+// auth_method_config oneof: only set for "client_secret_basic".
+// When omitted, auth_method is "none". auth_method is not returned; infer from oneof.
+message TokenDelegationResponse {
+  string organization_id = 1;
+  string token_endpoint = 2;
+  string subject_token_audience = 3;
+  oneof auth_method_config {
+    ClientSecretBasicResponse client_secret_basic = 4;
+  }
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
+message GetTokenDelegationRequest {
+  string organization_id = 1;
+}
+
+// auth_method_config oneof: only set when auth_method is "client_secret_basic".
+// When auth_method is "none", omit the oneof entirely.
+message TokenDelegation {
+  string token_endpoint = 1;
+  string subject_token_audience = 2;
+  oneof auth_method_config {
+    ClientSecretBasic client_secret_basic = 4;
+  }
+}
+
+message TokenDelegationRequest {
+  string organization_id = 1;
+  TokenDelegation config = 2;
+}
+
+// Carried JWKS document for GetJWKS. Standard key fields live in `jwks` only (RFC 7517).
+message Jwks {
+  // UTF-8 JSON text: {"keys":[ ... ]} per RFC 7517.
+  string jwks = 1;
+}
+
+message OpenIdConfiguration {
+  string issuer = 1;
+  string jwks_uri = 2;
+  // OAuth-style access token (JWT bearer) only; no OIDC `id_token` is issued.
+  repeated string response_types_supported = 3;
+  repeated string subject_types_supported = 4;
+  // Always empty: OIDC ID tokens are not supported. Verifiers use `jwks_uri` / `spiffe_jwks_uri`
+  // and GetJWKS `jwks` (`keys[].alg`) for machine-identity JWT bearer signature verification.
+  repeated string id_token_signing_alg_values_supported = 5;
+  // SPIFFE trust-domain style JWKS URL: `{issuer}/.well-known/spiffe/jwks.json` (GetJWKS with Spiffe kind).
+  string spiffe_jwks_uri = 7;
+}
+
+// Which JWKS document GetJWKS should return.
+enum JwksKind {
+  Unspecified = 0;  // Same as Oidc: tenant OIDC-style JWT signing JWKS (current default).
+  // Keys for verifying JWTs from this org issuer (e.g. machine identity ES256 public key).
+  Oidc = 1;
+  // SPIFFE trust-domain bundle keys (federation / SVID validation); distinct from OIDC OP JWKS above.
+  Spiffe = 2;
+}
+
+message JwksRequest {
+  string organization_id = 1;
+  // When omitted, treated as Unspecified / Oidc behavior.
+  optional JwksKind kind = 2;
+}
+
+message OpenIdConfigRequest {
+  string organization_id = 1;
 }
 
 // Determines machine ingestion state in relation to the power on gate
@@ -1015,7 +1210,8 @@ message RuntimeConfig {
   uint64 machine_update_runtime_interval = 23;
 
   reserved 24;
-  bool nvue_enabled = 25;
+  // Deprecated: NVUE is always enabled. This field is always set to true.
+  bool nvue_enabled = 25 [deprecated = true];
   uint32 max_database_connections = 26;
 
   bool auto_host_firmware_update = 27;
@@ -1054,6 +1250,8 @@ message RuntimeConfig {
   int32 dpa_subnet_mask = 48;
 
   bool dpf_enabled = 49;
+
+  bool rack_validation_enabled = 50;
 }
 
 message EchoRequest {
@@ -1212,7 +1410,9 @@ message VpcCreationRequest {
 enum VpcVirtualizationType {
   ETHERNET_VIRTUALIZER = 0;
   // 1 was previously FORGE_NATIVE_NETWORKING
-  ETHERNET_VIRTUALIZER_WITH_NVUE = 2;
+  // ETHERNET_VIRTUALIZER_WITH_NVUE is deprecated. NVUE is now
+  // implied; just use ETHERNET_VIRTUALIZER.
+  ETHERNET_VIRTUALIZER_WITH_NVUE = 2 [deprecated = true];
   // Deprecated: FN_CLASSIC and FNN_L3 are deprecated now. Use FNN only.
   FNN_CLASSIC = 3;
   FNN_L3 = 4;
@@ -1511,6 +1711,17 @@ message IBPartitionCreationRequest {
   Metadata metadata = 3;
 }
 
+message IBPartitionUpdateRequest {
+  common.IBPartitionId id = 1;
+
+  // New IBPartitionConfig to be applied to the IBPartition.
+  IBPartitionConfig config = 2;
+
+  optional string if_version_match = 3;
+
+  Metadata metadata = 4;
+}
+
 message IBPartitionDeletionRequest {
   common.IBPartitionId id = 1;
 }
@@ -1557,6 +1768,8 @@ message PowerShelfStatus {
   optional string power_state = 4;
   // Health status: "ok", "warning", "critical"
   optional string health_status = 5;
+  // The controller state machine state (e.g. "initializing", "ready", "error")
+  optional string controller_state = 6;
 }
 
 // Describe a PowerShelf configuration and status
@@ -1570,7 +1783,16 @@ message PowerShelf {
   // Timestamp when the power shelf was marked as deleted
   optional google.protobuf.Timestamp deleted = 4;
 
+  // Deprecated: use status.controller_state instead
   string controller_state = 5;
+
+  Metadata metadata = 6;
+  string version = 7;
+
+  BmcInfo bmc_info = 8;
+
+  // Version string for the current controller state (e.g. "V3-T1774905143273055").
+  string state_version = 9;
 }
 
 message PowerShelfList {
@@ -1615,20 +1837,42 @@ message PowerShelfQuery {
   common.PowerShelfId power_shelf_id = 2;
 }
 
-// Expected Power Shelf messages
+// Filter for controlling whether deleted resources are included in search results.
+enum DeletedFilter {
+  // Exclude deleted resources (default behavior)
+  DELETED_FILTER_EXCLUDE = 0;
+  // Return only deleted resources
+  DELETED_FILTER_ONLY = 1;
+  // Include both deleted and non-deleted resources
+  DELETED_FILTER_INCLUDE = 2;
+}
+
+message PowerShelfSearchFilter {
+  optional common.RackId rack_id = 1;
+  // Controls whether deleted power shelves are included. Defaults to EXCLUDE.
+  DeletedFilter deleted = 2;
+  // Filter by controller state (e.g. "ready", "initializing", "error")
+  optional string controller_state = 3;
+  // Filter by BMC MAC address via machine_interfaces
+  optional string bmc_mac = 4;
+}
+
+message PowerShelvesByIdsRequest {
+  repeated common.PowerShelfId power_shelf_ids = 1;
+}
+
 message ExpectedPowerShelf {
   string bmc_mac_address = 1;
   string bmc_username = 2;
   string bmc_password = 3;
   string shelf_serial_number = 4;
-  string ip_address = 5;
+  string bmc_ip_address = 5;
   // Metadata that will automatically get associated with a newly created PowerShelf
   Metadata metadata = 6;
   optional common.RackId rack_id = 7;
   // Unique identifier for the expected power shelf. When omitted, server generates one.
   optional common.UUID expected_power_shelf_id = 8;
-
-  // WARNING: Following fields are not present in Core
+  // WARNING: Following fields are not present in Core, but added directly in REST snapshot
   optional string name = 9;
   optional string manufacturer = 10;
   optional string model = 11;
@@ -1642,6 +1886,7 @@ message ExpectedPowerShelf {
 message ExpectedPowerShelfRequest {
   string bmc_mac_address = 1;
   // Optional unique identifier for selecting an expected power shelf.
+  // If provided, server will use this to select the record.
   optional common.UUID expected_power_shelf_id = 2;
 }
 
@@ -1655,11 +1900,12 @@ message LinkedExpectedPowerShelfList {
 
 message LinkedExpectedPowerShelf {
   string shelf_serial_number = 1;
-  string bmc_mac_address = 2;
-  optional common.PowerShelfId power_shelf_id = 3;
+  string bmc_mac_address = 2; // from expected_power_shelves table
+  optional common.PowerShelfId power_shelf_id = 3; // The power shelf
   optional common.UUID expected_power_shelf_id = 4;
+  optional string explored_endpoint_address = 5; // The explored BMC IP
+  optional common.RackId rack_id = 6;
 }
-
 
 // Describe the desired configuration of a Switch
 message SwitchConfig {
@@ -1689,6 +1935,8 @@ message SwitchStatus {
   optional string power_state = 4;
   // Health status: "ok", "warning", "critical"
   optional string health_status = 5;
+  // The controller state machine state (e.g. "initializing", "ready", "error")
+  optional string controller_state = 6;
 }
 
 // Describe a Switch configuration and status
@@ -1702,9 +1950,16 @@ message Switch {
   // Timestamp when the switch was marked as deleted
   optional google.protobuf.Timestamp deleted = 4;
 
+  // Deprecated: use status.controller_state instead
   string controller_state = 5;
 
   BmcInfo bmc_info = 6;
+
+  // Version string for the current controller state (e.g. "V3-T1774905143273055").
+  string state_version = 7;
+
+  Metadata metadata = 8;
+  string version = 9;
 }
 
 message SwitchList {
@@ -1751,7 +2006,20 @@ message SwitchQuery {
   common.SwitchId switch_id = 2;
 }
 
-// Expected Switch messages
+message SwitchSearchFilter {
+  optional common.RackId rack_id = 1;
+  // Controls whether deleted switches are included. Defaults to EXCLUDE.
+  DeletedFilter deleted = 2;
+  // Filter by controller state (e.g. "ready", "initializing", "error")
+  optional string controller_state = 3;
+  // Filter by BMC MAC address via machine_interfaces
+  optional string bmc_mac = 4;
+}
+
+message SwitchesByIdsRequest {
+  repeated common.SwitchId switch_ids = 1;
+}
+
 message ExpectedSwitch {
   string bmc_mac_address = 1;
   string bmc_username = 2;
@@ -1764,7 +2032,11 @@ message ExpectedSwitch {
   optional string nvos_password = 8;
   // Unique identifier for the expected switch. When omitted, server generates one.
   optional common.UUID expected_switch_id = 9;
-  // WARNING: Following fields are not present in Core
+  // WARNING: The following fields were added in core but not present in REST snapshot
+  // repeated string nvos_mac_addresses = 10;
+  // string bmc_ip_address = 11;
+
+  // WARNING: Following fields are not present in Core, but added directly in REST snapshot
   optional string name = 10;
   optional string manufacturer = 11;
   optional string model = 12;
@@ -1778,6 +2050,7 @@ message ExpectedSwitch {
 message ExpectedSwitchRequest {
   string bmc_mac_address = 1;
   // Optional unique identifier for selecting an expected switch.
+  // If provided, server will use this to select the record.
   optional common.UUID expected_switch_id = 2;
 }
 
@@ -1791,9 +2064,28 @@ message LinkedExpectedSwitchList {
 
 message LinkedExpectedSwitch {
   string switch_serial_number = 1;
-  string bmc_mac_address = 2;
-  optional common.SwitchId switch_id = 3;
+  string bmc_mac_address = 2; // from expected_switches table
+  optional common.SwitchId switch_id = 3; // The switch
   optional common.UUID expected_switch_id = 4;
+  optional string explored_endpoint_address = 5; // The explored BMC IP
+  optional common.RackId rack_id = 6;
+}
+
+message ExpectedRack {
+  // The rack identifier. Same rack_id referenced by expected machines, switches, and power shelves.
+  optional common.RackId rack_id = 1;
+  // The rack type name. Determines expected counts of compute trays, switches, and power shelves.
+  string rack_type = 2;
+  // Metadata that will be associated with the rack.
+  Metadata metadata = 3;
+}
+
+message ExpectedRackRequest {
+  string rack_id = 1;
+}
+
+message ExpectedRackList {
+  repeated ExpectedRack expected_racks = 1;
 }
 
 message IBFabricSearchFilter {
@@ -2578,8 +2870,15 @@ message MachineSearchConfig {
   reserved 5; // Was: bool include_associated_machine_id = 5; Now always included
   bool exclude_hosts = 6;
   bool only_quarantine = 7;
+  // Returns machines only if they are assigned the given instance type
   optional string instance_type_id = 8;
   bool mnnvl_only = 9;
+  // PowerState would mirror host_power_state_t, basically 'on' and 'off'
+  optional string only_with_power_state = 10;
+  // For example, to search for leak alerts, set the below to "hardware-health.tray-leak-detection"
+  optional string only_with_health_alert = 11;
+  // Returns machines only if they are part of the given rack
+  optional common.RackId rack_id = 12;
 }
 
 message MachineStateHistoriesRequest {
@@ -2604,18 +2903,18 @@ message MachineHealthHistoriesRequest {
   google.protobuf.Timestamp end_time = 3;
 }
 
-message MachineHealthHistories {
+message HealthHistories {
   // The Health History for each Machine
-  map<string, MachineHealthHistoryRecords> histories = 1;
+  map<string, HealthHistoryRecords> histories = 1;
 }
 
-// A list of Machine health history records, starting by the oldest
-message MachineHealthHistoryRecords {
-  repeated MachineHealthHistoryRecord records = 1;
+// A list of health history records, starting by the oldest
+message HealthHistoryRecords {
+  repeated HealthHistoryRecord records = 1;
 }
 
-// The observed health for a Machine at a certain point in time
-message MachineHealthHistoryRecord {
+// The observed health for a resource at a certain point in time
+message HealthHistoryRecord {
   // The observed health
   health.HealthReport health = 1;
   // The time when the health was observed
@@ -2653,6 +2952,53 @@ message InterfaceDeleteQuery {
 message InterfaceSearchQuery {
   optional common.MachineInterfaceId id = 1;
   optional string ip = 2;
+}
+
+message AssignStaticAddressRequest {
+  common.MachineInterfaceId interface_id = 1;
+  string ip_address = 2;
+}
+
+enum AssignStaticAddressStatus {
+  ASSIGN_STATIC_ADDRESS_STATUS_ASSIGNED = 0;
+  ASSIGN_STATIC_ADDRESS_STATUS_REPLACED_STATIC = 1;
+  ASSIGN_STATIC_ADDRESS_STATUS_REPLACED_DHCP = 2;
+}
+
+message AssignStaticAddressResponse {
+  common.MachineInterfaceId interface_id = 1;
+  string ip_address = 2;
+  AssignStaticAddressStatus status = 3;
+}
+
+message RemoveStaticAddressRequest {
+  common.MachineInterfaceId interface_id = 1;
+  string ip_address = 2;
+}
+
+enum RemoveStaticAddressStatus {
+  REMOVE_STATIC_ADDRESS_STATUS_REMOVED = 0;
+  REMOVE_STATIC_ADDRESS_STATUS_NOT_FOUND = 1;
+}
+
+message RemoveStaticAddressResponse {
+  common.MachineInterfaceId interface_id = 1;
+  string ip_address = 2;
+  RemoveStaticAddressStatus status = 3;
+}
+
+message FindInterfaceAddressesRequest {
+  common.MachineInterfaceId interface_id = 1;
+}
+
+message InterfaceAddress {
+  string address = 1;
+  string allocation_type = 2;
+}
+
+message FindInterfaceAddressesResponse {
+  common.MachineInterfaceId interface_id = 1;
+  repeated InterfaceAddress addresses = 2;
 }
 
 enum MachineType {
@@ -2715,9 +3061,7 @@ message Machine {
 
   // Other machine ids associated with this machine
   optional common.MachineId associated_host_machine_id = 19;
-  // Deprecated, use associated_dpu_machine_ids. For now, this is filled in with the first DPU ID.
-  // TODO: Once all admin CLI clients have updated, drop this and stop filling it in.
-  optional common.MachineId associated_dpu_machine_id = 20;
+  reserved 20; /* previously: optional common.MachineId associated_dpu_machine_id = 20; */
 
   optional MachineComponentInventory inventory = 21;
   optional google.protobuf.Timestamp last_reboot_requested_time = 22;
@@ -2771,6 +3115,8 @@ message Machine {
   optional MachineNVLinkInfo nvlink_info = 43;
 
   optional MachineNVLinkStatusObservation nvlink_status_observation = 44;
+
+  optional common.RackId rack_id = 45;
 }
 
 message InstanceNetworkRestrictions {
@@ -2808,12 +3154,54 @@ message MachineMetadataUpdateRequest {
   Metadata metadata = 3;
 }
 
+message RackMetadataUpdateRequest {
+  // The ID of the Rack for which the Metadata update will apply
+  common.RackId rack_id = 1;
+
+  // If the field here is set, the update will only be applied if the version
+  // is equivalent to the current Rack `version` on the Forge Site.
+  // If a concurrent update changed the site configuration, the API will return
+  // a `ConcurrentModificationError`.
+  optional string if_version_match = 2;
+
+  // New Metadata to be utilized by the Rack
+  Metadata metadata = 3;
+}
+
+message SwitchMetadataUpdateRequest {
+  // The ID of the Switch for which the Metadata update will apply
+  common.SwitchId switch_id = 1;
+
+  // If the field here is set, the update will only be applied if the version
+  // is equivalent to the current Switch `version` on the Forge Site.
+  // If a concurrent update changed the site configuration, the API will return
+  // a `ConcurrentModificationError`.
+  optional string if_version_match = 2;
+
+  // New Metadata to be utilized by the Switch
+  Metadata metadata = 3;
+}
+
+message PowerShelfMetadataUpdateRequest {
+  // The ID of the PowerShelf for which the Metadata update will apply
+  common.PowerShelfId power_shelf_id = 1;
+
+  // If the field here is set, the update will only be applied if the version
+  // is equivalent to the current PowerShelf `version` on the Forge Site.
+  // If a concurrent update changed the site configuration, the API will return
+  // a `ConcurrentModificationError`.
+  optional string if_version_match = 2;
+
+  // New Metadata to be utilized by the PowerShelf
+  Metadata metadata = 3;
+}
+
 message DpuAgentInventoryReport {
   common.MachineId machine_id = 1;
   MachineComponentInventory inventory = 2;
 }
 
-// WARNING: Cloud workflow schema already has a MachineInventory message, so we use MachineComponentInventory here
+// WARNING: This type conflicts with MachineInventory in forge_carbide.proto and must be renamed to MachineComponentInventory
 message MachineComponentInventory {
   repeated MachineInventorySoftwareComponent components = 1;
 }
@@ -2983,6 +3371,20 @@ message DhcpDiscovery {
   optional string desired_address = 7;
 }
 
+message ExpireDhcpLeaseRequest {
+  string ip_address = 1;
+}
+
+enum ExpireDhcpLeaseStatus {
+  EXPIRE_DHCP_LEASE_STATUS_RELEASED = 0;
+  EXPIRE_DHCP_LEASE_STATUS_NOT_FOUND = 1;
+}
+
+message ExpireDhcpLeaseResponse {
+  string ip_address = 1;
+  ExpireDhcpLeaseStatus status = 2;
+}
+
 message DhcpRecord {
   common.MachineId machine_id = 1;
   common.MachineInterfaceId machine_interface_id = 2;
@@ -3026,13 +3428,19 @@ message SSHKeyValidationResponse {
   UserRoles role = 2;
 }
 
-message CredentialRequest {
-  string host_id = 1; // UUID, IP address, host name or MAC address
+message GetBmcCredentialsRequest {
+  string mac_addr = 1;
 }
 
-message CredentialResponse {
-  string username = 1;
-  string password = 2;
+message GetBmcCredentialsResponse {
+  BmcCredentials credentials = 1;
+}
+
+message BmcCredentials {
+  oneof type {
+    UsernamePassword username_password = 1;
+    SessionToken session_token = 2;
+  }
 }
 
 message GetSiteExplorationRequest {
@@ -3098,6 +3506,9 @@ message SshRequest {
 message CopyBfbToDpuRshimRequest {
   SshRequest ssh_request = 1;
   reserved 2;
+  // Optional host BMC IP; if provided, the host will be power-cycled
+  // before BFB copy to ensure the DPU has rshim control.
+  optional string host_bmc_ip = 3;
 }
 
 message UpdateMachineHardwareInfoRequest {
@@ -3669,12 +4080,12 @@ message BMCMetaDataGetResponse {
   optional uint32 port = 5;
   optional uint32 ssh_port = 6;
   optional uint32 ipmi_port = 7;
+  optional string vendor = 8;
 }
 
 message MachineCredentialsUpdateRequest {
   enum CredentialPurpose {
     HBN = 0;
-    LOGIN_USER = 1;
     BMC = 2;
   }
 
@@ -3851,7 +4262,7 @@ message CloudInitInstructions {
 
 // Specifies whether a network interface is physical network function (PF)
 // or a virtual network function
-// WARNING: Site proto was changed to PHYSICAL = 0 and VIRTUAL = 1 which is backwards incompatible for JSON conversion, so we continue to use the following
+// WARNING: This enum was changed in a non-backwards compatible way in forge_carbide.proto to drop _FUNCTION suffix
 enum InterfaceFunctionType {
   PHYSICAL_FUNCTION = 0;
   VIRTUAL_FUNCTION = 1;
@@ -4594,13 +5005,15 @@ message ExpectedMachine {
   optional common.UUID id = 8;
   repeated ExpectedHostNic host_nics = 9;
   optional common.RackId rack_id = 10;
-  // WARNING: Conflict with Core - optional bool default_pause_ingestion_and_poweron = 11;
+  // WARNING: The following fields were added in core but not present in REST snapshot
+  // optional bool default_pause_ingestion_and_poweron = 11;
+  // bool dpf_enabled = 12 [deprecated = true];
+  // optional bool is_dpf_enabled = 13;
+
+  // WARNING: The following fields were added in core but not present in REST snapshot
   optional string name = 11;
-  // WARNING: Conflict with Core - bool dpf_enabled = 12 [deprecated = true];
   optional string manufacturer = 12;
-  // WARNING: Conflict with Core - optional bool is_dpf_enabled = 13;
   optional string model = 13;
-  // WARNING: Following fields are not present in Core
   optional string description = 14;
   optional string firmware_version = 15;
   optional int32 slot_id = 16;
@@ -4712,10 +5125,12 @@ enum MachineValidationStarted {
   Started = 0;
 }
 
+// WARNING: Site proto declares these enums inside `MachineValidationStatus`. This is not compilable to protobuf so we move the enums to the top level
 enum MachineValidationInProgress {
   InProgress = 0;
 }
 
+// WARNING: Site proto declares these enums inside `MachineValidationStatus`. This is not compilable to protobuf so we move the enums to the top level
 enum MachineValidationCompleted {
   Success = 0;
   Failed = 1;
@@ -4723,6 +5138,7 @@ enum MachineValidationCompleted {
 }
 
 message MachineValidationStatus {
+
   oneof MachineValidationState {
     MachineValidationStarted started = 1;
     MachineValidationInProgress in_progress = 2;
@@ -5653,6 +6069,17 @@ message DpaInterface {
 
   string underlay_ip = 17;
   string overlay_ip = 18;
+
+  // mlxconfig_profile is the optional profile of mlxconfig
+  // parameters to sync to the device. This is specifically
+  // the name of the profile to sync down. The actual config
+  // is defined in the Carbide API site config. If this is
+  // empty, no mlxconfig parameters will be synced during
+  // [re]provisioning, and instead an mlxconfig parameter
+  // reset will be performed, ensuring the device is reset
+  // back to its default values before allocating to the
+  // next tenant.
+  optional string mlxconfig_profile = 19;
 }
 
 
@@ -5846,6 +6273,21 @@ message GetRackResponse {
   repeated Rack rack = 1;
 }
 
+message RackList {
+  repeated Rack racks = 1;
+}
+
+message RackSearchFilter {
+}
+
+message RackIdList {
+  repeated common.RackId rack_ids = 1;
+}
+
+message RacksByIdsRequest {
+  repeated common.RackId rack_ids = 1;
+}
+
 message Rack {
   common.RackId id = 1;
   string rack_state = 2;
@@ -5854,12 +6296,14 @@ message Rack {
   repeated string expected_nvlink_switches = 5;
   repeated common.MachineId compute_trays = 6;
   repeated common.PowerShelfId power_shelves = 7;
-  // repeated common.NvlinkSwitchId nvlink_switches = 8;
+  repeated common.SwitchId switches = 8;
   google.protobuf.Timestamp created = 9;
   google.protobuf.Timestamp updated = 10;
   google.protobuf.Timestamp deleted = 11;
   health.HealthReport health = 12;
   repeated HealthOverrideOrigin health_overrides = 13;
+  Metadata metadata = 14;
+  string version = 15;
 }
 
 message RackStateHistoryRecord {
@@ -6214,6 +6658,10 @@ message UsernamePassword {
   string password = 2;
 }
 
+message SessionToken {
+  string token = 1;
+}
+
 message DpuExtensionServiceCredential {
   string registry_url = 1;
 
@@ -6380,6 +6828,7 @@ message DpuExtensionServiceObservabilityConfig {
     DpuExtensionServiceObservabilityConfigLogging    logging    = 3;
   }
 }
+
 
 message DpuExtensionServiceObservability {
   repeated DpuExtensionServiceObservabilityConfig configs = 1;
@@ -6548,6 +6997,50 @@ enum RoutingProfileType {
 message RoutingProfile {
   repeated common.RouteTarget route_target_imports     = 1;
   repeated common.RouteTarget route_targets_on_exports = 2;
+  bool leak_default_route_from_underlay                = 3;
+  bool leak_tenant_host_routes_to_underlay             = 4;
+
+  // Are route-leak communities sent by the host OS honored by the DPU for allowing
+  // routes advertised by the host OS to be leaked into the underlay?
+  bool tenant_leak_communities_accepted                = 5;
+
+}
+
+// ============================================================================
+// LEGACY DNS/DOMAIN TYPES - DEPRECATED
+// These types are maintained for backward compatibility
+// New code should use the types defined in dns.proto
+// TODO : Remove these types after migration is complete
+// ============================================================================
+
+// DEPRECATED: Use dns.Domain instead
+message DomainLegacy {
+  common.DomainId id = 1;
+  string name = 2;
+  google.protobuf.Timestamp created = 3;
+  google.protobuf.Timestamp updated = 4;
+  google.protobuf.Timestamp deleted = 5;
+}
+
+// DEPRECATED: Use dns.DomainList instead
+message DomainListLegacy {
+  repeated DomainLegacy domains = 1;
+}
+
+// DEPRECATED: Use dns.DomainDeletionRequest instead
+message DomainDeletionLegacy {
+  common.DomainId id = 1;
+}
+
+// DEPRECATED: Use dns.DomainDeletionResult instead
+message DomainDeletionResultLegacy {
+
+}
+
+// DEPRECATED: Use dns.DomainSearchQuery instead
+message DomainSearchQueryLegacy {
+  optional common.DomainId id = 1;
+  optional string name = 2;
 }
 
 // Temporary wrapper around both domain types while we transition
@@ -6555,9 +7048,11 @@ message RoutingProfile {
 message PxeDomain {
   oneof domain {
     dns.Domain new_domain = 1;
-    dns.Domain legacy_domain = 2;
+    // WARNING: Updated to correct legacy type
+    DomainLegacy legacy_domain = 2;
   }
 }
+
 
 message MachinePositionQuery {
   repeated common.MachineId machine_ids = 1;
@@ -6660,7 +7155,7 @@ message RackFirmwareJobStatusResponse {
 }
 
 message RackFirmwareHistoryRequest {
-  string firmware_id = 1;      // Optional: filter by firmware ID. Empty string means no filter.
+  string firmware_id = 1; // Optional: filter by firmware ID. Empty string means no filter.
   repeated string rack_ids = 2; // Optional: filter by rack IDs. Empty list returns all racks.
 }
 
@@ -6696,4 +7191,191 @@ message DPFStateResponse {
 
 message GetDPFStateRequest {
   repeated common.MachineId machine_ids = 1;
+}
+
+// ============================================================================
+// Component dispatch types
+// ============================================================================
+
+enum ComponentManagerStatusCode {
+  COMPONENT_MANAGER_STATUS_CODE_SUCCESS = 0;
+  COMPONENT_MANAGER_STATUS_CODE_INVALID_ARGUMENT = 1;
+  COMPONENT_MANAGER_STATUS_CODE_INTERNAL_ERROR = 2;
+  COMPONENT_MANAGER_STATUS_CODE_NOT_FOUND = 3;
+  COMPONENT_MANAGER_STATUS_CODE_ALREADY_EXISTS = 4;
+  COMPONENT_MANAGER_STATUS_CODE_UNAVAILABLE = 5;
+}
+
+message ComponentResult {
+  string component_id = 1;
+  ComponentManagerStatusCode status = 2;
+  string error = 3;
+}
+
+message SwitchIdList {
+  repeated common.SwitchId ids = 1;
+}
+
+message PowerShelfIdList {
+  repeated common.PowerShelfId ids = 1;
+}
+
+// --- Component inventory ---
+
+message GetComponentInventoryRequest {
+  oneof target {
+    common.MachineIdList machine_ids = 1;
+    SwitchIdList switch_ids = 2;
+    PowerShelfIdList power_shelf_ids = 3;
+  }
+}
+
+message ComponentInventoryEntry {
+  ComponentResult result = 1;
+  optional site_explorer.EndpointExplorationReport report = 2;
+}
+
+message GetComponentInventoryResponse {
+  repeated ComponentInventoryEntry entries = 1;
+}
+
+// --- Component power control ---
+
+message ComponentPowerControlRequest {
+  oneof target {
+    common.MachineIdList machine_ids = 1;
+    SwitchIdList switch_ids = 2;
+    PowerShelfIdList power_shelf_ids = 3;
+  }
+  common.SystemPowerControl action = 4;
+}
+
+message ComponentPowerControlResponse {
+  repeated ComponentResult results = 1;
+}
+
+// --- Component firmware ---
+
+enum FirmwareUpdateState {
+  FW_STATE_UNKNOWN = 0;
+  FW_STATE_QUEUED = 1;
+  FW_STATE_IN_PROGRESS = 2;
+  FW_STATE_VERIFYING = 3;
+  FW_STATE_COMPLETED = 4;
+  FW_STATE_FAILED = 5;
+  FW_STATE_CANCELLED = 6;
+}
+
+message FirmwareUpdateStatus {
+  ComponentResult result = 1;
+  FirmwareUpdateState state = 2;
+  string target_version = 3;
+  google.protobuf.Timestamp updated_at = 4;
+}
+
+enum NvSwitchComponent {
+  NV_SWITCH_COMPONENT_UNKNOWN = 0;
+  NV_SWITCH_COMPONENT_BMC = 1;
+  NV_SWITCH_COMPONENT_CPLD = 2;
+  NV_SWITCH_COMPONENT_BIOS = 3;
+  NV_SWITCH_COMPONENT_NVOS = 4;
+}
+
+enum PowerShelfComponent {
+  POWER_SHELF_COMPONENT_UNKNOWN = 0;
+  POWER_SHELF_COMPONENT_PMC = 1;
+  POWER_SHELF_COMPONENT_PSU = 2;
+}
+
+enum ComputeTrayComponent {
+  COMPUTE_TRAY_COMPONENT_UNKNOWN = 0;
+  COMPUTE_TRAY_COMPONENT_BMC = 1;
+  COMPUTE_TRAY_COMPONENT_BIOS = 2;
+}
+
+message UpdateComputeTrayFirmwareTarget {
+  common.MachineIdList machine_ids = 1;
+  repeated ComputeTrayComponent components = 2;
+}
+
+message UpdateSwitchFirmwareTarget {
+  SwitchIdList switch_ids = 1;
+  repeated NvSwitchComponent components = 2;
+}
+
+message UpdatePowerShelfFirmwareTarget {
+  PowerShelfIdList power_shelf_ids = 1;
+  repeated PowerShelfComponent components = 2;
+}
+
+message UpdateComponentFirmwareRequest {
+  oneof target {
+    UpdateComputeTrayFirmwareTarget compute_trays = 1;
+    UpdateSwitchFirmwareTarget switches = 2;
+    UpdatePowerShelfFirmwareTarget power_shelves = 3;
+  }
+  string target_version = 4;
+}
+
+message UpdateComponentFirmwareResponse {
+  repeated ComponentResult results = 1;
+}
+
+message GetComponentFirmwareStatusRequest {
+  oneof target {
+    common.MachineIdList machine_ids = 1;
+    SwitchIdList switch_ids = 2;
+    PowerShelfIdList power_shelf_ids = 3;
+  }
+}
+
+message GetComponentFirmwareStatusResponse {
+  repeated FirmwareUpdateStatus statuses = 1;
+}
+
+message ListComponentFirmwareVersionsRequest {
+  oneof target {
+    common.MachineIdList machine_ids = 1;
+    SwitchIdList switch_ids = 2;
+    PowerShelfIdList power_shelf_ids = 3;
+  }
+}
+
+message DeviceFirmwareVersions {
+  ComponentResult result = 1;
+  repeated string versions = 2;
+}
+
+message ListComponentFirmwareVersionsResponse {
+  repeated DeviceFirmwareVersions devices = 1;
+}
+
+// Force deletes a Switch and optionally its associated interfaces.
+message AdminForceDeleteSwitchRequest {
+  // The Switch ID to force delete.
+  common.SwitchId switch_id = 1;
+  // Should we delete the machine interfaces associated with this switch?
+  bool delete_interfaces = 2;
+}
+
+message AdminForceDeleteSwitchResponse {
+  // The ID of the switch that was deleted.
+  string switch_id = 1;
+  // Number of interfaces deleted.
+  uint32 interfaces_deleted = 2;
+}
+
+// Force deletes a Power Shelf and optionally its associated interfaces.
+message AdminForceDeletePowerShelfRequest {
+  // The Power Shelf ID to force delete.
+  common.PowerShelfId power_shelf_id = 1;
+  // Should we delete the machine interfaces associated with this power shelf?
+  bool delete_interfaces = 2;
+}
+
+message AdminForceDeletePowerShelfResponse {
+  // The ID of the power shelf that was deleted.
+  string power_shelf_id = 1;
+  // Number of interfaces deleted.
+  uint32 interfaces_deleted = 2;
 }

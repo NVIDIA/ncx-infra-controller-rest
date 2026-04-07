@@ -1,3 +1,4 @@
+//
 // SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -257,6 +258,7 @@ func (x *DnsResourceRecord) GetAuth() string {
 	return ""
 }
 
+// WARNING: This type conflicts with Metadata in forge_carbide.proto and must be renamed to DomainMetadata
 type DomainMetadata struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	AllowAxfrFrom []string               `protobuf:"bytes,2,rep,name=allow_axfr_from,json=allowAxfrFrom,proto3" json:"allow_axfr_from,omitempty"`

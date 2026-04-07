@@ -11,23 +11,77 @@ import (
 
 const (
 	LicenseHeader = `
-// SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-// SPDX-License-Identifier: Apache-2.0
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 `
 
 	goPackageOption = `option go_package = "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/proto";`
+
+	replaceExpectedMachineAttributes = `
+optional bool default_pause_ingestion_and_poweron = 11;
+// deprecated
+bool dpf_enabled = 12 [deprecated = true];
+optional bool is_dpf_enabled = 13;`
+
+	additionalExpectedMachineAttributes = `
+// WARNING: The following fields were added in core but not present in REST snapshot
+// optional bool default_pause_ingestion_and_poweron = 11;
+// bool dpf_enabled = 12 [deprecated = true];
+// optional bool is_dpf_enabled = 13;
+
+// WARNING: The following fields were added in core but not present in REST snapshot
+optional string name = 11;
+optional string manufacturer = 12;
+optional string model = 13;
+optional string description = 14;
+optional string firmware_version = 15;
+optional int32 slot_id = 16;
+optional int32 tray_idx = 17;
+optional int32 host_id = 18;`
+
+	additionalPowerShelfAttributes = `
+// WARNING: Following fields are not present in Core, but added directly in REST snapshot
+optional string name = 9;
+optional string manufacturer = 10;
+optional string model = 11;
+optional string description = 12;
+optional string firmware_version = 13;
+optional int32 slot_id = 14;
+optional int32 tray_idx = 15;
+optional int32 host_id = 16;`
+
+	replaceSwitchAttributes = `
+repeated string nvos_mac_addresses = 10;
+string bmc_ip_address = 11;`
+
+	additionalExpectedSwitchAttributes = `
+// WARNING: The following fields were added in core but not present in REST snapshot
+// repeated string nvos_mac_addresses = 10;
+// string bmc_ip_address = 11;
+
+// WARNING: Following fields are not present in Core, but added directly in REST snapshot
+optional string name = 10;
+optional string manufacturer = 11;
+optional string model = 12;
+optional string description = 13;
+optional string firmware_version = 14;
+optional int32 slot_id = 15;
+optional int32 tray_idx = 16;
+optional int32 host_id = 17;`
 )
 
 func normalizeProtoFile(protoFile string) {
@@ -63,23 +117,45 @@ func normalizeProtoFile(protoFile string) {
 
 // addOrReplaceLicenseHeader strips any existing comment/blank-line preamble
 // before the first proto directive (e.g. `syntax`) and prepends LicenseHeader.
+// Handles both // line comments and /* ... */ block comments (asterisk-formatted).
 func addOrReplaceLicenseHeader(content string) string {
 	lines := strings.Split(content, "\n")
 	idx := 0
+	inBlock := false
 	for idx < len(lines) {
 		trimmed := strings.TrimSpace(lines[idx])
-		if trimmed == "" || strings.HasPrefix(trimmed, "//") {
+		switch {
+		case inBlock:
+			if strings.Contains(trimmed, "*/") {
+				inBlock = false
+			}
 			idx++
-			continue
+		case trimmed == "" || strings.HasPrefix(trimmed, "//"):
+			idx++
+		case strings.HasPrefix(trimmed, "/*"):
+			inBlock = true
+			if strings.Contains(trimmed, "*/") {
+				inBlock = false
+			}
+			idx++
+		default:
+			goto done
 		}
-		break
 	}
+done:
 	return strings.TrimSpace(LicenseHeader) + "\n\n" + strings.Join(lines[idx:], "\n")
 }
 
 func addGoPackageOption(content string) string {
 	if strings.Contains(content, "go_package") {
 		return content
+	}
+	// Insert after the last import line, or after the package line if there are no imports.
+	lastImport := regexp.MustCompile(`(?m)(^import "[^"]+";)`)
+	matches := lastImport.FindAllStringIndex(content, -1)
+	if len(matches) > 0 {
+		pos := matches[len(matches)-1][1]
+		return content[:pos] + "\n\n" + goPackageOption + content[pos:]
 	}
 	re := regexp.MustCompile(`(?m)(^package\s+\w+;)`)
 	return re.ReplaceAllString(content, "${1}\n\n"+goPackageOption)
@@ -123,6 +199,9 @@ func normalizeForge(content string) string {
 	content = forgeMoveValidationEnums(content)
 	content = forgeRemoveDomainTypes(content)
 	content = forgeUpdatePxeDomain(content)
+	content = forgeExpandExpectedPowerShelf(content)
+	content = forgeUpdateExpectedSwitch(content)
+	content = forgeUpdateExpectedMachine(content)
 	return content
 }
 
@@ -203,6 +282,65 @@ func forgeUpdatePxeDomain(content string) string {
 	warning := "    // WARNING: Updated to correct legacy type\n"
 	content = strings.Replace(content, "    Domain legacy_domain = 2;", warning+"    DomainLegacy legacy_domain = 2;", 1)
 	return content
+}
+
+func forgeExpandExpectedPowerShelf(content string) string {
+	re := regexp.MustCompile(`message ExpectedPowerShelf \{[^}]*\}`)
+	loc := re.FindStringIndex(content)
+	if loc == nil {
+		return content
+	}
+
+	block := content[loc[0]:loc[1]]
+	block = strings.TrimSuffix(block, "}") + indentBlock(additionalPowerShelfAttributes) + "}"
+
+	return content[:loc[0]] + block + content[loc[1]:]
+}
+
+func forgeUpdateExpectedSwitch(content string) string {
+	re := regexp.MustCompile(`message ExpectedSwitch \{[^}]*\}`)
+	loc := re.FindStringIndex(content)
+	if loc == nil {
+		return content
+	}
+
+	block := content[loc[0]:loc[1]]
+
+	for _, line := range strings.Split(strings.TrimSpace(replaceSwitchAttributes), "\n") {
+		block = strings.Replace(block, "  "+strings.TrimSpace(line)+"\n", "", 1)
+	}
+
+	block = strings.TrimSuffix(block, "}") + indentBlock(additionalExpectedSwitchAttributes) + "}"
+
+	return content[:loc[0]] + block + content[loc[1]:]
+}
+
+func forgeUpdateExpectedMachine(content string) string {
+	re := regexp.MustCompile(`message ExpectedMachine \{[^}]*\}`)
+	loc := re.FindStringIndex(content)
+	if loc == nil {
+		return content
+	}
+
+	block := content[loc[0]:loc[1]]
+
+	for _, line := range strings.Split(strings.TrimSpace(replaceExpectedMachineAttributes), "\n") {
+		block = strings.Replace(block, "  "+strings.TrimSpace(line)+"\n", "", 1)
+	}
+
+	block = strings.TrimSuffix(block, "}") + indentBlock(additionalExpectedMachineAttributes) + "}"
+
+	return content[:loc[0]] + block + content[loc[1]:]
+}
+
+// indentBlock trims s, prefixes each line with 2 spaces, and returns the
+// result with a trailing newline.
+func indentBlock(s string) string {
+	lines := strings.Split(strings.TrimSpace(s), "\n")
+	for i, line := range lines {
+		lines[i] = "  " + line
+	}
+	return strings.Join(lines, "\n") + "\n"
 }
 
 func main() {

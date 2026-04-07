@@ -1,3 +1,4 @@
+//
 // SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -83,7 +84,7 @@ func (NicMode) EnumDescriptor() ([]byte, []int) {
 	return file_site_explorer_carbide_proto_rawDescGZIP(), []int{0}
 }
 
-// WARNING: This enum conflicts with PowerState in forge.proto and must be renamed to ComputerSystemPowerState
+// WARNING: This enum conflicts with PowerState in forge_carbide.proto and must be renamed to ComputerSystemPowerState
 type ComputerSystemPowerState int32
 
 const (
@@ -1198,8 +1199,10 @@ type EthernetInterface struct {
 	Description      *string                `protobuf:"bytes,2,opt,name=description,proto3,oneof" json:"description,omitempty"`
 	InterfaceEnabled *bool                  `protobuf:"varint,3,opt,name=interface_enabled,json=interfaceEnabled,proto3,oneof" json:"interface_enabled,omitempty"`
 	MacAddress       *string                `protobuf:"bytes,4,opt,name=mac_address,json=macAddress,proto3,oneof" json:"mac_address,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// Redfish LinkStatus (e.g. LinkUp, LinkDown, NoLink)
+	LinkStatus    *string `protobuf:"bytes,5,opt,name=link_status,json=linkStatus,proto3,oneof" json:"link_status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *EthernetInterface) Reset() {
@@ -1256,6 +1259,13 @@ func (x *EthernetInterface) GetInterfaceEnabled() bool {
 func (x *EthernetInterface) GetMacAddress() string {
 	if x != nil && x.MacAddress != nil {
 		return *x.MacAddress
+	}
+	return ""
+}
+
+func (x *EthernetInterface) GetLinkStatus() string {
+	if x != nil && x.LinkStatus != nil {
+		return *x.LinkStatus
 	}
 	return ""
 }
@@ -2121,17 +2131,20 @@ const file_site_explorer_carbide_proto_rawDesc = "" +
 	"\v_boot_order\"l\n" +
 	"\aManager\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12Q\n" +
-	"\x13ethernet_interfaces\x18\v \x03(\v2 .site_explorer.EthernetInterfaceR\x12ethernetInterfaces\"\xe4\x01\n" +
+	"\x13ethernet_interfaces\x18\v \x03(\v2 .site_explorer.EthernetInterfaceR\x12ethernetInterfaces\"\x9a\x02\n" +
 	"\x11EthernetInterface\x12\x13\n" +
 	"\x02id\x18\x01 \x01(\tH\x00R\x02id\x88\x01\x01\x12%\n" +
 	"\vdescription\x18\x02 \x01(\tH\x01R\vdescription\x88\x01\x01\x120\n" +
 	"\x11interface_enabled\x18\x03 \x01(\bH\x02R\x10interfaceEnabled\x88\x01\x01\x12$\n" +
 	"\vmac_address\x18\x04 \x01(\tH\x03R\n" +
-	"macAddress\x88\x01\x01B\x05\n" +
+	"macAddress\x88\x01\x01\x12$\n" +
+	"\vlink_status\x18\x05 \x01(\tH\x04R\n" +
+	"linkStatus\x88\x01\x01B\x05\n" +
 	"\x03_idB\x0e\n" +
 	"\f_descriptionB\x14\n" +
 	"\x12_interface_enabledB\x0e\n" +
-	"\f_mac_address\"\xb4\x02\n" +
+	"\f_mac_addressB\x0e\n" +
+	"\f_link_status\"\xb4\x02\n" +
 	"\aChassis\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12H\n" +
 	"\x10network_adapters\x18\x02 \x03(\v2\x1d.site_explorer.NetworkAdapterR\x0fnetworkAdapters\x12'\n" +

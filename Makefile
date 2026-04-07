@@ -218,17 +218,25 @@ docker-build:
 	docker build -t $(IMAGE_REGISTRY)/carbide-psm:$(IMAGE_TAG) -f $(DOCKERFILE_DIR)/Dockerfile.carbide-psm .
 	docker build -t $(IMAGE_REGISTRY)/carbide-nsm:$(IMAGE_TAG) -f $(DOCKERFILE_DIR)/Dockerfile.carbide-nsm .
 
-core-proto:
-	if [ -d "nico-core" ]; then cd nico-core && git pull; else git clone ssh://git@github.com/NVIDIA/ncx-infra-controller-core.git nico-core; fi
+core-proto: core-proto-clean core-proto-fetch core-proto-fmt core-protogen
+
+core-proto-clean:
+	@echo "Cleaning up Core proto and protobuf files"
+	rm -rf workflow-schema/site-agent/workflows/v1/*_carbide.proto
+	rm -rf workflow-schema/schema/site-agent/workflows/v1/*.pb.go
+
+core-proto-fetch:
+	if [ -d "nico-core" ]; then cd nico-core && git fetch origin && git reset --hard origin/main; else git clone ssh://git@github.com/NVIDIA/ncx-infra-controller-core.git nico-core; fi
 	ls nico-core/crates/rpc/proto
 	@for file in nico-core/crates/rpc/proto/*.proto; do \
 		cp "$$file" "workflow-schema/site-agent/workflows/v1/$$(basename "$$file" .proto)_carbide.proto"; \
 		echo "Copied: $$file"; \
 	done
+	echo "Successfully copied Core protobuf files"
 	rm -rf nico-core
-	echo "Successfully copied Core protobuf files. However, updating Core proto is a complex process and requires manual editing of copied files. Check for WARNING statements in the diff."
 
 core-proto-fmt:
+	@echo "Formatting Core protobuf files"
 	cd workflow-schema/scripts && go run core-proto-fmt.go
 
 core-protogen:
