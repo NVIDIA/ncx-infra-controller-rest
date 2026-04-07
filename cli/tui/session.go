@@ -51,6 +51,13 @@ type Session struct {
 	LoginFn    LoginFunc
 }
 
+// apiPath builds an org-scoped API path using the client's configured API name
+// instead of a hardcoded "carbide" segment. resource is everything after the
+// API name, e.g. "site", "site/{id}", "vpc/{id}/virtualization".
+func apiPath(s *Session, resource string) string {
+	return fmt.Sprintf("/v2/org/{org}/%s/%s", s.Client.APIName, resource)
+}
+
 // PromptString returns the prompt showing org and current scope.
 func (s *Session) PromptString() string {
 	parts := []string{s.Org}
@@ -175,7 +182,7 @@ func (s *Session) buildMachineVPCNames(ctx context.Context) map[string]string {
 	if s.Scope.VpcID != "" {
 		q["vpcId"] = s.Scope.VpcID
 	}
-	instances, err := s.fetchAll("/v2/org/{org}/carbide/instance", q)
+	instances, err := s.fetchAll(apiPath(s, "instance"), q)
 	if err != nil {
 		return map[string]string{}
 	}
@@ -213,7 +220,7 @@ func (s *Session) getTenantID(_ context.Context) (string, error) {
 	if cached := s.Cache.LookupByName("_tenant", s.Org); cached != nil {
 		return cached.ID, nil
 	}
-	body, _, err := s.Client.Do("GET", "/v2/org/{org}/carbide/tenant/current", nil, nil, nil)
+	body, _, err := s.Client.Do("GET", apiPath(s, "tenant/current"), nil, nil, nil)
 	if err != nil {
 		return "", fmt.Errorf("fetching tenant: %w", err)
 	}
@@ -232,7 +239,7 @@ func (s *Session) getTenantID(_ context.Context) (string, error) {
 // -- Fetchers --
 
 func (s *Session) fetchSites(_ context.Context) ([]NamedItem, error) {
-	items, err := s.fetchAll("/v2/org/{org}/carbide/site", nil)
+	items, err := s.fetchAll(apiPath(s, "site"), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -248,7 +255,7 @@ func (s *Session) fetchVPCs(_ context.Context) ([]NamedItem, error) {
 	if s.Scope.SiteID != "" {
 		q["siteId"] = s.Scope.SiteID
 	}
-	items, err := s.fetchAll("/v2/org/{org}/carbide/vpc", q)
+	items, err := s.fetchAll(apiPath(s, "vpc"), q)
 	if err != nil {
 		return nil, err
 	}
@@ -271,7 +278,7 @@ func (s *Session) fetchSubnets(_ context.Context) ([]NamedItem, error) {
 	if s.Scope.VpcID != "" {
 		q["vpcId"] = s.Scope.VpcID
 	}
-	items, err := s.fetchAll("/v2/org/{org}/carbide/subnet", q)
+	items, err := s.fetchAll(apiPath(s, "subnet"), q)
 	if err != nil {
 		return nil, err
 	}
@@ -293,7 +300,7 @@ func (s *Session) fetchInstances(_ context.Context) ([]NamedItem, error) {
 	if s.Scope.VpcID != "" {
 		q["vpcId"] = s.Scope.VpcID
 	}
-	items, err := s.fetchAll("/v2/org/{org}/carbide/instance", q)
+	items, err := s.fetchAll(apiPath(s, "instance"), q)
 	if err != nil {
 		return nil, err
 	}
@@ -313,7 +320,7 @@ func (s *Session) fetchMachines(_ context.Context) ([]NamedItem, error) {
 	if s.Scope.SiteID != "" {
 		q["siteId"] = s.Scope.SiteID
 	}
-	items, err := s.fetchAll("/v2/org/{org}/carbide/machine", q)
+	items, err := s.fetchAll(apiPath(s, "machine"), q)
 	if err != nil {
 		return nil, err
 	}
@@ -322,7 +329,7 @@ func (s *Session) fetchMachines(_ context.Context) ([]NamedItem, error) {
 		if s.Scope.SiteID != "" {
 			instanceQuery["siteId"] = s.Scope.SiteID
 		}
-		instances, err := s.fetchAll("/v2/org/{org}/carbide/instance", instanceQuery)
+		instances, err := s.fetchAll(apiPath(s, "instance"), instanceQuery)
 		if err != nil {
 			return nil, err
 		}
@@ -374,7 +381,7 @@ func (s *Session) fetchOperatingSystems(_ context.Context) ([]NamedItem, error) 
 	if s.Scope.SiteID != "" {
 		q["siteId"] = s.Scope.SiteID
 	}
-	items, err := s.fetchAll("/v2/org/{org}/carbide/operating-system", q)
+	items, err := s.fetchAll(apiPath(s, "operating-system"), q)
 	if err != nil {
 		return nil, err
 	}
@@ -390,7 +397,7 @@ func (s *Session) fetchSSHKeyGroups(_ context.Context) ([]NamedItem, error) {
 	if s.Scope.SiteID != "" {
 		q["siteId"] = s.Scope.SiteID
 	}
-	items, err := s.fetchAll("/v2/org/{org}/carbide/ssh-key-group", q)
+	items, err := s.fetchAll(apiPath(s, "ssh-key-group"), q)
 	if err != nil {
 		return nil, err
 	}
@@ -406,7 +413,7 @@ func (s *Session) fetchAllocations(_ context.Context) ([]NamedItem, error) {
 	if s.Scope.SiteID != "" {
 		q["siteId"] = s.Scope.SiteID
 	}
-	items, err := s.fetchAll("/v2/org/{org}/carbide/allocation", q)
+	items, err := s.fetchAll(apiPath(s, "allocation"), q)
 	if err != nil {
 		return nil, err
 	}
@@ -425,7 +432,7 @@ func (s *Session) fetchIPBlocks(_ context.Context) ([]NamedItem, error) {
 	if s.Scope.SiteID != "" {
 		q["siteId"] = s.Scope.SiteID
 	}
-	items, err := s.fetchAll("/v2/org/{org}/carbide/ip-block", q)
+	items, err := s.fetchAll(apiPath(s, "ip-block"), q)
 	if err != nil {
 		return nil, err
 	}
@@ -444,7 +451,7 @@ func (s *Session) fetchNSGs(_ context.Context) ([]NamedItem, error) {
 	if s.Scope.SiteID != "" {
 		q["siteId"] = s.Scope.SiteID
 	}
-	items, err := s.fetchAll("/v2/org/{org}/carbide/network-security-group", q)
+	items, err := s.fetchAll(apiPath(s, "network-security-group"), q)
 	if err != nil {
 		return nil, err
 	}
@@ -459,7 +466,7 @@ func (s *Session) fetchNSGs(_ context.Context) ([]NamedItem, error) {
 }
 
 func (s *Session) fetchAudits(_ context.Context) ([]NamedItem, error) {
-	items, err := s.fetchAll("/v2/org/{org}/carbide/audit", nil)
+	items, err := s.fetchAll(apiPath(s, "audit"), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -487,7 +494,7 @@ func (s *Session) fetchAudits(_ context.Context) ([]NamedItem, error) {
 }
 
 func (s *Session) fetchSSHKeys(_ context.Context) ([]NamedItem, error) {
-	items, err := s.fetchAll("/v2/org/{org}/carbide/ssh-key", nil)
+	items, err := s.fetchAll(apiPath(s, "ssh-key"), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -508,7 +515,7 @@ func (s *Session) fetchSKUs(_ context.Context) ([]NamedItem, error) {
 	if s.Scope.SiteID != "" {
 		q["siteId"] = s.Scope.SiteID
 	}
-	items, err := s.fetchAll("/v2/org/{org}/carbide/sku", q)
+	items, err := s.fetchAll(apiPath(s, "sku"), q)
 	if err != nil {
 		return nil, err
 	}
@@ -534,7 +541,7 @@ func (s *Session) fetchRacks(_ context.Context) ([]NamedItem, error) {
 	if s.Scope.SiteID != "" {
 		q["siteId"] = s.Scope.SiteID
 	}
-	items, err := s.fetchAll("/v2/org/{org}/carbide/rack", q)
+	items, err := s.fetchAll(apiPath(s, "rack"), q)
 	if err != nil {
 		return nil, err
 	}
@@ -557,7 +564,7 @@ func (s *Session) fetchVPCPrefixes(_ context.Context) ([]NamedItem, error) {
 	if s.Scope.VpcID != "" {
 		q["vpcId"] = s.Scope.VpcID
 	}
-	items, err := s.fetchAll("/v2/org/{org}/carbide/vpc-prefix", q)
+	items, err := s.fetchAll(apiPath(s, "vpc-prefix"), q)
 	if err != nil {
 		return nil, err
 	}
@@ -572,7 +579,7 @@ func (s *Session) fetchVPCPrefixes(_ context.Context) ([]NamedItem, error) {
 }
 
 func (s *Session) fetchTenantAccounts(_ context.Context) ([]NamedItem, error) {
-	items, err := s.fetchAll("/v2/org/{org}/carbide/tenant-account", nil)
+	items, err := s.fetchAll(apiPath(s, "tenant-account"), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -596,7 +603,7 @@ func (s *Session) fetchExpectedMachines(_ context.Context) ([]NamedItem, error) 
 	if s.Scope.SiteID != "" {
 		q["siteId"] = s.Scope.SiteID
 	}
-	items, err := s.fetchAll("/v2/org/{org}/carbide/expected-machine", q)
+	items, err := s.fetchAll(apiPath(s, "expected-machine"), q)
 	if err != nil {
 		return nil, err
 	}
@@ -628,7 +635,7 @@ func (s *Session) fetchInfiniBandPartitions(_ context.Context) ([]NamedItem, err
 	if s.Scope.SiteID != "" {
 		q["siteId"] = s.Scope.SiteID
 	}
-	items, err := s.fetchAll("/v2/org/{org}/carbide/infiniband-partition", q)
+	items, err := s.fetchAll(apiPath(s, "infiniband-partition"), q)
 	if err != nil {
 		return nil, err
 	}
@@ -648,7 +655,7 @@ func (s *Session) fetchNVLinkLogicalPartitions(_ context.Context) ([]NamedItem, 
 	if s.Scope.SiteID != "" {
 		q["siteId"] = s.Scope.SiteID
 	}
-	items, err := s.fetchAll("/v2/org/{org}/carbide/nvlink-logical-partition", q)
+	items, err := s.fetchAll(apiPath(s, "nvlink-logical-partition"), q)
 	if err != nil {
 		return nil, err
 	}
@@ -667,7 +674,7 @@ func (s *Session) fetchInstanceTypes(_ context.Context) ([]NamedItem, error) {
 	if s.Scope.SiteID != "" {
 		q["siteId"] = s.Scope.SiteID
 	}
-	items, err := s.fetchAll("/v2/org/{org}/carbide/instance/type", q)
+	items, err := s.fetchAll(apiPath(s, "instance/type"), q)
 	if err != nil {
 		return nil, err
 	}
@@ -687,7 +694,7 @@ func (s *Session) fetchDPUExtensionServices(_ context.Context) ([]NamedItem, err
 	if s.Scope.SiteID != "" {
 		q["siteId"] = s.Scope.SiteID
 	}
-	items, err := s.fetchAll("/v2/org/{org}/carbide/dpu-extension-service", q)
+	items, err := s.fetchAll(apiPath(s, "dpu-extension-service"), q)
 	if err != nil {
 		return nil, err
 	}
