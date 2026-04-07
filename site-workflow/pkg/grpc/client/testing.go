@@ -202,8 +202,10 @@ func (c *MockForgeClient) UpdateIBPartition(ctx context.Context, in *wflows.IBPa
 	} else {
 		out.Id = &wflows.IBPartitionId{Value: uuid.NewString()}
 	}
-	out.Config = in.GetConfig()
-	out.Metadata = in.GetMetadata()
+	if in != nil {
+		out.Config = in.GetConfig()
+		out.Metadata = in.GetMetadata()
+	}
 	return out, nil
 }
 
