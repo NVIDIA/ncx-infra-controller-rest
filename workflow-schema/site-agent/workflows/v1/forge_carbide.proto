@@ -1615,6 +1615,52 @@ message PowerShelfQuery {
   common.PowerShelfId power_shelf_id = 2;
 }
 
+// Expected Power Shelf messages
+message ExpectedPowerShelf {
+  string bmc_mac_address = 1;
+  string bmc_username = 2;
+  string bmc_password = 3;
+  string shelf_serial_number = 4;
+  string ip_address = 5;
+  // Metadata that will automatically get associated with a newly created PowerShelf
+  Metadata metadata = 6;
+  optional common.RackId rack_id = 7;
+  // Unique identifier for the expected power shelf. When omitted, server generates one.
+  optional common.UUID expected_power_shelf_id = 8;
+
+  // WARNING: Following fields are not present in Core
+  optional string name = 9;
+  optional string manufacturer = 10;
+  optional string model = 11;
+  optional string description = 12;
+  optional string firmware_version = 13;
+  optional int32 slot_id = 14;
+  optional int32 tray_idx = 15;
+  optional int32 host_id = 16;
+}
+
+message ExpectedPowerShelfRequest {
+  string bmc_mac_address = 1;
+  // Optional unique identifier for selecting an expected power shelf.
+  optional common.UUID expected_power_shelf_id = 2;
+}
+
+message ExpectedPowerShelfList {
+  repeated ExpectedPowerShelf expected_power_shelves = 1;
+}
+
+message LinkedExpectedPowerShelfList {
+  repeated LinkedExpectedPowerShelf expected_power_shelves = 1;
+}
+
+message LinkedExpectedPowerShelf {
+  string shelf_serial_number = 1;
+  string bmc_mac_address = 2;
+  optional common.PowerShelfId power_shelf_id = 3;
+  optional common.UUID expected_power_shelf_id = 4;
+}
+
+
 // Describe the desired configuration of a Switch
 message SwitchConfig {
   // The name of Switch.
@@ -1703,6 +1749,51 @@ message SwitchStateHistoryRecords {
 message SwitchQuery {
   optional string name = 1;
   common.SwitchId switch_id = 2;
+}
+
+// Expected Switch messages
+message ExpectedSwitch {
+  string bmc_mac_address = 1;
+  string bmc_username = 2;
+  string bmc_password = 3;
+  string switch_serial_number = 4;
+  // Metadata that will automatically get associated with a newly created Switch
+  Metadata metadata = 5;
+  optional common.RackId rack_id = 6;
+  optional string nvos_username = 7;
+  optional string nvos_password = 8;
+  // Unique identifier for the expected switch. When omitted, server generates one.
+  optional common.UUID expected_switch_id = 9;
+  // WARNING: Following fields are not present in Core
+  optional string name = 10;
+  optional string manufacturer = 11;
+  optional string model = 12;
+  optional string description = 13;
+  optional string firmware_version = 14;
+  optional int32 slot_id = 15;
+  optional int32 tray_idx = 16;
+  optional int32 host_id = 17;
+}
+
+message ExpectedSwitchRequest {
+  string bmc_mac_address = 1;
+  // Optional unique identifier for selecting an expected switch.
+  optional common.UUID expected_switch_id = 2;
+}
+
+message ExpectedSwitchList {
+  repeated ExpectedSwitch expected_switches = 1;
+}
+
+message LinkedExpectedSwitchList {
+  repeated LinkedExpectedSwitch expected_switches = 1;
+}
+
+message LinkedExpectedSwitch {
+  string switch_serial_number = 1;
+  string bmc_mac_address = 2;
+  optional common.SwitchId switch_id = 3;
+  optional common.UUID expected_switch_id = 4;
 }
 
 message IBFabricSearchFilter {
@@ -4562,96 +4653,6 @@ message ExpectedMachineOperationResult {
 message BatchExpectedMachineOperationResponse {
   // Individual results for each ExpectedMachine
   repeated ExpectedMachineOperationResult results = 1;
-}
-
-// Expected Power Shelf messages
-message ExpectedPowerShelf {
-  string bmc_mac_address = 1;
-  string bmc_username = 2;
-  string bmc_password = 3;
-  string shelf_serial_number = 4;
-  string ip_address = 5;
-  // Metadata that will automatically get associated with a newly created PowerShelf
-  Metadata metadata = 6;
-  optional common.RackId rack_id = 7;
-  // Unique identifier for the expected power shelf. When omitted, server generates one.
-  optional common.UUID expected_power_shelf_id = 8;
-
-  // WARNING: Following fields are not present in Core
-  optional string name = 9;
-  optional string manufacturer = 10;
-  optional string model = 11;
-  optional string description = 12;
-  optional string firmware_version = 13;
-  optional int32 slot_id = 14;
-  optional int32 tray_idx = 15;
-  optional int32 host_id = 16;
-}
-
-message ExpectedPowerShelfRequest {
-  string bmc_mac_address = 1;
-  // Optional unique identifier for selecting an expected power shelf.
-  optional common.UUID expected_power_shelf_id = 2;
-}
-
-message ExpectedPowerShelfList {
-  repeated ExpectedPowerShelf expected_power_shelves = 1;
-}
-
-message LinkedExpectedPowerShelfList {
-  repeated LinkedExpectedPowerShelf expected_power_shelves = 1;
-}
-
-message LinkedExpectedPowerShelf {
-  string shelf_serial_number = 1;
-  string bmc_mac_address = 2;
-  optional common.PowerShelfId power_shelf_id = 3;
-  optional common.UUID expected_power_shelf_id = 4;
-}
-
-// Expected Switch messages
-message ExpectedSwitch {
-  string bmc_mac_address = 1;
-  string bmc_username = 2;
-  string bmc_password = 3;
-  string switch_serial_number = 4;
-  // Metadata that will automatically get associated with a newly created Switch
-  Metadata metadata = 5;
-  optional common.RackId rack_id = 6;
-  optional string nvos_username = 7;
-  optional string nvos_password = 8;
-  // Unique identifier for the expected switch. When omitted, server generates one.
-  optional common.UUID expected_switch_id = 9;
-  // WARNING: Following fields are not present in Core
-  optional string name = 10;
-  optional string manufacturer = 11;
-  optional string model = 12;
-  optional string description = 13;
-  optional string firmware_version = 14;
-  optional int32 slot_id = 15;
-  optional int32 tray_idx = 16;
-  optional int32 host_id = 17;
-}
-
-message ExpectedSwitchRequest {
-  string bmc_mac_address = 1;
-  // Optional unique identifier for selecting an expected switch.
-  optional common.UUID expected_switch_id = 2;
-}
-
-message ExpectedSwitchList {
-  repeated ExpectedSwitch expected_switches = 1;
-}
-
-message LinkedExpectedSwitchList {
-  repeated LinkedExpectedSwitch expected_switches = 1;
-}
-
-message LinkedExpectedSwitch {
-  string switch_serial_number = 1;
-  string bmc_mac_address = 2;
-  optional common.SwitchId switch_id = 3;
-  optional common.UUID expected_switch_id = 4;
 }
 
 message MachineRebootCompletedResponse {

@@ -224,10 +224,12 @@ core-proto:
 	@for file in nico-core/crates/rpc/proto/*.proto; do \
 		cp "$$file" "workflow-schema/site-agent/workflows/v1/$$(basename "$$file" .proto)_carbide.proto"; \
 		echo "Copied: $$file"; \
-		./workflow-schema/scripts/add-go-package-option.sh "workflow-schema/site-agent/workflows/v1/$$(basename "$$file" .proto)_carbide.proto" "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/proto"; \
 	done
 	rm -rf nico-core
 	echo "Successfully copied Core protobuf files. However, updating Core proto is a complex process and requires manual editing of copied files. Check for WARNING statements in the diff."
+
+core-proto-fmt:
+	cd workflow-schema/scripts && go run core-proto-fmt.go
 
 core-protogen:
 	echo "Generating protobuf for Core"
