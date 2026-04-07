@@ -218,7 +218,7 @@ docker-build:
 	docker build -t $(IMAGE_REGISTRY)/carbide-psm:$(IMAGE_TAG) -f $(DOCKERFILE_DIR)/Dockerfile.carbide-psm .
 	docker build -t $(IMAGE_REGISTRY)/carbide-nsm:$(IMAGE_TAG) -f $(DOCKERFILE_DIR)/Dockerfile.carbide-nsm .
 
-core-proto: core-proto-clean core-proto-fetch core-proto-fmt core-protogen
+core-proto: core-proto-fetch core-proto-fmt core-protogen
 
 core-proto-clean:
 	@echo "Cleaning up Core proto and protobuf files"
