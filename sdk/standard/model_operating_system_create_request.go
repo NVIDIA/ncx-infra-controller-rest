@@ -25,9 +25,11 @@ type OperatingSystemCreateRequest struct {
 	Name string `json:"name"`
 	// Optional description of the Operating System
 	Description *string `json:"description,omitempty"`
-	// Obsolete. If provided will be ignored.
+	// Deprecated: Infrastructure Provider is now inferred from org membership.
+	// Deprecated
 	InfrastructureProviderId NullableString `json:"infrastructureProviderId,omitempty"`
-	// Obsolete. If provided will be ignored.
+	// Deprecated: Tenant is now inferred from org membership.
+	// Deprecated
 	TenantId NullableString `json:"tenantId,omitempty"`
 	// Specified only one Site if an Operating System is Image based, more than one Site is not supported\"
 	SiteIds []string `json:"siteIds,omitempty"`
@@ -134,6 +136,7 @@ func (o *OperatingSystemCreateRequest) SetDescription(v string) {
 }
 
 // GetInfrastructureProviderId returns the InfrastructureProviderId field value if set, zero value otherwise (both if not set or set to explicit null).
+// Deprecated
 func (o *OperatingSystemCreateRequest) GetInfrastructureProviderId() string {
 	if o == nil || IsNil(o.InfrastructureProviderId.Get()) {
 		var ret string
@@ -145,6 +148,7 @@ func (o *OperatingSystemCreateRequest) GetInfrastructureProviderId() string {
 // GetInfrastructureProviderIdOk returns a tuple with the InfrastructureProviderId field value if set, nil otherwise
 // and a boolean to check if the value has been set.
 // NOTE: If the value is an explicit nil, `nil, true` will be returned
+// Deprecated
 func (o *OperatingSystemCreateRequest) GetInfrastructureProviderIdOk() (*string, bool) {
 	if o == nil {
 		return nil, false
@@ -162,6 +166,7 @@ func (o *OperatingSystemCreateRequest) HasInfrastructureProviderId() bool {
 }
 
 // SetInfrastructureProviderId gets a reference to the given NullableString and assigns it to the InfrastructureProviderId field.
+// Deprecated
 func (o *OperatingSystemCreateRequest) SetInfrastructureProviderId(v string) {
 	o.InfrastructureProviderId.Set(&v)
 }
@@ -177,6 +182,7 @@ func (o *OperatingSystemCreateRequest) UnsetInfrastructureProviderId() {
 }
 
 // GetTenantId returns the TenantId field value if set, zero value otherwise (both if not set or set to explicit null).
+// Deprecated
 func (o *OperatingSystemCreateRequest) GetTenantId() string {
 	if o == nil || IsNil(o.TenantId.Get()) {
 		var ret string
@@ -188,6 +194,7 @@ func (o *OperatingSystemCreateRequest) GetTenantId() string {
 // GetTenantIdOk returns a tuple with the TenantId field value if set, nil otherwise
 // and a boolean to check if the value has been set.
 // NOTE: If the value is an explicit nil, `nil, true` will be returned
+// Deprecated
 func (o *OperatingSystemCreateRequest) GetTenantIdOk() (*string, bool) {
 	if o == nil {
 		return nil, false
@@ -205,6 +212,7 @@ func (o *OperatingSystemCreateRequest) HasTenantId() bool {
 }
 
 // SetTenantId gets a reference to the given NullableString and assigns it to the TenantId field.
+// Deprecated
 func (o *OperatingSystemCreateRequest) SetTenantId(v string) {
 	o.TenantId.Set(&v)
 }

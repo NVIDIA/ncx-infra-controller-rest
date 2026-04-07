@@ -31,11 +31,12 @@ import (
 )
 
 const (
-	errMsgInvalidImageSHA       = "not a valid SHA hash"
-	errMsgInvalidImageDiskPath  = "not a valid disk path"
-	errMsgExactlyOneRootFsField = "exactly one of 'rootFsId' and 'rootFsLabel' must be specified"
-	errMsgOnlyOneRootFsField    = "only one of 'rootFsId' and 'rootFsLabel' may be specified"
-	errMsgNotEmpty              = "cannot be empty"
+	validationErrorInfrastructureProviderIDExpectNil = "Specifying InfrastructureProviderID is currently not supported"
+	errMsgInvalidImageSHA                            = "not a valid SHA hash"
+	errMsgInvalidImageDiskPath                       = "not a valid disk path"
+	errMsgExactlyOneRootFsField                      = "exactly one of 'rootFsId' and 'rootFsLabel' must be specified"
+	errMsgOnlyOneRootFsField                         = "only one of 'rootFsId' and 'rootFsLabel' may be specified"
+	errMsgNotEmpty                                   = "cannot be empty"
 )
 
 // APIOperatingSystemCreateRequest is the data structure to capture user request to create a new OperatingSystem
@@ -86,6 +87,9 @@ func (oscr APIOperatingSystemCreateRequest) Validate() error {
 			validation.Required.Error(validationErrorStringLength),
 			validation.By(util.ValidateNameCharacters),
 			validation.Length(2, 256).Error(validationErrorStringLength)),
+		validation.Field(&oscr.InfrastructureProviderID,
+			// infrastructure provider id must be nil
+			validation.Nil.Error(validationErrorInfrastructureProviderIDExpectNil)),
 	)
 	if err != nil {
 		return err

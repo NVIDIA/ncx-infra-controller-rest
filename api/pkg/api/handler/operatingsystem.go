@@ -119,9 +119,25 @@ func (csh CreateOperatingSystemHandler) Handle(c echo.Context) error {
 		logger.Warn().Err(err).Msg("error binding request data into API model")
 		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
 	}
-	// ensure TenantID and InfrastructureProviderID from request are ignored
-	apiRequest.TenantID = nil
-	apiRequest.InfrastructureProviderID = nil
+	// Validate the tenant for which this OperatingSystem is being created
+	tenant, err := common.GetTenantForOrg(ctx, nil, csh.dbSession, org)
+	if err != nil {
+		if err == common.ErrOrgTenantNotFound {
+			logger.Warn().Err(err).Msg("Org does not have a Tenant associated")
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
+		}
+		logger.Error().Err(err).Msg("unable to retrieve tenant for org")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve tenant for org", nil)
+	}
+
+	// Default TenantID to org's Tenant when nil; validate when set
+	if apiRequest.TenantID == nil {
+		apiRequest.TenantID = cdb.GetStrPtr(tenant.ID.String())
+	} else if *apiRequest.TenantID != tenant.ID.String() {
+		logger.Warn().Str("tenantId", *apiRequest.TenantID).Msg("TenantID in request does not match org's Tenant")
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "TenantID specified in request does not match org's Tenant", nil)
+	}
+
 	// Validate request attributes
 	verr := apiRequest.Validate()
 	if verr != nil {
@@ -134,17 +150,6 @@ func (csh CreateOperatingSystemHandler) Handle(c echo.Context) error {
 	if verr != nil {
 		logger.Warn().Err(verr).Msg("error validating user data in Operating System creation request")
 		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating user data in Operating System creation request", verr)
-	}
-
-	// Validate the tenant for which this OperatingSystem is being created
-	tenant, err := common.GetTenantForOrg(ctx, nil, csh.dbSession, org)
-	if err != nil {
-		if err == common.ErrOrgTenantNotFound {
-			logger.Warn().Err(err).Msg("Org does not have a Tenant associated")
-			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Org does not have a Tenant associated", nil)
-		}
-		logger.Error().Err(err).Msg("unable to retrieve tenant for org")
-		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve tenant for org", nil)
 	}
 
 	// check for name uniqueness for the tenant, ie, tenant cannot have another os with same name

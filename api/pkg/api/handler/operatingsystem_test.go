@@ -233,7 +233,7 @@ func TestOperatingSystemHandler_Create(t *testing.T) {
 		},
 		{
 			name:           "error when both imageURL and idxScrip specified in request",
-			reqOrgName:     tnOrg3,
+			reqOrgName:     tnOrg1,
 			reqBody:        string(errIpxeImageUrlBody),
 			user:           tnu,
 			expectedErr:    true,
@@ -241,7 +241,7 @@ func TestOperatingSystemHandler_Create(t *testing.T) {
 		},
 		{
 			name:           "error when bad disk path specified in request",
-			reqOrgName:     tnOrg3,
+			reqOrgName:     tnOrg1,
 			user:           tnu,
 			reqBody:        string(errDiskImageBody),
 			expectedErr:    true,
@@ -249,7 +249,7 @@ func TestOperatingSystemHandler_Create(t *testing.T) {
 		},
 		{
 			name:           "error when bad imageURL specified in request",
-			reqOrgName:     tnOrg3,
+			reqOrgName:     tnOrg1,
 			reqBody:        string(badImageURLBody),
 			user:           tnu,
 			expectedErr:    true,
@@ -257,7 +257,7 @@ func TestOperatingSystemHandler_Create(t *testing.T) {
 		},
 		{
 			name:           "error when imageURL specified in request but imageSHA is nil",
-			reqOrgName:     tnOrg3,
+			reqOrgName:     tnOrg1,
 			reqBody:        string(errImageURLBody),
 			user:           tnu,
 			expectedErr:    true,
@@ -265,7 +265,7 @@ func TestOperatingSystemHandler_Create(t *testing.T) {
 		},
 		{
 			name:           "error when both rootFsID and rootFsLabel specified in request",
-			reqOrgName:     tnOrg3,
+			reqOrgName:     tnOrg1,
 			reqBody:        string(errRootFsBody),
 			user:           tnu,
 			expectedErr:    true,

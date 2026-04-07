@@ -14080,13 +14080,15 @@ components:
             - string
             - 'null'
           format: uuid
-          description: 'Obsolete. If provided will be ignored.'
+          description: 'Deprecated: Infrastructure Provider is now inferred from org membership.'
+          deprecated: true
         tenantId:
           type:
             - string
             - 'null'
           format: uuid
-          description: 'Obsolete. If provided will be ignored.'
+          description: 'Deprecated: Tenant is now inferred from org membership.'
+          deprecated: true
         siteIds:
           type: array
           items:
