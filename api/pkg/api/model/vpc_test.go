@@ -36,6 +36,8 @@ func TestAPIVpcCreateRequest_Validate(t *testing.T) {
 		SiteID                    string
 		NetworkVirtualizationType *string
 		Labels                    map[string]string
+		Vni                       *int
+		RoutingProfileType        *string
 	}
 	tests := []struct {
 		name    string
@@ -91,6 +93,54 @@ func TestAPIVpcCreateRequest_Validate(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "test valid VPC create request - valid routing profile type for FNN",
+			fields: fields{
+				Name:                      "test-name",
+				SiteID:                    uuid.NewString(),
+				NetworkVirtualizationType: cdb.GetStrPtr(cdbm.VpcFNN),
+				RoutingProfileType:        cdb.GetStrPtr(APIVpcRoutingProfileTypeInternal),
+			},
+			wantErr: false,
+		},
+		{
+			name: "test invalid VPC create request - admin routing profile type is not user settable",
+			fields: fields{
+				Name:                      "test-name",
+				SiteID:                    uuid.NewString(),
+				NetworkVirtualizationType: cdb.GetStrPtr(cdbm.VpcFNN),
+				RoutingProfileType:        cdb.GetStrPtr("ADMIN"),
+			},
+			wantErr: true,
+		},
+		{
+			name: "test invalid VPC create request - routing profile type on non-FNN VPC",
+			fields: fields{
+				Name:                      "test-name",
+				SiteID:                    uuid.NewString(),
+				NetworkVirtualizationType: cdb.GetStrPtr(cdbm.VpcEthernetVirtualizer),
+				RoutingProfileType:        cdb.GetStrPtr(APIVpcRoutingProfileTypeInternal),
+			},
+			wantErr: true,
+		},
+		{
+			name: "test valid VPC create request - routing profile type when network virtualization type is omitted",
+			fields: fields{
+				Name:               "test-name",
+				SiteID:             uuid.NewString(),
+				RoutingProfileType: cdb.GetStrPtr(APIVpcRoutingProfileTypeInternal),
+			},
+			wantErr: false,
+		},
+		{
+			name: "test invalid VPC create request - invalid VNI",
+			fields: fields{
+				Name:   "test-name",
+				SiteID: uuid.NewString(),
+				Vni:    cdb.GetIntPtr(70000),
+			},
+			wantErr: true,
+		},
+		{
 			name: "test valid VPC create request - invalid labels are specified key is empty",
 			fields: fields{
 				Name:   "test-name",
@@ -134,6 +184,8 @@ func TestAPIVpcCreateRequest_Validate(t *testing.T) {
 				SiteID:                    tt.fields.SiteID,
 				NetworkVirtualizationType: tt.fields.NetworkVirtualizationType,
 				Labels:                    tt.fields.Labels,
+				Vni:                       tt.fields.Vni,
+				RoutingProfileType:        tt.fields.RoutingProfileType,
 			}
 
 			if err := vcr.Validate(); (err != nil) != tt.wantErr {
@@ -319,6 +371,7 @@ func TestNewAPIVpc(t *testing.T) {
 		TenantID:                  uuid.New(),
 		SiteID:                    uuid.New(),
 		NetworkVirtualizationType: cdb.GetStrPtr(cdbm.VpcEthernetVirtualizer),
+		RoutingProfileType:        cdb.GetStrPtr(cdbm.VpcRoutingProfileTypeInternal),
 		ControllerVpcID:           cdb.GetUUIDPtr(uuid.New()),
 		// The normal expectation is that Vni and ActiveVni match or
 		// that Vni is simply null, but we want to test for correctness
@@ -354,7 +407,7 @@ func TestNewAPIVpc(t *testing.T) {
 		want APIVpc
 	}{
 		{
-			name: "get new APIVpc",
+			name: "get new APIVpc omits routing profile type for non-FNN VPC",
 			args: args{
 				dbVpc: dbVpc,
 				dbsds: dbsds,
@@ -381,6 +434,39 @@ func TestNewAPIVpc(t *testing.T) {
 				Updated:       dbVpc.Updated,
 			},
 		},
+		{
+			name: "get new APIVpc includes routing profile type for FNN VPC",
+			args: args{
+				dbVpc: func() cdbm.Vpc {
+					fnnVpc := dbVpc
+					fnnVpc.NetworkVirtualizationType = cdb.GetStrPtr(cdbm.VpcFNN)
+					return fnnVpc
+				}(),
+				dbsds: dbsds,
+			},
+			want: APIVpc{
+				ID:                        dbVpc.ID.String(),
+				Name:                      dbVpc.Name,
+				Description:               dbVpc.Description,
+				Org:                       dbVpc.Org,
+				InfrastructureProviderID:  util.GetUUIDPtrToStrPtr(&dbVpc.InfrastructureProviderID),
+				TenantID:                  util.GetUUIDPtrToStrPtr(&dbVpc.TenantID),
+				SiteID:                    util.GetUUIDPtrToStrPtr(&dbVpc.SiteID),
+				NetworkVirtualizationType: cdb.GetStrPtr(cdbm.VpcFNN),
+				RoutingProfileType:        cdb.GetStrPtr(APIVpcRoutingProfileTypeInternal),
+				ControllerVpcID:           util.GetUUIDPtrToStrPtr(dbVpc.ControllerVpcID),
+				RequestedVni:              dbVpc.Vni,
+				Vni:                       dbVpc.ActiveVni,
+				Status:                    dbVpc.Status,
+				Labels: map[string]string{
+					"zone": "1",
+					"west": "2",
+				},
+				StatusHistory: apidbsh,
+				Created:       dbVpc.Created,
+				Updated:       dbVpc.Updated,
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -394,9 +480,16 @@ func TestNewAPIVpc(t *testing.T) {
 			assert.Equal(t, *tt.want.TenantID, *got.TenantID)
 			assert.Equal(t, *tt.want.SiteID, *got.SiteID)
 			assert.Equal(t, tt.want.NetworkVirtualizationType, got.NetworkVirtualizationType)
+			assert.Equal(t, tt.want.RoutingProfileType, got.RoutingProfileType)
 			assert.Equal(t, *tt.want.ControllerVpcID, *got.ControllerVpcID)
-			assert.Equal(t, *tt.want.Vni, *got.Vni)
-			assert.Equal(t, *tt.want.RequestedVni, *got.RequestedVni)
+			if tt.want.Vni != nil {
+				assert.NotNil(t, got.Vni)
+				assert.Equal(t, *tt.want.Vni, *got.Vni)
+			}
+			if tt.want.RequestedVni != nil {
+				assert.NotNil(t, got.RequestedVni)
+				assert.Equal(t, *tt.want.RequestedVni, *got.RequestedVni)
+			}
 			assert.Equal(t, len(tt.want.Labels), len(got.Labels))
 			assert.Equal(t, tt.want.Status, got.Status)
 			assert.Equal(t, tt.want.StatusHistory, got.StatusHistory)

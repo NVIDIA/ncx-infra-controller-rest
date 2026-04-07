@@ -519,8 +519,8 @@ func (a *InstanceTypeAPIService) DeleteInstanceTypeMachineAssociationExecute(r A
 type ApiGetAllInstanceTypeRequest struct {
 	ctx                      context.Context
 	ApiService               *InstanceTypeAPIService
-	siteId                   *string
 	org                      string
+	siteId                   *string
 	infrastructureProviderId *string
 	tenantId                 *string
 	status                   *string
@@ -540,13 +540,15 @@ func (r ApiGetAllInstanceTypeRequest) SiteId(siteId string) ApiGetAllInstanceTyp
 	return r
 }
 
-// Filter Instance Types by Infrastructure Provider ID
+// Filter Instance Types by Infrastructure Provider ID.
+// Deprecated
 func (r ApiGetAllInstanceTypeRequest) InfrastructureProviderId(infrastructureProviderId string) ApiGetAllInstanceTypeRequest {
 	r.infrastructureProviderId = &infrastructureProviderId
 	return r
 }
 
-// Filter Instance Types by Tenant ID
+// Filter Instance Types by Tenant ID.
+// Deprecated
 func (r ApiGetAllInstanceTypeRequest) TenantId(tenantId string) ApiGetAllInstanceTypeRequest {
 	r.tenantId = &tenantId
 	return r
@@ -613,13 +615,11 @@ func (r ApiGetAllInstanceTypeRequest) Execute() ([]InstanceType, *http.Response,
 /*
 GetAllInstanceType Retrieve all Instance Types
 
-Get all Instance Types.
+Get all Instance Types for the org.
 
-`siteId` query param must be specified. Either `infrastructureProviderId` or `tenantId` query param must be specified.
+Provider and Tenant roles are inferred from the org's membership. User must have `FORGE_PROVIDER_ADMIN` or `FORGE_TENANT_ADMIN` role.
 
-If `infrastructureProviderId` query param is provided, then org must have an Infrastructure Provider entity that owns the Site specified by `siteId` in query param. User must have `FORGE_PROVIDER_ADMIN` role.
-
-If `tenantId` query param is provided, then org must have a Tenant entity and it should have at least one Allocation with the Site specified by `siteId` in query param. User must have `FORGE_TENANT_ADMIN` role.
+Results are returned from both Provider and Tenant perspectives when the org has both roles.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -655,11 +655,10 @@ func (a *InstanceTypeAPIService) GetAllInstanceTypeExecute(r ApiGetAllInstanceTy
 	localVarHeaderParams := make(map[string]string)
 	localVarQueryParams := url.Values{}
 	localVarFormParams := url.Values{}
-	if r.siteId == nil {
-		return localVarReturnValue, nil, reportError("siteId is required and must be specified")
-	}
 
-	parameterAddToHeaderOrQuery(localVarQueryParams, "siteId", r.siteId, "form", "")
+	if r.siteId != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "siteId", r.siteId, "form", "")
+	}
 	if r.infrastructureProviderId != nil {
 		parameterAddToHeaderOrQuery(localVarQueryParams, "infrastructureProviderId", r.infrastructureProviderId, "form", "")
 	}

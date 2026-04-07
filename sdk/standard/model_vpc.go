@@ -36,6 +36,8 @@ type VPC struct {
 	ControllerVpcId NullableString `json:"controllerVpcId,omitempty"`
 	// Network virtualization type of the VPC
 	NetworkVirtualizationType *string `json:"networkVirtualizationType,omitempty"`
+	// Requested routing profile type for the VPC
+	RoutingProfileType NullableString `json:"routingProfileType,omitempty"`
 	// Explicitly requested VNI for the VPC if one was requested at creation time
 	RequestedVni NullableInt32 `json:"requestedVni,omitempty"`
 	// Active VNI assigned to the VPC
@@ -340,6 +342,49 @@ func (o *VPC) HasNetworkVirtualizationType() bool {
 // SetNetworkVirtualizationType gets a reference to the given string and assigns it to the NetworkVirtualizationType field.
 func (o *VPC) SetNetworkVirtualizationType(v string) {
 	o.NetworkVirtualizationType = &v
+}
+
+// GetRoutingProfileType returns the RoutingProfileType field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *VPC) GetRoutingProfileType() string {
+	if o == nil || IsNil(o.RoutingProfileType.Get()) {
+		var ret string
+		return ret
+	}
+	return *o.RoutingProfileType.Get()
+}
+
+// GetRoutingProfileTypeOk returns a tuple with the RoutingProfileType field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *VPC) GetRoutingProfileTypeOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return o.RoutingProfileType.Get(), o.RoutingProfileType.IsSet()
+}
+
+// HasRoutingProfileType returns a boolean if a field has been set.
+func (o *VPC) HasRoutingProfileType() bool {
+	if o != nil && o.RoutingProfileType.IsSet() {
+		return true
+	}
+
+	return false
+}
+
+// SetRoutingProfileType gets a reference to the given NullableString and assigns it to the RoutingProfileType field.
+func (o *VPC) SetRoutingProfileType(v string) {
+	o.RoutingProfileType.Set(&v)
+}
+
+// SetRoutingProfileTypeNil sets the value for RoutingProfileType to be an explicit nil
+func (o *VPC) SetRoutingProfileTypeNil() {
+	o.RoutingProfileType.Set(nil)
+}
+
+// UnsetRoutingProfileType ensures that no value is present for RoutingProfileType, not even an explicit nil
+func (o *VPC) UnsetRoutingProfileType() {
+	o.RoutingProfileType.Unset()
 }
 
 // GetRequestedVni returns the RequestedVni field value if set, zero value otherwise (both if not set or set to explicit null).
@@ -739,6 +784,9 @@ func (o VPC) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.NetworkVirtualizationType) {
 		toSerialize["networkVirtualizationType"] = o.NetworkVirtualizationType
+	}
+	if o.RoutingProfileType.IsSet() {
+		toSerialize["routingProfileType"] = o.RoutingProfileType.Get()
 	}
 	if o.RequestedVni.IsSet() {
 		toSerialize["requestedVni"] = o.RequestedVni.Get()

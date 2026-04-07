@@ -12870,6 +12870,16 @@ components:
             - ETHERNET_VIRTUALIZER
             - FNN
           description: Network virtualization type of the VPC
+        routingProfileType:
+          type:
+            - string
+            - 'null'
+          enum:
+            - External
+            - Internal
+            - PrivilegedInternal
+            - Maintenance
+          description: Requested routing profile type for the VPC
         requestedVni:
           type:
             - integer
@@ -12955,6 +12965,7 @@ components:
           description: Virtual network for machines executing Spark jobs
           siteId: 72771e6a-6f5e-4de4-a5b9-1266c4197811
           networkVirtualizationType: FNN
+          routingProfileType: Internal
           vni: 12001
           nvLinkLogicalPartitionId: dd887330-dbd3-45ce-b400-c42fc8e47315
           labels:
@@ -12985,6 +12996,16 @@ components:
             - ETHERNET_VIRTUALIZER
             - FNN
           description: 'Network virtualization type of the VPC. If no value is specified, then defaults to `FNN` if Site has native networking enabled, or ETHERNET_VIRTUALIZER if native networking is disabled'
+        routingProfileType:
+          type:
+            - string
+            - 'null'
+          enum:
+            - External
+            - Internal
+            - PrivilegedInternal
+            - Maintenance
+          description: Routing profile type to request for the VPC. Only supported when `networkVirtualizationType` is `FNN`
         networkSecurityGroupId:
           type:
             - string
