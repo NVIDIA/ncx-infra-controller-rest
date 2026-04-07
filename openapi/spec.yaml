@@ -15141,7 +15141,7 @@ components:
             format: uuid
         allowUnhealthyMachine:
           type: boolean
-          description: Must be set to true creating a targeted Instance with a Machine that is in Error status. Requires Targeted Instance Creation capability enabled for Tenant
+          description: When creating a targeted Instance with `machineId`, forwarded to the site workflow. The machine must still be in Ready state at the API. Requires Targeted Instance Creation capability enabled for Tenant
       required:
         - name
         - tenantId

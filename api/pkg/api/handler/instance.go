@@ -832,9 +832,9 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Machine specified in request does not belong to Site: %s", site.Name), nil)
 		}
 
-		// Validate Machine availability. Note: allowUnhealthyMachine also bypasses
-		// the Ready status check, not just health - consider renaming the parameter later.
-		allowUnhealthyMachine := false
+		// Propagate allowUnhealthyMachine to the site workflow; API still requires the
+		// machine to be Ready before instance creation proceeds.
+		allowUnhealthyMachine = false
 		if apiRequest.AllowUnhealthyMachine != nil {
 			allowUnhealthyMachine = *apiRequest.AllowUnhealthyMachine
 		}
@@ -851,10 +851,9 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Machine: %s is assigned to an Instance, cannot be used for new Instance", machine.ID), nil)
 		}
 
-		// Check Machine health status unless allowUnhealthyMachine is true
-		if !allowUnhealthyMachine && machine.Status != cdbm.MachineStatusReady {
-			logger.Warn().Str("MachineID", machine.ID).Bool("AllowUnhealthyMachine", allowUnhealthyMachine).Msg("Machine is not ready, cannot be used for new Instance")
-			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Machine: %s has status: %s, set `allowUnhealthyMachine` to true in request data to proceed", machine.ID, machine.Status), nil)
+		if machine.Status != cdbm.MachineStatusReady {
+			logger.Warn().Str("MachineID", machine.ID).Str("status", machine.Status).Msg("Machine is not Ready, cannot be used for new Instance")
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Machine: %s has status: %s, machine must be in Ready state to create an Instance", machine.ID, machine.Status), nil)
 		}
 
 		// Acquire a lock on the MachineID
@@ -1004,6 +1003,18 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 	// NOTE: At this stage, we have a Machine ID whether it was provided in request or selected through Instance Type
 
 	// ==================== Step 5: Machine Capability Validation  ====================
+
+	// Check if Machine capabilities match with Instance Type capabilities
+	if instanceTypeID != nil && machine.ID != "" {
+		isMatch, _, apiErr := common.MatchInstanceTypeCapabilitiesForMachines(ctx, logger, cih.dbSession, *instanceTypeID, []string{machine.ID})
+		if apiErr != nil {
+			return cutil.NewAPIErrorResponse(c, apiErr.Code, apiErr.Message, apiErr.Data)
+		}
+
+		if !isMatch {
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Capabilities for Machine: %v do not match Instance Type's Capabilities", machine.ID), nil)
+		}
+	}
 
 	mcDAO := cdbm.NewMachineCapabilityDAO(cih.dbSession)
 
