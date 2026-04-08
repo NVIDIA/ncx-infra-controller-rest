@@ -226,7 +226,7 @@ func (uibpv2ts *UpdateIBPartitionV2TestSuite) Test_UpdateIBPartitionV2_Success()
 	uibpv2ts.env.RegisterActivity(IBPartitionManager.UpdateInfiniBandPartitionOnSite)
 	uibpv2ts.env.OnActivity(IBPartitionManager.UpdateInfiniBandPartitionOnSite, mock.Anything, mock.Anything).Return(nil)
 
-	uibpv2ts.env.ExecuteWorkflow(UpdateInfiniBandPartitionV2, request)
+	uibpv2ts.env.ExecuteWorkflow(UpdateInfiniBandPartition, request)
 	uibpv2ts.True(uibpv2ts.env.IsWorkflowCompleted())
 	uibpv2ts.NoError(uibpv2ts.env.GetWorkflowError())
 }
@@ -247,7 +247,7 @@ func (uibpv2ts *UpdateIBPartitionV2TestSuite) Test_UpdateIBPartitionV2_Failure()
 	uibpv2ts.env.RegisterActivity(IBPartitionManager.UpdateInfiniBandPartitionOnSite)
 	uibpv2ts.env.OnActivity(IBPartitionManager.UpdateInfiniBandPartitionOnSite, mock.Anything, mock.Anything).Return(errors.New(errMsg))
 
-	uibpv2ts.env.ExecuteWorkflow(UpdateInfiniBandPartitionV2, request)
+	uibpv2ts.env.ExecuteWorkflow(UpdateInfiniBandPartition, request)
 	uibpv2ts.True(uibpv2ts.env.IsWorkflowCompleted())
 	uibpv2ts.Error(uibpv2ts.env.GetWorkflowError())
 }

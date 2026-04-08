@@ -100,8 +100,8 @@ func CreateInfiniBandPartitionV2(ctx workflow.Context, request *cwssaws.IBPartit
 	return nil
 }
 
-// UpdateInfiniBandPartitionV2 updates an InfiniBand Partition on site using the UpdateInfiniBandPartitionOnSite activity
-func UpdateInfiniBandPartitionV2(ctx workflow.Context, request *cwssaws.IBPartitionUpdateRequest) error {
+// UpdateInfiniBandPartition updates an InfiniBand Partition on site using the UpdateInfiniBandPartitionOnSite activity
+func UpdateInfiniBandPartition(ctx workflow.Context, request *cwssaws.IBPartitionUpdateRequest) error {
 	logger := log.With().Str("Workflow", "InfiniBandPartition").Str("Action", "Update").Str("IB Partition ID", request.GetId().GetValue()).Logger()
 
 	logger.Info().Msg("starting workflow")
