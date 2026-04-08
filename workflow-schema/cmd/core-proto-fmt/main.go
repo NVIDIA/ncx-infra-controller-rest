@@ -31,57 +31,38 @@ const (
 
 	goPackageOption = `option go_package = "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/proto";`
 
-	replaceExpectedMachineAttributes = `
-optional bool default_pause_ingestion_and_poweron = 11;
-// deprecated
-bool dpf_enabled = 12 [deprecated = true];
-optional bool is_dpf_enabled = 13;`
-
 	additionalExpectedMachineAttributes = `
-// WARNING: The following fields were added in core but not present in REST snapshot
-// optional bool default_pause_ingestion_and_poweron = 11;
-// bool dpf_enabled = 12 [deprecated = true];
-// optional bool is_dpf_enabled = 13;
-
-// WARNING: The following fields were added in core but not present in REST snapshot
-optional string name = 11;
-optional string manufacturer = 12;
-optional string model = 13;
-optional string description = 14;
-optional string firmware_version = 15;
-optional int32 slot_id = 16;
-optional int32 tray_idx = 17;
-optional int32 host_id = 18;`
+// WARNING: Following fields are not present in Core, but added directly in REST snapshot
+optional string name = 21;
+optional string manufacturer = 22;
+optional string model = 23;
+optional string description = 24;
+optional string firmware_version = 25;
+optional int32 slot_id = 26;
+optional int32 tray_idx = 27;
+optional int32 host_id = 28;`
 
 	additionalPowerShelfAttributes = `
 // WARNING: Following fields are not present in Core, but added directly in REST snapshot
-optional string name = 9;
-optional string manufacturer = 10;
-optional string model = 11;
-optional string description = 12;
-optional string firmware_version = 13;
-optional int32 slot_id = 14;
-optional int32 tray_idx = 15;
-optional int32 host_id = 16;`
-
-	replaceSwitchAttributes = `
-repeated string nvos_mac_addresses = 10;
-string bmc_ip_address = 11;`
+optional string name = 21;
+optional string manufacturer = 22;
+optional string model = 23;
+optional string description = 24;
+optional string firmware_version = 25;
+optional int32 slot_id = 26;
+optional int32 tray_idx = 27;
+optional int32 host_id = 28;`
 
 	additionalExpectedSwitchAttributes = `
-// WARNING: The following fields were added in core but not present in REST snapshot
-// repeated string nvos_mac_addresses = 10;
-// string bmc_ip_address = 11;
-
 // WARNING: Following fields are not present in Core, but added directly in REST snapshot
-optional string name = 10;
-optional string manufacturer = 11;
-optional string model = 12;
-optional string description = 13;
-optional string firmware_version = 14;
-optional int32 slot_id = 15;
-optional int32 tray_idx = 16;
-optional int32 host_id = 17;`
+optional string name = 21;
+optional string manufacturer = 22;
+optional string model = 23;
+optional string description = 24;
+optional string firmware_version = 25;
+optional int32 slot_id = 26;
+optional int32 tray_idx = 27;
+optional int32 host_id = 28;`
 )
 
 func normalizeProtoFile(protoFile string) {
@@ -199,9 +180,9 @@ func normalizeForge(content string) string {
 	content = forgeMoveValidationEnums(content)
 	content = forgeRemoveDomainTypes(content)
 	content = forgeUpdatePxeDomain(content)
-	content = forgeExpandExpectedPowerShelf(content)
-	content = forgeUpdateExpectedSwitch(content)
-	content = forgeUpdateExpectedMachine(content)
+	content = forgeExpandExpectedObject(content, "ExpectedPowerShelf", additionalPowerShelfAttributes)
+	content = forgeExpandExpectedObject(content, "ExpectedSwitch", additionalExpectedSwitchAttributes)
+	content = forgeExpandExpectedObject(content, "ExpectedMachine", additionalExpectedMachineAttributes)
 	return content
 }
 
@@ -284,51 +265,15 @@ func forgeUpdatePxeDomain(content string) string {
 	return content
 }
 
-func forgeExpandExpectedPowerShelf(content string) string {
-	re := regexp.MustCompile(`message ExpectedPowerShelf \{[^}]*\}`)
+func forgeExpandExpectedObject(content string, objectType string, additionalAttributes string) string {
+	re := regexp.MustCompile(`message ` + objectType + ` \{[^}]*\}`)
 	loc := re.FindStringIndex(content)
 	if loc == nil {
 		return content
 	}
 
 	block := content[loc[0]:loc[1]]
-	block = strings.TrimSuffix(block, "}") + indentBlock(additionalPowerShelfAttributes) + "}"
-
-	return content[:loc[0]] + block + content[loc[1]:]
-}
-
-func forgeUpdateExpectedSwitch(content string) string {
-	re := regexp.MustCompile(`message ExpectedSwitch \{[^}]*\}`)
-	loc := re.FindStringIndex(content)
-	if loc == nil {
-		return content
-	}
-
-	block := content[loc[0]:loc[1]]
-
-	for _, line := range strings.Split(strings.TrimSpace(replaceSwitchAttributes), "\n") {
-		block = strings.Replace(block, "  "+strings.TrimSpace(line)+"\n", "", 1)
-	}
-
-	block = strings.TrimSuffix(block, "}") + indentBlock(additionalExpectedSwitchAttributes) + "}"
-
-	return content[:loc[0]] + block + content[loc[1]:]
-}
-
-func forgeUpdateExpectedMachine(content string) string {
-	re := regexp.MustCompile(`message ExpectedMachine \{[^}]*\}`)
-	loc := re.FindStringIndex(content)
-	if loc == nil {
-		return content
-	}
-
-	block := content[loc[0]:loc[1]]
-
-	for _, line := range strings.Split(strings.TrimSpace(replaceExpectedMachineAttributes), "\n") {
-		block = strings.Replace(block, "  "+strings.TrimSpace(line)+"\n", "", 1)
-	}
-
-	block = strings.TrimSuffix(block, "}") + indentBlock(additionalExpectedMachineAttributes) + "}"
+	block = strings.TrimSuffix(block, "}") + "\n" + indentBlock(additionalAttributes) + "}"
 
 	return content[:loc[0]] + block + content[loc[1]:]
 }

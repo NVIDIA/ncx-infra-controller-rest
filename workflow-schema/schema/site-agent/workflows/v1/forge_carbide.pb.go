@@ -10137,14 +10137,14 @@ type ExpectedPowerShelf struct {
 	// Unique identifier for the expected power shelf. When omitted, server generates one.
 	ExpectedPowerShelfId *UUID `protobuf:"bytes,8,opt,name=expected_power_shelf_id,json=expectedPowerShelfId,proto3,oneof" json:"expected_power_shelf_id,omitempty"`
 	// WARNING: Following fields are not present in Core, but added directly in REST snapshot
-	Name            *string `protobuf:"bytes,9,opt,name=name,proto3,oneof" json:"name,omitempty"`
-	Manufacturer    *string `protobuf:"bytes,10,opt,name=manufacturer,proto3,oneof" json:"manufacturer,omitempty"`
-	Model           *string `protobuf:"bytes,11,opt,name=model,proto3,oneof" json:"model,omitempty"`
-	Description     *string `protobuf:"bytes,12,opt,name=description,proto3,oneof" json:"description,omitempty"`
-	FirmwareVersion *string `protobuf:"bytes,13,opt,name=firmware_version,json=firmwareVersion,proto3,oneof" json:"firmware_version,omitempty"`
-	SlotId          *int32  `protobuf:"varint,14,opt,name=slot_id,json=slotId,proto3,oneof" json:"slot_id,omitempty"`
-	TrayIdx         *int32  `protobuf:"varint,15,opt,name=tray_idx,json=trayIdx,proto3,oneof" json:"tray_idx,omitempty"`
-	HostId          *int32  `protobuf:"varint,16,opt,name=host_id,json=hostId,proto3,oneof" json:"host_id,omitempty"`
+	Name            *string `protobuf:"bytes,21,opt,name=name,proto3,oneof" json:"name,omitempty"`
+	Manufacturer    *string `protobuf:"bytes,22,opt,name=manufacturer,proto3,oneof" json:"manufacturer,omitempty"`
+	Model           *string `protobuf:"bytes,23,opt,name=model,proto3,oneof" json:"model,omitempty"`
+	Description     *string `protobuf:"bytes,24,opt,name=description,proto3,oneof" json:"description,omitempty"`
+	FirmwareVersion *string `protobuf:"bytes,25,opt,name=firmware_version,json=firmwareVersion,proto3,oneof" json:"firmware_version,omitempty"`
+	SlotId          *int32  `protobuf:"varint,26,opt,name=slot_id,json=slotId,proto3,oneof" json:"slot_id,omitempty"`
+	TrayIdx         *int32  `protobuf:"varint,27,opt,name=tray_idx,json=trayIdx,proto3,oneof" json:"tray_idx,omitempty"`
+	HostId          *int32  `protobuf:"varint,28,opt,name=host_id,json=hostId,proto3,oneof" json:"host_id,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -11386,16 +11386,18 @@ type ExpectedSwitch struct {
 	NvosUsername *string   `protobuf:"bytes,7,opt,name=nvos_username,json=nvosUsername,proto3,oneof" json:"nvos_username,omitempty"`
 	NvosPassword *string   `protobuf:"bytes,8,opt,name=nvos_password,json=nvosPassword,proto3,oneof" json:"nvos_password,omitempty"`
 	// Unique identifier for the expected switch. When omitted, server generates one.
-	ExpectedSwitchId *UUID `protobuf:"bytes,9,opt,name=expected_switch_id,json=expectedSwitchId,proto3,oneof" json:"expected_switch_id,omitempty"`
+	ExpectedSwitchId *UUID    `protobuf:"bytes,9,opt,name=expected_switch_id,json=expectedSwitchId,proto3,oneof" json:"expected_switch_id,omitempty"`
+	NvosMacAddresses []string `protobuf:"bytes,10,rep,name=nvos_mac_addresses,json=nvosMacAddresses,proto3" json:"nvos_mac_addresses,omitempty"`
+	BmcIpAddress     string   `protobuf:"bytes,11,opt,name=bmc_ip_address,json=bmcIpAddress,proto3" json:"bmc_ip_address,omitempty"`
 	// WARNING: Following fields are not present in Core, but added directly in REST snapshot
-	Name            *string `protobuf:"bytes,10,opt,name=name,proto3,oneof" json:"name,omitempty"`
-	Manufacturer    *string `protobuf:"bytes,11,opt,name=manufacturer,proto3,oneof" json:"manufacturer,omitempty"`
-	Model           *string `protobuf:"bytes,12,opt,name=model,proto3,oneof" json:"model,omitempty"`
-	Description     *string `protobuf:"bytes,13,opt,name=description,proto3,oneof" json:"description,omitempty"`
-	FirmwareVersion *string `protobuf:"bytes,14,opt,name=firmware_version,json=firmwareVersion,proto3,oneof" json:"firmware_version,omitempty"`
-	SlotId          *int32  `protobuf:"varint,15,opt,name=slot_id,json=slotId,proto3,oneof" json:"slot_id,omitempty"`
-	TrayIdx         *int32  `protobuf:"varint,16,opt,name=tray_idx,json=trayIdx,proto3,oneof" json:"tray_idx,omitempty"`
-	HostId          *int32  `protobuf:"varint,17,opt,name=host_id,json=hostId,proto3,oneof" json:"host_id,omitempty"`
+	Name            *string `protobuf:"bytes,21,opt,name=name,proto3,oneof" json:"name,omitempty"`
+	Manufacturer    *string `protobuf:"bytes,22,opt,name=manufacturer,proto3,oneof" json:"manufacturer,omitempty"`
+	Model           *string `protobuf:"bytes,23,opt,name=model,proto3,oneof" json:"model,omitempty"`
+	Description     *string `protobuf:"bytes,24,opt,name=description,proto3,oneof" json:"description,omitempty"`
+	FirmwareVersion *string `protobuf:"bytes,25,opt,name=firmware_version,json=firmwareVersion,proto3,oneof" json:"firmware_version,omitempty"`
+	SlotId          *int32  `protobuf:"varint,26,opt,name=slot_id,json=slotId,proto3,oneof" json:"slot_id,omitempty"`
+	TrayIdx         *int32  `protobuf:"varint,27,opt,name=tray_idx,json=trayIdx,proto3,oneof" json:"tray_idx,omitempty"`
+	HostId          *int32  `protobuf:"varint,28,opt,name=host_id,json=hostId,proto3,oneof" json:"host_id,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -11491,6 +11493,20 @@ func (x *ExpectedSwitch) GetExpectedSwitchId() *UUID {
 		return x.ExpectedSwitchId
 	}
 	return nil
+}
+
+func (x *ExpectedSwitch) GetNvosMacAddresses() []string {
+	if x != nil {
+		return x.NvosMacAddresses
+	}
+	return nil
+}
+
+func (x *ExpectedSwitch) GetBmcIpAddress() string {
+	if x != nil {
+		return x.BmcIpAddress
+	}
+	return ""
 }
 
 func (x *ExpectedSwitch) GetName() string {
@@ -28942,18 +28958,24 @@ type ExpectedMachine struct {
 	Metadata *Metadata `protobuf:"bytes,6,opt,name=metadata,proto3" json:"metadata,omitempty"`
 	SkuId    *string   `protobuf:"bytes,7,opt,name=sku_id,json=skuId,proto3,oneof" json:"sku_id,omitempty"`
 	// Unique identifier for the expected machine. When omitted, server generates one.
-	Id       *UUID              `protobuf:"bytes,8,opt,name=id,proto3,oneof" json:"id,omitempty"`
-	HostNics []*ExpectedHostNic `protobuf:"bytes,9,rep,name=host_nics,json=hostNics,proto3" json:"host_nics,omitempty"`
-	RackId   *RackId            `protobuf:"bytes,10,opt,name=rack_id,json=rackId,proto3,oneof" json:"rack_id,omitempty"`
-	// WARNING: The following fields were added in core but not present in REST snapshot
-	Name            *string `protobuf:"bytes,11,opt,name=name,proto3,oneof" json:"name,omitempty"`
-	Manufacturer    *string `protobuf:"bytes,12,opt,name=manufacturer,proto3,oneof" json:"manufacturer,omitempty"`
-	Model           *string `protobuf:"bytes,13,opt,name=model,proto3,oneof" json:"model,omitempty"`
-	Description     *string `protobuf:"bytes,14,opt,name=description,proto3,oneof" json:"description,omitempty"`
-	FirmwareVersion *string `protobuf:"bytes,15,opt,name=firmware_version,json=firmwareVersion,proto3,oneof" json:"firmware_version,omitempty"`
-	SlotId          *int32  `protobuf:"varint,16,opt,name=slot_id,json=slotId,proto3,oneof" json:"slot_id,omitempty"`
-	TrayIdx         *int32  `protobuf:"varint,17,opt,name=tray_idx,json=trayIdx,proto3,oneof" json:"tray_idx,omitempty"`
-	HostId          *int32  `protobuf:"varint,18,opt,name=host_id,json=hostId,proto3,oneof" json:"host_id,omitempty"`
+	Id                              *UUID              `protobuf:"bytes,8,opt,name=id,proto3,oneof" json:"id,omitempty"`
+	HostNics                        []*ExpectedHostNic `protobuf:"bytes,9,rep,name=host_nics,json=hostNics,proto3" json:"host_nics,omitempty"`
+	RackId                          *RackId            `protobuf:"bytes,10,opt,name=rack_id,json=rackId,proto3,oneof" json:"rack_id,omitempty"`
+	DefaultPauseIngestionAndPoweron *bool              `protobuf:"varint,11,opt,name=default_pause_ingestion_and_poweron,json=defaultPauseIngestionAndPoweron,proto3,oneof" json:"default_pause_ingestion_and_poweron,omitempty"`
+	// deprecated
+	//
+	// Deprecated: Marked as deprecated in forge_carbide.proto.
+	DpfEnabled   bool  `protobuf:"varint,12,opt,name=dpf_enabled,json=dpfEnabled,proto3" json:"dpf_enabled,omitempty"`
+	IsDpfEnabled *bool `protobuf:"varint,13,opt,name=is_dpf_enabled,json=isDpfEnabled,proto3,oneof" json:"is_dpf_enabled,omitempty"`
+	// WARNING: Following fields are not present in Core, but added directly in REST snapshot
+	Name            *string `protobuf:"bytes,21,opt,name=name,proto3,oneof" json:"name,omitempty"`
+	Manufacturer    *string `protobuf:"bytes,22,opt,name=manufacturer,proto3,oneof" json:"manufacturer,omitempty"`
+	Model           *string `protobuf:"bytes,23,opt,name=model,proto3,oneof" json:"model,omitempty"`
+	Description     *string `protobuf:"bytes,24,opt,name=description,proto3,oneof" json:"description,omitempty"`
+	FirmwareVersion *string `protobuf:"bytes,25,opt,name=firmware_version,json=firmwareVersion,proto3,oneof" json:"firmware_version,omitempty"`
+	SlotId          *int32  `protobuf:"varint,26,opt,name=slot_id,json=slotId,proto3,oneof" json:"slot_id,omitempty"`
+	TrayIdx         *int32  `protobuf:"varint,27,opt,name=tray_idx,json=trayIdx,proto3,oneof" json:"tray_idx,omitempty"`
+	HostId          *int32  `protobuf:"varint,28,opt,name=host_id,json=hostId,proto3,oneof" json:"host_id,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -29056,6 +29078,28 @@ func (x *ExpectedMachine) GetRackId() *RackId {
 		return x.RackId
 	}
 	return nil
+}
+
+func (x *ExpectedMachine) GetDefaultPauseIngestionAndPoweron() bool {
+	if x != nil && x.DefaultPauseIngestionAndPoweron != nil {
+		return *x.DefaultPauseIngestionAndPoweron
+	}
+	return false
+}
+
+// Deprecated: Marked as deprecated in forge_carbide.proto.
+func (x *ExpectedMachine) GetDpfEnabled() bool {
+	if x != nil {
+		return x.DpfEnabled
+	}
+	return false
+}
+
+func (x *ExpectedMachine) GetIsDpfEnabled() bool {
+	if x != nil && x.IsDpfEnabled != nil {
+		return *x.IsDpfEnabled
+	}
+	return false
 }
 
 func (x *ExpectedMachine) GetName() string {
@@ -49816,15 +49860,14 @@ const file_forge_carbide_proto_rawDesc = "" +
 	"\bmetadata\x18\x06 \x01(\v2\x0f.forge.MetadataR\bmetadata\x12,\n" +
 	"\arack_id\x18\a \x01(\v2\x0e.common.RackIdH\x00R\x06rackId\x88\x01\x01\x12H\n" +
 	"\x17expected_power_shelf_id\x18\b \x01(\v2\f.common.UUIDH\x01R\x14expectedPowerShelfId\x88\x01\x01\x12\x17\n" +
-	"\x04name\x18\t \x01(\tH\x02R\x04name\x88\x01\x01\x12'\n" +
-	"\fmanufacturer\x18\n" +
-	" \x01(\tH\x03R\fmanufacturer\x88\x01\x01\x12\x19\n" +
-	"\x05model\x18\v \x01(\tH\x04R\x05model\x88\x01\x01\x12%\n" +
-	"\vdescription\x18\f \x01(\tH\x05R\vdescription\x88\x01\x01\x12.\n" +
-	"\x10firmware_version\x18\r \x01(\tH\x06R\x0ffirmwareVersion\x88\x01\x01\x12\x1c\n" +
-	"\aslot_id\x18\x0e \x01(\x05H\aR\x06slotId\x88\x01\x01\x12\x1e\n" +
-	"\btray_idx\x18\x0f \x01(\x05H\bR\atrayIdx\x88\x01\x01\x12\x1c\n" +
-	"\ahost_id\x18\x10 \x01(\x05H\tR\x06hostId\x88\x01\x01B\n" +
+	"\x04name\x18\x15 \x01(\tH\x02R\x04name\x88\x01\x01\x12'\n" +
+	"\fmanufacturer\x18\x16 \x01(\tH\x03R\fmanufacturer\x88\x01\x01\x12\x19\n" +
+	"\x05model\x18\x17 \x01(\tH\x04R\x05model\x88\x01\x01\x12%\n" +
+	"\vdescription\x18\x18 \x01(\tH\x05R\vdescription\x88\x01\x01\x12.\n" +
+	"\x10firmware_version\x18\x19 \x01(\tH\x06R\x0ffirmwareVersion\x88\x01\x01\x12\x1c\n" +
+	"\aslot_id\x18\x1a \x01(\x05H\aR\x06slotId\x88\x01\x01\x12\x1e\n" +
+	"\btray_idx\x18\x1b \x01(\x05H\bR\atrayIdx\x88\x01\x01\x12\x1c\n" +
+	"\ahost_id\x18\x1c \x01(\x05H\tR\x06hostId\x88\x01\x01B\n" +
 	"\n" +
 	"\b_rack_idB\x1a\n" +
 	"\x18_expected_power_shelf_idB\a\n" +
@@ -49937,7 +49980,7 @@ const file_forge_carbide_proto_rawDesc = "" +
 	"\b_bmc_mac\"G\n" +
 	"\x14SwitchesByIdsRequest\x12/\n" +
 	"\n" +
-	"switch_ids\x18\x01 \x03(\v2\x10.common.SwitchIdR\tswitchIds\"\xe5\x06\n" +
+	"switch_ids\x18\x01 \x03(\v2\x10.common.SwitchIdR\tswitchIds\"\xb9\a\n" +
 	"\x0eExpectedSwitch\x12&\n" +
 	"\x0fbmc_mac_address\x18\x01 \x01(\tR\rbmcMacAddress\x12!\n" +
 	"\fbmc_username\x18\x02 \x01(\tR\vbmcUsername\x12!\n" +
@@ -49947,17 +49990,19 @@ const file_forge_carbide_proto_rawDesc = "" +
 	"\arack_id\x18\x06 \x01(\v2\x0e.common.RackIdH\x00R\x06rackId\x88\x01\x01\x12(\n" +
 	"\rnvos_username\x18\a \x01(\tH\x01R\fnvosUsername\x88\x01\x01\x12(\n" +
 	"\rnvos_password\x18\b \x01(\tH\x02R\fnvosPassword\x88\x01\x01\x12?\n" +
-	"\x12expected_switch_id\x18\t \x01(\v2\f.common.UUIDH\x03R\x10expectedSwitchId\x88\x01\x01\x12\x17\n" +
-	"\x04name\x18\n" +
-	" \x01(\tH\x04R\x04name\x88\x01\x01\x12'\n" +
-	"\fmanufacturer\x18\v \x01(\tH\x05R\fmanufacturer\x88\x01\x01\x12\x19\n" +
-	"\x05model\x18\f \x01(\tH\x06R\x05model\x88\x01\x01\x12%\n" +
-	"\vdescription\x18\r \x01(\tH\aR\vdescription\x88\x01\x01\x12.\n" +
-	"\x10firmware_version\x18\x0e \x01(\tH\bR\x0ffirmwareVersion\x88\x01\x01\x12\x1c\n" +
-	"\aslot_id\x18\x0f \x01(\x05H\tR\x06slotId\x88\x01\x01\x12\x1e\n" +
-	"\btray_idx\x18\x10 \x01(\x05H\n" +
+	"\x12expected_switch_id\x18\t \x01(\v2\f.common.UUIDH\x03R\x10expectedSwitchId\x88\x01\x01\x12,\n" +
+	"\x12nvos_mac_addresses\x18\n" +
+	" \x03(\tR\x10nvosMacAddresses\x12$\n" +
+	"\x0ebmc_ip_address\x18\v \x01(\tR\fbmcIpAddress\x12\x17\n" +
+	"\x04name\x18\x15 \x01(\tH\x04R\x04name\x88\x01\x01\x12'\n" +
+	"\fmanufacturer\x18\x16 \x01(\tH\x05R\fmanufacturer\x88\x01\x01\x12\x19\n" +
+	"\x05model\x18\x17 \x01(\tH\x06R\x05model\x88\x01\x01\x12%\n" +
+	"\vdescription\x18\x18 \x01(\tH\aR\vdescription\x88\x01\x01\x12.\n" +
+	"\x10firmware_version\x18\x19 \x01(\tH\bR\x0ffirmwareVersion\x88\x01\x01\x12\x1c\n" +
+	"\aslot_id\x18\x1a \x01(\x05H\tR\x06slotId\x88\x01\x01\x12\x1e\n" +
+	"\btray_idx\x18\x1b \x01(\x05H\n" +
 	"R\atrayIdx\x88\x01\x01\x12\x1c\n" +
-	"\ahost_id\x18\x11 \x01(\x05H\vR\x06hostId\x88\x01\x01B\n" +
+	"\ahost_id\x18\x1c \x01(\x05H\vR\x06hostId\x88\x01\x01B\n" +
 	"\n" +
 	"\b_rack_idB\x10\n" +
 	"\x0e_nvos_usernameB\x10\n" +
@@ -51575,7 +51620,7 @@ const file_forge_carbide_proto_rawDesc = "" +
 	"\t_nic_typeB\v\n" +
 	"\t_fixed_ipB\r\n" +
 	"\v_fixed_maskB\x10\n" +
-	"\x0e_fixed_gateway\"\xdd\x06\n" +
+	"\x0e_fixed_gateway\"\xbb\b\n" +
 	"\x0fExpectedMachine\x12&\n" +
 	"\x0fbmc_mac_address\x18\x01 \x01(\tR\rbmcMacAddress\x12!\n" +
 	"\fbmc_username\x18\x02 \x01(\tR\vbmcUsername\x12!\n" +
@@ -51587,20 +51632,26 @@ const file_forge_carbide_proto_rawDesc = "" +
 	"\x02id\x18\b \x01(\v2\f.common.UUIDH\x01R\x02id\x88\x01\x01\x123\n" +
 	"\thost_nics\x18\t \x03(\v2\x16.forge.ExpectedHostNicR\bhostNics\x12,\n" +
 	"\arack_id\x18\n" +
-	" \x01(\v2\x0e.common.RackIdH\x02R\x06rackId\x88\x01\x01\x12\x17\n" +
-	"\x04name\x18\v \x01(\tH\x03R\x04name\x88\x01\x01\x12'\n" +
-	"\fmanufacturer\x18\f \x01(\tH\x04R\fmanufacturer\x88\x01\x01\x12\x19\n" +
-	"\x05model\x18\r \x01(\tH\x05R\x05model\x88\x01\x01\x12%\n" +
-	"\vdescription\x18\x0e \x01(\tH\x06R\vdescription\x88\x01\x01\x12.\n" +
-	"\x10firmware_version\x18\x0f \x01(\tH\aR\x0ffirmwareVersion\x88\x01\x01\x12\x1c\n" +
-	"\aslot_id\x18\x10 \x01(\x05H\bR\x06slotId\x88\x01\x01\x12\x1e\n" +
-	"\btray_idx\x18\x11 \x01(\x05H\tR\atrayIdx\x88\x01\x01\x12\x1c\n" +
-	"\ahost_id\x18\x12 \x01(\x05H\n" +
-	"R\x06hostId\x88\x01\x01B\t\n" +
+	" \x01(\v2\x0e.common.RackIdH\x02R\x06rackId\x88\x01\x01\x12Q\n" +
+	"#default_pause_ingestion_and_poweron\x18\v \x01(\bH\x03R\x1fdefaultPauseIngestionAndPoweron\x88\x01\x01\x12#\n" +
+	"\vdpf_enabled\x18\f \x01(\bB\x02\x18\x01R\n" +
+	"dpfEnabled\x12)\n" +
+	"\x0eis_dpf_enabled\x18\r \x01(\bH\x04R\fisDpfEnabled\x88\x01\x01\x12\x17\n" +
+	"\x04name\x18\x15 \x01(\tH\x05R\x04name\x88\x01\x01\x12'\n" +
+	"\fmanufacturer\x18\x16 \x01(\tH\x06R\fmanufacturer\x88\x01\x01\x12\x19\n" +
+	"\x05model\x18\x17 \x01(\tH\aR\x05model\x88\x01\x01\x12%\n" +
+	"\vdescription\x18\x18 \x01(\tH\bR\vdescription\x88\x01\x01\x12.\n" +
+	"\x10firmware_version\x18\x19 \x01(\tH\tR\x0ffirmwareVersion\x88\x01\x01\x12\x1c\n" +
+	"\aslot_id\x18\x1a \x01(\x05H\n" +
+	"R\x06slotId\x88\x01\x01\x12\x1e\n" +
+	"\btray_idx\x18\x1b \x01(\x05H\vR\atrayIdx\x88\x01\x01\x12\x1c\n" +
+	"\ahost_id\x18\x1c \x01(\x05H\fR\x06hostId\x88\x01\x01B\t\n" +
 	"\a_sku_idB\x05\n" +
 	"\x03_idB\n" +
 	"\n" +
-	"\b_rack_idB\a\n" +
+	"\b_rack_idB&\n" +
+	"$_default_pause_ingestion_and_poweronB\x11\n" +
+	"\x0f_is_dpf_enabledB\a\n" +
 	"\x05_nameB\x0f\n" +
 	"\r_manufacturerB\b\n" +
 	"\x06_modelB\x0e\n" +

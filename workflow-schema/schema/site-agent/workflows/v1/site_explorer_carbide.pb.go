@@ -219,8 +219,10 @@ type EndpointExplorationReport struct {
 	SecureBootStatus *SecureBootStatus `protobuf:"bytes,17,opt,name=secure_boot_status,json=secureBootStatus,proto3" json:"secure_boot_status,omitempty"`
 	// `LockdownStatus` reported by Redfish
 	LockdownStatus *LockdownStatus `protobuf:"bytes,18,opt,name=lockdown_status,json=lockdownStatus,proto3" json:"lockdown_status,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Parsed firmware component versions (e.g. {"bmc": "25.06-2", "uefi": "00000083", "hgxbmc": "97.00.B9.00.76"})
+	FirmwareVersions map[string]string `protobuf:"bytes,19,rep,name=firmware_versions,json=firmwareVersions,proto3" json:"firmware_versions,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *EndpointExplorationReport) Reset() {
@@ -333,6 +335,13 @@ func (x *EndpointExplorationReport) GetSecureBootStatus() *SecureBootStatus {
 func (x *EndpointExplorationReport) GetLockdownStatus() *LockdownStatus {
 	if x != nil {
 		return x.LockdownStatus
+	}
+	return nil
+}
+
+func (x *EndpointExplorationReport) GetFirmwareVersions() map[string]string {
+	if x != nil {
+		return x.FirmwareVersions
 	}
 	return nil
 }
@@ -2049,7 +2058,7 @@ var File_site_explorer_carbide_proto protoreflect.FileDescriptor
 
 const file_site_explorer_carbide_proto_rawDesc = "" +
 	"\n" +
-	"\x1bsite_explorer_carbide.proto\x12\rsite_explorer\x1a\x1egoogle/protobuf/duration.proto\"\xa5\x06\n" +
+	"\x1bsite_explorer_carbide.proto\x12\rsite_explorer\x1a\x1egoogle/protobuf/duration.proto\"\xd7\a\n" +
 	"\x19EndpointExplorationReport\x12#\n" +
 	"\rendpoint_type\x18\x01 \x01(\tR\fendpointType\x129\n" +
 	"\x16last_exploration_error\x18\x02 \x01(\tH\x00R\x14lastExplorationError\x88\x01\x01\x12\"\n" +
@@ -2063,7 +2072,11 @@ const file_site_explorer_carbide_proto_rawDesc = "" +
 	"\aservice\x18\x0f \x03(\v2\x16.site_explorer.ServiceR\aservice\x12S\n" +
 	"\x14machine_setup_status\x18\x10 \x01(\v2!.site_explorer.MachineSetupStatusR\x12machineSetupStatus\x12M\n" +
 	"\x12secure_boot_status\x18\x11 \x01(\v2\x1f.site_explorer.SecureBootStatusR\x10secureBootStatus\x12F\n" +
-	"\x0flockdown_status\x18\x12 \x01(\v2\x1d.site_explorer.LockdownStatusR\x0elockdownStatusB\x19\n" +
+	"\x0flockdown_status\x18\x12 \x01(\v2\x1d.site_explorer.LockdownStatusR\x0elockdownStatus\x12k\n" +
+	"\x11firmware_versions\x18\x13 \x03(\v2>.site_explorer.EndpointExplorationReport.FirmwareVersionsEntryR\x10firmwareVersions\x1aC\n" +
+	"\x15FirmwareVersionsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\x19\n" +
 	"\x17_last_exploration_errorB\r\n" +
 	"\v_machine_idB\x1b\n" +
 	"\x19_last_exploration_latencyB\t\n" +
@@ -2261,7 +2274,7 @@ func file_site_explorer_carbide_proto_rawDescGZIP() []byte {
 }
 
 var file_site_explorer_carbide_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_site_explorer_carbide_proto_msgTypes = make([]protoimpl.MessageInfo, 29)
+var file_site_explorer_carbide_proto_msgTypes = make([]protoimpl.MessageInfo, 30)
 var file_site_explorer_carbide_proto_goTypes = []any{
 	(NicMode)(0),                             // 0: site_explorer.NicMode
 	(ComputerSystemPowerState)(0),            // 1: site_explorer.ComputerSystemPowerState
@@ -2295,10 +2308,11 @@ var file_site_explorer_carbide_proto_goTypes = []any{
 	(*BootOption)(nil),                       // 29: site_explorer.BootOption
 	(*SecureBootStatus)(nil),                 // 30: site_explorer.SecureBootStatus
 	(*LockdownStatus)(nil),                   // 31: site_explorer.LockdownStatus
-	(*durationpb.Duration)(nil),              // 32: google.protobuf.Duration
+	nil,                                      // 32: site_explorer.EndpointExplorationReport.FirmwareVersionsEntry
+	(*durationpb.Duration)(nil),              // 33: google.protobuf.Duration
 }
 var file_site_explorer_carbide_proto_depIdxs = []int32{
-	32, // 0: site_explorer.EndpointExplorationReport.last_exploration_latency:type_name -> google.protobuf.Duration
+	33, // 0: site_explorer.EndpointExplorationReport.last_exploration_latency:type_name -> google.protobuf.Duration
 	18, // 1: site_explorer.EndpointExplorationReport.managers:type_name -> site_explorer.Manager
 	17, // 2: site_explorer.EndpointExplorationReport.systems:type_name -> site_explorer.ComputerSystem
 	20, // 3: site_explorer.EndpointExplorationReport.chassis:type_name -> site_explorer.Chassis
@@ -2306,30 +2320,31 @@ var file_site_explorer_carbide_proto_depIdxs = []int32{
 	24, // 5: site_explorer.EndpointExplorationReport.machine_setup_status:type_name -> site_explorer.MachineSetupStatus
 	30, // 6: site_explorer.EndpointExplorationReport.secure_boot_status:type_name -> site_explorer.SecureBootStatus
 	31, // 7: site_explorer.EndpointExplorationReport.lockdown_status:type_name -> site_explorer.LockdownStatus
-	3,  // 8: site_explorer.ExploredEndpoint.report:type_name -> site_explorer.EndpointExplorationReport
-	5,  // 9: site_explorer.ExploredManagedHost.dpus:type_name -> site_explorer.ExploredDpu
-	4,  // 10: site_explorer.SiteExplorationReport.endpoints:type_name -> site_explorer.ExploredEndpoint
-	6,  // 11: site_explorer.SiteExplorationReport.managed_hosts:type_name -> site_explorer.ExploredManagedHost
-	4,  // 12: site_explorer.ExploredEndpointList.endpoints:type_name -> site_explorer.ExploredEndpoint
-	6,  // 13: site_explorer.ExploredManagedHostList.managed_hosts:type_name -> site_explorer.ExploredManagedHost
-	0,  // 14: site_explorer.ComputerSystemAttributes.nic_mode:type_name -> site_explorer.NicMode
-	16, // 15: site_explorer.ComputerSystem.attributes:type_name -> site_explorer.ComputerSystemAttributes
-	19, // 16: site_explorer.ComputerSystem.ethernet_interfaces:type_name -> site_explorer.EthernetInterface
-	26, // 17: site_explorer.ComputerSystem.pcie_devices:type_name -> site_explorer.PCIeDevice
-	1,  // 18: site_explorer.ComputerSystem.power_state:type_name -> site_explorer.ComputerSystemPowerState
-	28, // 19: site_explorer.ComputerSystem.boot_order:type_name -> site_explorer.BootOrder
-	19, // 20: site_explorer.Manager.ethernet_interfaces:type_name -> site_explorer.EthernetInterface
-	21, // 21: site_explorer.Chassis.network_adapters:type_name -> site_explorer.NetworkAdapter
-	23, // 22: site_explorer.Service.inventories:type_name -> site_explorer.Inventory
-	25, // 23: site_explorer.MachineSetupStatus.diffs:type_name -> site_explorer.MachineSetupDiff
-	27, // 24: site_explorer.PCIeDevice.status:type_name -> site_explorer.SystemStatus
-	29, // 25: site_explorer.BootOrder.boot_order:type_name -> site_explorer.BootOption
-	2,  // 26: site_explorer.LockdownStatus.status:type_name -> site_explorer.InternalLockdownStatus
-	27, // [27:27] is the sub-list for method output_type
-	27, // [27:27] is the sub-list for method input_type
-	27, // [27:27] is the sub-list for extension type_name
-	27, // [27:27] is the sub-list for extension extendee
-	0,  // [0:27] is the sub-list for field type_name
+	32, // 8: site_explorer.EndpointExplorationReport.firmware_versions:type_name -> site_explorer.EndpointExplorationReport.FirmwareVersionsEntry
+	3,  // 9: site_explorer.ExploredEndpoint.report:type_name -> site_explorer.EndpointExplorationReport
+	5,  // 10: site_explorer.ExploredManagedHost.dpus:type_name -> site_explorer.ExploredDpu
+	4,  // 11: site_explorer.SiteExplorationReport.endpoints:type_name -> site_explorer.ExploredEndpoint
+	6,  // 12: site_explorer.SiteExplorationReport.managed_hosts:type_name -> site_explorer.ExploredManagedHost
+	4,  // 13: site_explorer.ExploredEndpointList.endpoints:type_name -> site_explorer.ExploredEndpoint
+	6,  // 14: site_explorer.ExploredManagedHostList.managed_hosts:type_name -> site_explorer.ExploredManagedHost
+	0,  // 15: site_explorer.ComputerSystemAttributes.nic_mode:type_name -> site_explorer.NicMode
+	16, // 16: site_explorer.ComputerSystem.attributes:type_name -> site_explorer.ComputerSystemAttributes
+	19, // 17: site_explorer.ComputerSystem.ethernet_interfaces:type_name -> site_explorer.EthernetInterface
+	26, // 18: site_explorer.ComputerSystem.pcie_devices:type_name -> site_explorer.PCIeDevice
+	1,  // 19: site_explorer.ComputerSystem.power_state:type_name -> site_explorer.ComputerSystemPowerState
+	28, // 20: site_explorer.ComputerSystem.boot_order:type_name -> site_explorer.BootOrder
+	19, // 21: site_explorer.Manager.ethernet_interfaces:type_name -> site_explorer.EthernetInterface
+	21, // 22: site_explorer.Chassis.network_adapters:type_name -> site_explorer.NetworkAdapter
+	23, // 23: site_explorer.Service.inventories:type_name -> site_explorer.Inventory
+	25, // 24: site_explorer.MachineSetupStatus.diffs:type_name -> site_explorer.MachineSetupDiff
+	27, // 25: site_explorer.PCIeDevice.status:type_name -> site_explorer.SystemStatus
+	29, // 26: site_explorer.BootOrder.boot_order:type_name -> site_explorer.BootOption
+	2,  // 27: site_explorer.LockdownStatus.status:type_name -> site_explorer.InternalLockdownStatus
+	28, // [28:28] is the sub-list for method output_type
+	28, // [28:28] is the sub-list for method input_type
+	28, // [28:28] is the sub-list for extension type_name
+	28, // [28:28] is the sub-list for extension extendee
+	0,  // [0:28] is the sub-list for field type_name
 }
 
 func init() { file_site_explorer_carbide_proto_init() }
@@ -2355,7 +2370,7 @@ func file_site_explorer_carbide_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_site_explorer_carbide_proto_rawDesc), len(file_site_explorer_carbide_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   29,
+			NumMessages:   30,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

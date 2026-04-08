@@ -1872,15 +1872,16 @@ message ExpectedPowerShelf {
   optional common.RackId rack_id = 7;
   // Unique identifier for the expected power shelf. When omitted, server generates one.
   optional common.UUID expected_power_shelf_id = 8;
+
   // WARNING: Following fields are not present in Core, but added directly in REST snapshot
-  optional string name = 9;
-  optional string manufacturer = 10;
-  optional string model = 11;
-  optional string description = 12;
-  optional string firmware_version = 13;
-  optional int32 slot_id = 14;
-  optional int32 tray_idx = 15;
-  optional int32 host_id = 16;
+  optional string name = 21;
+  optional string manufacturer = 22;
+  optional string model = 23;
+  optional string description = 24;
+  optional string firmware_version = 25;
+  optional int32 slot_id = 26;
+  optional int32 tray_idx = 27;
+  optional int32 host_id = 28;
 }
 
 message ExpectedPowerShelfRequest {
@@ -2032,19 +2033,18 @@ message ExpectedSwitch {
   optional string nvos_password = 8;
   // Unique identifier for the expected switch. When omitted, server generates one.
   optional common.UUID expected_switch_id = 9;
-  // WARNING: The following fields were added in core but not present in REST snapshot
-  // repeated string nvos_mac_addresses = 10;
-  // string bmc_ip_address = 11;
+  repeated string nvos_mac_addresses = 10;
+  string bmc_ip_address = 11;
 
   // WARNING: Following fields are not present in Core, but added directly in REST snapshot
-  optional string name = 10;
-  optional string manufacturer = 11;
-  optional string model = 12;
-  optional string description = 13;
-  optional string firmware_version = 14;
-  optional int32 slot_id = 15;
-  optional int32 tray_idx = 16;
-  optional int32 host_id = 17;
+  optional string name = 21;
+  optional string manufacturer = 22;
+  optional string model = 23;
+  optional string description = 24;
+  optional string firmware_version = 25;
+  optional int32 slot_id = 26;
+  optional int32 tray_idx = 27;
+  optional int32 host_id = 28;
 }
 
 message ExpectedSwitchRequest {
@@ -5005,20 +5005,20 @@ message ExpectedMachine {
   optional common.UUID id = 8;
   repeated ExpectedHostNic host_nics = 9;
   optional common.RackId rack_id = 10;
-  // WARNING: The following fields were added in core but not present in REST snapshot
-  // optional bool default_pause_ingestion_and_poweron = 11;
-  // bool dpf_enabled = 12 [deprecated = true];
-  // optional bool is_dpf_enabled = 13;
+  optional bool default_pause_ingestion_and_poweron = 11;
+  // deprecated
+  bool dpf_enabled = 12 [deprecated = true];
+  optional bool is_dpf_enabled = 13;
 
-  // WARNING: The following fields were added in core but not present in REST snapshot
-  optional string name = 11;
-  optional string manufacturer = 12;
-  optional string model = 13;
-  optional string description = 14;
-  optional string firmware_version = 15;
-  optional int32 slot_id = 16;
-  optional int32 tray_idx = 17;
-  optional int32 host_id = 18;
+  // WARNING: Following fields are not present in Core, but added directly in REST snapshot
+  optional string name = 21;
+  optional string manufacturer = 22;
+  optional string model = 23;
+  optional string description = 24;
+  optional string firmware_version = 25;
+  optional int32 slot_id = 26;
+  optional int32 tray_idx = 27;
+  optional int32 host_id = 28;
 }
 
 message ExpectedMachineRequest {
