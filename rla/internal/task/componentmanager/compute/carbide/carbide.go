@@ -332,6 +332,23 @@ func (m *Manager) FirmwareControl(ctx context.Context, target common.Target, inf
 		log.Warn().Err(err).Msg("Failed to check machines, proceeding with schedule")
 	} else {
 		actualFirmware := m.getActualFirmwareVersions(ctx, machines)
+
+		log.Debug().
+			Int("machines_found", len(machines)).
+			Int("actual_firmware_count", len(actualFirmware)).
+			Int("desired_entries_count", len(desiredEntries)).
+			Interface("target_firmware", targetFirmware).
+			Msg("Idempotent check summary")
+		for id, fv := range actualFirmware {
+			log.Debug().Str("machine_id", id).Interface("actual_fw", fv).Msg("Idempotent check: actual firmware")
+		}
+		for i, de := range desiredEntries {
+			log.Debug().Int("idx", i).
+				Str("vendor", de.GetVendor()).Str("model", de.GetModel()).
+				Interface("desired_fw", de.GetComponentVersions()).
+				Msg("Idempotent check: desired entry")
+		}
+
 		if allFirmwareUpToDate(target.ComponentIDs, actualFirmware, targetFirmware, desiredEntries) {
 			log.Info().
 				Str("components", target.String()).
@@ -420,8 +437,11 @@ func (m *Manager) getActualFirmwareVersions(
 	}
 
 	if len(bmcIPs) == 0 {
+		log.Debug().Msg("getActualFirmwareVersions: no BMC IPs found")
 		return nil
 	}
+
+	log.Debug().Strs("bmc_ips", bmcIPs).Msg("getActualFirmwareVersions: querying explored endpoints")
 
 	endpoints, err := m.carbideClient.FindExploredEndpointsByIds(ctx, bmcIPs)
 	if err != nil {
@@ -429,9 +449,16 @@ func (m *Manager) getActualFirmwareVersions(
 		return nil
 	}
 
+	log.Debug().Int("endpoints_returned", len(endpoints)).Msg("getActualFirmwareVersions: response")
+
 	result := make(map[string]map[string]string, len(endpoints))
 	for _, ep := range endpoints {
 		fwVersions := ep.GetReport().GetFirmwareVersions()
+		log.Debug().
+			Str("address", ep.GetAddress()).
+			Int("fw_versions_count", len(fwVersions)).
+			Interface("fw_versions", fwVersions).
+			Msg("getActualFirmwareVersions: endpoint data")
 		if len(fwVersions) == 0 {
 			continue
 		}
@@ -558,7 +585,9 @@ func (m *Manager) GetFirmwareStatus(ctx context.Context, target common.Target) (
 		switch {
 		case machine.UpdateComplete:
 			fwStatus.State = operations.FirmwareUpdateStateCompleted
-		case machine.State == "HostReprovisioning":
+		case strings.HasPrefix(machine.State, "HostReprovisioning/FailedFirmwareUpgrade"):
+			fwStatus.State = operations.FirmwareUpdateStateFailed
+		case strings.HasPrefix(machine.State, "HostReprovisioning"):
 			fwStatus.State = operations.FirmwareUpdateStateVerifying
 		default:
 			fwStatus.State = operations.FirmwareUpdateStateQueued
