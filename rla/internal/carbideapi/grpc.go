@@ -440,7 +440,7 @@ func (c *grpcClient) AddExpectedPowerShelf(ctx context.Context, req AddExpectedP
 		BmcUsername:       req.BMCUsername,
 		BmcPassword:       req.BMCPassword,
 		ShelfSerialNumber: req.ShelfSerialNumber,
-		IpAddress:         req.IPAddress,
+		BmcIpAddress:      req.IPAddress,
 	}
 
 	if req.RackID != "" {
