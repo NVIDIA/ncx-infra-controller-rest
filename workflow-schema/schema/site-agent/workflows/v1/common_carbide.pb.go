@@ -1,3 +1,4 @@
+//
 // SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -35,6 +36,73 @@ const (
 	// Verify that runtime/protoimpl is sufficiently up-to-date.
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
+
+type SystemPowerControl int32
+
+const (
+	SystemPowerControl_SYSTEM_POWER_CONTROL_UNKNOWN SystemPowerControl = 0
+	// Power on a machine
+	SystemPowerControl_SYSTEM_POWER_CONTROL_ON SystemPowerControl = 1
+	// Graceful host shutdown
+	SystemPowerControl_SYSTEM_POWER_CONTROL_GRACEFUL_SHUTDOWN SystemPowerControl = 2
+	// Forcefully powers a machine off
+	SystemPowerControl_SYSTEM_POWER_CONTROL_FORCE_OFF SystemPowerControl = 3
+	// Graceful restart. Asks the OS to restart via ACPI
+	SystemPowerControl_SYSTEM_POWER_CONTROL_GRACEFUL_RESTART SystemPowerControl = 4
+	// Force restart. This is equivalent to pressing the reset button on the front panel.
+	SystemPowerControl_SYSTEM_POWER_CONTROL_FORCE_RESTART SystemPowerControl = 5
+	// AC powercycle. This is equivalent to unplugging and reconnecting power cables. Not supported on Vikings.
+	SystemPowerControl_SYSTEM_POWER_CONTROL_AC_POWERCYCLE SystemPowerControl = 6
+)
+
+// Enum value maps for SystemPowerControl.
+var (
+	SystemPowerControl_name = map[int32]string{
+		0: "SYSTEM_POWER_CONTROL_UNKNOWN",
+		1: "SYSTEM_POWER_CONTROL_ON",
+		2: "SYSTEM_POWER_CONTROL_GRACEFUL_SHUTDOWN",
+		3: "SYSTEM_POWER_CONTROL_FORCE_OFF",
+		4: "SYSTEM_POWER_CONTROL_GRACEFUL_RESTART",
+		5: "SYSTEM_POWER_CONTROL_FORCE_RESTART",
+		6: "SYSTEM_POWER_CONTROL_AC_POWERCYCLE",
+	}
+	SystemPowerControl_value = map[string]int32{
+		"SYSTEM_POWER_CONTROL_UNKNOWN":           0,
+		"SYSTEM_POWER_CONTROL_ON":                1,
+		"SYSTEM_POWER_CONTROL_GRACEFUL_SHUTDOWN": 2,
+		"SYSTEM_POWER_CONTROL_FORCE_OFF":         3,
+		"SYSTEM_POWER_CONTROL_GRACEFUL_RESTART":  4,
+		"SYSTEM_POWER_CONTROL_FORCE_RESTART":     5,
+		"SYSTEM_POWER_CONTROL_AC_POWERCYCLE":     6,
+	}
+)
+
+func (x SystemPowerControl) Enum() *SystemPowerControl {
+	p := new(SystemPowerControl)
+	*p = x
+	return p
+}
+
+func (x SystemPowerControl) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (SystemPowerControl) Descriptor() protoreflect.EnumDescriptor {
+	return file_common_carbide_proto_enumTypes[0].Descriptor()
+}
+
+func (SystemPowerControl) Type() protoreflect.EnumType {
+	return &file_common_carbide_proto_enumTypes[0]
+}
+
+func (x SystemPowerControl) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use SystemPowerControl.Descriptor instead.
+func (SystemPowerControl) EnumDescriptor() ([]byte, []int) {
+	return file_common_carbide_proto_rawDescGZIP(), []int{0}
+}
 
 type MachineId struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -215,6 +283,138 @@ func (x *UUID) GetValue() string {
 	return ""
 }
 
+type PowerShelfId struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PowerShelfId) Reset() {
+	*x = PowerShelfId{}
+	mi := &file_common_carbide_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PowerShelfId) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PowerShelfId) ProtoMessage() {}
+
+func (x *PowerShelfId) ProtoReflect() protoreflect.Message {
+	mi := &file_common_carbide_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PowerShelfId.ProtoReflect.Descriptor instead.
+func (*PowerShelfId) Descriptor() ([]byte, []int) {
+	return file_common_carbide_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *PowerShelfId) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type RackId struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RackId) Reset() {
+	*x = RackId{}
+	mi := &file_common_carbide_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RackId) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RackId) ProtoMessage() {}
+
+func (x *RackId) ProtoReflect() protoreflect.Message {
+	mi := &file_common_carbide_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RackId.ProtoReflect.Descriptor instead.
+func (*RackId) Descriptor() ([]byte, []int) {
+	return file_common_carbide_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *RackId) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type SwitchId struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SwitchId) Reset() {
+	*x = SwitchId{}
+	mi := &file_common_carbide_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SwitchId) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SwitchId) ProtoMessage() {}
+
+func (x *SwitchId) ProtoReflect() protoreflect.Message {
+	mi := &file_common_carbide_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SwitchId.ProtoReflect.Descriptor instead.
+func (*SwitchId) Descriptor() ([]byte, []int) {
+	return file_common_carbide_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *SwitchId) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
 type Uint32List struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Items         []uint32               `protobuf:"varint,1,rep,packed,name=items,proto3" json:"items,omitempty"`
@@ -224,7 +424,7 @@ type Uint32List struct {
 
 func (x *Uint32List) Reset() {
 	*x = Uint32List{}
-	mi := &file_common_carbide_proto_msgTypes[4]
+	mi := &file_common_carbide_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -236,7 +436,7 @@ func (x *Uint32List) String() string {
 func (*Uint32List) ProtoMessage() {}
 
 func (x *Uint32List) ProtoReflect() protoreflect.Message {
-	mi := &file_common_carbide_proto_msgTypes[4]
+	mi := &file_common_carbide_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -249,7 +449,7 @@ func (x *Uint32List) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Uint32List.ProtoReflect.Descriptor instead.
 func (*Uint32List) Descriptor() ([]byte, []int) {
-	return file_common_carbide_proto_rawDescGZIP(), []int{4}
+	return file_common_carbide_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *Uint32List) GetItems() []uint32 {
@@ -269,7 +469,7 @@ type RouteTarget struct {
 
 func (x *RouteTarget) Reset() {
 	*x = RouteTarget{}
-	mi := &file_common_carbide_proto_msgTypes[5]
+	mi := &file_common_carbide_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -281,7 +481,7 @@ func (x *RouteTarget) String() string {
 func (*RouteTarget) ProtoMessage() {}
 
 func (x *RouteTarget) ProtoReflect() protoreflect.Message {
-	mi := &file_common_carbide_proto_msgTypes[5]
+	mi := &file_common_carbide_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -294,7 +494,7 @@ func (x *RouteTarget) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RouteTarget.ProtoReflect.Descriptor instead.
 func (*RouteTarget) Descriptor() ([]byte, []int) {
-	return file_common_carbide_proto_rawDescGZIP(), []int{5}
+	return file_common_carbide_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *RouteTarget) GetAsn() uint32 {
@@ -322,7 +522,7 @@ type DomainId struct {
 
 func (x *DomainId) Reset() {
 	*x = DomainId{}
-	mi := &file_common_carbide_proto_msgTypes[6]
+	mi := &file_common_carbide_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -334,7 +534,7 @@ func (x *DomainId) String() string {
 func (*DomainId) ProtoMessage() {}
 
 func (x *DomainId) ProtoReflect() protoreflect.Message {
-	mi := &file_common_carbide_proto_msgTypes[6]
+	mi := &file_common_carbide_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -347,7 +547,7 @@ func (x *DomainId) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DomainId.ProtoReflect.Descriptor instead.
 func (*DomainId) Descriptor() ([]byte, []int) {
-	return file_common_carbide_proto_rawDescGZIP(), []int{6}
+	return file_common_carbide_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *DomainId) GetValue() string {
@@ -366,7 +566,7 @@ type MachineInterfaceId struct {
 
 func (x *MachineInterfaceId) Reset() {
 	*x = MachineInterfaceId{}
-	mi := &file_common_carbide_proto_msgTypes[7]
+	mi := &file_common_carbide_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -378,7 +578,7 @@ func (x *MachineInterfaceId) String() string {
 func (*MachineInterfaceId) ProtoMessage() {}
 
 func (x *MachineInterfaceId) ProtoReflect() protoreflect.Message {
-	mi := &file_common_carbide_proto_msgTypes[7]
+	mi := &file_common_carbide_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -391,7 +591,7 @@ func (x *MachineInterfaceId) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MachineInterfaceId.ProtoReflect.Descriptor instead.
 func (*MachineInterfaceId) Descriptor() ([]byte, []int) {
-	return file_common_carbide_proto_rawDescGZIP(), []int{7}
+	return file_common_carbide_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *MachineInterfaceId) GetValue() string {
@@ -410,7 +610,7 @@ type VpcId struct {
 
 func (x *VpcId) Reset() {
 	*x = VpcId{}
-	mi := &file_common_carbide_proto_msgTypes[8]
+	mi := &file_common_carbide_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -422,7 +622,7 @@ func (x *VpcId) String() string {
 func (*VpcId) ProtoMessage() {}
 
 func (x *VpcId) ProtoReflect() protoreflect.Message {
-	mi := &file_common_carbide_proto_msgTypes[8]
+	mi := &file_common_carbide_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -435,7 +635,7 @@ func (x *VpcId) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VpcId.ProtoReflect.Descriptor instead.
 func (*VpcId) Descriptor() ([]byte, []int) {
-	return file_common_carbide_proto_rawDescGZIP(), []int{8}
+	return file_common_carbide_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *VpcId) GetValue() string {
@@ -454,7 +654,7 @@ type VpcPrefixId struct {
 
 func (x *VpcPrefixId) Reset() {
 	*x = VpcPrefixId{}
-	mi := &file_common_carbide_proto_msgTypes[9]
+	mi := &file_common_carbide_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -466,7 +666,7 @@ func (x *VpcPrefixId) String() string {
 func (*VpcPrefixId) ProtoMessage() {}
 
 func (x *VpcPrefixId) ProtoReflect() protoreflect.Message {
-	mi := &file_common_carbide_proto_msgTypes[9]
+	mi := &file_common_carbide_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -479,7 +679,7 @@ func (x *VpcPrefixId) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VpcPrefixId.ProtoReflect.Descriptor instead.
 func (*VpcPrefixId) Descriptor() ([]byte, []int) {
-	return file_common_carbide_proto_rawDescGZIP(), []int{9}
+	return file_common_carbide_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *VpcPrefixId) GetValue() string {
@@ -498,7 +698,7 @@ type VpcPeeringId struct {
 
 func (x *VpcPeeringId) Reset() {
 	*x = VpcPeeringId{}
-	mi := &file_common_carbide_proto_msgTypes[10]
+	mi := &file_common_carbide_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -510,7 +710,7 @@ func (x *VpcPeeringId) String() string {
 func (*VpcPeeringId) ProtoMessage() {}
 
 func (x *VpcPeeringId) ProtoReflect() protoreflect.Message {
-	mi := &file_common_carbide_proto_msgTypes[10]
+	mi := &file_common_carbide_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -523,7 +723,7 @@ func (x *VpcPeeringId) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VpcPeeringId.ProtoReflect.Descriptor instead.
 func (*VpcPeeringId) Descriptor() ([]byte, []int) {
-	return file_common_carbide_proto_rawDescGZIP(), []int{10}
+	return file_common_carbide_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *VpcPeeringId) GetValue() string {
@@ -542,7 +742,7 @@ type IBPartitionId struct {
 
 func (x *IBPartitionId) Reset() {
 	*x = IBPartitionId{}
-	mi := &file_common_carbide_proto_msgTypes[11]
+	mi := &file_common_carbide_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -554,7 +754,7 @@ func (x *IBPartitionId) String() string {
 func (*IBPartitionId) ProtoMessage() {}
 
 func (x *IBPartitionId) ProtoReflect() protoreflect.Message {
-	mi := &file_common_carbide_proto_msgTypes[11]
+	mi := &file_common_carbide_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -567,7 +767,7 @@ func (x *IBPartitionId) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IBPartitionId.ProtoReflect.Descriptor instead.
 func (*IBPartitionId) Descriptor() ([]byte, []int) {
-	return file_common_carbide_proto_rawDescGZIP(), []int{11}
+	return file_common_carbide_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *IBPartitionId) GetValue() string {
@@ -586,7 +786,7 @@ type InstanceId struct {
 
 func (x *InstanceId) Reset() {
 	*x = InstanceId{}
-	mi := &file_common_carbide_proto_msgTypes[12]
+	mi := &file_common_carbide_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -598,7 +798,7 @@ func (x *InstanceId) String() string {
 func (*InstanceId) ProtoMessage() {}
 
 func (x *InstanceId) ProtoReflect() protoreflect.Message {
-	mi := &file_common_carbide_proto_msgTypes[12]
+	mi := &file_common_carbide_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -611,7 +811,7 @@ func (x *InstanceId) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InstanceId.ProtoReflect.Descriptor instead.
 func (*InstanceId) Descriptor() ([]byte, []int) {
-	return file_common_carbide_proto_rawDescGZIP(), []int{12}
+	return file_common_carbide_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *InstanceId) GetValue() string {
@@ -630,7 +830,7 @@ type NetworkSegmentId struct {
 
 func (x *NetworkSegmentId) Reset() {
 	*x = NetworkSegmentId{}
-	mi := &file_common_carbide_proto_msgTypes[13]
+	mi := &file_common_carbide_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -642,7 +842,7 @@ func (x *NetworkSegmentId) String() string {
 func (*NetworkSegmentId) ProtoMessage() {}
 
 func (x *NetworkSegmentId) ProtoReflect() protoreflect.Message {
-	mi := &file_common_carbide_proto_msgTypes[13]
+	mi := &file_common_carbide_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -655,7 +855,7 @@ func (x *NetworkSegmentId) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NetworkSegmentId.ProtoReflect.Descriptor instead.
 func (*NetworkSegmentId) Descriptor() ([]byte, []int) {
-	return file_common_carbide_proto_rawDescGZIP(), []int{13}
+	return file_common_carbide_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *NetworkSegmentId) GetValue() string {
@@ -674,7 +874,7 @@ type DpaInterfaceId struct {
 
 func (x *DpaInterfaceId) Reset() {
 	*x = DpaInterfaceId{}
-	mi := &file_common_carbide_proto_msgTypes[14]
+	mi := &file_common_carbide_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -686,7 +886,7 @@ func (x *DpaInterfaceId) String() string {
 func (*DpaInterfaceId) ProtoMessage() {}
 
 func (x *DpaInterfaceId) ProtoReflect() protoreflect.Message {
-	mi := &file_common_carbide_proto_msgTypes[14]
+	mi := &file_common_carbide_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -699,7 +899,7 @@ func (x *DpaInterfaceId) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DpaInterfaceId.ProtoReflect.Descriptor instead.
 func (*DpaInterfaceId) Descriptor() ([]byte, []int) {
-	return file_common_carbide_proto_rawDescGZIP(), []int{14}
+	return file_common_carbide_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *DpaInterfaceId) GetValue() string {
@@ -718,7 +918,7 @@ type NetworkPrefixId struct {
 
 func (x *NetworkPrefixId) Reset() {
 	*x = NetworkPrefixId{}
-	mi := &file_common_carbide_proto_msgTypes[15]
+	mi := &file_common_carbide_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -730,7 +930,7 @@ func (x *NetworkPrefixId) String() string {
 func (*NetworkPrefixId) ProtoMessage() {}
 
 func (x *NetworkPrefixId) ProtoReflect() protoreflect.Message {
-	mi := &file_common_carbide_proto_msgTypes[15]
+	mi := &file_common_carbide_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -743,7 +943,7 @@ func (x *NetworkPrefixId) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NetworkPrefixId.ProtoReflect.Descriptor instead.
 func (*NetworkPrefixId) Descriptor() ([]byte, []int) {
-	return file_common_carbide_proto_rawDescGZIP(), []int{15}
+	return file_common_carbide_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *NetworkPrefixId) GetValue() string {
@@ -762,7 +962,7 @@ type RemediationId struct {
 
 func (x *RemediationId) Reset() {
 	*x = RemediationId{}
-	mi := &file_common_carbide_proto_msgTypes[16]
+	mi := &file_common_carbide_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -774,7 +974,7 @@ func (x *RemediationId) String() string {
 func (*RemediationId) ProtoMessage() {}
 
 func (x *RemediationId) ProtoReflect() protoreflect.Message {
-	mi := &file_common_carbide_proto_msgTypes[16]
+	mi := &file_common_carbide_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -787,7 +987,7 @@ func (x *RemediationId) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemediationId.ProtoReflect.Descriptor instead.
 func (*RemediationId) Descriptor() ([]byte, []int) {
-	return file_common_carbide_proto_rawDescGZIP(), []int{16}
+	return file_common_carbide_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *RemediationId) GetValue() string {
@@ -806,7 +1006,7 @@ type NVLinkPartitionId struct {
 
 func (x *NVLinkPartitionId) Reset() {
 	*x = NVLinkPartitionId{}
-	mi := &file_common_carbide_proto_msgTypes[17]
+	mi := &file_common_carbide_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -818,7 +1018,7 @@ func (x *NVLinkPartitionId) String() string {
 func (*NVLinkPartitionId) ProtoMessage() {}
 
 func (x *NVLinkPartitionId) ProtoReflect() protoreflect.Message {
-	mi := &file_common_carbide_proto_msgTypes[17]
+	mi := &file_common_carbide_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -831,7 +1031,7 @@ func (x *NVLinkPartitionId) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NVLinkPartitionId.ProtoReflect.Descriptor instead.
 func (*NVLinkPartitionId) Descriptor() ([]byte, []int) {
-	return file_common_carbide_proto_rawDescGZIP(), []int{17}
+	return file_common_carbide_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *NVLinkPartitionId) GetValue() string {
@@ -850,7 +1050,7 @@ type NVLinkLogicalPartitionId struct {
 
 func (x *NVLinkLogicalPartitionId) Reset() {
 	*x = NVLinkLogicalPartitionId{}
-	mi := &file_common_carbide_proto_msgTypes[18]
+	mi := &file_common_carbide_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -862,7 +1062,7 @@ func (x *NVLinkLogicalPartitionId) String() string {
 func (*NVLinkLogicalPartitionId) ProtoMessage() {}
 
 func (x *NVLinkLogicalPartitionId) ProtoReflect() protoreflect.Message {
-	mi := &file_common_carbide_proto_msgTypes[18]
+	mi := &file_common_carbide_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -875,7 +1075,7 @@ func (x *NVLinkLogicalPartitionId) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NVLinkLogicalPartitionId.ProtoReflect.Descriptor instead.
 func (*NVLinkLogicalPartitionId) Descriptor() ([]byte, []int) {
-	return file_common_carbide_proto_rawDescGZIP(), []int{18}
+	return file_common_carbide_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *NVLinkLogicalPartitionId) GetValue() string {
@@ -894,7 +1094,7 @@ type NVLinkDomainId struct {
 
 func (x *NVLinkDomainId) Reset() {
 	*x = NVLinkDomainId{}
-	mi := &file_common_carbide_proto_msgTypes[19]
+	mi := &file_common_carbide_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -906,7 +1106,7 @@ func (x *NVLinkDomainId) String() string {
 func (*NVLinkDomainId) ProtoMessage() {}
 
 func (x *NVLinkDomainId) ProtoReflect() protoreflect.Message {
-	mi := &file_common_carbide_proto_msgTypes[19]
+	mi := &file_common_carbide_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -919,7 +1119,7 @@ func (x *NVLinkDomainId) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NVLinkDomainId.ProtoReflect.Descriptor instead.
 func (*NVLinkDomainId) Descriptor() ([]byte, []int) {
-	return file_common_carbide_proto_rawDescGZIP(), []int{19}
+	return file_common_carbide_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *NVLinkDomainId) GetValue() string {
@@ -929,28 +1129,28 @@ func (x *NVLinkDomainId) GetValue() string {
 	return ""
 }
 
-type PowerShelfId struct {
+type ComputeAllocationId struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Value         string                 `protobuf:"bytes,1,opt,name=value,proto3" json:"value,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *PowerShelfId) Reset() {
-	*x = PowerShelfId{}
-	mi := &file_common_carbide_proto_msgTypes[20]
+func (x *ComputeAllocationId) Reset() {
+	*x = ComputeAllocationId{}
+	mi := &file_common_carbide_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *PowerShelfId) String() string {
+func (x *ComputeAllocationId) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*PowerShelfId) ProtoMessage() {}
+func (*ComputeAllocationId) ProtoMessage() {}
 
-func (x *PowerShelfId) ProtoReflect() protoreflect.Message {
-	mi := &file_common_carbide_proto_msgTypes[20]
+func (x *ComputeAllocationId) ProtoReflect() protoreflect.Message {
+	mi := &file_common_carbide_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -961,102 +1161,14 @@ func (x *PowerShelfId) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use PowerShelfId.ProtoReflect.Descriptor instead.
-func (*PowerShelfId) Descriptor() ([]byte, []int) {
-	return file_common_carbide_proto_rawDescGZIP(), []int{20}
+// Deprecated: Use ComputeAllocationId.ProtoReflect.Descriptor instead.
+func (*ComputeAllocationId) Descriptor() ([]byte, []int) {
+	return file_common_carbide_proto_rawDescGZIP(), []int{23}
 }
 
-func (x *PowerShelfId) GetId() string {
+func (x *ComputeAllocationId) GetValue() string {
 	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-type RackId struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *RackId) Reset() {
-	*x = RackId{}
-	mi := &file_common_carbide_proto_msgTypes[21]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *RackId) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*RackId) ProtoMessage() {}
-
-func (x *RackId) ProtoReflect() protoreflect.Message {
-	mi := &file_common_carbide_proto_msgTypes[21]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use RackId.ProtoReflect.Descriptor instead.
-func (*RackId) Descriptor() ([]byte, []int) {
-	return file_common_carbide_proto_rawDescGZIP(), []int{21}
-}
-
-func (x *RackId) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-type SwitchId struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *SwitchId) Reset() {
-	*x = SwitchId{}
-	mi := &file_common_carbide_proto_msgTypes[22]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *SwitchId) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*SwitchId) ProtoMessage() {}
-
-func (x *SwitchId) ProtoReflect() protoreflect.Message {
-	mi := &file_common_carbide_proto_msgTypes[22]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use SwitchId.ProtoReflect.Descriptor instead.
-func (*SwitchId) Descriptor() ([]byte, []int) {
-	return file_common_carbide_proto_rawDescGZIP(), []int{22}
-}
-
-func (x *SwitchId) GetId() string {
-	if x != nil {
-		return x.Id
+		return x.Value
 	}
 	return ""
 }
@@ -1075,7 +1187,13 @@ const file_common_carbide_proto_rawDesc = "" +
 	"StringList\x12\x14\n" +
 	"\x05items\x18\x01 \x03(\tR\x05items\"\x1c\n" +
 	"\x04UUID\x12\x14\n" +
-	"\x05value\x18\x01 \x01(\tR\x05value\"\"\n" +
+	"\x05value\x18\x01 \x01(\tR\x05value\"\x1e\n" +
+	"\fPowerShelfId\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\x18\n" +
+	"\x06RackId\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\x1a\n" +
+	"\bSwitchId\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\"\n" +
 	"\n" +
 	"Uint32List\x12\x14\n" +
 	"\x05items\x18\x01 \x03(\rR\x05items\"1\n" +
@@ -1110,13 +1228,17 @@ const file_common_carbide_proto_rawDesc = "" +
 	"\x18NVLinkLogicalPartitionId\x12\x14\n" +
 	"\x05value\x18\x01 \x01(\tR\x05value\"&\n" +
 	"\x0eNVLinkDomainId\x12\x14\n" +
-	"\x05value\x18\x01 \x01(\tR\x05value\"\x1e\n" +
-	"\fPowerShelfId\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"\x18\n" +
-	"\x06RackId\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"\x1a\n" +
-	"\bSwitchId\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02idBCZAgithub.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/protob\x06proto3"
+	"\x05value\x18\x01 \x01(\tR\x05value\"+\n" +
+	"\x13ComputeAllocationId\x12\x14\n" +
+	"\x05value\x18\x01 \x01(\tR\x05value*\x9e\x02\n" +
+	"\x12SystemPowerControl\x12 \n" +
+	"\x1cSYSTEM_POWER_CONTROL_UNKNOWN\x10\x00\x12\x1b\n" +
+	"\x17SYSTEM_POWER_CONTROL_ON\x10\x01\x12*\n" +
+	"&SYSTEM_POWER_CONTROL_GRACEFUL_SHUTDOWN\x10\x02\x12\"\n" +
+	"\x1eSYSTEM_POWER_CONTROL_FORCE_OFF\x10\x03\x12)\n" +
+	"%SYSTEM_POWER_CONTROL_GRACEFUL_RESTART\x10\x04\x12&\n" +
+	"\"SYSTEM_POWER_CONTROL_FORCE_RESTART\x10\x05\x12&\n" +
+	"\"SYSTEM_POWER_CONTROL_AC_POWERCYCLE\x10\x06BCZAgithub.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/protob\x06proto3"
 
 var (
 	file_common_carbide_proto_rawDescOnce sync.Once
@@ -1130,34 +1252,37 @@ func file_common_carbide_proto_rawDescGZIP() []byte {
 	return file_common_carbide_proto_rawDescData
 }
 
-var file_common_carbide_proto_msgTypes = make([]protoimpl.MessageInfo, 23)
+var file_common_carbide_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_common_carbide_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
 var file_common_carbide_proto_goTypes = []any{
-	(*MachineId)(nil),                // 0: common.MachineId
-	(*MachineIdList)(nil),            // 1: common.MachineIdList
-	(*StringList)(nil),               // 2: common.StringList
-	(*UUID)(nil),                     // 3: common.UUID
-	(*Uint32List)(nil),               // 4: common.Uint32List
-	(*RouteTarget)(nil),              // 5: common.RouteTarget
-	(*DomainId)(nil),                 // 6: common.DomainId
-	(*MachineInterfaceId)(nil),       // 7: common.MachineInterfaceId
-	(*VpcId)(nil),                    // 8: common.VpcId
-	(*VpcPrefixId)(nil),              // 9: common.VpcPrefixId
-	(*VpcPeeringId)(nil),             // 10: common.VpcPeeringId
-	(*IBPartitionId)(nil),            // 11: common.IBPartitionId
-	(*InstanceId)(nil),               // 12: common.InstanceId
-	(*NetworkSegmentId)(nil),         // 13: common.NetworkSegmentId
-	(*DpaInterfaceId)(nil),           // 14: common.DpaInterfaceId
-	(*NetworkPrefixId)(nil),          // 15: common.NetworkPrefixId
-	(*RemediationId)(nil),            // 16: common.RemediationId
-	(*NVLinkPartitionId)(nil),        // 17: common.NVLinkPartitionId
-	(*NVLinkLogicalPartitionId)(nil), // 18: common.NVLinkLogicalPartitionId
-	(*NVLinkDomainId)(nil),           // 19: common.NVLinkDomainId
-	(*PowerShelfId)(nil),             // 20: common.PowerShelfId
-	(*RackId)(nil),                   // 21: common.RackId
-	(*SwitchId)(nil),                 // 22: common.SwitchId
+	(SystemPowerControl)(0),          // 0: common.SystemPowerControl
+	(*MachineId)(nil),                // 1: common.MachineId
+	(*MachineIdList)(nil),            // 2: common.MachineIdList
+	(*StringList)(nil),               // 3: common.StringList
+	(*UUID)(nil),                     // 4: common.UUID
+	(*PowerShelfId)(nil),             // 5: common.PowerShelfId
+	(*RackId)(nil),                   // 6: common.RackId
+	(*SwitchId)(nil),                 // 7: common.SwitchId
+	(*Uint32List)(nil),               // 8: common.Uint32List
+	(*RouteTarget)(nil),              // 9: common.RouteTarget
+	(*DomainId)(nil),                 // 10: common.DomainId
+	(*MachineInterfaceId)(nil),       // 11: common.MachineInterfaceId
+	(*VpcId)(nil),                    // 12: common.VpcId
+	(*VpcPrefixId)(nil),              // 13: common.VpcPrefixId
+	(*VpcPeeringId)(nil),             // 14: common.VpcPeeringId
+	(*IBPartitionId)(nil),            // 15: common.IBPartitionId
+	(*InstanceId)(nil),               // 16: common.InstanceId
+	(*NetworkSegmentId)(nil),         // 17: common.NetworkSegmentId
+	(*DpaInterfaceId)(nil),           // 18: common.DpaInterfaceId
+	(*NetworkPrefixId)(nil),          // 19: common.NetworkPrefixId
+	(*RemediationId)(nil),            // 20: common.RemediationId
+	(*NVLinkPartitionId)(nil),        // 21: common.NVLinkPartitionId
+	(*NVLinkLogicalPartitionId)(nil), // 22: common.NVLinkLogicalPartitionId
+	(*NVLinkDomainId)(nil),           // 23: common.NVLinkDomainId
+	(*ComputeAllocationId)(nil),      // 24: common.ComputeAllocationId
 }
 var file_common_carbide_proto_depIdxs = []int32{
-	0, // 0: common.MachineIdList.machine_ids:type_name -> common.MachineId
+	1, // 0: common.MachineIdList.machine_ids:type_name -> common.MachineId
 	1, // [1:1] is the sub-list for method output_type
 	1, // [1:1] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
@@ -1175,13 +1300,14 @@ func file_common_carbide_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_common_carbide_proto_rawDesc), len(file_common_carbide_proto_rawDesc)),
-			NumEnums:      0,
-			NumMessages:   23,
+			NumEnums:      1,
+			NumMessages:   24,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_common_carbide_proto_goTypes,
 		DependencyIndexes: file_common_carbide_proto_depIdxs,
+		EnumInfos:         file_common_carbide_proto_enumTypes,
 		MessageInfos:      file_common_carbide_proto_msgTypes,
 	}.Build()
 	File_common_carbide_proto = out.File

@@ -22,9 +22,6 @@ import (
 	"errors"
 	"os"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	wflows "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel"
@@ -34,10 +31,6 @@ import (
 type InfiniBandPartitionInterface interface {
 	CreateInfiniBandPartition(ctx context.Context, request *wflows.CreateInfiniBandPartitionRequest) (response *wflows.IBPartition, err error)
 	DeleteInfiniBandPartition(ctx context.Context, request *wflows.DeleteInfiniBandPartitionRequest) (response *wflows.IBPartitionDeletionResult, err error)
-	// DEPRECATED: use GetAllInfiniBandPartitions instead
-	GetInfiniBandPartition(ctx context.Context, request *wflows.GetInfiniBandPartitionRequest) (response *wflows.IBPartitionList, err error)
-	// DEPRECATED: use GetAllInfiniBandPartitions instead
-	ListInfiniBandPartition(ctx context.Context) (response *wflows.IBPartitionList, err error)
 	GetAllInfiniBandPartitions(ctx context.Context, request *wflows.IBPartitionSearchFilter, pageSize int) (response *wflows.IBPartitionList, err error)
 	FindInfinibandPartitionIDs(ctx context.Context, request *wflows.IBPartitionSearchFilter) (response *wflows.IBPartitionIdList, err error)
 	FindInfinibandPartitionsByIDs(ctx context.Context, request *wflows.IBPartitionsByIdsRequest) (response *wflows.IBPartitionList, err error)
@@ -90,55 +83,6 @@ func (ibp *network) DeleteInfiniBandPartition(ctx context.Context, request *wflo
 	return response, err
 }
 
-// GetInfiniBandPartition gets a InfiniBandPartition
-// DEPRECATED: use GetAllInfiniBandPartitions instead
-func (ibp *network) GetInfiniBandPartition(ctx context.Context, request *wflows.GetInfiniBandPartitionRequest) (response *wflows.IBPartitionList, err error) {
-	log.Info().Interface("request", request).Msg("GetInfiniBandPartition: received request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-GetInfiniBandPartition")
-	defer span.End()
-
-	// Validate the request
-	if request == nil || request.Id == nil {
-		if request == nil {
-			err = errors.New("GetInfiniBandPartition: invalid request")
-		} else if request.Id == nil {
-			err = errors.New("GetInfiniBandPartition: invalid id")
-		}
-		log.Error().Err(err).Msg("GetInfiniBandPartition: invalid request")
-		return nil, err
-	}
-
-	carbideRequest := &wflows.IBPartitionQuery{
-		Id: &wflows.IBPartitionId{Value: request.Id.Value},
-	}
-	log.Info().Interface("request", carbideRequest).Msg("GetInfiniBandPartition: converted FindIBPartitions request")
-
-	response, err = ibp.carbide.FindIBPartitions(ctx, carbideRequest)
-	if err != nil {
-		log.Error().Err(err).Msg("GetInfiniBandPartition: error")
-		return nil, err
-	}
-	log.Info().Int("IbPartitionsLen", len(response.IbPartitions)).Msg("GetInfiniBandPartition: received result")
-	return response, err
-}
-
-// ListInfiniBandPartition returns list of InfiniBandPartition
-// DEPRECATED: use GetAllInfiniBandPartitions instead
-func (ibp *network) ListInfiniBandPartition(ctx context.Context) (response *wflows.IBPartitionList, err error) {
-	log.Info().Msg("ListInfiniBandPartition: received request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-ListInfiniBandPartition")
-	defer span.End()
-
-	carbiderequest := &wflows.IBPartitionQuery{}
-	response, err = ibp.carbide.FindIBPartitions(ctx, carbiderequest)
-	if err != nil {
-		log.Error().Err(err).Msg("ListInfiniBandPartition: error")
-		return nil, err
-	}
-	log.Info().Int("IbPartitionsLen", len(response.IbPartitions)).Msg("ListInfiniBandPartition: received result")
-	return response, err
-}
-
 func (ibp *network) GetAllInfiniBandPartitions(ctx context.Context, request *wflows.IBPartitionSearchFilter, pageSize int) (response *wflows.IBPartitionList, err error) {
 	log.Info().Interface("request", request).Msg("GetAllInfiniBandPartitions: received request")
 	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-GetAllInfiniBandPartitions")
@@ -150,12 +94,6 @@ func (ibp *network) GetAllInfiniBandPartitions(ctx context.Context, request *wfl
 
 	idList, err := ibp.carbide.FindIBPartitionIds(ctx, request)
 	if err != nil {
-		if grpcStatus, ok := status.FromError(err); ok {
-			if grpcStatus.Code() == codes.Unimplemented {
-				log.Info().Msg("Using deprecated API to get IBPartitions")
-				return ibp.ListInfiniBandPartition(ctx)
-			}
-		}
 		log.Error().Err(err).Msg("FindIBPartitionIds: error")
 		return nil, err
 	}

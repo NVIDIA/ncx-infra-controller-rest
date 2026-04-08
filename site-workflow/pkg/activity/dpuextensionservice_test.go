@@ -29,8 +29,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	tmocks "go.temporal.io/sdk/mocks"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 func TestManageDpuExtensionService_CreateDpuExtensionServiceOnSite(t *testing.T) {
@@ -417,7 +415,6 @@ func TestManageDpuExtensionServiceInventory_DiscoverDpuExtensionServiceInventory
 	}
 	type args struct {
 		wantTotalItems int
-		findIDsError   error
 	}
 	tests := []struct {
 		name   string
@@ -450,34 +447,6 @@ func TestManageDpuExtensionServiceInventory_DiscoverDpuExtensionServiceInventory
 				wantTotalItems: 195,
 			},
 		},
-		{
-			name: "test collecting and publishing dpu extension service inventory fallback, empty inventory",
-			fields: fields{
-				siteID:               uuid.New(),
-				carbideAtomicClient:  carbideAtomicClient,
-				temporalPublishQueue: "test-queue",
-				sitePageSize:         100,
-				cloudPageSize:        25,
-			},
-			args: args{
-				wantTotalItems: 0,
-				findIDsError:   status.Error(codes.Unimplemented, "not implemented"),
-			},
-		},
-		{
-			name: "test collecting and publishing dpu extension service inventory fallback, normal inventory",
-			fields: fields{
-				siteID:               uuid.New(),
-				carbideAtomicClient:  carbideAtomicClient,
-				temporalPublishQueue: "test-queue",
-				sitePageSize:         100,
-				cloudPageSize:        25,
-			},
-			args: args{
-				wantTotalItems: 195,
-				findIDsError:   status.Error(codes.Unimplemented, "not implemented"),
-			},
-		},
 	}
 
 	for _, tt := range tests {
@@ -498,9 +467,6 @@ func TestManageDpuExtensionServiceInventory_DiscoverDpuExtensionServiceInventory
 
 			ctx := context.Background()
 			ctx = context.WithValue(ctx, "wantCount", tt.args.wantTotalItems)
-			if tt.args.findIDsError != nil {
-				ctx = context.WithValue(ctx, "wantError", tt.args.findIDsError)
-			}
 
 			totalPages := tt.args.wantTotalItems / tt.fields.cloudPageSize
 			if tt.args.wantTotalItems%tt.fields.cloudPageSize > 0 {

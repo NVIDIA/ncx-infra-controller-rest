@@ -1,3 +1,4 @@
+//
 // SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -83,6 +84,7 @@ func (NicMode) EnumDescriptor() ([]byte, []int) {
 	return file_site_explorer_carbide_proto_rawDescGZIP(), []int{0}
 }
 
+// WARNING: This enum conflicts with PowerState in forge_carbide.proto and must be renamed to ComputerSystemPowerState
 type ComputerSystemPowerState int32
 
 const (
@@ -211,14 +213,16 @@ type EndpointExplorationReport struct {
 	Chassis []*Chassis `protobuf:"bytes,14,rep,name=chassis,proto3" json:"chassis,omitempty"`
 	// `Service` reported by Redfish
 	Service []*Service `protobuf:"bytes,15,rep,name=service,proto3" json:"service,omitempty"`
-	// `ForgeSetupStatus` reported by Redfish
-	ForgeSetupStatus *ForgeSetupStatus `protobuf:"bytes,16,opt,name=forge_setup_status,json=forgeSetupStatus,proto3" json:"forge_setup_status,omitempty"`
+	// `MachineSetupStatus` reported by Redfish
+	MachineSetupStatus *MachineSetupStatus `protobuf:"bytes,16,opt,name=machine_setup_status,json=machineSetupStatus,proto3" json:"machine_setup_status,omitempty"`
 	// `SecureBootStatus` reported by Redfish
 	SecureBootStatus *SecureBootStatus `protobuf:"bytes,17,opt,name=secure_boot_status,json=secureBootStatus,proto3" json:"secure_boot_status,omitempty"`
 	// `LockdownStatus` reported by Redfish
 	LockdownStatus *LockdownStatus `protobuf:"bytes,18,opt,name=lockdown_status,json=lockdownStatus,proto3" json:"lockdown_status,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Parsed firmware component versions (e.g. {"bmc": "25.06-2", "uefi": "00000083", "hgxbmc": "97.00.B9.00.76"})
+	FirmwareVersions map[string]string `protobuf:"bytes,19,rep,name=firmware_versions,json=firmwareVersions,proto3" json:"firmware_versions,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *EndpointExplorationReport) Reset() {
@@ -314,9 +318,9 @@ func (x *EndpointExplorationReport) GetService() []*Service {
 	return nil
 }
 
-func (x *EndpointExplorationReport) GetForgeSetupStatus() *ForgeSetupStatus {
+func (x *EndpointExplorationReport) GetMachineSetupStatus() *MachineSetupStatus {
 	if x != nil {
-		return x.ForgeSetupStatus
+		return x.MachineSetupStatus
 	}
 	return nil
 }
@@ -331,6 +335,13 @@ func (x *EndpointExplorationReport) GetSecureBootStatus() *SecureBootStatus {
 func (x *EndpointExplorationReport) GetLockdownStatus() *LockdownStatus {
 	if x != nil {
 		return x.LockdownStatus
+	}
+	return nil
+}
+
+func (x *EndpointExplorationReport) GetFirmwareVersions() map[string]string {
+	if x != nil {
+		return x.FirmwareVersions
 	}
 	return nil
 }
@@ -1197,8 +1208,10 @@ type EthernetInterface struct {
 	Description      *string                `protobuf:"bytes,2,opt,name=description,proto3,oneof" json:"description,omitempty"`
 	InterfaceEnabled *bool                  `protobuf:"varint,3,opt,name=interface_enabled,json=interfaceEnabled,proto3,oneof" json:"interface_enabled,omitempty"`
 	MacAddress       *string                `protobuf:"bytes,4,opt,name=mac_address,json=macAddress,proto3,oneof" json:"mac_address,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// Redfish LinkStatus (e.g. LinkUp, LinkDown, NoLink)
+	LinkStatus    *string `protobuf:"bytes,5,opt,name=link_status,json=linkStatus,proto3,oneof" json:"link_status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *EthernetInterface) Reset() {
@@ -1255,6 +1268,13 @@ func (x *EthernetInterface) GetInterfaceEnabled() bool {
 func (x *EthernetInterface) GetMacAddress() string {
 	if x != nil && x.MacAddress != nil {
 		return *x.MacAddress
+	}
+	return ""
+}
+
+func (x *EthernetInterface) GetLinkStatus() string {
+	if x != nil && x.LinkStatus != nil {
+		return *x.LinkStatus
 	}
 	return ""
 }
@@ -1543,29 +1563,29 @@ func (x *Inventory) GetReleaseDate() string {
 	return ""
 }
 
-// `ForgeSetupStatus` definition. Matches redfish definition
-type ForgeSetupStatus struct {
+// `MachineSetupStatus` definition. Matches redfish definition
+type MachineSetupStatus struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	IsDone        bool                   `protobuf:"varint,1,opt,name=is_done,json=isDone,proto3" json:"is_done,omitempty"`
-	Diffs         []*ForgeSetupDiff      `protobuf:"bytes,2,rep,name=diffs,proto3" json:"diffs,omitempty"`
+	Diffs         []*MachineSetupDiff    `protobuf:"bytes,2,rep,name=diffs,proto3" json:"diffs,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ForgeSetupStatus) Reset() {
-	*x = ForgeSetupStatus{}
+func (x *MachineSetupStatus) Reset() {
+	*x = MachineSetupStatus{}
 	mi := &file_site_explorer_carbide_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ForgeSetupStatus) String() string {
+func (x *MachineSetupStatus) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ForgeSetupStatus) ProtoMessage() {}
+func (*MachineSetupStatus) ProtoMessage() {}
 
-func (x *ForgeSetupStatus) ProtoReflect() protoreflect.Message {
+func (x *MachineSetupStatus) ProtoReflect() protoreflect.Message {
 	mi := &file_site_explorer_carbide_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1577,27 +1597,27 @@ func (x *ForgeSetupStatus) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ForgeSetupStatus.ProtoReflect.Descriptor instead.
-func (*ForgeSetupStatus) Descriptor() ([]byte, []int) {
+// Deprecated: Use MachineSetupStatus.ProtoReflect.Descriptor instead.
+func (*MachineSetupStatus) Descriptor() ([]byte, []int) {
 	return file_site_explorer_carbide_proto_rawDescGZIP(), []int{21}
 }
 
-func (x *ForgeSetupStatus) GetIsDone() bool {
+func (x *MachineSetupStatus) GetIsDone() bool {
 	if x != nil {
 		return x.IsDone
 	}
 	return false
 }
 
-func (x *ForgeSetupStatus) GetDiffs() []*ForgeSetupDiff {
+func (x *MachineSetupStatus) GetDiffs() []*MachineSetupDiff {
 	if x != nil {
 		return x.Diffs
 	}
 	return nil
 }
 
-// `ForgeSetupDiff` definition. Matches redfish definition
-type ForgeSetupDiff struct {
+// `MachineSetupDiff` definition. Matches redfish definition
+type MachineSetupDiff struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Key           string                 `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
 	Expected      string                 `protobuf:"bytes,2,opt,name=expected,proto3" json:"expected,omitempty"`
@@ -1606,20 +1626,20 @@ type ForgeSetupDiff struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ForgeSetupDiff) Reset() {
-	*x = ForgeSetupDiff{}
+func (x *MachineSetupDiff) Reset() {
+	*x = MachineSetupDiff{}
 	mi := &file_site_explorer_carbide_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ForgeSetupDiff) String() string {
+func (x *MachineSetupDiff) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ForgeSetupDiff) ProtoMessage() {}
+func (*MachineSetupDiff) ProtoMessage() {}
 
-func (x *ForgeSetupDiff) ProtoReflect() protoreflect.Message {
+func (x *MachineSetupDiff) ProtoReflect() protoreflect.Message {
 	mi := &file_site_explorer_carbide_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1631,26 +1651,26 @@ func (x *ForgeSetupDiff) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ForgeSetupDiff.ProtoReflect.Descriptor instead.
-func (*ForgeSetupDiff) Descriptor() ([]byte, []int) {
+// Deprecated: Use MachineSetupDiff.ProtoReflect.Descriptor instead.
+func (*MachineSetupDiff) Descriptor() ([]byte, []int) {
 	return file_site_explorer_carbide_proto_rawDescGZIP(), []int{22}
 }
 
-func (x *ForgeSetupDiff) GetKey() string {
+func (x *MachineSetupDiff) GetKey() string {
 	if x != nil {
 		return x.Key
 	}
 	return ""
 }
 
-func (x *ForgeSetupDiff) GetExpected() string {
+func (x *MachineSetupDiff) GetExpected() string {
 	if x != nil {
 		return x.Expected
 	}
 	return ""
 }
 
-func (x *ForgeSetupDiff) GetActual() string {
+func (x *MachineSetupDiff) GetActual() string {
 	if x != nil {
 		return x.Actual
 	}
@@ -2038,7 +2058,7 @@ var File_site_explorer_carbide_proto protoreflect.FileDescriptor
 
 const file_site_explorer_carbide_proto_rawDesc = "" +
 	"\n" +
-	"\x1bsite_explorer_carbide.proto\x12\rsite_explorer\x1a\x1egoogle/protobuf/duration.proto\"\x9f\x06\n" +
+	"\x1bsite_explorer_carbide.proto\x12\rsite_explorer\x1a\x1egoogle/protobuf/duration.proto\"\xd7\a\n" +
 	"\x19EndpointExplorationReport\x12#\n" +
 	"\rendpoint_type\x18\x01 \x01(\tR\fendpointType\x129\n" +
 	"\x16last_exploration_error\x18\x02 \x01(\tH\x00R\x14lastExplorationError\x88\x01\x01\x12\"\n" +
@@ -2049,10 +2069,14 @@ const file_site_explorer_carbide_proto_rawDesc = "" +
 	"\bmanagers\x18\f \x03(\v2\x16.site_explorer.ManagerR\bmanagers\x127\n" +
 	"\asystems\x18\r \x03(\v2\x1d.site_explorer.ComputerSystemR\asystems\x120\n" +
 	"\achassis\x18\x0e \x03(\v2\x16.site_explorer.ChassisR\achassis\x120\n" +
-	"\aservice\x18\x0f \x03(\v2\x16.site_explorer.ServiceR\aservice\x12M\n" +
-	"\x12forge_setup_status\x18\x10 \x01(\v2\x1f.site_explorer.ForgeSetupStatusR\x10forgeSetupStatus\x12M\n" +
+	"\aservice\x18\x0f \x03(\v2\x16.site_explorer.ServiceR\aservice\x12S\n" +
+	"\x14machine_setup_status\x18\x10 \x01(\v2!.site_explorer.MachineSetupStatusR\x12machineSetupStatus\x12M\n" +
 	"\x12secure_boot_status\x18\x11 \x01(\v2\x1f.site_explorer.SecureBootStatusR\x10secureBootStatus\x12F\n" +
-	"\x0flockdown_status\x18\x12 \x01(\v2\x1d.site_explorer.LockdownStatusR\x0elockdownStatusB\x19\n" +
+	"\x0flockdown_status\x18\x12 \x01(\v2\x1d.site_explorer.LockdownStatusR\x0elockdownStatus\x12k\n" +
+	"\x11firmware_versions\x18\x13 \x03(\v2>.site_explorer.EndpointExplorationReport.FirmwareVersionsEntryR\x10firmwareVersions\x1aC\n" +
+	"\x15FirmwareVersionsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\x19\n" +
 	"\x17_last_exploration_errorB\r\n" +
 	"\v_machine_idB\x1b\n" +
 	"\x19_last_exploration_latencyB\t\n" +
@@ -2120,17 +2144,20 @@ const file_site_explorer_carbide_proto_rawDesc = "" +
 	"\v_boot_order\"l\n" +
 	"\aManager\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12Q\n" +
-	"\x13ethernet_interfaces\x18\v \x03(\v2 .site_explorer.EthernetInterfaceR\x12ethernetInterfaces\"\xe4\x01\n" +
+	"\x13ethernet_interfaces\x18\v \x03(\v2 .site_explorer.EthernetInterfaceR\x12ethernetInterfaces\"\x9a\x02\n" +
 	"\x11EthernetInterface\x12\x13\n" +
 	"\x02id\x18\x01 \x01(\tH\x00R\x02id\x88\x01\x01\x12%\n" +
 	"\vdescription\x18\x02 \x01(\tH\x01R\vdescription\x88\x01\x01\x120\n" +
 	"\x11interface_enabled\x18\x03 \x01(\bH\x02R\x10interfaceEnabled\x88\x01\x01\x12$\n" +
 	"\vmac_address\x18\x04 \x01(\tH\x03R\n" +
-	"macAddress\x88\x01\x01B\x05\n" +
+	"macAddress\x88\x01\x01\x12$\n" +
+	"\vlink_status\x18\x05 \x01(\tH\x04R\n" +
+	"linkStatus\x88\x01\x01B\x05\n" +
 	"\x03_idB\x0e\n" +
 	"\f_descriptionB\x14\n" +
 	"\x12_interface_enabledB\x0e\n" +
-	"\f_mac_address\"\xb4\x02\n" +
+	"\f_mac_addressB\x0e\n" +
+	"\f_link_status\"\xb4\x02\n" +
 	"\aChassis\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12H\n" +
 	"\x10network_adapters\x18\x02 \x03(\v2\x1d.site_explorer.NetworkAdapterR\x0fnetworkAdapters\x12'\n" +
@@ -2165,11 +2192,11 @@ const file_site_explorer_carbide_proto_rawDesc = "" +
 	"\f_descriptionB\n" +
 	"\n" +
 	"\b_versionB\x0f\n" +
-	"\r_release_date\"`\n" +
-	"\x10ForgeSetupStatus\x12\x17\n" +
-	"\ais_done\x18\x01 \x01(\bR\x06isDone\x123\n" +
-	"\x05diffs\x18\x02 \x03(\v2\x1d.site_explorer.ForgeSetupDiffR\x05diffs\"V\n" +
-	"\x0eForgeSetupDiff\x12\x10\n" +
+	"\r_release_date\"d\n" +
+	"\x12MachineSetupStatus\x12\x17\n" +
+	"\ais_done\x18\x01 \x01(\bR\x06isDone\x125\n" +
+	"\x05diffs\x18\x02 \x03(\v2\x1f.site_explorer.MachineSetupDiffR\x05diffs\"X\n" +
+	"\x10MachineSetupDiff\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x1a\n" +
 	"\bexpected\x18\x02 \x01(\tR\bexpected\x12\x16\n" +
 	"\x06actual\x18\x03 \x01(\tR\x06actual\"\xea\x03\n" +
@@ -2247,7 +2274,7 @@ func file_site_explorer_carbide_proto_rawDescGZIP() []byte {
 }
 
 var file_site_explorer_carbide_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_site_explorer_carbide_proto_msgTypes = make([]protoimpl.MessageInfo, 29)
+var file_site_explorer_carbide_proto_msgTypes = make([]protoimpl.MessageInfo, 30)
 var file_site_explorer_carbide_proto_goTypes = []any{
 	(NicMode)(0),                             // 0: site_explorer.NicMode
 	(ComputerSystemPowerState)(0),            // 1: site_explorer.ComputerSystemPowerState
@@ -2273,49 +2300,51 @@ var file_site_explorer_carbide_proto_goTypes = []any{
 	(*NetworkAdapter)(nil),                   // 21: site_explorer.NetworkAdapter
 	(*Service)(nil),                          // 22: site_explorer.Service
 	(*Inventory)(nil),                        // 23: site_explorer.Inventory
-	(*ForgeSetupStatus)(nil),                 // 24: site_explorer.ForgeSetupStatus
-	(*ForgeSetupDiff)(nil),                   // 25: site_explorer.ForgeSetupDiff
+	(*MachineSetupStatus)(nil),               // 24: site_explorer.MachineSetupStatus
+	(*MachineSetupDiff)(nil),                 // 25: site_explorer.MachineSetupDiff
 	(*PCIeDevice)(nil),                       // 26: site_explorer.PCIeDevice
 	(*SystemStatus)(nil),                     // 27: site_explorer.SystemStatus
 	(*BootOrder)(nil),                        // 28: site_explorer.BootOrder
 	(*BootOption)(nil),                       // 29: site_explorer.BootOption
 	(*SecureBootStatus)(nil),                 // 30: site_explorer.SecureBootStatus
 	(*LockdownStatus)(nil),                   // 31: site_explorer.LockdownStatus
-	(*durationpb.Duration)(nil),              // 32: google.protobuf.Duration
+	nil,                                      // 32: site_explorer.EndpointExplorationReport.FirmwareVersionsEntry
+	(*durationpb.Duration)(nil),              // 33: google.protobuf.Duration
 }
 var file_site_explorer_carbide_proto_depIdxs = []int32{
-	32, // 0: site_explorer.EndpointExplorationReport.last_exploration_latency:type_name -> google.protobuf.Duration
+	33, // 0: site_explorer.EndpointExplorationReport.last_exploration_latency:type_name -> google.protobuf.Duration
 	18, // 1: site_explorer.EndpointExplorationReport.managers:type_name -> site_explorer.Manager
 	17, // 2: site_explorer.EndpointExplorationReport.systems:type_name -> site_explorer.ComputerSystem
 	20, // 3: site_explorer.EndpointExplorationReport.chassis:type_name -> site_explorer.Chassis
 	22, // 4: site_explorer.EndpointExplorationReport.service:type_name -> site_explorer.Service
-	24, // 5: site_explorer.EndpointExplorationReport.forge_setup_status:type_name -> site_explorer.ForgeSetupStatus
+	24, // 5: site_explorer.EndpointExplorationReport.machine_setup_status:type_name -> site_explorer.MachineSetupStatus
 	30, // 6: site_explorer.EndpointExplorationReport.secure_boot_status:type_name -> site_explorer.SecureBootStatus
 	31, // 7: site_explorer.EndpointExplorationReport.lockdown_status:type_name -> site_explorer.LockdownStatus
-	3,  // 8: site_explorer.ExploredEndpoint.report:type_name -> site_explorer.EndpointExplorationReport
-	5,  // 9: site_explorer.ExploredManagedHost.dpus:type_name -> site_explorer.ExploredDpu
-	4,  // 10: site_explorer.SiteExplorationReport.endpoints:type_name -> site_explorer.ExploredEndpoint
-	6,  // 11: site_explorer.SiteExplorationReport.managed_hosts:type_name -> site_explorer.ExploredManagedHost
-	4,  // 12: site_explorer.ExploredEndpointList.endpoints:type_name -> site_explorer.ExploredEndpoint
-	6,  // 13: site_explorer.ExploredManagedHostList.managed_hosts:type_name -> site_explorer.ExploredManagedHost
-	0,  // 14: site_explorer.ComputerSystemAttributes.nic_mode:type_name -> site_explorer.NicMode
-	16, // 15: site_explorer.ComputerSystem.attributes:type_name -> site_explorer.ComputerSystemAttributes
-	19, // 16: site_explorer.ComputerSystem.ethernet_interfaces:type_name -> site_explorer.EthernetInterface
-	26, // 17: site_explorer.ComputerSystem.pcie_devices:type_name -> site_explorer.PCIeDevice
-	1,  // 18: site_explorer.ComputerSystem.power_state:type_name -> site_explorer.ComputerSystemPowerState
-	28, // 19: site_explorer.ComputerSystem.boot_order:type_name -> site_explorer.BootOrder
-	19, // 20: site_explorer.Manager.ethernet_interfaces:type_name -> site_explorer.EthernetInterface
-	21, // 21: site_explorer.Chassis.network_adapters:type_name -> site_explorer.NetworkAdapter
-	23, // 22: site_explorer.Service.inventories:type_name -> site_explorer.Inventory
-	25, // 23: site_explorer.ForgeSetupStatus.diffs:type_name -> site_explorer.ForgeSetupDiff
-	27, // 24: site_explorer.PCIeDevice.status:type_name -> site_explorer.SystemStatus
-	29, // 25: site_explorer.BootOrder.boot_order:type_name -> site_explorer.BootOption
-	2,  // 26: site_explorer.LockdownStatus.status:type_name -> site_explorer.InternalLockdownStatus
-	27, // [27:27] is the sub-list for method output_type
-	27, // [27:27] is the sub-list for method input_type
-	27, // [27:27] is the sub-list for extension type_name
-	27, // [27:27] is the sub-list for extension extendee
-	0,  // [0:27] is the sub-list for field type_name
+	32, // 8: site_explorer.EndpointExplorationReport.firmware_versions:type_name -> site_explorer.EndpointExplorationReport.FirmwareVersionsEntry
+	3,  // 9: site_explorer.ExploredEndpoint.report:type_name -> site_explorer.EndpointExplorationReport
+	5,  // 10: site_explorer.ExploredManagedHost.dpus:type_name -> site_explorer.ExploredDpu
+	4,  // 11: site_explorer.SiteExplorationReport.endpoints:type_name -> site_explorer.ExploredEndpoint
+	6,  // 12: site_explorer.SiteExplorationReport.managed_hosts:type_name -> site_explorer.ExploredManagedHost
+	4,  // 13: site_explorer.ExploredEndpointList.endpoints:type_name -> site_explorer.ExploredEndpoint
+	6,  // 14: site_explorer.ExploredManagedHostList.managed_hosts:type_name -> site_explorer.ExploredManagedHost
+	0,  // 15: site_explorer.ComputerSystemAttributes.nic_mode:type_name -> site_explorer.NicMode
+	16, // 16: site_explorer.ComputerSystem.attributes:type_name -> site_explorer.ComputerSystemAttributes
+	19, // 17: site_explorer.ComputerSystem.ethernet_interfaces:type_name -> site_explorer.EthernetInterface
+	26, // 18: site_explorer.ComputerSystem.pcie_devices:type_name -> site_explorer.PCIeDevice
+	1,  // 19: site_explorer.ComputerSystem.power_state:type_name -> site_explorer.ComputerSystemPowerState
+	28, // 20: site_explorer.ComputerSystem.boot_order:type_name -> site_explorer.BootOrder
+	19, // 21: site_explorer.Manager.ethernet_interfaces:type_name -> site_explorer.EthernetInterface
+	21, // 22: site_explorer.Chassis.network_adapters:type_name -> site_explorer.NetworkAdapter
+	23, // 23: site_explorer.Service.inventories:type_name -> site_explorer.Inventory
+	25, // 24: site_explorer.MachineSetupStatus.diffs:type_name -> site_explorer.MachineSetupDiff
+	27, // 25: site_explorer.PCIeDevice.status:type_name -> site_explorer.SystemStatus
+	29, // 26: site_explorer.BootOrder.boot_order:type_name -> site_explorer.BootOption
+	2,  // 27: site_explorer.LockdownStatus.status:type_name -> site_explorer.InternalLockdownStatus
+	28, // [28:28] is the sub-list for method output_type
+	28, // [28:28] is the sub-list for method input_type
+	28, // [28:28] is the sub-list for extension type_name
+	28, // [28:28] is the sub-list for extension extendee
+	0,  // [0:28] is the sub-list for field type_name
 }
 
 func init() { file_site_explorer_carbide_proto_init() }
@@ -2341,7 +2370,7 @@ func file_site_explorer_carbide_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_site_explorer_carbide_proto_rawDesc), len(file_site_explorer_carbide_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   29,
+			NumMessages:   30,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

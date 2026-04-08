@@ -1,17 +1,19 @@
-// SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-// SPDX-License-Identifier: Apache-2.0
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 syntax = "proto3";
 
@@ -46,12 +48,14 @@ message EndpointExplorationReport {
   repeated Chassis chassis = 14;
   // `Service` reported by Redfish
   repeated Service service = 15;
-  // `ForgeSetupStatus` reported by Redfish
-  ForgeSetupStatus forge_setup_status = 16;
+  // `MachineSetupStatus` reported by Redfish
+  MachineSetupStatus machine_setup_status = 16;
   // `SecureBootStatus` reported by Redfish
   SecureBootStatus secure_boot_status = 17;
   // `LockdownStatus` reported by Redfish
   LockdownStatus lockdown_status = 18;
+  // Parsed firmware component versions (e.g. {"bmc": "25.06-2", "uefi": "00000083", "hgxbmc": "97.00.B9.00.76"})
+  map<string, string> firmware_versions = 19;
 }
 
 message ExploredEndpoint {
@@ -164,6 +168,7 @@ message ComputerSystem {
   optional BootOrder boot_order = 14;
 }
 
+// WARNING: This enum conflicts with PowerState in forge_carbide.proto and must be renamed to ComputerSystemPowerState
 enum ComputerSystemPowerState {
   On = 0;
   Off = 1;
@@ -184,6 +189,8 @@ message EthernetInterface {
   optional string description = 2;
   optional bool interface_enabled = 3;
   optional string mac_address = 4;
+  // Redfish LinkStatus (e.g. LinkUp, LinkDown, NoLink)
+  optional string link_status = 5;
 }
 
 // `Chassis` definition. Matches redfish definition
@@ -219,14 +226,14 @@ message Inventory {
   optional string release_date = 4;
 }
 
-// `ForgeSetupStatus` definition. Matches redfish definition
-message ForgeSetupStatus {
+// `MachineSetupStatus` definition. Matches redfish definition
+message MachineSetupStatus {
   bool is_done = 1;
-  repeated ForgeSetupDiff diffs = 2;
+  repeated MachineSetupDiff diffs = 2;
 }
 
-// `ForgeSetupDiff` definition. Matches redfish definition
-message ForgeSetupDiff {
+// `MachineSetupDiff` definition. Matches redfish definition
+message MachineSetupDiff {
   string key = 1;
   string expected = 2;
   string actual = 3;

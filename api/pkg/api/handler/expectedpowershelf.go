@@ -207,7 +207,7 @@ func (cepsh CreateExpectedPowerShelfHandler) Handle(c echo.Context) error {
 	}
 
 	if expectedPowerShelf.IpAddress != nil {
-		createExpectedPowerShelfRequest.IpAddress = *expectedPowerShelf.IpAddress
+		createExpectedPowerShelfRequest.BmcIpAddress = *expectedPowerShelf.IpAddress
 	}
 
 	if expectedPowerShelf.RackID != nil {
@@ -725,7 +725,7 @@ func (uepsh UpdateExpectedPowerShelfHandler) Handle(c echo.Context) error {
 	}
 
 	if updatedExpectedPowerShelf.IpAddress != nil {
-		updateExpectedPowerShelfRequest.IpAddress = *updatedExpectedPowerShelf.IpAddress
+		updateExpectedPowerShelfRequest.BmcIpAddress = *updatedExpectedPowerShelf.IpAddress
 	}
 
 	if updatedExpectedPowerShelf.RackID != nil {
