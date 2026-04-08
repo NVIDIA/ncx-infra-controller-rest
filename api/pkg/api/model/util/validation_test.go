@@ -18,10 +18,45 @@
 package util
 
 import (
+	"fmt"
 	"testing"
 
+	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+func TestValidateLabels(t *testing.T) {
+	assert.NoError(t, ValidateLabels(nil))
+	assert.NoError(t, ValidateLabels(map[string]string{}))
+
+	tooMany := make(map[string]string)
+	for i := range LabelCountMax + 1 {
+		tooMany[fmt.Sprintf("k%d", i)] = "v"
+	}
+	err := ValidateLabels(tooMany)
+	require.Error(t, err)
+	var verrs validation.Errors
+	require.ErrorAs(t, err, &verrs)
+	assert.Equal(t, ErrValidationLabelCount, verrs["labels"])
+
+	err = ValidateLabels(map[string]string{"": "v"})
+	require.Error(t, err)
+	require.ErrorAs(t, err, &verrs)
+	assert.Equal(t, ErrValidationLabelKeyEmpty, verrs["labels"])
+
+	err = ValidateLabels(map[string]string{"   ": "v"})
+	require.Error(t, err)
+	require.ErrorAs(t, err, &verrs)
+	assert.Equal(t, ErrValidationLabelKeyLength, verrs["labels"])
+
+	err = ValidateLabels(map[string]string{"k": string(make([]byte, LabelValueMaxLength+1))})
+	require.Error(t, err)
+	require.ErrorAs(t, err, &verrs)
+	assert.Equal(t, ErrValidationLabelValueLength, verrs["labels"])
+
+	assert.NoError(t, ValidateLabels(map[string]string{"ok": "ok"}))
+}
 
 func TestValidateNameCharacters(t *testing.T) {
 	val := 0

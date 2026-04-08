@@ -1194,7 +1194,7 @@ func TestInfiniBandPartitionHandle_Update(t *testing.T) {
 	wrunUpdate.On("GetID").Return("test-workflow-update-id")
 	wrunUpdate.Mock.On("Get", mock.Anything, mock.Anything).Return(nil)
 	tmc.Mock.On("ExecuteWorkflow", mock.Anything, mock.AnythingOfType("internal.StartWorkflowOptions"),
-		"UpdateInfiniBandPartitionV2", mock.Anything).Return(wrunUpdate, nil)
+		"UpdateInfiniBandPartition", mock.Anything).Return(wrunUpdate, nil)
 
 	tests := []struct {
 		name                     string

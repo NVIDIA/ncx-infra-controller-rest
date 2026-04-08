@@ -320,23 +320,7 @@ func (cibph CreateInfiniBandPartitionHandler) Handle(c echo.Context) error {
 	if err != nil {
 		var timeoutErr *tp.TimeoutError
 		if errors.As(err, &timeoutErr) || err == context.DeadlineExceeded || ctx.Err() != nil {
-
-			logger.Error().Err(err).Msg("failed to create InfiniBand Partition, timeout occurred executing workflow on Site.")
-
-			// Create a new context deadlines
-			newctx, newcancel := context.WithTimeout(context.Background(), cutil.WorkflowContextNewAfterTimeout)
-			defer newcancel()
-
-			// Initiate termination workflow
-			serr := stc.TerminateWorkflow(newctx, wid, "", "timeout occurred executing create InfiniBand Partition workflow")
-			if serr != nil {
-				logger.Error().Err(serr).Msg("failed to execute terminate Temporal workflow for creating InfiniBand Partition")
-				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to terminate synchronous InfiniBand Partition creation workflow after timeout, Cloud and Site data may be de-synced: %s", serr), nil)
-			}
-
-			logger.Info().Str("Workflow ID", wid).Msg("initiated terminate synchronous create InfiniBand Partition workflow successfully")
-
-			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to create InfiniBand Partition, timeout occurred executing workflow on Site: %s", err), nil)
+			return common.TerminateWorkflowOnTimeOut(c, logger, stc, wid, err, "InfiniBandPartition", "CreateInfiniBandPartitionV2")
 		}
 
 		code, err := common.UnwrapWorkflowError(err)
@@ -912,7 +896,7 @@ func (uibph UpdateInfiniBandPartitionHandler) Handle(c echo.Context) error {
 	wfCtx, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
 	defer cancel()
 
-	we, err := stc.ExecuteWorkflow(wfCtx, workflowOptions, "UpdateInfiniBandPartitionV2", updateIBPRequest)
+	we, err := stc.ExecuteWorkflow(wfCtx, workflowOptions, "UpdateInfiniBandPartition", updateIBPRequest)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to synchronously start Temporal workflow to update InfiniBand Partition")
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed start sync workflow to update InfiniBand Partition on Site: %s", err), nil)
@@ -925,21 +909,7 @@ func (uibph UpdateInfiniBandPartitionHandler) Handle(c echo.Context) error {
 	if err != nil {
 		var timeoutErr *tp.TimeoutError
 		if errors.As(err, &timeoutErr) || err == context.DeadlineExceeded || wfCtx.Err() != nil {
-
-			logger.Error().Err(err).Msg("failed to update InfiniBand Partition, timeout occurred executing workflow on Site.")
-
-			newctx, newcancel := context.WithTimeout(context.Background(), cutil.WorkflowContextNewAfterTimeout)
-			defer newcancel()
-
-			serr := stc.TerminateWorkflow(newctx, wid, "", "timeout occurred executing update InfiniBand Partition workflow")
-			if serr != nil {
-				logger.Error().Err(serr).Msg("failed to execute terminate Temporal workflow for updating InfiniBand Partition")
-				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to terminate synchronous InfiniBand Partition update workflow after timeout, Cloud and Site data may be de-synced: %s", serr), nil)
-			}
-
-			logger.Info().Str("Workflow ID", wid).Msg("initiated terminate synchronous update InfiniBand Partition workflow successfully")
-
-			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to update InfiniBand Partition, timeout occurred executing workflow on Site: %s", err), nil)
+			return common.TerminateWorkflowOnTimeOut(c, logger, stc, wid, err, "InfiniBandPartition", "UpdateInfiniBandPartition")
 		}
 
 		code, err := common.UnwrapWorkflowError(err)

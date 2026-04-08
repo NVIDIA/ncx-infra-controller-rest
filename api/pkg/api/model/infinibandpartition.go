@@ -32,49 +32,6 @@ var (
 	ErrValidationInfiniBandPartitionAssociation = errors.New("at least one security group association is required")
 )
 
-// validateInfiniBandPartitionLabels validates optional API label maps (count, keys, values).
-func validateInfiniBandPartitionLabels(labels map[string]string) error {
-	if labels == nil {
-		return nil
-	}
-	if len(labels) > util.LabelCountMax {
-		return validation.Errors{
-			"labels": util.ErrValidationLabelCount,
-		}
-	}
-
-	for key, value := range labels {
-		if key == "" {
-			return validation.Errors{
-				"labels": util.ErrValidationLabelKeyEmpty,
-			}
-		}
-
-		err := validation.Validate(key,
-			validation.Match(util.NotAllWhitespaceRegexp).Error("label key consists only of whitespace"),
-			validation.Length(1, 255).Error(validationErrorMapKeyLabelStringLength),
-		)
-		if err != nil {
-			return validation.Errors{
-				"labels": util.ErrValidationLabelKeyLength,
-			}
-		}
-
-		err = validation.Validate(value,
-			validation.When(value != "",
-				validation.Length(0, 255).Error(validationErrorMapValueLabelStringLength),
-			),
-		)
-		if err != nil {
-			return validation.Errors{
-				"labels": util.ErrValidationLabelValueLength,
-			}
-		}
-	}
-
-	return nil
-}
-
 // APIInfiniBandPartitionCreateRequest is the data structure to capture instance request to create a new InfiniBandPartition
 type APIInfiniBandPartitionCreateRequest struct {
 	// Name is the name of the InfiniBand Partition
@@ -103,7 +60,7 @@ func (ibpcr APIInfiniBandPartitionCreateRequest) Validate() error {
 		return err
 	}
 
-	return validateInfiniBandPartitionLabels(ibpcr.Labels)
+	return util.ValidateLabels(ibpcr.Labels)
 }
 
 // APIInfiniBandPartitionUpdateRequest is the data structure to capture user request to update a InfiniBandPartition
@@ -129,7 +86,7 @@ func (ibpur APIInfiniBandPartitionUpdateRequest) Validate() error {
 		return err
 	}
 
-	return validateInfiniBandPartitionLabels(ibpur.Labels)
+	return util.ValidateLabels(ibpur.Labels)
 }
 
 // APIInfiniBandPartition is the data structure to capture API representation of a InfiniBand Partition

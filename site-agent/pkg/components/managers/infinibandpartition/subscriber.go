@@ -48,9 +48,9 @@ func (api *API) RegisterSubscriber() error {
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.CreateInfiniBandPartitionV2)
 	ManagerAccess.Data.EB.Log.Info().Msg("InfiniBandPartition: successfully registered CreateInfiniBandPartitionV2 workflow")
 
-	// UpdateInfiniBandPartitionV2
-	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.UpdateInfiniBandPartitionV2)
-	ManagerAccess.Data.EB.Log.Info().Msg("InfiniBandPartition: successfully registered UpdateInfiniBandPartitionV2 workflow")
+	// UpdateInfiniBandPartition
+	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.UpdateInfiniBandPartition)
+	ManagerAccess.Data.EB.Log.Info().Msg("InfiniBandPartition: successfully registered UpdateInfiniBandPartition workflow")
 
 	// DeleteInfiniBandPartitionV2
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.DeleteInfiniBandPartitionV2)

@@ -109,35 +109,8 @@ func (emcr *APIExpectedMachineCreateRequest) Validate() error {
 		return err
 	}
 
-	// Labels validation
-	if emcr.Labels != nil {
-		if len(emcr.Labels) > util.LabelCountMax {
-			return validation.Errors{
-				"labels": util.ErrValidationLabelCount,
-			}
-		}
-
-		for key, value := range emcr.Labels {
-			if key == "" {
-				return validation.Errors{
-					"labels": util.ErrValidationLabelKeyEmpty,
-				}
-			}
-
-			// Key validation
-			if len(key) > util.LabelKeyMaxLength {
-				return validation.Errors{
-					"labels": util.ErrValidationLabelKeyLength,
-				}
-			}
-
-			// Value validation
-			if len(value) > util.LabelValueMaxLength {
-				return validation.Errors{
-					"labels": util.ErrValidationLabelValueLength,
-				}
-			}
-		}
+	if err := util.ValidateLabels(emcr.Labels); err != nil {
+		return err
 	}
 
 	return nil
@@ -232,35 +205,8 @@ func (emur *APIExpectedMachineUpdateRequest) Validate() error {
 		return err
 	}
 
-	// Labels validation
-	if emur.Labels != nil {
-		if len(emur.Labels) > util.LabelCountMax {
-			return validation.Errors{
-				"labels": util.ErrValidationLabelCount,
-			}
-		}
-
-		for key, value := range emur.Labels {
-			if key == "" {
-				return validation.Errors{
-					"labels": util.ErrValidationLabelKeyEmpty,
-				}
-			}
-
-			// Key validation
-			if len(key) > util.LabelKeyMaxLength {
-				return validation.Errors{
-					"labels": util.ErrValidationLabelKeyLength,
-				}
-			}
-
-			// Value validation
-			if len(value) > util.LabelValueMaxLength {
-				return validation.Errors{
-					"labels": util.ErrValidationLabelValueLength,
-				}
-			}
-		}
+	if err := util.ValidateLabels(emur.Labels); err != nil {
+		return err
 	}
 
 	return nil

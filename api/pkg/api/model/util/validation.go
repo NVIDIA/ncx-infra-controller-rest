@@ -53,6 +53,52 @@ var (
 	ErrValidationLabelCount       = fmt.Errorf("up to %v key/value pairs can be specified in labels", LabelCountMax)
 )
 
+// ValidateLabels validates optional API label maps (count, keys, values). Returns nil when labels is nil.
+func ValidateLabels(labels map[string]string) error {
+	if labels == nil {
+		return nil
+	}
+	if len(labels) > LabelCountMax {
+		return validation.Errors{
+			"labels": ErrValidationLabelCount,
+		}
+	}
+
+	keyErrMsg := ErrValidationLabelKeyLength.Error()
+	valueErrMsg := ErrValidationLabelValueLength.Error()
+
+	for key, value := range labels {
+		if key == "" {
+			return validation.Errors{
+				"labels": ErrValidationLabelKeyEmpty,
+			}
+		}
+
+		err := validation.Validate(key,
+			validation.Match(NotAllWhitespaceRegexp).Error("label key consists only of whitespace"),
+			validation.Length(1, LabelKeyMaxLength).Error(keyErrMsg),
+		)
+		if err != nil {
+			return validation.Errors{
+				"labels": ErrValidationLabelKeyLength,
+			}
+		}
+
+		err = validation.Validate(value,
+			validation.When(value != "",
+				validation.Length(0, LabelValueMaxLength).Error(valueErrMsg),
+			),
+		)
+		if err != nil {
+			return validation.Errors{
+				"labels": ErrValidationLabelValueLength,
+			}
+		}
+	}
+
+	return nil
+}
+
 // util.GetUUIDPtrToStrPtr is a utility function to return string pointer from uuid pointer
 func GetUUIDPtrToStrPtr(id *uuid.UUID) *string {
 	if id == nil {
