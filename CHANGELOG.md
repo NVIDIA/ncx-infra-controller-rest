@@ -509,7 +509,7 @@ Each release lists pull requests grouped by category, with the most recent versi
 
 ### Documentation
 
-- **Fix link to BMM core in README** ([#146](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/146))
+- **Fix link to Core repo in README** ([#146](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/146))
   Corrects a broken documentation link to the BMM Core repository in the README.
 
 - **Fix invalid NVLink Interface order, DPU Extension Service delete code in schema** ([#150](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/150))
@@ -672,7 +672,7 @@ Each release lists pull requests grouped by category, with the most recent versi
 - **Update Temporal and Postgres URLs to use local DNS** ([#98](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/98))
   Updates service URLs to use Kubernetes local DNS names for improved reliability in local development environments.
 
-- **Add Github interaction templates and code of conduct** ([#96](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/96))
+- **Add GitHub interaction templates and code of conduct** ([#96](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/96))
   Adds GitHub issue templates, discussion templates, and a code of conduct to standardize community interactions.
 
 - **Upgrade otelecho to v0.65.0 to fix security vulnerability** ([#91](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/91))
@@ -702,7 +702,7 @@ Each release lists pull requests grouped by category, with the most recent versi
 - **Support custom claims for JWT issuers** ([#41](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/41))
   Adds comprehensive custom JWT issuer support with multiple claim mapping strategies: static org with static roles, service accounts, dynamic roles from token attributes, and fully dynamic org/role extraction. Includes parallel JWKS fetching, configurable timeouts, and stricter validation rules.
 
-- **Add schema for instance batch API** ([#61](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/61))
+- **Add schema for Instance batch API** ([#61](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/61))
   Adds OpenAPI schema documentation for the instance batch creation API endpoint.
 
 - **Enable license scanning** ([#64](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/64))
@@ -716,7 +716,7 @@ Each release lists pull requests grouped by category, with the most recent versi
 - **Missing body close on HTTP responses** ([#71](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/71))
   Adds deferred `Body.Close()` calls on HTTP responses in Slack notification code, preventing resource leaks.
 
-- **FORGE-7552 Verify provided version in Active version list** ([#63](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/63))
+- **Verify provided version in DPU Extension Service active version list for deletion** ([#63](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/63))
   Validates that the specified DPU Extension Service version exists in the active version list before allowing deletion, preventing attempts to delete non-existent versions.
 
 ### CI/CD
@@ -738,7 +738,7 @@ Each release lists pull requests grouped by category, with the most recent versi
 - **Refactor and optimize Instance API handlers** ([#60](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/60))
   Converts N+1 individual `GetByID` calls to efficient batch `GetAll` queries for subnets, VPC prefixes, partitions, and DPU extensions in the instance update handler. Adds bulk NVLink Interface status update support.
 
-- **Use non-deprecated UserData field** (no PR)
+- **Use non-deprecated UserData field for OS create/update** (no PR)
   Migrates site-agent from the deprecated UserData field to the canonical one that applies across all OS types.
 
 - **Revise docker image push policy** ([#62](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/62))
@@ -750,10 +750,10 @@ Each release lists pull requests grouped by category, with the most recent versi
 
 ### Features
 
-- **FORGE-7473 Add support for bulk creation/update of Expected Machines** ([#35](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/35))
+- **Add support for bulk creation/update of Expected Machines** ([#35](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/35))
   Introduces batch API endpoints for creating and updating Expected Machine entries, enabling efficient onboarding of large hardware inventories in a single request.
 
-- **FORGE-7666 Add unique DB index for Expected Machine BMC MAC address per Site** ([#36](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/36))
+- **Add unique DB index for Expected Machine BMC MAC address per Site** ([#36](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/36))
   Adds a unique database index on BMC MAC addresses scoped per Site, preventing duplicate machine registration and ensuring data integrity during bulk imports.
 
 ### Bug Fixes
@@ -799,7 +799,7 @@ Each release lists pull requests grouped by category, with the most recent versi
 - **Enable binary/docker build for all branches, add security scans** ([#54](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/54))
   Extends CI to build binaries and Docker images on all branches (push-only for main/release/tags) and adds TruffleHog, Trivy, and CodeQL security scanning.
 
-- **Do not accept all whitespace strings in validation** ([#49](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/49))
+- **Do not accept all whitespace strings in Expected Machine attributes and labels** ([#49](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/49))
   Rejects all-whitespace strings for Expected Machine attributes and label keys, preventing accidental entry of blank values.
 
 - **Improve SiteID validation for APIExpectedMachineUpdateRequest** ([#46](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/46))
