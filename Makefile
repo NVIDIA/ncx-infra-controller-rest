@@ -225,8 +225,14 @@ core-proto-clean:
 	rm -rf workflow-schema/site-agent/workflows/v1/*_carbide.proto
 	rm -rf workflow-schema/schema/site-agent/workflows/v1/*.pb.go
 
+core-proto-repo ?= NVIDIA/ncx-infra-controller-core
+core-proto-repo-ssh:=ssh://git@github.com/$(core-proto-repo).git
+core-proto-ref ?= origin/main
 core-proto-fetch:
-	if [ -d "nico-core" ]; then cd nico-core && git fetch origin && git reset --hard origin/main; else git clone ssh://git@github.com/NVIDIA/ncx-infra-controller-core.git nico-core; fi
+	@echo "Fetching Core protobuf files from $(core-proto-repo-ssh) at $(core-proto-ref). Customize with make core-proto-repo=your-repo core-proto-ref=your-ref"
+	if [ -d "nico-core" ]; then rm -rf nico-core; fi
+	git clone $(core-proto-repo-ssh) nico-core;
+	cd nico-core && git fetch $(core-proto-repo-ssh) && git reset --hard $(core-proto-ref);
 	ls nico-core/crates/rpc/proto
 	@for file in nico-core/crates/rpc/proto/*.proto; do \
 		cp "$$file" "workflow-schema/site-agent/workflows/v1/$$(basename "$$file" .proto)_carbide.proto"; \
