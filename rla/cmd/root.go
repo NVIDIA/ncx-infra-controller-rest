@@ -65,7 +65,7 @@ func Execute() {
 
 func init() {
 	rootCmd.PersistentFlags().StringVarP(&globalHost, flagHost, "H", "localhost", "RLA server host")
-	rootCmd.PersistentFlags().IntVarP(&globalPort, flagPort, "P", 50051, "RLA server port")
+	rootCmd.PersistentFlags().IntVarP(&globalPort, flagPort, "P", defaultServicePort, "RLA server port")
 	rootCmd.PersistentFlags().StringVar(&globalCACert, "ca-cert", "", "Path to CA certificate file")
 	rootCmd.PersistentFlags().StringVar(&globalTLSCert, "tls-cert", "", "Path to TLS certificate file")
 	rootCmd.PersistentFlags().StringVar(&globalTLSKey, "tls-key", "", "Path to TLS private key file")
