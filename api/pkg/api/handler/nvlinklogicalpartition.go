@@ -45,6 +45,7 @@ import (
 	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
 	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/paginator"
+	cdbp "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/paginator"
 	swe "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/error"
 
 	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
@@ -571,7 +572,7 @@ func (gaibph GetAllNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	nvlifcMap := map[uuid.UUID][]cdbm.NVLinkInterface{}
 	if includeInterfaces {
 		nvlifcDAO := cdbm.NewNVLinkInterfaceDAO(gaibph.dbSession)
-		dbnvlifcs, _, err := nvlifcDAO.GetAll(ctx, nil, cdbm.NVLinkInterfaceFilterInput{NVLinkLogicalPartitionIDs: nvllpIDs}, paginator.PageInput{}, []string{})
+		dbnvlifcs, _, err := nvlifcDAO.GetAll(ctx, nil, cdbm.NVLinkInterfaceFilterInput{NVLinkLogicalPartitionIDs: nvllpIDs}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, []string{})
 		if err != nil {
 			logger.Error().Err(err).Msg("error retrieving NVLinkInterfaces from DB")
 			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve NVLink Interfaces for NVLink Logical Partitions, DB error", nil)
@@ -586,7 +587,7 @@ func (gaibph GetAllNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	vpcMap := map[uuid.UUID][]cdbm.Vpc{}
 	if includeVpcs {
 		vpcDAO := cdbm.NewVpcDAO(gaibph.dbSession)
-		dbvpc, _, err := vpcDAO.GetAll(ctx, nil, cdbm.VpcFilterInput{NVLinkLogicalPartitionIDs: nvllpIDs}, paginator.PageInput{}, []string{})
+		dbvpc, _, err := vpcDAO.GetAll(ctx, nil, cdbm.VpcFilterInput{NVLinkLogicalPartitionIDs: nvllpIDs}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, []string{})
 		if err != nil {
 			logger.Error().Err(err).Msg("error retrieving VPCs from DB")
 			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve VPCs for NVLink Logical Partitions, DB error", nil)
