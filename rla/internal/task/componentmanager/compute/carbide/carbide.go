@@ -287,12 +287,12 @@ func carbidePowerStateToOperationsPowerStatus(state carbideapi.PowerState) opera
 
 // FirmwareControl schedules a firmware update via Carbide's SetFirmwareUpdateTimeWindow API.
 //
-// Before scheduling, it performs two checks:
+// Before scheduling, it performs:
 //  1. Fail-fast: if targetVersion is provided, it must match one of the
-//     desired firmware entries configured in Core. Otherwise the update
-//     can never succeed and we return an error immediately.
-//  2. Idempotent: if all target machines already have UpdateComplete==true,
-//     the update already finished and we skip the schedule call.
+//     desired firmware entries configured in Core.
+//  2. Idempotent: queries the actual firmware versions from explored
+//     endpoints and compares them against the target (or desired) versions.
+//     If all machines are already at the desired firmware, returns early.
 func (m *Manager) FirmwareControl(ctx context.Context, target common.Target, info operations.FirmwareControlTaskInfo) error {
 	log.Debug().
 		Str("components", target.String()).
@@ -307,15 +307,16 @@ func (m *Manager) FirmwareControl(ctx context.Context, target common.Target, inf
 		return fmt.Errorf("target is invalid: %w", err)
 	}
 
-	// Fail-fast: validate targetVersion against Core's desired firmware config.
+	desiredEntries, err := m.carbideClient.GetDesiredFirmwareVersions(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to query desired firmware versions: %w", err)
+	}
+
+	var targetFirmware map[string]string
 	if info.TargetVersion != "" {
 		parsedTarget, err := parseTargetVersion(info.TargetVersion)
 		if err != nil {
 			return fmt.Errorf("invalid TargetVersion: %w", err)
-		}
-		desiredEntries, err := m.carbideClient.GetDesiredFirmwareVersions(ctx)
-		if err != nil {
-			return fmt.Errorf("failed to query desired firmware versions: %w", err)
 		}
 		if !isTargetVersionInDesired(parsedTarget, desiredEntries) {
 			return fmt.Errorf(
@@ -323,19 +324,20 @@ func (m *Manager) FirmwareControl(ctx context.Context, target common.Target, inf
 				info.TargetVersion,
 			)
 		}
+		targetFirmware = parsedTarget
 	}
 
-	// Idempotent: skip only when every requested machine was returned and all
-	// have UpdateComplete=true. A partial lookup must not suppress scheduling
-	// because some components may still need the update.
 	machines, err := m.carbideClient.FindMachinesByIds(ctx, target.ComponentIDs)
 	if err != nil {
-		log.Warn().Err(err).Msg("Failed to check machine update status, proceeding with schedule")
-	} else if len(machines) == len(target.ComponentIDs) && allUpdateComplete(machines) {
-		log.Info().
-			Str("components", target.String()).
-			Msg("All machines already have UpdateComplete=true, skipping firmware schedule")
-		return nil
+		log.Warn().Err(err).Msg("Failed to check machines, proceeding with schedule")
+	} else {
+		actualFirmware := m.getActualFirmwareVersions(ctx, machines)
+		if allFirmwareUpToDate(target.ComponentIDs, actualFirmware, targetFirmware, desiredEntries) {
+			log.Info().
+				Str("components", target.String()).
+				Msg("All firmware already at desired version, skipping schedule")
+			return nil
+		}
 	}
 
 	var startTime, endTime time.Time
@@ -402,21 +404,104 @@ func versionsEqual(a, b map[string]string) bool {
 	return true
 }
 
-func allUpdateComplete(machines []carbideapi.MachineDetail) bool {
-	if len(machines) == 0 {
+// getActualFirmwareVersions queries explored endpoints via BMC IPs and
+// returns a map of machineID → firmware_versions (map[string]string).
+func (m *Manager) getActualFirmwareVersions(
+	ctx context.Context,
+	machines []carbideapi.MachineDetail,
+) map[string]map[string]string {
+	bmcIPs := make([]string, 0, len(machines))
+	machineByBmcIP := make(map[string]string, len(machines))
+	for _, machine := range machines {
+		if machine.BmcIP != "" {
+			bmcIPs = append(bmcIPs, machine.BmcIP)
+			machineByBmcIP[machine.BmcIP] = machine.MachineID
+		}
+	}
+
+	if len(bmcIPs) == 0 {
+		return nil
+	}
+
+	endpoints, err := m.carbideClient.FindExploredEndpointsByIds(ctx, bmcIPs)
+	if err != nil {
+		log.Warn().Err(err).Msg("Failed to query explored endpoints for firmware versions")
+		return nil
+	}
+
+	result := make(map[string]map[string]string, len(endpoints))
+	for _, ep := range endpoints {
+		fwVersions := ep.GetReport().GetFirmwareVersions()
+		if len(fwVersions) == 0 {
+			continue
+		}
+		if machineID, ok := machineByBmcIP[ep.GetAddress()]; ok {
+			result[machineID] = fwVersions
+		}
+	}
+	return result
+}
+
+// allFirmwareUpToDate returns true when every component's actual firmware
+// matches the target (if provided) or any desired firmware entry.
+func allFirmwareUpToDate(
+	componentIDs []string,
+	actualFirmware map[string]map[string]string,
+	targetFirmware map[string]string,
+	desiredEntries []*pb.DesiredFirmwareVersionEntry,
+) bool {
+	if len(actualFirmware) == 0 {
 		return false
 	}
-	for _, m := range machines {
-		if !m.UpdateComplete {
+	for _, id := range componentIDs {
+		actual, ok := actualFirmware[id]
+		if !ok || len(actual) == 0 {
+			return false
+		}
+		if targetFirmware != nil {
+			if !firmwareVersionsMatch(targetFirmware, actual) {
+				return false
+			}
+		} else {
+			if !matchesAnyDesired(actual, desiredEntries) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// firmwareVersionsMatch returns true when every key in desired exists in
+// actual with the same value (desired is a subset of actual).
+func firmwareVersionsMatch(desired, actual map[string]string) bool {
+	if len(desired) == 0 {
+		return false
+	}
+	for k, v := range desired {
+		if actual[k] != v {
 			return false
 		}
 	}
 	return true
 }
 
-// GetFirmwareStatus returns the current status of firmware updates for the target components.
-// It queries Carbide for the current machine firmware version and compares it against the
-// target version to determine completion.
+// matchesAnyDesired returns true when the actual firmware versions satisfy
+// at least one desired firmware entry.
+func matchesAnyDesired(actual map[string]string, entries []*pb.DesiredFirmwareVersionEntry) bool {
+	for _, entry := range entries {
+		if firmwareVersionsMatch(entry.GetComponentVersions(), actual) {
+			return true
+		}
+	}
+	return false
+}
+
+// GetFirmwareStatus returns the current status of firmware updates for the
+// target components. It compares the actual firmware versions (from explored
+// endpoints) against Core's desired firmware entries. If the actual versions
+// match the desired versions, the component is considered Completed.
+// Falls back to Machine.UpdateComplete / Machine.State when version data
+// is unavailable.
 func (m *Manager) GetFirmwareStatus(ctx context.Context, target common.Target) (map[string]operations.FirmwareUpdateStatus, error) {
 	log.Debug().
 		Str("components", target.String()).
@@ -429,6 +514,15 @@ func (m *Manager) GetFirmwareStatus(ctx context.Context, target common.Target) (
 	machines, err := m.carbideClient.FindMachinesByIds(ctx, target.ComponentIDs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query machines: %w", err)
+	}
+
+	actualFirmware := m.getActualFirmwareVersions(ctx, machines)
+
+	var desiredEntries []*pb.DesiredFirmwareVersionEntry
+	if de, err := m.carbideClient.GetDesiredFirmwareVersions(ctx); err != nil {
+		log.Warn().Err(err).Msg("Failed to get desired firmware versions, falling back to state-based check")
+	} else {
+		desiredEntries = de
 	}
 
 	machineByID := make(map[string]carbideapi.MachineDetail, len(machines))
@@ -448,24 +542,36 @@ func (m *Manager) GetFirmwareStatus(ctx context.Context, target common.Target) (
 			continue
 		}
 
-		status := operations.FirmwareUpdateStatus{ComponentID: id}
+		fwStatus := operations.FirmwareUpdateStatus{ComponentID: id}
+
+		if actual, hasActual := actualFirmware[id]; hasActual && len(desiredEntries) > 0 {
+			if matchesAnyDesired(actual, desiredEntries) {
+				fwStatus.State = operations.FirmwareUpdateStateCompleted
+				log.Debug().
+					Str("machine_id", id).
+					Msg("Actual firmware matches desired, marking Completed")
+				result[id] = fwStatus
+				continue
+			}
+		}
+
 		switch {
 		case machine.UpdateComplete:
-			status.State = operations.FirmwareUpdateStateCompleted
+			fwStatus.State = operations.FirmwareUpdateStateCompleted
 		case machine.State == "HostReprovisioning":
-			status.State = operations.FirmwareUpdateStateVerifying
+			fwStatus.State = operations.FirmwareUpdateStateVerifying
 		default:
-			status.State = operations.FirmwareUpdateStateQueued
+			fwStatus.State = operations.FirmwareUpdateStateQueued
 		}
 
 		log.Debug().
 			Str("machine_id", id).
 			Str("machine_state", machine.State).
 			Bool("update_complete", machine.UpdateComplete).
-			Str("firmware_status", status.State.String()).
+			Str("firmware_status", fwStatus.State.String()).
 			Msg("Firmware status for compute machine")
 
-		result[id] = status
+		result[id] = fwStatus
 	}
 
 	return result, nil

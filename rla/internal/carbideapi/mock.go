@@ -207,6 +207,10 @@ func (c *mockClient) GetDesiredFirmwareVersions(_ context.Context) ([]*pb.Desire
 	return c.desiredFirmwareVersions, nil
 }
 
+func (c *mockClient) FindExploredEndpointsByIds(_ context.Context, _ []string) ([]*pb.ExploredEndpoint, error) {
+	return nil, nil
+}
+
 func (c *mockClient) AddExpectedSwitchInfo(info ExpectedSwitchInfo) {
 	c.expectedSwitches[utils.NormalizeMAC(info.BMCMACAddress)] = info
 }

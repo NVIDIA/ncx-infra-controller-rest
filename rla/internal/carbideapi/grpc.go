@@ -570,6 +570,23 @@ func (c *grpcClient) GetDesiredFirmwareVersions(ctx context.Context) ([]*pb.Desi
 	return resp.GetEntries(), nil
 }
 
+func (c *grpcClient) FindExploredEndpointsByIds(ctx context.Context, bmcIPs []string) ([]*pb.ExploredEndpoint, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
+	defer cancel()
+
+	if len(bmcIPs) == 0 {
+		return nil, nil
+	}
+
+	resp, err := c.gclient.FindExploredEndpointsByIds(ctx, &pb.ExploredEndpointsByIdsRequest{
+		EndpointIds: bmcIPs,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to find explored endpoints by IDs: %w", err)
+	}
+	return resp.GetEndpoints(), nil
+}
+
 func (c *grpcClient) AddMachine(machine MachineDetail) {
 	panic("Not a unit test")
 }
