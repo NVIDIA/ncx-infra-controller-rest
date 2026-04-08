@@ -44,6 +44,34 @@ const (
 // detect this case and fall back to non-mTLS.
 var ErrNotPresent = errors.New("certificates are not present")
 
+// IsTLSAvailable reports whether TLS certificates can be resolved. It checks,
+// in order: explicit paths in c, the CERTDIR env var, and the k8s SPIFFE
+// default directory. This mirrors the resolution order used by ResolveServer
+// without loading any files.
+func IsTLSAvailable(c pkgcerts.Config) bool {
+	if c.IsSet() {
+		for _, path := range []string{c.CACert, c.TLSCert, c.TLSKey} {
+			if _, err := os.Stat(path); err != nil {
+				return false
+			}
+		}
+		return true
+	}
+
+	certDir := os.Getenv("CERTDIR")
+	if certDir == "" {
+		certDir = defaultCertDir
+	}
+
+	for _, name := range []string{defaultCACert, defaultCertFile, defaultKeyFile} {
+		if _, err := os.Stat(filepath.Join(certDir, name)); err != nil {
+			return false
+		}
+	}
+
+	return true
+}
+
 // ResolveServer returns a server-side TLS config and source description. If c
 // has explicit paths set, uses them via pkg/certs.ServerTLSConfig; otherwise
 // falls back to the CERTDIR env var / k8s default via ServerTLSConfig.

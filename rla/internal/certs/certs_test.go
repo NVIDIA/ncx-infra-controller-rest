@@ -140,6 +140,101 @@ func TestServerTLSConfig(t *testing.T) {
 	})
 }
 
+func TestIsTLSAvailable(t *testing.T) {
+	// stubCerts writes empty stub files for each provided name in a new TempDir
+	// and returns the directory path. Names not in the list are absent.
+	stubCerts := func(t *testing.T, names ...string) string {
+		t.Helper()
+		dir := t.TempDir()
+		for _, name := range names {
+			require.NoError(t, os.WriteFile(filepath.Join(dir, name), []byte("stub"), 0600))
+		}
+		return dir
+	}
+
+	t.Run("explicit paths: all three files present", func(t *testing.T) {
+		dir := stubCerts(t, defaultCACert, defaultCertFile, defaultKeyFile)
+		c := pkgcerts.Config{
+			CACert:  filepath.Join(dir, defaultCACert),
+			TLSCert: filepath.Join(dir, defaultCertFile),
+			TLSKey:  filepath.Join(dir, defaultKeyFile),
+		}
+		assert.True(t, IsTLSAvailable(c))
+	})
+
+	t.Run("explicit paths: ca.crt missing", func(t *testing.T) {
+		dir := stubCerts(t, defaultCertFile, defaultKeyFile)
+		c := pkgcerts.Config{
+			CACert:  filepath.Join(dir, defaultCACert),
+			TLSCert: filepath.Join(dir, defaultCertFile),
+			TLSKey:  filepath.Join(dir, defaultKeyFile),
+		}
+		assert.False(t, IsTLSAvailable(c))
+	})
+
+	t.Run("explicit paths: tls.crt missing", func(t *testing.T) {
+		dir := stubCerts(t, defaultCACert, defaultKeyFile)
+		c := pkgcerts.Config{
+			CACert:  filepath.Join(dir, defaultCACert),
+			TLSCert: filepath.Join(dir, defaultCertFile),
+			TLSKey:  filepath.Join(dir, defaultKeyFile),
+		}
+		assert.False(t, IsTLSAvailable(c))
+	})
+
+	t.Run("explicit paths: tls.key missing", func(t *testing.T) {
+		dir := stubCerts(t, defaultCACert, defaultCertFile)
+		c := pkgcerts.Config{
+			CACert:  filepath.Join(dir, defaultCACert),
+			TLSCert: filepath.Join(dir, defaultCertFile),
+			TLSKey:  filepath.Join(dir, defaultKeyFile),
+		}
+		assert.False(t, IsTLSAvailable(c))
+	})
+
+	t.Run("explicit paths take precedence over CERTDIR", func(t *testing.T) {
+		badDir := stubCerts(t, defaultCACert, defaultCertFile) // tls.key absent
+		goodDir := stubCerts(t, defaultCACert, defaultCertFile, defaultKeyFile)
+		t.Setenv("CERTDIR", goodDir)
+
+		c := pkgcerts.Config{
+			CACert:  filepath.Join(badDir, defaultCACert),
+			TLSCert: filepath.Join(badDir, defaultCertFile),
+			TLSKey:  filepath.Join(badDir, defaultKeyFile),
+		}
+		assert.False(t, IsTLSAvailable(c))
+	})
+
+	t.Run("CERTDIR: all three files present", func(t *testing.T) {
+		dir := stubCerts(t, defaultCACert, defaultCertFile, defaultKeyFile)
+		t.Setenv("CERTDIR", dir)
+		assert.True(t, IsTLSAvailable(pkgcerts.Config{}))
+	})
+
+	t.Run("CERTDIR: ca.crt missing", func(t *testing.T) {
+		dir := stubCerts(t, defaultCertFile, defaultKeyFile)
+		t.Setenv("CERTDIR", dir)
+		assert.False(t, IsTLSAvailable(pkgcerts.Config{}))
+	})
+
+	t.Run("CERTDIR: tls.crt missing", func(t *testing.T) {
+		dir := stubCerts(t, defaultCACert, defaultKeyFile)
+		t.Setenv("CERTDIR", dir)
+		assert.False(t, IsTLSAvailable(pkgcerts.Config{}))
+	})
+
+	t.Run("CERTDIR: tls.key missing", func(t *testing.T) {
+		dir := stubCerts(t, defaultCACert, defaultCertFile)
+		t.Setenv("CERTDIR", dir)
+		assert.False(t, IsTLSAvailable(pkgcerts.Config{}))
+	})
+
+	t.Run("CERTDIR: empty dir", func(t *testing.T) {
+		t.Setenv("CERTDIR", t.TempDir())
+		assert.False(t, IsTLSAvailable(pkgcerts.Config{}))
+	})
+}
+
 func TestResolveServer(t *testing.T) {
 	t.Run("explicit paths used when set returns server config", func(t *testing.T) {
 		dir := generateTestCerts(t)
