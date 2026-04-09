@@ -79,17 +79,17 @@ func TestPatch(t *testing.T) {
 		parsedIPs = append(parsedIPs, net.ParseIP(ip))
 	}
 
-	bmc := BMC{MAC: hwAddrs[0], IP: parsedIPs[0], Credential: credPtr(creds[0])}
+	bmc := BMC{MAC: MACAddress{HardwareAddr: hwAddrs[0]}, IP: parsedIPs[0], Credential: credPtr(creds[0])}
 
 	// Test case 1: no patch if the mac is different
-	nb0 := BMC{MAC: hwAddrs[1], IP: parsedIPs[1], Credential: credPtr(creds[1])}
+	nb0 := BMC{MAC: MACAddress{HardwareAddr: hwAddrs[1]}, IP: parsedIPs[1], Credential: credPtr(creds[1])}
 	patched := bmc.Patch(nb0)
 	assert.False(t, patched)
 	assert.Equal(t, parsedIPs[0], bmc.IP)
 	assert.Equal(t, &creds[0], bmc.Credential)
 
 	// Test case 2: patched on the changed information
-	nb1 := BMC{MAC: hwAddrs[0], IP: parsedIPs[1], Credential: credPtr(creds[1])}
+	nb1 := BMC{MAC: MACAddress{HardwareAddr: hwAddrs[0]}, IP: parsedIPs[1], Credential: credPtr(creds[1])}
 	patched = bmc.Patch(nb1)
 	assert.True(t, patched)
 	assert.Equal(t, parsedIPs[1], bmc.IP)
