@@ -19,12 +19,14 @@ package model
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model/util"
 	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/go-ozzo/ozzo-validation/v4/is"
 	validationis "github.com/go-ozzo/ozzo-validation/v4/is"
@@ -154,6 +156,17 @@ func (oscr APIOperatingSystemCreateRequest) Validate() error {
 }
 
 func (oscr APIOperatingSystemCreateRequest) validateImageOS() error {
+	if len(oscr.IpxeParameters) > 0 {
+		return validation.Errors{
+			"ipxeParameters": errors.New("cannot be specified for Image based Operating Systems"),
+		}
+	}
+	if len(oscr.IpxeArtifacts) > 0 {
+		return validation.Errors{
+			"ipxeArtifacts": errors.New("cannot be specified for Image based Operating Systems"),
+		}
+	}
+
 	err := validation.ValidateStruct(&oscr,
 		validation.Field(&oscr.ImageURL, is.URL),
 		validation.Field(&oscr.ImageSHA,
@@ -230,6 +243,17 @@ func (oscr APIOperatingSystemCreateRequest) validateRawIpxeOS() error {
 		return err
 	}
 
+	if len(oscr.IpxeParameters) > 0 {
+		return validation.Errors{
+			"ipxeParameters": errors.New("cannot be specified for raw iPXE Operating Systems; use ipxeTemplateName for template-based OS"),
+		}
+	}
+	if len(oscr.IpxeArtifacts) > 0 {
+		return validation.Errors{
+			"ipxeArtifacts": errors.New("cannot be specified for raw iPXE Operating Systems; use ipxeTemplateName for template-based OS"),
+		}
+	}
+
 	if oscr.Scope != nil {
 		return validation.Errors{
 			"scope": errors.New("scope can only be specified for Templated iPXE Operating Systems"),
@@ -274,6 +298,13 @@ func (oscr APIOperatingSystemCreateRequest) validateTemplatedIpxeOS() error {
 		return validation.Errors{
 			"siteIds": errors.New("at least one siteId must be specified when scope is 'Limited'"),
 		}
+	}
+
+	if err := validateIpxeParameters(oscr.IpxeParameters); err != nil {
+		return err
+	}
+	if err := validateIpxeArtifacts(oscr.IpxeArtifacts); err != nil {
+		return err
 	}
 
 	return nil
@@ -516,7 +547,46 @@ func (osur APIOperatingSystemUpdateRequest) Validate(existingOS *cdbm.OperatingS
 		}
 	}
 
-	return err
+	if err != nil {
+		return err
+	}
+
+	isImageBased2 := existingOS.Type == cdbm.OperatingSystemTypeImage
+	isRawIpxe := existingOS.Type == cdbm.OperatingSystemTypeIPXE
+
+	if osur.IpxeParameters != nil {
+		if isImageBased2 {
+			return validation.Errors{
+				"ipxeParameters": errors.New("cannot be specified for Image based Operating Systems"),
+			}
+		}
+		if isRawIpxe {
+			return validation.Errors{
+				"ipxeParameters": errors.New("cannot be specified for raw iPXE Operating Systems"),
+			}
+		}
+		if verr := validateIpxeParameters(*osur.IpxeParameters); verr != nil {
+			return verr
+		}
+	}
+
+	if osur.IpxeArtifacts != nil {
+		if isImageBased2 {
+			return validation.Errors{
+				"ipxeArtifacts": errors.New("cannot be specified for Image based Operating Systems"),
+			}
+		}
+		if isRawIpxe {
+			return validation.Errors{
+				"ipxeArtifacts": errors.New("cannot be specified for raw iPXE Operating Systems"),
+			}
+		}
+		if verr := validateIpxeArtifacts(*osur.IpxeArtifacts); verr != nil {
+			return verr
+		}
+	}
+
+	return nil
 }
 
 func (osur *APIOperatingSystemUpdateRequest) ValidateAndSetUserData(phonehomeUrl string, existingOS *cdbm.OperatingSystem) error {
@@ -761,6 +831,65 @@ func GetOperatingSystemType(ipxeScript, ipxeTemplateName *string) string {
 		return cdbm.OperatingSystemTypeIPXE
 	}
 	return cdbm.OperatingSystemTypeImage
+}
+
+// validCacheStrategies is the set of accepted CacheStrategy string values.
+var validCacheStrategies = func() map[string]struct{} {
+	m := make(map[string]struct{}, len(cwssaws.IpxeScriptArtifactCacheStrategy_value))
+	for name := range cwssaws.IpxeScriptArtifactCacheStrategy_value {
+		m[name] = struct{}{}
+	}
+	return m
+}()
+
+func validateIpxeParameters(params []cdbm.OperatingSystemIpxeParameter) error {
+	for i, p := range params {
+		if strings.TrimSpace(p.Name) == "" {
+			return validation.Errors{
+				"ipxeParameters": fmt.Errorf("entry %d: name is required", i),
+			}
+		}
+	}
+	return nil
+}
+
+func validateIpxeArtifacts(artifacts []cdbm.OperatingSystemIpxeArtifact) error {
+	for i, a := range artifacts {
+		if strings.TrimSpace(a.Name) == "" {
+			return validation.Errors{
+				"ipxeArtifacts": fmt.Errorf("entry %d: name is required", i),
+			}
+		}
+		if strings.TrimSpace(a.URL) == "" {
+			return validation.Errors{
+				"ipxeArtifacts": fmt.Errorf("entry %d (%s): url is required", i, a.Name),
+			}
+		}
+		if _, ok := validCacheStrategies[a.CacheStrategy]; !ok {
+			return validation.Errors{
+				"ipxeArtifacts": fmt.Errorf("entry %d (%s): cacheStrategy must be one of CACHE_AS_NEEDED, LOCAL_ONLY, CACHED_ONLY, REMOTE_ONLY", i, a.Name),
+			}
+		}
+		if a.AuthType != nil && *a.AuthType != "" {
+			at := *a.AuthType
+			if at != cdbm.OperatingSystemAuthTypeBasic && at != cdbm.OperatingSystemAuthTypeBearer {
+				return validation.Errors{
+					"ipxeArtifacts": fmt.Errorf("entry %d (%s): authType must be Basic or Bearer", i, a.Name),
+				}
+			}
+			if a.AuthToken == nil || *a.AuthToken == "" {
+				return validation.Errors{
+					"ipxeArtifacts": fmt.Errorf("entry %d (%s): authToken is required when authType is specified", i, a.Name),
+				}
+			}
+		}
+		if a.AuthToken != nil && *a.AuthToken != "" && (a.AuthType == nil || *a.AuthType == "") {
+			return validation.Errors{
+				"ipxeArtifacts": fmt.Errorf("entry %d (%s): authType must be specified when authToken is provided", i, a.Name),
+			}
+		}
+	}
+	return nil
 }
 
 // APIOperatingSystemSummary is the data structure to capture API summary of an OperatingSystem
