@@ -47,6 +47,7 @@ import (
 	cdbp "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/paginator"
 	swe "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/error"
 	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/queue"
+	osWorkflow "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/workflow/operatingsystem"
 
 	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 )
@@ -339,13 +340,10 @@ func (csh CreateOperatingSystemHandler) Handle(c echo.Context) error {
 		rdbst = append(rdbst, providerSites...)
 	}
 
-	// Create status based on OS type
-	osStatus := cdbm.OperatingSystemStatusReady
-	osStatusMessage := "Operating System is ready for use"
-	if osType == cdbm.OperatingSystemTypeImage {
-		osStatus = cdbm.OperatingSystemStatusSyncing
-		osStatusMessage = "received Operating System creation request, syncing"
-	}
+	// Create status: Image and iPXE types all start as Syncing since the definition
+	// is pushed to sites asynchronously via the SynchronizeOperatingSystem workflow.
+	osStatus := cdbm.OperatingSystemStatusSyncing
+	osStatusMessage := "received Operating System creation request, syncing"
 
 	// Assign ownership: provider-owned OSes carry InfrastructureProviderID (tenant_id=nil);
 	// tenant-owned OSes carry TenantID (infrastructure_provider_id=nil).
@@ -468,25 +466,38 @@ func (csh CreateOperatingSystemHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Operating System Site associations from DB", nil)
 	}
 
-	// Trigger workflows to sync the Operating System with its Sites.
-	// Image-based OSes use CreateOsImage; iPXE OSes use CreateOperatingSystem to push the
-	// definition to carbide-core (the site controller), using the same UUID as primary key.
-	for _, ossa := range dbossa {
-		// Get the temporal client for the site we are working with.
-		stc, err := csh.scp.GetClientByID(ossa.SiteID)
-		if err != nil {
-			logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
+	// Trigger async workflow before committing so a failure to enqueue rolls back the transaction.
+	if cdbm.IsIPXEType(osType) && len(dbossa) > 0 {
+		wid, werr := osWorkflow.ExecuteSynchronizeOperatingSystemWorkflow(ctx, csh.tc, os.ID, osWorkflow.SyncOperationCreate)
+		if werr != nil {
+			logger.Error().Err(werr).Msg("failed to trigger SynchronizeOperatingSystem workflow for create")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to trigger Operating System synchronization workflow", nil)
 		}
+		logger.Info().Str("Workflow ID", *wid).Msg("triggered async SynchronizeOperatingSystem workflow for create")
+	}
 
-		var workflowName string
-		var workflowInput interface{}
-		var workflowIDPrefix string
+	// Commit transaction.
+	err = tx.Commit()
+	if err != nil {
+		logger.Error().Err(err).Msg("error committing Operating System transaction to DB")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Operating System", nil)
+	}
+	txCommitted = true
 
-		if osType == cdbm.OperatingSystemTypeImage {
-			workflowName = "CreateOsImage"
-			workflowIDPrefix = "image-os-create-"
-			workflowInput = &cwssaws.OsImageAttributes{
+	// Image-based OSes still use the synchronous per-site workflow pattern (post-commit).
+	if osType == cdbm.OperatingSystemTypeImage {
+		for _, ossa := range dbossa {
+			stc, serr := csh.scp.GetClientByID(ossa.SiteID)
+			if serr != nil {
+				logger.Error().Err(serr).Msg("failed to retrieve Temporal client for Site")
+				continue
+			}
+			workflowOptions := temporalClient.StartWorkflowOptions{
+				ID:                       "image-os-create-" + ossa.SiteID.String() + "-" + os.ID.String() + "-" + *ossa.Version,
+				WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
+				TaskQueue:                queue.SiteTaskQueue,
+			}
+			workflowInput := &cwssaws.OsImageAttributes{
 				Id:                   &cwssaws.UUID{Value: os.ID.String()},
 				Name:                 &os.Name,
 				TenantOrganizationId: tenant.Org,
@@ -499,102 +510,18 @@ func (csh CreateOperatingSystemHandler) Handle(c echo.Context) error {
 				RootfsId:             os.RootFsID,
 				RootfsLabel:          os.RootFsLabel,
 			}
-		} else {
-			// Templated iPXE OS: verify the referenced template is available at the target site.
-			if osType == cdbm.OperatingSystemTypeTemplatedIPXE {
-				ipxeTmplDAO := cdbm.NewIpxeTemplateDAO(csh.dbSession)
-				_, tmplErr := ipxeTmplDAO.GetBySiteAndName(ctx, nil, ossa.SiteID, *os.IpxeTemplateName)
-				if tmplErr != nil {
-					if errors.Is(tmplErr, cdb.ErrDoesNotExist) {
-						logger.Warn().Str("Site ID", ossa.SiteID.String()).Str("Template", *os.IpxeTemplateName).
-							Msg("iPXE template not available at site, skipping sync")
-						continue
-					}
-					logger.Error().Err(tmplErr).Str("Site ID", ossa.SiteID.String()).Msg("error checking iPXE template availability at site")
-					return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to verify iPXE template availability at site", nil)
-				}
+			sctx, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
+			defer cancel()
+			we, werr := stc.ExecuteWorkflow(sctx, workflowOptions, "CreateOsImage", workflowInput)
+			if werr != nil {
+				logger.Error().Err(werr).Msg("failed to start CreateOsImage workflow")
+				continue
 			}
-
-			// iPXE OS: push the definition to carbide-core using the same UUID as primary key.
-			workflowName = "CreateOperatingSystem"
-			workflowIDPrefix = "templated-ipxe-os-create-"
-			workflowInput = &cwssaws.CreateOperatingSystemRequest{
-				Id:                   &cwssaws.OperatingSystemId{Value: os.ID.String()},
-				Name:                 os.Name,
-				Description:          os.Description,
-				TenantOrganizationId: tenant.Org,
-				IsActive:             os.IsActive,
-				AllowOverride:        os.AllowOverride,
-				PhoneHomeEnabled:     os.PhoneHomeEnabled,
-				UserData:             os.UserData,
-				IpxeScript:           os.IpxeScript,
-				IpxeTemplateName:     os.IpxeTemplateName,
-				IpxeParameters:       dbParamsToProto(os.IpxeParameters),
-				IpxeArtifacts:        dbArtifactsToProto(os.IpxeArtifacts),
+			if werr = we.Get(sctx, nil); werr != nil {
+				logger.Error().Err(werr).Str("Workflow ID", we.GetID()).Msg("CreateOsImage workflow failed")
 			}
 		}
-
-		workflowOptions := temporalClient.StartWorkflowOptions{
-			ID:                       workflowIDPrefix + ossa.SiteID.String() + "-" + os.ID.String() + "-" + *ossa.Version,
-			WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
-			TaskQueue:                queue.SiteTaskQueue,
-		}
-
-		logger.Info().Str("Site ID", ossa.SiteID.String()).Str("Workflow", workflowName).Msg("triggering Operating System create workflow")
-
-		// Add context deadlines
-		ctx, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
-		defer cancel()
-
-		// Trigger Site workflow
-		we, err := stc.ExecuteWorkflow(ctx, workflowOptions, workflowName, workflowInput)
-		if err != nil {
-			logger.Error().Err(err).Msg("failed to synchronously start Temporal workflow to create Operating System")
-			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed start sync workflow to create Operating System on Site: %s", err), nil)
-		}
-
-		wid := we.GetID()
-		logger.Info().Str("Workflow ID", wid).Msg("executed synchronous create Operating System workflow")
-
-		// Block until the workflow has completed and returned success/error.
-		err = we.Get(ctx, nil)
-		if err != nil {
-			var timeoutErr *tp.TimeoutError
-			if errors.As(err, &timeoutErr) || err == context.DeadlineExceeded || ctx.Err() != nil {
-
-				logger.Error().Err(err).Msg("failed to create Operating System, timeout occurred executing workflow on Site.")
-
-				// Create a new context deadlines
-				newctx, newcancel := context.WithTimeout(context.Background(), cutil.WorkflowContextNewAfterTimeout)
-				defer newcancel()
-
-				// Initiate termination workflow
-				serr := stc.TerminateWorkflow(newctx, wid, "", "timeout occurred executing create Operating System workflow")
-				if serr != nil {
-					logger.Error().Err(serr).Msg("failed to execute terminate Temporal workflow for creating Operating System")
-					return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to terminate synchronous Operating System creation workflow after timeout, Cloud and Site data may be de-synced: %s", serr), nil)
-				}
-
-				logger.Info().Str("Workflow ID", wid).Msg("initiated terminate synchronous create Operating System workflow successfully")
-
-				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to create Operating System, timeout occurred executing workflow on Site: %s", err), nil)
-			}
-
-			code, err := common.UnwrapWorkflowError(err)
-			logger.Error().Err(err).Msg("failed to synchronously execute Temporal workflow to create Operating System")
-			return cutil.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to execute sync workflow to create Operating System on Site: %s", err), nil)
-		}
-		logger.Info().Str("Workflow ID", wid).Str("Site ID", ossa.SiteID.String()).Msg("completed synchronous create Operating System workflow")
 	}
-
-	// commit transaction
-	err = tx.Commit()
-	if err != nil {
-		logger.Error().Err(err).Msg("error committing Operating System transaction to DB")
-		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Operating System", nil)
-	}
-	// set committed so, deferred cleanup functions will do nothing
-	txCommitted = true
 
 	// create response
 	apiOperatingSystem := model.NewAPIOperatingSystem(os, dbossd, dbossa, sttsmap)
@@ -1330,23 +1257,18 @@ func (ush UpdateOperatingSystemHandler) Handle(c echo.Context) error {
 	txCommitted := false
 	defer common.RollbackTx(ctx, tx, &txCommitted)
 
-	// Save update status in DB
-	osStatus := db.GetStrPtr(cdbm.OperatingSystemStatusReady)
-	osStatusMessage := "Operating System has been updated and ready for use"
+	// Save update status in DB.
+	// Both Image and iPXE types go to Syncing since updates are pushed asynchronously.
+	osStatus := db.GetStrPtr(cdbm.OperatingSystemStatusSyncing)
+	osStatusMessage := "received Operating System update request, syncing"
 	if apiRequest.IsActive != nil && !*apiRequest.IsActive {
 		osStatus = db.GetStrPtr(cdbm.OperatingSystemStatusDeactivated)
 		osStatusMessage = "Operating System has been deactivated"
 		if apiRequest.DeactivationNote != nil && *apiRequest.DeactivationNote != "" {
 			osStatusMessage += ". " + *apiRequest.DeactivationNote
 		}
-	} else {
-		if apiRequest.IsActive != nil && *apiRequest.IsActive {
-			osStatusMessage = "Operating System has been reactivated and is ready for use"
-		}
-		if osType == cdbm.OperatingSystemTypeImage {
-			osStatus = db.GetStrPtr(cdbm.OperatingSystemStatusSyncing)
-			osStatusMessage = "received Operating System update request, syncing"
-		}
+	} else if apiRequest.IsActive != nil && *apiRequest.IsActive {
+		osStatusMessage = "Operating System has been reactivated, syncing"
 	}
 
 	// When switching from inactive to active, clear deactivation note
@@ -1508,206 +1430,25 @@ func (ush UpdateOperatingSystemHandler) Handle(c echo.Context) error {
 			logger.Info().Str("Workflow ID", wid).Str("Site ID", dbossa.SiteID.String()).Msg("completed synchronous update Operating System workflow")
 		}
 	} else if cdbm.IsIPXEType(osType) {
-		// Populate dbossas so the workflow loop below has site associations to
-		// iterate over.  The strategy depends on the OS scope.
-		if uos.IpxeOsScope != nil && *uos.IpxeOsScope == cdbm.OperatingSystemScopeGlobal {
-			// Global scope: ensure associations exist for every registered
-			// provider site, creating new ones for sites added after the OS was
-			// originally created.
-			ip, iperr := common.GetInfrastructureProviderForOrg(ctx, nil, ush.dbSession, org)
-			if iperr != nil {
-				logger.Error().Err(iperr).Msg("error retrieving Infrastructure Provider for org")
-				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Infrastructure Provider for org", nil)
-			}
-
-			stDAO := cdbm.NewSiteDAO(ush.dbSession)
-			providerSites, _, sterr := stDAO.GetAll(
-				ctx, nil,
-				cdbm.SiteFilterInput{
-					InfrastructureProviderIDs: []uuid.UUID{ip.ID},
-					Statuses:                  []string{cdbm.SiteStatusRegistered},
-				},
-				cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)},
-				nil,
-			)
-			if sterr != nil {
-				logger.Error().Err(sterr).Msg("error retrieving provider sites for global-scope OS update")
-				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve provider sites, DB error", nil)
-			}
-
-			existingOssas, _, eerr := ossaDAO.GetAll(
-				ctx, tx,
-				cdbm.OperatingSystemSiteAssociationFilterInput{
-					OperatingSystemIDs: []uuid.UUID{uos.ID},
-				},
-				cdbp.PageInput{},
-				nil,
-			)
-			if eerr != nil {
-				logger.Error().Err(eerr).Msg("error retrieving existing Operating System Site associations")
-				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Operating System Site associations from DB", nil)
-			}
-
-			existingSites := map[uuid.UUID]struct{}{}
-			for _, ea := range existingOssas {
-				existingSites[ea.SiteID] = struct{}{}
-			}
-
-			for _, ps := range providerSites {
-				if _, ok := existingSites[ps.ID]; ok {
-					continue
-				}
-				ossa, serr := ossaDAO.Create(ctx, tx, cdbm.OperatingSystemSiteAssociationCreateInput{
-					OperatingSystemID: uos.ID,
-					SiteID:            ps.ID,
-					Status:            cdbm.OperatingSystemSiteAssociationStatusSyncing,
-					CreatedBy:         dbUser.ID,
-				})
-				if serr != nil {
-					logger.Error().Err(serr).Msg("unable to create Operating System Site Association for global-scope update")
-					return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Operating System Site Association, DB error", nil)
-				}
-				_, serr = sdDAO.CreateFromParams(ctx, tx, ossa.ID.String(),
-					*cdb.GetStrPtr(cdbm.OperatingSystemSiteAssociationStatusSyncing),
-					cdb.GetStrPtr("received Operating System Association update request, syncing"))
-				if serr != nil {
-					logger.Error().Err(serr).Msg("error creating Status Detail DB entry for new association")
-					return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for Operating System Site Association", nil)
-				}
-			}
-
-			// Reload all associations (existing + newly created).
-			dbossas, _, err = ossaDAO.GetAll(
-				ctx, tx,
-				cdbm.OperatingSystemSiteAssociationFilterInput{
-					OperatingSystemIDs: []uuid.UUID{uos.ID},
-				},
-				cdbp.PageInput{},
-				[]string{cdbm.SiteRelationName},
-			)
-			if err != nil {
-				logger.Error().Err(err).Msg("error retrieving Operating System Site associations from DB")
-				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Operating System Site associations from DB", nil)
-			}
-		} else {
-			// Limited or unscoped: load existing associations from the DB.
-			dbossas, _, err = ossaDAO.GetAll(
-				ctx, tx,
-				cdbm.OperatingSystemSiteAssociationFilterInput{
-					OperatingSystemIDs: []uuid.UUID{uos.ID},
-				},
-				cdbp.PageInput{},
-				[]string{cdbm.SiteRelationName},
-			)
-			if err != nil {
-				logger.Error().Err(err).Msg("error retrieving Operating System Site associations from DB")
-				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Operating System Site associations from DB", nil)
-			}
+		// Load existing associations for the response.
+		dbossas, _, err = ossaDAO.GetAll(ctx, tx,
+			cdbm.OperatingSystemSiteAssociationFilterInput{OperatingSystemIDs: []uuid.UUID{uos.ID}},
+			cdbp.PageInput{}, []string{cdbm.SiteRelationName})
+		if err != nil {
+			logger.Error().Err(err).Msg("error retrieving Operating System Site associations from DB")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Operating System Site associations from DB", nil)
 		}
 
-		for _, dbossa := range dbossas {
-			// Templated iPXE OS: verify the referenced template is available at the target site.
-			if osType == cdbm.OperatingSystemTypeTemplatedIPXE {
-				ipxeTmplDAO := cdbm.NewIpxeTemplateDAO(ush.dbSession)
-				_, tmplErr := ipxeTmplDAO.GetBySiteAndName(ctx, nil, dbossa.SiteID, *uos.IpxeTemplateName)
-				if tmplErr != nil {
-					if errors.Is(tmplErr, cdb.ErrDoesNotExist) {
-						logger.Warn().Str("Site ID", dbossa.SiteID.String()).Str("Template", *uos.IpxeTemplateName).
-							Msg("iPXE template not available at site, skipping update sync")
-						continue
-					}
-					logger.Error().Err(tmplErr).Str("Site ID", dbossa.SiteID.String()).Msg("error checking iPXE template availability at site")
-					return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to verify iPXE template availability at site", nil)
-				}
-			}
-
-			_, err = ossaDAO.Update(
-				ctx,
-				tx,
-				cdbm.OperatingSystemSiteAssociationUpdateInput{
-					OperatingSystemSiteAssociationID: dbossa.ID,
-					Status:                           cdb.GetStrPtr(cdbm.OperatingSystemSiteAssociationStatusSyncing),
-				},
-			)
-			if err != nil {
-				logger.Error().Err(err).Msg("unable to update the Operating System association record in DB")
-				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Operating System Site Association status, DB error", nil)
-			}
-
-			_, serr = sdDAO.CreateFromParams(ctx, tx, dbossa.ID.String(), *cdb.GetStrPtr(cdbm.OperatingSystemSiteAssociationStatusSyncing),
-				cdb.GetStrPtr("received Operating System Association update request, syncing"))
-			if serr != nil {
-				logger.Error().Err(serr).Msg("error creating Status Detail DB entry")
-				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for Operating System Site Association", nil)
-			}
-
-			updatedOssa, err := ossaDAO.GenerateAndUpdateVersion(ctx, tx, dbossa.ID)
-			if err != nil {
-				logger.Error().Err(err).Msg("error updating version for updated Operating System Association")
-				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to set version for updated Operating System Site Association, DB error", nil)
-			}
-
-			stc, err := ush.scp.GetClientByID(dbossa.SiteID)
-			if err != nil {
-				logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
-			}
-
-			updateOsRequest := &cwssaws.UpdateOperatingSystemRequest{
-				Id:                 &cwssaws.OperatingSystemId{Value: uos.ID.String()},
-				Name:               &uos.Name,
-				Description:        uos.Description,
-				IsActive:           &uos.IsActive,
-				AllowOverride:      &uos.AllowOverride,
-				PhoneHomeEnabled:   &uos.PhoneHomeEnabled,
-				UserData:           uos.UserData,
-				IpxeScript:         uos.IpxeScript,
-				IpxeTemplateName:   uos.IpxeTemplateName,
-				IpxeParameters:     &cwssaws.IpxeScriptParameters{Items: dbParamsToProto(uos.IpxeParameters)},
-				IpxeArtifacts:      &cwssaws.IpxeScriptArtifacts{Items: dbArtifactsToProto(uos.IpxeArtifacts)},
-				IpxeDefinitionHash: uos.IpxeTemplateDefinitionHash,
-			}
-
-			workflowOptions := temporalClient.StartWorkflowOptions{
-				ID:                       "ipxe-os-update-" + updatedOssa.SiteID.String() + "-" + uos.ID.String() + "-" + *updatedOssa.Version,
-				WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
-				TaskQueue:                queue.SiteTaskQueue,
-			}
-
-			logger.Info().Str("Site ID", dbossa.SiteID.String()).Msg("triggering iPXE Operating System update workflow")
-
-			ctx, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
-			defer cancel()
-
-			we, err := stc.ExecuteWorkflow(ctx, workflowOptions, "UpdateOperatingSystem", updateOsRequest)
-			if err != nil {
-				logger.Error().Err(err).Msg("failed to synchronously start Temporal workflow to update Operating System")
-				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed start sync workflow to update Operating System on Site: %s", err), nil)
-			}
-
-			wid := we.GetID()
-			err = we.Get(ctx, nil)
-			if err != nil {
-				var timeoutErr *tp.TimeoutError
-				if errors.As(err, &timeoutErr) || err == context.DeadlineExceeded || ctx.Err() != nil {
-					newctx, newcancel := context.WithTimeout(context.Background(), cutil.WorkflowContextNewAfterTimeout)
-					defer newcancel()
-					serr := stc.TerminateWorkflow(newctx, wid, "", "timeout occurred executing update Operating System workflow")
-					if serr != nil {
-						logger.Error().Err(serr).Msg("failed to terminate Temporal workflow for updating Operating System")
-						return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to terminate Operating System update workflow after timeout: %s", serr), nil)
-					}
-					return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to update Operating System, timeout occurred executing workflow on Site: %s", err), nil)
-				}
-				code, err := common.UnwrapWorkflowError(err)
-				logger.Error().Err(err).Msg("failed to synchronously execute Temporal workflow to update Operating System")
-				return cutil.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to execute sync workflow to update Operating System on Site: %s", err), nil)
-			}
-			logger.Info().Str("Workflow ID", wid).Str("Site ID", dbossa.SiteID.String()).Msg("completed synchronous update Operating System workflow")
+		// Trigger async workflow before committing so a failure to enqueue rolls back the transaction.
+		wid, werr := osWorkflow.ExecuteSynchronizeOperatingSystemWorkflow(ctx, ush.tc, uos.ID, osWorkflow.SyncOperationUpdate)
+		if werr != nil {
+			logger.Error().Err(werr).Msg("failed to trigger SynchronizeOperatingSystem workflow for update")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to trigger Operating System synchronization workflow", nil)
 		}
+		logger.Info().Str("Workflow ID", *wid).Msg("triggered async SynchronizeOperatingSystem workflow for update")
 	}
 
-	// commit transaction
+	// Commit transaction.
 	err = tx.Commit()
 	if err != nil {
 		logger.Error().Err(err).Msg("error updating OperatingSystem in DB")
@@ -1925,14 +1666,11 @@ func (dsh DeleteOperatingSystemHandler) Handle(c echo.Context) error {
 
 		for _, ossa := range ossasToDelete {
 			if ossa.Status != cdbm.OperatingSystemSiteAssociationStatusDeleting {
-				_, err = ossaDAO.Update(
-					ctx,
-					tx,
+				_, err = ossaDAO.Update(ctx, tx,
 					cdbm.OperatingSystemSiteAssociationUpdateInput{
 						OperatingSystemSiteAssociationID: ossa.ID,
 						Status:                           cdb.GetStrPtr(cdbm.OperatingSystemSiteAssociationStatusDeleting),
-					},
-				)
+					})
 				if err != nil {
 					logger.Error().Err(err).Msg("error updating Operating System Association in DB")
 					return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete Operating Systems", nil)
@@ -1943,82 +1681,6 @@ func (dsh DeleteOperatingSystemHandler) Handle(c echo.Context) error {
 					logger.Error().Err(err).Msg("error creating Status Detail DB entry")
 					return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for Operating System Association", nil)
 				}
-
-				stc, err := dsh.scp.GetClientByID(ossa.SiteID)
-				if err != nil {
-					logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-					return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
-				}
-
-				var workflowName string
-				var deleteOsRequest interface{}
-				var workflowID string
-
-				if osType == cdbm.OperatingSystemTypeImage {
-					workflowName = "DeleteOsImage"
-					workflowID = "image-os-delete-" + ossa.SiteID.String() + "-" + os.ID.String() + "-" + *ossa.Version
-					deleteOsRequest = &cwssaws.DeleteOsImageRequest{
-						Id:                   &cwssaws.UUID{Value: os.ID.String()},
-						TenantOrganizationId: tenant.Org,
-					}
-				} else {
-					workflowName = "DeleteOperatingSystem"
-					workflowID = "ipxe-os-delete-" + ossa.SiteID.String() + "-" + os.ID.String()
-					deleteOsRequest = &cwssaws.DeleteOperatingSystemRequest{
-						Id: &cwssaws.OperatingSystemId{Value: os.ID.String()},
-					}
-				}
-
-				workflowOptions := temporalClient.StartWorkflowOptions{
-					ID:        workflowID,
-					TaskQueue: queue.SiteTaskQueue,
-				}
-
-				logger.Info().Str("Workflow", workflowName).Msg("triggering Operating System delete workflow")
-
-				we, err := stc.ExecuteWorkflow(ctx, workflowOptions, workflowName, deleteOsRequest)
-				if err != nil {
-					logger.Error().Err(err).Msg("failed to synchronously start Temporal workflow to delete Operating System")
-					return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to start sync workflow to delete Operating System on Site: %s", err), nil)
-				}
-
-				wid := we.GetID()
-				logger.Info().Str("Workflow ID", wid).Msg("executed synchronous delete Operating System workflow")
-
-				err = we.Get(ctx, nil)
-				if err != nil {
-					var applicationErr *tp.ApplicationError
-					if errors.As(err, &applicationErr) && applicationErr.Type() == swe.ErrTypeCarbideObjectNotFound {
-						logger.Warn().Msg(swe.ErrTypeCarbideObjectNotFound + " received from Site")
-						err = nil
-					}
-				}
-
-				if err != nil {
-					var timeoutErr *tp.TimeoutError
-					if errors.As(err, &timeoutErr) || ctx.Err() != nil {
-						logger.Error().Err(err).Msg("failed to delete Operating System, timeout occurred executing workflow on Site.")
-
-						newctx, newcancel := context.WithTimeout(context.Background(), cutil.WorkflowContextNewAfterTimeout)
-						defer newcancel()
-
-						serr := stc.TerminateWorkflow(newctx, wid, "", "timeout occurred executing delete Operating System workflow")
-						if serr != nil {
-							logger.Error().Err(serr).Msg("failed to terminate Temporal workflow for deleting Operating System")
-							return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to terminate synchronous Operating System deletion workflow after timeout, Cloud and Site data may be de-synced: %s", serr), nil)
-						}
-
-						logger.Info().Str("Workflow ID", wid).Msg("initiated terminate synchronous delete Operating System workflow successfully")
-
-						return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to delete Operating System, timeout occurred executing workflow on Site: %s", err), nil)
-					}
-
-					code, err := common.UnwrapWorkflowError(err)
-					logger.Error().Err(err).Msg("failed to synchronously execute Temporal workflow to delete Operating System")
-					return cutil.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to execute sync workflow to delete Operating System on Site: %s", err), nil)
-				}
-
-				logger.Info().Str("Workflow ID", wid).Msg("completed synchronous delete Operating System workflow")
 			}
 		}
 	}
@@ -2033,14 +1695,60 @@ func (dsh DeleteOperatingSystemHandler) Handle(c echo.Context) error {
 		}
 	}
 
-	// commit transaction
+	// Trigger async workflow before committing so a failure to enqueue rolls back the transaction.
+	if len(ossasToDelete) > 0 && cdbm.IsIPXEType(osType) {
+		wid, werr := osWorkflow.ExecuteSynchronizeOperatingSystemWorkflow(ctx, dsh.tc, os.ID, osWorkflow.SyncOperationDelete)
+		if werr != nil {
+			logger.Error().Err(werr).Msg("failed to trigger SynchronizeOperatingSystem workflow for delete")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to trigger Operating System synchronization workflow", nil)
+		}
+		logger.Info().Str("Workflow ID", *wid).Msg("triggered async SynchronizeOperatingSystem workflow for delete")
+	}
+
+	// Commit transaction.
 	err = tx.Commit()
 	if err != nil {
 		logger.Error().Err(err).Msg("error committing Operating System transaction to DB")
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete Operating System", nil)
 	}
-	// set committed so, deferred cleanup functions will do nothing
 	txCommitted = true
+
+	// Image-based OSes still use the synchronous per-site workflow pattern (post-commit).
+	if len(ossasToDelete) > 0 && osType == cdbm.OperatingSystemTypeImage {
+		for _, ossa := range ossasToDelete {
+			if ossa.Status == cdbm.OperatingSystemSiteAssociationStatusDeleting {
+				continue
+			}
+			stc, serr := dsh.scp.GetClientByID(ossa.SiteID)
+			if serr != nil {
+				logger.Error().Err(serr).Msg("failed to retrieve Temporal client for Site")
+				continue
+			}
+			workflowOptions := temporalClient.StartWorkflowOptions{
+				ID:        "image-os-delete-" + ossa.SiteID.String() + "-" + os.ID.String() + "-" + *ossa.Version,
+				TaskQueue: queue.SiteTaskQueue,
+			}
+			deleteOsRequest := &cwssaws.DeleteOsImageRequest{
+				Id:                   &cwssaws.UUID{Value: os.ID.String()},
+				TenantOrganizationId: tenant.Org,
+			}
+			we, werr := stc.ExecuteWorkflow(ctx, workflowOptions, "DeleteOsImage", deleteOsRequest)
+			if werr != nil {
+				logger.Error().Err(werr).Msg("failed to start DeleteOsImage workflow")
+				continue
+			}
+			werr = we.Get(ctx, nil)
+			if werr != nil {
+				var applicationErr *tp.ApplicationError
+				if errors.As(werr, &applicationErr) && applicationErr.Type() == swe.ErrTypeCarbideObjectNotFound {
+					werr = nil
+				}
+			}
+			if werr != nil {
+				logger.Error().Err(werr).Str("Workflow ID", we.GetID()).Msg("DeleteOsImage workflow failed")
+			}
+		}
+	}
 
 	// Create response
 	logger.Info().Msg("finishing API handler")

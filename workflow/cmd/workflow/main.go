@@ -279,6 +279,9 @@ func main() {
 		// InfiniBandPartition workflows
 		w.RegisterWorkflow(ibpWorkflow.CreateInfiniBandPartition)
 		w.RegisterWorkflow(ibpWorkflow.DeleteInfiniBandPartition)
+
+		// Operating System sync workflow (REST → core push for non-image OS)
+		w.RegisterWorkflow(osImageWorkflow.SynchronizeOperatingSystem)
 	} else if tcfg.Namespace == cwfn.SiteNamespace {
 		// Workflows triggered by Site Agent
 		// Machine Workflows
@@ -415,6 +418,10 @@ func main() {
 	// OS Definition activities (registered via the operatingsystem package)
 	osDefinitionManager := osImageActivity.NewManageOperatingSystemSync(dbSession, siteClientPool)
 	w.RegisterActivity(&osDefinitionManager)
+
+	// OS push activities (REST → core for non-image OS)
+	osPushManager := osImageActivity.NewManageOperatingSystemPush(dbSession, siteClientPool)
+	w.RegisterActivity(&osPushManager)
 
 	// DPU Extension Service activities
 	dpuExtensionServiceManager := dpuExtensionServiceActivity.NewManageDpuExtensionService(dbSession, siteClientPool)
