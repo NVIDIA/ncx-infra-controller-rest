@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
@@ -107,6 +108,37 @@ func (s *SiteControllerMachine) UnmarshalJSON(b []byte) error {
 
 func (s *SiteControllerMachine) MarshalJSON() ([]byte, error) {
 	return protojson.Marshal(s)
+}
+
+// ControllerStateFromString returns the controller machine state prefix before optional JSON substate
+// (text before the first '{' character), trimmed. When the state has no embedded JSON, the full
+// trimmed string is returned.
+func ControllerStateFromString(state string) string {
+	if state == "" {
+		return ""
+	}
+	if strings.Contains(state, "{") {
+		return strings.TrimSpace(strings.Split(state, "{")[0])
+	}
+	return strings.TrimSpace(state)
+}
+
+// GetControllerState returns the normalized controller state from Site Controller metadata, or empty
+// when metadata is nil or the embedded controller machine is missing.
+func (s *SiteControllerMachine) GetControllerState() string {
+	if s == nil || s.Machine == nil {
+		return ""
+	}
+	return ControllerStateFromString(s.State)
+}
+
+// GetControllerState returns the normalized controller state from Machine metadata, or empty when
+// metadata is nil.
+func (m *Machine) GetControllerState() string {
+	if m == nil || m.Metadata == nil {
+		return ""
+	}
+	return m.Metadata.GetControllerState()
 }
 
 // Machine is the baremetal server that sits in the datacenter

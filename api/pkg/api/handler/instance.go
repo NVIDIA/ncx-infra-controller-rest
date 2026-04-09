@@ -861,15 +861,9 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 			logger.Info().Str("MachineID", machine.ID).Str("Status", machine.Status).Bool("AllowUnhealthyMachine", allowUnhealthyMachine).Msg("Machine is Ready, proceeding with Instance creation")
 		} else {
 			isProvisionable := false
-			controllerState := ""
-			if machine.Metadata != nil {
-				if strings.Contains(machine.Metadata.State, "{") {
-					controllerState = strings.TrimSpace(strings.Split(machine.Metadata.State, "{")[0])
-				} else {
-					controllerState = strings.TrimSpace(machine.Metadata.State)
-				}
-			}
 
+			// Get the controller state from the machine
+			controllerState := machine.GetControllerState()
 			if strings.HasPrefix(controllerState, cdbm.MachineStatusReady) {
 				isProvisionable = true
 			}
