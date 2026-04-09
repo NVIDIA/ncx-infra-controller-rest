@@ -44,7 +44,7 @@ ncx-infra-controller-rest/
 ├── powershelf-manager/   # Power shelf management (PSM)
 ├── rla/                  # Rack Level Agent (RLA) logic
 ├── sdk/                  # Go API client (simple and standard variants)
-├── site-agent/           # On-site agent (elektra) for datacenter
+├── site-agent/           # On-site agent for datacenter
 ├── site-manager/         # Site management service (sitemgr)
 ├── site-workflow/        # Site-level Temporal workflows
 ├── temporal-helm/        # Temporal Helm chart
@@ -227,8 +227,8 @@ and `pull-request/[0-9]+` branches, as well as `v*.*.*` tags and manual
 - OpenAPI spec validation
 - Generated files check
 - Test matrix across all modules (with PostgreSQL service container)
-- Binary builds (api, workflow, sitemgr, elektra, migrations, credsmgr, carbidecli)
-- Security scanning (TruffleHog, Trivy)
+- Binary builds (api, workflow, migrations, sitemgr, credsmgr, site-agent)
+- Security scanning (TruffleHog)
 - Docker image builds and pushes
 - Helm chart validation
 - Release promotion

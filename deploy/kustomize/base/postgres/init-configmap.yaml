@@ -35,16 +35,6 @@ data:
     GRANT ALL ON SCHEMA public TO forge;
     CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
-    -- Create elektratest database (used by site-agent)
-    \c postgres
-    CREATE DATABASE elektratest WITH ENCODING 'UTF8';
-    GRANT ALL PRIVILEGES ON DATABASE elektratest TO forge;
-
-    -- Connect to elektratest to set up permissions
-    \c elektratest
-    GRANT ALL ON SCHEMA public TO forge;
-    CREATE EXTENSION IF NOT EXISTS pg_trgm;
-
     -- Create keycloak database
     \c postgres
     CREATE DATABASE keycloak WITH ENCODING 'UTF8';
