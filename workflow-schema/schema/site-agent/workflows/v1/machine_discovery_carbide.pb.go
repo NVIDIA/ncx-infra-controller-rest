@@ -1,3 +1,4 @@
+//
 // SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -1160,7 +1161,6 @@ type GpuPlatformInfo struct {
 	HostId        uint32                 `protobuf:"varint,4,opt,name=host_id,json=hostId,proto3" json:"host_id,omitempty"`
 	ModuleId      uint32                 `protobuf:"varint,5,opt,name=module_id,json=moduleId,proto3" json:"module_id,omitempty"`
 	FabricGuid    string                 `protobuf:"bytes,6,opt,name=fabric_guid,json=fabricGuid,proto3" json:"fabric_guid,omitempty"`
-	PlatformInfo  *GpuPlatformInfo       `protobuf:"bytes,9,opt,name=platform_info,json=platformInfo,proto3" json:"platform_info,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1237,13 +1237,6 @@ func (x *GpuPlatformInfo) GetFabricGuid() string {
 	return ""
 }
 
-func (x *GpuPlatformInfo) GetPlatformInfo() *GpuPlatformInfo {
-	if x != nil {
-		return x.PlatformInfo
-	}
-	return nil
-}
-
 type Gpu struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	Name           string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
@@ -1254,6 +1247,7 @@ type Gpu struct {
 	TotalMemory    string                 `protobuf:"bytes,6,opt,name=total_memory,json=totalMemory,proto3" json:"total_memory,omitempty"`
 	Frequency      string                 `protobuf:"bytes,7,opt,name=frequency,proto3" json:"frequency,omitempty"`
 	PciBusId       string                 `protobuf:"bytes,8,opt,name=pci_bus_id,json=pciBusId,proto3" json:"pci_bus_id,omitempty"`
+	PlatformInfo   *GpuPlatformInfo       `protobuf:"bytes,9,opt,name=platform_info,json=platformInfo,proto3" json:"platform_info,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -1342,6 +1336,13 @@ func (x *Gpu) GetPciBusId() string {
 		return x.PciBusId
 	}
 	return ""
+}
+
+func (x *Gpu) GetPlatformInfo() *GpuPlatformInfo {
+	if x != nil {
+		return x.PlatformInfo
+	}
+	return nil
 }
 
 type MemoryDevice struct {
@@ -1501,7 +1502,7 @@ const file_machine_discovery_carbide_proto_rawDesc = "" +
 	"\x13factory_mac_address\x18\x04 \x01(\tR\x11factoryMacAddress\x12)\n" +
 	"\x10firmware_version\x18\x05 \x01(\tR\x0ffirmwareVersion\x12#\n" +
 	"\rfirmware_date\x18\x06 \x01(\tR\ffirmwareDate\x12=\n" +
-	"\bswitches\x18\a \x03(\v2!.machine_discovery.LldpSwitchDataR\bswitches\"\x98\x02\n" +
+	"\bswitches\x18\a \x03(\v2!.machine_discovery.LldpSwitchDataR\bswitches\"\xcf\x01\n" +
 	"\x0fGpuPlatformInfo\x12%\n" +
 	"\x0echassis_serial\x18\x01 \x01(\tR\rchassisSerial\x12\x1f\n" +
 	"\vslot_number\x18\x02 \x01(\rR\n" +
@@ -1511,8 +1512,7 @@ const file_machine_discovery_carbide_proto_rawDesc = "" +
 	"\ahost_id\x18\x04 \x01(\rR\x06hostId\x12\x1b\n" +
 	"\tmodule_id\x18\x05 \x01(\rR\bmoduleId\x12\x1f\n" +
 	"\vfabric_guid\x18\x06 \x01(\tR\n" +
-	"fabricGuid\x12G\n" +
-	"\rplatform_info\x18\t \x01(\v2\".machine_discovery.GpuPlatformInfoR\fplatformInfo\"\x85\x02\n" +
+	"fabricGuid\"\xce\x02\n" +
 	"\x03Gpu\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x16\n" +
 	"\x06serial\x18\x02 \x01(\tR\x06serial\x12%\n" +
@@ -1522,7 +1522,8 @@ const file_machine_discovery_carbide_proto_rawDesc = "" +
 	"\ftotal_memory\x18\x06 \x01(\tR\vtotalMemory\x12\x1c\n" +
 	"\tfrequency\x18\a \x01(\tR\tfrequency\x12\x1c\n" +
 	"\n" +
-	"pci_bus_id\x18\b \x01(\tR\bpciBusId\"e\n" +
+	"pci_bus_id\x18\b \x01(\tR\bpciBusId\x12G\n" +
+	"\rplatform_info\x18\t \x01(\v2\".machine_discovery.GpuPlatformInfoR\fplatformInfo\"e\n" +
 	"\fMemoryDevice\x12\x1c\n" +
 	"\asize_mb\x18\x01 \x01(\rH\x00R\x06sizeMb\x88\x01\x01\x12\x1e\n" +
 	"\bmem_type\x18\x02 \x01(\tH\x01R\amemType\x88\x01\x01B\n" +
@@ -1585,7 +1586,7 @@ var file_machine_discovery_carbide_proto_depIdxs = []int32{
 	11, // 13: machine_discovery.NetworkInterface.pci_properties:type_name -> machine_discovery.PciDeviceProperties
 	11, // 14: machine_discovery.InfinibandInterface.pci_properties:type_name -> machine_discovery.PciDeviceProperties
 	12, // 15: machine_discovery.DpuData.switches:type_name -> machine_discovery.LldpSwitchData
-	14, // 16: machine_discovery.GpuPlatformInfo.platform_info:type_name -> machine_discovery.GpuPlatformInfo
+	14, // 16: machine_discovery.Gpu.platform_info:type_name -> machine_discovery.GpuPlatformInfo
 	17, // [17:17] is the sub-list for method output_type
 	17, // [17:17] is the sub-list for method input_type
 	17, // [17:17] is the sub-list for extension type_name

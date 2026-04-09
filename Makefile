@@ -218,18 +218,35 @@ docker-build:
 	docker build -t $(IMAGE_REGISTRY)/carbide-psm:$(IMAGE_TAG) -f $(DOCKERFILE_DIR)/Dockerfile.carbide-psm .
 	docker build -t $(IMAGE_REGISTRY)/carbide-nsm:$(IMAGE_TAG) -f $(DOCKERFILE_DIR)/Dockerfile.carbide-nsm .
 
-carbide-proto:
-	if [ -d "carbide-core" ]; then cd carbide-core && git pull; else git clone ssh://git@github.com/nvidia/carbide-core.git; fi
-	ls carbide-core/rpc/proto
-	@for file in carbide-core/rpc/proto/*.proto; do \
+core-proto: core-proto-fetch core-proto-fmt core-protogen
+
+core-proto-clean:
+	@echo "Cleaning up Core proto and protobuf files"
+	rm -rf workflow-schema/site-agent/workflows/v1/*_carbide.proto
+	rm -rf workflow-schema/schema/site-agent/workflows/v1/*.pb.go
+
+core-proto-repo ?= NVIDIA/ncx-infra-controller-core
+core-proto-repo-ssh:=ssh://git@github.com/$(core-proto-repo).git
+core-proto-ref ?= origin/main
+core-proto-fetch:
+	@echo "Fetching Core protobuf files from $(core-proto-repo-ssh) at $(core-proto-ref). Customize with make core-proto-repo=your-repo core-proto-ref=your-ref"
+	if [ -d "nico-core" ]; then rm -rf nico-core; fi
+	git clone $(core-proto-repo-ssh) nico-core;
+	cd nico-core && git fetch $(core-proto-repo-ssh) && git reset --hard $(core-proto-ref);
+	ls nico-core/crates/rpc/proto
+	@for file in nico-core/crates/rpc/proto/*.proto; do \
 		cp "$$file" "workflow-schema/site-agent/workflows/v1/$$(basename "$$file" .proto)_carbide.proto"; \
 		echo "Copied: $$file"; \
-		./workflow-schema/scripts/add-go-package-option.sh "workflow-schema/site-agent/workflows/v1/$$(basename "$$file" .proto)_carbide.proto" "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/proto"; \
 	done
-	rm -rf carbide-core
+	echo "Successfully copied Core protobuf files"
+	rm -rf nico-core
 
-carbide-protogen:
-	echo "Generating protobuf for Carbide"
+core-proto-fmt:
+	@echo "Formatting Core protobuf files"
+	cd workflow-schema/cmd/core-proto-fmt && go run main.go
+
+core-protogen:
+	echo "Generating protobuf for Core"
 	cd workflow-schema && buf generate
 
 rla-proto:

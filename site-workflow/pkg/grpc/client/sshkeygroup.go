@@ -20,8 +20,6 @@ package client
 import (
 	"context"
 	"errors"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"os"
 
 	wflows "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
@@ -34,10 +32,6 @@ type SSHKeyGroupInterface interface {
 	CreateSSHKeyGroup(ctx context.Context, request *wflows.CreateSSHKeyGroupRequest) (response *wflows.CreateTenantKeysetResponse, err error)
 	UpdateSSHKeyGroup(ctx context.Context, request *wflows.UpdateSSHKeyGroupRequest) (response *wflows.UpdateTenantKeysetResponse, err error)
 	DeleteSSHKeyGroup(ctx context.Context, request *wflows.DeleteSSHKeyGroupRequest) (response *wflows.DeleteTenantKeysetResponse, err error)
-	// DEPRECATED: use GetSSHKeyGroups instead
-	GetSSHKeyGroup(ctx context.Context, request *wflows.GetSSHKeyGroup) (response *wflows.TenantKeySetList, err error)
-	// DEPRECATED: use GetSSHKeyGroups instead
-	GetAllSSHKeyGroupsOld(ctx context.Context) (response *wflows.TenantKeySetList, err error)
 	GetAllSSHKeyGroups(ctx context.Context, request *wflows.TenantKeysetSearchFilter, pageSize int) (response *wflows.TenantKeySetList, err error)
 	FindSSHKeyGroupIDs(ctx context.Context, request *wflows.TenantKeysetSearchFilter) (response *wflows.TenantKeysetIdList, err error)
 	FindSSHKeyGroupsByIDs(ctx context.Context, request *wflows.TenantKeysetsByIdsRequest) (response *wflows.TenantKeySetList, err error)
@@ -73,55 +67,6 @@ func (skg *compute) CreateSSHKeyGroup(ctx context.Context, request *wflows.Creat
 	return response, err
 }
 
-// GetSSHKeyGroup gets a SSHKeyGroup
-// DEPRECATED: use GetAllSSHKeyGroups instead
-func (skg *compute) GetSSHKeyGroup(ctx context.Context, request *wflows.GetSSHKeyGroup) (response *wflows.TenantKeySetList, err error) {
-	log.Info().Interface("request", request).Msg("GetSSHKeyGroup: received GetSSHKeyGroup request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-GetSSHKeyGroup")
-	defer span.End()
-
-	// Validate the request
-	if request == nil {
-		err = errors.New("GetSSHKeyGroup: invalid request")
-		log.Error().Err(err).Msg("GetSSHKeyGroup: invalid request")
-		return nil, err
-	}
-
-	carbideRequest := &wflows.FindTenantKeysetRequest{
-		OrganizationId: &request.TenantOrganizationId,
-		KeysetId:       &request.KeysetId,
-		IncludeKeyData: request.IncludeKeyData,
-	}
-	log.Info().Interface("request", carbideRequest).Msg("GetSSHKeyGroup: converted FindTenantKeysetRequest request")
-	response, err = skg.carbide.FindTenantKeyset(ctx, carbideRequest)
-	if err != nil {
-		log.Error().Err(err).Msg("GetSSHKeyGroup: error")
-		return nil, err
-	}
-	log.Info().Int("KeysetLen", len(response.Keyset)).Msg("GetSSHKeyGroup: received result")
-	return response, err
-
-}
-
-// GetSSHKeyGroup gets a SSHKeyGroup
-// DEPRECATED: use GetAllSSHKeyGroups instead
-func (skg *compute) GetAllSSHKeyGroupsOld(ctx context.Context) (response *wflows.TenantKeySetList, err error) {
-	log.Info().Interface("request", "SSHKeyGroup Inventory").Msg("GetAllSSHKeyGroups: received GetAllSSHKeyGroups request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-GetSSHKeyGroup")
-	defer span.End()
-
-	// Create the request
-	carbideRequest := &wflows.FindTenantKeysetRequest{}
-	response, err = skg.carbide.FindTenantKeyset(ctx, carbideRequest)
-	if err != nil {
-		log.Error().Err(err).Msg("GetAllSSHKeyGroups: error")
-		return nil, err
-	}
-	log.Info().Int("KeysetLen", len(response.Keyset)).Msg("GetAllSSHKeyGroups: received result")
-	return response, err
-
-}
-
 func (skg *compute) GetAllSSHKeyGroups(ctx context.Context, request *wflows.TenantKeysetSearchFilter, pageSize int) (response *wflows.TenantKeySetList, err error) {
 	log.Info().Interface("request", request).Msg("GetAllSSHKeyGroups: received request")
 	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-GetAllSSHKeyGroups")
@@ -133,12 +78,6 @@ func (skg *compute) GetAllSSHKeyGroups(ctx context.Context, request *wflows.Tena
 
 	idList, err := skg.carbide.FindTenantKeysetIds(ctx, request)
 	if err != nil {
-		if grpcStatus, ok := status.FromError(err); ok {
-			if grpcStatus.Code() == codes.Unimplemented {
-				log.Info().Msg("Using deprecated API to get SSHKeyGroups")
-				return skg.GetAllSSHKeyGroupsOld(ctx)
-			}
-		}
 		log.Error().Err(err).Msg("FindTenantKeysetIds: error")
 		return nil, err
 	}

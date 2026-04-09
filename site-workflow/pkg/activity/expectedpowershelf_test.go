@@ -485,7 +485,7 @@ func Test_expectedPowerShelfToRLAComponent(t *testing.T) {
 			ExpectedPowerShelfId: &cwssaws.UUID{Value: "eps-001"},
 			BmcMacAddress:        "AA:BB:CC:DD:EE:FF",
 			ShelfSerialNumber:    "SHELF-001",
-			IpAddress:            "10.0.0.1",
+			BmcIpAddress:         "10.0.0.1",
 			RackId:               &cwssaws.RackId{Id: "rack-001"},
 			Name:                 strPtr("pdu-shelf-1"),
 			Manufacturer:         strPtr("Vertiv"),

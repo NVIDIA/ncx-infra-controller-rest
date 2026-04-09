@@ -46,7 +46,6 @@ func (mmi *ManageSSHKeyGroupInventory) DiscoverSSHKeyGroupInventory(ctx context.
 		internalFindIDs:        sshKeyGroupFindIDs,
 		internalFindByIDs:      sshKeyGroupFindByIDs,
 		internalPagedInventory: sshKeyGroupPagedInventory,
-		internalFindFallback:   sshKeyGroupFindFallback,
 	}
 	return inventoryImpl.CollectAndPublishInventory(ctx, &logger)
 }
@@ -96,18 +95,6 @@ func sshKeyGroupPagedInventory(allItemIDs []*cwssaws.TenantKeysetIdentifier, pag
 		inventory.InventoryPage.ItemIds = itemIDs
 	}
 	return inventory
-}
-
-func sshKeyGroupFindFallback(ctx context.Context, carbideClient *cClient.CarbideClient) ([]*cwssaws.TenantKeysetIdentifier, []*cwssaws.TenantKeyset, error) {
-	items, err := carbideClient.Compute().GetAllSSHKeyGroupsOld(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
-	var ids []*cwssaws.TenantKeysetIdentifier
-	for _, it := range items.GetKeyset() {
-		ids = append(ids, it.KeysetIdentifier)
-	}
-	return ids, items.GetKeyset(), nil
 }
 
 // ManageSSHKeyGroup is an activity wrapper for SSHKeyGroup management

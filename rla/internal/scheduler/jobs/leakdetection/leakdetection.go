@@ -20,54 +20,26 @@ package leakdetection
 import (
 	"context"
 	"fmt"
-	"os"
-	"time"
 
 	"github.com/rs/zerolog/log"
 
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/carbideapi"
-	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/config"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/operation"
 	taskmanager "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/manager"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operations"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
 )
 
-// RunLeakDetection will loop and handle various leak detection tasks
-func RunLeakDetection(ctx context.Context, taskMgr taskmanager.Manager) {
-	config := config.ReadConfig()
-	if config.DisableLeakDetection {
-		log.Info().Msg("Leak detection disabled by configuration")
-		return
-	}
-
-	carbideClient, err := carbideapi.NewClient(config.GRPCTimeout)
-	if err != nil {
-		// Use whether CARBIDE_API_URL is set to determine if we're running in a production environment (fail hard) or not (just complain and do nothing)
-		// Note that this doesn't actually create a connection immediately, so it won't fail just because carbide-api hasn't started yet.
-		msg := fmt.Sprintf("Unable to create GRPC client (pre-connect): %v", err)
-		if os.Getenv("CARBIDE_API_URL") == "" {
-			log.Error().Msg(msg)
-			return
-		} else {
-			log.Fatal().Msg(msg)
-		}
-	}
-
-	log.Info().Msg("Starting leak detection loop")
-
-	for {
-		runLeakDetectionOne(ctx, &config, carbideClient, taskMgr)
-		time.Sleep(config.LeakDetectionInterval)
-	}
-}
-
-func runLeakDetectionOne(ctx context.Context, config *config.Config, carbideClient carbideapi.Client, taskMgr taskmanager.Manager) {
+func runLeakDetectionOne(
+	ctx context.Context,
+	carbideClient carbideapi.Client,
+	taskMgr taskmanager.Manager,
+) {
 	log.Info().Msg("Running leak detection")
 
 	leakingMachineIds, err := carbideClient.GetLeakingMachineIds(ctx)
 	if err != nil {
-		log.Error().Msgf("Unable to retrieve leaking machine IDs from Carbide: %v", err)
+		log.Error().Err(err).Msg("Unable to retrieve leaking machine IDs from Carbide")
 		return
 	}
 
@@ -83,7 +55,11 @@ func runLeakDetectionOne(ctx context.Context, config *config.Config, carbideClie
 	}
 }
 
-func submitPowerOffTask(ctx context.Context, taskMgr taskmanager.Manager, machineID string) error {
+func submitPowerOffTask(
+	ctx context.Context,
+	taskMgr taskmanager.Manager,
+	machineID string,
+) error {
 	info := &operations.PowerControlTaskInfo{
 		Operation: operations.PowerOperationForcePowerOff,
 		Forced:    true,
