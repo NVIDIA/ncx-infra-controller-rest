@@ -349,7 +349,7 @@ func (s *PowershelfManagerServerImpl) powerOn(ctx context.Context, pmc_mac strin
 	}
 }
 
-func (s *PowershelfManagerServerImpl) PowerOff(ctx context.Context, req *pb.PowershelfRequest) (*pb.PowerControlResponse, error) {
+func (s *PowershelfManagerServerImpl) PowerOff(ctx context.Context, req *pb.PowerRequest) (*pb.PowerControlResponse, error) {
 	responses := make([]*pb.PowershelfResponse, 0, len(req.PmcMacs)+len(req.Targets))
 	for _, mac := range req.PmcMacs {
 		responses = append(responses, s.powerOff(ctx, mac))
@@ -363,7 +363,7 @@ func (s *PowershelfManagerServerImpl) PowerOff(ctx context.Context, req *pb.Powe
 	}, nil
 }
 
-func (s *PowershelfManagerServerImpl) PowerOn(ctx context.Context, req *pb.PowershelfRequest) (*pb.PowerControlResponse, error) {
+func (s *PowershelfManagerServerImpl) PowerOn(ctx context.Context, req *pb.PowerRequest) (*pb.PowerControlResponse, error) {
 	responses := make([]*pb.PowershelfResponse, 0, len(req.PmcMacs)+len(req.Targets))
 	for _, mac := range req.PmcMacs {
 		responses = append(responses, s.powerOn(ctx, mac))
@@ -388,7 +388,7 @@ func (s *PowershelfManagerServerImpl) powerTarget(ctx context.Context, target *p
 		}
 	}
 
-	if target.Credentials == nil {
+	if target.PmcCredentials == nil {
 		return &pb.PowershelfResponse{
 			PmcMacAddress: target.PmcIp,
 			Status:        pb.StatusCode_INVALID_ARGUMENT,
@@ -396,10 +396,18 @@ func (s *PowershelfManagerServerImpl) powerTarget(ctx context.Context, target *p
 		}
 	}
 
-	cred := credential.New(target.Credentials.Username, target.Credentials.Password)
+	if target.PmcCredentials.Username == "" || target.PmcCredentials.Password == "" {
+		return &pb.PowershelfResponse{
+			PmcMacAddress: target.PmcIp,
+			Status:        pb.StatusCode_INVALID_ARGUMENT,
+			Error:         "credentials username and password must not be empty",
+		}
+	}
+
+	cred := credential.New(target.PmcCredentials.Username, target.PmcCredentials.Password)
 	p := &pmc.PMC{
 		IP:         ip,
-		Vendor:     vendor.CodeToVendor(protobuf.PMCVendorFrom(target.Vendor)),
+		Vendor:     vendor.CodeToVendor(protobuf.PMCVendorFrom(target.PmcVendor)),
 		Credential: &cred,
 	}
 

@@ -28,9 +28,9 @@ service PowershelfManager {
 
     // Power Control
     // Power OFF the rack
-    rpc PowerOff(PowershelfRequest) returns (PowerControlResponse);
+    rpc PowerOff(PowerRequest) returns (PowerControlResponse);
     // Power ON the rack
-    rpc PowerOn(PowershelfRequest) returns (PowerControlResponse);
+    rpc PowerOn(PowerRequest) returns (PowerControlResponse);
 }
 
 
@@ -142,6 +142,13 @@ message RegisterPowershelvesResponse {
 
 message PowershelfRequest {
     repeated string pmc_macs = 1;
+}
+
+// PowerRequest is used by PowerOn/PowerOff RPCs. Registered devices are
+// identified by MAC; unregistered devices use PowerTarget with inline
+// connection details.
+message PowerRequest {
+    repeated string pmc_macs = 1;
     repeated PowerTarget targets = 2;
 }
 
@@ -159,8 +166,8 @@ message PowerControlResponse {
 // Only IP and credentials are required; the registry and credential manager are bypassed.
 message PowerTarget {
     string pmc_ip = 1;
-    Credentials credentials = 2;
-    PMCVendor vendor = 3;
+    Credentials pmc_credentials = 2;
+    PMCVendor pmc_vendor = 3;
 }
 
 message GetPowershelvesResponse {

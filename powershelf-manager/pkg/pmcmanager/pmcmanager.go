@@ -149,11 +149,11 @@ func (pm *PmcManager) powerControlPmc(ctx context.Context, pmc *pmc.PMC, on bool
 
 	tx := func(client *redfish.RedfishClient) error {
 		if on {
-			client.PowerOn()
-		} else {
-			client.PowerOff()
+			_, err := client.PowerOn()
+			return err
 		}
-		return nil
+		_, err := client.PowerOff()
+		return err
 	}
 	return pm.RedfishTx(ctx, pmc, tx)
 }

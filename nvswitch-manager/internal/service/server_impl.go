@@ -290,6 +290,14 @@ func resetTarget(ctx context.Context, target *pb.PowerTarget, resetType redfish.
 		}
 	}
 
+	if target.BmcCredentials.Username == "" || target.BmcCredentials.Password == "" {
+		return &pb.NVSwitchResponse{
+			Uuid:   target.BmcIp,
+			Status: pb.StatusCode_INVALID_ARGUMENT,
+			Error:  "bmc_credentials username and password must not be empty",
+		}
+	}
+
 	cred := credential.New(target.BmcCredentials.Username, target.BmcCredentials.Password)
 	tray := &nvswitch.NVSwitchTray{
 		BMC: &bmc.BMC{
@@ -307,7 +315,6 @@ func resetTarget(ctx context.Context, target *pb.PowerTarget, resetType redfish.
 		}
 	}
 
-	log.Infof("%s initiated for target %s", resetType, target.BmcIp)
 	return &pb.NVSwitchResponse{
 		Uuid:   target.BmcIp,
 		Status: pb.StatusCode_SUCCESS,
