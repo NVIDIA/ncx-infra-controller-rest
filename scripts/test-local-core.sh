@@ -189,6 +189,31 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# 3c. Enable ImageBasedOperatingSystem capability (direct DB update)
+# ---------------------------------------------------------------------------
+
+step "Enabling ImageBasedOperatingSystem capability (direct DB update)"
+
+SITE_CAPS=$(db_exec "SELECT config->>'image_based_operating_system' FROM site WHERE id = '$SITE_ID';")
+
+if [[ "$SITE_CAPS" == "true" ]]; then
+    ok "ImageBasedOperatingSystem is already enabled — skipping DB update"
+else
+    info "Enabling image_based_operating_system in site config"
+
+    UPDATE_TAG=$(kubectl exec -n "$PG_NAMESPACE" "$PG_STATEFULSET" -- \
+        psql -U "$PG_USER" -d "$PG_DB" -c \
+        "UPDATE site SET config = jsonb_set(COALESCE(config, '{}'), '{image_based_operating_system}', 'true'), updated = NOW() WHERE id = '$SITE_ID';" \
+        2>&1 | grep -E '^UPDATE')
+
+    [[ -z "$UPDATE_TAG" ]] && die "DB update produced no UPDATE tag — check site ID and postgres connectivity"
+    UPDATED_ROWS=$(echo "$UPDATE_TAG" | awk '{print $2}')
+    [[ "$UPDATED_ROWS" -eq 0 ]] && die "DB update matched 0 rows — site id '$SITE_ID' not found in table"
+
+    ok "Updated $UPDATED_ROWS row(s)"
+fi
+
+# ---------------------------------------------------------------------------
 # 4. Create an IP Block
 # ---------------------------------------------------------------------------
 
