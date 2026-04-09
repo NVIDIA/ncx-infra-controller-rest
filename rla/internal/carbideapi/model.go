@@ -47,6 +47,7 @@ type MachineDetail struct {
 	UpdateComplete      bool
 	HealthStatus        string
 	LastObservationTime *time.Time
+	FirmwareAutoupdate  *bool
 }
 
 // MachinePosition represents machine position information from Carbide
@@ -97,6 +98,11 @@ func machineDetailFromPb(machine *pb.Machine) MachineDetail {
 	if machine.LastObservationTime != nil {
 		t := machine.LastObservationTime.AsTime()
 		detail.LastObservationTime = &t
+	}
+
+	if machine.FirmwareAutoupdate != nil {
+		v := machine.GetFirmwareAutoupdate()
+		detail.FirmwareAutoupdate = &v
 	}
 
 	return detail

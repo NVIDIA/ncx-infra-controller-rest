@@ -111,6 +111,13 @@ type Client interface {
 	// iterate the slice to find matching entries.
 	GetDesiredFirmwareVersions(ctx context.Context) ([]*pb.DesiredFirmwareVersionEntry, error)
 
+	// FindExploredEndpointsByIds returns explored endpoint data (including
+	// firmware_versions) for the given BMC IP addresses.
+	FindExploredEndpointsByIds(ctx context.Context, bmcIPs []string) ([]*pb.ExploredEndpoint, error)
+
+	// SetMachineAutoUpdate enables or disables firmware auto-update for a machine.
+	SetMachineAutoUpdate(ctx context.Context, machineID string, enable bool) error
+
 	// The following are only valid in the mock environment and should only be called by unit tests
 	AddMachine(MachineDetail)
 	AddPowerState(machineID string, state PowerState)
