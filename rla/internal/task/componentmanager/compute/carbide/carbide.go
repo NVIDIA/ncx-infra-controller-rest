@@ -379,15 +379,21 @@ func (m *Manager) FirmwareControl(ctx context.Context, target common.Target, inf
 		}
 	}
 
+	var autoUpdateErrors []string
 	for _, machineID := range target.ComponentIDs {
-		if m, ok := machinesByID[machineID]; ok && m.FirmwareAutoupdate != nil && *m.FirmwareAutoupdate {
+		if machine, ok := machinesByID[machineID]; ok && machine.FirmwareAutoupdate != nil && *machine.FirmwareAutoupdate {
 			log.Debug().Str("machine_id", machineID).Msg("firmware_autoupdate already enabled, skipping SetMachineAutoUpdate")
 			continue
 		}
 		if err := m.carbideClient.SetMachineAutoUpdate(ctx, machineID, true); err != nil {
-			return fmt.Errorf("failed to enable auto-update for machine %s: %w", machineID, err)
+			log.Error().Err(err).Str("machine_id", machineID).Msg("Failed to enable auto-update, will continue with remaining machines")
+			autoUpdateErrors = append(autoUpdateErrors, machineID)
+			continue
 		}
 		log.Debug().Str("machine_id", machineID).Msg("Enabled firmware_autoupdate on machine")
+	}
+	if len(autoUpdateErrors) > 0 {
+		return fmt.Errorf("failed to enable auto-update for %d machine(s): %v", len(autoUpdateErrors), autoUpdateErrors)
 	}
 
 	if err := m.carbideClient.SetFirmwareUpdateTimeWindow(ctx, target.ComponentIDs, startTime, endTime); err != nil {
