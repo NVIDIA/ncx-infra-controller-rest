@@ -99,7 +99,7 @@ func TestOperatingSystemHandler_Create(t *testing.T) {
 	cfg := common.GetTestConfig()
 	tempClient := &tmocks.Client{}
 
-	osObj := model.APIOperatingSystemCreateRequest{Name: "test-operating-system-1", Description: cdb.GetStrPtr("test"), InfrastructureProviderID: nil, TenantID: cdb.GetStrPtr(tenant1.ID.String()), IpxeScript: cdb.GetStrPtr("ipxe"), ImageDisk: cdb.GetStrPtr("/dev/sda"), UserData: cdb.GetStrPtr(cdmu.TestCommonCloudInit), IsCloudInit: true, AllowOverride: false}
+	osObj := model.APIOperatingSystemCreateRequest{Name: "test-operating-system-1", Description: cdb.GetStrPtr("test"), InfrastructureProviderID: nil, TenantID: cdb.GetStrPtr(tenant1.ID.String()), IpxeScript: cdb.GetStrPtr("ipxe"), UserData: cdb.GetStrPtr(cdmu.TestCommonCloudInit), IsCloudInit: true, AllowOverride: false}
 	okBody, err := json.Marshal(osObj)
 	assert.Nil(t, err)
 
@@ -1629,7 +1629,7 @@ func TestOperatingSystemHandler_Update(t *testing.T) {
 			user:           user,
 			osID:           os2.ID.String(),
 			expectedErr:    true,
-			expectedStatus: http.StatusBadRequest,
+			expectedStatus: http.StatusForbidden,
 		},
 		{
 			name:           "error when req body doesnt bind",
@@ -2179,7 +2179,7 @@ func TestOperatingSystemHandler_Delete(t *testing.T) {
 			user:           tnu,
 			osID:           os3.ID.String(),
 			expectedErr:    true,
-			expectedStatus: http.StatusBadRequest,
+			expectedStatus: http.StatusForbidden,
 		},
 		{
 			name:           "error when instance present for os",

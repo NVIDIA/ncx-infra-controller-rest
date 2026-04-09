@@ -22,42 +22,49 @@ import (
 	sww "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/workflow"
 )
 
-// RegisterSubscriber registers the Machine workflows/activities with the Temporal client
+// RegisterSubscriber registers the OsImage and OperatingSystem workflows/activities with the Temporal client
 func (api *API) RegisterSubscriber() error {
-	// Register subscriber workflows
-	ManagerAccess.Data.EB.Log.Info().Msg("Machine: Registering the subscribers")
+	ManagerAccess.Data.EB.Log.Info().Msg("OperatingSystem: Registering the subscribers")
 
-	osImageManager := swa.NewManageOperatingSystem(ManagerAccess.Data.EB.Managers.Carbide.Client)
+	osManager := swa.NewManageOperatingSystem(ManagerAccess.Data.EB.Managers.Carbide.Client)
 
-	// Register workflows
-
-	// Sync workflows
-	// Register CreateOsImage workflow
+	// ── OsImage workflows (cloud-managed image catalog pushed to site) ─────────────────
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.CreateOsImage)
 	ManagerAccess.Data.EB.Log.Info().Msg("OsImage: successfully registered the CreateOsImage workflow")
 
-	// Register UpdateOsImage workflow
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.UpdateOsImage)
 	ManagerAccess.Data.EB.Log.Info().Msg("OsImage: successfully registered the UpdateOsImage workflow")
 
-	// Register DeleteOsImage workflow
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.DeleteOsImage)
 	ManagerAccess.Data.EB.Log.Info().Msg("OsImage: successfully registered the DeleteOsImage workflow")
 
-	// Register activities
-
-	// Sync workflow activities
-	// Register CreateOsImageOnSite
-	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(osImageManager.CreateOsImageOnSite)
+	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(osManager.CreateOsImageOnSite)
 	ManagerAccess.Data.EB.Log.Info().Msg("OsImage: successfully registered CreateOsImageOnSite activity")
 
-	// Register UpdateOsImageOnSite
-	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(osImageManager.UpdateOsImageOnSite)
+	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(osManager.UpdateOsImageOnSite)
 	ManagerAccess.Data.EB.Log.Info().Msg("OsImage: successfully registered UpdateOsImageOnSite activity")
 
-	// Register DeleteOsImageOnSite
-	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(osImageManager.DeleteOsImageOnSite)
+	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(osManager.DeleteOsImageOnSite)
 	ManagerAccess.Data.EB.Log.Info().Msg("OsImage: successfully registered DeleteOsImageOnSite activity")
+
+	// ── OperatingSystem workflows (bi-directional: carbide-rest ↔ carbide-core) ────────
+	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.CreateOperatingSystem)
+	ManagerAccess.Data.EB.Log.Info().Msg("OperatingSystem: successfully registered the CreateOperatingSystem workflow")
+
+	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.UpdateOperatingSystem)
+	ManagerAccess.Data.EB.Log.Info().Msg("OperatingSystem: successfully registered the UpdateOperatingSystem workflow")
+
+	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.DeleteOperatingSystem)
+	ManagerAccess.Data.EB.Log.Info().Msg("OperatingSystem: successfully registered the DeleteOperatingSystem workflow")
+
+	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(osManager.CreateOperatingSystemOnSite)
+	ManagerAccess.Data.EB.Log.Info().Msg("OperatingSystem: successfully registered CreateOperatingSystemOnSite activity")
+
+	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(osManager.UpdateOperatingSystemOnSite)
+	ManagerAccess.Data.EB.Log.Info().Msg("OperatingSystem: successfully registered UpdateOperatingSystemOnSite activity")
+
+	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(osManager.DeleteOperatingSystemOnSite)
+	ManagerAccess.Data.EB.Log.Info().Msg("OperatingSystem: successfully registered DeleteOperatingSystemOnSite activity")
 
 	return nil
 }

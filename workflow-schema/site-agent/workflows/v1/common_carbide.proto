@@ -128,3 +128,9 @@ enum SystemPowerControl {
   // AC powercycle. This is equivalent to unplugging and reconnecting power cables. Not supported on Vikings.
   SYSTEM_POWER_CONTROL_AC_POWERCYCLE = 6;
 }
+message OperatingSystemId {
+  string value = 1;
+}
+message IpxeTemplateId {
+  string value = 1;
+}

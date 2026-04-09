@@ -46,8 +46,16 @@ type OperatingSystem struct {
 	RootFsId NullableString `json:"rootFsId,omitempty"`
 	// Root filesystem label, only applicable for image based Operating System
 	RootFsLabel NullableString `json:"rootFsLabel,omitempty"`
-	// iPXE script or URL, only applicable for iPXE based Operating System
+	// iPXE script or URL, only applicable for iPXE based Operating System. Mutually exclusive with ipxeTemplateName
 	IpxeScript NullableString `json:"ipxeScript,omitempty"`
+	// Name of the iPXE template used by this Operating System. Mutually exclusive with ipxeScript
+	IpxeTemplateName NullableString `json:"ipxeTemplateName,omitempty"`
+	// Parameters passed to the iPXE template for variable substitution
+	IpxeParameters []IpxeScriptParameter `json:"ipxeParameters,omitempty"`
+	// Artifacts (kernel, initrd, etc.) for the iPXE OS definition
+	IpxeArtifacts []IpxeScriptArtifact `json:"ipxeArtifacts,omitempty"`
+	// Synchronization scope. Only meaningful for iPXE-based OSes
+	Scope NullableString `json:"scope,omitempty"`
 	// User data for the Operating System
 	UserData NullableString `json:"userData,omitempty"`
 	// Specified when the Operating System is Cloud Init based
@@ -647,6 +655,156 @@ func (o *OperatingSystem) UnsetIpxeScript() {
 	o.IpxeScript.Unset()
 }
 
+// GetIpxeTemplateName returns the IpxeTemplateName field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *OperatingSystem) GetIpxeTemplateName() string {
+	if o == nil || IsNil(o.IpxeTemplateName.Get()) {
+		var ret string
+		return ret
+	}
+	return *o.IpxeTemplateName.Get()
+}
+
+// GetIpxeTemplateNameOk returns a tuple with the IpxeTemplateName field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *OperatingSystem) GetIpxeTemplateNameOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return o.IpxeTemplateName.Get(), o.IpxeTemplateName.IsSet()
+}
+
+// HasIpxeTemplateName returns a boolean if a field has been set.
+func (o *OperatingSystem) HasIpxeTemplateName() bool {
+	if o != nil && o.IpxeTemplateName.IsSet() {
+		return true
+	}
+
+	return false
+}
+
+// SetIpxeTemplateName gets a reference to the given NullableString and assigns it to the IpxeTemplateName field.
+func (o *OperatingSystem) SetIpxeTemplateName(v string) {
+	o.IpxeTemplateName.Set(&v)
+}
+
+// SetIpxeTemplateNameNil sets the value for IpxeTemplateName to be an explicit nil
+func (o *OperatingSystem) SetIpxeTemplateNameNil() {
+	o.IpxeTemplateName.Set(nil)
+}
+
+// UnsetIpxeTemplateName ensures that no value is present for IpxeTemplateName, not even an explicit nil
+func (o *OperatingSystem) UnsetIpxeTemplateName() {
+	o.IpxeTemplateName.Unset()
+}
+
+// GetIpxeParameters returns the IpxeParameters field value if set, zero value otherwise.
+func (o *OperatingSystem) GetIpxeParameters() []IpxeScriptParameter {
+	if o == nil || IsNil(o.IpxeParameters) {
+		var ret []IpxeScriptParameter
+		return ret
+	}
+	return o.IpxeParameters
+}
+
+// GetIpxeParametersOk returns a tuple with the IpxeParameters field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *OperatingSystem) GetIpxeParametersOk() ([]IpxeScriptParameter, bool) {
+	if o == nil || IsNil(o.IpxeParameters) {
+		return nil, false
+	}
+	return o.IpxeParameters, true
+}
+
+// HasIpxeParameters returns a boolean if a field has been set.
+func (o *OperatingSystem) HasIpxeParameters() bool {
+	if o != nil && !IsNil(o.IpxeParameters) {
+		return true
+	}
+
+	return false
+}
+
+// SetIpxeParameters gets a reference to the given []IpxeScriptParameter and assigns it to the IpxeParameters field.
+func (o *OperatingSystem) SetIpxeParameters(v []IpxeScriptParameter) {
+	o.IpxeParameters = v
+}
+
+// GetIpxeArtifacts returns the IpxeArtifacts field value if set, zero value otherwise.
+func (o *OperatingSystem) GetIpxeArtifacts() []IpxeScriptArtifact {
+	if o == nil || IsNil(o.IpxeArtifacts) {
+		var ret []IpxeScriptArtifact
+		return ret
+	}
+	return o.IpxeArtifacts
+}
+
+// GetIpxeArtifactsOk returns a tuple with the IpxeArtifacts field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *OperatingSystem) GetIpxeArtifactsOk() ([]IpxeScriptArtifact, bool) {
+	if o == nil || IsNil(o.IpxeArtifacts) {
+		return nil, false
+	}
+	return o.IpxeArtifacts, true
+}
+
+// HasIpxeArtifacts returns a boolean if a field has been set.
+func (o *OperatingSystem) HasIpxeArtifacts() bool {
+	if o != nil && !IsNil(o.IpxeArtifacts) {
+		return true
+	}
+
+	return false
+}
+
+// SetIpxeArtifacts gets a reference to the given []IpxeScriptArtifact and assigns it to the IpxeArtifacts field.
+func (o *OperatingSystem) SetIpxeArtifacts(v []IpxeScriptArtifact) {
+	o.IpxeArtifacts = v
+}
+
+// GetScope returns the Scope field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *OperatingSystem) GetScope() string {
+	if o == nil || IsNil(o.Scope.Get()) {
+		var ret string
+		return ret
+	}
+	return *o.Scope.Get()
+}
+
+// GetScopeOk returns a tuple with the Scope field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *OperatingSystem) GetScopeOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return o.Scope.Get(), o.Scope.IsSet()
+}
+
+// HasScope returns a boolean if a field has been set.
+func (o *OperatingSystem) HasScope() bool {
+	if o != nil && o.Scope.IsSet() {
+		return true
+	}
+
+	return false
+}
+
+// SetScope gets a reference to the given NullableString and assigns it to the Scope field.
+func (o *OperatingSystem) SetScope(v string) {
+	o.Scope.Set(&v)
+}
+
+// SetScopeNil sets the value for Scope to be an explicit nil
+func (o *OperatingSystem) SetScopeNil() {
+	o.Scope.Set(nil)
+}
+
+// UnsetScope ensures that no value is present for Scope, not even an explicit nil
+func (o *OperatingSystem) UnsetScope() {
+	o.Scope.Unset()
+}
+
 // GetUserData returns the UserData field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *OperatingSystem) GetUserData() string {
 	if o == nil || IsNil(o.UserData.Get()) {
@@ -1072,6 +1230,18 @@ func (o OperatingSystem) ToMap() (map[string]interface{}, error) {
 	}
 	if o.IpxeScript.IsSet() {
 		toSerialize["ipxeScript"] = o.IpxeScript.Get()
+	}
+	if o.IpxeTemplateName.IsSet() {
+		toSerialize["ipxeTemplateName"] = o.IpxeTemplateName.Get()
+	}
+	if !IsNil(o.IpxeParameters) {
+		toSerialize["ipxeParameters"] = o.IpxeParameters
+	}
+	if !IsNil(o.IpxeArtifacts) {
+		toSerialize["ipxeArtifacts"] = o.IpxeArtifacts
+	}
+	if o.Scope.IsSet() {
+		toSerialize["scope"] = o.Scope.Get()
 	}
 	if o.UserData.IsSet() {
 		toSerialize["userData"] = o.UserData.Get()

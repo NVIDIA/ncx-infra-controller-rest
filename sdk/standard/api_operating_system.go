@@ -43,13 +43,17 @@ CreateOperatingSystem Create Operating System
 
 Create an Operating System for the org.
 
-Either `infrastructureProviderId` or `tenantId` must be provided in request data. Both cannot be provided at the same time.
+Either `infrastructureProviderId` or `tenantId` must be provided in request data. Both cannot be provided at the same time. For iPXE template-based OS definitions, Provider Admin may omit `tenantId` and have ownership resolved automatically.
 
 If `infrastructureProviderId` is provided in request data, then org must have an Infrastructure Provider entity and its ID should match the query param value. User must have `FORGE_PROVIDER_ADMIN` role.
 
 If `tenantId` is provided in request data, then org must have a Tenant entity and its ID should match the query param value. User must have `FORGE_TENANT_ADMIN` role.
 
-Only Tenants are allowed to create Operating System for MVP.
+Provider Admins can create iPXE template-based Operating Systems (using `ipxeTemplateName`). Tenants can create iPXE script-based or Image-based Operating Systems.
+
+`ipxeScript`, `ipxeTemplateName`, and `imageUrl` are mutually exclusive — only one may be specified. When `ipxeTemplateName` is used, `ipxeParameters` and `ipxeArtifacts` can be provided to configure the template.
+
+The `scope` field controls synchronization direction for iPXE OSes: `local` (bidirectional, default), `global` (rest-to-core for all sites), or `limited` (rest-to-core for sites in `siteIds`).
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
