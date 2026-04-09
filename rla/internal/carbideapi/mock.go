@@ -211,6 +211,10 @@ func (c *mockClient) FindExploredEndpointsByIds(_ context.Context, _ []string) (
 	return nil, nil
 }
 
+func (c *mockClient) SetMachineAutoUpdate(_ context.Context, _ string, _ bool) error {
+	return nil
+}
+
 func (c *mockClient) AddExpectedSwitchInfo(info ExpectedSwitchInfo) {
 	c.expectedSwitches[utils.NormalizeMAC(info.BMCMACAddress)] = info
 }

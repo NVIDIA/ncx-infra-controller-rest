@@ -587,6 +587,25 @@ func (c *grpcClient) FindExploredEndpointsByIds(ctx context.Context, bmcIPs []st
 	return resp.GetEndpoints(), nil
 }
 
+func (c *grpcClient) SetMachineAutoUpdate(ctx context.Context, machineID string, enable bool) error {
+	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
+	defer cancel()
+
+	action := pb.MachineSetAutoUpdateRequest_Enable
+	if !enable {
+		action = pb.MachineSetAutoUpdateRequest_Disable
+	}
+
+	_, err := c.gclient.MachineSetAutoUpdate(ctx, &pb.MachineSetAutoUpdateRequest{
+		MachineId: &pb.MachineId{Id: machineID},
+		Action:    action,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to set auto-update for machine %s: %w", machineID, err)
+	}
+	return nil
+}
+
 func (c *grpcClient) AddMachine(machine MachineDetail) {
 	panic("Not a unit test")
 }

@@ -327,10 +327,15 @@ func (m *Manager) FirmwareControl(ctx context.Context, target common.Target, inf
 		targetFirmware = parsedTarget
 	}
 
+	machinesByID := make(map[string]carbideapi.MachineDetail)
 	machines, err := m.carbideClient.FindMachinesByIds(ctx, target.ComponentIDs)
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to check machines, proceeding with schedule")
 	} else {
+		for _, machine := range machines {
+			machinesByID[machine.MachineID] = machine
+		}
+
 		actualFirmware := m.getActualFirmwareVersions(ctx, machines)
 
 		log.Debug().
@@ -372,6 +377,17 @@ func (m *Manager) FirmwareControl(ctx context.Context, target common.Target, inf
 			return fmt.Errorf("firmware window start_time (%s) must be before end_time (%s)",
 				startTime.Format(time.RFC3339), endTime.Format(time.RFC3339))
 		}
+	}
+
+	for _, machineID := range target.ComponentIDs {
+		if m, ok := machinesByID[machineID]; ok && m.FirmwareAutoupdate != nil && *m.FirmwareAutoupdate {
+			log.Debug().Str("machine_id", machineID).Msg("firmware_autoupdate already enabled, skipping SetMachineAutoUpdate")
+			continue
+		}
+		if err := m.carbideClient.SetMachineAutoUpdate(ctx, machineID, true); err != nil {
+			return fmt.Errorf("failed to enable auto-update for machine %s: %w", machineID, err)
+		}
+		log.Debug().Str("machine_id", machineID).Msg("Enabled firmware_autoupdate on machine")
 	}
 
 	if err := m.carbideClient.SetFirmwareUpdateTimeWindow(ctx, target.ComponentIDs, startTime, endTime); err != nil {
