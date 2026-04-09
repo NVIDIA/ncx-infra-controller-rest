@@ -142,6 +142,7 @@ message RegisterPowershelvesResponse {
 
 message PowershelfRequest {
     repeated string pmc_macs = 1;
+    repeated PowerTarget targets = 2;
 }
 
 message PowershelfResponse {
@@ -152,6 +153,14 @@ message PowershelfResponse {
 
 message PowerControlResponse {
     repeated PowershelfResponse responses = 1;
+}
+
+// PowerTarget allows power control against a device without prior registration.
+// Only IP and credentials are required; the registry and credential manager are bypassed.
+message PowerTarget {
+    string pmc_ip = 1;
+    Credentials credentials = 2;
+    PMCVendor vendor = 3;
 }
 
 message GetPowershelvesResponse {

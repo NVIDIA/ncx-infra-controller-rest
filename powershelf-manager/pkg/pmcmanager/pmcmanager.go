@@ -20,13 +20,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
+	"time"
+
+	log "github.com/sirupsen/logrus"
+
 	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/credentials"
 	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/objects/pmc"
 	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/objects/powershelf"
 	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/pmcregistry"
 	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/redfish"
-	"net"
-	"time"
 )
 
 const redfishTimeout = time.Minute * 1
@@ -128,6 +131,21 @@ func (pm *PmcManager) PowerControl(ctx context.Context, mac net.HardwareAddr, on
 	if err != nil {
 		return err
 	}
+	return pm.powerControlPmc(ctx, pmc, on)
+}
+
+// PowerControlDirect performs a power action on a PMC using pre-built connection
+// details, bypassing registry and credential manager lookups.
+func (pm *PmcManager) PowerControlDirect(ctx context.Context, pmc *pmc.PMC, on bool) error {
+	return pm.powerControlPmc(ctx, pmc, on)
+}
+
+func (pm *PmcManager) powerControlPmc(ctx context.Context, pmc *pmc.PMC, on bool) error {
+	action := "off"
+	if on {
+		action = "on"
+	}
+	log.Infof("Power %s initiated for %s", action, pmc.IP)
 
 	tx := func(client *redfish.RedfishClient) error {
 		if on {
@@ -137,7 +155,6 @@ func (pm *PmcManager) PowerControl(ctx context.Context, mac net.HardwareAddr, on
 		}
 		return nil
 	}
-
 	return pm.RedfishTx(ctx, pmc, tx)
 }
 
