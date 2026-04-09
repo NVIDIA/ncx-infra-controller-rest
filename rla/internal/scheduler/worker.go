@@ -42,6 +42,13 @@ func (w *worker) run(workCh <-chan workItem) {
 }
 
 func (w *worker) runJob(item workItem) {
+	defer item.cancel()
+	// Skip the job if the context was already cancelled before we started.
+	// This handles the race where forceStop cancels all contexts after the
+	// dispatcher sent the workItem but before the worker begins execution.
+	if item.ctx.Err() != nil {
+		return
+	}
 	start := time.Now()
 	log.Info().Str("job", w.job.Name()).Msg("job started")
 

@@ -136,11 +136,13 @@ func (s *Scheduler) Start(ctx context.Context) error {
 			close(e.eventCh)
 		}(e)
 
-		// 2. relay wrapper: runs relay.run (g1 + g2 internally)
+		// 2. relay wrapper: runs relay.run (g1 + g2 internally).
+		// relay.run does not receive runCtx; it stops via channel cascade:
+		// trigger closes eventCh → g1 closes notifyCh → g2 exits → workCh closed.
 		s.wg.Add(1)
 		go func(e *entry) {
 			defer s.wg.Done()
-			e.relay.run(runCtx) // closes e.workCh on return
+			e.relay.run() // closes e.workCh on return
 		}(e)
 
 		// 3. worker wrapper: runs worker.run until workCh is closed
@@ -189,6 +191,16 @@ func (s *Scheduler) Stop(force bool) error {
 
 	runCancel()
 	s.wg.Wait()
+
+	// Cancel each relay's forceCtx to release the monitoring goroutine
+	// allocated by context.WithCancel. All worker goroutines have exited by
+	// this point (wg.Wait returned), so no job context is in use and
+	// cancellation is purely a resource cleanup. In the force path this is a
+	// no-op because forceStop already called forceCancel; in the graceful
+	// path this is the sole call site.
+	for i := range s.entries {
+		s.entries[i].relay.forceCancel()
+	}
 
 	return nil
 }

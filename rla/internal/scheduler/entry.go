@@ -41,13 +41,11 @@ type entry struct {
 }
 
 // workItem is the unit of work dispatched from relay to worker.
-// ctx is a cancellable context for the job. For Skip, Queue, and Replace
-// policies it is a child of the scheduler's run context; for QueueAll it
-// is a child of context.Background() so that Stop(false) cancelling the
-// run context does not cut short the guaranteed flush. In all cases
-// relay.forceStop can abort the in-flight job by cancelling the context
-// directly via dispatchBase.cancelCurrent.
+// ctx is a cancellable context for the job, derived from relay.forceCtx so
+// that relay.forceStop cancels all in-flight jobs atomically by cancelling
+// the parent context — no per-job registration race is possible.
 type workItem struct {
-	ctx context.Context
-	ev  types.Event
+	ctx    context.Context
+	cancel context.CancelFunc
+	ev     types.Event
 }

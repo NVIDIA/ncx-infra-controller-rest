@@ -42,87 +42,67 @@ import (
 // forceCh is closed by forceStop to signal dispatchers to exit immediately
 // without draining the queue.
 type relay struct {
-	entry      *entry
-	mu         sync.Mutex
-	queue      []types.Event
-	notifyCh   chan struct{} // g1 → g2 signal (cap 1); closed by g1 on exit
-	forceCh    chan struct{} // closed by forceStop; signals immediate exit
-	dispatcher dispatcher
+	entry       *entry
+	mu          sync.Mutex
+	queue       []types.Event
+	notifyCh    chan struct{}      // g1 → g2 signal (cap 1); closed by g1 on exit
+	forceCh     chan struct{}      // closed by forceStop; signals immediate exit
+	forceCtx    context.Context    // parent context for all job contexts
+	forceCancel context.CancelFunc // cancelled by forceStop to abort all in-flight jobs
+	dispatcher  dispatcher
 }
 
 func newRelay(e *entry) *relay {
+	forceCtx, forceCancel := context.WithCancel(context.Background())
 	return &relay{
-		entry:      e,
-		notifyCh:   make(chan struct{}, 1),
-		forceCh:    make(chan struct{}),
-		dispatcher: newPolicyDispatcher(e.policy),
+		entry:       e,
+		notifyCh:    make(chan struct{}, 1),
+		forceCh:     make(chan struct{}),
+		forceCtx:    forceCtx,
+		forceCancel: forceCancel,
+		dispatcher:  newPolicyDispatcher(e.policy),
 	}
 }
 
 // run starts g1 (as a goroutine) and runs g2 (dispatcher.run) inline.
 // It closes entry.workCh on return to signal the worker.
-func (r *relay) run(ctx context.Context) {
+func (r *relay) run() {
 	defer close(r.entry.workCh)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		r.intake(ctx)
+		r.intake()
 	}()
 
-	r.dispatcher.run(ctx, r, r.entry.workCh) // blocks until g2 is done
-	wg.Wait()                                // wait for g1 to exit
+	r.dispatcher.run(r, r.entry.workCh) // blocks until g2 is done
+	wg.Wait()                           // wait for g1 to exit
 }
 
 // intake (g1) reads events from entry.eventCh, appends them to the queue, and
-// pings g2 via notifyCh. It exits when eventCh is closed or ctx is cancelled,
-// closing notifyCh to signal g2 that no more events will arrive.
-func (r *relay) intake(ctx context.Context) {
+// pings g2 via notifyCh. It exits when eventCh is closed (by the trigger
+// goroutine), closing notifyCh to signal g2 that no more events will arrive.
+// g1 never selects on ctx directly; the trigger goroutine is the sole consumer
+// of runCtx and closes eventCh when it stops, which in turn stops g1.
+func (r *relay) intake() {
 	defer close(r.notifyCh)
 
-	for {
+	for ev := range r.entry.eventCh {
+		r.mu.Lock()
+		if len(r.queue) >= maxQueueSize {
+			// Drop the oldest event to make room, preserving recent state.
+			r.queue = r.queue[1:]
+			log.Warn().Str("job", r.entry.job.Name()).
+				Msg("relay queue full, dropping oldest event")
+		}
+		r.queue = append(r.queue, ev)
+		r.mu.Unlock()
+		// Non-blocking ping: if notifyCh already has a pending signal,
+		// g2 will pick up the newly added item on its next wake.
 		select {
-		case ev, ok := <-r.entry.eventCh:
-			if !ok {
-				return
-			}
-			r.mu.Lock()
-			if len(r.queue) >= maxQueueSize {
-				// Drop the oldest event to make room, preserving recent state.
-				r.queue = r.queue[1:]
-				log.Warn().Str("job", r.entry.job.Name()).
-					Msg("relay queue full, dropping oldest event")
-			}
-			r.queue = append(r.queue, ev)
-			r.mu.Unlock()
-			// Non-blocking ping: if notifyCh already has a pending signal,
-			// g2 will pick up the newly added item on its next wake.
-			select {
-			case r.notifyCh <- struct{}{}:
-			default:
-			}
-		case <-ctx.Done():
-			// Graceful shutdown: drain any events the trigger already emitted
-			// into eventCh so they reach the relay queue before g2 exits.
-			// The trigger goroutine closes eventCh when its Emit returns
-			// (which it does promptly on ctx cancellation), so this loop is
-			// bounded.
-			for ev := range r.entry.eventCh {
-				r.mu.Lock()
-				if len(r.queue) >= maxQueueSize {
-					r.queue = r.queue[1:]
-					log.Warn().Str("job", r.entry.job.Name()).
-						Msg("relay queue full, dropping oldest event")
-				}
-				r.queue = append(r.queue, ev)
-				r.mu.Unlock()
-				select {
-				case r.notifyCh <- struct{}{}:
-				default:
-				}
-			}
-			return
+		case r.notifyCh <- struct{}{}:
+		default:
 		}
 	}
 }
@@ -134,6 +114,11 @@ func (r *relay) forceStop() {
 	r.mu.Lock()
 	r.queue = r.queue[:0]
 	r.mu.Unlock()
-	r.dispatcher.cancel()
+	// Close forceCh before cancelling job contexts. This ensures that any
+	// dispatcher blocked on a workCh send sees forceCh (worker is still busy
+	// with the current job) and exits without dispatching further events.
+	// Calling forceCancel first would free the worker prematurely, allowing
+	// the pending send to complete before the dispatcher sees forceCh.
 	close(r.forceCh)
+	r.forceCancel() // cancels all job contexts derived from forceCtx
 }
