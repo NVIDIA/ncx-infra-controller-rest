@@ -1692,6 +1692,52 @@ func (mi ManageInstance) deleteInstanceFromDB(ctx context.Context, tx *cdb.Tx, i
 		}
 	}
 
+	// Delete InfiniBand interface(s) corresponding to instance
+	ibiDAO := cdbm.NewInfiniBandInterfaceDAO(mi.dbSession)
+	ibis, _, err := ibiDAO.GetAll(ctx, tx, cdbm.InfiniBandInterfaceFilterInput{InstanceIDs: []uuid.UUID{instance.ID}}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
+	if err != nil {
+		logger.Error().Err(err).Msg("failed to retrieve InfiniBand interfaces from DB")
+		terr := tx.Rollback()
+		if terr != nil {
+			logger.Error().Err(terr).Msg("failed to rollback transaction")
+		}
+		return err
+	}
+	for _, ibi := range ibis {
+		serr := ibiDAO.Delete(ctx, tx, ibi.ID)
+		if serr != nil {
+			logger.Error().Err(serr).Msg("failed to delete InfiniBand interface for instance from DB")
+			terr := tx.Rollback()
+			if terr != nil {
+				logger.Error().Err(terr).Msg("failed to rollback transaction")
+			}
+			return serr
+		}
+	}
+
+	// Delete NVLink interface(s) corresponding to instance
+	nvliDAO := cdbm.NewNVLinkInterfaceDAO(mi.dbSession)
+	nvlis, _, err := nvliDAO.GetAll(ctx, tx, cdbm.NVLinkInterfaceFilterInput{InstanceIDs: []uuid.UUID{instance.ID}}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
+	if err != nil {
+		logger.Error().Err(err).Msg("failed to retrieve NVLink interfaces from DB")
+		terr := tx.Rollback()
+		if terr != nil {
+			logger.Error().Err(terr).Msg("failed to rollback transaction")
+		}
+		return err
+	}
+	for _, nvli := range nvlis {
+		serr := nvliDAO.Delete(ctx, tx, nvli.ID)
+		if serr != nil {
+			logger.Error().Err(serr).Msg("failed to delete NVLink interface for instance from DB")
+			terr := tx.Rollback()
+			if terr != nil {
+				logger.Error().Err(terr).Msg("failed to rollback transaction")
+			}
+			return serr
+		}
+	}
+
 	// Delete SSH Key Group Instance associations
 	skgiaDAO := cdbm.NewSSHKeyGroupInstanceAssociationDAO(mi.dbSession)
 	skgias, _, err := skgiaDAO.GetAll(ctx, tx, nil, nil, []uuid.UUID{instance.ID}, nil, nil, cdb.GetIntPtr(cdbp.TotalLimit), nil)
