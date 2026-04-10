@@ -37,10 +37,7 @@ func init() {
 			UPDATE infiniband_interface ibi
 			SET deleted = CURRENT_TIMESTAMP, updated = CURRENT_TIMESTAMP
 			WHERE ibi.deleted IS NULL
-			AND NOT EXISTS (
-				SELECT 1 FROM instance i
-				WHERE i.id = ibi.instance_id AND i.deleted IS NULL
-			)`)
+			AND ibi.instance_id NOT IN (SELECT id FROM instance WHERE deleted IS NULL)`)
 		handleError(tx, err)
 
 		// Soft-delete NVLink interfaces with no active instance.
@@ -48,10 +45,7 @@ func init() {
 			UPDATE nvlink_interface nvli
 			SET deleted = CURRENT_TIMESTAMP, updated = CURRENT_TIMESTAMP
 			WHERE nvli.deleted IS NULL
-			AND NOT EXISTS (
-				SELECT 1 FROM instance i
-				WHERE i.id = nvli.instance_id AND i.deleted IS NULL
-			)`)
+			AND nvli.instance_id NOT IN (SELECT id FROM instance WHERE deleted IS NULL)`)
 		handleError(tx, err)
 
 		terr = tx.Commit()
