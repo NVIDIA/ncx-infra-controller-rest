@@ -317,7 +317,7 @@ func cmdSiteCreate(s *Session, _ []string) error {
 
 	LogCmd(s, "site", "create", "--name", name)
 	bodyJSON, _ := json.Marshal(body)
-	resp, _, err := s.Client.Do("POST", "/v2/org/{org}/carbide/site", nil, nil, bodyJSON)
+	resp, _, err := s.Client.Do("POST", apiPath(s, "site"), nil, nil, bodyJSON)
 	if err != nil {
 		return fmt.Errorf("creating site: %w", err)
 	}
@@ -430,7 +430,7 @@ func cmdSiteUpdate(s *Session, args []string) error {
 
 	LogCmd(s, "site", "update", item.ID)
 	bodyJSON, _ := json.Marshal(body)
-	resp, _, err := s.Client.Do("PATCH", "/v2/org/{org}/carbide/site/{id}", map[string]string{"id": item.ID}, nil, bodyJSON)
+	resp, _, err := s.Client.Do("PATCH", apiPath(s, "site/{id}"), map[string]string{"id": item.ID}, nil, bodyJSON)
 	if err != nil {
 		return fmt.Errorf("updating site: %w", err)
 	}
@@ -460,7 +460,7 @@ func cmdSiteDelete(s *Session, args []string) error {
 		query["purgeMachines"] = "true"
 	}
 	LogCmd(s, "site", "delete", item.ID)
-	_, _, err = s.Client.Do("DELETE", "/v2/org/{org}/carbide/site/{id}", map[string]string{"id": item.ID}, query, nil)
+	_, _, err = s.Client.Do("DELETE", apiPath(s, "site/{id}"), map[string]string{"id": item.ID}, query, nil)
 	if err != nil {
 		return fmt.Errorf("deleting site: %w", err)
 	}
@@ -527,7 +527,7 @@ func cmdVPCCreate(s *Session, _ []string) error {
 	}
 	LogCmd(s, "vpc", "create", "--name", name, "--site-id", site.ID)
 	bodyJSON, _ := json.Marshal(body)
-	resp, _, err := s.Client.Do("POST", "/v2/org/{org}/carbide/vpc", nil, nil, bodyJSON)
+	resp, _, err := s.Client.Do("POST", apiPath(s, "vpc"), nil, nil, bodyJSON)
 	if err != nil {
 		return fmt.Errorf("creating VPC: %w", err)
 	}
@@ -563,7 +563,7 @@ func cmdVPCUpdate(s *Session, args []string) error {
 	}
 	LogCmd(s, "vpc", "update", vpc.ID)
 	bodyJSON, _ := json.Marshal(body)
-	resp, _, err := s.Client.Do("PATCH", "/v2/org/{org}/carbide/vpc/{id}", map[string]string{"id": vpc.ID}, nil, bodyJSON)
+	resp, _, err := s.Client.Do("PATCH", apiPath(s, "vpc/{id}"), map[string]string{"id": vpc.ID}, nil, bodyJSON)
 	if err != nil {
 		return fmt.Errorf("updating VPC: %w", err)
 	}
@@ -606,7 +606,7 @@ func cmdVPCVirtualizationUpdate(s *Session, args []string) error {
 	}
 	LogCmd(s, "vpc", "virtualization", "update", vpc.ID, "--network-virtualization-type", virtType)
 	bodyJSON, _ := json.Marshal(body)
-	resp, _, err := s.Client.Do("PATCH", "/v2/org/{org}/carbide/vpc/{id}/virtualization", map[string]string{"id": vpc.ID}, nil, bodyJSON)
+	resp, _, err := s.Client.Do("PATCH", apiPath(s, "vpc/{id}/virtualization"), map[string]string{"id": vpc.ID}, nil, bodyJSON)
 	if err != nil {
 		return fmt.Errorf("updating VPC virtualization: %w", err)
 	}
@@ -628,7 +628,7 @@ func cmdVPCDelete(s *Session, args []string) error {
 		return err
 	}
 	LogCmd(s, "vpc", "delete", vpc.ID)
-	_, _, err = s.Client.Do("DELETE", "/v2/org/{org}/carbide/vpc/{id}", map[string]string{"id": vpc.ID}, nil, nil)
+	_, _, err = s.Client.Do("DELETE", apiPath(s, "vpc/{id}"), map[string]string{"id": vpc.ID}, nil, nil)
 	if err != nil {
 		return fmt.Errorf("deleting VPC: %w", err)
 	}
@@ -712,7 +712,7 @@ func cmdSubnetCreate(s *Session, _ []string) error {
 	}
 	LogCmd(s, "subnet", "create", "--name", name, "--vpc-id", vpc.ID, "--ipv4-block-id", block.ID, "--prefix-length", prefixLenText)
 	bodyJSON, _ := json.Marshal(body)
-	resp, _, err := s.Client.Do("POST", "/v2/org/{org}/carbide/subnet", nil, nil, bodyJSON)
+	resp, _, err := s.Client.Do("POST", apiPath(s, "subnet"), nil, nil, bodyJSON)
 	if err != nil {
 		return fmt.Errorf("creating subnet: %w", err)
 	}
@@ -749,7 +749,7 @@ func cmdSubnetUpdate(s *Session, args []string) error {
 	}
 	LogCmd(s, "subnet", "update", subnet.ID)
 	bodyJSON, _ := json.Marshal(body)
-	resp, _, err := s.Client.Do("PATCH", "/v2/org/{org}/carbide/subnet/{id}", map[string]string{"id": subnet.ID}, nil, bodyJSON)
+	resp, _, err := s.Client.Do("PATCH", apiPath(s, "subnet/{id}"), map[string]string{"id": subnet.ID}, nil, bodyJSON)
 	if err != nil {
 		return fmt.Errorf("updating subnet: %w", err)
 	}
@@ -771,7 +771,7 @@ func cmdSubnetDelete(s *Session, args []string) error {
 		return err
 	}
 	LogCmd(s, "subnet", "delete", subnet.ID)
-	_, _, err = s.Client.Do("DELETE", "/v2/org/{org}/carbide/subnet/{id}", map[string]string{"id": subnet.ID}, nil, nil)
+	_, _, err = s.Client.Do("DELETE", apiPath(s, "subnet/{id}"), map[string]string{"id": subnet.ID}, nil, nil)
 	if err != nil {
 		return fmt.Errorf("deleting subnet: %w", err)
 	}
@@ -814,7 +814,7 @@ func cmdInstanceTypeGet(s *Session, args []string) error {
 		return err
 	}
 	LogCmd(s, "instance-type", "get", item.ID)
-	return getAndPrint(s, "/v2/org/{org}/carbide/instance/type/{id}", item.ID)
+	return getAndPrint(s, apiPath(s, "instance/type/{id}"), item.ID)
 }
 
 func cmdInstanceList(s *Session, args []string) error {
@@ -953,7 +953,7 @@ func cmdOSCreate(s *Session, _ []string) error {
 	}
 	LogCmd(s, "operating-system", "create", "--name", name)
 	bodyJSON, _ := json.Marshal(body)
-	resp, _, err := s.Client.Do("POST", "/v2/org/{org}/carbide/operating-system", nil, nil, bodyJSON)
+	resp, _, err := s.Client.Do("POST", apiPath(s, "operating-system"), nil, nil, bodyJSON)
 	if err != nil {
 		return fmt.Errorf("creating operating system: %w", err)
 	}
@@ -1035,7 +1035,7 @@ func cmdOSUpdate(s *Session, args []string) error {
 	}
 	LogCmd(s, "operating-system", "update", item.ID)
 	bodyJSON, _ := json.Marshal(body)
-	resp, _, err := s.Client.Do("PATCH", "/v2/org/{org}/carbide/operating-system/{id}", map[string]string{"id": item.ID}, nil, bodyJSON)
+	resp, _, err := s.Client.Do("PATCH", apiPath(s, "operating-system/{id}"), map[string]string{"id": item.ID}, nil, bodyJSON)
 	if err != nil {
 		return fmt.Errorf("updating operating system: %w", err)
 	}
@@ -1057,7 +1057,7 @@ func cmdOSDelete(s *Session, args []string) error {
 		return err
 	}
 	LogCmd(s, "operating-system", "delete", item.ID)
-	_, _, err = s.Client.Do("DELETE", "/v2/org/{org}/carbide/operating-system/{id}", map[string]string{"id": item.ID}, nil, nil)
+	_, _, err = s.Client.Do("DELETE", apiPath(s, "operating-system/{id}"), map[string]string{"id": item.ID}, nil, nil)
 	if err != nil {
 		return fmt.Errorf("deleting operating system: %w", err)
 	}
@@ -1108,7 +1108,7 @@ func cmdSSHKeyGroupCreate(s *Session, _ []string) error {
 
 	LogCmd(s, "ssh-key-group", "create", "--name", name)
 	bodyJSON, _ := json.Marshal(body)
-	resp, _, err := s.Client.Do("POST", "/v2/org/{org}/carbide/ssh-key-group", nil, nil, bodyJSON)
+	resp, _, err := s.Client.Do("POST", apiPath(s, "ssh-key-group"), nil, nil, bodyJSON)
 	if err != nil {
 		return fmt.Errorf("creating SSH key group: %w", err)
 	}
@@ -1167,7 +1167,7 @@ func cmdSSHKeyGroupUpdate(s *Session, args []string) error {
 
 	LogCmd(s, "ssh-key-group", "update", item.ID)
 	bodyJSON, _ := json.Marshal(body)
-	resp, _, err := s.Client.Do("PATCH", "/v2/org/{org}/carbide/ssh-key-group/{id}", map[string]string{"id": item.ID}, nil, bodyJSON)
+	resp, _, err := s.Client.Do("PATCH", apiPath(s, "ssh-key-group/{id}"), map[string]string{"id": item.ID}, nil, bodyJSON)
 	if err != nil {
 		return fmt.Errorf("updating SSH key group: %w", err)
 	}
@@ -1189,7 +1189,7 @@ func cmdSSHKeyGroupDelete(s *Session, args []string) error {
 		return err
 	}
 	LogCmd(s, "ssh-key-group", "delete", item.ID)
-	_, _, err = s.Client.Do("DELETE", "/v2/org/{org}/carbide/ssh-key-group/{id}", map[string]string{"id": item.ID}, nil, nil)
+	_, _, err = s.Client.Do("DELETE", apiPath(s, "ssh-key-group/{id}"), map[string]string{"id": item.ID}, nil, nil)
 	if err != nil {
 		return fmt.Errorf("deleting SSH key group: %w", err)
 	}
@@ -1236,7 +1236,7 @@ func cmdSSHKeyCreate(s *Session, _ []string) error {
 	}
 	LogCmd(s, "ssh-key", "create", "--name", name)
 	bodyJSON, _ := json.Marshal(body)
-	resp, _, err := s.Client.Do("POST", "/v2/org/{org}/carbide/ssh-key", nil, nil, bodyJSON)
+	resp, _, err := s.Client.Do("POST", apiPath(s, "ssh-key"), nil, nil, bodyJSON)
 	if err != nil {
 		return fmt.Errorf("creating SSH key: %w", err)
 	}
@@ -1263,7 +1263,7 @@ func cmdSSHKeyUpdate(s *Session, args []string) error {
 	}
 	LogCmd(s, "ssh-key", "update", item.ID, "--name", strings.TrimSpace(name))
 	bodyJSON, _ := json.Marshal(body)
-	resp, _, err := s.Client.Do("PATCH", "/v2/org/{org}/carbide/ssh-key/{id}", map[string]string{"id": item.ID}, nil, bodyJSON)
+	resp, _, err := s.Client.Do("PATCH", apiPath(s, "ssh-key/{id}"), map[string]string{"id": item.ID}, nil, bodyJSON)
 	if err != nil {
 		return fmt.Errorf("updating SSH key: %w", err)
 	}
@@ -1286,7 +1286,7 @@ func cmdSSHKeyDelete(s *Session, args []string) error {
 		return err
 	}
 	LogCmd(s, "ssh-key", "delete", item.ID)
-	_, _, err = s.Client.Do("DELETE", "/v2/org/{org}/carbide/ssh-key/{id}", map[string]string{"id": item.ID}, nil, nil)
+	_, _, err = s.Client.Do("DELETE", apiPath(s, "ssh-key/{id}"), map[string]string{"id": item.ID}, nil, nil)
 	if err != nil {
 		return fmt.Errorf("deleting SSH key: %w", err)
 	}
@@ -1340,7 +1340,7 @@ func cmdAllocationCreate(s *Session, _ []string) error {
 	}
 	LogCmd(s, "allocation", "create", "--name", name, "--site-id", site.ID, "--tenant-id", strings.TrimSpace(tenantID))
 	bodyJSON, _ := json.Marshal(body)
-	resp, _, err := s.Client.Do("POST", "/v2/org/{org}/carbide/allocation", nil, nil, bodyJSON)
+	resp, _, err := s.Client.Do("POST", apiPath(s, "allocation"), nil, nil, bodyJSON)
 	if err != nil {
 		return fmt.Errorf("creating allocation: %w", err)
 	}
@@ -1377,7 +1377,7 @@ func cmdAllocationUpdate(s *Session, args []string) error {
 	}
 	LogCmd(s, "allocation", "update", item.ID)
 	bodyJSON, _ := json.Marshal(body)
-	resp, _, err := s.Client.Do("PATCH", "/v2/org/{org}/carbide/allocation/{id}", map[string]string{"id": item.ID}, nil, bodyJSON)
+	resp, _, err := s.Client.Do("PATCH", apiPath(s, "allocation/{id}"), map[string]string{"id": item.ID}, nil, bodyJSON)
 	if err != nil {
 		return fmt.Errorf("updating allocation: %w", err)
 	}
@@ -1437,7 +1437,7 @@ func cmdIPBlockCreate(s *Session, _ []string) error {
 		"prefixLength": pl,
 	}
 	bodyJSON, _ := json.Marshal(body)
-	resp, _, err := s.Client.Do("POST", "/v2/org/{org}/carbide/ip-block", nil, nil, bodyJSON)
+	resp, _, err := s.Client.Do("POST", apiPath(s, "ip-block"), nil, nil, bodyJSON)
 	if err != nil {
 		return fmt.Errorf("creating IP block: %w", err)
 	}
@@ -1473,7 +1473,7 @@ func cmdIPBlockUpdate(s *Session, args []string) error {
 	}
 	LogCmd(s, "ip-block", "update", block.ID)
 	bodyJSON, _ := json.Marshal(body)
-	resp, _, err := s.Client.Do("PATCH", "/v2/org/{org}/carbide/ip-block/{id}", map[string]string{"id": block.ID}, nil, bodyJSON)
+	resp, _, err := s.Client.Do("PATCH", apiPath(s, "ip-block/{id}"), map[string]string{"id": block.ID}, nil, bodyJSON)
 	if err != nil {
 		return fmt.Errorf("updating IP block: %w", err)
 	}
@@ -1495,7 +1495,7 @@ func cmdIPBlockDelete(s *Session, args []string) error {
 		return err
 	}
 	LogCmd(s, "ip-block", "delete", block.ID)
-	_, _, err = s.Client.Do("DELETE", "/v2/org/{org}/carbide/ip-block/{id}", map[string]string{"id": block.ID}, nil, nil)
+	_, _, err = s.Client.Do("DELETE", apiPath(s, "ip-block/{id}"), map[string]string{"id": block.ID}, nil, nil)
 	if err != nil {
 		return fmt.Errorf("deleting IP block: %w", err)
 	}
@@ -1550,7 +1550,7 @@ func cmdNSGCreate(s *Session, _ []string) error {
 	}
 	LogCmd(s, "network-security-group", "create", "--name", name, "--site-id", site.ID)
 	bodyJSON, _ := json.Marshal(body)
-	resp, _, err := s.Client.Do("POST", "/v2/org/{org}/carbide/network-security-group", nil, nil, bodyJSON)
+	resp, _, err := s.Client.Do("POST", apiPath(s, "network-security-group"), nil, nil, bodyJSON)
 	if err != nil {
 		return fmt.Errorf("creating network security group: %w", err)
 	}
@@ -1587,7 +1587,7 @@ func cmdNSGUpdate(s *Session, args []string) error {
 	}
 	LogCmd(s, "network-security-group", "update", nsg.ID)
 	bodyJSON, _ := json.Marshal(body)
-	resp, _, err := s.Client.Do("PATCH", "/v2/org/{org}/carbide/network-security-group/{id}", map[string]string{"id": nsg.ID}, nil, bodyJSON)
+	resp, _, err := s.Client.Do("PATCH", apiPath(s, "network-security-group/{id}"), map[string]string{"id": nsg.ID}, nil, bodyJSON)
 	if err != nil {
 		return fmt.Errorf("updating network security group: %w", err)
 	}
@@ -1609,7 +1609,7 @@ func cmdNSGDelete(s *Session, args []string) error {
 		return err
 	}
 	LogCmd(s, "network-security-group", "delete", nsg.ID)
-	_, _, err = s.Client.Do("DELETE", "/v2/org/{org}/carbide/network-security-group/{id}", map[string]string{"id": nsg.ID}, nil, nil)
+	_, _, err = s.Client.Do("DELETE", apiPath(s, "network-security-group/{id}"), map[string]string{"id": nsg.ID}, nil, nil)
 	if err != nil {
 		return fmt.Errorf("deleting network security group: %w", err)
 	}
@@ -1701,7 +1701,7 @@ func cmdVPCPrefixCreate(s *Session, _ []string) error {
 	}
 	LogCmd(s, "vpc-prefix", "create", "--name", name, "--vpc-id", vpc.ID, "--prefix-length", prefixLenText)
 	bodyJSON, _ := json.Marshal(body)
-	resp, _, err := s.Client.Do("POST", "/v2/org/{org}/carbide/vpc-prefix", nil, nil, bodyJSON)
+	resp, _, err := s.Client.Do("POST", apiPath(s, "vpc-prefix"), nil, nil, bodyJSON)
 	if err != nil {
 		return fmt.Errorf("creating VPC prefix: %w", err)
 	}
@@ -1727,7 +1727,7 @@ func cmdVPCPrefixUpdate(s *Session, args []string) error {
 	}
 	LogCmd(s, "vpc-prefix", "update", item.ID, "--name", strings.TrimSpace(name))
 	bodyJSON, _ := json.Marshal(body)
-	resp, _, err := s.Client.Do("PATCH", "/v2/org/{org}/carbide/vpc-prefix/{id}", map[string]string{"id": item.ID}, nil, bodyJSON)
+	resp, _, err := s.Client.Do("PATCH", apiPath(s, "vpc-prefix/{id}"), map[string]string{"id": item.ID}, nil, bodyJSON)
 	if err != nil {
 		return fmt.Errorf("updating VPC prefix: %w", err)
 	}
@@ -1749,7 +1749,7 @@ func cmdVPCPrefixDelete(s *Session, args []string) error {
 		return err
 	}
 	LogCmd(s, "vpc-prefix", "delete", item.ID)
-	_, _, err = s.Client.Do("DELETE", "/v2/org/{org}/carbide/vpc-prefix/{id}", map[string]string{"id": item.ID}, nil, nil)
+	_, _, err = s.Client.Do("DELETE", apiPath(s, "vpc-prefix/{id}"), map[string]string{"id": item.ID}, nil, nil)
 	if err != nil {
 		return fmt.Errorf("deleting VPC prefix: %w", err)
 	}
@@ -1789,7 +1789,7 @@ func cmdTenantAccountCreate(s *Session, _ []string) error {
 	}
 	LogCmd(s, "tenant-account", "create", "--tenant-org", strings.TrimSpace(tenantOrg))
 	bodyJSON, _ := json.Marshal(body)
-	resp, _, err := s.Client.Do("POST", "/v2/org/{org}/carbide/tenant-account", nil, nil, bodyJSON)
+	resp, _, err := s.Client.Do("POST", apiPath(s, "tenant-account"), nil, nil, bodyJSON)
 	if err != nil {
 		return fmt.Errorf("creating tenant account: %w", err)
 	}
@@ -1811,7 +1811,7 @@ func cmdTenantAccountUpdate(s *Session, args []string) error {
 	}
 	LogCmd(s, "tenant-account", "update", item.ID)
 	bodyJSON, _ := json.Marshal(map[string]interface{}{})
-	resp, _, err := s.Client.Do("PATCH", "/v2/org/{org}/carbide/tenant-account/{id}", map[string]string{"id": item.ID}, nil, bodyJSON)
+	resp, _, err := s.Client.Do("PATCH", apiPath(s, "tenant-account/{id}"), map[string]string{"id": item.ID}, nil, bodyJSON)
 	if err != nil {
 		return fmt.Errorf("accepting tenant account invitation: %w", err)
 	}
@@ -1832,7 +1832,7 @@ func cmdTenantAccountDelete(s *Session, args []string) error {
 		return err
 	}
 	LogCmd(s, "tenant-account", "delete", item.ID)
-	_, _, err = s.Client.Do("DELETE", "/v2/org/{org}/carbide/tenant-account/{id}", map[string]string{"id": item.ID}, nil, nil)
+	_, _, err = s.Client.Do("DELETE", apiPath(s, "tenant-account/{id}"), map[string]string{"id": item.ID}, nil, nil)
 	if err != nil {
 		return fmt.Errorf("deleting tenant account: %w", err)
 	}
@@ -1942,7 +1942,7 @@ func cmdSiteGet(s *Session, args []string) error {
 		return err
 	}
 	LogCmd(s, "site", "get", item.ID)
-	return getAndPrint(s, "/v2/org/{org}/carbide/site/{id}", item.ID)
+	return getAndPrint(s, apiPath(s, "site/{id}"), item.ID)
 }
 
 func cmdVPCGet(s *Session, args []string) error {
@@ -1951,7 +1951,7 @@ func cmdVPCGet(s *Session, args []string) error {
 		return err
 	}
 	LogCmd(s, "vpc", "get", item.ID)
-	return getAndPrint(s, "/v2/org/{org}/carbide/vpc/{id}", item.ID)
+	return getAndPrint(s, apiPath(s, "vpc/{id}"), item.ID)
 }
 
 func cmdSubnetGet(s *Session, args []string) error {
@@ -1960,7 +1960,7 @@ func cmdSubnetGet(s *Session, args []string) error {
 		return err
 	}
 	LogCmd(s, "subnet", "get", item.ID)
-	return getAndPrint(s, "/v2/org/{org}/carbide/subnet/{id}", item.ID)
+	return getAndPrint(s, apiPath(s, "subnet/{id}"), item.ID)
 }
 
 func cmdInstanceGet(s *Session, args []string) error {
@@ -1969,7 +1969,7 @@ func cmdInstanceGet(s *Session, args []string) error {
 		return err
 	}
 	LogCmd(s, "instance", "get", item.ID)
-	return getAndPrint(s, "/v2/org/{org}/carbide/instance/{id}", item.ID)
+	return getAndPrint(s, apiPath(s, "instance/{id}"), item.ID)
 }
 
 func cmdInstanceCreate(s *Session, _ []string) error {
@@ -2031,7 +2031,7 @@ func cmdInstanceCreate(s *Session, _ []string) error {
 	}
 	LogCmd(s, "instance", "create", "--name", name, "--machine-id", machine.ID, "--vpc-id", vpc.ID)
 	bodyJSON, _ := json.Marshal(body)
-	resp, _, err := s.Client.Do("POST", "/v2/org/{org}/carbide/instance", nil, nil, bodyJSON)
+	resp, _, err := s.Client.Do("POST", apiPath(s, "instance"), nil, nil, bodyJSON)
 	if err != nil {
 		return fmt.Errorf("creating instance: %w", err)
 	}
@@ -2053,7 +2053,7 @@ func cmdInstanceDelete(s *Session, args []string) error {
 		return err
 	}
 	LogCmd(s, "instance", "delete", item.ID)
-	_, _, err = s.Client.Do("DELETE", "/v2/org/{org}/carbide/instance/{id}", map[string]string{"id": item.ID}, nil, nil)
+	_, _, err = s.Client.Do("DELETE", apiPath(s, "instance/{id}"), map[string]string{"id": item.ID}, nil, nil)
 	if err != nil {
 		return fmt.Errorf("deleting instance: %w", err)
 	}
@@ -2069,7 +2069,7 @@ func cmdMachineGet(s *Session, args []string) error {
 		return err
 	}
 	LogCmd(s, "machine", "get", item.ID)
-	return getAndPrint(s, "/v2/org/{org}/carbide/machine/{id}", item.ID)
+	return getAndPrint(s, apiPath(s, "machine/{id}"), item.ID)
 }
 
 func cmdOSGet(s *Session, args []string) error {
@@ -2078,7 +2078,7 @@ func cmdOSGet(s *Session, args []string) error {
 		return err
 	}
 	LogCmd(s, "operating-system", "get", item.ID)
-	return getAndPrint(s, "/v2/org/{org}/carbide/operating-system/{id}", item.ID)
+	return getAndPrint(s, apiPath(s, "operating-system/{id}"), item.ID)
 }
 
 func cmdSSHKeyGroupGet(s *Session, args []string) error {
@@ -2087,7 +2087,7 @@ func cmdSSHKeyGroupGet(s *Session, args []string) error {
 		return err
 	}
 	LogCmd(s, "ssh-key-group", "get", item.ID)
-	return getAndPrint(s, "/v2/org/{org}/carbide/ssh-key-group/{id}", item.ID)
+	return getAndPrint(s, apiPath(s, "ssh-key-group/{id}"), item.ID)
 }
 
 func cmdSSHKeyGet(s *Session, args []string) error {
@@ -2096,7 +2096,7 @@ func cmdSSHKeyGet(s *Session, args []string) error {
 		return err
 	}
 	LogCmd(s, "ssh-key", "get", item.ID)
-	return getAndPrint(s, "/v2/org/{org}/carbide/ssh-key/{id}", item.ID)
+	return getAndPrint(s, apiPath(s, "ssh-key/{id}"), item.ID)
 }
 
 func cmdAllocationGet(s *Session, args []string) error {
@@ -2105,7 +2105,7 @@ func cmdAllocationGet(s *Session, args []string) error {
 		return err
 	}
 	LogCmd(s, "allocation", "get", item.ID)
-	return getAndPrint(s, "/v2/org/{org}/carbide/allocation/{id}", item.ID)
+	return getAndPrint(s, apiPath(s, "allocation/{id}"), item.ID)
 }
 
 func cmdAllocationDelete(s *Session, args []string) error {
@@ -2118,7 +2118,7 @@ func cmdAllocationDelete(s *Session, args []string) error {
 		return err
 	}
 	LogCmd(s, "allocation", "delete", item.ID)
-	_, _, err = s.Client.Do("DELETE", "/v2/org/{org}/carbide/allocation/{id}", map[string]string{"id": item.ID}, nil, nil)
+	_, _, err = s.Client.Do("DELETE", apiPath(s, "allocation/{id}"), map[string]string{"id": item.ID}, nil, nil)
 	if err != nil {
 		return fmt.Errorf("deleting allocation: %w", err)
 	}
@@ -2133,7 +2133,7 @@ func cmdIPBlockGet(s *Session, args []string) error {
 		return err
 	}
 	LogCmd(s, "ip-block", "get", item.ID)
-	return getAndPrint(s, "/v2/org/{org}/carbide/ip-block/{id}", item.ID)
+	return getAndPrint(s, apiPath(s, "ip-block/{id}"), item.ID)
 }
 
 func cmdNSGGet(s *Session, args []string) error {
@@ -2142,7 +2142,7 @@ func cmdNSGGet(s *Session, args []string) error {
 		return err
 	}
 	LogCmd(s, "network-security-group", "get", item.ID)
-	return getAndPrint(s, "/v2/org/{org}/carbide/network-security-group/{id}", item.ID)
+	return getAndPrint(s, apiPath(s, "network-security-group/{id}"), item.ID)
 }
 
 func cmdSKUGet(s *Session, args []string) error {
@@ -2151,7 +2151,7 @@ func cmdSKUGet(s *Session, args []string) error {
 		return err
 	}
 	LogCmd(s, "sku", "get", item.ID)
-	return getAndPrint(s, "/v2/org/{org}/carbide/sku/{id}", item.ID)
+	return getAndPrint(s, apiPath(s, "sku/{id}"), item.ID)
 }
 
 func cmdRackGet(s *Session, args []string) error {
@@ -2160,7 +2160,7 @@ func cmdRackGet(s *Session, args []string) error {
 		return err
 	}
 	LogCmd(s, "rack", "get", item.ID)
-	return getAndPrint(s, "/v2/org/{org}/carbide/rack/{id}", item.ID)
+	return getAndPrint(s, apiPath(s, "rack/{id}"), item.ID)
 }
 
 func cmdVPCPrefixGet(s *Session, args []string) error {
@@ -2169,7 +2169,7 @@ func cmdVPCPrefixGet(s *Session, args []string) error {
 		return err
 	}
 	LogCmd(s, "vpc-prefix", "get", item.ID)
-	return getAndPrint(s, "/v2/org/{org}/carbide/vpc-prefix/{id}", item.ID)
+	return getAndPrint(s, apiPath(s, "vpc-prefix/{id}"), item.ID)
 }
 
 func cmdTenantAccountGet(s *Session, args []string) error {
@@ -2178,7 +2178,7 @@ func cmdTenantAccountGet(s *Session, args []string) error {
 		return err
 	}
 	LogCmd(s, "tenant-account", "get", item.ID)
-	return getAndPrint(s, "/v2/org/{org}/carbide/tenant-account/{id}", item.ID)
+	return getAndPrint(s, apiPath(s, "tenant-account/{id}"), item.ID)
 }
 
 func cmdExpectedMachineGet(s *Session, args []string) error {
@@ -2187,7 +2187,7 @@ func cmdExpectedMachineGet(s *Session, args []string) error {
 		return err
 	}
 	LogCmd(s, "expected-machine", "get", item.ID)
-	return getAndPrint(s, "/v2/org/{org}/carbide/expected-machine/{id}", item.ID)
+	return getAndPrint(s, apiPath(s, "expected-machine/{id}"), item.ID)
 }
 
 func cmdInfiniBandPartitionGet(s *Session, args []string) error {
@@ -2196,7 +2196,7 @@ func cmdInfiniBandPartitionGet(s *Session, args []string) error {
 		return err
 	}
 	LogCmd(s, "infiniband-partition", "get", item.ID)
-	return getAndPrint(s, "/v2/org/{org}/carbide/infiniband-partition/{id}", item.ID)
+	return getAndPrint(s, apiPath(s, "infiniband-partition/{id}"), item.ID)
 }
 
 func cmdNVLinkLogicalPartitionGet(s *Session, args []string) error {
@@ -2205,7 +2205,7 @@ func cmdNVLinkLogicalPartitionGet(s *Session, args []string) error {
 		return err
 	}
 	LogCmd(s, "nvlink-logical-partition", "get", item.ID)
-	return getAndPrint(s, "/v2/org/{org}/carbide/nvlink-logical-partition/{id}", item.ID)
+	return getAndPrint(s, apiPath(s, "nvlink-logical-partition/{id}"), item.ID)
 }
 
 func cmdDPUExtensionServiceGet(s *Session, args []string) error {
@@ -2214,7 +2214,7 @@ func cmdDPUExtensionServiceGet(s *Session, args []string) error {
 		return err
 	}
 	LogCmd(s, "dpu-extension-service", "get", item.ID)
-	return getAndPrint(s, "/v2/org/{org}/carbide/dpu-extension-service/{id}", item.ID)
+	return getAndPrint(s, apiPath(s, "dpu-extension-service/{id}"), item.ID)
 }
 
 func cmdAuditGet(s *Session, args []string) error {
@@ -2223,14 +2223,14 @@ func cmdAuditGet(s *Session, args []string) error {
 		return err
 	}
 	LogCmd(s, "audit", "get", item.ID)
-	return getAndPrint(s, "/v2/org/{org}/carbide/audit/{id}", item.ID)
+	return getAndPrint(s, apiPath(s, "audit/{id}"), item.ID)
 }
 
 // -- Singleton / info commands --
 
 func cmdMetadataGet(s *Session, _ []string) error {
 	LogCmd(s, "metadata", "get")
-	body, _, err := s.Client.Do("GET", "/v2/org/{org}/carbide/metadata", nil, nil, nil)
+	body, _, err := s.Client.Do("GET", apiPath(s, "metadata"), nil, nil, nil)
 	if err != nil {
 		return fmt.Errorf("getting metadata: %w", err)
 	}
@@ -2239,7 +2239,7 @@ func cmdMetadataGet(s *Session, _ []string) error {
 
 func cmdUserCurrent(s *Session, _ []string) error {
 	LogCmd(s, "user", "current")
-	body, _, err := s.Client.Do("GET", "/v2/org/{org}/carbide/user/current", nil, nil, nil)
+	body, _, err := s.Client.Do("GET", apiPath(s, "user/current"), nil, nil, nil)
 	if err != nil {
 		return fmt.Errorf("getting current user: %w", err)
 	}
@@ -2248,7 +2248,7 @@ func cmdUserCurrent(s *Session, _ []string) error {
 
 func cmdTenantCurrent(s *Session, _ []string) error {
 	LogCmd(s, "tenant", "current")
-	body, _, err := s.Client.Do("GET", "/v2/org/{org}/carbide/tenant/current", nil, nil, nil)
+	body, _, err := s.Client.Do("GET", apiPath(s, "tenant/current"), nil, nil, nil)
 	if err != nil {
 		return fmt.Errorf("getting current tenant: %w", err)
 	}
@@ -2257,7 +2257,7 @@ func cmdTenantCurrent(s *Session, _ []string) error {
 
 func cmdTenantStats(s *Session, _ []string) error {
 	LogCmd(s, "tenant", "stats")
-	body, _, err := s.Client.Do("GET", "/v2/org/{org}/carbide/tenant/current/stats", nil, nil, nil)
+	body, _, err := s.Client.Do("GET", apiPath(s, "tenant/current/stats"), nil, nil, nil)
 	if err != nil {
 		return fmt.Errorf("getting tenant stats: %w", err)
 	}
@@ -2266,7 +2266,7 @@ func cmdTenantStats(s *Session, _ []string) error {
 
 func cmdInfraProviderCurrent(s *Session, _ []string) error {
 	LogCmd(s, "infrastructure-provider", "current")
-	body, _, err := s.Client.Do("GET", "/v2/org/{org}/carbide/infrastructure-provider/current", nil, nil, nil)
+	body, _, err := s.Client.Do("GET", apiPath(s, "infrastructure-provider/current"), nil, nil, nil)
 	if err != nil {
 		return fmt.Errorf("getting infrastructure provider: %w", err)
 	}
@@ -2275,7 +2275,7 @@ func cmdInfraProviderCurrent(s *Session, _ []string) error {
 
 func cmdInfraProviderStats(s *Session, _ []string) error {
 	LogCmd(s, "infrastructure-provider", "stats")
-	body, _, err := s.Client.Do("GET", "/v2/org/{org}/carbide/infrastructure-provider/current/stats", nil, nil, nil)
+	body, _, err := s.Client.Do("GET", apiPath(s, "infrastructure-provider/current/stats"), nil, nil, nil)
 	if err != nil {
 		return fmt.Errorf("getting infrastructure provider stats: %w", err)
 	}
