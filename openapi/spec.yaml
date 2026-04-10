@@ -117,7 +117,6 @@ tags:
       - `sshUrl` was deprecated in favor of `serialConsoleUrl` and was removed on April 25th, 2023 0:00 UTC. Please use `serialConsoleUrl` instead.
       - `instanceSubnets` was deprecated in favor of `interfaces` and was removed on May 10th, 2023 0:00 UTC. Please use `interfaces` instead.
       - `sshkeygroups` was deprecated in favor of `sshKeyGroups` and was removed on September 4th, 2025 0:00 UTC. Please use `sshKeyGroups` instead.
-      - `allocationId` was deprecated, and removed on September 6th, 2025 0:00 UTC.
   - name: Machine
     description: Machine operations
   - name: Machine Capability
@@ -172,7 +171,6 @@ tags:
       - `sshUrl` was deprecated in favor of `serialConsoleUrl` and was removed on April 25th, 2023 0:00 UTC. Please use `serialConsoleUrl` instead.
       - `instanceSubnets` was deprecated in favor of `interfaces` and was removed on May 10th, 2023 0:00 UTC. Please use `interfaces` instead.
       - `sshkeygroups` was deprecated in favor of `sshKeyGroups` and was removed on September 4th, 2025 0:00 UTC. Please use `sshKeyGroups` instead.
-      - `allocationId` was deprecated, and removed on September 6th, 2025 0:00 UTC.
 
       IP Block:
       - `blockSize` was deprecated in favor of `prefixLength` and was removed on April 15th, 2023 0:00 UTC. Please use `prefixLength` instead.
@@ -5671,14 +5669,6 @@ paths:
                           replacedBy: sshKeyGroups
                           takeActionBy: '2025-09-04T00:00:00Z'
                           notice: '''sshkeygroups'' is being deprecated in favor of ''sshKeyGroups''. Please take action prior to the specified date.'
-                        - attribute: allocationId
-                          replacedBy: null
-                          takeActionBy: '2025-09-06T00:00:00Z'
-                          notice: '''allocationId'' is being deprecated. Please take action prior to the specified date.'
-                        - attribute: allocationConstraintId
-                          replacedBy: null
-                          takeActionBy: '2025-09-06T00:00:00Z'
-                          notice: '''allocationConstraintId'' is being deprecated. Please take action prior to the specified date.'
                       created: '2019-08-24T14:15:22Z'
                       updated: '2019-08-24T14:15:22Z'
                 example-2:
@@ -5770,14 +5760,6 @@ paths:
                           replacedBy: sshKeyGroups
                           takeActionBy: '2025-09-04T00:00:00Z'
                           notice: '''sshkeygroups'' is being deprecated in favor of ''sshKeyGroups'' and will be removed on September 9th, 2025. Please update your usage accordingly.'
-                        - attribute: allocationId
-                          replacedBy: null
-                          takeActionBy: '2025-09-06T00:00:00Z'
-                          notice: '''allocationId'' is being deprecated. Please take action prior to the specified date.'
-                        - attribute: allocationConstraintId
-                          replacedBy: null
-                          takeActionBy: '2025-09-06T00:00:00Z'
-                          notice: '''allocationConstraintId'' is being deprecated. Please take action prior to the specified date.'
                       created: '2019-08-24T14:15:22Z'
                       updated: '2019-08-24T14:15:22Z'
                 example-3:
@@ -6092,14 +6074,6 @@ paths:
                         replacedBy: sshKeyGroups
                         takeActionBy: '2025-09-04T00:00:00Z'
                         notice: '''sshkeygroups'' is being deprecated in favor of ''sshKeyGroups''. Please take action prior to the specified date.'
-                      - attribute: allocationId
-                        replacedBy: null
-                        takeActionBy: '2025-09-06T00:00:00Z'
-                        notice: '''allocationId'' is being deprecated. Please take action prior to the specified date.'
-                      - attribute: allocationConstraintId
-                        replacedBy: null
-                        takeActionBy: '2025-09-06T00:00:00Z'
-                        notice: '''allocationConstraintId'' is being deprecated. Please take action prior to the specified date.'
                     created: '2019-08-24T14:15:22Z'
                     updated: '2019-08-24T14:15:22Z'
                 With DPU Extension Service Deployments:
@@ -6559,14 +6533,6 @@ paths:
                         replacedBy: sshKeyGroups
                         takeActionBy: '2025-09-04T00:00:00Z'
                         notice: '''sshkeygroups'' is being deprecated in favor of ''sshKeyGroups''. Please take action prior to the specified date.'
-                      - attribute: allocationId
-                        replacedBy: null
-                        takeActionBy: '2025-09-06T00:00:00Z'
-                        notice: '''allocationId'' is being deprecated. Please take action prior to the specified date.'
-                      - attribute: allocationConstraintId
-                        replacedBy: null
-                        takeActionBy: '2025-09-06T00:00:00Z'
-                        notice: '''allocationConstraintId'' is being deprecated. Please take action prior to the specified date.'
                     created: '2019-08-24T14:15:22Z'
                     updated: '2019-08-24T14:15:22Z'
         '403':
@@ -6748,14 +6714,6 @@ paths:
                         replacedBy: sshKeyGroups
                         takeActionBy: '2025-09-04T00:00:00Z'
                         notice: '''sshkeygroups'' is being deprecated in favor of ''sshKeyGroups''. Please take action prior to the specified date.'
-                      - attribute: allocationId
-                        replacedBy: null
-                        takeActionBy: '2025-09-06T00:00:00Z'
-                        notice: '''allocationId'' is being deprecated. Please take action prior to the specified date.'
-                      - attribute: allocationConstraintId
-                        replacedBy: null
-                        takeActionBy: '2025-09-06T00:00:00Z'
-                        notice: '''allocationConstraintId'' is being deprecated. Please take action prior to the specified date.'
                     created: '2019-08-24T14:15:22Z'
                     updated: '2019-08-24T14:15:22Z'
         '400':
@@ -14676,14 +14634,6 @@ components:
               replacedBy: sshKeyGroups
               takeActionBy: '2025-09-04T00:00:00Z'
               notice: '''sshkeygroups'' is being deprecated in favor of ''sshKeyGroups''. Please take action prior to the specified date.'
-            - attribute: allocationId
-              replacedBy: null
-              takeActionBy: '2025-09-06T00:00:00Z'
-              notice: '''allocationId'' is being deprecated. Please take action prior to the specified date.'
-            - attribute: allocationConstraintId
-              replacedBy: null
-              takeActionBy: '2025-09-06T00:00:00Z'
-              notice: '''allocationConstraintId'' is being deprecated. Please take action prior to the specified date.'
           created: '2019-08-24T14:15:22Z'
           updated: '2019-08-24T14:15:22Z'
         - id: f61fbc1b-ba32-4476-aab5-5ac7c64c3f26
@@ -14764,14 +14714,6 @@ components:
               replacedBy: sshKeyGroups
               takeActionBy: '2025-09-04T00:00:00Z'
               notice: '''sshkeygroups'' is being deprecated in favor of ''sshKeyGroups''. Please take action prior to the specified date.'
-            - attribute: allocationId
-              replacedBy: null
-              takeActionBy: '2025-09-06T00:00:00Z'
-              notice: '''allocationId'' is being deprecated. Please take action prior to the specified date.'
-            - attribute: allocationConstraintId
-              replacedBy: null
-              takeActionBy: '2025-09-06T00:00:00Z'
-              notice: '''allocationConstraintId'' is being deprecated. Please take action prior to the specified date.'
           created: '2019-08-24T14:15:22Z'
           updated: '2019-08-24T14:15:22Z'
       properties:

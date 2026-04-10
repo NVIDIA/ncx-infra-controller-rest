@@ -48,7 +48,6 @@ func init() {
 
 			// instance table: Already indexed on created
 			{index: "instance_tenant_id_idx", table: "public.instance", column: "tenant_id"},
-			{index: "instance_allocation_id_idx", table: "public.instance", column: "allocation_id"},
 			{index: "instance_site_id_idx", table: "public.instance", column: "site_id"},
 
 			// instance_type table

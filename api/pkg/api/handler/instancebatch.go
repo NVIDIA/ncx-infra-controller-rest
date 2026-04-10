@@ -897,11 +897,11 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 
 	// ==================== Step 4: Machine Selection ====================
 
-	// Acquire an advisory lock on the tenant ID and instancetype ID
-	// This prevents concurrent instance creation (single or batch) from the same tenant on the same instance type
-	err = tx.TryAcquireAdvisoryLock(ctx, cdb.GetAdvisoryLockIDFromString(fmt.Sprintf("%s-%s", tenant.ID.String(), instancetype.ID.String())), nil)
+	// Acquire the shared quota lock for this tenant/site/instance-type pool.
+	// This prevents concurrent quota mutations and admissions from racing.
+	err = common.AcquireInstanceTypeQuotaLock(ctx, tx, tenant.ID, instancetype.ID)
 	if err != nil {
-		logger.Error().Err(err).Msg("Failed to acquire advisory lock on Tenant and Instance Type")
+		logger.Error().Err(err).Msg("Failed to acquire advisory lock on Instance Type quota pool")
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error creating Instances, detected multiple parallel requests on Instance Type by Tenant", nil)
 	}
 
@@ -933,23 +933,17 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 	if instancetype.SiteID != nil {
 		siteIDs = []uuid.UUID{*instancetype.SiteID}
 	}
-	instances, insTotal, err := inDAO.GetAll(ctx, tx, cdbm.InstanceFilterInput{TenantIDs: []uuid.UUID{tenant.ID}, SiteIDs: siteIDs, InstanceTypeIDs: []uuid.UUID{instancetype.ID}}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
+	_, insTotal, err := inDAO.GetAll(ctx, tx, cdbm.InstanceFilterInput{
+		TenantIDs:       []uuid.UUID{tenant.ID},
+		SiteIDs:         siteIDs,
+		InstanceTypeIDs: []uuid.UUID{instancetype.ID},
+	}, cdbp.PageInput{}, nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Active Instances from DB for Tenant and InstanceType")
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve active instances for Tenant and Instance Type, DB error", nil)
 	}
 
-	// Build map allocation constraint ID which has been used by Instance
-	usedMapAllocationConstraintIDs := map[uuid.UUID]int{}
-	for _, inst := range instances {
-		if inst.AllocationConstraintID == nil {
-			logger.Error().Msgf("found Instance missing AllocationConstraintID")
-			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Instance is missing Allocation Constraint ID", nil)
-		}
-		usedMapAllocationConstraintIDs[*inst.AllocationConstraintID] += 1
-	}
-
-	// Calculate total constraint value
+	// Calculate the total constraint value across all matching allocations.
 	totalConstraintValue := 0
 	for _, alcs := range alconstraints {
 		totalConstraintValue += alcs.ConstraintValue
@@ -959,27 +953,6 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 	if insTotal+apiRequest.Count > totalConstraintValue {
 		return cutil.NewAPIErrorResponse(c, http.StatusForbidden,
 			fmt.Sprintf("Tenant has reached the maximum number of Instances for Instance Type. Current: %d, Requested: %d, Max: %d", insTotal, apiRequest.Count, totalConstraintValue), nil)
-	}
-
-	// Build list of allocation constraints with available capacity
-	// Instances will be distributed across multiple constraints as needed
-	availableConstraints := []struct {
-		constraint *cdbm.AllocationConstraint
-		available  int
-	}{}
-
-	for _, alc := range alconstraints {
-		used := usedMapAllocationConstraintIDs[alc.ID]
-		available := alc.ConstraintValue - used
-		if available > 0 {
-			availableConstraints = append(availableConstraints, struct {
-				constraint *cdbm.AllocationConstraint
-				available  int
-			}{
-				constraint: &alc,
-				available:  available,
-			})
-		}
 	}
 
 	// Allocate machines with topology optimization
@@ -1251,23 +1224,7 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 
 	// --- Build all InstanceCreateInputs ---
 	instanceCreateInputs := make([]cdbm.InstanceCreateInput, 0, len(machines))
-	constraintIdx := 0
-	constraintUsedCount := 0
-
 	for i, machine := range machines {
-		// Check if we need to switch to the next allocation constraint
-		if constraintUsedCount >= availableConstraints[constraintIdx].available {
-			constraintIdx++
-			constraintUsedCount = 0
-			if constraintIdx >= len(availableConstraints) {
-				logger.Error().Msg("ran out of allocation constraints (should not happen)")
-				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError,
-					"Failed to allocate instances: insufficient allocation constraints", nil)
-			}
-		}
-		currentConstraint := availableConstraints[constraintIdx].constraint
-		constraintUsedCount++
-
 		instanceCreateInputs = append(instanceCreateInputs, cdbm.InstanceCreateInput{
 			Name:                     generateInstanceName(i),
 			Description:              apiRequest.Description,
@@ -1284,8 +1241,6 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 			NetworkSecurityGroupID:   apiRequest.NetworkSecurityGroupID,
 			Labels:                   apiRequest.Labels,
 			InstanceTypeID:           &apiInstanceTypeID,
-			AllocationID:             &currentConstraint.AllocationID,
-			AllocationConstraintID:   &currentConstraint.ID,
 			IsUpdatePending:          false,
 			Status:                   cdbm.InstanceStatusPending,
 			PowerStatus:              cdb.GetStrPtr(cdbm.InstancePowerStatusRebooting),
@@ -1627,12 +1582,8 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 		createdInstancesData[i].ssd = &createdSdsAll[i]
 	}
 
-	// Log allocation constraint usage summary
-	constraintsUsed := constraintIdx + 1
 	logger.Info().
 		Int("instanceCount", len(createdInstancesData)).
-		Int("constraintsUsed", constraintsUsed).
-		Int("totalConstraintsAvailable", len(availableConstraints)).
 		Msg("all instance records created using batch operations, now triggering batch Temporal workflow before commit")
 
 	// ==================== Step 7: Workflow Trigger ====================

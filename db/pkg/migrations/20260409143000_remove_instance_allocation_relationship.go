@@ -27,36 +27,28 @@ import (
 
 func init() {
 	Migrations.MustRegister(func(ctx context.Context, db *bun.DB) error {
-		// Start transactions
 		tx, terr := db.BeginTx(ctx, &sql.TxOptions{})
 		if terr != nil {
 			handlePanic(terr, "failed to begin transaction")
 		}
 
-		// Remove NOT NULL constraint from allocation_id in instance table
-		// when the legacy column is still present.
-		_, err := tx.Exec(`
-			DO $$
-			BEGIN
-				ALTER TABLE instance ALTER COLUMN allocation_id DROP NOT NULL;
-			EXCEPTION
-				WHEN undefined_column THEN
-					RAISE NOTICE 'Column allocation_id does not exist, skipping modification.';
-			END $$;
-		`)
+		// Drop legacy instance allocation foreign keys before removing the columns.
+		_, err := tx.Exec("ALTER TABLE instance DROP CONSTRAINT IF EXISTS instance_allocation_id_fkey")
 		handleError(tx, err)
 
-		// Remove NOT NULL constraint from allocation_constraint_id in instance table
-		// when the legacy column is still present.
-		_, err = tx.Exec(`
-			DO $$
-			BEGIN
-				ALTER TABLE instance ALTER COLUMN allocation_constraint_id DROP NOT NULL;
-			EXCEPTION
-				WHEN undefined_column THEN
-					RAISE NOTICE 'Column allocation_constraint_id does not exist, skipping modification.';
-			END $$;
-		`)
+		_, err = tx.Exec("ALTER TABLE instance DROP CONSTRAINT IF EXISTS instance_allocation_constraint_id_fkey")
+		handleError(tx, err)
+
+		// Remove the legacy lookup index because instance admission no longer
+		// keys off a specific allocation.
+		_, err = tx.Exec("DROP INDEX IF EXISTS instance_allocation_id_idx")
+		handleError(tx, err)
+
+		// Remove the direct allocation relationship from instance.
+		_, err = tx.Exec("ALTER TABLE instance DROP COLUMN IF EXISTS allocation_id")
+		handleError(tx, err)
+
+		_, err = tx.Exec("ALTER TABLE instance DROP COLUMN IF EXISTS allocation_constraint_id")
 		handleError(tx, err)
 
 		terr = tx.Commit()
@@ -67,6 +59,7 @@ func init() {
 		fmt.Print(" [up migration] ")
 		return nil
 	}, func(ctx context.Context, db *bun.DB) error {
+		// No down migration because the removed allocation linkage data is irreversible.
 		fmt.Print(" [down migration] ")
 		return nil
 	})

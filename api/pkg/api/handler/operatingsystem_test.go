@@ -1975,16 +1975,12 @@ func TestOperatingSystemHandler_Delete(t *testing.T) {
 	acGoodIT := model.APIAllocationConstraintCreateRequest{ResourceType: cdbm.AllocationResourceTypeInstanceType, ResourceTypeID: it3.ID.String(), ConstraintType: cdbm.AllocationConstraintTypeReserved, ConstraintValue: 2}
 	okBodyIT, err := json.Marshal(model.APIAllocationCreateRequest{Name: "ok1", Description: cdb.GetStrPtr(""), TenantID: tenant3.ID.String(), SiteID: site.ID.String(), AllocationConstraints: []model.APIAllocationConstraintCreateRequest{acGoodIT}})
 	assert.Nil(t, err)
-	aIT := testCreateAllocation(t, dbSession, ipamStorage, ipu, ipOrg3, string(okBodyIT))
-	aITUUID := uuid.MustParse(aIT.ID)
-	alcUUID := uuid.MustParse(aIT.AllocationConstraints[0].ID)
+	testCreateAllocation(t, dbSession, ipamStorage, ipu, ipOrg3, string(okBodyIT))
 	instanceDAO := cdbm.NewInstanceDAO(dbSession)
 	instance, err := instanceDAO.Create(
 		ctx, nil,
 		cdbm.InstanceCreateInput{
 			Name:                     "testInst",
-			AllocationID:             &aITUUID,
-			AllocationConstraintID:   &alcUUID,
 			TenantID:                 tenant3.ID,
 			InfrastructureProviderID: ip3.ID,
 			SiteID:                   site.ID,

@@ -609,7 +609,7 @@ func TestDeleteMachineInstanceTypeHandler_Handle(t *testing.T) {
 	assert.Equal(t, 1, len(alcs))
 
 	// Create an Instance with Machine 3
-	common.TestBuildInstance(t, dbSession, "test-instance", al.ID, alcs[0].ID, tenant.ID, ip.ID, st.ID, it3.ID, vpc.ID, &m3.ID, os.ID)
+	common.TestBuildInstance(t, dbSession, "test-instance", tenant.ID, ip.ID, st.ID, it3.ID, vpc.ID, &m3.ID, os.ID)
 
 	cfg := common.GetTestConfig()
 
