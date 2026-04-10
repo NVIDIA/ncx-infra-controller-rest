@@ -332,22 +332,30 @@ func (ush UpdateSiteHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
-	// Validate org
-	ok, err := auth.ValidateOrgMembership(dbUser, org)
-	if !ok {
-		if err != nil {
-			logger.Error().Err(err).Msg("error validating org membership for User in request")
-		} else {
-			logger.Warn().Msg("could not validate org membership for user, access denied")
-		}
-		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
-	}
-
-	// Validate role, only Provider Admins are allowed to update Site
-	isProviderRequest, orgProvider, orgTenant, apiErr := common.GetIsProviderRequest(ctx, logger, ush.dbSession, org, dbUser,
-		[]string{auth.ProviderAdminRole}, []string{auth.TenantAdminRole}, c.QueryParams())
+	provider, tenant, apiErr := common.IsProviderOrTenant(ctx, logger, ush.dbSession, org, dbUser, false, false)
 	if apiErr != nil {
 		return c.JSON(apiErr.Code, apiErr)
+	}
+
+	queryProviderID := c.QueryParam("infrastructureProviderId")
+	queryTenantID := c.QueryParam("tenantId")
+
+	if queryProviderID != "" && queryTenantID != "" {
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Only one of `infrastructureProviderId` or `tenantId` query params is allowed", nil)
+	}
+
+	isProviderRequest := provider != nil
+
+	if queryProviderID != "" {
+		if provider == nil || provider.ID.String() != queryProviderID {
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Infrastructure Provider ID specified in query param does not match org", nil)
+		}
+		isProviderRequest = true
+	} else if queryTenantID != "" {
+		if tenant == nil || tenant.ID.String() != queryTenantID {
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Tenant ID specified in query param does not match org", nil)
+		}
+		isProviderRequest = false
 	}
 
 	// Get application instance ID from URL param
@@ -390,12 +398,12 @@ func (ush UpdateSiteHandler) Handle(c echo.Context) error {
 	var ts *cdbm.TenantSite
 
 	if isProviderRequest {
-		if orgProvider.ID != es.InfrastructureProviderID {
+		if provider.ID != es.InfrastructureProviderID {
 			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Site is not associated with org's Infrastructure Provider", nil)
 		}
 	} else {
 		// Check that TenantSite exists
-		ts, err = tsDAO.GetByTenantIDAndSiteID(ctx, nil, orgTenant.ID, stID, nil)
+		ts, err = tsDAO.GetByTenantIDAndSiteID(ctx, nil, tenant.ID, stID, nil)
 		if err != nil {
 			if err == cdb.ErrDoesNotExist {
 				return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant does not have access to Site", nil)
@@ -1175,20 +1183,7 @@ func (gssdh GetSiteStatusDetailsHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
-	// Validate org
-	ok, err := auth.ValidateOrgMembership(dbUser, org)
-	if !ok {
-		if err != nil {
-			logger.Error().Err(err).Msg("error validating org membership for User in request")
-		} else {
-			logger.Warn().Msg("could not validate org membership for user, access denied")
-		}
-		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
-	}
-
-	// Validate role, user must be either Provider or Tenant Admin to retrieve a Site
-	isProviderRequest, orgProvider, orgTenant, apiErr := common.GetIsProviderRequest(ctx, logger, gssdh.dbSession, org, dbUser,
-		[]string{auth.ProviderAdminRole, auth.ProviderViewerRole}, []string{auth.TenantAdminRole}, c.QueryParams())
+	provider, tenant, apiErr := common.IsProviderOrTenant(ctx, logger, gssdh.dbSession, org, dbUser, true, false)
 	if apiErr != nil {
 		return c.JSON(apiErr.Code, apiErr)
 	}
@@ -1212,22 +1207,24 @@ func (gssdh GetSiteStatusDetailsHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site", nil)
 	}
 
-	// Check Site association with Provider
+	isAssociated := false
+	if provider != nil {
+		isAssociated = provider.ID == st.InfrastructureProviderID
+	}
 	tsDAO := cdbm.NewTenantSiteDAO(gssdh.dbSession)
-	if isProviderRequest {
-		if orgProvider.ID != st.InfrastructureProviderID {
-			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Site is not associated with org's Infrastructure Provider", nil)
-		}
-	} else {
-		// Check Site association with Tenant
-		_, serr := tsDAO.GetByTenantIDAndSiteID(ctx, nil, orgTenant.ID, stID, nil)
+	if !isAssociated && tenant != nil {
+		_, serr := tsDAO.GetByTenantIDAndSiteID(ctx, nil, tenant.ID, stID, nil)
 		if serr != nil {
-			if serr == cdb.ErrDoesNotExist {
-				return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant does not have access to this Site", nil)
+			if serr != cdb.ErrDoesNotExist {
+				logger.Error().Err(serr).Msg("error retrieving TenantSite from DB")
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to determine org's association with Site, DB error", nil)
 			}
-			logger.Error().Err(serr).Msg("error retrieving TenantSite from DB")
-			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to determine Tenant access to Site, DB error", nil)
+		} else {
+			isAssociated = true
 		}
+	}
+	if !isAssociated {
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Site is not associated with org", nil)
 	}
 
 	// handle retrieving and building status details response

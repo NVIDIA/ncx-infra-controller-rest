@@ -550,6 +550,11 @@ func TestUpdateSiteHandler_Handle(t *testing.T) {
 	mOrg := "test-mixed-org"
 	mixedRole := []string{"FORGE_PROVIDER_ADMIN", "FORGE_TENANT_ADMIN"}
 	mu := testSiteBuildUser(t, dbSession, "test789", mOrg, mixedRole)
+	mip := testSiteBuildInfrastructureProvider(t, dbSession, "Test Mixed Provider", mOrg, mu)
+	mtn := testSiteBuildTenant(t, dbSession, "Test Mixed Tenant", mOrg, mu)
+	mst := testSiteBuildSite(t, dbSession, mip, "Test Mixed Site", cdbm.SiteStatusRegistered, mu, nil, nil)
+	testSiteBuildAllocation(t, dbSession, mst, mtn, "Test Allocation Mixed", mu)
+	common.TestBuildTenantSite(t, dbSession, mtn, mst, mu)
 
 	st := testSiteBuildSite(t, dbSession, ip, "Test Site", cdbm.SiteStatusRegistered, ipu, nil, nil)
 	st2 := testSiteBuildSite(t, dbSession, ip, "Test Site 2", cdbm.SiteStatusError, ipu, nil, nil)
@@ -582,6 +587,7 @@ func TestUpdateSiteHandler_Handle(t *testing.T) {
 		fields             fields
 		args               args
 		wantErr            bool
+		query              url.Values
 		wantStatus         *string
 		siteMgrErr         bool
 		csmEnabled         bool
@@ -711,23 +717,86 @@ func TestUpdateSiteHandler_Handle(t *testing.T) {
 			verifyChildSpanner: false,
 		},
 		{
-			name: "test Site update API endpoint failure, user has both Provider and Tenant roles, query param not specified",
+			name: "test Site update API endpoint success, user has both Provider and Tenant roles, no query param defaults to provider",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        &tmocks.Client{},
 				cfg:       cfg,
 			},
 			args: args{
-				site: st,
+				site: mst,
 				org:  mOrg,
 				user: mu,
 				reqData: &model.APISiteUpdateRequest{
-					IsSerialConsoleEnabled: cdb.GetBoolPtr(true),
+					Description: cdb.GetStrPtr("Updated by dual-role default provider"),
 				},
 			},
-			csmEnabled:         true,
-			wantErr:            true,
+			csmEnabled:         false,
+			wantErr:            false,
 			verifyChildSpanner: false,
+		},
+		{
+			name: "dual-role PATCH explicit tenantId query forces tenant update",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        &tmocks.Client{},
+				cfg:       cfg,
+			},
+			args: args{
+				site: mst,
+				org:  mOrg,
+				user: mu,
+				reqData: &model.APISiteUpdateRequest{
+					IsSerialConsoleSSHKeysEnabled: cdb.GetBoolPtr(true),
+				},
+			},
+			query:              url.Values{"tenantId": []string{mtn.ID.String()}},
+			csmEnabled:         true,
+			wantErr:            false,
+			verifyTenantUpdate: true,
+			verifyChildSpanner: false,
+		},
+		{
+			name: "dual-role PATCH explicit infrastructureProviderId query forces provider update",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        &tmocks.Client{},
+				cfg:       cfg,
+			},
+			args: args{
+				site: mst,
+				org:  mOrg,
+				user: mu,
+				reqData: &model.APISiteUpdateRequest{
+					Description: cdb.GetStrPtr("Updated via explicit infrastructureProviderId query"),
+				},
+			},
+			query:              url.Values{"infrastructureProviderId": []string{mip.ID.String()}},
+			csmEnabled:         false,
+			wantErr:            false,
+			verifyChildSpanner: false,
+		},
+		{
+			name: "dual-role PATCH both tenantId and infrastructureProviderId returns 400",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        &tmocks.Client{},
+				cfg:       cfg,
+			},
+			args: args{
+				site: mst,
+				org:  mOrg,
+				user: mu,
+				reqData: &model.APISiteUpdateRequest{
+					Description: cdb.GetStrPtr("should not apply"),
+				},
+			},
+			query: url.Values{
+				"tenantId":                 []string{mtn.ID.String()},
+				"infrastructureProviderId": []string{mip.ID.String()},
+			},
+			csmEnabled: false,
+			wantErr:    true,
 		},
 		{
 			name: "test Site update API fails when name clashes",
@@ -871,6 +940,9 @@ func TestUpdateSiteHandler_Handle(t *testing.T) {
 			e := echo.New()
 			reqJSON, _ := json.Marshal(tt.args.reqData)
 			req := httptest.NewRequest(http.MethodPatch, "/", strings.NewReader(string(reqJSON)))
+			if tt.query != nil {
+				req.URL.RawQuery = tt.query.Encode()
+			}
 			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 			rec := httptest.NewRecorder()
 			ec := e.NewContext(req, rec)
@@ -2664,7 +2736,22 @@ func TestSiteHandler_GetStatusDetails(t *testing.T) {
 	mu := testSiteBuildUser(t, dbSession, uuid.NewString(), mOrg, mixedRole)
 
 	mip := testSiteBuildInfrastructureProvider(t, dbSession, "Test Mixed Provider", mOrg, mu)
+	mtn := testSiteBuildTenant(t, dbSession, "Test Mixed Tenant", mOrg, mu)
 	mst := testSiteBuildSite(t, dbSession, mip, "Test Mixed Site", cdbm.SiteStatusRegistered, mu, nil, nil)
+	testSiteBuildAllocation(t, dbSession, mst, mtn, "Test Allocation Mixed", mu)
+	common.TestBuildTenantSite(t, dbSession, mtn, mst, mu)
+
+	// Dual-role mixed org: access only via tenant path (site owned by another org's Infrastructure Provider)
+	extIpOrgStatus := "ext-ip-org-status-foreign"
+	extIpUserStatus := testSiteBuildUser(t, dbSession, uuid.NewString(), extIpOrgStatus, ipRoles)
+	ipExtStatus := testSiteBuildInfrastructureProvider(t, dbSession, "Ext Provider Status Foreign", extIpOrgStatus, extIpUserStatus)
+	mOrgStatusTenantForeignSite := "test-mixed-org-status-tenant-foreign-site"
+	muStatusT := testSiteBuildUser(t, dbSession, uuid.NewString(), mOrgStatusTenantForeignSite, mixedRole)
+	_ = testSiteBuildInfrastructureProvider(t, dbSession, "Test Mixed Own IP Status TenantForeign", mOrgStatusTenantForeignSite, muStatusT)
+	mtnStatusT := testSiteBuildTenant(t, dbSession, "Test Mixed Tenant Status TenantForeign", mOrgStatusTenantForeignSite, muStatusT)
+	mstStatusT := testSiteBuildSite(t, dbSession, ipExtStatus, "Test Mixed Site Status TenantForeign", cdbm.SiteStatusRegistered, extIpUserStatus, nil, nil)
+	testSiteBuildAllocation(t, dbSession, mstStatusT, mtnStatusT, "Test Allocation Status TenantForeign", muStatusT)
+	common.TestBuildTenantSite(t, dbSession, mtnStatusT, mstStatusT, muStatusT)
 
 	// add status details objects
 	totalCount := 30
@@ -2672,9 +2759,11 @@ func TestSiteHandler_GetStatusDetails(t *testing.T) {
 		if i%2 != 0 {
 			testMachineBuildStatusDetail(t, dbSession, st.ID.String(), cdbm.MachineStatusInitializing, nil)
 			testMachineBuildStatusDetail(t, dbSession, mst.ID.String(), cdbm.MachineStatusInitializing, nil)
+			testMachineBuildStatusDetail(t, dbSession, mstStatusT.ID.String(), cdbm.MachineStatusInitializing, nil)
 		} else {
 			testMachineBuildStatusDetail(t, dbSession, st.ID.String(), cdbm.MachineStatusReady, nil)
 			testMachineBuildStatusDetail(t, dbSession, mst.ID.String(), cdbm.MachineStatusInitializing, nil)
+			testMachineBuildStatusDetail(t, dbSession, mstStatusT.ID.String(), cdbm.MachineStatusInitializing, nil)
 		}
 	}
 
@@ -2756,11 +2845,11 @@ func TestSiteHandler_GetStatusDetails(t *testing.T) {
 			respCode:  http.StatusBadRequest,
 		},
 		{
-			name:      "failure user has both Provider/Tenant role but no query param specified",
+			name:      "success user has both Provider/Tenant role with no query param (OR site access)",
 			reqSiteID: mst.ID.String(),
 			reqOrg:    mOrg,
 			reqUser:   mu,
-			respCode:  http.StatusBadRequest,
+			respCode:  http.StatusOK,
 		},
 		{
 			name:      "success user has both Provider/Tenant role, Provider query param specified",
@@ -2768,6 +2857,13 @@ func TestSiteHandler_GetStatusDetails(t *testing.T) {
 			reqOrg:    mOrg,
 			reqUser:   mu,
 			query:     url.Values{"infrastructureProviderId": []string{mip.ID.String()}},
+			respCode:  http.StatusOK,
+		},
+		{
+			name:      "success dual-role tenant-only path (site owned by other org's provider)",
+			reqSiteID: mstStatusT.ID.String(),
+			reqOrg:    mOrgStatusTenantForeignSite,
+			reqUser:   muStatusT,
 			respCode:  http.StatusOK,
 		},
 	}
