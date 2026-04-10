@@ -31,17 +31,17 @@ type OperatingSystemCreateRequest struct {
 	// Deprecated: Tenant is now inferred from org membership.
 	// Deprecated
 	TenantId NullableString `json:"tenantId,omitempty"`
-	// For Image-based OS, specify exactly one Site. For limited-scope iPXE OS, specify the target provider sites
+	// For Image-based OS, specify exactly one Site. For limited-scope Templated iPXE OS, specify the target provider sites
 	SiteIds []string `json:"siteIds,omitempty"`
-	// iPXE script or URL, only applicable for iPXE based OS. Mutually exclusive with ipxeTemplateName and imageUrl
+	// iPXE script or URL, only applicable for iPXE based OS. Mutually exclusive with ipxeTemplateId and imageUrl
 	IpxeScript NullableString `json:"ipxeScript,omitempty"`
 	// Name of an iPXE template to use. Mutually exclusive with ipxeScript and imageUrl. Only Provider Admin can create template-based OSes
-	IpxeTemplateName NullableString `json:"ipxeTemplateName,omitempty"`
+	IpxeTemplateId NullableString `json:"ipxeTemplateId,omitempty"`
 	// Parameters to pass to the iPXE template for variable substitution
-	IpxeParameters []IpxeScriptParameter `json:"ipxeParameters,omitempty"`
+	IpxeParameters []IpxeTemplateParameter `json:"ipxeParameters,omitempty"`
 	// Artifacts (kernel, initrd, etc.) required for the iPXE OS definition
-	IpxeArtifacts []IpxeScriptArtifact `json:"ipxeArtifacts,omitempty"`
-	// Synchronization scope for iPXE-based OS. Defaults to local if omitted
+	IpxeArtifacts []IpxeTemplateArtifact `json:"ipxeArtifacts,omitempty"`
+	// Synchronization scope. Required for Templated iPXE OS (when ipxeTemplateId is specified); must not be set for other types
 	Scope NullableString `json:"scope,omitempty"`
 	// Original URL from where the Operating System image can be retreived from, required for image based OS. Cannot be specified if ipxeScript is specified
 	ImageUrl NullableString `json:"imageUrl,omitempty"`
@@ -310,53 +310,53 @@ func (o *OperatingSystemCreateRequest) UnsetIpxeScript() {
 	o.IpxeScript.Unset()
 }
 
-// GetIpxeTemplateName returns the IpxeTemplateName field value if set, zero value otherwise (both if not set or set to explicit null).
-func (o *OperatingSystemCreateRequest) GetIpxeTemplateName() string {
-	if o == nil || IsNil(o.IpxeTemplateName.Get()) {
+// GetIpxeTemplateId returns the IpxeTemplateId field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *OperatingSystemCreateRequest) GetIpxeTemplateId() string {
+	if o == nil || IsNil(o.IpxeTemplateId.Get()) {
 		var ret string
 		return ret
 	}
-	return *o.IpxeTemplateName.Get()
+	return *o.IpxeTemplateId.Get()
 }
 
-// GetIpxeTemplateNameOk returns a tuple with the IpxeTemplateName field value if set, nil otherwise
+// GetIpxeTemplateIdOk returns a tuple with the IpxeTemplateId field value if set, nil otherwise
 // and a boolean to check if the value has been set.
 // NOTE: If the value is an explicit nil, `nil, true` will be returned
-func (o *OperatingSystemCreateRequest) GetIpxeTemplateNameOk() (*string, bool) {
+func (o *OperatingSystemCreateRequest) GetIpxeTemplateIdOk() (*string, bool) {
 	if o == nil {
 		return nil, false
 	}
-	return o.IpxeTemplateName.Get(), o.IpxeTemplateName.IsSet()
+	return o.IpxeTemplateId.Get(), o.IpxeTemplateId.IsSet()
 }
 
-// HasIpxeTemplateName returns a boolean if a field has been set.
-func (o *OperatingSystemCreateRequest) HasIpxeTemplateName() bool {
-	if o != nil && o.IpxeTemplateName.IsSet() {
+// HasIpxeTemplateId returns a boolean if a field has been set.
+func (o *OperatingSystemCreateRequest) HasIpxeTemplateId() bool {
+	if o != nil && o.IpxeTemplateId.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetIpxeTemplateName gets a reference to the given NullableString and assigns it to the IpxeTemplateName field.
-func (o *OperatingSystemCreateRequest) SetIpxeTemplateName(v string) {
-	o.IpxeTemplateName.Set(&v)
+// SetIpxeTemplateId gets a reference to the given NullableString and assigns it to the IpxeTemplateId field.
+func (o *OperatingSystemCreateRequest) SetIpxeTemplateId(v string) {
+	o.IpxeTemplateId.Set(&v)
 }
 
-// SetIpxeTemplateNameNil sets the value for IpxeTemplateName to be an explicit nil
-func (o *OperatingSystemCreateRequest) SetIpxeTemplateNameNil() {
-	o.IpxeTemplateName.Set(nil)
+// SetIpxeTemplateIdNil sets the value for IpxeTemplateId to be an explicit nil
+func (o *OperatingSystemCreateRequest) SetIpxeTemplateIdNil() {
+	o.IpxeTemplateId.Set(nil)
 }
 
-// UnsetIpxeTemplateName ensures that no value is present for IpxeTemplateName, not even an explicit nil
-func (o *OperatingSystemCreateRequest) UnsetIpxeTemplateName() {
-	o.IpxeTemplateName.Unset()
+// UnsetIpxeTemplateId ensures that no value is present for IpxeTemplateId, not even an explicit nil
+func (o *OperatingSystemCreateRequest) UnsetIpxeTemplateId() {
+	o.IpxeTemplateId.Unset()
 }
 
 // GetIpxeParameters returns the IpxeParameters field value if set, zero value otherwise.
-func (o *OperatingSystemCreateRequest) GetIpxeParameters() []IpxeScriptParameter {
+func (o *OperatingSystemCreateRequest) GetIpxeParameters() []IpxeTemplateParameter {
 	if o == nil || IsNil(o.IpxeParameters) {
-		var ret []IpxeScriptParameter
+		var ret []IpxeTemplateParameter
 		return ret
 	}
 	return o.IpxeParameters
@@ -364,7 +364,7 @@ func (o *OperatingSystemCreateRequest) GetIpxeParameters() []IpxeScriptParameter
 
 // GetIpxeParametersOk returns a tuple with the IpxeParameters field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *OperatingSystemCreateRequest) GetIpxeParametersOk() ([]IpxeScriptParameter, bool) {
+func (o *OperatingSystemCreateRequest) GetIpxeParametersOk() ([]IpxeTemplateParameter, bool) {
 	if o == nil || IsNil(o.IpxeParameters) {
 		return nil, false
 	}
@@ -380,15 +380,15 @@ func (o *OperatingSystemCreateRequest) HasIpxeParameters() bool {
 	return false
 }
 
-// SetIpxeParameters gets a reference to the given []IpxeScriptParameter and assigns it to the IpxeParameters field.
-func (o *OperatingSystemCreateRequest) SetIpxeParameters(v []IpxeScriptParameter) {
+// SetIpxeParameters gets a reference to the given []IpxeTemplateParameter and assigns it to the IpxeParameters field.
+func (o *OperatingSystemCreateRequest) SetIpxeParameters(v []IpxeTemplateParameter) {
 	o.IpxeParameters = v
 }
 
 // GetIpxeArtifacts returns the IpxeArtifacts field value if set, zero value otherwise.
-func (o *OperatingSystemCreateRequest) GetIpxeArtifacts() []IpxeScriptArtifact {
+func (o *OperatingSystemCreateRequest) GetIpxeArtifacts() []IpxeTemplateArtifact {
 	if o == nil || IsNil(o.IpxeArtifacts) {
-		var ret []IpxeScriptArtifact
+		var ret []IpxeTemplateArtifact
 		return ret
 	}
 	return o.IpxeArtifacts
@@ -396,7 +396,7 @@ func (o *OperatingSystemCreateRequest) GetIpxeArtifacts() []IpxeScriptArtifact {
 
 // GetIpxeArtifactsOk returns a tuple with the IpxeArtifacts field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *OperatingSystemCreateRequest) GetIpxeArtifactsOk() ([]IpxeScriptArtifact, bool) {
+func (o *OperatingSystemCreateRequest) GetIpxeArtifactsOk() ([]IpxeTemplateArtifact, bool) {
 	if o == nil || IsNil(o.IpxeArtifacts) {
 		return nil, false
 	}
@@ -412,8 +412,8 @@ func (o *OperatingSystemCreateRequest) HasIpxeArtifacts() bool {
 	return false
 }
 
-// SetIpxeArtifacts gets a reference to the given []IpxeScriptArtifact and assigns it to the IpxeArtifacts field.
-func (o *OperatingSystemCreateRequest) SetIpxeArtifacts(v []IpxeScriptArtifact) {
+// SetIpxeArtifacts gets a reference to the given []IpxeTemplateArtifact and assigns it to the IpxeArtifacts field.
+func (o *OperatingSystemCreateRequest) SetIpxeArtifacts(v []IpxeTemplateArtifact) {
 	o.IpxeArtifacts = v
 }
 
@@ -937,8 +937,8 @@ func (o OperatingSystemCreateRequest) ToMap() (map[string]interface{}, error) {
 	if o.IpxeScript.IsSet() {
 		toSerialize["ipxeScript"] = o.IpxeScript.Get()
 	}
-	if o.IpxeTemplateName.IsSet() {
-		toSerialize["ipxeTemplateName"] = o.IpxeTemplateName.Get()
+	if o.IpxeTemplateId.IsSet() {
+		toSerialize["ipxeTemplateId"] = o.IpxeTemplateId.Get()
 	}
 	if !IsNil(o.IpxeParameters) {
 		toSerialize["ipxeParameters"] = o.IpxeParameters
