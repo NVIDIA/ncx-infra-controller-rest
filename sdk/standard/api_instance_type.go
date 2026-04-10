@@ -419,14 +419,16 @@ func (r ApiDeleteInstanceTypeMachineAssociationRequest) Execute() (*http.Respons
 /*
 DeleteInstanceTypeMachineAssociation Delete a Machine/Instance Type association
 
-# Delete a Machine's association with an Instance Type
+Delete a Machine's association with an Instance Type.
+
+`machineAssociationId` path parameter has been renamed to `machineId`. The path parameter will continue to accept both Machine ID and Machine/Instance Type ID until July 9th, 2026 00:00 UTC. After that time, Machine/Instance Type ID will no longer be accepted.
 
 Org must have an Infrastructure Provider entity that owns the Instance Type and the Machine. User must have `FORGE_PROVIDER_ADMIN` authorization role.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
 	@param instanceTypeId ID of the Instance Type
-	@param machineAssociationId ID of the Machine/Instance Type Association
+	@param machineAssociationId Can be ID of the Machine (`machineId`) or ID of Machine/Instance Type Association (`machineAssociationId`). Use of `machineAssociationId` is now deprecated and will no longer be accepted after July 9th, 2026 00:00 UTC.
 	@return ApiDeleteInstanceTypeMachineAssociationRequest
 */
 func (a *InstanceTypeAPIService) DeleteInstanceTypeMachineAssociation(ctx context.Context, org string, instanceTypeId string, machineAssociationId string) ApiDeleteInstanceTypeMachineAssociationRequest {

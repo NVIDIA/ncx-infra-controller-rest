@@ -20,11 +20,14 @@ var _ MappedNullable = &MachineInstanceType{}
 
 // MachineInstanceType Associates a machine with an Instance Type
 type MachineInstanceType struct {
-	Id             *string    `json:"id,omitempty"`
-	MachineId      *string    `json:"machineId,omitempty"`
-	InstanceTypeId *string    `json:"instanceTypeId,omitempty"`
-	Created        *time.Time `json:"created,omitempty"`
-	Updated        *time.Time `json:"updated,omitempty"`
+	// Deprecated: Use `machineId` when identifying a Machine/Instance Type association. This field will be removed on July 9th, 2026 0:00 UTC.
+	// Deprecated
+	Id             *string       `json:"id,omitempty"`
+	MachineId      *string       `json:"machineId,omitempty"`
+	InstanceTypeId *string       `json:"instanceTypeId,omitempty"`
+	Deprecations   []Deprecation `json:"deprecations,omitempty"`
+	Created        *time.Time    `json:"created,omitempty"`
+	Updated        *time.Time    `json:"updated,omitempty"`
 }
 
 // NewMachineInstanceType instantiates a new MachineInstanceType object
@@ -45,6 +48,7 @@ func NewMachineInstanceTypeWithDefaults() *MachineInstanceType {
 }
 
 // GetId returns the Id field value if set, zero value otherwise.
+// Deprecated
 func (o *MachineInstanceType) GetId() string {
 	if o == nil || IsNil(o.Id) {
 		var ret string
@@ -55,6 +59,7 @@ func (o *MachineInstanceType) GetId() string {
 
 // GetIdOk returns a tuple with the Id field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// Deprecated
 func (o *MachineInstanceType) GetIdOk() (*string, bool) {
 	if o == nil || IsNil(o.Id) {
 		return nil, false
@@ -72,6 +77,7 @@ func (o *MachineInstanceType) HasId() bool {
 }
 
 // SetId gets a reference to the given string and assigns it to the Id field.
+// Deprecated
 func (o *MachineInstanceType) SetId(v string) {
 	o.Id = &v
 }
@@ -138,6 +144,38 @@ func (o *MachineInstanceType) HasInstanceTypeId() bool {
 // SetInstanceTypeId gets a reference to the given string and assigns it to the InstanceTypeId field.
 func (o *MachineInstanceType) SetInstanceTypeId(v string) {
 	o.InstanceTypeId = &v
+}
+
+// GetDeprecations returns the Deprecations field value if set, zero value otherwise.
+func (o *MachineInstanceType) GetDeprecations() []Deprecation {
+	if o == nil || IsNil(o.Deprecations) {
+		var ret []Deprecation
+		return ret
+	}
+	return o.Deprecations
+}
+
+// GetDeprecationsOk returns a tuple with the Deprecations field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *MachineInstanceType) GetDeprecationsOk() ([]Deprecation, bool) {
+	if o == nil || IsNil(o.Deprecations) {
+		return nil, false
+	}
+	return o.Deprecations, true
+}
+
+// HasDeprecations returns a boolean if a field has been set.
+func (o *MachineInstanceType) HasDeprecations() bool {
+	if o != nil && !IsNil(o.Deprecations) {
+		return true
+	}
+
+	return false
+}
+
+// SetDeprecations gets a reference to the given []Deprecation and assigns it to the Deprecations field.
+func (o *MachineInstanceType) SetDeprecations(v []Deprecation) {
+	o.Deprecations = v
 }
 
 // GetCreated returns the Created field value if set, zero value otherwise.
@@ -222,6 +260,9 @@ func (o MachineInstanceType) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.InstanceTypeId) {
 		toSerialize["instanceTypeId"] = o.InstanceTypeId
+	}
+	if !IsNil(o.Deprecations) {
+		toSerialize["deprecations"] = o.Deprecations
 	}
 	if !IsNil(o.Created) {
 		toSerialize["created"] = o.Created

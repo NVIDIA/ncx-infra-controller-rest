@@ -552,6 +552,7 @@ func TestDeleteMachineInstanceTypeHandler_Handle(t *testing.T) {
 	m5 := common.TestBuildMachine(t, dbSession, ip, st, &it4.ID, cdb.GetStrPtr("test-controller-machine-type"), cdbm.MachineStatusReady)
 	m6 := common.TestBuildMachine(t, dbSession, ip, st, &it4.ID, cdb.GetStrPtr("test-controller-machine-type"), cdbm.MachineStatusReady)
 	m7 := common.TestBuildMachine(t, dbSession, ip, st, &it4.ID, cdb.GetStrPtr("test-controller-machine-type"), cdbm.MachineStatusReady)
+	m8 := common.TestBuildMachine(t, dbSession, ip, st, &it.ID, cdb.GetStrPtr("test-controller-machine-type"), cdbm.MachineStatusReady)
 
 	assert.Equal(t, it.ID, *m.InstanceTypeID)
 	assert.Equal(t, it2.ID, *m2.InstanceTypeID)
@@ -566,6 +567,7 @@ func TestDeleteMachineInstanceTypeHandler_Handle(t *testing.T) {
 	_ = common.TestBuildMachineInstanceType(t, dbSession, m6, it4)
 
 	mit7 := common.TestBuildMachineInstanceType(t, dbSession, m7, it)
+	mit8 := common.TestBuildMachineInstanceType(t, dbSession, m8, it)
 
 	// create an allocation for the instance type it2
 	ipamStorage := ipam.NewIpamStorage(dbSession.DB, nil)
@@ -683,10 +685,12 @@ func TestDeleteMachineInstanceTypeHandler_Handle(t *testing.T) {
 		scp       *sc.ClientPool
 	}
 	type args struct {
-		it   *cdbm.InstanceType
-		mit  *cdbm.MachineInstanceType
-		org  string
-		user *cdbm.User
+		it                     *cdbm.InstanceType
+		mit                    *cdbm.MachineInstanceType
+		deleteID               string
+		expectedDeletedMachine string
+		org                    string
+		user                   *cdbm.User
 	}
 	tests := []struct {
 		name               string
@@ -704,10 +708,12 @@ func TestDeleteMachineInstanceTypeHandler_Handle(t *testing.T) {
 				cfg:       cfg,
 			},
 			args: args{
-				it:   it,
-				mit:  mit,
-				org:  org,
-				user: ipu,
+				it:                     it,
+				mit:                    mit,
+				deleteID:               mit.ID.String(),
+				expectedDeletedMachine: m.ID,
+				org:                    org,
+				user:                   ipu,
 			},
 			wantStatusCode:     http.StatusInternalServerError,
 			verifyChildSpanner: true,
@@ -721,10 +727,31 @@ func TestDeleteMachineInstanceTypeHandler_Handle(t *testing.T) {
 				cfg:       cfg,
 			},
 			args: args{
-				it:   it,
-				mit:  mit,
-				org:  org,
-				user: ipu,
+				it:                     it,
+				mit:                    mit,
+				deleteID:               mit.ID.String(),
+				expectedDeletedMachine: m.ID,
+				org:                    org,
+				user:                   ipu,
+			},
+			wantStatusCode:     http.StatusAccepted,
+			verifyChildSpanner: true,
+		},
+		{
+			name: "test delete Machine Instance Type API endpoint by machine ID",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				scp:       scp,
+				cfg:       cfg,
+			},
+			args: args{
+				it:                     it,
+				mit:                    mit8,
+				deleteID:               m8.ID,
+				expectedDeletedMachine: m8.ID,
+				org:                    org,
+				user:                   ipu,
 			},
 			wantStatusCode:     http.StatusAccepted,
 			verifyChildSpanner: true,
@@ -738,10 +765,12 @@ func TestDeleteMachineInstanceTypeHandler_Handle(t *testing.T) {
 				cfg:       cfg,
 			},
 			args: args{
-				it:   it,
-				mit:  mit7,
-				org:  org,
-				user: ipu,
+				it:                     it,
+				mit:                    mit7,
+				deleteID:               mit7.ID.String(),
+				expectedDeletedMachine: m7.ID,
+				org:                    org,
+				user:                   ipu,
 			},
 			wantStatusCode:     http.StatusAccepted,
 			verifyChildSpanner: true,
@@ -755,10 +784,12 @@ func TestDeleteMachineInstanceTypeHandler_Handle(t *testing.T) {
 				cfg:       cfg,
 			},
 			args: args{
-				it:   it2,
-				mit:  mit2,
-				org:  org,
-				user: ipu,
+				it:                     it2,
+				mit:                    mit2,
+				deleteID:               mit2.ID.String(),
+				expectedDeletedMachine: m2.ID,
+				org:                    org,
+				user:                   ipu,
 			},
 			wantStatusCode: http.StatusBadRequest,
 		},
@@ -771,10 +802,12 @@ func TestDeleteMachineInstanceTypeHandler_Handle(t *testing.T) {
 				cfg:       cfg,
 			},
 			args: args{
-				it:   it3,
-				mit:  mit3,
-				org:  org,
-				user: ipu,
+				it:                     it3,
+				mit:                    mit3,
+				deleteID:               mit3.ID.String(),
+				expectedDeletedMachine: m3.ID,
+				org:                    org,
+				user:                   ipu,
 			},
 			wantStatusCode: http.StatusBadRequest,
 		},
@@ -787,10 +820,12 @@ func TestDeleteMachineInstanceTypeHandler_Handle(t *testing.T) {
 				cfg:       cfg,
 			},
 			args: args{
-				it:   it4,
-				mit:  mit4,
-				org:  org,
-				user: ipu,
+				it:                     it4,
+				mit:                    mit4,
+				deleteID:               mit4.ID.String(),
+				expectedDeletedMachine: m4.ID,
+				org:                    org,
+				user:                   ipu,
 			},
 			wantStatusCode: http.StatusBadRequest,
 		},
@@ -812,7 +847,7 @@ func TestDeleteMachineInstanceTypeHandler_Handle(t *testing.T) {
 			rec := httptest.NewRecorder()
 			ec := e.NewContext(req, rec)
 			ec.SetParamNames("orgName", "instanceTypeId", "id")
-			ec.SetParamValues(tt.args.org, tt.args.it.ID.String(), tt.args.mit.ID.String())
+			ec.SetParamValues(tt.args.org, tt.args.it.ID.String(), tt.args.deleteID)
 			ec.Set("user", tt.args.user)
 
 			ctx = context.WithValue(ctx, otelecho.TracerKey, tracer)
@@ -829,19 +864,14 @@ func TestDeleteMachineInstanceTypeHandler_Handle(t *testing.T) {
 			}
 
 			mitDAO := cdbm.NewMachineInstanceTypeDAO(dbSession)
-			umits, _, terr := mitDAO.GetAll(context.Background(), nil, &m.ID, []uuid.UUID{it.ID}, nil, nil, nil, nil)
+			umits, _, terr := mitDAO.GetAll(context.Background(), nil, cdb.GetStrPtr(tt.args.expectedDeletedMachine), []uuid.UUID{tt.args.it.ID}, nil, nil, nil, nil)
 			assert.Nil(t, terr)
-			assert.Equal(t, len(umits), 0)
+			assert.Len(t, umits, 0)
 
-			// mit was deleted, so the machine should have no instance type
-			um1, err := mDAO.GetByID(context.Background(), nil, m.ID, nil, false)
-			assert.Nil(t, err)
-			assert.Nil(t, um1.InstanceTypeID)
-
-			// mit2 was not deleted, so the machine should still have an instance type
-			um2, err := mDAO.GetByID(context.Background(), nil, m2.ID, nil, false)
-			assert.Nil(t, err)
-			assert.NotNil(t, um2.InstanceTypeID)
+			// Verify the requested machine no longer carries the Instance Type assignment.
+			updatedMachine, err := mDAO.GetByID(context.Background(), nil, tt.args.expectedDeletedMachine, nil, false)
+			require.NoError(t, err)
+			assert.Nil(t, updatedMachine.InstanceTypeID)
 
 			if tt.verifyChildSpanner {
 				span := oteltrace.SpanFromContext(ec.Request().Context())

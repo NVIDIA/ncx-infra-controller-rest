@@ -5518,7 +5518,7 @@ paths:
         name: machineAssociationId
         in: path
         required: true
-        description: ID of the Machine/Instance Type Association
+        description: Can be ID of the Machine (`machineId`) or ID of Machine/Instance Type Association (`machineAssociationId`). Use of `machineAssociationId` is now deprecated and will no longer be accepted after July 9th, 2026 00:00 UTC.
     delete:
       summary: Delete a Machine/Instance Type association
       operationId: delete-instance-type-machine-association
@@ -5528,7 +5528,9 @@ paths:
         '403':
           $ref: '#/components/responses/ForbiddenError'
       description: |-
-        Delete a Machine's association with an Instance Type
+        Delete a Machine's association with an Instance Type.
+
+        `machineAssociationId` path parameter has been renamed to `machineId`. The path parameter will continue to accept both Machine ID and Machine/Instance Type ID until July 9th, 2026 00:00 UTC. After that time, Machine/Instance Type ID will no longer be accepted.
 
         Org must have an Infrastructure Provider entity that owns the Instance Type and the Machine. User must have `FORGE_PROVIDER_ADMIN` authorization role.
       tags:
@@ -17185,6 +17187,11 @@ components:
         - id: 497f6eca-6276-4993-bfeb-53cbbbba6f08
           machineId: fm100ht4v4mce2qstjnl8970nnj3ie6ecek4mtjn27pea4kre5gsa49jg0g
           instanceTypeId: 41e36058-8403-4086-a9b8-39cb5bc9cb98
+          deprecations:
+            - attribute: id
+              replacedBy: machineId
+              takeActionBy: '2026-07-09T00:00:00Z'
+              notice: '''id'' is being deprecated in favor of ''machineId''. Please take action prior to the specified date.'
           created: '2019-08-24T14:15:22Z'
           updated: '2019-08-24T14:15:22Z'
       properties:
@@ -17192,11 +17199,17 @@ components:
           type: string
           format: uuid
           readOnly: true
+          description: 'Deprecated: Use `machineId` when identifying a Machine/Instance Type association. This field will be removed on July 9th, 2026 0:00 UTC.'
+          deprecated: true
         machineId:
           type: string
         instanceTypeId:
           type: string
           format: uuid
+        deprecations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Deprecation'
         created:
           type: string
           format: date-time
