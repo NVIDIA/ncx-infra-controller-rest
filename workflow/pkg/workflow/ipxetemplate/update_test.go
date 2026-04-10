@@ -54,7 +54,7 @@ func (s *UpdateIpxeTemplateTestSuite) Test_UpdateIpxeTemplateInventory_Success()
 	var metricsManager cwm.ManageInventoryMetrics
 
 	siteID := uuid.New()
-	inv := &cwssaws.IpxeTemplateInventory{Templates: []*cwssaws.IpxeScriptTemplate{}}
+	inv := &cwssaws.IpxeTemplateInventory{Templates: []*cwssaws.IpxeTemplate{}}
 
 	s.env.RegisterActivity(templateManager.UpdateIpxeTemplatesInDB)
 	s.env.OnActivity(templateManager.UpdateIpxeTemplatesInDB, mock.Anything, mock.Anything, mock.Anything).Return(nil)
@@ -72,7 +72,7 @@ func (s *UpdateIpxeTemplateTestSuite) Test_UpdateIpxeTemplateInventory_ActivityF
 	var metricsManager cwm.ManageInventoryMetrics
 
 	siteID := uuid.New()
-	inv := &cwssaws.IpxeTemplateInventory{Templates: []*cwssaws.IpxeScriptTemplate{}}
+	inv := &cwssaws.IpxeTemplateInventory{Templates: []*cwssaws.IpxeTemplate{}}
 
 	s.env.RegisterActivity(templateManager.UpdateIpxeTemplatesInDB)
 	s.env.OnActivity(templateManager.UpdateIpxeTemplatesInDB, mock.Anything, mock.Anything, mock.Anything).Return(errors.New("UpdateIpxeTemplatesInDB failure"))
@@ -91,7 +91,7 @@ func (s *UpdateIpxeTemplateTestSuite) Test_UpdateIpxeTemplateInventory_ActivityF
 }
 
 func (s *UpdateIpxeTemplateTestSuite) Test_UpdateIpxeTemplateInventory_InvalidSiteID() {
-	inv := &cwssaws.IpxeTemplateInventory{Templates: []*cwssaws.IpxeScriptTemplate{}}
+	inv := &cwssaws.IpxeTemplateInventory{Templates: []*cwssaws.IpxeTemplate{}}
 
 	s.env.ExecuteWorkflow(UpdateIpxeTemplateInventory, "not-a-valid-uuid", inv)
 	s.True(s.env.IsWorkflowCompleted())

@@ -533,19 +533,25 @@ func (mod ManageOperatingSystemSync) UpdateOperatingSystemsInDB(ctx context.Cont
 		}
 
 		coreUpdated, _ := time.Parse(time.RFC3339, reported.Updated)
-		params := protoParamsToModel(reported.IpxeParameters)
-		artifacts := protoArtifactsToModel(reported.IpxeArtifacts)
+		params := protoParamsToModel(reported.IpxeTemplateParameters)
+		artifacts := protoArtifactsToModel(reported.IpxeTemplateArtifacts)
 		osType := osTypeToString(reported.Type)
 
 		cur, found := existingByID[osID]
 		if !found {
 			// Templated iPXE OS: verify the referenced template is available at this site
 			// before creating the OS record. Skip silently if not available.
-			if osType == cdbm.OperatingSystemTypeTemplatedIPXE {
+			if osType == cdbm.OperatingSystemTypeTemplatedIPXE && reported.IpxeTemplateId != nil {
+				tmplUUID, parseErr := uuid.Parse(reported.IpxeTemplateId.Value)
+				if parseErr != nil {
+					logger.Error().Err(parseErr).Str("ID", osID.String()).Str("TemplateId", reported.IpxeTemplateId.Value).
+						Msg("invalid iPXE template UUID in OS definition")
+					return parseErr
+				}
 				ipxeTmplDAO := cdbm.NewIpxeTemplateDAO(mod.dbSession)
-				if _, tmplErr := ipxeTmplDAO.GetBySiteAndName(ctx, nil, siteID, *reported.IpxeTemplateName); tmplErr != nil {
+				if _, tmplErr := ipxeTmplDAO.GetBySiteAndTemplateID(ctx, nil, siteID, tmplUUID); tmplErr != nil {
 					if errors.Is(tmplErr, cdb.ErrDoesNotExist) {
-						logger.Warn().Str("ID", osID.String()).Str("Template", *reported.IpxeTemplateName).
+						logger.Warn().Str("ID", osID.String()).Str("TemplateId", reported.IpxeTemplateId.Value).
 							Msg("iPXE template not available at site, skipping OS creation")
 						continue
 					}
@@ -566,15 +572,15 @@ func (mod ManageOperatingSystemSync) UpdateOperatingSystemsInDB(ctx context.Cont
 				OsType:                   osType,
 				Description:              reported.Description,
 				UserData:                 reported.UserData,
-				IpxeScript:               reported.IpxeScript,
-				AllowOverride:            reported.AllowOverride,
-				PhoneHomeEnabled:         reported.PhoneHomeEnabled,
-				IpxeTemplateName:         reported.IpxeTemplateName,
-				IpxeParameters:           params,
-				IpxeArtifacts:            artifacts,
-				IpxeOSHash:               reported.IpxeDefinitionHash,
-				Status:                   tenantStateToRestStatus(reported.Status),
-			}); cerr != nil {
+			IpxeScript:               reported.IpxeScript,
+			AllowOverride:            reported.AllowOverride,
+			PhoneHomeEnabled:         reported.PhoneHomeEnabled,
+			IpxeTemplateId:           protoTemplateIdToString(reported.IpxeTemplateId),
+			IpxeParameters:           params,
+			IpxeArtifacts:            artifacts,
+			IpxeOSHash:               reported.IpxeTemplateDefinitionHash,
+			Status:                   tenantStateToRestStatus(reported.Status),
+		}); cerr != nil {
 				logger.Error().Err(cerr).Str("ID", reported.GetId().GetValue()).Msg("Failed to create Operating System in DB")
 			} else if !reported.IsActive {
 				// bun ORM hardcodes is_active=true on INSERT; correct it with an update.
@@ -641,15 +647,15 @@ func (mod ManageOperatingSystemSync) UpdateOperatingSystemsInDB(ctx context.Cont
 				OsType:                   &osType,
 				Description:              reported.Description,
 				UserData:                 reported.UserData,
-				IpxeScript:               reported.IpxeScript,
-				AllowOverride:            &reported.AllowOverride,
-				PhoneHomeEnabled:         &reported.PhoneHomeEnabled,
-				IsActive:                 &reported.IsActive,
-				IpxeTemplateName:         reported.IpxeTemplateName,
-				IpxeParameters:           &params,
-				IpxeArtifacts:            &artifacts,
-				IpxeOSHash:               reported.IpxeDefinitionHash,
-				Status:                   &controllerState,
+			IpxeScript:               reported.IpxeScript,
+			AllowOverride:            &reported.AllowOverride,
+			PhoneHomeEnabled:         &reported.PhoneHomeEnabled,
+			IsActive:                 &reported.IsActive,
+			IpxeTemplateId:           protoTemplateIdToString(reported.IpxeTemplateId),
+			IpxeParameters:           &params,
+			IpxeArtifacts:            &artifacts,
+			IpxeOSHash:               reported.IpxeTemplateDefinitionHash,
+			Status:                   &controllerState,
 			}
 			if _, uerr := osDAO.Update(ctx, nil, updateInput); uerr != nil {
 				logger.Error().Err(uerr).Str("ID", reported.GetId().GetValue()).Msg("Failed to update Operating System in DB")
@@ -762,8 +768,17 @@ func osTypeToString(t cwssaws.OperatingSystemType) string {
 	}
 }
 
-// protoParamsToModel converts proto IpxeScriptParameter slice to DB model slice
-func protoParamsToModel(params []*cwssaws.IpxeScriptParameter) []cdbm.OperatingSystemIpxeParameter {
+// protoTemplateIdToString extracts the UUID string from a proto IpxeTemplateId message, or nil.
+func protoTemplateIdToString(id *cwssaws.IpxeTemplateId) *string {
+	if id == nil {
+		return nil
+	}
+	v := id.Value
+	return &v
+}
+
+// protoParamsToModel converts proto IpxeTemplateParameter slice to DB model slice
+func protoParamsToModel(params []*cwssaws.IpxeTemplateParameter) []cdbm.OperatingSystemIpxeParameter {
 	result := make([]cdbm.OperatingSystemIpxeParameter, 0, len(params))
 	for _, p := range params {
 		if p == nil {
@@ -774,8 +789,8 @@ func protoParamsToModel(params []*cwssaws.IpxeScriptParameter) []cdbm.OperatingS
 	return result
 }
 
-// protoArtifactsToModel converts proto IpxeScriptArtifact slice to DB model slice
-func protoArtifactsToModel(artifacts []*cwssaws.IpxeScriptArtifact) []cdbm.OperatingSystemIpxeArtifact {
+// protoArtifactsToModel converts proto IpxeTemplateArtifact slice to DB model slice
+func protoArtifactsToModel(artifacts []*cwssaws.IpxeTemplateArtifact) []cdbm.OperatingSystemIpxeArtifact {
 	result := make([]cdbm.OperatingSystemIpxeArtifact, 0, len(artifacts))
 	for _, a := range artifacts {
 		if a == nil {

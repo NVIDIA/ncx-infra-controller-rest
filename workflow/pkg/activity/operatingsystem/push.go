@@ -378,14 +378,19 @@ func (mop ManageOperatingSystemPush) expandGlobalScopeAssociations(ctx context.C
 
 // checkTemplateAvailability returns true if the site should be skipped (template not available).
 func (mop ManageOperatingSystemPush) checkTemplateAvailability(ctx context.Context, logger zerolog.Logger, siteID uuid.UUID, os *cdbm.OperatingSystem) bool {
-	if os.IpxeTemplateName == nil {
+	if os.IpxeTemplateId == nil {
 		return false
 	}
+	tmplUUID, parseErr := uuid.Parse(*os.IpxeTemplateId)
+	if parseErr != nil {
+		logger.Error().Err(parseErr).Str("TemplateId", *os.IpxeTemplateId).Msg("invalid iPXE template UUID")
+		return true
+	}
 	ipxeTmplDAO := cdbm.NewIpxeTemplateDAO(mop.dbSession)
-	_, err := ipxeTmplDAO.GetBySiteAndName(ctx, nil, siteID, *os.IpxeTemplateName)
+	_, err := ipxeTmplDAO.GetBySiteAndTemplateID(ctx, nil, siteID, tmplUUID)
 	if err != nil {
 		if errors.Is(err, cdb.ErrDoesNotExist) {
-			logger.Warn().Str("Template", *os.IpxeTemplateName).
+			logger.Warn().Str("TemplateId", *os.IpxeTemplateId).
 				Msg("iPXE template not available at site, skipping sync")
 		} else {
 			logger.Error().Err(err).Msg("error checking iPXE template availability at site")
@@ -405,10 +410,10 @@ func (mop ManageOperatingSystemPush) buildCreateRequest(os *cdbm.OperatingSystem
 		AllowOverride:        os.AllowOverride,
 		PhoneHomeEnabled:     os.PhoneHomeEnabled,
 		UserData:             os.UserData,
-		IpxeScript:           os.IpxeScript,
-		IpxeTemplateName:     os.IpxeTemplateName,
-		IpxeParameters:       modelParamsToProto(os.IpxeParameters),
-		IpxeArtifacts:        modelArtifactsToProto(os.IpxeArtifacts),
+		IpxeScript:                   os.IpxeScript,
+		IpxeTemplateId:               ipxeTemplateIdPtr(os.IpxeTemplateId),
+		IpxeTemplateParameters:       modelParamsToProto(os.IpxeParameters),
+		IpxeTemplateArtifacts:        modelArtifactsToProto(os.IpxeArtifacts),
 	}
 }
 
@@ -422,10 +427,10 @@ func (mop ManageOperatingSystemPush) buildUpdateRequest(os *cdbm.OperatingSystem
 		PhoneHomeEnabled:   &os.PhoneHomeEnabled,
 		UserData:           os.UserData,
 		IpxeScript:         os.IpxeScript,
-		IpxeTemplateName:   os.IpxeTemplateName,
-		IpxeParameters:     &cwssaws.IpxeScriptParameters{Items: modelParamsToProto(os.IpxeParameters)},
-		IpxeArtifacts:      &cwssaws.IpxeScriptArtifacts{Items: modelArtifactsToProto(os.IpxeArtifacts)},
-		IpxeDefinitionHash: os.IpxeTemplateDefinitionHash,
+		IpxeTemplateId:     ipxeTemplateIdPtr(os.IpxeTemplateId),
+		IpxeTemplateParameters:     &cwssaws.IpxeTemplateParameters{Items: modelParamsToProto(os.IpxeParameters)},
+		IpxeTemplateArtifacts:      &cwssaws.IpxeTemplateArtifacts{Items: modelArtifactsToProto(os.IpxeArtifacts)},
+		IpxeTemplateDefinitionHash: os.IpxeTemplateDefinitionHash,
 	}
 }
 
@@ -480,28 +485,36 @@ func (mop ManageOperatingSystemPush) updateAggregateOSStatus(ctx context.Context
 
 func hasCachedOnlyArtifact(artifacts []cdbm.OperatingSystemIpxeArtifact) bool {
 	for _, a := range artifacts {
-		if a.CacheStrategy == cwssaws.IpxeScriptArtifactCacheStrategy_CACHED_ONLY.String() {
+		if a.CacheStrategy == cwssaws.IpxeTemplateArtifactCacheStrategy_CACHED_ONLY.String() {
 			return true
 		}
 	}
 	return false
 }
 
+// ipxeTemplateIdPtr converts a nullable string UUID to the proto IpxeTemplateId message.
+func ipxeTemplateIdPtr(id *string) *cwssaws.IpxeTemplateId {
+	if id == nil {
+		return nil
+	}
+	return &cwssaws.IpxeTemplateId{Value: *id}
+}
+
 // modelParamsToProto converts DB model iPXE parameters to proto representation.
-func modelParamsToProto(params []cdbm.OperatingSystemIpxeParameter) []*cwssaws.IpxeScriptParameter {
-	result := make([]*cwssaws.IpxeScriptParameter, 0, len(params))
+func modelParamsToProto(params []cdbm.OperatingSystemIpxeParameter) []*cwssaws.IpxeTemplateParameter {
+	result := make([]*cwssaws.IpxeTemplateParameter, 0, len(params))
 	for _, p := range params {
-		result = append(result, &cwssaws.IpxeScriptParameter{Name: p.Name, Value: p.Value})
+		result = append(result, &cwssaws.IpxeTemplateParameter{Name: p.Name, Value: p.Value})
 	}
 	return result
 }
 
 // modelArtifactsToProto converts DB model iPXE artifacts to proto representation.
-func modelArtifactsToProto(artifacts []cdbm.OperatingSystemIpxeArtifact) []*cwssaws.IpxeScriptArtifact {
-	result := make([]*cwssaws.IpxeScriptArtifact, 0, len(artifacts))
+func modelArtifactsToProto(artifacts []cdbm.OperatingSystemIpxeArtifact) []*cwssaws.IpxeTemplateArtifact {
+	result := make([]*cwssaws.IpxeTemplateArtifact, 0, len(artifacts))
 	for _, a := range artifacts {
-		strategy := cwssaws.IpxeScriptArtifactCacheStrategy(cwssaws.IpxeScriptArtifactCacheStrategy_value[a.CacheStrategy])
-		result = append(result, &cwssaws.IpxeScriptArtifact{
+		strategy := cwssaws.IpxeTemplateArtifactCacheStrategy(cwssaws.IpxeTemplateArtifactCacheStrategy_value[a.CacheStrategy])
+		result = append(result, &cwssaws.IpxeTemplateArtifact{
 			Name:          a.Name,
 			Url:           a.URL,
 			Sha:           a.SHA,

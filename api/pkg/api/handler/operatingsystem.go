@@ -113,7 +113,7 @@ func (csh CreateOperatingSystemHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request data, potentially invalid structure", nil)
 	}
 	// Infer type of OS from provided parameters:
-	osType := model.GetOperatingSystemType(apiRequest.IpxeScript, apiRequest.IpxeTemplateName)
+	osType := model.GetOperatingSystemType(apiRequest.IpxeScript, apiRequest.IpxeTemplateId)
 
 	// Role check: either Provider Admin or Tenant Admin can create OSes.
 	// Provider Admin is limited to iPXE Template-based OSes; Tenant Admin may
@@ -381,7 +381,7 @@ func (csh CreateOperatingSystemHandler) Handle(c echo.Context) error {
 		RootFsId:                 apiRequest.RootFsID,
 		RootFsLabel:              apiRequest.RootFsLabel,
 		IpxeScript:               apiRequest.IpxeScript,
-		IpxeTemplateName:         apiRequest.IpxeTemplateName,
+		IpxeTemplateId:         apiRequest.IpxeTemplateId,
 		IpxeParameters:           apiRequest.IpxeParameters,
 		IpxeArtifacts:            stripCachedURLFromArtifacts(apiRequest.IpxeArtifacts),
 		UserData:                 apiRequest.UserData,
@@ -1293,7 +1293,7 @@ func (ush UpdateOperatingSystemHandler) Handle(c echo.Context) error {
 		RootFsId:          apiRequest.RootFsID,
 		RootFsLabel:       apiRequest.RootFsLabel,
 		IpxeScript:        apiRequest.IpxeScript,
-		IpxeTemplateName:  apiRequest.IpxeTemplateName,
+		IpxeTemplateId:  apiRequest.IpxeTemplateId,
 		IpxeParameters:    apiRequest.IpxeParameters,
 		IpxeArtifacts:     stripCachedURLFromArtifactsPtr(apiRequest.IpxeArtifacts),
 		UserData:          apiRequest.UserData,
@@ -1745,6 +1745,18 @@ func (dsh DeleteOperatingSystemHandler) Handle(c echo.Context) error {
 				}
 			}
 			if werr != nil {
+				var timeoutErr *tp.TimeoutError
+				if errors.As(werr, &timeoutErr) {
+					logger.Error().Err(werr).Msg("failed to delete Operating System, timeout occurred executing workflow on Site.")
+					newctx := context.Background()
+					serr := stc.TerminateWorkflow(newctx, we.GetID(), "", "timeout occurred executing delete Operating System workflow")
+					if serr != nil {
+						logger.Error().Err(serr).Msg("failed to execute terminate Temporal workflow for deleting Operating System")
+						return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to terminate synchronous Operating System delete workflow after timeout, Cloud and Site data may be de-synced: %s", serr), nil)
+					}
+					logger.Info().Str("Workflow ID", we.GetID()).Msg("initiated terminate synchronous delete Operating System workflow successfully")
+					return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to delete Operating System, timeout occurred executing workflow on Site: %s", werr), nil)
+				}
 				logger.Error().Err(werr).Str("Workflow ID", we.GetID()).Msg("DeleteOsImage workflow failed")
 			}
 		}
@@ -1756,22 +1768,30 @@ func (dsh DeleteOperatingSystemHandler) Handle(c echo.Context) error {
 
 }
 
+// ipxeTemplateIdFromString converts a nullable string UUID to the proto IpxeTemplateId message.
+func ipxeTemplateIdFromString(id *string) *cwssaws.IpxeTemplateId {
+	if id == nil {
+		return nil
+	}
+	return &cwssaws.IpxeTemplateId{Value: *id}
+}
+
 // dbParamsToProto converts DB model iPXE parameters to the proto representation.
-func dbParamsToProto(params []cdbm.OperatingSystemIpxeParameter) []*cwssaws.IpxeScriptParameter {
-	result := make([]*cwssaws.IpxeScriptParameter, 0, len(params))
+func dbParamsToProto(params []cdbm.OperatingSystemIpxeParameter) []*cwssaws.IpxeTemplateParameter {
+	result := make([]*cwssaws.IpxeTemplateParameter, 0, len(params))
 	for _, p := range params {
-		result = append(result, &cwssaws.IpxeScriptParameter{Name: p.Name, Value: p.Value})
+		result = append(result, &cwssaws.IpxeTemplateParameter{Name: p.Name, Value: p.Value})
 	}
 	return result
 }
 
 // dbArtifactsToProto converts DB model iPXE artifacts to the proto representation.
 // CacheStrategy is stored as the proto enum's string name (e.g. "CACHE_AS_NEEDED").
-func dbArtifactsToProto(artifacts []cdbm.OperatingSystemIpxeArtifact) []*cwssaws.IpxeScriptArtifact {
-	result := make([]*cwssaws.IpxeScriptArtifact, 0, len(artifacts))
+func dbArtifactsToProto(artifacts []cdbm.OperatingSystemIpxeArtifact) []*cwssaws.IpxeTemplateArtifact {
+	result := make([]*cwssaws.IpxeTemplateArtifact, 0, len(artifacts))
 	for _, a := range artifacts {
-		strategy := cwssaws.IpxeScriptArtifactCacheStrategy(cwssaws.IpxeScriptArtifactCacheStrategy_value[a.CacheStrategy])
-		result = append(result, &cwssaws.IpxeScriptArtifact{
+		strategy := cwssaws.IpxeTemplateArtifactCacheStrategy(cwssaws.IpxeTemplateArtifactCacheStrategy_value[a.CacheStrategy])
+		result = append(result, &cwssaws.IpxeTemplateArtifact{
 			Name:          a.Name,
 			Url:           a.URL,
 			Sha:           a.SHA,

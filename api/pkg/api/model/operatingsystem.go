@@ -81,8 +81,8 @@ type APIOperatingSystemCreateRequest struct {
 	AllowOverride bool `json:"allowOverride"`
 	// EnableBlockStorage indicates whether the Operating System image will be stored remotely via block storage
 	EnableBlockStorage bool `json:"enableBlockStorage"`
-	// IpxeTemplateName is the name of the iPXE template to use (alternative to a raw ipxeScript)
-	IpxeTemplateName *string `json:"ipxeTemplateName"`
+	// IpxeTemplateId is the name of the iPXE template to use (alternative to a raw ipxeScript)
+	IpxeTemplateId *string `json:"ipxeTemplateId"`
 	// IpxeParameters are the parameters to pass to the iPXE template
 	IpxeParameters []cdbm.OperatingSystemIpxeParameter `json:"ipxeParameters"`
 	// IpxeArtifacts are the artifacts (kernel, initrd, ISO, …) for the iPXE OS definition
@@ -111,23 +111,23 @@ func (oscr APIOperatingSystemCreateRequest) Validate() error {
 		return err
 	}
 
-	if oscr.IpxeTemplateName != nil && strings.TrimSpace(*oscr.IpxeTemplateName) == "" {
+	if oscr.IpxeTemplateId != nil && strings.TrimSpace(*oscr.IpxeTemplateId) == "" {
 		return validation.Errors{
-			"ipxeTemplateName": errors.New("must not be empty"),
+			"ipxeTemplateId": errors.New("must not be empty"),
 		}
 	}
 
-	if oscr.IpxeScript != nil && oscr.IpxeTemplateName != nil {
+	if oscr.IpxeScript != nil && oscr.IpxeTemplateId != nil {
 		return validation.Errors{
-			"ipxeTemplateName": errors.New("ipxeScript and ipxeTemplateName are mutually exclusive"),
+			"ipxeTemplateId": errors.New("ipxeScript and ipxeTemplateId are mutually exclusive"),
 		}
 	}
 
-	osType := GetOperatingSystemType(oscr.IpxeScript, oscr.IpxeTemplateName)
+	osType := GetOperatingSystemType(oscr.IpxeScript, oscr.IpxeTemplateId)
 
 	if osType == cdbm.OperatingSystemTypeImage && oscr.ImageURL == nil {
 		return validation.Errors{
-			validationCommonErrorField: errors.New("one of imageURL, ipxeScript, or ipxeTemplateName must be specified"),
+			validationCommonErrorField: errors.New("one of imageURL, ipxeScript, or ipxeTemplateId must be specified"),
 		}
 	}
 
@@ -245,12 +245,12 @@ func (oscr APIOperatingSystemCreateRequest) validateRawIpxeOS() error {
 
 	if len(oscr.IpxeParameters) > 0 {
 		return validation.Errors{
-			"ipxeParameters": errors.New("cannot be specified for raw iPXE Operating Systems; use ipxeTemplateName for template-based OS"),
+			"ipxeParameters": errors.New("cannot be specified for raw iPXE Operating Systems; use ipxeTemplateId for template-based OS"),
 		}
 	}
 	if len(oscr.IpxeArtifacts) > 0 {
 		return validation.Errors{
-			"ipxeArtifacts": errors.New("cannot be specified for raw iPXE Operating Systems; use ipxeTemplateName for template-based OS"),
+			"ipxeArtifacts": errors.New("cannot be specified for raw iPXE Operating Systems; use ipxeTemplateId for template-based OS"),
 		}
 	}
 
@@ -401,8 +401,8 @@ type APIOperatingSystemUpdateRequest struct {
 	IsActive *bool `json:"isActive"`
 	// DeactivationNote is the deactivation note if any
 	DeactivationNote *string `json:"deactivationNote"`
-	// IpxeTemplateName is the name of the iPXE template to use (alternative to a raw ipxeScript)
-	IpxeTemplateName *string `json:"ipxeTemplateName"`
+	// IpxeTemplateId is the name of the iPXE template to use (alternative to a raw ipxeScript)
+	IpxeTemplateId *string `json:"ipxeTemplateId"`
 	// IpxeParameters are the parameters to pass to the iPXE template
 	IpxeParameters *[]cdbm.OperatingSystemIpxeParameter `json:"ipxeParameters"`
 	// IpxeArtifacts are the artifacts (kernel, initrd, ISO, …) for the iPXE OS definition
@@ -444,19 +444,19 @@ func (osur APIOperatingSystemUpdateRequest) Validate(existingOS *cdbm.OperatingS
 		}
 	}
 
-	if osur.IpxeScript != nil && osur.IpxeTemplateName != nil {
+	if osur.IpxeScript != nil && osur.IpxeTemplateId != nil {
 		return validation.Errors{
-			"ipxeTemplateName": errors.New("ipxeScript and ipxeTemplateName are mutually exclusive"),
+			"ipxeTemplateId": errors.New("ipxeScript and ipxeTemplateId are mutually exclusive"),
 		}
 	}
 
-	if osur.IpxeTemplateName != nil && strings.TrimSpace(*osur.IpxeTemplateName) == "" {
+	if osur.IpxeTemplateId != nil && strings.TrimSpace(*osur.IpxeTemplateId) == "" {
 		return validation.Errors{
-			"ipxeTemplateName": errors.New("must not be empty"),
+			"ipxeTemplateId": errors.New("must not be empty"),
 		}
 	}
 
-	if (osur.IpxeScript != nil || osur.IpxeTemplateName != nil) && osur.ImageURL != nil {
+	if (osur.IpxeScript != nil || osur.IpxeTemplateId != nil) && osur.ImageURL != nil {
 		return validation.Errors{
 			"imageURL": errors.New("cannot be specified for iPXE based Operating Systems"),
 		}
@@ -471,9 +471,9 @@ func (osur APIOperatingSystemUpdateRequest) Validate(existingOS *cdbm.OperatingS
 		return validation.Errors{
 			"ipxeScript": errors.New("unable to set iPXE script for image based Operating System"),
 		}
-	} else if existingOS.Type == cdbm.OperatingSystemTypeImage && osur.IpxeTemplateName != nil {
+	} else if existingOS.Type == cdbm.OperatingSystemTypeImage && osur.IpxeTemplateId != nil {
 		return validation.Errors{
-			"ipxeTemplateName": errors.New("unable to set iPXE template for image based Operating System"),
+			"ipxeTemplateId": errors.New("unable to set iPXE template for image based Operating System"),
 		}
 	}
 
@@ -732,8 +732,8 @@ type APIOperatingSystem struct {
 	RootFsLabel *string `json:"rootFsLabel"`
 	// IpxeScript is the ipxe script for the Operating System
 	IpxeScript *string `json:"ipxeScript"`
-	// IpxeTemplateName is the name of the iPXE template used by this Operating System
-	IpxeTemplateName *string `json:"ipxeTemplateName"`
+	// IpxeTemplateId is the name of the iPXE template used by this Operating System
+	IpxeTemplateId *string `json:"ipxeTemplateId"`
 	// IpxeParameters are the parameters passed to the iPXE template
 	IpxeParameters []cdbm.OperatingSystemIpxeParameter `json:"ipxeParameters"`
 	// IpxeArtifacts are the artifacts (kernel, initrd, ISO, …) for the iPXE OS definition
@@ -782,7 +782,7 @@ func NewAPIOperatingSystem(dbOS *cdbm.OperatingSystem, dbsds []cdbm.StatusDetail
 		RootFsID:           dbOS.RootFsID,
 		RootFsLabel:        dbOS.RootFsLabel,
 		IpxeScript:         dbOS.IpxeScript,
-		IpxeTemplateName:   dbOS.IpxeTemplateName,
+		IpxeTemplateId:   dbOS.IpxeTemplateId,
 		IpxeParameters:     dbOS.IpxeParameters,
 		IpxeArtifacts:      dbOS.IpxeArtifacts,
 		PhoneHomeEnabled:   dbOS.PhoneHomeEnabled,
@@ -823,8 +823,8 @@ func NewAPIOperatingSystem(dbOS *cdbm.OperatingSystem, dbsds []cdbm.StatusDetail
 }
 
 // GetOperatingSystemType returns the OperatingSystem type based on the source fields.
-func GetOperatingSystemType(ipxeScript, ipxeTemplateName *string) string {
-	if ipxeTemplateName != nil {
+func GetOperatingSystemType(ipxeScript, ipxeTemplateId *string) string {
+	if ipxeTemplateId != nil {
 		return cdbm.OperatingSystemTypeTemplatedIPXE
 	}
 	if ipxeScript != nil {
@@ -835,8 +835,8 @@ func GetOperatingSystemType(ipxeScript, ipxeTemplateName *string) string {
 
 // validCacheStrategies is the set of accepted CacheStrategy string values.
 var validCacheStrategies = func() map[string]struct{} {
-	m := make(map[string]struct{}, len(cwssaws.IpxeScriptArtifactCacheStrategy_value))
-	for name := range cwssaws.IpxeScriptArtifactCacheStrategy_value {
+	m := make(map[string]struct{}, len(cwssaws.IpxeTemplateArtifactCacheStrategy_value))
+	for name := range cwssaws.IpxeTemplateArtifactCacheStrategy_value {
 		m[name] = struct{}{}
 	}
 	return m

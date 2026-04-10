@@ -117,7 +117,7 @@ func (mit ManageIpxeTemplate) UpdateIpxeTemplatesInDB(ctx context.Context, siteI
 		}
 
 		// Only propagate PUBLIC templates into REST.
-		if reported.Scope != cwssaws.IpxeScriptTemplateScope_PUBLIC {
+		if reported.Scope != cwssaws.IpxeTemplateScope_PUBLIC {
 			logger.Debug().Str("Name", reported.Name).Str("Scope", reported.Scope.String()).Msg("Skipping non-public iPXE template")
 			continue
 		}
@@ -206,10 +206,10 @@ func NewManageIpxeTemplate(dbSession *cdb.Session, siteClientPool *sc.ClientPool
 	}
 }
 
-// ipxeScopeToString converts the IpxeScriptTemplateScope enum from the gRPC proto
+// ipxeScopeToString converts the IpxeTemplateScope enum from the gRPC proto
 // to the lowercase string representation stored in the database.
-func ipxeScopeToString(scope cwssaws.IpxeScriptTemplateScope) string {
-	if scope == cwssaws.IpxeScriptTemplateScope_PUBLIC {
+func ipxeScopeToString(scope cwssaws.IpxeTemplateScope) string {
+	if scope == cwssaws.IpxeTemplateScope_PUBLIC {
 		return cdbm.IpxeTemplateScopePublic
 	}
 	return cdbm.IpxeTemplateScopeInternal

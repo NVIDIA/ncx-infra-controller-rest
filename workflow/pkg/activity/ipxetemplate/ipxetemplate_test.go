@@ -60,9 +60,9 @@ func TestManageIpxeTemplate_Reconcile_CreateUpdateDelete(t *testing.T) {
 	// 1) Create: inventory with two PUBLIC templates
 	inv1 := &cwssaws.IpxeTemplateInventory{
 		InventoryStatus: cwssaws.InventoryStatus_INVENTORY_STATUS_SUCCESS,
-		Templates: []*cwssaws.IpxeScriptTemplate{
-			{Id: &cwssaws.IpxeTemplateId{Value: kernelInitrdID.String()}, Name: "kernel-initrd", Scope: cwssaws.IpxeScriptTemplateScope_PUBLIC, RequiredParams: []string{"p1"}, ReservedParams: []string{"r1"}, RequiredArtifacts: []string{"kernel"}},
-			{Id: &cwssaws.IpxeTemplateId{Value: ubuntuAutoinstallID.String()}, Name: "ubuntu-autoinstall", Scope: cwssaws.IpxeScriptTemplateScope_PUBLIC, RequiredParams: []string{}, ReservedParams: []string{}, RequiredArtifacts: []string{"iso"}},
+		Templates: []*cwssaws.IpxeTemplate{
+			{Id: &cwssaws.IpxeTemplateId{Value: kernelInitrdID.String()}, Name: "kernel-initrd", Scope: cwssaws.IpxeTemplateScope_PUBLIC, RequiredParams: []string{"p1"}, ReservedParams: []string{"r1"}, RequiredArtifacts: []string{"kernel"}},
+			{Id: &cwssaws.IpxeTemplateId{Value: ubuntuAutoinstallID.String()}, Name: "ubuntu-autoinstall", Scope: cwssaws.IpxeTemplateScope_PUBLIC, RequiredParams: []string{}, ReservedParams: []string{}, RequiredArtifacts: []string{"iso"}},
 		},
 	}
 	assert.NoError(t, mit.UpdateIpxeTemplatesInDB(ctx, site.ID, inv1))
@@ -80,9 +80,9 @@ func TestManageIpxeTemplate_Reconcile_CreateUpdateDelete(t *testing.T) {
 	// 2) Update: change required params of "ubuntu-autoinstall" (still PUBLIC)
 	inv2 := &cwssaws.IpxeTemplateInventory{
 		InventoryStatus: cwssaws.InventoryStatus_INVENTORY_STATUS_SUCCESS,
-		Templates: []*cwssaws.IpxeScriptTemplate{
-			{Id: &cwssaws.IpxeTemplateId{Value: kernelInitrdID.String()}, Name: "kernel-initrd", Scope: cwssaws.IpxeScriptTemplateScope_PUBLIC, RequiredParams: []string{"p1"}, ReservedParams: []string{"r1"}, RequiredArtifacts: []string{"kernel"}},
-			{Id: &cwssaws.IpxeTemplateId{Value: ubuntuAutoinstallID.String()}, Name: "ubuntu-autoinstall", Scope: cwssaws.IpxeScriptTemplateScope_PUBLIC, RequiredParams: []string{"new-param"}, ReservedParams: []string{}, RequiredArtifacts: []string{"iso"}},
+		Templates: []*cwssaws.IpxeTemplate{
+			{Id: &cwssaws.IpxeTemplateId{Value: kernelInitrdID.String()}, Name: "kernel-initrd", Scope: cwssaws.IpxeTemplateScope_PUBLIC, RequiredParams: []string{"p1"}, ReservedParams: []string{"r1"}, RequiredArtifacts: []string{"kernel"}},
+			{Id: &cwssaws.IpxeTemplateId{Value: ubuntuAutoinstallID.String()}, Name: "ubuntu-autoinstall", Scope: cwssaws.IpxeTemplateScope_PUBLIC, RequiredParams: []string{"new-param"}, ReservedParams: []string{}, RequiredArtifacts: []string{"iso"}},
 		},
 	}
 	assert.NoError(t, mit.UpdateIpxeTemplatesInDB(ctx, site.ID, inv2))
@@ -94,8 +94,8 @@ func TestManageIpxeTemplate_Reconcile_CreateUpdateDelete(t *testing.T) {
 	// 3) Delete: remove "ubuntu-autoinstall" from inventory
 	inv3 := &cwssaws.IpxeTemplateInventory{
 		InventoryStatus: cwssaws.InventoryStatus_INVENTORY_STATUS_SUCCESS,
-		Templates: []*cwssaws.IpxeScriptTemplate{
-			{Id: &cwssaws.IpxeTemplateId{Value: kernelInitrdID.String()}, Name: "kernel-initrd", Scope: cwssaws.IpxeScriptTemplateScope_PUBLIC, RequiredParams: []string{"p1"}, ReservedParams: []string{"r1"}, RequiredArtifacts: []string{"kernel"}},
+		Templates: []*cwssaws.IpxeTemplate{
+			{Id: &cwssaws.IpxeTemplateId{Value: kernelInitrdID.String()}, Name: "kernel-initrd", Scope: cwssaws.IpxeTemplateScope_PUBLIC, RequiredParams: []string{"p1"}, ReservedParams: []string{"r1"}, RequiredArtifacts: []string{"kernel"}},
 		},
 	}
 	assert.NoError(t, mit.UpdateIpxeTemplatesInDB(ctx, site.ID, inv3))
@@ -131,9 +131,9 @@ func TestManageIpxeTemplate_InternalScopeFiltered(t *testing.T) {
 	// Inventory with one PUBLIC and one INTERNAL template
 	inv := &cwssaws.IpxeTemplateInventory{
 		InventoryStatus: cwssaws.InventoryStatus_INVENTORY_STATUS_SUCCESS,
-		Templates: []*cwssaws.IpxeScriptTemplate{
-			{Id: &cwssaws.IpxeTemplateId{Value: publicID.String()}, Name: "public-tmpl", Scope: cwssaws.IpxeScriptTemplateScope_PUBLIC},
-			{Id: &cwssaws.IpxeTemplateId{Value: internalID.String()}, Name: "internal-tmpl", Scope: cwssaws.IpxeScriptTemplateScope_INTERNAL},
+		Templates: []*cwssaws.IpxeTemplate{
+			{Id: &cwssaws.IpxeTemplateId{Value: publicID.String()}, Name: "public-tmpl", Scope: cwssaws.IpxeTemplateScope_PUBLIC},
+			{Id: &cwssaws.IpxeTemplateId{Value: internalID.String()}, Name: "internal-tmpl", Scope: cwssaws.IpxeTemplateScope_INTERNAL},
 		},
 	}
 	assert.NoError(t, mit.UpdateIpxeTemplatesInDB(ctx, site.ID, inv))
@@ -173,8 +173,8 @@ func TestManageIpxeTemplate_InternalScopeDeletesExistingPublic(t *testing.T) {
 	// First sync: template is PUBLIC
 	inv1 := &cwssaws.IpxeTemplateInventory{
 		InventoryStatus: cwssaws.InventoryStatus_INVENTORY_STATUS_SUCCESS,
-		Templates: []*cwssaws.IpxeScriptTemplate{
-			{Id: &cwssaws.IpxeTemplateId{Value: templateID.String()}, Name: "my-template", Scope: cwssaws.IpxeScriptTemplateScope_PUBLIC},
+		Templates: []*cwssaws.IpxeTemplate{
+			{Id: &cwssaws.IpxeTemplateId{Value: templateID.String()}, Name: "my-template", Scope: cwssaws.IpxeTemplateScope_PUBLIC},
 		},
 	}
 	assert.NoError(t, mit.UpdateIpxeTemplatesInDB(ctx, site.ID, inv1))
@@ -184,8 +184,8 @@ func TestManageIpxeTemplate_InternalScopeDeletesExistingPublic(t *testing.T) {
 	// Second sync: template changed to INTERNAL — should be removed via reconciliation
 	inv2 := &cwssaws.IpxeTemplateInventory{
 		InventoryStatus: cwssaws.InventoryStatus_INVENTORY_STATUS_SUCCESS,
-		Templates: []*cwssaws.IpxeScriptTemplate{
-			{Id: &cwssaws.IpxeTemplateId{Value: templateID.String()}, Name: "my-template", Scope: cwssaws.IpxeScriptTemplateScope_INTERNAL},
+		Templates: []*cwssaws.IpxeTemplate{
+			{Id: &cwssaws.IpxeTemplateId{Value: templateID.String()}, Name: "my-template", Scope: cwssaws.IpxeTemplateScope_INTERNAL},
 		},
 	}
 	assert.NoError(t, mit.UpdateIpxeTemplatesInDB(ctx, site.ID, inv2))
@@ -219,8 +219,8 @@ func TestManageIpxeTemplate_CrossSiteNameConflict(t *testing.T) {
 	// Site 1 reports template with name "kernel-initrd"
 	inv1 := &cwssaws.IpxeTemplateInventory{
 		InventoryStatus: cwssaws.InventoryStatus_INVENTORY_STATUS_SUCCESS,
-		Templates: []*cwssaws.IpxeScriptTemplate{
-			{Id: &cwssaws.IpxeTemplateId{Value: sharedTemplateID.String()}, Name: "kernel-initrd", Scope: cwssaws.IpxeScriptTemplateScope_PUBLIC},
+		Templates: []*cwssaws.IpxeTemplate{
+			{Id: &cwssaws.IpxeTemplateId{Value: sharedTemplateID.String()}, Name: "kernel-initrd", Scope: cwssaws.IpxeTemplateScope_PUBLIC},
 		},
 	}
 	assert.NoError(t, mit.UpdateIpxeTemplatesInDB(ctx, site1.ID, inv1))
@@ -228,8 +228,8 @@ func TestManageIpxeTemplate_CrossSiteNameConflict(t *testing.T) {
 	// Site 2 reports same template ID but different name — should be skipped
 	inv2 := &cwssaws.IpxeTemplateInventory{
 		InventoryStatus: cwssaws.InventoryStatus_INVENTORY_STATUS_SUCCESS,
-		Templates: []*cwssaws.IpxeScriptTemplate{
-			{Id: &cwssaws.IpxeTemplateId{Value: sharedTemplateID.String()}, Name: "wrong-name", Scope: cwssaws.IpxeScriptTemplateScope_PUBLIC},
+		Templates: []*cwssaws.IpxeTemplate{
+			{Id: &cwssaws.IpxeTemplateId{Value: sharedTemplateID.String()}, Name: "wrong-name", Scope: cwssaws.IpxeTemplateScope_PUBLIC},
 		},
 	}
 	assert.NoError(t, mit.UpdateIpxeTemplatesInDB(ctx, site2.ID, inv2))
@@ -247,8 +247,8 @@ func TestManageIpxeTemplate_CrossSiteNameConflict(t *testing.T) {
 	// Site 2 reports same template ID with correct name — should succeed
 	inv3 := &cwssaws.IpxeTemplateInventory{
 		InventoryStatus: cwssaws.InventoryStatus_INVENTORY_STATUS_SUCCESS,
-		Templates: []*cwssaws.IpxeScriptTemplate{
-			{Id: &cwssaws.IpxeTemplateId{Value: sharedTemplateID.String()}, Name: "kernel-initrd", Scope: cwssaws.IpxeScriptTemplateScope_PUBLIC},
+		Templates: []*cwssaws.IpxeTemplate{
+			{Id: &cwssaws.IpxeTemplateId{Value: sharedTemplateID.String()}, Name: "kernel-initrd", Scope: cwssaws.IpxeTemplateScope_PUBLIC},
 		},
 	}
 	assert.NoError(t, mit.UpdateIpxeTemplatesInDB(ctx, site2.ID, inv3))
@@ -287,7 +287,7 @@ func TestManageIpxeTemplate_InventoryStatusFailed_Skip(t *testing.T) {
 	// Send a failed inventory — nothing should change
 	inv := &cwssaws.IpxeTemplateInventory{
 		InventoryStatus: cwssaws.InventoryStatus_INVENTORY_STATUS_FAILED,
-		Templates:       []*cwssaws.IpxeScriptTemplate{{Id: &cwssaws.IpxeTemplateId{Value: uuid.NewString()}, Name: "other-template", Scope: cwssaws.IpxeScriptTemplateScope_PUBLIC}},
+		Templates:       []*cwssaws.IpxeTemplate{{Id: &cwssaws.IpxeTemplateId{Value: uuid.NewString()}, Name: "other-template", Scope: cwssaws.IpxeTemplateScope_PUBLIC}},
 	}
 	assert.NoError(t, mit.UpdateIpxeTemplatesInDB(ctx, site.ID, inv))
 
@@ -342,7 +342,7 @@ func TestManageIpxeTemplate_EmptyInventory_DeletesAll(t *testing.T) {
 	// Empty success inventory should delete all
 	inv := &cwssaws.IpxeTemplateInventory{
 		InventoryStatus: cwssaws.InventoryStatus_INVENTORY_STATUS_SUCCESS,
-		Templates:       []*cwssaws.IpxeScriptTemplate{},
+		Templates:       []*cwssaws.IpxeTemplate{},
 	}
 	assert.NoError(t, mit.UpdateIpxeTemplatesInDB(ctx, site.ID, inv))
 
@@ -363,7 +363,7 @@ func TestManageIpxeTemplate_UnknownSite(t *testing.T) {
 
 	inv := &cwssaws.IpxeTemplateInventory{
 		InventoryStatus: cwssaws.InventoryStatus_INVENTORY_STATUS_SUCCESS,
-		Templates:       []*cwssaws.IpxeScriptTemplate{{Id: &cwssaws.IpxeTemplateId{Value: uuid.NewString()}, Name: "kernel-initrd", Scope: cwssaws.IpxeScriptTemplateScope_PUBLIC}},
+		Templates:       []*cwssaws.IpxeTemplate{{Id: &cwssaws.IpxeTemplateId{Value: uuid.NewString()}, Name: "kernel-initrd", Scope: cwssaws.IpxeTemplateScope_PUBLIC}},
 	}
 	err := mit.UpdateIpxeTemplatesInDB(ctx, uuid.New(), inv)
 	assert.Error(t, err)

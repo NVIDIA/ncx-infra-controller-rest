@@ -7467,7 +7467,7 @@ paths:
                       imageDisk: /dev/sda
                       rootFsId: 6c2ac315-3040-4728-94eb-b66d320206c1
                       ipxeScript: null
-                      ipxeTemplateName: null
+                      ipxeTemplateId: null
                       ipxeParameters: []
                       ipxeArtifacts: []
                       scope: null
@@ -7534,7 +7534,7 @@ paths:
                         initrd http://archive.ubuntu.com/ubuntu/dists/xenial/main/installer-amd64/current/images/netboot/ubuntu-installer/amd64/initrd.gz
                         boot || imgfree
                          shell
-                      ipxeTemplateName: null
+                      ipxeTemplateId: null
                       ipxeParameters: []
                       ipxeArtifacts: []
                       scope: null
@@ -7579,7 +7579,7 @@ paths:
                       tenantId: null
                       type: Templated iPXE
                       ipxeScript: null
-                      ipxeTemplateName: ubuntu-autoinstall
+                      ipxeTemplateId: <uuid-of-ubuntu-autoinstall-template>
                       ipxeParameters:
                         - name: kernel_args
                           value: console=ttyS0,115200n8
@@ -7722,7 +7722,7 @@ paths:
                       initrd http://archive.ubuntu.com/ubuntu/dists/xenial/main/installer-amd64/current/images/netboot/ubuntu-installer/amd64/initrd.gz
                       boot || imgfree
                        shell
-                    ipxeTemplateName: null
+                    ipxeTemplateId: null
                     ipxeParameters: []
                     ipxeArtifacts: []
                     scope: null
@@ -7767,7 +7767,7 @@ paths:
                     tenantId: null
                     type: Templated iPXE
                     ipxeScript: null
-                    ipxeTemplateName: ubuntu-autoinstall
+                    ipxeTemplateId: <uuid-of-ubuntu-autoinstall-template>
                     ipxeParameters:
                       - name: kernel_args
                         value: console=ttyS0,115200n8
@@ -7820,9 +7820,9 @@ paths:
 
         If `tenantId` is provided in request data, then org must have a Tenant entity and its ID should match the query param value. User must have `FORGE_TENANT_ADMIN` role.
 
-        Provider Admins can create iPXE template-based Operating Systems (using `ipxeTemplateName`). Tenants can create iPXE script-based or Image-based Operating Systems.
+        Provider Admins can create iPXE template-based Operating Systems (using `ipxeTemplateId`). Tenants can create iPXE script-based or Image-based Operating Systems.
 
-        `ipxeScript`, `ipxeTemplateName`, and `imageUrl` are mutually exclusive — only one may be specified. When `ipxeTemplateName` is used, `ipxeParameters` and `ipxeArtifacts` can be provided to configure the template.
+        `ipxeScript`, `ipxeTemplateId`, and `imageUrl` are mutually exclusive — only one may be specified. When `ipxeTemplateId` is used, `ipxeParameters` and `ipxeArtifacts` can be provided to configure the template.
 
         The `scope` field is required for Templated iPXE OSes and controls synchronization direction: `Local` (bidirectional), `Global` (rest-to-core for all sites), or `Limited` (rest-to-core for sites in `siteIds`). Must not be specified for other OS types.
       requestBody:
@@ -7878,7 +7878,7 @@ paths:
                 value:
                   name: ubuntu-autoinstall-24.04
                   description: Ubuntu 24.04 via iPXE template autoinstall
-                  ipxeTemplateName: ubuntu-autoinstall
+                  ipxeTemplateId: <uuid-of-ubuntu-autoinstall-template>
                   ipxeParameters:
                     - name: kernel_args
                       value: console=ttyS0,115200n8
@@ -7943,7 +7943,7 @@ paths:
                     rootFsId: 6c2ac315-3040-4728-94eb-b66d320206c1
                     rootFsLabel: null
                     ipxeScript: null
-                    ipxeTemplateName: null
+                    ipxeTemplateId: null
                     ipxeParameters: []
                     ipxeArtifacts: []
                     scope: null
@@ -8010,7 +8010,7 @@ paths:
                       initrd http://archive.ubuntu.com/ubuntu/dists/xenial/main/installer-amd64/current/images/netboot/ubuntu-installer/amd64/initrd.gz
                       boot || imgfree
                        shell
-                    ipxeTemplateName: null
+                    ipxeTemplateId: null
                     ipxeParameters: []
                     ipxeArtifacts: []
                     scope: null
@@ -8105,7 +8105,7 @@ paths:
                       initrd http://archive.ubuntu.com/ubuntu/dists/xenial/main/installer-amd64/current/images/netboot/ubuntu-installer/amd64/initrd.gz
                       boot || imgfree
                        shell
-                    ipxeTemplateName: null
+                    ipxeTemplateId: null
                     ipxeParameters: []
                     ipxeArtifacts: []
                     scope: null
@@ -14049,7 +14049,7 @@ components:
             initrd http://archive.ubuntu.com/ubuntu/dists/xenial/main/installer-amd64/current/images/netboot/ubuntu-installer/amd64/initrd.gz
             boot || imgfree
              shell
-          ipxeTemplateName: null
+          ipxeTemplateId: null
           ipxeParameters: []
           ipxeArtifacts: []
           scope: null
@@ -14102,7 +14102,7 @@ components:
           rootFsId: 6c2ac315-3040-4728-94eb-b66d320206c1
           rootFsLabel: null
           ipxeScript: null
-          ipxeTemplateName: null
+          ipxeTemplateId: null
           ipxeParameters: []
           ipxeArtifacts: []
           scope: null
@@ -14165,7 +14165,7 @@ components:
             initrd http://archive.ubuntu.com/ubuntu/dists/xenial/main/installer-amd64/current/images/netboot/ubuntu-installer/amd64/initrd.gz
             boot || imgfree
              shell
-          ipxeTemplateName: null
+          ipxeTemplateId: null
           ipxeParameters: []
           ipxeArtifacts: []
           scope: null
@@ -14285,8 +14285,8 @@ components:
           type:
             - string
             - 'null'
-          description: 'iPXE script or URL, only applicable for iPXE based Operating System. Mutually exclusive with ipxeTemplateName'
-        ipxeTemplateName:
+          description: 'iPXE script or URL, only applicable for iPXE based Operating System. Mutually exclusive with ipxeTemplateId'
+        ipxeTemplateId:
           type:
             - string
             - 'null'
@@ -14295,12 +14295,12 @@ components:
           type: array
           description: Parameters passed to the iPXE template for variable substitution
           items:
-            $ref: '#/components/schemas/IpxeScriptParameter'
+            $ref: '#/components/schemas/IpxeTemplateParameter'
         ipxeArtifacts:
           type: array
           description: 'Artifacts (kernel, initrd, etc.) for the iPXE OS definition'
           items:
-            $ref: '#/components/schemas/IpxeScriptArtifact'
+            $ref: '#/components/schemas/IpxeTemplateArtifact'
         scope:
           type:
             - string
@@ -14480,8 +14480,8 @@ components:
           type:
             - string
             - 'null'
-          description: 'iPXE script or URL, only applicable for iPXE based OS. Mutually exclusive with ipxeTemplateName and imageUrl'
-        ipxeTemplateName:
+          description: 'iPXE script or URL, only applicable for iPXE based OS. Mutually exclusive with ipxeTemplateId and imageUrl'
+        ipxeTemplateId:
           type:
             - string
             - 'null'
@@ -14490,17 +14490,17 @@ components:
           type: array
           description: Parameters to pass to the iPXE template for variable substitution
           items:
-            $ref: '#/components/schemas/IpxeScriptParameter'
+            $ref: '#/components/schemas/IpxeTemplateParameter'
         ipxeArtifacts:
           type: array
           description: 'Artifacts (kernel, initrd, etc.) required for the iPXE OS definition'
           items:
-            $ref: '#/components/schemas/IpxeScriptArtifact'
+            $ref: '#/components/schemas/IpxeTemplateArtifact'
         scope:
           type:
             - string
             - 'null'
-          description: 'Synchronization scope. Required for Templated iPXE OS (when ipxeTemplateName is specified); must not be set for other types'
+          description: 'Synchronization scope. Required for Templated iPXE OS (when ipxeTemplateId is specified); must not be set for other types'
           enum:
             - Local
             - Global
@@ -14597,8 +14597,8 @@ components:
           type:
             - string
             - 'null'
-          description: 'iPXE script or URL, only applicable for iPXE based OS. Mutually exclusive with ipxeTemplateName and imageUrl'
-        ipxeTemplateName:
+          description: 'iPXE script or URL, only applicable for iPXE based OS. Mutually exclusive with ipxeTemplateId and imageUrl'
+        ipxeTemplateId:
           type:
             - string
             - 'null'
@@ -14607,12 +14607,12 @@ components:
           type: array
           description: Parameters to pass to the iPXE template. If omitted the existing parameters are kept; if set to an empty array the parameters are cleared
           items:
-            $ref: '#/components/schemas/IpxeScriptParameter'
+            $ref: '#/components/schemas/IpxeTemplateParameter'
         ipxeArtifacts:
           type: array
           description: 'Artifacts for the iPXE OS definition. If omitted the existing artifacts are kept; if set to an empty array the artifacts are cleared'
           items:
-            $ref: '#/components/schemas/IpxeScriptArtifact'
+            $ref: '#/components/schemas/IpxeTemplateArtifact'
         imageUrl:
           type:
             - string
@@ -14679,8 +14679,8 @@ components:
             - string
             - 'null'
           description: Optional deactivation note if OS is inactive
-    IpxeScriptParameter:
-      title: IpxeScriptParameter
+    IpxeTemplateParameter:
+      title: IpxeTemplateParameter
       type: object
       description: A key-value parameter passed to an iPXE template for variable substitution
       properties:
@@ -14693,8 +14693,8 @@ components:
       required:
         - name
         - value
-    IpxeScriptArtifact:
-      title: IpxeScriptArtifact
+    IpxeTemplateArtifact:
+      title: IpxeTemplateArtifact
       type: object
       description: 'An artifact (kernel, initrd, ISO, etc.) required by an iPXE OS definition'
       properties:

@@ -37,7 +37,7 @@ func init() {
 		// The primary key (id) is shared between carbide-core and carbide-rest: both sides use
 		// the same UUID, enforced by the inventory sync workflows.
 
-		_, err := tx.Exec("ALTER TABLE operating_system ADD COLUMN IF NOT EXISTS ipxe_template_name TEXT NULL")
+		_, err := tx.Exec("ALTER TABLE operating_system ADD COLUMN IF NOT EXISTS ipxe_template_id TEXT NULL")
 		handleError(tx, err)
 
 		_, err = tx.Exec("ALTER TABLE operating_system ADD COLUMN IF NOT EXISTS ipxe_parameters JSONB NULL")

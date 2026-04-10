@@ -331,10 +331,10 @@ func (csh CreateSiteHandler) Handle(c echo.Context) error {
 					AllowOverride:        gos.AllowOverride,
 					PhoneHomeEnabled:     gos.PhoneHomeEnabled,
 					UserData:             gos.UserData,
-					IpxeScript:           gos.IpxeScript,
-					IpxeTemplateName:     gos.IpxeTemplateName,
-					IpxeParameters:       dbParamsToProto(gos.IpxeParameters),
-					IpxeArtifacts:        dbArtifactsToProto(gos.IpxeArtifacts),
+				IpxeScript:                   gos.IpxeScript,
+				IpxeTemplateId:               ipxeTemplateIdFromString(gos.IpxeTemplateId),
+				IpxeTemplateParameters:       dbParamsToProto(gos.IpxeParameters),
+				IpxeTemplateArtifacts:        dbArtifactsToProto(gos.IpxeArtifacts),
 				}
 
 				// Version is omitted from the workflow ID (unlike operatingsystem.go)

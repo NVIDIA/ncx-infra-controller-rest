@@ -146,7 +146,7 @@ type OperatingSystem struct {
 	RootFsLabel              *string                 `bun:"root_fs_label"`
 	IpxeScript               *string                 `bun:"ipxe_script"`
 	// iPXE fields populated for OS definitions synced from carbide-core (type = iPXE)
-	IpxeTemplateName           *string                        `bun:"ipxe_template_name"`
+	IpxeTemplateId           *string                        `bun:"ipxe_template_id"`
 	IpxeParameters             []OperatingSystemIpxeParameter `bun:"ipxe_parameters,type:jsonb"`
 	IpxeArtifacts              []OperatingSystemIpxeArtifact  `bun:"ipxe_artifacts,type:jsonb"`
 	IpxeTemplateDefinitionHash *string                        `bun:"definition_hash"`
@@ -195,7 +195,7 @@ type OperatingSystemCreateInput struct {
 	EnableBlockStorage       bool
 	PhoneHomeEnabled         bool
 	// iPXE definition fields (for carbide-core synced iPXE OS definitions)
-	IpxeTemplateName *string
+	IpxeTemplateId *string
 	IpxeParameters   []OperatingSystemIpxeParameter
 	IpxeArtifacts    []OperatingSystemIpxeArtifact
 	IpxeOSHash       *string
@@ -230,7 +230,7 @@ type OperatingSystemUpdateInput struct {
 	IsActive                 *bool
 	DeactivationNote         *string
 	// iPXE definition fields (for carbide-core synced iPXE OS definitions)
-	IpxeTemplateName *string
+	IpxeTemplateId *string
 	IpxeParameters   *[]OperatingSystemIpxeParameter
 	IpxeArtifacts    *[]OperatingSystemIpxeArtifact
 	IpxeOSHash       *string
@@ -255,7 +255,7 @@ type OperatingSystemClearInput struct {
 	IpxeScript               bool
 	UserData                 bool
 	DeactivationNote         bool
-	IpxeTemplateName         bool
+	IpxeTemplateId         bool
 	IpxeParameters           bool
 	IpxeArtifacts            bool
 	IpxeOSHash               bool
@@ -374,7 +374,7 @@ func (ossd OperatingSystemSQLDAO) Create(ctx context.Context, tx *db.Tx, input O
 		DeactivationNote:           nil,  //input.DeactivationNote,
 		Status:                     input.Status,
 		CreatedBy:                  input.CreatedBy,
-		IpxeTemplateName:           input.IpxeTemplateName,
+		IpxeTemplateId:           input.IpxeTemplateId,
 		IpxeParameters:             input.IpxeParameters,
 		IpxeArtifacts:              input.IpxeArtifacts,
 		IpxeTemplateDefinitionHash: input.IpxeOSHash,
@@ -671,9 +671,9 @@ func (ossd OperatingSystemSQLDAO) Update(ctx context.Context, tx *db.Tx, input O
 		updatedFields = append(updatedFields, "status")
 		ossd.tracerSpan.SetAttribute(operatingSystemSQLDAOSpan, "status", *input.Status)
 	}
-	if input.IpxeTemplateName != nil {
-		it.IpxeTemplateName = input.IpxeTemplateName
-		updatedFields = append(updatedFields, "ipxe_template_name")
+	if input.IpxeTemplateId != nil {
+		it.IpxeTemplateId = input.IpxeTemplateId
+		updatedFields = append(updatedFields, "ipxe_template_id")
 	}
 	if input.IpxeParameters != nil {
 		it.IpxeParameters = *input.IpxeParameters
@@ -783,9 +783,9 @@ func (ossd OperatingSystemSQLDAO) Clear(ctx context.Context, tx *db.Tx, input Op
 		it.DeactivationNote = nil
 		updatedFields = append(updatedFields, "deactivation_note")
 	}
-	if input.IpxeTemplateName {
-		it.IpxeTemplateName = nil
-		updatedFields = append(updatedFields, "ipxe_template_name")
+	if input.IpxeTemplateId {
+		it.IpxeTemplateId = nil
+		updatedFields = append(updatedFields, "ipxe_template_id")
 	}
 	if input.IpxeParameters {
 		it.IpxeParameters = nil

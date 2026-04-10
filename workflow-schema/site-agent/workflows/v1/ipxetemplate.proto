@@ -33,7 +33,7 @@ message IpxeTemplateInventory {
   // Reported timestamp of iPXE template inventory
   google.protobuf.Timestamp timestamp = 3;
   // List of iPXE templates
-  repeated forge.IpxeScriptTemplate templates = 4;
+  repeated forge.IpxeTemplate templates = 4;
   // Inventory page information
   InventoryPage inventory_page = 5;
 }

@@ -51,7 +51,7 @@ func (mii *ManageIpxeTemplateInventory) DiscoverIpxeTemplateInventory(ctx contex
 	}
 	forgeClient := carbideClient.Carbide()
 
-	result, err := forgeClient.ListIpxeScriptTemplates(ctx, &cwssaws.ListIpxeScriptTemplatesRequest{})
+	result, err := forgeClient.ListIpxeTemplates(ctx, &cwssaws.ListIpxeTemplatesRequest{})
 	if err != nil {
 		logger.Warn().Err(err).Msg("Failed to retrieve iPXE templates from Site Controller")
 		inventory := &cwssaws.IpxeTemplateInventory{
@@ -67,9 +67,9 @@ func (mii *ManageIpxeTemplateInventory) DiscoverIpxeTemplateInventory(ctx contex
 	}
 
 	// Only propagate PUBLIC templates to REST (core is source of truth, one-way sync).
-	var publicTemplates []*cwssaws.IpxeScriptTemplate
+	var publicTemplates []*cwssaws.IpxeTemplate
 	for _, t := range result.Templates {
-		if t.Scope == cwssaws.IpxeScriptTemplateScope_PUBLIC {
+		if t.Scope == cwssaws.IpxeTemplateScope_PUBLIC {
 			publicTemplates = append(publicTemplates, t)
 		}
 	}

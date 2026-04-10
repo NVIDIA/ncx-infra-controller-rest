@@ -214,7 +214,6 @@ func NewCarbideClient(config *CarbideClientConfig) (client *CarbideClient, err e
 		log.Error().Err(err).Msg("CarbideClient: failed to get version from server")
 		return nil, fmt.Errorf("CarbideClient: failed to get version from server: %w", err)
 	}
-
 	log.Info().Msg("CarbideClient: successfully connected to server")
 
 	return client, nil

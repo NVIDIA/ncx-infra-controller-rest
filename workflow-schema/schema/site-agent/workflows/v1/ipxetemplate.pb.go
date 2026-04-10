@@ -47,7 +47,7 @@ type IpxeTemplateInventory struct {
 	// Reported timestamp of iPXE template inventory
 	Timestamp *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	// List of iPXE templates
-	Templates []*IpxeScriptTemplate `protobuf:"bytes,4,rep,name=templates,proto3" json:"templates,omitempty"`
+	Templates []*IpxeTemplate `protobuf:"bytes,4,rep,name=templates,proto3" json:"templates,omitempty"`
 	// Inventory page information
 	InventoryPage *InventoryPage `protobuf:"bytes,5,opt,name=inventory_page,json=inventoryPage,proto3" json:"inventory_page,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -105,7 +105,7 @@ func (x *IpxeTemplateInventory) GetTimestamp() *timestamppb.Timestamp {
 	return nil
 }
 
-func (x *IpxeTemplateInventory) GetTemplates() []*IpxeScriptTemplate {
+func (x *IpxeTemplateInventory) GetTemplates() []*IpxeTemplate {
 	if x != nil {
 		return x.Templates
 	}
@@ -123,13 +123,13 @@ var File_ipxetemplate_proto protoreflect.FileDescriptor
 
 const file_ipxetemplate_proto_rawDesc = "" +
 	"\n" +
-	"\x12ipxetemplate.proto\x12\fworkflows.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0eworkflow.proto\x1a\x13forge_carbide.proto\"\xb7\x02\n" +
+	"\x12ipxetemplate.proto\x12\fworkflows.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0eworkflow.proto\x1a\x13forge_carbide.proto\"\xb1\x02\n" +
 	"\x15IpxeTemplateInventory\x12H\n" +
 	"\x10inventory_status\x18\x01 \x01(\x0e2\x1d.workflows.v1.InventoryStatusR\x0finventoryStatus\x12\x1d\n" +
 	"\n" +
 	"status_msg\x18\x02 \x01(\tR\tstatusMsg\x128\n" +
-	"\ttimestamp\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x127\n" +
-	"\ttemplates\x18\x04 \x03(\v2\x19.forge.IpxeScriptTemplateR\ttemplates\x12B\n" +
+	"\ttimestamp\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x121\n" +
+	"\ttemplates\x18\x04 \x03(\v2\x13.forge.IpxeTemplateR\ttemplates\x12B\n" +
 	"\x0einventory_page\x18\x05 \x01(\v2\x1b.workflows.v1.InventoryPageR\rinventoryPageBCZAgithub.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/protob\x06proto3"
 
 var (
@@ -149,13 +149,13 @@ var file_ipxetemplate_proto_goTypes = []any{
 	(*IpxeTemplateInventory)(nil), // 0: workflows.v1.IpxeTemplateInventory
 	(InventoryStatus)(0),          // 1: workflows.v1.InventoryStatus
 	(*timestamppb.Timestamp)(nil), // 2: google.protobuf.Timestamp
-	(*IpxeScriptTemplate)(nil),    // 3: forge.IpxeScriptTemplate
+	(*IpxeTemplate)(nil),          // 3: forge.IpxeTemplate
 	(*InventoryPage)(nil),         // 4: workflows.v1.InventoryPage
 }
 var file_ipxetemplate_proto_depIdxs = []int32{
 	1, // 0: workflows.v1.IpxeTemplateInventory.inventory_status:type_name -> workflows.v1.InventoryStatus
 	2, // 1: workflows.v1.IpxeTemplateInventory.timestamp:type_name -> google.protobuf.Timestamp
-	3, // 2: workflows.v1.IpxeTemplateInventory.templates:type_name -> forge.IpxeScriptTemplate
+	3, // 2: workflows.v1.IpxeTemplateInventory.templates:type_name -> forge.IpxeTemplate
 	4, // 3: workflows.v1.IpxeTemplateInventory.inventory_page:type_name -> workflows.v1.InventoryPage
 	4, // [4:4] is the sub-list for method output_type
 	4, // [4:4] is the sub-list for method input_type

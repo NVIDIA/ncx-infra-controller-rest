@@ -1195,19 +1195,19 @@ func (c *MockForgeClient) GetAllExpectedSwitchesLinked(ctx context.Context, in *
 }
 
 /* iPXE Template mock methods */
-func (c *MockForgeClient) ListIpxeScriptTemplates(ctx context.Context, in *wflows.ListIpxeScriptTemplatesRequest, opts ...grpc.CallOption) (*wflows.IpxeScriptTemplateList, error) {
+func (c *MockForgeClient) ListIpxeTemplates(ctx context.Context, in *wflows.ListIpxeTemplatesRequest, opts ...grpc.CallOption) (*wflows.IpxeTemplateList, error) {
 	if err, ok := ctx.Value("wantError").(error); ok {
 		return nil, err
 	}
 
-	out := &wflows.IpxeScriptTemplateList{}
+	out := &wflows.IpxeTemplateList{}
 
 	count, ok := ctx.Value("wantCount").(int)
 	if ok {
 		for i := 0; i < count; i++ {
-			out.Templates = append(out.Templates, &wflows.IpxeScriptTemplate{
+			out.Templates = append(out.Templates, &wflows.IpxeTemplate{
 				Name:  fmt.Sprintf("template-%d", i),
-				Scope: wflows.IpxeScriptTemplateScope_PUBLIC,
+				Scope: wflows.IpxeTemplateScope_PUBLIC,
 			})
 		}
 	}

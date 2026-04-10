@@ -216,7 +216,7 @@ func TestOperatingSystemHandler_Create_ProviderAndTenantOwnership(t *testing.T) 
 	// template-based request reused for several sub-tests.
 	templateBody := model.APIOperatingSystemCreateRequest{
 		Name:             "tmpl-os-" + uuid.NewString(),
-		IpxeTemplateName: &templateName,
+		IpxeTemplateId: &templateName,
 		Scope:            &scopeGlobal,
 		IpxeParameters: []cdbm.OperatingSystemIpxeParameter{
 			{Name: "kernel_params", Value: "ip=dhcp"},
@@ -269,7 +269,7 @@ func TestOperatingSystemHandler_Create_ProviderAndTenantOwnership(t *testing.T) 
 			user: env.tnUser,
 			body: model.APIOperatingSystemCreateRequest{
 				Name:             "tn-tmpl-" + uuid.NewString(),
-				IpxeTemplateName: &templateName,
+				IpxeTemplateId: &templateName,
 				Scope:            &scopeGlobal,
 				IpxeParameters: []cdbm.OperatingSystemIpxeParameter{
 					{Name: "kernel_params", Value: "ip=dhcp"},
@@ -298,7 +298,7 @@ func TestOperatingSystemHandler_Create_ProviderAndTenantOwnership(t *testing.T) 
 			user: env.dualUser,
 			body: model.APIOperatingSystemCreateRequest{
 				Name:             "dual-tmpl-" + uuid.NewString(),
-				IpxeTemplateName: &templateName,
+				IpxeTemplateId: &templateName,
 				Scope:            &scopeGlobal,
 				IpxeParameters: []cdbm.OperatingSystemIpxeParameter{
 					{Name: "kernel_params", Value: "ip=dhcp"},
@@ -342,8 +342,8 @@ func TestOperatingSystemHandler_Create_ProviderAndTenantOwnership(t *testing.T) 
 			}
 
 			// Verify iPXE parameters and artifacts round-trip for template OS.
-			if tc.body.IpxeTemplateName != nil {
-				assert.Equal(t, tc.body.IpxeTemplateName, rsp.IpxeTemplateName)
+			if tc.body.IpxeTemplateId != nil {
+				assert.Equal(t, tc.body.IpxeTemplateId, rsp.IpxeTemplateId)
 				if len(tc.body.IpxeParameters) > 0 {
 					require.Len(t, rsp.IpxeParameters, len(tc.body.IpxeParameters))
 					assert.Equal(t, tc.body.IpxeParameters[0].Name, rsp.IpxeParameters[0].Name)
