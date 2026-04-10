@@ -57,7 +57,7 @@ type InstanceCreateRequest struct {
 	NvLinkInterfaces []NVLinkInterfaceCreateRequest `json:"nvLinkInterfaces,omitempty"`
 	// Specify list of SSH Key Group IDs that will provide Serial over LAN access
 	SshKeyGroupIds []string `json:"sshKeyGroupIds,omitempty"`
-	// When creating a targeted Instance with `machineId`, forwarded to the site workflow. The machine must still be in Ready state at the API. Requires Targeted Instance Creation capability enabled for Tenant
+	// Set to true in order to target Machines are in maintenance or have health alerts preventing regular provision flow. Requires Targeted Instance Creation capability enabled for Tenant
 	AllowUnhealthyMachine *bool `json:"allowUnhealthyMachine,omitempty"`
 }
 
