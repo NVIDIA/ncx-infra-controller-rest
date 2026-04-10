@@ -1065,13 +1065,11 @@ func (uibph UpdateNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 		},
 	}
 
-	// Include name if it is present
-	if apiRequest.Name != nil {
-		updateRequest.Config.Metadata.Name = unvllp.Name
-	}
-
-	// Include description if it is present
-	if apiRequest.Description != nil {
+	// Site Controller (Forge) requires metadata.name on every update. When the client
+	// sends only description, apiRequest.Name is nil but we must still send the
+	// current partition name from the DB.
+	updateRequest.Config.Metadata.Name = unvllp.Name
+	if unvllp.Description != nil {
 		updateRequest.Config.Metadata.Description = *unvllp.Description
 	}
 
