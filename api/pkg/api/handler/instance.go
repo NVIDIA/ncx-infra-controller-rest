@@ -851,11 +851,6 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Machine: %s is assigned to an Instance, cannot be used for new Instance", machine.ID), nil)
 		}
 
-		if machine.Status != cdbm.MachineStatusReady {
-			logger.Warn().Str("MachineID", machine.ID).Str("status", machine.Status).Msg("Machine is not Ready, cannot be used for new Instance")
-			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Machine: %s has status: %s, machine must be in Ready state to create an Instance", machine.ID, machine.Status), nil)
-		}
-
 		// Check if it's possible to provision the Machine
 		if machine.Status == cdbm.MachineStatusReady {
 			logger.Info().Str("MachineID", machine.ID).Str("Status", machine.Status).Bool("AllowUnhealthyMachine", allowUnhealthyMachine).Msg("Machine is Ready, proceeding with Instance creation")
