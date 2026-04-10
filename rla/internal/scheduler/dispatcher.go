@@ -19,7 +19,6 @@ package scheduler
 
 import (
 	"context"
-	"sync"
 
 	"github.com/rs/zerolog/log"
 
@@ -28,18 +27,12 @@ import (
 
 // dispatcher is the per-policy component of relay g2.
 // It decides when and how events are sent from the relay queue to the worker.
-//
-// Every implementation maintains cancelCurrent so that relay.forceStop can
-// abort the in-flight job regardless of which policy is active.
 type dispatcher interface {
 	// run is the g2 event loop. It reads from r.notifyCh, dequeues events
 	// from r, and sends workItems to workCh. It blocks until it determines
-	// it should exit (ctx cancelled, or all events flushed for QueueAll).
-	run(ctx context.Context, r *relay, workCh chan<- workItem)
-
-	// cancel cancels the currently running worker job, if any.
-	// Called by relay.forceStop to abort in-flight work immediately.
-	cancel()
+	// it should exit (notifyCh closed by g1 meaning trigger exhausted, or
+	// forceCh closed by forceStop for immediate exit).
+	run(r *relay, workCh chan<- workItem)
 }
 
 // newPolicyDispatcher returns the dispatcher implementation for the given policy.
@@ -56,37 +49,13 @@ func newPolicyDispatcher(p types.Policy) dispatcher {
 	}
 }
 
-// --- shared helpers ---
-
-// dispatchBase holds the cancelCurrent field shared by all implementations.
-type dispatchBase struct {
-	mu            sync.Mutex
-	cancelCurrent context.CancelFunc
-}
-
-func (b *dispatchBase) setCancel(cancel context.CancelFunc) {
-	b.mu.Lock()
-	b.cancelCurrent = cancel
-	b.mu.Unlock()
-}
-
-func (b *dispatchBase) cancel() {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	if b.cancelCurrent != nil {
-		b.cancelCurrent()
-	}
-}
-
 // --- skipDispatcher ---
 
 // skipDispatcher drops the event when the worker is busy (non-blocking send).
-type skipDispatcher struct {
-	dispatchBase
-}
+type skipDispatcher struct{}
 
 func (d *skipDispatcher) run(
-	ctx context.Context, r *relay, workCh chan<- workItem,
+	r *relay, workCh chan<- workItem,
 ) {
 	for {
 		select {
@@ -96,8 +65,6 @@ func (d *skipDispatcher) run(
 			}
 		case <-r.forceCh:
 			return // force stop: queue already cleared by relay.forceStop
-		case <-ctx.Done():
-			return
 		}
 
 		r.mu.Lock()
@@ -111,17 +78,11 @@ func (d *skipDispatcher) run(
 		r.queue = r.queue[:0]
 		r.mu.Unlock()
 
-		// Create the job context before the select but only register
-		// its cancel with dispatchBase (for forceStop) if the send
-		// succeeds. On drop, call jobCancel directly to remove the
-		// child from the parent's internal children map; the running
-		// job is left untouched.
-		jobCtx, jobCancel := context.WithCancel(ctx)
+		jobCtx, jobCancel := context.WithCancel(r.forceCtx)
 		select {
-		case workCh <- workItem{ctx: jobCtx, ev: ev}:
-			d.setCancel(jobCancel)
+		case workCh <- workItem{ctx: jobCtx, cancel: jobCancel, ev: ev}:
 		default:
-			jobCancel() // release parent registration; no job was started
+			jobCancel() // worker busy; drop event
 			log.Debug().Str("job", r.entry.job.Name()).
 				Msg("skip: worker busy, dropping event")
 		}
@@ -132,64 +93,84 @@ func (d *skipDispatcher) run(
 
 // queueDispatcher keeps only the latest pending event; blocks until the worker
 // accepts it. Earlier events in the queue are discarded.
-type queueDispatcher struct {
-	dispatchBase
-}
+type queueDispatcher struct{}
 
 func (d *queueDispatcher) run(
-	ctx context.Context, r *relay, workCh chan<- workItem,
+	r *relay, workCh chan<- workItem,
 ) {
-	for {
-		// Phase 1: wait for a notification that the queue has a new event.
-		select {
-		case _, ok := <-r.notifyCh:
-			if !ok {
-				return // trigger exhausted
-			}
-		case <-r.forceCh:
-			return // force stop: queue already cleared by relay.forceStop
-		case <-ctx.Done():
-			return
-		}
-
-		// Dequeue the latest event and discard earlier ones.
+	// The helper function drains the queue and delivers the latest event
+	// to the worker after the trigger is exhausted (notifyCh closed).
+	drainOnExhausted := func() {
 		r.mu.Lock()
 		if len(r.queue) == 0 {
 			r.mu.Unlock()
-			continue
+			return
 		}
 		ev := r.queue[len(r.queue)-1]
 		r.queue = r.queue[:0]
 		r.mu.Unlock()
 
-		// Phase 2: block until the worker accepts ev. If a newer event
-		// arrives while waiting, update ev to the latest and keep
-		// blocking — the worker always receives the most recent event
-		// available when it next becomes free.
-	deliver:
+		jobCtx, jobCancel := context.WithCancel(r.forceCtx)
+		select {
+		case workCh <- workItem{ctx: jobCtx, cancel: jobCancel, ev: ev}:
+		case <-r.forceCh:
+			jobCancel()
+			return
+		}
+	}
+
+	for {
+		// Wait for a notification that the queue has a new event.
+		select {
+		case _, ok := <-r.notifyCh:
+			if !ok {
+				// Trigger exhausted, drain the queue and exit.
+				drainOnExhausted()
+				return
+			}
+		case <-r.forceCh:
+			return // force stop: queue already cleared by relay.forceStop
+		}
+
+		// There are events in the queue, process them.
 		for {
-			jobCtx, jobCancel := context.WithCancel(ctx)
+			// Dequeue the latest event and discard earlier ones.
+			r.mu.Lock()
+			if len(r.queue) == 0 {
+				r.mu.Unlock()
+				// Queue is empty, break the loop and wait for notifications
+				// on new events.
+				break
+			}
+
+			ev := r.queue[len(r.queue)-1]
+			r.queue = r.queue[:0]
+			r.mu.Unlock()
+
+			jobCtx, jobCancel := context.WithCancel(r.forceCtx)
 			select {
-			case workCh <- workItem{ctx: jobCtx, ev: ev}:
-				d.setCancel(jobCancel)
-				break deliver
+			case workCh <- workItem{ctx: jobCtx, cancel: jobCancel, ev: ev}:
 			case _, ok := <-r.notifyCh:
+				// A newer event arrived; cancel the current pending job and
+				// update ev to the latest in the queue (if any), then put it
+				// back so the inner loop picks it up on the next iteration.
+				// append reuses the cleared backing array — no allocation.
 				jobCancel()
-				// A newer event arrived; update ev to the latest in the
-				// queue, then retry delivery.
+
 				r.mu.Lock()
 				if len(r.queue) > 0 {
 					ev = r.queue[len(r.queue)-1]
 					r.queue = r.queue[:0]
 				}
+				r.queue = append(r.queue, ev)
 				r.mu.Unlock()
+
 				if !ok {
-					return // trigger exhausted while waiting
+					// Trigger exhausted, drain the queue and exit.
+					drainOnExhausted()
+					return
 				}
 			case <-r.forceCh:
-				jobCancel()
-				return
-			case <-ctx.Done():
 				jobCancel()
 				return
 			}
@@ -201,25 +182,16 @@ func (d *queueDispatcher) run(
 
 // queueAllDispatcher delivers every event in FIFO order. On graceful shutdown
 // it flushes any remaining queued events before exiting.
-type queueAllDispatcher struct {
-	dispatchBase
-}
+type queueAllDispatcher struct{}
 
 func (d *queueAllDispatcher) run(
-	ctx context.Context, r *relay, workCh chan<- workItem,
+	r *relay, workCh chan<- workItem,
 ) {
 	for {
 		// Snapshot and clear the entire queue under a single lock,
 		// then deliver events one-by-one without holding the mutex.
 		// This minimises lock contention with relay g1.
-		//
-		// Use context.Background() — not ctx (the scheduler run context) —
-		// so that Stop(false) cancelling the run context does not
-		// immediately invalidate the job contexts of items being delivered
-		// here. Force-stop still works: relay.forceStop calls
-		// dispatcher.cancel() which cancels the current job's context
-		// directly via dispatchBase.cancelCurrent.
-		d.deliver(context.Background(), r, workCh)
+		d.deliver(r, workCh)
 
 		// Queue empty: wait for more events or shutdown.
 		select {
@@ -227,27 +199,20 @@ func (d *queueAllDispatcher) run(
 			if !ok {
 				// g1 has exited: no more events will be produced.
 				// Flush anything added between our last drain and g1's exit.
-				// Use context.Background() so the flush is not aborted by
-				// the already-cancelled scheduler context.
-				d.deliver(context.Background(), r, workCh)
+				d.deliver(r, workCh)
 				return
 			}
 			// More items enqueued; loop back to drain.
 		case <-r.forceCh:
 			return // force stop: skip drain, queue already cleared
-		case <-ctx.Done():
-			// Graceful shutdown: flush remaining items.
-			d.deliver(context.Background(), r, workCh)
-			return
 		}
 	}
 }
 
 // deliver snapshots and clears r.queue under a single lock, then sends each
-// event to the worker one-by-one using parentCtx as the job context parent.
-func (d *queueAllDispatcher) deliver(
-	parentCtx context.Context, r *relay, workCh chan<- workItem,
-) {
+// event to the worker one-by-one. Job contexts are derived from r.forceCtx,
+// so force-stop cancels all in-flight jobs atomically via forceCancel.
+func (d *queueAllDispatcher) deliver(r *relay, workCh chan<- workItem) {
 	r.mu.Lock()
 	batch := make([]types.Event, len(r.queue))
 	copy(batch, r.queue)
@@ -255,12 +220,9 @@ func (d *queueAllDispatcher) deliver(
 	r.mu.Unlock()
 
 	for _, ev := range batch {
-		jobCtx, jobCancel := context.WithCancel(parentCtx)
+		jobCtx, jobCancel := context.WithCancel(r.forceCtx)
 		select {
-		case workCh <- workItem{ctx: jobCtx, ev: ev}:
-			// Register cancel only after successful delivery so that
-			// forceStop always targets an actual running job.
-			d.setCancel(jobCancel)
+		case workCh <- workItem{ctx: jobCtx, cancel: jobCancel, ev: ev}:
 		case <-r.forceCh:
 			// Force stop fired while blocked on a send; discard remaining
 			// batch and release the unsent context.
@@ -273,28 +235,37 @@ func (d *queueAllDispatcher) deliver(
 // --- replaceDispatcher ---
 
 // replaceDispatcher cancels the current job and starts a new one on each event.
-type replaceDispatcher struct {
-	dispatchBase
-}
+type replaceDispatcher struct{}
 
 func (d *replaceDispatcher) run(
-	ctx context.Context, r *relay, workCh chan<- workItem,
+	r *relay, workCh chan<- workItem,
 ) {
+	// cancelPrev tracks the cancel function of the currently running job so
+	// it can be cancelled when a newer event supersedes it. It is only
+	// accessed from this goroutine, so no mutex is needed.
+	var cancelPrev context.CancelFunc
+
 	for {
+		// Wait for a notification that the queue has a new event.
+		// notifyCh has capacity 1 with non-blocking sends, so the queue
+		// may hold unnotified events when it closes — exhausted drives the
+		// drain-and-exit behaviour below.
+		exhausted := false
 		select {
 		case _, ok := <-r.notifyCh:
 			if !ok {
-				return // trigger exhausted
+				exhausted = true
 			}
 		case <-r.forceCh:
 			return // force stop: queue already cleared by relay.forceStop
-		case <-ctx.Done():
-			return
 		}
 
 		r.mu.Lock()
 		if len(r.queue) == 0 {
 			r.mu.Unlock()
+			if exhausted {
+				return
+			}
 			continue
 		}
 		// Take the latest event and drop everything else: earlier events
@@ -304,19 +275,20 @@ func (d *replaceDispatcher) run(
 		r.mu.Unlock()
 
 		// Cancel the running job before dispatching the replacement.
-		d.cancel()
+		if cancelPrev != nil {
+			cancelPrev()
+		}
 
-		jobCtx, jobCancel := context.WithCancel(ctx)
+		jobCtx, jobCancel := context.WithCancel(r.forceCtx)
 		select {
-		case workCh <- workItem{ctx: jobCtx, ev: ev}:
-			// Register cancel only after successful delivery so that
-			// forceStop always targets an actual running job.
-			d.setCancel(jobCancel)
+		case workCh <- workItem{ctx: jobCtx, cancel: jobCancel, ev: ev}:
+			cancelPrev = jobCancel // track for cancel-on-replace
 		case <-r.forceCh:
 			jobCancel()
 			return
-		case <-ctx.Done():
-			jobCancel()
+		}
+
+		if exhausted {
 			return
 		}
 	}

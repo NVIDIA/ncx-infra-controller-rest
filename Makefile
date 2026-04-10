@@ -123,49 +123,49 @@ test-db:
 
 carbide-mock-server-build:
 	mkdir -p build
-	cd site-agent/cmd/elektraserver && go build -o ../../../build/elektraserver .
+	cd site-agent/cmd/mock-core && go build -o ../../../build/mock-core .
 
 carbide-mock-server-start: carbide-mock-server-build
 	-lsof -ti:11079 | xargs kill -9 2>/dev/null
-	./build/elektraserver -tout 0 > build/elektraserver.log 2>&1 & echo $$! > build/elektraserver.pid
+	./build/mock-core -tout 0 > build/mock-core.log 2>&1 & echo $$! > build/mock-core.pid
 	@echo "Waiting for gRPC server to start..."
 	@for i in 1 2 3 4 5 6 7 8 9 10; do \
-		if grep -q "Started API server" build/elektraserver.log 2>/dev/null; then \
+		if grep -q "Started API server" build/mock-core.log 2>/dev/null; then \
 			sleep 0.1; \
 			echo "gRPC server is ready"; \
 			exit 0; \
 		fi; \
 		sleep 0.2; \
 	done; \
-	echo "Timeout waiting for gRPC server to start"; \
+	echo "Timeout waiting for Mock Core gRPC server to start"; \
 	exit 1
 
 carbide-mock-server-stop:
-	-kill $$(cat build/elektraserver.pid) 2>/dev/null
-	-rm -f build/elektraserver.pid
+	-kill $$(cat build/mock-core.pid) 2>/dev/null
+	-rm -f build/mock-core.pid
 
 rla-mock-server-build:
 	mkdir -p build
-	cd site-agent/cmd/rlaserver && go build -o ../../../build/rlaserver .
+	cd site-agent/cmd/mock-rla && go build -o ../../../build/mock-rla .
 
 rla-mock-server-start: rla-mock-server-build
 	-lsof -ti:11080 | xargs kill -9 2>/dev/null
-	./build/rlaserver -tout 0 > build/rlaserver.log 2>&1 & echo $$! > build/rlaserver.pid
+	./build/mock-rla -tout 0 > build/mock-rla.log 2>&1 & echo $$! > build/mock-rla.pid
 	@echo "Waiting for RLA gRPC server to start..."
 	@for i in 1 2 3 4 5 6 7 8 9 10; do \
-		if grep -q "Started RLA API server" build/rlaserver.log 2>/dev/null; then \
+		if grep -q "Started RLA API server" build/mock-rla.log 2>/dev/null; then \
 			sleep 0.1; \
 			echo "RLA gRPC server is ready"; \
 			exit 0; \
 		fi; \
 		sleep 0.2; \
 	done; \
-	echo "Timeout waiting for RLA gRPC server to start"; \
+	echo "Timeout waiting for Mock RLA gRPC server to start"; \
 	exit 1
 
 rla-mock-server-stop:
-	-kill $$(cat build/rlaserver.pid) 2>/dev/null
-	-rm -f build/rlaserver.pid
+	-kill $$(cat build/mock-rla.pid) 2>/dev/null
+	-rm -f build/mock-rla.pid
 
 test-site-agent: carbide-mock-server-start rla-mock-server-start
 	cd site-agent/pkg/components && CGO_ENABLED=1 go test -race -p 1 ./... -count=1 ; \
@@ -196,7 +196,7 @@ build:
 	cd api && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-extldflags '-static'" -o ../$(BUILD_DIR)/api ./cmd/api
 	cd workflow && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-extldflags '-static'" -o ../$(BUILD_DIR)/workflow ./cmd/workflow
 	cd site-manager && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-extldflags '-static'" -o ../$(BUILD_DIR)/sitemgr ./cmd/sitemgr
-	cd site-agent && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-extldflags '-static'" -o ../$(BUILD_DIR)/elektra ./cmd/elektra
+	cd site-agent && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-extldflags '-static'" -o ../$(BUILD_DIR)/site-agent ./cmd/site-agent
 	cd db && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-extldflags '-static'" -o ../$(BUILD_DIR)/migrations ./cmd/migrations
 	cd cert-manager && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-extldflags '-static'" -o ../$(BUILD_DIR)/credsmgr ./cmd/credsmgr
 	cd cli && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-extldflags '-static'" -o ../$(BUILD_DIR)/carbidecli ./cmd/carbidecli
