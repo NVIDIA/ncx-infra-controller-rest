@@ -174,3 +174,9 @@ func (pm *PowershelfManager) PowerOn(ctx context.Context, mac net.HardwareAddr) 
 func (pm *PowershelfManager) PowerOff(ctx context.Context, mac net.HardwareAddr) error {
 	return pm.powerControl(ctx, mac, false)
 }
+
+// PowerControlDirect performs a power action using pre-built connection details,
+// bypassing registry and credential manager lookups.
+func (pm *PowershelfManager) PowerControlDirect(ctx context.Context, pmc *pmc.PMC, on bool) error {
+	return pm.PmcManager.PowerControlDirect(ctx, pmc, on)
+}
