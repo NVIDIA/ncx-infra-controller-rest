@@ -162,6 +162,9 @@ func TestSetupSchema(t *testing.T, dbSession *cdb.Session) {
 	// create User table
 	err = dbSession.DB.ResetModel(context.Background(), (*cdbm.User)(nil))
 	assert.Nil(t, err)
+	// create IpxeTemplate table
+	err = dbSession.DB.ResetModel(context.Background(), (*cdbm.IpxeTemplate)(nil))
+	assert.Nil(t, err)
 }
 
 // TestBuildUser build user
@@ -367,23 +370,22 @@ func TestBuildOperatingSystem(t *testing.T, dbSession *cdb.Session, name string)
 // TestBuildOperatingSystem build operating system
 func TestBuildImageOperatingSystem(t *testing.T, dbSession *cdb.Session, ipID *uuid.UUID, tenantID *uuid.UUID, name string, org string, version *string, status string) *cdbm.OperatingSystem {
 	operatingSystem := &cdbm.OperatingSystem{
-		ID:                          uuid.New(),
-		Name:                        name,
-		Org:                         org,
-		InfrastructureProviderID:    ipID,
-		TenantID:                    tenantID,
-		ControllerOperatingSystemID: nil,
-		Version:                     version,
-		Type:                        cdbm.OperatingSystemTypeImage,
-		ImageURL:                    cdb.GetStrPtr("http://testos.net"),
-		ImageSHA:                    cdb.GetStrPtr("123213ddddsa1231asd"),
-		ImageAuthType:               cdb.GetStrPtr("bear"),
-		ImageAuthToken:              cdb.GetStrPtr("1211331asdadad21123"),
-		ImageDisk:                   cdb.GetStrPtr("disk"),
-		RootFsID:                    cdb.GetStrPtr("rootfsID"),
-		RootFsLabel:                 cdb.GetStrPtr("rootFsLabel"),
-		Status:                      status,
-		CreatedBy:                   uuid.New(),
+		ID:                       uuid.New(),
+		Name:                     name,
+		Org:                      org,
+		InfrastructureProviderID: ipID,
+		TenantID:                 tenantID,
+		Version:                  version,
+		Type:                     cdbm.OperatingSystemTypeImage,
+		ImageURL:                 cdb.GetStrPtr("http://testos.net"),
+		ImageSHA:                 cdb.GetStrPtr("123213ddddsa1231asd"),
+		ImageAuthType:            cdb.GetStrPtr("bear"),
+		ImageAuthToken:           cdb.GetStrPtr("1211331asdadad21123"),
+		ImageDisk:                cdb.GetStrPtr("disk"),
+		RootFsID:                 cdb.GetStrPtr("rootfsID"),
+		RootFsLabel:              cdb.GetStrPtr("rootFsLabel"),
+		Status:                   status,
+		CreatedBy:                uuid.New(),
 	}
 	_, err := dbSession.DB.NewInsert().Model(operatingSystem).Exec(context.Background())
 	assert.Nil(t, err)

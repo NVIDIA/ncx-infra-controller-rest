@@ -36,3 +36,17 @@ message OsImageInventory {
   // Inventory page information
   InventoryPage inventory_page = 5;
 }
+
+// OperatingSystemInventory - inventory info for all OS definitions periodically collected from carbide-core
+message OperatingSystemInventory {
+  // List of Operating Systems (active records only; deletions are detected by absence)
+  repeated forge.OperatingSystemDefinition operating_systems = 1;
+  // Reported timestamp of inventory
+  google.protobuf.Timestamp timestamp = 2;
+  // Status of Inventory
+  InventoryStatus inventory_status = 3;
+  // Message for status
+  string status_msg = 4;
+  // Inventory page information
+  InventoryPage inventory_page = 5;
+}

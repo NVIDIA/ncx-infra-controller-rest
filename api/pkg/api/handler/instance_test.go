@@ -328,7 +328,7 @@ func testInstanceBuildOperatingSystem(t *testing.T, dbSession *cdb.Session, name
 	}
 
 	// If iPXE, the OS should have a script set.
-	if osType == cdbm.OperatingSystemTypeIPXE {
+	if cdbm.IsIPXEType(osType) {
 		operatingSystem.IpxeScript = cdb.GetStrPtr(common.DefaultIpxeScript)
 	}
 

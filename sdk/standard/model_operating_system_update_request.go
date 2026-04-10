@@ -23,8 +23,14 @@ type OperatingSystemUpdateRequest struct {
 	Name NullableString `json:"name,omitempty"`
 	// Optional description of the Operating System
 	Description NullableString `json:"description,omitempty"`
-	// iPXE script or URL, only applicable for iPXE based OS. Cannot be specified if imageUrl is specified
+	// iPXE script or URL, only applicable for iPXE based OS. Mutually exclusive with ipxeTemplateId and imageUrl
 	IpxeScript NullableString `json:"ipxeScript,omitempty"`
+	// Name of an iPXE template to use. Mutually exclusive with ipxeScript and imageUrl
+	IpxeTemplateId NullableString `json:"ipxeTemplateId,omitempty"`
+	// Parameters to pass to the iPXE template. If omitted the existing parameters are kept; if set to an empty array the parameters are cleared
+	IpxeParameters []IpxeTemplateParameter `json:"ipxeParameters,omitempty"`
+	// Artifacts for the iPXE OS definition. If omitted the existing artifacts are kept; if set to an empty array the artifacts are cleared
+	IpxeArtifacts []IpxeTemplateArtifact `json:"ipxeArtifacts,omitempty"`
 	// Original URL from where the Operating System image can be retreived from, required for image based OS
 	ImageUrl NullableString `json:"imageUrl,omitempty"`
 	// SHA hash of the image file, required for image based OS
@@ -197,6 +203,113 @@ func (o *OperatingSystemUpdateRequest) SetIpxeScriptNil() {
 // UnsetIpxeScript ensures that no value is present for IpxeScript, not even an explicit nil
 func (o *OperatingSystemUpdateRequest) UnsetIpxeScript() {
 	o.IpxeScript.Unset()
+}
+
+// GetIpxeTemplateId returns the IpxeTemplateId field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *OperatingSystemUpdateRequest) GetIpxeTemplateId() string {
+	if o == nil || IsNil(o.IpxeTemplateId.Get()) {
+		var ret string
+		return ret
+	}
+	return *o.IpxeTemplateId.Get()
+}
+
+// GetIpxeTemplateIdOk returns a tuple with the IpxeTemplateId field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *OperatingSystemUpdateRequest) GetIpxeTemplateIdOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return o.IpxeTemplateId.Get(), o.IpxeTemplateId.IsSet()
+}
+
+// HasIpxeTemplateId returns a boolean if a field has been set.
+func (o *OperatingSystemUpdateRequest) HasIpxeTemplateId() bool {
+	if o != nil && o.IpxeTemplateId.IsSet() {
+		return true
+	}
+
+	return false
+}
+
+// SetIpxeTemplateId gets a reference to the given NullableString and assigns it to the IpxeTemplateId field.
+func (o *OperatingSystemUpdateRequest) SetIpxeTemplateId(v string) {
+	o.IpxeTemplateId.Set(&v)
+}
+
+// SetIpxeTemplateIdNil sets the value for IpxeTemplateId to be an explicit nil
+func (o *OperatingSystemUpdateRequest) SetIpxeTemplateIdNil() {
+	o.IpxeTemplateId.Set(nil)
+}
+
+// UnsetIpxeTemplateId ensures that no value is present for IpxeTemplateId, not even an explicit nil
+func (o *OperatingSystemUpdateRequest) UnsetIpxeTemplateId() {
+	o.IpxeTemplateId.Unset()
+}
+
+// GetIpxeParameters returns the IpxeParameters field value if set, zero value otherwise.
+func (o *OperatingSystemUpdateRequest) GetIpxeParameters() []IpxeTemplateParameter {
+	if o == nil || IsNil(o.IpxeParameters) {
+		var ret []IpxeTemplateParameter
+		return ret
+	}
+	return o.IpxeParameters
+}
+
+// GetIpxeParametersOk returns a tuple with the IpxeParameters field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *OperatingSystemUpdateRequest) GetIpxeParametersOk() ([]IpxeTemplateParameter, bool) {
+	if o == nil || IsNil(o.IpxeParameters) {
+		return nil, false
+	}
+	return o.IpxeParameters, true
+}
+
+// HasIpxeParameters returns a boolean if a field has been set.
+func (o *OperatingSystemUpdateRequest) HasIpxeParameters() bool {
+	if o != nil && !IsNil(o.IpxeParameters) {
+		return true
+	}
+
+	return false
+}
+
+// SetIpxeParameters gets a reference to the given []IpxeTemplateParameter and assigns it to the IpxeParameters field.
+func (o *OperatingSystemUpdateRequest) SetIpxeParameters(v []IpxeTemplateParameter) {
+	o.IpxeParameters = v
+}
+
+// GetIpxeArtifacts returns the IpxeArtifacts field value if set, zero value otherwise.
+func (o *OperatingSystemUpdateRequest) GetIpxeArtifacts() []IpxeTemplateArtifact {
+	if o == nil || IsNil(o.IpxeArtifacts) {
+		var ret []IpxeTemplateArtifact
+		return ret
+	}
+	return o.IpxeArtifacts
+}
+
+// GetIpxeArtifactsOk returns a tuple with the IpxeArtifacts field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *OperatingSystemUpdateRequest) GetIpxeArtifactsOk() ([]IpxeTemplateArtifact, bool) {
+	if o == nil || IsNil(o.IpxeArtifacts) {
+		return nil, false
+	}
+	return o.IpxeArtifacts, true
+}
+
+// HasIpxeArtifacts returns a boolean if a field has been set.
+func (o *OperatingSystemUpdateRequest) HasIpxeArtifacts() bool {
+	if o != nil && !IsNil(o.IpxeArtifacts) {
+		return true
+	}
+
+	return false
+}
+
+// SetIpxeArtifacts gets a reference to the given []IpxeTemplateArtifact and assigns it to the IpxeArtifacts field.
+func (o *OperatingSystemUpdateRequest) SetIpxeArtifacts(v []IpxeTemplateArtifact) {
+	o.IpxeArtifacts = v
 }
 
 // GetImageUrl returns the ImageUrl field value if set, zero value otherwise (both if not set or set to explicit null).
@@ -776,6 +889,15 @@ func (o OperatingSystemUpdateRequest) ToMap() (map[string]interface{}, error) {
 	}
 	if o.IpxeScript.IsSet() {
 		toSerialize["ipxeScript"] = o.IpxeScript.Get()
+	}
+	if o.IpxeTemplateId.IsSet() {
+		toSerialize["ipxeTemplateId"] = o.IpxeTemplateId.Get()
+	}
+	if !IsNil(o.IpxeParameters) {
+		toSerialize["ipxeParameters"] = o.IpxeParameters
+	}
+	if !IsNil(o.IpxeArtifacts) {
+		toSerialize["ipxeArtifacts"] = o.IpxeArtifacts
 	}
 	if o.ImageUrl.IsSet() {
 		toSerialize["imageUrl"] = o.ImageUrl.Get()

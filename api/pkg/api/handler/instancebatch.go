@@ -143,7 +143,9 @@ func (bcih BatchCreateInstanceHandler) buildBatchInstanceCreateRequestOsConfig(c
 		return nil, nil, cutil.NewAPIError(http.StatusBadRequest, "OperatingSystem specified in request is not owned by Tenant", nil)
 	}
 
-	if os.Type == cdbm.OperatingSystemTypeImage {
+	osType := os.Type
+
+	if osType == cdbm.OperatingSystemTypeImage {
 		if site.Config == nil || !site.Config.ImageBasedOperatingSystem {
 			logger.Warn().Str("operatingSystemId", os.ID.String()).Str("siteId", site.ID.String()).Msg("Creation of Instance with Image based Operating System is not supported for Site, ImageBasedOperatingSystem capability is not enabled")
 			return nil, nil, cutil.NewAPIError(http.StatusBadRequest, "Creation of Instance with Image based Operating System is not supported. Site must have ImageBasedOperatingSystem capability enabled.", nil)
@@ -152,7 +154,7 @@ func (bcih BatchCreateInstanceHandler) buildBatchInstanceCreateRequestOsConfig(c
 
 	// Confirm match between site and OS (only for Image type).
 	/*
-		if os.Type == cdbm.OperatingSystemTypeImage {
+		if osType == cdbm.OperatingSystemTypeImage {
 			ossaDAO := cdbm.NewOperatingSystemSiteAssociationDAO(bcih.dbSession)
 			_, ossaCount, err := ossaDAO.GetAll(
 				ctx,
@@ -189,7 +191,7 @@ func (bcih BatchCreateInstanceHandler) buildBatchInstanceCreateRequestOsConfig(c
 	// Options below should all have been set by the
 	// earlier call to ValidateAndSetOperatingSystemData
 
-	if os.Type == cdbm.OperatingSystemTypeIPXE {
+	if cdbm.IsIPXEType(osType) {
 		return &cwssaws.OperatingSystem{
 			RunProvisioningInstructionsOnEveryBoot: *apiRequest.AlwaysBootWithCustomIpxe,
 			PhoneHomeEnabled:                       *apiRequest.PhoneHomeEnabled,
