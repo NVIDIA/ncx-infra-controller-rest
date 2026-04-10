@@ -194,6 +194,17 @@ func TestFabricHandler_Get(t *testing.T) {
 	ts1 := testBuildTenantSiteAssociation(t, dbSession, tnOrg1, tn1.ID, site1.ID, tnu1.ID)
 	assert.NotNil(t, ts1)
 
+	mOrgFabric := "test-mixed-org-fabric-get"
+	mixedRoles := []string{"FORGE_PROVIDER_ADMIN", "FORGE_TENANT_ADMIN"}
+	muFabric := testFabricBuildUser(t, dbSession, uuid.NewString(), []string{mOrgFabric}, mixedRoles)
+	ipM := testFabricBuildInfrastructureProvider(t, dbSession, mOrgFabric, "infraProviderMixed")
+	siteM := testFabricBuildSite(t, dbSession, ipM, "testSiteMixed", nil, nil)
+	tnM := testFabricBuildTenant(t, dbSession, mOrgFabric, "testTenantMixed")
+	tsM := testBuildTenantSiteAssociation(t, dbSession, mOrgFabric, tnM.ID, siteM.ID, muFabric.ID)
+	assert.NotNil(t, tsM)
+	fbM := testFabricBuildFabric(t, dbSession, ipM.Org, cdb.GetStrPtr("IFabricMixed"), ipM, siteM, nil, false)
+	testFabricBuildStatusDetail(t, dbSession, fbM.ID, cdbm.FabricStatusReady)
+
 	fb1 := testFabricBuildFabric(t, dbSession, ip1.Org, cdb.GetStrPtr("IFabric1"), ip1, site1, nil, false)
 	assert.NotNil(t, fb1)
 
@@ -306,6 +317,16 @@ func TestFabricHandler_Get(t *testing.T) {
 			expectedID:     fb1.ID,
 			expectedStatus: http.StatusOK,
 		},
+		{
+			name:           "success case when user has both Provider and Tenant roles (OR site access, no query params)",
+			reqOrgName:     mOrgFabric,
+			user:           muFabric,
+			fbID:           fbM.ID,
+			siteID:         siteM.ID,
+			expectedErr:    false,
+			expectedID:     fbM.ID,
+			expectedStatus: http.StatusOK,
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -413,6 +434,16 @@ func TestFabricHandler_GetAll(t *testing.T) {
 
 	ts1 := testBuildTenantSiteAssociation(t, dbSession, tnOrg1, tn1.ID, site1.ID, tnu1.ID)
 	assert.NotNil(t, ts1)
+
+	mOrgAll := "test-mixed-org-fabric-getall"
+	mixedRolesAll := []string{"FORGE_PROVIDER_ADMIN", "FORGE_TENANT_ADMIN"}
+	muAll := testFabricBuildUser(t, dbSession, uuid.NewString(), []string{mOrgAll}, mixedRolesAll)
+	ipMAll := testFabricBuildInfrastructureProvider(t, dbSession, mOrgAll, "infraProviderMixedAll")
+	siteMAll := testFabricBuildSite(t, dbSession, ipMAll, "testSiteMixedAll", nil, nil)
+	tnMAll := testFabricBuildTenant(t, dbSession, mOrgAll, "testTenantMixedAll")
+	assert.NotNil(t, testBuildTenantSiteAssociation(t, dbSession, mOrgAll, tnMAll.ID, siteMAll.ID, muAll.ID))
+	fbMAll := testFabricBuildFabric(t, dbSession, ipMAll.Org, cdb.GetStrPtr("IFabricMixedAll"), ipMAll, siteMAll, nil, false)
+	testFabricBuildStatusDetail(t, dbSession, fbMAll.ID, cdbm.FabricStatusReady)
 
 	totalCount := 30
 
@@ -546,6 +577,17 @@ func TestFabricHandler_GetAll(t *testing.T) {
 			expectedStatus:     http.StatusOK,
 			expectedCnt:        0,
 			expectedTotal:      cdb.GetIntPtr(0),
+			verifyChildSpanner: true,
+		},
+		{
+			name:               "success when user has both Provider and Tenant roles (OR site access, GetAll)",
+			reqOrgName:         mOrgAll,
+			user:               muAll,
+			querySiteID:        siteMAll.ID.String(),
+			expectedErr:        false,
+			expectedStatus:     http.StatusOK,
+			expectedCnt:        1,
+			expectedTotal:      cdb.GetIntPtr(1),
 			verifyChildSpanner: true,
 		},
 		{

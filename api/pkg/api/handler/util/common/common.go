@@ -750,11 +750,13 @@ func GetInstanceTypeAllocationStats(ctx context.Context, dbSession *cdb.Session,
 	return mstats[it.ID], nil
 }
 
-// GetIsProviderRequest is a utility function to check if the request is made from a Provider or Tenant perspective
-// If user only has Provider admin role then we can deduce they are acting as a Provider
-// If user only has Tenant admin role then we can deduce they are acting as a Tenant
-// If user has both Provider and Tenant admin role then we expect the user to specify the query param indicating which role they are acting on
-// This function supports both NGC and Keycloak authentication systems automatically
+// GetIsProviderRequest is a utility function to check if the request is made from a Provider or Tenant perspective.
+// If user only has Provider admin role then we can deduce they are acting as a Provider.
+// If user only has Tenant admin role then we can deduce they are acting as a Tenant.
+// If user has both Provider and Tenant admin role then we expect the user to specify the query param indicating which role they are acting on.
+//
+// Deprecated: Prefer IsProviderOrTenant plus explicit OR-access or defaulting rules (see Site PATCH and Fabric GET handlers).
+// This function supports both NGC and Keycloak authentication systems automatically.
 func GetIsProviderRequest(ctx context.Context, logger zerolog.Logger, dbSession *cdb.Session, org string, user *cdbm.User, providerRoles []string, tenantRoles []string, queryParams url.Values) (isProviderRequest bool, provider *cdbm.InfrastructureProvider, tenant *cdbm.Tenant, apiError *cutil.APIError) {
 	// Use the flexible role validation that works with both NGC and Keycloak
 	hasProviderRole := auth.ValidateUserRoles(user, org, nil, providerRoles...)

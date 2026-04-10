@@ -44,10 +44,6 @@ data:
             "description": "Tenant Admin role for test-org"
           },
           {
-            "name": "test-org:FORGE_PROVIDER_VIEWER",
-            "description": "Provider Viewer role for test-org"
-          },
-          {
             "name": "admin",
             "description": "Administrator role"
           },

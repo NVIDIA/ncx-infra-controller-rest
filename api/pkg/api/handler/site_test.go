@@ -550,6 +550,11 @@ func TestUpdateSiteHandler_Handle(t *testing.T) {
 	mOrg := "test-mixed-org"
 	mixedRole := []string{"FORGE_PROVIDER_ADMIN", "FORGE_TENANT_ADMIN"}
 	mu := testSiteBuildUser(t, dbSession, "test789", mOrg, mixedRole)
+	mip := testSiteBuildInfrastructureProvider(t, dbSession, "Test Mixed Provider", mOrg, mu)
+	mtn := testSiteBuildTenant(t, dbSession, "Test Mixed Tenant", mOrg, mu)
+	mst := testSiteBuildSite(t, dbSession, mip, "Test Mixed Site", cdbm.SiteStatusRegistered, mu, nil, nil)
+	testSiteBuildAllocation(t, dbSession, mst, mtn, "Test Allocation Mixed", mu)
+	common.TestBuildTenantSite(t, dbSession, mtn, mst, mu)
 
 	st := testSiteBuildSite(t, dbSession, ip, "Test Site", cdbm.SiteStatusRegistered, ipu, nil, nil)
 	st2 := testSiteBuildSite(t, dbSession, ip, "Test Site 2", cdbm.SiteStatusError, ipu, nil, nil)
@@ -711,22 +716,22 @@ func TestUpdateSiteHandler_Handle(t *testing.T) {
 			verifyChildSpanner: false,
 		},
 		{
-			name: "test Site update API endpoint failure, user has both Provider and Tenant roles, query param not specified",
+			name: "test Site update API endpoint success, user has both Provider and Tenant roles, no query param defaults to provider",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        &tmocks.Client{},
 				cfg:       cfg,
 			},
 			args: args{
-				site: st,
+				site: mst,
 				org:  mOrg,
 				user: mu,
 				reqData: &model.APISiteUpdateRequest{
-					IsSerialConsoleEnabled: cdb.GetBoolPtr(true),
+					Description: cdb.GetStrPtr("Updated by dual-role default provider"),
 				},
 			},
-			csmEnabled:         true,
-			wantErr:            true,
+			csmEnabled:         false,
+			wantErr:            false,
 			verifyChildSpanner: false,
 		},
 		{
@@ -2547,7 +2552,10 @@ func TestSiteHandler_GetStatusDetails(t *testing.T) {
 	mu := testSiteBuildUser(t, dbSession, uuid.NewString(), mOrg, mixedRole)
 
 	mip := testSiteBuildInfrastructureProvider(t, dbSession, "Test Mixed Provider", mOrg, mu)
+	mtn := testSiteBuildTenant(t, dbSession, "Test Mixed Tenant", mOrg, mu)
 	mst := testSiteBuildSite(t, dbSession, mip, "Test Mixed Site", cdbm.SiteStatusRegistered, mu, nil, nil)
+	testSiteBuildAllocation(t, dbSession, mst, mtn, "Test Allocation Mixed", mu)
+	common.TestBuildTenantSite(t, dbSession, mtn, mst, mu)
 
 	// add status details objects
 	totalCount := 30
@@ -2639,11 +2647,11 @@ func TestSiteHandler_GetStatusDetails(t *testing.T) {
 			respCode:  http.StatusBadRequest,
 		},
 		{
-			name:      "failure user has both Provider/Tenant role but no query param specified",
+			name:      "success user has both Provider/Tenant role with no query param (OR site access)",
 			reqSiteID: mst.ID.String(),
 			reqOrg:    mOrg,
 			reqUser:   mu,
-			respCode:  http.StatusBadRequest,
+			respCode:  http.StatusOK,
 		},
 		{
 			name:      "success user has both Provider/Tenant role, Provider query param specified",
