@@ -32,11 +32,13 @@ type VendorCode int
 const (
 	VendorCodeUnsupported VendorCode = iota
 	VendorCodeLiteon
+	VendorCodeDelta
 	VendorCodeMax
 )
 
 const (
 	VendorLiteon = "Liteon"
+	VendorDelta  = "Delta"
 )
 
 // CodeToVendor maps a vendor code to a Vendor struct.
@@ -46,6 +48,8 @@ func CodeToVendor(code VendorCode) Vendor {
 	switch code {
 	case VendorCodeLiteon:
 		v = VendorLiteon
+	case VendorCodeDelta:
+		v = VendorDelta
 	default:
 		v = "Unsupported"
 	}
@@ -60,6 +64,8 @@ func StringToVendor(v string) Vendor {
 	switch v {
 	case VendorLiteon:
 		code = VendorCodeLiteon
+	case VendorDelta:
+		code = VendorCodeDelta
 	default:
 		code = VendorCodeUnsupported
 	}
