@@ -217,14 +217,14 @@ Users of Carbide can also bring their own OpenID/OAuth JWT Provider, see [Auth d
 The `carbide-dev` realm includes:
 
 - **Client:** `carbide-api` with client secret `carbide-local-secret`
-- **Realm roles:** `admin`, `user`, `test-org:FORGE_PROVIDER_ADMIN`, `test-org:FORGE_TENANT_ADMIN`, `test-org:FORGE_PROVIDER_VIEWER`
+- **Realm roles:** `admin`, `user`, `test-org:FORGE_PROVIDER_ADMIN`, `test-org:FORGE_TENANT_ADMIN`, `test-org:FORGE_PROVIDER_VIEWER` — matches `deploy/kustomize/base/keycloak/realm-configmap.yaml`. The forge roles are org-scoped; `FORGE_PROVIDER_VIEWER` is defined for endpoints that accept it but is **not** granted to the pre-seeded users in the table below (assign in Keycloak if you need a viewer-only JWT).
 - **Pre-seeded dev users:**
 
   | Username | Password | Roles |
   |---|---|---|
-  | `testuser` | `testpassword` | `user`, `test-org:FORGE_TENANT_ADMIN` |
-  | `admin` | `adminpassword` | `admin`, `user`, `test-org:FORGE_PROVIDER_ADMIN`, `test-org:FORGE_TENANT_ADMIN` |
-  | `provider` | `providerpassword` | `user`, `test-org:FORGE_PROVIDER_ADMIN` |
+  | `testuser` | `testpassword` | `user`, `test-org:FORGE_TENANT_ADMIN` — tenant-admin–only API tests (`ORG=test-org`) |
+  | `admin` | `adminpassword` | `admin`, `user`, `test-org:FORGE_PROVIDER_ADMIN`, `test-org:FORGE_TENANT_ADMIN` — dual forge roles (PATCH defaults to provider unless `tenantId` is set) |
+  | `provider` | `providerpassword` | `user`, `test-org:FORGE_PROVIDER_ADMIN` — provider-only API tests |
 
 ### Configuration to change for production
 

@@ -194,6 +194,39 @@ func TestFabricHandler_Get(t *testing.T) {
 	ts1 := testBuildTenantSiteAssociation(t, dbSession, tnOrg1, tn1.ID, site1.ID, tnu1.ID)
 	assert.NotNil(t, ts1)
 
+	mOrgFabric := "test-mixed-org-fabric-get"
+	mixedRoles := []string{"FORGE_PROVIDER_ADMIN", "FORGE_TENANT_ADMIN"}
+	muFabric := testFabricBuildUser(t, dbSession, uuid.NewString(), []string{mOrgFabric}, mixedRoles)
+	ipM := testFabricBuildInfrastructureProvider(t, dbSession, mOrgFabric, "infraProviderMixed")
+	siteM := testFabricBuildSite(t, dbSession, ipM, "testSiteMixed", nil, nil)
+	tnM := testFabricBuildTenant(t, dbSession, mOrgFabric, "testTenantMixed")
+	tsM := testBuildTenantSiteAssociation(t, dbSession, mOrgFabric, tnM.ID, siteM.ID, muFabric.ID)
+	assert.NotNil(t, tsM)
+	fbM := testFabricBuildFabric(t, dbSession, ipM.Org, cdb.GetStrPtr("IFabricMixed"), ipM, siteM, nil, false)
+	testFabricBuildStatusDetail(t, dbSession, fbM.ID, cdbm.FabricStatusReady)
+
+	// Dual-role mixed org: access only via provider path (tenant row exists but no TenantSite for that tenant on this site).
+	mOrgFabricProviderOnly := "test-mixed-org-fabric-get-provider-only"
+	muFabricProviderOnly := testFabricBuildUser(t, dbSession, uuid.NewString(), []string{mOrgFabricProviderOnly}, mixedRoles)
+	ipFabricProviderOnly := testFabricBuildInfrastructureProvider(t, dbSession, mOrgFabricProviderOnly, "infraFabricProviderOnly")
+	siteFabricProviderOnly := testFabricBuildSite(t, dbSession, ipFabricProviderOnly, "testSiteFabricProviderOnly", nil, nil)
+	_ = testFabricBuildTenant(t, dbSession, mOrgFabricProviderOnly, "tenantFabricProviderOnly")
+	fbFabricProviderOnly := testFabricBuildFabric(t, dbSession, ipFabricProviderOnly.Org, cdb.GetStrPtr("IFabricProviderOnly"), ipFabricProviderOnly, siteFabricProviderOnly, nil, false)
+	testFabricBuildStatusDetail(t, dbSession, fbFabricProviderOnly.ID, cdbm.FabricStatusReady)
+
+	// Dual-role mixed org: access only via tenant path (site owned by a different org's Infrastructure Provider).
+	// User's org must still have an Infrastructure Provider row (IsProviderOrTenant) — distinct from the site's owner.
+	mOrgFabricTenantForeignSite := "test-mixed-org-fabric-get-tenant-foreign-site"
+	muFabricTenantForeignSite := testFabricBuildUser(t, dbSession, uuid.NewString(), []string{mOrgFabricTenantForeignSite}, mixedRoles)
+	_ = testFabricBuildInfrastructureProvider(t, dbSession, mOrgFabricTenantForeignSite, "infraOwnFabricTenantForeign")
+	extIpOrg := "ext-ip-org-fabric-get"
+	ipExt := testFabricBuildInfrastructureProvider(t, dbSession, extIpOrg, "infraExt")
+	siteFabricTenantForeign := testFabricBuildSite(t, dbSession, ipExt, "testSiteFabricTenantForeign", nil, nil)
+	tnFabricTenantForeign := testFabricBuildTenant(t, dbSession, mOrgFabricTenantForeignSite, "tenantFabricTenantForeign")
+	_ = testBuildTenantSiteAssociation(t, dbSession, mOrgFabricTenantForeignSite, tnFabricTenantForeign.ID, siteFabricTenantForeign.ID, muFabricTenantForeignSite.ID)
+	fbFabricTenantForeign := testFabricBuildFabric(t, dbSession, mOrgFabricTenantForeignSite, cdb.GetStrPtr("IFabricTenantForeign"), ipExt, siteFabricTenantForeign, nil, false)
+	testFabricBuildStatusDetail(t, dbSession, fbFabricTenantForeign.ID, cdbm.FabricStatusReady)
+
 	fb1 := testFabricBuildFabric(t, dbSession, ip1.Org, cdb.GetStrPtr("IFabric1"), ip1, site1, nil, false)
 	assert.NotNil(t, fb1)
 
@@ -306,6 +339,36 @@ func TestFabricHandler_Get(t *testing.T) {
 			expectedID:     fb1.ID,
 			expectedStatus: http.StatusOK,
 		},
+		{
+			name:           "success case when user has both Provider and Tenant roles (OR site access, no query params)",
+			reqOrgName:     mOrgFabric,
+			user:           muFabric,
+			fbID:           fbM.ID,
+			siteID:         siteM.ID,
+			expectedErr:    false,
+			expectedID:     fbM.ID,
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "success dual-role provider-only path (no TenantSite for org tenant on this site)",
+			reqOrgName:     mOrgFabricProviderOnly,
+			user:           muFabricProviderOnly,
+			fbID:           fbFabricProviderOnly.ID,
+			siteID:         siteFabricProviderOnly.ID,
+			expectedErr:    false,
+			expectedID:     fbFabricProviderOnly.ID,
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "success dual-role tenant-only path (site owned by different org's provider)",
+			reqOrgName:     mOrgFabricTenantForeignSite,
+			user:           muFabricTenantForeignSite,
+			fbID:           fbFabricTenantForeign.ID,
+			siteID:         siteFabricTenantForeign.ID,
+			expectedErr:    false,
+			expectedID:     fbFabricTenantForeign.ID,
+			expectedStatus: http.StatusOK,
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -351,7 +414,6 @@ func TestFabricHandler_Get(t *testing.T) {
 			if !tc.expectedErr {
 				rsp := &model.APIFabric{}
 				b := rec.Body.Bytes()
-				fmt.Println(string(b))
 				err := json.Unmarshal(b, rsp)
 				assert.Nil(t, err)
 				assert.Equal(t, tc.expectedID, rsp.ID)
@@ -413,6 +475,35 @@ func TestFabricHandler_GetAll(t *testing.T) {
 
 	ts1 := testBuildTenantSiteAssociation(t, dbSession, tnOrg1, tn1.ID, site1.ID, tnu1.ID)
 	assert.NotNil(t, ts1)
+
+	mOrgAll := "test-mixed-org-fabric-getall"
+	mixedRolesAll := []string{"FORGE_PROVIDER_ADMIN", "FORGE_TENANT_ADMIN"}
+	muAll := testFabricBuildUser(t, dbSession, uuid.NewString(), []string{mOrgAll}, mixedRolesAll)
+	ipMAll := testFabricBuildInfrastructureProvider(t, dbSession, mOrgAll, "infraProviderMixedAll")
+	siteMAll := testFabricBuildSite(t, dbSession, ipMAll, "testSiteMixedAll", nil, nil)
+	tnMAll := testFabricBuildTenant(t, dbSession, mOrgAll, "testTenantMixedAll")
+	assert.NotNil(t, testBuildTenantSiteAssociation(t, dbSession, mOrgAll, tnMAll.ID, siteMAll.ID, muAll.ID))
+	fbMAll := testFabricBuildFabric(t, dbSession, ipMAll.Org, cdb.GetStrPtr("IFabricMixedAll"), ipMAll, siteMAll, nil, false)
+	testFabricBuildStatusDetail(t, dbSession, fbMAll.ID, cdbm.FabricStatusReady)
+
+	mOrgFabricGetAllProviderOnly := "test-mixed-org-fabric-getall-provider-only"
+	muFabricGetAllProviderOnly := testFabricBuildUser(t, dbSession, uuid.NewString(), []string{mOrgFabricGetAllProviderOnly}, mixedRolesAll)
+	ipFabricGetAllProviderOnly := testFabricBuildInfrastructureProvider(t, dbSession, mOrgFabricGetAllProviderOnly, "infraFabricGetAllProviderOnly")
+	siteFabricGetAllProviderOnly := testFabricBuildSite(t, dbSession, ipFabricGetAllProviderOnly, "testSiteFabricGetAllProviderOnly", nil, nil)
+	_ = testFabricBuildTenant(t, dbSession, mOrgFabricGetAllProviderOnly, "tenantFabricGetAllProviderOnly")
+	fbFabricGetAllProviderOnly := testFabricBuildFabric(t, dbSession, ipFabricGetAllProviderOnly.Org, cdb.GetStrPtr("IFabricGetAllProviderOnly"), ipFabricGetAllProviderOnly, siteFabricGetAllProviderOnly, nil, false)
+	testFabricBuildStatusDetail(t, dbSession, fbFabricGetAllProviderOnly.ID, cdbm.FabricStatusReady)
+
+	mOrgFabricGetAllTenantForeignSite := "test-mixed-org-fabric-getall-tenant-foreign-site"
+	muFabricGetAllTenantForeignSite := testFabricBuildUser(t, dbSession, uuid.NewString(), []string{mOrgFabricGetAllTenantForeignSite}, mixedRolesAll)
+	_ = testFabricBuildInfrastructureProvider(t, dbSession, mOrgFabricGetAllTenantForeignSite, "infraOwnFabricGetAllTenantForeign")
+	extIpOrgAll := "ext-ip-org-fabric-getall"
+	ipExtAll := testFabricBuildInfrastructureProvider(t, dbSession, extIpOrgAll, "infraExtAll")
+	siteFabricGetAllTenantForeign := testFabricBuildSite(t, dbSession, ipExtAll, "testSiteFabricGetAllTenantForeign", nil, nil)
+	tnFabricGetAllTenantForeign := testFabricBuildTenant(t, dbSession, mOrgFabricGetAllTenantForeignSite, "tenantFabricGetAllTenantForeign")
+	_ = testBuildTenantSiteAssociation(t, dbSession, mOrgFabricGetAllTenantForeignSite, tnFabricGetAllTenantForeign.ID, siteFabricGetAllTenantForeign.ID, muFabricGetAllTenantForeignSite.ID)
+	fbFabricGetAllTenantForeign := testFabricBuildFabric(t, dbSession, mOrgFabricGetAllTenantForeignSite, cdb.GetStrPtr("IFabricGetAllTenantForeign"), ipExtAll, siteFabricGetAllTenantForeign, nil, false)
+	testFabricBuildStatusDetail(t, dbSession, fbFabricGetAllTenantForeign.ID, cdbm.FabricStatusReady)
 
 	totalCount := 30
 
@@ -546,6 +637,39 @@ func TestFabricHandler_GetAll(t *testing.T) {
 			expectedStatus:     http.StatusOK,
 			expectedCnt:        0,
 			expectedTotal:      cdb.GetIntPtr(0),
+			verifyChildSpanner: true,
+		},
+		{
+			name:               "success when user has both Provider and Tenant roles (OR site access, GetAll)",
+			reqOrgName:         mOrgAll,
+			user:               muAll,
+			querySiteID:        siteMAll.ID.String(),
+			expectedErr:        false,
+			expectedStatus:     http.StatusOK,
+			expectedCnt:        1,
+			expectedTotal:      cdb.GetIntPtr(1),
+			verifyChildSpanner: true,
+		},
+		{
+			name:               "success dual-role provider-only path GetAll (no TenantSite for org tenant on site)",
+			reqOrgName:         mOrgFabricGetAllProviderOnly,
+			user:               muFabricGetAllProviderOnly,
+			querySiteID:        siteFabricGetAllProviderOnly.ID.String(),
+			expectedErr:        false,
+			expectedStatus:     http.StatusOK,
+			expectedCnt:        1,
+			expectedTotal:      cdb.GetIntPtr(1),
+			verifyChildSpanner: true,
+		},
+		{
+			name:               "success dual-role tenant-only path GetAll (site owned by different org's provider)",
+			reqOrgName:         mOrgFabricGetAllTenantForeignSite,
+			user:               muFabricGetAllTenantForeignSite,
+			querySiteID:        siteFabricGetAllTenantForeign.ID.String(),
+			expectedErr:        false,
+			expectedStatus:     http.StatusOK,
+			expectedCnt:        1,
+			expectedTotal:      cdb.GetIntPtr(1),
 			verifyChildSpanner: true,
 		},
 		{
