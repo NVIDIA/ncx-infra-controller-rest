@@ -118,8 +118,9 @@ func (p *FirmwarePackage) HasComponent(name string) bool {
 }
 
 // DefaultComponentOrder defines the fallback update order when not specified in YAML.
-// Update sequence: BMC → CPLD → BIOS → NVOS
-var DefaultComponentOrder = []string{"bmc", "cpld", "bios", "nvos"}
+// TODO: re-enable all components once we resolve NVOS connectivity issues
+// var DefaultComponentOrder = []string{"bmc", "cpld", "bios", "nvos"}
+var DefaultComponentOrder = []string{"bmc", "bios"}
 
 // GetOrderedComponents returns the components in this package in the correct update order.
 // Uses the package's ComponentOrder if defined, otherwise falls back to DefaultComponentOrder.
