@@ -303,6 +303,17 @@ func GetAllocationIDsForTenantAtSite(ctx context.Context, tx *cdb.Tx, dbSession 
 	return aIDs, nil
 }
 
+// AcquireInstanceTypeQuotaLock acquires the shared quota lock for a tenant/instance-type pool.
+// It returns an error if the advisory lock cannot be acquired.
+func AcquireInstanceTypeQuotaLock(ctx context.Context, tx *cdb.Tx, tenantID uuid.UUID, instanceTypeID uuid.UUID) error {
+	if tx == nil {
+		return ErrInvalidFunctionParams
+	}
+
+	lockID := fmt.Sprintf("%s-%s", tenantID.String(), instanceTypeID.String())
+	return tx.TryAcquireAdvisoryLock(ctx, cdb.GetAdvisoryLockIDFromString(lockID), nil)
+}
+
 // GetUnallocatedMachineForInstanceType provides unallocatd machine based on instancetype
 func GetUnallocatedMachineForInstanceType(ctx context.Context, tx *cdb.Tx, dbSession *cdb.Session, instancetype *cdbm.InstanceType) (*cdbm.Machine, error) {
 	if instancetype == nil {

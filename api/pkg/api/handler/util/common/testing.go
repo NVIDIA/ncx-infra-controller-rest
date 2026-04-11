@@ -507,13 +507,12 @@ func TestBuildOperatingSystemSiteAssociation(t *testing.T, dbSession *cdb.Sessio
 	return ossa
 }
 
-// TestBuildInstance creates a test instance
-func TestBuildInstance(t *testing.T, dbSession *cdb.Session, name string, alID uuid.UUID, acID uuid.UUID, tnID uuid.UUID, ipID uuid.UUID, stID uuid.UUID, itID uuid.UUID, vpcID uuid.UUID, mID *string, osID uuid.UUID) *cdbm.Instance {
+// TestBuildInstance creates a test instance.
+// It returns a persisted instance without any allocation linkage.
+func TestBuildInstance(t *testing.T, dbSession *cdb.Session, name string, tnID uuid.UUID, ipID uuid.UUID, stID uuid.UUID, itID uuid.UUID, vpcID uuid.UUID, mID *string, osID uuid.UUID) *cdbm.Instance {
 	ins := &cdbm.Instance{
 		ID:                       uuid.New(),
 		Name:                     name,
-		AllocationID:             &alID,
-		AllocationConstraintID:   &acID,
 		TenantID:                 tnID,
 		InfrastructureProviderID: ipID,
 		SiteID:                   stID,
