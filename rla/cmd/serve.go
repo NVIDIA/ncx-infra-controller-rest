@@ -25,6 +25,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"go.temporal.io/sdk/worker"
@@ -55,6 +56,7 @@ const (
 var (
 	port               int
 	componentMgrConfig string
+	devMode            bool
 
 	// clientOnlyFlags are the global persistent flags that apply only to
 	// client commands. They are hidden from serve's help and rejected if set.
@@ -87,9 +89,10 @@ func init() {
 		_ = serveCmd.InheritedFlags().MarkHidden(name)
 	}
 
-	serveCmd.Flags().IntVarP(&port, "listen-port", "p", defaultServicePort, "Port for the gRPC server") //nolint
+	serveCmd.Flags().IntVarP(&port, "listen-port", "p", defaultServicePort, "Port for the gRPC server") //nolint:lll
 	// Component manager config: priority is CLI flag > env var > default prod config
-	serveCmd.Flags().StringVarP(&componentMgrConfig, "component-config", "c", "", "Path to component manager config file (YAML)") //nolint
+	serveCmd.Flags().StringVarP(&componentMgrConfig, "component-config", "c", "", "Path to component manager config file (YAML)")               //nolint:lll
+	serveCmd.Flags().BoolVar(&devMode, "dev-mode", false, "Enable developer options (gRPC reflection, debug logging). Not for production use.") //nolint:lll
 }
 
 // initProviderRegistry creates and initializes the provider registry based on configuration.
@@ -216,6 +219,24 @@ func loadComponentManagerConfig() (componentmanager.Config, error) {
 // configuration, initialises provider and component manager registries, builds
 // the service, and blocks until a termination signal is received.
 func doServe() {
+	if devMode {
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	} else {
+		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	}
+
+	if os.Getenv(svc.EnvVarName) == "" {
+		log.Warn().Msgf("%s not set, defaulting to %q for local development", svc.EnvVarName, "development")
+		os.Setenv(svc.EnvVarName, "development") //nolint:errcheck
+	}
+
+	rlaEnv, err := svc.GetDeploymentEnv()
+	if err != nil {
+		log.Fatal().Err(err).Msg("Invalid deployment environment")
+	}
+
+	log.Info().Str(svc.EnvVarName, rlaEnv).Msg("Deployment environment")
+
 	rlaConfig := config.ReadConfig()
 
 	dbConf, err := cdb.ConfigFromEnv()
@@ -295,6 +316,7 @@ func doServe() {
 			RLAConfig:        rlaConfig,
 			CMConfig:         cmConfig,
 			ProviderRegistry: providerRegistry,
+			DevMode:          devMode,
 			CertConfig: pkgcerts.Config{
 				CACert:  globalCACert,
 				TLSCert: globalTLSCert,
