@@ -24,15 +24,15 @@ import (
 	sww "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/workflow"
 )
 
-// RegisterPublisher registers the MachineWorkflows with the Temporal client
+// RegisterPublisher registers Machine inventory workflow and activity with Temporal
 func (api *API) RegisterPublisher() error {
-	// Register publisher workflows
+	ManagerAccess.Data.EB.Log.Info().Msg("Machine: Registering inventory workflow and activity")
 
-	// Collect and Publish Machine Inventory workflow
+	// Register CollectAndPublishMachineInventory workflow
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.CollectAndPublishMachineInventory)
-	ManagerAccess.Data.EB.Log.Info().Msg("Machine: successfully registered the Collect and Publish Machine Inventory workflow")
+	ManagerAccess.Data.EB.Log.Info().Msg("Machine: Successfully registered CollectAndPublishMachineInventory workflow")
 
-	// Register Machine activity for Collect and Publish Machine Inventory
+	// Register CollectAndPublishMachineInventory activity
 	machineInventoryManager := swa.NewManageMachineInventory(
 		uuid.MustParse(ManagerAccess.Conf.EB.Temporal.ClusterID),
 		ManagerAccess.Data.EB.Managers.Carbide.Client,
@@ -41,8 +41,9 @@ func (api *API) RegisterPublisher() error {
 		InventoryCarbidePageSize,
 		InventoryCloudPageSize,
 	)
+
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(machineInventoryManager.CollectAndPublishMachineInventory)
-	ManagerAccess.Data.EB.Log.Info().Msg("Machine: successfully registered the Collect and Publish Machine Inventory activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("Machine: Successfully registered CollectAndPublishMachineInventory activity")
 
 	api.RegisterCron()
 	return nil

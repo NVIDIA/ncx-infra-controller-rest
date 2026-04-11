@@ -24,14 +24,15 @@ import (
 	sww "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/workflow"
 )
 
-// RegisterPublisher registers the ExpectedPowerShelfWorkflows with the Temporal client
+// RegisterPublisher registers ExpectedPowerShelf inventory workflow and activity with Temporal
 func (api *API) RegisterPublisher() error {
-	// Register the publishers here
+	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedPowerShelf: Registering inventory workflow and activity")
 
-	// Collect and Publish ExpectedPowerShelf Inventory workflow
+	// Register DiscoverExpectedPowerShelfInventory workflow
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.DiscoverExpectedPowerShelfInventory)
-	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedPowerShelf: successfully registered the DiscoverExpectedPowerShelfInventory workflow")
+	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedPowerShelf: Successfully registered DiscoverExpectedPowerShelfInventory workflow")
 
+	// Register DiscoverExpectedPowerShelfInventory activity
 	inventoryManager := swa.NewManageExpectedPowerShelfInventory(
 		uuid.MustParse(ManagerAccess.Conf.EB.Temporal.ClusterID),
 		ManagerAccess.Data.EB.Managers.Carbide.Client,
@@ -39,10 +40,11 @@ func (api *API) RegisterPublisher() error {
 		ManagerAccess.Conf.EB.Temporal.TemporalPublishQueue,
 		InventoryCarbidePageSize,
 	)
-	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(inventoryManager.DiscoverExpectedPowerShelfInventory)
-	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedPowerShelf: successfully registered the DiscoverExpectedPowerShelfInventory activity")
 
-	_ = api.RegisterCron()
+	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(inventoryManager.DiscoverExpectedPowerShelfInventory)
+	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedPowerShelf: Successfully registered DiscoverExpectedPowerShelfInventory activity")
+
+	api.RegisterCron()
 
 	return nil
 }

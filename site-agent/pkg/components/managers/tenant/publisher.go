@@ -24,16 +24,16 @@ import (
 	sww "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/workflow"
 )
 
-// RegisterPublisher registers the Tenant workflows with Temporal client
+// RegisterPublisher registers Tenant inventory workflow and activity with Temporal
 func (api *API) RegisterPublisher() error {
-	// Register publisher workflows
+	ManagerAccess.Data.EB.Log.Info().Msg("Tenant: Registering inventory workflow and activity")
 
-	// Collect and Publish Tenant Inventory workflow
+	// Register DiscoverTenantInventory workflow
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.DiscoverTenantInventory)
-	ManagerAccess.Data.EB.Log.Info().Msg("Tenant: successfully registered DiscoverTenantInventory workflow")
+	ManagerAccess.Data.EB.Log.Info().Msg("Tenant: Successfully registered DiscoverTenantInventory workflow")
 
-	// Register activity for discovering and publishing Tenant Inventory
-	TenantInventoryManager := swa.NewManageTenantInventory(swa.ManageInventoryConfig{
+	// Register DiscoverTenantInventory activity
+	tenantInventoryManager := swa.NewManageTenantInventory(swa.ManageInventoryConfig{
 		SiteID:                uuid.MustParse(ManagerAccess.Conf.EB.Temporal.ClusterID),
 		CarbideAtomicClient:   ManagerAccess.Data.EB.Managers.Carbide.Client,
 		TemporalPublishClient: ManagerAccess.Data.EB.Managers.Workflow.Temporal.Publisher,
@@ -41,9 +41,11 @@ func (api *API) RegisterPublisher() error {
 		SitePageSize:          InventoryCarbidePageSize,
 		CloudPageSize:         InventoryCloudPageSize,
 	})
-	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(TenantInventoryManager.DiscoverTenantInventory)
-	ManagerAccess.Data.EB.Log.Info().Msg("Tenant: successfully registered  DiscoverTenantInventory activity")
+
+	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(tenantInventoryManager.DiscoverTenantInventory)
+	ManagerAccess.Data.EB.Log.Info().Msg("Tenant: Successfully registered DiscoverTenantInventory activity")
 
 	api.RegisterCron()
+
 	return nil
 }

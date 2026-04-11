@@ -24,14 +24,15 @@ import (
 	sww "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/workflow"
 )
 
-// RegisterPublisher registers the NVLinkLogicalPartitionWorkflows with the Temporal client
+// RegisterPublisher registers NVLinkLogicalPartition inventory workflow and activity with Temporal
 func (api *API) RegisterPublisher() error {
-	// Register the publishers here
+	ManagerAccess.Data.EB.Log.Info().Msg("NVLinkLogicalPartition: Registering inventory workflow and activity")
 
-	// Collect and Publish NVLinkLogicalPartition Inventory workflow
+	// Register DiscoverNVLinkLogicalPartitionInventory workflow
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.DiscoverNVLinkLogicalPartitionInventory)
-	ManagerAccess.Data.EB.Log.Info().Msg("NVLinkLogicalPartition: successfully registered the DiscoverNVLinkLogicalPartitionInventory workflow")
+	ManagerAccess.Data.EB.Log.Info().Msg("NVLinkLogicalPartition: Successfully registered DiscoverNVLinkLogicalPartitionInventory workflow")
 
+	// Register DiscoverNVLinkLogicalPartitionInventory activity
 	inventoryManager := swa.NewManageNVLinkLogicalPartitionInventory(swa.ManageInventoryConfig{
 		SiteID:                uuid.MustParse(ManagerAccess.Conf.EB.Temporal.ClusterID),
 		CarbideAtomicClient:   ManagerAccess.Data.EB.Managers.Carbide.Client,
@@ -40,10 +41,11 @@ func (api *API) RegisterPublisher() error {
 		SitePageSize:          InventoryCarbidePageSize,
 		CloudPageSize:         InventoryCloudPageSize,
 	})
-	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(inventoryManager.DiscoverNVLinkLogicalPartitionInventory)
-	ManagerAccess.Data.EB.Log.Info().Msg("NVLinkLogicalPartition: successfully registered the DiscoverNVLinkLogicalPartitionInventory activity")
 
-	_ = api.RegisterCron()
+	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(inventoryManager.DiscoverNVLinkLogicalPartitionInventory)
+	ManagerAccess.Data.EB.Log.Info().Msg("NVLinkLogicalPartition: Successfully registered DiscoverNVLinkLogicalPartitionInventory activity")
+
+	api.RegisterCron()
 
 	return nil
 }

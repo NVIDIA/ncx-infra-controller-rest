@@ -17,14 +17,6 @@
 
 package managerapi
 
-import (
-	"context"
-
-	wflowtypes "github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/datatypes/managertypes/workflow"
-	wflows "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
-	"go.temporal.io/sdk/workflow"
-)
-
 // OrchestratorExpansion - Orchestrator Expansion
 type OrchestratorExpansion interface{}
 
@@ -34,12 +26,6 @@ type OrchestratorInterface interface {
 	Init()
 	Start()
 	GetState() []string
-	AddWorkflow(wflow interface{})
-	DoWorkflow(ctx workflow.Context, TransactionID *wflows.TransactionID,
-		ResourceRequest interface{}, wflowMd wflowtypes.WorkflowMetadata,
-		retryOptions *wflows.WorkflowOptions) (actErr error, pubErr error)
-	DoActivity(ctx context.Context, ResourceVer uint64, ResourceID string,
-		ResourceReq interface{}, wflowMd wflowtypes.WorkflowMetadata) (interface{}, error)
 
 	OrchestratorExpansion
 }

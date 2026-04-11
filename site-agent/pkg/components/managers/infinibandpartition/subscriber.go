@@ -18,94 +18,34 @@
 package infinibandpartition
 
 import (
-	"go.temporal.io/sdk/activity"
-	workflow "go.temporal.io/sdk/workflow"
-
 	swa "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/activity"
 	sww "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/workflow"
 )
 
-// RegisterSubscriber registers the InfiniBandPartitionWorkflows with the Temporal client
+// RegisterSubscriber registers InfiniBandPartition CRUD workflows and activities with Temporal
 func (api *API) RegisterSubscriber() error {
+	ManagerAccess.Data.EB.Log.Info().Msg("InfiniBandPartition: Registering CRUD workflows and activities")
 
-	// Register the subscribers here
-	ManagerAccess.Data.EB.Log.Info().Msg("InfiniBandPartition: Registering the subscribers")
+	// Register workflows
 
+	// Register CreateInfiniBandPartitionV2 workflow
+	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.CreateInfiniBandPartitionV2)
+	ManagerAccess.Data.EB.Log.Info().Msg("InfiniBandPartition: Successfully registered CreateInfiniBandPartitionV2 workflow")
+
+	// Register DeleteInfiniBandPartitionV2 workflow
+	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.DeleteInfiniBandPartitionV2)
+	ManagerAccess.Data.EB.Log.Info().Msg("InfiniBandPartition: Successfully registered DeleteInfiniBandPartitionV2 workflow")
+
+	// Register activities
 	ibpManager := swa.NewManageInfiniBandPartition(ManagerAccess.Data.EB.Managers.Carbide.Client)
 
-	// Get InfiniBandPartition workflow interface
-	infiniBandPartitionInterface := NewInfiniBandPartitionWorkflows(
-		ManagerAccess.Data.EB.Managers.Workflow.Temporal.Publisher,
-		ManagerAccess.Data.EB.Managers.Workflow.Temporal.Subscriber,
-		ManagerAccess.Conf.EB,
-	)
-
-	// Register worfklow
-
-	// Sync workflows
-
-	// CreateInfiniBandPartitionV2
-	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.CreateInfiniBandPartitionV2)
-	ManagerAccess.Data.EB.Log.Info().Msg("InfiniBandPartition: successfully registered CreateInfiniBandPartitionV2 workflow")
-
-	// DeleteInfiniBandPartitionV2
-	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.DeleteInfiniBandPartitionV2)
-	ManagerAccess.Data.EB.Log.Info().Msg("InfiniBandPartition: successfully registered DeleteInfiniBandPartitionV2 workflow")
-
-	wflowRegisterOptions := workflow.RegisterOptions{
-		Name: "CreateInfiniBandPartition",
-	}
-	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflowWithOptions(
-		ManagerAccess.API.InfiniBandPartition.CreateInfiniBandPartition, wflowRegisterOptions,
-	)
-
-	ManagerAccess.Data.EB.Log.Info().Msg("InfiniBandPartition: successfully registered the create InfiniBandPartition workflow")
-
-	wflowRegisterOptions = workflow.RegisterOptions{
-		Name: "DeleteInfiniBandPartition",
-	}
-	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflowWithOptions(
-		ManagerAccess.API.InfiniBandPartition.DeleteInfiniBandPartition, wflowRegisterOptions,
-	)
-
-	ManagerAccess.Data.EB.Log.Info().Msg("InfiniBandPartition: successfully registered the delete InfiniBandPartition workflow")
-
-	// Register activity
-
-	// Sync workflow activities
-
-	// CreateInfiniBandPartitionOnSite
+	// Register CreateInfiniBandPartitionOnSite activity
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(ibpManager.CreateInfiniBandPartitionOnSite)
-	ManagerAccess.Data.EB.Log.Info().Msg("VPC: successfully registered the CreateInfiniBandPartitionOnSite activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("InfiniBandPartition: Successfully registered CreateInfiniBandPartitionOnSite activity")
 
-	// DeleteInfiniBandPartitionOnSite
+	// Register DeleteInfiniBandPartitionOnSite activity
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(ibpManager.DeleteInfiniBandPartitionOnSite)
-	ManagerAccess.Data.EB.Log.Info().Msg("VPC: successfully registered the DeleteInfiniBandPartitionOnSite activity")
-
-	activityRegisterOptions := activity.RegisterOptions{
-		Name: "CreateInfiniBandPartitionActivity",
-	}
-
-	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivityWithOptions(
-		infiniBandPartitionInterface.CreateInfiniBandPartitionActivity, activityRegisterOptions,
-	)
-	ManagerAccess.Data.EB.Log.Info().Msg("InfiniBandPartition: successfully registered the Create InfiniBandPartition activity")
-
-	activityRegisterOptions = activity.RegisterOptions{
-		Name: "DeleteInfiniBandPartitionActivity",
-	}
-
-	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivityWithOptions(
-		infiniBandPartitionInterface.DeleteInfiniBandPartitionActivity, activityRegisterOptions,
-	)
-	ManagerAccess.Data.EB.Log.Info().Msg("InfiniBandPartition: successfully registered the Delete InfiniBandPartition activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("InfiniBandPartition: Successfully registered DeleteInfiniBandPartitionOnSite activity")
 
 	return nil
-}
-
-// RegisterSubscribers - this is method 2 of registering the subscriber
-func RegisterSubscribers() {
-	// Register the subscribers here
-	ManagerAccess.Data.EB.Log.Info().Msg("InfiniBandPartition: Registering the subscribers")
-	ManagerAccess.API.Orchestrator.AddWorkflow(ManagerAccess.API.InfiniBandPartition.CreateInfiniBandPartition)
 }

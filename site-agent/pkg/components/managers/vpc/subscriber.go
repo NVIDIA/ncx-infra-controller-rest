@@ -22,99 +22,46 @@ import (
 	sww "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/workflow"
 )
 
-// RegisterSubscriber registers the VPCWorkflows with the Temporal client
+// RegisterSubscriber registers VPC CRUD workflows and activities with Temporal
 func (api *API) RegisterSubscriber() error {
+	ManagerAccess.Data.EB.Log.Info().Msg("VPC: Registering CRUD workflows and activities")
 
+	// Register workflows
+
+	// Register CreateVPCV2 workflow
+	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.CreateVPCV2)
+	ManagerAccess.Data.EB.Log.Info().Msg("VPC: Successfully registered CreateVPCV2 workflow")
+
+	// Register UpdateVPC workflow
+	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.UpdateVPC)
+	ManagerAccess.Data.EB.Log.Info().Msg("VPC: Successfully registered UpdateVPC workflow")
+
+	// Register UpdateVPCVirtualization workflow
+	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.UpdateVPCVirtualization)
+	ManagerAccess.Data.EB.Log.Info().Msg("VPC: Successfully registered UpdateVPCVirtualization workflow")
+
+	// Register DeleteVPCV2 workflow
+	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.DeleteVPCV2)
+	ManagerAccess.Data.EB.Log.Info().Msg("VPC: Successfully registered DeleteVPCV2 workflow")
+
+	// Register activities
 	vpcManager := swa.NewManageVPC(ManagerAccess.Data.EB.Managers.Carbide.Client)
 
-	// Register the subscribers here
-	ManagerAccess.Data.EB.Log.Info().Msg("VPC: Registering the subscribers")
-
-	// Get vpc workflow interface
-	vpcinterface := NewVPCWorkflows(
-		ManagerAccess.Data.EB.Managers.Workflow.Temporal.Publisher,
-		ManagerAccess.Data.EB.Managers.Workflow.Temporal.Subscriber,
-		ManagerAccess.Conf.EB,
-	)
-
-	/// Register worfklows
-
-	// Sync workflows
-
-	// CreateVPCV2
-	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.CreateVPCV2)
-	ManagerAccess.Data.EB.Log.Info().Msg("VPC: successfully registered CreateVPC v2 workflow")
-
-	// UpdateVPC
-	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.UpdateVPC)
-	ManagerAccess.Data.EB.Log.Info().Msg("VPC: successfully registered UpdateVPC workflow")
-
-	// UpdateVPCVirtualization
-	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.UpdateVPCVirtualization)
-	ManagerAccess.Data.EB.Log.Info().Msg("VPC: successfully UpdateVPCVirtualization workflow")
-
-	// DeleteVPCV2
-	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.DeleteVPCV2)
-	ManagerAccess.Data.EB.Log.Info().Msg("VPC: successfully registered DeleteVPC v2 workflow")
-
-	/// Legacy workflows
-
-	// CreateVPC
-	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(ManagerAccess.API.VPC.CreateVPC)
-	ManagerAccess.Data.EB.Log.Info().Msg("VPC: successfully registered the create VPC workflow")
-
-	// DeleteVPC
-	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(ManagerAccess.API.VPC.DeleteVPC)
-	ManagerAccess.Data.EB.Log.Info().Msg("VPC: successfully registered the delete VPC workflow")
-
-	// GetVPCByName
-	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(ManagerAccess.API.VPC.GetVPCByName)
-	ManagerAccess.Data.EB.Log.Info().Msg("VPC: successfully registered the GetVPCByName VPC workflow")
-
-	/// Register activities
-
-	// Sync workflow activities
-
-	// CreateVpcOnSite
+	// Register CreateVpcOnSite activity
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(vpcManager.CreateVpcOnSite)
-	ManagerAccess.Data.EB.Log.Info().Msg("VPC: successfully registered the CreateVpcOnSite activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("VPC: Successfully registered CreateVpcOnSite activity")
 
-	// UpdateVpcOnSite
+	// Register UpdateVpcOnSite activity
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(vpcManager.UpdateVpcOnSite)
-	ManagerAccess.Data.EB.Log.Info().Msg("VPC: successfully registered the UpdateVpcOnSite activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("VPC: Successfully registered UpdateVpcOnSite activity")
 
-	// UpdateVpcVirtualizationOnSite
+	// Register UpdateVpcVirtualizationOnSite activity
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(vpcManager.UpdateVpcVirtualizationOnSite)
-	ManagerAccess.Data.EB.Log.Info().Msg("VPC: successfully registered the UpdateVpcVirtualizationOnSite activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("VPC: Successfully registered UpdateVpcVirtualizationOnSite activity")
 
-	// UpdateVpcOnSite
+	// Register DeleteVpcOnSite activity
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(vpcManager.DeleteVpcOnSite)
-	ManagerAccess.Data.EB.Log.Info().Msg("VPC: successfully registered the DeleteVpcOnSite activity")
-
-	// Legacy workflow activities
-
-	// CreateVPCActivity
-	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(vpcinterface.CreateVPCActivity)
-	ManagerAccess.Data.EB.Log.Info().Msg("VPC: successfully registered the Create VPC activity")
-
-	// UpdateVPCActivity
-	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(vpcinterface.UpdateVPCActivity)
-	ManagerAccess.Data.EB.Log.Info().Msg("VPC: successfully registered the Update VPC activity")
-
-	// DeleteVPCActivity
-	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(vpcinterface.DeleteVPCActivity)
-	ManagerAccess.Data.EB.Log.Info().Msg("VPC: successfully registered the Delete VPC activity")
-
-	// GetVPCByNameActivity
-	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(vpcinterface.GetVPCByNameActivity)
-	ManagerAccess.Data.EB.Log.Info().Msg("VPC: successfully registered the GetVPCByName VPC activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("VPC: Successfully registered DeleteVpcOnSite activity")
 
 	return nil
-}
-
-// RegisterSubscribers - this is method 2 of registering the subscriber
-func RegisterSubscribers() {
-	// Register the subscribers here
-	ManagerAccess.Data.EB.Log.Info().Msg("VPC: Registering the subscribers")
-	ManagerAccess.API.Orchestrator.AddWorkflow(ManagerAccess.API.VPC.CreateVPC)
 }

@@ -24,15 +24,15 @@ import (
 	sww "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/workflow"
 )
 
-// RegisterPublisher registers the SKU workflows with the Temporal client
+// RegisterPublisher registers SKU inventory workflow and activity with Temporal
 func (api *API) RegisterPublisher() error {
-	// Register the publishers here
-	ManagerAccess.Data.EB.Log.Info().Msg("SKU: Registering the publishers")
+	ManagerAccess.Data.EB.Log.Info().Msg("SKU: Registering inventory workflow and activity")
 
-	// Collect and Publish SKU Inventory workflow
+	// Register DiscoverSkuInventory workflow
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.DiscoverSkuInventory)
-	ManagerAccess.Data.EB.Log.Info().Msg("SKU: successfully registered the DiscoverSkuInventory workflow")
+	ManagerAccess.Data.EB.Log.Info().Msg("SKU: Successfully registered DiscoverSkuInventory workflow")
 
+	// Register DiscoverSkuInventory activity
 	inventoryManager := swa.NewManageSkuInventory(swa.ManageInventoryConfig{
 		SiteID:                uuid.MustParse(ManagerAccess.Conf.EB.Temporal.ClusterID),
 		CarbideAtomicClient:   ManagerAccess.Data.EB.Managers.Carbide.Client,
@@ -41,10 +41,11 @@ func (api *API) RegisterPublisher() error {
 		SitePageSize:          InventoryCarbidePageSize,
 		CloudPageSize:         InventoryCloudPageSize,
 	})
-	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(inventoryManager.DiscoverSkuInventory)
-	ManagerAccess.Data.EB.Log.Info().Msg("SKU: successfully registered the DiscoverSkuInventory activity")
 
-	_ = api.RegisterCron()
+	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(inventoryManager.DiscoverSkuInventory)
+	ManagerAccess.Data.EB.Log.Info().Msg("SKU: Successfully registered DiscoverSkuInventory activity")
+
+	api.RegisterCron()
 
 	return nil
 }

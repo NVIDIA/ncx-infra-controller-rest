@@ -22,37 +22,30 @@ import (
 	sww "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/workflow"
 )
 
-// RegisterSubscriber registers Tenant workflows Site Agent subscribes to execute
+// RegisterSubscriber registers Tenant CRUD workflows and activities with Temporal
 func (api *API) RegisterSubscriber() error {
-	//  Register Workflows
+	ManagerAccess.Data.EB.Log.Info().Msg("Tenant: Registering CRUD workflows and activities")
 
-	// Sync workflows
-	// Register CreateTenant worfklow
+	// Register workflows
+
+	// Register CreateTenant workflow
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.CreateTenant)
-	ManagerAccess.Data.EB.Log.Info().Msg("Tenant: successfully registered CreateTenant workflow")
+	ManagerAccess.Data.EB.Log.Info().Msg("Tenant: Successfully registered CreateTenant workflow")
 
-	// Register UpdateTenant worfklow
+	// Register UpdateTenant workflow
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.UpdateTenant)
-	ManagerAccess.Data.EB.Log.Info().Msg("Tenant: successfully registered UpdateTenant workflow")
+	ManagerAccess.Data.EB.Log.Info().Msg("Tenant: Successfully registered UpdateTenant workflow")
 
-	// Regsiter Activities
+	// Register activities
 	tenantManager := swa.NewManageTenant(ManagerAccess.Data.EB.Managers.Carbide.Client)
 
-	// Sync workflow activities
-	// Register CreateTenantOnSite
+	// Register CreateTenantOnSite activity
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(tenantManager.CreateTenantOnSite)
-	ManagerAccess.Data.EB.Log.Info().Msg("Tenant: successfully registered CreateTenantOnSite activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("Tenant: Successfully registered CreateTenantOnSite activity")
 
-	// Register UpdateTenantOnSite
+	// Register UpdateTenantOnSite activity
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(tenantManager.UpdateTenantOnSite)
-	ManagerAccess.Data.EB.Log.Info().Msg("Tenant: successfully registered UpdateTenantOnSite activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("Tenant: Successfully registered UpdateTenantOnSite activity")
 
 	return nil
-}
-
-// RegisterSubscribers - this is method 2 of registering the subscriber
-func RegisterSubscribers() {
-	// Register the subscribers here
-	ManagerAccess.Data.EB.Log.Info().Msg("Subnet: Registering the subscribers")
-	ManagerAccess.API.Orchestrator.AddWorkflow(ManagerAccess.API.Subnet.CreateSubnet)
 }

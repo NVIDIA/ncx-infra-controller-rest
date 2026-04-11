@@ -22,62 +22,62 @@ import (
 	sww "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/workflow"
 )
 
-// RegisterSubscriber registers the ExpectedMachineWorkflows with the Temporal client
+// RegisterSubscriber registers ExpectedMachine CRUD workflows and activities with Temporal
 func (api *API) RegisterSubscriber() error {
-	// Register the subscribers here
-	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedMachine: Registering the subscribers")
+	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedMachine: Registering CRUD workflows and activities")
 
 	// Register workflows
+
 	// Register CreateExpectedMachine workflow
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.CreateExpectedMachine)
-	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedMachine: successfully registered the CreateExpectedMachine workflow")
+	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedMachine: Successfully registered CreateExpectedMachine workflow")
 
 	// Register UpdateExpectedMachine workflow
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.UpdateExpectedMachine)
-	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedMachine: successfully registered the UpdateExpectedMachine workflow")
+	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedMachine: Successfully registered UpdateExpectedMachine workflow")
 
 	// Register DeleteExpectedMachine workflow
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.DeleteExpectedMachine)
-	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedMachine: successfully registered the DeleteExpectedMachine workflow")
+	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedMachine: Successfully registered DeleteExpectedMachine workflow")
 
-	// Register CreateExpectedMachines workflow (plural)
+	// Register CreateExpectedMachines workflow (Batch)
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.CreateExpectedMachines)
-	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedMachine: successfully registered the CreateExpectedMachines workflow")
+	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedMachine: Successfully registered CreateExpectedMachines workflow")
 
-	// Register UpdateExpectedMachines workflow (plural)
+	// Register UpdateExpectedMachines workflow (Batch)
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.UpdateExpectedMachines)
-	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedMachine: successfully registered the UpdateExpectedMachines workflow")
+	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedMachine: Successfully registered UpdateExpectedMachines workflow")
 
 	// Register activities
 	expectedMachineManager := swa.NewManageExpectedMachine(ManagerAccess.Data.EB.Managers.Carbide.Client, ManagerAccess.Data.EB.Managers.RLA.Client)
 
 	// Register CreateExpectedMachineOnSite activity
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(expectedMachineManager.CreateExpectedMachineOnSite)
-	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedMachine: successfully registered the CreateExpectedMachineOnSite activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedMachine: Successfully registered CreateExpectedMachineOnSite activity")
 
 	// Register CreateExpectedMachineOnRLA activity
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(expectedMachineManager.CreateExpectedMachineOnRLA)
-	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedMachine: successfully registered the CreateExpectedMachineOnRLA activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedMachine: Successfully registered CreateExpectedMachineOnRLA activity")
 
 	// Register UpdateExpectedMachineOnSite activity
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(expectedMachineManager.UpdateExpectedMachineOnSite)
-	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedMachine: successfully registered the UpdateExpectedMachineOnSite activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedMachine: Successfully registered UpdateExpectedMachineOnSite activity")
 
 	// Register DeleteExpectedMachineOnSite activity
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(expectedMachineManager.DeleteExpectedMachineOnSite)
-	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedMachine: successfully registered the DeleteExpectedMachineOnSite activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedMachine: Successfully registered DeleteExpectedMachineOnSite activity")
 
-	// Register CreateExpectedMachinesOnSite activity (plural)
+	// Register CreateExpectedMachinesOnSite activity (Batch)
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(expectedMachineManager.CreateExpectedMachinesOnSite)
-	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedMachine: successfully registered the CreateExpectedMachinesOnSite activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedMachine: Successfully registered CreateExpectedMachinesOnSite activity")
 
-	// Register CreateExpectedMachinesOnRLA activity (plural)
+	// Register CreateExpectedMachinesOnRLA activity (Batch)
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(expectedMachineManager.CreateExpectedMachinesOnRLA)
-	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedMachine: successfully registered the CreateExpectedMachinesOnRLA activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedMachine: Successfully registered CreateExpectedMachinesOnRLA activity")
 
-	// Register UpdateExpectedMachinesOnSite activity (plural)
+	// Register UpdateExpectedMachinesOnSite activity (Batch)
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(expectedMachineManager.UpdateExpectedMachinesOnSite)
-	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedMachine: successfully registered the UpdateExpectedMachinesOnSite activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedMachine: Successfully registered UpdateExpectedMachinesOnSite activity")
 
 	return nil
 }
