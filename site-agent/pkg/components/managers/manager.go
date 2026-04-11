@@ -34,7 +34,6 @@ import (
 	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/expectedmachine"
 	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/expectedpowershelf"
 	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/expectedswitch"
-	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/health"
 	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/infinibandpartition"
 	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/instance"
 	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/instancetype"
@@ -69,7 +68,6 @@ func NewAPIHandlers() {
 		Machine:                &machine.API{},
 		Carbide:                &carbide.API{},
 		Bootstrap:              &bootstrap.BoostrapAPI{},
-		Health:                 &health.API{},
 		SSHKeyGroup:            &sshkeygroup.API{},
 		InfiniBandPartition:    &infinibandpartition.API{},
 		Tenant:                 &tenant.API{},
@@ -114,7 +112,6 @@ func (Managers *Manager) NewInstance() {
 	Managers.Carbide()
 	Managers.Machine()
 	Managers.Bootstrap()
-	Managers.Health()
 	Managers.SSHKeyGroup()
 	Managers.InfiniBandPartition()
 	Managers.Tenant()
@@ -162,7 +159,6 @@ func (Managers *Manager) Init() {
 	Managers.VpcPrefix().Init()
 	Managers.Subnet().Init()
 	Managers.Instance().Init()
-	Managers.Health().Init()
 	Managers.SSHKeyGroup().Init()
 	Managers.InfiniBandPartition().Init()
 	Managers.Tenant().Init()

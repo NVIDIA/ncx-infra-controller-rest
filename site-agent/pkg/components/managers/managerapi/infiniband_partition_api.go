@@ -17,11 +17,6 @@
 
 package managerapi
 
-import (
-	wflows "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
-	"go.temporal.io/sdk/workflow"
-)
-
 // InfiniBandPartitionExpansion - InfiniBandPartition Expansion
 type InfiniBandPartitionExpansion interface{}
 
@@ -33,13 +28,6 @@ type InfiniBandPartitionInterface interface {
 	RegisterPublisher() error
 	RegisterCron() error
 
-	// Cloud Workflow APIs
-	CreateInfiniBandPartition(ctx workflow.Context, TransactionID *wflows.TransactionID, ResourceRequest *wflows.CreateInfiniBandPartitionRequest) (err error)
-	DeleteInfiniBandPartition(ctx workflow.Context, TransactionID *wflows.TransactionID, ResourceRequest *wflows.DeleteInfiniBandPartitionRequest) (err error)
-
-	// CreateInfiniBandPartition
-	// RegisterWorkflows() error
-	// RegisterActivities() error
 	GetState() []string
 	InfiniBandPartitionExpansion
 }

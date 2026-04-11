@@ -17,12 +17,6 @@
 
 package managerapi
 
-import (
-	wflows "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
-
-	"go.temporal.io/sdk/workflow"
-)
-
 // SubnetExpansion - Subnet Expansion
 type SubnetExpansion interface{}
 
@@ -34,11 +28,6 @@ type SubnetInterface interface {
 	RegisterPublisher() error
 	RegisterCron() error
 
-	// Temporal Workflows - Subscriber
-	CreateSubnet(ctx workflow.Context, TransactionID *wflows.TransactionID, ResourceRequest *wflows.CreateSubnetRequest) (err error)
-	// Implement this when this is available in Site controller
-	// UpdateSubnet(ctx workflow.Context, TransactionID *wflows.TransactionID, ResourceRequest *wflows.UpdateSubnetRequest) (err error)
-	DeleteSubnet(ctx workflow.Context, TransactionID *wflows.TransactionID, ResourceRequest *wflows.DeleteSubnetRequest) (err error)
 	GetState() []string
 	SubnetExpansion
 }

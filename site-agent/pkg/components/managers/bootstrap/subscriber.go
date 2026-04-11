@@ -22,7 +22,7 @@ import (
 	"go.temporal.io/sdk/workflow"
 )
 
-// RegisterSubscriber registers the Bootstrap workflows and activities with the Temporal client
+// RegisterSubscriber registers Bootstrap workflows and activities with Temporal
 func (api *BoostrapAPI) RegisterSubscriber() error {
 	// Initialize logger
 	logger := ManagerAccess.Data.EB.Log
@@ -32,21 +32,21 @@ func (api *BoostrapAPI) RegisterSubscriber() error {
 		return nil
 	}
 
-	// Register the workflows
+	// Register workflows
 	wflowRegisterOptions := workflow.RegisterOptions{
 		Name: "RotateTemporalCertAccessOTP",
 	}
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflowWithOptions(api.RotateTemporalCertAccessOTP, wflowRegisterOptions)
-	logger.Info().Msg("Bootstrap: successfully registered the ReceiveAndProcessOTP workflow")
+	logger.Info().Msg("Bootstrap: Successfully registered RotateTemporalCertAccessOTP workflow")
 
-	// Register the activities
+	// Register activities
 	otpHandler := NewOTPHandler(ManagerAccess.Data.EB.Managers.Bootstrap.Secret)
 
 	activityRegisterOptions := activity.RegisterOptions{
 		Name: "ReceiveAndSaveOTP",
 	}
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivityWithOptions(otpHandler.ReceiveAndSaveOTP, activityRegisterOptions)
-	logger.Info().Msg("Bootstrap: successfully registered the ReceiveAndSaveOTP activity")
+	logger.Info().Msg("Bootstrap: Successfully registered ReceiveAndSaveOTP activity")
 
 	return nil
 }

@@ -22,7 +22,7 @@ import (
 	sww "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/workflow"
 )
 
-// RegisterSubscriber registers the RLA Rack and Tray workflows with the Temporal client
+// RegisterSubscriber registers RLA rack and tray workflows and activities with Temporal
 func (api *API) RegisterSubscriber() error {
 	// Check if RLA is enabled
 	if !ManagerAccess.Conf.EB.RLA.Enabled {
@@ -30,110 +30,107 @@ func (api *API) RegisterSubscriber() error {
 		return nil
 	}
 
-	rackManager := swa.NewManageRack(ManagerAccess.Data.EB.Managers.RLA.Client)
-	trayManager := swa.NewManageTray(ManagerAccess.Data.EB.Managers.RLA.Client)
+	// Register rack workflows
+	ManagerAccess.Data.EB.Log.Info().Msg("RLA: Registering rack workflows")
 
-	// Register the subscribers here
-	ManagerAccess.Data.EB.Log.Info().Msg("RLA: Registering the rack workflows")
-
-	/// Register rack workflows
-
-	// GetRack
+	// Register GetRack workflow
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.GetRack)
-	ManagerAccess.Data.EB.Log.Info().Msg("RLA: successfully registered GetRack workflow")
+	ManagerAccess.Data.EB.Log.Info().Msg("RLA: Successfully registered GetRack workflow")
 
-	// GetRacks
+	// Register GetRacks workflow
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.GetRacks)
-	ManagerAccess.Data.EB.Log.Info().Msg("RLA: successfully registered GetRacks workflow")
+	ManagerAccess.Data.EB.Log.Info().Msg("RLA: Successfully registered GetRacks workflow")
 
-	// ValidateRackComponents
+	// Register ValidateRackComponents workflow
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.ValidateRackComponents)
-	ManagerAccess.Data.EB.Log.Info().Msg("RLA: successfully registered ValidateRackComponents workflow")
+	ManagerAccess.Data.EB.Log.Info().Msg("RLA: Successfully registered ValidateRackComponents workflow")
 
-	// PowerOnRack
+	// Register PowerOnRack workflow
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.PowerOnRack)
-	ManagerAccess.Data.EB.Log.Info().Msg("RLA: successfully registered PowerOnRack workflow")
+	ManagerAccess.Data.EB.Log.Info().Msg("RLA: Successfully registered PowerOnRack workflow")
 
-	// PowerOffRack
+	// Register PowerOffRack workflow
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.PowerOffRack)
-	ManagerAccess.Data.EB.Log.Info().Msg("RLA: successfully registered PowerOffRack workflow")
+	ManagerAccess.Data.EB.Log.Info().Msg("RLA: Successfully registered PowerOffRack workflow")
 
-	// PowerResetRack
+	// Register PowerResetRack workflow
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.PowerResetRack)
-	ManagerAccess.Data.EB.Log.Info().Msg("RLA: successfully registered PowerResetRack workflow")
+	ManagerAccess.Data.EB.Log.Info().Msg("RLA: Successfully registered PowerResetRack workflow")
 
-	// BringUpRack
+	// Register BringUpRack workflow
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.BringUpRack)
-	ManagerAccess.Data.EB.Log.Info().Msg("RLA: successfully registered BringUpRack workflow")
+	ManagerAccess.Data.EB.Log.Info().Msg("RLA: Successfully registered BringUpRack workflow")
 
-	// UpgradeFirmware
+	// Register UpgradeFirmware workflow
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.UpgradeFirmware)
-	ManagerAccess.Data.EB.Log.Info().Msg("RLA: successfully registered UpgradeFirmware workflow")
+	ManagerAccess.Data.EB.Log.Info().Msg("RLA: Successfully registered UpgradeFirmware workflow")
 
-	// GetRackTask
+	// Register GetRackTask workflow
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.GetRackTask)
-	ManagerAccess.Data.EB.Log.Info().Msg("RLA: successfully registered GetRackTask workflow")
+	ManagerAccess.Data.EB.Log.Info().Msg("RLA: Successfully registered GetRackTask workflow")
 
-	/// Register rack activities
+	// Register activities
+	rackManager := swa.NewManageRack(ManagerAccess.Data.EB.Managers.RLA.Client)
 
-	// GetRack activity
+	// Register GetRack activity
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(rackManager.GetRack)
-	ManagerAccess.Data.EB.Log.Info().Msg("RLA: successfully registered GetRack activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("RLA: Successfully registered GetRack activity")
 
-	// GetRacks activity
+	// Register GetRacks activity
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(rackManager.GetRacks)
-	ManagerAccess.Data.EB.Log.Info().Msg("RLA: successfully registered GetRacks activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("RLA: Successfully registered GetRacks activity")
 
-	// ValidateRackComponents activity
+	// Register ValidateRackComponents activity
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(rackManager.ValidateRackComponents)
-	ManagerAccess.Data.EB.Log.Info().Msg("RLA: successfully registered ValidateRackComponents activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("RLA: Successfully registered ValidateRackComponents activity")
 
-	// PowerOnRack activity
+	// Register PowerOnRack activity
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(rackManager.PowerOnRack)
-	ManagerAccess.Data.EB.Log.Info().Msg("RLA: successfully registered PowerOnRack activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("RLA: Successfully registered PowerOnRack activity")
 
-	// PowerOffRack activity
+	// Register PowerOffRack activity
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(rackManager.PowerOffRack)
-	ManagerAccess.Data.EB.Log.Info().Msg("RLA: successfully registered PowerOffRack activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("RLA: Successfully registered PowerOffRack activity")
 
-	// PowerResetRack activity
+	// Register PowerResetRack activity
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(rackManager.PowerResetRack)
-	ManagerAccess.Data.EB.Log.Info().Msg("RLA: successfully registered PowerResetRack activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("RLA: Successfully registered PowerResetRack activity")
 
-	// BringUpRack activity
+	// Register BringUpRack activity
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(rackManager.BringUpRack)
-	ManagerAccess.Data.EB.Log.Info().Msg("RLA: successfully registered BringUpRack activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("RLA: Successfully registered BringUpRack activity")
 
-	// UpgradeFirmware activity
+	// Register UpgradeFirmware activity
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(rackManager.UpgradeFirmware)
-	ManagerAccess.Data.EB.Log.Info().Msg("RLA: successfully registered UpgradeFirmware activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("RLA: Successfully registered UpgradeFirmware activity")
 
-	// GetTaskByID activity
+	// Register GetTaskByID activity
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(rackManager.GetTaskByID)
-	ManagerAccess.Data.EB.Log.Info().Msg("RLA: successfully registered GetTaskByID activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("RLA: Successfully registered GetTaskByID activity")
 
 	// Register the tray subscribers here
-	ManagerAccess.Data.EB.Log.Info().Msg("RLA: Registering the tray workflows")
+	ManagerAccess.Data.EB.Log.Info().Msg("RLA: Registering tray workflows")
 
-	/// Register tray workflows
+	// Register Tray workflows
 
-	// GetTray
+	// Register GetTray workflow
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.GetTray)
-	ManagerAccess.Data.EB.Log.Info().Msg("RLA: successfully registered GetTray workflow")
+	ManagerAccess.Data.EB.Log.Info().Msg("RLA: Successfully registered GetTray workflow")
 
-	// GetTrays
+	// Register GetTrays workflow
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.GetTrays)
-	ManagerAccess.Data.EB.Log.Info().Msg("RLA: successfully registered GetTrays workflow")
+	ManagerAccess.Data.EB.Log.Info().Msg("RLA: Successfully registered GetTrays workflow")
 
-	/// Register tray activities
+	// Register tray activities
+	trayManager := swa.NewManageTray(ManagerAccess.Data.EB.Managers.RLA.Client)
 
-	// GetTray activity
+	// Register GetTray activity
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(trayManager.GetTray)
-	ManagerAccess.Data.EB.Log.Info().Msg("RLA: successfully registered GetTray activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("RLA: Successfully registered GetTray activity")
 
-	// GetTrays activity
+	// Register GetTrays activity
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(trayManager.GetTrays)
-	ManagerAccess.Data.EB.Log.Info().Msg("RLA: successfully registered GetTrays activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("RLA: Successfully registered GetTrays activity")
 
 	return nil
 }

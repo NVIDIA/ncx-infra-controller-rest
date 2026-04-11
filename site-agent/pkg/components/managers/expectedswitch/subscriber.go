@@ -22,42 +22,42 @@ import (
 	sww "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/workflow"
 )
 
-// RegisterSubscriber registers the ExpectedSwitchWorkflows with the Temporal client
+// RegisterSubscriber registers ExpectedSwitch CRUD workflows and activities with Temporal
 func (api *API) RegisterSubscriber() error {
-	// Register the subscribers here
-	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedSwitch: Registering the subscribers")
+	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedSwitch: Registering CRUD workflows and activities")
 
 	// Register workflows
+
 	// Register CreateExpectedSwitch workflow
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.CreateExpectedSwitch)
-	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedSwitch: successfully registered the CreateExpectedSwitch workflow")
+	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedSwitch: Successfully registered CreateExpectedSwitch workflow")
 
 	// Register UpdateExpectedSwitch workflow
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.UpdateExpectedSwitch)
-	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedSwitch: successfully registered the UpdateExpectedSwitch workflow")
+	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedSwitch: Successfully registered UpdateExpectedSwitch workflow")
 
 	// Register DeleteExpectedSwitch workflow
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.DeleteExpectedSwitch)
-	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedSwitch: successfully registered the DeleteExpectedSwitch workflow")
+	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedSwitch: Successfully registered DeleteExpectedSwitch workflow")
 
 	// Register activities
 	expectedSwitchManager := swa.NewManageExpectedSwitch(ManagerAccess.Data.EB.Managers.Carbide.Client, ManagerAccess.Data.EB.Managers.RLA.Client)
 
 	// Register CreateExpectedSwitchOnSite activity
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(expectedSwitchManager.CreateExpectedSwitchOnSite)
-	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedSwitch: successfully registered the CreateExpectedSwitchOnSite activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedSwitch: Successfully registered CreateExpectedSwitchOnSite activity")
 
 	// Register CreateExpectedSwitchOnRLA activity
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(expectedSwitchManager.CreateExpectedSwitchOnRLA)
-	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedSwitch: successfully registered the CreateExpectedSwitchOnRLA activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedSwitch: Successfully registered CreateExpectedSwitchOnRLA activity")
 
 	// Register UpdateExpectedSwitchOnSite activity
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(expectedSwitchManager.UpdateExpectedSwitchOnSite)
-	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedSwitch: successfully registered the UpdateExpectedSwitchOnSite activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedSwitch: Successfully registered UpdateExpectedSwitchOnSite activity")
 
 	// Register DeleteExpectedSwitchOnSite activity
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(expectedSwitchManager.DeleteExpectedSwitchOnSite)
-	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedSwitch: successfully registered the DeleteExpectedSwitchOnSite activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedSwitch: Successfully registered DeleteExpectedSwitchOnSite activity")
 
 	return nil
 }

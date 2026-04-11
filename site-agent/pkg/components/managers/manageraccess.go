@@ -24,7 +24,6 @@ import (
 	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/expectedmachine"
 	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/expectedpowershelf"
 	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/expectedswitch"
-	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/health"
 	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/infinibandpartition"
 	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/instance"
 	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/instancetype"
@@ -96,11 +95,6 @@ func (m *Manager) Subnet() *subnet.API {
 // Instance - Add Instance Manager instance here
 func (m *Manager) Instance() *instance.API {
 	return instance.NewInstanceManager(m.Data.EB, m.API, m.Conf)
-}
-
-// Health - Add Health Manager instance here
-func (m *Manager) Health() *health.API {
-	return health.NewHealthManager(m.Data.EB, m.API, m.Conf)
 }
 
 // SSHKeyGroup - Add SSHKeyGroup Manager instance here
