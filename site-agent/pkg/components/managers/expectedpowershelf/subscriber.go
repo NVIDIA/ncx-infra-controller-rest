@@ -22,42 +22,42 @@ import (
 	sww "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/workflow"
 )
 
-// RegisterSubscriber registers the ExpectedPowerShelfWorkflows with the Temporal client
+// RegisterSubscriber registers ExpectedPowerShelf CRUD workflows and activities with Temporal
 func (api *API) RegisterSubscriber() error {
-	// Register the subscribers here
-	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedPowerShelf: Registering the subscribers")
+	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedPowerShelf: Registering CRUD workflows and activities")
 
 	// Register workflows
+
 	// Register CreateExpectedPowerShelf workflow
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.CreateExpectedPowerShelf)
-	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedPowerShelf: successfully registered the CreateExpectedPowerShelf workflow")
+	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedPowerShelf: Successfully registered CreateExpectedPowerShelf workflow")
 
 	// Register UpdateExpectedPowerShelf workflow
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.UpdateExpectedPowerShelf)
-	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedPowerShelf: successfully registered the UpdateExpectedPowerShelf workflow")
+	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedPowerShelf: Successfully registered UpdateExpectedPowerShelf workflow")
 
 	// Register DeleteExpectedPowerShelf workflow
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.DeleteExpectedPowerShelf)
-	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedPowerShelf: successfully registered the DeleteExpectedPowerShelf workflow")
+	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedPowerShelf: Successfully registered DeleteExpectedPowerShelf workflow")
 
 	// Register activities
 	expectedPowerShelfManager := swa.NewManageExpectedPowerShelf(ManagerAccess.Data.EB.Managers.Carbide.Client, ManagerAccess.Data.EB.Managers.RLA.Client)
 
 	// Register CreateExpectedPowerShelfOnSite activity
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(expectedPowerShelfManager.CreateExpectedPowerShelfOnSite)
-	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedPowerShelf: successfully registered the CreateExpectedPowerShelfOnSite activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedPowerShelf: Successfully registered CreateExpectedPowerShelfOnSite activity")
 
 	// Register CreateExpectedPowerShelfOnRLA activity
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(expectedPowerShelfManager.CreateExpectedPowerShelfOnRLA)
-	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedPowerShelf: successfully registered the CreateExpectedPowerShelfOnRLA activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedPowerShelf: Successfully registered CreateExpectedPowerShelfOnRLA activity")
 
 	// Register UpdateExpectedPowerShelfOnSite activity
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(expectedPowerShelfManager.UpdateExpectedPowerShelfOnSite)
-	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedPowerShelf: successfully registered the UpdateExpectedPowerShelfOnSite activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedPowerShelf: Successfully registered UpdateExpectedPowerShelfOnSite activity")
 
 	// Register DeleteExpectedPowerShelfOnSite activity
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(expectedPowerShelfManager.DeleteExpectedPowerShelfOnSite)
-	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedPowerShelf: successfully registered the DeleteExpectedPowerShelfOnSite activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedPowerShelf: Successfully registered DeleteExpectedPowerShelfOnSite activity")
 
 	return nil
 }

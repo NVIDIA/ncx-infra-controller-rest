@@ -24,15 +24,15 @@ import (
 	sww "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/workflow"
 )
 
-// RegisterPublisher registers the DPU Extension Service workflows with Temporal client
+// RegisterPublisher registers DPU Extension Service inventory workflow and activity with Temporal
 func (api *API) RegisterPublisher() error {
-	// Register publisher workflows
+	ManagerAccess.Data.EB.Log.Info().Msg("DpuExtensionService: Registering inventory workflow and activity")
 
-	// Collect and Publish DPU Extension Service Inventory workflow
+	// Register DiscoverDpuExtensionServiceInventory workflow
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.DiscoverDpuExtensionServiceInventory)
-	ManagerAccess.Data.EB.Log.Info().Msg("DpuExtensionService: successfully registered DiscoverDpuExtensionServiceInventory workflow")
+	ManagerAccess.Data.EB.Log.Info().Msg("DpuExtensionService: Successfully registered DiscoverDpuExtensionServiceInventory workflow")
 
-	// Register activity for discovering and publishing DPU Extension Service Inventory
+	// Register DiscoverDpuExtensionServiceInventory activity
 	dpuExtServiceInventoryManager := swa.NewManageDpuExtensionServiceInventory(swa.ManageInventoryConfig{
 		SiteID:                uuid.MustParse(ManagerAccess.Conf.EB.Temporal.ClusterID),
 		CarbideAtomicClient:   ManagerAccess.Data.EB.Managers.Carbide.Client,
@@ -41,9 +41,11 @@ func (api *API) RegisterPublisher() error {
 		SitePageSize:          InventoryCarbidePageSize,
 		CloudPageSize:         InventoryCloudPageSize,
 	})
+
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(dpuExtServiceInventoryManager.DiscoverDpuExtensionServiceInventory)
-	ManagerAccess.Data.EB.Log.Info().Msg("DpuExtensionService: successfully registered DiscoverDpuExtensionServiceInventory activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("DpuExtensionService: Successfully registered DiscoverDpuExtensionServiceInventory activity")
 
 	api.RegisterCron()
+
 	return nil
 }

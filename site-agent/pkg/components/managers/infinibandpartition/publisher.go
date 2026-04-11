@@ -18,37 +18,21 @@
 package infinibandpartition
 
 import (
+	"github.com/google/uuid"
+
 	swa "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/activity"
 	sww "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/workflow"
-	"github.com/google/uuid"
-	"go.temporal.io/sdk/activity"
 )
 
-// RegisterPublisher registers the InfiniBandPartitionWorkflows with the Temporal client
+// RegisterPublisher registers InfiniBandPartition inventory workflow and activity with Temporal
 func (api *API) RegisterPublisher() error {
-	// Register the publishers here
-	ManagerAccess.Data.EB.Log.Info().Msg("InfiniBandPartition: Registering the publishers")
+	ManagerAccess.Data.EB.Log.Info().Msg("InfiniBandPartition: Registering inventory workflow and activity")
 
-	// Get InfiniBandPartition workflow interface
-	infiniBandPartitionInterface := NewInfiniBandPartitionWorkflows(
-		ManagerAccess.Data.EB.Managers.Workflow.Temporal.Publisher,
-		ManagerAccess.Data.EB.Managers.Workflow.Temporal.Subscriber,
-		ManagerAccess.Conf.EB,
-	)
-
-	activityRegisterOptions := activity.RegisterOptions{
-		Name: "PublishInfiniBandPartitionActivity",
-	}
-
-	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivityWithOptions(
-		infiniBandPartitionInterface.PublishInfiniBandPartitionActivity, activityRegisterOptions,
-	)
-	ManagerAccess.Data.EB.Log.Info().Msg("InfiniBandPartition: successfully registered the Publish InfiniBandPartition activity")
-
-	// Instance Inventory workflow
+	// Register DiscoverInfiniBandPartitionInventory workflow
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.DiscoverInfiniBandPartitionInventory)
-	ManagerAccess.Data.EB.Log.Info().Msg("InfiniBandPartition: successfully registered the Discover InfiniBandPartition Inventory workflow")
+	ManagerAccess.Data.EB.Log.Info().Msg("InfiniBandPartition: Successfully registered DiscoverInfiniBandPartitionInventory workflow")
 
+	// Register DiscoverInfiniBandPartitionInventory activity
 	inventoryManager := swa.NewManageInfiniBandPartitionInventory(swa.ManageInventoryConfig{
 		SiteID:                uuid.MustParse(ManagerAccess.Conf.EB.Temporal.ClusterID),
 		CarbideAtomicClient:   ManagerAccess.Data.EB.Managers.Carbide.Client,
@@ -57,8 +41,9 @@ func (api *API) RegisterPublisher() error {
 		SitePageSize:          InventoryCarbidePageSize,
 		CloudPageSize:         InventoryCloudPageSize,
 	})
+
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(inventoryManager.DiscoverInfiniBandPartitionInventory)
-	ManagerAccess.Data.EB.Log.Info().Msg("InfiniBandPartition: successfully registered the Discover InfiniBandPartition Inventory activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("InfiniBandPartition: Successfully registered DiscoverInfiniBandPartitionInventory activity")
 
 	api.RegisterCron()
 

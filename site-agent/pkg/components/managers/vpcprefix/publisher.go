@@ -18,19 +18,21 @@
 package vpcprefix
 
 import (
+	"github.com/google/uuid"
+
 	swa "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/activity"
 	sww "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/workflow"
-	"github.com/google/uuid"
 )
 
-// RegisterPublisher registers the VpcPrefix Workflows with the Temporal client
+// RegisterPublisher registers VpcPrefix inventory workflow and activity with Temporal
 func (api *API) RegisterPublisher() error {
-	// Register the publishers here
+	ManagerAccess.Data.EB.Log.Info().Msg("VpcPrefix: Registering inventory workflow and activity")
 
-	// Collect and Publish VpcPrefix Inventory workflow
+	// Register DiscoverVpcPrefixInventory workflow
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.DiscoverVpcPrefixInventory)
-	ManagerAccess.Data.EB.Log.Info().Msg("VpcPrefix: successfully registered the Discover VpcPrefix Inventory workflow")
+	ManagerAccess.Data.EB.Log.Info().Msg("VpcPrefix: Successfully registered DiscoverVpcPrefixInventory workflow")
 
+	// Register DiscoverVpcPrefixInventory activity
 	inventoryManager := swa.NewManageVpcPrefixInventory(swa.ManageInventoryConfig{
 		SiteID:                uuid.MustParse(ManagerAccess.Conf.EB.Temporal.ClusterID),
 		CarbideAtomicClient:   ManagerAccess.Data.EB.Managers.Carbide.Client,
@@ -39,8 +41,9 @@ func (api *API) RegisterPublisher() error {
 		SitePageSize:          InventoryCarbidePageSize,
 		CloudPageSize:         InventoryCloudPageSize,
 	})
+
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(inventoryManager.DiscoverVpcPrefixInventory)
-	ManagerAccess.Data.EB.Log.Info().Msg("VpcPrefix: successfully registered the Discover VpcPrefix Inventory activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("VpcPrefix: Successfully registered DiscoverVpcPrefixInventory activity")
 
 	api.RegisterCron()
 

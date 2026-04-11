@@ -24,16 +24,16 @@ import (
 	sww "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/workflow"
 )
 
-// RegisterPublisher registers the OsImage Workflows with the Temporal client
+// RegisterPublisher registers OperatingSystem inventory workflow and activity with Temporal
 func (api *API) RegisterPublisher() error {
-	// Register publisher workflows
+	ManagerAccess.Data.EB.Log.Info().Msg("OperatingSystem: Registering inventory workflow and activity")
 
-	// Collect and Publish OsImage Inventory workflow
+	// Register DiscoverOsImageInventory workflow
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.DiscoverOsImageInventory)
-	ManagerAccess.Data.EB.Log.Info().Msg("OsImage: successfully registered DiscoverOsImageInventory workflow")
+	ManagerAccess.Data.EB.Log.Info().Msg("OperatingSystem: Successfully registered DiscoverOsImageInventory workflow")
 
-	// Register OsImage activity for discovering and publishing OsImage Inventory
-	OsImageInventoryManager := swa.NewManageOsImageInventory(swa.ManageInventoryConfig{
+	// Register DiscoverOsImageInventory activity
+	osImageInventoryManager := swa.NewManageOsImageInventory(swa.ManageInventoryConfig{
 		SiteID:                uuid.MustParse(ManagerAccess.Conf.EB.Temporal.ClusterID),
 		CarbideAtomicClient:   ManagerAccess.Data.EB.Managers.Carbide.Client,
 		TemporalPublishClient: ManagerAccess.Data.EB.Managers.Workflow.Temporal.Publisher,
@@ -42,8 +42,8 @@ func (api *API) RegisterPublisher() error {
 		CloudPageSize:         InventoryCloudPageSize,
 	})
 
-	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(OsImageInventoryManager.DiscoverOsImageInventory)
-	ManagerAccess.Data.EB.Log.Info().Msg("OsImage: successfully registered DiscoverOsImageInventory activity")
+	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(osImageInventoryManager.DiscoverOsImageInventory)
+	ManagerAccess.Data.EB.Log.Info().Msg("OperatingSystem: Successfully registered DiscoverOsImageInventory activity")
 
 	api.RegisterCron()
 	return nil

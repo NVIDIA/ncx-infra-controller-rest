@@ -18,19 +18,21 @@
 package networksecuritygroup
 
 import (
+	"github.com/google/uuid"
+
 	swa "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/activity"
 	sww "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/workflow"
-	"github.com/google/uuid"
 )
 
-// RegisterPublisher registers the NetworkSecurityGroup Workflows with the Temporal client
+// RegisterPublisher registers NetworkSecurityGroup inventory workflow and activity with Temporal
 func (api *API) RegisterPublisher() error {
-	// Register the publishers here
+	ManagerAccess.Data.EB.Log.Info().Msg("NetworkSecurityGroup: Registering inventory workflow and activity")
 
-	// Collect and Publish NetworkSecurityGroup Inventory workflow
+	// Register DiscoverNetworkSecurityGroupInventory workflow
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.DiscoverNetworkSecurityGroupInventory)
-	ManagerAccess.Data.EB.Log.Info().Msg("NetworkSecurityGroup: successfully registered the Discover NetworkSecurityGroup Inventory workflow")
+	ManagerAccess.Data.EB.Log.Info().Msg("NetworkSecurityGroup: Successfully registered DiscoverNetworkSecurityGroupInventory workflow")
 
+	// Register DiscoverNetworkSecurityGroupInventory activity
 	inventoryManager := swa.NewManageNetworkSecurityGroupInventory(swa.ManageInventoryConfig{
 		SiteID:                uuid.MustParse(ManagerAccess.Conf.EB.Temporal.ClusterID),
 		CarbideAtomicClient:   ManagerAccess.Data.EB.Managers.Carbide.Client,
@@ -39,8 +41,9 @@ func (api *API) RegisterPublisher() error {
 		SitePageSize:          InventoryCarbidePageSize,
 		CloudPageSize:         InventoryCloudPageSize,
 	})
+
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(inventoryManager.DiscoverNetworkSecurityGroupInventory)
-	ManagerAccess.Data.EB.Log.Info().Msg("NetworkSecurityGroup: successfully registered the Discover NetworkSecurityGroup Inventory activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("NetworkSecurityGroup: Successfully registered DiscoverNetworkSecurityGroupInventory activity")
 
 	api.RegisterCron()
 

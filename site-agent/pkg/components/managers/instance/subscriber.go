@@ -18,108 +18,63 @@
 package instance
 
 import (
+	"go.temporal.io/sdk/workflow"
+
 	swa "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/activity"
 	sww "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/workflow"
-	workflow "go.temporal.io/sdk/workflow"
 )
 
-// RegisterSubscriber registers the InstanceWorkflows with the Temporal client
+// RegisterSubscriber registers Instance CRUD workflows and activities with Temporal
 func (api *API) RegisterSubscriber() error {
-	// Register the subscribers here
-	ManagerAccess.Data.EB.Log.Info().Msg("Instance: Registering the subscribers")
-
-	// Get Instance workflow interface
-	Instanceinterface := NewInstanceWorkflows(
-		ManagerAccess.Data.EB.Managers.Workflow.Temporal.Publisher,
-		ManagerAccess.Data.EB.Managers.Workflow.Temporal.Subscriber,
-		ManagerAccess.Conf.EB,
-	)
-
-	instanceManager := swa.NewManageInstance(ManagerAccess.Data.EB.Managers.Carbide.Client)
+	ManagerAccess.Data.EB.Log.Info().Msg("Instance: Registering CRUD workflows and activities")
 
 	// Register workflows
 
-	// Sync workflows
-	// Register CreateInstance worfklow
-	// TODO: Once all Site Agents are updated, remove the legacy CreateInstance workflow, duplicate register Site Workflow as CreateInstance
-	// Once all Site Agents are updated with duplicate workflow, switch Cloud API to use call CreateInstance, then de-register CreateInstanceV2 workflow
+	// Register CreateInstanceV2 workflow
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.CreateInstanceV2)
-	ManagerAccess.Data.EB.Log.Info().Msg("Instance: successfully registered Create Instance v2 workflow")
+	ManagerAccess.Data.EB.Log.Info().Msg("Instance: Successfully registered CreateInstanceV2 workflow")
 
-	// Register CreateInstances workflow
+	// Register CreateInstances workflow (Batch)
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.CreateInstances)
-	ManagerAccess.Data.EB.Log.Info().Msg("Instance: successfully registered Create Instances workflow")
+	ManagerAccess.Data.EB.Log.Info().Msg("Instance: Successfully registered CreateInstances workflow")
 
-	// Register DeleteInstanceV2 worfklow
+	// Register DeleteInstanceV2 workflow
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.DeleteInstanceV2)
-	ManagerAccess.Data.EB.Log.Info().Msg("Instance: successfully registered Delete Instance v2 workflow")
+	ManagerAccess.Data.EB.Log.Info().Msg("Instance: Successfully registered DeleteInstanceV2 workflow")
 
 	// Register UpdateInstance workflow
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.UpdateInstance)
-	ManagerAccess.Data.EB.Log.Info().Msg("Instance: successfully registered Update Instance workflow")
+	ManagerAccess.Data.EB.Log.Info().Msg("Instance: Successfully registered UpdateInstance workflow")
 
-	// Register RebootInstance workflow
-	// TODO: Same as above
+	// Register RebootInstanceV2 workflow
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflowWithOptions(sww.RebootInstance, workflow.RegisterOptions{
 		Name: "RebootInstanceV2",
 	})
-	ManagerAccess.Data.EB.Log.Info().Msg("Instance: successfully registered Reboot Instance v2 workflow")
-
-	// Legacy workflows
-	// Register CreateInstance worfklow (deprecated)
-	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(ManagerAccess.API.Instance.CreateInstance)
-	ManagerAccess.Data.EB.Log.Info().Msg("Instance: successfully registered deprecated Create Instance workflow")
-
-	// Register DeleteInstance worfklow
-	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(ManagerAccess.API.Instance.DeleteInstance)
-	ManagerAccess.Data.EB.Log.Info().Msg("Instance: successfully registered Delete Instance workflow")
-
-	// Register RebootInstance worfklow (deprecated)
-	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(ManagerAccess.API.Instance.RebootInstance)
-	ManagerAccess.Data.EB.Log.Info().Msg("Instance: successfully registered Reboot Instance workflow")
+	ManagerAccess.Data.EB.Log.Info().Msg("Instance: Successfully registered RebootInstanceV2 workflow")
 
 	// Register activities
 
-	// Sync workflow activities
-	// Register CreateInstanceOnSite
+	instanceManager := swa.NewManageInstance(ManagerAccess.Data.EB.Managers.Carbide.Client)
+
+	// Register CreateInstanceOnSite activity
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(instanceManager.CreateInstanceOnSite)
-	ManagerAccess.Data.EB.Log.Info().Msg("Instance: successfully registered Create Instance activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("Instance: Successfully registered CreateInstanceOnSite activity")
 
-	// Register CreateInstancesOnSite
+	// Register CreateInstancesOnSite activity
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(instanceManager.CreateInstancesOnSite)
-	ManagerAccess.Data.EB.Log.Info().Msg("Instance: successfully registered Create Instances activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("Instance: Successfully registered CreateInstancesOnSite activity")
 
-	// Register DeleteInstanceOnSite
+	// Register DeleteInstanceOnSite activity
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(instanceManager.DeleteInstanceOnSite)
-	ManagerAccess.Data.EB.Log.Info().Msg("Instance: successfully registered Delete Instance activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("Instance: Successfully registered DeleteInstanceOnSite activity")
 
-	// Register UpdateInstanceOnSite
+	// Register UpdateInstanceOnSite activity
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(instanceManager.UpdateInstanceOnSite)
-	ManagerAccess.Data.EB.Log.Info().Msg("Instance: successfully registered Update Instance activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("Instance: Successfully registered UpdateInstanceOnSite activity")
 
-	// Register RebootInstanceOnSite
+	// Register RebootInstanceOnSite activity
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(instanceManager.RebootInstanceOnSite)
-	ManagerAccess.Data.EB.Log.Info().Msg("Instance: successfully registered Reboot Instance activity")
-
-	// Legacy workflow activities
-	// Register CreateInstanceActivity (deprecated)
-	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(Instanceinterface.CreateInstanceActivity)
-	ManagerAccess.Data.EB.Log.Info().Msg("Instance: successfully registered deprecated Create Instance activity")
-
-	// Register DeleteInstanceActivity
-	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(Instanceinterface.DeleteInstanceActivity)
-	ManagerAccess.Data.EB.Log.Info().Msg("Instance: successfully registered delete Instance activity")
-
-	// Register RebootInstanceActivity
-	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(Instanceinterface.RebootInstanceActivity)
-	ManagerAccess.Data.EB.Log.Info().Msg("Instance: successfully registered Reboot Instance activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("Instance: Successfully registered RebootInstanceOnSite activity")
 
 	return nil
-}
-
-// RegisterSubscribers - this is method 2 of registering the subscriber
-func RegisterSubscribers() {
-	// Register the subscribers here
-	ManagerAccess.Data.EB.Log.Info().Msg("Instance: Registering the subscribers")
-	ManagerAccess.API.Orchestrator.AddWorkflow(ManagerAccess.API.Instance.CreateInstance)
 }

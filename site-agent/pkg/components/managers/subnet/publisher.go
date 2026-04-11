@@ -18,36 +18,21 @@
 package subnet
 
 import (
+	"github.com/google/uuid"
+
 	swa "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/activity"
 	sww "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/workflow"
-	"github.com/google/uuid"
-	"go.temporal.io/sdk/activity"
 )
 
-// RegisterPublisher registers the SubnetWorkflows with the Temporal client
+// RegisterPublisher registers Subnet inventory workflow and activity with Temporal
 func (api *API) RegisterPublisher() error {
+	ManagerAccess.Data.EB.Log.Info().Msg("Subnet: Registering inventory workflow and activity")
 
-	// Register the publishers here
-	ManagerAccess.Data.EB.Log.Info().Msg("Subnet: Registering the publishers")
-
-	// Get Subnet workflow interface
-	Subnetinterface := NewSubnetWorkflows(
-		ManagerAccess.Data.EB.Managers.Workflow.Temporal.Publisher,
-		ManagerAccess.Data.EB.Managers.Workflow.Temporal.Subscriber,
-		ManagerAccess.Conf.EB,
-	)
-	activityRegisterOptions := activity.RegisterOptions{
-		Name: "PublishSubnetActivity",
-	}
-	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivityWithOptions(
-		Subnetinterface.PublishSubnetActivity, activityRegisterOptions,
-	)
-	ManagerAccess.Data.EB.Log.Info().Msg("Subnet: successfully registered the Publish Subnet activity")
-
-	// Subnet Inventory workflow
+	// Register DiscoverSubnetInventory workflow
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.DiscoverSubnetInventory)
-	ManagerAccess.Data.EB.Log.Info().Msg("Subnet: successfully registered the Discover Subnet Inventory workflow")
+	ManagerAccess.Data.EB.Log.Info().Msg("Subnet: Successfully registered DiscoverSubnetInventory workflow")
 
+	// Register DiscoverSubnetInventory activity
 	inventoryManager := swa.NewManageSubnetInventory(swa.ManageInventoryConfig{
 		SiteID:                uuid.MustParse(ManagerAccess.Conf.EB.Temporal.ClusterID),
 		CarbideAtomicClient:   ManagerAccess.Data.EB.Managers.Carbide.Client,
@@ -56,8 +41,9 @@ func (api *API) RegisterPublisher() error {
 		SitePageSize:          InventoryCarbidePageSize,
 		CloudPageSize:         InventoryCloudPageSize,
 	})
+
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(inventoryManager.DiscoverSubnetInventory)
-	ManagerAccess.Data.EB.Log.Info().Msg("Subnet: successfully registered the Discover Subnet Inventory activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("Subnet: Successfully registered DiscoverSubnetInventory activity")
 
 	api.RegisterCron()
 
