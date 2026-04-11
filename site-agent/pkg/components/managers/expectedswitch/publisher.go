@@ -24,14 +24,15 @@ import (
 	sww "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/workflow"
 )
 
-// RegisterPublisher registers the ExpectedSwitchWorkflows with the Temporal client
+// RegisterPublisher registers ExpectedSwitch inventory workflow and activity with Temporal
 func (api *API) RegisterPublisher() error {
-	// Register the publishers here
+	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedSwitch: Registering inventory workflow and activity")
 
-	// Collect and Publish ExpectedSwitch Inventory workflow
+	// Register DiscoverExpectedSwitchInventory workflow
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.DiscoverExpectedSwitchInventory)
-	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedSwitch: successfully registered the DiscoverExpectedSwitchInventory workflow")
+	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedSwitch: Successfully registered DiscoverExpectedSwitchInventory workflow")
 
+	// Register DiscoverExpectedSwitchInventory activity
 	inventoryManager := swa.NewManageExpectedSwitchInventory(
 		uuid.MustParse(ManagerAccess.Conf.EB.Temporal.ClusterID),
 		ManagerAccess.Data.EB.Managers.Carbide.Client,
@@ -39,10 +40,11 @@ func (api *API) RegisterPublisher() error {
 		ManagerAccess.Conf.EB.Temporal.TemporalPublishQueue,
 		InventoryCarbidePageSize,
 	)
-	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(inventoryManager.DiscoverExpectedSwitchInventory)
-	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedSwitch: successfully registered the DiscoverExpectedSwitchInventory activity")
 
-	_ = api.RegisterCron()
+	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(inventoryManager.DiscoverExpectedSwitchInventory)
+	ManagerAccess.Data.EB.Log.Info().Msg("ExpectedSwitch: Successfully registered DiscoverExpectedSwitchInventory activity")
+
+	api.RegisterCron()
 
 	return nil
 }

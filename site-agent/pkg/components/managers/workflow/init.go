@@ -37,7 +37,7 @@ const (
 
 // Init - initialize the workflow orchestrator
 func (wflow *API) Init() {
-	ManagerAccess.Data.EB.Log.Info().Msg("Workflow: Initializing the workflow")
+	ManagerAccess.Data.EB.Log.Info().Msg("Workflow: Initializing workflow orchestrator")
 
 	prometheus.MustRegister(
 		prometheus.NewCounterFunc(prometheus.CounterOpts{
@@ -88,7 +88,7 @@ func (wflow *API) GetState() []string {
 
 // Start the workflow orchestrator
 func (wflow *API) Start() {
-	ManagerAccess.Data.EB.Log.Info().Msg("Workflow: Starting the workflow")
+	ManagerAccess.Data.EB.Log.Info().Msg("Workflow: Starting the workflow orchestrator")
 	Orchestrator()
 	wflow.WatchCertFile()
 }
@@ -108,12 +108,12 @@ func (wflow *API) WatchCertFile() {
 
 // watchFiles watch on the secret files
 func (wflow *API) watchFiles(path []string, file map[string]bool) {
-	log.Info().Msgf("Workflow: Watching secret %v", path)
+	log.Info().Msgf("Workflow: Watching Temporal cert files %v", path)
 
 	// Create a new watcher.
 	w, err := fsnotify.NewWatcher()
 	if err != nil {
-		log.Panic().Msgf("Workflow: creating a new watcher: %v", err)
+		log.Panic().Msgf("Workflow: Failed to create Temporal cert files watcher: %v", err)
 	}
 	defer w.Close()
 
@@ -121,7 +121,7 @@ func (wflow *API) watchFiles(path []string, file map[string]bool) {
 	for _, v := range path {
 		err = w.Add(v)
 		if err != nil {
-			log.Panic().Msgf("Workflow: add file to watcher: %v", err)
+			log.Panic().Msgf("Workflow: Failed to add Temporal cert files to watcher: %v", err)
 		}
 	}
 
@@ -132,7 +132,7 @@ func (wflow *API) watchFiles(path []string, file map[string]bool) {
 			if !ok { // Channel was closed (i.e. Watcher.Close() was called).
 				return
 			}
-			log.Panic().Msgf("Workflow: watcher closed: %v", err.Error())
+			log.Panic().Msgf("Workflow: Temporal cert files watcher closed: %v", err.Error())
 		// Read from Events.
 		case e, ok := <-w.Events:
 			if !ok { // Channel was closed (i.e. Watcher.Close() was called).
@@ -145,7 +145,7 @@ func (wflow *API) watchFiles(path []string, file map[string]bool) {
 				continue
 			}
 			Orchestrator()
-			log.Info().Msgf("Workflow: Back to watching secret %v ", e.String())
+			log.Info().Msgf("Workflow: Resuming Temporal cert files watcher for: %v ", e.String())
 		}
 	}
 }
