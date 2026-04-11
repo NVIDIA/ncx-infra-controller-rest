@@ -273,11 +273,11 @@ func TestBMCFrom(t *testing.T) {
 			},
 			expectedType: devicetypes.BMCTypeHost,
 			expectedBMC: &bmc.BMC{
-				MAC: mustParseMAC(sharedMac),
+				MAC: bmc.MACAddress{HardwareAddr: mustParseMAC(sharedMac)},
 				IP:  net.ParseIP(sharedIp),
 			},
 			source: &bmc.BMC{
-				MAC: mustParseMAC(sharedMac),
+				MAC: bmc.MACAddress{HardwareAddr: mustParseMAC(sharedMac)},
 				IP:  net.ParseIP(sharedIp),
 			},
 			expectedProto: &pb.BMCInfo{
@@ -296,11 +296,11 @@ func TestBMCFrom(t *testing.T) {
 			},
 			expectedType: devicetypes.BMCTypeDPU,
 			expectedBMC: &bmc.BMC{
-				MAC: mustParseMAC(sharedMac),
+				MAC: bmc.MACAddress{HardwareAddr: mustParseMAC(sharedMac)},
 				IP:  net.ParseIP(sharedIp),
 			},
 			source: &bmc.BMC{
-				MAC: mustParseMAC(sharedMac),
+				MAC: bmc.MACAddress{HardwareAddr: mustParseMAC(sharedMac)},
 				IP:  net.ParseIP(sharedIp),
 			},
 			expectedProto: &pb.BMCInfo{
@@ -318,10 +318,10 @@ func TestBMCFrom(t *testing.T) {
 			},
 			expectedType: devicetypes.BMCTypeUnknown,
 			expectedBMC: &bmc.BMC{
-				MAC: mustParseMAC(sharedMac),
+				MAC: bmc.MACAddress{HardwareAddr: mustParseMAC(sharedMac)},
 			},
 			source: &bmc.BMC{
-				MAC: mustParseMAC(sharedMac),
+				MAC: bmc.MACAddress{HardwareAddr: mustParseMAC(sharedMac)},
 			},
 			expectedProto: &pb.BMCInfo{
 				Type:       pb.BMCType_BMC_TYPE_UNKNOWN,
@@ -346,9 +346,17 @@ func TestBMCFrom(t *testing.T) {
 			},
 			expectedType: devicetypes.BMCTypeHost,
 			expectedBMC: &bmc.BMC{
-				MAC: nil,
+				MAC: bmc.MACAddress{},
 			},
-			testBMCTo: false,
+			source: &bmc.BMC{
+				MAC: bmc.MACAddress{},
+			},
+			expectedProto: &pb.BMCInfo{
+				Type:       pb.BMCType_BMC_TYPE_HOST,
+				MacAddress: "",
+			},
+			testBMCTo:     true,
+			testBMCToType: devicetypes.BMCTypeHost,
 		},
 		"empty MAC address": {
 			sourceP: &pb.BMCInfo{
@@ -357,9 +365,17 @@ func TestBMCFrom(t *testing.T) {
 			},
 			expectedType: devicetypes.BMCTypeHost,
 			expectedBMC: &bmc.BMC{
-				MAC: nil,
+				MAC: bmc.MACAddress{},
 			},
-			testBMCTo: false,
+			source: &bmc.BMC{
+				MAC: bmc.MACAddress{},
+			},
+			expectedProto: &pb.BMCInfo{
+				Type:       pb.BMCType_BMC_TYPE_HOST,
+				MacAddress: "",
+			},
+			testBMCTo:     true,
+			testBMCToType: devicetypes.BMCTypeHost,
 		},
 		"nil IP address": {
 			sourceP: &pb.BMCInfo{
@@ -369,11 +385,11 @@ func TestBMCFrom(t *testing.T) {
 			},
 			expectedType: devicetypes.BMCTypeHost,
 			expectedBMC: &bmc.BMC{
-				MAC: mustParseMAC(sharedMac),
+				MAC: bmc.MACAddress{HardwareAddr: mustParseMAC(sharedMac)},
 				IP:  nil,
 			},
 			source: &bmc.BMC{
-				MAC: mustParseMAC(sharedMac),
+				MAC: bmc.MACAddress{HardwareAddr: mustParseMAC(sharedMac)},
 				IP:  nil,
 			},
 			expectedProto: &pb.BMCInfo{
@@ -392,7 +408,7 @@ func TestBMCFrom(t *testing.T) {
 			},
 			expectedType: devicetypes.BMCTypeHost,
 			expectedBMC: &bmc.BMC{
-				MAC: mustParseMAC(sharedMac),
+				MAC: bmc.MACAddress{HardwareAddr: mustParseMAC(sharedMac)},
 				IP:  nil,
 			},
 			testBMCTo: false,
@@ -405,7 +421,7 @@ func TestBMCFrom(t *testing.T) {
 			},
 			expectedType: devicetypes.BMCTypeHost,
 			expectedBMC: &bmc.BMC{
-				MAC: mustParseMAC(sharedMac),
+				MAC: bmc.MACAddress{HardwareAddr: mustParseMAC(sharedMac)},
 				IP:  nil,
 			},
 			testBMCTo: false,
@@ -418,11 +434,11 @@ func TestBMCFrom(t *testing.T) {
 			},
 			expectedType: devicetypes.BMCTypeHost,
 			expectedBMC: &bmc.BMC{
-				MAC: mustParseMAC(sharedMac),
+				MAC: bmc.MACAddress{HardwareAddr: mustParseMAC(sharedMac)},
 				IP:  net.ParseIP("2001:db8::1"),
 			},
 			source: &bmc.BMC{
-				MAC: mustParseMAC(sharedMac),
+				MAC: bmc.MACAddress{HardwareAddr: mustParseMAC(sharedMac)},
 				IP:  net.ParseIP("2001:db8::1"),
 			},
 			expectedProto: &pb.BMCInfo{
@@ -440,10 +456,10 @@ func TestBMCFrom(t *testing.T) {
 			},
 			expectedType: devicetypes.BMCTypeHost,
 			expectedBMC: &bmc.BMC{
-				MAC: mustParseMAC(sharedMac),
+				MAC: bmc.MACAddress{HardwareAddr: mustParseMAC(sharedMac)},
 			},
 			source: &bmc.BMC{
-				MAC: mustParseMAC(sharedMac),
+				MAC: bmc.MACAddress{HardwareAddr: mustParseMAC(sharedMac)},
 			},
 			expectedProto: &pb.BMCInfo{
 				Type:       pb.BMCType_BMC_TYPE_HOST,
@@ -459,10 +475,10 @@ func TestBMCFrom(t *testing.T) {
 			},
 			expectedType: devicetypes.BMCTypeDPU,
 			expectedBMC: &bmc.BMC{
-				MAC: mustParseMAC("AA-BB-CC-DD-EE-FF"),
+				MAC: bmc.MACAddress{HardwareAddr: mustParseMAC("AA-BB-CC-DD-EE-FF")},
 			},
 			source: &bmc.BMC{
-				MAC: mustParseMAC("AA-BB-CC-DD-EE-FF"),
+				MAC: bmc.MACAddress{HardwareAddr: mustParseMAC("AA-BB-CC-DD-EE-FF")},
 			},
 			expectedProto: &pb.BMCInfo{
 				Type:       pb.BMCType_BMC_TYPE_DPU,
@@ -478,7 +494,7 @@ func TestBMCFrom(t *testing.T) {
 			},
 			expectedType: devicetypes.BMCTypeUnknown,
 			expectedBMC: &bmc.BMC{
-				MAC: mustParseMAC(sharedMac),
+				MAC: bmc.MACAddress{HardwareAddr: mustParseMAC(sharedMac)},
 			},
 			testBMCTo: false,
 		},

@@ -122,8 +122,12 @@ func bmcFromProto(b *pb.BMCInfo) types.BMC {
 		Type: bmcTypeFromProto(b.GetType()),
 	}
 
+	// Invalid MAC addresses are silently ignored; bmc.MAC remains unset (nil).
+	// This matches the behaviour of the internal DAO and protobuf converters.
 	if mac := b.GetMacAddress(); mac != "" {
-		bmc.MAC, _ = net.ParseMAC(mac)
+		if addr, err := net.ParseMAC(mac); err == nil {
+			bmc.MAC = addr
+		}
 	}
 
 	if ip := b.GetIpAddress(); ip != "" {

@@ -77,7 +77,7 @@ func BMCFrom(dao model.BMC) bmc.BMC {
 	var b bmc.BMC
 
 	if hwAddr, err := net.ParseMAC(dao.MacAddress); err == nil {
-		b.MAC = hwAddr
+		b.MAC = bmc.MACAddress{HardwareAddr: hwAddr}
 	}
 
 	if dao.IPAddress != nil {
