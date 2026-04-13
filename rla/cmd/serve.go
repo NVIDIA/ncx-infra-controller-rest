@@ -31,6 +31,7 @@ import (
 
 	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/carbideapi"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/config"
 	svc "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/service"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/componentmanager"
 	computecarbide "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/componentmanager/compute/carbide"
@@ -215,6 +216,8 @@ func loadComponentManagerConfig() (componentmanager.Config, error) {
 // configuration, initialises provider and component manager registries, builds
 // the service, and blocks until a termination signal is received.
 func doServe() {
+	rlaConfig := config.ReadConfig()
+
 	dbConf, err := cdb.ConfigFromEnv()
 	if err != nil {
 		log.Fatal().Msgf("failed to retrieve DB conn information: %v", err)
@@ -286,10 +289,12 @@ func doServe() {
 	service, err := svc.New(
 		ctx,
 		svc.Config{
-			Port:         port,
-			DBConf:       dbConf,
-			ExecutorConf: &temporalManagerConf,
-			CMConfig:     cmConfig,
+			Port:             port,
+			DBConf:           dbConf,
+			ExecutorConf:     &temporalManagerConf,
+			RLAConfig:        rlaConfig,
+			CMConfig:         cmConfig,
+			ProviderRegistry: providerRegistry,
 			CertConfig: pkgcerts.Config{
 				CACert:  globalCACert,
 				TLSCert: globalTLSCert,

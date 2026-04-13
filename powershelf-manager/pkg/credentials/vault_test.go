@@ -32,7 +32,7 @@ import (
 )
 
 type fakeVaultKVServer struct {
-	store        map[string]map[string]interface{} // mac -> map(username,password)
+	store        map[string]map[string]interface{} // uppercase MAC -> secret data (UsernamePassword map)
 	mountPresent bool
 }
 
@@ -70,9 +70,9 @@ func (s *fakeVaultKVServer) handler() http.Handler {
 			writeJSON(w, http.StatusNoContent, map[string]interface{}{})
 			return
 
-		// KV v2 write: client may use PUT or POST
-		case strings.HasPrefix(path, "/secrets/data/pmc/") && (r.Method == http.MethodPut || r.Method == http.MethodPost):
-			mac := strings.TrimPrefix(path, "/secrets/data/pmc/")
+		// KV v2 write: Core/NSM layout secrets/data/machines/bmc/{MAC}/root
+		case strings.HasPrefix(path, "/secrets/data/machines/bmc/") && strings.HasSuffix(path, "/root") && (r.Method == http.MethodPut || r.Method == http.MethodPost):
+			mac := strings.TrimSuffix(strings.TrimPrefix(path, "/secrets/data/machines/bmc/"), "/root")
 			var payload map[string]interface{}
 			_ = json.NewDecoder(r.Body).Decode(&payload)
 			_ = r.Body.Close()
@@ -85,8 +85,8 @@ func (s *fakeVaultKVServer) handler() http.Handler {
 			return
 
 		// KV v2 read
-		case strings.HasPrefix(path, "/secrets/data/pmc/") && r.Method == http.MethodGet:
-			mac := strings.TrimPrefix(path, "/secrets/data/pmc/")
+		case strings.HasPrefix(path, "/secrets/data/machines/bmc/") && strings.HasSuffix(path, "/root") && r.Method == http.MethodGet:
+			mac := strings.TrimSuffix(strings.TrimPrefix(path, "/secrets/data/machines/bmc/"), "/root")
 			if data, ok := s.store[mac]; ok {
 				writeJSON(w, http.StatusOK, map[string]interface{}{
 					"data": map[string]interface{}{
@@ -99,21 +99,21 @@ func (s *fakeVaultKVServer) handler() http.Handler {
 			return
 
 		// KV v2 delete
-		case strings.HasPrefix(path, "/secrets/data/pmc/") && r.Method == http.MethodDelete:
-			mac := strings.TrimPrefix(path, "/secrets/data/pmc/")
+		case strings.HasPrefix(path, "/secrets/data/machines/bmc/") && strings.HasSuffix(path, "/root") && r.Method == http.MethodDelete:
+			mac := strings.TrimSuffix(strings.TrimPrefix(path, "/secrets/data/machines/bmc/"), "/root")
 			delete(s.store, mac)
 			writeJSON(w, http.StatusNoContent, map[string]interface{}{})
 			return
 
-		// KV v2 list: GET /secrets/data/pmc?list=true (matching your implementation)
-		case path == "/secrets/data/pmc" && r.Method == http.MethodGet && r.URL.Query().Get("list") == "true":
+		// KV v2 list: GET /secrets/metadata/machines/bmc?list=true (NSM pattern)
+		case path == "/secrets/metadata/machines/bmc" && r.Method == http.MethodGet && r.URL.Query().Get("list") == "true":
 			if len(s.store) == 0 {
 				writeJSON(w, http.StatusNotFound, map[string]interface{}{"errors": []string{"no keys"}})
 				return
 			}
-			keys := make([]interface{}, 0, len(s.store)) // []interface{} to match manager type assertion
+			keys := make([]interface{}, 0, len(s.store))
 			for mac := range s.store {
-				keys = append(keys, mac)
+				keys = append(keys, mac+"/")
 			}
 			writeJSON(w, http.StatusOK, map[string]interface{}{
 				"data": map[string]interface{}{

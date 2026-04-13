@@ -30,11 +30,7 @@ import (
 // VPCInterface is the interface for the VPC client
 type VPCInterface interface {
 	CreateVPC(ctx context.Context, request *wflows.Vpc) (response *wflows.Vpc, err error)
-	// DEPRECATED: use GetAllVPCs instead
-	ListVPCs(ctx context.Context) (response *wflows.VpcList, err error)
 	DeleteVPC(ctx context.Context, id string) (response *wflows.VpcDeletionResult, err error)
-	// DEPRECATED: use GetAllVPCs instead
-	GetVPC(ctx context.Context, request *wflows.VpcSearchQuery) (response *wflows.VpcList, err error)
 	GetAllVPCs(ctx context.Context, request *wflows.VpcSearchFilter, pageSize int) (response *wflows.VpcList, err error)
 	FindVPCIDs(ctx context.Context, request *wflows.VpcSearchFilter) (response *wflows.VpcIdList, err error)
 	FindVPCsByIDs(ctx context.Context, request *wflows.VpcsByIdsRequest) (response *wflows.VpcList, err error)
@@ -61,42 +57,6 @@ func (vpc *network) CreateVPC(ctx context.Context, request *wflows.Vpc) (respons
 	}
 
 	response, err = vpc.carbide.CreateVpc(ctx, carbideRequest)
-	return response, err
-}
-
-// GetVPC gets a VPC
-// DEPRECATED: use GetAllVPCs instead
-func (vpc *network) GetVPC(ctx context.Context, request *wflows.VpcSearchQuery) (response *wflows.VpcList, err error) {
-	log.Info().Interface("request", request).Msg("GetVPC: received request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-GetVPC")
-	defer span.End()
-
-	response, err = vpc.carbide.FindVpcs(ctx, request)
-	if err != nil {
-		log.Error().Err(err).Msg("GetVPC: error")
-		return nil, err
-	}
-	log.Info().Int("VpcListLen", len(response.Vpcs)).Msg("GetVPC: received result")
-	return response, err
-
-}
-
-// GetVPC gets a VPC
-// DEPRECATED: use GetAllVPCs instead
-func (vpc *network) ListVPCs(ctx context.Context) (response *wflows.VpcList, err error) {
-	log.Info().Msg("ListVPCs: received request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-ListVPCs")
-	defer span.End()
-
-	carbiderequest := &wflows.VpcSearchQuery{
-		Id: &wflows.VpcId{},
-	}
-	response, err = vpc.carbide.FindVpcs(ctx, carbiderequest)
-	if err != nil {
-		log.Error().Err(err).Msg("ListVPCs: error")
-		return nil, err
-	}
-	log.Info().Int("VpcListLen", len(response.Vpcs)).Msg("ListVPC: received result")
 	return response, err
 }
 

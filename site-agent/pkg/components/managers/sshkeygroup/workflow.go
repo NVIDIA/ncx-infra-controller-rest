@@ -89,8 +89,6 @@ func (skgm *sshkgWorkflowMetadata) DoSiteControllerOP(ctx context.Context,
 		return ManagerAccess.Data.EB.Managers.Carbide.GetClient().Compute().UpdateSSHKeyGroup(ctx, req.(*wflows.UpdateSSHKeyGroupRequest))
 	case activityDelete:
 		return ManagerAccess.Data.EB.Managers.Carbide.GetClient().Compute().DeleteSSHKeyGroup(ctx, req.(*wflows.DeleteSSHKeyGroupRequest))
-	case activityGet:
-		return ManagerAccess.Data.EB.Managers.Carbide.GetClient().Compute().GetSSHKeyGroup(ctx, req.(*wflows.GetSSHKeyGroup))
 	default:
 		panic(fmt.Sprintf("invalid activity type: %v", skgm.activity))
 	}
@@ -106,11 +104,6 @@ func (skgm *sshkgWorkflowMetadata) ActivityInvoke() (act interface{}) {
 		act = sshkgwflowinstance.UpdateSSHKeyGroupActivity
 	case activityDelete:
 		act = sshkgwflowinstance.DeleteSSHKeyGroupActivity
-	case activityGet:
-		act = sshkgwflowinstance.GetSSHKeyGroupActivity
-		// No need for this activity yet
-		// case activityGetList:
-		// 	act = sshkgwflowinstance.CollectSSHKeyGroupListActivity
 	}
 
 	return

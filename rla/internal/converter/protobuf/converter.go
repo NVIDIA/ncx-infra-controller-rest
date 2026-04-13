@@ -182,17 +182,17 @@ func BMCFrom(bi *pb.BMCInfo) (devicetypes.BMCType, *bmc.BMC) {
 		return devicetypes.BMCTypeUnknown, nil
 	}
 
-	var bmc bmc.BMC
+	var b bmc.BMC
 
 	if hwAddr, err := net.ParseMAC(bi.GetMacAddress()); err == nil {
-		bmc.MAC = hwAddr
+		b.MAC = bmc.MACAddress{HardwareAddr: hwAddr}
 	}
 
 	if ip := bi.GetIpAddress(); ip != "" {
-		bmc.IP = net.ParseIP(ip)
+		b.IP = net.ParseIP(ip)
 	}
 
-	return BMCTypeFrom(bi.Type), &bmc
+	return BMCTypeFrom(bi.Type), &b
 }
 
 // BMCsFrom converts a slice of protobuf BMCInfo to the internal BMC map keyed by type.

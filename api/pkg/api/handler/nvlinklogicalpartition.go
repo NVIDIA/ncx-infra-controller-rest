@@ -31,10 +31,6 @@ import (
 	temporalClient "go.temporal.io/sdk/client"
 	tp "go.temporal.io/sdk/temporal"
 
-	validation "github.com/go-ozzo/ozzo-validation/v4"
-	"github.com/google/uuid"
-	"github.com/labstack/echo/v4"
-
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/internal/config"
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/handler/util/common"
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model"
@@ -44,8 +40,11 @@ import (
 	cutil "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/util"
 	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
-	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/paginator"
+	cdbp "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/paginator"
 	swe "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/error"
+	validation "github.com/go-ozzo/ozzo-validation/v4"
+	"github.com/google/uuid"
+	"github.com/labstack/echo/v4"
 
 	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/queue"
@@ -189,7 +188,7 @@ func (cibph CreateNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 			Names:     []string{apiRequest.Name},
 			TenantIDs: []uuid.UUID{orgTenant.ID},
 		},
-		paginator.PageInput{},
+		cdbp.PageInput{},
 		nil,
 	)
 	if err != nil {
@@ -544,6 +543,7 @@ func (gaibph GetAllNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 
 	nvllpDAO := cdbm.NewNVLinkLogicalPartitionDAO(gaibph.dbSession)
 	nvllps, total, err := nvllpDAO.GetAll(
+
 		ctx,
 		nil,
 		cdbm.NVLinkLogicalPartitionFilterInput{
@@ -552,7 +552,7 @@ func (gaibph GetAllNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 			Statuses:    statuses,
 			SearchQuery: searchQuery,
 		},
-		paginator.PageInput{Offset: pageRequest.Offset,
+		cdbp.PageInput{Offset: pageRequest.Offset,
 			Limit:   pageRequest.Limit,
 			OrderBy: pageRequest.OrderBy,
 		},
@@ -571,7 +571,7 @@ func (gaibph GetAllNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	nvlifcMap := map[uuid.UUID][]cdbm.NVLinkInterface{}
 	if includeInterfaces {
 		nvlifcDAO := cdbm.NewNVLinkInterfaceDAO(gaibph.dbSession)
-		dbnvlifcs, _, err := nvlifcDAO.GetAll(ctx, nil, cdbm.NVLinkInterfaceFilterInput{NVLinkLogicalPartitionIDs: nvllpIDs}, paginator.PageInput{}, []string{})
+		dbnvlifcs, _, err := nvlifcDAO.GetAll(ctx, nil, cdbm.NVLinkInterfaceFilterInput{NVLinkLogicalPartitionIDs: nvllpIDs}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, []string{})
 		if err != nil {
 			logger.Error().Err(err).Msg("error retrieving NVLinkInterfaces from DB")
 			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve NVLink Interfaces for NVLink Logical Partitions, DB error", nil)
@@ -586,7 +586,7 @@ func (gaibph GetAllNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	vpcMap := map[uuid.UUID][]cdbm.Vpc{}
 	if includeVpcs {
 		vpcDAO := cdbm.NewVpcDAO(gaibph.dbSession)
-		dbvpc, _, err := vpcDAO.GetAll(ctx, nil, cdbm.VpcFilterInput{NVLinkLogicalPartitionIDs: nvllpIDs}, paginator.PageInput{}, []string{})
+		dbvpc, _, err := vpcDAO.GetAll(ctx, nil, cdbm.VpcFilterInput{NVLinkLogicalPartitionIDs: nvllpIDs}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, []string{})
 		if err != nil {
 			logger.Error().Err(err).Msg("error retrieving VPCs from DB")
 			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve VPCs for NVLink Logical Partitions, DB error", nil)
@@ -813,7 +813,7 @@ func (gibph GetNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	var dbnvlifcs []cdbm.NVLinkInterface
 	if includeInterfaces {
 		nvlifcDAO := cdbm.NewNVLinkInterfaceDAO(gibph.dbSession)
-		dbnvlifcs, _, err = nvlifcDAO.GetAll(ctx, nil, cdbm.NVLinkInterfaceFilterInput{NVLinkLogicalPartitionIDs: []uuid.UUID{nvllp.ID}}, paginator.PageInput{}, []string{})
+		dbnvlifcs, _, err = nvlifcDAO.GetAll(ctx, nil, cdbm.NVLinkInterfaceFilterInput{NVLinkLogicalPartitionIDs: []uuid.UUID{nvllp.ID}}, cdbp.PageInput{}, []string{})
 		if err != nil {
 			logger.Error().Err(err).Msg("error retrieving NVLink Interfaces from DB")
 			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve NVLink Interfaces for NVLink Logical Partition", nil)
@@ -823,7 +823,7 @@ func (gibph GetNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 	var dbvpc []cdbm.Vpc
 	if includeVpcs {
 		vpcDAO := cdbm.NewVpcDAO(gibph.dbSession)
-		dbvpc, _, err = vpcDAO.GetAll(ctx, nil, cdbm.VpcFilterInput{NVLinkLogicalPartitionIDs: []uuid.UUID{nvllp.ID}}, paginator.PageInput{}, []string{})
+		dbvpc, _, err = vpcDAO.GetAll(ctx, nil, cdbm.VpcFilterInput{NVLinkLogicalPartitionIDs: []uuid.UUID{nvllp.ID}}, cdbp.PageInput{}, []string{})
 		if err != nil {
 			logger.Error().Err(err).Msg("error retrieving VPCs from DB")
 			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve VPCs for NVLink Logical Partition", nil)
@@ -1012,7 +1012,7 @@ func (uibph UpdateNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 				Names:     []string{*apiRequest.Name},
 				TenantIDs: []uuid.UUID{orgTenant.ID},
 			},
-			paginator.PageInput{},
+			cdbp.PageInput{},
 			nil,
 		)
 		if serr != nil {
@@ -1246,7 +1246,7 @@ func (dibph DeleteNVLinkLogicalPartitionHandler) Handle(c echo.Context) error {
 		TenantIDs:                 []uuid.UUID{orgTenant.ID},
 		NVLinkLogicalPartitionIDs: []uuid.UUID{nvllpID},
 	}
-	vpcs, _, err := vpcDAO.GetAll(ctx, nil, vpcFilter, paginator.PageInput{}, nil)
+	vpcs, _, err := vpcDAO.GetAll(ctx, nil, vpcFilter, cdbp.PageInput{}, nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving VPCs from DB for NVLink Logical Partition")
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve VPCs for NVLink Logical Partition", nil)

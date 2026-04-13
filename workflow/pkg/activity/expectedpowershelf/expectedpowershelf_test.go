@@ -163,7 +163,7 @@ func TestManageExpectedPowerShelf_UpdateExpectedPowerShelvesInDB(t *testing.T) {
 			ExpectedPowerShelfId: &cwssaws.UUID{Value: pagedExpectedPowerShelves[i].ID.String()},
 			BmcMacAddress:        pagedExpectedPowerShelves[i].BmcMacAddress,
 			ShelfSerialNumber:    pagedExpectedPowerShelves[i].ShelfSerialNumber,
-			IpAddress:            protoIpAddress,
+			BmcIpAddress:         protoIpAddress,
 		}
 
 		// Add labels to controller expected power shelves
@@ -186,7 +186,7 @@ func TestManageExpectedPowerShelf_UpdateExpectedPowerShelvesInDB(t *testing.T) {
 
 		// Test IpAddress updates: change IpAddress for some entries
 		if i == 2 {
-			ctrlExpectedPowerShelf.IpAddress = "192.168.1.100" // Add IP to entry that didn't have one
+			ctrlExpectedPowerShelf.BmcIpAddress = "192.168.1.100" // Add IP to entry that didn't have one
 			expectedPowerShelvesToUpdate = append(expectedPowerShelvesToUpdate, pagedExpectedPowerShelves[i])
 		}
 
@@ -392,7 +392,7 @@ func TestManageExpectedPowerShelf_UpdateExpectedPowerShelvesInDB(t *testing.T) {
 							ExpectedPowerShelfId: &cwssaws.UUID{Value: uuid.New().String()},
 							BmcMacAddress:        "00:11:22:33:44:FF",
 							ShelfSerialNumber:    "SHELF-SN-NEW-1",
-							IpAddress:            "10.0.0.100",
+							BmcIpAddress:         "10.0.0.100",
 							Metadata: &cwssaws.Metadata{
 								Labels: []*cwssaws.Label{
 									{Key: "environment", Value: cdb.GetStrPtr("test")},

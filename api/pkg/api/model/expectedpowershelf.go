@@ -101,35 +101,8 @@ func (epcr *APIExpectedPowerShelfCreateRequest) Validate() error {
 		return err
 	}
 
-	// Labels validation
-	if epcr.Labels != nil {
-		if len(epcr.Labels) > util.LabelCountMax {
-			return validation.Errors{
-				"labels": util.ErrValidationLabelCount,
-			}
-		}
-
-		for key, value := range epcr.Labels {
-			if key == "" {
-				return validation.Errors{
-					"labels": util.ErrValidationLabelKeyEmpty,
-				}
-			}
-
-			// Key validation
-			if len(key) > util.LabelKeyMaxLength {
-				return validation.Errors{
-					"labels": util.ErrValidationLabelKeyLength,
-				}
-			}
-
-			// Value validation
-			if len(value) > util.LabelValueMaxLength {
-				return validation.Errors{
-					"labels": util.ErrValidationLabelValueLength,
-				}
-			}
-		}
+	if err := util.ValidateLabels(epcr.Labels); err != nil {
+		return err
 	}
 
 	return nil
@@ -220,35 +193,8 @@ func (epur *APIExpectedPowerShelfUpdateRequest) Validate() error {
 		return err
 	}
 
-	// Labels validation
-	if epur.Labels != nil {
-		if len(epur.Labels) > util.LabelCountMax {
-			return validation.Errors{
-				"labels": util.ErrValidationLabelCount,
-			}
-		}
-
-		for key, value := range epur.Labels {
-			if key == "" {
-				return validation.Errors{
-					"labels": util.ErrValidationLabelKeyEmpty,
-				}
-			}
-
-			// Key validation
-			if len(key) > util.LabelKeyMaxLength {
-				return validation.Errors{
-					"labels": util.ErrValidationLabelKeyLength,
-				}
-			}
-
-			// Value validation
-			if len(value) > util.LabelValueMaxLength {
-				return validation.Errors{
-					"labels": util.ErrValidationLabelValueLength,
-				}
-			}
-		}
+	if err := util.ValidateLabels(epur.Labels); err != nil {
+		return err
 	}
 
 	return nil

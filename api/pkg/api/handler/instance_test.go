@@ -2954,19 +2954,11 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 			},
 			args: args{
 				reqData: &model.APIInstanceCreateRequest{
-					Name:              "Test Instance",
-					TenantID:          "",
-					InstanceTypeID:    cdb.GetStrPtr(ist1.ID.String()),
-					VpcID:             vpc1.ID.String(),
-					OperatingSystemID: cdb.GetStrPtr(os1.ID.String()),
-					UserData:          nil,
-					Interfaces: []model.APIInterfaceCreateOrUpdateRequest{
-						{
-							SubnetID: cdb.GetStrPtr(subnet1.ID.String()),
-						},
-					},
+					Name:           "Test Instance",
+					TenantID:       "not-a-valid-uuid",
+					InstanceTypeID: cdb.GetStrPtr(ist1.ID.String()),
+					VpcID:          vpc1.ID.String(),
 				},
-				reqMachine:  mc1,
 				reqOrg:      tnOrg,
 				reqUser:     tnu1,
 				respCode:    http.StatusBadRequest,

@@ -23,8 +23,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/carbideapi"
+	pb "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/carbideapi/gen"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor/temporalworkflow/common"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operations"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
@@ -130,6 +132,88 @@ func TestGetFirmwareStatus(t *testing.T) {
 	statuses, err := m.GetFirmwareStatus(context.Background(), target)
 	assert.NoError(t, err)
 	assert.NotNil(t, statuses)
+}
+
+func TestAggregateCarbideStatuses(t *testing.T) {
+	mkStatus := func(compID string, state pb.FirmwareUpdateState, errMsg string) *pb.FirmwareUpdateStatus {
+		return &pb.FirmwareUpdateStatus{
+			Result: &pb.ComponentResult{
+				ComponentId: compID,
+				Error:       errMsg,
+			},
+			State: state,
+		}
+	}
+
+	tests := map[string]struct {
+		statuses      []*pb.FirmwareUpdateStatus
+		expectedState operations.FirmwareUpdateState
+		expectedError string
+	}{
+		"empty returns unknown": {
+			statuses:      nil,
+			expectedState: operations.FirmwareUpdateStateUnknown,
+		},
+		"all completed": {
+			statuses: []*pb.FirmwareUpdateStatus{
+				mkStatus("sw-1", pb.FirmwareUpdateState_FW_STATE_COMPLETED, ""),
+				mkStatus("sw-1", pb.FirmwareUpdateState_FW_STATE_COMPLETED, ""),
+				mkStatus("sw-1", pb.FirmwareUpdateState_FW_STATE_COMPLETED, ""),
+				mkStatus("sw-1", pb.FirmwareUpdateState_FW_STATE_COMPLETED, ""),
+			},
+			expectedState: operations.FirmwareUpdateStateCompleted,
+		},
+		"any failure marks overall failed": {
+			statuses: []*pb.FirmwareUpdateStatus{
+				mkStatus("sw-1", pb.FirmwareUpdateState_FW_STATE_COMPLETED, ""),
+				mkStatus("sw-1", pb.FirmwareUpdateState_FW_STATE_FAILED, "BMC update failed"),
+				mkStatus("sw-1", pb.FirmwareUpdateState_FW_STATE_COMPLETED, ""),
+				mkStatus("sw-1", pb.FirmwareUpdateState_FW_STATE_COMPLETED, ""),
+			},
+			expectedState: operations.FirmwareUpdateStateFailed,
+			expectedError: "BMC update failed",
+		},
+		"last completed but earlier failed still reports failed": {
+			statuses: []*pb.FirmwareUpdateStatus{
+				mkStatus("sw-1", pb.FirmwareUpdateState_FW_STATE_FAILED, "CPLD flash error"),
+				mkStatus("sw-1", pb.FirmwareUpdateState_FW_STATE_COMPLETED, ""),
+			},
+			expectedState: operations.FirmwareUpdateStateFailed,
+			expectedError: "CPLD flash error",
+		},
+		"cancelled treated as failed": {
+			statuses: []*pb.FirmwareUpdateStatus{
+				mkStatus("sw-1", pb.FirmwareUpdateState_FW_STATE_COMPLETED, ""),
+				mkStatus("sw-1", pb.FirmwareUpdateState_FW_STATE_CANCELLED, ""),
+			},
+			expectedState: operations.FirmwareUpdateStateFailed,
+		},
+		"still in progress": {
+			statuses: []*pb.FirmwareUpdateStatus{
+				mkStatus("sw-1", pb.FirmwareUpdateState_FW_STATE_COMPLETED, ""),
+				mkStatus("sw-1", pb.FirmwareUpdateState_FW_STATE_IN_PROGRESS, ""),
+				mkStatus("sw-1", pb.FirmwareUpdateState_FW_STATE_QUEUED, ""),
+			},
+			expectedState: operations.FirmwareUpdateStateQueued,
+		},
+		"single completed": {
+			statuses: []*pb.FirmwareUpdateStatus{
+				mkStatus("sw-1", pb.FirmwareUpdateState_FW_STATE_COMPLETED, ""),
+			},
+			expectedState: operations.FirmwareUpdateStateCompleted,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			result := aggregateCarbideStatuses("sw-1", tc.statuses)
+			require.Equal(t, "sw-1", result.ComponentID)
+			require.Equal(t, tc.expectedState, result.State, "expected state %v, got %v", tc.expectedState, result.State)
+			if tc.expectedError != "" {
+				assert.Contains(t, result.Error, tc.expectedError)
+			}
+		})
+	}
 }
 
 func mustMarshal(t *testing.T, v any) json.RawMessage {

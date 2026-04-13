@@ -55,8 +55,8 @@ RUN VERSION=$(grep -v '^#' /workspace/VERSION | tr -d '[:space:]' 2>/dev/null ||
         -ldflags "-extldflags '-static' -w -s \
                   -X 'github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/metadata.Version=${VERSION}' \
                   -X 'github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/metadata.BuildTime=${BUILD_TIME}'" \
-        -o /app/elektraserver \
-        ./cmd/elektraserver
+        -o /app/mock-core \
+        ./cmd/mock-core
 
 # Final stage
 FROM nvcr.io/nvidia/distroless/go:v3.2.1 AS final
@@ -64,7 +64,7 @@ FROM nvcr.io/nvidia/distroless/go:v3.2.1 AS final
 WORKDIR /app
 
 # Copy binaries from builder
-COPY --from=builder --chown=nvs:nvs /app/elektraserver /app/elektraserver
+COPY --from=builder --chown=nvs:nvs /app/mock-core /app/mock-core
 
 # Switch to non-root user
 USER nvs
@@ -73,5 +73,5 @@ USER nvs
 EXPOSE 11079
 
 # Run the application with default timeout of 0 (infinite)
-ENTRYPOINT ["/app/elektraserver"]
+ENTRYPOINT ["/app/mock-core"]
 CMD ["-tout", "0"]

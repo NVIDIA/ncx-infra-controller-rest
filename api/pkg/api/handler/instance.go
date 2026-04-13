@@ -95,7 +95,7 @@ func (cih CreateInstanceHandler) buildInstanceCreateRequestOsConfig(c echo.Conte
 			RunProvisioningInstructionsOnEveryBoot: *apiRequest.AlwaysBootWithCustomIpxe, // Set by the earlier call to ValidateAndSetOperatingSystemData
 			PhoneHomeEnabled:                       *apiRequest.PhoneHomeEnabled,         // Set by the earlier call to ValidateAndSetOperatingSystemData
 			Variant: &cwssaws.OperatingSystem_Ipxe{
-				Ipxe: &cwssaws.IpxeOperatingSystem{
+				Ipxe: &cwssaws.InlineIpxe{
 					IpxeScript: *apiRequest.IpxeScript,
 				},
 			},
@@ -193,7 +193,7 @@ func (cih CreateInstanceHandler) buildInstanceCreateRequestOsConfig(c echo.Conte
 			RunProvisioningInstructionsOnEveryBoot: *apiRequest.AlwaysBootWithCustomIpxe,
 			PhoneHomeEnabled:                       *apiRequest.PhoneHomeEnabled,
 			Variant: &cwssaws.OperatingSystem_Ipxe{
-				Ipxe: &cwssaws.IpxeOperatingSystem{
+				Ipxe: &cwssaws.InlineIpxe{
 					IpxeScript: *apiRequest.IpxeScript,
 				},
 			},
@@ -324,7 +324,11 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve tenant for org", nil)
 	}
 
-	// verify tenant-id in request, the api validation ensures non-nil tenantID in request
+	// Deprecated: tenantId in request body. Infer from org when not provided.
+	if apiRequest.TenantID == "" {
+		apiRequest.TenantID = tenant.ID.String()
+	}
+
 	apiTenant, err := common.GetTenantFromIDString(ctx, nil, apiRequest.TenantID, cih.dbSession)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error retrieving tenant from request")
@@ -1854,7 +1858,7 @@ func (uih UpdateInstanceHandler) buildInstanceUpdateRequestOsConfig(c echo.Conte
 			RunProvisioningInstructionsOnEveryBoot: instance.AlwaysBootWithCustomIpxe,
 			PhoneHomeEnabled:                       *apiRequest.PhoneHomeEnabled, // Set by the earlier call to ValidateAndSetOperatingSystemData
 			Variant: &cwssaws.OperatingSystem_Ipxe{
-				Ipxe: &cwssaws.IpxeOperatingSystem{
+				Ipxe: &cwssaws.InlineIpxe{
 					IpxeScript: *apiRequest.IpxeScript,
 				},
 			},
@@ -1996,7 +2000,7 @@ func (uih UpdateInstanceHandler) buildInstanceUpdateRequestOsConfig(c echo.Conte
 				RunProvisioningInstructionsOnEveryBoot: alwaysBootWithCustomIpxe,
 				PhoneHomeEnabled:                       phoneHomeEnabled,
 				Variant: &cwssaws.OperatingSystem_Ipxe{
-					Ipxe: &cwssaws.IpxeOperatingSystem{
+					Ipxe: &cwssaws.InlineIpxe{
 						IpxeScript: *ipxeScript,
 					},
 				},
@@ -2019,7 +2023,7 @@ func (uih UpdateInstanceHandler) buildInstanceUpdateRequestOsConfig(c echo.Conte
 		RunProvisioningInstructionsOnEveryBoot: alwaysBootWithCustomIpxe,
 		PhoneHomeEnabled:                       phoneHomeEnabled,
 		Variant: &cwssaws.OperatingSystem_Ipxe{
-			Ipxe: &cwssaws.IpxeOperatingSystem{
+			Ipxe: &cwssaws.InlineIpxe{
 				IpxeScript: *ipxeScript,
 			},
 		},

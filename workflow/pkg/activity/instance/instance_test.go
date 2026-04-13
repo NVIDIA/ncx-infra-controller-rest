@@ -19,6 +19,7 @@ package instance
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"testing"
 	"time"
@@ -31,6 +32,7 @@ import (
 	sc "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/client/site"
 	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/queue"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -793,6 +795,111 @@ func TestManageInstance_DeleteInstanceViaSiteAgent(t *testing.T) {
 			assert.Equal(t, cdbm.InstanceStatusTerminating, tins.Status)
 		})
 	}
+}
+
+func TestManageInstance_deleteInstanceFromDB_removesIBAndNVLinkInterfaces(t *testing.T) {
+	ctx := context.Background()
+
+	dbSession := util.TestInitDB(t)
+	defer dbSession.Close()
+
+	util.TestSetupSchema(t, dbSession)
+
+	ipOrg := "test-provider-org-1"
+	ipRoles := []string{"FORGE_PROVIDER_ADMIN"}
+
+	ipu := util.TestBuildUser(t, dbSession, uuid.New().String(), []string{ipOrg}, ipRoles)
+	ip := util.TestBuildInfrastructureProvider(t, dbSession, "testIP", ipOrg, ipu)
+
+	tnOrg := "test-tenant-org-1"
+	tnRoles := []string{"FORGE_TENANT_ADMIN"}
+
+	tnu := util.TestBuildUser(t, dbSession, uuid.New().String(), []string{tnOrg}, tnRoles)
+	tncfg := cdbm.TenantConfig{
+		EnableSSHAccess: true,
+	}
+	tenant := util.TestBuildTenant(t, dbSession, tnOrg, "Test Tenant", &tncfg, tnu)
+
+	site := util.TestBuildSite(t, dbSession, ip, "testSite", cdbm.SiteStatusPending, nil, ipu)
+	vpc := util.TestBuildVpc(t, dbSession, ip, site, tenant, "testVpc")
+	machine := util.TestBuildMachine(t, dbSession, ip.ID, site.ID, cdb.GetStrPtr("mcTypeTest"), cdb.GetBoolPtr(true), cdbm.MachineStatusReady)
+	allocation := util.TestBuildAllocation(t, dbSession, ip, tenant, site, "testAllocation")
+	instanceType := util.TestBuildInstanceType(t, dbSession, ip, site, "testInstanceType")
+	_ = util.TestBuildAllocationContraints(t, dbSession, allocation, cdbm.AllocationResourceTypeInstanceType, instanceType.ID, cdbm.AllocationConstraintTypeReserved, 5, ipu)
+	operatingSystem := util.TestBuildOperatingSystem(t, dbSession, "testOS")
+
+	isd := cdbm.NewInstanceDAO(dbSession)
+
+	instance, err := isd.Create(
+		ctx, nil,
+		cdbm.InstanceCreateInput{
+			Name:                     "test1",
+			Description:              cdb.GetStrPtr("Test description"),
+			TenantID:                 tenant.ID,
+			InfrastructureProviderID: ip.ID,
+			SiteID:                   site.ID,
+			InstanceTypeID:           &instanceType.ID,
+			VpcID:                    vpc.ID,
+			MachineID:                &machine.ID,
+			Hostname:                 cdb.GetStrPtr("test.com"),
+			OperatingSystemID:        cdb.GetUUIDPtr(operatingSystem.ID),
+			IpxeScript:               cdb.GetStrPtr("ipxe"),
+			AlwaysBootWithCustomIpxe: true,
+			UserData:                 cdb.GetStrPtr("userdata"),
+			Labels:                   map[string]string{},
+			Status:                   cdbm.InstanceStatusTerminating,
+			PowerStatus:              cdb.GetStrPtr(cdbm.InstancePowerStatusBootCompleted),
+			CreatedBy:                tnu.ID,
+		},
+	)
+	require.NoError(t, err)
+
+	ibp := util.TestBuildInfiniBandPartition(t, dbSession, "ibpart", site, tenant, nil, cdbm.InfiniBandPartitionStatusReady, false)
+	nvlp := util.TestBuildNVLinkLogicalPartition(t, dbSession, "nvlp", cdb.GetStrPtr("nvlp"), site, tenant, cdbm.NVLinkLogicalPartitionStatusReady, false)
+
+	ibiDAO := cdbm.NewInfiniBandInterfaceDAO(dbSession)
+	_, err = ibiDAO.Create(ctx, nil, cdbm.InfiniBandInterfaceCreateInput{
+		InstanceID:            instance.ID,
+		SiteID:                site.ID,
+		InfiniBandPartitionID: ibp.ID,
+		Device:                "ib0",
+		DeviceInstance:        0,
+		IsPhysical:            true,
+		Status:                cdbm.InfiniBandInterfaceStatusReady,
+		CreatedBy:             tnu.ID,
+	})
+	require.NoError(t, err)
+
+	nvliDAO := cdbm.NewNVLinkInterfaceDAO(dbSession)
+	_, err = nvliDAO.Create(ctx, nil, cdbm.NVLinkInterfaceCreateInput{
+		InstanceID:               instance.ID,
+		SiteID:                   site.ID,
+		NVLinkLogicalPartitionID: nvlp.ID,
+		DeviceInstance:           0,
+		Status:                   cdbm.NVLinkInterfaceStatusReady,
+		CreatedBy:                tnu.ID,
+	})
+	require.NoError(t, err)
+
+	tx, err := cdb.BeginTx(ctx, dbSession, &sql.TxOptions{})
+	require.NoError(t, err)
+
+	tSiteClientPool := testTemporalSiteClientPool(t)
+	wtc := &tmocks.Client{}
+	cfg := config.GetTestConfig()
+	ms := NewManageInstance(dbSession, tSiteClientPool, wtc, cfg)
+
+	err = ms.deleteInstanceFromDB(ctx, tx, instance, zerolog.Nop())
+	require.NoError(t, err)
+	require.NoError(t, tx.Commit())
+
+	ibis, _, err := ibiDAO.GetAll(ctx, nil, cdbm.InfiniBandInterfaceFilterInput{InstanceIDs: []uuid.UUID{instance.ID}}, paginator.PageInput{Limit: cdb.GetIntPtr(paginator.TotalLimit)}, nil)
+	require.NoError(t, err)
+	require.Empty(t, ibis)
+
+	nvlis, _, err := nvliDAO.GetAll(ctx, nil, cdbm.NVLinkInterfaceFilterInput{InstanceIDs: []uuid.UUID{instance.ID}}, paginator.PageInput{Limit: cdb.GetIntPtr(paginator.TotalLimit)}, nil)
+	require.NoError(t, err)
+	require.Empty(t, nvlis)
 }
 
 func TestManageInstance_UpdateInstanceInDB(t *testing.T) {
