@@ -15168,7 +15168,7 @@ components:
             format: uuid
         allowUnhealthyMachine:
           type: boolean
-          description: Must be set to true creating a targeted Instance with a Machine that is in Error status. Requires Targeted Instance Creation capability enabled for Tenant
+          description: Set to true in order to target Machines are in maintenance or have health alerts preventing regular provision flow. Requires Targeted Instance Creation capability enabled for Tenant
       required:
         - name
         - tenantId

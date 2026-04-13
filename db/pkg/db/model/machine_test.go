@@ -2228,3 +2228,36 @@ func TestMachineSQLDAO_UpdateMultiple_AllFields(t *testing.T) {
 	assert.Equal(t, map[string]string{"env": "prod", "team": "infra"}, updated.Labels, "Labels not updated")
 	assert.True(t, updated.IsMissingOnSite, "IsMissingOnSite not updated")
 }
+
+func TestControllerStateFromString(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{"empty", "", ""},
+		{"trim_no_brace", "  Ready/InUse  ", "Ready/InUse"},
+		{"prefix_before_json", `Ready { "k": 1 }`, "Ready"},
+		{"first_brace_only", "A{B", "A"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, ControllerStateFromString(tt.in))
+		})
+	}
+}
+
+func TestMachine_GetControllerState(t *testing.T) {
+	t.Parallel()
+	var nilMachine *Machine
+	assert.Equal(t, "", nilMachine.GetControllerState())
+
+	mNoMeta := &Machine{Metadata: nil}
+	assert.Equal(t, "", mNoMeta.GetControllerState())
+
+	meta := &SiteControllerMachine{Machine: &cwssaws.Machine{State: `Ready { "x": 1 }`}}
+	m := &Machine{Metadata: meta}
+	assert.Equal(t, "Ready", m.GetControllerState())
+	assert.Equal(t, "Ready", meta.GetControllerState())
+}
