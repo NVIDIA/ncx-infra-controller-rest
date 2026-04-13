@@ -46,16 +46,16 @@ type actionExecutor func(actx actionExecutionContext) error
 
 // actionExecutorRegistry maps action names to their executor functions
 var actionExecutorRegistry = map[string]actionExecutor{
-	operationrules.ActionSleep:              executeSleepAction,
-	operationrules.ActionPowerControl:       executePowerControlAction,
-	operationrules.ActionVerifyPowerStatus:  executeVerifyPowerStatusAction,
-	operationrules.ActionVerifyReachability: executeVerifyReachabilityAction,
-	operationrules.ActionGetPowerStatus:     executeGetPowerStatusAction,
-	operationrules.ActionFirmwareControl:    executeFirmwareControlAction,
-	operationrules.ActionBringUpControl:             executeBringUpControlAction,
-	operationrules.ActionWaitBringUp:                executeWaitBringUpAction,
-	operationrules.ActionInjectExpectation:          executeInjectExpectationAction,
-	operationrules.ActionVerifyFirmwareConsistency:  executeVerifyFirmwareConsistencyAction,
+	operationrules.ActionSleep:                     executeSleepAction,
+	operationrules.ActionPowerControl:              executePowerControlAction,
+	operationrules.ActionVerifyPowerStatus:         executeVerifyPowerStatusAction,
+	operationrules.ActionVerifyReachability:        executeVerifyReachabilityAction,
+	operationrules.ActionGetPowerStatus:            executeGetPowerStatusAction,
+	operationrules.ActionFirmwareControl:           executeFirmwareControlAction,
+	operationrules.ActionBringUpControl:            executeBringUpControlAction,
+	operationrules.ActionWaitBringUp:               executeWaitBringUpAction,
+	operationrules.ActionInjectExpectation:         executeInjectExpectationAction,
+	operationrules.ActionVerifyFirmwareConsistency: executeVerifyFirmwareConsistencyAction,
 }
 
 // executeActionList executes a list of actions sequentially

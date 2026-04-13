@@ -33,14 +33,14 @@ const CurrentRuleDefinitionVersion = "v1"
 
 // Action names used in YAML configuration (executor-agnostic)
 const (
-	ActionSleep                 = "Sleep"
-	ActionPowerControl          = "PowerControl"
-	ActionVerifyPowerStatus     = "VerifyPowerStatus"
-	ActionVerifyReachability    = "VerifyReachability"
-	ActionGetPowerStatus        = "GetPowerStatus"
-	ActionFirmwareControl              = "FirmwareControl"
-	ActionVerifyFirmwareVersion        = "VerifyFirmwareVersion"
-	ActionVerifyFirmwareConsistency    = "VerifyFirmwareConsistency"
+	ActionSleep                     = "Sleep"
+	ActionPowerControl              = "PowerControl"
+	ActionVerifyPowerStatus         = "VerifyPowerStatus"
+	ActionVerifyReachability        = "VerifyReachability"
+	ActionGetPowerStatus            = "GetPowerStatus"
+	ActionFirmwareControl           = "FirmwareControl"
+	ActionVerifyFirmwareVersion     = "VerifyFirmwareVersion"
+	ActionVerifyFirmwareConsistency = "VerifyFirmwareConsistency"
 
 	// Bring-up specific actions
 	ActionBringUpControl    = "BringUpControl"
