@@ -2229,7 +2229,7 @@ func TestMachineSQLDAO_UpdateMultiple_AllFields(t *testing.T) {
 	assert.True(t, updated.IsMissingOnSite, "IsMissingOnSite not updated")
 }
 
-func TestControllerStateFromString(t *testing.T) {
+func TestSiteControllerMachine_GetNormalizedState(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name string
@@ -2243,7 +2243,9 @@ func TestControllerStateFromString(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, ControllerStateFromString(tt.in))
+
+			scm := SiteControllerMachine{Machine: &cwssaws.Machine{State: tt.in}}
+			assert.Equal(t, tt.want, scm.GetNormalizedState())
 		})
 	}
 }
@@ -2256,8 +2258,8 @@ func TestMachine_GetControllerState(t *testing.T) {
 	mNoMeta := &Machine{Metadata: nil}
 	assert.Equal(t, "", mNoMeta.GetControllerState())
 
-	meta := &SiteControllerMachine{Machine: &cwssaws.Machine{State: `Ready { "x": 1 }`}}
-	m := &Machine{Metadata: meta}
-	assert.Equal(t, "Ready", m.GetControllerState())
-	assert.Equal(t, "Ready", meta.GetControllerState())
+	scm := &SiteControllerMachine{Machine: &cwssaws.Machine{State: `Ready { "x": 1 }`}}
+	mMeta := &Machine{Metadata: scm}
+	assert.Equal(t, "Ready", mMeta.GetControllerState())
+	assert.Equal(t, "Ready", scm.GetNormalizedState())
 }

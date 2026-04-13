@@ -110,35 +110,21 @@ func (s *SiteControllerMachine) MarshalJSON() ([]byte, error) {
 	return protojson.Marshal(s)
 }
 
-// ControllerStateFromString returns the controller machine state prefix before optional JSON substate
-// (text before the first '{' character), trimmed. When the state has no embedded JSON, the full
-// trimmed string is returned.
-func ControllerStateFromString(state string) string {
-	if state == "" {
-		return ""
-	}
-	if strings.Contains(state, "{") {
-		return strings.TrimSpace(strings.Split(state, "{")[0])
-	}
-	return strings.TrimSpace(state)
-}
-
-// GetControllerState returns the normalized controller state from Site Controller metadata, or empty
-// when metadata is nil or the embedded controller machine is missing.
-func (s *SiteControllerMachine) GetControllerState() string {
+// GetNormalizedState returns the normalized state for the embedded controller machine
+// When non-empty, the controller machine state prefix without the JSON state suffix (`{...}`) is returned, otherwise the full state is returned
+// The returned state is empty when nil or the embedded controller machine is missing
+func (s *SiteControllerMachine) GetNormalizedState() string {
 	if s == nil || s.Machine == nil {
 		return ""
 	}
-	return ControllerStateFromString(s.State)
-}
 
-// GetControllerState returns the normalized controller state from Machine metadata, or empty when
-// metadata is nil.
-func (m *Machine) GetControllerState() string {
-	if m == nil || m.Metadata == nil {
-		return ""
+	controllerState := s.State
+
+	if strings.Contains(controllerState, "{") {
+		controllerState = strings.Split(controllerState, "{")[0]
 	}
-	return m.Metadata.GetControllerState()
+
+	return strings.TrimSpace(controllerState)
 }
 
 // Machine is the baremetal server that sits in the datacenter
@@ -177,6 +163,16 @@ type Machine struct {
 	Created              time.Time              `bun:"created,nullzero,notnull,default:current_timestamp"`
 	Updated              time.Time              `bun:"updated,nullzero,notnull,default:current_timestamp"`
 	Deleted              *time.Time             `bun:"deleted,soft_delete"`
+}
+
+// GetControllerState returns the normalized controller state from Machine metadata, or empty when
+// metadata is nil.
+func (m *Machine) GetControllerState() string {
+	if m == nil || m.Metadata == nil {
+		return ""
+	}
+
+	return m.Metadata.GetNormalizedState()
 }
 
 // MachineCreateInput input parameters for Create method

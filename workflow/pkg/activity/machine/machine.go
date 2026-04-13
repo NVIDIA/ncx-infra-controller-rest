@@ -932,7 +932,8 @@ func getForgeMachineStatus(controllerMachine *cwssaws.Machine, logger zerolog.Lo
 	}
 
 	// Parse state to get prefix and substate
-	controllerMachineBaseState := cdbm.ControllerStateFromString(controllerMachine.State)
+	controllerMachineWrapped := &cdbm.SiteControllerMachine{Machine: controllerMachine}
+	controllerMachineBaseState := controllerMachineWrapped.GetNormalizedState()
 
 	controllerMachineStateComps := strings.Split(controllerMachineBaseState, "/")
 	controllerMachineStatePrefix := controllerMachineStateComps[0]
