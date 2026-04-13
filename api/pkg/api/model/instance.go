@@ -393,14 +393,15 @@ type APIInstanceCreateRequest struct {
 	NetworkSecurityGroupID *string `json:"networkSecurityGroupId"`
 	// MachineID is the ID of the Machine. Only MachineID or InstanceTypeID can be present
 	MachineID *string `json:"machineId"`
-	// AllowUnhealthyMachine is the flag to allow unhealthy machine when requesting s specific Machine ID
+	// AllowUnhealthyMachine is a flag that can be used to target Machines are in maintenance or have health alerts preventing regular provision flow.
 	AllowUnhealthyMachine *bool `json:"allowUnhealthyMachine"`
 }
 
 // APIBatchInstanceCreateRequest is the data structure to capture request to create multiple instances in a single request
 // with rack-aware allocation logic to place instances on the same rack when possible
 type APIBatchInstanceCreateRequest struct {
-	// NamePrefix is the prefix for instance names (e.g., "worker" will create "worker-1", "worker-2", etc.)
+	// NamePrefix is the prefix for instance names (e.g., "worker" will create "worker-1", "worker-2",
+	// etc.)
 	NamePrefix string `json:"namePrefix"`
 	// Count is the number of instances to create
 	Count int `json:"count"`

@@ -832,9 +832,9 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Machine specified in request does not belong to Site: %s", site.Name), nil)
 		}
 
-		// Validate Machine availability. Note: allowUnhealthyMachine also bypasses
-		// the Ready status check, not just health - consider renaming the parameter later.
-		allowUnhealthyMachine := false
+		// Propagate allowUnhealthyMachine to the site workflow; API still requires the
+		// machine to be Ready before instance creation proceeds.
+		allowUnhealthyMachine = false
 		if apiRequest.AllowUnhealthyMachine != nil {
 			allowUnhealthyMachine = *apiRequest.AllowUnhealthyMachine
 		}
@@ -851,10 +851,41 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Machine: %s is assigned to an Instance, cannot be used for new Instance", machine.ID), nil)
 		}
 
-		// Check Machine health status unless allowUnhealthyMachine is true
-		if !allowUnhealthyMachine && machine.Status != cdbm.MachineStatusReady {
-			logger.Warn().Str("MachineID", machine.ID).Bool("AllowUnhealthyMachine", allowUnhealthyMachine).Msg("Machine is not ready, cannot be used for new Instance")
-			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Machine: %s has status: %s, set `allowUnhealthyMachine` to true in request data to proceed", machine.ID, machine.Status), nil)
+		// Check if it's possible to provision the Machine
+		if machine.Status == cdbm.MachineStatusReady {
+			logger.Info().Str("MachineID", machine.ID).Str("Status", machine.Status).Bool("AllowUnhealthyMachine", allowUnhealthyMachine).Msg("Machine is Ready, proceeding with Instance creation")
+		} else {
+			isProvisionable := false
+
+			// Get the controller state from the machine
+			controllerState := machine.GetControllerState()
+			if strings.HasPrefix(controllerState, cdbm.MachineStatusReady) {
+				isProvisionable = true
+			}
+
+			mlogger := logger.With().Str("MachineID", machine.ID).Str("Status", machine.Status).Str("ControllerState", controllerState).Bool("AllowUnhealthyMachine", allowUnhealthyMachine).Logger()
+
+			if allowUnhealthyMachine {
+				if isProvisionable {
+					mlogger.Info().Msg("Machine is provisionable, proceeding with Instance creation")
+				} else {
+					if machine.Status == cdbm.MachineStatusMaintenance || machine.Status == cdbm.MachineStatusError {
+						mlogger.Warn().Msg("Machine has controller state that does not allow Instance creation")
+						return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Machine: %s has controller state: %s that does not allow Instance creation even with `allowUnhealthyMachine` set to true", machine.ID, controllerState), nil)
+					} else {
+						mlogger.Warn().Msg("Machine has status that does not allow Instance creation")
+						return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Machine: %s has status: %s that does not allow Instance creation even with `allowUnhealthyMachine` set to true", machine.ID, machine.Status), nil)
+					}
+				}
+			} else {
+				if isProvisionable {
+					mlogger.Warn().Msg("Machine is not in Ready state, but it can be provisioned by setting `allowUnhealthyMachine` to true in request")
+					return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Machine: %s is not in Ready state, but it can be provisioned by setting `allowUnhealthyMachine` to true in request", machine.ID), nil)
+				} else {
+					mlogger.Warn().Msg("Machine has status that does not allow Instance creation")
+					return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Machine: %s has status: %s that does not allow Instance creation", machine.ID, machine.Status), nil)
+				}
+			}
 		}
 
 		// Acquire a lock on the MachineID
@@ -1002,8 +1033,6 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 	} // if apiRequest.InstanceTypeID != nil
 
 	// NOTE: At this stage, we have a Machine ID whether it was provided in request or selected through Instance Type
-
-	// ==================== Step 5: Machine Capability Validation  ====================
 
 	mcDAO := cdbm.NewMachineCapabilityDAO(cih.dbSession)
 
@@ -1233,7 +1262,7 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 		}
 	}
 
-	// ==================== Step 6: Create Instance Records  ====================
+	// ==================== Step 5: Create Instance Records  ====================
 
 	instanceCreateInput := cdbm.InstanceCreateInput{
 		Name:                     apiRequest.Name,
@@ -1507,7 +1536,7 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to get new Status Detail for Instance", nil)
 	}
 
-	// ==================== Step 7: Workflow Trigger  ====================
+	// ==================== Step 6: Workflow Trigger  ====================
 
 	// Get the temporal client for the site we are working with.
 	stc, err := cih.scp.GetClientByID(instance.SiteID)
@@ -1619,7 +1648,7 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 
 	logger.Info().Str("Workflow ID", wid).Msg("completed synchronous create Instance workflow")
 
-	// ==================== Step 8: Commit & Response ====================
+	// ==================== Step 7: Commit & Response ====================
 
 	// Commit the DB transaction after the synchronous workflow has completed without error
 	err = tx.Commit()
