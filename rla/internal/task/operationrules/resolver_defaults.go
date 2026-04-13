@@ -262,11 +262,14 @@ func buildPowerOffRule() *OperationRule {
 	}
 }
 
-// buildRestartRule creates the hardcoded default rule for restart operations
+// buildRestartRule creates the hardcoded default rule for graceful restart.
+// Each stage explicitly specifies the power operation to avoid inheriting the
+// composite "restart" operation from the task context (which would send
+// BMC GRACEFUL_RESTART — an atomic off→on — instead of separate off/on).
 func buildRestartRule() *OperationRule {
 	return &OperationRule{
 		Name:          "Hardcoded Default Restart",
-		Description:   "Composite rule: power off all components then power on",
+		Description:   "Composite rule: graceful power off all components then power on",
 		OperationType: common.TaskTypePowerControl,
 		OperationCode: SequenceRestart,
 		RuleDefinition: RuleDefinition{
@@ -276,7 +279,7 @@ func buildRestartRule() *OperationRule {
 				{
 					ComponentType: devicetypes.ComponentTypeCompute,
 					Stage:         1,
-					MaxParallel:   0, // All components together (legacy behavior)
+					MaxParallel:   0,
 					Timeout:       20 * time.Minute,
 					RetryPolicy: &RetryPolicy{
 						MaxAttempts:        3,
@@ -285,10 +288,12 @@ func buildRestartRule() *OperationRule {
 					},
 					MainOperation: ActionConfig{
 						Name: ActionPowerControl,
+						Parameters: map[string]any{
+							ParamOperation: "power_off",
+						},
 					},
 					PostOperation: []ActionConfig{
 						{
-							// Verify power status after operation
 							Name:         ActionVerifyPowerStatus,
 							Timeout:      3 * time.Minute,
 							PollInterval: 10 * time.Second,
@@ -301,7 +306,7 @@ func buildRestartRule() *OperationRule {
 				{
 					ComponentType: devicetypes.ComponentTypeNVLSwitch,
 					Stage:         2,
-					MaxParallel:   0, // All components together (legacy behavior)
+					MaxParallel:   0,
 					Timeout:       15 * time.Minute,
 					RetryPolicy: &RetryPolicy{
 						MaxAttempts:        3,
@@ -310,10 +315,12 @@ func buildRestartRule() *OperationRule {
 					},
 					MainOperation: ActionConfig{
 						Name: ActionPowerControl,
+						Parameters: map[string]any{
+							ParamOperation: "power_off",
+						},
 					},
 					PostOperation: []ActionConfig{
 						{
-							// Verify power status after operation
 							Name:         ActionVerifyPowerStatus,
 							Timeout:      3 * time.Minute,
 							PollInterval: 10 * time.Second,
@@ -326,7 +333,7 @@ func buildRestartRule() *OperationRule {
 				{
 					ComponentType: devicetypes.ComponentTypePowerShelf,
 					Stage:         3,
-					MaxParallel:   0, // All components together (legacy behavior)
+					MaxParallel:   0,
 					Timeout:       10 * time.Minute,
 					RetryPolicy: &RetryPolicy{
 						MaxAttempts:        3,
@@ -335,10 +342,12 @@ func buildRestartRule() *OperationRule {
 					},
 					MainOperation: ActionConfig{
 						Name: ActionPowerControl,
+						Parameters: map[string]any{
+							ParamOperation: "power_off",
+						},
 					},
 					PostOperation: []ActionConfig{
 						{
-							// Verify power status after operation
 							Name:         ActionVerifyPowerStatus,
 							Timeout:      3 * time.Minute,
 							PollInterval: 10 * time.Second,
@@ -352,7 +361,7 @@ func buildRestartRule() *OperationRule {
 				{
 					ComponentType: devicetypes.ComponentTypePowerShelf,
 					Stage:         4,
-					MaxParallel:   0, // All components together (legacy behavior)
+					MaxParallel:   0,
 					Timeout:       10 * time.Minute,
 					RetryPolicy: &RetryPolicy{
 						MaxAttempts:        3,
@@ -361,10 +370,12 @@ func buildRestartRule() *OperationRule {
 					},
 					MainOperation: ActionConfig{
 						Name: ActionPowerControl,
+						Parameters: map[string]any{
+							ParamOperation: "power_on",
+						},
 					},
 					PostOperation: []ActionConfig{
 						{
-							// Verify power status after operation
 							Name:         ActionVerifyPowerStatus,
 							Timeout:      3 * time.Minute,
 							PollInterval: 10 * time.Second,
@@ -373,8 +384,6 @@ func buildRestartRule() *OperationRule {
 							},
 						},
 						{
-							// Wait for downstream components to become
-							// reachable
 							Name:         ActionVerifyReachability,
 							Timeout:      3 * time.Minute,
 							PollInterval: 10 * time.Second,
@@ -390,7 +399,7 @@ func buildRestartRule() *OperationRule {
 				{
 					ComponentType: devicetypes.ComponentTypeNVLSwitch,
 					Stage:         5,
-					MaxParallel:   0, // All components together (legacy behavior)
+					MaxParallel:   0,
 					Timeout:       15 * time.Minute,
 					RetryPolicy: &RetryPolicy{
 						MaxAttempts:        3,
@@ -399,10 +408,12 @@ func buildRestartRule() *OperationRule {
 					},
 					MainOperation: ActionConfig{
 						Name: ActionPowerControl,
+						Parameters: map[string]any{
+							ParamOperation: "power_on",
+						},
 					},
 					PostOperation: []ActionConfig{
 						{
-							// Verify power status after operation
 							Name:         ActionVerifyPowerStatus,
 							Timeout:      3 * time.Minute,
 							PollInterval: 10 * time.Second,
@@ -415,7 +426,7 @@ func buildRestartRule() *OperationRule {
 				{
 					ComponentType: devicetypes.ComponentTypeCompute,
 					Stage:         6,
-					MaxParallel:   0, // All components together (legacy behavior)
+					MaxParallel:   0,
 					Timeout:       20 * time.Minute,
 					RetryPolicy: &RetryPolicy{
 						MaxAttempts:        3,
@@ -424,10 +435,12 @@ func buildRestartRule() *OperationRule {
 					},
 					MainOperation: ActionConfig{
 						Name: ActionPowerControl,
+						Parameters: map[string]any{
+							ParamOperation: "power_on",
+						},
 					},
 					PostOperation: []ActionConfig{
 						{
-							// Verify power status after operation
 							Name:         ActionVerifyPowerStatus,
 							Timeout:      3 * time.Minute,
 							PollInterval: 10 * time.Second,
@@ -987,18 +1000,21 @@ func buildIngestRule() *OperationRule {
 	}
 }
 
-// buildForceRestartRule creates the hardcoded default rule for
-// forced restart operations (no verification)
+// buildForceRestartRule creates the hardcoded default rule for forced restart
+// operations. Skips per-stage verification for speed but verifies the "off"
+// state before proceeding to power on, ensuring a real power cycle occurs.
 func buildForceRestartRule() *OperationRule {
 	return &OperationRule{
 		Name:          "Hardcoded Default Force Restart",
-		Description:   "Forced restart: power off then on (no verification)",
+		Description:   "Forced restart: power off, verify off, then power on",
 		OperationType: common.TaskTypePowerControl,
 		OperationCode: SequenceForceRestart,
 		RuleDefinition: RuleDefinition{
 			Version: CurrentRuleDefinitionVersion,
 			Steps: []SequenceStep{
 				// === Power Off Sequence (Stages 1-3) ===
+				// Explicit force_power_off to avoid sending BMC FORCE_RESTART
+				// (which is an atomic off→on cycle, not just off).
 				{
 					ComponentType: devicetypes.ComponentTypeCompute,
 					Stage:         1,
@@ -1011,6 +1027,9 @@ func buildForceRestartRule() *OperationRule {
 					},
 					MainOperation: ActionConfig{
 						Name: ActionPowerControl,
+						Parameters: map[string]any{
+							ParamOperation: "force_power_off",
+						},
 					},
 					PostOperation: []ActionConfig{
 						{
@@ -1033,6 +1052,9 @@ func buildForceRestartRule() *OperationRule {
 					},
 					MainOperation: ActionConfig{
 						Name: ActionPowerControl,
+						Parameters: map[string]any{
+							ParamOperation: "force_power_off",
+						},
 					},
 					PostOperation: []ActionConfig{
 						{
@@ -1055,10 +1077,12 @@ func buildForceRestartRule() *OperationRule {
 					},
 					MainOperation: ActionConfig{
 						Name: ActionPowerControl,
+						Parameters: map[string]any{
+							ParamOperation: "force_power_off",
+						},
 					},
 					PostOperation: []ActionConfig{
 						{
-							// Brief pause between off and on
 							Name: ActionSleep,
 							Parameters: map[string]any{
 								ParamDuration: 5 * time.Second,
@@ -1066,10 +1090,72 @@ func buildForceRestartRule() *OperationRule {
 						},
 					},
 				},
-				// === Power On Sequence (Stages 4-6) ===
+				// === Verify Off Stage (Stage 4) ===
+				// Confirm all components are actually off before powering
+				// back on. Without this, a silent power-off failure would
+				// result in a "successful restart" that never power-cycled.
 				{
 					ComponentType: devicetypes.ComponentTypePowerShelf,
 					Stage:         4,
+					MaxParallel:   0,
+					Timeout:       2 * time.Minute,
+					RetryPolicy: &RetryPolicy{
+						MaxAttempts:        2,
+						InitialInterval:    5 * time.Second,
+						BackoffCoefficient: 1.5,
+					},
+					MainOperation: ActionConfig{
+						Name:         ActionVerifyPowerStatus,
+						Timeout:      1 * time.Minute,
+						PollInterval: 5 * time.Second,
+						Parameters: map[string]any{
+							ParamExpectedStatus: "off",
+						},
+					},
+				},
+				{
+					ComponentType: devicetypes.ComponentTypeNVLSwitch,
+					Stage:         4, // Parallel with PowerShelf
+					MaxParallel:   0,
+					Timeout:       2 * time.Minute,
+					RetryPolicy: &RetryPolicy{
+						MaxAttempts:        2,
+						InitialInterval:    5 * time.Second,
+						BackoffCoefficient: 1.5,
+					},
+					MainOperation: ActionConfig{
+						Name:         ActionVerifyPowerStatus,
+						Timeout:      1 * time.Minute,
+						PollInterval: 5 * time.Second,
+						Parameters: map[string]any{
+							ParamExpectedStatus: "off",
+						},
+					},
+				},
+				{
+					ComponentType: devicetypes.ComponentTypeCompute,
+					Stage:         4, // Parallel with others
+					MaxParallel:   0,
+					Timeout:       2 * time.Minute,
+					RetryPolicy: &RetryPolicy{
+						MaxAttempts:        2,
+						InitialInterval:    5 * time.Second,
+						BackoffCoefficient: 1.5,
+					},
+					MainOperation: ActionConfig{
+						Name:         ActionVerifyPowerStatus,
+						Timeout:      1 * time.Minute,
+						PollInterval: 5 * time.Second,
+						Parameters: map[string]any{
+							ParamExpectedStatus: "off",
+						},
+					},
+				},
+				// === Power On Sequence (Stages 5-7) ===
+				// Explicit force_power_on to match the force semantics.
+				{
+					ComponentType: devicetypes.ComponentTypePowerShelf,
+					Stage:         5,
 					MaxParallel:   0,
 					Timeout:       10 * time.Minute,
 					RetryPolicy: &RetryPolicy{
@@ -1079,6 +1165,9 @@ func buildForceRestartRule() *OperationRule {
 					},
 					MainOperation: ActionConfig{
 						Name: ActionPowerControl,
+						Parameters: map[string]any{
+							ParamOperation: "force_power_on",
+						},
 					},
 					PostOperation: []ActionConfig{
 						{
@@ -1091,7 +1180,7 @@ func buildForceRestartRule() *OperationRule {
 				},
 				{
 					ComponentType: devicetypes.ComponentTypeNVLSwitch,
-					Stage:         5,
+					Stage:         6,
 					MaxParallel:   0,
 					Timeout:       15 * time.Minute,
 					RetryPolicy: &RetryPolicy{
@@ -1101,6 +1190,9 @@ func buildForceRestartRule() *OperationRule {
 					},
 					MainOperation: ActionConfig{
 						Name: ActionPowerControl,
+						Parameters: map[string]any{
+							ParamOperation: "force_power_on",
+						},
 					},
 					PostOperation: []ActionConfig{
 						{
@@ -1113,7 +1205,7 @@ func buildForceRestartRule() *OperationRule {
 				},
 				{
 					ComponentType: devicetypes.ComponentTypeCompute,
-					Stage:         6,
+					Stage:         7,
 					MaxParallel:   0,
 					Timeout:       20 * time.Minute,
 					RetryPolicy: &RetryPolicy{
@@ -1123,10 +1215,12 @@ func buildForceRestartRule() *OperationRule {
 					},
 					MainOperation: ActionConfig{
 						Name: ActionPowerControl,
+						Parameters: map[string]any{
+							ParamOperation: "force_power_on",
+						},
 					},
 					PostOperation: []ActionConfig{
 						{
-							// Brief settle time before final verification
 							Name: ActionSleep,
 							Parameters: map[string]any{
 								ParamDuration: 10 * time.Second,
@@ -1134,11 +1228,11 @@ func buildForceRestartRule() *OperationRule {
 						},
 					},
 				},
-				// === Final Verification Stage (Stage 7) ===
-				// Verify all components in parallel
+				// === Final Verification Stage (Stage 8) ===
+				// Verify all components are back on
 				{
 					ComponentType: devicetypes.ComponentTypePowerShelf,
-					Stage:         7,
+					Stage:         8,
 					MaxParallel:   0,
 					Timeout:       2 * time.Minute,
 					RetryPolicy: &RetryPolicy{
@@ -1157,7 +1251,7 @@ func buildForceRestartRule() *OperationRule {
 				},
 				{
 					ComponentType: devicetypes.ComponentTypeNVLSwitch,
-					Stage:         7, // Parallel with PowerShelf
+					Stage:         8, // Parallel with PowerShelf
 					MaxParallel:   0,
 					Timeout:       2 * time.Minute,
 					RetryPolicy: &RetryPolicy{
@@ -1176,7 +1270,7 @@ func buildForceRestartRule() *OperationRule {
 				},
 				{
 					ComponentType: devicetypes.ComponentTypeCompute,
-					Stage:         7, // Parallel with others
+					Stage:         8, // Parallel with others
 					MaxParallel:   0,
 					Timeout:       2 * time.Minute,
 					RetryPolicy: &RetryPolicy{

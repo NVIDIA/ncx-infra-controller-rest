@@ -2,6 +2,7 @@ package ipam
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"strings"
@@ -9,6 +10,15 @@ import (
 
 	redigo "github.com/redis/go-redis/v9"
 )
+
+// RedisConfig holds connection parameters for a Redis-backed IPAM storage.
+type RedisConfig struct {
+	IP        string
+	Port      string
+	Username  string
+	Password  string
+	TLSConfig *tls.Config
+}
 
 const namespaceKey = "namespaces"
 
@@ -20,18 +30,28 @@ type redis struct {
 
 // NewRedis create a redis storage for ipam
 func NewRedis(ctx context.Context, ip, port string) (Storage, error) {
-	return newRedis(ctx, ip, port)
+	return NewRedisFromConfig(ctx, RedisConfig{IP: ip, Port: port})
 }
+
+// NewRedisFromConfig creates a redis storage with full connection options
+// including optional authentication and TLS.
+func NewRedisFromConfig(ctx context.Context, cfg RedisConfig) (Storage, error) {
+	return newRedisFromConfig(ctx, cfg)
+}
+
 func (r *redis) Name() string {
 	return "redis"
 }
 
-func newRedis(ctx context.Context, ip, port string) (*redis, error) {
-	rdb := redigo.NewClient(&redigo.Options{
-		Addr:     fmt.Sprintf("%s:%s", ip, port),
-		Password: "", // no password set
-		DB:       0,  // use default DB
-	})
+func newRedisFromConfig(ctx context.Context, cfg RedisConfig) (*redis, error) {
+	opts := &redigo.Options{
+		Addr:      fmt.Sprintf("%s:%s", cfg.IP, cfg.Port),
+		Username:  cfg.Username,
+		Password:  cfg.Password,
+		DB:        0,
+		TLSConfig: cfg.TLSConfig,
+	}
+	rdb := redigo.NewClient(opts)
 
 	r := &redis{
 		rdb:        rdb,

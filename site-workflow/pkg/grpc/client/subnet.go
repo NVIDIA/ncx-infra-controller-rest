@@ -23,9 +23,6 @@ import (
 	"fmt"
 	"os"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	"net"
 
 	wflows "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
@@ -52,11 +49,9 @@ var (
 // SubnetInterface Subnet Interface
 type SubnetInterface interface {
 	CreateNetworkSegment(ctx context.Context, request *wflows.CreateSubnetRequest) (response *wflows.NetworkSegment, err error)
-	// DEPRECATED: use GetAllNetworkSegments or GetNetworkSegment instead
-	GetNetworkSegmentDeprecated(ctx context.Context, ID *wflows.UUID) (response *wflows.NetworkSegmentList, err error)
 	DeleteNetworkSegment(ctx context.Context, request *wflows.DeleteSubnetRequest) (response *wflows.NetworkSegmentDeletionResult, err error)
+
 	GetAllNetworkSegments(ctx context.Context, request *wflows.NetworkSegmentSearchFilter, pageSize int) (response *wflows.NetworkSegmentList, err error)
-	GetNetworkSegment(ctx context.Context, request *wflows.UUID) (response *wflows.NetworkSegment, err error)
 	FindNetworkSegmentIds(ctx context.Context, request *wflows.NetworkSegmentSearchFilter) (response *wflows.NetworkSegmentIdList, err error)
 	FindNetworkSegmentsByIds(ctx context.Context, request *wflows.NetworkSegmentsByIdsRequest) (response *wflows.NetworkSegmentList, err error)
 
@@ -122,22 +117,6 @@ func (sub *network) CreateNetworkSegment(ctx context.Context, request *wflows.Cr
 	return response, err
 }
 
-// DEPRECATED: use GetAllNetworkSegments instead
-func (sub *network) GetNetworkSegmentDeprecated(ctx context.Context, id *wflows.UUID) (response *wflows.NetworkSegmentList, err error) {
-	log.Info().Interface("request", id).Msg("GetNetworkSegment: received request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-GetNetworkSegment")
-	defer span.End()
-
-	// Carbide request
-	carbideRequest := &wflows.NetworkSegmentQuery{}
-	if id != nil {
-		carbideRequest.Id = &wflows.NetworkSegmentId{Value: id.Value}
-	}
-	response, err = sub.carbide.FindNetworkSegments(ctx, carbideRequest)
-	log.Info().Int("NetworkSegmentLen", len(response.NetworkSegments)).Msg("FindNetworkSegment: received result")
-	return response, err
-}
-
 func (sub *network) GetAllNetworkSegments(ctx context.Context, request *wflows.NetworkSegmentSearchFilter, pageSize int) (response *wflows.NetworkSegmentList, err error) {
 	log.Info().Interface("request", request).Msg("GetAllNetworkSegments: received request")
 	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-GetAllNetworkSegments")
@@ -149,12 +128,6 @@ func (sub *network) GetAllNetworkSegments(ctx context.Context, request *wflows.N
 
 	idList, err := sub.carbide.FindNetworkSegmentIds(ctx, request)
 	if err != nil {
-		if grpcStatus, ok := status.FromError(err); ok {
-			if grpcStatus.Code() == codes.Unimplemented {
-				log.Info().Msg("Using deprecated API to get NetworkSegments")
-				return sub.GetNetworkSegmentDeprecated(ctx, nil)
-			}
-		}
 		log.Error().Err(err).Msg("FindNetworkSegmentIds: error")
 		return nil, err
 	}
@@ -184,18 +157,8 @@ func (sub *network) GetNetworkSegment(ctx context.Context, request *wflows.UUID)
 	networkSegmentId := &wflows.NetworkSegmentId{Value: request.Value}
 	list, err := sub.carbide.FindNetworkSegmentsByIds(ctx, &wflows.NetworkSegmentsByIdsRequest{NetworkSegmentsIds: []*wflows.NetworkSegmentId{networkSegmentId}})
 	if err != nil {
-		if grpcStatus, ok := status.FromError(err); ok {
-			if grpcStatus.Code() == codes.Unimplemented {
-				log.Info().Msg("Using deprecated API to get NetworkSegment")
-				list, err = sub.GetNetworkSegmentDeprecated(ctx, request)
-				if err != nil {
-					return nil, err
-				}
-			}
-		} else {
-			log.Error().Err(err).Msgf("FindNetworkSegmentsByIds: error")
-			return nil, err
-		}
+		log.Error().Err(err).Msgf("FindNetworkSegmentsByIds: error")
+		return nil, err
 	}
 	segments := list.GetNetworkSegments()
 	if len(segments) == 1 {

@@ -16,7 +16,7 @@
 openapi: 3.1.0
 info:
   title: NCX Infra Controller REST API
-  version: 1.2.0
+  version: 1.2.1
   summary: NCX Infra Controller REST API is the centralized RESTful gateway to access NCX Infra Controller service
   description: 'NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.'
   license:
@@ -4338,6 +4338,9 @@ paths:
                       rateLimit: 40
                       mtu: 4000
                       enableSharp: true
+                      labels:
+                        environment: production
+                        team: devops
                       status: Pending
                       statusHistory:
                         - status: Pending
@@ -4442,6 +4445,9 @@ paths:
                     rateLimit: 40
                     mtu: 4000
                     enableSharp: true
+                    labels:
+                      environment: production
+                      team: devops
                     status: Pending
                     statusHistory:
                       - status: Pending
@@ -4468,6 +4474,9 @@ paths:
                 value:
                   name: turbo-net
                   siteId: 69dae3c8-3554-4a1f-b391-858c6dc47fff
+                  labels:
+                    environment: production
+                    team: devops
       tags:
         - InfiniBand Partition
   '/v2/org/{org}/carbide/infiniband-partition/{infiniBandPartitionId}':
@@ -4508,6 +4517,9 @@ paths:
                     rateLimit: 40
                     mtu: 4000
                     enableSharp: true
+                    labels:
+                      environment: production
+                      team: devops
                     status: Pending
                     statusHistory:
                       - status: Pending
@@ -4578,6 +4590,9 @@ paths:
                     rateLimit: 40
                     mtu: 4000
                     enableSharp: true
+                    labels:
+                      environment: production
+                      team: devops
                     status: Pending
                     statusHistory:
                       - status: Pending
@@ -4606,6 +4621,9 @@ paths:
                 value:
                   name: turbo-net-v2
                   description: Second version of the model training network
+                  labels:
+                    environment: production
+                    team: devops
       tags:
         - InfiniBand Partition
   '/v2/org/{org}/carbide/nvlink-logical-partition':
@@ -5518,7 +5536,7 @@ paths:
         name: machineAssociationId
         in: path
         required: true
-        description: ID of the Machine/Instance Type Association
+        description: Can be ID of the Machine (`machineId`) or ID of Machine/Instance Type Association (`machineAssociationId`). Use of `machineAssociationId` is now deprecated and will no longer be accepted after July 9th, 2026 00:00 UTC.
     delete:
       summary: Delete a Machine/Instance Type association
       operationId: delete-instance-type-machine-association
@@ -5528,7 +5546,9 @@ paths:
         '403':
           $ref: '#/components/responses/ForbiddenError'
       description: |-
-        Delete a Machine's association with an Instance Type
+        Delete a Machine's association with an Instance Type.
+
+        `machineAssociationId` path parameter has been renamed to `machineId`. The path parameter will continue to accept both Machine ID and Machine/Instance Type ID until July 9th, 2026 00:00 UTC. After that time, Machine/Instance Type ID will no longer be accepted.
 
         Org must have an Infrastructure Provider entity that owns the Instance Type and the Machine. User must have `FORGE_PROVIDER_ADMIN` authorization role.
       tags:
@@ -13530,6 +13550,9 @@ components:
         enableSharp:
           type: boolean
           readOnly: true
+        labels:
+          $ref: '#/components/schemas/Labels'
+          description: String key value pairs describing InfiniBand Partition labels. Up to 10 key value pairs can be specified
         status:
           $ref: '#/components/schemas/InfiniBandPartitionStatus'
           readOnly: true
@@ -13577,6 +13600,9 @@ components:
           type: string
           format: uuid
           description: ID of the Site the Partition should belong to
+        labels:
+          $ref: '#/components/schemas/Labels'
+          description: String key value pairs describing Partition labels. Up to 10 key value pairs can be specified
       required:
         - name
         - siteId
@@ -13594,6 +13620,9 @@ components:
           maxLength: 256
         description:
           type: string
+        labels:
+          $ref: '#/components/schemas/Labels'
+          description: String key value pairs describing Partition labels. Up to 10 key value pairs can be specified
       required:
         - name
     NVLinkLogicalPartition:
@@ -14080,13 +14109,15 @@ components:
             - string
             - 'null'
           format: uuid
-          description: Specified if a Provider owns the Operating System
+          description: 'Deprecated: Infrastructure Provider is now inferred from org membership.'
+          deprecated: true
         tenantId:
           type:
             - string
             - 'null'
           format: uuid
-          description: Specified if a Tenant owns the Operating System
+          description: 'Deprecated: Tenant is now inferred from org membership.'
+          deprecated: true
         siteIds:
           type: array
           items:
@@ -17183,6 +17214,11 @@ components:
         - id: 497f6eca-6276-4993-bfeb-53cbbbba6f08
           machineId: fm100ht4v4mce2qstjnl8970nnj3ie6ecek4mtjn27pea4kre5gsa49jg0g
           instanceTypeId: 41e36058-8403-4086-a9b8-39cb5bc9cb98
+          deprecations:
+            - attribute: id
+              replacedBy: machineId
+              takeActionBy: '2026-07-09T00:00:00Z'
+              notice: '''id'' is being deprecated in favor of ''machineId''. Please take action prior to the specified date.'
           created: '2019-08-24T14:15:22Z'
           updated: '2019-08-24T14:15:22Z'
       properties:
@@ -17190,11 +17226,17 @@ components:
           type: string
           format: uuid
           readOnly: true
+          description: 'Deprecated: Use `machineId` when identifying a Machine/Instance Type association. This field will be removed on July 9th, 2026 0:00 UTC.'
+          deprecated: true
         machineId:
           type: string
         instanceTypeId:
           type: string
           format: uuid
+        deprecations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Deprecation'
         created:
           type: string
           format: date-time

@@ -21,9 +21,6 @@ import (
 	"context"
 	"testing"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/mock"
 	tmocks "go.temporal.io/sdk/mocks"
@@ -272,7 +269,6 @@ func TestManageSubnetInventory_DiscoverSubnetInventory(t *testing.T) {
 	}
 	type args struct {
 		wantTotalItems int
-		findIDsError   error
 	}
 	tests := []struct {
 		name   string
@@ -305,34 +301,6 @@ func TestManageSubnetInventory_DiscoverSubnetInventory(t *testing.T) {
 				wantTotalItems: 195,
 			},
 		},
-		{
-			name: "test collecting and publishing subnet inventory fallback, empty inventory",
-			fields: fields{
-				siteID:               uuid.New(),
-				carbideAtomicClient:  carbideAtomicClient,
-				temporalPublishQueue: "test-queue",
-				sitePageSize:         100,
-				cloudPageSize:        25,
-			},
-			args: args{
-				wantTotalItems: 0,
-				findIDsError:   status.Error(codes.Unimplemented, "not implemented"),
-			},
-		},
-		{
-			name: "test collecting and publishing subnet inventory fallback, normal inventory",
-			fields: fields{
-				siteID:               uuid.New(),
-				carbideAtomicClient:  carbideAtomicClient,
-				temporalPublishQueue: "test-queue",
-				sitePageSize:         100,
-				cloudPageSize:        25,
-			},
-			args: args{
-				wantTotalItems: 195,
-				findIDsError:   status.Error(codes.Unimplemented, "not implemented"),
-			},
-		},
 	}
 
 	for _, tt := range tests {
@@ -353,9 +321,6 @@ func TestManageSubnetInventory_DiscoverSubnetInventory(t *testing.T) {
 
 			ctx := context.Background()
 			ctx = context.WithValue(ctx, "wantCount", tt.args.wantTotalItems)
-			if tt.args.findIDsError != nil {
-				ctx = context.WithValue(ctx, "wantError", tt.args.findIDsError)
-			}
 
 			totalPages := tt.args.wantTotalItems / tt.fields.cloudPageSize
 			if tt.args.wantTotalItems%tt.fields.cloudPageSize > 0 {

@@ -224,15 +224,7 @@ func TestOperatingSystemHandler_Create(t *testing.T) {
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
-			name:           "error when tenant doesnt exist for org",
-			reqOrgName:     tnOrg2,
-			reqBody:        string(okBody),
-			user:           tnu,
-			expectedErr:    true,
-			expectedStatus: http.StatusBadRequest,
-		},
-		{
-			name:           "error when tenant in request does not match that in org",
+			name:           "error when org does not have a tenant",
 			reqOrgName:     tnOrg3,
 			reqBody:        string(okBody),
 			user:           tnu,
@@ -241,7 +233,7 @@ func TestOperatingSystemHandler_Create(t *testing.T) {
 		},
 		{
 			name:           "error when both imageURL and idxScrip specified in request",
-			reqOrgName:     tnOrg3,
+			reqOrgName:     tnOrg1,
 			reqBody:        string(errIpxeImageUrlBody),
 			user:           tnu,
 			expectedErr:    true,
@@ -249,7 +241,7 @@ func TestOperatingSystemHandler_Create(t *testing.T) {
 		},
 		{
 			name:           "error when bad disk path specified in request",
-			reqOrgName:     tnOrg3,
+			reqOrgName:     tnOrg1,
 			user:           tnu,
 			reqBody:        string(errDiskImageBody),
 			expectedErr:    true,
@@ -257,7 +249,7 @@ func TestOperatingSystemHandler_Create(t *testing.T) {
 		},
 		{
 			name:           "error when bad imageURL specified in request",
-			reqOrgName:     tnOrg3,
+			reqOrgName:     tnOrg1,
 			reqBody:        string(badImageURLBody),
 			user:           tnu,
 			expectedErr:    true,
@@ -265,7 +257,7 @@ func TestOperatingSystemHandler_Create(t *testing.T) {
 		},
 		{
 			name:           "error when imageURL specified in request but imageSHA is nil",
-			reqOrgName:     tnOrg3,
+			reqOrgName:     tnOrg1,
 			reqBody:        string(errImageURLBody),
 			user:           tnu,
 			expectedErr:    true,
@@ -273,7 +265,7 @@ func TestOperatingSystemHandler_Create(t *testing.T) {
 		},
 		{
 			name:           "error when both rootFsID and rootFsLabel specified in request",
-			reqOrgName:     tnOrg3,
+			reqOrgName:     tnOrg1,
 			reqBody:        string(errRootFsBody),
 			user:           tnu,
 			expectedErr:    true,
@@ -355,7 +347,7 @@ func TestOperatingSystemHandler_Create(t *testing.T) {
 				assert.Nil(t, err)
 				// validate response fields
 				assert.Equal(t, len(rsp.StatusHistory), tc.expectedStatusHistoryCount)
-				assert.Equal(t, *rsp.TenantID, *tc.reqBodyModel.TenantID)
+				assert.Equal(t, tenant1.ID.String(), *rsp.TenantID)
 				if !tc.expectedImageURL {
 					assert.Equal(t, *rsp.IpxeScript, *tc.reqBodyModel.IpxeScript)
 					assert.Equal(t, *rsp.Type, "iPXE")

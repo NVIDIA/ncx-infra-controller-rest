@@ -49,10 +49,12 @@ jobs:
             path: ./site-manager/cmd/sitemgr
           - name: workflow
             path: ./workflow/cmd/workflow
-          - name: elektra
-            path: ./site-agent/cmd/elektra
-          - name: elektraserver
-            path: ./site-agent/cmd/elektraserver
+          - name: site-agent
+            path: ./site-agent/cmd/site-agent
+          - name: mock-core
+            path: ./site-agent/cmd/mock-core
+          - name: mock-rla
+            path: ./site-agent/cmd/mock-rla
           - name: credsmgr
             path: ./cert-manager/cmd/credsmgr
           - name: rla

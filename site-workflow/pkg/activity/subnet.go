@@ -153,7 +153,6 @@ func (mmi *ManageSubnetInventory) DiscoverSubnetInventory(ctx context.Context) e
 		internalFindIDs:        subnetFindIDs,
 		internalFindByIDs:      subnetFindByIDs,
 		internalPagedInventory: subnetPagedInventory,
-		internalFindFallback:   subnetFindFallback,
 	}
 	return inventoryImpl.CollectAndPublishInventory(ctx, &logger)
 }
@@ -203,16 +202,4 @@ func subnetPagedInventory(allItemIDs []*cwssaws.NetworkSegmentId, pagedItems []*
 		inventory.InventoryPage.ItemIds = itemIDs
 	}
 	return inventory
-}
-
-func subnetFindFallback(ctx context.Context, carbideClient *cClient.CarbideClient) ([]*cwssaws.NetworkSegmentId, []*cwssaws.NetworkSegment, error) {
-	items, err := carbideClient.Networks().GetNetworkSegmentDeprecated(ctx, nil)
-	if err != nil {
-		return nil, nil, err
-	}
-	var ids []*cwssaws.NetworkSegmentId
-	for _, it := range items.GetNetworkSegments() {
-		ids = append(ids, it.Id)
-	}
-	return ids, items.GetNetworkSegments(), nil
 }

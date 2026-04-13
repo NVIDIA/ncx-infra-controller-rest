@@ -72,7 +72,7 @@ func (s *UpdateInstanceTestSuite) Test_UpdateInstance_Success() {
 			Os: &cwssaws.OperatingSystem{
 				RunProvisioningInstructionsOnEveryBoot: true,
 				Variant: &cwssaws.OperatingSystem_Ipxe{
-					Ipxe: &cwssaws.IpxeOperatingSystem{
+					Ipxe: &cwssaws.InlineIpxe{
 						IpxeScript: ipxeScript,
 					},
 				},
@@ -115,7 +115,7 @@ func (s *UpdateInstanceTestSuite) Test_UpdateInstance_Failure() {
 			Os: &cwssaws.OperatingSystem{
 				RunProvisioningInstructionsOnEveryBoot: true,
 				Variant: &cwssaws.OperatingSystem_Ipxe{
-					Ipxe: &cwssaws.IpxeOperatingSystem{
+					Ipxe: &cwssaws.InlineIpxe{
 						IpxeScript: ipxeScript,
 					},
 				},
@@ -179,7 +179,7 @@ func (s *CreateInstanceV2TestSuite) Test_CreateInstanceV2_Success() {
 			Os: &cwssaws.OperatingSystem{
 				RunProvisioningInstructionsOnEveryBoot: true,
 				Variant: &cwssaws.OperatingSystem_Ipxe{
-					Ipxe: &cwssaws.IpxeOperatingSystem{
+					Ipxe: &cwssaws.InlineIpxe{
 						IpxeScript: ipxeScript,
 					},
 				},
@@ -222,7 +222,7 @@ func (s *CreateInstanceV2TestSuite) Test_CreateInstanceV2_Failure() {
 			Os: &cwssaws.OperatingSystem{
 				RunProvisioningInstructionsOnEveryBoot: true,
 				Variant: &cwssaws.OperatingSystem_Ipxe{
-					Ipxe: &cwssaws.IpxeOperatingSystem{
+					Ipxe: &cwssaws.InlineIpxe{
 						IpxeScript: ipxeScript,
 					},
 				},
@@ -292,7 +292,7 @@ func (s *CreateInstancesTestSuite) Test_CreateInstances_Success() {
 					Os: &cwssaws.OperatingSystem{
 						RunProvisioningInstructionsOnEveryBoot: true,
 						Variant: &cwssaws.OperatingSystem_Ipxe{
-							Ipxe: &cwssaws.IpxeOperatingSystem{
+							Ipxe: &cwssaws.InlineIpxe{
 								IpxeScript: ipxeScript,
 							},
 						},
@@ -316,7 +316,7 @@ func (s *CreateInstancesTestSuite) Test_CreateInstances_Success() {
 					Os: &cwssaws.OperatingSystem{
 						RunProvisioningInstructionsOnEveryBoot: true,
 						Variant: &cwssaws.OperatingSystem_Ipxe{
-							Ipxe: &cwssaws.IpxeOperatingSystem{
+							Ipxe: &cwssaws.InlineIpxe{
 								IpxeScript: ipxeScript,
 							},
 						},
@@ -365,7 +365,7 @@ func (s *CreateInstancesTestSuite) Test_CreateInstances_Failure() {
 					Os: &cwssaws.OperatingSystem{
 						RunProvisioningInstructionsOnEveryBoot: true,
 						Variant: &cwssaws.OperatingSystem_Ipxe{
-							Ipxe: &cwssaws.IpxeOperatingSystem{
+							Ipxe: &cwssaws.InlineIpxe{
 								IpxeScript: ipxeScript,
 							},
 						},

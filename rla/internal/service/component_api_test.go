@@ -353,7 +353,7 @@ func TestPatchComponent_WithBMCs(t *testing.T) {
 		Info:   deviceinfo.DeviceInfo{ID: compID, Name: "node-01"},
 		RackID: rackID,
 		BmcsByType: map[devicetypes.BMCType][]bmc.BMC{
-			devicetypes.BMCTypeHost: {{MAC: mac, IP: net.ParseIP("10.0.0.1")}},
+			devicetypes.BMCTypeHost: {{MAC: bmc.MACAddress{HardwareAddr: mac}, IP: net.ParseIP("10.0.0.1")}},
 		},
 	}
 
@@ -391,7 +391,7 @@ func TestPatchComponent_BMCsNotProvidedPreservesExisting(t *testing.T) {
 		FirmwareVersion: "1.0.0",
 		RackID:          rackID,
 		BmcsByType: map[devicetypes.BMCType][]bmc.BMC{
-			devicetypes.BMCTypeHost: {{MAC: mac, IP: net.ParseIP("10.0.0.1")}},
+			devicetypes.BMCTypeHost: {{MAC: bmc.MACAddress{HardwareAddr: mac}, IP: net.ParseIP("10.0.0.1")}},
 		},
 	}
 

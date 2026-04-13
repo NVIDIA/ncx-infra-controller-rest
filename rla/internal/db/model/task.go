@@ -101,8 +101,12 @@ func (t *Task) UpdateTaskStatus(
 	t.Status = status
 	t.Message = message
 	t.UpdatedAt = time.Now().UTC()
+
+	columns := []string{"status", "message", "updated_at", "finished_at"}
+
 	if status == taskcommon.TaskStatusRunning && t.StartedAt == nil {
 		t.StartedAt = &t.UpdatedAt
+		columns = append(columns, "started_at")
 	}
 	if status.IsFinished() {
 		t.FinishedAt = &t.UpdatedAt
@@ -112,7 +116,7 @@ func (t *Task) UpdateTaskStatus(
 
 	_, err := idb.NewUpdate().
 		Model(t).
-		Column("status", "message", "updated_at", "started_at", "finished_at").
+		Column(columns...).
 		Where("id = ?", t.ID).
 		Exec(ctx)
 

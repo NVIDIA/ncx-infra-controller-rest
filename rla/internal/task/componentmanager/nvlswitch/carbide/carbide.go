@@ -21,6 +21,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/rs/zerolog/log"
 
@@ -253,10 +254,9 @@ func (m *Manager) FirmwareControl(ctx context.Context, target common.Target, inf
 }
 
 // GetFirmwareStatus returns the current status of firmware updates for the target components.
-// Carbide does not have a dedicated firmware update status API; we read the current firmware version
-// to determine if the update completed.
-// TODO: Implement proper status checking once Carbide exposes a firmware update status API.
-func (m *Manager) GetFirmwareStatus(ctx context.Context, target common.Target) (map[string]operations.FirmwareUpdateStatus, error) { //nolint
+// Core may return multiple sub-component statuses (BMC/CPLD/BIOS/NVOS) per switch, so we
+// aggregate them into a single status per switch UUID.
+func (m *Manager) GetFirmwareStatus(ctx context.Context, target common.Target) (map[string]operations.FirmwareUpdateStatus, error) {
 	log.Debug().
 		Str("components", target.String()).
 		Msg("GetFirmwareStatus called for NVLSwitch")
@@ -276,16 +276,80 @@ func (m *Manager) GetFirmwareStatus(ctx context.Context, target common.Target) (
 		return nil, fmt.Errorf("GetComponentFirmwareStatus failed: %w", err)
 	}
 
-	result := make(map[string]operations.FirmwareUpdateStatus, len(resp.GetStatuses()))
+	// Group statuses by component ID since Core may return multiple
+	// sub-component updates (BMC, CPLD, BIOS, NVOS) for the same switch.
+	grouped := make(map[string][]*pb.FirmwareUpdateStatus)
 	for _, s := range resp.GetStatuses() {
 		compID := s.GetResult().GetComponentId()
-		result[compID] = operations.FirmwareUpdateStatus{
-			ComponentID: compID,
-			State:       carbideprovider.MapFirmwareState(s.GetState()),
-		}
+		grouped[compID] = append(grouped[compID], s)
+	}
+
+	// Ensure every requested component ID is present in the result,
+	// even if Core returned no statuses for it. This mirrors the
+	// nvswitchmanager path which queries each switch individually.
+	result := make(map[string]operations.FirmwareUpdateStatus, len(target.ComponentIDs))
+	for _, compID := range target.ComponentIDs {
+		result[compID] = aggregateCarbideStatuses(compID, grouped[compID])
 	}
 
 	return result, nil
+}
+
+// aggregateCarbideStatuses examines all sub-component firmware statuses for a switch
+// and produces a single FirmwareUpdateStatus. Any failure → Failed; all completed →
+// Completed; otherwise still in progress.
+//
+// TODO: Validate that Core returns all expected sub-component statuses (BMC, CPLD,
+// BIOS, NVOS) per switch. Currently we cannot verify completeness because the proto
+// FirmwareUpdateStatus message does not carry a sub-component type field. Once Core
+// exposes that information, we should check that all 4 sub-components are present and
+// treat a missing sub-component as incomplete (not Completed).
+func aggregateCarbideStatuses(compID string, statuses []*pb.FirmwareUpdateStatus) operations.FirmwareUpdateStatus {
+	if len(statuses) == 0 {
+		return operations.FirmwareUpdateStatus{
+			ComponentID: compID,
+			State:       operations.FirmwareUpdateStateUnknown,
+		}
+	}
+
+	allCompleted := true
+	var failures []string
+
+	for _, s := range statuses {
+		mapped := carbideprovider.MapFirmwareState(s.GetState())
+		switch mapped {
+		case operations.FirmwareUpdateStateFailed:
+			errMsg := s.GetResult().GetError()
+			if errMsg == "" {
+				errMsg = s.GetState().String()
+			}
+			failures = append(failures, errMsg)
+		case operations.FirmwareUpdateStateCompleted:
+			// ok
+		default:
+			allCompleted = false
+		}
+	}
+
+	if len(failures) > 0 {
+		return operations.FirmwareUpdateStatus{
+			ComponentID: compID,
+			State:       operations.FirmwareUpdateStateFailed,
+			Error:       fmt.Sprintf("firmware update failed for components: %s", strings.Join(failures, "; ")),
+		}
+	}
+
+	if allCompleted {
+		return operations.FirmwareUpdateStatus{
+			ComponentID: compID,
+			State:       operations.FirmwareUpdateStateCompleted,
+		}
+	}
+
+	return operations.FirmwareUpdateStatus{
+		ComponentID: compID,
+		State:       operations.FirmwareUpdateStateQueued,
+	}
 }
 
 func (m *Manager) BringUpControl(

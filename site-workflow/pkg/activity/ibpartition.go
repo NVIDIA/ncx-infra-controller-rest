@@ -46,7 +46,6 @@ func (mmi *ManageInfiniBandPartitionInventory) DiscoverInfiniBandPartitionInvent
 		internalFindIDs:        ibpFindIDs,
 		internalFindByIDs:      ibpFindByIDs,
 		internalPagedInventory: ibpPagedInventory,
-		internalFindFallback:   ibpFindFallback,
 	}
 	return inventoryImpl.CollectAndPublishInventory(ctx, &logger)
 }
@@ -98,18 +97,6 @@ func ibpPagedInventory(allItemIDs []*cwssaws.IBPartitionId, pagedItems []*cwssaw
 	return inventory
 }
 
-func ibpFindFallback(ctx context.Context, carbideClient *cClient.CarbideClient) ([]*cwssaws.IBPartitionId, []*cwssaws.IBPartition, error) {
-	items, err := carbideClient.Networks().ListInfiniBandPartition(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
-	var ids []*cwssaws.IBPartitionId
-	for _, it := range items.GetIbPartitions() {
-		ids = append(ids, it.Id)
-	}
-	return ids, items.GetIbPartitions(), nil
-}
-
 // ManageInfiniBandPartition is an activity wrapper for InfiniBand Partition management
 type ManageInfiniBandPartition struct {
 	CarbideAtomicClient *client.CarbideAtomicClient
@@ -159,6 +146,43 @@ func (mibp *ManageInfiniBandPartition) CreateInfiniBandPartitionOnSite(ctx conte
 	_, err = forgeClient.CreateIBPartition(ctx, request)
 	if err != nil {
 		logger.Warn().Err(err).Msg("Failed to create InfiniBand Partition using Site Controller API")
+		return swe.WrapErr(err)
+	}
+
+	logger.Info().Msg("Completed activity")
+
+	return nil
+}
+
+// UpdateInfiniBandPartitionOnSite applies an IB partition update on the site Forge controller
+func (mibp *ManageInfiniBandPartition) UpdateInfiniBandPartitionOnSite(ctx context.Context, request *cwssaws.IBPartitionUpdateRequest) error {
+	logger := log.With().Str("Activity", "UpdateInfiniBandPartitionOnSite").Logger()
+
+	logger.Info().Msg("Starting activity")
+
+	var err error
+
+	if request == nil {
+		err = errors.New("received empty update InfiniBand Partition request")
+	} else if request.Id == nil || request.GetId().GetValue() == "" {
+		err = errors.New("received update InfiniBand Partition request without ID")
+	} else if request.GetConfig() == nil && request.GetMetadata() == nil {
+		err = errors.New("received update InfiniBand Partition request without config or metadata")
+	}
+
+	if err != nil {
+		return temporal.NewNonRetryableApplicationError(err.Error(), swe.ErrTypeInvalidRequest, err)
+	}
+
+	carbideClient := mibp.CarbideAtomicClient.GetClient()
+	if carbideClient == nil {
+		return client.ErrClientNotConnected
+	}
+	forgeClient := carbideClient.Carbide()
+
+	_, err = forgeClient.UpdateIBPartition(ctx, request)
+	if err != nil {
+		logger.Warn().Err(err).Msg("Failed to update InfiniBand Partition using Site Controller API")
 		return swe.WrapErr(err)
 	}
 

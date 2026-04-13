@@ -124,40 +124,40 @@ func TestNewAPIInstanceType(t *testing.T) {
 				mcs:   []cdbm.MachineCapability{dbmc},
 				mit:   []cdbm.MachineInstanceType{mit},
 			},
-			want: &APIInstanceType{
-				ID:                       dbit.ID.String(),
-				Name:                     dbit.Name,
-				Description:              dbit.Description,
-				ControllerMachineType:    dbit.ControllerMachineType,
-				InfrastructureProviderID: dbit.InfrastructureProviderID.String(),
-				SiteID:                   dbit.SiteID.String(),
-				Status:                   dbit.Status,
-				Created:                  dbit.Created,
-				Updated:                  dbit.Updated,
-				StatusHistory: []APIStatusDetail{
-					{
-						Status:  dbsd.Status,
-						Message: dbsd.Message,
-						Created: dbsd.Created,
-						Updated: dbsd.Updated,
+			want: func() *APIInstanceType {
+				expected := &APIInstanceType{
+					ID:                       dbit.ID.String(),
+					Name:                     dbit.Name,
+					Description:              dbit.Description,
+					ControllerMachineType:    dbit.ControllerMachineType,
+					InfrastructureProviderID: dbit.InfrastructureProviderID.String(),
+					SiteID:                   dbit.SiteID.String(),
+					Status:                   dbit.Status,
+					Created:                  dbit.Created,
+					Updated:                  dbit.Updated,
+					StatusHistory: []APIStatusDetail{
+						{
+							Status:  dbsd.Status,
+							Message: dbsd.Message,
+							Created: dbsd.Created,
+							Updated: dbsd.Updated,
+						},
 					},
-				},
-				MachineCapabilities: []APIMachineCapability{
-					{
-						Type:     dbmc.Type,
-						Name:     dbmc.Name,
-						Capacity: dbmc.Capacity,
-						Count:    dbmc.Count,
+					MachineCapabilities: []APIMachineCapability{
+						{
+							Type:     dbmc.Type,
+							Name:     dbmc.Name,
+							Capacity: dbmc.Capacity,
+							Count:    dbmc.Count,
+						},
 					},
-				},
-				MachineInstanceTypes: []APIMachineInstanceType{
-					{
-						ID:             mit.ID.String(),
-						MachineID:      mit.MachineID,
-						InstanceTypeID: mit.InstanceTypeID.String(),
+					MachineInstanceTypes: []APIMachineInstanceType{
+						*NewAPIMachineInstanceType(&mit),
 					},
-				},
-			},
+				}
+
+				return expected
+			}(),
 		},
 	}
 	for _, tt := range tests {

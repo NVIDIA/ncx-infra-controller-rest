@@ -48,9 +48,6 @@ func TestInventory(t *testing.T) {
 		t.SkipNow()
 	}
 
-	// Reset package-level state to avoid cross-test pollution
-	lastUpdateMachineIDs = time.Time{}
-
 	dbConf, err := cdb.ConfigFromEnv()
 	assert.Nil(t, err)
 	pool, err := utils.UnitTestDB(ctx, t, dbConf)
@@ -89,7 +86,8 @@ func TestInventory(t *testing.T) {
 
 	psmMock := psmapi.NewMockClient()
 	nsmMock := nsmapi.NewMockClient()
-	runInventoryOne(ctx, &cfg, pool, grpcMock, psmMock, nsmMock, componentmanager.DefaultTestConfig())
+	var machineIDsLastSyncedAt time.Time
+	runInventoryOne(ctx, &cfg, pool, grpcMock, psmMock, nsmMock, componentmanager.DefaultTestConfig(), &machineIDsLastSyncedAt)
 
 	rows, err := pool.DB.Query("SELECT serial_number, power_state FROM component;")
 	assert.NotNil(t, rows)
@@ -126,8 +124,6 @@ func TestSyncFirmwareVersion(t *testing.T) {
 		t.SkipNow()
 	}
 
-	lastUpdateMachineIDs = time.Time{}
-
 	dbConf, err := cdb.ConfigFromEnv()
 	assert.Nil(t, err)
 	pool, err := utils.UnitTestDB(ctx, t, dbConf)
@@ -160,7 +156,8 @@ func TestSyncFirmwareVersion(t *testing.T) {
 
 	psmMock := psmapi.NewMockClient()
 	nsmMock := nsmapi.NewMockClient()
-	runInventoryOne(ctx, &cfg, pool, grpcMock, psmMock, nsmMock, componentmanager.DefaultTestConfig())
+	var machineIDsLastSyncedAt time.Time
+	runInventoryOne(ctx, &cfg, pool, grpcMock, psmMock, nsmMock, componentmanager.DefaultTestConfig(), &machineIDsLastSyncedAt)
 
 	var updated1 model.Component
 	err = pool.DB.NewSelect().Model(&updated1).Where("id = ?", c1.ID).Scan(ctx)
@@ -181,9 +178,6 @@ func TestHandleExpectedPowershelves(t *testing.T) {
 		log.Warn().Msgf("Not running unit test due to no DB environment specified")
 		t.SkipNow()
 	}
-
-	// Reset package-level state to avoid cross-test pollution
-	lastUpdateMachineIDs = time.Time{}
 
 	dbConf, err := cdb.ConfigFromEnv()
 	assert.Nil(t, err)
@@ -433,7 +427,8 @@ func TestHandleExpectedPowershelves(t *testing.T) {
 	// Run the inventory loop
 	cfg := config.UnitTestConfig()
 	nsmMock := nsmapi.NewMockClient()
-	runInventoryOne(ctx, &cfg, pool, carbideMock, psmMock, nsmMock, componentmanager.DefaultTestConfig())
+	var machineIDsLastSyncedAt time.Time
+	runInventoryOne(ctx, &cfg, pool, carbideMock, psmMock, nsmMock, componentmanager.DefaultTestConfig(), &machineIDsLastSyncedAt)
 
 	// Verify that only expected PMCs that have DHCPed were registered with PSM
 	registeredPowershelves, err := psmMock.GetPowershelves(ctx, []string{})
@@ -507,8 +502,6 @@ func TestHandleExpectedNVSwitches(t *testing.T) {
 		log.Warn().Msgf("Not running unit test due to no DB environment specified")
 		t.SkipNow()
 	}
-
-	lastUpdateMachineIDs = time.Time{}
 
 	dbConf, err := cdb.ConfigFromEnv()
 	assert.Nil(t, err)
@@ -759,7 +752,8 @@ func TestHandleExpectedNVSwitches(t *testing.T) {
 
 	// Run the inventory loop
 	cfg := config.UnitTestConfig()
-	runInventoryOne(ctx, &cfg, pool, carbideMock, psmMock, nsmMock, componentmanager.DefaultTestConfig())
+	var machineIDsLastSyncedAt time.Time
+	runInventoryOne(ctx, &cfg, pool, carbideMock, psmMock, nsmMock, componentmanager.DefaultTestConfig(), &machineIDsLastSyncedAt)
 
 	// --- Verify NSM registrations ---
 	registeredSwitches, err := nsmMock.GetNVSwitches(ctx, nil)
@@ -825,7 +819,7 @@ func TestHandleExpectedNVSwitches(t *testing.T) {
 	nsmMock.SetNVSwitchFirmware("aa:bb:cc:11:11:01", "3.0.0")
 	nsmMock.SetNVSwitchFirmware("aa:bb:cc:11:11:02", "3.1.0")
 
-	runInventoryOne(ctx, &cfg, pool, carbideMock, psmMock, nsmMock, componentmanager.DefaultTestConfig())
+	runInventoryOne(ctx, &cfg, pool, carbideMock, psmMock, nsmMock, componentmanager.DefaultTestConfig(), &machineIDsLastSyncedAt)
 
 	// SW1: external_id and firmware_version should now be set
 	var updatedSw1 model.Component

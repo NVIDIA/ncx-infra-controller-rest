@@ -30,11 +30,6 @@ import (
 	"github.com/google/uuid"
 )
 
-const (
-	// VpcMaxLabelCount is the maximum number of Labels allowed per VPC
-	VpcMaxLabelCount = 10
-)
-
 // APIVpcCreateRequest captures the request data for creating a new VPC
 type APIVpcCreateRequest struct {
 	// ID is the user-specified UUID of the VPC.
@@ -97,46 +92,8 @@ func (ascr APIVpcCreateRequest) Validate() error {
 		}
 	}
 
-	// Labels validation
-	if ascr.Labels != nil {
-		if len(ascr.Labels) > VpcMaxLabelCount {
-			return validation.Errors{
-				"labels": fmt.Errorf("up to %v key/value pairs can be specified in labels", VpcMaxLabelCount),
-			}
-		}
-
-		for key, value := range ascr.Labels {
-			if key == "" {
-				return validation.Errors{
-					"labels": errors.New("one or more labels do not have a key specified"),
-				}
-			}
-
-			// Key validation
-			err = validation.Validate(key,
-				validation.Match(util.NotAllWhitespaceRegexp).Error("label key consists only of whitespace"),
-				validation.Length(1, 255).Error(validationErrorMapKeyLabelStringLength),
-			)
-
-			if err != nil {
-				return validation.Errors{
-					"labels": errors.New(validationErrorMapKeyLabelStringLength),
-				}
-			}
-
-			// Value validation
-			err = validation.Validate(value,
-				validation.When(value != "",
-					validation.Length(0, 255).Error(validationErrorMapValueLabelStringLength),
-				),
-			)
-
-			if err != nil {
-				return validation.Errors{
-					"labels": errors.New(validationErrorMapValueLabelStringLength),
-				}
-			}
-		}
+	if err := util.ValidateLabels(ascr.Labels); err != nil {
+		return err
 	}
 
 	return err
@@ -173,46 +130,8 @@ func (asur APIVpcUpdateRequest) Validate() error {
 		return err
 	}
 
-	// Labels validation
-	if asur.Labels != nil {
-		if len(asur.Labels) > VpcMaxLabelCount {
-			return validation.Errors{
-				"labels": fmt.Errorf("up to %v key/value pairs can be specified in labels", VpcMaxLabelCount),
-			}
-		}
-
-		for key, value := range asur.Labels {
-			if key == "" {
-				return validation.Errors{
-					"labels": errors.New("one or more labels do not have a key specified"),
-				}
-			}
-
-			// Key validation
-			err = validation.Validate(key,
-				validation.Match(util.NotAllWhitespaceRegexp).Error("label key consists only of whitespace"),
-				validation.Length(1, 255).Error(validationErrorMapKeyLabelStringLength),
-			)
-
-			if err != nil {
-				return validation.Errors{
-					"labels": errors.New(validationErrorMapKeyLabelStringLength),
-				}
-			}
-
-			// Value validation
-			err = validation.Validate(value,
-				validation.When(value != "",
-					validation.Length(0, 255).Error(validationErrorMapValueLabelStringLength),
-				),
-			)
-
-			if err != nil {
-				return validation.Errors{
-					"labels": errors.New(validationErrorMapValueLabelStringLength),
-				}
-			}
-		}
+	if err := util.ValidateLabels(asur.Labels); err != nil {
+		return err
 	}
 
 	return err

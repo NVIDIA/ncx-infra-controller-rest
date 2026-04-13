@@ -95,7 +95,7 @@ func (cih CreateInstanceHandler) buildInstanceCreateRequestOsConfig(c echo.Conte
 			RunProvisioningInstructionsOnEveryBoot: *apiRequest.AlwaysBootWithCustomIpxe, // Set by the earlier call to ValidateAndSetOperatingSystemData
 			PhoneHomeEnabled:                       *apiRequest.PhoneHomeEnabled,         // Set by the earlier call to ValidateAndSetOperatingSystemData
 			Variant: &cwssaws.OperatingSystem_Ipxe{
-				Ipxe: &cwssaws.IpxeOperatingSystem{
+				Ipxe: &cwssaws.InlineIpxe{
 					IpxeScript: *apiRequest.IpxeScript,
 				},
 			},
@@ -193,7 +193,7 @@ func (cih CreateInstanceHandler) buildInstanceCreateRequestOsConfig(c echo.Conte
 			RunProvisioningInstructionsOnEveryBoot: *apiRequest.AlwaysBootWithCustomIpxe,
 			PhoneHomeEnabled:                       *apiRequest.PhoneHomeEnabled,
 			Variant: &cwssaws.OperatingSystem_Ipxe{
-				Ipxe: &cwssaws.IpxeOperatingSystem{
+				Ipxe: &cwssaws.InlineIpxe{
 					IpxeScript: *apiRequest.IpxeScript,
 				},
 			},
@@ -1858,7 +1858,7 @@ func (uih UpdateInstanceHandler) buildInstanceUpdateRequestOsConfig(c echo.Conte
 			RunProvisioningInstructionsOnEveryBoot: instance.AlwaysBootWithCustomIpxe,
 			PhoneHomeEnabled:                       *apiRequest.PhoneHomeEnabled, // Set by the earlier call to ValidateAndSetOperatingSystemData
 			Variant: &cwssaws.OperatingSystem_Ipxe{
-				Ipxe: &cwssaws.IpxeOperatingSystem{
+				Ipxe: &cwssaws.InlineIpxe{
 					IpxeScript: *apiRequest.IpxeScript,
 				},
 			},
@@ -2000,7 +2000,7 @@ func (uih UpdateInstanceHandler) buildInstanceUpdateRequestOsConfig(c echo.Conte
 				RunProvisioningInstructionsOnEveryBoot: alwaysBootWithCustomIpxe,
 				PhoneHomeEnabled:                       phoneHomeEnabled,
 				Variant: &cwssaws.OperatingSystem_Ipxe{
-					Ipxe: &cwssaws.IpxeOperatingSystem{
+					Ipxe: &cwssaws.InlineIpxe{
 						IpxeScript: *ipxeScript,
 					},
 				},
@@ -2023,7 +2023,7 @@ func (uih UpdateInstanceHandler) buildInstanceUpdateRequestOsConfig(c echo.Conte
 		RunProvisioningInstructionsOnEveryBoot: alwaysBootWithCustomIpxe,
 		PhoneHomeEnabled:                       phoneHomeEnabled,
 		Variant: &cwssaws.OperatingSystem_Ipxe{
-			Ipxe: &cwssaws.IpxeOperatingSystem{
+			Ipxe: &cwssaws.InlineIpxe{
 				IpxeScript: *ipxeScript,
 			},
 		},

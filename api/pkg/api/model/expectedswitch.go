@@ -103,35 +103,8 @@ func (escr *APIExpectedSwitchCreateRequest) Validate() error {
 		return err
 	}
 
-	// Labels validation
-	if escr.Labels != nil {
-		if len(escr.Labels) > util.LabelCountMax {
-			return validation.Errors{
-				"labels": util.ErrValidationLabelCount,
-			}
-		}
-
-		for key, value := range escr.Labels {
-			if key == "" {
-				return validation.Errors{
-					"labels": util.ErrValidationLabelKeyEmpty,
-				}
-			}
-
-			// Key validation
-			if len(key) > util.LabelKeyMaxLength {
-				return validation.Errors{
-					"labels": util.ErrValidationLabelKeyLength,
-				}
-			}
-
-			// Value validation
-			if len(value) > util.LabelValueMaxLength {
-				return validation.Errors{
-					"labels": util.ErrValidationLabelValueLength,
-				}
-			}
-		}
+	if err := util.ValidateLabels(escr.Labels); err != nil {
+		return err
 	}
 
 	return nil
@@ -224,35 +197,8 @@ func (esur *APIExpectedSwitchUpdateRequest) Validate() error {
 		return err
 	}
 
-	// Labels validation
-	if esur.Labels != nil {
-		if len(esur.Labels) > util.LabelCountMax {
-			return validation.Errors{
-				"labels": util.ErrValidationLabelCount,
-			}
-		}
-
-		for key, value := range esur.Labels {
-			if key == "" {
-				return validation.Errors{
-					"labels": util.ErrValidationLabelKeyEmpty,
-				}
-			}
-
-			// Key validation
-			if len(key) > util.LabelKeyMaxLength {
-				return validation.Errors{
-					"labels": util.ErrValidationLabelKeyLength,
-				}
-			}
-
-			// Value validation
-			if len(value) > util.LabelValueMaxLength {
-				return validation.Errors{
-					"labels": util.ErrValidationLabelValueLength,
-				}
-			}
-		}
+	if err := util.ValidateLabels(esur.Labels); err != nil {
+		return err
 	}
 
 	return nil

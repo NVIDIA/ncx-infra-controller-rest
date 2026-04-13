@@ -155,8 +155,8 @@ func (mei ManageExpectedPowerShelf) UpdateExpectedPowerShelvesInDB(ctx context.C
 
 		// Convert proto IpAddress (string) to *string for DB
 		var ipAddress *string
-		if reps.IpAddress != "" {
-			ipAddress = &reps.IpAddress
+		if reps.BmcIpAddress != "" {
+			ipAddress = &reps.BmcIpAddress
 		}
 
 		// Create a new Expected Power Shelf if it doesn't already exist in DB

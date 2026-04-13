@@ -18,6 +18,7 @@
 package model
 
 import (
+	"encoding/json"
 	"reflect"
 	"testing"
 	"time"
@@ -25,6 +26,7 @@ import (
 	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewAPINVLinkInterface(t *testing.T) {
@@ -120,6 +122,142 @@ func TestAPINVLinkInterfaceCreateOrUpdateRequest_Validate(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 			}
+		})
+	}
+}
+
+func TestNewAPINVLinkInterfaceSummary(t *testing.T) {
+	type fields struct {
+		status string
+	}
+
+	id := uuid.New()
+	instanceID := uuid.New()
+	nvllpID := uuid.New()
+
+	tests := []struct {
+		name   string
+		fields fields
+		want   *APINVLinkInterfaceSummary
+	}{
+		{
+			name:   "maps Ready status",
+			fields: fields{status: cdbm.NVLinkInterfaceStatusReady},
+			want: &APINVLinkInterfaceSummary{
+				ID:                       id.String(),
+				InstanceID:               instanceID.String(),
+				NVLinkLogicalPartitionID: nvllpID.String(),
+				DeviceInstance:           2,
+				Status:                   cdbm.NVLinkInterfaceStatusReady,
+			},
+		},
+		{
+			name:   "maps Pending status",
+			fields: fields{status: cdbm.NVLinkInterfaceStatusPending},
+			want: &APINVLinkInterfaceSummary{
+				ID:                       id.String(),
+				InstanceID:               instanceID.String(),
+				NVLinkLogicalPartitionID: nvllpID.String(),
+				DeviceInstance:           2,
+				Status:                   cdbm.NVLinkInterfaceStatusPending,
+			},
+		},
+		{
+			name:   "maps Provisioning status",
+			fields: fields{status: cdbm.NVLinkInterfaceStatusProvisioning},
+			want: &APINVLinkInterfaceSummary{
+				ID:                       id.String(),
+				InstanceID:               instanceID.String(),
+				NVLinkLogicalPartitionID: nvllpID.String(),
+				DeviceInstance:           2,
+				Status:                   cdbm.NVLinkInterfaceStatusProvisioning,
+			},
+		},
+		{
+			name:   "maps Error status",
+			fields: fields{status: cdbm.NVLinkInterfaceStatusError},
+			want: &APINVLinkInterfaceSummary{
+				ID:                       id.String(),
+				InstanceID:               instanceID.String(),
+				NVLinkLogicalPartitionID: nvllpID.String(),
+				DeviceInstance:           2,
+				Status:                   cdbm.NVLinkInterfaceStatusError,
+			},
+		},
+		{
+			name:   "maps Deleting status",
+			fields: fields{status: cdbm.NVLinkInterfaceStatusDeleting},
+			want: &APINVLinkInterfaceSummary{
+				ID:                       id.String(),
+				InstanceID:               instanceID.String(),
+				NVLinkLogicalPartitionID: nvllpID.String(),
+				DeviceInstance:           2,
+				Status:                   cdbm.NVLinkInterfaceStatusDeleting,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dbnvli := &cdbm.NVLinkInterface{
+				ID:                       id,
+				InstanceID:               instanceID,
+				SiteID:                   uuid.New(),
+				NVLinkLogicalPartitionID: nvllpID,
+				DeviceInstance:           2,
+				Status:                   tt.fields.status,
+			}
+			got := NewAPINVLinkInterfaceSummary(dbnvli)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestAPINVLinkInterfaceSummary_JSONStatusField(t *testing.T) {
+	type fields struct {
+		deviceInstance int
+		status         string
+	}
+	tests := []struct {
+		name   string
+		fields fields
+	}{
+		{
+			name: "json round-trip preserves Ready status",
+			fields: fields{
+				deviceInstance: 1,
+				status:         cdbm.NVLinkInterfaceStatusReady,
+			},
+		},
+		{
+			name: "json round-trip preserves Pending status",
+			fields: fields{
+				deviceInstance: 0,
+				status:         cdbm.NVLinkInterfaceStatusPending,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dbnvli := &cdbm.NVLinkInterface{
+				ID:                       uuid.New(),
+				InstanceID:               uuid.New(),
+				SiteID:                   uuid.New(),
+				NVLinkLogicalPartitionID: uuid.New(),
+				DeviceInstance:           tt.fields.deviceInstance,
+				Status:                   tt.fields.status,
+			}
+			summary := NewAPINVLinkInterfaceSummary(dbnvli)
+
+			b, err := json.Marshal(summary)
+			require.NoError(t, err)
+
+			var raw map[string]any
+			require.NoError(t, json.Unmarshal(b, &raw))
+			assert.Equal(t, tt.fields.status, raw["status"])
+
+			var roundTrip APINVLinkInterfaceSummary
+			require.NoError(t, json.Unmarshal(b, &roundTrip))
+			assert.Equal(t, summary.Status, roundTrip.Status)
 		})
 	}
 }

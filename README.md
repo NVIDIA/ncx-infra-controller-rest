@@ -210,9 +210,9 @@ done
 |---------|--------|-------------|
 | carbide-rest-api | `api` | Main REST API server |
 | carbide-rest-workflow | `workflow` | Temporal workflow service |
-| carbide-rest-site-manager | `sitemgr` | Site management service |
-| carbide-site-agent | `elektra` | On-site agent |
 | carbide-rest-db | `migrations` | Database migrations |
+| carbide-rest-site-agent | `site-agent` | On-site agent |
+| carbide-rest-site-manager | `sitemgr` | Site management service |
 | carbide-rest-cert-manager | `credsmgr` | Native PKI certificate manager |
 | carbide-cli | `carbidecli` | [CLI client](cli/README.md) for the REST API |
 

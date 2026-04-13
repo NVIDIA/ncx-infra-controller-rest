@@ -45,7 +45,7 @@ COPY workflow-schema/ ./workflow-schema/
 COPY site-workflow/ ./site-workflow/
 COPY cert-manager/ ./cert-manager/
 
-# Build elektra (site agent)
+# Build site-agent
 WORKDIR /workspace/site-agent
 RUN VERSION=$(grep -v '^#' /workspace/VERSION | tr -d '[:space:]' 2>/dev/null || echo "dev") && \
     BUILD_TIME=$(date +"%Y-%m-%d %H:%M:%S") && \
@@ -53,8 +53,8 @@ RUN VERSION=$(grep -v '^#' /workspace/VERSION | tr -d '[:space:]' 2>/dev/null ||
         -ldflags "-extldflags '-static' -w -s \
                   -X 'github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/metadata.Version=${VERSION}' \
                   -X 'github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/metadata.BuildTime=${BUILD_TIME}'" \
-        -o /app/elektra \
-        ./cmd/elektra
+        -o /app/site-agent \
+        ./cmd/site-agent
 
 # Final stage
 FROM nvcr.io/nvidia/distroless/go:v3.2.1 AS final
@@ -62,7 +62,7 @@ FROM nvcr.io/nvidia/distroless/go:v3.2.1 AS final
 WORKDIR /app
 
 # Copy binaries from builder
-COPY --from=builder --chown=nvs:nvs /app/elektra /app/elektra
+COPY --from=builder --chown=nvs:nvs /app/site-agent /app/site-agent
 
 # Switch to non-root user
 USER nvs
@@ -71,4 +71,4 @@ USER nvs
 EXPOSE 8080
 
 # Run the application
-ENTRYPOINT ["/app/elektra"]
+ENTRYPOINT ["/app/site-agent"]
