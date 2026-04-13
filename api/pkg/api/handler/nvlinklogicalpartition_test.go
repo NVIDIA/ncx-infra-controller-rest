@@ -547,6 +547,7 @@ func TestNVLinkLogicalPartitionHandler_Update(t *testing.T) {
 		expectedStatus                   int
 		expectedName                     bool
 		verifyChildSpanner               bool
+		verifyTemporalCall               bool
 		expectedForgeMetadataName        string  // Metadata.Name on the site workflow request (always from DB after update)
 		expectedForgeMetadataDescription *string // Metadata.Description when asserting Forge payload (DB snapshot after update)
 	}{
@@ -658,6 +659,7 @@ func TestNVLinkLogicalPartitionHandler_Update(t *testing.T) {
 			user:               tnu1,
 			expectedStatus:     http.StatusOK,
 			verifyChildSpanner: true,
+			verifyTemporalCall: false,
 		},
 		{
 			fields: fields{
@@ -673,6 +675,7 @@ func TestNVLinkLogicalPartitionHandler_Update(t *testing.T) {
 			user:               tnu1,
 			expectedStatus:     http.StatusOK,
 			verifyChildSpanner: true,
+			verifyTemporalCall: true,
 		},
 		{
 			fields: fields{
@@ -680,7 +683,7 @@ func TestNVLinkLogicalPartitionHandler_Update(t *testing.T) {
 				tc:        tsc,
 				cfg:       cfg,
 			},
-			name:                             "success case description-only PATCH sends current name to Forge",
+			name:                             "success case description-only update request sends current name to Forge",
 			nvllpID:                          nvllp2.ID.String(),
 			reqOrgName:                       tnOrg1,
 			reqBody:                          string(descOnlyBody),
@@ -690,6 +693,7 @@ func TestNVLinkLogicalPartitionHandler_Update(t *testing.T) {
 			verifyChildSpanner:               true,
 			expectedForgeMetadataName:        "test-nvllp-2",
 			expectedForgeMetadataDescription: cdb.GetStrPtr("updated description without name in body"),
+			verifyTemporalCall:               true,
 		},
 		{
 			fields: fields{
@@ -697,7 +701,7 @@ func TestNVLinkLogicalPartitionHandler_Update(t *testing.T) {
 				tc:        tsc,
 				cfg:       cfg,
 			},
-			name:                             "success case name-only PATCH sends DB name and preserved description to Forge",
+			name:                             "success case name-only update request sends DB name and preserved description to Forge",
 			nvllpID:                          nvllp5.ID.String(),
 			reqOrgName:                       tnOrg1,
 			reqBody:                          string(nameOnlyBody),
@@ -707,6 +711,7 @@ func TestNVLinkLogicalPartitionHandler_Update(t *testing.T) {
 			verifyChildSpanner:               true,
 			expectedForgeMetadataName:        "test-nvllp-5-renamed",
 			expectedForgeMetadataDescription: cdb.GetStrPtr("preserved-for-forge"),
+			verifyTemporalCall:               true,
 		},
 		{
 			fields: fields{
@@ -768,12 +773,23 @@ func TestNVLinkLogicalPartitionHandler_Update(t *testing.T) {
 
 				var updateReq *cwssaws.NVLinkLogicalPartitionUpdateRequest
 				for i := len(tsc.Calls) - 1; i >= 0; i-- {
-					if tsc.Calls[i].Method == "ExecuteWorkflow" {
-						updateReq = tsc.Calls[i].Arguments[3].(*cwssaws.NVLinkLogicalPartitionUpdateRequest)
-						break
+					call := tsc.Calls[i]
+					if call.Method == "ExecuteWorkflow" && len(call.Arguments) > 3 {
+						if wfName, ok := call.Arguments[2].(string); ok && wfName == "UpdateNVLinkLogicalPartition" {
+							updateReq, _ = call.Arguments[3].(*cwssaws.NVLinkLogicalPartitionUpdateRequest)
+							break
+						}
 					}
 				}
-				if updateReq != nil && (tc.reqBodyModel.Description != nil || tc.reqBodyModel.Name != nil) {
+
+				if tc.verifyTemporalCall {
+					require.NotNil(t, updateReq, "UpdateNVLinkLogicalPartition workflow should have been called")
+				} else {
+					require.Nil(t, updateReq, "UpdateNVLinkLogicalPartition workflow should not have been called")
+					return
+				}
+
+				if tc.reqBodyModel.Description != nil || tc.reqBodyModel.Name != nil {
 					if tc.expectedForgeMetadataName != "" {
 						assert.Equal(t, tc.expectedForgeMetadataName, updateReq.Config.Metadata.Name)
 					} else if tc.reqBodyModel.Name != nil {
@@ -784,9 +800,8 @@ func TestNVLinkLogicalPartitionHandler_Update(t *testing.T) {
 					} else if tc.reqBodyModel.Description != nil {
 						assert.Equal(t, *tc.reqBodyModel.Description, updateReq.Config.Metadata.Description)
 					}
-					assert.Equal(t, updateReq.Config.TenantOrganizationId, tc.reqOrgName)
+					assert.Equal(t, tc.reqOrgName, updateReq.Config.TenantOrganizationId)
 				}
-
 			}
 			if tc.verifyChildSpanner {
 				span := oteltrace.SpanFromContext(ec.Request().Context())
