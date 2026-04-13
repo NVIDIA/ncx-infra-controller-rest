@@ -24,7 +24,7 @@ import (
 	sww "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/workflow"
 )
 
-// RegisterPublisher registers the OsImage Workflows with the Temporal client
+// RegisterPublisher registers the OsImage and OperatingSystem Workflows with the Temporal client
 func (api *API) RegisterPublisher() error {
 	// Register publisher workflows
 
@@ -44,6 +44,21 @@ func (api *API) RegisterPublisher() error {
 
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(OsImageInventoryManager.DiscoverOsImageInventory)
 	ManagerAccess.Data.EB.Log.Info().Msg("OsImage: successfully registered DiscoverOsImageInventory activity")
+
+	// Collect and Publish OperatingSystem Inventory workflow (OS definitions from carbide-core)
+	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.DiscoverOperatingSystemInventory)
+	ManagerAccess.Data.EB.Log.Info().Msg("OperatingSystem: successfully registered DiscoverOperatingSystemInventory workflow")
+
+	// Register OperatingSystem activity for discovering and publishing OperatingSystem Inventory
+	OperatingSystemInventoryManager := swa.NewManageOperatingSystemInventory(swa.ManageInventoryConfig{
+		SiteID:                uuid.MustParse(ManagerAccess.Conf.EB.Temporal.ClusterID),
+		CarbideAtomicClient:   ManagerAccess.Data.EB.Managers.Carbide.Client,
+		TemporalPublishClient: ManagerAccess.Data.EB.Managers.Workflow.Temporal.Publisher,
+		TemporalPublishQueue:  ManagerAccess.Conf.EB.Temporal.TemporalPublishQueue,
+	})
+
+	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(OperatingSystemInventoryManager.DiscoverOperatingSystemInventory)
+	ManagerAccess.Data.EB.Log.Info().Msg("OperatingSystem: successfully registered DiscoverOperatingSystemInventory activity")
 
 	api.RegisterCron()
 	return nil

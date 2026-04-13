@@ -119,6 +119,88 @@ func (x *OsImageInventory) GetInventoryPage() *InventoryPage {
 	return nil
 }
 
+// OperatingSystemInventory - inventory info for all OS definitions periodically collected from carbide-core
+type OperatingSystemInventory struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// List of Operating Systems (active records only; deletions are detected by absence)
+	OperatingSystems []*OperatingSystem `protobuf:"bytes,1,rep,name=operating_systems,json=operatingSystems,proto3" json:"operating_systems,omitempty"`
+	// Reported timestamp of inventory
+	Timestamp *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	// Status of Inventory
+	InventoryStatus InventoryStatus `protobuf:"varint,3,opt,name=inventory_status,json=inventoryStatus,proto3,enum=workflows.v1.InventoryStatus" json:"inventory_status,omitempty"`
+	// Message for status
+	StatusMsg string `protobuf:"bytes,4,opt,name=status_msg,json=statusMsg,proto3" json:"status_msg,omitempty"`
+	// Inventory page information
+	InventoryPage *InventoryPage `protobuf:"bytes,5,opt,name=inventory_page,json=inventoryPage,proto3" json:"inventory_page,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OperatingSystemInventory) Reset() {
+	*x = OperatingSystemInventory{}
+	mi := &file_operatingsystem_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OperatingSystemInventory) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OperatingSystemInventory) ProtoMessage() {}
+
+func (x *OperatingSystemInventory) ProtoReflect() protoreflect.Message {
+	mi := &file_operatingsystem_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OperatingSystemInventory.ProtoReflect.Descriptor instead.
+func (*OperatingSystemInventory) Descriptor() ([]byte, []int) {
+	return file_operatingsystem_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *OperatingSystemInventory) GetOperatingSystems() []*OperatingSystem {
+	if x != nil {
+		return x.OperatingSystems
+	}
+	return nil
+}
+
+func (x *OperatingSystemInventory) GetTimestamp() *timestamppb.Timestamp {
+	if x != nil {
+		return x.Timestamp
+	}
+	return nil
+}
+
+func (x *OperatingSystemInventory) GetInventoryStatus() InventoryStatus {
+	if x != nil {
+		return x.InventoryStatus
+	}
+	return InventoryStatus_INVENTORY_STATUS_UNSPECIFIED
+}
+
+func (x *OperatingSystemInventory) GetStatusMsg() string {
+	if x != nil {
+		return x.StatusMsg
+	}
+	return ""
+}
+
+func (x *OperatingSystemInventory) GetInventoryPage() *InventoryPage {
+	if x != nil {
+		return x.InventoryPage
+	}
+	return nil
+}
+
 var File_operatingsystem_proto protoreflect.FileDescriptor
 
 const file_operatingsystem_proto_rawDesc = "" +
@@ -126,6 +208,13 @@ const file_operatingsystem_proto_rawDesc = "" +
 	"\x15operatingsystem.proto\x12\fworkflows.v1\x1a\x0eworkflow.proto\x1a\x13forge_carbide.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xa6\x02\n" +
 	"\x10OsImageInventory\x12+\n" +
 	"\tos_images\x18\x01 \x03(\v2\x0e.forge.OsImageR\bosImages\x128\n" +
+	"\ttimestamp\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12H\n" +
+	"\x10inventory_status\x18\x03 \x01(\x0e2\x1d.workflows.v1.InventoryStatusR\x0finventoryStatus\x12\x1d\n" +
+	"\n" +
+	"status_msg\x18\x04 \x01(\tR\tstatusMsg\x12B\n" +
+	"\x0einventory_page\x18\x05 \x01(\v2\x1b.workflows.v1.InventoryPageR\rinventoryPage\"\xc6\x02\n" +
+	"\x18OperatingSystemInventory\x12C\n" +
+	"\x11operating_systems\x18\x01 \x03(\v2\x16.forge.OperatingSystemR\x10operatingSystems\x128\n" +
 	"\ttimestamp\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12H\n" +
 	"\x10inventory_status\x18\x03 \x01(\x0e2\x1d.workflows.v1.InventoryStatusR\x0finventoryStatus\x12\x1d\n" +
 	"\n" +
@@ -144,24 +233,30 @@ func file_operatingsystem_proto_rawDescGZIP() []byte {
 	return file_operatingsystem_proto_rawDescData
 }
 
-var file_operatingsystem_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_operatingsystem_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_operatingsystem_proto_goTypes = []any{
-	(*OsImageInventory)(nil),      // 0: workflows.v1.OsImageInventory
-	(*OsImage)(nil),               // 1: forge.OsImage
-	(*timestamppb.Timestamp)(nil), // 2: google.protobuf.Timestamp
-	(InventoryStatus)(0),          // 3: workflows.v1.InventoryStatus
-	(*InventoryPage)(nil),         // 4: workflows.v1.InventoryPage
+	(*OsImageInventory)(nil),         // 0: workflows.v1.OsImageInventory
+	(*OperatingSystemInventory)(nil), // 1: workflows.v1.OperatingSystemInventory
+	(*OsImage)(nil),                  // 2: forge.OsImage
+	(*timestamppb.Timestamp)(nil),    // 3: google.protobuf.Timestamp
+	(InventoryStatus)(0),             // 4: workflows.v1.InventoryStatus
+	(*InventoryPage)(nil),            // 5: workflows.v1.InventoryPage
+	(*OperatingSystem)(nil),          // 6: forge.OperatingSystem
 }
 var file_operatingsystem_proto_depIdxs = []int32{
-	1, // 0: workflows.v1.OsImageInventory.os_images:type_name -> forge.OsImage
-	2, // 1: workflows.v1.OsImageInventory.timestamp:type_name -> google.protobuf.Timestamp
-	3, // 2: workflows.v1.OsImageInventory.inventory_status:type_name -> workflows.v1.InventoryStatus
-	4, // 3: workflows.v1.OsImageInventory.inventory_page:type_name -> workflows.v1.InventoryPage
-	4, // [4:4] is the sub-list for method output_type
-	4, // [4:4] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	2, // 0: workflows.v1.OsImageInventory.os_images:type_name -> forge.OsImage
+	3, // 1: workflows.v1.OsImageInventory.timestamp:type_name -> google.protobuf.Timestamp
+	4, // 2: workflows.v1.OsImageInventory.inventory_status:type_name -> workflows.v1.InventoryStatus
+	5, // 3: workflows.v1.OsImageInventory.inventory_page:type_name -> workflows.v1.InventoryPage
+	6, // 4: workflows.v1.OperatingSystemInventory.operating_systems:type_name -> forge.OperatingSystem
+	3, // 5: workflows.v1.OperatingSystemInventory.timestamp:type_name -> google.protobuf.Timestamp
+	4, // 6: workflows.v1.OperatingSystemInventory.inventory_status:type_name -> workflows.v1.InventoryStatus
+	5, // 7: workflows.v1.OperatingSystemInventory.inventory_page:type_name -> workflows.v1.InventoryPage
+	8, // [8:8] is the sub-list for method output_type
+	8, // [8:8] is the sub-list for method input_type
+	8, // [8:8] is the sub-list for extension type_name
+	8, // [8:8] is the sub-list for extension extendee
+	0, // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_operatingsystem_proto_init() }
@@ -177,7 +272,7 @@ func file_operatingsystem_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_operatingsystem_proto_rawDesc), len(file_operatingsystem_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   1,
+			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

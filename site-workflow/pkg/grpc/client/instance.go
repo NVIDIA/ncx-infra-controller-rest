@@ -141,12 +141,12 @@ func (instance *compute) CreateInstance(ctx context.Context, request *wflows.Cre
 		TenantKeysetIds:      request.TenantKeysetIds,
 	}
 
-	carbideRequest.Config.Os = &wflows.OperatingSystem{
+	carbideRequest.Config.Os = &wflows.InstanceOperatingSystemConfig{
 		PhoneHomeEnabled: request.PhoneHomeEnabled,
 	}
 
 	if request.CustomIpxe != nil {
-		carbideRequest.Config.Os.Variant = &wflows.OperatingSystem_Ipxe{
+		carbideRequest.Config.Os.Variant = &wflows.InstanceOperatingSystemConfig_Ipxe{
 			Ipxe: &wflows.InlineIpxe{
 				IpxeScript: *request.CustomIpxe,
 			},

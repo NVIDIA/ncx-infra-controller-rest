@@ -554,6 +554,10 @@ service Forge {
   rpc GetOsImage(common.UUID) returns (OsImage);
   rpc UpdateOsImage(OsImageAttributes) returns (OsImage);
 
+  // iPXE Script Template management
+  rpc GetIpxeTemplate(GetIpxeTemplateRequest) returns (IpxeTemplate);
+  rpc ListIpxeTemplates(ListIpxeTemplatesRequest) returns (IpxeTemplateList);
+
   rpc RebootCompleted(MachineRebootCompletedRequest) returns (MachineRebootCompletedResponse);
 
   // Validation result Persist
@@ -689,6 +693,7 @@ service Forge {
   // Deprecated: Use FindRackIds
   rpc GetRack(GetRackRequest) returns (GetRackResponse);
   rpc DeleteRack(DeleteRackRequest) returns (google.protobuf.Empty);
+  rpc GetRackCapabilities(GetRackCapabilitiesRequest) returns (GetRackCapabilitiesResponse);
 
   //
   // Compute Allocations
@@ -880,6 +885,19 @@ service Forge {
   rpc UpdateComponentFirmware(UpdateComponentFirmwareRequest) returns (UpdateComponentFirmwareResponse);
   rpc GetComponentFirmwareStatus(GetComponentFirmwareStatusRequest) returns (GetComponentFirmwareStatusResponse);
   rpc ListComponentFirmwareVersions(ListComponentFirmwareVersionsRequest) returns (ListComponentFirmwareVersionsResponse);
+
+  // Operating System library
+  rpc CreateOperatingSystem(CreateOperatingSystemRequest) returns (OperatingSystem);
+  rpc GetOperatingSystem(common.OperatingSystemId) returns (OperatingSystem);
+  rpc UpdateOperatingSystem(UpdateOperatingSystemRequest) returns (OperatingSystem);
+  rpc DeleteOperatingSystem(DeleteOperatingSystemRequest) returns (DeleteOperatingSystemResponse);
+  rpc FindOperatingSystemIds(OperatingSystemSearchFilter) returns (OperatingSystemIdList);
+  rpc FindOperatingSystemsByIds(OperatingSystemsByIdsRequest) returns (OperatingSystemList);
+  // Returns the ordered artifact list for an OS definition without fetching the full record.
+  rpc GetOperatingSystemCachableIpxeTemplateArtifacts(GetOperatingSystemCachableIpxeTemplateArtifactsRequest) returns (IpxeTemplateArtifactList);
+  // Updates the cached_url field of named artifacts in-place, leaving all other artifact fields
+  // and OS definition fields (including ipxe_definition_hash) unchanged.
+  rpc UpdateOperatingSystemCachableIpxeTemplateArtifacts(UpdateOperatingSystemIpxeTemplateArtifactRequest) returns (IpxeTemplateArtifactList);
 }
 
 message AttestationIdsRequest {
@@ -1132,6 +1150,7 @@ enum CredentialType {
   RootBmcByMacAddress = 8;
   BmcForgeAdminByMacAddress = 9;
   NmxM = 10;
+  BgpSiteWideLeafPassword = 11;
 }
 
 message CredentialCreationRequest {
@@ -1798,6 +1817,9 @@ message PowerShelf {
 
   // Version string for the current controller state (e.g. "V3-T1774905143273055").
   string state_version = 9;
+
+  // The rack that this powershelf is associated with
+  optional common.RackId rack_id = 10;
 }
 
 message PowerShelfList {
@@ -1966,6 +1988,9 @@ message Switch {
 
   Metadata metadata = 8;
   string version = 9;
+
+  // The rack that this switch is associated with
+  optional common.RackId rack_id = 10;
 }
 
 message SwitchList {
@@ -2322,6 +2347,52 @@ message BatchInstanceAllocationResponse {
   repeated Instance instances = 1;
 }
 
+// Parameter for iPXE template substitution or kernel command line
+// Can be used to replace variables in iPXE templates or add parameters to kernel command line
+// Some are "well known" like 'console', others can be custom defined by users
+message IpxeTemplateParameter {
+  string name = 1;   // Name of the parameter (used as variable in template)
+  string value = 2;  // Value of the parameter
+}
+
+// Artifact cache strategy
+enum IpxeTemplateArtifactCacheStrategy {
+  CACHE_AS_NEEDED = 0;   // Download and cache artifact locally if possible
+  LOCAL_ONLY = 1;        // Artifact URL provided is only usable locally: site specific, no caching applicable.
+  CACHED_ONLY = 2;       // Artifact URL must be cached locally or is unusable
+  REMOTE_ONLY = 3;       // Always fetch from remote URL, never cache locally
+}
+
+// Remote artifact to be cached locally before booting
+// Examples: kernel, initrd, rootfs, qcow-imager.efi, OS image, ...
+message IpxeTemplateArtifact {
+  string name = 1;                          // Name of the artifact (can be used as variable in template)
+  string url = 2;                           // Original URL for the artifact
+  optional string sha = 3;                  // Optional SHA256 checksum for the artifact
+  optional string auth_type = 4;            // Auth type: "None", "Basic", "Bearer"
+  optional string auth_token = 5;           // Optional auth token for the artifact
+  IpxeTemplateArtifactCacheStrategy cache_strategy = 6; // How to handle caching for this artifact
+  optional string cached_url = 7;           // Local cached URL, set by carbide-core on successful download. If present overrides 'url' at boot time.
+}
+
+// Scope for iPXE script templates.
+enum IpxeTemplateScope {
+  INTERNAL = 0;  // Carbide-core usage only
+  PUBLIC = 1;    // Usable by tenant
+}
+
+// Template management messages
+message IpxeTemplate {
+  string name = 1;
+  string template = 2;
+  repeated string required_params = 3;  // Error if these params are not provided or empty
+  string description = 4;
+  repeated string reserved_params = 5;  // Reserved for carbide-core to provide at render time
+  repeated string required_artifacts = 6;  // Error if these artifacts are not provided or empty
+  IpxeTemplateScope scope = 7;  // INTERNAL = carbide-core only, PUBLIC = tenant-usable
+  common.IpxeTemplateId id = 8;  // Stable UUID, hardcoded in templates.yaml; consistent across all sites
+}
+
 // Tenant related configuration that is set once the instance is allocated
 // by a tenant
 message TenantConfig {
@@ -2329,7 +2400,7 @@ message TenantConfig {
   string tenant_organization_id = 1;
 
   // These fields have been used for OS configuration in the past.
-  // They are now replaced with the OperatingSystem message.
+  // They are now replaced with the InstanceOperatingSystemConfig message.
   reserved 11, 12, 13, 14;
 
   optional string hostname = 15;
@@ -2339,11 +2410,14 @@ message TenantConfig {
   repeated string tenantKeysetIds = 8; // this may be empty
 }
 
-message OperatingSystem {
+message InstanceOperatingSystemConfig {
   // Contains the operating system definition based on the variant of operating system
   oneof variant {
     InlineIpxe ipxe = 1;
     common.UUID os_image_id = 2;
+    // Reference any operating system definition by ID (any variant except OS image).
+    // On read the actual variant (iPXE / ipxe_os_definition) is resolved from the row.
+    common.OperatingSystemId operating_system_id = 4;
   }
 
   // If this flag is set to `true` the instance will not transition to a Ready state until
@@ -2378,7 +2452,7 @@ message InlineIpxe {
   string ipxe_script = 1;
   // Optional user-data that is associated with the iPXE script
   // This can be a cloud-init script
-  // Deprecated, use OperatingSystem user_data field
+  // Deprecated, use InstanceOperatingSystemConfig user_data field
   optional string user_data = 2;
 }
 
@@ -2391,7 +2465,7 @@ message InstanceConfig {
   TenantConfig tenant = 1;
 
   // Operating system. This is required if no operating system reference is provided
-  OperatingSystem os = 2;
+  InstanceOperatingSystemConfig os = 2;
   // Can be used to reference an OS in the OS library based on a unique ID
   // string os_reference = 3;
 
@@ -2476,7 +2550,7 @@ message InstanceOperatingSystemUpdateRequest {
   optional string if_version_match = 2;
 
   // Operating system. This is required if no operating system reference is provided
-  OperatingSystem os = 3;
+  InstanceOperatingSystemConfig os = 3;
   // Can be used to reference an OS in the OS library based on a unique ID
   // string os_reference = 4;
 }
@@ -3121,6 +3195,7 @@ message Machine {
 
   optional MachineNVLinkStatusObservation nvlink_status_observation = 44;
 
+  // The rack that this machine is associated with
   optional common.RackId rack_id = 45;
 }
 
@@ -3677,6 +3752,10 @@ message ManagedHostNetworkConfigResponse {
   // will still use the dynamically allocated VNI for deriving
   // route-targets.
   optional uint32 site_global_vpc_vni = 117;
+
+  // The password the DPU should use when configuring a
+  // BGP session with the its TOR
+  optional string bgp_leaf_session_password = 118;
 }
 
 message TrafficInterceptConfig {
@@ -4227,6 +4306,13 @@ message PxeInstructionRequest {
 
 message PxeInstructions {
   string pxe_script = 1;
+  // URL overrides for external clients (e.g. on the static-assignments
+  // segment). When set, carbide-pxe uses these instead of its global
+  // env var URLs, allowing external hosts to reach services via an
+  // alternate hostname or IP that they can resolve.
+  optional string api_url_override = 2;
+  optional string pxe_url_override = 3;
+  optional string static_pxe_url_override = 4;
 }
 
 message CloudInitDiscoveryInstructions {
@@ -4263,6 +4349,12 @@ message CloudInitInstructions {
   optional string custom_cloud_init = 1;
   optional CloudInitDiscoveryInstructions discovery_instructions = 2;
   optional CloudInitMetaData metadata = 3;
+  // URL overrides for external clients (e.g. on the static-assignments
+  // segment). When set, carbide-pxe uses these instead of its global
+  // env var URLs, allowing external hosts to reach services via an
+  // alternate hostname or IP that they can resolve.
+  optional string api_url_override = 4;
+  optional string pxe_url_override = 5;
 }
 
 // Specifies whether a network interface is physical network function (PF)
@@ -4806,6 +4898,12 @@ enum IpType {
   // DB records specifically say their source type is `admin`.
   IpTypeRouteServerFromAdminApi = 10;
   IpTypeDpaInterface = 11;
+  // IpTypeStaticBmcIp are BMC IPs that were statically assigned via
+  // ExpectedMachine.bmc_ip_address, ExpectedPowerShelf.bmc_ip_address,
+  // ExpectedSwitch.bmc_ip_address, or operator static assignment
+  // (AllocationType::Static / static-assignments segment), as opposed to
+  // a normal DHCP allocation.
+  IpTypeStaticBmcIp = 12;
 }
 
 message MachineBootOverride {
@@ -4992,6 +5090,19 @@ message DeleteOsImageRequest {
 message DeleteOsImageResponse {
 }
 
+// Request/Response messages for iPXE Script Template management
+message GetIpxeTemplateRequest {
+  common.IpxeTemplateId id = 1;  // Stable template UUID
+}
+
+message ListIpxeTemplatesRequest {
+  // Empty for now
+}
+
+message IpxeTemplateList {
+  repeated IpxeTemplate templates = 1;
+}
+
 
 message ExpectedHostNic {
   string mac_address = 1;
@@ -5018,6 +5129,9 @@ message ExpectedMachine {
   // deprecated
   bool dpf_enabled = 12 [deprecated = true];
   optional bool is_dpf_enabled = 13;
+  // Static BMC IP (optional). Pre-allocates a machine_interface like expected
+  // switches and power shelves; external IPs use the static-assignments segment.
+  optional string bmc_ip_address = 14;
 
   // WARNING: Following fields are not present in Core, but added directly in REST snapshot
   optional string name = 21;
@@ -6337,6 +6451,71 @@ message DeleteRackRequest {
   string id = 1;
 }
 
+// Rack Capabilities
+
+enum RackHardwareType {
+  RACK_HARDWARE_TYPE_UNSPECIFIED = 0;
+  RACK_HARDWARE_TYPE_DSX_GB200NVL_36X1 = 1;
+  RACK_HARDWARE_TYPE_DSX_GB200NVL_36X2 = 2;
+  RACK_HARDWARE_TYPE_DSX_GB200NVL_72X1 = 3;
+}
+
+enum RackHardwareTopology {
+  RACK_HARDWARE_TOPOLOGY_UNSPECIFIED = 0;
+  RACK_HARDWARE_TOPOLOGY_GB200_NVL36R1_C2G4 = 1;
+  RACK_HARDWARE_TOPOLOGY_GB300_NVL36R1_C2G4 = 2;
+  RACK_HARDWARE_TOPOLOGY_GB200_NVL72R1_C2G4 = 3;
+  RACK_HARDWARE_TOPOLOGY_GB300_NVL72R1_C2G4 = 4;
+  RACK_HARDWARE_TOPOLOGY_VR_NVL8R1_C2G4_RTF = 5;
+  RACK_HARDWARE_TOPOLOGY_VR_NVL72R1_C2G4 = 6;
+}
+
+enum RackHardwareClass {
+  RACK_HARDWARE_CLASS_UNSPECIFIED = 0;
+  RACK_HARDWARE_CLASS_DEV = 1;
+  RACK_HARDWARE_CLASS_PROD = 2;
+}
+
+message RackCapabilityCompute {
+  optional string name = 1;
+  uint32 count = 2;
+  optional string vendor = 3;
+  repeated uint32 slot_ids = 4;
+}
+
+message RackCapabilitySwitch {
+  optional string name = 1;
+  uint32 count = 2;
+  optional string vendor = 3;
+  repeated uint32 slot_ids = 4;
+}
+
+message RackCapabilityPowerShelf {
+  optional string name = 1;
+  uint32 count = 2;
+  optional string vendor = 3;
+  repeated uint32 slot_ids = 4;
+}
+
+message RackCapabilitiesSet {
+  RackHardwareType rack_hardware_type = 1;
+  RackHardwareTopology rack_hardware_topology = 2;
+  RackHardwareClass rack_hardware_class = 3;
+  RackCapabilityCompute compute = 4;
+  RackCapabilitySwitch switch = 5;
+  RackCapabilityPowerShelf power_shelf = 6;
+}
+
+message GetRackCapabilitiesRequest {
+  common.RackId rack_id = 1;
+}
+
+message GetRackCapabilitiesResponse {
+  common.RackId rack_id = 1;
+  string rack_type = 2;
+  RackCapabilitiesSet capabilities = 3;
+}
+
 // put some sample rack manager commands in for now
 enum RackManagerForgeCmd {
   InventoryGet = 0;
@@ -7379,4 +7558,126 @@ message AdminForceDeletePowerShelfResponse {
   string power_shelf_id = 1;
   // Number of interfaces deleted.
   uint32 interfaces_deleted = 2;
+}
+
+// --- Operating System library messages ---
+
+// Operating system definition (CRUD resource, table operating_systems).
+// Type of Operating System variant
+enum OperatingSystemType {
+  OS_TYPE_UNSPECIFIED = 0;
+  OS_TYPE_IPXE = 1;              // Raw inline iPXE script
+  OS_TYPE_TEMPLATED_IPXE = 2; // iPXE OS using an iPXE template
+}
+
+message OperatingSystem {
+  common.OperatingSystemId id = 1;
+  string name = 2;
+  optional string description = 3;
+  string tenant_organization_id = 4;
+  OperatingSystemType type = 5;
+  TenantState status = 6; // we only use some states from TenantState
+  bool is_active = 7;
+  bool allow_override = 8;
+  bool phone_home_enabled = 9;
+  optional string user_data = 10;
+  string created = 11;
+  string updated = 12;
+
+  // Variant: ipxe
+  optional string ipxe_script = 20;
+  // Variant: ipxe_os_definition
+  optional common.IpxeTemplateId ipxe_template_id = 22;
+  repeated IpxeTemplateParameter ipxe_template_parameters = 23;
+  repeated IpxeTemplateArtifact ipxe_template_artifacts = 24;
+  optional string ipxe_template_definition_hash = 25;
+}
+
+message CreateOperatingSystemRequest {
+  string name = 1;
+  optional string description = 2;
+  string tenant_organization_id = 3;
+  bool is_active = 4;
+  bool allow_override = 5;
+  bool phone_home_enabled = 6;
+  optional string user_data = 7;
+  optional common.OperatingSystemId id = 8;
+
+  // Exactly one variant must be provided to determine the type.
+  // This is only set for 'ipxe' variant:
+  optional string ipxe_script = 20;
+  // This is only set for 'ipxe_os_definition' variant (with optional parameters/artifacts):
+  optional common.IpxeTemplateId ipxe_template_id = 22;
+  repeated IpxeTemplateParameter ipxe_template_parameters = 23;
+  repeated IpxeTemplateArtifact ipxe_template_artifacts = 24;
+}
+
+// Wrapper for repeated IpxeTemplateParameter so that an optional field can distinguish
+// "not provided" (keep existing) from "provided but empty" (clear the list).
+message IpxeTemplateParameters {
+  repeated IpxeTemplateParameter items = 1;
+}
+
+// Wrapper for repeated IpxeTemplateArtifact (same rationale as IpxeTemplateParameters).
+message IpxeTemplateArtifacts {
+  repeated IpxeTemplateArtifact items = 1;
+}
+
+message UpdateOperatingSystemRequest {
+  common.OperatingSystemId id = 1;
+  optional string name = 2;
+  optional string description = 3;
+  optional bool is_active = 4;
+  optional bool allow_override = 5;
+  optional bool phone_home_enabled = 6;
+  optional string user_data = 7;
+
+  optional string ipxe_script = 20;
+  optional common.IpxeTemplateId ipxe_template_id = 22;
+  optional IpxeTemplateParameters ipxe_template_parameters = 23;
+  optional IpxeTemplateArtifacts ipxe_template_artifacts = 24;
+  optional string ipxe_template_definition_hash = 25; // if provided, used as-is; otherwise recomputed
+}
+
+message DeleteOperatingSystemRequest {
+  common.OperatingSystemId id = 1;
+}
+
+message DeleteOperatingSystemResponse {
+}
+
+message OperatingSystemSearchFilter {
+  optional string tenant_organization_id = 1;
+}
+
+message OperatingSystemIdList {
+  repeated common.OperatingSystemId ids = 1;
+}
+
+message OperatingSystemsByIdsRequest {
+  repeated common.OperatingSystemId ids = 1;
+}
+
+message OperatingSystemList {
+  repeated OperatingSystem operating_systems = 1;
+}
+
+message GetOperatingSystemCachableIpxeTemplateArtifactsRequest {
+  common.OperatingSystemId id = 1;
+}
+
+message IpxeTemplateArtifactList {
+  repeated IpxeTemplateArtifact artifacts = 1;
+}
+
+// A single (artifact name, cached_url) pair for UpdateOperatingSystemCachableIpxeTemplateArtifacts.
+// cached_url is optional: absent means clear the cached_url on the matching artifact(s).
+message IpxeTemplateArtifactUpdateRequest {
+  string name = 1;
+  optional string cached_url = 2;
+}
+
+message UpdateOperatingSystemIpxeTemplateArtifactRequest {
+  common.OperatingSystemId id = 1;
+  repeated IpxeTemplateArtifactUpdateRequest updates = 2;
 }
