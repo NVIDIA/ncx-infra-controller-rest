@@ -670,28 +670,25 @@ func buildBringUpRule() *OperationRule {
 		RuleDefinition: RuleDefinition{
 			Version: CurrentRuleDefinitionVersion,
 			Steps: []SequenceStep{
-				// === Stage 1: Compute — power on, verify ===
-				{
-					ComponentType: devicetypes.ComponentTypeCompute,
-					Stage:         1,
-					MaxParallel:   0,
-					Timeout:       30 * time.Minute,
-					RetryPolicy: &RetryPolicy{
-						MaxAttempts:        3,
-						InitialInterval:    10 * time.Second,
-						BackoffCoefficient: 2.0,
+			// === Stage 1: Compute — power on, verify ===
+			{
+				ComponentType: devicetypes.ComponentTypeCompute,
+				Stage:         1,
+				MaxParallel:   0,
+				Timeout:       15 * time.Minute,
+				RetryPolicy: &RetryPolicy{
+					MaxAttempts:        3,
+					InitialInterval:    10 * time.Second,
+					BackoffCoefficient: 2.0,
+				},
+				MainOperation: ActionConfig{
+					Name: ActionPowerControl,
+					Parameters: map[string]any{
+						ParamOperation: "power_on",
 					},
-					PreOperation: []ActionConfig{
-						{
-							Name: ActionBringUpControl,
-						},
-						{
-							Name:         ActionWaitBringUp,
-							Timeout:      15 * time.Minute,
-							PollInterval: 30 * time.Second,
-						},
-					},
-					MainOperation: ActionConfig{
+				},
+				PostOperation: []ActionConfig{
+					{
 						Name:         ActionVerifyPowerStatus,
 						Timeout:      10 * time.Minute,
 						PollInterval: 15 * time.Second,
@@ -700,6 +697,7 @@ func buildBringUpRule() *OperationRule {
 						},
 					},
 				},
+			},
 				// === Stage 2: Compute — firmware update (auto-resolve desired) ===
 				{
 					ComponentType: devicetypes.ComponentTypeCompute,
@@ -719,28 +717,25 @@ func buildBringUpRule() *OperationRule {
 						},
 					},
 				},
-				// === Stage 3: NVLSwitch — power on, verify ===
-				{
-					ComponentType: devicetypes.ComponentTypeNVLSwitch,
-					Stage:         3,
-					MaxParallel:   0,
-					Timeout:       20 * time.Minute,
-					RetryPolicy: &RetryPolicy{
-						MaxAttempts:        3,
-						InitialInterval:    10 * time.Second,
-						BackoffCoefficient: 2.0,
+			// === Stage 3: NVLSwitch — power on, verify ===
+			{
+				ComponentType: devicetypes.ComponentTypeNVLSwitch,
+				Stage:         3,
+				MaxParallel:   0,
+				Timeout:       15 * time.Minute,
+				RetryPolicy: &RetryPolicy{
+					MaxAttempts:        3,
+					InitialInterval:    10 * time.Second,
+					BackoffCoefficient: 2.0,
+				},
+				MainOperation: ActionConfig{
+					Name: ActionPowerControl,
+					Parameters: map[string]any{
+						ParamOperation: "power_on",
 					},
-					PreOperation: []ActionConfig{
-						{
-							Name: ActionBringUpControl,
-						},
-						{
-							Name:         ActionWaitBringUp,
-							Timeout:      15 * time.Minute,
-							PollInterval: 30 * time.Second,
-						},
-					},
-					MainOperation: ActionConfig{
+				},
+				PostOperation: []ActionConfig{
+					{
 						Name:         ActionVerifyPowerStatus,
 						Timeout:      10 * time.Minute,
 						PollInterval: 15 * time.Second,
@@ -749,6 +744,7 @@ func buildBringUpRule() *OperationRule {
 						},
 					},
 				},
+			},
 				// === Stage 4: NVLSwitch — verify consistency + firmware update ===
 				{
 					ComponentType: devicetypes.ComponentTypeNVLSwitch,
