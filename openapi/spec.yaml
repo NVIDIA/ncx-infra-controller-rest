@@ -4338,6 +4338,9 @@ paths:
                       rateLimit: 40
                       mtu: 4000
                       enableSharp: true
+                      labels:
+                        environment: production
+                        team: devops
                       status: Pending
                       statusHistory:
                         - status: Pending
@@ -4442,6 +4445,9 @@ paths:
                     rateLimit: 40
                     mtu: 4000
                     enableSharp: true
+                    labels:
+                      environment: production
+                      team: devops
                     status: Pending
                     statusHistory:
                       - status: Pending
@@ -4468,6 +4474,9 @@ paths:
                 value:
                   name: turbo-net
                   siteId: 69dae3c8-3554-4a1f-b391-858c6dc47fff
+                  labels:
+                    environment: production
+                    team: devops
       tags:
         - InfiniBand Partition
   '/v2/org/{org}/carbide/infiniband-partition/{infiniBandPartitionId}':
@@ -4508,6 +4517,9 @@ paths:
                     rateLimit: 40
                     mtu: 4000
                     enableSharp: true
+                    labels:
+                      environment: production
+                      team: devops
                     status: Pending
                     statusHistory:
                       - status: Pending
@@ -4578,6 +4590,9 @@ paths:
                     rateLimit: 40
                     mtu: 4000
                     enableSharp: true
+                    labels:
+                      environment: production
+                      team: devops
                     status: Pending
                     statusHistory:
                       - status: Pending
@@ -4606,6 +4621,9 @@ paths:
                 value:
                   name: turbo-net-v2
                   description: Second version of the model training network
+                  labels:
+                    environment: production
+                    team: devops
       tags:
         - InfiniBand Partition
   '/v2/org/{org}/carbide/nvlink-logical-partition':
@@ -13532,6 +13550,9 @@ components:
         enableSharp:
           type: boolean
           readOnly: true
+        labels:
+          $ref: '#/components/schemas/Labels'
+          description: String key value pairs describing InfiniBand Partition labels. Up to 10 key value pairs can be specified
         status:
           $ref: '#/components/schemas/InfiniBandPartitionStatus'
           readOnly: true
@@ -13579,6 +13600,9 @@ components:
           type: string
           format: uuid
           description: ID of the Site the Partition should belong to
+        labels:
+          $ref: '#/components/schemas/Labels'
+          description: String key value pairs describing Partition labels. Up to 10 key value pairs can be specified
       required:
         - name
         - siteId
@@ -13596,6 +13620,9 @@ components:
           maxLength: 256
         description:
           type: string
+        labels:
+          $ref: '#/components/schemas/Labels'
+          description: String key value pairs describing Partition labels. Up to 10 key value pairs can be specified
       required:
         - name
     NVLinkLogicalPartition:

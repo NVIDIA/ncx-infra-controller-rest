@@ -100,6 +100,38 @@ func CreateInfiniBandPartitionV2(ctx workflow.Context, request *cwssaws.IBPartit
 	return nil
 }
 
+// UpdateInfiniBandPartition updates an InfiniBand Partition on site using the UpdateInfiniBandPartitionOnSite activity
+func UpdateInfiniBandPartition(ctx workflow.Context, request *cwssaws.IBPartitionUpdateRequest) error {
+	logger := log.With().Str("Workflow", "InfiniBandPartition").Str("Action", "Update").Str("IB Partition ID", request.GetId().GetValue()).Logger()
+
+	logger.Info().Msg("starting workflow")
+
+	retrypolicy := &temporal.RetryPolicy{
+		InitialInterval:    1 * time.Second,
+		BackoffCoefficient: 2.0,
+		MaximumInterval:    10 * time.Second,
+		MaximumAttempts:    2,
+	}
+	options := workflow.ActivityOptions{
+		StartToCloseTimeout: 2 * time.Minute,
+		RetryPolicy:         retrypolicy,
+	}
+
+	ctx = workflow.WithActivityOptions(ctx, options)
+
+	var ibPartitionManager activity.ManageInfiniBandPartition
+
+	err := workflow.ExecuteActivity(ctx, ibPartitionManager.UpdateInfiniBandPartitionOnSite, request).Get(ctx, nil)
+	if err != nil {
+		logger.Error().Err(err).Str("Activity", "UpdateInfiniBandPartitionOnSite").Msg("Failed to execute activity from workflow")
+		return err
+	}
+
+	logger.Info().Msg("completing workflow")
+
+	return nil
+}
+
 // DeleteInfiniBandPartitionV2 is a workflow to Delete InfiniBand Partitions using the DeleteInfiniBandPartitionOnSite activity
 // V1 (DeleteInfiniBandPartition) is found in cloud-workflow and uses a different activity that does not speak
 // to carbide directly.

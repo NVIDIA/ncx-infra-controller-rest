@@ -195,6 +195,20 @@ func (c *MockForgeClient) CreateIBPartition(ctx context.Context, in *wflows.IBPa
 	return out, nil
 }
 
+func (c *MockForgeClient) UpdateIBPartition(ctx context.Context, in *wflows.IBPartitionUpdateRequest, opts ...grpc.CallOption) (*wflows.IBPartition, error) {
+	out := new(wflows.IBPartition)
+	if in != nil && in.Id != nil {
+		out.Id = in.Id
+	} else {
+		out.Id = &wflows.IBPartitionId{Value: uuid.NewString()}
+	}
+	if in != nil {
+		out.Config = in.GetConfig()
+		out.Metadata = in.GetMetadata()
+	}
+	return out, nil
+}
+
 func (c *MockForgeClient) DeleteIBPartition(ctx context.Context, in *wflows.IBPartitionDeletionRequest, opts ...grpc.CallOption) (*wflows.IBPartitionDeletionResult, error) {
 	out := new(wflows.IBPartitionDeletionResult)
 	return out, nil
