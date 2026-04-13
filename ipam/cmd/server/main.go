@@ -195,15 +195,14 @@ func main() {
 
 					tlsCert := ctx.String("tls-cert")
 					tlsKey := ctx.String("tls-key")
-					if tlsCert != "" && tlsKey != "" {
-						cert, err := tls.LoadX509KeyPair(tlsCert, tlsKey)
-						if err != nil {
-							return fmt.Errorf("failed to load redis TLS cert/key: %w", err)
+					caPath := ctx.String("tls-ca")
+					if tlsCert != "" || tlsKey != "" || caPath != "" {
+						if (tlsCert == "") != (tlsKey == "") {
+							return fmt.Errorf("both redis tls-cert and tls-key must be set together")
 						}
-						tlsCfg := &tls.Config{
-							Certificates: []tls.Certificate{cert},
-						}
-						if caPath := ctx.String("tls-ca"); caPath != "" {
+
+						tlsCfg := &tls.Config{}
+						if caPath != "" {
 							caCert, err := os.ReadFile(caPath)
 							if err != nil {
 								return fmt.Errorf("failed to read redis CA cert: %w", err)
@@ -213,6 +212,13 @@ func main() {
 								return fmt.Errorf("failed to parse redis CA cert")
 							}
 							tlsCfg.RootCAs = pool
+						}
+						if tlsCert != "" {
+							cert, err := tls.LoadX509KeyPair(tlsCert, tlsKey)
+							if err != nil {
+								return fmt.Errorf("failed to load redis TLS cert/key: %w", err)
+							}
+							tlsCfg.Certificates = []tls.Certificate{cert}
 						}
 						cfg.TLSConfig = tlsCfg
 					}
