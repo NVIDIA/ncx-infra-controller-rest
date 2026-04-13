@@ -18,6 +18,7 @@
 package workflow
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -184,21 +185,32 @@ func executeGetPowerStatusAction(actx actionExecutionContext) error {
 // firmware update and polling for completion. Poll parameters are read from
 // the action config (poll_interval, poll_timeout) with sensible defaults.
 //
-// When called from a FirmwareControl workflow, operationInfo is
-// *FirmwareControlTaskInfo and is passed through directly.
-// When called from a non-firmware workflow (e.g. BringUp), operationInfo
-// will not be FirmwareControlTaskInfo; in that case we construct a default
-// FirmwareControlTaskInfo with an empty TargetVersion so the component
-// manager auto-resolves against Core's desired firmware entries.
+// operationInfo may arrive as *FirmwareControlTaskInfo (same-process call),
+// FirmwareControlTaskInfo (value copy), or map[string]interface{} (after
+// Temporal child-workflow JSON round-trip where the parameter type is `any`).
+// We attempt recovery in that order; if none succeeds (e.g. BringUp context
+// where operationInfo is BringUpTaskInfo), we fall back to a default upgrade
+// with empty TargetVersion so the component manager auto-resolves.
 func executeFirmwareControlAction(actx actionExecutionContext) error {
 	ctx := actx.workflowContext
 	target := actx.target
 
-	var fwInfo any = actx.operationInfo
-	if _, ok := actx.operationInfo.(*operations.FirmwareControlTaskInfo); !ok {
-		fwInfo = operations.FirmwareControlTaskInfo{
-			Operation: operations.FirmwareOperationUpgrade,
+	var fwInfo operations.FirmwareControlTaskInfo
+	switch v := actx.operationInfo.(type) {
+	case *operations.FirmwareControlTaskInfo:
+		fwInfo = *v
+	case operations.FirmwareControlTaskInfo:
+		fwInfo = v
+	default:
+		// After Temporal child-workflow serialization the concrete Go type is
+		// lost and becomes map[string]interface{}. JSON round-trip recovers
+		// the original FirmwareControlTaskInfo fields (including TargetVersion).
+		if data, err := json.Marshal(actx.operationInfo); err == nil {
+			_ = json.Unmarshal(data, &fwInfo)
 		}
+	}
+	if fwInfo.Operation == operations.FirmwareOperationUnknown {
+		fwInfo.Operation = operations.FirmwareOperationUpgrade
 	}
 
 	if err := workflow.ExecuteActivity(
