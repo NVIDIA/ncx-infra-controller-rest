@@ -26,7 +26,8 @@ type InfiniBandPartitionCreateRequest struct {
 	// Optional description of the Partition
 	Description *string `json:"description,omitempty"`
 	// ID of the Site the Partition should belong to
-	SiteId string `json:"siteId"`
+	SiteId string            `json:"siteId"`
+	Labels map[string]string `json:"labels,omitempty"`
 }
 
 type _InfiniBandPartitionCreateRequest InfiniBandPartitionCreateRequest
@@ -130,6 +131,38 @@ func (o *InfiniBandPartitionCreateRequest) SetSiteId(v string) {
 	o.SiteId = v
 }
 
+// GetLabels returns the Labels field value if set, zero value otherwise.
+func (o *InfiniBandPartitionCreateRequest) GetLabels() map[string]string {
+	if o == nil || IsNil(o.Labels) {
+		var ret map[string]string
+		return ret
+	}
+	return o.Labels
+}
+
+// GetLabelsOk returns a tuple with the Labels field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *InfiniBandPartitionCreateRequest) GetLabelsOk() (map[string]string, bool) {
+	if o == nil || IsNil(o.Labels) {
+		return map[string]string{}, false
+	}
+	return o.Labels, true
+}
+
+// HasLabels returns a boolean if a field has been set.
+func (o *InfiniBandPartitionCreateRequest) HasLabels() bool {
+	if o != nil && !IsNil(o.Labels) {
+		return true
+	}
+
+	return false
+}
+
+// SetLabels gets a reference to the given map[string]string and assigns it to the Labels field.
+func (o *InfiniBandPartitionCreateRequest) SetLabels(v map[string]string) {
+	o.Labels = v
+}
+
 func (o InfiniBandPartitionCreateRequest) MarshalJSON() ([]byte, error) {
 	toSerialize, err := o.ToMap()
 	if err != nil {
@@ -145,6 +178,9 @@ func (o InfiniBandPartitionCreateRequest) ToMap() (map[string]interface{}, error
 		toSerialize["description"] = o.Description
 	}
 	toSerialize["siteId"] = o.SiteId
+	if !IsNil(o.Labels) {
+		toSerialize["labels"] = o.Labels
+	}
 	return toSerialize, nil
 }
 

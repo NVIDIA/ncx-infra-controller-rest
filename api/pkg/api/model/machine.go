@@ -124,35 +124,8 @@ func (mur APIMachineUpdateRequest) Validate() error {
 		}
 	}
 
-	// Labels validation
-	if mur.Labels != nil {
-		if len(mur.Labels) > camu.LabelCountMax {
-			return validation.Errors{
-				"labels": camu.ErrValidationLabelCount,
-			}
-		}
-
-		for key, value := range mur.Labels {
-			if key == "" {
-				return validation.Errors{
-					"labels": camu.ErrValidationLabelKeyEmpty,
-				}
-			}
-
-			// Key validation
-			if len(key) > camu.LabelKeyMaxLength {
-				return validation.Errors{
-					"labels": camu.ErrValidationLabelKeyLength,
-				}
-			}
-
-			// Value validation
-			if len(value) > camu.LabelValueMaxLength {
-				return validation.Errors{
-					"labels": camu.ErrValidationLabelValueLength,
-				}
-			}
-		}
+	if err := camu.ValidateLabels(mur.Labels); err != nil {
+		return err
 	}
 
 	return err

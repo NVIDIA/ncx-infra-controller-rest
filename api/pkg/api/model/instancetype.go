@@ -63,46 +63,8 @@ func (itcr APIInstanceTypeCreateRequest) Validate() error {
 		return err
 	}
 
-	// Labels validation
-	if itcr.Labels != nil {
-		if len(itcr.Labels) > util.LabelCountMax {
-			return validation.Errors{
-				"labels": util.ErrValidationLabelCount,
-			}
-		}
-
-		for key, value := range itcr.Labels {
-			if key == "" {
-				return validation.Errors{
-					"labels": util.ErrValidationLabelKeyEmpty,
-				}
-			}
-
-			// Key validation
-			err = validation.Validate(key,
-				validation.Match(util.NotAllWhitespaceRegexp).Error("label key consists only of whitespace"),
-				validation.Length(1, 255).Error(validationErrorMapKeyLabelStringLength),
-			)
-
-			if err != nil {
-				return validation.Errors{
-					"labels": util.ErrValidationLabelKeyLength,
-				}
-			}
-
-			// Value validation
-			err = validation.Validate(value,
-				validation.When(value != "",
-					validation.Length(0, 255).Error(validationErrorMapValueLabelStringLength),
-				),
-			)
-
-			if err != nil {
-				return validation.Errors{
-					"labels": util.ErrValidationLabelValueLength,
-				}
-			}
-		}
+	if err := util.ValidateLabels(itcr.Labels); err != nil {
+		return err
 	}
 
 	if itcr.MachineCapabilities != nil {
@@ -169,46 +131,8 @@ func (itur APIInstanceTypeUpdateRequest) Validate() error {
 		return err
 	}
 
-	// Labels validation
-	if itur.Labels != nil {
-		if len(itur.Labels) > util.LabelCountMax {
-			return validation.Errors{
-				"labels": util.ErrValidationLabelCount,
-			}
-		}
-
-		for key, value := range itur.Labels {
-			if key == "" {
-				return validation.Errors{
-					"labels": util.ErrValidationLabelKeyEmpty,
-				}
-			}
-
-			// Key validation
-			err = validation.Validate(key,
-				validation.Match(util.NotAllWhitespaceRegexp).Error("label key consists only of whitespace"),
-				validation.Length(1, 255).Error(validationErrorMapKeyLabelStringLength),
-			)
-
-			if err != nil {
-				return validation.Errors{
-					"labels": util.ErrValidationLabelKeyLength,
-				}
-			}
-
-			// Value validation
-			err = validation.Validate(value,
-				validation.When(value != "",
-					validation.Length(0, 255).Error(validationErrorMapValueLabelStringLength),
-				),
-			)
-
-			if err != nil {
-				return validation.Errors{
-					"labels": util.ErrValidationLabelValueLength,
-				}
-			}
-		}
+	if err := util.ValidateLabels(itur.Labels); err != nil {
+		return err
 	}
 
 	if itur.MachineCapabilities != nil {

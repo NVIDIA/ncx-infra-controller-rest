@@ -21,8 +21,9 @@ var _ MappedNullable = &InfiniBandPartitionUpdateRequest{}
 
 // InfiniBandPartitionUpdateRequest Request data to update an InfiniBand Partition
 type InfiniBandPartitionUpdateRequest struct {
-	Name        string  `json:"name"`
-	Description *string `json:"description,omitempty"`
+	Name        string            `json:"name"`
+	Description *string           `json:"description,omitempty"`
+	Labels      map[string]string `json:"labels,omitempty"`
 }
 
 type _InfiniBandPartitionUpdateRequest InfiniBandPartitionUpdateRequest
@@ -101,6 +102,38 @@ func (o *InfiniBandPartitionUpdateRequest) SetDescription(v string) {
 	o.Description = &v
 }
 
+// GetLabels returns the Labels field value if set, zero value otherwise.
+func (o *InfiniBandPartitionUpdateRequest) GetLabels() map[string]string {
+	if o == nil || IsNil(o.Labels) {
+		var ret map[string]string
+		return ret
+	}
+	return o.Labels
+}
+
+// GetLabelsOk returns a tuple with the Labels field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *InfiniBandPartitionUpdateRequest) GetLabelsOk() (map[string]string, bool) {
+	if o == nil || IsNil(o.Labels) {
+		return map[string]string{}, false
+	}
+	return o.Labels, true
+}
+
+// HasLabels returns a boolean if a field has been set.
+func (o *InfiniBandPartitionUpdateRequest) HasLabels() bool {
+	if o != nil && !IsNil(o.Labels) {
+		return true
+	}
+
+	return false
+}
+
+// SetLabels gets a reference to the given map[string]string and assigns it to the Labels field.
+func (o *InfiniBandPartitionUpdateRequest) SetLabels(v map[string]string) {
+	o.Labels = v
+}
+
 func (o InfiniBandPartitionUpdateRequest) MarshalJSON() ([]byte, error) {
 	toSerialize, err := o.ToMap()
 	if err != nil {
@@ -114,6 +147,9 @@ func (o InfiniBandPartitionUpdateRequest) ToMap() (map[string]interface{}, error
 	toSerialize["name"] = o.Name
 	if !IsNil(o.Description) {
 		toSerialize["description"] = o.Description
+	}
+	if !IsNil(o.Labels) {
+		toSerialize["labels"] = o.Labels
 	}
 	return toSerialize, nil
 }

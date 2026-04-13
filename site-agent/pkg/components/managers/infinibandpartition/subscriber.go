@@ -48,6 +48,10 @@ func (api *API) RegisterSubscriber() error {
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.CreateInfiniBandPartitionV2)
 	ManagerAccess.Data.EB.Log.Info().Msg("InfiniBandPartition: successfully registered CreateInfiniBandPartitionV2 workflow")
 
+	// UpdateInfiniBandPartition
+	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.UpdateInfiniBandPartition)
+	ManagerAccess.Data.EB.Log.Info().Msg("InfiniBandPartition: successfully registered UpdateInfiniBandPartition workflow")
+
 	// DeleteInfiniBandPartitionV2
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.DeleteInfiniBandPartitionV2)
 	ManagerAccess.Data.EB.Log.Info().Msg("InfiniBandPartition: successfully registered DeleteInfiniBandPartitionV2 workflow")
@@ -76,11 +80,15 @@ func (api *API) RegisterSubscriber() error {
 
 	// CreateInfiniBandPartitionOnSite
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(ibpManager.CreateInfiniBandPartitionOnSite)
-	ManagerAccess.Data.EB.Log.Info().Msg("VPC: successfully registered the CreateInfiniBandPartitionOnSite activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("InfiniBandPartition: successfully registered the CreateInfiniBandPartitionOnSite activity")
+
+	// UpdateInfiniBandPartitionOnSite
+	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(ibpManager.UpdateInfiniBandPartitionOnSite)
+	ManagerAccess.Data.EB.Log.Info().Msg("InfiniBandPartition: successfully registered the UpdateInfiniBandPartitionOnSite activity")
 
 	// DeleteInfiniBandPartitionOnSite
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(ibpManager.DeleteInfiniBandPartitionOnSite)
-	ManagerAccess.Data.EB.Log.Info().Msg("VPC: successfully registered the DeleteInfiniBandPartitionOnSite activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("InfiniBandPartition: successfully registered the DeleteInfiniBandPartitionOnSite activity")
 
 	activityRegisterOptions := activity.RegisterOptions{
 		Name: "CreateInfiniBandPartitionActivity",

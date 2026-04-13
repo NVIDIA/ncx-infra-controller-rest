@@ -320,23 +320,7 @@ func (cibph CreateInfiniBandPartitionHandler) Handle(c echo.Context) error {
 	if err != nil {
 		var timeoutErr *tp.TimeoutError
 		if errors.As(err, &timeoutErr) || err == context.DeadlineExceeded || ctx.Err() != nil {
-
-			logger.Error().Err(err).Msg("failed to create InfiniBand Partition, timeout occurred executing workflow on Site.")
-
-			// Create a new context deadlines
-			newctx, newcancel := context.WithTimeout(context.Background(), cutil.WorkflowContextNewAfterTimeout)
-			defer newcancel()
-
-			// Initiate termination workflow
-			serr := stc.TerminateWorkflow(newctx, wid, "", "timeout occurred executing create InfiniBand Partition workflow")
-			if serr != nil {
-				logger.Error().Err(serr).Msg("failed to execute terminate Temporal workflow for creating InfiniBand Partition")
-				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to terminate synchronous InfiniBand Partition creation workflow after timeout, Cloud and Site data may be de-synced: %s", serr), nil)
-			}
-
-			logger.Info().Str("Workflow ID", wid).Msg("initiated terminate synchronous create InfiniBand Partition workflow successfully")
-
-			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to create InfiniBand Partition, timeout occurred executing workflow on Site: %s", err), nil)
+			return common.TerminateWorkflowOnTimeOut(c, logger, stc, wid, err, "InfiniBandPartition", "CreateInfiniBandPartitionV2")
 		}
 
 		code, err := common.UnwrapWorkflowError(err)
@@ -695,15 +679,17 @@ func (gibph GetInfiniBandPartitionHandler) Handle(c echo.Context) error {
 type UpdateInfiniBandPartitionHandler struct {
 	dbSession  *cdb.Session
 	tc         temporalClient.Client
+	scp        *sc.ClientPool
 	cfg        *config.Config
 	tracerSpan *cutil.TracerSpan
 }
 
 // NewUpdateInfiniBandPartitionHandler initializes and returns a new handler for updating InfiniBandPartition
-func NewUpdateInfiniBandPartitionHandler(dbSession *cdb.Session, tc temporalClient.Client, cfg *config.Config) UpdateInfiniBandPartitionHandler {
+func NewUpdateInfiniBandPartitionHandler(dbSession *cdb.Session, tc temporalClient.Client, scp *sc.ClientPool, cfg *config.Config) UpdateInfiniBandPartitionHandler {
 	return UpdateInfiniBandPartitionHandler{
 		dbSession:  dbSession,
 		tc:         tc,
+		scp:        scp,
 		cfg:        cfg,
 		tracerSpan: cutil.NewTracerSpan(),
 	}
@@ -841,6 +827,12 @@ func (uibph UpdateInfiniBandPartitionHandler) Handle(c echo.Context) error {
 		}
 	}
 
+	// Labels support
+	var labels map[string]string
+	if apiRequest.Labels != nil {
+		labels = apiRequest.Labels
+	}
+
 	// start a database transaction
 	tx, err := cdb.BeginTx(ctx, uibph.dbSession, &sql.TxOptions{})
 	if err != nil {
@@ -857,6 +849,7 @@ func (uibph UpdateInfiniBandPartitionHandler) Handle(c echo.Context) error {
 			InfiniBandPartitionID: ibpID,
 			Name:                  apiRequest.Name,
 			Description:           apiRequest.Description,
+			Labels:                labels,
 		},
 	)
 	if err != nil {
@@ -864,6 +857,67 @@ func (uibph UpdateInfiniBandPartitionHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update InfiniBand Partition", nil)
 	}
 	logger.Info().Msg("done updating InfiniBand Partition in DB")
+
+	stc, err := uibph.scp.GetClientByID(ibp.SiteID)
+	if err != nil {
+		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
+	}
+
+	updateIBPRequest := &cwssaws.IBPartitionUpdateRequest{
+		Id: &cwssaws.IBPartitionId{Value: ibp.ID.String()},
+		Config: &cwssaws.IBPartitionConfig{
+			Name:                 uipb.Name,
+			TenantOrganizationId: orgTenant.Org,
+		},
+	}
+	metadata := &cwssaws.Metadata{Name: uipb.Name}
+	if uipb.Description != nil {
+		metadata.Description = *uipb.Description
+	}
+	var clabels []*cwssaws.Label
+	if len(uipb.Labels) > 0 {
+		for key, value := range uipb.Labels {
+			curVal := value
+			clabels = append(clabels, &cwssaws.Label{Key: key, Value: &curVal})
+		}
+	}
+	metadata.Labels = clabels
+	updateIBPRequest.Metadata = metadata
+
+	workflowOptions := temporalClient.StartWorkflowOptions{
+		ID:                       "infiniband-partition-update-" + ibp.ID.String(),
+		TaskQueue:                queue.SiteTaskQueue,
+		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
+	}
+
+	logger.Info().Msg("triggering InfiniBand Partition update workflow")
+
+	wfCtx, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
+	defer cancel()
+
+	we, err := stc.ExecuteWorkflow(wfCtx, workflowOptions, "UpdateInfiniBandPartition", updateIBPRequest)
+	if err != nil {
+		logger.Error().Err(err).Msg("failed to synchronously start Temporal workflow to update InfiniBand Partition")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed start sync workflow to update InfiniBand Partition on Site: %s", err), nil)
+	}
+
+	wid := we.GetID()
+	logger.Info().Str("Workflow ID", wid).Msg("executed synchronous update InfiniBand Partition workflow")
+
+	err = we.Get(wfCtx, nil)
+	if err != nil {
+		var timeoutErr *tp.TimeoutError
+		if errors.As(err, &timeoutErr) || err == context.DeadlineExceeded || wfCtx.Err() != nil {
+			return common.TerminateWorkflowOnTimeOut(c, logger, stc, wid, err, "InfiniBandPartition", "UpdateInfiniBandPartition")
+		}
+
+		code, err := common.UnwrapWorkflowError(err)
+		logger.Error().Err(err).Msg("failed to synchronously execute Temporal workflow to update InfiniBand Partition")
+		return cutil.NewAPIErrorResponse(c, code, fmt.Sprintf("Failed to execute sync workflow to update InfiniBand Partition on Site: %s", err), nil)
+	}
+
+	logger.Info().Str("Workflow ID", wid).Msg("completed synchronous update InfiniBand Partition workflow")
 
 	// get status details for the response
 	sdDAO := cdbm.NewStatusDetailDAO(uibph.dbSession)

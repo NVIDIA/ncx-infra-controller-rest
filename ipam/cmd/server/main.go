@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"log"
 	"log/slog"
@@ -37,6 +39,16 @@ func main() {
 				Value:   "info",
 				Usage:   "log-level can be one of error|warn|info|debug",
 				EnvVars: []string{"GOIPAM_LOG_LEVEL"},
+			},
+			&cli.StringFlag{
+				Name:    "server-tls-cert",
+				Usage:   "path to TLS certificate for the gRPC/HTTP server",
+				EnvVars: []string{"GOIPAM_SERVER_TLS_CERT"},
+			},
+			&cli.StringFlag{
+				Name:    "server-tls-key",
+				Usage:   "path to TLS private key for the gRPC/HTTP server",
+				EnvVars: []string{"GOIPAM_SERVER_TLS_KEY"},
 			},
 		},
 		Commands: []*cli.Command{
@@ -146,13 +158,73 @@ func main() {
 						Usage:   "redis db port",
 						EnvVars: []string{"GOIPAM_REDIS_PORT"},
 					},
+					&cli.StringFlag{
+						Name:    "username",
+						Usage:   "redis username (ACL)",
+						EnvVars: []string{"GOIPAM_REDIS_USERNAME"},
+					},
+					&cli.StringFlag{
+						Name:    "password",
+						Usage:   "redis password",
+						EnvVars: []string{"GOIPAM_REDIS_PASSWORD"},
+					},
+					&cli.StringFlag{
+						Name:    "tls-cert",
+						Usage:   "path to TLS client certificate for redis",
+						EnvVars: []string{"GOIPAM_REDIS_TLS_CERT"},
+					},
+					&cli.StringFlag{
+						Name:    "tls-key",
+						Usage:   "path to TLS client key for redis",
+						EnvVars: []string{"GOIPAM_REDIS_TLS_KEY"},
+					},
+					&cli.StringFlag{
+						Name:    "tls-ca",
+						Usage:   "path to CA certificate for redis TLS verification",
+						EnvVars: []string{"GOIPAM_REDIS_TLS_CA"},
+					},
 				},
 				Action: func(ctx *cli.Context) error {
 					c := getConfig(ctx)
-					host := ctx.String("host")
-					port := ctx.String("port")
+					cfg := goipam.RedisConfig{
+						IP:       ctx.String("host"),
+						Port:     ctx.String("port"),
+						Username: ctx.String("username"),
+						Password: ctx.String("password"),
+					}
+
+					tlsCert := ctx.String("tls-cert")
+					tlsKey := ctx.String("tls-key")
+					caPath := ctx.String("tls-ca")
+					if tlsCert != "" || tlsKey != "" || caPath != "" {
+						if (tlsCert == "") != (tlsKey == "") {
+							return fmt.Errorf("both redis tls-cert and tls-key must be set together")
+						}
+
+						tlsCfg := &tls.Config{}
+						if caPath != "" {
+							caCert, err := os.ReadFile(caPath)
+							if err != nil {
+								return fmt.Errorf("failed to read redis CA cert: %w", err)
+							}
+							pool := x509.NewCertPool()
+							if !pool.AppendCertsFromPEM(caCert) {
+								return fmt.Errorf("failed to parse redis CA cert")
+							}
+							tlsCfg.RootCAs = pool
+						}
+						if tlsCert != "" {
+							cert, err := tls.LoadX509KeyPair(tlsCert, tlsKey)
+							if err != nil {
+								return fmt.Errorf("failed to load redis TLS cert/key: %w", err)
+							}
+							tlsCfg.Certificates = []tls.Certificate{cert}
+						}
+						cfg.TLSConfig = tlsCfg
+					}
+
 					var err error
-					c.Storage, err = goipam.NewRedis(ctx.Context, host, port)
+					c.Storage, err = goipam.NewRedisFromConfig(ctx.Context, cfg)
 					if err != nil {
 						return err
 					}
@@ -315,5 +387,7 @@ func getConfig(ctx *cli.Context) config {
 		GrpcServerEndpoint: ctx.String("grpc-server-endpoint"),
 		MetricsEndpoint:    ctx.String("metrics-endpoint"),
 		Log:                slog.New(slog.NewJSONHandler(os.Stdout, opts)),
+		TLSCertFile:        ctx.String("server-tls-cert"),
+		TLSKeyFile:         ctx.String("server-tls-key"),
 	}
 }

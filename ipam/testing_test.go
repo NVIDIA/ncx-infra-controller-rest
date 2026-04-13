@@ -208,7 +208,7 @@ func startRedis() (container testcontainers.Container, s *redis, err error) {
 	if err != nil {
 		return redisContainer, nil, err
 	}
-	db, err := newRedis(ctx, ip, port.Port())
+	db, err := newRedisFromConfig(ctx, RedisConfig{IP: ip, Port: port.Port()})
 	if err != nil {
 		return redisContainer, nil, err
 	}
@@ -338,7 +338,7 @@ func startKeyDB() (container testcontainers.Container, s *redis, err error) {
 	if err != nil {
 		return keyDBContainer, nil, err
 	}
-	db, err := newRedis(ctx, ip, port.Port())
+	db, err := newRedisFromConfig(ctx, RedisConfig{IP: ip, Port: port.Port()})
 	if err != nil {
 		return keyDBContainer, nil, err
 	}

@@ -40,12 +40,6 @@ import (
 const (
 	// MaxInterfaceCount is the maximum number of Interfaces allowed per Instance
 	MaxInterfaceCount = 16
-	// InstanceMaxLabelCount is the maximum number of Labels allowed per Instance
-	InstanceMaxLabelCount = 10
-
-	validationErrorMapKeyLabelStringLength   = "Label key must contain at least 1 character and a maximum of 255 characters"
-	validationErrorMapValueLabelStringLength = "Label value cannot exceed a maximum of 255 characters"
-
 	// MachineIssueCategoryHardware is the category for hardware issues
 	MachineIssueCategoryHardware = "Hardware"
 	// MachineIssueCategoryNetwork is the category for network issues
@@ -541,35 +535,8 @@ func (icr APIInstanceCreateRequest) Validate() error {
 		}
 	}
 
-	// Labels validation
-	if icr.Labels != nil {
-		if len(icr.Labels) > util.LabelCountMax {
-			return validation.Errors{
-				"labels": util.ErrValidationLabelCount,
-			}
-		}
-
-		for key, value := range icr.Labels {
-			if key == "" {
-				return validation.Errors{
-					"labels": util.ErrValidationLabelKeyEmpty,
-				}
-			}
-
-			// Key validation
-			if len(key) > util.LabelKeyMaxLength {
-				return validation.Errors{
-					"labels": util.ErrValidationLabelKeyLength,
-				}
-			}
-
-			// Value validation
-			if len(value) > util.LabelValueMaxLength {
-				return validation.Errors{
-					"labels": util.ErrValidationLabelValueLength,
-				}
-			}
-		}
+	if err := util.ValidateLabels(icr.Labels); err != nil {
+		return err
 	}
 
 	return err
@@ -897,35 +864,8 @@ func (bicr APIBatchInstanceCreateRequest) Validate() error {
 		}
 	}
 
-	// Validate Labels (matching single API pattern)
-	if bicr.Labels != nil {
-		if len(bicr.Labels) > util.LabelCountMax {
-			return validation.Errors{
-				"labels": util.ErrValidationLabelCount,
-			}
-		}
-
-		for key, value := range bicr.Labels {
-			if key == "" {
-				return validation.Errors{
-					"labels": util.ErrValidationLabelKeyEmpty,
-				}
-			}
-
-			// Key validation
-			if len(key) > util.LabelKeyMaxLength {
-				return validation.Errors{
-					"labels": util.ErrValidationLabelKeyLength,
-				}
-			}
-
-			// Value validation
-			if len(value) > util.LabelValueMaxLength {
-				return validation.Errors{
-					"labels": util.ErrValidationLabelValueLength,
-				}
-			}
-		}
+	if err := util.ValidateLabels(bicr.Labels); err != nil {
+		return err
 	}
 
 	// err should be nil at this point
@@ -1533,46 +1473,8 @@ func (iur APIInstanceUpdateRequest) Validate() error {
 		}
 	}
 
-	// Labels validation
-	if iur.Labels != nil {
-		if len(iur.Labels) > InstanceMaxLabelCount {
-			return validation.Errors{
-				"labels": fmt.Errorf("up to %v key/value pairs can be specified in labels", InstanceMaxLabelCount),
-			}
-		}
-
-		for key, value := range iur.Labels {
-			if key == "" {
-				return validation.Errors{
-					"labels": errors.New("one or more labels do not have a key specified"),
-				}
-			}
-
-			// Key validation
-			err = validation.Validate(&key,
-				validation.Match(util.NotAllWhitespaceRegexp).Error("label key consists only of whitespace"),
-				validation.Length(1, 255).Error(validationErrorMapKeyLabelStringLength),
-			)
-
-			if err != nil {
-				return validation.Errors{
-					"labels": errors.New(validationErrorMapKeyLabelStringLength),
-				}
-			}
-
-			// Value validation
-			err = validation.Validate(&value,
-				validation.When(value != "",
-					validation.Length(0, 255).Error(validationErrorMapValueLabelStringLength),
-				),
-			)
-
-			if err != nil {
-				return validation.Errors{
-					"labels": errors.New(validationErrorMapValueLabelStringLength),
-				}
-			}
-		}
+	if err := util.ValidateLabels(iur.Labels); err != nil {
+		return err
 	}
 
 	return err

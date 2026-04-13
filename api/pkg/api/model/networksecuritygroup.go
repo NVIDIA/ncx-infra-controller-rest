@@ -36,7 +36,6 @@ import (
 const MaxNetworkSecurityGroupRules = 200
 const NetworkSecurityGroupRulePriorityMin = 0
 const NetworkSecurityGroupRulePriorityMax = 60000
-const NetworkSecurityGroupLabelCount = 10
 
 // Action conversion maps
 
@@ -169,45 +168,8 @@ func (req APINetworkSecurityGroupCreateRequest) Validate(siteConfig *cdbm.SiteCo
 	// processing when we convert from request rules to
 	// the protobuf representation.
 
-	if req.Labels != nil {
-		if len(req.Labels) > NetworkSecurityGroupLabelCount {
-			return validation.Errors{
-				"labels": fmt.Errorf("up to %v key/value pairs can be specified in labels", NetworkSecurityGroupLabelCount),
-			}
-		}
-
-		for key, value := range req.Labels {
-			if key == "" {
-				return validation.Errors{
-					"labels": errors.New("one or more labels do not have a key specified"),
-				}
-			}
-
-			// Key validation
-			err = validation.Validate(key,
-				validation.Match(util.NotAllWhitespaceRegexp).Error("label key consists only of whitespace"),
-				validation.Length(1, 255).Error(validationErrorMapKeyLabelStringLength),
-			)
-
-			if err != nil {
-				return validation.Errors{
-					"labels": errors.New(validationErrorMapKeyLabelStringLength),
-				}
-			}
-
-			// Value validation
-			err = validation.Validate(value,
-				validation.When(value != "",
-					validation.Length(0, 255).Error(validationErrorMapValueLabelStringLength),
-				),
-			)
-
-			if err != nil {
-				return validation.Errors{
-					"labels": errors.New(validationErrorMapValueLabelStringLength),
-				}
-			}
-		}
+	if err := util.ValidateLabels(req.Labels); err != nil {
+		return err
 	}
 
 	return nil
@@ -258,45 +220,8 @@ func (req APINetworkSecurityGroupUpdateRequest) Validate(siteConfig *cdbm.SiteCo
 	// processing when we convert from request rules to
 	// the protobuf representation.
 
-	if req.Labels != nil {
-		if len(req.Labels) > NetworkSecurityGroupLabelCount {
-			return validation.Errors{
-				"labels": fmt.Errorf("up to %v key/value pairs can be specified in labels", NetworkSecurityGroupLabelCount),
-			}
-		}
-
-		for key, value := range req.Labels {
-			if key == "" {
-				return validation.Errors{
-					"labels": errors.New("one or more labels do not have a key specified"),
-				}
-			}
-
-			// Key validation
-			err = validation.Validate(key,
-				validation.Match(util.NotAllWhitespaceRegexp).Error("label key consists only of whitespace"),
-				validation.Length(1, 255).Error(validationErrorMapKeyLabelStringLength),
-			)
-
-			if err != nil {
-				return validation.Errors{
-					"labels": errors.New(validationErrorMapKeyLabelStringLength),
-				}
-			}
-
-			// Value validation
-			err = validation.Validate(value,
-				validation.When(value != "",
-					validation.Length(0, 255).Error(validationErrorMapValueLabelStringLength),
-				),
-			)
-
-			if err != nil {
-				return validation.Errors{
-					"labels": errors.New(validationErrorMapValueLabelStringLength),
-				}
-			}
-		}
+	if err := util.ValidateLabels(req.Labels); err != nil {
+		return err
 	}
 
 	return nil

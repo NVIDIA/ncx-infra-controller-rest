@@ -19,9 +19,6 @@ import (
 
 	"connectrpc.com/grpchealth"
 	"connectrpc.com/grpcreflect"
-
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
 )
 
 type config struct {
@@ -29,6 +26,8 @@ type config struct {
 	MetricsEndpoint    string
 	Log                *slog.Logger
 	Storage            goipam.Storage
+	TLSCertFile        string
+	TLSKeyFile         string
 }
 type server struct {
 	c       config
@@ -102,14 +101,20 @@ func (s *server) Run() error {
 		compress.WithAll(compress.LevelBalanced),
 	))
 
-	server := http.Server{
-		Addr: s.c.GrpcServerEndpoint,
-		// For gRPC clients, it's convenient to support HTTP/2 without TLS. You can
-		// avoid x/net/http2 by using http.ListenAndServeTLS.
-		Handler:           h2c.NewHandler(mux, &http2.Server{}),
-		ReadHeaderTimeout: 1 * time.Minute,
+	switch {
+	case s.c.TLSCertFile == "" && s.c.TLSKeyFile == "":
+		return fmt.Errorf("TLS certificates are required; set both server-tls-cert and server-tls-key")
+	case s.c.TLSCertFile == "":
+		return fmt.Errorf("partial TLS config: missing server-tls-cert")
+	case s.c.TLSKeyFile == "":
+		return fmt.Errorf("partial TLS config: missing server-tls-key")
 	}
 
-	err = server.ListenAndServe()
-	return err
+	srv := http.Server{
+		Addr:              s.c.GrpcServerEndpoint,
+		Handler:           mux,
+		ReadHeaderTimeout: 1 * time.Minute,
+	}
+	s.log.Info("serving gRPC with TLS", "addr", s.c.GrpcServerEndpoint)
+	return srv.ListenAndServeTLS(s.c.TLSCertFile, s.c.TLSKeyFile)
 }
