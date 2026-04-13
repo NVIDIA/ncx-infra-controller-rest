@@ -32,18 +32,19 @@ import (
 )
 
 // APIToProtoComponentTypeName maps API tray type strings to protobuf ComponentType enum names.
+// These names match RLA's internal ComponentTypeFromString (case-insensitive).
 var APIToProtoComponentTypeName = map[string]string{
-	"compute":    "COMPONENT_TYPE_COMPUTE",
-	"switch":     "COMPONENT_TYPE_NVLSWITCH",
-	"powershelf": "COMPONENT_TYPE_POWERSHELF",
+	"Compute":    "COMPONENT_TYPE_COMPUTE",
+	"NVLSwitch":  "COMPONENT_TYPE_NVLSWITCH",
+	"PowerShelf": "COMPONENT_TYPE_POWERSHELF",
 }
 
 // ProtoToAPIComponentTypeName maps protobuf ComponentType to API tray type strings.
 var ProtoToAPIComponentTypeName = map[rlav1.ComponentType]string{
-	rlav1.ComponentType_COMPONENT_TYPE_UNKNOWN:    "unknown",
-	rlav1.ComponentType_COMPONENT_TYPE_COMPUTE:    "compute",
-	rlav1.ComponentType_COMPONENT_TYPE_NVLSWITCH:  "switch",
-	rlav1.ComponentType_COMPONENT_TYPE_POWERSHELF: "powershelf",
+	rlav1.ComponentType_COMPONENT_TYPE_UNKNOWN:    "Unknown",
+	rlav1.ComponentType_COMPONENT_TYPE_COMPUTE:    "Compute",
+	rlav1.ComponentType_COMPONENT_TYPE_NVLSWITCH:  "NVLSwitch",
+	rlav1.ComponentType_COMPONENT_TYPE_POWERSHELF: "PowerShelf",
 }
 
 var validTrayTypesAny, ValidProtoComponentTypes = func() ([]interface{}, []rlav1.ComponentType) {
