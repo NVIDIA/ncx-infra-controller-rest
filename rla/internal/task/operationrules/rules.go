@@ -38,8 +38,9 @@ const (
 	ActionVerifyPowerStatus     = "VerifyPowerStatus"
 	ActionVerifyReachability    = "VerifyReachability"
 	ActionGetPowerStatus        = "GetPowerStatus"
-	ActionFirmwareControl       = "FirmwareControl"
-	ActionVerifyFirmwareVersion = "VerifyFirmwareVersion"
+	ActionFirmwareControl              = "FirmwareControl"
+	ActionVerifyFirmwareVersion        = "VerifyFirmwareVersion"
+	ActionVerifyFirmwareConsistency    = "VerifyFirmwareConsistency"
 
 	// Bring-up specific actions
 	ActionBringUpControl    = "BringUpControl"

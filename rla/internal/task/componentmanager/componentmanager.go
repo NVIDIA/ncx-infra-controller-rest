@@ -54,6 +54,12 @@ type BringUpController interface {
 	GetBringUpStatus(ctx context.Context, target common.Target) (map[string]operations.MachineBringUpState, error)
 }
 
+// FirmwareConsistencyChecker is an optional interface for component managers
+// that can verify firmware version consistency across a set of components.
+type FirmwareConsistencyChecker interface {
+	VerifyFirmwareConsistency(ctx context.Context, target common.Target) error
+}
+
 // ManagerFactory is a function that creates a ComponentManager instance.
 // It receives a ProviderRegistry from which it can retrieve the providers it needs.
 type ManagerFactory func(providers *ProviderRegistry) (ComponentManager, error)

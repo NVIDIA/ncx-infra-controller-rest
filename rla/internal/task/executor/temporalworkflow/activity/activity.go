@@ -100,7 +100,29 @@ func GetAllActivities() []any {
 		GetFirmwareStatus,
 		BringUpControl,
 		GetBringUpStatus,
+		VerifyFirmwareConsistency,
 	}
+}
+
+// VerifyFirmwareConsistency checks that all target components report the
+// same firmware version set. Only supported by component managers that
+// implement FirmwareConsistencyChecker.
+func VerifyFirmwareConsistency(
+	ctx context.Context,
+	target common.Target,
+) error {
+	cm, err := validAndGetComponentManager(target)
+	if err != nil {
+		return err
+	}
+
+	checker, ok := cm.(componentmanager.FirmwareConsistencyChecker)
+	if !ok {
+		return fmt.Errorf("component manager for %s does not support firmware consistency check",
+			target.Type)
+	}
+
+	return checker.VerifyFirmwareConsistency(ctx, target)
 }
 
 // BringUpControl opens the power-on gate for the target components.
