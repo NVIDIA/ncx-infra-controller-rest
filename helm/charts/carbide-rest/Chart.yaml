@@ -3,7 +3,7 @@ name: carbide-rest
 description: Umbrella chart for the Carbide REST API platform
 type: application
 version: 0.1.5
-appVersion: "1.2.1"
+appVersion: "1.3.0"
 keywords:
   - carbide
   - forge
