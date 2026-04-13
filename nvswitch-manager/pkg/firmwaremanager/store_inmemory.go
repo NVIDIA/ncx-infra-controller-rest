@@ -156,23 +156,56 @@ func (s *InMemoryUpdateStore) GetPendingUpdates(ctx context.Context, limit int) 
 	return results, nil
 }
 
-// GetBySwitch returns all firmware updates for a given switch.
-func (s *InMemoryUpdateStore) GetBySwitch(ctx context.Context, switchUUID uuid.UUID) ([]*FirmwareUpdate, error) {
+// GetLatestBundleBySwitch returns firmware updates belonging to the most
+// recent bundle_update_id for the given switch. For single-component
+// updates (bundle_update_id IS NULL) it returns only the newest record.
+func (s *InMemoryUpdateStore) GetLatestBundleBySwitch(ctx context.Context, switchUUID uuid.UUID) ([]*FirmwareUpdate, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	var results []*FirmwareUpdate
+	// Collect all updates for this switch
+	var all []*FirmwareUpdate
 	for _, update := range s.updates {
 		if update.SwitchUUID == switchUUID {
 			copy := *update
-			results = append(results, &copy)
+			all = append(all, &copy)
 		}
 	}
 
+	if len(all) == 0 {
+		return nil, nil
+	}
+
 	// Sort by created_at descending (newest first)
-	sort.Slice(results, func(i, j int) bool {
-		return results[i].CreatedAt.After(results[j].CreatedAt)
+	sort.Slice(all, func(i, j int) bool {
+		return all[i].CreatedAt.After(all[j].CreatedAt)
 	})
+
+	// Find the latest bundle_update_id (non-nil)
+	var latestBundleID *uuid.UUID
+	for _, u := range all {
+		if u.BundleUpdateID != nil {
+			latestBundleID = u.BundleUpdateID
+			break
+		}
+	}
+
+	var results []*FirmwareUpdate
+	if latestBundleID != nil {
+		for _, u := range all {
+			if u.BundleUpdateID != nil && *u.BundleUpdateID == *latestBundleID {
+				results = append(results, u)
+			}
+		}
+	}
+
+	// Also include the latest single-component update (no bundle_update_id)
+	for _, u := range all {
+		if u.BundleUpdateID == nil {
+			results = append(results, u)
+			break
+		}
+	}
 
 	return results, nil
 }
