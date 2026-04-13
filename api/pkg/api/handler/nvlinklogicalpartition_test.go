@@ -467,6 +467,9 @@ func TestNVLinkLogicalPartitionHandler_Update(t *testing.T) {
 	nvllp4 := testBuildNVLinkLogicalPartition(t, dbSession, "test-nvllp-4", cdb.GetStrPtr("Test NVLink Logical Partition"), tnOrg1, site3, tn1, cdb.GetStrPtr(cdbm.NVLinkLogicalPartitionStatusPending), false)
 	assert.NotNil(t, nvllp4)
 
+	nvllp5 := testBuildNVLinkLogicalPartition(t, dbSession, "test-nvllp-5", cdb.GetStrPtr("preserved-for-forge"), tnOrg1, site1, tn1, cdb.GetStrPtr(cdbm.NVLinkLogicalPartitionStatusPending), false)
+	assert.NotNil(t, nvllp5)
+
 	noupdateObj := model.APINVLinkLogicalPartitionUpdateRequest{Name: cdb.GetStrPtr("test-nvllp-1"), Description: cdb.GetStrPtr("Test NVLink Logical Partition")}
 	noupdateBody, err := json.Marshal(noupdateObj)
 	assert.Nil(t, err)
@@ -477,6 +480,14 @@ func TestNVLinkLogicalPartitionHandler_Update(t *testing.T) {
 
 	nvllpObj6 := model.APINVLinkLogicalPartitionUpdateRequest{Name: cdb.GetStrPtr("test-nvllp-updated-6"), Description: cdb.GetStrPtr("testdescription")}
 	okBody2, err := json.Marshal(nvllpObj6)
+	assert.Nil(t, err)
+
+	descOnlyObj := model.APINVLinkLogicalPartitionUpdateRequest{Description: cdb.GetStrPtr("updated description without name in body")}
+	descOnlyBody, err := json.Marshal(descOnlyObj)
+	assert.Nil(t, err)
+
+	nameOnlyObj := model.APINVLinkLogicalPartitionUpdateRequest{Name: cdb.GetStrPtr("test-nvllp-5-renamed")}
+	nameOnlyBody, err := json.Marshal(nameOnlyObj)
 	assert.Nil(t, err)
 
 	errBodyNameClash, err := json.Marshal(model.APINVLinkLogicalPartitionUpdateRequest{Name: cdb.GetStrPtr("test-nvllp-3")})
@@ -526,16 +537,19 @@ func TestNVLinkLogicalPartitionHandler_Update(t *testing.T) {
 	tsc2.Mock.On("TerminateWorkflow", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	tests := []struct {
-		fields             fields
-		name               string
-		reqOrgName         string
-		reqBody            string
-		reqBodyModel       *model.APINVLinkLogicalPartitionUpdateRequest
-		nvllpID            string
-		user               *cdbm.User
-		expectedStatus     int
-		expectedName       bool
-		verifyChildSpanner bool
+		fields                           fields
+		name                             string
+		reqOrgName                       string
+		reqBody                          string
+		reqBodyModel                     *model.APINVLinkLogicalPartitionUpdateRequest
+		nvllpID                          string
+		user                             *cdbm.User
+		expectedStatus                   int
+		expectedName                     bool
+		verifyChildSpanner               bool
+		verifyTemporalCall               bool
+		expectedForgeMetadataName        string  // Metadata.Name on the site workflow request (always from DB after update)
+		expectedForgeMetadataDescription *string // Metadata.Description when asserting Forge payload (DB snapshot after update)
 	}{
 		{
 			fields: fields{
@@ -645,6 +659,7 @@ func TestNVLinkLogicalPartitionHandler_Update(t *testing.T) {
 			user:               tnu1,
 			expectedStatus:     http.StatusOK,
 			verifyChildSpanner: true,
+			verifyTemporalCall: false,
 		},
 		{
 			fields: fields{
@@ -660,6 +675,43 @@ func TestNVLinkLogicalPartitionHandler_Update(t *testing.T) {
 			user:               tnu1,
 			expectedStatus:     http.StatusOK,
 			verifyChildSpanner: true,
+			verifyTemporalCall: true,
+		},
+		{
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tsc,
+				cfg:       cfg,
+			},
+			name:                             "success case description-only update request sends current name to Forge",
+			nvllpID:                          nvllp2.ID.String(),
+			reqOrgName:                       tnOrg1,
+			reqBody:                          string(descOnlyBody),
+			reqBodyModel:                     &descOnlyObj,
+			user:                             tnu1,
+			expectedStatus:                   http.StatusOK,
+			verifyChildSpanner:               true,
+			expectedForgeMetadataName:        "test-nvllp-2",
+			expectedForgeMetadataDescription: cdb.GetStrPtr("updated description without name in body"),
+			verifyTemporalCall:               true,
+		},
+		{
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tsc,
+				cfg:       cfg,
+			},
+			name:                             "success case name-only update request sends DB name and preserved description to Forge",
+			nvllpID:                          nvllp5.ID.String(),
+			reqOrgName:                       tnOrg1,
+			reqBody:                          string(nameOnlyBody),
+			reqBodyModel:                     &nameOnlyObj,
+			user:                             tnu1,
+			expectedStatus:                   http.StatusOK,
+			verifyChildSpanner:               true,
+			expectedForgeMetadataName:        "test-nvllp-5-renamed",
+			expectedForgeMetadataDescription: cdb.GetStrPtr("preserved-for-forge"),
+			verifyTemporalCall:               true,
 		},
 		{
 			fields: fields{
@@ -719,17 +771,37 @@ func TestNVLinkLogicalPartitionHandler_Update(t *testing.T) {
 					assert.Equal(t, *tc.reqBodyModel.Description, *rsp.Description)
 				}
 
-				if len(tsc.Calls) > 0 && (tc.reqBodyModel.Description != nil || tc.reqBodyModel.Name != nil) {
-					req := tsc.Calls[0].Arguments[3].(*cwssaws.NVLinkLogicalPartitionUpdateRequest)
-					if tc.reqBodyModel.Name != nil {
-						assert.Equal(t, *tc.reqBodyModel.Name, req.Config.Metadata.Name)
+				var updateReq *cwssaws.NVLinkLogicalPartitionUpdateRequest
+				for i := len(tsc.Calls) - 1; i >= 0; i-- {
+					call := tsc.Calls[i]
+					if call.Method == "ExecuteWorkflow" && len(call.Arguments) > 3 {
+						if wfName, ok := call.Arguments[2].(string); ok && wfName == "UpdateNVLinkLogicalPartition" {
+							updateReq, _ = call.Arguments[3].(*cwssaws.NVLinkLogicalPartitionUpdateRequest)
+							break
+						}
 					}
-					if tc.reqBodyModel.Description != nil {
-						assert.Equal(t, *tc.reqBodyModel.Description, req.Config.Metadata.Description)
-					}
-					assert.Equal(t, req.Config.TenantOrganizationId, tc.reqOrgName)
 				}
 
+				if tc.verifyTemporalCall {
+					require.NotNil(t, updateReq, "UpdateNVLinkLogicalPartition workflow should have been called")
+				} else {
+					require.Nil(t, updateReq, "UpdateNVLinkLogicalPartition workflow should not have been called")
+					return
+				}
+
+				if tc.reqBodyModel.Description != nil || tc.reqBodyModel.Name != nil {
+					if tc.expectedForgeMetadataName != "" {
+						assert.Equal(t, tc.expectedForgeMetadataName, updateReq.Config.Metadata.Name)
+					} else if tc.reqBodyModel.Name != nil {
+						assert.Equal(t, *tc.reqBodyModel.Name, updateReq.Config.Metadata.Name)
+					}
+					if tc.expectedForgeMetadataDescription != nil {
+						assert.Equal(t, *tc.expectedForgeMetadataDescription, updateReq.Config.Metadata.Description)
+					} else if tc.reqBodyModel.Description != nil {
+						assert.Equal(t, *tc.reqBodyModel.Description, updateReq.Config.Metadata.Description)
+					}
+					assert.Equal(t, tc.reqOrgName, updateReq.Config.TenantOrganizationId)
+				}
 			}
 			if tc.verifyChildSpanner {
 				span := oteltrace.SpanFromContext(ec.Request().Context())
