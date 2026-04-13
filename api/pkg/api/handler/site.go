@@ -276,6 +276,45 @@ func (csh CreateSiteHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create workflow namespace for Site", nil)
 	}
 
+	// Auto-associate global-scoped iPXE OSes for this provider with the newly created site.
+	// This ensures that OSes marked scope="Global" are automatically available on every new site
+	// added to the provider without requiring the user to update each OS individually.
+	ossaDAO := cdbm.NewOperatingSystemSiteAssociationDAO(csh.dbSession)
+	globalOSes, _, goserr := cdbm.NewOperatingSystemDAO(csh.dbSession).GetAll(
+		ctx, tx,
+		cdbm.OperatingSystemFilterInput{
+			InfrastructureProviderID: &ip.ID,
+			OsTypes:                  []string{cdbm.OperatingSystemTypeIPXE, cdbm.OperatingSystemTypeTemplatedIPXE},
+			Scopes:                   []string{cdbm.OperatingSystemScopeGlobal},
+		},
+		cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)},
+		nil,
+	)
+	if goserr != nil {
+		logger.Error().Err(goserr).Msg("error retrieving global-scoped OSes for auto-expansion")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve global-scoped OSes, DB error", nil)
+	}
+	for _, gos := range globalOSes {
+		if _, aerr := ossaDAO.Create(ctx, tx, cdbm.OperatingSystemSiteAssociationCreateInput{
+			OperatingSystemID: gos.ID,
+			SiteID:            st.ID,
+			Status:            cdbm.OperatingSystemSiteAssociationStatusSyncing,
+			CreatedBy:         dbUser.ID,
+		}); aerr != nil {
+			logger.Error().Err(aerr).Str("osID", gos.ID.String()).Msg("Failed to auto-associate global OS with new site")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to associate global-scoped Operating Systems with new Site", nil)
+		}
+	}
+	if len(globalOSes) > 0 {
+		logger.Info().Int("count", len(globalOSes)).Msg("Auto-associated global-scoped OSes with new site")
+	}
+
+	// Global-scoped OS propagation to the new site is intentionally not triggered here.
+	// The site is not yet in Registered state at creation time, so any workflow dispatch
+	// would fail or be meaningless. The SynchronizeOperatingSystem workflow (triggered on
+	// OS create/update) and the inventory reconciliation cycle will push the OSSAs once
+	// the site-agent connects and the site transitions to Registered.
+
 	err = tx.Commit()
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to commit transaction, error creating site")

@@ -61,6 +61,7 @@ type ManagerAPI struct {
 	ExpectedPowerShelf     ExpectedPowerShelfInterface
 	ExpectedSwitch         ExpectedSwitchInterface
 	SKU                    SKUInterface
+	IpxeTemplate           IpxeTemplateInterface
 	DpuExtensionService    DpuExtensionServiceInterface
 	NVLinkLogicalPartition NVLinkLogicalPartitionInterface
 	RLA                    RLAInterface

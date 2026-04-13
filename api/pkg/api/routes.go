@@ -841,6 +841,17 @@ func NewAPIRoutes(dbSession *cdb.Session, tc tClient.Client, tnc tClient.Namespa
 			Method:  http.MethodGet,
 			Handler: apiHandler.NewGetSkuHandler(dbSession, tc, cfg),
 		},
+		// iPXE Template endpoints
+		{
+			Path:    apiPathPrefix + "/ipxe-template",
+			Method:  http.MethodGet,
+			Handler: apiHandler.NewGetAllIpxeTemplateHandler(dbSession, tc, cfg),
+		},
+		{
+			Path:    apiPathPrefix + "/ipxe-template/:id",
+			Method:  http.MethodGet,
+			Handler: apiHandler.NewGetIpxeTemplateHandler(dbSession, tc, cfg),
+		},
 		// Rack endpoints (RLA)
 		{
 			Path:    apiPathPrefix + "/rack/task/:id",

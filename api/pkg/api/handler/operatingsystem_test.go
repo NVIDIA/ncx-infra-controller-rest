@@ -99,7 +99,7 @@ func TestOperatingSystemHandler_Create(t *testing.T) {
 	cfg := common.GetTestConfig()
 	tempClient := &tmocks.Client{}
 
-	osObj := model.APIOperatingSystemCreateRequest{Name: "test-operating-system-1", Description: cdb.GetStrPtr("test"), InfrastructureProviderID: nil, TenantID: cdb.GetStrPtr(tenant1.ID.String()), IpxeScript: cdb.GetStrPtr("ipxe"), ImageDisk: cdb.GetStrPtr("/dev/sda"), UserData: cdb.GetStrPtr(cdmu.TestCommonCloudInit), IsCloudInit: true, AllowOverride: false}
+	osObj := model.APIOperatingSystemCreateRequest{Name: "test-operating-system-1", Description: cdb.GetStrPtr("test"), InfrastructureProviderID: nil, TenantID: cdb.GetStrPtr(tenant1.ID.String()), IpxeScript: cdb.GetStrPtr("ipxe"), UserData: cdb.GetStrPtr(cdmu.TestCommonCloudInit), IsCloudInit: true, AllowOverride: false}
 	okBody, err := json.Marshal(osObj)
 	assert.Nil(t, err)
 
@@ -156,8 +156,8 @@ func TestOperatingSystemHandler_Create(t *testing.T) {
 	wrun.Mock.On("Get", mock.Anything, mock.Anything).Return(nil)
 
 	tempClient.Mock.On("ExecuteWorkflow", mock.Anything, mock.AnythingOfType("internal.StartWorkflowOptions"),
-		mock.AnythingOfType("func(internal.Context, uuid.UUID, uuid.UUID) error"), mock.AnythingOfType("uuid.UUID"),
-		mock.AnythingOfType("uuid.UUID")).Return(wrun, nil)
+		mock.AnythingOfType("func(internal.Context, uuid.UUID, string) error"), mock.AnythingOfType("uuid.UUID"),
+		mock.AnythingOfType("string")).Return(wrun, nil)
 
 	tsc.Mock.On("ExecuteWorkflow", mock.Anything, mock.AnythingOfType("internal.StartWorkflowOptions"),
 		"CreateOsImage", mock.Anything).Return(wrun, nil)
@@ -298,7 +298,7 @@ func TestOperatingSystemHandler_Create(t *testing.T) {
 			user:                          tnu,
 			expectedErr:                   false,
 			expectedStatus:                http.StatusCreated,
-			expectedOperatingSystemStatus: cdbm.OperatingSystemStatusReady,
+			expectedOperatingSystemStatus: cdbm.OperatingSystemStatusSyncing,
 			expectedStatusHistoryCount:    1,
 			verifyChildSpanner:            true,
 		},
@@ -1552,8 +1552,8 @@ func TestOperatingSystemHandler_Update(t *testing.T) {
 	wrun.Mock.On("Get", mock.Anything, mock.Anything).Return(nil)
 
 	tempClient.Mock.On("ExecuteWorkflow", mock.Anything, mock.AnythingOfType("internal.StartWorkflowOptions"),
-		mock.AnythingOfType("func(internal.Context, uuid.UUID, uuid.UUID) error"), mock.AnythingOfType("uuid.UUID"),
-		mock.AnythingOfType("uuid.UUID")).Return(wrun, nil)
+		mock.AnythingOfType("func(internal.Context, uuid.UUID, string) error"), mock.AnythingOfType("uuid.UUID"),
+		mock.AnythingOfType("string")).Return(wrun, nil)
 
 	tsc.Mock.On("ExecuteWorkflow", mock.Anything, mock.AnythingOfType("internal.StartWorkflowOptions"),
 		"UpdateOsImage", mock.Anything).Return(wrun, nil)
@@ -1629,7 +1629,7 @@ func TestOperatingSystemHandler_Update(t *testing.T) {
 			user:           user,
 			osID:           os2.ID.String(),
 			expectedErr:    true,
-			expectedStatus: http.StatusBadRequest,
+			expectedStatus: http.StatusForbidden,
 		},
 		{
 			name:           "error when req body doesnt bind",
@@ -2085,8 +2085,8 @@ func TestOperatingSystemHandler_Delete(t *testing.T) {
 	wrun.Mock.On("Get", mock.Anything, mock.Anything).Return(nil)
 
 	tempClient.Mock.On("ExecuteWorkflow", mock.Anything, mock.AnythingOfType("internal.StartWorkflowOptions"),
-		mock.AnythingOfType("func(internal.Context, uuid.UUID, uuid.UUID) error"), mock.AnythingOfType("uuid.UUID"),
-		mock.AnythingOfType("uuid.UUID")).Return(wrun, nil)
+		mock.AnythingOfType("func(internal.Context, uuid.UUID, string) error"), mock.AnythingOfType("uuid.UUID"),
+		mock.AnythingOfType("string")).Return(wrun, nil)
 
 	tsc.Mock.On("ExecuteWorkflow", mock.Anything, mock.AnythingOfType("internal.StartWorkflowOptions"),
 		"DeleteOsImage", mock.Anything).Return(wrun, nil)
@@ -2175,7 +2175,7 @@ func TestOperatingSystemHandler_Delete(t *testing.T) {
 			user:           tnu,
 			osID:           os3.ID.String(),
 			expectedErr:    true,
-			expectedStatus: http.StatusBadRequest,
+			expectedStatus: http.StatusForbidden,
 		},
 		{
 			name:           "error when instance present for os",
