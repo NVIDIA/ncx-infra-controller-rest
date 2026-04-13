@@ -80,7 +80,7 @@ func ValidateLabels(labels map[string]string) error {
 		)
 		if err != nil {
 			return validation.Errors{
-				"labels": ErrValidationLabelKeyLength,
+				"labels": err,
 			}
 		}
 
@@ -91,7 +91,7 @@ func ValidateLabels(labels map[string]string) error {
 		)
 		if err != nil {
 			return validation.Errors{
-				"labels": ErrValidationLabelValueLength,
+				"labels": err,
 			}
 		}
 	}

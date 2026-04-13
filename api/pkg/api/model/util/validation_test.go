@@ -48,12 +48,13 @@ func TestValidateLabels(t *testing.T) {
 	err = ValidateLabels(map[string]string{"   ": "v"})
 	require.Error(t, err)
 	require.ErrorAs(t, err, &verrs)
-	assert.Equal(t, ErrValidationLabelKeyLength, verrs["labels"])
+	// Whitespace-only key fails Match before Length (see ValidateLabels).
+	assert.Equal(t, "label key consists only of whitespace", verrs["labels"].Error())
 
 	err = ValidateLabels(map[string]string{"k": string(make([]byte, LabelValueMaxLength+1))})
 	require.Error(t, err)
 	require.ErrorAs(t, err, &verrs)
-	assert.Equal(t, ErrValidationLabelValueLength, verrs["labels"])
+	assert.Equal(t, ErrValidationLabelValueLength.Error(), verrs["labels"].Error())
 
 	assert.NoError(t, ValidateLabels(map[string]string{"ok": "ok"}))
 }
