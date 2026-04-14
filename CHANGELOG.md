@@ -5,6 +5,81 @@ Each release lists pull requests grouped by category, with the most recent versi
 
 ---
 
+## [v1.3.0](https://github.com/NVIDIA/ncx-infra-controller-rest/releases/tag/v1.3.0)
+
+### Features
+
+- **Add system job scheduler in RLA with trigger and overlap policies** ([#352](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/352))
+  Replaces ad-hoc inventory sync and leak detection go-routines with a structured scheduling framework. Each job is defined with a configurable trigger (timer, cron, trigger-once, or event-driven), an overlap policy, and a worker, providing graceful and forceful shutdown support.
+
+- **Add support for updating InfiniBand Partition data on Site** ([#334](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/334))
+  Implements end-to-end InfiniBand Partition update propagation to the Site Controller. The API handler now starts a site workflow after a successful update to REST DB cache, wiring through proto definitions, Temporal workflows, and activities consistent with the existing create/delete patterns.
+
+- **Add net.HardwareAddr wrapper for BMC MAC JSON marshaling** ([#369](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/369))
+  Introduces a `net.HardwareAddr` wrapper type that provides proper JSON marshaling and unmarshaling for BMC MAC addresses, replacing raw byte-slice serialization with human-readable colon-separated format.
+
+### Bug Fixes
+
+- **Include name in update request of NVLink Partition Update** ([#373](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/373))
+  Ensures new or existing partition name is included in NVLink Logical Partition update requests to Site, since Site expects the update request to reflect the full data.
+
+- **Require TLS certs by default for RLA/PSM/NVSM and IPAM server** ([#333](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/333))
+  RLA, PSM, and NSM now refuse to start without TLS certificates unless `ALLOW_INSECURE_GRPC=true` is explicitly set, hardening the default security posture. Also IPAM gRPC server now supports/requires TLS specification.
+
+- **Update default firmware update sequence for NSM to only include BMC and BIOS updates** ([#376](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/376))
+  Narrows the default NSM firmware update sequence to BMC and BIOS components only, excluding unnecessary sub-component updates that could cause longer maintenance windows.
+
+- **Prepare for Machine/InstanceType Association ID deprecation** ([#367](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/367))
+  Adds Machine ID as a replacement for Instance Type/Machine Association ID for removal of assignment, introduces a dated deprecation window for association IDs and enabling clients to migrate smoothly.
+
+- **Include NVLink and InfiniBand Interfaces while cleaning up Instance resources** ([#366](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/366))
+  Fixes instance termination cleanup to also delete associated NVLink and InfiniBand interfaces, preventing orphaned network interface records. Includes a DB migration to remove previously orphaned interfaces.
+
+- **Harden scheduler dispatcher correctness and unit tests of RLA** ([#364](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/364))
+  Eliminates shared-state race conditions in the scheduler dispatcher by using `forceCtx` as the parent for all job contexts, fixes event-draining on queue exhaustion, and replaces timing-sensitive tests with deterministic assertions.
+
+- **Added status field in NVLink Interface summary API model** ([#363](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/363))
+  Adds the missing `status` field to the NVLink Interface summary API model, allowing consumers to view interface status when listing NVLink Interfaces within an NVLink Partition.
+
+- **Fix bringup sequence, NSM stale records, and unify tray/rack type enums** ([#377](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/377))
+  Addresses several issues found during rack bring-up and firmware update testing: replaces the default BringUp rule's ingestion-based power-on with standard `PowerControl` to avoid BMC MAC lookup failures, restructures firmware upgrade sequencing from parallel to staged execution (compute then NVLSwitch then power recycle), fixes Temporal serialization loss of `FirmwareControlTaskInfo` across child workflow boundaries, filters stale firmware update records in NSM's `GetUpdatesForSwitch` to prevent old failures from masking current successes, and unifies component type enum naming across Tray and Rack API endpoints to PascalCase (`Compute`, `NVLSwitch`, `PowerShelf`, etc.).
+
+- **Add dev mode for RLA service** ([#360](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/360))
+  Introduces an `RLA_ENV` environment variable that gates development-only features: gRPC reflection is enabled only in dev mode, and the log level defaults to debug in dev mode versus info in production, preventing accidental exposure of diagnostic interfaces in deployed environments.
+
+- **Skip config filter in DB if no config query params are set when retrieving all Sites** ([#379](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/379))
+  Fixes a bug where the Site list handler unconditionally applied an empty JSONB config filter, causing sites with a NULL config column to be silently excluded from results. Site listing now only applies config filtering when at least one config query parameter is explicitly provided.
+
+- **Maintain association record when Instance Type is updated in Machine inventory** ([#383](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/383))
+  When a Machine's Instance Type changes during inventory sync, the Machine/InstanceType association record is now updated alongside the Machine attribute itself, keeping both representations consistent until the association ID is fully deprecated.
+
+- **Have PSM read firmware files at startup time rather than using an embedded filesystem** ([#385](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/385))
+  Switches PowerShelf Manager from compile-time embedded firmware binaries to runtime file loading at startup, allowing firmware images to be updated by replacing files on disk without recompiling the service.
+
+### Refactoring
+
+- **Require Ready status for targeted machine instance creation** ([#357](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/357))
+  Targeted instance creation now enforces that the specified machine must be in `Ready` status or in `Error` (health alerts) or `Maintenance` status with the Core state being `Ready` (when `allowUnhealthyMachine` flag is set).
+
+### Chores
+
+- **Replace hardcoded API name in path in TUI using helper** ([#356](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/356))
+  Replaces all 86 hardcoded `/v2/org/{org}/carbide/...` path strings in the TUI with calls to a new `apiPath` helper, making path construction consistent with the SDK's configurable API name support.
+
+- **Rename Site Agent and mock Core/RLA server binary** ([#365](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/365))
+  Renames Site Agent and mock server binaries as part of the Site Agent v2 preparation, and removes residual database references from the stateless agent.
+
+- **Update Core proto and improve firmware update sequencing in RLA** ([#361](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/361))
+  Aligns RLA snapshot of Core proto, improves firmware version matching between input requests and observed state, and enables RLA to update the `firmware_autoupdate` flag for machines.
+
+- **Update Core proto snapshot for REST components** ([#251](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/251))
+  Introduces an idempotent `make core-proto` script that automates Core proto file snapshotting with handling for backwards-incompatible changes and REST-specific additions. Also removes deprecated non-paginated object retrieval fallback methods from Site Agent.
+
+- **Add changelog with detailed history of released tags up to v1.2.1** ([#359](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/359))
+  Adds a comprehensive CHANGELOG.md with professional descriptions for every pull request across all 12 released versions.
+
+---
+
 ## [v1.2.1](https://github.com/NVIDIA/ncx-infra-controller-rest/releases/tag/v1.2.1) — 2026-04-07
 
 ### Features
