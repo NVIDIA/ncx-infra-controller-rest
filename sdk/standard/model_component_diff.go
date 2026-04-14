@@ -19,9 +19,11 @@ var _ MappedNullable = &ComponentDiff{}
 
 // ComponentDiff A single component difference found during rack validation
 type ComponentDiff struct {
-	// Type of difference: DiffTypeOnlyInExpected, DiffTypeOnlyInActual, or DiffTypeDrift
+	// Type of difference: Unknown, Missing, Unexpected, or Drift
 	Type *string `json:"type,omitempty"`
-	// ID of the component
+	// RLA internal component UUID
+	Id *string `json:"id,omitempty"`
+	// Component ID assigned by the component manager service
 	ComponentId *string        `json:"componentId,omitempty"`
 	Expected    *RackComponent `json:"expected,omitempty"`
 	Actual      *RackComponent `json:"actual,omitempty"`
@@ -76,6 +78,38 @@ func (o *ComponentDiff) HasType() bool {
 // SetType gets a reference to the given string and assigns it to the Type field.
 func (o *ComponentDiff) SetType(v string) {
 	o.Type = &v
+}
+
+// GetId returns the Id field value if set, zero value otherwise.
+func (o *ComponentDiff) GetId() string {
+	if o == nil || IsNil(o.Id) {
+		var ret string
+		return ret
+	}
+	return *o.Id
+}
+
+// GetIdOk returns a tuple with the Id field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *ComponentDiff) GetIdOk() (*string, bool) {
+	if o == nil || IsNil(o.Id) {
+		return nil, false
+	}
+	return o.Id, true
+}
+
+// HasId returns a boolean if a field has been set.
+func (o *ComponentDiff) HasId() bool {
+	if o != nil && !IsNil(o.Id) {
+		return true
+	}
+
+	return false
+}
+
+// SetId gets a reference to the given string and assigns it to the Id field.
+func (o *ComponentDiff) SetId(v string) {
+	o.Id = &v
 }
 
 // GetComponentId returns the ComponentId field value if set, zero value otherwise.
@@ -218,6 +252,9 @@ func (o ComponentDiff) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
 	if !IsNil(o.Type) {
 		toSerialize["type"] = o.Type
+	}
+	if !IsNil(o.Id) {
+		toSerialize["id"] = o.Id
 	}
 	if !IsNil(o.ComponentId) {
 		toSerialize["componentId"] = o.ComponentId

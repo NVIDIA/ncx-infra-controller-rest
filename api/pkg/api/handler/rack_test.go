@@ -686,12 +686,12 @@ func TestValidateRackHandler_Handle(t *testing.T) {
 				"siteId": site.ID.String(),
 			},
 			mockResponse: &rlav1.ValidateComponentsResponse{
-				Diffs:               []*rlav1.ComponentDiff{},
-				TotalDiffs:          0,
-				OnlyInExpectedCount: 0,
-				OnlyInActualCount:   0,
-				DriftCount:          0,
-				MatchCount:          5,
+				Diffs:           []*rlav1.ComponentDiff{},
+				TotalDiffs:      0,
+				MissingCount:    0,
+				UnexpectedCount: 0,
+				DriftCount:      0,
+				MatchCount:      5,
 			},
 			expectedStatus: http.StatusOK,
 			wantErr:        false,
@@ -707,15 +707,15 @@ func TestValidateRackHandler_Handle(t *testing.T) {
 			mockResponse: &rlav1.ValidateComponentsResponse{
 				Diffs: []*rlav1.ComponentDiff{
 					{
-						Type:        rlav1.DiffType_DIFF_TYPE_ONLY_IN_EXPECTED,
+						Type:        rlav1.DiffType_DIFF_TYPE_MISSING,
 						ComponentId: "comp-1",
 					},
 				},
-				TotalDiffs:          1,
-				OnlyInExpectedCount: 1,
-				OnlyInActualCount:   0,
-				DriftCount:          0,
-				MatchCount:          4,
+				TotalDiffs:      1,
+				MissingCount:    1,
+				UnexpectedCount: 0,
+				DriftCount:      0,
+				MatchCount:      4,
 			},
 			expectedStatus: http.StatusOK,
 			wantErr:        false,
@@ -779,8 +779,8 @@ func TestValidateRackHandler_Handle(t *testing.T) {
 					resp := args.Get(1).(*rlav1.ValidateComponentsResponse)
 					resp.Diffs = tt.mockResponse.Diffs
 					resp.TotalDiffs = tt.mockResponse.TotalDiffs
-					resp.OnlyInExpectedCount = tt.mockResponse.OnlyInExpectedCount
-					resp.OnlyInActualCount = tt.mockResponse.OnlyInActualCount
+					resp.MissingCount = tt.mockResponse.MissingCount
+					resp.UnexpectedCount = tt.mockResponse.UnexpectedCount
 					resp.DriftCount = tt.mockResponse.DriftCount
 					resp.MatchCount = tt.mockResponse.MatchCount
 				}).Return(nil)
@@ -883,12 +883,12 @@ func TestValidateRacksHandler_Handle(t *testing.T) {
 				"siteId": site.ID.String(),
 			},
 			mockResponse: &rlav1.ValidateComponentsResponse{
-				Diffs:               []*rlav1.ComponentDiff{},
-				TotalDiffs:          0,
-				OnlyInExpectedCount: 0,
-				OnlyInActualCount:   0,
-				DriftCount:          0,
-				MatchCount:          10,
+				Diffs:           []*rlav1.ComponentDiff{},
+				TotalDiffs:      0,
+				MissingCount:    0,
+				UnexpectedCount: 0,
+				DriftCount:      0,
+				MatchCount:      10,
 			},
 			expectedStatus: http.StatusOK,
 		},
@@ -901,12 +901,12 @@ func TestValidateRacksHandler_Handle(t *testing.T) {
 				"name":   "Rack-001",
 			},
 			mockResponse: &rlav1.ValidateComponentsResponse{
-				Diffs:               []*rlav1.ComponentDiff{},
-				TotalDiffs:          0,
-				OnlyInExpectedCount: 0,
-				OnlyInActualCount:   0,
-				DriftCount:          0,
-				MatchCount:          5,
+				Diffs:           []*rlav1.ComponentDiff{},
+				TotalDiffs:      0,
+				MissingCount:    0,
+				UnexpectedCount: 0,
+				DriftCount:      0,
+				MatchCount:      5,
 			},
 			expectedStatus: http.StatusOK,
 		},
@@ -932,11 +932,11 @@ func TestValidateRacksHandler_Handle(t *testing.T) {
 						},
 					},
 				},
-				TotalDiffs:          1,
-				OnlyInExpectedCount: 0,
-				OnlyInActualCount:   0,
-				DriftCount:          1,
-				MatchCount:          7,
+				TotalDiffs:      1,
+				MissingCount:    0,
+				UnexpectedCount: 0,
+				DriftCount:      1,
+				MatchCount:      7,
 			},
 			expectedStatus: http.StatusOK,
 		},
@@ -1002,8 +1002,8 @@ func TestValidateRacksHandler_Handle(t *testing.T) {
 					resp := args.Get(1).(*rlav1.ValidateComponentsResponse)
 					resp.Diffs = tt.mockResponse.Diffs
 					resp.TotalDiffs = tt.mockResponse.TotalDiffs
-					resp.OnlyInExpectedCount = tt.mockResponse.OnlyInExpectedCount
-					resp.OnlyInActualCount = tt.mockResponse.OnlyInActualCount
+					resp.MissingCount = tt.mockResponse.MissingCount
+					resp.UnexpectedCount = tt.mockResponse.UnexpectedCount
 					resp.DriftCount = tt.mockResponse.DriftCount
 					resp.MatchCount = tt.mockResponse.MatchCount
 				}).Return(nil)

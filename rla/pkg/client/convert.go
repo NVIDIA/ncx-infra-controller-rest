@@ -191,6 +191,7 @@ func componentDiffFromProto(d *pb.ComponentDiff) *types.ComponentDiff {
 
 	diff := &types.ComponentDiff{
 		Type:        diffTypeFromProto(d.GetType()),
+		ID:          uuidFromProto(d.GetId()),
 		ComponentID: d.GetComponentId(),
 		Expected:    componentFromProto(d.GetExpected()),
 		Actual:      componentFromProto(d.GetActual()),
@@ -268,10 +269,10 @@ func taskExecutorTypeFromProto(et pb.TaskExecutorType) types.TaskExecutorType {
 
 func diffTypeFromProto(dt pb.DiffType) types.DiffType {
 	switch dt {
-	case pb.DiffType_DIFF_TYPE_ONLY_IN_EXPECTED:
-		return types.DiffTypeOnlyInExpected
-	case pb.DiffType_DIFF_TYPE_ONLY_IN_ACTUAL:
-		return types.DiffTypeOnlyInActual
+	case pb.DiffType_DIFF_TYPE_MISSING:
+		return types.DiffTypeMissing
+	case pb.DiffType_DIFF_TYPE_UNEXPECTED:
+		return types.DiffTypeUnexpected
 	case pb.DiffType_DIFF_TYPE_DRIFT:
 		return types.DiffTypeDrift
 	default:

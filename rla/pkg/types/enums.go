@@ -80,10 +80,10 @@ const (
 type DiffType string
 
 const (
-	DiffTypeUnknown        DiffType = "UNKNOWN"
-	DiffTypeOnlyInExpected DiffType = "ONLY_IN_EXPECTED"
-	DiffTypeOnlyInActual   DiffType = "ONLY_IN_ACTUAL"
-	DiffTypeDrift          DiffType = "DRIFT"
+	DiffTypeUnknown    DiffType = "Unknown"
+	DiffTypeMissing    DiffType = "Missing"
+	DiffTypeUnexpected DiffType = "Unexpected"
+	DiffTypeDrift      DiffType = "Drift"
 )
 
 // OperationType represents the type of operation (power control, firmware, etc.).

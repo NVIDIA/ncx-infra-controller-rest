@@ -547,7 +547,7 @@ func TestValidateComponents_NoFilters(t *testing.T) {
 	assert.Equal(t, int32(3), resp.TotalDiffs)
 	assert.Equal(t, 3, len(resp.Diffs))
 	assert.Equal(t, int32(2), resp.DriftCount)
-	assert.Equal(t, int32(1), resp.OnlyInActualCount)
+	assert.Equal(t, int32(1), resp.MissingCount)
 }
 
 func TestValidateComponents_WithTypeFilter(t *testing.T) {
@@ -579,7 +579,7 @@ func TestValidateComponents_WithTypeFilter(t *testing.T) {
 	assert.Equal(t, int32(2), resp.TotalDiffs)
 	assert.Equal(t, 2, len(resp.Diffs))
 	assert.Equal(t, int32(1), resp.DriftCount)
-	assert.Equal(t, int32(1), resp.OnlyInActualCount)
+	assert.Equal(t, int32(1), resp.MissingCount)
 }
 
 func TestValidateComponents_WithNameFilter(t *testing.T) {
@@ -611,7 +611,7 @@ func TestValidateComponents_WithNameFilter(t *testing.T) {
 	assert.Equal(t, int32(1), resp.TotalDiffs)
 	assert.Equal(t, 1, len(resp.Diffs))
 	assert.Equal(t, int32(1), resp.DriftCount) // comp1 is mismatch
-	assert.Equal(t, int32(0), resp.OnlyInActualCount)
+	assert.Equal(t, int32(0), resp.UnexpectedCount)
 }
 
 func TestValidateComponents_WithManufacturerFilter(t *testing.T) {

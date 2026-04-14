@@ -1568,12 +1568,12 @@ func (c *MockRLAClient) ValidateComponents(ctx context.Context, in *rlav1.Valida
 	}
 
 	out := &rlav1.ValidateComponentsResponse{
-		Diffs:               []*rlav1.ComponentDiff{},
-		TotalDiffs:          0,
-		OnlyInExpectedCount: 0,
-		OnlyInActualCount:   0,
-		DriftCount:          0,
-		MatchCount:          0,
+		Diffs:           []*rlav1.ComponentDiff{},
+		TotalDiffs:      0,
+		MissingCount:    0,
+		UnexpectedCount: 0,
+		DriftCount:      0,
+		MatchCount:      0,
 	}
 	return out, nil
 }

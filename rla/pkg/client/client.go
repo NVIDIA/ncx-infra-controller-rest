@@ -879,12 +879,12 @@ func convertValidateComponentsResponse(rsp *pb.ValidateComponentsResponse) *Vali
 	}
 
 	return &ValidateComponentsResult{
-		Diffs:               diffs,
-		TotalDiffs:          int(rsp.TotalDiffs),
-		OnlyInExpectedCount: int(rsp.OnlyInExpectedCount),
-		OnlyInActualCount:   int(rsp.OnlyInActualCount),
-		DriftCount:          int(rsp.DriftCount),
-		MatchCount:          int(rsp.MatchCount),
+		Diffs:           diffs,
+		TotalDiffs:      int(rsp.TotalDiffs),
+		MissingCount:    int(rsp.MissingCount),
+		UnexpectedCount: int(rsp.UnexpectedCount),
+		DriftCount:      int(rsp.DriftCount),
+		MatchCount:      int(rsp.MatchCount),
 	}
 }
 

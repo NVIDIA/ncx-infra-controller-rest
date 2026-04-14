@@ -1,71 +1,73 @@
-// SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-// SPDX-License-Identifier: Apache-2.0
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 syntax = "proto3";
 
 package v1;
-option go_package = "github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/proto/v1";
 
 import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
 
+option go_package = "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/rla";
+
 service RLA {
-    // What version of RLA is this service running?
+    // Version
     rpc Version(VersionRequest) returns (BuildInfo);
 
+    // Rack CRUD
     rpc CreateExpectedRack(CreateExpectedRackRequest) returns (CreateExpectedRackResponse);
-    rpc PatchRack(PatchRackRequest) returns (PatchRackResponse);
     rpc GetRackInfoByID(GetRackInfoByIDRequest) returns (GetRackInfoResponse);
     rpc GetRackInfoBySerial(GetRackInfoBySerialRequest) returns (GetRackInfoResponse);
+    rpc GetListOfRacks(GetListOfRacksRequest) returns (GetListOfRacksResponse);
+    rpc PatchRack(PatchRackRequest) returns (PatchRackResponse);
+    rpc DeleteRack(DeleteRackRequest) returns (DeleteRackResponse);
+    rpc PurgeRack(PurgeRackRequest) returns (PurgeRackResponse);
+
+    // Rack operations
+    rpc UpgradeFirmware(UpgradeFirmwareRequest) returns (SubmitTaskResponse);
+    rpc BringUpRack(BringUpRackRequest) returns (SubmitTaskResponse);
+    rpc IngestRack(IngestRackRequest) returns (SubmitTaskResponse);
+    rpc PowerOnRack(PowerOnRackRequest) returns (SubmitTaskResponse);
+    rpc PowerOffRack(PowerOffRackRequest) returns (SubmitTaskResponse);
+    rpc PowerResetRack(PowerResetRackRequest) returns (SubmitTaskResponse);
+
+    // Component CRUD
     rpc GetComponentInfoByID(GetComponentInfoByIDRequest) returns (GetComponentInfoResponse);
     rpc GetComponentInfoBySerial(GetComponentInfoBySerialRequest) returns (GetComponentInfoResponse);
-    rpc GetListOfRacks(GetListOfRacksRequest) returns (GetListOfRacksResponse);
-    rpc CreateNVLDomain(CreateNVLDomainRequest) returns (CreateNVLDomainResponse);
-    rpc AttachRacksToNVLDomain(AttachRacksToNVLDomainRequest) returns (google.protobuf.Empty);
-    rpc DetachRacksFromNVLDomain(DetachRacksFromNVLDomainRequest) returns (google.protobuf.Empty);
-    rpc GetListOfNVLDomains(GetListOfNVLDomainsRequest) returns (GetListOfNVLDomainsResponse);
-    rpc GetRacksForNVLDomain(GetRacksForNVLDomainRequest) returns (GetRacksForNVLDomainResponse);
-    rpc UpgradeFirmware(UpgradeFirmwareRequest) returns (SubmitTaskResponse);
-
-    // Bring up rack: power on, configure, and validate a new rack
-    rpc BringUpRack(BringUpRackRequest) returns (SubmitTaskResponse);
-
-    // Ingest rack: inject expected component configurations to component manager services
-    rpc IngestRack(IngestRackRequest) returns (SubmitTaskResponse);
-
-    // Components APIs
     rpc GetComponents(GetComponentsRequest) returns (GetComponentsResponse);
     rpc ValidateComponents(ValidateComponentsRequest) returns (ValidateComponentsResponse);
     rpc AddComponent(AddComponentRequest) returns (AddComponentResponse);
     rpc PatchComponent(PatchComponentRequest) returns (PatchComponentResponse);
     rpc DeleteComponent(DeleteComponentRequest) returns (DeleteComponentResponse);
+    rpc PurgeComponent(PurgeComponentRequest) returns (PurgeComponentResponse);
 
-    // Power control a rack or a rack's specified components
-    rpc PowerOnRack(PowerOnRackRequest) returns (SubmitTaskResponse);
-    rpc PowerOffRack(PowerOffRackRequest) returns (SubmitTaskResponse);
-    rpc PowerResetRack(PowerResetRackRequest) returns (SubmitTaskResponse);
+    // NVL Domain
+    rpc CreateNVLDomain(CreateNVLDomainRequest) returns (CreateNVLDomainResponse);
+    rpc AttachRacksToNVLDomain(AttachRacksToNVLDomainRequest) returns (google.protobuf.Empty);
+    rpc DetachRacksFromNVLDomain(DetachRacksFromNVLDomainRequest) returns (google.protobuf.Empty);
+    rpc GetListOfNVLDomains(GetListOfNVLDomainsRequest) returns (GetListOfNVLDomainsResponse);
+    rpc GetRacksForNVLDomain(GetRacksForNVLDomainRequest) returns (GetRacksForNVLDomainResponse);
 
-    // Query for tasks
+    // Tasks
     rpc ListTasks(ListTasksRequest) returns (ListTasksResponse);
     rpc GetTasksByIDs(GetTasksByIDsRequest) returns (GetTasksByIDsResponse);
-
-    // Cancel a task (waiting tasks are terminated immediately; running tasks
-    // have their Temporal workflow terminated).
     rpc CancelTask(CancelTaskRequest) returns (CancelTaskResponse);
 
-    // Operation rules management
+    // Operation rules
     rpc CreateOperationRule(CreateOperationRuleRequest) returns (CreateOperationRuleResponse);
     rpc UpdateOperationRule(UpdateOperationRuleRequest) returns (google.protobuf.Empty);
     rpc DeleteOperationRule(DeleteOperationRuleRequest) returns (google.protobuf.Empty);
@@ -447,29 +449,26 @@ message ValidateComponentsResponse {
     int32 total_diffs = 2;
     
     // Summary counts
-    int32 only_in_expected_count = 3;
-    int32 only_in_actual_count = 4;
+    int32 missing_count = 3;     // Expected by RLA but not found in the component manager service
+    int32 unexpected_count = 4;  // Found in the component manager service but not expected by RLA
     int32 drift_count = 5;
     int32 match_count = 6;
 }
 
 enum DiffType {
     DIFF_TYPE_UNKNOWN = 0;
-    DIFF_TYPE_ONLY_IN_EXPECTED = 1;  // In local DB but not in source system
-    DIFF_TYPE_ONLY_IN_ACTUAL = 2;    // In source system but not in local DB
-    DIFF_TYPE_DRIFT = 3;              // In both but with field differences
+    DIFF_TYPE_MISSING = 1;       // Expected by RLA but not found in the component manager service
+    DIFF_TYPE_UNEXPECTED = 2;    // Found in the component manager service but not expected by RLA
+    DIFF_TYPE_DRIFT = 3;         // In both but with field differences
 }
 
 message ComponentDiff {
     DiffType type = 1;
-    string component_id = 2;
-    
-    // Populated when type is ONLY_IN_EXPECTED or ONLY_IN_ACTUAL
-    Component expected = 3;
+    string component_id = 2;    // Component ID assigned by the component manager service
+    Component expected = 3;     // Populated when type is MISSING
     Component actual = 4;
-    
-    // Populated when type is DRIFT - lists the fields that differ
-    repeated FieldDiff field_diffs = 5;
+    repeated FieldDiff field_diffs = 5; // Populated when type is DRIFT
+    UUID id = 6;                // RLA internal component UUID
 }
 
 message FieldDiff {
@@ -494,6 +493,27 @@ message DeleteComponentRequest {
 
 message DeleteComponentResponse {}
 
+// DeleteRack - soft-delete a rack and cascade to its components
+message DeleteRackRequest {
+    UUID id = 1;  // Required: rack UUID to soft-delete
+}
+
+message DeleteRackResponse {}
+
+// PurgeRack - permanently remove a soft-deleted rack and its components
+message PurgeRackRequest {
+    UUID id = 1;  // Required: rack UUID to purge (must already be soft-deleted)
+}
+
+message PurgeRackResponse {}
+
+// PurgeComponent - permanently remove a soft-deleted component
+message PurgeComponentRequest {
+    UUID id = 1;  // Required: component UUID to purge (must already be soft-deleted)
+}
+
+message PurgeComponentResponse {}
+
 // PatchComponent - update a single component's fields
 message PatchComponentRequest {
     UUID id = 1;                          // Required: component UUID
@@ -501,6 +521,7 @@ message PatchComponentRequest {
     optional RackPosition position = 3;   // Update slot_id, tray_idx, host_id
     optional string description = 4;      // Update description (JSON string)
     optional UUID rack_id = 5;            // Re-assign to a different rack
+    repeated BMCInfo bmcs = 6;            // Update BMCs (matched by MAC address; create if new)
 }
 
 message PatchComponentResponse {

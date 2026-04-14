@@ -605,8 +605,8 @@ func (r *RlaServerImpl) ValidateComponents(ctx context.Context, req *rlav1.Valid
 	}
 
 	var diffs []*rlav1.ComponentDiff
-	onlyInExpectedCount := 0
-	onlyInActualCount := 0
+	missingCount := 0
+	unexpectedCount := 0
 	driftCount := 0
 	matchCount := 0
 
@@ -614,11 +614,11 @@ func (r *RlaServerImpl) ValidateComponents(ctx context.Context, req *rlav1.Valid
 	for compID, expectedComp := range expectedMap {
 		if _, exists := actualMap[compID]; !exists {
 			diffs = append(diffs, &rlav1.ComponentDiff{
-				Type:        rlav1.DiffType_DIFF_TYPE_ONLY_IN_EXPECTED,
+				Type:        rlav1.DiffType_DIFF_TYPE_MISSING,
 				ComponentId: compID,
 				Expected:    expectedComp,
 			})
-			onlyInExpectedCount++
+			missingCount++
 		}
 	}
 
@@ -626,11 +626,11 @@ func (r *RlaServerImpl) ValidateComponents(ctx context.Context, req *rlav1.Valid
 	for compID, actualComp := range actualMap {
 		if _, exists := expectedMap[compID]; !exists {
 			diffs = append(diffs, &rlav1.ComponentDiff{
-				Type:        rlav1.DiffType_DIFF_TYPE_ONLY_IN_ACTUAL,
+				Type:        rlav1.DiffType_DIFF_TYPE_UNEXPECTED,
 				ComponentId: compID,
 				Actual:      actualComp,
 			})
-			onlyInActualCount++
+			unexpectedCount++
 		}
 	}
 
@@ -658,12 +658,12 @@ func (r *RlaServerImpl) ValidateComponents(ctx context.Context, req *rlav1.Valid
 	}
 
 	return &rlav1.ValidateComponentsResponse{
-		Diffs:               diffs,
-		TotalDiffs:          int32(len(diffs)),
-		OnlyInExpectedCount: int32(onlyInExpectedCount),
-		OnlyInActualCount:   int32(onlyInActualCount),
-		DriftCount:          int32(driftCount),
-		MatchCount:          int32(matchCount),
+		Diffs:           diffs,
+		TotalDiffs:      int32(len(diffs)),
+		MissingCount:    int32(missingCount),
+		UnexpectedCount: int32(unexpectedCount),
+		DriftCount:      int32(driftCount),
+		MatchCount:      int32(matchCount),
 	}, nil
 }
 

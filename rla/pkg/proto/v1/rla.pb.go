@@ -551,25 +551,25 @@ func (TaskExecutorType) EnumDescriptor() ([]byte, []int) {
 type DiffType int32
 
 const (
-	DiffType_DIFF_TYPE_UNKNOWN          DiffType = 0
-	DiffType_DIFF_TYPE_ONLY_IN_EXPECTED DiffType = 1 // In local DB but not in source system
-	DiffType_DIFF_TYPE_ONLY_IN_ACTUAL   DiffType = 2 // In source system but not in local DB
-	DiffType_DIFF_TYPE_DRIFT            DiffType = 3 // In both but with field differences
+	DiffType_DIFF_TYPE_UNKNOWN    DiffType = 0
+	DiffType_DIFF_TYPE_MISSING    DiffType = 1 // Expected by RLA but not found in the component manager service
+	DiffType_DIFF_TYPE_UNEXPECTED DiffType = 2 // Found in the component manager service but not expected by RLA
+	DiffType_DIFF_TYPE_DRIFT      DiffType = 3 // In both but with field differences
 )
 
 // Enum value maps for DiffType.
 var (
 	DiffType_name = map[int32]string{
 		0: "DIFF_TYPE_UNKNOWN",
-		1: "DIFF_TYPE_ONLY_IN_EXPECTED",
-		2: "DIFF_TYPE_ONLY_IN_ACTUAL",
+		1: "DIFF_TYPE_MISSING",
+		2: "DIFF_TYPE_UNEXPECTED",
 		3: "DIFF_TYPE_DRIFT",
 	}
 	DiffType_value = map[string]int32{
-		"DIFF_TYPE_UNKNOWN":          0,
-		"DIFF_TYPE_ONLY_IN_EXPECTED": 1,
-		"DIFF_TYPE_ONLY_IN_ACTUAL":   2,
-		"DIFF_TYPE_DRIFT":            3,
+		"DIFF_TYPE_UNKNOWN":    0,
+		"DIFF_TYPE_MISSING":    1,
+		"DIFF_TYPE_UNEXPECTED": 2,
+		"DIFF_TYPE_DRIFT":      3,
 	}
 )
 
@@ -3438,12 +3438,12 @@ type ValidateComponentsResponse struct {
 	Diffs      []*ComponentDiff       `protobuf:"bytes,1,rep,name=diffs,proto3" json:"diffs,omitempty"`
 	TotalDiffs int32                  `protobuf:"varint,2,opt,name=total_diffs,json=totalDiffs,proto3" json:"total_diffs,omitempty"`
 	// Summary counts
-	OnlyInExpectedCount int32 `protobuf:"varint,3,opt,name=only_in_expected_count,json=onlyInExpectedCount,proto3" json:"only_in_expected_count,omitempty"`
-	OnlyInActualCount   int32 `protobuf:"varint,4,opt,name=only_in_actual_count,json=onlyInActualCount,proto3" json:"only_in_actual_count,omitempty"`
-	DriftCount          int32 `protobuf:"varint,5,opt,name=drift_count,json=driftCount,proto3" json:"drift_count,omitempty"`
-	MatchCount          int32 `protobuf:"varint,6,opt,name=match_count,json=matchCount,proto3" json:"match_count,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	MissingCount    int32 `protobuf:"varint,3,opt,name=missing_count,json=missingCount,proto3" json:"missing_count,omitempty"`          // Expected by RLA but not found in the component manager service
+	UnexpectedCount int32 `protobuf:"varint,4,opt,name=unexpected_count,json=unexpectedCount,proto3" json:"unexpected_count,omitempty"` // Found in the component manager service but not expected by RLA
+	DriftCount      int32 `protobuf:"varint,5,opt,name=drift_count,json=driftCount,proto3" json:"drift_count,omitempty"`
+	MatchCount      int32 `protobuf:"varint,6,opt,name=match_count,json=matchCount,proto3" json:"match_count,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *ValidateComponentsResponse) Reset() {
@@ -3490,16 +3490,16 @@ func (x *ValidateComponentsResponse) GetTotalDiffs() int32 {
 	return 0
 }
 
-func (x *ValidateComponentsResponse) GetOnlyInExpectedCount() int32 {
+func (x *ValidateComponentsResponse) GetMissingCount() int32 {
 	if x != nil {
-		return x.OnlyInExpectedCount
+		return x.MissingCount
 	}
 	return 0
 }
 
-func (x *ValidateComponentsResponse) GetOnlyInActualCount() int32 {
+func (x *ValidateComponentsResponse) GetUnexpectedCount() int32 {
 	if x != nil {
-		return x.OnlyInActualCount
+		return x.UnexpectedCount
 	}
 	return 0
 }
@@ -3519,14 +3519,13 @@ func (x *ValidateComponentsResponse) GetMatchCount() int32 {
 }
 
 type ComponentDiff struct {
-	state       protoimpl.MessageState `protogen:"open.v1"`
-	Type        DiffType               `protobuf:"varint,1,opt,name=type,proto3,enum=v1.DiffType" json:"type,omitempty"`
-	ComponentId string                 `protobuf:"bytes,2,opt,name=component_id,json=componentId,proto3" json:"component_id,omitempty"`
-	// Populated when type is ONLY_IN_EXPECTED or ONLY_IN_ACTUAL
-	Expected *Component `protobuf:"bytes,3,opt,name=expected,proto3" json:"expected,omitempty"`
-	Actual   *Component `protobuf:"bytes,4,opt,name=actual,proto3" json:"actual,omitempty"`
-	// Populated when type is DRIFT - lists the fields that differ
-	FieldDiffs    []*FieldDiff `protobuf:"bytes,5,rep,name=field_diffs,json=fieldDiffs,proto3" json:"field_diffs,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Type          DiffType               `protobuf:"varint,1,opt,name=type,proto3,enum=v1.DiffType" json:"type,omitempty"`
+	ComponentId   string                 `protobuf:"bytes,2,opt,name=component_id,json=componentId,proto3" json:"component_id,omitempty"` // Component ID assigned by the component manager service
+	Expected      *Component             `protobuf:"bytes,3,opt,name=expected,proto3" json:"expected,omitempty"`                          // Populated when type is MISSING
+	Actual        *Component             `protobuf:"bytes,4,opt,name=actual,proto3" json:"actual,omitempty"`
+	FieldDiffs    []*FieldDiff           `protobuf:"bytes,5,rep,name=field_diffs,json=fieldDiffs,proto3" json:"field_diffs,omitempty"` // Populated when type is DRIFT
+	Id            *UUID                  `protobuf:"bytes,6,opt,name=id,proto3" json:"id,omitempty"`                                   // RLA internal component UUID
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3592,6 +3591,13 @@ func (x *ComponentDiff) GetActual() *Component {
 func (x *ComponentDiff) GetFieldDiffs() []*FieldDiff {
 	if x != nil {
 		return x.FieldDiffs
+	}
+	return nil
+}
+
+func (x *ComponentDiff) GetId() *UUID {
+	if x != nil {
+		return x.Id
 	}
 	return nil
 }
@@ -6176,24 +6182,25 @@ const file_rla_proto_rawDesc = "" +
 	"\border_by\x18\x04 \x01(\v2\v.v1.OrderByH\x02R\aorderBy\x88\x01\x01B\x0e\n" +
 	"\f_target_specB\r\n" +
 	"\v_paginationB\v\n" +
-	"\t_order_by\"\x8e\x02\n" +
+	"\t_order_by\"\xf8\x01\n" +
 	"\x1aValidateComponentsResponse\x12'\n" +
 	"\x05diffs\x18\x01 \x03(\v2\x11.v1.ComponentDiffR\x05diffs\x12\x1f\n" +
 	"\vtotal_diffs\x18\x02 \x01(\x05R\n" +
-	"totalDiffs\x123\n" +
-	"\x16only_in_expected_count\x18\x03 \x01(\x05R\x13onlyInExpectedCount\x12/\n" +
-	"\x14only_in_actual_count\x18\x04 \x01(\x05R\x11onlyInActualCount\x12\x1f\n" +
+	"totalDiffs\x12#\n" +
+	"\rmissing_count\x18\x03 \x01(\x05R\fmissingCount\x12)\n" +
+	"\x10unexpected_count\x18\x04 \x01(\x05R\x0funexpectedCount\x12\x1f\n" +
 	"\vdrift_count\x18\x05 \x01(\x05R\n" +
 	"driftCount\x12\x1f\n" +
 	"\vmatch_count\x18\x06 \x01(\x05R\n" +
-	"matchCount\"\xd6\x01\n" +
+	"matchCount\"\xf0\x01\n" +
 	"\rComponentDiff\x12 \n" +
 	"\x04type\x18\x01 \x01(\x0e2\f.v1.DiffTypeR\x04type\x12!\n" +
 	"\fcomponent_id\x18\x02 \x01(\tR\vcomponentId\x12)\n" +
 	"\bexpected\x18\x03 \x01(\v2\r.v1.ComponentR\bexpected\x12%\n" +
 	"\x06actual\x18\x04 \x01(\v2\r.v1.ComponentR\x06actual\x12.\n" +
 	"\vfield_diffs\x18\x05 \x03(\v2\r.v1.FieldDiffR\n" +
-	"fieldDiffs\"t\n" +
+	"fieldDiffs\x12\x18\n" +
+	"\x02id\x18\x06 \x01(\v2\b.v1.UUIDR\x02id\"t\n" +
 	"\tFieldDiff\x12\x1d\n" +
 	"\n" +
 	"field_name\x18\x01 \x01(\tR\tfieldName\x12%\n" +
@@ -6424,11 +6431,11 @@ const file_rla_proto_rawDesc = "" +
 	"\x13TASK_STATUS_WAITING\x10\x06*S\n" +
 	"\x10TaskExecutorType\x12\x1e\n" +
 	"\x1aTASK_EXECUTOR_TYPE_UNKNOWN\x10\x00\x12\x1f\n" +
-	"\x1bTASK_EXECUTOR_TYPE_TEMPORAL\x10\x01*t\n" +
+	"\x1bTASK_EXECUTOR_TYPE_TEMPORAL\x10\x01*g\n" +
 	"\bDiffType\x12\x15\n" +
-	"\x11DIFF_TYPE_UNKNOWN\x10\x00\x12\x1e\n" +
-	"\x1aDIFF_TYPE_ONLY_IN_EXPECTED\x10\x01\x12\x1c\n" +
-	"\x18DIFF_TYPE_ONLY_IN_ACTUAL\x10\x02\x12\x13\n" +
+	"\x11DIFF_TYPE_UNKNOWN\x10\x00\x12\x15\n" +
+	"\x11DIFF_TYPE_MISSING\x10\x01\x12\x18\n" +
+	"\x14DIFF_TYPE_UNEXPECTED\x10\x02\x12\x13\n" +
 	"\x0fDIFF_TYPE_DRIFT\x10\x03*p\n" +
 	"\x10ConflictStrategy\x12!\n" +
 	"\x1dCONFLICT_STRATEGY_UNSPECIFIED\x10\x00\x12\x1b\n" +
@@ -6684,146 +6691,147 @@ var file_rla_proto_depIdxs = []int32{
 	18,  // 76: v1.ComponentDiff.expected:type_name -> v1.Component
 	18,  // 77: v1.ComponentDiff.actual:type_name -> v1.Component
 	59,  // 78: v1.ComponentDiff.field_diffs:type_name -> v1.FieldDiff
-	18,  // 79: v1.AddComponentRequest.component:type_name -> v1.Component
-	18,  // 80: v1.AddComponentResponse.component:type_name -> v1.Component
-	12,  // 81: v1.DeleteComponentRequest.id:type_name -> v1.UUID
-	12,  // 82: v1.DeleteRackRequest.id:type_name -> v1.UUID
-	12,  // 83: v1.PurgeRackRequest.id:type_name -> v1.UUID
-	12,  // 84: v1.PurgeComponentRequest.id:type_name -> v1.UUID
-	12,  // 85: v1.PatchComponentRequest.id:type_name -> v1.UUID
-	17,  // 86: v1.PatchComponentRequest.position:type_name -> v1.RackPosition
-	12,  // 87: v1.PatchComponentRequest.rack_id:type_name -> v1.UUID
-	16,  // 88: v1.PatchComponentRequest.bmcs:type_name -> v1.BMCInfo
-	18,  // 89: v1.PatchComponentResponse.component:type_name -> v1.Component
-	12,  // 90: v1.SubmitTaskResponse.task_ids:type_name -> v1.UUID
-	10,  // 91: v1.QueueOptions.conflict_strategy:type_name -> v1.ConflictStrategy
-	21,  // 92: v1.PowerOnRackRequest.target_spec:type_name -> v1.OperationTargetSpec
-	73,  // 93: v1.PowerOnRackRequest.queue_options:type_name -> v1.QueueOptions
-	21,  // 94: v1.PowerOffRackRequest.target_spec:type_name -> v1.OperationTargetSpec
-	73,  // 95: v1.PowerOffRackRequest.queue_options:type_name -> v1.QueueOptions
-	21,  // 96: v1.PowerResetRackRequest.target_spec:type_name -> v1.OperationTargetSpec
-	73,  // 97: v1.PowerResetRackRequest.queue_options:type_name -> v1.QueueOptions
-	21,  // 98: v1.BringUpRackRequest.target_spec:type_name -> v1.OperationTargetSpec
-	21,  // 99: v1.IngestRackRequest.target_spec:type_name -> v1.OperationTargetSpec
-	30,  // 100: v1.IngestRackRequest.filters:type_name -> v1.Filter
-	12,  // 101: v1.ListTasksRequest.rack_id:type_name -> v1.UUID
-	28,  // 102: v1.ListTasksRequest.pagination:type_name -> v1.Pagination
-	32,  // 103: v1.ListTasksResponse.tasks:type_name -> v1.Task
-	12,  // 104: v1.GetTasksByIDsRequest.task_ids:type_name -> v1.UUID
-	32,  // 105: v1.GetTasksByIDsResponse.tasks:type_name -> v1.Task
-	12,  // 106: v1.CancelTaskRequest.task_id:type_name -> v1.UUID
-	32,  // 107: v1.CancelTaskResponse.task:type_name -> v1.Task
-	12,  // 108: v1.OperationRule.id:type_name -> v1.UUID
-	11,  // 109: v1.OperationRule.operation_type:type_name -> v1.OperationType
-	103, // 110: v1.OperationRule.created_at:type_name -> google.protobuf.Timestamp
-	103, // 111: v1.OperationRule.updated_at:type_name -> google.protobuf.Timestamp
-	11,  // 112: v1.CreateOperationRuleRequest.operation_type:type_name -> v1.OperationType
-	12,  // 113: v1.CreateOperationRuleResponse.id:type_name -> v1.UUID
-	12,  // 114: v1.UpdateOperationRuleRequest.rule_id:type_name -> v1.UUID
-	12,  // 115: v1.DeleteOperationRuleRequest.rule_id:type_name -> v1.UUID
-	12,  // 116: v1.SetRuleAsDefaultRequest.rule_id:type_name -> v1.UUID
-	12,  // 117: v1.GetOperationRuleRequest.rule_id:type_name -> v1.UUID
-	11,  // 118: v1.ListOperationRulesRequest.operation_type:type_name -> v1.OperationType
-	87,  // 119: v1.ListOperationRulesResponse.rules:type_name -> v1.OperationRule
-	12,  // 120: v1.AssociateRuleWithRackRequest.rack_id:type_name -> v1.UUID
-	12,  // 121: v1.AssociateRuleWithRackRequest.rule_id:type_name -> v1.UUID
-	12,  // 122: v1.DisassociateRuleFromRackRequest.rack_id:type_name -> v1.UUID
-	11,  // 123: v1.DisassociateRuleFromRackRequest.operation_type:type_name -> v1.OperationType
-	12,  // 124: v1.GetRackRuleAssociationRequest.rack_id:type_name -> v1.UUID
-	11,  // 125: v1.GetRackRuleAssociationRequest.operation_type:type_name -> v1.OperationType
-	12,  // 126: v1.GetRackRuleAssociationResponse.rule_id:type_name -> v1.UUID
-	12,  // 127: v1.ListRackRuleAssociationsRequest.rack_id:type_name -> v1.UUID
-	12,  // 128: v1.RackRuleAssociation.rack_id:type_name -> v1.UUID
-	11,  // 129: v1.RackRuleAssociation.operation_type:type_name -> v1.OperationType
-	12,  // 130: v1.RackRuleAssociation.rule_id:type_name -> v1.UUID
-	103, // 131: v1.RackRuleAssociation.created_at:type_name -> google.protobuf.Timestamp
-	103, // 132: v1.RackRuleAssociation.updated_at:type_name -> google.protobuf.Timestamp
-	101, // 133: v1.ListRackRuleAssociationsResponse.associations:type_name -> v1.RackRuleAssociation
-	85,  // 134: v1.RLA.Version:input_type -> v1.VersionRequest
-	33,  // 135: v1.RLA.CreateExpectedRack:input_type -> v1.CreateExpectedRackRequest
-	35,  // 136: v1.RLA.GetRackInfoByID:input_type -> v1.GetRackInfoByIDRequest
-	36,  // 137: v1.RLA.GetRackInfoBySerial:input_type -> v1.GetRackInfoBySerialRequest
-	43,  // 138: v1.RLA.GetListOfRacks:input_type -> v1.GetListOfRacksRequest
-	38,  // 139: v1.RLA.PatchRack:input_type -> v1.PatchRackRequest
-	64,  // 140: v1.RLA.DeleteRack:input_type -> v1.DeleteRackRequest
-	66,  // 141: v1.RLA.PurgeRack:input_type -> v1.PurgeRackRequest
-	53,  // 142: v1.RLA.UpgradeFirmware:input_type -> v1.UpgradeFirmwareRequest
-	77,  // 143: v1.RLA.BringUpRack:input_type -> v1.BringUpRackRequest
-	78,  // 144: v1.RLA.IngestRack:input_type -> v1.IngestRackRequest
-	74,  // 145: v1.RLA.PowerOnRack:input_type -> v1.PowerOnRackRequest
-	75,  // 146: v1.RLA.PowerOffRack:input_type -> v1.PowerOffRackRequest
-	76,  // 147: v1.RLA.PowerResetRack:input_type -> v1.PowerResetRackRequest
-	40,  // 148: v1.RLA.GetComponentInfoByID:input_type -> v1.GetComponentInfoByIDRequest
-	41,  // 149: v1.RLA.GetComponentInfoBySerial:input_type -> v1.GetComponentInfoBySerialRequest
-	54,  // 150: v1.RLA.GetComponents:input_type -> v1.GetComponentsRequest
-	56,  // 151: v1.RLA.ValidateComponents:input_type -> v1.ValidateComponentsRequest
-	60,  // 152: v1.RLA.AddComponent:input_type -> v1.AddComponentRequest
-	70,  // 153: v1.RLA.PatchComponent:input_type -> v1.PatchComponentRequest
-	62,  // 154: v1.RLA.DeleteComponent:input_type -> v1.DeleteComponentRequest
-	68,  // 155: v1.RLA.PurgeComponent:input_type -> v1.PurgeComponentRequest
-	45,  // 156: v1.RLA.CreateNVLDomain:input_type -> v1.CreateNVLDomainRequest
-	47,  // 157: v1.RLA.AttachRacksToNVLDomain:input_type -> v1.AttachRacksToNVLDomainRequest
-	48,  // 158: v1.RLA.DetachRacksFromNVLDomain:input_type -> v1.DetachRacksFromNVLDomainRequest
-	49,  // 159: v1.RLA.GetListOfNVLDomains:input_type -> v1.GetListOfNVLDomainsRequest
-	51,  // 160: v1.RLA.GetRacksForNVLDomain:input_type -> v1.GetRacksForNVLDomainRequest
-	79,  // 161: v1.RLA.ListTasks:input_type -> v1.ListTasksRequest
-	81,  // 162: v1.RLA.GetTasksByIDs:input_type -> v1.GetTasksByIDsRequest
-	83,  // 163: v1.RLA.CancelTask:input_type -> v1.CancelTaskRequest
-	88,  // 164: v1.RLA.CreateOperationRule:input_type -> v1.CreateOperationRuleRequest
-	90,  // 165: v1.RLA.UpdateOperationRule:input_type -> v1.UpdateOperationRuleRequest
-	91,  // 166: v1.RLA.DeleteOperationRule:input_type -> v1.DeleteOperationRuleRequest
-	93,  // 167: v1.RLA.GetOperationRule:input_type -> v1.GetOperationRuleRequest
-	94,  // 168: v1.RLA.ListOperationRules:input_type -> v1.ListOperationRulesRequest
-	92,  // 169: v1.RLA.SetRuleAsDefault:input_type -> v1.SetRuleAsDefaultRequest
-	96,  // 170: v1.RLA.AssociateRuleWithRack:input_type -> v1.AssociateRuleWithRackRequest
-	97,  // 171: v1.RLA.DisassociateRuleFromRack:input_type -> v1.DisassociateRuleFromRackRequest
-	98,  // 172: v1.RLA.GetRackRuleAssociation:input_type -> v1.GetRackRuleAssociationRequest
-	100, // 173: v1.RLA.ListRackRuleAssociations:input_type -> v1.ListRackRuleAssociationsRequest
-	86,  // 174: v1.RLA.Version:output_type -> v1.BuildInfo
-	34,  // 175: v1.RLA.CreateExpectedRack:output_type -> v1.CreateExpectedRackResponse
-	37,  // 176: v1.RLA.GetRackInfoByID:output_type -> v1.GetRackInfoResponse
-	37,  // 177: v1.RLA.GetRackInfoBySerial:output_type -> v1.GetRackInfoResponse
-	44,  // 178: v1.RLA.GetListOfRacks:output_type -> v1.GetListOfRacksResponse
-	39,  // 179: v1.RLA.PatchRack:output_type -> v1.PatchRackResponse
-	65,  // 180: v1.RLA.DeleteRack:output_type -> v1.DeleteRackResponse
-	67,  // 181: v1.RLA.PurgeRack:output_type -> v1.PurgeRackResponse
-	72,  // 182: v1.RLA.UpgradeFirmware:output_type -> v1.SubmitTaskResponse
-	72,  // 183: v1.RLA.BringUpRack:output_type -> v1.SubmitTaskResponse
-	72,  // 184: v1.RLA.IngestRack:output_type -> v1.SubmitTaskResponse
-	72,  // 185: v1.RLA.PowerOnRack:output_type -> v1.SubmitTaskResponse
-	72,  // 186: v1.RLA.PowerOffRack:output_type -> v1.SubmitTaskResponse
-	72,  // 187: v1.RLA.PowerResetRack:output_type -> v1.SubmitTaskResponse
-	42,  // 188: v1.RLA.GetComponentInfoByID:output_type -> v1.GetComponentInfoResponse
-	42,  // 189: v1.RLA.GetComponentInfoBySerial:output_type -> v1.GetComponentInfoResponse
-	55,  // 190: v1.RLA.GetComponents:output_type -> v1.GetComponentsResponse
-	57,  // 191: v1.RLA.ValidateComponents:output_type -> v1.ValidateComponentsResponse
-	61,  // 192: v1.RLA.AddComponent:output_type -> v1.AddComponentResponse
-	71,  // 193: v1.RLA.PatchComponent:output_type -> v1.PatchComponentResponse
-	63,  // 194: v1.RLA.DeleteComponent:output_type -> v1.DeleteComponentResponse
-	69,  // 195: v1.RLA.PurgeComponent:output_type -> v1.PurgeComponentResponse
-	46,  // 196: v1.RLA.CreateNVLDomain:output_type -> v1.CreateNVLDomainResponse
-	104, // 197: v1.RLA.AttachRacksToNVLDomain:output_type -> google.protobuf.Empty
-	104, // 198: v1.RLA.DetachRacksFromNVLDomain:output_type -> google.protobuf.Empty
-	50,  // 199: v1.RLA.GetListOfNVLDomains:output_type -> v1.GetListOfNVLDomainsResponse
-	52,  // 200: v1.RLA.GetRacksForNVLDomain:output_type -> v1.GetRacksForNVLDomainResponse
-	80,  // 201: v1.RLA.ListTasks:output_type -> v1.ListTasksResponse
-	82,  // 202: v1.RLA.GetTasksByIDs:output_type -> v1.GetTasksByIDsResponse
-	84,  // 203: v1.RLA.CancelTask:output_type -> v1.CancelTaskResponse
-	89,  // 204: v1.RLA.CreateOperationRule:output_type -> v1.CreateOperationRuleResponse
-	104, // 205: v1.RLA.UpdateOperationRule:output_type -> google.protobuf.Empty
-	104, // 206: v1.RLA.DeleteOperationRule:output_type -> google.protobuf.Empty
-	87,  // 207: v1.RLA.GetOperationRule:output_type -> v1.OperationRule
-	95,  // 208: v1.RLA.ListOperationRules:output_type -> v1.ListOperationRulesResponse
-	104, // 209: v1.RLA.SetRuleAsDefault:output_type -> google.protobuf.Empty
-	104, // 210: v1.RLA.AssociateRuleWithRack:output_type -> google.protobuf.Empty
-	104, // 211: v1.RLA.DisassociateRuleFromRack:output_type -> google.protobuf.Empty
-	99,  // 212: v1.RLA.GetRackRuleAssociation:output_type -> v1.GetRackRuleAssociationResponse
-	102, // 213: v1.RLA.ListRackRuleAssociations:output_type -> v1.ListRackRuleAssociationsResponse
-	174, // [174:214] is the sub-list for method output_type
-	134, // [134:174] is the sub-list for method input_type
-	134, // [134:134] is the sub-list for extension type_name
-	134, // [134:134] is the sub-list for extension extendee
-	0,   // [0:134] is the sub-list for field type_name
+	12,  // 79: v1.ComponentDiff.id:type_name -> v1.UUID
+	18,  // 80: v1.AddComponentRequest.component:type_name -> v1.Component
+	18,  // 81: v1.AddComponentResponse.component:type_name -> v1.Component
+	12,  // 82: v1.DeleteComponentRequest.id:type_name -> v1.UUID
+	12,  // 83: v1.DeleteRackRequest.id:type_name -> v1.UUID
+	12,  // 84: v1.PurgeRackRequest.id:type_name -> v1.UUID
+	12,  // 85: v1.PurgeComponentRequest.id:type_name -> v1.UUID
+	12,  // 86: v1.PatchComponentRequest.id:type_name -> v1.UUID
+	17,  // 87: v1.PatchComponentRequest.position:type_name -> v1.RackPosition
+	12,  // 88: v1.PatchComponentRequest.rack_id:type_name -> v1.UUID
+	16,  // 89: v1.PatchComponentRequest.bmcs:type_name -> v1.BMCInfo
+	18,  // 90: v1.PatchComponentResponse.component:type_name -> v1.Component
+	12,  // 91: v1.SubmitTaskResponse.task_ids:type_name -> v1.UUID
+	10,  // 92: v1.QueueOptions.conflict_strategy:type_name -> v1.ConflictStrategy
+	21,  // 93: v1.PowerOnRackRequest.target_spec:type_name -> v1.OperationTargetSpec
+	73,  // 94: v1.PowerOnRackRequest.queue_options:type_name -> v1.QueueOptions
+	21,  // 95: v1.PowerOffRackRequest.target_spec:type_name -> v1.OperationTargetSpec
+	73,  // 96: v1.PowerOffRackRequest.queue_options:type_name -> v1.QueueOptions
+	21,  // 97: v1.PowerResetRackRequest.target_spec:type_name -> v1.OperationTargetSpec
+	73,  // 98: v1.PowerResetRackRequest.queue_options:type_name -> v1.QueueOptions
+	21,  // 99: v1.BringUpRackRequest.target_spec:type_name -> v1.OperationTargetSpec
+	21,  // 100: v1.IngestRackRequest.target_spec:type_name -> v1.OperationTargetSpec
+	30,  // 101: v1.IngestRackRequest.filters:type_name -> v1.Filter
+	12,  // 102: v1.ListTasksRequest.rack_id:type_name -> v1.UUID
+	28,  // 103: v1.ListTasksRequest.pagination:type_name -> v1.Pagination
+	32,  // 104: v1.ListTasksResponse.tasks:type_name -> v1.Task
+	12,  // 105: v1.GetTasksByIDsRequest.task_ids:type_name -> v1.UUID
+	32,  // 106: v1.GetTasksByIDsResponse.tasks:type_name -> v1.Task
+	12,  // 107: v1.CancelTaskRequest.task_id:type_name -> v1.UUID
+	32,  // 108: v1.CancelTaskResponse.task:type_name -> v1.Task
+	12,  // 109: v1.OperationRule.id:type_name -> v1.UUID
+	11,  // 110: v1.OperationRule.operation_type:type_name -> v1.OperationType
+	103, // 111: v1.OperationRule.created_at:type_name -> google.protobuf.Timestamp
+	103, // 112: v1.OperationRule.updated_at:type_name -> google.protobuf.Timestamp
+	11,  // 113: v1.CreateOperationRuleRequest.operation_type:type_name -> v1.OperationType
+	12,  // 114: v1.CreateOperationRuleResponse.id:type_name -> v1.UUID
+	12,  // 115: v1.UpdateOperationRuleRequest.rule_id:type_name -> v1.UUID
+	12,  // 116: v1.DeleteOperationRuleRequest.rule_id:type_name -> v1.UUID
+	12,  // 117: v1.SetRuleAsDefaultRequest.rule_id:type_name -> v1.UUID
+	12,  // 118: v1.GetOperationRuleRequest.rule_id:type_name -> v1.UUID
+	11,  // 119: v1.ListOperationRulesRequest.operation_type:type_name -> v1.OperationType
+	87,  // 120: v1.ListOperationRulesResponse.rules:type_name -> v1.OperationRule
+	12,  // 121: v1.AssociateRuleWithRackRequest.rack_id:type_name -> v1.UUID
+	12,  // 122: v1.AssociateRuleWithRackRequest.rule_id:type_name -> v1.UUID
+	12,  // 123: v1.DisassociateRuleFromRackRequest.rack_id:type_name -> v1.UUID
+	11,  // 124: v1.DisassociateRuleFromRackRequest.operation_type:type_name -> v1.OperationType
+	12,  // 125: v1.GetRackRuleAssociationRequest.rack_id:type_name -> v1.UUID
+	11,  // 126: v1.GetRackRuleAssociationRequest.operation_type:type_name -> v1.OperationType
+	12,  // 127: v1.GetRackRuleAssociationResponse.rule_id:type_name -> v1.UUID
+	12,  // 128: v1.ListRackRuleAssociationsRequest.rack_id:type_name -> v1.UUID
+	12,  // 129: v1.RackRuleAssociation.rack_id:type_name -> v1.UUID
+	11,  // 130: v1.RackRuleAssociation.operation_type:type_name -> v1.OperationType
+	12,  // 131: v1.RackRuleAssociation.rule_id:type_name -> v1.UUID
+	103, // 132: v1.RackRuleAssociation.created_at:type_name -> google.protobuf.Timestamp
+	103, // 133: v1.RackRuleAssociation.updated_at:type_name -> google.protobuf.Timestamp
+	101, // 134: v1.ListRackRuleAssociationsResponse.associations:type_name -> v1.RackRuleAssociation
+	85,  // 135: v1.RLA.Version:input_type -> v1.VersionRequest
+	33,  // 136: v1.RLA.CreateExpectedRack:input_type -> v1.CreateExpectedRackRequest
+	35,  // 137: v1.RLA.GetRackInfoByID:input_type -> v1.GetRackInfoByIDRequest
+	36,  // 138: v1.RLA.GetRackInfoBySerial:input_type -> v1.GetRackInfoBySerialRequest
+	43,  // 139: v1.RLA.GetListOfRacks:input_type -> v1.GetListOfRacksRequest
+	38,  // 140: v1.RLA.PatchRack:input_type -> v1.PatchRackRequest
+	64,  // 141: v1.RLA.DeleteRack:input_type -> v1.DeleteRackRequest
+	66,  // 142: v1.RLA.PurgeRack:input_type -> v1.PurgeRackRequest
+	53,  // 143: v1.RLA.UpgradeFirmware:input_type -> v1.UpgradeFirmwareRequest
+	77,  // 144: v1.RLA.BringUpRack:input_type -> v1.BringUpRackRequest
+	78,  // 145: v1.RLA.IngestRack:input_type -> v1.IngestRackRequest
+	74,  // 146: v1.RLA.PowerOnRack:input_type -> v1.PowerOnRackRequest
+	75,  // 147: v1.RLA.PowerOffRack:input_type -> v1.PowerOffRackRequest
+	76,  // 148: v1.RLA.PowerResetRack:input_type -> v1.PowerResetRackRequest
+	40,  // 149: v1.RLA.GetComponentInfoByID:input_type -> v1.GetComponentInfoByIDRequest
+	41,  // 150: v1.RLA.GetComponentInfoBySerial:input_type -> v1.GetComponentInfoBySerialRequest
+	54,  // 151: v1.RLA.GetComponents:input_type -> v1.GetComponentsRequest
+	56,  // 152: v1.RLA.ValidateComponents:input_type -> v1.ValidateComponentsRequest
+	60,  // 153: v1.RLA.AddComponent:input_type -> v1.AddComponentRequest
+	70,  // 154: v1.RLA.PatchComponent:input_type -> v1.PatchComponentRequest
+	62,  // 155: v1.RLA.DeleteComponent:input_type -> v1.DeleteComponentRequest
+	68,  // 156: v1.RLA.PurgeComponent:input_type -> v1.PurgeComponentRequest
+	45,  // 157: v1.RLA.CreateNVLDomain:input_type -> v1.CreateNVLDomainRequest
+	47,  // 158: v1.RLA.AttachRacksToNVLDomain:input_type -> v1.AttachRacksToNVLDomainRequest
+	48,  // 159: v1.RLA.DetachRacksFromNVLDomain:input_type -> v1.DetachRacksFromNVLDomainRequest
+	49,  // 160: v1.RLA.GetListOfNVLDomains:input_type -> v1.GetListOfNVLDomainsRequest
+	51,  // 161: v1.RLA.GetRacksForNVLDomain:input_type -> v1.GetRacksForNVLDomainRequest
+	79,  // 162: v1.RLA.ListTasks:input_type -> v1.ListTasksRequest
+	81,  // 163: v1.RLA.GetTasksByIDs:input_type -> v1.GetTasksByIDsRequest
+	83,  // 164: v1.RLA.CancelTask:input_type -> v1.CancelTaskRequest
+	88,  // 165: v1.RLA.CreateOperationRule:input_type -> v1.CreateOperationRuleRequest
+	90,  // 166: v1.RLA.UpdateOperationRule:input_type -> v1.UpdateOperationRuleRequest
+	91,  // 167: v1.RLA.DeleteOperationRule:input_type -> v1.DeleteOperationRuleRequest
+	93,  // 168: v1.RLA.GetOperationRule:input_type -> v1.GetOperationRuleRequest
+	94,  // 169: v1.RLA.ListOperationRules:input_type -> v1.ListOperationRulesRequest
+	92,  // 170: v1.RLA.SetRuleAsDefault:input_type -> v1.SetRuleAsDefaultRequest
+	96,  // 171: v1.RLA.AssociateRuleWithRack:input_type -> v1.AssociateRuleWithRackRequest
+	97,  // 172: v1.RLA.DisassociateRuleFromRack:input_type -> v1.DisassociateRuleFromRackRequest
+	98,  // 173: v1.RLA.GetRackRuleAssociation:input_type -> v1.GetRackRuleAssociationRequest
+	100, // 174: v1.RLA.ListRackRuleAssociations:input_type -> v1.ListRackRuleAssociationsRequest
+	86,  // 175: v1.RLA.Version:output_type -> v1.BuildInfo
+	34,  // 176: v1.RLA.CreateExpectedRack:output_type -> v1.CreateExpectedRackResponse
+	37,  // 177: v1.RLA.GetRackInfoByID:output_type -> v1.GetRackInfoResponse
+	37,  // 178: v1.RLA.GetRackInfoBySerial:output_type -> v1.GetRackInfoResponse
+	44,  // 179: v1.RLA.GetListOfRacks:output_type -> v1.GetListOfRacksResponse
+	39,  // 180: v1.RLA.PatchRack:output_type -> v1.PatchRackResponse
+	65,  // 181: v1.RLA.DeleteRack:output_type -> v1.DeleteRackResponse
+	67,  // 182: v1.RLA.PurgeRack:output_type -> v1.PurgeRackResponse
+	72,  // 183: v1.RLA.UpgradeFirmware:output_type -> v1.SubmitTaskResponse
+	72,  // 184: v1.RLA.BringUpRack:output_type -> v1.SubmitTaskResponse
+	72,  // 185: v1.RLA.IngestRack:output_type -> v1.SubmitTaskResponse
+	72,  // 186: v1.RLA.PowerOnRack:output_type -> v1.SubmitTaskResponse
+	72,  // 187: v1.RLA.PowerOffRack:output_type -> v1.SubmitTaskResponse
+	72,  // 188: v1.RLA.PowerResetRack:output_type -> v1.SubmitTaskResponse
+	42,  // 189: v1.RLA.GetComponentInfoByID:output_type -> v1.GetComponentInfoResponse
+	42,  // 190: v1.RLA.GetComponentInfoBySerial:output_type -> v1.GetComponentInfoResponse
+	55,  // 191: v1.RLA.GetComponents:output_type -> v1.GetComponentsResponse
+	57,  // 192: v1.RLA.ValidateComponents:output_type -> v1.ValidateComponentsResponse
+	61,  // 193: v1.RLA.AddComponent:output_type -> v1.AddComponentResponse
+	71,  // 194: v1.RLA.PatchComponent:output_type -> v1.PatchComponentResponse
+	63,  // 195: v1.RLA.DeleteComponent:output_type -> v1.DeleteComponentResponse
+	69,  // 196: v1.RLA.PurgeComponent:output_type -> v1.PurgeComponentResponse
+	46,  // 197: v1.RLA.CreateNVLDomain:output_type -> v1.CreateNVLDomainResponse
+	104, // 198: v1.RLA.AttachRacksToNVLDomain:output_type -> google.protobuf.Empty
+	104, // 199: v1.RLA.DetachRacksFromNVLDomain:output_type -> google.protobuf.Empty
+	50,  // 200: v1.RLA.GetListOfNVLDomains:output_type -> v1.GetListOfNVLDomainsResponse
+	52,  // 201: v1.RLA.GetRacksForNVLDomain:output_type -> v1.GetRacksForNVLDomainResponse
+	80,  // 202: v1.RLA.ListTasks:output_type -> v1.ListTasksResponse
+	82,  // 203: v1.RLA.GetTasksByIDs:output_type -> v1.GetTasksByIDsResponse
+	84,  // 204: v1.RLA.CancelTask:output_type -> v1.CancelTaskResponse
+	89,  // 205: v1.RLA.CreateOperationRule:output_type -> v1.CreateOperationRuleResponse
+	104, // 206: v1.RLA.UpdateOperationRule:output_type -> google.protobuf.Empty
+	104, // 207: v1.RLA.DeleteOperationRule:output_type -> google.protobuf.Empty
+	87,  // 208: v1.RLA.GetOperationRule:output_type -> v1.OperationRule
+	95,  // 209: v1.RLA.ListOperationRules:output_type -> v1.ListOperationRulesResponse
+	104, // 210: v1.RLA.SetRuleAsDefault:output_type -> google.protobuf.Empty
+	104, // 211: v1.RLA.AssociateRuleWithRack:output_type -> google.protobuf.Empty
+	104, // 212: v1.RLA.DisassociateRuleFromRack:output_type -> google.protobuf.Empty
+	99,  // 213: v1.RLA.GetRackRuleAssociation:output_type -> v1.GetRackRuleAssociationResponse
+	102, // 214: v1.RLA.ListRackRuleAssociations:output_type -> v1.ListRackRuleAssociationsResponse
+	175, // [175:215] is the sub-list for method output_type
+	135, // [135:175] is the sub-list for method input_type
+	135, // [135:135] is the sub-list for extension type_name
+	135, // [135:135] is the sub-list for extension extendee
+	0,   // [0:135] is the sub-list for field type_name
 }
 
 func init() { file_rla_proto_init() }

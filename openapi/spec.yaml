@@ -9357,14 +9357,15 @@ paths:
                   value:
                     diffs: []
                     totalDiffs: 0
-                    onlyInExpectedCount: 0
-                    onlyInActualCount: 0
+                    missingCount: 0
+                    unexpectedCount: 0
                     driftCount: 0
                     matchCount: 10
                 example-with-diffs:
                   value:
                     diffs:
-                      - type: DiffTypeOnlyInExpected
+                      - type: Missing
+                        id: 660e8400-e29b-41d4-a716-446655440001
                         componentId: comp-1
                         expected:
                           id: 660e8400-e29b-41d4-a716-446655440001
@@ -9382,15 +9383,16 @@ paths:
                               macAddress: 'AA:BB:CC:DD:EE:01'
                               ipAddress: 10.0.0.101
                           powerState: 'on'
-                      - type: DiffTypeDrift
+                      - type: Drift
+                        id: 770e8400-e29b-41d4-a716-446655440002
                         componentId: comp-2
                         fieldDiffs:
                           - fieldName: firmware_version
                             expectedValue: '1.0.0'
                             actualValue: '2.0.0'
                     totalDiffs: 2
-                    onlyInExpectedCount: 1
-                    onlyInActualCount: 0
+                    missingCount: 1
+                    unexpectedCount: 0
                     driftCount: 1
                     matchCount: 8
         '400':
@@ -9443,14 +9445,15 @@ paths:
                   value:
                     diffs: []
                     totalDiffs: 0
-                    onlyInExpectedCount: 0
-                    onlyInActualCount: 0
+                    missingCount: 0
+                    unexpectedCount: 0
                     driftCount: 0
                     matchCount: 5
                 example-with-diffs:
                   value:
                     diffs:
-                      - type: DiffTypeOnlyInExpected
+                      - type: Missing
+                        id: 660e8400-e29b-41d4-a716-446655440001
                         componentId: comp-1
                         expected:
                           id: 660e8400-e29b-41d4-a716-446655440001
@@ -9468,15 +9471,16 @@ paths:
                               macAddress: 'AA:BB:CC:DD:EE:01'
                               ipAddress: 10.0.0.101
                           powerState: 'on'
-                      - type: DiffTypeDrift
+                      - type: Drift
+                        id: 770e8400-e29b-41d4-a716-446655440002
                         componentId: comp-2
                         fieldDiffs:
                           - fieldName: firmware_version
                             expectedValue: '1.0.0'
                             actualValue: '2.0.0'
                     totalDiffs: 2
-                    onlyInExpectedCount: 1
-                    onlyInActualCount: 0
+                    missingCount: 1
+                    unexpectedCount: 0
                     driftCount: 1
                     matchCount: 3
         '400':
@@ -10131,8 +10135,8 @@ paths:
                   value:
                     diffs: []
                     totalDiffs: 0
-                    onlyInExpectedCount: 0
-                    onlyInActualCount: 0
+                    missingCount: 0
+                    unexpectedCount: 0
                     driftCount: 0
                     matchCount: 10
         '400':
@@ -10185,8 +10189,8 @@ paths:
                   value:
                     diffs: []
                     totalDiffs: 0
-                    onlyInExpectedCount: 0
-                    onlyInActualCount: 0
+                    missingCount: 0
+                    unexpectedCount: 0
                     driftCount: 0
                     matchCount: 5
         '400':
@@ -16055,12 +16059,12 @@ components:
         totalDiffs:
           type: integer
           description: Total number of component differences found
-        onlyInExpectedCount:
+        missingCount:
           type: integer
-          description: Number of components only in expected configuration (missing from actual)
-        onlyInActualCount:
+          description: Number of components expected but missing from the source system
+        unexpectedCount:
           type: integer
-          description: Number of components only in actual state (not in expected configuration)
+          description: Number of components found in the source system but not expected
         driftCount:
           type: integer
           description: Number of components present in both but with field differences
@@ -16074,15 +16078,19 @@ components:
       properties:
         type:
           type: string
-          description: 'Type of difference: DiffTypeOnlyInExpected, DiffTypeOnlyInActual, or DiffTypeDrift'
+          description: 'Type of difference: Unknown, Missing, Unexpected, or Drift'
           enum:
-            - DiffTypeUnknown
-            - DiffTypeOnlyInExpected
-            - DiffTypeOnlyInActual
-            - DiffTypeDrift
+            - Unknown
+            - Missing
+            - Unexpected
+            - Drift
+        id:
+          type: string
+          format: uuid
+          description: RLA internal component UUID
         componentId:
           type: string
-          description: ID of the component
+          description: Component ID assigned by the component manager service
         expected:
           $ref: '#/components/schemas/RackComponent'
         actual:

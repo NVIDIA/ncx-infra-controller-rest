@@ -448,29 +448,26 @@ message ValidateComponentsResponse {
     int32 total_diffs = 2;
     
     // Summary counts
-    int32 only_in_expected_count = 3;
-    int32 only_in_actual_count = 4;
+    int32 missing_count = 3;     // Expected by RLA but not found in the component manager service
+    int32 unexpected_count = 4;  // Found in the component manager service but not expected by RLA
     int32 drift_count = 5;
     int32 match_count = 6;
 }
 
 enum DiffType {
     DIFF_TYPE_UNKNOWN = 0;
-    DIFF_TYPE_ONLY_IN_EXPECTED = 1;  // In local DB but not in source system
-    DIFF_TYPE_ONLY_IN_ACTUAL = 2;    // In source system but not in local DB
-    DIFF_TYPE_DRIFT = 3;              // In both but with field differences
+    DIFF_TYPE_MISSING = 1;       // Expected by RLA but not found in the component manager service
+    DIFF_TYPE_UNEXPECTED = 2;    // Found in the component manager service but not expected by RLA
+    DIFF_TYPE_DRIFT = 3;         // In both but with field differences
 }
 
 message ComponentDiff {
     DiffType type = 1;
-    string component_id = 2;
-    
-    // Populated when type is ONLY_IN_EXPECTED or ONLY_IN_ACTUAL
-    Component expected = 3;
+    string component_id = 2;    // Component ID assigned by the component manager service
+    Component expected = 3;     // Populated when type is MISSING
     Component actual = 4;
-    
-    // Populated when type is DRIFT - lists the fields that differ
-    repeated FieldDiff field_diffs = 5;
+    repeated FieldDiff field_diffs = 5; // Populated when type is DRIFT
+    UUID id = 6;                // RLA internal component UUID
 }
 
 message FieldDiff {
