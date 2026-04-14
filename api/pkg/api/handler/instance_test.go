@@ -740,6 +740,26 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 	mcinstbyid := testInstanceBuildMachineInstanceType(t, dbSession, mcbyid, istbyid)
 	assert.NotNil(t, mcinstbyid)
 
+	// Instance types + machines for MatchInstanceTypeCapabilitiesForMachines (HTTP 400 / 409 on create)
+	istCapMismatch := testInstanceBuildInstanceType(t, dbSession, ip, "test-instance-type-cap-mismatch", st1, cdbm.InstanceStatusReady)
+	assert.NotNil(t, istCapMismatch)
+	common.TestBuildMachineCapability(t, dbSession, nil, &istCapMismatch.ID, cdbm.MachineCapabilityTypeGPU, "GPU-ONLY-ON-IT", nil, nil, cdb.GetStrPtr("NVIDIA"), cdb.GetIntPtr(4), cdb.GetStrPtr(cdbm.MachineCapabilityDeviceTypeNVLink), nil)
+	mcCapMismatch := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
+	assert.NotNil(t, mcCapMismatch)
+	common.TestBuildMachineCapability(t, dbSession, &mcCapMismatch.ID, nil, cdbm.MachineCapabilityTypeGPU, "NVIDIA GB200", nil, nil, cdb.GetStrPtr("NVIDIA"), cdb.GetIntPtr(4), cdb.GetStrPtr(cdbm.MachineCapabilityDeviceTypeNVLink), nil)
+	testInstanceBuildMachineInstanceType(t, dbSession, mcCapMismatch, istCapMismatch)
+	alcISTCapMismatch := testInstanceSiteBuildAllocationContraints(t, dbSession, al1, cdbm.AllocationResourceTypeInstanceType, istCapMismatch.ID, cdbm.AllocationConstraintTypeReserved, 1, ipu)
+	assert.NotNil(t, alcISTCapMismatch)
+
+	istCapNoMachineCaps := testInstanceBuildInstanceType(t, dbSession, ip, "test-instance-type-409-no-machine-caps", st1, cdbm.InstanceStatusReady)
+	assert.NotNil(t, istCapNoMachineCaps)
+	common.TestBuildMachineCapability(t, dbSession, nil, &istCapNoMachineCaps.ID, cdbm.MachineCapabilityTypeGPU, "GPU-REQUIRES-MACHINE-CAPS", nil, nil, cdb.GetStrPtr("NVIDIA"), cdb.GetIntPtr(1), cdb.GetStrPtr(cdbm.MachineCapabilityDeviceTypeNVLink), nil)
+	mcCapNoMachineCaps := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
+	assert.NotNil(t, mcCapNoMachineCaps)
+	testInstanceBuildMachineInstanceType(t, dbSession, mcCapNoMachineCaps, istCapNoMachineCaps)
+	alcCapNoMachineCaps := testInstanceSiteBuildAllocationContraints(t, dbSession, al1, cdbm.AllocationResourceTypeInstanceType, istCapNoMachineCaps.ID, cdbm.AllocationConstraintTypeReserved, 1, ipu)
+	assert.NotNil(t, alcCapNoMachineCaps)
+
 	// machine not belonging to an instance type
 	mcnoinst := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
 	assert.NotNil(t, mcnoinst)
@@ -3351,6 +3371,68 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 			wantErr:            false,
 			verifyChildSpanner: true,
 		},
+		{
+			name: "test Instance create API endpoint fails when machine capabilities do not match instance type capabilities",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIInstanceCreateRequest{
+					Name:       "Test Instance capability mismatch",
+					TenantID:   tn1.ID.String(),
+					MachineID:  cdb.GetStrPtr(mcCapMismatch.ID),
+					VpcID:      vpc1.ID.String(),
+					UserData:   cdb.GetStrPtr(""),
+					IpxeScript: cdb.GetStrPtr(common.DefaultIpxeScript),
+					Interfaces: []model.APIInterfaceCreateOrUpdateRequest{
+						{
+							SubnetID: cdb.GetStrPtr(subnet1.ID.String()),
+						},
+					},
+					PhoneHomeEnabled: cdb.GetBoolPtr(false),
+				},
+				reqMachine:  mcCapMismatch,
+				reqOrg:      tnOrg,
+				reqUser:     tnu1,
+				respCode:    http.StatusBadRequest,
+				respMessage: fmt.Sprintf("Capabilities for Machine: %s do not match Instance Type's Capabilities", mcCapMismatch.ID),
+			},
+			wantErr:            false,
+			verifyChildSpanner: true,
+		},
+		{
+			name: "test Instance create API endpoint fails when machine has no capabilities to match instance type",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIInstanceCreateRequest{
+					Name:       "Test Instance no machine capabilities",
+					TenantID:   tn1.ID.String(),
+					MachineID:  cdb.GetStrPtr(mcCapNoMachineCaps.ID),
+					VpcID:      vpc1.ID.String(),
+					UserData:   cdb.GetStrPtr(""),
+					IpxeScript: cdb.GetStrPtr(common.DefaultIpxeScript),
+					Interfaces: []model.APIInterfaceCreateOrUpdateRequest{
+						{
+							SubnetID: cdb.GetStrPtr(subnet1.ID.String()),
+						},
+					},
+					PhoneHomeEnabled: cdb.GetBoolPtr(false),
+				},
+				reqMachine:  mcCapNoMachineCaps,
+				reqOrg:      tnOrg,
+				reqUser:     tnu1,
+				respCode:    http.StatusConflict,
+				respMessage: "Machines specified in request currently do not have any Capabilities to match against Instance Type",
+			},
+			wantErr:            false,
+			verifyChildSpanner: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -4010,6 +4092,32 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 
 	desd17 := common.TestBuildDpuExtensionServiceDeployment(t, dbSession, des1, inst17.ID, "1.0.0", cdbm.DpuExtensionServiceDeploymentStatusRunning, tnu1)
 	assert.NotNil(t, desd17)
+
+	// Instance types + instances for MatchInstanceTypeCapabilitiesForMachines on update (HTTP 400 / 409)
+	istUpdateCapMismatch := testInstanceBuildInstanceType(t, dbSession, ip, "test-instance-type-update-cap-mismatch", st1, cdbm.InstanceStatusReady)
+	assert.NotNil(t, istUpdateCapMismatch)
+	common.TestBuildMachineCapability(t, dbSession, nil, &istUpdateCapMismatch.ID, cdbm.MachineCapabilityTypeGPU, "GPU-UPDATE-ONLY-ON-IT", nil, nil, cdb.GetStrPtr("NVIDIA"), cdb.GetIntPtr(4), cdb.GetStrPtr(cdbm.MachineCapabilityDeviceTypeNVLink), nil)
+	mcUpdateCapMismatch := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
+	assert.NotNil(t, mcUpdateCapMismatch)
+	common.TestBuildMachineCapability(t, dbSession, &mcUpdateCapMismatch.ID, nil, cdbm.MachineCapabilityTypeGPU, "NVIDIA GB200", nil, nil, cdb.GetStrPtr("NVIDIA"), cdb.GetIntPtr(4), cdb.GetStrPtr(cdbm.MachineCapabilityDeviceTypeNVLink), nil)
+	testInstanceBuildMachineInstanceType(t, dbSession, mcUpdateCapMismatch, istUpdateCapMismatch)
+	alcUpdateCapMismatch := testInstanceSiteBuildAllocationContraints(t, dbSession, al1, cdbm.AllocationResourceTypeInstanceType, istUpdateCapMismatch.ID, cdbm.AllocationConstraintTypeReserved, 1, ipu)
+	assert.NotNil(t, alcUpdateCapMismatch)
+	testInstanceBuildMachineInterface(t, dbSession, subnet1.ID, mcUpdateCapMismatch.ID)
+	instUpdateCapMismatch := testInstanceBuildInstance(t, dbSession, "test-instance-update-cap-mismatch", al1.ID, alcUpdateCapMismatch.ID, tn1.ID, ip.ID, st1.ID, &istUpdateCapMismatch.ID, vpc1.ID, cdb.GetStrPtr(mcUpdateCapMismatch.ID), &os2.ID, nil, cdbm.InstanceStatusReady)
+	assert.NotNil(t, instUpdateCapMismatch)
+
+	istUpdateNoMachineCaps := testInstanceBuildInstanceType(t, dbSession, ip, "test-instance-type-update-no-machine-caps", st1, cdbm.InstanceStatusReady)
+	assert.NotNil(t, istUpdateNoMachineCaps)
+	common.TestBuildMachineCapability(t, dbSession, nil, &istUpdateNoMachineCaps.ID, cdbm.MachineCapabilityTypeGPU, "GPU-UPDATE-REQUIRES-MACHINE-CAPS", nil, nil, cdb.GetStrPtr("NVIDIA"), cdb.GetIntPtr(1), cdb.GetStrPtr(cdbm.MachineCapabilityDeviceTypeNVLink), nil)
+	mcUpdateNoMachineCaps := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
+	assert.NotNil(t, mcUpdateNoMachineCaps)
+	testInstanceBuildMachineInstanceType(t, dbSession, mcUpdateNoMachineCaps, istUpdateNoMachineCaps)
+	alcUpdateNoMachineCaps := testInstanceSiteBuildAllocationContraints(t, dbSession, al1, cdbm.AllocationResourceTypeInstanceType, istUpdateNoMachineCaps.ID, cdbm.AllocationConstraintTypeReserved, 1, ipu)
+	assert.NotNil(t, alcUpdateNoMachineCaps)
+	testInstanceBuildMachineInterface(t, dbSession, subnet1.ID, mcUpdateNoMachineCaps.ID)
+	instUpdateNoMachineCaps := testInstanceBuildInstance(t, dbSession, "test-instance-update-no-machine-caps", al1.ID, alcUpdateNoMachineCaps.ID, tn1.ID, ip.ID, st1.ID, &istUpdateNoMachineCaps.ID, vpc1.ID, cdb.GetStrPtr(mcUpdateNoMachineCaps.ID), &os2.ID, nil, cdbm.InstanceStatusReady)
+	assert.NotNil(t, instUpdateNoMachineCaps)
 
 	e := echo.New()
 	cfg := common.GetTestConfig()
@@ -5734,6 +5842,48 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 				reqUser:     tnu1,
 				respCode:    http.StatusConflict,
 				respMessage: cdb.GetStrPtr("Instance is missing on site and cannot be updated"),
+			},
+			wantErr: false,
+		},
+		{
+			name: "test Instance update API endpoint fails when machine capabilities do not match instance type capabilities",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				scp:       scp,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIInstanceUpdateRequest{
+					Name:       cdb.GetStrPtr("Test Instance capability mismatch update"),
+					IpxeScript: os2.IpxeScript,
+				},
+				reqInstance: instUpdateCapMismatch.ID.String(),
+				reqOrg:      tnOrg1,
+				reqUser:     tnu1,
+				respCode:    http.StatusBadRequest,
+				respMessage: cdb.GetStrPtr(fmt.Sprintf("Capabilities for Machine: %s do not match Instance Type's Capabilities", mcUpdateCapMismatch.ID)),
+			},
+			wantErr: false,
+		},
+		{
+			name: "test Instance update API endpoint fails when machine has no capabilities to match instance type",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				scp:       scp,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIInstanceUpdateRequest{
+					Name:       cdb.GetStrPtr("Test Instance no machine capabilities update"),
+					IpxeScript: os2.IpxeScript,
+				},
+				reqInstance: instUpdateNoMachineCaps.ID.String(),
+				reqOrg:      tnOrg1,
+				reqUser:     tnu1,
+				respCode:    http.StatusConflict,
+				respMessage: cdb.GetStrPtr("Machines specified in request currently do not have any Capabilities to match against Instance Type"),
 			},
 			wantErr: false,
 		},

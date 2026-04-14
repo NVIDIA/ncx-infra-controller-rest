@@ -1034,6 +1034,18 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 
 	// NOTE: At this stage, we have a Machine ID whether it was provided in request or selected through Instance Type
 
+	// Verify here if Instance Type and Machine capabilities match
+	if instanceTypeID != nil && machine != nil {
+		isMatch, _, apiErr := common.MatchInstanceTypeCapabilitiesForMachines(ctx, logger, cih.dbSession, *instanceTypeID, []string{machine.ID})
+		if apiErr != nil {
+			return cutil.NewAPIErrorResponse(c, apiErr.Code, apiErr.Message, apiErr.Data)
+		}
+
+		if !isMatch {
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Capabilities for Machine: %v do not match Instance Type's Capabilities", machine.ID), nil)
+		}
+	}
+
 	mcDAO := cdbm.NewMachineCapabilityDAO(cih.dbSession)
 
 	// Fetch InfiniBand Capabilities from Instance Type or Machine and validate InfiniBand Interfaces
@@ -2469,6 +2481,18 @@ func (uih UpdateInstanceHandler) Handle(c echo.Context) error {
 	}
 
 	mcDAO := cdbm.NewMachineCapabilityDAO(uih.dbSession)
+
+	// Verify here if Instance Type and Machine capabilities match
+	if instance.InstanceTypeID != nil && machine != nil {
+		isMatch, _, apiErr := common.MatchInstanceTypeCapabilitiesForMachines(ctx, logger, uih.dbSession, *instance.InstanceTypeID, []string{machine.ID})
+		if apiErr != nil {
+			return cutil.NewAPIErrorResponse(c, apiErr.Code, apiErr.Message, apiErr.Data)
+		}
+
+		if !isMatch {
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Capabilities for Machine: %v do not match Instance Type's Capabilities", machine.ID), nil)
+		}
+	}
 
 	// Validate DPU Interfaces if Instance Type has Network Capability with DPU device type
 	if isDeviceInfoPresent {
