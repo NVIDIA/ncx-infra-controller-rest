@@ -658,12 +658,12 @@ func (r *RlaServerImpl) ValidateComponents(ctx context.Context, req *rlav1.Valid
 	}
 
 	return &rlav1.ValidateComponentsResponse{
-		Diffs:               diffs,
-		TotalDiffs:          int32(len(diffs)),
-		MissingCount: int32(missingCount),
-		UnexpectedCount:   int32(unexpectedCount),
-		DriftCount:          int32(driftCount),
-		MatchCount:          int32(matchCount),
+		Diffs:           diffs,
+		TotalDiffs:      int32(len(diffs)),
+		MissingCount:    int32(missingCount),
+		UnexpectedCount: int32(unexpectedCount),
+		DriftCount:      int32(driftCount),
+		MatchCount:      int32(matchCount),
 	}, nil
 }
 

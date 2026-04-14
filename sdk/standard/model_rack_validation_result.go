@@ -23,10 +23,10 @@ type RackValidationResult struct {
 	Diffs []ComponentDiff `json:"diffs,omitempty"`
 	// Total number of component differences found
 	TotalDiffs *int32 `json:"totalDiffs,omitempty"`
-	// Number of components only in expected configuration (missing from actual)
-	OnlyInExpectedCount *int32 `json:"onlyInExpectedCount,omitempty"`
-	// Number of components only in actual state (not in expected configuration)
-	OnlyInActualCount *int32 `json:"onlyInActualCount,omitempty"`
+	// Number of components expected but missing from the source system
+	MissingCount *int32 `json:"missingCount,omitempty"`
+	// Number of components found in the source system but not expected
+	UnexpectedCount *int32 `json:"unexpectedCount,omitempty"`
 	// Number of components present in both but with field differences
 	DriftCount *int32 `json:"driftCount,omitempty"`
 	// Number of components that match between expected and actual
@@ -114,68 +114,68 @@ func (o *RackValidationResult) SetTotalDiffs(v int32) {
 	o.TotalDiffs = &v
 }
 
-// GetOnlyInExpectedCount returns the OnlyInExpectedCount field value if set, zero value otherwise.
-func (o *RackValidationResult) GetOnlyInExpectedCount() int32 {
-	if o == nil || IsNil(o.OnlyInExpectedCount) {
+// GetMissingCount returns the MissingCount field value if set, zero value otherwise.
+func (o *RackValidationResult) GetMissingCount() int32 {
+	if o == nil || IsNil(o.MissingCount) {
 		var ret int32
 		return ret
 	}
-	return *o.OnlyInExpectedCount
+	return *o.MissingCount
 }
 
-// GetOnlyInExpectedCountOk returns a tuple with the OnlyInExpectedCount field value if set, nil otherwise
+// GetMissingCountOk returns a tuple with the MissingCount field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *RackValidationResult) GetOnlyInExpectedCountOk() (*int32, bool) {
-	if o == nil || IsNil(o.OnlyInExpectedCount) {
+func (o *RackValidationResult) GetMissingCountOk() (*int32, bool) {
+	if o == nil || IsNil(o.MissingCount) {
 		return nil, false
 	}
-	return o.OnlyInExpectedCount, true
+	return o.MissingCount, true
 }
 
-// HasOnlyInExpectedCount returns a boolean if a field has been set.
-func (o *RackValidationResult) HasOnlyInExpectedCount() bool {
-	if o != nil && !IsNil(o.OnlyInExpectedCount) {
+// HasMissingCount returns a boolean if a field has been set.
+func (o *RackValidationResult) HasMissingCount() bool {
+	if o != nil && !IsNil(o.MissingCount) {
 		return true
 	}
 
 	return false
 }
 
-// SetOnlyInExpectedCount gets a reference to the given int32 and assigns it to the OnlyInExpectedCount field.
-func (o *RackValidationResult) SetOnlyInExpectedCount(v int32) {
-	o.OnlyInExpectedCount = &v
+// SetMissingCount gets a reference to the given int32 and assigns it to the MissingCount field.
+func (o *RackValidationResult) SetMissingCount(v int32) {
+	o.MissingCount = &v
 }
 
-// GetOnlyInActualCount returns the OnlyInActualCount field value if set, zero value otherwise.
-func (o *RackValidationResult) GetOnlyInActualCount() int32 {
-	if o == nil || IsNil(o.OnlyInActualCount) {
+// GetUnexpectedCount returns the UnexpectedCount field value if set, zero value otherwise.
+func (o *RackValidationResult) GetUnexpectedCount() int32 {
+	if o == nil || IsNil(o.UnexpectedCount) {
 		var ret int32
 		return ret
 	}
-	return *o.OnlyInActualCount
+	return *o.UnexpectedCount
 }
 
-// GetOnlyInActualCountOk returns a tuple with the OnlyInActualCount field value if set, nil otherwise
+// GetUnexpectedCountOk returns a tuple with the UnexpectedCount field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *RackValidationResult) GetOnlyInActualCountOk() (*int32, bool) {
-	if o == nil || IsNil(o.OnlyInActualCount) {
+func (o *RackValidationResult) GetUnexpectedCountOk() (*int32, bool) {
+	if o == nil || IsNil(o.UnexpectedCount) {
 		return nil, false
 	}
-	return o.OnlyInActualCount, true
+	return o.UnexpectedCount, true
 }
 
-// HasOnlyInActualCount returns a boolean if a field has been set.
-func (o *RackValidationResult) HasOnlyInActualCount() bool {
-	if o != nil && !IsNil(o.OnlyInActualCount) {
+// HasUnexpectedCount returns a boolean if a field has been set.
+func (o *RackValidationResult) HasUnexpectedCount() bool {
+	if o != nil && !IsNil(o.UnexpectedCount) {
 		return true
 	}
 
 	return false
 }
 
-// SetOnlyInActualCount gets a reference to the given int32 and assigns it to the OnlyInActualCount field.
-func (o *RackValidationResult) SetOnlyInActualCount(v int32) {
-	o.OnlyInActualCount = &v
+// SetUnexpectedCount gets a reference to the given int32 and assigns it to the UnexpectedCount field.
+func (o *RackValidationResult) SetUnexpectedCount(v int32) {
+	o.UnexpectedCount = &v
 }
 
 // GetDriftCount returns the DriftCount field value if set, zero value otherwise.
@@ -258,11 +258,11 @@ func (o RackValidationResult) ToMap() (map[string]interface{}, error) {
 	if !IsNil(o.TotalDiffs) {
 		toSerialize["totalDiffs"] = o.TotalDiffs
 	}
-	if !IsNil(o.OnlyInExpectedCount) {
-		toSerialize["onlyInExpectedCount"] = o.OnlyInExpectedCount
+	if !IsNil(o.MissingCount) {
+		toSerialize["missingCount"] = o.MissingCount
 	}
-	if !IsNil(o.OnlyInActualCount) {
-		toSerialize["onlyInActualCount"] = o.OnlyInActualCount
+	if !IsNil(o.UnexpectedCount) {
+		toSerialize["unexpectedCount"] = o.UnexpectedCount
 	}
 	if !IsNil(o.DriftCount) {
 		toSerialize["driftCount"] = o.DriftCount

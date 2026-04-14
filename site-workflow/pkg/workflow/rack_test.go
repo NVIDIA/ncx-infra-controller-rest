@@ -228,12 +228,12 @@ func (s *ValidateRackComponentsTestSuite) Test_ValidateRackComponents_Success_No
 	}
 
 	expectedResponse := &rlav1.ValidateComponentsResponse{
-		Diffs:               []*rlav1.ComponentDiff{},
-		TotalDiffs:          0,
-		MissingCount: 0,
-		UnexpectedCount:   0,
-		DriftCount:          0,
-		MatchCount:          5,
+		Diffs:           []*rlav1.ComponentDiff{},
+		TotalDiffs:      0,
+		MissingCount:    0,
+		UnexpectedCount: 0,
+		DriftCount:      0,
+		MatchCount:      5,
 	}
 
 	// Mock ValidateRackComponents activity
@@ -290,11 +290,11 @@ func (s *ValidateRackComponentsTestSuite) Test_ValidateRackComponents_Success_Wi
 				},
 			},
 		},
-		TotalDiffs:          2,
-		MissingCount: 1,
-		UnexpectedCount:   0,
-		DriftCount:          1,
-		MatchCount:          3,
+		TotalDiffs:      2,
+		MissingCount:    1,
+		UnexpectedCount: 0,
+		DriftCount:      1,
+		MatchCount:      3,
 	}
 
 	// Mock ValidateRackComponents activity

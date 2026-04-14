@@ -481,12 +481,12 @@ func (d *APIComponentDiff) FromProto(protoDiff *rlav1.ComponentDiff) {
 
 // APIRackValidationResult is the API representation of a rack validation result
 type APIRackValidationResult struct {
-	Diffs               []*APIComponentDiff `json:"diffs"`
-	TotalDiffs          int32               `json:"totalDiffs"`
+	Diffs           []*APIComponentDiff `json:"diffs"`
+	TotalDiffs      int32               `json:"totalDiffs"`
 	MissingCount    int32               `json:"missingCount"`
 	UnexpectedCount int32               `json:"unexpectedCount"`
-	DriftCount          int32               `json:"driftCount"`
-	MatchCount          int32               `json:"matchCount"`
+	DriftCount      int32               `json:"driftCount"`
+	MatchCount      int32               `json:"matchCount"`
 }
 
 // FromProto converts an RLA protobuf ValidateComponentsResponse to an APIRackValidationResult
