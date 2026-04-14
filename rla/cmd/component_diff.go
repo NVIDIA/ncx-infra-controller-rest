@@ -175,19 +175,19 @@ func doDiffComponents() {
 // outputDiffJSON prints the ValidateComponentsResult as indented JSON to stdout.
 func outputDiffJSON(result *client.ValidateComponentsResult) {
 	output := struct {
-		TotalDiffs          int                    `json:"total_diffs"`
-		OnlyInExpectedCount int                    `json:"only_in_expected_count"`
-		OnlyInActualCount   int                    `json:"only_in_actual_count"`
-		DriftCount          int                    `json:"drift_count"`
-		MatchCount          int                    `json:"match_count"`
-		Diffs               []*types.ComponentDiff `json:"diffs"`
+		TotalDiffs      int                    `json:"total_diffs"`
+		MissingCount    int                    `json:"missing_count"`
+		UnexpectedCount int                    `json:"unexpected_count"`
+		DriftCount      int                    `json:"drift_count"`
+		MatchCount      int                    `json:"match_count"`
+		Diffs           []*types.ComponentDiff `json:"diffs"`
 	}{
-		TotalDiffs:          result.TotalDiffs,
-		OnlyInExpectedCount: result.OnlyInExpectedCount,
-		OnlyInActualCount:   result.OnlyInActualCount,
-		DriftCount:          result.DriftCount,
-		MatchCount:          result.MatchCount,
-		Diffs:               result.Diffs,
+		TotalDiffs:      result.TotalDiffs,
+		MissingCount:    result.MissingCount,
+		UnexpectedCount: result.UnexpectedCount,
+		DriftCount:      result.DriftCount,
+		MatchCount:      result.MatchCount,
+		Diffs:           result.Diffs,
 	}
 
 	data, err := json.MarshalIndent(output, "", "  ")
@@ -204,8 +204,8 @@ func outputDiffTable(result *client.ValidateComponentsResult) {
 	fmt.Println("Summary:")
 	fmt.Printf("  Total compared: %d\n", result.TotalDiffs+result.MatchCount)
 	fmt.Printf("  - Match: %d\n", result.MatchCount)
-	fmt.Printf("  - Only in Expected (missing from source): %d\n", result.OnlyInExpectedCount)
-	fmt.Printf("  - Only in Actual (unexpected in source): %d\n", result.OnlyInActualCount)
+	fmt.Printf("  - Missing (expected but not in source): %d\n", result.MissingCount)
+	fmt.Printf("  - Unexpected (in source but not expected): %d\n", result.UnexpectedCount)
 	fmt.Printf("  - Drift (field differences): %d\n", result.DriftCount)
 	fmt.Println()
 
@@ -225,12 +225,12 @@ func outputDiffTable(result *client.ValidateComponentsResult) {
 		details := ""
 
 		switch diff.Type {
-		case types.DiffTypeOnlyInExpected:
-			diffType = "ONLY_IN_EXPECTED"
-			details = "Missing from source system"
-		case types.DiffTypeOnlyInActual:
-			diffType = "ONLY_IN_ACTUAL"
-			details = "Not in local DB"
+		case types.DiffTypeMissing:
+			diffType = "Missing"
+			details = "Expected but not found in source system"
+		case types.DiffTypeUnexpected:
+			diffType = "Unexpected"
+			details = "Found in source system but not expected"
 		case types.DiffTypeDrift:
 			diffType = "DRIFT"
 			var fieldStrs []string

@@ -448,24 +448,24 @@ message ValidateComponentsResponse {
     int32 total_diffs = 2;
     
     // Summary counts
-    int32 only_in_expected_count = 3;
-    int32 only_in_actual_count = 4;
+    int32 missing_count = 3;     // Expected in local DB but missing from source system
+    int32 unexpected_count = 4;  // Found in source system but not expected in local DB
     int32 drift_count = 5;
     int32 match_count = 6;
 }
 
 enum DiffType {
     DIFF_TYPE_UNKNOWN = 0;
-    DIFF_TYPE_ONLY_IN_EXPECTED = 1;  // In local DB but not in source system
-    DIFF_TYPE_ONLY_IN_ACTUAL = 2;    // In source system but not in local DB
-    DIFF_TYPE_DRIFT = 3;              // In both but with field differences
+    DIFF_TYPE_MISSING = 1;       // Expected in local DB but missing from source system
+    DIFF_TYPE_UNEXPECTED = 2;    // Found in source system but not expected in local DB
+    DIFF_TYPE_DRIFT = 3;         // In both but with field differences
 }
 
 message ComponentDiff {
     DiffType type = 1;
     string component_id = 2;
     
-    // Populated when type is ONLY_IN_EXPECTED or ONLY_IN_ACTUAL
+    // Populated when type is MISSING or UNEXPECTED
     Component expected = 3;
     Component actual = 4;
     

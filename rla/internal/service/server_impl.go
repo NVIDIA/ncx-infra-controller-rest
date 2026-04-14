@@ -1580,7 +1580,7 @@ func (rs *RLAServerImpl) ValidateComponents(
 
 	// Convert store drifts to proto response
 	var diffs []*pb.ComponentDiff
-	var onlyInExpectedCount, onlyInActualCount, driftCount, matchCount int32
+	var missingCount, unexpectedCount, driftCount, matchCount int32
 
 	for _, sd := range storeDrifts {
 		componentIDStr := ""
@@ -1595,16 +1595,16 @@ func (rs *RLAServerImpl) ValidateComponents(
 		switch sd.DriftType {
 		case "missing_in_expected":
 			diffs = append(diffs, &pb.ComponentDiff{
-				Type:        pb.DiffType_DIFF_TYPE_ONLY_IN_ACTUAL,
+				Type:        pb.DiffType_DIFF_TYPE_UNEXPECTED,
 				ComponentId: externalIDStr, // only external_id is known
 			})
-			onlyInActualCount++
+			unexpectedCount++
 		case "missing_in_actual":
 			diffs = append(diffs, &pb.ComponentDiff{
-				Type:        pb.DiffType_DIFF_TYPE_ONLY_IN_EXPECTED,
+				Type:        pb.DiffType_DIFF_TYPE_MISSING,
 				ComponentId: componentIDStr,
 			})
-			onlyInExpectedCount++
+			missingCount++
 		case "mismatch":
 			fieldDiffs := make([]*pb.FieldDiff, 0, len(sd.Diffs))
 			for _, fd := range sd.Diffs {
@@ -1625,7 +1625,7 @@ func (rs *RLAServerImpl) ValidateComponents(
 
 	// Calculate match count: if we have targeted components, matches = targeted - drifts
 	if targetSpec != nil {
-		matchCount = filteredComponentCount - onlyInActualCount - driftCount
+		matchCount = filteredComponentCount - unexpectedCount - driftCount
 		if matchCount < 0 {
 			matchCount = 0
 		}
@@ -1644,12 +1644,12 @@ func (rs *RLAServerImpl) ValidateComponents(
 	}
 
 	return &pb.ValidateComponentsResponse{
-		Diffs:               diffs,
-		TotalDiffs:          totalDiffs,
-		OnlyInExpectedCount: onlyInExpectedCount,
-		OnlyInActualCount:   onlyInActualCount,
-		DriftCount:          driftCount,
-		MatchCount:          matchCount,
+		Diffs:           diffs,
+		TotalDiffs:      totalDiffs,
+		MissingCount:    missingCount,
+		UnexpectedCount: unexpectedCount,
+		DriftCount:      driftCount,
+		MatchCount:      matchCount,
 	}, nil
 }
 

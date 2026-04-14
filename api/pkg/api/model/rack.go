@@ -44,10 +44,10 @@ var ProtoToAPIRackComponentTypeName = map[rlav1.ComponentType]string{
 
 // ProtoToAPIDiffTypeName maps protobuf DiffType to API-friendly names.
 var ProtoToAPIDiffTypeName = map[rlav1.DiffType]string{
-	rlav1.DiffType_DIFF_TYPE_UNKNOWN:          "DiffTypeUnknown",
-	rlav1.DiffType_DIFF_TYPE_ONLY_IN_EXPECTED: "DiffTypeOnlyInExpected",
-	rlav1.DiffType_DIFF_TYPE_ONLY_IN_ACTUAL:   "DiffTypeOnlyInActual",
-	rlav1.DiffType_DIFF_TYPE_DRIFT:            "DiffTypeDrift",
+	rlav1.DiffType_DIFF_TYPE_UNKNOWN:    "Unknown",
+	rlav1.DiffType_DIFF_TYPE_MISSING:    "Missing",
+	rlav1.DiffType_DIFF_TYPE_UNEXPECTED: "Unexpected",
+	rlav1.DiffType_DIFF_TYPE_DRIFT:      "Drift",
 }
 
 // enumOr returns mapped value or fallback when key is missing from mapping.
@@ -452,7 +452,7 @@ func (d *APIComponentDiff) FromProto(protoDiff *rlav1.ComponentDiff) {
 		return
 	}
 
-	d.Type = enumOr(ProtoToAPIDiffTypeName, protoDiff.GetType(), "DiffTypeUnknown")
+	d.Type = enumOr(ProtoToAPIDiffTypeName, protoDiff.GetType(), "Unknown")
 	d.ComponentID = protoDiff.GetComponentId()
 
 	if protoDiff.GetExpected() != nil {
@@ -479,8 +479,8 @@ func (d *APIComponentDiff) FromProto(protoDiff *rlav1.ComponentDiff) {
 type APIRackValidationResult struct {
 	Diffs               []*APIComponentDiff `json:"diffs"`
 	TotalDiffs          int32               `json:"totalDiffs"`
-	OnlyInExpectedCount int32               `json:"onlyInExpectedCount"`
-	OnlyInActualCount   int32               `json:"onlyInActualCount"`
+	MissingCount    int32               `json:"missingCount"`
+	UnexpectedCount int32               `json:"unexpectedCount"`
 	DriftCount          int32               `json:"driftCount"`
 	MatchCount          int32               `json:"matchCount"`
 }
@@ -492,8 +492,8 @@ func (r *APIRackValidationResult) FromProto(protoResp *rlav1.ValidateComponentsR
 	}
 
 	r.TotalDiffs = protoResp.GetTotalDiffs()
-	r.OnlyInExpectedCount = protoResp.GetOnlyInExpectedCount()
-	r.OnlyInActualCount = protoResp.GetOnlyInActualCount()
+	r.MissingCount = protoResp.GetMissingCount()
+	r.UnexpectedCount = protoResp.GetUnexpectedCount()
 	r.DriftCount = protoResp.GetDriftCount()
 	r.MatchCount = protoResp.GetMatchCount()
 

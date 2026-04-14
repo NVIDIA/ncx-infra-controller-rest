@@ -171,8 +171,8 @@ func TestTypesInteroperability(t *testing.T) {
 	// Verify diff types are accessible
 	diffTypes := []types.DiffType{
 		types.DiffTypeUnknown,
-		types.DiffTypeOnlyInExpected,
-		types.DiffTypeOnlyInActual,
+		types.DiffTypeMissing,
+		types.DiffTypeUnexpected,
 		types.DiffTypeDrift,
 	}
 	if len(diffTypes) == 0 {

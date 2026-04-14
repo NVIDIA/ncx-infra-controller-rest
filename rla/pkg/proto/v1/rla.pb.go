@@ -551,25 +551,25 @@ func (TaskExecutorType) EnumDescriptor() ([]byte, []int) {
 type DiffType int32
 
 const (
-	DiffType_DIFF_TYPE_UNKNOWN          DiffType = 0
-	DiffType_DIFF_TYPE_ONLY_IN_EXPECTED DiffType = 1 // In local DB but not in source system
-	DiffType_DIFF_TYPE_ONLY_IN_ACTUAL   DiffType = 2 // In source system but not in local DB
-	DiffType_DIFF_TYPE_DRIFT            DiffType = 3 // In both but with field differences
+	DiffType_DIFF_TYPE_UNKNOWN    DiffType = 0
+	DiffType_DIFF_TYPE_MISSING    DiffType = 1 // Expected in local DB but missing from source system
+	DiffType_DIFF_TYPE_UNEXPECTED DiffType = 2 // Found in source system but not expected in local DB
+	DiffType_DIFF_TYPE_DRIFT      DiffType = 3 // In both but with field differences
 )
 
 // Enum value maps for DiffType.
 var (
 	DiffType_name = map[int32]string{
 		0: "DIFF_TYPE_UNKNOWN",
-		1: "DIFF_TYPE_ONLY_IN_EXPECTED",
-		2: "DIFF_TYPE_ONLY_IN_ACTUAL",
+		1: "DIFF_TYPE_MISSING",
+		2: "DIFF_TYPE_UNEXPECTED",
 		3: "DIFF_TYPE_DRIFT",
 	}
 	DiffType_value = map[string]int32{
-		"DIFF_TYPE_UNKNOWN":          0,
-		"DIFF_TYPE_ONLY_IN_EXPECTED": 1,
-		"DIFF_TYPE_ONLY_IN_ACTUAL":   2,
-		"DIFF_TYPE_DRIFT":            3,
+		"DIFF_TYPE_UNKNOWN":    0,
+		"DIFF_TYPE_MISSING":    1,
+		"DIFF_TYPE_UNEXPECTED": 2,
+		"DIFF_TYPE_DRIFT":      3,
 	}
 )
 
@@ -3438,12 +3438,12 @@ type ValidateComponentsResponse struct {
 	Diffs      []*ComponentDiff       `protobuf:"bytes,1,rep,name=diffs,proto3" json:"diffs,omitempty"`
 	TotalDiffs int32                  `protobuf:"varint,2,opt,name=total_diffs,json=totalDiffs,proto3" json:"total_diffs,omitempty"`
 	// Summary counts
-	OnlyInExpectedCount int32 `protobuf:"varint,3,opt,name=only_in_expected_count,json=onlyInExpectedCount,proto3" json:"only_in_expected_count,omitempty"`
-	OnlyInActualCount   int32 `protobuf:"varint,4,opt,name=only_in_actual_count,json=onlyInActualCount,proto3" json:"only_in_actual_count,omitempty"`
-	DriftCount          int32 `protobuf:"varint,5,opt,name=drift_count,json=driftCount,proto3" json:"drift_count,omitempty"`
-	MatchCount          int32 `protobuf:"varint,6,opt,name=match_count,json=matchCount,proto3" json:"match_count,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	MissingCount    int32 `protobuf:"varint,3,opt,name=missing_count,json=missingCount,proto3" json:"missing_count,omitempty"`          // Expected in local DB but missing from source system
+	UnexpectedCount int32 `protobuf:"varint,4,opt,name=unexpected_count,json=unexpectedCount,proto3" json:"unexpected_count,omitempty"` // Found in source system but not expected in local DB
+	DriftCount      int32 `protobuf:"varint,5,opt,name=drift_count,json=driftCount,proto3" json:"drift_count,omitempty"`
+	MatchCount      int32 `protobuf:"varint,6,opt,name=match_count,json=matchCount,proto3" json:"match_count,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *ValidateComponentsResponse) Reset() {
@@ -3490,16 +3490,16 @@ func (x *ValidateComponentsResponse) GetTotalDiffs() int32 {
 	return 0
 }
 
-func (x *ValidateComponentsResponse) GetOnlyInExpectedCount() int32 {
+func (x *ValidateComponentsResponse) GetMissingCount() int32 {
 	if x != nil {
-		return x.OnlyInExpectedCount
+		return x.MissingCount
 	}
 	return 0
 }
 
-func (x *ValidateComponentsResponse) GetOnlyInActualCount() int32 {
+func (x *ValidateComponentsResponse) GetUnexpectedCount() int32 {
 	if x != nil {
-		return x.OnlyInActualCount
+		return x.UnexpectedCount
 	}
 	return 0
 }
@@ -3522,7 +3522,7 @@ type ComponentDiff struct {
 	state       protoimpl.MessageState `protogen:"open.v1"`
 	Type        DiffType               `protobuf:"varint,1,opt,name=type,proto3,enum=v1.DiffType" json:"type,omitempty"`
 	ComponentId string                 `protobuf:"bytes,2,opt,name=component_id,json=componentId,proto3" json:"component_id,omitempty"`
-	// Populated when type is ONLY_IN_EXPECTED or ONLY_IN_ACTUAL
+	// Populated when type is MISSING or UNEXPECTED
 	Expected *Component `protobuf:"bytes,3,opt,name=expected,proto3" json:"expected,omitempty"`
 	Actual   *Component `protobuf:"bytes,4,opt,name=actual,proto3" json:"actual,omitempty"`
 	// Populated when type is DRIFT - lists the fields that differ
@@ -6176,13 +6176,13 @@ const file_rla_proto_rawDesc = "" +
 	"\border_by\x18\x04 \x01(\v2\v.v1.OrderByH\x02R\aorderBy\x88\x01\x01B\x0e\n" +
 	"\f_target_specB\r\n" +
 	"\v_paginationB\v\n" +
-	"\t_order_by\"\x8e\x02\n" +
+	"\t_order_by\"\xf8\x01\n" +
 	"\x1aValidateComponentsResponse\x12'\n" +
 	"\x05diffs\x18\x01 \x03(\v2\x11.v1.ComponentDiffR\x05diffs\x12\x1f\n" +
 	"\vtotal_diffs\x18\x02 \x01(\x05R\n" +
-	"totalDiffs\x123\n" +
-	"\x16only_in_expected_count\x18\x03 \x01(\x05R\x13onlyInExpectedCount\x12/\n" +
-	"\x14only_in_actual_count\x18\x04 \x01(\x05R\x11onlyInActualCount\x12\x1f\n" +
+	"totalDiffs\x12#\n" +
+	"\rmissing_count\x18\x03 \x01(\x05R\fmissingCount\x12)\n" +
+	"\x10unexpected_count\x18\x04 \x01(\x05R\x0funexpectedCount\x12\x1f\n" +
 	"\vdrift_count\x18\x05 \x01(\x05R\n" +
 	"driftCount\x12\x1f\n" +
 	"\vmatch_count\x18\x06 \x01(\x05R\n" +
@@ -6424,11 +6424,11 @@ const file_rla_proto_rawDesc = "" +
 	"\x13TASK_STATUS_WAITING\x10\x06*S\n" +
 	"\x10TaskExecutorType\x12\x1e\n" +
 	"\x1aTASK_EXECUTOR_TYPE_UNKNOWN\x10\x00\x12\x1f\n" +
-	"\x1bTASK_EXECUTOR_TYPE_TEMPORAL\x10\x01*t\n" +
+	"\x1bTASK_EXECUTOR_TYPE_TEMPORAL\x10\x01*g\n" +
 	"\bDiffType\x12\x15\n" +
-	"\x11DIFF_TYPE_UNKNOWN\x10\x00\x12\x1e\n" +
-	"\x1aDIFF_TYPE_ONLY_IN_EXPECTED\x10\x01\x12\x1c\n" +
-	"\x18DIFF_TYPE_ONLY_IN_ACTUAL\x10\x02\x12\x13\n" +
+	"\x11DIFF_TYPE_UNKNOWN\x10\x00\x12\x15\n" +
+	"\x11DIFF_TYPE_MISSING\x10\x01\x12\x18\n" +
+	"\x14DIFF_TYPE_UNEXPECTED\x10\x02\x12\x13\n" +
 	"\x0fDIFF_TYPE_DRIFT\x10\x03*p\n" +
 	"\x10ConflictStrategy\x12!\n" +
 	"\x1dCONFLICT_STRATEGY_UNSPECIFIED\x10\x00\x12\x1b\n" +
