@@ -1598,13 +1598,13 @@ func (rs *RLAServerImpl) ValidateComponents(
 				Type:        pb.DiffType_DIFF_TYPE_ONLY_IN_ACTUAL,
 				ComponentId: externalIDStr, // only external_id is known
 			})
-			onlyInExpectedCount++
+			onlyInActualCount++
 		case "missing_in_actual":
 			diffs = append(diffs, &pb.ComponentDiff{
 				Type:        pb.DiffType_DIFF_TYPE_ONLY_IN_EXPECTED,
 				ComponentId: componentIDStr,
 			})
-			onlyInActualCount++
+			onlyInExpectedCount++
 		case "mismatch":
 			fieldDiffs := make([]*pb.FieldDiff, 0, len(sd.Diffs))
 			for _, fd := range sd.Diffs {
