@@ -34,6 +34,7 @@ type Config struct {
 	DSType          DataStoreType
 	PmcRegistryConf pmcregistry.Config
 	CredentialConf  credentials.Config
+	FirmwareDir     string
 }
 
 // StringToDSType converts a string to a DataStoreType, returning false if unsupported.

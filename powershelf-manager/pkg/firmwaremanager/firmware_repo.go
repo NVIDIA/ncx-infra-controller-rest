@@ -18,10 +18,12 @@ package firmwaremanager
 
 import (
 	"fmt"
+	"io/fs"
+	"os"
+	"strings"
+
 	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/common/util"
 	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/common/vendor"
-	"io/fs"
-	"strings"
 )
 
 // FirmwareRepo holds parsed firmware upgrade edges and the supported starting-version range for a vendor.
@@ -66,9 +68,19 @@ func (repo *FirmwareRepo) open(upgrade *FirmwareUpgrade) (fs.File, error) {
 	return repo.ff.open(upgrade.path)
 }
 
-// newFirmwareRepo discovers embedded artifacts for a vendor, parses filename-encoded edges, and computes supported range.
-func newFirmwareRepo(v vendor.Vendor) (*FirmwareRepo, error) {
-	ff := newFirmwareFetcher()
+// newFirmwareRepo discovers firmware artifacts for a vendor, parses filename-encoded edges, and computes supported range.
+func newFirmwareRepo(v vendor.Vendor, firmwareDir string) (*FirmwareRepo, error) {
+	if firmwareDir == "" {
+		return nil, fmt.Errorf("firmware directory not configured (set FW_DIR)")
+	}
+
+	if info, err := os.Stat(firmwareDir); err != nil {
+		return nil, fmt.Errorf("firmware directory %q does not exist: %w", firmwareDir, err)
+	} else if !info.IsDir() {
+		return nil, fmt.Errorf("firmware path %q is not a directory", firmwareDir)
+	}
+
+	ff := newFirmwareFetcher(firmwareDir)
 
 	fw_entries, err := ff.getPmcFirmwareEntries(v)
 	if err != nil {

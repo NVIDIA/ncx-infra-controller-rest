@@ -18,16 +18,20 @@ package firmwaremanager
 
 import (
 	"context"
+	"fmt"
+	"strings"
+
 	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/common/vendor"
 	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/objects/pmc"
 	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/redfish"
-	"net/http"
-	"strings"
 
 	log "github.com/sirupsen/logrus"
 )
 
-// FirmwareUpdater encapsulates a vendor’s FirmwareRepo and UpgradeRule to select and execute upgrades.
+// A real firmware image is at least several megabytes; LFS pointers are typically < 200 bytes.
+const minFirmwareSize = 1024
+
+// FirmwareUpdater encapsulates a vendor's FirmwareRepo and UpgradeRule to select and execute upgrades.
 type FirmwareUpdater struct {
 	vendor vendor.Vendor
 	repo   *FirmwareRepo
@@ -50,12 +54,12 @@ func (updater *FirmwareUpdater) Summary() (string, error) {
 	return sb.String(), nil
 }
 
-func newFirmwareUpdater(v vendor.Vendor) (*FirmwareUpdater, error) {
+func newFirmwareUpdater(v vendor.Vendor, firmwareDir string) (*FirmwareUpdater, error) {
 	if err := v.IsSupported(); err != nil {
 		return nil, err
 	}
 
-	repo, err := newFirmwareRepo(v)
+	repo, err := newFirmwareRepo(v, firmwareDir)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +72,7 @@ func newFirmwareUpdater(v vendor.Vendor) (*FirmwareUpdater, error) {
 	return &FirmwareUpdater{vendor: v, repo: repo, rule: rule}, nil
 }
 
-// canUpdate checks the repo’s support range for the current version.
+// canUpdate checks the repo's support range for the current version.
 func (fp *FirmwareUpdater) canUpdate(current firmwareVersion, targetVersion firmwareVersion) bool {
 	if fp.repo.supportUpgrade(current) {
 		for _, upgrade := range fp.repo.upgrades {
@@ -109,10 +113,10 @@ func (fp *FirmwareUpdater) getFwVersion(client *redfish.RedfishClient) (firmware
 }
 
 // update executes the upgrade for an existing Redfish client; when dryRun, returns a synthetic 200 OK without uploading.
-func (fp *FirmwareUpdater) update(client *redfish.RedfishClient, targetVersion firmwareVersion, dryRun bool) (*http.Response, error) {
+func (fp *FirmwareUpdater) update(client *redfish.RedfishClient, targetVersion firmwareVersion, dryRun bool) error {
 	currentVersion, err := fp.getFwVersion(client)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if fp.canUpdate(currentVersion, targetVersion) {
@@ -120,25 +124,25 @@ func (fp *FirmwareUpdater) update(client *redfish.RedfishClient, targetVersion f
 		if upgrade != nil {
 			fw, err := fp.repo.open(upgrade)
 			if err != nil {
-				return nil, err
+				return err
 			}
 			defer fw.Close()
 
 			info, err := fw.Stat()
 			if err != nil {
-				return nil, err
+				return err
 			}
 			size := info.Size()
 
-			log.Printf("Upgrading firmware from %s to %s using %s (dry_run: %v)\n", upgrade.from.String(), upgrade.to.String(), upgrade.path, dryRun)
+			if size < minFirmwareSize {
+				return fmt.Errorf("firmware artifact %s is only %d bytes -- this is likely a Git LFS pointer, not the actual firmware (run 'git lfs pull')", upgrade.path, size)
+			}
+
+			log.Printf("Upgrading firmware from %s to %s using %s (size: %d bytes, dry_run: %v)\n", upgrade.from.String(), upgrade.to.String(), upgrade.path, size, dryRun)
 
 			if dryRun {
 				log.Printf("Dry run: would upgrade firmware from %s to %s using %s (size: %d bytes)\n", upgrade.from.String(), upgrade.to.String(), upgrade.path, size)
-				return &http.Response{
-					Status:     "200 OK",
-					StatusCode: 200,
-					Body:       http.NoBody,
-				}, nil
+				return nil
 			}
 
 			return client.UpdateFirmware(fw)
@@ -147,21 +151,21 @@ func (fp *FirmwareUpdater) update(client *redfish.RedfishClient, targetVersion f
 
 	log.Printf("FW Updater does not support updating powershelf that has a PMC fw version of r.%v.%v.%v\n", currentVersion.major, currentVersion.minor, currentVersion.patch)
 
-	return nil, nil
+	return nil
 }
 
 // upgrade opens a Redfish session and delegates to update.
-func (fp *FirmwareUpdater) upgrade(ctx context.Context, pmc *pmc.PMC, targetVersion firmwareVersion, dryRun bool) (*http.Response, error) {
-	client, err := redfish.New(ctx, pmc, true)
+func (fp *FirmwareUpdater) upgrade(ctx context.Context, pmc *pmc.PMC, targetVersion firmwareVersion, dryRun bool) error {
+	client, err := redfish.New(ctx, pmc, false)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer client.Logout()
 
 	return fp.update(client, targetVersion, dryRun)
 }
 
-// canUpdatePmc reports whether an upgrade is supported for the PMC’s current version.
+// canUpdatePmc reports whether an upgrade is supported for the PMC's current version.
 func (fp *FirmwareUpdater) canUpdatePmc(ctx context.Context, pmc *pmc.PMC, targetVersion firmwareVersion) (bool, error) {
 	client, err := redfish.New(ctx, pmc, true)
 	if err != nil {

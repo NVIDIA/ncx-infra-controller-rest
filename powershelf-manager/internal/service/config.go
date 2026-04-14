@@ -32,6 +32,7 @@ type Config struct {
 	DataStoreType powershelfmanager.DataStoreType
 	VaultConf     credentials.VaultConfig
 	DBConf        cdb.Config
+	FirmwareDir   string
 }
 
 // toCredentialManagerConf converts the public service Config into a pmcregistry.Config,
@@ -85,6 +86,7 @@ func (c *Config) ToPsmConf() (*powershelfmanager.Config, error) {
 		DSType:          c.DataStoreType,
 		CredentialConf:  *credentialManagerConf,
 		PmcRegistryConf: *dataStoreConf,
+		FirmwareDir:     c.FirmwareDir,
 	}
 
 	return &psmConf, nil
