@@ -33,6 +33,7 @@ import (
 	sc "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/client/site"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun/extra/bundebug"
 
 	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
@@ -1246,7 +1247,7 @@ func TestManageMachine_UpdateMachinesInDB(t *testing.T) {
 
 				machineInstanceTypes, total, serr := mitDAO.GetAll(tt.args.ctx, nil, tt.args.updatedMachineInstanceTypeID, nil, nil, nil, cdb.GetIntPtr(cdbp.TotalLimit), nil)
 				assert.Nil(t, serr)
-				assert.Equal(t, 1, total)
+				require.Equal(t, 1, total)
 				assert.Equal(t, instanceTypeUpdated.ID, machineInstanceTypes[0].InstanceTypeID)
 				assert.NotEqual(t, m16MachineInstanceType.ID, machineInstanceTypes[0].ID)
 			}

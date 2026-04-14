@@ -463,22 +463,21 @@ func (mm *ManageMachine) UpdateMachinesInDB(ctx context.Context, siteIDStr strin
 
 			// Check if there were any changes to the Instance type ID
 			clearInstanceTypeID := controllerInstanceTypeID == nil && existingCloudMachine.InstanceTypeID != nil
-			updateInstanceTypeID := controllerInstanceTypeID != nil && (existingCloudMachine.InstanceTypeID == nil || *controllerInstanceTypeID != *existingCloudMachine.InstanceTypeID)
+			updateInstanceTypeID := controllerInstanceTypeID != nil && !util.PtrsEqual(controllerInstanceTypeID, existingCloudMachine.InstanceTypeID)
 
 			if clearInstanceTypeID || updateInstanceTypeID {
-				// Fetch existing MachineInstanceType records
+				// Fetch existing MachineInstanceType records and delete them
 				machineInstanceTypes, _, err := mitDAO.GetAll(ctx, txn, &existingCloudMachine.ID, nil, nil, nil, cdb.GetIntPtr(cdbp.DefaultLimit), nil)
 				if err != nil {
-					slogger.Error().Err(err).Msg("failed to get MachineInstanceTypes")
+					slogger.Error().Err(err).Msg("failed to get MachineInstanceTypes for deletion")
 					txn.Rollback()
 					continue
 				}
-
 				// Go through and remove them (covers both clear and update cases)
 				for _, mit := range machineInstanceTypes {
 					err = mitDAO.DeleteByID(ctx, txn, mit.ID, false)
 					if err != nil {
-						slogger.Error().Err(err).Msg("failed to delete MachineInstanceType")
+						slogger.Error().Err(err).Msg("failed to delete MachineInstanceType for clearing/updating")
 						break
 					}
 				}
@@ -491,7 +490,7 @@ func (mm *ManageMachine) UpdateMachinesInDB(ctx context.Context, siteIDStr strin
 				if updateInstanceTypeID {
 					_, serr = mitDAO.CreateFromParams(ctx, txn, existingCloudMachine.ID, *controllerInstanceTypeID)
 					if serr != nil {
-						slogger.Error().Err(serr).Msg("failed to create MachineInstanceType")
+						slogger.Error().Err(serr).Msg("failed to create MachineInstanceType for Instance Type update")
 						txn.Rollback()
 						continue
 					}
