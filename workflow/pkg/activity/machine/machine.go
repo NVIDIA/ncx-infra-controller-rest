@@ -467,7 +467,7 @@ func (mm *ManageMachine) UpdateMachinesInDB(ctx context.Context, siteIDStr strin
 
 			if clearInstanceTypeID || updateInstanceTypeID {
 				// Fetch existing MachineInstanceType records and delete them
-				machineInstanceTypes, _, err := mitDAO.GetAll(ctx, txn, &existingCloudMachine.ID, nil, nil, nil, cdb.GetIntPtr(cdbp.DefaultLimit), nil)
+				machineInstanceTypes, _, err := mitDAO.GetAll(ctx, txn, &existingCloudMachine.ID, nil, nil, nil, cdb.GetIntPtr(cdbp.TotalLimit), nil)
 				if err != nil {
 					slogger.Error().Err(err).Msg("failed to get MachineInstanceTypes for deletion")
 					txn.Rollback()
