@@ -1272,7 +1272,7 @@ func TestManageMachine_UpdateMachinesInDB(t *testing.T) {
 
 				machineInstanceTypes, total, serr := mitDAO.GetAll(tt.args.ctx, nil, tt.args.unchangedMachineInstanceTypeID, nil, nil, nil, cdb.GetIntPtr(cdbp.TotalLimit), nil)
 				assert.Nil(t, serr)
-				assert.Equal(t, 1, total)
+				require.Equal(t, 1, total)
 				assert.Equal(t, m18MachineInstanceType.ID, machineInstanceTypes[0].ID)
 				assert.Equal(t, instanceTypeUnchanged.ID, machineInstanceTypes[0].InstanceTypeID)
 			}
