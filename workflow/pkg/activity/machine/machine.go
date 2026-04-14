@@ -217,6 +217,7 @@ func (mm *ManageMachine) UpdateMachinesInDB(ctx context.Context, siteIDStr strin
 	}
 
 	miDAO := cdbm.NewMachineInterfaceDAO(mm.dbSession)
+	mitDAO := cdbm.NewMachineInstanceTypeDAO(mm.dbSession)
 	sdDAO := cdbm.NewStatusDetailDAO(mm.dbSession)
 
 	// Iterate through Machines in the inventory and update/create them in DB
@@ -328,6 +329,13 @@ func (mm *ManageMachine) UpdateMachinesInDB(ctx context.Context, siteIDStr strin
 
 		if !found {
 			slogger.Info().Msg("adding new Machine in DB")
+
+			txn, err := cdb.BeginTx(ctx, mm.dbSession, &sql.TxOptions{})
+			if err != nil {
+				slogger.Error().Err(err).Msg("failed to start transaction to create Machine in DB")
+				continue
+			}
+
 			createInput := cdbm.MachineCreateInput{
 				MachineID:                controllerMachineID,
 				InfrastructureProviderID: site.InfrastructureProviderID,
@@ -350,11 +358,25 @@ func (mm *ManageMachine) UpdateMachinesInDB(ctx context.Context, siteIDStr strin
 				Labels:                   labels,
 				Status:                   machineStatus,
 			}
-			newMachine, serr := mDAO.Create(ctx, nil, createInput)
+
+			newMachine, serr := mDAO.Create(ctx, txn, createInput)
 			if serr != nil {
-				slogger.Error().Err(serr).Msg("failed to create Machine in DB")
+				slogger.Error().Err(serr).Msg("failed to create DB record for new Machine")
+				txn.Rollback()
 				continue
 			}
+
+			if controllerInstanceTypeID != nil {
+				_, serr = mitDAO.CreateFromParams(ctx, txn, newMachine.ID, *controllerInstanceTypeID)
+				if serr != nil {
+					slogger.Error().Err(serr).Msg("failed to create MachineInstanceType DB record for new Machine")
+					txn.Rollback()
+					continue
+				}
+			}
+
+			// Commit now as the base Machine record is created, any failure below can be retried in next inventory
+			txn.Commit()
 
 			// Create status detail
 			_, serr = sdDAO.CreateFromParams(ctx, nil, newMachine.ID, machineStatus, &statusMessage)
@@ -400,9 +422,7 @@ func (mm *ManageMachine) UpdateMachinesInDB(ctx context.Context, siteIDStr strin
 
 			machine = newMachine
 		} else {
-			//
-			// Update
-			//
+			// Update existing Machine record
 
 			// There could be a race between inventory and human changes in carbide-rest-api,
 			// so we need to grab a txn and also lock on the machine record.
@@ -460,9 +480,52 @@ func (mm *ManageMachine) UpdateMachinesInDB(ctx context.Context, siteIDStr strin
 				continue
 			}
 
+			// Reconcile MachineInstanceType rows with controller inventory: always load MIT rows
+			// and fix empty/stale state even when Machine.InstanceTypeID already matches.
+			clearInstanceTypeID := controllerInstanceTypeID == nil && existingCloudMachine.InstanceTypeID != nil
+
+			machineInstanceTypes, _, err := mitDAO.GetAll(ctx, txn, &existingCloudMachine.ID, nil, nil, nil, cdb.GetIntPtr(cdbp.TotalLimit), nil)
+			if err != nil {
+				slogger.Error().Err(err).Msg("failed to get MachineInstanceTypes for reconciliation")
+				txn.Rollback()
+				continue
+			}
+
+			needsMitReconcile := false
+			if controllerInstanceTypeID != nil {
+				if len(machineInstanceTypes) != 1 || !util.PtrsEqual(&machineInstanceTypes[0].InstanceTypeID, controllerInstanceTypeID) {
+					needsMitReconcile = true
+				}
+			} else if len(machineInstanceTypes) > 0 {
+				needsMitReconcile = true
+			}
+
+			if needsMitReconcile {
+				for _, mit := range machineInstanceTypes {
+					err = mitDAO.DeleteByID(ctx, txn, mit.ID, false)
+					if err != nil {
+						slogger.Error().Err(err).Msg("failed to delete MachineInstanceType during reconciliation")
+						break
+					}
+				}
+				if err != nil {
+					txn.Rollback()
+					continue
+				}
+
+				if controllerInstanceTypeID != nil {
+					_, serr = mitDAO.CreateFromParams(ctx, txn, existingCloudMachine.ID, *controllerInstanceTypeID)
+					if serr != nil {
+						slogger.Error().Err(serr).Msg("failed to create MachineInstanceType during reconciliation")
+						txn.Rollback()
+						continue
+					}
+				}
+			}
+
+			// Clear maintenance message, network health message, and Instance type ID if needed
 			clearMaintenanceMessage := existingCloudMachine.MaintenanceMessage != nil && !isInMaintenance
 			clearNetworkHealthMessage := existingCloudMachine.NetworkHealthMessage != nil && !isNetworkDegraded
-			clearInstanceTypeID := existingCloudMachine.InstanceTypeID != nil && controllerInstanceTypeID == nil
 
 			if clearMaintenanceMessage || clearNetworkHealthMessage || clearInstanceTypeID {
 				clearInput := cdbm.MachineClearInput{
@@ -474,40 +537,12 @@ func (mm *ManageMachine) UpdateMachinesInDB(ctx context.Context, siteIDStr strin
 				_, serr = mDAO.Clear(ctx, txn, clearInput)
 				if serr != nil {
 					slogger.Error().Err(serr).Msg("failed to clear maintenance or network health message from Machine in DB")
-				}
-			}
-
-			// If clearing the instance type ID, we _also_ need to remove any
-			// MachineInstanceType records
-			if clearInstanceTypeID {
-				// We'll need to remove any MachineInstanceType records.
-				mitDAO := cdbm.NewMachineInstanceTypeDAO(mm.dbSession)
-
-				// Get any we can find, which should really only be one.
-				machineInstanceTypes, _, err := mitDAO.GetAll(ctx, txn, &existingCloudMachine.ID, nil, nil, nil, cdb.GetIntPtr(cdbp.DefaultLimit), nil)
-				if err != nil {
-					slogger.Error().Err(err).Msg("failed to get MachineInstanceTypes")
-					txn.Rollback()
-					continue
-				}
-
-				// Go through and remove them.
-				for _, mit := range machineInstanceTypes {
-					err = mitDAO.DeleteByID(ctx, txn, mit.ID, false)
-					if err != nil {
-						slogger.Error().Err(err).Msg("failed to delete MachineInstanceType")
-						break
-					}
-				}
-				if err != nil {
 					txn.Rollback()
 					continue
 				}
 			}
 
-			// Commit the txn now that all work is done.
-			// From this point, there shouldn't be any coordination
-			// needed between human users and the inventory process.
+			// Commit the txn now that the base Machine record is updated, any failure below is not critical and can be retried in next inventory
 			txn.Commit()
 
 			// Check if most recent status detail is the same as the current status, otherwise create a new one

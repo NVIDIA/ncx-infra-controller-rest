@@ -2012,6 +2012,123 @@ func TestGetAllSiteHandler_Handle(t *testing.T) {
 	}
 }
 
+// TestGetAllSiteHandler_NullConfig reproduces NVBug 6072342:
+//
+//	~ carbidecli site list
+//	0 items
+//	[]
+//
+//	~ carbidecli site create --name "reno-qa4"
+//	Error: API error 409: A Site with specified name already exists for Infrastructure Provider
+//	Details: {"id":"bc4f6b79-f6b8-46f8-9921-0978789332907"}
+//
+// Root cause: GetAllSiteHandler unconditionally sets filter.Config to an
+// empty SiteConfigFilterInput, adding WHERE st.config @> '{}'::jsonb to
+// every list query.  NULL @> '{}' evaluates to NULL (falsy in SQL), so
+// sites with a NULL config column are silently excluded.  The create
+// handler's duplicate check does NOT apply this filter, so it finds the
+// site and returns 409 -- contradiction.
+func TestGetAllSiteHandler_NullConfig(t *testing.T) {
+	ctx := context.Background()
+	dbSession := testSiteInitDB(t)
+	defer dbSession.Close()
+	testSiteSetupSchema(t, dbSession)
+
+	org := "reno-qa4-org"
+	roles := []string{"FORGE_PROVIDER_ADMIN"}
+	user := testSiteBuildUser(t, dbSession, "qa4-admin", org, roles)
+	ip := testSiteBuildInfrastructureProvider(t, dbSession, "QA4 Provider", org, user)
+
+	// Create a site named "reno-qa4" (same as the bug report).
+	site := testSiteBuildSite(t, dbSession, ip, "reno-qa4", cdbm.SiteStatusRegistered, user, nil, nil)
+	require.NotNil(t, site)
+	common.TestBuildStatusDetail(t, dbSession, site.ID.String(), cdbm.SiteStatusPending, cdb.GetStrPtr("pending"))
+	common.TestBuildStatusDetail(t, dbSession, site.ID.String(), cdbm.SiteStatusRegistered, cdb.GetStrPtr("registered"))
+
+	// Simulate the DB state that causes the bug: config column is NULL.
+	// This can happen when sites predate the config migration or when the
+	// migration copied a NULL capabilities value.
+	_, err := dbSession.DB.NewUpdate().
+		Model((*cdbm.Site)(nil)).
+		Set("config = NULL").
+		Where("id = ?", site.ID).
+		Exec(ctx)
+	require.NoError(t, err)
+
+	e := echo.New()
+	cfg := common.GetTestConfig()
+	tracer, _, ctx := common.TestCommonTraceProviderSetup(t, ctx)
+
+	// ---- Step 1: carbidecli site list ----
+	gash := GetAllSiteHandler{
+		dbSession: dbSession,
+		tc:        &tmocks.Client{},
+		cfg:       cfg,
+	}
+
+	listPath := fmt.Sprintf("/v2/org/%s/carbide/site", org)
+	listReq := httptest.NewRequest(http.MethodGet, listPath, nil)
+	listReq.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	listRec := httptest.NewRecorder()
+	listCtx := e.NewContext(listReq, listRec)
+	listCtx.SetParamNames("orgName")
+	listCtx.SetParamValues(org)
+	listCtx.Set("user", user)
+	listCtx.SetRequest(listReq.WithContext(context.WithValue(ctx, otelecho.TracerKey, tracer)))
+
+	err = gash.Handle(listCtx)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, listRec.Code)
+
+	ph := listRec.Header().Get(pagination.ResponseHeaderName)
+	require.NotEmpty(t, ph)
+	pr := &pagination.PageResponse{}
+	require.NoError(t, json.Unmarshal([]byte(ph), pr))
+
+	var listResp []model.APISite
+	require.NoError(t, json.Unmarshal(listRec.Body.Bytes(), &listResp))
+
+	t.Logf("--- carbidecli site list ---")
+	t.Logf("%d items", pr.Total)
+	t.Logf("%s", listRec.Body.String())
+
+	// ---- Step 2: carbidecli site create --name "reno-qa4" ----
+	createBody := `{"name":"reno-qa4"}`
+	createPath := fmt.Sprintf("/v2/org/%s/carbide/site", org)
+	createReq := httptest.NewRequest(http.MethodPost, createPath, strings.NewReader(createBody))
+	createReq.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	createRec := httptest.NewRecorder()
+	createCtx := e.NewContext(createReq, createRec)
+	createCtx.SetParamNames("orgName")
+	createCtx.SetParamValues(org)
+	createCtx.Set("user", user)
+	createCtx.SetRequest(createReq.WithContext(context.WithValue(ctx, otelecho.TracerKey, tracer)))
+
+	csh := CreateSiteHandler{
+		dbSession:  dbSession,
+		tc:         &tmocks.Client{},
+		cfg:        cfg,
+		tracerSpan: sutil.NewTracerSpan(),
+	}
+	err = csh.Handle(createCtx)
+	require.NoError(t, err)
+
+	t.Logf("--- carbidecli site create --name reno-qa4 ---")
+	t.Logf("HTTP %d: %s", createRec.Code, createRec.Body.String())
+
+	// The create handler can find the site (no config filter) and returns
+	// 409.  This proves the site exists in the DB.
+	assert.Equal(t, http.StatusConflict, createRec.Code,
+		"create must return 409 proving the site exists")
+
+	// The list handler must also find the site.  Before the fix it
+	// returned 0 items due to the unconditional config JSONB filter.
+	assert.Equal(t, 1, len(listResp),
+		"site list must return the site even when config is NULL")
+	assert.Equal(t, 1, pr.Total,
+		"pagination total must include the site with NULL config")
+}
+
 func TestDeleteSiteHandler_Handle(t *testing.T) {
 	ctx := context.Background()
 
