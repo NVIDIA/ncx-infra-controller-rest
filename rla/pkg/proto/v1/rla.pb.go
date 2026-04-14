@@ -552,8 +552,8 @@ type DiffType int32
 
 const (
 	DiffType_DIFF_TYPE_UNKNOWN    DiffType = 0
-	DiffType_DIFF_TYPE_MISSING    DiffType = 1 // Expected in local DB but missing from source system
-	DiffType_DIFF_TYPE_UNEXPECTED DiffType = 2 // Found in source system but not expected in local DB
+	DiffType_DIFF_TYPE_MISSING    DiffType = 1 // Expected by RLA but not found in the component manager service
+	DiffType_DIFF_TYPE_UNEXPECTED DiffType = 2 // Found in the component manager service but not expected by RLA
 	DiffType_DIFF_TYPE_DRIFT      DiffType = 3 // In both but with field differences
 )
 
@@ -3438,8 +3438,8 @@ type ValidateComponentsResponse struct {
 	Diffs      []*ComponentDiff       `protobuf:"bytes,1,rep,name=diffs,proto3" json:"diffs,omitempty"`
 	TotalDiffs int32                  `protobuf:"varint,2,opt,name=total_diffs,json=totalDiffs,proto3" json:"total_diffs,omitempty"`
 	// Summary counts
-	MissingCount    int32 `protobuf:"varint,3,opt,name=missing_count,json=missingCount,proto3" json:"missing_count,omitempty"`          // Expected in local DB but missing from source system
-	UnexpectedCount int32 `protobuf:"varint,4,opt,name=unexpected_count,json=unexpectedCount,proto3" json:"unexpected_count,omitempty"` // Found in source system but not expected in local DB
+	MissingCount    int32 `protobuf:"varint,3,opt,name=missing_count,json=missingCount,proto3" json:"missing_count,omitempty"`          // Expected by RLA but not found in the component manager service
+	UnexpectedCount int32 `protobuf:"varint,4,opt,name=unexpected_count,json=unexpectedCount,proto3" json:"unexpected_count,omitempty"` // Found in the component manager service but not expected by RLA
 	DriftCount      int32 `protobuf:"varint,5,opt,name=drift_count,json=driftCount,proto3" json:"drift_count,omitempty"`
 	MatchCount      int32 `protobuf:"varint,6,opt,name=match_count,json=matchCount,proto3" json:"match_count,omitempty"`
 	unknownFields   protoimpl.UnknownFields
@@ -3522,7 +3522,7 @@ type ComponentDiff struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Type          DiffType               `protobuf:"varint,1,opt,name=type,proto3,enum=v1.DiffType" json:"type,omitempty"`
 	ComponentId   string                 `protobuf:"bytes,2,opt,name=component_id,json=componentId,proto3" json:"component_id,omitempty"` // Component ID assigned by the component manager service
-	Expected      *Component             `protobuf:"bytes,3,opt,name=expected,proto3" json:"expected,omitempty"`                          // Populated when type is MISSING or UNEXPECTED
+	Expected      *Component             `protobuf:"bytes,3,opt,name=expected,proto3" json:"expected,omitempty"`                          // Populated when type is MISSING
 	Actual        *Component             `protobuf:"bytes,4,opt,name=actual,proto3" json:"actual,omitempty"`
 	FieldDiffs    []*FieldDiff           `protobuf:"bytes,5,rep,name=field_diffs,json=fieldDiffs,proto3" json:"field_diffs,omitempty"` // Populated when type is DRIFT
 	Id            *UUID                  `protobuf:"bytes,6,opt,name=id,proto3" json:"id,omitempty"`                                   // RLA internal component UUID

@@ -1627,7 +1627,7 @@ func (rs *RLAServerImpl) ValidateComponents(
 
 	// Calculate match count: if we have targeted components, matches = targeted - drifts
 	if targetSpec != nil {
-		matchCount = filteredComponentCount - unexpectedCount - driftCount
+		matchCount = filteredComponentCount - missingCount - driftCount
 		if matchCount < 0 {
 			matchCount = 0
 		}

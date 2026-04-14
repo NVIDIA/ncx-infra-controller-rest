@@ -19,7 +19,7 @@ var _ MappedNullable = &ComponentDiff{}
 
 // ComponentDiff A single component difference found during rack validation
 type ComponentDiff struct {
-	// Type of difference: Missing, Unexpected, or Drift
+	// Type of difference: Unknown, Missing, Unexpected, or Drift
 	Type *string `json:"type,omitempty"`
 	// RLA internal component UUID
 	Id *string `json:"id,omitempty"`

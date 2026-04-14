@@ -16078,7 +16078,7 @@ components:
       properties:
         type:
           type: string
-          description: 'Type of difference: Missing, Unexpected, or Drift'
+          description: 'Type of difference: Unknown, Missing, Unexpected, or Drift'
           enum:
             - Unknown
             - Missing
@@ -16086,6 +16086,7 @@ components:
             - Drift
         id:
           type: string
+          format: uuid
           description: RLA internal component UUID
         componentId:
           type: string
