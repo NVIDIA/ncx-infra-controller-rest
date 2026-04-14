@@ -216,9 +216,9 @@ func outputDiffTable(result *client.ValidateComponentsResult) {
 
 	// Differences table
 	fmt.Println("Differences:")
-	fmt.Println(strings.Repeat("-", 100))
-	fmt.Printf("%-20s %-30s %s\n", "TYPE", "COMPONENT_ID", "DETAILS")
-	fmt.Println(strings.Repeat("-", 100))
+	fmt.Println(strings.Repeat("-", 130))
+	fmt.Printf("%-15s %-38s %-30s %s\n", "TYPE", "UUID", "COMPONENT_ID", "DETAILS")
+	fmt.Println(strings.Repeat("-", 130))
 
 	for _, diff := range result.Diffs {
 		diffType := ""
@@ -232,7 +232,7 @@ func outputDiffTable(result *client.ValidateComponentsResult) {
 			diffType = "Unexpected"
 			details = "Found in source system but not expected"
 		case types.DiffTypeDrift:
-			diffType = "DRIFT"
+			diffType = "Drift"
 			var fieldStrs []string
 			for _, fd := range diff.FieldDiffs {
 				fieldStrs = append(fieldStrs, fmt.Sprintf("%s: %s → %s",
@@ -241,7 +241,11 @@ func outputDiffTable(result *client.ValidateComponentsResult) {
 			details = strings.Join(fieldStrs, ", ")
 		}
 
-		fmt.Printf("%-20s %-30s %s\n", diffType, diff.ComponentID, details)
+		uuidStr := ""
+		if diff.ID != uuid.Nil {
+			uuidStr = diff.ID.String()
+		}
+		fmt.Printf("%-15s %-38s %-30s %s\n", diffType, uuidStr, diff.ComponentID, details)
 	}
-	fmt.Println(strings.Repeat("-", 100))
+	fmt.Println(strings.Repeat("-", 130))
 }

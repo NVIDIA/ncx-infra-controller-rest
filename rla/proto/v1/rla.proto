@@ -463,14 +463,11 @@ enum DiffType {
 
 message ComponentDiff {
     DiffType type = 1;
-    string component_id = 2;
-    
-    // Populated when type is MISSING or UNEXPECTED
-    Component expected = 3;
+    string component_id = 2;    // Component ID assigned by the component manager service
+    Component expected = 3;     // Populated when type is MISSING or UNEXPECTED
     Component actual = 4;
-    
-    // Populated when type is DRIFT - lists the fields that differ
-    repeated FieldDiff field_diffs = 5;
+    repeated FieldDiff field_diffs = 5; // Populated when type is DRIFT
+    UUID id = 6;                // RLA internal component UUID
 }
 
 message FieldDiff {

@@ -1583,26 +1583,27 @@ func (rs *RLAServerImpl) ValidateComponents(
 	var missingCount, unexpectedCount, driftCount, matchCount int32
 
 	for _, sd := range storeDrifts {
-		componentIDStr := ""
+		var compUUID *pb.UUID
 		if sd.ComponentID != nil {
-			componentIDStr = sd.ComponentID.String()
+			compUUID = &pb.UUID{Id: sd.ComponentID.String()}
 		}
-		externalIDStr := ""
+		componentID := ""
 		if sd.ExternalID != nil {
-			externalIDStr = *sd.ExternalID
+			componentID = *sd.ExternalID
 		}
 
 		switch sd.DriftType {
 		case "missing_in_expected":
 			diffs = append(diffs, &pb.ComponentDiff{
 				Type:        pb.DiffType_DIFF_TYPE_UNEXPECTED,
-				ComponentId: externalIDStr, // only external_id is known
+				ComponentId: componentID,
 			})
 			unexpectedCount++
 		case "missing_in_actual":
 			diffs = append(diffs, &pb.ComponentDiff{
 				Type:        pb.DiffType_DIFF_TYPE_MISSING,
-				ComponentId: componentIDStr,
+				Id:          compUUID,
+				ComponentId: componentID,
 			})
 			missingCount++
 		case "mismatch":
@@ -1616,7 +1617,8 @@ func (rs *RLAServerImpl) ValidateComponents(
 			}
 			diffs = append(diffs, &pb.ComponentDiff{
 				Type:        pb.DiffType_DIFF_TYPE_DRIFT,
-				ComponentId: componentIDStr,
+				Id:          compUUID,
+				ComponentId: componentID,
 				FieldDiffs:  fieldDiffs,
 			})
 			driftCount++

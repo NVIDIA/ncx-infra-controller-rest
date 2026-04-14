@@ -191,6 +191,7 @@ func componentDiffFromProto(d *pb.ComponentDiff) *types.ComponentDiff {
 
 	diff := &types.ComponentDiff{
 		Type:        diffTypeFromProto(d.GetType()),
+		ID:          uuidFromProto(d.GetId()),
 		ComponentID: d.GetComponentId(),
 		Expected:    componentFromProto(d.GetExpected()),
 		Actual:      componentFromProto(d.GetActual()),

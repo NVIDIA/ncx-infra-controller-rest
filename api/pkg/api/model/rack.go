@@ -440,7 +440,8 @@ func (f *APIFieldDiff) FromProto(protoFieldDiff *rlav1.FieldDiff) {
 // APIComponentDiff represents a single component difference found during validation
 type APIComponentDiff struct {
 	Type        string            `json:"type"`
-	ComponentID string            `json:"componentId"`
+	ID          string            `json:"id,omitempty"`          // RLA internal component UUID
+	ComponentID string            `json:"componentId,omitempty"` // Component ID from the component manager service
 	Expected    *APIRackComponent `json:"expected,omitempty"`
 	Actual      *APIRackComponent `json:"actual,omitempty"`
 	FieldDiffs  []*APIFieldDiff   `json:"fieldDiffs,omitempty"`
@@ -453,6 +454,9 @@ func (d *APIComponentDiff) FromProto(protoDiff *rlav1.ComponentDiff) {
 	}
 
 	d.Type = enumOr(ProtoToAPIDiffTypeName, protoDiff.GetType(), "Unknown")
+	if protoDiff.GetId() != nil {
+		d.ID = protoDiff.GetId().GetId()
+	}
 	d.ComponentID = protoDiff.GetComponentId()
 
 	if protoDiff.GetExpected() != nil {
