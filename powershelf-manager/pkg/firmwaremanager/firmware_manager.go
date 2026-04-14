@@ -331,7 +331,6 @@ func fwRunner(ctx interface{}, task interface{}) {
 	log.Printf("Firmare Runner: finished handling %v pending updates in %s", len(updates), time.Since(start))
 }
 
-
 func recordToDomain(rec *FirmwareUpdateRecord) *powershelf.FirmwareUpdate {
 	if rec == nil {
 		return nil

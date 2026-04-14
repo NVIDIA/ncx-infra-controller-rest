@@ -181,32 +181,6 @@ func executeGetPowerStatusAction(actx actionExecutionContext) error {
 	)
 }
 
-// toFirmwareControlTaskInfo converts an any-typed operationInfo (which may be
-// a map[string]interface{} after Temporal child-workflow deserialization) into
-// a concrete FirmwareControlTaskInfo. This ensures all fields survive the
-// any → JSON → struct roundtrip that Temporal performs across workflow boundaries.
-func toFirmwareControlTaskInfo(v any) (operations.FirmwareControlTaskInfo, error) {
-	switch t := v.(type) {
-	case operations.FirmwareControlTaskInfo:
-		return t, nil
-	case *operations.FirmwareControlTaskInfo:
-		if t == nil {
-			return operations.FirmwareControlTaskInfo{}, fmt.Errorf("nil FirmwareControlTaskInfo")
-		}
-		return *t, nil
-	default:
-		raw, err := json.Marshal(v)
-		if err != nil {
-			return operations.FirmwareControlTaskInfo{}, fmt.Errorf("marshal: %w", err)
-		}
-		var info operations.FirmwareControlTaskInfo
-		if err := json.Unmarshal(raw, &info); err != nil {
-			return operations.FirmwareControlTaskInfo{}, fmt.Errorf("unmarshal: %w", err)
-		}
-		return info, nil
-	}
-}
-
 // executeFirmwareControlAction handles FirmwareControl action by starting a
 // firmware update and polling for completion. Poll parameters are read from
 // the action config (poll_interval, poll_timeout) with sensible defaults.
