@@ -20,8 +20,9 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	"github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/credential"
-	"github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/secretstring"
 	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 	svc "github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/internal/service"
 	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/common/vendor"
@@ -29,8 +30,6 @@ import (
 	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/objects/pmc"
 	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/objects/powershelf"
 	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/powershelfmanager"
-	"net"
-	"strings"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -40,6 +39,7 @@ var vendorStr string
 var fw_action string
 var dryRun bool
 var versionTo string
+var pmcMAC string
 
 // serveCmd represents the serve command
 var fwCmd = &cobra.Command{
@@ -83,32 +83,26 @@ func init() {
 	fwCmd.Flags().StringVarP(&pmcUsername, "user", "u", "root", "Username")
 	fwCmd.Flags().StringVarP(&pmcPassword, "pass", "p", "0penBmc", "Password")
 	fwCmd.Flags().StringVar(&versionTo, "version", "0penBmc", "Target Version to upgrade to")
+	fwCmd.Flags().StringVarP(&pmcMAC, "mac", "m", "", "PMC MAC address")
+	fwCmd.Flags().StringVar(&firmwareDir, "firmware-dir", getEnvOrDefault("FW_DIR", "/var/lib/psm/firmware"), "Firmware files directory (env: FW_DIR)")
 }
 
 func doFw() {
-	ip := net.ParseIP(pmcIP)
-	if ip == nil {
-		log.Fatalf("invalid IP address: %s", pmcIP)
-	}
-
 	vendor := vendor.StringToVendor(vendorStr)
 
 	if err := vendor.IsSupported(); err != nil {
 		log.Fatalf("unsupported vendor: %v\n", err)
 	}
 
-	pmc := &pmc.PMC{
-		IP:     ip,
-		Vendor: vendor,
-		Credential: &credential.Credential{
-			User:     pmcUsername,
-			Password: secretstring.New(pmcPassword),
-		},
+	cred := credential.New(pmcUsername, pmcPassword)
+	pmc, err := pmc.New(pmcMAC, pmcIP, vendor.Code, &cred)
+	if err != nil {
+		log.Fatalf("failed to create PMC: %v\n", err)
 	}
 
 	svcConfig := svc.Config{
 		Port:          port,
-		DataStoreType: powershelfmanager.DataStoreType(datastoreType),
+		DataStoreType: powershelfmanager.DatastoreTypeInMemory,
 		VaultConf: credentials.VaultConfig{
 			Address: vaultAddress,
 			Token:   vaultToken,
@@ -120,6 +114,7 @@ func doFw() {
 			Credential:        credential.New(dbUser, dbPassword),
 			CACertificatePath: "",
 		},
+		FirmwareDir: firmwareDir,
 	}
 
 	psmConfig, err := svcConfig.ToPsmConf()
@@ -130,6 +125,10 @@ func doFw() {
 	psm, err := powershelfmanager.New(context.Background(), *psmConfig)
 	if err != nil {
 		log.Fatalf("failed to init powershelf manager: %v\n", err)
+	}
+
+	if err := psm.RegisterPmc(context.Background(), pmc); err != nil {
+		log.Fatalf("failed to register PMC: %v\n", err)
 	}
 
 	fw_manager := psm.FirmwareManager
@@ -143,11 +142,6 @@ func doFw() {
 
 		fmt.Println(summary)
 	case CanUpgrade:
-		ip := net.ParseIP(pmcIP)
-		if ip == nil {
-			log.Fatalf("invalid IP address: %s", pmcIP)
-		}
-
 		supported, err := fw_manager.CanUpdate(context.Background(), pmc, powershelf.PMC, versionTo)
 		if err != nil {
 			log.Fatalf("failed to upgrade fw for %v: %v\n", vendor, err)
@@ -155,11 +149,12 @@ func doFw() {
 
 		fmt.Printf("%v\n", supported)
 	case Upgrade:
-		fmt.Printf("Upgrading fw for %v (ip %s user: %s password: %s)\n", vendor, pmcIP, pmcUsername, pmcPassword)
+		fmt.Printf("Upgrading fw for %v (ip %s)\n", vendor, pmcIP)
 		err := fw_manager.Upgrade(context.Background(), pmc, powershelf.PMC, versionTo)
 		if err != nil {
 			log.Fatalf("failed to upgrade fw for %v: %v\n", vendor, err)
 		}
+		fmt.Println("Firmware upgrade queued.")
 	default:
 		log.Fatalf("unsupported action: %s\n", fw_action)
 	}

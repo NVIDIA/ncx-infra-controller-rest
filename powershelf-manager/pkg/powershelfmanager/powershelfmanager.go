@@ -86,7 +86,7 @@ func New(ctx context.Context, c Config) (*PowershelfManager, error) {
 		return nil, fmt.Errorf("unsupported datastore type for firmware manager: %v", c.DSType)
 	}
 
-	firmwareManager, err := firmwaremanager.New(fwStore, pmcManager, false)
+	firmwareManager, err := firmwaremanager.New(fwStore, pmcManager, false, c.FirmwareDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize firmware manager (conf: %v): %w", c, err)
 	}

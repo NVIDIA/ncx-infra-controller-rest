@@ -48,7 +48,8 @@ type Manager struct {
 }
 
 // New constructs a Manager with the given FirmwareUpdateStore backend.
-func New(store FirmwareUpdateStore, pmcManager *pmcmanager.PmcManager, dryRun bool) (*Manager, error) {
+// firmwareDir specifies the on-disk directory containing firmware artifacts (env: FW_DIR).
+func New(store FirmwareUpdateStore, pmcManager *pmcmanager.PmcManager, dryRun bool, firmwareDir string) (*Manager, error) {
 	manager := Manager{
 		firmwareUpdater: make(map[vendor.Vendor]*FirmwareUpdater),
 		store:           store,
@@ -56,13 +57,15 @@ func New(store FirmwareUpdateStore, pmcManager *pmcmanager.PmcManager, dryRun bo
 		dryRun:          dryRun,
 	}
 
+	log.Printf("Firmware manager using firmware directory: %s", firmwareDir)
+
 	for v := range vendor.VendorCodeMax {
 		vendor := vendor.CodeToVendor(v)
 		if err := vendor.IsSupported(); err != nil {
 			continue
 		}
 
-		updater, err := newFirmwareUpdater(vendor)
+		updater, err := newFirmwareUpdater(vendor, firmwareDir)
 		if err != nil {
 			return nil, err
 		}
@@ -232,11 +235,11 @@ func (manager *Manager) handleOnePmcUpdate(ctx context.Context, pmc *pmc.PMC, up
 			return powershelf.FirmwareStateFailed, err
 		}
 
-		response, err := updater.upgrade(ctx, pmc, version, manager.dryRun)
+		err = updater.upgrade(ctx, pmc, version, manager.dryRun)
 		if err != nil {
-			return powershelf.FirmwareStateFailed, fmt.Errorf("failed initiate  MAC %v for fw update %v", update.PmcMacAddress, update)
+			return powershelf.FirmwareStateFailed, fmt.Errorf("failed to initiate firmware update of component %v for powershelf with PMC MAC %v from %v to %v: %w", update.Component, pmc, update.VersionFrom, update.VersionTo, err)
 		} else {
-			log.Printf("successfully initiated firmware update of component %v for powershelf with PMC MAC %v from %v to %v: %v\n", update.Component, pmc, update.VersionFrom, update.VersionTo, response)
+			log.Printf("successfully initiated firmware update of component %v for powershelf with PMC MAC %v from %v to %v\n", update.Component, pmc, update.VersionFrom, update.VersionTo)
 			return powershelf.FirmwareStateVerifying, nil
 		}
 	case powershelf.FirmwareStateVerifying:
@@ -327,6 +330,7 @@ func fwRunner(ctx interface{}, task interface{}) {
 
 	log.Printf("Firmare Runner: finished handling %v pending updates in %s", len(updates), time.Since(start))
 }
+
 
 func recordToDomain(rec *FirmwareUpdateRecord) *powershelf.FirmwareUpdate {
 	if rec == nil {

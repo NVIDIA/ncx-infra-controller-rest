@@ -529,6 +529,84 @@ func TestGenericComponentStepWorkflow_FirmwareControlAction(t *testing.T) {
 	assert.NoError(t, env.GetWorkflowError())
 }
 
+// TestGenericComponentStepWorkflow_FirmwareControlPassesTargetVersion verifies
+// that TargetVersion from FirmwareControlTaskInfo is preserved when passed
+// through the child workflow to the FirmwareControl activity. This guards
+// against the Temporal any-typed parameter deserialization issue where fields
+// can be lost across child workflow boundaries.
+func TestGenericComponentStepWorkflow_FirmwareControlPassesTargetVersion(t *testing.T) {
+	testSuite := &testsuite.WorkflowTestSuite{}
+	env := testSuite.NewTestWorkflowEnvironment()
+
+	var capturedInfo operations.FirmwareControlTaskInfo
+	mockStart := func(ctx context.Context, target common.Target, info operations.FirmwareControlTaskInfo) error {
+		capturedInfo = info
+		return nil
+	}
+	mockStatus := func(ctx context.Context, target common.Target) (*activitypkg.GetFirmwareStatusResult, error) {
+		return &activitypkg.GetFirmwareStatusResult{
+			Statuses: map[string]operations.FirmwareUpdateStatus{
+				"switch-1": {
+					ComponentID: "switch-1",
+					State:       operations.FirmwareUpdateStateCompleted,
+				},
+			},
+		}, nil
+	}
+
+	env.RegisterActivityWithOptions(mockStart,
+		activity.RegisterOptions{Name: "FirmwareControl"})
+	env.RegisterActivityWithOptions(mockStatus,
+		activity.RegisterOptions{Name: "GetFirmwareStatus"})
+
+	env.OnActivity(mockStart, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	env.OnActivity(mockStatus, mock.Anything, mock.Anything).Return(
+		&activitypkg.GetFirmwareStatusResult{
+			Statuses: map[string]operations.FirmwareUpdateStatus{
+				"switch-1": {
+					ComponentID: "switch-1",
+					State:       operations.FirmwareUpdateStateCompleted,
+				},
+			},
+		}, nil)
+
+	step := operationrules.SequenceStep{
+		ComponentType: devicetypes.ComponentTypeNVLSwitch,
+		Stage:         1,
+		MaxParallel:   0,
+		Timeout:       10 * time.Minute,
+		MainOperation: operationrules.ActionConfig{
+			Name: operationrules.ActionFirmwareControl,
+			Parameters: map[string]any{
+				operationrules.ParamPollInterval: "1s",
+				operationrules.ParamPollTimeout:  "10s",
+			},
+		},
+	}
+
+	target := common.Target{
+		Type:         devicetypes.ComponentTypeNVLSwitch,
+		ComponentIDs: []string{"switch-1"},
+	}
+	allTargets := map[devicetypes.ComponentType]common.Target{
+		devicetypes.ComponentTypeNVLSwitch: target,
+	}
+
+	info := &operations.FirmwareControlTaskInfo{
+		Operation:     operations.FirmwareOperationUpgrade,
+		TargetVersion: "1.3.1",
+	}
+
+	env.ExecuteWorkflow(GenericComponentStepWorkflow, step, target, "",
+		info, allTargets)
+
+	assert.True(t, env.IsWorkflowCompleted())
+	assert.NoError(t, env.GetWorkflowError())
+	assert.Equal(t, operations.FirmwareOperationUpgrade, capturedInfo.Operation)
+	assert.Equal(t, "1.3.1", capturedInfo.TargetVersion,
+		"TargetVersion must survive the child workflow boundary")
+}
+
 // TestGenericComponentStepWorkflow_PowerControlWithParamOperation tests that
 // PowerControl action constructs PowerControlTaskInfo from ParamOperation
 // when the workflow's operationInfo is a different type (cross-workflow use).
