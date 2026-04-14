@@ -33,13 +33,13 @@ var ProtoToAPIBMCTypeName = map[rlav1.BMCType]string{
 
 // ProtoToAPIRackComponentTypeName maps protobuf ComponentType to API-friendly names for rack components.
 var ProtoToAPIRackComponentTypeName = map[rlav1.ComponentType]string{
-	rlav1.ComponentType_COMPONENT_TYPE_UNKNOWN:    "ComponentTypeUnknown",
-	rlav1.ComponentType_COMPONENT_TYPE_COMPUTE:    "ComponentTypeCompute",
-	rlav1.ComponentType_COMPONENT_TYPE_NVLSWITCH:  "ComponentTypeNvlswitch",
-	rlav1.ComponentType_COMPONENT_TYPE_POWERSHELF: "ComponentTypePowershelf",
-	rlav1.ComponentType_COMPONENT_TYPE_TORSWITCH:  "ComponentTypeTorswitch",
-	rlav1.ComponentType_COMPONENT_TYPE_UMS:        "ComponentTypeUms",
-	rlav1.ComponentType_COMPONENT_TYPE_CDU:        "ComponentTypeCdu",
+	rlav1.ComponentType_COMPONENT_TYPE_UNKNOWN:    "Unknown",
+	rlav1.ComponentType_COMPONENT_TYPE_COMPUTE:    "Compute",
+	rlav1.ComponentType_COMPONENT_TYPE_NVLSWITCH:  "NVLSwitch",
+	rlav1.ComponentType_COMPONENT_TYPE_POWERSHELF: "PowerShelf",
+	rlav1.ComponentType_COMPONENT_TYPE_TORSWITCH:  "TORSwitch",
+	rlav1.ComponentType_COMPONENT_TYPE_UMS:        "UMS",
+	rlav1.ComponentType_COMPONENT_TYPE_CDU:        "CDU",
 }
 
 // ProtoToAPIDiffTypeName maps protobuf DiffType to API-friendly names.
@@ -377,7 +377,7 @@ func (arc *APIRackComponent) FromProto(protoComponent *rlav1.Component) {
 	if protoComponent == nil {
 		return
 	}
-	arc.Type = enumOr(ProtoToAPIRackComponentTypeName, protoComponent.GetType(), "ComponentTypeUnknown")
+	arc.Type = enumOr(ProtoToAPIRackComponentTypeName, protoComponent.GetType(), "Unknown")
 	arc.FirmwareVersion = protoComponent.GetFirmwareVersion()
 	arc.ComponentID = protoComponent.GetComponentId()
 	arc.PowerState = protoComponent.GetPowerState()

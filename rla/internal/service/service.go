@@ -59,6 +59,10 @@ type Service struct {
 // database connection, runs pending migrations, and wires up the inventory and
 // task managers. The returned service is ready to Start.
 func New(ctx context.Context, c Config) (*Service, error) {
+	if err := c.Validate(); err != nil {
+		return nil, err
+	}
+
 	// 1. Create shared PostgreSQL connection
 	session, err := cdb.NewSessionFromConfig(ctx, c.DBConf)
 	if err != nil {
@@ -151,7 +155,10 @@ func (s *Service) Start(ctx context.Context) error {
 
 	// Block the main runtime loop for accepting and processing gRPC requests.
 	pb.RegisterRLAServer(s.grpcServer, serverImpl)
-	reflection.Register(s.grpcServer)
+	if s.conf.DevMode {
+		reflection.Register(s.grpcServer)
+		log.Debug().Msg("Dev mode: gRPC reflection enabled")
+	}
 
 	if err := s.grpcServer.Serve(lis); err != nil {
 		return err
@@ -236,12 +243,14 @@ func (s *Service) startScheduler(ctx context.Context) error {
 		return fmt.Errorf("failed to create inventory sync job: %w", err)
 	}
 
-	invTrigger, err := schedtypes.NewIntervalTrigger(s.conf.RLAConfig.InventoryRunFrequency)
-	if err != nil {
-		return fmt.Errorf("invalid inventory sync interval: %w", err)
-	}
-	if err := sched.Schedule(invJob, invTrigger, schedtypes.Skip); err != nil {
-		return fmt.Errorf("failed to schedule inventory sync job: %w", err)
+	if invJob != nil {
+		invTrigger, err := schedtypes.NewIntervalTrigger(s.conf.RLAConfig.InventoryRunFrequency)
+		if err != nil {
+			return fmt.Errorf("invalid inventory sync interval: %w", err)
+		}
+		if err := sched.Schedule(invJob, invTrigger, schedtypes.Skip); err != nil {
+			return fmt.Errorf("failed to schedule inventory sync job: %w", err)
+		}
 	}
 
 	// Create and register the leak detection job
@@ -254,12 +263,14 @@ func (s *Service) startScheduler(ctx context.Context) error {
 		return fmt.Errorf("failed to create leak detection job: %w", err)
 	}
 
-	leakTrigger, err := schedtypes.NewIntervalTrigger(s.conf.RLAConfig.LeakDetectionInterval)
-	if err != nil {
-		return fmt.Errorf("invalid leak detection interval: %w", err)
-	}
-	if err := sched.Schedule(leakJob, leakTrigger, schedtypes.Skip); err != nil {
-		return fmt.Errorf("failed to schedule leak detection job: %w", err)
+	if leakJob != nil {
+		leakTrigger, err := schedtypes.NewIntervalTrigger(s.conf.RLAConfig.LeakDetectionInterval)
+		if err != nil {
+			return fmt.Errorf("invalid leak detection interval: %w", err)
+		}
+		if err := sched.Schedule(leakJob, leakTrigger, schedtypes.Skip); err != nil {
+			return fmt.Errorf("failed to schedule leak detection job: %w", err)
+		}
 	}
 
 	if err := sched.Start(ctx); err != nil {

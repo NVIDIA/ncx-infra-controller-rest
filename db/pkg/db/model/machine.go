@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
@@ -109,6 +110,23 @@ func (s *SiteControllerMachine) MarshalJSON() ([]byte, error) {
 	return protojson.Marshal(s)
 }
 
+// GetNormalizedState returns the normalized state for the embedded controller machine
+// When non-empty, the controller machine state prefix without the JSON state suffix (`{...}`) is returned, otherwise the full state is returned
+// The returned state is empty when nil or the embedded controller machine is missing
+func (s *SiteControllerMachine) GetNormalizedState() string {
+	if s == nil || s.Machine == nil {
+		return ""
+	}
+
+	controllerState := s.State
+
+	if strings.Contains(controllerState, "{") {
+		controllerState = strings.Split(controllerState, "{")[0]
+	}
+
+	return strings.TrimSpace(controllerState)
+}
+
 // Machine is the baremetal server that sits in the datacenter
 type Machine struct {
 	bun.BaseModel `bun:"table:machine,alias:m"`
@@ -145,6 +163,16 @@ type Machine struct {
 	Created              time.Time              `bun:"created,nullzero,notnull,default:current_timestamp"`
 	Updated              time.Time              `bun:"updated,nullzero,notnull,default:current_timestamp"`
 	Deleted              *time.Time             `bun:"deleted,soft_delete"`
+}
+
+// GetControllerState returns the normalized controller state from Machine metadata, or empty when
+// metadata is nil.
+func (m *Machine) GetControllerState() string {
+	if m == nil || m.Metadata == nil {
+		return ""
+	}
+
+	return m.Metadata.GetNormalizedState()
 }
 
 // MachineCreateInput input parameters for Create method

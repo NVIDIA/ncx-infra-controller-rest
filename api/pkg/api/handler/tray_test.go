@@ -344,7 +344,7 @@ func TestGetTrayHandler_Handle(t *testing.T) {
 			err = json.Unmarshal(rec.Body.Bytes(), &apiTray)
 			assert.NoError(t, err)
 			assert.Equal(t, trayID, apiTray.ID)
-			assert.Equal(t, "compute", apiTray.Type)
+			assert.Equal(t, "Compute", apiTray.Type)
 			assert.Equal(t, "NVIDIA", apiTray.Manufacturer)
 		})
 	}
@@ -449,7 +449,7 @@ func TestGetAllTrayHandler_Handle(t *testing.T) {
 			user:   providerUser,
 			queryParams: map[string]string{
 				"siteId": site.ID.String(),
-				"type":   "compute",
+				"type":   "Compute",
 			},
 			mockResponse:   createMockRLAResponse(testComponents[:2], 2),
 			expectedStatus: http.StatusOK,
@@ -994,7 +994,7 @@ func TestValidateTraysHandler_Handle(t *testing.T) {
 			user:   providerUser,
 			queryParams: map[string]string{
 				"siteId": site.ID.String(),
-				"type":   "compute",
+				"type":   "Compute",
 			},
 			mockResponse: &rlav1.ValidateComponentsResponse{
 				Diffs:      []*rlav1.ComponentDiff{},
@@ -1040,7 +1040,7 @@ func TestValidateTraysHandler_Handle(t *testing.T) {
 			queryParams: map[string]string{
 				"siteId": site.ID.String(),
 				"rackId": rackID,
-				"type":   "compute",
+				"type":   "Compute",
 			},
 			mockResponse: &rlav1.ValidateComponentsResponse{
 				Diffs:      []*rlav1.ComponentDiff{},
@@ -1056,7 +1056,7 @@ func TestValidateTraysHandler_Handle(t *testing.T) {
 			queryParams: map[string]string{
 				"siteId":      site.ID.String(),
 				"componentId": "ext-comp-1",
-				"type":        "compute",
+				"type":        "Compute",
 			},
 			mockResponse: &rlav1.ValidateComponentsResponse{
 				Diffs:      []*rlav1.ComponentDiff{},
@@ -1084,7 +1084,7 @@ func TestValidateTraysHandler_Handle(t *testing.T) {
 				"siteId":      site.ID.String(),
 				"rackId":      rackID,
 				"componentId": "ext-comp-1",
-				"type":        "compute",
+				"type":        "Compute",
 			},
 			expectedStatus: http.StatusBadRequest,
 		},

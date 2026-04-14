@@ -19,11 +19,13 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"strconv"
 
 	"github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/endpoint"
 	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/certs"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/clients/temporal"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/config"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/componentmanager"
@@ -34,7 +36,39 @@ import (
 const (
 	// DefaultPort is the default port the RLA gRPC server listens on.
 	DefaultPort = 50051
+
+	// EnvVarName is the environment variable operators set to declare the
+	// deployment environment. Valid values: "development", "staging", "production".
+	// Must be set explicitly; there is no implicit default.
+	EnvVarName = "RLA_ENV"
 )
+
+// deploymentEnv identifies the deployment environment, controlling which
+// safety checks are enforced at startup.
+type deploymentEnv string
+
+const (
+	envDevelopment deploymentEnv = "development"
+	envStaging     deploymentEnv = "staging"
+	envProduction  deploymentEnv = "production"
+)
+
+// GetDeploymentEnv reads RLA_ENV and returns the resolved environment name.
+// An unset or empty value is an error; callers that want a development default
+// (e.g. a local CLI entrypoint) must set the variable before calling this.
+func GetDeploymentEnv() (string, error) {
+	v := os.Getenv(EnvVarName)
+	if v == "" {
+		return "", fmt.Errorf("%s is required: must be development, staging, or production", EnvVarName)
+	}
+
+	switch deploymentEnv(v) {
+	case envDevelopment, envStaging, envProduction:
+		return v, nil
+	default:
+		return "", fmt.Errorf("unknown %s value %q: must be development, staging, or production", EnvVarName, v) //nolint:lll
+	}
+}
 
 // Config holds the service configuration.
 // It uses interfaces to abstract implementation details:
@@ -47,10 +81,50 @@ type Config struct {
 	CMConfig         componentmanager.Config
 	ProviderRegistry *componentmanager.ProviderRegistry
 
+	// DevMode enables developer options such as gRPC reflection and debug
+	// logging. Must not be set in staging/production environments.
+	DevMode bool
+
 	// CertConfig holds certificate file paths for the gRPC server listener.
 	// When set, these take precedence over CERTDIR / the k8s default.
 	// Either all three fields must be set or none.
 	CertConfig pkgcerts.Config
+}
+
+// Validate checks the Config for unsafe combinations and returns an error for
+// the first violation found, in priority order:
+//
+//  1. Unknown or unset RLA_ENV — always rejected regardless of other settings.
+//  2. DevMode in a non-development environment — staging and production block it.
+//  3. Partial CertConfig — all three cert paths must be set together or not at all.
+//  4. Missing TLS in staging or production — those environments require mTLS.
+func (c Config) Validate() error {
+	envStr, err := GetDeploymentEnv()
+	if err != nil {
+		return err
+	}
+
+	env := deploymentEnv(envStr)
+
+	// Rule 1: dev-mode is only allowed in development.
+	if c.DevMode && env != envDevelopment {
+		return fmt.Errorf("--dev-mode is not allowed in %q environment", env)
+	}
+
+	// Rule 2: reject partial CertConfig before reaching IsTLSAvailable. A
+	// partial config would cause IsSet() to return false, letting the CERTDIR /
+	// SPIFFE fallback satisfy the TLS check even though those certs would never
+	// be used by the server (it would attempt to load the incomplete paths).
+	if err := c.CertConfig.Validate(); err != nil {
+		return err
+	}
+
+	// Rule 3: staging and production require TLS.
+	if (env == envStaging || env == envProduction) && !certs.IsTLSAvailable(c.CertConfig) {
+		return fmt.Errorf("%q environment requires TLS certificates to be present", env)
+	}
+
+	return nil
 }
 
 // BuildTemporalConfigFromEnv builds a Temporal client configuration from

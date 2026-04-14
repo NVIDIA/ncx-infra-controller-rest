@@ -36,17 +36,17 @@ func TestProtoToAPIComponentTypeName(t *testing.T) {
 		{
 			name: "compute type",
 			ct:   rlav1.ComponentType_COMPONENT_TYPE_COMPUTE,
-			want: "compute",
+			want: "Compute",
 		},
 		{
 			name: "nvlswitch type",
 			ct:   rlav1.ComponentType_COMPONENT_TYPE_NVLSWITCH,
-			want: "switch",
+			want: "NVLSwitch",
 		},
 		{
 			name: "powershelf type",
 			ct:   rlav1.ComponentType_COMPONENT_TYPE_POWERSHELF,
-			want: "powershelf",
+			want: "PowerShelf",
 		},
 	}
 
@@ -103,7 +103,7 @@ func TestNewAPITray(t *testing.T) {
 			want: &APITray{
 				ID:              "tray-id-123",
 				ComponentID:     "carbide-machine-456",
-				Type:            "compute",
+				Type:            "Compute",
 				Name:            "compute-tray-1",
 				Manufacturer:    "NVIDIA",
 				Model:           "GB200",
@@ -143,7 +143,7 @@ func TestNewAPITray(t *testing.T) {
 			},
 			want: &APITray{
 				ID:              "switch-tray-id",
-				Type:            "switch",
+				Type:            "NVLSwitch",
 				Name:            "switch-tray-1",
 				Manufacturer:    "NVIDIA",
 				SerialNumber:    "SSN001",
@@ -172,7 +172,7 @@ func TestNewAPITray(t *testing.T) {
 			},
 			want: &APITray{
 				ID:           "power-tray-id",
-				Type:         "powershelf",
+				Type:         "PowerShelf",
 				Name:         "powershelf-1",
 				Manufacturer: "NVIDIA",
 				SerialNumber: "PSN001",
@@ -194,7 +194,7 @@ func TestNewAPITray(t *testing.T) {
 			},
 			want: &APITray{
 				ID:   "minimal-tray",
-				Type: "compute",
+				Type: "Compute",
 			},
 		},
 		{
@@ -206,7 +206,7 @@ func TestNewAPITray(t *testing.T) {
 			},
 			want: &APITray{
 				ID:   "untyped-tray",
-				Type: "unknown",
+				Type: "Unknown",
 			},
 		},
 		{
@@ -216,7 +216,7 @@ func TestNewAPITray(t *testing.T) {
 				ComponentId: "compute-component-123",
 			},
 			want: &APITray{
-				Type:        "compute",
+				Type:        "Compute",
 				ComponentID: "compute-component-123",
 			},
 		},
@@ -231,7 +231,7 @@ func TestNewAPITray(t *testing.T) {
 			},
 			want: &APITray{
 				ID:       "switch-tray-id",
-				Type:     "switch",
+				Type:     "NVLSwitch",
 				Name:     "switch-1",
 				Position: nil,
 			},
@@ -310,7 +310,7 @@ func TestAPITray_FromProto(t *testing.T) {
 	}
 	at := &APITray{}
 	at.FromProto(comp)
-	assert.Equal(t, "compute", at.Type)
+	assert.Equal(t, "Compute", at.Type)
 	assert.Equal(t, "comp-1", at.ComponentID)
 	assert.Equal(t, "tray-uuid", at.ID)
 	assert.Equal(t, "My Tray", at.Name)
@@ -361,18 +361,18 @@ func TestAPITrayGetAllRequest_Validate(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:    "valid type - compute",
-			req:     APITrayGetAllRequest{Type: strPtr("compute")},
+			name:    "valid type - Compute",
+			req:     APITrayGetAllRequest{Type: strPtr("Compute")},
 			wantErr: false,
 		},
 		{
-			name:    "valid type - switch",
-			req:     APITrayGetAllRequest{Type: strPtr("switch")},
+			name:    "valid type - NVLSwitch",
+			req:     APITrayGetAllRequest{Type: strPtr("NVLSwitch")},
 			wantErr: false,
 		},
 		{
-			name:    "valid type - powershelf",
-			req:     APITrayGetAllRequest{Type: strPtr("powershelf")},
+			name:    "valid type - PowerShelf",
+			req:     APITrayGetAllRequest{Type: strPtr("PowerShelf")},
 			wantErr: false,
 		},
 		{
@@ -407,7 +407,7 @@ func TestAPITrayGetAllRequest_Validate(t *testing.T) {
 		},
 		{
 			name:    "componentIDs with type is valid",
-			req:     APITrayGetAllRequest{ComponentIDs: []string{"comp-1", "comp-2"}, Type: strPtr("compute")},
+			req:     APITrayGetAllRequest{ComponentIDs: []string{"comp-1", "comp-2"}, Type: strPtr("Compute")},
 			wantErr: false,
 		},
 		{
@@ -417,7 +417,7 @@ func TestAPITrayGetAllRequest_Validate(t *testing.T) {
 		},
 		{
 			name:    "IDs and componentIDs can coexist (both component-level)",
-			req:     APITrayGetAllRequest{IDs: []string{validUUID}, ComponentIDs: []string{"comp-1"}, Type: strPtr("compute")},
+			req:     APITrayGetAllRequest{IDs: []string{validUUID}, ComponentIDs: []string{"comp-1"}, Type: strPtr("Compute")},
 			wantErr: false,
 		},
 		{
@@ -427,12 +427,12 @@ func TestAPITrayGetAllRequest_Validate(t *testing.T) {
 		},
 		{
 			name:    "rackName conflicts with componentIDs",
-			req:     APITrayGetAllRequest{RackName: strPtr("Rack-001"), ComponentIDs: []string{"comp-1"}, Type: strPtr("compute")},
+			req:     APITrayGetAllRequest{RackName: strPtr("Rack-001"), ComponentIDs: []string{"comp-1"}, Type: strPtr("Compute")},
 			wantErr: true,
 		},
 		{
 			name:    "rackId conflicts with componentIDs",
-			req:     APITrayGetAllRequest{RackID: strPtr(validUUID), ComponentIDs: []string{"comp-1"}, Type: strPtr("compute")},
+			req:     APITrayGetAllRequest{RackID: strPtr(validUUID), ComponentIDs: []string{"comp-1"}, Type: strPtr("Compute")},
 			wantErr: true,
 		},
 		{
@@ -442,7 +442,7 @@ func TestAPITrayGetAllRequest_Validate(t *testing.T) {
 		},
 		{
 			name:    "rackId with type is valid (rack-level)",
-			req:     APITrayGetAllRequest{RackID: strPtr(validUUID), Type: strPtr("compute")},
+			req:     APITrayGetAllRequest{RackID: strPtr(validUUID), Type: strPtr("Compute")},
 			wantErr: false,
 		},
 	}
@@ -465,7 +465,7 @@ func TestAPITrayGetAllRequest_Validate(t *testing.T) {
 func TestAPITrayGetAllRequest_ToProto(t *testing.T) {
 	rackID := uuid.New().String()
 	rackName := "Rack-001"
-	trayType := "compute"
+	trayType := "Compute"
 	id1 := uuid.New().String()
 	id2 := uuid.New().String()
 
@@ -519,7 +519,7 @@ func TestAPITrayGetAllRequest_ToProto(t *testing.T) {
 				assert.Nil(t, req.TargetSpec)
 				require.Len(t, req.Filters, 1)
 				assert.Equal(t, rlav1.ComponentFilterField_COMPONENT_FILTER_FIELD_TYPE, req.Filters[0].GetComponentField())
-				assert.Contains(t, req.Filters[0].GetQueryInfo().GetPatterns(), "compute")
+				assert.Contains(t, req.Filters[0].GetQueryInfo().GetPatterns(), "Compute")
 			},
 		},
 		{

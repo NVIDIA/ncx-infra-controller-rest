@@ -531,6 +531,19 @@ func testUpdateMachineToMissing(t *testing.T, dbSession *cdb.Session, m *cdbm.Ma
 	return m
 }
 
+// testUpdateMachineStatusAndControllerState sets DB status and site-controller machine state (metadata) for provisioning tests.
+func testUpdateMachineStatusAndControllerState(t *testing.T, dbSession *cdb.Session, m *cdbm.Machine, status string, controllerState string) *cdbm.Machine {
+	m.Status = status
+	if controllerState != "" {
+		m.Metadata = &cdbm.SiteControllerMachine{Machine: &cwssaws.Machine{State: controllerState}}
+	} else {
+		m.Metadata = nil
+	}
+	_, err := dbSession.DB.NewUpdate().Where("id = ?", m.ID).Model(m).Exec(context.Background())
+	assert.Nil(t, err)
+	return m
+}
+
 func testInstanceBuildInstanceInterface(t *testing.T, dbSession *cdb.Session, in uuid.UUID, sub *uuid.UUID, vp *uuid.UUID, mi *uuid.UUID, status string) *cdbm.Interface {
 	ifc := &cdbm.Interface{
 		ID:                 uuid.New(),
@@ -1222,7 +1235,10 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 		respMessage                  string
 		respUserDataContains         *string
 		respUserData                 *string
+		// prepareReq runs before the handler (e.g. insert a Machine and set req.MachineID) so cases stay self-contained.
+		prepareReq func(t *testing.T, req *model.APIInstanceCreateRequest)
 	}
+
 	tests := []struct {
 		name                    string
 		fields                  fields
@@ -1302,6 +1318,113 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 			},
 			wantErr:            false,
 			verifyChildSpanner: true,
+		},
+		{
+			name: "test Instance create API endpoint failure, machine DB status not Ready but controller Ready without allowUnhealthyMachine",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIInstanceCreateRequest{
+					Name:        "Test Instance provable controller but DB not Ready",
+					Description: cdb.GetStrPtr("Targeted machine: controller Ready prefix, DB status not Ready"),
+					TenantID:    tn1.ID.String(),
+					VpcID:       vpc1.ID.String(),
+					UserData:    cdb.GetStrPtr(""),
+					IpxeScript:  cdb.GetStrPtr(common.DefaultIpxeScript),
+					Interfaces: []model.APIInterfaceCreateOrUpdateRequest{
+						{
+							SubnetID: cdb.GetStrPtr(subnet1.ID.String()),
+						},
+					},
+					PhoneHomeEnabled: cdb.GetBoolPtr(false),
+				},
+				prepareReq: func(t *testing.T, req *model.APIInstanceCreateRequest) {
+					mc := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
+					testInstanceBuildMachineInstanceType(t, dbSession, mc, ist1)
+					testUpdateMachineStatusAndControllerState(t, dbSession, mc, cdbm.MachineStatusError, cdbm.MachineStatusReady)
+					req.MachineID = cdb.GetStrPtr(mc.ID)
+				},
+				reqOrg:      tnOrg,
+				reqUser:     tnu1,
+				respCode:    http.StatusBadRequest,
+				respMessage: "can be provisioned by setting `allowUnhealthyMachine` to true in request",
+			},
+			wantErr: false,
+		},
+		{
+			name: "test Instance create API endpoint failure, allowUnhealthyMachine true, Maintenance and controller not provisionable",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIInstanceCreateRequest{
+					Name:        "Test Instance maintenance controller not provisionable",
+					Description: cdb.GetStrPtr("Maintenance status with non-Ready controller state"),
+					TenantID:    tn1.ID.String(),
+					VpcID:       vpc1.ID.String(),
+					UserData:    cdb.GetStrPtr(""),
+					IpxeScript:  cdb.GetStrPtr(common.DefaultIpxeScript),
+					Interfaces: []model.APIInterfaceCreateOrUpdateRequest{
+						{
+							SubnetID: cdb.GetStrPtr(subnet1.ID.String()),
+						},
+					},
+					AllowUnhealthyMachine: cdb.GetBoolPtr(true),
+					PhoneHomeEnabled:      cdb.GetBoolPtr(false),
+				},
+				prepareReq: func(t *testing.T, req *model.APIInstanceCreateRequest) {
+					mc := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
+					testInstanceBuildMachineInstanceType(t, dbSession, mc, ist1)
+					testUpdateMachineStatusAndControllerState(t, dbSession, mc, cdbm.MachineStatusMaintenance, "Offline")
+					req.MachineID = cdb.GetStrPtr(mc.ID)
+				},
+				reqOrg:      tnOrg,
+				reqUser:     tnu1,
+				respCode:    http.StatusBadRequest,
+				respMessage: "has controller state: Offline that does not allow Instance creation even with `allowUnhealthyMachine` set to true",
+			},
+			wantErr: false,
+		},
+		{
+			name: "test Instance create API endpoint failure, allowUnhealthyMachine true, Initializing and controller not provisionable",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIInstanceCreateRequest{
+					Name:        "Test Instance initializing controller not provisionable",
+					Description: cdb.GetStrPtr("Initializing status with non-Ready controller state"),
+					TenantID:    tn1.ID.String(),
+					VpcID:       vpc1.ID.String(),
+					UserData:    cdb.GetStrPtr(""),
+					IpxeScript:  cdb.GetStrPtr(common.DefaultIpxeScript),
+					Interfaces: []model.APIInterfaceCreateOrUpdateRequest{
+						{
+							SubnetID: cdb.GetStrPtr(subnet1.ID.String()),
+						},
+					},
+					AllowUnhealthyMachine: cdb.GetBoolPtr(true),
+					PhoneHomeEnabled:      cdb.GetBoolPtr(false),
+				},
+				prepareReq: func(t *testing.T, req *model.APIInstanceCreateRequest) {
+					mc := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
+					testInstanceBuildMachineInstanceType(t, dbSession, mc, ist1)
+					testUpdateMachineStatusAndControllerState(t, dbSession, mc, cdbm.MachineStatusInitializing, "Offline")
+					req.MachineID = cdb.GetStrPtr(mc.ID)
+				},
+				reqOrg:      tnOrg,
+				reqUser:     tnu1,
+				respCode:    http.StatusBadRequest,
+				respMessage: "has status: Initializing that does not allow Instance creation even with `allowUnhealthyMachine` set to true",
+			},
+			wantErr: false,
 		},
 		{
 			name: "test Instance create API endpoint success with secondary VPC Prefix interface",
@@ -1983,12 +2106,12 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 				reqOrg:      tnOrg,
 				reqUser:     tnu1,
 				respCode:    http.StatusBadRequest,
-				respMessage: "set `allowUnhealthyMachine` to true in request data to proceed",
+				respMessage: "has status: Error that does not allow Instance creation",
 			},
 			wantErr: false,
 		},
 		{
-			name: "test Instance create API endpoint success, allow for an unhealthy machine",
+			name: "test Instance create API endpoint failure, allowUnhealthyMachine true but machine not Ready",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        tc,
@@ -1996,7 +2119,7 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 			},
 			args: args{
 				reqData: &model.APIInstanceCreateRequest{
-					Name:                  "Test Instance with unhealthy machine allowed",
+					Name:                  "Test Instance with unhealthy machine and flag true",
 					TenantID:              tn1.ID.String(),
 					MachineID:             cdb.GetStrPtr(mcunhealthy2.ID),
 					AllowUnhealthyMachine: cdb.GetBoolPtr(true),
@@ -2010,12 +2133,10 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 					},
 					PhoneHomeEnabled: cdb.GetBoolPtr(false),
 				},
-				reqMachine:   mcunhealthy2,
-				reqOrg:       tnOrg,
-				reqUser:      tnu1,
-				respCode:     http.StatusCreated,
-				respMessage:  "",
-				respUserData: cdb.GetStrPtr(""),
+				reqOrg:      tnOrg,
+				reqUser:     tnu1,
+				respCode:    http.StatusBadRequest,
+				respMessage: "has controller state:",
 			},
 			wantErr: false,
 		},
@@ -3238,6 +3359,10 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 				tc:        tt.fields.tc,
 				scp:       scp,
 				cfg:       tt.fields.cfg,
+			}
+
+			if tt.args.prepareReq != nil {
+				tt.args.prepareReq(t, tt.args.reqData)
 			}
 
 			jsonData, _ := json.Marshal(tt.args.reqData)

@@ -233,12 +233,29 @@ func (s *PostgresUpdateStore) GetPendingUpdates(ctx context.Context, limit int) 
 	return results, nil
 }
 
-// GetBySwitch returns all firmware updates for a given switch.
-func (s *PostgresUpdateStore) GetBySwitch(ctx context.Context, switchUUID uuid.UUID) ([]*FirmwareUpdate, error) {
+// GetLatestBundleBySwitch returns firmware updates belonging to the most
+// recent bundle_update_id for the given switch. For single-component
+// updates (bundle_update_id IS NULL) it returns only the newest record.
+// This avoids stale historical failures from previous update attempts.
+func (s *PostgresUpdateStore) GetLatestBundleBySwitch(ctx context.Context, switchUUID uuid.UUID) ([]*FirmwareUpdate, error) {
 	var models []FirmwareUpdateModel
 	err := s.db.NewSelect().
 		Model(&models).
 		Where("switch_uuid = ?", switchUUID).
+		Where(`(
+			bundle_update_id = (
+				SELECT bundle_update_id FROM firmware_update
+				WHERE switch_uuid = ? AND bundle_update_id IS NOT NULL
+				ORDER BY created_at DESC LIMIT 1
+			)
+			OR (
+				bundle_update_id IS NULL AND id = (
+					SELECT id FROM firmware_update
+					WHERE switch_uuid = ? AND bundle_update_id IS NULL
+					ORDER BY created_at DESC LIMIT 1
+				)
+			)
+		)`, switchUUID, switchUUID).
 		Order("created_at DESC").
 		Scan(ctx)
 
