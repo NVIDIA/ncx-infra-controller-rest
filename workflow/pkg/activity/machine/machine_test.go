@@ -786,9 +786,20 @@ func TestManageMachine_UpdateMachinesInDB(t *testing.T) {
 		},
 	}
 
+	newWithInstanceTypeMachineID := uuid.NewString()
+	machineInfo18 := &cwssaws.MachineInfo{
+		Machine: &cwssaws.Machine{
+			Id:             &cwssaws.MachineId{Id: newWithInstanceTypeMachineID},
+			State:          controllerMachineStatePrefixReady,
+			Interfaces:     []*cwssaws.MachineInterface{},
+			DiscoveryInfo:  nil,
+			InstanceTypeId: cdb.GetStrPtr(instanceTypeOriginal.ID.String()),
+		},
+	}
+
 	// Build machineInventory which is populated from site agent
 	machineInventory := &cwssaws.MachineInventory{
-		Machines:  []*cwssaws.MachineInfo{machineInfo1, machineInfo2, machineInfo3, machineInfo4, machineInfo5, machineInfo6, machineInfo7, machineInfo8, machineInfo9, machineInfo11, machineInfo12, machineInfo13, machineInfo14, machineInfo15, machineInfo16, machineInfo17},
+		Machines:  []*cwssaws.MachineInfo{machineInfo1, machineInfo2, machineInfo3, machineInfo4, machineInfo5, machineInfo6, machineInfo7, machineInfo8, machineInfo9, machineInfo11, machineInfo12, machineInfo13, machineInfo14, machineInfo15, machineInfo16, machineInfo17, machineInfo18},
 		Timestamp: timestamppb.Now(),
 	}
 	assert.NotNil(t, machineInventory)
@@ -840,9 +851,10 @@ func TestManageMachine_UpdateMachinesInDB(t *testing.T) {
 		updatedCapabilitiesMachineID               *string
 		desiredMachineStates                       map[string]string
 		newHostname                                *string
-		updatedMachineInstanceTypeID               *string
-		clearedMachineInstanceTypeID               *string
-		unchangedMachineInstanceTypeID             *string
+		newWithInstanceTypeMachineID               *string
+		updatedInstanceTypeMachineID               *string
+		clearedInstanceTypeMachineID               *string
+		unchangedInstanceTypeMachineID             *string
 		isHealthReported                           *bool
 		isDPUCountReported                         *bool
 		deletedMachineCapabilities                 []*cdbm.MachineCapability
@@ -884,9 +896,10 @@ func TestManageMachine_UpdateMachinesInDB(t *testing.T) {
 				maintenanceCompletedMachineID:  &m5.ControllerMachineID,
 				maintenanceStartedMachineID:    &m6.ControllerMachineID,
 				updatedCapabilitiesMachineID:   &m14.ControllerMachineID,
-				updatedMachineInstanceTypeID:   &m16.ControllerMachineID,
-				clearedMachineInstanceTypeID:   &m17.ControllerMachineID,
-				unchangedMachineInstanceTypeID: &m18.ControllerMachineID,
+				newWithInstanceTypeMachineID:   &newWithInstanceTypeMachineID,
+				updatedInstanceTypeMachineID:   &m16.ControllerMachineID,
+				clearedInstanceTypeMachineID:   &m17.ControllerMachineID,
+				unchangedInstanceTypeMachineID: &m18.ControllerMachineID,
 				isDPUCountReported:             cdb.GetBoolPtr(true),
 				desiredMachineStates: map[string]string{
 					m7.ControllerMachineID:  cdbm.MachineStatusInitializing,
@@ -1238,39 +1251,51 @@ func TestManageMachine_UpdateMachinesInDB(t *testing.T) {
 				assert.Nil(t, um6.NetworkHealthMessage)
 			}
 
-			if tt.args.updatedMachineInstanceTypeID != nil {
-				updatedMachine, serr := mDAO.GetByID(tt.args.ctx, nil, *tt.args.updatedMachineInstanceTypeID, nil, false)
+			if tt.args.newWithInstanceTypeMachineID != nil {
+				newMachine, serr := mDAO.GetByID(tt.args.ctx, nil, *tt.args.newWithInstanceTypeMachineID, nil, false)
+				require.NoError(t, serr)
+				assert.NotNil(t, newMachine.InstanceTypeID)
+				assert.Equal(t, instanceTypeOriginal.ID, *newMachine.InstanceTypeID)
+
+				machineInstanceTypes, total, serr := mitDAO.GetAll(tt.args.ctx, nil, tt.args.newWithInstanceTypeMachineID, nil, nil, nil, cdb.GetIntPtr(cdbp.TotalLimit), nil)
+				assert.Nil(t, serr)
+				require.Equal(t, 1, total)
+				assert.Equal(t, instanceTypeOriginal.ID, machineInstanceTypes[0].InstanceTypeID)
+			}
+
+			if tt.args.updatedInstanceTypeMachineID != nil {
+				updatedMachine, serr := mDAO.GetByID(tt.args.ctx, nil, *tt.args.updatedInstanceTypeMachineID, nil, false)
 				assert.Nil(t, serr)
 				if assert.NotNil(t, updatedMachine.InstanceTypeID) {
 					assert.Equal(t, instanceTypeUpdated.ID, *updatedMachine.InstanceTypeID)
 				}
 
-				machineInstanceTypes, total, serr := mitDAO.GetAll(tt.args.ctx, nil, tt.args.updatedMachineInstanceTypeID, nil, nil, nil, cdb.GetIntPtr(cdbp.TotalLimit), nil)
+				machineInstanceTypes, total, serr := mitDAO.GetAll(tt.args.ctx, nil, tt.args.updatedInstanceTypeMachineID, nil, nil, nil, cdb.GetIntPtr(cdbp.TotalLimit), nil)
 				assert.Nil(t, serr)
 				require.Equal(t, 1, total)
 				assert.Equal(t, instanceTypeUpdated.ID, machineInstanceTypes[0].InstanceTypeID)
 				assert.NotEqual(t, m16MachineInstanceType.ID, machineInstanceTypes[0].ID)
 			}
 
-			if tt.args.clearedMachineInstanceTypeID != nil {
-				clearedMachine, serr := mDAO.GetByID(tt.args.ctx, nil, *tt.args.clearedMachineInstanceTypeID, nil, false)
+			if tt.args.clearedInstanceTypeMachineID != nil {
+				clearedMachine, serr := mDAO.GetByID(tt.args.ctx, nil, *tt.args.clearedInstanceTypeMachineID, nil, false)
 				assert.Nil(t, serr)
 				assert.Nil(t, clearedMachine.InstanceTypeID)
 
-				machineInstanceTypes, total, serr := mitDAO.GetAll(tt.args.ctx, nil, tt.args.clearedMachineInstanceTypeID, nil, nil, nil, cdb.GetIntPtr(cdbp.TotalLimit), nil)
+				machineInstanceTypes, total, serr := mitDAO.GetAll(tt.args.ctx, nil, tt.args.clearedInstanceTypeMachineID, nil, nil, nil, cdb.GetIntPtr(cdbp.TotalLimit), nil)
 				assert.Nil(t, serr)
 				assert.Equal(t, 0, total)
 				assert.Empty(t, machineInstanceTypes)
 			}
 
-			if tt.args.unchangedMachineInstanceTypeID != nil {
-				unchangedMachine, serr := mDAO.GetByID(tt.args.ctx, nil, *tt.args.unchangedMachineInstanceTypeID, nil, false)
+			if tt.args.unchangedInstanceTypeMachineID != nil {
+				unchangedMachine, serr := mDAO.GetByID(tt.args.ctx, nil, *tt.args.unchangedInstanceTypeMachineID, nil, false)
 				assert.Nil(t, serr)
 				if assert.NotNil(t, unchangedMachine.InstanceTypeID) {
 					assert.Equal(t, instanceTypeUnchanged.ID, *unchangedMachine.InstanceTypeID)
 				}
 
-				machineInstanceTypes, total, serr := mitDAO.GetAll(tt.args.ctx, nil, tt.args.unchangedMachineInstanceTypeID, nil, nil, nil, cdb.GetIntPtr(cdbp.TotalLimit), nil)
+				machineInstanceTypes, total, serr := mitDAO.GetAll(tt.args.ctx, nil, tt.args.unchangedInstanceTypeMachineID, nil, nil, nil, cdb.GetIntPtr(cdbp.TotalLimit), nil)
 				assert.Nil(t, serr)
 				require.Equal(t, 1, total)
 				assert.Equal(t, m18MachineInstanceType.ID, machineInstanceTypes[0].ID)
