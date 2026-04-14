@@ -217,6 +217,7 @@ func (mm *ManageMachine) UpdateMachinesInDB(ctx context.Context, siteIDStr strin
 	}
 
 	miDAO := cdbm.NewMachineInterfaceDAO(mm.dbSession)
+	mitDAO := cdbm.NewMachineInstanceTypeDAO(mm.dbSession)
 	sdDAO := cdbm.NewStatusDetailDAO(mm.dbSession)
 
 	// Iterate through Machines in the inventory and update/create them in DB
@@ -460,30 +461,12 @@ func (mm *ManageMachine) UpdateMachinesInDB(ctx context.Context, siteIDStr strin
 				continue
 			}
 
-			clearMaintenanceMessage := existingCloudMachine.MaintenanceMessage != nil && !isInMaintenance
-			clearNetworkHealthMessage := existingCloudMachine.NetworkHealthMessage != nil && !isNetworkDegraded
-			clearInstanceTypeID := existingCloudMachine.InstanceTypeID != nil && controllerInstanceTypeID == nil
+			// Check if there were any changes to the Instance type ID
+			clearInstanceTypeID := controllerInstanceTypeID == nil && existingCloudMachine.InstanceTypeID != nil
+			updateInstanceTypeID := controllerInstanceTypeID != nil && (existingCloudMachine.InstanceTypeID == nil || *controllerInstanceTypeID != *existingCloudMachine.InstanceTypeID)
 
-			if clearMaintenanceMessage || clearNetworkHealthMessage || clearInstanceTypeID {
-				clearInput := cdbm.MachineClearInput{
-					MachineID:            existingCloudMachine.ID,
-					MaintenanceMessage:   clearMaintenanceMessage,
-					NetworkHealthMessage: clearNetworkHealthMessage,
-					InstanceTypeID:       clearInstanceTypeID,
-				}
-				_, serr = mDAO.Clear(ctx, txn, clearInput)
-				if serr != nil {
-					slogger.Error().Err(serr).Msg("failed to clear maintenance or network health message from Machine in DB")
-				}
-			}
-
-			// If clearing the instance type ID, we _also_ need to remove any
-			// MachineInstanceType records
-			if clearInstanceTypeID {
-				// We'll need to remove any MachineInstanceType records.
-				mitDAO := cdbm.NewMachineInstanceTypeDAO(mm.dbSession)
-
-				// Get any we can find, which should really only be one.
+			if clearInstanceTypeID || updateInstanceTypeID {
+				// Fetch existing MachineInstanceType records
 				machineInstanceTypes, _, err := mitDAO.GetAll(ctx, txn, &existingCloudMachine.ID, nil, nil, nil, cdb.GetIntPtr(cdbp.DefaultLimit), nil)
 				if err != nil {
 					slogger.Error().Err(err).Msg("failed to get MachineInstanceTypes")
@@ -491,7 +474,7 @@ func (mm *ManageMachine) UpdateMachinesInDB(ctx context.Context, siteIDStr strin
 					continue
 				}
 
-				// Go through and remove them.
+				// Go through and remove them (covers both clear and update cases)
 				for _, mit := range machineInstanceTypes {
 					err = mitDAO.DeleteByID(ctx, txn, mit.ID, false)
 					if err != nil {
@@ -502,6 +485,33 @@ func (mm *ManageMachine) UpdateMachinesInDB(ctx context.Context, siteIDStr strin
 				if err != nil {
 					txn.Rollback()
 					continue
+				}
+
+				// Create new MachineInstanceType record since Instance type ID was changed
+				if updateInstanceTypeID {
+					_, serr = mitDAO.CreateFromParams(ctx, txn, existingCloudMachine.ID, *controllerInstanceTypeID)
+					if serr != nil {
+						slogger.Error().Err(serr).Msg("failed to create MachineInstanceType")
+						txn.Rollback()
+						continue
+					}
+				}
+			}
+
+			// Clear maintenance message, network health message, and Instance type ID if needed
+			clearMaintenanceMessage := existingCloudMachine.MaintenanceMessage != nil && !isInMaintenance
+			clearNetworkHealthMessage := existingCloudMachine.NetworkHealthMessage != nil && !isNetworkDegraded
+
+			if clearMaintenanceMessage || clearNetworkHealthMessage {
+				clearInput := cdbm.MachineClearInput{
+					MachineID:            existingCloudMachine.ID,
+					MaintenanceMessage:   clearMaintenanceMessage,
+					NetworkHealthMessage: clearNetworkHealthMessage,
+					InstanceTypeID:       clearInstanceTypeID,
+				}
+				_, serr = mDAO.Clear(ctx, txn, clearInput)
+				if serr != nil {
+					slogger.Error().Err(serr).Msg("failed to clear maintenance or network health message from Machine in DB")
 				}
 			}
 
