@@ -480,23 +480,31 @@ func (mm *ManageMachine) UpdateMachinesInDB(ctx context.Context, siteIDStr strin
 				continue
 			}
 
-			// Check if there were any changes to the Instance type ID
+			// Reconcile MachineInstanceType rows with controller inventory: always load MIT rows
+			// and fix empty/stale state even when Machine.InstanceTypeID already matches.
 			clearInstanceTypeID := controllerInstanceTypeID == nil && existingCloudMachine.InstanceTypeID != nil
-			updateInstanceTypeID := controllerInstanceTypeID != nil && !util.PtrsEqual(controllerInstanceTypeID, existingCloudMachine.InstanceTypeID)
 
-			if clearInstanceTypeID || updateInstanceTypeID {
-				// Fetch existing MachineInstanceType records and delete them
-				machineInstanceTypes, _, err := mitDAO.GetAll(ctx, txn, &existingCloudMachine.ID, nil, nil, nil, cdb.GetIntPtr(cdbp.TotalLimit), nil)
-				if err != nil {
-					slogger.Error().Err(err).Msg("failed to get MachineInstanceTypes for deletion")
-					txn.Rollback()
-					continue
+			machineInstanceTypes, _, err := mitDAO.GetAll(ctx, txn, &existingCloudMachine.ID, nil, nil, nil, cdb.GetIntPtr(cdbp.TotalLimit), nil)
+			if err != nil {
+				slogger.Error().Err(err).Msg("failed to get MachineInstanceTypes for reconciliation")
+				txn.Rollback()
+				continue
+			}
+
+			needsMitReconcile := false
+			if controllerInstanceTypeID != nil {
+				if len(machineInstanceTypes) != 1 || !util.PtrsEqual(&machineInstanceTypes[0].InstanceTypeID, controllerInstanceTypeID) {
+					needsMitReconcile = true
 				}
-				// Go through and remove them (covers both clear and update cases)
+			} else if len(machineInstanceTypes) > 0 {
+				needsMitReconcile = true
+			}
+
+			if needsMitReconcile {
 				for _, mit := range machineInstanceTypes {
 					err = mitDAO.DeleteByID(ctx, txn, mit.ID, false)
 					if err != nil {
-						slogger.Error().Err(err).Msg("failed to delete MachineInstanceType for clearing/updating")
+						slogger.Error().Err(err).Msg("failed to delete MachineInstanceType during reconciliation")
 						break
 					}
 				}
@@ -505,11 +513,10 @@ func (mm *ManageMachine) UpdateMachinesInDB(ctx context.Context, siteIDStr strin
 					continue
 				}
 
-				// Create new MachineInstanceType record since Instance type ID was changed
-				if updateInstanceTypeID {
+				if controllerInstanceTypeID != nil {
 					_, serr = mitDAO.CreateFromParams(ctx, txn, existingCloudMachine.ID, *controllerInstanceTypeID)
 					if serr != nil {
-						slogger.Error().Err(serr).Msg("failed to create MachineInstanceType for Instance Type update")
+						slogger.Error().Err(serr).Msg("failed to create MachineInstanceType during reconciliation")
 						txn.Rollback()
 						continue
 					}
