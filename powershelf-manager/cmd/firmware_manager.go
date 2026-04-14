@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/credential"
 	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
@@ -36,7 +37,7 @@ import (
 )
 
 var vendorStr string
-var fw_action string
+var fwAction string
 var dryRun bool
 var versionTo string
 var pmcMAC string
@@ -77,14 +78,14 @@ func init() {
 	rootCmd.AddCommand(fwCmd)
 
 	fwCmd.Flags().StringVarP(&vendorStr, "vendor", "v", "", "Vendor")
-	fwCmd.Flags().StringVarP(&fw_action, "action", "a", "", "Action to perform: "+getAvailableFwActions())
+	fwCmd.Flags().StringVarP(&fwAction, "action", "a", "", "Action to perform: "+getAvailableFwActions())
 	fwCmd.Flags().BoolVarP(&dryRun, "dry", "d", true, "dry run (default true)")
 	fwCmd.Flags().StringVarP(&pmcIP, "ip", "i", "", "PMC IP address")
 	fwCmd.Flags().StringVarP(&pmcUsername, "user", "u", "root", "Username")
 	fwCmd.Flags().StringVarP(&pmcPassword, "pass", "p", "0penBmc", "Password")
-	fwCmd.Flags().StringVar(&versionTo, "version", "0penBmc", "Target Version to upgrade to")
+	fwCmd.Flags().StringVar(&versionTo, "version", "", "Target Version to upgrade to")
 	fwCmd.Flags().StringVarP(&pmcMAC, "mac", "m", "", "PMC MAC address")
-	fwCmd.Flags().StringVar(&firmwareDir, "firmware-dir", getEnvOrDefault("FW_DIR", "/var/lib/psm/firmware"), "Firmware files directory (env: FW_DIR)")
+	fwCmd.Flags().StringVar(&firmwareDir, "fw_dir", getEnvOrDefault("FW_DIR", "/var/lib/psm/firmware"), "Firmware files directory (env: FW_DIR)")
 }
 
 func doFw() {
@@ -95,7 +96,7 @@ func doFw() {
 	}
 
 	cred := credential.New(pmcUsername, pmcPassword)
-	pmc, err := pmc.New(pmcMAC, pmcIP, vendor.Code, &cred)
+	pmcInstance, err := pmc.New(pmcMAC, pmcIP, vendor.Code, &cred)
 	if err != nil {
 		log.Fatalf("failed to create PMC: %v\n", err)
 	}
@@ -127,13 +128,13 @@ func doFw() {
 		log.Fatalf("failed to init powershelf manager: %v\n", err)
 	}
 
-	if err := psm.RegisterPmc(context.Background(), pmc); err != nil {
+	if err := psm.RegisterPmc(context.Background(), pmcInstance); err != nil {
 		log.Fatalf("failed to register PMC: %v\n", err)
 	}
 
 	fw_manager := psm.FirmwareManager
 
-	switch FwManagerAction(fw_action) {
+	switch FwManagerAction(fwAction) {
 	case Summary:
 		summary, err := fw_manager.Summary()
 		if err != nil {
@@ -142,7 +143,7 @@ func doFw() {
 
 		fmt.Println(summary)
 	case CanUpgrade:
-		supported, err := fw_manager.CanUpdate(context.Background(), pmc, powershelf.PMC, versionTo)
+		supported, err := fw_manager.CanUpdate(context.Background(), pmcInstance, powershelf.PMC, versionTo)
 		if err != nil {
 			log.Fatalf("failed to upgrade fw for %v: %v\n", vendor, err)
 		}
@@ -150,12 +151,13 @@ func doFw() {
 		fmt.Printf("%v\n", supported)
 	case Upgrade:
 		fmt.Printf("Upgrading fw for %v (ip %s)\n", vendor, pmcIP)
-		err := fw_manager.Upgrade(context.Background(), pmc, powershelf.PMC, versionTo)
+		err := fw_manager.Upgrade(context.Background(), pmcInstance, powershelf.PMC, versionTo)
 		if err != nil {
 			log.Fatalf("failed to upgrade fw for %v: %v\n", vendor, err)
 		}
 		fmt.Println("Firmware upgrade queued.")
+		time.Sleep(10 * time.Minute)
 	default:
-		log.Fatalf("unsupported action: %s\n", fw_action)
+		log.Fatalf("unsupported action: %s\n", fwAction)
 	}
 }

@@ -146,7 +146,7 @@ func doServe() {
 		},
 	)
 
-	log.Printf("New service is created with port: %+v, data store type: %s, vault address: %s", port, datastoreType, vaultAddress)
+	log.Printf("New service is created with port: %+v, data store type: %s, vault address: %s, firmware dir: %s", port, datastoreType, vaultAddress, firmwareDir)
 
 	if err != nil {
 		log.Fatalf("failed to create the new gRPC server: %v\n", err)

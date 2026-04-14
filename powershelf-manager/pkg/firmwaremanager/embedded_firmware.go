@@ -26,8 +26,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const firmware_path = "firmware"
-const pmc_path = "pmc"
+const pmcPath = "pmc"
 
 // FirmwareFetcher provides read-only access to firmware assets organized as firmware/<vendor>/pmc.
 type FirmwareFetcher struct {
@@ -47,7 +46,7 @@ func newFirmwareFetcher(firmwareDir string) *FirmwareFetcher {
 
 // getVendorDirectories lists vendor directories under the firmware root.
 func (ff *FirmwareFetcher) getVendorDirectories() ([]fs.DirEntry, error) {
-	return fs.ReadDir(ff.fs, firmware_path)
+	return fs.ReadDir(ff.fs, ".")
 }
 
 // getPmcFirmwareEntries returns all PMC firmware files for a vendor; entries are non-empty .tar files.
@@ -63,7 +62,7 @@ func (ff *FirmwareFetcher) getPmcFirmwareEntries(v vendor.Vendor) ([]FirmwareEnt
 		if vendor.IsDir() {
 			vendorName := vendor.Name()
 			if vendorName == expectedVendorName {
-				path := fmt.Sprintf("%s/%s/%s", firmware_path, vendorName, pmc_path)
+				path := fmt.Sprintf("%s/%s", vendorName, pmcPath)
 				entries, err := fs.ReadDir(ff.fs, path)
 				if err != nil {
 					return nil, err
@@ -89,11 +88,11 @@ func (ff *FirmwareFetcher) getPmcFirmwareEntries(v vendor.Vendor) ([]FirmwareEnt
 						continue
 					}
 
-					fw_path := fmt.Sprintf("%s/%s", path, name)
-					log.Printf("Vendor %s: adding fw {%s} at %s (size: %d bytes)\n", vendorName, name, fw_path, size)
+					fwPath := fmt.Sprintf("%s/%s", path, name)
+					log.Printf("Vendor %s: adding fw {%s} at %s (size: %d bytes)\n", vendorName, name, fwPath, size)
 					fwEntries = append(fwEntries, FirmwareEntry{
 						name: name,
-						path: fw_path,
+						path: fwPath,
 					})
 
 				}

@@ -43,10 +43,12 @@ import (
 // checkResponse returns an error if the HTTP status code indicates failure (>= 300),
 // including the response body in the error message for diagnostics.
 func checkResponse(resp *http.Response) error {
+	defer resp.Body.Close()
+
 	if resp.StatusCode < http.StatusMultipleChoices {
 		return nil
 	}
-	defer resp.Body.Close()
+
 	body, readErr := io.ReadAll(resp.Body)
 	if readErr != nil {
 		return fmt.Errorf("HTTP %d %s (could not read response body: %v)", resp.StatusCode, resp.Status, readErr)

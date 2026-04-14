@@ -149,9 +149,7 @@ func (fp *FirmwareUpdater) update(client *redfish.RedfishClient, targetVersion f
 		}
 	}
 
-	log.Printf("FW Updater does not support updating powershelf that has a PMC fw version of r.%v.%v.%v\n", currentVersion.major, currentVersion.minor, currentVersion.patch)
-
-	return nil
+	return fmt.Errorf("FW Updater does not support updating powershelf that has a PMC fw version of r.%v.%v.%v\n", currentVersion.major, currentVersion.minor, currentVersion.patch)
 }
 
 // upgrade opens a Redfish session and delegates to update.

@@ -110,7 +110,7 @@ func newFirmwareRepo(v vendor.Vendor, firmwareDir string) (*FirmwareRepo, error)
 				maxStartingFwVersion = from
 			} else if from.cmp(minStartingFwVersion) < 0 {
 				minStartingFwVersion = from
-			} else if from.cmp(minStartingFwVersion) > 0 {
+			} else if from.cmp(maxStartingFwVersion) > 0 {
 				maxStartingFwVersion = from
 			}
 		}
