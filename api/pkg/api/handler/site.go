@@ -779,55 +779,56 @@ func (gash GetAllSiteHandler) Handle(c echo.Context) error {
 		}
 	}
 
-	filter.Config = &cdbm.SiteConfigFilterInput{}
+	configFilter := cdbm.SiteConfigFilterInput{}
+	hasConfigFilter := false
 
 	// Check `isNativeNetworkingEnabled` in query
-	var isNativeNetworkingEnabled *bool
 	qinne := c.QueryParam("isNativeNetworkingEnabled")
 	if qinne != "" {
 		isnnEnabled, err := strconv.ParseBool(qinne)
 		if err != nil {
 			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid value specified for `isNativeNetworkingEnabled` query param", nil)
 		}
-		isNativeNetworkingEnabled = &isnnEnabled
+		configFilter.NativeNetworking = &isnnEnabled
+		hasConfigFilter = true
 	}
-	filter.Config.NativeNetworking = isNativeNetworkingEnabled
 
 	// Check `isNetworkSecurityGroupEnabled` in query
-	var isNetworkSecurityGroupEnabled *bool
 	qie := c.QueryParam("isNetworkSecurityGroupEnabled")
 	if qie != "" {
 		isEnabled, err := strconv.ParseBool(qie)
 		if err != nil {
 			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid value specified for `isNativeNetworkingEnabled` query param", nil)
 		}
-		isNetworkSecurityGroupEnabled = &isEnabled
+		configFilter.NetworkSecurityGroup = &isEnabled
+		hasConfigFilter = true
 	}
-	filter.Config.NetworkSecurityGroup = isNetworkSecurityGroupEnabled
 
 	// Check `isNVLinkPartitionEnabled` in query
-	var isNVLinkPartitionEnabled *bool
 	qinlpe := c.QueryParam("isNVLinkPartitionEnabled")
 	if qinlpe != "" {
 		isEnabled, err := strconv.ParseBool(qinlpe)
 		if err != nil {
 			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid value specified for `isNVLinkPartitionEnabled` query param", nil)
 		}
-		isNVLinkPartitionEnabled = &isEnabled
+		configFilter.NVLinkPartition = &isEnabled
+		hasConfigFilter = true
 	}
-	filter.Config.NVLinkPartition = isNVLinkPartitionEnabled
 
 	// Check `isRackLevelAdministrationEnabled` in query
-	var isRackLevelAdministrationEnabled *bool
 	qirlae := c.QueryParam("isRackLevelAdministrationEnabled")
 	if qirlae != "" {
 		isEnabled, err := strconv.ParseBool(qirlae)
 		if err != nil {
 			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid value specified for `isRackLevelAdministrationEnabled` query param", nil)
 		}
-		isRackLevelAdministrationEnabled = &isEnabled
+		configFilter.RackLevelAdministration = &isEnabled
+		hasConfigFilter = true
 	}
-	filter.Config.RackLevelAdministration = isRackLevelAdministrationEnabled
+
+	if hasConfigFilter {
+		filter.Config = &configFilter
+	}
 
 	// Get machine stats if requested
 	var machineStats map[uuid.UUID]*model.APISiteMachineStats
