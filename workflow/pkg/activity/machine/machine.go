@@ -502,7 +502,7 @@ func (mm *ManageMachine) UpdateMachinesInDB(ctx context.Context, siteIDStr strin
 			clearMaintenanceMessage := existingCloudMachine.MaintenanceMessage != nil && !isInMaintenance
 			clearNetworkHealthMessage := existingCloudMachine.NetworkHealthMessage != nil && !isNetworkDegraded
 
-			if clearMaintenanceMessage || clearNetworkHealthMessage {
+			if clearMaintenanceMessage || clearNetworkHealthMessage || clearInstanceTypeID {
 				clearInput := cdbm.MachineClearInput{
 					MachineID:            existingCloudMachine.ID,
 					MaintenanceMessage:   clearMaintenanceMessage,
@@ -512,6 +512,8 @@ func (mm *ManageMachine) UpdateMachinesInDB(ctx context.Context, siteIDStr strin
 				_, serr = mDAO.Clear(ctx, txn, clearInput)
 				if serr != nil {
 					slogger.Error().Err(serr).Msg("failed to clear maintenance or network health message from Machine in DB")
+					txn.Rollback()
+					continue
 				}
 			}
 
