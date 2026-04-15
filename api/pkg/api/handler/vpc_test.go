@@ -2092,7 +2092,7 @@ func TestGetAllVPCHandler_Handle(t *testing.T) {
 			status = cdbm.VpcStatusPending
 		}
 
-		vpc := testVPCBuildVPC(t, dbSession, fmt.Sprintf("test-vpc-%02d", i), ip, tn, curSite, cdb.GetStrPtr(cdbm.VpcEthernetVirtualizer), &curNvllp.ID, map[string]string{"zone": "test-vpc-%02d"}, status, tnu)
+		vpc := testVPCBuildVPC(t, dbSession, fmt.Sprintf("test-vpc-%02d", i), ip, tn, curSite, cdb.GetStrPtr(cdbm.VpcEthernetVirtualizer), &curNvllp.ID, map[string]string{"zone": fmt.Sprintf("test-vpc-%02d", i)}, status, tnu)
 		assert.NotNil(t, vpc)
 
 		// Add the NSG of the site to the VPC
