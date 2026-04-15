@@ -85,6 +85,20 @@ func (m *mockManager) GetComponentByID(_ context.Context, id uuid.UUID) (*compon
 	return nil, assert.AnError
 }
 
+func (m *mockManager) GetComponentsByExternalIDs(_ context.Context, externalIDs []string) ([]*component.Component, error) {
+	lookup := make(map[string]bool, len(externalIDs))
+	for _, id := range externalIDs {
+		lookup[id] = true
+	}
+	var result []*component.Component
+	for _, comp := range m.components {
+		if comp.ComponentID != "" && lookup[comp.ComponentID] {
+			result = append(result, comp)
+		}
+	}
+	return result, nil
+}
+
 func (m *mockManager) AddComponent(_ context.Context, comp *component.Component) (uuid.UUID, error) {
 	m.components[comp.Info.ID] = comp
 	return comp.Info.ID, nil

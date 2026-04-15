@@ -460,6 +460,16 @@ func componentTypeToProto(ct types.ComponentType) pb.ComponentType {
 	}
 }
 
+// componentTypesFilter returns a []pb.ComponentType restricting to ct, or nil
+// when ct is ComponentTypeUnknown (meaning "all component types").
+func componentTypesFilter(ct types.ComponentType) []pb.ComponentType {
+	if ct == types.ComponentTypeUnknown {
+		return nil
+	}
+
+	return []pb.ComponentType{componentTypeToProto(ct)}
+}
+
 // componentTypeToString converts types.ComponentType to its string representation
 // for use in filters map
 func componentTypeToString(ct types.ComponentType) string {

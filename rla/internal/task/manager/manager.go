@@ -204,9 +204,8 @@ func (m *ManagerImpl) Stop(ctx context.Context) {
 }
 
 // SubmitTask submits a task to the task manager.
-// operation.Request can contain multiple racks. Task Manager resolves identifiers,
-// splits by rack, and creates one Task per rack.
-// Returns a list of created task IDs.
+// The TargetSpec is resolved to racks via inventory; one Task is created per
+// rack. Returns the IDs of all created tasks.
 func (m *ManagerImpl) SubmitTask(
 	ctx context.Context,
 	req *operation.Request,
@@ -232,7 +231,7 @@ func (m *ManagerImpl) SubmitTask(
 		}
 	}
 
-	// Resolve targets to racks with components
+	// Resolve targets to racks with components.
 	rackMap, err := resolveTargetSpecToRacks(ctx, m.inventoryStore, &req.TargetSpec)
 	if err != nil {
 		return nil, err
@@ -242,12 +241,45 @@ func (m *ManagerImpl) SubmitTask(
 		return nil, fmt.Errorf("no valid racks found for request")
 	}
 
-	// Create and execute task for each rack
+	if req.RequiredRackID != uuid.Nil {
+		if len(rackMap) != 1 {
+			return nil, fmt.Errorf(
+				"RequiredRackID: components resolved to %d racks, expected exactly rack %s",
+				len(rackMap), req.RequiredRackID,
+			)
+		}
+		if _, ok := rackMap[req.RequiredRackID]; !ok {
+			var actualID uuid.UUID
+			for id := range rackMap {
+				actualID = id
+			}
+			return nil, fmt.Errorf(
+				"RequiredRackID: components resolved to rack %s, expected %s",
+				actualID, req.RequiredRackID,
+			)
+		}
+	}
+
+	// Create and execute task for each rack.
 	var taskIDs []uuid.UUID
 	for _, targetRack := range rackMap {
 		taskID, err := m.createAndExecuteTask(ctx, req, targetRack)
 		if err != nil {
-			log.Error().Err(err).Str("rack_id", targetRack.Info.ID.String()).Msg("failed to create task for rack")
+			log.Error().
+				Err(err).
+				Str("rack_id", targetRack.Info.ID.String()).
+				Msg("failed to create task for rack")
+
+			// RequiredRackID callers (e.g. the schedule dispatcher) depend on
+			// exactly one task ID being returned. Fail fast rather than
+			// returning nil error with zero IDs, which the dispatcher would
+			// misinterpret as a successful no-op.
+			if req.RequiredRackID != uuid.Nil {
+				return nil, fmt.Errorf(
+					"failed to create task for required rack %s: %w",
+					targetRack.Info.ID, err,
+				)
+			}
 			continue
 		}
 		taskIDs = append(taskIDs, taskID)

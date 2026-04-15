@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/robfig/cron"
+	"github.com/robfig/cron/v3"
 )
 
 // Trigger defines when events are emitted to the scheduler.
@@ -88,27 +88,29 @@ func (t *IntervalTrigger) Emit(ctx context.Context, ch chan<- Event) {
 
 // --- CronTrigger ---
 
-// CronTrigger fires on a robfig/cron v1 6-field cron schedule
+// CronTrigger fires on a robfig/cron v3 6-field cron schedule
 // (seconds minute hour dom month dow), e.g. "0 30 9 * * 1-5" for
 // weekdays at 09:30:00.
 //
-// Assumption: robfig/cron v1 is the scheduling library. Its native format
-// is 6 fields with seconds as the first field, which differs from the
-// standard Unix 5-field format. If the library is ever replaced, this
-// expression format may need to change.
+// robfig/cron v3 defaults to 5-field (no seconds); WithSeconds() is used
+// to enable the 6-field format with seconds as the first field.
+//
+// NOTE: This trigger is used by the internal system job scheduler.
+// User-defined task schedules use 5-field cron expressions without seconds,
+// parsed via cron.ParseStandard() in the task schedule dispatcher.
 type CronTrigger struct {
-	expr string // validated robfig/cron v1 6-field expression
+	expr string // validated robfig/cron v3 6-field expression
 }
 
 // NewCronTrigger creates a Trigger that fires on a cron schedule.
-// expr must be a robfig/cron v1 6-field expression, e.g. "0 0 2 * * *"
+// expr must be a robfig/cron v3 6-field expression, e.g. "0 0 2 * * *"
 // for daily at 02:00:00. Returns an error if the expression is invalid.
 func NewCronTrigger(expr string) (*CronTrigger, error) {
 	// Validate the expression at construction time using the same parser
 	// that Emit will use, so callers get an immediate error rather than a
 	// silent no-op trigger at runtime.
-	c := cron.New()
-	if err := c.AddFunc(expr, func() {}); err != nil {
+	c := cron.New(cron.WithSeconds())
+	if _, err := c.AddFunc(expr, func() {}); err != nil {
 		return nil, fmt.Errorf("invalid cron expression %q: %w", expr, err)
 	}
 
@@ -125,7 +127,7 @@ func (t *CronTrigger) Description() string {
 // previous event when the next tick fires, that tick is dropped (the send
 // into ch is non-blocking with a ctx.Done guard).
 func (t *CronTrigger) Emit(ctx context.Context, ch chan<- Event) {
-	c := cron.New()
+	c := cron.New(cron.WithSeconds())
 	emitter := func() {
 		select {
 		case ch <- Event{}:
@@ -137,7 +139,7 @@ func (t *CronTrigger) Emit(ctx context.Context, ch chan<- Event) {
 
 	// Expression was already validated in NewCronTrigger, so AddFunc
 	// cannot fail here.
-	_ = c.AddFunc(t.expr, emitter)
+	_, _ = c.AddFunc(t.expr, emitter)
 
 	c.Start()
 	defer c.Stop()
