@@ -189,16 +189,26 @@ jobs:
 
       - name: Check for uncommitted changes
         run: |
-          if git diff --quiet; then
+          UNTRACKED=$(git ls-files --others --exclude-standard)
+
+          # Filter out diffs that only change protoc plugin version comments
+          MEANINGFUL_DIFF=$(git diff --unified=0 | grep '^[+-]' | grep -v '^[+-][+-][+-]' | grep -v '^[+-]//.*protoc-gen-go' | grep -v '^[+-]//.*protoc v' || true)
+
+          if [ -z "$MEANINGFUL_DIFF" ] && [ -z "$UNTRACKED" ]; then
             echo "✓ Protobuf generated code is up to date."
           else
             echo "::error::Protobuf generated code is out of date. Please run 'make core-protogen' and 'make rla-protogen' and commit the results."
             echo ""
             echo "Changed files:"
-            git -P diff --name-only
+            git status --porcelain
             echo ""
             echo "Diff:"
             git -P diff
+            if [ -n "$UNTRACKED" ]; then
+              echo ""
+              echo "Untracked files:"
+              echo "$UNTRACKED"
+            fi
             exit 1
           fi
 
