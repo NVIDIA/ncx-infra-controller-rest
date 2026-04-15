@@ -154,22 +154,56 @@ func updateImports(content string) string {
 	})
 }
 
+// replaceOutsideComments applies re.ReplaceAllString(line, repl) only on
+// lines that are not proto comments (i.e. lines not starting with "//").
+func replaceOutsideComments(content string, re *regexp.Regexp, repl string) string {
+	lines := strings.Split(content, "\n")
+	for i, line := range lines {
+		if !strings.HasPrefix(strings.TrimSpace(line), "//") {
+			lines[i] = re.ReplaceAllString(line, repl)
+		}
+	}
+	return strings.Join(lines, "\n")
+}
+
+// hasWarningBefore reports whether a "// WARNING:" comment already exists on
+// the line immediately preceding the first occurrence of target. This is more
+// robust than checking for a specific warning string because rename regexes
+// may alter words inside existing warning comments.
+func hasWarningBefore(content, target string) bool {
+	idx := strings.Index(content, target)
+	if idx <= 0 {
+		return false
+	}
+	before := strings.TrimRight(content[:idx], " \t\n")
+	if nl := strings.LastIndex(before, "\n"); nl >= 0 {
+		before = before[nl+1:]
+	}
+	return strings.HasPrefix(strings.TrimSpace(before), "// WARNING:")
+}
+
 func normalizeSiteExplorer(content string) string {
 	re := regexp.MustCompile(`\bPowerState\b`)
-	content = re.ReplaceAllString(content, "ComputerSystemPowerState")
+	content = replaceOutsideComments(content, re, "ComputerSystemPowerState")
 
 	warning := "// WARNING: This enum conflicts with PowerState in forge_carbide.proto and must be renamed to ComputerSystemPowerState\n"
-	content = strings.Replace(content, "enum ComputerSystemPowerState {", warning+"enum ComputerSystemPowerState {", 1)
+	target := "enum ComputerSystemPowerState {"
+	if !hasWarningBefore(content, target) {
+		content = strings.Replace(content, target, warning+target, 1)
+	}
 
 	return content
 }
 
 func normalizeDns(content string) string {
 	re := regexp.MustCompile(`\bMetadata\b`)
-	content = re.ReplaceAllString(content, "DomainMetadata")
+	content = replaceOutsideComments(content, re, "DomainMetadata")
 
 	warning := "// WARNING: This type conflicts with Metadata in forge_carbide.proto and must be renamed to DomainMetadata\n"
-	content = strings.Replace(content, "message DomainMetadata {", warning+"message DomainMetadata {", 1)
+	target := "message DomainMetadata {"
+	if !hasWarningBefore(content, target) {
+		content = strings.Replace(content, target, warning+target, 1)
+	}
 
 	return content
 }
@@ -188,17 +222,23 @@ func normalizeForge(content string) string {
 
 func forgeRenameMachineInventory(content string) string {
 	re := regexp.MustCompile(`\bMachineInventory\b`)
-	content = re.ReplaceAllString(content, "MachineComponentInventory")
+	content = replaceOutsideComments(content, re, "MachineComponentInventory")
 
 	warning := "// WARNING: This type conflicts with MachineInventory in forge_carbide.proto and must be renamed to MachineComponentInventory\n"
-	content = strings.Replace(content, "message MachineComponentInventory {", warning+"message MachineComponentInventory {", 1)
+	target := "message MachineComponentInventory {"
+	if !hasWarningBefore(content, target) {
+		content = strings.Replace(content, target, warning+target, 1)
+	}
 
 	return content
 }
 
 func forgeUpdateInterfaceFunctionType(content string) string {
 	warning := "// WARNING: This enum was changed in a non-backwards compatible way in forge_carbide.proto to drop _FUNCTION suffix\n"
-	content = strings.Replace(content, "enum InterfaceFunctionType {", warning+"enum InterfaceFunctionType {", 1)
+	target := "enum InterfaceFunctionType {"
+	if !hasWarningBefore(content, target) {
+		content = strings.Replace(content, target, warning+target, 1)
+	}
 	content = strings.Replace(content, "  PHYSICAL = 0;", "  PHYSICAL_FUNCTION = 0;", 1)
 	content = strings.Replace(content, "  VIRTUAL = 1;", "  VIRTUAL_FUNCTION = 1;", 1)
 	return content
@@ -214,7 +254,7 @@ func forgeMoveValidationEnums(content string) string {
 	var extractedEnums strings.Builder
 
 	for _, name := range enumNames {
-		re := regexp.MustCompile(`\n\s*enum\s+` + name + `\s*\{[^}]*\}`)
+		re := regexp.MustCompile(`\n {2,}enum\s+` + name + `\s*\{[^}]*\}`)
 		match := re.FindString(content)
 		if match != "" {
 			content = strings.Replace(content, match, "", 1)
@@ -273,6 +313,9 @@ func forgeExpandExpectedObject(content string, objectType string, additionalAttr
 	}
 
 	block := content[loc[0]:loc[1]]
+	if strings.Contains(block, "WARNING: Following fields are not present in Core") {
+		return content
+	}
 	block = strings.TrimSuffix(block, "}") + "\n" + indentBlock(additionalAttributes) + "}"
 
 	return content[:loc[0]] + block + content[loc[1]:]
