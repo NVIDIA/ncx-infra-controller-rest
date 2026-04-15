@@ -949,6 +949,20 @@ func MatchInstanceTypeCapabilitiesForMachines(ctx context.Context, logger zerolo
 	return true, nil, nil
 }
 
+// ResolveInstanceTypeMachineCapabilitiesMatch validates that the Machine's
+// capabilities satisfy the Instance Type's capabilities. It returns a non-nil
+// *cutil.APIError when validation fails, or nil on success.
+func ResolveInstanceTypeMachineCapabilitiesMatch(ctx context.Context, logger zerolog.Logger, dbSession *cdb.Session, instanceTypeID uuid.UUID, machineID string) *cutil.APIError {
+	isMatch, _, apiErr := MatchInstanceTypeCapabilitiesForMachines(ctx, logger, dbSession, instanceTypeID, []string{machineID})
+	if apiErr != nil {
+		return apiErr
+	}
+	if !isMatch {
+		return cutil.NewAPIError(http.StatusBadRequest, fmt.Sprintf("Capabilities for Machine: %v do not match Instance Type's Capabilities", machineID), nil)
+	}
+	return nil
+}
+
 // GetAllocationResourceTypeMaps is a utility function to get resource info based on resource type in allocation constraints
 // currently its only supports Instance Type and IPBlock
 func GetAllocationResourceTypeMaps(ctx context.Context, logger zerolog.Logger, dbSession *cdb.Session, acs []cdbm.AllocationConstraint) (

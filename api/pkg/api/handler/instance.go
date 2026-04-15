@@ -1036,13 +1036,8 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 
 	// Verify here if Instance Type and Machine capabilities match
 	if instanceTypeID != nil && machine != nil {
-		isMatch, _, apiErr := common.MatchInstanceTypeCapabilitiesForMachines(ctx, logger, cih.dbSession, *instanceTypeID, []string{machine.ID})
-		if apiErr != nil {
+		if apiErr := common.ResolveInstanceTypeMachineCapabilitiesMatch(ctx, logger, cih.dbSession, *instanceTypeID, machine.ID); apiErr != nil {
 			return cutil.NewAPIErrorResponse(c, apiErr.Code, apiErr.Message, apiErr.Data)
-		}
-
-		if !isMatch {
-			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Capabilities for Machine: %v do not match Instance Type's Capabilities", machine.ID), nil)
 		}
 	}
 
@@ -2072,6 +2067,23 @@ func (uih UpdateInstanceHandler) buildInstanceUpdateRequestOsConfig(c echo.Conte
 	}, osID, nil
 }
 
+// instanceUpdateNeedsInstanceTypeMachineCapabilityValidation returns true when
+// the update touches interface or secondary-VPC networking so Instance Type vs
+// Machine capabilities must be validated. Pure metadata/OS/NSG/SSH updates
+// return false so existing instances without machine capability rows still work.
+func instanceUpdateNeedsInstanceTypeMachineCapabilityValidation(apiRequest *model.APIInstanceUpdateRequest) bool {
+	if apiRequest == nil {
+		return false
+	}
+	if apiRequest.IsInterfaceUpdateRequest() {
+		return true
+	}
+	if apiRequest.SecondaryVpcIDs != nil {
+		return true
+	}
+	return false
+}
+
 // Handle godoc
 // @Summary Update an existing Instance
 // @Description Update an existing Instance for the org
@@ -2480,19 +2492,17 @@ func (uih UpdateInstanceHandler) Handle(c echo.Context) error {
 		}
 	}
 
-	mcDAO := cdbm.NewMachineCapabilityDAO(uih.dbSession)
-
-	// Verify here if Instance Type and Machine capabilities match
-	if instance.InstanceTypeID != nil && machine != nil {
-		isMatch, _, apiErr := common.MatchInstanceTypeCapabilitiesForMachines(ctx, logger, uih.dbSession, *instance.InstanceTypeID, []string{machine.ID})
-		if apiErr != nil {
+	// Verify Instance Type and Machine capabilities match when the request
+	// changes networking (after interface / VPC validation so more specific
+	// errors are returned first). Skip for metadata-only updates.
+	if instanceUpdateNeedsInstanceTypeMachineCapabilityValidation(&apiRequest) &&
+		instance.InstanceTypeID != nil && machine != nil {
+		if apiErr := common.ResolveInstanceTypeMachineCapabilitiesMatch(ctx, logger, uih.dbSession, *instance.InstanceTypeID, machine.ID); apiErr != nil {
 			return cutil.NewAPIErrorResponse(c, apiErr.Code, apiErr.Message, apiErr.Data)
 		}
-
-		if !isMatch {
-			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Capabilities for Machine: %v do not match Instance Type's Capabilities", machine.ID), nil)
-		}
 	}
+
+	mcDAO := cdbm.NewMachineCapabilityDAO(uih.dbSession)
 
 	// Validate DPU Interfaces if Instance Type has Network Capability with DPU device type
 	if isDeviceInfoPresent {
