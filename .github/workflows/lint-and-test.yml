@@ -160,6 +160,49 @@ jobs:
           fi
 
   # ============================================================================
+  # Check Protobuf Generated Code - Ensure .pb.go files match .proto sources
+  # ============================================================================
+  check-protobuf-generated:
+    name: Check Protobuf Generated Code
+    runs-on: ubuntu-latest
+    continue-on-error: false
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Install buf and protoc plugins
+        run: |
+          go install github.com/bufbuild/buf/cmd/buf@latest
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+
+      - name: Regenerate protobuf code
+        run: |
+          cd workflow-schema && buf generate
+          cd rla && buf generate
+
+      - name: Check for uncommitted changes
+        run: |
+          if git diff --quiet; then
+            echo "✓ Protobuf generated code is up to date."
+          else
+            echo "::error::Protobuf generated code is out of date. Please run 'make core-protogen' and 'make rla-protogen' and commit the results."
+            echo ""
+            echo "Changed files:"
+            git -P diff --name-only
+            echo ""
+            echo "Diff:"
+            git -P diff
+            exit 1
+          fi
+
+  # ============================================================================
   # Test Job - Unit tests per module with PostgreSQL service
   # ============================================================================
   test:
