@@ -110,97 +110,6 @@ func (x *CreateInfiniBandPartitionRequest) GetIbPartitionId() *UUID {
 	return nil
 }
 
-// UpdateInfiniBandPartitionRequest - request parameters to update an InfiniBandPartition
-type UpdateInfiniBandPartitionRequest struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// ID of the InfiniBandPartition to update
-	Id *UUID `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	// Updated partition name (maps to IBPartitionConfig.name)
-	Name *string `protobuf:"bytes,2,opt,name=name,proto3,oneof" json:"name,omitempty"`
-	// Updated tenant organization ID (maps to IBPartitionConfig.tenant_organization_id)
-	TenantOrganizationId *string `protobuf:"bytes,3,opt,name=tenant_organization_id,json=tenantOrganizationId,proto3,oneof" json:"tenant_organization_id,omitempty"`
-	// If set, the update is applied only when the object version matches (optimistic concurrency)
-	IfVersionMatch *string `protobuf:"bytes,4,opt,name=if_version_match,json=ifVersionMatch,proto3,oneof" json:"if_version_match,omitempty"`
-	// Workflow configurations
-	Options *WorkflowOptions `protobuf:"bytes,5,opt,name=options,proto3,oneof" json:"options,omitempty"`
-	// Optional metadata (name, description, labels)
-	Metadata      *Metadata `protobuf:"bytes,6,opt,name=metadata,proto3,oneof" json:"metadata,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *UpdateInfiniBandPartitionRequest) Reset() {
-	*x = UpdateInfiniBandPartitionRequest{}
-	mi := &file_infiniband_partition_proto_msgTypes[1]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *UpdateInfiniBandPartitionRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*UpdateInfiniBandPartitionRequest) ProtoMessage() {}
-
-func (x *UpdateInfiniBandPartitionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_infiniband_partition_proto_msgTypes[1]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use UpdateInfiniBandPartitionRequest.ProtoReflect.Descriptor instead.
-func (*UpdateInfiniBandPartitionRequest) Descriptor() ([]byte, []int) {
-	return file_infiniband_partition_proto_rawDescGZIP(), []int{1}
-}
-
-func (x *UpdateInfiniBandPartitionRequest) GetId() *UUID {
-	if x != nil {
-		return x.Id
-	}
-	return nil
-}
-
-func (x *UpdateInfiniBandPartitionRequest) GetName() string {
-	if x != nil && x.Name != nil {
-		return *x.Name
-	}
-	return ""
-}
-
-func (x *UpdateInfiniBandPartitionRequest) GetTenantOrganizationId() string {
-	if x != nil && x.TenantOrganizationId != nil {
-		return *x.TenantOrganizationId
-	}
-	return ""
-}
-
-func (x *UpdateInfiniBandPartitionRequest) GetIfVersionMatch() string {
-	if x != nil && x.IfVersionMatch != nil {
-		return *x.IfVersionMatch
-	}
-	return ""
-}
-
-func (x *UpdateInfiniBandPartitionRequest) GetOptions() *WorkflowOptions {
-	if x != nil {
-		return x.Options
-	}
-	return nil
-}
-
-func (x *UpdateInfiniBandPartitionRequest) GetMetadata() *Metadata {
-	if x != nil {
-		return x.Metadata
-	}
-	return nil
-}
-
 // DeleteInfiniBandPartitionRequest - request parameters to delete InfiniBandPartition
 type DeleteInfiniBandPartitionRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -214,7 +123,7 @@ type DeleteInfiniBandPartitionRequest struct {
 
 func (x *DeleteInfiniBandPartitionRequest) Reset() {
 	*x = DeleteInfiniBandPartitionRequest{}
-	mi := &file_infiniband_partition_proto_msgTypes[2]
+	mi := &file_infiniband_partition_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -226,7 +135,7 @@ func (x *DeleteInfiniBandPartitionRequest) String() string {
 func (*DeleteInfiniBandPartitionRequest) ProtoMessage() {}
 
 func (x *DeleteInfiniBandPartitionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_infiniband_partition_proto_msgTypes[2]
+	mi := &file_infiniband_partition_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -239,7 +148,7 @@ func (x *DeleteInfiniBandPartitionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteInfiniBandPartitionRequest.ProtoReflect.Descriptor instead.
 func (*DeleteInfiniBandPartitionRequest) Descriptor() ([]byte, []int) {
-	return file_infiniband_partition_proto_rawDescGZIP(), []int{2}
+	return file_infiniband_partition_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *DeleteInfiniBandPartitionRequest) GetId() *UUID {
@@ -269,7 +178,7 @@ type GetInfiniBandPartitionRequest struct {
 
 func (x *GetInfiniBandPartitionRequest) Reset() {
 	*x = GetInfiniBandPartitionRequest{}
-	mi := &file_infiniband_partition_proto_msgTypes[3]
+	mi := &file_infiniband_partition_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -281,7 +190,7 @@ func (x *GetInfiniBandPartitionRequest) String() string {
 func (*GetInfiniBandPartitionRequest) ProtoMessage() {}
 
 func (x *GetInfiniBandPartitionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_infiniband_partition_proto_msgTypes[3]
+	mi := &file_infiniband_partition_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -294,7 +203,7 @@ func (x *GetInfiniBandPartitionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetInfiniBandPartitionRequest.ProtoReflect.Descriptor instead.
 func (*GetInfiniBandPartitionRequest) Descriptor() ([]byte, []int) {
-	return file_infiniband_partition_proto_rawDescGZIP(), []int{3}
+	return file_infiniband_partition_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *GetInfiniBandPartitionRequest) GetId() *UUID {
@@ -328,7 +237,7 @@ type InfiniBandPartitionInfo struct {
 
 func (x *InfiniBandPartitionInfo) Reset() {
 	*x = InfiniBandPartitionInfo{}
-	mi := &file_infiniband_partition_proto_msgTypes[4]
+	mi := &file_infiniband_partition_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -340,7 +249,7 @@ func (x *InfiniBandPartitionInfo) String() string {
 func (*InfiniBandPartitionInfo) ProtoMessage() {}
 
 func (x *InfiniBandPartitionInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_infiniband_partition_proto_msgTypes[4]
+	mi := &file_infiniband_partition_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -353,7 +262,7 @@ func (x *InfiniBandPartitionInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InfiniBandPartitionInfo.ProtoReflect.Descriptor instead.
 func (*InfiniBandPartitionInfo) Descriptor() ([]byte, []int) {
-	return file_infiniband_partition_proto_rawDescGZIP(), []int{4}
+	return file_infiniband_partition_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *InfiniBandPartitionInfo) GetStatus() WorkflowStatus {
@@ -404,7 +313,7 @@ type InfiniBandPartitionInventory struct {
 
 func (x *InfiniBandPartitionInventory) Reset() {
 	*x = InfiniBandPartitionInventory{}
-	mi := &file_infiniband_partition_proto_msgTypes[5]
+	mi := &file_infiniband_partition_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -416,7 +325,7 @@ func (x *InfiniBandPartitionInventory) String() string {
 func (*InfiniBandPartitionInventory) ProtoMessage() {}
 
 func (x *InfiniBandPartitionInventory) ProtoReflect() protoreflect.Message {
-	mi := &file_infiniband_partition_proto_msgTypes[5]
+	mi := &file_infiniband_partition_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -429,7 +338,7 @@ func (x *InfiniBandPartitionInventory) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InfiniBandPartitionInventory.ProtoReflect.Descriptor instead.
 func (*InfiniBandPartitionInventory) Descriptor() ([]byte, []int) {
-	return file_infiniband_partition_proto_rawDescGZIP(), []int{5}
+	return file_infiniband_partition_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *InfiniBandPartitionInventory) GetInventoryStatus() InventoryStatus {
@@ -478,20 +387,7 @@ const file_infiniband_partition_proto_rawDesc = "" +
 	"\aoptions\x18\x03 \x01(\v2\x1d.workflows.v1.WorkflowOptionsH\x00R\aoptions\x88\x01\x01\x124\n" +
 	"\x0fib_partition_id\x18\x04 \x01(\v2\f.common.UUIDR\ribPartitionIdB\n" +
 	"\n" +
-	"\b_options\"\x85\x03\n" +
-	" UpdateInfiniBandPartitionRequest\x12\x1c\n" +
-	"\x02id\x18\x01 \x01(\v2\f.common.UUIDR\x02id\x12\x17\n" +
-	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x129\n" +
-	"\x16tenant_organization_id\x18\x03 \x01(\tH\x01R\x14tenantOrganizationId\x88\x01\x01\x12-\n" +
-	"\x10if_version_match\x18\x04 \x01(\tH\x02R\x0eifVersionMatch\x88\x01\x01\x12<\n" +
-	"\aoptions\x18\x05 \x01(\v2\x1d.workflows.v1.WorkflowOptionsH\x03R\aoptions\x88\x01\x01\x120\n" +
-	"\bmetadata\x18\x06 \x01(\v2\x0f.forge.MetadataH\x04R\bmetadata\x88\x01\x01B\a\n" +
-	"\x05_nameB\x19\n" +
-	"\x17_tenant_organization_idB\x13\n" +
-	"\x11_if_version_matchB\n" +
-	"\n" +
-	"\b_optionsB\v\n" +
-	"\t_metadata\"\x8a\x01\n" +
+	"\b_options\"\x8a\x01\n" +
 	" DeleteInfiniBandPartitionRequest\x12\x1c\n" +
 	"\x02id\x18\x01 \x01(\v2\f.common.UUIDR\x02id\x12<\n" +
 	"\aoptions\x18\x02 \x01(\v2\x1d.workflows.v1.WorkflowOptionsH\x00R\aoptions\x88\x01\x01B\n" +
@@ -528,46 +424,41 @@ func file_infiniband_partition_proto_rawDescGZIP() []byte {
 	return file_infiniband_partition_proto_rawDescData
 }
 
-var file_infiniband_partition_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_infiniband_partition_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_infiniband_partition_proto_goTypes = []any{
 	(*CreateInfiniBandPartitionRequest)(nil), // 0: workflows.v1.CreateInfiniBandPartitionRequest
-	(*UpdateInfiniBandPartitionRequest)(nil), // 1: workflows.v1.UpdateInfiniBandPartitionRequest
-	(*DeleteInfiniBandPartitionRequest)(nil), // 2: workflows.v1.DeleteInfiniBandPartitionRequest
-	(*GetInfiniBandPartitionRequest)(nil),    // 3: workflows.v1.GetInfiniBandPartitionRequest
-	(*InfiniBandPartitionInfo)(nil),          // 4: workflows.v1.InfiniBandPartitionInfo
-	(*InfiniBandPartitionInventory)(nil),     // 5: workflows.v1.InfiniBandPartitionInventory
-	(*WorkflowOptions)(nil),                  // 6: workflows.v1.WorkflowOptions
-	(*UUID)(nil),                             // 7: common.UUID
-	(*Metadata)(nil),                         // 8: forge.Metadata
-	(WorkflowStatus)(0),                      // 9: workflows.v1.WorkflowStatus
-	(ObjectStatus)(0),                        // 10: workflows.v1.ObjectStatus
-	(*IBPartition)(nil),                      // 11: forge.IBPartition
-	(InventoryStatus)(0),                     // 12: workflows.v1.InventoryStatus
-	(*timestamppb.Timestamp)(nil),            // 13: google.protobuf.Timestamp
-	(*InventoryPage)(nil),                    // 14: workflows.v1.InventoryPage
+	(*DeleteInfiniBandPartitionRequest)(nil), // 1: workflows.v1.DeleteInfiniBandPartitionRequest
+	(*GetInfiniBandPartitionRequest)(nil),    // 2: workflows.v1.GetInfiniBandPartitionRequest
+	(*InfiniBandPartitionInfo)(nil),          // 3: workflows.v1.InfiniBandPartitionInfo
+	(*InfiniBandPartitionInventory)(nil),     // 4: workflows.v1.InfiniBandPartitionInventory
+	(*WorkflowOptions)(nil),                  // 5: workflows.v1.WorkflowOptions
+	(*UUID)(nil),                             // 6: common.UUID
+	(WorkflowStatus)(0),                      // 7: workflows.v1.WorkflowStatus
+	(ObjectStatus)(0),                        // 8: workflows.v1.ObjectStatus
+	(*IBPartition)(nil),                      // 9: forge.IBPartition
+	(InventoryStatus)(0),                     // 10: workflows.v1.InventoryStatus
+	(*timestamppb.Timestamp)(nil),            // 11: google.protobuf.Timestamp
+	(*InventoryPage)(nil),                    // 12: workflows.v1.InventoryPage
 }
 var file_infiniband_partition_proto_depIdxs = []int32{
-	6,  // 0: workflows.v1.CreateInfiniBandPartitionRequest.options:type_name -> workflows.v1.WorkflowOptions
-	7,  // 1: workflows.v1.CreateInfiniBandPartitionRequest.ib_partition_id:type_name -> common.UUID
-	7,  // 2: workflows.v1.UpdateInfiniBandPartitionRequest.id:type_name -> common.UUID
-	6,  // 3: workflows.v1.UpdateInfiniBandPartitionRequest.options:type_name -> workflows.v1.WorkflowOptions
-	8,  // 4: workflows.v1.UpdateInfiniBandPartitionRequest.metadata:type_name -> forge.Metadata
-	7,  // 5: workflows.v1.DeleteInfiniBandPartitionRequest.id:type_name -> common.UUID
-	6,  // 6: workflows.v1.DeleteInfiniBandPartitionRequest.options:type_name -> workflows.v1.WorkflowOptions
-	7,  // 7: workflows.v1.GetInfiniBandPartitionRequest.id:type_name -> common.UUID
-	6,  // 8: workflows.v1.GetInfiniBandPartitionRequest.options:type_name -> workflows.v1.WorkflowOptions
-	9,  // 9: workflows.v1.InfiniBandPartitionInfo.status:type_name -> workflows.v1.WorkflowStatus
-	10, // 10: workflows.v1.InfiniBandPartitionInfo.object_status:type_name -> workflows.v1.ObjectStatus
-	11, // 11: workflows.v1.InfiniBandPartitionInfo.ib_partition:type_name -> forge.IBPartition
-	12, // 12: workflows.v1.InfiniBandPartitionInventory.inventory_status:type_name -> workflows.v1.InventoryStatus
-	13, // 13: workflows.v1.InfiniBandPartitionInventory.timestamp:type_name -> google.protobuf.Timestamp
-	11, // 14: workflows.v1.InfiniBandPartitionInventory.ib_partitions:type_name -> forge.IBPartition
-	14, // 15: workflows.v1.InfiniBandPartitionInventory.inventory_page:type_name -> workflows.v1.InventoryPage
-	16, // [16:16] is the sub-list for method output_type
-	16, // [16:16] is the sub-list for method input_type
-	16, // [16:16] is the sub-list for extension type_name
-	16, // [16:16] is the sub-list for extension extendee
-	0,  // [0:16] is the sub-list for field type_name
+	5,  // 0: workflows.v1.CreateInfiniBandPartitionRequest.options:type_name -> workflows.v1.WorkflowOptions
+	6,  // 1: workflows.v1.CreateInfiniBandPartitionRequest.ib_partition_id:type_name -> common.UUID
+	6,  // 2: workflows.v1.DeleteInfiniBandPartitionRequest.id:type_name -> common.UUID
+	5,  // 3: workflows.v1.DeleteInfiniBandPartitionRequest.options:type_name -> workflows.v1.WorkflowOptions
+	6,  // 4: workflows.v1.GetInfiniBandPartitionRequest.id:type_name -> common.UUID
+	5,  // 5: workflows.v1.GetInfiniBandPartitionRequest.options:type_name -> workflows.v1.WorkflowOptions
+	7,  // 6: workflows.v1.InfiniBandPartitionInfo.status:type_name -> workflows.v1.WorkflowStatus
+	8,  // 7: workflows.v1.InfiniBandPartitionInfo.object_status:type_name -> workflows.v1.ObjectStatus
+	9,  // 8: workflows.v1.InfiniBandPartitionInfo.ib_partition:type_name -> forge.IBPartition
+	10, // 9: workflows.v1.InfiniBandPartitionInventory.inventory_status:type_name -> workflows.v1.InventoryStatus
+	11, // 10: workflows.v1.InfiniBandPartitionInventory.timestamp:type_name -> google.protobuf.Timestamp
+	9,  // 11: workflows.v1.InfiniBandPartitionInventory.ib_partitions:type_name -> forge.IBPartition
+	12, // 12: workflows.v1.InfiniBandPartitionInventory.inventory_page:type_name -> workflows.v1.InventoryPage
+	13, // [13:13] is the sub-list for method output_type
+	13, // [13:13] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
 func init() { file_infiniband_partition_proto_init() }
@@ -581,14 +472,13 @@ func file_infiniband_partition_proto_init() {
 	file_infiniband_partition_proto_msgTypes[0].OneofWrappers = []any{}
 	file_infiniband_partition_proto_msgTypes[1].OneofWrappers = []any{}
 	file_infiniband_partition_proto_msgTypes[2].OneofWrappers = []any{}
-	file_infiniband_partition_proto_msgTypes[3].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_infiniband_partition_proto_rawDesc), len(file_infiniband_partition_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
