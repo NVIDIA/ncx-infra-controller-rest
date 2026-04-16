@@ -51,18 +51,20 @@ type UpgradeRule interface {
 	summary() string
 }
 
-// LiteonUpgradeRule allows only direct upgrades where the device’s current version equals the edge’s source.
+// LiteonUpgradeRule allows upgrades where the device's current version equals
+// the edge's source or target. Liteon firmware artifacts are full images, so
+// re-flashing the same version (current == to) is safe.
 type LiteonUpgradeRule struct{}
 
 func (r LiteonUpgradeRule) isAllowed(currentFw firmwareVersion, upgrade FirmwareUpgrade) bool {
-	return currentFw.cmp(upgrade.from) == 0
+	return currentFw.cmp(upgrade.from) == 0 || currentFw.cmp(upgrade.to) == 0
 }
 
 func (r LiteonUpgradeRule) summary() string {
-	return "Liteon upgrade rule: only direct upgrades supported"
+	return "Liteon upgrade rule: direct upgrades and same-version re-flash supported"
 }
 
-// newUpgradeRule returns the vendor’s rule set or an error if the vendor is unsupported.
+// newUpgradeRule returns the vendor's rule set or an error if the vendor is unsupported.
 func newUpgradeRule(v vendor.Vendor) (UpgradeRule, error) {
 	switch v.Code {
 	case vendor.VendorCodeLiteon:
