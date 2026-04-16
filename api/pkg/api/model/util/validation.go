@@ -35,7 +35,6 @@ var (
 	ShaHashRegex             = regexp.MustCompile("^[A-Fa-f0-9]+$")
 	DiskImagePathRegex       = regexp.MustCompile("^/dev/(:?nvme\\d+n\\d+|sd*)")
 
-	ValidationErrorExpectStringType          = errors.New("expect name field to be string type")
 	ValidationErrorNameHasLeadingWhitespace  = errors.New("name field has leading whitespace")
 	ValidationErrorNameHasTrailingWhitespace = errors.New("name field has trailing whitespace")
 	ValidationErrorNameFieldIsEmpty          = errors.New("name field is empty")
@@ -125,16 +124,19 @@ func ValidateNested(target interface{}, fieldRules ...*validation.FieldRules) *v
 }
 
 // ValidateNameCharacters is a utility function to lexically validate the name field
-// currently checks for leading or trailing whitespaces
-// could evolve in the future, if there are more constraints
+// Currently checks for leading or trailing whitespaces
+// NOTE: Can only be used in conjunction with validation.Required or with validation.When(name != nil, validation.By(util.ValidateNameCharacters))
 func ValidateNameCharacters(value interface{}) error {
 	s, ok := value.(string)
 	var name string
 	if !ok {
 		// check for string pointer
 		sPtr, ok := value.(*string)
-		if !ok || sPtr == nil {
-			return ValidationErrorExpectStringType
+		if !ok {
+			return errors.New("value in name field must be a string type")
+		}
+		if sPtr == nil {
+			return errors.New("name field cannot be nil")
 		}
 		name = *sPtr
 	} else {

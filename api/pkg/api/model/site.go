@@ -98,11 +98,11 @@ func (asur APISiteUpdateRequest) Validate(isProvider bool, isTenant bool) error 
 	if isProvider {
 		// Validate fields that can only be set by Provider
 		err = validation.ValidateStruct(&asur,
-			validation.Field(&asur.Name, validation.Required.Error(validationErrorStringLength)),
-			validation.Field(&asur.Name, validation.By(util.ValidateNameCharacters)),
-			validation.Field(&asur.Name, validation.Length(2, 256).Error(validationErrorStringLength)),
-			validation.Field(&asur.SerialConsoleHostname,
-				validation.When(asur.SerialConsoleHostname != nil, validationis.Host.Error(validationErrorInvalidHostname))),
+			validation.Field(&asur.Name,
+				validation.NilOrNotEmpty.Error(validationErrorStringLength),
+				validation.When(asur.Name != nil, validation.By(util.ValidateNameCharacters)),
+				validation.When(asur.Name != nil, validation.Length(2, 256).Error(validationErrorStringLength))),
+			validation.Field(&asur.SerialConsoleHostname, validationis.Host.Error(validationErrorInvalidHostname)),
 			validation.Field(&asur.SerialConsoleIdleTimeout, validation.Min(1).Error("value must be greater than 0")),
 			validation.Field(&asur.SerialConsoleMaxSessionLength, validation.Min(1).Error("value must be greater than 0")),
 		)

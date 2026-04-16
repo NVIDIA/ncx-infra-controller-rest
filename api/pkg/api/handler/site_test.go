@@ -606,8 +606,8 @@ func TestUpdateSiteHandler_Handle(t *testing.T) {
 				org:  ipOrg,
 				user: ipu,
 				reqData: &model.APISiteUpdateRequest{
-					Name:                          cdb.GetStrPtr("Test Site Updated"),
-					Description:                   cdb.GetStrPtr("Test Site Description Updated"),
+					Name:                          cdb.GetStrPtr("test-site-updated"),
+					Description:                   cdb.GetStrPtr("Test updated description"),
 					RenewRegistrationToken:        cdb.GetBoolPtr(true),
 					SerialConsoleHostname:         cdb.GetStrPtr("forge.acme.com"),
 					IsSerialConsoleEnabled:        cdb.GetBoolPtr(true),
@@ -620,7 +620,7 @@ func TestUpdateSiteHandler_Handle(t *testing.T) {
 			verifyChildSpanner: true,
 		},
 		{
-			name: "test renew registration token success for Site in Error state",
+			name: "test registration token renewal success for Site in Error state",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        &tmocks.Client{},
@@ -639,7 +639,7 @@ func TestUpdateSiteHandler_Handle(t *testing.T) {
 			wantStatus: cdb.GetStrPtr(cdbm.SiteStatusPending),
 		},
 		{
-			name: "test renew registration token success for Site in Registered state",
+			name: "test registration token renewal success for Site in Registered state",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        &tmocks.Client{},
@@ -658,7 +658,7 @@ func TestUpdateSiteHandler_Handle(t *testing.T) {
 			wantStatus: cdb.GetStrPtr(cdbm.SiteStatusRegistered),
 		},
 		{
-			name: "test Site update API endpoint success by Tenant",
+			name: "test Site update API endpoint failure by Tenant, configuring serial console SSH keys is no longer supported",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        &tmocks.Client{},
@@ -673,8 +673,7 @@ func TestUpdateSiteHandler_Handle(t *testing.T) {
 				},
 			},
 			csmEnabled:         true,
-			wantErr:            false,
-			verifyTenantUpdate: true,
+			wantErr:            true,
 			verifyChildSpanner: false,
 		},
 		{
@@ -689,7 +688,7 @@ func TestUpdateSiteHandler_Handle(t *testing.T) {
 				org:  tnOrg,
 				user: tnu,
 				reqData: &model.APISiteUpdateRequest{
-					Name:                   cdb.GetStrPtr("Test Site Updated"),
+					Name:                   cdb.GetStrPtr("test-site-updated"),
 					IsSerialConsoleEnabled: cdb.GetBoolPtr(true),
 				},
 			},
@@ -698,7 +697,7 @@ func TestUpdateSiteHandler_Handle(t *testing.T) {
 			verifyChildSpanner: false,
 		},
 		{
-			name: "test Site update API endpoint failure by Provider, changing Tenant specific attributes not allowed",
+			name: "test Site update API endpoint failure by Provider, updating Tenant specific attributes not allowed",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        &tmocks.Client{},
@@ -717,7 +716,7 @@ func TestUpdateSiteHandler_Handle(t *testing.T) {
 			verifyChildSpanner: false,
 		},
 		{
-			name: "test Site update API endpoint success, user has both Provider and Tenant roles, no query param defaults to provider",
+			name: "test Site update success when user has both Provider and Tenant roles",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        &tmocks.Client{},
@@ -728,75 +727,11 @@ func TestUpdateSiteHandler_Handle(t *testing.T) {
 				org:  mOrg,
 				user: mu,
 				reqData: &model.APISiteUpdateRequest{
-					Description: cdb.GetStrPtr("Updated by dual-role default provider"),
+					Description: cdb.GetStrPtr("Updated Site description"),
 				},
-			},
-			csmEnabled:         false,
-			wantErr:            false,
-			verifyChildSpanner: false,
-		},
-		{
-			name: "dual-role PATCH explicit tenantId query forces tenant update",
-			fields: fields{
-				dbSession: dbSession,
-				tc:        &tmocks.Client{},
-				cfg:       cfg,
-			},
-			args: args{
-				site: mst,
-				org:  mOrg,
-				user: mu,
-				reqData: &model.APISiteUpdateRequest{
-					IsSerialConsoleSSHKeysEnabled: cdb.GetBoolPtr(true),
-				},
-			},
-			query:              url.Values{"tenantId": []string{mtn.ID.String()}},
-			csmEnabled:         true,
-			wantErr:            false,
-			verifyTenantUpdate: true,
-			verifyChildSpanner: false,
-		},
-		{
-			name: "dual-role PATCH explicit infrastructureProviderId query forces provider update",
-			fields: fields{
-				dbSession: dbSession,
-				tc:        &tmocks.Client{},
-				cfg:       cfg,
-			},
-			args: args{
-				site: mst,
-				org:  mOrg,
-				user: mu,
-				reqData: &model.APISiteUpdateRequest{
-					Description: cdb.GetStrPtr("Updated via explicit infrastructureProviderId query"),
-				},
-			},
-			query:              url.Values{"infrastructureProviderId": []string{mip.ID.String()}},
-			csmEnabled:         false,
-			wantErr:            false,
-			verifyChildSpanner: false,
-		},
-		{
-			name: "dual-role PATCH both tenantId and infrastructureProviderId returns 400",
-			fields: fields{
-				dbSession: dbSession,
-				tc:        &tmocks.Client{},
-				cfg:       cfg,
-			},
-			args: args{
-				site: mst,
-				org:  mOrg,
-				user: mu,
-				reqData: &model.APISiteUpdateRequest{
-					Description: cdb.GetStrPtr("should not apply"),
-				},
-			},
-			query: url.Values{
-				"tenantId":                 []string{mtn.ID.String()},
-				"infrastructureProviderId": []string{mip.ID.String()},
 			},
 			csmEnabled: false,
-			wantErr:    true,
+			wantErr:    false,
 		},
 		{
 			name: "test Site update API fails when name clashes",
@@ -894,7 +829,7 @@ func TestUpdateSiteHandler_Handle(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "update site with location",
+			name: "test Site update API endpoint success with location",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        &tmocks.Client{},
@@ -914,7 +849,7 @@ func TestUpdateSiteHandler_Handle(t *testing.T) {
 			},
 		},
 		{
-			name: "update site with contact",
+			name: "test Site update API endpoint success with contact",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        &tmocks.Client{},
