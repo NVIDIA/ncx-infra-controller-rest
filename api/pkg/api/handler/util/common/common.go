@@ -1269,12 +1269,6 @@ func IsTenant(ctx context.Context, logger zerolog.Logger, dbSession *cdb.Session
 // IsProviderOrTenant ensures that user is authorized to act as a Provider Admin or/and Tenant Admin for the org.
 // if authorized it returns the tenant otherwise a relevant error.
 func IsProviderOrTenant(ctx context.Context, logger zerolog.Logger, dbSession *cdb.Session, org string, user *cdbm.User, allowViewerRole bool, requirePrivilegedTenant bool) (infrastructureProvider *cdbm.InfrastructureProvider, tenant *cdbm.Tenant, apiError *cutil.APIError) {
-	// Validate that user has the right Provider role
-	targetRoles := []string{auth.ProviderAdminRole}
-	if allowViewerRole {
-		targetRoles = append(targetRoles, auth.ProviderViewerRole)
-	}
-
 	// Validate that user belongs to org
 	ok, err := auth.ValidateOrgMembership(user, org)
 	if !ok {
@@ -1287,56 +1281,69 @@ func IsProviderOrTenant(ctx context.Context, logger zerolog.Logger, dbSession *c
 		return nil, nil, cutil.NewAPIError(http.StatusForbidden, "Failed to validate membership for org", nil)
 	}
 
-	var providerErr, tenantErr error
+	// Check if user has Provider role
+	targetRoles := []string{auth.ProviderAdminRole}
+	if allowViewerRole {
+		targetRoles = append(targetRoles, auth.ProviderViewerRole)
+	}
 
+	providerNotFound := false
 	isProvider := auth.ValidateUserRoles(user, org, nil, targetRoles...)
+
 	if isProvider {
 		infrastructureProvider, err = GetInfrastructureProviderForOrg(ctx, nil, dbSession, org)
 		if err != nil {
-			if !errors.Is(err, ErrOrgInstrastructureProviderNotFound) {
+			if errors.Is(err, ErrOrgInstrastructureProviderNotFound) {
+				providerNotFound = true
+			} else {
 				logger.Error().Err(err).Msg("error getting infrastructure provider for org")
-				return nil, nil, cutil.NewAPIError(http.StatusInternalServerError, "Failed to retrieve infrastructure provider for org, DB error", nil)
+				return nil, nil, cutil.NewAPIError(http.StatusInternalServerError, "Failed to retrieve Infrastructure Provider for org, DB error", nil)
 			}
-			providerErr = err
-			infrastructureProvider = nil
 		}
 	}
 
+	tenantNotFound := false
 	isTenant := auth.ValidateUserRoles(user, org, nil, auth.TenantAdminRole)
+
 	if isTenant {
 		tenant, err = GetTenantForOrg(ctx, nil, dbSession, org)
 		if err != nil {
-			if !errors.Is(err, ErrOrgTenantNotFound) {
+			if errors.Is(err, ErrOrgTenantNotFound) {
+				tenantNotFound = true
+			} else {
 				logger.Error().Err(err).Msg("error getting tenant for org")
-				return nil, nil, cutil.NewAPIError(http.StatusInternalServerError, "Failed to retrieve tenant for org, DB error", nil)
+				return nil, nil, cutil.NewAPIError(http.StatusInternalServerError, "Failed to retrieve Tenant for org, DB error", nil)
 			}
-			tenantErr = err
-			tenant = nil
 		}
+
 		if tenant != nil && requirePrivilegedTenant {
 			if !tenant.Config.TargetedInstanceCreation {
 				if infrastructureProvider == nil {
-					return nil, nil, cutil.NewAPIError(http.StatusForbidden, "Tenant does not have Targeted Instance Creation capability enabled", nil)
+					return nil, nil, cutil.NewAPIError(http.StatusForbidden, "Tenant does not have targeted Instance creation capability enabled", nil)
 				}
+
 				tenant = nil
 			}
 		}
 	}
 
 	if infrastructureProvider == nil && tenant == nil {
-		if providerErr != nil || tenantErr != nil {
-			var msgs []string
-			if providerErr != nil {
-				msgs = append(msgs, "Could not find Infrastructure Provider for org, retrieve current Provider for org and try again")
+		if providerNotFound || tenantNotFound {
+			var errMsgs []string
+			if providerNotFound {
+				errMsgs = append(errMsgs, "User has Provider role but org doesn't have an Infrastructure Provider associated, retrieve current Infrastructure Provider for org and try again")
 			}
-			if tenantErr != nil {
-				msgs = append(msgs, "Could not find Tenant for org, retrieve current Tenant for org and try again")
+			if tenantNotFound {
+				errMsgs = append(errMsgs, "User has Tenant role but org doesn't have a Tenant associated, retrieve current Tenant for org and try again")
 			}
-			msg := strings.Join(msgs, "; ")
+			msg := strings.Join(errMsgs, ". ")
 			logger.Error().Msg(msg)
+
 			return nil, nil, cutil.NewAPIError(http.StatusBadRequest, msg, nil)
 		}
+
 		logger.Error().Msg("user does not have Provider or Tenant role with org, access denied")
+
 		return nil, nil, cutil.NewAPIError(http.StatusForbidden, "User does not have Provider or Tenant role with org", nil)
 	}
 

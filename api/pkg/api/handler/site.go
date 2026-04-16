@@ -337,27 +337,6 @@ func (ush UpdateSiteHandler) Handle(c echo.Context) error {
 		return c.JSON(apiErr.Code, apiErr)
 	}
 
-	queryProviderID := c.QueryParam("infrastructureProviderId")
-	queryTenantID := c.QueryParam("tenantId")
-
-	if queryProviderID != "" && queryTenantID != "" {
-		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Only one of `infrastructureProviderId` or `tenantId` query params is allowed", nil)
-	}
-
-	isProviderRequest := provider != nil
-
-	if queryProviderID != "" {
-		if provider == nil || provider.ID.String() != queryProviderID {
-			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Infrastructure Provider ID specified in query param does not match org", nil)
-		}
-		isProviderRequest = true
-	} else if queryTenantID != "" {
-		if tenant == nil || tenant.ID.String() != queryTenantID {
-			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Tenant ID specified in query param does not match org", nil)
-		}
-		isProviderRequest = false
-	}
-
 	// Get application instance ID from URL param
 	stStrID := c.Param("id")
 
@@ -380,7 +359,7 @@ func (ush UpdateSiteHandler) Handle(c echo.Context) error {
 	}
 
 	// Validate request attributes
-	verr := apiRequest.Validate(isProviderRequest)
+	verr := apiRequest.Validate(provider != nil, tenant != nil)
 	if verr != nil {
 		logger.Warn().Err(verr).Msg("error validating Site update request data")
 		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating Site update request data", verr)
@@ -397,19 +376,20 @@ func (ush UpdateSiteHandler) Handle(c echo.Context) error {
 
 	var ts *cdbm.TenantSite
 
-	if isProviderRequest {
+	// Check that Site is associated with Provider
+	if provider != nil {
 		if provider.ID != es.InfrastructureProviderID {
 			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Site is not associated with org's Infrastructure Provider", nil)
 		}
 	} else {
-		// Check that TenantSite exists
+		// Check that Tenant is associated with Site
 		ts, err = tsDAO.GetByTenantIDAndSiteID(ctx, nil, tenant.ID, stID, nil)
 		if err != nil {
 			if err == cdb.ErrDoesNotExist {
 				return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant does not have access to Site", nil)
 			}
 			logger.Warn().Err(err).Msg("error retrieving TenantSite DB entity")
-			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Failed to determine Tenant access to Site, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Failed to determine Tenant's access to Site, DB error", nil)
 		}
 	}
 
@@ -419,7 +399,7 @@ func (ush UpdateSiteHandler) Handle(c echo.Context) error {
 	var statusMessage *string
 
 	if apiRequest.RenewRegistrationToken != nil && *apiRequest.RenewRegistrationToken {
-		// roll site in site manager
+		// Re-issue Site OTP using Site Manager
 		url := ush.cfg.GetSiteManagerEndpoint()
 		err = csm.RollSite(ctx, logger, es.ID.String(), es.Name, url)
 		if err != nil {
@@ -481,10 +461,9 @@ func (ush UpdateSiteHandler) Handle(c echo.Context) error {
 
 	// Update Site
 	var us *cdbm.Site
-	var uts *cdbm.TenantSite
 
-	if isProviderRequest {
-		dbUpdateInput := cdbm.SiteUpdateInput{
+	if provider != nil {
+		siteUpdateInput := cdbm.SiteUpdateInput{
 			SiteID:                        stID,
 			Name:                          apiRequest.Name,
 			Description:                   apiRequest.Description,
@@ -497,39 +476,27 @@ func (ush UpdateSiteHandler) Handle(c echo.Context) error {
 			Status:                        status,
 		}
 		if apiRequest.Location != nil {
-			dbUpdateInput.Location = &cdbm.SiteLocation{
+			siteUpdateInput.Location = &cdbm.SiteLocation{
 				City:    apiRequest.Location.City,
 				State:   apiRequest.Location.State,
 				Country: apiRequest.Location.Country,
 			}
 		}
 		if apiRequest.Contact != nil {
-			dbUpdateInput.Contact = &cdbm.SiteContact{
+			siteUpdateInput.Contact = &cdbm.SiteContact{
 				Email: apiRequest.Contact.Email,
 			}
 		}
-		us, err = stDAO.Update(ctx, tx, dbUpdateInput)
+
+		// Update Site
+		us, err = stDAO.Update(ctx, tx, siteUpdateInput)
 		if err != nil {
-			logger.Error().Err(err).Msg("error updating site")
-			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update site", nil)
-		}
-	} else {
-		us = es
-		uts, err = tsDAO.Update(
-			ctx,
-			tx,
-			cdbm.TenantSiteUpdateInput{
-				TenantSiteID:        ts.ID,
-				EnableSerialConsole: apiRequest.IsSerialConsoleEnabled,
-			},
-		)
-		if err != nil {
-			logger.Error().Err(err).Msg("error updating tenant site")
-			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update tenant site", nil)
+			logger.Error().Err(err).Msg("error updating Site")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Site, DB error", nil)
 		}
 	}
 
-	// Add status detail if needed
+	// Add Status Detail record if needed
 	if status != nil {
 		sdDAO := cdbm.NewStatusDetailDAO(ush.dbSession)
 		_, serr := sdDAO.CreateFromParams(ctx, tx, stID.String(), *status, statusMessage)
@@ -555,7 +522,7 @@ func (ush UpdateSiteHandler) Handle(c echo.Context) error {
 	txCommitted = true
 
 	// Create response
-	apiSite := model.NewAPISite(*us, ssds, uts)
+	apiSite := model.NewAPISite(*us, ssds, ts)
 
 	logger.Info().Msg("finishing API handler")
 
