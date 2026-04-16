@@ -12657,6 +12657,8 @@ components:
         - Pending
         - Processing
         - Ready
+        - Registered
+        - Deleting
         - Error
     AllocationCreateRequest:
       title: AllocationCreateRequest

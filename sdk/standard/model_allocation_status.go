@@ -23,6 +23,8 @@ const (
 	ALLOCATIONSTATUS_PENDING    AllocationStatus = "Pending"
 	ALLOCATIONSTATUS_PROCESSING AllocationStatus = "Processing"
 	ALLOCATIONSTATUS_READY      AllocationStatus = "Ready"
+	ALLOCATIONSTATUS_REGISTERED AllocationStatus = "Registered"
+	ALLOCATIONSTATUS_DELETING   AllocationStatus = "Deleting"
 	ALLOCATIONSTATUS_ERROR      AllocationStatus = "Error"
 )
 
@@ -31,6 +33,8 @@ var AllowedAllocationStatusEnumValues = []AllocationStatus{
 	"Pending",
 	"Processing",
 	"Ready",
+	"Registered",
+	"Deleting",
 	"Error",
 }
 
