@@ -304,14 +304,14 @@ func GetAllocationIDsForTenantAtSite(ctx context.Context, tx *cdb.Tx, dbSession 
 }
 
 // GetUnallocatedMachineForInstanceType provides unallocatd machine based on instancetype
-func GetUnallocatedMachineForInstanceType(ctx context.Context, tx *cdb.Tx, dbSession *cdb.Session, instancetype *cdbm.InstanceType) (*cdbm.Machine, error) {
+func GetUnallocatedMachineForInstanceType(ctx context.Context, tx *cdb.Tx, dbSession *cdb.Session, instancetype *cdbm.InstanceType, logger zerolog.Logger) (*cdbm.Machine, *cutil.APIError, error) {
 	if instancetype == nil {
-		return nil, ErrInvalidFunctionParams
+		return nil, nil, ErrInvalidFunctionParams
 	}
 
 	// tx has to be set, required acquring lock
 	if tx == nil {
-		return nil, ErrInvalidFunctionParams
+		return nil, nil, ErrInvalidFunctionParams
 	}
 
 	mcDAO := cdbm.NewMachineDAO(dbSession)
@@ -326,7 +326,7 @@ func GetUnallocatedMachineForInstanceType(ctx context.Context, tx *cdb.Tx, dbSes
 	}
 	machines, _, err := mcDAO.GetAll(ctx, tx, filterInput, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// Randomize the list of machines.
@@ -342,6 +342,8 @@ func GetUnallocatedMachineForInstanceType(ctx context.Context, tx *cdb.Tx, dbSes
 			machines[i], machines[j] = machines[j], machines[i]
 		},
 	)
+
+	var lastCapErr *cutil.APIError
 
 	if len(machines) > 0 {
 		for _, mc := range machines {
@@ -366,6 +368,12 @@ func GetUnallocatedMachineForInstanceType(ctx context.Context, tx *cdb.Tx, dbSes
 				continue
 			}
 
+			// Verify that the Machine's capabilities match the Instance Type's capabilities.
+			if apiErr := VerifyInstanceTypeMachineCapabilitiesMatch(ctx, logger, dbSession, instancetype.ID, mc.ID); apiErr != nil {
+				lastCapErr = apiErr
+				continue
+			}
+
 			// We should now be able to proceed with the allocation
 			// Update the machine status to assigned
 			updateInput := cdbm.MachineUpdateInput{
@@ -377,10 +385,13 @@ func GetUnallocatedMachineForInstanceType(ctx context.Context, tx *cdb.Tx, dbSes
 			if err != nil {
 				continue
 			}
-			return mcu, nil
+			return mcu, nil, nil
 		}
 	}
-	return nil, ErrInstanceTypeMachineNotFound
+	if lastCapErr != nil {
+		return nil, lastCapErr, nil
+	}
+	return nil, nil, ErrInstanceTypeMachineNotFound
 }
 
 // GetCountOfMachinesForInstanceType is a utility function to return count of
@@ -949,10 +960,10 @@ func MatchInstanceTypeCapabilitiesForMachines(ctx context.Context, logger zerolo
 	return true, nil, nil
 }
 
-// ResolveInstanceTypeMachineCapabilitiesMatch validates that the Machine's
+// VerifyInstanceTypeMachineCapabilitiesMatch validates that the Machine's
 // capabilities satisfy the Instance Type's capabilities. It returns a non-nil
 // *cutil.APIError when validation fails, or nil on success.
-func ResolveInstanceTypeMachineCapabilitiesMatch(ctx context.Context, logger zerolog.Logger, dbSession *cdb.Session, instanceTypeID uuid.UUID, machineID string) *cutil.APIError {
+func VerifyInstanceTypeMachineCapabilitiesMatch(ctx context.Context, logger zerolog.Logger, dbSession *cdb.Session, instanceTypeID uuid.UUID, machineID string) *cutil.APIError {
 	isMatch, _, apiErr := MatchInstanceTypeCapabilitiesForMachines(ctx, logger, dbSession, instanceTypeID, []string{machineID})
 	if apiErr != nil {
 		return apiErr

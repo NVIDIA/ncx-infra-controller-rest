@@ -888,6 +888,13 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 			}
 		}
 
+		// Verify that the Machine's capabilities match the Instance Type's capabilities
+		if machine.InstanceTypeID != nil && machine.ID != "" {
+			if apiErr := common.VerifyInstanceTypeMachineCapabilitiesMatch(ctx, logger, cih.dbSession, *machine.InstanceTypeID, machine.ID); apiErr != nil {
+				return cutil.NewAPIErrorResponse(c, apiErr.Code, apiErr.Message, apiErr.Data)
+			}
+		}
+
 		// Acquire a lock on the MachineID
 		err = tx.TryAcquireAdvisoryLock(ctx, cdb.GetAdvisoryLockIDFromString(machine.ID), nil)
 		if err != nil {
@@ -1021,7 +1028,8 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 		}
 
 		// Select unallocated Machine for the requested instance type
-		machine, err = common.GetUnallocatedMachineForInstanceType(ctx, tx, cih.dbSession, instanceType)
+		var apiErr *cutil.APIError
+		machine, apiErr, err = common.GetUnallocatedMachineForInstanceType(ctx, tx, cih.dbSession, instanceType, logger)
 		if err != nil {
 			if err == common.ErrInstanceTypeMachineNotFound {
 				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest,
@@ -1030,16 +1038,14 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 			logger.Error().Err(err).Msg("error retrieving Machine from DB for Instance Type")
 			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve available baremetal Machines for specified Instance Type", nil)
 		}
+
+		// No machine found with matching capabilities
+		if apiErr != nil {
+			return cutil.NewAPIErrorResponse(c, apiErr.Code, apiErr.Message, apiErr.Data)
+		}
 	} // if apiRequest.InstanceTypeID != nil
 
 	// NOTE: At this stage, we have a Machine ID whether it was provided in request or selected through Instance Type
-
-	// Verify here if Instance Type and Machine capabilities match
-	if instanceTypeID != nil && machine != nil {
-		if apiErr := common.ResolveInstanceTypeMachineCapabilitiesMatch(ctx, logger, cih.dbSession, *instanceTypeID, machine.ID); apiErr != nil {
-			return cutil.NewAPIErrorResponse(c, apiErr.Code, apiErr.Message, apiErr.Data)
-		}
-	}
 
 	mcDAO := cdbm.NewMachineCapabilityDAO(cih.dbSession)
 
@@ -2067,23 +2073,6 @@ func (uih UpdateInstanceHandler) buildInstanceUpdateRequestOsConfig(c echo.Conte
 	}, osID, nil
 }
 
-// instanceUpdateNeedsInstanceTypeMachineCapabilityValidation returns true when
-// the update touches interface or secondary-VPC networking so Instance Type vs
-// Machine capabilities must be validated. Pure metadata/OS/NSG/SSH updates
-// return false so existing instances without machine capability rows still work.
-func instanceUpdateNeedsInstanceTypeMachineCapabilityValidation(apiRequest *model.APIInstanceUpdateRequest) bool {
-	if apiRequest == nil {
-		return false
-	}
-	if apiRequest.IsInterfaceUpdateRequest() {
-		return true
-	}
-	if apiRequest.SecondaryVpcIDs != nil {
-		return true
-	}
-	return false
-}
-
 // Handle godoc
 // @Summary Update an existing Instance
 // @Description Update an existing Instance for the org
@@ -2495,9 +2484,9 @@ func (uih UpdateInstanceHandler) Handle(c echo.Context) error {
 	// Verify Instance Type and Machine capabilities match when the request
 	// changes networking (after interface / VPC validation so more specific
 	// errors are returned first). Skip for metadata-only updates.
-	if instanceUpdateNeedsInstanceTypeMachineCapabilityValidation(&apiRequest) &&
+	if apiRequest.NeedsCapabilityValidation() &&
 		instance.InstanceTypeID != nil && machine != nil {
-		if apiErr := common.ResolveInstanceTypeMachineCapabilitiesMatch(ctx, logger, uih.dbSession, *instance.InstanceTypeID, machine.ID); apiErr != nil {
+		if apiErr := common.VerifyInstanceTypeMachineCapabilitiesMatch(ctx, logger, uih.dbSession, *instance.InstanceTypeID, machine.ID); apiErr != nil {
 			return cutil.NewAPIErrorResponse(c, apiErr.Code, apiErr.Message, apiErr.Data)
 		}
 	}

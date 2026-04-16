@@ -364,11 +364,18 @@ func testInstanceBuildMachineInstanceType(t *testing.T, dbSession *cdb.Session, 
 	return mit
 }
 
-func assertMachineInstanceTypeAssociation(t *testing.T, mit *cdbm.MachineInstanceType, mc *cdbm.Machine, in *cdbm.InstanceType) {
+func assertMachineInstanceTypeAssociation(t *testing.T, dbSession *cdb.Session, mit *cdbm.MachineInstanceType, mc *cdbm.Machine, in *cdbm.InstanceType) {
 	t.Helper()
 	require.NotNil(t, mit)
 	assert.Equal(t, mc.ID, mit.MachineID)
 	assert.Equal(t, in.ID, mit.InstanceTypeID)
+
+	mDAO := cdbm.NewMachineDAO(dbSession)
+	reloaded, err := mDAO.GetByID(context.Background(), nil, mc.ID, nil, false)
+	require.NoError(t, err)
+	require.NotNil(t, reloaded)
+	require.NotNil(t, reloaded.InstanceTypeID)
+	assert.Equal(t, in.ID, *reloaded.InstanceTypeID)
 }
 
 // testAddMachineCapabilitiesMatchingIST1 adds machine capability rows matching ist1 in
@@ -737,7 +744,16 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 	mcnoib := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
 	assert.NotNil(t, mcnoib)
 	mcinstnoib := testInstanceBuildMachineInstanceType(t, dbSession, mcnoib, istnoib)
-	assertMachineInstanceTypeAssociation(t, mcinstnoib, mcnoib, istnoib)
+	assertMachineInstanceTypeAssociation(t, dbSession, mcinstnoib, mcnoib, istnoib)
+
+	// Instance type with no IT capabilities + machine whose IB capability marks device instance 1 inactive (ValidateInfiniBandInterfaces uses machine IB caps when IT has none)
+	istInactiveIBOnly := testInstanceBuildInstanceType(t, dbSession, ip, "test-instance-type-ib-inactive-only", st1, cdbm.InstanceStatusReady)
+	assert.NotNil(t, istInactiveIBOnly)
+	mcInactiveIBCreate := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
+	assert.NotNil(t, mcInactiveIBCreate)
+	mcinstInactiveIBCreate := testInstanceBuildMachineInstanceType(t, dbSession, mcInactiveIBCreate, istInactiveIBOnly)
+	assertMachineInstanceTypeAssociation(t, dbSession, mcinstInactiveIBCreate, mcInactiveIBCreate, istInactiveIBOnly)
+	common.TestBuildMachineCapability(t, dbSession, &mcInactiveIBCreate.ID, nil, cdbm.MachineCapabilityTypeInfiniBand, "MT28908 Family [ConnectX-6]", nil, nil, cdb.GetStrPtr("Mellanox Technologies"), cdb.GetIntPtr(3), cdb.GetStrPtr(""), []int{1})
 
 	// machine to instantiate by idbelonging to an instance type
 	istbyid := testInstanceBuildInstanceType(t, dbSession, ip, "test-instance-type-byid", st1, cdbm.InstanceStatusReady)
@@ -754,7 +770,7 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 	common.TestBuildMachineCapability(t, dbSession, &mcbyid.ID, nil, cdbm.MachineCapabilityTypeGPU, "NVIDIA GB200", nil, nil, cdb.GetStrPtr("NVIDIA"), cdb.GetIntPtr(4), cdb.GetStrPtr(cdbm.MachineCapabilityDeviceTypeNVLink), nil)
 
 	mcinstbyid := testInstanceBuildMachineInstanceType(t, dbSession, mcbyid, istbyid)
-	assertMachineInstanceTypeAssociation(t, mcinstbyid, mcbyid, istbyid)
+	assertMachineInstanceTypeAssociation(t, dbSession, mcinstbyid, mcbyid, istbyid)
 
 	// Instance types + machines for MatchInstanceTypeCapabilitiesForMachines (HTTP 400 / 409 on create)
 	istCapMismatch := testInstanceBuildInstanceType(t, dbSession, ip, "test-instance-type-cap-mismatch", st1, cdbm.InstanceStatusReady)
@@ -764,7 +780,7 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 	assert.NotNil(t, mcCapMismatch)
 	common.TestBuildMachineCapability(t, dbSession, &mcCapMismatch.ID, nil, cdbm.MachineCapabilityTypeGPU, "NVIDIA GB200", nil, nil, cdb.GetStrPtr("NVIDIA"), cdb.GetIntPtr(4), cdb.GetStrPtr(cdbm.MachineCapabilityDeviceTypeNVLink), nil)
 	mcinstCapMismatch := testInstanceBuildMachineInstanceType(t, dbSession, mcCapMismatch, istCapMismatch)
-	assertMachineInstanceTypeAssociation(t, mcinstCapMismatch, mcCapMismatch, istCapMismatch)
+	assertMachineInstanceTypeAssociation(t, dbSession, mcinstCapMismatch, mcCapMismatch, istCapMismatch)
 	alcISTCapMismatch := testInstanceSiteBuildAllocationContraints(t, dbSession, al1, cdbm.AllocationResourceTypeInstanceType, istCapMismatch.ID, cdbm.AllocationConstraintTypeReserved, 1, ipu)
 	assert.NotNil(t, alcISTCapMismatch)
 
@@ -774,7 +790,7 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 	mcCapNoMachineCaps := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
 	assert.NotNil(t, mcCapNoMachineCaps)
 	mcinstCapNoMachineCaps := testInstanceBuildMachineInstanceType(t, dbSession, mcCapNoMachineCaps, istCapNoMachineCaps)
-	assertMachineInstanceTypeAssociation(t, mcinstCapNoMachineCaps, mcCapNoMachineCaps, istCapNoMachineCaps)
+	assertMachineInstanceTypeAssociation(t, dbSession, mcinstCapNoMachineCaps, mcCapNoMachineCaps, istCapNoMachineCaps)
 	alcCapNoMachineCaps := testInstanceSiteBuildAllocationContraints(t, dbSession, al1, cdbm.AllocationResourceTypeInstanceType, istCapNoMachineCaps.ID, cdbm.AllocationConstraintTypeReserved, 1, ipu)
 	assert.NotNil(t, alcCapNoMachineCaps)
 
@@ -805,7 +821,7 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 	assert.NotNil(t, mc1)
 
 	mcinst1 := testInstanceBuildMachineInstanceType(t, dbSession, mc1, ist1)
-	assertMachineInstanceTypeAssociation(t, mcinst1, mc1, ist1)
+	assertMachineInstanceTypeAssociation(t, dbSession, mcinst1, mc1, ist1)
 
 	mc12 := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
 	assert.NotNil(t, mc12)
@@ -835,31 +851,31 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 	assert.NotNil(t, mc20)
 
 	mcinst12 := testInstanceBuildMachineInstanceType(t, dbSession, mc12, ist1)
-	assertMachineInstanceTypeAssociation(t, mcinst12, mc12, ist1)
+	assertMachineInstanceTypeAssociation(t, dbSession, mcinst12, mc12, ist1)
 
 	mcinst13 := testInstanceBuildMachineInstanceType(t, dbSession, mc13, ist1)
-	assertMachineInstanceTypeAssociation(t, mcinst13, mc13, ist1)
+	assertMachineInstanceTypeAssociation(t, dbSession, mcinst13, mc13, ist1)
 
 	mcinst14 := testInstanceBuildMachineInstanceType(t, dbSession, mc14, ist1)
-	assertMachineInstanceTypeAssociation(t, mcinst14, mc14, ist1)
+	assertMachineInstanceTypeAssociation(t, dbSession, mcinst14, mc14, ist1)
 
 	mcinst15 := testInstanceBuildMachineInstanceType(t, dbSession, mc15, ist1)
-	assertMachineInstanceTypeAssociation(t, mcinst15, mc15, ist1)
+	assertMachineInstanceTypeAssociation(t, dbSession, mcinst15, mc15, ist1)
 
 	mcinst16 := testInstanceBuildMachineInstanceType(t, dbSession, mc16, ist1)
-	assertMachineInstanceTypeAssociation(t, mcinst16, mc16, ist1)
+	assertMachineInstanceTypeAssociation(t, dbSession, mcinst16, mc16, ist1)
 
 	mcinst17 := testInstanceBuildMachineInstanceType(t, dbSession, mc17, ist1)
-	assertMachineInstanceTypeAssociation(t, mcinst17, mc17, ist1)
+	assertMachineInstanceTypeAssociation(t, dbSession, mcinst17, mc17, ist1)
 
 	mcinst18 := testInstanceBuildMachineInstanceType(t, dbSession, mc18, ist1)
-	assertMachineInstanceTypeAssociation(t, mcinst18, mc18, ist1)
+	assertMachineInstanceTypeAssociation(t, dbSession, mcinst18, mc18, ist1)
 
 	mcinst19 := testInstanceBuildMachineInstanceType(t, dbSession, mc19, ist1)
-	assertMachineInstanceTypeAssociation(t, mcinst19, mc19, ist1)
+	assertMachineInstanceTypeAssociation(t, dbSession, mcinst19, mc19, ist1)
 
 	mcinst20 := testInstanceBuildMachineInstanceType(t, dbSession, mc20, ist1)
-	assertMachineInstanceTypeAssociation(t, mcinst20, mc20, ist1)
+	assertMachineInstanceTypeAssociation(t, dbSession, mcinst20, mc20, ist1)
 
 	for _, m := range []*cdbm.Machine{mc1, mc12, mc13, mc14, mc15, mc16, mc17, mc18, mc19, mc20} {
 		testAddMachineCapabilitiesMatchingIST1(t, dbSession, m)
@@ -901,6 +917,7 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 
 	subnet1 := testInstanceBuildSubnet(t, dbSession, "test-subnet-1", tn1, vpc1, cdb.GetUUIDPtr(uuid.New()), cdbm.SubnetStatusReady, tnu1)
 	assert.NotNil(t, subnet1)
+	testInstanceBuildMachineInterface(t, dbSession, subnet1.ID, mcInactiveIBCreate.ID)
 
 	subnet2 := testInstanceBuildSubnet(t, dbSession, "test-subnet-2", tn1, vpc2, cdb.GetUUIDPtr(uuid.New()), cdbm.SubnetStatusReady, tnu1)
 	assert.NotNil(t, subnet2)
@@ -999,7 +1016,7 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 		ms2 = append(ms2, mc)
 
 		mcinstLoop := testInstanceBuildMachineInstanceType(t, dbSession, mc, ist2)
-		assertMachineInstanceTypeAssociation(t, mcinstLoop, mc, ist2)
+		assertMachineInstanceTypeAssociation(t, dbSession, mcinstLoop, mc, ist2)
 		testInstanceBuildMachineInterface(t, dbSession, subnet3.ID, mc.ID)
 	}
 
@@ -1060,7 +1077,7 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 
 	mc5 := testInstanceBuildMachine(t, dbSession, ip.ID, st4.ID, cdb.GetBoolPtr(false), nil)
 	mcinst5 := testInstanceBuildMachineInstanceType(t, dbSession, mc5, ist5)
-	assertMachineInstanceTypeAssociation(t, mcinst5, mc5, ist5)
+	assertMachineInstanceTypeAssociation(t, dbSession, mcinst5, mc5, ist5)
 
 	os5 := testInstanceBuildOperatingSystem(t, dbSession, "test-operating-system-5", tn5, cdbm.OperatingSystemTypeImage, true, nil, false, cdbm.OperatingSystemStatusReady, tnu5)
 	testInstanceBuildOperatingSystemSiteAssociation(t, dbSession, st4.ID, os5.ID)
@@ -1088,7 +1105,7 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 
 	mc6 := testInstanceBuildMachine(t, dbSession, ip.ID, st6.ID, cdb.GetBoolPtr(false), nil)
 	mcinst6 := testInstanceBuildMachineInstanceType(t, dbSession, mc6, ist6)
-	assertMachineInstanceTypeAssociation(t, mcinst6, mc6, ist6)
+	assertMachineInstanceTypeAssociation(t, dbSession, mcinst6, mc6, ist6)
 
 	os6 := testInstanceBuildOperatingSystem(t, dbSession, "test-operating-system-6", tn6, cdbm.OperatingSystemTypeIPXE, false, nil, false, cdbm.OperatingSystemStatusReady, tnu6)
 	vpc8 := testInstanceBuildVPC(t, dbSession, "test-vpc-8", ip, tn6, st6, cdb.GetUUIDPtr(uuid.New()), nil, cdb.GetStrPtr(cdbm.VpcEthernetVirtualizer), nil, cdbm.VpcStatusReady, tnu6)
@@ -1108,7 +1125,7 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 	testInstanceSiteBuildAllocationContraints(t, dbSession, al10, cdbm.AllocationResourceTypeInstanceType, ist10.ID, cdbm.AllocationConstraintTypeReserved, 1, ipu)
 	mc10 := testInstanceBuildMachine(t, dbSession, ip.ID, st7.ID, cdb.GetBoolPtr(false), nil)
 	mcinst10 := testInstanceBuildMachineInstanceType(t, dbSession, mc10, ist10)
-	assertMachineInstanceTypeAssociation(t, mcinst10, mc10, ist10)
+	assertMachineInstanceTypeAssociation(t, dbSession, mcinst10, mc10, ist10)
 	os10 := testInstanceBuildOperatingSystem(t, dbSession, "test-operating-system-10", tn7, cdbm.OperatingSystemTypeIPXE, false, nil, false, cdbm.OperatingSystemStatusReady, tnu7)
 	vpc10 := testInstanceBuildVPC(t, dbSession, "test-vpc-7", ip, tn7, st7, cdb.GetUUIDPtr(uuid.New()), nil, cdb.GetStrPtr(cdbm.VpcEthernetVirtualizer), nil, cdbm.VpcStatusReady, tnu7)
 	subnet10 := testInstanceBuildSubnet(t, dbSession, "test-subnet-10", tn7, vpc10, cdb.GetUUIDPtr(uuid.New()), cdbm.SubnetStatusReady, tnu7)
@@ -1120,7 +1137,7 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 	testInstanceSiteBuildAllocationContraints(t, dbSession, al7b, cdbm.AllocationResourceTypeInstanceType, ist7b.ID, cdbm.AllocationConstraintTypeReserved, 1, ipu)
 	mc7b := testInstanceBuildMachine(t, dbSession, ip.ID, st7b.ID, cdb.GetBoolPtr(false), nil)
 	mcinst7b := testInstanceBuildMachineInstanceType(t, dbSession, mc7b, ist7b)
-	assertMachineInstanceTypeAssociation(t, mcinst7b, mc7b, ist7b)
+	assertMachineInstanceTypeAssociation(t, dbSession, mcinst7b, mc7b, ist7b)
 	os7b := testInstanceBuildOperatingSystem(t, dbSession, "test-operating-system-7b", tn7, cdbm.OperatingSystemTypeIPXE, false, nil, false, cdbm.OperatingSystemStatusReady, tnu7)
 	vpc7b := testInstanceBuildVPC(t, dbSession, "test-vpc-7b", ip, tn7, st7b, cdb.GetUUIDPtr(uuid.New()), nil, cdb.GetStrPtr(cdbm.VpcEthernetVirtualizer), nil, cdbm.VpcStatusReady, tnu7)
 	subnet7b := testInstanceBuildSubnet(t, dbSession, "test-subnet-7b", tn7, vpc7b, cdb.GetUUIDPtr(uuid.New()), cdbm.SubnetStatusReady, tnu7)
@@ -1142,7 +1159,7 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 
 	mc8 := testInstanceBuildMachine(t, dbSession, ip.ID, st8.ID, cdb.GetBoolPtr(false), nil)
 	mcinst8 := testInstanceBuildMachineInstanceType(t, dbSession, mc8, ist8)
-	assertMachineInstanceTypeAssociation(t, mcinst8, mc8, ist8)
+	assertMachineInstanceTypeAssociation(t, dbSession, mcinst8, mc8, ist8)
 
 	os11 := testInstanceBuildOperatingSystem(t, dbSession, "test-operating-system-11", tn8, cdbm.OperatingSystemTypeImage, true, nil, false, cdbm.OperatingSystemStatusReady, tnu8)
 	ossa2 := testInstanceBuildOperatingSystemSiteAssociation(t, dbSession, st8.ID, os11.ID)
@@ -1159,7 +1176,7 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 	testInstanceSiteBuildAllocationContraints(t, dbSession, al8, cdbm.AllocationResourceTypeInstanceType, ist9.ID, cdbm.AllocationConstraintTypeReserved, 1, ipu)
 	mc9 := testInstanceBuildMachine(t, dbSession, ip.ID, st8.ID, cdb.GetBoolPtr(false), nil)
 	mcinst9 := testInstanceBuildMachineInstanceType(t, dbSession, mc9, ist9)
-	assertMachineInstanceTypeAssociation(t, mcinst9, mc9, ist9)
+	assertMachineInstanceTypeAssociation(t, dbSession, mcinst9, mc9, ist9)
 	testInstanceBuildMachineInterface(t, dbSession, subnet11.ID, mc9.ID)
 
 	// FNN VPC
@@ -1386,7 +1403,7 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 				prepareReq: func(t *testing.T, req *model.APIInstanceCreateRequest) {
 					mc := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
 					mcinstPrep := testInstanceBuildMachineInstanceType(t, dbSession, mc, ist1)
-					assertMachineInstanceTypeAssociation(t, mcinstPrep, mc, ist1)
+					assertMachineInstanceTypeAssociation(t, dbSession, mcinstPrep, mc, ist1)
 					testAddMachineCapabilitiesMatchingIST1(t, dbSession, mc)
 					testUpdateMachineStatusAndControllerState(t, dbSession, mc, cdbm.MachineStatusError, cdbm.MachineStatusReady)
 					req.MachineID = cdb.GetStrPtr(mc.ID)
@@ -1424,7 +1441,7 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 				prepareReq: func(t *testing.T, req *model.APIInstanceCreateRequest) {
 					mc := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
 					mcinstPrep := testInstanceBuildMachineInstanceType(t, dbSession, mc, ist1)
-					assertMachineInstanceTypeAssociation(t, mcinstPrep, mc, ist1)
+					assertMachineInstanceTypeAssociation(t, dbSession, mcinstPrep, mc, ist1)
 					testAddMachineCapabilitiesMatchingIST1(t, dbSession, mc)
 					testUpdateMachineStatusAndControllerState(t, dbSession, mc, cdbm.MachineStatusMaintenance, "Offline")
 					req.MachineID = cdb.GetStrPtr(mc.ID)
@@ -1462,7 +1479,7 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 				prepareReq: func(t *testing.T, req *model.APIInstanceCreateRequest) {
 					mc := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
 					mcinstPrep := testInstanceBuildMachineInstanceType(t, dbSession, mc, ist1)
-					assertMachineInstanceTypeAssociation(t, mcinstPrep, mc, ist1)
+					assertMachineInstanceTypeAssociation(t, dbSession, mcinstPrep, mc, ist1)
 					testAddMachineCapabilitiesMatchingIST1(t, dbSession, mc)
 					testUpdateMachineStatusAndControllerState(t, dbSession, mc, cdbm.MachineStatusInitializing, "Offline")
 					req.MachineID = cdb.GetStrPtr(mc.ID)
@@ -3400,6 +3417,47 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 			verifyChildSpanner: true,
 		},
 		{
+			name: "test Instance create API endpoint fails when InfiniBand device instance is inactive per machine capability inactiveDevices",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIInstanceCreateRequest{
+					Name:              "Test Instance IB inactive device index",
+					TenantID:          tn1.ID.String(),
+					MachineID:         cdb.GetStrPtr(mcInactiveIBCreate.ID),
+					VpcID:             vpc1.ID.String(),
+					OperatingSystemID: cdb.GetStrPtr(os1.ID.String()),
+					UserData:          nil,
+					IpxeScript:        cdb.GetStrPtr(common.DefaultIpxeScript),
+					Interfaces: []model.APIInterfaceCreateOrUpdateRequest{
+						{
+							SubnetID: cdb.GetStrPtr(subnet1.ID.String()),
+						},
+					},
+					PhoneHomeEnabled: cdb.GetBoolPtr(false),
+					InfiniBandInterfaces: []model.APIInfiniBandInterfaceCreateOrUpdateRequest{
+						{
+							InfiniBandPartitionID: ibp1.ID.String(),
+							Device:                "MT28908 Family [ConnectX-6]",
+							Vendor:                cdb.GetStrPtr("Mellanox Technologies"),
+							DeviceInstance:        1,
+							IsPhysical:            true,
+						},
+					},
+				},
+				reqMachine:  mcInactiveIBCreate,
+				reqOrg:      tnOrg,
+				reqUser:     tnu1,
+				respCode:    http.StatusBadRequest,
+				respMessage: "Device Instance: 1 for Device MT28908 Family [ConnectX-6] is inactive",
+			},
+			wantErr:            false,
+			verifyChildSpanner: true,
+		},
+		{
 			name: "test Instance create API endpoint fails when machine capabilities do not match instance type capabilities",
 			fields: fields{
 				dbSession: dbSession,
@@ -3717,13 +3775,13 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 	assert.NotNil(t, mc4)
 
 	mcinst1 := testInstanceBuildMachineInstanceType(t, dbSession, mc1, ist1)
-	assertMachineInstanceTypeAssociation(t, mcinst1, mc1, ist1)
+	assertMachineInstanceTypeAssociation(t, dbSession, mcinst1, mc1, ist1)
 
 	mcinst2 := testInstanceBuildMachineInstanceType(t, dbSession, mc3, ist2)
-	assertMachineInstanceTypeAssociation(t, mcinst2, mc3, ist2)
+	assertMachineInstanceTypeAssociation(t, dbSession, mcinst2, mc3, ist2)
 
 	mcinst4 := testInstanceBuildMachineInstanceType(t, dbSession, mc4, ist1)
-	assertMachineInstanceTypeAssociation(t, mcinst4, mc4, ist1)
+	assertMachineInstanceTypeAssociation(t, dbSession, mcinst4, mc4, ist1)
 
 	// Build SSHKeyGroup 1
 	skg1 := testBuildSSHKeyGroup(t, dbSession, "test-sshkeygroup-1", tnOrg1, cdb.GetStrPtr("test"), tn1.ID, cdb.GetStrPtr("12345"), cdbm.SSHKeyGroupStatusSynced, tnu1.ID)
@@ -3862,7 +3920,7 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 	assert.NotNil(t, mc5)
 
 	mcinst5 := testInstanceBuildMachineInstanceType(t, dbSession, mc5, ist4)
-	assertMachineInstanceTypeAssociation(t, mcinst5, mc5, ist4)
+	assertMachineInstanceTypeAssociation(t, dbSession, mcinst5, mc5, ist4)
 
 	al3 := testInstanceSiteBuildAllocation(t, dbSession, st3, tn2, "test-allocation-3", ipu)
 	assert.NotNil(t, al3)
@@ -3919,15 +3977,15 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 	mc7 := testInstanceBuildMachine(t, dbSession, ip.ID, st3.ID, cdb.GetBoolPtr(false), nil)
 	assert.NotNil(t, mc7)
 	mcinst7 := testInstanceBuildMachineInstanceType(t, dbSession, mc7, ist4)
-	assertMachineInstanceTypeAssociation(t, mcinst7, mc7, ist4)
+	assertMachineInstanceTypeAssociation(t, dbSession, mcinst7, mc7, ist4)
 	mc8 := testInstanceBuildMachine(t, dbSession, ip.ID, st3.ID, cdb.GetBoolPtr(false), nil)
 	assert.NotNil(t, mc8)
 	mcinst8u := testInstanceBuildMachineInstanceType(t, dbSession, mc8, ist4)
-	assertMachineInstanceTypeAssociation(t, mcinst8u, mc8, ist4)
+	assertMachineInstanceTypeAssociation(t, dbSession, mcinst8u, mc8, ist4)
 	mc9 := testInstanceBuildMachine(t, dbSession, ip.ID, st3.ID, cdb.GetBoolPtr(false), nil)
 	assert.NotNil(t, mc9)
 	mcinst9u := testInstanceBuildMachineInstanceType(t, dbSession, mc9, ist4)
-	assertMachineInstanceTypeAssociation(t, mcinst9u, mc9, ist4)
+	assertMachineInstanceTypeAssociation(t, dbSession, mcinst9u, mc9, ist4)
 
 	buildNsgPropagationMultiVpcPair := func(primaryName, secondaryName, primaryPrefixName, secondaryPrefixName, primaryCIDR, secondaryCIDR string) (*cdbm.Vpc, *cdbm.Vpc, *cdbm.VpcPrefix, *cdbm.VpcPrefix) {
 		primary := testInstanceBuildVPC(t, dbSession, primaryName, ip, tn1, st3, nil, nil, cdb.GetStrPtr(cdbm.VpcFNN), nil, cdbm.VpcStatusReady, tnu1)
@@ -3986,7 +4044,7 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 	common.TestBuildMachineCapability(t, dbSession, nil, &ist4.ID, cdbm.MachineCapabilityTypeNetwork, "MT42822 BlueField-2 integrated ConnectX-6 Dx network controller", nil, nil, cdb.GetStrPtr("Mellanox Technologies"), cdb.GetIntPtr(2), cdb.GetStrPtr("DPU"), nil)
 	// NVLink GPU on ist4 so machines with Network+DPU+GPU match the instance type (e.g. mc5 after GPU is added below)
 	common.TestBuildMachineCapability(t, dbSession, nil, &ist4.ID, cdbm.MachineCapabilityTypeGPU, "NVIDIA GB200", nil, nil, cdb.GetStrPtr("NVIDIA"), cdb.GetIntPtr(4), cdb.GetStrPtr(cdbm.MachineCapabilityDeviceTypeNVLink), nil)
-	// Same capability on machines paired with ist4 so ResolveInstanceTypeMachineCapabilitiesMatch succeeds on interface updates
+	// Same capability on machines paired with ist4 so VerifyInstanceTypeMachineCapabilitiesMatch succeeds on interface updates
 	common.TestBuildMachineCapability(t, dbSession, &mc5.ID, nil, cdbm.MachineCapabilityTypeNetwork, "MT42822 BlueField-2 integrated ConnectX-6 Dx network controller", nil, nil, cdb.GetStrPtr("Mellanox Technologies"), cdb.GetIntPtr(2), cdb.GetStrPtr("DPU"), nil)
 	common.TestBuildMachineCapability(t, dbSession, &mc7.ID, nil, cdbm.MachineCapabilityTypeNetwork, "MT42822 BlueField-2 integrated ConnectX-6 Dx network controller", nil, nil, cdb.GetStrPtr("Mellanox Technologies"), cdb.GetIntPtr(2), cdb.GetStrPtr("DPU"), nil)
 	common.TestBuildMachineCapability(t, dbSession, &mc8.ID, nil, cdbm.MachineCapabilityTypeNetwork, "MT42822 BlueField-2 integrated ConnectX-6 Dx network controller", nil, nil, cdb.GetStrPtr("Mellanox Technologies"), cdb.GetIntPtr(2), cdb.GetStrPtr("DPU"), nil)
@@ -4022,7 +4080,7 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 	assert.NotNil(t, mc6)
 
 	mcinst6 := testInstanceBuildMachineInstanceType(t, dbSession, mc6, ist2)
-	assertMachineInstanceTypeAssociation(t, mcinst6, mc6, ist2)
+	assertMachineInstanceTypeAssociation(t, dbSession, mcinst6, mc6, ist2)
 
 	inst14 := testInstanceBuildInstance(t, dbSession, "test-instance-14", al2.ID, alc2.ID, tn2.ID, ip.ID, st2.ID, &ist2.ID, vpc2.ID, cdb.GetStrPtr(mc6.ID), &os4.ID, nil, cdbm.InstanceStatusError)
 	assert.NotNil(t, inst14)
@@ -4071,7 +4129,7 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 
 	// Add InfiniBand capability to Instance Type
 	common.TestBuildMachineCapability(t, dbSession, nil, &ist1.ID, cdbm.MachineCapabilityTypeInfiniBand, "MT28908 Family [ConnectX-6]", nil, nil, cdb.GetStrPtr("Mellanox Technologies"), cdb.GetIntPtr(5), cdb.GetStrPtr(""), nil)
-	// Same capability on machines paired with ist1 so ResolveInstanceTypeMachineCapabilitiesMatch succeeds on interface / IB updates
+	// Same capability on machines paired with ist1 so VerifyInstanceTypeMachineCapabilitiesMatch succeeds on interface / IB updates
 	common.TestBuildMachineCapability(t, dbSession, &mc1.ID, nil, cdbm.MachineCapabilityTypeInfiniBand, "MT28908 Family [ConnectX-6]", nil, nil, cdb.GetStrPtr("Mellanox Technologies"), cdb.GetIntPtr(5), cdb.GetStrPtr(""), nil)
 	common.TestBuildMachineCapability(t, dbSession, &mc2.ID, nil, cdbm.MachineCapabilityTypeInfiniBand, "MT28908 Family [ConnectX-6]", nil, nil, cdb.GetStrPtr("Mellanox Technologies"), cdb.GetIntPtr(5), cdb.GetStrPtr(""), nil)
 	common.TestBuildMachineCapability(t, dbSession, &mc4.ID, nil, cdbm.MachineCapabilityTypeInfiniBand, "MT28908 Family [ConnectX-6]", nil, nil, cdb.GetStrPtr("Mellanox Technologies"), cdb.GetIntPtr(5), cdb.GetStrPtr(""), nil)
@@ -4150,7 +4208,7 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 	assert.NotNil(t, mcUpdateCapMismatch)
 	common.TestBuildMachineCapability(t, dbSession, &mcUpdateCapMismatch.ID, nil, cdbm.MachineCapabilityTypeGPU, "NVIDIA GB200", nil, nil, cdb.GetStrPtr("NVIDIA"), cdb.GetIntPtr(4), cdb.GetStrPtr(cdbm.MachineCapabilityDeviceTypeNVLink), nil)
 	mcinstUpdateCapMismatch := testInstanceBuildMachineInstanceType(t, dbSession, mcUpdateCapMismatch, istUpdateCapMismatch)
-	assertMachineInstanceTypeAssociation(t, mcinstUpdateCapMismatch, mcUpdateCapMismatch, istUpdateCapMismatch)
+	assertMachineInstanceTypeAssociation(t, dbSession, mcinstUpdateCapMismatch, mcUpdateCapMismatch, istUpdateCapMismatch)
 	alcUpdateCapMismatch := testInstanceSiteBuildAllocationContraints(t, dbSession, al1, cdbm.AllocationResourceTypeInstanceType, istUpdateCapMismatch.ID, cdbm.AllocationConstraintTypeReserved, 1, ipu)
 	assert.NotNil(t, alcUpdateCapMismatch)
 	testInstanceBuildMachineInterface(t, dbSession, subnet1.ID, mcUpdateCapMismatch.ID)
@@ -4163,12 +4221,25 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 	mcUpdateNoMachineCaps := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
 	assert.NotNil(t, mcUpdateNoMachineCaps)
 	mcinstUpdateNoMachineCaps := testInstanceBuildMachineInstanceType(t, dbSession, mcUpdateNoMachineCaps, istUpdateNoMachineCaps)
-	assertMachineInstanceTypeAssociation(t, mcinstUpdateNoMachineCaps, mcUpdateNoMachineCaps, istUpdateNoMachineCaps)
+	assertMachineInstanceTypeAssociation(t, dbSession, mcinstUpdateNoMachineCaps, mcUpdateNoMachineCaps, istUpdateNoMachineCaps)
 	alcUpdateNoMachineCaps := testInstanceSiteBuildAllocationContraints(t, dbSession, al1, cdbm.AllocationResourceTypeInstanceType, istUpdateNoMachineCaps.ID, cdbm.AllocationConstraintTypeReserved, 1, ipu)
 	assert.NotNil(t, alcUpdateNoMachineCaps)
 	testInstanceBuildMachineInterface(t, dbSession, subnet1.ID, mcUpdateNoMachineCaps.ID)
 	instUpdateNoMachineCaps := testInstanceBuildInstance(t, dbSession, "test-instance-update-no-machine-caps", al1.ID, alcUpdateNoMachineCaps.ID, tn1.ID, ip.ID, st1.ID, &istUpdateNoMachineCaps.ID, vpc1.ID, cdb.GetStrPtr(mcUpdateNoMachineCaps.ID), &os2.ID, nil, cdbm.InstanceStatusReady)
 	assert.NotNil(t, instUpdateNoMachineCaps)
+
+	istUpdateInactiveIBOnly := testInstanceBuildInstanceType(t, dbSession, ip, "test-instance-type-update-ib-inactive-only", st1, cdbm.InstanceStatusReady)
+	assert.NotNil(t, istUpdateInactiveIBOnly)
+	alcUpdateInactiveIB := testInstanceSiteBuildAllocationContraints(t, dbSession, al1, cdbm.AllocationResourceTypeInstanceType, istUpdateInactiveIBOnly.ID, cdbm.AllocationConstraintTypeReserved, 1, ipu)
+	assert.NotNil(t, alcUpdateInactiveIB)
+	mcUpdateInactiveIB := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
+	assert.NotNil(t, mcUpdateInactiveIB)
+	mcinstUpdateInactiveIB := testInstanceBuildMachineInstanceType(t, dbSession, mcUpdateInactiveIB, istUpdateInactiveIBOnly)
+	assertMachineInstanceTypeAssociation(t, dbSession, mcinstUpdateInactiveIB, mcUpdateInactiveIB, istUpdateInactiveIBOnly)
+	common.TestBuildMachineCapability(t, dbSession, &mcUpdateInactiveIB.ID, nil, cdbm.MachineCapabilityTypeInfiniBand, "MT28908 Family [ConnectX-6]", nil, nil, cdb.GetStrPtr("Mellanox Technologies"), cdb.GetIntPtr(3), cdb.GetStrPtr(""), []int{1})
+	testInstanceBuildMachineInterface(t, dbSession, subnet1.ID, mcUpdateInactiveIB.ID)
+	instUpdateInactiveIB := testInstanceBuildInstance(t, dbSession, "test-instance-update-ib-inactive", al1.ID, alcUpdateInactiveIB.ID, tn1.ID, ip.ID, st1.ID, &istUpdateInactiveIBOnly.ID, vpc1.ID, cdb.GetStrPtr(mcUpdateInactiveIB.ID), &os2.ID, nil, cdbm.InstanceStatusReady)
+	assert.NotNil(t, instUpdateInactiveIB)
 
 	e := echo.New()
 	cfg := common.GetTestConfig()
@@ -5959,6 +6030,37 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "test Instance update API endpoint fails when InfiniBand device instance is inactive per machine capability inactiveDevices",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				scp:       scp,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIInstanceUpdateRequest{
+					Name:       cdb.GetStrPtr("Test Instance update IB inactive device index"),
+					IpxeScript: os2.IpxeScript,
+					Interfaces: []model.APIInterfaceCreateOrUpdateRequest{},
+					InfiniBandInterfaces: []model.APIInfiniBandInterfaceCreateOrUpdateRequest{
+						{
+							InfiniBandPartitionID: ibp1.ID.String(),
+							Device:                "MT28908 Family [ConnectX-6]",
+							Vendor:                cdb.GetStrPtr("Mellanox Technologies"),
+							DeviceInstance:        1,
+							IsPhysical:            true,
+						},
+					},
+				},
+				reqInstance: instUpdateInactiveIB.ID.String(),
+				reqOrg:      tnOrg1,
+				reqUser:     tnu1,
+				respCode:    http.StatusBadRequest,
+				respMessage: cdb.GetStrPtr("Device Instance: 1 for Device MT28908 Family [ConnectX-6] is inactive"),
+			},
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -6416,19 +6518,19 @@ func TestGetInstanceHandler_Handle(t *testing.T) {
 	assert.NotNil(t, mc1)
 
 	mcinst1 := testInstanceBuildMachineInstanceType(t, dbSession, mc1, ist1)
-	assertMachineInstanceTypeAssociation(t, mcinst1, mc1, ist1)
+	assertMachineInstanceTypeAssociation(t, dbSession, mcinst1, mc1, ist1)
 
 	mc2 := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
 	assert.NotNil(t, mc2)
 
 	mcinst2 := testInstanceBuildMachineInstanceType(t, dbSession, mc2, ist1)
-	assertMachineInstanceTypeAssociation(t, mcinst2, mc2, ist1)
+	assertMachineInstanceTypeAssociation(t, dbSession, mcinst2, mc2, ist1)
 
 	mc3 := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
 	assert.NotNil(t, mc3)
 
 	mcinst3 := testInstanceBuildMachineInstanceType(t, dbSession, mc3, ist1)
-	assertMachineInstanceTypeAssociation(t, mcinst3, mc3, ist1)
+	assertMachineInstanceTypeAssociation(t, dbSession, mcinst3, mc3, ist1)
 
 	os1 := testInstanceBuildOperatingSystem(t, dbSession, "test-operating-system-1", tn1, cdbm.OperatingSystemTypeImage, false, nil, false, cdbm.OperatingSystemStatusReady, tnu1)
 	assert.NotNil(t, os1)
@@ -6492,15 +6594,15 @@ func TestGetInstanceHandler_Handle(t *testing.T) {
 	mc4 := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
 	assert.NotNil(t, mc4)
 	mcinst4g := testInstanceBuildMachineInstanceType(t, dbSession, mc4, ist1)
-	assertMachineInstanceTypeAssociation(t, mcinst4g, mc4, ist1)
+	assertMachineInstanceTypeAssociation(t, dbSession, mcinst4g, mc4, ist1)
 	mc5 := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
 	assert.NotNil(t, mc5)
 	mcinst5g := testInstanceBuildMachineInstanceType(t, dbSession, mc5, ist1)
-	assertMachineInstanceTypeAssociation(t, mcinst5g, mc5, ist1)
+	assertMachineInstanceTypeAssociation(t, dbSession, mcinst5g, mc5, ist1)
 	mc6 := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
 	assert.NotNil(t, mc6)
 	mcinst6g := testInstanceBuildMachineInstanceType(t, dbSession, mc6, ist1)
-	assertMachineInstanceTypeAssociation(t, mcinst6g, mc6, ist1)
+	assertMachineInstanceTypeAssociation(t, dbSession, mcinst6g, mc6, ist1)
 
 	buildMultiVpcPair := func(primaryName, secondaryName, primaryPrefixName, secondaryPrefixName, primaryCIDR, secondaryCIDR string) (*cdbm.Vpc, *cdbm.Vpc, *cdbm.VpcPrefix, *cdbm.VpcPrefix) {
 		primary := testInstanceBuildVPC(t, dbSession, primaryName, ip, tn1, st1, cdb.GetUUIDPtr(uuid.New()), nil, cdb.GetStrPtr(cdbm.VpcFNN), nil, cdbm.VpcStatusReady, tnu1)
@@ -7098,11 +7200,11 @@ func TestGetAllInstanceHandler_Handle(t *testing.T) {
 	mc3 := testInstanceBuildMachineWithID(t, dbSession, ip.ID, st3.ID, cdb.GetBoolPtr(false), nil, "machine-3")
 	assert.NotNil(t, mc3)
 	mcinst1 := testInstanceBuildMachineInstanceType(t, dbSession, mc1, ist1)
-	assertMachineInstanceTypeAssociation(t, mcinst1, mc1, ist1)
+	assertMachineInstanceTypeAssociation(t, dbSession, mcinst1, mc1, ist1)
 	mcinst2 := testInstanceBuildMachineInstanceType(t, dbSession, mc2, ist2)
-	assertMachineInstanceTypeAssociation(t, mcinst2, mc2, ist2)
+	assertMachineInstanceTypeAssociation(t, dbSession, mcinst2, mc2, ist2)
 	mcinst3 := testInstanceBuildMachineInstanceType(t, dbSession, mc3, ist4)
-	assertMachineInstanceTypeAssociation(t, mcinst3, mc3, ist4)
+	assertMachineInstanceTypeAssociation(t, dbSession, mcinst3, mc3, ist4)
 
 	os1 := testInstanceBuildOperatingSystem(t, dbSession, "test-operating-system-1", tn1, cdbm.OperatingSystemTypeImage, false, nil, false, cdbm.OperatingSystemStatusReady, tnu1)
 	assert.NotNil(t, os1)
@@ -7191,15 +7293,15 @@ func TestGetAllInstanceHandler_Handle(t *testing.T) {
 	mc4 := testInstanceBuildMachineWithID(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil, "machine-getall-4")
 	assert.NotNil(t, mc4)
 	mcinst4ga := testInstanceBuildMachineInstanceType(t, dbSession, mc4, ist2)
-	assertMachineInstanceTypeAssociation(t, mcinst4ga, mc4, ist2)
+	assertMachineInstanceTypeAssociation(t, dbSession, mcinst4ga, mc4, ist2)
 	mc5 := testInstanceBuildMachineWithID(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil, "machine-getall-5")
 	assert.NotNil(t, mc5)
 	mcinst5ga := testInstanceBuildMachineInstanceType(t, dbSession, mc5, ist2)
-	assertMachineInstanceTypeAssociation(t, mcinst5ga, mc5, ist2)
+	assertMachineInstanceTypeAssociation(t, dbSession, mcinst5ga, mc5, ist2)
 	mc6 := testInstanceBuildMachineWithID(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil, "machine-getall-6")
 	assert.NotNil(t, mc6)
 	mcinst6ga := testInstanceBuildMachineInstanceType(t, dbSession, mc6, ist2)
-	assertMachineInstanceTypeAssociation(t, mcinst6ga, mc6, ist2)
+	assertMachineInstanceTypeAssociation(t, dbSession, mcinst6ga, mc6, ist2)
 
 	buildMultiVpcPair := func(primaryName, secondaryName, primaryPrefixName, secondaryPrefixName, primaryCIDR, secondaryCIDR string) (*cdbm.Vpc, *cdbm.Vpc, *cdbm.VpcPrefix, *cdbm.VpcPrefix) {
 		primary := testInstanceBuildVPC(t, dbSession, primaryName, ip, tn1, st1, cdb.GetUUIDPtr(uuid.New()), nil, cdb.GetStrPtr(cdbm.VpcFNN), nil, cdbm.VpcStatusReady, tnu1)
@@ -8634,7 +8736,7 @@ func TestDeleteInstanceHandler_Handle(t *testing.T) {
 	assert.NotNil(t, mc1)
 
 	mcinst1 := testInstanceBuildMachineInstanceType(t, dbSession, mc1, ist1)
-	assertMachineInstanceTypeAssociation(t, mcinst1, mc1, ist1)
+	assertMachineInstanceTypeAssociation(t, dbSession, mcinst1, mc1, ist1)
 
 	os1 := testInstanceBuildOperatingSystem(t, dbSession, "test-operating-system-1", tn1, cdbm.OperatingSystemTypeImage, false, nil, false, cdbm.OperatingSystemStatusReady, tnu1)
 	assert.NotNil(t, os1)
@@ -9272,7 +9374,7 @@ func TestInstanceHandler_GetStatusDetails(t *testing.T) {
 	assert.NotNil(t, mc1)
 
 	mcinst1 := testInstanceBuildMachineInstanceType(t, dbSession, mc1, ist1)
-	assertMachineInstanceTypeAssociation(t, mcinst1, mc1, ist1)
+	assertMachineInstanceTypeAssociation(t, dbSession, mcinst1, mc1, ist1)
 
 	os1 := testInstanceBuildOperatingSystem(t, dbSession, "test-operating-system-1", tn1, cdbm.OperatingSystemTypeImage, false, nil, false, cdbm.OperatingSystemStatusReady, tnu1)
 	assert.NotNil(t, os1)

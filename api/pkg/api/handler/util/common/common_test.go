@@ -25,6 +25,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 	"testing"
 
 	swe "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/error"
@@ -846,6 +847,7 @@ func TestGetAllocationConstraintsForInstanceType(t *testing.T) {
 
 func TestGetUnallocatedMachineForInstanceType(t *testing.T) {
 	ctx := context.Background()
+	logger := zerolog.New(os.Stdout).Level(zerolog.DebugLevel).With().Timestamp().Logger()
 	dbSession := testCommonInitDB(t)
 	defer dbSession.Close()
 
@@ -892,10 +894,36 @@ func TestGetUnallocatedMachineForInstanceType(t *testing.T) {
 		assert.NotNil(t, mit)
 	}
 
+	// Instance types + machines for VerifyInstanceTypeMachineCapabilitiesMatch in GetUnallocatedMachineForInstanceType
+	// (skip machines that fail the check while more candidates exist; return API error on last failure).
+	instCapPair := testCommonBuildInstanceType(t, dbSession, "it-cap-pair", site1, ip, tnuser)
+	TestBuildMachineCapability(t, dbSession, nil, &instCapPair.ID, cdbm.MachineCapabilityTypeGPU, "GPU-CAP-UNALLOC", nil, nil, cdb.GetStrPtr("NVIDIA"), cdb.GetIntPtr(4), cdb.GetStrPtr(cdbm.MachineCapabilityDeviceTypeNVLink), nil)
+	mcCapBad := testCommonBuildMachine(t, dbSession, ip.ID, site1.ID, cdb.GetUUIDPtr(instCapPair.ID), uuid.New(), nil, nil, nil, cdbm.MachineStatusReady)
+	testCommonBuildMachineInstanceType(t, dbSession, mcCapBad.ID, instCapPair.ID)
+	TestBuildMachineCapability(t, dbSession, &mcCapBad.ID, nil, cdbm.MachineCapabilityTypeGPU, "GPU-CAP-UNALLOC", nil, nil, cdb.GetStrPtr("NVIDIA"), cdb.GetIntPtr(2), cdb.GetStrPtr(cdbm.MachineCapabilityDeviceTypeNVLink), nil)
+	mcCapGood := testCommonBuildMachine(t, dbSession, ip.ID, site1.ID, cdb.GetUUIDPtr(instCapPair.ID), uuid.New(), nil, nil, nil, cdbm.MachineStatusReady)
+	testCommonBuildMachineInstanceType(t, dbSession, mcCapGood.ID, instCapPair.ID)
+	TestBuildMachineCapability(t, dbSession, &mcCapGood.ID, nil, cdbm.MachineCapabilityTypeGPU, "GPU-CAP-UNALLOC", nil, nil, cdb.GetStrPtr("NVIDIA"), cdb.GetIntPtr(4), cdb.GetStrPtr(cdbm.MachineCapabilityDeviceTypeNVLink), nil)
+
+	instCapSingleBad := testCommonBuildInstanceType(t, dbSession, "it-cap-single-bad", site1, ip, tnuser)
+	TestBuildMachineCapability(t, dbSession, nil, &instCapSingleBad.ID, cdbm.MachineCapabilityTypeGPU, "GPU-CAP-SINGLE", nil, nil, cdb.GetStrPtr("NVIDIA"), cdb.GetIntPtr(4), cdb.GetStrPtr(cdbm.MachineCapabilityDeviceTypeNVLink), nil)
+	mcCapOnlyBad := testCommonBuildMachine(t, dbSession, ip.ID, site1.ID, cdb.GetUUIDPtr(instCapSingleBad.ID), uuid.New(), nil, nil, nil, cdbm.MachineStatusReady)
+	testCommonBuildMachineInstanceType(t, dbSession, mcCapOnlyBad.ID, instCapSingleBad.ID)
+	TestBuildMachineCapability(t, dbSession, &mcCapOnlyBad.ID, nil, cdbm.MachineCapabilityTypeGPU, "GPU-CAP-SINGLE", nil, nil, cdb.GetStrPtr("NVIDIA"), cdb.GetIntPtr(1), cdb.GetStrPtr(cdbm.MachineCapabilityDeviceTypeNVLink), nil)
+
+	instCapTwoBad := testCommonBuildInstanceType(t, dbSession, "it-cap-two-bad", site1, ip, tnuser)
+	TestBuildMachineCapability(t, dbSession, nil, &instCapTwoBad.ID, cdbm.MachineCapabilityTypeGPU, "GPU-CAP-TWO", nil, nil, cdb.GetStrPtr("NVIDIA"), cdb.GetIntPtr(4), cdb.GetStrPtr(cdbm.MachineCapabilityDeviceTypeNVLink), nil)
+	for range 2 {
+		mcTwoBad := testCommonBuildMachine(t, dbSession, ip.ID, site1.ID, cdb.GetUUIDPtr(instCapTwoBad.ID), uuid.New(), nil, nil, nil, cdbm.MachineStatusReady)
+		testCommonBuildMachineInstanceType(t, dbSession, mcTwoBad.ID, instCapTwoBad.ID)
+		TestBuildMachineCapability(t, dbSession, &mcTwoBad.ID, nil, cdbm.MachineCapabilityTypeGPU, "GPU-CAP-TWO", nil, nil, cdb.GetStrPtr("NVIDIA"), cdb.GetIntPtr(2), cdb.GetStrPtr(cdbm.MachineCapabilityDeviceTypeNVLink), nil)
+	}
+
 	tests := []struct {
-		name         string
-		instancetype *cdbm.InstanceType
-		expectErr    bool
+		name              string
+		instancetype      *cdbm.InstanceType
+		expectErr         bool
+		apiErrMsgContains string
 	}{
 		{
 			name:         "success when machine and machine instance type exists",
@@ -907,13 +935,38 @@ func TestGetUnallocatedMachineForInstanceType(t *testing.T) {
 			instancetype: nil,
 			expectErr:    true,
 		},
+		{
+			name:         "success when one machine fails capability match but another machine matches",
+			instancetype: instCapPair,
+			expectErr:    false,
+		},
+		{
+			name:              "BadRequest when only candidate machine fails capability match",
+			instancetype:      instCapSingleBad,
+			expectErr:         true,
+			apiErrMsgContains: "Capabilities for Machine",
+		},
+		{
+			name:              "BadRequest when every candidate machine fails capability match",
+			instancetype:      instCapTwoBad,
+			expectErr:         true,
+			apiErrMsgContains: "Capabilities for Machine",
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			s, err := GetUnallocatedMachineForInstanceType(ctx, tx, dbSession, tc.instancetype)
-			assert.Equal(t, tc.expectErr, err != nil)
-			if err == nil {
+			s, apiErr, err := GetUnallocatedMachineForInstanceType(ctx, tx, dbSession, tc.instancetype, logger)
+			assert.Equal(t, tc.expectErr, err != nil || apiErr != nil)
+			if err == nil && apiErr == nil {
 				assert.NotNil(t, s)
+			}
+			if apiErr != nil {
+				assert.Equal(t, http.StatusBadRequest, apiErr.Code)
+				if tc.apiErrMsgContains != "" {
+					assert.Contains(t, apiErr.Message, tc.apiErrMsgContains)
+				} else {
+					assert.Equal(t, tc.expectErr, strings.Contains(apiErr.Message, "No Machines are available for specified Instance Type"))
+				}
 			}
 		})
 	}
