@@ -57,9 +57,10 @@ func (repo *FirmwareRepo) summary() (string, error) {
 	return sb.String(), nil
 }
 
-// supportUpgrade returns true if the current version is within the repo’s supported starting range.
+// supportUpgrade returns true if the current version falls within the repo's
+// supported range, which spans the minimum 'from' to the maximum 'to' across
+// all upgrade edges.
 func (repo *FirmwareRepo) supportUpgrade(currentFwVersion firmwareVersion) bool {
-	// Check if currentFwVersion is within the FirmwareReport's supported range
 	return repo.minStartingFwVersion.cmp(currentFwVersion) <= 0 && repo.maxStartingFwVersion.cmp(currentFwVersion) >= 0
 }
 
@@ -107,11 +108,13 @@ func newFirmwareRepo(v vendor.Vendor, firmwareDir string) (*FirmwareRepo, error)
 
 			if len(upgrades) == 1 {
 				minStartingFwVersion = from
-				maxStartingFwVersion = from
-			} else if from.cmp(minStartingFwVersion) < 0 {
+				maxStartingFwVersion = to
+			}
+			if from.cmp(minStartingFwVersion) < 0 {
 				minStartingFwVersion = from
-			} else if from.cmp(maxStartingFwVersion) > 0 {
-				maxStartingFwVersion = from
+			}
+			if to.cmp(maxStartingFwVersion) > 0 {
+				maxStartingFwVersion = to
 			}
 		}
 	}

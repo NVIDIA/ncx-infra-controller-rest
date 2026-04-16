@@ -150,16 +150,15 @@ func (m *FirmwareManager) QueueUpdate(
 	// Determine which components to update
 	var componentNames []string
 	if len(components) == 0 {
-		// Default to BMC and BIOS — these only require BMC access (Redfish)
-		// TODO: re-enable full bundle default once NVOS connectivity is resolved
-		// componentNames = pkg.GetOrderedComponents()
-		// if len(componentNames) == 0 {
-		// 	return nil, fmt.Errorf("no components found in bundle %s", bundleVersion)
-		// }
-		componentNames = []string{
-			strings.ToLower(string(nvswitch.BMC)),
-			strings.ToLower(string(nvswitch.BIOS)),
+		componentNames = pkg.GetOrderedComponents()
+		if len(componentNames) == 0 {
+			return nil, fmt.Errorf("no components found in bundle %s", bundleVersion)
 		}
+		// Default to BMC and BIOS — these only require BMC access (Redfish)
+		// componentNames = []string{
+		//	strings.ToLower(string(nvswitch.BMC)),
+		//	strings.ToLower(string(nvswitch.BIOS)),
+		//}
 	} else {
 		// Convert and validate specified components
 		for _, c := range components {

@@ -235,7 +235,13 @@ func (manager *Manager) handleOnePmcUpdate(ctx context.Context, pmc *pmc.PMC, up
 			return powershelf.FirmwareStateFailed, err
 		}
 
-		err = updater.upgrade(ctx, pmc, version, manager.dryRun)
+		// Skip the actual Redfish upload for same-version re-flashes; the device is already at the target version.
+		dryRun := manager.dryRun
+		if update.VersionFrom == update.VersionTo {
+			dryRun = true
+			log.Printf("Re-flash detected for component %v on PMC %v (version %v); forcing dry-run", update.Component, pmc, update.VersionFrom)
+		}
+		err = updater.upgrade(ctx, pmc, version, dryRun)
 		if err != nil {
 			return powershelf.FirmwareStateFailed, fmt.Errorf("failed to initiate firmware update of component %v for powershelf with PMC MAC %v from %v to %v: %w", update.Component, pmc, update.VersionFrom, update.VersionTo, err)
 		} else {
