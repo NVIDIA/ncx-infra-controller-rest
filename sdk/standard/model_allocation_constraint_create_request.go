@@ -25,7 +25,7 @@ type AllocationConstraintCreateRequest struct {
 	ResourceType string `json:"resourceType"`
 	// ID of the Resource Type that the Allocation Constraint applies to. For InstanceType, this is the ID of the Instance Type. For IPBlock, this is the ID of the IP Block.
 	ResourceTypeId string `json:"resourceTypeId"`
-	// Type of the Allocation Constraint. Currently supported values are Reserved.
+	// Type of the Allocation Constraint. Please note that OnDemand and Preemptible are not supported by current implementation.
 	ConstraintType string `json:"constraintType"`
 	// Value of the Allocation Constraint. For InstanceType, this value represents number of Machines allocated for Tenant. For IPBlock, this value represents the prefix Length of the IP Block.
 	ConstraintValue int32 `json:"constraintValue"`
