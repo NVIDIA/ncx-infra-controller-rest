@@ -12546,7 +12546,7 @@ components:
           deprecated: true
         isSerialConsoleSSHKeysEnabled:
           type: boolean
-          description: Enable/disable Serial Console access using SSH Keys. Previously updateable only by Tenants, modifying this value is no longer supported, please update SSH Key Groups to dissociate Sites.
+          description: Enable/disable Serial Console access using SSH Keys. Previously updateable only by Tenants, modifying this value is no longer supported, update SSH Key Groups to remove Site instead.
           deprecated: true
         location:
           $ref: '#/components/schemas/SiteLocation'

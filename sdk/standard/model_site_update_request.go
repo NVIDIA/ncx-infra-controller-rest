@@ -36,7 +36,7 @@ type SiteUpdateRequest struct {
 	// Maximum length of Serial Console session in seconds. Can only be updated by Provider. Modifying this attribute has no actual effect on SOL. It will be removed in a future API version.
 	// Deprecated
 	SerialConsoleMaxSessionLength *int32 `json:"serialConsoleMaxSessionLength,omitempty"`
-	// Enable/disable Serial Console access using SSH Keys. Previously updateable only by Tenants, modifying this value is no longer supported, please update SSH Key Groups to dissociate Sites.
+	// Enable/disable Serial Console access using SSH Keys. Previously updateable only by Tenants, modifying this value is no longer supported, update SSH Key Groups to remove Site instead.
 	// Deprecated
 	IsSerialConsoleSSHKeysEnabled *bool         `json:"isSerialConsoleSSHKeysEnabled,omitempty"`
 	Location                      *SiteLocation `json:"location,omitempty"`
