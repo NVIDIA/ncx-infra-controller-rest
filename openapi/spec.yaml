@@ -12583,7 +12583,7 @@ components:
     Allocation:
       title: Allocation
       type: object
-      description: Specifies a portion of a Site that has been allocated to a Tenant
+      description: Specifies a group of resources on a Site that has been allocated to a Tenant
       examples:
         - id: 497f6eca-6276-4993-bfeb-53cbbbba6f08
           name: Echo Studios Allocations
@@ -12612,22 +12612,28 @@ components:
       properties:
         id:
           type: string
+          description: ID of the Allocation
           format: uuid
           readOnly: true
         name:
           type: string
+          description: Concise and descriptive name of the Allocation
           minLength: 2
           maxLength: 256
         description:
           type: string
+          description: Detailed description of the Allocation
         infrastructureProviderId:
           type: string
+          description: ID of the Infrastructure Provider that created the Allocation
           format: uuid
         tenantId:
           type: string
+          description: ID of the Tenant that received the Allocation
           format: uuid
         siteId:
           type: string
+          description: ID of the Site where resources are allocated
           format: uuid
         status:
           $ref: '#/components/schemas/AllocationStatus'
@@ -12643,10 +12649,12 @@ components:
             $ref: '#/components/schemas/AllocationConstraint'
         created:
           type: string
+          description: Date/time when the Allocation was created
           format: date-time
           readOnly: true
         updated:
           type: string
+          description: Date/time when the Allocation was last updated
           format: date-time
           readOnly: true
     AllocationStatus:
@@ -12655,8 +12663,8 @@ components:
       description: Status values for Allocation objects
       enum:
         - Pending
-        - Processing
-        - Ready
+        - Registered
+        - Deleting
         - Error
     AllocationCreateRequest:
       title: AllocationCreateRequest
@@ -12675,16 +12683,20 @@ components:
       properties:
         name:
           type: string
+          description: Concise and descriptive name for the Allocation
           minLength: 2
           maxLength: 256
         description:
           type: string
+          description: Detailed description for the Allocation
         tenantId:
           type: string
           format: uuid
+          description: ID of the Tenant that should receive the Allocation
         siteId:
           type: string
           format: uuid
+          description: ID of the Site where resources should be allocated
         allocationConstraints:
           type: array
           items:
@@ -12703,14 +12715,16 @@ components:
       properties:
         name:
           type: string
+          description: Update name of the Allocation
           minLength: 2
           maxLength: 256
         description:
           type: string
+          description: Update description of the Allocation
     AllocationConstraint:
       title: AllocationConstraint
       type: object
-      description: Constraints an allocation by specifying limits for different resource types
+      description: Constraints on an Allocation that specify limits for different resource types
       examples:
         - id: 497f6eca-6276-4993-bfeb-53cbbbba6f08
           allocationId: 9ec871ce-3363-4de2-8f79-062881067628
@@ -12744,42 +12758,50 @@ components:
       properties:
         id:
           type: string
+          description: ID of the Allocation Constraint
           format: uuid
           readOnly: true
         allocationId:
           type: string
           format: uuid
+          description: ID of the Allocation that contains the Allocation Constraint
         resourceType:
           type: string
+          description: Type of the Resource that the Allocation Constraint applies to
           enum:
             - InstanceType
             - IPBlock
         resourceTypeId:
           type: string
           format: uuid
+          description: ID of the Resource Type that the Allocation Constraint applies to. For InstanceType, this is the ID of the Instance Type. For IPBlock, this is the ID of the IP Block.
         constraintType:
           type: string
+          description: Type of the Allocation Constraint. Please note that OnDemand and Preemptible are not supported by current implementation.
           enum:
             - Reserved
             - OnDemand
             - Preemptible
         constraintValue:
           type: integer
+          description: Value of the Allocation Constraint. For InstanceType, this value represents number of Machines allocated for Tenant. For IPBlock, this value represents the prefix Length of the IP Block.
         derivedResourceId:
           type:
             - string
             - 'null'
-          description: Populated with resulting IP Block ID when resource type is IP Block
+          description: ID of the allocated Tenant IP Block when resource type is IPBlock
         instanceType:
           $ref: '#/components/schemas/InstanceTypeSummary'
         ipBlock:
           $ref: '#/components/schemas/IpBlockSummary'
         created:
           type: string
+          description: Date/time when the Allocation Constraint was created
           format: date-time
           readOnly: true
         updated:
           type: string
+          description: Date/time when the Allocation Constraint was last updated
           format: date-time
           readOnly: true
     AllocationConstraintCreateRequest:
@@ -12798,21 +12820,26 @@ components:
       properties:
         resourceType:
           type: string
+          description: Type of the Resource that the Allocation Constraint applies to
           enum:
             - InstanceType
             - IPBlock
         resourceTypeId:
           type: string
           format: uuid
+          description: ID of the Resource Type that the Allocation Constraint applies to. For InstanceType, this is the ID of the Instance Type. For IPBlock, this is the ID of the IP Block.
         constraintType:
           type: string
+          description: Type of the Allocation Constraint. Please note that OnDemand and Preemptible are not supported by current implementation.
           enum:
             - Reserved
             - OnDemand
             - Preemptible
         constraintValue:
           type: integer
+          description: Value of the Allocation Constraint. For InstanceType, this value represents number of Machines allocated for Tenant. For IPBlock, this value represents the prefix Length of the IP Block.
       required:
+        - resourceType
         - resourceTypeId
         - constraintType
         - constraintValue
@@ -12825,6 +12852,7 @@ components:
       properties:
         constraintValue:
           type: integer
+          description: Value of the Allocation Constraint. For InstanceType, this value represents number of Machines allocated for Tenant. For IPBlock, this value represents the prefix Length of the IP Block.
       required:
         - constraintValue
     VPC:

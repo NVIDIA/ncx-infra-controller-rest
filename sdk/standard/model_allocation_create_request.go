@@ -21,9 +21,13 @@ var _ MappedNullable = &AllocationCreateRequest{}
 
 // AllocationCreateRequest Request data to create an Allocation
 type AllocationCreateRequest struct {
-	Name                  string                              `json:"name"`
-	Description           *string                             `json:"description,omitempty"`
-	TenantId              string                              `json:"tenantId"`
+	// Concise and descriptive name for the Allocation
+	Name string `json:"name"`
+	// Detailed description for the Allocation
+	Description *string `json:"description,omitempty"`
+	// ID of the Tenant that should receive the Allocation
+	TenantId string `json:"tenantId"`
+	// ID of the Site where resources should be allocated
 	SiteId                string                              `json:"siteId"`
 	AllocationConstraints []AllocationConstraintCreateRequest `json:"allocationConstraints,omitempty"`
 }

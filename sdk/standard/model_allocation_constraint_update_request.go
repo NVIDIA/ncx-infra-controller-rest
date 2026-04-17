@@ -21,6 +21,7 @@ var _ MappedNullable = &AllocationConstraintUpdateRequest{}
 
 // AllocationConstraintUpdateRequest Request data to update an AllocationConstraint
 type AllocationConstraintUpdateRequest struct {
+	// Value of the Allocation Constraint. For InstanceType, this value represents number of Machines allocated for Tenant. For IPBlock, this value represents the prefix Length of the IP Block.
 	ConstraintValue int32 `json:"constraintValue"`
 }
 

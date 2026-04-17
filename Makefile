@@ -662,7 +662,7 @@ lint-openapi:
 # Preview OpenAPI spec in Redoc UI (Docker)
 preview-openapi:
 	@echo "Starting Redoc UI at http://127.0.0.1:8090"
-	docker run -it --rm -p 8090:80 -v ./openapi/spec.yaml:/usr/share/nginx/html/openapi.yaml -e SPEC_URL=openapi.yaml redocly/redoc
+	docker run -it --rm -p 8090:80 -v ./openapi/spec.yaml:/usr/share/nginx/html/openapi.yaml -e SPEC_URL=openapi.yaml redocly/redoc:v2.5.1
 
 publish-openapi:
 	npx @redocly/cli build-docs ./openapi/spec.yaml -o ./docs/index.html
