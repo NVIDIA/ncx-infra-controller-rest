@@ -397,7 +397,7 @@ func (s *Session) fetchSSHKeyGroups(_ context.Context) ([]NamedItem, error) {
 	if s.Scope.SiteID != "" {
 		q["siteId"] = s.Scope.SiteID
 	}
-	items, err := s.fetchAll(apiPath(s, "ssh-key-group"), q)
+	items, err := s.fetchAll(apiPath(s, "sshkeygroup"), q)
 	if err != nil {
 		return nil, err
 	}
@@ -432,7 +432,7 @@ func (s *Session) fetchIPBlocks(_ context.Context) ([]NamedItem, error) {
 	if s.Scope.SiteID != "" {
 		q["siteId"] = s.Scope.SiteID
 	}
-	items, err := s.fetchAll(apiPath(s, "ip-block"), q)
+	items, err := s.fetchAll(apiPath(s, "ipblock"), q)
 	if err != nil {
 		return nil, err
 	}
@@ -494,7 +494,7 @@ func (s *Session) fetchAudits(_ context.Context) ([]NamedItem, error) {
 }
 
 func (s *Session) fetchSSHKeys(_ context.Context) ([]NamedItem, error) {
-	items, err := s.fetchAll(apiPath(s, "ssh-key"), nil)
+	items, err := s.fetchAll(apiPath(s, "sshkey"), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -579,7 +579,7 @@ func (s *Session) fetchVPCPrefixes(_ context.Context) ([]NamedItem, error) {
 }
 
 func (s *Session) fetchTenantAccounts(_ context.Context) ([]NamedItem, error) {
-	items, err := s.fetchAll(apiPath(s, "tenant-account"), nil)
+	items, err := s.fetchAll(apiPath(s, "tenant/account"), nil)
 	if err != nil {
 		return nil, err
 	}
