@@ -45,7 +45,7 @@ Create a Site for the org.
 
 Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` authorization role.
 
-Tenant cannot create a Site.
+Tenants cannot create Sites.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -537,6 +537,11 @@ Retrieve a specific Site by ID.
 
 User must have `FORGE_PROVIDER_ADMIN` or `FORGE_TENANT_ADMIN` role.
 
+Access is granted if:
+- The Site is owned by the org's Infrastructure Provider
+- The org's Tenant has an Allocation for Site
+- The org's Tenant is privileged and has Account with Site's Provider
+
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
 	@param siteId ID of the Site
@@ -676,9 +681,12 @@ GetSiteStatusHistory Retrieve Site status history
 
 # Retrieve a specific Site status history
 
-User must have `FORGE_PROVIDER_ADMIN`, `FORGE_PROVIDER_VIEWER`, or `FORGE_TENANT_ADMIN` role. Provider and Tenant entities are inferred from org membership.
+User must have `FORGE_PROVIDER_ADMIN` or `FORGE_TENANT_ADMIN` role.
 
-Access is granted if the Site is owned by the org's Infrastructure Provider **or** the org's Tenant has an allocation with the Site, consistent with the Get Site operation.
+Access is granted if:
+- The Site is owned by the org's Infrastructure Provider
+- The org's Tenant has an Allocation for Site
+- The org's Tenant is privileged and has Account with Site's Provider
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org

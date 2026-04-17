@@ -605,25 +605,44 @@ func (gsh GetSiteHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site", nil)
 	}
 
-	// Check Site association with Provider
+	// Check Site association
 	isAssociated := false
+
+	var ts *cdbm.TenantSite
+
 	if provider != nil {
 		isAssociated = provider.ID == st.InfrastructureProviderID
 	}
 
-	var ts *cdbm.TenantSite
-	tsDAO := cdbm.NewTenantSiteDAO(gsh.dbSession)
-
 	if !isAssociated && tenant != nil {
-		var serr error
-		ts, serr = tsDAO.GetByTenantIDAndSiteID(ctx, nil, tenant.ID, stID, nil)
+		tsDAO := cdbm.NewTenantSiteDAO(gsh.dbSession)
+
+		tss, tsCount, serr := tsDAO.GetAll(ctx, nil, cdbm.TenantSiteFilterInput{TenantIDs: []uuid.UUID{tenant.ID}, SiteIDs: []uuid.UUID{stID}}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
 		if serr != nil {
-			if serr != cdb.ErrDoesNotExist {
-				logger.Error().Err(serr).Msg("error retrieving TenantSite from DB")
-				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to determine org's association with Site, DB error", nil)
-			}
-		} else {
+			logger.Error().Err(serr).Msg("error retrieving TenantSite from DB")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant/Site association to determine access to Site, DB error", nil)
+		}
+		if tsCount > 0 {
+			ts = &tss[0]
 			isAssociated = true
+		}
+
+		if !isAssociated {
+			// Check if Tenant is privileged
+			if tenant.Config != nil && tenant.Config.TargetedInstanceCreation {
+				taDAO := cdbm.NewTenantAccountDAO(gsh.dbSession)
+				tas, _, serr := taDAO.GetAll(ctx, nil, cdbm.TenantAccountFilterInput{
+					InfrastructureProviderID: &st.InfrastructureProviderID,
+					TenantIDs:                []uuid.UUID{tenant.ID},
+					Statuses:                 []string{cdbm.TenantAccountStatusReady},
+				}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
+				if serr != nil {
+					logger.Error().Err(serr).Msg("error retrieving Tenant Accounts for privileged Tenant")
+					return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant Accounts to determine access to Site, DB error", nil)
+				}
+
+				isAssociated = len(tas) > 0
+			}
 		}
 	}
 
@@ -1174,22 +1193,44 @@ func (gssdh GetSiteStatusDetailsHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site", nil)
 	}
 
+	// Check Site association
 	isAssociated := false
+
 	if provider != nil {
 		isAssociated = provider.ID == st.InfrastructureProviderID
 	}
-	tsDAO := cdbm.NewTenantSiteDAO(gssdh.dbSession)
+
 	if !isAssociated && tenant != nil {
-		_, serr := tsDAO.GetByTenantIDAndSiteID(ctx, nil, tenant.ID, stID, nil)
+		tsDAO := cdbm.NewTenantSiteDAO(gssdh.dbSession)
+
+		_, tsCount, serr := tsDAO.GetAll(ctx, nil, cdbm.TenantSiteFilterInput{TenantIDs: []uuid.UUID{tenant.ID}, SiteIDs: []uuid.UUID{stID}}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
 		if serr != nil {
-			if serr != cdb.ErrDoesNotExist {
-				logger.Error().Err(serr).Msg("error retrieving TenantSite from DB")
-				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to determine org's association with Site, DB error", nil)
-			}
-		} else {
+			logger.Error().Err(serr).Msg("error retrieving TenantSite from DB")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant/Site association to determine access to Site, DB error", nil)
+		}
+		if tsCount > 0 {
 			isAssociated = true
 		}
+
+		if !isAssociated {
+			// Check if Tenant is privileged
+			if tenant.Config != nil && tenant.Config.TargetedInstanceCreation {
+				taDAO := cdbm.NewTenantAccountDAO(gssdh.dbSession)
+				tas, _, serr := taDAO.GetAll(ctx, nil, cdbm.TenantAccountFilterInput{
+					InfrastructureProviderID: &st.InfrastructureProviderID,
+					TenantIDs:                []uuid.UUID{tenant.ID},
+					Statuses:                 []string{cdbm.TenantAccountStatusReady},
+				}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
+				if serr != nil {
+					logger.Error().Err(serr).Msg("error retrieving Tenant Accounts for privileged Tenant")
+					return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant Accounts to determine access to Site, DB error", nil)
+				}
+
+				isAssociated = len(tas) > 0
+			}
+		}
 	}
+
 	if !isAssociated {
 		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Site is not associated with org", nil)
 	}

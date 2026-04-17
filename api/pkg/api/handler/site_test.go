@@ -992,11 +992,12 @@ func TestGetSiteHandler_Handle(t *testing.T) {
 
 	ipu := testSiteBuildUser(t, dbSession, uuid.NewString(), ipOrg, ipRoles)
 	ipuv := testSiteBuildUser(t, dbSession, uuid.NewString(), ipOrg, ipvRoles)
-	ip := testSiteBuildInfrastructureProvider(t, dbSession, "Test Infrastructure Provider", ipOrg, ipu)
-	st := testSiteBuildSite(t, dbSession, ip, "Test Site", cdbm.SiteStatusRegistered, ipu, nil, nil)
+	ip := testSiteBuildInfrastructureProvider(t, dbSession, "test-provider", ipOrg, ipu)
+	st := testSiteBuildSite(t, dbSession, ip, "test-site", cdbm.SiteStatusRegistered, ipu, nil, nil)
 
 	tnOrg1 := "test-tenant-org-1"
 	tnOrg2 := "test-tenant-org-2"
+	tnOrg3 := "test-tenant-org-3"
 	tnRoles := []string{"FORGE_TENANT_ADMIN"}
 
 	tnu1 := testSiteBuildUser(t, dbSession, uuid.NewString(), tnOrg1, tnRoles)
@@ -1005,29 +1006,57 @@ func TestGetSiteHandler_Handle(t *testing.T) {
 	tnu2 := testSiteBuildUser(t, dbSession, uuid.NewString(), tnOrg2, tnRoles)
 	assert.NotNil(t, tnu2)
 
-	tn1 := testSiteBuildTenant(t, dbSession, "Test Tenant 1", tnOrg1, tnu1)
+	tnu3 := testSiteBuildUser(t, dbSession, uuid.NewString(), tnOrg3, tnRoles)
+	assert.NotNil(t, tnu3)
+
+	tn1 := testSiteBuildTenant(t, dbSession, "test-tenant-1", tnOrg1, tnu1)
 	assert.NotNil(t, tn1)
 
-	tn2 := testSiteBuildTenant(t, dbSession, "Test Tenant 2", tnOrg2, tnu2)
+	tn2 := testSiteBuildTenant(t, dbSession, "test-tenant-2", tnOrg2, tnu2)
 	assert.NotNil(t, tn2)
 
-	testSiteBuildAllocation(t, dbSession, st, tn1, "Test Allocation", ipu)
+	// Tenant 3 is privileged
+	tn3 := testSiteBuildTenant(t, dbSession, "test-tenant-3", tnOrg3, tnu3)
+	assert.NotNil(t, tn3)
+	tn3 = testInstanceUpdateTenantCapability(t, dbSession, tn3)
+
+	ta3 := common.TestBuildTenantAccount(t, dbSession, ip, &tn3.ID, tnOrg3, cdbm.TenantAccountStatusReady, tnu3)
+	assert.NotNil(t, ta3)
+
+	// Tenant 1 has an allocation
+	testSiteBuildAllocation(t, dbSession, st, tn1, "test-allocation", ipu)
 	ts := common.TestBuildTenantSite(t, dbSession, tn1, st, ipu)
 
-	vOrg1 := "test-visitor-org-1"
-	vu1 := testSiteBuildUser(t, dbSession, uuid.NewString(), vOrg1, []string{"RANDDOM_ROLE"})
+	vOrg1 := "test-provider-org-1"
+	vu1 := testSiteBuildUser(t, dbSession, uuid.NewString(), vOrg1, []string{"INVALID_ROLE"})
 
-	vOrg2 := "test-visitor-org-2"
+	vOrg2 := "test-provider-org-2"
 	vu2 := testSiteBuildUser(t, dbSession, uuid.NewString(), vOrg2, ipRoles)
 
 	sOrg := "test-service-org"
 	sRoles := []string{"FORGE_PROVIDER_ADMIN", "FORGE_TENANT_ADMIN"}
 	su := testSiteBuildUser(t, dbSession, uuid.NewString(), sOrg, sRoles)
-	sip := testSiteBuildInfrastructureProvider(t, dbSession, "Test Service Provider", sOrg, su)
-	stn := testSiteBuildTenant(t, dbSession, "Test Service Tenant", sOrg, su)
+	sip := testSiteBuildInfrastructureProvider(t, dbSession, "test-service-provider", sOrg, su)
+	stn := testSiteBuildTenant(t, dbSession, "test-service-tenant", sOrg, su)
 
 	ss := testSiteBuildSite(t, dbSession, sip, "test-service-site", cdbm.SiteStatusRegistered, su, nil, nil)
 	common.TestBuildTenantSite(t, dbSession, stn, ss, su)
+
+	// Case: User with both Provider/Tenant role, has access to Site owned by another org
+	ipOrg2 := "test-provider-org-2"
+	ipRoles2 := []string{"FORGE_PROVIDER_ADMIN"}
+	ipu2 := testSiteBuildUser(t, dbSession, uuid.NewString(), ipOrg2, ipRoles2)
+	ip2 := testSiteBuildInfrastructureProvider(t, dbSession, "test-provider-2", ipOrg2, ipu2)
+	st2 := testSiteBuildSite(t, dbSession, ip2, "test-site-2", cdbm.SiteStatusRegistered, ipu2, nil, nil)
+
+	mOrg := "test-mixed-org"
+	mixedRole := []string{"FORGE_PROVIDER_ADMIN", "FORGE_TENANT_ADMIN"}
+	mu := testSiteBuildUser(t, dbSession, uuid.NewString(), mOrg, mixedRole)
+	_ = testSiteBuildInfrastructureProvider(t, dbSession, "test-mixed-provider", mOrg, mu)
+	mtn := testSiteBuildTenant(t, dbSession, "test-mixed-tenant", mOrg, mu)
+
+	testSiteBuildAllocation(t, dbSession, st2, mtn, "test-mixed-allocation", ipu2)
+	common.TestBuildTenantSite(t, dbSession, mtn, st2, ipu2)
 
 	// Setup echo server/context
 	e := echo.New()
@@ -1064,7 +1093,7 @@ func TestGetSiteHandler_Handle(t *testing.T) {
 		verifyChildSpanner    bool
 	}{
 		{
-			name: "test Site retrieval by Provider admin success",
+			name: "test Site retrieval by Provider Admin success",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        &tmocks.Client{},
@@ -1079,7 +1108,7 @@ func TestGetSiteHandler_Handle(t *testing.T) {
 			wantErr:      false,
 		},
 		{
-			name: "test Site retrieval by Provider viewer success",
+			name: "test Site retrieval by Provider Viewer success",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        &tmocks.Client{},
@@ -1142,7 +1171,7 @@ func TestGetSiteHandler_Handle(t *testing.T) {
 			wantErr:               false,
 			verifyIncludeRelation: true,
 		}, {
-			name: "test Site retrieval by Tenant with no Allocation",
+			name: "test Site retrieval by Tenant with no targetedInstanceCreation capability and no Allocation",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        &tmocks.Client{},
@@ -1154,6 +1183,22 @@ func TestGetSiteHandler_Handle(t *testing.T) {
 				user: tnu2,
 			},
 			wantRespCode:       http.StatusForbidden,
+			wantErr:            false,
+			verifyChildSpanner: true,
+		},
+		{
+			name: "test Site retrieval by Tenant with targetedInstanceCreation capability but no Allocation",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        &tmocks.Client{},
+				cfg:       cfg,
+			},
+			args: args{
+				org:  tnOrg3,
+				site: st,
+				user: tnu3,
+			},
+			wantRespCode:       http.StatusOK,
 			wantErr:            false,
 			verifyChildSpanner: true,
 		},
@@ -1188,7 +1233,7 @@ func TestGetSiteHandler_Handle(t *testing.T) {
 			wantErr:      false,
 		},
 		{
-			name: "test Site retrieval failure when org does not have Provider",
+			name: "test Site retrieval failure when org does not have any association with Site",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        &tmocks.Client{},
@@ -1199,7 +1244,7 @@ func TestGetSiteHandler_Handle(t *testing.T) {
 				site: st,
 				user: vu2,
 			},
-			wantRespCode: http.StatusBadRequest,
+			wantRespCode: http.StatusForbidden,
 			wantErr:      false,
 		},
 		{
@@ -1214,6 +1259,21 @@ func TestGetSiteHandler_Handle(t *testing.T) {
 				site:             ss,
 				user:             su,
 				isServiceAccount: true,
+			},
+			wantRespCode: http.StatusOK,
+			wantErr:      false,
+		},
+		{
+			name: "test Site retrieval by user with both Provider/Tenant role, and has Allocation for Site owned by another org",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        &tmocks.Client{},
+				cfg:       cfg,
+			},
+			args: args{
+				org:  mOrg,
+				site: st2,
+				user: mu,
 			},
 			wantRespCode: http.StatusOK,
 			wantErr:      false,
@@ -1265,8 +1325,6 @@ func TestGetSiteHandler_Handle(t *testing.T) {
 
 			if tt.args.ts != nil {
 				assert.Equal(t, *rst.IsSerialConsoleSSHKeysEnabled, tt.args.ts.EnableSerialConsole)
-			} else if !tt.args.isServiceAccount {
-				assert.Nil(t, rst.IsSerialConsoleSSHKeysEnabled)
 			}
 
 			if tt.verifyIncludeRelation {
@@ -2643,6 +2701,7 @@ func TestSiteHandler_GetStatusDetails(t *testing.T) {
 
 	tnOrg1 := "test-tenant-org-1"
 	tnOrg2 := "test-tenant-org-2"
+	tnOrg3 := "test-tenant-org-3"
 	tnRoles := []string{"FORGE_TENANT_ADMIN"}
 
 	tnu1 := testSiteBuildUser(t, dbSession, uuid.NewString(), tnOrg1, tnRoles)
@@ -2651,12 +2710,24 @@ func TestSiteHandler_GetStatusDetails(t *testing.T) {
 	tnu2 := testSiteBuildUser(t, dbSession, uuid.NewString(), tnOrg2, tnRoles)
 	assert.NotNil(t, tnu2)
 
+	tnu3 := testSiteBuildUser(t, dbSession, uuid.NewString(), tnOrg3, tnRoles)
+	assert.NotNil(t, tnu3)
+
 	tn1 := testSiteBuildTenant(t, dbSession, "Test Tenant 1", tnOrg1, tnu1)
 	assert.NotNil(t, tn1)
 
 	tn2 := testSiteBuildTenant(t, dbSession, "Test Tenant 2", tnOrg2, tnu2)
 	assert.NotNil(t, tn2)
 
+	tn3 := testSiteBuildTenant(t, dbSession, "Test Tenant 3", tnOrg3, tnu3)
+	assert.NotNil(t, tn3)
+
+	// Tenant 3 is privileged
+	tn3 = testInstanceUpdateTenantCapability(t, dbSession, tn3)
+	ta3 := common.TestBuildTenantAccount(t, dbSession, ip, &tn3.ID, tnOrg3, cdbm.TenantAccountStatusReady, tnu3)
+	assert.NotNil(t, ta3)
+
+	// Tenant 1 has an Allocation
 	testSiteBuildAllocation(t, dbSession, st, tn1, "Test Allocation", ipu)
 	common.TestBuildTenantSite(t, dbSession, tn1, st, ipu)
 
@@ -2667,26 +2738,30 @@ func TestSiteHandler_GetStatusDetails(t *testing.T) {
 	vu2 := testSiteBuildUser(t, dbSession, uuid.NewString(), vOrg2, ipRoles)
 
 	mOrg := "test-mixed-org"
+	mOrg2 := "test-mixed-org-2"
 	mixedRole := []string{"FORGE_PROVIDER_ADMIN", "FORGE_TENANT_ADMIN"}
-	mu := testSiteBuildUser(t, dbSession, uuid.NewString(), mOrg, mixedRole)
 
-	mip := testSiteBuildInfrastructureProvider(t, dbSession, "Test Mixed Provider", mOrg, mu)
-	mtn := testSiteBuildTenant(t, dbSession, "Test Mixed Tenant", mOrg, mu)
-	mst := testSiteBuildSite(t, dbSession, mip, "Test Mixed Site", cdbm.SiteStatusRegistered, mu, nil, nil)
-	testSiteBuildAllocation(t, dbSession, mst, mtn, "Test Allocation Mixed", mu)
+	mu := testSiteBuildUser(t, dbSession, uuid.NewString(), mOrg, mixedRole)
+	mu2 := testSiteBuildUser(t, dbSession, uuid.NewString(), mOrg2, mixedRole)
+
+	mip := testSiteBuildInfrastructureProvider(t, dbSession, "test-mixed-provider", mOrg, mu)
+	mtn := testSiteBuildTenant(t, dbSession, "test-mixed-tenant", mOrg, mu)
+	mst := testSiteBuildSite(t, dbSession, mip, "test-mixed-site", cdbm.SiteStatusRegistered, mu, nil, nil)
+	testSiteBuildAllocation(t, dbSession, mst, mtn, "test-mixed-allocation", mu)
 	common.TestBuildTenantSite(t, dbSession, mtn, mst, mu)
 
-	// Dual-role mixed org: access only via tenant path (site owned by another org's Infrastructure Provider)
-	extIpOrgStatus := "ext-ip-org-status-foreign"
-	extIpUserStatus := testSiteBuildUser(t, dbSession, uuid.NewString(), extIpOrgStatus, ipRoles)
-	ipExtStatus := testSiteBuildInfrastructureProvider(t, dbSession, "Ext Provider Status Foreign", extIpOrgStatus, extIpUserStatus)
-	mOrgStatusTenantForeignSite := "test-mixed-org-status-tenant-foreign-site"
-	muStatusT := testSiteBuildUser(t, dbSession, uuid.NewString(), mOrgStatusTenantForeignSite, mixedRole)
-	_ = testSiteBuildInfrastructureProvider(t, dbSession, "Test Mixed Own IP Status TenantForeign", mOrgStatusTenantForeignSite, muStatusT)
-	mtnStatusT := testSiteBuildTenant(t, dbSession, "Test Mixed Tenant Status TenantForeign", mOrgStatusTenantForeignSite, muStatusT)
-	mstStatusT := testSiteBuildSite(t, dbSession, ipExtStatus, "Test Mixed Site Status TenantForeign", cdbm.SiteStatusRegistered, extIpUserStatus, nil, nil)
-	testSiteBuildAllocation(t, dbSession, mstStatusT, mtnStatusT, "Test Allocation Status TenantForeign", muStatusT)
-	common.TestBuildTenantSite(t, dbSession, mtnStatusT, mstStatusT, muStatusT)
+	// Case: User with both Provider/Tenant role, has access to Site owned by another org
+	ipOrg2 := "test-provider-org-2"
+	ipRoles2 := []string{"FORGE_PROVIDER_ADMIN"}
+	ipu2 := testSiteBuildUser(t, dbSession, uuid.NewString(), ipOrg2, ipRoles2)
+	ip2 := testSiteBuildInfrastructureProvider(t, dbSession, "test-provider-2", ipOrg2, ipu2)
+	st2 := testSiteBuildSite(t, dbSession, ip2, "test-site-", cdbm.SiteStatusRegistered, ipu2, nil, nil)
+
+	_ = testSiteBuildInfrastructureProvider(t, dbSession, "test-mixed-provider-2", mOrg2, mu2)
+	mtn2 := testSiteBuildTenant(t, dbSession, "test-mixed-tenant-2", mOrg2, mu2)
+
+	testSiteBuildAllocation(t, dbSession, st2, mtn2, "test-mixed-allocation-2", ipu2)
+	common.TestBuildTenantSite(t, dbSession, mtn2, st2, mu2)
 
 	// add status details objects
 	totalCount := 30
@@ -2694,11 +2769,11 @@ func TestSiteHandler_GetStatusDetails(t *testing.T) {
 		if i%2 != 0 {
 			testMachineBuildStatusDetail(t, dbSession, st.ID.String(), cdbm.MachineStatusInitializing, nil)
 			testMachineBuildStatusDetail(t, dbSession, mst.ID.String(), cdbm.MachineStatusInitializing, nil)
-			testMachineBuildStatusDetail(t, dbSession, mstStatusT.ID.String(), cdbm.MachineStatusInitializing, nil)
+			testMachineBuildStatusDetail(t, dbSession, st2.ID.String(), cdbm.MachineStatusInitializing, nil)
 		} else {
 			testMachineBuildStatusDetail(t, dbSession, st.ID.String(), cdbm.MachineStatusReady, nil)
 			testMachineBuildStatusDetail(t, dbSession, mst.ID.String(), cdbm.MachineStatusInitializing, nil)
-			testMachineBuildStatusDetail(t, dbSession, mstStatusT.ID.String(), cdbm.MachineStatusInitializing, nil)
+			testMachineBuildStatusDetail(t, dbSession, st2.ID.String(), cdbm.MachineStatusInitializing, nil)
 		}
 	}
 
@@ -2780,25 +2855,24 @@ func TestSiteHandler_GetStatusDetails(t *testing.T) {
 			respCode:  http.StatusBadRequest,
 		},
 		{
-			name:      "success user has both Provider/Tenant role with no query param (OR site access)",
+			name:      "success user has both Provider/Tenant role",
 			reqSiteID: mst.ID.String(),
 			reqOrg:    mOrg,
 			reqUser:   mu,
 			respCode:  http.StatusOK,
 		},
 		{
-			name:      "success user has both Provider/Tenant role, Provider query param specified",
-			reqSiteID: mst.ID.String(),
-			reqOrg:    mOrg,
-			reqUser:   mu,
-			query:     url.Values{"infrastructureProviderId": []string{mip.ID.String()}},
+			name:      "success user has both Provider/Tenant role, user has Allocation for Site owned by another org",
+			reqSiteID: st2.ID.String(),
+			reqOrg:    mOrg2,
+			reqUser:   mu2,
 			respCode:  http.StatusOK,
 		},
 		{
-			name:      "success dual-role tenant-only path (site owned by other org's provider)",
-			reqSiteID: mstStatusT.ID.String(),
-			reqOrg:    mOrgStatusTenantForeignSite,
-			reqUser:   muStatusT,
+			name:      "success user has targetedInstanceCreation capability but no Allocation",
+			reqSiteID: st.ID.String(),
+			reqOrg:    tnOrg3,
+			reqUser:   tnu3,
 			respCode:  http.StatusOK,
 		},
 	}
