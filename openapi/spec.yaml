@@ -42,21 +42,21 @@ tags:
 
       ### Service Account Mode
       Depending on the auth configuration used, the NICo REST API may be configured in Service Account mode. In this mode, API users can act as both Provider and Tenant as part of the same organization.
-      If this is the case, user must first retrieve the Service Account by making a call to the [Retrieve Service Account endpoint](#tag/Service-Account/operation/get-current-service-account).
+      If this is the case, the user must first retrieve the Service Account by making a call to the [Retrieve Service Account endpoint](#tag/Service-Account/operation/get-current-service-account).
       For service accounts, the Tenant entity is initialized as a privileged Tenant with `targetedInstanceCreation` capability enabled.
 
       ### Provider or Tenant Mode
-      If NICo REST API is not configured in Service Account mode, user should retrieve the Infrastructure Provider by making a call to the [Retrieve Infrastructure Provider endpoint](#tag/Infrastructure-Provider/operation/get-current-infrastructure-provider)
+      If NICo REST API is not configured in Service Account mode, the user should retrieve the Infrastructure Provider by making a call to the [Retrieve Infrastructure Provider endpoint](#tag/Infrastructure-Provider/operation/get-current-infrastructure-provider)
       or the Tenant by making a call to the [Retrieve Tenant endpoint](#tag/Tenant/operation/get-current-tenant).
 
       In both cases, these calls initialize Provider and Tenant entities for the organization. All resources created are anchored to either the Provider or Tenant entity.
 
-      Once the Provider and Tenant entities are initialized, user can create resources by making calls to the appropriate endpoints.
+      Once the Provider and the Tenant are initialized, the user can create resources by making calls to the appropriate endpoints.
 
       ### Creating Site Level IP Blocks
       To utilize a NICo Site, the Provider or Service Account holder must create IP Blocks for each network overlay defined in NICo Core [Site configuration toml file](https://github.com/NVIDIA/ncx-infra-controller-core/blob/v0.5.8/deploy/files/carbide-api/carbide-api-site-config.toml#L30).
 
-      To create an IP Block, user must make a call to the [Create IP Block endpoint](#tag/IP-Block/operation/create-ipblock).
+      To create an IP Block, the user must make a call to the [Create IP Block endpoint](#tag/IP-Block/operation/create-ipblock).
 
       > **Note:** From this point onwards, a brief outline is provided for the typical API call flows for various use cases.
 
@@ -69,8 +69,8 @@ tags:
         - Creating an Allocation will create the Tenant in NICo Core.
       - Create a VPC using the [Create VPC endpoint](#tag/VPC/operation/create-vpc).
       - Create a VPC Prefix or Subnet referencing the VPC and a Tenant IP Block
-        - Site supports Native Networking (FNN), create a VPC Prefix using the [Create VPC Prefix endpoint](#tag/VPC-Prefix/operation/create-vpc-prefix)
-        - Otherwise user should create a Subnet using the [Create Subnet endpoint](#tag/Subnet/operation/create-subnet)
+        - If the Site supports Native Networking (FNN), create a VPC Prefix using the [Create VPC Prefix endpoint](#tag/VPC-Prefix/operation/create-vpc-prefix). Otherwise the user should create a Subnet
+        using the [Create Subnet endpoint](#tag/Subnet/operation/create-subnet).
       - Create an Operating System using the [Create Operating System endpoint](#tag/Operating-System/operation/create-operating-system) specifying iPXE script and user data.
       - Retrieve available Machines on Site using the [Retrieve All Machines endpoint](#tag/Machine/operation/get-all-machine)
       - Create an Instance specifying the VPC, VPC Prefix or Subnet, Operating System, and Machine
@@ -78,7 +78,7 @@ tags:
       ### Typical API Call Flow for Provider
 
       - Create a Tenant Account using the [Create Tenant Account endpoint](#tag/Tenant-Account/operation/create-tenant-account). Provider must know the Tenant org name.
-      - Once Tenant has accepted the Tenant Account, Provider can allocate resources to the Tenant.
+      - Once the Tenant has accepted the Tenant Account, the Provider can allocate resources to the Tenant.
       - Retrieve available Sites using the [Retrieve All Sites endpoint](#tag/Site/operation/get-all-site) and choose a Site to create resources in.
       - Create an Instance Type using the [Create Instance Type endpoint](#tag/Instance-Type/operation/create-instance-type)
       - Retrieve available Machines on Site using the [Retrieve All Machines endpoint](#tag/Machine/operation/get-all-machine)
@@ -91,18 +91,18 @@ tags:
 
       ### Typical API Call Flow for Tenant
 
-      - Accept the Tenant Account using the [Update Tenant Account endpoint](#tag/Tenant-Account/operation/update-tenant-account)
-      - Retrieve available Sites using the [Retrieve All Sites endpoint](#tag/Site/operation/get-all-site) and choose a Site to create resources in. Any Site where Tenant
+      - Accept the Tenant Account using the [Update Tenant Account endpoint](#tag/Tenant-Account/operation/update-tenant-account).
+      - Retrieve available Sites using the [Retrieve All Sites endpoint](#tag/Site/operation/get-all-site) and choose a Site to create resources in. Any Site where the Tenant
       has an Allocation will be returned.
       - Create a VPC using the [Create VPC endpoint](#tag/VPC/operation/create-vpc).
-      - Retrieve available Site IP Blocks using the [Retrieve All IP Blocks endpoint](#tag/IP-Block/operation/get-all-ipblock). Any IP Block for which Tenant has received
+      - Retrieve available Site IP Blocks using the [Retrieve All IP Blocks endpoint](#tag/IP-Block/operation/get-all-ipblock). Any IP Block for which the Tenant has received
       a Network Allocation from the Provider will be returned.
       - Create a VPC Prefix or Subnet referencing the VPC and a Tenant IP Block
         - Site supports Native Networking (FNN), create a VPC Prefix using the [Create VPC Prefix endpoint](#tag/VPC-Prefix/operation/create-vpc-prefix)
-        - Otherwise user should create a Subnet using the [Create Subnet endpoint](#tag/Subnet/operation/create-subnet)
+        - Otherwise the user should create a Subnet using the [Create Subnet endpoint](#tag/Subnet/operation/create-subnet)
       - Create an Operating System using the [Create Operating System endpoint](#tag/Operating-System/operation/create-operating-system) specifying iPXE script and user data.
       - Retrieve available Instance Types using the [Retrieve All Instance Types endpoint](#tag/Instance-Type/operation/get-all-instance-type). Any Instance Type for which
-      Tenant has received a Compute Allocation from the Provider will be returned.
+      the Tenant has received a Compute Allocation from the Provider will be returned.
       - Create an Instance specifying the VPC, VPC Prefix or Subnet, Operating System, and Instance Type
 
   - name: Service Account
@@ -117,7 +117,7 @@ tags:
 
       - `name` attribute was deprecated and was removed on August 17th, 2023 0:00 UTC. Please use `orgDisplayName` instead.
       - `POST /org/:orgName/carbide/infrastructure-provider` endpoint was deprecated and was removed on August 17th, 2023 0:00 UTC. Infrastructure Providers are automatically created when retrieved by a Provider Admin.
-      - `PATCH /org/:orgName/carbide/infrastructure-provider/current` endpoint was deprecated and was removed on August 17th, 2023 0:00 UTC. Infrastructure Provider details are populated from Org information and cannot be updated by user.
+      - `PATCH /org/:orgName/carbide/infrastructure-provider/current` endpoint was deprecated and was removed on August 17th, 2023 0:00 UTC. Infrastructure Provider details are populated from Org information and cannot be updated by the user.
   - name: Tenant
     description: |-
       Tenant is the anchor entity for an organization that consumes Network and Compute resources on a Site.
@@ -127,7 +127,7 @@ tags:
       - `name` attribute was deprecated and was removed on August 17th, 2023. Please use `orgDisplayName` instead.
       - `enableSSHAccess` attribute was deprecated and was removed on August 17th, 2023 0:00 UTC. Please use 'isSerialConsoleSSHKeysEnabled' attribute of Site instead.
       - `POST /org/:orgName/carbide/tenant` endpoint was deprecated and was removed on August 17th, 2023 0:00 UTC. Tenants are automatically created when retrieved by a Tenant Admin.
-      - `PATCH /org/:orgName/carbide/tenant/current` endpoint was deprecated and was removed on August 17th, 2023 0:00 UTC. Tenant details are populated from Org information and cannot be updated by user.
+      - `PATCH /org/:orgName/carbide/tenant/current` endpoint was deprecated and was removed on August 17th, 2023 0:00 UTC. Tenant details are populated from Org information and cannot be updated by the user.
   - name: Tenant Account
     description: Tenant Account connects a Tenant with an Infrastructure Provider. It represents/contains any information pertaining to their relationship.
   - name: Site
@@ -211,7 +211,7 @@ tags:
       Rack is a physical enclosure that contains a number of Machines. Racks are the physical building blocks of a Site.
   - name: Tray
     description: |-
-      Tray is represents a component within a Rack.
+      Tray represents a component within a Rack.
   - name: Network Security Group
     description: |-
       Network Security Group is a security policy that controls the traffic flowing between Instances.
