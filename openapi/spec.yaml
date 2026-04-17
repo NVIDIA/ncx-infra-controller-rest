@@ -28,6 +28,78 @@ servers:
   - url: 'https://carbide-rest-api.carbide.svc.cluster.local'
     description: Kubernetes Cluster
 tags:
+  - name: Getting Started
+    description:  |-
+      This section provides a quick overview of the API and how to get started.
+
+      ### Authentication
+      The first step is to authenticate using a JWT bearer token. Organization structures and roles depend on the authentication configuration used. For details on authentication, please consult the
+      NICo REST `auth` module [README](https://github.com/NVIDIA/ncx-infra-controller-rest/tree/main/auth).
+
+      ### API Version
+      The next step is to be aware of the API version being used. The API version can be retrieved by calling the [Retrieve Metadata endpoint](#tag/Metadata/operation/get-metadata). In general, the API maintains backward
+      compatibility with the previous versions. Any breaking changes are announced using a deprecation notice. Current and past deprecations are listed in the [Deprecations](#tag/Deprecations) section.
+
+      ### Service Account Mode
+      Depending on the auth configuration used, the NICo REST API may be configured in Service Account mode. In this mode, API users can act as both Provider and Tenant as part of the same organization.
+      If this is the case, user must first retrieve the Service Account by making a call to the [Retrieve Service Account endpoint](#tag/Service-Account/operation/get-current-service-account).
+
+      ### Provider or Tenant Mode
+      If NICo REST API is not configured in Service Account mode, user should retrieve the Infrastructure Provider by making a call to the [Retrieve Infrastructure Provider endpoint](#tag/Infrastructure-Provider/operation/get-current-infrastructure-provider)
+      or the Tenant by making a call to the [Retrieve Tenant endpoint](#tag/Tenant/operation/get-current-tenant).
+
+      In both cases, these calls initialize Provider and Tenant entities for the organization. All resources created are anchored to either the Provider or Tenant entity.
+
+      Once the Provider and Tenant entities are initialized, user can create resources by making calls to the appropriate endpoints.
+
+      ### Creating Site Level IP Blocks
+      To utilize a NICo Site, the Provider or Service Account holder must create IP Blocks for each network overlay defined in NICo Core [Site configuration toml file](https://github.com/NVIDIA/ncx-infra-controller-core/blob/v0.5.8/deploy/files/carbide-api/carbide-api-site-config.toml#L30).
+
+      To create an IP Block, user must make a call to the [Create IP Block endpoint](#tag/IP-Block/operation/create-ipblock).
+
+      > **Note:** From this point onwards, a brief outline is provided for the typical API call flows for various use cases.
+
+      ### Typical API Call Flow for Service Account
+
+      - Retrieve available Sites using the [Retrieve All Sites endpoint](#tag/Site/operation/get-all-site) and choose a Site to create resources in. For _Disconnected_ NICo installations where NICo
+      REST is deployed alongside NICo Core, typically there will be a single Site available.
+      - For each Site IP Block, create a Network Allocation for the Tenant entity using the [Create Allocation endpoint](#tag/Allocation/operation/create-allocation) using the full prefix length.
+      This will create a Tenant IP Block for each Site IP Block.
+        - Creating an Allocation will create the Tenant in NICo Core.
+      - Create a VPC using the [Create VPC endpoint](#tag/VPC/operation/create-vpc).
+      - Create a VPC Prefix or Subnet referencing the VPC and a Tenant IP Block
+        - Site supports Native Networking (FNN), create a VPC Prefix using the [Create VPC Prefix endpoint](#tag/VPC-Prefix/operation/create-vpc-prefix)
+        - Otherwise user should create a Subnet using the [Create Subnet endpoint](#tag/Subnet/operation/create-subnet)
+      - Create an Operating System using the [Create Operating System endpoint](#tag/Operating-System/operation/create-operating-system) specifying iPXE script and user data.
+      - Retrieve available Machines on Site using the [Retrieve All Machines endpoint](#tag/Machine/operation/get-all-machine)
+      - Create an Instance specifying the VPC, VPC Prefix or Subnet, Operating System, and Machine
+
+      ### Typical API Call Flow for Provider
+
+      - Create a Tenant Account using the [Create Tenant Account endpoint](#tag/Tenant-Account/operation/create-tenant-account). Provider must know the Tenant org name.
+      - Once Tenant has accepted the Tenant Account, Provider can allocate resources to the Tenant.
+      - Retrieve available Sites using the [Retrieve All Sites endpoint](#tag/Site/operation/get-all-site) and choose a Site to create resources in.
+      - Create an Instance Type using the [Create Instance Type endpoint](#tag/Instance-Type/operation/create-instance-type)
+      - Retrieve available Machines on Site using the [Retrieve All Machines endpoint](#tag/Machine/operation/get-all-machine)
+      - Update a Machine's Instance Type using the [Update Machine endpoint](#tag/Machine/operation/update-machine) or assign multiple Machines to an Instance Type using the [Create Instance Type/Machine Association endpoint](#tag/Instance-Type/operation/create-instance-type-machine-association)
+      - Create a Compute Allocation for Tenant using the [Create Compute Allocation endpoint](#tag/Allocation/operation/create-allocation) referencing the Instance Type
+        - Creating any type of Allocation for a Tenant will create the Tenant in NICo Core.
+      - Create a Network Allocation for Tenant using the [Create Allocation endpoint](#tag/Allocation/operation/create-allocation) referencing a Site IP Block
+        - Creating a Network Allocation will create a Tenant IP Block
+
+      ### Typical API Call Flow for Tenant
+
+      - Accept the Tenant Account using the [Update Tenant Account endpoint](#tag/Tenant-Account/operation/update-tenant-account)
+      - Retrieve available Sites using the [Retrieve All Sites endpoint](#tag/Site/operation/get-all-site) and choose a Site to create resources in. Any Site where Tenant has an Allocation will be returned.
+      - Create a VPC using the [Create VPC endpoint](#tag/VPC/operation/create-vpc).
+      - Retrieve available Site IP Blocks using the [Retrieve All IP Blocks endpoint](#tag/IP-Block/operation/get-all-ipblock). Any IP Block for which Tenant has received a Network Allocation from the Provider will be returned.
+      - Create a VPC Prefix or Subnet referencing the VPC and a Tenant IP Block
+        - Site supports Native Networking (FNN), create a VPC Prefix using the [Create VPC Prefix endpoint](#tag/VPC-Prefix/operation/create-vpc-prefix)
+        - Otherwise user should create a Subnet using the [Create Subnet endpoint](#tag/Subnet/operation/create-subnet)
+      - Create an Operating System using the [Create Operating System endpoint](#tag/Operating-System/operation/create-operating-system) specifying iPXE script and user data.
+      - Retrieve available Instance Types using the [Retrieve All Instance Types endpoint](#tag/Instance-Type/operation/get-all-instance-type). Any Instance Type for which Tenant has received a Compute Allocation from the Provider will be returned.
+      - Create an Instance specifying the VPC, VPC Prefix or Subnet, Operating System, and Instance Type
+
   - name: Service Account
     description: 'When API service is configured in Service Account mode, API users can act as both Provider and Tenant'
   - name: Infrastructure Provider
