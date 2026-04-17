@@ -338,11 +338,11 @@ func (ush UpdateSiteHandler) Handle(c echo.Context) error {
 	}
 
 	// Get application instance ID from URL param
-	stStrID := c.Param("id")
+	siteStrID := c.Param("id")
 
-	ush.tracerSpan.SetAttribute(handlerSpan, attribute.String("site_id", stStrID), logger)
+	ush.tracerSpan.SetAttribute(handlerSpan, attribute.String("site_id", siteStrID), logger)
 
-	stID, err := uuid.Parse(stStrID)
+	siteID, err := uuid.Parse(siteStrID)
 	if err != nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Site ID in URL", nil)
 	}
@@ -366,31 +366,38 @@ func (ush UpdateSiteHandler) Handle(c echo.Context) error {
 	}
 
 	// Check that Site exists
-	es, err := stDAO.GetByID(ctx, nil, stID, nil, false)
+	es, err := stDAO.GetByID(ctx, nil, siteID, nil, false)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error retrieving Site DB entity")
 		return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not retrieve Site to update", nil)
 	}
 
-	tsDAO := cdbm.NewTenantSiteDAO(ush.dbSession)
-
-	var ts *cdbm.TenantSite
+	isAssociated := false
 
 	// Check that Site is associated with Provider
 	if provider != nil {
-		if provider.ID != es.InfrastructureProviderID {
-			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Site is not associated with org's Infrastructure Provider", nil)
-		}
-	} else {
-		// Check that Tenant is associated with Site
-		ts, err = tsDAO.GetByTenantIDAndSiteID(ctx, nil, tenant.ID, stID, nil)
+		isAssociated = provider.ID == es.InfrastructureProviderID
+	}
+
+	tsDAO := cdbm.NewTenantSiteDAO(ush.dbSession)
+	var ts *cdbm.TenantSite
+
+	if !isAssociated && tenant != nil {
+		// Check if Tenant is associated with Site
+		tss, _, err := tsDAO.GetAll(ctx, nil, cdbm.TenantSiteFilterInput{TenantIDs: []uuid.UUID{tenant.ID}, SiteIDs: []uuid.UUID{siteID}}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
 		if err != nil {
-			if err == cdb.ErrDoesNotExist {
-				return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant does not have access to Site", nil)
-			}
-			logger.Warn().Err(err).Msg("error retrieving TenantSite DB entity")
-			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Failed to determine Tenant's access to Site, DB error", nil)
+			logger.Warn().Err(err).Msg("error retrieving TenantSite records from DB")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to determine Tenant's access to Site, DB error", nil)
 		}
+		if len(tss) > 0 {
+			ts = &tss[0]
+			isAssociated = true
+		}
+	}
+
+	if !isAssociated {
+		logger.Warn().Msg("Site is not associated with org's Infrastructure Provider or Tenant")
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Current org is not allowed to modify Site attributes", nil)
 	}
 
 	var registrationToken *string
@@ -464,7 +471,7 @@ func (ush UpdateSiteHandler) Handle(c echo.Context) error {
 
 	if provider != nil {
 		siteUpdateInput := cdbm.SiteUpdateInput{
-			SiteID:                        stID,
+			SiteID:                        siteID,
 			Name:                          apiRequest.Name,
 			Description:                   apiRequest.Description,
 			RegistrationToken:             registrationToken,
@@ -499,7 +506,7 @@ func (ush UpdateSiteHandler) Handle(c echo.Context) error {
 	// Add Status Detail record if needed
 	if status != nil {
 		sdDAO := cdbm.NewStatusDetailDAO(ush.dbSession)
-		_, serr := sdDAO.CreateFromParams(ctx, tx, stID.String(), *status, statusMessage)
+		_, serr := sdDAO.CreateFromParams(ctx, tx, siteID.String(), *status, statusMessage)
 		if serr != nil {
 			logger.Error().Err(serr).Msg("error creating Status Detail DB entry")
 		}
@@ -508,7 +515,7 @@ func (ush UpdateSiteHandler) Handle(c echo.Context) error {
 	// Get status details
 	sdDAO := cdbm.NewStatusDetailDAO(ush.dbSession)
 
-	ssds, _, err := sdDAO.GetAllByEntityID(ctx, tx, stID.String(), nil, cdb.GetIntPtr(pagination.MaxPageSize), nil)
+	ssds, _, err := sdDAO.GetAllByEntityID(ctx, tx, siteID.String(), nil, cdb.GetIntPtr(pagination.MaxPageSize), nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Status Details for Site from DB")
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details for Site", nil)
