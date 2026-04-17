@@ -393,6 +393,13 @@ func TestDetectMisorderedFlags(t *testing.T) {
 			wantErr:   false,
 		},
 		{
+			name:         "multi-positional command with flag inside a required positional slot",
+			args:         []string{"instanceTypeId-1", "--data={}"},
+			argParams:    []string{"instanceTypeId", "machineAssociationId"},
+			wantErr:      true,
+			wantContains: []string{"--data", "placed after a positional"},
+		},
+		{
 			name:         "multi-positional command with trailing flag",
 			args:         []string{"instanceTypeId-1", "machineAssociationId-1", "--data", "{}"},
 			argParams:    []string{"instanceTypeId", "machineAssociationId"},

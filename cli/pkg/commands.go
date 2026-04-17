@@ -432,14 +432,30 @@ func detectMisorderedFlags(c *cli.Context, argParams []string, usageText string)
 // detectMisorderedFlagsInArgs is the pure-function core of detectMisorderedFlags,
 // extracted so it can be exercised directly from tests without building a cli.Context.
 func detectMisorderedFlagsInArgs(args, argParams []string, usageText string) error {
-	if len(args) <= len(argParams) {
+	isFlagLike := func(s string) bool {
+		return strings.HasPrefix(s, "-") && len(s) > 1
+	}
+
+	// Default: extras start past all expected positionals. But if a flag-like
+	// token appears inside the positional slots on a multi-positional command
+	// (e.g. `create <instanceTypeId> --data={}`, where urfave would otherwise
+	// pass --data={} through as the second path param), split earlier so the
+	// flag is detected rather than silently consumed into the URL path.
+	split := len(argParams)
+	for i := 1; i < len(args) && i < len(argParams); i++ {
+		if isFlagLike(args[i]) {
+			split = i
+			break
+		}
+	}
+	if len(args) <= split {
 		return nil
 	}
-	extras := args[len(argParams):]
+	extras := args[split:]
 
 	var misplacedFlags, extraPositionals []string
 	for _, a := range extras {
-		if strings.HasPrefix(a, "-") && len(a) > 1 {
+		if isFlagLike(a) {
 			name := a
 			if eq := strings.Index(a, "="); eq >= 0 {
 				name = a[:eq]
