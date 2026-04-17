@@ -181,7 +181,8 @@ tags:
     description: |-
       NVLink Logical Partitions are used to group GPUs into logical partitions for shared memory and low-latency direct communication between GPUs.
   - name: Operating System
-    description: Operating System in NICo are typically iPXE scripts that are used to boot the Machine.
+    description: |-
+      Operating Systems in NICo are typically iPXE scripts that are used to boot Machines.
   - name: Instance Type
     description: |-
       Instance Types allow grouping Machines into a pool defined by their capabilities. Providers can then allocate a portion of the Instance Type pool to a Tenant.
