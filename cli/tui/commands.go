@@ -1108,7 +1108,7 @@ func cmdSSHKeyGroupCreate(s *Session, _ []string) error {
 
 	LogCmd(s, "ssh-key-group", "create", "--name", name)
 	bodyJSON, _ := json.Marshal(body)
-	resp, _, err := s.Client.Do("POST", apiPath(s, "ssh-key-group"), nil, nil, bodyJSON)
+	resp, _, err := s.Client.Do("POST", apiPath(s, "sshkeygroup"), nil, nil, bodyJSON)
 	if err != nil {
 		return fmt.Errorf("creating SSH key group: %w", err)
 	}
@@ -1167,7 +1167,7 @@ func cmdSSHKeyGroupUpdate(s *Session, args []string) error {
 
 	LogCmd(s, "ssh-key-group", "update", item.ID)
 	bodyJSON, _ := json.Marshal(body)
-	resp, _, err := s.Client.Do("PATCH", apiPath(s, "ssh-key-group/{id}"), map[string]string{"id": item.ID}, nil, bodyJSON)
+	resp, _, err := s.Client.Do("PATCH", apiPath(s, "sshkeygroup/{id}"), map[string]string{"id": item.ID}, nil, bodyJSON)
 	if err != nil {
 		return fmt.Errorf("updating SSH key group: %w", err)
 	}
@@ -1189,7 +1189,7 @@ func cmdSSHKeyGroupDelete(s *Session, args []string) error {
 		return err
 	}
 	LogCmd(s, "ssh-key-group", "delete", item.ID)
-	_, _, err = s.Client.Do("DELETE", apiPath(s, "ssh-key-group/{id}"), map[string]string{"id": item.ID}, nil, nil)
+	_, _, err = s.Client.Do("DELETE", apiPath(s, "sshkeygroup/{id}"), map[string]string{"id": item.ID}, nil, nil)
 	if err != nil {
 		return fmt.Errorf("deleting SSH key group: %w", err)
 	}
@@ -1236,7 +1236,7 @@ func cmdSSHKeyCreate(s *Session, _ []string) error {
 	}
 	LogCmd(s, "ssh-key", "create", "--name", name)
 	bodyJSON, _ := json.Marshal(body)
-	resp, _, err := s.Client.Do("POST", apiPath(s, "ssh-key"), nil, nil, bodyJSON)
+	resp, _, err := s.Client.Do("POST", apiPath(s, "sshkey"), nil, nil, bodyJSON)
 	if err != nil {
 		return fmt.Errorf("creating SSH key: %w", err)
 	}
@@ -1263,7 +1263,7 @@ func cmdSSHKeyUpdate(s *Session, args []string) error {
 	}
 	LogCmd(s, "ssh-key", "update", item.ID, "--name", strings.TrimSpace(name))
 	bodyJSON, _ := json.Marshal(body)
-	resp, _, err := s.Client.Do("PATCH", apiPath(s, "ssh-key/{id}"), map[string]string{"id": item.ID}, nil, bodyJSON)
+	resp, _, err := s.Client.Do("PATCH", apiPath(s, "sshkey/{id}"), map[string]string{"id": item.ID}, nil, bodyJSON)
 	if err != nil {
 		return fmt.Errorf("updating SSH key: %w", err)
 	}
@@ -1286,7 +1286,7 @@ func cmdSSHKeyDelete(s *Session, args []string) error {
 		return err
 	}
 	LogCmd(s, "ssh-key", "delete", item.ID)
-	_, _, err = s.Client.Do("DELETE", apiPath(s, "ssh-key/{id}"), map[string]string{"id": item.ID}, nil, nil)
+	_, _, err = s.Client.Do("DELETE", apiPath(s, "sshkey/{id}"), map[string]string{"id": item.ID}, nil, nil)
 	if err != nil {
 		return fmt.Errorf("deleting SSH key: %w", err)
 	}
@@ -1437,7 +1437,7 @@ func cmdIPBlockCreate(s *Session, _ []string) error {
 		"prefixLength": pl,
 	}
 	bodyJSON, _ := json.Marshal(body)
-	resp, _, err := s.Client.Do("POST", apiPath(s, "ip-block"), nil, nil, bodyJSON)
+	resp, _, err := s.Client.Do("POST", apiPath(s, "ipblock"), nil, nil, bodyJSON)
 	if err != nil {
 		return fmt.Errorf("creating IP block: %w", err)
 	}
@@ -1473,7 +1473,7 @@ func cmdIPBlockUpdate(s *Session, args []string) error {
 	}
 	LogCmd(s, "ip-block", "update", block.ID)
 	bodyJSON, _ := json.Marshal(body)
-	resp, _, err := s.Client.Do("PATCH", apiPath(s, "ip-block/{id}"), map[string]string{"id": block.ID}, nil, bodyJSON)
+	resp, _, err := s.Client.Do("PATCH", apiPath(s, "ipblock/{id}"), map[string]string{"id": block.ID}, nil, bodyJSON)
 	if err != nil {
 		return fmt.Errorf("updating IP block: %w", err)
 	}
@@ -1495,7 +1495,7 @@ func cmdIPBlockDelete(s *Session, args []string) error {
 		return err
 	}
 	LogCmd(s, "ip-block", "delete", block.ID)
-	_, _, err = s.Client.Do("DELETE", apiPath(s, "ip-block/{id}"), map[string]string{"id": block.ID}, nil, nil)
+	_, _, err = s.Client.Do("DELETE", apiPath(s, "ipblock/{id}"), map[string]string{"id": block.ID}, nil, nil)
 	if err != nil {
 		return fmt.Errorf("deleting IP block: %w", err)
 	}
@@ -1789,7 +1789,7 @@ func cmdTenantAccountCreate(s *Session, _ []string) error {
 	}
 	LogCmd(s, "tenant-account", "create", "--tenant-org", strings.TrimSpace(tenantOrg))
 	bodyJSON, _ := json.Marshal(body)
-	resp, _, err := s.Client.Do("POST", apiPath(s, "tenant-account"), nil, nil, bodyJSON)
+	resp, _, err := s.Client.Do("POST", apiPath(s, "tenant/account"), nil, nil, bodyJSON)
 	if err != nil {
 		return fmt.Errorf("creating tenant account: %w", err)
 	}
@@ -1811,7 +1811,7 @@ func cmdTenantAccountUpdate(s *Session, args []string) error {
 	}
 	LogCmd(s, "tenant-account", "update", item.ID)
 	bodyJSON, _ := json.Marshal(map[string]interface{}{})
-	resp, _, err := s.Client.Do("PATCH", apiPath(s, "tenant-account/{id}"), map[string]string{"id": item.ID}, nil, bodyJSON)
+	resp, _, err := s.Client.Do("PATCH", apiPath(s, "tenant/account/{id}"), map[string]string{"id": item.ID}, nil, bodyJSON)
 	if err != nil {
 		return fmt.Errorf("accepting tenant account invitation: %w", err)
 	}
@@ -1832,7 +1832,7 @@ func cmdTenantAccountDelete(s *Session, args []string) error {
 		return err
 	}
 	LogCmd(s, "tenant-account", "delete", item.ID)
-	_, _, err = s.Client.Do("DELETE", apiPath(s, "tenant-account/{id}"), map[string]string{"id": item.ID}, nil, nil)
+	_, _, err = s.Client.Do("DELETE", apiPath(s, "tenant/account/{id}"), map[string]string{"id": item.ID}, nil, nil)
 	if err != nil {
 		return fmt.Errorf("deleting tenant account: %w", err)
 	}
@@ -2087,7 +2087,7 @@ func cmdSSHKeyGroupGet(s *Session, args []string) error {
 		return err
 	}
 	LogCmd(s, "ssh-key-group", "get", item.ID)
-	return getAndPrint(s, apiPath(s, "ssh-key-group/{id}"), item.ID)
+	return getAndPrint(s, apiPath(s, "sshkeygroup/{id}"), item.ID)
 }
 
 func cmdSSHKeyGet(s *Session, args []string) error {
@@ -2096,7 +2096,7 @@ func cmdSSHKeyGet(s *Session, args []string) error {
 		return err
 	}
 	LogCmd(s, "ssh-key", "get", item.ID)
-	return getAndPrint(s, apiPath(s, "ssh-key/{id}"), item.ID)
+	return getAndPrint(s, apiPath(s, "sshkey/{id}"), item.ID)
 }
 
 func cmdAllocationGet(s *Session, args []string) error {
@@ -2133,7 +2133,7 @@ func cmdIPBlockGet(s *Session, args []string) error {
 		return err
 	}
 	LogCmd(s, "ip-block", "get", item.ID)
-	return getAndPrint(s, apiPath(s, "ip-block/{id}"), item.ID)
+	return getAndPrint(s, apiPath(s, "ipblock/{id}"), item.ID)
 }
 
 func cmdNSGGet(s *Session, args []string) error {
@@ -2178,7 +2178,7 @@ func cmdTenantAccountGet(s *Session, args []string) error {
 		return err
 	}
 	LogCmd(s, "tenant-account", "get", item.ID)
-	return getAndPrint(s, apiPath(s, "tenant-account/{id}"), item.ID)
+	return getAndPrint(s, apiPath(s, "tenant/account/{id}"), item.ID)
 }
 
 func cmdExpectedMachineGet(s *Session, args []string) error {
