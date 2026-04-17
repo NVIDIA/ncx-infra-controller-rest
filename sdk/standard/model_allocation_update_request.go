@@ -19,7 +19,9 @@ var _ MappedNullable = &AllocationUpdateRequest{}
 
 // AllocationUpdateRequest Request data to update an Allocation
 type AllocationUpdateRequest struct {
-	Name        *string `json:"name,omitempty"`
+	// Update name of the Allocation
+	Name *string `json:"name,omitempty"`
+	// Update description of the Allocation
 	Description *string `json:"description,omitempty"`
 }
 

@@ -21,8 +21,6 @@ type AllocationStatus string
 // List of AllocationStatus
 const (
 	ALLOCATIONSTATUS_PENDING    AllocationStatus = "Pending"
-	ALLOCATIONSTATUS_PROCESSING AllocationStatus = "Processing"
-	ALLOCATIONSTATUS_READY      AllocationStatus = "Ready"
 	ALLOCATIONSTATUS_REGISTERED AllocationStatus = "Registered"
 	ALLOCATIONSTATUS_DELETING   AllocationStatus = "Deleting"
 	ALLOCATIONSTATUS_ERROR      AllocationStatus = "Error"
@@ -31,8 +29,6 @@ const (
 // All allowed values of AllocationStatus enum
 var AllowedAllocationStatusEnumValues = []AllocationStatus{
 	"Pending",
-	"Processing",
-	"Ready",
 	"Registered",
 	"Deleting",
 	"Error",
