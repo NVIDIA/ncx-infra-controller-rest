@@ -21,7 +21,9 @@ var _ MappedNullable = &SiteCreateRequest{}
 
 // SiteCreateRequest Request data to create a Site
 type SiteCreateRequest struct {
-	Name        string  `json:"name"`
+	// Name for the Site
+	Name string `json:"name"`
+	// Description for the Site
 	Description *string `json:"description,omitempty"`
 	// Hostname to reach Serial Console for the Site
 	SerialConsoleHostname *string       `json:"serialConsoleHostname,omitempty"`

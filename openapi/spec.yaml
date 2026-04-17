@@ -888,28 +888,9 @@ paths:
       description: |-
         Update a specific Site
 
-        User must have `FORGE_PROVIDER_ADMIN` or `FORGE_TENANT_ADMIN` authorization role. Provider and Tenant entities are inferred from org membership.
+        User must have `FORGE_PROVIDER_ADMIN` role.
 
-        Infrastructure Provider updating the Site must be the owner of the Site.
-
-        Tenant updating the Site must have access to the Site and can only update Tenant specific attributes.
-
-        Dual-role users default to provider update. Set `tenantId` to update as tenant instead, or `infrastructureProviderId` to be explicit.
-      parameters:
-        - name: infrastructureProviderId
-          in: query
-          required: false
-          schema:
-            type: string
-            format: uuid
-          description: Optional. Act as the org's Infrastructure Provider for this request (must match the org's provider when set). Mutually exclusive with `tenantId`.
-        - name: tenantId
-          in: query
-          required: false
-          schema:
-            type: string
-            format: uuid
-          description: Optional. Act as the org's Tenant for this request (must match the org's tenant when set). Mutually exclusive with `infrastructureProviderId`. When both roles apply and neither param is set, provider semantics are used by default.
+        Infrastructure Provider updating the Site must be the owner of the Site. At present, there are no Site specific configuration modifiable by Tenant.
       requestBody:
         content:
           application/json:
@@ -922,9 +903,6 @@ paths:
                   description: Datacenter 4 serving central San Jose
                   renewRegistrationToken: true
                   serialConsoleHostname: sol.carbide.acme.com
-                  isSerialConsoleEnabled: true
-                  serialConsoleIdleTimeout: 120
-                  serialConsoleMaxSessionLength: 1800
                   location:
                     city: San Jose
                     state: CA
@@ -12489,8 +12467,8 @@ components:
       type: object
       description: Request data to create a Site
       examples:
-        - name: San Jose Central 4
-          description: Datacenter serving San Jose central region
+        - name: sjc4
+          description: Datacenter serving San Jose central region, zone 4
           serialConsoleHostname: carbide.acme.com
           location:
             city: San Jose
@@ -12501,10 +12479,12 @@ components:
       properties:
         name:
           type: string
+          description: Name for the Site
           minLength: 2
           maxLength: 256
         description:
           type: string
+          description: Description for the Site
         serialConsoleHostname:
           type: string
           description: Hostname to reach Serial Console for the Site
@@ -12520,14 +12500,10 @@ components:
       type: object
       description: Request data to update a Site
       examples:
-        - name: San Jose Central No.4
+        - name: sjc04
           description: Datacenter 4 serving central San Jose
           renewRegistrationToken: true
           serialConsoleHostname: sol.carbide.acme.com
-          isSerialConsoleEnabled: true
-          serialConsoleIdleTimeout: 120
-          serialConsoleMaxSessionLength: 3600
-        - isSerialConsoleSSHKeysEnabled: true
           location:
             city: San Jose
             state: CA
@@ -12550,16 +12526,20 @@ components:
           format: hostname
         isSerialConsoleEnabled:
           type: boolean
-          description: Enable/disable Serial Console. Can only be updated by Provider
+          description: Enable/disable Serial Console. Can only be updated by Provider. Modifying this attribute has no actual effect on SOL. It will be removed in a future API version.
+          deprecated: true
         serialConsoleIdleTimeout:
           type: integer
-          description: Maximum idle time in seconds before Serial Console is disconnected. Can only be updated by Provider
+          description: Maximum idle time in seconds before Serial Console is disconnected. Can only be updated by Provider. Modifying this attribute has no actual effect on SOL. It will be removed in a future API version.
+          deprecated: true
         serialConsoleMaxSessionLength:
           type: integer
-          description: Maximum length of Serial Console session in seconds. Can only be updated by Provider
+          description: Maximum length of Serial Console session in seconds. Can only be updated by Provider. Modifying this attribute has no actual effect on SOL. It will be removed in a future API version.
+          deprecated: true
         isSerialConsoleSSHKeysEnabled:
           type: boolean
-          description: Enable/disable Serial Console access using SSH Keys. Can only be updated by Tenant
+          description: Enable/disable Serial Console access using SSH Keys. Previously updateable only by Tenants, modifying this value is no longer supported, please update SSH Key Groups to dissociate Sites.
+          deprecated: true
         location:
           $ref: '#/components/schemas/SiteLocation'
         contact:

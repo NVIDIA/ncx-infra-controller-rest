@@ -58,8 +58,8 @@ func NewGetAllFabricHandler(dbSession *cdb.Session, tc temporalClient.Client, cf
 }
 
 // Handle godoc
-// @Summary Get all Fabrics
-// @Description Get all Fabrics
+// @Summary Retrieve all Fabrics
+// @Description Retrieve all Fabrics for Sites owned by the org. Endpoint is currently not exposed to users
 // @Tags Fabric
 // @Accept json
 // @Produce json
@@ -85,7 +85,7 @@ func (gafh GetAllFabricHandler) Handle(c echo.Context) error {
 		return c.JSON(apiErr.Code, apiErr)
 	}
 
-	// Validate paginantion request
+	// Validate pagination request
 	pageRequest := pagination.PageRequest{}
 	err := c.Bind(&pageRequest)
 	if err != nil {
@@ -224,8 +224,8 @@ func NewGetFabricHandler(dbSession *cdb.Session, tc temporalClient.Client, cfg *
 }
 
 // Handle godoc
-// @Summary Retrieve the Fabric
-// @Description Retrieve the Fabric
+// @Summary Retrieve Fabric
+// @Description Retrieve Fabric by ID. Endpoint is currently not exposed to users
 // @Tags Fabric
 // @Accept json
 // @Produce json

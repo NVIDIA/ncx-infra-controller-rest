@@ -27,13 +27,17 @@ type SiteUpdateRequest struct {
 	RenewRegistrationToken *bool `json:"renewRegistrationToken,omitempty"`
 	// Hostname to reach Serial Console for the Site. Can only be updated by Provider
 	SerialConsoleHostname *string `json:"serialConsoleHostname,omitempty"`
-	// Enable/disable Serial Console. Can only be updated by Provider
+	// Enable/disable Serial Console. Can only be updated by Provider. Modifying this attribute has no actual effect on SOL. It will be removed in a future API version.
+	// Deprecated
 	IsSerialConsoleEnabled *bool `json:"isSerialConsoleEnabled,omitempty"`
-	// Maximum idle time in seconds before Serial Console is disconnected. Can only be updated by Provider
+	// Maximum idle time in seconds before Serial Console is disconnected. Can only be updated by Provider. Modifying this attribute has no actual effect on SOL. It will be removed in a future API version.
+	// Deprecated
 	SerialConsoleIdleTimeout *int32 `json:"serialConsoleIdleTimeout,omitempty"`
-	// Maximum length of Serial Console session in seconds. Can only be updated by Provider
+	// Maximum length of Serial Console session in seconds. Can only be updated by Provider. Modifying this attribute has no actual effect on SOL. It will be removed in a future API version.
+	// Deprecated
 	SerialConsoleMaxSessionLength *int32 `json:"serialConsoleMaxSessionLength,omitempty"`
-	// Enable/disable Serial Console access using SSH Keys. Can only be updated by Tenant
+	// Enable/disable Serial Console access using SSH Keys. Previously updateable only by Tenants, modifying this value is no longer supported, please update SSH Key Groups to dissociate Sites.
+	// Deprecated
 	IsSerialConsoleSSHKeysEnabled *bool         `json:"isSerialConsoleSSHKeysEnabled,omitempty"`
 	Location                      *SiteLocation `json:"location,omitempty"`
 	Contact                       *SiteContact  `json:"contact,omitempty"`
@@ -185,6 +189,7 @@ func (o *SiteUpdateRequest) SetSerialConsoleHostname(v string) {
 }
 
 // GetIsSerialConsoleEnabled returns the IsSerialConsoleEnabled field value if set, zero value otherwise.
+// Deprecated
 func (o *SiteUpdateRequest) GetIsSerialConsoleEnabled() bool {
 	if o == nil || IsNil(o.IsSerialConsoleEnabled) {
 		var ret bool
@@ -195,6 +200,7 @@ func (o *SiteUpdateRequest) GetIsSerialConsoleEnabled() bool {
 
 // GetIsSerialConsoleEnabledOk returns a tuple with the IsSerialConsoleEnabled field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// Deprecated
 func (o *SiteUpdateRequest) GetIsSerialConsoleEnabledOk() (*bool, bool) {
 	if o == nil || IsNil(o.IsSerialConsoleEnabled) {
 		return nil, false
@@ -212,11 +218,13 @@ func (o *SiteUpdateRequest) HasIsSerialConsoleEnabled() bool {
 }
 
 // SetIsSerialConsoleEnabled gets a reference to the given bool and assigns it to the IsSerialConsoleEnabled field.
+// Deprecated
 func (o *SiteUpdateRequest) SetIsSerialConsoleEnabled(v bool) {
 	o.IsSerialConsoleEnabled = &v
 }
 
 // GetSerialConsoleIdleTimeout returns the SerialConsoleIdleTimeout field value if set, zero value otherwise.
+// Deprecated
 func (o *SiteUpdateRequest) GetSerialConsoleIdleTimeout() int32 {
 	if o == nil || IsNil(o.SerialConsoleIdleTimeout) {
 		var ret int32
@@ -227,6 +235,7 @@ func (o *SiteUpdateRequest) GetSerialConsoleIdleTimeout() int32 {
 
 // GetSerialConsoleIdleTimeoutOk returns a tuple with the SerialConsoleIdleTimeout field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// Deprecated
 func (o *SiteUpdateRequest) GetSerialConsoleIdleTimeoutOk() (*int32, bool) {
 	if o == nil || IsNil(o.SerialConsoleIdleTimeout) {
 		return nil, false
@@ -244,11 +253,13 @@ func (o *SiteUpdateRequest) HasSerialConsoleIdleTimeout() bool {
 }
 
 // SetSerialConsoleIdleTimeout gets a reference to the given int32 and assigns it to the SerialConsoleIdleTimeout field.
+// Deprecated
 func (o *SiteUpdateRequest) SetSerialConsoleIdleTimeout(v int32) {
 	o.SerialConsoleIdleTimeout = &v
 }
 
 // GetSerialConsoleMaxSessionLength returns the SerialConsoleMaxSessionLength field value if set, zero value otherwise.
+// Deprecated
 func (o *SiteUpdateRequest) GetSerialConsoleMaxSessionLength() int32 {
 	if o == nil || IsNil(o.SerialConsoleMaxSessionLength) {
 		var ret int32
@@ -259,6 +270,7 @@ func (o *SiteUpdateRequest) GetSerialConsoleMaxSessionLength() int32 {
 
 // GetSerialConsoleMaxSessionLengthOk returns a tuple with the SerialConsoleMaxSessionLength field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// Deprecated
 func (o *SiteUpdateRequest) GetSerialConsoleMaxSessionLengthOk() (*int32, bool) {
 	if o == nil || IsNil(o.SerialConsoleMaxSessionLength) {
 		return nil, false
@@ -276,11 +288,13 @@ func (o *SiteUpdateRequest) HasSerialConsoleMaxSessionLength() bool {
 }
 
 // SetSerialConsoleMaxSessionLength gets a reference to the given int32 and assigns it to the SerialConsoleMaxSessionLength field.
+// Deprecated
 func (o *SiteUpdateRequest) SetSerialConsoleMaxSessionLength(v int32) {
 	o.SerialConsoleMaxSessionLength = &v
 }
 
 // GetIsSerialConsoleSSHKeysEnabled returns the IsSerialConsoleSSHKeysEnabled field value if set, zero value otherwise.
+// Deprecated
 func (o *SiteUpdateRequest) GetIsSerialConsoleSSHKeysEnabled() bool {
 	if o == nil || IsNil(o.IsSerialConsoleSSHKeysEnabled) {
 		var ret bool
@@ -291,6 +305,7 @@ func (o *SiteUpdateRequest) GetIsSerialConsoleSSHKeysEnabled() bool {
 
 // GetIsSerialConsoleSSHKeysEnabledOk returns a tuple with the IsSerialConsoleSSHKeysEnabled field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// Deprecated
 func (o *SiteUpdateRequest) GetIsSerialConsoleSSHKeysEnabledOk() (*bool, bool) {
 	if o == nil || IsNil(o.IsSerialConsoleSSHKeysEnabled) {
 		return nil, false
@@ -308,6 +323,7 @@ func (o *SiteUpdateRequest) HasIsSerialConsoleSSHKeysEnabled() bool {
 }
 
 // SetIsSerialConsoleSSHKeysEnabled gets a reference to the given bool and assigns it to the IsSerialConsoleSSHKeysEnabled field.
+// Deprecated
 func (o *SiteUpdateRequest) SetIsSerialConsoleSSHKeysEnabled(v bool) {
 	o.IsSerialConsoleSSHKeysEnabled = &v
 }

@@ -676,11 +676,9 @@ GetSiteStatusHistory Retrieve Site status history
 
 # Retrieve a specific Site status history
 
-Either `infrastructureProviderId` or `tenantId` query param must be specified.
+User must have `FORGE_PROVIDER_ADMIN`, `FORGE_PROVIDER_VIEWER`, or `FORGE_TENANT_ADMIN` role. Provider and Tenant entities are inferred from org membership.
 
-If `infrastructureProviderId` query param is provided, then org must have an Infrastructure Provider entity and its ID should match the query param value. User must have `FORGE_PROVIDER_ADMIN` role. The Infrastructure Provider must own the Site.
-
-If `tenantId` query param is provided, then org must have a Tenant entity and its ID should match the query param value. User must have `FORGE_TENANT_ADMIN` role. The Tenant must have an allocation with the Site.
+Access is granted if the Site is owned by the org's Infrastructure Provider **or** the org's Tenant has an allocation with the Site, consistent with the Get Site operation.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -815,11 +813,9 @@ UpdateSite Update Site
 
 # Update a specific Site
 
-Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` or `FORGE_TENANT_ADMIN` authorization role.
+User must have `FORGE_PROVIDER_ADMIN` role.
 
-Infrastructure Provider updating the Site must be the owner of the Site.
-
-Tenant updating the Site must have access to the Site and can only update Tenant specific attributes.
+Infrastructure Provider updating the Site must be the owner of the Site. At present, there are no Site specific configuration modifiable by Tenant.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
