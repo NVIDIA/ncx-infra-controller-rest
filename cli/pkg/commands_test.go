@@ -19,6 +19,9 @@ package carbidecli
 
 import (
 	"testing"
+
+	"github.com/NVIDIA/ncx-infra-controller-rest/openapi"
+	cli "github.com/urfave/cli/v2"
 )
 
 func TestToKebab(t *testing.T) {
@@ -305,6 +308,129 @@ func TestIsListAction(t *testing.T) {
 				t.Errorf("isListAction(%q) = %v, want %v", tt.action, got, tt.want)
 			}
 		})
+	}
+}
+
+// TestBuildCommands_NoDuplicateFlags walks every command produced from the
+// embedded OpenAPI spec and asserts that no single command declares the same
+// flag name twice. Duplicate names cause urfave/cli to panic at
+// flag.(*FlagSet).Var ("flag redefined") when the command's flag set is built,
+// which is exactly how the dpu-extension-service create bug surfaced.
+func TestBuildCommands_NoDuplicateFlags(t *testing.T) {
+	spec, err := ParseSpec(openapi.Spec)
+	if err != nil {
+		t.Fatalf("ParseSpec failed: %v", err)
+	}
+
+	cmds := BuildCommands(spec)
+	if len(cmds) == 0 {
+		t.Fatal("BuildCommands returned no commands")
+	}
+
+	var visit func(path string, children []*cli.Command)
+	visit = func(path string, children []*cli.Command) {
+		for _, c := range children {
+			full := path + " " + c.Name
+			seen := make(map[string]bool)
+			for _, f := range c.Flags {
+				name := f.Names()[0]
+				if seen[name] {
+					t.Errorf("command %q declares duplicate flag %q (would panic at runtime)",
+						full, name)
+				}
+				seen[name] = true
+			}
+			if len(c.Subcommands) > 0 {
+				visit(full, c.Subcommands)
+			}
+		}
+	}
+	visit("carbidecli", cmds)
+}
+
+// TestBuildActionCommand_ReservedBodyPropertySkipped verifies that when a
+// request body schema has a property whose kebab-cased name collides with a
+// reserved CLI-wrapper flag (data, data-file, output, all), the generated
+// command does not register a duplicate flag.
+func TestBuildActionCommand_ReservedBodyPropertySkipped(t *testing.T) {
+	spec := &Spec{
+		Paths: map[string]PathItem{
+			"/v2/org/{org}/carbide/widget": {
+				Post: &Operation{
+					OperationID: "create-widget",
+					Tags:        []string{"Widget"},
+					RequestBody: &RequestBody{
+						Content: map[string]MediaType{
+							"application/json": {
+								Schema: &Schema{
+									Type: "object",
+									Properties: map[string]*Schema{
+										"name":   {Type: "string"},
+										"data":   {Type: "string"},
+										"output": {Type: "string"},
+										"all":    {Type: "boolean"},
+									},
+									Required: []string{"name"},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	ro := resolvedOp{
+		tag:    "Widget",
+		action: "create",
+		method: "POST",
+		path:   "/v2/org/{org}/carbide/widget",
+		op:     spec.Paths["/v2/org/{org}/carbide/widget"].Post,
+	}
+
+	cmd := buildActionCommand(spec, ro, "")
+
+	counts := make(map[string]int)
+	for _, f := range cmd.Flags {
+		counts[f.Names()[0]]++
+	}
+
+	// data, data-file and output are hardcoded CLI-wrapper flags on any
+	// create-style command; their body-property twins must be silently
+	// dropped so we end up with exactly one registration each.
+	for _, name := range []string{"data", "data-file", "output"} {
+		if counts[name] != 1 {
+			t.Errorf("expected exactly one --%s flag, got %d", name, counts[name])
+		}
+	}
+	// --all is list-only; on a create action the body property named "all"
+	// must not get smuggled in.
+	if counts["all"] != 0 {
+		t.Errorf("expected zero --all flags on a create action, got %d", counts["all"])
+	}
+	if counts["name"] != 1 {
+		t.Errorf("expected exactly one --name flag (non-reserved body property), got %d", counts["name"])
+	}
+}
+
+// TestNewApp_DpuExtensionServiceCreate_DoesNotPanic loads the real embedded
+// OpenAPI spec and runs `carbidecli dpu-extension-service create --help`. Prior
+// to the reserved-flag fix this invocation panics with
+// "create flag redefined: data" during urfave/cli flag-set construction.
+func TestNewApp_DpuExtensionServiceCreate_DoesNotPanic(t *testing.T) {
+	app, err := NewApp(openapi.Spec)
+	if err != nil {
+		t.Fatalf("NewApp failed: %v", err)
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("expected no panic, got %v", r)
+		}
+	}()
+
+	if err := app.Run([]string{"carbidecli", "dpu-extension-service", "create", "--help"}); err != nil {
+		t.Fatalf("app.Run returned error: %v", err)
 	}
 }
 
