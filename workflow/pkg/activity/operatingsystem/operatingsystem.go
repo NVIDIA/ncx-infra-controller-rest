@@ -467,20 +467,6 @@ func (mod ManageOperatingSystemSync) UpdateOperatingSystemsInDB(ctx context.Cont
 	siteProviderID := site.InfrastructureProviderID
 	logger.Debug().Str("infrastructure_provider_id", siteProviderID.String()).Msg("Resolved infrastructure provider from site")
 
-	// Resolve the carbide-rest org for this site (best-effort, used for display only).
-	// carbide-core's TenantOrganizationId may use a different name than carbide-rest, so we
-	// look up the TenantSite association instead of trusting the reported org field.
-	tsDAO := cdbm.NewTenantSiteDAO(mod.dbSession)
-	tenantSites, _, tsErr := tsDAO.GetAll(ctx, nil, cdbm.TenantSiteFilterInput{
-		SiteIDs: []uuid.UUID{siteID},
-	}, cdbp.PageInput{Limit: cdb.GetIntPtr(1)}, nil)
-
-	var localOrg string
-	if tsErr == nil && len(tenantSites) > 0 {
-		localOrg = tenantSites[0].TenantOrg
-		logger.Debug().Str("org", localOrg).Msg("Resolved org from TenantSite")
-	}
-
 	osDAO := cdbm.NewOperatingSystemDAO(mod.dbSession)
 
 	// Collect the UUIDs of all reported OS records (active only — the new Find APIs do not
@@ -563,10 +549,11 @@ func (mod ManageOperatingSystemSync) UpdateOperatingSystemsInDB(ctx context.Cont
 			// New OS from carbide-core: create it with the site's InfrastructureProviderID.
 			// OSes originating in carbide-core are provider-owned (not tenant-owned): ProviderAdmin
 			// can update them and all tenants of the provider can read them via the OR filter.
+			// Scope is Local: the definition lives at a single site with bidirectional sync.
 			if _, cerr := osDAO.Create(ctx, nil, cdbm.OperatingSystemCreateInput{
 				ID:                       osID,
 				Name:                     reported.Name,
-				Org:                      localOrg,
+				Org:                      site.Org,
 				TenantID:                 nil,
 				InfrastructureProviderID: &siteProviderID,
 				OsType:                   osType,
@@ -579,10 +566,14 @@ func (mod ManageOperatingSystemSync) UpdateOperatingSystemsInDB(ctx context.Cont
 				IpxeTemplateParameters:   params,
 				IpxeTemplateArtifacts:    artifacts,
 				IpxeOSHash:               reported.IpxeTemplateDefinitionHash,
+				IpxeOsScope:              cdb.GetStrPtr(cdbm.OperatingSystemScopeLocal),
 				Status:                   tenantStateToRestStatus(reported.Status),
 			}); cerr != nil {
 				logger.Error().Err(cerr).Str("ID", reported.GetId().GetValue()).Msg("Failed to create Operating System in DB")
-			} else if !reported.IsActive {
+				continue
+			}
+
+			if !reported.IsActive {
 				// bun ORM hardcodes is_active=true on INSERT; correct it with an update.
 				inactive := false
 				if _, uerr := osDAO.Update(ctx, nil, cdbm.OperatingSystemUpdateInput{
@@ -592,6 +583,16 @@ func (mod ManageOperatingSystemSync) UpdateOperatingSystemsInDB(ctx context.Cont
 					logger.Error().Err(uerr).Str("ID", reported.GetId().GetValue()).Msg("Failed to set is_active=false after create")
 					return uerr
 				}
+			}
+
+			// Create site association linking the OS to the reporting site.
+			ossaDAO := cdbm.NewOperatingSystemSiteAssociationDAO(mod.dbSession)
+			if _, ossaErr := ossaDAO.Create(ctx, nil, cdbm.OperatingSystemSiteAssociationCreateInput{
+				OperatingSystemID: osID,
+				SiteID:            siteID,
+				Status:            coreStateToOSSAStatus(reported.Status),
+			}); ossaErr != nil {
+				logger.Error().Err(ossaErr).Str("ID", osID.String()).Msg("Failed to create site association for new OS")
 			}
 			continue
 		}
@@ -603,29 +604,40 @@ func (mod ManageOperatingSystemSync) UpdateOperatingSystemsInDB(ctx context.Cont
 			continue
 		}
 
-		// For global- or limited-scoped OSes, carbide-rest is the source of truth
-		// for the OS definition. However, we still need to record the per-site
-		// operational status (ControllerState) on the OSSA and aggregate the overall
-		// OS status from all site statuses.
-		if cur.IpxeOsScope != nil && *cur.IpxeOsScope != cdbm.OperatingSystemScopeLocal {
-			controllerState := tenantStateToRestStatus(reported.Status)
-			ossaDAO := cdbm.NewOperatingSystemSiteAssociationDAO(mod.dbSession)
-			ossa, ossaErr := ossaDAO.GetByOperatingSystemIDAndSiteID(ctx, nil, osID, siteID, nil)
-			if ossaErr != nil {
-				if !errors.Is(ossaErr, cdb.ErrDoesNotExist) {
-					logger.Error().Err(ossaErr).Str("osID", osID.String()).Msg("Failed to look up OSSA for global/limited OS")
-					return ossaErr
-				}
-			} else if ossa != nil {
-				if _, uerr := ossaDAO.Update(ctx, nil, cdbm.OperatingSystemSiteAssociationUpdateInput{
-					OperatingSystemSiteAssociationID: ossa.ID,
-					ControllerState:                  &controllerState,
-				}); uerr != nil {
-					logger.Error().Err(uerr).Str("osID", osID.String()).Msg("Failed to update OSSA controller_state")
-				} else {
-					globalLimitedOSIDs[osID] = struct{}{}
-				}
+		// Update or create the per-site OSSA for every OS type. For
+		// Global/Limited, rest is the source of truth for the definition so we
+		// only record the site's controller state and skip the definition update.
+		// For Local (provider-owned, from core) we also fall through to update
+		// the definition below. nil scope is treated as Local for safety
+		// (legacy records before the backfill migration).
+		isLocalScope := cur.IpxeOsScope == nil || *cur.IpxeOsScope == cdbm.OperatingSystemScopeLocal
+		controllerState := tenantStateToRestStatus(reported.Status)
+		ossaDAO := cdbm.NewOperatingSystemSiteAssociationDAO(mod.dbSession)
+		ossa, ossaErr := ossaDAO.GetByOperatingSystemIDAndSiteID(ctx, nil, osID, siteID, nil)
+		if ossaErr != nil {
+			if !errors.Is(ossaErr, cdb.ErrDoesNotExist) {
+				logger.Error().Err(ossaErr).Str("osID", osID.String()).Msg("Failed to look up OSSA")
+				return ossaErr
 			}
+			// OSSA missing: backfill for OS created before site associations were tracked.
+			if _, cerr := ossaDAO.Create(ctx, nil, cdbm.OperatingSystemSiteAssociationCreateInput{
+				OperatingSystemID: osID,
+				SiteID:            siteID,
+				Status:            coreStateToOSSAStatus(reported.Status),
+			}); cerr != nil {
+				logger.Error().Err(cerr).Str("osID", osID.String()).Msg("Failed to backfill OSSA")
+			}
+		} else if ossa != nil {
+			if _, uerr := ossaDAO.Update(ctx, nil, cdbm.OperatingSystemSiteAssociationUpdateInput{
+				OperatingSystemSiteAssociationID: ossa.ID,
+				ControllerState:                  &controllerState,
+			}); uerr != nil {
+				logger.Error().Err(uerr).Str("osID", osID.String()).Msg("Failed to update OSSA controller_state")
+			} else if !isLocalScope {
+				globalLimitedOSIDs[osID] = struct{}{}
+			}
+		}
+		if !isLocalScope {
 			continue
 		}
 
@@ -633,7 +645,7 @@ func (mod ManageOperatingSystemSync) UpdateOperatingSystemsInDB(ctx context.Cont
 		// Backfill: older records may have been created with tenant_id set and no
 		// infrastructure_provider_id (before this ownership model was established).
 		needsProviderBackfill := cur.InfrastructureProviderID == nil
-		needsOrgBackfill := cur.Org == "" && localOrg != ""
+		needsOrgBackfill := cur.Org == "" && site.Org != ""
 		needsIsActiveCorrection := cur.IsActive != reported.IsActive
 		needsTenantClear := cur.TenantID != nil
 		if coreUpdated.After(cur.Updated) || needsProviderBackfill || needsOrgBackfill || needsIsActiveCorrection || needsTenantClear {
@@ -641,7 +653,7 @@ func (mod ManageOperatingSystemSync) UpdateOperatingSystemsInDB(ctx context.Cont
 			updateInput := cdbm.OperatingSystemUpdateInput{
 				OperatingSystemId:        cur.ID,
 				Name:                     &reported.Name,
-				Org:                      &localOrg,
+				Org:                      &site.Org,
 				TenantID:                 nil,
 				InfrastructureProviderID: &siteProviderID,
 				OsType:                   &osType,
@@ -744,6 +756,18 @@ func NewManageOperatingSystemSync(dbSession *cdb.Session, siteClientPool *sc.Cli
 	}
 }
 
+// coreStateToOSSAStatus maps carbide-core's TenantState to the OSSA status string.
+func coreStateToOSSAStatus(s cwssaws.TenantState) string {
+	switch s {
+	case cwssaws.TenantState_READY:
+		return cdbm.OperatingSystemSiteAssociationStatusSynced
+	case cwssaws.TenantState_FAILED:
+		return cdbm.OperatingSystemSiteAssociationStatusError
+	default:
+		return cdbm.OperatingSystemSiteAssociationStatusSyncing
+	}
+}
+
 // tenantStateToRestStatus maps carbide-core's TenantState to the REST OperatingSystem status string.
 func tenantStateToRestStatus(s cwssaws.TenantState) string {
 	switch s {
@@ -759,10 +783,10 @@ func tenantStateToRestStatus(s cwssaws.TenantState) string {
 // osTypeToString maps carbide-core's OperatingSystemType enum to the DB type string.
 func osTypeToString(t cwssaws.OperatingSystemType) string {
 	switch t {
-	case cwssaws.OperatingSystemType_OS_TYPE_TEMPLATED_IPXE:
-		return cdbm.OperatingSystemTypeTemplatedIPXE
 	case cwssaws.OperatingSystemType_OS_TYPE_IPXE:
 		return cdbm.OperatingSystemTypeIPXE
+	case cwssaws.OperatingSystemType_OS_TYPE_TEMPLATED_IPXE:
+		return cdbm.OperatingSystemTypeTemplatedIPXE
 	default:
 		return cdbm.OperatingSystemTypeIPXE
 	}

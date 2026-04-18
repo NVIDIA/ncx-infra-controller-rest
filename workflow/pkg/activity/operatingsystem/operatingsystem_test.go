@@ -406,6 +406,15 @@ func TestManageOperatingSystemSync_UpdateOperatingSystemsInDB(t *testing.T) {
 		assert.NotNil(t, created.InfrastructureProviderID)
 		assert.Equal(t, ip.ID, *created.InfrastructureProviderID)
 		assert.Nil(t, created.TenantID)
+		assert.NotNil(t, created.IpxeOsScope)
+		assert.Equal(t, cdbm.OperatingSystemScopeLocal, *created.IpxeOsScope)
+
+		// Verify site association was created for the reporting site.
+		ossaDAO := cdbm.NewOperatingSystemSiteAssociationDAO(dbSession)
+		createdOssa, ossaGetErr := ossaDAO.GetByOperatingSystemIDAndSiteID(context.Background(), nil, newID, st.ID, nil)
+		assert.NoError(t, ossaGetErr)
+		assert.NotNil(t, createdOssa)
+		assert.Equal(t, cdbm.OperatingSystemSiteAssociationStatusSynced, createdOssa.Status)
 	})
 
 	t.Run("updates existing OS when core is newer", func(t *testing.T) {
@@ -451,6 +460,13 @@ func TestManageOperatingSystemSync_UpdateOperatingSystemsInDB(t *testing.T) {
 		assert.Equal(t, "existing-os-updated", updated.Name)
 		assert.Equal(t, cdbm.OperatingSystemStatusReady, updated.Status)
 		assert.True(t, updated.PhoneHomeEnabled)
+
+		// Verify OSSA was backfilled for the existing OS.
+		ossaDAO := cdbm.NewOperatingSystemSiteAssociationDAO(dbSession)
+		backfilledOssa, ossaGetErr := ossaDAO.GetByOperatingSystemIDAndSiteID(context.Background(), nil, existingID, st.ID, nil)
+		assert.NoError(t, ossaGetErr)
+		assert.NotNil(t, backfilledOssa)
+		assert.Equal(t, cdbm.OperatingSystemSiteAssociationStatusSynced, backfilledOssa.Status)
 	})
 
 	t.Run("skips global-scoped OS definition update but records core status", func(t *testing.T) {

@@ -33,8 +33,9 @@
 //                      for ownership assignment
 //
 // Cross-ownership visibility (GetAll / GetByID)
-//   - Any user whose org has both a Tenant and an InfrastructureProvider
-//     can see OSes owned by either entity.
+//   - Provider Admin sees only provider-owned OSes (none from tenants).
+//   - Tenant Admin sees own OSes + provider-owned OSes that have site
+//     associations at sites accessible to the tenant.
 //
 // Mutation enforcement (Update / Delete)
 //   - Provider Admin can mutate only provider-owned OSes.
@@ -360,16 +361,18 @@ func TestOperatingSystemHandler_Create_ProviderAndTenantOwnership(t *testing.T) 
 
 // ─── GetAll: cross-ownership visibility ──────────────────────────────────────
 
-// TestOperatingSystemHandler_GetAll_CrossOwnership verifies that any user whose
-// org resolves both a Tenant and an InfrastructureProvider can see OSes owned
-// by either entity in a single GetAll call.
+// TestOperatingSystemHandler_GetAll_CrossOwnership verifies role-based
+// visibility rules:
+//   - Provider Admin sees only provider-owned OSes.
+//   - Tenant Admin sees own OSes + provider-owned OSes at accessible sites.
+//   - Dual-role user sees the union.
 func TestOperatingSystemHandler_GetAll_CrossOwnership(t *testing.T) {
 	env := newOwnershipTestEnv(t)
 	ctx := context.Background()
 
 	osDAO := cdbm.NewOperatingSystemDAO(env.dbSession)
 
-	// Seed one provider-owned OS.
+	// Seed one provider-owned OS with a site association so the tenant can see it.
 	provOS, err := osDAO.Create(ctx, nil, cdbm.OperatingSystemCreateInput{
 		Name:                     "synced-from-core",
 		Org:                      env.sharedOrg,
@@ -377,25 +380,32 @@ func TestOperatingSystemHandler_GetAll_CrossOwnership(t *testing.T) {
 		InfrastructureProviderID: &env.ip.ID,
 		OsType:                   cdbm.OperatingSystemTypeIPXE,
 		IpxeScript:               cdb.GetStrPtr("#!ipxe\nchain http://boot.example.com"),
+		IpxeOsScope:              cdb.GetStrPtr(cdbm.OperatingSystemScopeLocal),
 		Status:                   cdbm.OperatingSystemStatusReady,
 		CreatedBy:                env.ipUser.ID,
 	})
 	require.NoError(t, err)
 
-	// Seed one tenant-owned OS.
-	tnOS, err := osDAO.Create(ctx, nil, cdbm.OperatingSystemCreateInput{
-		Name:       "tenant-os",
-		Org:        env.sharedOrg,
-		TenantID:   &env.tenant.ID,
-		OsType:     cdbm.OperatingSystemTypeIPXE,
-		IpxeScript: cdb.GetStrPtr("#!ipxe\nboot"),
-		Status:     cdbm.OperatingSystemStatusReady,
-		CreatedBy:  env.tnUser.ID,
+	ossaDAO := cdbm.NewOperatingSystemSiteAssociationDAO(env.dbSession)
+	_, err = ossaDAO.Create(ctx, nil, cdbm.OperatingSystemSiteAssociationCreateInput{
+		OperatingSystemID: provOS.ID,
+		SiteID:            env.site.ID,
+		Status:            cdbm.OperatingSystemSiteAssociationStatusSynced,
 	})
 	require.NoError(t, err)
 
-	_ = provOS
-	_ = tnOS
+	// Seed one tenant-owned OS.
+	tnOS, err := osDAO.Create(ctx, nil, cdbm.OperatingSystemCreateInput{
+		Name:        "tenant-os",
+		Org:         env.sharedOrg,
+		TenantID:    &env.tenant.ID,
+		OsType:      cdbm.OperatingSystemTypeIPXE,
+		IpxeScript:  cdb.GetStrPtr("#!ipxe\nboot"),
+		IpxeOsScope: cdb.GetStrPtr(cdbm.OperatingSystemScopeGlobal),
+		Status:      cdbm.OperatingSystemStatusReady,
+		CreatedBy:   env.tnUser.ID,
+	})
+	require.NoError(t, err)
 
 	execGetAll := func(t *testing.T, user *cdbm.User) []model.APIOperatingSystem {
 		t.Helper()
@@ -427,25 +437,24 @@ func TestOperatingSystemHandler_GetAll_CrossOwnership(t *testing.T) {
 		return rsp
 	}
 
-	t.Run("provider admin sees both provider-owned and tenant-owned OSes", func(t *testing.T) {
+	t.Run("provider admin sees only provider-owned OS", func(t *testing.T) {
 		oss := execGetAll(t, env.ipUser)
-		assert.GreaterOrEqual(t, len(oss), 2, "expected at least the two seeded OSes")
 		ids := make([]string, len(oss))
 		for i, o := range oss {
 			ids[i] = o.ID
 		}
 		assert.Contains(t, ids, provOS.ID.String())
-		assert.Contains(t, ids, tnOS.ID.String())
+		assert.NotContains(t, ids, tnOS.ID.String(), "provider admin must not see tenant-owned OS")
 	})
 
-	t.Run("tenant admin sees both provider-owned and tenant-owned OSes", func(t *testing.T) {
+	t.Run("tenant admin sees own and provider-owned OS at accessible site", func(t *testing.T) {
 		oss := execGetAll(t, env.tnUser)
 		assert.GreaterOrEqual(t, len(oss), 2)
 		ids := make([]string, len(oss))
 		for i, o := range oss {
 			ids[i] = o.ID
 		}
-		assert.Contains(t, ids, provOS.ID.String())
+		assert.Contains(t, ids, provOS.ID.String(), "tenant should see provider OS at accessible site")
 		assert.Contains(t, ids, tnOS.ID.String())
 	})
 
@@ -457,15 +466,17 @@ func TestOperatingSystemHandler_GetAll_CrossOwnership(t *testing.T) {
 
 // ─── GetByID: cross-ownership visibility ─────────────────────────────────────
 
-// TestOperatingSystemHandler_GetByID_CrossOwnership verifies that any user
-// whose org has both a Tenant and a Provider can fetch an individual OS
-// regardless of which entity owns it.
+// TestOperatingSystemHandler_GetByID_CrossOwnership verifies role-based
+// visibility for individual OS fetches:
+//   - Provider Admin can fetch provider-owned OS, but NOT tenant-owned.
+//   - Tenant Admin can fetch own OS + provider-owned OS at accessible sites.
 func TestOperatingSystemHandler_GetByID_CrossOwnership(t *testing.T) {
 	env := newOwnershipTestEnv(t)
 	ctx := context.Background()
 
 	osDAO := cdbm.NewOperatingSystemDAO(env.dbSession)
 
+	// Provider-owned OS with site association (visible to tenant via site).
 	provOS, err := osDAO.Create(ctx, nil, cdbm.OperatingSystemCreateInput{
 		Name:                     "prov-single",
 		Org:                      env.sharedOrg,
@@ -473,19 +484,29 @@ func TestOperatingSystemHandler_GetByID_CrossOwnership(t *testing.T) {
 		InfrastructureProviderID: &env.ip.ID,
 		OsType:                   cdbm.OperatingSystemTypeIPXE,
 		IpxeScript:               cdb.GetStrPtr("#!ipxe"),
+		IpxeOsScope:              cdb.GetStrPtr(cdbm.OperatingSystemScopeLocal),
 		Status:                   cdbm.OperatingSystemStatusReady,
 		CreatedBy:                env.ipUser.ID,
 	})
 	require.NoError(t, err)
 
+	ossaDAO := cdbm.NewOperatingSystemSiteAssociationDAO(env.dbSession)
+	_, err = ossaDAO.Create(ctx, nil, cdbm.OperatingSystemSiteAssociationCreateInput{
+		OperatingSystemID: provOS.ID,
+		SiteID:            env.site.ID,
+		Status:            cdbm.OperatingSystemSiteAssociationStatusSynced,
+	})
+	require.NoError(t, err)
+
 	tnOS, err := osDAO.Create(ctx, nil, cdbm.OperatingSystemCreateInput{
-		Name:       "tenant-single",
-		Org:        env.sharedOrg,
-		TenantID:   &env.tenant.ID,
-		OsType:     cdbm.OperatingSystemTypeIPXE,
-		IpxeScript: cdb.GetStrPtr("#!ipxe"),
-		Status:     cdbm.OperatingSystemStatusReady,
-		CreatedBy:  env.tnUser.ID,
+		Name:        "tenant-single",
+		Org:         env.sharedOrg,
+		TenantID:    &env.tenant.ID,
+		OsType:      cdbm.OperatingSystemTypeIPXE,
+		IpxeScript:  cdb.GetStrPtr("#!ipxe"),
+		IpxeOsScope: cdb.GetStrPtr(cdbm.OperatingSystemScopeGlobal),
+		Status:      cdbm.OperatingSystemStatusReady,
+		CreatedBy:   env.tnUser.ID,
 	})
 	require.NoError(t, err)
 
@@ -520,14 +541,14 @@ func TestOperatingSystemHandler_GetByID_CrossOwnership(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	})
 
-	t.Run("tenant admin gets provider-owned OS", func(t *testing.T) {
+	t.Run("tenant admin gets provider-owned OS at accessible site", func(t *testing.T) {
 		rec := execGetByID(t, env.tnUser, provOS.ID.String())
 		assert.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	})
 
-	t.Run("provider admin gets tenant-owned OS", func(t *testing.T) {
+	t.Run("provider admin cannot get tenant-owned OS", func(t *testing.T) {
 		rec := execGetByID(t, env.ipUser, tnOS.ID.String())
-		assert.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		assert.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
 	})
 
 	t.Run("tenant admin gets tenant-owned OS", func(t *testing.T) {
@@ -757,4 +778,183 @@ func TestOperatingSystemHandler_Delete_OwnershipEnforcement(t *testing.T) {
 		rec := execDelete(t, env.dualUser, os.ID.String())
 		assert.Equal(t, http.StatusAccepted, rec.Code, rec.Body.String())
 	})
+}
+
+// ─── Create: scope and site-association behaviour ─────────────────────────────
+
+// TestOperatingSystemHandler_Create_ScopeAndSiteAssociation verifies that:
+//   - Templated iPXE with Global scope auto-associates with all registered provider sites
+//   - Templated iPXE with Limited scope associates only with specified sites
+//   - Raw iPXE auto-sets scope to Global and auto-associates with tenant-accessible sites
+//   - Response includes correct scope, type, and site associations
+func TestOperatingSystemHandler_Create_ScopeAndSiteAssociation(t *testing.T) {
+	env := newOwnershipTestEnv(t)
+
+	scopeGlobal := cdbm.OperatingSystemScopeGlobal
+	scopeLimited := cdbm.OperatingSystemScopeLimited
+	templateName := "test-template"
+
+	tests := []struct {
+		name              string
+		user              *cdbm.User
+		body              model.APIOperatingSystemCreateRequest
+		wantStatus        int
+		wantType          string
+		wantScope         *string
+		wantSiteCount     int
+		wantProviderOwned bool
+	}{
+		{
+			name: "provider admin template iPXE global scope → auto-associates with provider sites",
+			user: env.ipUser,
+			body: model.APIOperatingSystemCreateRequest{
+				Name:           "prov-global-" + uuid.NewString(),
+				IpxeTemplateId: &templateName,
+				Scope:          &scopeGlobal,
+			},
+			wantStatus:        http.StatusCreated,
+			wantType:          cdbm.OperatingSystemTypeTemplatedIPXE,
+			wantScope:         &scopeGlobal,
+			wantSiteCount:     1, // one registered site in env
+			wantProviderOwned: true,
+		},
+		{
+			name: "provider admin template iPXE limited scope → associates with specified sites",
+			user: env.ipUser,
+			body: model.APIOperatingSystemCreateRequest{
+				Name:           "prov-limited-" + uuid.NewString(),
+				IpxeTemplateId: &templateName,
+				Scope:          &scopeLimited,
+				SiteIDs:        []string{env.site.ID.String()},
+			},
+			wantStatus:        http.StatusCreated,
+			wantType:          cdbm.OperatingSystemTypeTemplatedIPXE,
+			wantScope:         &scopeLimited,
+			wantSiteCount:     1,
+			wantProviderOwned: true,
+		},
+		{
+			name: "tenant admin raw iPXE → scope auto-set to Global, associates with tenant sites",
+			user: env.tnUser,
+			body: model.APIOperatingSystemCreateRequest{
+				Name:       "tn-raw-ipxe-" + uuid.NewString(),
+				IpxeScript: cdb.GetStrPtr("#!ipxe\nboot"),
+			},
+			wantStatus:    http.StatusCreated,
+			wantType:      cdbm.OperatingSystemTypeIPXE,
+			wantScope:     &scopeGlobal,
+			wantSiteCount: 1, // tenant has access to env.site
+		},
+		{
+			name: "tenant admin template iPXE global scope → tenant-owned, associates with tenant sites",
+			user: env.tnUser,
+			body: model.APIOperatingSystemCreateRequest{
+				Name:           "tn-tmpl-global-" + uuid.NewString(),
+				IpxeTemplateId: &templateName,
+				Scope:          &scopeGlobal,
+			},
+			wantStatus:    http.StatusCreated,
+			wantType:      cdbm.OperatingSystemTypeTemplatedIPXE,
+			wantScope:     &scopeGlobal,
+			wantSiteCount: 1,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			rec := env.execCreateOS(t, tc.user, tc.body)
+			require.Equal(t, tc.wantStatus, rec.Code, "response body: %s", rec.Body.String())
+
+			var rsp model.APIOperatingSystem
+			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &rsp))
+
+			require.NotNil(t, rsp.Type, "type must be set")
+			assert.Equal(t, tc.wantType, *rsp.Type)
+
+			if tc.wantScope != nil {
+				require.NotNil(t, rsp.Scope, "scope must be set in response")
+				assert.Equal(t, *tc.wantScope, *rsp.Scope)
+			}
+
+			assert.Len(t, rsp.SiteAssociations, tc.wantSiteCount,
+				"expected %d site associations, got %d", tc.wantSiteCount, len(rsp.SiteAssociations))
+
+			if tc.wantProviderOwned {
+				assert.NotNil(t, rsp.InfrastructureProviderID)
+				assert.Nil(t, rsp.TenantID)
+			} else {
+				assert.Nil(t, rsp.InfrastructureProviderID)
+				assert.NotNil(t, rsp.TenantID)
+			}
+
+			assert.Equal(t, cdbm.OperatingSystemStatusSyncing, rsp.Status)
+			assert.True(t, len(rsp.StatusHistory) >= 1, "expected at least one status history entry")
+		})
+	}
+}
+
+// ─── Create: validation error paths for scope ─────────────────────────────────
+
+// TestOperatingSystemHandler_Create_ScopeValidationErrors verifies API-level
+// rejection of invalid scope combinations that the model validation covers.
+func TestOperatingSystemHandler_Create_ScopeValidationErrors(t *testing.T) {
+	env := newOwnershipTestEnv(t)
+
+	scopeLocal := cdbm.OperatingSystemScopeLocal
+	scopeLimited := cdbm.OperatingSystemScopeLimited
+	templateName := "test-template"
+
+	tests := []struct {
+		name       string
+		user       *cdbm.User
+		body       model.APIOperatingSystemCreateRequest
+		wantStatus int
+	}{
+		{
+			name: "template iPXE with Local scope → 400",
+			user: env.ipUser,
+			body: model.APIOperatingSystemCreateRequest{
+				Name:           "tmpl-local-" + uuid.NewString(),
+				IpxeTemplateId: &templateName,
+				Scope:          &scopeLocal,
+			},
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name: "template iPXE with Limited scope but no siteIds → 400",
+			user: env.ipUser,
+			body: model.APIOperatingSystemCreateRequest{
+				Name:           "tmpl-limited-nosites-" + uuid.NewString(),
+				IpxeTemplateId: &templateName,
+				Scope:          &scopeLimited,
+			},
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name: "template iPXE missing scope entirely → 400",
+			user: env.ipUser,
+			body: model.APIOperatingSystemCreateRequest{
+				Name:           "tmpl-noscope-" + uuid.NewString(),
+				IpxeTemplateId: &templateName,
+			},
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name: "raw iPXE with scope specified → 400",
+			user: env.tnUser,
+			body: model.APIOperatingSystemCreateRequest{
+				Name:       "raw-ipxe-scope-" + uuid.NewString(),
+				IpxeScript: cdb.GetStrPtr("#!ipxe\nboot"),
+				Scope:      &scopeLimited,
+			},
+			wantStatus: http.StatusBadRequest,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			rec := env.execCreateOS(t, tc.user, tc.body)
+			assert.Equal(t, tc.wantStatus, rec.Code, "response body: %s", rec.Body.String())
+		})
+	}
 }

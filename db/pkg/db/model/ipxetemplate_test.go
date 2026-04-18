@@ -159,43 +159,6 @@ func TestIpxeTemplateSQLDAO_Get(t *testing.T) {
 	}
 }
 
-func TestIpxeTemplateSQLDAO_GetBySiteAndName(t *testing.T) {
-	ctx := context.Background()
-	dbSession := testIpxeTemplateInitDB(t)
-	defer dbSession.Close()
-	testIpxeTemplateSetupSchema(t, dbSession)
-
-	user := TestBuildUser(t, dbSession, "test-user", "test-org", []string{"admin"})
-	ip := TestBuildInfrastructureProvider(t, dbSession, "test-provider", "test-org", user)
-	site := TestBuildSite(t, dbSession, ip, "test-site", user)
-
-	dao := NewIpxeTemplateDAO(dbSession)
-	testIpxeTemplateCreate(ctx, t, dao, site.ID, "ubuntu-autoinstall", IpxeTemplateScopePublic)
-
-	tests := []struct {
-		desc        string
-		siteID      uuid.UUID
-		name        string
-		expectError bool
-	}{
-		{desc: "existing template", siteID: site.ID, name: "ubuntu-autoinstall"},
-		{desc: "wrong name", siteID: site.ID, name: "does-not-exist", expectError: true},
-		{desc: "wrong site", siteID: uuid.New(), name: "ubuntu-autoinstall", expectError: true},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.desc, func(t *testing.T) {
-			got, err := dao.GetBySiteAndName(ctx, nil, tc.siteID, tc.name)
-			assert.Equal(t, tc.expectError, err != nil)
-			if !tc.expectError {
-				require.NotNil(t, got)
-				assert.Equal(t, tc.name, got.Name)
-				assert.Equal(t, tc.siteID, got.SiteID)
-			}
-		})
-	}
-}
-
 func TestIpxeTemplateSQLDAO_GetAll(t *testing.T) {
 	ctx := context.Background()
 	dbSession := testIpxeTemplateInitDB(t)
@@ -221,8 +184,6 @@ func TestIpxeTemplateSQLDAO_GetAll(t *testing.T) {
 		{desc: "no filter returns all", expectedCount: 3, expectedTotal: db.GetIntPtr(3)},
 		{desc: "filter by site", filter: IpxeTemplateFilterInput{SiteIDs: []uuid.UUID{site.ID}}, expectedCount: 3},
 		{desc: "filter by name", filter: IpxeTemplateFilterInput{Names: []string{"kernel-initrd"}}, expectedCount: 1},
-		{desc: "filter by scope public", filter: IpxeTemplateFilterInput{Scopes: []string{IpxeTemplateScopePublic}}, expectedCount: 2},
-		{desc: "filter by scope internal", filter: IpxeTemplateFilterInput{Scopes: []string{IpxeTemplateScopeInternal}}, expectedCount: 1},
 		{desc: "limit applies", page: paginator.PageInput{Offset: db.GetIntPtr(0), Limit: db.GetIntPtr(2)}, expectedCount: 2, expectedTotal: db.GetIntPtr(3)},
 		{desc: "offset applies", page: paginator.PageInput{Offset: db.GetIntPtr(1)}, expectedCount: 2, expectedTotal: db.GetIntPtr(3)},
 		{desc: "unknown site returns empty", filter: IpxeTemplateFilterInput{SiteIDs: []uuid.UUID{uuid.New()}}, expectedCount: 0},
@@ -255,7 +216,7 @@ func TestIpxeTemplateSQLDAO_Update(t *testing.T) {
 
 	// Update scope and params
 	updated, err := dao.Update(ctx, nil, IpxeTemplateUpdateInput{
-		ID:                created.ID,
+		IpxeTemplateID:    created.ID,
 		Name:              "kernel-initrd",
 		RequiredParams:    []string{"kernel_params", "extra_option"},
 		ReservedParams:    []string{"base_url"},

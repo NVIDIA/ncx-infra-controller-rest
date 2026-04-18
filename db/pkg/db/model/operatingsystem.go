@@ -50,11 +50,11 @@ const (
 	// OperatingSystemRelationName is the relation name for the OperatingSystem model
 	OperatingSystemRelationName = "OperatingSystem"
 
-	// OperatingSystemScopeLocal is the default scope: single site, bidirectional sync, most-recently-updated wins.
+	// OperatingSystemScopeLocal means single site, bidirectional sync (provider-owned OS from carbide-core).
 	OperatingSystemScopeLocal = "Local"
 	// OperatingSystemScopeLimited means carbide-rest is the source of truth for a fixed list of sites.
 	OperatingSystemScopeLimited = "Limited"
-	// OperatingSystemScopeGlobal means carbide-rest is the source of truth for all provider sites.
+	// OperatingSystemScopeGlobal means carbide-rest is the source of truth for all owner sites.
 	OperatingSystemScopeGlobal = "Global"
 	// OperatingSystemTypeIPXE is the raw iPXE script based OperatingSystem type
 	OperatingSystemTypeIPXE = "iPXE"
@@ -119,7 +119,6 @@ type OperatingSystemIpxeArtifact struct {
 	AuthType      *string `json:"authType,omitempty"`
 	AuthToken     *string `json:"authToken,omitempty"`
 	CacheStrategy string  `json:"cacheStrategy"`
-	CachedURL     *string `json:"cached_url,omitempty"`
 }
 
 // OperatingSystem describes the attributes of the operating system
@@ -151,9 +150,11 @@ type OperatingSystem struct {
 	IpxeTemplateArtifacts      []OperatingSystemIpxeArtifact  `bun:"ipxe_template_artifacts,type:jsonb"`
 	IpxeTemplateDefinitionHash *string                        `bun:"ipxe_template_definition_hash"`
 	// IpxeOsScope controls synchronization direction between carbide-rest and carbide-core.
-	// Nil / "Local" means bidirectional (most-recently-updated wins).
+	// "Local" means bidirectional, provider-owned from carbide-core.
 	// "Global" and "Limited" mean carbide-rest is the source of truth.
-	// Only valid for Templated iPXE Operating Systems.
+	// Set for all iPXE types (raw and templated); nil for Image-type OS.
+	// Tenant raw iPXE is auto-set to "Global"; provider iPXE from core is "Local".
+	// Legacy records with nil scope are treated as "Local" and backfilled by migration.
 	IpxeOsScope        *string    `bun:"ipxe_os_scope"`
 	UserData           *string    `bun:"user_data"`
 	IsCloudInit        bool       `bun:"is_cloud_init,notnull"`
@@ -265,23 +266,28 @@ type OperatingSystemClearInput struct {
 type OperatingSystemFilterInput struct {
 	InfrastructureProviderID *uuid.UUID
 	TenantIDs                []uuid.UUID
-	// InfrastructureProviderIDs, when set together with TenantIDs, widens the result set with
-	// an OR: the query returns OSes owned by any of the given tenants OR any of the given providers.
-	// When used alone (without TenantIDs) it is an AND filter like the other fields.
-	InfrastructureProviderIDs []uuid.UUID
-	SiteIDs                   []uuid.UUID
-	Names                     []string
-	Orgs                      []string
-	OsTypes                   []string
-	Statuses                  []string
-	SearchQuery               *string
-	OperatingSystemIds        []uuid.UUID
-	IsActive                  *bool
+	SiteIDs                  []uuid.UUID
+	Names                    []string
+	Orgs                     []string
+	OsTypes                  []string
+	Statuses                 []string
+	SearchQuery              *string
+	OperatingSystemIds       []uuid.UUID
+	IsActive                 *bool
 	// Scopes filters by the scope field (e.g. "Global", "Limited", "Local").
 	Scopes []string
 	// IncludeDeleted includes soft-deleted records in the result.
 	// Used by the inventory sync to detect and propagate deletions from carbide-core.
 	IncludeDeleted bool
+
+	// ProviderOSVisibleAtSiteIDs restricts provider-owned OS visibility when
+	// InfrastructureProviderID is set together with TenantIDs (tenant admin view).
+	// Only provider-owned OSes with at least one site association at one of these
+	// sites are included. If nil, no cross-ownership provider entries are shown
+	// alongside tenant entries (default). If set to an empty slice, no provider
+	// entries match. This field is ignored when InfrastructureProviderID is used
+	// without TenantIDs (provider-only view).
+	ProviderOSVisibleAtSiteIDs *[]uuid.UUID
 }
 
 var _ bun.BeforeAppendModelHook = (*OperatingSystem)(nil)
@@ -452,27 +458,39 @@ func (ossd OperatingSystemSQLDAO) GetAll(ctx context.Context, tx *db.Tx, filter 
 		query = query.Where("os.org IN (?)", bun.In(filter.Orgs))
 		ossd.tracerSpan.SetAttribute(operatingSystemSQLDAOSpan, "filter.org", filter.Orgs)
 	}
-	if filter.InfrastructureProviderID != nil {
-		query = query.Where("os.infrastructure_provider_id = ?", *filter.InfrastructureProviderID)
-		ossd.tracerSpan.SetAttribute(operatingSystemSQLDAOSpan, "infrastructure_provider_id", filter.InfrastructureProviderID.String())
-	}
-	// When both TenantIDs and InfrastructureProviderIDs are set, widen the result with OR so that
-	// tenant admins and provider admins can see all OSes belonging to either their tenant or their
-	// provider. When only TenantIDs is set it behaves as a plain AND filter (legacy behaviour).
+	hasTenants := len(filter.TenantIDs) > 0
+	hasProvider := filter.InfrastructureProviderID != nil
+	hasSiteScope := filter.ProviderOSVisibleAtSiteIDs != nil
+
 	switch {
-	case len(filter.TenantIDs) > 0 && len(filter.InfrastructureProviderIDs) > 0:
+	case hasTenants && hasProvider && hasSiteScope:
+		// Tenant admin view: own tenant entries + provider entries at accessible sites.
+		query = query.WhereGroup(" AND ", func(q *bun.SelectQuery) *bun.SelectQuery {
+			q = q.Where("os.tenant_id IN (?)", bun.In(filter.TenantIDs))
+			if len(*filter.ProviderOSVisibleAtSiteIDs) > 0 {
+				q = q.WhereOr(
+					"(os.infrastructure_provider_id = ? AND EXISTS (SELECT 1 FROM operating_system_site_association WHERE operating_system_id = os.id AND deleted IS NULL AND site_id IN (?)))",
+					*filter.InfrastructureProviderID, bun.In(*filter.ProviderOSVisibleAtSiteIDs),
+				)
+			}
+			return q
+		})
+		ossd.tracerSpan.SetAttribute(operatingSystemSQLDAOSpan, "tenant_with_provider_at_sites", filter.TenantIDs)
+	case hasTenants && hasProvider:
+		// Dual-role view: own tenant entries + own provider entries, no site restriction.
 		query = query.WhereGroup(" AND ", func(q *bun.SelectQuery) *bun.SelectQuery {
 			return q.
 				Where("os.tenant_id IN (?)", bun.In(filter.TenantIDs)).
-				WhereOr("os.infrastructure_provider_id IN (?)", bun.In(filter.InfrastructureProviderIDs))
+				WhereOr("os.infrastructure_provider_id = ?", *filter.InfrastructureProviderID)
 		})
 		ossd.tracerSpan.SetAttribute(operatingSystemSQLDAOSpan, "tenant_or_provider", filter.TenantIDs)
-	case len(filter.TenantIDs) > 0:
+	case hasTenants:
 		query = query.Where("os.tenant_id IN (?)", bun.In(filter.TenantIDs))
 		ossd.tracerSpan.SetAttribute(operatingSystemSQLDAOSpan, "tenant_id", filter.TenantIDs)
-	case len(filter.InfrastructureProviderIDs) > 0:
-		query = query.Where("os.infrastructure_provider_id IN (?)", bun.In(filter.InfrastructureProviderIDs))
-		ossd.tracerSpan.SetAttribute(operatingSystemSQLDAOSpan, "infrastructure_provider_ids", filter.InfrastructureProviderIDs)
+	case hasProvider:
+		// Provider-only view: only provider-owned entries.
+		query = query.Where("os.infrastructure_provider_id = ?", *filter.InfrastructureProviderID)
+		ossd.tracerSpan.SetAttribute(operatingSystemSQLDAOSpan, "infrastructure_provider_id", filter.InfrastructureProviderID.String())
 	}
 	if filter.OsTypes != nil {
 		query = query.Where("os.type IN (?)", bun.In(filter.OsTypes))

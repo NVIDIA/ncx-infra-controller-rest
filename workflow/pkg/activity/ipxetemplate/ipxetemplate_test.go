@@ -87,7 +87,7 @@ func TestManageIpxeTemplate_Reconcile_CreateUpdateDelete(t *testing.T) {
 	}
 	assert.NoError(t, mit.UpdateIpxeTemplatesInDB(ctx, site.ID, inv2))
 
-	updated, err := templateDAO.GetBySiteAndName(ctx, nil, site.ID, "ubuntu-autoinstall")
+	updated, err := templateDAO.GetBySiteAndTemplateID(ctx, nil, site.ID, ubuntuAutoinstallID)
 	assert.NoError(t, err)
 	assert.Equal(t, []string{"new-param"}, updated.RequiredParams)
 
@@ -104,7 +104,7 @@ func TestManageIpxeTemplate_Reconcile_CreateUpdateDelete(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 1, total)
 
-	_, err = templateDAO.GetBySiteAndName(ctx, nil, site.ID, "ubuntu-autoinstall")
+	_, err = templateDAO.GetBySiteAndTemplateID(ctx, nil, site.ID, ubuntuAutoinstallID)
 	assert.ErrorIs(t, err, cdb.ErrDoesNotExist)
 }
 
@@ -143,11 +143,11 @@ func TestManageIpxeTemplate_InternalScopeFiltered(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 1, total)
 
-	tmpl, err := templateDAO.GetBySiteAndName(ctx, nil, site.ID, "public-tmpl")
+	tmpl, err := templateDAO.GetBySiteAndTemplateID(ctx, nil, site.ID, publicID)
 	assert.NoError(t, err)
 	assert.Equal(t, cdbm.IpxeTemplateScopePublic, tmpl.Scope)
 
-	_, err = templateDAO.GetBySiteAndName(ctx, nil, site.ID, "internal-tmpl")
+	_, err = templateDAO.GetBySiteAndTemplateID(ctx, nil, site.ID, internalID)
 	assert.ErrorIs(t, err, cdb.ErrDoesNotExist)
 }
 
@@ -178,7 +178,7 @@ func TestManageIpxeTemplate_InternalScopeDeletesExistingPublic(t *testing.T) {
 		},
 	}
 	assert.NoError(t, mit.UpdateIpxeTemplatesInDB(ctx, site.ID, inv1))
-	_, err := templateDAO.GetBySiteAndName(ctx, nil, site.ID, "my-template")
+	_, err := templateDAO.GetBySiteAndTemplateID(ctx, nil, site.ID, templateID)
 	assert.NoError(t, err)
 
 	// Second sync: template changed to INTERNAL — should be removed via reconciliation
@@ -240,9 +240,9 @@ func TestManageIpxeTemplate_CrossSiteNameConflict(t *testing.T) {
 	assert.Equal(t, 0, total)
 
 	// Site 1 template should still be intact
-	tmpl, err := templateDAO.GetBySiteAndName(ctx, nil, site1.ID, "kernel-initrd")
+	tmpl, err := templateDAO.GetBySiteAndTemplateID(ctx, nil, site1.ID, sharedTemplateID)
 	assert.NoError(t, err)
-	assert.Equal(t, sharedTemplateID, tmpl.TemplateID)
+	assert.Equal(t, "kernel-initrd", tmpl.Name)
 
 	// Site 2 reports same template ID with correct name — should succeed
 	inv3 := &cwssaws.IpxeTemplateInventory{

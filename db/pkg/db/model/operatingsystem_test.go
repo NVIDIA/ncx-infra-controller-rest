@@ -844,7 +844,7 @@ func TestOperatingSystemSQLDAO_GetAll(t *testing.T) {
 			ipID:          nil,
 			tenantIDs:     nil,
 			osNames:       nil,
-			osTypes:       []string{OperatingSystemTypeImage, OperatingSystemTypeIPXE},
+			osTypes:       []string{OperatingSystemTypeIPXE, OperatingSystemTypeImage},
 			expectedCount: paginator.DefaultLimit,
 			expectedTotal: db.GetIntPtr(totalCount + testJoinCount),
 			expectedError: false,

@@ -54,7 +54,7 @@ type OperatingSystem struct {
 	IpxeTemplateParameters []IpxeTemplateParameter `json:"ipxeTemplateParameters,omitempty"`
 	// Artifacts (kernel, initrd, etc.) for the iPXE OS definition
 	IpxeTemplateArtifacts []IpxeTemplateArtifact `json:"ipxeTemplateArtifacts,omitempty"`
-	// Synchronization scope. Required for Templated iPXE Operating Systems; nil for all other types
+	// Synchronization scope for iPXE Operating Systems; nil for Image OS. Local: single site, bidirectional sync (provider-owned, originating from carbide-core). Global: rest-to-core for all owner sites. Limited: rest-to-core for specific sites
 	Scope NullableString `json:"scope,omitempty"`
 	// User data for the Operating System
 	UserData NullableString `json:"userData,omitempty"`

@@ -61,14 +61,13 @@ func NewGetAllIpxeTemplateHandler(dbSession *cdb.Session, tc tclient.Client, cfg
 
 // Handle godoc
 // @Summary Get all iPXE templates
-// @Description Get all iPXE templates propagated from bare-metal-manager-core for a given site. Any Tenant Admin or Provider Admin/Viewer can access templates for sites they are associated with.
+// @Description Get all iPXE templates propagated from bare-metal-manager-core. The `siteId` query parameter is optional and may be repeated to filter by one or more sites. When omitted, a Provider Admin/Viewer receives templates for all sites owned by their infrastructure provider; a Tenant Admin receives templates for all sites whose provider the tenant has a Tenant Account on.
 // @Tags iPXE Template
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
 // @Param org path string true "Name of NGC organization"
-// @Param siteId query string true "ID of Site"
-// @Param scope query string false "Filter by scope ('internal' or 'public')"
+// @Param siteId query []string false "Optional site ID(s); may be repeated to filter by multiple sites"
 // @Param pageNumber query integer false "Page number of results returned"
 // @Param pageSize query integer false "Number of results per page"
 // @Param orderBy query string false "Order by field"
@@ -85,77 +84,118 @@ func (h GetAllIpxeTemplateHandler) Handle(c echo.Context) error {
 		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
-	// Validate org membership
-	if _, err := dbUser.OrgData.GetOrgByName(org); err != nil {
-		logger.Warn().Msg("could not validate org membership for user, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
-	}
-
-	// Validate role: Provider Admins/Viewers or any Tenant Admin
+	// Validate role (Provider Admin/Viewer or Tenant Admin) and org membership
 	infrastructureProvider, tenant, apiError := common.IsProviderOrTenant(ctx, logger, h.dbSession, org, dbUser, true, false)
 	if apiError != nil {
 		return cerr.NewAPIErrorResponse(c, apiError.Code, apiError.Message, apiError.Data)
 	}
 
-	// siteId is required
-	siteIDStr := c.QueryParam("siteId")
-	if siteIDStr == "" {
-		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Site ID must be specified in query parameter 'siteId'", nil)
+	// Parse optional siteId query parameters. Multiple values (repeated
+	// `?siteId=...&siteId=...`) are supported.
+	requestedSiteIDStrs := c.QueryParams()["siteId"]
+	requestedSiteIDs := make([]uuid.UUID, 0, len(requestedSiteIDStrs))
+	for _, s := range requestedSiteIDStrs {
+		if s == "" {
+			continue
+		}
+		parsed, perr := uuid.Parse(s)
+		if perr != nil {
+			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Invalid siteId in query parameter: %s", s), nil)
+		}
+		requestedSiteIDs = append(requestedSiteIDs, parsed)
 	}
 
-	site, err := common.GetSiteFromIDString(ctx, nil, siteIDStr, h.dbSession)
-	if err != nil {
-		if errors.Is(err, common.ErrInvalidID) {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid siteId in request data", nil)
-		}
-		if errors.Is(err, cdb.ErrDoesNotExist) {
-			return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Site specified in request data does not exist", nil)
-		}
-		logger.Error().Err(err).Msg("error retrieving Site from DB")
-		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site specified in request data, DB error", nil)
-	}
+	// Build the caller's authorized site set, tracking which sites come from the
+	// provider path vs the tenant path. A site can be in both sets for a
+	// dual-role caller — provider access wins (fewer restrictions).
+	//
+	// Note on tenant-path scoping: tenant access is established per-site via
+	// `TenantSite` associations (a tenant may be associated with some sites of
+	// a provider but not others).
+	providerSites := map[uuid.UUID]struct{}{}
+	tenantSites := map[uuid.UUID]struct{}{}
 
-	// Validate site ownership — evaluate both roles independently so a mixed-role
-	// service account succeeds if either path authorizes the request.
-	providerAllowed := infrastructureProvider != nil && site.InfrastructureProviderID == infrastructureProvider.ID
-
-	tenantAllowed := false
-	if !providerAllowed && tenant != nil {
-		taDAO := cdbm.NewTenantAccountDAO(h.dbSession)
-		_, taCount, serr := taDAO.GetAll(ctx, nil, cdbm.TenantAccountFilterInput{
-			InfrastructureProviderID: &site.InfrastructureProviderID,
-			TenantIDs:                []uuid.UUID{tenant.ID},
-		}, cdbp.PageInput{}, []string{})
+	if infrastructureProvider != nil {
+		siteDAO := cdbm.NewSiteDAO(h.dbSession)
+		sites, _, serr := siteDAO.GetAll(ctx, nil,
+			cdbm.SiteFilterInput{InfrastructureProviderIDs: []uuid.UUID{infrastructureProvider.ID}},
+			cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)},
+			nil,
+		)
 		if serr != nil {
-			logger.Error().Err(serr).Msg("error retrieving Tenant Account for Site")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error retrieving Tenant Account for Site", nil)
+			logger.Error().Err(serr).Msg("error retrieving provider sites from DB")
+			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve provider sites, DB error", nil)
 		}
-		tenantAllowed = taCount > 0
+		for i := range sites {
+			providerSites[sites[i].ID] = struct{}{}
+		}
 	}
 
-	if !providerAllowed && !tenantAllowed {
-		logger.Warn().Msg("neither provider nor tenant authorization succeeded for Site access")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Current org is not authorized to access the Site specified in request data", nil)
+	if tenant != nil {
+		tsDAO := cdbm.NewTenantSiteDAO(h.dbSession)
+		tss, _, terr := tsDAO.GetAll(ctx, nil,
+			cdbm.TenantSiteFilterInput{TenantIDs: []uuid.UUID{tenant.ID}},
+			cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)},
+			nil,
+		)
+		if terr != nil {
+			logger.Error().Err(terr).Msg("error retrieving Tenant Site associations from DB")
+			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant Site associations, DB error", nil)
+		}
+		for i := range tss {
+			tenantSites[tss[i].SiteID] = struct{}{}
+		}
 	}
 
-	filterInput := cdbm.IpxeTemplateFilterInput{
-		SiteIDs: []uuid.UUID{site.ID},
+	isAuthorized := func(id uuid.UUID) bool {
+		if _, ok := providerSites[id]; ok {
+			return true
+		}
+		_, ok := tenantSites[id]
+		return ok
 	}
 
-	if tenantAllowed && !providerAllowed {
-		// Tenants may only see PUBLIC templates; ignore any scope query param.
-		filterInput.Scopes = []string{cdbm.IpxeTemplateScopePublic}
-	} else if scopeStr := c.QueryParam("scope"); scopeStr != "" {
-		filterInput.Scopes = []string{scopeStr}
+	// Determine the effective site filter:
+	//   - siteId(s) provided: must all be authorized; use them as-is.
+	//   - siteId(s) omitted:  use the union of provider and tenant accessible sites.
+	var effectiveSiteIDs []uuid.UUID
+	if len(requestedSiteIDs) > 0 {
+		for _, id := range requestedSiteIDs {
+			if !isAuthorized(id) {
+				logger.Warn().Str("siteID", id.String()).Msg("org not authorized to access requested Site")
+				return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Current org is not authorized to access Site: %s", id.String()), nil)
+			}
+		}
+		effectiveSiteIDs = requestedSiteIDs
+	} else {
+		effectiveSiteIDs = make([]uuid.UUID, 0, len(providerSites)+len(tenantSites))
+		seen := map[uuid.UUID]struct{}{}
+		for id := range providerSites {
+			if _, ok := seen[id]; !ok {
+				seen[id] = struct{}{}
+				effectiveSiteIDs = append(effectiveSiteIDs, id)
+			}
+		}
+		for id := range tenantSites {
+			if _, ok := seen[id]; !ok {
+				seen[id] = struct{}{}
+				effectiveSiteIDs = append(effectiveSiteIDs, id)
+			}
+		}
+	}
+
+	// No authorized sites — neither provider-owned nor reachable via a tenant account.
+	if len(effectiveSiteIDs) == 0 {
+		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Current org is not associated with any Site", nil)
 	}
 
 	// Validate pagination request
 	pageRequest := pagination.PageRequest{}
-	if err = c.Bind(&pageRequest); err != nil {
+	if err := c.Bind(&pageRequest); err != nil {
 		logger.Warn().Err(err).Msg("error binding pagination request data into API model")
 		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request pagination data", nil)
 	}
-	if err = pageRequest.Validate(cdbm.IpxeTemplateOrderByFields); err != nil {
+	if err := pageRequest.Validate(cdbm.IpxeTemplateOrderByFields); err != nil {
 		logger.Warn().Err(err).Msg("error validating pagination request data")
 		return cerr.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate pagination request data", err)
 	}
@@ -165,7 +205,7 @@ func (h GetAllIpxeTemplateHandler) Handle(c echo.Context) error {
 	templates, total, err := templateDAO.GetAll(
 		ctx,
 		nil,
-		filterInput,
+		cdbm.IpxeTemplateFilterInput{SiteIDs: effectiveSiteIDs},
 		paginator.PageInput{
 			Offset:  pageRequest.Offset,
 			Limit:   pageRequest.Limit,
@@ -239,13 +279,8 @@ func (h GetIpxeTemplateHandler) Handle(c echo.Context) error {
 		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
-	// Validate org membership
-	if _, err := dbUser.OrgData.GetOrgByName(org); err != nil {
-		logger.Warn().Msg("could not validate org membership for user, access denied")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
-	}
-
-	// Validate role: Provider Admins/Viewers or any Tenant Admin
+	// Validate role (Provider Admin/Viewer or Tenant Admin) — this also validates
+	// org membership, so no separate membership check is needed here.
 	infrastructureProvider, tenant, apiError := common.IsProviderOrTenant(ctx, logger, h.dbSession, org, dbUser, true, false)
 	if apiError != nil {
 		return cerr.NewAPIErrorResponse(c, apiError.Code, apiError.Message, apiError.Data)
@@ -296,26 +331,21 @@ func (h GetIpxeTemplateHandler) Handle(c echo.Context) error {
 
 	tenantAllowed := false
 	if !providerAllowed && tenant != nil {
-		taDAO := cdbm.NewTenantAccountDAO(h.dbSession)
-		_, taCount, serr := taDAO.GetAll(ctx, nil, cdbm.TenantAccountFilterInput{
-			InfrastructureProviderID: &site.InfrastructureProviderID,
-			TenantIDs:                []uuid.UUID{tenant.ID},
-		}, cdbp.PageInput{}, []string{})
+		tsDAO := cdbm.NewTenantSiteDAO(h.dbSession)
+		_, tsCount, serr := tsDAO.GetAll(ctx, nil, cdbm.TenantSiteFilterInput{
+			TenantIDs: []uuid.UUID{tenant.ID},
+			SiteIDs:   []uuid.UUID{site.ID},
+		}, cdbp.PageInput{}, nil)
 		if serr != nil {
-			logger.Error().Err(serr).Msg("error retrieving Tenant Account for Site")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error retrieving Tenant Account for Site", nil)
+			logger.Error().Err(serr).Msg("error retrieving Tenant Site association for Site")
+			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error retrieving Tenant Site association for Site", nil)
 		}
-		tenantAllowed = taCount > 0
+		tenantAllowed = tsCount > 0
 	}
 
 	if !providerAllowed && !tenantAllowed {
 		logger.Warn().Msg("neither provider nor tenant authorization succeeded for Site access")
 		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Current org is not authorized to access the iPXE template's Site", nil)
-	}
-
-	if tenantAllowed && !providerAllowed && tmpl.Scope == cdbm.IpxeTemplateScopeInternal {
-		logger.Warn().Msg("tenant attempted to access an internal iPXE template")
-		return cerr.NewAPIErrorResponse(c, http.StatusForbidden, "Current org is not authorized to access this iPXE template", nil)
 	}
 
 	logger.Info().Msg("finishing API handler")
