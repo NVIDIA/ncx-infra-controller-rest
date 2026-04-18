@@ -88,7 +88,7 @@ type IpxeTemplateCreateInput struct {
 
 // IpxeTemplateUpdateInput are input parameters for the Update method
 type IpxeTemplateUpdateInput struct {
-	ID                uuid.UUID
+	IpxeTemplateID    uuid.UUID
 	Name              string
 	Template          string
 	RequiredParams    []string
@@ -97,11 +97,12 @@ type IpxeTemplateUpdateInput struct {
 	Scope             string
 }
 
-// IpxeTemplateFilterInput are input parameters for the filter/GetAll method
+// IpxeTemplateFilterInput are input parameters for the filter/GetAll method.
+// Note: only `Public`-scoped templates are ever propagated into REST (see the
+// workflow activity `UpdateIpxeTemplatesInDB`), so there is no scope filter.
 type IpxeTemplateFilterInput struct {
 	SiteIDs []uuid.UUID
 	Names   []string
-	Scopes  []string
 }
 
 var _ bun.BeforeAppendModelHook = (*IpxeTemplate)(nil)
@@ -138,8 +139,6 @@ type IpxeTemplateDAO interface {
 	GetAll(ctx context.Context, tx *db.Tx, filter IpxeTemplateFilterInput, page paginator.PageInput) ([]IpxeTemplate, int, error)
 	// Get returns the row for the specified ID
 	Get(ctx context.Context, tx *db.Tx, id uuid.UUID) (*IpxeTemplate, error)
-	// GetBySiteAndName returns the row for the specified site and template name
-	GetBySiteAndName(ctx context.Context, tx *db.Tx, siteID uuid.UUID, name string) (*IpxeTemplate, error)
 	// GetBySiteAndTemplateID returns the row for the specified site and core template ID
 	GetBySiteAndTemplateID(ctx context.Context, tx *db.Tx, siteID uuid.UUID, templateID uuid.UUID) (*IpxeTemplate, error)
 	// GetAnyByTemplateID returns any single row matching the core template ID (across all sites).
@@ -193,32 +192,6 @@ func (itd IpxeTemplateSQLDAO) Get(ctx context.Context, tx *db.Tx, id uuid.UUID) 
 	it := &IpxeTemplate{}
 
 	err := db.GetIDB(tx, itd.dbSession).NewSelect().Model(it).Where("ipxet.id = ?", id).Scan(ctx)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, db.ErrDoesNotExist
-		}
-		return nil, err
-	}
-
-	return it, nil
-}
-
-// GetBySiteAndName returns an IpxeTemplate by site ID and template name
-// Returns db.ErrDoesNotExist if the record is not found
-func (itd IpxeTemplateSQLDAO) GetBySiteAndName(ctx context.Context, tx *db.Tx, siteID uuid.UUID, name string) (*IpxeTemplate, error) {
-	ctx, span := itd.tracerSpan.CreateChildInCurrentContext(ctx, "IpxeTemplateDAO.GetBySiteAndName")
-	if span != nil {
-		defer span.End()
-		itd.tracerSpan.SetAttribute(span, "site_id", siteID)
-		itd.tracerSpan.SetAttribute(span, "name", name)
-	}
-
-	it := &IpxeTemplate{}
-
-	err := db.GetIDB(tx, itd.dbSession).NewSelect().Model(it).
-		Where("ipxet.site_id = ?", siteID).
-		Where("ipxet.name = ?", name).
-		Scan(ctx)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, db.ErrDoesNotExist
@@ -296,13 +269,6 @@ func (itd IpxeTemplateSQLDAO) setQueryWithFilter(filter IpxeTemplateFilterInput,
 		}
 	}
 
-	if len(filter.Scopes) > 0 {
-		query = query.Where("ipxet.scope IN (?)", bun.In(filter.Scopes))
-		if span != nil {
-			itd.tracerSpan.SetAttribute(span, "scopes", filter.Scopes)
-		}
-	}
-
 	return query, nil
 }
 
@@ -345,10 +311,10 @@ func (itd IpxeTemplateSQLDAO) Update(ctx context.Context, tx *db.Tx, input IpxeT
 	ctx, span := itd.tracerSpan.CreateChildInCurrentContext(ctx, "IpxeTemplateDAO.Update")
 	if span != nil {
 		defer span.End()
-		itd.tracerSpan.SetAttribute(span, "id", input.ID)
+		itd.tracerSpan.SetAttribute(span, "id", input.IpxeTemplateID)
 	}
 
-	it := &IpxeTemplate{ID: input.ID}
+	it := &IpxeTemplate{ID: input.IpxeTemplateID}
 	updatedFields := []string{"name", "template", "required_params", "reserved_params", "required_artifacts", "scope", "updated"}
 
 	it.Name = input.Name
@@ -358,7 +324,7 @@ func (itd IpxeTemplateSQLDAO) Update(ctx context.Context, tx *db.Tx, input IpxeT
 	it.RequiredArtifacts = input.RequiredArtifacts
 	it.Scope = input.Scope
 
-	_, err := db.GetIDB(tx, itd.dbSession).NewUpdate().Model(it).Column(updatedFields...).Where("ipxet.id = ?", input.ID).Exec(ctx)
+	_, err := db.GetIDB(tx, itd.dbSession).NewUpdate().Model(it).Column(updatedFields...).Where("ipxet.id = ?", input.IpxeTemplateID).Exec(ctx)
 	if err != nil {
 		return nil, err
 	}

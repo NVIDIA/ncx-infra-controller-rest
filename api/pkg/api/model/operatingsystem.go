@@ -88,9 +88,9 @@ type APIOperatingSystemCreateRequest struct {
 	// IpxeTemplateArtifacts are the artifacts (kernel, initrd, ISO, …) for the iPXE OS definition
 	IpxeTemplateArtifacts []cdbm.OperatingSystemIpxeArtifact `json:"ipxeTemplateArtifacts"`
 	// Scope controls the synchronization direction between carbide-rest and carbide-core.
-	// Allowed values: "Local" (single site, bidirectional), "Global" (rest→core, all sites),
-	// "Limited" (rest→core, specific sites listed in siteIds).
-	// Required for Templated iPXE Operating Systems; must be nil for all other types.
+	// Allowed values: "Global" (rest→core, all sites), "Limited" (rest→core, specific sites
+	// listed in siteIds). Required for Templated iPXE OS; rejected for other types
+	// (validateRawIpxeOS / validateImageOS). The handler defaults raw iPXE to "Global".
 	Scope *string `json:"scope"`
 }
 
@@ -123,7 +123,7 @@ func (oscr APIOperatingSystemCreateRequest) Validate() error {
 		}
 	}
 
-	osType := GetOperatingSystemType(oscr.IpxeScript, oscr.IpxeTemplateId)
+	osType := oscr.GetOperatingSystemType()
 
 	if osType == cdbm.OperatingSystemTypeImage && oscr.ImageURL == nil {
 		return validation.Errors{
@@ -144,12 +144,12 @@ func (oscr APIOperatingSystemCreateRequest) Validate() error {
 	}
 
 	switch osType {
-	case cdbm.OperatingSystemTypeImage:
-		return oscr.validateImageOS()
 	case cdbm.OperatingSystemTypeIPXE:
 		return oscr.validateRawIpxeOS()
 	case cdbm.OperatingSystemTypeTemplatedIPXE:
 		return oscr.validateTemplatedIpxeOS()
+	case cdbm.OperatingSystemTypeImage:
+		return oscr.validateImageOS()
 	}
 
 	return nil
@@ -281,11 +281,15 @@ func (oscr APIOperatingSystemCreateRequest) validateTemplatedIpxeOS() error {
 	}
 
 	switch *oscr.Scope {
-	case cdbm.OperatingSystemScopeLocal, cdbm.OperatingSystemScopeGlobal, cdbm.OperatingSystemScopeLimited:
+	case cdbm.OperatingSystemScopeGlobal, cdbm.OperatingSystemScopeLimited:
 		// valid
+	case cdbm.OperatingSystemScopeLocal:
+		return validation.Errors{
+			"scope": errors.New("scope 'Local' cannot be specified at creation; Local Operating Systems are created in carbide-core"),
+		}
 	default:
 		return validation.Errors{
-			"scope": errors.New("scope must be one of 'Local', 'Global', or 'Limited'"),
+			"scope": errors.New("scope must be one of 'Global' or 'Limited'"),
 		}
 	}
 
@@ -462,10 +466,18 @@ func (osur APIOperatingSystemUpdateRequest) Validate(existingOS *cdbm.OperatingS
 		}
 	}
 
-	// verify if os created with ipxe script, if yes reject the update if imageURL provided
+	// Reject cross-type field assignments (iPXE → Templated iPXE → Image).
 	if cdbm.IsIPXEType(existingOS.Type) && osur.ImageURL != nil {
 		return validation.Errors{
 			"imageURL": errors.New("unable to set image URL for iPXE based Operating System"),
+		}
+	} else if existingOS.Type == cdbm.OperatingSystemTypeIPXE && osur.IpxeTemplateId != nil {
+		return validation.Errors{
+			"ipxeTemplateId": errors.New("unable to set iPXE template for raw iPXE Operating System"),
+		}
+	} else if existingOS.Type == cdbm.OperatingSystemTypeTemplatedIPXE && osur.IpxeScript != nil {
+		return validation.Errors{
+			"ipxeScript": errors.New("unable to set iPXE script for templated iPXE Operating System"),
 		}
 	} else if existingOS.Type == cdbm.OperatingSystemTypeImage && osur.IpxeScript != nil {
 		return validation.Errors{
@@ -738,6 +750,9 @@ type APIOperatingSystem struct {
 	IpxeTemplateParameters []cdbm.OperatingSystemIpxeParameter `json:"ipxeTemplateParameters"`
 	// IpxeTemplateArtifacts are the artifacts (kernel, initrd, ISO, …) for the iPXE OS definition
 	IpxeTemplateArtifacts []cdbm.OperatingSystemIpxeArtifact `json:"ipxeTemplateArtifacts"`
+	// Scope controls the synchronization direction between carbide-rest and carbide-core.
+	// One of "Local" (default), "Global", or "Limited". Only valid for Templated iPXE OSes.
+	Scope *string `json:"scope"`
 	// PhoneHomeEnabled is an attribute which is specified by user if Operating System needs to be enabled for phone home or not
 	PhoneHomeEnabled bool `json:"phoneHomeEnabled"`
 	// UserData is the user data for the Operating System
@@ -758,9 +773,6 @@ type APIOperatingSystem struct {
 	StatusHistory []APIStatusDetail `json:"statusHistory"`
 	// SiteAssociations is the list of Sites associated with the Operating System
 	SiteAssociations []APIOperatingSystemSiteAssociation `json:"siteAssociations"`
-	// Scope controls the synchronization direction between carbide-rest and carbide-core.
-	// One of "Local" (default), "Global", or "Limited". Only valid for Templated iPXE OSes.
-	Scope *string `json:"scope"`
 	// CreatedAt indicates the ISO datetime string for when the entity was created
 	Created time.Time `json:"created"`
 	// UpdatedAt indicates the ISO datetime string for when the entity was last updated
@@ -785,6 +797,7 @@ func NewAPIOperatingSystem(dbOS *cdbm.OperatingSystem, dbsds []cdbm.StatusDetail
 		IpxeTemplateId:         dbOS.IpxeTemplateId,
 		IpxeTemplateParameters: dbOS.IpxeTemplateParameters,
 		IpxeTemplateArtifacts:  dbOS.IpxeTemplateArtifacts,
+		Scope:                  dbOS.IpxeOsScope,
 		PhoneHomeEnabled:       dbOS.PhoneHomeEnabled,
 		UserData:               dbOS.UserData,
 		IsCloudInit:            dbOS.IsCloudInit,
@@ -793,7 +806,6 @@ func NewAPIOperatingSystem(dbOS *cdbm.OperatingSystem, dbsds []cdbm.StatusDetail
 		IsActive:               dbOS.IsActive,
 		DeactivationNote:       dbOS.DeactivationNote,
 		Status:                 dbOS.Status,
-		Scope:                  dbOS.IpxeOsScope,
 		Created:                dbOS.Created,
 		Updated:                dbOS.Updated,
 	}
@@ -822,13 +834,14 @@ func NewAPIOperatingSystem(dbOS *cdbm.OperatingSystem, dbsds []cdbm.StatusDetail
 	return &apiOperatingSystem
 }
 
-// GetOperatingSystemType returns the OperatingSystem type based on the source fields.
-func GetOperatingSystemType(ipxeScript, ipxeTemplateId *string) string {
-	if ipxeTemplateId != nil {
-		return cdbm.OperatingSystemTypeTemplatedIPXE
-	}
-	if ipxeScript != nil {
+// GetOperatingSystemType returns the OperatingSystem type inferred from the
+// create request's source fields (`IpxeScript`, `IpxeTemplateId`, or neither).
+func (oscr APIOperatingSystemCreateRequest) GetOperatingSystemType() string {
+	if oscr.IpxeScript != nil {
 		return cdbm.OperatingSystemTypeIPXE
+	}
+	if oscr.IpxeTemplateId != nil {
+		return cdbm.OperatingSystemTypeTemplatedIPXE
 	}
 	return cdbm.OperatingSystemTypeImage
 }

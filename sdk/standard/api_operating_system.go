@@ -49,11 +49,11 @@ If `infrastructureProviderId` is provided in request data, then org must have an
 
 If `tenantId` is provided in request data, then org must have a Tenant entity and its ID should match the query param value. User must have `FORGE_TENANT_ADMIN` role.
 
-Provider Admins can create iPXE template-based Operating Systems (using `ipxeTemplateId`). Tenants can create iPXE script-based or Image-based Operating Systems.
+Tenants can create iPXE script-based or Image-based Operating Systems. Provider Admins can create iPXE template-based Operating Systems (using `ipxeTemplateId`).
 
 `ipxeScript`, `ipxeTemplateId`, and `imageUrl` are mutually exclusive — only one may be specified. When `ipxeTemplateId` is used, `ipxeTemplateParameters` and `ipxeTemplateArtifacts` can be provided to configure the template.
 
-The `scope` field is required for Templated iPXE OSes and controls synchronization direction: `Local` (bidirectional), `Global` (rest-to-core for all sites), or `Limited` (rest-to-core for sites in `siteIds`). Must not be specified for other OS types.
+The `scope` field is required for Templated iPXE OSes and controls synchronization direction: `Global` (rest-to-core for all sites) or `Limited` (rest-to-core for sites in `siteIds`). `Local` scope cannot be specified at creation — Local Operating Systems originate in carbide-core and are synced to rest via inventory. Must not be specified for other OS types.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org

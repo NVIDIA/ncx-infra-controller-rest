@@ -164,7 +164,7 @@ func (mit ManageIpxeTemplate) UpdateIpxeTemplatesInDB(ctx context.Context, siteI
 			!reflect.DeepEqual(cur.ReservedParams, reported.ReservedParams) ||
 			!reflect.DeepEqual(cur.RequiredArtifacts, reported.RequiredArtifacts) {
 			input := cdbm.IpxeTemplateUpdateInput{
-				ID:                cur.ID,
+				IpxeTemplateID:    cur.ID,
 				Name:              reported.Name,
 				Template:          reported.Template,
 				RequiredParams:    reported.RequiredParams,

@@ -1261,6 +1261,50 @@ func (x *IpxeTemplateId) GetValue() string {
 	return ""
 }
 
+type RackHardwareType struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Value         string                 `protobuf:"bytes,1,opt,name=value,proto3" json:"value,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RackHardwareType) Reset() {
+	*x = RackHardwareType{}
+	mi := &file_common_carbide_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RackHardwareType) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RackHardwareType) ProtoMessage() {}
+
+func (x *RackHardwareType) ProtoReflect() protoreflect.Message {
+	mi := &file_common_carbide_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RackHardwareType.ProtoReflect.Descriptor instead.
+func (*RackHardwareType) Descriptor() ([]byte, []int) {
+	return file_common_carbide_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *RackHardwareType) GetValue() string {
+	if x != nil {
+		return x.Value
+	}
+	return ""
+}
+
 var File_common_carbide_proto protoreflect.FileDescriptor
 
 const file_common_carbide_proto_rawDesc = "" +
@@ -1322,6 +1366,8 @@ const file_common_carbide_proto_rawDesc = "" +
 	"\x11OperatingSystemId\x12\x14\n" +
 	"\x05value\x18\x01 \x01(\tR\x05value\"&\n" +
 	"\x0eIpxeTemplateId\x12\x14\n" +
+	"\x05value\x18\x01 \x01(\tR\x05value\"(\n" +
+	"\x10RackHardwareType\x12\x14\n" +
 	"\x05value\x18\x01 \x01(\tR\x05value*\x9e\x02\n" +
 	"\x12SystemPowerControl\x12 \n" +
 	"\x1cSYSTEM_POWER_CONTROL_UNKNOWN\x10\x00\x12\x1b\n" +
@@ -1345,7 +1391,7 @@ func file_common_carbide_proto_rawDescGZIP() []byte {
 }
 
 var file_common_carbide_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_common_carbide_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
+var file_common_carbide_proto_msgTypes = make([]protoimpl.MessageInfo, 27)
 var file_common_carbide_proto_goTypes = []any{
 	(SystemPowerControl)(0),          // 0: common.SystemPowerControl
 	(*MachineId)(nil),                // 1: common.MachineId
@@ -1374,6 +1420,7 @@ var file_common_carbide_proto_goTypes = []any{
 	(*ComputeAllocationId)(nil),      // 24: common.ComputeAllocationId
 	(*OperatingSystemId)(nil),        // 25: common.OperatingSystemId
 	(*IpxeTemplateId)(nil),           // 26: common.IpxeTemplateId
+	(*RackHardwareType)(nil),         // 27: common.RackHardwareType
 }
 var file_common_carbide_proto_depIdxs = []int32{
 	1, // 0: common.MachineIdList.machine_ids:type_name -> common.MachineId
@@ -1395,7 +1442,7 @@ func file_common_carbide_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_common_carbide_proto_rawDesc), len(file_common_carbide_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   26,
+			NumMessages:   27,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

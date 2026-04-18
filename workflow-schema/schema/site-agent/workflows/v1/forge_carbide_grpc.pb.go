@@ -369,7 +369,6 @@ const (
 	Forge_FindRacksByIds_FullMethodName                                     = "/forge.Forge/FindRacksByIds"
 	Forge_GetRack_FullMethodName                                            = "/forge.Forge/GetRack"
 	Forge_DeleteRack_FullMethodName                                         = "/forge.Forge/DeleteRack"
-	Forge_GetRackCapabilities_FullMethodName                                = "/forge.Forge/GetRackCapabilities"
 	Forge_CreateComputeAllocation_FullMethodName                            = "/forge.Forge/CreateComputeAllocation"
 	Forge_FindComputeAllocationIds_FullMethodName                           = "/forge.Forge/FindComputeAllocationIds"
 	Forge_FindComputeAllocationsByIds_FullMethodName                        = "/forge.Forge/FindComputeAllocationsByIds"
@@ -998,7 +997,6 @@ type ForgeClient interface {
 	// Deprecated: Use FindRackIds
 	GetRack(ctx context.Context, in *GetRackRequest, opts ...grpc.CallOption) (*GetRackResponse, error)
 	DeleteRack(ctx context.Context, in *DeleteRackRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	GetRackCapabilities(ctx context.Context, in *GetRackCapabilitiesRequest, opts ...grpc.CallOption) (*GetRackCapabilitiesResponse, error)
 	// Compute Allocations
 	CreateComputeAllocation(ctx context.Context, in *CreateComputeAllocationRequest, opts ...grpc.CallOption) (*CreateComputeAllocationResponse, error)
 	FindComputeAllocationIds(ctx context.Context, in *FindComputeAllocationIdsRequest, opts ...grpc.CallOption) (*FindComputeAllocationIdsResponse, error)
@@ -4515,16 +4513,6 @@ func (c *forgeClient) DeleteRack(ctx context.Context, in *DeleteRackRequest, opt
 	return out, nil
 }
 
-func (c *forgeClient) GetRackCapabilities(ctx context.Context, in *GetRackCapabilitiesRequest, opts ...grpc.CallOption) (*GetRackCapabilitiesResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetRackCapabilitiesResponse)
-	err := c.cc.Invoke(ctx, Forge_GetRackCapabilities_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *forgeClient) CreateComputeAllocation(ctx context.Context, in *CreateComputeAllocationRequest, opts ...grpc.CallOption) (*CreateComputeAllocationResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CreateComputeAllocationResponse)
@@ -5937,7 +5925,6 @@ type ForgeServer interface {
 	// Deprecated: Use FindRackIds
 	GetRack(context.Context, *GetRackRequest) (*GetRackResponse, error)
 	DeleteRack(context.Context, *DeleteRackRequest) (*emptypb.Empty, error)
-	GetRackCapabilities(context.Context, *GetRackCapabilitiesRequest) (*GetRackCapabilitiesResponse, error)
 	// Compute Allocations
 	CreateComputeAllocation(context.Context, *CreateComputeAllocationRequest) (*CreateComputeAllocationResponse, error)
 	FindComputeAllocationIds(context.Context, *FindComputeAllocationIdsRequest) (*FindComputeAllocationIdsResponse, error)
@@ -7116,9 +7103,6 @@ func (UnimplementedForgeServer) GetRack(context.Context, *GetRackRequest) (*GetR
 }
 func (UnimplementedForgeServer) DeleteRack(context.Context, *DeleteRackRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteRack not implemented")
-}
-func (UnimplementedForgeServer) GetRackCapabilities(context.Context, *GetRackCapabilitiesRequest) (*GetRackCapabilitiesResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method GetRackCapabilities not implemented")
 }
 func (UnimplementedForgeServer) CreateComputeAllocation(context.Context, *CreateComputeAllocationRequest) (*CreateComputeAllocationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateComputeAllocation not implemented")
@@ -13395,24 +13379,6 @@ func _Forge_DeleteRack_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Forge_GetRackCapabilities_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetRackCapabilitiesRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ForgeServer).GetRackCapabilities(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Forge_GetRackCapabilities_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ForgeServer).GetRackCapabilities(ctx, req.(*GetRackCapabilitiesRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _Forge_CreateComputeAllocation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateComputeAllocationRequest)
 	if err := dec(in); err != nil {
@@ -16306,10 +16272,6 @@ var Forge_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteRack",
 			Handler:    _Forge_DeleteRack_Handler,
-		},
-		{
-			MethodName: "GetRackCapabilities",
-			Handler:    _Forge_GetRackCapabilities_Handler,
 		},
 		{
 			MethodName: "CreateComputeAllocation",

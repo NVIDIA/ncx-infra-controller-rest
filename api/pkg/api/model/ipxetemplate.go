@@ -29,7 +29,7 @@ type APIIpxeTemplate struct {
 	ID string `json:"id"`
 	// SiteID is the ID of the Site this template was retrieved from
 	SiteID string `json:"siteId"`
-	// Name is the unique template name (e.g. "ubuntu-autoinstall", "kernel-initrd")
+	// Name is the template name, unique per site (e.g. "ubuntu-autoinstall", "kernel-initrd")
 	Name string `json:"name"`
 	// Template is the raw iPXE script content
 	Template string `json:"template"`

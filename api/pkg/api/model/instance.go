@@ -584,7 +584,9 @@ func (icr *APIInstanceCreateRequest) ValidateAndSetOperatingSystemData(cfg *conf
 
 		// Merge things in from OS when not
 		// found in request.
-		if mergedIpxeScript == nil {
+		// Templated iPXE uses server-side template resolution, so the OS's
+		// inline ipxeScript must not be copied into the request.
+		if mergedIpxeScript == nil && os.Type == cdbm.OperatingSystemTypeIPXE {
 			// If no script was sent in the request, and the
 			// request is selecting the operating system,
 			// give it precedence.
@@ -914,7 +916,9 @@ func (bicr *APIBatchInstanceCreateRequest) ValidateAndSetOperatingSystemData(cfg
 
 		// Merge things in from OS when not
 		// found in request.
-		if mergedIpxeScript == nil {
+		// Templated iPXE uses server-side template resolution, so the OS's
+		// inline ipxeScript must not be copied into the request.
+		if mergedIpxeScript == nil && os.Type == cdbm.OperatingSystemTypeIPXE {
 			mergedIpxeScript = os.IpxeScript
 			bicr.IpxeScript = mergedIpxeScript
 		}
@@ -1152,18 +1156,20 @@ func (iur *APIInstanceUpdateRequest) ValidateAndSetOperatingSystemData(cfg *conf
 		// Merge things in from OS and/or instance when not
 		// found in request.
 		if mergedIpxeScript == nil {
-			if iur.OperatingSystemID != nil {
+			if iur.OperatingSystemID != nil && os.Type == cdbm.OperatingSystemTypeIPXE {
 				// If no script was sent in the request, and the
-				// request is changing the operating system,
+				// request is changing to a raw iPXE operating system,
 				// give it precedence.
 				// I.e., the caller has said, "Switch the base OS,"
 				// but has not sent in any override for iPXE script,
 				// so the script of the base OS will be used.
+				// Templated iPXE uses server-side template resolution,
+				// so we must not copy the OS's inline ipxeScript.
 				mergedIpxeScript = os.IpxeScript
 
 				// Set it so the DB gets updated.
 				iur.IpxeScript = mergedIpxeScript
-			} else {
+			} else if iur.OperatingSystemID == nil {
 				// If no script was sent in the request AND no
 				// change in base OS is being requested, then
 				// use the existing iPXE script of the instance.
