@@ -206,28 +206,98 @@ func (uach UpdateAllocationConstraintHandler) Handle(c echo.Context) error {
 				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error retrieving Instance Type in Allocation Constraint in request", nil)
 			}
 
-			// acquire an advisory lock on the InstanceType
-			// this lock is released when the transaction commits or rollsback
-			serr = tx.TryAcquireAdvisoryLock(ctx, cdb.GetAdvisoryLockIDFromString(dbit.ID.String()), nil)
+			// Acquire the shared quota lock for this tenant/site/instance-type pool.
+			// This lock is released when the transaction commits or rolls back.
+			// We start by coordinating around instance type and tenant.
+			// If the constraint update is a decrease, this is all we need to ensure we coordinate around the same
+			// lock as Instance creation.
+			// If the constraint update is an increase, we'll "upgrade" to coordination around
+			// only instance type to match allocation creation and machine/type dissociation.
+			serr = common.AcquireInstanceTypeQuotaLock(ctx, tx, a.TenantID, dbit.ID)
 			if serr != nil {
-				logger.Error().Err(serr).Msg("Failed to acquire advisory lock on Instance Type")
+				logger.Error().Err(serr).Msg("Failed to acquire advisory lock on Instance Type quota pool")
 				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Allocation Constraint, DB error", nil)
 			}
 
-			// Validating if any instances are exist for this allocation constraint
-			inDAO := cdbm.NewInstanceDAO(uach.dbSession)
-			_, iCount, serr := inDAO.GetAll(ctx, tx, cdbm.InstanceFilterInput{AllocationIDs: []uuid.UUID{ac.AllocationID}, AllocationConstraintIDs: []uuid.UUID{ac.ID}}, paginator.PageInput{}, nil)
+			// Get the current tenant's allocation IDs for the allocation site.
+			// We'll use them to scope the aggregate capacity calculation.
+			allocationIDs, serr := common.GetAllocationIDsForTenantAtSite(ctx, tx, uach.dbSession, a.InfrastructureProviderID, a.TenantID, a.SiteID)
 			if serr != nil {
-				logger.Error().Err(serr).Msg("error getting Instances from db for AllocationConstraint")
-				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Instances for AllocationConstraint", nil)
-			}
-			if iCount > apiRequest.ConstraintValue {
-				logger.Warn().Msg("current number of Instances exceed Constraint value, failed to update Allocation Constraint")
-				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Cannot update AllocationConstraint, more Instances exist than requested constraint for this Allocation", nil)
+				logger.Error().Err(serr).Msg("error getting Allocation IDs for Tenant at Site")
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Allocation IDs for Tenant at Site", nil)
 			}
 
-			// Check if there are machines which are available to be allocated
-			if ac.ConstraintType == cdbm.AllocationConstraintTypeReserved && apiRequest.ConstraintValue > ac.ConstraintValue {
+			// Get all matching constraints for the tenant/site aggregate pool.
+			allocConstraints, _, serr := acDAO.GetAll(
+				ctx,
+				tx,
+				allocationIDs,
+				cdb.GetStrPtr(cdbm.AllocationResourceTypeInstanceType),
+				[]uuid.UUID{dbit.ID},
+				cdb.GetStrPtr(cdbm.AllocationConstraintTypeReserved),
+				nil,
+				nil,
+				nil,
+				cdb.GetIntPtr(paginator.TotalLimit),
+				nil,
+			)
+			if serr != nil {
+				logger.Error().Err(serr).Msg("error getting AllocationConstraints from db for InstanceType")
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve AllocationConstraints for InstanceType", nil)
+			}
+
+			// Sum up all the constraints so we can see what effect changes to the current
+			// allocation constraint will have on the total pool.
+			sumConstraints := apiRequest.ConstraintValue
+			for _, constraint := range allocConstraints {
+				// We exclude the constraint of the request because that's
+				// what's being changed, so the current value in the DB isn't
+				// relevant, and we've already added the requested new value
+				// into the sum.
+				if constraint.ID != ac.ID {
+					sumConstraints += constraint.ConstraintValue
+				}
+			}
+
+			// If the request is reducing the constraint value, make sure the total
+			// pool does not fall below what has already been allocated.
+			if apiRequest.ConstraintValue < ac.ConstraintValue {
+				// Validate if any instances exist for this instance type.
+				inDAO := cdbm.NewInstanceDAO(uach.dbSession)
+				_, instanceCount, serr := inDAO.GetAll(ctx, tx, cdbm.InstanceFilterInput{
+					TenantIDs:       []uuid.UUID{a.TenantID},
+					SiteIDs:         []uuid.UUID{a.SiteID},
+					InstanceTypeIDs: []uuid.UUID{dbit.ID},
+				}, paginator.PageInput{}, nil)
+				if serr != nil {
+					logger.Error().Err(serr).Msg("error getting Instances from db for AllocationConstraint")
+					return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Instances for AllocationConstraint", nil)
+				}
+
+				if instanceCount > sumConstraints {
+					logger.Warn().Msg("updating this Allocation Constraint as requested would leave the tenant pool below the active instance count for the instance type")
+					return cutil.NewAPIErrorResponse(
+						c,
+						http.StatusBadRequest,
+						fmt.Sprintf(
+							"Updating this Allocation Constraint as specified would result in %d total Machines for Instance Type: %s allocated to Tenant, less than Tenant's active Instance count: %d for the Instance Type",
+							sumConstraints,
+							dbit.Name,
+							instanceCount,
+						),
+						nil,
+					)
+				}
+			} else if ac.ConstraintType == cdbm.AllocationConstraintTypeReserved && apiRequest.ConstraintValue > ac.ConstraintValue {
+				// If the new value being requested is greater than the current one,
+				// check whether there are enough machines to support the increased pool size.
+				// We need to "upgrade" our lock to coordinate around only InstanceType here.
+				serr = tx.TryAcquireAdvisoryLock(ctx, cdb.GetAdvisoryLockIDFromString(dbit.ID.String()), nil)
+				if serr != nil {
+					logger.Error().Err(serr).Msg("Failed to acquire advisory lock on Instance Type quota pool")
+					return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Allocation Constraint, DB error", nil)
+				}
+
 				ok, serr := common.CheckMachinesForInstanceTypeAllocation(ctx, tx, uach.dbSession, logger, dbit.ID, apiRequest.ConstraintValue-ac.ConstraintValue)
 				if serr != nil {
 					logger.Error().Err(serr).Str("resourceId", ac.ResourceTypeID.String()).Msg("error checking available machines for instance type allocation")

@@ -1544,7 +1544,7 @@ func TestVpcPrefixHandler_Delete(t *testing.T) {
 
 	al1 := common.TestBuildAllocation(t, dbSession, site, tn1, "test-allocation-1", ipu)
 	it1 := common.TestBuildInstanceType(t, dbSession, "test-instance-type-1", cdb.GetUUIDPtr(uuid.New()), site, nil, ipu)
-	alc1 := common.TestBuildAllocationConstraint(t, dbSession, al1, it1, nil, 5, ipu)
+	common.TestBuildAllocationConstraint(t, dbSession, al1, it1, nil, 5, ipu)
 
 	m1 := common.TestBuildMachine(t, dbSession, ip, site, &it1.ID, cdb.GetStrPtr("test-controller-machine-type"), cdbm.MachineStatusReady)
 	_ = common.TestBuildMachineInstanceType(t, dbSession, m1, it1)
@@ -1646,7 +1646,7 @@ func TestVpcPrefixHandler_Delete(t *testing.T) {
 
 	vpcp1FG := testCreateVpcPrefix(t, dbSession, scp, ipamStorage, tnu, tnOrg1, string(okBodyFG))
 
-	ins1 := common.TestBuildInstance(t, dbSession, "test-instance-1", al1.ID, alc1.ID, tn1.ID, ip.ID, site.ID, it1.ID, vpc1.ID, cdb.GetStrPtr(m1.ID), os1.ID)
+	ins1 := common.TestBuildInstance(t, dbSession, "test-instance-1", tn1.ID, ip.ID, site.ID, it1.ID, vpc1.ID, cdb.GetStrPtr(m1.ID), os1.ID)
 	common.TestBuildInterface(t, dbSession, ins1.ID, nil, &vpcp2ID, true, nil, nil, nil, cdb.GetStrPtr(cdbm.InterfaceStatusReady), tnu)
 
 	// OTEL Spanner configuration

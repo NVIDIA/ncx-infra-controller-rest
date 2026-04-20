@@ -100,7 +100,7 @@ func TestInterfaceSQLDAO_Create(t *testing.T) {
 	instanceType := testInstanceBuildInstanceType(t, dbSession, ip, "testInstanceType")
 	machine := testMachineBuildMachine(t, dbSession, ip.ID, site.ID, db.GetUUIDPtr(instanceType.ID), db.GetStrPtr("mcTypeTest"))
 	allocation := testInstanceBuildAllocation(t, dbSession, ip, tenant, site, "testAllocation")
-	allocationConstraint := testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
+	_ = testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
 	operatingSystem := testInstanceBuildOperatingSystem(t, dbSession, "testOS")
 	user := testInstanceBuildUser(t, dbSession, "testUser")
 	isd := NewInstanceDAO(dbSession)
@@ -109,8 +109,6 @@ func TestInterfaceSQLDAO_Create(t *testing.T) {
 		ctx, nil,
 		InstanceCreateInput{
 			Name:                     "test1",
-			AllocationID:             &allocation.ID,
-			AllocationConstraintID:   &allocationConstraint.ID,
 			TenantID:                 tenant.ID,
 			InfrastructureProviderID: ip.ID,
 			SiteID:                   site.ID,
@@ -345,7 +343,7 @@ func TestInterfaceSQLDAO_GetByID(t *testing.T) {
 	instanceType := testInstanceBuildInstanceType(t, dbSession, ip, "testInstanceType")
 	machine := testMachineBuildMachine(t, dbSession, ip.ID, site.ID, db.GetUUIDPtr(instanceType.ID), db.GetStrPtr("mcTypeTest"))
 	allocation := testInstanceBuildAllocation(t, dbSession, ip, tenant, site, "testAllocation")
-	allocationConstraint := testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
+	_ = testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
 	operatingSystem := testInstanceBuildOperatingSystem(t, dbSession, "testOS")
 	user := testInstanceBuildUser(t, dbSession, "testUser")
 	isd := NewInstanceDAO(dbSession)
@@ -354,8 +352,6 @@ func TestInterfaceSQLDAO_GetByID(t *testing.T) {
 		ctx, nil,
 		InstanceCreateInput{
 			Name:                     "test1",
-			AllocationID:             &allocation.ID,
-			AllocationConstraintID:   &allocationConstraint.ID,
 			TenantID:                 tenant.ID,
 			InfrastructureProviderID: ip.ID,
 			SiteID:                   site.ID,
@@ -553,7 +549,7 @@ func TestInterfaceSQLDAO_GetAll(t *testing.T) {
 	instanceType := testInstanceBuildInstanceType(t, dbSession, ip, "testInstanceType")
 	machine := testMachineBuildMachine(t, dbSession, ip.ID, site.ID, db.GetUUIDPtr(instanceType.ID), db.GetStrPtr("mcTypeTest"))
 	allocation := testInstanceBuildAllocation(t, dbSession, ip, tenant, site, "testAllocation")
-	allocationConstraint := testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
+	_ = testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
 	operatingSystem := testInstanceBuildOperatingSystem(t, dbSession, "testOS")
 	user := testInstanceBuildUser(t, dbSession, "testUser")
 	isd := NewInstanceDAO(dbSession)
@@ -566,8 +562,6 @@ func TestInterfaceSQLDAO_GetAll(t *testing.T) {
 			ctx, nil,
 			InstanceCreateInput{
 				Name:                     "test1",
-				AllocationID:             &allocation.ID,
-				AllocationConstraintID:   &allocationConstraint.ID,
 				TenantID:                 tenant.ID,
 				InfrastructureProviderID: ip.ID,
 				SiteID:                   site.ID,
@@ -946,7 +940,7 @@ func TestInterfaceSQLDAO_Clear(t *testing.T) {
 	instanceType := testInstanceBuildInstanceType(t, dbSession, ip, "testInstanceType")
 	machine := testMachineBuildMachine(t, dbSession, ip.ID, site.ID, db.GetUUIDPtr(instanceType.ID), db.GetStrPtr("mcTypeTest"))
 	allocation := testInstanceBuildAllocation(t, dbSession, ip, tenant, site, "testAllocation")
-	allocationConstraint := testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
+	_ = testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
 	operatingSystem := testInstanceBuildOperatingSystem(t, dbSession, "testOS")
 	user := testInstanceBuildUser(t, dbSession, "testUser")
 	isd := NewInstanceDAO(dbSession)
@@ -955,8 +949,6 @@ func TestInterfaceSQLDAO_Clear(t *testing.T) {
 		ctx, nil,
 		InstanceCreateInput{
 			Name:                     "test1",
-			AllocationID:             &allocation.ID,
-			AllocationConstraintID:   &allocationConstraint.ID,
 			TenantID:                 tenant.ID,
 			InfrastructureProviderID: ip.ID,
 			SiteID:                   site.ID,
@@ -1085,7 +1077,7 @@ func TestInterfaceSQLDAO_Update(t *testing.T) {
 	instanceType := testInstanceBuildInstanceType(t, dbSession, ip, "testInstanceType")
 	machine := testMachineBuildMachine(t, dbSession, ip.ID, site.ID, db.GetUUIDPtr(instanceType.ID), db.GetStrPtr("mcTypeTest"))
 	allocation := testInstanceBuildAllocation(t, dbSession, ip, tenant, site, "testAllocation")
-	allocationConstraint := testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
+	_ = testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
 	operatingSystem := testInstanceBuildOperatingSystem(t, dbSession, "testOS")
 	user := testInstanceBuildUser(t, dbSession, "testUser")
 	isd := NewInstanceDAO(dbSession)
@@ -1094,8 +1086,6 @@ func TestInterfaceSQLDAO_Update(t *testing.T) {
 		ctx, nil,
 		InstanceCreateInput{
 			Name:                     "test1",
-			AllocationID:             &allocation.ID,
-			AllocationConstraintID:   &allocationConstraint.ID,
 			TenantID:                 tenant.ID,
 			InfrastructureProviderID: ip.ID,
 			SiteID:                   site.ID,
@@ -1119,8 +1109,6 @@ func TestInterfaceSQLDAO_Update(t *testing.T) {
 		ctx, nil,
 		InstanceCreateInput{
 			Name:                     "test2",
-			AllocationID:             &allocation.ID,
-			AllocationConstraintID:   &allocationConstraint.ID,
 			TenantID:                 tenant.ID,
 			InfrastructureProviderID: ip.ID,
 			SiteID:                   site.ID,
@@ -1430,7 +1418,7 @@ func TestInterfaceSQLDAO_Delete(t *testing.T) {
 	instanceType := testInstanceBuildInstanceType(t, dbSession, ip, "testInstanceType")
 	machine := testMachineBuildMachine(t, dbSession, ip.ID, site.ID, db.GetUUIDPtr(instanceType.ID), db.GetStrPtr("mcTypeTest"))
 	allocation := testInstanceBuildAllocation(t, dbSession, ip, tenant, site, "testAllocation")
-	allocationConstraint := testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
+	_ = testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
 	operatingSystem := testInstanceBuildOperatingSystem(t, dbSession, "testOS")
 	user := testInstanceBuildUser(t, dbSession, "testUser")
 	isd := NewInstanceDAO(dbSession)
@@ -1439,8 +1427,6 @@ func TestInterfaceSQLDAO_Delete(t *testing.T) {
 		ctx, nil,
 		InstanceCreateInput{
 			Name:                     "test1",
-			AllocationID:             &allocation.ID,
-			AllocationConstraintID:   &allocationConstraint.ID,
 			TenantID:                 tenant.ID,
 			InfrastructureProviderID: ip.ID,
 			SiteID:                   site.ID,
@@ -1558,7 +1544,7 @@ func TestInterfaceSQLDAO_CreateMultiple(t *testing.T) {
 	instanceType := testInstanceBuildInstanceType(t, dbSession, ip, "testInstanceType")
 	machine := testMachineBuildMachine(t, dbSession, ip.ID, site.ID, db.GetUUIDPtr(instanceType.ID), db.GetStrPtr("mcTypeTest"))
 	allocation := testInstanceBuildAllocation(t, dbSession, ip, tenant, site, "testAllocation")
-	allocationConstraint := testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
+	_ = testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
 	operatingSystem := testInstanceBuildOperatingSystem(t, dbSession, "testOS")
 	user := testInstanceBuildUser(t, dbSession, "testUser")
 	isd := NewInstanceDAO(dbSession)
@@ -1566,8 +1552,6 @@ func TestInterfaceSQLDAO_CreateMultiple(t *testing.T) {
 		ctx, nil,
 		InstanceCreateInput{
 			Name:                     "test-instance-1",
-			AllocationID:             &allocation.ID,
-			AllocationConstraintID:   &allocationConstraint.ID,
 			TenantID:                 tenant.ID,
 			InfrastructureProviderID: ip.ID,
 			SiteID:                   site.ID,
@@ -1589,8 +1573,6 @@ func TestInterfaceSQLDAO_CreateMultiple(t *testing.T) {
 		ctx, nil,
 		InstanceCreateInput{
 			Name:                     "test-instance-2",
-			AllocationID:             &allocation.ID,
-			AllocationConstraintID:   &allocationConstraint.ID,
 			TenantID:                 tenant.ID,
 			InfrastructureProviderID: ip.ID,
 			SiteID:                   site.ID,

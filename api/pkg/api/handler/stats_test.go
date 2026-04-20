@@ -193,12 +193,10 @@ func testStatsBuildAllocationConstraint(t *testing.T, dbSession *cdb.Session, al
 	return ac
 }
 
-func testStatsBuildInstance(t *testing.T, dbSession *cdb.Session, ip *cdbm.InfrastructureProvider, site *cdbm.Site, tenant *cdbm.Tenant, vpc *cdbm.Vpc, itID *uuid.UUID, machineID *string, allocID *uuid.UUID, acID *uuid.UUID, name, status string) *cdbm.Instance {
+func testStatsBuildInstance(t *testing.T, dbSession *cdb.Session, ip *cdbm.InfrastructureProvider, site *cdbm.Site, tenant *cdbm.Tenant, vpc *cdbm.Vpc, itID *uuid.UUID, machineID *string, name, status string) *cdbm.Instance {
 	inst := &cdbm.Instance{
 		ID:                       uuid.New(),
 		Name:                     name,
-		AllocationID:             allocID,
-		AllocationConstraintID:   acID,
 		TenantID:                 tenant.ID,
 		InfrastructureProviderID: ip.ID,
 		SiteID:                   site.ID,
@@ -404,26 +402,26 @@ func TestStatsHandlers(t *testing.T) {
 	vpcGamma := testStatsBuildVpc(t, dbSession, ip, site, tenantGamma, "vpc-gamma")
 
 	// alpha: 4 instances on gpu-large (2 InUse→Ready, 1 Error→Error, 1 Initializing→Provisioning)
-	testStatsBuildInstance(t, dbSession, ip, site, tenantAlpha, vpcAlpha, &itGPULarge.ID, &gpuL[6].ID, &allocTraining.ID, nil, "alpha-gpuL-1", cdbm.InstanceStatusReady)        // machine InUse
-	testStatsBuildInstance(t, dbSession, ip, site, tenantAlpha, vpcAlpha, &itGPULarge.ID, &gpuL[7].ID, &allocTraining.ID, nil, "alpha-gpuL-2", cdbm.InstanceStatusReady)        // machine InUse
-	testStatsBuildInstance(t, dbSession, ip, site, tenantAlpha, vpcAlpha, &itGPULarge.ID, &gpuL[8].ID, &allocInference.ID, nil, "alpha-gpuL-3", cdbm.InstanceStatusError)       // machine Error
-	testStatsBuildInstance(t, dbSession, ip, site, tenantAlpha, vpcAlpha, &itGPULarge.ID, &gpuL[0].ID, &allocTraining.ID, nil, "alpha-gpuL-4", cdbm.InstanceStatusProvisioning) // machine Initializing
+	testStatsBuildInstance(t, dbSession, ip, site, tenantAlpha, vpcAlpha, &itGPULarge.ID, &gpuL[6].ID, "alpha-gpuL-1", cdbm.InstanceStatusReady)        // machine InUse
+	testStatsBuildInstance(t, dbSession, ip, site, tenantAlpha, vpcAlpha, &itGPULarge.ID, &gpuL[7].ID, "alpha-gpuL-2", cdbm.InstanceStatusReady)        // machine InUse
+	testStatsBuildInstance(t, dbSession, ip, site, tenantAlpha, vpcAlpha, &itGPULarge.ID, &gpuL[8].ID, "alpha-gpuL-3", cdbm.InstanceStatusError)        // machine Error
+	testStatsBuildInstance(t, dbSession, ip, site, tenantAlpha, vpcAlpha, &itGPULarge.ID, &gpuL[0].ID, "alpha-gpuL-4", cdbm.InstanceStatusProvisioning) // machine Initializing
 
 	// alpha: 2 instances on gpu-small (2 InUse→Ready)
-	testStatsBuildInstance(t, dbSession, ip, site, tenantAlpha, vpcAlpha, &itGPUSmall.ID, &gpuS[5].ID, &allocTraining.ID, nil, "alpha-gpuS-1", cdbm.InstanceStatusReady) // machine InUse
-	testStatsBuildInstance(t, dbSession, ip, site, tenantAlpha, vpcAlpha, &itGPUSmall.ID, &gpuS[6].ID, &allocTraining.ID, nil, "alpha-gpuS-2", cdbm.InstanceStatusReady) // machine InUse
+	testStatsBuildInstance(t, dbSession, ip, site, tenantAlpha, vpcAlpha, &itGPUSmall.ID, &gpuS[5].ID, "alpha-gpuS-1", cdbm.InstanceStatusReady) // machine InUse
+	testStatsBuildInstance(t, dbSession, ip, site, tenantAlpha, vpcAlpha, &itGPUSmall.ID, &gpuS[6].ID, "alpha-gpuS-2", cdbm.InstanceStatusReady) // machine InUse
 
 	// beta: 1 instance on gpu-large (Maintenance→Ready)
-	testStatsBuildInstance(t, dbSession, ip, site, tenantBeta, vpcBeta, &itGPULarge.ID, &gpuL[9].ID, &allocSimulation.ID, nil, "beta-gpuL-1", cdbm.InstanceStatusReady) // machine Maintenance
+	testStatsBuildInstance(t, dbSession, ip, site, tenantBeta, vpcBeta, &itGPULarge.ID, &gpuL[9].ID, "beta-gpuL-1", cdbm.InstanceStatusReady) // machine Maintenance
 
 	// beta: 3 instances on gpu-small (1 Error→Error, 1 Maintenance→Ready, 1 Initializing→Provisioning)
-	testStatsBuildInstance(t, dbSession, ip, site, tenantBeta, vpcBeta, &itGPUSmall.ID, &gpuS[8].ID, &allocSimulation.ID, nil, "beta-gpuS-1", cdbm.InstanceStatusError)        // machine Error
-	testStatsBuildInstance(t, dbSession, ip, site, tenantBeta, vpcBeta, &itGPUSmall.ID, &gpuS[9].ID, &allocSimulation.ID, nil, "beta-gpuS-2", cdbm.InstanceStatusReady)        // machine Maintenance
-	testStatsBuildInstance(t, dbSession, ip, site, tenantBeta, vpcBeta, &itGPUSmall.ID, &gpuS[0].ID, &allocSimulation.ID, nil, "beta-gpuS-3", cdbm.InstanceStatusProvisioning) // machine Initializing
+	testStatsBuildInstance(t, dbSession, ip, site, tenantBeta, vpcBeta, &itGPUSmall.ID, &gpuS[8].ID, "beta-gpuS-1", cdbm.InstanceStatusError)        // machine Error
+	testStatsBuildInstance(t, dbSession, ip, site, tenantBeta, vpcBeta, &itGPUSmall.ID, &gpuS[9].ID, "beta-gpuS-2", cdbm.InstanceStatusReady)        // machine Maintenance
+	testStatsBuildInstance(t, dbSession, ip, site, tenantBeta, vpcBeta, &itGPUSmall.ID, &gpuS[0].ID, "beta-gpuS-3", cdbm.InstanceStatusProvisioning) // machine Initializing
 
 	// gamma: 1 instance on gpu-small (InUse→Ready), 1 on cpu (InUse→Ready)
-	testStatsBuildInstance(t, dbSession, ip, site, tenantGamma, vpcGamma, &itGPUSmall.ID, &gpuS[7].ID, &allocGeneral.ID, nil, "gamma-gpuS-1", cdbm.InstanceStatusReady) // machine InUse
-	testStatsBuildInstance(t, dbSession, ip, site, tenantGamma, vpcGamma, &itCPU.ID, &cpu[3].ID, &allocGeneral.ID, nil, "gamma-cpu-1", cdbm.InstanceStatusReady)        // machine InUse
+	testStatsBuildInstance(t, dbSession, ip, site, tenantGamma, vpcGamma, &itGPUSmall.ID, &gpuS[7].ID, "gamma-gpuS-1", cdbm.InstanceStatusReady) // machine InUse
+	testStatsBuildInstance(t, dbSession, ip, site, tenantGamma, vpcGamma, &itCPU.ID, &cpu[3].ID, "gamma-cpu-1", cdbm.InstanceStatusReady)        // machine InUse
 
 	cfg := common.GetTestConfig()
 
