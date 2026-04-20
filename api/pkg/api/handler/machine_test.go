@@ -360,15 +360,13 @@ func TestMachineHandler_Get(t *testing.T) {
 
 	vpc := testMachineBuildVpc(t, dbSession, ip, site, tenant, tnOrg1, "test-vpc-1")
 	allocation := testMachineBuildAllocation(t, dbSession, ip, tenant, site, "test-allocation-1")
-	alc := testInstanceSiteBuildAllocationContraints(t, dbSession, allocation, cdbm.AllocationResourceTypeInstanceType, ist.ID, cdbm.AllocationConstraintTypeReserved, 1, ipu)
+	_ = testInstanceSiteBuildAllocationContraints(t, dbSession, allocation, cdbm.AllocationResourceTypeInstanceType, ist.ID, cdbm.AllocationConstraintTypeReserved, 1, ipu)
 	os := testMachineBuildOperatingSystem(t, dbSession, "test-os-1", tenant.ID, tnu)
 
 	ins, err := insDAO.Create(
 		context.Background(), nil,
 		cdbm.InstanceCreateInput{
 			Name:                     "test-instance-1",
-			AllocationID:             &allocation.ID,
-			AllocationConstraintID:   &alc.ID,
 			TenantID:                 tenant.ID,
 			InfrastructureProviderID: ip.ID,
 			SiteID:                   site.ID,
@@ -388,15 +386,13 @@ func TestMachineHandler_Get(t *testing.T) {
 
 	vpc2 := testMachineBuildVpc(t, dbSession, ip2, site2, tenant2, tnOrg2, "test-vpc-2")
 	allocation2 := testMachineBuildAllocation(t, dbSession, ip2, tenant2, site2, "test-allocation-2")
-	alc2 := testInstanceSiteBuildAllocationContraints(t, dbSession, allocation2, cdbm.AllocationResourceTypeInstanceType, ist2.ID, cdbm.AllocationConstraintTypeReserved, 1, ipu)
+	_ = testInstanceSiteBuildAllocationContraints(t, dbSession, allocation2, cdbm.AllocationResourceTypeInstanceType, ist2.ID, cdbm.AllocationConstraintTypeReserved, 1, ipu)
 	os2 := testMachineBuildOperatingSystem(t, dbSession, "test-os-2", tenant2.ID, tnu)
 
 	ins2, _ := insDAO.Create(
 		context.Background(), nil,
 		cdbm.InstanceCreateInput{
 			Name:                     "test-instance-2",
-			AllocationID:             &allocation2.ID,
-			AllocationConstraintID:   &alc2.ID,
 			TenantID:                 tenant2.ID,
 			InfrastructureProviderID: ip2.ID,
 			SiteID:                   site2.ID,
@@ -730,7 +726,7 @@ func TestMachineHandler_GetAll(t *testing.T) {
 		"name":        "test-instance-type-2",
 		"description": "Test Instance Type 2 Description",
 	}, ipu)
-	alc := testInstanceSiteBuildAllocationContraints(t, dbSession, al, cdbm.AllocationResourceTypeInstanceType, it1.ID, cdbm.AllocationConstraintTypeReserved, 20, ipu)
+	_ = testInstanceSiteBuildAllocationContraints(t, dbSession, al, cdbm.AllocationResourceTypeInstanceType, it1.ID, cdbm.AllocationConstraintTypeReserved, 20, ipu)
 
 	os := testMachineBuildOperatingSystem(t, dbSession, "test-os", tenant.ID, tnu)
 	isd := cdbm.NewInstanceDAO(dbSession)
@@ -789,8 +785,6 @@ func TestMachineHandler_GetAll(t *testing.T) {
 				context.Background(), nil,
 				cdbm.InstanceCreateInput{
 					Name:                     fmt.Sprintf("test-instance-%v", i),
-					AllocationID:             &al.ID,
-					AllocationConstraintID:   &alc.ID,
 					TenantID:                 tenant.ID,
 					InfrastructureProviderID: ip.ID,
 					SiteID:                   site.ID,
@@ -860,8 +854,6 @@ func TestMachineHandler_GetAll(t *testing.T) {
 		context.Background(), nil,
 		cdbm.InstanceCreateInput{
 			Name:                     fmt.Sprintf("test-instance-targeted-31"),
-			AllocationID:             nil,
-			AllocationConstraintID:   nil,
 			TenantID:                 tenant4.ID,
 			InfrastructureProviderID: ip4.ID,
 			SiteID:                   site3.ID,
@@ -884,8 +876,6 @@ func TestMachineHandler_GetAll(t *testing.T) {
 		context.Background(), nil,
 		cdbm.InstanceCreateInput{
 			Name:                     fmt.Sprintf("test-instance-targeted-32"),
-			AllocationID:             nil,
-			AllocationConstraintID:   nil,
 			TenantID:                 tenant4.ID,
 			InfrastructureProviderID: ip4.ID,
 			SiteID:                   site3.ID,
@@ -909,8 +899,6 @@ func TestMachineHandler_GetAll(t *testing.T) {
 		context.Background(), nil,
 		cdbm.InstanceCreateInput{
 			Name:                     fmt.Sprintf("test-instance-targeted-34"),
-			AllocationID:             nil,
-			AllocationConstraintID:   nil,
 			TenantID:                 tenant5.ID,
 			InfrastructureProviderID: ip4.ID,
 			SiteID:                   site3.ID,
@@ -1686,7 +1674,7 @@ func TestMachineHandler_Update(t *testing.T) {
 	assert.NotNil(t, alc1)
 
 	allocation4 := testMachineBuildAllocation(t, dbSession, ip, tenant, site, "testAllocation4")
-	alc4 := testInstanceSiteBuildAllocationContraints(t, dbSession, allocation4, cdbm.AllocationResourceTypeInstanceType, instanceType4.ID, cdbm.AllocationConstraintTypeReserved, 1, ipu)
+	_ = testInstanceSiteBuildAllocationContraints(t, dbSession, allocation4, cdbm.AllocationResourceTypeInstanceType, instanceType4.ID, cdbm.AllocationConstraintTypeReserved, 1, ipu)
 
 	operatingSystem := testMachineBuildOperatingSystem(t, dbSession, "testOS", tenant.ID, tnu)
 	isd := cdbm.NewInstanceDAO(dbSession)
@@ -1695,8 +1683,6 @@ func TestMachineHandler_Update(t *testing.T) {
 		context.Background(), nil,
 		cdbm.InstanceCreateInput{
 			Name:                     "testInst1",
-			AllocationID:             &allocation4.ID,
-			AllocationConstraintID:   &alc4.ID,
 			TenantID:                 tenant.ID,
 			InfrastructureProviderID: ip.ID,
 			SiteID:                   site.ID,
@@ -2699,15 +2685,13 @@ func TestMachineHandler_Delete(t *testing.T) {
 
 	vpc := testMachineBuildVpc(t, dbSession, ip, site, tenant, tnOrg1, "test-vpc-1")
 	allocation := testMachineBuildAllocation(t, dbSession, ip, tenant, site, "test-allocation-1")
-	alc := testInstanceSiteBuildAllocationContraints(t, dbSession, allocation, cdbm.AllocationResourceTypeInstanceType, ist.ID, cdbm.AllocationConstraintTypeReserved, 1, ipu)
+	_ = testInstanceSiteBuildAllocationContraints(t, dbSession, allocation, cdbm.AllocationResourceTypeInstanceType, ist.ID, cdbm.AllocationConstraintTypeReserved, 1, ipu)
 	os := testMachineBuildOperatingSystem(t, dbSession, "test-os-1", tenant.ID, tnu)
 
 	_, err = insDAO.Create(
 		context.Background(), nil,
 		cdbm.InstanceCreateInput{
 			Name:                     "test-instance-1",
-			AllocationID:             &allocation.ID,
-			AllocationConstraintID:   &alc.ID,
 			TenantID:                 tenant.ID,
 			InfrastructureProviderID: ip.ID,
 			SiteID:                   site.ID,

@@ -827,15 +827,13 @@ func TestDpuExtensionServiceDeploymentSQLDAO_CreateMultiple(t *testing.T) {
 	instanceType := testInstanceBuildInstanceType(t, dbSession, ip, "testInstanceType")
 	machine := testMachineBuildMachine(t, dbSession, ip.ID, st.ID, &instanceType.ID, db.GetStrPtr("mcTypeTest"))
 	allocation := testInstanceBuildAllocation(t, dbSession, ip, tn, st, "testAllocation")
-	allocationConstraint := testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
+	_ = testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
 	operatingSystem := testInstanceBuildOperatingSystem(t, dbSession, "testOS")
 	isd := NewInstanceDAO(dbSession)
 	instance1, err := isd.Create(
 		ctx, nil,
 		InstanceCreateInput{
 			Name:                     "test1",
-			AllocationID:             &allocation.ID,
-			AllocationConstraintID:   &allocationConstraint.ID,
 			TenantID:                 tn.ID,
 			InfrastructureProviderID: ip.ID,
 			SiteID:                   st.ID,
@@ -858,8 +856,6 @@ func TestDpuExtensionServiceDeploymentSQLDAO_CreateMultiple(t *testing.T) {
 		ctx, nil,
 		InstanceCreateInput{
 			Name:                     "test2",
-			AllocationID:             &allocation.ID,
-			AllocationConstraintID:   &allocationConstraint.ID,
 			TenantID:                 tn.ID,
 			InfrastructureProviderID: ip.ID,
 			SiteID:                   st.ID,

@@ -417,13 +417,12 @@ func TestBuildOperatingSystem(t *testing.T, dbSession *db.Session, name string, 
 	return operatingSystem
 }
 
-// TestBuildInstance creates a test instance
-func TestBuildInstance(t *testing.T, dbSession *db.Session, name string, al *Allocation, ac *AllocationConstraint, tn *Tenant, ip *InfrastructureProvider, st *Site, it *InstanceType, vpc *Vpc, m *Machine, os *OperatingSystem) *Instance {
+// TestBuildInstance creates a test instance.
+// It returns a persisted instance without any allocation linkage.
+func TestBuildInstance(t *testing.T, dbSession *db.Session, name string, tn *Tenant, ip *InfrastructureProvider, st *Site, it *InstanceType, vpc *Vpc, m *Machine, os *OperatingSystem) *Instance {
 	ins := &Instance{
 		ID:                       uuid.New(),
 		Name:                     name,
-		AllocationID:             &al.ID,
-		AllocationConstraintID:   &ac.ID,
 		TenantID:                 tn.ID,
 		InfrastructureProviderID: ip.ID,
 		SiteID:                   st.ID,

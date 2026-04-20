@@ -912,9 +912,6 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 		instanceTypeID = machine.InstanceTypeID
 	} // End validating Machine ID
 
-	// Allocation Constraint to be used for the Instance
-	var selectedAllocationConstraint *cdbm.AllocationConstraint
-
 	// Begin validating Instance Type ID
 	if apiRequest.InstanceTypeID != nil {
 		// Validate the Instance Type ID
@@ -936,12 +933,11 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to retrieve Instance Type with ID: %s specified in request data", *instanceTypeID), nil)
 		}
 
-		// Acquire an advisory lock on the tenant ID and instanceType ID on which instance is being creating
-		// this lock is released when the transaction commits or rolls back
-		err = tx.TryAcquireAdvisoryLock(ctx, cdb.GetAdvisoryLockIDFromString(fmt.Sprintf("%s-%s", tenant.ID.String(), instanceType.ID.String())), nil)
+		// Acquire the shared quota lock for this tenant/site/instance-type pool.
+		// This lock is released when the transaction commits or rolls back.
+		err = common.AcquireInstanceTypeQuotaLock(ctx, tx, tenant.ID, instanceType.ID)
 		if err != nil {
-			// TODO: Add a retry here
-			logger.Error().Err(err).Msg("Failed to acquire advisory lock on Tenant and Instance Type")
+			logger.Error().Err(err).Msg("Failed to acquire advisory lock on Instance Type quota pool")
 			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error creating Instance, detected multiple parallel request on Instance Type by Tenant", nil)
 		}
 
@@ -975,49 +971,28 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 		if instanceType.SiteID != nil {
 			siteIDs = []uuid.UUID{*instanceType.SiteID}
 		}
-		instances, insTotal, err := instanceDAO.GetAll(ctx, tx, cdbm.InstanceFilterInput{TenantIDs: []uuid.UUID{tenant.ID}, SiteIDs: siteIDs, InstanceTypeIDs: []uuid.UUID{instanceType.ID}}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
+		_, insTotal, err := instanceDAO.GetAll(ctx, tx, cdbm.InstanceFilterInput{
+			TenantIDs:       []uuid.UUID{tenant.ID},
+			SiteIDs:         siteIDs,
+			InstanceTypeIDs: []uuid.UUID{instanceType.ID},
+		}, cdbp.PageInput{}, nil)
 		if err != nil {
 			logger.Error().Err(err).Msg("error retrieving Active Instances from DB for Tenant and InstanceType")
 			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve active instances for Tenant and Instance Type, DB error", nil)
 		}
 
-		// Build map allocation constraint ID which has been used by Instance
-		usedMapAllocationConstraintIDs := map[uuid.UUID]int{}
-		for _, inst := range instances {
-			// WARNING
-			// TODO: Currently no instances can be created without a constraint ID
-			// but that will be changing.  When it does, this will need to be handled differently.
-			if inst.AllocationConstraintID == nil {
-				logger.Error().Msgf("found Instance missing AllocationConstraintID")
-				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Instance is missing Allocation Constraint ID", nil)
-			}
-			usedMapAllocationConstraintIDs[*inst.AllocationConstraintID] += 1
-		}
-
-		// Calculate total constraint value
+		// Calculate the total constraint value across all matching allocations.
 		totalConstraintValue := 0
 		for _, alcs := range alconstraints {
 			totalConstraintValue += alcs.ConstraintValue
 		}
 
-		// Allocation constraints
-		if len(alconstraints) > 0 && insTotal >= totalConstraintValue {
+		// If the current number of active instances has already
+		// reached or exceeded the limit, then we can't add one
+		// more.
+		if insTotal >= totalConstraintValue {
 			return cutil.NewAPIErrorResponse(c, http.StatusForbidden,
 				"Tenant has reached the maximum number of Instances for Instance Type specified in request data", nil)
-		}
-
-		// Validate the currently active instances of the requested instance type for the tenant with allocation constraints
-		for _, alcs := range alconstraints {
-			if usedMapAllocationConstraintIDs[alcs.ID] < alcs.ConstraintValue {
-				selectedAllocationConstraint = &alcs
-				break
-			}
-		}
-
-		// Allocation constraints
-		if selectedAllocationConstraint == nil {
-			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError,
-				"Error determining available Allocation for Instance, potential data issue", nil)
 		}
 
 		// Select unallocated Machine for the requested instance type
@@ -1285,12 +1260,10 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 		CreatedBy:                dbUser.ID,
 	}
 
-	// NOTE: Set InstanceTypeID only if it is provided in the request. For Instances created with an Instance Type ID, we expect Allocation information
-	// to be present. Since Machine ID based Instance creation does not require Allocation information, setting InstanceTypeID will create data integrity issues.
+	// NOTE: Set InstanceTypeID only if it is provided in the request.
+	// Machine ID based Instance creation does not require an Instance Type.
 	if apiRequest.InstanceTypeID != nil {
 		instanceCreateInput.InstanceTypeID = instanceTypeID
-		instanceCreateInput.AllocationID = &selectedAllocationConstraint.AllocationID
-		instanceCreateInput.AllocationConstraintID = &selectedAllocationConstraint.ID
 	}
 
 	instance, err := instanceDAO.Create(ctx, tx, instanceCreateInput)
