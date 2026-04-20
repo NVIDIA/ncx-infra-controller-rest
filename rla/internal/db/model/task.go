@@ -40,22 +40,21 @@ var defaultTaskPagination = dbquery.Pagination{
 type Task struct {
 	bun.BaseModel `bun:"table:task,alias:t"`
 
-	ID              uuid.UUID                 `bun:"id,pk,type:uuid,default:gen_random_uuid()"`
-	Type            taskcommon.TaskType       `bun:"type,type:varchar(64),notnull"`
-	ExecutorType    taskcommon.ExecutorType   `bun:"executor_type,type:varchar(64),nullzero"`
-	Information     json.RawMessage           `bun:"information,type:jsonb,json_use_number"`
-	Description     string                    `bun:"description,nullzero"`
-	RackID          uuid.UUID                 `bun:"rack_id,type:uuid,notnull"` // The rack this task operates on
-	Attributes      taskcommon.TaskAttributes `bun:"attributes,type:jsonb"`
-	ExecutionID     string                    `bun:"execution_id,notnull"`
-	Status          taskcommon.TaskStatus     `bun:"status,type:varchar(32),notnull"`
-	Message         string                    `bun:"message,nullzero"`
-	RequestedRuleID *uuid.UUID                `bun:"requested_rule_id,type:uuid"` // Caller-specified rule override (nil = use default resolution)
-	AppliedRuleID   *uuid.UUID                `bun:"applied_rule_id,type:uuid"`   // Which operation rule was applied
-	CreatedAt       time.Time                 `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt       time.Time                 `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
-	StartedAt       *time.Time                `bun:"started_at"`
-	FinishedAt      *time.Time                `bun:"finished_at"`
+	ID            uuid.UUID                 `bun:"id,pk,type:uuid,default:gen_random_uuid()"`
+	Type          taskcommon.TaskType       `bun:"type,type:varchar(64),notnull"`
+	ExecutorType  taskcommon.ExecutorType   `bun:"executor_type,type:varchar(64),nullzero"`
+	Information   json.RawMessage           `bun:"information,type:jsonb,json_use_number"`
+	Description   string                    `bun:"description,nullzero"`
+	RackID        uuid.UUID                 `bun:"rack_id,type:uuid,notnull"` // The rack this task operates on
+	Attributes    taskcommon.TaskAttributes `bun:"attributes,type:jsonb"`
+	ExecutionID   string                    `bun:"execution_id,notnull"`
+	Status        taskcommon.TaskStatus     `bun:"status,type:varchar(32),notnull"`
+	Message       string                    `bun:"message,nullzero"`
+	AppliedRuleID *uuid.UUID                `bun:"applied_rule_id,type:uuid"` // Which operation rule was applied
+	CreatedAt     time.Time                 `bun:"created_at,nullzero,notnull,default:current_timestamp"`
+	UpdatedAt     time.Time                 `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	StartedAt     *time.Time                `bun:"started_at"`
+	FinishedAt    *time.Time                `bun:"finished_at"`
 
 	// QueueExpiresAt is set only for waiting tasks. After this time, the
 	// Promoter will discard the task instead of promoting it.

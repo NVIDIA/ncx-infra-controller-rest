@@ -320,7 +320,6 @@ message Task {
     optional UUID applied_rule_id = 13;
     google.protobuf.Timestamp updated_at = 14;
     optional google.protobuf.Timestamp started_at = 15;
-    optional UUID requested_rule_id = 16;  // Caller-specified rule override (if any)
 }
 
 message CreateExpectedRackRequest {

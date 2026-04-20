@@ -42,21 +42,20 @@ import (
 // -- Message: Status message or error details.
 // -- AppliedRuleID: The ID of the operation rule that was applied (if any).
 type Task struct {
-	ID              uuid.UUID
-	Operation       operation.Wrapper
-	RackID          uuid.UUID // The rack this task operates on (1 task = 1 rack)
-	Attributes      taskcommon.TaskAttributes
-	Description     string
-	ExecutorType    taskcommon.ExecutorType
-	ExecutionID     string
-	Status          taskcommon.TaskStatus
-	Message         string
-	RequestedRuleID *uuid.UUID // Caller-specified rule override (nil = use default resolution)
-	AppliedRuleID   *uuid.UUID // The ID of the operation rule that was applied
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
-	StartedAt       *time.Time
-	FinishedAt      *time.Time
+	ID            uuid.UUID
+	Operation     operation.Wrapper
+	RackID        uuid.UUID // The rack this task operates on (1 task = 1 rack)
+	Attributes    taskcommon.TaskAttributes
+	Description   string
+	ExecutorType  taskcommon.ExecutorType
+	ExecutionID   string
+	Status        taskcommon.TaskStatus
+	Message       string
+	AppliedRuleID *uuid.UUID // The ID of the operation rule that was applied
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+	StartedAt     *time.Time
+	FinishedAt    *time.Time
 
 	// QueueExpiresAt is the deadline for a waiting task to be promoted.
 	// After this time the Promoter terminates the task automatically.

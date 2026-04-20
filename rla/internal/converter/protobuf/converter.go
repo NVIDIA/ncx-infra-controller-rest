@@ -146,6 +146,16 @@ func UUIDFrom(id *pb.UUID) uuid.UUID {
 	return uuid.Nil
 }
 
+// UUIDStringFrom converts a *pb.UUID to a plain string.
+// Returns "" if the input is nil or cannot be parsed.
+func UUIDStringFrom(id *pb.UUID) string {
+	parsed := UUIDFrom(id)
+	if parsed == uuid.Nil {
+		return ""
+	}
+	return parsed.String()
+}
+
 // OptionalUUIDFrom converts a *pb.UUID to *uuid.UUID.
 // Returns nil if the input is nil or cannot be parsed.
 func OptionalUUIDFrom(id *pb.UUID) *uuid.UUID {
@@ -471,9 +481,6 @@ func TaskTo(task *taskdef.Task) *pb.Task {
 		Message:        task.Message,
 		CreatedAt:      timestamppb.New(task.CreatedAt),
 		UpdatedAt:      timestamppb.New(task.UpdatedAt),
-	}
-	if task.RequestedRuleID != nil {
-		pbTask.RequestedRuleId = UUIDTo(*task.RequestedRuleID)
 	}
 	if task.AppliedRuleID != nil {
 		pbTask.AppliedRuleId = UUIDTo(*task.AppliedRuleID)

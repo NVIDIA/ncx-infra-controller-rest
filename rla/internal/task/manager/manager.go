@@ -279,10 +279,9 @@ func (m *ManagerImpl) createAndExecuteTask(
 		Attributes: taskcommon.TaskAttributes{
 			ComponentsByType: compsByType,
 		},
-		Description:     req.Description,
-		ExecutorType:    taskcommon.ExecutorTypeUnknown,
-		ExecutionID:     "",
-		RequestedRuleID: req.RuleID,
+		Description:  req.Description,
+		ExecutorType: taskcommon.ExecutorTypeUnknown,
+		ExecutionID:  "",
 	}
 
 	// Check for conflicts inside a transaction to avoid a race between the
@@ -374,8 +373,10 @@ func (m *ManagerImpl) resolveAndExecuteTask(
 	task *taskdef.Task,
 	targetRack *rack.Rack,
 ) error {
+	ruleID := operations.ExtractRuleID(task.Operation.Info)
+
 	rule, err := m.ruleResolver.ResolveRule(
-		ctx, task.Operation.Type, task.Operation.Code, task.RackID, task.RequestedRuleID,
+		ctx, task.Operation.Type, task.Operation.Code, task.RackID, ruleID,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to resolve operation rule: %w", err)

@@ -710,7 +710,9 @@ func (rs *RLAServerImpl) BringUpRack(
 		)
 	}
 
-	info := &operations.BringUpTaskInfo{}
+	info := &operations.BringUpTaskInfo{
+		RuleID: protobuf.UUIDStringFrom(req.GetRuleId()),
+	}
 	opReq, err := rs.convertTargetSpecToOperationRequest(
 		targetSpec, req.GetDescription(), info,
 	)
@@ -753,7 +755,9 @@ func (rs *RLAServerImpl) IngestRack(
 		return nil, errors.New("target_spec is required")
 	}
 
-	info := &operations.BringUpTaskInfo{}
+	info := &operations.BringUpTaskInfo{
+		RuleID: protobuf.UUIDStringFrom(req.GetRuleId()),
+	}
 
 	opReq, err := rs.convertTargetSpecToOperationRequest(
 		targetSpec, req.GetDescription(), info,
@@ -796,6 +800,8 @@ func (rs *RLAServerImpl) handlePowerControlTask(
 	if targetSpec == nil {
 		return nil, errors.New("target_spec is required")
 	}
+
+	info.RuleID = protobuf.UUIDStringFrom(pbRuleID)
 
 	// Convert pb.OperationTargetSpec to internal operation.Request
 	req, err := rs.convertTargetSpecToOperationRequest(targetSpec, description, info)
@@ -1304,6 +1310,7 @@ func (rs *RLAServerImpl) UpgradeFirmware(
 	info := &operations.FirmwareControlTaskInfo{
 		Operation:     operations.FirmwareOperationUpgrade,
 		TargetVersion: req.GetTargetVersion(),
+		RuleID:        protobuf.UUIDStringFrom(req.GetRuleId()),
 	}
 
 	// Parse optional time parameters for scheduled upgrade
