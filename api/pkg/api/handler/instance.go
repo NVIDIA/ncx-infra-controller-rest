@@ -816,6 +816,13 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 
 		mDAO := cdbm.NewMachineDAO(cih.dbSession)
 
+		// Acquire a lock on the MachineID
+		err = tx.TryAcquireAdvisoryLock(ctx, cdb.GetAdvisoryLockIDFromString(*apiRequest.MachineID), nil)
+		if err != nil {
+			logger.Error().Err(err).Msg("Failed to acquire advisory lock on Machine")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to lock Machine: %s for Instance creation. It is likely being considered for another Instance creation request", *apiRequest.MachineID), nil)
+		}
+
 		// Retrieve Machine by ID
 		machine, err = mDAO.GetByID(ctx, nil, *apiRequest.MachineID, nil, false)
 		if err != nil {
