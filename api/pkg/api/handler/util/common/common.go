@@ -304,14 +304,10 @@ func GetAllocationIDsForTenantAtSite(ctx context.Context, tx *cdb.Tx, dbSession 
 }
 
 // GetUnallocatedMachineForInstanceType provides unallocatd machine based on instancetype
-func GetUnallocatedMachineForInstanceType(ctx context.Context, tx *cdb.Tx, dbSession *cdb.Session, instancetype *cdbm.InstanceType, logger zerolog.Logger) (*cdbm.Machine, *cutil.APIError, error) {
-	if instancetype == nil {
-		return nil, nil, ErrInvalidFunctionParams
-	}
-
+func GetUnallocatedMachineForInstanceType(ctx context.Context, tx *cdb.Tx, dbSession *cdb.Session, instanceType cdbm.InstanceType, logger zerolog.Logger) (*cdbm.Machine, *cutil.APIError) {
 	// tx has to be set, required acquring lock
 	if tx == nil {
-		return nil, nil, ErrInvalidFunctionParams
+		return nil, cutil.NewAPIError(http.StatusInternalServerError, "Failed to retrieve available Machines, transaction required for Machine selection", nil)
 	}
 
 	mcDAO := cdbm.NewMachineDAO(dbSession)
@@ -319,14 +315,15 @@ func GetUnallocatedMachineForInstanceType(ctx context.Context, tx *cdb.Tx, dbSes
 	// Get all available Machines for the Instance Type
 	// Since this query is occurring outside of a lock, we will have to double check availability of Machines
 	filterInput := cdbm.MachineFilterInput{
-		SiteID:          instancetype.SiteID,
-		InstanceTypeIDs: []uuid.UUID{instancetype.ID},
+		SiteID:          instanceType.SiteID,
+		InstanceTypeIDs: []uuid.UUID{instanceType.ID},
 		IsAssigned:      cdb.GetBoolPtr(false),
 		Statuses:        []string{cdbm.MachineStatusReady},
+		ExcludeMetadata: true,
 	}
 	machines, _, err := mcDAO.GetAll(ctx, tx, filterInput, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
 	if err != nil {
-		return nil, nil, err
+		return nil, cutil.NewAPIError(http.StatusInternalServerError, "Failed to retrieve available Machines for Instance Type, DB error", nil)
 	}
 
 	// Randomize the list of machines.
@@ -343,7 +340,7 @@ func GetUnallocatedMachineForInstanceType(ctx context.Context, tx *cdb.Tx, dbSes
 		},
 	)
 
-	var lastCapErr *cutil.APIError
+	capabilityMismatchCount := 0
 
 	if len(machines) > 0 {
 		for _, mc := range machines {
@@ -369,8 +366,8 @@ func GetUnallocatedMachineForInstanceType(ctx context.Context, tx *cdb.Tx, dbSes
 			}
 
 			// Verify that the Machine's capabilities match the Instance Type's capabilities.
-			if apiErr := VerifyInstanceTypeMachineCapabilitiesMatch(ctx, logger, dbSession, instancetype.ID, mc.ID); apiErr != nil {
-				lastCapErr = apiErr
+			if apiErr := VerifyInstanceTypeMachineCapabilitiesMatch(ctx, logger, dbSession, instanceType.ID, mc.ID); apiErr != nil {
+				capabilityMismatchCount++
 				continue
 			}
 
@@ -380,18 +377,21 @@ func GetUnallocatedMachineForInstanceType(ctx context.Context, tx *cdb.Tx, dbSes
 				MachineID:  mc.ID,
 				IsAssigned: cdb.GetBoolPtr(true),
 			}
+
 			// return the updated machine
 			mcu, err := mcDAO.Update(ctx, tx, updateInput)
 			if err != nil {
 				continue
 			}
-			return mcu, nil, nil
+			return mcu, nil
 		}
 	}
-	if lastCapErr != nil {
-		return nil, lastCapErr, nil
+
+	if capabilityMismatchCount > 0 {
+		return nil, cutil.NewAPIError(http.StatusNotAcceptable, fmt.Sprintf("%d Machines for this Instance Type were found with capability mismatch, unable to select a Machine for provisioning", capabilityMismatchCount), nil)
 	}
-	return nil, nil, ErrInstanceTypeMachineNotFound
+
+	return nil, cutil.NewAPIError(http.StatusNotFound, "No Machines are available for specified Instance Type", nil)
 }
 
 // GetCountOfMachinesForInstanceType is a utility function to return count of

@@ -1029,17 +1029,7 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 
 		// Select unallocated Machine for the requested instance type
 		var apiErr *cutil.APIError
-		machine, apiErr, err = common.GetUnallocatedMachineForInstanceType(ctx, tx, cih.dbSession, instanceType, logger)
-		if err != nil {
-			if err == common.ErrInstanceTypeMachineNotFound {
-				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest,
-					"No Machines are available for specified Instance Type", nil)
-			}
-			logger.Error().Err(err).Msg("error retrieving Machine from DB for Instance Type")
-			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve available baremetal Machines for specified Instance Type", nil)
-		}
-
-		// No machine found with matching capabilities
+		machine, apiErr = common.GetUnallocatedMachineForInstanceType(ctx, tx, cih.dbSession, *instanceType, logger)
 		if apiErr != nil {
 			return cutil.NewAPIErrorResponse(c, apiErr.Code, apiErr.Message, apiErr.Data)
 		}
