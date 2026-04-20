@@ -31,10 +31,10 @@ import (
 
 // mockRuleStore implements RuleStore for testing.
 type mockRuleStore struct {
-	rules          map[uuid.UUID]*OperationRule
-	rackAssocRule  *OperationRule
-	rackAssocErr   error
-	getByIDErr     error
+	rules         map[uuid.UUID]*OperationRule
+	rackAssocRule *OperationRule
+	rackAssocErr  error
+	getByIDErr    error
 }
 
 func newMockRuleStore() *mockRuleStore {
