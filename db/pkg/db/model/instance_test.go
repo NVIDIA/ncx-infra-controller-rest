@@ -261,7 +261,7 @@ func TestInstanceSQLDAO_Create(t *testing.T) {
 	networkSecurityGroup := testInstanceBuildNetworkSecurityGroup(t, dbSession, tenant, site, "testNetworkSecurityGroup")
 	machine := testMachineBuildMachine(t, dbSession, ip.ID, site.ID, &instanceType.ID, db.GetStrPtr("mcTypeTest"))
 	allocation := testInstanceBuildAllocation(t, dbSession, ip, tenant, site, "testAllocation")
-	allocationConstraint := testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
+	_ = testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
 	operatingSystem := testInstanceBuildOperatingSystem(t, dbSession, "testOS")
 	user := testInstanceBuildUser(t, dbSession, "testUser")
 	ossd := NewInstanceDAO(dbSession)
@@ -283,8 +283,6 @@ func TestInstanceSQLDAO_Create(t *testing.T) {
 				{
 					Name:                     "test",
 					Description:              db.GetStrPtr("Test description"),
-					AllocationID:             &allocation.ID,
-					AllocationConstraintID:   &allocationConstraint.ID,
 					TenantID:                 tenant.ID,
 					InfrastructureProviderID: ip.ID,
 					SiteID:                   site.ID,
@@ -318,31 +316,22 @@ func TestInstanceSQLDAO_Create(t *testing.T) {
 			desc: "create multiple, some with null fields",
 			is: []Instance{
 				{
-					Name: "test1", Description: db.GetStrPtr("Test description"), AllocationID: &allocation.ID, AllocationConstraintID: &allocationConstraint.ID, TenantID: tenant.ID, InfrastructureProviderID: ip.ID, SiteID: site.ID, InstanceTypeID: &instanceType.ID, VpcID: vpc.ID, MachineID: &machine.ID, Hostname: db.GetStrPtr("test.com"), OperatingSystemID: db.GetUUIDPtr(operatingSystem.ID), Status: InstanceStatusPending, IpxeScript: db.GetStrPtr("ipxe"), AlwaysBootWithCustomIpxe: true, PhoneHomeEnabled: true, UserData: db.GetStrPtr("data"), IsUpdatePending: true, CreatedBy: user.ID, Labels: map[string]string{},
+					Name: "test1", Description: db.GetStrPtr("Test description"), TenantID: tenant.ID, InfrastructureProviderID: ip.ID, SiteID: site.ID, InstanceTypeID: &instanceType.ID, VpcID: vpc.ID, MachineID: &machine.ID, Hostname: db.GetStrPtr("test.com"), OperatingSystemID: db.GetUUIDPtr(operatingSystem.ID), Status: InstanceStatusPending, IpxeScript: db.GetStrPtr("ipxe"), AlwaysBootWithCustomIpxe: true, PhoneHomeEnabled: true, UserData: db.GetStrPtr("data"), IsUpdatePending: true, CreatedBy: user.ID, Labels: map[string]string{},
 				},
 				{
-					Name: "test2", AllocationID: &allocation.ID, AllocationConstraintID: &allocationConstraint.ID, TenantID: tenant.ID, InfrastructureProviderID: ip.ID, SiteID: site.ID, InstanceTypeID: &instanceType.ID, VpcID: vpc.ID, MachineID: &machine.ID, Hostname: nil, OperatingSystemID: db.GetUUIDPtr(operatingSystem.ID), InfinityRCRStatus: db.GetStrPtr("RESOURCE_GRANTED"), Status: InstanceStatusPending, IpxeScript: nil, PhoneHomeEnabled: false, UserData: nil, CreatedBy: user.ID, Labels: map[string]string{},
+					Name: "test2", TenantID: tenant.ID, InfrastructureProviderID: ip.ID, SiteID: site.ID, InstanceTypeID: &instanceType.ID, VpcID: vpc.ID, MachineID: &machine.ID, Hostname: nil, OperatingSystemID: db.GetUUIDPtr(operatingSystem.ID), InfinityRCRStatus: db.GetStrPtr("RESOURCE_GRANTED"), Status: InstanceStatusPending, IpxeScript: nil, PhoneHomeEnabled: false, UserData: nil, CreatedBy: user.ID, Labels: map[string]string{},
 				},
 				{
-					Name: "test3", Description: db.GetStrPtr("Test description 3"), AllocationID: &allocation.ID, AllocationConstraintID: &allocationConstraint.ID, TenantID: tenant.ID, InfrastructureProviderID: ip.ID, SiteID: site.ID, InstanceTypeID: &instanceType.ID, VpcID: vpc.ID, MachineID: &machine.ID, Hostname: db.GetStrPtr("test.com"), OperatingSystemID: db.GetUUIDPtr(operatingSystem.ID), InfinityRCRStatus: db.GetStrPtr("RESOURCE_GRANTED"), Status: InstanceStatusPending, IpxeScript: db.GetStrPtr("ipxe"), AlwaysBootWithCustomIpxe: true, UserData: db.GetStrPtr("data"), CreatedBy: user.ID, Labels: map[string]string{},
+					Name: "test3", Description: db.GetStrPtr("Test description 3"), TenantID: tenant.ID, InfrastructureProviderID: ip.ID, SiteID: site.ID, InstanceTypeID: &instanceType.ID, VpcID: vpc.ID, MachineID: &machine.ID, Hostname: db.GetStrPtr("test.com"), OperatingSystemID: db.GetUUIDPtr(operatingSystem.ID), InfinityRCRStatus: db.GetStrPtr("RESOURCE_GRANTED"), Status: InstanceStatusPending, IpxeScript: db.GetStrPtr("ipxe"), AlwaysBootWithCustomIpxe: true, UserData: db.GetStrPtr("data"), CreatedBy: user.ID, Labels: map[string]string{},
 				},
 			},
 			expectError: false,
 		},
 		{
-			desc: "failure - foreign key violation on allocation_id",
-			is: []Instance{
-				{
-					Name: "test", AllocationID: &dummyUUID, TenantID: tenant.ID, InfrastructureProviderID: ip.ID, SiteID: site.ID, InstanceTypeID: &instanceType.ID, VpcID: vpc.ID, MachineID: &machine.ID, Hostname: db.GetStrPtr("test.com"), OperatingSystemID: db.GetUUIDPtr(operatingSystem.ID), Status: InstanceStatusPending, IpxeScript: db.GetStrPtr("ipxe"), UserData: db.GetStrPtr("data"), CreatedBy: user.ID, Labels: map[string]string{},
-				},
-			},
-			expectError: true,
-		},
-		{
 			desc: "failure - foreign key violation on tenant_id",
 			is: []Instance{
 				{
-					Name: "test", AllocationID: &allocation.ID, AllocationConstraintID: &allocationConstraint.ID, TenantID: dummyUUID, InfrastructureProviderID: ip.ID, SiteID: site.ID, InstanceTypeID: &instanceType.ID, VpcID: vpc.ID, MachineID: &machine.ID, Hostname: db.GetStrPtr("test.com"), OperatingSystemID: db.GetUUIDPtr(operatingSystem.ID), Status: InstanceStatusPending, IpxeScript: db.GetStrPtr("ipxe"), UserData: db.GetStrPtr("data"), CreatedBy: user.ID, Labels: map[string]string{},
+					Name: "test", TenantID: dummyUUID, InfrastructureProviderID: ip.ID, SiteID: site.ID, InstanceTypeID: &instanceType.ID, VpcID: vpc.ID, MachineID: &machine.ID, Hostname: db.GetStrPtr("test.com"), OperatingSystemID: db.GetUUIDPtr(operatingSystem.ID), Status: InstanceStatusPending, IpxeScript: db.GetStrPtr("ipxe"), UserData: db.GetStrPtr("data"), CreatedBy: user.ID, Labels: map[string]string{},
 				},
 			},
 			expectError: true,
@@ -351,7 +340,7 @@ func TestInstanceSQLDAO_Create(t *testing.T) {
 			desc: "failure - foreign key violation on infrastructure_provider_id",
 			is: []Instance{
 				{
-					Name: "test", AllocationID: &allocation.ID, AllocationConstraintID: &allocationConstraint.ID, TenantID: tenant.ID, InfrastructureProviderID: dummyUUID, SiteID: site.ID, InstanceTypeID: &instanceType.ID, VpcID: vpc.ID, MachineID: &machine.ID, Hostname: db.GetStrPtr("test.com"), OperatingSystemID: db.GetUUIDPtr(operatingSystem.ID), Status: InstanceStatusPending, IpxeScript: db.GetStrPtr("ipxe"), UserData: db.GetStrPtr("data"), CreatedBy: user.ID, Labels: map[string]string{},
+					Name: "test", TenantID: tenant.ID, InfrastructureProviderID: dummyUUID, SiteID: site.ID, InstanceTypeID: &instanceType.ID, VpcID: vpc.ID, MachineID: &machine.ID, Hostname: db.GetStrPtr("test.com"), OperatingSystemID: db.GetUUIDPtr(operatingSystem.ID), Status: InstanceStatusPending, IpxeScript: db.GetStrPtr("ipxe"), UserData: db.GetStrPtr("data"), CreatedBy: user.ID, Labels: map[string]string{},
 				},
 			},
 			expectError: true,
@@ -360,7 +349,7 @@ func TestInstanceSQLDAO_Create(t *testing.T) {
 			desc: "failure - foreign key violation on site_id",
 			is: []Instance{
 				{
-					Name: "test", AllocationID: &allocation.ID, AllocationConstraintID: &allocationConstraint.ID, TenantID: tenant.ID, InfrastructureProviderID: ip.ID, SiteID: dummyUUID, InstanceTypeID: &instanceType.ID, VpcID: vpc.ID, MachineID: &machine.ID, Hostname: db.GetStrPtr("test.com"), OperatingSystemID: db.GetUUIDPtr(operatingSystem.ID), Status: InstanceStatusPending, IpxeScript: db.GetStrPtr("ipxe"), UserData: db.GetStrPtr("data"), CreatedBy: user.ID, Labels: map[string]string{},
+					Name: "test", TenantID: tenant.ID, InfrastructureProviderID: ip.ID, SiteID: dummyUUID, InstanceTypeID: &instanceType.ID, VpcID: vpc.ID, MachineID: &machine.ID, Hostname: db.GetStrPtr("test.com"), OperatingSystemID: db.GetUUIDPtr(operatingSystem.ID), Status: InstanceStatusPending, IpxeScript: db.GetStrPtr("ipxe"), UserData: db.GetStrPtr("data"), CreatedBy: user.ID, Labels: map[string]string{},
 				},
 			},
 			expectError: true,
@@ -369,7 +358,7 @@ func TestInstanceSQLDAO_Create(t *testing.T) {
 			desc: "failure - foreign key violation on instance_type_id",
 			is: []Instance{
 				{
-					Name: "test", AllocationID: &allocation.ID, AllocationConstraintID: &allocationConstraint.ID, TenantID: tenant.ID, InfrastructureProviderID: ip.ID, SiteID: site.ID, InstanceTypeID: &dummyUUID, VpcID: vpc.ID, MachineID: &machine.ID, Hostname: db.GetStrPtr("test.com"), OperatingSystemID: db.GetUUIDPtr(operatingSystem.ID), Status: InstanceStatusPending, IpxeScript: db.GetStrPtr("ipxe"), UserData: db.GetStrPtr("data"), CreatedBy: user.ID, Labels: map[string]string{},
+					Name: "test", TenantID: tenant.ID, InfrastructureProviderID: ip.ID, SiteID: site.ID, InstanceTypeID: &dummyUUID, VpcID: vpc.ID, MachineID: &machine.ID, Hostname: db.GetStrPtr("test.com"), OperatingSystemID: db.GetUUIDPtr(operatingSystem.ID), Status: InstanceStatusPending, IpxeScript: db.GetStrPtr("ipxe"), UserData: db.GetStrPtr("data"), CreatedBy: user.ID, Labels: map[string]string{},
 				},
 			},
 			expectError: true,
@@ -378,7 +367,7 @@ func TestInstanceSQLDAO_Create(t *testing.T) {
 			desc: "failure - foreign key violation on vpc_id",
 			is: []Instance{
 				{
-					Name: "test", AllocationID: &allocation.ID, AllocationConstraintID: &allocationConstraint.ID, TenantID: tenant.ID, InfrastructureProviderID: ip.ID, SiteID: site.ID, InstanceTypeID: &instanceType.ID, VpcID: dummyUUID, MachineID: &machine.ID, Hostname: db.GetStrPtr("test.com"), OperatingSystemID: db.GetUUIDPtr(operatingSystem.ID), Status: InstanceStatusPending, IpxeScript: db.GetStrPtr("ipxe"), UserData: db.GetStrPtr("data"), CreatedBy: user.ID, Labels: map[string]string{},
+					Name: "test", TenantID: tenant.ID, InfrastructureProviderID: ip.ID, SiteID: site.ID, InstanceTypeID: &instanceType.ID, VpcID: dummyUUID, MachineID: &machine.ID, Hostname: db.GetStrPtr("test.com"), OperatingSystemID: db.GetUUIDPtr(operatingSystem.ID), Status: InstanceStatusPending, IpxeScript: db.GetStrPtr("ipxe"), UserData: db.GetStrPtr("data"), CreatedBy: user.ID, Labels: map[string]string{},
 				},
 			},
 			expectError: true,
@@ -387,7 +376,7 @@ func TestInstanceSQLDAO_Create(t *testing.T) {
 			desc: "failure - foreign key violation on machine_id",
 			is: []Instance{
 				{
-					Name: "test", AllocationID: &allocation.ID, AllocationConstraintID: &allocationConstraint.ID, TenantID: tenant.ID, InfrastructureProviderID: ip.ID, SiteID: site.ID, InstanceTypeID: &instanceType.ID, VpcID: vpc.ID, MachineID: &dummyMachineID, Hostname: db.GetStrPtr("test.com"), OperatingSystemID: db.GetUUIDPtr(operatingSystem.ID), Status: InstanceStatusPending, IpxeScript: db.GetStrPtr("ipxe"), UserData: db.GetStrPtr("data"), CreatedBy: user.ID, Labels: map[string]string{},
+					Name: "test", TenantID: tenant.ID, InfrastructureProviderID: ip.ID, SiteID: site.ID, InstanceTypeID: &instanceType.ID, VpcID: vpc.ID, MachineID: &dummyMachineID, Hostname: db.GetStrPtr("test.com"), OperatingSystemID: db.GetUUIDPtr(operatingSystem.ID), Status: InstanceStatusPending, IpxeScript: db.GetStrPtr("ipxe"), UserData: db.GetStrPtr("data"), CreatedBy: user.ID, Labels: map[string]string{},
 				},
 			},
 			expectError: true,
@@ -396,7 +385,7 @@ func TestInstanceSQLDAO_Create(t *testing.T) {
 			desc: "failure - foreign key violation on operating_system_id",
 			is: []Instance{
 				{
-					Name: "test", AllocationID: &allocation.ID, AllocationConstraintID: &allocationConstraint.ID, TenantID: tenant.ID, InfrastructureProviderID: ip.ID, SiteID: site.ID, InstanceTypeID: &instanceType.ID, VpcID: vpc.ID, MachineID: &machine.ID, Hostname: db.GetStrPtr("test.com"), OperatingSystemID: db.GetUUIDPtr(dummyUUID), Status: InstanceStatusPending, IpxeScript: db.GetStrPtr("ipxe"), UserData: db.GetStrPtr("data"), CreatedBy: user.ID, Labels: map[string]string{},
+					Name: "test", TenantID: tenant.ID, InfrastructureProviderID: ip.ID, SiteID: site.ID, InstanceTypeID: &instanceType.ID, VpcID: vpc.ID, MachineID: &machine.ID, Hostname: db.GetStrPtr("test.com"), OperatingSystemID: db.GetUUIDPtr(dummyUUID), Status: InstanceStatusPending, IpxeScript: db.GetStrPtr("ipxe"), UserData: db.GetStrPtr("data"), CreatedBy: user.ID, Labels: map[string]string{},
 				},
 			},
 			expectError: true,
@@ -405,7 +394,7 @@ func TestInstanceSQLDAO_Create(t *testing.T) {
 			desc: "failure - foreign key violation on network_security_group_id",
 			is: []Instance{
 				{
-					Name: "test", AllocationID: &allocation.ID, AllocationConstraintID: &allocationConstraint.ID, TenantID: tenant.ID, InfrastructureProviderID: ip.ID, SiteID: site.ID, InstanceTypeID: &instanceType.ID, NetworkSecurityGroupID: db.GetStrPtr(uuid.NewString()), VpcID: vpc.ID, MachineID: &machine.ID, Hostname: db.GetStrPtr("test.com"), OperatingSystemID: db.GetUUIDPtr(dummyUUID), Status: InstanceStatusPending, IpxeScript: db.GetStrPtr("ipxe"), UserData: db.GetStrPtr("data"), CreatedBy: user.ID, Labels: map[string]string{},
+					Name: "test", TenantID: tenant.ID, InfrastructureProviderID: ip.ID, SiteID: site.ID, InstanceTypeID: &instanceType.ID, NetworkSecurityGroupID: db.GetStrPtr(uuid.NewString()), VpcID: vpc.ID, MachineID: &machine.ID, Hostname: db.GetStrPtr("test.com"), OperatingSystemID: db.GetUUIDPtr(dummyUUID), Status: InstanceStatusPending, IpxeScript: db.GetStrPtr("ipxe"), UserData: db.GetStrPtr("data"), CreatedBy: user.ID, Labels: map[string]string{},
 				},
 			},
 			expectError: true,
@@ -419,8 +408,6 @@ func TestInstanceSQLDAO_Create(t *testing.T) {
 					InstanceCreateInput{
 						Name:                                   i.Name,
 						Description:                            i.Description,
-						AllocationID:                           i.AllocationID,
-						AllocationConstraintID:                 i.AllocationConstraintID,
 						TenantID:                               i.TenantID,
 						InfrastructureProviderID:               i.InfrastructureProviderID,
 						SiteID:                                 i.SiteID,
@@ -475,7 +462,7 @@ func TestInstanceSQLDAO_GetByID(t *testing.T) {
 	networkSecurityGroup := testInstanceBuildNetworkSecurityGroup(t, dbSession, tenant, site, "testNetworkSecurityGroup")
 	machine := testMachineBuildMachine(t, dbSession, ip.ID, site.ID, &instanceType.ID, db.GetStrPtr("mcTypeTest"))
 	allocation := testInstanceBuildAllocation(t, dbSession, ip, tenant, site, "testAllocation")
-	allocationConstraint := testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
+	_ = testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
 	operatingSystem := testInstanceBuildOperatingSystem(t, dbSession, "testOS")
 	user := testInstanceBuildUser(t, dbSession, "testUser")
 	isd := NewInstanceDAO(dbSession)
@@ -485,8 +472,6 @@ func TestInstanceSQLDAO_GetByID(t *testing.T) {
 		InstanceCreateInput{
 			Name:                     "test1",
 			Description:              db.GetStrPtr("Test description"),
-			AllocationID:             &allocation.ID,
-			AllocationConstraintID:   &allocationConstraint.ID,
 			TenantID:                 tenant.ID,
 			InfrastructureProviderID: ip.ID,
 			SiteID:                   site.ID,
@@ -519,8 +504,6 @@ func TestInstanceSQLDAO_GetByID(t *testing.T) {
 		paramRelations                 []string
 		expectedError                  bool
 		expectedErrVal                 error
-		expectedAllocation             bool
-		expectedAllocationConstraint   bool
 		expectedTenant                 bool
 		expectedInfrastructureProvider bool
 		expectedSite                   bool
@@ -537,8 +520,6 @@ func TestInstanceSQLDAO_GetByID(t *testing.T) {
 			instance:                       i1,
 			paramRelations:                 []string{},
 			expectedError:                  false,
-			expectedAllocation:             false,
-			expectedAllocationConstraint:   false,
 			expectedTenant:                 false,
 			expectedInfrastructureProvider: false,
 			expectedSite:                   false,
@@ -555,8 +536,6 @@ func TestInstanceSQLDAO_GetByID(t *testing.T) {
 			paramRelations:                 []string{},
 			expectedError:                  true,
 			expectedErrVal:                 db.ErrDoesNotExist,
-			expectedAllocation:             false,
-			expectedAllocationConstraint:   false,
 			expectedTenant:                 false,
 			expectedInfrastructureProvider: false,
 			expectedSite:                   false,
@@ -566,13 +545,11 @@ func TestInstanceSQLDAO_GetByID(t *testing.T) {
 			expectedOperatingSystem:        false,
 		},
 		{
-			desc:                           "GetById with all relations",
+			desc:                           "GetById with supported relations",
 			id:                             i1.ID,
 			instance:                       i1,
-			paramRelations:                 []string{AllocationRelationName, TenantRelationName, InfrastructureProviderRelationName, SiteRelationName, InstanceTypeRelationName, VpcRelationName, MachineRelationName, OperatingSystemRelationName, NetworkSecurityGroupRelationName},
+			paramRelations:                 []string{TenantRelationName, InfrastructureProviderRelationName, SiteRelationName, InstanceTypeRelationName, VpcRelationName, MachineRelationName, OperatingSystemRelationName, NetworkSecurityGroupRelationName},
 			expectedError:                  false,
-			expectedAllocation:             true,
-			expectedAllocationConstraint:   true,
 			expectedTenant:                 true,
 			expectedInfrastructureProvider: true,
 			expectedSite:                   true,
@@ -592,9 +569,6 @@ func TestInstanceSQLDAO_GetByID(t *testing.T) {
 			}
 			if err == nil {
 				assert.EqualValues(t, tc.instance.ID, got.ID)
-				if tc.expectedAllocation {
-					assert.EqualValues(t, *tc.instance.AllocationID, got.Allocation.ID)
-				}
 				if tc.expectedTenant {
 					assert.EqualValues(t, tc.instance.TenantID, got.Tenant.ID)
 				}
@@ -606,6 +580,10 @@ func TestInstanceSQLDAO_GetByID(t *testing.T) {
 				}
 				if tc.expectedInstanceType {
 					assert.EqualValues(t, *tc.instance.InstanceTypeID, got.InstanceType.ID)
+				}
+				if tc.expectedNetworkSecurityGroup {
+					assert.NotNil(t, got.NetworkSecurityGroup)
+					assert.EqualValues(t, *tc.instance.NetworkSecurityGroupID, got.NetworkSecurityGroup.ID)
 				}
 				if tc.expectedVpc {
 					assert.EqualValues(t, tc.instance.VpcID, got.Vpc.ID)
@@ -650,7 +628,7 @@ func TestInstanceSQLDAO_GetCountByStatus(t *testing.T) {
 	networkSecurityGroup := testInstanceBuildNetworkSecurityGroup(t, dbSession, tenant1, site, "testNetworkSecurityGroup")
 	machine := testMachineBuildMachine(t, dbSession, ip.ID, site.ID, &instanceType.ID, db.GetStrPtr("mcTypeTest"))
 	allocation := testInstanceBuildAllocation(t, dbSession, ip, tenant1, site, "testAllocation")
-	allocationConstraint := testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
+	_ = testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
 	operatingSystem := testInstanceBuildOperatingSystem(t, dbSession, "testOS")
 	user := testInstanceBuildUser(t, dbSession, "testUser")
 	isd := NewInstanceDAO(dbSession)
@@ -660,8 +638,6 @@ func TestInstanceSQLDAO_GetCountByStatus(t *testing.T) {
 		InstanceCreateInput{
 			Name:                     "test1",
 			Description:              db.GetStrPtr("Test description"),
-			AllocationID:             &allocation.ID,
-			AllocationConstraintID:   &allocationConstraint.ID,
 			TenantID:                 tenant1.ID,
 			InfrastructureProviderID: ip.ID,
 			SiteID:                   site.ID,
@@ -687,8 +663,6 @@ func TestInstanceSQLDAO_GetCountByStatus(t *testing.T) {
 		ctx, nil,
 		InstanceCreateInput{
 			Name:                     "test2",
-			AllocationID:             &allocation.ID,
-			AllocationConstraintID:   &allocationConstraint.ID,
 			TenantID:                 tenant1.ID,
 			InfrastructureProviderID: ip.ID,
 			SiteID:                   site.ID,
@@ -713,8 +687,6 @@ func TestInstanceSQLDAO_GetCountByStatus(t *testing.T) {
 		ctx, nil,
 		InstanceCreateInput{
 			Name:                     "test3",
-			AllocationID:             &allocation.ID,
-			AllocationConstraintID:   &allocationConstraint.ID,
 			TenantID:                 tenant1.ID,
 			InfrastructureProviderID: ip.ID,
 			SiteID:                   site.ID,
@@ -739,8 +711,6 @@ func TestInstanceSQLDAO_GetCountByStatus(t *testing.T) {
 		ctx, nil,
 		InstanceCreateInput{
 			Name:                     "test4",
-			AllocationID:             &allocation.ID,
-			AllocationConstraintID:   &allocationConstraint.ID,
 			TenantID:                 tenant1.ID,
 			InfrastructureProviderID: ip.ID,
 			SiteID:                   site.ID,
@@ -941,7 +911,7 @@ func TestInstanceSQLDAO_GetAll(t *testing.T) {
 	}
 	_, err = dbSession.DB.NewInsert().Model(vpcPrefix2).Exec(ctx)
 	assert.NoError(t, err)
-	allocationConstraint := testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
+	_ = testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
 	testBuildAllocationConstraint(t, dbSession, allocation2, AllocationResourceTypeInstanceType, instanceType2.ID, AllocationConstraintTypeReserved, 10, uuid.New())
 
 	operatingSystem := testInstanceBuildOperatingSystem(t, dbSession, "testOS")
@@ -966,8 +936,6 @@ func TestInstanceSQLDAO_GetAll(t *testing.T) {
 			ctx, nil,
 			InstanceCreateInput{
 				Name:                     fmt.Sprintf("test-%d", i),
-				AllocationID:             &allocation.ID,
-				AllocationConstraintID:   &allocationConstraint.ID,
 				TenantID:                 tenant.ID,
 				InfrastructureProviderID: ip.ID,
 				SiteID:                   site.ID,
@@ -1080,7 +1048,6 @@ func TestInstanceSQLDAO_GetAll(t *testing.T) {
 				InfrastructureProviderRelationName,
 				SiteRelationName,
 				InstanceTypeRelationName,
-				AllocationRelationName,
 				TenantRelationName,
 				VpcRelationName,
 				OperatingSystemRelationName,
@@ -1107,38 +1074,6 @@ func TestInstanceSQLDAO_GetAll(t *testing.T) {
 			desc: "GetAll with instance IDs filter returns no objects for non-existent ID",
 			filter: InstanceFilterInput{
 				InstanceIDs: []uuid.UUID{dummyUUID},
-			},
-			expectedCount: 0,
-			expectedError: false,
-		},
-		{
-			desc: "GetAll with allocation filter returns objects",
-			filter: InstanceFilterInput{
-				AllocationIDs: []uuid.UUID{allocation.ID},
-			},
-			expectedCount: totalCount / 2,
-			expectedError: false,
-		},
-		{
-			desc: "GetAll with allocation filter returns no objects",
-			filter: InstanceFilterInput{
-				AllocationIDs: []uuid.UUID{dummyUUID},
-			},
-			expectedCount: 0,
-			expectedError: false,
-		},
-		{
-			desc: "GetAll with allocation constraint filter returns objects",
-			filter: InstanceFilterInput{
-				AllocationConstraintIDs: []uuid.UUID{allocationConstraint.ID},
-			},
-			expectedCount: totalCount / 2,
-			expectedError: false,
-		},
-		{
-			desc: "GetAll with allocation constraint filter returns no objects",
-			filter: InstanceFilterInput{
-				AllocationConstraintIDs: []uuid.UUID{dummyUUID},
 			},
 			expectedCount: 0,
 			expectedError: false,
@@ -1263,8 +1198,6 @@ func TestInstanceSQLDAO_GetAll(t *testing.T) {
 		{
 			desc: "GetAll with all filters returns objects",
 			filter: InstanceFilterInput{
-				AllocationIDs:             []uuid.UUID{allocation.ID},
-				AllocationConstraintIDs:   []uuid.UUID{allocationConstraint.ID},
 				TenantIDs:                 []uuid.UUID{tenant.ID},
 				InfrastructureProviderIDs: []uuid.UUID{ip.ID},
 				SiteIDs:                   []uuid.UUID{site.ID},
@@ -1280,8 +1213,6 @@ func TestInstanceSQLDAO_GetAll(t *testing.T) {
 		{
 			desc: "GetAll with all filters returns no objects",
 			filter: InstanceFilterInput{
-				AllocationIDs:             []uuid.UUID{allocation.ID},
-				AllocationConstraintIDs:   []uuid.UUID{allocationConstraint.ID},
 				TenantIDs:                 []uuid.UUID{tenant2.ID},
 				InfrastructureProviderIDs: []uuid.UUID{ip.ID},
 				SiteIDs:                   []uuid.UUID{site.ID},
@@ -1297,8 +1228,6 @@ func TestInstanceSQLDAO_GetAll(t *testing.T) {
 		{
 			desc: "GetAll with some filters returns objects",
 			filter: InstanceFilterInput{
-				AllocationIDs:             []uuid.UUID{allocation.ID},
-				AllocationConstraintIDs:   []uuid.UUID{allocationConstraint.ID},
 				TenantIDs:                 []uuid.UUID{tenant.ID},
 				InfrastructureProviderIDs: []uuid.UUID{ip.ID},
 				SiteIDs:                   []uuid.UUID{site.ID},
@@ -1309,8 +1238,6 @@ func TestInstanceSQLDAO_GetAll(t *testing.T) {
 		{
 			desc: "GetAll with some filters returns no objects",
 			filter: InstanceFilterInput{
-				AllocationIDs:             []uuid.UUID{allocation.ID},
-				AllocationConstraintIDs:   []uuid.UUID{allocationConstraint.ID},
 				TenantIDs:                 []uuid.UUID{tenant2.ID},
 				InfrastructureProviderIDs: []uuid.UUID{ip.ID},
 				SiteIDs:                   []uuid.UUID{site.ID},
@@ -1558,9 +1485,7 @@ func TestInstanceSQLDAO_GetAll(t *testing.T) {
 			} else {
 				assert.Equal(t, tc.expectedCount, len(got))
 				for _, relation := range tc.paramRelations {
-					if relation == AllocationRelationName && got[0].AllocationID != nil {
-						assert.NotNil(t, got[0].Allocation)
-					} else if relation == TenantRelationName {
+					if relation == TenantRelationName {
 						assert.NotNil(t, got[0].Tenant)
 					} else if relation == InfrastructureProviderRelationName {
 						assert.NotNil(t, got[0].InfrastructureProvider)
@@ -1615,8 +1540,8 @@ func TestInstanceSQLDAO_GetCount(t *testing.T) {
 	instanceType2 := testInstanceBuildInstanceType(t, dbSession, ip, "testInstanceType2")
 	networkSecurityGroup := testInstanceBuildNetworkSecurityGroup(t, dbSession, tenant, site, "testNetworkSecurityGroup")
 	networkSecurityGroup2 := testInstanceBuildNetworkSecurityGroup(t, dbSession, tenant2, site2, "testNetworkSecurityGroup2")
-	allocationConstraint := testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
-	allocationConstraint2 := testBuildAllocationConstraint(t, dbSession, allocation2, AllocationResourceTypeInstanceType, instanceType2.ID, AllocationConstraintTypeReserved, 10, uuid.New())
+	_ = testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
+	_ = testBuildAllocationConstraint(t, dbSession, allocation2, AllocationResourceTypeInstanceType, instanceType2.ID, AllocationConstraintTypeReserved, 10, uuid.New())
 	ipBlock := &IPBlock{
 		ID:                       uuid.New(),
 		Name:                     "testIpBlock",
@@ -1680,7 +1605,6 @@ func TestInstanceSQLDAO_GetCount(t *testing.T) {
 	operatingSystem2 := testInstanceBuildOperatingSystem(t, dbSession, "testOS2")
 	user := testInstanceBuildUser(t, dbSession, "testUser")
 	isd := NewInstanceDAO(dbSession)
-	dummyUUID := uuid.New()
 
 	totalCount := 30
 
@@ -1692,8 +1616,6 @@ func TestInstanceSQLDAO_GetCount(t *testing.T) {
 			ctx, nil,
 			InstanceCreateInput{
 				Name:                     fmt.Sprintf("test-%d", i),
-				AllocationID:             &allocation.ID,
-				AllocationConstraintID:   &allocationConstraint.ID,
 				TenantID:                 tenant.ID,
 				InfrastructureProviderID: ip.ID,
 				SiteID:                   site.ID,
@@ -1726,8 +1648,6 @@ func TestInstanceSQLDAO_GetCount(t *testing.T) {
 			ctx, nil,
 			InstanceCreateInput{
 				Name:                     fmt.Sprintf("test-%d", i),
-				AllocationID:             &allocation2.ID,
-				AllocationConstraintID:   &allocationConstraint2.ID,
 				TenantID:                 tenant2.ID,
 				InfrastructureProviderID: ip.ID,
 				SiteID:                   site2.ID,
@@ -1791,38 +1711,6 @@ func TestInstanceSQLDAO_GetCount(t *testing.T) {
 			expectedCount:      totalCount,
 			expectedError:      false,
 			verifyChildSpanner: true,
-		},
-		{
-			desc: "GetCount with allocation filter returns objects",
-			filter: InstanceFilterInput{
-				AllocationIDs: []uuid.UUID{allocation.ID},
-			},
-			expectedCount: totalCount / 2,
-			expectedError: false,
-		},
-		{
-			desc: "GetCount with allocation filter returns no objects",
-			filter: InstanceFilterInput{
-				AllocationIDs: []uuid.UUID{dummyUUID},
-			},
-			expectedCount: 0,
-			expectedError: false,
-		},
-		{
-			desc: "GetCount with allocation constraint filter returns objects",
-			filter: InstanceFilterInput{
-				AllocationConstraintIDs: []uuid.UUID{allocationConstraint.ID},
-			},
-			expectedCount: totalCount / 2,
-			expectedError: false,
-		},
-		{
-			desc: "GetCount with allocation constraint filter returns no objects",
-			filter: InstanceFilterInput{
-				AllocationConstraintIDs: []uuid.UUID{dummyUUID},
-			},
-			expectedCount: 0,
-			expectedError: false,
 		},
 		{
 			desc: "GetCount with tenant filter returns objects",
@@ -1940,8 +1828,6 @@ func TestInstanceSQLDAO_GetCount(t *testing.T) {
 		{
 			desc: "GetCount with all filters returns objects",
 			filter: InstanceFilterInput{
-				AllocationIDs:             []uuid.UUID{allocation.ID},
-				AllocationConstraintIDs:   []uuid.UUID{allocationConstraint.ID},
 				TenantIDs:                 []uuid.UUID{tenant.ID},
 				InfrastructureProviderIDs: []uuid.UUID{ip.ID},
 				SiteIDs:                   []uuid.UUID{site.ID},
@@ -1956,8 +1842,6 @@ func TestInstanceSQLDAO_GetCount(t *testing.T) {
 		{
 			desc: "GetCount with all filters returns no objects",
 			filter: InstanceFilterInput{
-				AllocationIDs:             []uuid.UUID{allocation.ID},
-				AllocationConstraintIDs:   []uuid.UUID{allocationConstraint.ID},
 				TenantIDs:                 []uuid.UUID{tenant2.ID},
 				InfrastructureProviderIDs: []uuid.UUID{ip.ID},
 				SiteIDs:                   []uuid.UUID{site.ID},
@@ -1972,8 +1856,6 @@ func TestInstanceSQLDAO_GetCount(t *testing.T) {
 		{
 			desc: "GetCount with some filters returns objects",
 			filter: InstanceFilterInput{
-				AllocationIDs:             []uuid.UUID{allocation.ID},
-				AllocationConstraintIDs:   []uuid.UUID{allocationConstraint.ID},
 				TenantIDs:                 []uuid.UUID{tenant.ID},
 				InfrastructureProviderIDs: []uuid.UUID{ip.ID},
 				SiteIDs:                   []uuid.UUID{site.ID},
@@ -1984,8 +1866,6 @@ func TestInstanceSQLDAO_GetCount(t *testing.T) {
 		{
 			desc: "GetCount with some filters returns no objects",
 			filter: InstanceFilterInput{
-				AllocationIDs:             []uuid.UUID{allocation.ID},
-				AllocationConstraintIDs:   []uuid.UUID{allocationConstraint.ID},
 				TenantIDs:                 []uuid.UUID{tenant2.ID},
 				InfrastructureProviderIDs: []uuid.UUID{ip.ID},
 				SiteIDs:                   []uuid.UUID{site.ID},
@@ -2116,8 +1996,8 @@ func TestInstanceSQLDAO_Update(t *testing.T) {
 
 	allocation := testInstanceBuildAllocation(t, dbSession, ip, tenant, site, "testAllocation")
 	allocation2 := testInstanceBuildAllocation(t, dbSession, ip, tenant2, site2, "testAllocation2")
-	allocationConstraint := testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
-	allocationConstraint2 := testBuildAllocationConstraint(t, dbSession, allocation2, AllocationResourceTypeInstanceType, instanceType2.ID, AllocationConstraintTypeReserved, 10, uuid.New())
+	_ = testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
+	_ = testBuildAllocationConstraint(t, dbSession, allocation2, AllocationResourceTypeInstanceType, instanceType2.ID, AllocationConstraintTypeReserved, 10, uuid.New())
 
 	operatingSystem := testInstanceBuildOperatingSystem(t, dbSession, "testOS")
 	operatingSystem2 := testInstanceBuildOperatingSystem(t, dbSession, "testOS2")
@@ -2132,8 +2012,6 @@ func TestInstanceSQLDAO_Update(t *testing.T) {
 		InstanceCreateInput{
 			Name:                     "test1",
 			Description:              db.GetStrPtr("Test description"),
-			AllocationID:             &allocation.ID,
-			AllocationConstraintID:   &allocationConstraint.ID,
 			TenantID:                 tenant.ID,
 			InfrastructureProviderID: ip.ID,
 			SiteID:                   site.ID,
@@ -2163,8 +2041,6 @@ func TestInstanceSQLDAO_Update(t *testing.T) {
 		instance                                    *Instance
 		paramName                                   *string
 		paramDescription                            *string
-		paramAllocationID                           *uuid.UUID
-		paramAllocationConstraintID                 *uuid.UUID
 		paramTenantID                               *uuid.UUID
 		paramInfrastructureProviderID               *uuid.UUID
 		paramSiteID                                 *uuid.UUID
@@ -2191,8 +2067,6 @@ func TestInstanceSQLDAO_Update(t *testing.T) {
 		expectedError                                  bool
 		expectedName                                   *string
 		expectedDescription                            *string
-		expectedAllocationID                           *uuid.UUID
-		expectedAllocationConstraintID                 *uuid.UUID
 		expectedTenantID                               *uuid.UUID
 		expectedInfrastructureProviderID               *uuid.UUID
 		expectedSiteID                                 *uuid.UUID
@@ -2223,8 +2097,6 @@ func TestInstanceSQLDAO_Update(t *testing.T) {
 			instance:                      i1,
 			paramName:                     db.GetStrPtr("updatedName"),
 			paramDescription:              db.GetStrPtr("Updated description"),
-			paramAllocationID:             nil,
-			paramAllocationConstraintID:   nil,
 			paramTenantID:                 nil,
 			paramInfrastructureProviderID: nil,
 			paramSiteID:                   nil,
@@ -2248,8 +2120,6 @@ func TestInstanceSQLDAO_Update(t *testing.T) {
 			expectedError:                                  false,
 			expectedName:                                   db.GetStrPtr("updatedName"),
 			expectedDescription:                            db.GetStrPtr("Updated description"),
-			expectedAllocationID:                           &allocation.ID,
-			expectedAllocationConstraintID:                 &allocationConstraint.ID,
 			expectedTenantID:                               &tenant.ID,
 			expectedInfrastructureProviderID:               &ip.ID,
 			expectedSiteID:                                 &site.ID,
@@ -2276,8 +2146,6 @@ func TestInstanceSQLDAO_Update(t *testing.T) {
 			id:                            i1.ID,
 			instance:                      i1,
 			paramName:                     nil,
-			paramAllocationID:             &allocation2.ID,
-			paramAllocationConstraintID:   &allocationConstraint2.ID,
 			paramTenantID:                 &tenant2.ID,
 			paramInfrastructureProviderID: &ip2.ID,
 			paramSiteID:                   &site2.ID,
@@ -2300,8 +2168,6 @@ func TestInstanceSQLDAO_Update(t *testing.T) {
 
 			expectedError:                    false,
 			expectedName:                     db.GetStrPtr("updatedName"),
-			expectedAllocationID:             &allocation2.ID,
-			expectedAllocationConstraintID:   &allocationConstraint2.ID,
 			expectedTenantID:                 &tenant2.ID,
 			expectedInfrastructureProviderID: &ip2.ID,
 			expectedSiteID:                   &site2.ID,
@@ -2328,8 +2194,6 @@ func TestInstanceSQLDAO_Update(t *testing.T) {
 			id:                            dummyUUID,
 			instance:                      i1,
 			paramName:                     nil,
-			paramAllocationID:             &dummyUUID,
-			paramAllocationConstraintID:   &dummyUUID,
 			paramTenantID:                 &dummyUUID,
 			paramInfrastructureProviderID: &dummyUUID,
 			paramSiteID:                   &dummyUUID,
@@ -2351,8 +2215,6 @@ func TestInstanceSQLDAO_Update(t *testing.T) {
 			id:                            i1.ID,
 			instance:                      i1,
 			paramName:                     nil,
-			paramAllocationID:             &dummyUUID,
-			paramAllocationConstraintID:   &dummyUUID,
 			paramTenantID:                 &dummyUUID,
 			paramInfrastructureProviderID: &dummyUUID,
 			paramSiteID:                   &dummyUUID,
@@ -2375,8 +2237,6 @@ func TestInstanceSQLDAO_Update(t *testing.T) {
 			instance:                      i1,
 			paramName:                     nil,
 			paramDescription:              nil,
-			paramAllocationID:             nil,
-			paramAllocationConstraintID:   nil,
 			paramTenantID:                 nil,
 			paramInfrastructureProviderID: nil,
 			paramSiteID:                   nil,
@@ -2398,8 +2258,6 @@ func TestInstanceSQLDAO_Update(t *testing.T) {
 			expectedError:                    false,
 			expectedName:                     db.GetStrPtr("updatedName"),
 			expectedDescription:              db.GetStrPtr("Updated description"),
-			expectedAllocationID:             &allocation2.ID,
-			expectedAllocationConstraintID:   &allocationConstraint2.ID,
 			expectedTenantID:                 &tenant2.ID,
 			expectedInfrastructureProviderID: &ip2.ID,
 			expectedSiteID:                   &site2.ID,
@@ -2424,8 +2282,6 @@ func TestInstanceSQLDAO_Update(t *testing.T) {
 					InstanceID:                             tc.id,
 					Name:                                   tc.paramName,
 					Description:                            tc.paramDescription,
-					AllocationID:                           tc.paramAllocationID,
-					AllocationConstraintID:                 tc.expectedAllocationConstraintID,
 					TenantID:                               tc.paramTenantID,
 					InfrastructureProviderID:               tc.paramInfrastructureProviderID,
 					SiteID:                                 tc.paramSiteID,
@@ -2555,7 +2411,7 @@ func TestInstanceSQLDAO_Clear(t *testing.T) {
 	networkSecurityGroup := testInstanceBuildNetworkSecurityGroup(t, dbSession, tenant, site, "testNetworkSecurityGroup")
 	machine := testMachineBuildMachine(t, dbSession, ip.ID, site.ID, &instanceType.ID, db.GetStrPtr("mcTypeTest"))
 	allocation := testInstanceBuildAllocation(t, dbSession, ip, tenant, site, "testAllocation")
-	allocationConstraint := testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
+	_ = testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
 	operatingSystem := testInstanceBuildOperatingSystem(t, dbSession, "testOS")
 	user := testInstanceBuildUser(t, dbSession, "testUser")
 	isd := NewInstanceDAO(dbSession)
@@ -2565,8 +2421,6 @@ func TestInstanceSQLDAO_Clear(t *testing.T) {
 		InstanceCreateInput{
 			Name:                     "test1",
 			Description:              db.GetStrPtr("Test description"),
-			AllocationID:             &allocation.ID,
-			AllocationConstraintID:   &allocationConstraint.ID,
 			TenantID:                 tenant.ID,
 			InfrastructureProviderID: ip.ID,
 			SiteID:                   site.ID,
@@ -2595,8 +2449,6 @@ func TestInstanceSQLDAO_Clear(t *testing.T) {
 		InstanceCreateInput{
 			Name:                     "test2",
 			Description:              db.GetStrPtr("Test description 2"),
-			AllocationID:             &allocation.ID,
-			AllocationConstraintID:   &allocationConstraint.ID,
 			TenantID:                 tenant.ID,
 			InfrastructureProviderID: ip.ID,
 			SiteID:                   site.ID,
@@ -2642,8 +2494,6 @@ func TestInstanceSQLDAO_Clear(t *testing.T) {
 		expectedError                                  bool
 		expectedName                                   *string
 		expectedDescription                            *string
-		expectedAllocationID                           *uuid.UUID
-		expectedAllocationConstraintID                 *uuid.UUID
 		expectedTenantID                               *uuid.UUID
 		expectedInfrastructureProviderID               *uuid.UUID
 		expectedSiteID                                 *uuid.UUID
@@ -2678,29 +2528,27 @@ func TestInstanceSQLDAO_Clear(t *testing.T) {
 			paramNetworkSecurityGroupID: true,
 			paramNetworkSecurityGroupPropagationDetails: true,
 
-			expectedUpdate:                                 true,
-			expectedError:                                  false,
-			expectedName:                                   db.GetStrPtr("test1"),
-			expectedDescription:                            nil,
-			expectedAllocationID:                           &allocation.ID,
-			expectedAllocationConstraintID:                 &allocationConstraint.ID,
-			expectedTenantID:                               &tenant.ID,
-			expectedInfrastructureProviderID:               &ip.ID,
-			expectedSiteID:                                 &site.ID,
-			expectedInstanceTypeID:                         &instanceType.ID,
-			expectedNetworkSecurityGroupID:                 nil,
+			expectedUpdate:                   true,
+			expectedError:                    false,
+			expectedName:                     db.GetStrPtr("test1"),
+			expectedDescription:              nil,
+			expectedTenantID:                 &tenant.ID,
+			expectedInfrastructureProviderID: &ip.ID,
+			expectedSiteID:                   &site.ID,
+			expectedInstanceTypeID:           &instanceType.ID,
+			expectedNetworkSecurityGroupID:   nil,
 			expectednetworkSecurityGroupPropagationDetails: nil,
-			expectedVpcID:                                  &vpc.ID,
-			expectedMachineID:                              nil,
-			expectedControllerInstanceID:                   nil,
-			expectedHostname:                               nil,
-			expectedOperatingSystemID:                      nil,
-			expectedIpxeScript:                             nil,
-			expectRebootWithCustomIpxe:                     nil,
-			expectedUserData:                               nil,
-			expectedStatus:                                 db.GetStrPtr(InstanceStatusPending),
-			verifyChildSpanner:                             true,
-			expectedLabels:                                 nil,
+			expectedVpcID:                &vpc.ID,
+			expectedMachineID:            nil,
+			expectedControllerInstanceID: nil,
+			expectedHostname:             nil,
+			expectedOperatingSystemID:    nil,
+			expectedIpxeScript:           nil,
+			expectRebootWithCustomIpxe:   nil,
+			expectedUserData:             nil,
+			expectedStatus:               db.GetStrPtr(InstanceStatusPending),
+			verifyChildSpanner:           true,
+			expectedLabels:               nil,
 		},
 		{
 			desc:            "Error when attempting to clear unknown object",
@@ -2725,8 +2573,6 @@ func TestInstanceSQLDAO_Clear(t *testing.T) {
 			expectedError:                    false,
 			expectedName:                     db.GetStrPtr("test2"),
 			expectedDescription:              db.GetStrPtr("Test description 2"),
-			expectedAllocationID:             &allocation.ID,
-			expectedAllocationConstraintID:   &allocationConstraint.ID,
 			expectedTenantID:                 &tenant.ID,
 			expectedInfrastructureProviderID: &ip.ID,
 			expectedSiteID:                   &site.ID,
@@ -2766,8 +2612,6 @@ func TestInstanceSQLDAO_Clear(t *testing.T) {
 			if err == nil {
 				assert.EqualValues(t, tc.instance.ID, got.ID)
 
-				assert.Equal(t, tc.expectedAllocationID, got.AllocationID)
-				assert.Equal(t, tc.expectedAllocationConstraintID, got.AllocationConstraintID)
 				assert.Equal(t, *tc.expectedTenantID, got.TenantID)
 				assert.Equal(t, *tc.expectedInfrastructureProviderID, got.InfrastructureProviderID)
 				assert.Equal(t, *tc.expectedSiteID, got.SiteID)
@@ -2832,7 +2676,7 @@ func TestInstanceSQLDAO_Delete(t *testing.T) {
 	networkSecurityGroup := testInstanceBuildNetworkSecurityGroup(t, dbSession, tenant, site, "testNetworkSecurityGroup")
 	machine := testMachineBuildMachine(t, dbSession, ip.ID, site.ID, &instanceType.ID, db.GetStrPtr("mcTypeTest"))
 	allocation := testInstanceBuildAllocation(t, dbSession, ip, tenant, site, "testAllocation")
-	allocationConstraint := testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
+	_ = testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
 	operatingSystem := testInstanceBuildOperatingSystem(t, dbSession, "testOS")
 	user := testInstanceBuildUser(t, dbSession, "testUser")
 	isd := NewInstanceDAO(dbSession)
@@ -2841,8 +2685,6 @@ func TestInstanceSQLDAO_Delete(t *testing.T) {
 		ctx, nil,
 		InstanceCreateInput{
 			Name:                     "test1",
-			AllocationID:             &allocation.ID,
-			AllocationConstraintID:   &allocationConstraint.ID,
 			TenantID:                 tenant.ID,
 			InfrastructureProviderID: ip.ID,
 			SiteID:                   site.ID,
@@ -2918,7 +2760,7 @@ func TestInstanceSQLDAO_CreateMultiple(t *testing.T) {
 	networkSecurityGroup := testInstanceBuildNetworkSecurityGroup(t, dbSession, tenant, site, "testNetworkSecurityGroup")
 	machine := testMachineBuildMachine(t, dbSession, ip.ID, site.ID, &instanceType.ID, db.GetStrPtr("mcTypeTest"))
 	allocation := testInstanceBuildAllocation(t, dbSession, ip, tenant, site, "testAllocation")
-	allocationConstraint := testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
+	_ = testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
 	operatingSystem := testInstanceBuildOperatingSystem(t, dbSession, "testOS")
 	user := testInstanceBuildUser(t, dbSession, "testUser")
 	isd := NewInstanceDAO(dbSession)
@@ -2939,8 +2781,6 @@ func TestInstanceSQLDAO_CreateMultiple(t *testing.T) {
 				{
 					Name:                     "test-batch-1",
 					Description:              db.GetStrPtr("Test batch description 1"),
-					AllocationID:             &allocation.ID,
-					AllocationConstraintID:   &allocationConstraint.ID,
 					TenantID:                 tenant.ID,
 					InfrastructureProviderID: ip.ID,
 					SiteID:                   site.ID,
@@ -3073,7 +2913,7 @@ func TestInstanceSQLDAO_UpdateMultiple(t *testing.T) {
 	instanceType := testInstanceBuildInstanceType(t, dbSession, ip, "testInstanceType")
 	machine := testMachineBuildMachine(t, dbSession, ip.ID, site.ID, &instanceType.ID, db.GetStrPtr("mcTypeTest"))
 	allocation := testInstanceBuildAllocation(t, dbSession, ip, tenant, site, "testAllocation")
-	allocationConstraint := testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
+	_ = testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
 	operatingSystem := testInstanceBuildOperatingSystem(t, dbSession, "testOS")
 	user := testInstanceBuildUser(t, dbSession, "testUser")
 	isd := NewInstanceDAO(dbSession)
@@ -3143,11 +2983,9 @@ func TestInstanceSQLDAO_UpdateMultiple(t *testing.T) {
 					InstanceTypeID: &instanceType.ID,
 				},
 				{
-					InstanceID:             i3.ID,
-					Name:                   db.GetStrPtr("test-update-3-modified"),
-					Status:                 db.GetStrPtr(InstanceStatusError),
-					AllocationID:           &allocation.ID,
-					AllocationConstraintID: &allocationConstraint.ID,
+					InstanceID: i3.ID,
+					Name:       db.GetStrPtr("test-update-3-modified"),
+					Status:     db.GetStrPtr(InstanceStatusError),
 				},
 			},
 			expectError:        false,
@@ -3346,7 +3184,7 @@ func TestInstanceSQLDAO_UpdateMultiple_AllFields(t *testing.T) {
 	instanceType := testInstanceBuildInstanceType(t, dbSession, ip, "testInstanceType")
 	machine := testMachineBuildMachine(t, dbSession, ip.ID, site.ID, &instanceType.ID, db.GetStrPtr("mcType"))
 	allocation := testInstanceBuildAllocation(t, dbSession, ip, tenant, site, "testAllocation")
-	allocationConstraint := testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, user.ID)
+	_ = testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, user.ID)
 	operatingSystem := testInstanceBuildOperatingSystem(t, dbSession, "testOS")
 	isd := NewInstanceDAO(dbSession)
 
@@ -3370,8 +3208,6 @@ func TestInstanceSQLDAO_UpdateMultiple_AllFields(t *testing.T) {
 		InstanceID:               instance.ID,
 		Name:                     db.GetStrPtr("updated-instance-name"),
 		Description:              db.GetStrPtr("updated description"),
-		AllocationID:             &allocation.ID,
-		AllocationConstraintID:   &allocationConstraint.ID,
 		TenantID:                 &tenant.ID,
 		InfrastructureProviderID: &ip.ID,
 		SiteID:                   &site.ID,
@@ -3408,8 +3244,6 @@ func TestInstanceSQLDAO_UpdateMultiple_AllFields(t *testing.T) {
 	assert.Equal(t, instance.ID, updated.ID)
 	assert.Equal(t, "updated-instance-name", updated.Name, "Name not updated")
 	assert.Equal(t, "updated description", *updated.Description, "Description not updated")
-	assert.Equal(t, &allocation.ID, updated.AllocationID, "AllocationID not updated")
-	assert.Equal(t, &allocationConstraint.ID, updated.AllocationConstraintID, "AllocationConstraintID not updated")
 	assert.Equal(t, tenant.ID, updated.TenantID, "TenantID not updated")
 	assert.Equal(t, ip.ID, updated.InfrastructureProviderID, "InfrastructureProviderID not updated")
 	assert.Equal(t, site.ID, updated.SiteID, "SiteID not updated")
