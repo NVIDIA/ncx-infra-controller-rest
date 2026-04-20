@@ -3176,7 +3176,7 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 				reqMachine:  nil,
 				reqOrg:      tnOrg3,
 				reqUser:     tnu3,
-				respCode:    http.StatusBadRequest,
+				respCode:    http.StatusNotFound,
 				respMessage: "No Machines are available for specified Instance Type",
 			},
 			wantErr: false,

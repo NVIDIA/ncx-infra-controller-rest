@@ -25,7 +25,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"strings"
 	"testing"
 
 	swe "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/error"
@@ -895,7 +894,7 @@ func TestGetUnallocatedMachineForInstanceType(t *testing.T) {
 	}
 
 	// Instance types + machines for VerifyInstanceTypeMachineCapabilitiesMatch in GetUnallocatedMachineForInstanceType
-	// (skip machines that fail the check while more candidates exist; return API error on last failure).
+	// (skip machines that fail the check while more candidates exist; if every candidate mismatches, return 406 with an aggregate message).
 	instCapPair := testCommonBuildInstanceType(t, dbSession, "it-cap-pair", site1, ip, tnuser)
 	TestBuildMachineCapability(t, dbSession, nil, &instCapPair.ID, cdbm.MachineCapabilityTypeGPU, "GPU-CAP-UNALLOC", nil, nil, cdb.GetStrPtr("NVIDIA"), cdb.GetIntPtr(4), cdb.GetStrPtr(cdbm.MachineCapabilityDeviceTypeNVLink), nil)
 	mcCapBad := testCommonBuildMachine(t, dbSession, ip.ID, site1.ID, cdb.GetUUIDPtr(instCapPair.ID), uuid.New(), nil, nil, nil, cdbm.MachineStatusReady)
@@ -923,6 +922,7 @@ func TestGetUnallocatedMachineForInstanceType(t *testing.T) {
 		name              string
 		instancetype      *cdbm.InstanceType
 		expectErr         bool
+		expectHTTPStatus  int
 		apiErrMsgContains string
 	}{
 		{
@@ -931,9 +931,11 @@ func TestGetUnallocatedMachineForInstanceType(t *testing.T) {
 			expectErr:    false,
 		},
 		{
-			name:         "error when allocation does not exist",
-			instancetype: nil,
-			expectErr:    true,
+			name:             "error when instance type is empty",
+			instancetype:     nil,
+			expectErr:        true,
+			expectHTTPStatus: http.StatusNotFound,
+			apiErrMsgContains: "No Machines are available for specified Instance Type",
 		},
 		{
 			name:         "success when one machine fails capability match but another machine matches",
@@ -941,32 +943,39 @@ func TestGetUnallocatedMachineForInstanceType(t *testing.T) {
 			expectErr:    false,
 		},
 		{
-			name:              "BadRequest when only candidate machine fails capability match",
+			name:              "NotAcceptable when only candidate machine fails capability match",
 			instancetype:      instCapSingleBad,
 			expectErr:         true,
-			apiErrMsgContains: "Capabilities for Machine",
+			expectHTTPStatus:  http.StatusNotAcceptable,
+			apiErrMsgContains: "1 Machines for this Instance Type were found with capability mismatch",
 		},
 		{
-			name:              "BadRequest when every candidate machine fails capability match",
+			name:              "NotAcceptable when every candidate machine fails capability match",
 			instancetype:      instCapTwoBad,
 			expectErr:         true,
-			apiErrMsgContains: "Capabilities for Machine",
+			expectHTTPStatus:  http.StatusNotAcceptable,
+			apiErrMsgContains: "2 Machines for this Instance Type were found with capability mismatch",
 		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			s, apiErr, err := GetUnallocatedMachineForInstanceType(ctx, tx, dbSession, tc.instancetype, logger)
-			assert.Equal(t, tc.expectErr, err != nil || apiErr != nil)
-			if err == nil && apiErr == nil {
-				assert.NotNil(t, s)
+			var it cdbm.InstanceType
+			if tc.instancetype != nil {
+				it = *tc.instancetype
 			}
-			if apiErr != nil {
-				assert.Equal(t, http.StatusBadRequest, apiErr.Code)
+			s, apiErr := GetUnallocatedMachineForInstanceType(ctx, tx, dbSession, it, logger)
+			if tc.expectErr {
+				assert.NotNil(t, apiErr)
+				assert.Nil(t, s)
+				if tc.expectHTTPStatus != 0 {
+					assert.Equal(t, tc.expectHTTPStatus, apiErr.Code)
+				}
 				if tc.apiErrMsgContains != "" {
 					assert.Contains(t, apiErr.Message, tc.apiErrMsgContains)
-				} else {
-					assert.Equal(t, tc.expectErr, strings.Contains(apiErr.Message, "No Machines are available for specified Instance Type"))
 				}
+			} else {
+				assert.Nil(t, apiErr)
+				assert.NotNil(t, s)
 			}
 		})
 	}
