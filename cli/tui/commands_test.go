@@ -592,6 +592,71 @@ func TestMergeLabels(t *testing.T) {
 	})
 }
 
+func TestUniqueLabelKeys(t *testing.T) {
+	t.Run("empty input", func(t *testing.T) {
+		assert.Nil(t, uniqueLabelKeys(nil))
+		assert.Nil(t, uniqueLabelKeys([]NamedItem{}))
+	})
+	t.Run("no labels on any item", func(t *testing.T) {
+		items := []NamedItem{{Name: "a"}, {Name: "b", Labels: map[string]string{}}}
+		assert.Nil(t, uniqueLabelKeys(items))
+	})
+	t.Run("dedupes and sorts keys", func(t *testing.T) {
+		items := []NamedItem{
+			{Name: "a", Labels: map[string]string{"rack": "A1", "env": "prod"}},
+			{Name: "b", Labels: map[string]string{"env": "dev", "ServerName": "foo"}},
+			{Name: "c", Labels: nil},
+		}
+		got := uniqueLabelKeys(items)
+		assert.Equal(t, []string{"ServerName", "env", "rack"}, got)
+	})
+}
+
+func TestPrintLabelHint(t *testing.T) {
+	itemsWithLabels := []NamedItem{
+		{Name: "m1", Labels: map[string]string{"RackIdentifier": "H19", "ServerName": "pdx01"}},
+		{Name: "m2", Labels: map[string]string{"RackIdentifier": "H20"}},
+	}
+	t.Run("active filter suppresses hint", func(t *testing.T) {
+		var buf bytes.Buffer
+		printLabelHint(&buf, itemsWithLabels, map[string]string{"RackIdentifier": "H19"})
+		assert.Empty(t, buf.String())
+	})
+	t.Run("no labels means no hint", func(t *testing.T) {
+		var buf bytes.Buffer
+		printLabelHint(&buf, []NamedItem{{Name: "x"}}, nil)
+		assert.Empty(t, buf.String())
+	})
+	t.Run("hint surfaces an actual key", func(t *testing.T) {
+		var buf bytes.Buffer
+		printLabelHint(&buf, itemsWithLabels, nil)
+		out := buf.String()
+		assert.Contains(t, out, "--label")
+		assert.Contains(t, out, "--sort-label")
+		assert.Contains(t, out, "scope label")
+		assert.Contains(t, out, "RackIdentifier", "hint should reference a label key from the items")
+		assert.Contains(t, out, "Label keys: RackIdentifier, ServerName")
+	})
+	t.Run("truncates long key list", func(t *testing.T) {
+		labels := map[string]string{}
+		for _, k := range []string{"k1", "k2", "k3", "k4", "k5", "k6", "k7", "k8"} {
+			labels[k] = "v"
+		}
+		items := []NamedItem{{Name: "a", Labels: labels}}
+		var buf bytes.Buffer
+		printLabelHint(&buf, items, nil)
+		out := buf.String()
+		assert.Contains(t, out, "...", "more than 6 keys should be truncated")
+		assert.NotContains(t, out, "k7", "truncation should drop overflow keys")
+		assert.NotContains(t, out, "k8", "truncation should drop overflow keys")
+	})
+	t.Run("empty filter map still shows hint", func(t *testing.T) {
+		var buf bytes.Buffer
+		printLabelHint(&buf, itemsWithLabels, map[string]string{})
+		assert.NotEmpty(t, buf.String(), "empty (non-nil) filter map should be treated as no filter")
+	})
+}
+
 func TestInvalidateFilteredIncludesInstanceType(t *testing.T) {
 	c := NewCache()
 	c.Set("instance-type", []NamedItem{{Name: "it1", ID: "1"}})

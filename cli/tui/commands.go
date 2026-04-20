@@ -495,6 +495,7 @@ func cmdVPCList(s *Session, args []string) error {
 		}
 	}
 	fmt.Fprintf(os.Stderr, "%d items\n", len(items))
+	defer printLabelHint(os.Stderr, items, merged)
 	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
 	fmt.Fprintln(tw, "NAME\tSTATUS\tSITE\tLABELS\tID")
 	for _, item := range items {
@@ -800,6 +801,7 @@ func cmdInstanceTypeList(s *Session, args []string) error {
 		items = sortByLabelKey(items, sortKey)
 	}
 	fmt.Fprintf(os.Stderr, "%d items\n", len(items))
+	defer printLabelHint(os.Stderr, items, merged)
 	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
 	fmt.Fprintln(tw, "NAME\tSTATUS\tLABELS\tID")
 	for _, item := range items {
@@ -838,6 +840,7 @@ func cmdInstanceList(s *Session, args []string) error {
 		items = sortByLabelKey(items, sortKey)
 	}
 	fmt.Fprintf(os.Stderr, "%d items\n", len(items))
+	defer printLabelHint(os.Stderr, items, merged)
 	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
 	fmt.Fprintln(tw, "NAME\tSTATUS\tVPC\tSITE\tLABELS\tID")
 	for _, item := range items {
@@ -882,6 +885,7 @@ func cmdMachineList(s *Session, args []string) error {
 	}
 
 	fmt.Fprintf(os.Stderr, "%d items\n", len(items))
+	defer printLabelHint(os.Stderr, items, merged)
 	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
 	fmt.Fprintln(tw, "NAME\tSTATUS\tSITE\tVPC\tLABELS\tID")
 	for _, item := range items {
@@ -1523,6 +1527,7 @@ func cmdNSGList(s *Session, args []string) error {
 		items = sortByLabelKey(items, sortKey)
 	}
 	fmt.Fprintf(os.Stderr, "%d items\n", len(items))
+	defer printLabelHint(os.Stderr, items, merged)
 	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
 	fmt.Fprintln(tw, "NAME\tSTATUS\tLABELS\tID")
 	for _, item := range items {
@@ -1860,6 +1865,7 @@ func cmdExpectedMachineList(s *Session, args []string) error {
 		items = sortByLabelKey(items, sortKey)
 	}
 	fmt.Fprintf(os.Stderr, "%d items\n", len(items))
+	defer printLabelHint(os.Stderr, items, merged)
 	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
 	fmt.Fprintln(tw, "SITE ID\tBMC MAC\tCHASSIS SN\tLABELS\tID")
 	for _, item := range items {
@@ -1887,6 +1893,7 @@ func cmdInfiniBandPartitionList(s *Session, args []string) error {
 		items = sortByLabelKey(items, sortKey)
 	}
 	fmt.Fprintf(os.Stderr, "%d items\n", len(items))
+	defer printLabelHint(os.Stderr, items, merged)
 	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
 	fmt.Fprintln(tw, "NAME\tSTATUS\tLABELS\tID")
 	for _, item := range items {
@@ -2309,9 +2316,11 @@ func cmdHelp(_ *Session, _ []string) error {
 	fmt.Fprintln(tw, "scope\tShow current scope filters")
 	fmt.Fprintln(tw, "scope site [name]\tSet site scope (filters lists)")
 	fmt.Fprintln(tw, "scope vpc [name]\tSet VPC scope (filters lists)")
-	fmt.Fprintln(tw, "scope label key=value\tAdd a label filter")
+	fmt.Fprintln(tw, "scope label key=value\tAdd a label filter (persists across commands)")
 	fmt.Fprintln(tw, "scope label clear\tClear all label filters")
 	fmt.Fprintln(tw, "scope clear\tClear all scope filters")
+	fmt.Fprintln(tw, "<list> --label key=value\tFilter a single list by a label (no persist)")
+	fmt.Fprintln(tw, "<list> --sort-label key\tSort a single list by a label key")
 	fmt.Fprintln(tw, "exit\tExit interactive mode")
 	tw.Flush()
 	fmt.Printf("\n%s\n", Bold("KEYBINDINGS"))
@@ -2424,6 +2433,52 @@ func formatLabels(labels map[string]string, maxWidth int) string {
 		return s[:maxWidth-3] + "..."
 	}
 	return s
+}
+
+// uniqueLabelKeys returns the sorted set of label keys present on items.
+func uniqueLabelKeys(items []NamedItem) []string {
+	seen := map[string]struct{}{}
+	for _, item := range items {
+		for k := range item.Labels {
+			seen[k] = struct{}{}
+		}
+	}
+	if len(seen) == 0 {
+		return nil
+	}
+	keys := make([]string, 0, len(seen))
+	for k := range seen {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+// printLabelHint writes a one-line hint about how to filter, sort, and persist
+// label filters for the most recently listed items. Skipped when label filters
+// are already active or when no items carry labels, so the hint only surfaces
+// when it is actionable.
+func printLabelHint(w io.Writer, items []NamedItem, activeFilters map[string]string) {
+	if len(activeFilters) > 0 {
+		return
+	}
+	keys := uniqueLabelKeys(items)
+	if len(keys) == 0 {
+		return
+	}
+	sample := keys[0]
+	fmt.Fprintln(w, Dim(fmt.Sprintf(
+		"Hint: --label %s=<value> filter | --sort-label %s sort | scope label %s=<value> persist",
+		sample, sample, sample,
+	)))
+	const maxKeys = 6
+	listed := keys
+	suffix := ""
+	if len(listed) > maxKeys {
+		listed = listed[:maxKeys]
+		suffix = ", ..."
+	}
+	fmt.Fprintln(w, Dim("Label keys: "+strings.Join(listed, ", ")+suffix))
 }
 
 func filterByLabels(items []NamedItem, filters map[string]string) []NamedItem {
