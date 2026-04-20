@@ -50,7 +50,8 @@ type Task struct {
 	ExecutionID   string                    `bun:"execution_id,notnull"`
 	Status        taskcommon.TaskStatus     `bun:"status,type:varchar(32),notnull"`
 	Message       string                    `bun:"message,nullzero"`
-	AppliedRuleID *uuid.UUID                `bun:"applied_rule_id,type:uuid"` // Which operation rule was applied
+	RequestedRuleID *uuid.UUID                `bun:"requested_rule_id,type:uuid"` // Caller-specified rule override (nil = use default resolution)
+	AppliedRuleID   *uuid.UUID                `bun:"applied_rule_id,type:uuid"`   // Which operation rule was applied
 	CreatedAt     time.Time                 `bun:"created_at,nullzero,notnull,default:current_timestamp"`
 	UpdatedAt     time.Time                 `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
 	StartedAt     *time.Time                `bun:"started_at"`

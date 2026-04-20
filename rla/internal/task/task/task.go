@@ -51,8 +51,9 @@ type Task struct {
 	ExecutionID   string
 	Status        taskcommon.TaskStatus
 	Message       string
-	AppliedRuleID *uuid.UUID // The ID of the operation rule that was applied
-	CreatedAt     time.Time
+	RequestedRuleID *uuid.UUID // Caller-specified rule override (nil = use default resolution)
+	AppliedRuleID   *uuid.UUID // The ID of the operation rule that was applied
+	CreatedAt       time.Time
 	UpdatedAt     time.Time
 	StartedAt     *time.Time
 	FinishedAt    *time.Time

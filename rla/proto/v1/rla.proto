@@ -320,6 +320,7 @@ message Task {
     optional UUID applied_rule_id = 13;
     google.protobuf.Timestamp updated_at = 14;
     optional google.protobuf.Timestamp started_at = 15;
+    optional UUID requested_rule_id = 16;  // Caller-specified rule override (if any)
 }
 
 message CreateExpectedRackRequest {
@@ -421,6 +422,7 @@ message UpgradeFirmwareRequest {
     optional google.protobuf.Timestamp end_time = 4;    // optional: scheduled end time
     string description = 5;                             // optional: task description
     optional QueueOptions queue_options = 6;
+    optional UUID rule_id = 7;                          // optional: override rule resolution with a specific rule
 }
 
 // GetComponents - retrieves components from local database
@@ -558,6 +560,7 @@ message PowerOnRackRequest {
     OperationTargetSpec target_spec = 1;  // Flexible targeting: rack(s) with optional type filter, or specific components
     string description = 2;               // optional task description
     optional QueueOptions queue_options = 3;
+    optional UUID rule_id = 4;            // optional: override rule resolution with a specific rule
 }
 
 message PowerOffRackRequest {
@@ -565,6 +568,7 @@ message PowerOffRackRequest {
     bool forced = 2;
     string description = 3;               // optional task description
     optional QueueOptions queue_options = 4;
+    optional UUID rule_id = 5;            // optional: override rule resolution with a specific rule
 }
 
 message PowerResetRackRequest {
@@ -572,17 +576,20 @@ message PowerResetRackRequest {
     bool forced = 2;
     string description = 3;               // optional task description
     optional QueueOptions queue_options = 4;
+    optional UUID rule_id = 5;            // optional: override rule resolution with a specific rule
 }
 
 message BringUpRackRequest {
     OperationTargetSpec target_spec = 1;  // Target racks for bring-up
     string description = 2;               // optional task description
+    optional UUID rule_id = 3;            // optional: override rule resolution with a specific rule
 }
 
 message IngestRackRequest {
     OperationTargetSpec target_spec = 1;  // Target racks for ingestion
     repeated Filter filters = 2;          // Filter conditions for component queries (e.g. by type, name)
     string description = 3;               // optional task description
+    optional UUID rule_id = 4;            // optional: override rule resolution with a specific rule
 }
 
 message ListTasksRequest {

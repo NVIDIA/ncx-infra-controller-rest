@@ -219,6 +219,19 @@ func (m *ManagerImpl) SubmitTask(
 		return nil, err
 	}
 
+	// Fail-fast: verify the requested rule exists before creating any tasks.
+	// The resolver will check again at execution time (defense-in-depth for
+	// queued tasks whose rule may be deleted while waiting).
+	if req.RuleID != nil && *req.RuleID != uuid.Nil {
+		rule, err := m.taskStore.GetRule(ctx, *req.RuleID)
+		if err != nil {
+			return nil, fmt.Errorf("requested rule_id %s: %w", req.RuleID, err)
+		}
+		if rule == nil {
+			return nil, fmt.Errorf("requested rule_id %s not found", req.RuleID)
+		}
+	}
+
 	// Resolve targets to racks with components
 	rackMap, err := resolveTargetSpecToRacks(ctx, m.inventoryStore, &req.TargetSpec)
 	if err != nil {
@@ -266,9 +279,10 @@ func (m *ManagerImpl) createAndExecuteTask(
 		Attributes: taskcommon.TaskAttributes{
 			ComponentsByType: compsByType,
 		},
-		Description:  req.Description,
-		ExecutorType: taskcommon.ExecutorTypeUnknown,
-		ExecutionID:  "",
+		Description:     req.Description,
+		ExecutorType:    taskcommon.ExecutorTypeUnknown,
+		ExecutionID:     "",
+		RequestedRuleID: req.RuleID,
 	}
 
 	// Check for conflicts inside a transaction to avoid a race between the
@@ -361,7 +375,7 @@ func (m *ManagerImpl) resolveAndExecuteTask(
 	targetRack *rack.Rack,
 ) error {
 	rule, err := m.ruleResolver.ResolveRule(
-		ctx, task.Operation.Type, task.Operation.Code, task.RackID,
+		ctx, task.Operation.Type, task.Operation.Code, task.RackID, task.RequestedRuleID,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to resolve operation rule: %w", err)

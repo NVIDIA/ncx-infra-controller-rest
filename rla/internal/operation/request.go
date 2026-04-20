@@ -186,6 +186,7 @@ type Request struct {
 	Description      string
 	ConflictStrategy ConflictStrategy
 	QueueTimeout     time.Duration
+	RuleID           *uuid.UUID // Optional: override rule resolution with a specific rule
 }
 
 func (r *Request) Validate() error {
