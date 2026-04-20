@@ -931,10 +931,10 @@ func TestGetUnallocatedMachineForInstanceType(t *testing.T) {
 			expectErr:    false,
 		},
 		{
-			name:             "error when instance type is empty",
-			instancetype:     nil,
-			expectErr:        true,
-			expectHTTPStatus: http.StatusNotFound,
+			name:              "error when instance type is empty",
+			instancetype:      nil,
+			expectErr:         true,
+			expectHTTPStatus:  http.StatusNotFound,
 			apiErrMsgContains: "No Machines are available for specified Instance Type",
 		},
 		{
