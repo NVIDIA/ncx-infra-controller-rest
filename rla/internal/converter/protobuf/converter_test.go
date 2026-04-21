@@ -747,3 +747,28 @@ func TestOrderByConverter(t *testing.T) {
 		})
 	}
 }
+
+func TestOptionalUUIDFrom(t *testing.T) {
+	testID := uuid.New()
+
+	t.Run("nil input returns nil", func(t *testing.T) {
+		result := OptionalUUIDFrom(nil)
+		assert.Nil(t, result)
+	})
+
+	t.Run("valid UUID returns pointer", func(t *testing.T) {
+		result := OptionalUUIDFrom(&pb.UUID{Id: testID.String()})
+		assert.NotNil(t, result)
+		assert.Equal(t, testID, *result)
+	})
+
+	t.Run("empty string returns nil", func(t *testing.T) {
+		result := OptionalUUIDFrom(&pb.UUID{Id: ""})
+		assert.Nil(t, result)
+	})
+
+	t.Run("invalid UUID returns nil", func(t *testing.T) {
+		result := OptionalUUIDFrom(&pb.UUID{Id: "not-a-uuid"})
+		assert.Nil(t, result)
+	})
+}

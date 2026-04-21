@@ -872,11 +872,20 @@ func TestNVLinkLogicalPartitionHandler_GetAll(t *testing.T) {
 	alc1 := testInstanceSiteBuildAllocationContraints(t, dbSession, al1, cdbm.AllocationResourceTypeInstanceType, ist1.ID, cdbm.AllocationConstraintTypeReserved, 5, ipu)
 	assert.NotNil(t, alc1)
 
+	ist2 := testInstanceBuildInstanceType(t, dbSession, ip1, "test-instance-type-2", site2, cdbm.InstanceStatusReady)
+	assert.NotNil(t, ist2)
+
 	mc1 := testInstanceBuildMachine(t, dbSession, ip1.ID, site1.ID, cdb.GetBoolPtr(false), nil)
 	assert.NotNil(t, mc1)
 
 	mcinst1 := testInstanceBuildMachineInstanceType(t, dbSession, mc1, ist1)
 	assert.NotNil(t, mcinst1)
+
+	mc2 := testInstanceBuildMachine(t, dbSession, ip1.ID, site2.ID, cdb.GetBoolPtr(false), nil)
+	assert.NotNil(t, mc2)
+
+	mcinst2 := testInstanceBuildMachineInstanceType(t, dbSession, mc2, ist2)
+	assert.NotNil(t, mcinst2)
 
 	os1 := testInstanceBuildOperatingSystem(t, dbSession, "test-operating-system-1", tn1, cdbm.OperatingSystemTypeImage, false, nil, false, cdbm.OperatingSystemStatusReady, tnu1)
 	assert.NotNil(t, os1)
@@ -927,10 +936,10 @@ func TestNVLinkLogicalPartitionHandler_GetAll(t *testing.T) {
 	vpc2 := testInstanceBuildVPC(t, dbSession, "test-vpc-2", ip1, tn2, site2, nil, nil, cdb.GetStrPtr(cdbm.VpcEthernetVirtualizer), cdb.GetUUIDPtr(nvllp1.ID), cdbm.VpcStatusPending, tnu1)
 	assert.NotNil(t, vpc2)
 
-	inst1 := testInstanceBuildInstance(t, dbSession, "test-instance-2", al1.ID, alc1.ID, tn1.ID, ip1.ID, site1.ID, &ist1.ID, vpc1.ID, cdb.GetStrPtr(mc1.ID), &os1.ID, nil, cdbm.InstanceStatusReady)
+	inst1 := testInstanceBuildInstance(t, dbSession, "test-instance-2", tn1.ID, ip1.ID, site1.ID, &ist1.ID, vpc1.ID, cdb.GetStrPtr(mc1.ID), &os1.ID, nil, cdbm.InstanceStatusReady)
 	assert.NotNil(t, inst1)
 
-	inst2 := testInstanceBuildInstance(t, dbSession, "test-instance-2", al1.ID, alc1.ID, tn1.ID, ip1.ID, site2.ID, &ist1.ID, vpc2.ID, cdb.GetStrPtr(mc1.ID), &os1.ID, nil, cdbm.InstanceStatusReady)
+	inst2 := testInstanceBuildInstance(t, dbSession, "test-instance-2", tn2.ID, ip1.ID, site2.ID, &ist2.ID, vpc2.ID, cdb.GetStrPtr(mc2.ID), &os1.ID, nil, cdbm.InstanceStatusReady)
 	assert.NotNil(t, inst2)
 
 	// Create NVLinkInterface records for each NVLinkLogicalPartition
@@ -1332,11 +1341,20 @@ func TestNVLinkLogicalPartitionHandler_GetByID(t *testing.T) {
 	alc1 := testInstanceSiteBuildAllocationContraints(t, dbSession, al1, cdbm.AllocationResourceTypeInstanceType, ist1.ID, cdbm.AllocationConstraintTypeReserved, 5, ipu)
 	assert.NotNil(t, alc1)
 
+	ist2 := testInstanceBuildInstanceType(t, dbSession, ip1, "test-instance-type-2", site2, cdbm.InstanceStatusReady)
+	assert.NotNil(t, ist2)
+
 	mc1 := testInstanceBuildMachine(t, dbSession, ip1.ID, site1.ID, cdb.GetBoolPtr(false), nil)
 	assert.NotNil(t, mc1)
 
 	mcinst1 := testInstanceBuildMachineInstanceType(t, dbSession, mc1, ist1)
 	assert.NotNil(t, mcinst1)
+
+	mc2 := testInstanceBuildMachine(t, dbSession, ip1.ID, site2.ID, cdb.GetBoolPtr(false), nil)
+	assert.NotNil(t, mc2)
+
+	mcinst2 := testInstanceBuildMachineInstanceType(t, dbSession, mc2, ist2)
+	assert.NotNil(t, mcinst2)
 
 	os1 := testInstanceBuildOperatingSystem(t, dbSession, "test-operating-system-1", tn1, cdbm.OperatingSystemTypeImage, false, nil, false, cdbm.OperatingSystemStatusReady, tnu1)
 	assert.NotNil(t, os1)
@@ -1353,10 +1371,10 @@ func TestNVLinkLogicalPartitionHandler_GetByID(t *testing.T) {
 	vpc2 := testInstanceBuildVPC(t, dbSession, "test-vpc-2", ip1, tn1, site2, nil, nil, cdb.GetStrPtr(cdbm.VpcEthernetVirtualizer), cdb.GetUUIDPtr(nvllp2.ID), cdbm.VpcStatusPending, tnu1)
 	assert.NotNil(t, vpc2)
 
-	inst1 := testInstanceBuildInstance(t, dbSession, "test-instance-2", al1.ID, alc1.ID, tn1.ID, ip1.ID, site1.ID, &ist1.ID, vpc1.ID, cdb.GetStrPtr(mc1.ID), &os1.ID, nil, cdbm.InstanceStatusReady)
+	inst1 := testInstanceBuildInstance(t, dbSession, "test-instance-2", tn1.ID, ip1.ID, site1.ID, &ist1.ID, vpc1.ID, cdb.GetStrPtr(mc1.ID), &os1.ID, nil, cdbm.InstanceStatusReady)
 	assert.NotNil(t, inst1)
 
-	inst2 := testInstanceBuildInstance(t, dbSession, "test-instance-2", al1.ID, alc1.ID, tn1.ID, ip1.ID, site2.ID, &ist1.ID, vpc2.ID, cdb.GetStrPtr(mc1.ID), &os1.ID, nil, cdbm.InstanceStatusReady)
+	inst2 := testInstanceBuildInstance(t, dbSession, "test-instance-2", tn1.ID, ip1.ID, site2.ID, &ist2.ID, vpc2.ID, cdb.GetStrPtr(mc2.ID), &os1.ID, nil, cdbm.InstanceStatusReady)
 	assert.NotNil(t, inst2)
 
 	nvlifc1 := testInstanceBuildInstanceNVLinkInterface(t, dbSession, site1.ID, inst1.ID, nvllp1.ID, cdb.GetUUIDPtr(uuid.New()), cdb.GetStrPtr("NVIDIA GB200"), 0, cdbm.NVLinkInterfaceStatusReady)

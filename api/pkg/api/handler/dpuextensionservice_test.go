@@ -942,12 +942,12 @@ func TestDeleteDpuExtensionServiceHandler_Handle(t *testing.T) {
 		"name":        "test-instance-type-1",
 		"description": "Test Instance Type 1 Description",
 	}, tnu1)
-	alc1 := common.TestBuildAllocationConstraint(t, dbSession, al1, it1, nil, 5, tnu1)
+	common.TestBuildAllocationConstraint(t, dbSession, al1, it1, nil, 5, tnu1)
 	m1 := common.TestBuildMachine(t, dbSession, ip, st1, &it1.ID, nil, cdbm.MachineStatusReady)
 	_ = common.TestBuildMachineInstanceType(t, dbSession, m1, it1)
 	vpc1 := common.TestBuildVPC(t, dbSession, "test-vpc-1", ip, tn1, st1, nil, nil, cdbm.VpcStatusReady, tnu1)
 	os1 := common.TestBuildOperatingSystem(t, dbSession, "test-operating-system-1", tn1, cdbm.OperatingSystemStatusReady, tnu1)
-	i1 := common.TestBuildInstance(t, dbSession, "test-instance-1", al1.ID, alc1.ID, tn1.ID, ip.ID, st1.ID, it1.ID, vpc1.ID, &m1.ID, os1.ID)
+	i1 := common.TestBuildInstance(t, dbSession, "test-instance-1", tn1.ID, ip.ID, st1.ID, it1.ID, vpc1.ID, &m1.ID, os1.ID)
 	assert.NotNil(t, i1)
 
 	// Create a deployment for des2 to test active deployment check
@@ -1327,12 +1327,12 @@ func TestDeleteDpuExtensionServiceVersionHandler_Handle(t *testing.T) {
 		"name":        "test-instance-type-1",
 		"description": "Test Instance Type 1 Description",
 	}, tnu1)
-	alc1 := common.TestBuildAllocationConstraint(t, dbSession, al1, it1, nil, 5, tnu1)
+	common.TestBuildAllocationConstraint(t, dbSession, al1, it1, nil, 5, tnu1)
 	m1 := common.TestBuildMachine(t, dbSession, ip, st1, &it1.ID, nil, cdbm.MachineStatusReady)
 	_ = common.TestBuildMachineInstanceType(t, dbSession, m1, it1)
 	vpc1 := common.TestBuildVPC(t, dbSession, "test-vpc-1", ip, tn1, st1, nil, nil, cdbm.VpcStatusReady, tnu1)
 	os1 := common.TestBuildOperatingSystem(t, dbSession, "test-operating-system-1", tn1, cdbm.OperatingSystemStatusReady, tnu1)
-	i1 := common.TestBuildInstance(t, dbSession, "test-instance-1", al1.ID, alc1.ID, tn1.ID, ip.ID, st1.ID, it1.ID, vpc1.ID, &m1.ID, os1.ID)
+	i1 := common.TestBuildInstance(t, dbSession, "test-instance-1", tn1.ID, ip.ID, st1.ID, it1.ID, vpc1.ID, &m1.ID, os1.ID)
 	assert.NotNil(t, i1)
 
 	// Create a deployment for des2 to test active deployment check

@@ -578,7 +578,7 @@ func Test_renameInstanceSubnetToInterfaceUpMigration(t *testing.T) {
 	st := model.TestBuildSite(t, dbSession, ip, "test-site", ipu)
 	al := model.TestBuildAllocation(t, dbSession, "test-allocation", st, tn, ipu)
 	it := model.TestBuildInstanceType(t, dbSession, "test-instance-type", ip, st, ipu)
-	ac := model.TestBuildAllocationConstraint(t, dbSession, al, it, nil, 40, ipu)
+	model.TestBuildAllocationConstraint(t, dbSession, al, it, nil, 40, ipu)
 
 	vpc := model.TestBuildVPC(t, dbSession, "test-vpc", ip, tn, st, db.GetStrPtr(model.VpcEthernetVirtualizer), nil, nil, model.VpcStatusProvisioning, ipu, nil)
 	ipb := model.TestBuildIPBlock(t, dbSession, "test-ipb", st, tn, model.IPBlockRoutingTypeDatacenterOnly, "192.168.1.0", 24, model.IPBlockProtocolVersionV4)
@@ -588,7 +588,7 @@ func Test_renameInstanceSubnetToInterfaceUpMigration(t *testing.T) {
 	ifcCount := 30
 	for i := 0; i < ifcCount; i++ {
 		m := model.TestBuildMachine(t, dbSession, ip, st, it, nil)
-		ins := model.TestBuildInstance(t, dbSession, fmt.Sprintf("test-instance-%d", i), al, ac, tn, ip, st, it, vpc, m, os)
+		ins := model.TestBuildInstance(t, dbSession, fmt.Sprintf("test-instance-%d", i), tn, ip, st, it, vpc, m, os)
 		model.TestBuildInterface(t, dbSession, ins, &sb.ID, nil, true, model.InterfaceStatusProvisioning)
 	}
 

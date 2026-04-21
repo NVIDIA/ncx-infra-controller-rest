@@ -421,13 +421,13 @@ func testInstanceBuildMachineInterface(t *testing.T, dbSession *cdb.Session, sub
 	return mi
 }
 
-func testInstanceBuildInstance(t *testing.T, dbSession *cdb.Session, name string, al uuid.UUID, alc uuid.UUID, tn uuid.UUID, ip uuid.UUID, st uuid.UUID, ist *uuid.UUID, vpc uuid.UUID, mc *string, os *uuid.UUID, ipxeScript *string, status string) *cdbm.Instance {
+// testInstanceBuildInstance creates a persisted instance fixture without any
+// allocation linkage. Tests that need allocation state must create it explicitly.
+func testInstanceBuildInstance(t *testing.T, dbSession *cdb.Session, name string, tn uuid.UUID, ip uuid.UUID, st uuid.UUID, ist *uuid.UUID, vpc uuid.UUID, mc *string, os *uuid.UUID, ipxeScript *string, status string) *cdbm.Instance {
 	insID := uuid.New()
 	ins := &cdbm.Instance{
 		ID:                       insID,
 		Name:                     name,
-		AllocationID:             &al,
-		AllocationConstraintID:   &alc,
 		TenantID:                 tn,
 		InfrastructureProviderID: ip,
 		SiteID:                   st,
@@ -963,7 +963,7 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 	// Create 25 test Instances
 	insts2 := []*cdbm.Instance{}
 	for i := 0; i < 25; i++ {
-		inst := testInstanceBuildInstance(t, dbSession, fmt.Sprintf("test-instance-%d", i), al2.ID, alc2.ID, tn2.ID, ip.ID, st2.ID, &ist2.ID, vpc3.ID, cdb.GetStrPtr(ms2[i].ID), &os3.ID, nil, cdbm.InstanceStatusReady)
+		inst := testInstanceBuildInstance(t, dbSession, fmt.Sprintf("test-instance-%d", i), tn2.ID, ip.ID, st2.ID, &ist2.ID, vpc3.ID, cdb.GetStrPtr(ms2[i].ID), &os3.ID, nil, cdbm.InstanceStatusReady)
 		assert.NotNil(t, inst)
 		insts2 = append(insts2, inst)
 	}
@@ -999,7 +999,7 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 	subnet6 := testInstanceBuildSubnet(t, dbSession, "test-subnet-5", tn3, vpc6, cdb.GetUUIDPtr(uuid.New()), cdbm.SubnetStatusReady, tnu3)
 	assert.NotNil(t, subnet6)
 
-	inst3 := testInstanceBuildInstance(t, dbSession, "test-instance-2", al3.ID, alc4.ID, tn3.ID, ip.ID, st3.ID, &ist3.ID, vpc5.ID, nil, &os4.ID, nil, cdbm.InstanceStatusReady)
+	inst3 := testInstanceBuildInstance(t, dbSession, "test-instance-2", tn3.ID, ip.ID, st3.ID, &ist3.ID, vpc5.ID, nil, &os4.ID, nil, cdbm.InstanceStatusReady)
 	assert.NotNil(t, inst3)
 
 	// Tenant 4
@@ -1013,7 +1013,7 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 	st4 := testInstanceBuildSite(t, dbSession, ip, "test-site-4", cdbm.SiteStatusRegistered, true, ipu)
 	al5 := testInstanceSiteBuildAllocation(t, dbSession, st4, tn5, "test-allocation-5", ipu)
 	ist5 := testInstanceBuildInstanceType(t, dbSession, ip, "test-instance-type-5", st4, cdbm.InstanceStatusReady)
-	alc5 := testInstanceSiteBuildAllocationContraints(t, dbSession, al5, cdbm.AllocationResourceTypeInstanceType, ist5.ID, cdbm.AllocationConstraintTypeReserved, 1, ipu)
+	testInstanceSiteBuildAllocationContraints(t, dbSession, al5, cdbm.AllocationResourceTypeInstanceType, ist5.ID, cdbm.AllocationConstraintTypeReserved, 1, ipu)
 
 	mc5 := testInstanceBuildMachine(t, dbSession, ip.ID, st4.ID, cdb.GetBoolPtr(false), nil)
 	mcinst5 := testInstanceBuildMachineInstanceType(t, dbSession, mc5, ist5)
@@ -1026,7 +1026,7 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 	subnet7 := testInstanceBuildSubnet(t, dbSession, "test-subnet-7", tn5, vpc7, cdb.GetUUIDPtr(uuid.New()), cdbm.SubnetStatusReady, tnu5)
 
 	testInstanceBuildMachineInterface(t, dbSession, subnet7.ID, mc5.ID)
-	inst4 := testInstanceBuildInstance(t, dbSession, "test-instance-9001", al5.ID, alc5.ID, tn5.ID, ip.ID, st4.ID, &ist5.ID, vpc7.ID, nil, &os5.ID, nil, cdbm.InstanceStatusReady)
+	inst4 := testInstanceBuildInstance(t, dbSession, "test-instance-9001", tn5.ID, ip.ID, st4.ID, &ist5.ID, vpc7.ID, nil, &os5.ID, nil, cdbm.InstanceStatusReady)
 	assert.NotNil(t, inst4)
 
 	// Build components for multiple allocation constraint test
@@ -1038,7 +1038,7 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 	st6 := testInstanceBuildSite(t, dbSession, ip, "test-site-6", cdbm.SiteStatusRegistered, false, ipu)
 	al6 := testInstanceSiteBuildAllocation(t, dbSession, st6, tn6, "test-allocation-6", ipu)
 	ist6 := testInstanceBuildInstanceType(t, dbSession, ip, "test-instance-type-6", st6, cdbm.InstanceStatusReady)
-	alc6 := testInstanceSiteBuildAllocationContraints(t, dbSession, al6, cdbm.AllocationResourceTypeInstanceType, ist6.ID, cdbm.AllocationConstraintTypeReserved, 1, ipu)
+	testInstanceSiteBuildAllocationContraints(t, dbSession, al6, cdbm.AllocationResourceTypeInstanceType, ist6.ID, cdbm.AllocationConstraintTypeReserved, 1, ipu)
 
 	// extra allocation constraint
 	al7 := testInstanceSiteBuildAllocation(t, dbSession, st6, tn6, "test-allocation-7", ipu)
@@ -1053,7 +1053,7 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 	subnet8 := testInstanceBuildSubnet(t, dbSession, "test-subnet-8", tn6, vpc8, cdb.GetUUIDPtr(uuid.New()), cdbm.SubnetStatusReady, tnu6)
 	testInstanceBuildMachineInterface(t, dbSession, subnet8.ID, mc6.ID)
 
-	inst6 := testInstanceBuildInstance(t, dbSession, "test-instance-900100", al6.ID, alc6.ID, tn5.ID, ip.ID, st6.ID, &ist6.ID, vpc8.ID, nil, &os6.ID, nil, cdbm.InstanceStatusReady)
+	inst6 := testInstanceBuildInstance(t, dbSession, "test-instance-900100", tn6.ID, ip.ID, st6.ID, &ist6.ID, vpc8.ID, nil, &os6.ID, nil, cdbm.InstanceStatusReady)
 	assert.NotNil(t, inst6)
 
 	// Tenant 7
@@ -1139,11 +1139,6 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 	vpcPrefix7 := common.TestBuildVPCPrefix(t, dbSession, "test-vpcprefix-7", st1, tn1, vpc9.ID, &ipb5.ID, cdb.GetStrPtr("192.168.0.0/24"), cdb.GetIntPtr(24), cdbm.VpcPrefixStatusReady, tnu1)
 	vpcPrefixSite2 := common.TestBuildVPCPrefix(t, dbSession, "test-vpcprefix-site2", st2, tn1, vpc9Site2.ID, &ipbSite2.ID, cdb.GetStrPtr("192.170.0.0/24"), cdb.GetIntPtr(24), cdbm.VpcPrefixStatusReady, tnu1)
 	assert.NotNil(t, vpcPrefixSite2)
-	/*
-		inst4 := testInstanceBuildInstance(t, dbSession, "test-instance-9001", al5.ID, alc5.ID, tn5.ID, ip.ID, st4.ID, ist5.ID, vpc7.ID, nil, &os5.ID, nil, cdbm.InstanceStatusReady)
-		assert.NotNil(t, inst4)
-	*/
-
 	// NvLink Logical Partition
 	nvllp1 := testBuildNVLinkLogicalPartition(t, dbSession, "test-nvllp-1", cdb.GetStrPtr("Test NVLink Logical Partition"), tnOrg, st1, tn1, cdb.GetStrPtr(cdbm.NVLinkLogicalPartitionStatusReady), false)
 	assert.NotNil(t, nvllp1)
@@ -3702,42 +3697,42 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 	mci1 := testInstanceBuildMachineInterface(t, dbSession, subnet1.ID, mc1.ID)
 	assert.NotNil(t, mci1)
 
-	inst1 := testInstanceBuildInstance(t, dbSession, "test-instance-1", al1.ID, alc1.ID, tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1.ID, cdb.GetStrPtr(mc1.ID), &os2.ID, nil, cdbm.InstanceStatusReady)
+	inst1 := testInstanceBuildInstance(t, dbSession, "test-instance-1", tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1.ID, cdb.GetStrPtr(mc1.ID), &os2.ID, nil, cdbm.InstanceStatusReady)
 	assert.NotNil(t, inst1)
 
-	inst2 := testInstanceBuildInstance(t, dbSession, "test-instance-name-updated", al1.ID, alc1.ID, tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1.ID, cdb.GetStrPtr(mc2.ID), &os2.ID, nil, cdbm.InstanceStatusReady)
+	inst2 := testInstanceBuildInstance(t, dbSession, "test-instance-name-updated", tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1.ID, cdb.GetStrPtr(mc2.ID), &os2.ID, nil, cdbm.InstanceStatusReady)
 	assert.NotNil(t, inst2)
 
-	inst3 := testInstanceBuildInstance(t, dbSession, "test-instance-3", al1.ID, alc1.ID, tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1.ID, cdb.GetStrPtr(mc1.ID), &os2.ID, nil, cdbm.InstanceStatusTerminating)
+	inst3 := testInstanceBuildInstance(t, dbSession, "test-instance-3", tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1.ID, cdb.GetStrPtr(mc1.ID), &os2.ID, nil, cdbm.InstanceStatusTerminating)
 	assert.NotNil(t, inst3)
 
-	instConfiguring := testInstanceBuildInstance(t, dbSession, "test-instance-configuring", al1.ID, alc1.ID, tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1.ID, cdb.GetStrPtr(mc1.ID), &os2.ID, nil, cdbm.InstanceStatusConfiguring)
+	instConfiguring := testInstanceBuildInstance(t, dbSession, "test-instance-configuring", tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1.ID, cdb.GetStrPtr(mc1.ID), &os2.ID, nil, cdbm.InstanceStatusConfiguring)
 	assert.NotNil(t, instConfiguring)
 
 	// Instance with iPXE OS type and user-data allowed
-	inst4 := testInstanceBuildInstance(t, dbSession, "test-instance-4", al1.ID, alc1.ID, tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1.ID, cdb.GetStrPtr(mc1.ID), &os2.ID, nil, cdbm.InstanceStatusReady)
+	inst4 := testInstanceBuildInstance(t, dbSession, "test-instance-4", tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1.ID, cdb.GetStrPtr(mc1.ID), &os2.ID, nil, cdbm.InstanceStatusReady)
 	assert.NotNil(t, inst4)
 
 	// Instance with iPXE OS type and user-data NOT allowed
-	inst5 := testInstanceBuildInstance(t, dbSession, "test-instance-5", al1.ID, alc1.ID, tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1.ID, cdb.GetStrPtr(mc1.ID), &os3.ID, nil, cdbm.InstanceStatusReady)
+	inst5 := testInstanceBuildInstance(t, dbSession, "test-instance-5", tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1.ID, cdb.GetStrPtr(mc1.ID), &os3.ID, nil, cdbm.InstanceStatusReady)
 	assert.NotNil(t, inst5)
 
-	inst6 := testInstanceBuildInstance(t, dbSession, "test-instance-6", al2.ID, alc2.ID, tn2.ID, ip.ID, st2.ID, &ist2.ID, vpc3.ID, cdb.GetStrPtr(mc3.ID), &os4.ID, nil, cdbm.InstanceStatusReady)
+	inst6 := testInstanceBuildInstance(t, dbSession, "test-instance-6", tn2.ID, ip.ID, st2.ID, &ist2.ID, vpc3.ID, cdb.GetStrPtr(mc3.ID), &os4.ID, nil, cdbm.InstanceStatusReady)
 	assert.NotNil(t, inst6)
 
-	inst7 := testInstanceBuildInstance(t, dbSession, "test-instance-7", al2.ID, alc2.ID, tn2.ID, ip.ID, st2.ID, &ist2.ID, vpc3.ID, cdb.GetStrPtr(mc3.ID), &os5.ID, nil, cdbm.InstanceStatusReady)
+	inst7 := testInstanceBuildInstance(t, dbSession, "test-instance-7", tn2.ID, ip.ID, st2.ID, &ist2.ID, vpc3.ID, cdb.GetStrPtr(mc3.ID), &os5.ID, nil, cdbm.InstanceStatusReady)
 	assert.NotNil(t, inst7)
 
-	inst8 := testInstanceBuildInstance(t, dbSession, "test-instance-8", al1.ID, alc1.ID, tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1.ID, cdb.GetStrPtr(mc1.ID), &os2.ID, nil, cdbm.InstanceStatusReady)
+	inst8 := testInstanceBuildInstance(t, dbSession, "test-instance-8", tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1.ID, cdb.GetStrPtr(mc1.ID), &os2.ID, nil, cdbm.InstanceStatusReady)
 	assert.NotNil(t, inst8)
 
 	skgia8 := testInstanceBuildSSHKeyGroupInstanceAssociation(t, dbSession, skg1.ID, st1.ID, inst8.ID)
 	assert.NotNil(t, skgia8)
 
-	inst9 := testInstanceBuildInstance(t, dbSession, "test-instance-9", al1.ID, alc1.ID, tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1.ID, cdb.GetStrPtr(mc1.ID), &os2.ID, nil, cdbm.InstanceStatusReady)
+	inst9 := testInstanceBuildInstance(t, dbSession, "test-instance-9", tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1.ID, cdb.GetStrPtr(mc1.ID), &os2.ID, nil, cdbm.InstanceStatusReady)
 	assert.NotNil(t, inst9)
 
-	inst10 := testInstanceBuildInstance(t, dbSession, "test-instance-10", al1.ID, alc1.ID, tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1.ID, cdb.GetStrPtr(mc1.ID), &os2.ID, nil, cdbm.InstanceStatusReady)
+	inst10 := testInstanceBuildInstance(t, dbSession, "test-instance-10", tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1.ID, cdb.GetStrPtr(mc1.ID), &os2.ID, nil, cdbm.InstanceStatusReady)
 	assert.NotNil(t, inst10)
 
 	instsub1 := testInstanceBuildInstanceInterface(t, dbSession, inst1.ID, &subnet1.ID, nil, nil, cdbm.InterfaceStatusReady)
@@ -3795,10 +3790,10 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 	vpcPrefix3 := common.TestBuildVPCPrefix(t, dbSession, "test-vpcprefix-3", st3, tn1, vpc4.ID, &ipb3.ID, cdb.GetStrPtr("192.152.0.0/24"), cdb.GetIntPtr(24), cdbm.VpcPrefixStatusReady, tnu1)
 	assert.NotNil(t, vpcPrefix3)
 
-	inst11 := testInstanceBuildInstance(t, dbSession, "test-instance-11", al3.ID, alc3.ID, tn1.ID, ip.ID, st3.ID, &ist1.ID, vpc4.ID, cdb.GetStrPtr(mc1.ID), &os2.ID, nil, cdbm.InstanceStatusReady)
+	inst11 := testInstanceBuildInstance(t, dbSession, "test-instance-11", tn1.ID, ip.ID, st3.ID, &ist1.ID, vpc4.ID, cdb.GetStrPtr(mc1.ID), &os2.ID, nil, cdbm.InstanceStatusReady)
 	assert.NotNil(t, inst11)
 
-	inst12 := testInstanceBuildInstance(t, dbSession, "test-instance-12", al3.ID, alc3.ID, tn1.ID, ip.ID, st3.ID, &ist4.ID, vpc4.ID, cdb.GetStrPtr(mc5.ID), &os2.ID, nil, cdbm.InstanceStatusReady)
+	inst12 := testInstanceBuildInstance(t, dbSession, "test-instance-12", tn1.ID, ip.ID, st3.ID, &ist4.ID, vpc4.ID, cdb.GetStrPtr(mc5.ID), &os2.ID, nil, cdbm.InstanceStatusReady)
 
 	instifc1 := testInstanceBuildInstanceInterface(t, dbSession, inst12.ID, nil, &vpcPrefix1.ID, nil, cdbm.InterfaceStatusReady)
 	assert.NotNil(t, instifc1)
@@ -3830,13 +3825,13 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 	vpcPrimaryNone, vpcSecondaryNone, vpcPrefixPrimaryNone, vpcPrefixSecondaryNone := buildNsgPropagationMultiVpcPair("test-update-vpc-primary-none", "test-update-vpc-secondary-none", "test-update-vpcprefix-none-primary", "test-update-vpcprefix-none-secondary", "192.177.0.0", "192.178.0.0")
 	vpcPrimaryPartial, vpcSecondaryPartial, vpcPrefixPrimaryPartial, vpcPrefixSecondaryPartial := buildNsgPropagationMultiVpcPair("test-update-vpc-primary-partial", "test-update-vpc-secondary-partial", "test-update-vpcprefix-partial-primary", "test-update-vpcprefix-partial-secondary", "192.179.0.0", "192.180.0.0")
 
-	instUpdateFull := testInstanceBuildInstance(t, dbSession, "test-instance-update-vpc-full", al3.ID, alc3.ID, tn1.ID, ip.ID, st3.ID, &ist4.ID, vpcPrimaryFull.ID, cdb.GetStrPtr(mc7.ID), &os2.ID, nil, cdbm.InstanceStatusReady)
+	instUpdateFull := testInstanceBuildInstance(t, dbSession, "test-instance-update-vpc-full", tn1.ID, ip.ID, st3.ID, &ist4.ID, vpcPrimaryFull.ID, cdb.GetStrPtr(mc7.ID), &os2.ID, nil, cdbm.InstanceStatusReady)
 	assert.NotNil(t, instUpdateFull)
-	instUpdateNone := testInstanceBuildInstance(t, dbSession, "test-instance-update-vpc-none", al3.ID, alc3.ID, tn1.ID, ip.ID, st3.ID, &ist4.ID, vpcPrimaryNone.ID, cdb.GetStrPtr(mc8.ID), &os2.ID, nil, cdbm.InstanceStatusReady)
+	instUpdateNone := testInstanceBuildInstance(t, dbSession, "test-instance-update-vpc-none", tn1.ID, ip.ID, st3.ID, &ist4.ID, vpcPrimaryNone.ID, cdb.GetStrPtr(mc8.ID), &os2.ID, nil, cdbm.InstanceStatusReady)
 	assert.NotNil(t, instUpdateNone)
-	instUpdateRebootFull := testInstanceBuildInstance(t, dbSession, "test-instance-update-vpc-reboot-full", al3.ID, alc3.ID, tn1.ID, ip.ID, st3.ID, &ist4.ID, vpcPrimaryFull.ID, cdb.GetStrPtr(mc7.ID), &os2.ID, nil, cdbm.InstanceStatusReady)
+	instUpdateRebootFull := testInstanceBuildInstance(t, dbSession, "test-instance-update-vpc-reboot-full", tn1.ID, ip.ID, st3.ID, &ist4.ID, vpcPrimaryFull.ID, cdb.GetStrPtr(mc7.ID), &os2.ID, nil, cdbm.InstanceStatusReady)
 	assert.NotNil(t, instUpdateRebootFull)
-	instUpdatePartial := testInstanceBuildInstance(t, dbSession, "test-instance-update-vpc-partial", al3.ID, alc3.ID, tn1.ID, ip.ID, st3.ID, &ist4.ID, vpcPrimaryPartial.ID, cdb.GetStrPtr(mc9.ID), &os2.ID, nil, cdbm.InstanceStatusReady)
+	instUpdatePartial := testInstanceBuildInstance(t, dbSession, "test-instance-update-vpc-partial", tn1.ID, ip.ID, st3.ID, &ist4.ID, vpcPrimaryPartial.ID, cdb.GetStrPtr(mc9.ID), &os2.ID, nil, cdbm.InstanceStatusReady)
 	assert.NotNil(t, instUpdatePartial)
 
 	assert.NotNil(t, testInstanceBuildInstanceInterface(t, dbSession, instUpdateFull.ID, nil, &vpcPrefixPrimaryFull.ID, nil, cdbm.InterfaceStatusReady))
@@ -3872,7 +3867,7 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 	// Add Network DPU capability to Instance Type
 	common.TestBuildMachineCapability(t, dbSession, nil, &ist4.ID, cdbm.MachineCapabilityTypeNetwork, "MT42822 BlueField-2 integrated ConnectX-6 Dx network controller", nil, nil, cdb.GetStrPtr("Mellanox Technologies"), cdb.GetIntPtr(2), cdb.GetStrPtr("DPU"), nil)
 
-	inst13 := testInstanceBuildInstance(t, dbSession, "test-instance-nvlink-update", al3.ID, alc3.ID, tn1.ID, ip.ID, st3.ID, &ist4.ID, vpc4.ID, cdb.GetStrPtr(mc5.ID), &os2.ID, nil, cdbm.InstanceStatusReady)
+	inst13 := testInstanceBuildInstance(t, dbSession, "test-instance-nvlink-update", tn1.ID, ip.ID, st3.ID, &ist4.ID, vpc4.ID, cdb.GetStrPtr(mc5.ID), &os2.ID, nil, cdbm.InstanceStatusReady)
 
 	// Add NVLink GPU capability to Machine
 	common.TestBuildMachineCapability(t, dbSession, &mc5.ID, nil, cdbm.MachineCapabilityTypeGPU, "NVIDIA GB200", nil, nil, cdb.GetStrPtr("NVIDIA"), cdb.GetIntPtr(4), cdb.GetStrPtr(cdbm.MachineCapabilityDeviceTypeNVLink), nil)
@@ -3901,7 +3896,7 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 	mcinst6 := testInstanceBuildMachineInstanceType(t, dbSession, mc6, ist2)
 	assert.NotNil(t, mcinst6)
 
-	inst14 := testInstanceBuildInstance(t, dbSession, "test-instance-14", al2.ID, alc2.ID, tn2.ID, ip.ID, st2.ID, &ist2.ID, vpc2.ID, cdb.GetStrPtr(mc6.ID), &os4.ID, nil, cdbm.InstanceStatusError)
+	inst14 := testInstanceBuildInstance(t, dbSession, "test-instance-14", tn2.ID, ip.ID, st2.ID, &ist2.ID, vpc2.ID, cdb.GetStrPtr(mc6.ID), &os4.ID, nil, cdbm.InstanceStatusError)
 	assert.NotNil(t, inst14)
 
 	insDAO := cdbm.NewInstanceDAO(dbSession)
@@ -3966,7 +3961,7 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 	mc15 := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
 	assert.NotNil(t, mc15)
 
-	inst15 := testInstanceBuildInstance(t, dbSession, "test-instance-des-preserve", al1.ID, alc1.ID, tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1.ID, cdb.GetStrPtr(mc15.ID), &os2.ID, nil, cdbm.InstanceStatusReady)
+	inst15 := testInstanceBuildInstance(t, dbSession, "test-instance-des-preserve", tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1.ID, cdb.GetStrPtr(mc15.ID), &os2.ID, nil, cdbm.InstanceStatusReady)
 	assert.NotNil(t, inst15)
 
 	des1 := common.TestBuildDpuExtensionService(t, dbSession, "test-dpu-extension-service-1", model.DpuExtensionServiceTypeKubernetesPod, tn1, st1, "1.0.0", cdbm.DpuExtensionServiceStatusReady, tnu1)
@@ -3995,7 +3990,7 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 	mc16 := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
 	assert.NotNil(t, mc16)
 
-	inst16 := testInstanceBuildInstance(t, dbSession, "test-instance-des-update", al1.ID, alc1.ID, tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1.ID, cdb.GetStrPtr(mc16.ID), &os2.ID, nil, cdbm.InstanceStatusReady)
+	inst16 := testInstanceBuildInstance(t, dbSession, "test-instance-des-update", tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1.ID, cdb.GetStrPtr(mc16.ID), &os2.ID, nil, cdbm.InstanceStatusReady)
 	assert.NotNil(t, inst16)
 
 	desd16 := common.TestBuildDpuExtensionServiceDeployment(t, dbSession, des1, inst16.ID, "1.0.0", cdbm.DpuExtensionServiceDeploymentStatusRunning, tnu1)
@@ -4005,7 +4000,7 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 	mc17 := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
 	assert.NotNil(t, mc17)
 
-	inst17 := testInstanceBuildInstance(t, dbSession, "test-instance-des-update", al1.ID, alc1.ID, tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1.ID, cdb.GetStrPtr(mc17.ID), &os2.ID, nil, cdbm.InstanceStatusReady)
+	inst17 := testInstanceBuildInstance(t, dbSession, "test-instance-des-update", tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1.ID, cdb.GetStrPtr(mc17.ID), &os2.ID, nil, cdbm.InstanceStatusReady)
 	assert.NotNil(t, inst17)
 
 	desd17 := common.TestBuildDpuExtensionServiceDeployment(t, dbSession, des1, inst17.ID, "1.0.0", cdbm.DpuExtensionServiceDeploymentStatusRunning, tnu1)
@@ -6226,7 +6221,7 @@ func TestGetInstanceHandler_Handle(t *testing.T) {
 	mci1 := testInstanceBuildMachineInterface(t, dbSession, subnet1.ID, mc1.ID)
 	assert.NotNil(t, mci1)
 
-	inst1 := testInstanceBuildInstance(t, dbSession, "test-instance-2", al1.ID, alc1.ID, tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1.ID, cdb.GetStrPtr(mc1.ID), &os1.ID, nil, cdbm.InstanceStatusReady)
+	inst1 := testInstanceBuildInstance(t, dbSession, "test-instance-2", tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1.ID, cdb.GetStrPtr(mc1.ID), &os1.ID, nil, cdbm.InstanceStatusReady)
 	assert.NotNil(t, inst1)
 
 	// Attach an NSG to this instance
@@ -6250,14 +6245,14 @@ func TestGetInstanceHandler_Handle(t *testing.T) {
 	desd1 := common.TestBuildDpuExtensionServiceDeployment(t, dbSession, des1, inst1.ID, "1.0.0", cdbm.DpuExtensionServiceDeploymentStatusRunning, tnu1)
 	assert.NotNil(t, desd1)
 
-	inst2 := testInstanceBuildInstance(t, dbSession, "test-instance-3", al1.ID, alc1.ID, tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1.ID, cdb.GetStrPtr(mc2.ID), &os1.ID, nil, cdbm.InstanceStatusReady)
+	inst2 := testInstanceBuildInstance(t, dbSession, "test-instance-3", tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1.ID, cdb.GetStrPtr(mc2.ID), &os1.ID, nil, cdbm.InstanceStatusReady)
 	assert.NotNil(t, inst2)
 
 	inst2.ControllerInstanceID = cdb.GetUUIDPtr(uuid.New())
 
-	inst3 := testInstanceBuildInstance(t, dbSession, "test-instance-4", al1.ID, alc1.ID, tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc2.ID, cdb.GetStrPtr(mc3.ID), &os1.ID, nil, cdbm.InstanceStatusReady)
+	inst3 := testInstanceBuildInstance(t, dbSession, "test-instance-4", tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc2.ID, cdb.GetStrPtr(mc3.ID), &os1.ID, nil, cdbm.InstanceStatusReady)
 	assert.NotNil(t, inst3)
-	inst3WithIfc := testInstanceBuildInstance(t, dbSession, "test-instance-4-with-interface", al1.ID, alc1.ID, tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc2.ID, cdb.GetStrPtr(mc2.ID), &os1.ID, nil, cdbm.InstanceStatusReady)
+	inst3WithIfc := testInstanceBuildInstance(t, dbSession, "test-instance-4-with-interface", tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc2.ID, cdb.GetStrPtr(mc2.ID), &os1.ID, nil, cdbm.InstanceStatusReady)
 	assert.NotNil(t, inst3WithIfc)
 	assert.NotNil(t, testInstanceBuildInstanceInterface(t, dbSession, inst3WithIfc.ID, &subnet3.ID, nil, nil, cdbm.InterfaceStatusPending))
 
@@ -6285,11 +6280,11 @@ func TestGetInstanceHandler_Handle(t *testing.T) {
 	vpcPrimaryNone, vpcSecondaryNone, vpcPrefixPrimaryNone, vpcPrefixSecondaryNone := buildMultiVpcPair("test-get-vpc-primary-none", "test-get-vpc-secondary-none", "test-get-vpcprefix-none-primary", "test-get-vpcprefix-none-secondary", "192.187.0.0/24", "192.190.0.0/24")
 	vpcPrimaryPartial, vpcSecondaryPartial, vpcPrefixPrimaryPartial, vpcPrefixSecondaryPartial := buildMultiVpcPair("test-get-vpc-primary-partial", "test-get-vpc-secondary-partial", "test-get-vpcprefix-partial-primary", "test-get-vpcprefix-partial-secondary", "192.188.0.0/24", "192.191.0.0/24")
 
-	instFull := testInstanceBuildInstance(t, dbSession, "test-instance-get-vpc-full", al1.ID, alc1.ID, tn1.ID, ip.ID, st1.ID, &ist1.ID, vpcPrimaryFull.ID, cdb.GetStrPtr(mc4.ID), &os1.ID, nil, cdbm.InstanceStatusReady)
+	instFull := testInstanceBuildInstance(t, dbSession, "test-instance-get-vpc-full", tn1.ID, ip.ID, st1.ID, &ist1.ID, vpcPrimaryFull.ID, cdb.GetStrPtr(mc4.ID), &os1.ID, nil, cdbm.InstanceStatusReady)
 	assert.NotNil(t, instFull)
-	instNone := testInstanceBuildInstance(t, dbSession, "test-instance-get-vpc-none", al1.ID, alc1.ID, tn1.ID, ip.ID, st1.ID, &ist1.ID, vpcPrimaryNone.ID, cdb.GetStrPtr(mc5.ID), &os1.ID, nil, cdbm.InstanceStatusReady)
+	instNone := testInstanceBuildInstance(t, dbSession, "test-instance-get-vpc-none", tn1.ID, ip.ID, st1.ID, &ist1.ID, vpcPrimaryNone.ID, cdb.GetStrPtr(mc5.ID), &os1.ID, nil, cdbm.InstanceStatusReady)
 	assert.NotNil(t, instNone)
-	instPartial := testInstanceBuildInstance(t, dbSession, "test-instance-get-vpc-partial", al1.ID, alc1.ID, tn1.ID, ip.ID, st1.ID, &ist1.ID, vpcPrimaryPartial.ID, cdb.GetStrPtr(mc6.ID), &os1.ID, nil, cdbm.InstanceStatusReady)
+	instPartial := testInstanceBuildInstance(t, dbSession, "test-instance-get-vpc-partial", tn1.ID, ip.ID, st1.ID, &ist1.ID, vpcPrimaryPartial.ID, cdb.GetStrPtr(mc6.ID), &os1.ID, nil, cdbm.InstanceStatusReady)
 	assert.NotNil(t, instPartial)
 
 	assert.NotNil(t, testInstanceBuildInstanceInterface(t, dbSession, instFull.ID, nil, &vpcPrefixPrimaryFull.ID, nil, cdbm.InterfaceStatusPending))
@@ -6913,7 +6908,7 @@ func TestGetAllInstanceHandler_Handle(t *testing.T) {
 	instarr := []*cdbm.Instance{}
 	instsubarr := []*cdbm.Interface{}
 	for i := 11; i <= 35; i++ {
-		inst := testInstanceBuildInstance(t, dbSession, fmt.Sprintf("test-instance-%d", i), al1.ID, alc1.ID, tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1.ID, cdb.GetStrPtr(mc1.ID), &os1.ID, nil, cdbm.InstanceStatusReady)
+		inst := testInstanceBuildInstance(t, dbSession, fmt.Sprintf("test-instance-%d", i), tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1.ID, cdb.GetStrPtr(mc1.ID), &os1.ID, nil, cdbm.InstanceStatusReady)
 		assert.NotNil(t, inst)
 
 		instsub := testInstanceBuildInstanceInterface(t, dbSession, inst.ID, &subnet1.ID, nil, nil, cdbm.InterfaceStatusPending)
@@ -6945,7 +6940,7 @@ func TestGetAllInstanceHandler_Handle(t *testing.T) {
 	desd1 := common.TestBuildDpuExtensionServiceDeployment(t, dbSession, des1, inst1.ID, "1.0.0", cdbm.DpuExtensionServiceDeploymentStatusRunning, tnu1)
 	assert.NotNil(t, desd1)
 
-	inst2 := testInstanceBuildInstance(t, dbSession, "test-instance-vpc", al3.ID, alc2.ID, tn1.ID, ip.ID, st1.ID, &ist2.ID, vpc3.ID, cdb.GetStrPtr(mc2.ID), &os2.ID, cdb.GetStrPtr("test-ipxe-script"), cdbm.InstanceStatusReady)
+	inst2 := testInstanceBuildInstance(t, dbSession, "test-instance-vpc", tn1.ID, ip.ID, st1.ID, &ist2.ID, vpc3.ID, cdb.GetStrPtr(mc2.ID), &os2.ID, cdb.GetStrPtr("test-ipxe-script"), cdbm.InstanceStatusReady)
 	assert.NotNil(t, inst2)
 
 	instsub2 := testInstanceBuildInstanceInterface(t, dbSession, inst2.ID, &subnet1.ID, nil, nil, cdbm.InterfaceStatusPending)
@@ -6954,7 +6949,7 @@ func TestGetAllInstanceHandler_Handle(t *testing.T) {
 	common.TestBuildStatusDetail(t, dbSession, inst2.ID.String(), cdbm.InstanceStatusPending, cdb.GetStrPtr("request received, pending processing"))
 	common.TestBuildStatusDetail(t, dbSession, inst2.ID.String(), cdbm.InstanceStatusProvisioning, cdb.GetStrPtr("Instance is being provisioned on Site"))
 
-	inst4 := testInstanceBuildInstance(t, dbSession, "test-instance-no-site-id", al4.ID, alc3.ID, tn1.ID, ip.ID, st3.ID, &ist4.ID, vpc4.ID, cdb.GetStrPtr(mc3.ID), &os2.ID, cdb.GetStrPtr("test-ipxe-script"), cdbm.InstanceStatusReady)
+	inst4 := testInstanceBuildInstance(t, dbSession, "test-instance-no-site-id", tn1.ID, ip.ID, st3.ID, &ist4.ID, vpc4.ID, cdb.GetStrPtr(mc3.ID), &os2.ID, cdb.GetStrPtr("test-ipxe-script"), cdbm.InstanceStatusReady)
 	assert.NotNil(t, inst4)
 
 	mc4 := testInstanceBuildMachineWithID(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil, "machine-getall-4")
@@ -6981,11 +6976,11 @@ func TestGetAllInstanceHandler_Handle(t *testing.T) {
 	vpcPrimaryNone, vpcSecondaryNone, vpcPrefixPrimaryNone, vpcPrefixSecondaryNone := buildMultiVpcPair("test-getall-vpc-primary-none", "test-getall-vpc-secondary-none", "test-getall-vpcprefix-none-primary", "test-getall-vpcprefix-none-secondary", "192.184.0.0", "192.187.0.0")
 	vpcPrimaryPartial, vpcSecondaryPartial, vpcPrefixPrimaryPartial, vpcPrefixSecondaryPartial := buildMultiVpcPair("test-getall-vpc-primary-partial", "test-getall-vpc-secondary-partial", "test-getall-vpcprefix-partial-primary", "test-getall-vpcprefix-partial-secondary", "192.185.0.0", "192.188.0.0")
 
-	instFull := testInstanceBuildInstance(t, dbSession, "test-instance-vpc-full", al3.ID, alc2.ID, tn1.ID, ip.ID, st1.ID, &ist2.ID, vpcPrimaryFull.ID, cdb.GetStrPtr(mc4.ID), &os2.ID, cdb.GetStrPtr("test-ipxe-script"), cdbm.InstanceStatusReady)
+	instFull := testInstanceBuildInstance(t, dbSession, "test-instance-vpc-full", tn1.ID, ip.ID, st1.ID, &ist2.ID, vpcPrimaryFull.ID, cdb.GetStrPtr(mc4.ID), &os2.ID, cdb.GetStrPtr("test-ipxe-script"), cdbm.InstanceStatusReady)
 	assert.NotNil(t, instFull)
-	instNone := testInstanceBuildInstance(t, dbSession, "test-instance-vpc-none", al3.ID, alc2.ID, tn1.ID, ip.ID, st1.ID, &ist2.ID, vpcPrimaryNone.ID, cdb.GetStrPtr(mc5.ID), &os2.ID, cdb.GetStrPtr("test-ipxe-script"), cdbm.InstanceStatusReady)
+	instNone := testInstanceBuildInstance(t, dbSession, "test-instance-vpc-none", tn1.ID, ip.ID, st1.ID, &ist2.ID, vpcPrimaryNone.ID, cdb.GetStrPtr(mc5.ID), &os2.ID, cdb.GetStrPtr("test-ipxe-script"), cdbm.InstanceStatusReady)
 	assert.NotNil(t, instNone)
-	instPartial := testInstanceBuildInstance(t, dbSession, "test-instance-vpc-partial", al3.ID, alc2.ID, tn1.ID, ip.ID, st1.ID, &ist2.ID, vpcPrimaryPartial.ID, cdb.GetStrPtr(mc6.ID), &os2.ID, cdb.GetStrPtr("test-ipxe-script"), cdbm.InstanceStatusReady)
+	instPartial := testInstanceBuildInstance(t, dbSession, "test-instance-vpc-partial", tn1.ID, ip.ID, st1.ID, &ist2.ID, vpcPrimaryPartial.ID, cdb.GetStrPtr(mc6.ID), &os2.ID, cdb.GetStrPtr("test-ipxe-script"), cdbm.InstanceStatusReady)
 	assert.NotNil(t, instPartial)
 	assert.NotNil(t, testInstanceBuildInstanceInterface(t, dbSession, instFull.ID, nil, &vpcPrefixPrimaryFull.ID, nil, cdbm.InterfaceStatusPending))
 	assert.NotNil(t, testInstanceBuildInstanceInterface(t, dbSession, instFull.ID, nil, &vpcPrefixSecondaryFull.ID, nil, cdbm.InterfaceStatusPending))
@@ -8423,14 +8418,14 @@ func TestDeleteInstanceHandler_Handle(t *testing.T) {
 	mci1 := testInstanceBuildMachineInterface(t, dbSession, subnet1.ID, mc1.ID)
 	assert.NotNil(t, mci1)
 
-	inst1 := testInstanceBuildInstance(t, dbSession, "test-instance-2", al1.ID, alc1.ID, tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1.ID, cdb.GetStrPtr(mc1.ID), &os1.ID, nil, cdbm.InstanceStatusReady)
+	inst1 := testInstanceBuildInstance(t, dbSession, "test-instance-2", tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1.ID, cdb.GetStrPtr(mc1.ID), &os1.ID, nil, cdbm.InstanceStatusReady)
 	assert.NotNil(t, inst1)
 
-	instVpcNotReady := testInstanceBuildInstance(t, dbSession, "test-instance-2", al1.ID, alc1.ID, tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc2.ID, cdb.GetStrPtr(mc1.ID), &os1.ID, nil, cdbm.InstanceStatusReady)
-	assert.NotNil(t, inst1)
+	instVpcNotReady := testInstanceBuildInstance(t, dbSession, "test-instance-2", tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc2.ID, cdb.GetStrPtr(mc1.ID), &os1.ID, nil, cdbm.InstanceStatusReady)
+	assert.NotNil(t, instVpcNotReady)
 
-	instSiteNotReady := testInstanceBuildInstance(t, dbSession, "test-instance-2", al1.ID, alc1.ID, tn1.ID, ip.ID, stNotReady.ID, &ist1.ID, vpc3.ID, cdb.GetStrPtr(mc1.ID), &os1.ID, nil, cdbm.InstanceStatusReady)
-	assert.NotNil(t, inst1)
+	instSiteNotReady := testInstanceBuildInstance(t, dbSession, "test-instance-2", tn1.ID, ip.ID, stNotReady.ID, &ist1.ID, vpc3.ID, cdb.GetStrPtr(mc1.ID), &os1.ID, nil, cdbm.InstanceStatusReady)
+	assert.NotNil(t, instSiteNotReady)
 
 	instsub1 := testInstanceBuildInstanceInterface(t, dbSession, inst1.ID, &subnet1.ID, nil, nil, cdbm.InterfaceStatusPending)
 	assert.NotNil(t, instsub1)
@@ -9046,7 +9041,7 @@ func TestInstanceHandler_GetStatusDetails(t *testing.T) {
 	vpc1 := testInstanceBuildVPC(t, dbSession, "test-vpc-1", ip, tn1, st1, cdb.GetUUIDPtr(uuid.New()), nil, cdb.GetStrPtr(cdbm.VpcEthernetVirtualizer), nil, cdbm.VpcStatusReady, tnu1)
 	assert.NotNil(t, vpc1)
 
-	inst1 := testInstanceBuildInstance(t, dbSession, "test-instance-1", al1.ID, alc1.ID, tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1.ID, cdb.GetStrPtr(mc1.ID), &os1.ID, nil, cdbm.InstanceStatusReady)
+	inst1 := testInstanceBuildInstance(t, dbSession, "test-instance-1", tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1.ID, cdb.GetStrPtr(mc1.ID), &os1.ID, nil, cdbm.InstanceStatusReady)
 	assert.NotNil(t, inst1)
 
 	// add status details objects
