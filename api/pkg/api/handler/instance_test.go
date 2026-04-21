@@ -1422,6 +1422,41 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "test Instance create API endpoint success, allowUnhealthyMachine true, Machine has Error status, but controller is Ready",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIInstanceCreateRequest{
+					Name:        "test-instance-error-controller-ready",
+					Description: cdb.GetStrPtr("Error status with Ready controller state"),
+					TenantID:    tn1.ID.String(),
+					VpcID:       vpc1.ID.String(),
+					UserData:    cdb.GetStrPtr(""),
+					IpxeScript:  cdb.GetStrPtr(common.DefaultIpxeScript),
+					Interfaces: []model.APIInterfaceCreateOrUpdateRequest{
+						{
+							SubnetID: cdb.GetStrPtr(subnet1.ID.String()),
+						},
+					},
+					AllowUnhealthyMachine: cdb.GetBoolPtr(true),
+					PhoneHomeEnabled:      cdb.GetBoolPtr(false),
+				},
+				prepareReq: func(t *testing.T, req *model.APIInstanceCreateRequest) {
+					mc := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
+					testInstanceBuildMachineInstanceType(t, dbSession, mc, ist1)
+					testUpdateMachineStatusAndControllerState(t, dbSession, mc, cdbm.MachineStatusError, "Ready")
+					req.MachineID = cdb.GetStrPtr(mc.ID)
+				},
+				reqOrg:   tnOrg,
+				reqUser:  tnu1,
+				respCode: http.StatusCreated,
+			},
+			wantErr: false,
+		},
+		{
 			name: "test Instance create API endpoint success with secondary VPC Prefix interface",
 			fields: fields{
 				dbSession: dbSession,
@@ -3438,6 +3473,8 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 				// Check that the list of IDs match in size and order.
 				if len(tt.args.reqData.SSHKeyGroupIDs) > 0 {
 					assert.Equal(t, req.Config.Tenant.TenantKeysetIds, tt.args.reqData.SSHKeyGroupIDs)
+				} else {
+					assert.Empty(t, req.Config.Tenant.TenantKeysetIds)
 				}
 
 				// Check that the allow unhealthy machine flag is set correctly
