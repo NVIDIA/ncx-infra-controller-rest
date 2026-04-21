@@ -81,8 +81,11 @@ func testInstanceSetupSchema(t *testing.T, dbSession *cdb.Session) {
 	// create User table
 	err = dbSession.DB.ResetModel(context.Background(), (*cdbm.User)(nil))
 	assert.Nil(t, err)
-	// create Domain table
-	err = dbSession.DB.ResetModel(context.Background(), (*cdbm.Domain)(nil))
+	// create InstanceType table
+	err = dbSession.DB.ResetModel(context.Background(), (*cdbm.InstanceType)(nil))
+	assert.Nil(t, err)
+	// create IPBlock table
+	err = dbSession.DB.ResetModel(context.Background(), (*cdbm.IPBlock)(nil))
 	assert.Nil(t, err)
 	// create Allocation table
 	err = dbSession.DB.ResetModel(context.Background(), (*cdbm.Allocation)(nil))
@@ -96,14 +99,26 @@ func testInstanceSetupSchema(t *testing.T, dbSession *cdb.Session) {
 	// create NVLink Logical Partition table
 	err = dbSession.DB.ResetModel(context.Background(), (*cdbm.NVLinkLogicalPartition)(nil))
 	assert.Nil(t, err)
+	// create NetworkSecurityGroup table
+	err = dbSession.DB.ResetModel(context.Background(), (*cdbm.NetworkSecurityGroup)(nil))
+	assert.Nil(t, err)
 	// create VPC table
 	err = dbSession.DB.ResetModel(context.Background(), (*cdbm.Vpc)(nil))
+	assert.Nil(t, err)
+	// create VpcPrefix table
+	err = dbSession.DB.ResetModel(context.Background(), (*cdbm.VpcPrefix)(nil))
 	assert.Nil(t, err)
 	// create Subnet table
 	err = dbSession.DB.ResetModel(context.Background(), (*cdbm.Subnet)(nil))
 	assert.Nil(t, err)
 	// create Machine table
 	err = dbSession.DB.ResetModel(context.Background(), (*cdbm.Machine)(nil))
+	assert.Nil(t, err)
+	// create Machine Interface table
+	err = dbSession.DB.ResetModel(context.Background(), (*cdbm.MachineInterface)(nil))
+	assert.Nil(t, err)
+	// create Machine Capability table
+	err = dbSession.DB.ResetModel(context.Background(), (*cdbm.MachineCapability)(nil))
 	assert.Nil(t, err)
 	// create InstanceType table
 	err = dbSession.DB.ResetModel(context.Background(), (*cdbm.MachineInstanceType)(nil))
@@ -113,12 +128,6 @@ func testInstanceSetupSchema(t *testing.T, dbSession *cdb.Session) {
 	assert.Nil(t, err)
 	// create InfiniBandPartition table
 	err = dbSession.DB.ResetModel(context.Background(), (*cdbm.InfiniBandPartition)(nil))
-	assert.Nil(t, err)
-	// create InstanceType table
-	err = dbSession.DB.ResetModel(context.Background(), (*cdbm.InstanceType)(nil))
-	assert.Nil(t, err)
-	// create Interface table
-	err = dbSession.DB.ResetModel(context.Background(), (*cdbm.Interface)(nil))
 	assert.Nil(t, err)
 	// create Instance table
 	err = dbSession.DB.ResetModel(context.Background(), (*cdbm.Instance)(nil))
@@ -140,9 +149,6 @@ func testInstanceSetupSchema(t *testing.T, dbSession *cdb.Session) {
 	assert.Nil(t, err)
 	// create NVLink Interface table
 	err = dbSession.DB.ResetModel(context.Background(), (*cdbm.NVLinkInterface)(nil))
-	assert.Nil(t, err)
-	// create NetworkSecurityGroup table
-	err = dbSession.DB.ResetModel(context.Background(), (*cdbm.NetworkSecurityGroup)(nil))
 	assert.Nil(t, err)
 }
 
@@ -3047,12 +3053,29 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 			// Test that first Interface entry is physical
 			assert.True(t, rst.Interfaces[0].IsPhysical)
 
-			if len(tsc.Calls) > 0 && len(tt.args.reqData.SSHKeyGroupIDs) > 0 {
-
-				req := tsc.Calls[0].Arguments[3].(*cwssaws.InstanceAllocationRequest)
+			if len(tsc.Calls) > 0 && len(tsc.Calls[len(tsc.Calls)-1].Arguments) > 3 {
+				req := tsc.Calls[len(tsc.Calls)-1].Arguments[3].(*cwssaws.InstanceAllocationRequest)
 
 				// Check that the list of IDs match in size and order.
-				assert.Equal(t, req.Config.Tenant.TenantKeysetIds, tt.args.reqData.SSHKeyGroupIDs)
+				if len(tt.args.reqData.SSHKeyGroupIDs) > 0 {
+					assert.Equal(t, req.Config.Tenant.TenantKeysetIds, tt.args.reqData.SSHKeyGroupIDs)
+				} else {
+					assert.Empty(t, req.Config.Tenant.TenantKeysetIds)
+				}
+
+				// Check that if user did not send Instance Type ID, it is not sent to Core
+				if tt.args.reqData.InstanceTypeID == nil {
+					assert.Nil(t, req.InstanceTypeId)
+				} else {
+					assert.Equal(t, *tt.args.reqData.InstanceTypeID, *req.InstanceTypeId)
+				}
+
+				// Check that the allow unhealthy machine flag is set correctly
+				if tt.args.reqData.AllowUnhealthyMachine != nil && *tt.args.reqData.AllowUnhealthyMachine {
+					assert.True(t, req.AllowUnhealthyMachine, fmt.Sprintf("%v", req))
+				} else {
+					assert.False(t, req.AllowUnhealthyMachine, fmt.Sprintf("%v", req))
+				}
 			}
 
 			if len(tt.args.reqData.InfiniBandInterfaces) > 0 {
