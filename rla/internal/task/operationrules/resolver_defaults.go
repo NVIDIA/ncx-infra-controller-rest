@@ -87,7 +87,7 @@ func buildPowerOnRule() *OperationRule {
 					PostOperation: []ActionConfig{
 						{
 							Name:         ActionVerifyPowerStatus,
-							Timeout:      3 * time.Minute,
+							Timeout:      5 * time.Minute,
 							PollInterval: 10 * time.Second,
 							Parameters: map[string]any{
 								ParamExpectedStatus: "on",
@@ -111,7 +111,7 @@ func buildPowerOnRule() *OperationRule {
 					PostOperation: []ActionConfig{
 						{
 							Name:         ActionVerifyPowerStatus,
-							Timeout:      3 * time.Minute,
+							Timeout:      5 * time.Minute,
 							PollInterval: 10 * time.Second,
 							Parameters: map[string]any{
 								ParamExpectedStatus: "on",
@@ -151,7 +151,7 @@ func buildPowerOffRule() *OperationRule {
 					PostOperation: []ActionConfig{
 						{
 							Name:         ActionVerifyPowerStatus,
-							Timeout:      3 * time.Minute,
+							Timeout:      5 * time.Minute,
 							PollInterval: 10 * time.Second,
 							Parameters: map[string]any{
 								ParamExpectedStatus: "off",
@@ -175,7 +175,7 @@ func buildPowerOffRule() *OperationRule {
 					PostOperation: []ActionConfig{
 						{
 							Name:         ActionVerifyPowerStatus,
-							Timeout:      3 * time.Minute,
+							Timeout:      5 * time.Minute,
 							PollInterval: 10 * time.Second,
 							Parameters: map[string]any{
 								ParamExpectedStatus: "off",
@@ -222,7 +222,7 @@ func buildRestartRule() *OperationRule {
 					PostOperation: []ActionConfig{
 						{
 							Name:         ActionVerifyPowerStatus,
-							Timeout:      5 * time.Minute,
+							Timeout:      10 * time.Minute,
 							PollInterval: 15 * time.Second,
 							Parameters: map[string]any{
 								ParamExpectedStatus: "off",
@@ -249,7 +249,7 @@ func buildRestartRule() *OperationRule {
 					PostOperation: []ActionConfig{
 						{
 							Name:         ActionVerifyPowerStatus,
-							Timeout:      5 * time.Minute,
+							Timeout:      10 * time.Minute,
 							PollInterval: 15 * time.Second,
 							Parameters: map[string]any{
 								ParamExpectedStatus: "off",
@@ -277,8 +277,8 @@ func buildRestartRule() *OperationRule {
 					PostOperation: []ActionConfig{
 						{
 							Name:         ActionVerifyPowerStatus,
-							Timeout:      3 * time.Minute,
-							PollInterval: 10 * time.Second,
+							Timeout:      10 * time.Minute,
+							PollInterval: 15 * time.Second,
 							Parameters: map[string]any{
 								ParamExpectedStatus: "on",
 							},
@@ -304,8 +304,8 @@ func buildRestartRule() *OperationRule {
 					PostOperation: []ActionConfig{
 						{
 							Name:         ActionVerifyPowerStatus,
-							Timeout:      3 * time.Minute,
-							PollInterval: 10 * time.Second,
+							Timeout:      10 * time.Minute,
+							PollInterval: 15 * time.Second,
 							Parameters: map[string]any{
 								ParamExpectedStatus: "on",
 							},
@@ -529,7 +529,7 @@ func buildForcePowerOnRule() *OperationRule {
 					ComponentType: devicetypes.ComponentTypeNVLSwitch,
 					Stage:         3,
 					MaxParallel:   0,
-					Timeout:       2 * time.Minute,
+					Timeout:       4 * time.Minute,
 					RetryPolicy: &RetryPolicy{
 						MaxAttempts:        2,
 						InitialInterval:    5 * time.Second,
@@ -537,7 +537,7 @@ func buildForcePowerOnRule() *OperationRule {
 					},
 					MainOperation: ActionConfig{
 						Name:         ActionVerifyPowerStatus,
-						Timeout:      1 * time.Minute,
+						Timeout:      3 * time.Minute,
 						PollInterval: 5 * time.Second,
 						Parameters: map[string]any{
 							ParamExpectedStatus: "on",
@@ -548,7 +548,7 @@ func buildForcePowerOnRule() *OperationRule {
 					ComponentType: devicetypes.ComponentTypeCompute,
 					Stage:         3, // Parallel with NVLSwitch
 					MaxParallel:   0,
-					Timeout:       2 * time.Minute,
+					Timeout:       4 * time.Minute,
 					RetryPolicy: &RetryPolicy{
 						MaxAttempts:        2,
 						InitialInterval:    5 * time.Second,
@@ -556,7 +556,7 @@ func buildForcePowerOnRule() *OperationRule {
 					},
 					MainOperation: ActionConfig{
 						Name:         ActionVerifyPowerStatus,
-						Timeout:      1 * time.Minute,
+						Timeout:      3 * time.Minute,
 						PollInterval: 5 * time.Second,
 						Parameters: map[string]any{
 							ParamExpectedStatus: "on",
@@ -629,7 +629,7 @@ func buildForcePowerOffRule() *OperationRule {
 					ComponentType: devicetypes.ComponentTypeNVLSwitch,
 					Stage:         3,
 					MaxParallel:   0,
-					Timeout:       2 * time.Minute,
+					Timeout:       4 * time.Minute,
 					RetryPolicy: &RetryPolicy{
 						MaxAttempts:        2,
 						InitialInterval:    5 * time.Second,
@@ -637,7 +637,7 @@ func buildForcePowerOffRule() *OperationRule {
 					},
 					MainOperation: ActionConfig{
 						Name:         ActionVerifyPowerStatus,
-						Timeout:      1 * time.Minute,
+						Timeout:      3 * time.Minute,
 						PollInterval: 5 * time.Second,
 						Parameters: map[string]any{
 							ParamExpectedStatus: "off",
@@ -648,7 +648,7 @@ func buildForcePowerOffRule() *OperationRule {
 					ComponentType: devicetypes.ComponentTypeCompute,
 					Stage:         3, // Parallel with NVLSwitch
 					MaxParallel:   0,
-					Timeout:       2 * time.Minute,
+					Timeout:       4 * time.Minute,
 					RetryPolicy: &RetryPolicy{
 						MaxAttempts:        2,
 						InitialInterval:    5 * time.Second,
@@ -656,7 +656,7 @@ func buildForcePowerOffRule() *OperationRule {
 					},
 					MainOperation: ActionConfig{
 						Name:         ActionVerifyPowerStatus,
-						Timeout:      1 * time.Minute,
+						Timeout:      3 * time.Minute,
 						PollInterval: 5 * time.Second,
 						Parameters: map[string]any{
 							ParamExpectedStatus: "off",
@@ -1001,7 +1001,7 @@ func buildForceRestartRule() *OperationRule {
 					ComponentType: devicetypes.ComponentTypeNVLSwitch,
 					Stage:         3,
 					MaxParallel:   0,
-					Timeout:       6 * time.Minute,
+					Timeout:       4 * time.Minute,
 					RetryPolicy: &RetryPolicy{
 						MaxAttempts:        2,
 						InitialInterval:    5 * time.Second,
@@ -1009,7 +1009,7 @@ func buildForceRestartRule() *OperationRule {
 					},
 					MainOperation: ActionConfig{
 						Name:         ActionVerifyPowerStatus,
-						Timeout:      5 * time.Minute,
+						Timeout:      3 * time.Minute,
 						PollInterval: 15 * time.Second,
 						Parameters: map[string]any{
 							ParamExpectedStatus: "off",
@@ -1020,7 +1020,7 @@ func buildForceRestartRule() *OperationRule {
 					ComponentType: devicetypes.ComponentTypeCompute,
 					Stage:         3, // Parallel with NVLSwitch
 					MaxParallel:   0,
-					Timeout:       6 * time.Minute,
+					Timeout:       4 * time.Minute,
 					RetryPolicy: &RetryPolicy{
 						MaxAttempts:        2,
 						InitialInterval:    5 * time.Second,
@@ -1028,7 +1028,7 @@ func buildForceRestartRule() *OperationRule {
 					},
 					MainOperation: ActionConfig{
 						Name:         ActionVerifyPowerStatus,
-						Timeout:      5 * time.Minute,
+						Timeout:      3 * time.Minute,
 						PollInterval: 15 * time.Second,
 						Parameters: map[string]any{
 							ParamExpectedStatus: "off",
@@ -1092,7 +1092,7 @@ func buildForceRestartRule() *OperationRule {
 					ComponentType: devicetypes.ComponentTypeNVLSwitch,
 					Stage:         6,
 					MaxParallel:   0,
-					Timeout:       2 * time.Minute,
+					Timeout:       4 * time.Minute,
 					RetryPolicy: &RetryPolicy{
 						MaxAttempts:        2,
 						InitialInterval:    5 * time.Second,
@@ -1100,7 +1100,7 @@ func buildForceRestartRule() *OperationRule {
 					},
 					MainOperation: ActionConfig{
 						Name:         ActionVerifyPowerStatus,
-						Timeout:      1 * time.Minute,
+						Timeout:      3 * time.Minute,
 						PollInterval: 5 * time.Second,
 						Parameters: map[string]any{
 							ParamExpectedStatus: "on",
@@ -1111,7 +1111,7 @@ func buildForceRestartRule() *OperationRule {
 					ComponentType: devicetypes.ComponentTypeCompute,
 					Stage:         6, // Parallel with NVLSwitch
 					MaxParallel:   0,
-					Timeout:       2 * time.Minute,
+					Timeout:       4 * time.Minute,
 					RetryPolicy: &RetryPolicy{
 						MaxAttempts:        2,
 						InitialInterval:    5 * time.Second,
@@ -1119,7 +1119,7 @@ func buildForceRestartRule() *OperationRule {
 					},
 					MainOperation: ActionConfig{
 						Name:         ActionVerifyPowerStatus,
-						Timeout:      1 * time.Minute,
+						Timeout:      3 * time.Minute,
 						PollInterval: 5 * time.Second,
 						Parameters: map[string]any{
 							ParamExpectedStatus: "on",
