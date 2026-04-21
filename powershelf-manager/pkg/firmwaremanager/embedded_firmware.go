@@ -102,7 +102,8 @@ func (ff *FirmwareFetcher) getPmcFirmwareEntries(v vendor.Vendor) ([]FirmwareEnt
 		}
 	}
 
-	return nil, fmt.Errorf("no firmware found for vendor %s out of vendors %v", v.Name, vendors)
+	log.Printf("no embedded firmware found for vendor %s; firmware operations will be unavailable for this vendor", v.Name)
+	return nil, nil
 }
 
 // open opens a file by path.

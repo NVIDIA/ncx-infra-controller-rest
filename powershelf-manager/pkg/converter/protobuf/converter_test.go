@@ -53,6 +53,10 @@ func TestPMCVendorFrom(t *testing.T) {
 			in:       pb.PMCVendor_PMC_TYPE_LITEON,
 			expected: vendor.VendorCodeLiteon,
 		},
+		"delta -> delta": {
+			in:       pb.PMCVendor_PMC_TYPE_DELTA,
+			expected: vendor.VendorCodeDelta,
+		},
 		"unmapped enum -> unsupported": {
 			in:       pb.PMCVendor(999),
 			expected: vendor.VendorCodeUnsupported,
@@ -81,6 +85,10 @@ func TestVendorCodeTo(t *testing.T) {
 		"liteon -> liteon": {
 			in:       vendor.VendorCodeLiteon,
 			expected: pb.PMCVendor_PMC_TYPE_LITEON,
+		},
+		"delta -> delta": {
+			in:       vendor.VendorCodeDelta,
+			expected: pb.PMCVendor_PMC_TYPE_DELTA,
 		},
 		"unmapped code -> unknown": {
 			in:       vendor.VendorCodeMax,

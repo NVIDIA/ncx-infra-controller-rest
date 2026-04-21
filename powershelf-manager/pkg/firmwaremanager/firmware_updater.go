@@ -64,6 +64,10 @@ func newFirmwareUpdater(v vendor.Vendor, firmwareDir string) (*FirmwareUpdater, 
 		return nil, err
 	}
 
+	if len(repo.upgrades) == 0 {
+		log.Printf("no firmware artifacts available for vendor %s; firmware operations will be unavailable", v.Name)
+	}
+
 	rule, err := newUpgradeRule(v)
 	if err != nil {
 		return nil, err

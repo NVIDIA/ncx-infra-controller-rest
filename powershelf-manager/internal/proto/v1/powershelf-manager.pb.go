@@ -29,6 +29,7 @@ type PMCVendor int32
 const (
 	PMCVendor_PMC_TYPE_UNKNOWN PMCVendor = 0
 	PMCVendor_PMC_TYPE_LITEON  PMCVendor = 1
+	PMCVendor_PMC_TYPE_DELTA   PMCVendor = 2
 )
 
 // Enum value maps for PMCVendor.
@@ -36,10 +37,12 @@ var (
 	PMCVendor_name = map[int32]string{
 		0: "PMC_TYPE_UNKNOWN",
 		1: "PMC_TYPE_LITEON",
+		2: "PMC_TYPE_DELTA",
 	}
 	PMCVendor_value = map[string]int32{
 		"PMC_TYPE_UNKNOWN": 0,
 		"PMC_TYPE_LITEON":  1,
+		"PMC_TYPE_DELTA":   2,
 	}
 )
 
@@ -2199,10 +2202,11 @@ const file_internal_proto_v1_powershelf_manager_proto_rawDesc = "" +
 	"\tcomponent\x18\x02 \x01(\x0e2\x17.v1.PowershelfComponentR\tcomponent\x12-\n" +
 	"\x05state\x18\x03 \x01(\x0e2\x17.v1.FirmwareUpdateStateR\x05state\x12&\n" +
 	"\x06status\x18\x04 \x01(\x0e2\x0e.v1.StatusCodeR\x06status\x12\x14\n" +
-	"\x05error\x18\x05 \x01(\tR\x05error*6\n" +
+	"\x05error\x18\x05 \x01(\tR\x05error*J\n" +
 	"\tPMCVendor\x12\x14\n" +
 	"\x10PMC_TYPE_UNKNOWN\x10\x00\x12\x13\n" +
-	"\x0fPMC_TYPE_LITEON\x10\x01*C\n" +
+	"\x0fPMC_TYPE_LITEON\x10\x01\x12\x12\n" +
+	"\x0ePMC_TYPE_DELTA\x10\x02*C\n" +
 	"\n" +
 	"StatusCode\x12\v\n" +
 	"\aSUCCESS\x10\x00\x12\x14\n" +
