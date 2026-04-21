@@ -603,8 +603,15 @@ func (s *Session) fetchTenantAccounts(ctx context.Context) ([]NamedItem, error) 
 	q := map[string]string{}
 	if id, err := s.getInfrastructureProviderID(ctx); err == nil {
 		q["infrastructureProviderId"] = id
-	} else if id, err := s.getTenantID(ctx); err == nil {
-		q["tenantId"] = id
+	} else {
+		tenantID, tenantErr := s.getTenantID(ctx)
+		if tenantErr != nil {
+			return nil, fmt.Errorf(
+				"resolving tenant-account scope: infrastructure provider: %v; tenant: %w",
+				err, tenantErr,
+			)
+		}
+		q["tenantId"] = tenantID
 	}
 	items, err := s.fetchAll(apiPath(s, "tenant/account"), q)
 	if err != nil {
