@@ -137,7 +137,7 @@ func resolveComponentTargetSpec(
 	for _, ct := range components {
 		comp, err := fetchComponentTarget(ctx, fetcher, &ct)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get component by UUID %s: %w", ct.UUID, err)
+			return nil, fmt.Errorf("failed to get component target %s: %w", ct.TargetIdentifier(), err)
 		}
 		componentObjs = append(componentObjs, comp)
 	}
