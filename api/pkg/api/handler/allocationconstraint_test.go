@@ -69,6 +69,7 @@ func TestAllocationConstraintHandler_Update(t *testing.T) {
 	assert.NotNil(t, site)
 
 	tenant1 := common.TestBuildTenant(t, dbSession, "test-tenant-1", tnOrg1, tnu)
+	tenant2 := common.TestBuildTenant(t, dbSession, "test-tenant-2", tnOrg2, tnu)
 
 	cfg := common.GetTestConfig()
 
@@ -85,7 +86,7 @@ func TestAllocationConstraintHandler_Update(t *testing.T) {
 	}, ipu)
 
 	// build some machines, and map the machines to the instancetypes
-	for i := 1; i <= 25; i++ {
+	for i := 1; i <= 30; i++ {
 		mc := testInstanceBuildMachine(t, dbSession, ip.ID, site.ID, cdb.GetBoolPtr(false), nil)
 		assert.NotNil(t, mc)
 		mcinst1 := testInstanceBuildMachineInstanceType(t, dbSession, mc, it1)
@@ -120,10 +121,13 @@ func TestAllocationConstraintHandler_Update(t *testing.T) {
 
 	acGoodIT2 := model.APIAllocationConstraintCreateRequest{ResourceType: cdbm.AllocationResourceTypeInstanceType, ResourceTypeID: it2.ID.String(), ConstraintType: cdbm.AllocationConstraintTypeReserved, ConstraintValue: 22}
 	acGoodIPB2 := model.APIAllocationConstraintCreateRequest{ResourceType: cdbm.AllocationResourceTypeIPBlock, ResourceTypeID: ipb2.ID.String(), ConstraintType: cdbm.AllocationConstraintTypeReserved, ConstraintValue: 24}
+	acGoodITTenant2 := model.APIAllocationConstraintCreateRequest{ResourceType: cdbm.AllocationResourceTypeInstanceType, ResourceTypeID: it1.ID.String(), ConstraintType: cdbm.AllocationConstraintTypeReserved, ConstraintValue: 7}
 
 	okABodyIT2, err := json.Marshal(model.APIAllocationCreateRequest{Name: "okit2", Description: cdb.GetStrPtr(""), TenantID: tenant1.ID.String(), SiteID: site.ID.String(), AllocationConstraints: []model.APIAllocationConstraintCreateRequest{acGoodIT2}})
 	assert.Nil(t, err)
 	okABodyIPB2, err := json.Marshal(model.APIAllocationCreateRequest{Name: "okipb2", Description: cdb.GetStrPtr(""), TenantID: tenant1.ID.String(), SiteID: site.ID.String(), AllocationConstraints: []model.APIAllocationConstraintCreateRequest{acGoodIPB2}})
+	assert.Nil(t, err)
+	okABodyITTenant2, err := json.Marshal(model.APIAllocationCreateRequest{Name: "okit-tenant-2", Description: cdb.GetStrPtr(""), TenantID: tenant2.ID.String(), SiteID: site.ID.String(), AllocationConstraints: []model.APIAllocationConstraintCreateRequest{acGoodITTenant2}})
 	assert.Nil(t, err)
 
 	// Allocation 1
@@ -151,6 +155,9 @@ func TestAllocationConstraintHandler_Update(t *testing.T) {
 	assert.NotNil(t, aipID2)
 	acipID2 := uuid.MustParse(aIPB2.AllocationConstraints[0].ID)
 	assert.NotNil(t, acipID2)
+
+	aITTenant2 := testCreateAllocation(t, dbSession, ipamStorage, ipu, ipOrg1, string(okABodyITTenant2))
+	assert.NotNil(t, aITTenant2)
 
 	// Get Allocation Constraints for above Allocations
 	acDAO := cdbm.NewAllocationConstraintDAO(dbSession)
@@ -205,8 +212,6 @@ func TestAllocationConstraintHandler_Update(t *testing.T) {
 			ctx, nil,
 			cdbm.InstanceCreateInput{
 				Name:                     fmt.Sprintf("testInst-%v", i),
-				AllocationID:             &aID2,
-				AllocationConstraintID:   &acID2,
 				TenantID:                 tenant1.ID,
 				InfrastructureProviderID: ip.ID,
 				SiteID:                   site.ID,
@@ -466,11 +471,11 @@ func TestAllocationConstraintHandler_Update(t *testing.T) {
 			reqOrgName:              ipOrg1,
 			reqBody:                 string(okBodyIT3),
 			user:                    ipu,
-			requestedAID:            acsit2[0].AllocationID,
-			requestedACS:            acsit2[0],
-			acID:                    acsit2[0].ID.String(),
+			requestedAID:            acsit1[0].AllocationID,
+			requestedACS:            acsit1[0],
+			acID:                    acsit1[0].ID.String(),
 			expectedErr:             true,
-			expectedErrMessage:      "Cannot update AllocationConstraint, more Instances exist than requested constraint for this Allocation",
+			expectedErrMessage:      "Updating this Allocation Constraint as specified would result in 1 total Machines for Instance Type: testIT allocated to Tenant, less than Tenant's active Instance count: 22 for the Instance Type",
 			expectedStatus:          http.StatusBadRequest,
 			expectedConstraintValue: 0,
 		},

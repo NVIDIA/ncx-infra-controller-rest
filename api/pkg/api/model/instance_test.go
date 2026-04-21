@@ -46,7 +46,6 @@ func TestNewAPIInstance(t *testing.T) {
 		ID:                       uuid.New(),
 		Name:                     "test-name",
 		TenantID:                 uuid.New(),
-		AllocationID:             cdb.GetUUIDPtr(uuid.New()),
 		InfrastructureProviderID: dbs.InfrastructureProviderID,
 		SiteID:                   dbs.ID,
 		InstanceTypeID:           &instanceTypeID,
@@ -148,7 +147,6 @@ func TestNewAPIInstance(t *testing.T) {
 		ID:                       uuid.New(),
 		Name:                     "test-name",
 		TenantID:                 uuid.New(),
-		AllocationID:             cdb.GetUUIDPtr(uuid.New()),
 		InfrastructureProviderID: uuid.New(),
 		SiteID:                   uuid.New(),
 		InstanceTypeID:           &instanceTypeID,
@@ -383,7 +381,6 @@ func TestAPIInstanceCreateRequest_Validate(t *testing.T) {
 		Name                           string
 		Description                    *string
 		TenantID                       string
-		AllocationID                   string
 		InstanceTypeID                 string
 		VpcID                          string
 		SecondaryVpcIDs                []string
@@ -585,7 +582,6 @@ func TestAPIInstanceCreateRequest_Validate(t *testing.T) {
 			fields: fields{
 				Name:              "test-name",
 				TenantID:          uuid.NewString(),
-				AllocationID:      uuid.NewString(),
 				InstanceTypeID:    uuid.NewString(),
 				VpcID:             "invalid-uuid",
 				OperatingSystemID: cdb.GetStrPtr(uuid.NewString()),
@@ -603,7 +599,6 @@ func TestAPIInstanceCreateRequest_Validate(t *testing.T) {
 			fields: fields{
 				Name:              "test-name",
 				TenantID:          uuid.NewString(),
-				AllocationID:      uuid.NewString(),
 				InstanceTypeID:    uuid.NewString(),
 				VpcID:             uuid.NewString(),
 				OperatingSystemID: cdb.GetStrPtr(uuid.NewString()),
@@ -621,7 +616,6 @@ func TestAPIInstanceCreateRequest_Validate(t *testing.T) {
 			fields: fields{
 				Name:              "test-name",
 				TenantID:          uuid.NewString(),
-				AllocationID:      uuid.NewString(),
 				InstanceTypeID:    uuid.NewString(),
 				VpcID:             uuid.NewString(),
 				OperatingSystemID: cdb.GetStrPtr(uuid.NewString()),
@@ -635,7 +629,6 @@ func TestAPIInstanceCreateRequest_Validate(t *testing.T) {
 			fields: fields{
 				Name:              "test-name",
 				TenantID:          uuid.NewString(),
-				AllocationID:      uuid.NewString(),
 				InstanceTypeID:    uuid.NewString(),
 				VpcID:             uuid.NewString(),
 				OperatingSystemID: cdb.GetStrPtr(uuid.NewString()),
@@ -658,7 +651,6 @@ func TestAPIInstanceCreateRequest_Validate(t *testing.T) {
 			fields: fields{
 				Name:              "test-name",
 				TenantID:          uuid.NewString(),
-				AllocationID:      uuid.NewString(),
 				InstanceTypeID:    uuid.NewString(),
 				VpcID:             uuid.NewString(),
 				OperatingSystemID: cdb.GetStrPtr(uuid.NewString()),
@@ -682,7 +674,6 @@ func TestAPIInstanceCreateRequest_Validate(t *testing.T) {
 			fields: fields{
 				Name:              "test-name",
 				TenantID:          uuid.NewString(),
-				AllocationID:      uuid.NewString(),
 				InstanceTypeID:    uuid.NewString(),
 				VpcID:             uuid.NewString(),
 				OperatingSystemID: cdb.GetStrPtr(uuid.NewString()),
@@ -710,7 +701,6 @@ func TestAPIInstanceCreateRequest_Validate(t *testing.T) {
 			fields: fields{
 				Name:              "test-name",
 				TenantID:          uuid.NewString(),
-				AllocationID:      uuid.NewString(),
 				InstanceTypeID:    uuid.NewString(),
 				VpcID:             uuid.NewString(),
 				OperatingSystemID: cdb.GetStrPtr(uuid.NewString()),
@@ -723,7 +713,6 @@ func TestAPIInstanceCreateRequest_Validate(t *testing.T) {
 			fields: fields{
 				Name:              "test-name",
 				TenantID:          uuid.NewString(),
-				AllocationID:      uuid.NewString(),
 				InstanceTypeID:    uuid.NewString(),
 				VpcID:             uuid.NewString(),
 				OperatingSystemID: cdb.GetStrPtr(uuid.NewString()),
@@ -741,7 +730,6 @@ func TestAPIInstanceCreateRequest_Validate(t *testing.T) {
 			fields: fields{
 				Name:              "test-name",
 				TenantID:          uuid.NewString(),
-				AllocationID:      uuid.NewString(),
 				InstanceTypeID:    uuid.NewString(),
 				VpcID:             uuid.NewString(),
 				OperatingSystemID: cdb.GetStrPtr(uuid.NewString()),
@@ -760,7 +748,6 @@ func TestAPIInstanceCreateRequest_Validate(t *testing.T) {
 			fields: fields{
 				Name:              "test-name",
 				TenantID:          uuid.NewString(),
-				AllocationID:      uuid.NewString(),
 				InstanceTypeID:    uuid.NewString(),
 				VpcID:             uuid.NewString(),
 				OperatingSystemID: cdb.GetStrPtr(uuid.NewString()),
@@ -781,7 +768,6 @@ func TestAPIInstanceCreateRequest_Validate(t *testing.T) {
 			fields: fields{
 				Name:           "test-name",
 				TenantID:       uuid.NewString(),
-				AllocationID:   uuid.NewString(),
 				InstanceTypeID: uuid.NewString(),
 				VpcID:          uuid.NewString(),
 				IpxeScript:     cdb.GetStrPtr("test-ipxe-script"),
@@ -799,7 +785,6 @@ func TestAPIInstanceCreateRequest_Validate(t *testing.T) {
 			fields: fields{
 				Name:           "test-name",
 				TenantID:       uuid.NewString(),
-				AllocationID:   uuid.NewString(),
 				InstanceTypeID: uuid.NewString(),
 				VpcID:          uuid.NewString(),
 				IpxeScript:     cdb.GetStrPtr(""),
@@ -919,7 +904,6 @@ func TestAPIInstanceCreateRequest_Validate(t *testing.T) {
 			fields: fields{
 				Name:              "test-name",
 				TenantID:          uuid.NewString(),
-				AllocationID:      uuid.NewString(),
 				InstanceTypeID:    uuid.NewString(),
 				VpcID:             uuid.NewString(),
 				OperatingSystemID: cdb.GetStrPtr(uuid.NewString()),
@@ -943,7 +927,6 @@ func TestAPIInstanceCreateRequest_Validate(t *testing.T) {
 			fields: fields{
 				Name:              "test-name",
 				TenantID:          uuid.NewString(),
-				AllocationID:      uuid.NewString(),
 				InstanceTypeID:    uuid.NewString(),
 				VpcID:             uuid.NewString(),
 				OperatingSystemID: cdb.GetStrPtr(uuid.NewString()),
@@ -1070,7 +1053,6 @@ func TestAPIInstanceCreateRequest_ValidateAndSetOperatingSystemData(t *testing.T
 		Name                     string
 		Description              *string
 		TenantID                 string
-		AllocationID             string
 		InstanceTypeID           string
 		VpcID                    string
 		OperatingSystemID        *string

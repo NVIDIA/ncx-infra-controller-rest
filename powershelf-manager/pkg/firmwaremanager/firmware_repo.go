@@ -37,6 +37,12 @@ type FirmwareRepo struct {
 // summary returns a human-readable report of supported versions and artifacts.
 func (repo *FirmwareRepo) summary() (string, error) {
 	sb := strings.Builder{}
+
+	if len(repo.upgrades) == 0 {
+		sb.WriteString("Firmware Repo has no firmware artifacts available\n")
+		return sb.String(), nil
+	}
+
 	sb.WriteString(fmt.Sprintf("Firmware Repo supports upgrading powershelves starting at PMC fw version between %s to %s (inclusive)\n", repo.minStartingFwVersion.String(), repo.maxStartingFwVersion.String()))
 
 	for i, upgrade := range repo.upgrades {
@@ -86,6 +92,10 @@ func newFirmwareRepo(v vendor.Vendor, firmwareDir string) (*FirmwareRepo, error)
 	fw_entries, err := ff.getPmcFirmwareEntries(v)
 	if err != nil {
 		return nil, err
+	}
+
+	if fw_entries == nil {
+		return &FirmwareRepo{ff: ff}, nil
 	}
 
 	var upgrades []FirmwareUpgrade = make([]FirmwareUpgrade, 0, len(fw_entries))

@@ -644,6 +644,7 @@ func (rs *RLAServerImpl) PowerOnRack(
 		req.GetTargetSpec(),
 		req.GetDescription(),
 		req.GetQueueOptions(),
+		req.GetRuleId(),
 		&operations.PowerControlTaskInfo{
 			Operation: operations.PowerOperationPowerOn,
 		},
@@ -663,6 +664,7 @@ func (rs *RLAServerImpl) PowerOffRack(
 		req.GetTargetSpec(),
 		req.GetDescription(),
 		req.GetQueueOptions(),
+		req.GetRuleId(),
 		&operations.PowerControlTaskInfo{
 			Operation: op,
 			Forced:    req.GetForced(),
@@ -683,6 +685,7 @@ func (rs *RLAServerImpl) PowerResetRack(
 		req.GetTargetSpec(),
 		req.GetDescription(),
 		req.GetQueueOptions(),
+		req.GetRuleId(),
 		&operations.PowerControlTaskInfo{
 			Operation: op,
 			Forced:    req.GetForced(),
@@ -707,13 +710,17 @@ func (rs *RLAServerImpl) BringUpRack(
 		)
 	}
 
-	info := &operations.BringUpTaskInfo{}
+	info := &operations.BringUpTaskInfo{
+		RuleID: protobuf.UUIDStringFrom(req.GetRuleId()),
+	}
 	opReq, err := rs.convertTargetSpecToOperationRequest(
 		targetSpec, req.GetDescription(), info,
 	)
 	if err != nil {
 		return nil, err
 	}
+
+	opReq.RuleID = protobuf.OptionalUUIDFrom(req.GetRuleId())
 
 	taskIDs, err := rs.taskManager.SubmitTask(ctx, opReq)
 	if err != nil {
@@ -748,7 +755,9 @@ func (rs *RLAServerImpl) IngestRack(
 		return nil, errors.New("target_spec is required")
 	}
 
-	info := &operations.BringUpTaskInfo{}
+	info := &operations.BringUpTaskInfo{
+		RuleID: protobuf.UUIDStringFrom(req.GetRuleId()),
+	}
 
 	opReq, err := rs.convertTargetSpecToOperationRequest(
 		targetSpec, req.GetDescription(), info,
@@ -760,6 +769,7 @@ func (rs *RLAServerImpl) IngestRack(
 	// Override the operation code so the rule resolver picks the
 	// ingestion-only rule instead of the full bring-up rule.
 	opReq.Operation.Code = taskcommon.OpCodeIngest
+	opReq.RuleID = protobuf.OptionalUUIDFrom(req.GetRuleId())
 
 	taskIDs, err := rs.taskManager.SubmitTask(ctx, opReq)
 	if err != nil {
@@ -780,6 +790,7 @@ func (rs *RLAServerImpl) handlePowerControlTask(
 	targetSpec *pb.OperationTargetSpec,
 	description string,
 	queueOptions *pb.QueueOptions,
+	pbRuleID *pb.UUID,
 	info *operations.PowerControlTaskInfo,
 ) (*pb.SubmitTaskResponse, error) {
 	if rs.taskManager == nil {
@@ -790,6 +801,8 @@ func (rs *RLAServerImpl) handlePowerControlTask(
 		return nil, errors.New("target_spec is required")
 	}
 
+	info.RuleID = protobuf.UUIDStringFrom(pbRuleID)
+
 	// Convert pb.OperationTargetSpec to internal operation.Request
 	req, err := rs.convertTargetSpecToOperationRequest(targetSpec, description, info)
 	if err != nil {
@@ -797,6 +810,7 @@ func (rs *RLAServerImpl) handlePowerControlTask(
 	}
 
 	req.ConflictStrategy, req.QueueTimeout = protobuf.QueueOptionsFrom(queueOptions)
+	req.RuleID = protobuf.OptionalUUIDFrom(pbRuleID)
 
 	// Task Manager handles resolve + split by rack + create tasks
 	taskIDs, err := rs.taskManager.SubmitTask(ctx, req)
@@ -1296,6 +1310,7 @@ func (rs *RLAServerImpl) UpgradeFirmware(
 	info := &operations.FirmwareControlTaskInfo{
 		Operation:     operations.FirmwareOperationUpgrade,
 		TargetVersion: req.GetTargetVersion(),
+		RuleID:        protobuf.UUIDStringFrom(req.GetRuleId()),
 	}
 
 	// Parse optional time parameters for scheduled upgrade
@@ -1315,6 +1330,7 @@ func (rs *RLAServerImpl) UpgradeFirmware(
 	opReq.ConflictStrategy, opReq.QueueTimeout = protobuf.QueueOptionsFrom(
 		req.GetQueueOptions(),
 	)
+	opReq.RuleID = protobuf.OptionalUUIDFrom(req.GetRuleId())
 
 	// Task Manager handles resolve + split by rack + create tasks
 	taskIDs, err := rs.taskManager.SubmitTask(ctx, opReq)

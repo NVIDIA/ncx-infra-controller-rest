@@ -84,7 +84,7 @@ func TestSSHKeyGroupInstanceAssociationSQLDAO_CreateFromParams(t *testing.T) {
 	instanceType := testInstanceBuildInstanceType(t, dbSession, ip, "testInstanceType")
 	machine := testMachineBuildMachine(t, dbSession, ip.ID, site.ID, &instanceType.ID, db.GetStrPtr("mcTypeTest"))
 	allocation := testInstanceBuildAllocation(t, dbSession, ip, tenant, site, "testAllocation")
-	allocationConstraint := testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
+	_ = testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
 	operatingSystem := testInstanceBuildOperatingSystem(t, dbSession, "testOS")
 	sshKeyGroup1 := testBuildSSHKeyGroup(t, dbSession, "test1", db.GetStrPtr("test1"), "tesorg", tenant.ID, nil, SSHKeyGroupStatusSyncing, user.ID)
 	sshKeyGroup2 := testBuildSSHKeyGroup(t, dbSession, "test2", db.GetStrPtr("test2"), "tesorg", tenant.ID, nil, SSHKeyGroupStatusSyncing, user.ID)
@@ -93,8 +93,6 @@ func TestSSHKeyGroupInstanceAssociationSQLDAO_CreateFromParams(t *testing.T) {
 		ctx, nil,
 		InstanceCreateInput{
 			Name:                     "test1",
-			AllocationID:             &allocation.ID,
-			AllocationConstraintID:   &allocationConstraint.ID,
 			TenantID:                 tenant.ID,
 			InfrastructureProviderID: ip.ID,
 			SiteID:                   site.ID,
@@ -181,7 +179,7 @@ func TestSSHKeyGroupInstanceAssociationSQLDAO_GetByID(t *testing.T) {
 	instanceType := testInstanceBuildInstanceType(t, dbSession, ip, "testInstanceType")
 	machine := testMachineBuildMachine(t, dbSession, ip.ID, site.ID, &instanceType.ID, db.GetStrPtr("mcTypeTest"))
 	allocation := testInstanceBuildAllocation(t, dbSession, ip, tenant, site, "testAllocation")
-	allocationConstraint := testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
+	_ = testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
 	operatingSystem := testInstanceBuildOperatingSystem(t, dbSession, "testOS")
 	sshKeyGroup1 := testBuildSSHKeyGroup(t, dbSession, "test1", db.GetStrPtr("test1"), "tesorg", tenant.ID, nil, SSHKeyGroupStatusSyncing, user.ID)
 	isd := NewInstanceDAO(dbSession)
@@ -189,8 +187,6 @@ func TestSSHKeyGroupInstanceAssociationSQLDAO_GetByID(t *testing.T) {
 		ctx, nil,
 		InstanceCreateInput{
 			Name:                     "test1",
-			AllocationID:             &allocation.ID,
-			AllocationConstraintID:   &allocationConstraint.ID,
 			TenantID:                 tenant.ID,
 			InfrastructureProviderID: ip.ID,
 			SiteID:                   site.ID,
@@ -286,7 +282,7 @@ func TestSSHKeyGroupInstanceAssociationSQLDAO_GetAll(t *testing.T) {
 	instanceType := testInstanceBuildInstanceType(t, dbSession, ip, "testInstanceType")
 	machine := testMachineBuildMachine(t, dbSession, ip.ID, site.ID, &instanceType.ID, db.GetStrPtr("mcTypeTest"))
 	allocation := testInstanceBuildAllocation(t, dbSession, ip, tenant, site, "testAllocation")
-	allocationConstraint := testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
+	_ = testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
 	operatingSystem := testInstanceBuildOperatingSystem(t, dbSession, "testOS")
 
 	skgs := []*SSHKeyGroup{}
@@ -315,8 +311,6 @@ func TestSSHKeyGroupInstanceAssociationSQLDAO_GetAll(t *testing.T) {
 			ctx, nil,
 			InstanceCreateInput{
 				Name:                     "test1",
-				AllocationID:             &allocation.ID,
-				AllocationConstraintID:   &allocationConstraint.ID,
 				TenantID:                 tenant.ID,
 				InfrastructureProviderID: ip.ID,
 				SiteID:                   site.ID,
@@ -490,7 +484,7 @@ func TestSSHKeyGroupInstanceAssociationSQLDAO_UpdateFromParams(t *testing.T) {
 	instanceType := testInstanceBuildInstanceType(t, dbSession, ip, "testInstanceType")
 	machine := testMachineBuildMachine(t, dbSession, ip.ID, site.ID, &instanceType.ID, db.GetStrPtr("mcTypeTest"))
 	allocation := testInstanceBuildAllocation(t, dbSession, ip, tenant, site, "testAllocation")
-	allocationConstraint := testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
+	_ = testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
 	operatingSystem := testInstanceBuildOperatingSystem(t, dbSession, "testOS")
 
 	skgiasd := NewSSHKeyGroupInstanceAssociationDAO(dbSession)
@@ -502,8 +496,6 @@ func TestSSHKeyGroupInstanceAssociationSQLDAO_UpdateFromParams(t *testing.T) {
 		ctx, nil,
 		InstanceCreateInput{
 			Name:                     "test1",
-			AllocationID:             &allocation.ID,
-			AllocationConstraintID:   &allocationConstraint.ID,
 			TenantID:                 tenant.ID,
 			InfrastructureProviderID: ip.ID,
 			SiteID:                   site.ID,
@@ -526,8 +518,6 @@ func TestSSHKeyGroupInstanceAssociationSQLDAO_UpdateFromParams(t *testing.T) {
 		ctx, nil,
 		InstanceCreateInput{
 			Name:                     "test2",
-			AllocationID:             &allocation.ID,
-			AllocationConstraintID:   &allocationConstraint.ID,
 			TenantID:                 tenant.ID,
 			InfrastructureProviderID: ip.ID,
 			SiteID:                   site.ID,
@@ -622,7 +612,7 @@ func TestSSHKeyGroupInstanceAssociationSQLDAO_DeleteByID(t *testing.T) {
 	instanceType := testInstanceBuildInstanceType(t, dbSession, ip, "testInstanceType")
 	machine := testMachineBuildMachine(t, dbSession, ip.ID, site.ID, &instanceType.ID, db.GetStrPtr("mcTypeTest"))
 	allocation := testInstanceBuildAllocation(t, dbSession, ip, tenant, site, "testAllocation")
-	allocationConstraint := testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
+	_ = testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
 	operatingSystem := testInstanceBuildOperatingSystem(t, dbSession, "testOS")
 
 	skgiasd := NewSSHKeyGroupInstanceAssociationDAO(dbSession)
@@ -633,8 +623,6 @@ func TestSSHKeyGroupInstanceAssociationSQLDAO_DeleteByID(t *testing.T) {
 		ctx, nil,
 		InstanceCreateInput{
 			Name:                     "test1",
-			AllocationID:             &allocation.ID,
-			AllocationConstraintID:   &allocationConstraint.ID,
 			TenantID:                 tenant.ID,
 			InfrastructureProviderID: ip.ID,
 			SiteID:                   site.ID,
@@ -712,15 +700,13 @@ func TestSSHKeyGroupInstanceAssociationSQLDAO_CreateMultiple(t *testing.T) {
 	instanceType := testInstanceBuildInstanceType(t, dbSession, ip, "testInstanceType")
 	machine := testMachineBuildMachine(t, dbSession, ip.ID, st.ID, &instanceType.ID, db.GetStrPtr("mcTypeTest"))
 	allocation := testInstanceBuildAllocation(t, dbSession, ip, tn, st, "testAllocation")
-	allocationConstraint := testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
+	_ = testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
 	operatingSystem := testInstanceBuildOperatingSystem(t, dbSession, "testOS")
 	isd := NewInstanceDAO(dbSession)
 	instance1, err := isd.Create(
 		ctx, nil,
 		InstanceCreateInput{
 			Name:                     "test1",
-			AllocationID:             &allocation.ID,
-			AllocationConstraintID:   &allocationConstraint.ID,
 			TenantID:                 tn.ID,
 			InfrastructureProviderID: ip.ID,
 			SiteID:                   st.ID,
@@ -743,8 +729,6 @@ func TestSSHKeyGroupInstanceAssociationSQLDAO_CreateMultiple(t *testing.T) {
 		ctx, nil,
 		InstanceCreateInput{
 			Name:                     "test2",
-			AllocationID:             &allocation.ID,
-			AllocationConstraintID:   &allocationConstraint.ID,
 			TenantID:                 tn.ID,
 			InfrastructureProviderID: ip.ID,
 			SiteID:                   st.ID,

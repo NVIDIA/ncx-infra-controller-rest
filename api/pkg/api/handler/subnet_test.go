@@ -1723,16 +1723,14 @@ func TestSubnetHandler_Delete(t *testing.T) {
 	okBodyIT, err := json.Marshal(model.APIAllocationCreateRequest{Name: "ok1", Description: cdb.GetStrPtr(""), TenantID: tenant1.ID.String(), SiteID: site.ID.String(), AllocationConstraints: []model.APIAllocationConstraintCreateRequest{acGoodIT}})
 	assert.Nil(t, err)
 	aIT := testCreateAllocation(t, dbSession, ipamStorage, ipu, ipOrg1, string(okBodyIT))
-	aITUUID := uuid.MustParse(aIT.ID)
-	alcUUID := uuid.MustParse(aIT.AllocationConstraints[0].ID)
+	_ = uuid.MustParse(aIT.ID)
+	_ = uuid.MustParse(aIT.AllocationConstraints[0].ID)
 	os1 := testAllocationBuildOperatingSystem(t, dbSession, "ubuntu")
 	instanceDAO := cdbm.NewInstanceDAO(dbSession)
 	instance, err := instanceDAO.Create(
 		ctx, nil,
 		cdbm.InstanceCreateInput{
 			Name:                     "testInst",
-			AllocationID:             &aITUUID,
-			AllocationConstraintID:   &alcUUID,
 			TenantID:                 tenant1.ID,
 			InfrastructureProviderID: ip.ID,
 			SiteID:                   site.ID,
@@ -1749,8 +1747,6 @@ func TestSubnetHandler_Delete(t *testing.T) {
 		ctx, nil,
 		cdbm.InstanceCreateInput{
 			Name:                     "testInst2",
-			AllocationID:             &aITUUID,
-			AllocationConstraintID:   &alcUUID,
 			TenantID:                 tenant1.ID,
 			InfrastructureProviderID: ip.ID,
 			SiteID:                   site.ID,

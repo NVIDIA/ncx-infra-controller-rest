@@ -1452,7 +1452,7 @@ func TestUpdateVirtualizationVPCHandler_Handle(t *testing.T) {
 	assert.NotNil(t, instanceType)
 	allocationConstraint := testInstanceSiteBuildAllocationContraints(t, dbSession, al, cdbm.AllocationResourceTypeInstanceType, instanceType.ID, cdbm.AllocationConstraintTypeReserved, 1, tnu)
 	assert.NotNil(t, allocationConstraint)
-	assert.NotNil(t, testInstanceBuildInstance(t, dbSession, "test-instance", al.ID, allocationConstraint.ID, tn.ID, ip.ID, st.ID, &instanceType.ID, vpcWithInstance.ID, nil, nil, nil, cdbm.InstanceStatusReady))
+	assert.NotNil(t, testInstanceBuildInstance(t, dbSession, "test-instance", tn.ID, ip.ID, st.ID, &instanceType.ID, vpcWithInstance.ID, nil, nil, nil, cdbm.InstanceStatusReady))
 
 	e := echo.New()
 	cfg := common.GetTestConfig()
@@ -2783,7 +2783,7 @@ func TestDeleteVPCHandler_Handle(t *testing.T) {
 	alc := common.TestBuildAllocationConstraint(t, dbSession, al, it, nil, 1, ipu)
 	assert.NotNil(t, alc)
 
-	instance := common.TestBuildInstance(t, dbSession, "test-instance", al.ID, alc.ID, tn1.ID, ip.ID, st.ID, it.ID, vpc3.ID, &machine.ID, os.ID)
+	instance := common.TestBuildInstance(t, dbSession, "test-instance", tn1.ID, ip.ID, st.ID, it.ID, vpc3.ID, &machine.ID, os.ID)
 	assert.NotNil(t, instance)
 
 	subnet := testVPCBuildSubnet(t, dbSession, "test-subnet", tn1, vpc2, tnu1)
