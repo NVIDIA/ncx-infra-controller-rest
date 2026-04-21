@@ -2435,11 +2435,17 @@ func formatLabels(labels map[string]string, maxWidth int) string {
 	return s
 }
 
-// uniqueLabelKeys returns the sorted set of label keys present on items.
+// uniqueLabelKeys returns the sorted set of non-empty label keys present on
+// items. Whitespace-only keys are dropped so the generated CLI hint never
+// suggests an unusable form like `--label =<value>`.
 func uniqueLabelKeys(items []NamedItem) []string {
 	seen := map[string]struct{}{}
 	for _, item := range items {
 		for k := range item.Labels {
+			k = strings.TrimSpace(k)
+			if k == "" {
+				continue
+			}
 			seen[k] = struct{}{}
 		}
 	}

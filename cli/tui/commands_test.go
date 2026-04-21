@@ -610,6 +610,20 @@ func TestUniqueLabelKeys(t *testing.T) {
 		got := uniqueLabelKeys(items)
 		assert.Equal(t, []string{"ServerName", "env", "rack"}, got)
 	})
+	t.Run("drops empty and whitespace-only keys", func(t *testing.T) {
+		items := []NamedItem{
+			{Name: "a", Labels: map[string]string{"": "blank", "  ": "spaces", "rack": "A1"}},
+		}
+		got := uniqueLabelKeys(items)
+		assert.Equal(t, []string{"rack"}, got, "empty and whitespace-only keys must not appear in hints")
+	})
+	t.Run("trims surrounding whitespace from keys", func(t *testing.T) {
+		items := []NamedItem{
+			{Name: "a", Labels: map[string]string{" rack ": "A1"}},
+		}
+		got := uniqueLabelKeys(items)
+		assert.Equal(t, []string{"rack"}, got)
+	})
 }
 
 func TestPrintLabelHint(t *testing.T) {
