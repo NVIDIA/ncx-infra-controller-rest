@@ -662,10 +662,10 @@ lint-openapi:
 # Preview OpenAPI spec in Redoc UI (Docker)
 preview-openapi:
 	@echo "Starting Redoc UI at http://127.0.0.1:8090"
-	docker run -it --rm -p 8090:80 -v ./openapi/spec.yaml:/usr/share/nginx/html/openapi.yaml -e SPEC_URL=openapi.yaml redocly/redoc:v2.5.1
+	docker run -it --rm -p 8090:80 -v ./openapi/spec.yaml:/usr/share/nginx/html/openapi.yaml -e SPEC_URL=openapi.yaml -e REDOC_OPTIONS="expand-responses=200,201" redocly/redoc:v2.5.1
 
 publish-openapi:
-	npx @redocly/cli build-docs ./openapi/spec.yaml -o ./docs/index.html
+	npx @redocly/cli build-docs --config=./openapi/redocly.yaml ./openapi/spec.yaml -o ./docs/index.html
 
 # =============================================================================
 # Pre-commit Hooks (TruffleHog Secret Detection)

@@ -69,6 +69,9 @@ func testCommonSetupSchema(t *testing.T, dbSession *cdb.Session) {
 	// create Security Group table
 	err = dbSession.DB.ResetModel(context.Background(), (*cdbm.NetworkSecurityGroup)(nil))
 	assert.Nil(t, err)
+	// create NVLink Logical Partition table before VPC, which references it
+	err = dbSession.DB.ResetModel(context.Background(), (*cdbm.NVLinkLogicalPartition)(nil))
+	assert.Nil(t, err)
 	// create Vpc table
 	err = dbSession.DB.ResetModel(context.Background(), (*cdbm.Vpc)(nil))
 	assert.Nil(t, err)
@@ -108,14 +111,14 @@ func testCommonSetupSchema(t *testing.T, dbSession *cdb.Session) {
 	// create Instance table
 	err = dbSession.DB.ResetModel(context.Background(), (*cdbm.Instance)(nil))
 	assert.Nil(t, err)
+	// create MachineInterface table before Interface, which depends on it
+	err = dbSession.DB.ResetModel(context.Background(), (*cdbm.MachineInterface)(nil))
+	assert.Nil(t, err)
 	// create Interface table
 	err = dbSession.DB.ResetModel(context.Background(), (*cdbm.Interface)(nil))
 	assert.Nil(t, err)
 	// create MachineCapability table
 	err = dbSession.DB.ResetModel(context.Background(), (*cdbm.MachineCapability)(nil))
-	assert.Nil(t, err)
-	// create MachineInterface table
-	err = dbSession.DB.ResetModel(context.Background(), (*cdbm.MachineInterface)(nil))
 	assert.Nil(t, err)
 	// create StatusDetail table
 	err = dbSession.DB.ResetModel(context.Background(), (*cdbm.StatusDetail)(nil))
@@ -1428,13 +1431,13 @@ func TestGetInstanceTypeAllocationStats(t *testing.T) {
 	for i := 0; i < allocatedMachines; i++ {
 		var ins *cdbm.Instance
 		if i < 5 {
-			ins = TestBuildInstance(t, dbSession, fmt.Sprintf("test-instance-%v", i), al1.ID, alc1.ID, tn1.ID, ip.ID, site1.ID, it1.ID, vpc1.ID, &m1s[i].ID, os1.ID)
+			ins = TestBuildInstance(t, dbSession, fmt.Sprintf("test-instance-%v", i), tn1.ID, ip.ID, site1.ID, it1.ID, vpc1.ID, &m1s[i].ID, os1.ID)
 			tn1inss = append(tn1inss, *ins)
 		} else if i < 8 {
-			ins = TestBuildInstance(t, dbSession, fmt.Sprintf("test-instance-%v", i), al2.ID, alc2.ID, tn2.ID, ip.ID, site1.ID, it1.ID, vpc2.ID, &m1s[i].ID, os2.ID)
+			ins = TestBuildInstance(t, dbSession, fmt.Sprintf("test-instance-%v", i), tn2.ID, ip.ID, site1.ID, it1.ID, vpc2.ID, &m1s[i].ID, os2.ID)
 			tn2inss = append(tn2inss, *ins)
 		} else {
-			ins = TestBuildInstance(t, dbSession, fmt.Sprintf("test-instance-%v", i), al3.ID, alc3.ID, tn3.ID, ip.ID, site1.ID, it1.ID, vpc3.ID, &m1s[i].ID, os2.ID)
+			ins = TestBuildInstance(t, dbSession, fmt.Sprintf("test-instance-%v", i), tn3.ID, ip.ID, site1.ID, it1.ID, vpc3.ID, &m1s[i].ID, os2.ID)
 			tn3inss = append(tn3inss, *ins)
 		}
 		it1inss = append(it1inss, *ins)

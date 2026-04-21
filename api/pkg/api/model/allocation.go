@@ -180,30 +180,3 @@ func NewAPIAllocation(dba *cdbm.Allocation, dbsds []cdbm.StatusDetail, acs []cdb
 
 	return &apiAllocation
 }
-
-// APIAllocationSummary is the data structure to capture API summary of an Allocation
-type APIAllocationSummary struct {
-	// ID of the Allocation
-	ID string `json:"id"`
-	// Name of the Allocation, only lowercase characters, digits, hyphens and cannot begin/end with hyphen
-	Name string `json:"name"`
-	// InfrastructureProviderID is the ID of the Infrastructure Provider
-	InfrastructureProviderID string `json:"infrastructureProviderId"`
-	// SiteID is the ID of the site
-	SiteID string `json:"siteId"`
-	// Status is the status of the Allocation
-	Status string `json:"status"`
-}
-
-// NewAPIAllocationSummary accepts a DB layer Allocation object returns an API layer summary object
-func NewAPIAllocationSummary(dbal *cdbm.Allocation) *APIAllocationSummary {
-	als := APIAllocationSummary{
-		ID:                       dbal.ID.String(),
-		Name:                     dbal.Name,
-		InfrastructureProviderID: dbal.InfrastructureProviderID.String(),
-		SiteID:                   dbal.SiteID.String(),
-		Status:                   dbal.Status,
-	}
-
-	return &als
-}

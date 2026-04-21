@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strconv"
 
 	temporalClient "go.temporal.io/sdk/client"
@@ -1258,16 +1259,38 @@ func (dah DeleteAllocationHandler) Handle(c echo.Context) error {
 	imAcUpd := []cdbm.AllocationConstraint{}
 
 	ipamStorage := ipam.NewIpamStorage(dah.dbSession.DB, tx.GetBunTx())
+
+	// Since we are going to lock on multiple AllocationConstraints, we need a consistent order
+	// to avoid deadlock risks.
+	// In reality, we don't actually support multiple constraints, even of mixed types,
+	// for a single allocation, so this should be cleaned up once allocations and
+	// constraints have merged into a single object.
+	slices.SortFunc(acs, func(a, b cdbm.AllocationConstraint) int {
+		if a.ResourceTypeID.String() < b.ResourceTypeID.String() {
+			return -1
+		}
+		if a.ResourceTypeID.String() > b.ResourceTypeID.String() {
+			return 1
+		}
+		return 0
+	})
 	for _, ac := range acs {
 		switch ac.ResourceType {
 		case cdbm.AllocationResourceTypeInstanceType:
-			// check if the tenant has instances using this instance type id
+			// Acquire the shared quota lock for this tenant/site/instance-type pool.
+			// This serializes deletes with instance admissions and quota updates.
+			serr := common.AcquireInstanceTypeQuotaLock(ctx, tx, a.TenantID, ac.ResourceTypeID)
+			if serr != nil {
+				logger.Error().Err(serr).Msg("unable to acquire advisory lock on Instance Type quota pool")
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete Allocation, unable to acquire quota lock", nil)
+			}
+
+			// Check how many active instances currently consume this tenant/site pool.
 			_, iCount, serr := iDAO.GetAll(ctx, tx,
 				cdbm.InstanceFilterInput{
-					AllocationIDs:             []uuid.UUID{a.ID},
-					AllocationConstraintIDs:   []uuid.UUID{ac.ID},
 					TenantIDs:                 []uuid.UUID{a.TenantID},
 					InfrastructureProviderIDs: []uuid.UUID{a.InfrastructureProviderID},
+					SiteIDs:                   []uuid.UUID{a.SiteID},
 					InstanceTypeIDs:           []uuid.UUID{ac.ResourceTypeID},
 				},
 				cdbp.PageInput{Limit: cdb.GetIntPtr(0)},
@@ -1277,9 +1300,48 @@ func (dah DeleteAllocationHandler) Handle(c echo.Context) error {
 				logger.Error().Err(serr).Msg("error retrieving Instances for Allocation Constraint")
 				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error getting Instances for this Allocation", nil)
 			}
-			if iCount > 0 {
-				logger.Warn().Msg("unable to delete Allocation, Instances found for Allocation Constraint")
-				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("%v Instances exist for this Allocation", iCount), nil)
+
+			// Get all allocation IDs for the tenant at the allocation site.
+			// We'll use them to compute the remaining aggregate capacity.
+			allocationIDs, serr := common.GetAllocationIDsForTenantAtSite(ctx, tx, dah.dbSession, a.InfrastructureProviderID, a.TenantID, a.SiteID)
+			if serr != nil {
+				logger.Error().Err(serr).Msg("error getting Allocation IDs for Tenant at Site")
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error getting Allocation IDs for Tenant at Site", nil)
+			}
+
+			// Calculate the tenant/site aggregate capacity for the instance type.
+			totalConstraintValue, serr := common.GetTotalAllocationConstraintValueForInstanceType(
+				ctx, tx, dah.dbSession, allocationIDs, &ac.ResourceTypeID, cdb.GetStrPtr(cdbm.AllocationConstraintTypeReserved),
+			)
+			if serr != nil {
+				logger.Error().Err(serr).Msg("error getting total Allocation Constraint value for Instance Type")
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error getting Allocation capacity for this Instance Type", nil)
+			}
+
+			// Calculate how much capacity would be removed by deleting this allocation.
+			deletedConstraintValue, serr := common.GetTotalAllocationConstraintValueForInstanceType(
+				ctx, tx, dah.dbSession, []uuid.UUID{a.ID}, &ac.ResourceTypeID, cdb.GetStrPtr(cdbm.AllocationConstraintTypeReserved),
+			)
+			if serr != nil {
+				logger.Error().Err(serr).Msg("error getting Allocation Constraint value for Allocation being deleted")
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error getting Allocation capacity for Allocation being deleted", nil)
+			}
+
+			// If deleting this allocation would reduce the remaining aggregate capacity
+			// below the current instance count, then the delete must be blocked.
+			if iCount > totalConstraintValue-deletedConstraintValue {
+				logger.Warn().Msg("deleting this Allocation as requested would leave the tenant pool below the active instance count for the instance type")
+				return cutil.NewAPIErrorResponse(
+					c,
+					http.StatusBadRequest,
+					fmt.Sprintf(
+						"Deleting this Allocation as specified would result in %d total Machines for Instance Type ID: %s allocated to Tenant, less than Tenant's active Instance count: %d for the Instance Type",
+						totalConstraintValue-deletedConstraintValue,
+						ac.ResourceTypeID.String(),
+						iCount,
+					),
+					nil,
+				)
 			}
 			_, acCnt, serr := common.GetAllAllocationConstraintsForInstanceType(ctx, tx, dah.dbSession, a.InfrastructureProvider, a.Site, a.Tenant, &ac.ResourceTypeID)
 			if serr != nil {

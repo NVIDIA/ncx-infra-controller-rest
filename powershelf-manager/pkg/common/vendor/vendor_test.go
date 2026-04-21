@@ -41,6 +41,12 @@ func TestCodeToVendor(t *testing.T) {
 			wantName:    VendorLiteon,
 			wantSupport: true,
 		},
+		"delta code -> Delta vendor": {
+			inCode:      VendorCodeDelta,
+			wantCode:    VendorCodeDelta,
+			wantName:    VendorDelta,
+			wantSupport: true,
+		},
 		"max sentinel -> Unsupported vendor": {
 			inCode:      VendorCodeMax,
 			wantCode:    VendorCodeMax,
@@ -78,6 +84,13 @@ func TestStringToVendor(t *testing.T) {
 			wantCode:    VendorCodeLiteon,
 			wantName:    VendorLiteon,
 			wantString:  VendorLiteon,
+			wantSupport: true,
+		},
+		"Delta name -> Delta code": {
+			inName:      VendorDelta,
+			wantCode:    VendorCodeDelta,
+			wantName:    VendorDelta,
+			wantString:  VendorDelta,
 			wantSupport: true,
 		},
 		"unknown name -> Unsupported code": {
@@ -129,6 +142,10 @@ func TestVendorIsSupported(t *testing.T) {
 			in:            CodeToVendor(VendorCodeLiteon),
 			wantSupported: true,
 		},
+		"delta code": {
+			in:            CodeToVendor(VendorCodeDelta),
+			wantSupported: true,
+		},
 		"max sentinel code": {
 			in:            CodeToVendor(VendorCodeMax),
 			wantSupported: false,
@@ -156,13 +173,17 @@ func TestVendorString(t *testing.T) {
 			in:   CodeToVendor(VendorCodeLiteon),
 			want: VendorLiteon,
 		},
+		"delta string": {
+			in:   CodeToVendor(VendorCodeDelta),
+			want: VendorDelta,
+		},
 		"unsupported string (Unsupported name)": {
 			in:   CodeToVendor(VendorCodeUnsupported),
 			want: "unsupported vendor: Unsupported (0)",
 		},
 		"unsupported string (Max sentinel)": {
 			in:   CodeToVendor(VendorCodeMax),
-			want: "unsupported vendor: Unsupported (2)",
+			want: "unsupported vendor: Unsupported (3)",
 		},
 	}
 
@@ -179,6 +200,7 @@ func TestRoundTrip_NameAndCode(t *testing.T) {
 		code VendorCode
 	}{
 		"round-trip Liteon":       {code: VendorCodeLiteon},
+		"round-trip Delta":        {code: VendorCodeDelta},
 		"round-trip Unsupported":  {code: VendorCodeUnsupported},
 		"round-trip Max sentinel": {code: VendorCodeMax},
 	}
@@ -189,10 +211,13 @@ func TestRoundTrip_NameAndCode(t *testing.T) {
 			v := CodeToVendor(tc.code)
 			v2 := StringToVendor(v.Name)
 
-			// For Liteon, code should round-trip. For unsupported names, StringToVendor maps to Unsupported.
+			// For supported vendors, code should round-trip. For unsupported names, StringToVendor maps to Unsupported.
 			if tc.code == VendorCodeLiteon {
 				assert.Equal(t, VendorCodeLiteon, v2.Code)
 				assert.Equal(t, VendorLiteon, v2.Name)
+			} else if tc.code == VendorCodeDelta {
+				assert.Equal(t, VendorCodeDelta, v2.Code)
+				assert.Equal(t, VendorDelta, v2.Name)
 			} else {
 				assert.Equal(t, VendorCodeUnsupported, v2.Code)
 				assert.Equal(t, v.Name, v2.Name)

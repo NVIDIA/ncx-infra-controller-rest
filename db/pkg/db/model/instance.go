@@ -123,7 +123,6 @@ var (
 		SiteRelationName:                   true,
 		InstanceTypeRelationName:           true,
 		NetworkSecurityGroupRelationName:   true,
-		AllocationRelationName:             true,
 		TenantRelationName:                 true,
 		VpcRelationName:                    true,
 		MachineRelationName:                true,
@@ -151,10 +150,6 @@ type Instance struct {
 	ID                                     uuid.UUID                               `bun:"type:uuid,pk"`
 	Name                                   string                                  `bun:"name,notnull"`
 	Description                            *string                                 `bun:"description"`
-	AllocationID                           *uuid.UUID                              `bun:"allocation_id,type:uuid"`
-	Allocation                             *Allocation                             `bun:"rel:belongs-to,join:allocation_id=id"`
-	AllocationConstraintID                 *uuid.UUID                              `bun:"allocation_constraint_id,type:uuid"`
-	AllocationConstraint                   *AllocationConstraint                   `bun:"rel:belongs-to,join:allocation_constraint_id=id"`
 	TenantID                               uuid.UUID                               `bun:"tenant_id,type:uuid,notnull"`
 	Tenant                                 *Tenant                                 `bun:"rel:belongs-to,join:tenant_id=id"`
 	InfrastructureProviderID               uuid.UUID                               `bun:"infrastructure_provider_id,type:uuid,notnull"`
@@ -197,8 +192,6 @@ type Instance struct {
 type InstanceCreateInput struct {
 	Name                                   string
 	Description                            *string
-	AllocationID                           *uuid.UUID
-	AllocationConstraintID                 *uuid.UUID
 	TenantID                               uuid.UUID
 	InfrastructureProviderID               uuid.UUID
 	SiteID                                 uuid.UUID
@@ -228,8 +221,6 @@ type InstanceUpdateInput struct {
 	InstanceID                             uuid.UUID
 	Name                                   *string
 	Description                            *string
-	AllocationID                           *uuid.UUID
-	AllocationConstraintID                 *uuid.UUID
 	TenantID                               *uuid.UUID
 	InfrastructureProviderID               *uuid.UUID
 	SiteID                                 *uuid.UUID
@@ -274,8 +265,6 @@ type InstanceClearInput struct {
 type InstanceFilterInput struct {
 	InstanceIDs               []uuid.UUID
 	Names                     []string
-	AllocationIDs             []uuid.UUID
-	AllocationConstraintIDs   []uuid.UUID
 	TenantIDs                 []uuid.UUID
 	InfrastructureProviderIDs []uuid.UUID
 	SiteIDs                   []uuid.UUID
@@ -307,9 +296,7 @@ var _ bun.BeforeCreateTableHook = (*Instance)(nil)
 
 // BeforeCreateTable is a hook that is called before the table is created
 func (i *Instance) BeforeCreateTable(ctx context.Context, query *bun.CreateTableQuery) error {
-	query.ForeignKey(`("allocation_id") REFERENCES "allocation" ("id")`).
-		ForeignKey(`("allocation_constraint_id") REFERENCES "allocation_constraint" ("id")`).
-		ForeignKey(`("tenant_id") REFERENCES "tenant" ("id")`).
+	query.ForeignKey(`("tenant_id") REFERENCES "tenant" ("id")`).
 		ForeignKey(`("infrastructure_provider_id") REFERENCES "infrastructure_provider" ("id")`).
 		ForeignKey(`("site_id") REFERENCES "site" ("id")`).
 		ForeignKey(`("instance_type_id") REFERENCES "instance_type" ("id")`).
@@ -371,8 +358,9 @@ func (isd InstanceSQLDAO) Create(ctx context.Context, tx *db.Tx, input InstanceC
 }
 
 // GetByID returns a Instance by ID
-// includeRelation can be a subset of "Allocation", "Tenant", "InfrastructureProvider"
-// "Site", "InstanceType", "Vpc", "Subnet", "OperatingSystem"
+// includeRelation can be a subset of "Tenant", "InfrastructureProvider"
+// "Site", "InstanceType", "Vpc", "Machine", "OperatingSystem", "NetworkSecurityGroup"
+// Allocation relations are intentionally omitted because direct instance-allocation linkage was removed.
 // returns db.ErrDoesNotExist error if the record is not found
 func (isd InstanceSQLDAO) GetByID(ctx context.Context, tx *db.Tx, id uuid.UUID, includeRelations []string) (*Instance, error) {
 	i := &Instance{}
@@ -467,20 +455,6 @@ func (isd InstanceSQLDAO) setQueryWithFilter(filter InstanceFilterInput, query *
 		query = query.Where("i.name IN (?)", bun.In(filter.Names))
 		if instanceDAOSpan != nil {
 			isd.tracerSpan.SetAttribute(instanceDAOSpan, "names", filter.Names)
-		}
-	}
-
-	if filter.AllocationIDs != nil {
-		query = query.Where("i.allocation_id IN (?)", bun.In(filter.AllocationIDs))
-		if instanceDAOSpan != nil {
-			isd.tracerSpan.SetAttribute(instanceDAOSpan, "allocation_ids", filter.AllocationIDs)
-		}
-	}
-
-	if filter.AllocationConstraintIDs != nil {
-		query = query.Where("i.allocation_constraint_id IN (?)", bun.In(filter.AllocationConstraintIDs))
-		if instanceDAOSpan != nil {
-			isd.tracerSpan.SetAttribute(instanceDAOSpan, "allocation_constraint_ids", filter.AllocationConstraintIDs)
 		}
 	}
 
@@ -594,8 +568,11 @@ func (isd InstanceSQLDAO) setQueryWithFilter(filter InstanceFilterInput, query *
 	return query, nil
 }
 
-// GetAll returns all Instances filtering by
-// instanceIDs, allocationID, tenantIDs, infrastructureProviderID, siteIDs, instanceTypeIDs, vpcIDs, machineIDs, controllerInstanceIDs, operatingSystemIDs
+// GetAll returns all Instances filtered by the fields in InstanceFilterInput:
+// InstanceIDs, Names, TenantIDs, InfrastructureProviderIDs, SiteIDs, InstanceTypeIDs,
+// VpcIDs, MachineIDs, ControllerInstanceIDs, OperatingSystemIDs, IDsNotIn, SearchQuery,
+// Statuses, TenantOrgName, Labels, NetworkSecurityGroupIDs, and Hostnames.
+// Allocation-based filters are intentionally omitted because direct instance-allocation linkage was removed.
 // errors are returned only when there is a db related error
 // if records not found, then error is nil, but length of returned slice is 0
 // if page.OrderBy is nil, then records are ordered by column specified in InstanceOrderByDefault in ascending order
@@ -827,8 +804,6 @@ func (isd InstanceSQLDAO) CreateMultiple(ctx context.Context, tx *db.Tx, inputs 
 			ID:                                     uuid.New(),
 			Name:                                   input.Name,
 			Description:                            input.Description,
-			AllocationID:                           input.AllocationID,
-			AllocationConstraintID:                 input.AllocationConstraintID,
 			TenantID:                               input.TenantID,
 			InfrastructureProviderID:               input.InfrastructureProviderID,
 			SiteID:                                 input.SiteID,
@@ -942,20 +917,6 @@ func (isd InstanceSQLDAO) UpdateMultiple(ctx context.Context, tx *db.Tx, inputs 
 			columns = append(columns, "description")
 			if addTrace {
 				isd.tracerSpan.SetAttribute(instanceDAOSpan, prefix+"description", *input.Description)
-			}
-		}
-		if input.AllocationID != nil {
-			i.AllocationID = input.AllocationID
-			columns = append(columns, "allocation_id")
-			if addTrace {
-				isd.tracerSpan.SetAttribute(instanceDAOSpan, prefix+"allocation_id", input.AllocationID.String())
-			}
-		}
-		if input.AllocationConstraintID != nil {
-			i.AllocationConstraintID = input.AllocationConstraintID
-			columns = append(columns, "allocation_constraint_id")
-			if addTrace {
-				isd.tracerSpan.SetAttribute(instanceDAOSpan, prefix+"allocation_constraint_id", input.AllocationConstraintID.String())
 			}
 		}
 		if input.TenantID != nil {

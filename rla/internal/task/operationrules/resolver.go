@@ -31,6 +31,7 @@ import (
 // RuleStore defines the interface for operation rule persistence.
 // This is a subset of the full Store interface focusing on rule operations.
 type RuleStore interface {
+	GetRule(ctx context.Context, id uuid.UUID) (*OperationRule, error)
 	GetRuleByOperationAndRack(ctx context.Context, opType common.TaskType, operation string, rackID *uuid.UUID) (*OperationRule, error)
 }
 
@@ -51,6 +52,7 @@ func NewResolver(store RuleStore) *Resolver {
 
 // ResolveRule resolves the operation rule for a given operation type, operation, and rack.
 // It always returns a rule (never nil) or an error. The resolution follows this priority:
+// 0. Explicit rule ID override (caller-specified, highest priority)
 // 1. Database rule (rack-specific or default)
 // 2. Hardcoded default rule
 func (r *Resolver) ResolveRule(
@@ -58,6 +60,7 @@ func (r *Resolver) ResolveRule(
 	operationType common.TaskType,
 	operation string,
 	rackID uuid.UUID,
+	ruleID *uuid.UUID,
 ) (*OperationRule, error) {
 	if r == nil {
 		// If resolver is nil, return hardcoded default
@@ -67,7 +70,26 @@ func (r *Resolver) ResolveRule(
 		return nil, fmt.Errorf("resolver is nil and no hardcoded default found for %s/%s", operationType, operation)
 	}
 
-	// Query the database for the rule
+	// Priority 0: Explicit rule ID override
+	if ruleID != nil && *ruleID != uuid.Nil {
+		rule, err := r.store.GetRule(ctx, *ruleID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch explicitly requested rule %s: %w", ruleID, err)
+		}
+		if rule == nil {
+			return nil, fmt.Errorf("explicitly requested rule %s not found", ruleID)
+		}
+		log.Info().
+			Str("rule_id", ruleID.String()).
+			Str("rule_name", rule.Name).
+			Str("operation_type", string(operationType)).
+			Str("operation", operation).
+			Str("rack_id", rackID.String()).
+			Msg("Using explicitly requested operation rule")
+		return rule, nil
+	}
+
+	// Priority 1: Query the database for the rule (rack association or default)
 	dbRule, err := r.store.GetRuleByOperationAndRack(ctx, operationType, operation, &rackID)
 	if err != nil {
 		log.Warn().Err(err).
@@ -87,7 +109,7 @@ func (r *Resolver) ResolveRule(
 		return dbRule, nil
 	}
 
-	// Fall back to hardcoded default rule
+	// Priority 2: Fall back to hardcoded default rule
 	log.Info().
 		Str("operation_type", string(operationType)).
 		Str("operation", operation).

@@ -19,3 +19,4 @@ build/
 .idea/
 ref/
 .debug/
+.cursor

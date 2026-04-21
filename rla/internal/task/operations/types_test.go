@@ -18,7 +18,11 @@
 package operations
 
 import (
+	"encoding/json"
 	"testing"
+
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
 
 	taskcommon "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/common"
 )
@@ -103,4 +107,106 @@ func TestFirmwareOperationCodeString(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestExtractRuleID(t *testing.T) {
+	validID := uuid.New()
+
+	tests := []struct {
+		name     string
+		info     json.RawMessage
+		expected *uuid.UUID
+	}{
+		{
+			name:     "present and valid",
+			info:     json.RawMessage(`{"operation":"power_on","rule_id":"` + validID.String() + `"}`),
+			expected: &validID,
+		},
+		{
+			name:     "absent",
+			info:     json.RawMessage(`{"operation":"power_on"}`),
+			expected: nil,
+		},
+		{
+			name:     "empty string",
+			info:     json.RawMessage(`{"operation":"power_on","rule_id":""}`),
+			expected: nil,
+		},
+		{
+			name:     "invalid UUID",
+			info:     json.RawMessage(`{"rule_id":"not-a-uuid"}`),
+			expected: nil,
+		},
+		{
+			name:     "invalid JSON",
+			info:     json.RawMessage(`{broken`),
+			expected: nil,
+		},
+		{
+			name:     "nil input",
+			info:     nil,
+			expected: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := ExtractRuleID(tt.info)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestRuleID_RoundTrip_PowerControl(t *testing.T) {
+	ruleID := uuid.New()
+	info := &PowerControlTaskInfo{
+		Operation: PowerOperationPowerOn,
+		RuleID:    ruleID.String(),
+	}
+
+	raw, err := info.Marshal()
+	assert.NoError(t, err)
+
+	extracted := ExtractRuleID(raw)
+	assert.NotNil(t, extracted)
+	assert.Equal(t, ruleID, *extracted)
+}
+
+func TestRuleID_RoundTrip_BringUp(t *testing.T) {
+	ruleID := uuid.New()
+	info := &BringUpTaskInfo{RuleID: ruleID.String()}
+
+	raw, err := info.Marshal()
+	assert.NoError(t, err)
+
+	extracted := ExtractRuleID(raw)
+	assert.NotNil(t, extracted)
+	assert.Equal(t, ruleID, *extracted)
+}
+
+func TestRuleID_RoundTrip_FirmwareControl(t *testing.T) {
+	ruleID := uuid.New()
+	info := &FirmwareControlTaskInfo{
+		Operation: FirmwareOperationUpgrade,
+		RuleID:    ruleID.String(),
+	}
+
+	raw, err := info.Marshal()
+	assert.NoError(t, err)
+
+	extracted := ExtractRuleID(raw)
+	assert.NotNil(t, extracted)
+	assert.Equal(t, ruleID, *extracted)
+}
+
+func TestRuleID_OmittedWhenEmpty(t *testing.T) {
+	info := &PowerControlTaskInfo{
+		Operation: PowerOperationPowerOn,
+	}
+
+	raw, err := info.Marshal()
+	assert.NoError(t, err)
+
+	extracted := ExtractRuleID(raw)
+	assert.Nil(t, extracted)
 }
