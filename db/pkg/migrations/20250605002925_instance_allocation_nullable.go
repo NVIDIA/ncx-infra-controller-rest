@@ -34,11 +34,29 @@ func init() {
 		}
 
 		// Remove NOT NULL constraint from allocation_id in instance table
-		_, err := tx.Exec("ALTER TABLE instance ALTER COLUMN allocation_id DROP NOT NULL;")
+		// when the legacy column is still present.
+		_, err := tx.Exec(`
+			DO $$
+			BEGIN
+				ALTER TABLE instance ALTER COLUMN allocation_id DROP NOT NULL;
+			EXCEPTION
+				WHEN undefined_column THEN
+					RAISE NOTICE 'Column allocation_id does not exist, skipping modification.';
+			END $$;
+		`)
 		handleError(tx, err)
 
 		// Remove NOT NULL constraint from allocation_constraint_id in instance table
-		_, err = tx.Exec("ALTER TABLE instance ALTER COLUMN allocation_constraint_id DROP NOT NULL;")
+		// when the legacy column is still present.
+		_, err = tx.Exec(`
+			DO $$
+			BEGIN
+				ALTER TABLE instance ALTER COLUMN allocation_constraint_id DROP NOT NULL;
+			EXCEPTION
+				WHEN undefined_column THEN
+					RAISE NOTICE 'Column allocation_constraint_id does not exist, skipping modification.';
+			END $$;
+		`)
 		handleError(tx, err)
 
 		terr = tx.Commit()

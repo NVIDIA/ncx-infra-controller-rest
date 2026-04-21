@@ -80,15 +80,13 @@ func TestInfiniBandInterfaceSQLDAO_GetByID(t *testing.T) {
 	instanceType := testInstanceBuildInstanceType(t, dbSession, ip, "testInstanceType")
 	machine := testMachineBuildMachine(t, dbSession, ip.ID, st.ID, &instanceType.ID, db.GetStrPtr("mcTypeTest"))
 	allocation := testInstanceBuildAllocation(t, dbSession, ip, tn, st, "testAllocation")
-	allocationConstraint := testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
+	_ = testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
 	operatingSystem := testInstanceBuildOperatingSystem(t, dbSession, "testOS")
 	isd := NewInstanceDAO(dbSession)
 	i1, err := isd.Create(
 		ctx, nil,
 		InstanceCreateInput{
 			Name:                     "test1",
-			AllocationID:             &allocation.ID,
-			AllocationConstraintID:   &allocationConstraint.ID,
 			TenantID:                 tn.ID,
 			InfrastructureProviderID: ip.ID,
 			SiteID:                   st.ID,
@@ -226,16 +224,14 @@ func TestInfiniBandInterface_GetAll(t *testing.T) {
 	machine2 := testMachineBuildMachine(t, dbSession, ip.ID, st2.ID, &instanceType.ID, db.GetStrPtr("mcTypeTest2"))
 	allocation := testInstanceBuildAllocation(t, dbSession, ip, tn1, st, "testAllocation")
 	allocation2 := testInstanceBuildAllocation(t, dbSession, ip, tn2, st2, "testAllocation2")
-	allocationConstraint := testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
-	allocationConstraint2 := testBuildAllocationConstraint(t, dbSession, allocation2, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
+	_ = testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
+	_ = testBuildAllocationConstraint(t, dbSession, allocation2, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
 	operatingSystem := testInstanceBuildOperatingSystem(t, dbSession, "testOS")
 	isd := NewInstanceDAO(dbSession)
 	i1, err := isd.Create(
 		ctx, nil,
 		InstanceCreateInput{
 			Name:                     "test1",
-			AllocationID:             &allocation.ID,
-			AllocationConstraintID:   &allocationConstraint.ID,
 			TenantID:                 tn1.ID,
 			InfrastructureProviderID: ip.ID,
 			SiteID:                   st.ID,
@@ -258,8 +254,6 @@ func TestInfiniBandInterface_GetAll(t *testing.T) {
 		ctx, nil,
 		InstanceCreateInput{
 			Name:                     "test2",
-			AllocationID:             &allocation2.ID,
-			AllocationConstraintID:   &allocationConstraint2.ID,
 			TenantID:                 tn2.ID,
 			InfrastructureProviderID: ip.ID,
 			SiteID:                   st2.ID,
@@ -565,15 +559,13 @@ func TestInfiniBandInterfaceSQLDAO_Create(t *testing.T) {
 	instanceType := testInstanceBuildInstanceType(t, dbSession, ip, "testInstanceType")
 	machine := testMachineBuildMachine(t, dbSession, ip.ID, st.ID, &instanceType.ID, db.GetStrPtr("mcTypeTest"))
 	allocation := testInstanceBuildAllocation(t, dbSession, ip, tn, st, "testAllocation")
-	allocationConstraint := testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
+	_ = testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
 	operatingSystem := testInstanceBuildOperatingSystem(t, dbSession, "testOS")
 	isd := NewInstanceDAO(dbSession)
 	i1, err := isd.Create(
 		ctx, nil,
 		InstanceCreateInput{
 			Name:                     "test1",
-			AllocationID:             &allocation.ID,
-			AllocationConstraintID:   &allocationConstraint.ID,
 			TenantID:                 tn.ID,
 			InfrastructureProviderID: ip.ID,
 			SiteID:                   st.ID,
@@ -713,15 +705,13 @@ func TestInfiniBandInterfaceSQLDAO_Update(t *testing.T) {
 	instanceType := testInstanceBuildInstanceType(t, dbSession, ip, "testInstanceType")
 	machine := testMachineBuildMachine(t, dbSession, ip.ID, st.ID, &instanceType.ID, db.GetStrPtr("mcTypeTest"))
 	allocation := testInstanceBuildAllocation(t, dbSession, ip, tn, st, "testAllocation")
-	allocationConstraint := testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
+	_ = testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
 	operatingSystem := testInstanceBuildOperatingSystem(t, dbSession, "testOS")
 	isd := NewInstanceDAO(dbSession)
 	i1, err := isd.Create(
 		ctx, nil,
 		InstanceCreateInput{
 			Name:                     "test1",
-			AllocationID:             &allocation.ID,
-			AllocationConstraintID:   &allocationConstraint.ID,
 			TenantID:                 tn.ID,
 			InfrastructureProviderID: ip.ID,
 			SiteID:                   st.ID,
@@ -846,15 +836,13 @@ func TestInfiniBandInterfaceSQLDAO_Clear(t *testing.T) {
 	instanceType := testInstanceBuildInstanceType(t, dbSession, ip, "testInstanceType")
 	machine := testMachineBuildMachine(t, dbSession, ip.ID, st.ID, &instanceType.ID, db.GetStrPtr("mcTypeTest"))
 	allocation := testInstanceBuildAllocation(t, dbSession, ip, tn, st, "testAllocation")
-	allocationConstraint := testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
+	_ = testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
 	operatingSystem := testInstanceBuildOperatingSystem(t, dbSession, "testOS")
 	isd := NewInstanceDAO(dbSession)
 	i1, err := isd.Create(
 		ctx, nil,
 		InstanceCreateInput{
 			Name:                     "test1",
-			AllocationID:             &allocation.ID,
-			AllocationConstraintID:   &allocationConstraint.ID,
 			TenantID:                 tn.ID,
 			InfrastructureProviderID: ip.ID,
 			SiteID:                   st.ID,
@@ -978,15 +966,13 @@ func TestInfiniBandInterfaceSQLDAO_Delete(t *testing.T) {
 	instanceType := testInstanceBuildInstanceType(t, dbSession, ip, "testInstanceType")
 	machine := testMachineBuildMachine(t, dbSession, ip.ID, st.ID, &instanceType.ID, db.GetStrPtr("mcTypeTest"))
 	allocation := testInstanceBuildAllocation(t, dbSession, ip, tn, st, "testAllocation")
-	allocationConstraint := testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
+	_ = testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
 	operatingSystem := testInstanceBuildOperatingSystem(t, dbSession, "testOS")
 	isd := NewInstanceDAO(dbSession)
 	i1, err := isd.Create(
 		ctx, nil,
 		InstanceCreateInput{
 			Name:                     "test1",
-			AllocationID:             &allocation.ID,
-			AllocationConstraintID:   &allocationConstraint.ID,
 			TenantID:                 tn.ID,
 			InfrastructureProviderID: ip.ID,
 			SiteID:                   st.ID,
@@ -1072,15 +1058,13 @@ func TestInfiniBandInterfaceSQLDAO_CreateMultiple(t *testing.T) {
 	instanceType := testInstanceBuildInstanceType(t, dbSession, ip, "testInstanceType")
 	machine := testMachineBuildMachine(t, dbSession, ip.ID, st.ID, &instanceType.ID, db.GetStrPtr("mcTypeTest"))
 	allocation := testInstanceBuildAllocation(t, dbSession, ip, tn, st, "testAllocation")
-	allocationConstraint := testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
+	_ = testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
 	operatingSystem := testInstanceBuildOperatingSystem(t, dbSession, "testOS")
 	isd := NewInstanceDAO(dbSession)
 	instance, err := isd.Create(
 		ctx, nil,
 		InstanceCreateInput{
 			Name:                     "test1",
-			AllocationID:             &allocation.ID,
-			AllocationConstraintID:   &allocationConstraint.ID,
 			TenantID:                 tn.ID,
 			InfrastructureProviderID: ip.ID,
 			SiteID:                   st.ID,

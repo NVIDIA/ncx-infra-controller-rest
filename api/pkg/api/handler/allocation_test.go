@@ -2223,6 +2223,7 @@ func TestAllocationHandler_Delete(t *testing.T) {
 	os1 := testAllocationBuildOperatingSystem(t, dbSession, "ubuntu")
 
 	acGoodIT := model.APIAllocationConstraintCreateRequest{ResourceType: cdbm.AllocationResourceTypeInstanceType, ResourceTypeID: it1.ID.String(), ConstraintType: cdbm.AllocationConstraintTypeReserved, ConstraintValue: 2}
+	acGoodITSmall := model.APIAllocationConstraintCreateRequest{ResourceType: cdbm.AllocationResourceTypeInstanceType, ResourceTypeID: it1.ID.String(), ConstraintType: cdbm.AllocationConstraintTypeReserved, ConstraintValue: 1}
 	acGoodIPB := model.APIAllocationConstraintCreateRequest{ResourceType: cdbm.AllocationResourceTypeIPBlock, ResourceTypeID: ipb1.ID.String(), ConstraintType: cdbm.AllocationConstraintTypeReserved, ConstraintValue: 24}
 
 	acGoodIPBVpcPrefix := model.APIAllocationConstraintCreateRequest{ResourceType: cdbm.AllocationResourceTypeIPBlock, ResourceTypeID: ipbVpcPrefix.ID.String(), ConstraintType: cdbm.AllocationConstraintTypeReserved, ConstraintValue: 16}
@@ -2232,6 +2233,8 @@ func TestAllocationHandler_Delete(t *testing.T) {
 	okBodyIT, err := json.Marshal(model.APIAllocationCreateRequest{Name: "okit", Description: cdb.GetStrPtr(""), TenantID: tenant1.ID.String(), SiteID: site.ID.String(), AllocationConstraints: []model.APIAllocationConstraintCreateRequest{acGoodIT}})
 	assert.Nil(t, err)
 	okBodyRepeatedITInAC, err := json.Marshal(model.APIAllocationCreateRequest{Name: "ok-repeated", Description: cdb.GetStrPtr(""), TenantID: tenant1.ID.String(), SiteID: site.ID.String(), AllocationConstraints: []model.APIAllocationConstraintCreateRequest{acGoodIT}})
+	assert.Nil(t, err)
+	okBodySmallIT, err := json.Marshal(model.APIAllocationCreateRequest{Name: "ok-small", Description: cdb.GetStrPtr(""), TenantID: tenant1.ID.String(), SiteID: site.ID.String(), AllocationConstraints: []model.APIAllocationConstraintCreateRequest{acGoodITSmall}})
 	assert.Nil(t, err)
 	okBodyIPB, err := json.Marshal(model.APIAllocationCreateRequest{Name: "okipb", Description: cdb.GetStrPtr(""), TenantID: tenant1.ID.String(), SiteID: site.ID.String(), AllocationConstraints: []model.APIAllocationConstraintCreateRequest{acGoodIPB}})
 	assert.Nil(t, err)
@@ -2254,12 +2257,11 @@ func TestAllocationHandler_Delete(t *testing.T) {
 
 	// Create 1 Instance Type Allocation
 	aIT := testCreateAllocation(t, dbSession, ipamStorage, ipu, ipOrg1, string(okBodyIT))
-	aITUUID := uuid.MustParse(aIT.ID)
-	acUUID := uuid.MustParse(aIT.AllocationConstraints[0].ID)
+	_ = uuid.MustParse(aIT.ID)
+	_ = uuid.MustParse(aIT.AllocationConstraints[0].ID)
 	// Create another instance type allocation with same instane type
 	aIT2 := testCreateAllocation(t, dbSession, ipamStorage, ipu, ipOrg1, string(okBodyRepeatedITInAC))
-	//aIT2UUID := uuid.MustParse(aIT2.ID)
-	//ac2UUID := uuid.MustParse(aIT.AllocationConstraints[0].ID)
+	aIT3 := testCreateAllocation(t, dbSession, ipamStorage, ipu, ipOrg1, string(okBodySmallIT))
 
 	// Create 3 IP Block Allocation
 	aIPB := testCreateAllocation(t, dbSession, ipamStorage, ipu, ipOrg1, string(okBodyIPB))
@@ -2272,8 +2274,51 @@ func TestAllocationHandler_Delete(t *testing.T) {
 		ctx, nil,
 		cdbm.InstanceCreateInput{
 			Name:                     "testInst",
-			AllocationID:             &aITUUID,
-			AllocationConstraintID:   &acUUID,
+			TenantID:                 tenant1.ID,
+			InfrastructureProviderID: ip.ID,
+			SiteID:                   site.ID,
+			InstanceTypeID:           &it1.ID,
+			VpcID:                    vpc1.ID,
+			OperatingSystemID:        cdb.GetUUIDPtr(os1.ID),
+			Status:                   cdbm.InstanceStatusReady,
+			CreatedBy:                tnu.ID,
+		},
+	)
+	assert.Nil(t, err)
+	instance2, err := instanceDAO.Create(
+		ctx, nil,
+		cdbm.InstanceCreateInput{
+			Name:                     "testInst2",
+			TenantID:                 tenant1.ID,
+			InfrastructureProviderID: ip.ID,
+			SiteID:                   site.ID,
+			InstanceTypeID:           &it1.ID,
+			VpcID:                    vpc1.ID,
+			OperatingSystemID:        cdb.GetUUIDPtr(os1.ID),
+			Status:                   cdbm.InstanceStatusReady,
+			CreatedBy:                tnu.ID,
+		},
+	)
+	assert.Nil(t, err)
+	instance3, err := instanceDAO.Create(
+		ctx, nil,
+		cdbm.InstanceCreateInput{
+			Name:                     "testInst3",
+			TenantID:                 tenant1.ID,
+			InfrastructureProviderID: ip.ID,
+			SiteID:                   site.ID,
+			InstanceTypeID:           &it1.ID,
+			VpcID:                    vpc1.ID,
+			OperatingSystemID:        cdb.GetUUIDPtr(os1.ID),
+			Status:                   cdbm.InstanceStatusReady,
+			CreatedBy:                tnu.ID,
+		},
+	)
+	assert.Nil(t, err)
+	instance4, err := instanceDAO.Create(
+		ctx, nil,
+		cdbm.InstanceCreateInput{
+			Name:                     "testInst4",
 			TenantID:                 tenant1.ID,
 			InfrastructureProviderID: ip.ID,
 			SiteID:                   site.ID,
@@ -2345,7 +2390,7 @@ func TestAllocationHandler_Delete(t *testing.T) {
 		allocation         *model.APIAllocation
 		expectedErr        bool
 		expectedStatus     int
-		deleteInstanceID   *uuid.UUID
+		deleteInstanceIDs  []uuid.UUID
 		deleteSubnetID     *uuid.UUID
 		deleteVpcPrefixID  *uuid.UUID
 		checkFullGrant     bool
@@ -2406,13 +2451,29 @@ func TestAllocationHandler_Delete(t *testing.T) {
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
-			name:             "error when tenant has instances using instance type",
-			reqOrgName:       ipOrg1,
-			user:             ipu,
-			aID:              aIT.ID,
-			expectedErr:      true,
-			expectedStatus:   http.StatusBadRequest,
-			deleteInstanceID: &instance.ID,
+			name:           "error when tenant has instances using instance type",
+			reqOrgName:     ipOrg1,
+			user:           ipu,
+			aID:            aIT.ID,
+			expectedErr:    true,
+			expectedStatus: http.StatusBadRequest,
+			deleteInstanceIDs: []uuid.UUID{
+				instance3.ID,
+				instance4.ID,
+			},
+		},
+		{
+			name:            "success when deleting allocation still leaves enough aggregate capacity",
+			reqOrgName:      ipOrg1,
+			user:            ipu,
+			aID:             aIT3.ID,
+			allocation:      aIT3,
+			expectedErr:     false,
+			expectedStatus:  http.StatusAccepted,
+			tenantSiteCount: 1,
+			deleteInstanceIDs: []uuid.UUID{
+				instance2.ID,
+			},
 		},
 		{
 			name:           "error when user doesn't have the right role",
@@ -2486,6 +2547,9 @@ func TestAllocationHandler_Delete(t *testing.T) {
 			expectedErr:     false,
 			expectedStatus:  http.StatusAccepted,
 			tenantSiteCount: 1, // allocation left
+			deleteInstanceIDs: []uuid.UUID{
+				instance.ID,
+			},
 		},
 		{
 			name:            "success case with InstanceType, should cause deletion",
@@ -2567,8 +2631,8 @@ func TestAllocationHandler_Delete(t *testing.T) {
 				assert.Equal(t, tc.tenantSiteCount, tscount)
 			}
 
-			if tc.deleteInstanceID != nil {
-				err = instanceDAO.Delete(ctx, nil, *tc.deleteInstanceID)
+			for _, deleteInstanceID := range tc.deleteInstanceIDs {
+				err = instanceDAO.Delete(ctx, nil, deleteInstanceID)
 				assert.Nil(t, err)
 			}
 			if tc.deleteSubnetID != nil {

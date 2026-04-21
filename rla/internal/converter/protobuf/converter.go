@@ -146,6 +146,26 @@ func UUIDFrom(id *pb.UUID) uuid.UUID {
 	return uuid.Nil
 }
 
+// UUIDStringFrom converts a *pb.UUID to a plain string.
+// Returns "" if the input is nil or cannot be parsed.
+func UUIDStringFrom(id *pb.UUID) string {
+	parsed := UUIDFrom(id)
+	if parsed == uuid.Nil {
+		return ""
+	}
+	return parsed.String()
+}
+
+// OptionalUUIDFrom converts a *pb.UUID to *uuid.UUID.
+// Returns nil if the input is nil or cannot be parsed.
+func OptionalUUIDFrom(id *pb.UUID) *uuid.UUID {
+	parsed := UUIDFrom(id)
+	if parsed == uuid.Nil {
+		return nil
+	}
+	return &parsed
+}
+
 // UUIDsFrom converts a slice of *pb.UUID to a slice of uuid.UUID.
 func UUIDsFrom(ids []*pb.UUID) []uuid.UUID {
 	result := make([]uuid.UUID, 0, len(ids))

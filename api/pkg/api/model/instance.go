@@ -60,20 +60,12 @@ var (
 	// Time when sshKeyGroupsLegacyDeprecatedTime query param will be deprecated
 	sshKeyGroupsLegacyDeprecatedTime, _ = time.Parse(time.RFC1123, "Thu, 04 Sep 2025 00:00:00 UTC")
 
-	// Time when allocationId/allocation will be deprecated
-	allocationDeprecatedTime, _ = time.Parse(time.RFC1123, "Thu, 06 Sep 2025 00:00:00 UTC")
-
 	instanceDeprecations = []DeprecatedEntity{
 		{
 			OldValue:     "sshkeygroups",
 			NewValue:     cdb.GetStrPtr("sshKeyGroups"),
 			Type:         DeprecationTypeAttribute,
 			TakeActionBy: sshKeyGroupsLegacyDeprecatedTime,
-		},
-		{
-			OldValue:     "allocationId",
-			Type:         DeprecationTypeAttribute,
-			TakeActionBy: allocationDeprecatedTime,
 		},
 	}
 

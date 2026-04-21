@@ -1,0 +1,2 @@
+openapi:
+  expandResponses: "200,201"

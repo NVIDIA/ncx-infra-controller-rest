@@ -67,7 +67,8 @@ func New(store FirmwareUpdateStore, pmcManager *pmcmanager.PmcManager, dryRun bo
 
 		updater, err := newFirmwareUpdater(vendor, firmwareDir)
 		if err != nil {
-			return nil, err
+			log.Printf("skipping firmware support for vendor %s: %v", vendor.Name, err)
+			continue
 		}
 
 		manager.firmwareUpdater[vendor] = updater
