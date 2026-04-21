@@ -805,7 +805,7 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 
 	// ==================== Step 4: Machine Selection  ====================
 
-	// Default to false, will be set to true if allowUnhealthyMachine is set to true in request. This value is used when
+	// Default to false, will be set to true for data sent to Core if allowUnhealthyMachine is set to true in request
 	allowUnhealthyMachine := false
 
 	// Begin validating Machine ID
