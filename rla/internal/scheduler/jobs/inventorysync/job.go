@@ -42,7 +42,7 @@ type Job struct {
 	psmClient     psmapi.Client
 	nsmClient     nsmapi.Client
 	pool          *cdb.Session
-	cmConfig componentmanager.Config
+	cmConfig      componentmanager.Config
 }
 
 // New constructs an inventory sync Job using clients sourced from the provider
