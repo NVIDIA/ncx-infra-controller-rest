@@ -46,12 +46,10 @@ type bodyField struct {
 	schema   *Schema
 }
 
-// reservedBodyFlagNames are flag names owned by the CLI wrapper for every
-// generated command. Body properties whose kebab-cased name matches one of
-// these are skipped during flag registration to avoid duplicate-flag panics
-// from Go's stdlib flag package (invoked via urfave/cli's flag.Apply). The
-// colliding field can still be supplied inside the `--data` JSON payload or
-// via `--data-file`.
+// reservedBodyFlagNames are flag names owned by the CLI wrapper. Body
+// properties whose kebab-cased name matches one of these get a "body-"
+// prefix during flag registration (e.g. --body-data) to avoid
+// duplicate-flag panics from Go's stdlib flag package.
 var reservedBodyFlagNames = map[string]bool{
 	"output":    true,
 	"all":       true,
@@ -338,15 +336,15 @@ func buildActionCommand(spec *Spec, ro resolvedOp, subResource string) *cli.Comm
 					continue
 				}
 				flagName := toKebab(name)
-				// Skip body properties whose kebab-cased name collides with
-				// flags owned by the CLI wrapper. Without this check urfave/cli
+				// Prefix body properties whose kebab-cased name collides with
+				// flags owned by the CLI wrapper. Without this, urfave/cli
 				// calls flag.StringVar twice with the same name and Go's flag
 				// package panics with "create flag redefined: data" at command
 				// setup time (e.g. dpu-extension-service create has a body
-				// property literally named `data`). Users can still set the
-				// colliding field via `--data '{...}'` or `--data-file`.
+				// property named "data"). The prefixed flag (--body-data)
+				// stays distinct from the JSON wrapper flag (--data).
 				if reservedBodyFlagNames[flagName] {
-					continue
+					flagName = "body-" + flagName
 				}
 				usage := name
 				if reqSet[name] {

@@ -21,6 +21,8 @@ import (
 	"testing"
 
 	"github.com/NVIDIA/ncx-infra-controller-rest/openapi"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	cli "github.com/urfave/cli/v2"
 )
 
@@ -318,14 +320,10 @@ func TestIsListAction(t *testing.T) {
 // which is exactly how the dpu-extension-service create bug surfaced.
 func TestBuildCommands_NoDuplicateFlags(t *testing.T) {
 	spec, err := ParseSpec(openapi.Spec)
-	if err != nil {
-		t.Fatalf("ParseSpec failed: %v", err)
-	}
+	require.NoError(t, err, "ParseSpec failed")
 
 	cmds := BuildCommands(spec)
-	if len(cmds) == 0 {
-		t.Fatal("BuildCommands returned no commands")
-	}
+	require.NotEmpty(t, cmds, "BuildCommands returned no commands")
 
 	var visit func(path string, children []*cli.Command)
 	visit = func(path string, children []*cli.Command) {
@@ -334,10 +332,8 @@ func TestBuildCommands_NoDuplicateFlags(t *testing.T) {
 			seen := make(map[string]bool)
 			for _, f := range c.Flags {
 				name := f.Names()[0]
-				if seen[name] {
-					t.Errorf("command %q declares duplicate flag %q (would panic at runtime)",
-						full, name)
-				}
+				assert.Falsef(t, seen[name],
+					"command %q declares duplicate flag %q (would panic at runtime)", full, name)
 				seen[name] = true
 			}
 			if len(c.Subcommands) > 0 {
@@ -348,11 +344,12 @@ func TestBuildCommands_NoDuplicateFlags(t *testing.T) {
 	visit("carbidecli", cmds)
 }
 
-// TestBuildActionCommand_ReservedBodyPropertySkipped verifies that when a
+// TestBuildActionCommand_ReservedBodyPropertyPrefixed verifies that when a
 // request body schema has a property whose kebab-cased name collides with a
 // reserved CLI-wrapper flag (data, data-file, output, all), the generated
-// command does not register a duplicate flag.
-func TestBuildActionCommand_ReservedBodyPropertySkipped(t *testing.T) {
+// command registers the body property under a "body-" prefix instead of
+// creating a duplicate flag.
+func TestBuildActionCommand_ReservedBodyPropertyPrefixed(t *testing.T) {
 	spec := &Spec{
 		Paths: map[string]PathItem{
 			"/v2/org/{org}/carbide/widget": {
@@ -395,22 +392,18 @@ func TestBuildActionCommand_ReservedBodyPropertySkipped(t *testing.T) {
 		counts[f.Names()[0]]++
 	}
 
-	// data, data-file and output are hardcoded CLI-wrapper flags on any
-	// create-style command; their body-property twins must be silently
-	// dropped so we end up with exactly one registration each.
-	for _, name := range []string{"data", "data-file", "output"} {
-		if counts[name] != 1 {
-			t.Errorf("expected exactly one --%s flag, got %d", name, counts[name])
-		}
-	}
-	// --all is list-only; on a create action the body property named "all"
-	// must not get smuggled in.
-	if counts["all"] != 0 {
-		t.Errorf("expected zero --all flags on a create action, got %d", counts["all"])
-	}
-	if counts["name"] != 1 {
-		t.Errorf("expected exactly one --name flag (non-reserved body property), got %d", counts["name"])
-	}
+	// Wrapper flags stay unprefixed with exactly one registration each.
+	assert.Equal(t, 1, counts["data"], "--data (JSON wrapper)")
+	assert.Equal(t, 1, counts["data-file"], "--data-file (JSON wrapper)")
+	assert.Equal(t, 1, counts["output"], "--output (format flag)")
+
+	// Colliding body properties get a body- prefix.
+	assert.Equal(t, 1, counts["body-data"], "--body-data (prefixed body property)")
+	assert.Equal(t, 1, counts["body-output"], "--body-output (prefixed body property)")
+	assert.Equal(t, 1, counts["body-all"], "--body-all (prefixed body property)")
+
+	// Non-colliding body property stays unprefixed.
+	assert.Equal(t, 1, counts["name"], "--name (non-reserved body property)")
 }
 
 // TestNewApp_DpuExtensionServiceCreate_DoesNotPanic loads the real embedded
@@ -419,19 +412,11 @@ func TestBuildActionCommand_ReservedBodyPropertySkipped(t *testing.T) {
 // "create flag redefined: data" during urfave/cli flag-set construction.
 func TestNewApp_DpuExtensionServiceCreate_DoesNotPanic(t *testing.T) {
 	app, err := NewApp(openapi.Spec)
-	if err != nil {
-		t.Fatalf("NewApp failed: %v", err)
-	}
+	require.NoError(t, err, "NewApp failed")
 
-	defer func() {
-		if r := recover(); r != nil {
-			t.Fatalf("expected no panic, got %v", r)
-		}
-	}()
-
-	if err := app.Run([]string{"carbidecli", "dpu-extension-service", "create", "--help"}); err != nil {
-		t.Fatalf("app.Run returned error: %v", err)
-	}
+	require.NotPanics(t, func() {
+		require.NoError(t, app.Run([]string{"carbidecli", "dpu-extension-service", "create", "--help"}))
+	})
 }
 
 func TestIsActionModifier(t *testing.T) {
