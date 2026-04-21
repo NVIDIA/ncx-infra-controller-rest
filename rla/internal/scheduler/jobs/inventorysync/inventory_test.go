@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
@@ -31,7 +30,6 @@ import (
 	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/carbideapi"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/common/utils"
-	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/config"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/db/model"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/nsmapi"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/psmapi"
@@ -52,8 +50,6 @@ func TestInventory(t *testing.T) {
 	assert.Nil(t, err)
 	pool, err := utils.UnitTestDB(ctx, t, dbConf)
 	assert.Nil(t, err)
-
-	cfg := config.UnitTestConfig()
 
 	grpcMock := carbideapi.NewMockClient()
 
@@ -86,8 +82,7 @@ func TestInventory(t *testing.T) {
 
 	psmMock := psmapi.NewMockClient()
 	nsmMock := nsmapi.NewMockClient()
-	var machineIDsLastSyncedAt time.Time
-	runInventoryOne(ctx, &cfg, pool, grpcMock, psmMock, nsmMock, componentmanager.DefaultTestConfig(), &machineIDsLastSyncedAt)
+	runInventoryOne(ctx, pool, grpcMock, psmMock, nsmMock, componentmanager.DefaultTestConfig())
 
 	rows, err := pool.DB.Query("SELECT serial_number, power_state FROM component;")
 	assert.NotNil(t, rows)
@@ -129,7 +124,6 @@ func TestSyncFirmwareVersion(t *testing.T) {
 	pool, err := utils.UnitTestDB(ctx, t, dbConf)
 	assert.Nil(t, err)
 
-	cfg := config.UnitTestConfig()
 	grpcMock := carbideapi.NewMockClient()
 
 	serial1 := "fw-serial-1"
@@ -156,8 +150,7 @@ func TestSyncFirmwareVersion(t *testing.T) {
 
 	psmMock := psmapi.NewMockClient()
 	nsmMock := nsmapi.NewMockClient()
-	var machineIDsLastSyncedAt time.Time
-	runInventoryOne(ctx, &cfg, pool, grpcMock, psmMock, nsmMock, componentmanager.DefaultTestConfig(), &machineIDsLastSyncedAt)
+	runInventoryOne(ctx, pool, grpcMock, psmMock, nsmMock, componentmanager.DefaultTestConfig())
 
 	var updated1 model.Component
 	err = pool.DB.NewSelect().Model(&updated1).Where("id = ?", c1.ID).Scan(ctx)
@@ -425,10 +418,8 @@ func TestHandleExpectedPowershelves(t *testing.T) {
 	assert.Equal(t, 3, len(preRegistered), "Should have 3 pre-registered powershelves (PMC 4, 5, 6)")
 
 	// Run the inventory loop
-	cfg := config.UnitTestConfig()
 	nsmMock := nsmapi.NewMockClient()
-	var machineIDsLastSyncedAt time.Time
-	runInventoryOne(ctx, &cfg, pool, carbideMock, psmMock, nsmMock, componentmanager.DefaultTestConfig(), &machineIDsLastSyncedAt)
+	runInventoryOne(ctx, pool, carbideMock, psmMock, nsmMock, componentmanager.DefaultTestConfig())
 
 	// Verify that only expected PMCs that have DHCPed were registered with PSM
 	registeredPowershelves, err := psmMock.GetPowershelves(ctx, []string{})
@@ -751,9 +742,7 @@ func TestHandleExpectedNVSwitches(t *testing.T) {
 	assert.Equal(t, 1, len(preRegistered), "Should have 1 pre-registered switch (SW7)")
 
 	// Run the inventory loop
-	cfg := config.UnitTestConfig()
-	var machineIDsLastSyncedAt time.Time
-	runInventoryOne(ctx, &cfg, pool, carbideMock, psmMock, nsmMock, componentmanager.DefaultTestConfig(), &machineIDsLastSyncedAt)
+	runInventoryOne(ctx, pool, carbideMock, psmMock, nsmMock, componentmanager.DefaultTestConfig())
 
 	// --- Verify NSM registrations ---
 	registeredSwitches, err := nsmMock.GetNVSwitches(ctx, nil)
@@ -819,7 +808,7 @@ func TestHandleExpectedNVSwitches(t *testing.T) {
 	nsmMock.SetNVSwitchFirmware("aa:bb:cc:11:11:01", "3.0.0")
 	nsmMock.SetNVSwitchFirmware("aa:bb:cc:11:11:02", "3.1.0")
 
-	runInventoryOne(ctx, &cfg, pool, carbideMock, psmMock, nsmMock, componentmanager.DefaultTestConfig(), &machineIDsLastSyncedAt)
+	runInventoryOne(ctx, pool, carbideMock, psmMock, nsmMock, componentmanager.DefaultTestConfig())
 
 	// SW1: external_id and firmware_version should now be set
 	var updatedSw1 model.Component
