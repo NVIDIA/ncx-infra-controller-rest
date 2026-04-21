@@ -3432,12 +3432,18 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 				}
 			}
 
-			if len(tsc.Calls) > 0 && len(tt.args.reqData.SSHKeyGroupIDs) > 0 {
-
-				req := tsc.Calls[0].Arguments[3].(*cwssaws.InstanceAllocationRequest)
+			if len(tsc.Calls) > 0 && len(tsc.Calls[len(tsc.Calls)-1].Arguments) > 3 {
+				req := tsc.Calls[len(tsc.Calls)-1].Arguments[3].(*cwssaws.InstanceAllocationRequest)
 
 				// Check that the list of IDs match in size and order.
-				assert.Equal(t, req.Config.Tenant.TenantKeysetIds, tt.args.reqData.SSHKeyGroupIDs)
+				if len(tt.args.reqData.SSHKeyGroupIDs) > 0 {
+					assert.Equal(t, req.Config.Tenant.TenantKeysetIds, tt.args.reqData.SSHKeyGroupIDs)
+				}
+
+				// Check that the allow unhealthy machine flag is set correctly
+				if tt.args.reqData.AllowUnhealthyMachine != nil && *tt.args.reqData.AllowUnhealthyMachine {
+					assert.True(t, req.AllowUnhealthyMachine, fmt.Sprintf("%v", req))
+				}
 			}
 
 			if len(tt.args.reqData.InfiniBandInterfaces) > 0 {
