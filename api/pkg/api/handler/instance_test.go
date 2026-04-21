@@ -3477,9 +3477,18 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 					assert.Empty(t, req.Config.Tenant.TenantKeysetIds)
 				}
 
+				// Check that if user did not send Instance Type ID, it is not sent to Core
+				if tt.args.reqData.InstanceTypeID == nil {
+					assert.Nil(t, req.InstanceTypeId)
+				} else {
+					assert.Equal(t, *tt.args.reqData.InstanceTypeID, *req.InstanceTypeId)
+				}
+
 				// Check that the allow unhealthy machine flag is set correctly
 				if tt.args.reqData.AllowUnhealthyMachine != nil && *tt.args.reqData.AllowUnhealthyMachine {
 					assert.True(t, req.AllowUnhealthyMachine, fmt.Sprintf("%v", req))
+				} else {
+					assert.False(t, req.AllowUnhealthyMachine, fmt.Sprintf("%v", req))
 				}
 			}
 
