@@ -18,6 +18,7 @@
 package carbidecli
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -303,6 +304,125 @@ func TestIsListAction(t *testing.T) {
 			got := isListAction(tt.action)
 			if got != tt.want {
 				t.Errorf("isListAction(%q) = %v, want %v", tt.action, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestDetectMisorderedFlags(t *testing.T) {
+	usage := "carbidecli machine update <machineId>"
+	tests := []struct {
+		name         string
+		args         []string
+		argParams    []string
+		wantErr      bool
+		wantContains []string
+	}{
+		{
+			name:      "happy path - exactly the positional, no extras",
+			args:      []string{"fm100htq"},
+			argParams: []string{"machineId"},
+			wantErr:   false,
+		},
+		{
+			name:      "happy path - no positionals required and none given",
+			args:      nil,
+			argParams: nil,
+			wantErr:   false,
+		},
+		{
+			name:         "flag after positional - NVBug repro",
+			args:         []string{"fm100htq", "--data", "{}"},
+			argParams:    []string{"machineId"},
+			wantErr:      true,
+			wantContains: []string{"--data", "placed after a positional", "Move all flags before positionals", "[flags...] <machineId>"},
+		},
+		{
+			name:         "flag=value form after positional",
+			args:         []string{"fm100htq", "--data={}"},
+			argParams:    []string{"machineId"},
+			wantErr:      true,
+			wantContains: []string{"--data", "placed after a positional"},
+		},
+		{
+			name:         "short flag after positional",
+			args:         []string{"fm100htq", "-o", "yaml"},
+			argParams:    []string{"machineId"},
+			wantErr:      true,
+			wantContains: []string{"-o"},
+		},
+		{
+			name:         "multiple flags after positional",
+			args:         []string{"fm100htq", "--data", "{}", "--output", "yaml"},
+			argParams:    []string{"machineId"},
+			wantErr:      true,
+			wantContains: []string{"--data", "--output"},
+		},
+		{
+			name:         "per-field flag after positional",
+			args:         []string{"fm100htq", "--instance-type-id", "uuid-here"},
+			argParams:    []string{"machineId"},
+			wantErr:      true,
+			wantContains: []string{"--instance-type-id"},
+		},
+		{
+			name:         "extra positional without leading dash",
+			args:         []string{"fm100htq", "bonusId"},
+			argParams:    []string{"machineId"},
+			wantErr:      true,
+			wantContains: []string{"unexpected positional argument", "bonusId"},
+		},
+		{
+			name:         "extra positional plus misplaced flag",
+			args:         []string{"fm100htq", "bonusId", "--data", "{}"},
+			argParams:    []string{"machineId"},
+			wantErr:      true,
+			wantContains: []string{"--data", "bonusId", "unexpected positional"},
+		},
+		{
+			name:         "lone dash is not treated as a flag",
+			args:         []string{"fm100htq", "-"},
+			argParams:    []string{"machineId"},
+			wantErr:      true,
+			wantContains: []string{"unexpected positional", "-"},
+		},
+		{
+			name:      "multi-positional command with flags in correct order",
+			args:      []string{"instanceTypeId-1", "machineAssociationId-1"},
+			argParams: []string{"instanceTypeId", "machineAssociationId"},
+			wantErr:   false,
+		},
+		{
+			name:         "multi-positional command with flag inside a required positional slot",
+			args:         []string{"instanceTypeId-1", "--data={}"},
+			argParams:    []string{"instanceTypeId", "machineAssociationId"},
+			wantErr:      true,
+			wantContains: []string{"--data", "placed after a positional"},
+		},
+		{
+			name:         "multi-positional command with trailing flag",
+			args:         []string{"instanceTypeId-1", "machineAssociationId-1", "--data", "{}"},
+			argParams:    []string{"instanceTypeId", "machineAssociationId"},
+			wantErr:      true,
+			wantContains: []string{"--data"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := detectMisorderedFlagsInArgs(tt.args, tt.argParams, usage)
+			if tt.wantErr && err == nil {
+				t.Fatalf("expected error, got nil")
+			}
+			if !tt.wantErr && err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if err != nil {
+				for _, want := range tt.wantContains {
+					if !strings.Contains(err.Error(), want) {
+						t.Errorf("error missing %q:\n%s", want, err.Error())
+					}
+				}
 			}
 		})
 	}

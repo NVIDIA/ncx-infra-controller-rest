@@ -363,6 +363,10 @@ func buildActionCommand(spec *Spec, ro resolvedOp, subResource string) *cli.Comm
 		UsageText: usageText,
 		Flags:     flags,
 		Action: func(c *cli.Context) error {
+			if err := detectMisorderedFlags(c, argParams, usageText); err != nil {
+				return err
+			}
+
 			client, err := clientFromContext(c)
 			if err != nil {
 				return err
@@ -412,6 +416,88 @@ func buildActionCommand(spec *Spec, ro resolvedOp, subResource string) *cli.Comm
 			return FormatOutput(respBody, c.String("output"))
 		},
 	}
+}
+
+// detectMisorderedFlags returns a helpful error when urfave/cli's stdlib flag
+// parser stopped at a positional and left flag-like tokens in c.Args(). Go's
+// flag package stops parsing at the first non-flag argument, so anything the
+// user placed after a positional is silently ignored -- which on update/create
+// operations surfaces as confusing server-side errors like "no updates
+// specified". Catching it client-side turns a silent drop into a clear usage
+// hint.
+func detectMisorderedFlags(c *cli.Context, argParams []string, usageText string) error {
+	return detectMisorderedFlagsInArgs(c.Args().Slice(), argParams, usageText)
+}
+
+// detectMisorderedFlagsInArgs is the pure-function core of detectMisorderedFlags,
+// extracted so it can be exercised directly from tests without building a cli.Context.
+func detectMisorderedFlagsInArgs(args, argParams []string, usageText string) error {
+	isFlagLike := func(s string) bool {
+		return strings.HasPrefix(s, "-") && len(s) > 1
+	}
+
+	// Default: extras start past all expected positionals. But if a flag-like
+	// token appears inside the positional slots on a multi-positional command
+	// (e.g. `create <instanceTypeId> --data={}`, where urfave would otherwise
+	// pass --data={} through as the second path param), split earlier so the
+	// flag is detected rather than silently consumed into the URL path.
+	split := len(argParams)
+	for i := 1; i < len(args) && i < len(argParams); i++ {
+		if isFlagLike(args[i]) {
+			split = i
+			break
+		}
+	}
+	if len(args) <= split {
+		return nil
+	}
+	extras := args[split:]
+
+	var misplacedFlags, extraPositionals []string
+	for _, a := range extras {
+		if isFlagLike(a) {
+			name := a
+			if eq := strings.Index(a, "="); eq >= 0 {
+				name = a[:eq]
+			}
+			misplacedFlags = append(misplacedFlags, name)
+		} else {
+			extraPositionals = append(extraPositionals, a)
+		}
+	}
+
+	if len(misplacedFlags) == 0 && len(extraPositionals) == 0 {
+		return nil
+	}
+
+	// Rewrite the usage line so the hint shows exactly where flags belong.
+	hint := usageText
+	if len(argParams) > 0 {
+		tail := ""
+		for _, ap := range argParams {
+			tail += " <" + ap + ">"
+		}
+		if idx := strings.Index(usageText, tail); idx >= 0 {
+			hint = usageText[:idx] + " [flags...]" + tail
+		}
+	}
+
+	var msg strings.Builder
+	if len(misplacedFlags) > 0 {
+		fmt.Fprintf(&msg, "flag(s) %s placed after a positional argument; urfave/cli (stdlib flag) stops parsing flags at the first positional, so these flags are being ignored.\n",
+			strings.Join(misplacedFlags, ", "))
+		fmt.Fprintf(&msg, "Move all flags before positionals, e.g.\n  %s\n", hint)
+	}
+	if len(extraPositionals) > 0 {
+		if msg.Len() > 0 {
+			msg.WriteString("Also: ")
+		}
+		fmt.Fprintf(&msg, "unexpected positional argument(s): %s (expected %d: %s)",
+			strings.Join(extraPositionals, ", "),
+			len(argParams),
+			strings.Join(argParams, ", "))
+	}
+	return fmt.Errorf("%s", strings.TrimRight(msg.String(), "\n"))
 }
 
 func readFlagValue(c *cli.Context, p Parameter) string {
