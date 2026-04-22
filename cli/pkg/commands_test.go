@@ -20,6 +20,11 @@ package carbidecli
 import (
 	"strings"
 	"testing"
+
+	"github.com/NVIDIA/ncx-infra-controller-rest/openapi"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	cli "github.com/urfave/cli/v2"
 )
 
 func TestToKebab(t *testing.T) {
@@ -307,6 +312,118 @@ func TestIsListAction(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestBuildCommands_NoDuplicateFlags walks every command produced from the
+// embedded OpenAPI spec and asserts that no single command declares the same
+// flag name twice. Duplicate names cause urfave/cli to panic at
+// flag.(*FlagSet).Var ("flag redefined") when the command's flag set is built,
+// which is exactly how the dpu-extension-service create bug surfaced.
+func TestBuildCommands_NoDuplicateFlags(t *testing.T) {
+	spec, err := ParseSpec(openapi.Spec)
+	require.NoError(t, err, "ParseSpec failed")
+
+	cmds := BuildCommands(spec)
+	require.NotEmpty(t, cmds, "BuildCommands returned no commands")
+
+	var visit func(path string, children []*cli.Command)
+	visit = func(path string, children []*cli.Command) {
+		for _, c := range children {
+			full := path + " " + c.Name
+			seen := make(map[string]bool)
+			for _, f := range c.Flags {
+				name := f.Names()[0]
+				assert.Falsef(t, seen[name],
+					"command %q declares duplicate flag %q (would panic at runtime)", full, name)
+				seen[name] = true
+			}
+			if len(c.Subcommands) > 0 {
+				visit(full, c.Subcommands)
+			}
+		}
+	}
+	visit("carbidecli", cmds)
+}
+
+// TestBuildActionCommand_ReservedBodyPropertyPrefixed verifies that when a
+// request body schema has a property whose kebab-cased name collides with a
+// reserved CLI-wrapper flag (data, data-file, output, all), the generated
+// command registers the body property under a "body-" prefix instead of
+// creating a duplicate flag.
+func TestBuildActionCommand_ReservedBodyPropertyPrefixed(t *testing.T) {
+	spec := &Spec{
+		Paths: map[string]PathItem{
+			"/v2/org/{org}/carbide/widget": {
+				Post: &Operation{
+					OperationID: "create-widget",
+					Tags:        []string{"Widget"},
+					RequestBody: &RequestBody{
+						Content: map[string]MediaType{
+							"application/json": {
+								Schema: &Schema{
+									Type: "object",
+									Properties: map[string]*Schema{
+										"name":     {Type: "string"},
+										"data":     {Type: "string"},
+										"dataFile": {Type: "string"},
+										"output":   {Type: "string"},
+										"all":      {Type: "boolean"},
+									},
+									Required: []string{"name"},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	ro := resolvedOp{
+		tag:    "Widget",
+		action: "create",
+		method: "POST",
+		path:   "/v2/org/{org}/carbide/widget",
+		op:     spec.Paths["/v2/org/{org}/carbide/widget"].Post,
+	}
+
+	cmd := buildActionCommand(spec, ro, "")
+
+	counts := make(map[string]int)
+	for _, f := range cmd.Flags {
+		counts[f.Names()[0]]++
+	}
+
+	// Wrapper flags stay unprefixed with exactly one registration each.
+	assert.Equal(t, 1, counts["data"], "--data (JSON wrapper)")
+	assert.Equal(t, 1, counts["data-file"], "--data-file (JSON wrapper)")
+	assert.Equal(t, 1, counts["output"], "--output (format flag)")
+
+	// --all is list-only; on a create action neither the wrapper nor the
+	// colliding body property should be registered as plain --all.
+	assert.Equal(t, 0, counts["all"], "--all should not be present for create")
+
+	// Colliding body properties get a body- prefix.
+	assert.Equal(t, 1, counts["body-data"], "--body-data (prefixed body property)")
+	assert.Equal(t, 1, counts["body-data-file"], "--body-data-file (prefixed body property)")
+	assert.Equal(t, 1, counts["body-output"], "--body-output (prefixed body property)")
+	assert.Equal(t, 1, counts["body-all"], "--body-all (prefixed body property)")
+
+	// Non-colliding body property stays unprefixed.
+	assert.Equal(t, 1, counts["name"], "--name (non-reserved body property)")
+}
+
+// TestNewApp_DpuExtensionServiceCreate_DoesNotPanic loads the real embedded
+// OpenAPI spec and runs `carbidecli dpu-extension-service create --help`. Prior
+// to the reserved-flag fix this invocation panics with
+// "create flag redefined: data" during urfave/cli flag-set construction.
+func TestNewApp_DpuExtensionServiceCreate_DoesNotPanic(t *testing.T) {
+	app, err := NewApp(openapi.Spec)
+	require.NoError(t, err, "NewApp failed")
+
+	require.NotPanics(t, func() {
+		require.NoError(t, app.Run([]string{"carbidecli", "dpu-extension-service", "create", "--help"}))
+	})
 }
 
 func TestDetectMisorderedFlags(t *testing.T) {
