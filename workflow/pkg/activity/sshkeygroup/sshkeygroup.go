@@ -276,112 +276,6 @@ func (mskg ManageSSHKeyGroup) SyncSSHKeyGroupViaSiteAgent(ctx context.Context, s
 	return nil
 }
 
-// UpdateSSHKeyGroupSiteAssociationInDB updates an SSHKeyGroup for a Site in the DB from data pushed by Site Controller
-func (mskg ManageSSHKeyGroup) UpdateSSHKeyGroupInDB(ctx context.Context, siteID uuid.UUID, transactionID *cwssaws.TransactionID, sshKeyGroupInfo *cwssaws.SSHKeyGroupInfo) (*string, error) {
-	logger := log.With().Str("Activity", "UpdateSSHKeyGroupInDB").Str("SSH Key Group ID", transactionID.ResourceId).Logger()
-
-	logger.Info().Msg("starting activity")
-
-	sshKeyGroupID, err := uuid.Parse(transactionID.ResourceId)
-	if err != nil {
-		logger.Error().Err(err).Msg("failed to parse SSH Key Group ID from transaction ID")
-		return nil, err
-	}
-
-	skgsaDAO := cdbm.NewSSHKeyGroupSiteAssociationDAO(mskg.dbSession)
-
-	skgsa, err := skgsaDAO.GetBySSHKeyGroupIDAndSiteID(ctx, nil, sshKeyGroupID, siteID, []string{cdbm.SSHKeyGroupRelationName})
-	if err != nil {
-		if err == cdb.ErrDoesNotExist {
-			logger.Error().Err(err).Msg("could not find SSH Key Group Site Association from DB using Site Agent transaction ID")
-		} else {
-			logger.Error().Err(err).Msg("failed to retrieve SSH Key Group Site Association from DB using Site Agent transaction ID")
-		}
-
-		return nil, err
-	}
-
-	logger.Info().Msg("retrieved SSH Key Group Site Association from DB")
-
-	// Start a db tx
-	tx, err := cdb.BeginTx(ctx, mskg.dbSession, &sql.TxOptions{})
-	if err != nil {
-		logger.Error().Err(err).Msg("failed to start transaction")
-		return nil, err
-	}
-
-	var status *string
-	var statusMessage *string
-
-	if sshKeyGroupInfo.Status == cwssaws.WorkflowStatus_WORKFLOW_STATUS_SUCCESS {
-		if sshKeyGroupInfo.ObjectStatus == cwssaws.ObjectStatus_OBJECT_STATUS_CREATED || sshKeyGroupInfo.ObjectStatus == cwssaws.ObjectStatus_OBJECT_STATUS_UPDATED {
-			if skgsa.Status != cdbm.SSHKeyGroupSiteAssociationStatusDeleting {
-				status = cdb.GetStrPtr(cdbm.SSHKeyGroupSiteAssociationStatusSynced)
-				statusMessage = cdb.GetStrPtr(MsgSSHKeyGroupSynced)
-			}
-		} else if sshKeyGroupInfo.ObjectStatus == cwssaws.ObjectStatus_OBJECT_STATUS_DELETED {
-			serr := skgsaDAO.DeleteByID(ctx, tx, skgsa.ID)
-			if serr != nil {
-				logger.Error().Err(serr).Msg("failed to delete SSH Key Group Site Association from DB")
-				terr := tx.Rollback()
-				if terr != nil {
-					logger.Error().Err(terr).Msg("failed to rollback transaction")
-				}
-				return nil, err
-			}
-		}
-	} else if sshKeyGroupInfo.Status == cwssaws.WorkflowStatus_WORKFLOW_STATUS_FAILURE {
-		status = cdb.GetStrPtr(cdbm.SSHKeyGroupSiteAssociationStatusError)
-		statusMessage = cdb.GetStrPtr(sshKeyGroupInfo.StatusMsg)
-
-		// If the error is related to the SSHKeyGroupSiteAssociation not being found on the Site, or already being deleted then we delete it from DB
-		if skgsa.Status == cdbm.SSHKeyGroupSiteAssociationStatusDeleting && statusMessage != nil {
-			if strings.Contains(*statusMessage, util.ErrMsgSiteControllerRowNotFound) ||
-				strings.Contains(*statusMessage, util.ErrMsgSiteControllerNoRowsReturned) ||
-				strings.Contains(*statusMessage, util.ErrMsgSiteControllerMarkedForDeletion) ||
-				strings.Contains(*statusMessage, util.ErrMsgSiteControllerCouldNotFind) {
-				//
-				status = nil
-				serr := skgsaDAO.DeleteByID(ctx, tx, skgsa.ID)
-				if serr != nil {
-					logger.Error().Err(serr).Msg("failed to delete SSH Key Group Site Association from DB")
-					terr := tx.Rollback()
-					if terr != nil {
-						logger.Error().Err(terr).Msg("failed to rollback transaction")
-					}
-					return nil, err
-				}
-			} else {
-				// Record the error in status message but keep the Deleting status
-				status = cdb.GetStrPtr(cdbm.SSHKeyGroupSiteAssociationStatusDeleting)
-			}
-		}
-	}
-
-	if status != nil {
-		err = mskg.updateSSHKeyGroupSiteAssociationStatusInDB(ctx, tx, skgsa.ID, status, statusMessage)
-		if err != nil {
-			logger.Error().Err(err).Msg("failed to update SSH Key Group Site Association status detail in DB")
-			terr := tx.Rollback()
-			if terr != nil {
-				logger.Error().Err(terr).Msg("failed to rollback transaction")
-			}
-			return nil, err
-		}
-	}
-
-	// Commit transaction
-	err = tx.Commit()
-	if err != nil {
-		logger.Error().Err(err).Msg("error committing transaction to DB")
-		return nil, err
-	}
-
-	logger.Info().Msg("successfully completed activity")
-
-	return cdb.GetStrPtr(skgsa.SSHKeyGroupID.String()), nil
-}
-
 // UpdateSSHKeyGroupsInDB takes information pushed by Site Agent for a collection of SSH Key Groups associated with the Site and updates the DB
 func (mskg ManageSSHKeyGroup) UpdateSSHKeyGroupsInDB(ctx context.Context, siteID uuid.UUID, sshKeyGroupInventory *cwssaws.SSHKeyGroupInventory) ([]string, error) {
 	logger := log.With().Str("Activity", "UpdateSSHKeyGroupsInDB").Str("Site ID", siteID.String()).Logger()
@@ -611,6 +505,8 @@ func (mskg ManageSSHKeyGroup) DeleteSSHKeyGroupViaSiteAgent(ctx context.Context,
 
 		return err
 	}
+
+	// TODO: Execute this synchronously
 
 	logger.Info().Str("Workflow ID", we.GetID()).Msg("triggered Site agent workflow to delete SSH Key Group")
 

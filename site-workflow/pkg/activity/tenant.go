@@ -63,9 +63,9 @@ func (mt *ManageTenant) CreateTenantOnSite(ctx context.Context, request *cwssaws
 	if carbideClient == nil {
 		return cClient.ErrClientNotConnected
 	}
-	computeClient := carbideClient.Compute()
+	forgeClient := carbideClient.Carbide()
 
-	_, err = computeClient.CreateTenant(ctx, request)
+	_, err = forgeClient.CreateTenant(ctx, request)
 	if err != nil {
 		logger.Warn().Err(err).Msg("Failed to create Tenant using Site Controller API")
 		return swe.WrapErr(err)
@@ -100,9 +100,9 @@ func (mt *ManageTenant) UpdateTenantOnSite(ctx context.Context, request *cwssaws
 	if carbideClient == nil {
 		return cClient.ErrClientNotConnected
 	}
-	computeClient := carbideClient.Compute()
+	forgeClient := carbideClient.Carbide()
 
-	_, err = computeClient.UpdateTenant(ctx, request)
+	_, err = forgeClient.UpdateTenant(ctx, request)
 	if err != nil {
 		logger.Warn().Err(err).Msg("Failed to update Tenant using Site Controller API")
 		return swe.WrapErr(err)
@@ -147,7 +147,9 @@ func NewManageTenantInventory(config ManageInventoryConfig) ManageTenantInventor
 }
 
 func tenantFindIDs(ctx context.Context, carbideClient *cClient.CarbideClient) ([]string, error) {
-	idList, err := carbideClient.Compute().FindTenantOrganizationIDs(ctx, &cwssaws.TenantSearchFilter{})
+	forgeClient := carbideClient.Carbide()
+
+	idList, err := forgeClient.FindTenantOrganizationIds(ctx, &cwssaws.TenantSearchFilter{})
 	if err != nil {
 		return nil, err
 	}
@@ -155,13 +157,15 @@ func tenantFindIDs(ctx context.Context, carbideClient *cClient.CarbideClient) ([
 }
 
 func tenantFindByIDs(ctx context.Context, carbideClient *cClient.CarbideClient, ids []string) ([]*cwssaws.Tenant, error) {
-	list, err := carbideClient.Compute().FindTenantsByOrganizationIDs(ctx, &cwssaws.TenantByOrganizationIdsRequest{
+	forgeClient := carbideClient.Carbide()
+
+	tenantList, err := forgeClient.FindTenantsByOrganizationIds(ctx, &cwssaws.TenantByOrganizationIdsRequest{
 		OrganizationIds: ids,
 	})
 	if err != nil {
 		return nil, err
 	}
-	return list.GetTenants(), nil
+	return tenantList.GetTenants(), nil
 }
 
 func tenantPagedInventory(allItemIDs []string, pagedItems []*cwssaws.Tenant, input *pagedInventoryInput) *cwssaws.TenantInventory {

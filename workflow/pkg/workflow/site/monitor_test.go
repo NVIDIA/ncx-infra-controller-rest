@@ -98,66 +98,6 @@ func (s *MonitorHealthForAllSitesTestSuite) Test_ExecuteMonitorHealthForAllSites
 	s.Equal(wrid, *rwrid)
 }
 
-func (s *MonitorHealthForAllSitesTestSuite) Test_CheckHealthForAllSites_ActivityGetAllSiteIDsFails() {
-	var siteManager siteActivity.ManageSite
-
-	// Mock CheckHealthForAllSitesViaSiteAgent activity failure
-	s.env.RegisterActivity(siteManager.GetAllSiteIDs)
-	s.env.RegisterActivity(siteManager.CheckHealthForSiteViaSiteAgent)
-	s.env.RegisterActivity(siteManager.OnCheckHealthForSiteViaSiteAgentError)
-	s.env.OnActivity(siteManager.GetAllSiteIDs, mock.Anything).Return(nil, errors.New("GetAllSiteIDs Failure"))
-
-	// Execute MonitorHealthForAllSites workflow
-	s.env.ExecuteWorkflow(CheckHealthForAllSites)
-	s.True(s.env.IsWorkflowCompleted())
-	err := s.env.GetWorkflowError()
-	s.Error(err)
-
-	var applicationErr *temporal.ApplicationError
-	s.True(errors.As(err, &applicationErr))
-	s.Equal("GetAllSiteIDs Failure", applicationErr.Error())
-}
-
-func (s *MonitorHealthForAllSitesTestSuite) Test_CheckHealthForAllSites_ActivityCheckHealthForSiteViaSiteAgentFails() {
-	var siteManager siteActivity.ManageSite
-
-	// Mock CheckHealthForAllSitesViaSiteAgent activity failure
-	s.env.RegisterActivity(siteManager.GetAllSiteIDs)
-	s.env.RegisterActivity(siteManager.OnCheckHealthForSiteViaSiteAgentError)
-	s.env.RegisterActivity(siteManager.CheckHealthForSiteViaSiteAgent)
-	s.env.OnActivity(siteManager.GetAllSiteIDs, mock.Anything).Return([]uuid.UUID{uuid.New()}, nil)
-	s.env.OnActivity(siteManager.OnCheckHealthForSiteViaSiteAgentError, mock.Anything, mock.Anything, mock.Anything).Return(errors.New("CheckHealthForSiteViaSiteAgent Failure"))
-	s.env.OnActivity(siteManager.CheckHealthForSiteViaSiteAgent, mock.Anything, mock.Anything).Return(errors.New("CheckHealthForSiteViaSiteAgent Failure"))
-
-	// Execute MonitorHealthForAllSites workflow
-	s.env.ExecuteWorkflow(CheckHealthForAllSites)
-	s.True(s.env.IsWorkflowCompleted())
-	err := s.env.GetWorkflowError()
-	s.Error(err)
-
-	var applicationErr *temporal.ApplicationError
-	s.True(errors.As(err, &applicationErr))
-	s.Equal("CheckHealthForSiteViaSiteAgent Failure", applicationErr.Error())
-}
-
-func (s *MonitorHealthForAllSitesTestSuite) Test_ExecuteCheckHealthForAllSitesWorkflow_Success() {
-	ctx := context.Background()
-
-	wrid := "test-workflow-run-id"
-
-	wrun := &tmocks.WorkflowRun{}
-	wrun.On("GetID").Return(wrid)
-
-	tc := &tmocks.Client{}
-
-	tc.Mock.On("ExecuteWorkflow", context.Background(), mock.AnythingOfType("internal.StartWorkflowOptions"),
-		mock.Anything).Return(wrun, nil)
-
-	rwrid, err := ExecuteCheckHealthForAllSitesWorkflow(ctx, tc)
-	s.NoError(err)
-	s.Equal(wrid, *rwrid)
-}
-
 func TestMonitorHealthForAllSitesSuite(t *testing.T) {
 	suite.Run(t, new(MonitorHealthForAllSitesTestSuite))
 }

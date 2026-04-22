@@ -18,7 +18,6 @@
 package infinibandpartition
 
 import (
-	"context"
 	"errors"
 	"testing"
 
@@ -29,9 +28,8 @@ import (
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/testsuite"
 
-	tmocks "go.temporal.io/sdk/mocks"
-
-	ibpActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/infinibandpartition"
+	ibpActivity "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/activity"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 )
 
 type DeleteInfiniBandPartitionTestSuite struct {
@@ -52,15 +50,17 @@ func (s *DeleteInfiniBandPartitionTestSuite) AfterTest(suiteName, testName strin
 func (s *DeleteInfiniBandPartitionTestSuite) Test_DeleteInfiniBandPartitionWorkflow_Success() {
 	var ibpManager ibpActivity.ManageInfiniBandPartition
 
-	siteID := uuid.New()
 	ibpID := uuid.New()
+	request := &cwssaws.IBPartitionDeletionRequest{
+		Id: &cwssaws.IBPartitionId{Value: ibpID.String()},
+	}
 
-	// Mock DeleteInfiniBandPartitionViaSiteAgent activity
-	s.env.RegisterActivity(ibpManager.DeleteInfiniBandPartitionViaSiteAgent)
-	s.env.OnActivity(ibpManager.DeleteInfiniBandPartitionViaSiteAgent, mock.Anything, siteID, ibpID).Return(nil)
+	// Mock DeleteInfiniBandPartitionOnSite activity
+	s.env.RegisterActivity(ibpManager.DeleteInfiniBandPartitionOnSite)
+	s.env.OnActivity(ibpManager.DeleteInfiniBandPartitionOnSite, mock.Anything, request).Return(nil)
 
-	// execute DeleteInfiniBandPartition workflow
-	s.env.ExecuteWorkflow(DeleteInfiniBandPartition, siteID, ibpID)
+	// Execute DeleteInfiniBandPartitionByID workflow
+	s.env.ExecuteWorkflow(DeleteInfiniBandPartitionByID, ibpID)
 	s.True(s.env.IsWorkflowCompleted())
 	s.NoError(s.env.GetWorkflowError())
 }
@@ -68,42 +68,24 @@ func (s *DeleteInfiniBandPartitionTestSuite) Test_DeleteInfiniBandPartitionWorkf
 func (s *DeleteInfiniBandPartitionTestSuite) Test_DeleteInfiniBandPartitionWorkflow_ActivityFails() {
 	var ibpManager ibpActivity.ManageInfiniBandPartition
 
-	siteID := uuid.New()
 	ibpID := uuid.New()
+	request := &cwssaws.IBPartitionDeletionRequest{
+		Id: &cwssaws.IBPartitionId{Value: ibpID.String()},
+	}
 
-	// Mock DeleteInfiniBandPartitionViaSiteAgent activity failure
-	s.env.RegisterActivity(ibpManager.DeleteInfiniBandPartitionViaSiteAgent)
-	s.env.OnActivity(ibpManager.DeleteInfiniBandPartitionViaSiteAgent, mock.Anything, siteID, ibpID).Return(errors.New("DeleteInfiniBandPartitionViaSiteAgent Failure"))
+	// Mock DeleteInfiniBandPartitionOnSite activity failure
+	s.env.RegisterActivity(ibpManager.DeleteInfiniBandPartitionOnSite)
+	s.env.OnActivity(ibpManager.DeleteInfiniBandPartitionOnSite, mock.Anything, request).Return(errors.New("DeleteInfiniBandPartitionOnSite Failure"))
 
-	// execute createVPC workflow
-	s.env.ExecuteWorkflow(DeleteInfiniBandPartition, siteID, ibpID)
+	// Execute DeleteInfiniBandPartitionByID workflow
+	s.env.ExecuteWorkflow(DeleteInfiniBandPartitionByID, ibpID)
 	s.True(s.env.IsWorkflowCompleted())
 	err := s.env.GetWorkflowError()
 	s.Error(err)
 
 	var applicationErr *temporal.ApplicationError
 	s.True(errors.As(err, &applicationErr))
-	s.Equal("DeleteInfiniBandPartitionViaSiteAgent Failure", applicationErr.Error())
-}
-
-func (s *DeleteInfiniBandPartitionTestSuite) Test_ExecuteDeleteInfiniBandPartitionWorkflow_Success() {
-	ctx := context.Background()
-	siteID := uuid.New()
-	ibpID := uuid.New()
-
-	wid := "test-workflow-id"
-
-	wrun := &tmocks.WorkflowRun{}
-	wrun.On("GetID").Return(wid)
-
-	tc := &tmocks.Client{}
-
-	tc.Mock.On("ExecuteWorkflow", context.Background(), mock.AnythingOfType("internal.StartWorkflowOptions"),
-		mock.Anything, siteID, ibpID).Return(wrun, nil)
-
-	rwid, err := ExecuteDeleteInfiniBandPartitionWorkflow(ctx, tc, siteID, ibpID)
-	s.NoError(err)
-	s.Equal(wid, *rwid)
+	s.Equal("DeleteInfiniBandPartitionOnSite Failure", applicationErr.Error())
 }
 
 func TestDeleteInfiniBandPartitionSuite(t *testing.T) {

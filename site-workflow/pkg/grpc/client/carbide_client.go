@@ -244,16 +244,6 @@ func (client *CarbideClient) Carbide() wflows.ForgeClient {
 	return client.carbide
 }
 
-// Networks Getter
-func (client *CarbideClient) Networks() NetworkInterface {
-	return newNetwork(client.carbide)
-}
-
-// Compute Getter
-func (client *CarbideClient) Compute() ComputeInterface {
-	return newCompute(client.carbide)
-}
-
 // CarbideAtomicClient is an atomic wrapper around the CarbideClient
 type CarbideAtomicClient struct {
 	Config  *CarbideClientConfig

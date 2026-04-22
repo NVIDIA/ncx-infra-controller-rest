@@ -165,7 +165,9 @@ func NewManageSubnetInventory(config ManageInventoryConfig) ManageSubnetInventor
 }
 
 func subnetFindIDs(ctx context.Context, carbideClient *cClient.CarbideClient) ([]*cwssaws.NetworkSegmentId, error) {
-	idList, err := carbideClient.Networks().FindNetworkSegmentIds(ctx, &cwssaws.NetworkSegmentSearchFilter{})
+	forgeClient := carbideClient.Carbide()
+
+	idList, err := forgeClient.FindNetworkSegmentIds(ctx, &cwssaws.NetworkSegmentSearchFilter{})
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +175,9 @@ func subnetFindIDs(ctx context.Context, carbideClient *cClient.CarbideClient) ([
 }
 
 func subnetFindByIDs(ctx context.Context, carbideClient *cClient.CarbideClient, ids []*cwssaws.NetworkSegmentId) ([]*cwssaws.NetworkSegment, error) {
-	list, err := carbideClient.Networks().FindNetworkSegmentsByIds(ctx, &cwssaws.NetworkSegmentsByIdsRequest{
+	forgeClient := carbideClient.Carbide()
+
+	list, err := forgeClient.FindNetworkSegmentsByIds(ctx, &cwssaws.NetworkSegmentsByIdsRequest{
 		NetworkSegmentsIds: ids,
 	})
 	if err != nil {
