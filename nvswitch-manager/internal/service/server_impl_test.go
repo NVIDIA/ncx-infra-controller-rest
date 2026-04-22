@@ -49,7 +49,7 @@ func TestResetTarget_InvalidIP(t *testing.T) {
 			resp := resetTarget(context.Background(), target, redfish.ResetOn)
 
 			assert.Equal(t, pb.StatusCode_INVALID_ARGUMENT, resp.Status)
-			assert.Equal(t, tc.ip, resp.Uuid)
+			assert.Equal(t, tc.ip, resp.BmcIp)
 			assert.Contains(t, resp.Error, "invalid BMC IP")
 		})
 	}
@@ -64,7 +64,7 @@ func TestResetTarget_NilCredentials(t *testing.T) {
 	resp := resetTarget(context.Background(), target, redfish.ResetOn)
 
 	assert.Equal(t, pb.StatusCode_INVALID_ARGUMENT, resp.Status)
-	assert.Equal(t, "172.16.0.10", resp.Uuid)
+	assert.Equal(t, "172.16.0.10", resp.BmcIp)
 	assert.Contains(t, resp.Error, "bmc_credentials are required")
 }
 

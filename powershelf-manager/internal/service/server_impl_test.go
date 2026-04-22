@@ -53,7 +53,7 @@ func TestPowerTarget_InvalidIP(t *testing.T) {
 			resp := s.powerTarget(context.Background(), target, true)
 
 			assert.Equal(t, pb.StatusCode_INVALID_ARGUMENT, resp.Status)
-			assert.Equal(t, tc.ip, resp.PmcMacAddress)
+			assert.Equal(t, tc.ip, resp.PmcIp)
 			assert.Contains(t, resp.Error, "invalid PMC IP")
 		})
 	}
@@ -69,7 +69,7 @@ func TestPowerTarget_NilCredentials(t *testing.T) {
 	resp := s.powerTarget(context.Background(), target, true)
 
 	assert.Equal(t, pb.StatusCode_INVALID_ARGUMENT, resp.Status)
-	assert.Equal(t, "10.20.30.40", resp.PmcMacAddress)
+	assert.Equal(t, "10.20.30.40", resp.PmcIp)
 	assert.Contains(t, resp.Error, "credentials are required")
 }
 
