@@ -20,6 +20,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"net"
 	"time"
 
 	"github.com/google/uuid"
@@ -220,8 +221,9 @@ func (s *NVSwitchManagerServerImpl) PowerControl(ctx context.Context, req *pb.Po
 		}, nil
 	}
 
-	responses := make([]*pb.NVSwitchResponse, 0, len(req.Uuids))
+	responses := make([]*pb.NVSwitchResponse, 0, len(req.Uuids)+len(req.Targets))
 
+	// Registered path: resolve UUIDs via registry + credential manager
 	for _, uuidStr := range req.Uuids {
 		uuid, err := protobuf.ParseUUID(uuidStr)
 		if err != nil {
@@ -259,9 +261,64 @@ func (s *NVSwitchManagerServerImpl) PowerControl(ctx context.Context, req *pb.Po
 		})
 	}
 
+	// Direct path: use inline connection details, bypass registry and credential manager
+	for _, target := range req.Targets {
+		responses = append(responses, resetTarget(ctx, target, resetType))
+	}
+
 	return &pb.PowerControlResponse{
 		Responses: responses,
 	}, nil
+}
+
+// resetTarget performs a power action against an unregistered device using inline connection details.
+func resetTarget(ctx context.Context, target *pb.PowerTarget, resetType redfish.ResetType) *pb.NVSwitchResponse {
+	ip := net.ParseIP(target.BmcIp)
+	if ip == nil {
+		return &pb.NVSwitchResponse{
+			BmcIp:  target.BmcIp,
+			Status: pb.StatusCode_INVALID_ARGUMENT,
+			Error:  fmt.Sprintf("invalid BMC IP: %s", target.BmcIp),
+		}
+	}
+
+	if target.BmcCredentials == nil {
+		return &pb.NVSwitchResponse{
+			BmcIp:  target.BmcIp,
+			Status: pb.StatusCode_INVALID_ARGUMENT,
+			Error:  "bmc_credentials are required for power targets",
+		}
+	}
+
+	if target.BmcCredentials.Username == "" || target.BmcCredentials.Password == "" {
+		return &pb.NVSwitchResponse{
+			BmcIp:  target.BmcIp,
+			Status: pb.StatusCode_INVALID_ARGUMENT,
+			Error:  "bmc_credentials username and password must not be empty",
+		}
+	}
+
+	cred := credential.New(target.BmcCredentials.Username, target.BmcCredentials.Password)
+	tray := &nvswitch.NVSwitchTray{
+		BMC: &bmc.BMC{
+			IP:         ip,
+			Port:       int(target.BmcPort),
+			Credential: cred,
+		},
+	}
+
+	if err := firmwaremanager.ResetTray(ctx, tray, resetType); err != nil {
+		return &pb.NVSwitchResponse{
+			BmcIp:  target.BmcIp,
+			Status: pb.StatusCode_INTERNAL_ERROR,
+			Error:  fmt.Sprintf("%s failed: %s", resetType, err.Error()),
+		}
+	}
+
+	return &pb.NVSwitchResponse{
+		BmcIp:  target.BmcIp,
+		Status: pb.StatusCode_SUCCESS,
+	}
 }
 
 // ============================================================================
