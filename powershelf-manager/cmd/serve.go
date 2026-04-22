@@ -56,7 +56,7 @@ func getEnvIntOrDefault(envVar string, defaultVal int) int {
 const (
 	// default service config
 	defaultServicePort   = 50051
-	defaultDataStoreType = powershelfmanager.DatastoreTypePersistent
+	defaultDataStoreType = powershelfmanager.DatastoreTypeInMemory
 
 	// default db config
 	defaultDbPort     = 5432
