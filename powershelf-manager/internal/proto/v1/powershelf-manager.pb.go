@@ -1174,6 +1174,7 @@ type PowershelfResponse struct {
 	PmcMacAddress string                 `protobuf:"bytes,1,opt,name=pmc_mac_address,json=pmcMacAddress,proto3" json:"pmc_mac_address,omitempty"`
 	Status        StatusCode             `protobuf:"varint,2,opt,name=status,proto3,enum=v1.StatusCode" json:"status,omitempty"`
 	Error         string                 `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
+	PmcIp         string                 `protobuf:"bytes,4,opt,name=pmc_ip,json=pmcIp,proto3" json:"pmc_ip,omitempty"` // Set for direct PowerTarget responses; empty for registered shelves
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1225,6 +1226,13 @@ func (x *PowershelfResponse) GetStatus() StatusCode {
 func (x *PowershelfResponse) GetError() string {
 	if x != nil {
 		return x.Error
+	}
+	return ""
+}
+
+func (x *PowershelfResponse) GetPmcIp() string {
+	if x != nil {
+		return x.PmcIp
 	}
 	return ""
 }
@@ -2265,11 +2273,12 @@ const file_internal_proto_v1_powershelf_manager_proto_rawDesc = "" +
 	"\bpmc_macs\x18\x01 \x03(\tR\apmcMacs\"T\n" +
 	"\fPowerRequest\x12\x19\n" +
 	"\bpmc_macs\x18\x01 \x03(\tR\apmcMacs\x12)\n" +
-	"\atargets\x18\x02 \x03(\v2\x0f.v1.PowerTargetR\atargets\"z\n" +
+	"\atargets\x18\x02 \x03(\v2\x0f.v1.PowerTargetR\atargets\"\x91\x01\n" +
 	"\x12PowershelfResponse\x12&\n" +
 	"\x0fpmc_mac_address\x18\x01 \x01(\tR\rpmcMacAddress\x12&\n" +
 	"\x06status\x18\x02 \x01(\x0e2\x0e.v1.StatusCodeR\x06status\x12\x14\n" +
-	"\x05error\x18\x03 \x01(\tR\x05error\"L\n" +
+	"\x05error\x18\x03 \x01(\tR\x05error\x12\x15\n" +
+	"\x06pmc_ip\x18\x04 \x01(\tR\x05pmcIp\"L\n" +
 	"\x14PowerControlResponse\x124\n" +
 	"\tresponses\x18\x01 \x03(\v2\x16.v1.PowershelfResponseR\tresponses\"\x8c\x01\n" +
 	"\vPowerTarget\x12\x15\n" +

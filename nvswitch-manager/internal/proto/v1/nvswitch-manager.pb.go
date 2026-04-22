@@ -1106,6 +1106,7 @@ type NVSwitchResponse struct {
 	Uuid          string                 `protobuf:"bytes,1,opt,name=uuid,proto3" json:"uuid,omitempty"`
 	Status        StatusCode             `protobuf:"varint,2,opt,name=status,proto3,enum=v1.StatusCode" json:"status,omitempty"`
 	Error         string                 `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
+	BmcIp         string                 `protobuf:"bytes,4,opt,name=bmc_ip,json=bmcIp,proto3" json:"bmc_ip,omitempty"` // Set for direct PowerTarget responses; empty for registered switches
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1157,6 +1158,13 @@ func (x *NVSwitchResponse) GetStatus() StatusCode {
 func (x *NVSwitchResponse) GetError() string {
 	if x != nil {
 		return x.Error
+	}
+	return ""
+}
+
+func (x *NVSwitchResponse) GetBmcIp() string {
+	if x != nil {
+		return x.BmcIp
 	}
 	return ""
 }
@@ -2367,11 +2375,12 @@ const file_internal_proto_v1_nvswitch_manager_proto_rawDesc = "" +
 	"\x1aRegisterNVSwitchesResponse\x12:\n" +
 	"\tresponses\x18\x01 \x03(\v2\x1c.v1.RegisterNVSwitchResponseR\tresponses\"'\n" +
 	"\x0fNVSwitchRequest\x12\x14\n" +
-	"\x05uuids\x18\x01 \x03(\tR\x05uuids\"d\n" +
+	"\x05uuids\x18\x01 \x03(\tR\x05uuids\"{\n" +
 	"\x10NVSwitchResponse\x12\x12\n" +
 	"\x04uuid\x18\x01 \x01(\tR\x04uuid\x12&\n" +
 	"\x06status\x18\x02 \x01(\x0e2\x0e.v1.StatusCodeR\x06status\x12\x14\n" +
-	"\x05error\x18\x03 \x01(\tR\x05error\"y\n" +
+	"\x05error\x18\x03 \x01(\tR\x05error\x12\x15\n" +
+	"\x06bmc_ip\x18\x04 \x01(\tR\x05bmcIp\"y\n" +
 	"\vPowerTarget\x12\x15\n" +
 	"\x06bmc_ip\x18\x01 \x01(\tR\x05bmcIp\x128\n" +
 	"\x0fbmc_credentials\x18\x02 \x01(\v2\x0f.v1.CredentialsR\x0ebmcCredentials\x12\x19\n" +
