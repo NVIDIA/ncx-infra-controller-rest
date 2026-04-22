@@ -73,9 +73,9 @@ func TestResetTarget_EmptyCredentials(t *testing.T) {
 		username string
 		password string
 	}{
-		"empty username":      {username: "", password: "bmcSecret"},
-		"empty password":      {username: "bmcAdmin", password: ""},
-		"both empty":          {username: "", password: ""},
+		"empty username": {username: "", password: "bmcSecret"},
+		"empty password": {username: "bmcAdmin", password: ""},
+		"both empty":     {username: "", password: ""},
 	}
 
 	for name, tc := range tests {
