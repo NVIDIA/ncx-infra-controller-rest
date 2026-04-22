@@ -51,3 +51,39 @@ func PromptConfirm(label string) (bool, error) {
 	answer := strings.TrimSpace(strings.ToLower(scanner.Text()))
 	return answer == "y" || answer == "yes", nil
 }
+
+// PromptChoice displays a label with a list of options and reads a selection.
+// If the user enters an empty string and a default is provided, the default is
+// returned. Input matching is case-insensitive and the canonical option value
+// is returned.
+func PromptChoice(label string, options []string, defaultValue string) (string, error) {
+	if len(options) == 0 {
+		return "", fmt.Errorf("no options provided")
+	}
+	scanner := bufio.NewScanner(os.Stdin)
+	display := strings.Join(options, "/")
+	suffix := fmt.Sprintf("[%s]", display)
+	if defaultValue != "" {
+		suffix = fmt.Sprintf("[%s, default %s]", display, defaultValue)
+	}
+	for {
+		fmt.Printf("%s %s: ", Bold(label), suffix)
+		if !scanner.Scan() {
+			return "", fmt.Errorf("input cancelled")
+		}
+		text := strings.TrimSpace(scanner.Text())
+		if text == "" {
+			if defaultValue != "" {
+				return defaultValue, nil
+			}
+			fmt.Println(Red("  (required)"))
+			continue
+		}
+		for _, opt := range options {
+			if strings.EqualFold(text, opt) {
+				return opt, nil
+			}
+		}
+		fmt.Println(Red(fmt.Sprintf("  (must be one of %s)", display)))
+	}
+}
