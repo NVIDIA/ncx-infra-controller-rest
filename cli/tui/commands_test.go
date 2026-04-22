@@ -710,11 +710,19 @@ func TestPromptChoice(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, "IPv4", got)
 	})
+	t.Run("rejects default not in options", func(t *testing.T) {
+		_, err := withStdin(t, "\n", func() (string, error) {
+			return PromptChoice("Protocol", []string{"IPv4", "IPv6"}, "IPv5")
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "not in allowed options")
+	})
 }
 
 // withStdin pipes the provided input into os.Stdin for the duration of f,
 // captures stdout so the prompt text does not leak into test output, and
-// restores both when it returns.
+// restores both when it returns. All four pipe ends are closed before
+// returning so repeated test runs do not accumulate file descriptors.
 func withStdin(t *testing.T, input string, f func() (string, error)) (string, error) {
 	t.Helper()
 	oldStdin := os.Stdin
@@ -726,6 +734,8 @@ func withStdin(t *testing.T, input string, f func() (string, error)) (string, er
 	os.Stdin = r
 	os.Stdout = sw
 	defer func() {
+		_ = r.Close()
+		_ = sr.Close()
 		os.Stdin = oldStdin
 		os.Stdout = oldStdout
 	}()
@@ -734,8 +744,8 @@ func withStdin(t *testing.T, input string, f func() (string, error)) (string, er
 		_, _ = io.WriteString(w, input)
 	}()
 	result, rerr := f()
-	sw.Close()
-	io.Copy(io.Discard, sr)
+	_ = sw.Close()
+	_, _ = io.Copy(io.Discard, sr)
 	return result, rerr
 }
 

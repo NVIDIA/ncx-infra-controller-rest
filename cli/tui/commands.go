@@ -1474,7 +1474,9 @@ func cmdIPBlockCreate(s *Session, _ []string) error {
 		return err
 	}
 	var pl int
-	fmt.Sscanf(prefixLen, "%d", &pl)
+	if _, err := fmt.Sscanf(prefixLen, "%d", &pl); err != nil {
+		return fmt.Errorf("prefix length must be a number, got %q", prefixLen)
+	}
 	if err := validateIPBlockPrefixLength(protocolVersion, pl); err != nil {
 		return err
 	}
