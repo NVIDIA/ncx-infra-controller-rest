@@ -489,24 +489,68 @@ grpcurl -plaintext -d '{
 
 ---
 
-### PowerCycle
+### PowerControl
 
-Issues a Redfish chassis power cycle for each specified NV-Switch tray.
+Performs a power action (e.g., PowerCycle, ForceOff, On) on one or more NV-Switch trays. Supports both registered switches (by UUID) and unregistered devices (by inline connection details via `PowerTarget`).
 
 ```protobuf
-rpc PowerCycle(NVSwitchRequest) returns (PowerControlResponse)
+rpc PowerControl(PowerControlRequest) returns (PowerControlResponse)
+```
+
+#### Request
+
+```protobuf
+message PowerControlRequest {
+    repeated string uuids = 1;          // Registered switches by UUID
+    PowerAction action = 2;
+    repeated PowerTarget targets = 3;   // Unregistered devices with inline credentials
+}
+
+message PowerTarget {
+    string bmc_ip = 1;
+    Credentials bmc_credentials = 2;
+    int32 bmc_port = 3;                 // 0 = default (443)
+}
+```
+
+#### Response
+
+```protobuf
+message PowerControlResponse {
+    repeated NVSwitchResponse responses = 1;
+}
+
+message NVSwitchResponse {
+    string uuid = 1;       // Set for registered switches; empty for direct targets
+    StatusCode status = 2;
+    string error = 3;
+    string bmc_ip = 4;     // Set for direct PowerTarget responses; empty for registered switches
+}
 ```
 
 #### Behavior
 
 - Returns per-switch status; partial failures are possible
+- For registered switches, `uuid` identifies the device in the response
+- For direct `PowerTarget` requests, `bmc_ip` identifies the device and `uuid` is empty
 
 #### Example
 
 ```bash
+# Registered switch by UUID
 grpcurl -plaintext -d '{
-  "uuids": ["uuid-1"]
-}' localhost:50051 v1.NVSwitchManager/PowerCycle
+  "uuids": ["uuid-1"],
+  "action": "POWER_ACTION_POWER_CYCLE"
+}' localhost:50051 v1.NVSwitchManager/PowerControl
+
+# Unregistered device via PowerTarget
+grpcurl -plaintext -d '{
+  "action": "POWER_ACTION_FORCE_OFF",
+  "targets": [{
+    "bmc_ip": "10.0.1.100",
+    "bmc_credentials": {"username": "admin", "password": "secret"}
+  }]
+}' localhost:50051 v1.NVSwitchManager/PowerControl
 ```
 
 ---
