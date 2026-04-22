@@ -1430,6 +1430,9 @@ func buildTenantSelectItems(accounts []NamedItem) []SelectItem {
 	if len(items) == 0 {
 		return nil
 	}
+	sort.SliceStable(items, func(i, j int) bool {
+		return items[i].Label < items[j].Label
+	})
 	items = append(items, SelectItem{Label: "Enter Tenant ID manually...", ID: tenantManualEntrySentinel})
 	return items
 }

@@ -770,6 +770,20 @@ func TestBuildTenantSelectItems_FallsBackToTenantIDWhenNameBlank(t *testing.T) {
 	assert.Equal(t, "tenant-xyz", items[0].Label)
 }
 
+func TestBuildTenantSelectItems_SortsAlphabeticallyByLabel(t *testing.T) {
+	accounts := []NamedItem{
+		{Name: "zeta", Extra: map[string]string{"tenantId": "tenant-z"}},
+		{Name: "alpha", Extra: map[string]string{"tenantId": "tenant-a"}},
+		{Name: "mu", Extra: map[string]string{"tenantId": "tenant-m"}},
+	}
+	items := buildTenantSelectItems(accounts)
+	require.Len(t, items, 4)
+	assert.Equal(t, "alpha", items[0].Label)
+	assert.Equal(t, "mu", items[1].Label)
+	assert.Equal(t, "zeta", items[2].Label)
+	assert.Equal(t, tenantManualEntrySentinel, items[3].ID, "manual-entry sentinel must stay last")
+}
+
 func TestBuildTenantSelectItems_DeduplicatesByTenantID(t *testing.T) {
 	accounts := []NamedItem{
 		{Name: "acme-prod", Extra: map[string]string{"tenantId": "tenant-1"}},
