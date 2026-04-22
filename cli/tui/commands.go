@@ -2450,51 +2450,36 @@ var labelCapableListCommands = []string{
 	"infiniband-partition list",
 }
 
-// uniqueLabelKeys returns the sorted set of non-empty label keys present on
-// items. Whitespace-only keys are dropped so the generated CLI hint never
-// suggests an unusable form like `--label =<value>`.
-func uniqueLabelKeys(items []NamedItem) []string {
-	seen := map[string]struct{}{}
-	for _, item := range items {
-		for k := range item.Labels {
-			k = strings.TrimSpace(k)
-			if k == "" {
-				continue
-			}
-			seen[k] = struct{}{}
-		}
-	}
-	if len(seen) == 0 {
-		return nil
-	}
-	keys := make([]string, 0, len(seen))
-	for k := range seen {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	return keys
-}
-
 // printLabelHint writes a one-line hint about how to filter, sort, and persist
-// label filters for the most recently listed items. Skipped when label filters
-// are already active or when no items carry labels, so the hint only surfaces
-// when it is actionable. All discovered keys are listed -- the set is bounded
-// by what the org actually defines on this resource type, so no fixed cap is
-// needed.
+// label filters. Uses generic <key>/<value> placeholders -- the hint is the
+// same regardless of what is in the current result set, so no per-call sample
+// or key listing is needed (and no max-keys cap to tune). Suppressed when a
+// label filter is already active or when no items carry labels, so the hint
+// only surfaces when it is actionable.
 func printLabelHint(w io.Writer, items []NamedItem, activeFilters map[string]string) {
 	if len(activeFilters) > 0 {
 		return
 	}
-	keys := uniqueLabelKeys(items)
-	if len(keys) == 0 {
+	if !anyItemHasLabels(items) {
 		return
 	}
-	sample := keys[0]
-	fmt.Fprintln(w, Dim(fmt.Sprintf(
-		"Hint: --label %s=<value> filter | --sort-label %s sort | scope label %s=<value> persist",
-		sample, sample, sample,
-	)))
-	fmt.Fprintln(w, Dim("Label keys: "+strings.Join(keys, ", ")))
+	fmt.Fprintln(w, Dim(
+		"Hint: --label <key>=<value> filter | --sort-label <key> sort | scope label <key>=<value> persist",
+	))
+}
+
+// anyItemHasLabels reports whether at least one item carries a non-empty
+// label key. Used to gate printLabelHint so the hint only appears on lists
+// where labels are actually in play.
+func anyItemHasLabels(items []NamedItem) bool {
+	for _, item := range items {
+		for k := range item.Labels {
+			if strings.TrimSpace(k) != "" {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func filterByLabels(items []NamedItem, filters map[string]string) []NamedItem {

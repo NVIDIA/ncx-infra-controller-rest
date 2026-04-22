@@ -592,40 +592,6 @@ func TestMergeLabels(t *testing.T) {
 	})
 }
 
-func TestUniqueLabelKeys(t *testing.T) {
-	t.Run("empty input", func(t *testing.T) {
-		assert.Nil(t, uniqueLabelKeys(nil))
-		assert.Nil(t, uniqueLabelKeys([]NamedItem{}))
-	})
-	t.Run("no labels on any item", func(t *testing.T) {
-		items := []NamedItem{{Name: "a"}, {Name: "b", Labels: map[string]string{}}}
-		assert.Nil(t, uniqueLabelKeys(items))
-	})
-	t.Run("dedupes and sorts keys", func(t *testing.T) {
-		items := []NamedItem{
-			{Name: "a", Labels: map[string]string{"rack": "A1", "env": "prod"}},
-			{Name: "b", Labels: map[string]string{"env": "dev", "ServerName": "foo"}},
-			{Name: "c", Labels: nil},
-		}
-		got := uniqueLabelKeys(items)
-		assert.Equal(t, []string{"ServerName", "env", "rack"}, got)
-	})
-	t.Run("drops empty and whitespace-only keys", func(t *testing.T) {
-		items := []NamedItem{
-			{Name: "a", Labels: map[string]string{"": "blank", "  ": "spaces", "rack": "A1"}},
-		}
-		got := uniqueLabelKeys(items)
-		assert.Equal(t, []string{"rack"}, got, "empty and whitespace-only keys must not appear in hints")
-	})
-	t.Run("trims surrounding whitespace from keys", func(t *testing.T) {
-		items := []NamedItem{
-			{Name: "a", Labels: map[string]string{" rack ": "A1"}},
-		}
-		got := uniqueLabelKeys(items)
-		assert.Equal(t, []string{"rack"}, got)
-	})
-}
-
 func TestPrintLabelHint(t *testing.T) {
 	itemsWithLabels := []NamedItem{
 		{Name: "m1", Labels: map[string]string{"RackIdentifier": "H19", "ServerName": "pdx01"}},
@@ -641,28 +607,27 @@ func TestPrintLabelHint(t *testing.T) {
 		printLabelHint(&buf, []NamedItem{{Name: "x"}}, nil)
 		assert.Empty(t, buf.String())
 	})
-	t.Run("hint surfaces an actual key", func(t *testing.T) {
+	t.Run("whitespace-only label keys do not trigger hint", func(t *testing.T) {
+		var buf bytes.Buffer
+		items := []NamedItem{{Name: "a", Labels: map[string]string{"": "blank", "  ": "spaces"}}}
+		printLabelHint(&buf, items, nil)
+		assert.Empty(t, buf.String(), "blank/whitespace keys must not be treated as real labels")
+	})
+	t.Run("hint uses placeholders not real keys", func(t *testing.T) {
 		var buf bytes.Buffer
 		printLabelHint(&buf, itemsWithLabels, nil)
 		out := buf.String()
-		assert.Contains(t, out, "--label")
-		assert.Contains(t, out, "--sort-label")
-		assert.Contains(t, out, "scope label")
-		assert.Contains(t, out, "RackIdentifier", "hint should reference a label key from the items")
-		assert.Contains(t, out, "Label keys: RackIdentifier, ServerName")
+		assert.Contains(t, out, "--label <key>=<value>")
+		assert.Contains(t, out, "--sort-label <key>")
+		assert.Contains(t, out, "scope label <key>=<value>")
+		assert.NotContains(t, out, "RackIdentifier", "hint must not surface real keys from the result set")
+		assert.NotContains(t, out, "ServerName", "hint must not surface real keys from the result set")
+		assert.NotContains(t, out, "Label keys:", "no per-result key listing should be printed")
 	})
-	t.Run("lists every discovered key", func(t *testing.T) {
-		labels := map[string]string{}
-		for _, k := range []string{"k1", "k2", "k3", "k4", "k5", "k6", "k7", "k8"} {
-			labels[k] = "v"
-		}
-		items := []NamedItem{{Name: "a", Labels: labels}}
+	t.Run("hint output is exactly one line", func(t *testing.T) {
 		var buf bytes.Buffer
-		printLabelHint(&buf, items, nil)
-		out := buf.String()
-		assert.Contains(t, out, "Label keys: k1, k2, k3, k4, k5, k6, k7, k8",
-			"all unique label keys should be listed without truncation")
-		assert.NotContains(t, out, "...", "no truncation marker should appear when all keys fit naturally")
+		printLabelHint(&buf, itemsWithLabels, nil)
+		assert.Equal(t, 1, strings.Count(buf.String(), "\n"), "hint should be a single line")
 	})
 	t.Run("empty filter map still shows hint", func(t *testing.T) {
 		var buf bytes.Buffer
