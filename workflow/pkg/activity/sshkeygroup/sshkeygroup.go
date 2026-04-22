@@ -261,12 +261,16 @@ func (mskg ManageSSHKeyGroup) SyncSSHKeyGroupViaSiteAgent(ctx context.Context, s
 		}
 	}
 
+	// Log status detail regardless of success or failure
 	_ = mskg.updateSSHKeyGroupSiteAssociationStatusInDB(ctx, nil, skgsa.ID, &status, &statusMessage)
+
+	// If workflow wasn't successful, return error to retry workflow
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to trigger site agent SyncSSHKeyGroup workflow")
 		return err
 	}
 
+	// Create/update was successful
 	if we != nil {
 		logger.Info().Str("Workflow ID", we.GetID()).Msg(fmt.Sprintf("successfully executed %s SSHKeyGroup workflow on Site", workflowMethod))
 	}

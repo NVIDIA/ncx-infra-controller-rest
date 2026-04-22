@@ -48,7 +48,7 @@ func (s *SyncSSHKeyGroupTestSuite) AfterTest(suiteName, testName string) {
 	s.env.AssertExpectations(s.T())
 }
 
-func (s *SyncSSHKeyGroupTestSuite) Test_CreateSSHKeyGroupWorkflow_Success() {
+func (s *SyncSSHKeyGroupTestSuite) Test_SyncSSHKeyGroupWorkflow_Success() {
 	var sshKeyGroupManager sshKeyGroupActivity.ManageSSHKeyGroup
 
 	siteID := uuid.New()
@@ -58,13 +58,37 @@ func (s *SyncSSHKeyGroupTestSuite) Test_CreateSSHKeyGroupWorkflow_Success() {
 	s.env.RegisterActivity(sshKeyGroupManager.SyncSSHKeyGroupViaSiteAgent)
 	s.env.OnActivity(sshKeyGroupManager.SyncSSHKeyGroupViaSiteAgent, mock.Anything, siteID, sshKeyGroupID, mock.Anything).Return(nil)
 
-	// execute CreateSSHKeyGroup workflow
+	// Mock UpdateSSHKeyGroupStatusInDB activity
+	s.env.RegisterActivity(sshKeyGroupManager.UpdateSSHKeyGroupStatusInDB)
+	s.env.OnActivity(sshKeyGroupManager.UpdateSSHKeyGroupStatusInDB, mock.Anything, sshKeyGroupID.String()).Return(nil)
+
+	// Execute SyncSSHKeyGroup workflow
 	s.env.ExecuteWorkflow(SyncSSHKeyGroup, siteID, sshKeyGroupID, mock.Anything)
 	s.True(s.env.IsWorkflowCompleted())
 	s.NoError(s.env.GetWorkflowError())
 }
 
-func (s *SyncSSHKeyGroupTestSuite) Test_CreateSSHKeyGroupWorkflow_ActivityFails() {
+func (s *SyncSSHKeyGroupTestSuite) Test_SyncSSHKeyGroupWorkflow_Success_With_UpdateSSHKeyGroupStatusInDB_Failure() {
+	var sshKeyGroupManager sshKeyGroupActivity.ManageSSHKeyGroup
+
+	siteID := uuid.New()
+	sshKeyGroupID := uuid.New()
+
+	// Mock SyncSSHKeyGroupViaSiteAgent activity
+	s.env.RegisterActivity(sshKeyGroupManager.SyncSSHKeyGroupViaSiteAgent)
+	s.env.OnActivity(sshKeyGroupManager.SyncSSHKeyGroupViaSiteAgent, mock.Anything, siteID, sshKeyGroupID, mock.Anything).Return(nil)
+
+	// Mock UpdateSSHKeyGroupStatusInDB activity
+	s.env.RegisterActivity(sshKeyGroupManager.UpdateSSHKeyGroupStatusInDB)
+	s.env.OnActivity(sshKeyGroupManager.UpdateSSHKeyGroupStatusInDB, mock.Anything, sshKeyGroupID.String()).Return(errors.New("UpdateSSHKeyGroupStatusInDB Failure"))
+
+	// Execute SyncSSHKeyGroup workflow
+	s.env.ExecuteWorkflow(SyncSSHKeyGroup, siteID, sshKeyGroupID, mock.Anything)
+	s.True(s.env.IsWorkflowCompleted())
+	s.NoError(s.env.GetWorkflowError())
+}
+
+func (s *SyncSSHKeyGroupTestSuite) Test_SyncSSHKeyGroupWorkflow_SyncSSHKeyGroupViaSiteAgent_Failure() {
 
 	var sshKeyGroupManager sshKeyGroupActivity.ManageSSHKeyGroup
 
@@ -75,7 +99,10 @@ func (s *SyncSSHKeyGroupTestSuite) Test_CreateSSHKeyGroupWorkflow_ActivityFails(
 	s.env.RegisterActivity(sshKeyGroupManager.SyncSSHKeyGroupViaSiteAgent)
 	s.env.OnActivity(sshKeyGroupManager.SyncSSHKeyGroupViaSiteAgent, mock.Anything, siteID, sshKeyGroupID, mock.Anything).Return(errors.New("SyncSSHKeyGroupViaSiteAgent Failure"))
 
-	// execute CreateSSHKeyGroup workflow
+	// Mock UpdateSSHKeyGroupStatusInDB activity
+	s.env.RegisterActivity(sshKeyGroupManager.UpdateSSHKeyGroupStatusInDB)
+
+	// Execute SyncSSHKeyGroup workflow
 	s.env.ExecuteWorkflow(SyncSSHKeyGroup, siteID, sshKeyGroupID, mock.Anything)
 	s.True(s.env.IsWorkflowCompleted())
 	err := s.env.GetWorkflowError()
@@ -86,7 +113,7 @@ func (s *SyncSSHKeyGroupTestSuite) Test_CreateSSHKeyGroupWorkflow_ActivityFails(
 	s.Equal("SyncSSHKeyGroupViaSiteAgent Failure", applicationErr.Error())
 }
 
-func (s *SyncSSHKeyGroupTestSuite) Test_ExecuteCreateSSHKeyGroupWorkflow_Success() {
+func (s *SyncSSHKeyGroupTestSuite) Test_ExecuteSyncSSHKeyGroupWorkflow_Success() {
 	ctx := context.Background()
 	siteID := uuid.New()
 	sshKeyGroupID := uuid.New()
