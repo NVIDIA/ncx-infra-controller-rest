@@ -39,6 +39,12 @@ func (api *API) RegisterSubscriber() error {
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.UpdateMachineMetadata)
 	ManagerAccess.Data.EB.Log.Info().Msg("Machine: successfully registered the Update Machine Metadata workflow")
 
+	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.ApplyMachineOnlineRepairHealthOverride)
+	ManagerAccess.Data.EB.Log.Info().Msg("Machine: successfully registered the Apply Machine Online Repair Health Override workflow")
+
+	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.ClearMachineOnlineRepairHealthOverride)
+	ManagerAccess.Data.EB.Log.Info().Msg("Machine: successfully registered the Clear Machine Online Repair Health Override workflow")
+
 	// Register activities
 
 	// Sync workflow activities
@@ -48,6 +54,12 @@ func (api *API) RegisterSubscriber() error {
 
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(machineManager.UpdateMachineMetadataOnSite)
 	ManagerAccess.Data.EB.Log.Info().Msg("Machine: successfully registered the Update Machine Metadata activity")
+
+	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(machineManager.InsertHealthReportOverrideOnSite)
+	ManagerAccess.Data.EB.Log.Info().Msg("Machine: successfully registered the Insert Health Report Override activity")
+
+	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(machineManager.RemoveHealthReportOverrideOnSite)
+	ManagerAccess.Data.EB.Log.Info().Msg("Machine: successfully registered the Remove Health Report Override activity")
 
 	return nil
 }
