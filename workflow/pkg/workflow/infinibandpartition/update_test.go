@@ -27,7 +27,6 @@ import (
 	"github.com/stretchr/testify/suite"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/testsuite"
-	"google.golang.org/protobuf/types/known/timestamppb"
 
 	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 )
@@ -45,76 +44,6 @@ func (s *UpdateInfiniBandPartitionTestSuite) SetupTest() {
 
 func (s *UpdateInfiniBandPartitionTestSuite) AfterTest(suiteName, testName string) {
 	s.env.AssertExpectations(s.T())
-}
-
-func (s *UpdateInfiniBandPartitionTestSuite) Test_UpdateInfiniBandPartitionInfo_Success() {
-	var InfiniBandPartitionManager ibpActivity.ManageInfiniBandPartition
-
-	siteID := uuid.New()
-
-	transactionID := &cwssaws.TransactionID{
-		ResourceId: uuid.New().String(),
-		Timestamp:  timestamppb.Now(),
-	}
-
-	ibpInfo := &cwssaws.InfiniBandPartitionInfo{
-		Status:    cwssaws.WorkflowStatus_WORKFLOW_STATUS_IN_PROGRESS,
-		StatusMsg: "InfiniBandPartition creation in progress",
-		IbPartition: &cwssaws.IBPartition{
-			Id: &cwssaws.IBPartitionId{Value: uuid.New().String()},
-			Config: &cwssaws.IBPartitionConfig{
-				Name:                 uuid.New().String(),
-				TenantOrganizationId: uuid.NewString(),
-			},
-		},
-	}
-
-	// Mock UpdateInfiniBandPartitionViaSiteAgent activity
-	s.env.RegisterActivity(InfiniBandPartitionManager.UpdateInfiniBandPartitionInDB)
-	s.env.OnActivity(InfiniBandPartitionManager.UpdateInfiniBandPartitionInDB, mock.Anything, mock.Anything, mock.Anything).Return(nil)
-
-	// execute UpdateInfiniBandPartitionInfo workflow
-	s.env.ExecuteWorkflow(UpdateInfiniBandPartitionInfo, siteID.String(), transactionID, ibpInfo)
-	s.True(s.env.IsWorkflowCompleted())
-	s.NoError(s.env.GetWorkflowError())
-}
-
-func (s *UpdateInfiniBandPartitionTestSuite) Test_UpdateInfiniBandPartitionInfo_ActivityFails() {
-
-	var InfiniBandPartitionManager ibpActivity.ManageInfiniBandPartition
-
-	siteID := uuid.New()
-
-	transactionID := &cwssaws.TransactionID{
-		ResourceId: uuid.New().String(),
-		Timestamp:  timestamppb.Now(),
-	}
-
-	ibpInfo := &cwssaws.InfiniBandPartitionInfo{
-		Status:    cwssaws.WorkflowStatus_WORKFLOW_STATUS_IN_PROGRESS,
-		StatusMsg: "InfiniBandPartition creation in progress",
-		IbPartition: &cwssaws.IBPartition{
-			Id: &cwssaws.IBPartitionId{Value: uuid.New().String()},
-			Config: &cwssaws.IBPartitionConfig{
-				Name:                 uuid.New().String(),
-				TenantOrganizationId: uuid.NewString(),
-			},
-		},
-	}
-
-	// Mock UpdateInfiniBandPartitionViaSiteAgent activity failure
-	s.env.RegisterActivity(InfiniBandPartitionManager.UpdateInfiniBandPartitionInDB)
-	s.env.OnActivity(InfiniBandPartitionManager.UpdateInfiniBandPartitionInDB, mock.Anything, mock.Anything, mock.Anything).Return(errors.New("UpdateInfiniBandPartitionInfo Failure"))
-
-	// execute UpdateInfiniBandPartitionStatus workflow
-	s.env.ExecuteWorkflow(UpdateInfiniBandPartitionInfo, siteID.String(), transactionID, ibpInfo)
-	s.True(s.env.IsWorkflowCompleted())
-	err := s.env.GetWorkflowError()
-	s.Error(err)
-
-	var applicationErr *temporal.ApplicationError
-	s.True(errors.As(err, &applicationErr))
-	s.Equal("UpdateInfiniBandPartitionInfo Failure", applicationErr.Error())
 }
 
 func (s *UpdateInfiniBandPartitionTestSuite) Test_UpdateInfiniBandPartitionInventory_Success() {

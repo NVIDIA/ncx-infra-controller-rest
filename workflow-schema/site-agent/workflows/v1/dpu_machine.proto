@@ -15,29 +15,19 @@
 
 syntax = "proto3";
 
-package workflows.v1;
-
 import "google/protobuf/timestamp.proto";
 
-import "workflow.proto";
-import "common_carbide.proto";
 import "forge_carbide.proto";
+import "machine_discovery_carbide.proto";
 
 option go_package = "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/proto";
 
-// ExpectedPowerShelfInventory - inventory info of all ExpectedPowerShelves on Site collected
-// periodically
-message ExpectedPowerShelfInventory {
-  // Status of Inventory
-  InventoryStatus inventory_status = 1;
-  // Status message
-  string status_msg = 2;
-  // Reported timestamp of Expected Power Shelf inventory
-  google.protobuf.Timestamp timestamp = 3;
-  // List of Expected Power Shelves
-  repeated forge.ExpectedPowerShelf expected_power_shelves = 4;
-  // Inventory page information
-  InventoryPage inventory_page = 5;
-  // Linked Expected Power Shelves (contains PowerShelf ID)
-  repeated forge.LinkedExpectedPowerShelf linked_power_shelves = 6;
+package workflows.v1.machine;
+
+// DpuMachine - wrapper proto object for including DPU network configuration for Machine
+message DpuMachine {
+  // Machine object
+  forge.Machine machine = 1;
+  // DPU network configuration
+  forge.ManagedHostNetworkConfigResponse dpu_network_config = 2;
 }

@@ -63,6 +63,7 @@ func (mm *ManageInstance) UpdateInstanceOnSite(ctx context.Context, request *cws
 	if carbideClient == nil {
 		return cClient.ErrClientNotConnected
 	}
+
 	forgeClient := carbideClient.Carbide()
 
 	_, err = forgeClient.UpdateInstanceConfig(ctx, request)
@@ -100,6 +101,7 @@ func (mm *ManageInstance) CreateInstanceOnSite(ctx context.Context, request *cws
 	if carbideClient == nil {
 		return cClient.ErrClientNotConnected
 	}
+
 	forgeClient := carbideClient.Carbide()
 
 	_, err = forgeClient.AllocateInstance(ctx, request)
@@ -138,13 +140,15 @@ func (mm *ManageInstance) CreateInstancesOnSite(ctx context.Context, request *cw
 		}
 	}
 
+	// Call Site Controller gRPC endpoint
 	carbideClient := mm.CarbideAtomicClient.GetClient()
 	if carbideClient == nil {
 		return cClient.ErrClientNotConnected
 	}
-	computeClient := carbideClient.Compute()
 
-	_, err = computeClient.CreateInstances(ctx, request)
+	forgeClient := carbideClient.Carbide()
+
+	_, err = forgeClient.AllocateInstances(ctx, request)
 	if err != nil {
 		logger.Warn().Err(err).Int("Count", len(request.InstanceRequests)).Msg("Failed to batch create Instances using Site Controller API")
 		return swe.WrapErr(err)
@@ -178,6 +182,7 @@ func (mm *ManageInstance) RebootInstanceOnSite(ctx context.Context, request *cws
 	if carbideClient == nil {
 		return cClient.ErrClientNotConnected
 	}
+
 	forgeClient := carbideClient.Carbide()
 
 	_, err = forgeClient.InvokeInstancePower(ctx, request)
@@ -215,6 +220,7 @@ func (mm *ManageInstance) DeleteInstanceOnSite(ctx context.Context, request *cws
 	if carbideClient == nil {
 		return cClient.ErrClientNotConnected
 	}
+
 	forgeClient := carbideClient.Carbide()
 
 	_, err = forgeClient.ReleaseInstance(ctx, request)
@@ -263,15 +269,20 @@ func NewManageInstanceInventory(config ManageInventoryConfig) ManageInstanceInve
 }
 
 func instanceFindIDs(ctx context.Context, carbideClient *cClient.CarbideClient) ([]*cwssaws.InstanceId, error) {
-	instanceIdList, err := carbideClient.Compute().FindInstanceIDs(ctx, &cwssaws.InstanceSearchFilter{})
+	forgeClient := carbideClient.Carbide()
+
+	instanceIdList, err := forgeClient.FindInstanceIds(ctx, &cwssaws.InstanceSearchFilter{})
 	if err != nil {
 		return nil, err
 	}
+
 	return instanceIdList.GetInstanceIds(), nil
 }
 
 func instanceFindByIDs(ctx context.Context, carbideClient *cClient.CarbideClient, ids []*cwssaws.InstanceId) ([]*cwssaws.Instance, error) {
-	instanceList, err := carbideClient.Compute().FindInstancesByIDs(ctx, &cwssaws.InstancesByIdsRequest{
+	forgeClient := carbideClient.Carbide()
+
+	instanceList, err := forgeClient.FindInstancesByIds(ctx, &cwssaws.InstancesByIdsRequest{
 		InstanceIds: ids,
 	})
 	if err != nil {

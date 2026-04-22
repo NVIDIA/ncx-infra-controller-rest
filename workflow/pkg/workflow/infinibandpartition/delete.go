@@ -18,7 +18,6 @@
 package infinibandpartition
 
 import (
-	"context"
 	"time"
 
 	"github.com/google/uuid"
@@ -27,16 +26,15 @@ import (
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
 
-	"go.temporal.io/sdk/client"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 
-	ibpActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/infinibandpartition"
-	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/queue"
+	ibpActivity "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/activity"
 )
 
-// DeleteInfiniBandPartition is a Temporal workflow to delete an existing InfiniBandPartition via Site Agent
-func DeleteInfiniBandPartition(ctx workflow.Context, siteID uuid.UUID, ibpID uuid.UUID) error {
-	logger := log.With().Str("Workflow", "InfiniBandPartition").Str("Action", "Delete").Str("Site ID", siteID.String()).
-		Str("Partition ID", ibpID.String()).Logger()
+// DeleteInfiniBandPartitionByID is a helper Temporal workflow to delete an existing InfiniBand Partition by ID
+// This workflow is useful for invoking from Temporal CLI because it does not require us to create a proto request object
+func DeleteInfiniBandPartitionByID(ctx workflow.Context, ibpID uuid.UUID) error {
+	logger := log.With().Str("Workflow", "InfiniBandPartition").Str("Action", "Delete").Str("InfiniBand Partition ID", ibpID.String()).Logger()
 
 	logger.Info().Msg("starting workflow")
 
@@ -57,36 +55,19 @@ func DeleteInfiniBandPartition(ctx workflow.Context, siteID uuid.UUID, ibpID uui
 
 	ctx = workflow.WithActivityOptions(ctx, options)
 
-	var ibpManager ibpActivity.ManageInfiniBandPartition
+	var ibPartitionManager ibpActivity.ManageInfiniBandPartition
 
-	err := workflow.ExecuteActivity(ctx, ibpManager.DeleteInfiniBandPartitionViaSiteAgent, siteID, ibpID).Get(ctx, nil)
+	request := &cwssaws.IBPartitionDeletionRequest{
+		Id: &cwssaws.IBPartitionId{Value: ibpID.String()},
+	}
+
+	err := workflow.ExecuteActivity(ctx, ibPartitionManager.DeleteInfiniBandPartitionOnSite, request).Get(ctx, nil)
 	if err != nil {
-		logger.Warn().Err(err).Msg("failed to execute activity: DeleteInfiniBandPartitionViaSiteAgent")
+		logger.Error().Err(err).Str("Activity", "DeleteInfiniBandPartitionOnSite").Msg("Failed to execute activity from workflow")
 		return err
 	}
 
 	logger.Info().Msg("completing workflow")
 
 	return nil
-}
-
-// ExecuteDeleteInfiniBandPartitionWorkflow is a helper function to trigger execution of delete InfiniBandPartition workflow
-func ExecuteDeleteInfiniBandPartitionWorkflow(ctx context.Context, tc client.Client, siteID uuid.UUID, ibpID uuid.UUID) (*string, error) {
-	uid := uuid.New()
-
-	workflowOptions := client.StartWorkflowOptions{
-		ID:        "infiniband-partition-delete-" + uid.String(),
-		TaskQueue: queue.CloudTaskQueue,
-	}
-
-	we, err := tc.ExecuteWorkflow(ctx, workflowOptions, DeleteInfiniBandPartition, siteID, ibpID)
-
-	if err != nil {
-		log.Error().Err(err).Msg("failed to execute workflow: DeleteInfiniBandPartition")
-		return nil, err
-	}
-
-	wid := we.GetID()
-
-	return &wid, nil
 }

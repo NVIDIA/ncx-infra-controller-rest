@@ -18,7 +18,6 @@
 package subnet
 
 import (
-	"context"
 	"errors"
 	"testing"
 
@@ -29,9 +28,8 @@ import (
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/testsuite"
 
-	tmocks "go.temporal.io/sdk/mocks"
-
-	subnetActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/subnet"
+	subnetActivity "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/activity"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 )
 
 type DeleteSubnetTestSuite struct {
@@ -52,15 +50,17 @@ func (s *DeleteSubnetTestSuite) AfterTest(suiteName, testName string) {
 func (s *DeleteSubnetTestSuite) Test_DeleteSubnetWorkflow_Success() {
 	var subnetManager subnetActivity.ManageSubnet
 
-	vpcID := uuid.New()
 	subnetID := uuid.New()
+	request := &cwssaws.NetworkSegmentDeletionRequest{
+		Id: &cwssaws.NetworkSegmentId{Value: subnetID.String()},
+	}
 
-	// Mock DeleteSubnetViaSiteAgent activity
-	s.env.RegisterActivity(subnetManager.DeleteSubnetViaSiteAgent)
-	s.env.OnActivity(subnetManager.DeleteSubnetViaSiteAgent, mock.Anything, subnetID, vpcID).Return(nil)
+	// Mock DeleteSubnetOnSite activity
+	s.env.RegisterActivity(subnetManager.DeleteSubnetOnSite)
+	s.env.OnActivity(subnetManager.DeleteSubnetOnSite, mock.Anything, request).Return(nil)
 
-	// execute deleteVPC workflow
-	s.env.ExecuteWorkflow(DeleteSubnet, subnetID, vpcID)
+	// execute DeleteSubnetByID workflow
+	s.env.ExecuteWorkflow(DeleteSubnetByID, subnetID)
 	s.True(s.env.IsWorkflowCompleted())
 	s.NoError(s.env.GetWorkflowError())
 }
@@ -68,43 +68,25 @@ func (s *DeleteSubnetTestSuite) Test_DeleteSubnetWorkflow_Success() {
 func (s *DeleteSubnetTestSuite) Test_DeleteSubnetWorkflow_ActivityFails() {
 	var subnetManager subnetActivity.ManageSubnet
 
-	vpcID := uuid.New()
 	subnetID := uuid.New()
 
-	// Mock DeleteSubnetViaSiteAgent activity failure
-	s.env.RegisterActivity(subnetManager.DeleteSubnetViaSiteAgent)
-	s.env.OnActivity(subnetManager.DeleteSubnetViaSiteAgent, mock.Anything, subnetID, vpcID).Return(errors.New("DeleteSubnetViaSiteAgent Failure"))
+	request := &cwssaws.NetworkSegmentDeletionRequest{
+		Id: &cwssaws.NetworkSegmentId{Value: subnetID.String()},
+	}
 
-	// execute DeleteSubnet workflow
-	s.env.ExecuteWorkflow(DeleteSubnet, subnetID, vpcID)
+	// Mock DeleteSubnetOnSite activity failure
+	s.env.RegisterActivity(subnetManager.DeleteSubnetOnSite)
+	s.env.OnActivity(subnetManager.DeleteSubnetOnSite, mock.Anything, request).Return(errors.New("DeleteSubnetOnSite Failure"))
+
+	// execute DeleteSubnetByID workflow
+	s.env.ExecuteWorkflow(DeleteSubnetByID, subnetID)
 	s.True(s.env.IsWorkflowCompleted())
 	err := s.env.GetWorkflowError()
 	s.Error(err)
 
 	var applicationErr *temporal.ApplicationError
 	s.True(errors.As(err, &applicationErr))
-	s.Equal("DeleteSubnetViaSiteAgent Failure", applicationErr.Error())
-}
-
-func (s *DeleteSubnetTestSuite) Test_ExecuteDeleteSubnetWorkflow_Success() {
-	ctx := context.Background()
-
-	vpcID := uuid.New()
-	subnetID := uuid.New()
-
-	wid := "test-workflow-id"
-
-	wrun := &tmocks.WorkflowRun{}
-	wrun.On("GetID").Return(wid)
-
-	tc := &tmocks.Client{}
-
-	tc.Mock.On("ExecuteWorkflow", context.Background(), mock.AnythingOfType("internal.StartWorkflowOptions"),
-		mock.Anything, subnetID, vpcID).Return(wrun, nil)
-
-	rwid, err := ExecuteDeleteSubnetWorkflow(ctx, tc, subnetID, vpcID)
-	s.NoError(err)
-	s.Equal(wid, *rwid)
+	s.Equal("DeleteSubnetOnSite Failure", applicationErr.Error())
 }
 
 func TestDeleteSubnetSuite(t *testing.T) {

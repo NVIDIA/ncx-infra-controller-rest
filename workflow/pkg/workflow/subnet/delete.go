@@ -18,7 +18,6 @@
 package subnet
 
 import (
-	"context"
 	"time"
 
 	"github.com/google/uuid"
@@ -27,16 +26,14 @@ import (
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
 
-	"go.temporal.io/sdk/client"
-
-	subnetActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/subnet"
-	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/queue"
+	subnetActivity "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/activity"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 )
 
-// DeleteSubnet is a Temporal workflow to delete an existing Subnet via Site Agent
-func DeleteSubnet(ctx workflow.Context, subnetID uuid.UUID, vpcID uuid.UUID) error {
-	logger := log.With().Str("Workflow", "Subnet").Str("Action", "Delete").Str("Subnet ID", subnetID.String()).
-		Str("VPC ID", vpcID.String()).Logger()
+// DeleteSubnetByID is a helper Temporal workflow to delete an existing Subnet by ID
+// This workflow is useful for invoking from Temporal CLI because it does not require us to create a proto request object
+func DeleteSubnetByID(ctx workflow.Context, subnetID uuid.UUID) error {
+	logger := log.With().Str("Workflow", "Subnet").Str("Action", "Delete").Str("Subnet ID", subnetID.String()).Logger()
 
 	logger.Info().Msg("starting workflow")
 
@@ -58,34 +55,17 @@ func DeleteSubnet(ctx workflow.Context, subnetID uuid.UUID, vpcID uuid.UUID) err
 
 	var subnetManager subnetActivity.ManageSubnet
 
-	err := workflow.ExecuteActivity(ctx, subnetManager.DeleteSubnetViaSiteAgent, subnetID, vpcID).Get(ctx, nil)
+	request := &cwssaws.NetworkSegmentDeletionRequest{
+		Id: &cwssaws.NetworkSegmentId{Value: subnetID.String()},
+	}
+
+	err := workflow.ExecuteActivity(ctx, subnetManager.DeleteSubnetOnSite, request).Get(ctx, nil)
 	if err != nil {
-		logger.Warn().Err(err).Msg("failed to delete activity: DeleteSubnetViaSiteAgent")
+		logger.Warn().Err(err).Msg("failed to delete activity: DeleteSubnetOnSite")
 		return err
 	}
 
 	logger.Info().Msg("completing workflow")
 
 	return nil
-}
-
-// ExecuteDeleteSubnetWorkflow is a helper function to trigger execution of delete Subnet workflow
-func ExecuteDeleteSubnetWorkflow(ctx context.Context, tc client.Client, subnetID uuid.UUID, vpcID uuid.UUID) (*string, error) {
-	uid := uuid.New()
-
-	workflowOptions := client.StartWorkflowOptions{
-		ID:        "subnet-delete-" + uid.String(),
-		TaskQueue: queue.CloudTaskQueue,
-	}
-
-	we, err := tc.ExecuteWorkflow(ctx, workflowOptions, DeleteSubnet, subnetID, vpcID)
-
-	if err != nil {
-		log.Error().Err(err).Msg("failed to execute workflow: DeleteSubnet")
-		return nil, err
-	}
-
-	wid := we.GetID()
-
-	return &wid, nil
 }

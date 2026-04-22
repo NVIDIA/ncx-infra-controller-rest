@@ -18,7 +18,6 @@
 package vpc
 
 import (
-	"context"
 	"errors"
 	"testing"
 
@@ -29,9 +28,8 @@ import (
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/testsuite"
 
-	tmocks "go.temporal.io/sdk/mocks"
-
-	vpcActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/vpc"
+	vpcActivity "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/activity"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 )
 
 type DeleteVpcTestSuite struct {
@@ -50,60 +48,44 @@ func (s *DeleteVpcTestSuite) AfterTest(suiteName, testName string) {
 }
 
 func (s *DeleteVpcTestSuite) Test_DeleteVPCWorkflow_Success() {
-	var vpcManager vpcActivity.ManageVpc
+	var vpcManager vpcActivity.ManageVPC
 
-	siteID := uuid.New()
 	vpcID := uuid.New()
+	request := &cwssaws.VpcDeletionRequest{
+		Id: &cwssaws.VpcId{Value: vpcID.String()},
+	}
 
-	// Mock DeleteVpcViaSiteAgent activity
-	s.env.RegisterActivity(vpcManager.DeleteVpcViaSiteAgent)
-	s.env.OnActivity(vpcManager.DeleteVpcViaSiteAgent, mock.Anything, siteID, vpcID).Return(nil)
+	// Mock DeleteVpcOnSite activity
+	s.env.RegisterActivity(vpcManager.DeleteVpcOnSite)
+	s.env.OnActivity(vpcManager.DeleteVpcOnSite, mock.Anything, request).Return(nil)
 
-	// execute deleteVPC workflow
-	s.env.ExecuteWorkflow(DeleteVpc, siteID, vpcID)
+	// execute DeleteVpcByID workflow
+	s.env.ExecuteWorkflow(DeleteVpcByID, vpcID)
 	s.True(s.env.IsWorkflowCompleted())
 	s.NoError(s.env.GetWorkflowError())
 }
 
 func (s *DeleteVpcTestSuite) Test_DeleteVPCWorkflow_ActivityFails() {
-	var vpcManager vpcActivity.ManageVpc
+	var vpcManager vpcActivity.ManageVPC
 
-	siteID := uuid.New()
 	vpcID := uuid.New()
+	request := &cwssaws.VpcDeletionRequest{
+		Id: &cwssaws.VpcId{Value: vpcID.String()},
+	}
 
-	// Mock DeleteVpcViaSiteAgent activity failure
-	s.env.RegisterActivity(vpcManager.DeleteVpcViaSiteAgent)
-	s.env.OnActivity(vpcManager.DeleteVpcViaSiteAgent, mock.Anything, siteID, vpcID).Return(errors.New("DeleteVpcViaSiteAgent Failure"))
+	// Mock DeleteVpcOnSite activity failure
+	s.env.RegisterActivity(vpcManager.DeleteVpcOnSite)
+	s.env.OnActivity(vpcManager.DeleteVpcOnSite, mock.Anything, request).Return(errors.New("DeleteVpcOnSite Failure"))
 
-	// execute createVPC workflow
-	s.env.ExecuteWorkflow(DeleteVpc, siteID, vpcID)
+	// execute DeleteVpcByID workflow
+	s.env.ExecuteWorkflow(DeleteVpcByID, vpcID)
 	s.True(s.env.IsWorkflowCompleted())
 	err := s.env.GetWorkflowError()
 	s.Error(err)
 
 	var applicationErr *temporal.ApplicationError
 	s.True(errors.As(err, &applicationErr))
-	s.Equal("DeleteVpcViaSiteAgent Failure", applicationErr.Error())
-}
-
-func (s *DeleteVpcTestSuite) Test_ExecuteDeleteVpcWorkflow_Success() {
-	ctx := context.Background()
-	siteID := uuid.New()
-	vpcID := uuid.New()
-
-	wid := "test-workflow-id"
-
-	wrun := &tmocks.WorkflowRun{}
-	wrun.On("GetID").Return(wid)
-
-	tc := &tmocks.Client{}
-
-	tc.Mock.On("ExecuteWorkflow", context.Background(), mock.AnythingOfType("internal.StartWorkflowOptions"),
-		mock.Anything, siteID, vpcID).Return(wrun, nil)
-
-	rwid, err := ExecuteDeleteVpcWorkflow(ctx, tc, siteID, vpcID)
-	s.NoError(err)
-	s.Equal(wid, *rwid)
+	s.Equal("DeleteVpcOnSite Failure", applicationErr.Error())
 }
 
 func TestDeleteVpcSuite(t *testing.T) {

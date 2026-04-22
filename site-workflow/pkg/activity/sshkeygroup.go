@@ -58,7 +58,9 @@ func NewManageSSHKeyGroupInventory(config ManageInventoryConfig) ManageSSHKeyGro
 }
 
 func sshKeyGroupFindIDs(ctx context.Context, carbideClient *cClient.CarbideClient) ([]*cwssaws.TenantKeysetIdentifier, error) {
-	idList, err := carbideClient.Compute().FindSSHKeyGroupIDs(ctx, &cwssaws.TenantKeysetSearchFilter{})
+	forgeClient := carbideClient.Carbide()
+
+	idList, err := forgeClient.FindTenantKeysetIds(ctx, &cwssaws.TenantKeysetSearchFilter{})
 	if err != nil {
 		return nil, err
 	}
@@ -66,13 +68,15 @@ func sshKeyGroupFindIDs(ctx context.Context, carbideClient *cClient.CarbideClien
 }
 
 func sshKeyGroupFindByIDs(ctx context.Context, carbideClient *cClient.CarbideClient, ids []*cwssaws.TenantKeysetIdentifier) ([]*cwssaws.TenantKeyset, error) {
-	list, err := carbideClient.Compute().FindSSHKeyGroupsByIDs(ctx, &cwssaws.TenantKeysetsByIdsRequest{
+	forgeClient := carbideClient.Carbide()
+
+	keysetList, err := forgeClient.FindTenantKeysetsByIds(ctx, &cwssaws.TenantKeysetsByIdsRequest{
 		KeysetIds: ids,
 	})
 	if err != nil {
 		return nil, err
 	}
-	return list.GetKeyset(), nil
+	return keysetList.GetKeyset(), nil
 }
 
 func sshKeyGroupPagedInventory(allItemIDs []*cwssaws.TenantKeysetIdentifier, pagedItems []*cwssaws.TenantKeyset, input *pagedInventoryInput) *cwssaws.SSHKeyGroupInventory {

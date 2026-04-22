@@ -58,21 +58,29 @@ func NewManageInfiniBandPartitionInventory(config ManageInventoryConfig) ManageI
 }
 
 func ibpFindIDs(ctx context.Context, carbideClient *cClient.CarbideClient) ([]*cwssaws.IBPartitionId, error) {
-	idList, err := carbideClient.Networks().FindInfinibandPartitionIDs(ctx, &cwssaws.IBPartitionSearchFilter{})
+	// Call Site Controller gRPC endpoint
+	forgeClient := carbideClient.Carbide()
+
+	idList, err := forgeClient.FindIBPartitionIds(ctx, &cwssaws.IBPartitionSearchFilter{})
 	if err != nil {
 		return nil, err
 	}
+
 	return idList.GetIbPartitionIds(), nil
 }
 
 func ibpFindByIDs(ctx context.Context, carbideClient *cClient.CarbideClient, ids []*cwssaws.IBPartitionId) ([]*cwssaws.IBPartition, error) {
-	list, err := carbideClient.Networks().FindInfinibandPartitionsByIDs(ctx, &cwssaws.IBPartitionsByIdsRequest{
+	// Call Site Controller gRPC endpoint
+	forgeClient := carbideClient.Carbide()
+
+	ibPartitionList, err := forgeClient.FindIBPartitionsByIds(ctx, &cwssaws.IBPartitionsByIdsRequest{
 		IbPartitionIds: ids,
 	})
 	if err != nil {
 		return nil, err
 	}
-	return list.GetIbPartitions(), nil
+
+	return ibPartitionList.GetIbPartitions(), nil
 }
 
 func ibpPagedInventory(allItemIDs []*cwssaws.IBPartitionId, pagedItems []*cwssaws.IBPartition, input *pagedInventoryInput) *cwssaws.InfiniBandPartitionInventory {
@@ -140,9 +148,9 @@ func (mibp *ManageInfiniBandPartition) CreateInfiniBandPartitionOnSite(ctx conte
 	if carbideClient == nil {
 		return client.ErrClientNotConnected
 	}
+
 	forgeClient := carbideClient.Carbide()
 
-	// Call Forge gRPC endpoint
 	_, err = forgeClient.CreateIBPartition(ctx, request)
 	if err != nil {
 		logger.Warn().Err(err).Msg("Failed to create InfiniBand Partition using Site Controller API")
@@ -174,10 +182,12 @@ func (mibp *ManageInfiniBandPartition) UpdateInfiniBandPartitionOnSite(ctx conte
 		return temporal.NewNonRetryableApplicationError(err.Error(), swe.ErrTypeInvalidRequest, err)
 	}
 
+	// Call Site Controller gRPC endpoint
 	carbideClient := mibp.CarbideAtomicClient.GetClient()
 	if carbideClient == nil {
 		return client.ErrClientNotConnected
 	}
+
 	forgeClient := carbideClient.Carbide()
 
 	_, err = forgeClient.UpdateIBPartition(ctx, request)
@@ -215,6 +225,7 @@ func (mipb *ManageInfiniBandPartition) DeleteInfiniBandPartitionOnSite(ctx conte
 	if carbideClient == nil {
 		return client.ErrClientNotConnected
 	}
+
 	forgeClient := carbideClient.Carbide()
 
 	_, err = forgeClient.DeleteIBPartition(ctx, request)

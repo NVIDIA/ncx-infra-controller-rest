@@ -18,9 +18,7 @@
 package instance
 
 import (
-	"context"
 	"errors"
-	"fmt"
 	"testing"
 
 	"github.com/google/uuid"
@@ -30,9 +28,8 @@ import (
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/testsuite"
 
-	tmocks "go.temporal.io/sdk/mocks"
-
-	instanceActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/instance"
+	instanceActivity "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/activity"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 )
 
 type DeleteInstanceTestSuite struct {
@@ -54,13 +51,18 @@ func (s *DeleteInstanceTestSuite) Test_DeleteInstanceWorkflow_Success() {
 	var instanceManager instanceActivity.ManageInstance
 
 	instanceID := uuid.New()
+	request := &cwssaws.InstanceReleaseRequest{
+		Id: &cwssaws.InstanceId{
+			Value: instanceID.String(),
+		},
+	}
 
-	// Mock DeleteInstanceViaSiteAgent activity
-	s.env.RegisterActivity(instanceManager.DeleteInstanceViaSiteAgent)
-	s.env.OnActivity(instanceManager.DeleteInstanceViaSiteAgent, mock.Anything, instanceID).Return(nil)
+	// Mock DeleteInstanceOnSite activity
+	s.env.RegisterActivity(instanceManager.DeleteInstanceOnSite)
+	s.env.OnActivity(instanceManager.DeleteInstanceOnSite, mock.Anything, request).Return(nil)
 
 	// execute deleteVPC workflow
-	s.env.ExecuteWorkflow(DeleteInstance, instanceID)
+	s.env.ExecuteWorkflow(DeleteInstanceByID, instanceID)
 	s.True(s.env.IsWorkflowCompleted())
 	s.NoError(s.env.GetWorkflowError())
 }
@@ -70,58 +72,25 @@ func (s *DeleteInstanceTestSuite) Test_DeleteInstanceWorkflow_DeleteInstanceViaS
 
 	instanceID := uuid.New()
 
-	// Mock DeleteInstanceViaSiteAgent activity failure
-	s.env.RegisterActivity(instanceManager.DeleteInstanceViaSiteAgent)
-	s.env.OnActivity(instanceManager.DeleteInstanceViaSiteAgent, mock.Anything, instanceID).Return(errors.New("DeleteInstanceViaSiteAgent Failure"))
+	request := &cwssaws.InstanceReleaseRequest{
+		Id: &cwssaws.InstanceId{
+			Value: instanceID.String(),
+		},
+	}
 
-	// execute DeleteInstance workflow
-	s.env.ExecuteWorkflow(DeleteInstance, instanceID)
+	// Mock DeleteInstanceOnSite activity failure
+	s.env.RegisterActivity(instanceManager.DeleteInstanceOnSite)
+	s.env.OnActivity(instanceManager.DeleteInstanceOnSite, mock.Anything, request).Return(errors.New("DeleteInstanceOnSite Failure"))
+
+	// execute DeleteInstanceByID workflow
+	s.env.ExecuteWorkflow(DeleteInstanceByID, instanceID)
 	s.True(s.env.IsWorkflowCompleted())
 	err := s.env.GetWorkflowError()
 	s.Error(err)
 
 	var applicationErr *temporal.ApplicationError
 	s.True(errors.As(err, &applicationErr))
-	s.Equal("DeleteInstanceViaSiteAgent Failure", applicationErr.Error())
-}
-
-func (s *DeleteInstanceTestSuite) Test_ExecuteDeleteInstanceWorkflow_Success() {
-	ctx := context.Background()
-
-	instanceID := uuid.New()
-
-	wid := "test-workflow-id"
-
-	wrun := &tmocks.WorkflowRun{}
-	wrun.On("GetID").Return(wid)
-
-	tc := &tmocks.Client{}
-
-	tc.Mock.On("ExecuteWorkflow", context.Background(), mock.AnythingOfType("internal.StartWorkflowOptions"),
-		mock.Anything, instanceID).Return(wrun, nil)
-
-	rwid, err := ExecuteDeleteInstanceWorkflow(ctx, tc, instanceID)
-	s.NoError(err)
-	s.Equal(wid, *rwid)
-}
-
-func (s *DeleteInstanceTestSuite) Test_ExecuteDeleteInstanceWorkflow_Failure() {
-	ctx := context.Background()
-
-	instanceID := uuid.New()
-
-	wid := "test-workflow-id"
-
-	wrun := &tmocks.WorkflowRun{}
-	wrun.On("GetID").Return(wid)
-
-	tc := &tmocks.Client{}
-
-	tc.Mock.On("ExecuteWorkflow", context.Background(), mock.AnythingOfType("internal.StartWorkflowOptions"),
-		mock.Anything, instanceID).Return(wrun, fmt.Errorf("failed to execute workflow"))
-
-	_, err := ExecuteDeleteInstanceWorkflow(ctx, tc, instanceID)
-	s.Error(err)
+	s.Equal("DeleteInstanceOnSite Failure", applicationErr.Error())
 }
 
 func TestDeleteInstanceSuite(t *testing.T) {

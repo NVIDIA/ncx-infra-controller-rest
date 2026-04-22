@@ -73,7 +73,9 @@ func NewManageVPCInventory(config ManageInventoryConfig) ManageVPCInventory {
 }
 
 func vpcFindIDs(ctx context.Context, carbideClient *cClient.CarbideClient) ([]*cwssaws.VpcId, error) {
-	idList, err := carbideClient.Networks().FindVPCIDs(ctx, &cwssaws.VpcSearchFilter{})
+	forgeClient := carbideClient.Carbide()
+
+	idList, err := forgeClient.FindVpcIds(ctx, &cwssaws.VpcSearchFilter{})
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +83,9 @@ func vpcFindIDs(ctx context.Context, carbideClient *cClient.CarbideClient) ([]*c
 }
 
 func vpcFindByIDs(ctx context.Context, carbideClient *cClient.CarbideClient, ids []*cwssaws.VpcId) ([]*cwssaws.Vpc, error) {
-	list, err := carbideClient.Networks().FindVPCsByIDs(ctx, &cwssaws.VpcsByIdsRequest{
+	forgeClient := carbideClient.Carbide()
+
+	list, err := forgeClient.FindVpcsByIds(ctx, &cwssaws.VpcsByIdsRequest{
 		VpcIds: ids,
 	})
 	if err != nil {

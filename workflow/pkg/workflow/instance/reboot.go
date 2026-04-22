@@ -18,7 +18,6 @@
 package instance
 
 import (
-	"context"
 	"time"
 
 	"github.com/google/uuid"
@@ -27,14 +26,14 @@ import (
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
 
-	"go.temporal.io/sdk/client"
+	instanceActivity "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/activity"
 
-	instanceActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/instance"
-	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/queue"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 )
 
-// RebootInstance is a Temporal workflow to reboot a machine associated with Instance via Site Agent
-func RebootInstance(ctx workflow.Context, instanceID uuid.UUID, rebootWithCustomIpxe bool, applyUpdatesOnReboot bool) error {
+// RebootInstanceByID is a helper Temporal workflow to reboot a Machine associated with an Instance
+// This workflow is useful for invoking from Temporal CLI because it does not require us to create a proto request object
+func RebootInstanceByID(ctx workflow.Context, instanceID uuid.UUID, rebootWithCustomIpxe bool, applyUpdatesOnReboot bool) error {
 	logger := log.With().Str("Workflow", "Instance").Str("Action", "Reboot").Str("Instance ID", instanceID.String()).Logger()
 
 	logger.Info().Msg("starting workflow")
@@ -57,34 +56,21 @@ func RebootInstance(ctx workflow.Context, instanceID uuid.UUID, rebootWithCustom
 
 	var instanceManager instanceActivity.ManageInstance
 
-	err := workflow.ExecuteActivity(ctx, instanceManager.RebootInstanceViaSiteAgent, instanceID, rebootWithCustomIpxe, applyUpdatesOnReboot).Get(ctx, nil)
+	request := &cwssaws.InstancePowerRequest{
+		MachineId: &cwssaws.MachineId{
+			Id: instanceID.String(),
+		},
+		BootWithCustomIpxe:   rebootWithCustomIpxe,
+		ApplyUpdatesOnReboot: applyUpdatesOnReboot,
+	}
+
+	err := workflow.ExecuteActivity(ctx, instanceManager.RebootInstanceOnSite, request).Get(ctx, nil)
 	if err != nil {
-		logger.Warn().Err(err).Msg("failed to execute activity: RebootInstanceViaSiteAgent")
+		logger.Error().Err(err).Str("Activity", "RebootInstanceOnSite").Msg("Failed to execute activity from workflow")
 		return err
 	}
 
 	logger.Info().Msg("completing workflow")
 
 	return nil
-}
-
-// ExecuteRebootInstanceWorkflow is a helper function to trigger execution of reboot Instance workflow
-func ExecuteRebootInstanceWorkflow(ctx context.Context, tc client.Client, instanceID uuid.UUID, rebootWithCustomIpxe bool, applyUpdatesOnReboot bool) (*string, error) {
-	uid := uuid.New()
-
-	workflowOptions := client.StartWorkflowOptions{
-		ID:        "instance-reboot-" + uid.String(),
-		TaskQueue: queue.CloudTaskQueue,
-	}
-
-	we, err := tc.ExecuteWorkflow(ctx, workflowOptions, RebootInstance, instanceID, rebootWithCustomIpxe, applyUpdatesOnReboot)
-
-	if err != nil {
-		log.Error().Err(err).Msg("failed to execute workflow: RebootInstance")
-		return nil, err
-	}
-
-	wid := we.GetID()
-
-	return &wid, nil
 }

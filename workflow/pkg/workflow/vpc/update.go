@@ -33,41 +33,6 @@ import (
 	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 )
 
-// UpdateVpcInfo is a Temporal workflow that Site Agent calls to update VPC information
-func UpdateVpcInfo(ctx workflow.Context, siteID string, transactionID *cwssaws.TransactionID, vpcInfo *cwssaws.VPCInfo) error {
-	logger := log.With().Str("Workflow", "UpdateVpcInfo").Str("Site ID", siteID).Logger()
-
-	logger.Info().Msg("starting workflow")
-
-	// RetryPolicy specifies how to automatically handle retries if an Activity fails.
-	retrypolicy := &temporal.RetryPolicy{
-		InitialInterval:    2 * time.Second,
-		BackoffCoefficient: 2.0,
-		MaximumInterval:    2 * time.Minute,
-		MaximumAttempts:    15,
-	}
-	options := workflow.ActivityOptions{
-		// Timeout options specify when to automatically timeout Activity functions.
-		StartToCloseTimeout: 2 * time.Minute,
-		// Optionally provide a customized RetryPolicy.
-		RetryPolicy: retrypolicy,
-	}
-
-	ctx = workflow.WithActivityOptions(ctx, options)
-
-	var vpcManager vpcActivity.ManageVpc
-
-	err := workflow.ExecuteActivity(ctx, vpcManager.UpdateVpcInDB, transactionID, vpcInfo).Get(ctx, nil)
-	if err != nil {
-		logger.Warn().Err(err).Msg("failed to execute activity: UpdateVpcInDB")
-		return err
-	}
-
-	logger.Info().Msg("completing workflow")
-
-	return nil
-}
-
 // UpdateVpcInventory is a workflow called by Site Agent to update VPC inventory for a Site
 func UpdateVpcInventory(ctx workflow.Context, siteID string, vpcInventory *cwssaws.VPCInventory) (err error) {
 	logger := log.With().Str("Workflow", "UpdateVpcInventory").Str("Site ID", siteID).Logger()

@@ -18,7 +18,6 @@
 package instance
 
 import (
-	"context"
 	"time"
 
 	"github.com/google/uuid"
@@ -27,14 +26,13 @@ import (
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
 
-	"go.temporal.io/sdk/client"
-
-	instanceActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/instance"
-	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/queue"
+	instanceActivity "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/activity"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 )
 
-// DeleteInstance is a Temporal workflow to delete an existing Instance via Site Agent
-func DeleteInstance(ctx workflow.Context, instanceID uuid.UUID) error {
+// DeleteInstanceByID is a helper Temporal workflow to delete an Instance by ID
+// This workflow is useful for invoking from Temporal CLI because it does not require us to create a proto request object
+func DeleteInstanceByID(ctx workflow.Context, instanceID uuid.UUID) error {
 	logger := log.With().Str("Workflow", "Instance").Str("Action", "Delete").Str("Instance ID", instanceID.String()).Logger()
 
 	logger.Info().Msg("starting workflow")
@@ -57,34 +55,19 @@ func DeleteInstance(ctx workflow.Context, instanceID uuid.UUID) error {
 
 	var instanceManager instanceActivity.ManageInstance
 
-	err := workflow.ExecuteActivity(ctx, instanceManager.DeleteInstanceViaSiteAgent, instanceID).Get(ctx, nil)
+	request := &cwssaws.InstanceReleaseRequest{
+		Id: &cwssaws.InstanceId{
+			Value: instanceID.String(),
+		},
+	}
+
+	err := workflow.ExecuteActivity(ctx, instanceManager.DeleteInstanceOnSite, request).Get(ctx, nil)
 	if err != nil {
-		logger.Warn().Err(err).Msg("failed to execute activity: DeleteInstanceViaSiteAgent")
+		logger.Warn().Err(err).Msg("failed to execute activity: DeleteInstanceOnSite")
 		return err
 	}
 
 	logger.Info().Msg("completing workflow")
 
 	return nil
-}
-
-// ExecuteDeleteInstanceWorkflow is a helper function to trigger execution of delete Instance workflow
-func ExecuteDeleteInstanceWorkflow(ctx context.Context, tc client.Client, instanceID uuid.UUID) (*string, error) {
-	uid := uuid.New()
-
-	workflowOptions := client.StartWorkflowOptions{
-		ID:        "instance-delete-" + uid.String(),
-		TaskQueue: queue.CloudTaskQueue,
-	}
-
-	we, err := tc.ExecuteWorkflow(ctx, workflowOptions, DeleteInstance, instanceID)
-
-	if err != nil {
-		log.Error().Err(err).Msg("failed to execute workflow: DeleteInstance")
-		return nil, err
-	}
-
-	wid := we.GetID()
-
-	return &wid, nil
 }

@@ -18,7 +18,6 @@
 package vpc
 
 import (
-	"context"
 	"time"
 
 	"github.com/google/uuid"
@@ -27,16 +26,13 @@ import (
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
 
-	"go.temporal.io/sdk/client"
-
-	vpcActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/vpc"
-	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/queue"
+	vpcActivity "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/activity"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 )
 
 // DeleteVpc is a Temporal workflow to delete an existing VPC via Site Agent
-func DeleteVpc(ctx workflow.Context, siteID uuid.UUID, vpcID uuid.UUID) error {
-	logger := log.With().Str("Workflow", "VPC").Str("Action", "Delete").Str("Site ID", siteID.String()).
-		Str("VPC ID", vpcID.String()).Logger()
+func DeleteVpcByID(ctx workflow.Context, vpcID uuid.UUID) error {
+	logger := log.With().Str("Workflow", "VPC").Str("Action", "Delete").Str("VPC ID", vpcID.String()).Logger()
 
 	logger.Info().Msg("starting workflow")
 
@@ -56,36 +52,19 @@ func DeleteVpc(ctx workflow.Context, siteID uuid.UUID, vpcID uuid.UUID) error {
 
 	ctx = workflow.WithActivityOptions(ctx, options)
 
-	var vpcManager vpcActivity.ManageVpc
+	var vpcManager vpcActivity.ManageVPC
 
-	err := workflow.ExecuteActivity(ctx, vpcManager.DeleteVpcViaSiteAgent, siteID, vpcID).Get(ctx, nil)
+	request := &cwssaws.VpcDeletionRequest{
+		Id: &cwssaws.VpcId{Value: vpcID.String()},
+	}
+
+	err := workflow.ExecuteActivity(ctx, vpcManager.DeleteVpcOnSite, request).Get(ctx, nil)
 	if err != nil {
-		logger.Warn().Err(err).Msg("failed to execute activity: DeleteVpcViaSiteAgent")
+		logger.Warn().Err(err).Msg("failed to execute activity: DeleteVpcOnSite")
 		return err
 	}
 
 	logger.Info().Msg("completing workflow")
 
 	return nil
-}
-
-// ExecuteDeleteVpcWorkflow is a helper function to trigger execution of delete VPC workflow
-func ExecuteDeleteVpcWorkflow(ctx context.Context, tc client.Client, siteID uuid.UUID, vpcID uuid.UUID) (*string, error) {
-	uid := uuid.New()
-
-	workflowOptions := client.StartWorkflowOptions{
-		ID:        "vpc-delete-" + uid.String(),
-		TaskQueue: queue.CloudTaskQueue,
-	}
-
-	we, err := tc.ExecuteWorkflow(ctx, workflowOptions, DeleteVpc, siteID, vpcID)
-
-	if err != nil {
-		log.Error().Err(err).Msg("failed to execute workflow: DeleteVpc")
-		return nil, err
-	}
-
-	wid := we.GetID()
-
-	return &wid, nil
 }
