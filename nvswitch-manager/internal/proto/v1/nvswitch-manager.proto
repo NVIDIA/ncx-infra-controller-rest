@@ -152,6 +152,7 @@ message NVSwitchResponse {
     string uuid = 1;
     StatusCode status = 2;
     string error = 3;
+    string bmc_ip = 4;  // Set for direct PowerTarget responses; empty for registered switches
 }
 
 // PowerAction enumerates the Redfish ComputerSystem.Reset actions supported by NV-Switch trays.

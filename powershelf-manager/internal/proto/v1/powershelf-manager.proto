@@ -156,6 +156,7 @@ message PowershelfResponse {
     string pmc_mac_address = 1;
     StatusCode status = 2;
     string error = 3;
+    string pmc_ip = 4;  // Set for direct PowerTarget responses; empty for registered shelves
 }
 
 message PowerControlResponse {

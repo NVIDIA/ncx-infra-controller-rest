@@ -382,25 +382,25 @@ func (s *PowershelfManagerServerImpl) powerTarget(ctx context.Context, target *p
 	ip := net.ParseIP(target.PmcIp)
 	if ip == nil {
 		return &pb.PowershelfResponse{
-			PmcMacAddress: target.PmcIp,
-			Status:        pb.StatusCode_INVALID_ARGUMENT,
-			Error:         fmt.Sprintf("invalid PMC IP: %s", target.PmcIp),
+			PmcIp:  target.PmcIp,
+			Status: pb.StatusCode_INVALID_ARGUMENT,
+			Error:  fmt.Sprintf("invalid PMC IP: %s", target.PmcIp),
 		}
 	}
 
 	if target.PmcCredentials == nil {
 		return &pb.PowershelfResponse{
-			PmcMacAddress: target.PmcIp,
-			Status:        pb.StatusCode_INVALID_ARGUMENT,
-			Error:         "credentials are required for power targets",
+			PmcIp:  target.PmcIp,
+			Status: pb.StatusCode_INVALID_ARGUMENT,
+			Error:  "credentials are required for power targets",
 		}
 	}
 
 	if target.PmcCredentials.Username == "" || target.PmcCredentials.Password == "" {
 		return &pb.PowershelfResponse{
-			PmcMacAddress: target.PmcIp,
-			Status:        pb.StatusCode_INVALID_ARGUMENT,
-			Error:         "credentials username and password must not be empty",
+			PmcIp:  target.PmcIp,
+			Status: pb.StatusCode_INVALID_ARGUMENT,
+			Error:  "credentials username and password must not be empty",
 		}
 	}
 
@@ -413,15 +413,15 @@ func (s *PowershelfManagerServerImpl) powerTarget(ctx context.Context, target *p
 
 	if err := s.psm.PowerControlDirect(ctx, p, on); err != nil {
 		return &pb.PowershelfResponse{
-			PmcMacAddress: target.PmcIp,
-			Status:        pb.StatusCode_INTERNAL_ERROR,
-			Error:         err.Error(),
+			PmcIp:  target.PmcIp,
+			Status: pb.StatusCode_INTERNAL_ERROR,
+			Error:  err.Error(),
 		}
 	}
 
 	return &pb.PowershelfResponse{
-		PmcMacAddress: target.PmcIp,
-		Status:        pb.StatusCode_SUCCESS,
+		PmcIp:  target.PmcIp,
+		Status: pb.StatusCode_SUCCESS,
 	}
 }
 

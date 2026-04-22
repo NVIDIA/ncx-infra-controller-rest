@@ -276,7 +276,7 @@ func resetTarget(ctx context.Context, target *pb.PowerTarget, resetType redfish.
 	ip := net.ParseIP(target.BmcIp)
 	if ip == nil {
 		return &pb.NVSwitchResponse{
-			Uuid:   target.BmcIp,
+			BmcIp:  target.BmcIp,
 			Status: pb.StatusCode_INVALID_ARGUMENT,
 			Error:  fmt.Sprintf("invalid BMC IP: %s", target.BmcIp),
 		}
@@ -284,7 +284,7 @@ func resetTarget(ctx context.Context, target *pb.PowerTarget, resetType redfish.
 
 	if target.BmcCredentials == nil {
 		return &pb.NVSwitchResponse{
-			Uuid:   target.BmcIp,
+			BmcIp:  target.BmcIp,
 			Status: pb.StatusCode_INVALID_ARGUMENT,
 			Error:  "bmc_credentials are required for power targets",
 		}
@@ -292,7 +292,7 @@ func resetTarget(ctx context.Context, target *pb.PowerTarget, resetType redfish.
 
 	if target.BmcCredentials.Username == "" || target.BmcCredentials.Password == "" {
 		return &pb.NVSwitchResponse{
-			Uuid:   target.BmcIp,
+			BmcIp:  target.BmcIp,
 			Status: pb.StatusCode_INVALID_ARGUMENT,
 			Error:  "bmc_credentials username and password must not be empty",
 		}
@@ -309,14 +309,14 @@ func resetTarget(ctx context.Context, target *pb.PowerTarget, resetType redfish.
 
 	if err := firmwaremanager.ResetTray(ctx, tray, resetType); err != nil {
 		return &pb.NVSwitchResponse{
-			Uuid:   target.BmcIp,
+			BmcIp:  target.BmcIp,
 			Status: pb.StatusCode_INTERNAL_ERROR,
 			Error:  fmt.Sprintf("%s failed: %s", resetType, err.Error()),
 		}
 	}
 
 	return &pb.NVSwitchResponse{
-		Uuid:   target.BmcIp,
+		BmcIp:  target.BmcIp,
 		Status: pb.StatusCode_SUCCESS,
 	}
 }
