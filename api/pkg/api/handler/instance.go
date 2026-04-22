@@ -805,7 +805,8 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 
 	// ==================== Step 4: Machine Selection  ====================
 
-	var allowUnhealthyMachine bool
+	// Default to false, will be set to true for data sent to Core if allowUnhealthyMachine is set to true in request
+	allowUnhealthyMachine := false
 
 	// Begin validating Machine ID
 	if apiRequest.MachineID != nil {
@@ -839,9 +840,8 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Machine specified in request does not belong to Site: %s", site.Name), nil)
 		}
 
-		// Propagate allowUnhealthyMachine to the site workflow; API still requires the
-		// machine to be Ready before instance creation proceeds.
-		allowUnhealthyMachine = false
+		// Validate Machine availability. Note: allowUnhealthyMachine also bypasses
+		// the Ready status check, not just health - consider renaming the parameter later.
 		if apiRequest.AllowUnhealthyMachine != nil {
 			allowUnhealthyMachine = *apiRequest.AllowUnhealthyMachine
 		}
@@ -1563,8 +1563,9 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 		},
 		AllowUnhealthyMachine: allowUnhealthyMachine,
 	}
-	if instanceTypeID != nil {
-		createInstanceRequest.InstanceTypeId = cdb.GetStrPtr(instanceTypeID.String())
+
+	if apiRequest.InstanceTypeID != nil {
+		createInstanceRequest.InstanceTypeId = cdb.GetStrPtr(*apiRequest.InstanceTypeID)
 	}
 
 	workflowOptions := temporalClient.StartWorkflowOptions{
