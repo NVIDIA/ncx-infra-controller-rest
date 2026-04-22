@@ -20,6 +20,7 @@ package workflow
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -212,6 +213,8 @@ func executeFirmwareControlAction(actx actionExecutionContext) error {
 	if fwInfo.Operation == operations.FirmwareOperationUnknown {
 		fwInfo.Operation = operations.FirmwareOperationUpgrade
 	}
+
+	fwInfo.TargetVersion = extractComponentTargetVersion(fwInfo.TargetVersion, target.Type)
 
 	if err := workflow.ExecuteActivity(
 		ctx, "FirmwareControl", target, fwInfo,
@@ -605,4 +608,49 @@ func executeVerifyFirmwareConsistencyAction(actx actionExecutionContext) error {
 		activity.VerifyFirmwareConsistency,
 		actx.target,
 	).Get(actx.workflowContext, nil)
+}
+
+// knownComponentTypeKeys are the JSON keys recognised in a layered
+// TargetVersion object. Used to distinguish the new per-component-type
+// format from the legacy flat format.
+var knownComponentTypeKeys = []string{"compute", "nvlswitch", "powershelf"}
+
+// extractComponentTargetVersion extracts the component-specific section from
+// a layered TargetVersion JSON string. The expected top-level structure is:
+//
+//	{
+//	  "compute":    {"bmc": "7.10.30", "uefi": "2.22.1"},
+//	  "nvlswitch":  {"nvos": "1.2.3", "cpld": "4.5.6"},
+//	  "powershelf": {"firmware": "1.0.0"}
+//	}
+//
+// If the key for componentType is present, the corresponding value is
+// returned as a raw JSON string. If the key is absent but the document
+// contains another known component-type key (i.e. it IS the layered
+// format), an empty string is returned so the component manager skips
+// the firmware update. If the document does not look like the layered
+// format (no known keys), the original string is returned as-is for
+// backward compatibility with single-component updates.
+func extractComponentTargetVersion(rawVersion string, componentType devicetypes.ComponentType) string {
+	if rawVersion == "" {
+		return ""
+	}
+
+	var layered map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(rawVersion), &layered); err != nil {
+		return rawVersion
+	}
+
+	key := strings.ToLower(devicetypes.ComponentTypeToString(componentType))
+	if section, ok := layered[key]; ok {
+		return string(section)
+	}
+
+	for _, known := range knownComponentTypeKeys {
+		if _, found := layered[known]; found {
+			return ""
+		}
+	}
+
+	return rawVersion
 }
