@@ -770,6 +770,22 @@ func TestBuildTenantSelectItems_FallsBackToTenantIDWhenNameBlank(t *testing.T) {
 	assert.Equal(t, "tenant-xyz", items[0].Label)
 }
 
+func TestBuildTenantSelectItems_DeduplicatesByTenantID(t *testing.T) {
+	accounts := []NamedItem{
+		{Name: "acme-prod", Extra: map[string]string{"tenantId": "tenant-1"}},
+		{Name: "acme-dev", Extra: map[string]string{"tenantId": "tenant-1"}},
+		{Name: "globex", Extra: map[string]string{"tenantId": "tenant-2"}},
+	}
+
+	items := buildTenantSelectItems(accounts)
+
+	require.Len(t, items, 3, "two unique tenants plus the manual-entry sentinel")
+	assert.Equal(t, "tenant-1", items[0].ID)
+	assert.Equal(t, "acme-prod", items[0].Label, "first occurrence wins on dedupe")
+	assert.Equal(t, "tenant-2", items[1].ID)
+	assert.Equal(t, tenantManualEntrySentinel, items[2].ID)
+}
+
 func TestAllocationConstraintResourceTypes_MatchAPIValidation(t *testing.T) {
 	items := allocationConstraintResourceTypes()
 	ids := make([]string, len(items))

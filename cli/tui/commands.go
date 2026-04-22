@@ -1400,10 +1400,12 @@ func promptTenantIDRaw() (string, error) {
 }
 
 // buildTenantSelectItems converts tenant-account NamedItems into selectable
-// items keyed by tenantId. A trailing manual-entry sentinel is appended so the
-// user can still type a raw UUID when needed.
+// items keyed by tenantId. Duplicate tenantIds (the same tenant can appear
+// under multiple tenant-account rows) are collapsed. A trailing manual-entry
+// sentinel is appended so the user can still type a raw UUID when needed.
 func buildTenantSelectItems(accounts []NamedItem) []SelectItem {
 	items := make([]SelectItem, 0, len(accounts)+1)
+	seen := make(map[string]struct{}, len(accounts))
 	for _, acc := range accounts {
 		tenantID := ""
 		if acc.Extra != nil {
@@ -1412,6 +1414,10 @@ func buildTenantSelectItems(accounts []NamedItem) []SelectItem {
 		if tenantID == "" {
 			continue
 		}
+		if _, dup := seen[tenantID]; dup {
+			continue
+		}
+		seen[tenantID] = struct{}{}
 		label := acc.Name
 		if strings.TrimSpace(label) == "" {
 			label = tenantID
@@ -1428,36 +1434,17 @@ func buildTenantSelectItems(accounts []NamedItem) []SelectItem {
 	return items
 }
 
-// promptAllocationConstraints collects one or more allocation constraints.
-// The API requires at least one constraint, so the first prompt is mandatory;
-// subsequent prompts are optional.
+// promptAllocationConstraints collects exactly one allocation constraint.
+// The REST API enforces len(allocationConstraints) == 1 in
+// APIAllocationCreateRequest.Validate, so multiple entries are rejected
+// server-side and a zero-length list is rejected as well.
 func promptAllocationConstraints(s *Session, ctx context.Context) ([]map[string]interface{}, error) {
-	var constraints []map[string]interface{}
-	for {
-		isFirst := len(constraints) == 0
-		var label string
-		if isFirst {
-			label = "Allocation requires at least one constraint. Add one now?"
-		} else {
-			label = "Add another allocation constraint?"
-		}
-		add, err := PromptConfirm(label)
-		if err != nil {
-			return nil, err
-		}
-		if !add {
-			if isFirst {
-				return nil, fmt.Errorf("allocation requires at least one constraint")
-			}
-			break
-		}
-		c, err := promptSingleAllocationConstraint(s, ctx)
-		if err != nil {
-			return nil, err
-		}
-		constraints = append(constraints, c)
+	fmt.Fprintf(os.Stderr, "%s allocation requires exactly one constraint\n", Dim("note:"))
+	c, err := promptSingleAllocationConstraint(s, ctx)
+	if err != nil {
+		return nil, err
 	}
-	return constraints, nil
+	return []map[string]interface{}{c}, nil
 }
 
 func promptSingleAllocationConstraint(s *Session, ctx context.Context) (map[string]interface{}, error) {
