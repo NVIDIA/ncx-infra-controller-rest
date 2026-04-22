@@ -595,10 +595,22 @@ func (m *Manager) GetFirmwareStatus(ctx context.Context, target common.Target) (
 
 		if actual, hasActual := actualFirmware[id]; hasActual && len(desiredEntries) > 0 {
 			if matchesAnyDesired(actual, desiredEntries) {
-				fwStatus.State = operations.FirmwareUpdateStateCompleted
-				log.Debug().
-					Str("machine_id", id).
-					Msg("Actual firmware matches desired, marking Completed")
+				if strings.HasPrefix(machine.State, "HostReprovisioning") {
+					// Version matches but Core is still doing post-update
+					// operations (e.g. power drain). Wait for Core to finish
+					// before declaring completion to avoid conflicting power
+					// cycles.
+					fwStatus.State = operations.FirmwareUpdateStateVerifying
+					log.Info().
+						Str("machine_id", id).
+						Str("machine_state", machine.State).
+						Msg("Actual firmware matches desired but machine still in HostReprovisioning, marking Verifying")
+				} else {
+					fwStatus.State = operations.FirmwareUpdateStateCompleted
+					log.Debug().
+						Str("machine_id", id).
+						Msg("Actual firmware matches desired, marking Completed")
+				}
 				result[id] = fwStatus
 				continue
 			}
