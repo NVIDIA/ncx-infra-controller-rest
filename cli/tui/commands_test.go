@@ -651,7 +651,7 @@ func TestPrintLabelHint(t *testing.T) {
 		assert.Contains(t, out, "RackIdentifier", "hint should reference a label key from the items")
 		assert.Contains(t, out, "Label keys: RackIdentifier, ServerName")
 	})
-	t.Run("truncates long key list", func(t *testing.T) {
+	t.Run("lists every discovered key", func(t *testing.T) {
 		labels := map[string]string{}
 		for _, k := range []string{"k1", "k2", "k3", "k4", "k5", "k6", "k7", "k8"} {
 			labels[k] = "v"
@@ -660,9 +660,9 @@ func TestPrintLabelHint(t *testing.T) {
 		var buf bytes.Buffer
 		printLabelHint(&buf, items, nil)
 		out := buf.String()
-		assert.Contains(t, out, "...", "more than 6 keys should be truncated")
-		assert.NotContains(t, out, "k7", "truncation should drop overflow keys")
-		assert.NotContains(t, out, "k8", "truncation should drop overflow keys")
+		assert.Contains(t, out, "Label keys: k1, k2, k3, k4, k5, k6, k7, k8",
+			"all unique label keys should be listed without truncation")
+		assert.NotContains(t, out, "...", "no truncation marker should appear when all keys fit naturally")
 	})
 	t.Run("empty filter map still shows hint", func(t *testing.T) {
 		var buf bytes.Buffer

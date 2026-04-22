@@ -2319,8 +2319,9 @@ func cmdHelp(_ *Session, _ []string) error {
 	fmt.Fprintln(tw, "scope label key=value\tAdd a label filter (persists across commands)")
 	fmt.Fprintln(tw, "scope label clear\tClear all label filters")
 	fmt.Fprintln(tw, "scope clear\tClear all scope filters")
-	fmt.Fprintln(tw, "<list> --label key=value\tFilter a single list by a label (no persist)")
-	fmt.Fprintln(tw, "<list> --sort-label key\tSort a single list by a label key")
+	fmt.Fprintln(tw, "<list> --label key=value\tFilter a single label-capable list by a label (no persist)")
+	fmt.Fprintln(tw, "<list> --sort-label key\tSort a single label-capable list by a label key")
+	fmt.Fprintln(tw, "\t  label-capable lists: "+strings.Join(labelCapableListCommands, ", "))
 	fmt.Fprintln(tw, "exit\tExit interactive mode")
 	tw.Flush()
 	fmt.Printf("\n%s\n", Bold("KEYBINDINGS"))
@@ -2435,6 +2436,20 @@ func formatLabels(labels map[string]string, maxWidth int) string {
 	return s
 }
 
+// labelCapableListCommands enumerates the list commands that render a LABELS
+// column and accept --label / --sort-label flags. Kept here next to the hint
+// helpers so adding a new label-capable list in one place keeps the hint
+// behavior, the help text, and any future label-aware tooling in sync.
+var labelCapableListCommands = []string{
+	"vpc list",
+	"instance-type list",
+	"instance list",
+	"machine list",
+	"network-security-group list",
+	"expected-machine list",
+	"infiniband-partition list",
+}
+
 // uniqueLabelKeys returns the sorted set of non-empty label keys present on
 // items. Whitespace-only keys are dropped so the generated CLI hint never
 // suggests an unusable form like `--label =<value>`.
@@ -2463,7 +2478,9 @@ func uniqueLabelKeys(items []NamedItem) []string {
 // printLabelHint writes a one-line hint about how to filter, sort, and persist
 // label filters for the most recently listed items. Skipped when label filters
 // are already active or when no items carry labels, so the hint only surfaces
-// when it is actionable.
+// when it is actionable. All discovered keys are listed -- the set is bounded
+// by what the org actually defines on this resource type, so no fixed cap is
+// needed.
 func printLabelHint(w io.Writer, items []NamedItem, activeFilters map[string]string) {
 	if len(activeFilters) > 0 {
 		return
@@ -2477,14 +2494,7 @@ func printLabelHint(w io.Writer, items []NamedItem, activeFilters map[string]str
 		"Hint: --label %s=<value> filter | --sort-label %s sort | scope label %s=<value> persist",
 		sample, sample, sample,
 	)))
-	const maxKeys = 6
-	listed := keys
-	suffix := ""
-	if len(listed) > maxKeys {
-		listed = listed[:maxKeys]
-		suffix = ", ..."
-	}
-	fmt.Fprintln(w, Dim("Label keys: "+strings.Join(listed, ", ")+suffix))
+	fmt.Fprintln(w, Dim("Label keys: "+strings.Join(keys, ", ")))
 }
 
 func filterByLabels(items []NamedItem, filters map[string]string) []NamedItem {
