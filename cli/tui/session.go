@@ -236,6 +236,27 @@ func (s *Session) getTenantID(_ context.Context) (string, error) {
 	return id, nil
 }
 
+// getInfrastructureProviderID returns the current infrastructure provider ID, caching it for the session.
+func (s *Session) getInfrastructureProviderID(_ context.Context) (string, error) {
+	if cached := s.Cache.LookupByName("_infra_provider", s.Org); cached != nil {
+		return cached.ID, nil
+	}
+	body, _, err := s.Client.Do("GET", apiPath(s, "infrastructure-provider/current"), nil, nil, nil)
+	if err != nil {
+		return "", fmt.Errorf("fetching infrastructure provider: %w", err)
+	}
+	var p map[string]interface{}
+	if err := json.Unmarshal(body, &p); err != nil {
+		return "", fmt.Errorf("parsing infrastructure provider: %w", err)
+	}
+	id := str(p, "id")
+	if id == "" {
+		return "", fmt.Errorf("infrastructure provider has no id")
+	}
+	s.Cache.Set("_infra_provider", []NamedItem{{Name: s.Org, ID: id}})
+	return id, nil
+}
+
 // -- Fetchers --
 
 func (s *Session) fetchSites(_ context.Context) ([]NamedItem, error) {
@@ -578,8 +599,21 @@ func (s *Session) fetchVPCPrefixes(_ context.Context) ([]NamedItem, error) {
 	return result, nil
 }
 
-func (s *Session) fetchTenantAccounts(_ context.Context) ([]NamedItem, error) {
-	items, err := s.fetchAll(apiPath(s, "tenant/account"), nil)
+func (s *Session) fetchTenantAccounts(ctx context.Context) ([]NamedItem, error) {
+	q := map[string]string{}
+	if id, err := s.getInfrastructureProviderID(ctx); err == nil {
+		q["infrastructureProviderId"] = id
+	} else {
+		tenantID, tenantErr := s.getTenantID(ctx)
+		if tenantErr != nil {
+			return nil, fmt.Errorf(
+				"resolving tenant-account scope: infrastructure provider: %v; tenant: %w",
+				err, tenantErr,
+			)
+		}
+		q["tenantId"] = tenantID
+	}
+	items, err := s.fetchAll(apiPath(s, "tenant/account"), q)
 	if err != nil {
 		return nil, err
 	}
