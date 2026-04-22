@@ -38,7 +38,9 @@ import (
 	inventorymanager "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/inventory/manager"
 
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/operation"
+	taskschedule "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/scheduler/taskschedule"
 	taskcommon "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/common"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/conflict"
 	taskmanager "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/manager"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operationrules"
 	operations "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operations"
@@ -58,6 +60,9 @@ type RLAServerImpl struct {
 	inventoryManager          inventorymanager.Manager // Business logic manager for inventory operations
 	taskManager               taskmanager.Manager      // Task manager for orchestrating task lifecycle
 	taskStore                 taskstore.Store          // Task store for task queries
+	taskScheduleStore         taskschedule.Store       // Persistence layer for task schedules
+	taskScheduleDispatcher    *taskschedule.Dispatcher // Background poller that fires due task schedules
+	conflictResolver          *conflict.Resolver       // Reused for inter-schedule conflict detection
 	pb.UnimplementedRLAServer                          // Embedded protobuf server interface for forward compatibility
 }
 
@@ -76,11 +81,16 @@ func newServerImplementation(
 	inventoryManager inventorymanager.Manager,
 	taskManager taskmanager.Manager,
 	taskStore taskstore.Store,
+	taskScheduleStore taskschedule.Store,
+	taskScheduleDispatcher *taskschedule.Dispatcher,
 ) (*RLAServerImpl, error) {
 	return &RLAServerImpl{
-		inventoryManager: inventoryManager,
-		taskManager:      taskManager,
-		taskStore:        taskStore,
+		inventoryManager:       inventoryManager,
+		taskManager:            taskManager,
+		taskStore:              taskStore,
+		taskScheduleStore:      taskScheduleStore,
+		taskScheduleDispatcher: taskScheduleDispatcher,
+		conflictResolver:       conflict.NewResolver(taskStore),
 	}, nil
 }
 
@@ -837,100 +847,20 @@ func (rs *RLAServerImpl) convertTargetSpecToOperationRequest(
 		return nil, err
 	}
 
-	req := &operation.Request{
+	ts, err := protobuf.TargetSpecFrom(targetSpec)
+	if err != nil {
+		return nil, err
+	}
+
+	return &operation.Request{
 		Operation: operation.Wrapper{
 			Type: info.Type(),
 			Code: info.CodeString(),
 			Info: raw,
 		},
+		TargetSpec:  ts,
 		Description: description,
-	}
-
-	// Convert pb targets to internal targets based on the oneof type
-	switch targets := targetSpec.GetTargets().(type) {
-	case *pb.OperationTargetSpec_Racks:
-		for _, pbRack := range targets.Racks.GetTargets() {
-			rackTarget, err := rs.convertPbRackTargetToRackTarget(pbRack)
-			if err != nil {
-				return nil, fmt.Errorf("failed to convert rack target: %w", err)
-			}
-			req.TargetSpec.Racks = append(req.TargetSpec.Racks, *rackTarget)
-		}
-
-	case *pb.OperationTargetSpec_Components:
-		for _, pbComp := range targets.Components.GetTargets() {
-			compTarget, err := rs.convertPbComponentTargetToComponentTarget(pbComp)
-			if err != nil {
-				return nil, fmt.Errorf("failed to convert component target: %w", err)
-			}
-			req.TargetSpec.Components = append(req.TargetSpec.Components, *compTarget)
-		}
-
-	default:
-		return nil, errors.New("target_spec must have either racks or components set")
-	}
-
-	return req, nil
-}
-
-// convertPbRackTargetToRackTarget converts a protobuf RackTarget to an internal RackTarget
-func (rs *RLAServerImpl) convertPbRackTargetToRackTarget(rt *pb.RackTarget) (*operation.RackTarget, error) {
-	if rt == nil {
-		return nil, fmt.Errorf("rack target is nil")
-	}
-
-	target := &operation.RackTarget{}
-
-	switch id := rt.GetIdentifier().(type) {
-	case *pb.RackTarget_Id:
-		parsed, err := uuid.Parse(id.Id.GetId())
-		if err != nil {
-			return nil, fmt.Errorf("invalid rack id %q: %w", id.Id.GetId(), err)
-		}
-		target.Identifier.ID = parsed
-
-	case *pb.RackTarget_Name:
-		target.Identifier.Name = id.Name
-
-	default:
-		return nil, fmt.Errorf("rack target must have either id or name set")
-	}
-
-	// Convert component types
-	for _, pbType := range rt.GetComponentTypes() {
-		target.ComponentTypes = append(target.ComponentTypes, protobuf.ComponentTypeFrom(pbType))
-	}
-
-	return target, nil
-}
-
-// convertPbComponentTargetToComponentTarget converts a protobuf ComponentTarget to an internal ComponentTarget
-func (rs *RLAServerImpl) convertPbComponentTargetToComponentTarget(ct *pb.ComponentTarget) (*operation.ComponentTarget, error) {
-	if ct == nil {
-		return nil, fmt.Errorf("component target is nil")
-	}
-
-	target := &operation.ComponentTarget{}
-
-	switch id := ct.GetIdentifier().(type) {
-	case *pb.ComponentTarget_Id:
-		parsed, err := uuid.Parse(id.Id.GetId())
-		if err != nil {
-			return nil, fmt.Errorf("invalid component uuid %q: %w", id.Id.GetId(), err)
-		}
-		target.UUID = parsed
-
-	case *pb.ComponentTarget_External:
-		target.External = &operation.ExternalRef{
-			Type: protobuf.ComponentTypeFrom(id.External.GetType()),
-			ID:   id.External.GetId(),
-		}
-
-	default:
-		return nil, fmt.Errorf("component target must have either uuid or external set")
-	}
-
-	return target, nil
+	}, nil
 }
 
 func (rs *RLAServerImpl) ListTasks(
@@ -1879,127 +1809,91 @@ func extractComponentsByTypes(r *rack.Rack, compTypes []devicetypes.ComponentTyp
 	return result
 }
 
-// extractComponentsFromTargetSpec extracts components from an OperationTargetSpec message.
-// It handles rack targets (with optional type filtering) or component targets (by UUID or external ref).
+// extractComponentsFromTargetSpec parses and validates targetSpec via
+// protobuf.TargetSpecFrom (the same converter used by the submission path),
+// then resolves each rack or component target against the inventory.
+// Validation errors (malformed UUIDs, empty names, unknown types) are
+// surfaced identically to the submission path rather than deferring to an
+// inventory-lookup failure.
 func (rs *RLAServerImpl) extractComponentsFromTargetSpec(
 	ctx context.Context,
 	targetSpec *pb.OperationTargetSpec,
 ) ([]*component.Component, error) {
-	if targetSpec == nil {
-		return nil, errors.New("target_spec is required")
+	spec, err := protobuf.TargetSpecFrom(targetSpec)
+	if err != nil {
+		return nil, err
 	}
 
 	var components []*component.Component
 
-	switch targets := targetSpec.GetTargets().(type) {
-	case *pb.OperationTargetSpec_Racks:
-		if len(targets.Racks.GetTargets()) == 0 {
-			return nil, errors.New("racks targets is empty")
+	for _, rt := range spec.Racks {
+		resolved, err := rs.resolveRackTarget(ctx, rt)
+		if err != nil {
+			return nil, err
 		}
-		for _, rt := range targets.Racks.GetTargets() {
-			resolved, err := rs.extractComponentsFromRackTarget(ctx, rt)
-			if err != nil {
-				return nil, err
-			}
-			components = append(components, resolved...)
-		}
+		components = append(components, resolved...)
+	}
 
-	case *pb.OperationTargetSpec_Components:
-		if len(targets.Components.GetTargets()) == 0 {
-			return nil, errors.New("components targets is empty")
+	for _, ct := range spec.Components {
+		resolved, err := rs.fetchComponentTarget(ctx, ct)
+		if err != nil {
+			return nil, err
 		}
-		for _, ct := range targets.Components.GetTargets() {
-			resolved, err := rs.extractComponentsFromComponentTarget(ctx, ct)
-			if err != nil {
-				return nil, err
-			}
-			components = append(components, resolved...)
-		}
-
-	default:
-		return nil, errors.New("target_spec must have either racks or components set")
+		components = append(components, resolved...)
 	}
 
 	return components, nil
 }
 
-// extractComponentsFromRackTarget extracts components from a rack target.
-func (rs *RLAServerImpl) extractComponentsFromRackTarget(
+// resolveRackTarget fetches the rack from inventory and returns its components,
+// filtered by rt.ComponentTypes (empty = all types).
+func (rs *RLAServerImpl) resolveRackTarget(
 	ctx context.Context,
-	rt *pb.RackTarget,
+	rt operation.RackTarget,
 ) ([]*component.Component, error) {
 	var r *rack.Rack
 	var err error
 
-	switch id := rt.GetIdentifier().(type) {
-	case *pb.RackTarget_Id:
-		rackUUID, parseErr := uuid.Parse(id.Id.GetId())
-		if parseErr != nil {
-			return nil, fmt.Errorf("invalid rack id %q: %w", id.Id.GetId(), parseErr)
-		}
-		r, err = rs.inventoryManager.GetRackByID(ctx, rackUUID, true)
-	case *pb.RackTarget_Name:
-		r, err = rs.inventoryManager.GetRackByIdentifier(ctx, identifier.Identifier{Name: id.Name}, true)
-	default:
-		return nil, errors.New("rack target must have either id or name set")
+	if rt.Identifier.ID != uuid.Nil {
+		r, err = rs.inventoryManager.GetRackByID(ctx, rt.Identifier.ID, true)
+	} else {
+		r, err = rs.inventoryManager.GetRackByIdentifier(ctx, rt.Identifier, true)
 	}
-
 	if err != nil {
 		return nil, err
 	}
 
-	// Convert pb component types to internal types
-	compTypes := make([]devicetypes.ComponentType, 0, len(rt.GetComponentTypes()))
-	for _, pbType := range rt.GetComponentTypes() {
-		compTypes = append(compTypes, protobuf.ComponentTypeFrom(pbType))
-	}
-
-	return extractComponentsByTypes(r, compTypes), nil
+	return extractComponentsByTypes(r, rt.ComponentTypes), nil
 }
 
-// extractComponentsFromComponentTarget extracts components from a component target.
-func (rs *RLAServerImpl) extractComponentsFromComponentTarget(
+// fetchComponentTarget fetches a single component from inventory by its
+// internal UUID or by external ID + type. The type in ct.External is
+// guaranteed non-unknown by protobuf.ComponentTargetFrom.
+func (rs *RLAServerImpl) fetchComponentTarget(
 	ctx context.Context,
-	ct *pb.ComponentTarget,
+	ct operation.ComponentTarget,
 ) ([]*component.Component, error) {
-	switch id := ct.GetIdentifier().(type) {
-	case *pb.ComponentTarget_Id:
-		compUUID, parseErr := uuid.Parse(id.Id.GetId())
-		if parseErr != nil {
-			return nil, fmt.Errorf("invalid component uuid %q: %w", id.Id.GetId(), parseErr)
-		}
-		comp, err := rs.inventoryManager.GetComponentByID(ctx, compUUID)
+	if ct.UUID != uuid.Nil {
+		comp, err := rs.inventoryManager.GetComponentByID(ctx, ct.UUID)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get component by uuid %s: %w", id.Id.GetId(), err)
+			return nil, fmt.Errorf("failed to get component by uuid %s: %w", ct.UUID, err)
 		}
 		return []*component.Component{comp}, nil
-
-	case *pb.ComponentTarget_External:
-		extRef := id.External
-		compType := protobuf.ComponentTypeFrom(extRef.GetType())
-		externalID := extRef.GetId()
-
-		// Use GetComponentsByExternalIDs which looks up by external_id field
-		comps, err := rs.inventoryManager.GetComponentsByExternalIDs(ctx, []string{externalID})
-		if err != nil {
-			return nil, fmt.Errorf("failed to get component by external id %s: %w", externalID, err)
-		}
-		if len(comps) == 0 {
-			return nil, fmt.Errorf("component with external id %s not found", externalID)
-		}
-		// Filter by type if specified
-		if compType != devicetypes.ComponentTypeUnknown {
-			for _, comp := range comps {
-				if comp.Type == compType {
-					return []*component.Component{comp}, nil
-				}
-			}
-			return nil, fmt.Errorf("component with external id %s and type %s not found",
-				externalID, devicetypes.ComponentTypeToString(compType))
-		}
-		return comps[:1], nil // Return first match if no type filter
-
-	default:
-		return nil, errors.New("component target must have either uuid or external set")
 	}
+
+	// External ref: ID and Type are both validated non-empty by ComponentTargetFrom.
+	comps, err := rs.inventoryManager.GetComponentsByExternalIDs(ctx, []string{ct.External.ID})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get component by external id %s: %w", ct.External.ID, err)
+	}
+	if len(comps) == 0 {
+		return nil, fmt.Errorf("component with external id %s not found", ct.External.ID)
+	}
+	for _, comp := range comps {
+		if comp.Type == ct.External.Type {
+			return []*component.Component{comp}, nil
+		}
+	}
+	return nil, fmt.Errorf("component with external id %s and type %s not found",
+		ct.External.ID, devicetypes.ComponentTypeToString(ct.External.Type))
 }

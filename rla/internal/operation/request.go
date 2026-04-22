@@ -85,9 +85,10 @@ func (ts *TargetSpec) Validate() error {
 }
 
 // RackTarget identifies a rack with optional component type filtering.
+// To target specific components, use the component-level APIs instead.
 type RackTarget struct {
 	Identifier     identifier.Identifier       // Rack identifier (ID or Name, at least one must be set)
-	ComponentTypes []devicetypes.ComponentType // Optional: empty = ALL component types in rack
+	ComponentTypes []devicetypes.ComponentType // Optional: filter by type; empty = ALL component types in rack
 }
 
 func (rt *RackTarget) Validate() error {
@@ -167,26 +168,37 @@ const (
 )
 
 // Request represents the specification of an operation submitted by the user.
-// This is a simple translation of the gRPC input, can contain multiple racks/components.
-// Task Manager will resolve and split by rack, creating one Task per rack.
-// -- Operation: The operation to be performed.
-// -- TargetSpec: Either rack targets or component targets (single-type targeting enforced).
-// -- Description: Optional task description.
-// -- ConflictStrategy: How to handle the task when a conflict is detected.
-//
-//	Default (ConflictStrategyReject) rejects on conflict.
-//
-// -- QueueTimeout: How long to wait in queue before auto-expiry. Zero means
-//
-//	use the server default (e.g. 1 hour). The server may enforce a maximum.
-//	Only relevant when ConflictStrategy is ConflictStrategyQueue.
+// The Task Manager resolves the TargetSpec, splits by rack, and creates one
+// Task per rack.
 type Request struct {
-	Operation        Wrapper
-	TargetSpec       TargetSpec // Either racks or components, not both
-	Description      string
+	Operation   Wrapper
+	TargetSpec  TargetSpec // Either racks or components, not both
+	Description string
+
+	// ConflictStrategy controls how the task behaves when a conflict is
+	// detected. Default (ConflictStrategyReject) rejects on conflict.
 	ConflictStrategy ConflictStrategy
-	QueueTimeout     time.Duration
-	RuleID           *uuid.UUID // Optional: override rule resolution with a specific rule
+
+	// QueueTimeout is how long to wait in queue before auto-expiry. Zero
+	// means use the server default. The server may enforce a maximum.
+	// Only relevant when ConflictStrategy is ConflictStrategyQueue.
+	QueueTimeout time.Duration
+
+	// Optional: override rule resolution with a specific rule
+	RuleID *uuid.UUID
+
+	// RequiredRackID, when non-zero, causes SubmitTask to return an error
+	// (and create no tasks) if the resolved targets do not belong exclusively
+	// to this rack. Use this for component-targeting requests where the scope
+	// was originally written against a specific rack, to guard against the
+	// case where all listed components have since been moved to a different
+	// single rack or span multiple racks.
+	//
+	// This field only handles the single-rack enforcement case. If a future
+	// caller needs to constrain resolution to a known set of multiple racks,
+	// this would need to become []uuid.UUID (or a separate AllowedRackIDs
+	// field). Do not add that generalization until there is a concrete caller.
+	RequiredRackID uuid.UUID
 }
 
 func (r *Request) Validate() error {

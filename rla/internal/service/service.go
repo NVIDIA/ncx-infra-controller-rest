@@ -37,6 +37,7 @@ import (
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/scheduler"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/scheduler/jobs/inventorysync"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/scheduler/jobs/leakdetection"
+	taskschedule "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/scheduler/taskschedule"
 	schedtypes "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/scheduler/types"
 	taskmanager "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/manager"
 	taskstore "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/store"
@@ -46,13 +47,15 @@ import (
 // Service is the top-level RLA service. It owns the gRPC server, database
 // session, inventory manager, and task manager and coordinates their lifecycles.
 type Service struct {
-	conf             Config
-	grpcServer       *grpc.Server
-	session          *cdb.Session
-	inventoryManager inventorymanager.Manager
-	taskStore        taskstore.Store
-	taskManager      taskmanager.Manager
-	sched            *scheduler.Scheduler
+	conf                   Config
+	grpcServer             *grpc.Server
+	session                *cdb.Session
+	inventoryManager       inventorymanager.Manager
+	taskStore              taskstore.Store
+	taskManager            taskmanager.Manager
+	sched                  *scheduler.Scheduler
+	taskScheduleStore      taskschedule.Store
+	taskScheduleDispatcher *taskschedule.Dispatcher
 }
 
 // New creates and initialises a Service from the provided Config. It opens the
@@ -79,6 +82,7 @@ func New(ctx context.Context, c Config) (*Service, error) {
 	// 2. Create stores (Storage Layer)
 	invStore := inventorystore.NewPostgres(session)
 	tskStore := taskstore.NewPostgres(session)
+	schedStore := taskschedule.NewPostgresStore(session)
 
 	// 3. Create InventoryManager (Business Logic Layer)
 	invManager := inventorymanager.New(invStore)
@@ -98,21 +102,56 @@ func New(ctx context.Context, c Config) (*Service, error) {
 	}
 
 	return &Service{
-		conf:             c,
-		session:          session,
-		inventoryManager: invManager,
-		taskStore:        tskStore,
-		taskManager:      taskManager,
+		conf:              c,
+		session:           session,
+		inventoryManager:  invManager,
+		taskStore:         tskStore,
+		taskManager:       taskManager,
+		taskScheduleStore: schedStore,
 	}, nil
 }
 
 // Start starts the inventory manager, task manager, and inventory sync
 // goroutine, then begins serving gRPC requests on the configured port.
 // It blocks until the gRPC server stops.
-func (s *Service) Start(ctx context.Context) error {
+func (s *Service) Start(ctx context.Context) (retErr error) {
 	log.Logger = log.With().Caller().Logger()
 
 	certOpt := s.certOption()
+
+	// On any error return, shut down every resource that was started, in
+	// reverse start order. Boolean flags record which components are running
+	// because inventoryManager and taskManager are always non-nil (set in New)
+	// so a nil check cannot distinguish "created" from "started".
+	var (
+		invStarted  bool
+		taskStarted bool
+		lis         net.Listener
+	)
+
+	defer func() {
+		if retErr == nil {
+			return
+		}
+
+		// Stop the started resources in reverse start order.
+		if s.taskScheduleDispatcher != nil {
+			s.taskScheduleDispatcher.Stop()
+		}
+		if s.sched != nil {
+			s.sched.Stop(false) //nolint
+		}
+		if lis != nil {
+			lis.Close()
+		}
+		if taskStarted {
+			s.taskManager.Stop(ctx)
+		}
+		if invStarted {
+			s.inventoryManager.Stop(ctx)
+		}
+		s.session.Close()
+	}()
 
 	// Rule resolver is ready immediately (queries DB for rules)
 	log.Info().Msg("Rule resolver ready (will query DB for operation rules)")
@@ -120,22 +159,30 @@ func (s *Service) Start(ctx context.Context) error {
 	if err := s.inventoryManager.Start(ctx); err != nil {
 		return fmt.Errorf("failed to start inventory manager: %w", err)
 	}
-
+	invStarted = true
 	log.Info().Msg("Inventory manager started")
 
 	if s.taskManager != nil {
 		if err := s.taskManager.Start(ctx); err != nil {
 			return fmt.Errorf("failed to start task manager: %w", err)
 		}
-
+		taskStarted = true
 		log.Info().Msg("Task manager started")
 	}
 
-	if err := s.startScheduler(ctx); err != nil {
-		return fmt.Errorf("failed to start system job scheduler: %w", err)
-	}
+	// Pre-create the dispatcher without starting it. The listener and server
+	// implementation are constructed next so that a failure there does not
+	// leave a live background goroutine polling the DB.
+	dispatcher := taskschedule.NewDispatcher(
+		taskschedule.Config{
+			Store:       s.taskScheduleStore,
+			TaskManager: s.taskManager,
+			TaskStore:   s.taskStore,
+		},
+	)
 
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", s.conf.Port))
+	var err error
+	lis, err = net.Listen("tcp", fmt.Sprintf(":%v", s.conf.Port))
 	if err != nil {
 		return err
 	}
@@ -144,10 +191,24 @@ func (s *Service) Start(ctx context.Context) error {
 		s.inventoryManager,
 		s.taskManager,
 		s.taskStore,
+		s.taskScheduleStore,
+		dispatcher,
 	)
 	if err != nil {
 		return err
 	}
+
+	// All construction succeeded — start background workers.
+	if err := s.startScheduler(ctx); err != nil {
+		return fmt.Errorf("failed to start system job scheduler: %w", err)
+	}
+
+	log.Info().Msg("Starting task schedule dispatcher")
+	if err := dispatcher.Start(ctx); err != nil {
+		return fmt.Errorf("failed to start task schedule dispatcher: %w", err)
+	}
+	s.taskScheduleDispatcher = dispatcher
+	log.Info().Msg("Task schedule dispatcher started")
 
 	s.grpcServer = grpc.NewServer(certOpt)
 
@@ -160,26 +221,42 @@ func (s *Service) Start(ctx context.Context) error {
 		log.Debug().Msg("Dev mode: gRPC reflection enabled")
 	}
 
-	if err := s.grpcServer.Serve(lis); err != nil {
+	// Serve blocks until Stop/GracefulStop is called. GracefulStop returns
+	// grpc.ErrServerStopped, which is a sentinel for intentional shutdown, not
+	// a failure. Normalize it to nil so the deferred cleanup block (which fires
+	// on any non-nil retErr) does not incorrectly tear down resources that are
+	// already being shut down by Stop().
+	if err := s.grpcServer.Serve(lis); err != nil &&
+		!errors.Is(err, grpc.ErrServerStopped) {
 		return err
 	}
 
 	return nil
 }
 
-// Stop gracefully shuts down the gRPC server, task manager, inventory manager,
-// and database session.
+// Stop gracefully shuts down the service in dependency order:
+//  1. Background producers (dispatcher, system scheduler) — stop submitting new work.
+//  2. gRPC server — drain in-flight RPCs; no new requests accepted after this.
+//  3. Task and inventory managers — safe to stop once no new submissions can arrive.
+//  4. Database session.
 func (s *Service) Stop(ctx context.Context) {
 	log.Info().Msg("Starting graceful shutdown now...")
 
-	if s.grpcServer != nil {
-		s.grpcServer.GracefulStop()
-		log.Info().Msg("gRPC server stopped")
+	// Stop background producers first so they cannot submit new tasks during
+	// the gRPC drain window.
+	if s.taskScheduleDispatcher != nil {
+		s.taskScheduleDispatcher.Stop()
+		log.Info().Msg("Task schedule dispatcher stopped")
 	}
 
 	if s.sched != nil {
 		s.sched.Stop(false) //nolint
 		log.Info().Msg("System job scheduler stopped")
+	}
+
+	if s.grpcServer != nil {
+		s.grpcServer.GracefulStop()
+		log.Info().Msg("gRPC server stopped")
 	}
 
 	if s.taskManager != nil {
@@ -210,7 +287,7 @@ func (s *Service) certOption() grpc.ServerOption {
 	if err != nil {
 		if errors.Is(err, certs.ErrNotPresent) {
 			if os.Getenv("ALLOW_INSECURE_GRPC") == "true" {
-				log.Warn().Msg("TLS certs not present, running without mTLS (ALLOW_INSECURE_GRPC=true)")
+				log.Warn().Msg("TLS certs not present, running without mTLS")
 				return grpc.EmptyServerOption{}
 			}
 			log.Fatal().Msg("TLS certificates required but not found; set ALLOW_INSECURE_GRPC=true for local development")
