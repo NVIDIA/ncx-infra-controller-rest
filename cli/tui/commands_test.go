@@ -784,6 +784,17 @@ func TestBuildTenantSelectItems_SortsAlphabeticallyByLabel(t *testing.T) {
 	assert.Equal(t, tenantManualEntrySentinel, items[3].ID, "manual-entry sentinel must stay last")
 }
 
+func TestBuildTenantSelectItems_SortTieBreaksByID(t *testing.T) {
+	accounts := []NamedItem{
+		{Name: "acme", Extra: map[string]string{"tenantId": "tenant-b"}},
+		{Name: "acme", Extra: map[string]string{"tenantId": "tenant-a"}},
+	}
+	items := buildTenantSelectItems(accounts)
+	require.Len(t, items, 3)
+	assert.Equal(t, "tenant-a", items[0].ID, "equal labels must tie-break by ID")
+	assert.Equal(t, "tenant-b", items[1].ID)
+}
+
 func TestBuildTenantSelectItems_DeduplicatesByTenantID(t *testing.T) {
 	accounts := []NamedItem{
 		{Name: "acme-prod", Extra: map[string]string{"tenantId": "tenant-1"}},
@@ -810,14 +821,15 @@ func TestAllocationConstraintResourceTypes_MatchAPIValidation(t *testing.T) {
 		"resource type IDs must match APIAllocationConstraintCreateRequest validation")
 }
 
-func TestAllocationConstraintTypes_MatchAPIValidation(t *testing.T) {
+func TestAllocationConstraintTypes_OnlyExposesReserved(t *testing.T) {
 	items := allocationConstraintTypes()
 	ids := make([]string, len(items))
 	for i, it := range items {
 		ids[i] = it.ID
 	}
-	assert.ElementsMatch(t, []string{"Reserved", "OnDemand", "Preemptible"}, ids,
-		"constraint type IDs must match APIAllocationConstraintCreateRequest validation")
+	assert.Equal(t, []string{"Reserved"}, ids,
+		"only Reserved is offered; OnDemand/Preemptible are accepted by the API validator "+
+			"but are documented as unsupported by the current backend implementation")
 }
 
 func TestResolverResourceForAllocationResourceType(t *testing.T) {

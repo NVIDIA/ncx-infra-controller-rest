@@ -1324,6 +1324,9 @@ func cmdAllocationCreate(s *Session, _ []string) error {
 	if err != nil {
 		return err
 	}
+	// Scope subsequent resolver lookups (ip-block, instance-type) to the
+	// allocation site so the constraint resource belongs to the same site.
+	setSiteScopeFromID(s, site.ID)
 	name, err := PromptText("Allocation name", true)
 	if err != nil {
 		return err
@@ -1431,6 +1434,9 @@ func buildTenantSelectItems(accounts []NamedItem) []SelectItem {
 		return nil
 	}
 	sort.SliceStable(items, func(i, j int) bool {
+		if items[i].Label == items[j].Label {
+			return items[i].ID < items[j].ID
+		}
 		return items[i].Label < items[j].Label
 	})
 	items = append(items, SelectItem{Label: "Enter Tenant ID manually...", ID: tenantManualEntrySentinel})
@@ -1484,15 +1490,15 @@ func allocationConstraintResourceTypes() []SelectItem {
 	}
 }
 
-// allocationConstraintTypes lists the supported constraint types. Only
-// Reserved is currently supported by the backend; OnDemand and Preemptible
-// are accepted by the API validation but not implemented (see the constraint
-// type validator in api/pkg/api/model/allocationconstraint.go).
+// allocationConstraintTypes lists the constraint types offered to the user.
+// Only Reserved is exposed: the API validator in
+// api/pkg/api/model/allocationconstraint.go accepts OnDemand and Preemptible
+// as well, but those two are documented as "not supported by current
+// implementation" in the SDK and would turn a normal create flow into a
+// server-side failure path. Add them back here once the backend supports them.
 func allocationConstraintTypes() []SelectItem {
 	return []SelectItem{
 		{Label: "Reserved", ID: "Reserved"},
-		{Label: "OnDemand (not supported by current implementation)", ID: "OnDemand"},
-		{Label: "Preemptible (not supported by current implementation)", ID: "Preemptible"},
 	}
 }
 
