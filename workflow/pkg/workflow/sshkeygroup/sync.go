@@ -60,10 +60,18 @@ func SyncSSHKeyGroup(ctx workflow.Context, siteID uuid.UUID, sshKeyGroupID uuid.
 
 	var sshKeyGroupManager sshKeyGroupActivity.ManageSSHKeyGroup
 
+	// Sync SSH Key Group via Site Agent
 	err := workflow.ExecuteActivity(ctx, sshKeyGroupManager.SyncSSHKeyGroupViaSiteAgent, siteID, sshKeyGroupID, version).Get(ctx, nil)
 	if err != nil {
 		logger.Warn().Err(err).Msg("failed to execute activity: SyncSSHKeyGroupViaSiteAgent")
 		return err
+	}
+
+	// Update overall SSH Key Group status in DB
+	serr := workflow.ExecuteActivity(ctx, sshKeyGroupManager.UpdateSSHKeyGroupStatusInDB, sshKeyGroupID.String()).Get(ctx, nil)
+	if serr != nil {
+		// Log error but continue as we don't want to fail the entire workflow if sync was successful
+		logger.Warn().Err(serr).Msg("failed to execute activity: UpdateSSHKeyGroupStatusInDB")
 	}
 
 	logger.Info().Msg("completing workflow")
