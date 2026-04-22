@@ -53,9 +53,9 @@ type PowershelfManagerClient interface {
 	SetDryRun(ctx context.Context, in *SetDryRunRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Power Control
 	// Power OFF the rack
-	PowerOff(ctx context.Context, in *PowershelfRequest, opts ...grpc.CallOption) (*PowerControlResponse, error)
+	PowerOff(ctx context.Context, in *PowerRequest, opts ...grpc.CallOption) (*PowerControlResponse, error)
 	// Power ON the rack
-	PowerOn(ctx context.Context, in *PowershelfRequest, opts ...grpc.CallOption) (*PowerControlResponse, error)
+	PowerOn(ctx context.Context, in *PowerRequest, opts ...grpc.CallOption) (*PowerControlResponse, error)
 }
 
 type powershelfManagerClient struct {
@@ -126,7 +126,7 @@ func (c *powershelfManagerClient) SetDryRun(ctx context.Context, in *SetDryRunRe
 	return out, nil
 }
 
-func (c *powershelfManagerClient) PowerOff(ctx context.Context, in *PowershelfRequest, opts ...grpc.CallOption) (*PowerControlResponse, error) {
+func (c *powershelfManagerClient) PowerOff(ctx context.Context, in *PowerRequest, opts ...grpc.CallOption) (*PowerControlResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(PowerControlResponse)
 	err := c.cc.Invoke(ctx, PowershelfManager_PowerOff_FullMethodName, in, out, cOpts...)
@@ -136,7 +136,7 @@ func (c *powershelfManagerClient) PowerOff(ctx context.Context, in *PowershelfRe
 	return out, nil
 }
 
-func (c *powershelfManagerClient) PowerOn(ctx context.Context, in *PowershelfRequest, opts ...grpc.CallOption) (*PowerControlResponse, error) {
+func (c *powershelfManagerClient) PowerOn(ctx context.Context, in *PowerRequest, opts ...grpc.CallOption) (*PowerControlResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(PowerControlResponse)
 	err := c.cc.Invoke(ctx, PowershelfManager_PowerOn_FullMethodName, in, out, cOpts...)
@@ -169,9 +169,9 @@ type PowershelfManagerServer interface {
 	SetDryRun(context.Context, *SetDryRunRequest) (*emptypb.Empty, error)
 	// Power Control
 	// Power OFF the rack
-	PowerOff(context.Context, *PowershelfRequest) (*PowerControlResponse, error)
+	PowerOff(context.Context, *PowerRequest) (*PowerControlResponse, error)
 	// Power ON the rack
-	PowerOn(context.Context, *PowershelfRequest) (*PowerControlResponse, error)
+	PowerOn(context.Context, *PowerRequest) (*PowerControlResponse, error)
 	mustEmbedUnimplementedPowershelfManagerServer()
 }
 
@@ -200,10 +200,10 @@ func (UnimplementedPowershelfManagerServer) ListAvailableFirmware(context.Contex
 func (UnimplementedPowershelfManagerServer) SetDryRun(context.Context, *SetDryRunRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method SetDryRun not implemented")
 }
-func (UnimplementedPowershelfManagerServer) PowerOff(context.Context, *PowershelfRequest) (*PowerControlResponse, error) {
+func (UnimplementedPowershelfManagerServer) PowerOff(context.Context, *PowerRequest) (*PowerControlResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method PowerOff not implemented")
 }
-func (UnimplementedPowershelfManagerServer) PowerOn(context.Context, *PowershelfRequest) (*PowerControlResponse, error) {
+func (UnimplementedPowershelfManagerServer) PowerOn(context.Context, *PowerRequest) (*PowerControlResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method PowerOn not implemented")
 }
 func (UnimplementedPowershelfManagerServer) mustEmbedUnimplementedPowershelfManagerServer() {}
@@ -336,7 +336,7 @@ func _PowershelfManager_SetDryRun_Handler(srv interface{}, ctx context.Context, 
 }
 
 func _PowershelfManager_PowerOff_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PowershelfRequest)
+	in := new(PowerRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -348,13 +348,13 @@ func _PowershelfManager_PowerOff_Handler(srv interface{}, ctx context.Context, d
 		FullMethod: PowershelfManager_PowerOff_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(PowershelfManagerServer).PowerOff(ctx, req.(*PowershelfRequest))
+		return srv.(PowershelfManagerServer).PowerOff(ctx, req.(*PowerRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _PowershelfManager_PowerOn_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PowershelfRequest)
+	in := new(PowerRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -366,7 +366,7 @@ func _PowershelfManager_PowerOn_Handler(srv interface{}, ctx context.Context, de
 		FullMethod: PowershelfManager_PowerOn_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(PowershelfManagerServer).PowerOn(ctx, req.(*PowershelfRequest))
+		return srv.(PowershelfManagerServer).PowerOn(ctx, req.(*PowerRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
