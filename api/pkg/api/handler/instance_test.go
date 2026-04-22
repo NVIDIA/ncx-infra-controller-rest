@@ -1422,6 +1422,41 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "test Instance create API endpoint success, allowUnhealthyMachine true, Machine has Error status, but controller is Ready",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIInstanceCreateRequest{
+					Name:        "test-instance-error-controller-ready",
+					Description: cdb.GetStrPtr("Error status with Ready controller state"),
+					TenantID:    tn1.ID.String(),
+					VpcID:       vpc1.ID.String(),
+					UserData:    cdb.GetStrPtr(""),
+					IpxeScript:  cdb.GetStrPtr(common.DefaultIpxeScript),
+					Interfaces: []model.APIInterfaceCreateOrUpdateRequest{
+						{
+							SubnetID: cdb.GetStrPtr(subnet1.ID.String()),
+						},
+					},
+					AllowUnhealthyMachine: cdb.GetBoolPtr(true),
+					PhoneHomeEnabled:      cdb.GetBoolPtr(false),
+				},
+				prepareReq: func(t *testing.T, req *model.APIInstanceCreateRequest) {
+					mc := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
+					testInstanceBuildMachineInstanceType(t, dbSession, mc, ist1)
+					testUpdateMachineStatusAndControllerState(t, dbSession, mc, cdbm.MachineStatusError, "Ready")
+					req.MachineID = cdb.GetStrPtr(mc.ID)
+				},
+				reqOrg:   tnOrg,
+				reqUser:  tnu1,
+				respCode: http.StatusCreated,
+			},
+			wantErr: false,
+		},
+		{
 			name: "test Instance create API endpoint success with secondary VPC Prefix interface",
 			fields: fields{
 				dbSession: dbSession,
@@ -3432,12 +3467,29 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 				}
 			}
 
-			if len(tsc.Calls) > 0 && len(tt.args.reqData.SSHKeyGroupIDs) > 0 {
-
-				req := tsc.Calls[0].Arguments[3].(*cwssaws.InstanceAllocationRequest)
+			if len(tsc.Calls) > 0 && len(tsc.Calls[len(tsc.Calls)-1].Arguments) > 3 {
+				req := tsc.Calls[len(tsc.Calls)-1].Arguments[3].(*cwssaws.InstanceAllocationRequest)
 
 				// Check that the list of IDs match in size and order.
-				assert.Equal(t, req.Config.Tenant.TenantKeysetIds, tt.args.reqData.SSHKeyGroupIDs)
+				if len(tt.args.reqData.SSHKeyGroupIDs) > 0 {
+					assert.Equal(t, req.Config.Tenant.TenantKeysetIds, tt.args.reqData.SSHKeyGroupIDs)
+				} else {
+					assert.Empty(t, req.Config.Tenant.TenantKeysetIds)
+				}
+
+				// Check that if user did not send Instance Type ID, it is not sent to Core
+				if tt.args.reqData.InstanceTypeID == nil {
+					assert.Nil(t, req.InstanceTypeId)
+				} else {
+					assert.Equal(t, *tt.args.reqData.InstanceTypeID, *req.InstanceTypeId)
+				}
+
+				// Check that the allow unhealthy machine flag is set correctly
+				if tt.args.reqData.AllowUnhealthyMachine != nil && *tt.args.reqData.AllowUnhealthyMachine {
+					assert.True(t, req.AllowUnhealthyMachine, fmt.Sprintf("%v", req))
+				} else {
+					assert.False(t, req.AllowUnhealthyMachine, fmt.Sprintf("%v", req))
+				}
 			}
 
 			if len(tt.args.reqData.InfiniBandInterfaces) > 0 {
