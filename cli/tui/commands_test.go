@@ -827,6 +827,33 @@ func TestBuildAllocationConstraint_RejectsNonInteger(t *testing.T) {
 	assert.Contains(t, err.Error(), "integer")
 }
 
+func TestBuildAllocationConstraint_RejectsOutOfRangeIPBlockPrefix(t *testing.T) {
+	_, err := buildAllocationConstraint("IPBlock", "block-1", "Reserved", "0")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "prefix length")
+
+	_, err = buildAllocationConstraint("IPBlock", "block-1", "Reserved", "33")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "prefix length")
+}
+
+func TestBuildAllocationConstraint_AcceptsBoundaryIPBlockPrefix(t *testing.T) {
+	_, err := buildAllocationConstraint("IPBlock", "block-1", "Reserved", "1")
+	require.NoError(t, err)
+	_, err = buildAllocationConstraint("IPBlock", "block-1", "Reserved", "32")
+	require.NoError(t, err)
+}
+
+func TestBuildAllocationConstraint_RejectsNonPositiveInstanceTypeCount(t *testing.T) {
+	_, err := buildAllocationConstraint("InstanceType", "type-1", "Reserved", "0")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "at least 1")
+
+	_, err = buildAllocationConstraint("InstanceType", "type-1", "Reserved", "-5")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "at least 1")
+}
+
 func TestBuildAllocationConstraint_MarshalShape(t *testing.T) {
 	c, err := buildAllocationConstraint("InstanceType", "type-1", "Reserved", "4")
 	require.NoError(t, err)
