@@ -24,6 +24,7 @@ import (
 	"io"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"text/tabwriter"
 )
@@ -1318,7 +1319,8 @@ func cmdAllocationList(s *Session, _ []string) error {
 }
 
 func cmdAllocationCreate(s *Session, _ []string) error {
-	site, err := s.Resolver.Resolve(context.Background(), "site", "Site")
+	ctx := context.Background()
+	site, err := s.Resolver.Resolve(ctx, "site", "Site")
 	if err != nil {
 		return err
 	}
@@ -1330,19 +1332,25 @@ func cmdAllocationCreate(s *Session, _ []string) error {
 	if err != nil {
 		return err
 	}
-	tenantID, err := PromptText("Tenant ID", true)
+	tenantID, err := promptAllocationTenantID(s, ctx)
+	if err != nil {
+		return err
+	}
+	constraints, err := promptAllocationConstraints(s, ctx)
 	if err != nil {
 		return err
 	}
 	body := map[string]interface{}{
-		"name":     name,
-		"siteId":   site.ID,
-		"tenantId": strings.TrimSpace(tenantID),
+		"name":                  name,
+		"siteId":                site.ID,
+		"tenantId":              tenantID,
+		"allocationConstraints": constraints,
 	}
 	if strings.TrimSpace(desc) != "" {
 		body["description"] = strings.TrimSpace(desc)
 	}
-	LogCmd(s, "allocation", "create", "--name", name, "--site-id", site.ID, "--tenant-id", strings.TrimSpace(tenantID))
+	LogCmd(s, "allocation", "create", "--name", name, "--site-id", site.ID, "--tenant-id", tenantID)
+	fmt.Fprintf(os.Stderr, "%s allocation constraints are passed via JSON body, not flags; see --debug for the full request\n", Dim("note:"))
 	bodyJSON, _ := json.Marshal(body)
 	resp, _, err := s.Client.Do("POST", apiPath(s, "allocation"), nil, nil, bodyJSON)
 	if err != nil {
@@ -1354,6 +1362,188 @@ func cmdAllocationCreate(s *Session, _ []string) error {
 	json.Unmarshal(resp, &created)
 	fmt.Printf("%s Allocation created: %s (%s)\n", Green("OK"), str(created, "name"), str(created, "id"))
 	return nil
+}
+
+const tenantManualEntrySentinel = "__manual__"
+
+// promptAllocationTenantID prompts the user to pick a tenant for the allocation.
+// It lists tenants derived from tenant-accounts (the allocation API expects a
+// tenant ID, not a tenant-account ID) and falls back to manual entry if no
+// tenant accounts are visible or if the user explicitly opts out of the list.
+func promptAllocationTenantID(s *Session, ctx context.Context) (string, error) {
+	accounts, err := s.Resolver.Fetch(ctx, "tenant-account")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s could not list tenant accounts (%v); falling back to manual entry\n", Dim("note:"), err)
+		return promptTenantIDRaw()
+	}
+	items := buildTenantSelectItems(accounts)
+	if len(items) == 0 {
+		fmt.Fprintf(os.Stderr, "%s no tenants found via tenant-account; falling back to manual entry\n", Dim("note:"))
+		return promptTenantIDRaw()
+	}
+	selected, err := Select("Tenant:", items)
+	if err != nil {
+		return "", err
+	}
+	if selected.ID == tenantManualEntrySentinel {
+		return promptTenantIDRaw()
+	}
+	return selected.ID, nil
+}
+
+func promptTenantIDRaw() (string, error) {
+	raw, err := PromptText("Tenant ID", true)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(raw), nil
+}
+
+// buildTenantSelectItems converts tenant-account NamedItems into selectable
+// items keyed by tenantId. A trailing manual-entry sentinel is appended so the
+// user can still type a raw UUID when needed.
+func buildTenantSelectItems(accounts []NamedItem) []SelectItem {
+	items := make([]SelectItem, 0, len(accounts)+1)
+	for _, acc := range accounts {
+		tenantID := ""
+		if acc.Extra != nil {
+			tenantID = acc.Extra["tenantId"]
+		}
+		if tenantID == "" {
+			continue
+		}
+		label := acc.Name
+		if strings.TrimSpace(label) == "" {
+			label = tenantID
+		}
+		if acc.Status != "" {
+			label += "  " + acc.Status
+		}
+		items = append(items, SelectItem{Label: label, ID: tenantID})
+	}
+	if len(items) == 0 {
+		return nil
+	}
+	items = append(items, SelectItem{Label: "Enter Tenant ID manually...", ID: tenantManualEntrySentinel})
+	return items
+}
+
+// promptAllocationConstraints collects one or more allocation constraints.
+// The API requires at least one constraint, so the first prompt is mandatory;
+// subsequent prompts are optional.
+func promptAllocationConstraints(s *Session, ctx context.Context) ([]map[string]interface{}, error) {
+	var constraints []map[string]interface{}
+	for {
+		isFirst := len(constraints) == 0
+		var label string
+		if isFirst {
+			label = "Allocation requires at least one constraint. Add one now?"
+		} else {
+			label = "Add another allocation constraint?"
+		}
+		add, err := PromptConfirm(label)
+		if err != nil {
+			return nil, err
+		}
+		if !add {
+			if isFirst {
+				return nil, fmt.Errorf("allocation requires at least one constraint")
+			}
+			break
+		}
+		c, err := promptSingleAllocationConstraint(s, ctx)
+		if err != nil {
+			return nil, err
+		}
+		constraints = append(constraints, c)
+	}
+	return constraints, nil
+}
+
+func promptSingleAllocationConstraint(s *Session, ctx context.Context) (map[string]interface{}, error) {
+	rt, err := Select("Resource type:", allocationConstraintResourceTypes())
+	if err != nil {
+		return nil, err
+	}
+	resolverKey, resolverLabel, ok := resolverResourceForAllocationResourceType(rt.ID)
+	if !ok {
+		return nil, fmt.Errorf("unsupported resource type %q", rt.ID)
+	}
+	item, err := s.Resolver.Resolve(ctx, resolverKey, resolverLabel)
+	if err != nil {
+		return nil, err
+	}
+	ct, err := Select("Constraint type:", allocationConstraintTypes())
+	if err != nil {
+		return nil, err
+	}
+	valueText, err := PromptText(fmt.Sprintf("Constraint value (%s)", allocationConstraintValueHint(rt.ID)), true)
+	if err != nil {
+		return nil, err
+	}
+	return buildAllocationConstraint(rt.ID, item.ID, ct.ID, valueText)
+}
+
+// allocationConstraintResourceTypes lists the supported resource types for an
+// allocation constraint. These mirror the values accepted by the REST API
+// (see APIAllocationConstraintCreateRequest.Validate).
+func allocationConstraintResourceTypes() []SelectItem {
+	return []SelectItem{
+		{Label: "IPBlock (IP address allocation; value = prefix length)", ID: "IPBlock"},
+		{Label: "InstanceType (machine allocation; value = machine count)", ID: "InstanceType"},
+	}
+}
+
+// allocationConstraintTypes lists the supported constraint types. Only
+// Reserved is currently supported by the backend; OnDemand and Preemptible
+// are accepted by the API validation but not implemented (see the constraint
+// type validator in api/pkg/api/model/allocationconstraint.go).
+func allocationConstraintTypes() []SelectItem {
+	return []SelectItem{
+		{Label: "Reserved", ID: "Reserved"},
+		{Label: "OnDemand (not supported by current implementation)", ID: "OnDemand"},
+		{Label: "Preemptible (not supported by current implementation)", ID: "Preemptible"},
+	}
+}
+
+// resolverResourceForAllocationResourceType maps an allocation constraint
+// resource type (as accepted by the API) to the TUI resolver key and a
+// human-readable label to use when prompting.
+func resolverResourceForAllocationResourceType(resourceType string) (resolverKey, label string, ok bool) {
+	switch resourceType {
+	case "IPBlock":
+		return "ip-block", "IP Block", true
+	case "InstanceType":
+		return "instance-type", "Instance Type", true
+	}
+	return "", "", false
+}
+
+// allocationConstraintValueHint returns a short hint describing what the
+// constraint value represents for a given resource type.
+func allocationConstraintValueHint(resourceType string) string {
+	switch resourceType {
+	case "IPBlock":
+		return "prefix length, e.g. 28"
+	case "InstanceType":
+		return "machine count, e.g. 4"
+	}
+	return "integer"
+}
+
+// buildAllocationConstraint assembles an API-shaped constraint body from its
+// prompted fields. valueText is parsed as an integer.
+func buildAllocationConstraint(resourceType, resourceTypeID, constraintType, valueText string) (map[string]interface{}, error) {
+	value, err := strconv.Atoi(strings.TrimSpace(valueText))
+	if err != nil {
+		return nil, fmt.Errorf("constraint value must be an integer: %w", err)
+	}
+	return map[string]interface{}{
+		"resourceType":    resourceType,
+		"resourceTypeId":  resourceTypeID,
+		"constraintType":  constraintType,
+		"constraintValue": value,
+	}, nil
 }
 
 func cmdAllocationUpdate(s *Session, args []string) error {

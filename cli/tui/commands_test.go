@@ -19,6 +19,7 @@ package tui
 
 import (
 	"bytes"
+	"encoding/json"
 	"io"
 	"os"
 	"sort"
@@ -715,4 +716,133 @@ func contains(ss []string, target string) bool {
 		}
 	}
 	return false
+}
+
+// --- Allocation create tests ---
+
+func TestBuildTenantSelectItems_MapsTenantIDAndAppendsManualSentinel(t *testing.T) {
+	accounts := []NamedItem{
+		{
+			Name:   "acme",
+			ID:     "account-1",
+			Status: "Active",
+			Extra:  map[string]string{"tenantId": "tenant-1", "tenantOrg": "acme"},
+		},
+		{
+			Name:  "globex",
+			ID:    "account-2",
+			Extra: map[string]string{"tenantId": "tenant-2"},
+		},
+	}
+
+	items := buildTenantSelectItems(accounts)
+
+	require.Len(t, items, 3, "two tenants plus the manual-entry sentinel")
+	assert.Equal(t, "tenant-1", items[0].ID, "select ID must be the tenantId, not the tenant-account ID")
+	assert.Contains(t, items[0].Label, "acme")
+	assert.Contains(t, items[0].Label, "Active", "status should be surfaced in the label")
+	assert.Equal(t, "tenant-2", items[1].ID)
+	assert.Equal(t, tenantManualEntrySentinel, items[2].ID)
+}
+
+func TestBuildTenantSelectItems_SkipsAccountsWithoutTenantID(t *testing.T) {
+	accounts := []NamedItem{
+		{Name: "pending-invite", ID: "account-1", Extra: map[string]string{"tenantId": ""}},
+		{Name: "no-extra", ID: "account-2"},
+	}
+
+	items := buildTenantSelectItems(accounts)
+
+	assert.Nil(t, items, "accounts without a tenantId must be skipped and no sentinel emitted")
+}
+
+func TestBuildTenantSelectItems_EmptyInputReturnsNil(t *testing.T) {
+	assert.Nil(t, buildTenantSelectItems(nil))
+	assert.Nil(t, buildTenantSelectItems([]NamedItem{}))
+}
+
+func TestBuildTenantSelectItems_FallsBackToTenantIDWhenNameBlank(t *testing.T) {
+	accounts := []NamedItem{
+		{Name: "   ", Extra: map[string]string{"tenantId": "tenant-xyz"}},
+	}
+	items := buildTenantSelectItems(accounts)
+	require.Len(t, items, 2)
+	assert.Equal(t, "tenant-xyz", items[0].Label)
+}
+
+func TestAllocationConstraintResourceTypes_MatchAPIValidation(t *testing.T) {
+	items := allocationConstraintResourceTypes()
+	ids := make([]string, len(items))
+	for i, it := range items {
+		ids[i] = it.ID
+	}
+	assert.ElementsMatch(t, []string{"IPBlock", "InstanceType"}, ids,
+		"resource type IDs must match APIAllocationConstraintCreateRequest validation")
+}
+
+func TestAllocationConstraintTypes_MatchAPIValidation(t *testing.T) {
+	items := allocationConstraintTypes()
+	ids := make([]string, len(items))
+	for i, it := range items {
+		ids[i] = it.ID
+	}
+	assert.ElementsMatch(t, []string{"Reserved", "OnDemand", "Preemptible"}, ids,
+		"constraint type IDs must match APIAllocationConstraintCreateRequest validation")
+}
+
+func TestResolverResourceForAllocationResourceType(t *testing.T) {
+	cases := []struct {
+		resourceType string
+		wantKey      string
+		wantLabel    string
+		wantOK       bool
+	}{
+		{"IPBlock", "ip-block", "IP Block", true},
+		{"InstanceType", "instance-type", "Instance Type", true},
+		{"Unknown", "", "", false},
+		{"", "", "", false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.resourceType, func(t *testing.T) {
+			key, label, ok := resolverResourceForAllocationResourceType(tc.resourceType)
+			assert.Equal(t, tc.wantKey, key)
+			assert.Equal(t, tc.wantLabel, label)
+			assert.Equal(t, tc.wantOK, ok)
+		})
+	}
+}
+
+func TestBuildAllocationConstraint_ValidInput(t *testing.T) {
+	got, err := buildAllocationConstraint("IPBlock", "block-1", "Reserved", "  28 ")
+	require.NoError(t, err)
+	assert.Equal(t, "IPBlock", got["resourceType"])
+	assert.Equal(t, "block-1", got["resourceTypeId"])
+	assert.Equal(t, "Reserved", got["constraintType"])
+	assert.Equal(t, 28, got["constraintValue"], "value must be an int, not a string")
+}
+
+func TestBuildAllocationConstraint_RejectsNonInteger(t *testing.T) {
+	_, err := buildAllocationConstraint("IPBlock", "block-1", "Reserved", "not-a-number")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "integer")
+}
+
+func TestBuildAllocationConstraint_MarshalShape(t *testing.T) {
+	c, err := buildAllocationConstraint("InstanceType", "type-1", "Reserved", "4")
+	require.NoError(t, err)
+	encoded, err := json.Marshal(c)
+	require.NoError(t, err)
+	var decoded map[string]interface{}
+	require.NoError(t, json.Unmarshal(encoded, &decoded))
+	assert.Equal(t, "InstanceType", decoded["resourceType"])
+	assert.Equal(t, "type-1", decoded["resourceTypeId"])
+	assert.Equal(t, "Reserved", decoded["constraintType"])
+	assert.InDelta(t, 4, decoded["constraintValue"], 0.0001,
+		"constraintValue must round-trip through JSON as a number, not a string")
+}
+
+func TestAllocationConstraintValueHint(t *testing.T) {
+	assert.Contains(t, allocationConstraintValueHint("IPBlock"), "prefix")
+	assert.Contains(t, allocationConstraintValueHint("InstanceType"), "machine")
+	assert.NotEmpty(t, allocationConstraintValueHint("Unknown"), "unknown types still get a generic hint")
 }

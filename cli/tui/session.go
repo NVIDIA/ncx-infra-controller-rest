@@ -626,7 +626,12 @@ func (s *Session) fetchTenantAccounts(ctx context.Context) ([]NamedItem, error) 
 		}
 		result[i] = NamedItem{
 			Name: name, ID: str(m, "id"), Status: str(m, "status"),
-			Extra: map[string]string{"infrastructureProviderId": str(m, "infrastructureProviderId")}, Raw: m,
+			Extra: map[string]string{
+				"infrastructureProviderId": str(m, "infrastructureProviderId"),
+				"tenantId":                 str(m, "tenantId"),
+				"tenantOrg":                str(m, "tenantOrg"),
+			},
+			Raw: m,
 		}
 	}
 	return result, nil
