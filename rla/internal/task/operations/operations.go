@@ -161,6 +161,7 @@ func (t *InjectExpectationTaskInfo) CodeString() string {
 
 type BringUpTaskInfo struct {
 	RuleID string `json:"rule_id,omitempty"`
+	OpCode string `json:"op_code,omitempty"`
 }
 
 func (t *BringUpTaskInfo) Validate() error {
@@ -193,10 +194,18 @@ func (t *BringUpTaskInfo) Type() taskcommon.TaskType {
 }
 
 func (t *BringUpTaskInfo) Description() string {
-	return "rack bring-up"
+	switch t.CodeString() {
+	case taskcommon.OpCodeIngest:
+		return "rack ingest"
+	default:
+		return "rack bring-up"
+	}
 }
 
 func (t *BringUpTaskInfo) CodeString() string {
+	if t.OpCode != "" {
+		return t.OpCode
+	}
 	return taskcommon.OpCodeBringUp
 }
 

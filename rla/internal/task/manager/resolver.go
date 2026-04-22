@@ -100,22 +100,22 @@ func resolveRackTarget(
 		return nil, fmt.Errorf("failed to get rack by identifier %+v: %w", rt.Identifier, err)
 	}
 
-	components := make([]component.Component, 0)
-	if len(rt.ComponentTypes) == 0 {
-		// All components
-		components = rackObj.Components
-	} else {
-		// Components with the specified types
+	var components []component.Component
+
+	if len(rt.ComponentTypes) > 0 {
+		// Filter by component type.
 		requiredTypes := make(map[devicetypes.ComponentType]bool)
 		for _, ctype := range rt.ComponentTypes {
 			requiredTypes[ctype] = true
 		}
-
 		for _, comp := range rackObj.Components {
 			if requiredTypes[comp.Type] {
 				components = append(components, comp)
 			}
 		}
+	} else {
+		// All components.
+		components = rackObj.Components
 	}
 
 	// Do the following so that the internal map for components can be built up

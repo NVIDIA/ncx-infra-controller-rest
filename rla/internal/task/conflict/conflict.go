@@ -32,6 +32,7 @@ package conflict
 import (
 	"context"
 
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/operation"
 	taskcommon "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/common"
 	taskstore "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/store"
 	taskdef "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/task"
@@ -194,6 +195,20 @@ type Entry struct {
 	RequireComponentOverlap bool
 }
 
+// opMatch reports whether e matches the (a, b) operation pair directionally:
+// entry.A matches a and entry.B matches b on type and code.
+func (e Entry) opMatch(a, b OperationSpec) bool {
+	return e.A.Matches(a) && e.B.Matches(b)
+}
+
+// componentMatch reports whether e's component-type constraints are satisfied
+// directionally: entry.A's component type is present in taskA and entry.B's
+// component type is present in taskB.
+func (e Entry) componentMatch(taskA, taskB *taskdef.Task) bool {
+	return hasComponentType(taskA, e.A.ComponentType) &&
+		hasComponentType(taskB, e.B.ComponentType)
+}
+
 // Rule declaratively defines when operations conflict.
 // Empty ConflictingPairs means exclusive mode: any active task is a conflict.
 type Rule struct {
@@ -240,19 +255,17 @@ func (r *Rule) Conflicts(
 			OperationCode: active.Operation.Code,
 		}
 		for _, entry := range r.ConflictingPairs {
-			// Forward: A qualifies incoming, B qualifies active.
-			forward := entry.A.Matches(incomingOp) &&
-				hasComponentType(incoming, entry.A.ComponentType) &&
-				entry.B.Matches(activeOp) &&
-				hasComponentType(active, entry.B.ComponentType)
+			if !entry.opMatch(incomingOp, activeOp) && !entry.opMatch(activeOp, incomingOp) {
+				continue
+			}
 
-			// Reverse: symmetric — A qualifies active, B qualifies incoming.
-			reverse := entry.A.Matches(activeOp) &&
-				hasComponentType(active, entry.A.ComponentType) &&
-				entry.B.Matches(incomingOp) &&
-				hasComponentType(incoming, entry.B.ComponentType)
+			// Apply component-type checks in the matched direction.
+			// Both directions may hold when A and B match the same op type.
+			componentMatch :=
+				(entry.opMatch(incomingOp, activeOp) && entry.componentMatch(incoming, active)) ||
+					(entry.opMatch(activeOp, incomingOp) && entry.componentMatch(active, incoming))
 
-			if (forward || reverse) &&
+			if componentMatch &&
 				(!entry.RequireComponentOverlap ||
 					componentUUIDsOverlap(incoming, active)) {
 				return true
@@ -323,4 +336,41 @@ func (r *Resolver) HasConflict(
 	}
 
 	return builtinRule.Conflicts(incoming, activeTasks), nil
+}
+
+// HasScheduleConflict reports whether the incoming operation would conflict
+// with any of the existing schedule operations.
+//
+// This is a coarse-grained advisory check: only operation type and code are
+// matched against the ConflictingPairs table. Component-type checks and
+// component-UUID overlap checks are intentionally skipped because the exact
+// components are not known at schedule creation time (they are resolved from
+// scope rows at fire time). The check is therefore conservative — it may
+// return true when a runtime check would not — but it will never miss a
+// conflict that would be caught at runtime.
+//
+// For precise per-component conflict detection use HasConflict, which requires
+// full task Attributes (populated from live inventory).
+func (r *Resolver) HasScheduleConflict(
+	incoming operation.Wrapper,
+	existing []operation.Wrapper,
+) bool {
+	incomingOp := OperationSpec{
+		OperationType: string(incoming.Type),
+		OperationCode: incoming.Code,
+	}
+
+	for _, op := range existing {
+		activeOp := OperationSpec{
+			OperationType: string(op.Type),
+			OperationCode: op.Code,
+		}
+		for _, entry := range builtinRule.ConflictingPairs {
+			if entry.opMatch(incomingOp, activeOp) || entry.opMatch(activeOp, incomingOp) {
+				return true
+			}
+		}
+	}
+
+	return false
 }
