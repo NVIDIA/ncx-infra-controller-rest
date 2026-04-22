@@ -48,69 +48,6 @@ func (s *UpdateSubnetTestSuite) AfterTest(suiteName, testName string) {
 	s.env.AssertExpectations(s.T())
 }
 
-func (s *UpdateSubnetTestSuite) Test_UpdateSubnetInfo_Success() {
-	var subnetManager subnetActivity.ManageSubnet
-
-	siteID := uuid.New()
-
-	transactionID := &cwssaws.TransactionID{
-		ResourceId: uuid.New().String(),
-		Timestamp:  timestamppb.Now(),
-	}
-
-	subnetInfo := &cwssaws.SubnetInfo{
-		Status:    cwssaws.WorkflowStatus_WORKFLOW_STATUS_IN_PROGRESS,
-		StatusMsg: "Subnet creation in progress",
-		NetworkSegment: &cwssaws.NetworkSegment{
-			Id:   &cwssaws.NetworkSegmentId{Value: uuid.New().String()},
-			Name: uuid.New().String(),
-		},
-	}
-
-	// Mock UpdateSubnetInDB activity
-	s.env.RegisterActivity(subnetManager.UpdateSubnetInDB)
-	s.env.OnActivity(subnetManager.UpdateSubnetInDB, mock.Anything, mock.Anything, mock.Anything).Return(nil)
-
-	// Execute UpdateSubnetInfo workflow
-	s.env.ExecuteWorkflow(UpdateSubnetInfo, siteID.String(), transactionID, subnetInfo)
-	s.True(s.env.IsWorkflowCompleted())
-	s.NoError(s.env.GetWorkflowError())
-}
-
-func (s *UpdateSubnetTestSuite) Test_UpdateSubnetInfo_ActivityFails() {
-	var subnetManager subnetActivity.ManageSubnet
-
-	siteID := uuid.New()
-
-	transactionID := &cwssaws.TransactionID{
-		ResourceId: uuid.New().String(),
-		Timestamp:  timestamppb.Now(),
-	}
-
-	subnetInfo := &cwssaws.SubnetInfo{
-		Status:    cwssaws.WorkflowStatus_WORKFLOW_STATUS_IN_PROGRESS,
-		StatusMsg: "Subnet creation in progress",
-		NetworkSegment: &cwssaws.NetworkSegment{
-			Id:   &cwssaws.NetworkSegmentId{Value: uuid.New().String()},
-			Name: uuid.New().String(),
-		},
-	}
-
-	// Mock UpdateSubnetInDB activity failure
-	s.env.RegisterActivity(subnetManager.UpdateSubnetInDB)
-	s.env.OnActivity(subnetManager.UpdateSubnetInDB, mock.Anything, mock.Anything, mock.Anything).Return(errors.New("UpdateSubnetInfo Failure"))
-
-	// Execute UpdateSubnetInfo workflow
-	s.env.ExecuteWorkflow(UpdateSubnetInfo, siteID.String(), transactionID, subnetInfo)
-	s.True(s.env.IsWorkflowCompleted())
-	err := s.env.GetWorkflowError()
-	s.Error(err)
-
-	var applicationErr *temporal.ApplicationError
-	s.True(errors.As(err, &applicationErr))
-	s.Equal("UpdateSubnetInfo Failure", applicationErr.Error())
-}
-
 func (s *UpdateSubnetTestSuite) Test_UpdateSubnetInventory_Success() {
 	var subnetManager subnetActivity.ManageSubnet
 	var lifecycleMetricsManager subnetActivity.ManageSubnetLifecycleMetrics

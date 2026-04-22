@@ -243,20 +243,14 @@ func main() {
 	// Register workflows
 	if tcfg.Namespace == cwfn.CloudNamespace {
 		// Workflows triggered by Cloud services
-		// VPC workflows
-		w.RegisterWorkflow(vpcWorkflow.CreateVpc)
-		w.RegisterWorkflow(vpcWorkflow.DeleteVpc)
+		w.RegisterWorkflow(vpcWorkflow.DeleteVpcByID)
 
 		// Subnet workflows
-		w.RegisterWorkflow(subnetWorkflow.CreateSubnet)
-		w.RegisterWorkflow(subnetWorkflow.DeleteSubnet)
+		w.RegisterWorkflow(subnetWorkflow.DeleteSubnetByID)
 
 		// Instance workflows
-		w.RegisterWorkflow(instanceWorkflow.CreateInstance)
-		w.RegisterWorkflow(instanceWorkflow.DeleteInstance)
-		w.RegisterWorkflow(instanceWorkflow.RebootInstance)
-
-		// ExpectedMachine workflows (none under Cloud namespace)
+		w.RegisterWorkflow(instanceWorkflow.DeleteInstanceByID)
+		w.RegisterWorkflow(instanceWorkflow.RebootInstanceByID)
 
 		// User workflows
 		w.RegisterWorkflow(userWorkflow.UpdateUserFromNGC)
@@ -265,7 +259,6 @@ func main() {
 		// Site workflows
 		w.RegisterWorkflow(siteWorkflow.DeleteSiteComponents)
 		w.RegisterWorkflow(siteWorkflow.MonitorHealthForAllSites)
-		w.RegisterWorkflow(siteWorkflow.CheckHealthForAllSites)
 		w.RegisterWorkflow(siteWorkflow.MonitorTemporalCertExpirationForAllSites)
 		w.RegisterWorkflow(siteWorkflow.MonitorSiteTemporalNamespaces)
 
@@ -274,35 +267,28 @@ func main() {
 		w.RegisterWorkflow(sshKeyGroupWorkflow.DeleteSSHKeyGroup)
 
 		// InfiniBandPartition workflows
-		w.RegisterWorkflow(ibpWorkflow.CreateInfiniBandPartition)
-		w.RegisterWorkflow(ibpWorkflow.DeleteInfiniBandPartition)
+		w.RegisterWorkflow(ibpWorkflow.DeleteInfiniBandPartitionByID)
 	} else if tcfg.Namespace == cwfn.SiteNamespace {
 		// Workflows triggered by Site Agent
 		// Machine Workflows
 		w.RegisterWorkflow(machineWorkflow.UpdateMachineInventory)
 
 		// VPC workflows
-		w.RegisterWorkflow(vpcWorkflow.UpdateVpcInfo)
 		w.RegisterWorkflow(vpcWorkflow.UpdateVpcInventory)
 
 		// Subnet workflows
-		w.RegisterWorkflow(subnetWorkflow.UpdateSubnetInfo)
 		w.RegisterWorkflow(subnetWorkflow.UpdateSubnetInventory)
 
 		// Instance workflows
-		w.RegisterWorkflow(instanceWorkflow.UpdateInstanceInfo)
 		w.RegisterWorkflow(instanceWorkflow.UpdateInstanceInventory)
-		w.RegisterWorkflow(instanceWorkflow.UpdateInstanceRebootInfo)
 
 		// Site workflows
 		w.RegisterWorkflow(siteWorkflow.UpdateAgentCertExpiry)
 
 		// SSHKeyGroup workflows
-		w.RegisterWorkflow(sshKeyGroupWorkflow.UpdateSSHKeyGroupInfo)
 		w.RegisterWorkflow(sshKeyGroupWorkflow.UpdateSSHKeyGroupInventory)
 
 		// InfiniBandPartition workflows
-		w.RegisterWorkflow(ibpWorkflow.UpdateInfiniBandPartitionInfo)
 		w.RegisterWorkflow(ibpWorkflow.UpdateInfiniBandPartitionInventory)
 
 		// Tenant workflow
@@ -487,11 +473,6 @@ func main() {
 		if err != nil {
 			log.Error().Err(err).Msg("failed to trigger Temporal Cert Expiration Monitor workflow")
 		}
-		// NOTE: This will stay disabled until Site Agent is ready
-		// _, err = siteWorkflow.ExecuteCheckHealthForAllSitesWorkflow(ctx, tc)
-		// if err != nil {
-		// 	log.Error().Err(err).Msg("failed to trigger Site Agent Health Monitor workflow")
-		// }
 
 		// Trigger MonitorSiteTemporalNamespaces
 		_, err = siteWorkflow.ExecuteMonitorSiteTemporalNamespaces(ctx, tc)
@@ -499,5 +480,6 @@ func main() {
 			log.Error().Err(err).Msg("failed to trigger Monitor Site Temporal Namespaces workflow")
 		}
 	}
+
 	// NOTE: Log messages past this point do not show up in the log output
 }

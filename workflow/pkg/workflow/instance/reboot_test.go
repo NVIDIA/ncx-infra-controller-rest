@@ -18,20 +18,18 @@
 package instance
 
 import (
-	"context"
 	"errors"
-	"fmt"
 	"testing"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
-	tmocks "go.temporal.io/sdk/mocks"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/testsuite"
 
-	instanceActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/instance"
+	instanceActivity "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/activity"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 )
 
 type RebootInstanceTestSuite struct {
@@ -49,78 +47,53 @@ func (s *RebootInstanceTestSuite) AfterTest(suiteName, testName string) {
 	s.env.AssertExpectations(s.T())
 }
 
-func (s *RebootInstanceTestSuite) Test_RebootInstanceWorkflow_Success() {
+func (s *RebootInstanceTestSuite) Test_RebootInstanceByIDWorkflow_Success() {
 	var instanceManager instanceActivity.ManageInstance
 
 	instanceID := uuid.New()
+	request := &cwssaws.InstancePowerRequest{
+		MachineId: &cwssaws.MachineId{
+			Id: instanceID.String(),
+		},
+		BootWithCustomIpxe:   true,
+		ApplyUpdatesOnReboot: true,
+	}
 
-	// Mock RebootInstanceViaSiteAgent activity
-	s.env.RegisterActivity(instanceManager.RebootInstanceViaSiteAgent)
-	s.env.OnActivity(instanceManager.RebootInstanceViaSiteAgent, mock.Anything, instanceID, true, true).Return(nil)
+	// Mock RebootInstanceOnSite activity
+	s.env.RegisterActivity(instanceManager.RebootInstanceOnSite)
+	s.env.OnActivity(instanceManager.RebootInstanceOnSite, mock.Anything, request).Return(nil)
 
-	// execute RebootInstance workflow
-	s.env.ExecuteWorkflow(RebootInstance, instanceID, true, true)
+	// execute RebootInstanceByID workflow
+	s.env.ExecuteWorkflow(RebootInstanceByID, instanceID, true, true)
 	s.True(s.env.IsWorkflowCompleted())
 	s.NoError(s.env.GetWorkflowError())
 }
 
-func (s *RebootInstanceTestSuite) Test_RebootInstanceWorkflow_ActivityFailsErrorActivityFails() {
+func (s *RebootInstanceTestSuite) Test_RebootInstanceByIDWorkflow_ActivityFailsErrorActivityFails() {
 	var instanceManager instanceActivity.ManageInstance
 
 	instanceID := uuid.New()
+	request := &cwssaws.InstancePowerRequest{
+		MachineId: &cwssaws.MachineId{
+			Id: instanceID.String(),
+		},
+		BootWithCustomIpxe:   true,
+		ApplyUpdatesOnReboot: true,
+	}
 
 	// Mock RebootInstanceViaSiteAgent activity failure
-	s.env.RegisterActivity(instanceManager.RebootInstanceViaSiteAgent)
-	s.env.OnActivity(instanceManager.RebootInstanceViaSiteAgent, mock.Anything, instanceID, true, true).Return(errors.New("RebootInstanceViaSiteAgent Failure"))
+	s.env.RegisterActivity(instanceManager.RebootInstanceOnSite)
+	s.env.OnActivity(instanceManager.RebootInstanceOnSite, mock.Anything, request).Return(errors.New("RebootInstanceOnSite Failure"))
 
-	// execute RebootInstance workflow
-	s.env.ExecuteWorkflow(RebootInstance, instanceID, true, true)
+	// execute RebootInstanceByID workflow
+	s.env.ExecuteWorkflow(RebootInstanceByID, instanceID, true, true)
 	s.True(s.env.IsWorkflowCompleted())
 	err := s.env.GetWorkflowError()
 	s.Error(err)
 
 	var applicationErr *temporal.ApplicationError
 	s.True(errors.As(err, &applicationErr))
-	s.Equal("RebootInstanceViaSiteAgent Failure", applicationErr.Error())
-}
-
-func (s *RebootInstanceTestSuite) Test_ExecuteRebootInstanceWorkflow_Success() {
-	ctx := context.Background()
-
-	instanceID := uuid.New()
-
-	wid := "test-workflow-id"
-
-	wrun := &tmocks.WorkflowRun{}
-	wrun.On("GetID").Return(wid)
-
-	tc := &tmocks.Client{}
-
-	tc.Mock.On("ExecuteWorkflow", context.Background(), mock.AnythingOfType("internal.StartWorkflowOptions"), mock.Anything,
-		instanceID, true, true).Return(wrun, nil)
-
-	rwid, err := ExecuteRebootInstanceWorkflow(ctx, tc, instanceID, true, true)
-	s.NoError(err)
-	s.Equal(wid, *rwid)
-}
-
-func (s *RebootInstanceTestSuite) Test_ExecuteRebootInstanceWorkflow_Failure() {
-	ctx := context.Background()
-
-	instanceID := uuid.New()
-
-	wid := "test-workflow-id"
-
-	wrun := &tmocks.WorkflowRun{}
-	wrun.On("GetID").Return(wid)
-
-	tc := &tmocks.Client{}
-
-	tc.Mock.On("ExecuteWorkflow", context.Background(), mock.AnythingOfType("internal.StartWorkflowOptions"), mock.Anything,
-		instanceID, true, true).Return(wrun, fmt.Errorf("failed to execute workflow"))
-
-	_, err := ExecuteRebootInstanceWorkflow(ctx, tc, instanceID, true, true)
-	s.Error(err)
+	s.Equal("RebootInstanceOnSite Failure", applicationErr.Error())
 }
 
 func TestRebootInstanceSuite(t *testing.T) {

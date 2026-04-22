@@ -18,10 +18,6 @@
 package workflowtypes
 
 import (
-	"context"
-
-	computils "github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/common"
-	wflows "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
 	"go.uber.org/atomic"
@@ -114,18 +110,4 @@ func NewWorkflowInstance() *Workflow {
 		DpuExtensionServiceState:    &MgrState{},
 		NVLinkLogicalPartitionState: &MgrState{},
 	}
-}
-
-// WorkflowMetadata - workflow metadata
-type WorkflowMetadata interface {
-	ResourceType() string
-	ActivityType() string
-	DoDbOP() computils.OpType
-	DoSiteControllerOP(context.Context, *wflows.TransactionID, interface{}) (interface{}, error)
-	ActivityInvoke() interface{}
-	ActivityPublish() interface{}
-	Response() interface{}
-	ResponseState(status wflows.WorkflowStatus,
-		objectStatus wflows.ObjectStatus, statusMsg string)
-	Statistics() *MgrState
 }

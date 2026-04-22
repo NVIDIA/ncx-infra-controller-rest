@@ -74,9 +74,10 @@ func (mos *ManageOperatingSystem) CreateOsImageOnSite(ctx context.Context, reque
 	if carbideClient == nil {
 		return client.ErrClientNotConnected
 	}
-	computeClient := carbideClient.Compute()
 
-	_, err = computeClient.CreateOsImage(ctx, request)
+	forgeClient := carbideClient.Carbide()
+
+	_, err = forgeClient.CreateOsImage(ctx, request)
 	if err != nil {
 		logger.Warn().Err(err).Msg("Failed to create OS Image using Site Controller API")
 		return swe.WrapErr(err)
@@ -115,9 +116,9 @@ func (mos *ManageOperatingSystem) UpdateOsImageOnSite(ctx context.Context, reque
 	if carbideClient == nil {
 		return client.ErrClientNotConnected
 	}
-	computeClient := carbideClient.Compute()
+	forgeClient := carbideClient.Carbide()
 
-	_, err = computeClient.UpdateOsImage(ctx, request)
+	_, err = forgeClient.UpdateOsImage(ctx, request)
 	if err != nil {
 		logger.Warn().Err(err).Msg("Failed to update OS Image using Site Controller API")
 		return swe.WrapErr(err)
@@ -154,9 +155,9 @@ func (mos *ManageOperatingSystem) DeleteOsImageOnSite(ctx context.Context, reque
 	if carbideClient == nil {
 		return client.ErrClientNotConnected
 	}
-	computeClient := carbideClient.Compute()
+	forgeClient := carbideClient.Carbide()
 
-	_, err = computeClient.DeleteOsImage(ctx, request)
+	_, err = forgeClient.DeleteOsImage(ctx, request)
 	if err != nil {
 		logger.Warn().Err(err).Msg("Failed to delete OS Image using Site Controller API")
 		return swe.WrapErr(err)
@@ -227,13 +228,18 @@ func osImagePagedInventory(allItemIDs []*cwssaws.UUID, pagedItems []*cwssaws.OsI
 
 func osImageFindFallback(ctx context.Context, carbideClient *cClient.CarbideClient) ([]*cwssaws.UUID, []*cwssaws.OsImage, error) {
 	request := &cwssaws.ListOsImageRequest{}
-	items, err := carbideClient.Compute().ListOsImage(ctx, request)
+
+	forgeClient := carbideClient.Carbide()
+
+	items, err := forgeClient.ListOsImage(ctx, request)
 	if err != nil {
 		return nil, nil, err
 	}
+
 	var ids []*cwssaws.UUID
 	for _, it := range items.GetImages() {
 		ids = append(ids, it.GetAttributes().Id)
 	}
+
 	return ids, items.GetImages(), nil
 }

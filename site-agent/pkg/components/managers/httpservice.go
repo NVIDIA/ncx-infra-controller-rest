@@ -18,15 +18,11 @@
 package managers
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"os"
 
 	computils "github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/utils"
-	wflows "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
-	"github.com/rs/zerolog/log"
-	"go.temporal.io/sdk/client"
 )
 
 func handleSiteStatusRequest(w http.ResponseWriter, r *http.Request) {
@@ -48,38 +44,6 @@ func handleSiteStatusRequest(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleVpcStatusRequest(w http.ResponseWriter, r *http.Request) {
-	log.Info().Msgf("GET params were: %v", r.URL.Query())
-
-	vpcName := r.URL.Query().Get(computils.ParamName)
-	if vpcName != "" {
-		workflowID := "vpc-get-" + vpcName
-		log.Info().Msgf("VPC GET : %v", vpcName)
-
-		workflowOptions := client.StartWorkflowOptions{
-			ID:        workflowID,
-			TaskQueue: ManagerAccess.Conf.EB.Temporal.TemporalSubscribeQueue,
-		}
-
-		we, err := ManagerAccess.Data.EB.Managers.Workflow.Temporal.Subscriber.ExecuteWorkflow(
-			context.Background(),
-			workflowOptions,
-			ManagerAccess.API.VPC.GetVPCByName,
-		)
-		if err != nil {
-			log.Info().Msgf("Op error: %v", err.Error())
-			fmt.Fprint(w, err.Error())
-			return
-		}
-		ResourceResponse := &wflows.GetVPCResponse{}
-		we.Get(context.Background(), ResourceResponse)
-		fmt.Fprint(w, ResourceResponse.Status)
-		fmt.Fprint(w, ResourceResponse.StatusMsg)
-		for _, v := range ResourceResponse.List.Vpcs {
-			fmt.Fprint(w, v)
-		}
-		return
-	}
-
 	// Get the status of VPC n write to the HTTP response body.
 	vpcStatus := ManagerAccess.API.VPC.GetState()
 	for _, v := range vpcStatus {
@@ -88,25 +52,25 @@ func handleVpcStatusRequest(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleSubnetStatusRequest(w http.ResponseWriter, r *http.Request) {
-	// Get the status of Subnet n write to the HTTP response body.
-	sStatus := ManagerAccess.API.Subnet.GetState()
-	for _, v := range sStatus {
+	// Get the status of Subnet and write to the HTTP response body.
+	subnetStatus := ManagerAccess.API.Subnet.GetState()
+	for _, v := range subnetStatus {
 		fmt.Fprint(w, v)
 	}
 }
 
 func handleInstanceStatusRequest(w http.ResponseWriter, r *http.Request) {
-	// Get the status of Instance n write to the HTTP response body.
-	sStatus := ManagerAccess.API.Instance.GetState()
-	for _, v := range sStatus {
+	// Get the status of Instance and write to the HTTP response body.
+	instanceStatus := ManagerAccess.API.Instance.GetState()
+	for _, v := range instanceStatus {
 		fmt.Fprint(w, v)
 	}
 }
 
 func handleMachineStatusRequest(w http.ResponseWriter, r *http.Request) {
-	// Get the status of Instance n write to the HTTP response body.
-	sStatus := ManagerAccess.API.Machine.GetState()
-	for _, v := range sStatus {
+	// Get the status of Instance and write to the HTTP response body.
+	machineStatus := ManagerAccess.API.Machine.GetState()
+	for _, v := range machineStatus {
 		fmt.Fprint(w, v)
 	}
 }

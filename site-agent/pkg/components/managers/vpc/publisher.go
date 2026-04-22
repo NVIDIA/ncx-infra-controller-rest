@@ -18,45 +18,21 @@
 package vpc
 
 import (
+	"github.com/google/uuid"
+
 	swa "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/activity"
 	sww "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/workflow"
-	"github.com/google/uuid"
-	"go.temporal.io/sdk/activity"
 )
 
-// RegisterPublisher registers the VPCWorkflows with the Temporal client
+// RegisterPublisher registers VPC inventory workflow and activity with Temporal
 func (api *API) RegisterPublisher() error {
-	// Register the publishers here
-	ManagerAccess.Data.EB.Log.Info().Msg("VPC: Registering the publishers")
+	ManagerAccess.Data.EB.Log.Info().Msg("VPC: Registering inventory workflow and activity")
 
-	// Get VPC workflow interface
-	VPCinterface := NewVPCWorkflows(
-		ManagerAccess.Data.EB.Managers.Workflow.Temporal.Publisher,
-		ManagerAccess.Data.EB.Managers.Workflow.Temporal.Subscriber,
-		ManagerAccess.Conf.EB,
-	)
-
-	activityRegisterOptions := activity.RegisterOptions{
-		Name: "PublishVPCActivity",
-	}
-
-	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivityWithOptions(
-		VPCinterface.PublishVPCActivity, activityRegisterOptions,
-	)
-	ManagerAccess.Data.EB.Log.Info().Msg("VPC: successfully registered the Publish VPC activity")
-
-	activityRegisterOptions = activity.RegisterOptions{
-		Name: "PublishVPCListActivity",
-	}
-	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivityWithOptions(
-		VPCinterface.PublishVPCListActivity, activityRegisterOptions,
-	)
-	ManagerAccess.Data.EB.Log.Info().Msg("VPC: successfully registered the Publish VPC List activity")
-
-	// Instance Inventory workflow
+	// Register DiscoverVPCInventory workflow
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.DiscoverVPCInventory)
-	ManagerAccess.Data.EB.Log.Info().Msg("VPC: successfully registered the Discover VPC Inventory workflow")
+	ManagerAccess.Data.EB.Log.Info().Msg("VPC: Successfully registered DiscoverVPCInventory workflow")
 
+	// Register DiscoverVPCInventory activity
 	inventoryManager := swa.NewManageVPCInventory(swa.ManageInventoryConfig{
 		SiteID:                uuid.MustParse(ManagerAccess.Conf.EB.Temporal.ClusterID),
 		CarbideAtomicClient:   ManagerAccess.Data.EB.Managers.Carbide.Client,
@@ -65,9 +41,11 @@ func (api *API) RegisterPublisher() error {
 		SitePageSize:          InventoryCarbidePageSize,
 		CloudPageSize:         InventoryCloudPageSize,
 	})
+
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(inventoryManager.DiscoverVPCInventory)
-	ManagerAccess.Data.EB.Log.Info().Msg("VPC: successfully registered the Discover VPC Inventory activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("VPC: Successfully registered DiscoverVPCInventory activity")
 
 	api.RegisterCron()
+
 	return nil
 }

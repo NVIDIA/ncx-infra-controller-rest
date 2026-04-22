@@ -18,19 +18,21 @@
 package instancetype
 
 import (
+	"github.com/google/uuid"
+
 	swa "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/activity"
 	sww "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/workflow"
-	"github.com/google/uuid"
 )
 
-// RegisterPublisher registers the InstanceType Workflows with the Temporal client
+// RegisterPublisher registers InstanceType inventory workflow and activity with Temporal
 func (api *API) RegisterPublisher() error {
-	// Register the publishers here
+	ManagerAccess.Data.EB.Log.Info().Msg("InstanceType: Registering inventory workflow and activity")
 
-	// Collect and Publish InstanceType Inventory workflow
+	// Register DiscoverInstanceTypeInventory workflow
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.DiscoverInstanceTypeInventory)
-	ManagerAccess.Data.EB.Log.Info().Msg("InstanceType: successfully registered the Discover InstanceType Inventory workflow")
+	ManagerAccess.Data.EB.Log.Info().Msg("InstanceType: Successfully registered DiscoverInstanceTypeInventory workflow")
 
+	// Register DiscoverInstanceTypeInventory activity
 	inventoryManager := swa.NewManageInstanceTypeInventory(swa.ManageInventoryConfig{
 		SiteID:                uuid.MustParse(ManagerAccess.Conf.EB.Temporal.ClusterID),
 		CarbideAtomicClient:   ManagerAccess.Data.EB.Managers.Carbide.Client,
@@ -39,8 +41,9 @@ func (api *API) RegisterPublisher() error {
 		SitePageSize:          InventoryCarbidePageSize,
 		CloudPageSize:         InventoryCloudPageSize,
 	})
+
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(inventoryManager.DiscoverInstanceTypeInventory)
-	ManagerAccess.Data.EB.Log.Info().Msg("InstanceType: successfully registered the Discover InstanceType Inventory activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("InstanceType: Successfully registered DiscoverInstanceTypeInventory activity")
 
 	api.RegisterCron()
 

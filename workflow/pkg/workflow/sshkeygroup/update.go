@@ -34,54 +34,6 @@ import (
 	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 )
 
-// UpdateSSHKeyGroupInfo is a Temporal workflow that Site Agent calls to update VPC information
-func UpdateSSHKeyGroupInfo(ctx workflow.Context, siteID string, transactionID *cwssaws.TransactionID, sshKeyGroupInfo *cwssaws.SSHKeyGroupInfo) error {
-	logger := log.With().Str("Workflow", "UpdateSSHKeyGroupInfo").Str("Site ID", siteID).Logger()
-
-	logger.Info().Msg("starting workflow")
-
-	// RetryPolicy specifies how to automatically handle retries if an Activity fails.
-	retrypolicy := &temporal.RetryPolicy{
-		InitialInterval:    2 * time.Second,
-		BackoffCoefficient: 2.0,
-		MaximumInterval:    2 * time.Minute,
-		MaximumAttempts:    15,
-	}
-	options := workflow.ActivityOptions{
-		// Timeout options specify when to automatically timeout Activity functions.
-		StartToCloseTimeout: 2 * time.Minute,
-		// Optionally provide a customized RetryPolicy.
-		RetryPolicy: retrypolicy,
-	}
-
-	parsedSiteID, err := uuid.Parse(siteID)
-	if err != nil {
-		logger.Warn().Err(err).Msg("failed to parse Site ID")
-		return err
-	}
-
-	ctx = workflow.WithActivityOptions(ctx, options)
-
-	var sshKeyGroupManager sshKeyGroupActivity.ManageSSHKeyGroup
-	var sshKeyGroupIDStr *string
-
-	err = workflow.ExecuteActivity(ctx, sshKeyGroupManager.UpdateSSHKeyGroupInDB, parsedSiteID, transactionID, sshKeyGroupInfo).Get(ctx, &sshKeyGroupIDStr)
-	if err != nil {
-		logger.Warn().Err(err).Msg("failed to execute activity: UpdateSSHKeyGroupInDB")
-		return err
-	}
-
-	err = workflow.ExecuteActivity(ctx, sshKeyGroupManager.UpdateSSHKeyGroupStatusInDB, *sshKeyGroupIDStr).Get(ctx, nil)
-	if err != nil {
-		logger.Warn().Err(err).Msg("failed to execute activity: UpdateSSHKeyGroupStatusInDB")
-		return err
-	}
-
-	logger.Info().Msg("completing workflow")
-
-	return nil
-}
-
 // UpdateSSHKeyGroupInventory is a workflow called by Site Agent to update SSHKeyGroupinventory for a Site
 func UpdateSSHKeyGroupInventory(ctx workflow.Context, siteID string, sshKeyGroupInventory *cwssaws.SSHKeyGroupInventory) (err error) {
 	logger := log.With().Str("Workflow", "UpdateSSHKeyGroupInventory").Str("Site ID", siteID).Logger()

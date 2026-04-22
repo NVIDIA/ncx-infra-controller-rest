@@ -20,7 +20,6 @@ package site
 import (
 	"context"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"time"
 
@@ -29,7 +28,6 @@ import (
 	tOperatorv1 "go.temporal.io/api/operatorservice/v1"
 	tWorkflowv1 "go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
-	"google.golang.org/protobuf/types/known/timestamppb"
 
 	cloudutils "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/util"
 	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
@@ -41,8 +39,6 @@ import (
 	sc "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/client/site"
 	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/queue"
 	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/util"
-
-	cwsv1 "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 )
 
 const (
@@ -371,94 +367,6 @@ func (mst ManageSite) MonitorInventoryReceiptForAllSites(ctx context.Context) er
 	return nil
 }
 
-// CheckHealthForSiteViaSiteAgent checks the health of a Site via the Site Agent
-func (mst ManageSite) CheckHealthForSiteViaSiteAgent(ctx context.Context, siteID uuid.UUID) error {
-	logger := log.With().Str("activity", "CheckHealthForSiteViaSiteAgent").Logger()
-
-	logger.Info().Msg("starting activity")
-
-	// Check if site exists
-	siteDAO := cdbm.NewSiteDAO(mst.dbSession)
-	site, err := siteDAO.GetByID(ctx, nil, siteID, nil, false)
-	if err != nil {
-		if err != cdb.ErrDoesNotExist {
-			return nil
-		} else {
-			logger.Error().Err(err).Msg("failed to retrieve Site from DB by ID")
-			return err
-		}
-	}
-
-	// Execute Site Agent workflow for health check synchronously
-	tc, err := mst.siteClientPool.GetClientByID(siteID)
-	if err != nil {
-		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-		return err
-	}
-
-	workflowOptions := client.StartWorkflowOptions{
-		ID:        "get-health-site-agent-" + siteID.String(),
-		TaskQueue: queue.SiteTaskQueue,
-	}
-
-	transactionID := &cwsv1.TransactionID{
-		ResourceId: siteID.String(),
-		Timestamp:  timestamppb.Now(),
-	}
-
-	we, err := tc.ExecuteWorkflow(ctx, workflowOptions, "GetHealth",
-		// Workflow arguments
-		// Transaction ID
-		transactionID,
-	)
-
-	status := cdbm.SiteStatusRegistered
-	statusMessage := "Received Site health status from Site Agent"
-
-	if err != nil {
-		log.Error().Err(err).Msg("failed to execute Site Agent health check workflow")
-		// if error is context.DeadlineExceeded, will not allow updateStatus DB
-		// return as it is
-		if errors.Is(err, context.DeadlineExceeded) {
-			return err
-		}
-		status = cdbm.SiteStatusError
-		statusMessage = "Failed to initiate health check on Site Agent"
-	} else {
-		// Execute the workflow synchronously
-		// Wait until we received acknowledge from site agent
-		// Parse the recieved info and check site agent
-		var healthStatus *cwsv1.HealthStatus
-		err = we.Get(ctx, &healthStatus)
-		if err != nil {
-			log.Error().Err(err).Msg("failed to execute Site Agent health check workflow")
-			status = cdbm.SiteStatusError
-			statusMessage = "Failed to initiate health check on site agent"
-		} else {
-			if healthStatus != nil {
-				// Get the status of different site agent services
-				status, statusMessage = mst.getSiteStatusFromSiteAgentHealthStatus(healthStatus)
-			}
-		}
-	}
-
-	if err == nil {
-		we.GetID()
-	}
-
-	if site.Status != status {
-		err = mst.updateSiteStatusInDB(ctx, nil, siteID, &status, &statusMessage)
-		if err != nil {
-			logger.Error().Err(err).Msg("error updating Site status in DB")
-			return err
-		}
-	}
-
-	logger.Info().Msg("successfully completed activity")
-
-	return nil
-}
-
 // GetAllSites returns all sites
 func (mst ManageSite) GetAllSiteIDs(ctx context.Context) ([]uuid.UUID, error) {
 	logger := log.With().Str("activity", "GetAllSites").Logger()
@@ -502,64 +410,6 @@ func (mst ManageSite) updateSiteStatusInDB(ctx context.Context, tx *cdb.Tx, site
 			return err
 		}
 	}
-	return nil
-}
-
-// getSiteStatusFromSiteAgentHealthStatus is an utility function to get Site Agent status from different dependent service state
-func (mst ManageSite) getSiteStatusFromSiteAgentHealthStatus(healthStatus *cwsv1.HealthStatus) (string, string) {
-	status := cdbm.SiteStatusRegistered
-	statusMessage := "Received health check from Site Agent"
-
-	if healthStatus != nil {
-		if healthStatus.SiteControllerConnection.State != cwsv1.HealthState_UP {
-			return cdbm.SiteStatusError, "Site Agent is unable to reach Site Controller"
-		}
-
-		if healthStatus.SiteInventoryCollection.State != cwsv1.HealthState_UP {
-			return cdbm.SiteStatusError, "Site Agent inventory collection is suspended due to errors"
-		}
-	}
-	return status, statusMessage
-}
-
-// OnCheckHealthForSiteViaSiteAgentError is a Temporal activity that is invoked when
-// the activity CheckHealthForSiteViaSiteAgent has errored
-// it sets the site status to error
-func (mst ManageSite) OnCheckHealthForSiteViaSiteAgentError(ctx context.Context, siteID uuid.UUID, errMessage *string) error {
-	logger := log.With().Str("Activity", "OnCheckHealthForSiteViaSiteAgentError").Str("Site ID", siteID.String()).Logger()
-
-	logger.Info().Msg("starting activity")
-
-	// update site status to error
-	status := cdb.GetStrPtr(cdbm.SiteStatusError)
-	var statusMessage *string
-	if errMessage != nil {
-		statusMessage = errMessage
-	} else {
-		statusMessage = cdb.GetStrPtr("failed to initiate activity to monitor site health via Site Agent")
-	}
-
-	// Check if site exists
-	siteDAO := cdbm.NewSiteDAO(mst.dbSession)
-	site, err := siteDAO.GetByID(ctx, nil, siteID, nil, false)
-	if err != nil {
-		if err != cdb.ErrDoesNotExist {
-			return nil
-		} else {
-			logger.Error().Err(err).Msg("failed to retrieve Site from DB by ID")
-			return err
-		}
-	}
-
-	if site.Status != *status {
-		err := mst.updateSiteStatusInDB(ctx, nil, siteID, status, statusMessage)
-		if err != nil {
-			return err
-		}
-	}
-
-	logger.Info().Msg("successfully completed activity")
-
 	return nil
 }
 

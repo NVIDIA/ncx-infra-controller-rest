@@ -29,7 +29,6 @@ import (
 
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/testsuite"
-	"google.golang.org/protobuf/types/known/timestamppb"
 
 	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 )
@@ -47,71 +46,6 @@ func (s *UpdateVpcTestSuite) SetupTest() {
 
 func (s *UpdateVpcTestSuite) AfterTest(suiteName, testName string) {
 	s.env.AssertExpectations(s.T())
-}
-
-func (s *UpdateVpcTestSuite) Test_UpdateVpcInfo_Success() {
-	var vpcManager vpcActivity.ManageVpc
-
-	siteID := uuid.New()
-
-	transactionID := &cwssaws.TransactionID{
-		ResourceId: uuid.New().String(),
-		Timestamp:  timestamppb.Now(),
-	}
-
-	vpcInfo := &cwssaws.VPCInfo{
-		Status:    cwssaws.WorkflowStatus_WORKFLOW_STATUS_IN_PROGRESS,
-		StatusMsg: "VPC creation in progress",
-		Vpc: &cwssaws.Vpc{
-			Id:                   &cwssaws.VpcId{Value: uuid.New().String()},
-			Name:                 uuid.New().String(),
-			TenantOrganizationId: uuid.NewString(),
-		},
-	}
-
-	// Mock UpdateVpcViaSiteAgent activity
-	s.env.RegisterActivity(vpcManager.UpdateVpcInDB)
-	s.env.OnActivity(vpcManager.UpdateVpcInDB, mock.Anything, mock.Anything, mock.Anything).Return(nil)
-
-	// execute UpdateVpcInfo workflow
-	s.env.ExecuteWorkflow(UpdateVpcInfo, siteID.String(), transactionID, vpcInfo)
-	s.True(s.env.IsWorkflowCompleted())
-	s.NoError(s.env.GetWorkflowError())
-}
-
-func (s *UpdateVpcTestSuite) Test_UpdateVpcInfo_ActivityFails() {
-	var vpcManager vpcActivity.ManageVpc
-
-	siteID := uuid.New()
-
-	transactionID := &cwssaws.TransactionID{
-		ResourceId: uuid.New().String(),
-		Timestamp:  timestamppb.Now(),
-	}
-
-	vpcInfo := &cwssaws.VPCInfo{
-		Status:    cwssaws.WorkflowStatus_WORKFLOW_STATUS_IN_PROGRESS,
-		StatusMsg: "VPC creation in progress",
-		Vpc: &cwssaws.Vpc{
-			Id:                   &cwssaws.VpcId{Value: uuid.New().String()},
-			Name:                 uuid.New().String(),
-			TenantOrganizationId: uuid.NewString(),
-		},
-	}
-
-	// Mock UpdateVpcViaSiteAgent activity failure
-	s.env.RegisterActivity(vpcManager.UpdateVpcInDB)
-	s.env.OnActivity(vpcManager.UpdateVpcInDB, mock.Anything, mock.Anything, mock.Anything).Return(errors.New("UpdateVpcInfo Failure"))
-
-	// execute UpdateVPCStatus workflow
-	s.env.ExecuteWorkflow(UpdateVpcInfo, siteID.String(), transactionID, vpcInfo)
-	s.True(s.env.IsWorkflowCompleted())
-	err := s.env.GetWorkflowError()
-	s.Error(err)
-
-	var applicationErr *temporal.ApplicationError
-	s.True(errors.As(err, &applicationErr))
-	s.Equal("UpdateVpcInfo Failure", applicationErr.Error())
 }
 
 func (s *UpdateVpcTestSuite) Test_UpdateVpcInventory_Success() {

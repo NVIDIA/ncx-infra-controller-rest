@@ -22,68 +22,31 @@ import (
 	sww "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/workflow"
 )
 
-// RegisterSubscriber registers the SubnetWorkflows with the Temporal client
+// RegisterSubscriber registers Subnet CRUD workflows and activities with Temporal
 func (api *API) RegisterSubscriber() error {
-	// Register the subscribers here
-	ManagerAccess.Data.EB.Log.Info().Msg("Subnet: Registering the subscribers")
+	ManagerAccess.Data.EB.Log.Info().Msg("Subnet: Registering CRUD workflows and activities")
 
-	// Get Subnet workflow interface
-	Subnetinterface := NewSubnetWorkflows(
-		ManagerAccess.Data.EB.Managers.Workflow.Temporal.Publisher,
-		ManagerAccess.Data.EB.Managers.Workflow.Temporal.Subscriber,
-		ManagerAccess.Conf.EB,
-	)
+	// Register workflows
+
+	// Register CreateSubnetV2 workflow
+	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.CreateSubnetV2)
+	ManagerAccess.Data.EB.Log.Info().Msg("Subnet: Successfully registered CreateSubnetV2 workflow")
+
+	// Register DeleteSubnetV2 workflow
+	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.DeleteSubnetV2)
+	ManagerAccess.Data.EB.Log.Info().Msg("Subnet: Successfully registered DeleteSubnetV2 workflow")
+
+	// Register activities
 
 	subnetManager := swa.NewManageSubnet(ManagerAccess.Data.EB.Managers.Carbide.Client)
 
-	//  Register Workflows
-
-	// Sync workflows
-	// Register CreateSubnet worfklow
-	// TODO: Once all Site Agents are updated, remove the legacy CreateSubnet workflow, duplicate register Site Workflow as CreateSubnet
-	// Once all Site Agents are updated with duplicate workflow, switch Cloud API to use call CreateSubnet, then de-register CreateSubnetV2 workflow
-	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.CreateSubnetV2)
-	ManagerAccess.Data.EB.Log.Info().Msg("Subnet: successfully registered Create Subnet v2 workflow")
-
-	// Register DeleteSubnet worfklow
-	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.DeleteSubnetV2)
-	ManagerAccess.Data.EB.Log.Info().Msg("Subnet: successfully registered Delete Subnet v2 workflow")
-
-	// Legacy workflows
-	// Register CreateSubnet worfklow (deprecated)
-	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(ManagerAccess.API.Subnet.CreateSubnet)
-	ManagerAccess.Data.EB.Log.Info().Msg("Subnet: successfully registered deprecated Create Subnet workflow")
-
-	// Register DeleteSubnet worfklow (deprecated)
-	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(ManagerAccess.API.Subnet.DeleteSubnet)
-	ManagerAccess.Data.EB.Log.Info().Msg("Subnet: successfully registered Delete Subnet workflow")
-
-	// Regsiter Activities
-
-	// Sync workflow activities
-	// Register CreateSubnetOnSite
+	// Register CreateSubnetOnSite activity
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(subnetManager.CreateSubnetOnSite)
-	ManagerAccess.Data.EB.Log.Info().Msg("Subnet: successfully registered Create Subnet activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("Subnet: Successfully registered CreateSubnetOnSite activity")
 
-	// Register DeleteSubnetOnSite
+	// Register DeleteSubnetOnSite activity
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(subnetManager.DeleteSubnetOnSite)
-	ManagerAccess.Data.EB.Log.Info().Msg("Subnet: successfully registered Delete Subnet activity")
-
-	// Legacy workflow activities
-	// Register CreateSubnetActivity (deprecated)
-	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(Subnetinterface.CreateSubnetActivity)
-	ManagerAccess.Data.EB.Log.Info().Msg("Subnet: successfully registered deprecated Create Subnet Activity")
-
-	// Register DeleteSubnetActivity
-	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(Subnetinterface.DeleteSubnetActivity)
-	ManagerAccess.Data.EB.Log.Info().Msg("Subnet: successfully registered Delete Subnet activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("Subnet: Successfully registered DeleteSubnetOnSite activity")
 
 	return nil
-}
-
-// RegisterSubscribers - this is method 2 of registering the subscriber
-func RegisterSubscribers() {
-	// Register the subscribers here
-	ManagerAccess.Data.EB.Log.Info().Msg("Subnet: Registering the subscribers")
-	ManagerAccess.API.Orchestrator.AddWorkflow(ManagerAccess.API.Subnet.CreateSubnet)
 }
