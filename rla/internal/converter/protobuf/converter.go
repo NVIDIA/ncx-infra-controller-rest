@@ -19,6 +19,7 @@ package protobuf
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"time"
@@ -951,10 +952,329 @@ func RackRuleAssociationFromProto(pbAssoc *pb.RackRuleAssociation) *operationrul
 	return assoc
 }
 
+// TargetSpecFrom converts a proto OperationTargetSpec to an internal operation.TargetSpec.
+func TargetSpecFrom(ts *pb.OperationTargetSpec) (operation.TargetSpec, error) {
+	if ts == nil {
+		return operation.TargetSpec{}, fmt.Errorf("target_spec is required")
+	}
+
+	var spec operation.TargetSpec
+	switch targets := ts.GetTargets().(type) {
+	case *pb.OperationTargetSpec_Racks:
+		if len(targets.Racks.GetTargets()) == 0 {
+			return operation.TargetSpec{}, fmt.Errorf(
+				"racks.targets must have at least one entry",
+			)
+		}
+		for _, pbRack := range targets.Racks.GetTargets() {
+			rt, err := RackTargetFrom(pbRack)
+			if err != nil {
+				return operation.TargetSpec{}, fmt.Errorf(
+					"convert rack target: %w", err,
+				)
+			}
+			spec.Racks = append(spec.Racks, rt)
+		}
+	case *pb.OperationTargetSpec_Components:
+		if len(targets.Components.GetTargets()) == 0 {
+			return operation.TargetSpec{}, fmt.Errorf(
+				"components.targets must have at least one entry",
+			)
+		}
+		for _, pbComp := range targets.Components.GetTargets() {
+			ct, err := ComponentTargetFrom(pbComp)
+			if err != nil {
+				return operation.TargetSpec{}, fmt.Errorf(
+					"convert component target: %w", err,
+				)
+			}
+			spec.Components = append(spec.Components, ct)
+		}
+	default:
+		return operation.TargetSpec{}, fmt.Errorf(
+			"target_spec must have either racks or components set",
+		)
+	}
+
+	return spec, nil
+}
+
+// TargetSpecTo converts an internal operation.TargetSpec to its proto form.
+// It returns an error when both or neither of Racks and Components are populated,
+// matching the mutual-exclusion rule enforced by TargetSpecFrom on the inbound path.
+func TargetSpecTo(ts operation.TargetSpec) (*pb.OperationTargetSpec, error) {
+	hasRacks := len(ts.Racks) > 0
+	hasComponents := len(ts.Components) > 0
+
+	if hasRacks && hasComponents {
+		return nil, fmt.Errorf("target_spec cannot have both racks and components set")
+	}
+	if !hasRacks && !hasComponents {
+		return nil, fmt.Errorf("target_spec must have either racks or components set")
+	}
+
+	// Rack targets, converted to proto RackTargets.
+	if hasRacks {
+		racks := make([]*pb.RackTarget, 0, len(ts.Racks))
+		for _, r := range ts.Racks {
+			rt := &pb.RackTarget{}
+			if r.Identifier.ID != uuid.Nil {
+				rt.Identifier = &pb.RackTarget_Id{
+					Id: UUIDTo(r.Identifier.ID),
+				}
+			} else if r.Identifier.Name != "" {
+				rt.Identifier = &pb.RackTarget_Name{
+					Name: r.Identifier.Name,
+				}
+			} else {
+				return nil, fmt.Errorf("invalid rack target: neither id nor name is set")
+			}
+
+			for _, ct := range r.ComponentTypes {
+				if ct == devicetypes.ComponentTypeUnknown {
+					return nil, fmt.Errorf(
+						"invalid rack target: unknown component type filter",
+					)
+				}
+				rt.ComponentTypes = append(rt.ComponentTypes, ComponentTypeTo(ct))
+			}
+
+			racks = append(racks, rt)
+		}
+
+		return &pb.OperationTargetSpec{
+			Targets: &pb.OperationTargetSpec_Racks{
+				Racks: &pb.RackTargets{
+					Targets: racks,
+				},
+			},
+		}, nil
+	}
+
+	// Component targets, converted to proto ComponentTargets.
+	comps := make([]*pb.ComponentTarget, 0, len(ts.Components))
+	for _, c := range ts.Components {
+		ct := &pb.ComponentTarget{}
+		if c.UUID != uuid.Nil {
+			ct.Identifier = &pb.ComponentTarget_Id{
+				Id: UUIDTo(c.UUID),
+			}
+		} else if c.External != nil {
+			ct.Identifier = &pb.ComponentTarget_External{
+				External: &pb.ExternalRef{
+					Type: ComponentTypeTo(c.External.Type),
+					Id:   c.External.ID,
+				},
+			}
+		} else {
+			return nil, fmt.Errorf("invalid component target: neither uuid nor external ref is set")
+		}
+
+		comps = append(comps, ct)
+	}
+
+	return &pb.OperationTargetSpec{
+		Targets: &pb.OperationTargetSpec_Components{
+			Components: &pb.ComponentTargets{
+				Targets: comps,
+			},
+		},
+	}, nil
+}
+
+// RackTargetFrom converts a proto RackTarget to an internal operation.RackTarget.
+func RackTargetFrom(rt *pb.RackTarget) (operation.RackTarget, error) {
+	if rt == nil {
+		return operation.RackTarget{}, fmt.Errorf("rack target is nil")
+	}
+
+	var target operation.RackTarget
+
+	switch id := rt.GetIdentifier().(type) {
+	case *pb.RackTarget_Id:
+		parsed, err := uuid.Parse(id.Id.GetId())
+		if err != nil {
+			return operation.RackTarget{}, fmt.Errorf("invalid rack id %q: %w", id.Id.GetId(), err)
+		}
+		target.Identifier.ID = parsed
+	case *pb.RackTarget_Name:
+		if id.Name == "" {
+			return operation.RackTarget{}, fmt.Errorf("rack target name must not be empty")
+		}
+		target.Identifier.Name = id.Name
+	default:
+		return operation.RackTarget{}, fmt.Errorf("rack target must have either id or name set")
+	}
+
+	for _, pbType := range rt.GetComponentTypes() {
+		ct := ComponentTypeFrom(pbType)
+		if ct == devicetypes.ComponentTypeUnknown {
+			return operation.RackTarget{}, fmt.Errorf(
+				"unknown component type %v in rack target filter", pbType,
+			)
+		}
+		target.ComponentTypes = append(target.ComponentTypes, ct)
+	}
+
+	return target, nil
+}
+
+// ComponentTargetFrom converts a proto ComponentTarget to an internal operation.ComponentTarget.
+func ComponentTargetFrom(ct *pb.ComponentTarget) (operation.ComponentTarget, error) {
+	if ct == nil {
+		return operation.ComponentTarget{}, fmt.Errorf("component target is nil")
+	}
+
+	var target operation.ComponentTarget
+
+	switch id := ct.GetIdentifier().(type) {
+	case *pb.ComponentTarget_Id:
+		parsed, err := uuid.Parse(id.Id.GetId())
+		if err != nil {
+			return operation.ComponentTarget{}, fmt.Errorf("invalid component uuid %q: %w", id.Id.GetId(), err)
+		}
+		target.UUID = parsed
+	case *pb.ComponentTarget_External:
+		extType := ComponentTypeFrom(id.External.GetType())
+		if extType == devicetypes.ComponentTypeUnknown {
+			return operation.ComponentTarget{}, fmt.Errorf("external component type must not be unknown")
+		}
+		if id.External.GetId() == "" {
+			return operation.ComponentTarget{}, fmt.Errorf("external component id must not be empty")
+		}
+		target.External = &operation.ExternalRef{
+			Type: extType,
+			ID:   id.External.GetId(),
+		}
+	default:
+		return operation.ComponentTarget{}, fmt.Errorf("component target must have either uuid or external set")
+	}
+
+	return target, nil
+}
+
+// ScheduledOperationFrom converts a proto ScheduledOperation oneof to the
+// internal Operation, TargetSpec, and request-level scheduling options. All
+// values are always valid together: the Operation carries the task-type and
+// parameters, the TargetSpec identifies the racks or components the task will
+// run against, and the returned QueueOptions / rule UUID carry the caller's
+// conflict-handling and rule-override preferences for use at fire time.
+func ScheduledOperationFrom(
+	scheduled *pb.ScheduledOperation,
+) (operations.Operation, operation.TargetSpec, *pb.QueueOptions, *pb.UUID, error) {
+	if scheduled == nil || scheduled.GetOperation() == nil {
+		return nil, operation.TargetSpec{}, nil, nil, errors.New("operation is required")
+	}
+
+	switch r := scheduled.GetOperation().(type) {
+	case *pb.ScheduledOperation_PowerOn:
+		ts, err := TargetSpecFrom(r.PowerOn.GetTargetSpec())
+		if err != nil {
+			return nil, operation.TargetSpec{}, nil, nil, fmt.Errorf(
+				"invalid target_spec: %w", err,
+			)
+		}
+
+		return &operations.PowerControlTaskInfo{
+			Operation: operations.PowerOperationPowerOn,
+		}, ts, r.PowerOn.GetQueueOptions(), r.PowerOn.GetRuleId(), nil
+
+	case *pb.ScheduledOperation_PowerOff:
+		powerOp := operations.PowerOperationPowerOff
+		if r.PowerOff.GetForced() {
+			powerOp = operations.PowerOperationForcePowerOff
+		}
+
+		ts, err := TargetSpecFrom(r.PowerOff.GetTargetSpec())
+		if err != nil {
+			return nil, operation.TargetSpec{}, nil, nil, fmt.Errorf(
+				"invalid target_spec: %w", err,
+			)
+		}
+
+		return &operations.PowerControlTaskInfo{
+			Operation: powerOp,
+			Forced:    r.PowerOff.GetForced(),
+		}, ts, r.PowerOff.GetQueueOptions(), r.PowerOff.GetRuleId(), nil
+
+	case *pb.ScheduledOperation_PowerReset:
+		powerOp := operations.PowerOperationRestart
+		if r.PowerReset.GetForced() {
+			powerOp = operations.PowerOperationForceRestart
+		}
+
+		ts, err := TargetSpecFrom(r.PowerReset.GetTargetSpec())
+		if err != nil {
+			return nil, operation.TargetSpec{}, nil, nil, fmt.Errorf(
+				"invalid target_spec: %w", err,
+			)
+		}
+
+		return &operations.PowerControlTaskInfo{
+			Operation: powerOp,
+			Forced:    r.PowerReset.GetForced(),
+		}, ts, r.PowerReset.GetQueueOptions(), r.PowerReset.GetRuleId(), nil
+
+	case *pb.ScheduledOperation_BringUp:
+		ts, err := TargetSpecFrom(r.BringUp.GetTargetSpec())
+		if err != nil {
+			return nil, operation.TargetSpec{}, nil, nil, fmt.Errorf(
+				"invalid target_spec: %w", err,
+			)
+		}
+
+		return &operations.BringUpTaskInfo{}, ts, nil, r.BringUp.GetRuleId(), nil
+
+	case *pb.ScheduledOperation_Ingest:
+		ts, err := TargetSpecFrom(r.Ingest.GetTargetSpec())
+		if err != nil {
+			return nil, operation.TargetSpec{}, nil, nil, fmt.Errorf(
+				"invalid target_spec: %w", err,
+			)
+		}
+
+		return &operations.BringUpTaskInfo{OpCode: taskcommon.OpCodeIngest}, ts, nil, r.Ingest.GetRuleId(), nil
+
+	case *pb.ScheduledOperation_UpgradeFirmware:
+		info := &operations.FirmwareControlTaskInfo{
+			Operation:     operations.FirmwareOperationUpgrade,
+			TargetVersion: r.UpgradeFirmware.GetTargetVersion(),
+		}
+
+		if r.UpgradeFirmware.GetStartTime() != nil {
+			info.StartTime = r.UpgradeFirmware.GetStartTime().AsTime().Unix()
+		}
+
+		if r.UpgradeFirmware.GetEndTime() != nil {
+			info.EndTime = r.UpgradeFirmware.GetEndTime().AsTime().Unix()
+		}
+
+		ts, err := TargetSpecFrom(r.UpgradeFirmware.GetTargetSpec())
+		if err != nil {
+			return nil, operation.TargetSpec{}, nil, nil, fmt.Errorf(
+				"invalid target_spec: %w", err,
+			)
+		}
+
+		return info, ts, r.UpgradeFirmware.GetQueueOptions(), r.UpgradeFirmware.GetRuleId(), nil
+
+	default:
+		// Unreachable with well-typed proto code: all
+		// isScheduledOperation_Operation implementations are generated types
+		// with explicit cases above. This fires only if a new oneof variant
+		// is added to the proto without updating this switch.
+		return nil, operation.TargetSpec{}, nil, nil, errors.New(
+			"unsupported scheduled operation type",
+		)
+	}
+}
+
 // QueueOptionsFrom converts a proto QueueOptions message to the two fields
 // used on operation.Request. A nil opts is handled safely — both return
 // values will be their zero values (reject on conflict, server default timeout).
-func QueueOptionsFrom(opts *pb.QueueOptions) (strategy operation.ConflictStrategy, timeout time.Duration) {
+func QueueOptionsFrom(
+	opts *pb.QueueOptions,
+) (strategy operation.ConflictStrategy, timeout time.Duration) {
 	if opts == nil {
 		return operation.ConflictStrategyReject, 0
 	}

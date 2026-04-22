@@ -1760,8 +1760,15 @@ func cmdVPCPrefixDelete(s *Session, args []string) error {
 }
 
 func cmdTenantAccountList(s *Session, _ []string) error {
-	LogCmd(s, "tenant-account", "list")
-	items, err := s.Resolver.Fetch(context.Background(), "tenant-account")
+	ctx := context.Background()
+	var extraFlags []string
+	if id, err := s.getInfrastructureProviderID(ctx); err == nil {
+		extraFlags = append(extraFlags, "--infrastructure-provider-id", id)
+	} else if id, err := s.getTenantID(ctx); err == nil {
+		extraFlags = append(extraFlags, "--tenant-id", id)
+	}
+	LogCmd(s, append([]string{"tenant-account", "list"}, extraFlags...)...)
+	items, err := s.Resolver.Fetch(ctx, "tenant-account")
 	if err != nil {
 		return err
 	}

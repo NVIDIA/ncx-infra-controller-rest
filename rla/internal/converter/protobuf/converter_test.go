@@ -20,11 +20,17 @@ package protobuf
 import (
 	"net"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	dbquery "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/db/query"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/operation"
+	taskcommon "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/common"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operations"
+	identifier "github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/Identifier"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/deviceinfo"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/location"
@@ -771,4 +777,460 @@ func TestOptionalUUIDFrom(t *testing.T) {
 		result := OptionalUUIDFrom(&pb.UUID{Id: "not-a-uuid"})
 		assert.Nil(t, result)
 	})
+}
+
+func TestRackTargetFrom(t *testing.T) {
+	rackID := uuid.New()
+
+	testCases := map[string]struct {
+		input   *pb.RackTarget
+		want    operation.RackTarget
+		wantErr string
+	}{
+		"nil input": {
+			input:   nil,
+			wantErr: "rack target is nil",
+		},
+		"no identifier set": {
+			input:   &pb.RackTarget{},
+			wantErr: "rack target must have either id or name set",
+		},
+		"valid UUID": {
+			input: &pb.RackTarget{
+				Identifier: &pb.RackTarget_Id{Id: &pb.UUID{Id: rackID.String()}},
+			},
+			want: operation.RackTarget{Identifier: identifier.Identifier{ID: rackID}},
+		},
+		"invalid UUID string": {
+			input: &pb.RackTarget{
+				Identifier: &pb.RackTarget_Id{Id: &pb.UUID{Id: "not-a-uuid"}},
+			},
+			wantErr: "invalid rack id",
+		},
+		"valid name": {
+			input: &pb.RackTarget{
+				Identifier: &pb.RackTarget_Name{Name: "rack-1"},
+			},
+			want: operation.RackTarget{Identifier: identifier.Identifier{Name: "rack-1"}},
+		},
+		"empty name": {
+			input: &pb.RackTarget{
+				Identifier: &pb.RackTarget_Name{Name: ""},
+			},
+			wantErr: "rack target name must not be empty",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got, err := RackTargetFrom(tc.input)
+			if tc.wantErr != "" {
+				assert.ErrorContains(t, err, tc.wantErr)
+				assert.Equal(t, operation.RackTarget{}, got)
+				return
+			}
+			assert.NoError(t, err)
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}
+
+func TestComponentTargetFrom(t *testing.T) {
+	compID := uuid.New()
+
+	testCases := map[string]struct {
+		input   *pb.ComponentTarget
+		want    operation.ComponentTarget
+		wantErr string
+	}{
+		"nil input": {
+			input:   nil,
+			wantErr: "component target is nil",
+		},
+		"no identifier set": {
+			input:   &pb.ComponentTarget{},
+			wantErr: "component target must have either uuid or external set",
+		},
+		"valid UUID": {
+			input: &pb.ComponentTarget{
+				Identifier: &pb.ComponentTarget_Id{Id: &pb.UUID{Id: compID.String()}},
+			},
+			want: operation.ComponentTarget{UUID: compID},
+		},
+		"invalid UUID string": {
+			input: &pb.ComponentTarget{
+				Identifier: &pb.ComponentTarget_Id{Id: &pb.UUID{Id: "bad-uuid"}},
+			},
+			wantErr: "invalid component uuid",
+		},
+		"valid external": {
+			input: &pb.ComponentTarget{
+				Identifier: &pb.ComponentTarget_External{
+					External: &pb.ExternalRef{
+						Type: pb.ComponentType_COMPONENT_TYPE_COMPUTE,
+						Id:   "ext-123",
+					},
+				},
+			},
+			want: operation.ComponentTarget{
+				External: &operation.ExternalRef{
+					Type: devicetypes.ComponentTypeCompute,
+					ID:   "ext-123",
+				},
+			},
+		},
+		"external with unknown component type": {
+			input: &pb.ComponentTarget{
+				Identifier: &pb.ComponentTarget_External{
+					External: &pb.ExternalRef{
+						Type: pb.ComponentType_COMPONENT_TYPE_UNKNOWN,
+						Id:   "ext-123",
+					},
+				},
+			},
+			wantErr: "external component type must not be unknown",
+		},
+		"external with empty ID": {
+			input: &pb.ComponentTarget{
+				Identifier: &pb.ComponentTarget_External{
+					External: &pb.ExternalRef{
+						Type: pb.ComponentType_COMPONENT_TYPE_COMPUTE,
+						Id:   "",
+					},
+				},
+			},
+			wantErr: "external component id must not be empty",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got, err := ComponentTargetFrom(tc.input)
+			if tc.wantErr != "" {
+				assert.ErrorContains(t, err, tc.wantErr)
+				assert.Equal(t, operation.ComponentTarget{}, got)
+				return
+			}
+			assert.NoError(t, err)
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}
+
+func TestTargetSpecTo(t *testing.T) {
+	rackID := uuid.New()
+	compID := uuid.New()
+
+	testCases := map[string]struct {
+		input   operation.TargetSpec
+		wantErr string
+	}{
+		"both racks and components set": {
+			input: operation.TargetSpec{
+				Racks:      []operation.RackTarget{{Identifier: identifier.Identifier{Name: "rack-1"}}},
+				Components: []operation.ComponentTarget{{UUID: compID}},
+			},
+			wantErr: "cannot have both racks and components",
+		},
+		"neither racks nor components set": {
+			input:   operation.TargetSpec{},
+			wantErr: "must have either racks or components",
+		},
+		"rack target by name": {
+			input: operation.TargetSpec{
+				Racks: []operation.RackTarget{
+					{Identifier: identifier.Identifier{Name: "rack-1"}},
+				},
+			},
+		},
+		"rack target by UUID": {
+			input: operation.TargetSpec{
+				Racks: []operation.RackTarget{
+					{Identifier: identifier.Identifier{ID: rackID}},
+				},
+			},
+		},
+		"component target by UUID": {
+			input: operation.TargetSpec{
+				Components: []operation.ComponentTarget{{UUID: compID}},
+			},
+		},
+		"component target with no UUID and no external": {
+			input: operation.TargetSpec{
+				Components: []operation.ComponentTarget{{}},
+			},
+			wantErr: "invalid component target",
+		},
+		"rack target with neither id nor name": {
+			input: operation.TargetSpec{
+				Racks: []operation.RackTarget{
+					{Identifier: identifier.Identifier{}}, // zero value: ID == uuid.Nil, Name == ""
+				},
+			},
+			wantErr: "invalid rack target",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got, err := TargetSpecTo(tc.input)
+			if tc.wantErr != "" {
+				assert.ErrorContains(t, err, tc.wantErr)
+				assert.Nil(t, got)
+				return
+			}
+			assert.NoError(t, err)
+			assert.NotNil(t, got)
+		})
+	}
+}
+
+func TestScheduledOperationFrom(t *testing.T) {
+	rackTargetProto := &pb.OperationTargetSpec{
+		Targets: &pb.OperationTargetSpec_Racks{
+			Racks: &pb.RackTargets{
+				Targets: []*pb.RackTarget{
+					{Identifier: &pb.RackTarget_Name{Name: "rack-1"}},
+				},
+			},
+		},
+	}
+	rackSpec := operation.TargetSpec{
+		Racks: []operation.RackTarget{
+			{Identifier: identifier.Identifier{Name: "rack-1"}},
+		},
+	}
+
+	strPtr := func(s string) *string { return &s }
+
+	startTime := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	endTime := time.Date(2026, 1, 2, 0, 0, 0, 0, time.UTC)
+
+	testCases := map[string]struct {
+		input        *pb.ScheduledOperation
+		wantOp       operations.Operation
+		wantTS       operation.TargetSpec
+		wantQueueOpt *pb.QueueOptions
+		wantRuleID   *pb.UUID
+		wantErr      string
+	}{
+		"nil input": {
+			input:   nil,
+			wantErr: "operation is required",
+		},
+		"no operation set": {
+			input:   &pb.ScheduledOperation{},
+			wantErr: "operation is required",
+		},
+		"missing target_spec": {
+			input: &pb.ScheduledOperation{
+				Operation: &pb.ScheduledOperation_PowerOn{
+					PowerOn: &pb.PowerOnRackRequest{TargetSpec: nil},
+				},
+			},
+			wantErr: "invalid target_spec: target_spec is required",
+		},
+		"empty racks targets": {
+			input: &pb.ScheduledOperation{
+				Operation: &pb.ScheduledOperation_PowerOn{
+					PowerOn: &pb.PowerOnRackRequest{
+						TargetSpec: &pb.OperationTargetSpec{
+							Targets: &pb.OperationTargetSpec_Racks{
+								Racks: &pb.RackTargets{Targets: []*pb.RackTarget{}},
+							},
+						},
+					},
+				},
+			},
+			wantErr: "invalid target_spec: racks.targets must have at least one entry",
+		},
+		"empty components targets": {
+			input: &pb.ScheduledOperation{
+				Operation: &pb.ScheduledOperation_PowerOn{
+					PowerOn: &pb.PowerOnRackRequest{
+						TargetSpec: &pb.OperationTargetSpec{
+							Targets: &pb.OperationTargetSpec_Components{
+								Components: &pb.ComponentTargets{Targets: []*pb.ComponentTarget{}},
+							},
+						},
+					},
+				},
+			},
+			wantErr: "invalid target_spec: components.targets must have at least one entry",
+		},
+		"power_on": {
+			input: &pb.ScheduledOperation{
+				Operation: &pb.ScheduledOperation_PowerOn{
+					PowerOn: &pb.PowerOnRackRequest{TargetSpec: rackTargetProto},
+				},
+			},
+			wantOp: &operations.PowerControlTaskInfo{Operation: operations.PowerOperationPowerOn},
+			wantTS: rackSpec,
+		},
+		"power_off unforced": {
+			input: &pb.ScheduledOperation{
+				Operation: &pb.ScheduledOperation_PowerOff{
+					PowerOff: &pb.PowerOffRackRequest{TargetSpec: rackTargetProto, Forced: false},
+				},
+			},
+			wantOp: &operations.PowerControlTaskInfo{Operation: operations.PowerOperationPowerOff},
+			wantTS: rackSpec,
+		},
+		"power_off forced": {
+			input: &pb.ScheduledOperation{
+				Operation: &pb.ScheduledOperation_PowerOff{
+					PowerOff: &pb.PowerOffRackRequest{TargetSpec: rackTargetProto, Forced: true},
+				},
+			},
+			wantOp: &operations.PowerControlTaskInfo{
+				Operation: operations.PowerOperationForcePowerOff,
+				Forced:    true,
+			},
+			wantTS: rackSpec,
+		},
+		"power_reset unforced": {
+			input: &pb.ScheduledOperation{
+				Operation: &pb.ScheduledOperation_PowerReset{
+					PowerReset: &pb.PowerResetRackRequest{TargetSpec: rackTargetProto, Forced: false},
+				},
+			},
+			wantOp: &operations.PowerControlTaskInfo{Operation: operations.PowerOperationRestart},
+			wantTS: rackSpec,
+		},
+		"power_reset forced": {
+			input: &pb.ScheduledOperation{
+				Operation: &pb.ScheduledOperation_PowerReset{
+					PowerReset: &pb.PowerResetRackRequest{TargetSpec: rackTargetProto, Forced: true},
+				},
+			},
+			wantOp: &operations.PowerControlTaskInfo{
+				Operation: operations.PowerOperationForceRestart,
+				Forced:    true,
+			},
+			wantTS: rackSpec,
+		},
+		"bring_up": {
+			input: &pb.ScheduledOperation{
+				Operation: &pb.ScheduledOperation_BringUp{
+					BringUp: &pb.BringUpRackRequest{TargetSpec: rackTargetProto},
+				},
+			},
+			wantOp: &operations.BringUpTaskInfo{},
+			wantTS: rackSpec,
+		},
+		"upgrade_firmware": {
+			input: &pb.ScheduledOperation{
+				Operation: &pb.ScheduledOperation_UpgradeFirmware{
+					UpgradeFirmware: &pb.UpgradeFirmwareRequest{
+						TargetSpec:    rackTargetProto,
+						TargetVersion: strPtr("v1.0.0"),
+					},
+				},
+			},
+			wantOp: &operations.FirmwareControlTaskInfo{
+				Operation:     operations.FirmwareOperationUpgrade,
+				TargetVersion: "v1.0.0",
+			},
+			wantTS: rackSpec,
+		},
+		"upgrade_firmware with start and end time": {
+			input: &pb.ScheduledOperation{
+				Operation: &pb.ScheduledOperation_UpgradeFirmware{
+					UpgradeFirmware: &pb.UpgradeFirmwareRequest{
+						TargetSpec:    rackTargetProto,
+						TargetVersion: strPtr("v1.0.0"),
+						StartTime:     timestamppb.New(startTime),
+						EndTime:       timestamppb.New(endTime),
+					},
+				},
+			},
+			wantOp: &operations.FirmwareControlTaskInfo{
+				Operation:     operations.FirmwareOperationUpgrade,
+				TargetVersion: "v1.0.0",
+				StartTime:     startTime.Unix(),
+				EndTime:       endTime.Unix(),
+			},
+			wantTS: rackSpec,
+		},
+		"power_on with queue_options and rule_id": {
+			input: &pb.ScheduledOperation{
+				Operation: &pb.ScheduledOperation_PowerOn{
+					PowerOn: &pb.PowerOnRackRequest{
+						TargetSpec: rackTargetProto,
+						QueueOptions: &pb.QueueOptions{
+							ConflictStrategy:    pb.ConflictStrategy_CONFLICT_STRATEGY_QUEUE,
+							QueueTimeoutSeconds: 60,
+						},
+						RuleId: &pb.UUID{Id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"},
+					},
+				},
+			},
+			wantOp: &operations.PowerControlTaskInfo{Operation: operations.PowerOperationPowerOn},
+			wantTS: rackSpec,
+			wantQueueOpt: &pb.QueueOptions{
+				ConflictStrategy:    pb.ConflictStrategy_CONFLICT_STRATEGY_QUEUE,
+				QueueTimeoutSeconds: 60,
+			},
+			wantRuleID: &pb.UUID{Id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"},
+		},
+		"bring_up with rule_id (no queue_options)": {
+			input: &pb.ScheduledOperation{
+				Operation: &pb.ScheduledOperation_BringUp{
+					BringUp: &pb.BringUpRackRequest{
+						TargetSpec: rackTargetProto,
+						RuleId:     &pb.UUID{Id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"},
+					},
+				},
+			},
+			wantOp:       &operations.BringUpTaskInfo{},
+			wantTS:       rackSpec,
+			wantQueueOpt: nil,
+			wantRuleID:   &pb.UUID{Id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"},
+		},
+		"ingest": {
+			// Ingest is scheduled as BringUpTaskInfo{OpCode: "ingest"} internally;
+			// it has no queue_options field, so wantQueueOpt is nil.
+			input: &pb.ScheduledOperation{
+				Operation: &pb.ScheduledOperation_Ingest{
+					Ingest: &pb.IngestRackRequest{
+						TargetSpec: rackTargetProto,
+					},
+				},
+			},
+			wantOp: &operations.BringUpTaskInfo{OpCode: taskcommon.OpCodeIngest},
+			wantTS: rackSpec,
+		},
+		"ingest with rule_id": {
+			input: &pb.ScheduledOperation{
+				Operation: &pb.ScheduledOperation_Ingest{
+					Ingest: &pb.IngestRackRequest{
+						TargetSpec: rackTargetProto,
+						RuleId:     &pb.UUID{Id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"},
+					},
+				},
+			},
+			wantOp:     &operations.BringUpTaskInfo{OpCode: taskcommon.OpCodeIngest},
+			wantTS:     rackSpec,
+			wantRuleID: &pb.UUID{Id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			op, ts, queueOpt, ruleID, err := ScheduledOperationFrom(tc.input)
+			if tc.wantErr != "" {
+				assert.ErrorContains(t, err, tc.wantErr)
+				assert.Nil(t, op)
+				assert.Equal(t, operation.TargetSpec{}, ts)
+				assert.Nil(t, queueOpt)
+				assert.Nil(t, ruleID)
+				return
+			}
+			assert.NoError(t, err)
+			assert.Equal(t, tc.wantOp, op)
+			assert.Equal(t, tc.wantTS, ts)
+			assert.Equal(t, tc.wantQueueOpt, queueOpt)
+			assert.Equal(t, tc.wantRuleID, ruleID)
+		})
+	}
 }
