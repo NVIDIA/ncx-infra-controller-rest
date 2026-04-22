@@ -52,7 +52,7 @@ func getEnvIntOrDefault(envVar string, defaultVal int) int {
 const (
 	// default service config
 	defaultServicePort   = 50051
-	defaultDataStoreType = nvswitchmanager.DatastoreTypePersistent
+	defaultDataStoreType = nvswitchmanager.DatastoreTypeInMemory
 
 	// default db config
 	defaultDbPort     = 5432
