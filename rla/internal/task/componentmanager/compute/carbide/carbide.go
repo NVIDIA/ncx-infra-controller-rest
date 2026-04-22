@@ -595,22 +595,25 @@ func (m *Manager) GetFirmwareStatus(ctx context.Context, target common.Target) (
 
 		if actual, hasActual := actualFirmware[id]; hasActual && len(desiredEntries) > 0 {
 			if matchesAnyDesired(actual, desiredEntries) {
-				if strings.HasPrefix(machine.State, "HostReprovisioning") {
-					// Version matches but Core is still doing post-update
-					// operations (e.g. power drain). Wait for Core to finish
-					// before declaring completion to avoid conflicting power
-					// cycles.
-					fwStatus.State = operations.FirmwareUpdateStateVerifying
-					log.Info().
-						Str("machine_id", id).
-						Str("machine_state", machine.State).
-						Msg("Actual firmware matches desired but machine still in HostReprovisioning, marking Verifying")
-				} else {
-					fwStatus.State = operations.FirmwareUpdateStateCompleted
-					log.Debug().
-						Str("machine_id", id).
-						Msg("Actual firmware matches desired, marking Completed")
-				}
+			if strings.Contains(machine.State, "HostReprovision") {
+				// Version matches but Core is still doing post-update
+				// operations (e.g. power drain). Wait for Core to finish
+				// before declaring completion to avoid conflicting power
+				// cycles.
+				// Matches both top-level "HostReprovisioning/..." and
+				// "Assigned/HostReprovision{...}" (instance-mode updates).
+				fwStatus.State = operations.FirmwareUpdateStateVerifying
+				log.Info().
+					Str("machine_id", id).
+					Str("machine_state", machine.State).
+					Msg("Actual firmware matches desired but machine still in HostReprovision state, marking Verifying")
+			} else {
+				fwStatus.State = operations.FirmwareUpdateStateCompleted
+				log.Info().
+					Str("machine_id", id).
+					Str("completion_reason", "desired_equals_actual").
+					Msg("Firmware update completed: actual firmware matches desired versions")
+			}
 				result[id] = fwStatus
 				continue
 			}
@@ -619,9 +622,14 @@ func (m *Manager) GetFirmwareStatus(ctx context.Context, target common.Target) (
 		switch {
 		case machine.UpdateComplete:
 			fwStatus.State = operations.FirmwareUpdateStateCompleted
-		case strings.HasPrefix(machine.State, "HostReprovisioning/FailedFirmwareUpgrade"):
+			log.Info().
+				Str("machine_id", id).
+				Str("machine_state", machine.State).
+				Str("completion_reason", "core_update_complete").
+				Msg("Firmware update completed: Core reported UpdateComplete flag")
+		case strings.Contains(machine.State, "HostReprovision") && strings.Contains(machine.State, "FailedFirmwareUpgrade"):
 			fwStatus.State = operations.FirmwareUpdateStateFailed
-		case strings.HasPrefix(machine.State, "HostReprovisioning"):
+		case strings.Contains(machine.State, "HostReprovision"):
 			fwStatus.State = operations.FirmwareUpdateStateVerifying
 		default:
 			fwStatus.State = operations.FirmwareUpdateStateQueued
