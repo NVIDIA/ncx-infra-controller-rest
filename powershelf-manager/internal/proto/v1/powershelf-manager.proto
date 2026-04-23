@@ -28,9 +28,9 @@ service PowershelfManager {
 
     // Power Control
     // Power OFF the rack
-    rpc PowerOff(PowershelfRequest) returns (PowerControlResponse);
+    rpc PowerOff(PowerRequest) returns (PowerControlResponse);
     // Power ON the rack
-    rpc PowerOn(PowershelfRequest) returns (PowerControlResponse);
+    rpc PowerOn(PowerRequest) returns (PowerControlResponse);
 }
 
 
@@ -144,14 +144,31 @@ message PowershelfRequest {
     repeated string pmc_macs = 1;
 }
 
+// PowerRequest is used by PowerOn/PowerOff RPCs. Registered devices are
+// identified by MAC; unregistered devices use PowerTarget with inline
+// connection details.
+message PowerRequest {
+    repeated string pmc_macs = 1;
+    repeated PowerTarget targets = 2;
+}
+
 message PowershelfResponse {
     string pmc_mac_address = 1;
     StatusCode status = 2;
     string error = 3;
+    string pmc_ip = 4;  // Set for direct PowerTarget responses; empty for registered shelves
 }
 
 message PowerControlResponse {
     repeated PowershelfResponse responses = 1;
+}
+
+// PowerTarget allows power control against a device without prior registration.
+// Only IP and credentials are required; the registry and credential manager are bypassed.
+message PowerTarget {
+    string pmc_ip = 1;
+    Credentials pmc_credentials = 2;
+    PMCVendor pmc_vendor = 3;
 }
 
 message GetPowershelvesResponse {
