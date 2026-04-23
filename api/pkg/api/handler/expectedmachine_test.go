@@ -1843,6 +1843,185 @@ func TestCreateExpectedMachinesHandler_Handle(t *testing.T) {
 	}
 }
 
+// TestCreateExpectedMachineHandler_BmcCredentialsForwardedToWorkflow is a regression test for a
+// bug where the OpenAPI spec documented "bmcUsername" / "bmcPassword" as the request field names
+// while the Go struct (APIExpectedMachineCreateRequest) used JSON tags "defaultBmcUsername" /
+// "defaultBmcPassword". Clients following the spec sent keys that the JSON decoder could not bind,
+// leaving DefaultBmcUsername / DefaultBmcPassword nil and silently dropping credentials before
+// they reached the workflow. The spec has been corrected to use "defaultBmcUsername" /
+// "defaultBmcPassword" to match the Go struct tags.
+func TestCreateExpectedMachineHandler_BmcCredentialsForwardedToWorkflow(t *testing.T) {
+	e := echo.New()
+	dbSession := testExpectedMachineInitDB(t)
+	defer dbSession.Close()
+
+	cfg := common.GetTestConfig()
+	tcfg, _ := cfg.GetTemporalConfig()
+	scp := sc.NewClientPool(tcfg)
+
+	org := "test-org"
+	_, site := testExpectedMachineSetupTestData(t, dbSession, org)
+
+	// Capture the proto struct forwarded to the Temporal workflow.
+	var capturedRequest *cwssaws.ExpectedMachine
+	mockTemporalClient := &tmocks.Client{}
+	mockWorkflowRun := &tmocks.WorkflowRun{}
+	mockWorkflowRun.On("GetID").Return("test-workflow-id")
+	mockWorkflowRun.Mock.On("Get", mock.Anything, mock.Anything).Return(nil)
+	mockTemporalClient.Mock.On("ExecuteWorkflow", mock.Anything, mock.Anything, "CreateExpectedMachine", mock.Anything).
+		Run(func(args mock.Arguments) {
+			if req, ok := args.Get(3).(*cwssaws.ExpectedMachine); ok {
+				capturedRequest = req
+			}
+		}).
+		Return(mockWorkflowRun, nil)
+	scp.IDClientMap[site.ID.String()] = mockTemporalClient
+
+	handler := NewCreateExpectedMachineHandler(dbSession, nil, scp, cfg)
+
+	// Build the request body as a raw JSON map using the field names defined in the
+	// OpenAPI spec ("defaultBmcUsername" / "defaultBmcPassword"), exactly as a curl
+	// client sends them.
+	rawBody := map[string]interface{}{
+		"siteId":              site.ID.String(),
+		"bmcMacAddress":       "00:AA:BB:CC:DD:EE",
+		"defaultBmcUsername":  "root",
+		"defaultBmcPassword":  "secret123",
+		"chassisSerialNumber": "CRED-TEST-CHASSIS-001",
+	}
+	reqBody, err := json.Marshal(rawBody)
+	assert.Nil(t, err)
+
+	req := httptest.NewRequest(http.MethodPost, "/v2/org/"+org+"/carbide/expected-machine", bytes.NewReader(reqBody))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	req = req.WithContext(context.Background())
+
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.Set("user", &cdbm.User{
+		StarfleetID: cdb.GetStrPtr("test-user"),
+		OrgData: cdbm.OrgData{
+			org: cdbm.Org{
+				ID:          123,
+				Name:        org,
+				DisplayName: org,
+				OrgType:     "ENTERPRISE",
+				Roles:       []string{"FORGE_PROVIDER_ADMIN"},
+			},
+		},
+	})
+	c.SetParamNames("orgName")
+	c.SetParamValues(org)
+
+	err = handler.Handle(c)
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusCreated, rec.Code, "Response: %s", rec.Body.String())
+
+	// The core regression assertion: verify that the BMC credentials supplied in the
+	// request were actually forwarded to the workflow. Before the fix, both fields
+	// would be empty strings because the JSON decoder could not match "bmcUsername" /
+	// "bmcPassword" to the struct fields whose tags read "defaultBmcUsername" /
+	// "defaultBmcPassword".
+	if assert.NotNil(t, capturedRequest, "workflow should have received a request") {
+		assert.Equal(t, "root", capturedRequest.BmcUsername,
+			"BmcUsername must be forwarded to the workflow (JSON tag mismatch bug?)")
+		assert.Equal(t, "secret123", capturedRequest.BmcPassword,
+			"BmcPassword must be forwarded to the workflow (JSON tag mismatch bug?)")
+	}
+}
+
+// TestUpdateExpectedMachineHandler_BmcCredentialsForwardedToWorkflow is a regression test for the
+// same spec / JSON struct tag mismatch bug described in
+// TestCreateExpectedMachineHandler_BmcCredentialsForwardedToWorkflow, but for the PATCH
+// (single update) endpoint.
+func TestUpdateExpectedMachineHandler_BmcCredentialsForwardedToWorkflow(t *testing.T) {
+	e := echo.New()
+	dbSession := testExpectedMachineInitDB(t)
+	defer dbSession.Close()
+
+	cfg := common.GetTestConfig()
+	tcfg, _ := cfg.GetTemporalConfig()
+	scp := sc.NewClientPool(tcfg)
+
+	org := "test-org"
+	_, site := testExpectedMachineSetupTestData(t, dbSession, org)
+
+	// Create an existing expected machine to update.
+	ctx := context.Background()
+	emDAO := cdbm.NewExpectedMachineDAO(dbSession)
+	testEM, err := emDAO.Create(ctx, nil, cdbm.ExpectedMachineCreateInput{
+		ExpectedMachineID:   uuid.New(),
+		SiteID:              site.ID,
+		BmcMacAddress:       "00:11:22:33:AA:BB",
+		ChassisSerialNumber: "CRED-UPDATE-CHASSIS-001",
+	})
+	assert.Nil(t, err)
+	assert.NotNil(t, testEM)
+
+	// Capture the proto struct forwarded to the Temporal workflow.
+	var capturedRequest *cwssaws.ExpectedMachine
+	mockTemporalClient := &tmocks.Client{}
+	mockWorkflowRun := &tmocks.WorkflowRun{}
+	mockWorkflowRun.On("GetID").Return("test-workflow-id")
+	mockWorkflowRun.Mock.On("Get", mock.Anything, mock.Anything).Return(nil)
+	mockTemporalClient.Mock.On("ExecuteWorkflow", mock.Anything, mock.Anything, "UpdateExpectedMachine", mock.Anything).
+		Run(func(args mock.Arguments) {
+			if req, ok := args.Get(3).(*cwssaws.ExpectedMachine); ok {
+				capturedRequest = req
+			}
+		}).
+		Return(mockWorkflowRun, nil)
+	scp.IDClientMap[site.ID.String()] = mockTemporalClient
+
+	handler := NewUpdateExpectedMachineHandler(dbSession, nil, scp, cfg)
+
+	// Build the request body as a raw JSON map using the field names defined in the
+	// OpenAPI spec ("defaultBmcUsername" / "defaultBmcPassword"), exactly as a curl
+	// client sends them.
+	rawBody := map[string]interface{}{
+		"defaultBmcUsername": "newadmin",
+		"defaultBmcPassword": "newpassword456",
+	}
+	reqBody, err := json.Marshal(rawBody)
+	assert.Nil(t, err)
+
+	url := "/v2/org/" + org + "/carbide/expected-machine/" + testEM.ID.String()
+	req := httptest.NewRequest(http.MethodPatch, url, bytes.NewReader(reqBody))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	req = req.WithContext(context.Background())
+
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.Set("user", &cdbm.User{
+		StarfleetID: cdb.GetStrPtr("test-user"),
+		OrgData: cdbm.OrgData{
+			org: cdbm.Org{
+				ID:          123,
+				Name:        org,
+				DisplayName: org,
+				OrgType:     "ENTERPRISE",
+				Roles:       []string{"FORGE_PROVIDER_ADMIN"},
+			},
+		},
+	})
+	c.SetParamNames("orgName", "id")
+	c.SetParamValues(org, testEM.ID.String())
+
+	err = handler.Handle(c)
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusOK, rec.Code, "Response: %s", rec.Body.String())
+
+	// The core regression assertion: before the fix the update workflow would receive
+	// empty strings for BmcUsername and BmcPassword because "bmcUsername"/"bmcPassword"
+	// keys did not match the struct tags "defaultBmcUsername"/"defaultBmcPassword".
+	if assert.NotNil(t, capturedRequest, "workflow should have received a request") {
+		assert.Equal(t, "newadmin", capturedRequest.BmcUsername,
+			"BmcUsername must be forwarded to the update workflow (JSON tag mismatch bug?)")
+		assert.Equal(t, "newpassword456", capturedRequest.BmcPassword,
+			"BmcPassword must be forwarded to the update workflow (JSON tag mismatch bug?)")
+	}
+}
+
 // TestUpdateExpectedMachinesHandler_Handle tests the batch update handler
 func TestUpdateExpectedMachinesHandler_Handle(t *testing.T) {
 	// Setup
