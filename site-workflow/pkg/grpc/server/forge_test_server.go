@@ -40,13 +40,29 @@ var (
 	// DefaultPort is the default port that the server listens at
 	DefaultPort = ":11079"
 	// DefaultVpcId is the default VPC ID for testing
-	DefaultVpcId = "00000000-0000-4000-8000-000000000000"
+	DefaultVpcId = "00000000-0000-4000-8000-000000000001"
 	// DefaultNetworkSegmentId is the default NetworkSegment ID for testing
-	DefaultNetworkSegmentId = "00000000-0000-4000-9000-000000000000"
+	DefaultNetworkSegmentId = "00000000-0000-4000-8000-000000000002"
 	// DefaultTenantKeysetId is the default TenantKeyset ID for testing
-	DefaultTenantKeysetId = "00000000-0000-4000-a000-000000000000"
+	DefaultTenantKeysetId = "00000000-0000-4000-8000-000000000003"
 	// DefaultIBParitionId is the default IBPartition ID for testing
-	DefaultIBParitionId = "00000000-0000-4000-b000-000000000000"
+	DefaultIBParitionId = "00000000-0000-4000-8000-000000000004"
+	// DefaultInstanceId is the default Instance ID for testing
+	DefaultInstanceId = "00000000-0000-4000-8000-000000000005"
+	// DefaultInstanceTypeId is the default InstanceType ID for testing
+	DefaultInstanceTypeId = "00000000-0000-4000-8000-000000000006"
+	// DefaultDpuExtensionServiceId is the default DPU Extension Service ID for testing
+	DefaultDpuExtensionServiceId = "00000000-0000-4000-8000-000000000007"
+	// DefaultOsImageId is the default OS Image ID for testing
+	DefaultOsImageId = "00000000-0000-4000-8000-000000000008"
+	// DefaultVpcPrefixId is the default VPCPrefix ID for testing
+	DefaultVpcPrefixId = "00000000-0000-4000-8000-000000000009"
+	// DefaultNetworkSecurityGroupId is the default NetworkSecurityGroup ID for testing
+	DefaultNetworkSecurityGroupId = "00000000-0000-4000-8000-00000000000a"
+	// DefaultVpcPeeringId is the default VPCPeering ID for testing
+	DefaultVpcPeeringId = "00000000-0000-4000-8000-00000000000b"
+	// DefaultNVLinkLogicalPartitionId is the default NVLinkLogicalPartition ID for testing
+	DefaultNVLinkLogicalPartitionId = "00000000-0000-4000-8000-00000000000c"
 )
 
 // ForgeServerImpl implements interface ForgeServer
@@ -56,11 +72,19 @@ type ForgeServerImpl struct {
 	ns  map[string]*cwssaws.NetworkSegment
 	ins map[string]*cwssaws.Instance
 	m   map[string]*cwssaws.Machine
+	t   map[string]*cwssaws.Tenant
 	tk  map[string]*cwssaws.TenantKeyset
 	ibp map[string]*cwssaws.IBPartition
 	em  map[string]*cwssaws.ExpectedMachine
 	eps map[string]*cwssaws.ExpectedPowerShelf
 	es  map[string]*cwssaws.ExpectedSwitch
+	des map[string]*cwssaws.DpuExtensionService
+	osi map[string]*cwssaws.OsImage
+	vpr map[string]*cwssaws.VpcPrefix
+	nsg map[string]*cwssaws.NetworkSecurityGroup
+	vpp map[string]*cwssaws.VpcPeering
+	nvl map[string]*cwssaws.NVLinkLogicalPartition
+	sku map[string]*cwssaws.Sku
 }
 
 var logger = log.With().Str("Component", "Mock Carbide gRPC Server").Logger()
@@ -386,6 +410,20 @@ func (f *ForgeServerImpl) FindMachineIds(ctx context.Context, req *cwssaws.Machi
 	return &response, nil
 }
 
+// FindMachinesByIds implements interface ForgeServer
+func (f *ForgeServerImpl) FindMachinesByIds(ctx context.Context, req *cwssaws.MachinesByIdsRequest) (*cwssaws.MachineList, error) {
+	if req == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
+	}
+	response := cwssaws.MachineList{}
+	for _, id := range req.MachineIds {
+		if obj, ok := f.m[id.Id]; ok {
+			response.Machines = append(response.Machines, obj)
+		}
+	}
+	return &response, nil
+}
+
 func (f *ForgeServerImpl) SetMaintenance(context.Context, *cwssaws.MaintenanceRequest) (*emptypb.Empty, error) {
 	return &emptypb.Empty{}, nil
 }
@@ -579,6 +617,180 @@ func (f *ForgeServerImpl) FindIBPartitionsByIds(ctx context.Context, req *cwssaw
 	return &response, nil
 }
 
+// FindDpuExtensionServiceIds implements interface ForgeServer
+func (f *ForgeServerImpl) FindDpuExtensionServiceIds(ctx context.Context, req *cwssaws.DpuExtensionServiceSearchFilter) (*cwssaws.DpuExtensionServiceIdList, error) {
+	if req == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
+	}
+	response := cwssaws.DpuExtensionServiceIdList{}
+	for id := range f.des {
+		response.ServiceIds = append(response.ServiceIds, id)
+	}
+	return &response, nil
+}
+
+// FindDpuExtensionServicesByIds implements interface ForgeServer
+func (f *ForgeServerImpl) FindDpuExtensionServicesByIds(ctx context.Context, req *cwssaws.DpuExtensionServicesByIdsRequest) (*cwssaws.DpuExtensionServiceList, error) {
+	if req == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
+	}
+	response := cwssaws.DpuExtensionServiceList{}
+	for _, id := range req.ServiceIds {
+		if obj, ok := f.des[id]; ok {
+			response.Services = append(response.Services, obj)
+		}
+	}
+	return &response, nil
+}
+
+// nsg map[string]*cwssaws.NetworkSecurityGroup
+// vpp map[string]*cwssaws.VpcPeering
+// nvl map[string]*cwssaws.NVLinkLogicalPartition
+
+// ListOsImage implements interface ForgeServer
+func (f *ForgeServerImpl) ListOsImage(ctx context.Context, req *cwssaws.ListOsImageRequest) (*cwssaws.ListOsImageResponse, error) {
+	if req == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
+	}
+	response := cwssaws.ListOsImageResponse{}
+	for id := range f.osi {
+		if obj, ok := f.osi[id]; ok {
+			response.Images = append(response.Images, obj)
+		}
+	}
+	return &response, nil
+}
+
+// SearchVpcPrefixes implements interface ForgeServer
+func (f *ForgeServerImpl) SearchVpcPrefixes(ctx context.Context, req *cwssaws.VpcPrefixSearchQuery) (*cwssaws.VpcPrefixIdList, error) {
+	if req == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
+	}
+	response := cwssaws.VpcPrefixIdList{}
+	for id := range f.vpr {
+		response.VpcPrefixIds = append(response.VpcPrefixIds, &cwssaws.VpcPrefixId{Value: id})
+	}
+	return &response, nil
+}
+
+// GetVpcPrefixes implements interface ForgeServer
+func (f *ForgeServerImpl) GetVpcPrefixes(ctx context.Context, req *cwssaws.VpcPrefixGetRequest) (*cwssaws.VpcPrefixList, error) {
+	if req == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
+	}
+	response := cwssaws.VpcPrefixList{}
+	for _, id := range req.VpcPrefixIds {
+		if obj, ok := f.vpr[id.GetValue()]; ok {
+			response.VpcPrefixes = append(response.VpcPrefixes, obj)
+		}
+	}
+	return &response, nil
+}
+
+// FindNetworkSecurityGroupIds implements interface ForgeServer
+func (f *ForgeServerImpl) FindNetworkSecurityGroupIds(ctx context.Context, req *cwssaws.FindNetworkSecurityGroupIdsRequest) (*cwssaws.FindNetworkSecurityGroupIdsResponse, error) {
+	if req == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
+	}
+	response := cwssaws.FindNetworkSecurityGroupIdsResponse{}
+	for id := range f.nsg {
+		response.NetworkSecurityGroupIds = append(response.NetworkSecurityGroupIds, id)
+	}
+	return &response, nil
+}
+
+// FindNetworkSecurityGroupsByIds implements interface ForgeServer
+func (f *ForgeServerImpl) FindNetworkSecurityGroupsByIds(ctx context.Context, req *cwssaws.FindNetworkSecurityGroupsByIdsRequest) (*cwssaws.FindNetworkSecurityGroupsByIdsResponse, error) {
+	if req == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
+	}
+	response := cwssaws.FindNetworkSecurityGroupsByIdsResponse{}
+	for _, id := range req.NetworkSecurityGroupIds {
+		if obj, ok := f.nsg[id]; ok {
+			response.NetworkSecurityGroups = append(response.NetworkSecurityGroups, obj)
+		}
+	}
+	return &response, nil
+}
+
+// FindVpcPeeringIds implements interface ForgeServer
+func (f *ForgeServerImpl) FindVpcPeeringIds(ctx context.Context, req *cwssaws.VpcPeeringSearchFilter) (*cwssaws.VpcPeeringIdList, error) {
+	if req == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
+	}
+	response := cwssaws.VpcPeeringIdList{}
+	for id := range f.vpp {
+		response.VpcPeeringIds = append(response.VpcPeeringIds, &cwssaws.VpcPeeringId{Value: id})
+	}
+	return &response, nil
+}
+
+// FindVpcPeeringsByIds implements interface ForgeServer
+func (f *ForgeServerImpl) FindVpcPeeringsByIds(ctx context.Context, req *cwssaws.VpcPeeringsByIdsRequest) (*cwssaws.VpcPeeringList, error) {
+	if req == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
+	}
+	response := cwssaws.VpcPeeringList{}
+	for _, id := range req.VpcPeeringIds {
+		if obj, ok := f.vpp[id.Value]; ok {
+			response.VpcPeerings = append(response.VpcPeerings, obj)
+		}
+	}
+	return &response, nil
+}
+
+// GetAllSkuIds implements interface ForgeServer
+func (f *ForgeServerImpl) GetAllSkuIds(ctx context.Context, req *emptypb.Empty) (*cwssaws.SkuIdList, error) {
+	if req == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
+	}
+	response := cwssaws.SkuIdList{}
+	for id := range f.sku {
+		response.Ids = append(response.Ids, id)
+	}
+	return &response, nil
+}
+
+// FindSkusByIds implements interface ForgeServer
+func (f *ForgeServerImpl) FindSkusByIds(ctx context.Context, req *cwssaws.SkusByIdsRequest) (*cwssaws.SkuList, error) {
+	if req == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
+	}
+	response := cwssaws.SkuList{}
+	for _, id := range req.Ids {
+		if obj, ok := f.sku[id]; ok {
+			response.Skus = append(response.Skus, obj)
+		}
+	}
+	return &response, nil
+}
+
+// FindTenantOrganizationIds implements interface ForgeServer
+func (f *ForgeServerImpl) FindTenantOrganizationIds(ctx context.Context, req *cwssaws.TenantSearchFilter) (*cwssaws.TenantOrganizationIdList, error) {
+	if req == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
+	}
+	response := cwssaws.TenantOrganizationIdList{}
+	for id := range f.t {
+		response.TenantOrganizationIds = append(response.TenantOrganizationIds, id)
+	}
+	return &response, nil
+}
+
+// FindTenantsByOrganizationIds implements interface ForgeServer
+func (f *ForgeServerImpl) FindTenantsByOrganizationIds(ctx context.Context, req *cwssaws.TenantByOrganizationIdsRequest) (*cwssaws.TenantList, error) {
+	if req == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
+	}
+	response := cwssaws.TenantList{}
+	for _, id := range req.OrganizationIds {
+		if obj, ok := f.t[id]; ok {
+			response.Tenants = append(response.Tenants, obj)
+		}
+	}
+	return &response, nil
+}
+
 // AddExpectedMachine implements interface ForgeServer
 func (f *ForgeServerImpl) AddExpectedMachine(ctx context.Context, req *cwssaws.ExpectedMachine) (*emptypb.Empty, error) {
 	if req == nil || req.Id == nil || req.Id.Value == "" {
@@ -723,6 +935,29 @@ func (f *ForgeServerImpl) UpdateExpectedMachines(ctx context.Context, req *cwssa
 	return out, nil
 }
 
+// GetAllExpectedMachines implements interface ForgeServer
+func (f *ForgeServerImpl) GetAllExpectedMachines(ctx context.Context, req *emptypb.Empty) (*cwssaws.ExpectedMachineList, error) {
+	if req == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
+	}
+	response := cwssaws.ExpectedMachineList{}
+	for _, em := range f.em {
+		response.ExpectedMachines = append(response.ExpectedMachines, em)
+	}
+
+	return &response, nil
+}
+
+// GetAllExpectedMachinesLinked implements interface ForgeServer
+func (f *ForgeServerImpl) GetAllExpectedMachinesLinked(ctx context.Context, req *emptypb.Empty) (*cwssaws.LinkedExpectedMachineList, error) {
+	if req == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
+	}
+	response := cwssaws.LinkedExpectedMachineList{}
+
+	return &response, nil
+}
+
 // AddExpectedPowerShelf implements interface ForgeServer
 func (f *ForgeServerImpl) AddExpectedPowerShelf(ctx context.Context, req *cwssaws.ExpectedPowerShelf) (*emptypb.Empty, error) {
 	if req == nil || req.ExpectedPowerShelfId == nil || req.ExpectedPowerShelfId.Value == "" {
@@ -789,6 +1024,15 @@ func (f *ForgeServerImpl) GetAllExpectedPowerShelves(ctx context.Context, req *e
 	return &cwssaws.ExpectedPowerShelfList{ExpectedPowerShelves: res}, nil
 }
 
+// GetAllExpectedPowerShelvesLinked implements interface ForgeServer
+func (f *ForgeServerImpl) GetAllExpectedPowerShelvesLinked(ctx context.Context, req *emptypb.Empty) (*cwssaws.LinkedExpectedPowerShelfList, error) {
+	if req == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
+	}
+	response := cwssaws.LinkedExpectedPowerShelfList{}
+	return &response, nil
+}
+
 // AddExpectedSwitch implements interface ForgeServer
 func (f *ForgeServerImpl) AddExpectedSwitch(ctx context.Context, req *cwssaws.ExpectedSwitch) (*emptypb.Empty, error) {
 	if req == nil || req.ExpectedSwitchId == nil || req.ExpectedSwitchId.Value == "" {
@@ -853,6 +1097,15 @@ func (f *ForgeServerImpl) GetAllExpectedSwitches(ctx context.Context, req *empty
 		res = append(res, es)
 	}
 	return &cwssaws.ExpectedSwitchList{ExpectedSwitches: res}, nil
+}
+
+// GetAllExpectedSwitchesLinked implements interface ForgeServer
+func (f *ForgeServerImpl) GetAllExpectedSwitchesLinked(ctx context.Context, req *emptypb.Empty) (*cwssaws.LinkedExpectedSwitchList, error) {
+	if req == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
+	}
+	response := cwssaws.LinkedExpectedSwitchList{}
+	return &response, nil
 }
 
 // LoadTestMachines loads test machines into the server
