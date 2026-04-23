@@ -257,6 +257,35 @@ func (s *Session) getInfrastructureProviderID(_ context.Context) (string, error)
 	return id, nil
 }
 
+// addOwnerScopeFilter adds either an `infrastructureProviderId` or a
+// `tenantId` query parameter to q so that list endpoints which require one
+// of the two (when the caller holds both Provider Admin and Tenant Admin
+// roles) succeed instead of returning 400. Provider scope is preferred
+// because resources offered to allocation-create constraints (IP blocks,
+// instance types) are owned by the provider; the tenant view of the same
+// resources is what the provider has already allocated, which is not what
+// the picker wants.
+//
+// Either filter is skipped silently if the caller already supplied one in
+// q, or if both lookups fail (single-role users for whom neither identity
+// resolves). The latter case preserves the legacy behavior where the API
+// happily lists with no owner filter.
+func addOwnerScopeFilter(s *Session, ctx context.Context, q map[string]string) {
+	if _, hasProv := q["infrastructureProviderId"]; hasProv {
+		return
+	}
+	if _, hasTen := q["tenantId"]; hasTen {
+		return
+	}
+	if id, err := s.getInfrastructureProviderID(ctx); err == nil && id != "" {
+		q["infrastructureProviderId"] = id
+		return
+	}
+	if id, err := s.getTenantID(ctx); err == nil && id != "" {
+		q["tenantId"] = id
+	}
+}
+
 // -- Fetchers --
 
 func (s *Session) fetchSites(_ context.Context) ([]NamedItem, error) {
@@ -448,11 +477,12 @@ func (s *Session) fetchAllocations(_ context.Context) ([]NamedItem, error) {
 	return result, nil
 }
 
-func (s *Session) fetchIPBlocks(_ context.Context) ([]NamedItem, error) {
+func (s *Session) fetchIPBlocks(ctx context.Context) ([]NamedItem, error) {
 	q := map[string]string{}
 	if s.Scope.SiteID != "" {
 		q["siteId"] = s.Scope.SiteID
 	}
+	addOwnerScopeFilter(s, ctx, q)
 	items, err := s.fetchAll(apiPath(s, "ipblock"), q)
 	if err != nil {
 		return nil, err
@@ -708,11 +738,12 @@ func (s *Session) fetchNVLinkLogicalPartitions(_ context.Context) ([]NamedItem, 
 	return result, nil
 }
 
-func (s *Session) fetchInstanceTypes(_ context.Context) ([]NamedItem, error) {
+func (s *Session) fetchInstanceTypes(ctx context.Context) ([]NamedItem, error) {
 	q := map[string]string{}
 	if s.Scope.SiteID != "" {
 		q["siteId"] = s.Scope.SiteID
 	}
+	addOwnerScopeFilter(s, ctx, q)
 	items, err := s.fetchAll(apiPath(s, "instance/type"), q)
 	if err != nil {
 		return nil, err
