@@ -18,13 +18,11 @@ import (
 // checks if the IpxeTemplate type satisfies the MappedNullable interface at compile time
 var _ MappedNullable = &IpxeTemplate{}
 
-// IpxeTemplate An iPXE boot template that can be used to create template-based Operating System definitions
+// IpxeTemplate An iPXE boot template that can be used to create template-based Operating System definitions. Templates are global across REST and are propagated (read-only) from bare-metal-manager-core.
 type IpxeTemplate struct {
-	// Stable template UUID from core, consistent across all sites
+	// Stable template UUID assigned by core and identical across core and REST
 	Id *string `json:"id,omitempty"`
-	// ID of the Site this template was retrieved from
-	SiteId *string `json:"siteId,omitempty"`
-	// Unique template name (e.g. ubuntu-autoinstall, kernel-initrd)
+	// Globally unique template name (e.g. ubuntu-autoinstall, kernel-initrd)
 	Name *string `json:"name,omitempty"`
 	// Raw iPXE script content with template variables
 	Template *string `json:"template,omitempty"`
@@ -89,38 +87,6 @@ func (o *IpxeTemplate) HasId() bool {
 // SetId gets a reference to the given string and assigns it to the Id field.
 func (o *IpxeTemplate) SetId(v string) {
 	o.Id = &v
-}
-
-// GetSiteId returns the SiteId field value if set, zero value otherwise.
-func (o *IpxeTemplate) GetSiteId() string {
-	if o == nil || IsNil(o.SiteId) {
-		var ret string
-		return ret
-	}
-	return *o.SiteId
-}
-
-// GetSiteIdOk returns a tuple with the SiteId field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *IpxeTemplate) GetSiteIdOk() (*string, bool) {
-	if o == nil || IsNil(o.SiteId) {
-		return nil, false
-	}
-	return o.SiteId, true
-}
-
-// HasSiteId returns a boolean if a field has been set.
-func (o *IpxeTemplate) HasSiteId() bool {
-	if o != nil && !IsNil(o.SiteId) {
-		return true
-	}
-
-	return false
-}
-
-// SetSiteId gets a reference to the given string and assigns it to the SiteId field.
-func (o *IpxeTemplate) SetSiteId(v string) {
-	o.SiteId = &v
 }
 
 // GetName returns the Name field value if set, zero value otherwise.
@@ -391,9 +357,6 @@ func (o IpxeTemplate) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
 	if !IsNil(o.Id) {
 		toSerialize["id"] = o.Id
-	}
-	if !IsNil(o.SiteId) {
-		toSerialize["siteId"] = o.SiteId
 	}
 	if !IsNil(o.Name) {
 		toSerialize["name"] = o.Name

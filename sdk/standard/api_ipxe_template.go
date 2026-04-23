@@ -64,12 +64,12 @@ func (r ApiGetAllIpxeTemplateRequest) Execute() ([]IpxeTemplate, *http.Response,
 /*
 GetAllIpxeTemplate Retrieve all iPXE Templates
 
-Retrieve all iPXE templates propagated from bare-metal-manager-core. Templates are propagated one-way from core and are read-only.
+Retrieve all iPXE templates propagated from bare-metal-manager-core. Templates are global — the `id` is the same UUID used by core across all sites — and are read-only from this service.
 
-The `siteId` query parameter is optional and may be repeated to filter by one or more sites. When omitted, the caller receives templates for every site they are authorized to see:
+The `siteId` query parameter is optional and may be repeated to restrict results to templates that are currently available at one or more specific sites. When omitted, the caller receives every template available at any site they are authorized to see:
 
-* Provider Admins/Viewers: templates for every site owned by their infrastructure provider.
-* Tenant Admins: templates for every site the tenant is associated with via a Tenant/Site association.
+* Provider Admins/Viewers: templates available at any site owned by their infrastructure provider.
+* Tenant Admins: templates available at any site the tenant is associated with via a Tenant/Site association.
 
 When `siteId` is provided, every requested site must be authorized for the caller.
 
@@ -223,7 +223,7 @@ func (r ApiGetIpxeTemplateRequest) Execute() (*IpxeTemplate, *http.Response, err
 /*
 GetIpxeTemplate Retrieve iPXE Template
 
-Retrieve an iPXE template by ID.
+Retrieve a global iPXE template by ID. The caller must be authorized at at least one site where this template is currently available (i.e. the caller must be the provider/owner or an authorized tenant at one of the sites the template has been reported from).
 
 Provider Admins/Viewers can access templates for their provider's sites. Tenant Admins can access templates for sites the tenant is associated with via a Tenant/Site association.
 

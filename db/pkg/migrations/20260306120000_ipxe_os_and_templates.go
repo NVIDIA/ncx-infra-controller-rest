@@ -26,6 +26,15 @@ import (
 	"github.com/uptrace/bun"
 )
 
+// 20260306120000_ipxe_os_and_templates
+//
+// Introduces the iPXE Template + OS Template support in REST:
+//   - Global `ipxe_template` table, keyed by the stable template UUID assigned
+//     by bare-metal-manager-core (the same UUID is used on both sides).
+//   - `ipxe_template_site_association` (ITSA) table tracking which sites
+//     currently report each global template.
+//   - iPXE-template related columns on `operating_system` and
+//     `operating_system_site_association`.
 func init() {
 	Migrations.MustRegister(func(ctx context.Context, db *bun.DB) error {
 		tx, terr := db.BeginTx(ctx, &sql.TxOptions{})
@@ -33,19 +42,14 @@ func init() {
 			handlePanic(terr, "failed to begin transaction")
 		}
 
-		// ── iPXE Template table ──────────────────────────────────────────
+		// ── iPXE Template table (global) ─────────────────────────────────
 
 		_, err := tx.NewCreateTable().Model((*model.IpxeTemplate)(nil)).IfNotExists().Exec(ctx)
 		handleError(tx, err)
 
-		_, err = tx.Exec("ALTER TABLE ipxe_template DROP CONSTRAINT IF EXISTS ipxe_template_site_id_name_key")
+		_, err = tx.Exec("ALTER TABLE ipxe_template DROP CONSTRAINT IF EXISTS ipxe_template_name_key")
 		handleError(tx, err)
-		_, err = tx.Exec("ALTER TABLE ipxe_template ADD CONSTRAINT ipxe_template_site_id_name_key UNIQUE (site_id, name)")
-		handleError(tx, err)
-
-		_, err = tx.Exec("DROP INDEX IF EXISTS ipxe_template_site_id_idx")
-		handleError(tx, err)
-		_, err = tx.Exec("CREATE INDEX ipxe_template_site_id_idx ON ipxe_template(site_id)")
+		_, err = tx.Exec("ALTER TABLE ipxe_template ADD CONSTRAINT ipxe_template_name_key UNIQUE (name)")
 		handleError(tx, err)
 
 		_, err = tx.Exec("DROP INDEX IF EXISTS ipxe_template_name_idx")
@@ -66,6 +70,33 @@ func init() {
 		_, err = tx.Exec("DROP INDEX IF EXISTS ipxe_template_updated_idx")
 		handleError(tx, err)
 		_, err = tx.Exec("CREATE INDEX ipxe_template_updated_idx ON ipxe_template(updated)")
+		handleError(tx, err)
+
+		// ── iPXE Template ↔ Site association ─────────────────────────────
+
+		_, err = tx.NewCreateTable().Model((*model.IpxeTemplateSiteAssociation)(nil)).IfNotExists().Exec(ctx)
+		handleError(tx, err)
+
+		_, err = tx.Exec(`
+			ALTER TABLE ipxe_template_site_association
+			DROP CONSTRAINT IF EXISTS ipxe_template_site_association_template_id_site_id_key
+		`)
+		handleError(tx, err)
+		_, err = tx.Exec(`
+			ALTER TABLE ipxe_template_site_association
+			ADD CONSTRAINT ipxe_template_site_association_template_id_site_id_key
+			UNIQUE (ipxe_template_id, site_id)
+		`)
+		handleError(tx, err)
+
+		_, err = tx.Exec("DROP INDEX IF EXISTS itsa_ipxe_template_id_idx")
+		handleError(tx, err)
+		_, err = tx.Exec("CREATE INDEX itsa_ipxe_template_id_idx ON ipxe_template_site_association(ipxe_template_id)")
+		handleError(tx, err)
+
+		_, err = tx.Exec("DROP INDEX IF EXISTS itsa_site_id_idx")
+		handleError(tx, err)
+		_, err = tx.Exec("CREATE INDEX itsa_site_id_idx ON ipxe_template_site_association(site_id)")
 		handleError(tx, err)
 
 		// ── Operating System: iPXE definition columns ────────────────────
@@ -114,16 +145,6 @@ func init() {
 			WHERE ipxe_os_scope IS NULL
 			  AND type = 'iPXE'
 			  AND tenant_id IS NOT NULL
-			  AND deleted IS NULL
-		`)
-		handleError(tx, err)
-
-		_, err = tx.Exec(`
-			UPDATE operating_system
-			SET ipxe_os_scope = 'Local'
-			WHERE ipxe_os_scope IS NULL
-			  AND type IN ('iPXE', 'Templated iPXE')
-			  AND tenant_id IS NULL
 			  AND deleted IS NULL
 		`)
 		handleError(tx, err)

@@ -4325,6 +4325,15 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 	desd17 := common.TestBuildDpuExtensionServiceDeployment(t, dbSession, des1, inst17.ID, "1.0.0", cdbm.DpuExtensionServiceDeploymentStatusRunning, tnu1)
 	assert.NotNil(t, desd17)
 
+	// Instance with no OperatingSystem (raw ipxeScript only) to test that an
+	// update setting a deactivated OS on an instance that previously had no OS
+	// is rejected.
+	mcNoOs := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
+	assert.NotNil(t, mcNoOs)
+
+	instNoOs := testInstanceBuildInstance(t, dbSession, "test-instance-no-os", tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1.ID, cdb.GetStrPtr(mcNoOs.ID), nil, cdb.GetStrPtr(common.DefaultIpxeScript), cdbm.InstanceStatusReady)
+	assert.NotNil(t, instNoOs)
+
 	e := echo.New()
 	cfg := common.GetTestConfig()
 	tc := &tmocks.Client{}
@@ -5181,6 +5190,27 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 				reqOrg:                tnOrg1,
 				reqUser:               tnu1,
 				respCode:              http.StatusBadRequest,
+			},
+			wantErr: false,
+		},
+		{
+			name: "test Instance update API endpoint failure setting deactivated OS on instance with no prior OS",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				scp:       scp,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIInstanceUpdateRequest{
+					OperatingSystemID: cdb.GetStrPtr(os3off.ID.String()),
+				},
+				reqInstance:           instNoOs.ID.String(),
+				cleanInstanceToStatus: instNoOs.Status,
+				reqOrg:                tnOrg1,
+				reqUser:               tnu1,
+				respCode:              http.StatusBadRequest,
+				respMessage:           cdb.GetStrPtr("has been deactivated"),
 			},
 			wantErr: false,
 		},

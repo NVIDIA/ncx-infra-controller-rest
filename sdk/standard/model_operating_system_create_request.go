@@ -41,7 +41,7 @@ type OperatingSystemCreateRequest struct {
 	IpxeTemplateParameters []IpxeTemplateParameter `json:"ipxeTemplateParameters,omitempty"`
 	// Artifacts (kernel, initrd, etc.) required for the iPXE OS definition
 	IpxeTemplateArtifacts []IpxeTemplateArtifact `json:"ipxeTemplateArtifacts,omitempty"`
-	// Synchronization scope. Required for Templated iPXE OS created by Provider Admin (when ipxeTemplateId is specified); must not be set for other types. Raw iPXE OS scope is auto-set to Global. Image OS scope is always nil
+	// Synchronization scope. Required for Templated iPXE OS created by Provider Admin (when ipxeTemplateId is specified). For Raw iPXE OS, only \"Global\" or unspecified is accepted; the handler always normalizes raw iPXE to Global. Must not be set for Image OS (always nil).
 	Scope NullableString `json:"scope,omitempty"`
 	// Original URL from where the Operating System image can be retreived from, required for image based OS. Cannot be specified if ipxeScript is specified
 	ImageUrl NullableString `json:"imageUrl,omitempty"`

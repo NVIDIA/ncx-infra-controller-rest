@@ -40,7 +40,13 @@ type ManageIpxeTemplate struct {
 }
 
 // UpdateIpxeTemplatesInDB is a Temporal activity that takes a collection of iPXE template data
-// pushed by the Site Agent and reconciles the DB
+// pushed by the Site Agent and reconciles the DB.
+//
+// iPXE templates are global in REST (one row per stable template UUID), and per-site
+// availability is tracked via IpxeTemplateSiteAssociation. For each reported template
+// we ensure the global row exists with current fields and that an ITSA row exists for
+// the reporting site. Templates no longer reported by this site have their ITSA
+// removed; if no ITSA remains anywhere for a template, the global row is hard-deleted.
 func (mit ManageIpxeTemplate) UpdateIpxeTemplatesInDB(ctx context.Context, siteID uuid.UUID, inventory *cwssaws.IpxeTemplateInventory) error {
 	logger := log.With().Str("Activity", "UpdateIpxeTemplatesInDB").Str("Site ID", siteID.String()).Logger()
 
@@ -68,24 +74,29 @@ func (mit ManageIpxeTemplate) UpdateIpxeTemplatesInDB(ctx context.Context, siteI
 		return err
 	}
 
-	// Initialize DAO
 	templateDAO := cdbm.NewIpxeTemplateDAO(mit.dbSession)
+	itsaDAO := cdbm.NewIpxeTemplateSiteAssociationDAO(mit.dbSession)
 
-	// Fetch all existing iPXE templates for this site
-	filterInput := cdbm.IpxeTemplateFilterInput{SiteIDs: []uuid.UUID{siteID}}
-	existingTemplates, _, err := templateDAO.GetAll(ctx, nil, filterInput, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)})
+	// Fetch existing ITSA rows for this site (with their template loaded) so we
+	// can reconcile against this inventory snapshot.
+	existingITSAs, _, err := itsaDAO.GetAll(ctx, nil,
+		cdbm.IpxeTemplateSiteAssociationFilterInput{SiteIDs: []uuid.UUID{siteID}},
+		cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)},
+		[]string{cdbm.IpxeTemplateRelationName},
+	)
 	if err != nil {
-		logger.Error().Err(err).Msg("Failed to get iPXE templates for Site from DB")
+		logger.Error().Err(err).Msg("Failed to get IpxeTemplateSiteAssociation rows for Site from DB")
 		return err
 	}
 
-	// Build a map of existing templates keyed by core template ID
-	existingByTemplateID := map[uuid.UUID]*cdbm.IpxeTemplate{}
-	for i := range existingTemplates {
-		existingByTemplateID[existingTemplates[i].TemplateID] = &existingTemplates[i]
+	// Map existing ITSAs by template ID for quick lookup.
+	existingITSAByTemplateID := map[uuid.UUID]*cdbm.IpxeTemplateSiteAssociation{}
+	for i := range existingITSAs {
+		existingITSAByTemplateID[existingITSAs[i].IpxeTemplateID] = &existingITSAs[i]
 	}
 
-	// Track all template IDs reported by this inventory payload
+	// Track all template IDs reported by this inventory payload (for both
+	// inline templates and the page item-id list, used during paginated runs).
 	reportedTemplateIDs := map[uuid.UUID]bool{}
 
 	if inventory.InventoryPage != nil {
@@ -125,24 +136,17 @@ func (mit ManageIpxeTemplate) UpdateIpxeTemplatesInDB(ctx context.Context, siteI
 		reportedTemplateIDs[templateID] = true
 		reportedScope := ipxeScopeToString(reported.Scope)
 
-		cur, found := existingByTemplateID[templateID]
-		if !found {
-			// Cross-site name consistency check: if any other site already has a
-			// template with the same ID but a different name, skip this entry.
-			existing, gerr := templateDAO.GetAnyByTemplateID(ctx, nil, templateID)
-			if gerr == nil && existing != nil && existing.Name != reported.Name {
-				logger.Error().
-					Str("TemplateID", templateID.String()).
-					Str("ReportedName", reported.Name).
-					Str("ExistingName", existing.Name).
-					Str("ExistingSiteID", existing.SiteID.String()).
-					Msg("Template ID reused with different name across sites, skipping")
-				continue
-			}
+		// Look up the global template row (if any).
+		globalTmpl, getErr := templateDAO.Get(ctx, nil, templateID)
+		if getErr != nil && !errors.Is(getErr, cdb.ErrDoesNotExist) {
+			logger.Error().Err(getErr).Str("Name", reported.Name).Msg("Failed to look up global iPXE template")
+			return fmt.Errorf("failed to look up iPXE template %q: %w", reported.Name, getErr)
+		}
 
+		if globalTmpl == nil {
+			// First sighting of this template across all sites — create it.
 			input := cdbm.IpxeTemplateCreateInput{
-				TemplateID:        templateID,
-				SiteID:            siteID,
+				ID:                templateID,
 				Name:              reported.Name,
 				Template:          reported.Template,
 				RequiredParams:    reported.RequiredParams,
@@ -154,17 +158,23 @@ func (mit ManageIpxeTemplate) UpdateIpxeTemplatesInDB(ctx context.Context, siteI
 				logger.Error().Err(cerr).Str("Name", reported.Name).Msg("Failed to create iPXE template in DB")
 				return fmt.Errorf("failed to create iPXE template %q: %w", reported.Name, cerr)
 			}
+		} else if globalTmpl.Name != reported.Name {
+			// Cross-site name conflict: a template with the same ID is already
+			// known under a different name. Keep the existing name (first
+			// writer wins) and skip both the field update and the ITSA upsert.
+			logger.Error().
+				Str("TemplateID", templateID.String()).
+				Str("ReportedName", reported.Name).
+				Str("ExistingName", globalTmpl.Name).
+				Msg("Template ID reused with different name, skipping")
 			continue
-		}
-
-		if cur.Name != reported.Name ||
-			cur.Scope != reportedScope ||
-			cur.Template != reported.Template ||
-			!reflect.DeepEqual(cur.RequiredParams, reported.RequiredParams) ||
-			!reflect.DeepEqual(cur.ReservedParams, reported.ReservedParams) ||
-			!reflect.DeepEqual(cur.RequiredArtifacts, reported.RequiredArtifacts) {
+		} else if globalTmpl.Scope != reportedScope ||
+			globalTmpl.Template != reported.Template ||
+			!reflect.DeepEqual(globalTmpl.RequiredParams, reported.RequiredParams) ||
+			!reflect.DeepEqual(globalTmpl.ReservedParams, reported.ReservedParams) ||
+			!reflect.DeepEqual(globalTmpl.RequiredArtifacts, reported.RequiredArtifacts) {
 			input := cdbm.IpxeTemplateUpdateInput{
-				IpxeTemplateID:    cur.ID,
+				IpxeTemplateID:    globalTmpl.ID,
 				Name:              reported.Name,
 				Template:          reported.Template,
 				RequiredParams:    reported.RequiredParams,
@@ -177,19 +187,56 @@ func (mit ManageIpxeTemplate) UpdateIpxeTemplatesInDB(ctx context.Context, siteI
 				return fmt.Errorf("failed to update iPXE template %q: %w", reported.Name, uerr)
 			}
 		}
+
+		// Ensure an ITSA exists for (template, site).
+		if _, present := existingITSAByTemplateID[templateID]; !present {
+			if _, cerr := itsaDAO.Create(ctx, nil, cdbm.IpxeTemplateSiteAssociationCreateInput{
+				IpxeTemplateID: templateID,
+				SiteID:         siteID,
+			}); cerr != nil {
+				logger.Error().Err(cerr).Str("Name", reported.Name).Msg("Failed to create iPXE template site association")
+				return fmt.Errorf("failed to associate iPXE template %q with site: %w", reported.Name, cerr)
+			}
+		}
 	}
 
-	// Delete any templates present in DB but no longer reported by the Site Controller.
+	// Reconcile deletions only on the final page of an inventory run.
 	if inventory.InventoryPage == nil || inventory.InventoryPage.TotalPages == 0 ||
 		inventory.InventoryPage.CurrentPage == inventory.InventoryPage.TotalPages {
-		for _, existing := range existingTemplates {
-			if reportedTemplateIDs[existing.TemplateID] {
+		for _, existing := range existingITSAs {
+			if reportedTemplateIDs[existing.IpxeTemplateID] {
 				continue
 			}
-			logger.Info().Str("Name", existing.Name).Str("TemplateID", existing.TemplateID.String()).Msg("Deleting iPXE template from DB since it was no longer reported by Site Controller")
-			if derr := templateDAO.Delete(ctx, nil, existing.ID); derr != nil {
-				logger.Error().Err(derr).Str("Name", existing.Name).Msg("Failed to delete iPXE template from DB")
-				return fmt.Errorf("failed to delete iPXE template %q: %w", existing.Name, derr)
+			templateName := ""
+			if existing.IpxeTemplate != nil {
+				templateName = existing.IpxeTemplate.Name
+			}
+			logger.Info().
+				Str("Name", templateName).
+				Str("TemplateID", existing.IpxeTemplateID.String()).
+				Msg("Removing iPXE template site association since it is no longer reported by Site Controller")
+			if derr := itsaDAO.Delete(ctx, nil, existing.ID); derr != nil {
+				logger.Error().Err(derr).Str("Name", templateName).Msg("Failed to delete iPXE template site association from DB")
+				return fmt.Errorf("failed to delete iPXE template site association for %q: %w", templateName, derr)
+			}
+
+			// If no other site references this template anymore, hard-delete
+			// the global template row.
+			_, count, gerr := itsaDAO.GetAll(ctx, nil,
+				cdbm.IpxeTemplateSiteAssociationFilterInput{IpxeTemplateIDs: []uuid.UUID{existing.IpxeTemplateID}},
+				cdbp.PageInput{Limit: cdb.GetIntPtr(1)},
+				nil,
+			)
+			if gerr != nil {
+				logger.Error().Err(gerr).Str("TemplateID", existing.IpxeTemplateID.String()).
+					Msg("Failed to count remaining site associations for iPXE template")
+				return fmt.Errorf("failed to count site associations for iPXE template %q: %w", templateName, gerr)
+			}
+			if count == 0 {
+				if derr := templateDAO.Delete(ctx, nil, existing.IpxeTemplateID); derr != nil {
+					logger.Error().Err(derr).Str("Name", templateName).Msg("Failed to delete global iPXE template from DB")
+					return fmt.Errorf("failed to delete iPXE template %q: %w", templateName, derr)
+				}
 			}
 		}
 	}

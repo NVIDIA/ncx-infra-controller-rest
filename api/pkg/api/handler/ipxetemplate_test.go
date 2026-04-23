@@ -47,11 +47,16 @@ func testIpxeTemplateInitDB(t *testing.T) *cdb.Session {
 func testIpxeTemplateHandlerSetupSchema(t *testing.T, dbSession *cdb.Session) {
 	ctx := context.Background()
 
-	assert.Nil(t, dbSession.DB.ResetModel(ctx, (*cdbm.TenantSite)(nil)))
-	assert.Nil(t, dbSession.DB.ResetModel(ctx, (*cdbm.IpxeTemplate)(nil)))
-	assert.Nil(t, dbSession.DB.ResetModel(ctx, (*cdbm.Tenant)(nil)))
-	assert.Nil(t, dbSession.DB.ResetModel(ctx, (*cdbm.Site)(nil)))
+	// Reset parent tables before any table whose CREATE references them via
+	// foreign keys. Order: providers first, then sites/tenants, then the
+	// global ipxe_template table, then the association tables that reference
+	// ipxe_template/site/tenant.
 	assert.Nil(t, dbSession.DB.ResetModel(ctx, (*cdbm.InfrastructureProvider)(nil)))
+	assert.Nil(t, dbSession.DB.ResetModel(ctx, (*cdbm.Site)(nil)))
+	assert.Nil(t, dbSession.DB.ResetModel(ctx, (*cdbm.Tenant)(nil)))
+	assert.Nil(t, dbSession.DB.ResetModel(ctx, (*cdbm.IpxeTemplate)(nil)))
+	assert.Nil(t, dbSession.DB.ResetModel(ctx, (*cdbm.IpxeTemplateSiteAssociation)(nil)))
+	assert.Nil(t, dbSession.DB.ResetModel(ctx, (*cdbm.TenantSite)(nil)))
 }
 
 type ipxeTemplateTestFixture struct {
@@ -59,6 +64,17 @@ type ipxeTemplateTestFixture struct {
 	site  *cdbm.Site
 	tmpl1 *cdbm.IpxeTemplate
 	tmpl2 *cdbm.IpxeTemplate
+}
+
+// associateTemplate creates an IpxeTemplateSiteAssociation row linking the
+// global template to the given site.
+func associateTemplate(t *testing.T, dbSession *cdb.Session, templateID, siteID uuid.UUID) {
+	itsaDAO := cdbm.NewIpxeTemplateSiteAssociationDAO(dbSession)
+	_, err := itsaDAO.Create(context.Background(), nil, cdbm.IpxeTemplateSiteAssociationCreateInput{
+		IpxeTemplateID: templateID,
+		SiteID:         siteID,
+	})
+	assert.Nil(t, err)
 }
 
 func testIpxeTemplateSetupTestData(t *testing.T, dbSession *cdb.Session, org string) *ipxeTemplateTestFixture {
@@ -85,16 +101,18 @@ func testIpxeTemplateSetupTestData(t *testing.T, dbSession *cdb.Session, org str
 	dao := cdbm.NewIpxeTemplateDAO(dbSession)
 
 	tmpl1, err := dao.Create(ctx, nil, cdbm.IpxeTemplateCreateInput{
-		TemplateID: uuid.New(), SiteID: site.ID, Name: "kernel-initrd", Scope: cdbm.IpxeTemplateScopePublic,
+		ID: uuid.New(), Name: "kernel-initrd", Scope: cdbm.IpxeTemplateScopePublic,
 		RequiredParams: []string{"kernel_params"}, ReservedParams: []string{"base_url"}, RequiredArtifacts: []string{"kernel"},
 	})
 	assert.Nil(t, err)
+	associateTemplate(t, dbSession, tmpl1.ID, site.ID)
 
 	tmpl2, err := dao.Create(ctx, nil, cdbm.IpxeTemplateCreateInput{
-		TemplateID: uuid.New(), SiteID: site.ID, Name: "ubuntu-autoinstall", Scope: cdbm.IpxeTemplateScopePublic,
+		ID: uuid.New(), Name: "ubuntu-autoinstall", Scope: cdbm.IpxeTemplateScopePublic,
 		RequiredParams: []string{}, ReservedParams: []string{}, RequiredArtifacts: []string{"iso"},
 	})
 	assert.Nil(t, err)
+	associateTemplate(t, dbSession, tmpl2.ID, site.ID)
 
 	return &ipxeTemplateTestFixture{ip: ip, site: site, tmpl1: tmpl1, tmpl2: tmpl2}
 }
@@ -167,19 +185,17 @@ func TestGetAllIpxeTemplateHandler_Handle(t *testing.T) {
 	_, err = dbSession.DB.NewInsert().Model(unmanagedSite).Exec(ctx)
 	assert.Nil(t, err)
 
-	// Second provider-owned site with its own (Internal) template, to exercise the
+	// Second provider-owned site with its own template, to exercise the
 	// "omitted siteId", multi-siteId, and per-site tenant-association paths.
 	site2 := &cdbm.Site{ID: uuid.New(), Name: "test-site-2", Org: org, InfrastructureProviderID: fix.ip.ID, Status: cdbm.SiteStatusRegistered}
 	_, err = dbSession.DB.NewInsert().Model(site2).Exec(ctx)
 	assert.Nil(t, err)
 
-	// The sync workflow only propagates Public templates into REST, so all stored
-	// rows are Public. We keep a second site with its own template purely to
-	// exercise omitted-/multi-siteId and per-site tenant-association paths.
 	tmpl3, err := cdbm.NewIpxeTemplateDAO(dbSession).Create(ctx, nil, cdbm.IpxeTemplateCreateInput{
-		TemplateID: uuid.New(), SiteID: site2.ID, Name: "site2-public", Scope: cdbm.IpxeTemplateScopePublic,
+		ID: uuid.New(), Name: "site2-public", Scope: cdbm.IpxeTemplateScopePublic,
 	})
 	assert.Nil(t, err)
+	associateTemplate(t, dbSession, tmpl3.ID, site2.ID)
 
 	// Tenant with a TenantSite association to fix.site only (not site2).
 	tenantOrg := "test-tenant-org"
@@ -201,8 +217,7 @@ func TestGetAllIpxeTemplateHandler_Handle(t *testing.T) {
 	_, err = dbSession.DB.NewInsert().Model(tenantSiteNonPriv).Exec(ctx)
 	assert.Nil(t, err)
 
-	// Tenant with a TenantSite to fix.site AND site2 — exercises the multi-site
-	// tenant path (should see Public templates from both sites).
+	// Tenant with TenantSite to fix.site AND site2.
 	tenantOrgTwoSites := "test-tenant-two-sites"
 	tenantTwoSites := &cdbm.Tenant{ID: uuid.New(), Name: "two-sites-tenant", Org: tenantOrgTwoSites, Config: &cdbm.TenantConfig{}}
 	_, err = dbSession.DB.NewInsert().Model(tenantTwoSites).Exec(ctx)
@@ -216,22 +231,18 @@ func TestGetAllIpxeTemplateHandler_Handle(t *testing.T) {
 	_, err = dbSession.DB.NewInsert().Model(tenantSiteTwoB).Exec(ctx)
 	assert.Nil(t, err)
 
-	// Tenant without any TenantSite association (no site access).
+	// Tenant without any TenantSite association.
 	tenantOrgNoCapability := "test-tenant-no-capability"
 	tenantWithoutCapability := &cdbm.Tenant{ID: uuid.New(), Name: "no-cap-tenant", Org: tenantOrgNoCapability, Config: &cdbm.TenantConfig{TargetedInstanceCreation: false}}
 	_, err = dbSession.DB.NewInsert().Model(tenantWithoutCapability).Exec(ctx)
 	assert.Nil(t, err)
 
-	// Tenant with capability but no TenantSite.
 	tenantOrgNoAccount := "test-tenant-no-site"
 	tenantWithoutAccount := &cdbm.Tenant{ID: uuid.New(), Name: "no-site-tenant", Org: tenantOrgNoAccount, Config: &cdbm.TenantConfig{TargetedInstanceCreation: true}}
 	_, err = dbSession.DB.NewInsert().Model(tenantWithoutAccount).Exec(ctx)
 	assert.Nil(t, err)
 
-	// Mixed-role org: has both a provider (different from fix.ip) and a tenant
-	// with a TenantSite association to fix.site. A mixed-role user in this org
-	// should fail the provider check (site belongs to fix.ip, not mixedIP) but
-	// pass via the tenant path.
+	// Mixed-role org.
 	mixedOrg := "mixed-role-org"
 	mixedIP := &cdbm.InfrastructureProvider{ID: uuid.New(), Name: "mixed-provider", Org: mixedOrg}
 	_, err = dbSession.DB.NewInsert().Model(mixedIP).Exec(ctx)
@@ -261,7 +272,7 @@ func TestGetAllIpxeTemplateHandler_Handle(t *testing.T) {
 		checkResponseContent func(t *testing.T, body []byte)
 	}{
 		{
-			name:    "omitted siteId returns all templates for provider's sites",
+			name:    "omitted siteId returns all templates available at provider's sites",
 			siteIDs: nil,
 			setupContext: func(c echo.Context) {
 				c.Set("user", createIpxeTemplateMockUser(org))
@@ -341,9 +352,12 @@ func TestGetAllIpxeTemplateHandler_Handle(t *testing.T) {
 				var response []*model.APIIpxeTemplate
 				assert.Nil(t, json.Unmarshal(body, &response))
 				assert.Len(t, response, 2)
+				ids := map[string]bool{}
 				for _, tmpl := range response {
-					assert.Equal(t, fix.site.ID.String(), tmpl.SiteID)
+					ids[tmpl.ID] = true
 				}
+				assert.True(t, ids[fix.tmpl1.ID.String()])
+				assert.True(t, ids[fix.tmpl2.ID.String()])
 			},
 		},
 		{
@@ -430,9 +444,6 @@ func TestGetAllIpxeTemplateHandler_Handle(t *testing.T) {
 				assert.Len(t, response, 2)
 			},
 		},
-		// Per-site scoping: a tenant associated with fix.site (but not site2) must
-		// not receive templates from site2, even though both sites belong to the
-		// same provider. This is the bug the TenantSite-based scoping fixes.
 		{
 			name:    "tenant associated with one site cannot access sibling site on same provider",
 			siteIDs: []string{site2.ID.String()},
@@ -518,9 +529,10 @@ func TestGetIpxeTemplateHandler_Handle(t *testing.T) {
 	assert.Nil(t, err)
 
 	unmanagedTmpl, err := cdbm.NewIpxeTemplateDAO(dbSession).Create(ctx, nil, cdbm.IpxeTemplateCreateInput{
-		TemplateID: uuid.New(), SiteID: unmanagedSite.ID, Name: "unmanaged-tmpl", Scope: cdbm.IpxeTemplateScopePublic,
+		ID: uuid.New(), Name: "unmanaged-tmpl", Scope: cdbm.IpxeTemplateScopePublic,
 	})
 	assert.Nil(t, err)
+	associateTemplate(t, dbSession, unmanagedTmpl.ID, unmanagedSite.ID)
 
 	// Tenant with a TenantSite association to fix.site.
 	tenantOrg := "test-tenant-org"
@@ -548,7 +560,6 @@ func TestGetIpxeTemplateHandler_Handle(t *testing.T) {
 	_, err = dbSession.DB.NewInsert().Model(tenantWithoutCapability).Exec(ctx)
 	assert.Nil(t, err)
 
-	// Tenant with capability but no TenantSite.
 	tenantOrgNoAccount := "test-tenant-no-site-get"
 	tenantWithoutAccount := &cdbm.Tenant{ID: uuid.New(), Name: "no-site-tenant-get", Org: tenantOrgNoAccount, Config: &cdbm.TenantConfig{TargetedInstanceCreation: true}}
 	_, err = dbSession.DB.NewInsert().Model(tenantWithoutAccount).Exec(ctx)
@@ -577,33 +588,29 @@ func TestGetIpxeTemplateHandler_Handle(t *testing.T) {
 	tests := []struct {
 		name                 string
 		templateID           string
-		siteID               string
 		setupContext         func(c echo.Context)
 		expectedStatus       int
 		checkResponseContent func(t *testing.T, body []byte)
 	}{
 		{
 			name:       "successful retrieval",
-			templateID: fix.tmpl1.TemplateID.String(),
-			siteID:     fix.site.ID.String(),
+			templateID: fix.tmpl1.ID.String(),
 			setupContext: func(c echo.Context) {
 				c.Set("user", createIpxeTemplateMockUser(org))
 				c.SetParamNames("orgName", "id")
-				c.SetParamValues(org, fix.tmpl1.TemplateID.String())
+				c.SetParamValues(org, fix.tmpl1.ID.String())
 			},
 			expectedStatus: http.StatusOK,
 			checkResponseContent: func(t *testing.T, body []byte) {
 				var response model.APIIpxeTemplate
 				assert.Nil(t, json.Unmarshal(body, &response))
-				assert.Equal(t, fix.tmpl1.TemplateID.String(), response.ID)
-				assert.Equal(t, fix.site.ID.String(), response.SiteID)
+				assert.Equal(t, fix.tmpl1.ID.String(), response.ID)
 				assert.Equal(t, "kernel-initrd", response.Name)
 			},
 		},
 		{
 			name:       "template not found",
 			templateID: uuid.New().String(),
-			siteID:     fix.site.ID.String(),
 			setupContext: func(c echo.Context) {
 				c.Set("user", createIpxeTemplateMockUser(org))
 				c.SetParamNames("orgName", "id")
@@ -623,12 +630,11 @@ func TestGetIpxeTemplateHandler_Handle(t *testing.T) {
 		},
 		{
 			name:       "cannot retrieve from unmanaged site",
-			templateID: unmanagedTmpl.TemplateID.String(),
-			siteID:     unmanagedSite.ID.String(),
+			templateID: unmanagedTmpl.ID.String(),
 			setupContext: func(c echo.Context) {
 				c.Set("user", createIpxeTemplateMockUser(org))
 				c.SetParamNames("orgName", "id")
-				c.SetParamValues(org, unmanagedTmpl.TemplateID.String())
+				c.SetParamValues(org, unmanagedTmpl.ID.String())
 			},
 			expectedStatus: http.StatusForbidden,
 		},
@@ -643,72 +649,67 @@ func TestGetIpxeTemplateHandler_Handle(t *testing.T) {
 		},
 		{
 			name:       "tenant with TenantSite can retrieve template",
-			templateID: fix.tmpl1.TemplateID.String(),
-			siteID:     fix.site.ID.String(),
+			templateID: fix.tmpl1.ID.String(),
 			setupContext: func(c echo.Context) {
 				c.Set("user", createIpxeTemplateTenantMockUser(tenantOrg))
 				c.SetParamNames("orgName", "id")
-				c.SetParamValues(tenantOrg, fix.tmpl1.TemplateID.String())
+				c.SetParamValues(tenantOrg, fix.tmpl1.ID.String())
 			},
 			expectedStatus: http.StatusOK,
 			checkResponseContent: func(t *testing.T, body []byte) {
 				var response model.APIIpxeTemplate
 				assert.Nil(t, json.Unmarshal(body, &response))
-				assert.Equal(t, fix.tmpl1.TemplateID.String(), response.ID)
+				assert.Equal(t, fix.tmpl1.ID.String(), response.ID)
 			},
 		},
 		{
 			name:       "non-privileged tenant with TenantSite can retrieve template",
-			templateID: fix.tmpl1.TemplateID.String(),
-			siteID:     fix.site.ID.String(),
+			templateID: fix.tmpl1.ID.String(),
 			setupContext: func(c echo.Context) {
 				c.Set("user", createIpxeTemplateTenantMockUser(tenantOrgNonPrivGet))
 				c.SetParamNames("orgName", "id")
-				c.SetParamValues(tenantOrgNonPrivGet, fix.tmpl1.TemplateID.String())
+				c.SetParamValues(tenantOrgNonPrivGet, fix.tmpl1.ID.String())
 			},
 			expectedStatus: http.StatusOK,
 			checkResponseContent: func(t *testing.T, body []byte) {
 				var response model.APIIpxeTemplate
 				assert.Nil(t, json.Unmarshal(body, &response))
-				assert.Equal(t, fix.tmpl1.TemplateID.String(), response.ID)
+				assert.Equal(t, fix.tmpl1.ID.String(), response.ID)
 			},
 		},
 		{
 			name:       "tenant without TenantSite is denied",
-			templateID: fix.tmpl1.TemplateID.String(),
-			siteID:     fix.site.ID.String(),
+			templateID: fix.tmpl1.ID.String(),
 			setupContext: func(c echo.Context) {
 				c.Set("user", createIpxeTemplateTenantMockUser(tenantOrgNoCapability))
 				c.SetParamNames("orgName", "id")
-				c.SetParamValues(tenantOrgNoCapability, fix.tmpl1.TemplateID.String())
+				c.SetParamValues(tenantOrgNoCapability, fix.tmpl1.ID.String())
 			},
 			expectedStatus: http.StatusForbidden,
 		},
 		{
 			name:       "tenant without TenantSite on requested site is denied",
-			templateID: fix.tmpl1.TemplateID.String(),
-			siteID:     fix.site.ID.String(),
+			templateID: fix.tmpl1.ID.String(),
 			setupContext: func(c echo.Context) {
 				c.Set("user", createIpxeTemplateTenantMockUser(tenantOrgNoAccount))
 				c.SetParamNames("orgName", "id")
-				c.SetParamValues(tenantOrgNoAccount, fix.tmpl1.TemplateID.String())
+				c.SetParamValues(tenantOrgNoAccount, fix.tmpl1.ID.String())
 			},
 			expectedStatus: http.StatusForbidden,
 		},
 		{
 			name:       "mixed-role user fails provider check but passes tenant authorization",
-			templateID: fix.tmpl1.TemplateID.String(),
-			siteID:     fix.site.ID.String(),
+			templateID: fix.tmpl1.ID.String(),
 			setupContext: func(c echo.Context) {
 				c.Set("user", createIpxeTemplateMixedRoleMockUser(mixedOrg))
 				c.SetParamNames("orgName", "id")
-				c.SetParamValues(mixedOrg, fix.tmpl1.TemplateID.String())
+				c.SetParamValues(mixedOrg, fix.tmpl1.ID.String())
 			},
 			expectedStatus: http.StatusOK,
 			checkResponseContent: func(t *testing.T, body []byte) {
 				var response model.APIIpxeTemplate
 				assert.Nil(t, json.Unmarshal(body, &response))
-				assert.Equal(t, fix.tmpl1.TemplateID.String(), response.ID)
+				assert.Equal(t, fix.tmpl1.ID.String(), response.ID)
 			},
 		},
 	}
@@ -716,9 +717,6 @@ func TestGetIpxeTemplateHandler_Handle(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			url := "/v2/org/" + org + "/carbide/ipxe-template/" + tt.templateID
-			if tt.siteID != "" {
-				url += "?siteId=" + tt.siteID
-			}
 			req := httptest.NewRequest(http.MethodGet, url, nil)
 			req = req.WithContext(context.Background())
 			rec := httptest.NewRecorder()

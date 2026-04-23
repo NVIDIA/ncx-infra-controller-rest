@@ -534,8 +534,8 @@ func (mod ManageOperatingSystemSync) UpdateOperatingSystemsInDB(ctx context.Cont
 						Msg("invalid iPXE template UUID in OS definition")
 					return parseErr
 				}
-				ipxeTmplDAO := cdbm.NewIpxeTemplateDAO(mod.dbSession)
-				if _, tmplErr := ipxeTmplDAO.GetBySiteAndTemplateID(ctx, nil, siteID, tmplUUID); tmplErr != nil {
+				itsaDAO := cdbm.NewIpxeTemplateSiteAssociationDAO(mod.dbSession)
+				if _, tmplErr := itsaDAO.GetByIpxeTemplateIDAndSiteID(ctx, nil, tmplUUID, siteID, nil); tmplErr != nil {
 					if errors.Is(tmplErr, cdb.ErrDoesNotExist) {
 						logger.Warn().Str("ID", osID.String()).Str("TemplateId", reported.IpxeTemplateId.Value).
 							Msg("iPXE template not available at site, skipping OS creation")

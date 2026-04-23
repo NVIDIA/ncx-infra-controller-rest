@@ -459,13 +459,14 @@ func (cah CreateAllocationHandler) Handle(c echo.Context) error {
 			logger.Info().Str("Workflow ID", we.GetID()).Msg("triggered workflow to create Tenant")
 		}
 
-		// Auto-associate tenant-owned Global-scoped raw iPXE OSes with the new site.
-		// This mirrors the provider-side auto-expansion in the Site create handler.
+		// Auto-associate tenant-owned Global-scoped iPXE OSes (both raw and
+		// Templated) with the new site. This mirrors the provider-side
+		// auto-expansion in the Site create handler.
 		globalTenantOSes, _, goserr := cdbm.NewOperatingSystemDAO(cah.dbSession).GetAll(
 			ctx, tx,
 			cdbm.OperatingSystemFilterInput{
 				TenantIDs: []uuid.UUID{tenant.ID},
-				OsTypes:   []string{cdbm.OperatingSystemTypeIPXE},
+				OsTypes:   []string{cdbm.OperatingSystemTypeIPXE, cdbm.OperatingSystemTypeTemplatedIPXE},
 				Scopes:    []string{cdbm.OperatingSystemScopeGlobal},
 			},
 			cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)},

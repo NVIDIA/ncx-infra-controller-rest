@@ -8269,7 +8269,6 @@ paths:
                 example-1:
                   value:
                     - id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
-                      siteId: 4b36152c-f48d-4bcc-a722-0fd8e2ad209a
                       name: ubuntu-autoinstall
                       template: |-
                         #!ipxe
@@ -8300,12 +8299,12 @@ paths:
           $ref: '#/components/responses/ForbiddenError'
       operationId: get-all-ipxe-template
       description: |-
-        Retrieve all iPXE templates propagated from bare-metal-manager-core. Templates are propagated one-way from core and are read-only.
+        Retrieve all iPXE templates propagated from bare-metal-manager-core. Templates are global — the `id` is the same UUID used by core across all sites — and are read-only from this service.
 
-        The `siteId` query parameter is optional and may be repeated to filter by one or more sites. When omitted, the caller receives templates for every site they are authorized to see:
+        The `siteId` query parameter is optional and may be repeated to restrict results to templates that are currently available at one or more specific sites. When omitted, the caller receives every template available at any site they are authorized to see:
 
-        * Provider Admins/Viewers: templates for every site owned by their infrastructure provider.
-        * Tenant Admins: templates for every site the tenant is associated with via a Tenant/Site association.
+        * Provider Admins/Viewers: templates available at any site owned by their infrastructure provider.
+        * Tenant Admins: templates available at any site the tenant is associated with via a Tenant/Site association.
 
         When `siteId` is provided, every requested site must be authorized for the caller.
 
@@ -8378,7 +8377,6 @@ paths:
                 example-1:
                   value:
                     id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
-                    siteId: 4b36152c-f48d-4bcc-a722-0fd8e2ad209a
                     name: ubuntu-autoinstall
                     template: |-
                       #!ipxe
@@ -8403,7 +8401,7 @@ paths:
           $ref: '#/components/responses/NotFoundError'
       operationId: get-ipxe-template
       description: |-
-        Retrieve an iPXE template by ID.
+        Retrieve a global iPXE template by ID. The caller must be authorized at at least one site where this template is currently available (i.e. the caller must be the provider/owner or an authorized tenant at one of the sites the template has been reported from).
 
         Provider Admins/Viewers can access templates for their provider's sites. Tenant Admins can access templates for sites the tenant is associated with via a Tenant/Site association.
   '/v2/org/{org}/carbide/machine':
@@ -14637,7 +14635,7 @@ components:
           type:
             - string
             - 'null'
-          description: 'Synchronization scope. Required for Templated iPXE OS created by Provider Admin (when ipxeTemplateId is specified); must not be set for other types. Raw iPXE OS scope is auto-set to Global. Image OS scope is always nil'
+          description: 'Synchronization scope. Required for Templated iPXE OS created by Provider Admin (when ipxeTemplateId is specified). For Raw iPXE OS, only "Global" or unspecified is accepted; the handler always normalizes raw iPXE to Global. Must not be set for Image OS (always nil).'
           enum:
             - Global
             - Limited
@@ -14871,20 +14869,16 @@ components:
     IpxeTemplate:
       title: IpxeTemplate
       type: object
-      description: An iPXE boot template that can be used to create template-based Operating System definitions
+      description: An iPXE boot template that can be used to create template-based Operating System definitions. Templates are global across REST and are propagated (read-only) from bare-metal-manager-core.
       properties:
         id:
           type: string
           format: uuid
-          description: Stable template UUID from core, consistent across all sites
+          description: Stable template UUID assigned by core and identical across core and REST
           readOnly: true
-        siteId:
-          type: string
-          format: uuid
-          description: ID of the Site this template was retrieved from
         name:
           type: string
-          description: 'Unique template name (e.g. ubuntu-autoinstall, kernel-initrd)'
+          description: 'Globally unique template name (e.g. ubuntu-autoinstall, kernel-initrd)'
         template:
           type: string
           description: Raw iPXE script content with template variables

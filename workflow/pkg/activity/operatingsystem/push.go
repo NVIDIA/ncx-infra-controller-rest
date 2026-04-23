@@ -386,8 +386,8 @@ func (mop ManageOperatingSystemPush) checkTemplateAvailability(ctx context.Conte
 		logger.Error().Err(parseErr).Str("TemplateId", *os.IpxeTemplateId).Msg("invalid iPXE template UUID")
 		return true
 	}
-	ipxeTmplDAO := cdbm.NewIpxeTemplateDAO(mop.dbSession)
-	_, err := ipxeTmplDAO.GetBySiteAndTemplateID(ctx, nil, siteID, tmplUUID)
+	itsaDAO := cdbm.NewIpxeTemplateSiteAssociationDAO(mop.dbSession)
+	_, err := itsaDAO.GetByIpxeTemplateIDAndSiteID(ctx, nil, tmplUUID, siteID, nil)
 	if err != nil {
 		if errors.Is(err, cdb.ErrDoesNotExist) {
 			logger.Warn().Str("TemplateId", *os.IpxeTemplateId).
