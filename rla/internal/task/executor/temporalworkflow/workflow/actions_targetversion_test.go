@@ -56,10 +56,15 @@ func TestExtractComponentTargetVersion(t *testing.T) {
 			componentType: devicetypes.ComponentTypePowerShelf,
 			expected:      "",
 		},
-		"layered JSON — section is a simple string value": {
+		"layered JSON — string scalar value is unquoted": {
 			rawVersion:    `{"compute":{"bmc":"7.10.30"},"nvlswitch":"2.0.0"}`,
 			componentType: devicetypes.ComponentTypeNVLSwitch,
-			expected:      `"2.0.0"`,
+			expected:      "2.0.0",
+		},
+		"layered JSON — string scalar with escapes is unquoted": {
+			rawVersion:    `{"nvlswitch":"r1.3.9-alpha"}`,
+			componentType: devicetypes.ComponentTypeNVLSwitch,
+			expected:      "r1.3.9-alpha",
 		},
 		"old flat JSON — no known keys, returns as-is for backward compat": {
 			rawVersion:    `{"bmc":"7.10.30","uefi":"2.22.1"}`,

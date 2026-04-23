@@ -620,17 +620,20 @@ var knownComponentTypeKeys = []string{"compute", "nvlswitch", "powershelf"}
 //
 //	{
 //	  "compute":    {"bmc": "7.10.30", "uefi": "2.22.1"},
-//	  "nvlswitch":  {"nvos": "1.2.3", "cpld": "4.5.6"},
-//	  "powershelf": {"firmware": "1.0.0"}
+//	  "nvlswitch":  "1.3.1",
+//	  "powershelf": "r1.3.9"
 //	}
 //
 // If the key for componentType is present, the corresponding value is
-// returned as a raw JSON string. If the key is absent but the document
-// contains another known component-type key (i.e. it IS the layered
-// format), an empty string is returned so the component manager skips
-// the firmware update. If the document does not look like the layered
-// format (no known keys), the original string is returned as-is for
-// backward compatibility with single-component updates.
+// returned. String scalars are unquoted so component managers receive the
+// plain value (e.g. "1.3.1" → 1.3.1); object values are returned as raw
+// JSON for component managers that parse multi-field version payloads.
+// If the key is absent but the document contains another known
+// component-type key (i.e. it IS the layered format), an empty string
+// is returned so the component manager skips the firmware update. If the
+// document does not look like the layered format (no known keys), the
+// original string is returned as-is for backward compatibility with
+// single-component updates.
 func extractComponentTargetVersion(rawVersion string, componentType devicetypes.ComponentType) string {
 	if rawVersion == "" {
 		return ""
@@ -643,6 +646,12 @@ func extractComponentTargetVersion(rawVersion string, componentType devicetypes.
 
 	key := strings.ToLower(devicetypes.ComponentTypeToString(componentType))
 	if section, ok := layered[key]; ok {
+		if len(section) > 0 && section[0] == '"' {
+			var s string
+			if err := json.Unmarshal(section, &s); err == nil {
+				return s
+			}
+		}
 		return string(section)
 	}
 
