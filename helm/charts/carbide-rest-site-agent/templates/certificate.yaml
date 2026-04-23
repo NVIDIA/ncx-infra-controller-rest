@@ -26,7 +26,11 @@ spec:
     - {{ include "carbide-rest-site-agent.name" . }}.{{ include "carbide-rest-site-agent.namespace" . }}
     - {{ include "carbide-rest-site-agent.name" . }}.{{ include "carbide-rest-site-agent.namespace" . }}.svc.cluster.local
   uris:
+    {{- if .Values.certificate.uris }}
+    {{- toYaml .Values.certificate.uris | nindent 4 }}
+    {{- else }}
     - spiffe://carbide.local/{{ include "carbide-rest-site-agent.namespace" . }}/sa/{{ include "carbide-rest-site-agent.name" . }}
+    {{- end }}
   issuerRef:
     name: {{ .Values.global.certificate.issuerRef.name }}
     kind: {{ .Values.global.certificate.issuerRef.kind }}
