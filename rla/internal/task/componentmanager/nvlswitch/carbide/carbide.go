@@ -304,7 +304,10 @@ func (m *Manager) checkFirmwareUpToDate(ctx context.Context, target common.Targe
 }
 
 // getActualFirmwareVersions queries GetComponentInventory for the target
-// switches and extracts firmware_versions from the exploration reports.
+// switches and extracts firmware versions from the exploration reports.
+// report.FirmwareVersions is empty for NVLSwitches (Core's FirmwareConfig
+// only covers host/DPU), so fall back to the raw Redfish FirmwareInventory
+// entries in report.Service[].Inventories[], keyed by Inventory.Id.
 func (m *Manager) getActualFirmwareVersions(ctx context.Context, target common.Target) (map[string]map[string]string, error) {
 	req := &pb.GetComponentInventoryRequest{
 		Target: &pb.GetComponentInventoryRequest_SwitchIds{
@@ -320,12 +323,31 @@ func (m *Manager) getActualFirmwareVersions(ctx context.Context, target common.T
 	result := make(map[string]map[string]string, len(target.ComponentIDs))
 	for _, entry := range resp.GetEntries() {
 		compID := entry.GetResult().GetComponentId()
-		fwVersions := entry.GetReport().GetFirmwareVersions()
+		report := entry.GetReport()
+		fwVersions := report.GetFirmwareVersions()
+		if len(fwVersions) == 0 {
+			fwVersions = extractInventoryVersions(report)
+		}
 		if len(fwVersions) > 0 {
 			result[compID] = fwVersions
 		}
 	}
 	return result, nil
+}
+
+// extractInventoryVersions builds a firmware version map from the raw Redfish
+// FirmwareInventory entries in the exploration report, keyed by Inventory.Id.
+// Entries without a version are skipped.
+func extractInventoryVersions(report *pb.EndpointExplorationReport) map[string]string {
+	out := make(map[string]string)
+	for _, svc := range report.GetService() {
+		for _, inv := range svc.GetInventories() {
+			if v := inv.GetVersion(); v != "" {
+				out[inv.GetId()] = v
+			}
+		}
+	}
+	return out
 }
 
 // VerifyFirmwareConsistency checks that all target switches report the same
