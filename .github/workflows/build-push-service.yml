@@ -100,13 +100,44 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      # Login is needed even when we're not pushing, because the scan build
+      # below may pull private base images from NVCR.
       - name: Login to NVCR
-        if: inputs.push_enabled == true
         uses: docker/login-action@v3
         with:
           registry: nvcr.io
           username: ${{ secrets.NVCR_USERNAME }}
           password: ${{ secrets.NVCR_TOKEN }}
+
+      # Build a local amd64 image and scan it with Grype before pushing
+      # anything to NVCR. Runs on every branch (including PR branches via
+      # copy-pr-bot) so findings surface pre-merge; BuildKit cache should
+      # reduce duplicated work between this build and the main multi-arch
+      # build below.
+      - name: Build amd64 image for Grype scan (load to daemon)
+        id: scan-build
+        continue-on-error: true
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ${{ inputs.dockerfile }}
+          platforms: linux/amd64
+          push: false
+          load: true
+          tags: localbuild/scan-${{ inputs.service_name }}:${{ github.run_id }}-${{ github.run_attempt }}
+          cache-from: type=gha,scope=${{ inputs.service_name }}
+          cache-to: type=gha,mode=max,scope=${{ inputs.service_name }}
+
+      - name: Grype vulnerability scan
+        if: steps.scan-build.outcome == 'success'
+        continue-on-error: true
+        uses: NVIDIA/dsx-github-actions/.github/actions/security-container-scan@be36cb11e170d4fdf4b748bc30dc17cd2158676a
+        with:
+          image: localbuild/scan-${{ inputs.service_name }}:${{ github.run_id }}-${{ github.run_attempt }}
+          fail-on: critical
+          fail-build: 'false'
+          artifact-name: grype-${{ inputs.service_name }}-${{ github.run_id }}-${{ github.run_attempt }}
+          sbom-artifact-name: sbom-${{ inputs.service_name }}-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Determine Docker tags
         id: docker-tags
