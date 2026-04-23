@@ -78,6 +78,7 @@ type ForgeServerImpl struct {
 	em  map[string]*cwssaws.ExpectedMachine
 	eps map[string]*cwssaws.ExpectedPowerShelf
 	es  map[string]*cwssaws.ExpectedSwitch
+	it  map[string]*cwssaws.InstanceType
 	des map[string]*cwssaws.DpuExtensionService
 	osi map[string]*cwssaws.OsImage
 	vpr map[string]*cwssaws.VpcPrefix
@@ -786,6 +787,58 @@ func (f *ForgeServerImpl) FindTenantsByOrganizationIds(ctx context.Context, req 
 	for _, id := range req.OrganizationIds {
 		if obj, ok := f.t[id]; ok {
 			response.Tenants = append(response.Tenants, obj)
+		}
+	}
+	return &response, nil
+}
+
+// FindNVLinkLogicalPartitionIds
+func (f *ForgeServerImpl) FindNVLinkLogicalPartitionIds(ctx context.Context, req *cwssaws.NVLinkLogicalPartitionSearchFilter) (*cwssaws.NVLinkLogicalPartitionIdList, error) {
+	if req == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
+	}
+	response := cwssaws.NVLinkLogicalPartitionIdList{}
+	for id := range f.nvl {
+		response.PartitionIds = append(response.PartitionIds, &cwssaws.NVLinkLogicalPartitionId{Value: id})
+	}
+	return &response, nil
+}
+
+// FindNVLinkLogicalPartitionsByIds implements interface ForgeServer
+func (f *ForgeServerImpl) FindNVLinkLogicalPartitionsByIds(ctx context.Context, req *cwssaws.NVLinkLogicalPartitionsByIdsRequest) (*cwssaws.NVLinkLogicalPartitionList, error) {
+	if req == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
+	}
+	response := cwssaws.NVLinkLogicalPartitionList{}
+	for _, id := range req.PartitionIds {
+		if obj, ok := f.nvl[id.Value]; ok {
+			response.Partitions = append(response.Partitions, obj)
+		}
+	}
+	return &response, nil
+}
+
+// FindInstanceTypeIds implements interface ForgeServer
+func (f *ForgeServerImpl) FindInstanceTypeIds(ctx context.Context, req *cwssaws.FindInstanceTypeIdsRequest) (*cwssaws.FindInstanceTypeIdsResponse, error) {
+	if req == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
+	}
+	response := cwssaws.FindInstanceTypeIdsResponse{}
+	for id := range f.it {
+		response.InstanceTypeIds = append(response.InstanceTypeIds, id)
+	}
+	return &response, nil
+}
+
+// FindInstanceTypesByIds implements interface ForgeServer
+func (f *ForgeServerImpl) FindInstanceTypesByIds(ctx context.Context, req *cwssaws.FindInstanceTypesByIdsRequest) (*cwssaws.FindInstanceTypesByIdsResponse, error) {
+	if req == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
+	}
+	response := cwssaws.FindInstanceTypesByIdsResponse{}
+	for _, id := range req.InstanceTypeIds {
+		if obj, ok := f.it[id]; ok {
+			response.InstanceTypes = append(response.InstanceTypes, obj)
 		}
 	}
 	return &response, nil
