@@ -254,10 +254,6 @@ func executeFirmwareControlAction(actx actionExecutionContext) error {
 			)
 		}
 
-		if err := workflow.Sleep(ctx, pollInterval); err != nil {
-			return fmt.Errorf("workflow sleep interrupted: %w", err)
-		}
-
 		var result activity.GetFirmwareStatusResult
 		err := workflow.ExecuteActivity(
 			ctx, "GetFirmwareStatus", target,
@@ -266,32 +262,35 @@ func executeFirmwareControlAction(actx actionExecutionContext) error {
 			log.Warn().Err(err).
 				Str("target", target.String()).
 				Msg("Failed to get firmware update status, will retry")
-			continue
-		}
-
-		allCompleted := true
-		var failedComponents []string
-		for componentID, status := range result.Statuses {
-			if status.State == operations.FirmwareUpdateStateFailed {
-				failedComponents = append(failedComponents, componentID)
+		} else {
+			allCompleted := true
+			var failedComponents []string
+			for componentID, status := range result.Statuses {
+				if status.State == operations.FirmwareUpdateStateFailed {
+					failedComponents = append(failedComponents, componentID)
+				}
+				if status.State != operations.FirmwareUpdateStateCompleted {
+					allCompleted = false
+				}
 			}
-			if status.State != operations.FirmwareUpdateStateCompleted {
-				allCompleted = false
+
+			if len(failedComponents) > 0 {
+				return fmt.Errorf(
+					"firmware update failed for components: %v", failedComponents,
+				)
+			}
+
+			if allCompleted {
+				log.Info().
+					Str("target", target.String()).
+					Dur("duration", workflow.Now(ctx).Sub(startTime)).
+					Msg("Firmware update completed")
+				return nil
 			}
 		}
 
-		if len(failedComponents) > 0 {
-			return fmt.Errorf(
-				"firmware update failed for components: %v", failedComponents,
-			)
-		}
-
-		if allCompleted {
-			log.Info().
-				Str("target", target.String()).
-				Dur("duration", workflow.Now(ctx).Sub(startTime)).
-				Msg("Firmware update completed")
-			return nil
+		if err := workflow.Sleep(ctx, pollInterval); err != nil {
+			return fmt.Errorf("workflow sleep interrupted: %w", err)
 		}
 	}
 }
