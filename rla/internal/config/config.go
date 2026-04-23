@@ -32,21 +32,19 @@ const defaultLocation = "/etc/rla/rlaconfig.yaml"
 
 // Config is a set of configuration operations that will be read from an environment specific config file
 type Config struct {
-	InventoryRunFrequency     time.Duration `yaml:"inventory_run_frequency"`
-	UpdateMachineIDsFrequency time.Duration `yaml:"update_machine_ids_frequency"`
-	GRPCTimeout               time.Duration `yaml:"grpc_timeout"`
-	DisableInventory          bool          `yaml:"disable_inventory"`
-	LeakDetectionInterval     time.Duration `yaml:"leak_detection_interval"`
-	DisableLeakDetection      bool          `yaml:"disable_leak_detection"`
+	InventoryRunFrequency time.Duration `yaml:"inventory_run_frequency"`
+	GRPCTimeout           time.Duration `yaml:"grpc_timeout"`
+	DisableInventory      bool          `yaml:"disable_inventory"`
+	LeakDetectionInterval time.Duration `yaml:"leak_detection_interval"`
+	DisableLeakDetection  bool          `yaml:"disable_leak_detection"`
 }
 
 // defaultConfig sets up the default values used when something is not specified
 func defaultConfig() Config {
 	return Config{InventoryRunFrequency: time.Minute,
-		GRPCTimeout:               time.Minute,
-		UpdateMachineIDsFrequency: time.Hour,
-		LeakDetectionInterval:     time.Minute,
-		DisableLeakDetection:      false,
+		GRPCTimeout:           time.Minute,
+		LeakDetectionInterval: time.Minute,
+		DisableLeakDetection:  false,
 	}
 }
 
