@@ -1524,7 +1524,11 @@ func allocationConstraintResourceTypes() []SelectItem {
 // api/pkg/api/model/allocationconstraint.go accepts OnDemand and Preemptible
 // as well, but those two are documented as "not supported by current
 // implementation" in the SDK and would turn a normal create flow into a
-// server-side failure path. Add them back here once the backend supports them.
+// server-side failure path.
+//
+// TODO(reenable-on-demand-preemptible): re-enable OnDemand and Preemptible
+// SelectItems once the backend implements them end-to-end (track via the
+// constraint-type validator in api/pkg/api/model/allocationconstraint.go).
 func allocationConstraintTypes() []SelectItem {
 	return []SelectItem{
 		{Label: "Reserved", ID: "Reserved"},
