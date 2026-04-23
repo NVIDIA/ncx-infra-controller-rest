@@ -358,32 +358,35 @@ func verifyPowerStatus(
 		).Get(ctx, &statusMap)
 
 		if actErr == nil {
-			// Check if all components have expected status
 			allMatch := true
+			mismatched := make(map[string]string, len(statusMap))
 			for componentID, status := range statusMap {
 				if status != expected {
-					log.Debug().
-						Str("component_id", componentID).
-						Str("current_status", string(status)).
-						Str("expected_status", string(expected)).
-						Msg("Component status mismatch")
+					mismatched[componentID] = string(status)
 					allMatch = false
-					break
 				}
 			}
 
 			if allMatch {
-				log.Debug().
+				log.Info().
 					Int("attempts", attempt).
 					Int("component_count", len(statusMap)).
 					Str("expected_status", string(expected)).
 					Msg("All components reached expected power status")
 				return nil
 			}
+
+			log.Info().
+				Int("attempt", attempt).
+				Str("expected_status", string(expected)).
+				Int("mismatch_count", len(mismatched)).
+				Interface("mismatched", mismatched).
+				Msg("Power status mismatch, will retry")
 		} else {
-			log.Debug().
+			log.Info().
 				Err(actErr).
 				Int("attempt", attempt).
+				Str("expected_status", string(expected)).
 				Msg("GetPowerStatus failed, will retry")
 		}
 

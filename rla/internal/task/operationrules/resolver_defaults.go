@@ -423,10 +423,13 @@ func buildRestartRule() *OperationRule {
 // buildFirmwareUpgradeRule creates the hardcoded default rule for firmware
 // operations. PowerShelf is excluded — managed out-of-band.
 //
+// Power recycle (to activate flashed firmware) is intentionally not part of
+// this default. Callers that need an AC cycle after the update can either
+// submit a separate power-recycle task or register a custom rule in the
+// operation_rules table.
+//
 //	Stage 1: Compute firmware update
 //	Stage 2: NVLSwitch firmware update
-//	Stage 3: NVLSwitch power recycle (off → sleep → on → verify)
-//	Stage 4: Compute power recycle (off → sleep → on → verify)
 func buildFirmwareUpgradeRule() *OperationRule {
 	return &OperationRule{
 		Name:          "Hardcoded Default Firmware Upgrade",
@@ -471,106 +474,6 @@ func buildFirmwareUpgradeRule() *OperationRule {
 						Parameters: map[string]any{
 							ParamPollInterval: "2m",
 							ParamPollTimeout:  "45m",
-						},
-					},
-				},
-				// === Stage 3: NVLSwitch power recycle ===
-				{
-					ComponentType: devicetypes.ComponentTypeNVLSwitch,
-					Stage:         3,
-					MaxParallel:   0,
-					Timeout:       10 * time.Minute,
-					RetryPolicy: &RetryPolicy{
-						MaxAttempts:        3,
-						InitialInterval:    5 * time.Second,
-						BackoffCoefficient: 2.0,
-					},
-					PreOperation: []ActionConfig{
-						{
-							Name: ActionPowerControl,
-							Parameters: map[string]any{
-								ParamOperation: "force_power_off",
-							},
-						},
-						{
-							Name:         ActionVerifyPowerStatus,
-							Timeout:      5 * time.Minute,
-							PollInterval: 15 * time.Second,
-							Parameters: map[string]any{
-								ParamExpectedStatus: "off",
-							},
-						},
-						{
-							Name: ActionSleep,
-							Parameters: map[string]any{
-								ParamDuration: 10 * time.Second,
-							},
-						},
-					},
-					MainOperation: ActionConfig{
-						Name: ActionPowerControl,
-						Parameters: map[string]any{
-							ParamOperation: "power_on",
-						},
-					},
-					PostOperation: []ActionConfig{
-						{
-							Name:         ActionVerifyPowerStatus,
-							Timeout:      5 * time.Minute,
-							PollInterval: 15 * time.Second,
-							Parameters: map[string]any{
-								ParamExpectedStatus: "on",
-							},
-						},
-					},
-				},
-				// === Stage 4: Compute power recycle ===
-				{
-					ComponentType: devicetypes.ComponentTypeCompute,
-					Stage:         4,
-					MaxParallel:   0,
-					Timeout:       10 * time.Minute,
-					RetryPolicy: &RetryPolicy{
-						MaxAttempts:        3,
-						InitialInterval:    5 * time.Second,
-						BackoffCoefficient: 2.0,
-					},
-					PreOperation: []ActionConfig{
-						{
-							Name: ActionPowerControl,
-							Parameters: map[string]any{
-								ParamOperation: "force_power_off",
-							},
-						},
-						{
-							Name:         ActionVerifyPowerStatus,
-							Timeout:      5 * time.Minute,
-							PollInterval: 15 * time.Second,
-							Parameters: map[string]any{
-								ParamExpectedStatus: "off",
-							},
-						},
-						{
-							Name: ActionSleep,
-							Parameters: map[string]any{
-								ParamDuration: 10 * time.Second,
-							},
-						},
-					},
-					MainOperation: ActionConfig{
-						Name: ActionPowerControl,
-						Parameters: map[string]any{
-							ParamOperation: "power_on",
-						},
-					},
-					PostOperation: []ActionConfig{
-						{
-							Name:         ActionVerifyPowerStatus,
-							Timeout:      5 * time.Minute,
-							PollInterval: 15 * time.Second,
-							Parameters: map[string]any{
-								ParamExpectedStatus: "on",
-							},
 						},
 					},
 				},
