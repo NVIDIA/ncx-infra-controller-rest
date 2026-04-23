@@ -19,36 +19,53 @@ package executor
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/common"
-	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operations"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/task"
 )
 
+// Executor is the engine-agnostic interface for executing tasks. Implementations
+// hide all engine-specific details (Temporal, local, mock) from the task manager.
 type Executor interface {
 	Start(ctx context.Context) error
 	Stop(ctx context.Context) error
 	Type() common.ExecutorType
-	PowerControl(ctx context.Context, req *task.ExecutionRequest, info operations.PowerControlTaskInfo) (*task.ExecutionResponse, error)           //nolint
-	FirmwareControl(ctx context.Context, req *task.ExecutionRequest, info operations.FirmwareControlTaskInfo) (*task.ExecutionResponse, error)     //nolint
-	InjectExpectation(ctx context.Context, req *task.ExecutionRequest, info operations.InjectExpectationTaskInfo) (*task.ExecutionResponse, error) //nolint
-	BringUp(ctx context.Context, req *task.ExecutionRequest, info operations.BringUpTaskInfo) (*task.ExecutionResponse, error)                     //nolint
+	// Execute dispatches a task to the appropriate handler based on
+	// req.Info.OperationType. The operation payload must be pre-serialized
+	// into req.Info.OperationInfo before calling.
+	Execute(ctx context.Context, req *task.ExecutionRequest) (*task.ExecutionResponse, error)
 	CheckStatus(ctx context.Context, executionID string) (common.TaskStatus, error)
 	TerminateTask(ctx context.Context, executionID string, reason string) error
 }
 
+// ExecutorConfig is implemented by engine-specific configuration structs.
+// Build is called once at startup to construct the live Executor.
 type ExecutorConfig interface {
 	Validate() error
-	Build(ctx context.Context) (Executor, error)
+	// Build constructs the Executor. updater receives task status transitions
+	// from the execution engine back to the store. It must not be nil.
+	Build(ctx context.Context, updater task.TaskStatusUpdater) (Executor, error)
 }
 
+// New validates the config and builds the Executor, wiring updater so the
+// engine can report task status changes without importing store packages.
 func New(
 	ctx context.Context,
 	executorConfig ExecutorConfig,
+	updater task.TaskStatusUpdater,
 ) (Executor, error) {
+	if executorConfig == nil {
+		return nil, fmt.Errorf("executor config is required")
+	}
+
 	if err := executorConfig.Validate(); err != nil {
 		return nil, err
 	}
 
-	return executorConfig.Build(ctx)
+	if updater == nil {
+		return nil, fmt.Errorf("task status updater is required")
+	}
+
+	return executorConfig.Build(ctx, updater)
 }

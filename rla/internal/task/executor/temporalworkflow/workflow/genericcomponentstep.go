@@ -28,32 +28,28 @@ import (
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
 )
 
-const (
-	PowerControlWorkflowName      = "PowerControl"
-	FirmwareControlWorkflowName   = "FirmwareControl"
-	InjectExpectationWorkflowName = "InjectExpectation"
-	BringUpWorkflowName           = "BringUp"
-)
+// nameGenericComponentStepWorkflow is the registered Temporal name for
+// genericComponentStepWorkflow. Use this constant when scheduling the child
+// workflow via workflow.ExecuteChildWorkflow.
+const nameGenericComponentStepWorkflow = "GenericComponentStepWorkflow"
 
-func GetAllWorkflows() []any {
-	return []any{
-		PowerControl,
-		FirmwareControl,
-		InjectExpectation,
-		BringUp,
-		GenericComponentStepWorkflow,
-	}
+// init registers genericComponentStepWorkflow with the package registry so it
+// is included in worker registration alongside all task-type workflows.
+func init() {
+	register(WorkflowDescriptor{
+		WorkflowName: nameGenericComponentStepWorkflow,
+		WorkflowFunc: genericComponentStepWorkflow,
+	})
 }
 
-// GenericComponentStepWorkflow is a generic child workflow that handles
-// any operation for a single component type. It processes components in
-// batches according to the step's max_parallel setting. This provides
-// better isolation, visibility, and independent lifecycle per component type.
-func GenericComponentStepWorkflow(
+// genericComponentStepWorkflow is a child workflow that handles any operation
+// for a single component type. It processes components in batches according to
+// the step's max_parallel setting, providing isolation and independent lifecycle
+// per component type.
+func genericComponentStepWorkflow(
 	ctx workflow.Context,
 	step operationrules.SequenceStep,
 	target common.Target,
-	activityName string,
 	activityInfo any,
 	allTargets map[devicetypes.ComponentType]common.Target,
 ) error {
@@ -61,7 +57,6 @@ func GenericComponentStepWorkflow(
 		Str("component_type", devicetypes.ComponentTypeToString(step.ComponentType)).
 		Int("component_count", len(target.ComponentIDs)).
 		Int("max_parallel", step.MaxParallel).
-		Str("activity", activityName).
 		Msg("Component step workflow started")
 
 	// Build activity options from step configuration
@@ -80,7 +75,6 @@ func GenericComponentStepWorkflow(
 
 	// 2. Execute main operation
 	if shouldDo, action := step.DoMainOperation(); shouldDo {
-		// New action-based configuration
 		log.Debug().
 			Str("action", action.Name).
 			Msg("Executing main operation action")
@@ -88,18 +82,7 @@ func GenericComponentStepWorkflow(
 			return fmt.Errorf("main operation failed: %w", err)
 		}
 	} else {
-		// Backward compatibility: use legacy activityName parameter
-		if activityName == "" {
-			return fmt.Errorf(
-				"no main operation configured and no legacy activityName provided",
-			)
-		}
-		log.Debug().
-			Str("activity", activityName).
-			Msg("Executing main operation (legacy)")
-		if err := executeGenericBatchedComponents(ctx, step, target, activityName, activityInfo); err != nil {
-			return fmt.Errorf("main operation (legacy) failed: %w", err)
-		}
+		return fmt.Errorf("step has no main_operation configured")
 	}
 
 	// 3. Execute post-operation actions
@@ -118,7 +101,9 @@ func GenericComponentStepWorkflow(
 			Dur("delay", step.DelayAfter).
 			Str("component_type", devicetypes.ComponentTypeToString(step.ComponentType)).
 			Msg("Applying delay after step (legacy)")
-		workflow.Sleep(ctx, step.DelayAfter)
+		if err := workflow.Sleep(ctx, step.DelayAfter); err != nil {
+			return fmt.Errorf("delay_after sleep interrupted: %w", err)
+		}
 	}
 
 	log.Info().

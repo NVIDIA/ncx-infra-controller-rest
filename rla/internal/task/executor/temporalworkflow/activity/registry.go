@@ -19,24 +19,56 @@ package activity
 
 import (
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/componentmanager"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/task"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
 )
 
-var cmRegistry *componentmanager.Registry
-
-// SetComponentManagerRegistry sets the component manager registry to use for activities.
-// This must be called before using GetComponentManager.
-func SetComponentManagerRegistry(r *componentmanager.Registry) {
-	cmRegistry = r
+// Activities holds the per-manager-instance dependencies for all Temporal
+// activities. Construct one via New and pass its methods to each Temporal
+// worker via RegisterActivityWithOptions. Because each Activities instance is
+// independent, multiple managers can coexist in the same process without
+// sharing mutable state.
+type Activities struct {
+	updater  task.TaskStatusUpdater
+	registry *componentmanager.Registry
 }
 
-// GetComponentManager returns the component manager for the specified type.
-// Returns nil if the registry is not set or no manager is registered for the type.
-func GetComponentManager(
-	typ devicetypes.ComponentType,
-) componentmanager.ComponentManager {
-	if cmRegistry == nil {
+// New creates an Activities instance bound to the given status updater and
+// component manager registry. Either argument may be nil; activity calls that
+// require the missing dependency will return an error at invocation time.
+func New(
+	updater task.TaskStatusUpdater,
+	registry *componentmanager.Registry,
+) *Activities {
+	return &Activities{
+		updater:  updater,
+		registry: registry,
+	}
+}
+
+// All returns a map of Temporal activity name to bound method for worker
+// registration via RegisterActivityWithOptions. Each entry is a bound method
+// that captures this Activities instance, so its dependencies are isolated
+// from other Activities instances.
+func (a *Activities) All() map[string]any {
+	return map[string]any{
+		NameInjectExpectation:         a.InjectExpectation,
+		NamePowerControl:              a.PowerControl,
+		NameGetPowerStatus:            a.GetPowerStatus,
+		NameUpdateTaskStatus:          a.UpdateTaskStatus,
+		NameFirmwareControl:           a.FirmwareControl,
+		NameGetFirmwareStatus:         a.GetFirmwareStatus,
+		NameBringUpControl:            a.BringUpControl,
+		NameGetBringUpStatus:          a.GetBringUpStatus,
+		NameVerifyFirmwareConsistency: a.VerifyFirmwareConsistency,
+	}
+}
+
+// getComponentManager returns the component manager for typ, or nil if no
+// registry is configured or no manager is registered for that type.
+func (a *Activities) getComponentManager(typ devicetypes.ComponentType) componentmanager.ComponentManager {
+	if a.registry == nil {
 		return nil
 	}
-	return cmRegistry.GetManager(typ)
+	return a.registry.GetManager(typ)
 }

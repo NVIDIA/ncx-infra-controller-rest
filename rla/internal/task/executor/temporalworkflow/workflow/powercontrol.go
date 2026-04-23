@@ -23,10 +23,19 @@ import (
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
 
+	taskcommon "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/common"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operations"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/task"
 )
 
+// init registers the PowerControl workflow descriptor with the package registry.
+func init() {
+	registerTaskWorkflow[operations.PowerControlTaskInfo](
+		taskcommon.TaskTypePowerControl, "PowerControl", powerControl,
+	)
+}
+
+// powerControlActivityOptions are the default activity options for power-control workflows.
 var (
 	powerControlActivityOptions = workflow.ActivityOptions{
 		StartToCloseTimeout: 20 * time.Minute,
@@ -39,15 +48,14 @@ var (
 	}
 )
 
-func PowerControl(
+// powerControl orchestrates power state transitions using operation rules.
+func powerControl(
 	ctx workflow.Context,
 	reqInfo task.ExecutionInfo,
-	info operations.PowerControlTaskInfo,
-) (err error) {
-	if len(reqInfo.Components) == 0 {
-		return nil
-	}
-
+	info *operations.PowerControlTaskInfo,
+) error {
+	// Components and operation info are validated by executeWorkflow before
+	// this function is invoked — no need to re-validate here.
 	ctx = workflow.WithActivityOptions(ctx, powerControlActivityOptions)
 
 	if err := updateRunningTaskStatus(ctx, reqInfo.TaskID); err != nil {
@@ -56,10 +64,9 @@ func PowerControl(
 
 	typeToTargets := buildTargets(&reqInfo)
 
-	err = executeRuleBasedOperation(
+	err := executeRuleBasedOperation(
 		ctx,
 		typeToTargets,
-		"PowerControl",
 		info,
 		reqInfo.RuleDefinition,
 	)

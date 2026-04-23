@@ -18,17 +18,25 @@
 package workflow
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/rs/zerolog/log"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
 
+	taskcommon "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/common"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operations"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/task"
 )
 
+// init registers the FirmwareControl workflow descriptor with the package registry.
+func init() {
+	registerTaskWorkflow[operations.FirmwareControlTaskInfo](
+		taskcommon.TaskTypeFirmwareControl, "FirmwareControl", firmwareControl,
+	)
+}
+
+// firmwareControlActivityOptions are the default activity options for firmware-control workflows.
 var firmwareControlActivityOptions = workflow.ActivityOptions{
 	StartToCloseTimeout: 5 * time.Minute,
 	RetryPolicy: &temporal.RetryPolicy{
@@ -39,22 +47,16 @@ var firmwareControlActivityOptions = workflow.ActivityOptions{
 	},
 }
 
-// FirmwareControl orchestrates firmware updates using operation rules.
+// firmwareControl orchestrates firmware updates using operation rules.
 // The execution sequence is driven by the RuleDefinition attached to the
 // task, falling back to a hardcoded default when no custom rule exists.
-func FirmwareControl(
+func firmwareControl(
 	ctx workflow.Context,
 	reqInfo task.ExecutionInfo,
 	info *operations.FirmwareControlTaskInfo,
 ) error {
-	if len(reqInfo.Components) == 0 {
-		return fmt.Errorf("no components provided")
-	}
-
-	if err := info.Validate(); err != nil {
-		return fmt.Errorf("invalid firmware control info: %w", err)
-	}
-
+	// Components and operation info are validated by executeWorkflow before
+	// this function is invoked — no need to re-validate here.
 	ctx = workflow.WithActivityOptions(ctx, firmwareControlActivityOptions)
 
 	if err := updateRunningTaskStatus(ctx, reqInfo.TaskID); err != nil {
@@ -70,7 +72,6 @@ func FirmwareControl(
 	err := executeRuleBasedOperation(
 		ctx,
 		typeToTargets,
-		"FirmwareControl",
 		info,
 		reqInfo.RuleDefinition,
 	)

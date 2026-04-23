@@ -20,8 +20,10 @@ package operationrules
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/common"
 )
@@ -119,6 +121,8 @@ rules:
         stage: 1
         max_parallel: 1
         timeout: 10m
+        main_operation:
+          name: PowerControl
   - name: "Invalid Rule"
     operation_type: power_control
     operation: invalid_op
@@ -127,6 +131,8 @@ rules:
         stage: 1
         max_parallel: 1
         timeout: 10m
+        main_operation:
+          name: PowerControl
 `,
 			wantErrMsg: "invalid operation code 'invalid_op' for operation type 'power_control'",
 		},
@@ -134,29 +140,15 @@ rules:
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create temporary YAML file
-			tmpDir := t.TempDir()
-			yamlPath := filepath.Join(tmpDir, "test-rules.yaml")
-			if err := os.WriteFile(yamlPath, []byte(tt.yamlContent), 0644); err != nil {
-				t.Fatalf("Failed to create test YAML file: %v", err)
-			}
+			yamlPath := filepath.Join(t.TempDir(), "test-rules.yaml")
+			require.NoError(t, os.WriteFile(yamlPath, []byte(tt.yamlContent), 0644))
 
-			// Create loader
 			loader, err := NewYAMLRuleLoader(yamlPath)
-			if err != nil {
-				t.Fatalf("Failed to create YAML loader: %v", err)
-			}
+			require.NoError(t, err)
 
-			// Load rules - should fail
 			_, err = loader.Load()
-			if err == nil {
-				t.Fatal("Expected error but got nil")
-			}
-
-			// Check error message
-			if !strings.Contains(err.Error(), tt.wantErrMsg) {
-				t.Errorf("Expected error containing %q, got %q", tt.wantErrMsg, err.Error())
-			}
+			require.Error(t, err)
+			assert.ErrorContains(t, err, tt.wantErrMsg)
 		})
 	}
 }
@@ -179,6 +171,8 @@ rules:
         stage: 1
         max_parallel: 1
         timeout: 10m
+        main_operation:
+          name: PowerControl
   - name: "Power Off"
     operation_type: power_control
     operation: power_off
@@ -187,6 +181,8 @@ rules:
         stage: 1
         max_parallel: 1
         timeout: 10m
+        main_operation:
+          name: PowerControl
   - name: "Force Restart"
     operation_type: power_control
     operation: force_restart
@@ -195,6 +191,8 @@ rules:
         stage: 1
         max_parallel: 1
         timeout: 10m
+        main_operation:
+          name: PowerControl
 `,
 			wantRules: map[common.TaskType][]string{
 				common.TaskTypePowerControl: {"power_on", "power_off", "force_restart"},
@@ -212,6 +210,8 @@ rules:
         stage: 1
         max_parallel: 1
         timeout: 10m
+        main_operation:
+          name: FirmwareControl
   - name: "Downgrade"
     operation_type: firmware_control
     operation: downgrade
@@ -220,6 +220,8 @@ rules:
         stage: 1
         max_parallel: 1
         timeout: 10m
+        main_operation:
+          name: FirmwareControl
   - name: "Rollback"
     operation_type: firmware_control
     operation: rollback
@@ -228,6 +230,8 @@ rules:
         stage: 1
         max_parallel: 1
         timeout: 10m
+        main_operation:
+          name: FirmwareControl
 `,
 			wantRules: map[common.TaskType][]string{
 				common.TaskTypeFirmwareControl: {"upgrade", "downgrade", "rollback"},
@@ -245,6 +249,8 @@ rules:
         stage: 1
         max_parallel: 1
         timeout: 10m
+        main_operation:
+          name: PowerControl
   - name: "Power Off"
     operation_type: power_control
     operation: power_off
@@ -253,6 +259,8 @@ rules:
         stage: 1
         max_parallel: 1
         timeout: 10m
+        main_operation:
+          name: PowerControl
   - name: "Upgrade"
     operation_type: firmware_control
     operation: upgrade
@@ -261,6 +269,8 @@ rules:
         stage: 1
         max_parallel: 1
         timeout: 10m
+        main_operation:
+          name: FirmwareControl
 `,
 			wantRules: map[common.TaskType][]string{
 				common.TaskTypePowerControl:    {"power_on", "power_off"},
@@ -271,41 +281,21 @@ rules:
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create temporary YAML file
-			tmpDir := t.TempDir()
-			yamlPath := filepath.Join(tmpDir, "test-rules.yaml")
-			if err := os.WriteFile(yamlPath, []byte(tt.yamlContent), 0644); err != nil {
-				t.Fatalf("Failed to create test YAML file: %v", err)
-			}
+			yamlPath := filepath.Join(t.TempDir(), "test-rules.yaml")
+			require.NoError(t, os.WriteFile(yamlPath, []byte(tt.yamlContent), 0644))
 
-			// Create loader
 			loader, err := NewYAMLRuleLoader(yamlPath)
-			if err != nil {
-				t.Fatalf("Failed to create YAML loader: %v", err)
-			}
+			require.NoError(t, err)
 
-			// Load rules - should succeed
 			rules, err := loader.Load()
-			if err != nil {
-				t.Fatalf("Unexpected error: %v", err)
-			}
+			require.NoError(t, err)
 
-			// Verify rules were loaded correctly
 			for opType, expectedOps := range tt.wantRules {
 				typeRules, ok := rules[opType]
-				if !ok {
-					t.Errorf("Expected rules for operation type %v, but none found", opType)
-					continue
-				}
-
-				if len(typeRules) != len(expectedOps) {
-					t.Errorf("Expected %d rules for %v, got %d", len(expectedOps), opType, len(typeRules))
-				}
-
+				require.True(t, ok, "expected rules for operation type %v", opType)
+				assert.Len(t, typeRules, len(expectedOps))
 				for _, opName := range expectedOps {
-					if _, exists := typeRules[opName]; !exists {
-						t.Errorf("Expected rule for operation %q under type %v, but not found", opName, opType)
-					}
+					assert.Contains(t, typeRules, opName, "expected rule for operation %q under type %v", opName, opType)
 				}
 			}
 		})

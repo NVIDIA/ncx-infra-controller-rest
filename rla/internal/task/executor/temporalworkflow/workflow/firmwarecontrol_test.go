@@ -28,6 +28,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/testsuite"
+	temporalworkflow "go.temporal.io/sdk/workflow"
 
 	activitypkg "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor/temporalworkflow/activity"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor/temporalworkflow/common"
@@ -177,22 +178,22 @@ func TestFirmwareControlWorkflow(t *testing.T) {
 			testSuite := &testsuite.WorkflowTestSuite{}
 			env := testSuite.NewTestWorkflowEnvironment()
 
-			env.RegisterWorkflow(GenericComponentStepWorkflow)
+			env.RegisterWorkflowWithOptions(genericComponentStepWorkflow, temporalworkflow.RegisterOptions{Name: nameGenericComponentStepWorkflow})
 
 			env.RegisterActivityWithOptions(mockUpdateTaskStatusForFirmwareControl, activity.RegisterOptions{
-				Name: "UpdateTaskStatus",
+				Name: activitypkg.NameUpdateTaskStatus,
 			})
 			env.RegisterActivityWithOptions(mockFirmwareControl, activity.RegisterOptions{
-				Name: "FirmwareControl",
+				Name: activitypkg.NameFirmwareControl,
 			})
 			env.RegisterActivityWithOptions(mockGetFirmwareStatus, activity.RegisterOptions{
-				Name: "GetFirmwareStatus",
+				Name: activitypkg.NameGetFirmwareStatus,
 			})
 			env.RegisterActivityWithOptions(mockPowerControl, activity.RegisterOptions{
-				Name: "PowerControl",
+				Name: activitypkg.NamePowerControl,
 			})
 			env.RegisterActivityWithOptions(mockGetPowerStatus, activity.RegisterOptions{
-				Name: "GetPowerStatus",
+				Name: activitypkg.NameGetPowerStatus,
 			})
 
 			env.OnActivity(mockUpdateTaskStatusForFirmwareControl, mock.Anything, mock.Anything).Return(nil)
@@ -208,7 +209,7 @@ func TestFirmwareControlWorkflow(t *testing.T) {
 			env.OnActivity(mockGetPowerStatus, mock.Anything, mock.Anything).Return(
 				map[string]operations.PowerStatus{"comp1": operations.PowerStatusOn, "comp2": operations.PowerStatusOn}, nil)
 
-			env.ExecuteWorkflow(FirmwareControl, tc.reqInfo, tc.info)
+			env.ExecuteWorkflow(firmwareControl, tc.reqInfo, tc.info)
 
 			assert.True(t, env.IsWorkflowCompleted())
 
@@ -237,7 +238,7 @@ func TestFirmwareControlWorkflowEmptyComponents(t *testing.T) {
 		EndTime:   now.Add(time.Hour * 2).Unix(),
 	}
 
-	env.ExecuteWorkflow(FirmwareControl, reqInfo, info)
+	env.ExecuteWorkflow(firmwareControl, reqInfo, info)
 
 	assert.True(t, env.IsWorkflowCompleted())
 	assert.Error(t, env.GetWorkflowError()) // Should error because no components
@@ -260,7 +261,7 @@ func TestFirmwareControlWorkflowNoComponentIDs(t *testing.T) {
 		EndTime:   now.Add(time.Hour * 2).Unix(),
 	}
 
-	env.ExecuteWorkflow(FirmwareControl, reqInfo, info)
+	env.ExecuteWorkflow(firmwareControl, reqInfo, info)
 
 	assert.True(t, env.IsWorkflowCompleted())
 	assert.Error(t, env.GetWorkflowError()) // Should error because no components

@@ -126,12 +126,12 @@ func executePowerControlAction(actx actionExecutionContext) error {
 		}
 		info := operations.PowerControlTaskInfo{Operation: op}
 		return executeGenericActivity(
-			actx.workflowContext, "PowerControl", actx.target, info,
+			actx.workflowContext, activity.NamePowerControl, actx.target, info,
 		)
 	}
 
 	return executeGenericActivity(
-		actx.workflowContext, "PowerControl", actx.target, actx.operationInfo,
+		actx.workflowContext, activity.NamePowerControl, actx.target, actx.operationInfo,
 	)
 }
 
@@ -176,7 +176,7 @@ func executeVerifyReachabilityAction(actx actionExecutionContext) error {
 func executeGetPowerStatusAction(actx actionExecutionContext) error {
 	return executeGenericActivity(
 		actx.workflowContext,
-		"GetPowerStatus",
+		activity.NameGetPowerStatus,
 		actx.target,
 		nil,
 	)
@@ -217,7 +217,7 @@ func executeFirmwareControlAction(actx actionExecutionContext) error {
 	fwInfo.TargetVersion = extractComponentTargetVersion(fwInfo.TargetVersion, target.Type)
 
 	if err := workflow.ExecuteActivity(
-		ctx, "FirmwareControl", target, fwInfo,
+		ctx, activity.NameFirmwareControl, target, fwInfo,
 	).Get(ctx, nil); err != nil {
 		return fmt.Errorf("failed to start firmware update: %w", err)
 	}
@@ -256,7 +256,7 @@ func executeFirmwareControlAction(actx actionExecutionContext) error {
 
 		var result activity.GetFirmwareStatusResult
 		err := workflow.ExecuteActivity(
-			ctx, "GetFirmwareStatus", target,
+			ctx, activity.NameGetFirmwareStatus, target,
 		).Get(ctx, &result)
 		if err != nil {
 			log.Warn().Err(err).
@@ -295,22 +295,19 @@ func executeFirmwareControlAction(actx actionExecutionContext) error {
 	}
 }
 
-// executeGenericActivity executes a Temporal activity with the given name
+// executeGenericActivity executes a Temporal activity identified by its assigned name.
 func executeGenericActivity(
 	ctx workflow.Context,
-	activityName string,
+	name string,
 	target common.Target,
 	activityInfo any,
 ) error {
-	// Build activity arguments
 	var args []any
 	args = append(args, target)
 	if activityInfo != nil {
 		args = append(args, activityInfo)
 	}
-
-	// Execute activity
-	return workflow.ExecuteActivity(ctx, activityName, args...).Get(ctx, nil)
+	return workflow.ExecuteActivity(ctx, name, args...).Get(ctx, nil)
 }
 
 // verifyPowerStatus polls GetPowerStatus until expected status is reached
@@ -353,7 +350,7 @@ func verifyPowerStatus(
 		var statusMap map[string]operations.PowerStatus
 		actErr := workflow.ExecuteActivity(
 			ctx,
-			"GetPowerStatus",
+			activity.NameGetPowerStatus,
 			target,
 		).Get(ctx, &statusMap)
 
@@ -408,7 +405,7 @@ func verifyPowerStatus(
 // executeBringUpControlAction opens the power-on gate for the target components.
 func executeBringUpControlAction(actx actionExecutionContext) error {
 	return workflow.ExecuteActivity(
-		actx.workflowContext, "BringUpControl", actx.target,
+		actx.workflowContext, activity.NameBringUpControl, actx.target,
 	).Get(actx.workflowContext, nil)
 }
 
@@ -448,7 +445,7 @@ func executeWaitBringUpAction(actx actionExecutionContext) error {
 
 		var result activity.GetBringUpStatusResult
 		err := workflow.ExecuteActivity(
-			ctx, "GetBringUpStatus", target,
+			ctx, activity.NameGetBringUpStatus, target,
 		).Get(ctx, &result)
 		if err != nil {
 			log.Warn().Err(err).Msg("Failed to get bring-up state, will retry")
@@ -523,7 +520,7 @@ func verifyReachability(
 			var statusMap map[string]operations.PowerStatus
 			err := workflow.ExecuteActivity(
 				ctx,
-				"GetPowerStatus",
+				activity.NameGetPowerStatus,
 				target,
 			).Get(ctx, &statusMap)
 
@@ -598,7 +595,7 @@ func executeInjectExpectationAction(actx actionExecutionContext) error {
 		Msg("Executing InjectExpectation action")
 
 	return workflow.ExecuteActivity(
-		ctx, activity.InjectExpectation, actx.target, info,
+		ctx, activity.NameInjectExpectation, actx.target, info,
 	).Get(ctx, nil)
 }
 
@@ -607,7 +604,7 @@ func executeInjectExpectationAction(actx actionExecutionContext) error {
 func executeVerifyFirmwareConsistencyAction(actx actionExecutionContext) error {
 	return workflow.ExecuteActivity(
 		actx.workflowContext,
-		activity.VerifyFirmwareConsistency,
+		activity.NameVerifyFirmwareConsistency,
 		actx.target,
 	).Get(actx.workflowContext, nil)
 }

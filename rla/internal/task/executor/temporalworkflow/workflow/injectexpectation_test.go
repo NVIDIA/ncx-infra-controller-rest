@@ -28,6 +28,7 @@ import (
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/testsuite"
 
+	activitypkg "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor/temporalworkflow/activity"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor/temporalworkflow/common"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operations"
 	taskdef "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/task"
@@ -83,16 +84,6 @@ func TestInjectExpectationWorkflow(t *testing.T) {
 			components:  powershelfOnly,
 			expectError: false,
 		},
-		"nil components returns error": {
-			components:    nil,
-			expectError:   true,
-			errorContains: "no components provided",
-		},
-		"empty components returns error": {
-			components:    []*component.Component{},
-			expectError:   true,
-			errorContains: "no components provided",
-		},
 		"activity failure returns error": {
 			components:    computeOnly,
 			activityError: errors.New("component manager service unavailable"),
@@ -107,10 +98,10 @@ func TestInjectExpectationWorkflow(t *testing.T) {
 			env := testSuite.NewTestWorkflowEnvironment()
 
 			env.RegisterActivityWithOptions(mockInjectExpectation, activity.RegisterOptions{
-				Name: "InjectExpectation",
+				Name: activitypkg.NameInjectExpectation,
 			})
 			env.RegisterActivityWithOptions(mockUpdateTaskStatus, activity.RegisterOptions{
-				Name: "UpdateTaskStatus",
+				Name: activitypkg.NameUpdateTaskStatus,
 			})
 
 			env.OnActivity(mockInjectExpectation, mock.Anything, mock.Anything, mock.Anything).Return(tc.activityError)
@@ -122,7 +113,7 @@ func TestInjectExpectationWorkflow(t *testing.T) {
 				Components: toWorkflowComponents(tc.components),
 			}
 
-			env.ExecuteWorkflow(InjectExpectation, reqInfo, info)
+			env.ExecuteWorkflow(injectExpectation, reqInfo, info)
 
 			assert.True(t, env.IsWorkflowCompleted())
 

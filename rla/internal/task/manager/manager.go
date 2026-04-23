@@ -31,7 +31,6 @@ import (
 	taskcommon "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/common"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/conflict"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor"
-	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor/temporalworkflow/activity"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operationrules"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operations"
 	taskstore "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/store"
@@ -129,36 +128,33 @@ func New(ctx context.Context, conf *Config) (*ManagerImpl, error) {
 	}
 	conf.applyDefaults()
 
-	exec, err := executor.New(ctx, conf.ExecutorConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	// Create rule resolver internally (queries DB for operation rules)
-	ruleResolver := operationrules.NewResolver(conf.TaskStore)
-	conflictResolver := conflict.NewResolver(conf.TaskStore)
-
+	// Skeleton manager first — promoteTask is a bound method, m must exist.
 	m := &ManagerImpl{
 		inventoryStore:      conf.InventoryStore,
-		executor:            exec,
-		ruleResolver:        ruleResolver,
-		conflictResolver:    conflictResolver,
 		maxWaitingPerRack:   conf.MaxWaitingTasksPerRack,
 		defaultQueueTimeout: conf.DefaultQueueTimeout,
 	}
 
-	// Promoter needs m.promoteTask, so it is created after the manager.
+	// Promoter needs m.promoteTask.
 	promoter := conflict.NewPromoter(
 		conf.TaskStore, m.promoteTask, conf.PromoterConfig,
 	)
-	m.promoter = promoter
 
-	// Wrap the task store so completed tasks trigger promotion of waiting tasks.
+	// wrappedStore must exist before executor.New so it can be passed as the
+	// updater. Activities use it so completions fire Promoter notifications.
 	wrappedStore := newNotifyingTaskStore(conf.TaskStore, promoter)
-	m.taskStore = wrappedStore
 
-	// Activities use the wrapped store so completions fire Promoter notifications.
-	activity.SetTaskStatusUpdater(wrappedStore)
+	// Build executor — updater is passed explicitly, no global involved at this layer.
+	exec, err := executor.New(ctx, conf.ExecutorConfig, wrappedStore)
+	if err != nil {
+		return nil, err
+	}
+
+	m.executor = exec
+	m.taskStore = wrappedStore
+	m.promoter = promoter
+	m.ruleResolver = operationrules.NewResolver(wrappedStore)
+	m.conflictResolver = conflict.NewResolver(wrappedStore)
 
 	return m, nil
 }
@@ -564,38 +560,13 @@ func (m *ManagerImpl) executeTask(
 			TaskID:         task.ID,
 			Components:     workflowComponentsFrom(targetRack),
 			RuleDefinition: ruleDef,
+			OperationType:  task.Operation.Type,
+			OperationInfo:  task.Operation.Info, // already json.RawMessage from the DB
 		},
 		Async: true,
 	}
 
-	switch task.Operation.Type {
-	case taskcommon.TaskTypePowerControl:
-		var info operations.PowerControlTaskInfo
-		if err := info.Unmarshal(task.Operation.Info); err != nil {
-			return nil, err
-		}
-		return m.executor.PowerControl(ctx, &req, info)
-	case taskcommon.TaskTypeFirmwareControl:
-		var info operations.FirmwareControlTaskInfo
-		if err := info.Unmarshal(task.Operation.Info); err != nil {
-			return nil, err
-		}
-		return m.executor.FirmwareControl(ctx, &req, info)
-	case taskcommon.TaskTypeInjectExpectation:
-		var info operations.InjectExpectationTaskInfo
-		if err := info.Unmarshal(task.Operation.Info); err != nil {
-			return nil, err
-		}
-		return m.executor.InjectExpectation(ctx, &req, info)
-	case taskcommon.TaskTypeBringUp:
-		var info operations.BringUpTaskInfo
-		if err := info.Unmarshal(task.Operation.Info); err != nil {
-			return nil, err
-		}
-		return m.executor.BringUp(ctx, &req, info)
-	default:
-		return nil, fmt.Errorf("unsupported task type: %s", task.Operation.Type)
-	}
+	return m.executor.Execute(ctx, &req)
 }
 
 func (m *ManagerImpl) getReqExpiresAt(req *operation.Request) *time.Time {

@@ -28,6 +28,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/testsuite"
+	temporalworkflow "go.temporal.io/sdk/workflow"
 
 	activitypkg "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor/temporalworkflow/activity"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor/temporalworkflow/common"
@@ -122,17 +123,18 @@ func createBringUpTestComponents() []task.WorkflowComponent {
 }
 
 func registerBringUpActivities(env *testsuite.TestWorkflowEnvironment) {
-	env.RegisterWorkflow(GenericComponentStepWorkflow)
+	env.RegisterWorkflowWithOptions(bringUp, temporalworkflow.RegisterOptions{Name: "BringUp"})
+	env.RegisterWorkflowWithOptions(genericComponentStepWorkflow, temporalworkflow.RegisterOptions{Name: nameGenericComponentStepWorkflow})
 	env.RegisterActivityWithOptions(mockUpdateTaskStatusForBringUp,
-		activity.RegisterOptions{Name: "UpdateTaskStatus"})
+		activity.RegisterOptions{Name: activitypkg.NameUpdateTaskStatus})
 	env.RegisterActivityWithOptions(mockPowerControl,
-		activity.RegisterOptions{Name: "PowerControl"})
+		activity.RegisterOptions{Name: activitypkg.NamePowerControl})
 	env.RegisterActivityWithOptions(mockGetPowerStatus,
-		activity.RegisterOptions{Name: "GetPowerStatus"})
+		activity.RegisterOptions{Name: activitypkg.NameGetPowerStatus})
 	env.RegisterActivityWithOptions(mockBringUpControl,
-		activity.RegisterOptions{Name: "BringUpControl"})
+		activity.RegisterOptions{Name: activitypkg.NameBringUpControl})
 	env.RegisterActivityWithOptions(mockGetBringUpStatus,
-		activity.RegisterOptions{Name: "GetBringUpStatus"})
+		activity.RegisterOptions{Name: activitypkg.NameGetBringUpStatus})
 }
 
 func TestBringUpWorkflow(t *testing.T) {
@@ -142,14 +144,14 @@ func TestBringUpWorkflow(t *testing.T) {
 	}{
 		"success": {
 			setupMocks: func(env *testsuite.TestWorkflowEnvironment) {
-				env.OnActivity(mockUpdateTaskStatusForBringUp, mock.Anything, mock.Anything).Return(nil)
-				env.OnActivity(mockPowerControl, mock.Anything, mock.Anything, mock.Anything).Return(nil)
-				env.OnActivity(mockGetPowerStatus, mock.Anything, mock.Anything).Return(
+				env.OnActivity(activitypkg.NameUpdateTaskStatus, mock.Anything, mock.Anything).Return(nil)
+				env.OnActivity(activitypkg.NamePowerControl, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+				env.OnActivity(activitypkg.NameGetPowerStatus, mock.Anything, mock.Anything).Return(
 					map[string]operations.PowerStatus{
 						"ps-1": operations.PowerStatusOn,
 					}, nil)
-				env.OnActivity(mockBringUpControl, mock.Anything, mock.Anything).Return(nil)
-				env.OnActivity(mockGetBringUpStatus, mock.Anything, mock.Anything).Return(
+				env.OnActivity(activitypkg.NameBringUpControl, mock.Anything, mock.Anything).Return(nil)
+				env.OnActivity(activitypkg.NameGetBringUpStatus, mock.Anything, mock.Anything).Return(
 					&activitypkg.GetBringUpStatusResult{
 						States: map[string]operations.MachineBringUpState{
 							"compute-1": operations.MachineBringUpStateMachineCreated,
@@ -160,12 +162,12 @@ func TestBringUpWorkflow(t *testing.T) {
 		},
 		"power control failure": {
 			setupMocks: func(env *testsuite.TestWorkflowEnvironment) {
-				env.OnActivity(mockUpdateTaskStatusForBringUp, mock.Anything, mock.Anything).Return(nil)
-				env.OnActivity(mockGetPowerStatus, mock.Anything, mock.Anything).Return(
+				env.OnActivity(activitypkg.NameUpdateTaskStatus, mock.Anything, mock.Anything).Return(nil)
+				env.OnActivity(activitypkg.NameGetPowerStatus, mock.Anything, mock.Anything).Return(
 					map[string]operations.PowerStatus{
 						"ps-1": operations.PowerStatusOff,
 					}, nil)
-				env.OnActivity(mockPowerControl, mock.Anything, mock.Anything, mock.Anything).
+				env.OnActivity(activitypkg.NamePowerControl, mock.Anything, mock.Anything, mock.Anything).
 					Return(errors.New("BMC unreachable"))
 			},
 			expectError: true,
@@ -186,7 +188,7 @@ func TestBringUpWorkflow(t *testing.T) {
 			}
 			info := &operations.BringUpTaskInfo{}
 
-			env.ExecuteWorkflow(BringUp, reqInfo, info)
+			env.ExecuteWorkflow("BringUp", reqInfo, info)
 
 			assert.True(t, env.IsWorkflowCompleted())
 			if tc.expectError {
@@ -213,14 +215,15 @@ func TestBringUpWorkflowWithIngestion(t *testing.T) {
 		return nil
 	}
 
-	env.RegisterWorkflow(GenericComponentStepWorkflow)
+	env.RegisterWorkflowWithOptions(bringUp, temporalworkflow.RegisterOptions{Name: "BringUp"})
+	env.RegisterWorkflowWithOptions(genericComponentStepWorkflow, temporalworkflow.RegisterOptions{Name: nameGenericComponentStepWorkflow})
 	env.RegisterActivityWithOptions(mockUpdateTaskStatusForBringUp,
-		activity.RegisterOptions{Name: "UpdateTaskStatus"})
+		activity.RegisterOptions{Name: activitypkg.NameUpdateTaskStatus})
 	env.RegisterActivityWithOptions(mockInjectExpectation,
-		activity.RegisterOptions{Name: "InjectExpectation"})
+		activity.RegisterOptions{Name: activitypkg.NameInjectExpectation})
 
-	env.OnActivity(mockUpdateTaskStatusForBringUp, mock.Anything, mock.Anything).Return(nil)
-	env.OnActivity(mockInjectExpectation, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	env.OnActivity(activitypkg.NameUpdateTaskStatus, mock.Anything, mock.Anything).Return(nil)
+	env.OnActivity(activitypkg.NameInjectExpectation, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	testComponents := []task.WorkflowComponent{
 		{ComponentID: "ps-1", Type: devicetypes.ComponentTypePowerShelf},
@@ -268,7 +271,7 @@ func TestBringUpWorkflowWithIngestion(t *testing.T) {
 	}
 	info := &operations.BringUpTaskInfo{}
 
-	env.ExecuteWorkflow(BringUp, reqInfo, info)
+	env.ExecuteWorkflow("BringUp", reqInfo, info)
 
 	assert.True(t, env.IsWorkflowCompleted())
 	assert.NoError(t, env.GetWorkflowError())
@@ -277,6 +280,7 @@ func TestBringUpWorkflowWithIngestion(t *testing.T) {
 func TestBringUpWorkflowEmptyRack(t *testing.T) {
 	testSuite := &testsuite.WorkflowTestSuite{}
 	env := testSuite.NewTestWorkflowEnvironment()
+	env.RegisterWorkflowWithOptions(bringUp, temporalworkflow.RegisterOptions{Name: "BringUp"})
 
 	reqInfo := task.ExecutionInfo{
 		TaskID:         uuid.New(),
@@ -285,7 +289,7 @@ func TestBringUpWorkflowEmptyRack(t *testing.T) {
 	}
 	info := &operations.BringUpTaskInfo{}
 
-	env.ExecuteWorkflow(BringUp, reqInfo, info)
+	env.ExecuteWorkflow("BringUp", reqInfo, info)
 
 	assert.True(t, env.IsWorkflowCompleted())
 	assert.Error(t, env.GetWorkflowError())

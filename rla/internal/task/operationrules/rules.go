@@ -602,13 +602,12 @@ func (step *SequenceStep) Validate() error {
 		}
 	}
 
-	// Validate main operation (if present)
-	// Note: Empty MainOperation.Name is allowed for backward compatibility
-	// with legacy activityName parameter in workflow execution
-	if step.MainOperation.Name != "" {
-		if err := step.MainOperation.Validate(); err != nil {
-			return fmt.Errorf("main_operation: %w", err)
-		}
+	if step.MainOperation.Name == "" {
+		return fmt.Errorf("main_operation is required")
+	}
+
+	if err := step.MainOperation.Validate(); err != nil {
+		return fmt.Errorf("main_operation: %w", err)
 	}
 
 	// Validate post-operation actions
@@ -631,7 +630,7 @@ func (step *SequenceStep) DoPreOperations() (bool, []ActionConfig) {
 }
 
 // DoMainOperation returns whether there is a main operation to execute
-// and the action configuration. Returns false if using legacy mode.
+// and the action configuration.
 func (step *SequenceStep) DoMainOperation() (bool, ActionConfig) {
 	if step.MainOperation.Name == "" {
 		return false, ActionConfig{}

@@ -30,17 +30,21 @@ import (
 
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/alert"
 	taskcommon "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/common"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor/temporalworkflow/activity"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor/temporalworkflow/common"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operationrules"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/task"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
 )
 
-// sendAlert logs an alert. Best-effort, never blocks the workflow.
+// sendAlert dispatches an alert on a best-effort basis. The call must never
+// block or fail the workflow, so it runs with a background context.
 func sendAlert(a alert.Alert) {
 	alert.Send(context.Background(), a)
 }
 
+// updateRunningTaskStatus records the transition to TaskStatusRunning via the
+// UpdateTaskStatus activity. Returns an error if taskID is nil or the activity fails.
 func updateRunningTaskStatus(
 	ctx workflow.Context,
 	taskID uuid.UUID,
@@ -55,9 +59,13 @@ func updateRunningTaskStatus(
 		Message: "Running",
 	}
 
-	return workflow.ExecuteActivity(ctx, "UpdateTaskStatus", arg).Get(ctx, nil)
+	return workflow.ExecuteActivity(ctx, activity.NameUpdateTaskStatus, arg).Get(ctx, nil)
 }
 
+// updateFinishedTaskStatus records the terminal task status (Completed or Failed)
+// via the UpdateTaskStatus activity. If both the operation error and the status
+// update fail, the errors are joined. The operation error is always returned so
+// the workflow reflects the correct failure cause.
 func updateFinishedTaskStatus(
 	ctx workflow.Context,
 	taskID uuid.UUID,
@@ -83,13 +91,15 @@ func updateFinishedTaskStatus(
 		}
 	}
 
-	if lerr := workflow.ExecuteActivity(ctx, "UpdateTaskStatus", arg).Get(ctx, nil); lerr != nil { //nolint
+	if lerr := workflow.ExecuteActivity(ctx, activity.NameUpdateTaskStatus, arg).Get(ctx, nil); lerr != nil { //nolint
 		return errors.Join(err, fmt.Errorf("failed to update task status: %w", lerr))
 	}
 
 	return err
 }
 
+// buildTargets groups the components in ExecutionInfo by type, returning a map
+// of ComponentType to Target. A nil info produces an empty (non-nil) map.
 func buildTargets(
 	info *task.ExecutionInfo,
 ) map[devicetypes.ComponentType]common.Target {
@@ -215,7 +225,6 @@ func executeGenericStageParallel(
 	ctx workflow.Context,
 	steps []operationrules.SequenceStep,
 	typeToTargets map[devicetypes.ComponentType]common.Target,
-	activityName string,
 	activityInfo any,
 ) error {
 	// Launch a child workflow for each component type that has targets.
@@ -237,7 +246,6 @@ func executeGenericStageParallel(
 			Str("component_type", devicetypes.ComponentTypeToString(step.ComponentType)).
 			Int("component_count", len(target.ComponentIDs)).
 			Int("max_parallel", step.MaxParallel).
-			Str("activity", activityName).
 			Msg("Starting component step as child workflow")
 
 		childOptions := workflow.ChildWorkflowOptions{
@@ -251,10 +259,9 @@ func executeGenericStageParallel(
 
 		future := workflow.ExecuteChildWorkflow(
 			childCtx,
-			GenericComponentStepWorkflow,
+			nameGenericComponentStepWorkflow,
 			step,
 			target,
-			activityName,
 			activityInfo,
 			typeToTargets,
 		)
@@ -279,97 +286,6 @@ func executeGenericStageParallel(
 	return nil
 }
 
-// executeGenericBatchedComponents executes any operation for all components of a single type
-// Components are processed in batches according to the step's max_parallel setting
-func executeGenericBatchedComponents(
-	ctx workflow.Context,
-	step operationrules.SequenceStep,
-	target common.Target,
-	activityName string,
-	activityInfo any,
-) error {
-	componentIDs := target.ComponentIDs
-	maxParallel := step.MaxParallel
-
-	// Handle special cases for maxParallel
-	if maxParallel == 0 {
-		maxParallel = len(componentIDs) // 0 = unlimited (all at once)
-	}
-	if maxParallel < 0 {
-		maxParallel = 1 // Negative = treat as sequential
-	}
-
-	componentCount := len(componentIDs)
-	batchCount := (componentCount + maxParallel - 1) / maxParallel
-
-	log.Info().
-		Str("component_type", devicetypes.ComponentTypeToString(step.ComponentType)).
-		Int("total_components", componentCount).
-		Int("max_parallel", maxParallel).
-		Int("batch_count", batchCount).
-		Str("activity", activityName).
-		Msg("Processing components in batches")
-
-	// Process components in batches
-	for batchNum := range batchCount {
-		start := batchNum * maxParallel
-		end := min(start+maxParallel, componentCount)
-		batch := componentIDs[start:end]
-
-		log.Info().
-			Str("component_type", devicetypes.ComponentTypeToString(step.ComponentType)).
-			Int("batch_number", batchNum+1).
-			Int("total_batches", batchCount).
-			Int("batch_size", len(batch)).
-			Msg("Processing batch")
-
-		// Execute all components in this batch in parallel
-		futures := make([]workflow.Future, len(batch))
-		for i, componentID := range batch {
-			singleTarget := common.Target{
-				Type:         target.Type,
-				ComponentIDs: []string{componentID},
-			}
-
-			log.Debug().
-				Str("component_id", componentID).
-				Str("component_type", devicetypes.ComponentTypeToString(step.ComponentType)).
-				Str("activity", activityName).
-				Msg("Starting activity for component")
-
-			// Execute activity for single component
-			futures[i] = workflow.ExecuteActivity(ctx, activityName, singleTarget, activityInfo)
-		}
-
-		// Wait for all components in this batch to complete
-		for i, future := range futures {
-			if err := future.Get(ctx, nil); err != nil {
-				return fmt.Errorf("component %s failed: %w", batch[i], err)
-			}
-
-			log.Debug().
-				Str("component_id", batch[i]).
-				Str("component_type", devicetypes.ComponentTypeToString(step.ComponentType)).
-				Str("activity", activityName).
-				Msg("Activity succeeded for component")
-		}
-
-		log.Info().
-			Str("component_type", devicetypes.ComponentTypeToString(step.ComponentType)).
-			Int("batch_number", batchNum+1).
-			Int("total_batches", batchCount).
-			Msg("Batch completed successfully")
-	}
-
-	log.Info().
-		Str("component_type", devicetypes.ComponentTypeToString(step.ComponentType)).
-		Int("total_components", componentCount).
-		Int("batch_count", batchCount).
-		Msg("All batches completed successfully for component type")
-
-	return nil
-}
-
 // parseDurationParam extracts a duration from a parameter value.
 // Accepts time.Duration, string (e.g. "30s"), float64, or int (nanoseconds).
 func parseDurationParam(val any) time.Duration {
@@ -390,12 +306,10 @@ func parseDurationParam(val any) time.Duration {
 
 // executeRuleBasedOperation drives any operation through its RuleDefinition.
 // Stages execute sequentially; steps within a stage execute in parallel via
-// child workflows. The activityName is a legacy fallback used only when a
-// step has no MainOperation configured.
+// child workflows.
 func executeRuleBasedOperation(
 	ctx workflow.Context,
 	typeToTargets map[devicetypes.ComponentType]common.Target,
-	activityName string,
 	operationInfo any,
 	ruleDef *operationrules.RuleDefinition,
 ) error {
@@ -424,7 +338,6 @@ func executeRuleBasedOperation(
 			ctx,
 			stage.Steps,
 			typeToTargets,
-			activityName,
 			operationInfo,
 		); err != nil {
 			log.Error().
