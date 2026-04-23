@@ -24,6 +24,7 @@ import (
 	"io"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"text/tabwriter"
 )
@@ -1477,8 +1478,8 @@ func cmdIPBlockCreate(s *Session, _ []string) error {
 	if err != nil {
 		return err
 	}
-	var pl int
-	if _, err := fmt.Sscanf(prefixLen, "%d", &pl); err != nil {
+	pl, err := strconv.Atoi(strings.TrimSpace(prefixLen))
+	if err != nil {
 		return fmt.Errorf("prefix length must be a number, got %q", prefixLen)
 	}
 	if err := validateIPBlockPrefixLength(protocolVersion, pl); err != nil {
