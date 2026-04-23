@@ -735,7 +735,7 @@ func TestBuildTenantSelectItems_MapsTenantIDAndAppendsManualSentinel(t *testing.
 		},
 	}
 
-	items := buildTenantSelectItems(accounts)
+	items := buildTenantSelectItems(accounts, "", "")
 
 	require.Len(t, items, 3, "two tenants plus the manual-entry sentinel")
 	assert.Equal(t, "tenant-1", items[0].ID, "select ID must be the tenantId, not the tenant-account ID")
@@ -751,21 +751,21 @@ func TestBuildTenantSelectItems_SkipsAccountsWithoutTenantID(t *testing.T) {
 		{Name: "no-extra", ID: "account-2"},
 	}
 
-	items := buildTenantSelectItems(accounts)
+	items := buildTenantSelectItems(accounts, "", "")
 
 	assert.Nil(t, items, "accounts without a tenantId must be skipped and no sentinel emitted")
 }
 
 func TestBuildTenantSelectItems_EmptyInputReturnsNil(t *testing.T) {
-	assert.Nil(t, buildTenantSelectItems(nil))
-	assert.Nil(t, buildTenantSelectItems([]NamedItem{}))
+	assert.Nil(t, buildTenantSelectItems(nil, "", ""))
+	assert.Nil(t, buildTenantSelectItems([]NamedItem{}, "", ""))
 }
 
 func TestBuildTenantSelectItems_FallsBackToTenantIDWhenNameBlank(t *testing.T) {
 	accounts := []NamedItem{
 		{Name: "   ", Extra: map[string]string{"tenantId": "tenant-xyz"}},
 	}
-	items := buildTenantSelectItems(accounts)
+	items := buildTenantSelectItems(accounts, "", "")
 	require.Len(t, items, 2)
 	assert.Equal(t, "tenant-xyz", items[0].Label)
 }
@@ -779,7 +779,7 @@ func TestBuildTenantSelectItems_DisambiguatesDuplicateLabels(t *testing.T) {
 		{Name: "test-org", Extra: map[string]string{"tenantId": "22222222-aaaa-bbbb-cccc-2222aaaa0002"}},
 		{Name: "unique", Extra: map[string]string{"tenantId": "33333333-aaaa-bbbb-cccc-3333aaaa0003"}},
 	}
-	items := buildTenantSelectItems(accounts)
+	items := buildTenantSelectItems(accounts, "", "")
 	require.Len(t, items, 4, "three tenants plus the manual-entry sentinel")
 
 	labels := []string{items[0].Label, items[1].Label, items[2].Label}
@@ -817,7 +817,7 @@ func TestBuildTenantSelectItems_SortsAlphabeticallyByLabel(t *testing.T) {
 		{Name: "alpha", Extra: map[string]string{"tenantId": "tenant-a"}},
 		{Name: "mu", Extra: map[string]string{"tenantId": "tenant-m"}},
 	}
-	items := buildTenantSelectItems(accounts)
+	items := buildTenantSelectItems(accounts, "", "")
 	require.Len(t, items, 4)
 	assert.Equal(t, "alpha", items[0].Label)
 	assert.Equal(t, "mu", items[1].Label)
@@ -830,7 +830,7 @@ func TestBuildTenantSelectItems_SortTieBreaksByID(t *testing.T) {
 		{Name: "acme", Extra: map[string]string{"tenantId": "tenant-b"}},
 		{Name: "acme", Extra: map[string]string{"tenantId": "tenant-a"}},
 	}
-	items := buildTenantSelectItems(accounts)
+	items := buildTenantSelectItems(accounts, "", "")
 	require.Len(t, items, 3)
 	assert.Equal(t, "tenant-a", items[0].ID, "equal labels must tie-break by ID")
 	assert.Equal(t, "tenant-b", items[1].ID)
@@ -843,13 +843,63 @@ func TestBuildTenantSelectItems_DeduplicatesByTenantID(t *testing.T) {
 		{Name: "globex", Extra: map[string]string{"tenantId": "tenant-2"}},
 	}
 
-	items := buildTenantSelectItems(accounts)
+	items := buildTenantSelectItems(accounts, "", "")
 
 	require.Len(t, items, 3, "two unique tenants plus the manual-entry sentinel")
 	assert.Equal(t, "tenant-1", items[0].ID)
 	assert.Equal(t, "acme-prod", items[0].Label, "first occurrence wins on dedupe")
 	assert.Equal(t, "tenant-2", items[1].ID)
 	assert.Equal(t, tenantManualEntrySentinel, items[2].ID)
+}
+
+func TestBuildTenantSelectItems_SelfTenantPinnedFirstWithSuffix(t *testing.T) {
+	// Common dev-cluster case: caller is both Provider Admin and Tenant
+	// Admin for the same org, so there are zero tenant-accounts but their
+	// own tenant id is known. Must appear as the first picker entry with
+	// a "(self)" suffix so the label is unambiguous.
+	items := buildTenantSelectItems(nil, "11111111-2222-3333-4444-555566667777", "ncx")
+	require.Len(t, items, 2, "self entry plus manual-entry sentinel")
+	assert.Equal(t, "11111111-2222-3333-4444-555566667777", items[0].ID)
+	assert.Equal(t, "ncx (self)", items[0].Label)
+	assert.Equal(t, tenantManualEntrySentinel, items[1].ID)
+}
+
+func TestBuildTenantSelectItems_SelfTenantBlankOrgFallsBackToID(t *testing.T) {
+	items := buildTenantSelectItems(nil, "abc-tenant-id", "   ")
+	require.Len(t, items, 2)
+	assert.Equal(t, "abc-tenant-id (self)", items[0].Label,
+		"blank org name must fall back to the tenant id so the label is still non-empty")
+}
+
+func TestBuildTenantSelectItems_SelfTenantStaysFirstWhenAccountsSort(t *testing.T) {
+	accounts := []NamedItem{
+		{Name: "zeta", Extra: map[string]string{"tenantId": "tenant-z"}},
+		{Name: "alpha", Extra: map[string]string{"tenantId": "tenant-a"}},
+	}
+	items := buildTenantSelectItems(accounts, "self-tenant", "ncx")
+	require.Len(t, items, 4, "self + 2 tenant-accounts + sentinel")
+	assert.Equal(t, "ncx (self)", items[0].Label, "self always pinned first even if it sorts after")
+	assert.Equal(t, "alpha", items[1].Label, "remaining items sort alphabetically")
+	assert.Equal(t, "zeta", items[2].Label)
+	assert.Equal(t, tenantManualEntrySentinel, items[3].ID)
+}
+
+func TestBuildTenantSelectItems_SelfTenantDedupesWithAccount(t *testing.T) {
+	// If a tenant-account already references the same tenant id as self,
+	// only the self entry is shown (inserted first, so the account-row
+	// copy is dropped by the dedupe map).
+	accounts := []NamedItem{
+		{Name: "ncx", Extra: map[string]string{"tenantId": "self-tenant"}},
+	}
+	items := buildTenantSelectItems(accounts, "self-tenant", "ncx")
+	require.Len(t, items, 2, "one entry (self) plus manual-entry sentinel")
+	assert.Equal(t, "ncx (self)", items[0].Label)
+	assert.Equal(t, "self-tenant", items[0].ID)
+}
+
+func TestBuildTenantSelectItems_EmptySelfTenantIgnored(t *testing.T) {
+	items := buildTenantSelectItems(nil, "", "ncx")
+	assert.Nil(t, items, "no self id and no accounts means no picker")
 }
 
 func TestAllocationConstraintResourceTypes_MatchAPIValidation(t *testing.T) {

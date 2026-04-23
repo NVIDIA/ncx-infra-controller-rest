@@ -1385,11 +1385,16 @@ func promptAllocationTenantID(s *Session, ctx context.Context) (string, error) {
 	accounts, err := s.Resolver.Fetch(ctx, "tenant-account")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s could not list tenant accounts (%v); falling back to manual entry\n", Dim("note:"), err)
-		return promptTenantIDRaw()
+		accounts = nil
 	}
-	items := buildTenantSelectItems(accounts)
+	// Dev orgs (and any org that is both Provider Admin and Tenant Admin)
+	// have an implicit self-tenant that does not appear in tenant-accounts.
+	// Surface it as a first-class option so the operator does not have to
+	// paste a raw UUID just to allocate to themselves.
+	selfTenantID, _ := s.getTenantID(ctx)
+	items := buildTenantSelectItems(accounts, selfTenantID, s.Org)
 	if len(items) == 0 {
-		fmt.Fprintf(os.Stderr, "%s no tenants found via tenant-account; falling back to manual entry\n", Dim("note:"))
+		fmt.Fprintf(os.Stderr, "%s no tenants found via tenant-account or current-tenant; falling back to manual entry\n", Dim("note:"))
 		return promptTenantIDRaw()
 	}
 	selected, err := Select("Tenant:", items)
@@ -1410,14 +1415,38 @@ func promptTenantIDRaw() (string, error) {
 	return strings.TrimSpace(raw), nil
 }
 
-// buildTenantSelectItems converts tenant-account NamedItems into selectable
-// items keyed by tenantId. Duplicate tenantIds (the same tenant can appear
-// under multiple tenant-account rows) are collapsed. A trailing manual-entry
-// sentinel is appended so the user can still type a raw UUID when needed.
-func buildTenantSelectItems(accounts []NamedItem) []SelectItem {
-	items := make([]SelectItem, 0, len(accounts)+1)
-	seen := make(map[string]struct{}, len(accounts))
-	labelCounts := make(map[string]int, len(accounts))
+// buildTenantSelectItems builds the tenant picker for allocation create.
+//
+// Sources (all optional):
+//   - accounts: tenant-account rows the provider has established. Each row's
+//     `Extra["tenantId"]` is the selector ID; duplicate tenantIds across rows
+//     are collapsed.
+//   - selfTenantID / selfOrg: the caller's own tenant, surfaced first with a
+//     "(self)" suffix when the caller also holds a Tenant Admin role. Common
+//     for dev orgs where provider and tenant are the same entity.
+//
+// Returns nil when no source yields a tenantId so the caller can fall back
+// to raw manual entry. When any items exist, a trailing manual-entry
+// sentinel is always appended so the user can still type a raw UUID.
+// Distinct tenants that share a display name are disambiguated with a
+// short tenant-id suffix so the picker is never ambiguous.
+func buildTenantSelectItems(accounts []NamedItem, selfTenantID, selfOrg string) []SelectItem {
+	items := make([]SelectItem, 0, len(accounts)+2)
+	seen := make(map[string]struct{}, len(accounts)+1)
+	labelCounts := make(map[string]int, len(accounts)+1)
+
+	selfTenantID = strings.TrimSpace(selfTenantID)
+	if selfTenantID != "" {
+		selfLabel := strings.TrimSpace(selfOrg)
+		if selfLabel == "" {
+			selfLabel = selfTenantID
+		}
+		selfLabel += " (self)"
+		seen[selfTenantID] = struct{}{}
+		labelCounts[selfLabel]++
+		items = append(items, SelectItem{Label: selfLabel, ID: selfTenantID})
+	}
+
 	for _, acc := range accounts {
 		tenantID := ""
 		if acc.Extra != nil {
@@ -1452,12 +1481,21 @@ func buildTenantSelectItems(accounts []NamedItem) []SelectItem {
 			items[i].Label = fmt.Sprintf("%s (%s)", items[i].Label, shortTenantID(items[i].ID))
 		}
 	}
-	sort.SliceStable(items, func(i, j int) bool {
-		if items[i].Label == items[j].Label {
-			return items[i].ID < items[j].ID
-		}
-		return items[i].Label < items[j].Label
-	})
+	// Sort everything except the self entry (kept at the top so the
+	// operator does not have to hunt for the common case).
+	sortStart := 0
+	if selfTenantID != "" {
+		sortStart = 1
+	}
+	if sortStart < len(items) {
+		tail := items[sortStart:]
+		sort.SliceStable(tail, func(i, j int) bool {
+			if tail[i].Label == tail[j].Label {
+				return tail[i].ID < tail[j].ID
+			}
+			return tail[i].Label < tail[j].Label
+		})
+	}
 	items = append(items, SelectItem{Label: "Enter Tenant ID manually...", ID: tenantManualEntrySentinel})
 	return items
 }
