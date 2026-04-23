@@ -30,7 +30,6 @@ import (
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/carbideapi"
 	pb "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/carbideapi/gen"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/common/utils"
-	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/config"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/db/model"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/nsmapi"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/psmapi"
@@ -45,18 +44,16 @@ const driftFieldSerialNumber = "serial_number"
 // and persists them in one shot.
 func runInventoryOne(
 	ctx context.Context,
-	config *config.Config,
 	pool *cdb.Session,
 	carbideClient carbideapi.Client,
 	psmClient psmapi.Client,
 	nsmClient nsmapi.Client,
 	cmConfig componentmanager.Config,
-	machineIDsLastSyncedAt *time.Time,
 ) {
 	var allDrifts []model.ComponentDrift
 
 	// Sync machines against Carbide
-	machineDrifts := syncMachines(ctx, config, pool, carbideClient, machineIDsLastSyncedAt)
+	machineDrifts := syncMachines(ctx, pool, carbideClient)
 	allDrifts = append(allDrifts, machineDrifts...)
 
 	// Sync NVL switches: dispatch based on configured component manager
@@ -113,10 +110,8 @@ func isMachineComponentType(t string) bool {
 // Direct-write fields (written to DB, not compared): external_id, power_state, firmware_version
 func syncMachines(
 	ctx context.Context,
-	config *config.Config,
 	pool *cdb.Session,
 	carbideClient carbideapi.Client,
-	machineIDsLastSyncedAt *time.Time,
 ) []model.ComponentDrift {
 	log.Debug().Msg("Syncing machines...")
 
@@ -151,7 +146,7 @@ func syncMachines(
 	}
 
 	// Step 3: Direct-write external_id by serial matching
-	syncMachineIDs(ctx, config, pool, allMachineDetails, components, machineIDsLastSyncedAt)
+	syncMachineIDs(ctx, pool, allMachineDetails, components)
 
 	// Re-read components to pick up any external_id updates
 	allComponents, err = model.GetAllComponents(ctx, pool.DB)
@@ -303,42 +298,13 @@ func buildDriftsForUnmatchedComponents(
 }
 
 // syncMachineIDs matches components by serial number against pre-fetched Carbide
-// machine details and direct-writes the external_id. Respects UpdateMachineIDsFrequency config.
+// machine details and direct-writes the external_id.
 func syncMachineIDs(
 	ctx context.Context,
-	config *config.Config,
 	pool *cdb.Session,
 	allDetails []carbideapi.MachineDetail,
 	components []model.Component,
-	machineIDsLastSyncedAt *time.Time,
 ) {
-	shouldUpdate := false
-	if config.UpdateMachineIDsFrequency == 0 {
-		if machineIDsLastSyncedAt.IsZero() {
-			shouldUpdate = true
-		}
-	} else {
-		if machineIDsLastSyncedAt.Before(time.Now().Add(-config.UpdateMachineIDsFrequency)) {
-			shouldUpdate = true
-		}
-	}
-
-	if !shouldUpdate {
-		return
-	}
-
-	missingMachine := false
-	for _, cur := range components {
-		if cur.ComponentID == nil || *cur.ComponentID == "" {
-			missingMachine = true
-			break
-		}
-	}
-	if !missingMachine {
-		*machineIDsLastSyncedAt = time.Now()
-		return
-	}
-
 	containersBySerial := make(map[string]model.Component)
 	for _, cur := range components {
 		containersBySerial[cur.SerialNumber] = cur
@@ -373,8 +339,6 @@ func syncMachineIDs(
 
 		log.Info().Msgf("Updated %d machine ID(s)", len(toUpdate))
 	}
-
-	*machineIDsLastSyncedAt = time.Now()
 }
 
 // syncPowerStates fetches power states from Carbide and direct-writes to component table.

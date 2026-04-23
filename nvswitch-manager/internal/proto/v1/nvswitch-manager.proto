@@ -152,6 +152,7 @@ message NVSwitchResponse {
     string uuid = 1;
     StatusCode status = 2;
     string error = 3;
+    string bmc_ip = 4;  // Set for direct PowerTarget responses; empty for registered switches
 }
 
 // PowerAction enumerates the Redfish ComputerSystem.Reset actions supported by NV-Switch trays.
@@ -166,10 +167,20 @@ enum PowerAction {
     POWER_ACTION_FORCE_RESTART = 7;
 }
 
+// PowerTarget allows power control against a device without prior registration.
+// Only IP and credentials are required; the registry and credential manager are bypassed.
+message PowerTarget {
+    string bmc_ip = 1;
+    Credentials bmc_credentials = 2;
+    int32 bmc_port = 3; // 0 = default (443)
+}
+
 // PowerControlRequest specifies the switches and the power action to perform.
+// Registered switches are identified by UUID; unregistered devices use PowerTarget.
 message PowerControlRequest {
     repeated string uuids = 1;
     PowerAction action = 2;
+    repeated PowerTarget targets = 3;
 }
 
 message PowerControlResponse {

@@ -20,7 +20,6 @@ package inventorysync
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/rs/zerolog/log"
 
@@ -42,12 +41,8 @@ type Job struct {
 	carbideClient carbideapi.Client
 	psmClient     psmapi.Client
 	nsmClient     nsmapi.Client
-	config        config.Config
 	pool          *cdb.Session
 	cmConfig      componentmanager.Config
-	// machineIDsLastSyncedAt tracks when external machine IDs were last
-	// synced. Kept on the Job so separate instances never share state.
-	machineIDsLastSyncedAt time.Time
 }
 
 // New constructs an inventory sync Job using clients sourced from the provider
@@ -130,7 +125,6 @@ func New(
 		carbideClient: carbideProvider.Client(),
 		psmClient:     psmClient,
 		nsmClient:     nsmClient,
-		config:        cfg,
 		pool:          pool,
 		cmConfig:      cmConfig,
 	}, nil
@@ -146,9 +140,9 @@ func (j *Job) Name() string { return "inventory-sync" }
 // fatal — the scheduler will simply retry on the next trigger fire.
 func (j *Job) Run(ctx context.Context, _ types.Event) error {
 	runInventoryOne(
-		ctx, &j.config, j.pool,
+		ctx, j.pool,
 		j.carbideClient, j.psmClient, j.nsmClient,
-		j.cmConfig, &j.machineIDsLastSyncedAt,
+		j.cmConfig,
 	)
 	return nil
 }
