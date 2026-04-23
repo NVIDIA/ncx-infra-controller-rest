@@ -398,3 +398,29 @@ jobs:
           # Compact JSON and set as output
           ARTIFACTS=$(jq -c . artifacts.json)
           echo "artifacts=$ARTIFACTS" >> $GITHUB_OUTPUT
+
+  # Aggregate the 9 per-service Grype scan artifacts into one summary and
+  # post a sticky PR comment on copy-pr-bot pull-request/* branches.
+  # Runs in parallel with build-summary; both have if: always() so partial
+  # results still surface when individual builds fail.
+  security-container-scan-summary:
+    name: Container Scan Summary
+    runs-on: ${{ inputs.runner }}
+    needs:
+      - build-carbide-rest-api
+      - build-carbide-rest-db
+      - build-carbide-rest-site-manager
+      - build-carbide-rest-workflow
+      - build-carbide-rest-site-agent
+      - build-carbide-rest-cert-manager
+      - build-carbide-rla
+      - build-carbide-psm
+      - build-carbide-nsm
+    if: always()
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: NVIDIA/dsx-github-actions/.github/actions/security-container-scan-aggregate@4aaa7e3df4d2b050e5c52b64d9e1c30a2d5faae8
+        with:
+          post-pr-comment: 'true'
