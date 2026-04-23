@@ -592,6 +592,50 @@ func TestMergeLabels(t *testing.T) {
 	})
 }
 
+func TestPrintLabelHint(t *testing.T) {
+	itemsWithLabels := []NamedItem{
+		{Name: "m1", Labels: map[string]string{"RackIdentifier": "H19", "ServerName": "pdx01"}},
+		{Name: "m2", Labels: map[string]string{"RackIdentifier": "H20"}},
+	}
+	t.Run("active filter suppresses hint", func(t *testing.T) {
+		var buf bytes.Buffer
+		printLabelHint(&buf, itemsWithLabels, map[string]string{"RackIdentifier": "H19"})
+		assert.Empty(t, buf.String())
+	})
+	t.Run("no labels means no hint", func(t *testing.T) {
+		var buf bytes.Buffer
+		printLabelHint(&buf, []NamedItem{{Name: "x"}}, nil)
+		assert.Empty(t, buf.String())
+	})
+	t.Run("whitespace-only label keys do not trigger hint", func(t *testing.T) {
+		var buf bytes.Buffer
+		items := []NamedItem{{Name: "a", Labels: map[string]string{"": "blank", "  ": "spaces"}}}
+		printLabelHint(&buf, items, nil)
+		assert.Empty(t, buf.String(), "blank/whitespace keys must not be treated as real labels")
+	})
+	t.Run("hint uses placeholders not real keys", func(t *testing.T) {
+		var buf bytes.Buffer
+		printLabelHint(&buf, itemsWithLabels, nil)
+		out := buf.String()
+		assert.Contains(t, out, "--label <key>=<value>")
+		assert.Contains(t, out, "--sort-label <key>")
+		assert.Contains(t, out, "scope label <key>=<value>")
+		assert.NotContains(t, out, "RackIdentifier", "hint must not surface real keys from the result set")
+		assert.NotContains(t, out, "ServerName", "hint must not surface real keys from the result set")
+		assert.NotContains(t, out, "Label keys:", "no per-result key listing should be printed")
+	})
+	t.Run("hint output is exactly one line", func(t *testing.T) {
+		var buf bytes.Buffer
+		printLabelHint(&buf, itemsWithLabels, nil)
+		assert.Equal(t, 1, strings.Count(buf.String(), "\n"), "hint should be a single line")
+	})
+	t.Run("empty filter map still shows hint", func(t *testing.T) {
+		var buf bytes.Buffer
+		printLabelHint(&buf, itemsWithLabels, map[string]string{})
+		assert.NotEmpty(t, buf.String(), "empty (non-nil) filter map should be treated as no filter")
+	})
+}
+
 func TestInvalidateFilteredIncludesInstanceType(t *testing.T) {
 	c := NewCache()
 	c.Set("instance-type", []NamedItem{{Name: "it1", ID: "1"}})

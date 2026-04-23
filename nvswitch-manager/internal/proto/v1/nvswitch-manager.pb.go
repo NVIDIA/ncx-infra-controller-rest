@@ -1106,6 +1106,7 @@ type NVSwitchResponse struct {
 	Uuid          string                 `protobuf:"bytes,1,opt,name=uuid,proto3" json:"uuid,omitempty"`
 	Status        StatusCode             `protobuf:"varint,2,opt,name=status,proto3,enum=v1.StatusCode" json:"status,omitempty"`
 	Error         string                 `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
+	BmcIp         string                 `protobuf:"bytes,4,opt,name=bmc_ip,json=bmcIp,proto3" json:"bmc_ip,omitempty"` // Set for direct PowerTarget responses; empty for registered switches
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1161,18 +1162,89 @@ func (x *NVSwitchResponse) GetError() string {
 	return ""
 }
 
+func (x *NVSwitchResponse) GetBmcIp() string {
+	if x != nil {
+		return x.BmcIp
+	}
+	return ""
+}
+
+// PowerTarget allows power control against a device without prior registration.
+// Only IP and credentials are required; the registry and credential manager are bypassed.
+type PowerTarget struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	BmcIp          string                 `protobuf:"bytes,1,opt,name=bmc_ip,json=bmcIp,proto3" json:"bmc_ip,omitempty"`
+	BmcCredentials *Credentials           `protobuf:"bytes,2,opt,name=bmc_credentials,json=bmcCredentials,proto3" json:"bmc_credentials,omitempty"`
+	BmcPort        int32                  `protobuf:"varint,3,opt,name=bmc_port,json=bmcPort,proto3" json:"bmc_port,omitempty"` // 0 = default (443)
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *PowerTarget) Reset() {
+	*x = PowerTarget{}
+	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PowerTarget) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PowerTarget) ProtoMessage() {}
+
+func (x *PowerTarget) ProtoReflect() protoreflect.Message {
+	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PowerTarget.ProtoReflect.Descriptor instead.
+func (*PowerTarget) Descriptor() ([]byte, []int) {
+	return file_internal_proto_v1_nvswitch_manager_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *PowerTarget) GetBmcIp() string {
+	if x != nil {
+		return x.BmcIp
+	}
+	return ""
+}
+
+func (x *PowerTarget) GetBmcCredentials() *Credentials {
+	if x != nil {
+		return x.BmcCredentials
+	}
+	return nil
+}
+
+func (x *PowerTarget) GetBmcPort() int32 {
+	if x != nil {
+		return x.BmcPort
+	}
+	return 0
+}
+
 // PowerControlRequest specifies the switches and the power action to perform.
+// Registered switches are identified by UUID; unregistered devices use PowerTarget.
 type PowerControlRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Uuids         []string               `protobuf:"bytes,1,rep,name=uuids,proto3" json:"uuids,omitempty"`
 	Action        PowerAction            `protobuf:"varint,2,opt,name=action,proto3,enum=v1.PowerAction" json:"action,omitempty"`
+	Targets       []*PowerTarget         `protobuf:"bytes,3,rep,name=targets,proto3" json:"targets,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *PowerControlRequest) Reset() {
 	*x = PowerControlRequest{}
-	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[12]
+	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1184,7 +1256,7 @@ func (x *PowerControlRequest) String() string {
 func (*PowerControlRequest) ProtoMessage() {}
 
 func (x *PowerControlRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[12]
+	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1197,7 +1269,7 @@ func (x *PowerControlRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PowerControlRequest.ProtoReflect.Descriptor instead.
 func (*PowerControlRequest) Descriptor() ([]byte, []int) {
-	return file_internal_proto_v1_nvswitch_manager_proto_rawDescGZIP(), []int{12}
+	return file_internal_proto_v1_nvswitch_manager_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *PowerControlRequest) GetUuids() []string {
@@ -1214,6 +1286,13 @@ func (x *PowerControlRequest) GetAction() PowerAction {
 	return PowerAction_POWER_ACTION_UNKNOWN
 }
 
+func (x *PowerControlRequest) GetTargets() []*PowerTarget {
+	if x != nil {
+		return x.Targets
+	}
+	return nil
+}
+
 type PowerControlResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Responses     []*NVSwitchResponse    `protobuf:"bytes,1,rep,name=responses,proto3" json:"responses,omitempty"`
@@ -1223,7 +1302,7 @@ type PowerControlResponse struct {
 
 func (x *PowerControlResponse) Reset() {
 	*x = PowerControlResponse{}
-	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[13]
+	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1235,7 +1314,7 @@ func (x *PowerControlResponse) String() string {
 func (*PowerControlResponse) ProtoMessage() {}
 
 func (x *PowerControlResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[13]
+	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1248,7 +1327,7 @@ func (x *PowerControlResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PowerControlResponse.ProtoReflect.Descriptor instead.
 func (*PowerControlResponse) Descriptor() ([]byte, []int) {
-	return file_internal_proto_v1_nvswitch_manager_proto_rawDescGZIP(), []int{13}
+	return file_internal_proto_v1_nvswitch_manager_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *PowerControlResponse) GetResponses() []*NVSwitchResponse {
@@ -1267,7 +1346,7 @@ type GetNVSwitchesResponse struct {
 
 func (x *GetNVSwitchesResponse) Reset() {
 	*x = GetNVSwitchesResponse{}
-	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[14]
+	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1279,7 +1358,7 @@ func (x *GetNVSwitchesResponse) String() string {
 func (*GetNVSwitchesResponse) ProtoMessage() {}
 
 func (x *GetNVSwitchesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[14]
+	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1292,7 +1371,7 @@ func (x *GetNVSwitchesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetNVSwitchesResponse.ProtoReflect.Descriptor instead.
 func (*GetNVSwitchesResponse) Descriptor() ([]byte, []int) {
-	return file_internal_proto_v1_nvswitch_manager_proto_rawDescGZIP(), []int{14}
+	return file_internal_proto_v1_nvswitch_manager_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *GetNVSwitchesResponse) GetNvswitches() []*NVSwitchTray {
@@ -1314,7 +1393,7 @@ type FirmwareBundle struct {
 
 func (x *FirmwareBundle) Reset() {
 	*x = FirmwareBundle{}
-	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[15]
+	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1326,7 +1405,7 @@ func (x *FirmwareBundle) String() string {
 func (*FirmwareBundle) ProtoMessage() {}
 
 func (x *FirmwareBundle) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[15]
+	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1339,7 +1418,7 @@ func (x *FirmwareBundle) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FirmwareBundle.ProtoReflect.Descriptor instead.
 func (*FirmwareBundle) Descriptor() ([]byte, []int) {
-	return file_internal_proto_v1_nvswitch_manager_proto_rawDescGZIP(), []int{15}
+	return file_internal_proto_v1_nvswitch_manager_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *FirmwareBundle) GetVersion() string {
@@ -1375,7 +1454,7 @@ type ComponentInfo struct {
 
 func (x *ComponentInfo) Reset() {
 	*x = ComponentInfo{}
-	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[16]
+	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1387,7 +1466,7 @@ func (x *ComponentInfo) String() string {
 func (*ComponentInfo) ProtoMessage() {}
 
 func (x *ComponentInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[16]
+	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1400,7 +1479,7 @@ func (x *ComponentInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ComponentInfo.ProtoReflect.Descriptor instead.
 func (*ComponentInfo) Descriptor() ([]byte, []int) {
-	return file_internal_proto_v1_nvswitch_manager_proto_rawDescGZIP(), []int{16}
+	return file_internal_proto_v1_nvswitch_manager_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *ComponentInfo) GetName() string {
@@ -1434,7 +1513,7 @@ type ListBundlesResponse struct {
 
 func (x *ListBundlesResponse) Reset() {
 	*x = ListBundlesResponse{}
-	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[17]
+	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1446,7 +1525,7 @@ func (x *ListBundlesResponse) String() string {
 func (*ListBundlesResponse) ProtoMessage() {}
 
 func (x *ListBundlesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[17]
+	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1459,7 +1538,7 @@ func (x *ListBundlesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListBundlesResponse.ProtoReflect.Descriptor instead.
 func (*ListBundlesResponse) Descriptor() ([]byte, []int) {
-	return file_internal_proto_v1_nvswitch_manager_proto_rawDescGZIP(), []int{17}
+	return file_internal_proto_v1_nvswitch_manager_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *ListBundlesResponse) GetBundles() []*FirmwareBundle {
@@ -1482,7 +1561,7 @@ type QueueUpdateRequest struct {
 
 func (x *QueueUpdateRequest) Reset() {
 	*x = QueueUpdateRequest{}
-	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[18]
+	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1494,7 +1573,7 @@ func (x *QueueUpdateRequest) String() string {
 func (*QueueUpdateRequest) ProtoMessage() {}
 
 func (x *QueueUpdateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[18]
+	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1507,7 +1586,7 @@ func (x *QueueUpdateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use QueueUpdateRequest.ProtoReflect.Descriptor instead.
 func (*QueueUpdateRequest) Descriptor() ([]byte, []int) {
-	return file_internal_proto_v1_nvswitch_manager_proto_rawDescGZIP(), []int{18}
+	return file_internal_proto_v1_nvswitch_manager_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *QueueUpdateRequest) GetSwitchUuid() string {
@@ -1541,7 +1620,7 @@ type QueueUpdateResponse struct {
 
 func (x *QueueUpdateResponse) Reset() {
 	*x = QueueUpdateResponse{}
-	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[19]
+	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1553,7 +1632,7 @@ func (x *QueueUpdateResponse) String() string {
 func (*QueueUpdateResponse) ProtoMessage() {}
 
 func (x *QueueUpdateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[19]
+	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1566,7 +1645,7 @@ func (x *QueueUpdateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use QueueUpdateResponse.ProtoReflect.Descriptor instead.
 func (*QueueUpdateResponse) Descriptor() ([]byte, []int) {
-	return file_internal_proto_v1_nvswitch_manager_proto_rawDescGZIP(), []int{19}
+	return file_internal_proto_v1_nvswitch_manager_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *QueueUpdateResponse) GetUpdates() []*FirmwareUpdateInfo {
@@ -1588,7 +1667,7 @@ type QueueUpdatesRequest struct {
 
 func (x *QueueUpdatesRequest) Reset() {
 	*x = QueueUpdatesRequest{}
-	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[20]
+	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1600,7 +1679,7 @@ func (x *QueueUpdatesRequest) String() string {
 func (*QueueUpdatesRequest) ProtoMessage() {}
 
 func (x *QueueUpdatesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[20]
+	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1613,7 +1692,7 @@ func (x *QueueUpdatesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use QueueUpdatesRequest.ProtoReflect.Descriptor instead.
 func (*QueueUpdatesRequest) Descriptor() ([]byte, []int) {
-	return file_internal_proto_v1_nvswitch_manager_proto_rawDescGZIP(), []int{20}
+	return file_internal_proto_v1_nvswitch_manager_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *QueueUpdatesRequest) GetSwitchUuids() []string {
@@ -1647,7 +1726,7 @@ type QueueUpdatesResponse struct {
 
 func (x *QueueUpdatesResponse) Reset() {
 	*x = QueueUpdatesResponse{}
-	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[21]
+	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1659,7 +1738,7 @@ func (x *QueueUpdatesResponse) String() string {
 func (*QueueUpdatesResponse) ProtoMessage() {}
 
 func (x *QueueUpdatesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[21]
+	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1672,7 +1751,7 @@ func (x *QueueUpdatesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use QueueUpdatesResponse.ProtoReflect.Descriptor instead.
 func (*QueueUpdatesResponse) Descriptor() ([]byte, []int) {
-	return file_internal_proto_v1_nvswitch_manager_proto_rawDescGZIP(), []int{21}
+	return file_internal_proto_v1_nvswitch_manager_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *QueueUpdatesResponse) GetResults() []*QueueUpdateResult {
@@ -1695,7 +1774,7 @@ type QueueUpdateResult struct {
 
 func (x *QueueUpdateResult) Reset() {
 	*x = QueueUpdateResult{}
-	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[22]
+	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1707,7 +1786,7 @@ func (x *QueueUpdateResult) String() string {
 func (*QueueUpdateResult) ProtoMessage() {}
 
 func (x *QueueUpdateResult) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[22]
+	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1720,7 +1799,7 @@ func (x *QueueUpdateResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use QueueUpdateResult.ProtoReflect.Descriptor instead.
 func (*QueueUpdateResult) Descriptor() ([]byte, []int) {
-	return file_internal_proto_v1_nvswitch_manager_proto_rawDescGZIP(), []int{22}
+	return file_internal_proto_v1_nvswitch_manager_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *QueueUpdateResult) GetSwitchUuid() string {
@@ -1761,7 +1840,7 @@ type GetUpdateRequest struct {
 
 func (x *GetUpdateRequest) Reset() {
 	*x = GetUpdateRequest{}
-	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[23]
+	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1773,7 +1852,7 @@ func (x *GetUpdateRequest) String() string {
 func (*GetUpdateRequest) ProtoMessage() {}
 
 func (x *GetUpdateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[23]
+	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1786,7 +1865,7 @@ func (x *GetUpdateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetUpdateRequest.ProtoReflect.Descriptor instead.
 func (*GetUpdateRequest) Descriptor() ([]byte, []int) {
-	return file_internal_proto_v1_nvswitch_manager_proto_rawDescGZIP(), []int{23}
+	return file_internal_proto_v1_nvswitch_manager_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *GetUpdateRequest) GetUpdateId() string {
@@ -1806,7 +1885,7 @@ type GetUpdateResponse struct {
 
 func (x *GetUpdateResponse) Reset() {
 	*x = GetUpdateResponse{}
-	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[24]
+	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1818,7 +1897,7 @@ func (x *GetUpdateResponse) String() string {
 func (*GetUpdateResponse) ProtoMessage() {}
 
 func (x *GetUpdateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[24]
+	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1831,7 +1910,7 @@ func (x *GetUpdateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetUpdateResponse.ProtoReflect.Descriptor instead.
 func (*GetUpdateResponse) Descriptor() ([]byte, []int) {
-	return file_internal_proto_v1_nvswitch_manager_proto_rawDescGZIP(), []int{24}
+	return file_internal_proto_v1_nvswitch_manager_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *GetUpdateResponse) GetUpdate() *FirmwareUpdateInfo {
@@ -1851,7 +1930,7 @@ type GetUpdatesForSwitchRequest struct {
 
 func (x *GetUpdatesForSwitchRequest) Reset() {
 	*x = GetUpdatesForSwitchRequest{}
-	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[25]
+	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1863,7 +1942,7 @@ func (x *GetUpdatesForSwitchRequest) String() string {
 func (*GetUpdatesForSwitchRequest) ProtoMessage() {}
 
 func (x *GetUpdatesForSwitchRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[25]
+	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1876,7 +1955,7 @@ func (x *GetUpdatesForSwitchRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetUpdatesForSwitchRequest.ProtoReflect.Descriptor instead.
 func (*GetUpdatesForSwitchRequest) Descriptor() ([]byte, []int) {
-	return file_internal_proto_v1_nvswitch_manager_proto_rawDescGZIP(), []int{25}
+	return file_internal_proto_v1_nvswitch_manager_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *GetUpdatesForSwitchRequest) GetSwitchUuid() string {
@@ -1896,7 +1975,7 @@ type GetUpdatesForSwitchResponse struct {
 
 func (x *GetUpdatesForSwitchResponse) Reset() {
 	*x = GetUpdatesForSwitchResponse{}
-	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[26]
+	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1908,7 +1987,7 @@ func (x *GetUpdatesForSwitchResponse) String() string {
 func (*GetUpdatesForSwitchResponse) ProtoMessage() {}
 
 func (x *GetUpdatesForSwitchResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[26]
+	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1921,7 +2000,7 @@ func (x *GetUpdatesForSwitchResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetUpdatesForSwitchResponse.ProtoReflect.Descriptor instead.
 func (*GetUpdatesForSwitchResponse) Descriptor() ([]byte, []int) {
-	return file_internal_proto_v1_nvswitch_manager_proto_rawDescGZIP(), []int{26}
+	return file_internal_proto_v1_nvswitch_manager_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *GetUpdatesForSwitchResponse) GetUpdates() []*FirmwareUpdateInfo {
@@ -1941,7 +2020,7 @@ type GetAllUpdatesResponse struct {
 
 func (x *GetAllUpdatesResponse) Reset() {
 	*x = GetAllUpdatesResponse{}
-	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[27]
+	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1953,7 +2032,7 @@ func (x *GetAllUpdatesResponse) String() string {
 func (*GetAllUpdatesResponse) ProtoMessage() {}
 
 func (x *GetAllUpdatesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[27]
+	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1966,7 +2045,7 @@ func (x *GetAllUpdatesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAllUpdatesResponse.ProtoReflect.Descriptor instead.
 func (*GetAllUpdatesResponse) Descriptor() ([]byte, []int) {
-	return file_internal_proto_v1_nvswitch_manager_proto_rawDescGZIP(), []int{27}
+	return file_internal_proto_v1_nvswitch_manager_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *GetAllUpdatesResponse) GetUpdates() []*FirmwareUpdateInfo {
@@ -1986,7 +2065,7 @@ type CancelUpdateRequest struct {
 
 func (x *CancelUpdateRequest) Reset() {
 	*x = CancelUpdateRequest{}
-	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[28]
+	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1998,7 +2077,7 @@ func (x *CancelUpdateRequest) String() string {
 func (*CancelUpdateRequest) ProtoMessage() {}
 
 func (x *CancelUpdateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[28]
+	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2011,7 +2090,7 @@ func (x *CancelUpdateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelUpdateRequest.ProtoReflect.Descriptor instead.
 func (*CancelUpdateRequest) Descriptor() ([]byte, []int) {
-	return file_internal_proto_v1_nvswitch_manager_proto_rawDescGZIP(), []int{28}
+	return file_internal_proto_v1_nvswitch_manager_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *CancelUpdateRequest) GetUpdateId() string {
@@ -2032,7 +2111,7 @@ type CancelUpdateResponse struct {
 
 func (x *CancelUpdateResponse) Reset() {
 	*x = CancelUpdateResponse{}
-	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[29]
+	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2044,7 +2123,7 @@ func (x *CancelUpdateResponse) String() string {
 func (*CancelUpdateResponse) ProtoMessage() {}
 
 func (x *CancelUpdateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[29]
+	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2057,7 +2136,7 @@ func (x *CancelUpdateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelUpdateResponse.ProtoReflect.Descriptor instead.
 func (*CancelUpdateResponse) Descriptor() ([]byte, []int) {
-	return file_internal_proto_v1_nvswitch_manager_proto_rawDescGZIP(), []int{29}
+	return file_internal_proto_v1_nvswitch_manager_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *CancelUpdateResponse) GetSuccess() bool {
@@ -2099,7 +2178,7 @@ type FirmwareUpdateInfo struct {
 
 func (x *FirmwareUpdateInfo) Reset() {
 	*x = FirmwareUpdateInfo{}
-	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[30]
+	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2111,7 +2190,7 @@ func (x *FirmwareUpdateInfo) String() string {
 func (*FirmwareUpdateInfo) ProtoMessage() {}
 
 func (x *FirmwareUpdateInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[30]
+	mi := &file_internal_proto_v1_nvswitch_manager_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2124,7 +2203,7 @@ func (x *FirmwareUpdateInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FirmwareUpdateInfo.ProtoReflect.Descriptor instead.
 func (*FirmwareUpdateInfo) Descriptor() ([]byte, []int) {
-	return file_internal_proto_v1_nvswitch_manager_proto_rawDescGZIP(), []int{30}
+	return file_internal_proto_v1_nvswitch_manager_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *FirmwareUpdateInfo) GetId() string {
@@ -2296,14 +2375,20 @@ const file_internal_proto_v1_nvswitch_manager_proto_rawDesc = "" +
 	"\x1aRegisterNVSwitchesResponse\x12:\n" +
 	"\tresponses\x18\x01 \x03(\v2\x1c.v1.RegisterNVSwitchResponseR\tresponses\"'\n" +
 	"\x0fNVSwitchRequest\x12\x14\n" +
-	"\x05uuids\x18\x01 \x03(\tR\x05uuids\"d\n" +
+	"\x05uuids\x18\x01 \x03(\tR\x05uuids\"{\n" +
 	"\x10NVSwitchResponse\x12\x12\n" +
 	"\x04uuid\x18\x01 \x01(\tR\x04uuid\x12&\n" +
 	"\x06status\x18\x02 \x01(\x0e2\x0e.v1.StatusCodeR\x06status\x12\x14\n" +
-	"\x05error\x18\x03 \x01(\tR\x05error\"T\n" +
+	"\x05error\x18\x03 \x01(\tR\x05error\x12\x15\n" +
+	"\x06bmc_ip\x18\x04 \x01(\tR\x05bmcIp\"y\n" +
+	"\vPowerTarget\x12\x15\n" +
+	"\x06bmc_ip\x18\x01 \x01(\tR\x05bmcIp\x128\n" +
+	"\x0fbmc_credentials\x18\x02 \x01(\v2\x0f.v1.CredentialsR\x0ebmcCredentials\x12\x19\n" +
+	"\bbmc_port\x18\x03 \x01(\x05R\abmcPort\"\x7f\n" +
 	"\x13PowerControlRequest\x12\x14\n" +
 	"\x05uuids\x18\x01 \x03(\tR\x05uuids\x12'\n" +
-	"\x06action\x18\x02 \x01(\x0e2\x0f.v1.PowerActionR\x06action\"J\n" +
+	"\x06action\x18\x02 \x01(\x0e2\x0f.v1.PowerActionR\x06action\x12)\n" +
+	"\atargets\x18\x03 \x03(\v2\x0f.v1.PowerTargetR\atargets\"J\n" +
 	"\x14PowerControlResponse\x122\n" +
 	"\tresponses\x18\x01 \x03(\v2\x14.v1.NVSwitchResponseR\tresponses\"I\n" +
 	"\x15GetNVSwitchesResponse\x120\n" +
@@ -2451,7 +2536,7 @@ func file_internal_proto_v1_nvswitch_manager_proto_rawDescGZIP() []byte {
 }
 
 var file_internal_proto_v1_nvswitch_manager_proto_enumTypes = make([]protoimpl.EnumInfo, 6)
-var file_internal_proto_v1_nvswitch_manager_proto_msgTypes = make([]protoimpl.MessageInfo, 31)
+var file_internal_proto_v1_nvswitch_manager_proto_msgTypes = make([]protoimpl.MessageInfo, 32)
 var file_internal_proto_v1_nvswitch_manager_proto_goTypes = []any{
 	(Vendor)(0),                         // 0: v1.Vendor
 	(StatusCode)(0),                     // 1: v1.StatusCode
@@ -2471,27 +2556,28 @@ var file_internal_proto_v1_nvswitch_manager_proto_goTypes = []any{
 	(*RegisterNVSwitchesResponse)(nil),  // 15: v1.RegisterNVSwitchesResponse
 	(*NVSwitchRequest)(nil),             // 16: v1.NVSwitchRequest
 	(*NVSwitchResponse)(nil),            // 17: v1.NVSwitchResponse
-	(*PowerControlRequest)(nil),         // 18: v1.PowerControlRequest
-	(*PowerControlResponse)(nil),        // 19: v1.PowerControlResponse
-	(*GetNVSwitchesResponse)(nil),       // 20: v1.GetNVSwitchesResponse
-	(*FirmwareBundle)(nil),              // 21: v1.FirmwareBundle
-	(*ComponentInfo)(nil),               // 22: v1.ComponentInfo
-	(*ListBundlesResponse)(nil),         // 23: v1.ListBundlesResponse
-	(*QueueUpdateRequest)(nil),          // 24: v1.QueueUpdateRequest
-	(*QueueUpdateResponse)(nil),         // 25: v1.QueueUpdateResponse
-	(*QueueUpdatesRequest)(nil),         // 26: v1.QueueUpdatesRequest
-	(*QueueUpdatesResponse)(nil),        // 27: v1.QueueUpdatesResponse
-	(*QueueUpdateResult)(nil),           // 28: v1.QueueUpdateResult
-	(*GetUpdateRequest)(nil),            // 29: v1.GetUpdateRequest
-	(*GetUpdateResponse)(nil),           // 30: v1.GetUpdateResponse
-	(*GetUpdatesForSwitchRequest)(nil),  // 31: v1.GetUpdatesForSwitchRequest
-	(*GetUpdatesForSwitchResponse)(nil), // 32: v1.GetUpdatesForSwitchResponse
-	(*GetAllUpdatesResponse)(nil),       // 33: v1.GetAllUpdatesResponse
-	(*CancelUpdateRequest)(nil),         // 34: v1.CancelUpdateRequest
-	(*CancelUpdateResponse)(nil),        // 35: v1.CancelUpdateResponse
-	(*FirmwareUpdateInfo)(nil),          // 36: v1.FirmwareUpdateInfo
-	(*timestamppb.Timestamp)(nil),       // 37: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),               // 38: google.protobuf.Empty
+	(*PowerTarget)(nil),                 // 18: v1.PowerTarget
+	(*PowerControlRequest)(nil),         // 19: v1.PowerControlRequest
+	(*PowerControlResponse)(nil),        // 20: v1.PowerControlResponse
+	(*GetNVSwitchesResponse)(nil),       // 21: v1.GetNVSwitchesResponse
+	(*FirmwareBundle)(nil),              // 22: v1.FirmwareBundle
+	(*ComponentInfo)(nil),               // 23: v1.ComponentInfo
+	(*ListBundlesResponse)(nil),         // 24: v1.ListBundlesResponse
+	(*QueueUpdateRequest)(nil),          // 25: v1.QueueUpdateRequest
+	(*QueueUpdateResponse)(nil),         // 26: v1.QueueUpdateResponse
+	(*QueueUpdatesRequest)(nil),         // 27: v1.QueueUpdatesRequest
+	(*QueueUpdatesResponse)(nil),        // 28: v1.QueueUpdatesResponse
+	(*QueueUpdateResult)(nil),           // 29: v1.QueueUpdateResult
+	(*GetUpdateRequest)(nil),            // 30: v1.GetUpdateRequest
+	(*GetUpdateResponse)(nil),           // 31: v1.GetUpdateResponse
+	(*GetUpdatesForSwitchRequest)(nil),  // 32: v1.GetUpdatesForSwitchRequest
+	(*GetUpdatesForSwitchResponse)(nil), // 33: v1.GetUpdatesForSwitchResponse
+	(*GetAllUpdatesResponse)(nil),       // 34: v1.GetAllUpdatesResponse
+	(*CancelUpdateRequest)(nil),         // 35: v1.CancelUpdateRequest
+	(*CancelUpdateResponse)(nil),        // 36: v1.CancelUpdateResponse
+	(*FirmwareUpdateInfo)(nil),          // 37: v1.FirmwareUpdateInfo
+	(*timestamppb.Timestamp)(nil),       // 38: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),               // 39: google.protobuf.Empty
 }
 var file_internal_proto_v1_nvswitch_manager_proto_depIdxs = []int32{
 	6,  // 0: v1.Subsystem.credentials:type_name -> v1.Credentials
@@ -2503,54 +2589,56 @@ var file_internal_proto_v1_nvswitch_manager_proto_depIdxs = []int32{
 	7,  // 6: v1.RegisterNVSwitchRequest.bmc:type_name -> v1.Subsystem
 	7,  // 7: v1.RegisterNVSwitchRequest.nvos:type_name -> v1.Subsystem
 	12, // 8: v1.RegisterNVSwitchesRequest.registration_requests:type_name -> v1.RegisterNVSwitchRequest
-	37, // 9: v1.RegisterNVSwitchResponse.created:type_name -> google.protobuf.Timestamp
+	38, // 9: v1.RegisterNVSwitchResponse.created:type_name -> google.protobuf.Timestamp
 	1,  // 10: v1.RegisterNVSwitchResponse.status:type_name -> v1.StatusCode
 	14, // 11: v1.RegisterNVSwitchesResponse.responses:type_name -> v1.RegisterNVSwitchResponse
 	1,  // 12: v1.NVSwitchResponse.status:type_name -> v1.StatusCode
-	2,  // 13: v1.PowerControlRequest.action:type_name -> v1.PowerAction
-	17, // 14: v1.PowerControlResponse.responses:type_name -> v1.NVSwitchResponse
-	11, // 15: v1.GetNVSwitchesResponse.nvswitches:type_name -> v1.NVSwitchTray
-	22, // 16: v1.FirmwareBundle.components:type_name -> v1.ComponentInfo
-	21, // 17: v1.ListBundlesResponse.bundles:type_name -> v1.FirmwareBundle
-	3,  // 18: v1.QueueUpdateRequest.components:type_name -> v1.NVSwitchComponent
-	36, // 19: v1.QueueUpdateResponse.updates:type_name -> v1.FirmwareUpdateInfo
-	3,  // 20: v1.QueueUpdatesRequest.components:type_name -> v1.NVSwitchComponent
-	28, // 21: v1.QueueUpdatesResponse.results:type_name -> v1.QueueUpdateResult
-	1,  // 22: v1.QueueUpdateResult.status:type_name -> v1.StatusCode
-	36, // 23: v1.QueueUpdateResult.updates:type_name -> v1.FirmwareUpdateInfo
-	36, // 24: v1.GetUpdateResponse.update:type_name -> v1.FirmwareUpdateInfo
-	36, // 25: v1.GetUpdatesForSwitchResponse.updates:type_name -> v1.FirmwareUpdateInfo
-	36, // 26: v1.GetAllUpdatesResponse.updates:type_name -> v1.FirmwareUpdateInfo
-	3,  // 27: v1.FirmwareUpdateInfo.component:type_name -> v1.NVSwitchComponent
-	4,  // 28: v1.FirmwareUpdateInfo.strategy:type_name -> v1.UpdateStrategy
-	5,  // 29: v1.FirmwareUpdateInfo.state:type_name -> v1.UpdateState
-	37, // 30: v1.FirmwareUpdateInfo.created_at:type_name -> google.protobuf.Timestamp
-	37, // 31: v1.FirmwareUpdateInfo.updated_at:type_name -> google.protobuf.Timestamp
-	13, // 32: v1.NVSwitchManager.RegisterNVSwitches:input_type -> v1.RegisterNVSwitchesRequest
-	16, // 33: v1.NVSwitchManager.GetNVSwitches:input_type -> v1.NVSwitchRequest
-	38, // 34: v1.NVSwitchManager.ListBundles:input_type -> google.protobuf.Empty
-	24, // 35: v1.NVSwitchManager.QueueUpdate:input_type -> v1.QueueUpdateRequest
-	26, // 36: v1.NVSwitchManager.QueueUpdates:input_type -> v1.QueueUpdatesRequest
-	29, // 37: v1.NVSwitchManager.GetUpdate:input_type -> v1.GetUpdateRequest
-	31, // 38: v1.NVSwitchManager.GetUpdatesForSwitch:input_type -> v1.GetUpdatesForSwitchRequest
-	38, // 39: v1.NVSwitchManager.GetAllUpdates:input_type -> google.protobuf.Empty
-	34, // 40: v1.NVSwitchManager.CancelUpdate:input_type -> v1.CancelUpdateRequest
-	18, // 41: v1.NVSwitchManager.PowerControl:input_type -> v1.PowerControlRequest
-	15, // 42: v1.NVSwitchManager.RegisterNVSwitches:output_type -> v1.RegisterNVSwitchesResponse
-	20, // 43: v1.NVSwitchManager.GetNVSwitches:output_type -> v1.GetNVSwitchesResponse
-	23, // 44: v1.NVSwitchManager.ListBundles:output_type -> v1.ListBundlesResponse
-	25, // 45: v1.NVSwitchManager.QueueUpdate:output_type -> v1.QueueUpdateResponse
-	27, // 46: v1.NVSwitchManager.QueueUpdates:output_type -> v1.QueueUpdatesResponse
-	30, // 47: v1.NVSwitchManager.GetUpdate:output_type -> v1.GetUpdateResponse
-	32, // 48: v1.NVSwitchManager.GetUpdatesForSwitch:output_type -> v1.GetUpdatesForSwitchResponse
-	33, // 49: v1.NVSwitchManager.GetAllUpdates:output_type -> v1.GetAllUpdatesResponse
-	35, // 50: v1.NVSwitchManager.CancelUpdate:output_type -> v1.CancelUpdateResponse
-	19, // 51: v1.NVSwitchManager.PowerControl:output_type -> v1.PowerControlResponse
-	42, // [42:52] is the sub-list for method output_type
-	32, // [32:42] is the sub-list for method input_type
-	32, // [32:32] is the sub-list for extension type_name
-	32, // [32:32] is the sub-list for extension extendee
-	0,  // [0:32] is the sub-list for field type_name
+	6,  // 13: v1.PowerTarget.bmc_credentials:type_name -> v1.Credentials
+	2,  // 14: v1.PowerControlRequest.action:type_name -> v1.PowerAction
+	18, // 15: v1.PowerControlRequest.targets:type_name -> v1.PowerTarget
+	17, // 16: v1.PowerControlResponse.responses:type_name -> v1.NVSwitchResponse
+	11, // 17: v1.GetNVSwitchesResponse.nvswitches:type_name -> v1.NVSwitchTray
+	23, // 18: v1.FirmwareBundle.components:type_name -> v1.ComponentInfo
+	22, // 19: v1.ListBundlesResponse.bundles:type_name -> v1.FirmwareBundle
+	3,  // 20: v1.QueueUpdateRequest.components:type_name -> v1.NVSwitchComponent
+	37, // 21: v1.QueueUpdateResponse.updates:type_name -> v1.FirmwareUpdateInfo
+	3,  // 22: v1.QueueUpdatesRequest.components:type_name -> v1.NVSwitchComponent
+	29, // 23: v1.QueueUpdatesResponse.results:type_name -> v1.QueueUpdateResult
+	1,  // 24: v1.QueueUpdateResult.status:type_name -> v1.StatusCode
+	37, // 25: v1.QueueUpdateResult.updates:type_name -> v1.FirmwareUpdateInfo
+	37, // 26: v1.GetUpdateResponse.update:type_name -> v1.FirmwareUpdateInfo
+	37, // 27: v1.GetUpdatesForSwitchResponse.updates:type_name -> v1.FirmwareUpdateInfo
+	37, // 28: v1.GetAllUpdatesResponse.updates:type_name -> v1.FirmwareUpdateInfo
+	3,  // 29: v1.FirmwareUpdateInfo.component:type_name -> v1.NVSwitchComponent
+	4,  // 30: v1.FirmwareUpdateInfo.strategy:type_name -> v1.UpdateStrategy
+	5,  // 31: v1.FirmwareUpdateInfo.state:type_name -> v1.UpdateState
+	38, // 32: v1.FirmwareUpdateInfo.created_at:type_name -> google.protobuf.Timestamp
+	38, // 33: v1.FirmwareUpdateInfo.updated_at:type_name -> google.protobuf.Timestamp
+	13, // 34: v1.NVSwitchManager.RegisterNVSwitches:input_type -> v1.RegisterNVSwitchesRequest
+	16, // 35: v1.NVSwitchManager.GetNVSwitches:input_type -> v1.NVSwitchRequest
+	39, // 36: v1.NVSwitchManager.ListBundles:input_type -> google.protobuf.Empty
+	25, // 37: v1.NVSwitchManager.QueueUpdate:input_type -> v1.QueueUpdateRequest
+	27, // 38: v1.NVSwitchManager.QueueUpdates:input_type -> v1.QueueUpdatesRequest
+	30, // 39: v1.NVSwitchManager.GetUpdate:input_type -> v1.GetUpdateRequest
+	32, // 40: v1.NVSwitchManager.GetUpdatesForSwitch:input_type -> v1.GetUpdatesForSwitchRequest
+	39, // 41: v1.NVSwitchManager.GetAllUpdates:input_type -> google.protobuf.Empty
+	35, // 42: v1.NVSwitchManager.CancelUpdate:input_type -> v1.CancelUpdateRequest
+	19, // 43: v1.NVSwitchManager.PowerControl:input_type -> v1.PowerControlRequest
+	15, // 44: v1.NVSwitchManager.RegisterNVSwitches:output_type -> v1.RegisterNVSwitchesResponse
+	21, // 45: v1.NVSwitchManager.GetNVSwitches:output_type -> v1.GetNVSwitchesResponse
+	24, // 46: v1.NVSwitchManager.ListBundles:output_type -> v1.ListBundlesResponse
+	26, // 47: v1.NVSwitchManager.QueueUpdate:output_type -> v1.QueueUpdateResponse
+	28, // 48: v1.NVSwitchManager.QueueUpdates:output_type -> v1.QueueUpdatesResponse
+	31, // 49: v1.NVSwitchManager.GetUpdate:output_type -> v1.GetUpdateResponse
+	33, // 50: v1.NVSwitchManager.GetUpdatesForSwitch:output_type -> v1.GetUpdatesForSwitchResponse
+	34, // 51: v1.NVSwitchManager.GetAllUpdates:output_type -> v1.GetAllUpdatesResponse
+	36, // 52: v1.NVSwitchManager.CancelUpdate:output_type -> v1.CancelUpdateResponse
+	20, // 53: v1.NVSwitchManager.PowerControl:output_type -> v1.PowerControlResponse
+	44, // [44:54] is the sub-list for method output_type
+	34, // [34:44] is the sub-list for method input_type
+	34, // [34:34] is the sub-list for extension type_name
+	34, // [34:34] is the sub-list for extension extendee
+	0,  // [0:34] is the sub-list for field type_name
 }
 
 func init() { file_internal_proto_v1_nvswitch_manager_proto_init() }
@@ -2564,7 +2652,7 @@ func file_internal_proto_v1_nvswitch_manager_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_internal_proto_v1_nvswitch_manager_proto_rawDesc), len(file_internal_proto_v1_nvswitch_manager_proto_rawDesc)),
 			NumEnums:      6,
-			NumMessages:   31,
+			NumMessages:   32,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

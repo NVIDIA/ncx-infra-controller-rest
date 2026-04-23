@@ -455,15 +455,18 @@ func (m *Manager) getActualFirmwareVersions(
 		if machine.BmcIP != "" {
 			bmcIPs = append(bmcIPs, machine.BmcIP)
 			machineByBmcIP[machine.BmcIP] = machine.MachineID
+		} else {
+			log.Warn().
+				Str("machine_id", machine.MachineID).
+				Str("machine_state", machine.State).
+				Msg("getActualFirmwareVersions: machine has empty BmcIP, skipping")
 		}
 	}
 
 	if len(bmcIPs) == 0 {
-		log.Debug().Msg("getActualFirmwareVersions: no BMC IPs found")
+		log.Warn().Msg("getActualFirmwareVersions: no BMC IPs found")
 		return nil
 	}
-
-	log.Debug().Strs("bmc_ips", bmcIPs).Msg("getActualFirmwareVersions: querying explored endpoints")
 
 	endpoints, err := m.carbideClient.FindExploredEndpointsByIds(ctx, bmcIPs)
 	if err != nil {
@@ -471,21 +474,35 @@ func (m *Manager) getActualFirmwareVersions(
 		return nil
 	}
 
-	log.Debug().Int("endpoints_returned", len(endpoints)).Msg("getActualFirmwareVersions: response")
-
 	result := make(map[string]map[string]string, len(endpoints))
 	for _, ep := range endpoints {
 		fwVersions := ep.GetReport().GetFirmwareVersions()
-		log.Debug().
+		machineID, idOk := machineByBmcIP[ep.GetAddress()]
+		log.Info().
 			Str("address", ep.GetAddress()).
+			Bool("matched_machine", idOk).
+			Str("machine_id", machineID).
 			Int("fw_versions_count", len(fwVersions)).
 			Interface("fw_versions", fwVersions).
 			Msg("getActualFirmwareVersions: endpoint data")
 		if len(fwVersions) == 0 {
 			continue
 		}
-		if machineID, ok := machineByBmcIP[ep.GetAddress()]; ok {
+		if idOk {
 			result[machineID] = fwVersions
+		}
+	}
+
+	returnedAddrs := make(map[string]bool, len(endpoints))
+	for _, ep := range endpoints {
+		returnedAddrs[ep.GetAddress()] = true
+	}
+	for _, ip := range bmcIPs {
+		if !returnedAddrs[ip] {
+			log.Warn().
+				Str("bmc_ip", ip).
+				Str("machine_id", machineByBmcIP[ip]).
+				Msg("BMC IP had no explored endpoint returned")
 		}
 	}
 	return result
@@ -574,6 +591,14 @@ func (m *Manager) GetFirmwareStatus(ctx context.Context, target common.Target) (
 		desiredEntries = de
 	}
 
+	log.Info().
+		Str("components", target.String()).
+		Int("desired_entries_count", len(desiredEntries)).
+		Interface("desired_entries", desiredEntries).
+		Int("actual_machines_count", len(actualFirmware)).
+		Interface("actual_firmware_by_machine", actualFirmware).
+		Msg("GetFirmwareStatus inputs")
+
 	machineByID := make(map[string]carbideapi.MachineDetail, len(machines))
 	for _, machine := range machines {
 		machineByID[machine.MachineID] = machine
@@ -583,6 +608,7 @@ func (m *Manager) GetFirmwareStatus(ctx context.Context, target common.Target) (
 	for _, id := range target.ComponentIDs {
 		machine, ok := machineByID[id]
 		if !ok {
+			log.Warn().Str("machine_id", id).Msg("machine not found in Carbide")
 			result[id] = operations.FirmwareUpdateStatus{
 				ComponentID: id,
 				State:       operations.FirmwareUpdateStateUnknown,
@@ -593,34 +619,79 @@ func (m *Manager) GetFirmwareStatus(ctx context.Context, target common.Target) (
 
 		fwStatus := operations.FirmwareUpdateStatus{ComponentID: id}
 
-		if actual, hasActual := actualFirmware[id]; hasActual && len(desiredEntries) > 0 {
-			if matchesAnyDesired(actual, desiredEntries) {
-				fwStatus.State = operations.FirmwareUpdateStateCompleted
-				log.Debug().
+		actual, hasActual := actualFirmware[id]
+		log.Info().
+			Str("machine_id", id).
+			Str("machine_state", machine.State).
+			Bool("machine_update_complete", machine.UpdateComplete).
+			Str("bmc_ip", machine.BmcIP).
+			Str("machine_type", machine.MachineType).
+			Str("firmware_version", machine.FirmwareVersion).
+			Bool("has_actual", hasActual).
+			Interface("actual_versions", actual).
+			Int("desired_entries_count", len(desiredEntries)).
+			Msg("per-machine firmware status inputs")
+
+		if hasActual && len(desiredEntries) > 0 {
+			matched := false
+			for idx, entry := range desiredEntries {
+				entryMatch := firmwareVersionsMatch(entry.GetComponentVersions(), actual)
+				log.Info().
 					Str("machine_id", id).
-					Msg("Actual firmware matches desired, marking Completed")
+					Int("desired_idx", idx).
+					Str("desired_vendor", entry.GetVendor()).
+					Str("desired_model", entry.GetModel()).
+					Interface("desired_versions", entry.GetComponentVersions()).
+					Bool("matches", entryMatch).
+					Msg("comparing actual vs desired entry")
+				if entryMatch {
+					matched = true
+				}
+			}
+			if matched {
+				if strings.Contains(machine.State, "HostReprovision") {
+					fwStatus.State = operations.FirmwareUpdateStateVerifying
+					log.Info().
+						Str("machine_id", id).
+						Str("machine_state", machine.State).
+						Msg("Actual firmware matches desired but machine still in HostReprovision state, marking Verifying")
+				} else {
+					fwStatus.State = operations.FirmwareUpdateStateCompleted
+					log.Info().
+						Str("machine_id", id).
+						Str("completion_reason", "desired_equals_actual").
+						Msg("Firmware update completed: actual firmware matches desired versions")
+				}
 				result[id] = fwStatus
 				continue
 			}
 		}
 
+		fallthroughReason := ""
 		switch {
 		case machine.UpdateComplete:
 			fwStatus.State = operations.FirmwareUpdateStateCompleted
-		case strings.HasPrefix(machine.State, "HostReprovisioning/FailedFirmwareUpgrade"):
+			fallthroughReason = "core_update_complete"
+		case strings.Contains(machine.State, "HostReprovision") && strings.Contains(machine.State, "FailedFirmwareUpgrade"):
 			fwStatus.State = operations.FirmwareUpdateStateFailed
-		case strings.HasPrefix(machine.State, "HostReprovisioning"):
+			fallthroughReason = "host_reprovision_failed"
+		case strings.Contains(machine.State, "HostReprovision"):
 			fwStatus.State = operations.FirmwareUpdateStateVerifying
+			fallthroughReason = "host_reprovision_in_progress"
 		default:
 			fwStatus.State = operations.FirmwareUpdateStateQueued
+			fallthroughReason = "default_queued"
 		}
 
-		log.Debug().
+		log.Info().
 			Str("machine_id", id).
 			Str("machine_state", machine.State).
 			Bool("update_complete", machine.UpdateComplete).
+			Bool("has_actual", hasActual).
+			Int("desired_entries_count", len(desiredEntries)).
 			Str("firmware_status", fwStatus.State.String()).
-			Msg("Firmware status for compute machine")
+			Str("fallthrough_reason", fallthroughReason).
+			Msg("final firmware status decision")
 
 		result[id] = fwStatus
 	}

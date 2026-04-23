@@ -116,6 +116,16 @@ type ComponentTarget struct {
 	External *ExternalRef // External system reference (one of UUID or External must be set)
 }
 
+func (ct *ComponentTarget) TargetIdentifier() string {
+	if ct.UUID != uuid.Nil {
+		return fmt.Sprintf("uuid=%s", ct.UUID)
+	}
+	if ct.External != nil {
+		return fmt.Sprintf("external_id=%s", ct.External.ID)
+	}
+	return "unknown"
+}
+
 func (ct *ComponentTarget) Validate() error {
 	if ct == nil {
 		return fmt.Errorf("component target is nil")

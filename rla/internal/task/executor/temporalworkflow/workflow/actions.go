@@ -20,6 +20,7 @@ package workflow
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -213,6 +214,8 @@ func executeFirmwareControlAction(actx actionExecutionContext) error {
 		fwInfo.Operation = operations.FirmwareOperationUpgrade
 	}
 
+	fwInfo.TargetVersion = extractComponentTargetVersion(fwInfo.TargetVersion, target.Type)
+
 	if err := workflow.ExecuteActivity(
 		ctx, "FirmwareControl", target, fwInfo,
 	).Get(ctx, nil); err != nil {
@@ -251,10 +254,6 @@ func executeFirmwareControlAction(actx actionExecutionContext) error {
 			)
 		}
 
-		if err := workflow.Sleep(ctx, pollInterval); err != nil {
-			return fmt.Errorf("workflow sleep interrupted: %w", err)
-		}
-
 		var result activity.GetFirmwareStatusResult
 		err := workflow.ExecuteActivity(
 			ctx, "GetFirmwareStatus", target,
@@ -263,32 +262,35 @@ func executeFirmwareControlAction(actx actionExecutionContext) error {
 			log.Warn().Err(err).
 				Str("target", target.String()).
 				Msg("Failed to get firmware update status, will retry")
-			continue
-		}
-
-		allCompleted := true
-		var failedComponents []string
-		for componentID, status := range result.Statuses {
-			if status.State == operations.FirmwareUpdateStateFailed {
-				failedComponents = append(failedComponents, componentID)
+		} else {
+			allCompleted := true
+			var failedComponents []string
+			for componentID, status := range result.Statuses {
+				if status.State == operations.FirmwareUpdateStateFailed {
+					failedComponents = append(failedComponents, componentID)
+				}
+				if status.State != operations.FirmwareUpdateStateCompleted {
+					allCompleted = false
+				}
 			}
-			if status.State != operations.FirmwareUpdateStateCompleted {
-				allCompleted = false
+
+			if len(failedComponents) > 0 {
+				return fmt.Errorf(
+					"firmware update failed for components: %v", failedComponents,
+				)
+			}
+
+			if allCompleted {
+				log.Info().
+					Str("target", target.String()).
+					Dur("duration", workflow.Now(ctx).Sub(startTime)).
+					Msg("Firmware update completed")
+				return nil
 			}
 		}
 
-		if len(failedComponents) > 0 {
-			return fmt.Errorf(
-				"firmware update failed for components: %v", failedComponents,
-			)
-		}
-
-		if allCompleted {
-			log.Info().
-				Str("target", target.String()).
-				Dur("duration", workflow.Now(ctx).Sub(startTime)).
-				Msg("Firmware update completed")
-			return nil
+		if err := workflow.Sleep(ctx, pollInterval); err != nil {
+			return fmt.Errorf("workflow sleep interrupted: %w", err)
 		}
 	}
 }
@@ -356,32 +358,35 @@ func verifyPowerStatus(
 		).Get(ctx, &statusMap)
 
 		if actErr == nil {
-			// Check if all components have expected status
 			allMatch := true
+			mismatched := make(map[string]string, len(statusMap))
 			for componentID, status := range statusMap {
 				if status != expected {
-					log.Debug().
-						Str("component_id", componentID).
-						Str("current_status", string(status)).
-						Str("expected_status", string(expected)).
-						Msg("Component status mismatch")
+					mismatched[componentID] = string(status)
 					allMatch = false
-					break
 				}
 			}
 
 			if allMatch {
-				log.Debug().
+				log.Info().
 					Int("attempts", attempt).
 					Int("component_count", len(statusMap)).
 					Str("expected_status", string(expected)).
 					Msg("All components reached expected power status")
 				return nil
 			}
+
+			log.Info().
+				Int("attempt", attempt).
+				Str("expected_status", string(expected)).
+				Int("mismatch_count", len(mismatched)).
+				Interface("mismatched", mismatched).
+				Msg("Power status mismatch, will retry")
 		} else {
-			log.Debug().
+			log.Info().
 				Err(actErr).
 				Int("attempt", attempt).
+				Str("expected_status", string(expected)).
 				Msg("GetPowerStatus failed, will retry")
 		}
 
@@ -605,4 +610,58 @@ func executeVerifyFirmwareConsistencyAction(actx actionExecutionContext) error {
 		activity.VerifyFirmwareConsistency,
 		actx.target,
 	).Get(actx.workflowContext, nil)
+}
+
+// knownComponentTypeKeys are the JSON keys recognised in a layered
+// TargetVersion object. Used to distinguish the new per-component-type
+// format from the legacy flat format.
+var knownComponentTypeKeys = []string{"compute", "nvlswitch", "powershelf"}
+
+// extractComponentTargetVersion extracts the component-specific section from
+// a layered TargetVersion JSON string. The expected top-level structure is:
+//
+//	{
+//	  "compute":    {"bmc": "7.10.30", "uefi": "2.22.1"},
+//	  "nvlswitch":  "1.3.1",
+//	  "powershelf": "r1.3.9"
+//	}
+//
+// If the key for componentType is present, the corresponding value is
+// returned. String scalars are unquoted so component managers receive the
+// plain value (e.g. "1.3.1" → 1.3.1); object values are returned as raw
+// JSON for component managers that parse multi-field version payloads.
+// If the key is absent but the document contains another known
+// component-type key (i.e. it IS the layered format), an empty string
+// is returned so the component manager skips the firmware update. If the
+// document does not look like the layered format (no known keys), the
+// original string is returned as-is for backward compatibility with
+// single-component updates.
+func extractComponentTargetVersion(rawVersion string, componentType devicetypes.ComponentType) string {
+	if rawVersion == "" {
+		return ""
+	}
+
+	var layered map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(rawVersion), &layered); err != nil {
+		return rawVersion
+	}
+
+	key := strings.ToLower(devicetypes.ComponentTypeToString(componentType))
+	if section, ok := layered[key]; ok {
+		if len(section) > 0 && section[0] == '"' {
+			var s string
+			if err := json.Unmarshal(section, &s); err == nil {
+				return s
+			}
+		}
+		return string(section)
+	}
+
+	for _, known := range knownComponentTypeKeys {
+		if _, found := layered[known]; found {
+			return ""
+		}
+	}
+
+	return rawVersion
 }

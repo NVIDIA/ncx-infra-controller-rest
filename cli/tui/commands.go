@@ -495,6 +495,7 @@ func cmdVPCList(s *Session, args []string) error {
 		}
 	}
 	fmt.Fprintf(os.Stderr, "%d items\n", len(items))
+	defer printLabelHint(os.Stderr, items, merged)
 	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
 	fmt.Fprintln(tw, "NAME\tSTATUS\tSITE\tLABELS\tID")
 	for _, item := range items {
@@ -800,6 +801,7 @@ func cmdInstanceTypeList(s *Session, args []string) error {
 		items = sortByLabelKey(items, sortKey)
 	}
 	fmt.Fprintf(os.Stderr, "%d items\n", len(items))
+	defer printLabelHint(os.Stderr, items, merged)
 	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
 	fmt.Fprintln(tw, "NAME\tSTATUS\tLABELS\tID")
 	for _, item := range items {
@@ -838,6 +840,7 @@ func cmdInstanceList(s *Session, args []string) error {
 		items = sortByLabelKey(items, sortKey)
 	}
 	fmt.Fprintf(os.Stderr, "%d items\n", len(items))
+	defer printLabelHint(os.Stderr, items, merged)
 	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
 	fmt.Fprintln(tw, "NAME\tSTATUS\tVPC\tSITE\tLABELS\tID")
 	for _, item := range items {
@@ -882,6 +885,7 @@ func cmdMachineList(s *Session, args []string) error {
 	}
 
 	fmt.Fprintf(os.Stderr, "%d items\n", len(items))
+	defer printLabelHint(os.Stderr, items, merged)
 	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
 	fmt.Fprintln(tw, "NAME\tSTATUS\tSITE\tVPC\tLABELS\tID")
 	for _, item := range items {
@@ -1576,6 +1580,7 @@ func cmdNSGList(s *Session, args []string) error {
 		items = sortByLabelKey(items, sortKey)
 	}
 	fmt.Fprintf(os.Stderr, "%d items\n", len(items))
+	defer printLabelHint(os.Stderr, items, merged)
 	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
 	fmt.Fprintln(tw, "NAME\tSTATUS\tLABELS\tID")
 	for _, item := range items {
@@ -1920,6 +1925,7 @@ func cmdExpectedMachineList(s *Session, args []string) error {
 		items = sortByLabelKey(items, sortKey)
 	}
 	fmt.Fprintf(os.Stderr, "%d items\n", len(items))
+	defer printLabelHint(os.Stderr, items, merged)
 	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
 	fmt.Fprintln(tw, "SITE ID\tBMC MAC\tCHASSIS SN\tLABELS\tID")
 	for _, item := range items {
@@ -1947,6 +1953,7 @@ func cmdInfiniBandPartitionList(s *Session, args []string) error {
 		items = sortByLabelKey(items, sortKey)
 	}
 	fmt.Fprintf(os.Stderr, "%d items\n", len(items))
+	defer printLabelHint(os.Stderr, items, merged)
 	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
 	fmt.Fprintln(tw, "NAME\tSTATUS\tLABELS\tID")
 	for _, item := range items {
@@ -2369,9 +2376,12 @@ func cmdHelp(_ *Session, _ []string) error {
 	fmt.Fprintln(tw, "scope\tShow current scope filters")
 	fmt.Fprintln(tw, "scope site [name]\tSet site scope (filters lists)")
 	fmt.Fprintln(tw, "scope vpc [name]\tSet VPC scope (filters lists)")
-	fmt.Fprintln(tw, "scope label key=value\tAdd a label filter")
+	fmt.Fprintln(tw, "scope label key=value\tAdd a label filter (persists across commands)")
 	fmt.Fprintln(tw, "scope label clear\tClear all label filters")
 	fmt.Fprintln(tw, "scope clear\tClear all scope filters")
+	fmt.Fprintln(tw, "<list> --label key=value\tFilter a single label-capable list by a label (no persist)")
+	fmt.Fprintln(tw, "<list> --sort-label key\tSort a single label-capable list by a label key")
+	fmt.Fprintln(tw, "\t  label-capable lists: "+strings.Join(labelCapableListCommands, ", "))
 	fmt.Fprintln(tw, "exit\tExit interactive mode")
 	tw.Flush()
 	fmt.Printf("\n%s\n", Bold("KEYBINDINGS"))
@@ -2484,6 +2494,52 @@ func formatLabels(labels map[string]string, maxWidth int) string {
 		return s[:maxWidth-3] + "..."
 	}
 	return s
+}
+
+// labelCapableListCommands enumerates the list commands that render a LABELS
+// column and accept --label / --sort-label flags. Kept here next to the hint
+// helpers so adding a new label-capable list in one place keeps the hint
+// behavior, the help text, and any future label-aware tooling in sync.
+var labelCapableListCommands = []string{
+	"vpc list",
+	"instance-type list",
+	"instance list",
+	"machine list",
+	"network-security-group list",
+	"expected-machine list",
+	"infiniband-partition list",
+}
+
+// printLabelHint writes a one-line hint about how to filter, sort, and persist
+// label filters. Uses generic <key>/<value> placeholders -- the hint is the
+// same regardless of what is in the current result set, so no per-call sample
+// or key listing is needed (and no max-keys cap to tune). Suppressed when a
+// label filter is already active or when no items carry labels, so the hint
+// only surfaces when it is actionable.
+func printLabelHint(w io.Writer, items []NamedItem, activeFilters map[string]string) {
+	if len(activeFilters) > 0 {
+		return
+	}
+	if !anyItemHasLabels(items) {
+		return
+	}
+	fmt.Fprintln(w, Dim(
+		"Hint: --label <key>=<value> filter | --sort-label <key> sort | scope label <key>=<value> persist",
+	))
+}
+
+// anyItemHasLabels reports whether at least one item carries a non-empty
+// label key. Used to gate printLabelHint so the hint only appears on lists
+// where labels are actually in play.
+func anyItemHasLabels(items []NamedItem) bool {
+	for _, item := range items {
+		for k := range item.Labels {
+			if strings.TrimSpace(k) != "" {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func filterByLabels(items []NamedItem, filters map[string]string) []NamedItem {

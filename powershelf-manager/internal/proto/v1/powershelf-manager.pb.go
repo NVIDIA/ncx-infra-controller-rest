@@ -1114,18 +1114,74 @@ func (x *PowershelfRequest) GetPmcMacs() []string {
 	return nil
 }
 
+// PowerRequest is used by PowerOn/PowerOff RPCs. Registered devices are
+// identified by MAC; unregistered devices use PowerTarget with inline
+// connection details.
+type PowerRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	PmcMacs       []string               `protobuf:"bytes,1,rep,name=pmc_macs,json=pmcMacs,proto3" json:"pmc_macs,omitempty"`
+	Targets       []*PowerTarget         `protobuf:"bytes,2,rep,name=targets,proto3" json:"targets,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PowerRequest) Reset() {
+	*x = PowerRequest{}
+	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PowerRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PowerRequest) ProtoMessage() {}
+
+func (x *PowerRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PowerRequest.ProtoReflect.Descriptor instead.
+func (*PowerRequest) Descriptor() ([]byte, []int) {
+	return file_internal_proto_v1_powershelf_manager_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *PowerRequest) GetPmcMacs() []string {
+	if x != nil {
+		return x.PmcMacs
+	}
+	return nil
+}
+
+func (x *PowerRequest) GetTargets() []*PowerTarget {
+	if x != nil {
+		return x.Targets
+	}
+	return nil
+}
+
 type PowershelfResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	PmcMacAddress string                 `protobuf:"bytes,1,opt,name=pmc_mac_address,json=pmcMacAddress,proto3" json:"pmc_mac_address,omitempty"`
 	Status        StatusCode             `protobuf:"varint,2,opt,name=status,proto3,enum=v1.StatusCode" json:"status,omitempty"`
 	Error         string                 `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
+	PmcIp         string                 `protobuf:"bytes,4,opt,name=pmc_ip,json=pmcIp,proto3" json:"pmc_ip,omitempty"` // Set for direct PowerTarget responses; empty for registered shelves
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *PowershelfResponse) Reset() {
 	*x = PowershelfResponse{}
-	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[13]
+	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1137,7 +1193,7 @@ func (x *PowershelfResponse) String() string {
 func (*PowershelfResponse) ProtoMessage() {}
 
 func (x *PowershelfResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[13]
+	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1150,7 +1206,7 @@ func (x *PowershelfResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PowershelfResponse.ProtoReflect.Descriptor instead.
 func (*PowershelfResponse) Descriptor() ([]byte, []int) {
-	return file_internal_proto_v1_powershelf_manager_proto_rawDescGZIP(), []int{13}
+	return file_internal_proto_v1_powershelf_manager_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *PowershelfResponse) GetPmcMacAddress() string {
@@ -1174,6 +1230,13 @@ func (x *PowershelfResponse) GetError() string {
 	return ""
 }
 
+func (x *PowershelfResponse) GetPmcIp() string {
+	if x != nil {
+		return x.PmcIp
+	}
+	return ""
+}
+
 type PowerControlResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Responses     []*PowershelfResponse  `protobuf:"bytes,1,rep,name=responses,proto3" json:"responses,omitempty"`
@@ -1183,7 +1246,7 @@ type PowerControlResponse struct {
 
 func (x *PowerControlResponse) Reset() {
 	*x = PowerControlResponse{}
-	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[14]
+	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1195,7 +1258,7 @@ func (x *PowerControlResponse) String() string {
 func (*PowerControlResponse) ProtoMessage() {}
 
 func (x *PowerControlResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[14]
+	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1208,7 +1271,7 @@ func (x *PowerControlResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PowerControlResponse.ProtoReflect.Descriptor instead.
 func (*PowerControlResponse) Descriptor() ([]byte, []int) {
-	return file_internal_proto_v1_powershelf_manager_proto_rawDescGZIP(), []int{14}
+	return file_internal_proto_v1_powershelf_manager_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *PowerControlResponse) GetResponses() []*PowershelfResponse {
@@ -1216,6 +1279,68 @@ func (x *PowerControlResponse) GetResponses() []*PowershelfResponse {
 		return x.Responses
 	}
 	return nil
+}
+
+// PowerTarget allows power control against a device without prior registration.
+// Only IP and credentials are required; the registry and credential manager are bypassed.
+type PowerTarget struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	PmcIp          string                 `protobuf:"bytes,1,opt,name=pmc_ip,json=pmcIp,proto3" json:"pmc_ip,omitempty"`
+	PmcCredentials *Credentials           `protobuf:"bytes,2,opt,name=pmc_credentials,json=pmcCredentials,proto3" json:"pmc_credentials,omitempty"`
+	PmcVendor      PMCVendor              `protobuf:"varint,3,opt,name=pmc_vendor,json=pmcVendor,proto3,enum=v1.PMCVendor" json:"pmc_vendor,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *PowerTarget) Reset() {
+	*x = PowerTarget{}
+	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PowerTarget) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PowerTarget) ProtoMessage() {}
+
+func (x *PowerTarget) ProtoReflect() protoreflect.Message {
+	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PowerTarget.ProtoReflect.Descriptor instead.
+func (*PowerTarget) Descriptor() ([]byte, []int) {
+	return file_internal_proto_v1_powershelf_manager_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *PowerTarget) GetPmcIp() string {
+	if x != nil {
+		return x.PmcIp
+	}
+	return ""
+}
+
+func (x *PowerTarget) GetPmcCredentials() *Credentials {
+	if x != nil {
+		return x.PmcCredentials
+	}
+	return nil
+}
+
+func (x *PowerTarget) GetPmcVendor() PMCVendor {
+	if x != nil {
+		return x.PmcVendor
+	}
+	return PMCVendor_PMC_TYPE_UNKNOWN
 }
 
 type GetPowershelvesResponse struct {
@@ -1227,7 +1352,7 @@ type GetPowershelvesResponse struct {
 
 func (x *GetPowershelvesResponse) Reset() {
 	*x = GetPowershelvesResponse{}
-	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[15]
+	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1239,7 +1364,7 @@ func (x *GetPowershelvesResponse) String() string {
 func (*GetPowershelvesResponse) ProtoMessage() {}
 
 func (x *GetPowershelvesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[15]
+	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1252,7 +1377,7 @@ func (x *GetPowershelvesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPowershelvesResponse.ProtoReflect.Descriptor instead.
 func (*GetPowershelvesResponse) Descriptor() ([]byte, []int) {
-	return file_internal_proto_v1_powershelf_manager_proto_rawDescGZIP(), []int{15}
+	return file_internal_proto_v1_powershelf_manager_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *GetPowershelvesResponse) GetPowershelves() []*PowerShelf {
@@ -1272,7 +1397,7 @@ type UpdateComponentFirmwareRequest struct {
 
 func (x *UpdateComponentFirmwareRequest) Reset() {
 	*x = UpdateComponentFirmwareRequest{}
-	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[16]
+	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1284,7 +1409,7 @@ func (x *UpdateComponentFirmwareRequest) String() string {
 func (*UpdateComponentFirmwareRequest) ProtoMessage() {}
 
 func (x *UpdateComponentFirmwareRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[16]
+	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1297,7 +1422,7 @@ func (x *UpdateComponentFirmwareRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateComponentFirmwareRequest.ProtoReflect.Descriptor instead.
 func (*UpdateComponentFirmwareRequest) Descriptor() ([]byte, []int) {
-	return file_internal_proto_v1_powershelf_manager_proto_rawDescGZIP(), []int{16}
+	return file_internal_proto_v1_powershelf_manager_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *UpdateComponentFirmwareRequest) GetComponent() PowershelfComponent {
@@ -1324,7 +1449,7 @@ type UpdatePowershelfFirmwareRequest struct {
 
 func (x *UpdatePowershelfFirmwareRequest) Reset() {
 	*x = UpdatePowershelfFirmwareRequest{}
-	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[17]
+	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1336,7 +1461,7 @@ func (x *UpdatePowershelfFirmwareRequest) String() string {
 func (*UpdatePowershelfFirmwareRequest) ProtoMessage() {}
 
 func (x *UpdatePowershelfFirmwareRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[17]
+	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1349,7 +1474,7 @@ func (x *UpdatePowershelfFirmwareRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdatePowershelfFirmwareRequest.ProtoReflect.Descriptor instead.
 func (*UpdatePowershelfFirmwareRequest) Descriptor() ([]byte, []int) {
-	return file_internal_proto_v1_powershelf_manager_proto_rawDescGZIP(), []int{17}
+	return file_internal_proto_v1_powershelf_manager_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *UpdatePowershelfFirmwareRequest) GetPmcMacAddress() string {
@@ -1375,7 +1500,7 @@ type UpdateFirmwareRequest struct {
 
 func (x *UpdateFirmwareRequest) Reset() {
 	*x = UpdateFirmwareRequest{}
-	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[18]
+	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1387,7 +1512,7 @@ func (x *UpdateFirmwareRequest) String() string {
 func (*UpdateFirmwareRequest) ProtoMessage() {}
 
 func (x *UpdateFirmwareRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[18]
+	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1400,7 +1525,7 @@ func (x *UpdateFirmwareRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateFirmwareRequest.ProtoReflect.Descriptor instead.
 func (*UpdateFirmwareRequest) Descriptor() ([]byte, []int) {
-	return file_internal_proto_v1_powershelf_manager_proto_rawDescGZIP(), []int{18}
+	return file_internal_proto_v1_powershelf_manager_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *UpdateFirmwareRequest) GetUpgrades() []*UpdatePowershelfFirmwareRequest {
@@ -1421,7 +1546,7 @@ type UpdateComponentFirmwareResponse struct {
 
 func (x *UpdateComponentFirmwareResponse) Reset() {
 	*x = UpdateComponentFirmwareResponse{}
-	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[19]
+	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1433,7 +1558,7 @@ func (x *UpdateComponentFirmwareResponse) String() string {
 func (*UpdateComponentFirmwareResponse) ProtoMessage() {}
 
 func (x *UpdateComponentFirmwareResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[19]
+	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1446,7 +1571,7 @@ func (x *UpdateComponentFirmwareResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateComponentFirmwareResponse.ProtoReflect.Descriptor instead.
 func (*UpdateComponentFirmwareResponse) Descriptor() ([]byte, []int) {
-	return file_internal_proto_v1_powershelf_manager_proto_rawDescGZIP(), []int{19}
+	return file_internal_proto_v1_powershelf_manager_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *UpdateComponentFirmwareResponse) GetComponent() PowershelfComponent {
@@ -1480,7 +1605,7 @@ type UpdatePowershelfFirmwareResponse struct {
 
 func (x *UpdatePowershelfFirmwareResponse) Reset() {
 	*x = UpdatePowershelfFirmwareResponse{}
-	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[20]
+	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1492,7 +1617,7 @@ func (x *UpdatePowershelfFirmwareResponse) String() string {
 func (*UpdatePowershelfFirmwareResponse) ProtoMessage() {}
 
 func (x *UpdatePowershelfFirmwareResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[20]
+	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1505,7 +1630,7 @@ func (x *UpdatePowershelfFirmwareResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdatePowershelfFirmwareResponse.ProtoReflect.Descriptor instead.
 func (*UpdatePowershelfFirmwareResponse) Descriptor() ([]byte, []int) {
-	return file_internal_proto_v1_powershelf_manager_proto_rawDescGZIP(), []int{20}
+	return file_internal_proto_v1_powershelf_manager_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *UpdatePowershelfFirmwareResponse) GetPmcMacAddress() string {
@@ -1531,7 +1656,7 @@ type UpdateFirmwareResponse struct {
 
 func (x *UpdateFirmwareResponse) Reset() {
 	*x = UpdateFirmwareResponse{}
-	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[21]
+	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1543,7 +1668,7 @@ func (x *UpdateFirmwareResponse) String() string {
 func (*UpdateFirmwareResponse) ProtoMessage() {}
 
 func (x *UpdateFirmwareResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[21]
+	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1556,7 +1681,7 @@ func (x *UpdateFirmwareResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateFirmwareResponse.ProtoReflect.Descriptor instead.
 func (*UpdateFirmwareResponse) Descriptor() ([]byte, []int) {
-	return file_internal_proto_v1_powershelf_manager_proto_rawDescGZIP(), []int{21}
+	return file_internal_proto_v1_powershelf_manager_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *UpdateFirmwareResponse) GetResponses() []*UpdatePowershelfFirmwareResponse {
@@ -1575,7 +1700,7 @@ type CanUpdateFirmwareResponse struct {
 
 func (x *CanUpdateFirmwareResponse) Reset() {
 	*x = CanUpdateFirmwareResponse{}
-	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[22]
+	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1587,7 +1712,7 @@ func (x *CanUpdateFirmwareResponse) String() string {
 func (*CanUpdateFirmwareResponse) ProtoMessage() {}
 
 func (x *CanUpdateFirmwareResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[22]
+	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1600,7 +1725,7 @@ func (x *CanUpdateFirmwareResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CanUpdateFirmwareResponse.ProtoReflect.Descriptor instead.
 func (*CanUpdateFirmwareResponse) Descriptor() ([]byte, []int) {
-	return file_internal_proto_v1_powershelf_manager_proto_rawDescGZIP(), []int{22}
+	return file_internal_proto_v1_powershelf_manager_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *CanUpdateFirmwareResponse) GetCanUpdate() bool {
@@ -1619,7 +1744,7 @@ type FirmwareVersion struct {
 
 func (x *FirmwareVersion) Reset() {
 	*x = FirmwareVersion{}
-	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[23]
+	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1631,7 +1756,7 @@ func (x *FirmwareVersion) String() string {
 func (*FirmwareVersion) ProtoMessage() {}
 
 func (x *FirmwareVersion) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[23]
+	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1644,7 +1769,7 @@ func (x *FirmwareVersion) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FirmwareVersion.ProtoReflect.Descriptor instead.
 func (*FirmwareVersion) Descriptor() ([]byte, []int) {
-	return file_internal_proto_v1_powershelf_manager_proto_rawDescGZIP(), []int{23}
+	return file_internal_proto_v1_powershelf_manager_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *FirmwareVersion) GetVersion() string {
@@ -1664,7 +1789,7 @@ type ComponentFirmwareUpgrades struct {
 
 func (x *ComponentFirmwareUpgrades) Reset() {
 	*x = ComponentFirmwareUpgrades{}
-	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[24]
+	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1676,7 +1801,7 @@ func (x *ComponentFirmwareUpgrades) String() string {
 func (*ComponentFirmwareUpgrades) ProtoMessage() {}
 
 func (x *ComponentFirmwareUpgrades) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[24]
+	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1689,7 +1814,7 @@ func (x *ComponentFirmwareUpgrades) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ComponentFirmwareUpgrades.ProtoReflect.Descriptor instead.
 func (*ComponentFirmwareUpgrades) Descriptor() ([]byte, []int) {
-	return file_internal_proto_v1_powershelf_manager_proto_rawDescGZIP(), []int{24}
+	return file_internal_proto_v1_powershelf_manager_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *ComponentFirmwareUpgrades) GetComponent() PowershelfComponent {
@@ -1716,7 +1841,7 @@ type AvailableFirmware struct {
 
 func (x *AvailableFirmware) Reset() {
 	*x = AvailableFirmware{}
-	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[25]
+	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1728,7 +1853,7 @@ func (x *AvailableFirmware) String() string {
 func (*AvailableFirmware) ProtoMessage() {}
 
 func (x *AvailableFirmware) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[25]
+	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1741,7 +1866,7 @@ func (x *AvailableFirmware) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AvailableFirmware.ProtoReflect.Descriptor instead.
 func (*AvailableFirmware) Descriptor() ([]byte, []int) {
-	return file_internal_proto_v1_powershelf_manager_proto_rawDescGZIP(), []int{25}
+	return file_internal_proto_v1_powershelf_manager_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *AvailableFirmware) GetPmcMacAddress() string {
@@ -1767,7 +1892,7 @@ type ListAvailableFirmwareResponse struct {
 
 func (x *ListAvailableFirmwareResponse) Reset() {
 	*x = ListAvailableFirmwareResponse{}
-	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[26]
+	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1779,7 +1904,7 @@ func (x *ListAvailableFirmwareResponse) String() string {
 func (*ListAvailableFirmwareResponse) ProtoMessage() {}
 
 func (x *ListAvailableFirmwareResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[26]
+	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1792,7 +1917,7 @@ func (x *ListAvailableFirmwareResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAvailableFirmwareResponse.ProtoReflect.Descriptor instead.
 func (*ListAvailableFirmwareResponse) Descriptor() ([]byte, []int) {
-	return file_internal_proto_v1_powershelf_manager_proto_rawDescGZIP(), []int{26}
+	return file_internal_proto_v1_powershelf_manager_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *ListAvailableFirmwareResponse) GetUpgrades() []*AvailableFirmware {
@@ -1811,7 +1936,7 @@ type SetDryRunRequest struct {
 
 func (x *SetDryRunRequest) Reset() {
 	*x = SetDryRunRequest{}
-	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[27]
+	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1823,7 +1948,7 @@ func (x *SetDryRunRequest) String() string {
 func (*SetDryRunRequest) ProtoMessage() {}
 
 func (x *SetDryRunRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[27]
+	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1836,7 +1961,7 @@ func (x *SetDryRunRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetDryRunRequest.ProtoReflect.Descriptor instead.
 func (*SetDryRunRequest) Descriptor() ([]byte, []int) {
-	return file_internal_proto_v1_powershelf_manager_proto_rawDescGZIP(), []int{27}
+	return file_internal_proto_v1_powershelf_manager_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *SetDryRunRequest) GetDryRun() bool {
@@ -1856,7 +1981,7 @@ type GetFirmwareUpdateStatusRequest struct {
 
 func (x *GetFirmwareUpdateStatusRequest) Reset() {
 	*x = GetFirmwareUpdateStatusRequest{}
-	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[28]
+	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1868,7 +1993,7 @@ func (x *GetFirmwareUpdateStatusRequest) String() string {
 func (*GetFirmwareUpdateStatusRequest) ProtoMessage() {}
 
 func (x *GetFirmwareUpdateStatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[28]
+	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1881,7 +2006,7 @@ func (x *GetFirmwareUpdateStatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetFirmwareUpdateStatusRequest.ProtoReflect.Descriptor instead.
 func (*GetFirmwareUpdateStatusRequest) Descriptor() ([]byte, []int) {
-	return file_internal_proto_v1_powershelf_manager_proto_rawDescGZIP(), []int{28}
+	return file_internal_proto_v1_powershelf_manager_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *GetFirmwareUpdateStatusRequest) GetQueries() []*FirmwareUpdateQuery {
@@ -1902,7 +2027,7 @@ type FirmwareUpdateQuery struct {
 
 func (x *FirmwareUpdateQuery) Reset() {
 	*x = FirmwareUpdateQuery{}
-	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[29]
+	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1914,7 +2039,7 @@ func (x *FirmwareUpdateQuery) String() string {
 func (*FirmwareUpdateQuery) ProtoMessage() {}
 
 func (x *FirmwareUpdateQuery) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[29]
+	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1927,7 +2052,7 @@ func (x *FirmwareUpdateQuery) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FirmwareUpdateQuery.ProtoReflect.Descriptor instead.
 func (*FirmwareUpdateQuery) Descriptor() ([]byte, []int) {
-	return file_internal_proto_v1_powershelf_manager_proto_rawDescGZIP(), []int{29}
+	return file_internal_proto_v1_powershelf_manager_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *FirmwareUpdateQuery) GetPmcMacAddress() string {
@@ -1954,7 +2079,7 @@ type GetFirmwareUpdateStatusResponse struct {
 
 func (x *GetFirmwareUpdateStatusResponse) Reset() {
 	*x = GetFirmwareUpdateStatusResponse{}
-	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[30]
+	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1966,7 +2091,7 @@ func (x *GetFirmwareUpdateStatusResponse) String() string {
 func (*GetFirmwareUpdateStatusResponse) ProtoMessage() {}
 
 func (x *GetFirmwareUpdateStatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[30]
+	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1979,7 +2104,7 @@ func (x *GetFirmwareUpdateStatusResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetFirmwareUpdateStatusResponse.ProtoReflect.Descriptor instead.
 func (*GetFirmwareUpdateStatusResponse) Descriptor() ([]byte, []int) {
-	return file_internal_proto_v1_powershelf_manager_proto_rawDescGZIP(), []int{30}
+	return file_internal_proto_v1_powershelf_manager_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *GetFirmwareUpdateStatusResponse) GetStatuses() []*FirmwareUpdateStatus {
@@ -2003,7 +2128,7 @@ type FirmwareUpdateStatus struct {
 
 func (x *FirmwareUpdateStatus) Reset() {
 	*x = FirmwareUpdateStatus{}
-	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[31]
+	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2015,7 +2140,7 @@ func (x *FirmwareUpdateStatus) String() string {
 func (*FirmwareUpdateStatus) ProtoMessage() {}
 
 func (x *FirmwareUpdateStatus) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[31]
+	mi := &file_internal_proto_v1_powershelf_manager_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2028,7 +2153,7 @@ func (x *FirmwareUpdateStatus) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FirmwareUpdateStatus.ProtoReflect.Descriptor instead.
 func (*FirmwareUpdateStatus) Descriptor() ([]byte, []int) {
-	return file_internal_proto_v1_powershelf_manager_proto_rawDescGZIP(), []int{31}
+	return file_internal_proto_v1_powershelf_manager_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *FirmwareUpdateStatus) GetPmcMacAddress() string {
@@ -2145,13 +2270,22 @@ const file_internal_proto_v1_powershelf_manager_proto_rawDesc = "" +
 	"\x1cRegisterPowershelvesResponse\x12<\n" +
 	"\tresponses\x18\x01 \x03(\v2\x1e.v1.RegisterPowershelfResponseR\tresponses\".\n" +
 	"\x11PowershelfRequest\x12\x19\n" +
-	"\bpmc_macs\x18\x01 \x03(\tR\apmcMacs\"z\n" +
+	"\bpmc_macs\x18\x01 \x03(\tR\apmcMacs\"T\n" +
+	"\fPowerRequest\x12\x19\n" +
+	"\bpmc_macs\x18\x01 \x03(\tR\apmcMacs\x12)\n" +
+	"\atargets\x18\x02 \x03(\v2\x0f.v1.PowerTargetR\atargets\"\x91\x01\n" +
 	"\x12PowershelfResponse\x12&\n" +
 	"\x0fpmc_mac_address\x18\x01 \x01(\tR\rpmcMacAddress\x12&\n" +
 	"\x06status\x18\x02 \x01(\x0e2\x0e.v1.StatusCodeR\x06status\x12\x14\n" +
-	"\x05error\x18\x03 \x01(\tR\x05error\"L\n" +
+	"\x05error\x18\x03 \x01(\tR\x05error\x12\x15\n" +
+	"\x06pmc_ip\x18\x04 \x01(\tR\x05pmcIp\"L\n" +
 	"\x14PowerControlResponse\x124\n" +
-	"\tresponses\x18\x01 \x03(\v2\x16.v1.PowershelfResponseR\tresponses\"M\n" +
+	"\tresponses\x18\x01 \x03(\v2\x16.v1.PowershelfResponseR\tresponses\"\x8c\x01\n" +
+	"\vPowerTarget\x12\x15\n" +
+	"\x06pmc_ip\x18\x01 \x01(\tR\x05pmcIp\x128\n" +
+	"\x0fpmc_credentials\x18\x02 \x01(\v2\x0f.v1.CredentialsR\x0epmcCredentials\x12,\n" +
+	"\n" +
+	"pmc_vendor\x18\x03 \x01(\x0e2\r.v1.PMCVendorR\tpmcVendor\"M\n" +
 	"\x17GetPowershelvesResponse\x122\n" +
 	"\fpowershelves\x18\x01 \x03(\v2\x0e.v1.PowerShelfR\fpowershelves\"\x8a\x01\n" +
 	"\x1eUpdateComponentFirmwareRequest\x125\n" +
@@ -2220,16 +2354,16 @@ const file_internal_proto_v1_powershelf_manager_proto_rawDesc = "" +
 	"\x1cFIRMWARE_UPDATE_STATE_QUEUED\x10\x01\x12#\n" +
 	"\x1fFIRMWARE_UPDATE_STATE_VERIFYING\x10\x02\x12#\n" +
 	"\x1fFIRMWARE_UPDATE_STATE_COMPLETED\x10\x03\x12 \n" +
-	"\x1cFIRMWARE_UPDATE_STATE_FAILED\x10\x042\xe9\x04\n" +
+	"\x1cFIRMWARE_UPDATE_STATE_FAILED\x10\x042\xdf\x04\n" +
 	"\x11PowershelfManager\x12Y\n" +
 	"\x14RegisterPowershelves\x12\x1f.v1.RegisterPowershelvesRequest\x1a .v1.RegisterPowershelvesResponse\x12E\n" +
 	"\x0fGetPowershelves\x12\x15.v1.PowershelfRequest\x1a\x1b.v1.GetPowershelvesResponse\x12G\n" +
 	"\x0eUpdateFirmware\x12\x19.v1.UpdateFirmwareRequest\x1a\x1a.v1.UpdateFirmwareResponse\x12b\n" +
 	"\x17GetFirmwareUpdateStatus\x12\".v1.GetFirmwareUpdateStatusRequest\x1a#.v1.GetFirmwareUpdateStatusResponse\x12Q\n" +
 	"\x15ListAvailableFirmware\x12\x15.v1.PowershelfRequest\x1a!.v1.ListAvailableFirmwareResponse\x129\n" +
-	"\tSetDryRun\x12\x14.v1.SetDryRunRequest\x1a\x16.google.protobuf.Empty\x12;\n" +
-	"\bPowerOff\x12\x15.v1.PowershelfRequest\x1a\x18.v1.PowerControlResponse\x12:\n" +
-	"\aPowerOn\x12\x15.v1.PowershelfRequest\x1a\x18.v1.PowerControlResponseB\n" +
+	"\tSetDryRun\x12\x14.v1.SetDryRunRequest\x1a\x16.google.protobuf.Empty\x126\n" +
+	"\bPowerOff\x12\x10.v1.PowerRequest\x1a\x18.v1.PowerControlResponse\x125\n" +
+	"\aPowerOn\x12\x10.v1.PowerRequest\x1a\x18.v1.PowerControlResponseB\n" +
 	"Z\bproto/v1b\x06proto3"
 
 var (
@@ -2245,7 +2379,7 @@ func file_internal_proto_v1_powershelf_manager_proto_rawDescGZIP() []byte {
 }
 
 var file_internal_proto_v1_powershelf_manager_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
-var file_internal_proto_v1_powershelf_manager_proto_msgTypes = make([]protoimpl.MessageInfo, 32)
+var file_internal_proto_v1_powershelf_manager_proto_msgTypes = make([]protoimpl.MessageInfo, 34)
 var file_internal_proto_v1_powershelf_manager_proto_goTypes = []any{
 	(PMCVendor)(0),                           // 0: v1.PMCVendor
 	(StatusCode)(0),                          // 1: v1.StatusCode
@@ -2264,27 +2398,29 @@ var file_internal_proto_v1_powershelf_manager_proto_goTypes = []any{
 	(*RegisterPowershelfResponse)(nil),       // 14: v1.RegisterPowershelfResponse
 	(*RegisterPowershelvesResponse)(nil),     // 15: v1.RegisterPowershelvesResponse
 	(*PowershelfRequest)(nil),                // 16: v1.PowershelfRequest
-	(*PowershelfResponse)(nil),               // 17: v1.PowershelfResponse
-	(*PowerControlResponse)(nil),             // 18: v1.PowerControlResponse
-	(*GetPowershelvesResponse)(nil),          // 19: v1.GetPowershelvesResponse
-	(*UpdateComponentFirmwareRequest)(nil),   // 20: v1.UpdateComponentFirmwareRequest
-	(*UpdatePowershelfFirmwareRequest)(nil),  // 21: v1.UpdatePowershelfFirmwareRequest
-	(*UpdateFirmwareRequest)(nil),            // 22: v1.UpdateFirmwareRequest
-	(*UpdateComponentFirmwareResponse)(nil),  // 23: v1.UpdateComponentFirmwareResponse
-	(*UpdatePowershelfFirmwareResponse)(nil), // 24: v1.UpdatePowershelfFirmwareResponse
-	(*UpdateFirmwareResponse)(nil),           // 25: v1.UpdateFirmwareResponse
-	(*CanUpdateFirmwareResponse)(nil),        // 26: v1.CanUpdateFirmwareResponse
-	(*FirmwareVersion)(nil),                  // 27: v1.FirmwareVersion
-	(*ComponentFirmwareUpgrades)(nil),        // 28: v1.ComponentFirmwareUpgrades
-	(*AvailableFirmware)(nil),                // 29: v1.AvailableFirmware
-	(*ListAvailableFirmwareResponse)(nil),    // 30: v1.ListAvailableFirmwareResponse
-	(*SetDryRunRequest)(nil),                 // 31: v1.SetDryRunRequest
-	(*GetFirmwareUpdateStatusRequest)(nil),   // 32: v1.GetFirmwareUpdateStatusRequest
-	(*FirmwareUpdateQuery)(nil),              // 33: v1.FirmwareUpdateQuery
-	(*GetFirmwareUpdateStatusResponse)(nil),  // 34: v1.GetFirmwareUpdateStatusResponse
-	(*FirmwareUpdateStatus)(nil),             // 35: v1.FirmwareUpdateStatus
-	(*timestamppb.Timestamp)(nil),            // 36: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),                    // 37: google.protobuf.Empty
+	(*PowerRequest)(nil),                     // 17: v1.PowerRequest
+	(*PowershelfResponse)(nil),               // 18: v1.PowershelfResponse
+	(*PowerControlResponse)(nil),             // 19: v1.PowerControlResponse
+	(*PowerTarget)(nil),                      // 20: v1.PowerTarget
+	(*GetPowershelvesResponse)(nil),          // 21: v1.GetPowershelvesResponse
+	(*UpdateComponentFirmwareRequest)(nil),   // 22: v1.UpdateComponentFirmwareRequest
+	(*UpdatePowershelfFirmwareRequest)(nil),  // 23: v1.UpdatePowershelfFirmwareRequest
+	(*UpdateFirmwareRequest)(nil),            // 24: v1.UpdateFirmwareRequest
+	(*UpdateComponentFirmwareResponse)(nil),  // 25: v1.UpdateComponentFirmwareResponse
+	(*UpdatePowershelfFirmwareResponse)(nil), // 26: v1.UpdatePowershelfFirmwareResponse
+	(*UpdateFirmwareResponse)(nil),           // 27: v1.UpdateFirmwareResponse
+	(*CanUpdateFirmwareResponse)(nil),        // 28: v1.CanUpdateFirmwareResponse
+	(*FirmwareVersion)(nil),                  // 29: v1.FirmwareVersion
+	(*ComponentFirmwareUpgrades)(nil),        // 30: v1.ComponentFirmwareUpgrades
+	(*AvailableFirmware)(nil),                // 31: v1.AvailableFirmware
+	(*ListAvailableFirmwareResponse)(nil),    // 32: v1.ListAvailableFirmwareResponse
+	(*SetDryRunRequest)(nil),                 // 33: v1.SetDryRunRequest
+	(*GetFirmwareUpdateStatusRequest)(nil),   // 34: v1.GetFirmwareUpdateStatusRequest
+	(*FirmwareUpdateQuery)(nil),              // 35: v1.FirmwareUpdateQuery
+	(*GetFirmwareUpdateStatusResponse)(nil),  // 36: v1.GetFirmwareUpdateStatusResponse
+	(*FirmwareUpdateStatus)(nil),             // 37: v1.FirmwareUpdateStatus
+	(*timestamppb.Timestamp)(nil),            // 38: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),                    // 39: google.protobuf.Empty
 }
 var file_internal_proto_v1_powershelf_manager_proto_depIdxs = []int32{
 	0,  // 0: v1.PowerManagementController.vendor:type_name -> v1.PMCVendor
@@ -2300,51 +2436,54 @@ var file_internal_proto_v1_powershelf_manager_proto_depIdxs = []int32{
 	0,  // 10: v1.RegisterPowershelfRequest.pmc_vendor:type_name -> v1.PMCVendor
 	4,  // 11: v1.RegisterPowershelfRequest.pmc_credentials:type_name -> v1.Credentials
 	12, // 12: v1.RegisterPowershelvesRequest.registration_requests:type_name -> v1.RegisterPowershelfRequest
-	36, // 13: v1.RegisterPowershelfResponse.created:type_name -> google.protobuf.Timestamp
+	38, // 13: v1.RegisterPowershelfResponse.created:type_name -> google.protobuf.Timestamp
 	1,  // 14: v1.RegisterPowershelfResponse.status:type_name -> v1.StatusCode
 	14, // 15: v1.RegisterPowershelvesResponse.responses:type_name -> v1.RegisterPowershelfResponse
-	1,  // 16: v1.PowershelfResponse.status:type_name -> v1.StatusCode
-	17, // 17: v1.PowerControlResponse.responses:type_name -> v1.PowershelfResponse
-	11, // 18: v1.GetPowershelvesResponse.powershelves:type_name -> v1.PowerShelf
-	2,  // 19: v1.UpdateComponentFirmwareRequest.component:type_name -> v1.PowershelfComponent
-	27, // 20: v1.UpdateComponentFirmwareRequest.upgradeTo:type_name -> v1.FirmwareVersion
-	20, // 21: v1.UpdatePowershelfFirmwareRequest.components:type_name -> v1.UpdateComponentFirmwareRequest
-	21, // 22: v1.UpdateFirmwareRequest.upgrades:type_name -> v1.UpdatePowershelfFirmwareRequest
-	2,  // 23: v1.UpdateComponentFirmwareResponse.component:type_name -> v1.PowershelfComponent
-	1,  // 24: v1.UpdateComponentFirmwareResponse.status:type_name -> v1.StatusCode
-	23, // 25: v1.UpdatePowershelfFirmwareResponse.components:type_name -> v1.UpdateComponentFirmwareResponse
-	24, // 26: v1.UpdateFirmwareResponse.responses:type_name -> v1.UpdatePowershelfFirmwareResponse
-	2,  // 27: v1.ComponentFirmwareUpgrades.component:type_name -> v1.PowershelfComponent
-	27, // 28: v1.ComponentFirmwareUpgrades.upgrades:type_name -> v1.FirmwareVersion
-	28, // 29: v1.AvailableFirmware.upgrades:type_name -> v1.ComponentFirmwareUpgrades
-	29, // 30: v1.ListAvailableFirmwareResponse.upgrades:type_name -> v1.AvailableFirmware
-	33, // 31: v1.GetFirmwareUpdateStatusRequest.queries:type_name -> v1.FirmwareUpdateQuery
-	2,  // 32: v1.FirmwareUpdateQuery.component:type_name -> v1.PowershelfComponent
-	35, // 33: v1.GetFirmwareUpdateStatusResponse.statuses:type_name -> v1.FirmwareUpdateStatus
-	2,  // 34: v1.FirmwareUpdateStatus.component:type_name -> v1.PowershelfComponent
-	3,  // 35: v1.FirmwareUpdateStatus.state:type_name -> v1.FirmwareUpdateState
-	1,  // 36: v1.FirmwareUpdateStatus.status:type_name -> v1.StatusCode
-	13, // 37: v1.PowershelfManager.RegisterPowershelves:input_type -> v1.RegisterPowershelvesRequest
-	16, // 38: v1.PowershelfManager.GetPowershelves:input_type -> v1.PowershelfRequest
-	22, // 39: v1.PowershelfManager.UpdateFirmware:input_type -> v1.UpdateFirmwareRequest
-	32, // 40: v1.PowershelfManager.GetFirmwareUpdateStatus:input_type -> v1.GetFirmwareUpdateStatusRequest
-	16, // 41: v1.PowershelfManager.ListAvailableFirmware:input_type -> v1.PowershelfRequest
-	31, // 42: v1.PowershelfManager.SetDryRun:input_type -> v1.SetDryRunRequest
-	16, // 43: v1.PowershelfManager.PowerOff:input_type -> v1.PowershelfRequest
-	16, // 44: v1.PowershelfManager.PowerOn:input_type -> v1.PowershelfRequest
-	15, // 45: v1.PowershelfManager.RegisterPowershelves:output_type -> v1.RegisterPowershelvesResponse
-	19, // 46: v1.PowershelfManager.GetPowershelves:output_type -> v1.GetPowershelvesResponse
-	25, // 47: v1.PowershelfManager.UpdateFirmware:output_type -> v1.UpdateFirmwareResponse
-	34, // 48: v1.PowershelfManager.GetFirmwareUpdateStatus:output_type -> v1.GetFirmwareUpdateStatusResponse
-	30, // 49: v1.PowershelfManager.ListAvailableFirmware:output_type -> v1.ListAvailableFirmwareResponse
-	37, // 50: v1.PowershelfManager.SetDryRun:output_type -> google.protobuf.Empty
-	18, // 51: v1.PowershelfManager.PowerOff:output_type -> v1.PowerControlResponse
-	18, // 52: v1.PowershelfManager.PowerOn:output_type -> v1.PowerControlResponse
-	45, // [45:53] is the sub-list for method output_type
-	37, // [37:45] is the sub-list for method input_type
-	37, // [37:37] is the sub-list for extension type_name
-	37, // [37:37] is the sub-list for extension extendee
-	0,  // [0:37] is the sub-list for field type_name
+	20, // 16: v1.PowerRequest.targets:type_name -> v1.PowerTarget
+	1,  // 17: v1.PowershelfResponse.status:type_name -> v1.StatusCode
+	18, // 18: v1.PowerControlResponse.responses:type_name -> v1.PowershelfResponse
+	4,  // 19: v1.PowerTarget.pmc_credentials:type_name -> v1.Credentials
+	0,  // 20: v1.PowerTarget.pmc_vendor:type_name -> v1.PMCVendor
+	11, // 21: v1.GetPowershelvesResponse.powershelves:type_name -> v1.PowerShelf
+	2,  // 22: v1.UpdateComponentFirmwareRequest.component:type_name -> v1.PowershelfComponent
+	29, // 23: v1.UpdateComponentFirmwareRequest.upgradeTo:type_name -> v1.FirmwareVersion
+	22, // 24: v1.UpdatePowershelfFirmwareRequest.components:type_name -> v1.UpdateComponentFirmwareRequest
+	23, // 25: v1.UpdateFirmwareRequest.upgrades:type_name -> v1.UpdatePowershelfFirmwareRequest
+	2,  // 26: v1.UpdateComponentFirmwareResponse.component:type_name -> v1.PowershelfComponent
+	1,  // 27: v1.UpdateComponentFirmwareResponse.status:type_name -> v1.StatusCode
+	25, // 28: v1.UpdatePowershelfFirmwareResponse.components:type_name -> v1.UpdateComponentFirmwareResponse
+	26, // 29: v1.UpdateFirmwareResponse.responses:type_name -> v1.UpdatePowershelfFirmwareResponse
+	2,  // 30: v1.ComponentFirmwareUpgrades.component:type_name -> v1.PowershelfComponent
+	29, // 31: v1.ComponentFirmwareUpgrades.upgrades:type_name -> v1.FirmwareVersion
+	30, // 32: v1.AvailableFirmware.upgrades:type_name -> v1.ComponentFirmwareUpgrades
+	31, // 33: v1.ListAvailableFirmwareResponse.upgrades:type_name -> v1.AvailableFirmware
+	35, // 34: v1.GetFirmwareUpdateStatusRequest.queries:type_name -> v1.FirmwareUpdateQuery
+	2,  // 35: v1.FirmwareUpdateQuery.component:type_name -> v1.PowershelfComponent
+	37, // 36: v1.GetFirmwareUpdateStatusResponse.statuses:type_name -> v1.FirmwareUpdateStatus
+	2,  // 37: v1.FirmwareUpdateStatus.component:type_name -> v1.PowershelfComponent
+	3,  // 38: v1.FirmwareUpdateStatus.state:type_name -> v1.FirmwareUpdateState
+	1,  // 39: v1.FirmwareUpdateStatus.status:type_name -> v1.StatusCode
+	13, // 40: v1.PowershelfManager.RegisterPowershelves:input_type -> v1.RegisterPowershelvesRequest
+	16, // 41: v1.PowershelfManager.GetPowershelves:input_type -> v1.PowershelfRequest
+	24, // 42: v1.PowershelfManager.UpdateFirmware:input_type -> v1.UpdateFirmwareRequest
+	34, // 43: v1.PowershelfManager.GetFirmwareUpdateStatus:input_type -> v1.GetFirmwareUpdateStatusRequest
+	16, // 44: v1.PowershelfManager.ListAvailableFirmware:input_type -> v1.PowershelfRequest
+	33, // 45: v1.PowershelfManager.SetDryRun:input_type -> v1.SetDryRunRequest
+	17, // 46: v1.PowershelfManager.PowerOff:input_type -> v1.PowerRequest
+	17, // 47: v1.PowershelfManager.PowerOn:input_type -> v1.PowerRequest
+	15, // 48: v1.PowershelfManager.RegisterPowershelves:output_type -> v1.RegisterPowershelvesResponse
+	21, // 49: v1.PowershelfManager.GetPowershelves:output_type -> v1.GetPowershelvesResponse
+	27, // 50: v1.PowershelfManager.UpdateFirmware:output_type -> v1.UpdateFirmwareResponse
+	36, // 51: v1.PowershelfManager.GetFirmwareUpdateStatus:output_type -> v1.GetFirmwareUpdateStatusResponse
+	32, // 52: v1.PowershelfManager.ListAvailableFirmware:output_type -> v1.ListAvailableFirmwareResponse
+	39, // 53: v1.PowershelfManager.SetDryRun:output_type -> google.protobuf.Empty
+	19, // 54: v1.PowershelfManager.PowerOff:output_type -> v1.PowerControlResponse
+	19, // 55: v1.PowershelfManager.PowerOn:output_type -> v1.PowerControlResponse
+	48, // [48:56] is the sub-list for method output_type
+	40, // [40:48] is the sub-list for method input_type
+	40, // [40:40] is the sub-list for extension type_name
+	40, // [40:40] is the sub-list for extension extendee
+	0,  // [0:40] is the sub-list for field type_name
 }
 
 func init() { file_internal_proto_v1_powershelf_manager_proto_init() }
@@ -2358,7 +2497,7 @@ func file_internal_proto_v1_powershelf_manager_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_internal_proto_v1_powershelf_manager_proto_rawDesc), len(file_internal_proto_v1_powershelf_manager_proto_rawDesc)),
 			NumEnums:      4,
-			NumMessages:   32,
+			NumMessages:   34,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
