@@ -105,6 +105,24 @@ jobs:
       NVCR_USERNAME: ${{ secrets.NVCR_STG_USERNAME }}
       NVCR_TOKEN: ${{ secrets.NVCR_STG_TOKEN }}
 
+  # Step 5.5: Aggregate the 9 per-service Grype scan artifacts into one summary
+  # and post a sticky PR comment on copy-pr-bot pull-request/* branches.
+  # Runs regardless of whether individual builds succeeded so partial results
+  # still surface.
+  security-container-scan-summary:
+    name: Container Scan Summary
+    needs:
+      - build-and-push
+    if: always() && needs.build-and-push.result != 'cancelled'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: NVIDIA/dsx-github-actions/.github/actions/security-container-scan-aggregate@11e534275a26fe72455059ec29bf36d69684a54f
+        with:
+          post-pr-comment: 'true'
+
   # Step 6: Helm Charts (detect changes, validate versions, lint/template, push)
   helm:
     name: Helm Charts
