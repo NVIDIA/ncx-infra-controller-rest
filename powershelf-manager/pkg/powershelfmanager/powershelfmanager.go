@@ -86,7 +86,7 @@ func New(ctx context.Context, c Config) (*PowershelfManager, error) {
 		return nil, fmt.Errorf("unsupported datastore type for firmware manager: %v", c.DSType)
 	}
 
-	firmwareManager, err := firmwaremanager.New(fwStore, pmcManager, false)
+	firmwareManager, err := firmwaremanager.New(fwStore, pmcManager, false, c.FirmwareDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize firmware manager (conf: %v): %w", c, err)
 	}
@@ -173,4 +173,10 @@ func (pm *PowershelfManager) PowerOn(ctx context.Context, mac net.HardwareAddr) 
 // Power OFF the rack
 func (pm *PowershelfManager) PowerOff(ctx context.Context, mac net.HardwareAddr) error {
 	return pm.powerControl(ctx, mac, false)
+}
+
+// PowerControlDirect performs a power action using pre-built connection details,
+// bypassing registry and credential manager lookups.
+func (pm *PowershelfManager) PowerControlDirect(ctx context.Context, pmc *pmc.PMC, on bool) error {
+	return pm.PmcManager.PowerControlDirect(ctx, pmc, on)
 }

@@ -35,7 +35,6 @@ var (
 	ShaHashRegex             = regexp.MustCompile("^[A-Fa-f0-9]+$")
 	DiskImagePathRegex       = regexp.MustCompile("^/dev/(:?nvme\\d+n\\d+|sd*)")
 
-	ValidationErrorExpectStringType          = errors.New("expect name field to be string type")
 	ValidationErrorNameHasLeadingWhitespace  = errors.New("name field has leading whitespace")
 	ValidationErrorNameHasTrailingWhitespace = errors.New("name field has trailing whitespace")
 	ValidationErrorNameFieldIsEmpty          = errors.New("name field is empty")
@@ -52,6 +51,52 @@ var (
 	ErrValidationLabelValueLength = fmt.Errorf("label value cannot exceed a maximum of %v characters", LabelValueMaxLength)
 	ErrValidationLabelCount       = fmt.Errorf("up to %v key/value pairs can be specified in labels", LabelCountMax)
 )
+
+// ValidateLabels validates optional API label maps (count, keys, values). Returns nil when labels is nil.
+func ValidateLabels(labels map[string]string) error {
+	if labels == nil {
+		return nil
+	}
+	if len(labels) > LabelCountMax {
+		return validation.Errors{
+			"labels": ErrValidationLabelCount,
+		}
+	}
+
+	keyErrMsg := ErrValidationLabelKeyLength.Error()
+	valueErrMsg := ErrValidationLabelValueLength.Error()
+
+	for key, value := range labels {
+		if key == "" {
+			return validation.Errors{
+				"labels": ErrValidationLabelKeyEmpty,
+			}
+		}
+
+		err := validation.Validate(key,
+			validation.Match(NotAllWhitespaceRegexp).Error("label key consists only of whitespace"),
+			validation.Length(1, LabelKeyMaxLength).Error(keyErrMsg),
+		)
+		if err != nil {
+			return validation.Errors{
+				"labels": err,
+			}
+		}
+
+		err = validation.Validate(value,
+			validation.When(value != "",
+				validation.Length(0, LabelValueMaxLength).Error(valueErrMsg),
+			),
+		)
+		if err != nil {
+			return validation.Errors{
+				"labels": err,
+			}
+		}
+	}
+
+	return nil
+}
 
 // util.GetUUIDPtrToStrPtr is a utility function to return string pointer from uuid pointer
 func GetUUIDPtrToStrPtr(id *uuid.UUID) *string {
@@ -79,16 +124,19 @@ func ValidateNested(target interface{}, fieldRules ...*validation.FieldRules) *v
 }
 
 // ValidateNameCharacters is a utility function to lexically validate the name field
-// currently checks for leading or trailing whitespaces
-// could evolve in the future, if there are more constraints
+// Currently checks for leading or trailing whitespaces
+// NOTE: Can only be used in conjunction with validation.Required or with validation.When(name != nil, validation.By(util.ValidateNameCharacters))
 func ValidateNameCharacters(value interface{}) error {
 	s, ok := value.(string)
 	var name string
 	if !ok {
 		// check for string pointer
 		sPtr, ok := value.(*string)
-		if !ok || sPtr == nil {
-			return ValidationErrorExpectStringType
+		if !ok {
+			return errors.New("value in name field must be a string type")
+		}
+		if sPtr == nil {
+			return errors.New("name field cannot be nil")
 		}
 		name = *sPtr
 	} else {

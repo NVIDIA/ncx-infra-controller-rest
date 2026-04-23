@@ -782,6 +782,57 @@ func TestTenantAccountSQLDAO_GetAll(t *testing.T) {
 			expectedTotal:    db.GetIntPtr(totalCount),
 			includeRelations: []string{TenantContactRelationName},
 		},
+		{
+			desc: "GetAll with search query matching account_number",
+			filter: TenantAccountFilterInput{
+				SearchQuery: db.GetStrPtr("account-number-0"),
+			},
+			expectedCount: 1,
+			expectedError: false,
+		},
+		{
+			desc: "GetAll with search query matching tenant_org",
+			filter: TenantAccountFilterInput{
+				SearchQuery: db.GetStrPtr("test-tenant-org-29"),
+			},
+			expectedCount: 1,
+			expectedError: false,
+		},
+		{
+			desc: "GetAll with search query matching tenant org_display_name",
+			filter: TenantAccountFilterInput{
+				SearchQuery: db.GetStrPtr("test-tenant-5-display"),
+			},
+			expectedCount: 1,
+			expectedError: false,
+		},
+		{
+			desc: "GetAll with search query no matches",
+			filter: TenantAccountFilterInput{
+				SearchQuery: db.GetStrPtr("nonexistent-query-xyz"),
+			},
+			expectedCount: 0,
+			expectedTotal: db.GetIntPtr(0),
+			expectedError: false,
+		},
+		{
+			desc: "GetAll with search query case insensitive",
+			filter: TenantAccountFilterInput{
+				SearchQuery: db.GetStrPtr("ACCOUNT-NUMBER-0"),
+			},
+			expectedCount: 1,
+			expectedError: false,
+		},
+		{
+			desc: "GetAll with search query combined with status filter",
+			filter: TenantAccountFilterInput{
+				SearchQuery: db.GetStrPtr("account-number"),
+				Statuses:    []string{TenantAccountStatusPending},
+			},
+			expectedCount: paginator.DefaultLimit,
+			expectedTotal: db.GetIntPtr(totalCount),
+			expectedError: false,
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.desc, func(t *testing.T) {
@@ -935,6 +986,23 @@ func TestTenantAccountSQLDAO_GetCount(t *testing.T) {
 				Statuses: []string{*db.GetStrPtr(TenantAccountStatusPending)},
 			},
 			expectedCount: totalCount,
+			expectedError: false,
+		},
+		{
+			desc: "GetCount with search query and status filter combined",
+			filter: TenantAccountFilterInput{
+				SearchQuery: db.GetStrPtr("account-number-0"),
+				Statuses:    []string{TenantAccountStatusPending},
+			},
+			expectedCount: 1,
+			expectedError: false,
+		},
+		{
+			desc: "GetCount with search query no matches",
+			filter: TenantAccountFilterInput{
+				SearchQuery: db.GetStrPtr("nonexistent-query-xyz"),
+			},
+			expectedCount: 0,
 			expectedError: false,
 		},
 	}

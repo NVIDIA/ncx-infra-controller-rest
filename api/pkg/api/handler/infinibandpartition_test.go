@@ -1183,6 +1183,19 @@ func TestInfiniBandPartitionHandle_Update(t *testing.T) {
 	tmc := &tmocks.Client{}
 	tracer, _, ctx := common.TestCommonTraceProviderSetup(t, ctx)
 
+	tcfg, _ := cfg.GetTemporalConfig()
+	scp := sc.NewClientPool(tcfg)
+	scp.IDClientMap[site1.ID.String()] = tmc
+	scp.IDClientMap[site2.ID.String()] = tmc
+	scp.IDClientMap[site3.ID.String()] = tmc
+	scp.IDClientMap[site4.ID.String()] = tmc
+
+	wrunUpdate := &tmocks.WorkflowRun{}
+	wrunUpdate.On("GetID").Return("test-workflow-update-id")
+	wrunUpdate.Mock.On("Get", mock.Anything, mock.Anything).Return(nil)
+	tmc.Mock.On("ExecuteWorkflow", mock.Anything, mock.AnythingOfType("internal.StartWorkflowOptions"),
+		"UpdateInfiniBandPartition", mock.Anything).Return(wrunUpdate, nil)
+
 	tests := []struct {
 		name                     string
 		reqOrgName               string
@@ -1316,6 +1329,7 @@ func TestInfiniBandPartitionHandle_Update(t *testing.T) {
 			uibpgh := UpdateInfiniBandPartitionHandler{
 				dbSession: dbSession,
 				tc:        tmc,
+				scp:       scp,
 				cfg:       cfg,
 			}
 			err := uibpgh.Handle(ec)

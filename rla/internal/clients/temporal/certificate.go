@@ -19,76 +19,25 @@ package temporal
 
 import (
 	"crypto/tls"
-	"crypto/x509"
-	"fmt"
-	"os"
+	"path/filepath"
 
-	"github.com/rs/zerolog/log"
+	pkgcerts "github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/certs"
 )
 
 const (
 	caCertificateFileName     = "ca.crt"
 	clientCertificateFileName = "tls.crt"
 	clientKeyFileName         = "tls.key"
-	caCertificateDirName      = "ca"
-	clientCertificateDirName  = "client"
 )
-
-func loadClientCertificate(clientCertPath string) (tls.Certificate, error) {
-	log.Info().Msgf("Loading client certificate from %s", clientCertPath)
-	cert, err := tls.LoadX509KeyPair(
-		clientCertPath+"/"+clientCertificateFileName,
-		clientCertPath+"/"+clientKeyFileName,
-	)
-
-	if err != nil {
-		log.Error().Msgf("Failed to load client certificate: %v", err)
-		return tls.Certificate{}, err
-	}
-
-	log.Info().Msgf("Client certificate loaded successfully")
-	return cert, nil
-}
-
-func loadCACertificate(caCertPath string) (*x509.CertPool, error) {
-	log.Info().Msgf("Loading CA certificate from %s", caCertPath)
-	caCert, err := os.ReadFile(caCertPath + "/" + caCertificateFileName)
-	if err != nil {
-		log.Error().Msgf("Failed to load CA certificate: %v", err)
-		return nil, err
-	}
-
-	log.Info().Msgf("CA certificate loaded successfully")
-
-	certPool := x509.NewCertPool()
-	if !certPool.AppendCertsFromPEM(caCert) {
-		log.Error().Msgf("Failed to append CA certificate to pool")
-		return nil, fmt.Errorf("failed to append CA certificate to pool")
-	}
-
-	return certPool, nil
-}
 
 func buildTLSConfig(c Config) (*tls.Config, error) {
 	if !c.EnableTLS {
 		return nil, nil
 	}
 
-	caCertPath := c.Endpoint.CACertificatePath + "/" + caCertificateDirName
-	caCert, err := loadCACertificate(caCertPath)
-	if err != nil {
-		return nil, err
-	}
-
-	clientCertPath := c.Endpoint.CACertificatePath + "/" + clientCertificateDirName
-	clientCert, err := loadClientCertificate(clientCertPath)
-	if err != nil {
-		return nil, err
-	}
-
-	return &tls.Config{
-		Certificates: []tls.Certificate{clientCert},
-		ServerName:   c.ServerName,
-		RootCAs:      caCert,
-	}, nil
+	return pkgcerts.Config{
+		CACert:  filepath.Join(c.Endpoint.CACertificatePath, caCertificateFileName),
+		TLSCert: filepath.Join(c.Endpoint.CACertificatePath, clientCertificateFileName),
+		TLSKey:  filepath.Join(c.Endpoint.CACertificatePath, clientKeyFileName),
+	}.TLSConfig(c.ServerName)
 }

@@ -150,11 +150,15 @@ func (m *FirmwareManager) QueueUpdate(
 	// Determine which components to update
 	var componentNames []string
 	if len(components) == 0 {
-		// Empty list = update all components in order
 		componentNames = pkg.GetOrderedComponents()
 		if len(componentNames) == 0 {
 			return nil, fmt.Errorf("no components found in bundle %s", bundleVersion)
 		}
+		// Default to BMC and BIOS — these only require BMC access (Redfish)
+		// componentNames = []string{
+		//	strings.ToLower(string(nvswitch.BMC)),
+		//	strings.ToLower(string(nvswitch.BIOS)),
+		//}
 	} else {
 		// Convert and validate specified components
 		for _, c := range components {
@@ -254,9 +258,10 @@ func (m *FirmwareManager) GetUpdate(ctx context.Context, updateID uuid.UUID) (*F
 	return m.store.Get(ctx, updateID)
 }
 
-// GetUpdatesForSwitch returns all firmware updates for a switch.
+// GetUpdatesForSwitch returns the firmware updates for the most recent
+// bundle of a switch, filtering out stale historical records.
 func (m *FirmwareManager) GetUpdatesForSwitch(ctx context.Context, switchUUID uuid.UUID) ([]*FirmwareUpdate, error) {
-	return m.store.GetBySwitch(ctx, switchUUID)
+	return m.store.GetLatestBundleBySwitch(ctx, switchUUID)
 }
 
 // GetAllUpdates returns all firmware updates.

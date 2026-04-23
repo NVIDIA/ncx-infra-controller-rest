@@ -37,6 +37,7 @@ var pmcIP string
 var pmcUsername string
 var pmcPassword string
 var redfish_action string
+var firmwarePath string
 
 type Action string
 
@@ -111,6 +112,7 @@ func init() {
 	redfishCmd.Flags().StringVarP(&pmcUsername, "user", "u", "root", "Username")
 	redfishCmd.Flags().StringVarP(&pmcPassword, "pass", "p", "0penBmc", "Password")
 	redfishCmd.Flags().StringVarP(&redfish_action, "action", "a", "", "Action to perform: "+getAvailableActions())
+	redfishCmd.Flags().StringVarP(&firmwarePath, "firmware", "f", "", "Path to firmware file (for upload_firmware_file action)")
 }
 
 func doRedfish() {
@@ -230,7 +232,10 @@ func doRedfish() {
 		}
 		util.PrintPrettyResponse(resp)
 	case UploadFirmwareFile:
-		resp, err := client.UploadFirmwareByPath("cm14mp1r-r1.3.8_to_r1.3.9.tar")
+		if firmwarePath == "" {
+			log.Fatalf("firmware path is required for upload_firmware_file action (use --firmware/-f)")
+		}
+		resp, err := client.UploadFirmwareByPath(firmwarePath)
 		if err != nil {
 			log.Fatalf("failed to upload firmware file: %v\n", err)
 		}

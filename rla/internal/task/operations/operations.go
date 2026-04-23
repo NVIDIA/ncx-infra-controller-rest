@@ -22,8 +22,26 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
+
 	taskcommon "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/common"
 )
+
+// ExtractRuleID peeks at the "rule_id" field in a serialized operation info
+// JSON blob. Returns nil if absent, empty, or unparseable.
+func ExtractRuleID(info json.RawMessage) *uuid.UUID {
+	var peek struct {
+		RuleID string `json:"rule_id"`
+	}
+	if err := json.Unmarshal(info, &peek); err != nil || peek.RuleID == "" {
+		return nil
+	}
+	parsed, err := uuid.Parse(peek.RuleID)
+	if err != nil {
+		return nil
+	}
+	return &parsed
+}
 
 type Operation interface {
 	Validate() error
@@ -68,6 +86,7 @@ func New(typ taskcommon.TaskType, info json.RawMessage) (Operation, error) {
 type PowerControlTaskInfo struct {
 	Operation PowerOperation `json:"operation"`
 	Forced    bool           `json:"forced"`
+	RuleID    string         `json:"rule_id,omitempty"`
 }
 
 func (t *PowerControlTaskInfo) Validate() error {
@@ -140,7 +159,10 @@ func (t *InjectExpectationTaskInfo) CodeString() string {
 	return "inject_expectation"
 }
 
-type BringUpTaskInfo struct{}
+type BringUpTaskInfo struct {
+	RuleID string `json:"rule_id,omitempty"`
+	OpCode string `json:"op_code,omitempty"`
+}
 
 func (t *BringUpTaskInfo) Validate() error {
 	return nil
@@ -172,10 +194,18 @@ func (t *BringUpTaskInfo) Type() taskcommon.TaskType {
 }
 
 func (t *BringUpTaskInfo) Description() string {
-	return "rack bring-up"
+	switch t.CodeString() {
+	case taskcommon.OpCodeIngest:
+		return "rack ingest"
+	default:
+		return "rack bring-up"
+	}
 }
 
 func (t *BringUpTaskInfo) CodeString() string {
+	if t.OpCode != "" {
+		return t.OpCode
+	}
 	return taskcommon.OpCodeBringUp
 }
 
@@ -184,6 +214,7 @@ type FirmwareControlTaskInfo struct {
 	TargetVersion string            `json:"target_version,omitempty"`
 	StartTime     int64             `json:"start_time,omitempty"` // Unix timestamp
 	EndTime       int64             `json:"end_time,omitempty"`   // Unix timestamp
+	RuleID        string            `json:"rule_id,omitempty"`
 }
 
 func (t *FirmwareControlTaskInfo) Validate() error {

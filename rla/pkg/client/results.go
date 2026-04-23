@@ -41,12 +41,12 @@ type GetExpectedComponentsResult struct {
 
 // ValidateComponentsResult represents the result of ValidateComponents call.
 type ValidateComponentsResult struct {
-	Diffs               []*types.ComponentDiff
-	TotalDiffs          int
-	OnlyInExpectedCount int
-	OnlyInActualCount   int
-	DriftCount          int
-	MatchCount          int
+	Diffs           []*types.ComponentDiff
+	TotalDiffs      int
+	MissingCount    int
+	UnexpectedCount int
+	DriftCount      int
+	MatchCount      int
 }
 
 // IngestRackResult represents the result of an IngestRack operation.

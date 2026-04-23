@@ -52,8 +52,10 @@ type UpdateStore interface {
 	// This method is used by the scheduler to dispatch work to workers.
 	GetPendingUpdates(ctx context.Context, limit int) ([]*FirmwareUpdate, error)
 
-	// GetBySwitch returns all firmware updates for a given switch.
-	GetBySwitch(ctx context.Context, switchUUID uuid.UUID) ([]*FirmwareUpdate, error)
+	// GetLatestBundleBySwitch returns firmware updates for the most recent
+	// bundle_update_id of a given switch. This prevents stale historical
+	// records (e.g. old CPLD failures) from polluting the current status.
+	GetLatestBundleBySwitch(ctx context.Context, switchUUID uuid.UUID) ([]*FirmwareUpdate, error)
 
 	// GetActive returns the active (non-terminal) update for a switch/component pair.
 	// Returns nil, nil if no active update exists.

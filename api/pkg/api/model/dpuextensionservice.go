@@ -18,19 +18,33 @@
 package model
 
 import (
+	"fmt"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model/util"
 	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	validationis "github.com/go-ozzo/ozzo-validation/v4/is"
+
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 )
 
 const (
 	// DpuExtensionServiceTypeKubernetesPod is the service type for Kubernetes Pod
 	DpuExtensionServiceTypeKubernetesPod = "KubernetesPod"
-	// DpuExtensionServiceTimeFormat is the time format used on Site for version info creation time
-	DpuExtensionServiceTimeFormat = "2006-01-02 15:04:05.000000 UTC"
+	// DpuExtensionServiceMaxObservabilityConfigs is the max number of observability configs allowed per service version
+	DpuExtensionServiceMaxObservabilityConfigs = 20
+	// DpuExtensionServiceMaxObservabilityConfigNameLength is the max length for an observability config name
+	DpuExtensionServiceMaxObservabilityConfigNameLength = 64
+	// DpuExtensionServiceMaxObservabilityPropertyLength is the max length for endpoint and path properties
+	DpuExtensionServiceMaxObservabilityPropertyLength = 128
+)
+
+var (
+	dpuExtensionServiceObservabilityPromEndpointBadRE = regexp.MustCompile(`[^a-zA-Z0-9:\-]+`)
+	dpuExtensionServiceObservabilityLogPathBadRE      = regexp.MustCompile(`[^a-zA-Z0-9\-_\/\.\@]+`)
 )
 
 // APIDpuExtensionServiceCreateRequest is the data structure to capture user request to create a new DpuExtensionService
@@ -47,6 +61,8 @@ type APIDpuExtensionServiceCreateRequest struct {
 	Data string `json:"data"`
 	// Credentials are the credentials to download resources
 	Credentials *APIDpuExtensionServiceCredentials `json:"credentials"`
+	// Observability is the observability configuration for the DPU Extension Service version
+	Observability *APIDpuExtensionServiceObservability `json:"observability"`
 }
 
 // Validate ensures that the values passed in request are acceptable
@@ -77,6 +93,13 @@ func (descr APIDpuExtensionServiceCreateRequest) Validate() error {
 		}
 	}
 
+	if descr.Observability != nil {
+		err = descr.Observability.Validate()
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -90,6 +113,8 @@ type APIDpuExtensionServiceUpdateRequest struct {
 	Data *string `json:"data"`
 	// Credentials are the credentials to download resources
 	Credentials *APIDpuExtensionServiceCredentials `json:"credentials"`
+	// Observability is the observability configuration for the DPU Extension Service version
+	Observability *APIDpuExtensionServiceObservability `json:"observability"`
 }
 
 // Validate ensures that the values passed in request are acceptable
@@ -107,6 +132,13 @@ func (desur APIDpuExtensionServiceUpdateRequest) Validate() error {
 	// Validate credentials if provided
 	if desur.Credentials != nil {
 		err = desur.Credentials.Validate()
+		if err != nil {
+			return err
+		}
+	}
+
+	if desur.Observability != nil {
+		err = desur.Observability.Validate()
 		if err != nil {
 			return err
 		}
@@ -244,6 +276,8 @@ type APIDpuExtensionServiceVersionInfo struct {
 	HasCredentials bool `json:"hasCredentials"`
 	// Created indicates when this version was created
 	Created time.Time `json:"created"`
+	// Observability is the observability configuration for this version
+	Observability *APIDpuExtensionServiceObservability `json:"observability"`
 }
 
 // NewAPIDpuExtensionServiceVersionInfo creates and returns a new APIDpuExtensionServiceVersionInfo object
@@ -253,5 +287,240 @@ func NewAPIDpuExtensionServiceVersionInfo(dbv *cdbm.DpuExtensionServiceVersionIn
 		Data:           dbv.Data,
 		HasCredentials: dbv.HasCredentials,
 		Created:        dbv.Created,
+		Observability:  NewAPIDpuExtensionServiceObservability(dbv.Observability),
 	}
+}
+
+// APIDpuExtensionServiceObservability is the data structure for DPU Extension Service observability
+type APIDpuExtensionServiceObservability struct {
+	// Configs are the observability configurations for the service version
+	Configs []APIDpuExtensionServiceObservabilityConfig `json:"configs"`
+}
+
+// Validate ensures that the observability configuration is valid
+func (deso APIDpuExtensionServiceObservability) Validate() error {
+	err := validation.ValidateStruct(&deso,
+		validation.Field(&deso.Configs,
+			validation.By(func(value any) error {
+				configs, ok := value.([]APIDpuExtensionServiceObservabilityConfig)
+				if !ok {
+					return fmt.Errorf("must be a valid list of observability configs")
+				}
+				if len(configs) > DpuExtensionServiceMaxObservabilityConfigs {
+					return fmt.Errorf("must not contain more than %d observability configs", DpuExtensionServiceMaxObservabilityConfigs)
+				}
+				return nil
+			})),
+	)
+	if err != nil {
+		return err
+	}
+
+	for idx, cfg := range deso.Configs {
+		if err = cfg.Validate(); err != nil {
+			return fmt.Errorf("configs[%d]: %w", idx, err)
+		}
+	}
+
+	return nil
+}
+
+// APIDpuExtensionServiceObservabilityConfig is the data structure for a single DPU Extension Service observability config
+type APIDpuExtensionServiceObservabilityConfig struct {
+	// Name is the name of the service or service component being monitored
+	Name *string `json:"name"`
+	// Prometheus holds prometheus scrape configuration
+	Prometheus *APIDpuExtensionServiceObservabilityConfigPrometheus `json:"prometheus,omitempty"`
+	// Logging holds logging configuration
+	Logging *APIDpuExtensionServiceObservabilityConfigLogging `json:"logging,omitempty"`
+}
+
+// Validate ensures that the observability config is valid
+func (desoc APIDpuExtensionServiceObservabilityConfig) Validate() error {
+	if desoc.Name != nil {
+		if strings.TrimSpace(*desoc.Name) == "" {
+			return fmt.Errorf("name must be non-empty")
+		}
+		if len(*desoc.Name) > DpuExtensionServiceMaxObservabilityConfigNameLength {
+			return fmt.Errorf("name length must not exceed %d", DpuExtensionServiceMaxObservabilityConfigNameLength)
+		}
+	}
+
+	configCount := 0
+	if desoc.Prometheus != nil {
+		configCount++
+	}
+	if desoc.Logging != nil {
+		configCount++
+	}
+	if configCount != 1 {
+		return fmt.Errorf("exactly one of `prometheus` or `logging` must be specified")
+	}
+
+	switch {
+	case desoc.Prometheus != nil:
+		if err := desoc.Prometheus.Validate(); err != nil {
+			return err
+		}
+	case desoc.Logging != nil:
+		if err := desoc.Logging.Validate(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// APIDpuExtensionServiceObservabilityConfigPrometheus is the data structure for prometheus observability config
+type APIDpuExtensionServiceObservabilityConfigPrometheus struct {
+	// ScrapeIntervalSeconds is how often prometheus should scrape the endpoint
+	ScrapeIntervalSeconds uint32 `json:"scrapeIntervalSeconds"`
+	// Endpoint is the prometheus scrape endpoint
+	Endpoint string `json:"endpoint"`
+}
+
+// Validate ensures that the prometheus observability config is valid
+func (desop APIDpuExtensionServiceObservabilityConfigPrometheus) Validate() error {
+	err := validation.ValidateStruct(&desop,
+		validation.Field(&desop.ScrapeIntervalSeconds, validation.Min(uint32(1)).Error("must be greater than 0")),
+		validation.Field(&desop.Endpoint, validation.Required.Error(validationErrorValueRequired)),
+		validation.Field(&desop.Endpoint, validation.Length(0, DpuExtensionServiceMaxObservabilityPropertyLength).Error(fmt.Sprintf("length must not exceed %d", DpuExtensionServiceMaxObservabilityPropertyLength))),
+	)
+	if err != nil {
+		return err
+	}
+
+	if dpuExtensionServiceObservabilityPromEndpointBadRE.MatchString(desop.Endpoint) {
+		return fmt.Errorf("endpoint contains invalid characters")
+	}
+
+	return nil
+}
+
+// APIDpuExtensionServiceObservabilityConfigLogging is the data structure for logging observability config
+type APIDpuExtensionServiceObservabilityConfigLogging struct {
+	// Path is the log path to collect
+	Path string `json:"path"`
+}
+
+// Validate ensures that the logging observability config is valid
+func (desol APIDpuExtensionServiceObservabilityConfigLogging) Validate() error {
+	err := validation.ValidateStruct(&desol,
+		validation.Field(&desol.Path, validation.Required.Error(validationErrorValueRequired)),
+		validation.Field(&desol.Path, validation.Length(0, DpuExtensionServiceMaxObservabilityPropertyLength).Error(fmt.Sprintf("length must not exceed %d", DpuExtensionServiceMaxObservabilityPropertyLength))),
+	)
+	if err != nil {
+		return err
+	}
+
+	if dpuExtensionServiceObservabilityLogPathBadRE.MatchString(desol.Path) {
+		return fmt.Errorf("path contains invalid characters")
+	}
+
+	return nil
+}
+
+// ToProto converts an API observability definition to the protobuf
+// representation passed to Carbide.
+func (apiObservability *APIDpuExtensionServiceObservability) ToProto() *cwssaws.DpuExtensionServiceObservability {
+	if apiObservability == nil {
+		return nil
+	}
+
+	protoObservability := &cwssaws.DpuExtensionServiceObservability{
+		Configs: make([]*cwssaws.DpuExtensionServiceObservabilityConfig, 0, len(apiObservability.Configs)),
+	}
+
+	for _, cfg := range apiObservability.Configs {
+		protoCfg := &cwssaws.DpuExtensionServiceObservabilityConfig{
+			Name: cfg.Name,
+		}
+
+		// A single observability config is modeled as a proto oneof,
+		// so exactly one of these options should be populated.
+		switch {
+		case cfg.Prometheus != nil:
+			protoCfg.Config = &cwssaws.DpuExtensionServiceObservabilityConfig_Prometheus{
+				Prometheus: &cwssaws.DpuExtensionServiceObservabilityConfigPrometheus{
+					ScrapeIntervalSeconds: cfg.Prometheus.ScrapeIntervalSeconds,
+					Endpoint:              cfg.Prometheus.Endpoint,
+				},
+			}
+		case cfg.Logging != nil:
+			protoCfg.Config = &cwssaws.DpuExtensionServiceObservabilityConfig_Logging{
+				Logging: &cwssaws.DpuExtensionServiceObservabilityConfigLogging{
+					Path: cfg.Logging.Path,
+				},
+			}
+		}
+
+		protoObservability.Configs = append(protoObservability.Configs, protoCfg)
+	}
+
+	return protoObservability
+}
+
+// FromProto populates API version info from the site-agent protobuf form.
+func (apiVersionInfo *APIDpuExtensionServiceVersionInfo) FromProto(protoVersionInfo *cwssaws.DpuExtensionServiceVersionInfo, fallbackTime time.Time) {
+	if apiVersionInfo == nil || protoVersionInfo == nil {
+		return
+	}
+
+	dbVersionInfo := &cdbm.DpuExtensionServiceVersionInfo{}
+	dbVersionInfo.FromProto(protoVersionInfo, fallbackTime)
+
+	*apiVersionInfo = APIDpuExtensionServiceVersionInfo{
+		Version:        dbVersionInfo.Version,
+		Data:           dbVersionInfo.Data,
+		HasCredentials: dbVersionInfo.HasCredentials,
+		Created:        dbVersionInfo.Created,
+		Observability:  NewAPIDpuExtensionServiceObservability(dbVersionInfo.Observability),
+	}
+}
+
+// FromProto populates API observability from the site-agent protobuf form.
+func (apiObservability *APIDpuExtensionServiceObservability) FromProto(protoObservability *cwssaws.DpuExtensionServiceObservability) {
+	if apiObservability == nil || protoObservability == nil {
+		return
+	}
+
+	apiObservability.Configs = make([]APIDpuExtensionServiceObservabilityConfig, 0, len(protoObservability.Configs))
+
+	for _, cfg := range protoObservability.Configs {
+		if cfg == nil {
+			continue
+		}
+
+		apiCfg := APIDpuExtensionServiceObservabilityConfig{
+			Name: cfg.Name,
+		}
+
+		// A single observability config is modeled as a proto oneof,
+		// so exactly one of these options should be populated.
+		if cfg.GetPrometheus() != nil {
+			apiCfg.Prometheus = &APIDpuExtensionServiceObservabilityConfigPrometheus{
+				ScrapeIntervalSeconds: cfg.GetPrometheus().ScrapeIntervalSeconds,
+				Endpoint:              cfg.GetPrometheus().Endpoint,
+			}
+		}
+
+		if cfg.GetLogging() != nil {
+			apiCfg.Logging = &APIDpuExtensionServiceObservabilityConfigLogging{
+				Path: cfg.GetLogging().Path,
+			}
+		}
+
+		apiObservability.Configs = append(apiObservability.Configs, apiCfg)
+	}
+}
+
+// NewAPIDpuExtensionServiceObservability creates and returns a new APIDpuExtensionServiceObservability object
+func NewAPIDpuExtensionServiceObservability(dbo *cdbm.DpuExtensionServiceObservability) *APIDpuExtensionServiceObservability {
+	if dbo == nil {
+		return nil
+	}
+
+	apiObservability := &APIDpuExtensionServiceObservability{}
+	apiObservability.FromProto(dbo.DpuExtensionServiceObservability)
+	return apiObservability
 }

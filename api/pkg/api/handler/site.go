@@ -332,30 +332,17 @@ func (ush UpdateSiteHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
-	// Validate org
-	ok, err := auth.ValidateOrgMembership(dbUser, org)
-	if !ok {
-		if err != nil {
-			logger.Error().Err(err).Msg("error validating org membership for User in request")
-		} else {
-			logger.Warn().Msg("could not validate org membership for user, access denied")
-		}
-		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
-	}
-
-	// Validate role, only Provider Admins are allowed to update Site
-	isProviderRequest, orgProvider, orgTenant, apiErr := common.GetIsProviderRequest(ctx, logger, ush.dbSession, org, dbUser,
-		[]string{auth.ProviderAdminRole}, []string{auth.TenantAdminRole}, c.QueryParams())
+	provider, tenant, apiErr := common.IsProviderOrTenant(ctx, logger, ush.dbSession, org, dbUser, false, false)
 	if apiErr != nil {
 		return c.JSON(apiErr.Code, apiErr)
 	}
 
 	// Get application instance ID from URL param
-	stStrID := c.Param("id")
+	siteStrID := c.Param("id")
 
-	ush.tracerSpan.SetAttribute(handlerSpan, attribute.String("site_id", stStrID), logger)
+	ush.tracerSpan.SetAttribute(handlerSpan, attribute.String("site_id", siteStrID), logger)
 
-	stID, err := uuid.Parse(stStrID)
+	siteID, err := uuid.Parse(siteStrID)
 	if err != nil {
 		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Site ID in URL", nil)
 	}
@@ -372,37 +359,45 @@ func (ush UpdateSiteHandler) Handle(c echo.Context) error {
 	}
 
 	// Validate request attributes
-	verr := apiRequest.Validate(isProviderRequest)
+	verr := apiRequest.Validate(provider != nil, tenant != nil)
 	if verr != nil {
 		logger.Warn().Err(verr).Msg("error validating Site update request data")
 		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Error validating Site update request data", verr)
 	}
 
 	// Check that Site exists
-	es, err := stDAO.GetByID(ctx, nil, stID, nil, false)
+	es, err := stDAO.GetByID(ctx, nil, siteID, nil, false)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error retrieving Site DB entity")
 		return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not retrieve Site to update", nil)
 	}
 
-	tsDAO := cdbm.NewTenantSiteDAO(ush.dbSession)
+	isAssociated := false
 
+	// Check that Site is associated with Provider
+	if provider != nil {
+		isAssociated = provider.ID == es.InfrastructureProviderID
+	}
+
+	tsDAO := cdbm.NewTenantSiteDAO(ush.dbSession)
 	var ts *cdbm.TenantSite
 
-	if isProviderRequest {
-		if orgProvider.ID != es.InfrastructureProviderID {
-			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Site is not associated with org's Infrastructure Provider", nil)
-		}
-	} else {
-		// Check that TenantSite exists
-		ts, err = tsDAO.GetByTenantIDAndSiteID(ctx, nil, orgTenant.ID, stID, nil)
+	if !isAssociated && tenant != nil {
+		// Check if Tenant is associated with Site
+		tss, _, err := tsDAO.GetAll(ctx, nil, cdbm.TenantSiteFilterInput{TenantIDs: []uuid.UUID{tenant.ID}, SiteIDs: []uuid.UUID{siteID}}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
 		if err != nil {
-			if err == cdb.ErrDoesNotExist {
-				return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant does not have access to Site", nil)
-			}
-			logger.Warn().Err(err).Msg("error retrieving TenantSite DB entity")
-			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Failed to determine Tenant access to Site, DB error", nil)
+			logger.Warn().Err(err).Msg("error retrieving TenantSite records from DB")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to determine Tenant's access to Site, DB error", nil)
 		}
+		if len(tss) > 0 {
+			ts = &tss[0]
+			isAssociated = true
+		}
+	}
+
+	if !isAssociated {
+		logger.Warn().Msg("Site is not associated with org's Infrastructure Provider or Tenant")
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Current org is not allowed to modify Site attributes", nil)
 	}
 
 	var registrationToken *string
@@ -411,7 +406,7 @@ func (ush UpdateSiteHandler) Handle(c echo.Context) error {
 	var statusMessage *string
 
 	if apiRequest.RenewRegistrationToken != nil && *apiRequest.RenewRegistrationToken {
-		// roll site in site manager
+		// Re-issue Site OTP using Site Manager
 		url := ush.cfg.GetSiteManagerEndpoint()
 		err = csm.RollSite(ctx, logger, es.ID.String(), es.Name, url)
 		if err != nil {
@@ -473,11 +468,10 @@ func (ush UpdateSiteHandler) Handle(c echo.Context) error {
 
 	// Update Site
 	var us *cdbm.Site
-	var uts *cdbm.TenantSite
 
-	if isProviderRequest {
-		dbUpdateInput := cdbm.SiteUpdateInput{
-			SiteID:                        stID,
+	if provider != nil {
+		siteUpdateInput := cdbm.SiteUpdateInput{
+			SiteID:                        siteID,
 			Name:                          apiRequest.Name,
 			Description:                   apiRequest.Description,
 			RegistrationToken:             registrationToken,
@@ -489,42 +483,30 @@ func (ush UpdateSiteHandler) Handle(c echo.Context) error {
 			Status:                        status,
 		}
 		if apiRequest.Location != nil {
-			dbUpdateInput.Location = &cdbm.SiteLocation{
+			siteUpdateInput.Location = &cdbm.SiteLocation{
 				City:    apiRequest.Location.City,
 				State:   apiRequest.Location.State,
 				Country: apiRequest.Location.Country,
 			}
 		}
 		if apiRequest.Contact != nil {
-			dbUpdateInput.Contact = &cdbm.SiteContact{
+			siteUpdateInput.Contact = &cdbm.SiteContact{
 				Email: apiRequest.Contact.Email,
 			}
 		}
-		us, err = stDAO.Update(ctx, tx, dbUpdateInput)
+
+		// Update Site
+		us, err = stDAO.Update(ctx, tx, siteUpdateInput)
 		if err != nil {
-			logger.Error().Err(err).Msg("error updating site")
-			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update site", nil)
-		}
-	} else {
-		us = es
-		uts, err = tsDAO.Update(
-			ctx,
-			tx,
-			cdbm.TenantSiteUpdateInput{
-				TenantSiteID:        ts.ID,
-				EnableSerialConsole: apiRequest.IsSerialConsoleEnabled,
-			},
-		)
-		if err != nil {
-			logger.Error().Err(err).Msg("error updating tenant site")
-			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update tenant site", nil)
+			logger.Error().Err(err).Msg("error updating Site")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Site, DB error", nil)
 		}
 	}
 
-	// Add status detail if needed
+	// Add Status Detail record if needed
 	if status != nil {
 		sdDAO := cdbm.NewStatusDetailDAO(ush.dbSession)
-		_, serr := sdDAO.CreateFromParams(ctx, tx, stID.String(), *status, statusMessage)
+		_, serr := sdDAO.CreateFromParams(ctx, tx, siteID.String(), *status, statusMessage)
 		if serr != nil {
 			logger.Error().Err(serr).Msg("error creating Status Detail DB entry")
 		}
@@ -533,7 +515,7 @@ func (ush UpdateSiteHandler) Handle(c echo.Context) error {
 	// Get status details
 	sdDAO := cdbm.NewStatusDetailDAO(ush.dbSession)
 
-	ssds, _, err := sdDAO.GetAllByEntityID(ctx, tx, stID.String(), nil, cdb.GetIntPtr(pagination.MaxPageSize), nil)
+	ssds, _, err := sdDAO.GetAllByEntityID(ctx, tx, siteID.String(), nil, cdb.GetIntPtr(pagination.MaxPageSize), nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Status Details for Site from DB")
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Status Details for Site", nil)
@@ -547,7 +529,7 @@ func (ush UpdateSiteHandler) Handle(c echo.Context) error {
 	txCommitted = true
 
 	// Create response
-	apiSite := model.NewAPISite(*us, ssds, uts)
+	apiSite := model.NewAPISite(*us, ssds, ts)
 
 	logger.Info().Msg("finishing API handler")
 
@@ -595,17 +577,6 @@ func (gsh GetSiteHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
-	// Validate org
-	ok, err := auth.ValidateOrgMembership(dbUser, org)
-	if !ok {
-		if err != nil {
-			logger.Error().Err(err).Msg("error validating org membership for User in request")
-		} else {
-			logger.Warn().Msg("could not validate org membership for user, access denied")
-		}
-		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
-	}
-
 	provider, tenant, apiErr := common.IsProviderOrTenant(ctx, logger, gsh.dbSession, org, dbUser, true, false)
 	if apiErr != nil {
 		return c.JSON(apiErr.Code, apiErr)
@@ -641,25 +612,44 @@ func (gsh GetSiteHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site", nil)
 	}
 
-	// Check Site association with Provider
+	// Check Site association
 	isAssociated := false
+
+	var ts *cdbm.TenantSite
+
 	if provider != nil {
 		isAssociated = provider.ID == st.InfrastructureProviderID
 	}
 
-	var ts *cdbm.TenantSite
-	tsDAO := cdbm.NewTenantSiteDAO(gsh.dbSession)
-
 	if !isAssociated && tenant != nil {
-		var serr error
-		ts, serr = tsDAO.GetByTenantIDAndSiteID(ctx, nil, tenant.ID, stID, nil)
+		tsDAO := cdbm.NewTenantSiteDAO(gsh.dbSession)
+
+		tss, tsCount, serr := tsDAO.GetAll(ctx, nil, cdbm.TenantSiteFilterInput{TenantIDs: []uuid.UUID{tenant.ID}, SiteIDs: []uuid.UUID{stID}}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
 		if serr != nil {
-			if serr != cdb.ErrDoesNotExist {
-				logger.Error().Err(serr).Msg("error retrieving TenantSite from DB")
-				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to determine org's association with Site, DB error", nil)
-			}
-		} else {
+			logger.Error().Err(serr).Msg("error retrieving TenantSite from DB")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant/Site association to determine access to Site, DB error", nil)
+		}
+		if tsCount > 0 {
+			ts = &tss[0]
 			isAssociated = true
+		}
+
+		if !isAssociated {
+			// Check if Tenant is privileged
+			if tenant.Config != nil && tenant.Config.TargetedInstanceCreation {
+				taDAO := cdbm.NewTenantAccountDAO(gsh.dbSession)
+				tas, _, serr := taDAO.GetAll(ctx, nil, cdbm.TenantAccountFilterInput{
+					InfrastructureProviderID: &st.InfrastructureProviderID,
+					TenantIDs:                []uuid.UUID{tenant.ID},
+					Statuses:                 []string{cdbm.TenantAccountStatusReady},
+				}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
+				if serr != nil {
+					logger.Error().Err(serr).Msg("error retrieving Tenant Accounts for privileged Tenant")
+					return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant Accounts to determine access to Site, DB error", nil)
+				}
+
+				isAssociated = len(tas) > 0
+			}
 		}
 	}
 
@@ -728,21 +718,9 @@ func (gash GetAllSiteHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
-	// Validate org
-	ok, err := auth.ValidateOrgMembership(dbUser, org)
-	if !ok {
-		if err != nil {
-			logger.Error().Err(err).Msg("error validating org membership for User in request")
-		} else {
-			logger.Warn().Msg("could not validate org membership for user, access denied")
-		}
-		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
-	}
-
 	// Validate pagination request
-	// Bind request data to API model
 	pageRequest := pagination.PageRequest{}
-	err = c.Bind(&pageRequest)
+	err := c.Bind(&pageRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding pagination request data into API model")
 		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request pagination data", nil)
@@ -802,55 +780,56 @@ func (gash GetAllSiteHandler) Handle(c echo.Context) error {
 		}
 	}
 
-	filter.Config = &cdbm.SiteConfigFilterInput{}
+	configFilter := cdbm.SiteConfigFilterInput{}
+	hasConfigFilter := false
 
 	// Check `isNativeNetworkingEnabled` in query
-	var isNativeNetworkingEnabled *bool
 	qinne := c.QueryParam("isNativeNetworkingEnabled")
 	if qinne != "" {
 		isnnEnabled, err := strconv.ParseBool(qinne)
 		if err != nil {
 			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid value specified for `isNativeNetworkingEnabled` query param", nil)
 		}
-		isNativeNetworkingEnabled = &isnnEnabled
+		configFilter.NativeNetworking = &isnnEnabled
+		hasConfigFilter = true
 	}
-	filter.Config.NativeNetworking = isNativeNetworkingEnabled
 
 	// Check `isNetworkSecurityGroupEnabled` in query
-	var isNetworkSecurityGroupEnabled *bool
 	qie := c.QueryParam("isNetworkSecurityGroupEnabled")
 	if qie != "" {
 		isEnabled, err := strconv.ParseBool(qie)
 		if err != nil {
 			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid value specified for `isNativeNetworkingEnabled` query param", nil)
 		}
-		isNetworkSecurityGroupEnabled = &isEnabled
+		configFilter.NetworkSecurityGroup = &isEnabled
+		hasConfigFilter = true
 	}
-	filter.Config.NetworkSecurityGroup = isNetworkSecurityGroupEnabled
 
 	// Check `isNVLinkPartitionEnabled` in query
-	var isNVLinkPartitionEnabled *bool
 	qinlpe := c.QueryParam("isNVLinkPartitionEnabled")
 	if qinlpe != "" {
 		isEnabled, err := strconv.ParseBool(qinlpe)
 		if err != nil {
 			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid value specified for `isNVLinkPartitionEnabled` query param", nil)
 		}
-		isNVLinkPartitionEnabled = &isEnabled
+		configFilter.NVLinkPartition = &isEnabled
+		hasConfigFilter = true
 	}
-	filter.Config.NVLinkPartition = isNVLinkPartitionEnabled
 
 	// Check `isRackLevelAdministrationEnabled` in query
-	var isRackLevelAdministrationEnabled *bool
 	qirlae := c.QueryParam("isRackLevelAdministrationEnabled")
 	if qirlae != "" {
 		isEnabled, err := strconv.ParseBool(qirlae)
 		if err != nil {
 			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid value specified for `isRackLevelAdministrationEnabled` query param", nil)
 		}
-		isRackLevelAdministrationEnabled = &isEnabled
+		configFilter.RackLevelAdministration = &isEnabled
+		hasConfigFilter = true
 	}
-	filter.Config.RackLevelAdministration = isRackLevelAdministrationEnabled
+
+	if hasConfigFilter {
+		filter.Config = &configFilter
+	}
 
 	// Get machine stats if requested
 	var machineStats map[uuid.UUID]*model.APISiteMachineStats
@@ -1197,20 +1176,7 @@ func (gssdh GetSiteStatusDetailsHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
-	// Validate org
-	ok, err := auth.ValidateOrgMembership(dbUser, org)
-	if !ok {
-		if err != nil {
-			logger.Error().Err(err).Msg("error validating org membership for User in request")
-		} else {
-			logger.Warn().Msg("could not validate org membership for user, access denied")
-		}
-		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
-	}
-
-	// Validate role, user must be either Provider or Tenant Admin to retrieve a Site
-	isProviderRequest, orgProvider, orgTenant, apiErr := common.GetIsProviderRequest(ctx, logger, gssdh.dbSession, org, dbUser,
-		[]string{auth.ProviderAdminRole, auth.ProviderViewerRole}, []string{auth.TenantAdminRole}, c.QueryParams())
+	provider, tenant, apiErr := common.IsProviderOrTenant(ctx, logger, gssdh.dbSession, org, dbUser, true, false)
 	if apiErr != nil {
 		return c.JSON(apiErr.Code, apiErr)
 	}
@@ -1234,22 +1200,46 @@ func (gssdh GetSiteStatusDetailsHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site", nil)
 	}
 
-	// Check Site association with Provider
-	tsDAO := cdbm.NewTenantSiteDAO(gssdh.dbSession)
-	if isProviderRequest {
-		if orgProvider.ID != st.InfrastructureProviderID {
-			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Site is not associated with org's Infrastructure Provider", nil)
-		}
-	} else {
-		// Check Site association with Tenant
-		_, serr := tsDAO.GetByTenantIDAndSiteID(ctx, nil, orgTenant.ID, stID, nil)
+	// Check Site association
+	isAssociated := false
+
+	if provider != nil {
+		isAssociated = provider.ID == st.InfrastructureProviderID
+	}
+
+	if !isAssociated && tenant != nil {
+		tsDAO := cdbm.NewTenantSiteDAO(gssdh.dbSession)
+
+		_, tsCount, serr := tsDAO.GetAll(ctx, nil, cdbm.TenantSiteFilterInput{TenantIDs: []uuid.UUID{tenant.ID}, SiteIDs: []uuid.UUID{stID}}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
 		if serr != nil {
-			if serr == cdb.ErrDoesNotExist {
-				return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant does not have access to this Site", nil)
-			}
 			logger.Error().Err(serr).Msg("error retrieving TenantSite from DB")
-			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to determine Tenant access to Site, DB error", nil)
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant/Site association to determine access to Site, DB error", nil)
 		}
+		if tsCount > 0 {
+			isAssociated = true
+		}
+
+		if !isAssociated {
+			// Check if Tenant is privileged
+			if tenant.Config != nil && tenant.Config.TargetedInstanceCreation {
+				taDAO := cdbm.NewTenantAccountDAO(gssdh.dbSession)
+				tas, _, serr := taDAO.GetAll(ctx, nil, cdbm.TenantAccountFilterInput{
+					InfrastructureProviderID: &st.InfrastructureProviderID,
+					TenantIDs:                []uuid.UUID{tenant.ID},
+					Statuses:                 []string{cdbm.TenantAccountStatusReady},
+				}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
+				if serr != nil {
+					logger.Error().Err(serr).Msg("error retrieving Tenant Accounts for privileged Tenant")
+					return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant Accounts to determine access to Site, DB error", nil)
+				}
+
+				isAssociated = len(tas) > 0
+			}
+		}
+	}
+
+	if !isAssociated {
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Site is not associated with org", nil)
 	}
 
 	// handle retrieving and building status details response

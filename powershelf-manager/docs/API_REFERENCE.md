@@ -551,17 +551,24 @@ grpcurl -plaintext -d '{"dry_run": false}' localhost:50051 v1.PowershelfManager/
 
 ### PowerOff
 
-Issues a Redfish chassis power-off action for each specified powershelf.
+Issues a Redfish chassis power-off action for each specified powershelf. Supports both registered devices (by MAC) and unregistered devices (by inline connection details via `PowerTarget`).
 
 ```protobuf
-rpc PowerOff(PowershelfRequest) returns (PowerControlResponse)
+rpc PowerOff(PowerRequest) returns (PowerControlResponse)
 ```
 
 #### Request
 
 ```protobuf
-message PowershelfRequest {
-    repeated string pmc_macs = 1;  // Required. At least one MAC
+message PowerRequest {
+    repeated string pmc_macs = 1;       // Registered devices by MAC
+    repeated PowerTarget targets = 2;   // Unregistered devices with inline credentials
+}
+
+message PowerTarget {
+    string pmc_ip = 1;
+    Credentials pmc_credentials = 2;
+    PMCVendor pmc_vendor = 3;
 }
 ```
 
@@ -573,9 +580,10 @@ message PowerControlResponse {
 }
 
 message PowershelfResponse {
-    string pmc_mac_address = 1;
+    string pmc_mac_address = 1;  // Set for registered devices; empty for direct targets
     StatusCode status = 2;
     string error = 3;
+    string pmc_ip = 4;           // Set for direct PowerTarget responses; empty for registered devices
 }
 ```
 
@@ -583,13 +591,25 @@ message PowershelfResponse {
 
 - Executes `Chassis.Reset` with `ResetType: ForceOff`
 - Idempotent: powering off an already-off chassis succeeds
-- Returns per-PMC status; partial failures are possible
+- Returns per-target status; partial failures are possible
+- For registered devices, `pmc_mac_address` identifies the device in the response
+- For direct `PowerTarget` requests, `pmc_ip` identifies the device and `pmc_mac_address` is empty
 
 #### Example
 
 ```bash
+# Registered device by MAC
 grpcurl -plaintext -d '{
   "pmc_macs": ["00:11:22:33:44:55"]
+}' localhost:50051 v1.PowershelfManager/PowerOff
+
+# Unregistered device via PowerTarget
+grpcurl -plaintext -d '{
+  "targets": [{
+    "pmc_ip": "10.0.1.100",
+    "pmc_credentials": {"username": "admin", "password": "secret"},
+    "pmc_vendor": "PMC_TYPE_LITEON"
+  }]
 }' localhost:50051 v1.PowershelfManager/PowerOff
 ```
 
@@ -597,23 +617,34 @@ grpcurl -plaintext -d '{
 
 ### PowerOn
 
-Issues a Redfish chassis power-on action for each specified powershelf.
+Issues a Redfish chassis power-on action for each specified powershelf. Supports both registered devices (by MAC) and unregistered devices (by inline connection details via `PowerTarget`).
 
 ```protobuf
-rpc PowerOn(PowershelfRequest) returns (PowerControlResponse)
+rpc PowerOn(PowerRequest) returns (PowerControlResponse)
 ```
 
 #### Behavior
 
 - Executes `Chassis.Reset` with `ResetType: On`
 - Idempotent: powering on an already-on chassis succeeds
-- Returns per-PMC status; partial failures are possible
+- Returns per-target status; partial failures are possible
+- Response format is the same as `PowerOff`: `pmc_mac_address` for registered devices, `pmc_ip` for direct targets
 
 #### Example
 
 ```bash
+# Registered device by MAC
 grpcurl -plaintext -d '{
   "pmc_macs": ["00:11:22:33:44:55"]
+}' localhost:50051 v1.PowershelfManager/PowerOn
+
+# Unregistered device via PowerTarget
+grpcurl -plaintext -d '{
+  "targets": [{
+    "pmc_ip": "10.0.1.100",
+    "pmc_credentials": {"username": "admin", "password": "secret"},
+    "pmc_vendor": "PMC_TYPE_LITEON"
+  }]
 }' localhost:50051 v1.PowershelfManager/PowerOn
 ```
 

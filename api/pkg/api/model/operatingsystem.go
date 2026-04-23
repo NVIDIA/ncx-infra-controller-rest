@@ -26,7 +26,6 @@ import (
 	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/go-ozzo/ozzo-validation/v4/is"
-	validationis "github.com/go-ozzo/ozzo-validation/v4/is"
 	"github.com/google/uuid"
 	"gopkg.in/yaml.v3"
 )
@@ -91,10 +90,6 @@ func (oscr APIOperatingSystemCreateRequest) Validate() error {
 		validation.Field(&oscr.InfrastructureProviderID,
 			// infrastructure provider id must be nil
 			validation.Nil.Error(validationErrorInfrastructureProviderIDExpectNil)),
-		validation.Field(&oscr.TenantID,
-			// NOTE: TenantID is required for now as only Tenants can create Operating Systems
-			validation.Required.Error(validationErrorValueRequired),
-			validationis.UUID.Error(validationErrorInvalidUUID)),
 	)
 	if err != nil {
 		return err

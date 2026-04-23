@@ -66,7 +66,7 @@ func TestBMCConversion(t *testing.T) {
 				mac, _ := net.ParseMAC("00:11:22:33:44:55")
 				cred := credential.New("admin", "password")
 				return &bmc.BMC{
-					MAC:        mac,
+					MAC:        bmc.MACAddress{HardwareAddr: mac},
 					IP:         net.ParseIP("192.168.0.1"),
 					Credential: &cred,
 				}
@@ -96,7 +96,7 @@ func TestBMCConversion(t *testing.T) {
 				mac, _ := net.ParseMAC("aa:bb:cc:dd:ee:ff")
 				cred := credential.New("root", "secret")
 				return &bmc.BMC{
-					MAC:        mac,
+					MAC:        bmc.MACAddress{HardwareAddr: mac},
 					IP:         net.ParseIP("10.0.0.1"),
 					Credential: &cred,
 				}
@@ -115,7 +115,7 @@ func TestBMCConversion(t *testing.T) {
 			},
 			setupInternal: func() *bmc.BMC {
 				return &bmc.BMC{
-					MAC: nil, // Invalid MAC results in nil
+					MAC: bmc.MACAddress{}, // Invalid MAC results in zero-value MACAddress (HardwareAddr is nil)
 				}
 			},
 			bmcType:         devicetypes.BMCTypeHost,
@@ -136,7 +136,7 @@ func TestBMCConversion(t *testing.T) {
 			setupInternal: func() *bmc.BMC {
 				mac, _ := net.ParseMAC("11:22:33:44:55:66")
 				return &bmc.BMC{
-					MAC: mac,
+					MAC: bmc.MACAddress{HardwareAddr: mac},
 					IP:  nil,
 				}
 			},
@@ -159,7 +159,7 @@ func TestBMCConversion(t *testing.T) {
 			setupInternal: func() *bmc.BMC {
 				mac, _ := net.ParseMAC("11:22:33:44:55:77")
 				return &bmc.BMC{
-					MAC: mac,
+					MAC: bmc.MACAddress{HardwareAddr: mac},
 					IP:  nil, // Empty string results in nil IP
 				}
 			},
@@ -182,7 +182,7 @@ func TestBMCConversion(t *testing.T) {
 			setupInternal: func() *bmc.BMC {
 				mac, _ := net.ParseMAC("aa:bb:cc:dd:ee:11")
 				return &bmc.BMC{
-					MAC:        mac,
+					MAC:        bmc.MACAddress{HardwareAddr: mac},
 					Credential: nil,
 				}
 			},
@@ -206,7 +206,7 @@ func TestBMCConversion(t *testing.T) {
 			setupInternal: func() *bmc.BMC {
 				mac, _ := net.ParseMAC("aa:bb:cc:dd:ee:22")
 				return &bmc.BMC{
-					MAC:        mac,
+					MAC:        bmc.MACAddress{HardwareAddr: mac},
 					Credential: nil, // BMCFrom requires both user and password
 				}
 			},
@@ -230,7 +230,7 @@ func TestBMCConversion(t *testing.T) {
 			setupInternal: func() *bmc.BMC {
 				mac, _ := net.ParseMAC("aa:bb:cc:dd:ee:33")
 				return &bmc.BMC{
-					MAC:        mac,
+					MAC:        bmc.MACAddress{HardwareAddr: mac},
 					Credential: nil, // BMCFrom requires both user and password
 				}
 			},
@@ -251,7 +251,7 @@ func TestBMCConversion(t *testing.T) {
 			setupInternal: func() *bmc.BMC {
 				mac, _ := net.ParseMAC("AA-BB-CC-DD-EE-FF")
 				return &bmc.BMC{
-					MAC: mac,
+					MAC: bmc.MACAddress{HardwareAddr: mac},
 				}
 			},
 			bmcType:         devicetypes.BMCTypeDPU,
@@ -273,7 +273,7 @@ func TestBMCConversion(t *testing.T) {
 			setupInternal: func() *bmc.BMC {
 				mac, _ := net.ParseMAC("11:22:33:44:55:88")
 				return &bmc.BMC{
-					MAC: mac,
+					MAC: bmc.MACAddress{HardwareAddr: mac},
 					IP:  net.ParseIP("2001:db8::1"),
 				}
 			},
@@ -299,7 +299,7 @@ func TestBMCConversion(t *testing.T) {
 				mac, _ := net.ParseMAC("11:22:33:44:55:99")
 				cred := credential.New("", "")
 				return &bmc.BMC{
-					MAC:        mac,
+					MAC:        bmc.MACAddress{HardwareAddr: mac},
 					Credential: &cred,
 				}
 			},

@@ -18,6 +18,7 @@
 package workflow
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -45,15 +46,16 @@ type actionExecutor func(actx actionExecutionContext) error
 
 // actionExecutorRegistry maps action names to their executor functions
 var actionExecutorRegistry = map[string]actionExecutor{
-	operationrules.ActionSleep:              executeSleepAction,
-	operationrules.ActionPowerControl:       executePowerControlAction,
-	operationrules.ActionVerifyPowerStatus:  executeVerifyPowerStatusAction,
-	operationrules.ActionVerifyReachability: executeVerifyReachabilityAction,
-	operationrules.ActionGetPowerStatus:     executeGetPowerStatusAction,
-	operationrules.ActionFirmwareControl:    executeFirmwareControlAction,
-	operationrules.ActionBringUpControl:     executeBringUpControlAction,
-	operationrules.ActionWaitBringUp:        executeWaitBringUpAction,
-	operationrules.ActionInjectExpectation:  executeInjectExpectationAction,
+	operationrules.ActionSleep:                     executeSleepAction,
+	operationrules.ActionPowerControl:              executePowerControlAction,
+	operationrules.ActionVerifyPowerStatus:         executeVerifyPowerStatusAction,
+	operationrules.ActionVerifyReachability:        executeVerifyReachabilityAction,
+	operationrules.ActionGetPowerStatus:            executeGetPowerStatusAction,
+	operationrules.ActionFirmwareControl:           executeFirmwareControlAction,
+	operationrules.ActionBringUpControl:            executeBringUpControlAction,
+	operationrules.ActionWaitBringUp:               executeWaitBringUpAction,
+	operationrules.ActionInjectExpectation:         executeInjectExpectationAction,
+	operationrules.ActionVerifyFirmwareConsistency: executeVerifyFirmwareConsistencyAction,
 }
 
 // executeActionList executes a list of actions sequentially
@@ -182,15 +184,37 @@ func executeGetPowerStatusAction(actx actionExecutionContext) error {
 // executeFirmwareControlAction handles FirmwareControl action by starting a
 // firmware update and polling for completion. Poll parameters are read from
 // the action config (poll_interval, poll_timeout) with sensible defaults.
-// operationInfo is passed through to the activity for Temporal to
-// deserialize at the activity boundary.
+//
+// operationInfo may arrive as *FirmwareControlTaskInfo (same-process call),
+// FirmwareControlTaskInfo (value copy), or map[string]interface{} (after
+// Temporal child-workflow JSON round-trip where the parameter type is `any`).
+// We attempt recovery in that order; if none succeeds (e.g. BringUp context
+// where operationInfo is BringUpTaskInfo), we fall back to a default upgrade
+// with empty TargetVersion so the component manager auto-resolves.
 func executeFirmwareControlAction(actx actionExecutionContext) error {
 	ctx := actx.workflowContext
 	target := actx.target
 
-	// Start firmware update (Temporal deserializes operationInfo at activity level)
+	var fwInfo operations.FirmwareControlTaskInfo
+	switch v := actx.operationInfo.(type) {
+	case *operations.FirmwareControlTaskInfo:
+		fwInfo = *v
+	case operations.FirmwareControlTaskInfo:
+		fwInfo = v
+	default:
+		// After Temporal child-workflow serialization the concrete Go type is
+		// lost and becomes map[string]interface{}. JSON round-trip recovers
+		// the original FirmwareControlTaskInfo fields (including TargetVersion).
+		if data, err := json.Marshal(actx.operationInfo); err == nil {
+			_ = json.Unmarshal(data, &fwInfo)
+		}
+	}
+	if fwInfo.Operation == operations.FirmwareOperationUnknown {
+		fwInfo.Operation = operations.FirmwareOperationUpgrade
+	}
+
 	if err := workflow.ExecuteActivity(
-		ctx, "FirmwareControl", target, actx.operationInfo,
+		ctx, "FirmwareControl", target, fwInfo,
 	).Get(ctx, nil); err != nil {
 		return fmt.Errorf("failed to start firmware update: %w", err)
 	}
@@ -571,4 +595,14 @@ func executeInjectExpectationAction(actx actionExecutionContext) error {
 	return workflow.ExecuteActivity(
 		ctx, activity.InjectExpectation, actx.target, info,
 	).Get(ctx, nil)
+}
+
+// executeVerifyFirmwareConsistencyAction checks that all target components
+// have the same firmware version. Fails if versions are heterogeneous.
+func executeVerifyFirmwareConsistencyAction(actx actionExecutionContext) error {
+	return workflow.ExecuteActivity(
+		actx.workflowContext,
+		activity.VerifyFirmwareConsistency,
+		actx.target,
+	).Get(actx.workflowContext, nil)
 }

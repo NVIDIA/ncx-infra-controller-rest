@@ -344,7 +344,7 @@ func TestGetTrayHandler_Handle(t *testing.T) {
 			err = json.Unmarshal(rec.Body.Bytes(), &apiTray)
 			assert.NoError(t, err)
 			assert.Equal(t, trayID, apiTray.ID)
-			assert.Equal(t, "compute", apiTray.Type)
+			assert.Equal(t, "Compute", apiTray.Type)
 			assert.Equal(t, "NVIDIA", apiTray.Manufacturer)
 		})
 	}
@@ -449,7 +449,7 @@ func TestGetAllTrayHandler_Handle(t *testing.T) {
 			user:   providerUser,
 			queryParams: map[string]string{
 				"siteId": site.ID.String(),
-				"type":   "compute",
+				"type":   "Compute",
 			},
 			mockResponse:   createMockRLAResponse(testComponents[:2], 2),
 			expectedStatus: http.StatusOK,
@@ -762,12 +762,12 @@ func TestValidateTrayHandler_Handle(t *testing.T) {
 				"siteId": site.ID.String(),
 			},
 			mockResponse: &rlav1.ValidateComponentsResponse{
-				Diffs:               []*rlav1.ComponentDiff{},
-				TotalDiffs:          0,
-				OnlyInExpectedCount: 0,
-				OnlyInActualCount:   0,
-				DriftCount:          0,
-				MatchCount:          1,
+				Diffs:           []*rlav1.ComponentDiff{},
+				TotalDiffs:      0,
+				MissingCount:    0,
+				UnexpectedCount: 0,
+				DriftCount:      0,
+				MatchCount:      1,
 			},
 			expectedStatus: http.StatusOK,
 		},
@@ -793,11 +793,11 @@ func TestValidateTrayHandler_Handle(t *testing.T) {
 						},
 					},
 				},
-				TotalDiffs:          1,
-				OnlyInExpectedCount: 0,
-				OnlyInActualCount:   0,
-				DriftCount:          1,
-				MatchCount:          0,
+				TotalDiffs:      1,
+				MissingCount:    0,
+				UnexpectedCount: 0,
+				DriftCount:      1,
+				MatchCount:      0,
 			},
 			expectedStatus: http.StatusOK,
 		},
@@ -861,8 +861,8 @@ func TestValidateTrayHandler_Handle(t *testing.T) {
 					resp := args.Get(1).(*rlav1.ValidateComponentsResponse)
 					resp.Diffs = tt.mockResponse.Diffs
 					resp.TotalDiffs = tt.mockResponse.TotalDiffs
-					resp.OnlyInExpectedCount = tt.mockResponse.OnlyInExpectedCount
-					resp.OnlyInActualCount = tt.mockResponse.OnlyInActualCount
+					resp.MissingCount = tt.mockResponse.MissingCount
+					resp.UnexpectedCount = tt.mockResponse.UnexpectedCount
 					resp.DriftCount = tt.mockResponse.DriftCount
 					resp.MatchCount = tt.mockResponse.MatchCount
 				}).Return(nil)
@@ -964,12 +964,12 @@ func TestValidateTraysHandler_Handle(t *testing.T) {
 				"siteId": site.ID.String(),
 			},
 			mockResponse: &rlav1.ValidateComponentsResponse{
-				Diffs:               []*rlav1.ComponentDiff{},
-				TotalDiffs:          0,
-				OnlyInExpectedCount: 0,
-				OnlyInActualCount:   0,
-				DriftCount:          0,
-				MatchCount:          10,
+				Diffs:           []*rlav1.ComponentDiff{},
+				TotalDiffs:      0,
+				MissingCount:    0,
+				UnexpectedCount: 0,
+				DriftCount:      0,
+				MatchCount:      10,
 			},
 			expectedStatus: http.StatusOK,
 		},
@@ -994,7 +994,7 @@ func TestValidateTraysHandler_Handle(t *testing.T) {
 			user:   providerUser,
 			queryParams: map[string]string{
 				"siteId": site.ID.String(),
-				"type":   "compute",
+				"type":   "Compute",
 			},
 			mockResponse: &rlav1.ValidateComponentsResponse{
 				Diffs:      []*rlav1.ComponentDiff{},
@@ -1040,7 +1040,7 @@ func TestValidateTraysHandler_Handle(t *testing.T) {
 			queryParams: map[string]string{
 				"siteId": site.ID.String(),
 				"rackId": rackID,
-				"type":   "compute",
+				"type":   "Compute",
 			},
 			mockResponse: &rlav1.ValidateComponentsResponse{
 				Diffs:      []*rlav1.ComponentDiff{},
@@ -1056,7 +1056,7 @@ func TestValidateTraysHandler_Handle(t *testing.T) {
 			queryParams: map[string]string{
 				"siteId":      site.ID.String(),
 				"componentId": "ext-comp-1",
-				"type":        "compute",
+				"type":        "Compute",
 			},
 			mockResponse: &rlav1.ValidateComponentsResponse{
 				Diffs:      []*rlav1.ComponentDiff{},
@@ -1084,7 +1084,7 @@ func TestValidateTraysHandler_Handle(t *testing.T) {
 				"siteId":      site.ID.String(),
 				"rackId":      rackID,
 				"componentId": "ext-comp-1",
-				"type":        "compute",
+				"type":        "Compute",
 			},
 			expectedStatus: http.StatusBadRequest,
 		},
@@ -1154,8 +1154,8 @@ func TestValidateTraysHandler_Handle(t *testing.T) {
 					resp := args.Get(1).(*rlav1.ValidateComponentsResponse)
 					resp.Diffs = tt.mockResponse.Diffs
 					resp.TotalDiffs = tt.mockResponse.TotalDiffs
-					resp.OnlyInExpectedCount = tt.mockResponse.OnlyInExpectedCount
-					resp.OnlyInActualCount = tt.mockResponse.OnlyInActualCount
+					resp.MissingCount = tt.mockResponse.MissingCount
+					resp.UnexpectedCount = tt.mockResponse.UnexpectedCount
 					resp.DriftCount = tt.mockResponse.DriftCount
 					resp.MatchCount = tt.mockResponse.MatchCount
 				}).Return(nil)

@@ -24,12 +24,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/objects/pmc"
-	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/objects/powershelf"
-	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/objects/powersupply"
 	"io"
 	"io/ioutil"
 	"net/http"
+
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/objects/pmc"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/objects/powershelf"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/objects/powersupply"
 
 	log "github.com/sirupsen/logrus"
 
@@ -38,6 +39,22 @@ import (
 	"github.com/stmcginnis/gofish"
 	"github.com/stmcginnis/gofish/redfish"
 )
+
+// checkResponse returns an error if the HTTP status code indicates failure (>= 300),
+// including the response body in the error message for diagnostics.
+func checkResponse(resp *http.Response) error {
+	defer resp.Body.Close()
+
+	if resp.StatusCode < http.StatusMultipleChoices {
+		return nil
+	}
+
+	body, readErr := io.ReadAll(resp.Body)
+	if readErr != nil {
+		return fmt.Errorf("HTTP %d %s (could not read response body: %v)", resp.StatusCode, resp.Status, readErr)
+	}
+	return fmt.Errorf("HTTP %d %s: %s", resp.StatusCode, resp.Status, string(body))
+}
 
 // RedfishClient manages a gofish API client and PMC context to perform typed Redfish operations against a device.
 type RedfishClient struct {
@@ -204,47 +221,39 @@ func (c *RedfishClient) UploadFirmwareByPath(firmwarePath string) (*http.Respons
 	defer firmwareFile.Close()
 
 	return c.UploadFirmware(firmwareFile)
-
 }
 
-// UploadFirmware uploads firmware from an io.Reader using basic auth.
+// UploadFirmware uploads firmware from an io.Reader via the Redfish UpdateService.
 func (c *RedfishClient) UploadFirmware(fw io.Reader) (*http.Response, error) {
-	// Create a new POST request with the file reader as the body
 	req, err := http.NewRequest("POST", c.ClientConfig.Endpoint+"/redfish/v1/UpdateService", fw)
 	if err != nil {
 		return nil, err
 	}
 
-	// Set headers
 	req.Header.Set("Content-Type", "application/octet-stream")
-
-	// Set basic authentication
 	req.SetBasicAuth(c.ClientConfig.Username, c.ClientConfig.Password)
 
 	return c.APIClient.HTTPClient.Do(req)
-
 }
 
 // UpdateFirmware sets apply time to Immediate then uploads firmware from the reader.
-func (c *RedfishClient) UpdateFirmware(fw io.Reader) (*http.Response, error) {
-	_, err := c.SetHttpPushUriApplyTimeImmediate()
+func (c *RedfishClient) UpdateFirmware(fw io.Reader) error {
+	resp, err := c.SetHttpPushUriApplyTimeImmediate()
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("failed to set apply time to Immediate: %w", err)
 	}
 
-	return c.UploadFirmware(fw)
-}
-
-// UpdateFirmwareByPath opens a local file and performs UpdateFirmware.
-func (c *RedfishClient) UpdateFirmwareByPath(firmwarePath string) (*http.Response, error) {
-	// Open the firmware file
-	firmwareFile, err := os.Open(firmwarePath)
+	err = checkResponse(resp)
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("failed to set apply time to Immediate: %w", err)
 	}
-	defer firmwareFile.Close()
 
-	return c.UpdateFirmware(firmwareFile)
+	resp, err = c.UploadFirmware(fw)
+	if err != nil {
+		return fmt.Errorf("failed to upload firmware: %w", err)
+	}
+
+	return checkResponse(resp)
 }
 
 // QueryPowerSubsystem returns the chassis PowerSubsystem resource.

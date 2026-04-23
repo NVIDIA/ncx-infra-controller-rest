@@ -72,6 +72,13 @@ type Client interface {
 	// AddExpectedPowerShelf registers an expected power shelf with Carbide for ingestion.
 	AddExpectedPowerShelf(ctx context.Context, req AddExpectedPowerShelfRequest) error
 
+	// InsertHealthReportOverride inserts a health-report override for a machine
+	// (replaces the deprecated SetMaintenance RPC).
+	InsertHealthReportOverride(ctx context.Context, machineID string, source string) error
+
+	// RemoveHealthReportOverride removes a previously inserted health-report override.
+	RemoveHealthReportOverride(ctx context.Context, machineID string, source string) error
+
 	// ComponentPowerControl performs power control on component targets (switches, power shelves).
 	ComponentPowerControl(ctx context.Context, req *pb.ComponentPowerControlRequest) (*pb.ComponentPowerControlResponse, error)
 
@@ -86,6 +93,30 @@ type Client interface {
 
 	// GetComponentInventory retrieves inventory (including site exploration reports) for component targets.
 	GetComponentInventory(ctx context.Context, req *pb.GetComponentInventoryRequest) (*pb.GetComponentInventoryResponse, error)
+
+	// GetAllExpectedSwitchesLinked returns expected switches linked to their
+	// explored endpoints and live Switch resources. Each entry includes the
+	// BMC MAC, Core's SwitchId (if the switch has been created), and the
+	// expected switch UUID.
+	GetAllExpectedSwitchesLinked(ctx context.Context) ([]LinkedExpectedSwitch, error)
+
+	// GetAllExpectedPowerShelvesLinked returns expected power shelves linked
+	// to their explored endpoints and live PowerShelf resources. Each entry
+	// includes the BMC/PMC MAC, Core's PowerShelfId (if the shelf has been
+	// created), and the expected power shelf UUID.
+	GetAllExpectedPowerShelvesLinked(ctx context.Context) ([]LinkedExpectedPowerShelf, error)
+
+	// GetDesiredFirmwareVersions returns a slice of desired firmware version
+	// entries configured in Core. Each entry carries vendor and model fields;
+	// iterate the slice to find matching entries.
+	GetDesiredFirmwareVersions(ctx context.Context) ([]*pb.DesiredFirmwareVersionEntry, error)
+
+	// FindExploredEndpointsByIds returns explored endpoint data (including
+	// firmware_versions) for the given BMC IP addresses.
+	FindExploredEndpointsByIds(ctx context.Context, bmcIPs []string) ([]*pb.ExploredEndpoint, error)
+
+	// SetMachineAutoUpdate enables or disables firmware auto-update for a machine.
+	SetMachineAutoUpdate(ctx context.Context, machineID string, enable bool) error
 
 	// The following are only valid in the mock environment and should only be called by unit tests
 	AddMachine(MachineDetail)

@@ -32,7 +32,8 @@ export TEMPORAL_HOST=localhost TEMPORAL_PORT=7233 TEMPORAL_NAMESPACE=rla
 ./rla db migrate
 
 # Start server (default port 50051)
-./rla serve
+# Use --dev-mode to enable gRPC reflection and debug logging (required for grpcui/grpcurl)
+./rla serve --dev-mode
 ```
 
 **Note:** Carbide is not available locally; power/firmware operations will fail. Use dev/staging for those tests.
@@ -42,6 +43,8 @@ export TEMPORAL_HOST=localhost TEMPORAL_PORT=7233 TEMPORAL_NAMESPACE=rla
 go install github.com/fullstorydev/grpcui/cmd/grpcui@latest
 grpcui -plaintext localhost:50051
 ```
+
+> `grpcui` and `grpcurl` rely on gRPC server reflection, which is only enabled when the server is started with `--dev-mode`.
 
 ## Task Architecture
 
@@ -64,6 +67,8 @@ gRPC Request → Server (convert to TaskSpec)
 ```
 
 ## gRPC APIs
+
+> The examples below require the server to be running with `--dev-mode` (enables gRPC reflection).
 
 List all available APIs:
 ```bash

@@ -39,6 +39,7 @@ func init() {
 	pmcTypeToMap = map[vendor.VendorCode]pb.PMCVendor{
 		vendor.VendorCodeUnsupported: pb.PMCVendor_PMC_TYPE_UNKNOWN,
 		vendor.VendorCodeLiteon:      pb.PMCVendor_PMC_TYPE_LITEON,
+		vendor.VendorCodeDelta:       pb.PMCVendor_PMC_TYPE_DELTA,
 	}
 
 	componentTypeFromMap = map[pb.PowershelfComponent]powershelf.Component{

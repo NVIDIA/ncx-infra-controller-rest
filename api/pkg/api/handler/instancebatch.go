@@ -25,6 +25,7 @@ import (
 	"math/rand"
 	"net/http"
 
+	goset "github.com/deckarep/golang-set/v2"
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/labstack/echo/v4"
 	"go.opentelemetry.io/otel/attribute"
@@ -94,7 +95,7 @@ func (bcih BatchCreateInstanceHandler) buildBatchInstanceCreateRequestOsConfig(c
 			RunProvisioningInstructionsOnEveryBoot: *apiRequest.AlwaysBootWithCustomIpxe, // Set by the earlier call to ValidateAndSetOperatingSystemData
 			PhoneHomeEnabled:                       *apiRequest.PhoneHomeEnabled,         // Set by the earlier call to ValidateAndSetOperatingSystemData
 			Variant: &cwssaws.OperatingSystem_Ipxe{
-				Ipxe: &cwssaws.IpxeOperatingSystem{
+				Ipxe: &cwssaws.InlineIpxe{
 					IpxeScript: *apiRequest.IpxeScript,
 				},
 			},
@@ -193,7 +194,7 @@ func (bcih BatchCreateInstanceHandler) buildBatchInstanceCreateRequestOsConfig(c
 			RunProvisioningInstructionsOnEveryBoot: *apiRequest.AlwaysBootWithCustomIpxe,
 			PhoneHomeEnabled:                       *apiRequest.PhoneHomeEnabled,
 			Variant: &cwssaws.OperatingSystem_Ipxe{
-				Ipxe: &cwssaws.IpxeOperatingSystem{
+				Ipxe: &cwssaws.InlineIpxe{
 					IpxeScript: *apiRequest.IpxeScript,
 				},
 			},
@@ -363,7 +364,11 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve tenant for org", nil)
 	}
 
-	// Verify tenant-id in request matches tenant from org
+	// Deprecated: tenantId in request body. Infer from org when not provided.
+	if apiRequest.TenantID == "" {
+		apiRequest.TenantID = tenant.ID.String()
+	}
+
 	apiTenant, err := common.GetTenantFromIDString(ctx, nil, apiRequest.TenantID, bcih.dbSession)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error retrieving tenant from request")
@@ -503,6 +508,29 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 	// Validate each Interface against fetched data and build dbInterfaces
 	dbInterfaces := []cdbm.Interface{}
 	isDeviceInfoPresent := false
+	pfWithinVPC := []uuid.UUID{}
+	allFoundVpcIds := goset.NewSet[uuid.UUID]()
+
+	// Prepare the unique set of all VPC IDs for this batch request.
+	allRequestedVpcIds := goset.NewSet[uuid.UUID]()
+	for _, secondaryVpcID := range apiRequest.SecondaryVpcIDs {
+		id, err := uuid.Parse(secondaryVpcID)
+		if err != nil {
+			logger.Error().Msgf("invalid VPC ID %v in `secondaryVpcIds` in request data", secondaryVpcID)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Invalid VPC ID `%s` in secondaryVpcIds in request data", secondaryVpcID), nil)
+		}
+
+		if !allRequestedVpcIds.Add(id) {
+			logger.Error().Msgf("duplicate ID %s found in `secondaryVpcIds`", id)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Duplicate ID `%s` found in `secondaryVpcIds`", id), nil)
+		}
+	}
+
+	// Add the primary VPC. It must not also appear in secondaryVpcIds.
+	if !allRequestedVpcIds.Add(vpc.ID) {
+		logger.Error().Msgf("primary VPC ID: %s for Instances must not be listed in `secondaryVpcIds`", vpc.ID)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Primary VPC ID: %s for Instances must not be listed in `secondaryVpcIds`", vpc.ID), nil)
+	}
 
 	for _, ifc := range apiRequest.Interfaces {
 		if ifc.SubnetID != nil {
@@ -558,9 +586,9 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("VPC Prefix: %v specified in request data is not in Ready state", vpcPrefixUUID), nil)
 			}
 
-			if vpcPrefix.VpcID != vpc.ID {
-				logger.Warn().Msg(fmt.Sprintf("VPC Prefix: %v specified in request does not match with VPC", vpcPrefixUUID))
-				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("VPC Prefix: %v specified in request does not match with VPC", vpcPrefixUUID), nil)
+			if vpcPrefix.SiteID != site.ID {
+				logger.Warn().Msg(fmt.Sprintf("VPC Prefix: %v specified in request does not belong to Site", vpcPrefixUUID))
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("VPC Prefix: %v specified in request does not belong to Site", vpcPrefixUUID), nil)
 			}
 
 			if vpc.NetworkVirtualizationType == nil || *vpc.NetworkVirtualizationType != cdbm.VpcFNN {
@@ -568,18 +596,74 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("VPC: %v specified in request must have FNN network virtualization type in order to create VPC Prefix based interfaces", vpc.ID), nil)
 			}
 
+			// If the interface is associated with a VPC ID that the user
+			// didn't request, reject the request.
+			if !allRequestedVpcIds.Contains(vpcPrefix.VpcID) {
+				logger.Error().Msgf("One or more Interfaces specify VPC Prefix: %s belonging to VPC: %s which is not specified in 'vpcId' or 'secondaryVpcIds'", vpcPrefix.ID, vpcPrefix.VpcID)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("One or more Interfaces specify VPC Prefix: %s belonging to VPC: %s which is not specified in 'vpcId' or 'secondaryVpcIds'", vpcPrefix.ID, vpcPrefix.VpcID), nil)
+			}
+
+			// Collect the VPC IDs actually found based on interface definitions.
+			allFoundVpcIds.Add(vpcPrefix.VpcID)
+
 			if ifc.Device != nil && ifc.DeviceInstance != nil {
 				isDeviceInfoPresent = true
 			}
 
+			// The requirement that the VpcID of a prefix being associated with an interface must match the VPC of the batch request
+			// is only valid for the first interface where ifc.IsPhysical==true.
+			// When DeviceInstance is present, "first interface" is the PF of the first DPU, defined as DeviceInstance==0.
+			// For all other interfaces, there is no such requirement, and instances are allowed to attach to different VPCs
+			// using additional interfaces.
+			if ifc.IsPhysical {
+				// If no device info, append it.
+				// If DeviceInstance > 0, just ignore it.
+				// If DeviceInstance==0, then just replace the slice.
+				// This will give precedence to DeviceInstance==0
+				// for defining whether the primary.  DeviceInstance > 0
+				// is by definition not the primary.
+				if !isDeviceInfoPresent {
+					pfWithinVPC = append(pfWithinVPC, vpcPrefix.VpcID)
+				} else if ifc.DeviceInstance != nil && *ifc.DeviceInstance == 0 {
+					pfWithinVPC = []uuid.UUID{vpcPrefix.VpcID}
+				}
+			}
+
 			dbInterfaces = append(dbInterfaces, cdbm.Interface{
-				VpcPrefixID:       &vpcPrefixUUID,
-				Device:            ifc.Device,
-				DeviceInstance:    ifc.DeviceInstance,
-				VirtualFunctionID: ifc.VirtualFunctionID,
-				IsPhysical:        ifc.IsPhysical,
-				Status:            cdbm.InterfaceStatusPending,
+				VpcPrefixID:        &vpcPrefixUUID,
+				VpcPrefix:          vpcPrefix,
+				RequestedIpAddress: nil, // Explicit IPs are not supported for batch create.
+				Device:             ifc.Device,
+				DeviceInstance:     ifc.DeviceInstance,
+				VirtualFunctionID:  ifc.VirtualFunctionID,
+				IsPhysical:         ifc.IsPhysical,
+				Status:             cdbm.InterfaceStatusPending,
 			})
+		}
+	}
+
+	// If there are ethernet interfaces for these Instances,
+	// validate the network plan.
+	if len(dbInterfaces) > 0 &&
+		vpc.NetworkVirtualizationType != nil &&
+		*vpc.NetworkVirtualizationType == cdbm.VpcFNN {
+		// Throw an error if there are somehow no PFs, or if the VPC of the first
+		// PF doesn't match the primary VPC of the batch request.
+		if len(pfWithinVPC) == 0 || pfWithinVPC[0] != vpc.ID {
+			logger.Error().Msg("the primary physical interface must use a VPC prefix that matches with Instance VPC")
+
+			if !isDeviceInfoPresent {
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "The primary physical Interface must use a VPC Prefix that belongs to VPC specified in `vpcId`", nil)
+			} else {
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "The primary physical Interface for deviceInstance: 0 must use a VPC Prefix that belongs to VPC specified in `vpcId`", nil)
+			}
+		}
+
+		// Reject the request if the requested VPC associations don't match
+		// the VPC associations actually found based on interface definitions.
+		if allRequestedVpcIds.Cardinality() != allFoundVpcIds.Cardinality() {
+			logger.Error().Msg("one or more Interfaces in request data specify VPC Prefixes that do not belong to VPCs specified in `vpcId` or `secondaryVpcIds`")
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "One or more Interfaces in request data specify VPC Prefixes that do not belong to VPCs specified in `vpcId` or `secondaryVpcIds`", nil)
 		}
 	}
 
@@ -813,11 +897,11 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 
 	// ==================== Step 4: Machine Selection ====================
 
-	// Acquire an advisory lock on the tenant ID and instancetype ID
-	// This prevents concurrent instance creation (single or batch) from the same tenant on the same instance type
-	err = tx.TryAcquireAdvisoryLock(ctx, cdb.GetAdvisoryLockIDFromString(fmt.Sprintf("%s-%s", tenant.ID.String(), instancetype.ID.String())), nil)
+	// Acquire the shared quota lock for this tenant/site/instance-type pool.
+	// This prevents concurrent quota mutations and admissions from racing.
+	err = common.AcquireInstanceTypeQuotaLock(ctx, tx, tenant.ID, instancetype.ID)
 	if err != nil {
-		logger.Error().Err(err).Msg("Failed to acquire advisory lock on Tenant and Instance Type")
+		logger.Error().Err(err).Msg("Failed to acquire advisory lock on Instance Type quota pool")
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error creating Instances, detected multiple parallel requests on Instance Type by Tenant", nil)
 	}
 
@@ -849,23 +933,17 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 	if instancetype.SiteID != nil {
 		siteIDs = []uuid.UUID{*instancetype.SiteID}
 	}
-	instances, insTotal, err := inDAO.GetAll(ctx, tx, cdbm.InstanceFilterInput{TenantIDs: []uuid.UUID{tenant.ID}, SiteIDs: siteIDs, InstanceTypeIDs: []uuid.UUID{instancetype.ID}}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
+	_, insTotal, err := inDAO.GetAll(ctx, tx, cdbm.InstanceFilterInput{
+		TenantIDs:       []uuid.UUID{tenant.ID},
+		SiteIDs:         siteIDs,
+		InstanceTypeIDs: []uuid.UUID{instancetype.ID},
+	}, cdbp.PageInput{}, nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Active Instances from DB for Tenant and InstanceType")
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve active instances for Tenant and Instance Type, DB error", nil)
 	}
 
-	// Build map allocation constraint ID which has been used by Instance
-	usedMapAllocationConstraintIDs := map[uuid.UUID]int{}
-	for _, inst := range instances {
-		if inst.AllocationConstraintID == nil {
-			logger.Error().Msgf("found Instance missing AllocationConstraintID")
-			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Instance is missing Allocation Constraint ID", nil)
-		}
-		usedMapAllocationConstraintIDs[*inst.AllocationConstraintID] += 1
-	}
-
-	// Calculate total constraint value
+	// Calculate the total constraint value across all matching allocations.
 	totalConstraintValue := 0
 	for _, alcs := range alconstraints {
 		totalConstraintValue += alcs.ConstraintValue
@@ -875,27 +953,6 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 	if insTotal+apiRequest.Count > totalConstraintValue {
 		return cutil.NewAPIErrorResponse(c, http.StatusForbidden,
 			fmt.Sprintf("Tenant has reached the maximum number of Instances for Instance Type. Current: %d, Requested: %d, Max: %d", insTotal, apiRequest.Count, totalConstraintValue), nil)
-	}
-
-	// Build list of allocation constraints with available capacity
-	// Instances will be distributed across multiple constraints as needed
-	availableConstraints := []struct {
-		constraint *cdbm.AllocationConstraint
-		available  int
-	}{}
-
-	for _, alc := range alconstraints {
-		used := usedMapAllocationConstraintIDs[alc.ID]
-		available := alc.ConstraintValue - used
-		if available > 0 {
-			availableConstraints = append(availableConstraints, struct {
-				constraint *cdbm.AllocationConstraint
-				available  int
-			}{
-				constraint: &alc,
-				available:  available,
-			})
-		}
 	}
 
 	// Allocate machines with topology optimization
@@ -1167,23 +1224,7 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 
 	// --- Build all InstanceCreateInputs ---
 	instanceCreateInputs := make([]cdbm.InstanceCreateInput, 0, len(machines))
-	constraintIdx := 0
-	constraintUsedCount := 0
-
 	for i, machine := range machines {
-		// Check if we need to switch to the next allocation constraint
-		if constraintUsedCount >= availableConstraints[constraintIdx].available {
-			constraintIdx++
-			constraintUsedCount = 0
-			if constraintIdx >= len(availableConstraints) {
-				logger.Error().Msg("ran out of allocation constraints (should not happen)")
-				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError,
-					"Failed to allocate instances: insufficient allocation constraints", nil)
-			}
-		}
-		currentConstraint := availableConstraints[constraintIdx].constraint
-		constraintUsedCount++
-
 		instanceCreateInputs = append(instanceCreateInputs, cdbm.InstanceCreateInput{
 			Name:                     generateInstanceName(i),
 			Description:              apiRequest.Description,
@@ -1200,8 +1241,6 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 			NetworkSecurityGroupID:   apiRequest.NetworkSecurityGroupID,
 			Labels:                   apiRequest.Labels,
 			InstanceTypeID:           &apiInstanceTypeID,
-			AllocationID:             &currentConstraint.AllocationID,
-			AllocationConstraintID:   &currentConstraint.ID,
 			IsUpdatePending:          false,
 			Status:                   cdbm.InstanceStatusPending,
 			PowerStatus:              cdb.GetStrPtr(cdbm.InstancePowerStatusRebooting),
@@ -1445,6 +1484,14 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 	// Distribute Interfaces and build workflow configs
 	for _, ifc := range createdIfcsAll {
 		idx := instanceIDToIdx[ifc.InstanceID]
+
+		// NewAPIInstance derives SecondaryVpcIDs from prefix-backed interface relations.
+		// Reattach the already-validated VpcPrefix relation here because CreateMultiple
+		// returns interfaces with IDs populated but without related objects preloaded.
+		if ifc.VpcPrefixID != nil {
+			ifc.VpcPrefix = vpcPrefixIDMap[*ifc.VpcPrefixID]
+		}
+
 		createdInstancesData[idx].ifcs = append(createdInstancesData[idx].ifcs, ifc)
 
 		// Build temporal workflow config
@@ -1535,12 +1582,8 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 		createdInstancesData[i].ssd = &createdSdsAll[i]
 	}
 
-	// Log allocation constraint usage summary
-	constraintsUsed := constraintIdx + 1
 	logger.Info().
 		Int("instanceCount", len(createdInstancesData)).
-		Int("constraintsUsed", constraintsUsed).
-		Int("totalConstraintsAvailable", len(availableConstraints)).
 		Msg("all instance records created using batch operations, now triggering batch Temporal workflow before commit")
 
 	// ==================== Step 7: Workflow Trigger ====================
@@ -1697,6 +1740,7 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 			sds = append(sds, *data.ssd)
 		}
 		apiInstance := model.NewAPIInstance(data.instance, site, data.ifcs, data.ibifcs, data.desds, data.nvlifcs, sshKeyGroups, sds)
+
 		apiInstances = append(apiInstances, *apiInstance)
 	}
 

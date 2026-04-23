@@ -29,19 +29,18 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/google/uuid"
 	"google.golang.org/protobuf/types/known/emptypb"
 
-	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/carbideapi"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/converter/protobuf"
 	dbquery "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/db/query"
 	inventorymanager "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/inventory/manager"
 
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/operation"
-	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/psmapi"
+	taskschedule "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/scheduler/taskschedule"
 	taskcommon "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/common"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/conflict"
 	taskmanager "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/manager"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operationrules"
 	operations "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operations"
@@ -61,8 +60,9 @@ type RLAServerImpl struct {
 	inventoryManager          inventorymanager.Manager // Business logic manager for inventory operations
 	taskManager               taskmanager.Manager      // Task manager for orchestrating task lifecycle
 	taskStore                 taskstore.Store          // Task store for task queries
-	carbideClient             carbideapi.Client        // Carbide API client for actual component data
-	psmClient                 psmapi.Client            // PSM API client for powershelf operations
+	taskScheduleStore         taskschedule.Store       // Persistence layer for task schedules
+	taskScheduleDispatcher    *taskschedule.Dispatcher // Background poller that fires due task schedules
+	conflictResolver          *conflict.Resolver       // Reused for inter-schedule conflict detection
 	pb.UnimplementedRLAServer                          // Embedded protobuf server interface for forward compatibility
 }
 
@@ -73,8 +73,6 @@ type RLAServerImpl struct {
 //   - inventoryManager: The inventory manager instance for handling rack and component topology
 //   - taskManager: The Task manager for orchestrating task lifecycle
 //   - taskStore: The task store for task queries
-//   - carbideClient: The Carbide API client for actual component data
-//   - psmClient: The PSM API client for powershelf operations
 //
 // Returns:
 //   - *RLAServerImpl: A new server implementation instance
@@ -83,15 +81,16 @@ func newServerImplementation(
 	inventoryManager inventorymanager.Manager,
 	taskManager taskmanager.Manager,
 	taskStore taskstore.Store,
-	carbideClient carbideapi.Client,
-	psmClient psmapi.Client,
+	taskScheduleStore taskschedule.Store,
+	taskScheduleDispatcher *taskschedule.Dispatcher,
 ) (*RLAServerImpl, error) {
 	return &RLAServerImpl{
-		inventoryManager: inventoryManager,
-		taskManager:      taskManager,
-		taskStore:        taskStore,
-		carbideClient:    carbideClient,
-		psmClient:        psmClient,
+		inventoryManager:       inventoryManager,
+		taskManager:            taskManager,
+		taskStore:              taskStore,
+		taskScheduleStore:      taskScheduleStore,
+		taskScheduleDispatcher: taskScheduleDispatcher,
+		conflictResolver:       conflict.NewResolver(taskStore),
 	}, nil
 }
 
@@ -267,6 +266,57 @@ func (rs *RLAServerImpl) DeleteComponent(
 	return &pb.DeleteComponentResponse{}, nil
 }
 
+// DeleteRack soft-deletes a rack and all its components.
+func (rs *RLAServerImpl) DeleteRack(
+	ctx context.Context,
+	req *pb.DeleteRackRequest,
+) (*pb.DeleteRackResponse, error) {
+	rackID := protobuf.UUIDFrom(req.GetId())
+	if rackID == uuid.Nil {
+		return nil, errors.New("rack id is required")
+	}
+
+	if err := rs.inventoryManager.DeleteRack(ctx, rackID); err != nil {
+		return nil, fmt.Errorf("failed to delete rack: %w", err)
+	}
+
+	return &pb.DeleteRackResponse{}, nil
+}
+
+// PurgeRack permanently removes a soft-deleted rack and its components.
+func (rs *RLAServerImpl) PurgeRack(
+	ctx context.Context,
+	req *pb.PurgeRackRequest,
+) (*pb.PurgeRackResponse, error) {
+	rackID := protobuf.UUIDFrom(req.GetId())
+	if rackID == uuid.Nil {
+		return nil, errors.New("rack id is required")
+	}
+
+	if err := rs.inventoryManager.PurgeRack(ctx, rackID); err != nil {
+		return nil, fmt.Errorf("failed to purge rack: %w", err)
+	}
+
+	return &pb.PurgeRackResponse{}, nil
+}
+
+// PurgeComponent permanently removes a soft-deleted component.
+func (rs *RLAServerImpl) PurgeComponent(
+	ctx context.Context,
+	req *pb.PurgeComponentRequest,
+) (*pb.PurgeComponentResponse, error) {
+	compID := protobuf.UUIDFrom(req.GetId())
+	if compID == uuid.Nil {
+		return nil, errors.New("component id is required")
+	}
+
+	if err := rs.inventoryManager.PurgeComponent(ctx, compID); err != nil {
+		return nil, fmt.Errorf("failed to purge component: %w", err)
+	}
+
+	return &pb.PurgeComponentResponse{}, nil
+}
+
 // PatchComponent updates a single component's patchable fields.
 func (rs *RLAServerImpl) PatchComponent(
 	ctx context.Context,
@@ -303,6 +353,10 @@ func (rs *RLAServerImpl) PatchComponent(
 		if rackID != uuid.Nil {
 			existing.RackID = rackID
 		}
+	}
+
+	if len(req.GetBmcs()) > 0 {
+		existing.BmcsByType = protobuf.BMCsFrom(req.GetBmcs())
 	}
 
 	// Persist the update
@@ -600,6 +654,7 @@ func (rs *RLAServerImpl) PowerOnRack(
 		req.GetTargetSpec(),
 		req.GetDescription(),
 		req.GetQueueOptions(),
+		req.GetRuleId(),
 		&operations.PowerControlTaskInfo{
 			Operation: operations.PowerOperationPowerOn,
 		},
@@ -619,6 +674,7 @@ func (rs *RLAServerImpl) PowerOffRack(
 		req.GetTargetSpec(),
 		req.GetDescription(),
 		req.GetQueueOptions(),
+		req.GetRuleId(),
 		&operations.PowerControlTaskInfo{
 			Operation: op,
 			Forced:    req.GetForced(),
@@ -639,6 +695,7 @@ func (rs *RLAServerImpl) PowerResetRack(
 		req.GetTargetSpec(),
 		req.GetDescription(),
 		req.GetQueueOptions(),
+		req.GetRuleId(),
 		&operations.PowerControlTaskInfo{
 			Operation: op,
 			Forced:    req.GetForced(),
@@ -663,13 +720,17 @@ func (rs *RLAServerImpl) BringUpRack(
 		)
 	}
 
-	info := &operations.BringUpTaskInfo{}
+	info := &operations.BringUpTaskInfo{
+		RuleID: protobuf.UUIDStringFrom(req.GetRuleId()),
+	}
 	opReq, err := rs.convertTargetSpecToOperationRequest(
 		targetSpec, req.GetDescription(), info,
 	)
 	if err != nil {
 		return nil, err
 	}
+
+	opReq.RuleID = protobuf.OptionalUUIDFrom(req.GetRuleId())
 
 	taskIDs, err := rs.taskManager.SubmitTask(ctx, opReq)
 	if err != nil {
@@ -704,7 +765,9 @@ func (rs *RLAServerImpl) IngestRack(
 		return nil, errors.New("target_spec is required")
 	}
 
-	info := &operations.BringUpTaskInfo{}
+	info := &operations.BringUpTaskInfo{
+		RuleID: protobuf.UUIDStringFrom(req.GetRuleId()),
+	}
 
 	opReq, err := rs.convertTargetSpecToOperationRequest(
 		targetSpec, req.GetDescription(), info,
@@ -716,6 +779,7 @@ func (rs *RLAServerImpl) IngestRack(
 	// Override the operation code so the rule resolver picks the
 	// ingestion-only rule instead of the full bring-up rule.
 	opReq.Operation.Code = taskcommon.OpCodeIngest
+	opReq.RuleID = protobuf.OptionalUUIDFrom(req.GetRuleId())
 
 	taskIDs, err := rs.taskManager.SubmitTask(ctx, opReq)
 	if err != nil {
@@ -736,6 +800,7 @@ func (rs *RLAServerImpl) handlePowerControlTask(
 	targetSpec *pb.OperationTargetSpec,
 	description string,
 	queueOptions *pb.QueueOptions,
+	pbRuleID *pb.UUID,
 	info *operations.PowerControlTaskInfo,
 ) (*pb.SubmitTaskResponse, error) {
 	if rs.taskManager == nil {
@@ -746,6 +811,8 @@ func (rs *RLAServerImpl) handlePowerControlTask(
 		return nil, errors.New("target_spec is required")
 	}
 
+	info.RuleID = protobuf.UUIDStringFrom(pbRuleID)
+
 	// Convert pb.OperationTargetSpec to internal operation.Request
 	req, err := rs.convertTargetSpecToOperationRequest(targetSpec, description, info)
 	if err != nil {
@@ -753,6 +820,7 @@ func (rs *RLAServerImpl) handlePowerControlTask(
 	}
 
 	req.ConflictStrategy, req.QueueTimeout = protobuf.QueueOptionsFrom(queueOptions)
+	req.RuleID = protobuf.OptionalUUIDFrom(pbRuleID)
 
 	// Task Manager handles resolve + split by rack + create tasks
 	taskIDs, err := rs.taskManager.SubmitTask(ctx, req)
@@ -779,100 +847,20 @@ func (rs *RLAServerImpl) convertTargetSpecToOperationRequest(
 		return nil, err
 	}
 
-	req := &operation.Request{
+	ts, err := protobuf.TargetSpecFrom(targetSpec)
+	if err != nil {
+		return nil, err
+	}
+
+	return &operation.Request{
 		Operation: operation.Wrapper{
 			Type: info.Type(),
 			Code: info.CodeString(),
 			Info: raw,
 		},
+		TargetSpec:  ts,
 		Description: description,
-	}
-
-	// Convert pb targets to internal targets based on the oneof type
-	switch targets := targetSpec.GetTargets().(type) {
-	case *pb.OperationTargetSpec_Racks:
-		for _, pbRack := range targets.Racks.GetTargets() {
-			rackTarget, err := rs.convertPbRackTargetToRackTarget(pbRack)
-			if err != nil {
-				return nil, fmt.Errorf("failed to convert rack target: %w", err)
-			}
-			req.TargetSpec.Racks = append(req.TargetSpec.Racks, *rackTarget)
-		}
-
-	case *pb.OperationTargetSpec_Components:
-		for _, pbComp := range targets.Components.GetTargets() {
-			compTarget, err := rs.convertPbComponentTargetToComponentTarget(pbComp)
-			if err != nil {
-				return nil, fmt.Errorf("failed to convert component target: %w", err)
-			}
-			req.TargetSpec.Components = append(req.TargetSpec.Components, *compTarget)
-		}
-
-	default:
-		return nil, errors.New("target_spec must have either racks or components set")
-	}
-
-	return req, nil
-}
-
-// convertPbRackTargetToRackTarget converts a protobuf RackTarget to an internal RackTarget
-func (rs *RLAServerImpl) convertPbRackTargetToRackTarget(rt *pb.RackTarget) (*operation.RackTarget, error) {
-	if rt == nil {
-		return nil, fmt.Errorf("rack target is nil")
-	}
-
-	target := &operation.RackTarget{}
-
-	switch id := rt.GetIdentifier().(type) {
-	case *pb.RackTarget_Id:
-		parsed, err := uuid.Parse(id.Id.GetId())
-		if err != nil {
-			return nil, fmt.Errorf("invalid rack id %q: %w", id.Id.GetId(), err)
-		}
-		target.Identifier.ID = parsed
-
-	case *pb.RackTarget_Name:
-		target.Identifier.Name = id.Name
-
-	default:
-		return nil, fmt.Errorf("rack target must have either id or name set")
-	}
-
-	// Convert component types
-	for _, pbType := range rt.GetComponentTypes() {
-		target.ComponentTypes = append(target.ComponentTypes, protobuf.ComponentTypeFrom(pbType))
-	}
-
-	return target, nil
-}
-
-// convertPbComponentTargetToComponentTarget converts a protobuf ComponentTarget to an internal ComponentTarget
-func (rs *RLAServerImpl) convertPbComponentTargetToComponentTarget(ct *pb.ComponentTarget) (*operation.ComponentTarget, error) {
-	if ct == nil {
-		return nil, fmt.Errorf("component target is nil")
-	}
-
-	target := &operation.ComponentTarget{}
-
-	switch id := ct.GetIdentifier().(type) {
-	case *pb.ComponentTarget_Id:
-		parsed, err := uuid.Parse(id.Id.GetId())
-		if err != nil {
-			return nil, fmt.Errorf("invalid component uuid %q: %w", id.Id.GetId(), err)
-		}
-		target.UUID = parsed
-
-	case *pb.ComponentTarget_External:
-		target.External = &operation.ExternalRef{
-			Type: protobuf.ComponentTypeFrom(id.External.GetType()),
-			ID:   id.External.GetId(),
-		}
-
-	default:
-		return nil, fmt.Errorf("component target must have either uuid or external set")
-	}
-
-	return target, nil
+	}, nil
 }
 
 func (rs *RLAServerImpl) ListTasks(
@@ -1252,6 +1240,7 @@ func (rs *RLAServerImpl) UpgradeFirmware(
 	info := &operations.FirmwareControlTaskInfo{
 		Operation:     operations.FirmwareOperationUpgrade,
 		TargetVersion: req.GetTargetVersion(),
+		RuleID:        protobuf.UUIDStringFrom(req.GetRuleId()),
 	}
 
 	// Parse optional time parameters for scheduled upgrade
@@ -1271,6 +1260,7 @@ func (rs *RLAServerImpl) UpgradeFirmware(
 	opReq.ConflictStrategy, opReq.QueueTimeout = protobuf.QueueOptionsFrom(
 		req.GetQueueOptions(),
 	)
+	opReq.RuleID = protobuf.OptionalUUIDFrom(req.GetRuleId())
 
 	// Task Manager handles resolve + split by rack + create tasks
 	taskIDs, err := rs.taskManager.SubmitTask(ctx, opReq)
@@ -1420,20 +1410,6 @@ func (rs *RLAServerImpl) GetComponents(
 	}, nil
 }
 
-// powerStateToString converts a PowerState to a string representation
-func powerStateToString(ps carbideapi.PowerState) string {
-	switch ps {
-	case carbideapi.PowerStateOn:
-		return "on"
-	case carbideapi.PowerStateOff:
-		return "off"
-	case carbideapi.PowerStateDisabled:
-		return "disabled"
-	default:
-		return "unknown"
-	}
-}
-
 // ValidateComponents returns pre-computed drifts between expected (local DB) and actual
 // (source system) components. Results are computed asynchronously by the inventory loop,
 // so this API returns quickly without calling external systems.
@@ -1550,31 +1526,32 @@ func (rs *RLAServerImpl) ValidateComponents(
 
 	// Convert store drifts to proto response
 	var diffs []*pb.ComponentDiff
-	var onlyInExpectedCount, onlyInActualCount, driftCount, matchCount int32
+	var missingCount, unexpectedCount, driftCount, matchCount int32
 
 	for _, sd := range storeDrifts {
-		componentIDStr := ""
+		var compUUID *pb.UUID
 		if sd.ComponentID != nil {
-			componentIDStr = sd.ComponentID.String()
+			compUUID = &pb.UUID{Id: sd.ComponentID.String()}
 		}
-		externalIDStr := ""
+		componentID := ""
 		if sd.ExternalID != nil {
-			externalIDStr = *sd.ExternalID
+			componentID = *sd.ExternalID
 		}
 
 		switch sd.DriftType {
 		case "missing_in_expected":
 			diffs = append(diffs, &pb.ComponentDiff{
-				Type:        pb.DiffType_DIFF_TYPE_ONLY_IN_ACTUAL,
-				ComponentId: externalIDStr, // only external_id is known
+				Type:        pb.DiffType_DIFF_TYPE_UNEXPECTED,
+				ComponentId: componentID,
 			})
-			onlyInExpectedCount++
+			unexpectedCount++
 		case "missing_in_actual":
 			diffs = append(diffs, &pb.ComponentDiff{
-				Type:        pb.DiffType_DIFF_TYPE_ONLY_IN_EXPECTED,
-				ComponentId: componentIDStr,
+				Type:        pb.DiffType_DIFF_TYPE_MISSING,
+				Id:          compUUID,
+				ComponentId: componentID,
 			})
-			onlyInActualCount++
+			missingCount++
 		case "mismatch":
 			fieldDiffs := make([]*pb.FieldDiff, 0, len(sd.Diffs))
 			for _, fd := range sd.Diffs {
@@ -1586,7 +1563,8 @@ func (rs *RLAServerImpl) ValidateComponents(
 			}
 			diffs = append(diffs, &pb.ComponentDiff{
 				Type:        pb.DiffType_DIFF_TYPE_DRIFT,
-				ComponentId: componentIDStr,
+				Id:          compUUID,
+				ComponentId: componentID,
 				FieldDiffs:  fieldDiffs,
 			})
 			driftCount++
@@ -1595,7 +1573,7 @@ func (rs *RLAServerImpl) ValidateComponents(
 
 	// Calculate match count: if we have targeted components, matches = targeted - drifts
 	if targetSpec != nil {
-		matchCount = filteredComponentCount - onlyInActualCount - driftCount
+		matchCount = filteredComponentCount - missingCount - driftCount
 		if matchCount < 0 {
 			matchCount = 0
 		}
@@ -1603,85 +1581,24 @@ func (rs *RLAServerImpl) ValidateComponents(
 
 	// Apply pagination to diffs
 	totalDiffs := int32(len(diffs))
-	if pg != nil {
-		start := pg.Offset
-		end := start + pg.Limit
-		if start > len(diffs) {
-			diffs = []*pb.ComponentDiff{}
-		} else if end > len(diffs) {
-			diffs = diffs[start:]
-		} else {
-			diffs = diffs[start:end]
-		}
+	start := pg.Offset
+	end := start + pg.Limit
+	if start > len(diffs) {
+		diffs = []*pb.ComponentDiff{}
+	} else if end > len(diffs) {
+		diffs = diffs[start:]
+	} else {
+		diffs = diffs[start:end]
 	}
 
 	return &pb.ValidateComponentsResponse{
-		Diffs:               diffs,
-		TotalDiffs:          totalDiffs,
-		OnlyInExpectedCount: onlyInExpectedCount,
-		OnlyInActualCount:   onlyInActualCount,
-		DriftCount:          driftCount,
-		MatchCount:          matchCount,
+		Diffs:           diffs,
+		TotalDiffs:      totalDiffs,
+		MissingCount:    missingCount,
+		UnexpectedCount: unexpectedCount,
+		DriftCount:      driftCount,
+		MatchCount:      matchCount,
 	}, nil
-}
-
-// compareComponentFields compares expected and actual component fields and returns differences.
-// Does not compare frequently changing fields like power_state and health_status.
-func compareComponentFields(
-	expected *component.Component,
-	actual carbideapi.MachineDetail,
-	position carbideapi.MachinePosition,
-) []*pb.FieldDiff {
-	var diffs []*pb.FieldDiff
-
-	// Compare position.slot_id
-	if position.PhysicalSlotNum != nil && expected.Position.SlotID != int(*position.PhysicalSlotNum) {
-		diffs = append(diffs, &pb.FieldDiff{
-			FieldName:     "position.slot_id",
-			ExpectedValue: fmt.Sprintf("%d", expected.Position.SlotID),
-			ActualValue:   fmt.Sprintf("%d", *position.PhysicalSlotNum),
-		})
-	}
-
-	// Compare position.tray_idx
-	if position.ComputeTrayIndex != nil && expected.Position.TrayIndex != int(*position.ComputeTrayIndex) {
-		diffs = append(diffs, &pb.FieldDiff{
-			FieldName:     "position.tray_idx",
-			ExpectedValue: fmt.Sprintf("%d", expected.Position.TrayIndex),
-			ActualValue:   fmt.Sprintf("%d", *position.ComputeTrayIndex),
-		})
-	}
-
-	// Compare position.host_id
-	if position.TopologyID != nil && expected.Position.HostID != int(*position.TopologyID) {
-		diffs = append(diffs, &pb.FieldDiff{
-			FieldName:     "position.host_id",
-			ExpectedValue: fmt.Sprintf("%d", expected.Position.HostID),
-			ActualValue:   fmt.Sprintf("%d", *position.TopologyID),
-		})
-	}
-
-	// Compare firmware_version
-	if expected.FirmwareVersion != "" && actual.FirmwareVersion != "" &&
-		expected.FirmwareVersion != actual.FirmwareVersion {
-		diffs = append(diffs, &pb.FieldDiff{
-			FieldName:     "firmware_version",
-			ExpectedValue: expected.FirmwareVersion,
-			ActualValue:   actual.FirmwareVersion,
-		})
-	}
-
-	// Compare serial_number (chassis_serial)
-	if actual.ChassisSerial != nil && expected.Info.SerialNumber != "" &&
-		expected.Info.SerialNumber != *actual.ChassisSerial {
-		diffs = append(diffs, &pb.FieldDiff{
-			FieldName:     "serial_number",
-			ExpectedValue: expected.Info.SerialNumber,
-			ActualValue:   *actual.ChassisSerial,
-		})
-	}
-
-	return diffs
 }
 
 // applyComponentFilters applies filters to a list of components in memory.
@@ -1865,20 +1782,6 @@ func (rs *RLAServerImpl) sortComponents(components []*component.Component, order
 	return nil
 }
 
-// now returns the current time (extracted for testing)
-var now = time.Now
-
-// extractComponentsByType extracts components of the specified type from a rack
-func extractComponentsByType(r *rack.Rack, compType devicetypes.ComponentType) []*component.Component {
-	var result []*component.Component
-	for i := range r.Components {
-		if r.Components[i].Type == compType {
-			result = append(result, &r.Components[i])
-		}
-	}
-	return result
-}
-
 // extractComponentsByTypes extracts components matching any of the specified types from a rack.
 // If compTypes is empty, returns all components.
 func extractComponentsByTypes(r *rack.Rack, compTypes []devicetypes.ComponentType) []*component.Component {
@@ -1906,127 +1809,91 @@ func extractComponentsByTypes(r *rack.Rack, compTypes []devicetypes.ComponentTyp
 	return result
 }
 
-// extractComponentsFromTargetSpec extracts components from an OperationTargetSpec message.
-// It handles rack targets (with optional type filtering) or component targets (by UUID or external ref).
+// extractComponentsFromTargetSpec parses and validates targetSpec via
+// protobuf.TargetSpecFrom (the same converter used by the submission path),
+// then resolves each rack or component target against the inventory.
+// Validation errors (malformed UUIDs, empty names, unknown types) are
+// surfaced identically to the submission path rather than deferring to an
+// inventory-lookup failure.
 func (rs *RLAServerImpl) extractComponentsFromTargetSpec(
 	ctx context.Context,
 	targetSpec *pb.OperationTargetSpec,
 ) ([]*component.Component, error) {
-	if targetSpec == nil {
-		return nil, errors.New("target_spec is required")
+	spec, err := protobuf.TargetSpecFrom(targetSpec)
+	if err != nil {
+		return nil, err
 	}
 
 	var components []*component.Component
 
-	switch targets := targetSpec.GetTargets().(type) {
-	case *pb.OperationTargetSpec_Racks:
-		if len(targets.Racks.GetTargets()) == 0 {
-			return nil, errors.New("racks targets is empty")
+	for _, rt := range spec.Racks {
+		resolved, err := rs.resolveRackTarget(ctx, rt)
+		if err != nil {
+			return nil, err
 		}
-		for _, rt := range targets.Racks.GetTargets() {
-			resolved, err := rs.extractComponentsFromRackTarget(ctx, rt)
-			if err != nil {
-				return nil, err
-			}
-			components = append(components, resolved...)
-		}
+		components = append(components, resolved...)
+	}
 
-	case *pb.OperationTargetSpec_Components:
-		if len(targets.Components.GetTargets()) == 0 {
-			return nil, errors.New("components targets is empty")
+	for _, ct := range spec.Components {
+		resolved, err := rs.fetchComponentTarget(ctx, ct)
+		if err != nil {
+			return nil, err
 		}
-		for _, ct := range targets.Components.GetTargets() {
-			resolved, err := rs.extractComponentsFromComponentTarget(ctx, ct)
-			if err != nil {
-				return nil, err
-			}
-			components = append(components, resolved...)
-		}
-
-	default:
-		return nil, errors.New("target_spec must have either racks or components set")
+		components = append(components, resolved...)
 	}
 
 	return components, nil
 }
 
-// extractComponentsFromRackTarget extracts components from a rack target.
-func (rs *RLAServerImpl) extractComponentsFromRackTarget(
+// resolveRackTarget fetches the rack from inventory and returns its components,
+// filtered by rt.ComponentTypes (empty = all types).
+func (rs *RLAServerImpl) resolveRackTarget(
 	ctx context.Context,
-	rt *pb.RackTarget,
+	rt operation.RackTarget,
 ) ([]*component.Component, error) {
 	var r *rack.Rack
 	var err error
 
-	switch id := rt.GetIdentifier().(type) {
-	case *pb.RackTarget_Id:
-		rackUUID, parseErr := uuid.Parse(id.Id.GetId())
-		if parseErr != nil {
-			return nil, fmt.Errorf("invalid rack id %q: %w", id.Id.GetId(), parseErr)
-		}
-		r, err = rs.inventoryManager.GetRackByID(ctx, rackUUID, true)
-	case *pb.RackTarget_Name:
-		r, err = rs.inventoryManager.GetRackByIdentifier(ctx, identifier.Identifier{Name: id.Name}, true)
-	default:
-		return nil, errors.New("rack target must have either id or name set")
+	if rt.Identifier.ID != uuid.Nil {
+		r, err = rs.inventoryManager.GetRackByID(ctx, rt.Identifier.ID, true)
+	} else {
+		r, err = rs.inventoryManager.GetRackByIdentifier(ctx, rt.Identifier, true)
 	}
-
 	if err != nil {
 		return nil, err
 	}
 
-	// Convert pb component types to internal types
-	compTypes := make([]devicetypes.ComponentType, 0, len(rt.GetComponentTypes()))
-	for _, pbType := range rt.GetComponentTypes() {
-		compTypes = append(compTypes, protobuf.ComponentTypeFrom(pbType))
-	}
-
-	return extractComponentsByTypes(r, compTypes), nil
+	return extractComponentsByTypes(r, rt.ComponentTypes), nil
 }
 
-// extractComponentsFromComponentTarget extracts components from a component target.
-func (rs *RLAServerImpl) extractComponentsFromComponentTarget(
+// fetchComponentTarget fetches a single component from inventory by its
+// internal UUID or by external ID + type. The type in ct.External is
+// guaranteed non-unknown by protobuf.ComponentTargetFrom.
+func (rs *RLAServerImpl) fetchComponentTarget(
 	ctx context.Context,
-	ct *pb.ComponentTarget,
+	ct operation.ComponentTarget,
 ) ([]*component.Component, error) {
-	switch id := ct.GetIdentifier().(type) {
-	case *pb.ComponentTarget_Id:
-		compUUID, parseErr := uuid.Parse(id.Id.GetId())
-		if parseErr != nil {
-			return nil, fmt.Errorf("invalid component uuid %q: %w", id.Id.GetId(), parseErr)
-		}
-		comp, err := rs.inventoryManager.GetComponentByID(ctx, compUUID)
+	if ct.UUID != uuid.Nil {
+		comp, err := rs.inventoryManager.GetComponentByID(ctx, ct.UUID)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get component by uuid %s: %w", id.Id.GetId(), err)
+			return nil, fmt.Errorf("failed to get component by uuid %s: %w", ct.UUID, err)
 		}
 		return []*component.Component{comp}, nil
-
-	case *pb.ComponentTarget_External:
-		extRef := id.External
-		compType := protobuf.ComponentTypeFrom(extRef.GetType())
-		externalID := extRef.GetId()
-
-		// Use GetComponentsByExternalIDs which looks up by external_id field
-		comps, err := rs.inventoryManager.GetComponentsByExternalIDs(ctx, []string{externalID})
-		if err != nil {
-			return nil, fmt.Errorf("failed to get component by external id %s: %w", externalID, err)
-		}
-		if len(comps) == 0 {
-			return nil, fmt.Errorf("component with external id %s not found", externalID)
-		}
-		// Filter by type if specified
-		if compType != devicetypes.ComponentTypeUnknown {
-			for _, comp := range comps {
-				if comp.Type == compType {
-					return []*component.Component{comp}, nil
-				}
-			}
-			return nil, fmt.Errorf("component with external id %s and type %s not found",
-				externalID, devicetypes.ComponentTypeToString(compType))
-		}
-		return comps[:1], nil // Return first match if no type filter
-
-	default:
-		return nil, errors.New("component target must have either uuid or external set")
 	}
+
+	// External ref: ID and Type are both validated non-empty by ComponentTargetFrom.
+	comps, err := rs.inventoryManager.GetComponentsByExternalIDs(ctx, []string{ct.External.ID})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get component by external id %s: %w", ct.External.ID, err)
+	}
+	if len(comps) == 0 {
+		return nil, fmt.Errorf("component with external id %s not found", ct.External.ID)
+	}
+	for _, comp := range comps {
+		if comp.Type == ct.External.Type {
+			return []*component.Component{comp}, nil
+		}
+	}
+	return nil, fmt.Errorf("component with external id %s and type %s not found",
+		ct.External.ID, devicetypes.ComponentTypeToString(ct.External.Type))
 }

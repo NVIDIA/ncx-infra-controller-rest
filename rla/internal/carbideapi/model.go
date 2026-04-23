@@ -44,8 +44,10 @@ type MachineDetail struct {
 	BmcIP               string
 	BmcMac              string
 	FirmwareVersion     string
+	UpdateComplete      bool
 	HealthStatus        string
 	LastObservationTime *time.Time
+	FirmwareAutoupdate  *bool
 }
 
 // MachinePosition represents machine position information from Carbide
@@ -58,9 +60,10 @@ type MachinePosition struct {
 
 func machineDetailFromPb(machine *pb.Machine) MachineDetail {
 	detail := MachineDetail{
-		MachineID:   machine.Id.Id,
-		State:       machine.State,
-		MachineType: machine.MachineType.String(),
+		MachineID:      machine.Id.Id,
+		State:          machine.State,
+		MachineType:    machine.MachineType.String(),
+		UpdateComplete: machine.UpdateComplete,
 	}
 
 	// Chassis serial
@@ -95,6 +98,11 @@ func machineDetailFromPb(machine *pb.Machine) MachineDetail {
 	if machine.LastObservationTime != nil {
 		t := machine.LastObservationTime.AsTime()
 		detail.LastObservationTime = &t
+	}
+
+	if machine.FirmwareAutoupdate != nil {
+		v := machine.GetFirmwareAutoupdate()
+		detail.FirmwareAutoupdate = &v
 	}
 
 	return detail
@@ -274,6 +282,52 @@ func expectedSwitchInfoFromPb(es *pb.ExpectedSwitch) ExpectedSwitchInfo {
 				info.Metadata[label.GetKey()] = label.GetValue()
 			}
 		}
+	}
+	return info
+}
+
+// LinkedExpectedSwitch represents an expected switch linked to its
+// explored endpoint and live Switch resource in Core.
+type LinkedExpectedSwitch struct {
+	BMCMACAddress      string
+	SwitchID           string // Core's live Switch ID; empty if not yet created
+	ExpectedSwitchID   string
+	SwitchSerialNumber string
+}
+
+func linkedExpectedSwitchFromPb(les *pb.LinkedExpectedSwitch) LinkedExpectedSwitch {
+	info := LinkedExpectedSwitch{
+		BMCMACAddress:      les.GetBmcMacAddress(),
+		SwitchSerialNumber: les.GetSwitchSerialNumber(),
+	}
+	if les.GetSwitchId() != nil {
+		info.SwitchID = les.GetSwitchId().GetId()
+	}
+	if les.GetExpectedSwitchId() != nil {
+		info.ExpectedSwitchID = les.GetExpectedSwitchId().GetValue()
+	}
+	return info
+}
+
+// LinkedExpectedPowerShelf represents an expected power shelf linked to its
+// explored endpoint and live PowerShelf resource in Core.
+type LinkedExpectedPowerShelf struct {
+	BMCMACAddress        string
+	PowerShelfID         string // Core's live PowerShelf ID; empty if not yet created
+	ExpectedPowerShelfID string
+	ShelfSerialNumber    string
+}
+
+func linkedExpectedPowerShelfFromPb(leps *pb.LinkedExpectedPowerShelf) LinkedExpectedPowerShelf {
+	info := LinkedExpectedPowerShelf{
+		BMCMACAddress:     leps.GetBmcMacAddress(),
+		ShelfSerialNumber: leps.GetShelfSerialNumber(),
+	}
+	if leps.GetPowerShelfId() != nil {
+		info.PowerShelfID = leps.GetPowerShelfId().GetId()
+	}
+	if leps.GetExpectedPowerShelfId() != nil {
+		info.ExpectedPowerShelfID = leps.GetExpectedPowerShelfId().GetValue()
 	}
 	return info
 }

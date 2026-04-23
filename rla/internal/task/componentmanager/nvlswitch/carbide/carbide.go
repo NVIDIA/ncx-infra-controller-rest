@@ -21,6 +21,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/rs/zerolog/log"
 
@@ -212,9 +213,17 @@ func carbidePowerStateToOperationsPowerStatus(state carbideapi.PowerState) opera
 	}
 }
 
-// FirmwareControl schedules a firmware update via Carbide's SetFirmwareUpdateTimeWindow API.
-// This sets the time window during which Carbide will automatically perform the firmware update.
-// Returns immediately after the schedule request is accepted.
+// FirmwareControl schedules a firmware update via Carbide's UpdateComponentFirmware API.
+//
+// When TargetVersion is provided it is forwarded directly to Core.
+// When TargetVersion is empty (e.g. BringUp context), the method queries
+// Core's desired firmware entries and the actual firmware from explored
+// endpoints to perform an idempotency check. If all switches already run the
+// desired firmware the call returns early without triggering an update.
+//
+// Before issuing the update the method also verifies that all target switches
+// report the same firmware version set. A heterogeneous fleet is rejected
+// because a single UpdateComponentFirmware call cannot target mixed versions.
 func (m *Manager) FirmwareControl(ctx context.Context, target common.Target, info operations.FirmwareControlTaskInfo) error {
 	log.Debug().
 		Str("components", target.String()).
@@ -223,6 +232,18 @@ func (m *Manager) FirmwareControl(ctx context.Context, target common.Target, inf
 
 	if err := target.Validate(); err != nil {
 		return fmt.Errorf("target is invalid: %w", err)
+	}
+
+	if info.TargetVersion == "" {
+		upToDate, err := m.checkFirmwareUpToDate(ctx, target)
+		if err != nil {
+			log.Warn().Err(err).Msg("NVLSwitch idempotency check failed, proceeding with update")
+		} else if upToDate {
+			log.Info().
+				Str("components", target.String()).
+				Msg("All NVLSwitch firmware already at desired version, skipping update")
+			return nil
+		}
 	}
 
 	req := &pb.UpdateComponentFirmwareRequest{
@@ -252,11 +273,116 @@ func (m *Manager) FirmwareControl(ctx context.Context, target common.Target, inf
 	return nil
 }
 
+// checkFirmwareUpToDate queries actual firmware from GetComponentInventory and
+// desired firmware from Core, returning true when all target switches are
+// already running a desired version.
+func (m *Manager) checkFirmwareUpToDate(ctx context.Context, target common.Target) (bool, error) {
+	desiredEntries, err := m.carbideClient.GetDesiredFirmwareVersions(ctx)
+	if err != nil {
+		return false, fmt.Errorf("failed to query desired firmware versions: %w", err)
+	}
+
+	actualFirmware, err := m.getActualFirmwareVersions(ctx, target)
+	if err != nil {
+		return false, err
+	}
+
+	if len(actualFirmware) == 0 {
+		return false, nil
+	}
+
+	for _, id := range target.ComponentIDs {
+		actual, ok := actualFirmware[id]
+		if !ok || len(actual) == 0 {
+			return false, nil
+		}
+		if !matchesAnyDesired(actual, desiredEntries) {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
+// getActualFirmwareVersions queries GetComponentInventory for the target
+// switches and extracts firmware_versions from the exploration reports.
+func (m *Manager) getActualFirmwareVersions(ctx context.Context, target common.Target) (map[string]map[string]string, error) {
+	req := &pb.GetComponentInventoryRequest{
+		Target: &pb.GetComponentInventoryRequest_SwitchIds{
+			SwitchIds: switchIDsProto(target.ComponentIDs),
+		},
+	}
+
+	resp, err := m.carbideClient.GetComponentInventory(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("GetComponentInventory failed: %w", err)
+	}
+
+	result := make(map[string]map[string]string, len(target.ComponentIDs))
+	for _, entry := range resp.GetEntries() {
+		compID := entry.GetResult().GetComponentId()
+		fwVersions := entry.GetReport().GetFirmwareVersions()
+		if len(fwVersions) > 0 {
+			result[compID] = fwVersions
+		}
+	}
+	return result, nil
+}
+
+// VerifyFirmwareConsistency checks that all target switches report the same
+// firmware version set. Returns an error when versions are heterogeneous.
+func (m *Manager) VerifyFirmwareConsistency(ctx context.Context, target common.Target) error {
+	actualFirmware, err := m.getActualFirmwareVersions(ctx, target)
+	if err != nil {
+		return err
+	}
+
+	var referenceJSON string
+	for _, id := range target.ComponentIDs {
+		actual, ok := actualFirmware[id]
+		if !ok {
+			return fmt.Errorf("switch %s has no firmware version data", id)
+		}
+		encoded, _ := json.Marshal(actual)
+		currentJSON := string(encoded)
+		if referenceJSON == "" {
+			referenceJSON = currentJSON
+		} else if currentJSON != referenceJSON {
+			return fmt.Errorf(
+				"NVLSwitch firmware versions are inconsistent: switch %s has %s, expected %s",
+				id, currentJSON, referenceJSON,
+			)
+		}
+	}
+
+	log.Info().
+		Int("switch_count", len(target.ComponentIDs)).
+		Str("firmware_versions", referenceJSON).
+		Msg("All NVLSwitch firmware versions are consistent")
+	return nil
+}
+
+func matchesAnyDesired(actual map[string]string, entries []*pb.DesiredFirmwareVersionEntry) bool {
+	for _, entry := range entries {
+		if firmwareVersionsMatch(entry.GetComponentVersions(), actual) {
+			return true
+		}
+	}
+	return false
+}
+
+func firmwareVersionsMatch(desired, actual map[string]string) bool {
+	for k, v := range desired {
+		if actual[k] != v {
+			return false
+		}
+	}
+	return true
+}
+
 // GetFirmwareStatus returns the current status of firmware updates for the target components.
-// Carbide does not have a dedicated firmware update status API; we read the current firmware version
-// to determine if the update completed.
-// TODO: Implement proper status checking once Carbide exposes a firmware update status API.
-func (m *Manager) GetFirmwareStatus(ctx context.Context, target common.Target) (map[string]operations.FirmwareUpdateStatus, error) { //nolint
+// Core may return multiple sub-component statuses (BMC/CPLD/BIOS/NVOS) per switch, so we
+// aggregate them into a single status per switch UUID.
+func (m *Manager) GetFirmwareStatus(ctx context.Context, target common.Target) (map[string]operations.FirmwareUpdateStatus, error) {
 	log.Debug().
 		Str("components", target.String()).
 		Msg("GetFirmwareStatus called for NVLSwitch")
@@ -276,16 +402,80 @@ func (m *Manager) GetFirmwareStatus(ctx context.Context, target common.Target) (
 		return nil, fmt.Errorf("GetComponentFirmwareStatus failed: %w", err)
 	}
 
-	result := make(map[string]operations.FirmwareUpdateStatus, len(resp.GetStatuses()))
+	// Group statuses by component ID since Core may return multiple
+	// sub-component updates (BMC, CPLD, BIOS, NVOS) for the same switch.
+	grouped := make(map[string][]*pb.FirmwareUpdateStatus)
 	for _, s := range resp.GetStatuses() {
 		compID := s.GetResult().GetComponentId()
-		result[compID] = operations.FirmwareUpdateStatus{
-			ComponentID: compID,
-			State:       carbideprovider.MapFirmwareState(s.GetState()),
-		}
+		grouped[compID] = append(grouped[compID], s)
+	}
+
+	// Ensure every requested component ID is present in the result,
+	// even if Core returned no statuses for it. This mirrors the
+	// nvswitchmanager path which queries each switch individually.
+	result := make(map[string]operations.FirmwareUpdateStatus, len(target.ComponentIDs))
+	for _, compID := range target.ComponentIDs {
+		result[compID] = aggregateCarbideStatuses(compID, grouped[compID])
 	}
 
 	return result, nil
+}
+
+// aggregateCarbideStatuses examines all sub-component firmware statuses for a switch
+// and produces a single FirmwareUpdateStatus. Any failure → Failed; all completed →
+// Completed; otherwise still in progress.
+//
+// TODO: Validate that Core returns all expected sub-component statuses (BMC, CPLD,
+// BIOS, NVOS) per switch. Currently we cannot verify completeness because the proto
+// FirmwareUpdateStatus message does not carry a sub-component type field. Once Core
+// exposes that information, we should check that all 4 sub-components are present and
+// treat a missing sub-component as incomplete (not Completed).
+func aggregateCarbideStatuses(compID string, statuses []*pb.FirmwareUpdateStatus) operations.FirmwareUpdateStatus {
+	if len(statuses) == 0 {
+		return operations.FirmwareUpdateStatus{
+			ComponentID: compID,
+			State:       operations.FirmwareUpdateStateUnknown,
+		}
+	}
+
+	allCompleted := true
+	var failures []string
+
+	for _, s := range statuses {
+		mapped := carbideprovider.MapFirmwareState(s.GetState())
+		switch mapped {
+		case operations.FirmwareUpdateStateFailed:
+			errMsg := s.GetResult().GetError()
+			if errMsg == "" {
+				errMsg = s.GetState().String()
+			}
+			failures = append(failures, errMsg)
+		case operations.FirmwareUpdateStateCompleted:
+			// ok
+		default:
+			allCompleted = false
+		}
+	}
+
+	if len(failures) > 0 {
+		return operations.FirmwareUpdateStatus{
+			ComponentID: compID,
+			State:       operations.FirmwareUpdateStateFailed,
+			Error:       fmt.Sprintf("firmware update failed for components: %s", strings.Join(failures, "; ")),
+		}
+	}
+
+	if allCompleted {
+		return operations.FirmwareUpdateStatus{
+			ComponentID: compID,
+			State:       operations.FirmwareUpdateStateCompleted,
+		}
+	}
+
+	return operations.FirmwareUpdateStatus{
+		ComponentID: compID,
+		State:       operations.FirmwareUpdateStateQueued,
+	}
 }
 
 func (m *Manager) BringUpControl(

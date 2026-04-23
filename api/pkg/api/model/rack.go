@@ -33,21 +33,21 @@ var ProtoToAPIBMCTypeName = map[rlav1.BMCType]string{
 
 // ProtoToAPIRackComponentTypeName maps protobuf ComponentType to API-friendly names for rack components.
 var ProtoToAPIRackComponentTypeName = map[rlav1.ComponentType]string{
-	rlav1.ComponentType_COMPONENT_TYPE_UNKNOWN:    "ComponentTypeUnknown",
-	rlav1.ComponentType_COMPONENT_TYPE_COMPUTE:    "ComponentTypeCompute",
-	rlav1.ComponentType_COMPONENT_TYPE_NVLSWITCH:  "ComponentTypeNvlswitch",
-	rlav1.ComponentType_COMPONENT_TYPE_POWERSHELF: "ComponentTypePowershelf",
-	rlav1.ComponentType_COMPONENT_TYPE_TORSWITCH:  "ComponentTypeTorswitch",
-	rlav1.ComponentType_COMPONENT_TYPE_UMS:        "ComponentTypeUms",
-	rlav1.ComponentType_COMPONENT_TYPE_CDU:        "ComponentTypeCdu",
+	rlav1.ComponentType_COMPONENT_TYPE_UNKNOWN:    "Unknown",
+	rlav1.ComponentType_COMPONENT_TYPE_COMPUTE:    "Compute",
+	rlav1.ComponentType_COMPONENT_TYPE_NVLSWITCH:  "NVLSwitch",
+	rlav1.ComponentType_COMPONENT_TYPE_POWERSHELF: "PowerShelf",
+	rlav1.ComponentType_COMPONENT_TYPE_TORSWITCH:  "TORSwitch",
+	rlav1.ComponentType_COMPONENT_TYPE_UMS:        "UMS",
+	rlav1.ComponentType_COMPONENT_TYPE_CDU:        "CDU",
 }
 
 // ProtoToAPIDiffTypeName maps protobuf DiffType to API-friendly names.
 var ProtoToAPIDiffTypeName = map[rlav1.DiffType]string{
-	rlav1.DiffType_DIFF_TYPE_UNKNOWN:          "DiffTypeUnknown",
-	rlav1.DiffType_DIFF_TYPE_ONLY_IN_EXPECTED: "DiffTypeOnlyInExpected",
-	rlav1.DiffType_DIFF_TYPE_ONLY_IN_ACTUAL:   "DiffTypeOnlyInActual",
-	rlav1.DiffType_DIFF_TYPE_DRIFT:            "DiffTypeDrift",
+	rlav1.DiffType_DIFF_TYPE_UNKNOWN:    "Unknown",
+	rlav1.DiffType_DIFF_TYPE_MISSING:    "Missing",
+	rlav1.DiffType_DIFF_TYPE_UNEXPECTED: "Unexpected",
+	rlav1.DiffType_DIFF_TYPE_DRIFT:      "Drift",
 }
 
 // enumOr returns mapped value or fallback when key is missing from mapping.
@@ -377,7 +377,7 @@ func (arc *APIRackComponent) FromProto(protoComponent *rlav1.Component) {
 	if protoComponent == nil {
 		return
 	}
-	arc.Type = enumOr(ProtoToAPIRackComponentTypeName, protoComponent.GetType(), "ComponentTypeUnknown")
+	arc.Type = enumOr(ProtoToAPIRackComponentTypeName, protoComponent.GetType(), "Unknown")
 	arc.FirmwareVersion = protoComponent.GetFirmwareVersion()
 	arc.ComponentID = protoComponent.GetComponentId()
 	arc.PowerState = protoComponent.GetPowerState()
@@ -440,7 +440,8 @@ func (f *APIFieldDiff) FromProto(protoFieldDiff *rlav1.FieldDiff) {
 // APIComponentDiff represents a single component difference found during validation
 type APIComponentDiff struct {
 	Type        string            `json:"type"`
-	ComponentID string            `json:"componentId"`
+	ID          string            `json:"id,omitempty"`          // RLA internal component UUID
+	ComponentID string            `json:"componentId,omitempty"` // Component ID from the component manager service
 	Expected    *APIRackComponent `json:"expected,omitempty"`
 	Actual      *APIRackComponent `json:"actual,omitempty"`
 	FieldDiffs  []*APIFieldDiff   `json:"fieldDiffs,omitempty"`
@@ -452,7 +453,10 @@ func (d *APIComponentDiff) FromProto(protoDiff *rlav1.ComponentDiff) {
 		return
 	}
 
-	d.Type = enumOr(ProtoToAPIDiffTypeName, protoDiff.GetType(), "DiffTypeUnknown")
+	d.Type = enumOr(ProtoToAPIDiffTypeName, protoDiff.GetType(), "Unknown")
+	if protoDiff.GetId() != nil {
+		d.ID = protoDiff.GetId().GetId()
+	}
 	d.ComponentID = protoDiff.GetComponentId()
 
 	if protoDiff.GetExpected() != nil {
@@ -477,12 +481,12 @@ func (d *APIComponentDiff) FromProto(protoDiff *rlav1.ComponentDiff) {
 
 // APIRackValidationResult is the API representation of a rack validation result
 type APIRackValidationResult struct {
-	Diffs               []*APIComponentDiff `json:"diffs"`
-	TotalDiffs          int32               `json:"totalDiffs"`
-	OnlyInExpectedCount int32               `json:"onlyInExpectedCount"`
-	OnlyInActualCount   int32               `json:"onlyInActualCount"`
-	DriftCount          int32               `json:"driftCount"`
-	MatchCount          int32               `json:"matchCount"`
+	Diffs           []*APIComponentDiff `json:"diffs"`
+	TotalDiffs      int32               `json:"totalDiffs"`
+	MissingCount    int32               `json:"missingCount"`
+	UnexpectedCount int32               `json:"unexpectedCount"`
+	DriftCount      int32               `json:"driftCount"`
+	MatchCount      int32               `json:"matchCount"`
 }
 
 // FromProto converts an RLA protobuf ValidateComponentsResponse to an APIRackValidationResult
@@ -492,8 +496,8 @@ func (r *APIRackValidationResult) FromProto(protoResp *rlav1.ValidateComponentsR
 	}
 
 	r.TotalDiffs = protoResp.GetTotalDiffs()
-	r.OnlyInExpectedCount = protoResp.GetOnlyInExpectedCount()
-	r.OnlyInActualCount = protoResp.GetOnlyInActualCount()
+	r.MissingCount = protoResp.GetMissingCount()
+	r.UnexpectedCount = protoResp.GetUnexpectedCount()
 	r.DriftCount = protoResp.GetDriftCount()
 	r.MatchCount = protoResp.GetMatchCount()
 

@@ -26,6 +26,7 @@ import (
 
 	"github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/credential"
 	pb "github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/internal/proto/v1"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/common/vendor"
 	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/converter/protobuf"
 	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/objects/pmc"
 	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/powershelfmanager"
@@ -46,21 +47,18 @@ func newServerImplementation(psm *powershelfmanager.PowershelfManager) (*Powersh
 	}, nil
 }
 
-// registerPowershelf registers a powershelf by its PMC MAC/IP/Vendor and persists its credentials. Returns creation timestamp on success.
+// registerPowershelf registers a powershelf by its PMC MAC/IP/Vendor and optionally persists its credentials. Returns creation timestamp on success.
 func (s *PowershelfManagerServerImpl) registerPowershelf(
 	ctx context.Context,
 	req *pb.RegisterPowershelfRequest,
 ) *pb.RegisterPowershelfResponse {
-	if req.PmcCredentials == nil {
-		return &pb.RegisterPowershelfResponse{
-			PmcMacAddress: req.PmcMacAddress,
-			Status:        pb.StatusCode_INVALID_ARGUMENT,
-			Error:         "PMC credentials are required",
-		}
+	var cred *credential.Credential
+	if req.PmcCredentials != nil {
+		pmcCred := credential.New(req.PmcCredentials.Username, req.PmcCredentials.Password)
+		cred = &pmcCred
 	}
 
-	cred := credential.New(req.PmcCredentials.Username, req.PmcCredentials.Password)
-	pmc, err := pmc.New(req.PmcMacAddress, req.PmcIpAddress, protobuf.PMCVendorFrom(req.PmcVendor), &cred)
+	pmc, err := pmc.New(req.PmcMacAddress, req.PmcIpAddress, protobuf.PMCVendorFrom(req.PmcVendor), cred)
 	if err != nil {
 		return &pb.RegisterPowershelfResponse{
 			PmcMacAddress: req.PmcMacAddress,
@@ -351,11 +349,13 @@ func (s *PowershelfManagerServerImpl) powerOn(ctx context.Context, pmc_mac strin
 	}
 }
 
-func (s *PowershelfManagerServerImpl) PowerOff(ctx context.Context, req *pb.PowershelfRequest) (*pb.PowerControlResponse, error) {
-	responses := make([]*pb.PowershelfResponse, 0, len(req.PmcMacs))
+func (s *PowershelfManagerServerImpl) PowerOff(ctx context.Context, req *pb.PowerRequest) (*pb.PowerControlResponse, error) {
+	responses := make([]*pb.PowershelfResponse, 0, len(req.PmcMacs)+len(req.Targets))
 	for _, mac := range req.PmcMacs {
-		response := s.powerOff(ctx, mac)
-		responses = append(responses, response)
+		responses = append(responses, s.powerOff(ctx, mac))
+	}
+	for _, target := range req.Targets {
+		responses = append(responses, s.powerTarget(ctx, target, false))
 	}
 
 	return &pb.PowerControlResponse{
@@ -363,11 +363,13 @@ func (s *PowershelfManagerServerImpl) PowerOff(ctx context.Context, req *pb.Powe
 	}, nil
 }
 
-func (s *PowershelfManagerServerImpl) PowerOn(ctx context.Context, req *pb.PowershelfRequest) (*pb.PowerControlResponse, error) {
-	responses := make([]*pb.PowershelfResponse, 0, len(req.PmcMacs))
+func (s *PowershelfManagerServerImpl) PowerOn(ctx context.Context, req *pb.PowerRequest) (*pb.PowerControlResponse, error) {
+	responses := make([]*pb.PowershelfResponse, 0, len(req.PmcMacs)+len(req.Targets))
 	for _, mac := range req.PmcMacs {
-		response := s.powerOn(ctx, mac)
-		responses = append(responses, response)
+		responses = append(responses, s.powerOn(ctx, mac))
+	}
+	for _, target := range req.Targets {
+		responses = append(responses, s.powerTarget(ctx, target, true))
 	}
 
 	return &pb.PowerControlResponse{
@@ -375,7 +377,54 @@ func (s *PowershelfManagerServerImpl) PowerOn(ctx context.Context, req *pb.Power
 	}, nil
 }
 
-// registerPowershelf registers a powershelf by its PMC MAC/IP/Vendor and persists its credentials. Returns creation timestamp on success.
+// powerTarget performs a power action against an unregistered device using inline connection details.
+func (s *PowershelfManagerServerImpl) powerTarget(ctx context.Context, target *pb.PowerTarget, on bool) *pb.PowershelfResponse {
+	ip := net.ParseIP(target.PmcIp)
+	if ip == nil {
+		return &pb.PowershelfResponse{
+			PmcIp:  target.PmcIp,
+			Status: pb.StatusCode_INVALID_ARGUMENT,
+			Error:  fmt.Sprintf("invalid PMC IP: %s", target.PmcIp),
+		}
+	}
+
+	if target.PmcCredentials == nil {
+		return &pb.PowershelfResponse{
+			PmcIp:  target.PmcIp,
+			Status: pb.StatusCode_INVALID_ARGUMENT,
+			Error:  "credentials are required for power targets",
+		}
+	}
+
+	if target.PmcCredentials.Username == "" || target.PmcCredentials.Password == "" {
+		return &pb.PowershelfResponse{
+			PmcIp:  target.PmcIp,
+			Status: pb.StatusCode_INVALID_ARGUMENT,
+			Error:  "credentials username and password must not be empty",
+		}
+	}
+
+	cred := credential.New(target.PmcCredentials.Username, target.PmcCredentials.Password)
+	p := &pmc.PMC{
+		IP:         ip,
+		Vendor:     vendor.CodeToVendor(protobuf.PMCVendorFrom(target.PmcVendor)),
+		Credential: &cred,
+	}
+
+	if err := s.psm.PowerControlDirect(ctx, p, on); err != nil {
+		return &pb.PowershelfResponse{
+			PmcIp:  target.PmcIp,
+			Status: pb.StatusCode_INTERNAL_ERROR,
+			Error:  err.Error(),
+		}
+	}
+
+	return &pb.PowershelfResponse{
+		PmcIp:  target.PmcIp,
+		Status: pb.StatusCode_SUCCESS,
+	}
+}
+
 func (s *PowershelfManagerServerImpl) SetDryRun(
 	ctx context.Context,
 	req *pb.SetDryRunRequest,

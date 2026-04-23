@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/internal/config"
@@ -28,6 +29,7 @@ import (
 	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
+	goset "github.com/deckarep/golang-set/v2"
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	validationis "github.com/go-ozzo/ozzo-validation/v4/is"
 	"gopkg.in/yaml.v3"
@@ -38,12 +40,6 @@ import (
 const (
 	// MaxInterfaceCount is the maximum number of Interfaces allowed per Instance
 	MaxInterfaceCount = 16
-	// InstanceMaxLabelCount is the maximum number of Labels allowed per Instance
-	InstanceMaxLabelCount = 10
-
-	validationErrorMapKeyLabelStringLength   = "Label key must contain at least 1 character and a maximum of 255 characters"
-	validationErrorMapValueLabelStringLength = "Label value cannot exceed a maximum of 255 characters"
-
 	// MachineIssueCategoryHardware is the category for hardware issues
 	MachineIssueCategoryHardware = "Hardware"
 	// MachineIssueCategoryNetwork is the category for network issues
@@ -64,20 +60,12 @@ var (
 	// Time when sshKeyGroupsLegacyDeprecatedTime query param will be deprecated
 	sshKeyGroupsLegacyDeprecatedTime, _ = time.Parse(time.RFC1123, "Thu, 04 Sep 2025 00:00:00 UTC")
 
-	// Time when allocationId/allocation will be deprecated
-	allocationDeprecatedTime, _ = time.Parse(time.RFC1123, "Thu, 06 Sep 2025 00:00:00 UTC")
-
 	instanceDeprecations = []DeprecatedEntity{
 		{
 			OldValue:     "sshkeygroups",
 			NewValue:     cdb.GetStrPtr("sshKeyGroups"),
 			Type:         DeprecationTypeAttribute,
 			TakeActionBy: sshKeyGroupsLegacyDeprecatedTime,
-		},
-		{
-			OldValue:     "allocationId",
-			Type:         DeprecationTypeAttribute,
-			TakeActionBy: allocationDeprecatedTime,
 		},
 	}
 
@@ -364,6 +352,12 @@ type APIInstanceCreateRequest struct {
 	InstanceTypeID *string `json:"instanceTypeId"`
 	// VpcID is the ID of the VPC containing the Instance
 	VpcID string `json:"vpcId"`
+	// SecondaryVpcIDs lists additional VPC UUIDs for prefix-backed, non-primary
+	// network interfaces on the Instance. Validate() rejects this field unless
+	// every entry in Interfaces uses vpcPrefixId, and the create handler then
+	// verifies that the supplied UUIDs exactly match the VPCs resolved from those
+	// prefix-backed interfaces.
+	SecondaryVpcIDs []string `json:"secondaryVpcIds"`
 	// OperatingSystemID is the ID of the Operating System
 	OperatingSystemID *string `json:"operatingSystemId"`
 	// IpxeScript is the iPXE script for the Operating System
@@ -391,14 +385,15 @@ type APIInstanceCreateRequest struct {
 	NetworkSecurityGroupID *string `json:"networkSecurityGroupId"`
 	// MachineID is the ID of the Machine. Only MachineID or InstanceTypeID can be present
 	MachineID *string `json:"machineId"`
-	// AllowUnhealthyMachine is the flag to allow unhealthy machine when requesting s specific Machine ID
+	// AllowUnhealthyMachine is a flag that can be used to target Machines are in maintenance or have health alerts preventing regular provision flow.
 	AllowUnhealthyMachine *bool `json:"allowUnhealthyMachine"`
 }
 
 // APIBatchInstanceCreateRequest is the data structure to capture request to create multiple instances in a single request
 // with rack-aware allocation logic to place instances on the same rack when possible
 type APIBatchInstanceCreateRequest struct {
-	// NamePrefix is the prefix for instance names (e.g., "worker" will create "worker-1", "worker-2", etc.)
+	// NamePrefix is the prefix for instance names (e.g., "worker" will create "worker-1", "worker-2",
+	// etc.)
 	NamePrefix string `json:"namePrefix"`
 	// Count is the number of instances to create
 	Count int `json:"count"`
@@ -410,6 +405,12 @@ type APIBatchInstanceCreateRequest struct {
 	InstanceTypeID string `json:"instanceTypeId"`
 	// VpcID is the ID of the VPC containing the Instances
 	VpcID string `json:"vpcId"`
+	// SecondaryVpcIDs lists additional VPC UUIDs for prefix-backed, non-primary
+	// network interfaces on each Instance in the batch. Validate() rejects this
+	// field unless every entry in Interfaces uses vpcPrefixId, and batch create
+	// processing expects these UUIDs to align with the VPCs implied by those
+	// prefix-backed interfaces.
+	SecondaryVpcIDs []string `json:"secondaryVpcIds"`
 	// OperatingSystemID is the ID of the Operating System
 	OperatingSystemID *string `json:"operatingSystemId"`
 	// IpxeScript is the iPXE script for the Operating System
@@ -451,8 +452,7 @@ func (icr APIInstanceCreateRequest) Validate() error {
 				validation.Length(0, 1024).Error(validationErrorDescriptionStringLength)),
 		),
 		validation.Field(&icr.TenantID,
-			validation.Required.Error(validationErrorValueRequired),
-			validationis.UUID.Error(validationErrorInvalidUUID)),
+			validation.When(icr.TenantID != "", validationis.UUID.Error(validationErrorInvalidUUID))),
 		validation.Field(&icr.InstanceTypeID,
 			validationis.UUID.Error(validationErrorInvalidUUID)),
 		validation.Field(&icr.VpcID,
@@ -467,6 +467,16 @@ func (icr APIInstanceCreateRequest) Validate() error {
 
 	if err != nil {
 		return err
+	}
+
+	if icr.SecondaryVpcIDs != nil {
+		for _, iface := range icr.Interfaces {
+			if iface.VpcPrefixID == nil {
+				return validation.Errors{
+					"secondaryVpcIds": errors.New("`secondaryVpcIds` can only be specified when `vpcPrefixId` is specified within `interfaces`"),
+				}
+			}
+		}
 	}
 
 	// ensure we have one and only one of InstanceTypeID or MachineID
@@ -518,35 +528,8 @@ func (icr APIInstanceCreateRequest) Validate() error {
 		}
 	}
 
-	// Labels validation
-	if icr.Labels != nil {
-		if len(icr.Labels) > util.LabelCountMax {
-			return validation.Errors{
-				"labels": util.ErrValidationLabelCount,
-			}
-		}
-
-		for key, value := range icr.Labels {
-			if key == "" {
-				return validation.Errors{
-					"labels": util.ErrValidationLabelKeyEmpty,
-				}
-			}
-
-			// Key validation
-			if len(key) > util.LabelKeyMaxLength {
-				return validation.Errors{
-					"labels": util.ErrValidationLabelKeyLength,
-				}
-			}
-
-			// Value validation
-			if len(value) > util.LabelValueMaxLength {
-				return validation.Errors{
-					"labels": util.ErrValidationLabelValueLength,
-				}
-			}
-		}
+	if err := util.ValidateLabels(icr.Labels); err != nil {
+		return err
 	}
 
 	return err
@@ -797,8 +780,7 @@ func (bicr APIBatchInstanceCreateRequest) Validate() error {
 				validation.Length(0, 1024).Error(validationErrorDescriptionStringLength)),
 		),
 		validation.Field(&bicr.TenantID,
-			validation.Required.Error(validationErrorValueRequired),
-			validationis.UUID.Error(validationErrorInvalidUUID)),
+			validation.When(bicr.TenantID != "", validationis.UUID.Error(validationErrorInvalidUUID))),
 		validation.Field(&bicr.InstanceTypeID,
 			validation.Required.Error(validationErrorValueRequired),
 			validationis.UUID.Error(validationErrorInvalidUUID)),
@@ -814,6 +796,16 @@ func (bicr APIBatchInstanceCreateRequest) Validate() error {
 
 	if err != nil {
 		return err
+	}
+
+	if bicr.SecondaryVpcIDs != nil {
+		for _, iface := range bicr.Interfaces {
+			if iface.VpcPrefixID == nil {
+				return validation.Errors{
+					"secondaryVpcIds": errors.New("`secondaryVpcIds` can only be specified when `vpcPrefixId` is specified within `interfaces`"),
+				}
+			}
+		}
 	}
 
 	// Validate that either OperatingSystemID or IpxeScript is specified
@@ -865,35 +857,8 @@ func (bicr APIBatchInstanceCreateRequest) Validate() error {
 		}
 	}
 
-	// Validate Labels (matching single API pattern)
-	if bicr.Labels != nil {
-		if len(bicr.Labels) > util.LabelCountMax {
-			return validation.Errors{
-				"labels": util.ErrValidationLabelCount,
-			}
-		}
-
-		for key, value := range bicr.Labels {
-			if key == "" {
-				return validation.Errors{
-					"labels": util.ErrValidationLabelKeyEmpty,
-				}
-			}
-
-			// Key validation
-			if len(key) > util.LabelKeyMaxLength {
-				return validation.Errors{
-					"labels": util.ErrValidationLabelKeyLength,
-				}
-			}
-
-			// Value validation
-			if len(value) > util.LabelValueMaxLength {
-				return validation.Errors{
-					"labels": util.ErrValidationLabelValueLength,
-				}
-			}
-		}
+	if err := util.ValidateLabels(bicr.Labels); err != nil {
+		return err
 	}
 
 	// err should be nil at this point
@@ -1100,6 +1065,12 @@ type APIInstanceUpdateRequest struct {
 	PhoneHomeEnabled *bool `json:"phoneHomeEnabled"`
 	// AlwaysBootWithCustomIpxe is an attribute which is specified by user if instance boot with ipxe or not
 	AlwaysBootWithCustomIpxe *bool `json:"alwaysBootWithCustomIpxe"`
+	// SecondaryVpcIDs lists additional VPC IDs for prefix-backed, non-primary
+	// network interfaces on the Instance. This field will be rejected unless
+	// Interfaces is provided and non-empty and every entry in Interfaces uses
+	// vpcPrefixId. The update handler then verifies that the supplied UUIDs
+	// exactly match the VPCs resolved from those prefix-backed interfaces.
+	SecondaryVpcIDs []string `json:"secondaryVpcIds"`
 	// Interfaces is the list of Interfaces to update for the Instance
 	Interfaces []APIInterfaceCreateOrUpdateRequest `json:"interfaces"`
 	// InfiniBandInterfaces is the list of InfiniBandInterface to update for the Instance
@@ -1388,6 +1359,7 @@ func (iur *APIInstanceUpdateRequest) IsUpdateRequest() bool {
 		iur.UserData != nil ||
 		iur.PhoneHomeEnabled != nil ||
 		iur.AlwaysBootWithCustomIpxe != nil ||
+		iur.SecondaryVpcIDs != nil ||
 		iur.Interfaces != nil ||
 		iur.InfiniBandInterfaces != nil ||
 		iur.NVLinkInterfaces != nil ||
@@ -1425,6 +1397,22 @@ func (iur APIInstanceUpdateRequest) Validate() error {
 
 	if err != nil {
 		return err
+	}
+
+	if iur.SecondaryVpcIDs != nil {
+		if len(iur.Interfaces) == 0 {
+			return validation.Errors{
+				"secondaryVpcIds": errors.New("`secondaryVpcIds` can only be specified when `interfaces` is specified and non-empty"),
+			}
+		}
+
+		for _, iface := range iur.Interfaces {
+			if iface.VpcPrefixID == nil {
+				return validation.Errors{
+					"secondaryVpcIds": errors.New("`secondaryVpcIds` can only be specified when `vpcPrefixId` is specified within `interfaces`"),
+				}
+			}
+		}
 	}
 
 	if iur.IsRebootRequest() && iur.IsUpdateRequest() {
@@ -1478,46 +1466,8 @@ func (iur APIInstanceUpdateRequest) Validate() error {
 		}
 	}
 
-	// Labels validation
-	if iur.Labels != nil {
-		if len(iur.Labels) > InstanceMaxLabelCount {
-			return validation.Errors{
-				"labels": fmt.Errorf("up to %v key/value pairs can be specified in labels", InstanceMaxLabelCount),
-			}
-		}
-
-		for key, value := range iur.Labels {
-			if key == "" {
-				return validation.Errors{
-					"labels": errors.New("one or more labels do not have a key specified"),
-				}
-			}
-
-			// Key validation
-			err = validation.Validate(&key,
-				validation.Match(util.NotAllWhitespaceRegexp).Error("label key consists only of whitespace"),
-				validation.Length(1, 255).Error(validationErrorMapKeyLabelStringLength),
-			)
-
-			if err != nil {
-				return validation.Errors{
-					"labels": errors.New(validationErrorMapKeyLabelStringLength),
-				}
-			}
-
-			// Value validation
-			err = validation.Validate(&value,
-				validation.When(value != "",
-					validation.Length(0, 255).Error(validationErrorMapValueLabelStringLength),
-				),
-			)
-
-			if err != nil {
-				return validation.Errors{
-					"labels": errors.New(validationErrorMapValueLabelStringLength),
-				}
-			}
-		}
+	if err := util.ValidateLabels(iur.Labels); err != nil {
+		return err
 	}
 
 	return err
@@ -1609,6 +1559,10 @@ type APIInstance struct {
 	VpcID string `json:"vpcId"`
 	// Vpc is the summary of the VPC
 	Vpc *APIVpcSummary `json:"vpc,omitempty"`
+	// SecondaryVpcIDs lists non-primary VPC UUIDs derived from prefix-backed
+	// interfaces attached to the Instance. These values are populated from
+	// interface relations rather than stored directly on the Instance record.
+	SecondaryVpcIDs []string `json:"secondaryVpcIds"`
 	// MachineID is the ID of the Machine
 	MachineID *string `json:"machineId"`
 	// Machine is the summary of the Machine
@@ -1665,7 +1619,9 @@ type APIInstance struct {
 	Deprecations []APIDeprecation `json:"deprecations,omitempty"`
 }
 
-// NewAPIInstance accepts a DB layer Instance object returns an API layer object
+// NewAPIInstance accepts a DB layer Instance object returns an API layer object.
+// SecondaryVpcIDs are derived from interface relations, so callers must preload
+// Interface.VpcPrefix on prefix-backed interfaces when they want those IDs populated.
 func NewAPIInstance(dbinst *cdbm.Instance, dbSite *cdbm.Site, dbiss []cdbm.Interface, dbibis []cdbm.InfiniBandInterface, dbdesds []cdbm.DpuExtensionServiceDeployment, dbnvlis []cdbm.NVLinkInterface, dbskgs []cdbm.SSHKeyGroup, dbsds []cdbm.StatusDetail) *APIInstance {
 	var instanceTypeID *string
 	if dbinst.InstanceTypeID != nil {
@@ -1748,11 +1704,19 @@ func NewAPIInstance(dbinst *cdbm.Instance, dbSite *cdbm.Site, dbiss []cdbm.Inter
 
 	apiInstance.Status = getAggregatedInstanceStatus(dbinst.Status, dbinst.PowerStatus)
 
+	secondaryVpcIDs := goset.NewSet[string]()
+
 	apiInstance.Interfaces = []APIInterface{}
 	for _, dbis := range dbiss {
 		curis := dbis
 		apiInstance.Interfaces = append(apiInstance.Interfaces, *NewAPIInterface(&curis))
+		if dbis.VpcPrefix != nil && dbis.VpcPrefix.VpcID != dbinst.VpcID {
+			secondaryVpcIDs.Add(dbis.VpcPrefix.VpcID.String())
+		}
 	}
+
+	apiInstance.SecondaryVpcIDs = secondaryVpcIDs.ToSlice()
+	slices.Sort(apiInstance.SecondaryVpcIDs)
 
 	apiInstance.InfiniBandInterfaces = []APIInfiniBandInterface{}
 	for _, dbibi := range dbibis {

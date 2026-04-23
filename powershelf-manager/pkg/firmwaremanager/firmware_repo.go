@@ -18,10 +18,12 @@ package firmwaremanager
 
 import (
 	"fmt"
+	"io/fs"
+	"os"
+	"strings"
+
 	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/common/util"
 	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/common/vendor"
-	"io/fs"
-	"strings"
 )
 
 // FirmwareRepo holds parsed firmware upgrade edges and the supported starting-version range for a vendor.
@@ -35,6 +37,12 @@ type FirmwareRepo struct {
 // summary returns a human-readable report of supported versions and artifacts.
 func (repo *FirmwareRepo) summary() (string, error) {
 	sb := strings.Builder{}
+
+	if len(repo.upgrades) == 0 {
+		sb.WriteString("Firmware Repo has no firmware artifacts available\n")
+		return sb.String(), nil
+	}
+
 	sb.WriteString(fmt.Sprintf("Firmware Repo supports upgrading powershelves starting at PMC fw version between %s to %s (inclusive)\n", repo.minStartingFwVersion.String(), repo.maxStartingFwVersion.String()))
 
 	for i, upgrade := range repo.upgrades {
@@ -55,9 +63,10 @@ func (repo *FirmwareRepo) summary() (string, error) {
 	return sb.String(), nil
 }
 
-// supportUpgrade returns true if the current version is within the repo’s supported starting range.
+// supportUpgrade returns true if the current version falls within the repo's
+// supported range, which spans the minimum 'from' to the maximum 'to' across
+// all upgrade edges.
 func (repo *FirmwareRepo) supportUpgrade(currentFwVersion firmwareVersion) bool {
-	// Check if currentFwVersion is within the FirmwareReport's supported range
 	return repo.minStartingFwVersion.cmp(currentFwVersion) <= 0 && repo.maxStartingFwVersion.cmp(currentFwVersion) >= 0
 }
 
@@ -66,13 +75,27 @@ func (repo *FirmwareRepo) open(upgrade *FirmwareUpgrade) (fs.File, error) {
 	return repo.ff.open(upgrade.path)
 }
 
-// newFirmwareRepo discovers embedded artifacts for a vendor, parses filename-encoded edges, and computes supported range.
-func newFirmwareRepo(v vendor.Vendor) (*FirmwareRepo, error) {
-	ff := newFirmwareFetcher()
+// newFirmwareRepo discovers firmware artifacts for a vendor, parses filename-encoded edges, and computes supported range.
+func newFirmwareRepo(v vendor.Vendor, firmwareDir string) (*FirmwareRepo, error) {
+	if firmwareDir == "" {
+		return nil, fmt.Errorf("firmware directory not configured (set FW_DIR)")
+	}
+
+	if info, err := os.Stat(firmwareDir); err != nil {
+		return nil, fmt.Errorf("firmware directory %q does not exist: %w", firmwareDir, err)
+	} else if !info.IsDir() {
+		return nil, fmt.Errorf("firmware path %q is not a directory", firmwareDir)
+	}
+
+	ff := newFirmwareFetcher(firmwareDir)
 
 	fw_entries, err := ff.getPmcFirmwareEntries(v)
 	if err != nil {
 		return nil, err
+	}
+
+	if fw_entries == nil {
+		return &FirmwareRepo{ff: ff}, nil
 	}
 
 	var upgrades []FirmwareUpgrade = make([]FirmwareUpgrade, 0, len(fw_entries))
@@ -95,11 +118,13 @@ func newFirmwareRepo(v vendor.Vendor) (*FirmwareRepo, error) {
 
 			if len(upgrades) == 1 {
 				minStartingFwVersion = from
-				maxStartingFwVersion = from
-			} else if from.cmp(minStartingFwVersion) < 0 {
+				maxStartingFwVersion = to
+			}
+			if from.cmp(minStartingFwVersion) < 0 {
 				minStartingFwVersion = from
-			} else if from.cmp(minStartingFwVersion) > 0 {
-				maxStartingFwVersion = from
+			}
+			if to.cmp(maxStartingFwVersion) > 0 {
+				maxStartingFwVersion = to
 			}
 		}
 	}

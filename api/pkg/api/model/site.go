@@ -92,27 +92,27 @@ type APISiteUpdateRequest struct {
 }
 
 // Validate validates Site update request data
-func (asur APISiteUpdateRequest) Validate(isProvider bool) error {
+func (asur APISiteUpdateRequest) Validate(isProvider bool, isTenant bool) error {
 	var err error
 
 	if isProvider {
+		// Validate fields that can only be set by Provider
 		err = validation.ValidateStruct(&asur,
 			validation.Field(&asur.Name,
-				validation.When(asur.Name != nil, validation.Required.Error(validationErrorStringLength)),
+				validation.NilOrNotEmpty.Error(validationErrorStringLength),
 				validation.When(asur.Name != nil, validation.By(util.ValidateNameCharacters)),
 				validation.When(asur.Name != nil, validation.Length(2, 256).Error(validationErrorStringLength))),
-			validation.Field(&asur.SerialConsoleHostname,
-				validation.When(asur.SerialConsoleHostname != nil, validationis.Host.Error(validationErrorInvalidHostname))),
-			validation.Field(&asur.SerialConsoleIdleTimeout, validation.Min(1).Error("Value must be greater than 0")),
-			validation.Field(&asur.SerialConsoleMaxSessionLength, validation.Min(1).Error("Value must be greater than 0")),
-			validation.Field(&asur.IsSerialConsoleSSHKeysEnabled, validation.Nil.Error(ErrMsgNotConfigurableByProvider)),
+			validation.Field(&asur.SerialConsoleHostname, validationis.Host.Error(validationErrorInvalidHostname)),
+			validation.Field(&asur.SerialConsoleIdleTimeout, validation.Min(1).Error("value must be greater than 0")),
+			validation.Field(&asur.SerialConsoleMaxSessionLength, validation.Min(1).Error("value must be greater than 0")),
 		)
 	} else {
+		// Request is not from a user with Provider role, reject updates to fields that can only be set by Provider
 		err = validation.ValidateStruct(&asur,
 			validation.Field(&asur.Name, validation.Nil.Error(ErrMsgNotConfigurableByTenant)),
 			validation.Field(&asur.Description, validation.Nil.Error(ErrMsgNotConfigurableByTenant)),
 			validation.Field(&asur.RenewRegistrationToken, validation.Nil.Error(ErrMsgNotConfigurableByTenant)),
-			validation.Field(&asur.IsSerialConsoleEnabled, validation.Nil.Error("value is not configurable by Tenant, modify `isSerialConsoleSSHKeysEnabled` instead")),
+			validation.Field(&asur.IsSerialConsoleEnabled, validation.Nil.Error(ErrMsgNotConfigurableByTenant)),
 			validation.Field(&asur.SerialConsoleHostname, validation.Nil.Error(ErrMsgNotConfigurableByTenant)),
 			validation.Field(&asur.SerialConsoleIdleTimeout, validation.Nil.Error(ErrMsgNotConfigurableByTenant)),
 			validation.Field(&asur.SerialConsoleMaxSessionLength, validation.Nil.Error(ErrMsgNotConfigurableByTenant)),
@@ -123,7 +123,19 @@ func (asur APISiteUpdateRequest) Validate(isProvider bool) error {
 		return err
 	}
 
-	return nil
+	if isTenant {
+		// Validate fields that can only be set by Tenant
+		err = validation.ValidateStruct(&asur,
+			validation.Field(&asur.IsSerialConsoleSSHKeysEnabled, validation.Nil.Error("configuring this value is no longer supported, update SSH Key Groups to remove Site instead")),
+		)
+	} else {
+		// Request is not from a user with Tenant role, reject updates to fields that can only be set by Tenant
+		err = validation.ValidateStruct(&asur,
+			validation.Field(&asur.IsSerialConsoleSSHKeysEnabled, validation.Nil.Error(ErrMsgNotConfigurableByProvider)),
+		)
+	}
+
+	return err
 }
 
 type APISiteMachineStats struct {

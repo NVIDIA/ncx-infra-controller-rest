@@ -52,7 +52,7 @@ func (ms *MemRegistry) Stop(ctx context.Context) error {
 	return nil
 }
 
-// RegisterPmc inserts a new PMC; returns error on duplicate MAC.
+// RegisterPmc creates or updates a PMC entry keyed by MAC.
 func (ms *MemRegistry) RegisterPmc(ctx context.Context, pmc *pmc.PMC) error {
 	ms.mu.Lock()
 	defer ms.mu.Unlock()
@@ -61,15 +61,8 @@ func (ms *MemRegistry) RegisterPmc(ctx context.Context, pmc *pmc.PMC) error {
 		return fmt.Errorf("cannot register nil PMC")
 	}
 
-	macStr := pmc.GetMac().String()
-	if _, exists := ms.registry[macStr]; exists {
-		return fmt.Errorf("PMC (%s) already registered", macStr)
-	}
-
-	ms.registry[macStr] = pmc
-
+	ms.registry[pmc.GetMac().String()] = pmc
 	return nil
-
 }
 
 // IsPmcRegistered checks if a PMC has been registered with the specified MAC.

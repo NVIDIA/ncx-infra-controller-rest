@@ -188,22 +188,24 @@ func (c *MockForgeClient) FindNetworkSegmentsByIds(ctx context.Context, in *wflo
 	return out, nil
 }
 
-// DEPRECATED: use FindNetworkSegmentIDs and FindNetworkSegmentsByIDs instead
-func (c *MockForgeClient) FindNetworkSegments(ctx context.Context, in *wflows.NetworkSegmentQuery, opts ...grpc.CallOption) (*wflows.NetworkSegmentList, error) {
-	out := &wflows.NetworkSegmentList{}
-	count, ok := ctx.Value("wantCount").(int)
-	if ok {
-		for i := 0; i < count; i++ {
-			out.NetworkSegments = append(out.NetworkSegments, &wflows.NetworkSegment{Id: &wflows.NetworkSegmentId{Value: uuid.NewString()}})
-		}
-	}
-	return out, nil
-}
-
 /* InfiniBand Partition mock methods */
 func (c *MockForgeClient) CreateIBPartition(ctx context.Context, in *wflows.IBPartitionCreationRequest, opts ...grpc.CallOption) (*wflows.IBPartition, error) {
 	out := new(wflows.IBPartition)
 	out.Id = &wflows.IBPartitionId{Value: uuid.NewString()}
+	return out, nil
+}
+
+func (c *MockForgeClient) UpdateIBPartition(ctx context.Context, in *wflows.IBPartitionUpdateRequest, opts ...grpc.CallOption) (*wflows.IBPartition, error) {
+	out := new(wflows.IBPartition)
+	if in != nil && in.Id != nil {
+		out.Id = in.Id
+	} else {
+		out.Id = &wflows.IBPartitionId{Value: uuid.NewString()}
+	}
+	if in != nil {
+		out.Config = in.GetConfig()
+		out.Metadata = in.GetMetadata()
+	}
 	return out, nil
 }
 
@@ -244,18 +246,6 @@ func (c *MockForgeClient) FindIBPartitionsByIds(ctx context.Context, in *wflows.
 		}
 	}
 
-	return out, nil
-}
-
-// DEPRECATED: use FindIBPartitionIds and FindIBPartitionsByIds instead
-func (c *MockForgeClient) FindIBPartitions(ctx context.Context, in *wflows.IBPartitionQuery, opts ...grpc.CallOption) (*wflows.IBPartitionList, error) {
-	out := &wflows.IBPartitionList{}
-	count, ok := ctx.Value("wantCount").(int)
-	if ok {
-		for i := 0; i < count; i++ {
-			out.IbPartitions = append(out.IbPartitions, &wflows.IBPartition{Id: &wflows.IBPartitionId{Value: uuid.NewString()}})
-		}
-	}
 	return out, nil
 }
 
@@ -329,18 +319,6 @@ func (c *MockForgeClient) FindInstancesByIds(ctx context.Context, in *wflows.Ins
 		}
 	}
 
-	return out, nil
-}
-
-// DEPRECATED: use FindInstanceIds and FindInstancesByIds instead
-func (c *MockForgeClient) FindInstances(ctx context.Context, in *wflows.InstanceSearchQuery, opts ...grpc.CallOption) (*wflows.InstanceList, error) {
-	out := new(wflows.InstanceList)
-	count, ok := ctx.Value("wantCount").(int)
-	if ok {
-		for i := 0; i < count; i++ {
-			out.Instances = append(out.Instances, &wflows.Instance{Id: &wflows.InstanceId{Value: uuid.NewString()}})
-		}
-	}
 	return out, nil
 }
 
@@ -466,18 +444,6 @@ func (c *MockForgeClient) FindTenantKeysetsByIds(ctx context.Context, in *wflows
 		}
 	}
 
-	return out, nil
-}
-
-// DEPRECATED: use FindTenantKeysetIds and FindTenantKeysetsByIds instead
-func (c *MockForgeClient) FindTenantKeyset(ctx context.Context, in *wflows.FindTenantKeysetRequest, opts ...grpc.CallOption) (*wflows.TenantKeySetList, error) {
-	out := &wflows.TenantKeySetList{}
-	count, ok := ctx.Value("wantCount").(int)
-	if ok {
-		for i := 0; i < count; i++ {
-			out.Keyset = append(out.Keyset, &wflows.TenantKeyset{KeysetIdentifier: &wflows.TenantKeysetIdentifier{KeysetId: uuid.NewString()}})
-		}
-	}
 	return out, nil
 }
 
@@ -1284,6 +1250,7 @@ func (c *MockForgeClient) CreateDpuExtensionService(ctx context.Context, in *wfl
 		Version:       generateSiteVersion(),
 		Data:          "test data",
 		HasCredential: false,
+		Observability: in.Observability,
 	}
 
 	serviceID := uuid.NewString()
@@ -1312,6 +1279,7 @@ func (c *MockForgeClient) UpdateDpuExtensionService(ctx context.Context, in *wfl
 		Version:       generateSiteVersion(),
 		Data:          "test data",
 		HasCredential: false,
+		Observability: in.Observability,
 	}
 
 	out := &wflows.DpuExtensionService{
@@ -1337,6 +1305,10 @@ func (c *MockForgeClient) DeleteDpuExtensionService(ctx context.Context, in *wfl
 }
 
 func (c *MockForgeClient) FindDpuExtensionServiceIds(ctx context.Context, in *wflows.DpuExtensionServiceSearchFilter, opts ...grpc.CallOption) (*wflows.DpuExtensionServiceIdList, error) {
+	if err, ok := ctx.Value("wantError").(error); ok {
+		return nil, status.Error(status.Code(err), "failed to retrieve dpu extension service ids")
+	}
+
 	out := &wflows.DpuExtensionServiceIdList{}
 	count, ok := ctx.Value("wantCount").(int)
 	if ok {
@@ -1596,12 +1568,12 @@ func (c *MockRLAClient) ValidateComponents(ctx context.Context, in *rlav1.Valida
 	}
 
 	out := &rlav1.ValidateComponentsResponse{
-		Diffs:               []*rlav1.ComponentDiff{},
-		TotalDiffs:          0,
-		OnlyInExpectedCount: 0,
-		OnlyInActualCount:   0,
-		DriftCount:          0,
-		MatchCount:          0,
+		Diffs:           []*rlav1.ComponentDiff{},
+		TotalDiffs:      0,
+		MissingCount:    0,
+		UnexpectedCount: 0,
+		DriftCount:      0,
+		MatchCount:      0,
 	}
 	return out, nil
 }

@@ -25,14 +25,14 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"go.temporal.io/sdk/worker"
 
 	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/carbideapi"
-	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/nsmapi"
-	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/psmapi"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/config"
 	svc "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/service"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/componentmanager"
 	computecarbide "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/componentmanager/compute/carbide"
@@ -56,6 +56,7 @@ const (
 var (
 	port               int
 	componentMgrConfig string
+	devMode            bool
 
 	// clientOnlyFlags are the global persistent flags that apply only to
 	// client commands. They are hidden from serve's help and rejected if set.
@@ -88,23 +89,15 @@ func init() {
 		_ = serveCmd.InheritedFlags().MarkHidden(name)
 	}
 
-	serveCmd.Flags().IntVarP(&port, "listen-port", "p", defaultServicePort, "Port for the gRPC server") //nolint
+	serveCmd.Flags().IntVarP(&port, "listen-port", "p", defaultServicePort, "Port for the gRPC server") //nolint:lll
 	// Component manager config: priority is CLI flag > env var > default prod config
-	serveCmd.Flags().StringVarP(&componentMgrConfig, "component-config", "c", "", "Path to component manager config file (YAML)") //nolint
-}
-
-// providerClients holds the API clients extracted from providers for use by the service.
-type providerClients struct {
-	carbide carbideapi.Client
-	psm     psmapi.Client
-	nsm     nsmapi.Client
+	serveCmd.Flags().StringVarP(&componentMgrConfig, "component-config", "c", "", "Path to component manager config file (YAML)")               //nolint:lll
+	serveCmd.Flags().BoolVar(&devMode, "dev-mode", false, "Enable developer options (gRPC reflection, debug logging). Not for production use.") //nolint:lll
 }
 
 // initProviderRegistry creates and initializes the provider registry based on configuration.
-// It returns the registry and the underlying clients for use by the service layer.
-func initProviderRegistry(config componentmanager.Config) (*componentmanager.ProviderRegistry, providerClients, error) {
+func initProviderRegistry(config componentmanager.Config) (*componentmanager.ProviderRegistry, error) {
 	providerRegistry := componentmanager.NewProviderRegistry()
-	var clients providerClients
 
 	// Initialize Carbide provider if configured
 	if config.Providers.Carbide != nil {
@@ -112,7 +105,6 @@ func initProviderRegistry(config componentmanager.Config) (*componentmanager.Pro
 		if err != nil {
 			log.Warn().Err(err).Msg("Unable to create Carbide GRPC client (power control may not work)")
 		} else {
-			clients.carbide = carbideProvider.Client()
 			providerRegistry.Register(carbideProvider)
 			log.Info().
 				Dur("timeout", config.Providers.Carbide.Timeout).
@@ -126,7 +118,6 @@ func initProviderRegistry(config componentmanager.Config) (*componentmanager.Pro
 		if err != nil {
 			log.Warn().Err(err).Msg("Unable to create PSM client (powershelf operations may not work)")
 		} else {
-			clients.psm = psmProvider.Client()
 			providerRegistry.Register(psmProvider)
 			log.Info().
 				Dur("timeout", config.Providers.PSM.Timeout).
@@ -140,7 +131,6 @@ func initProviderRegistry(config componentmanager.Config) (*componentmanager.Pro
 		if err != nil {
 			log.Warn().Err(err).Msg("Unable to create NV-Switch Manager client (NVLSwitch operations may not work)")
 		} else {
-			clients.nsm = nsmProvider.Client()
 			providerRegistry.Register(nsmProvider)
 			log.Info().
 				Dur("timeout", config.Providers.NVSwitchManager.Timeout).
@@ -154,7 +144,7 @@ func initProviderRegistry(config componentmanager.Config) (*componentmanager.Pro
 		Strs("providers", registeredProviders).
 		Msg("Provider registry initialized")
 
-	return providerRegistry, clients, nil
+	return providerRegistry, nil
 }
 
 // initComponentManagerRegistry creates and initializes the component manager registry.
@@ -229,6 +219,26 @@ func loadComponentManagerConfig() (componentmanager.Config, error) {
 // configuration, initialises provider and component manager registries, builds
 // the service, and blocks until a termination signal is received.
 func doServe() {
+	if devMode {
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	} else {
+		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	}
+
+	if os.Getenv(svc.EnvVarName) == "" {
+		log.Warn().Msgf("%s not set, defaulting to %q for local development", svc.EnvVarName, "development")
+		os.Setenv(svc.EnvVarName, "development") //nolint:errcheck
+	}
+
+	rlaEnv, err := svc.GetDeploymentEnv()
+	if err != nil {
+		log.Fatal().Err(err).Msg("Invalid deployment environment")
+	}
+
+	log.Info().Str(svc.EnvVarName, rlaEnv).Msg("Deployment environment")
+
+	rlaConfig := config.ReadConfig()
+
 	dbConf, err := cdb.ConfigFromEnv()
 	if err != nil {
 		log.Fatal().Msgf("failed to retrieve DB conn information: %v", err)
@@ -246,7 +256,7 @@ func doServe() {
 	}
 
 	// Initialize provider registry (creates API clients based on config)
-	providerRegistry, clients, err := initProviderRegistry(cmConfig)
+	providerRegistry, err := initProviderRegistry(cmConfig)
 	if err != nil {
 		log.Fatal().Msgf("failed to initialize provider registry: %v", err)
 	}
@@ -300,11 +310,13 @@ func doServe() {
 	service, err := svc.New(
 		ctx,
 		svc.Config{
-			Port:          port,
-			DBConf:        dbConf,
-			ExecutorConf:  &temporalManagerConf,
-			CarbideClient: clients.carbide,
-			PSMClient:     clients.psm,
+			Port:             port,
+			DBConf:           dbConf,
+			ExecutorConf:     &temporalManagerConf,
+			RLAConfig:        rlaConfig,
+			CMConfig:         cmConfig,
+			ProviderRegistry: providerRegistry,
+			DevMode:          devMode,
 			CertConfig: pkgcerts.Config{
 				CACert:  globalCACert,
 				TLSCert: globalTLSCert,

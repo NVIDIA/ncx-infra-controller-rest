@@ -186,9 +186,29 @@ func (cd *Component) Patch(ctx context.Context, idb bun.IDB) error {
 	return err
 }
 
+// GetIncludingDeleted retrieves a component by ID regardless of soft-delete status.
+func (cd *Component) GetIncludingDeleted(ctx context.Context, idb bun.IDB) (*Component, error) {
+	var comp Component
+	err := idb.NewSelect().Model(&comp).
+		Where("id = ?", cd.ID).
+		WhereAllWithDeleted().
+		Relation("BMCs").
+		Scan(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &comp, nil
+}
+
 // Delete soft-deletes the component by setting deleted_at.
 func (cd *Component) Delete(ctx context.Context, idb bun.IDB) error {
 	_, err := idb.NewDelete().Model(cd).Where("id = ?", cd.ID).Exec(ctx)
+	return err
+}
+
+// ForceDelete permanently removes the component row from the database.
+func (cd *Component) ForceDelete(ctx context.Context, idb bun.IDB) error {
+	_, err := idb.NewDelete().Model(cd).Where("id = ?", cd.ID).ForceDelete().Exec(ctx)
 	return err
 }
 

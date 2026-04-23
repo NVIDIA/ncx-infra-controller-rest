@@ -122,8 +122,12 @@ func bmcFromProto(b *pb.BMCInfo) types.BMC {
 		Type: bmcTypeFromProto(b.GetType()),
 	}
 
+	// Invalid MAC addresses are silently ignored; bmc.MAC remains unset (nil).
+	// This matches the behaviour of the internal DAO and protobuf converters.
 	if mac := b.GetMacAddress(); mac != "" {
-		bmc.MAC, _ = net.ParseMAC(mac)
+		if addr, err := net.ParseMAC(mac); err == nil {
+			bmc.MAC = addr
+		}
 	}
 
 	if ip := b.GetIpAddress(); ip != "" {
@@ -187,6 +191,7 @@ func componentDiffFromProto(d *pb.ComponentDiff) *types.ComponentDiff {
 
 	diff := &types.ComponentDiff{
 		Type:        diffTypeFromProto(d.GetType()),
+		ID:          uuidFromProto(d.GetId()),
 		ComponentID: d.GetComponentId(),
 		Expected:    componentFromProto(d.GetExpected()),
 		Actual:      componentFromProto(d.GetActual()),
@@ -264,10 +269,10 @@ func taskExecutorTypeFromProto(et pb.TaskExecutorType) types.TaskExecutorType {
 
 func diffTypeFromProto(dt pb.DiffType) types.DiffType {
 	switch dt {
-	case pb.DiffType_DIFF_TYPE_ONLY_IN_EXPECTED:
-		return types.DiffTypeOnlyInExpected
-	case pb.DiffType_DIFF_TYPE_ONLY_IN_ACTUAL:
-		return types.DiffTypeOnlyInActual
+	case pb.DiffType_DIFF_TYPE_MISSING:
+		return types.DiffTypeMissing
+	case pb.DiffType_DIFF_TYPE_UNEXPECTED:
+		return types.DiffTypeUnexpected
 	case pb.DiffType_DIFF_TYPE_DRIFT:
 		return types.DiffTypeDrift
 	default:
@@ -453,6 +458,16 @@ func componentTypeToProto(ct types.ComponentType) pb.ComponentType {
 	default:
 		return pb.ComponentType_COMPONENT_TYPE_UNKNOWN
 	}
+}
+
+// componentTypesFilter returns a []pb.ComponentType restricting to ct, or nil
+// when ct is ComponentTypeUnknown (meaning "all component types").
+func componentTypesFilter(ct types.ComponentType) []pb.ComponentType {
+	if ct == types.ComponentTypeUnknown {
+		return nil
+	}
+
+	return []pb.ComponentType{componentTypeToProto(ct)}
 }
 
 // componentTypeToString converts types.ComponentType to its string representation

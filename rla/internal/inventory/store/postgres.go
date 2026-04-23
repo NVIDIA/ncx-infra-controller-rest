@@ -966,16 +966,120 @@ func (s *PostgresStore) AddComponent(ctx context.Context, comp *component.Compon
 	return compDAO.ID, nil
 }
 
-// PatchComponent updates a single component's fields in the database.
+// PatchComponent updates a single component's fields and reconciles BMCs in the database.
 func (s *PostgresStore) PatchComponent(ctx context.Context, comp *component.Component) error {
-	compDAO := dao.ComponentTo(comp, comp.RackID)
-	return compDAO.Patch(ctx, s.pg.DB)
+	newDAO := dao.ComponentTo(comp, comp.RackID)
+
+	operation := func(ctx context.Context, tx bun.Tx) error {
+		if err := newDAO.Patch(ctx, tx); err != nil {
+			return err
+		}
+
+		if len(newDAO.BMCs) == 0 {
+			return nil
+		}
+
+		// Load existing BMCs for this component
+		var existingBMCs []model.BMC
+		if err := tx.NewSelect().Model(&existingBMCs).
+			Where("component_id = ?", newDAO.ID).Scan(ctx); err != nil {
+			return err
+		}
+
+		bmcsByMac := make(map[string]*model.BMC, len(existingBMCs))
+		for i := range existingBMCs {
+			bmcsByMac[existingBMCs[i].MacAddress] = &existingBMCs[i]
+		}
+
+		for i := range newDAO.BMCs {
+			nb := &newDAO.BMCs[i]
+			if cb, ok := bmcsByMac[nb.MacAddress]; ok {
+				if pb := nb.BuildPatch(cb); pb != nil {
+					if err := pb.Patch(ctx, tx); err != nil {
+						return err
+					}
+				}
+			} else {
+				if !nb.InvalidType() {
+					if err := nb.Create(ctx, tx); err != nil {
+						return err
+					}
+				}
+			}
+		}
+
+		return nil
+	}
+
+	return s.runInTx(ctx, operation)
+}
+
+// DeleteRack soft-deletes a rack and all its components in a single transaction.
+func (s *PostgresStore) DeleteRack(ctx context.Context, id uuid.UUID) error {
+	operation := func(ctx context.Context, tx bun.Tx) error {
+		rackDAO := &model.Rack{ID: id}
+		if _, err := rackDAO.Get(ctx, tx, false); err != nil {
+			return s.checkDBGetError(err, fmt.Sprintf("rack %s", id))
+		}
+
+		// Soft-delete all components belonging to this rack.
+		_, err := tx.NewDelete().Model((*model.Component)(nil)).
+			Where("rack_id = ?", id).
+			Exec(ctx)
+		if err != nil {
+			return err
+		}
+
+		return rackDAO.Delete(ctx, tx)
+	}
+	return s.runInTx(ctx, operation)
+}
+
+// PurgeRack permanently removes a soft-deleted rack and its components.
+func (s *PostgresStore) PurgeRack(ctx context.Context, id uuid.UUID) error {
+	operation := func(ctx context.Context, tx bun.Tx) error {
+		rackDAO := &model.Rack{ID: id}
+		r, err := rackDAO.GetIncludingDeleted(ctx, tx)
+		if err != nil {
+			return s.checkDBGetError(err, fmt.Sprintf("rack %s", id))
+		}
+		if r.DeletedAt == nil {
+			return errors.GRPCErrorPreconditionFailed(
+				fmt.Sprintf("rack %s is not soft-deleted; call DeleteRack first", id))
+		}
+
+		// Hard-delete all components (including already soft-deleted ones).
+		_, err = tx.NewDelete().Model((*model.Component)(nil)).
+			Where("rack_id = ?", id).
+			ForceDelete().
+			Exec(ctx)
+		if err != nil {
+			return err
+		}
+
+		return rackDAO.ForceDelete(ctx, tx)
+	}
+	return s.runInTx(ctx, operation)
 }
 
 // DeleteComponent soft-deletes a component by UUID.
 func (s *PostgresStore) DeleteComponent(ctx context.Context, id uuid.UUID) error {
 	compDAO := &model.Component{ID: id}
 	return compDAO.Delete(ctx, s.pg.DB)
+}
+
+// PurgeComponent permanently removes a soft-deleted component.
+func (s *PostgresStore) PurgeComponent(ctx context.Context, id uuid.UUID) error {
+	compDAO := &model.Component{ID: id}
+	c, err := compDAO.GetIncludingDeleted(ctx, s.pg.DB)
+	if err != nil {
+		return s.checkDBGetError(err, fmt.Sprintf("component %s", id))
+	}
+	if c.DeletedAt == nil {
+		return errors.GRPCErrorPreconditionFailed(
+			fmt.Sprintf("component %s is not soft-deleted; call DeleteComponent first", id))
+	}
+	return compDAO.ForceDelete(ctx, s.pg.DB)
 }
 
 // GetDriftsByComponentIDs retrieves drift records for the given component UUIDs.

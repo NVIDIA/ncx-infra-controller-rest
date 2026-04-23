@@ -21,12 +21,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/client"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/types"
 )
 
 var (
@@ -37,6 +40,7 @@ var (
 	updateHostID          int
 	updateDescription     string
 	updateRackID          string
+	updateBMCs            string
 )
 
 // newUpdateCmd returns a configured cobra.Command for patching a component's
@@ -57,6 +61,7 @@ Patchable fields (at least one required):
   --host-id          : New host ID (position)
   --description      : New description (JSON string)
   --rack-id          : Re-assign to a different rack (UUID)
+  --bmcs             : BMCs as JSON array, e.g. [{"type":"HOST","mac":"aa:bb:cc:dd:ee:ff","ip":"10.0.0.1"}]
 
 Examples:
   # Update firmware version
@@ -67,6 +72,9 @@ Examples:
 
   # Re-assign to a different rack
   rla component update --id "uuid" --rack-id "new-rack-uuid"
+
+  # Update BMC information
+  rla component update --id "uuid" --bmcs '[{"type":"HOST","mac":"aa:bb:cc:dd:ee:ff","ip":"10.0.0.1"}]'
 
   # Update multiple fields at once
   rla component update --id "uuid" --firmware-version "2.0.0" --slot-id 3
@@ -83,6 +91,7 @@ Examples:
 	cmd.Flags().IntVar(&updateHostID, "host-id", 0, "New host ID")
 	cmd.Flags().StringVar(&updateDescription, "description", "", "New description (JSON string)")
 	cmd.Flags().StringVar(&updateRackID, "rack-id", "", "Re-assign to a different rack (UUID)")
+	cmd.Flags().StringVar(&updateBMCs, "bmcs", "", `BMCs as JSON array, e.g. [{"type":"HOST","mac":"aa:bb:cc:dd:ee:ff","ip":"10.0.0.1"}]`)
 
 	_ = cmd.MarkFlagRequired("id")
 
@@ -143,6 +152,15 @@ func doUpdateComponent(cmd *cobra.Command) {
 		hasUpdate = true
 	}
 
+	if updateBMCs != "" {
+		bmcs, err := parseBMCsFromJSON(updateBMCs)
+		if err != nil {
+			log.Fatal().Err(err).Msg("Invalid --bmcs input")
+		}
+		opts.BMCs = bmcs
+		hasUpdate = true
+	}
+
 	if !hasUpdate {
 		log.Fatal().Msg("At least one field to update must be specified")
 	}
@@ -166,4 +184,44 @@ func doUpdateComponent(cmd *cobra.Command) {
 		log.Fatal().Err(err).Msg("Failed to marshal JSON")
 	}
 	fmt.Println(string(data))
+}
+
+// parseBMCsFromJSON parses a JSON array of BMC objects, validates each entry's
+// type (HOST or DPU), MAC address, and IP address, and returns typed BMC values.
+func parseBMCsFromJSON(input string) ([]types.BMC, error) {
+	var rawBMCs []struct {
+		Type string `json:"type"`
+		MAC  string `json:"mac"`
+		IP   string `json:"ip"`
+	}
+	if err := json.Unmarshal([]byte(input), &rawBMCs); err != nil {
+		return nil, fmt.Errorf("invalid JSON: %w", err)
+	}
+
+	bmcs := make([]types.BMC, 0, len(rawBMCs))
+	for _, rb := range rawBMCs {
+		bt := types.BMCType(strings.ToUpper(rb.Type))
+		switch bt {
+		case types.BMCTypeHost, types.BMCTypeDPU:
+		default:
+			return nil, fmt.Errorf("invalid BMC type %q (allowed: HOST, DPU)", rb.Type)
+		}
+
+		b := types.BMC{Type: bt}
+		if rb.MAC != "" {
+			mac, err := net.ParseMAC(rb.MAC)
+			if err != nil {
+				return nil, fmt.Errorf("invalid MAC address %q: %w", rb.MAC, err)
+			}
+			b.MAC = mac
+		}
+		if rb.IP != "" {
+			b.IP = net.ParseIP(rb.IP)
+			if b.IP == nil {
+				return nil, fmt.Errorf("invalid IP address %q", rb.IP)
+			}
+		}
+		bmcs = append(bmcs, b)
+	}
+	return bmcs, nil
 }

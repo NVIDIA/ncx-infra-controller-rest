@@ -206,6 +206,9 @@ func (m *Manager) FirmwareControl(
 		Target: &pb.UpdateComponentFirmwareRequest_PowerShelves{
 			PowerShelves: &pb.UpdatePowerShelfFirmwareTarget{
 				PowerShelfIds: powerShelfIDsProto(target.ComponentIDs),
+				Components: []pb.PowerShelfComponent{
+					pb.PowerShelfComponent_POWER_SHELF_COMPONENT_PMC,
+				},
 			},
 		},
 		TargetVersion: info.TargetVersion,

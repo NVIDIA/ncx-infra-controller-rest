@@ -33,6 +33,7 @@ type mockClient struct {
 	leakingMachineIds           []string
 	firmwareUpdateTimeWindowErr error // If set, SetFirmwareUpdateTimeWindow will return this error
 	adminPowerControlErr        error // If set, AdminPowerControl will return this error
+	desiredFirmwareVersions     []*pb.DesiredFirmwareVersionEntry
 }
 
 // NewMockClient returns a "GRPC" client that returns mock values so it can be used in unit tests.
@@ -166,6 +167,14 @@ func (c *mockClient) AddExpectedPowerShelf(ctx context.Context, req AddExpectedP
 	return nil
 }
 
+func (c *mockClient) InsertHealthReportOverride(ctx context.Context, machineID string, source string) error {
+	return nil
+}
+
+func (c *mockClient) RemoveHealthReportOverride(ctx context.Context, machineID string, source string) error {
+	return nil
+}
+
 func (c *mockClient) ComponentPowerControl(ctx context.Context, req *pb.ComponentPowerControlRequest) (*pb.ComponentPowerControlResponse, error) {
 	return &pb.ComponentPowerControlResponse{}, nil
 }
@@ -184,6 +193,26 @@ func (c *mockClient) ListComponentFirmwareVersions(ctx context.Context, req *pb.
 
 func (c *mockClient) GetComponentInventory(ctx context.Context, req *pb.GetComponentInventoryRequest) (*pb.GetComponentInventoryResponse, error) {
 	return &pb.GetComponentInventoryResponse{}, nil
+}
+
+func (c *mockClient) GetAllExpectedSwitchesLinked(_ context.Context) ([]LinkedExpectedSwitch, error) {
+	return nil, nil
+}
+
+func (c *mockClient) GetAllExpectedPowerShelvesLinked(_ context.Context) ([]LinkedExpectedPowerShelf, error) {
+	return nil, nil
+}
+
+func (c *mockClient) GetDesiredFirmwareVersions(_ context.Context) ([]*pb.DesiredFirmwareVersionEntry, error) {
+	return c.desiredFirmwareVersions, nil
+}
+
+func (c *mockClient) FindExploredEndpointsByIds(_ context.Context, _ []string) ([]*pb.ExploredEndpoint, error) {
+	return nil, nil
+}
+
+func (c *mockClient) SetMachineAutoUpdate(_ context.Context, _ string, _ bool) error {
+	return nil
 }
 
 func (c *mockClient) AddExpectedSwitchInfo(info ExpectedSwitchInfo) {

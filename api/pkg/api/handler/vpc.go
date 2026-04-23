@@ -697,38 +697,42 @@ func (uvh UpdateVPCHandler) Handle(c echo.Context) error {
 			}
 		}
 
-		nvllpDAO := cdbm.NewNVLinkLogicalPartitionDAO(uvh.dbSession)
-		nvllpID, err := uuid.Parse(*apiRequest.NVLinkLogicalPartitionID)
-		if err != nil {
-			logger.Error().Err(err).Msg("error parsing NVLink Logical Partition ID specified in request data")
-			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid NVLink Logical Partition ID specified in request data", nil)
-		}
+		// If a new NVLink Logical Partition ID is specified, validate it.
+		// if it is empty then user wants
+		if *apiRequest.NVLinkLogicalPartitionID != "" {
+			nvllpDAO := cdbm.NewNVLinkLogicalPartitionDAO(uvh.dbSession)
+			nvllpID, err := uuid.Parse(*apiRequest.NVLinkLogicalPartitionID)
+			if err != nil {
+				logger.Error().Err(err).Msg("error parsing NVLink Logical Partition ID specified in request data")
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid NVLink Logical Partition ID specified in request data", nil)
+			}
 
-		nvllPartition, err := nvllpDAO.GetByID(ctx, nil, nvllpID, nil)
-		if err != nil {
-			logger.Error().Err(err).Msg("error retrieving NVLink Logical Partition with ID specified in request data")
-			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve NVLink Logical Partition with ID specified in request data", nil)
-		}
+			nvllPartition, err := nvllpDAO.GetByID(ctx, nil, nvllpID, nil)
+			if err != nil {
+				logger.Error().Err(err).Msg("error retrieving NVLink Logical Partition with ID specified in request data")
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve NVLink Logical Partition with ID specified in request data", nil)
+			}
 
-		// Verify that the NVLink Logical Partition is associated with the VPC's Site
-		if nvllPartition.SiteID != vpc.SiteID {
-			logger.Error().Msg("NVLink Logical Partition in request does not belong to Site")
-			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "NVLink Logical Partition with ID specified in request data does not belong to Site", nil)
-		}
+			// Verify that the NVLink Logical Partition is associated with the VPC's Site
+			if nvllPartition.SiteID != vpc.SiteID {
+				logger.Error().Msg("NVLink Logical Partition in request does not belong to Site")
+				return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "NVLink Logical Partition with ID specified in request data does not belong to Site", nil)
+			}
 
-		// Verify that the NVLink Logical Partition is in the Ready state
-		if nvllPartition.Status != cdbm.NVLinkLogicalPartitionStatusReady {
-			logger.Error().Msg("NVLink Logical Partition in request is not in Ready state")
-			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "NVLink Logical Partition with ID specified in request data is not in Ready state", nil)
-		}
+			// Verify that the NVLink Logical Partition is in the Ready state
+			if nvllPartition.Status != cdbm.NVLinkLogicalPartitionStatusReady {
+				logger.Error().Msg("NVLink Logical Partition in request is not in Ready state")
+				return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "NVLink Logical Partition with ID specified in request data is not in Ready state", nil)
+			}
 
-		// Verify that the NVLink Logical Partition is associated with the VPC's Tenant
-		if nvllPartition.TenantID != tenant.ID {
-			logger.Error().Msg("NVLink Logical Partition in request does not belong to Tenant")
-			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "NVLink Logical Partition with ID specified in request data does not belong to Tenant", nil)
-		}
+			// Verify that the NVLink Logical Partition is associated with the VPC's Tenant
+			if nvllPartition.TenantID != tenant.ID {
+				logger.Error().Msg("NVLink Logical Partition in request does not belong to Tenant")
+				return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "NVLink Logical Partition with ID specified in request data does not belong to Tenant", nil)
+			}
 
-		defaultNvllPartitionId = &nvllpID
+			defaultNvllPartitionId = &nvllpID
+		}
 	}
 
 	// Start a database transaction
@@ -780,6 +784,12 @@ func (uvh UpdateVPCHandler) Handle(c echo.Context) error {
 		shouldClear = true
 	}
 
+	// If this request is attempting to clear the NVLink Logical Partition ID, set it.
+	if apiRequest.NVLinkLogicalPartitionID != nil && *apiRequest.NVLinkLogicalPartitionID == "" {
+		clearInput.NVLinkLogicalPartitionID = true
+		shouldClear = true
+	}
+
 	// Clear it in the db if something should be cleared.
 	if shouldClear {
 		vpc, err = vpcDAO.Clear(ctx, tx, clearInput)
@@ -810,9 +820,13 @@ func (uvh UpdateVPCHandler) Handle(c echo.Context) error {
 		NetworkSecurityGroupId: vpc.NetworkSecurityGroupID,
 	}
 
-	// Add default NVLink Logical Partition ID if it is present
-	if defaultNvllPartitionId != nil {
-		updateVpcRequest.DefaultNvlinkLogicalPartitionId = &cwssaws.NVLinkLogicalPartitionId{Value: defaultNvllPartitionId.String()}
+	// Propagate the NVLink Logical Partition ID change to the site controller
+	if apiRequest.NVLinkLogicalPartitionID != nil {
+		if *apiRequest.NVLinkLogicalPartitionID != "" {
+			updateVpcRequest.DefaultNvlinkLogicalPartitionId = &cwssaws.NVLinkLogicalPartitionId{Value: vpc.NVLinkLogicalPartitionID.String()}
+		} else {
+			updateVpcRequest.DefaultNvlinkLogicalPartitionId = &cwssaws.NVLinkLogicalPartitionId{Value: ""}
+		}
 	}
 
 	workflowOptions := temporalClient.StartWorkflowOptions{
@@ -1019,6 +1033,28 @@ func (uvvh UpdateVPCVirtualizationHandler) Handle(c echo.Context) error {
 	// Check that VPC belongs to the Tenant
 	if vpc.TenantID != tenant.ID {
 		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "VPC does not belong to current Tenant", nil)
+	}
+
+	subnetDAO := cdbm.NewSubnetDAO(uvvh.dbSession)
+	_, subnetCount, err := subnetDAO.GetAll(ctx, nil, cdbm.SubnetFilterInput{VpcIDs: []uuid.UUID{vpc.ID}}, cdbp.PageInput{Limit: cdb.GetIntPtr(0)}, nil)
+	if err != nil {
+		logger.Error().Err(err).Msg("error retrieving Subnets count from DB for VPC")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Subnets count for VPC", nil)
+	}
+
+	instanceDAO := cdbm.NewInstanceDAO(uvvh.dbSession)
+	instanceCount, err := instanceDAO.GetCount(ctx, nil, cdbm.InstanceFilterInput{VpcIDs: []uuid.UUID{vpc.ID}})
+	if err != nil {
+		logger.Error().Err(err).Msg("error retrieving Instances count from DB for VPC")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Instances count for VPC", nil)
+	}
+
+	if subnetCount > 0 {
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Virtualization Type cannot be changed while VPC contains one or more Subnets", nil)
+	}
+
+	if instanceCount > 0 {
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Virtualization Type cannot be changed while VPC contains one or more Instances", nil)
 	}
 
 	// Ensure that Tenant has access to Site
@@ -1280,6 +1316,7 @@ func NewGetAllVPCHandler(dbSession *cdb.Session, tc temporalClient.Client, cfg *
 // @Security ApiKeyAuth
 // @Param org path string true "Name of NGC organization"
 // @Param siteId query string false "Site ID"
+// @Param nvLinkLogicalPartitionId query string false "NVLink Logical Partition ID"
 // @Param status query string false "Filter by status" e.g. 'Pending', 'Error'"
 // @Param query query string false "Query input for full text search"
 // @Param includeRelation query string false "Related entities to include in response e.g. 'InfrastructureProvider', 'Site', 'Tenant'"
@@ -1358,23 +1395,37 @@ func (gavh GetAllVPCHandler) Handle(c echo.Context) error {
 		}
 	}
 
-	// Get site ID from query param
-	var siteID *uuid.UUID
+	// Get site IDs from query param
+	var siteIDs []uuid.UUID
 
-	siteIDStr := c.QueryParam("siteId")
-	if siteIDStr != "" {
-		parsedID, serr := uuid.Parse(siteIDStr)
-		if serr != nil {
-			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Site ID in query", nil)
+	siteIDStrs := qParams["siteId"]
+	if len(siteIDStrs) > 0 {
+		gavh.tracerSpan.SetAttribute(handlerSpan, attribute.StringSlice("siteId", siteIDStrs), logger)
+		for _, idStr := range siteIDStrs {
+			parsedID, serr := uuid.Parse(idStr)
+			if serr != nil {
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Invalid Site ID in query: %s", idStr), nil)
+			}
+			siteIDs = append(siteIDs, parsedID)
 		}
-		siteID = &parsedID
 
 		// Check for Site existence
 		stDAO := cdbm.NewSiteDAO(gavh.dbSession)
-		_, verr := stDAO.GetByID(ctx, nil, *siteID, nil, false)
-		if verr != nil {
-			logger.Warn().Err(verr).Msg("error retrieving Site from DB by ID")
-			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Could not retrieve Site with ID specified in query", nil)
+		sites, _, err := stDAO.GetAll(ctx, nil, cdbm.SiteFilterInput{SiteIDs: siteIDs}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
+		if err != nil {
+			logger.Warn().Err(err).Msg("error retrieving Sites from DB by IDs")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Could not retrieve Sites with IDs specified in query", nil)
+		}
+		// Build a set of site IDs for efficient lookup
+		sitesByID := make(map[uuid.UUID]struct{}, len(sites))
+		for _, site := range sites {
+			sitesByID[site.ID] = struct{}{}
+		}
+		// For each siteIDStr, check if the corresponding site exists
+		for _, siteID := range siteIDs {
+			if _, ok := sitesByID[siteID]; !ok {
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Could not find Site with ID specified in query: %s", siteID.String()), nil)
+			}
 		}
 	}
 
@@ -1388,17 +1439,17 @@ func (gavh GetAllVPCHandler) Handle(c echo.Context) error {
 	}
 
 	// Get status from query param
-	var status *string
-
-	statusQuery := c.QueryParam("status")
-	if statusQuery != "" {
-		_, ok := cdbm.VpcStatusMap[statusQuery]
-		if !ok {
-			logger.Warn().Msg(fmt.Sprintf("invalid value in status query: %v", statusQuery))
-			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Status value in query", nil)
+	var statuses []string
+	if statusStrings := qParams["status"]; len(statusStrings) != 0 {
+		gavh.tracerSpan.SetAttribute(handlerSpan, attribute.StringSlice("status", statusStrings), logger)
+		for _, status := range statusStrings {
+			_, ok := cdbm.VpcStatusMap[status]
+			if !ok {
+				logger.Warn().Msg(fmt.Sprintf("invalid value in status query: %v", status))
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Status value in query", nil)
+			}
+			statuses = append(statuses, status)
 		}
-		status = &statusQuery
-		gavh.tracerSpan.SetAttribute(handlerSpan, attribute.String("status", statusQuery), logger)
 	}
 
 	// Get Tenant for this org
@@ -1425,17 +1476,70 @@ func (gavh GetAllVPCHandler) Handle(c echo.Context) error {
 		TenantIDs:                []uuid.UUID{tenant.ID},
 	}
 
-	if siteID != nil {
-		vpcFilter.SiteIDs = []uuid.UUID{*siteID}
+	if len(siteIDs) > 0 {
+		vpcFilter.SiteIDs = siteIDs
 	}
 
-	if status != nil {
-		vpcFilter.Statuses = []string{*status}
+	if len(statuses) > 0 {
+		vpcFilter.Statuses = statuses
 	}
 
 	// Get network security group IDs from query param
-	if len(qParams["networkSecurityGroupId"]) > 0 {
-		vpcFilter.NetworkSecurityGroupIDs = qParams["networkSecurityGroupId"]
+	networkSecurityGroupIDs := qParams["networkSecurityGroupId"]
+	if len(networkSecurityGroupIDs) > 0 {
+		gavh.tracerSpan.SetAttribute(handlerSpan, attribute.StringSlice("networkSecurityGroupId", networkSecurityGroupIDs), logger)
+		networkSecurityGroupDAO := cdbm.NewNetworkSecurityGroupDAO(gavh.dbSession)
+
+		networkSecurityGroups, _, err := networkSecurityGroupDAO.GetAll(
+			ctx,
+			nil,
+			cdbm.NetworkSecurityGroupFilterInput{NetworkSecurityGroupIDs: networkSecurityGroupIDs, TenantIDs: []uuid.UUID{tenant.ID}},
+			cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)},
+			nil,
+		)
+		if err != nil {
+			logger.Error().Err(err).Msg("error retrieving Network Security Groups from DB")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Network Security Groups specified in query", nil)
+		}
+		networkSecurityGroupIDsMap := make(map[string]struct{}, len(networkSecurityGroups))
+		for _, networkSecurityGroup := range networkSecurityGroups {
+			networkSecurityGroupIDsMap[networkSecurityGroup.ID] = struct{}{}
+		}
+		for _, nsgID := range networkSecurityGroupIDs {
+			if _, ok := networkSecurityGroupIDsMap[nsgID]; !ok {
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Network Security Group ID: %s specified in query does not exist for current Tenant", nsgID), nil)
+			}
+		}
+		vpcFilter.NetworkSecurityGroupIDs = networkSecurityGroupIDs
+	}
+
+	qNvLinkLogicalPartitionIDStrs := qParams["nvLinkLogicalPartitionId"]
+	if len(qNvLinkLogicalPartitionIDStrs) > 0 {
+		gavh.tracerSpan.SetAttribute(handlerSpan, attribute.StringSlice("nvLinkLogicalPartitionId", qNvLinkLogicalPartitionIDStrs), logger)
+		nvllpDAO := cdbm.NewNVLinkLogicalPartitionDAO(gavh.dbSession)
+		nvLinkLogicalPartitionIDs := make([]uuid.UUID, 0, len(qNvLinkLogicalPartitionIDStrs))
+		for _, nvLinkLogicalPartitionIDStr := range qNvLinkLogicalPartitionIDStrs {
+			nvLinkLogicalPartitionID, err := uuid.Parse(nvLinkLogicalPartitionIDStr)
+			if err != nil {
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Invalid NVLink Logical Partition ID: %s in query", nvLinkLogicalPartitionIDStr), nil)
+			}
+			nvLinkLogicalPartitionIDs = append(nvLinkLogicalPartitionIDs, nvLinkLogicalPartitionID)
+		}
+		nvLinkLogicalPartitions, _, err := nvllpDAO.GetAll(ctx, nil, cdbm.NVLinkLogicalPartitionFilterInput{NVLinkLogicalPartitionIDs: nvLinkLogicalPartitionIDs, TenantIDs: []uuid.UUID{tenant.ID}}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
+		if err != nil {
+			logger.Error().Err(err).Msg("error retrieving NVLink Logical Partitions from DB")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve NVLink Logical Partitions specified in query", nil)
+		}
+		nvLinkLogicalPartitionIDsMap := make(map[uuid.UUID]struct{}, len(nvLinkLogicalPartitions))
+		for _, nvLinkLogicalPartition := range nvLinkLogicalPartitions {
+			nvLinkLogicalPartitionIDsMap[nvLinkLogicalPartition.ID] = struct{}{}
+		}
+		for _, nvLinkLogicalPartitionID := range nvLinkLogicalPartitionIDs {
+			if _, ok := nvLinkLogicalPartitionIDsMap[nvLinkLogicalPartitionID]; !ok {
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("NVLink Logical Partition ID: %s specified in query does not exist for current Tenant", nvLinkLogicalPartitionID.String()), nil)
+			}
+		}
+		vpcFilter.NVLinkLogicalPartitionIDs = nvLinkLogicalPartitionIDs
 	}
 
 	vpcPageInput := cdbp.PageInput{

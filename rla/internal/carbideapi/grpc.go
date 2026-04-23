@@ -36,6 +36,11 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+const (
+	healthProbeIDMaintenance               = "Maintenance"
+	classificationSuppressExternalAlerting = "SuppressExternalAlerting"
+)
+
 type grpcClient struct {
 	gclient     pb.ForgeClient
 	grpcTimeout time.Duration
@@ -435,7 +440,7 @@ func (c *grpcClient) AddExpectedPowerShelf(ctx context.Context, req AddExpectedP
 		BmcUsername:       req.BMCUsername,
 		BmcPassword:       req.BMCPassword,
 		ShelfSerialNumber: req.ShelfSerialNumber,
-		IpAddress:         req.IPAddress,
+		BmcIpAddress:      req.IPAddress,
 	}
 
 	if req.RackID != "" {
@@ -447,6 +452,48 @@ func (c *grpcClient) AddExpectedPowerShelf(ctx context.Context, req AddExpectedP
 		return fmt.Errorf("failed to add expected power shelf (bmc_mac=%s): %w", req.BMCMACAddress, err)
 	}
 
+	return nil
+}
+
+func (c *grpcClient) InsertHealthReportOverride(ctx context.Context, machineID string, source string) error {
+	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
+	defer cancel()
+
+	req := &pb.InsertHealthReportOverrideRequest{
+		MachineId: &pb.MachineId{Id: machineID},
+		Override: &pb.HealthReportOverride{
+			Report: &pb.HealthReport{
+				Source: source,
+				Alerts: []*pb.HealthProbeAlert{{
+					Id:              healthProbeIDMaintenance,
+					Message:         "Machine under RLA-managed maintenance",
+					Classifications: []string{classificationSuppressExternalAlerting},
+				}},
+			},
+			Mode: pb.OverrideMode_Replace,
+		},
+	}
+
+	_, err := c.gclient.InsertHealthReportOverride(ctx, req)
+	if err != nil {
+		return fmt.Errorf("failed to insert health report override for machine %s: %w", machineID, err)
+	}
+	return nil
+}
+
+func (c *grpcClient) RemoveHealthReportOverride(ctx context.Context, machineID string, source string) error {
+	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
+	defer cancel()
+
+	req := &pb.RemoveHealthReportOverrideRequest{
+		MachineId: &pb.MachineId{Id: machineID},
+		Source:    source,
+	}
+
+	_, err := c.gclient.RemoveHealthReportOverride(ctx, req)
+	if err != nil {
+		return fmt.Errorf("failed to remove health report override for machine %s: %w", machineID, err)
+	}
 	return nil
 }
 
@@ -478,6 +525,85 @@ func (c *grpcClient) GetComponentInventory(ctx context.Context, req *pb.GetCompo
 	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
 	defer cancel()
 	return c.gclient.GetComponentInventory(ctx, req)
+}
+
+func (c *grpcClient) GetAllExpectedSwitchesLinked(ctx context.Context) ([]LinkedExpectedSwitch, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
+	defer cancel()
+
+	resp, err := c.gclient.GetAllExpectedSwitchesLinked(ctx, &emptypb.Empty{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get all expected switches linked: %w", err)
+	}
+
+	var results []LinkedExpectedSwitch
+	for _, les := range resp.GetExpectedSwitches() {
+		results = append(results, linkedExpectedSwitchFromPb(les))
+	}
+	return results, nil
+}
+
+func (c *grpcClient) GetAllExpectedPowerShelvesLinked(ctx context.Context) ([]LinkedExpectedPowerShelf, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
+	defer cancel()
+
+	resp, err := c.gclient.GetAllExpectedPowerShelvesLinked(ctx, &emptypb.Empty{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get all expected power shelves linked: %w", err)
+	}
+
+	var results []LinkedExpectedPowerShelf
+	for _, leps := range resp.GetExpectedPowerShelves() {
+		results = append(results, linkedExpectedPowerShelfFromPb(leps))
+	}
+	return results, nil
+}
+
+func (c *grpcClient) GetDesiredFirmwareVersions(ctx context.Context) ([]*pb.DesiredFirmwareVersionEntry, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
+	defer cancel()
+
+	resp, err := c.gclient.GetDesiredFirmwareVersions(ctx, &pb.GetDesiredFirmwareVersionsRequest{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get desired firmware versions: %w", err)
+	}
+	return resp.GetEntries(), nil
+}
+
+func (c *grpcClient) FindExploredEndpointsByIds(ctx context.Context, bmcIPs []string) ([]*pb.ExploredEndpoint, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
+	defer cancel()
+
+	if len(bmcIPs) == 0 {
+		return nil, nil
+	}
+
+	resp, err := c.gclient.FindExploredEndpointsByIds(ctx, &pb.ExploredEndpointsByIdsRequest{
+		EndpointIds: bmcIPs,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to find explored endpoints by IDs: %w", err)
+	}
+	return resp.GetEndpoints(), nil
+}
+
+func (c *grpcClient) SetMachineAutoUpdate(ctx context.Context, machineID string, enable bool) error {
+	ctx, cancel := context.WithTimeout(ctx, c.grpcTimeout)
+	defer cancel()
+
+	action := pb.MachineSetAutoUpdateRequest_Enable
+	if !enable {
+		action = pb.MachineSetAutoUpdateRequest_Disable
+	}
+
+	_, err := c.gclient.MachineSetAutoUpdate(ctx, &pb.MachineSetAutoUpdateRequest{
+		MachineId: &pb.MachineId{Id: machineID},
+		Action:    action,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to set auto-update for machine %s: %w", machineID, err)
+	}
+	return nil
 }
 
 func (c *grpcClient) AddMachine(machine MachineDetail) {

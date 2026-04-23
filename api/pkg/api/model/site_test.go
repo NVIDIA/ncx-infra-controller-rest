@@ -304,6 +304,7 @@ func TestAPISiteUpdateRequest_Validate(t *testing.T) {
 		name       string
 		fields     fields
 		isProvider bool
+		isTenant   bool
 		wantErr    bool
 	}{
 		{
@@ -359,15 +360,15 @@ func TestAPISiteUpdateRequest_Validate(t *testing.T) {
 			wantErr:    false,
 		},
 		{
-			name: "validate update request success when requested by Tenant",
+			name: "validate update request failure, Tenant configuring this value is no longer supported",
 			fields: fields{
 				IsSerialConsoleSSHKeysEnabled: cdb.GetBoolPtr(true),
 			},
-			isProvider: false,
-			wantErr:    false,
+			isTenant: true,
+			wantErr:  true,
 		},
 		{
-			name: "validate update request failure when requested by Tenant",
+			name: "validate update request failure, Tenant changing Provider specific attributes not allowed",
 			fields: fields{
 				Name:                   cdb.GetStrPtr("test-site"),
 				Description:            cdb.GetStrPtr("Test Site Description"),
@@ -375,8 +376,8 @@ func TestAPISiteUpdateRequest_Validate(t *testing.T) {
 				IsSerialConsoleEnabled: cdb.GetBoolPtr(true),
 				RenewRegistrationToken: cdb.GetBoolPtr(true),
 			},
-			isProvider: false,
-			wantErr:    true,
+			isTenant: true,
+			wantErr:  true,
 		},
 	}
 	for _, tt := range tests {
@@ -391,7 +392,7 @@ func TestAPISiteUpdateRequest_Validate(t *testing.T) {
 				SerialConsoleMaxSessionLength: tt.fields.SerialConsoleMaxSessionLength,
 				IsSerialConsoleSSHKeysEnabled: tt.fields.IsSerialConsoleSSHKeysEnabled,
 			}
-			err := asur.Validate(tt.isProvider)
+			err := asur.Validate(tt.isProvider, tt.isTenant)
 
 			if tt.wantErr {
 				require.Error(t, err)

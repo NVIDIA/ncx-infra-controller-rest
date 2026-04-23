@@ -60,7 +60,7 @@ func TestAddBMC(t *testing.T) {
 	for _, m := range bmcMacs {
 		parsed, err := net.ParseMAC(m)
 		assert.NoError(t, err)
-		bmcs = append(bmcs, bmc.BMC{MAC: parsed})
+		bmcs = append(bmcs, bmc.BMC{MAC: bmc.MACAddress{HardwareAddr: parsed}})
 	}
 
 	comp := New(devicetypes.ComponentTypeCompute, nil, "", nil)

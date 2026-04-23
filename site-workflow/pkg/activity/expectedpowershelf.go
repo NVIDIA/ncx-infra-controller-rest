@@ -423,8 +423,8 @@ func expectedPowerShelfToRLAComponent(eps *cwssaws.ExpectedPowerShelf) *rlav1.Co
 		component.Position = pos
 	}
 
-	if eps.GetIpAddress() != "" {
-		ipAddr := eps.GetIpAddress()
+	if eps.GetBmcIpAddress() != "" {
+		ipAddr := eps.GetBmcIpAddress()
 		component.Bmcs[0].IpAddress = &ipAddr
 	}
 

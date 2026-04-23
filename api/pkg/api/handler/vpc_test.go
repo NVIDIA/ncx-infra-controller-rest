@@ -42,6 +42,7 @@ import (
 	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/paginator"
 	cdbu "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/util"
 	swe "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/error"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
@@ -93,6 +94,12 @@ func testVPCSetupSchema(t *testing.T, dbSession *cdb.Session) {
 	assert.Nil(t, err)
 	// create Status Details table
 	err = dbSession.DB.ResetModel(context.Background(), (*cdbm.StatusDetail)(nil))
+	assert.Nil(t, err)
+	// create NetworkSecurityGroup table
+	err = dbSession.DB.ResetModel(context.Background(), (*cdbm.NetworkSecurityGroup)(nil))
+	assert.Nil(t, err)
+	// create NVLinkLogicalPartition table
+	err = dbSession.DB.ResetModel(context.Background(), (*cdbm.NVLinkLogicalPartition)(nil))
 	assert.Nil(t, err)
 	// create VPC table
 	err = dbSession.DB.ResetModel(context.Background(), (*cdbm.Vpc)(nil))
@@ -256,6 +263,24 @@ func testVPCBuildVPCPrefix(t *testing.T, dbSession *cdb.Session, name string, tn
 	assert.Nil(t, err)
 
 	return vpcPrefix
+}
+
+func testVPCBuildNVLinkLogicalPartition(t *testing.T, dbSession *cdb.Session, name string, description *string, org string, site *cdbm.Site, tenant *cdbm.Tenant, status string, user *cdbm.User) *cdbm.NVLinkLogicalPartition {
+	nvllpDAO := cdbm.NewNVLinkLogicalPartitionDAO(dbSession)
+
+	nvllp, err := nvllpDAO.Create(context.Background(), nil, cdbm.NVLinkLogicalPartitionCreateInput{
+		Name:        name,
+		Description: description,
+		TenantOrg:   org,
+		SiteID:      site.ID,
+		TenantID:    tenant.ID,
+		Status:      status,
+		CreatedBy:   user.ID,
+	})
+
+	assert.Nil(t, err)
+
+	return nvllp
 }
 
 func TestCreateVPCHandler_Handle(t *testing.T) {
@@ -703,7 +728,7 @@ func TestCreateVPCHandler_Handle(t *testing.T) {
 				reqOrg:      tnOrg,
 				reqUser:     tnu,
 				respCode:    http.StatusBadRequest,
-				respMessage: "Label key must contain at least 1 character and a maximum of 255 characters",
+				respMessage: "label key must contain at least 1 character and a maximum of 255 characters",
 			},
 			wantErr:            false,
 			verifyChildSpanner: true,
@@ -844,6 +869,9 @@ func TestUpdateVPCHandler_Handle(t *testing.T) {
 	nvllp1 := testBuildNVLinkLogicalPartition(t, dbSession, "test-nvllp-1", cdb.GetStrPtr("Test NVLink Logical Partition"), tnOrg, st, tn, cdb.GetStrPtr(cdbm.NVLinkLogicalPartitionStatusReady), false)
 	assert.NotNil(t, nvllp1)
 
+	nvllp2 := testBuildNVLinkLogicalPartition(t, dbSession, "test-nvllp-2", cdb.GetStrPtr("Test NVLink Logical Partition 2"), tnOrg, st, tn, cdb.GetStrPtr(cdbm.NVLinkLogicalPartitionStatusReady), false)
+	assert.NotNil(t, nvllp2)
+
 	vpc := testVPCBuildVPC(t, dbSession, "test-vpc", ip, tn, st, cdb.GetStrPtr(cdbm.VpcEthernetVirtualizer), cdb.GetUUIDPtr(nvllp1.ID), map[string]string{"zone": "west1"}, cdbm.VpcStatusReady, tnu)
 	assert.NotNil(t, vpc)
 
@@ -927,11 +955,12 @@ func TestUpdateVPCHandler_Handle(t *testing.T) {
 	tst.Mock.On("TerminateWorkflow", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	tests := []struct {
-		name               string
-		fields             fields
-		args               args
-		wantErr            bool
-		verifyChildSpanner bool
+		name                         string
+		fields                       fields
+		args                         args
+		wantErr                      bool
+		verifyChildSpanner           bool
+		expectedNVLinkPartitionValue *string
 	}{
 		{
 			name: "test VPC update success",
@@ -1205,10 +1234,54 @@ func TestUpdateVPCHandler_Handle(t *testing.T) {
 				reqVPC:      vpc,
 				reqUser:     tnu,
 				respCode:    http.StatusBadRequest,
-				respMessage: "Label key must contain at least 1 character and a maximum of 255 characters",
+				respMessage: "label key must contain at least 1 character and a maximum of 255 characters",
 			},
 			wantErr:            false,
 			verifyChildSpanner: true,
+		},
+		{
+			name: "test VPC update to clear NVLink Logical Partition ID - success",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIVpcUpdateRequest{
+					Name:                     cdb.GetStrPtr("test-vpc"),
+					Description:              cdb.GetStrPtr("Test VPC Description"),
+					NVLinkLogicalPartitionID: cdb.GetStrPtr(""),
+				},
+				reqVPCID: vpc.ID.String(),
+				reqVPC:   vpc,
+				reqOrg:   tnOrg,
+				reqUser:  tnu,
+				respCode: http.StatusOK,
+			},
+			wantErr:                      false,
+			expectedNVLinkPartitionValue: cdb.GetStrPtr(""),
+		},
+		{
+			name: "test VPC update to set NVLink Logical Partition ID after clearing - success",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIVpcUpdateRequest{
+					Name:                     cdb.GetStrPtr("test-vpc"),
+					Description:              cdb.GetStrPtr("Test VPC Description"),
+					NVLinkLogicalPartitionID: cdb.GetStrPtr(nvllp2.ID.String()),
+				},
+				reqVPCID: vpc.ID.String(),
+				reqVPC:   vpc,
+				reqOrg:   tnOrg,
+				reqUser:  tnu,
+				respCode: http.StatusOK,
+			},
+			wantErr:                      false,
+			expectedNVLinkPartitionValue: cdb.GetStrPtr(nvllp2.ID.String()),
 		},
 	}
 	for _, tt := range tests {
@@ -1265,11 +1338,31 @@ func TestUpdateVPCHandler_Handle(t *testing.T) {
 			assert.NotEqual(t, rst.Updated.String(), tt.args.reqVPC.Updated.String())
 
 			if tt.args.reqData.NVLinkLogicalPartitionID != nil {
-				assert.Equal(t, *rst.NVLinkLogicalPartitionID, *tt.args.reqData.NVLinkLogicalPartitionID)
+				if *tt.args.reqData.NVLinkLogicalPartitionID == "" {
+					assert.Nil(t, rst.NVLinkLogicalPartitionID)
+				} else {
+					assert.Equal(t, *rst.NVLinkLogicalPartitionID, *tt.args.reqData.NVLinkLogicalPartitionID)
+				}
 			}
 
 			if tt.args.reqData.Labels != nil {
 				assert.Equal(t, len(rst.Labels), len(tt.args.reqData.Labels))
+			}
+
+			if tt.expectedNVLinkPartitionValue != nil {
+				var lastUpdateVPCReq *cwssaws.VpcUpdateRequest
+				for i := len(tsc.Mock.Calls) - 1; i >= 0; i-- {
+					call := tsc.Mock.Calls[i]
+					if call.Method == "ExecuteWorkflow" && len(call.Arguments) >= 4 {
+						if wfName, ok := call.Arguments[2].(string); ok && wfName == "UpdateVPC" {
+							lastUpdateVPCReq, _ = call.Arguments[3].(*cwssaws.VpcUpdateRequest)
+							break
+						}
+					}
+				}
+				require.NotNil(t, lastUpdateVPCReq, "UpdateVPC workflow should have been called")
+				require.NotNil(t, lastUpdateVPCReq.DefaultNvlinkLogicalPartitionId, "DefaultNvlinkLogicalPartitionId should be set in workflow request")
+				assert.Equal(t, *tt.expectedNVLinkPartitionValue, lastUpdateVPCReq.DefaultNvlinkLogicalPartitionId.Value)
 			}
 
 			if tt.verifyChildSpanner {
@@ -1300,7 +1393,7 @@ func TestUpdateVirtualizationVPCHandler_Handle(t *testing.T) {
 	dbSession := testSiteInitDB(t)
 	defer dbSession.Close()
 
-	testVPCSetupSchema(t, dbSession)
+	testInstanceSetupSchema(t, dbSession)
 
 	ipOrg := "test-provider-org"
 	ipOrgRoles := []string{"FORGE_PROVIDER_ADMIN"}
@@ -1348,6 +1441,18 @@ func TestUpdateVirtualizationVPCHandler_Handle(t *testing.T) {
 
 	vpc4 := testVPCBuildVPC(t, dbSession, "test-vpc-3", ip, tn, st2, cdb.GetStrPtr(cdbm.VpcFNN), nil, map[string]string{"zone": "west6"}, cdbm.VpcStatusReady, tnu)
 	assert.NotNil(t, vpc4)
+
+	vpcWithSubnet := testVPCBuildVPC(t, dbSession, "test-vpc-with-subnet", ip, tn, st, cdb.GetStrPtr(cdbm.VpcEthernetVirtualizer), nil, map[string]string{"zone": "west4"}, cdbm.VpcStatusReady, tnu)
+	assert.NotNil(t, vpcWithSubnet)
+	assert.NotNil(t, testVPCBuildSubnet(t, dbSession, "test-subnet", tn, vpcWithSubnet, tnu))
+
+	vpcWithInstance := testVPCBuildVPC(t, dbSession, "test-vpc-with-instance", ip, tn, st, cdb.GetStrPtr(cdbm.VpcEthernetVirtualizer), nil, map[string]string{"zone": "west5"}, cdbm.VpcStatusReady, tnu)
+	assert.NotNil(t, vpcWithInstance)
+	instanceType := testInstanceBuildInstanceType(t, dbSession, ip, "test-instance-type", st, cdbm.InstanceStatusReady)
+	assert.NotNil(t, instanceType)
+	allocationConstraint := testInstanceSiteBuildAllocationContraints(t, dbSession, al, cdbm.AllocationResourceTypeInstanceType, instanceType.ID, cdbm.AllocationConstraintTypeReserved, 1, tnu)
+	assert.NotNil(t, allocationConstraint)
+	assert.NotNil(t, testInstanceBuildInstance(t, dbSession, "test-instance", tn.ID, ip.ID, st.ID, &instanceType.ID, vpcWithInstance.ID, nil, nil, nil, cdbm.InstanceStatusReady))
 
 	e := echo.New()
 	cfg := common.GetTestConfig()
@@ -1494,6 +1599,48 @@ func TestUpdateVirtualizationVPCHandler_Handle(t *testing.T) {
 				reqUser:     tnu,
 				respCode:    http.StatusBadRequest,
 				respMessage: "VPC virtualization type is already set to FNN",
+			},
+			wantErr:            false,
+			verifyChildSpanner: true,
+		},
+		{
+			name: "test VPC virtualization update API endpoint fail when VPC has subnets",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIVpcVirtualizationUpdateRequest{
+					NetworkVirtualizationType: "FNN",
+				},
+				reqOrg:      tnOrg,
+				reqVPCID:    vpcWithSubnet.ID.String(),
+				reqVPC:      vpcWithSubnet,
+				reqUser:     tnu,
+				respCode:    http.StatusBadRequest,
+				respMessage: "Virtualization Type cannot be changed while VPC contains one or more Subnets",
+			},
+			wantErr:            false,
+			verifyChildSpanner: true,
+		},
+		{
+			name: "test VPC virtualization update API endpoint fail when VPC has instances",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIVpcVirtualizationUpdateRequest{
+					NetworkVirtualizationType: "FNN",
+				},
+				reqOrg:      tnOrg,
+				reqVPCID:    vpcWithInstance.ID.String(),
+				reqVPC:      vpcWithInstance,
+				reqUser:     tnu,
+				respCode:    http.StatusBadRequest,
+				respMessage: "Virtualization Type cannot be changed while VPC contains one or more Instances",
 			},
 			wantErr:            false,
 			verifyChildSpanner: true,
@@ -1868,12 +2015,15 @@ func TestGetAllVPCHandler_Handle(t *testing.T) {
 
 	tnOrg := "test-tenant-org"
 	tnOrgRoles := []string{"FORGE_TENANT_ADMIN"}
+	tn2Org := "test-tenant-org-2"
 
 	ipu := testVPCBuildUser(t, dbSession, "test-starfleet-id-1", ipOrg, ipOrgRoles)
 	ip := testVPCSiteBuildInfrastructureProvider(t, dbSession, "test-infrastructure-provider", ipOrg, ipu)
 
 	tnu := testVPCBuildUser(t, dbSession, "test-starfleet-id-2", tnOrg, tnOrgRoles)
 	tn := testVPCBuildTenant(t, dbSession, "test-tenant", tnOrg, tnu)
+	tnu2 := testVPCBuildUser(t, dbSession, "test-starfleet-id-3", tn2Org, tnOrgRoles)
+	tn2 := testVPCBuildTenant(t, dbSession, "test-tenant-2", tn2Org, tnu2)
 
 	st := testVPCBuildSite(t, dbSession, ip, "test-site-1", false, false, cdbm.SiteStatusRegistered, ipu)
 	assert.NotNil(t, st)
@@ -1887,11 +2037,14 @@ func TestGetAllVPCHandler_Handle(t *testing.T) {
 	al2 := testVPCSiteBuildAllocation(t, dbSession, st2, tn, "test-allocation-2", ipu)
 	assert.NotNil(t, al2)
 
-	// Site with no allocations
+	// Site with no allocations for first tenant
 	// We'll add VPCs to simulate a site where tenant had allocations
 	// but they were deleted without deleting VPCs.
 	st3 := testVPCBuildSite(t, dbSession, ip, "test-site-3", false, false, cdbm.SiteStatusRegistered, ipu)
 	assert.NotNil(t, st3)
+
+	al3 := testVPCSiteBuildAllocation(t, dbSession, st3, tn2, "test-allocation-3", ipu)
+	assert.NotNil(t, al3)
 
 	// NSGs
 	nsg1 := testBuildNetworkSecurityGroup(t, dbSession, "nsg1", tn, st, cdbm.NetworkSecurityGroupStatusReady)
@@ -1900,8 +2053,22 @@ func TestGetAllVPCHandler_Handle(t *testing.T) {
 	assert.NotNil(t, nsg2)
 	nsg3 := testBuildNetworkSecurityGroup(t, dbSession, "nsg3", tn, st3, cdbm.NetworkSecurityGroupStatusReady)
 	assert.NotNil(t, nsg3)
+	nsg4 := testBuildNetworkSecurityGroup(t, dbSession, "nsg4", tn2, st3, cdbm.NetworkSecurityGroupStatusReady)
+	assert.NotNil(t, nsg4)
 
 	nsgs := []*cdbm.NetworkSecurityGroup{nsg1, nsg2, nsg3}
+
+	// NVLink Logical Partitions
+	nvllp1 := testVPCBuildNVLinkLogicalPartition(t, dbSession, "nvllp1", cdb.GetStrPtr("Test NVLink Logical Partition"), tnOrg, st, tn, cdbm.NVLinkLogicalPartitionStatusReady, tnu)
+	assert.NotNil(t, nvllp1)
+	nvllp2 := testVPCBuildNVLinkLogicalPartition(t, dbSession, "nvllp2", cdb.GetStrPtr("Test NVLink Logical Partition"), tnOrg, st2, tn, cdbm.NVLinkLogicalPartitionStatusReady, tnu)
+	assert.NotNil(t, nvllp2)
+	nvllp3 := testVPCBuildNVLinkLogicalPartition(t, dbSession, "nvllp3", cdb.GetStrPtr("Test NVLink Logical Partition"), tnOrg, st3, tn, cdbm.NVLinkLogicalPartitionStatusReady, tnu)
+	assert.NotNil(t, nvllp3)
+	nvllp4 := testVPCBuildNVLinkLogicalPartition(t, dbSession, "nvllp4", cdb.GetStrPtr("Test NVLink Logical Partition"), tn2Org, st3, tn2, cdbm.NVLinkLogicalPartitionStatusReady, tnu2)
+	assert.NotNil(t, nvllp4)
+
+	nvllps := []*cdbm.NVLinkLogicalPartition{nvllp1, nvllp2, nvllp3}
 
 	sites := []*cdbm.Site{st, st2, st3}
 	siteCount := len(sites)
@@ -1916,8 +2083,16 @@ func TestGetAllVPCHandler_Handle(t *testing.T) {
 	for i := 0; i < totalCount; i++ {
 		curSite := sites[i%siteCount]
 		curNsg := nsgs[i%siteCount]
+		curNvllp := nvllps[i%siteCount]
 
-		vpc := testVPCBuildVPC(t, dbSession, fmt.Sprintf("test-vpc-%02d", i), ip, tn, curSite, cdb.GetStrPtr(cdbm.VpcEthernetVirtualizer), nil, map[string]string{"zone": "test-vpc-%02d"}, cdbm.VpcStatusPending, tnu)
+		var status string
+		if i%2 == 0 {
+			status = cdbm.VpcStatusReady
+		} else {
+			status = cdbm.VpcStatusPending
+		}
+
+		vpc := testVPCBuildVPC(t, dbSession, fmt.Sprintf("test-vpc-%02d", i), ip, tn, curSite, cdb.GetStrPtr(cdbm.VpcEthernetVirtualizer), &curNvllp.ID, map[string]string{"zone": fmt.Sprintf("test-vpc-%02d", i)}, status, tnu)
 		assert.NotNil(t, vpc)
 
 		// Add the NSG of the site to the VPC
@@ -2000,6 +2175,24 @@ func TestGetAllVPCHandler_Handle(t *testing.T) {
 			},
 			wantCount:      vpcsPerSite,
 			wantTotalCount: vpcsPerSite,
+			wantRespCode:   http.StatusOK,
+		},
+		{
+			name: "get all VPCs with multiple sites filter success",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				org: tnOrg,
+				query: url.Values{
+					"siteId": []string{st.ID.String(), st2.ID.String()},
+				},
+				user: tnu,
+			},
+			wantCount:      paginator.DefaultLimit,
+			wantTotalCount: vpcsPerSite * 2,
 			wantRespCode:   http.StatusOK,
 		},
 		{
@@ -2179,7 +2372,7 @@ func TestGetAllVPCHandler_Handle(t *testing.T) {
 				user: tnu,
 			},
 			wantCount:      paginator.DefaultLimit,
-			wantTotalCount: totalCount,
+			wantTotalCount: totalCount / 2,
 			wantRespCode:   http.StatusOK,
 		},
 		{
@@ -2233,7 +2426,7 @@ func TestGetAllVPCHandler_Handle(t *testing.T) {
 				user: tnu,
 			},
 			wantCount:      paginator.DefaultLimit,
-			wantTotalCount: totalCount,
+			wantTotalCount: totalCount / 2,
 			wantRespCode:   http.StatusOK,
 		},
 		{
@@ -2255,6 +2448,24 @@ func TestGetAllVPCHandler_Handle(t *testing.T) {
 			wantRespCode:   http.StatusOK,
 		},
 		{
+			name: "get all VPCs by multiple statuses success",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				org: tnOrg,
+				query: url.Values{
+					"status": []string{cdbm.VpcStatusPending, cdbm.VpcStatusReady},
+				},
+				user: tnu,
+			},
+			wantCount:      paginator.DefaultLimit,
+			wantTotalCount: totalCount,
+			wantRespCode:   http.StatusOK,
+		},
+		{
 			name: "get all VPCs failure, BadStatus status value in request",
 			fields: fields{
 				dbSession: dbSession,
@@ -2265,6 +2476,150 @@ func TestGetAllVPCHandler_Handle(t *testing.T) {
 				org: tnOrg,
 				query: url.Values{
 					"status": []string{"BadStatus"},
+				},
+				user: tnu,
+			},
+			wantCount:      0,
+			wantTotalCount: 0,
+			wantRespCode:   http.StatusBadRequest,
+		},
+		{
+			name: "get all VPCs, filter by network security group ID success",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				org: tnOrg,
+				query: url.Values{
+					"networkSecurityGroupId": []string{nsg1.ID},
+				},
+				user: tnu,
+			},
+			wantCount:      vpcsPerSite,
+			wantTotalCount: vpcsPerSite,
+			wantRespCode:   http.StatusOK,
+		},
+		{
+			name: "get all VPCs, filter by multiple network security group IDs success",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				org: tnOrg,
+				query: url.Values{
+					"networkSecurityGroupId": []string{nsg1.ID, nsg2.ID},
+				},
+				user: tnu,
+			},
+			wantCount:      paginator.DefaultLimit,
+			wantTotalCount: vpcsPerSite * 2,
+			wantRespCode:   http.StatusOK,
+		},
+		{
+			name: "get all VPCs, filter by network security group ID failure, network security group ID does not exist",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				org: tnOrg,
+				query: url.Values{
+					"networkSecurityGroupId": []string{uuid.NewString()},
+				},
+				user: tnu,
+			},
+			wantCount:      0,
+			wantTotalCount: 0,
+			wantRespCode:   http.StatusBadRequest,
+		},
+		{
+			name: "get all VPCs, filter by network security group belonging to different tenant failure",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				org: tnOrg,
+				query: url.Values{
+					"networkSecurityGroupId": []string{nsg4.ID},
+				},
+				user: tnu,
+			},
+			wantCount:      0,
+			wantTotalCount: 0,
+			wantRespCode:   http.StatusBadRequest,
+		},
+		{
+			name: "get all VPCs, filter by nvlink logical partition ID success",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				org: tnOrg,
+				query: url.Values{
+					"nvLinkLogicalPartitionId": []string{nvllp1.ID.String()},
+				},
+				user: tnu,
+			},
+			wantCount:      vpcsPerSite,
+			wantTotalCount: vpcsPerSite,
+			wantRespCode:   http.StatusOK,
+		},
+		{
+			name: "get all VPCs, filter by multiple nvlink logical partition IDs success",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				org: tnOrg,
+				query: url.Values{
+					"nvLinkLogicalPartitionId": []string{nvllp1.ID.String(), nvllp2.ID.String()},
+				},
+				user: tnu,
+			},
+			wantCount:      paginator.DefaultLimit,
+			wantTotalCount: vpcsPerSite * 2,
+			wantRespCode:   http.StatusOK,
+		},
+		{
+			name: "get all VPCs, filter by nvlink logical partition ID failure, nvlink logical partition ID does not exist",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				org: tnOrg,
+				query: url.Values{
+					"nvLinkLogicalPartitionId": []string{uuid.NewString()},
+				},
+				user: tnu,
+			},
+			wantCount:      0,
+			wantTotalCount: 0,
+			wantRespCode:   http.StatusBadRequest,
+		},
+		{
+			name: "get all VPCs, filter by nvlink logical partition ID failure, nvlink logical partition ID is not owned by current tenant",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				org: tnOrg,
+				query: url.Values{
+					"nvLinkLogicalPartitionId": []string{nvllp4.ID.String()},
 				},
 				user: tnu,
 			},
@@ -2428,7 +2783,7 @@ func TestDeleteVPCHandler_Handle(t *testing.T) {
 	alc := common.TestBuildAllocationConstraint(t, dbSession, al, it, nil, 1, ipu)
 	assert.NotNil(t, alc)
 
-	instance := common.TestBuildInstance(t, dbSession, "test-instance", al.ID, alc.ID, tn1.ID, ip.ID, st.ID, it.ID, vpc3.ID, &machine.ID, os.ID)
+	instance := common.TestBuildInstance(t, dbSession, "test-instance", tn1.ID, ip.ID, st.ID, it.ID, vpc3.ID, &machine.ID, os.ID)
 	assert.NotNil(t, instance)
 
 	subnet := testVPCBuildSubnet(t, dbSession, "test-subnet", tn1, vpc2, tnu1)

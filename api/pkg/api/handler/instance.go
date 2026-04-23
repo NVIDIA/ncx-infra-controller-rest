@@ -95,7 +95,7 @@ func (cih CreateInstanceHandler) buildInstanceCreateRequestOsConfig(c echo.Conte
 			RunProvisioningInstructionsOnEveryBoot: *apiRequest.AlwaysBootWithCustomIpxe, // Set by the earlier call to ValidateAndSetOperatingSystemData
 			PhoneHomeEnabled:                       *apiRequest.PhoneHomeEnabled,         // Set by the earlier call to ValidateAndSetOperatingSystemData
 			Variant: &cwssaws.OperatingSystem_Ipxe{
-				Ipxe: &cwssaws.IpxeOperatingSystem{
+				Ipxe: &cwssaws.InlineIpxe{
 					IpxeScript: *apiRequest.IpxeScript,
 				},
 			},
@@ -193,7 +193,7 @@ func (cih CreateInstanceHandler) buildInstanceCreateRequestOsConfig(c echo.Conte
 			RunProvisioningInstructionsOnEveryBoot: *apiRequest.AlwaysBootWithCustomIpxe,
 			PhoneHomeEnabled:                       *apiRequest.PhoneHomeEnabled,
 			Variant: &cwssaws.OperatingSystem_Ipxe{
-				Ipxe: &cwssaws.IpxeOperatingSystem{
+				Ipxe: &cwssaws.InlineIpxe{
 					IpxeScript: *apiRequest.IpxeScript,
 				},
 			},
@@ -324,7 +324,11 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve tenant for org", nil)
 	}
 
-	// verify tenant-id in request, the api validation ensures non-nil tenantID in request
+	// Deprecated: tenantId in request body. Infer from org when not provided.
+	if apiRequest.TenantID == "" {
+		apiRequest.TenantID = tenant.ID.String()
+	}
+
 	apiTenant, err := common.GetTenantFromIDString(ctx, nil, apiRequest.TenantID, cih.dbSession)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error retrieving tenant from request")
@@ -433,6 +437,32 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 	dbInterfaces := []cdbm.Interface{}
 	isInterfaceDeviceInfoPresent := false
 
+	pfWithinVPC := []uuid.UUID{}
+	allFoundVpcIds := goset.NewSet[uuid.UUID]()
+
+	// Prepare the unique set of all VPC IDs for this instance.
+	allRequestedVpcIds := goset.NewSet[uuid.UUID]()
+	for _, vpcID := range apiRequest.SecondaryVpcIDs {
+		id, err := uuid.Parse(vpcID)
+		if err != nil {
+			logger.Error().Msgf("invalid VPC ID %v in `secondaryVpcIds` in request data", vpcID)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Invalid VPC ID `%s` in secondaryVpcIds in request data", vpcID), nil)
+		}
+
+		if !allRequestedVpcIds.Add(id) {
+			logger.Error().Msgf("duplicate ID %s found in `secondaryVpcIds`", id)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Duplicate ID `%s` found in `secondaryVpcIds`", id), nil)
+		}
+	}
+
+	// Now add the primary VPC to the list.
+	// If add failed, it means the ID already existed, but
+	// the primary VPC of the instance shouldn't exist in the secondary list.
+	if !allRequestedVpcIds.Add(vpc.ID) {
+		logger.Error().Msgf("primary VPC ID: %s for Instance must not be listed in `secondaryVpcIds`", vpc.ID)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Primary VPC ID: %s for Instance must not be listed in `secondaryVpcIds`", vpc.ID), nil)
+	}
+
 	for _, ifc := range apiRequest.Interfaces {
 		if ifc.SubnetID != nil {
 			subnetID := uuid.MustParse(*ifc.SubnetID)
@@ -490,9 +520,43 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("VPC Prefix: %v specified in request data is not in Ready state", vpcPrefixID), nil)
 			}
 
-			if vpcPrefix.VpcID != vpc.ID {
-				logger.Warn().Msg(fmt.Sprintf("VPC Prefix: %v specified in request does not match with VPC", vpcPrefixID))
-				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("VPC Prefix: %v specified in request does not match with VPC", vpcPrefixID), nil)
+			if vpcPrefix.SiteID != site.ID {
+				logger.Warn().Msg(fmt.Sprintf("VPC Prefix: %v specified in request does not belong to Site", vpcPrefixID))
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("VPC Prefix: %v specified in request does not belong to Site", vpcPrefixID), nil)
+			}
+
+			// If the interface is associated with a VPC ID that the user
+			// didn't expect, reject the request.
+			if !allRequestedVpcIds.Contains(vpcPrefix.VpcID) {
+				logger.Error().Msgf("One or more Interfaces specify VPC Prefix: %s belonging to VPC: %s which is not specified in 'vpcId' or 'secondaryVpcIds'", vpcPrefix.ID, vpcPrefix.VpcID)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("One or more Interfaces specify VPC Prefix: %s belonging to VPC: %s which is not specified in 'vpcId' or 'secondaryVpcIds'", vpcPrefix.ID, vpcPrefix.VpcID), nil)
+			}
+
+			// Collect the VPC IDs actually found based on
+			// interface definitions.
+			allFoundVpcIds.Add(vpcPrefix.VpcID)
+
+			if ifc.Device != nil && ifc.DeviceInstance != nil {
+				isInterfaceDeviceInfoPresent = true
+			}
+
+			// The requirement that the VpcID of a prefix being associated with an interface must match the VPC of the instance
+			// is only valid for the first interface where ifc.IsPhysical==true.
+			// When DeviceInstance is present, "first interface" is the PF of the first DPU, defined as DeviceInstance==0.
+			// For all other interfaces, there is no such requirement, and instances are allowed to attach to different VPCs
+			// using additional interfaces.
+			if ifc.IsPhysical {
+				// If no device info, append it.
+				// If DeviceInstance > 0, just ignore it.
+				// If DeviceInstance==0, then just replace the slice.
+				// This will give precedence to DeviceInstance==0
+				// for defining whether the primary.  DeviceInstance > 0
+				// is by definition not the primary.
+				if !isInterfaceDeviceInfoPresent {
+					pfWithinVPC = append(pfWithinVPC, vpcPrefix.VpcID)
+				} else if ifc.DeviceInstance != nil && *ifc.DeviceInstance == 0 {
+					pfWithinVPC = []uuid.UUID{vpcPrefix.VpcID}
+				}
 			}
 
 			if vpc.NetworkVirtualizationType == nil || *vpc.NetworkVirtualizationType != cdbm.VpcFNN {
@@ -500,12 +564,9 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("VPC: %v specified in request must have FNN network virtualization type in order to create VPC Prefix based interfaces", vpc.ID), nil)
 			}
 
-			if ifc.Device != nil && ifc.DeviceInstance != nil {
-				isInterfaceDeviceInfoPresent = true
-			}
-
 			dbInterfaces = append(dbInterfaces, cdbm.Interface{
 				VpcPrefixID:        &vpcPrefixID,
+				VpcPrefix:          vpcPrefix, // We attach this here so it can be used when we convert to the API model.
 				RequestedIpAddress: ifc.IPAddress,
 				Device:             ifc.Device,
 				DeviceInstance:     ifc.DeviceInstance,
@@ -515,6 +576,33 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 			})
 		}
 	}
+
+	// If there are ethernet interfaces for this Instance,
+	// validate the network plan.
+	if len(dbInterfaces) > 0 &&
+		vpc.NetworkVirtualizationType != nil &&
+		*vpc.NetworkVirtualizationType == cdbm.VpcFNN {
+		// Throw an error if there are somehow no PFs (shouldn't
+		// be possible at this point), or if the VPC of the first
+		// PF doesn't match the (primary) VPC of the instance.
+		if len(pfWithinVPC) == 0 || pfWithinVPC[0] != vpc.ID {
+			logger.Error().Msg("the primary physical interface must use a VPC prefix that matches with Instance VPC")
+
+			if !isInterfaceDeviceInfoPresent {
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "The primary physical Interface must use a VPC Prefix that belongs to VPC specified in `vpcId`", nil)
+			} else {
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "The primary physical Interface for deviceInstance: 0 must use a VPC Prefix that belongs to VPC specified in `vpcId`", nil)
+			}
+		}
+		// Reject the requeste if the planned VPC associations doesn't match
+		// the reality of the VPC associations found based on interface
+		// definitions.
+		if allRequestedVpcIds.Cardinality() != allFoundVpcIds.Cardinality() {
+			logger.Error().Msg("one or more Interfaces in request data specify VPC Prefixes that do not belong to VPCs specified in `vpcId` or `secondaryVpcIds`")
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "One or more Interfaces in request data specify VPC Prefixes that do not belong to VPCs specified in `vpcId` or `secondaryVpcIds`", nil)
+		}
+	}
+
 	// End validating interfaces
 
 	// Begin validating DPU Extension Service Deployments
@@ -717,7 +805,8 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 
 	// ==================== Step 4: Machine Selection  ====================
 
-	var allowUnhealthyMachine bool
+	// Default to false, will be set to true for data sent to Core if allowUnhealthyMachine is set to true in request
+	allowUnhealthyMachine := false
 
 	// Begin validating Machine ID
 	if apiRequest.MachineID != nil {
@@ -727,6 +816,13 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 		}
 
 		mDAO := cdbm.NewMachineDAO(cih.dbSession)
+
+		// Acquire a lock on the MachineID
+		err = tx.TryAcquireAdvisoryLock(ctx, cdb.GetAdvisoryLockIDFromString(*apiRequest.MachineID), nil)
+		if err != nil {
+			logger.Error().Err(err).Msg("Failed to acquire advisory lock on Machine")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to lock Machine: %s for Instance creation. It is likely being considered for another Instance creation request", *apiRequest.MachineID), nil)
+		}
 
 		// Retrieve Machine by ID
 		machine, err = mDAO.GetByID(ctx, nil, *apiRequest.MachineID, nil, false)
@@ -746,7 +842,6 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 
 		// Validate Machine availability. Note: allowUnhealthyMachine also bypasses
 		// the Ready status check, not just health - consider renaming the parameter later.
-		allowUnhealthyMachine := false
 		if apiRequest.AllowUnhealthyMachine != nil {
 			allowUnhealthyMachine = *apiRequest.AllowUnhealthyMachine
 		}
@@ -763,17 +858,41 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Machine: %s is assigned to an Instance, cannot be used for new Instance", machine.ID), nil)
 		}
 
-		// Check Machine health status unless allowUnhealthyMachine is true
-		if !allowUnhealthyMachine && machine.Status != cdbm.MachineStatusReady {
-			logger.Warn().Str("MachineID", machine.ID).Bool("AllowUnhealthyMachine", allowUnhealthyMachine).Msg("Machine is not ready, cannot be used for new Instance")
-			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Machine: %s has status: %s, set `allowUnhealthyMachine` to true in request data to proceed", machine.ID, machine.Status), nil)
-		}
+		// Check if it's possible to provision the Machine
+		if machine.Status == cdbm.MachineStatusReady {
+			logger.Info().Str("MachineID", machine.ID).Str("Status", machine.Status).Bool("AllowUnhealthyMachine", allowUnhealthyMachine).Msg("Machine is Ready, proceeding with Instance creation")
+		} else {
+			isProvisionable := false
 
-		// Acquire a lock on the MachineID
-		err = tx.TryAcquireAdvisoryLock(ctx, cdb.GetAdvisoryLockIDFromString(machine.ID), nil)
-		if err != nil {
-			logger.Error().Err(err).Msg("Failed to acquire advisory lock on Machine")
-			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to lock Machine: %s for Instance creation. It is likely being considered for another Instance creation request", machine.ID), nil)
+			// Get the controller state from the machine
+			controllerState := machine.GetControllerState()
+			if strings.HasPrefix(controllerState, cdbm.MachineStatusReady) {
+				isProvisionable = true
+			}
+
+			mlogger := logger.With().Str("MachineID", machine.ID).Str("Status", machine.Status).Str("ControllerState", controllerState).Bool("AllowUnhealthyMachine", allowUnhealthyMachine).Logger()
+
+			if allowUnhealthyMachine {
+				if isProvisionable {
+					mlogger.Info().Msg("Machine is provisionable, proceeding with Instance creation")
+				} else {
+					if machine.Status == cdbm.MachineStatusMaintenance || machine.Status == cdbm.MachineStatusError {
+						mlogger.Warn().Msg("Machine has controller state that does not allow Instance creation")
+						return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Machine: %s has controller state: %s that does not allow Instance creation even with `allowUnhealthyMachine` set to true", machine.ID, controllerState), nil)
+					} else {
+						mlogger.Warn().Msg("Machine has status that does not allow Instance creation")
+						return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Machine: %s has status: %s that does not allow Instance creation even with `allowUnhealthyMachine` set to true", machine.ID, machine.Status), nil)
+					}
+				}
+			} else {
+				if isProvisionable {
+					mlogger.Warn().Msg("Machine is not in Ready state, but it can be provisioned by setting `allowUnhealthyMachine` to true in request")
+					return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Machine: %s is not in Ready state, but it can be provisioned by setting `allowUnhealthyMachine` to true in request", machine.ID), nil)
+				} else {
+					mlogger.Warn().Msg("Machine has status that does not allow Instance creation")
+					return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Machine: %s has status: %s that does not allow Instance creation", machine.ID, machine.Status), nil)
+				}
+			}
 		}
 
 		// Update the machine status to assigned
@@ -792,9 +911,6 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 
 		instanceTypeID = machine.InstanceTypeID
 	} // End validating Machine ID
-
-	// Allocation Constraint to be used for the Instance
-	var selectedAllocationConstraint *cdbm.AllocationConstraint
 
 	// Begin validating Instance Type ID
 	if apiRequest.InstanceTypeID != nil {
@@ -817,12 +933,11 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to retrieve Instance Type with ID: %s specified in request data", *instanceTypeID), nil)
 		}
 
-		// Acquire an advisory lock on the tenant ID and instanceType ID on which instance is being creating
-		// this lock is released when the transaction commits or rolls back
-		err = tx.TryAcquireAdvisoryLock(ctx, cdb.GetAdvisoryLockIDFromString(fmt.Sprintf("%s-%s", tenant.ID.String(), instanceType.ID.String())), nil)
+		// Acquire the shared quota lock for this tenant/site/instance-type pool.
+		// This lock is released when the transaction commits or rolls back.
+		err = common.AcquireInstanceTypeQuotaLock(ctx, tx, tenant.ID, instanceType.ID)
 		if err != nil {
-			// TODO: Add a retry here
-			logger.Error().Err(err).Msg("Failed to acquire advisory lock on Tenant and Instance Type")
+			logger.Error().Err(err).Msg("Failed to acquire advisory lock on Instance Type quota pool")
 			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Error creating Instance, detected multiple parallel request on Instance Type by Tenant", nil)
 		}
 
@@ -856,49 +971,28 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 		if instanceType.SiteID != nil {
 			siteIDs = []uuid.UUID{*instanceType.SiteID}
 		}
-		instances, insTotal, err := instanceDAO.GetAll(ctx, tx, cdbm.InstanceFilterInput{TenantIDs: []uuid.UUID{tenant.ID}, SiteIDs: siteIDs, InstanceTypeIDs: []uuid.UUID{instanceType.ID}}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
+		_, insTotal, err := instanceDAO.GetAll(ctx, tx, cdbm.InstanceFilterInput{
+			TenantIDs:       []uuid.UUID{tenant.ID},
+			SiteIDs:         siteIDs,
+			InstanceTypeIDs: []uuid.UUID{instanceType.ID},
+		}, cdbp.PageInput{}, nil)
 		if err != nil {
 			logger.Error().Err(err).Msg("error retrieving Active Instances from DB for Tenant and InstanceType")
 			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve active instances for Tenant and Instance Type, DB error", nil)
 		}
 
-		// Build map allocation constraint ID which has been used by Instance
-		usedMapAllocationConstraintIDs := map[uuid.UUID]int{}
-		for _, inst := range instances {
-			// WARNING
-			// TODO: Currently no instances can be created without a constraint ID
-			// but that will be changing.  When it does, this will need to be handled differently.
-			if inst.AllocationConstraintID == nil {
-				logger.Error().Msgf("found Instance missing AllocationConstraintID")
-				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Instance is missing Allocation Constraint ID", nil)
-			}
-			usedMapAllocationConstraintIDs[*inst.AllocationConstraintID] += 1
-		}
-
-		// Calculate total constraint value
+		// Calculate the total constraint value across all matching allocations.
 		totalConstraintValue := 0
 		for _, alcs := range alconstraints {
 			totalConstraintValue += alcs.ConstraintValue
 		}
 
-		// Allocation constraints
-		if len(alconstraints) > 0 && insTotal >= totalConstraintValue {
+		// If the current number of active instances has already
+		// reached or exceeded the limit, then we can't add one
+		// more.
+		if insTotal >= totalConstraintValue {
 			return cutil.NewAPIErrorResponse(c, http.StatusForbidden,
 				"Tenant has reached the maximum number of Instances for Instance Type specified in request data", nil)
-		}
-
-		// Validate the currently active instances of the requested instance type for the tenant with allocation constraints
-		for _, alcs := range alconstraints {
-			if usedMapAllocationConstraintIDs[alcs.ID] < alcs.ConstraintValue {
-				selectedAllocationConstraint = &alcs
-				break
-			}
-		}
-
-		// Allocation constraints
-		if selectedAllocationConstraint == nil {
-			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError,
-				"Error determining available Allocation for Instance, potential data issue", nil)
 		}
 
 		// Select unallocated Machine for the requested instance type
@@ -914,8 +1008,6 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 	} // if apiRequest.InstanceTypeID != nil
 
 	// NOTE: At this stage, we have a Machine ID whether it was provided in request or selected through Instance Type
-
-	// ==================== Step 5: Machine Capability Validation  ====================
 
 	mcDAO := cdbm.NewMachineCapabilityDAO(cih.dbSession)
 
@@ -1145,7 +1237,7 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 		}
 	}
 
-	// ==================== Step 6: Create Instance Records  ====================
+	// ==================== Step 5: Create Instance Records  ====================
 
 	instanceCreateInput := cdbm.InstanceCreateInput{
 		Name:                     apiRequest.Name,
@@ -1168,12 +1260,10 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 		CreatedBy:                dbUser.ID,
 	}
 
-	// NOTE: Set InstanceTypeID only if it is provided in the request. For Instances created with an Instance Type ID, we expect Allocation information
-	// to be present. Since Machine ID based Instance creation does not require Allocation information, setting InstanceTypeID will create data integrity issues.
+	// NOTE: Set InstanceTypeID only if it is provided in the request.
+	// Machine ID based Instance creation does not require an Instance Type.
 	if apiRequest.InstanceTypeID != nil {
 		instanceCreateInput.InstanceTypeID = instanceTypeID
-		instanceCreateInput.AllocationID = &selectedAllocationConstraint.AllocationID
-		instanceCreateInput.AllocationConstraintID = &selectedAllocationConstraint.ID
 	}
 
 	instance, err := instanceDAO.Create(ctx, tx, instanceCreateInput)
@@ -1235,6 +1325,7 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 		}
 
 		ifc := *retifc
+		ifc.VpcPrefix = dbifc.VpcPrefix // We created the interface in the DB based on the values in dbifc, so we can populate this as well.
 		ifcs = append(ifcs, ifc)
 
 		interfaceConfig := &cwssaws.InstanceInterfaceConfig{
@@ -1418,7 +1509,7 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to get new Status Detail for Instance", nil)
 	}
 
-	// ==================== Step 7: Workflow Trigger  ====================
+	// ==================== Step 6: Workflow Trigger  ====================
 
 	// Get the temporal client for the site we are working with.
 	stc, err := cih.scp.GetClientByID(instance.SiteID)
@@ -1472,8 +1563,9 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 		},
 		AllowUnhealthyMachine: allowUnhealthyMachine,
 	}
-	if instanceTypeID != nil {
-		createInstanceRequest.InstanceTypeId = cdb.GetStrPtr(instanceTypeID.String())
+
+	if apiRequest.InstanceTypeID != nil {
+		createInstanceRequest.InstanceTypeId = cdb.GetStrPtr(*apiRequest.InstanceTypeID)
 	}
 
 	workflowOptions := temporalClient.StartWorkflowOptions{
@@ -1530,7 +1622,7 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 
 	logger.Info().Str("Workflow ID", wid).Msg("completed synchronous create Instance workflow")
 
-	// ==================== Step 8: Commit & Response ====================
+	// ==================== Step 7: Commit & Response ====================
 
 	// Commit the DB transaction after the synchronous workflow has completed without error
 	err = tx.Commit()
@@ -1634,7 +1726,7 @@ func (uih UpdateInstanceHandler) handleReboot(c echo.Context, logger *zerolog.Lo
 
 	// Get the instance subnets record from the db
 	ifcDAO := cdbm.NewInterfaceDAO(uih.dbSession)
-	retifc, _, err := ifcDAO.GetAll(ctx, tx, cdbm.InterfaceFilterInput{InstanceIDs: []uuid.UUID{instance.ID}}, cdbp.PageInput{}, nil)
+	retifc, _, err := ifcDAO.GetAll(ctx, tx, cdbm.InterfaceFilterInput{InstanceIDs: []uuid.UUID{instance.ID}}, cdbp.PageInput{}, []string{cdbm.SubnetRelationName, cdbm.VpcPrefixRelationName})
 	if err != nil {
 		logger.Error().Err(err).Msg("error retrieving Instance Subnets Details from DB")
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Instance Subnets for Instance", nil)
@@ -1677,6 +1769,7 @@ func (uih UpdateInstanceHandler) handleReboot(c echo.Context, logger *zerolog.Lo
 	logger.Info().Msg("triggering instance reboot workflow")
 
 	// Add context deadlines
+	reqCtx := ctx
 	ctx, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
 	defer cancel()
 
@@ -1732,6 +1825,13 @@ func (uih UpdateInstanceHandler) handleReboot(c echo.Context, logger *zerolog.Lo
 
 	// Create response
 	apiInstance := model.NewAPIInstance(ui, instance.Site, retifc, nil, nil, nil, dbskgs, ssds)
+	if ui.NetworkSecurityGroupID == nil {
+		err = AttachVpcNsgPropagationDetailsToApiInstance(c, reqCtx, logger, uih.dbSession, ui, retifc, apiInstance)
+		if err != nil {
+			logger.Error().Err(err).Msg("failed to attach VPC NSG propagation details to rebooted Instance response")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve VPC NSG propagation details for Instance", nil)
+		}
+	}
 
 	logger.Info().Msg("finishing rebootHandler")
 
@@ -1761,7 +1861,7 @@ func (uih UpdateInstanceHandler) buildInstanceUpdateRequestOsConfig(c echo.Conte
 			RunProvisioningInstructionsOnEveryBoot: instance.AlwaysBootWithCustomIpxe,
 			PhoneHomeEnabled:                       *apiRequest.PhoneHomeEnabled, // Set by the earlier call to ValidateAndSetOperatingSystemData
 			Variant: &cwssaws.OperatingSystem_Ipxe{
-				Ipxe: &cwssaws.IpxeOperatingSystem{
+				Ipxe: &cwssaws.InlineIpxe{
 					IpxeScript: *apiRequest.IpxeScript,
 				},
 			},
@@ -1903,7 +2003,7 @@ func (uih UpdateInstanceHandler) buildInstanceUpdateRequestOsConfig(c echo.Conte
 				RunProvisioningInstructionsOnEveryBoot: alwaysBootWithCustomIpxe,
 				PhoneHomeEnabled:                       phoneHomeEnabled,
 				Variant: &cwssaws.OperatingSystem_Ipxe{
-					Ipxe: &cwssaws.IpxeOperatingSystem{
+					Ipxe: &cwssaws.InlineIpxe{
 						IpxeScript: *ipxeScript,
 					},
 				},
@@ -1926,7 +2026,7 @@ func (uih UpdateInstanceHandler) buildInstanceUpdateRequestOsConfig(c echo.Conte
 		RunProvisioningInstructionsOnEveryBoot: alwaysBootWithCustomIpxe,
 		PhoneHomeEnabled:                       phoneHomeEnabled,
 		Variant: &cwssaws.OperatingSystem_Ipxe{
-			Ipxe: &cwssaws.IpxeOperatingSystem{
+			Ipxe: &cwssaws.InlineIpxe{
 				IpxeScript: *ipxeScript,
 			},
 		},
@@ -2185,6 +2285,31 @@ func (uih UpdateInstanceHandler) Handle(c echo.Context) error {
 	// Validate each Interface against fetched data
 	dbInterfaces := []cdbm.Interface{}
 	isDeviceInfoPresent := false
+	pfWithinVPC := []uuid.UUID{}
+	allFoundVpcIds := goset.NewSet[uuid.UUID]()
+
+	// Prepare the unique set of all VPC IDs for this instance update.
+	allRequestedVpcIds := goset.NewSet[uuid.UUID]()
+	for _, vpcID := range apiRequest.SecondaryVpcIDs {
+		id, err := uuid.Parse(vpcID)
+		if err != nil {
+			logger.Error().Msgf("invalid VPC ID %v in secondaryVpcIds in request data", vpcID)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Invalid VPC ID `%s` in secondaryVpcIds in request data", vpcID), nil)
+		}
+
+		if !allRequestedVpcIds.Add(id) {
+			logger.Error().Msgf("duplicate ID %s found in `secondaryVpcIds`", id)
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Duplicate ID `%s` found in `secondaryVpcIds`", id), nil)
+		}
+	}
+
+	// Now add the primary VPC to the list.
+	// If add failed, it means the ID already existed, but
+	// the primary VPC of the instance shouldn't exist in the secondary list.
+	if !allRequestedVpcIds.Add(vpc.ID) {
+		logger.Error().Msgf("primary VPC ID: %s for Instance must not be listed in `secondaryVpcIds`", vpc.ID)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Primary VPC ID: %s for Instance must not be listed in `secondaryVpcIds`", vpc.ID), nil)
+	}
 
 	for _, ifc := range apiRequest.Interfaces {
 		if ifc.SubnetID != nil {
@@ -2241,9 +2366,43 @@ func (uih UpdateInstanceHandler) Handle(c echo.Context) error {
 				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("VPC Prefix: %v specified in request data is not in Ready state", vpcPrefixID), nil)
 			}
 
-			if vpcPrefix.VpcID != vpc.ID {
-				logger.Warn().Msg(fmt.Sprintf("VPC Prefix: %v specified in request does not match with VPC", vpcPrefixID))
-				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("VPC Prefix: %v specified in request does not match with VPC", vpcPrefixID), nil)
+			if vpcPrefix.SiteID != site.ID {
+				logger.Warn().Msg(fmt.Sprintf("VPC Prefix: %v specified in request does not belong to Site", vpcPrefixID))
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("VPC Prefix: %v specified in request does not belong to Site", vpcPrefixID), nil)
+			}
+
+			// If the interface is associated with a VPC ID that the user
+			// didn't expect, reject the request.
+			if !allRequestedVpcIds.Contains(vpcPrefix.VpcID) {
+				logger.Error().Msgf("One or more Interfaces specify VPC Prefix: %s belonging to VPC: %s which is not specified in 'vpcId' or 'secondaryVpcIds'", vpcPrefix.ID, vpcPrefix.VpcID)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("One or more Interfaces specify VPC Prefix: %s belonging to VPC: %s which is not specified in 'vpcId' or 'secondaryVpcIds'", vpcPrefix.ID, vpcPrefix.VpcID), nil)
+			}
+
+			// Collect the VPC IDs actually found based on
+			// interface definitions.
+			allFoundVpcIds.Add(vpcPrefix.VpcID)
+
+			if ifc.Device != nil && ifc.DeviceInstance != nil {
+				isDeviceInfoPresent = true
+			}
+
+			// The requirement that the VpcID of a prefix being associated with an interface must match the VPC of the instance
+			// is only valid for the first interface where ifc.IsPhysical==true.
+			// When DeviceInstance is present, "first interface" is the PF of the first DPU, defined as DeviceInstance==0.
+			// For all other interfaces, there is no such requirement, and instances are allowed to attach to different VPCs
+			// using additional interfaces.
+			if ifc.IsPhysical {
+				// If no device info, append it.
+				// If DeviceInstance > 0, just ignore it.
+				// If DeviceInstance==0, then just replace the slice.
+				// This will give precedence to DeviceInstance==0
+				// for defining whether the primary.  DeviceInstance > 0
+				// is by definition not the primary.
+				if !isDeviceInfoPresent {
+					pfWithinVPC = append(pfWithinVPC, vpcPrefix.VpcID)
+				} else if ifc.DeviceInstance != nil && *ifc.DeviceInstance == 0 {
+					pfWithinVPC = []uuid.UUID{vpcPrefix.VpcID}
+				}
 			}
 
 			if vpc.NetworkVirtualizationType == nil || *vpc.NetworkVirtualizationType != cdbm.VpcFNN {
@@ -2251,18 +2410,35 @@ func (uih UpdateInstanceHandler) Handle(c echo.Context) error {
 				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("VPC: %v specified in request must have FNN network virtualization type in order to create VPC Prefix based interfaces", instance.VpcID), nil)
 			}
 
-			if ifc.Device != nil && ifc.DeviceInstance != nil {
-				isDeviceInfoPresent = true
-			}
-
 			dbInterfaces = append(dbInterfaces, cdbm.Interface{
 				VpcPrefixID:        &vpcPrefixID,
+				VpcPrefix:          vpcPrefix, // We attach this here so it can be used when we convert to the API model.
 				RequestedIpAddress: ifc.IPAddress,
 				Device:             ifc.Device,
 				DeviceInstance:     ifc.DeviceInstance,
 				VirtualFunctionID:  ifc.VirtualFunctionID,
 				IsPhysical:         ifc.IsPhysical,
 				Status:             cdbm.InterfaceStatusPending})
+		}
+	}
+
+	// If there are ethernet interfaces for this Instance,
+	// validate the network plan.
+	if len(dbInterfaces) > 0 &&
+		vpc.NetworkVirtualizationType != nil &&
+		*vpc.NetworkVirtualizationType == cdbm.VpcFNN {
+		if len(pfWithinVPC) == 0 || pfWithinVPC[0] != vpc.ID {
+			logger.Error().Msg("the primary physical interface must use a VPC prefix that matches with Instance VPC")
+
+			if !isDeviceInfoPresent {
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "The physical Interface must use a VPC Prefix that belongs to VPC specified in `vpcId`", nil)
+			} else {
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "The physical Interface for deviceInstance: 0 must use a VPC Prefix that belongs to VPC specified in `vpcId`", nil)
+			}
+		}
+		if allRequestedVpcIds.Cardinality() != allFoundVpcIds.Cardinality() {
+			logger.Error().Msg("one or more Interfaces in request data specify VPC Prefixes that do not belong to VPCs specified in `vpcId` or `secondaryVpcIds`")
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "One or more Interfaces in request data specify VPC Prefixes that do not belong to VPCs specified in `vpcId` or `secondaryVpcIds`", nil)
 		}
 	}
 
@@ -2785,13 +2961,14 @@ func (uih UpdateInstanceHandler) Handle(c echo.Context) error {
 				CreatedBy:          dbUser.ID,
 			}
 
-			dbifc, serr := ifcDAO.Create(ctx, tx, input)
+			newDbifc, serr := ifcDAO.Create(ctx, tx, input)
 			if serr != nil {
 				logger.Error().Err(serr).Msg("error creating Instance Interface DB entry")
 				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Instance Interface entry for Instance, DB error", nil)
 			}
 
-			ifc := *dbifc
+			ifc := *newDbifc
+			ifc.VpcPrefix = dbifc.VpcPrefix // We created the interface in the DB based on the values in dbifc, so we can populate this as well.
 			// Add the new Interface to the list of new Interfaces
 			newdbIfcs = append(newdbIfcs, ifc)
 		}
@@ -2955,6 +3132,7 @@ func (uih UpdateInstanceHandler) Handle(c echo.Context) error {
 	}
 
 	if apiRequest.NVLinkInterfaces != nil {
+		nvllpIDs := goset.NewSet[uuid.UUID]()
 		for _, apiNvlIfc := range apiRequest.NVLinkInterfaces {
 			// NVLink Logical Partition
 			nvllPartitionID, err := uuid.Parse(apiNvlIfc.NVLinkLogicalPartitionID)
@@ -2962,12 +3140,26 @@ func (uih UpdateInstanceHandler) Handle(c echo.Context) error {
 				logger.Warn().Err(err).Msg("error parsing NVLink Logical Partition id in instance NVLink Interface request")
 				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("NVLink Logical Partition ID: %v specified in request data is not valid", apiNvlIfc.NVLinkLogicalPartitionID), nil)
 			}
+			nvllpIDs.Add(nvllPartitionID)
+		}
 
-			// Validate NVLink Logical Partition
-			nvllPartition, err := nvllpDAO.GetByID(ctx, nil, nvllPartitionID, nil)
+		nvllpIDMap := make(map[string]*cdbm.NVLinkLogicalPartition)
+
+		if nvllpIDs.Cardinality() > 0 {
+			nvllps, _, err := nvllpDAO.GetAll(ctx, nil, cdbm.NVLinkLogicalPartitionFilterInput{NVLinkLogicalPartitionIDs: nvllpIDs.ToSlice()}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
 			if err != nil {
-				logger.Error().Err(err).Msg("error retrieving NVLink Logical Partition from DB by ID")
-				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve NVLink Logical Partition with ID specified in request data, DB error", nil)
+				logger.Error().Err(err).Msg("error retrieving NVLink Logical Partitions from DB by IDs")
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve NVLink Logical Partitions specified in request data, DB error", nil)
+			}
+			for i := range nvllps {
+				nvllpIDMap[nvllps[i].ID.String()] = &nvllps[i]
+			}
+		}
+
+		for _, apiNvlIfc := range apiRequest.NVLinkInterfaces {
+			nvllPartition, ok := nvllpIDMap[apiNvlIfc.NVLinkLogicalPartitionID]
+			if !ok {
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Could not find NVLink Logical Partition with ID: %v specified in request data", apiNvlIfc.NVLinkLogicalPartitionID), nil)
 			}
 
 			newNvlIfc, err := nvlIfcDAO.Create(ctx, tx, cdbm.NVLinkInterfaceCreateInput{
@@ -3183,6 +3375,7 @@ func (uih UpdateInstanceHandler) Handle(c echo.Context) error {
 	logger.Info().Msg("triggering instance update workflow")
 
 	// Add context deadlines
+	reqCtx := ctx
 	ctx, cancel := context.WithTimeout(ctx, cutil.WorkflowContextTimeout)
 	defer cancel()
 
@@ -3256,8 +3449,119 @@ func (uih UpdateInstanceHandler) Handle(c echo.Context) error {
 	// Create response
 	apiInstance := model.NewAPIInstance(ui, site, newdbIfcs, newIbIfcs, updateDesds, newNvlIfcs, dbskgs, ssds)
 
+	// If the instance has no NSG ID, then we need to check if its parent VPC does.
+	// We'll need to pull that separately because the user might not have asked for
+	// the VPC relation, so we can't assume that it's there.
+
+	if ui.NetworkSecurityGroupID == nil {
+		err = AttachVpcNsgPropagationDetailsToApiInstance(c, reqCtx, &logger, uih.dbSession, ui, newdbIfcs, apiInstance)
+		if err != nil {
+			return err
+		}
+	}
+
 	logger.Info().Msg("finishing API handler")
 	return c.JSON(http.StatusOK, apiInstance)
+}
+
+// AttachVpcNsgPropagationDetailsToApiInstance attaches NSG propagation details to an APIInstance.
+// It returns NewAPIErrorResponse directly.
+func AttachVpcNsgPropagationDetailsToApiInstance(c echo.Context, ctx context.Context, logger *zerolog.Logger, dbSession *cdb.Session, instance *cdbm.Instance, interfaces []cdbm.Interface, apiInstance *model.APIInstance) error {
+
+	// If there are no ethernet interfaces, there is no VPC attachment to check for NSG
+	// propagation.
+	if len(interfaces) == 0 {
+		return nil
+	}
+
+	// Get _all_ the VPCs with which this Instance is associated.
+	// Only an instance in a primary VPC that uses FNN virtualization
+	// can span multiple VPCs, and the primary interface would still
+	// be within the primary VPC of the instance, so we can init
+	// the list with that.
+	vpcIDs := goset.NewSet[uuid.UUID]()
+	for _, ifc := range interfaces {
+		if ifc.VpcPrefix != nil {
+			vpcIDs.Add(ifc.VpcPrefix.VpcID)
+		}
+
+		if ifc.Subnet != nil {
+			vpcIDs.Add(ifc.Subnet.VpcID)
+		}
+	}
+
+	vpcDAO := cdbm.NewVpcDAO(dbSession)
+
+	vpcs, _, err := vpcDAO.GetAll(ctx, nil, cdbm.VpcFilterInput{VpcIDs: vpcIDs.ToSlice()}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
+	if err != nil {
+		logger.Error().Err(err).Msg("error retrieving VPC DB entity")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve VPC for Instance", nil)
+	}
+
+	// If we somehow found no VPCs, that's simply incorrect.
+	if len(vpcs) == 0 {
+		logger.Error().Err(err).Msg("no VPC found for Instance based on Interfaces")
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to find any VPC for Instance based on Interfaces", nil)
+	}
+
+	vpcCountWithNsgTotal := 0
+	vpcCountWithNsgPropagated := 0
+
+	for _, vpc := range vpcs {
+
+		// If we inherited an NSG from this VPC, then see if we're propagated.
+		if vpc.NetworkSecurityGroupID != nil {
+
+			// We found an attached VPC that has an NSG attached,
+			// so we'll need to track propagation.
+			vpcCountWithNsgTotal++
+
+			if vpc.NetworkSecurityGroupPropagationDetails != nil {
+				// If the instance wasn't found in the list of unpropagated instances, then we're propagated.
+				if !slices.Contains(vpc.NetworkSecurityGroupPropagationDetails.GetUnpropagatedInstanceIds(), instance.ID.String()) {
+					// We're propagated, so count it.
+					vpcCountWithNsgPropagated++
+				}
+			}
+		}
+	}
+
+	if vpcCountWithNsgTotal > 0 {
+		// We've only inherited if our NSG ID is null _and_ the parent
+		// NSG ID is not null. I.e., at least one VPC is using an NSG.
+		apiInstance.NetworkSecurityGroupInherited = true
+
+		switch {
+		case vpcCountWithNsgPropagated == 0:
+			apiInstance.NetworkSecurityGroupPropagationDetails = &model.APINetworkSecurityGroupPropagationDetails{
+				ObjectID:       instance.ID.String(),
+				DetailedStatus: model.APINetworkSecurityGroupPropagationDetailedStatusNone,
+				Status:         model.APINetworkSecurityGroupPropagationStatusSynchronizing,
+			}
+		case vpcCountWithNsgPropagated < vpcCountWithNsgTotal:
+			apiInstance.NetworkSecurityGroupPropagationDetails = &model.APINetworkSecurityGroupPropagationDetails{
+				ObjectID:       instance.ID.String(),
+				DetailedStatus: model.APINetworkSecurityGroupPropagationDetailedStatusPartial,
+				Status:         model.APINetworkSecurityGroupPropagationStatusSynchronizing,
+			}
+		case vpcCountWithNsgPropagated == vpcCountWithNsgTotal:
+			apiInstance.NetworkSecurityGroupPropagationDetails = &model.APINetworkSecurityGroupPropagationDetails{
+				ObjectID:       instance.ID.String(),
+				DetailedStatus: model.APINetworkSecurityGroupPropagationDetailedStatusFull,
+				Status:         model.APINetworkSecurityGroupPropagationStatusSynchronized,
+			}
+		default:
+			apiInstance.NetworkSecurityGroupPropagationDetails = &model.APINetworkSecurityGroupPropagationDetails{
+				ObjectID:       instance.ID.String(),
+				DetailedStatus: model.APINetworkSecurityGroupPropagationDetailedStatusUnknown,
+				Status:         model.APINetworkSecurityGroupPropagationStatusError,
+			}
+
+		}
+
+	}
+
+	return nil
 }
 
 // ~~~~~ Get Handler ~~~~~ //
@@ -3450,41 +3754,11 @@ func (gih GetInstanceHandler) Handle(c echo.Context) error {
 	// Create response
 	ins := model.NewAPIInstance(instance, site, ifcs, ibIfcs, desds, nvlIfcs, dbskgs, ssds)
 
-	// If the instance has no NSG ID, then we need to check if its parent VPC does.
-	// We'll need to pull that separately because the user might not have asked for
-	// the VPC relation, so we can't assume that it's there.
-
+	// If the instance has no NSG ID, then we need to check if any parent VPC does.
 	if instance.NetworkSecurityGroupID == nil {
-		vpcDAO := cdbm.NewVpcDAO(gih.dbSession)
-
-		vpc, err := vpcDAO.GetByID(ctx, nil, instance.VpcID, nil)
+		err = AttachVpcNsgPropagationDetailsToApiInstance(c, ctx, &logger, gih.dbSession, instance, ifcs, ins)
 		if err != nil {
-			logger.Error().Err(err).Msg("error retrieving VPC DB entity")
-			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve VPC for Instance", nil)
-		}
-
-		// We've only inherited if our NSG ID is null _and_ the parent
-		// NSG ID is not null.
-		ins.NetworkSecurityGroupInherited = vpc.NetworkSecurityGroupID != nil
-
-		// If we inherited our NSG, then see if we're propagated.
-		if ins.NetworkSecurityGroupInherited {
-
-			// We can default to non/configuring and then switch
-			// if we're actually propagated.
-			ins.NetworkSecurityGroupPropagationDetails = &model.APINetworkSecurityGroupPropagationDetails{
-				ObjectID:       instanceID.String(),
-				DetailedStatus: model.APINetworkSecurityGroupPropagationDetailedStatusNone,
-				Status:         model.APINetworkSecurityGroupPropagationStatusSynchronizing,
-			}
-
-			if vpc.NetworkSecurityGroupPropagationDetails != nil {
-				// If the instance wasn't found in the list of unpropagated instances, then we're propagated.
-				if !slices.Contains(vpc.NetworkSecurityGroupPropagationDetails.GetUnpropagatedInstanceIds(), instanceID.String()) {
-					ins.NetworkSecurityGroupPropagationDetails.DetailedStatus = model.APINetworkSecurityGroupPropagationDetailedStatusFull
-					ins.NetworkSecurityGroupPropagationDetails.Status = model.APINetworkSecurityGroupPropagationStatusSynchronized
-				}
-			}
+			return err
 		}
 	}
 
@@ -3867,6 +4141,15 @@ func (gaih GetAllInstanceHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Instances for Site", nil)
 	}
 
+	// Make a map for instanceID -> ref Instance
+	// for some easy look ups later when we need
+	// to compile info for NSGs.
+	dbInstancesByID := map[uuid.UUID]*cdbm.Instance{}
+	for idx := range dbInstances {
+		ins := &dbInstances[idx]
+		dbInstancesByID[ins.ID] = ins
+	}
+
 	// Get status details
 	sdDAO := cdbm.NewStatusDetailDAO(gaih.dbSession)
 
@@ -3894,15 +4177,51 @@ func (gaih GetAllInstanceHandler) Handle(c echo.Context) error {
 	nvlDAO := cdbm.NewNVLinkInterfaceDAO(gaih.dbSession)
 	skgiaDAO := cdbm.NewSSHKeyGroupInstanceAssociationDAO(gaih.dbSession)
 
+	// Create a map for instanceID -> set of VPCs
+	vpcsByInstance := map[uuid.UUID]goset.Set[uuid.UUID]{}
+
 	ifcs, _, serr := ifcDAO.GetAll(ctx, nil, cdbm.InterfaceFilterInput{InstanceIDs: insIDs}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, []string{cdbm.SubnetRelationName, cdbm.VpcPrefixRelationName})
 	if serr != nil {
 		// Log error and continue
 		logger.Error().Err(serr).Msg("error retrieving Instance Subnets for Instance from DB")
 	}
+
+	// We'll need to pull the VPC details for any instances that aren't setting NSG ID
+	// to decide if they're inheriting one from their parent VPC, and then figure out
+	// their propagation status.  This needs to done separately because we can't assume
+	// that the user requested the VPC relation.
+
+	inheritVpcIDs := goset.NewSet[uuid.UUID]()
+
 	ifcMap := map[uuid.UUID][]cdbm.Interface{}
 	for _, ifc := range ifcs {
 		cifc := ifc
 		ifcMap[ifc.InstanceID] = append(ifcMap[ifc.InstanceID], cifc)
+
+		ins := dbInstancesByID[ifc.InstanceID]
+		// We're only concerned about VPCs for instances with no
+		// NSG attached since they'd inherit from their associated
+		// VPCs.
+		if ins != nil && ins.NetworkSecurityGroupID == nil {
+			if vpcsByInstance[ifc.InstanceID] == nil {
+				vpcsByInstance[ifc.InstanceID] = goset.NewSet[uuid.UUID]()
+			}
+
+			// Collect the sets of _all_ VPC IDs for the instances so we can use
+			// it later for determining NSG propagation.
+			if ifc.VpcPrefix != nil {
+				vpcsByInstance[ifc.InstanceID].Add(ifc.VpcPrefix.VpcID)
+				inheritVpcIDs.Add(ifc.VpcPrefix.VpcID)
+			}
+
+			if ifc.Subnet != nil {
+				vpcsByInstance[ifc.InstanceID].Add(ifc.Subnet.VpcID)
+				inheritVpcIDs.Add(ifc.Subnet.VpcID)
+
+			}
+
+		}
+
 	}
 
 	// Get the instance infiniband interface record from the db
@@ -3977,25 +4296,10 @@ func (gaih GetAllInstanceHandler) Handle(c echo.Context) error {
 		skgiasMap[skgia.InstanceID] = append(skgiasMap[skgia.InstanceID], *cskgia.SSHKeyGroup)
 	}
 
-	// We'll need to pull the VPC details for any instances that aren't setting NSG ID
-	// to decide if they're inheriting one from their parent VPC, and then figure out
-	// their propagation status.  This needs to done separately because we can't assume
-	// that the user requested the 	VPC relation.
-
-	inheritVpcIDs := goset.NewSet[uuid.UUID]()
-
-	for _, ins := range dbInstances {
-		// Only instances with no NSG attached directly
-		// could possible be inheriting from their VPC.
-		if ins.NetworkSecurityGroupID == nil {
-			inheritVpcIDs.Add(ins.VpcID)
-		}
-	}
-
 	vpcs := map[uuid.UUID]*cdbm.Vpc{}
 
 	// Only if there's at least one possible case
-	// of inheritence
+	// of inheritence.
 	if !inheritVpcIDs.IsEmpty() {
 
 		vpcDAO := cdbm.NewVpcDAO(gaih.dbSession)
@@ -4021,38 +4325,77 @@ func (gaih GetAllInstanceHandler) Handle(c echo.Context) error {
 		dbInstance := ins
 		apiInstance := model.NewAPIInstance(&dbInstance, sitesByID[dbInstance.SiteID], ifcMap[dbInstance.ID], ibifcMap[dbInstance.ID], desdsMap[dbInstance.ID], nvlifcMap[dbInstance.ID], skgiasMap[dbInstance.ID], ssdMap[ins.ID.String()])
 
-		if ins.NetworkSecurityGroupID == nil {
+		// If the instance has no NSG applied directly, and there
+		// were ethernet interfaces attached to VPCs (vpcsByInstance),
+		// then we'll need to check if we're inheriting from any VPCs
+		// and check propagation if so.
+		if ins.NetworkSecurityGroupID == nil && vpcsByInstance[ins.ID] != nil {
 
-			vpc, exists := vpcs[ins.VpcID]
+			vpcCountWithNsgTotal := 0
+			vpcCountWithNsgPropagated := 0
 
-			// We've only inherited if our NSG ID is null _and_ the parent
-			// NSG ID is not null.
-			if exists {
-				apiInstance.NetworkSecurityGroupInherited = vpc.NetworkSecurityGroupID != nil
+			for _, vpcID := range vpcsByInstance[ins.ID].ToSlice() {
+				vpc, exists := vpcs[vpcID]
 
-				// If we inherited our NSG, then see if we're propagated.
-				if apiInstance.NetworkSecurityGroupInherited {
+				if exists {
+					// If we inherited an NSG from this VPC, then see if we're propagated.
+					if vpc.NetworkSecurityGroupID != nil {
 
-					// We can default to non/configuring and then switch
-					// if we're actually propagated.
+						// We found an attached VPC that has an NSG attached,
+						// so we'll need to track propagation.
+						vpcCountWithNsgTotal++
+
+						if vpc.NetworkSecurityGroupPropagationDetails != nil {
+							// If the instance wasn't found in the list of unpropagated instances, then we're propagated.
+							if !slices.Contains(vpc.NetworkSecurityGroupPropagationDetails.GetUnpropagatedInstanceIds(), ins.ID.String()) {
+								// We're propagated, so count it.
+								vpcCountWithNsgPropagated++
+							}
+						}
+					}
+
+				}
+
+			}
+
+			if vpcCountWithNsgTotal > 0 {
+				// We've only inherited if our NSG ID is null _and_ the parent
+				// NSG ID is not null. I.e., at least one VPC is using an NSG.
+				apiInstance.NetworkSecurityGroupInherited = true
+
+				// NOTE: We could track the specific list of VPCs still waiting for us to synchronize,
+				//       but that information can also be derived by looking at VPC details to see
+				//       which instances are pending, so we mayb not need it here.
+
+				switch {
+				case vpcCountWithNsgPropagated == 0:
 					apiInstance.NetworkSecurityGroupPropagationDetails = &model.APINetworkSecurityGroupPropagationDetails{
-						ObjectID:       apiInstance.ID,
+						ObjectID:       ins.ID.String(),
 						DetailedStatus: model.APINetworkSecurityGroupPropagationDetailedStatusNone,
 						Status:         model.APINetworkSecurityGroupPropagationStatusSynchronizing,
 					}
-
-					if vpc.NetworkSecurityGroupPropagationDetails != nil {
-						// If the instance wasn't found in the list of unpropagated instances, then we're propagated.
-						if !slices.Contains(vpc.NetworkSecurityGroupPropagationDetails.GetUnpropagatedInstanceIds(), apiInstance.ID) {
-							apiInstance.NetworkSecurityGroupPropagationDetails.DetailedStatus = model.APINetworkSecurityGroupPropagationDetailedStatusFull
-							apiInstance.NetworkSecurityGroupPropagationDetails.Status = model.APINetworkSecurityGroupPropagationStatusSynchronized
-						}
+				case vpcCountWithNsgPropagated < vpcCountWithNsgTotal:
+					apiInstance.NetworkSecurityGroupPropagationDetails = &model.APINetworkSecurityGroupPropagationDetails{
+						ObjectID:       ins.ID.String(),
+						DetailedStatus: model.APINetworkSecurityGroupPropagationDetailedStatusPartial,
+						Status:         model.APINetworkSecurityGroupPropagationStatusSynchronizing,
+					}
+				case vpcCountWithNsgPropagated == vpcCountWithNsgTotal:
+					apiInstance.NetworkSecurityGroupPropagationDetails = &model.APINetworkSecurityGroupPropagationDetails{
+						ObjectID:       ins.ID.String(),
+						DetailedStatus: model.APINetworkSecurityGroupPropagationDetailedStatusFull,
+						Status:         model.APINetworkSecurityGroupPropagationStatusSynchronized,
+					}
+				default:
+					apiInstance.NetworkSecurityGroupPropagationDetails = &model.APINetworkSecurityGroupPropagationDetails{
+						ObjectID:       ins.ID.String(),
+						DetailedStatus: model.APINetworkSecurityGroupPropagationDetailedStatusUnknown,
+						Status:         model.APINetworkSecurityGroupPropagationStatusError,
 					}
 				}
 			}
 
 		}
-
 		apiInstances = append(apiInstances, *apiInstance)
 	}
 

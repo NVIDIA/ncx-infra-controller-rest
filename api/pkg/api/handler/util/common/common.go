@@ -303,6 +303,17 @@ func GetAllocationIDsForTenantAtSite(ctx context.Context, tx *cdb.Tx, dbSession 
 	return aIDs, nil
 }
 
+// AcquireInstanceTypeQuotaLock acquires the shared quota lock for a tenant/instance-type pool.
+// It returns an error if the advisory lock cannot be acquired.
+func AcquireInstanceTypeQuotaLock(ctx context.Context, tx *cdb.Tx, tenantID uuid.UUID, instanceTypeID uuid.UUID) error {
+	if tx == nil {
+		return ErrInvalidFunctionParams
+	}
+
+	lockID := fmt.Sprintf("%s-%s", tenantID.String(), instanceTypeID.String())
+	return tx.TryAcquireAdvisoryLock(ctx, cdb.GetAdvisoryLockIDFromString(lockID), nil)
+}
+
 // GetUnallocatedMachineForInstanceType provides unallocatd machine based on instancetype
 func GetUnallocatedMachineForInstanceType(ctx context.Context, tx *cdb.Tx, dbSession *cdb.Session, instancetype *cdbm.InstanceType) (*cdbm.Machine, error) {
 	if instancetype == nil {
@@ -1269,12 +1280,6 @@ func IsTenant(ctx context.Context, logger zerolog.Logger, dbSession *cdb.Session
 // IsProviderOrTenant ensures that user is authorized to act as a Provider Admin or/and Tenant Admin for the org.
 // if authorized it returns the tenant otherwise a relevant error.
 func IsProviderOrTenant(ctx context.Context, logger zerolog.Logger, dbSession *cdb.Session, org string, user *cdbm.User, allowViewerRole bool, requirePrivilegedTenant bool) (infrastructureProvider *cdbm.InfrastructureProvider, tenant *cdbm.Tenant, apiError *cutil.APIError) {
-	// Validate that user has the right Provider role
-	targetRoles := []string{auth.ProviderAdminRole}
-	if allowViewerRole {
-		targetRoles = append(targetRoles, auth.ProviderViewerRole)
-	}
-
 	// Validate that user belongs to org
 	ok, err := auth.ValidateOrgMembership(user, org)
 	if !ok {
@@ -1287,47 +1292,69 @@ func IsProviderOrTenant(ctx context.Context, logger zerolog.Logger, dbSession *c
 		return nil, nil, cutil.NewAPIError(http.StatusForbidden, "Failed to validate membership for org", nil)
 	}
 
-	// Validate that user has the right Provider role
+	// Check if user has Provider role
+	targetRoles := []string{auth.ProviderAdminRole}
+	if allowViewerRole {
+		targetRoles = append(targetRoles, auth.ProviderViewerRole)
+	}
+
+	providerNotFound := false
 	isProvider := auth.ValidateUserRoles(user, org, nil, targetRoles...)
+
 	if isProvider {
-		// Retrieve Infrastructure Provider for org
 		infrastructureProvider, err = GetInfrastructureProviderForOrg(ctx, nil, dbSession, org)
 		if err != nil {
 			if errors.Is(err, ErrOrgInstrastructureProviderNotFound) {
-				return nil, nil, cutil.NewAPIError(http.StatusBadRequest, "Could not find Infrastructure Provider for org, retrieve current Provider for org and try again", nil)
+				providerNotFound = true
+			} else {
+				logger.Error().Err(err).Msg("error getting infrastructure provider for org")
+				return nil, nil, cutil.NewAPIError(http.StatusInternalServerError, "Failed to retrieve Infrastructure Provider for org, DB error", nil)
 			}
-
-			logger.Error().Err(err).Msg("error getting infrastructure provider for org")
-			return nil, nil, cutil.NewAPIError(http.StatusInternalServerError, "Failed to retrieve infrastructure provider for org, DB error", nil)
 		}
 	}
 
-	// Validate that user has the right Tenant role
+	tenantNotFound := false
 	isTenant := auth.ValidateUserRoles(user, org, nil, auth.TenantAdminRole)
 
 	if isTenant {
-		// Find tenant for org
 		tenant, err = GetTenantForOrg(ctx, nil, dbSession, org)
 		if err != nil {
 			if errors.Is(err, ErrOrgTenantNotFound) {
-				return nil, nil, cutil.NewAPIError(http.StatusBadRequest, "Could not find Tenant for org, retrieve current Tenant for org and try again", nil)
+				tenantNotFound = true
+			} else {
+				logger.Error().Err(err).Msg("error getting tenant for org")
+				return nil, nil, cutil.NewAPIError(http.StatusInternalServerError, "Failed to retrieve Tenant for org, DB error", nil)
 			}
-			logger.Error().Err(err).Msg("error getting tenant for org")
 		}
-		if requirePrivilegedTenant {
-			// Check if Tenant has TargetedInstanceCreation capability
+
+		if tenant != nil && requirePrivilegedTenant {
 			if !tenant.Config.TargetedInstanceCreation {
 				if infrastructureProvider == nil {
-					return nil, nil, cutil.NewAPIError(http.StatusForbidden, "Tenant does not have Targeted Instance Creation capability enabled", nil)
-				} else {
-					tenant = nil
+					return nil, nil, cutil.NewAPIError(http.StatusForbidden, "Tenant does not have targeted Instance creation capability enabled", nil)
 				}
+
+				tenant = nil
 			}
 		}
 	}
 
 	if infrastructureProvider == nil && tenant == nil {
+		if providerNotFound || tenantNotFound {
+			var errMsgs []string
+			if providerNotFound {
+				errMsgs = append(errMsgs, "User has Provider role but org doesn't have an Infrastructure Provider associated, retrieve current Infrastructure Provider for org and try again")
+			}
+			if tenantNotFound {
+				errMsgs = append(errMsgs, "User has Tenant role but org doesn't have a Tenant associated, retrieve current Tenant for org and try again")
+			}
+			msg := strings.Join(errMsgs, ". ")
+			logger.Error().Msg(msg)
+
+			return nil, nil, cutil.NewAPIError(http.StatusBadRequest, msg, nil)
+		}
+
 		logger.Error().Msg("user does not have Provider or Tenant role with org, access denied")
+
 		return nil, nil, cutil.NewAPIError(http.StatusForbidden, "User does not have Provider or Tenant role with org", nil)
 	}
 

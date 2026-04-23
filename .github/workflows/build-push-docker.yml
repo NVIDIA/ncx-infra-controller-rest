@@ -164,8 +164,8 @@ jobs:
     with:
       runner: ${{ inputs.runner }}
       service_name: carbide-rest-site-agent
-      binary_name: elektra
-      binary_path: /app/elektra
+      binary_name: site-agent
+      binary_path: /app/site-agent
       dockerfile: ./docker/production/Dockerfile.carbide-rest-site-agent
       semantic_version: ${{ inputs.semantic_version }}
       short_sha: ${{ inputs.short_sha }}

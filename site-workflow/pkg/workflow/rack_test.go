@@ -228,12 +228,12 @@ func (s *ValidateRackComponentsTestSuite) Test_ValidateRackComponents_Success_No
 	}
 
 	expectedResponse := &rlav1.ValidateComponentsResponse{
-		Diffs:               []*rlav1.ComponentDiff{},
-		TotalDiffs:          0,
-		OnlyInExpectedCount: 0,
-		OnlyInActualCount:   0,
-		DriftCount:          0,
-		MatchCount:          5,
+		Diffs:           []*rlav1.ComponentDiff{},
+		TotalDiffs:      0,
+		MissingCount:    0,
+		UnexpectedCount: 0,
+		DriftCount:      0,
+		MatchCount:      5,
 	}
 
 	// Mock ValidateRackComponents activity
@@ -275,7 +275,7 @@ func (s *ValidateRackComponentsTestSuite) Test_ValidateRackComponents_Success_Wi
 	expectedResponse := &rlav1.ValidateComponentsResponse{
 		Diffs: []*rlav1.ComponentDiff{
 			{
-				Type:        rlav1.DiffType_DIFF_TYPE_ONLY_IN_EXPECTED,
+				Type:        rlav1.DiffType_DIFF_TYPE_MISSING,
 				ComponentId: "comp-1",
 			},
 			{
@@ -290,11 +290,11 @@ func (s *ValidateRackComponentsTestSuite) Test_ValidateRackComponents_Success_Wi
 				},
 			},
 		},
-		TotalDiffs:          2,
-		OnlyInExpectedCount: 1,
-		OnlyInActualCount:   0,
-		DriftCount:          1,
-		MatchCount:          3,
+		TotalDiffs:      2,
+		MissingCount:    1,
+		UnexpectedCount: 0,
+		DriftCount:      1,
+		MatchCount:      3,
 	}
 
 	// Mock ValidateRackComponents activity
@@ -310,7 +310,7 @@ func (s *ValidateRackComponentsTestSuite) Test_ValidateRackComponents_Success_Wi
 	var response rlav1.ValidateComponentsResponse
 	s.NoError(s.env.GetWorkflowResult(&response))
 	s.Equal(int32(2), response.TotalDiffs)
-	s.Equal(int32(1), response.OnlyInExpectedCount)
+	s.Equal(int32(1), response.MissingCount)
 	s.Equal(int32(1), response.DriftCount)
 	s.Equal(int32(3), response.MatchCount)
 	s.Equal(2, len(response.Diffs))

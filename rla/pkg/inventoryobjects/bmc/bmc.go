@@ -28,7 +28,7 @@ import (
 // BMC specifies the information for a BMC which includes MAC address, IP
 // address, and access credential.
 type BMC struct {
-	MAC        net.HardwareAddr       `json:"mac"`
+	MAC        MACAddress             `json:"mac"`
 	IP         net.IP                 `json:"ip"`
 	Credential *credential.Credential `json:"credential"`
 }
@@ -47,7 +47,7 @@ func New(s string, cred *credential.Credential, ip string) (*BMC, error) {
 		return nil, err
 	}
 
-	bmcInfo := &BMC{MAC: addr}
+	bmcInfo := &BMC{MAC: MACAddress{HardwareAddr: addr}}
 
 	if cred != nil {
 		nc := *cred

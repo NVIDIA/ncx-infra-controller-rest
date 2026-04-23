@@ -19,7 +19,6 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -33,7 +32,6 @@ import (
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/handler/util/common"
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model"
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/pagination"
-	auth "github.com/NVIDIA/ncx-infra-controller-rest/auth/pkg/authorization"
 	cutil "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/util"
 	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
@@ -60,8 +58,8 @@ func NewGetAllFabricHandler(dbSession *cdb.Session, tc temporalClient.Client, cf
 }
 
 // Handle godoc
-// @Summary Get all Fabrics
-// @Description Get all Fabrics
+// @Summary Retrieve all Fabrics
+// @Description Retrieve all Fabrics for Sites owned by the org. Endpoint is currently not exposed to users
 // @Tags Fabric
 // @Accept json
 // @Produce json
@@ -82,27 +80,14 @@ func (gafh GetAllFabricHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
-	// Validate org
-	ok, err := auth.ValidateOrgMembership(dbUser, org)
-	if !ok {
-		if err != nil {
-			logger.Error().Err(err).Msg("error validating org membership for User in request")
-		} else {
-			logger.Warn().Msg("could not validate org membership for user, access denied")
-		}
-		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
-	}
-
-	// Validate role, only Provider Admins or Tenat Admins are allowed to retrieve Fabrics
-	isProviderRequest, orgProvider, orgTenant, apiErr := common.GetIsProviderRequest(ctx, logger, gafh.dbSession, org, dbUser,
-		[]string{auth.ProviderAdminRole, auth.ProviderViewerRole}, []string{auth.TenantAdminRole}, c.QueryParams())
+	provider, tenant, apiErr := common.IsProviderOrTenant(ctx, logger, gafh.dbSession, org, dbUser, true, false)
 	if apiErr != nil {
 		return c.JSON(apiErr.Code, apiErr)
 	}
 
-	// Validate paginantion request
+	// Validate pagination request
 	pageRequest := pagination.PageRequest{}
-	err = c.Bind(&pageRequest)
+	err := c.Bind(&pageRequest)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error binding pagination request data into API model")
 		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to parse request pagination data", nil)
@@ -141,23 +126,24 @@ func (gafh GetAllFabricHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, errMsg, nil)
 	}
 
-	// Check Site association with Provider
+	isAssociated := false
+	if provider != nil {
+		isAssociated = provider.ID == st.InfrastructureProviderID
+	}
 	tsDAO := cdbm.NewTenantSiteDAO(gafh.dbSession)
-	if isProviderRequest {
-		if orgProvider.ID != st.InfrastructureProviderID {
-			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Site is not associated with org's Infrastructure Provider", nil)
-		}
-	} else {
-		// Check Site association with Tenant
-		var serr error
-		_, serr = tsDAO.GetByTenantIDAndSiteID(ctx, nil, orgTenant.ID, stID, nil)
+	if !isAssociated && tenant != nil {
+		_, serr := tsDAO.GetByTenantIDAndSiteID(ctx, nil, tenant.ID, stID, nil)
 		if serr != nil {
-			if serr == cdb.ErrDoesNotExist {
-				return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant does not have access to this Site", nil)
+			if serr != cdb.ErrDoesNotExist {
+				logger.Error().Err(serr).Msg("error retrieving TenantSite from DB")
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to determine org's association with Site, DB error", nil)
 			}
-			logger.Error().Err(serr).Msg("error retrieving TenantSite from DB")
-			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to determine Tenant access to Site, DB error", nil)
+		} else {
+			isAssociated = true
 		}
+	}
+	if !isAssociated {
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Site is not associated with org", nil)
 	}
 
 	// Get query text for full text search from query param
@@ -238,8 +224,8 @@ func NewGetFabricHandler(dbSession *cdb.Session, tc temporalClient.Client, cfg *
 }
 
 // Handle godoc
-// @Summary Retrieve the Fabric
-// @Description Retrieve the Fabric
+// @Summary Retrieve Fabric
+// @Description Retrieve Fabric by ID. Endpoint is currently not exposed to users
 // @Tags Fabric
 // @Accept json
 // @Produce json
@@ -259,20 +245,7 @@ func (gfh GetFabricHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve current user", nil)
 	}
 
-	// Validate org
-	ok, err := auth.ValidateOrgMembership(dbUser, org)
-	if !ok {
-		if err != nil {
-			logger.Error().Err(err).Msg("error validating org membership for User in request")
-		} else {
-			logger.Warn().Msg("could not validate org membership for user, access denied")
-		}
-		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, fmt.Sprintf("Failed to validate membership for org: %s", org), nil)
-	}
-
-	// Validate role, only Provider Admins or Tenat Admins are allowed to retrieve Fabrics
-	isProviderRequest, orgProvider, orgTenant, apiErr := common.GetIsProviderRequest(ctx, logger, gfh.dbSession, org, dbUser,
-		[]string{auth.ProviderAdminRole, auth.ProviderViewerRole}, []string{auth.TenantAdminRole}, c.QueryParams())
+	provider, tenant, apiErr := common.IsProviderOrTenant(ctx, logger, gfh.dbSession, org, dbUser, true, false)
 	if apiErr != nil {
 		return c.JSON(apiErr.Code, apiErr)
 	}
@@ -319,23 +292,24 @@ func (gfh GetFabricHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Could not retrieve Fabric", nil)
 	}
 
-	// Check Site association with Provider
+	isAssociated := false
+	if provider != nil {
+		isAssociated = provider.ID == st.InfrastructureProviderID
+	}
 	tsDAO := cdbm.NewTenantSiteDAO(gfh.dbSession)
-	if isProviderRequest {
-		if orgProvider.ID != st.InfrastructureProviderID {
-			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Site is not associated with org's Infrastructure Provider", nil)
-		}
-	} else {
-		// Check Site association with Tenant
-		var serr error
-		_, serr = tsDAO.GetByTenantIDAndSiteID(ctx, nil, orgTenant.ID, stID, nil)
+	if !isAssociated && tenant != nil {
+		_, serr := tsDAO.GetByTenantIDAndSiteID(ctx, nil, tenant.ID, stID, nil)
 		if serr != nil {
-			if serr == cdb.ErrDoesNotExist {
-				return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant does not have access to this Site", nil)
+			if serr != cdb.ErrDoesNotExist {
+				logger.Error().Err(serr).Msg("error retrieving TenantSite from DB")
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to determine org's association with Site, DB error", nil)
 			}
-			logger.Error().Err(serr).Msg("error retrieving TenantSite from DB")
-			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to determine Tenant access to Site, DB error", nil)
+		} else {
+			isAssociated = true
 		}
+	}
+	if !isAssociated {
+		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Site is not associated with org", nil)
 	}
 
 	// Create response

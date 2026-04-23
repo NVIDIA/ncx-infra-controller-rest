@@ -52,7 +52,7 @@ func New(c Config) (*Client, error) {
 
 	var creds credentials.TransportCredentials
 	if c.CertConfig.IsSet() {
-		tlsConfig, err := c.CertConfig.TLSConfig()
+		tlsConfig, err := c.CertConfig.TLSConfig(c.ServerName)
 		if err != nil {
 			return nil, fmt.Errorf("failed to build TLS config: %w", err)
 		}
@@ -344,13 +344,10 @@ func (c *Client) UpgradeFirmwareByRackIDs(
 ) (*UpgradeFirmwareResult, error) {
 	rackTargets := make([]*pb.RackTarget, 0, len(rackIDs))
 	for _, id := range rackIDs {
-		rt := &pb.RackTarget{
-			Identifier: &pb.RackTarget_Id{Id: uuidToProto(id)},
-		}
-		if componentType != types.ComponentTypeUnknown {
-			rt.ComponentTypes = []pb.ComponentType{componentTypeToProto(componentType)}
-		}
-		rackTargets = append(rackTargets, rt)
+		rackTargets = append(rackTargets, &pb.RackTarget{
+			Identifier:     &pb.RackTarget_Id{Id: uuidToProto(id)},
+			ComponentTypes: componentTypesFilter(componentType),
+		})
 	}
 
 	req := &pb.UpgradeFirmwareRequest{
@@ -386,13 +383,10 @@ func (c *Client) UpgradeFirmwareByRackNames(
 ) (*UpgradeFirmwareResult, error) {
 	rackTargets := make([]*pb.RackTarget, 0, len(rackNames))
 	for _, name := range rackNames {
-		rt := &pb.RackTarget{
-			Identifier: &pb.RackTarget_Name{Name: name},
-		}
-		if componentType != types.ComponentTypeUnknown {
-			rt.ComponentTypes = []pb.ComponentType{componentTypeToProto(componentType)}
-		}
-		rackTargets = append(rackTargets, rt)
+		rackTargets = append(rackTargets, &pb.RackTarget{
+			Identifier:     &pb.RackTarget_Name{Name: name},
+			ComponentTypes: componentTypesFilter(componentType),
+		})
 	}
 
 	req := &pb.UpgradeFirmwareRequest{
@@ -470,13 +464,10 @@ func (c *Client) PowerControlByRackIDs(
 ) (*PowerControlResult, error) {
 	rackTargets := make([]*pb.RackTarget, 0, len(rackIDs))
 	for _, id := range rackIDs {
-		rt := &pb.RackTarget{
-			Identifier: &pb.RackTarget_Id{Id: uuidToProto(id)},
-		}
-		if componentType != types.ComponentTypeUnknown {
-			rt.ComponentTypes = []pb.ComponentType{componentTypeToProto(componentType)}
-		}
-		rackTargets = append(rackTargets, rt)
+		rackTargets = append(rackTargets, &pb.RackTarget{
+			Identifier:     &pb.RackTarget_Id{Id: uuidToProto(id)},
+			ComponentTypes: componentTypesFilter(componentType),
+		})
 	}
 
 	targetSpec := &pb.OperationTargetSpec{
@@ -497,13 +488,10 @@ func (c *Client) PowerControlByRackNames(
 ) (*PowerControlResult, error) {
 	rackTargets := make([]*pb.RackTarget, 0, len(rackNames))
 	for _, name := range rackNames {
-		rt := &pb.RackTarget{
-			Identifier: &pb.RackTarget_Name{Name: name},
-		}
-		if componentType != types.ComponentTypeUnknown {
-			rt.ComponentTypes = []pb.ComponentType{componentTypeToProto(componentType)}
-		}
-		rackTargets = append(rackTargets, rt)
+		rackTargets = append(rackTargets, &pb.RackTarget{
+			Identifier:     &pb.RackTarget_Name{Name: name},
+			ComponentTypes: componentTypesFilter(componentType),
+		})
 	}
 
 	targetSpec := &pb.OperationTargetSpec{
@@ -604,13 +592,10 @@ func (c *Client) GetExpectedComponentsByRackIDs(
 ) (*GetExpectedComponentsResult, error) {
 	rackTargets := make([]*pb.RackTarget, 0, len(rackIDs))
 	for _, id := range rackIDs {
-		rt := &pb.RackTarget{
-			Identifier: &pb.RackTarget_Id{Id: uuidToProto(id)},
-		}
-		if componentType != types.ComponentTypeUnknown {
-			rt.ComponentTypes = []pb.ComponentType{componentTypeToProto(componentType)}
-		}
-		rackTargets = append(rackTargets, rt)
+		rackTargets = append(rackTargets, &pb.RackTarget{
+			Identifier:     &pb.RackTarget_Id{Id: uuidToProto(id)},
+			ComponentTypes: componentTypesFilter(componentType),
+		})
 	}
 
 	// Build filters array
@@ -656,13 +641,10 @@ func (c *Client) GetExpectedComponentsByRackNames(
 ) (*GetExpectedComponentsResult, error) {
 	rackTargets := make([]*pb.RackTarget, 0, len(rackNames))
 	for _, name := range rackNames {
-		rt := &pb.RackTarget{
-			Identifier: &pb.RackTarget_Name{Name: name},
-		}
-		if componentType != types.ComponentTypeUnknown {
-			rt.ComponentTypes = []pb.ComponentType{componentTypeToProto(componentType)}
-		}
-		rackTargets = append(rackTargets, rt)
+		rackTargets = append(rackTargets, &pb.RackTarget{
+			Identifier:     &pb.RackTarget_Name{Name: name},
+			ComponentTypes: componentTypesFilter(componentType),
+		})
 	}
 
 	// Build filters array
@@ -775,13 +757,10 @@ func (c *Client) ValidateComponentsByRackIDs(
 ) (*ValidateComponentsResult, error) {
 	rackTargets := make([]*pb.RackTarget, 0, len(rackIDs))
 	for _, id := range rackIDs {
-		rt := &pb.RackTarget{
-			Identifier: &pb.RackTarget_Id{Id: uuidToProto(id)},
-		}
-		if componentType != types.ComponentTypeUnknown {
-			rt.ComponentTypes = []pb.ComponentType{componentTypeToProto(componentType)}
-		}
-		rackTargets = append(rackTargets, rt)
+		rackTargets = append(rackTargets, &pb.RackTarget{
+			Identifier:     &pb.RackTarget_Id{Id: uuidToProto(id)},
+			ComponentTypes: componentTypesFilter(componentType),
+		})
 	}
 
 	rsp, err := c.client.ValidateComponents(
@@ -809,13 +788,10 @@ func (c *Client) ValidateComponentsByRackNames(
 ) (*ValidateComponentsResult, error) {
 	rackTargets := make([]*pb.RackTarget, 0, len(rackNames))
 	for _, name := range rackNames {
-		rt := &pb.RackTarget{
-			Identifier: &pb.RackTarget_Name{Name: name},
-		}
-		if componentType != types.ComponentTypeUnknown {
-			rt.ComponentTypes = []pb.ComponentType{componentTypeToProto(componentType)}
-		}
-		rackTargets = append(rackTargets, rt)
+		rackTargets = append(rackTargets, &pb.RackTarget{
+			Identifier:     &pb.RackTarget_Name{Name: name},
+			ComponentTypes: componentTypesFilter(componentType),
+		})
 	}
 
 	rsp, err := c.client.ValidateComponents(
@@ -879,12 +855,12 @@ func convertValidateComponentsResponse(rsp *pb.ValidateComponentsResponse) *Vali
 	}
 
 	return &ValidateComponentsResult{
-		Diffs:               diffs,
-		TotalDiffs:          int(rsp.TotalDiffs),
-		OnlyInExpectedCount: int(rsp.OnlyInExpectedCount),
-		OnlyInActualCount:   int(rsp.OnlyInActualCount),
-		DriftCount:          int(rsp.DriftCount),
-		MatchCount:          int(rsp.MatchCount),
+		Diffs:           diffs,
+		TotalDiffs:      int(rsp.TotalDiffs),
+		MissingCount:    int(rsp.MissingCount),
+		UnexpectedCount: int(rsp.UnexpectedCount),
+		DriftCount:      int(rsp.DriftCount),
+		MatchCount:      int(rsp.MatchCount),
 	}
 }
 
@@ -970,6 +946,39 @@ func (c *Client) DeleteComponent(
 	return err
 }
 
+// DeleteRack soft-deletes a rack and all its components by UUID.
+func (c *Client) DeleteRack(
+	ctx context.Context,
+	rackID uuid.UUID,
+) error {
+	_, err := c.client.DeleteRack(ctx, &pb.DeleteRackRequest{
+		Id: uuidToProto(rackID),
+	})
+	return err
+}
+
+// PurgeRack permanently removes a soft-deleted rack and its components.
+func (c *Client) PurgeRack(
+	ctx context.Context,
+	rackID uuid.UUID,
+) error {
+	_, err := c.client.PurgeRack(ctx, &pb.PurgeRackRequest{
+		Id: uuidToProto(rackID),
+	})
+	return err
+}
+
+// PurgeComponent permanently removes a soft-deleted component.
+func (c *Client) PurgeComponent(
+	ctx context.Context,
+	componentID uuid.UUID,
+) error {
+	_, err := c.client.PurgeComponent(ctx, &pb.PurgeComponentRequest{
+		Id: uuidToProto(componentID),
+	})
+	return err
+}
+
 // PatchComponentOpts contains the optional fields for patching a component.
 type PatchComponentOpts struct {
 	FirmwareVersion *string
@@ -978,6 +987,7 @@ type PatchComponentOpts struct {
 	HostID          *int32
 	Description     *string
 	RackID          *uuid.UUID
+	BMCs            []types.BMC
 }
 
 // PatchComponent updates a single component's fields.
@@ -1013,6 +1023,13 @@ func (c *Client) PatchComponent(
 
 	if opts.RackID != nil {
 		req.RackId = uuidToProto(*opts.RackID)
+	}
+
+	if len(opts.BMCs) > 0 {
+		req.Bmcs = make([]*pb.BMCInfo, 0, len(opts.BMCs))
+		for i := range opts.BMCs {
+			req.Bmcs = append(req.Bmcs, bmcToProto(&opts.BMCs[i]))
+		}
 	}
 
 	rsp, err := c.client.PatchComponent(ctx, req)

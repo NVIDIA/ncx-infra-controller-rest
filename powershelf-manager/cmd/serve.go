@@ -56,7 +56,7 @@ func getEnvIntOrDefault(envVar string, defaultVal int) int {
 const (
 	// default service config
 	defaultServicePort   = 50051
-	defaultDataStoreType = powershelfmanager.DatastoreTypePersistent
+	defaultDataStoreType = powershelfmanager.DatastoreTypeInMemory
 
 	// default db config
 	defaultDbPort     = 5432
@@ -87,6 +87,9 @@ var (
 	// Vault config
 	vaultToken   string
 	vaultAddress string
+
+	// Firmware config
+	firmwareDir string
 )
 
 // serveCmd represents the serve command
@@ -117,6 +120,8 @@ func init() {
 
 	serveCmd.Flags().StringVarP(&vaultToken, "vault_token", "t", getEnvOrDefault("VAULT_TOKEN", defaultVaultToken), "Vault Token (env: VAULT_TOKEN)")
 	serveCmd.Flags().StringVarP(&vaultAddress, "vault_address", "a", getEnvOrDefault("VAULT_ADDR", defaultVaultAddress), "Vault Address (env: VAULT_ADDR)")
+
+	serveCmd.Flags().StringVar(&firmwareDir, "fw_dir", getEnvOrDefault("FW_DIR", "/var/lib/psm/firmware"), "Firmware files directory (env: FW_DIR)")
 }
 
 func doServe() {
@@ -137,10 +142,11 @@ func doServe() {
 				Credential:        credential.New(dbUser, dbPassword),
 				CACertificatePath: dbCertPath,
 			},
+			FirmwareDir: firmwareDir,
 		},
 	)
 
-	log.Printf("New service is created with port: %+v, data store type: %s, vault address: %s", port, datastoreType, vaultAddress)
+	log.Printf("New service is created with port: %+v, data store type: %s, vault address: %s, firmware dir: %s", port, datastoreType, vaultAddress, firmwareDir)
 
 	if err != nil {
 		log.Fatalf("failed to create the new gRPC server: %v\n", err)

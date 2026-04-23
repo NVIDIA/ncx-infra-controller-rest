@@ -126,8 +126,14 @@ func TestIntegration_FirmwareManager_CanUpdate(t *testing.T) {
 		dryRun:          true,
 	}
 
-	// Add Liteon updater
-	updater, err := newFirmwareUpdater(vendor.CodeToVendor(vendor.VendorCodeLiteon))
+	// Set up a temporary firmware directory with the expected layout
+	fwDir := t.TempDir()
+	pmcDir := fmt.Sprintf("%s/liteon/pmc", fwDir)
+	require.NoError(t, os.MkdirAll(pmcDir, 0o755))
+	require.NoError(t, os.WriteFile(pmcDir+"/cm14mp1r-r1.3.7_to_r1.3.8.tar", make([]byte, 2048), 0o644))
+	require.NoError(t, os.WriteFile(pmcDir+"/cm14mp1r-r1.3.8_to_r1.3.9.tar", make([]byte, 2048), 0o644))
+
+	updater, err := newFirmwareUpdater(vendor.CodeToVendor(vendor.VendorCodeLiteon), fwDir)
 	require.NoError(t, err)
 	manager.firmwareUpdater[vendor.CodeToVendor(vendor.VendorCodeLiteon)] = updater
 

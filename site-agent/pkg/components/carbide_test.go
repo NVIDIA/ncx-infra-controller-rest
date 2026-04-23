@@ -203,22 +203,23 @@ func TestCarbideSubnet(t *testing.T) {
 			case "get":
 				ctx := context.Background()
 				ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideTest-GetNetworkSegment")
-				response, err := grpcClient.Networks().GetNetworkSegment(ctx, &wflows.UUID{Value: created.Id.Value})
+				response, err := grpcClient.Networks().FindNetworkSegmentsByIds(ctx, &wflows.NetworkSegmentsByIdsRequest{NetworkSegmentsIds: []*wflows.NetworkSegmentId{created.Id}})
 				span.End()
 				if err != nil {
 					t.Log(err.Error())
 				}
 				assert.Nil(t, err)
 				assert.NotNil(t, response)
-				assert.Equal(t, created.Name, response.Name)
-				assert.Equal(t, created.Id.Value, response.Id.Value)
-				assert.Equal(t, created.Mtu, response.Mtu)
-				assert.Equal(t, created.SubdomainId.Value, response.SubdomainId.Value)
-				assert.Equal(t, created.VpcId.Value, response.VpcId.Value)
-				assert.Equal(t, len(created.Prefixes), len(response.Prefixes))
-				assert.Equal(t, created.Prefixes[0].Prefix, response.Prefixes[0].Prefix)
-				assert.Equal(t, created.Prefixes[0].Gateway, response.Prefixes[0].Gateway)
-				assert.Equal(t, created.Prefixes[0].ReserveFirst, response.Prefixes[0].ReserveFirst)
+				responseSegment := response.NetworkSegments[0]
+				assert.Equal(t, created.Name, responseSegment.Name)
+				assert.Equal(t, created.Id.Value, responseSegment.Id.Value)
+				assert.Equal(t, created.Mtu, responseSegment.Mtu)
+				assert.Equal(t, created.SubdomainId.Value, responseSegment.SubdomainId.Value)
+				assert.Equal(t, created.VpcId.Value, responseSegment.VpcId.Value)
+				assert.Equal(t, len(created.Prefixes), len(responseSegment.Prefixes))
+				assert.Equal(t, created.Prefixes[0].Prefix, responseSegment.Prefixes[0].Prefix)
+				assert.Equal(t, created.Prefixes[0].Gateway, responseSegment.Prefixes[0].Gateway)
+				assert.Equal(t, created.Prefixes[0].ReserveFirst, responseSegment.Prefixes[0].ReserveFirst)
 				t.Log("GRPCResponse", response)
 			case "delete":
 				v := &wflows.DeleteSubnetRequest{

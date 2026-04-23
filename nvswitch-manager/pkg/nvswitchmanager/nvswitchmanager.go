@@ -83,19 +83,23 @@ func (nm *NVSwitchManager) Stop(ctx context.Context) error {
 
 // Register registers a new NV-Switch tray and stores its credentials.
 func (nm *NVSwitchManager) Register(ctx context.Context, tray *nvswitch.NVSwitchTray) (uuid.UUID, bool, error) {
+	if tray.BMC == nil {
+		return uuid.Nil, false, fmt.Errorf("tray BMC subsystem is required")
+	}
+	if tray.NVOS == nil {
+		return uuid.Nil, false, fmt.Errorf("tray NVOS subsystem is required")
+	}
+
 	// Store credentials first
-	if tray.BMC != nil && tray.BMC.Credential != nil {
+	if tray.BMC.Credential != nil {
 		if err := nm.CredentialManager.PutBMC(ctx, tray.BMC.MAC, tray.BMC.Credential); err != nil {
 			return uuid.Nil, false, fmt.Errorf("failed to store BMC credentials: %v", err)
 		}
 	}
 
-	if tray.NVOS != nil && tray.NVOS.Credential != nil {
-		// Use BMC MAC as the key for NVOS credentials (they're linked)
-		if tray.BMC != nil {
-			if err := nm.CredentialManager.PutNVOS(ctx, tray.BMC.MAC, tray.NVOS.Credential); err != nil {
-				return uuid.Nil, false, fmt.Errorf("failed to store NVOS credentials: %v", err)
-			}
+	if tray.NVOS.Credential != nil {
+		if err := nm.CredentialManager.PutNVOS(ctx, tray.BMC.MAC, tray.NVOS.Credential); err != nil {
+			return uuid.Nil, false, fmt.Errorf("failed to store NVOS credentials: %v", err)
 		}
 	}
 
@@ -110,18 +114,24 @@ func (nm *NVSwitchManager) Get(ctx context.Context, id uuid.UUID) (*nvswitch.NVS
 		return nil, err
 	}
 
-	// Attach credentials
-	if tray.BMC != nil {
-		cred, err := nm.CredentialManager.GetBMC(ctx, tray.BMC.MAC)
-		if err == nil {
-			tray.BMC.Credential = cred
-		}
-
-		nvosCred, err := nm.CredentialManager.GetNVOS(ctx, tray.BMC.MAC)
-		if err == nil && tray.NVOS != nil {
-			tray.NVOS.Credential = nvosCred
-		}
+	if tray.BMC == nil {
+		return nil, fmt.Errorf("switch %s has no BMC subsystem", id)
 	}
+	if tray.NVOS == nil {
+		return nil, fmt.Errorf("switch %s has no NVOS subsystem", id)
+	}
+
+	bmcCred, err := nm.CredentialManager.GetBMC(ctx, tray.BMC.MAC)
+	if err != nil {
+		return nil, fmt.Errorf("loading BMC credentials for switch %s (MAC %s): %w", id, tray.BMC.MAC, err)
+	}
+	tray.BMC.Credential = bmcCred
+
+	nvosCred, err := nm.CredentialManager.GetNVOS(ctx, tray.BMC.MAC)
+	if err != nil {
+		return nil, fmt.Errorf("loading NVOS credentials for switch %s (MAC %s): %w", id, tray.BMC.MAC, err)
+	}
+	tray.NVOS.Credential = nvosCred
 
 	return tray, nil
 }

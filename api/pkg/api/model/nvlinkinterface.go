@@ -120,6 +120,8 @@ type APINVLinkInterfaceSummary struct {
 	NVLinkLogicalPartitionID string `json:"nvLinkLogicalPartitionId"`
 	// DeviceInstance is the index of the GPU
 	DeviceInstance int `json:"deviceInstance"`
+	// Status is the status of the NVLinkInterface
+	Status string `json:"status"`
 }
 
 // NewAPINVLinkInterfaceSummary accepts a DB layer NVLinkInterface object returns an API layer object
@@ -129,6 +131,7 @@ func NewAPINVLinkInterfaceSummary(dbnvli *cdbm.NVLinkInterface) *APINVLinkInterf
 		InstanceID:               dbnvli.InstanceID.String(),
 		NVLinkLogicalPartitionID: dbnvli.NVLinkLogicalPartitionID.String(),
 		DeviceInstance:           dbnvli.DeviceInstance,
+		Status:                   dbnvli.Status,
 	}
 	return &apinvlifcs
 }

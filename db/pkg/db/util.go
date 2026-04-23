@@ -103,18 +103,12 @@ func GetStringToTsQuery(inputQuery string) string {
 		return inputQuery
 	}
 
-	convertedToTsQuery := ""
-	querySplit := strings.Split(inputQuery, " ")
-	for _, qstring := range querySplit {
-		if convertedToTsQuery != "" {
-			// formatting into ts_query pattern
-			convertedToTsQuery = convertedToTsQuery + " | " + strings.Trim(qstring, " ")
-		} else {
-			convertedToTsQuery = qstring
-		}
+	tokens := strings.Fields(inputQuery)
+	if len(tokens) == 0 {
+		return inputQuery
 	}
 
-	return convertedToTsQuery
+	return strings.Join(tokens, " | ")
 }
 
 // CompareStringSlicesIgnoreOrder compares two string slices ignoring order

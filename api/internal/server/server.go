@@ -123,8 +123,14 @@ func InitAPIServer(cfg *config.Config, dbSession *cdb.Session, tc tsdkClient.Cli
 	e.HideBanner = true
 	e.HTTPErrorHandler = cerr.DefaultHTTPErrorHandler
 
-	// Add header read timeout to prevent SLOWLORIS attacks
+	// Add timeouts to prevent SLOWLORIS attacks
 	e.Server.ReadHeaderTimeout = 3 * time.Second
+	e.Server.ReadTimeout = 60 * time.Second
+	e.Server.WriteTimeout = 60 * time.Second
+	e.Server.IdleTimeout = 120 * time.Second
+
+	// Add middleware to set the API name
+	e.Use(middleware.APIName(cfg.GetAPIName()))
 
 	// General middlewares
 	e.Use(echoMiddleware.Recover())
@@ -134,6 +140,9 @@ func InitAPIServer(cfg *config.Config, dbSession *cdb.Session, tc tsdkClient.Cli
 
 	// Secure middleware configures echo with secure headers
 	e.Use(middleware.Secure())
+
+	// Limit request body size to prevent OOM from oversized payloads
+	e.Use(echoMiddleware.BodyLimit("10M"))
 
 	// Rate limiter middleware (if enabled)
 	rateLimiterConfig := cfg.GetRateLimiterConfig()

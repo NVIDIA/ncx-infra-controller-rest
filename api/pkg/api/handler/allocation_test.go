@@ -797,6 +797,30 @@ func TestAllocationHandler_GetAll(t *testing.T) {
 		common.TestBuildStatusDetail(t, dbSession, alID.String(), cdbm.AllocationStatusRegistered, cdb.GetStrPtr("Allocation is now registered"))
 	}
 
+	// Org with both Provider and Tenant roles: same org acts as its own infrastructure provider and tenant
+	orgName := "test-provider-and-tenant-org"
+	orgRoles := []string{"FORGE_PROVIDER_ADMIN", "FORGE_TENANT_ADMIN"}
+	orgUser := testMachineBuildUser(t, dbSession, uuid.New().String(), []string{orgName}, orgRoles)
+	orgProvider := common.TestBuildInfrastructureProvider(t, dbSession, "test-org-provider", orgName, orgUser)
+	orgSite := testIPBlockBuildSite(t, dbSession, orgProvider, "test-org-site", cdbm.SiteStatusRegistered, true, orgUser)
+	orgTenant := common.TestBuildTenantWithDisplayName(t, dbSession, "test-org-tenant", orgName, orgUser, "Test Org Tenant")
+
+	orgAllocCount := 5
+	for i := 0; i < orgAllocCount; i++ {
+		itTmp := testMachineBuildInstanceType(t, dbSession, orgProvider, orgSite, fmt.Sprintf("test-org-instance-type-%02d", i))
+		for j := 1; j <= 2; j++ {
+			mc := testInstanceBuildMachine(t, dbSession, orgProvider.ID, orgSite.ID, cdb.GetBoolPtr(false), nil)
+			mcinst := testInstanceBuildMachineInstanceType(t, dbSession, mc, itTmp)
+			assert.NotNil(t, mcinst)
+		}
+		acOrg := model.APIAllocationConstraintCreateRequest{ResourceType: cdbm.AllocationResourceTypeInstanceType, ResourceTypeID: itTmp.ID.String(), ConstraintType: cdbm.AllocationConstraintTypeReserved, ConstraintValue: 1}
+		orgBody, err := json.Marshal(model.APIAllocationCreateRequest{Name: fmt.Sprintf("org-allocation-%02d", i), Description: cdb.GetStrPtr(""), TenantID: orgTenant.ID.String(), SiteID: orgSite.ID.String(), AllocationConstraints: []model.APIAllocationConstraintCreateRequest{acOrg}})
+		assert.Nil(t, err)
+		orgAl := testCreateAllocation(t, dbSession, ipamStorage, orgUser, orgName, string(orgBody))
+		assert.NotNil(t, orgAl)
+		common.TestBuildStatusDetail(t, dbSession, orgAl.ID, cdbm.AllocationStatusRegistered, cdb.GetStrPtr("Allocation is now registered"))
+	}
+
 	// OTEL Spanner configuration
 	tracer, _, ctx := common.TestCommonTraceProviderSetup(t, ctx)
 
@@ -845,60 +869,27 @@ func TestAllocationHandler_GetAll(t *testing.T) {
 			expectedStatus: http.StatusForbidden,
 		},
 		{
-			name:           "error when infrastructure provider and tenant not specified",
+			name:           "success when no provider or tenant query params specified (inferred from org)",
 			reqOrgName:     tnOrg1,
 			user:           tnu,
 			querySiteIDs:   []string{site1.ID.String()},
-			expectedErr:    true,
-			expectedStatus: http.StatusBadRequest,
+			expectedErr:    false,
+			expectedStatus: http.StatusOK,
+			expectedCnt:    paginator.DefaultLimit,
+			expectedTotal:  &totalCount,
 		},
 		{
-			name:                          "error when infrastructure provider not valid uuid",
-			reqOrgName:                    ipOrg1,
-			user:                          ipu,
-			queryInfrastructureProviderID: cdb.GetStrPtr("non-uuid"),
-			expectedErr:                   true,
-			expectedStatus:                http.StatusBadRequest,
-		},
-		{
-			name:                          "error when infrastructure provider not found for org",
-			reqOrgName:                    ipOrg3,
-			user:                          ipu,
-			queryInfrastructureProviderID: cdb.GetStrPtr(ip.ID.String()),
-			expectedErr:                   true,
-			expectedStatus:                http.StatusBadRequest,
-		},
-		{
-			name:                          "error when infrastructure provider in url doesnt match org",
-			reqOrgName:                    ipOrg1,
-			user:                          ipu,
-			queryInfrastructureProviderID: cdb.GetStrPtr(uuid.New().String()),
-			expectedErr:                   true,
-			expectedStatus:                http.StatusBadRequest,
-		},
-		{
-			name:           "error when tenant id not valid uuid",
-			reqOrgName:     tnOrg1,
-			user:           tnu,
-			queryTenantIDs: []string{"non-uuid"},
-			expectedErr:    true,
-			expectedStatus: http.StatusBadRequest,
-		},
-		{
-			name:           "error when tenant not found for org",
-			reqOrgName:     tnOrg2,
-			user:           tnu,
-			queryTenantIDs: []string{tenant1.ID.String()},
-			expectedErr:    true,
-			expectedStatus: http.StatusBadRequest,
-		},
-		{
-			name:           "error when tenant id in url doesnt match org",
-			reqOrgName:     tnOrg1,
-			user:           tnu,
-			queryTenantIDs: []string{uuid.New().String()},
-			expectedErr:    true,
-			expectedStatus: http.StatusBadRequest,
+			// Org has both Provider and Tenant roles. Every allocation has
+			// InfrastructureProviderID = orgProvider and TenantID = orgTenant, so it appears in both
+			// the provider and tenant DB queries. The mapset must deduplicate them so the response
+			// contains exactly orgAllocCount unique allocations, not 2×orgAllocCount.
+			name:           "success when org has both provider and tenant roles (results deduplicated)",
+			reqOrgName:     orgName,
+			user:           orgUser,
+			expectedErr:    false,
+			expectedStatus: http.StatusOK,
+			expectedCnt:    orgAllocCount,
+			expectedTotal:  &orgAllocCount,
 		},
 		{
 			name:           "error when site id not valid uuid",
@@ -1565,7 +1556,7 @@ func TestAllocationHandler_GetByID(t *testing.T) {
 	assert.NotNil(t, site)
 
 	tenant1 := common.TestBuildTenant(t, dbSession, "test-tenant-1", tnOrg1, tnu)
-	tenant2 := common.TestBuildTenant(t, dbSession, "test-tenant-2", tnOrg2, tnu)
+	_ = common.TestBuildTenant(t, dbSession, "test-tenant-2", tnOrg2, tnu)
 
 	cfg := common.GetTestConfig()
 	tempClient := &tmocks.Client{}
@@ -1635,14 +1626,6 @@ func TestAllocationHandler_GetByID(t *testing.T) {
 			expectedStatus: http.StatusForbidden,
 		},
 		{
-			name:           "error when infrastructure provider and tenant not specified",
-			reqOrgName:     tnOrg1,
-			user:           tnu,
-			aID:            aIT.ID,
-			expectedErr:    true,
-			expectedStatus: http.StatusBadRequest,
-		},
-		{
 			name:           "error when allocation id is invalid uuid",
 			reqOrgName:     tnOrg1,
 			user:           tnu,
@@ -1659,85 +1642,20 @@ func TestAllocationHandler_GetByID(t *testing.T) {
 			expectedStatus: http.StatusNotFound,
 		},
 		{
-			name:                          "error when infrastructure provider not valid uuid",
-			reqOrgName:                    ipOrg1,
-			user:                          ipu,
-			aID:                           aIT.ID,
-			queryInfrastructureProviderID: cdb.GetStrPtr("non-uuid"),
-			expectedErr:                   true,
-			expectedStatus:                http.StatusBadRequest,
+			name:           "error when provider in org doesnt match allocation",
+			reqOrgName:     ipOrg2,
+			user:           ipu,
+			aID:            aIT.ID,
+			expectedErr:    true,
+			expectedStatus: http.StatusForbidden,
 		},
 		{
-			name:                          "error when infrastructure provider not found for org",
-			reqOrgName:                    ipOrg3,
-			user:                          ipu,
-			aID:                           aIT.ID,
-			queryInfrastructureProviderID: cdb.GetStrPtr(ip.ID.String()),
-			expectedErr:                   true,
-			expectedStatus:                http.StatusBadRequest,
-		},
-		{
-			name:                          "error when infrastructure provider in url doesnt match org",
-			reqOrgName:                    ipOrg1,
-			user:                          ipu,
-			aID:                           aIT.ID,
-			queryInfrastructureProviderID: cdb.GetStrPtr(uuid.New().String()),
-			expectedErr:                   true,
-			expectedStatus:                http.StatusNotFound,
-		},
-		{
-			name:                          "error when infrastructure provider in org doesnt match infrastructure provider in allocation",
-			reqOrgName:                    ipOrg2,
-			user:                          ipu,
-			aID:                           aIT.ID,
-			queryInfrastructureProviderID: cdb.GetStrPtr(ip2.ID.String()),
-			expectedErr:                   true,
-			expectedStatus:                http.StatusNotFound,
-		},
-		{
-			name:           "error when tenant id not valid uuid",
+			name:           "error when user does not have valid role",
 			reqOrgName:     ipOrg1,
-			user:           ipu,
+			user:           nru,
 			aID:            aIT.ID,
-			queryTenantID:  cdb.GetStrPtr("non-uuid"),
 			expectedErr:    true,
-			expectedStatus: http.StatusBadRequest,
-		},
-		{
-			name:           "error when tenant not found for org",
-			reqOrgName:     ipOrg3,
-			user:           ipu,
-			aID:            aIT.ID,
-			queryTenantID:  cdb.GetStrPtr(uuid.New().String()),
-			expectedErr:    true,
-			expectedStatus: http.StatusNotFound,
-		},
-		{
-			name:           "error when tenant id in url doesnt match tenant in org",
-			reqOrgName:     tnOrg1,
-			user:           tnu,
-			aID:            aIT.ID,
-			queryTenantID:  cdb.GetStrPtr(uuid.New().String()),
-			expectedErr:    true,
-			expectedStatus: http.StatusNotFound,
-		},
-		{
-			name:           "error when tenant in org doesnt match tenant in allocation",
-			reqOrgName:     tnOrg2,
-			user:           tnu,
-			aID:            aIT.ID,
-			queryTenantID:  cdb.GetStrPtr(tenant2.ID.String()),
-			expectedErr:    true,
-			expectedStatus: http.StatusNotFound,
-		},
-		{
-			name:                          "error when user does not have valid role",
-			reqOrgName:                    ipOrg1,
-			user:                          nru,
-			aID:                           aIT.ID,
-			queryInfrastructureProviderID: cdb.GetStrPtr(ip.ID.String()),
-			expectedErr:                   true,
-			expectedStatus:                http.StatusForbidden,
+			expectedStatus: http.StatusForbidden,
 		},
 		{
 			name:                          "success when infrastructure provider id is specified",
@@ -2305,6 +2223,7 @@ func TestAllocationHandler_Delete(t *testing.T) {
 	os1 := testAllocationBuildOperatingSystem(t, dbSession, "ubuntu")
 
 	acGoodIT := model.APIAllocationConstraintCreateRequest{ResourceType: cdbm.AllocationResourceTypeInstanceType, ResourceTypeID: it1.ID.String(), ConstraintType: cdbm.AllocationConstraintTypeReserved, ConstraintValue: 2}
+	acGoodITSmall := model.APIAllocationConstraintCreateRequest{ResourceType: cdbm.AllocationResourceTypeInstanceType, ResourceTypeID: it1.ID.String(), ConstraintType: cdbm.AllocationConstraintTypeReserved, ConstraintValue: 1}
 	acGoodIPB := model.APIAllocationConstraintCreateRequest{ResourceType: cdbm.AllocationResourceTypeIPBlock, ResourceTypeID: ipb1.ID.String(), ConstraintType: cdbm.AllocationConstraintTypeReserved, ConstraintValue: 24}
 
 	acGoodIPBVpcPrefix := model.APIAllocationConstraintCreateRequest{ResourceType: cdbm.AllocationResourceTypeIPBlock, ResourceTypeID: ipbVpcPrefix.ID.String(), ConstraintType: cdbm.AllocationConstraintTypeReserved, ConstraintValue: 16}
@@ -2314,6 +2233,8 @@ func TestAllocationHandler_Delete(t *testing.T) {
 	okBodyIT, err := json.Marshal(model.APIAllocationCreateRequest{Name: "okit", Description: cdb.GetStrPtr(""), TenantID: tenant1.ID.String(), SiteID: site.ID.String(), AllocationConstraints: []model.APIAllocationConstraintCreateRequest{acGoodIT}})
 	assert.Nil(t, err)
 	okBodyRepeatedITInAC, err := json.Marshal(model.APIAllocationCreateRequest{Name: "ok-repeated", Description: cdb.GetStrPtr(""), TenantID: tenant1.ID.String(), SiteID: site.ID.String(), AllocationConstraints: []model.APIAllocationConstraintCreateRequest{acGoodIT}})
+	assert.Nil(t, err)
+	okBodySmallIT, err := json.Marshal(model.APIAllocationCreateRequest{Name: "ok-small", Description: cdb.GetStrPtr(""), TenantID: tenant1.ID.String(), SiteID: site.ID.String(), AllocationConstraints: []model.APIAllocationConstraintCreateRequest{acGoodITSmall}})
 	assert.Nil(t, err)
 	okBodyIPB, err := json.Marshal(model.APIAllocationCreateRequest{Name: "okipb", Description: cdb.GetStrPtr(""), TenantID: tenant1.ID.String(), SiteID: site.ID.String(), AllocationConstraints: []model.APIAllocationConstraintCreateRequest{acGoodIPB}})
 	assert.Nil(t, err)
@@ -2336,12 +2257,11 @@ func TestAllocationHandler_Delete(t *testing.T) {
 
 	// Create 1 Instance Type Allocation
 	aIT := testCreateAllocation(t, dbSession, ipamStorage, ipu, ipOrg1, string(okBodyIT))
-	aITUUID := uuid.MustParse(aIT.ID)
-	acUUID := uuid.MustParse(aIT.AllocationConstraints[0].ID)
+	_ = uuid.MustParse(aIT.ID)
+	_ = uuid.MustParse(aIT.AllocationConstraints[0].ID)
 	// Create another instance type allocation with same instane type
 	aIT2 := testCreateAllocation(t, dbSession, ipamStorage, ipu, ipOrg1, string(okBodyRepeatedITInAC))
-	//aIT2UUID := uuid.MustParse(aIT2.ID)
-	//ac2UUID := uuid.MustParse(aIT.AllocationConstraints[0].ID)
+	aIT3 := testCreateAllocation(t, dbSession, ipamStorage, ipu, ipOrg1, string(okBodySmallIT))
 
 	// Create 3 IP Block Allocation
 	aIPB := testCreateAllocation(t, dbSession, ipamStorage, ipu, ipOrg1, string(okBodyIPB))
@@ -2354,8 +2274,51 @@ func TestAllocationHandler_Delete(t *testing.T) {
 		ctx, nil,
 		cdbm.InstanceCreateInput{
 			Name:                     "testInst",
-			AllocationID:             &aITUUID,
-			AllocationConstraintID:   &acUUID,
+			TenantID:                 tenant1.ID,
+			InfrastructureProviderID: ip.ID,
+			SiteID:                   site.ID,
+			InstanceTypeID:           &it1.ID,
+			VpcID:                    vpc1.ID,
+			OperatingSystemID:        cdb.GetUUIDPtr(os1.ID),
+			Status:                   cdbm.InstanceStatusReady,
+			CreatedBy:                tnu.ID,
+		},
+	)
+	assert.Nil(t, err)
+	instance2, err := instanceDAO.Create(
+		ctx, nil,
+		cdbm.InstanceCreateInput{
+			Name:                     "testInst2",
+			TenantID:                 tenant1.ID,
+			InfrastructureProviderID: ip.ID,
+			SiteID:                   site.ID,
+			InstanceTypeID:           &it1.ID,
+			VpcID:                    vpc1.ID,
+			OperatingSystemID:        cdb.GetUUIDPtr(os1.ID),
+			Status:                   cdbm.InstanceStatusReady,
+			CreatedBy:                tnu.ID,
+		},
+	)
+	assert.Nil(t, err)
+	instance3, err := instanceDAO.Create(
+		ctx, nil,
+		cdbm.InstanceCreateInput{
+			Name:                     "testInst3",
+			TenantID:                 tenant1.ID,
+			InfrastructureProviderID: ip.ID,
+			SiteID:                   site.ID,
+			InstanceTypeID:           &it1.ID,
+			VpcID:                    vpc1.ID,
+			OperatingSystemID:        cdb.GetUUIDPtr(os1.ID),
+			Status:                   cdbm.InstanceStatusReady,
+			CreatedBy:                tnu.ID,
+		},
+	)
+	assert.Nil(t, err)
+	instance4, err := instanceDAO.Create(
+		ctx, nil,
+		cdbm.InstanceCreateInput{
+			Name:                     "testInst4",
 			TenantID:                 tenant1.ID,
 			InfrastructureProviderID: ip.ID,
 			SiteID:                   site.ID,
@@ -2427,7 +2390,7 @@ func TestAllocationHandler_Delete(t *testing.T) {
 		allocation         *model.APIAllocation
 		expectedErr        bool
 		expectedStatus     int
-		deleteInstanceID   *uuid.UUID
+		deleteInstanceIDs  []uuid.UUID
 		deleteSubnetID     *uuid.UUID
 		deleteVpcPrefixID  *uuid.UUID
 		checkFullGrant     bool
@@ -2488,13 +2451,29 @@ func TestAllocationHandler_Delete(t *testing.T) {
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
-			name:             "error when tenant has instances using instance type",
-			reqOrgName:       ipOrg1,
-			user:             ipu,
-			aID:              aIT.ID,
-			expectedErr:      true,
-			expectedStatus:   http.StatusBadRequest,
-			deleteInstanceID: &instance.ID,
+			name:           "error when tenant has instances using instance type",
+			reqOrgName:     ipOrg1,
+			user:           ipu,
+			aID:            aIT.ID,
+			expectedErr:    true,
+			expectedStatus: http.StatusBadRequest,
+			deleteInstanceIDs: []uuid.UUID{
+				instance3.ID,
+				instance4.ID,
+			},
+		},
+		{
+			name:            "success when deleting allocation still leaves enough aggregate capacity",
+			reqOrgName:      ipOrg1,
+			user:            ipu,
+			aID:             aIT3.ID,
+			allocation:      aIT3,
+			expectedErr:     false,
+			expectedStatus:  http.StatusAccepted,
+			tenantSiteCount: 1,
+			deleteInstanceIDs: []uuid.UUID{
+				instance2.ID,
+			},
 		},
 		{
 			name:           "error when user doesn't have the right role",
@@ -2568,6 +2547,9 @@ func TestAllocationHandler_Delete(t *testing.T) {
 			expectedErr:     false,
 			expectedStatus:  http.StatusAccepted,
 			tenantSiteCount: 1, // allocation left
+			deleteInstanceIDs: []uuid.UUID{
+				instance.ID,
+			},
 		},
 		{
 			name:            "success case with InstanceType, should cause deletion",
@@ -2649,8 +2631,8 @@ func TestAllocationHandler_Delete(t *testing.T) {
 				assert.Equal(t, tc.tenantSiteCount, tscount)
 			}
 
-			if tc.deleteInstanceID != nil {
-				err = instanceDAO.Delete(ctx, nil, *tc.deleteInstanceID)
+			for _, deleteInstanceID := range tc.deleteInstanceIDs {
+				err = instanceDAO.Delete(ctx, nil, deleteInstanceID)
 				assert.Nil(t, err)
 			}
 			if tc.deleteSubnetID != nil {

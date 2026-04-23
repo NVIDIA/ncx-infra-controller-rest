@@ -140,35 +140,38 @@ func (m *VaultCredentialManager) Stop(ctx context.Context) error {
 	return nil
 }
 
+// Uppercase the MAC to match Carbide Core's vault key convention (Rust's
+// MacAddress Display trait emits uppercase hex). Go's net.HardwareAddr.String()
+// emits lowercase, and vault paths are case-sensitive.
 func (m *VaultCredentialManager) getBMCCredentialKey(mac net.HardwareAddr) string {
-	return fmt.Sprintf("%s/%s/%s", bmcCredentialPath, mac.String(), bmcCredentialSuffix)
+	return fmt.Sprintf("%s/%s/%s", bmcCredentialPath, strings.ToUpper(mac.String()), bmcCredentialSuffix)
 }
 
 func (m *VaultCredentialManager) getNVOSCredentialKey(mac net.HardwareAddr) string {
-	return fmt.Sprintf("%s/%s/%s", nvosCredentialPath, mac.String(), nvosCredentialSuffix)
+	return fmt.Sprintf("%s/%s/%s", nvosCredentialPath, strings.ToUpper(mac.String()), nvosCredentialSuffix)
 }
 
 func (m *VaultCredentialManager) get(ctx context.Context, key string) (*credential.Credential, error) {
 	secret, err := m.client.Logical().Read(key)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("vault read at %q: %w", key, err)
 	}
 	if secret == nil || secret.Data == nil {
-		return nil, errors.New("credential not found")
+		return nil, fmt.Errorf("credential not found at vault path %q", key)
 	}
 
 	credData, ok := secret.Data["data"].(map[string]interface{})
 	if !ok {
-		return nil, fmt.Errorf("unexpected secret data format")
+		return nil, fmt.Errorf("unexpected secret data format at vault path %q", key)
 	}
 
 	cred, err := credential.FromMap(credData)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parsing credential at vault path %q: %w", key, err)
 	}
 
 	if cred == nil || !cred.IsValid() {
-		return nil, fmt.Errorf("retrieved invalid credential from vault")
+		return nil, fmt.Errorf("retrieved invalid credential from vault path %q", key)
 	}
 
 	return cred, nil

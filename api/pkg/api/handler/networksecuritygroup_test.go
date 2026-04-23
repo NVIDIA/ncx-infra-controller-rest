@@ -875,11 +875,11 @@ func TestNetworkSecurityGroupHandler_GetAll(t *testing.T) {
 	mci2 := testInstanceBuildMachineInterface(t, dbSession, subnet1.ID, mc2.ID)
 	assert.NotNil(t, mci2)
 
-	inst1Site1Vpc1 := testInstanceBuildInstance(t, dbSession, "test-instance-1", al1.ID, alc1.ID, tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1Site1.ID, cdb.GetStrPtr(mc1.ID), nil, nil, cdbm.InstanceStatusReady)
+	inst1Site1Vpc1 := testInstanceBuildInstance(t, dbSession, "test-instance-1", tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1Site1.ID, cdb.GetStrPtr(mc1.ID), nil, nil, cdbm.InstanceStatusReady)
 	inst1Site1Vpc1.NetworkSecurityGroupID = cdb.GetStrPtr(nsg1Site1.ID)
 	testUpdateInstance(t, dbSession, inst1Site1Vpc1)
 
-	inst2Site1Vpc1 := testInstanceBuildInstance(t, dbSession, "test-instance-1", al1.ID, alc1.ID, tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1Site1.ID, cdb.GetStrPtr(mc1.ID), nil, nil, cdbm.InstanceStatusReady)
+	inst2Site1Vpc1 := testInstanceBuildInstance(t, dbSession, "test-instance-1", tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1Site1.ID, cdb.GetStrPtr(mc1.ID), nil, nil, cdbm.InstanceStatusReady)
 	inst2Site1Vpc1.NetworkSecurityGroupID = cdb.GetStrPtr(nsg1Site1.ID)
 	testUpdateInstance(t, dbSession, inst2Site1Vpc1)
 
@@ -1269,11 +1269,11 @@ func TestNetworkSecurityGroupHandler_Get(t *testing.T) {
 	mci2 := testInstanceBuildMachineInterface(t, dbSession, subnet1.ID, mc2.ID)
 	assert.NotNil(t, mci2)
 
-	inst1Site1Vpc1 := testInstanceBuildInstance(t, dbSession, "test-instance-1", al1.ID, alc1.ID, tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1Site1.ID, cdb.GetStrPtr(mc1.ID), nil, nil, cdbm.InstanceStatusReady)
+	inst1Site1Vpc1 := testInstanceBuildInstance(t, dbSession, "test-instance-1", tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1Site1.ID, cdb.GetStrPtr(mc1.ID), nil, nil, cdbm.InstanceStatusReady)
 	inst1Site1Vpc1.NetworkSecurityGroupID = cdb.GetStrPtr(nsg1Site1.ID)
 	testUpdateInstance(t, dbSession, inst1Site1Vpc1)
 
-	inst2Site1Vpc1 := testInstanceBuildInstance(t, dbSession, "test-instance-1", al1.ID, alc1.ID, tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1Site1.ID, cdb.GetStrPtr(mc1.ID), nil, nil, cdbm.InstanceStatusReady)
+	inst2Site1Vpc1 := testInstanceBuildInstance(t, dbSession, "test-instance-1", tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1Site1.ID, cdb.GetStrPtr(mc1.ID), nil, nil, cdbm.InstanceStatusReady)
 	inst2Site1Vpc1.NetworkSecurityGroupID = cdb.GetStrPtr(nsg1Site1.ID)
 	testUpdateInstance(t, dbSession, inst2Site1Vpc1)
 
@@ -1560,7 +1560,7 @@ func TestNetworkSecurityGroupHandler_Delete(t *testing.T) {
 	mci2 := testInstanceBuildMachineInterface(t, dbSession, subnet1.ID, mc2.ID)
 	assert.NotNil(t, mci2)
 
-	inst1Site1Vpc1 := testInstanceBuildInstance(t, dbSession, "test-instance-1", al1.ID, alc1.ID, tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1Site1.ID, cdb.GetStrPtr(mc1.ID), nil, nil, cdbm.InstanceStatusReady)
+	inst1Site1Vpc1 := testInstanceBuildInstance(t, dbSession, "test-instance-1", tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1Site1.ID, cdb.GetStrPtr(mc1.ID), nil, nil, cdbm.InstanceStatusReady)
 	inst1Site1Vpc1.NetworkSecurityGroupID = cdb.GetStrPtr(nsg2Site1.ID)
 	testUpdateInstance(t, dbSession, inst1Site1Vpc1)
 
@@ -1980,7 +1980,7 @@ func TestNetworkSecurityGroupHandler_Update(t *testing.T) {
 	mci2 := testInstanceBuildMachineInterface(t, dbSession, subnet1.ID, mc2.ID)
 	assert.NotNil(t, mci2)
 
-	inst1Site1Vpc1 := testInstanceBuildInstance(t, dbSession, "test-instance-1", al1.ID, alc1.ID, tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1Site1.ID, cdb.GetStrPtr(mc1.ID), nil, nil, cdbm.InstanceStatusReady)
+	inst1Site1Vpc1 := testInstanceBuildInstance(t, dbSession, "test-instance-1", tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1Site1.ID, cdb.GetStrPtr(mc1.ID), nil, nil, cdbm.InstanceStatusReady)
 	inst1Site1Vpc1.NetworkSecurityGroupID = cdb.GetStrPtr(nsg2Site1.ID)
 	testUpdateInstance(t, dbSession, inst1Site1Vpc1)
 

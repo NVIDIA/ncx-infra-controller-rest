@@ -48,7 +48,8 @@ type Manager struct {
 }
 
 // New constructs a Manager with the given FirmwareUpdateStore backend.
-func New(store FirmwareUpdateStore, pmcManager *pmcmanager.PmcManager, dryRun bool) (*Manager, error) {
+// firmwareDir specifies the on-disk directory containing firmware artifacts (env: FW_DIR).
+func New(store FirmwareUpdateStore, pmcManager *pmcmanager.PmcManager, dryRun bool, firmwareDir string) (*Manager, error) {
 	manager := Manager{
 		firmwareUpdater: make(map[vendor.Vendor]*FirmwareUpdater),
 		store:           store,
@@ -56,15 +57,18 @@ func New(store FirmwareUpdateStore, pmcManager *pmcmanager.PmcManager, dryRun bo
 		dryRun:          dryRun,
 	}
 
+	log.Printf("Firmware manager using firmware directory: %s", firmwareDir)
+
 	for v := range vendor.VendorCodeMax {
 		vendor := vendor.CodeToVendor(v)
 		if err := vendor.IsSupported(); err != nil {
 			continue
 		}
 
-		updater, err := newFirmwareUpdater(vendor)
+		updater, err := newFirmwareUpdater(vendor, firmwareDir)
 		if err != nil {
-			return nil, err
+			log.Printf("skipping firmware support for vendor %s: %v", vendor.Name, err)
+			continue
 		}
 
 		manager.firmwareUpdater[vendor] = updater
@@ -232,11 +236,17 @@ func (manager *Manager) handleOnePmcUpdate(ctx context.Context, pmc *pmc.PMC, up
 			return powershelf.FirmwareStateFailed, err
 		}
 
-		response, err := updater.upgrade(ctx, pmc, version, manager.dryRun)
+		// Skip the actual Redfish upload for same-version re-flashes; the device is already at the target version.
+		dryRun := manager.dryRun
+		if update.VersionFrom == update.VersionTo {
+			dryRun = true
+			log.Printf("Re-flash detected for component %v on PMC %v (version %v); forcing dry-run", update.Component, pmc, update.VersionFrom)
+		}
+		err = updater.upgrade(ctx, pmc, version, dryRun)
 		if err != nil {
-			return powershelf.FirmwareStateFailed, fmt.Errorf("failed initiate  MAC %v for fw update %v", update.PmcMacAddress, update)
+			return powershelf.FirmwareStateFailed, fmt.Errorf("failed to initiate firmware update of component %v for powershelf with PMC MAC %v from %v to %v: %w", update.Component, pmc, update.VersionFrom, update.VersionTo, err)
 		} else {
-			log.Printf("successfully initiated firmware update of component %v for powershelf with PMC MAC %v from %v to %v: %v\n", update.Component, pmc, update.VersionFrom, update.VersionTo, response)
+			log.Printf("successfully initiated firmware update of component %v for powershelf with PMC MAC %v from %v to %v\n", update.Component, pmc, update.VersionFrom, update.VersionTo)
 			return powershelf.FirmwareStateVerifying, nil
 		}
 	case powershelf.FirmwareStateVerifying:

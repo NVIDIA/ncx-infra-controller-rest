@@ -498,14 +498,14 @@ func NewDeleteMachineInstanceTypeHandler(dbSession *cdb.Session, tc temporalClie
 
 // Handle godoc
 // @Summary Delete a Machine/InstanceType association
-// @Description Delete a Machine/InstanceType association for Instance Type
+// @Description Delete a Machine/InstanceType association for Instance Type. The `{id}` path parameter accepts either a `machineId` or the deprecated Machine/InstanceType association ID, which will be removed on July 9th, 2026 0:00 UTC.
 // @Tags machineinstancetype
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
 // @Param org path string true "Name of NGC organization"
 // @Param instance_type_id path string true "ID of Instance Type"
-// @Param id path string true "ID of Machine/Instance Type association"
+// @Param id path string true "Machine ID or deprecated ID of Machine/Instance Type association"
 // @Success 204
 // @Router /v2/org/{org}/carbide/instance/type/{instance_type_id}/machine/{id} [delete]
 func (dmith DeleteMachineInstanceTypeHandler) Handle(c echo.Context) error {
@@ -581,27 +581,40 @@ func (dmith DeleteMachineInstanceTypeHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusPreconditionFailed, "Failed to remove associate Machines with Instance Type because Instance Type is not associated with a Site.", nil)
 	}
 
-	// Get Machine/InstanceType association
-	mitStrID := c.Param("id")
+	// Resolve the delete identifier from either the machine ID or the deprecated association ID.
+	machineOrAssociationID := c.Param("id")
+	dmith.tracerSpan.SetAttribute(handlerSpan, attribute.String("machineinstancetype_identifier", machineOrAssociationID), logger)
 
-	dmith.tracerSpan.SetAttribute(handlerSpan, attribute.String("machineinstancetype_id", mitStrID), logger)
-
-	mitID, err := uuid.Parse(mitStrID)
-
-	if err != nil {
-		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Invalid Machine/Instance Type association ID in URL", nil)
-	}
-
+	// Look up the association first by deprecated association ID and then by machine ID.
 	mitDAO := cdbm.NewMachineInstanceTypeDAO(dmith.dbSession)
 
-	mit, err := mitDAO.GetByID(ctx, nil, mitID, nil)
-	if err != nil {
-		if err == cdb.ErrDoesNotExist {
-			return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find Machine/Instance Type association with ID specified in URL", nil)
-		}
+	var mit *cdbm.MachineInstanceType
 
-		logger.Error().Err(err).Msg("error retrieving Machine/InstanceType associations from DB")
-		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Machine/Instance Type associations", nil)
+	associationID, err := uuid.Parse(machineOrAssociationID)
+	if err == nil {
+		mit, err = mitDAO.GetByID(ctx, nil, associationID, nil)
+		if err != nil && err != cdb.ErrDoesNotExist {
+			logger.Error().Err(err).Msg("error retrieving Machine/InstanceType association by deprecated association ID from DB")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Machine/Instance Type associations", nil)
+		}
+		if err == cdb.ErrDoesNotExist {
+			mit = nil
+		}
+	}
+
+	if mit == nil {
+		mits, _, err := mitDAO.GetAll(ctx, nil, &machineOrAssociationID, []uuid.UUID{itID}, nil, nil, nil, nil)
+		if err != nil {
+			logger.Error().Err(err).Msg("error retrieving Machine/InstanceType association by Machine ID from DB")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Machine/Instance Type associations", nil)
+		}
+		if len(mits) > 0 {
+			mit = &mits[0]
+		}
+	}
+
+	if mit == nil {
+		return cutil.NewAPIErrorResponse(c, http.StatusNotFound, "Could not find Machine/Instance Type association with ID specified in URL", nil)
 	}
 
 	// Check if Machine/InstanceType association belongs to the Instance Type
@@ -640,7 +653,7 @@ func (dmith DeleteMachineInstanceTypeHandler) Handle(c echo.Context) error {
 	}
 
 	// Delete Machine/InstanceType association
-	err = mitDAO.DeleteByID(ctx, tx, mitID, false)
+	err = mitDAO.DeleteByID(ctx, tx, mit.ID, false)
 	if err != nil {
 		logger.Error().Err(err).Msg("error deleting Machine/InstanceType association from DB")
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete Machine/Instance Type association", nil)

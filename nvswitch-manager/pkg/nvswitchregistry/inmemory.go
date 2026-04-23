@@ -60,6 +60,9 @@ func (r *InMemoryRegistry) Register(ctx context.Context, tray *nvswitch.NVSwitch
 	if tray.BMC == nil {
 		return uuid.Nil, false, fmt.Errorf("tray.BMC is nil")
 	}
+	if tray.NVOS == nil {
+		return uuid.Nil, false, fmt.Errorf("tray.NVOS is nil")
+	}
 
 	r.mu.Lock()
 	defer r.mu.Unlock()

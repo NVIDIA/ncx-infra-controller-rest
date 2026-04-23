@@ -49,13 +49,21 @@ func TestNewAPIMachineInstanceType(t *testing.T) {
 			args: args{
 				dbmit: dbmit,
 			},
-			want: &APIMachineInstanceType{
-				ID:             dbmit.ID.String(),
-				MachineID:      dbmit.MachineID,
-				InstanceTypeID: dbmit.InstanceTypeID.String(),
-				Created:        dbmit.Created,
-				Updated:        dbmit.Updated,
-			},
+			want: func() *APIMachineInstanceType {
+				expected := &APIMachineInstanceType{
+					ID:             dbmit.ID.String(),
+					MachineID:      dbmit.MachineID,
+					InstanceTypeID: dbmit.InstanceTypeID.String(),
+					Created:        dbmit.Created,
+					Updated:        dbmit.Updated,
+				}
+
+				for _, deprecation := range machineInstanceTypeDeprecations {
+					expected.Deprecations = append(expected.Deprecations, NewAPIDeprecation(deprecation))
+				}
+
+				return expected
+			}(),
 		},
 	}
 	for _, tt := range tests {

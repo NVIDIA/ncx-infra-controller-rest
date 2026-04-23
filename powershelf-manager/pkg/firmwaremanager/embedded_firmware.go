@@ -17,41 +17,36 @@
 package firmwaremanager
 
 import (
-	"embed"
 	"fmt"
-	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/common/vendor"
 	"io/fs"
+	"os"
 	"strings"
 
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/common/vendor"
 	log "github.com/sirupsen/logrus"
 )
 
-//go:embed firmware/*
-var firmware embed.FS
+const pmcPath = "pmc"
 
-const firmware_path = "firmware"
-const pmc_path = "pmc"
-
-// FirmwareFetcher provides read-only access to embedded firmware assets organized as firmware/<vendor>/pmc.
+// FirmwareFetcher provides read-only access to firmware assets organized as firmware/<vendor>/pmc.
 type FirmwareFetcher struct {
-	fs embed.FS
+	fs fs.FS
 }
 
-// FirmwareEntry identifies a firmware artifact by name and embedded FS path.
+// FirmwareEntry identifies a firmware artifact by name and FS path.
 type FirmwareEntry struct {
 	name string
 	path string
 }
 
-func newFirmwareFetcher() *FirmwareFetcher {
-	return &FirmwareFetcher{
-		fs: firmware,
-	}
+// newFirmwareFetcher returns a FirmwareFetcher backed by the given on-disk directory.
+func newFirmwareFetcher(firmwareDir string) *FirmwareFetcher {
+	return &FirmwareFetcher{fs: os.DirFS(firmwareDir)}
 }
 
-// getVendorDirectories lists vendor directories under the embedded firmware root.
+// getVendorDirectories lists vendor directories under the firmware root.
 func (ff *FirmwareFetcher) getVendorDirectories() ([]fs.DirEntry, error) {
-	return fs.ReadDir(ff.fs, firmware_path)
+	return fs.ReadDir(ff.fs, ".")
 }
 
 // getPmcFirmwareEntries returns all PMC firmware files for a vendor; entries are non-empty .tar files.
@@ -67,8 +62,8 @@ func (ff *FirmwareFetcher) getPmcFirmwareEntries(v vendor.Vendor) ([]FirmwareEnt
 		if vendor.IsDir() {
 			vendorName := vendor.Name()
 			if vendorName == expectedVendorName {
-				path := fmt.Sprintf("%s/%s/%s", firmware_path, vendorName, pmc_path)
-				entries, err := fs.ReadDir(firmware, path)
+				path := fmt.Sprintf("%s/%s", vendorName, pmcPath)
+				entries, err := fs.ReadDir(ff.fs, path)
 				if err != nil {
 					return nil, err
 				}
@@ -93,11 +88,11 @@ func (ff *FirmwareFetcher) getPmcFirmwareEntries(v vendor.Vendor) ([]FirmwareEnt
 						continue
 					}
 
-					fw_path := fmt.Sprintf("%s/%s", path, name)
-					//log.Printf("Vendor %s: adding fw {%s} at %s (size: %d bytes)\n", vendorName, name, fw_path, size)
+					fwPath := fmt.Sprintf("%s/%s", path, name)
+					log.Printf("Vendor %s: adding fw {%s} at %s (size: %d bytes)\n", vendorName, name, fwPath, size)
 					fwEntries = append(fwEntries, FirmwareEntry{
 						name: name,
-						path: fw_path,
+						path: fwPath,
 					})
 
 				}
@@ -107,10 +102,11 @@ func (ff *FirmwareFetcher) getPmcFirmwareEntries(v vendor.Vendor) ([]FirmwareEnt
 		}
 	}
 
-	return nil, fmt.Errorf("no firmware found for vendor %s out of vendors %v", v.Name, vendors)
+	log.Printf("no embedded firmware found for vendor %s; firmware operations will be unavailable for this vendor", v.Name)
+	return nil, nil
 }
 
-// open opens a file by embedded path.
+// open opens a file by path.
 func (ff *FirmwareFetcher) open(path string) (fs.File, error) {
 	return ff.fs.Open(path)
 }
