@@ -50,8 +50,12 @@ func TaskTypeFromString(s string) TaskType {
 	}
 }
 
+func (tt TaskType) IsZero() bool {
+	return tt == ""
+}
+
 func (tt TaskType) IsValid() bool {
-	return tt != TaskTypeUnknown
+	return TaskTypeFromString(tt.String()) != TaskTypeUnknown
 }
 
 func (tt TaskType) String() string {

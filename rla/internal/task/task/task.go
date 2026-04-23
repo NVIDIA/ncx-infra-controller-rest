@@ -19,6 +19,7 @@ package task
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -71,12 +72,23 @@ type WorkflowComponent struct {
 }
 
 // ExecutionInfo contains the information needed to execute a task.
-// RuleDefinition contains the resolved operation rule
-// (resolved at task creation time).
 type ExecutionInfo struct {
-	TaskID         uuid.UUID
-	Components     []WorkflowComponent
+	TaskID     uuid.UUID
+	Components []WorkflowComponent
+
+	// RuleDefinition is the resolved operation rule, determined at task
+	// creation time and carried through to the workflow unchanged.
 	RuleDefinition *operationrules.RuleDefinition
+
+	// OperationType identifies which workflow to dispatch to. The executor
+	// looks up the registered WorkflowDescriptor by this value and submits
+	// the workflow by its stable Temporal name.
+	OperationType taskcommon.TaskType
+
+	// OperationInfo is the serialized operation-specific payload. The
+	// executor passes it to the WorkflowDescriptor's Unmarshal function,
+	// which deserializes and validates it before the workflow starts.
+	OperationInfo json.RawMessage
 }
 
 // ExecutionRequest holds the parameters for submitting a task for execution.
@@ -98,6 +110,18 @@ func (r *ExecutionRequest) Validate() error {
 
 	if r.Info.TaskID == uuid.Nil {
 		return fmt.Errorf("task ID is nil")
+	}
+
+	if !r.Info.OperationType.IsValid() {
+		return fmt.Errorf("operation type is invalid or not set")
+	}
+
+	if len(r.Info.OperationInfo) == 0 {
+		return fmt.Errorf("operation info is empty")
+	}
+
+	if !json.Valid(r.Info.OperationInfo) {
+		return fmt.Errorf("operation info is not valid JSON")
 	}
 
 	if len(r.Info.Components) == 0 {

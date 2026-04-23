@@ -30,17 +30,47 @@ import (
 
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/alert"
 	taskcommon "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/common"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor/temporalworkflow/activity"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor/temporalworkflow/common"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operationrules"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/task"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
 )
 
-// sendAlert logs an alert. Best-effort, never blocks the workflow.
+// Validator is a type constraint for pointer types that expose a Validate method.
+// It is used by validateWorkflowInput and registerTaskWorkflow to enforce that
+// the concrete info type can be nil-checked and validated before execution begins.
+type Validator[T any] interface {
+	*T
+	Validate() error
+}
+
+// validateWorkflowInput checks the three preconditions that every task workflow
+// must satisfy before doing any work:
+//  1. The component list is non-empty.
+//  2. The typed operation info pointer is not nil.
+//  3. The operation info is internally valid (info.Validate()).
+//
+// Type parameters are inferred from the info argument — callers write
+// validateWorkflowInput(reqInfo, info) with no explicit type arguments.
+func validateWorkflowInput[T any, PT Validator[T]](reqInfo task.ExecutionInfo, info PT) error {
+	if len(reqInfo.Components) == 0 {
+		return fmt.Errorf("no components provided")
+	}
+	if info == nil {
+		return fmt.Errorf("operation info is nil")
+	}
+	return info.Validate()
+}
+
+// sendAlert dispatches an alert on a best-effort basis. The call must never
+// block or fail the workflow, so it runs with a background context.
 func sendAlert(a alert.Alert) {
 	alert.Send(context.Background(), a)
 }
 
+// updateRunningTaskStatus records the transition to TaskStatusRunning via the
+// UpdateTaskStatus activity. Returns an error if taskID is nil or the activity fails.
 func updateRunningTaskStatus(
 	ctx workflow.Context,
 	taskID uuid.UUID,
@@ -55,9 +85,13 @@ func updateRunningTaskStatus(
 		Message: "Running",
 	}
 
-	return workflow.ExecuteActivity(ctx, "UpdateTaskStatus", arg).Get(ctx, nil)
+	return workflow.ExecuteActivity(ctx, activity.NameUpdateTaskStatus, arg).Get(ctx, nil)
 }
 
+// updateFinishedTaskStatus records the terminal task status (Completed or Failed)
+// via the UpdateTaskStatus activity. If both the operation error and the status
+// update fail, the errors are joined. The operation error is always returned so
+// the workflow reflects the correct failure cause.
 func updateFinishedTaskStatus(
 	ctx workflow.Context,
 	taskID uuid.UUID,
@@ -83,13 +117,15 @@ func updateFinishedTaskStatus(
 		}
 	}
 
-	if lerr := workflow.ExecuteActivity(ctx, "UpdateTaskStatus", arg).Get(ctx, nil); lerr != nil { //nolint
+	if lerr := workflow.ExecuteActivity(ctx, activity.NameUpdateTaskStatus, arg).Get(ctx, nil); lerr != nil { //nolint
 		return errors.Join(err, fmt.Errorf("failed to update task status: %w", lerr))
 	}
 
 	return err
 }
 
+// buildTargets groups the components in ExecutionInfo by type, returning a map
+// of ComponentType to Target. A nil info produces an empty (non-nil) map.
 func buildTargets(
 	info *task.ExecutionInfo,
 ) map[devicetypes.ComponentType]common.Target {
@@ -251,7 +287,7 @@ func executeGenericStageParallel(
 
 		future := workflow.ExecuteChildWorkflow(
 			childCtx,
-			GenericComponentStepWorkflow,
+			nameGenericComponentStepWorkflow,
 			step,
 			target,
 			activityName,

@@ -1,511 +1,425 @@
 # Temporal Workflow Guide
 
-This guide demonstrates how to create a new operation driven by Temporal workflow in the RLA system.
+This guide explains how to add a new operation to the Temporal workflow executor in the RLA system.
 
 ## Table of Contents
 - [Overview](#overview)
 - [Architecture](#architecture)
-- [Creating a New Operation](#creating-a-new-operation)
-  - [Step 1: Define Activities](#step-1-define-activities)
-  - [Step 2: Register Activities](#step-2-register-activities)
-  - [Step 3: Create Workflow](#step-3-create-workflow)
-  - [Step 4: Register Workflow](#step-4-register-workflow)
-  - [Step 5: Add Manager Method](#step-5-add-manager-method)
+- [Adding a New Operation](#adding-a-new-operation)
+  - [Step 0: Define the Task Type and Operation Metadata](#step-0-define-the-task-type-and-operation-metadata)
+  - [Step 1: Define Activity Methods](#step-1-define-activity-methods)
+  - [Step 2: Assign Names and Expose Activities](#step-2-assign-names-and-expose-activities)
+  - [Step 3: Create the Workflow File](#step-3-create-the-workflow-file)
 - [Complete Example](#complete-example)
 - [Best Practices](#best-practices)
+- [Workflow Patterns](#workflow-patterns)
 
 ## Overview
 
-The RLA temporal workflow system provides a reliable and scalable way to orchestrate long-running operations across distributed components. It consists of three main layers:
+The RLA Temporal workflow system provides durable, retryable execution of long-running operations across distributed rack components. It has three layers:
 
-1. **Manager**: Entry point that starts workflows and manages temporal clients
-2. **Workflows**: Orchestrate activities and define execution logic
-3. **Activities**: Actual work units that interact with component managers
+1. **Manager**: Receives generic `ExecutionRequest`s, looks up the right workflow from the registry, and submits it to Temporal
+2. **Workflows**: Orchestrate activities in sequence or parallel; each workflow self-registers with its `TaskType`
+3. **Activities**: Execute actual work (API calls, status checks) against component managers
 
 ## Architecture
 
-```
-┌─────────────────┐
-│     Manager     │  - Starts workers
-│                 │  - Manages temporal clients
-└────────┬────────┘
+```text
+ExecutionRequest{OperationType, OperationInfo}
          │
+         ▼
+┌─────────────────┐
+│     Manager     │  Looks up WorkflowDescriptor from registry
+│  manager.go     │  Calls client.ExecuteWorkflow(desc.WorkflowName, ...)
+└────────┬────────┘
          │ ExecuteWorkflow
          ▼
-┌─────────────────┐
-│    Workflow     │  - Orchestrates activities
-│                 │  - Defines execution sequence
-└────────┬────────┘
-         │
-         │ ExecuteActivity (parallel/sequential)
-         ▼
-┌─────────────────┐
-│   Activities    │  - Execute actual operations
-│                 │  - Interact with components
-└─────────────────┘
+┌─────────────────────────────────────┐
+│           Workflow                  │  Defined per operation type
+│  workflow/powercontrol.go, etc.     │  Calls executeRuleBasedOperation()
+└────────┬──────────────┬────────────┘
+         │ child wf     │ ExecuteActivity (name constant)
+         ▼              ▼
+┌────────────────┐  ┌──────────────────┐
+│ GenericComponent│  │    Activities    │  Registered with explicit names
+│  StepWorkflow  │  │ activity/*.go    │  via RegisterActivityWithOptions
+└────────────────┘  └──────────────────┘
 ```
 
-## Creating a New Operation
+### Registry Pattern
 
-Let's create a new operation called "HealthCheck" as an example. This operation will check the health of all components in a rack.
+**Workflow registry** (`workflow/registry.go`): uses `init()` self-registration. Task-dispatched workflow files call `registerTaskWorkflow[T, *T](taskType, name, fn)`, which derives the timeout and builds the `Unmarshal` closure automatically. Internal workflows (those without a `TaskType`) call `register(WorkflowDescriptor{...})` directly. Nothing needs to be added to a central list — the registry is populated automatically at startup.
 
-### Step 1: Define Activities
+**Activity registry** (`activity/registry.go`): uses per-instance dependency injection. `Build()` creates an `*Activities` value via `activity.New(updater, registry)` and calls `acts.All()` to obtain the name → bound-method map, then registers each entry with the Temporal worker via `RegisterActivityWithOptions(fn, {Name: name})`. Because activities are methods on `*Activities`, each manager instance holds its own isolated copy of the dependencies — no shared mutable globals.
 
-Activities are the basic units of work. They should be idempotent and handle retries gracefully.
+## Adding a New Operation
 
-**File: `activity/activity.go`**
+### Step 0: Define the Task Type and Operation Metadata
 
-Add a new activity function:
+Before any activity or workflow code can compile, two prerequisites must exist.
+
+**1. Register the task type** in `internal/task/common/common.go`:
 
 ```go
-// HealthCheck checks the health status of a component
-func HealthCheck(
-	ctx context.Context,
-	req common.HealthCheckRequest,
-) (common.HealthStatus, error) {
-	cm, err := validAndGetComponentManager(req.ComponentInfo)
-	if err != nil {
-		return common.HealthStatusUnknown, err
-	}
+const (
+    // ... existing constants ...
+    TaskTypeHealthCheck TaskType = "health_check"
+)
 
-	return cm.HealthCheck(ctx, req)
+func TaskTypeFromString(s string) TaskType {
+    switch s {
+    // ... existing cases ...
+    case TaskTypeHealthCheck.String():
+        return TaskTypeHealthCheck
+    // ...
+    }
 }
 ```
 
-**Key Points:**
-- Activities take `context.Context` as the first parameter
-- Use request/response structs from `common` package
-- Activities should validate inputs and handle errors gracefully
-- Activities are automatically retried by Temporal based on retry policy
-
-### Step 2: Register Activities
-
-Add your activity to the registry so it can be discovered by workers.
-
-**File: `activity/activity.go`**
-
-Update the `GetAllActivities()` function:
+**2. Add operation options** (at minimum a timeout) in `internal/task/operations/options.go` or equivalent:
 
 ```go
-func GetAllActivities() []any {
-	return []any{
-		InjectExpectation,
-		PowerControl,
-		GetPowerStatus,
-		UpdateTaskStatus,
-		FirmwareControl,
-		GetFirmwareStatus,
-		BringUpControl,
-		GetBringUpStatus,
-		HealthCheck,  // Add your new activity here
-	}
+func GetOperationOptions(tt taskcommon.TaskType) OperationOptions {
+    switch tt {
+    // ... existing cases ...
+    case taskcommon.TaskTypeHealthCheck:
+        return OperationOptions{Timeout: 10 * time.Minute}
+    // ...
+    }
 }
 ```
 
-### Step 3: Create Workflow
+**3. Define the task-info struct** in the `operations` package. Include a `Validate()` method — it is called by the `Unmarshal` closure that `registerTaskWorkflow` builds automatically:
 
-Workflows orchestrate activities. They define the execution logic, sequencing, and error handling.
+```go
+// HealthCheckTaskInfo carries the parameters for a health check operation.
+type HealthCheckTaskInfo struct {
+    // CheckType selects which checks to run (e.g. "full", "connectivity").
+    CheckType string `json:"check_type"`
+}
 
-**File: `workflow/healthcheck.go`** (create new file)
+func (i *HealthCheckTaskInfo) Validate() error {
+    if i.CheckType == "" {
+        return fmt.Errorf("check_type is required")
+    }
+    return nil
+}
+```
+
+### Step 1: Define Activity Methods
+
+Add methods to `*Activities` in `activity/activity.go`. Each method performs one unit of work and must be idempotent (Temporal may retry it).
+
+```go
+// HealthCheck checks the health status of a component.
+func (a *Activities) HealthCheck(
+    ctx context.Context,
+    target common.Target,
+) (operations.HealthStatus, error) {
+    cm, err := a.validAndGetComponentManager(target)
+    if err != nil {
+        return operations.HealthStatusUnknown, err
+    }
+    return cm.HealthCheck(ctx, target)
+}
+```
+
+**Key points:**
+- Receiver is `*Activities`; use `a.validAndGetComponentManager` (not a free function)
+- First non-receiver parameter is always `context.Context`
+- Activities are retried automatically per the workflow's retry policy
+- Validate inputs; return descriptive errors
+
+### Step 2: Assign Names and Expose Activities
+
+In `activity/activity.go`, add a name constant. In `activity/registry.go`, add the bound method to `All()`. These are the only two places the name string appears — everywhere else uses the constant.
+
+```go
+// activity/activity.go
+const (
+    // ... existing constants ...
+    NameHealthCheck = "HealthCheck"
+)
+```
+
+```go
+// activity/registry.go — inside All()
+func (a *Activities) All() map[string]any {
+    return map[string]any{
+        // ... existing entries ...
+        NameHealthCheck: a.HealthCheck,
+    }
+}
+```
+
+`Build()` in `manager.go` calls `acts.All()` and registers each entry with the Temporal worker via `RegisterActivityWithOptions(fn, {Name: name})` — no manual update to `manager.go` is needed.
+
+Use `NameHealthCheck` (not `"HealthCheck"`) in all `workflow.ExecuteActivity` call sites.
+
+### Step 3: Create the Workflow File
+
+Create `workflow/healthcheck.go`. The file must:
+
+1. Call `registerTaskWorkflow[T, PT](...)` in `init()` to register the workflow
+2. Implement the workflow function (unexported)
 
 ```go
 package workflow
 
 import (
-	"fmt"
-	"strings"
-	"time"
+    "fmt"
 
-	"github.com/rs/zerolog/log"
-	"go.temporal.io/sdk/temporal"
-	"go.temporal.io/sdk/workflow"
+    "go.temporal.io/sdk/workflow"
 
-	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/componentmanager/common"
-	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/inventoryobjects/component"
-	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/inventoryobjects/rack"
+    taskcommon "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/common"
+    "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor/temporalworkflow/activity"
+    "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operations"
+    "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/task"
 )
 
-const (
-	HealthCheckWorkflowExecutionTimeout = 30 * time.Minute
-	HealthCheckWorkflowName             = "HealthCheck"
-)
-
-var (
-	healthCheckActivityOptions = workflow.ActivityOptions{
-		StartToCloseTimeout: 10 * time.Minute,
-		RetryPolicy: &temporal.RetryPolicy{
-			MaximumAttempts:    3,
-			InitialInterval:    1 * time.Second,
-			MaximumInterval:    1 * time.Minute,
-			BackoffCoefficient: 2,
-		},
-	}
-)
-
-// HealthCheck workflow checks the health of all components in a rack
-func HealthCheck(
-	ctx workflow.Context,
-	rack *rack.Rack,
-) (map[string]common.HealthStatus, error) {
-	if rack == nil {
-		return nil, fmt.Errorf("rack is nil")
-	}
-
-	ctx = workflow.WithActivityOptions(ctx, healthCheckActivityOptions)
-
-	// Execute health checks for all components in parallel
-	futures := make(map[string]workflow.Future)
-	for _, c := range rack.Components {
-		componentName := c.Info.Name
-		futures[componentName] = healthCheckComponent(ctx, &c)
-		log.Debug().Msgf("health check for component %s started", componentName)
-	}
-
-	// Collect results
-	results := make(map[string]common.HealthStatus)
-	errs := make([]error, 0)
-
-	for componentName, f := range futures {
-		var status common.HealthStatus
-		err := f.Get(ctx, &status)
-		if err != nil {
-			log.Error().Msgf("health check for component %s failed: %v", componentName, err)
-			errs = append(errs, fmt.Errorf("%s: %w", componentName, err))
-			status = common.HealthStatusUnknown
-		}
-		results[componentName] = status
-		log.Debug().Msgf("health check for component %s completed: %s", componentName, status)
-	}
-
-	// Return results even if some checks failed
-	if len(errs) > 0 {
-		return results, combineErrors(errs)
-	}
-
-	return results, nil
+// init registers the HealthCheck workflow descriptor with the package registry.
+func init() {
+    registerTaskWorkflow[operations.HealthCheckTaskInfo, *operations.HealthCheckTaskInfo](
+        taskcommon.TaskTypeHealthCheck, "HealthCheck", healthCheck,
+    )
 }
 
-func healthCheckComponent(
-	ctx workflow.Context,
-	comp *component.Component,
-) workflow.Future {
-	req := common.HealthCheckRequest{
-		ComponentInfo: common.ComponentInfo{
-			Type:       comp.Type,
-			DeviceInfo: comp.Info,
-		},
-	}
+// healthCheck orchestrates health checks across all target components.
+func healthCheck(
+    ctx workflow.Context,
+    reqInfo task.ExecutionInfo,
+    info *operations.HealthCheckTaskInfo,
+) error {
+    if err := validateWorkflowInput(reqInfo, info); err != nil {
+        return err
+    }
 
-	return workflow.ExecuteActivity(ctx, "HealthCheck", req)
-}
+    ctx = workflow.WithActivityOptions(ctx, healthCheckActivityOptions)
 
-func combineErrors(errs []error) error {
-	if len(errs) == 0 {
-		return nil
-	}
+    if err := updateRunningTaskStatus(ctx, reqInfo.TaskID); err != nil {
+        return err
+    }
 
-	var sb strings.Builder
-	sb.WriteString("multiple errors occurred: ")
-	for i, err := range errs {
-		if i > 0 {
-			sb.WriteString(", ")
-		}
-		sb.WriteString(err.Error())
-	}
+    typeToTargets := buildTargets(&reqInfo)
 
-	return fmt.Errorf(sb.String())
+    err := executeRuleBasedOperation(
+        ctx,
+        typeToTargets,
+        activity.NameHealthCheck,
+        info,
+        reqInfo.RuleDefinition,
+    )
+
+    return updateFinishedTaskStatus(ctx, reqInfo.TaskID, err)
 }
 ```
 
-**Key Points:**
-- Workflows must be deterministic (no random values, no direct external calls)
-- Use `workflow.Context`, not `context.Context`
-- Define activity options (timeouts, retry policies)
-- Use `workflow.ExecuteActivity()` to call activities
-- Activities can be executed in parallel using futures
-- Return meaningful results and errors
+`registerTaskWorkflow` derives the `Timeout` from `operations.GetOperationOptions` and builds the `Unmarshal` closure via `unmarshalAndValidate`, so neither needs to be written by hand. `manager.Execute()` looks up the descriptor by `OperationType` and submits it to Temporal — no changes to `manager.go` are needed.
 
-### Step 4: Register Workflow
-
-Add your workflow to the registry so it can be discovered by workers.
-
-**File: `workflow/workflow.go`**
-
-```go
-func GetAllWorkflows() []any {
-	return []any{
-		PowerControl,
-		HealthCheck,  // Add your new workflow here
-	}
-}
-```
-
-### Step 5: Add Manager Method
-
-Create a method in the Manager to start your workflow. This is the entry point that external callers use.
-
-**File: `manager/manager.go`**
-
-```go
-// HealthCheck executes a health check workflow for a rack
-func (m *Manager) HealthCheck(ctx context.Context, rack *rack.Rack) (map[string]common.HealthStatus, error) {
-	workflowOptions := temporalclient.StartWorkflowOptions{
-		TaskQueue:                WorkflowQueue,
-		ID:                       fmt.Sprintf("health-check-%s", rack.Info.Name),
-		WorkflowExecutionTimeout: workflow.HealthCheckWorkflowExecutionTimeout,
-	}
-
-	r, err := m.publisherClient.Client().ExecuteWorkflow(
-		ctx,
-		workflowOptions,
-		workflow.HealthCheckWorkflowName,
-		rack,
-	)
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to execute health check workflow: %v", err)
-	}
-
-	wid := r.GetID()
-	log.Info().Msgf(
-		"Health check workflow started [wid: %s, rack: %s]",
-		wid,
-		rack.Info.Name,
-	)
-
-	// Wait for the workflow to complete and get results
-	var results map[string]common.HealthStatus
-	if err := r.Get(ctx, &results); err != nil {
-		return nil, err
-	}
-
-	return results, nil
-}
-```
-
-**Key Points:**
-- Use unique workflow IDs to prevent duplicates
-- Set appropriate timeouts
-- Pass workflow name and parameters
-- Handle both synchronous (blocking) and asynchronous patterns
-- Log workflow execution for observability
+**Key points:**
+- `registerTaskWorkflow` is the standard entry point for task-dispatched workflows; use `register()` directly only for internal workflows that have no `TaskType`
+- `WorkflowName` is what Temporal uses internally; keep it stable — it need not match the Go function name
+- `WorkflowFunc` can be unexported to decouple Go symbol renames from the stable Temporal name
+- Use `activity.NameXxx` constants, not string literals, in `workflow.ExecuteActivity` calls
 
 ## Complete Example
 
-Here's the complete flow for the HealthCheck operation:
+A full end-to-end trace for the `HealthCheck` operation:
 
-### 1. Request/Response Structs (common package)
+### 1. Operation info type (`operations` package)
 
 ```go
-// In internal/componentmanager/common/requests.go
-type HealthCheckRequest struct {
-	ComponentInfo ComponentInfo
+// HealthCheckTaskInfo carries the parameters for a health check operation.
+type HealthCheckTaskInfo struct {
+    // CheckType selects which checks to run (e.g. "full", "connectivity").
+    CheckType string `json:"check_type"`
 }
 
-// In internal/componentmanager/common/status.go
-type HealthStatus int
+func (i *HealthCheckTaskInfo) Validate() error {
+    if i.CheckType == "" {
+        return fmt.Errorf("check_type is required")
+    }
+    return nil
+}
+```
+
+### 2. Activity method, name constant, and registration
+
+```go
+// In activity/activity.go — add the name constant and method.
 
 const (
-	HealthStatusUnknown HealthStatus = iota
-	HealthStatusHealthy
-	HealthStatusDegraded
-	HealthStatusUnhealthy
+    // ... existing constants ...
+    NameHealthCheck = "HealthCheck"
 )
-```
 
-### 2. Component Manager Implementation
-
-```go
-// ComponentManager interface should include:
-type ComponentManager interface {
-	// ... other methods ...
-	HealthCheck(ctx context.Context, req HealthCheckRequest) (HealthStatus, error)
+func (a *Activities) HealthCheck(ctx context.Context, target common.Target) (operations.HealthStatus, error) {
+    cm, err := a.validAndGetComponentManager(target)
+    if err != nil {
+        return operations.HealthStatusUnknown, err
+    }
+    return cm.HealthCheck(ctx, target)
 }
 ```
 
-### 3. Usage Example
+```go
+// In activity/registry.go — add the bound method to All().
+
+func (a *Activities) All() map[string]any {
+    return map[string]any{
+        // ... existing entries ...
+        NameHealthCheck: a.HealthCheck,
+    }
+}
+```
+
+### 3. Workflow file (`workflow/healthcheck.go`)
 
 ```go
-// In your service layer
-func (s *Service) CheckRackHealth(ctx context.Context, rackName string) error {
-	// Get rack from database
-	rack, err := s.rackManager.GetRack(ctx, rackName)
-	if err != nil {
-		return err
-	}
-
-	// Execute health check workflow
-	results, err := s.temporalManager.HealthCheck(ctx, rack)
-	if err != nil {
-		return fmt.Errorf("health check failed: %v", err)
-	}
-
-	// Process results
-	for component, status := range results {
-		log.Info().Msgf("Component %s: %s", component, status)
-	}
-
-	return nil
+func init() {
+    registerTaskWorkflow[operations.HealthCheckTaskInfo, *operations.HealthCheckTaskInfo](
+        taskcommon.TaskTypeHealthCheck, "HealthCheck", healthCheck,
+    )
 }
+
+func healthCheck(ctx workflow.Context, reqInfo task.ExecutionInfo, info *operations.HealthCheckTaskInfo) error {
+    // ... orchestration logic ...
+    if err := updateRunningTaskStatus(ctx, reqInfo.TaskID); err != nil {
+        return err
+    }
+
+    err := executeRuleBasedOperation(
+        ctx,
+        buildTargets(&reqInfo),
+        activity.NameHealthCheck,
+        info,
+        reqInfo.RuleDefinition,
+    )
+    return updateFinishedTaskStatus(ctx, reqInfo.TaskID, err)
+}
+```
+
+### 4. Dispatching from the caller
+
+The caller constructs an `ExecutionRequest` and calls `executor.Execute()`. No operation-specific code is needed in the manager or executor layers.
+
+```go
+req := task.ExecutionRequest{
+    Info: task.ExecutionInfo{
+        TaskID:         task.ID,
+        Components:     components,
+        RuleDefinition: ruleDef,
+        OperationType:  taskcommon.TaskTypeHealthCheck,
+        OperationInfo:  task.Operation.Info, // json.RawMessage
+    },
+    Async: true,
+}
+resp, err := executor.Execute(ctx, &req)
 ```
 
 ## Best Practices
 
-### Workflow Design
+### Activity names
 
-1. **Keep workflows deterministic**: Don't use random numbers, current time, or external calls directly
-2. **Use activities for non-deterministic work**: All I/O, API calls, and side effects go in activities
-3. **Handle errors gracefully**: Workflows should be resilient to partial failures
-4. **Use meaningful workflow IDs**: Makes it easier to track and debug
-5. **Set appropriate timeouts**: Balance between giving enough time and detecting hung workflows
+- Define one `NameXxx` constant per activity in `activity/activity.go`
+- Always use the constant in `workflow.ExecuteActivity` calls — never write the string inline
+- The constant is the single source of truth; `RegisterActivityWithOptions` and all call sites use it
 
-### Activity Design
+### Workflow registration
 
-1. **Make activities idempotent**: They may be retried multiple times
-2. **Keep activities focused**: Each activity should do one thing well
-3. **Use structured logging**: Include context like component name, operation type
-4. **Validate inputs**: Check all parameters before executing
-5. **Return detailed errors**: Help with debugging when things fail
+- Each workflow file owns its own `init()` — no central list to maintain
+- Use `registerTaskWorkflow[T, *T](taskType, name, fn)` for task-dispatched workflows; it derives `Timeout` from `GetOperationOptions` and builds the `Unmarshal` + `Validate` closure automatically
+- Use `register(WorkflowDescriptor{...})` directly only for internal workflows that have no `TaskType` (e.g. `genericComponentStepWorkflow`)
+- `WorkflowName` is written once and never needs to match the Go function name; `registerTaskWorkflow` panics at startup if `TaskType` is zero or invalid, and `register` panics on any other misconfiguration
 
-### Performance Considerations
+### Workflow determinism
 
-1. **Parallelize when possible**: Use futures to execute independent activities concurrently
-2. **Batch operations**: Group related operations to reduce overhead
-3. **Use appropriate timeouts**: Don't make them too short or too long
-4. **Monitor workflow execution**: Track duration and success rates
+- Workflows must be deterministic: no random values, no direct I/O, no `time.Now()` (use `workflow.Now()`)
+- All non-deterministic work — API calls, status checks, sleeps — must happen inside activities
+- Use `workflow.Sleep()`, not `time.Sleep()`
 
-### Error Handling
+### Rule-based execution
 
-1. **Use retry policies**: Configure appropriate retry behavior for activities
-2. **Collect partial results**: Don't fail the entire workflow if one component fails
-3. **Provide context in errors**: Include which component/operation failed
-4. **Log at appropriate levels**: Info for normal flow, Error for actual problems
+For operations that fan out across component types, use `executeRuleBasedOperation()`. It drives execution through the `RuleDefinition` attached to the task:
+- Stages run sequentially
+- Steps within a stage run in parallel via `genericComponentStepWorkflow` child workflows
+- Each step can have pre/post actions and a configurable `max_parallel` batch size
 
-### Testing
+### Error handling
 
-1. **Test activities independently**: Unit test each activity function
-2. **Test workflows with mock activities**: Use Temporal's test framework
-3. **Test error scenarios**: Verify retry and error handling logic
-4. **Test Manager methods**: Integration tests for the full flow
-
-### Observability
-
-1. **Log workflow starts and completions**: Include workflow ID and parameters
-2. **Log activity executions**: Track when activities start and complete
-3. **Use structured logging**: Makes it easier to search and analyze
-4. **Add metrics**: Track success rates, durations, retry counts
-5. **Use Temporal Web UI**: Monitor workflows in real-time
+- Wrap errors with context (which component or stage failed)
+- Always call `updateFinishedTaskStatus()` — even on the error path — so the task record is updated
+- Retry policies live in the workflow's `workflow.ActivityOptions` variable or in the per-step `RetryPolicy` field of the rule definition — not scattered through workflow code
 
 ## Workflow Patterns
 
-### Sequential Execution
-
-Execute activities one after another:
+### Direct activity call (single component type)
 
 ```go
-func SequentialWorkflow(ctx workflow.Context, rack *rack.Rack) error {
-	ctx = workflow.WithActivityOptions(ctx, activityOptions)
-
-	// Step 1
-	if err := workflow.ExecuteActivity(ctx, "Activity1", arg1).Get(ctx, nil); err != nil {
-		return err
-	}
-
-	// Step 2
-	if err := workflow.ExecuteActivity(ctx, "Activity2", arg2).Get(ctx, nil); err != nil {
-		return err
-	}
-
-	return nil
+ctx = workflow.WithActivityOptions(ctx, activityOpts)
+if err := workflow.ExecuteActivity(ctx, activity.NameHealthCheck, target).Get(ctx, nil); err != nil {
+    return fmt.Errorf("health check failed: %w", err)
 }
 ```
 
-### Parallel Execution
-
-Execute multiple activities at once:
+### Parallel activities with result collection
 
 ```go
-func ParallelWorkflow(ctx workflow.Context, rack *rack.Rack) error {
-	ctx = workflow.WithActivityOptions(ctx, activityOptions)
-
-	futures := make([]workflow.Future, 0)
-	for _, comp := range rack.Components {
-		f := workflow.ExecuteActivity(ctx, "Activity", comp)
-		futures = append(futures, f)
-	}
-
-	// Wait for all to complete
-	for _, f := range futures {
-		if err := f.Get(ctx, nil); err != nil {
-			return err
-		}
-	}
-
-	return nil
+futures := make([]workflow.Future, len(targets))
+for i, target := range targets {
+    futures[i] = workflow.ExecuteActivity(ctx, activity.NameHealthCheck, target)
+}
+for i, f := range futures {
+    if err := f.Get(ctx, nil); err != nil {
+        return fmt.Errorf("component %s failed: %w", targets[i].ComponentIDs[0], err)
+    }
 }
 ```
 
-### Conditional Execution
-
-Execute activities based on conditions:
+### Polling loop
 
 ```go
-func ConditionalWorkflow(ctx workflow.Context, rack *rack.Rack, mode string) error {
-	ctx = workflow.WithActivityOptions(ctx, activityOptions)
-
-	switch mode {
-	case "full":
-		return workflow.ExecuteActivity(ctx, "FullCheck", rack).Get(ctx, nil)
-	case "quick":
-		return workflow.ExecuteActivity(ctx, "QuickCheck", rack).Get(ctx, nil)
-	default:
-		return fmt.Errorf("unknown mode: %s", mode)
-	}
+deadline := workflow.Now(ctx).Add(timeout)
+for {
+    if workflow.Now(ctx).After(deadline) {
+        return fmt.Errorf("timed out after %v", timeout)
+    }
+    if err := workflow.Sleep(ctx, pollInterval); err != nil {
+        return err
+    }
+    var result activity.SomeStatusResult
+    if err := workflow.ExecuteActivity(ctx, activity.NameGetSomeStatus, target).Get(ctx, &result); err != nil {
+        continue // transient error, keep polling
+    }
+    if result.Done {
+        return nil
+    }
 }
 ```
 
-### Sequenced Groups
-
-Execute groups of activities in sequence, with parallel execution within each group:
+### Rule-based fan-out (recommended for multi-component operations)
 
 ```go
-func SequencedGroupsWorkflow(ctx workflow.Context, rack *rack.Rack) error {
-	ctx = workflow.WithActivityOptions(ctx, activityOptions)
-
-	// Group 1: Power on power shelves (parallel)
-	group1 := make([]workflow.Future, 0)
-	for _, ps := range powerShelves {
-		f := workflow.ExecuteActivity(ctx, "PowerOn", ps)
-		group1 = append(group1, f)
-	}
-	for _, f := range group1 {
-		if err := f.Get(ctx, nil); err != nil {
-			return err
-		}
-	}
-
-	// Group 2: Power on switches (parallel)
-	group2 := make([]workflow.Future, 0)
-	for _, sw := range switches {
-		f := workflow.ExecuteActivity(ctx, "PowerOn", sw)
-		group2 = append(group2, f)
-	}
-	for _, f := range group2 {
-		if err := f.Get(ctx, nil); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
+err := executeRuleBasedOperation(
+    ctx,
+    typeToTargets,          // map[ComponentType]Target
+    activity.NameMyActivity, // legacy fallback name for steps without MainOperation
+    operationInfo,
+    reqInfo.RuleDefinition,
+)
 ```
+
+This drives the entire operation through the `RuleDefinition` stages and steps, handling parallelism and batching automatically via `genericComponentStepWorkflow`.
 
 ## References
 
 - [Temporal Documentation](https://docs.temporal.io/)
 - [Temporal Go SDK](https://github.com/temporalio/sdk-go)
-- Existing implementations:
-  - `workflow/powercontrol.go` - Power control workflow
-  - `activity/activity.go` - Activity implementations
-  - `manager/manager.go` - Manager with workflow execution
-
+- Key files in this package:
+  - `activity/activity.go` — `*Activities` methods, name constants
+  - `activity/registry.go` — `Activities` struct, `New`, `All` (per-instance dependency injection)
+  - `workflow/registry.go` — workflow registry (`WorkflowDescriptor`, `registerTaskWorkflow`, `unmarshalAndValidate`, `register`, `Get`, `GetAllWorkflows`)
+  - `workflow/genericcomponentstep.go` — `genericComponentStepWorkflow`, `nameGenericComponentStepWorkflow`
+  - `workflow/helpers.go` — `executeRuleBasedOperation`, `buildTargets`, batching helpers
+  - `workflow/actions.go` — pre/post action executors (`actionExecutorRegistry`)
+  - `manager/manager.go` — `Build` (worker setup), `Execute` (workflow dispatch)

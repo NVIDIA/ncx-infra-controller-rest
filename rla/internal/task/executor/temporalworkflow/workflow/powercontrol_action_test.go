@@ -27,7 +27,9 @@ import (
 	"github.com/stretchr/testify/mock"
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/testsuite"
+	temporalworkflow "go.temporal.io/sdk/workflow"
 
+	activitypkg "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor/temporalworkflow/activity"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor/temporalworkflow/common"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operationrules"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operations"
@@ -109,11 +111,11 @@ func TestPowerControlWorkflow_GracefulWithVerification(t *testing.T) {
 
 			// Register activities
 			env.RegisterActivityWithOptions(mockPowerControl,
-				activity.RegisterOptions{Name: "PowerControl"})
+				activity.RegisterOptions{Name: activitypkg.NamePowerControl})
 			env.RegisterActivityWithOptions(mockGetPowerStatus,
-				activity.RegisterOptions{Name: "GetPowerStatus"})
+				activity.RegisterOptions{Name: activitypkg.NameGetPowerStatus})
 			env.RegisterActivityWithOptions(mockUpdateTaskStatus,
-				activity.RegisterOptions{Name: "UpdateTaskStatus"})
+				activity.RegisterOptions{Name: activitypkg.NameUpdateTaskStatus})
 
 			// Mock activity responses
 			env.OnActivity(mockPowerControl, mock.Anything, mock.Anything,
@@ -138,7 +140,7 @@ func TestPowerControlWorkflow_GracefulWithVerification(t *testing.T) {
 					devicetypes.ComponentTypeCompute),
 			}
 
-			info := operations.PowerControlTaskInfo{
+			info := &operations.PowerControlTaskInfo{
 				Operation: tc.operation,
 			}
 
@@ -149,10 +151,10 @@ func TestPowerControlWorkflow_GracefulWithVerification(t *testing.T) {
 			}
 
 			// Register child workflow
-			env.RegisterWorkflow(GenericComponentStepWorkflow)
+			env.RegisterWorkflowWithOptions(genericComponentStepWorkflow, temporalworkflow.RegisterOptions{Name: nameGenericComponentStepWorkflow})
 
 			// Execute workflow
-			env.ExecuteWorkflow(PowerControl, reqInfo, info)
+			env.ExecuteWorkflow(powerControl, reqInfo, info)
 
 			// Verify workflow completed successfully
 			assert.True(t, env.IsWorkflowCompleted())
@@ -219,11 +221,11 @@ func TestPowerControlWorkflow_ForcefulWithFinalVerification(t *testing.T) {
 
 			// Register activities
 			env.RegisterActivityWithOptions(mockPowerControl,
-				activity.RegisterOptions{Name: "PowerControl"})
+				activity.RegisterOptions{Name: activitypkg.NamePowerControl})
 			env.RegisterActivityWithOptions(mockGetPowerStatus,
-				activity.RegisterOptions{Name: "GetPowerStatus"})
+				activity.RegisterOptions{Name: activitypkg.NameGetPowerStatus})
 			env.RegisterActivityWithOptions(mockUpdateTaskStatus,
-				activity.RegisterOptions{Name: "UpdateTaskStatus"})
+				activity.RegisterOptions{Name: activitypkg.NameUpdateTaskStatus})
 
 			// Mock activity responses
 			env.OnActivity(mockPowerControl, mock.Anything, mock.Anything,
@@ -241,7 +243,7 @@ func TestPowerControlWorkflow_ForcefulWithFinalVerification(t *testing.T) {
 					devicetypes.ComponentTypeCompute),
 			}
 
-			info := operations.PowerControlTaskInfo{
+			info := &operations.PowerControlTaskInfo{
 				Operation: tc.operation,
 			}
 
@@ -252,10 +254,10 @@ func TestPowerControlWorkflow_ForcefulWithFinalVerification(t *testing.T) {
 			}
 
 			// Register child workflow
-			env.RegisterWorkflow(GenericComponentStepWorkflow)
+			env.RegisterWorkflowWithOptions(genericComponentStepWorkflow, temporalworkflow.RegisterOptions{Name: nameGenericComponentStepWorkflow})
 
 			// Execute workflow
-			env.ExecuteWorkflow(PowerControl, reqInfo, info)
+			env.ExecuteWorkflow(powerControl, reqInfo, info)
 
 			// Verify workflow completed successfully
 			assert.True(t, env.IsWorkflowCompleted())
@@ -283,13 +285,13 @@ func TestPowerControlWorkflow_CompositeVerification(t *testing.T) {
 
 	// Register activities
 	env.RegisterActivityWithOptions(mockPowerControl,
-		activity.RegisterOptions{Name: "PowerControl"})
+		activity.RegisterOptions{Name: activitypkg.NamePowerControl})
 	env.RegisterActivityWithOptions(mockGetPowerStatus,
-		activity.RegisterOptions{Name: "GetPowerStatus"})
+		activity.RegisterOptions{Name: activitypkg.NameGetPowerStatus})
 	env.RegisterActivityWithOptions(mockVerifyReachability,
 		activity.RegisterOptions{Name: "VerifyReachability"})
 	env.RegisterActivityWithOptions(mockUpdateTaskStatus,
-		activity.RegisterOptions{Name: "UpdateTaskStatus"})
+		activity.RegisterOptions{Name: activitypkg.NameUpdateTaskStatus})
 
 	// Mock activity responses
 	env.OnActivity(mockPowerControl, mock.Anything, mock.Anything,
@@ -346,7 +348,7 @@ func TestPowerControlWorkflow_CompositeVerification(t *testing.T) {
 			devicetypes.ComponentTypePowerShelf),
 	}
 
-	info := operations.PowerControlTaskInfo{
+	info := &operations.PowerControlTaskInfo{
 		Operation: operations.PowerOperationPowerOn,
 	}
 
@@ -357,10 +359,10 @@ func TestPowerControlWorkflow_CompositeVerification(t *testing.T) {
 	}
 
 	// Register child workflow
-	env.RegisterWorkflow(GenericComponentStepWorkflow)
+	env.RegisterWorkflowWithOptions(genericComponentStepWorkflow, temporalworkflow.RegisterOptions{Name: nameGenericComponentStepWorkflow})
 
 	// Execute workflow
-	env.ExecuteWorkflow(PowerControl, reqInfo, info)
+	env.ExecuteWorkflow(powerControl, reqInfo, info)
 
 	// Verify workflow completed successfully
 	assert.True(t, env.IsWorkflowCompleted())
@@ -375,11 +377,11 @@ func TestPowerControlWorkflow_BackwardCompatibility(t *testing.T) {
 
 	// Register activities
 	env.RegisterActivityWithOptions(mockPowerControl,
-		activity.RegisterOptions{Name: "PowerControl"})
+		activity.RegisterOptions{Name: activitypkg.NamePowerControl})
 	env.RegisterActivityWithOptions(mockGetPowerStatus,
-		activity.RegisterOptions{Name: "GetPowerStatus"})
+		activity.RegisterOptions{Name: activitypkg.NameGetPowerStatus})
 	env.RegisterActivityWithOptions(mockUpdateTaskStatus,
-		activity.RegisterOptions{Name: "UpdateTaskStatus"})
+		activity.RegisterOptions{Name: activitypkg.NameUpdateTaskStatus})
 
 	// Mock activity responses
 	env.OnActivity(mockPowerControl, mock.Anything, mock.Anything,
@@ -412,7 +414,7 @@ func TestPowerControlWorkflow_BackwardCompatibility(t *testing.T) {
 			devicetypes.ComponentTypeCompute),
 	}
 
-	info := operations.PowerControlTaskInfo{
+	info := &operations.PowerControlTaskInfo{
 		Operation: operations.PowerOperationPowerOn,
 	}
 
@@ -423,10 +425,10 @@ func TestPowerControlWorkflow_BackwardCompatibility(t *testing.T) {
 	}
 
 	// Register child workflow
-	env.RegisterWorkflow(GenericComponentStepWorkflow)
+	env.RegisterWorkflowWithOptions(genericComponentStepWorkflow, temporalworkflow.RegisterOptions{Name: nameGenericComponentStepWorkflow})
 
 	// Execute workflow
-	env.ExecuteWorkflow(PowerControl, reqInfo, info)
+	env.ExecuteWorkflow(powerControl, reqInfo, info)
 
 	// Verify workflow completed successfully
 	assert.True(t, env.IsWorkflowCompleted())

@@ -21,7 +21,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/rs/zerolog/log"
 	"go.temporal.io/api/enums/v1"
@@ -30,9 +29,12 @@ import (
 
 	taskcommon "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/common"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor/temporalworkflow/common"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor/temporalworkflow/workflow"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/task"
 )
 
+// workflowStatusToTaskStatus maps Temporal workflow execution statuses to the
+// engine-agnostic TaskStatus values exposed by the executor interface.
 var (
 	workflowStatusToTaskStatus = map[enums.WorkflowExecutionStatus]taskcommon.TaskStatus{ //nlint
 		enums.WORKFLOW_EXECUTION_STATUS_RUNNING:          taskcommon.TaskStatusRunning,
@@ -56,6 +58,9 @@ func ignoreNotFound(err error) error {
 	return err
 }
 
+// taskStatusFromTemporalWorkflowStatus converts a Temporal workflow execution
+// status to the engine-agnostic TaskStatus. Returns TaskStatusUnknown for any
+// status not present in the mapping table.
 func taskStatusFromTemporalWorkflowStatus(
 	workflowStatus enums.WorkflowExecutionStatus,
 ) taskcommon.TaskStatus {
@@ -65,28 +70,40 @@ func taskStatusFromTemporalWorkflowStatus(
 	return taskcommon.TaskStatusUnknown
 }
 
-type executeWorkflowParams struct {
-	workflowName string
-	timeout      time.Duration
-	req          *task.ExecutionRequest
-	info         any
-}
-
+// executeWorkflow deserializes the operation payload and submits the Temporal
+// workflow described by desc. All engine-specific mechanics — client options,
+// workflow ID, timeout, and the optional synchronous wait — are handled here.
 func executeWorkflow(
 	ctx context.Context,
 	client temporalclient.Client,
-	params executeWorkflowParams,
+	desc workflow.WorkflowDescriptor,
+	req *task.ExecutionRequest,
 ) (*task.ExecutionResponse, error) {
+	if desc.Unmarshal == nil {
+		return nil, fmt.Errorf(
+			"workflow %q has no unmarshal function",
+			desc.WorkflowName,
+		)
+	}
+
+	typedInfo, err := desc.Unmarshal(req.Info.OperationInfo)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"failed to unmarshal operation info for %s: %w",
+			req.Info.OperationType, err,
+		)
+	}
+
 	r, err := client.ExecuteWorkflow(
 		ctx,
 		temporalclient.StartWorkflowOptions{
 			TaskQueue:                WorkflowQueue,
-			ID:                       params.req.Info.TaskID.String(),
-			WorkflowExecutionTimeout: params.timeout,
+			ID:                       req.Info.TaskID.String(),
+			WorkflowExecutionTimeout: desc.Timeout,
 		},
-		params.workflowName,
-		params.req.Info,
-		params.info,
+		desc.WorkflowName,
+		req.Info,
+		typedInfo,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute workflow: %w", err)
@@ -106,7 +123,7 @@ func executeWorkflow(
 		)
 	}
 
-	if !params.req.Async {
+	if !req.Async {
 		// For synchronous requests, block until the workflow is completed.
 		if err := r.Get(ctx, nil); err != nil {
 			return nil, fmt.Errorf("failed to get workflow result: %w", err)

@@ -28,7 +28,9 @@ import (
 	"github.com/stretchr/testify/mock"
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/testsuite"
+	temporalworkflow "go.temporal.io/sdk/workflow"
 
+	activitypkg "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor/temporalworkflow/activity"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor/temporalworkflow/common"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operationrules"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operations"
@@ -89,15 +91,15 @@ func TestPowerControlWorkflowWithBatching(t *testing.T) {
 		}
 
 		env.RegisterActivityWithOptions(mockPowerControlWithTracking, activity.RegisterOptions{
-			Name: "PowerControl",
+			Name: activitypkg.NamePowerControl,
 		})
 		env.RegisterActivityWithOptions(mockUpdateTaskStatus, activity.RegisterOptions{
-			Name: "UpdateTaskStatus",
+			Name: activitypkg.NameUpdateTaskStatus,
 		})
 		env.RegisterActivityWithOptions(mockGetPowerStatus, activity.RegisterOptions{
-			Name: "GetPowerStatus",
+			Name: activitypkg.NameGetPowerStatus,
 		})
-		env.RegisterWorkflow(GenericComponentStepWorkflow)
+		env.RegisterWorkflowWithOptions(genericComponentStepWorkflow, temporalworkflow.RegisterOptions{Name: nameGenericComponentStepWorkflow})
 
 		env.OnActivity(mockUpdateTaskStatus, mock.Anything, mock.Anything).Return(nil)
 		env.OnActivity(mockGetPowerStatus, mock.Anything, mock.Anything).Return(
@@ -113,14 +115,14 @@ func TestPowerControlWorkflowWithBatching(t *testing.T) {
 			},
 		)
 
-		info := operations.PowerControlTaskInfo{Operation: operations.PowerOperationPowerOn}
+		info := &operations.PowerControlTaskInfo{Operation: operations.PowerOperationPowerOn}
 		reqInfo := taskdef.ExecutionInfo{
 			TaskID:         uuid.New(),
 			Components:     toWorkflowComponents(components),
 			RuleDefinition: ruleDef,
 		}
 
-		env.ExecuteWorkflow(PowerControl, reqInfo, info)
+		env.ExecuteWorkflow(powerControl, reqInfo, info)
 
 		assert.True(t, env.IsWorkflowCompleted())
 		assert.NoError(t, env.GetWorkflowError())
@@ -174,15 +176,15 @@ func TestPowerControlWorkflowWithBatching(t *testing.T) {
 		}
 
 		env.RegisterActivityWithOptions(mockPowerControlTypeTracking, activity.RegisterOptions{
-			Name: "PowerControl",
+			Name: activitypkg.NamePowerControl,
 		})
 		env.RegisterActivityWithOptions(mockUpdateTaskStatus, activity.RegisterOptions{
-			Name: "UpdateTaskStatus",
+			Name: activitypkg.NameUpdateTaskStatus,
 		})
 		env.RegisterActivityWithOptions(mockGetPowerStatus, activity.RegisterOptions{
-			Name: "GetPowerStatus",
+			Name: activitypkg.NameGetPowerStatus,
 		})
-		env.RegisterWorkflow(GenericComponentStepWorkflow)
+		env.RegisterWorkflowWithOptions(genericComponentStepWorkflow, temporalworkflow.RegisterOptions{Name: nameGenericComponentStepWorkflow})
 
 		env.OnActivity(mockUpdateTaskStatus, mock.Anything, mock.Anything).Return(nil)
 		env.OnActivity(mockGetPowerStatus, mock.Anything, mock.Anything).Return(
@@ -200,14 +202,14 @@ func TestPowerControlWorkflowWithBatching(t *testing.T) {
 			},
 		)
 
-		info := operations.PowerControlTaskInfo{Operation: operations.PowerOperationPowerOn}
+		info := &operations.PowerControlTaskInfo{Operation: operations.PowerOperationPowerOn}
 		reqInfo := taskdef.ExecutionInfo{
 			TaskID:         uuid.New(),
 			Components:     toWorkflowComponents(components),
 			RuleDefinition: ruleDef,
 		}
 
-		env.ExecuteWorkflow(PowerControl, reqInfo, info)
+		env.ExecuteWorkflow(powerControl, reqInfo, info)
 
 		assert.True(t, env.IsWorkflowCompleted())
 		assert.NoError(t, env.GetWorkflowError())
@@ -249,15 +251,15 @@ func TestPowerControlWorkflowWithBatching(t *testing.T) {
 		env := testSuite.NewTestWorkflowEnvironment()
 
 		env.RegisterActivityWithOptions(mockPowerControl, activity.RegisterOptions{
-			Name: "PowerControl",
+			Name: activitypkg.NamePowerControl,
 		})
 		env.RegisterActivityWithOptions(mockUpdateTaskStatus, activity.RegisterOptions{
-			Name: "UpdateTaskStatus",
+			Name: activitypkg.NameUpdateTaskStatus,
 		})
 		env.RegisterActivityWithOptions(mockGetPowerStatus, activity.RegisterOptions{
-			Name: "GetPowerStatus",
+			Name: activitypkg.NameGetPowerStatus,
 		})
-		env.RegisterWorkflow(GenericComponentStepWorkflow)
+		env.RegisterWorkflowWithOptions(genericComponentStepWorkflow, temporalworkflow.RegisterOptions{Name: nameGenericComponentStepWorkflow})
 
 		env.OnActivity(mockPowerControl, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 		env.OnActivity(mockUpdateTaskStatus, mock.Anything, mock.Anything).Return(nil)
@@ -274,14 +276,14 @@ func TestPowerControlWorkflowWithBatching(t *testing.T) {
 			},
 		)
 
-		info := operations.PowerControlTaskInfo{Operation: operations.PowerOperationPowerOn}
+		info := &operations.PowerControlTaskInfo{Operation: operations.PowerOperationPowerOn}
 		reqInfo := taskdef.ExecutionInfo{
 			TaskID:         uuid.New(),
 			Components:     toWorkflowComponents(components),
 			RuleDefinition: ruleDef,
 		}
 
-		env.ExecuteWorkflow(PowerControl, reqInfo, info)
+		env.ExecuteWorkflow(powerControl, reqInfo, info)
 
 		assert.True(t, env.IsWorkflowCompleted())
 		assert.NoError(t, env.GetWorkflowError())
@@ -314,15 +316,15 @@ func TestPowerControlWorkflowWithBatching(t *testing.T) {
 		env := testSuite.NewTestWorkflowEnvironment()
 
 		env.RegisterActivityWithOptions(mockPowerControl, activity.RegisterOptions{
-			Name: "PowerControl",
+			Name: activitypkg.NamePowerControl,
 		})
 		env.RegisterActivityWithOptions(mockUpdateTaskStatus, activity.RegisterOptions{
-			Name: "UpdateTaskStatus",
+			Name: activitypkg.NameUpdateTaskStatus,
 		})
 		env.RegisterActivityWithOptions(mockGetPowerStatus, activity.RegisterOptions{
-			Name: "GetPowerStatus",
+			Name: activitypkg.NameGetPowerStatus,
 		})
-		env.RegisterWorkflow(GenericComponentStepWorkflow)
+		env.RegisterWorkflowWithOptions(genericComponentStepWorkflow, temporalworkflow.RegisterOptions{Name: nameGenericComponentStepWorkflow})
 
 		env.OnActivity(mockPowerControl, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 		env.OnActivity(mockUpdateTaskStatus, mock.Anything, mock.Anything).Return(nil)
@@ -337,14 +339,14 @@ func TestPowerControlWorkflowWithBatching(t *testing.T) {
 			},
 		)
 
-		info := operations.PowerControlTaskInfo{Operation: operations.PowerOperationPowerOn}
+		info := &operations.PowerControlTaskInfo{Operation: operations.PowerOperationPowerOn}
 		reqInfo := taskdef.ExecutionInfo{
 			TaskID:         uuid.New(),
 			Components:     toWorkflowComponents(components),
 			RuleDefinition: ruleDef,
 		}
 
-		env.ExecuteWorkflow(PowerControl, reqInfo, info)
+		env.ExecuteWorkflow(powerControl, reqInfo, info)
 
 		assert.True(t, env.IsWorkflowCompleted())
 		assert.NoError(t, env.GetWorkflowError())
