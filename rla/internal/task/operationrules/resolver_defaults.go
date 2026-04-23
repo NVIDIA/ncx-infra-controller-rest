@@ -441,7 +441,7 @@ func buildFirmwareUpgradeRule() *OperationRule {
 					ComponentType: devicetypes.ComponentTypeCompute,
 					Stage:         1,
 					MaxParallel:   0,
-					Timeout:       30 * time.Minute,
+					Timeout:       45 * time.Minute,
 					RetryPolicy: &RetryPolicy{
 						MaxAttempts:        2,
 						InitialInterval:    30 * time.Second,
@@ -451,7 +451,7 @@ func buildFirmwareUpgradeRule() *OperationRule {
 						Name: ActionFirmwareControl,
 						Parameters: map[string]any{
 							ParamPollInterval: "2m",
-							ParamPollTimeout:  "30m",
+							ParamPollTimeout:  "45m",
 						},
 					},
 				},
@@ -460,7 +460,7 @@ func buildFirmwareUpgradeRule() *OperationRule {
 					ComponentType: devicetypes.ComponentTypeNVLSwitch,
 					Stage:         2,
 					MaxParallel:   0,
-					Timeout:       30 * time.Minute,
+					Timeout:       45 * time.Minute,
 					RetryPolicy: &RetryPolicy{
 						MaxAttempts:        2,
 						InitialInterval:    30 * time.Second,
@@ -470,7 +470,7 @@ func buildFirmwareUpgradeRule() *OperationRule {
 						Name: ActionFirmwareControl,
 						Parameters: map[string]any{
 							ParamPollInterval: "2m",
-							ParamPollTimeout:  "30m",
+							ParamPollTimeout:  "45m",
 						},
 					},
 				},
