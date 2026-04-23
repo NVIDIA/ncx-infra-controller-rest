@@ -770,6 +770,47 @@ func TestBuildTenantSelectItems_FallsBackToTenantIDWhenNameBlank(t *testing.T) {
 	assert.Equal(t, "tenant-xyz", items[0].Label)
 }
 
+func TestBuildTenantSelectItems_DisambiguatesDuplicateLabels(t *testing.T) {
+	// Two distinct tenants with the same display name (e.g. "test-org" in
+	// dev envs) must not produce visually identical picker options, because
+	// the user could route the allocation to the wrong tenant.
+	accounts := []NamedItem{
+		{Name: "test-org", Extra: map[string]string{"tenantId": "11111111-aaaa-bbbb-cccc-1111aaaa0001"}},
+		{Name: "test-org", Extra: map[string]string{"tenantId": "22222222-aaaa-bbbb-cccc-2222aaaa0002"}},
+		{Name: "unique", Extra: map[string]string{"tenantId": "33333333-aaaa-bbbb-cccc-3333aaaa0003"}},
+	}
+	items := buildTenantSelectItems(accounts)
+	require.Len(t, items, 4, "three tenants plus the manual-entry sentinel")
+
+	labels := []string{items[0].Label, items[1].Label, items[2].Label}
+	for _, l := range labels {
+		count := 0
+		for _, l2 := range labels {
+			if l == l2 {
+				count++
+			}
+		}
+		assert.Equal(t, 1, count, "label %q must be unique after disambiguation, got %d copies", l, count)
+	}
+
+	uniqueIdx := -1
+	for i, it := range items[:3] {
+		if it.ID == "33333333-aaaa-bbbb-cccc-3333aaaa0003" {
+			uniqueIdx = i
+		}
+	}
+	require.NotEqual(t, -1, uniqueIdx)
+	assert.Equal(t, "unique", items[uniqueIdx].Label,
+		"items whose label is already unique must NOT get a disambiguating suffix")
+}
+
+func TestShortTenantID(t *testing.T) {
+	assert.Equal(t, "short", shortTenantID("short"))
+	assert.Equal(t, "12345678", shortTenantID("12345678"))
+	assert.Equal(t, "ddccbbaa", shortTenantID("11111111-aaaa-bbbb-cccc-ddddccbbaa"),
+		"long UUID must return last 8 chars only")
+}
+
 func TestBuildTenantSelectItems_SortsAlphabeticallyByLabel(t *testing.T) {
 	accounts := []NamedItem{
 		{Name: "zeta", Extra: map[string]string{"tenantId": "tenant-z"}},

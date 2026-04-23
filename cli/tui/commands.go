@@ -1326,7 +1326,15 @@ func cmdAllocationCreate(s *Session, _ []string) error {
 	}
 	// Scope subsequent resolver lookups (ip-block, instance-type) to the
 	// allocation site so the constraint resource belongs to the same site.
+	// This mutation is reverted on every exit path (success, error, or
+	// interactive cancel) so the user's interactive scope is unchanged
+	// after the command returns.
+	savedScope := s.Scope
 	setSiteScopeFromID(s, site.ID)
+	defer func() {
+		s.Scope = savedScope
+		s.Cache.InvalidateFiltered()
+	}()
 	name, err := PromptText("Allocation name", true)
 	if err != nil {
 		return err
@@ -1409,6 +1417,7 @@ func promptTenantIDRaw() (string, error) {
 func buildTenantSelectItems(accounts []NamedItem) []SelectItem {
 	items := make([]SelectItem, 0, len(accounts)+1)
 	seen := make(map[string]struct{}, len(accounts))
+	labelCounts := make(map[string]int, len(accounts))
 	for _, acc := range accounts {
 		tenantID := ""
 		if acc.Extra != nil {
@@ -1428,10 +1437,20 @@ func buildTenantSelectItems(accounts []NamedItem) []SelectItem {
 		if acc.Status != "" {
 			label += "  " + acc.Status
 		}
+		labelCounts[label]++
 		items = append(items, SelectItem{Label: label, ID: tenantID})
 	}
 	if len(items) == 0 {
 		return nil
+	}
+	// Disambiguate any items that share a label: distinct tenants with the
+	// same display name would otherwise route the request to whichever the
+	// user happens to highlight, which is silently wrong. Append a short
+	// tenant id suffix so the picker is always unambiguous.
+	for i := range items {
+		if labelCounts[items[i].Label] > 1 {
+			items[i].Label = fmt.Sprintf("%s (%s)", items[i].Label, shortTenantID(items[i].ID))
+		}
 	}
 	sort.SliceStable(items, func(i, j int) bool {
 		if items[i].Label == items[j].Label {
@@ -1441,6 +1460,16 @@ func buildTenantSelectItems(accounts []NamedItem) []SelectItem {
 	})
 	items = append(items, SelectItem{Label: "Enter Tenant ID manually...", ID: tenantManualEntrySentinel})
 	return items
+}
+
+// shortTenantID returns up to the last 8 chars of a tenant UUID for use
+// inside disambiguating picker labels. UUID strings shorter than 8 chars
+// are returned as-is.
+func shortTenantID(id string) string {
+	if len(id) <= 8 {
+		return id
+	}
+	return id[len(id)-8:]
 }
 
 // promptAllocationConstraints collects exactly one allocation constraint.
