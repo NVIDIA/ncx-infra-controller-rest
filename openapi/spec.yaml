@@ -12985,6 +12985,13 @@ components:
             - ETHERNET_VIRTUALIZER
             - FNN
           description: Network virtualization type of the VPC
+        routingProfile:
+          type:
+            - string
+            - 'null'
+          minLength: 3
+          maxLength: 64
+          description: Routing profile type for the VPC. Populated when Site has Native Networking enabled and network virtualization type is `FNN`.
         requestedVni:
           type:
             - integer
@@ -13070,6 +13077,7 @@ components:
           description: Virtual network for machines executing Spark jobs
           siteId: 72771e6a-6f5e-4de4-a5b9-1266c4197811
           networkVirtualizationType: FNN
+          routingProfile: internal
           vni: 12001
           nvLinkLogicalPartitionId: dd887330-dbd3-45ce-b400-c42fc8e47315
           labels:
@@ -13100,6 +13108,13 @@ components:
             - ETHERNET_VIRTUALIZER
             - FNN
           description: 'Network virtualization type of the VPC. If no value is specified, then defaults to `FNN` if Site has native networking enabled, or ETHERNET_VIRTUALIZER if native networking is disabled'
+        routingProfile:
+          type:
+            - string
+            - 'null'
+          minLength: 3
+          maxLength: 64
+          description: Specify routing profile for the VPC. Only supported when `networkVirtualizationType` is set to `FNN`, or when `networkVirtualizationType` is omitted and Site has Native Networking enabled. Requires Tenant to have elevated privilege. Current accepted values are `privileged-internal`, `internal`, and `external`.
         networkSecurityGroupId:
           type:
             - string
