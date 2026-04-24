@@ -88,6 +88,10 @@ jobs:
     permissions:
       contents: read
       packages: write
+      # Needed so the Grype step below can upload SARIF to GitHub code
+      # scanning on main. Caller (main-build.yml) must also grant this
+      # at the reusable-workflow-call level for the permission to reach here.
+      security-events: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -131,7 +135,7 @@ jobs:
       - name: Grype vulnerability scan
         if: steps.scan-build.outcome == 'success'
         continue-on-error: true
-        uses: NVIDIA/dsx-github-actions/.github/actions/security-container-scan@4aaa7e3df4d2b050e5c52b64d9e1c30a2d5faae8
+        uses: NVIDIA/dsx-github-actions/.github/actions/security-container-scan@739847ddf00fda38916504ef84e1f504eac3158f
         with:
           image: localbuild/scan-${{ inputs.service_name }}:${{ github.run_id }}-${{ github.run_attempt }}
           fail-on: critical
@@ -139,6 +143,11 @@ jobs:
           # Per-service summary suppressed — security-container-scan-summary
           # job aggregates all 9 scans into one consolidated table + PR comment.
           write-summary: 'false'
+          # SARIF upload to GitHub code scanning only on main; PR / feat / fix
+          # branches would create ephemeral alert refs that get orphaned when
+          # the branch is deleted. Main is authoritative and enough.
+          upload-sarif: ${{ github.ref == 'refs/heads/main' && 'true' || 'false' }}
+          sarif-category: grype-${{ inputs.service_name }}
           artifact-name: grype-${{ inputs.service_name }}-${{ github.run_id }}-${{ github.run_attempt }}
           sbom-artifact-name: sbom-${{ inputs.service_name }}-${{ github.run_id }}-${{ github.run_attempt }}
 

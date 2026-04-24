@@ -90,10 +90,13 @@ jobs:
       - lint-and-test
     # pull-requests: write is required so the security-container-scan-summary
     # job inside the reusable workflow can post/update the sticky PR comment.
+    # security-events: write lets the per-service Grype step upload SARIF to
+    # GitHub code scanning on main pushes.
     permissions:
       contents: read
       packages: write
       pull-requests: write
+      security-events: write
     uses: ./.github/workflows/build-push-docker.yml
     with:
       runner: ubuntu-latest
