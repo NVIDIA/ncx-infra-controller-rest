@@ -13366,6 +13366,7 @@ components:
         ipBlockId:
           type: string
           format: uuid
+          description: ID of the IP Block to allocate the VPC Prefix from
         prefixLength:
           type: integer
           minimum: 8
@@ -13374,6 +13375,7 @@ components:
       required:
         - name
         - vpcId
+        - ipBlockId
         - prefixLength
     VpcPrefixUpdateRequest:
       title: VpcPrefixUpdateRequest

@@ -24,8 +24,9 @@ type VpcPrefixCreateRequest struct {
 	// Human readable name for the VPC Prefix
 	Name string `json:"name"`
 	// ID of the VPC
-	VpcId     string  `json:"vpcId"`
-	IpBlockId *string `json:"ipBlockId,omitempty"`
+	VpcId string `json:"vpcId"`
+	// ID of the IP Block to allocate the VPC Prefix from
+	IpBlockId string `json:"ipBlockId"`
 	// Prefix length for the VPC Prefix. Valid range is 8 to 31, and max usable value depends on prefix length of parent IP Block.
 	PrefixLength int32 `json:"prefixLength"`
 }
@@ -36,10 +37,11 @@ type _VpcPrefixCreateRequest VpcPrefixCreateRequest
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewVpcPrefixCreateRequest(name string, vpcId string, prefixLength int32) *VpcPrefixCreateRequest {
+func NewVpcPrefixCreateRequest(name string, vpcId string, ipBlockId string, prefixLength int32) *VpcPrefixCreateRequest {
 	this := VpcPrefixCreateRequest{}
 	this.Name = name
 	this.VpcId = vpcId
+	this.IpBlockId = ipBlockId
 	this.PrefixLength = prefixLength
 	return &this
 }
@@ -100,36 +102,28 @@ func (o *VpcPrefixCreateRequest) SetVpcId(v string) {
 	o.VpcId = v
 }
 
-// GetIpBlockId returns the IpBlockId field value if set, zero value otherwise.
+// GetIpBlockId returns the IpBlockId field value
 func (o *VpcPrefixCreateRequest) GetIpBlockId() string {
-	if o == nil || IsNil(o.IpBlockId) {
+	if o == nil {
 		var ret string
 		return ret
 	}
-	return *o.IpBlockId
+
+	return o.IpBlockId
 }
 
-// GetIpBlockIdOk returns a tuple with the IpBlockId field value if set, nil otherwise
+// GetIpBlockIdOk returns a tuple with the IpBlockId field value
 // and a boolean to check if the value has been set.
 func (o *VpcPrefixCreateRequest) GetIpBlockIdOk() (*string, bool) {
-	if o == nil || IsNil(o.IpBlockId) {
+	if o == nil {
 		return nil, false
 	}
-	return o.IpBlockId, true
+	return &o.IpBlockId, true
 }
 
-// HasIpBlockId returns a boolean if a field has been set.
-func (o *VpcPrefixCreateRequest) HasIpBlockId() bool {
-	if o != nil && !IsNil(o.IpBlockId) {
-		return true
-	}
-
-	return false
-}
-
-// SetIpBlockId gets a reference to the given string and assigns it to the IpBlockId field.
+// SetIpBlockId sets field value
 func (o *VpcPrefixCreateRequest) SetIpBlockId(v string) {
-	o.IpBlockId = &v
+	o.IpBlockId = v
 }
 
 // GetPrefixLength returns the PrefixLength field value
@@ -168,9 +162,7 @@ func (o VpcPrefixCreateRequest) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
 	toSerialize["name"] = o.Name
 	toSerialize["vpcId"] = o.VpcId
-	if !IsNil(o.IpBlockId) {
-		toSerialize["ipBlockId"] = o.IpBlockId
-	}
+	toSerialize["ipBlockId"] = o.IpBlockId
 	toSerialize["prefixLength"] = o.PrefixLength
 	return toSerialize, nil
 }
@@ -182,6 +174,7 @@ func (o *VpcPrefixCreateRequest) UnmarshalJSON(data []byte) (err error) {
 	requiredProperties := []string{
 		"name",
 		"vpcId",
+		"ipBlockId",
 		"prefixLength",
 	}
 
