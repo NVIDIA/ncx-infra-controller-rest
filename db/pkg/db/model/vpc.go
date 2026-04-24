@@ -99,6 +99,7 @@ type Vpc struct {
 	NVLinkLogicalPartitionID               *uuid.UUID                              `bun:"nvlink_logical_partition_id,type:uuid"`
 	NVLinkLogicalPartition                 *NVLinkLogicalPartition                 `bun:"rel:belongs-to,join:nvlink_logical_partition_id=id"`
 	NetworkVirtualizationType              *string                                 `bun:"network_virtualization_type"`
+	RoutingProfile                         *string                                 `bun:"routing_profile"`
 	ControllerVpcID                        *uuid.UUID                              `bun:"controller_vpc_id,type:uuid"`
 	ActiveVni                              *int                                    `bun:"active_vni,type:integer"`
 	NetworkSecurityGroupID                 *string                                 `bun:"network_security_group_id"`
@@ -125,6 +126,7 @@ type VpcCreateInput struct {
 	SiteID                                 uuid.UUID
 	NVLinkLogicalPartitionID               *uuid.UUID
 	NetworkVirtualizationType              *string
+	RoutingProfile                         *string
 	ControllerVpcID                        *uuid.UUID
 	NetworkSecurityGroupID                 *string
 	NetworkSecurityGroupPropagationDetails *NetworkSecurityGroupPropagationDetails
@@ -140,6 +142,7 @@ type VpcUpdateInput struct {
 	Name                                   *string
 	Description                            *string
 	NetworkVirtualizationType              *string
+	RoutingProfile                         *string
 	ControllerVpcID                        *uuid.UUID
 	ActiveVni                              *int
 	NVLinkLogicalPartitionID               *uuid.UUID
@@ -156,6 +159,7 @@ type VpcClearInput struct {
 	VpcID                                  uuid.UUID
 	Description                            bool
 	ControllerVpcID                        bool
+	RoutingProfile                         bool
 	NVLinkLogicalPartitionID               bool
 	NetworkSecurityGroupID                 bool
 	NetworkSecurityGroupPropagationDetails bool
@@ -487,6 +491,7 @@ func (vsd VpcSQLDAO) Create(ctx context.Context, tx *db.Tx, input VpcCreateInput
 		SiteID:                                 input.SiteID,
 		NVLinkLogicalPartitionID:               input.NVLinkLogicalPartitionID,
 		NetworkVirtualizationType:              input.NetworkVirtualizationType,
+		RoutingProfile:                         input.RoutingProfile,
 		ControllerVpcID:                        input.ControllerVpcID,
 		NetworkSecurityGroupID:                 input.NetworkSecurityGroupID,
 		NetworkSecurityGroupPropagationDetails: input.NetworkSecurityGroupPropagationDetails,
@@ -554,6 +559,12 @@ func (vsd VpcSQLDAO) Update(ctx context.Context, tx *db.Tx, input VpcUpdateInput
 		v.ControllerVpcID = input.ControllerVpcID
 		updatedFields = append(updatedFields, "controller_vpc_id")
 		vsd.tracerSpan.SetAttribute(vpcDAOSpan, "controller_vpc_id", input.ControllerVpcID.String())
+	}
+
+	if input.RoutingProfile != nil {
+		v.RoutingProfile = input.RoutingProfile
+		updatedFields = append(updatedFields, "routing_profile")
+		vsd.tracerSpan.SetAttribute(vpcDAOSpan, "routing_profile", *input.RoutingProfile)
 	}
 
 	if input.ActiveVni != nil {
@@ -644,6 +655,11 @@ func (vsd VpcSQLDAO) Clear(ctx context.Context, tx *db.Tx, input VpcClearInput) 
 	if input.ControllerVpcID {
 		v.ControllerVpcID = nil
 		updatedFields = append(updatedFields, "controller_vpc_id")
+	}
+
+	if input.RoutingProfile {
+		v.RoutingProfile = nil
+		updatedFields = append(updatedFields, "routing_profile")
 	}
 
 	if input.Labels {

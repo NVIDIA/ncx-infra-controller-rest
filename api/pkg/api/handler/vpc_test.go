@@ -314,9 +314,18 @@ func TestCreateVPCHandler_Handle(t *testing.T) {
 
 	tnu := testVPCBuildUser(t, dbSession, "test-starfleet-id-2", tnOrg, tnOrgRoles)
 	tn := testVPCBuildTenant(t, dbSession, "test-tenant", tnOrg, tnu)
+	tnDAO := cdbm.NewTenantDAO(dbSession)
+	tn, err := tnDAO.UpdateFromParams(context.Background(), nil, tn.ID, nil, nil, nil, &cdbm.TenantConfig{
+		TargetedInstanceCreation: true,
+	})
+	assert.NoError(t, err)
 
 	tnu2 := testVPCBuildUser(t, dbSession, "test-starfleet-id-3", tnOrg, tnOrgRoles)
 	tn2 := testVPCBuildTenant(t, dbSession, "test-tenant-2", tnOrg, tnu2)
+
+	tnOrg3 := "test-tenant-org-3"
+	tnu3 := testVPCBuildUser(t, dbSession, "test-starfleet-id-4", tnOrg3, tnOrgRoles)
+	tn3 := testVPCBuildTenant(t, dbSession, "test-tenant-3", tnOrg3, tnu3)
 
 	st1 := testVPCBuildSite(t, dbSession, ip, "test-site-1", true, true, cdbm.SiteStatusRegistered, ipu)
 	assert.NotNil(t, st1)
@@ -333,6 +342,9 @@ func TestCreateVPCHandler_Handle(t *testing.T) {
 	al2 := testVPCSiteBuildAllocation(t, dbSession, st3, tn, "test-allocation-3", ipu)
 	assert.NotNil(t, al2)
 
+	al3 := testVPCSiteBuildAllocation(t, dbSession, st1, tn3, "test-allocation-tenant-3", ipu)
+	assert.NotNil(t, al3)
+
 	// Associate tenant 1 with site 1
 	ts1t1 := testBuildTenantSiteAssociation(t, dbSession, tnOrg, tn.ID, st1.ID, tnu.ID)
 	assert.NotNil(t, ts1t1)
@@ -348,6 +360,10 @@ func TestCreateVPCHandler_Handle(t *testing.T) {
 	// Associate tenant 2 with site 2
 	ts2t2 := testBuildTenantSiteAssociation(t, dbSession, tnOrg, tn2.ID, st2.ID, tnu2.ID)
 	assert.NotNil(t, ts2t2)
+
+	// Associate tenant 3 with site 1
+	ts1t3 := testBuildTenantSiteAssociation(t, dbSession, tnOrg3, tn3.ID, st1.ID, tnu3.ID)
+	assert.NotNil(t, ts1t3)
 
 	// NSG for tenant 1 on site 1
 	nsgTenant1Site1 := testBuildNetworkSecurityGroup(t, dbSession, "test-nsg-1", tn, st1, cdbm.NetworkSecurityGroupStatusReady)
@@ -444,6 +460,157 @@ func TestCreateVPCHandler_Handle(t *testing.T) {
 				reqOrg:   tnOrg,
 				reqUser:  tnu,
 				respCode: http.StatusCreated,
+			},
+			wantErr:            false,
+			verifyChildSpanner: true,
+		},
+		{
+			name: "test VPC create API endpoint with routing profile success",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIVpcCreateRequest{
+					Name:                      "Test VPC routing profile",
+					Description:               cdb.GetStrPtr("Test VPC Description"),
+					SiteID:                    st1.ID.String(),
+					NetworkVirtualizationType: cdb.GetStrPtr(cdbm.VpcFNN),
+					NetworkSecurityGroupID:    &nsgTenant1Site1.ID,
+					Vni:                       cdb.GetIntPtr(559),
+					RoutingProfile:            cdb.GetStrPtr(model.APIVpcRoutingProfileInternal),
+					Labels: map[string]string{
+						"vpc-dpu-zone": "east1",
+						"vpc-gpu-zone": "west1",
+					},
+					NVLinkLogicalPartitionID: cdb.GetStrPtr(nvllp1.ID.String()),
+				},
+				reqOrg:   tnOrg,
+				reqUser:  tnu,
+				respCode: http.StatusCreated,
+			},
+			wantErr:            false,
+			verifyChildSpanner: true,
+		},
+		{
+			name: "test VPC create API endpoint rejects unsupported routing profile",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIVpcCreateRequest{
+					Name:                      "Test VPC unsupported routing profile",
+					Description:               cdb.GetStrPtr("Test VPC Description"),
+					SiteID:                    st1.ID.String(),
+					NetworkVirtualizationType: cdb.GetStrPtr(cdbm.VpcFNN),
+					RoutingProfile:            cdb.GetStrPtr("tenant-edge"),
+				},
+				reqOrg:      tnOrg,
+				reqUser:     tnu,
+				respCode:    http.StatusBadRequest,
+				respMessage: "`routingProfile` must be one of privileged-internal, internal, or external",
+			},
+			wantErr:            false,
+			verifyChildSpanner: true,
+		},
+		{
+			name: "test VPC create API endpoint rejects routing profile for tenant without targeted instance creation",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIVpcCreateRequest{
+					Name:                      "Test VPC restricted routing profile",
+					Description:               cdb.GetStrPtr("Test VPC Description"),
+					SiteID:                    st1.ID.String(),
+					NetworkVirtualizationType: cdb.GetStrPtr(cdbm.VpcFNN),
+					RoutingProfile:            cdb.GetStrPtr(model.APIVpcRoutingProfileInternal),
+				},
+				reqOrg:      tnOrg3,
+				reqUser:     tnu3,
+				respCode:    http.StatusForbidden,
+				respMessage: "Tenant does not have sufficient privileges to set `routingProfile`",
+			},
+			wantErr:            false,
+			verifyChildSpanner: true,
+		},
+		{
+			name: "test VPC create API endpoint rejects routing profile for ethernet virtualization",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIVpcCreateRequest{
+					Name:                      "Test VPC ethernet routing profile",
+					Description:               cdb.GetStrPtr("Test VPC Description"),
+					SiteID:                    st1.ID.String(),
+					NetworkVirtualizationType: cdb.GetStrPtr(cdbm.VpcEthernetVirtualizer),
+					RoutingProfile:            cdb.GetStrPtr(model.APIVpcRoutingProfileInternal),
+					NetworkSecurityGroupID:    &nsgTenant1Site1.ID,
+				},
+				reqOrg:      tnOrg,
+				reqUser:     tnu,
+				respCode:    http.StatusBadRequest,
+				respMessage: "`routingProfile` is only supported when `networkVirtualizationType` is FNN",
+			},
+			wantErr:            false,
+			verifyChildSpanner: true,
+		},
+		{
+			name: "test VPC create API endpoint original success payload fails with routing profile on ethernet virtualization",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIVpcCreateRequest{
+					Name:                      "Test VPC",
+					Description:               cdb.GetStrPtr("Test VPC Description"),
+					SiteID:                    st1.ID.String(),
+					NetworkVirtualizationType: cdb.GetStrPtr(cdbm.VpcEthernetVirtualizer),
+					NetworkSecurityGroupID:    &nsgTenant1Site1.ID,
+					Vni:                       cdb.GetIntPtr(555),
+					RoutingProfile:            cdb.GetStrPtr(model.APIVpcRoutingProfileInternal),
+					Labels: map[string]string{
+						"vpc-dpu-zone": "east1",
+						"vpc-gpu-zone": "west1",
+					},
+					NVLinkLogicalPartitionID: cdb.GetStrPtr(nvllp1.ID.String()),
+				},
+				reqOrg:      tnOrg,
+				reqUser:     tnu,
+				respCode:    http.StatusBadRequest,
+				respMessage: "`routingProfile` is only supported when `networkVirtualizationType` is FNN",
+			},
+			wantErr:            false,
+			verifyChildSpanner: true,
+		},
+		{
+			name: "test VPC create API endpoint rejects routing profile when resolved network virtualization type defaults to ethernet",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIVpcCreateRequest{
+					Name:           "Test VPC default ethernet routing profile",
+					Description:    cdb.GetStrPtr("Test VPC Description"),
+					SiteID:         st3.ID.String(),
+					RoutingProfile: cdb.GetStrPtr(model.APIVpcRoutingProfileInternal),
+				},
+				reqOrg:      tnOrg,
+				reqUser:     tnu,
+				respCode:    http.StatusBadRequest,
+				respMessage: "`routingProfile` can only be specified if network virtualization type is set to `FNN`, or Site has native networking enabled and no network virtualization type is specified",
 			},
 			wantErr:            false,
 			verifyChildSpanner: true,
@@ -736,6 +903,9 @@ func TestCreateVPCHandler_Handle(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			tsc.Calls = nil
+			tst3.Calls = nil
+
 			csh := CreateVPCHandler{
 				dbSession: tt.fields.dbSession,
 				tc:        tt.fields.tc,
@@ -783,8 +953,17 @@ func TestCreateVPCHandler_Handle(t *testing.T) {
 
 			assert.Equal(t, rst.Name, tt.args.reqData.Name)
 			assert.True(t, tt.args.reqData.ID == nil || rst.ID == tt.args.reqData.ID.String(), "%+v != %+v", rst.ID, tt.args.reqData.ID)
-			assert.True(t, rst.RequestedVni == nil || *rst.RequestedVni == int(*tt.args.reqData.Vni))
-			assert.Equal(t, *rst.Description, *tt.args.reqData.Description)
+			if tt.args.reqData.Vni != nil {
+				assert.NotNil(t, rst.RequestedVni)
+				assert.Equal(t, *tt.args.reqData.Vni, *rst.RequestedVni)
+			}
+			if tt.args.reqData.Description != nil {
+				assert.NotNil(t, rst.Description)
+				assert.Equal(t, *rst.Description, *tt.args.reqData.Description)
+			} else {
+				assert.Nil(t, rst.Description)
+			}
+			assert.Equal(t, tt.args.reqData.RoutingProfile, rst.RoutingProfile)
 			if tt.args.reqData.NetworkVirtualizationType != nil {
 				assert.Equal(t, rst.NetworkVirtualizationType, tt.args.reqData.NetworkVirtualizationType)
 			} else {
@@ -802,6 +981,19 @@ func TestCreateVPCHandler_Handle(t *testing.T) {
 			if tt.args.reqData.Labels != nil {
 				assert.Equal(t, len(rst.Labels), len(tt.args.reqData.Labels))
 			}
+
+			assert.True(t, tsc.AssertCalled(t, "ExecuteWorkflow", mock.Anything, mock.AnythingOfType("internal.StartWorkflowOptions"), "CreateVPCV2", mock.MatchedBy(func(req *cwssaws.VpcCreationRequest) bool {
+				if req == nil {
+					return false
+				}
+				if tt.args.reqData.RoutingProfile == nil {
+					return req.RoutingProfileType == nil
+				}
+				if req.RoutingProfileType == nil {
+					return false
+				}
+				return *req.RoutingProfileType == model.NormalizeAPIVpcRoutingProfileForSite(*tt.args.reqData.RoutingProfile)
+			})))
 
 			if tt.verifyChildSpanner {
 				span := oteltrace.SpanFromContext(ec.Request().Context())

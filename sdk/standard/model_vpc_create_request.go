@@ -31,6 +31,8 @@ type VpcCreateRequest struct {
 	SiteId string `json:"siteId"`
 	// Network virtualization type of the VPC. If no value is specified, then defaults to `FNN` if Site has native networking enabled, or ETHERNET_VIRTUALIZER if native networking is disabled
 	NetworkVirtualizationType NullableString `json:"networkVirtualizationType,omitempty"`
+	// Specify routing profile for the VPC. Only supported when `networkVirtualizationType` is set to `FNN`, or when `networkVirtualizationType` is omitted and Site has Native Networking enabled. Requires Tenant to have elevated privilege. Current accepted values are `privileged-internal`, `internal`, and `external`.
+	RoutingProfile NullableString `json:"routingProfile,omitempty"`
 	// ID of the Network Security Group to attach to the VPC
 	NetworkSecurityGroupId NullableString `json:"networkSecurityGroupId,omitempty"`
 	// Explicitly requested VNI for the VPC
@@ -217,6 +219,49 @@ func (o *VpcCreateRequest) UnsetNetworkVirtualizationType() {
 	o.NetworkVirtualizationType.Unset()
 }
 
+// GetRoutingProfile returns the RoutingProfile field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *VpcCreateRequest) GetRoutingProfile() string {
+	if o == nil || IsNil(o.RoutingProfile.Get()) {
+		var ret string
+		return ret
+	}
+	return *o.RoutingProfile.Get()
+}
+
+// GetRoutingProfileOk returns a tuple with the RoutingProfile field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *VpcCreateRequest) GetRoutingProfileOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return o.RoutingProfile.Get(), o.RoutingProfile.IsSet()
+}
+
+// HasRoutingProfile returns a boolean if a field has been set.
+func (o *VpcCreateRequest) HasRoutingProfile() bool {
+	if o != nil && o.RoutingProfile.IsSet() {
+		return true
+	}
+
+	return false
+}
+
+// SetRoutingProfile gets a reference to the given NullableString and assigns it to the RoutingProfile field.
+func (o *VpcCreateRequest) SetRoutingProfile(v string) {
+	o.RoutingProfile.Set(&v)
+}
+
+// SetRoutingProfileNil sets the value for RoutingProfile to be an explicit nil
+func (o *VpcCreateRequest) SetRoutingProfileNil() {
+	o.RoutingProfile.Set(nil)
+}
+
+// UnsetRoutingProfile ensures that no value is present for RoutingProfile, not even an explicit nil
+func (o *VpcCreateRequest) UnsetRoutingProfile() {
+	o.RoutingProfile.Unset()
+}
+
 // GetNetworkSecurityGroupId returns the NetworkSecurityGroupId field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *VpcCreateRequest) GetNetworkSecurityGroupId() string {
 	if o == nil || IsNil(o.NetworkSecurityGroupId.Get()) {
@@ -398,6 +443,9 @@ func (o VpcCreateRequest) ToMap() (map[string]interface{}, error) {
 	toSerialize["siteId"] = o.SiteId
 	if o.NetworkVirtualizationType.IsSet() {
 		toSerialize["networkVirtualizationType"] = o.NetworkVirtualizationType.Get()
+	}
+	if o.RoutingProfile.IsSet() {
+		toSerialize["routingProfile"] = o.RoutingProfile.Get()
 	}
 	if o.NetworkSecurityGroupId.IsSet() {
 		toSerialize["networkSecurityGroupId"] = o.NetworkSecurityGroupId.Get()

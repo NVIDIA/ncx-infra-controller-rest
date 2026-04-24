@@ -554,6 +554,7 @@ func TestManageVpc_UpdateVpcInDB(t *testing.T) {
 						Id:                   &cwssaws.VpcId{Value: uuid.New().String()},
 						Name:                 vpc1.ID.String(),
 						TenantOrganizationId: vpc1.Org,
+						RoutingProfileType:   cdb.GetStrPtr("INTERNAL"),
 					},
 					ObjectStatus: cwssaws.ObjectStatus_OBJECT_STATUS_CREATED,
 				},
@@ -642,6 +643,7 @@ func TestManageVpc_UpdateVpcInDB(t *testing.T) {
 			if tt.args.vpcInfo.ObjectStatus == cwssaws.ObjectStatus_OBJECT_STATUS_CREATED {
 				assert.Nil(t, err)
 				assert.Equal(t, cdbm.VpcStatusReady, uvpc.Status)
+				assert.Equal(t, "INTERNAL", *uvpc.RoutingProfile)
 			} else if tt.args.vpcInfo.ObjectStatus == cwssaws.ObjectStatus_OBJECT_STATUS_DELETED {
 				assert.Nil(t, err)
 				assert.Equal(t, cdbm.VpcStatusDeleting, uvpc.Status)
@@ -715,6 +717,8 @@ func TestManageVpc_UpdateVpcsInDB(t *testing.T) {
 
 	vpcDAO := cdbm.NewVpcDAO(dbSession)
 	vpc8, err = vpcDAO.Update(ctx, nil, cdbm.VpcUpdateInput{VpcID: vpc8.ID, Status: cdb.GetStrPtr(cdbm.VpcStatusError), IsMissingOnSite: cdb.GetBoolPtr(true)})
+	assert.NoError(t, err)
+	vpc2, err = vpcDAO.Update(ctx, nil, cdbm.VpcUpdateInput{VpcID: vpc2.ID, RoutingProfile: cdb.GetStrPtr("EXTERNAL")})
 	assert.NoError(t, err)
 
 	vpc12 := testVPCBuildVPC(t, dbSession, "test-vpc-12", ip, tn, st, nil, cdb.GetUUIDPtr(uuid.New()), nil, tnu, cdbm.VpcStatusReady)
@@ -823,6 +827,8 @@ func TestManageVpc_UpdateVpcsInDB(t *testing.T) {
 		nsgPropagationDetailsClearedVpcs  []*cdbm.Vpc
 		networkVirtualizationUpdatedVpcs  []*cdbm.Vpc
 		ethernetVirtualizationUpdatedVpcs []*cdbm.Vpc
+		routingProfileUpdatedVpcs         []*cdbm.Vpc
+		routingProfileClearedVpcs         []*cdbm.Vpc
 		requiredMetadataUpdate            bool
 		metadataVpcUpdate                 *cdbm.Vpc
 		wantErr                           bool
@@ -868,6 +874,7 @@ func TestManageVpc_UpdateVpcsInDB(t *testing.T) {
 							Id:                        &cwssaws.VpcId{Value: vpc1.ID.String()},
 							Name:                      vpc1.ID.String(),
 							NetworkVirtualizationType: &nwvt,
+							RoutingProfileType:        cdb.GetStrPtr("INTERNAL"),
 						},
 						{
 							Id:   &cwssaws.VpcId{Value: vpc2.ControllerVpcID.String()},
@@ -910,6 +917,8 @@ func TestManageVpc_UpdateVpcsInDB(t *testing.T) {
 			nsgPropagationDetailsClearedVpcs:  []*cdbm.Vpc{vpc12},
 			networkVirtualizationUpdatedVpcs:  []*cdbm.Vpc{vpc1},
 			ethernetVirtualizationUpdatedVpcs: []*cdbm.Vpc{vpc12, vpc13},
+			routingProfileUpdatedVpcs:         []*cdbm.Vpc{vpc1},
+			routingProfileClearedVpcs:         []*cdbm.Vpc{vpc2},
 			deletedVpcs:                       []*cdbm.Vpc{vpc5, vpc6},
 			missingVpcs:                       []*cdbm.Vpc{vpc7, vpc11},
 			restoredVpcs:                      []*cdbm.Vpc{vpc8},
@@ -1076,6 +1085,17 @@ func TestManageVpc_UpdateVpcsInDB(t *testing.T) {
 			for _, vpc := range tt.ethernetVirtualizationUpdatedVpcs {
 				updatedEthernetVirtVPC, _ := vpcDAO.GetByID(ctx, nil, vpc.ID, nil)
 				assert.Equal(t, evt.String(), *updatedEthernetVirtVPC.NetworkVirtualizationType)
+			}
+
+			for _, vpc := range tt.routingProfileUpdatedVpcs {
+				updatedRoutingProfileVPC, _ := vpcDAO.GetByID(ctx, nil, vpc.ID, nil)
+				assert.NotNil(t, updatedRoutingProfileVPC.RoutingProfile)
+				assert.Equal(t, "INTERNAL", *updatedRoutingProfileVPC.RoutingProfile)
+			}
+
+			for _, vpc := range tt.routingProfileClearedVpcs {
+				clearedRoutingProfileVPC, _ := vpcDAO.GetByID(ctx, nil, vpc.ID, nil)
+				assert.Nil(t, clearedRoutingProfileVPC.RoutingProfile)
 			}
 
 			for _, vpc := range tt.readyVpcs {

@@ -249,6 +249,24 @@ func (cvh CreateVPCHandler) Handle(c echo.Context) error {
 		}
 	}
 
+	var routingProfile *string
+	if apiRequest.RoutingProfile != nil {
+		// For now, we gate on TargetedInstanceCreation permission,
+		// Which implies a "privileged tenant"
+		if tenant.Config == nil || !tenant.Config.TargetedInstanceCreation {
+			logger.Warn().Msg("tenant does not have sufficient privileges to set `routingProfile`")
+			return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Tenant does not have sufficient privileges to set `routingProfile`", nil)
+		}
+
+		if *networkVirtualizationType != cdbm.VpcFNN {
+			logger.Warn().Str("routingProfile", *apiRequest.RoutingProfile).Msg("`routingProfile` can only be specified if network virtualization type is set to `FNN`, or Site has native networking enabled and no network virtualization type is specified")
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "`routingProfile` can only be specified if network virtualization type is set to `FNN`, or Site has native networking enabled and no network virtualization type is specified", nil)
+		}
+
+		// Normalize the API routing profile before sending it to the site controller.
+		routingProfile = cdb.GetStrPtr(model.NormalizeAPIVpcRoutingProfileForSite(*apiRequest.RoutingProfile))
+	}
+
 	var defaultNvllPartitionId *uuid.UUID
 	if apiRequest.NVLinkLogicalPartitionID != nil {
 		if !siteConfig.NVLinkPartition {
@@ -314,6 +332,7 @@ func (cvh CreateVPCHandler) Handle(c echo.Context) error {
 		TenantID:                  tenant.ID,
 		SiteID:                    site.ID,
 		NetworkVirtualizationType: networkVirtualizationType,
+		RoutingProfile:            routingProfile,
 		NVLinkLogicalPartitionID:  defaultNvllPartitionId,
 		Labels:                    labels,
 		Status:                    cdbm.VpcStatusReady,
@@ -379,6 +398,7 @@ func (cvh CreateVPCHandler) Handle(c echo.Context) error {
 		Name:                      vpc.Name,
 		TenantOrganizationId:      tenant.Org,
 		NetworkVirtualizationType: &nwvt,
+		RoutingProfileType:        routingProfile,
 		NetworkSecurityGroupId:    vpc.NetworkSecurityGroupID,
 		Vni:                       vni,
 	}

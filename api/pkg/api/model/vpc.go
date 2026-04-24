@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"regexp"
 	"time"
 
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model/util"
@@ -29,6 +30,49 @@ import (
 	validationis "github.com/go-ozzo/ozzo-validation/v4/is"
 	"github.com/google/uuid"
 )
+
+var (
+	vpcRoutingProfileStartsWithLetterRegexp = regexp.MustCompile(`^[A-Za-z]`)
+	vpcRoutingProfileAllowedCharsRegexp     = regexp.MustCompile(`^[A-Za-z0-9-]+$`)
+)
+
+const (
+	APIVpcRoutingProfileExternal           = "external"
+	APIVpcRoutingProfileInternal           = "internal"
+	APIVpcRoutingProfilePrivilegedInternal = "privileged-internal"
+
+	apiVpcRoutingProfileSiteExternal           = "EXTERNAL"
+	apiVpcRoutingProfileSiteInternal           = "INTERNAL"
+	apiVpcRoutingProfileSitePrivilegedInternal = "PRIVILEGED_INTERNAL"
+)
+
+var apiVpcRoutingProfileToSiteMap = map[string]string{
+	APIVpcRoutingProfileExternal:           apiVpcRoutingProfileSiteExternal,
+	APIVpcRoutingProfileInternal:           apiVpcRoutingProfileSiteInternal,
+	APIVpcRoutingProfilePrivilegedInternal: apiVpcRoutingProfileSitePrivilegedInternal,
+}
+
+var apiVpcRoutingProfileFromSiteMap = map[string]string{
+	apiVpcRoutingProfileSiteExternal:           APIVpcRoutingProfileExternal,
+	apiVpcRoutingProfileSiteInternal:           APIVpcRoutingProfileInternal,
+	apiVpcRoutingProfileSitePrivilegedInternal: APIVpcRoutingProfilePrivilegedInternal,
+}
+
+// NormalizeAPIVpcRoutingProfileForSite converts REST routing profile values to the
+// current site-controller wire format when a known mapping exists.
+func NormalizeAPIVpcRoutingProfileForSite(routingProfile string) string {
+	if mapped, ok := apiVpcRoutingProfileToSiteMap[routingProfile]; ok {
+		return mapped
+	}
+	return routingProfile
+}
+
+func normalizeAPIVpcRoutingProfileFromSite(routingProfile string) string {
+	if mapped, ok := apiVpcRoutingProfileFromSiteMap[routingProfile]; ok {
+		return mapped
+	}
+	return routingProfile
+}
 
 // APIVpcCreateRequest captures the request data for creating a new VPC
 type APIVpcCreateRequest struct {
@@ -53,6 +97,12 @@ type APIVpcCreateRequest struct {
 	// The request will be rejected by the site if the VNI
 	// is not within a VNI range allowed for explicit requests.
 	Vni *int `json:"vni"`
+	// RoutingProfile specifies the routing profile for the VPC.
+	// This is only supported when `networkVirtualizationType` is `FNN`, or when
+	// `networkVirtualizationType` is omitted and the Site has native networking enabled.
+	// This requires the Tenant to have elevated privileges. Current accepted values
+	// are `privileged-internal`, `internal`, and `external`.
+	RoutingProfile *string `json:"routingProfile"`
 }
 
 // Validate ensure the values passed in create request are acceptable
@@ -65,6 +115,13 @@ func (ascr APIVpcCreateRequest) Validate() error {
 		validation.Field(&ascr.Description,
 			validation.When(ascr.Description != nil,
 				validation.Length(0, 1024).Error(validationErrorDescriptionStringLength)),
+		),
+		validation.Field(&ascr.RoutingProfile,
+			validation.When(ascr.RoutingProfile != nil,
+				validation.Length(3, 64).Error("`routingProfile` must contain at least 3 characters and a maximum of 64 characters"),
+				validation.Match(vpcRoutingProfileStartsWithLetterRegexp).Error("`routingProfile` must start with a letter"),
+				validation.Match(vpcRoutingProfileAllowedCharsRegexp).Error("`routingProfile` may only contain letters, numbers, or dashes"),
+			),
 		),
 		validation.Field(&ascr.SiteID,
 			validation.Required.Error(validationErrorValueRequired),
@@ -86,9 +143,23 @@ func (ascr APIVpcCreateRequest) Validate() error {
 		}
 	}
 
+	if ascr.RoutingProfile != nil {
+		if _, ok := apiVpcRoutingProfileToSiteMap[*ascr.RoutingProfile]; !ok {
+			return validation.Errors{
+				"routingProfile": fmt.Errorf("`routingProfile` must be one of %s, %s, or %s", APIVpcRoutingProfilePrivilegedInternal, APIVpcRoutingProfileInternal, APIVpcRoutingProfileExternal),
+			}
+		}
+
+		if ascr.NetworkVirtualizationType != nil && *ascr.NetworkVirtualizationType != cdbm.VpcFNN {
+			return validation.Errors{
+				"routingProfile": errors.New("`routingProfile` is only supported when `networkVirtualizationType` is FNN"),
+			}
+		}
+	}
+
 	if ascr.Vni != nil && (*ascr.Vni < 0 || *ascr.Vni > math.MaxUint16) {
 		return validation.Errors{
-			"labels": fmt.Errorf("VNI must be an integer between 0 and %d", math.MaxUint16),
+			"vni": fmt.Errorf("VNI must be an integer between 0 and %d", math.MaxUint16),
 		}
 	}
 
@@ -209,6 +280,13 @@ type APIVpc struct {
 	NetworkSecurityGroup *APINetworkSecurityGroupSummary `json:"networkSecurityGroup,omitempty"`
 	// NetworkSecurityGroupPropagationDetails is the propagation details for the attched NSG, if any
 	NetworkSecurityGroupPropagationDetails *APINetworkSecurityGroupPropagationDetails `json:"networkSecurityGroupPropagationDetails"`
+	// RoutingProfile is the applied routing profile for the VPC, when known.
+	RoutingProfile *string `json:"routingProfile"`
+	// RequestedVni is the explicitly requested VPC VNI at creation time _if_ one was requested.
+	RequestedVni *int `json:"requestedVni"`
+	// Vni is the active/actual VNI of the VPC, regardless of whether it was
+	// explicitly requested or auto-allocated.
+	Vni *int `json:"vni"`
 	// Status is the status of the VPC
 	Status string `json:"status"`
 	// StatusHistory is the status detail records for the VPC over time
@@ -217,11 +295,6 @@ type APIVpc struct {
 	Created time.Time `json:"created"`
 	// Updated indicates the ISO datetime string for when the VPC was last updated
 	Updated time.Time `json:"updated"`
-	// RequestedVni is the explicitly requested VPC VNI at creation time _if_ one was requested.
-	RequestedVni *int
-	// Vni is the active/actual VNI of the VPC, regardless of whether it was
-	// explicitly requested or auto-allocated.
-	Vni *int
 }
 
 // NewAPIVpc creates and returns a new APIVpc object
@@ -246,6 +319,11 @@ func NewAPIVpc(dbVpc cdbm.Vpc, dbsds []cdbm.StatusDetail) APIVpc {
 
 	if dbVpc.NetworkVirtualizationType != nil {
 		apivpc.NetworkVirtualizationType = dbVpc.NetworkVirtualizationType
+	}
+
+	if dbVpc.RoutingProfile != nil {
+		routingProfile := normalizeAPIVpcRoutingProfileFromSite(*dbVpc.RoutingProfile)
+		apivpc.RoutingProfile = &routingProfile
 	}
 
 	if dbVpc.ControllerVpcID != nil {
