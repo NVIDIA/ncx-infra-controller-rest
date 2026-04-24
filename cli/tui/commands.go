@@ -2028,7 +2028,7 @@ func cmdVPCPrefixCreate(s *Session, _ []string) error {
 	if prefixLen < 8 || prefixLen > 31 {
 		return fmt.Errorf("prefix length must be between 8 and 31")
 	}
-	ipBlockID, err := PromptText("IP block ID (optional)", false)
+	ipBlockID, err := PromptText("IP block ID", true)
 	if err != nil {
 		return err
 	}
@@ -2036,10 +2036,8 @@ func cmdVPCPrefixCreate(s *Session, _ []string) error {
 	body := map[string]interface{}{
 		"name":         name,
 		"vpcId":        vpc.ID,
+		"ipBlockId":    strings.TrimSpace(ipBlockID),
 		"prefixLength": prefixLen,
-	}
-	if strings.TrimSpace(ipBlockID) != "" {
-		body["ipBlockId"] = strings.TrimSpace(ipBlockID)
 	}
 	LogCmd(s, "vpc-prefix", "create", "--name", name, "--vpc-id", vpc.ID, "--prefix-length", prefixLenText)
 	bodyJSON, _ := json.Marshal(body)

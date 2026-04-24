@@ -64,6 +64,11 @@ func TestAPIVpcPrefixCreateRequest_Validate(t *testing.T) {
 			expectErr: true,
 		},
 		{
+			desc:      "error when IPBlockID is not provided",
+			obj:       APIVpcPrefixCreateRequest{Name: "ab", VpcID: uuid.New().String(), PrefixLength: prefix24},
+			expectErr: true,
+		},
+		{
 			desc:      "error when prefixLength is not valid < min",
 			obj:       APIVpcPrefixCreateRequest{Name: "ab", VpcID: uuid.New().String(), IPBlockID: cdb.GetStrPtr(uuid.New().String()), PrefixLength: prefix7},
 			expectErr: true,
