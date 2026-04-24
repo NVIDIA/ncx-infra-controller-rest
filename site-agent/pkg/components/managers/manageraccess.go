@@ -40,6 +40,7 @@ import (
 	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/subnet"
 	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/tenant"
 	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/vpc"
+	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/vpcpeering"
 	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/vpcprefix"
 	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/workflow"
 )
@@ -76,6 +77,11 @@ func (m *Manager) VPC() *vpc.API {
 // VpcPrefix - Add vpcprefix manager instance here
 func (m *Manager) VpcPrefix() *vpcprefix.API {
 	return vpcprefix.NewVpcPrefixManager(m.Data.EB, m.API, m.Conf)
+}
+
+// VpcPeering - Add vpcpeering manager instance here
+func (m *Manager) VpcPeering() *vpcpeering.API {
+	return vpcpeering.NewVpcPeeringManager(m.Data.EB, m.API, m.Conf)
 }
 
 // Carbide manager instance here

@@ -44,6 +44,7 @@ type ManagerAPI struct {
 	Bootstrap              BootstrapInterface
 	VPC                    VPCInterface
 	VpcPrefix              VpcPrefixInterface
+	VpcPeering             VpcPeeringInterface
 	Subnet                 SubnetInterface
 	Instance               InstanceInterface
 	Machine                MachineInterface

@@ -120,32 +120,7 @@ func (mvp ManageVpcPeering) UpdateVpcPeeringsInDB(
 		if !found {
 			slogger.Warn().Msg("VpcPeering does not have a record in DB, possibly created directly on Site. Creating in cloud DB.")
 
-			// Attempt to create the missing VPC Peering in the DB
-			// Set IsMultiTenant to false (default), Status to Ready, CreatedBy to zero UUID
-			// TODO: set proper CreatedByID if possible
-			vpcPeeringDAO := cdbm.NewVpcPeeringDAO(mvp.dbSession)
-
-			newVpcPeering, err := vpcPeeringDAO.Create(ctx, nil, cdbm.VpcPeeringCreateInput{
-				Vpc1ID:        uuid.MustParse(controllerVpcPeering.VpcId.Value),
-				Vpc2ID:        uuid.MustParse(controllerVpcPeering.PeerVpcId.Value),
-				SiteID:        siteID,
-				IsMultiTenant: false,
-				CreatedByID:   uuid.UUID{},
-			})
-			if err != nil {
-				slogger.Error().Err(err).Msg("VpcPeering could not be created from site data")
-				continue
-			}
-
-			slogger.Info().Msg("VpcPeering has been created from site data")
-
-			// Set status to Ready
-			err = mvp.updateVpcPeeringStatusInDB(ctx, nil, newVpcPeering.ID, cdb.GetStrPtr(cdbm.VpcPeeringStatusReady), cdb.GetStrPtr("VPC Peering was created in DB from site inventory"))
-			if err != nil {
-				slogger.Error().Err(err).Msg("failed to update status for newly created VPC Peering")
-			}
-
-			reportedVpcPeeringIDMap[newVpcPeering.ID] = true
+			// TODO: Create a new VPC Peering record in DB
 
 			continue
 		}

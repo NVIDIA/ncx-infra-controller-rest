@@ -49,6 +49,7 @@ import (
 	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/subnet"
 	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/tenant"
 	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/vpc"
+	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/vpcpeering"
 	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/vpcprefix"
 	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/workflow"
 
@@ -64,6 +65,7 @@ func NewAPIHandlers() {
 		Orchestrator:           &workflow.API{},
 		VPC:                    &vpc.API{},
 		VpcPrefix:              &vpcprefix.API{},
+		VpcPeering:             &vpcpeering.API{},
 		Subnet:                 &subnet.API{},
 		Instance:               &instance.API{},
 		Machine:                &machine.API{},
@@ -129,6 +131,7 @@ func (Managers *Manager) NewInstance() {
 	Managers.DpuExtensionService()
 	Managers.NVLinkLogicalPartition()
 	Managers.RLA()
+	Managers.VpcPeering()
 }
 
 // Init - initialize all the mgrs
@@ -177,7 +180,7 @@ func (Managers *Manager) Init() {
 	Managers.DpuExtensionService().Init()
 	Managers.NVLinkLogicalPartition().Init()
 	Managers.RLA().Init()
-
+	Managers.VpcPeering().Init()
 }
 
 // Start - start the mgrs

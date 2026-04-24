@@ -57,6 +57,10 @@ func (mvp *ManageVpcPeering) CreateVpcPeeringOnSite(ctx context.Context, request
 		err = errors.New("received create VpcPeering request missing VpcId")
 	} else if request.PeerVpcId == nil || request.PeerVpcId.Value == "" {
 		err = errors.New("received create VpcPeering request missing PeerVpcId")
+	} else if request.Id == nil || request.Id.Value == "" {
+		// Don't let a request come in without a cloud-provided ID
+		// or carbide will generate one and cloud won't know the relationship.
+		err = errors.New("received create VpcPeering request missing VPC peering ID")
 	}
 
 	if err != nil {
@@ -166,7 +170,9 @@ func VpcPeeringFindByIDs(ctx context.Context, carbideClient *cClient.CarbideClie
 func VpcPeeringPagedInventory(allItemIDs []*cwssaws.VpcPeeringId, pagedItems []*cwssaws.VpcPeering, input *pagedInventoryInput) *cwssaws.VPCPeeringInventory {
 	itemIDs := make([]string, len(allItemIDs))
 	for i, id := range allItemIDs {
-		itemIDs[i] = id.GetValue()
+		if id != nil {
+			itemIDs[i] = id.GetValue()
+		}
 	}
 
 	// Create an inventory page with the subset of VpcPeerings
