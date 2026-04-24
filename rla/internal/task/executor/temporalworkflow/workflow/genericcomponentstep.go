@@ -28,28 +28,25 @@ import (
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
 )
 
-const (
-	PowerControlWorkflowName      = "PowerControl"
-	FirmwareControlWorkflowName   = "FirmwareControl"
-	InjectExpectationWorkflowName = "InjectExpectation"
-	BringUpWorkflowName           = "BringUp"
-)
+// nameGenericComponentStepWorkflow is the registered Temporal name for
+// genericComponentStepWorkflow. Use this constant when scheduling the child
+// workflow via workflow.ExecuteChildWorkflow.
+const nameGenericComponentStepWorkflow = "GenericComponentStepWorkflow"
 
-func GetAllWorkflows() []any {
-	return []any{
-		PowerControl,
-		FirmwareControl,
-		InjectExpectation,
-		BringUp,
-		GenericComponentStepWorkflow,
-	}
+// init registers genericComponentStepWorkflow with the package registry so it
+// is included in worker registration alongside all task-type workflows.
+func init() {
+	register(WorkflowDescriptor{
+		WorkflowName: nameGenericComponentStepWorkflow,
+		WorkflowFunc: genericComponentStepWorkflow,
+	})
 }
 
-// GenericComponentStepWorkflow is a generic child workflow that handles
-// any operation for a single component type. It processes components in
-// batches according to the step's max_parallel setting. This provides
-// better isolation, visibility, and independent lifecycle per component type.
-func GenericComponentStepWorkflow(
+// genericComponentStepWorkflow is a child workflow that handles any operation
+// for a single component type. It processes components in batches according to
+// the step's max_parallel setting, providing isolation and independent lifecycle
+// per component type.
+func genericComponentStepWorkflow(
 	ctx workflow.Context,
 	step operationrules.SequenceStep,
 	target common.Target,
@@ -118,7 +115,9 @@ func GenericComponentStepWorkflow(
 			Dur("delay", step.DelayAfter).
 			Str("component_type", devicetypes.ComponentTypeToString(step.ComponentType)).
 			Msg("Applying delay after step (legacy)")
-		workflow.Sleep(ctx, step.DelayAfter)
+		if err := workflow.Sleep(ctx, step.DelayAfter); err != nil {
+			return fmt.Errorf("delay_after sleep interrupted: %w", err)
+		}
 	}
 
 	log.Info().

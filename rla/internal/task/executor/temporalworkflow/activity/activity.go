@@ -29,19 +29,29 @@ import (
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/task"
 )
 
-var taskStatusUpdater task.TaskStatusUpdater
+// Canonical Temporal activity names. These constants are the single source of
+// truth: used in All() for worker registration and when scheduling via
+// workflow.ExecuteActivity.
+const (
+	NameInjectExpectation         = "InjectExpectation"
+	NamePowerControl              = "PowerControl"
+	NameGetPowerStatus            = "GetPowerStatus"
+	NameUpdateTaskStatus          = "UpdateTaskStatus"
+	NameFirmwareControl           = "FirmwareControl"
+	NameGetFirmwareStatus         = "GetFirmwareStatus"
+	NameBringUpControl            = "BringUpControl"
+	NameGetBringUpStatus          = "GetBringUpStatus"
+	NameVerifyFirmwareConsistency = "VerifyFirmwareConsistency"
+)
 
-// SetTaskStatusUpdater registers the updater used by activities.
-func SetTaskStatusUpdater(updater task.TaskStatusUpdater) {
-	taskStatusUpdater = updater
-}
-
-func InjectExpectation(
+// InjectExpectation is a Temporal activity that registers expected component
+// configurations with the appropriate component manager service.
+func (a *Activities) InjectExpectation(
 	ctx context.Context,
 	target common.Target,
 	info operations.InjectExpectationTaskInfo,
 ) error {
-	cm, err := validAndGetComponentManager(target)
+	cm, err := a.validAndGetComponentManager(target)
 	if err != nil {
 		return err
 	}
@@ -49,12 +59,14 @@ func InjectExpectation(
 	return cm.InjectExpectation(ctx, target, info)
 }
 
-func PowerControl(
+// PowerControl is a Temporal activity that applies a power state transition
+// to the target components via the appropriate component manager.
+func (a *Activities) PowerControl(
 	ctx context.Context,
 	target common.Target,
 	info operations.PowerControlTaskInfo,
 ) error {
-	cm, err := validAndGetComponentManager(target)
+	cm, err := a.validAndGetComponentManager(target)
 	if err != nil {
 		return err
 	}
@@ -62,11 +74,13 @@ func PowerControl(
 	return cm.PowerControl(ctx, target, info)
 }
 
-func GetPowerStatus(
+// GetPowerStatus is a Temporal activity that queries current power states for
+// all components in the target. Returns a map of component ID to PowerStatus.
+func (a *Activities) GetPowerStatus(
 	ctx context.Context,
 	target common.Target,
 ) (map[string]operations.PowerStatus, error) {
-	cm, err := validAndGetComponentManager(target)
+	cm, err := a.validAndGetComponentManager(target)
 	if err != nil {
 		return nil, err
 	}
@@ -75,11 +89,11 @@ func GetPowerStatus(
 }
 
 // UpdateTaskStatus is a Temporal activity that updates task status by ID.
-func UpdateTaskStatus(
+func (a *Activities) UpdateTaskStatus(
 	ctx context.Context,
 	arg *task.TaskStatusUpdate,
 ) error {
-	if taskStatusUpdater == nil {
+	if a.updater == nil {
 		return fmt.Errorf("task status updater is not configured")
 	}
 
@@ -87,50 +101,54 @@ func UpdateTaskStatus(
 		return fmt.Errorf("invalid task identifier")
 	}
 
-	return taskStatusUpdater.UpdateTaskStatus(ctx, arg)
+	return a.updater.UpdateTaskStatus(ctx, arg)
 }
 
-func GetAllActivities() []any {
-	return []any{
-		InjectExpectation,
-		PowerControl,
-		GetPowerStatus,
-		UpdateTaskStatus,
-		FirmwareControl,
-		GetFirmwareStatus,
-		BringUpControl,
-		GetBringUpStatus,
-		VerifyFirmwareConsistency,
-	}
-}
-
-// VerifyFirmwareConsistency checks that all target components report the
-// same firmware version set. Only supported by component managers that
-// implement FirmwareConsistencyChecker.
-func VerifyFirmwareConsistency(
+// FirmwareControl initiates firmware update without waiting for completion.
+// This activity returns immediately after the update request is accepted.
+func (a *Activities) FirmwareControl(
 	ctx context.Context,
 	target common.Target,
+	info operations.FirmwareControlTaskInfo,
 ) error {
-	cm, err := validAndGetComponentManager(target)
+	cm, err := a.validAndGetComponentManager(target)
 	if err != nil {
 		return err
 	}
 
-	checker, ok := cm.(componentmanager.FirmwareConsistencyChecker)
-	if !ok {
-		return fmt.Errorf("component manager for %s does not support firmware consistency check",
-			target.Type)
+	return cm.FirmwareControl(ctx, target, info)
+}
+
+// GetFirmwareStatusResult is the result of GetFirmwareStatus activity.
+type GetFirmwareStatusResult struct {
+	Statuses map[string]operations.FirmwareUpdateStatus
+}
+
+// GetFirmwareStatus returns the current status of firmware updates.
+// This activity is designed to be called repeatedly in a polling loop.
+func (a *Activities) GetFirmwareStatus(
+	ctx context.Context,
+	target common.Target,
+) (*GetFirmwareStatusResult, error) {
+	cm, err := a.validAndGetComponentManager(target)
+	if err != nil {
+		return nil, err
 	}
 
-	return checker.VerifyFirmwareConsistency(ctx, target)
+	statuses, err := cm.GetFirmwareStatus(ctx, target)
+	if err != nil {
+		return nil, err
+	}
+
+	return &GetFirmwareStatusResult{Statuses: statuses}, nil
 }
 
 // BringUpControl opens the power-on gate for the target components.
-func BringUpControl(
+func (a *Activities) BringUpControl(
 	ctx context.Context,
 	target common.Target,
 ) error {
-	cm, err := validAndGetComponentManager(target)
+	cm, err := a.validAndGetComponentManager(target)
 	if err != nil {
 		return err
 	}
@@ -149,11 +167,11 @@ type GetBringUpStatusResult struct {
 }
 
 // GetBringUpStatus returns the bring-up state for target components.
-func GetBringUpStatus(
+func (a *Activities) GetBringUpStatus(
 	ctx context.Context,
 	target common.Target,
 ) (*GetBringUpStatusResult, error) {
-	cm, err := validAndGetComponentManager(target)
+	cm, err := a.validAndGetComponentManager(target)
 	if err != nil {
 		return nil, err
 	}
@@ -171,51 +189,44 @@ func GetBringUpStatus(
 	return &GetBringUpStatusResult{States: states}, nil
 }
 
-// FirmwareControl initiates firmware update without waiting for completion.
-// This activity returns immediately after the update request is accepted.
-func FirmwareControl(
+// VerifyFirmwareConsistency checks that all target components report the
+// same firmware version set. Only supported by component managers that
+// implement FirmwareConsistencyChecker.
+func (a *Activities) VerifyFirmwareConsistency(
 	ctx context.Context,
 	target common.Target,
-	info operations.FirmwareControlTaskInfo,
 ) error {
-	cm, err := validAndGetComponentManager(target)
+	cm, err := a.validAndGetComponentManager(target)
 	if err != nil {
 		return err
 	}
 
-	return cm.FirmwareControl(ctx, target, info)
-}
-
-// GetFirmwareStatusResult is the result of GetFirmwareStatus activity.
-type GetFirmwareStatusResult struct {
-	Statuses map[string]operations.FirmwareUpdateStatus
-}
-
-// GetFirmwareStatus returns the current status of firmware updates.
-// This activity is designed to be called repeatedly in a polling loop.
-func GetFirmwareStatus(
-	ctx context.Context,
-	target common.Target,
-) (*GetFirmwareStatusResult, error) {
-	cm, err := validAndGetComponentManager(target)
-	if err != nil {
-		return nil, err
+	checker, ok := cm.(componentmanager.FirmwareConsistencyChecker)
+	if !ok {
+		return fmt.Errorf("component manager for %s does not support firmware consistency check",
+			target.Type)
 	}
 
-	statuses, err := cm.GetFirmwareStatus(ctx, target)
-	if err != nil {
-		return nil, err
-	}
-
-	return &GetFirmwareStatusResult{Statuses: statuses}, nil
+	return checker.VerifyFirmwareConsistency(ctx, target)
 }
 
-func validAndGetComponentManager(
+// validAndGetComponentManager validates the target and returns the component
+// manager registered for its type. Returns an error if the target is invalid
+// or no manager is found.
+func (a *Activities) validAndGetComponentManager(
 	target common.Target,
 ) (componentmanager.ComponentManager, error) {
 	if err := target.Validate(); err != nil {
 		return nil, fmt.Errorf("target is invalid: %w", err)
 	}
 
-	return GetComponentManager(target.Type), nil
+	cm := a.getComponentManager(target.Type)
+	if cm == nil {
+		return nil, fmt.Errorf(
+			"no component manager registered for type %s",
+			target.Type.String(),
+		)
+	}
+
+	return cm, nil
 }

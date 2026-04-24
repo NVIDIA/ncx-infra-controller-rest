@@ -23,7 +23,9 @@ import (
 	"fmt"
 
 	"github.com/rs/zerolog/log"
+	temporalactivity "go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/worker"
+	temporalworkflow "go.temporal.io/sdk/workflow"
 
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/clients/temporal"
 	taskcommon "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/common"
@@ -32,7 +34,6 @@ import (
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor/temporalworkflow/activity"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor/temporalworkflow/common"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor/temporalworkflow/workflow"
-	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operations"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/task"
 )
 
@@ -40,6 +41,9 @@ const (
 	WorkflowQueue = "rla-tasks"
 )
 
+// Config holds all configuration required to build a Temporal-backed executor.
+// WorkerOptions maps Temporal task-queue names to per-queue worker settings;
+// each key results in a dedicated worker started by Build.
 type Config struct {
 	ClientConf    temporal.Config
 	WorkerOptions map[string]worker.Options
@@ -48,6 +52,8 @@ type Config struct {
 	ComponentManagerRegistry *componentmanager.Registry
 }
 
+// Validate checks that the configuration is complete and consistent.
+// It validates the Temporal client config.
 func (c *Config) Validate() error {
 	if c == nil {
 		return errors.New("configuration for Temporal Executor is nil")
@@ -57,17 +63,23 @@ func (c *Config) Validate() error {
 		return err
 	}
 
-	queueMap := make(map[string]bool)
-	for queue := range c.WorkerOptions {
-		if queueMap[queue] {
-			return fmt.Errorf("queue %s is defined multiple times", queue)
-		}
-		queueMap[queue] = true
+	if len(c.WorkerOptions) == 0 {
+		return errors.New("at least one Temporal worker queue must be configured")
+	}
+
+	if _, ok := c.WorkerOptions[WorkflowQueue]; !ok {
+		return fmt.Errorf(
+			"worker options must include workflow queue %q",
+			WorkflowQueue,
+		)
 	}
 
 	return nil
 }
 
+// Manager is the Temporal implementation of executor.Executor. It owns two
+// Temporal clients (publisher for workflow submission and status queries,
+// subscriber for worker registration) and one worker per configured task queue.
 type Manager struct {
 	conf             Config
 	publisherClient  *temporal.Client
@@ -75,13 +87,30 @@ type Manager struct {
 	workers          map[string]worker.Worker
 }
 
-func (c *Config) Build(ctx context.Context) (executor.Executor, error) {
-	// Set the component manager registry for activities
-	if c.ComponentManagerRegistry != nil {
-		activity.SetComponentManagerRegistry(c.ComponentManagerRegistry)
-	} else {
-		log.Warn().Msg("No component manager registry configured, activities may fail")
+// Build creates the Temporal executor: it wires the status updater and component
+// manager registry into the activity layer, then starts the Temporal clients and
+// workers for each configured queue. On success the caller must eventually call
+// Stop() to release the Temporal client connections — typically via defer,
+// regardless of whether Start() succeeds.
+func (c *Config) Build(
+	ctx context.Context,
+	updater task.TaskStatusUpdater,
+) (executor.Executor, error) {
+	if err := c.Validate(); err != nil {
+		return nil, err
 	}
+
+	if updater == nil {
+		return nil, errors.New("task status updater is required")
+	}
+
+	if c.ComponentManagerRegistry == nil {
+		return nil, errors.New("component manager registry is required")
+	}
+
+	// Bind dependencies into an Activities instance so each manager has its
+	// own isolated copy — no shared mutable globals between managers.
+	acts := activity.New(updater, c.ComponentManagerRegistry)
 
 	publisherClient, err := temporal.New(c.ClientConf)
 	if err != nil {
@@ -90,18 +119,27 @@ func (c *Config) Build(ctx context.Context) (executor.Executor, error) {
 
 	subscriberClient, err := temporal.New(c.ClientConf)
 	if err != nil {
+		publisherClient.Client().Close()
 		return nil, err
 	}
 
+	allActivities := acts.All()
+	allWorkflows := workflow.GetAllWorkflows()
 	workers := make(map[string]worker.Worker)
 	for queue, options := range c.WorkerOptions {
 		worker := worker.New(subscriberClient.Client(), queue, options)
-		for _, a := range activity.GetAllActivities() {
-			worker.RegisterActivity(a)
+		for name, fn := range allActivities {
+			worker.RegisterActivityWithOptions(
+				fn,
+				temporalactivity.RegisterOptions{Name: name},
+			)
 		}
 
-		for _, wf := range workflow.GetAllWorkflows() {
-			worker.RegisterWorkflow(wf)
+		for _, wf := range allWorkflows {
+			worker.RegisterWorkflowWithOptions(
+				wf.WorkflowFunc,
+				temporalworkflow.RegisterOptions{Name: wf.WorkflowName},
+			)
 		}
 
 		workers[queue] = worker
@@ -115,18 +153,32 @@ func (c *Config) Build(ctx context.Context) (executor.Executor, error) {
 	}, nil
 }
 
+// Start begins polling for workflow and activity tasks on all configured queues.
 func (m *Manager) Start(ctx context.Context) error {
+	started := make([]worker.Worker, 0, len(m.workers))
 	for queue, worker := range m.workers {
 		log.Info().Msgf("Starting temporal worker for queue %s", queue)
 		if err := worker.Start(); err != nil {
+			for i := len(started) - 1; i >= 0; i-- {
+				started[i].Stop()
+			}
+			// Do not close publisherClient/subscriberClient here: they are
+			// owned by the Manager (created in Build, not in Start) and must
+			// remain open until Stop() is called. The caller is expected to
+			// defer Stop() immediately after a successful Build(), so Stop()
+			// will run even when Start() returns an error.
 			return fmt.Errorf("failed to start temporal worker: %w", err)
 		}
+		started = append(started, worker)
 		log.Info().Msgf("Temporal worker started for queue %s", queue)
 	}
 
 	return nil
 }
 
+// Stop is the full teardown for a Manager created by Build: it stops all
+// workers (safe to call even if Start was never called or failed partway) and
+// closes the Temporal client connections.
 func (m *Manager) Stop(ctx context.Context) error {
 	for queue, worker := range m.workers {
 		log.Info().Msgf("Stopping temporal worker for queue %s", queue)
@@ -140,10 +192,13 @@ func (m *Manager) Stop(ctx context.Context) error {
 	return nil
 }
 
+// Type returns ExecutorTypeTemporal, identifying this executor implementation.
 func (m *Manager) Type() taskcommon.ExecutorType {
 	return taskcommon.ExecutorTypeTemporal
 }
 
+// CheckStatus decodes the execution ID and queries Temporal for the current
+// workflow execution status, mapping it to a TaskStatus.
 func (m *Manager) CheckStatus(
 	ctx context.Context,
 	encodedExecutionID string,
@@ -193,86 +248,29 @@ func (m *Manager) TerminateTask(
 	))
 }
 
-func (m *Manager) PowerControl(
+// Execute dispatches the task to the Temporal workflow registered for its
+// OperationType. All Temporal mechanics (client, options, workflow submission)
+// are contained here — nothing engine-specific crosses the Executor boundary.
+func (m *Manager) Execute(
 	ctx context.Context,
 	req *task.ExecutionRequest,
-	info operations.PowerControlTaskInfo,
 ) (*task.ExecutionResponse, error) {
-	if err := info.Validate(); err != nil {
-		return nil, err
+	if req == nil {
+		return nil, errors.New("execution request is nil")
 	}
 
-	return executeWorkflow(
-		ctx,
-		m.publisherClient.Client(),
-		executeWorkflowParams{
-			workflowName: workflow.PowerControlWorkflowName,
-			timeout:      operations.GetOperationOptions(taskcommon.TaskTypePowerControl).Timeout,
-			req:          req,
-			info:         info,
-		},
-	)
-}
-
-func (m *Manager) FirmwareControl(
-	ctx context.Context,
-	req *task.ExecutionRequest,
-	info operations.FirmwareControlTaskInfo,
-) (*task.ExecutionResponse, error) {
-	if err := info.Validate(); err != nil {
-		return nil, err
+	if err := req.Validate(); err != nil {
+		return nil, fmt.Errorf("invalid execution request: %w", err)
 	}
 
-	return executeWorkflow(
-		ctx,
-		m.publisherClient.Client(),
-		executeWorkflowParams{
-			workflowName: workflow.FirmwareControlWorkflowName,
-			timeout:      operations.GetOperationOptions(taskcommon.TaskTypeFirmwareControl).Timeout,
-			req:          req,
-			info:         info,
-		},
-	)
-}
-
-func (m *Manager) InjectExpectation(
-	ctx context.Context,
-	req *task.ExecutionRequest,
-	info operations.InjectExpectationTaskInfo,
-) (*task.ExecutionResponse, error) {
-	if err := info.Validate(); err != nil {
-		return nil, err
+	desc, ok := workflow.Get(req.Info.OperationType)
+	if !ok {
+		return nil, fmt.Errorf(
+			"no workflow registered for task type %q — "+
+				"ensure the workflow package is imported and its init() runs",
+			req.Info.OperationType,
+		)
 	}
 
-	return executeWorkflow(
-		ctx,
-		m.publisherClient.Client(),
-		executeWorkflowParams{
-			workflowName: workflow.InjectExpectationWorkflowName,
-			timeout:      operations.GetOperationOptions(taskcommon.TaskTypeInjectExpectation).Timeout,
-			req:          req,
-			info:         info,
-		},
-	)
-}
-
-func (m *Manager) BringUp(
-	ctx context.Context,
-	req *task.ExecutionRequest,
-	info operations.BringUpTaskInfo,
-) (*task.ExecutionResponse, error) {
-	if err := info.Validate(); err != nil {
-		return nil, err
-	}
-
-	return executeWorkflow(
-		ctx,
-		m.publisherClient.Client(),
-		executeWorkflowParams{
-			workflowName: workflow.BringUpWorkflowName,
-			timeout:      operations.GetOperationOptions(taskcommon.TaskTypeBringUp).Timeout,
-			req:          req,
-			info:         info,
-		},
-	)
+	return executeWorkflow(ctx, m.publisherClient.Client(), desc, req)
 }

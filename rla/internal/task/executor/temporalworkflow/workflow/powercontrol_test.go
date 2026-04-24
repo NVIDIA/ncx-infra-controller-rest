@@ -28,8 +28,10 @@ import (
 	"github.com/stretchr/testify/mock"
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/testsuite"
+	temporalworkflow "go.temporal.io/sdk/workflow"
 
 	taskcommon "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/common"
+	taskactivity "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor/temporalworkflow/activity"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor/temporalworkflow/common"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operationrules"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operations"
@@ -239,11 +241,12 @@ func TestPowerControlWorkflow(t *testing.T) {
 			activityError: nil,
 			expectError:   false,
 		},
-		"empty components returns nil": {
+		"empty components returns error": {
 			components:    nil,
 			op:            operations.PowerOperationPowerOn,
 			activityError: nil,
-			expectError:   false,
+			expectError:   true,
+			errorContains: "no components provided",
 		},
 		"restart success": {
 			components:    computeOnlyComponents,
@@ -276,7 +279,7 @@ func TestPowerControlWorkflow(t *testing.T) {
 			op:            operations.PowerOperationUnknown,
 			activityError: nil,
 			expectError:   true,
-			errorContains: "rule definition has no steps",
+			errorContains: "invalid power control operation",
 		},
 		"activity failure returns error": {
 			components:    computeOnlyComponents,
@@ -293,19 +296,19 @@ func TestPowerControlWorkflow(t *testing.T) {
 			env := testSuite.NewTestWorkflowEnvironment()
 
 			env.RegisterActivityWithOptions(mockPowerControl, activity.RegisterOptions{
-				Name: "PowerControl",
+				Name: taskactivity.NamePowerControl,
 			})
 			env.RegisterActivityWithOptions(mockUpdateTaskStatus, activity.RegisterOptions{
-				Name: "UpdateTaskStatus",
+				Name: taskactivity.NameUpdateTaskStatus,
 			})
 			env.RegisterActivityWithOptions(mockGetPowerStatus, activity.RegisterOptions{
-				Name: "GetPowerStatus",
+				Name: taskactivity.NameGetPowerStatus,
 			})
 			// Register the child workflow needed for rule-based execution
-			env.RegisterWorkflow(GenericComponentStepWorkflow)
+			env.RegisterWorkflowWithOptions(genericComponentStepWorkflow, temporalworkflow.RegisterOptions{Name: nameGenericComponentStepWorkflow})
 
-			env.OnActivity(mockPowerControl, mock.Anything, mock.Anything, mock.Anything).Return(tc.activityError)
-			env.OnActivity(mockUpdateTaskStatus, mock.Anything, mock.Anything).Return(nil)
+			env.OnActivity(taskactivity.NamePowerControl, mock.Anything, mock.Anything, mock.Anything).Return(tc.activityError)
+			env.OnActivity(taskactivity.NameUpdateTaskStatus, mock.Anything, mock.Anything).Return(nil)
 
 			// Track call count for restart operations which need Off then On
 			callCount := 0
@@ -319,7 +322,7 @@ func TestPowerControlWorkflow(t *testing.T) {
 				numComponentTypes = len(typesSeen)
 			}
 
-			env.OnActivity(mockGetPowerStatus, mock.Anything, mock.Anything).Return(
+			env.OnActivity(taskactivity.NameGetPowerStatus, mock.Anything, mock.Anything).Return(
 				func(ctx context.Context, target common.Target) (map[string]operations.PowerStatus, error) {
 					callCount++
 					result := make(map[string]operations.PowerStatus)
@@ -348,14 +351,14 @@ func TestPowerControlWorkflow(t *testing.T) {
 				},
 			)
 
-			info := operations.PowerControlTaskInfo{Operation: tc.op}
+			info := &operations.PowerControlTaskInfo{Operation: tc.op}
 			reqInfo := taskdef.ExecutionInfo{
 				TaskID:         uuid.New(),
 				Components:     toWorkflowComponents(tc.components),
 				RuleDefinition: createDefaultPowerRuleDef(tc.op),
 			}
 
-			env.ExecuteWorkflow(PowerControl, reqInfo, info)
+			env.ExecuteWorkflow(powerControl, reqInfo, info)
 
 			assert.True(t, env.IsWorkflowCompleted())
 
@@ -376,7 +379,7 @@ func TestGenericComponentStepWorkflow_BackwardCompatibilityValidation(t *testing
 	t.Run("missing both main_operation and activityName returns error", func(t *testing.T) {
 		testSuite := &testsuite.WorkflowTestSuite{}
 		env := testSuite.NewTestWorkflowEnvironment()
-		env.RegisterWorkflow(GenericComponentStepWorkflow)
+		env.RegisterWorkflowWithOptions(genericComponentStepWorkflow, temporalworkflow.RegisterOptions{Name: nameGenericComponentStepWorkflow})
 
 		step := operationrules.SequenceStep{
 			ComponentType: devicetypes.ComponentTypeCompute,
@@ -397,7 +400,7 @@ func TestGenericComponentStepWorkflow_BackwardCompatibilityValidation(t *testing
 
 		// Call workflow with empty activityName (backward compat mode but no activity)
 		env.ExecuteWorkflow(
-			GenericComponentStepWorkflow,
+			genericComponentStepWorkflow,
 			step,
 			target,
 			"", // Empty activityName - should trigger error
@@ -418,14 +421,14 @@ func TestGenericComponentStepWorkflow_BackwardCompatibilityValidation(t *testing
 	t.Run("legacy mode with valid activityName succeeds", func(t *testing.T) {
 		testSuite := &testsuite.WorkflowTestSuite{}
 		env := testSuite.NewTestWorkflowEnvironment()
-		env.RegisterWorkflow(GenericComponentStepWorkflow)
+		env.RegisterWorkflowWithOptions(genericComponentStepWorkflow, temporalworkflow.RegisterOptions{Name: nameGenericComponentStepWorkflow})
 
 		// Register mock activity with correct name
 		env.RegisterActivityWithOptions(
 			mockPowerControl,
-			activity.RegisterOptions{Name: "PowerControl"},
+			activity.RegisterOptions{Name: taskactivity.NamePowerControl},
 		)
-		env.OnActivity("PowerControl", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+		env.OnActivity(taskactivity.NamePowerControl, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		step := operationrules.SequenceStep{
 			ComponentType: devicetypes.ComponentTypeCompute,
@@ -450,10 +453,10 @@ func TestGenericComponentStepWorkflow_BackwardCompatibilityValidation(t *testing
 
 		// Call workflow with valid activityName (backward compat mode)
 		env.ExecuteWorkflow(
-			GenericComponentStepWorkflow,
+			genericComponentStepWorkflow,
 			step,
 			target,
-			"PowerControl", // Valid activityName - should succeed
+			taskactivity.NamePowerControl, // Valid activityName - should succeed
 			info,
 			allTargets,
 		)

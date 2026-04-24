@@ -18,16 +18,25 @@
 package workflow
 
 import (
-	"fmt"
 	"time"
 
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
 
+	taskcommon "github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/common"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/executor/temporalworkflow/activity"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/operations"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/task"
 )
 
+// init registers the BringUp workflow descriptor with the package registry.
+func init() {
+	registerTaskWorkflow[operations.BringUpTaskInfo, *operations.BringUpTaskInfo](
+		taskcommon.TaskTypeBringUp, "BringUp", bringUp,
+	)
+}
+
+// bringUpActivityOptions are the default activity options for bring-up workflows.
 var bringUpActivityOptions = workflow.ActivityOptions{
 	StartToCloseTimeout: 20 * time.Minute,
 	RetryPolicy: &temporal.RetryPolicy{
@@ -38,16 +47,16 @@ var bringUpActivityOptions = workflow.ActivityOptions{
 	},
 }
 
-// BringUp orchestrates the rack bring-up sequence using operation rules.
+// bringUp orchestrates the rack bring-up sequence using operation rules.
 // The execution sequence is driven by the RuleDefinition attached to the
 // task, falling back to a hardcoded default when no custom rule exists.
-func BringUp(
+func bringUp(
 	ctx workflow.Context,
 	reqInfo task.ExecutionInfo,
 	info *operations.BringUpTaskInfo,
 ) error {
-	if len(reqInfo.Components) == 0 {
-		return fmt.Errorf("no components provided")
+	if err := validateWorkflowInput(reqInfo, info); err != nil {
+		return err
 	}
 
 	ctx = workflow.WithActivityOptions(ctx, bringUpActivityOptions)
@@ -61,7 +70,7 @@ func BringUp(
 	err := executeRuleBasedOperation(
 		ctx,
 		typeToTargets,
-		"BringUp",
+		activity.NameBringUpControl,
 		info,
 		reqInfo.RuleDefinition,
 	)

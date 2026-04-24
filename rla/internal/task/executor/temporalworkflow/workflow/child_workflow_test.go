@@ -64,9 +64,9 @@ func TestGenericComponentStepWorkflow_ActionBased(t *testing.T) {
 
 	// Register activities with correct names
 	env.RegisterActivityWithOptions(mockPowerControl,
-		activity.RegisterOptions{Name: "PowerControl"})
+		activity.RegisterOptions{Name: activitypkg.NamePowerControl})
 	env.RegisterActivityWithOptions(mockGetPowerStatus,
-		activity.RegisterOptions{Name: "GetPowerStatus"})
+		activity.RegisterOptions{Name: activitypkg.NameGetPowerStatus})
 	env.RegisterActivityWithOptions(mockVerifyPowerStatus,
 		activity.RegisterOptions{Name: "VerifyPowerStatus"})
 	env.RegisterActivityWithOptions(mockVerifyReachability,
@@ -125,7 +125,7 @@ func TestGenericComponentStepWorkflow_ActionBased(t *testing.T) {
 	}
 
 	// Execute workflow
-	env.ExecuteWorkflow(GenericComponentStepWorkflow, step, target, "",
+	env.ExecuteWorkflow(genericComponentStepWorkflow, step, target, "",
 		operationInfo, allTargets)
 
 	// Verify workflow completed successfully
@@ -141,7 +141,7 @@ func TestGenericComponentStepWorkflow_WithSleepAction(t *testing.T) {
 
 	// Register activities with correct names
 	env.RegisterActivityWithOptions(mockPowerControl,
-		activity.RegisterOptions{Name: "PowerControl"})
+		activity.RegisterOptions{Name: activitypkg.NamePowerControl})
 
 	// Mock activity responses
 	env.OnActivity(mockPowerControl, mock.Anything, mock.Anything,
@@ -180,7 +180,7 @@ func TestGenericComponentStepWorkflow_WithSleepAction(t *testing.T) {
 	}
 
 	// Execute workflow
-	env.ExecuteWorkflow(GenericComponentStepWorkflow, step, target, "",
+	env.ExecuteWorkflow(genericComponentStepWorkflow, step, target, "",
 		operationInfo, allTargets)
 
 	// Verify workflow completed successfully
@@ -196,7 +196,7 @@ func TestGenericComponentStepWorkflow_VerificationFailure(t *testing.T) {
 
 	// Register activities with correct names
 	env.RegisterActivityWithOptions(mockPowerControl,
-		activity.RegisterOptions{Name: "PowerControl"})
+		activity.RegisterOptions{Name: activitypkg.NamePowerControl})
 	env.RegisterActivity(mockVerifyPowerStatus)
 
 	// Mock activity responses - verification fails
@@ -241,7 +241,7 @@ func TestGenericComponentStepWorkflow_VerificationFailure(t *testing.T) {
 	}
 
 	// Execute workflow
-	env.ExecuteWorkflow(GenericComponentStepWorkflow, step, target, "",
+	env.ExecuteWorkflow(genericComponentStepWorkflow, step, target, "",
 		operationInfo, allTargets)
 
 	// Verify workflow completed with error
@@ -259,7 +259,7 @@ func TestGenericComponentStepWorkflow_PreOperation(t *testing.T) {
 
 	// Register activities with correct names
 	env.RegisterActivityWithOptions(mockPowerControl,
-		activity.RegisterOptions{Name: "PowerControl"})
+		activity.RegisterOptions{Name: activitypkg.NamePowerControl})
 
 	// Mock activity responses
 	env.OnActivity(mockPowerControl, mock.Anything, mock.Anything,
@@ -298,7 +298,7 @@ func TestGenericComponentStepWorkflow_PreOperation(t *testing.T) {
 	}
 
 	// Execute workflow
-	env.ExecuteWorkflow(GenericComponentStepWorkflow, step, target, "",
+	env.ExecuteWorkflow(genericComponentStepWorkflow, step, target, "",
 		operationInfo, allTargets)
 
 	// Verify workflow completed successfully
@@ -314,7 +314,7 @@ func TestGenericComponentStepWorkflow_EmptyMainOperation(t *testing.T) {
 
 	// Register activities with correct names
 	env.RegisterActivityWithOptions(mockPowerControl,
-		activity.RegisterOptions{Name: "PowerControl"})
+		activity.RegisterOptions{Name: activitypkg.NamePowerControl})
 
 	// Mock activity responses
 	env.OnActivity(mockPowerControl, mock.Anything, mock.Anything,
@@ -342,8 +342,8 @@ func TestGenericComponentStepWorkflow_EmptyMainOperation(t *testing.T) {
 	}
 
 	// Execute workflow with legacy activityName parameter
-	env.ExecuteWorkflow(GenericComponentStepWorkflow, step, target,
-		"PowerControl", operationInfo, allTargets)
+	env.ExecuteWorkflow(genericComponentStepWorkflow, step, target,
+		activitypkg.NamePowerControl, operationInfo, allTargets)
 
 	// Verify workflow completed successfully
 	assert.True(t, env.IsWorkflowCompleted())
@@ -358,9 +358,9 @@ func TestGenericComponentStepWorkflow_VerifyReachabilityRequireAll(t *testing.T)
 	env := testSuite.NewTestWorkflowEnvironment()
 
 	env.RegisterActivityWithOptions(mockGetPowerStatus,
-		activity.RegisterOptions{Name: "GetPowerStatus"})
+		activity.RegisterOptions{Name: activitypkg.NameGetPowerStatus})
 	env.RegisterActivityWithOptions(mockPowerControl,
-		activity.RegisterOptions{Name: "PowerControl"})
+		activity.RegisterOptions{Name: activitypkg.NamePowerControl})
 
 	env.OnActivity(mockGetPowerStatus, mock.Anything, mock.Anything).Return(
 		map[string]operations.PowerStatus{
@@ -400,7 +400,7 @@ func TestGenericComponentStepWorkflow_VerifyReachabilityRequireAll(t *testing.T)
 		devicetypes.ComponentTypePowerShelf: target,
 	}
 
-	env.ExecuteWorkflow(GenericComponentStepWorkflow, step, target, "",
+	env.ExecuteWorkflow(genericComponentStepWorkflow, step, target, "",
 		&operations.BringUpTaskInfo{}, allTargets)
 
 	assert.True(t, env.IsWorkflowCompleted())
@@ -421,9 +421,9 @@ func TestGenericComponentStepWorkflow_BringUpAndWait(t *testing.T) {
 	}
 
 	env.RegisterActivityWithOptions(mockBringUpControl,
-		activity.RegisterOptions{Name: "BringUpControl"})
+		activity.RegisterOptions{Name: activitypkg.NameBringUpControl})
 	env.RegisterActivityWithOptions(mockGetBringUpStatus,
-		activity.RegisterOptions{Name: "GetBringUpStatus"})
+		activity.RegisterOptions{Name: activitypkg.NameGetBringUpStatus})
 
 	env.OnActivity(mockBringUpControl, mock.Anything, mock.Anything).Return(nil)
 	env.OnActivity(mockGetBringUpStatus, mock.Anything, mock.Anything).Return(
@@ -458,7 +458,7 @@ func TestGenericComponentStepWorkflow_BringUpAndWait(t *testing.T) {
 		devicetypes.ComponentTypeCompute: target,
 	}
 
-	env.ExecuteWorkflow(GenericComponentStepWorkflow, step, target, "",
+	env.ExecuteWorkflow(genericComponentStepWorkflow, step, target, "",
 		&operations.BringUpTaskInfo{}, allTargets)
 
 	assert.True(t, env.IsWorkflowCompleted())
@@ -479,9 +479,9 @@ func TestGenericComponentStepWorkflow_FirmwareControlAction(t *testing.T) {
 	}
 
 	env.RegisterActivityWithOptions(mockStart,
-		activity.RegisterOptions{Name: "FirmwareControl"})
+		activity.RegisterOptions{Name: activitypkg.NameFirmwareControl})
 	env.RegisterActivityWithOptions(mockStatus,
-		activity.RegisterOptions{Name: "GetFirmwareStatus"})
+		activity.RegisterOptions{Name: activitypkg.NameGetFirmwareStatus})
 
 	env.OnActivity(mockStart, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	env.OnActivity(mockStatus, mock.Anything, mock.Anything).Return(
@@ -522,7 +522,7 @@ func TestGenericComponentStepWorkflow_FirmwareControlAction(t *testing.T) {
 		EndTime:   time.Now().Add(2 * time.Hour).Unix(),
 	}
 
-	env.ExecuteWorkflow(GenericComponentStepWorkflow, step, target, "",
+	env.ExecuteWorkflow(genericComponentStepWorkflow, step, target, "",
 		info, allTargets)
 
 	assert.True(t, env.IsWorkflowCompleted())
@@ -537,7 +537,7 @@ func TestGenericComponentStepWorkflow_PowerControlWithParamOperation(t *testing.
 	env := testSuite.NewTestWorkflowEnvironment()
 
 	env.RegisterActivityWithOptions(mockPowerControl,
-		activity.RegisterOptions{Name: "PowerControl"})
+		activity.RegisterOptions{Name: activitypkg.NamePowerControl})
 
 	env.OnActivity(mockPowerControl, mock.Anything, mock.Anything,
 		mock.Anything).Return(nil)
@@ -571,7 +571,7 @@ func TestGenericComponentStepWorkflow_PowerControlWithParamOperation(t *testing.
 		EndTime:   time.Now().Add(2 * time.Hour).Unix(),
 	}
 
-	env.ExecuteWorkflow(GenericComponentStepWorkflow, step, target, "",
+	env.ExecuteWorkflow(genericComponentStepWorkflow, step, target, "",
 		firmwareInfo, allTargets)
 
 	assert.True(t, env.IsWorkflowCompleted())
@@ -593,7 +593,7 @@ func TestGenericComponentStepWorkflow_InjectExpectationAction(t *testing.T) {
 	}
 
 	env.RegisterActivityWithOptions(mockInjectExpectation,
-		activity.RegisterOptions{Name: "InjectExpectation"})
+		activity.RegisterOptions{Name: activitypkg.NameInjectExpectation})
 
 	env.OnActivity(mockInjectExpectation, mock.Anything, mock.Anything,
 		mock.Anything).Return(nil)
@@ -616,7 +616,7 @@ func TestGenericComponentStepWorkflow_InjectExpectationAction(t *testing.T) {
 		devicetypes.ComponentTypePowerShelf: target,
 	}
 
-	env.ExecuteWorkflow(GenericComponentStepWorkflow, step, target, "",
+	env.ExecuteWorkflow(genericComponentStepWorkflow, step, target, "",
 		&operations.BringUpTaskInfo{}, allTargets)
 
 	assert.True(t, env.IsWorkflowCompleted())
@@ -638,7 +638,7 @@ func TestGenericComponentStepWorkflow_InjectExpectationFailure(t *testing.T) {
 	}
 
 	env.RegisterActivityWithOptions(mockInjectExpectation,
-		activity.RegisterOptions{Name: "InjectExpectation"})
+		activity.RegisterOptions{Name: activitypkg.NameInjectExpectation})
 
 	env.OnActivity(mockInjectExpectation, mock.Anything, mock.Anything,
 		mock.Anything).Return(errors.New("component manager service unavailable"))
@@ -661,7 +661,7 @@ func TestGenericComponentStepWorkflow_InjectExpectationFailure(t *testing.T) {
 		devicetypes.ComponentTypeCompute: target,
 	}
 
-	env.ExecuteWorkflow(GenericComponentStepWorkflow, step, target, "",
+	env.ExecuteWorkflow(genericComponentStepWorkflow, step, target, "",
 		&operations.BringUpTaskInfo{}, allTargets)
 
 	assert.True(t, env.IsWorkflowCompleted())

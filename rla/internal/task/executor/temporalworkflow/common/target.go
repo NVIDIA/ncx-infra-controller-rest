@@ -32,6 +32,7 @@ type Target struct {
 	ComponentIDs []string
 }
 
+// Validate returns an error if the Target has an unknown component type or no component IDs.
 func (t *Target) Validate() error {
 	if t.Type == devicetypes.ComponentTypeUnknown {
 		return errors.New("component type is unknown")
@@ -44,6 +45,7 @@ func (t *Target) Validate() error {
 	return nil
 }
 
+// String returns a human-readable representation for logging.
 func (t *Target) String() string {
 	return fmt.Sprintf(
 		"[type: %s, component_ids: %s]",
