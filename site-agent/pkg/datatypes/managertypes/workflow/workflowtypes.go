@@ -81,6 +81,7 @@ type Workflow struct {
 	SKUState                    *MgrState
 	DpuExtensionServiceState    *MgrState
 	NVLinkLogicalPartitionState *MgrState
+	VpcPeeringState             *MgrState
 }
 
 // Temporal datastructure
@@ -113,6 +114,7 @@ func NewWorkflowInstance() *Workflow {
 		SKUState:                    &MgrState{},
 		DpuExtensionServiceState:    &MgrState{},
 		NVLinkLogicalPartitionState: &MgrState{},
+		VpcPeeringState:             &MgrState{},
 	}
 }
 

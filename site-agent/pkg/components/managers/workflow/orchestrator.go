@@ -237,6 +237,9 @@ func workflowOrchestrator() error {
 	ManagerAccess.API.VpcPrefix.RegisterSubscriber()
 	ManagerAccess.API.VpcPrefix.RegisterPublisher()
 
+	ManagerAccess.API.VpcPeering.RegisterSubscriber()
+	ManagerAccess.API.VpcPeering.RegisterPublisher()
+
 	ManagerAccess.API.Subnet.RegisterSubscriber()
 	ManagerAccess.API.Subnet.RegisterPublisher()
 

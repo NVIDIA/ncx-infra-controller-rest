@@ -57,6 +57,7 @@ func TestManageVpcPeering_CreateVpcPeeringOnSite(t *testing.T) {
 			args: args{
 				ctx: context.Background(),
 				request: &cwssaws.VpcPeeringCreationRequest{
+					Id:        &cwssaws.VpcPeeringId{Value: uuid.NewString()},
 					VpcId:     &cwssaws.VpcId{Value: uuid.NewString()},
 					PeerVpcId: &cwssaws.VpcId{Value: uuid.NewString()},
 				},
@@ -87,6 +88,20 @@ func TestManageVpcPeering_CreateVpcPeeringOnSite(t *testing.T) {
 				request: &cwssaws.VpcPeeringCreationRequest{
 					VpcId:     &cwssaws.VpcId{Value: uuid.NewString()},
 					PeerVpcId: nil,
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "test create VpcPeering fail on missing VPC peering ID",
+			fields: fields{
+				CarbideAtomicClient: carbideAtomicClient,
+			},
+			args: args{
+				ctx: context.Background(),
+				request: &cwssaws.VpcPeeringCreationRequest{
+					VpcId:     &cwssaws.VpcId{Value: uuid.NewString()},
+					PeerVpcId: &cwssaws.VpcId{Value: uuid.NewString()},
 				},
 			},
 			wantErr: true,
@@ -266,6 +281,11 @@ func TestManageVpcPeeringInventory_DiscoverVpcPeeringInventory(t *testing.T) {
 			})
 
 			ctx := context.Background()
+			// Mock: vpcFindIDs uses ctx "wantCount" (see testing.go FindVpcIds); at least one VPC is
+			// required so VpcPeeringFindIDs queries FindVpcPeeringIds per vpc_id.
+			if tt.args.wantTotalItems > 0 {
+				ctx = context.WithValue(ctx, "wantCount", 1)
+			}
 			ctx = context.WithValue(ctx, "WantCount", tt.args.wantTotalItems)
 
 			totalPages := tt.args.wantTotalItems / tt.fields.cloudPageSize
