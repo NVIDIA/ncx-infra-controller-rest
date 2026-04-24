@@ -656,9 +656,21 @@ func (c *MockForgeClient) GetVpcPrefixes(ctx context.Context, in *wflows.VpcPref
 
 /* VPC Peering mock methods */
 func (c *MockForgeClient) CreateVpcPeering(ctx context.Context, in *wflows.VpcPeeringCreationRequest, opts ...grpc.CallOption) (*wflows.VpcPeering, error) {
-	out := new(wflows.VpcPeering)
-	out.Id = &wflows.VpcPeeringId{Value: uuid.NewString()}
-	return out, nil
+	if in == nil {
+		return &wflows.VpcPeering{Id: &wflows.VpcPeeringId{Value: uuid.NewString()}}, nil
+	}
+	var id *wflows.VpcPeeringId
+	if in.Id != nil && in.Id.Value != "" {
+		id = &wflows.VpcPeeringId{Value: in.Id.Value}
+	} else {
+		id = &wflows.VpcPeeringId{Value: uuid.NewString()}
+	}
+
+	return &wflows.VpcPeering{
+		Id:        id,
+		VpcId:     in.VpcId,
+		PeerVpcId: in.PeerVpcId,
+	}, nil
 }
 
 func (c *MockForgeClient) DeleteVpcPeering(ctx context.Context, in *wflows.VpcPeeringDeletionRequest, opts ...grpc.CallOption) (*wflows.VpcPeeringDeletionResult, error) {
