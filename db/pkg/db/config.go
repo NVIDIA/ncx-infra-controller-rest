@@ -95,7 +95,7 @@ func (c *Config) BuildDSN() string {
 	if len(c.CACertificatePath) > 0 {
 		dsn += fmt.Sprintf("prefer&sslrootcert=%v", c.CACertificatePath)
 	} else {
-		dsn += "disable"
+		dsn += "prefer"
 	}
 
 	return dsn
