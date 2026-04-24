@@ -37,7 +37,9 @@ Test database configuration:
 - Port: `30432`
 - User/Password: `postgres` / `postgres`
 
-### Local Deployment with Kind
+### Option A: Local Development with Kind
+
+The fastest path to a running stack on your laptop. Builds images locally, spins up a Kind cluster, and deploys a mock NCX Infra Controller Core automatically — no external registry or bare-metal cluster required.
 
 ```bash
 make kind-reset
@@ -79,7 +81,44 @@ make helm-uninstall      # Uninstall Helm releases
 make kind-down           # Tear down cluster
 ```
 
-### Production Cluster Deployment
+### Option B: Bare-Metal Cluster with helm-prereqs
+
+For deploying onto a real Kubernetes cluster alongside NCX Infra Controller Core. Uses `helm-prereqs/setup.sh` from the [ncx-infra-controller-core](https://github.com/NVIDIA/ncx-infra-controller-core) repo, which installs the full prerequisite stack (cert-manager, Vault, external-secrets, PostgreSQL, Temporal, Keycloak) and deploys both NCX Core and NCX REST in the correct order.
+
+```bash
+# 1. Build and push images to your registry
+make docker-build IMAGE_REGISTRY=my-registry.example.com/ncx IMAGE_TAG=v1.0.4
+
+for image in carbide-rest-api carbide-rest-workflow carbide-rest-site-manager \
+             carbide-rest-site-agent carbide-rest-db carbide-rest-cert-manager; do
+    docker push my-registry.example.com/ncx/$image:v1.0.4
+done
+
+# 2. Set environment variables
+export KUBECONFIG=/path/to/kubeconfig
+export REGISTRY_PULL_SECRET=<pull-secret-or-api-key>
+export NCX_IMAGE_REGISTRY=my-registry.example.com/ncx
+export NCX_CORE_IMAGE_TAG=<ncx-core-tag>    # NCX Infra Controller Core image tag
+export NCX_REST_IMAGE_TAG=v1.0.4               # NCX REST image tag
+
+# 3. Clone ncx-infra-controller-core (if not already present as a sibling directory)
+git clone https://github.com/NVIDIA/ncx-infra-controller-core.git ../ncx-infra-controller-core
+
+# 4. Run setup from the ncx-infra-controller-core repo
+cd ../ncx-infra-controller-core/helm-prereqs
+./setup.sh -y     # or ./setup.sh for interactive prompts
+```
+
+The setup script auto-detects this repo from the sibling path `ncx-infra-controller-rest`. Set `NCX_REPO=/path/to/this/repo` to override.
+
+To tear everything down:
+```bash
+./clean.sh
+```
+
+See [ncx-infra-controller-core/helm-prereqs/README.md](https://github.com/NVIDIA/ncx-infra-controller-core/blob/main/helm-prereqs/README.md) for the full reference: PKI architecture, phase-by-phase description, site customization, secrets reference, and troubleshooting (including site-agent gRPC connectivity).
+
+### Option C: Manual / Kustomize Production Deployment
 
 See **[Deployment QuickStart Guide](deploy/README.md)** for a concise bring-up guide, and **[Detailed Installation Guide](deploy/INSTALLATION.md)** for the full step-by-step reference with per-component explanations.
 

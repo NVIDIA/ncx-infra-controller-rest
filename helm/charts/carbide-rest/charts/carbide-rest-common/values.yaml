@@ -5,6 +5,8 @@ secrets:
   # -- Set to false to skip Secret creation (e.g. when migrating from Kustomize with pre-existing Secrets).
   create: true
   dbCreds:
+    # -- DB username. Replace with real credentials in production.
+    username: "forge"
     # -- DB password. Replace with real credentials in production.
     password: "forge"
   keycloakClientSecret:
