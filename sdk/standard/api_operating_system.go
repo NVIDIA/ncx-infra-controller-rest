@@ -45,9 +45,9 @@ Create an Operating System for the org.
 
 Either `infrastructureProviderId` or `tenantId` must be provided in request data. Both cannot be provided at the same time.
 
-If `infrastructureProviderId` is provided in request data, then org must have an Infrastructure Provider entity and its ID should match the query param value. User must have `FORGE_PROVIDER_ADMIN` role.
+If `infrastructureProviderId` is provided in request data, then org must have an Infrastructure Provider entity and its ID should match the query param value. User must have `NICO_PROVIDER_ADMIN` role.
 
-If `tenantId` is provided in request data, then org must have a Tenant entity and its ID should match the query param value. User must have `FORGE_TENANT_ADMIN` role.
+If `tenantId` is provided in request data, then org must have a Tenant entity and its ID should match the query param value. User must have `NICO_TENANT_ADMIN` role.
 
 Only Tenants are allowed to create Operating System for MVP.
 
@@ -79,7 +79,7 @@ func (a *OperatingSystemAPIService) CreateOperatingSystemExecute(r ApiCreateOper
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/operating-system"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/operating-system"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -128,7 +128,7 @@ func (a *OperatingSystemAPIService) CreateOperatingSystemExecute(r ApiCreateOper
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 400 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -139,7 +139,7 @@ func (a *OperatingSystemAPIService) CreateOperatingSystemExecute(r ApiCreateOper
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -179,9 +179,9 @@ DeleteOperatingSystem Delete Operating System
 
 # Delete an Operating System by ID
 
-If the Operating System has `infrastructureProviderId` set, then org must have an Infrastructure Provider entity and its ID should match the Operating System Infrastructure Provider ID. User must have `FORGE_PROVIDER_ADMIN` authorization role.
+If the Operating System has `infrastructureProviderId` set, then org must have an Infrastructure Provider entity and its ID should match the Operating System Infrastructure Provider ID. User must have `NICO_PROVIDER_ADMIN` authorization role.
 
-If the Operating System has `tenantId` set, then org must have a Tenant entity and its ID should match the Operating System Tenant ID. User must have `FORGE_TENANT_ADMIN` authorization role.
+If the Operating System has `tenantId` set, then org must have a Tenant entity and its ID should match the Operating System Tenant ID. User must have `NICO_TENANT_ADMIN` authorization role.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -210,7 +210,7 @@ func (a *OperatingSystemAPIService) DeleteOperatingSystemExecute(r ApiDeleteOper
 		return nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/operating-system/{operatingSystemId}"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/operating-system/{operatingSystemId}"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"operatingSystemId"+"}", url.PathEscape(parameterValueToString(r.operatingSystemId, "operatingSystemId")), -1)
 
@@ -258,7 +258,7 @@ func (a *OperatingSystemAPIService) DeleteOperatingSystemExecute(r ApiDeleteOper
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -344,9 +344,9 @@ GetAllOperatingSystem Retrieve all Operating Systems
 
 # Get an Operating System by ID
 
-If the Operating System has `infrastructureProviderId` set, then org must have an Infrastructure Provider entity and its ID should match the Operating System Infrastructure Provider ID. User must have `FORGE_PROVIDER_ADMIN` authorization role.
+If the Operating System has `infrastructureProviderId` set, then org must have an Infrastructure Provider entity and its ID should match the Operating System Infrastructure Provider ID. User must have `NICO_PROVIDER_ADMIN` authorization role.
 
-If the Operating System has `tenantId` set, then org must have a Tenant entity and its ID should match the Operating System Tenant ID. User must have `FORGE_TENANT_ADMIN` role.
+If the Operating System has `tenantId` set, then org must have a Tenant entity and its ID should match the Operating System Tenant ID. User must have `NICO_TENANT_ADMIN` role.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -376,7 +376,7 @@ func (a *OperatingSystemAPIService) GetAllOperatingSystemExecute(r ApiGetAllOper
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/operating-system"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/operating-system"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -451,7 +451,7 @@ func (a *OperatingSystemAPIService) GetAllOperatingSystemExecute(r ApiGetAllOper
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -498,9 +498,9 @@ GetOperatingSystem Retrieve Operating System
 
 # Get an Operating System by ID
 
-If the Operating System has `infrastructureProviderId` set, then org must have an Infrastructure Provider entity and its ID should match the Operating System Infrastructure Provider ID. User must have `FORGE_PROVIDER_ADMIN` authorization role.
+If the Operating System has `infrastructureProviderId` set, then org must have an Infrastructure Provider entity and its ID should match the Operating System Infrastructure Provider ID. User must have `NICO_PROVIDER_ADMIN` authorization role.
 
-If the Operating System has `tenantId` set, then org must have a Tenant entity and its ID should match the Operating System Tenant ID. User must have `FORGE_TENANT_ADMIN` role.
+If the Operating System has `tenantId` set, then org must have a Tenant entity and its ID should match the Operating System Tenant ID. User must have `NICO_TENANT_ADMIN` role.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -532,7 +532,7 @@ func (a *OperatingSystemAPIService) GetOperatingSystemExecute(r ApiGetOperatingS
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/operating-system/{operatingSystemId}"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/operating-system/{operatingSystemId}"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"operatingSystemId"+"}", url.PathEscape(parameterValueToString(r.operatingSystemId, "operatingSystemId")), -1)
 
@@ -583,7 +583,7 @@ func (a *OperatingSystemAPIService) GetOperatingSystemExecute(r ApiGetOperatingS
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -629,9 +629,9 @@ UpdateOperatingSystem Update Operating System
 
 # Update an Operating System by ID
 
-If the Operating System has `infrastructureProviderId` set, then org must have an Infrastructure Provider entity and its ID should match the Operating System Infrastructure Provider ID. User must have `FORGE_PROVIDER_ADMIN` authorization role. Provider must own the Operating System.
+If the Operating System has `infrastructureProviderId` set, then org must have an Infrastructure Provider entity and its ID should match the Operating System Infrastructure Provider ID. User must have `NICO_PROVIDER_ADMIN` authorization role. Provider must own the Operating System.
 
-If the Operating System has `tenantId` set, then org must have a Tenant entity and its ID should match the Operating System Tenant ID. User must have `FORGE_TENANT_ADMIN` role. Tenant must own the Operating System.
+If the Operating System has `tenantId` set, then org must have a Tenant entity and its ID should match the Operating System Tenant ID. User must have `NICO_TENANT_ADMIN` role. Tenant must own the Operating System.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -663,7 +663,7 @@ func (a *OperatingSystemAPIService) UpdateOperatingSystemExecute(r ApiUpdateOper
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/operating-system/{operatingSystemId}"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/operating-system/{operatingSystemId}"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"operatingSystemId"+"}", url.PathEscape(parameterValueToString(r.operatingSystemId, "operatingSystemId")), -1)
 
@@ -713,7 +713,7 @@ func (a *OperatingSystemAPIService) UpdateOperatingSystemExecute(r ApiUpdateOper
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 400 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -724,7 +724,7 @@ func (a *OperatingSystemAPIService) UpdateOperatingSystemExecute(r ApiUpdateOper
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()

@@ -35,10 +35,10 @@ func (api *API) RegisterPublisher() error {
 	// Register activity for discovering and publishing Tenant Inventory
 	TenantInventoryManager := swa.NewManageTenantInventory(swa.ManageInventoryConfig{
 		SiteID:                uuid.MustParse(ManagerAccess.Conf.EB.Temporal.ClusterID),
-		CarbideAtomicClient:   ManagerAccess.Data.EB.Managers.Carbide.Client,
+		NicoAtomicClient:   ManagerAccess.Data.EB.Managers.Nico.Client,
 		TemporalPublishClient: ManagerAccess.Data.EB.Managers.Workflow.Temporal.Publisher,
 		TemporalPublishQueue:  ManagerAccess.Conf.EB.Temporal.TemporalPublishQueue,
-		SitePageSize:          InventoryCarbidePageSize,
+		SitePageSize:          InventoryNicoPageSize,
 		CloudPageSize:         InventoryCloudPageSize,
 	})
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(TenantInventoryManager.DiscoverTenantInventory)

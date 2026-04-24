@@ -28,13 +28,13 @@ import (
 
 var (
 	// ServiceAccountRoles are the default roles assigned to service accounts
-	ServiceAccountRoles = []string{"FORGE_PROVIDER_ADMIN", "FORGE_TENANT_ADMIN"}
+	ServiceAccountRoles = []string{"NICO_PROVIDER_ADMIN", "NICO_TENANT_ADMIN"}
 
 	// AllowedRoles is the set of valid roles that can be assigned to users.
 	// Both static roles in config and dynamic roles from claims must be from this set.
 	AllowedRoles = map[string]bool{
-		"FORGE_TENANT_ADMIN":   true,
-		"FORGE_PROVIDER_ADMIN": true,
+		"NICO_TENANT_ADMIN":   true,
+		"NICO_PROVIDER_ADMIN": true,
 	}
 )
 

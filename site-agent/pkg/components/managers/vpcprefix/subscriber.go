@@ -27,7 +27,7 @@ func (api *API) RegisterSubscriber() error {
 	// Register the subscribers here
 	ManagerAccess.Data.EB.Log.Info().Msg("VpcPrefix: Registering the subscribers")
 
-	vpcPrefixManager := swa.NewManageVpcPrefix(ManagerAccess.Data.EB.Managers.Carbide.Client)
+	vpcPrefixManager := swa.NewManageVpcPrefix(ManagerAccess.Data.EB.Managers.Nico.Client)
 
 	//  Register Workflows
 

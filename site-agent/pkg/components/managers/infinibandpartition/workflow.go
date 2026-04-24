@@ -77,9 +77,9 @@ func (ibpm *ibpWorkflowMetadata) DoSiteControllerOP(ctx context.Context,
 	TransactionID *wflows.TransactionID, req interface{}) (interface{}, error) {
 	switch ibpm.activity {
 	case activityCreate:
-		return ManagerAccess.Data.EB.Managers.Carbide.GetClient().Networks().CreateInfiniBandPartition(ctx, req.(*wflows.CreateInfiniBandPartitionRequest))
+		return ManagerAccess.Data.EB.Managers.Nico.GetClient().Networks().CreateInfiniBandPartition(ctx, req.(*wflows.CreateInfiniBandPartitionRequest))
 	case activityDelete:
-		return ManagerAccess.Data.EB.Managers.Carbide.GetClient().Networks().DeleteInfiniBandPartition(ctx, req.(*wflows.DeleteInfiniBandPartitionRequest))
+		return ManagerAccess.Data.EB.Managers.Nico.GetClient().Networks().DeleteInfiniBandPartition(ctx, req.(*wflows.DeleteInfiniBandPartitionRequest))
 	default:
 		panic(fmt.Sprintf("invalid activity type: %v", ibpm.activity))
 	}

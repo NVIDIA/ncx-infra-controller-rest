@@ -29,10 +29,10 @@ var ManagerAccess *Manager.ManagerAccess
 type API struct{}
 
 // NewMachineValidationManager - returns a new instance of helm manager
-func NewMachineValidationManager(superForge *elektratypes.Elektra, superAPI *Manager.ManagerAPI, superConf *Manager.ManagerConf) *API {
+func NewMachineValidationManager(superNico *elektratypes.Elektra, superAPI *Manager.ManagerAPI, superConf *Manager.ManagerConf) *API {
 	ManagerAccess = &Manager.ManagerAccess{
 		Data: &Manager.ManagerData{
-			EB: superForge,
+			EB: superNico,
 		},
 		API:  superAPI,
 		Conf: superConf,

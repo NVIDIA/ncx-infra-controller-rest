@@ -84,11 +84,11 @@ func (skgm *sshkgWorkflowMetadata) DoSiteControllerOP(ctx context.Context,
 	TransactionID *wflows.TransactionID, req interface{}) (interface{}, error) {
 	switch skgm.activity {
 	case activityCreate:
-		return ManagerAccess.Data.EB.Managers.Carbide.GetClient().Compute().CreateSSHKeyGroup(ctx, req.(*wflows.CreateSSHKeyGroupRequest))
+		return ManagerAccess.Data.EB.Managers.Nico.GetClient().Compute().CreateSSHKeyGroup(ctx, req.(*wflows.CreateSSHKeyGroupRequest))
 	case activityUpdate:
-		return ManagerAccess.Data.EB.Managers.Carbide.GetClient().Compute().UpdateSSHKeyGroup(ctx, req.(*wflows.UpdateSSHKeyGroupRequest))
+		return ManagerAccess.Data.EB.Managers.Nico.GetClient().Compute().UpdateSSHKeyGroup(ctx, req.(*wflows.UpdateSSHKeyGroupRequest))
 	case activityDelete:
-		return ManagerAccess.Data.EB.Managers.Carbide.GetClient().Compute().DeleteSSHKeyGroup(ctx, req.(*wflows.DeleteSSHKeyGroupRequest))
+		return ManagerAccess.Data.EB.Managers.Nico.GetClient().Compute().DeleteSSHKeyGroup(ctx, req.(*wflows.DeleteSSHKeyGroupRequest))
 	default:
 		panic(fmt.Sprintf("invalid activity type: %v", skgm.activity))
 	}

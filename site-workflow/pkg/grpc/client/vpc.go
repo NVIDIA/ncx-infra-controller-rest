@@ -39,7 +39,7 @@ type VPCInterface interface {
 // CreateVPC creates a VPC
 func (vpc *network) CreateVPC(ctx context.Context, request *wflows.Vpc) (response *wflows.Vpc, err error) {
 	log.Info().Interface("request", request).Msg("CreateVPC: received request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-CreateVPC")
+	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "NicoClient-CreateVPC")
 	defer span.End()
 
 	// Validate the request
@@ -49,27 +49,27 @@ func (vpc *network) CreateVPC(ctx context.Context, request *wflows.Vpc) (respons
 		return nil, err
 	}
 
-	// Translate the workflow request to the carbide request
-	carbideRequest := &wflows.VpcCreationRequest{
+	// Translate the workflow request to the nico request
+	nicoRequest := &wflows.VpcCreationRequest{
 		Id:                   request.Id,
 		Name:                 request.Name,
 		TenantOrganizationId: request.TenantOrganizationId,
 	}
 
-	response, err = vpc.carbide.CreateVpc(ctx, carbideRequest)
+	response, err = vpc.nico.CreateVpc(ctx, nicoRequest)
 	return response, err
 }
 
 func (vpc *network) GetAllVPCs(ctx context.Context, request *wflows.VpcSearchFilter, pageSize int) (response *wflows.VpcList, err error) {
 	log.Info().Interface("request", request).Msg("GetAllVPCs: received request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-GetAllVPCs")
+	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "NicoClient-GetAllVPCs")
 	defer span.End()
 
 	if request == nil {
 		request = &wflows.VpcSearchFilter{}
 	}
 
-	idList, err := vpc.carbide.FindVpcIds(ctx, request)
+	idList, err := vpc.nico.FindVpcIds(ctx, request)
 	if err != nil {
 		log.Error().Err(err).Msg("FindVpcIds: error")
 		return nil, err
@@ -77,7 +77,7 @@ func (vpc *network) GetAllVPCs(ctx context.Context, request *wflows.VpcSearchFil
 	response = &wflows.VpcList{}
 	idChunks := SliceToChunks(idList.VpcIds, pageSize)
 	for i, chunk := range idChunks {
-		list, err := vpc.carbide.FindVpcsByIds(ctx, &wflows.VpcsByIdsRequest{VpcIds: chunk})
+		list, err := vpc.nico.FindVpcsByIds(ctx, &wflows.VpcsByIdsRequest{VpcIds: chunk})
 		if err != nil {
 			log.Error().Err(err).Msgf("FindVpcsByIds: error on chunk index %d", i)
 			return nil, err
@@ -90,14 +90,14 @@ func (vpc *network) GetAllVPCs(ctx context.Context, request *wflows.VpcSearchFil
 
 func (vpc *network) FindVPCIDs(ctx context.Context, request *wflows.VpcSearchFilter) (response *wflows.VpcIdList, err error) {
 	log.Info().Interface("request", request).Msg("FindVPCIDs: received request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-FindVPCIDs")
+	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "NicoClient-FindVPCIDs")
 	defer span.End()
 
 	if request == nil {
 		request = &wflows.VpcSearchFilter{}
 	}
 
-	response, err = vpc.carbide.FindVpcIds(ctx, request)
+	response, err = vpc.nico.FindVpcIds(ctx, request)
 	if err != nil {
 		log.Error().Err(err).Msg("FindVpcIds: error")
 		return nil, err
@@ -107,14 +107,14 @@ func (vpc *network) FindVPCIDs(ctx context.Context, request *wflows.VpcSearchFil
 
 func (vpc *network) FindVPCsByIDs(ctx context.Context, request *wflows.VpcsByIdsRequest) (response *wflows.VpcList, err error) {
 	log.Info().Interface("request", request).Msg("FindVPCsByIDs: received request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-FindVPCsByIDs")
+	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "NicoClient-FindVPCsByIDs")
 	defer span.End()
 
 	if request == nil {
 		request = &wflows.VpcsByIdsRequest{}
 	}
 
-	response, err = vpc.carbide.FindVpcsByIds(ctx, request)
+	response, err = vpc.nico.FindVpcsByIds(ctx, request)
 	if err != nil {
 		log.Error().Err(err).Msgf("FindVpcsByIds: error")
 		return nil, err
@@ -125,7 +125,7 @@ func (vpc *network) FindVPCsByIDs(ctx context.Context, request *wflows.VpcsByIds
 // DeleteVPC deletes a VPC
 func (vpc *network) DeleteVPC(ctx context.Context, id string) (response *wflows.VpcDeletionResult, err error) {
 	log.Info().Str("id", id).Msg("DeleteVPC: received request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-DeleteVPC")
+	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "NicoClient-DeleteVPC")
 	defer span.End()
 
 	// Validate the request
@@ -134,10 +134,10 @@ func (vpc *network) DeleteVPC(ctx context.Context, id string) (response *wflows.
 		log.Error().Err(err).Msg("DeleteVPC: invalid request")
 	}
 
-	// Translate the workflow request to the carbide request
-	carbideRequest := &wflows.VpcDeletionRequest{}
-	carbideRequest.Id = &wflows.VpcId{Value: id}
-	carbideRequest.Id.Value = id
-	response, err = vpc.carbide.DeleteVpc(ctx, carbideRequest)
+	// Translate the workflow request to the nico request
+	nicoRequest := &wflows.VpcDeletionRequest{}
+	nicoRequest.Id = &wflows.VpcId{Value: id}
+	nicoRequest.Id.Value = id
+	response, err = vpc.nico.DeleteVpc(ctx, nicoRequest)
 	return response, err
 }

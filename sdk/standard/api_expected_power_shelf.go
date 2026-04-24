@@ -44,7 +44,7 @@ CreateExpectedPowerShelf Create Expected Power Shelf
 
 Create an Expected Power Shelf to pre-register power shelves expected to be discovered at a Site.
 
-Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` role.
+Org must have an Infrastructure Provider entity. User must have `NICO_PROVIDER_ADMIN` role.
 
 Alternatively, Tenant Admins with `TargetedInstanceCreation` capability can also create Expected Power Shelves if they have an account with the Site's Infrastructure Provider.
 
@@ -76,7 +76,7 @@ func (a *ExpectedPowerShelfAPIService) CreateExpectedPowerShelfExecute(r ApiCrea
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/expected-power-shelf"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/expected-power-shelf"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -128,7 +128,7 @@ func (a *ExpectedPowerShelfAPIService) CreateExpectedPowerShelfExecute(r ApiCrea
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 400 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -139,7 +139,7 @@ func (a *ExpectedPowerShelfAPIService) CreateExpectedPowerShelfExecute(r ApiCrea
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -179,7 +179,7 @@ DeleteExpectedPowerShelf Delete Expected Power Shelf
 
 Delete an existing Expected Power Shelf by ID.
 
-Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` role.
+Org must have an Infrastructure Provider entity. User must have `NICO_PROVIDER_ADMIN` role.
 
 Infrastructure Provider must own the Expected Power Shelf.
 
@@ -212,7 +212,7 @@ func (a *ExpectedPowerShelfAPIService) DeleteExpectedPowerShelfExecute(r ApiDele
 		return nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/expected-power-shelf/{expectedPowerShelfId}"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/expected-power-shelf/{expectedPowerShelfId}"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"expectedPowerShelfId"+"}", url.PathEscape(parameterValueToString(r.expectedPowerShelfId, "expectedPowerShelfId")), -1)
 
@@ -260,7 +260,7 @@ func (a *ExpectedPowerShelfAPIService) DeleteExpectedPowerShelfExecute(r ApiDele
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 400 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -271,7 +271,7 @@ func (a *ExpectedPowerShelfAPIService) DeleteExpectedPowerShelfExecute(r ApiDele
 			return localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -282,7 +282,7 @@ func (a *ExpectedPowerShelfAPIService) DeleteExpectedPowerShelfExecute(r ApiDele
 			return localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 404 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -347,7 +347,7 @@ GetAllExpectedPowerShelf Retrieve all Expected Power Shelves
 
 Retrieve all Expected Power Shelves.
 
-Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` or `FORGE_PROVIDER_VIEWER` role.
+Org must have an Infrastructure Provider entity. User must have `NICO_PROVIDER_ADMIN` or `NICO_PROVIDER_VIEWER` role.
 
 Alternatively, Tenant Admins with `TargetedInstanceCreation` capability can also retrieve Expected Power Shelves if they have an account with the Site's Infrastructure Provider (siteId query parameter is required for Tenants).
 
@@ -379,7 +379,7 @@ func (a *ExpectedPowerShelfAPIService) GetAllExpectedPowerShelfExecute(r ApiGetA
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/expected-power-shelf"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/expected-power-shelf"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -445,7 +445,7 @@ func (a *ExpectedPowerShelfAPIService) GetAllExpectedPowerShelfExecute(r ApiGetA
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 400 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -456,7 +456,7 @@ func (a *ExpectedPowerShelfAPIService) GetAllExpectedPowerShelfExecute(r ApiGetA
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -503,7 +503,7 @@ GetExpectedPowerShelf Retrieve Expected Power Shelf
 
 Retrieve a specific Expected Power Shelf by ID.
 
-Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` or `FORGE_PROVIDER_VIEWER` role.
+Org must have an Infrastructure Provider entity. User must have `NICO_PROVIDER_ADMIN` or `NICO_PROVIDER_VIEWER` role.
 
 Alternatively, Tenant Admins with `TargetedInstanceCreation` capability can also retrieve Expected Power Shelves if they have an account with the Site's Infrastructure Provider.
 
@@ -537,7 +537,7 @@ func (a *ExpectedPowerShelfAPIService) GetExpectedPowerShelfExecute(r ApiGetExpe
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/expected-power-shelf/{expectedPowerShelfId}"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/expected-power-shelf/{expectedPowerShelfId}"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"expectedPowerShelfId"+"}", url.PathEscape(parameterValueToString(r.expectedPowerShelfId, "expectedPowerShelfId")), -1)
 
@@ -588,7 +588,7 @@ func (a *ExpectedPowerShelfAPIService) GetExpectedPowerShelfExecute(r ApiGetExpe
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 400 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -599,7 +599,7 @@ func (a *ExpectedPowerShelfAPIService) GetExpectedPowerShelfExecute(r ApiGetExpe
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -610,7 +610,7 @@ func (a *ExpectedPowerShelfAPIService) GetExpectedPowerShelfExecute(r ApiGetExpe
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 404 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -657,7 +657,7 @@ UpdateExpectedPowerShelf Update Expected Power Shelf
 
 Update an existing Expected Power Shelf by ID.
 
-Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` role.
+Org must have an Infrastructure Provider entity. User must have `NICO_PROVIDER_ADMIN` role.
 
 Infrastructure Provider must own the Expected Power Shelf.
 
@@ -693,7 +693,7 @@ func (a *ExpectedPowerShelfAPIService) UpdateExpectedPowerShelfExecute(r ApiUpda
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/expected-power-shelf/{expectedPowerShelfId}"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/expected-power-shelf/{expectedPowerShelfId}"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"expectedPowerShelfId"+"}", url.PathEscape(parameterValueToString(r.expectedPowerShelfId, "expectedPowerShelfId")), -1)
 
@@ -746,7 +746,7 @@ func (a *ExpectedPowerShelfAPIService) UpdateExpectedPowerShelfExecute(r ApiUpda
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 400 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -757,7 +757,7 @@ func (a *ExpectedPowerShelfAPIService) UpdateExpectedPowerShelfExecute(r ApiUpda
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -768,7 +768,7 @@ func (a *ExpectedPowerShelfAPIService) UpdateExpectedPowerShelfExecute(r ApiUpda
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 404 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()

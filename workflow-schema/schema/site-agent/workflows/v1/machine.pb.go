@@ -226,14 +226,14 @@ var File_machine_proto protoreflect.FileDescriptor
 
 const file_machine_proto_rawDesc = "" +
 	"\n" +
-	"\rmachine.proto\x12\x14workflows.v1.machine\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0eworkflow.proto\x1a\x13forge_carbide.proto\x1a\x1fmachine_discovery_carbide.proto\"\x80\x01\n" +
+	"\rmachine.proto\x12\x14workflows.v1.machine\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0eworkflow.proto\x1a\x13nico_nico.proto\x1a\x1fmachine_discovery_nico.proto\"\x80\x01\n" +
 	"\vMachineInfo\x12(\n" +
-	"\amachine\x18\x01 \x01(\v2\x0e.forge.MachineR\amachine\x12G\n" +
+	"\amachine\x18\x01 \x01(\v2\x0e.nico.MachineR\amachine\x12G\n" +
 	"\x0ediscovery_info\x18\x02 \x01(\v2 .machine_discovery.DiscoveryInfoR\rdiscoveryInfo\"\x8d\x01\n" +
 	"\n" +
 	"DpuMachine\x12(\n" +
-	"\amachine\x18\x01 \x01(\v2\x0e.forge.MachineR\amachine\x12U\n" +
-	"\x12dpu_network_config\x18\x02 \x01(\v2'.forge.ManagedHostNetworkConfigResponseR\x10dpuNetworkConfig\"\xb8\x02\n" +
+	"\amachine\x18\x01 \x01(\v2\x0e.nico.MachineR\amachine\x12U\n" +
+	"\x12dpu_network_config\x18\x02 \x01(\v2'.nico.ManagedHostNetworkConfigResponseR\x10dpuNetworkConfig\"\xb8\x02\n" +
 	"\x10MachineInventory\x12=\n" +
 	"\bmachines\x18\x01 \x03(\v2!.workflows.v1.machine.MachineInfoR\bmachines\x128\n" +
 	"\ttimestamp\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12H\n" +
@@ -259,18 +259,18 @@ var file_machine_proto_goTypes = []any{
 	(*MachineInfo)(nil),                      // 0: workflows.v1.machine.MachineInfo
 	(*DpuMachine)(nil),                       // 1: workflows.v1.machine.DpuMachine
 	(*MachineInventory)(nil),                 // 2: workflows.v1.machine.MachineInventory
-	(*Machine)(nil),                          // 3: forge.Machine
+	(*Machine)(nil),                          // 3: nico.Machine
 	(*DiscoveryInfo)(nil),                    // 4: machine_discovery.DiscoveryInfo
-	(*ManagedHostNetworkConfigResponse)(nil), // 5: forge.ManagedHostNetworkConfigResponse
+	(*ManagedHostNetworkConfigResponse)(nil), // 5: nico.ManagedHostNetworkConfigResponse
 	(*timestamppb.Timestamp)(nil),            // 6: google.protobuf.Timestamp
 	(InventoryStatus)(0),                     // 7: workflows.v1.InventoryStatus
 	(*InventoryPage)(nil),                    // 8: workflows.v1.InventoryPage
 }
 var file_machine_proto_depIdxs = []int32{
-	3, // 0: workflows.v1.machine.MachineInfo.machine:type_name -> forge.Machine
+	3, // 0: workflows.v1.machine.MachineInfo.machine:type_name -> nico.Machine
 	4, // 1: workflows.v1.machine.MachineInfo.discovery_info:type_name -> machine_discovery.DiscoveryInfo
-	3, // 2: workflows.v1.machine.DpuMachine.machine:type_name -> forge.Machine
-	5, // 3: workflows.v1.machine.DpuMachine.dpu_network_config:type_name -> forge.ManagedHostNetworkConfigResponse
+	3, // 2: workflows.v1.machine.DpuMachine.machine:type_name -> nico.Machine
+	5, // 3: workflows.v1.machine.DpuMachine.dpu_network_config:type_name -> nico.ManagedHostNetworkConfigResponse
 	0, // 4: workflows.v1.machine.MachineInventory.machines:type_name -> workflows.v1.machine.MachineInfo
 	6, // 5: workflows.v1.machine.MachineInventory.timestamp:type_name -> google.protobuf.Timestamp
 	7, // 6: workflows.v1.machine.MachineInventory.inventory_status:type_name -> workflows.v1.InventoryStatus
@@ -288,8 +288,8 @@ func file_machine_proto_init() {
 		return
 	}
 	file_workflow_proto_init()
-	file_forge_carbide_proto_init()
-	file_machine_discovery_carbide_proto_init()
+	file_nico_nico_proto_init()
+	file_machine_discovery_nico_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

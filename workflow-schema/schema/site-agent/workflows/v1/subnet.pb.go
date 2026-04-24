@@ -402,14 +402,14 @@ var File_subnet_proto protoreflect.FileDescriptor
 
 const file_subnet_proto_rawDesc = "" +
 	"\n" +
-	"\fsubnet.proto\x12\fworkflows.v1\x1a\x0eworkflow.proto\x1a\x14common_carbide.proto\x1a\x13forge_carbide.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xe2\x01\n" +
+	"\fsubnet.proto\x12\fworkflows.v1\x1a\x0eworkflow.proto\x1a\x14common_nico.proto\x1a\x13nico_nico.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xe2\x01\n" +
 	"\n" +
 	"SubnetInfo\x124\n" +
 	"\x06status\x18\x01 \x01(\x0e2\x1c.workflows.v1.WorkflowStatusR\x06status\x12?\n" +
 	"\robject_status\x18\x02 \x01(\x0e2\x1a.workflows.v1.ObjectStatusR\fobjectStatus\x12\x1d\n" +
 	"\n" +
 	"status_msg\x18\x03 \x01(\tR\tstatusMsg\x12>\n" +
-	"\x0fnetwork_segment\x18\x04 \x01(\v2\x15.forge.NetworkSegmentR\x0enetworkSegment\"{\n" +
+	"\x0fnetwork_segment\x18\x04 \x01(\v2\x15.nico.NetworkSegmentR\x0enetworkSegment\"{\n" +
 	"\x11NetworkPrefixInfo\x12\x16\n" +
 	"\x06prefix\x18\x01 \x01(\tR\x06prefix\x12\x1d\n" +
 	"\agateway\x18\x02 \x01(\tH\x00R\agateway\x88\x01\x01\x12#\n" +
@@ -434,7 +434,7 @@ const file_subnet_proto_rawDesc = "" +
 	"\n" +
 	"\b_options\"\xab\x02\n" +
 	"\x0fSubnetInventory\x121\n" +
-	"\bsegments\x18\x01 \x03(\v2\x15.forge.NetworkSegmentR\bsegments\x128\n" +
+	"\bsegments\x18\x01 \x03(\v2\x15.nico.NetworkSegmentR\bsegments\x128\n" +
 	"\ttimestamp\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12H\n" +
 	"\x10inventory_status\x18\x03 \x01(\x0e2\x1d.workflows.v1.InventoryStatusR\x0finventoryStatus\x12\x1d\n" +
 	"\n" +
@@ -462,7 +462,7 @@ var file_subnet_proto_goTypes = []any{
 	(*SubnetInventory)(nil),       // 4: workflows.v1.SubnetInventory
 	(WorkflowStatus)(0),           // 5: workflows.v1.WorkflowStatus
 	(ObjectStatus)(0),             // 6: workflows.v1.ObjectStatus
-	(*NetworkSegment)(nil),        // 7: forge.NetworkSegment
+	(*NetworkSegment)(nil),        // 7: nico.NetworkSegment
 	(*UUID)(nil),                  // 8: common.UUID
 	(*WorkflowOptions)(nil),       // 9: workflows.v1.WorkflowOptions
 	(*timestamppb.Timestamp)(nil), // 10: google.protobuf.Timestamp
@@ -472,7 +472,7 @@ var file_subnet_proto_goTypes = []any{
 var file_subnet_proto_depIdxs = []int32{
 	5,  // 0: workflows.v1.SubnetInfo.status:type_name -> workflows.v1.WorkflowStatus
 	6,  // 1: workflows.v1.SubnetInfo.object_status:type_name -> workflows.v1.ObjectStatus
-	7,  // 2: workflows.v1.SubnetInfo.network_segment:type_name -> forge.NetworkSegment
+	7,  // 2: workflows.v1.SubnetInfo.network_segment:type_name -> nico.NetworkSegment
 	8,  // 3: workflows.v1.CreateSubnetRequest.vpc_id:type_name -> common.UUID
 	8,  // 4: workflows.v1.CreateSubnetRequest.subdomain_id:type_name -> common.UUID
 	1,  // 5: workflows.v1.CreateSubnetRequest.network_prefixes:type_name -> workflows.v1.NetworkPrefixInfo
@@ -480,7 +480,7 @@ var file_subnet_proto_depIdxs = []int32{
 	8,  // 7: workflows.v1.CreateSubnetRequest.subnet_id:type_name -> common.UUID
 	8,  // 8: workflows.v1.DeleteSubnetRequest.network_segment_id:type_name -> common.UUID
 	9,  // 9: workflows.v1.DeleteSubnetRequest.options:type_name -> workflows.v1.WorkflowOptions
-	7,  // 10: workflows.v1.SubnetInventory.segments:type_name -> forge.NetworkSegment
+	7,  // 10: workflows.v1.SubnetInventory.segments:type_name -> nico.NetworkSegment
 	10, // 11: workflows.v1.SubnetInventory.timestamp:type_name -> google.protobuf.Timestamp
 	11, // 12: workflows.v1.SubnetInventory.inventory_status:type_name -> workflows.v1.InventoryStatus
 	12, // 13: workflows.v1.SubnetInventory.inventory_page:type_name -> workflows.v1.InventoryPage
@@ -497,8 +497,8 @@ func file_subnet_proto_init() {
 		return
 	}
 	file_workflow_proto_init()
-	file_common_carbide_proto_init()
-	file_forge_carbide_proto_init()
+	file_common_nico_proto_init()
+	file_nico_nico_proto_init()
 	file_subnet_proto_msgTypes[1].OneofWrappers = []any{}
 	file_subnet_proto_msgTypes[2].OneofWrappers = []any{}
 	file_subnet_proto_msgTypes[3].OneofWrappers = []any{}

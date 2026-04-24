@@ -620,7 +620,7 @@ var File_vpc_proto protoreflect.FileDescriptor
 
 const file_vpc_proto_rawDesc = "" +
 	"\n" +
-	"\tvpc.proto\x12\fworkflows.v1\x1a\x0eworkflow.proto\x1a\x14common_carbide.proto\x1a\x13forge_carbide.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xc9\x01\n" +
+	"\tvpc.proto\x12\fworkflows.v1\x1a\x0eworkflow.proto\x1a\x14common_nico.proto\x1a\x13nico_nico.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xc9\x01\n" +
 	"\x10CreateVPCRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x122\n" +
 	"\x14tenantOrganizationId\x18\x02 \x01(\tR\x14tenantOrganizationId\x12<\n" +
@@ -646,7 +646,7 @@ const file_vpc_proto_rawDesc = "" +
 	"\n" +
 	"status_msg\x18\x03 \x01(\tR\tstatusMsg\x12\x1c\n" +
 	"\x03vpc\x18\x04 \x01(\v2\n" +
-	".forge.VpcR\x03vpc\"{\n" +
+	".nico.VpcR\x03vpc\"{\n" +
 	"\x11GetVPCByIdRequest\x12\x1c\n" +
 	"\x02id\x18\x01 \x01(\v2\f.common.UUIDR\x02id\x12<\n" +
 	"\aoptions\x18\x02 \x01(\v2\x1d.workflows.v1.WorkflowOptionsH\x00R\aoptions\x88\x01\x01B\n" +
@@ -666,12 +666,12 @@ const file_vpc_proto_rawDesc = "" +
 	"\x06status\x18\x01 \x01(\x0e2\x1c.workflows.v1.WorkflowStatusR\x06status\x12\x1d\n" +
 	"\n" +
 	"status_msg\x18\x02 \x01(\tR\tstatusMsg\x12\"\n" +
-	"\x04list\x18\x03 \x01(\v2\x0e.forge.VpcListR\x04list\x12B\n" +
+	"\x04list\x18\x03 \x01(\v2\x0e.nico.VpcListR\x04list\x12B\n" +
 	"\x0etransaction_id\x18\x04 \x01(\v2\x1b.workflows.v1.TransactionIDR\rtransactionId\"\x99\x03\n" +
 	"\fVPCInventory\x12\x1e\n" +
 	"\x04vpcs\x18\x01 \x03(\v2\n" +
-	".forge.VpcR\x04vpcs\x12\x81\x01\n" +
-	"#network_security_group_propagations\x18\x06 \x03(\v22.forge.NetworkSecurityGroupPropagationObjectStatusR networkSecurityGroupPropagations\x128\n" +
+	".nico.VpcR\x04vpcs\x12\x81\x01\n" +
+	"#network_security_group_propagations\x18\x06 \x03(\v22.nico.NetworkSecurityGroupPropagationObjectStatusR networkSecurityGroupPropagations\x128\n" +
 	"\ttimestamp\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12H\n" +
 	"\x10inventory_status\x18\x03 \x01(\x0e2\x1d.workflows.v1.InventoryStatusR\x0finventoryStatus\x12\x1d\n" +
 	"\n" +
@@ -705,10 +705,10 @@ var file_vpc_proto_goTypes = []any{
 	(*UUID)(nil),                // 10: common.UUID
 	(WorkflowStatus)(0),         // 11: workflows.v1.WorkflowStatus
 	(ObjectStatus)(0),           // 12: workflows.v1.ObjectStatus
-	(*Vpc)(nil),                 // 13: forge.Vpc
+	(*Vpc)(nil),                 // 13: nico.Vpc
 	(*TransactionID)(nil),       // 14: workflows.v1.TransactionID
-	(*VpcList)(nil),             // 15: forge.VpcList
-	(*NetworkSecurityGroupPropagationObjectStatus)(nil), // 16: forge.NetworkSecurityGroupPropagationObjectStatus
+	(*VpcList)(nil),             // 15: nico.VpcList
+	(*NetworkSecurityGroupPropagationObjectStatus)(nil), // 16: nico.NetworkSecurityGroupPropagationObjectStatus
 	(*timestamppb.Timestamp)(nil),                       // 17: google.protobuf.Timestamp
 	(InventoryStatus)(0),                                // 18: workflows.v1.InventoryStatus
 	(*InventoryPage)(nil),                               // 19: workflows.v1.InventoryPage
@@ -722,17 +722,17 @@ var file_vpc_proto_depIdxs = []int32{
 	9,  // 5: workflows.v1.DeleteVPCRequest.options:type_name -> workflows.v1.WorkflowOptions
 	11, // 6: workflows.v1.VPCInfo.status:type_name -> workflows.v1.WorkflowStatus
 	12, // 7: workflows.v1.VPCInfo.object_status:type_name -> workflows.v1.ObjectStatus
-	13, // 8: workflows.v1.VPCInfo.vpc:type_name -> forge.Vpc
+	13, // 8: workflows.v1.VPCInfo.vpc:type_name -> nico.Vpc
 	10, // 9: workflows.v1.GetVPCByIdRequest.id:type_name -> common.UUID
 	9,  // 10: workflows.v1.GetVPCByIdRequest.options:type_name -> workflows.v1.WorkflowOptions
 	9,  // 11: workflows.v1.GetVPCByNameRequest.options:type_name -> workflows.v1.WorkflowOptions
 	14, // 12: workflows.v1.GetVPCAllRequest.transaction_id:type_name -> workflows.v1.TransactionID
 	9,  // 13: workflows.v1.GetVPCAllRequest.options:type_name -> workflows.v1.WorkflowOptions
 	11, // 14: workflows.v1.GetVPCResponse.status:type_name -> workflows.v1.WorkflowStatus
-	15, // 15: workflows.v1.GetVPCResponse.list:type_name -> forge.VpcList
+	15, // 15: workflows.v1.GetVPCResponse.list:type_name -> nico.VpcList
 	14, // 16: workflows.v1.GetVPCResponse.transaction_id:type_name -> workflows.v1.TransactionID
-	13, // 17: workflows.v1.VPCInventory.vpcs:type_name -> forge.Vpc
-	16, // 18: workflows.v1.VPCInventory.network_security_group_propagations:type_name -> forge.NetworkSecurityGroupPropagationObjectStatus
+	13, // 17: workflows.v1.VPCInventory.vpcs:type_name -> nico.Vpc
+	16, // 18: workflows.v1.VPCInventory.network_security_group_propagations:type_name -> nico.NetworkSecurityGroupPropagationObjectStatus
 	17, // 19: workflows.v1.VPCInventory.timestamp:type_name -> google.protobuf.Timestamp
 	18, // 20: workflows.v1.VPCInventory.inventory_status:type_name -> workflows.v1.InventoryStatus
 	19, // 21: workflows.v1.VPCInventory.inventory_page:type_name -> workflows.v1.InventoryPage
@@ -749,8 +749,8 @@ func file_vpc_proto_init() {
 		return
 	}
 	file_workflow_proto_init()
-	file_common_carbide_proto_init()
-	file_forge_carbide_proto_init()
+	file_common_nico_proto_init()
+	file_nico_nico_proto_init()
 	file_vpc_proto_msgTypes[0].OneofWrappers = []any{}
 	file_vpc_proto_msgTypes[1].OneofWrappers = []any{}
 	file_vpc_proto_msgTypes[2].OneofWrappers = []any{}

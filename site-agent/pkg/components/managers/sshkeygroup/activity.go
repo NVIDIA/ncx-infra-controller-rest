@@ -79,7 +79,7 @@ func (ac *Workflows) CreateSSHKeyGroupActivity(ctx context.Context, ResourceVer 
 	return ResourceResp, err
 }
 
-// UpdateSSHKeyGroupActivity updates the sshkeygroup at carbide
+// UpdateSSHKeyGroupActivity updates the sshkeygroup at nico
 func (ac *Workflows) UpdateSSHKeyGroupActivity(ctx context.Context, ResourceVer uint64, ResourceID string,
 	ResourceReq *wflows.UpdateSSHKeyGroupRequest) (*wflows.SSHKeyGroupInfo, error) {
 	var sshkeygroupRequest *wflows.SSHKeyGroupInfo
@@ -127,7 +127,7 @@ func (ac *Workflows) UpdateSSHKeyGroupActivity(ctx context.Context, ResourceVer 
 	return ResourceResp, nil
 }
 
-// DeleteSSHKeyGroupActivity deletes the sshkeygroup at carbide
+// DeleteSSHKeyGroupActivity deletes the sshkeygroup at nico
 func (ac *Workflows) DeleteSSHKeyGroupActivity(ctx context.Context, ResourceVer uint64, ResourceID string,
 	ResourceReq *wflows.DeleteSSHKeyGroupRequest) (*wflows.SSHKeyGroupInfo, error) {
 	// Initialize logger
@@ -166,7 +166,7 @@ func (ac *Workflows) DeleteSSHKeyGroupActivity(ctx context.Context, ResourceVer 
 	return wflowMetadata.response, err
 }
 
-// GetSSHKeyGroupActivity Gets the sshkeygroup at carbide
+// GetSSHKeyGroupActivity Gets the sshkeygroup at nico
 func (ac *Workflows) GetSSHKeyGroupActivity(ctx context.Context, ResourceVer uint64, ResourceID string,
 	ResourceReq *wflows.GetSSHKeyGroup) (*wflows.GetSSHKeyGroupResponse, error) {
 	// Initialize logger

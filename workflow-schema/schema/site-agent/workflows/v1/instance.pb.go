@@ -596,13 +596,13 @@ var File_instance_proto protoreflect.FileDescriptor
 
 const file_instance_proto_rawDesc = "" +
 	"\n" +
-	"\x0einstance.proto\x12\fworkflows.v1\x1a\x0eworkflow.proto\x1a\x14common_carbide.proto\x1a\x13forge_carbide.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xd1\x01\n" +
+	"\x0einstance.proto\x12\fworkflows.v1\x1a\x0eworkflow.proto\x1a\x14common_nico.proto\x1a\x13nico_nico.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xd1\x01\n" +
 	"\fInstanceInfo\x124\n" +
 	"\x06status\x18\x01 \x01(\x0e2\x1c.workflows.v1.WorkflowStatusR\x06status\x12?\n" +
 	"\robject_status\x18\x02 \x01(\x0e2\x1a.workflows.v1.ObjectStatusR\fobjectStatus\x12\x1d\n" +
 	"\n" +
 	"status_msg\x18\x03 \x01(\tR\tstatusMsg\x12+\n" +
-	"\binstance\x18\x04 \x01(\v2\x0f.forge.InstanceR\binstance\"P\n" +
+	"\binstance\x18\x04 \x01(\v2\x0f.nico.InstanceR\binstance\"P\n" +
 	"\x10InstanceUserData\x12\x1b\n" +
 	"\tuser_data\x18\x01 \x01(\tR\buserData\x12\x1f\n" +
 	"\vcustom_ipxe\x18\x02 \x01(\tR\n" +
@@ -614,7 +614,7 @@ const file_instance_proto_rawDesc = "" +
 	"\n" +
 	"tenant_org\x18\x03 \x01(\tR\ttenantOrg\x12>\n" +
 	"\n" +
-	"interfaces\x18\x04 \x03(\v2\x1e.forge.InstanceInterfaceConfigR\n" +
+	"interfaces\x18\x04 \x03(\v2\x1e.nico.InstanceInterfaceConfigR\n" +
 	"interfaces\x12$\n" +
 	"\vcustom_ipxe\x18\x05 \x01(\tH\x00R\n" +
 	"customIpxe\x88\x01\x01\x12 \n" +
@@ -625,8 +625,8 @@ const file_instance_proto_rawDesc = "" +
 	"instanceId\x12C\n" +
 	"\x1calways_boot_with_custom_ipxe\x18\n" +
 	" \x01(\bH\x03R\x18alwaysBootWithCustomIpxe\x88\x01\x01\x12E\n" +
-	"\rib_interfaces\x18\v \x03(\v2 .forge.InstanceIBInterfaceConfigR\fibInterfaces\x12+\n" +
-	"\bmetadata\x18\f \x01(\v2\x0f.forge.MetadataR\bmetadata\x12,\n" +
+	"\rib_interfaces\x18\v \x03(\v2 .nico.InstanceIBInterfaceConfigR\fibInterfaces\x12+\n" +
+	"\bmetadata\x18\f \x01(\v2\x0f.nico.MetadataR\bmetadata\x12,\n" +
 	"\x12phone_home_enabled\x18\r \x01(\bR\x10phoneHomeEnabledB\x0e\n" +
 	"\f_custom_ipxeB\f\n" +
 	"\n" +
@@ -656,8 +656,8 @@ const file_instance_proto_rawDesc = "" +
 	"\n" +
 	"machine_id\x18\x04 \x01(\v2\x11.common.MachineIdR\tmachineId\"\xad\x03\n" +
 	"\x11InstanceInventory\x12-\n" +
-	"\tinstances\x18\x01 \x03(\v2\x0f.forge.InstanceR\tinstances\x12\x81\x01\n" +
-	"#network_security_group_propagations\x18\x06 \x03(\v22.forge.NetworkSecurityGroupPropagationObjectStatusR networkSecurityGroupPropagations\x128\n" +
+	"\tinstances\x18\x01 \x03(\v2\x0f.nico.InstanceR\tinstances\x12\x81\x01\n" +
+	"#network_security_group_propagations\x18\x06 \x03(\v22.nico.NetworkSecurityGroupPropagationObjectStatusR networkSecurityGroupPropagations\x128\n" +
 	"\ttimestamp\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12H\n" +
 	"\x10inventory_status\x18\x03 \x01(\x0e2\x1d.workflows.v1.InventoryStatusR\x0finventoryStatus\x12\x1d\n" +
 	"\n" +
@@ -687,14 +687,14 @@ var file_instance_proto_goTypes = []any{
 	(*InstanceInventory)(nil),                           // 6: workflows.v1.InstanceInventory
 	(WorkflowStatus)(0),                                 // 7: workflows.v1.WorkflowStatus
 	(ObjectStatus)(0),                                   // 8: workflows.v1.ObjectStatus
-	(*Instance)(nil),                                    // 9: forge.Instance
+	(*Instance)(nil),                                    // 9: nico.Instance
 	(*MachineId)(nil),                                   // 10: common.MachineId
-	(*InstanceInterfaceConfig)(nil),                     // 11: forge.InstanceInterfaceConfig
+	(*InstanceInterfaceConfig)(nil),                     // 11: nico.InstanceInterfaceConfig
 	(*WorkflowOptions)(nil),                             // 12: workflows.v1.WorkflowOptions
 	(*UUID)(nil),                                        // 13: common.UUID
-	(*InstanceIBInterfaceConfig)(nil),                   // 14: forge.InstanceIBInterfaceConfig
-	(*Metadata)(nil),                                    // 15: forge.Metadata
-	(*NetworkSecurityGroupPropagationObjectStatus)(nil), // 16: forge.NetworkSecurityGroupPropagationObjectStatus
+	(*InstanceIBInterfaceConfig)(nil),                   // 14: nico.InstanceIBInterfaceConfig
+	(*Metadata)(nil),                                    // 15: nico.Metadata
+	(*NetworkSecurityGroupPropagationObjectStatus)(nil), // 16: nico.NetworkSecurityGroupPropagationObjectStatus
 	(*timestamppb.Timestamp)(nil),                       // 17: google.protobuf.Timestamp
 	(InventoryStatus)(0),                                // 18: workflows.v1.InventoryStatus
 	(*InventoryPage)(nil),                               // 19: workflows.v1.InventoryPage
@@ -702,13 +702,13 @@ var file_instance_proto_goTypes = []any{
 var file_instance_proto_depIdxs = []int32{
 	7,  // 0: workflows.v1.InstanceInfo.status:type_name -> workflows.v1.WorkflowStatus
 	8,  // 1: workflows.v1.InstanceInfo.object_status:type_name -> workflows.v1.ObjectStatus
-	9,  // 2: workflows.v1.InstanceInfo.instance:type_name -> forge.Instance
+	9,  // 2: workflows.v1.InstanceInfo.instance:type_name -> nico.Instance
 	10, // 3: workflows.v1.CreateInstanceRequest.machine_id:type_name -> common.MachineId
-	11, // 4: workflows.v1.CreateInstanceRequest.interfaces:type_name -> forge.InstanceInterfaceConfig
+	11, // 4: workflows.v1.CreateInstanceRequest.interfaces:type_name -> nico.InstanceInterfaceConfig
 	12, // 5: workflows.v1.CreateInstanceRequest.options:type_name -> workflows.v1.WorkflowOptions
 	13, // 6: workflows.v1.CreateInstanceRequest.instance_id:type_name -> common.UUID
-	14, // 7: workflows.v1.CreateInstanceRequest.ib_interfaces:type_name -> forge.InstanceIBInterfaceConfig
-	15, // 8: workflows.v1.CreateInstanceRequest.metadata:type_name -> forge.Metadata
+	14, // 7: workflows.v1.CreateInstanceRequest.ib_interfaces:type_name -> nico.InstanceIBInterfaceConfig
+	15, // 8: workflows.v1.CreateInstanceRequest.metadata:type_name -> nico.Metadata
 	13, // 9: workflows.v1.DeleteInstanceRequest.instance_id:type_name -> common.UUID
 	12, // 10: workflows.v1.DeleteInstanceRequest.options:type_name -> workflows.v1.WorkflowOptions
 	10, // 11: workflows.v1.RebootInstanceRequest.machine_id:type_name -> common.MachineId
@@ -716,8 +716,8 @@ var file_instance_proto_depIdxs = []int32{
 	7,  // 13: workflows.v1.InstanceRebootInfo.status:type_name -> workflows.v1.WorkflowStatus
 	8,  // 14: workflows.v1.InstanceRebootInfo.object_status:type_name -> workflows.v1.ObjectStatus
 	10, // 15: workflows.v1.InstanceRebootInfo.machine_id:type_name -> common.MachineId
-	9,  // 16: workflows.v1.InstanceInventory.instances:type_name -> forge.Instance
-	16, // 17: workflows.v1.InstanceInventory.network_security_group_propagations:type_name -> forge.NetworkSecurityGroupPropagationObjectStatus
+	9,  // 16: workflows.v1.InstanceInventory.instances:type_name -> nico.Instance
+	16, // 17: workflows.v1.InstanceInventory.network_security_group_propagations:type_name -> nico.NetworkSecurityGroupPropagationObjectStatus
 	17, // 18: workflows.v1.InstanceInventory.timestamp:type_name -> google.protobuf.Timestamp
 	18, // 19: workflows.v1.InstanceInventory.inventory_status:type_name -> workflows.v1.InventoryStatus
 	19, // 20: workflows.v1.InstanceInventory.inventory_page:type_name -> workflows.v1.InventoryPage
@@ -734,8 +734,8 @@ func file_instance_proto_init() {
 		return
 	}
 	file_workflow_proto_init()
-	file_common_carbide_proto_init()
-	file_forge_carbide_proto_init()
+	file_common_nico_proto_init()
+	file_nico_nico_proto_init()
 	file_instance_proto_msgTypes[2].OneofWrappers = []any{}
 	file_instance_proto_msgTypes[3].OneofWrappers = []any{}
 	file_instance_proto_msgTypes[4].OneofWrappers = []any{}

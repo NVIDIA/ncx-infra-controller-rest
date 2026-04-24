@@ -23,7 +23,7 @@ for on-site hardware operations.
 - IP address management (IPAM)
 - Authentication and authorization (Keycloak, JWT, service accounts)
 - Native PKI certificate management
-- CLI client (`carbidecli`) with interactive TUI
+- CLI client (`nicocli`) with interactive TUI
 
 ## Repository Structure
 
@@ -32,7 +32,7 @@ ncx-infra-controller-rest/
 ├── api/                  # Main REST API server (Echo-based)
 ├── auth/                 # Authentication (Keycloak, JWT, service accounts)
 ├── cert-manager/         # Native PKI certificate management (credsmgr)
-├── cli/                  # CLI client (carbidecli) with TUI
+├── cli/                  # CLI client (nicocli) with TUI
 ├── common/               # Shared utilities and configuration
 ├── db/                   # Database layer (Bun ORM, pgx, migrations)
 ├── deploy/               # Kubernetes deployment (Kind, Kustomize, Helm)
@@ -77,7 +77,7 @@ ncx-infra-controller-rest/
 make build
 
 # Build and install CLI to $GOPATH/bin
-make carbide-cli
+make nico-cli
 
 # Build Docker images (production)
 make docker-build
@@ -146,8 +146,8 @@ make publish-openapi
 ### Protobuf Code Generation
 
 ```bash
-make carbide-proto          # fetch proto files from carbide-core
-make carbide-protogen       # generate Go code from protos
+make nico-proto          # fetch proto files from nico-core
+make nico-protogen       # generate Go code from protos
 make rla-proto              # fetch RLA proto files
 make rla-protogen           # generate Go code from RLA protos
 ```

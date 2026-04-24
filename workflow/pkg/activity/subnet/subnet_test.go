@@ -323,10 +323,10 @@ func TestManageSubnet_CreateSubnetViaSiteAgent(t *testing.T) {
 	testSubnetSetupSchema(t, dbSession)
 
 	ipOrg1 := "test-provider-org-1"
-	ipOrgRoles1 := []string{"FORGE_PROVIDER_ADMIN_1"}
+	ipOrgRoles1 := []string{"NICO_PROVIDER_ADMIN_1"}
 
 	tnOrg1 := "test-tenant-org-1"
-	tnOrgRoles1 := []string{"FORGE_TENANT_ADMIN_1"}
+	tnOrgRoles1 := []string{"NICO_TENANT_ADMIN_1"}
 
 	sbu := testSubnetBuildUser(t, dbSession, "test-starfleet-id-1", ipOrg1, ipOrgRoles1)
 	assert.NotNil(t, sbu)
@@ -598,10 +598,10 @@ func TestManageSubnet_DeleteSubnetViaSiteAgent(t *testing.T) {
 	testSubnetSetupSchema(t, dbSession)
 
 	ipOrg := "test-provider-org"
-	ipOrgRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipOrgRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	tnOrg := "test-tenant-org"
-	tnOrgRoles := []string{"FORGE_TENANT_ADMIN"}
+	tnOrgRoles := []string{"NICO_TENANT_ADMIN"}
 
 	sbu := testSubnetBuildUser(t, dbSession, "test-starfleet-id-1", ipOrg, ipOrgRoles)
 	ip := testSubnetSiteBuildInfrastructureProvider(t, dbSession, "Test Subnet Site Infrastructure Provider", ipOrg, sbu)
@@ -771,10 +771,10 @@ func TestManageSubnet_UpdateSubnetInDB(t *testing.T) {
 	testSubnetSetupSchema(t, dbSession)
 
 	ipOrg := "test-provider-org"
-	ipOrgRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipOrgRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	tnOrg := "test-tenant-org"
-	tnOrgRoles := []string{"FORGE_TENANT_ADMIN"}
+	tnOrgRoles := []string{"NICO_TENANT_ADMIN"}
 
 	ipu := testSubnetBuildUser(t, dbSession, "test-starfleet-id-1", ipOrg, ipOrgRoles)
 	ip := testSubnetSiteBuildInfrastructureProvider(t, dbSession, "test-infrastructure-provider", ipOrg, ipu)
@@ -970,10 +970,10 @@ func TestManageSubnet_UpdateSubnetsInDB(t *testing.T) {
 	testSubnetSetupSchema(t, dbSession)
 
 	ipOrg := "test-provider-org"
-	ipOrgRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipOrgRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	tnOrg := "test-tenant-org"
-	tnOrgRoles := []string{"FORGE_TENANT_ADMIN"}
+	tnOrgRoles := []string{"NICO_TENANT_ADMIN"}
 
 	ipu := testSubnetBuildUser(t, dbSession, "test-starfleet-id-1", ipOrg, ipOrgRoles)
 	ip := testSubnetSiteBuildInfrastructureProvider(t, dbSession, "test-infrastructure-provider", ipOrg, ipu)

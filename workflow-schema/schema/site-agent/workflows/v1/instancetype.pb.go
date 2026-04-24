@@ -123,9 +123,9 @@ var File_instancetype_proto protoreflect.FileDescriptor
 
 const file_instancetype_proto_rawDesc = "" +
 	"\n" +
-	"\x12instancetype.proto\x12\fworkflows.v1\x1a\x0eworkflow.proto\x1a\x13forge_carbide.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xba\x02\n" +
+	"\x12instancetype.proto\x12\fworkflows.v1\x1a\x0eworkflow.proto\x1a\x13nico_nico.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xba\x02\n" +
 	"\x15InstanceTypeInventory\x12:\n" +
-	"\x0einstance_types\x18\x01 \x03(\v2\x13.forge.InstanceTypeR\rinstanceTypes\x128\n" +
+	"\x0einstance_types\x18\x01 \x03(\v2\x13.nico.InstanceTypeR\rinstanceTypes\x128\n" +
 	"\ttimestamp\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12H\n" +
 	"\x10inventory_status\x18\x03 \x01(\x0e2\x1d.workflows.v1.InventoryStatusR\x0finventoryStatus\x12\x1d\n" +
 	"\n" +
@@ -147,13 +147,13 @@ func file_instancetype_proto_rawDescGZIP() []byte {
 var file_instancetype_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
 var file_instancetype_proto_goTypes = []any{
 	(*InstanceTypeInventory)(nil), // 0: workflows.v1.InstanceTypeInventory
-	(*InstanceType)(nil),          // 1: forge.InstanceType
+	(*InstanceType)(nil),          // 1: nico.InstanceType
 	(*timestamppb.Timestamp)(nil), // 2: google.protobuf.Timestamp
 	(InventoryStatus)(0),          // 3: workflows.v1.InventoryStatus
 	(*InventoryPage)(nil),         // 4: workflows.v1.InventoryPage
 }
 var file_instancetype_proto_depIdxs = []int32{
-	1, // 0: workflows.v1.InstanceTypeInventory.instance_types:type_name -> forge.InstanceType
+	1, // 0: workflows.v1.InstanceTypeInventory.instance_types:type_name -> nico.InstanceType
 	2, // 1: workflows.v1.InstanceTypeInventory.timestamp:type_name -> google.protobuf.Timestamp
 	3, // 2: workflows.v1.InstanceTypeInventory.inventory_status:type_name -> workflows.v1.InventoryStatus
 	4, // 3: workflows.v1.InstanceTypeInventory.inventory_page:type_name -> workflows.v1.InventoryPage
@@ -170,7 +170,7 @@ func file_instancetype_proto_init() {
 		return
 	}
 	file_workflow_proto_init()
-	file_forge_carbide_proto_init()
+	file_nico_nico_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

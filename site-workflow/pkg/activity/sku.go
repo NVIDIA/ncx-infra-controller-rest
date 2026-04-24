@@ -53,9 +53,9 @@ func NewManageSkuInventory(config ManageInventoryConfig) ManageSkuInventory {
 	}
 }
 
-func skuFindIDs(ctx context.Context, carbideClient *cclient.CarbideClient) ([]string, error) {
-	forgeClient := carbideClient.Carbide()
-	result, err := forgeClient.GetAllSkuIds(ctx, nil)
+func skuFindIDs(ctx context.Context, nicoClient *cclient.NicoClient) ([]string, error) {
+	nicoClient := nicoClient.Nico()
+	result, err := nicoClient.GetAllSkuIds(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -69,9 +69,9 @@ func skuFindIDs(ctx context.Context, carbideClient *cclient.CarbideClient) ([]st
 	return ids, nil
 }
 
-func skuFindByIDs(ctx context.Context, carbideClient *cclient.CarbideClient, ids []string) ([]*cwssaws.Sku, error) {
-	forgeClient := carbideClient.Carbide()
-	result, err := forgeClient.FindSkusByIds(ctx, &cwssaws.SkusByIdsRequest{
+func skuFindByIDs(ctx context.Context, nicoClient *cclient.NicoClient, ids []string) ([]*cwssaws.Sku, error) {
+	nicoClient := nicoClient.Nico()
+	result, err := nicoClient.FindSkusByIds(ctx, &cwssaws.SkusByIdsRequest{
 		Ids: ids,
 	})
 	if err != nil {

@@ -123,9 +123,9 @@ var File_tenant_proto protoreflect.FileDescriptor
 
 const file_tenant_proto_rawDesc = "" +
 	"\n" +
-	"\ftenant.proto\x12\fworkflows.v1\x1a\x0eworkflow.proto\x1a\x13forge_carbide.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xa1\x02\n" +
+	"\ftenant.proto\x12\fworkflows.v1\x1a\x0eworkflow.proto\x1a\x13nico_nico.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xa1\x02\n" +
 	"\x0fTenantInventory\x12'\n" +
-	"\atenants\x18\x01 \x03(\v2\r.forge.TenantR\atenants\x128\n" +
+	"\atenants\x18\x01 \x03(\v2\r.nico.TenantR\atenants\x128\n" +
 	"\ttimestamp\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12H\n" +
 	"\x10inventory_status\x18\x03 \x01(\x0e2\x1d.workflows.v1.InventoryStatusR\x0finventoryStatus\x12\x1d\n" +
 	"\n" +
@@ -147,13 +147,13 @@ func file_tenant_proto_rawDescGZIP() []byte {
 var file_tenant_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
 var file_tenant_proto_goTypes = []any{
 	(*TenantInventory)(nil),       // 0: workflows.v1.TenantInventory
-	(*Tenant)(nil),                // 1: forge.Tenant
+	(*Tenant)(nil),                // 1: nico.Tenant
 	(*timestamppb.Timestamp)(nil), // 2: google.protobuf.Timestamp
 	(InventoryStatus)(0),          // 3: workflows.v1.InventoryStatus
 	(*InventoryPage)(nil),         // 4: workflows.v1.InventoryPage
 }
 var file_tenant_proto_depIdxs = []int32{
-	1, // 0: workflows.v1.TenantInventory.tenants:type_name -> forge.Tenant
+	1, // 0: workflows.v1.TenantInventory.tenants:type_name -> nico.Tenant
 	2, // 1: workflows.v1.TenantInventory.timestamp:type_name -> google.protobuf.Timestamp
 	3, // 2: workflows.v1.TenantInventory.inventory_status:type_name -> workflows.v1.InventoryStatus
 	4, // 3: workflows.v1.TenantInventory.inventory_page:type_name -> workflows.v1.InventoryPage
@@ -170,7 +170,7 @@ func file_tenant_proto_init() {
 		return
 	}
 	file_workflow_proto_init()
-	file_forge_carbide_proto_init()
+	file_nico_nico_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

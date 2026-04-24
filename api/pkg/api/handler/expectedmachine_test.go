@@ -196,7 +196,7 @@ func TestCreateExpectedMachineHandler_Handle(t *testing.T) {
 					Name:        org,
 					DisplayName: org,
 					OrgType:     "ENTERPRISE",
-					Roles:       []string{"FORGE_PROVIDER_ADMIN"},
+					Roles:       []string{"NICO_PROVIDER_ADMIN"},
 				},
 			},
 		}
@@ -372,7 +372,7 @@ func TestCreateExpectedMachineHandler_Handle(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create request
 			reqBody, _ := json.Marshal(tt.requestBody)
-			req := httptest.NewRequest(http.MethodPost, "/v2/org/test-org/carbide/expected-machine", bytes.NewReader(reqBody))
+			req := httptest.NewRequest(http.MethodPost, "/v2/org/test-org/nico/expected-machine", bytes.NewReader(reqBody))
 			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 			req = req.WithContext(context.Background())
 
@@ -496,7 +496,7 @@ func TestGetAllExpectedMachineHandler_Handle(t *testing.T) {
 					Name:        org,
 					DisplayName: org,
 					OrgType:     "ENTERPRISE",
-					Roles:       []string{"FORGE_PROVIDER_VIEWER"},
+					Roles:       []string{"NICO_PROVIDER_VIEWER"},
 				},
 			},
 		}
@@ -657,7 +657,7 @@ func TestGetAllExpectedMachineHandler_Handle(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			url := "/v2/org/" + org + "/carbide/expected-machine"
+			url := "/v2/org/" + org + "/nico/expected-machine"
 			params := []string{}
 			if tt.siteId != "" {
 				params = append(params, "siteId="+tt.siteId)
@@ -786,7 +786,7 @@ func TestGetExpectedMachineHandler_Handle(t *testing.T) {
 					Name:        org,
 					DisplayName: org,
 					OrgType:     "ENTERPRISE",
-					Roles:       []string{"FORGE_PROVIDER_ADMIN"},
+					Roles:       []string{"NICO_PROVIDER_ADMIN"},
 				},
 			},
 		}
@@ -844,7 +844,7 @@ func TestGetExpectedMachineHandler_Handle(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			url := "/v2/org/" + org + "/carbide/expected-machine/" + tt.id
+			url := "/v2/org/" + org + "/nico/expected-machine/" + tt.id
 			req := httptest.NewRequest(http.MethodGet, url, nil)
 			req = req.WithContext(context.Background())
 
@@ -877,7 +877,7 @@ func TestGetExpectedMachineHandler_Handle(t *testing.T) {
 
 	// Test Get with includeRelation=Machine
 	t.Run("successful retrieval with includeRelation=Machine", func(t *testing.T) {
-		url := "/v2/org/" + org + "/carbide/expected-machine/" + testEM.ID.String() + "?includeRelation=Machine"
+		url := "/v2/org/" + org + "/nico/expected-machine/" + testEM.ID.String() + "?includeRelation=Machine"
 		req := httptest.NewRequest(http.MethodGet, url, nil)
 		req = req.WithContext(context.Background())
 
@@ -893,7 +893,7 @@ func TestGetExpectedMachineHandler_Handle(t *testing.T) {
 					Name:        org,
 					DisplayName: org,
 					OrgType:     "ENTERPRISE",
-					Roles:       []string{"FORGE_PROVIDER_ADMIN"},
+					Roles:       []string{"NICO_PROVIDER_ADMIN"},
 				},
 			},
 		})
@@ -998,7 +998,7 @@ func TestUpdateExpectedMachineHandler_Handle(t *testing.T) {
 					Name:        org,
 					DisplayName: org,
 					OrgType:     "ENTERPRISE",
-					Roles:       []string{"FORGE_PROVIDER_ADMIN"},
+					Roles:       []string{"NICO_PROVIDER_ADMIN"},
 				},
 			},
 		}
@@ -1093,7 +1093,7 @@ func TestUpdateExpectedMachineHandler_Handle(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			reqBody, _ := json.Marshal(tt.requestBody)
-			url := "/v2/org/" + org + "/carbide/expected-machine/" + tt.id
+			url := "/v2/org/" + org + "/nico/expected-machine/" + tt.id
 			req := httptest.NewRequest(http.MethodPatch, url, bytes.NewReader(reqBody))
 			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 			req = req.WithContext(context.Background())
@@ -1200,7 +1200,7 @@ func TestDeleteExpectedMachineHandler_Handle(t *testing.T) {
 					Name:        org,
 					DisplayName: org,
 					OrgType:     "ENTERPRISE",
-					Roles:       []string{"FORGE_PROVIDER_ADMIN"},
+					Roles:       []string{"NICO_PROVIDER_ADMIN"},
 				},
 			},
 		}
@@ -1238,7 +1238,7 @@ func TestDeleteExpectedMachineHandler_Handle(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			url := "/v2/org/" + org + "/carbide/expected-machine/" + tt.id
+			url := "/v2/org/" + org + "/nico/expected-machine/" + tt.id
 			req := httptest.NewRequest(http.MethodDelete, url, nil)
 			req = req.WithContext(context.Background())
 
@@ -1313,7 +1313,7 @@ func TestTenantWithTargetedInstanceCreationCapability(t *testing.T) {
 				Name:        tenantOrg,
 				DisplayName: "Test Tenant Org",
 				OrgType:     "ENTERPRISE",
-				Roles:       []string{"FORGE_TENANT_ADMIN"},
+				Roles:       []string{"NICO_TENANT_ADMIN"},
 			},
 		},
 	}
@@ -1356,7 +1356,7 @@ func TestTenantWithTargetedInstanceCreationCapability(t *testing.T) {
 				Name:        tenantOrg2,
 				DisplayName: "Test Tenant Org No Cap",
 				OrgType:     "ENTERPRISE",
-				Roles:       []string{"FORGE_TENANT_ADMIN"},
+				Roles:       []string{"NICO_TENANT_ADMIN"},
 			},
 		},
 	}
@@ -1425,7 +1425,7 @@ func TestTenantWithTargetedInstanceCreationCapability(t *testing.T) {
 		{
 			name:   "Create Expected Machine as Tenant with TargetedInstanceCreation",
 			method: http.MethodPost,
-			path:   "/v2/org/" + tenantOrg + "/carbide/expected-machine",
+			path:   "/v2/org/" + tenantOrg + "/nico/expected-machine",
 			requestBody: model.APIExpectedMachineCreateRequest{
 				SiteID:                   site.ID.String(),
 				BmcMacAddress:            "AA:BB:CC:DD:EE:01",
@@ -1455,7 +1455,7 @@ func TestTenantWithTargetedInstanceCreationCapability(t *testing.T) {
 		{
 			name:        "GetAll Expected Machines as Tenant with siteId",
 			method:      http.MethodGet,
-			path:        "/v2/org/" + tenantOrg + "/carbide/expected-machine?siteId=" + site.ID.String(),
+			path:        "/v2/org/" + tenantOrg + "/nico/expected-machine?siteId=" + site.ID.String(),
 			requestBody: nil,
 			setupHandler: func() interface{} {
 				return NewGetAllExpectedMachineHandler(dbSession, tc, cfg)
@@ -1476,7 +1476,7 @@ func TestTenantWithTargetedInstanceCreationCapability(t *testing.T) {
 		{
 			name:        "GetAll Expected Machines as Tenant without siteId should fail",
 			method:      http.MethodGet,
-			path:        "/v2/org/" + tenantOrg + "/carbide/expected-machine",
+			path:        "/v2/org/" + tenantOrg + "/nico/expected-machine",
 			requestBody: nil,
 			setupHandler: func() interface{} {
 				return NewGetAllExpectedMachineHandler(dbSession, tc, cfg)
@@ -1492,7 +1492,7 @@ func TestTenantWithTargetedInstanceCreationCapability(t *testing.T) {
 		{
 			name:   "Tenant without TargetedInstanceCreation capability should fail",
 			method: http.MethodPost,
-			path:   "/v2/org/" + tenantOrg2 + "/carbide/expected-machine",
+			path:   "/v2/org/" + tenantOrg2 + "/nico/expected-machine",
 			requestBody: model.APIExpectedMachineCreateRequest{
 				SiteID:              site.ID.String(),
 				BmcMacAddress:       "AA:BB:CC:DD:EE:05",
@@ -1514,7 +1514,7 @@ func TestTenantWithTargetedInstanceCreationCapability(t *testing.T) {
 		{
 			name:   "Tenant without TenantAccount should fail",
 			method: http.MethodPost,
-			path:   "/v2/org/" + tenantOrg + "/carbide/expected-machine",
+			path:   "/v2/org/" + tenantOrg + "/nico/expected-machine",
 			requestBody: model.APIExpectedMachineCreateRequest{
 				SiteID:              site2.ID.String(), // Site with different provider
 				BmcMacAddress:       "AA:BB:CC:DD:EE:06",
@@ -1671,7 +1671,7 @@ func TestCreateExpectedMachinesHandler_Handle(t *testing.T) {
 					Name:        org,
 					DisplayName: org,
 					OrgType:     "ENTERPRISE",
-					Roles:       []string{"FORGE_PROVIDER_ADMIN"},
+					Roles:       []string{"NICO_PROVIDER_ADMIN"},
 				},
 			},
 		}
@@ -1815,7 +1815,7 @@ func TestCreateExpectedMachinesHandler_Handle(t *testing.T) {
 			workflowFailures = tt.workflowErrors
 			// Create request
 			reqBody, _ := json.Marshal(tt.requestBody)
-			req := httptest.NewRequest(http.MethodPost, "/v2/org/test-org/carbide/expected-machine/batch", bytes.NewReader(reqBody))
+			req := httptest.NewRequest(http.MethodPost, "/v2/org/test-org/nico/expected-machine/batch", bytes.NewReader(reqBody))
 			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 			req = req.WithContext(context.Background())
 
@@ -1976,7 +1976,7 @@ func TestUpdateExpectedMachinesHandler_Handle(t *testing.T) {
 					Name:        org,
 					DisplayName: org,
 					OrgType:     "ENTERPRISE",
-					Roles:       []string{"FORGE_PROVIDER_ADMIN"},
+					Roles:       []string{"NICO_PROVIDER_ADMIN"},
 				},
 			},
 		}
@@ -2190,7 +2190,7 @@ func TestUpdateExpectedMachinesHandler_Handle(t *testing.T) {
 			workflowFailures = tt.workflowErrors
 			// Create request
 			reqBody, _ := json.Marshal(tt.requestBody)
-			req := httptest.NewRequest(http.MethodPatch, "/v2/org/test-org/carbide/expected-machine/batch", bytes.NewReader(reqBody))
+			req := httptest.NewRequest(http.MethodPatch, "/v2/org/test-org/nico/expected-machine/batch", bytes.NewReader(reqBody))
 			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 			req = req.WithContext(context.Background())
 

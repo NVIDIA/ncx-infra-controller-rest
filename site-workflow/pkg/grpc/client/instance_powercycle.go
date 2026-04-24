@@ -28,7 +28,7 @@ import (
 
 func (instance *compute) RebootInstance(ctx context.Context, resourceRequest *wflows.RebootInstanceRequest) (result *wflows.InstancePowerResult, err error) {
 	log.Info().Interface("request", resourceRequest).Msg("RebootInstance: received request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-RebootInstance")
+	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "NicoClient-RebootInstance")
 	defer span.End()
 
 	// Validations
@@ -37,16 +37,16 @@ func (instance *compute) RebootInstance(ctx context.Context, resourceRequest *wf
 		log.Err(ErrInvalidMachineID).Msg("RebootInstance: invalid request")
 		return result, ErrInvalidMachineID
 	}
-	carbideRequest := &wflows.InstancePowerRequest{MachineId: &wflows.MachineId{}}
+	nicoRequest := &wflows.InstancePowerRequest{MachineId: &wflows.MachineId{}}
 
 	// Convert Resource Request to the type needed by Site controller
-	machineID := carbideRequest.MachineId
+	machineID := nicoRequest.MachineId
 	machineID.Id = resourceRequest.MachineId.Id
-	carbideRequest.MachineId = machineID
-	carbideRequest.BootWithCustomIpxe = resourceRequest.BootWithCustomIpxe
-	carbideRequest.Operation = wflows.InstancePowerRequest_POWER_RESET
-	carbideRequest.ApplyUpdatesOnReboot = resourceRequest.ApplyUpdatesOnReboot
-	grpcResponse, err := instance.carbide.InvokeInstancePower(ctx, carbideRequest)
-	log.Info().Interface("request", carbideRequest).Interface("response", grpcResponse).Msg("RebootInstance: sent gRPC request")
+	nicoRequest.MachineId = machineID
+	nicoRequest.BootWithCustomIpxe = resourceRequest.BootWithCustomIpxe
+	nicoRequest.Operation = wflows.InstancePowerRequest_POWER_RESET
+	nicoRequest.ApplyUpdatesOnReboot = resourceRequest.ApplyUpdatesOnReboot
+	grpcResponse, err := instance.nico.InvokeInstancePower(ctx, nicoRequest)
+	log.Info().Interface("request", nicoRequest).Interface("response", grpcResponse).Msg("RebootInstance: sent gRPC request")
 	return grpcResponse, err
 }

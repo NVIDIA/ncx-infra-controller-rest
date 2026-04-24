@@ -46,7 +46,7 @@ const (
 	activityPublish
 )
 
-// TODO(deprecated): Remove any related VpcDelete references after carbide-rest-api and agent are updated everywhere.  We've moved to sync workflow.
+// TODO(deprecated): Remove any related VpcDelete references after nico-rest-api and agent are updated everywhere.  We've moved to sync workflow.
 // TODO: Remove VpcCreate an any related references (deprecated).  We've moved to sync workflow.
 var activityStr = []string{"VpcCreate", "VpcUpdate", "VpcDelete", "VpcGetByName", "VpcGetList", "VPCCollectInventory", "VpcPublish"}
 
@@ -86,13 +86,13 @@ func (v *vpcWorkflowMetadata) DoSiteControllerOP(ctx context.Context,
 	TransactionID *wflows.TransactionID, req interface{}) (interface{}, error) {
 	switch v.activity {
 	case activityCreate:
-		return ManagerAccess.Data.EB.Managers.Carbide.GetClient().Networks().CreateVPC(ctx, req.(*wflows.Vpc))
+		return ManagerAccess.Data.EB.Managers.Nico.GetClient().Networks().CreateVPC(ctx, req.(*wflows.Vpc))
 	case activityDelete:
-		return ManagerAccess.Data.EB.Managers.Carbide.GetClient().Networks().DeleteVPC(ctx, req.(string))
+		return ManagerAccess.Data.EB.Managers.Nico.GetClient().Networks().DeleteVPC(ctx, req.(string))
 	case activityGetByName:
-		return ManagerAccess.Data.EB.Managers.Carbide.GetClient().Networks().GetAllVPCs(ctx, req.(*wflows.VpcSearchFilter), utils.CarbideApiPageSize)
+		return ManagerAccess.Data.EB.Managers.Nico.GetClient().Networks().GetAllVPCs(ctx, req.(*wflows.VpcSearchFilter), utils.NicoApiPageSize)
 	case activityGetList:
-		return ManagerAccess.Data.EB.Managers.Carbide.GetClient().Networks().GetAllVPCs(ctx, req.(*wflows.VpcSearchFilter), utils.CarbideApiPageSize)
+		return ManagerAccess.Data.EB.Managers.Nico.GetClient().Networks().GetAllVPCs(ctx, req.(*wflows.VpcSearchFilter), utils.NicoApiPageSize)
 	}
 	panic(fmt.Sprintf("invalid activity type: %v", v.activity))
 }
@@ -340,10 +340,10 @@ Site Controller:
 
 
    Summary:
-   1. Handling Temporal failure after carbide-rest-api persists the user Request
+   1. Handling Temporal failure after nico-rest-api persists the user Request
    2. Site Agent Queue Request timestamp:
 	   A. Use the status timestamp
    3. Resoultion of the timestamp: microseconds
    4. All update Requests will be sepearate row in the status table
-	  This status timestamp is the one that will be sent from carbide-rest-api - worker -> site agent
+	  This status timestamp is the one that will be sent from nico-rest-api - worker -> site agent
 */

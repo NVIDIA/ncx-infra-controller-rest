@@ -29,10 +29,10 @@ var ManagerAccess *Manager.ManagerAccess
 type API struct{}
 
 // NewHealthManager - returns a new instance of helm manager
-func NewHealthManager(superForge *elektratypes.Elektra, superAPI *Manager.ManagerAPI, superConf *Manager.ManagerConf) *API {
+func NewHealthManager(superNico *elektratypes.Elektra, superAPI *Manager.ManagerAPI, superConf *Manager.ManagerConf) *API {
 	ManagerAccess = &Manager.ManagerAccess{
 		Data: &Manager.ManagerData{
-			EB: superForge,
+			EB: superNico,
 		},
 		API:  superAPI,
 		Conf: superConf,

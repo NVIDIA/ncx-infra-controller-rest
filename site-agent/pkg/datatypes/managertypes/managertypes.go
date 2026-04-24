@@ -19,7 +19,7 @@ package managertypes
 
 import (
 	bootstraptypes "github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/datatypes/managertypes/bootstrap"
-	carbidetypes "github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/datatypes/managertypes/carbide"
+	nicotypes "github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/datatypes/managertypes/nico"
 	healthtypes "github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/datatypes/managertypes/health"
 	rlatypes "github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/datatypes/managertypes/rla"
 	workflowtypes "github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/datatypes/managertypes/workflow"
@@ -30,7 +30,7 @@ type Managers struct {
 	Version string
 	// All the datastructures of Managers below
 	Workflow  *workflowtypes.Workflow
-	Carbide   *carbidetypes.Carbide
+	Nico   *nicotypes.Nico
 	RLA       *rlatypes.RLA
 	Bootstrap *bootstraptypes.Bootstrap
 	Health    *healthtypes.HealthCache
@@ -42,7 +42,7 @@ func NewManagerType() *Managers {
 		Version: "0.0.1",
 		// All the managers below
 		Workflow:  workflowtypes.NewWorkflowInstance(),
-		Carbide:   carbidetypes.NewCarbideInstance(),
+		Nico:   nicotypes.NewNicoInstance(),
 		RLA:       rlatypes.NewRLAInstance(),
 		Bootstrap: bootstraptypes.NewBootstrapInstance(),
 		Health:    healthtypes.NewHealthCache(),

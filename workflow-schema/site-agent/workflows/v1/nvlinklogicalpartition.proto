@@ -18,7 +18,7 @@ syntax = "proto3";
 package workflows.v1;
 
 import "workflow.proto";
-import "forge_carbide.proto";
+import "nico_nico.proto";
 import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/proto";
@@ -33,7 +33,7 @@ message NVLinkLogicalPartitionInventory {
     // Reported timestamp of NVLinkLogicalPartition inventory
     google.protobuf.Timestamp timestamp = 3;
     // List of NVL Partition
-    repeated forge.NVLinkLogicalPartition partitions = 4;
+    repeated nico.NVLinkLogicalPartition partitions = 4;
     // Inventory page information
     InventoryPage inventory_page = 5;
 }

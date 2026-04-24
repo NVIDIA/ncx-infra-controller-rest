@@ -36,17 +36,17 @@ import (
 
 // ManageOperatingSystem is an activity wrapper for Operating System management
 type ManageOperatingSystem struct {
-	CarbideAtomicClient *client.CarbideAtomicClient
+	NicoAtomicClient *client.NicoAtomicClient
 }
 
 // NewManageOperatingSystem returns a new ManageOperatingSystem client
-func NewManageOperatingSystem(carbideClient *client.CarbideAtomicClient) ManageOperatingSystem {
+func NewManageOperatingSystem(nicoClient *client.NicoAtomicClient) ManageOperatingSystem {
 	return ManageOperatingSystem{
-		CarbideAtomicClient: carbideClient,
+		NicoAtomicClient: nicoClient,
 	}
 }
 
-// Function to create OsImage with Carbide
+// Function to create OsImage with Nico
 func (mos *ManageOperatingSystem) CreateOsImageOnSite(ctx context.Context, request *cwssaws.OsImageAttributes) error {
 	logger := log.With().Str("Activity", "CreateOsImageOnSite").Logger()
 
@@ -70,11 +70,11 @@ func (mos *ManageOperatingSystem) CreateOsImageOnSite(ctx context.Context, reque
 	}
 
 	// Call Site Controller gRPC endpoint
-	carbideClient := mos.CarbideAtomicClient.GetClient()
-	if carbideClient == nil {
+	nicoClient := mos.NicoAtomicClient.GetClient()
+	if nicoClient == nil {
 		return client.ErrClientNotConnected
 	}
-	computeClient := carbideClient.Compute()
+	computeClient := nicoClient.Compute()
 
 	_, err = computeClient.CreateOsImage(ctx, request)
 	if err != nil {
@@ -87,7 +87,7 @@ func (mos *ManageOperatingSystem) CreateOsImageOnSite(ctx context.Context, reque
 	return nil
 }
 
-// Function to update OsImage with Carbide
+// Function to update OsImage with Nico
 func (mos *ManageOperatingSystem) UpdateOsImageOnSite(ctx context.Context, request *cwssaws.OsImageAttributes) error {
 	logger := log.With().Str("Activity", "UpdateOsImageOnSite").Logger()
 
@@ -111,11 +111,11 @@ func (mos *ManageOperatingSystem) UpdateOsImageOnSite(ctx context.Context, reque
 	}
 
 	// Call Site Controller gRPC endpoint
-	carbideClient := mos.CarbideAtomicClient.GetClient()
-	if carbideClient == nil {
+	nicoClient := mos.NicoAtomicClient.GetClient()
+	if nicoClient == nil {
 		return client.ErrClientNotConnected
 	}
-	computeClient := carbideClient.Compute()
+	computeClient := nicoClient.Compute()
 
 	_, err = computeClient.UpdateOsImage(ctx, request)
 	if err != nil {
@@ -128,7 +128,7 @@ func (mos *ManageOperatingSystem) UpdateOsImageOnSite(ctx context.Context, reque
 	return nil
 }
 
-// Function to delete OsImage on Carbide
+// Function to delete OsImage on Nico
 func (mos *ManageOperatingSystem) DeleteOsImageOnSite(ctx context.Context, request *cwssaws.DeleteOsImageRequest) error {
 	logger := log.With().Str("Activity", "DeleteOsImageOnSite").Logger()
 
@@ -150,11 +150,11 @@ func (mos *ManageOperatingSystem) DeleteOsImageOnSite(ctx context.Context, reque
 	}
 
 	// Call Site Controller gRPC endpoint
-	carbideClient := mos.CarbideAtomicClient.GetClient()
-	if carbideClient == nil {
+	nicoClient := mos.NicoAtomicClient.GetClient()
+	if nicoClient == nil {
 		return client.ErrClientNotConnected
 	}
-	computeClient := carbideClient.Compute()
+	computeClient := nicoClient.Compute()
 
 	_, err = computeClient.DeleteOsImage(ctx, request)
 	if err != nil {
@@ -195,11 +195,11 @@ func (moii *ManageOsImageInventory) DiscoverOsImageInventory(ctx context.Context
 	return inventoryImpl.CollectAndPublishInventory(ctx, &logger)
 }
 
-func osImageFindIDs(ctx context.Context, carbideClient *cClient.CarbideClient) ([]*cwssaws.UUID, error) {
+func osImageFindIDs(ctx context.Context, nicoClient *cClient.NicoClient) ([]*cwssaws.UUID, error) {
 	return nil, gstatus.Error(gcodes.Unimplemented, "")
 }
 
-func osImageFindByIDs(ctx context.Context, carbideClient *cClient.CarbideClient, ids []*cwssaws.UUID) ([]*cwssaws.OsImage, error) {
+func osImageFindByIDs(ctx context.Context, nicoClient *cClient.NicoClient, ids []*cwssaws.UUID) ([]*cwssaws.OsImage, error) {
 	return nil, gstatus.Error(gcodes.Unimplemented, "")
 }
 
@@ -225,9 +225,9 @@ func osImagePagedInventory(allItemIDs []*cwssaws.UUID, pagedItems []*cwssaws.OsI
 	return inventory
 }
 
-func osImageFindFallback(ctx context.Context, carbideClient *cClient.CarbideClient) ([]*cwssaws.UUID, []*cwssaws.OsImage, error) {
+func osImageFindFallback(ctx context.Context, nicoClient *cClient.NicoClient) ([]*cwssaws.UUID, []*cwssaws.OsImage, error) {
 	request := &cwssaws.ListOsImageRequest{}
-	items, err := carbideClient.Compute().ListOsImage(ctx, request)
+	items, err := nicoClient.Compute().ListOsImage(ctx, request)
 	if err != nil {
 		return nil, nil, err
 	}

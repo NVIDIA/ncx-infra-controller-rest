@@ -31,10 +31,10 @@ import (
 )
 
 func TestInstance_DeleteInstance(t *testing.T) {
-	mockCarbide := NewMockCarbideClient()
+	mockNico := NewMockNicoClient()
 
 	type fields struct {
-		CarbideClient *CarbideClient
+		NicoClient *NicoClient
 	}
 	type args struct {
 		ctx     context.Context
@@ -49,7 +49,7 @@ func TestInstance_DeleteInstance(t *testing.T) {
 		{
 			name: "test delete instance success",
 			fields: fields{
-				CarbideClient: mockCarbide,
+				NicoClient: mockNico,
 			},
 			args: args{
 				ctx: context.Background(),
@@ -62,7 +62,7 @@ func TestInstance_DeleteInstance(t *testing.T) {
 		{
 			name: "test delete instance failed, NotFound",
 			fields: fields{
-				CarbideClient: mockCarbide,
+				NicoClient: mockNico,
 			},
 			args: args{
 				ctx: context.WithValue(context.Background(), "wantError", status.Error(codes.NotFound, "instance not found: ")),
@@ -76,7 +76,7 @@ func TestInstance_DeleteInstance(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cc := &compute{
-				carbide: tt.fields.CarbideClient.carbide,
+				nico: tt.fields.NicoClient.nico,
 			}
 			_, err := cc.DeleteInstance(tt.args.ctx, tt.args.request)
 			if tt.wantErr {
@@ -89,10 +89,10 @@ func TestInstance_DeleteInstance(t *testing.T) {
 }
 
 func TestInstance_CreateInstance(t *testing.T) {
-	mockCarbide := NewMockCarbideClient()
+	mockNico := NewMockNicoClient()
 
 	type fields struct {
-		CarbideClient *CarbideClient
+		NicoClient *NicoClient
 	}
 	type args struct {
 		ctx     context.Context
@@ -107,7 +107,7 @@ func TestInstance_CreateInstance(t *testing.T) {
 		{
 			name: "test create instance success",
 			fields: fields{
-				CarbideClient: mockCarbide,
+				NicoClient: mockNico,
 			},
 			args: args{
 				ctx: context.Background(),
@@ -124,7 +124,7 @@ func TestInstance_CreateInstance(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cc := &compute{
-				carbide: tt.fields.CarbideClient.carbide,
+				nico: tt.fields.NicoClient.nico,
 			}
 			_, err := cc.CreateInstance(tt.args.ctx, tt.args.request)
 			if tt.wantErr {

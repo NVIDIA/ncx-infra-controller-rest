@@ -20,8 +20,8 @@ package workflows.v1;
 import "google/protobuf/timestamp.proto";
 
 import "workflow.proto";
-import "common_carbide.proto";
-import "forge_carbide.proto";
+import "common_nico.proto";
+import "nico_nico.proto";
 
 option go_package = "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/proto";
 
@@ -35,9 +35,9 @@ message ExpectedMachineInventory {
   // Reported timestamp of Expected Machine inventory
   google.protobuf.Timestamp timestamp = 3;
   // List of Expected Machine Partition
-  repeated forge.ExpectedMachine expected_machines = 4;
+  repeated nico.ExpectedMachine expected_machines = 4;
   // Inventory page information
   InventoryPage inventory_page = 5;
   // Linked Expected Machines (contains Machine ID)
-  repeated forge.LinkedExpectedMachine linked_machines = 6;
+  repeated nico.LinkedExpectedMachine linked_machines = 6;
 }

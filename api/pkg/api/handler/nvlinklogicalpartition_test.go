@@ -88,8 +88,8 @@ func TestNVLinkLogicalPartitionHandler_Create(t *testing.T) {
 	tnOrg1 := "test-tn-org-1"
 	tnOrg2 := "test-tn-org-2"
 	tnOrg3 := "test-tn-org-3"
-	tnRoles1 := []string{"FORGE_TENANT_ADMIN"}
-	tnRoles2 := []string{"FORGE_TENANT_NONADMIN"}
+	tnRoles1 := []string{"NICO_TENANT_ADMIN"}
+	tnRoles2 := []string{"NICO_TENANT_NONADMIN"}
 
 	tnu1 := testFabricBuildUser(t, dbSession, uuid.NewString(), []string{tnOrg1}, tnRoles1)
 	tnu2 := testFabricBuildUser(t, dbSession, uuid.NewString(), []string{tnOrg2}, tnRoles2)
@@ -425,8 +425,8 @@ func TestNVLinkLogicalPartitionHandler_Update(t *testing.T) {
 	tnOrg1 := "test-tn-org-1"
 	tnOrg2 := "test-tn-org-2"
 	tnOrg3 := "test-tn-org-3"
-	tnRoles1 := []string{"FORGE_TENANT_ADMIN"}
-	tnRoles2 := []string{"FORGE_TENANT_NONADMIN"}
+	tnRoles1 := []string{"NICO_TENANT_ADMIN"}
+	tnRoles2 := []string{"NICO_TENANT_NONADMIN"}
 
 	tnu1 := testFabricBuildUser(t, dbSession, uuid.NewString(), []string{tnOrg1}, tnRoles1)
 	tnu2 := testFabricBuildUser(t, dbSession, uuid.NewString(), []string{tnOrg2}, tnRoles2)
@@ -467,7 +467,7 @@ func TestNVLinkLogicalPartitionHandler_Update(t *testing.T) {
 	nvllp4 := testBuildNVLinkLogicalPartition(t, dbSession, "test-nvllp-4", cdb.GetStrPtr("Test NVLink Logical Partition"), tnOrg1, site3, tn1, cdb.GetStrPtr(cdbm.NVLinkLogicalPartitionStatusPending), false)
 	assert.NotNil(t, nvllp4)
 
-	nvllp5 := testBuildNVLinkLogicalPartition(t, dbSession, "test-nvllp-5", cdb.GetStrPtr("preserved-for-forge"), tnOrg1, site1, tn1, cdb.GetStrPtr(cdbm.NVLinkLogicalPartitionStatusPending), false)
+	nvllp5 := testBuildNVLinkLogicalPartition(t, dbSession, "test-nvllp-5", cdb.GetStrPtr("preserved-for-nico"), tnOrg1, site1, tn1, cdb.GetStrPtr(cdbm.NVLinkLogicalPartitionStatusPending), false)
 	assert.NotNil(t, nvllp5)
 
 	noupdateObj := model.APINVLinkLogicalPartitionUpdateRequest{Name: cdb.GetStrPtr("test-nvllp-1"), Description: cdb.GetStrPtr("Test NVLink Logical Partition")}
@@ -548,8 +548,8 @@ func TestNVLinkLogicalPartitionHandler_Update(t *testing.T) {
 		expectedName                     bool
 		verifyChildSpanner               bool
 		verifyTemporalCall               bool
-		expectedForgeMetadataName        string  // Metadata.Name on the site workflow request (always from DB after update)
-		expectedForgeMetadataDescription *string // Metadata.Description when asserting Forge payload (DB snapshot after update)
+		expectedNicoMetadataName        string  // Metadata.Name on the site workflow request (always from DB after update)
+		expectedNicoMetadataDescription *string // Metadata.Description when asserting Nico payload (DB snapshot after update)
 	}{
 		{
 			fields: fields{
@@ -683,7 +683,7 @@ func TestNVLinkLogicalPartitionHandler_Update(t *testing.T) {
 				tc:        tsc,
 				cfg:       cfg,
 			},
-			name:                             "success case description-only update request sends current name to Forge",
+			name:                             "success case description-only update request sends current name to Nico",
 			nvllpID:                          nvllp2.ID.String(),
 			reqOrgName:                       tnOrg1,
 			reqBody:                          string(descOnlyBody),
@@ -691,8 +691,8 @@ func TestNVLinkLogicalPartitionHandler_Update(t *testing.T) {
 			user:                             tnu1,
 			expectedStatus:                   http.StatusOK,
 			verifyChildSpanner:               true,
-			expectedForgeMetadataName:        "test-nvllp-2",
-			expectedForgeMetadataDescription: cdb.GetStrPtr("updated description without name in body"),
+			expectedNicoMetadataName:        "test-nvllp-2",
+			expectedNicoMetadataDescription: cdb.GetStrPtr("updated description without name in body"),
 			verifyTemporalCall:               true,
 		},
 		{
@@ -701,7 +701,7 @@ func TestNVLinkLogicalPartitionHandler_Update(t *testing.T) {
 				tc:        tsc,
 				cfg:       cfg,
 			},
-			name:                             "success case name-only update request sends DB name and preserved description to Forge",
+			name:                             "success case name-only update request sends DB name and preserved description to Nico",
 			nvllpID:                          nvllp5.ID.String(),
 			reqOrgName:                       tnOrg1,
 			reqBody:                          string(nameOnlyBody),
@@ -709,8 +709,8 @@ func TestNVLinkLogicalPartitionHandler_Update(t *testing.T) {
 			user:                             tnu1,
 			expectedStatus:                   http.StatusOK,
 			verifyChildSpanner:               true,
-			expectedForgeMetadataName:        "test-nvllp-5-renamed",
-			expectedForgeMetadataDescription: cdb.GetStrPtr("preserved-for-forge"),
+			expectedNicoMetadataName:        "test-nvllp-5-renamed",
+			expectedNicoMetadataDescription: cdb.GetStrPtr("preserved-for-nico"),
 			verifyTemporalCall:               true,
 		},
 		{
@@ -790,13 +790,13 @@ func TestNVLinkLogicalPartitionHandler_Update(t *testing.T) {
 				}
 
 				if tc.reqBodyModel.Description != nil || tc.reqBodyModel.Name != nil {
-					if tc.expectedForgeMetadataName != "" {
-						assert.Equal(t, tc.expectedForgeMetadataName, updateReq.Config.Metadata.Name)
+					if tc.expectedNicoMetadataName != "" {
+						assert.Equal(t, tc.expectedNicoMetadataName, updateReq.Config.Metadata.Name)
 					} else if tc.reqBodyModel.Name != nil {
 						assert.Equal(t, *tc.reqBodyModel.Name, updateReq.Config.Metadata.Name)
 					}
-					if tc.expectedForgeMetadataDescription != nil {
-						assert.Equal(t, *tc.expectedForgeMetadataDescription, updateReq.Config.Metadata.Description)
+					if tc.expectedNicoMetadataDescription != nil {
+						assert.Equal(t, *tc.expectedNicoMetadataDescription, updateReq.Config.Metadata.Description)
 					} else if tc.reqBodyModel.Description != nil {
 						assert.Equal(t, *tc.reqBodyModel.Description, updateReq.Config.Metadata.Description)
 					}
@@ -824,8 +824,8 @@ func TestNVLinkLogicalPartitionHandler_GetAll(t *testing.T) {
 	tnOrg2 := "test-tn-org-2"
 	tnOrg3 := "test-tn-org-3"
 	tnOrg4 := "test-tn-org-4"
-	tnRoles1 := []string{"FORGE_TENANT_ADMIN"}
-	tnRoles2 := []string{"FORGE_TENANT_NONADMIN"}
+	tnRoles1 := []string{"NICO_TENANT_ADMIN"}
+	tnRoles2 := []string{"NICO_TENANT_NONADMIN"}
 
 	tnu1 := testFabricBuildUser(t, dbSession, uuid.NewString(), []string{tnOrg1}, tnRoles1)
 	tnu2 := testFabricBuildUser(t, dbSession, uuid.NewString(), []string{tnOrg2}, tnRoles2)
@@ -837,7 +837,7 @@ func TestNVLinkLogicalPartitionHandler_GetAll(t *testing.T) {
 		NVLinkPartition: true,
 	}
 
-	ipu := testFabricBuildUser(t, dbSession, "test-starfleet-id-1", []string{ipOrg1}, []string{"FORGE_PROVIDER_ADMIN"})
+	ipu := testFabricBuildUser(t, dbSession, "test-starfleet-id-1", []string{ipOrg1}, []string{"NICO_PROVIDER_ADMIN"})
 
 	site1 := testFabricBuildSite(t, dbSession, ip1, "testSite1", SiteConfig, cdb.GetStrPtr(cdbm.SiteStatusRegistered))
 
@@ -1209,7 +1209,7 @@ func TestNVLinkLogicalPartitionHandler_GetAll(t *testing.T) {
 				q.Set("orderBy", *tc.orderBy)
 			}
 
-			path := fmt.Sprintf("/v2/org/%s/carbide/nvlinklogical-partition?%s", tc.reqOrgName, q.Encode())
+			path := fmt.Sprintf("/v2/org/%s/nico/nvlinklogical-partition?%s", tc.reqOrgName, q.Encode())
 
 			req := httptest.NewRequest(http.MethodGet, path, nil)
 
@@ -1298,8 +1298,8 @@ func TestNVLinkLogicalPartitionHandler_GetByID(t *testing.T) {
 	tnOrg2 := "test-tn-org-2"
 	tnOrg3 := "test-tn-org-3"
 	tnOrg4 := "test-tn-org-4"
-	tnRoles1 := []string{"FORGE_TENANT_ADMIN"}
-	tnRoles2 := []string{"FORGE_TENANT_NONADMIN"}
+	tnRoles1 := []string{"NICO_TENANT_ADMIN"}
+	tnRoles2 := []string{"NICO_TENANT_NONADMIN"}
 
 	tnu1 := testFabricBuildUser(t, dbSession, uuid.NewString(), []string{tnOrg1}, tnRoles1)
 	tnu2 := testFabricBuildUser(t, dbSession, uuid.NewString(), []string{tnOrg2}, tnRoles2)
@@ -1311,7 +1311,7 @@ func TestNVLinkLogicalPartitionHandler_GetByID(t *testing.T) {
 		NVLinkPartition: true,
 	}
 
-	ipu := testFabricBuildUser(t, dbSession, uuid.NewString(), []string{ipOrg1}, []string{"FORGE_PROVIDER_ADMIN"})
+	ipu := testFabricBuildUser(t, dbSession, uuid.NewString(), []string{ipOrg1}, []string{"NICO_PROVIDER_ADMIN"})
 
 	site1 := testFabricBuildSite(t, dbSession, ip1, "testSite1", SiteConfig, cdb.GetStrPtr(cdbm.SiteStatusRegistered))
 
@@ -1616,8 +1616,8 @@ func TestNVLinkLogicalPartitionHandler_Delete(t *testing.T) {
 	tnOrg2 := "test-tn-org-2"
 	tnOrg3 := "test-tn-org-3"
 	tnOrg4 := "test-tn-org-4"
-	tnRoles1 := []string{"FORGE_TENANT_ADMIN"}
-	tnRoles2 := []string{"FORGE_TENANT_NONADMIN"}
+	tnRoles1 := []string{"NICO_TENANT_ADMIN"}
+	tnRoles2 := []string{"NICO_TENANT_NONADMIN"}
 
 	tnu1 := testFabricBuildUser(t, dbSession, uuid.NewString(), []string{tnOrg1}, tnRoles1)
 	tnu2 := testFabricBuildUser(t, dbSession, uuid.NewString(), []string{tnOrg2}, tnRoles2)
@@ -1685,22 +1685,22 @@ func TestNVLinkLogicalPartitionHandler_Delete(t *testing.T) {
 	tscWithTimeout.Mock.On("TerminateWorkflow", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	//
-	// Carbide not-found mocking
+	// Nico not-found mocking
 	//
-	scpWithCarbideNotFound := sc.NewClientPool(tcfg)
-	tscWithCarbideNotFound := &tmocks.Client{}
+	scpWithNicoNotFound := sc.NewClientPool(tcfg)
+	tscWithNicoNotFound := &tmocks.Client{}
 
-	scpWithCarbideNotFound.IDClientMap[site2.ID.String()] = tscWithCarbideNotFound
+	scpWithNicoNotFound.IDClientMap[site2.ID.String()] = tscWithNicoNotFound
 
-	wrunWithCarbideNotFound := &tmocks.WorkflowRun{}
-	wrunWithCarbideNotFound.On("GetID").Return("workflow-WithCarbideNotFound")
+	wrunWithNicoNotFound := &tmocks.WorkflowRun{}
+	wrunWithNicoNotFound.On("GetID").Return("workflow-WithNicoNotFound")
 
-	wrunWithCarbideNotFound.Mock.On("Get", mock.Anything, mock.Anything).Return(tp.NewNonRetryableApplicationError("Carbide went bananas", swe.ErrTypeCarbideObjectNotFound, errors.New("Carbide went bananas")))
+	wrunWithNicoNotFound.Mock.On("Get", mock.Anything, mock.Anything).Return(tp.NewNonRetryableApplicationError("Nico went bananas", swe.ErrTypeNicoObjectNotFound, errors.New("Nico went bananas")))
 
-	tscWithCarbideNotFound.Mock.On("ExecuteWorkflow", mock.Anything, mock.AnythingOfType("internal.StartWorkflowOptions"),
-		"DeleteNVLinkLogicalPartition", mock.Anything).Return(wrunWithCarbideNotFound, nil)
+	tscWithNicoNotFound.Mock.On("ExecuteWorkflow", mock.Anything, mock.AnythingOfType("internal.StartWorkflowOptions"),
+		"DeleteNVLinkLogicalPartition", mock.Anything).Return(wrunWithNicoNotFound, nil)
 
-	tscWithCarbideNotFound.Mock.On("TerminateWorkflow", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	tscWithNicoNotFound.Mock.On("TerminateWorkflow", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	// Prepare client pool for sync calls
 	// to site(s).
@@ -1833,11 +1833,11 @@ func TestNVLinkLogicalPartitionHandler_Delete(t *testing.T) {
 			verifyChildSpanner: true,
 		},
 		{
-			name: "test NVLinkLogical Partition delete API endpoint carbide not-found, still success",
+			name: "test NVLinkLogical Partition delete API endpoint nico not-found, still success",
 			fields: fields{
 				dbSession: dbSession,
-				tc:        tscWithCarbideNotFound,
-				scp:       scpWithCarbideNotFound,
+				tc:        tscWithNicoNotFound,
+				scp:       scpWithNicoNotFound,
 				cfg:       cfg,
 			},
 			reqOrgName:         tnOrg3,

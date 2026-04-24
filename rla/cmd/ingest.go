@@ -33,8 +33,8 @@ var (
 		Long: `Inject expected component configurations to their respective component manager services.
 
 Components are routed to the appropriate service based on type:
-  - Compute    → Carbide AddExpectedMachine API
-  - NVLSwitch  → Carbide AddExpectedSwitch API
+  - Compute    → Nico AddExpectedMachine API
+  - NVLSwitch  → Nico AddExpectedSwitch API
   - PowerShelf → PSM RegisterPowershelves API
 
 Specify racks by ID or name:

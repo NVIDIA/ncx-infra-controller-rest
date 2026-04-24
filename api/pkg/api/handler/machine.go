@@ -238,7 +238,7 @@ func NewGetAllMachineHandler(dbSession *cdb.Session, tc temporalClient.Client, c
 // @Param pageSize query integer false "Number of results per page"
 // @Param orderBy query string false "Order by field"
 // @Success 200 {object} []model.APIMachine
-// @Router /v2/org/{org}/carbide/machine [get]
+// @Router /v2/org/{org}/nico/machine [get]
 func (gamh GetAllMachineHandler) Handle(c echo.Context) error {
 	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("Machine", "GetAll", c, gamh.tracerSpan)
 	if handlerSpan != nil {
@@ -591,7 +591,7 @@ func NewGetMachineHandler(dbSession *cdb.Session, tc temporalClient.Client, cfg 
 // @Param id path string true "ID of Machine"
 // @Param includeMetadata query boolean false "Include metadata info in response"
 // @Success 200 {object} model.APIMachine
-// @Router /v2/org/{org}/carbide/machine/{id} [get]
+// @Router /v2/org/{org}/nico/machine/{id} [get]
 func (gmh GetMachineHandler) Handle(c echo.Context) error {
 	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("Machine", "Get", c, gmh.tracerSpan)
 	if handlerSpan != nil {
@@ -748,7 +748,7 @@ func NewUpdateMachineHandler(dbSession *cdb.Session, tc temporalClient.Client, s
 // @Param id path string true "ID of Machine"
 // @Param message body model.APIMachineUpdateRequest true "Machine update request"
 // @Success 200 {object} model.APIMachine
-// @Router /v2/org/{org}/carbide/machine/{id} [patch]
+// @Router /v2/org/{org}/nico/machine/{id} [patch]
 func (umh UpdateMachineHandler) Handle(c echo.Context) error {
 	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("Machine", "Update", c, umh.tracerSpan)
 	if handlerSpan != nil {
@@ -1064,12 +1064,12 @@ func (umh UpdateMachineHandler) Handle(c echo.Context) error {
 			err = we.Get(ctx, nil)
 
 			if err != nil {
-				// If this was a 404 back from Carbide, the machine was not found, and we can
+				// If this was a 404 back from Nico, the machine was not found, and we can
 				// treat the object as already having been deleted and allow things to proceed.
 				var applicationErr *tp.ApplicationError
 				if errors.As(err, &applicationErr) {
-					if applicationErr.Type() == swe.ErrTypeCarbideObjectNotFound {
-						logger.Warn().Msg(swe.ErrTypeCarbideObjectNotFound + " received from Site")
+					if applicationErr.Type() == swe.ErrTypeNicoObjectNotFound {
+						logger.Warn().Msg(swe.ErrTypeNicoObjectNotFound + " received from Site")
 						// Reset error to nil
 						err = nil
 					}
@@ -1435,7 +1435,7 @@ func NewGetMachineStatusDetailsHandler(dbSession *cdb.Session) GetMachineStatusD
 // @Param org path string true "Name of NGC organization"
 // @Param id path string true "ID of Machine"
 // @Success 200 {object} []model.APIStatusDetail
-// @Router /v2/org/{org}/carbide/machine/{id}/status-history [get]
+// @Router /v2/org/{org}/nico/machine/{id}/status-history [get]
 func (gmsdh GetMachineStatusDetailsHandler) Handle(c echo.Context) error {
 	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("Machine", "Get", c, gmsdh.tracerSpan)
 	if handlerSpan != nil {
@@ -1564,7 +1564,7 @@ func NewDeleteMachineHandler(dbSession *cdb.Session, tc temporalClient.Client, c
 // @Param org path string true "Name of NGC organization"
 // @Param id path string true "ID of Machine"
 // @Success 202 {object}
-// @Router /v2/org/{org}/carbide/machine/{id} [delete]
+// @Router /v2/org/{org}/nico/machine/{id} [delete]
 func (umh DeleteMachineHandler) Handle(c echo.Context) error {
 	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("Machine", "Delete", c, umh.tracerSpan)
 	if handlerSpan != nil {

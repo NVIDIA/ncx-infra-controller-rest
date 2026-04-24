@@ -25,7 +25,7 @@ import (
 	wflows "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 )
 
-// TODO(deprecated): Remove any related DeleteVPC references after carbide-rest-api and agent are updated everywhere.  We've moved to sync workflow.
+// TODO(deprecated): Remove any related DeleteVPC references after nico-rest-api and agent are updated everywhere.  We've moved to sync workflow.
 // TODO: Remove this and and any related references (deprecated).  We've moved to sync workflow.
 // CreateVPCActivity - Create VPC Activity
 func (ac *Workflows) CreateVPCActivity(ctx context.Context, ResourceVer uint64, ResourceID string,
@@ -92,7 +92,7 @@ func (ac *Workflows) CreateVPCActivity(ctx context.Context, ResourceVer uint64, 
 	return ResourceResp, err
 }
 
-// UpdateVPCActivity updates the vpc at carbide
+// UpdateVPCActivity updates the vpc at nico
 func (ac *Workflows) UpdateVPCActivity(ctx context.Context, ResourceVer uint64, ResourceID string,
 	ResourceReq *wflows.UpdateVPCRequest) (*wflows.VPCInfo, error) {
 	var vpcRequest *wflows.Vpc
@@ -143,7 +143,7 @@ func (ac *Workflows) UpdateVPCActivity(ctx context.Context, ResourceVer uint64, 
 	return wflowMetadata.response, nil
 }
 
-// DeleteVPCActivity deletes the vpc at carbide
+// DeleteVPCActivity deletes the vpc at nico
 func (ac *Workflows) DeleteVPCActivity(ctx context.Context, ResourceVer uint64, ResourceID string,
 	ResourceReq *wflows.DeleteVPCRequest) (*wflows.VPCInfo, error) {
 	// Initialize logger
@@ -169,7 +169,7 @@ func (ac *Workflows) DeleteVPCActivity(ctx context.Context, ResourceVer uint64, 
 	return wflowMetadata.response, nil
 }
 
-// GetVPCByNameActivity Gets the vpc at carbide
+// GetVPCByNameActivity Gets the vpc at nico
 func (ac *Workflows) GetVPCByNameActivity(ctx context.Context, ResourceVer uint64, ResourceID string,
 	ResourceReq *wflows.GetVPCByNameRequest) (*wflows.GetVPCResponse, error) {
 	// Initialize logger

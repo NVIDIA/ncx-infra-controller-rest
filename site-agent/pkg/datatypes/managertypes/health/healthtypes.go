@@ -51,7 +51,7 @@ type HighAvailability struct {
 // HealthCache Site Agent HealthCache
 type HealthCache struct {
 	Inventory        SiteInventoryHealth
-	CarbideInterface SiteControllerConnection
+	NicoInterface SiteControllerConnection
 	Availabilty      HighAvailability
 }
 

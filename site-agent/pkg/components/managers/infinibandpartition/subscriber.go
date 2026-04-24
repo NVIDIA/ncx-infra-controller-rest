@@ -31,7 +31,7 @@ func (api *API) RegisterSubscriber() error {
 	// Register the subscribers here
 	ManagerAccess.Data.EB.Log.Info().Msg("InfiniBandPartition: Registering the subscribers")
 
-	ibpManager := swa.NewManageInfiniBandPartition(ManagerAccess.Data.EB.Managers.Carbide.Client)
+	ibpManager := swa.NewManageInfiniBandPartition(ManagerAccess.Data.EB.Managers.Nico.Client)
 
 	// Get InfiniBandPartition workflow interface
 	infiniBandPartitionInterface := NewInfiniBandPartitionWorkflows(

@@ -125,7 +125,7 @@ func NewCreateExpectedMachineHandler(dbSession *cdb.Session, tc tclient.Client, 
 // @Param org path string true "Name of NGC organization"
 // @Param message body model.APIExpectedMachineCreateRequest true "ExpectedMachine creation request"
 // @Success 201 {object} model.APIExpectedMachine
-// @Router /v2/org/{org}/carbide/expected-machine [post]
+// @Router /v2/org/{org}/nico/expected-machine [post]
 func (cemh CreateExpectedMachineHandler) Handle(c echo.Context) error {
 	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("ExpectedMachine", "Create", c, cemh.tracerSpan)
 	if handlerSpan != nil {
@@ -395,7 +395,7 @@ func NewGetAllExpectedMachineHandler(dbSession *cdb.Session, tc tclient.Client, 
 // @Param pageSize query integer false "Number of results per page"
 // @Param orderBy query string false "Order by field"
 // @Success 200 {object} []model.APIExpectedMachine
-// @Router /v2/org/{org}/carbide/expected-machine [get]
+// @Router /v2/org/{org}/nico/expected-machine [get]
 func (gaemh GetAllExpectedMachineHandler) Handle(c echo.Context) error {
 	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("ExpectedMachine", "GetAll", c, gaemh.tracerSpan)
 	if handlerSpan != nil {
@@ -554,7 +554,7 @@ func NewGetExpectedMachineHandler(dbSession *cdb.Session, tc tclient.Client, cfg
 // @Param id path string true "ID of Expected Machine"
 // @Param includeRelation query string false "Related entities to include in response e.g. 'Site', 'SKU'"
 // @Success 200 {object} model.APIExpectedMachine
-// @Router /v2/org/{org}/carbide/expected-machine/{id} [get]
+// @Router /v2/org/{org}/nico/expected-machine/{id} [get]
 func (gemh GetExpectedMachineHandler) Handle(c echo.Context) error {
 	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("ExpectedMachine", "Get", c, gemh.tracerSpan)
 	if handlerSpan != nil {
@@ -660,7 +660,7 @@ func NewUpdateExpectedMachineHandler(dbSession *cdb.Session, tc tclient.Client, 
 // @Param id path string true "ID of Expected Machine"
 // @Param message body model.APIExpectedMachineUpdateRequest true "ExpectedMachine update request"
 // @Success 200 {object} model.APIExpectedMachine
-// @Router /v2/org/{org}/carbide/expected-machine/{id} [patch]
+// @Router /v2/org/{org}/nico/expected-machine/{id} [patch]
 func (uemh UpdateExpectedMachineHandler) Handle(c echo.Context) error {
 	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("ExpectedMachine", "Update", c, uemh.tracerSpan)
 	if handlerSpan != nil {
@@ -925,7 +925,7 @@ func NewDeleteExpectedMachineHandler(dbSession *cdb.Session, tc tclient.Client, 
 // @Param org path string true "Name of NGC organization"
 // @Param id path string true "ID of Expected Machine"
 // @Success 204
-// @Router /v2/org/{org}/carbide/expected-machine/{id} [delete]
+// @Router /v2/org/{org}/nico/expected-machine/{id} [delete]
 func (demh DeleteExpectedMachineHandler) Handle(c echo.Context) error {
 	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("ExpectedMachine", "Delete", c, demh.tracerSpan)
 	if handlerSpan != nil {
@@ -1070,7 +1070,7 @@ func NewCreateExpectedMachinesHandler(dbSession *cdb.Session, tc tclient.Client,
 // @Param org path string true "Name of NGC organization"
 // @Param message body []model.APIExpectedMachineCreateRequest true "ExpectedMachine batch creation request"
 // @Success 201 {object} model.APIExpectedMachineBatchResponse
-// @Router /v2/org/{org}/carbide/expected-machine/batch [post]
+// @Router /v2/org/{org}/nico/expected-machine/batch [post]
 func (cemh CreateExpectedMachinesHandler) Handle(c echo.Context) error {
 	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("ExpectedMachine", "CreateMultiple", c, cemh.tracerSpan)
 	if handlerSpan != nil {
@@ -1454,7 +1454,7 @@ func NewUpdateExpectedMachinesHandler(dbSession *cdb.Session, tc tclient.Client,
 // @Param org path string true "Name of NGC organization"
 // @Param message body []model.APIExpectedMachineUpdateRequest true "ExpectedMachine UpdateExpectedMachines request"
 // @Success 200 {object} model.APIExpectedMachineBatchResponse
-// @Router /v2/org/{org}/carbide/expected-machine/batch [patch]
+// @Router /v2/org/{org}/nico/expected-machine/batch [patch]
 func (uemh UpdateExpectedMachinesHandler) Handle(c echo.Context) error {
 	org, dbUser, ctx, logger, handlerSpan := common.SetupHandler("ExpectedMachine", "UpdateMultiple", c, uemh.tracerSpan)
 	if handlerSpan != nil {

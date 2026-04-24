@@ -33,17 +33,17 @@ import (
 
 // ManageVpcPrefix is an activity wrapper for VpcPrefix management
 type ManageVpcPrefix struct {
-	CarbideAtomicClient *client.CarbideAtomicClient
+	NicoAtomicClient *client.NicoAtomicClient
 }
 
 // NewManageVpcPrefix returns a new ManageVpcPrefix client
-func NewManageVpcPrefix(carbideClient *client.CarbideAtomicClient) ManageVpcPrefix {
+func NewManageVpcPrefix(nicoClient *client.NicoAtomicClient) ManageVpcPrefix {
 	return ManageVpcPrefix{
-		CarbideAtomicClient: carbideClient,
+		NicoAtomicClient: nicoClient,
 	}
 }
 
-// Function to create VpcPrefix with Carbide
+// Function to create VpcPrefix with Nico
 func (mvp *ManageVpcPrefix) CreateVpcPrefixOnSite(ctx context.Context, request *cwssaws.VpcPrefixCreationRequest) error {
 	logger := log.With().Str("Activity", "CreateVpcPrefixOnSite").Logger()
 
@@ -60,7 +60,7 @@ func (mvp *ManageVpcPrefix) CreateVpcPrefixOnSite(ctx context.Context, request *
 		err = errors.New("received create VPC prefix request missing Prefix")
 	} else if request.Id == nil || request.Id.Value == "" {
 		// Don't let a request come in without a cloud-provided ID
-		// or carbide will generate one and cloud won't know the relationship.
+		// or nico will generate one and cloud won't know the relationship.
 		err = errors.New("received create VPC prefix request missing ID")
 	} else if request.VpcId == nil || request.VpcId.Value == "" {
 		err = errors.New("received create VPC prefix request missing VPC ID")
@@ -71,13 +71,13 @@ func (mvp *ManageVpcPrefix) CreateVpcPrefixOnSite(ctx context.Context, request *
 	}
 
 	// Call Site Controller gRPC endpoint
-	carbideClient := mvp.CarbideAtomicClient.GetClient()
-	if carbideClient == nil {
+	nicoClient := mvp.NicoAtomicClient.GetClient()
+	if nicoClient == nil {
 		return client.ErrClientNotConnected
 	}
-	forgeClient := carbideClient.Carbide()
+	nicoClient := nicoClient.Nico()
 
-	_, err = forgeClient.CreateVpcPrefix(ctx, request)
+	_, err = nicoClient.CreateVpcPrefix(ctx, request)
 	if err != nil {
 		logger.Warn().Err(err).Msg("Failed to create VPC prefix using Site Controller API")
 		return swe.WrapErr(err)
@@ -88,7 +88,7 @@ func (mvp *ManageVpcPrefix) CreateVpcPrefixOnSite(ctx context.Context, request *
 	return nil
 }
 
-// Function to update VpcPrefix with Carbide
+// Function to update VpcPrefix with Nico
 func (mvp *ManageVpcPrefix) UpdateVpcPrefixOnSite(ctx context.Context, request *cwssaws.VpcPrefixUpdateRequest) error {
 	logger := log.With().Str("Activity", "UpdateVpcPrefixOnSite").Logger()
 
@@ -108,13 +108,13 @@ func (mvp *ManageVpcPrefix) UpdateVpcPrefixOnSite(ctx context.Context, request *
 	}
 
 	// Call Site Controller gRPC endpoint
-	carbideClient := mvp.CarbideAtomicClient.GetClient()
-	if carbideClient == nil {
+	nicoClient := mvp.NicoAtomicClient.GetClient()
+	if nicoClient == nil {
 		return client.ErrClientNotConnected
 	}
-	forgeClient := carbideClient.Carbide()
+	nicoClient := nicoClient.Nico()
 
-	_, err = forgeClient.UpdateVpcPrefix(ctx, request)
+	_, err = nicoClient.UpdateVpcPrefix(ctx, request)
 	if err != nil {
 		logger.Warn().Err(err).Msg("Failed to update VPC prefix using Site Controller API")
 		return swe.WrapErr(err)
@@ -125,7 +125,7 @@ func (mvp *ManageVpcPrefix) UpdateVpcPrefixOnSite(ctx context.Context, request *
 	return nil
 }
 
-// Function to delete VpcPrefix on Carbide
+// Function to delete VpcPrefix on Nico
 func (mvp *ManageVpcPrefix) DeleteVpcPrefixOnSite(ctx context.Context, request *cwssaws.VpcPrefixDeletionRequest) error {
 	logger := log.With().Str("Activity", "DeleteVpcPrefixOnSite").Logger()
 
@@ -145,13 +145,13 @@ func (mvp *ManageVpcPrefix) DeleteVpcPrefixOnSite(ctx context.Context, request *
 	}
 
 	// Call Site Controller gRPC endpoint
-	carbideClient := mvp.CarbideAtomicClient.GetClient()
-	if carbideClient == nil {
+	nicoClient := mvp.NicoAtomicClient.GetClient()
+	if nicoClient == nil {
 		return client.ErrClientNotConnected
 	}
-	forgeClient := carbideClient.Carbide()
+	nicoClient := nicoClient.Nico()
 
-	_, err = forgeClient.DeleteVpcPrefix(ctx, request)
+	_, err = nicoClient.DeleteVpcPrefix(ctx, request)
 	if err != nil {
 		logger.Warn().Err(err).Msg("Failed to delete VPC prefix using Site Controller API")
 		return swe.WrapErr(err)
@@ -190,16 +190,16 @@ func (moii *ManageVpcPrefixInventory) DiscoverVpcPrefixInventory(ctx context.Con
 	return inventoryImpl.CollectAndPublishInventory(ctx, &logger)
 }
 
-func VpcPrefixFindIDs(ctx context.Context, carbideClient *cClient.CarbideClient) ([]*cwssaws.VpcPrefixId, error) {
-	idList, err := carbideClient.Carbide().SearchVpcPrefixes(ctx, &cwssaws.VpcPrefixSearchQuery{})
+func VpcPrefixFindIDs(ctx context.Context, nicoClient *cClient.NicoClient) ([]*cwssaws.VpcPrefixId, error) {
+	idList, err := nicoClient.Nico().SearchVpcPrefixes(ctx, &cwssaws.VpcPrefixSearchQuery{})
 	if err != nil {
 		return nil, err
 	}
 	return idList.VpcPrefixIds, nil
 }
 
-func VpcPrefixFindByIDs(ctx context.Context, carbideClient *cClient.CarbideClient, ids []*cwssaws.VpcPrefixId) ([]*cwssaws.VpcPrefix, error) {
-	list, err := carbideClient.Carbide().GetVpcPrefixes(ctx, &cwssaws.VpcPrefixGetRequest{
+func VpcPrefixFindByIDs(ctx context.Context, nicoClient *cClient.NicoClient, ids []*cwssaws.VpcPrefixId) ([]*cwssaws.VpcPrefix, error) {
+	list, err := nicoClient.Nico().GetVpcPrefixes(ctx, &cwssaws.VpcPrefixGetRequest{
 		VpcPrefixIds: ids,
 	})
 
@@ -231,9 +231,9 @@ func VpcPrefixPagedInventory(allItemIDs []*cwssaws.VpcPrefixId, pagedItems []*cw
 	return inventory
 }
 
-func VpcPrefixFindFallback(ctx context.Context, carbideClient *cClient.CarbideClient) ([]*cwssaws.VpcPrefixId, []*cwssaws.VpcPrefix, error) {
+func VpcPrefixFindFallback(ctx context.Context, nicoClient *cClient.NicoClient) ([]*cwssaws.VpcPrefixId, []*cwssaws.VpcPrefix, error) {
 	request := &cwssaws.VpcPrefixGetRequest{}
-	items, err := carbideClient.Carbide().GetVpcPrefixes(ctx, request)
+	items, err := nicoClient.Nico().GetVpcPrefixes(ctx, request)
 	if err != nil {
 		return nil, nil, err
 	}

@@ -98,7 +98,7 @@ func (cred *Credential) Retrieve() (*string, *string) {
 }
 
 // ToMap converts a Credential to a map[string]interface{} suitable for Vault storage.
-// Uses Forge's credential format with a UsernamePassword wrapper.
+// Uses Nico's credential format with a UsernamePassword wrapper.
 func (c Credential) ToMap() map[string]interface{} {
 	return map[string]interface{}{
 		"UsernamePassword": map[string]interface{}{
@@ -109,7 +109,7 @@ func (c Credential) ToMap() map[string]interface{} {
 }
 
 // FromMap converts a map[string]interface{} from Vault storage to a Credential.
-// Expects Forge's credential format: {"UsernamePassword": {"username": ..., "password": ...}}
+// Expects Nico's credential format: {"UsernamePassword": {"username": ..., "password": ...}}
 func FromMap(data map[string]interface{}) (*Credential, error) {
 	nested, ok := data["UsernamePassword"].(map[string]interface{})
 	if !ok {

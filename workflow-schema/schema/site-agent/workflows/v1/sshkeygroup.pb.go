@@ -572,12 +572,12 @@ var File_sshkeygroup_proto protoreflect.FileDescriptor
 
 const file_sshkeygroup_proto_rawDesc = "" +
 	"\n" +
-	"\x11sshkeygroup.proto\x12\fworkflows.v1\x1a\x0eworkflow.proto\x1a\x13forge_carbide.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x8a\x02\n" +
+	"\x11sshkeygroup.proto\x12\fworkflows.v1\x1a\x0eworkflow.proto\x1a\x13nico_nico.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x8a\x02\n" +
 	"\x18CreateSSHKeyGroupRequest\x124\n" +
 	"\x16tenant_organization_id\x18\x01 \x01(\tR\x14tenantOrganizationId\x12\x1b\n" +
 	"\tkeyset_id\x18\x02 \x01(\tR\bkeysetId\x12\x18\n" +
 	"\aversion\x18\x03 \x01(\tR\aversion\x127\n" +
-	"\vpublic_keys\x18\x04 \x03(\v2\x16.forge.TenantPublicKeyR\n" +
+	"\vpublic_keys\x18\x04 \x03(\v2\x16.nico.TenantPublicKeyR\n" +
 	"publicKeys\x12<\n" +
 	"\aoptions\x18\x05 \x01(\v2\x1d.workflows.v1.WorkflowOptionsH\x00R\aoptions\x88\x01\x01B\n" +
 	"\n" +
@@ -586,7 +586,7 @@ const file_sshkeygroup_proto_rawDesc = "" +
 	"\x16tenant_organization_id\x18\x01 \x01(\tR\x14tenantOrganizationId\x12\x1b\n" +
 	"\tkeyset_id\x18\x02 \x01(\tR\bkeysetId\x12\x18\n" +
 	"\aversion\x18\x03 \x01(\tR\aversion\x127\n" +
-	"\vpublic_keys\x18\x04 \x03(\v2\x16.forge.TenantPublicKeyR\n" +
+	"\vpublic_keys\x18\x04 \x03(\v2\x16.nico.TenantPublicKeyR\n" +
 	"publicKeys\x12-\n" +
 	"\x10if_version_match\x18\x05 \x01(\tH\x00R\x0eifVersionMatch\x88\x01\x01\x12<\n" +
 	"\aoptions\x18\x06 \x01(\v2\x1d.workflows.v1.WorkflowOptionsH\x01R\aoptions\x88\x01\x01B\x13\n" +
@@ -611,15 +611,15 @@ const file_sshkeygroup_proto_rawDesc = "" +
 	"\robject_status\x18\x02 \x01(\x0e2\x1a.workflows.v1.ObjectStatusR\fobjectStatus\x12\x1d\n" +
 	"\n" +
 	"status_msg\x18\x03 \x01(\tR\tstatusMsg\x128\n" +
-	"\rtenant_keyset\x18\x04 \x01(\v2\x13.forge.TenantKeysetR\ftenantKeyset\"\xde\x01\n" +
+	"\rtenant_keyset\x18\x04 \x01(\v2\x13.nico.TenantKeysetR\ftenantKeyset\"\xde\x01\n" +
 	"\x16GetSSHKeyGroupResponse\x124\n" +
 	"\x06status\x18\x01 \x01(\x0e2\x1c.workflows.v1.WorkflowStatusR\x06status\x12\x1d\n" +
 	"\n" +
 	"status_msg\x18\x02 \x01(\tR\tstatusMsg\x12+\n" +
-	"\x04list\x18\x03 \x01(\v2\x17.forge.TenantKeySetListR\x04list\x12B\n" +
+	"\x04list\x18\x03 \x01(\v2\x17.nico.TenantKeySetListR\x04list\x12B\n" +
 	"\x0etransaction_id\x18\x04 \x01(\v2\x1b.workflows.v1.TransactionIDR\rtransactionId\"\xb9\x02\n" +
 	"\x14SSHKeyGroupInventory\x12:\n" +
-	"\x0etenant_keysets\x18\x01 \x03(\v2\x13.forge.TenantKeysetR\rtenantKeysets\x128\n" +
+	"\x0etenant_keysets\x18\x01 \x03(\v2\x13.nico.TenantKeysetR\rtenantKeysets\x128\n" +
 	"\ttimestamp\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12H\n" +
 	"\x10inventory_status\x18\x03 \x01(\x0e2\x1d.workflows.v1.InventoryStatusR\x0finventoryStatus\x12\x1d\n" +
 	"\n" +
@@ -647,31 +647,31 @@ var file_sshkeygroup_proto_goTypes = []any{
 	(*SSHKeyGroupInfo)(nil),          // 4: workflows.v1.SSHKeyGroupInfo
 	(*GetSSHKeyGroupResponse)(nil),   // 5: workflows.v1.GetSSHKeyGroupResponse
 	(*SSHKeyGroupInventory)(nil),     // 6: workflows.v1.SSHKeyGroupInventory
-	(*TenantPublicKey)(nil),          // 7: forge.TenantPublicKey
+	(*TenantPublicKey)(nil),          // 7: nico.TenantPublicKey
 	(*WorkflowOptions)(nil),          // 8: workflows.v1.WorkflowOptions
 	(WorkflowStatus)(0),              // 9: workflows.v1.WorkflowStatus
 	(ObjectStatus)(0),                // 10: workflows.v1.ObjectStatus
-	(*TenantKeyset)(nil),             // 11: forge.TenantKeyset
-	(*TenantKeySetList)(nil),         // 12: forge.TenantKeySetList
+	(*TenantKeyset)(nil),             // 11: nico.TenantKeyset
+	(*TenantKeySetList)(nil),         // 12: nico.TenantKeySetList
 	(*TransactionID)(nil),            // 13: workflows.v1.TransactionID
 	(*timestamppb.Timestamp)(nil),    // 14: google.protobuf.Timestamp
 	(InventoryStatus)(0),             // 15: workflows.v1.InventoryStatus
 	(*InventoryPage)(nil),            // 16: workflows.v1.InventoryPage
 }
 var file_sshkeygroup_proto_depIdxs = []int32{
-	7,  // 0: workflows.v1.CreateSSHKeyGroupRequest.public_keys:type_name -> forge.TenantPublicKey
+	7,  // 0: workflows.v1.CreateSSHKeyGroupRequest.public_keys:type_name -> nico.TenantPublicKey
 	8,  // 1: workflows.v1.CreateSSHKeyGroupRequest.options:type_name -> workflows.v1.WorkflowOptions
-	7,  // 2: workflows.v1.UpdateSSHKeyGroupRequest.public_keys:type_name -> forge.TenantPublicKey
+	7,  // 2: workflows.v1.UpdateSSHKeyGroupRequest.public_keys:type_name -> nico.TenantPublicKey
 	8,  // 3: workflows.v1.UpdateSSHKeyGroupRequest.options:type_name -> workflows.v1.WorkflowOptions
 	8,  // 4: workflows.v1.DeleteSSHKeyGroupRequest.options:type_name -> workflows.v1.WorkflowOptions
 	8,  // 5: workflows.v1.GetSSHKeyGroup.options:type_name -> workflows.v1.WorkflowOptions
 	9,  // 6: workflows.v1.SSHKeyGroupInfo.status:type_name -> workflows.v1.WorkflowStatus
 	10, // 7: workflows.v1.SSHKeyGroupInfo.object_status:type_name -> workflows.v1.ObjectStatus
-	11, // 8: workflows.v1.SSHKeyGroupInfo.tenant_keyset:type_name -> forge.TenantKeyset
+	11, // 8: workflows.v1.SSHKeyGroupInfo.tenant_keyset:type_name -> nico.TenantKeyset
 	9,  // 9: workflows.v1.GetSSHKeyGroupResponse.status:type_name -> workflows.v1.WorkflowStatus
-	12, // 10: workflows.v1.GetSSHKeyGroupResponse.list:type_name -> forge.TenantKeySetList
+	12, // 10: workflows.v1.GetSSHKeyGroupResponse.list:type_name -> nico.TenantKeySetList
 	13, // 11: workflows.v1.GetSSHKeyGroupResponse.transaction_id:type_name -> workflows.v1.TransactionID
-	11, // 12: workflows.v1.SSHKeyGroupInventory.tenant_keysets:type_name -> forge.TenantKeyset
+	11, // 12: workflows.v1.SSHKeyGroupInventory.tenant_keysets:type_name -> nico.TenantKeyset
 	14, // 13: workflows.v1.SSHKeyGroupInventory.timestamp:type_name -> google.protobuf.Timestamp
 	15, // 14: workflows.v1.SSHKeyGroupInventory.inventory_status:type_name -> workflows.v1.InventoryStatus
 	16, // 15: workflows.v1.SSHKeyGroupInventory.inventory_page:type_name -> workflows.v1.InventoryPage
@@ -688,7 +688,7 @@ func file_sshkeygroup_proto_init() {
 		return
 	}
 	file_workflow_proto_init()
-	file_forge_carbide_proto_init()
+	file_nico_nico_proto_init()
 	file_sshkeygroup_proto_msgTypes[0].OneofWrappers = []any{}
 	file_sshkeygroup_proto_msgTypes[1].OneofWrappers = []any{}
 	file_sshkeygroup_proto_msgTypes[2].OneofWrappers = []any{}

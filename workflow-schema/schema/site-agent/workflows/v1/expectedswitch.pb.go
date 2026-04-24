@@ -133,15 +133,15 @@ var File_expectedswitch_proto protoreflect.FileDescriptor
 
 const file_expectedswitch_proto_rawDesc = "" +
 	"\n" +
-	"\x14expectedswitch.proto\x12\fworkflows.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0eworkflow.proto\x1a\x14common_carbide.proto\x1a\x13forge_carbide.proto\"\x8a\x03\n" +
+	"\x14expectedswitch.proto\x12\fworkflows.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0eworkflow.proto\x1a\x14common_nico.proto\x1a\x13nico_nico.proto\"\x8a\x03\n" +
 	"\x17ExpectedSwitchInventory\x12H\n" +
 	"\x10inventory_status\x18\x01 \x01(\x0e2\x1d.workflows.v1.InventoryStatusR\x0finventoryStatus\x12\x1d\n" +
 	"\n" +
 	"status_msg\x18\x02 \x01(\tR\tstatusMsg\x128\n" +
 	"\ttimestamp\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12B\n" +
-	"\x11expected_switches\x18\x04 \x03(\v2\x15.forge.ExpectedSwitchR\x10expectedSwitches\x12B\n" +
+	"\x11expected_switches\x18\x04 \x03(\v2\x15.nico.ExpectedSwitchR\x10expectedSwitches\x12B\n" +
 	"\x0einventory_page\x18\x05 \x01(\v2\x1b.workflows.v1.InventoryPageR\rinventoryPage\x12D\n" +
-	"\x0flinked_switches\x18\x06 \x03(\v2\x1b.forge.LinkedExpectedSwitchR\x0elinkedSwitchesBCZAgithub.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/protob\x06proto3"
+	"\x0flinked_switches\x18\x06 \x03(\v2\x1b.nico.LinkedExpectedSwitchR\x0elinkedSwitchesBCZAgithub.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/protob\x06proto3"
 
 var (
 	file_expectedswitch_proto_rawDescOnce sync.Once
@@ -160,16 +160,16 @@ var file_expectedswitch_proto_goTypes = []any{
 	(*ExpectedSwitchInventory)(nil), // 0: workflows.v1.ExpectedSwitchInventory
 	(InventoryStatus)(0),            // 1: workflows.v1.InventoryStatus
 	(*timestamppb.Timestamp)(nil),   // 2: google.protobuf.Timestamp
-	(*ExpectedSwitch)(nil),          // 3: forge.ExpectedSwitch
+	(*ExpectedSwitch)(nil),          // 3: nico.ExpectedSwitch
 	(*InventoryPage)(nil),           // 4: workflows.v1.InventoryPage
-	(*LinkedExpectedSwitch)(nil),    // 5: forge.LinkedExpectedSwitch
+	(*LinkedExpectedSwitch)(nil),    // 5: nico.LinkedExpectedSwitch
 }
 var file_expectedswitch_proto_depIdxs = []int32{
 	1, // 0: workflows.v1.ExpectedSwitchInventory.inventory_status:type_name -> workflows.v1.InventoryStatus
 	2, // 1: workflows.v1.ExpectedSwitchInventory.timestamp:type_name -> google.protobuf.Timestamp
-	3, // 2: workflows.v1.ExpectedSwitchInventory.expected_switches:type_name -> forge.ExpectedSwitch
+	3, // 2: workflows.v1.ExpectedSwitchInventory.expected_switches:type_name -> nico.ExpectedSwitch
 	4, // 3: workflows.v1.ExpectedSwitchInventory.inventory_page:type_name -> workflows.v1.InventoryPage
-	5, // 4: workflows.v1.ExpectedSwitchInventory.linked_switches:type_name -> forge.LinkedExpectedSwitch
+	5, // 4: workflows.v1.ExpectedSwitchInventory.linked_switches:type_name -> nico.LinkedExpectedSwitch
 	5, // [5:5] is the sub-list for method output_type
 	5, // [5:5] is the sub-list for method input_type
 	5, // [5:5] is the sub-list for extension type_name
@@ -183,8 +183,8 @@ func file_expectedswitch_proto_init() {
 		return
 	}
 	file_workflow_proto_init()
-	file_common_carbide_proto_init()
-	file_forge_carbide_proto_init()
+	file_common_nico_proto_init()
+	file_nico_nico_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

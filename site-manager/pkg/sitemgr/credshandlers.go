@@ -48,7 +48,7 @@ func (h *credsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	objName := nameFromUUID(req.SiteUUID)
 
-	siteObj, err := h.manager.crdClient.ForgeV1().Sites(h.manager.namespace).Get(r.Context(), objName, metav1.GetOptions{})
+	siteObj, err := h.manager.crdClient.NicoV1().Sites(h.manager.namespace).Get(r.Context(), objName, metav1.GetOptions{})
 	if err != nil {
 		log.Errorf("Site Creds Req: %+v  %v", req, err)
 		var errStr string
@@ -108,7 +108,7 @@ func (h *credsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	siteObj.Status.BootstrapState = crdsv1.SiteHandshakeComplete
-	if _, err := h.manager.crdClient.ForgeV1().Sites(h.manager.namespace).UpdateStatus(r.Context(), siteObj, metav1.UpdateOptions{}); err != nil {
+	if _, err := h.manager.crdClient.NicoV1().Sites(h.manager.namespace).UpdateStatus(r.Context(), siteObj, metav1.UpdateOptions{}); err != nil {
 		log.Errorf("Get credentials site %s %v", objName, err)
 		http.Error(w, "check logs", http.StatusInternalServerError)
 		return

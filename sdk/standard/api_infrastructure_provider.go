@@ -37,7 +37,7 @@ GetCurrentInfrastructureProvider Retrieve Infrastructure Provider for current Or
 
 Retrieve Infrastructure Provider entity for current Org.
 
-User must have `FORGE_PROVIDER_ADMIN` authorization role.
+User must have `NICO_PROVIDER_ADMIN` authorization role.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -67,7 +67,7 @@ func (a *InfrastructureProviderAPIService) GetCurrentInfrastructureProviderExecu
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/infrastructure-provider/current"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/infrastructure-provider/current"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -114,7 +114,7 @@ func (a *InfrastructureProviderAPIService) GetCurrentInfrastructureProviderExecu
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -153,7 +153,7 @@ GetCurrentInfrastructureProviderStats Retrieve Stats for current Infrastructure 
 
 Retrieve stats for current Infrastructure Provider.
 
-User must have `FORGE_PROVIDER_ADMIN` authorization role.
+User must have `NICO_PROVIDER_ADMIN` authorization role.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -183,7 +183,7 @@ func (a *InfrastructureProviderAPIService) GetCurrentInfrastructureProviderStats
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/infrastructure-provider/current/stats"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/infrastructure-provider/current/stats"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -230,7 +230,7 @@ func (a *InfrastructureProviderAPIService) GetCurrentInfrastructureProviderStats
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()

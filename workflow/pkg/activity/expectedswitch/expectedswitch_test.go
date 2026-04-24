@@ -95,7 +95,7 @@ func TestManageExpectedSwitch_UpdateExpectedSwitchesInDB(t *testing.T) {
 	testExpectedSwitchSetupSchema(t, dbSession)
 
 	ipOrg := "test-provider-org"
-	ipRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	ipu := cwu.TestBuildUser(t, dbSession, uuid.NewString(), []string{ipOrg}, ipRoles)
 	ip := cwu.TestBuildInfrastructureProvider(t, dbSession, "test-provider", ipOrg, ipu)
@@ -477,7 +477,7 @@ func TestManageExpectedSwitch_UpdateExpectedSwitchesInDB_RaceCondition(t *testin
 	testExpectedSwitchSetupSchema(t, dbSession)
 
 	ipOrg := "test-provider-org"
-	ipRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	ipu := cwu.TestBuildUser(t, dbSession, uuid.NewString(), []string{ipOrg}, ipRoles)
 	ip := cwu.TestBuildInfrastructureProvider(t, dbSession, "test-provider", ipOrg, ipu)

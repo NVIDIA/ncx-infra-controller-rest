@@ -123,14 +123,14 @@ var File_sku_proto protoreflect.FileDescriptor
 
 const file_sku_proto_rawDesc = "" +
 	"\n" +
-	"\tsku.proto\x12\fworkflows.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0eworkflow.proto\x1a\x13forge_carbide.proto\"\x95\x02\n" +
+	"\tsku.proto\x12\fworkflows.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0eworkflow.proto\x1a\x13nico_nico.proto\"\x95\x02\n" +
 	"\fSkuInventory\x12H\n" +
 	"\x10inventory_status\x18\x01 \x01(\x0e2\x1d.workflows.v1.InventoryStatusR\x0finventoryStatus\x12\x1d\n" +
 	"\n" +
 	"status_msg\x18\x02 \x01(\tR\tstatusMsg\x128\n" +
 	"\ttimestamp\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12\x1e\n" +
 	"\x04skus\x18\x04 \x03(\v2\n" +
-	".forge.SkuR\x04skus\x12B\n" +
+	".nico.SkuR\x04skus\x12B\n" +
 	"\x0einventory_page\x18\x05 \x01(\v2\x1b.workflows.v1.InventoryPageR\rinventoryPageBCZAgithub.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/protob\x06proto3"
 
 var (
@@ -150,13 +150,13 @@ var file_sku_proto_goTypes = []any{
 	(*SkuInventory)(nil),          // 0: workflows.v1.SkuInventory
 	(InventoryStatus)(0),          // 1: workflows.v1.InventoryStatus
 	(*timestamppb.Timestamp)(nil), // 2: google.protobuf.Timestamp
-	(*Sku)(nil),                   // 3: forge.Sku
+	(*Sku)(nil),                   // 3: nico.Sku
 	(*InventoryPage)(nil),         // 4: workflows.v1.InventoryPage
 }
 var file_sku_proto_depIdxs = []int32{
 	1, // 0: workflows.v1.SkuInventory.inventory_status:type_name -> workflows.v1.InventoryStatus
 	2, // 1: workflows.v1.SkuInventory.timestamp:type_name -> google.protobuf.Timestamp
-	3, // 2: workflows.v1.SkuInventory.skus:type_name -> forge.Sku
+	3, // 2: workflows.v1.SkuInventory.skus:type_name -> nico.Sku
 	4, // 3: workflows.v1.SkuInventory.inventory_page:type_name -> workflows.v1.InventoryPage
 	4, // [4:4] is the sub-list for method output_type
 	4, // [4:4] is the sub-list for method input_type
@@ -171,7 +171,7 @@ func file_sku_proto_init() {
 		return
 	}
 	file_workflow_proto_init()
-	file_forge_carbide_proto_init()
+	file_nico_nico_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

@@ -27,7 +27,7 @@ func (api *API) RegisterSubscriber() error {
 	// Register the subscribers here
 	ManagerAccess.Data.EB.Log.Info().Msg("NetworkSecurityGroup: Registering the subscribers")
 
-	networkSecurityGroupManager := swa.NewManageNetworkSecurityGroup(ManagerAccess.Data.EB.Managers.Carbide.Client)
+	networkSecurityGroupManager := swa.NewManageNetworkSecurityGroup(ManagerAccess.Data.EB.Managers.Nico.Client)
 
 	//  Register Workflows
 

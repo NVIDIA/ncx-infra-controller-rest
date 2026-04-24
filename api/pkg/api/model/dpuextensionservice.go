@@ -421,7 +421,7 @@ func (desol APIDpuExtensionServiceObservabilityConfigLogging) Validate() error {
 }
 
 // ToProto converts an API observability definition to the protobuf
-// representation passed to Carbide.
+// representation passed to Nico.
 func (apiObservability *APIDpuExtensionServiceObservability) ToProto() *cwssaws.DpuExtensionServiceObservability {
 	if apiObservability == nil {
 		return nil

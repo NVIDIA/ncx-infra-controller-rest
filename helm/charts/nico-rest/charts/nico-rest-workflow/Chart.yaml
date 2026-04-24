@@ -1,0 +1,11 @@
+apiVersion: v2
+name: nico-rest-workflow
+description: Helm chart for the Nico REST Temporal workflow workers
+type: application
+version: 0.1.0
+appVersion: "latest"
+keywords:
+  - nico
+  - rest
+  - workflow
+  - temporal

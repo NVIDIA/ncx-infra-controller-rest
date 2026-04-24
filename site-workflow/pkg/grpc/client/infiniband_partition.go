@@ -39,7 +39,7 @@ type InfiniBandPartitionInterface interface {
 // CreateInfiniBandPartition creates a InfiniBandPartition
 func (ibp *network) CreateInfiniBandPartition(ctx context.Context, request *wflows.CreateInfiniBandPartitionRequest) (response *wflows.IBPartition, err error) {
 	log.Info().Interface("request", request).Msg("CreateInfiniBandPartition: received request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-CreateInfiniBandPartition")
+	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "NicoClient-CreateInfiniBandPartition")
 	defer span.End()
 
 	// Validate the request
@@ -49,8 +49,8 @@ func (ibp *network) CreateInfiniBandPartition(ctx context.Context, request *wflo
 		return nil, err
 	}
 
-	// Translate the workflow request to the carbide request
-	carbideRequest := &wflows.IBPartitionCreationRequest{
+	// Translate the workflow request to the nico request
+	nicoRequest := &wflows.IBPartitionCreationRequest{
 		Id: &wflows.IBPartitionId{Value: request.IbPartitionId.Value},
 		Config: &wflows.IBPartitionConfig{
 			Name:                 request.Name,
@@ -58,14 +58,14 @@ func (ibp *network) CreateInfiniBandPartition(ctx context.Context, request *wflo
 		},
 	}
 
-	response, err = ibp.carbide.CreateIBPartition(ctx, carbideRequest)
+	response, err = ibp.nico.CreateIBPartition(ctx, nicoRequest)
 	return response, err
 }
 
 // DeleteInfiniBandPartition deletes a InfiniBandPartition
 func (ibp *network) DeleteInfiniBandPartition(ctx context.Context, request *wflows.DeleteInfiniBandPartitionRequest) (response *wflows.IBPartitionDeletionResult, err error) {
 	log.Info().Interface("request", request).Msg("DeleteInfiniBandPartition: received request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-DeleteInfiniBandPartition")
+	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "NicoClient-DeleteInfiniBandPartition")
 	defer span.End()
 
 	// Validate the request
@@ -75,24 +75,24 @@ func (ibp *network) DeleteInfiniBandPartition(ctx context.Context, request *wflo
 		return nil, err
 	}
 
-	// Translate the workflow request to the carbide request
-	carbideRequest := &wflows.IBPartitionDeletionRequest{
+	// Translate the workflow request to the nico request
+	nicoRequest := &wflows.IBPartitionDeletionRequest{
 		Id: &wflows.IBPartitionId{Value: request.Id.Value},
 	}
-	response, err = ibp.carbide.DeleteIBPartition(ctx, carbideRequest)
+	response, err = ibp.nico.DeleteIBPartition(ctx, nicoRequest)
 	return response, err
 }
 
 func (ibp *network) GetAllInfiniBandPartitions(ctx context.Context, request *wflows.IBPartitionSearchFilter, pageSize int) (response *wflows.IBPartitionList, err error) {
 	log.Info().Interface("request", request).Msg("GetAllInfiniBandPartitions: received request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-GetAllInfiniBandPartitions")
+	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "NicoClient-GetAllInfiniBandPartitions")
 	defer span.End()
 
 	if request == nil {
 		request = &wflows.IBPartitionSearchFilter{}
 	}
 
-	idList, err := ibp.carbide.FindIBPartitionIds(ctx, request)
+	idList, err := ibp.nico.FindIBPartitionIds(ctx, request)
 	if err != nil {
 		log.Error().Err(err).Msg("FindIBPartitionIds: error")
 		return nil, err
@@ -100,7 +100,7 @@ func (ibp *network) GetAllInfiniBandPartitions(ctx context.Context, request *wfl
 	response = &wflows.IBPartitionList{}
 	idChunks := SliceToChunks(idList.IbPartitionIds, pageSize)
 	for i, chunk := range idChunks {
-		list, err := ibp.carbide.FindIBPartitionsByIds(ctx, &wflows.IBPartitionsByIdsRequest{IbPartitionIds: chunk})
+		list, err := ibp.nico.FindIBPartitionsByIds(ctx, &wflows.IBPartitionsByIdsRequest{IbPartitionIds: chunk})
 		if err != nil {
 			log.Error().Err(err).Msgf("FindIBPartitionsByIds: error on chunk index %d", i)
 			return nil, err
@@ -113,14 +113,14 @@ func (ibp *network) GetAllInfiniBandPartitions(ctx context.Context, request *wfl
 
 func (ibp *network) FindInfinibandPartitionIDs(ctx context.Context, request *wflows.IBPartitionSearchFilter) (response *wflows.IBPartitionIdList, err error) {
 	log.Info().Interface("request", request).Msg("FindInfinibandPartitionIDs: received request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-FindInfinibandPartitionIDs")
+	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "NicoClient-FindInfinibandPartitionIDs")
 	defer span.End()
 
 	if request == nil {
 		request = &wflows.IBPartitionSearchFilter{}
 	}
 
-	response, err = ibp.carbide.FindIBPartitionIds(ctx, request)
+	response, err = ibp.nico.FindIBPartitionIds(ctx, request)
 	if err != nil {
 		log.Error().Err(err).Msg("FindIBPartitionIds: error")
 		return nil, err
@@ -130,14 +130,14 @@ func (ibp *network) FindInfinibandPartitionIDs(ctx context.Context, request *wfl
 
 func (ibp *network) FindInfinibandPartitionsByIDs(ctx context.Context, request *wflows.IBPartitionsByIdsRequest) (response *wflows.IBPartitionList, err error) {
 	log.Info().Interface("request", request).Msg("FindInfinibandPartitionsByIDs: received request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-FindInfinibandPartitionsByIDs")
+	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "NicoClient-FindInfinibandPartitionsByIDs")
 	defer span.End()
 
 	if request == nil {
 		request = &wflows.IBPartitionsByIdsRequest{}
 	}
 
-	response, err = ibp.carbide.FindIBPartitionsByIds(ctx, request)
+	response, err = ibp.nico.FindIBPartitionsByIds(ctx, request)
 	if err != nil {
 		log.Error().Err(err).Msg("FindIBPartitionsByIds: error")
 		return nil, err

@@ -62,7 +62,7 @@ type sites struct {
 }
 
 // newSites returns a Sites
-func newSites(c *ForgeV1Client, namespace string) *sites {
+func newSites(c *NicoV1Client, namespace string) *sites {
 	return &sites{
 		client: c.RESTClient(),
 		ns:     namespace,

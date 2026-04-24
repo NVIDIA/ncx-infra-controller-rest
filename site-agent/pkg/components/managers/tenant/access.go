@@ -29,10 +29,10 @@ var ManagerAccess *Manager.ManagerAccess
 type API struct{}
 
 // NewTenantManager - returns a new instance of Tenant manager
-func NewTenantManager(superForge *elektratypes.Elektra, superAPI *Manager.ManagerAPI, superConf *Manager.ManagerConf) *API {
+func NewTenantManager(superNico *elektratypes.Elektra, superAPI *Manager.ManagerAPI, superConf *Manager.ManagerConf) *API {
 	ManagerAccess = &Manager.ManagerAccess{
 		Data: &Manager.ManagerData{
-			EB: superForge,
+			EB: superNico,
 		},
 		API:  superAPI,
 		Conf: superConf,

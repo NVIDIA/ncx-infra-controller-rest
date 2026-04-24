@@ -34,15 +34,15 @@ import (
 )
 
 const (
-	DefaultCarbideClientCAPath   = "/etc/carbide/ca.crt"
-	DefaultCarbideClientCertPath = "/etc/carbide/tls.crt"
-	DefaultCarbideClientKeyPath  = "/etc/carbide/tls.key"
+	DefaultNicoClientCAPath   = "/etc/nico/ca.crt"
+	DefaultNicoClientCertPath = "/etc/nico/tls.crt"
+	DefaultNicoClientKeyPath  = "/etc/nico/tls.key"
 
-	// RLA uses the same SPIFFE trust domain (forge.local) and vault-forge-issuer as Carbide,
-	// so we can reuse the Carbide certificates for mTLS with RLA.
-	DefaultRLAClientCAPath   = "/etc/carbide/ca.crt"
-	DefaultRLAClientCertPath = "/etc/carbide/tls.crt"
-	DefaultRLAClientKeyPath  = "/etc/carbide/tls.key"
+	// RLA uses the same SPIFFE trust domain (nico.local) and vault-nico-issuer as Nico,
+	// so we can reuse the Nico certificates for mTLS with RLA.
+	DefaultRLAClientCAPath   = "/etc/nico/ca.crt"
+	DefaultRLAClientCertPath = "/etc/nico/tls.crt"
+	DefaultRLAClientKeyPath  = "/etc/nico/tls.key"
 )
 
 // NewElektraConfig reads configurations from env variables and returns
@@ -62,12 +62,12 @@ func NewElektraConfig(utMode bool) *conftypes.Config {
 	conf.RunningIn = determineEnvironment()
 	conf.UtMode = utMode
 
-	// Carbide config
-	flag.StringVar(&conf.Carbide.Address, "carbideAddress", os.Getenv("CARBIDE_ADDRESS"), "Carbide Address")
-	if conf.Carbide.Address == "" {
-		conf.Carbide.Address = "carbide-api.forge-system.svc.cluster.local:1079"
+	// Nico config
+	flag.StringVar(&conf.Nico.Address, "nicoAddress", os.Getenv("NICO_ADDRESS"), "Nico Address")
+	if conf.Nico.Address == "" {
+		conf.Nico.Address = "nico-api.nico-system.svc.cluster.local:1079"
 	}
-	cSecOpt, err := strconv.Atoi(os.Getenv("CARBIDE_SEC_OPT"))
+	cSecOpt, err := strconv.Atoi(os.Getenv("NICO_SEC_OPT"))
 	if err != nil {
 		log.Info().Msg(err.Error())
 		cSecOpt = int(client.ServerTLS)
@@ -76,27 +76,27 @@ func NewElektraConfig(utMode bool) *conftypes.Config {
 		cSecOpt = int(client.ServerTLS)
 	}
 	sOpt := 0
-	flag.IntVar(&sOpt, "carbideSecureOptions", cSecOpt, "Carbide security option")
-	conf.Carbide.Secure = client.SecureOptions(sOpt)
-	flag.StringVar(&conf.Carbide.ServerCAPath, "carbideCertPath", os.Getenv("CARBIDE_CA_CERT_PATH"), "Carbide Cert Path")
-	if conf.Carbide.ServerCAPath == "" {
-		conf.Carbide.ServerCAPath = DefaultCarbideClientCAPath
+	flag.IntVar(&sOpt, "nicoSecureOptions", cSecOpt, "Nico security option")
+	conf.Nico.Secure = client.SecureOptions(sOpt)
+	flag.StringVar(&conf.Nico.ServerCAPath, "nicoCertPath", os.Getenv("NICO_CA_CERT_PATH"), "Nico Cert Path")
+	if conf.Nico.ServerCAPath == "" {
+		conf.Nico.ServerCAPath = DefaultNicoClientCAPath
 	}
-	flag.StringVar(&conf.Carbide.ClientCertPath, "carbideClientCertPath", os.Getenv("CARBIDE_CLIENT_CERT_PATH"), "Carbide client Cert Path")
-	if conf.Carbide.ClientCertPath == "" {
-		conf.Carbide.ClientCertPath = DefaultCarbideClientCertPath
+	flag.StringVar(&conf.Nico.ClientCertPath, "nicoClientCertPath", os.Getenv("NICO_CLIENT_CERT_PATH"), "Nico client Cert Path")
+	if conf.Nico.ClientCertPath == "" {
+		conf.Nico.ClientCertPath = DefaultNicoClientCertPath
 	}
-	flag.StringVar(&conf.Carbide.ClientKeyPath, "carbideClientKeyPath", os.Getenv("CARBIDE_CLIENT_KEY_PATH"), "Carbide client Cert Path")
-	if conf.Carbide.ClientKeyPath == "" {
-		conf.Carbide.ClientKeyPath = DefaultCarbideClientKeyPath
+	flag.StringVar(&conf.Nico.ClientKeyPath, "nicoClientKeyPath", os.Getenv("NICO_CLIENT_KEY_PATH"), "Nico client Cert Path")
+	if conf.Nico.ClientKeyPath == "" {
+		conf.Nico.ClientKeyPath = DefaultNicoClientKeyPath
 	}
 
-	log.Info().Msg(conf.Carbide.Address)
-	log.Info().Msg(strconv.Itoa(int(conf.Carbide.Secure)))
+	log.Info().Msg(conf.Nico.Address)
+	log.Info().Msg(strconv.Itoa(int(conf.Nico.Secure)))
 
-	log.Info().Msg("CA Path:" + conf.Carbide.ServerCAPath)
-	log.Info().Msg("client Cert:" + conf.Carbide.ClientCertPath)
-	log.Info().Msg("client Key:" + conf.Carbide.ClientKeyPath)
+	log.Info().Msg("CA Path:" + conf.Nico.ServerCAPath)
+	log.Info().Msg("client Cert:" + conf.Nico.ClientCertPath)
+	log.Info().Msg("client Key:" + conf.Nico.ClientKeyPath)
 
 	// RLA config
 	flag.StringVar(&conf.RLA.Address, "rlaAddress", os.Getenv("RLA_ADDRESS"), "RLA Address")
@@ -147,7 +147,7 @@ func NewElektraConfig(utMode bool) *conftypes.Config {
 	flag.StringVar(&conf.TemporalSecret, "temporalSecret", os.Getenv("TEMPORAL_CERT"), "Temporal cert secret")
 	flag.StringVar(&conf.CloudVersion, "cloudVersion", os.Getenv("CLOUD_WORKFLOW_VERSION"), "Cloud Workflow Proto version")
 	flag.StringVar(&conf.SiteVersion, "siteVersion", os.Getenv("SITE_WORKFLOW_VERSION"), "Site Workflow Proto version")
-	flag.StringVar(&skipServerAuth, "carbideSkipServerAuth", os.Getenv("SKIP_GRPC_SERVER_AUTH"), "Skip gRPC server auth in TLS")
+	flag.StringVar(&skipServerAuth, "nicoSkipServerAuth", os.Getenv("SKIP_GRPC_SERVER_AUTH"), "Skip gRPC server auth in TLS")
 
 	var skipRlaServerAuth string
 	flag.StringVar(&skipRlaServerAuth, "rlaSkipServerAuth", os.Getenv("SKIP_RLA_GRPC_SERVER_AUTH"), "Skip RLA gRPC server auth in TLS")
@@ -189,7 +189,7 @@ func NewElektraConfig(utMode bool) *conftypes.Config {
 	conf.DevMode = strings.ToLower(devmode) == "true"
 	conf.EnableTLS = strings.ToLower(enableTLS) == "true"
 	conf.DisableBootstrap = strings.ToLower(disableBootstrap) == "true"
-	conf.Carbide.SkipServerAuth = strings.ToLower(skipServerAuth) == "true"
+	conf.Nico.SkipServerAuth = strings.ToLower(skipServerAuth) == "true"
 	conf.RLA.SkipServerAuth = strings.ToLower(skipRlaServerAuth) == "true"
 	conf.RLA.Enabled = strings.ToLower(rlaEnabled) == "true"
 
@@ -249,7 +249,7 @@ func NewElektraConfig(utMode bool) *conftypes.Config {
 	flag.StringVar(&conf.Temporal.TemporalSubscribeQueue, "TemporalSubscribeQueue", temporalSubscribeQueue, "Temporal Subscribe queue")
 	flag.StringVar(&conf.Temporal.TemporalPublishNamespace, "TemporalPublishNamespace", temporalPublishNamespace, "Temporal Publish Namespace")
 	flag.StringVar(&conf.Temporal.TemporalSubscribeNamespace, "TemporalSubscribeNamespace", temporalSubscribeNamespace, "Temporal Subscribe Namespace")
-	flag.StringVar(&conf.Temporal.ClusterID, "ClusterID", clusterID, "Forge Site cluster ID")
+	flag.StringVar(&conf.Temporal.ClusterID, "ClusterID", clusterID, "Nico Site cluster ID")
 	flag.StringVar(&conf.Temporal.TemporalCertPath, "TemporalCertPath", temporalCertPath, "Temporal cert path")
 	flag.StringVar(&conf.Temporal.TemporalServer, "TemporalServer", os.Getenv("TEMPORAL_SERVER"), "Temporal server")
 	flag.StringVar(&conf.Temporal.TemporalInventorySchedule, "TemporalInventorySchedule", os.Getenv("TEMPORAL_INVENTORY_SCHEDULE"), "Temporal Inventory schedule")

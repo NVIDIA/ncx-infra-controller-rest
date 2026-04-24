@@ -43,7 +43,7 @@ CreateDpuExtensionService Create DPU Extension Service
 
 Create a DPU Extension Service for the current Tenant.
 
-Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` authorization role.
+Org must have a Tenant entity. User must have `NICO_TENANT_ADMIN` authorization role.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -73,7 +73,7 @@ func (a *DPUExtensionServiceAPIService) CreateDpuExtensionServiceExecute(r ApiCr
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/dpu-extension-service"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/dpu-extension-service"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -122,7 +122,7 @@ func (a *DPUExtensionServiceAPIService) CreateDpuExtensionServiceExecute(r ApiCr
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 400 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -133,7 +133,7 @@ func (a *DPUExtensionServiceAPIService) CreateDpuExtensionServiceExecute(r ApiCr
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -175,7 +175,7 @@ Delete a specific DPU Extension Service by ID. All versions will be deleted.
 
 DPU Extension Service must be owned by current Tenant. No versions of the DPU Extension Service can have active deployments.
 
-Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` authorization role.
+Org must have a Tenant entity. User must have `NICO_TENANT_ADMIN` authorization role.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -204,7 +204,7 @@ func (a *DPUExtensionServiceAPIService) DeleteDpuExtensionServiceExecute(r ApiDe
 		return nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/dpu-extension-service/{dpuExtensionServiceId}"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/dpu-extension-service/{dpuExtensionServiceId}"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"dpuExtensionServiceId"+"}", url.PathEscape(parameterValueToString(r.dpuExtensionServiceId, "dpuExtensionServiceId")), -1)
 
@@ -252,7 +252,7 @@ func (a *DPUExtensionServiceAPIService) DeleteDpuExtensionServiceExecute(r ApiDe
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -286,7 +286,7 @@ Delete a specific version of a DPU Extension Service.
 
 DPU Extension Service must be owned by current Tenant. The version being deleted cannot have active deployments.
 
-Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` authorization role.
+Org must have a Tenant entity. User must have `NICO_TENANT_ADMIN` authorization role.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -317,7 +317,7 @@ func (a *DPUExtensionServiceAPIService) DeleteDpuExtensionServiceVersionExecute(
 		return nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/dpu-extension-service/{dpuExtensionServiceId}/version/{version}"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/dpu-extension-service/{dpuExtensionServiceId}/version/{version}"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"dpuExtensionServiceId"+"}", url.PathEscape(parameterValueToString(r.dpuExtensionServiceId, "dpuExtensionServiceId")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"version"+"}", url.PathEscape(parameterValueToString(r.version, "version")), -1)
@@ -366,7 +366,7 @@ func (a *DPUExtensionServiceAPIService) DeleteDpuExtensionServiceVersionExecute(
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -445,7 +445,7 @@ GetAllDpuExtensionService Retrieve all DPU Extension Services
 
 # Retrieve all DPU Extension Services for the current Tenant
 
-Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` authorization role.
+Org must have a Tenant entity. User must have `NICO_TENANT_ADMIN` authorization role.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -475,7 +475,7 @@ func (a *DPUExtensionServiceAPIService) GetAllDpuExtensionServiceExecute(r ApiGe
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/dpu-extension-service"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/dpu-extension-service"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -547,7 +547,7 @@ func (a *DPUExtensionServiceAPIService) GetAllDpuExtensionServiceExecute(r ApiGe
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -589,7 +589,7 @@ GetDpuExtensionService Retrieve DPU Extension Service
 
 DPU Extension Service must be owned by current Tenant.
 
-Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` authorization role.
+Org must have a Tenant entity. User must have `NICO_TENANT_ADMIN` authorization role.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -621,7 +621,7 @@ func (a *DPUExtensionServiceAPIService) GetDpuExtensionServiceExecute(r ApiGetDp
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/dpu-extension-service/{dpuExtensionServiceId}"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/dpu-extension-service/{dpuExtensionServiceId}"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"dpuExtensionServiceId"+"}", url.PathEscape(parameterValueToString(r.dpuExtensionServiceId, "dpuExtensionServiceId")), -1)
 
@@ -669,7 +669,7 @@ func (a *DPUExtensionServiceAPIService) GetDpuExtensionServiceExecute(r ApiGetDp
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -712,7 +712,7 @@ Retrieve details for a specific version of a DPU Extension Service.
 
 DPU Extension Service must be owned by current Tenant.
 
-Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` authorization role.
+Org must have a Tenant entity. User must have `NICO_TENANT_ADMIN` authorization role.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -746,7 +746,7 @@ func (a *DPUExtensionServiceAPIService) GetDpuExtensionServiceVersionExecute(r A
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/dpu-extension-service/{dpuExtensionServiceId}/version/{version}"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/dpu-extension-service/{dpuExtensionServiceId}/version/{version}"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"dpuExtensionServiceId"+"}", url.PathEscape(parameterValueToString(r.dpuExtensionServiceId, "dpuExtensionServiceId")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"version"+"}", url.PathEscape(parameterValueToString(r.version, "version")), -1)
@@ -795,7 +795,7 @@ func (a *DPUExtensionServiceAPIService) GetDpuExtensionServiceVersionExecute(r A
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -806,7 +806,7 @@ func (a *DPUExtensionServiceAPIService) GetDpuExtensionServiceVersionExecute(r A
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 404 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -854,7 +854,7 @@ Update a specific DPU Extension Service.
 
 DPU Extension Service must be owned by current Tenant. A new version will be created if data or credentials are modified.
 
-Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` authorization role.
+Org must have a Tenant entity. User must have `NICO_TENANT_ADMIN` authorization role.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -886,7 +886,7 @@ func (a *DPUExtensionServiceAPIService) UpdateDpuExtensionServiceExecute(r ApiUp
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/dpu-extension-service/{dpuExtensionServiceId}"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/dpu-extension-service/{dpuExtensionServiceId}"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"dpuExtensionServiceId"+"}", url.PathEscape(parameterValueToString(r.dpuExtensionServiceId, "dpuExtensionServiceId")), -1)
 
@@ -936,7 +936,7 @@ func (a *DPUExtensionServiceAPIService) UpdateDpuExtensionServiceExecute(r ApiUp
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 400 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -947,7 +947,7 @@ func (a *DPUExtensionServiceAPIService) UpdateDpuExtensionServiceExecute(r ApiUp
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -958,7 +958,7 @@ func (a *DPUExtensionServiceAPIService) UpdateDpuExtensionServiceExecute(r ApiUp
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 404 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()

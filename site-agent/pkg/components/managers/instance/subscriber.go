@@ -35,7 +35,7 @@ func (api *API) RegisterSubscriber() error {
 		ManagerAccess.Conf.EB,
 	)
 
-	instanceManager := swa.NewManageInstance(ManagerAccess.Data.EB.Managers.Carbide.Client)
+	instanceManager := swa.NewManageInstance(ManagerAccess.Data.EB.Managers.Nico.Client)
 
 	// Register workflows
 

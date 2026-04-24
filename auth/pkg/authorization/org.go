@@ -24,11 +24,11 @@ import (
 
 const (
 	// ProviderAdminRole is the role that gives Provider Admin access to an org
-	ProviderAdminRole = "FORGE_PROVIDER_ADMIN"
+	ProviderAdminRole = "NICO_PROVIDER_ADMIN"
 	// ProviderViewerRole is the role that gives Provider Viewer access to an org
-	ProviderViewerRole = "FORGE_PROVIDER_VIEWER"
+	ProviderViewerRole = "NICO_PROVIDER_VIEWER"
 	// TenantAdminRole is the role that gives Tenant Admin access to an org
-	TenantAdminRole = "FORGE_TENANT_ADMIN"
+	TenantAdminRole = "NICO_TENANT_ADMIN"
 )
 
 // ValidateOrgMembership validates if a given user is member of an org

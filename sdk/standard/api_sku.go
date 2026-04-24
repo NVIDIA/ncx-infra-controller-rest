@@ -69,9 +69,9 @@ SKUs represent unique hardware configurations discovered at sites. They are auto
 
 A `siteId` query parameter is required for all requests.
 
-For Infrastructure Providers: Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` or `FORGE_PROVIDER_VIEWER` role.
+For Infrastructure Providers: Org must have an Infrastructure Provider entity. User must have `NICO_PROVIDER_ADMIN` or `NICO_PROVIDER_VIEWER` role.
 
-For Tenants: Org must have a Tenant with `TargetedInstanceCreation` capability enabled. User must have `FORGE_TENANT_ADMIN` role. The Tenant must have an account with the Site's Infrastructure Provider.
+For Tenants: Org must have a Tenant with `TargetedInstanceCreation` capability enabled. User must have `NICO_TENANT_ADMIN` role. The Tenant must have an account with the Site's Infrastructure Provider.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -101,7 +101,7 @@ func (a *SKUAPIService) GetAllSkuExecute(r ApiGetAllSkuRequest) ([]Sku, *http.Re
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/sku"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/sku"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -165,7 +165,7 @@ func (a *SKUAPIService) GetAllSkuExecute(r ApiGetAllSkuRequest) ([]Sku, *http.Re
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 400 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -176,7 +176,7 @@ func (a *SKUAPIService) GetAllSkuExecute(r ApiGetAllSkuRequest) ([]Sku, *http.Re
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -218,9 +218,9 @@ Retrieve a specific SKU (Stock Keeping Unit) by ID.
 
 SKUs represent unique hardware configurations discovered at sites. They are automatically derived from machine characteristics.
 
-For Infrastructure Providers: Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` or `FORGE_PROVIDER_VIEWER` role.
+For Infrastructure Providers: Org must have an Infrastructure Provider entity. User must have `NICO_PROVIDER_ADMIN` or `NICO_PROVIDER_VIEWER` role.
 
-For Tenants: Org must have a Tenant with `TargetedInstanceCreation` capability enabled. User must have `FORGE_TENANT_ADMIN` role. The Tenant must have an account with the SKU's Site's Infrastructure Provider.
+For Tenants: Org must have a Tenant with `TargetedInstanceCreation` capability enabled. User must have `NICO_TENANT_ADMIN` role. The Tenant must have an account with the SKU's Site's Infrastructure Provider.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -252,7 +252,7 @@ func (a *SKUAPIService) GetSkuExecute(r ApiGetSkuRequest) (*Sku, *http.Response,
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/sku/{skuId}"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/sku/{skuId}"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"skuId"+"}", url.PathEscape(parameterValueToString(r.skuId, "skuId")), -1)
 
@@ -300,7 +300,7 @@ func (a *SKUAPIService) GetSkuExecute(r ApiGetSkuRequest) (*Sku, *http.Response,
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 400 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -311,7 +311,7 @@ func (a *SKUAPIService) GetSkuExecute(r ApiGetSkuRequest) (*Sku, *http.Response,
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -322,7 +322,7 @@ func (a *SKUAPIService) GetSkuExecute(r ApiGetSkuRequest) (*Sku, *http.Response,
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 404 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()

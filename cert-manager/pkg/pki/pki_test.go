@@ -150,8 +150,8 @@ func TestNewCA_Defaults(t *testing.T) {
 		t.Fatalf("Failed to parse CA certificate: %v", err)
 	}
 
-	if cert.Subject.CommonName != "Carbide Local CA" {
-		t.Errorf("Expected default CommonName 'Carbide Local CA', got '%s'", cert.Subject.CommonName)
+	if cert.Subject.CommonName != "Nico Local CA" {
+		t.Errorf("Expected default CommonName 'Nico Local CA', got '%s'", cert.Subject.CommonName)
 	}
 
 	if len(cert.Subject.Organization) == 0 || cert.Subject.Organization[0] != "NVIDIA" {

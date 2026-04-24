@@ -27,7 +27,7 @@ func (api *API) RegisterSubscriber() error {
 	// Register the subscribers here
 	ManagerAccess.Data.EB.Log.Info().Msg("InstanceType: Registering the subscribers")
 
-	instanceTypeManager := swa.NewManageInstanceType(ManagerAccess.Data.EB.Managers.Carbide.Client)
+	instanceTypeManager := swa.NewManageInstanceType(ManagerAccess.Data.EB.Managers.Nico.Client)
 
 	//  Register Workflows
 

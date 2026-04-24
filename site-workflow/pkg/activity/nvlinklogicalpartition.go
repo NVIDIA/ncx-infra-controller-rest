@@ -56,8 +56,8 @@ func NewManageNVLinkLogicalPartitionInventory(config ManageInventoryConfig) Mana
 	}
 }
 
-func nvllpFindIDs(ctx context.Context, carbideClient *cClient.CarbideClient) ([]*cwssaws.NVLinkLogicalPartitionId, error) {
-	resp, err := carbideClient.Carbide().FindNVLinkLogicalPartitionIds(ctx, &cwssaws.NVLinkLogicalPartitionSearchFilter{})
+func nvllpFindIDs(ctx context.Context, nicoClient *cClient.NicoClient) ([]*cwssaws.NVLinkLogicalPartitionId, error) {
+	resp, err := nicoClient.Nico().FindNVLinkLogicalPartitionIds(ctx, &cwssaws.NVLinkLogicalPartitionSearchFilter{})
 	if err != nil {
 		return nil, err
 	}
@@ -68,11 +68,11 @@ func nvllpFindIDs(ctx context.Context, carbideClient *cClient.CarbideClient) ([]
 	return ids, nil
 }
 
-func nvllpFindByIDs(ctx context.Context, carbideClient *cClient.CarbideClient, ids []*cwssaws.NVLinkLogicalPartitionId) ([]*cwssaws.NVLinkLogicalPartition, error) {
+func nvllpFindByIDs(ctx context.Context, nicoClient *cClient.NicoClient, ids []*cwssaws.NVLinkLogicalPartitionId) ([]*cwssaws.NVLinkLogicalPartition, error) {
 	req := &cwssaws.NVLinkLogicalPartitionsByIdsRequest{
 		PartitionIds: ids,
 	}
-	resp, err := carbideClient.Carbide().FindNVLinkLogicalPartitionsByIds(ctx, req)
+	resp, err := nicoClient.Nico().FindNVLinkLogicalPartitionsByIds(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -105,17 +105,17 @@ func nvllpPagedInventory(allItemIDs []*cwssaws.NVLinkLogicalPartitionId, pagedIt
 
 // ManageNVLinkLogicalPartition is an activity wrapper for NVLinkLogical Partition management
 type ManageNVLinkLogicalPartition struct {
-	CarbideAtomicClient *cClient.CarbideAtomicClient
+	NicoAtomicClient *cClient.NicoAtomicClient
 }
 
 // NewManageNVLinkLogicalPartition returns a new ManageNVLinkLogicalPartition client
-func NewManageNVLinkLogicalPartition(carbideClient *cClient.CarbideAtomicClient) ManageNVLinkLogicalPartition {
+func NewManageNVLinkLogicalPartition(nicoClient *cClient.NicoAtomicClient) ManageNVLinkLogicalPartition {
 	return ManageNVLinkLogicalPartition{
-		CarbideAtomicClient: carbideClient,
+		NicoAtomicClient: nicoClient,
 	}
 }
 
-// Function to create NVLinkLogical Partition with Carbide
+// Function to create NVLinkLogical Partition with Nico
 func (mnvllp *ManageNVLinkLogicalPartition) CreateNVLinkLogicalPartitionOnSite(ctx context.Context, request *cwssaws.NVLinkLogicalPartitionCreationRequest) (*cwssaws.NVLinkLogicalPartition, error) {
 	logger := log.With().Str("Activity", "CreateNVLinkLogicalPartitionOnSite").Logger()
 
@@ -143,14 +143,14 @@ func (mnvllp *ManageNVLinkLogicalPartition) CreateNVLinkLogicalPartitionOnSite(c
 	}
 
 	// Call Site Controller gRPC endpoint
-	carbideClient := mnvllp.CarbideAtomicClient.GetClient()
-	if carbideClient == nil {
+	nicoClient := mnvllp.NicoAtomicClient.GetClient()
+	if nicoClient == nil {
 		return nil, cClient.ErrClientNotConnected
 	}
-	forgeClient := carbideClient.Carbide()
+	nicoClient := nicoClient.Nico()
 
-	// Call Forge gRPC endpoint
-	nvLinkLogicalPartition, err := forgeClient.CreateNVLinkLogicalPartition(ctx, request)
+	// Call Nico gRPC endpoint
+	nvLinkLogicalPartition, err := nicoClient.CreateNVLinkLogicalPartition(ctx, request)
 	if err != nil {
 		logger.Warn().Err(err).Msg("Failed to create NVLink Logical Partition using Site Controller API")
 		return nil, swe.WrapErr(err)
@@ -160,7 +160,7 @@ func (mnvllp *ManageNVLinkLogicalPartition) CreateNVLinkLogicalPartitionOnSite(c
 	return nvLinkLogicalPartition, nil
 }
 
-// Function to update NVLinkLogical Partition with Carbide
+// Function to update NVLinkLogical Partition with Nico
 func (mnvllp *ManageNVLinkLogicalPartition) UpdateNVLinkLogicalPartitionOnSite(ctx context.Context, request *cwssaws.NVLinkLogicalPartitionUpdateRequest) error {
 	logger := log.With().Str("Activity", "UpdateNVLinkLogicalPartitionOnSite").Logger()
 
@@ -186,14 +186,14 @@ func (mnvllp *ManageNVLinkLogicalPartition) UpdateNVLinkLogicalPartitionOnSite(c
 	}
 
 	// Call Site Controller gRPC endpoint
-	carbideClient := mnvllp.CarbideAtomicClient.GetClient()
-	if carbideClient == nil {
+	nicoClient := mnvllp.NicoAtomicClient.GetClient()
+	if nicoClient == nil {
 		return cClient.ErrClientNotConnected
 	}
-	forgeClient := carbideClient.Carbide()
+	nicoClient := nicoClient.Nico()
 
-	// Call Forge gRPC endpoint
-	_, err = forgeClient.UpdateNVLinkLogicalPartition(ctx, request)
+	// Call Nico gRPC endpoint
+	_, err = nicoClient.UpdateNVLinkLogicalPartition(ctx, request)
 	if err != nil {
 		logger.Warn().Err(err).Msg("Failed to update NVLink Logical Partition using Site Controller API")
 		return swe.WrapErr(err)
@@ -204,7 +204,7 @@ func (mnvllp *ManageNVLinkLogicalPartition) UpdateNVLinkLogicalPartitionOnSite(c
 	return nil
 }
 
-// Function to delete NVLinkLogical Partition on Carbide
+// Function to delete NVLinkLogical Partition on Nico
 func (mnvllp *ManageNVLinkLogicalPartition) DeleteNVLinkLogicalPartitionOnSite(ctx context.Context, request *cwssaws.NVLinkLogicalPartitionDeletionRequest) error {
 	logger := log.With().Str("Activity", "DeleteNVLinkLogicalPartitionOnSite").Logger()
 
@@ -224,13 +224,13 @@ func (mnvllp *ManageNVLinkLogicalPartition) DeleteNVLinkLogicalPartitionOnSite(c
 	}
 
 	// Call Site Controller gRPC endpoint
-	carbideClient := mnvllp.CarbideAtomicClient.GetClient()
-	if carbideClient == nil {
+	nicoClient := mnvllp.NicoAtomicClient.GetClient()
+	if nicoClient == nil {
 		return cClient.ErrClientNotConnected
 	}
-	forgeClient := carbideClient.Carbide()
+	nicoClient := nicoClient.Nico()
 
-	_, err = forgeClient.DeleteNVLinkLogicalPartition(ctx, request)
+	_, err = nicoClient.DeleteNVLinkLogicalPartition(ctx, request)
 	if err != nil {
 		logger.Warn().Err(err).Msg("Failed to delete NVLink Logical Partition using Site Controller API")
 		return swe.WrapErr(err)

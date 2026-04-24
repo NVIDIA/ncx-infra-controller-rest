@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"time"
 
-	carbidetypes "github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/datatypes/managertypes/carbide"
+	nicotypes "github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/datatypes/managertypes/nico"
 
 	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/log"
@@ -78,16 +78,16 @@ func (w *API) DoWorkflow(ctx workflow.Context, TransactionID *wflows.Transaction
 	retryOptions *wflows.WorkflowOptions) (actErr error, pubErr error) {
 	recordWflowStart(wflowMd.Statistics())
 	defer func(startTime time.Time) {
-		if ManagerAccess.Data.EB.Managers.Carbide.State.WflowMetrics != nil {
-			status := carbidetypes.WorkflowStatusSuccess
+		if ManagerAccess.Data.EB.Managers.Nico.State.WflowMetrics != nil {
+			status := nicotypes.WorkflowStatusSuccess
 			if actErr != nil && pubErr != nil {
-				status = carbidetypes.WorkflowStatusActivityPublishFailed
+				status = nicotypes.WorkflowStatusActivityPublishFailed
 			} else if actErr != nil {
-				status = carbidetypes.WorkflowStatusActivityFailed
+				status = nicotypes.WorkflowStatusActivityFailed
 			} else if pubErr != nil {
-				status = carbidetypes.WorkflowStatusPublishFailed
+				status = nicotypes.WorkflowStatusPublishFailed
 			}
-			ManagerAccess.Data.EB.Managers.Carbide.State.WflowMetrics.RecordLatency(wflowMd.ActivityType(), status, time.Since(startTime))
+			ManagerAccess.Data.EB.Managers.Nico.State.WflowMetrics.RecordLatency(wflowMd.ActivityType(), status, time.Since(startTime))
 		}
 	}(time.Now())
 	actErr, pubErr = doWorkflow(ctx, TransactionID, ResourceRequest, wflowMd, retryOptions)
@@ -168,16 +168,16 @@ func invokeActivity(ctx workflow.Context, TransactionID *wflows.TransactionID,
 	resourceType := wflowMd.ResourceType()
 
 	// 1. Make sure GRPC client is available
-	if ManagerAccess.Data.EB.Managers.Carbide.GetClient() == nil {
+	if ManagerAccess.Data.EB.Managers.Nico.GetClient() == nil {
 		ManagerAccess.Data.EB.Log.Info().Str("Workflow", wflowMd.ActivityType()).Msgf("%v: GRPC client is not available creating one", resourceType)
-		err = ManagerAccess.API.Carbide.CreateGRPCClient()
+		err = ManagerAccess.API.Nico.CreateGRPCClient()
 		if err != nil {
 			wflowMd.ResponseState(wflows.WorkflowStatus_WORKFLOW_STATUS_FAILURE,
 				wflows.ObjectStatus_OBJECT_STATUS_UNSPECIFIED, err.Error())
 			return err
 		}
 	}
-	if ManagerAccess.Data.EB.Managers.Carbide.GetClient() == nil {
+	if ManagerAccess.Data.EB.Managers.Nico.GetClient() == nil {
 		err = fmt.Errorf("%v: Failed to create grpc client connection handle", resourceType)
 		wflowMd.ResponseState(wflows.WorkflowStatus_WORKFLOW_STATUS_FAILURE,
 			wflows.ObjectStatus_OBJECT_STATUS_UNSPECIFIED, err.Error())

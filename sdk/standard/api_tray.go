@@ -44,7 +44,7 @@ FirmwareUpdateTray Firmware update a Tray
 
 Update firmware on a Tray identified by Tray UUID.
 
-Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` authorization role.
+Org must have an Infrastructure Provider entity. User must have `NICO_PROVIDER_ADMIN` authorization role.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -76,7 +76,7 @@ func (a *TrayAPIService) FirmwareUpdateTrayExecute(r ApiFirmwareUpdateTrayReques
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/tray/{id}/firmware"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/tray/{id}/firmware"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterValueToString(r.id, "id")), -1)
 
@@ -129,7 +129,7 @@ func (a *TrayAPIService) FirmwareUpdateTrayExecute(r ApiFirmwareUpdateTrayReques
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 400 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -140,7 +140,7 @@ func (a *TrayAPIService) FirmwareUpdateTrayExecute(r ApiFirmwareUpdateTrayReques
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -190,7 +190,7 @@ Update firmware on Trays with optional filters. If no filter is specified, targe
 - `rackId`/`rackName` cannot be combined with `ids`/`componentIds` (rack-level vs component-level targeting)
 - `componentIds` requires `type` to be specified
 
-Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` authorization role.
+Org must have an Infrastructure Provider entity. User must have `NICO_PROVIDER_ADMIN` authorization role.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -220,7 +220,7 @@ func (a *TrayAPIService) FirmwareUpdateTraysExecute(r ApiFirmwareUpdateTraysRequ
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/tray/firmware"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/tray/firmware"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -272,7 +272,7 @@ func (a *TrayAPIService) FirmwareUpdateTraysExecute(r ApiFirmwareUpdateTraysRequ
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 400 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -283,7 +283,7 @@ func (a *TrayAPIService) FirmwareUpdateTraysExecute(r ApiFirmwareUpdateTraysRequ
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -385,7 +385,7 @@ GetAllTray Retrieve all Trays
 
 Get all Trays (components) for the specified Site.
 
-Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` authorization role.
+Org must have an Infrastructure Provider entity. User must have `NICO_PROVIDER_ADMIN` authorization role.
 
 **Filter constraints:**
 - `rackId` and `rackName` are mutually exclusive
@@ -420,7 +420,7 @@ func (a *TrayAPIService) GetAllTrayExecute(r ApiGetAllTrayRequest) ([]Tray, *htt
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/tray"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/tray"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -499,7 +499,7 @@ func (a *TrayAPIService) GetAllTrayExecute(r ApiGetAllTrayRequest) ([]Tray, *htt
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -546,7 +546,7 @@ GetTray Retrieve a Tray
 
 Get a Tray by ID.
 
-Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` authorization role.
+Org must have an Infrastructure Provider entity. User must have `NICO_PROVIDER_ADMIN` authorization role.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -578,7 +578,7 @@ func (a *TrayAPIService) GetTrayExecute(r ApiGetTrayRequest) (*Tray, *http.Respo
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/tray/{id}"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/tray/{id}"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterValueToString(r.id, "id")), -1)
 
@@ -630,7 +630,7 @@ func (a *TrayAPIService) GetTrayExecute(r ApiGetTrayRequest) (*Tray, *http.Respo
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -641,7 +641,7 @@ func (a *TrayAPIService) GetTrayExecute(r ApiGetTrayRequest) (*Tray, *http.Respo
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 404 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -689,7 +689,7 @@ Power control a Tray identified by Tray UUID.
 
 Supported power states: `on`, `off`, `cycle`, `forceoff`, `forcecycle`.
 
-Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` authorization role.
+Org must have an Infrastructure Provider entity. User must have `NICO_PROVIDER_ADMIN` authorization role.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -721,7 +721,7 @@ func (a *TrayAPIService) PowerControlTrayExecute(r ApiPowerControlTrayRequest) (
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/tray/{id}/power"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/tray/{id}/power"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterValueToString(r.id, "id")), -1)
 
@@ -774,7 +774,7 @@ func (a *TrayAPIService) PowerControlTrayExecute(r ApiPowerControlTrayRequest) (
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 400 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -785,7 +785,7 @@ func (a *TrayAPIService) PowerControlTrayExecute(r ApiPowerControlTrayRequest) (
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -837,7 +837,7 @@ Supported power states: `on`, `off`, `cycle`, `forceoff`, `forcecycle`.
 - `rackId`/`rackName` cannot be combined with `ids`/`componentIds` (rack-level vs component-level targeting)
 - `componentIds` requires `type` to be specified
 
-Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` authorization role.
+Org must have an Infrastructure Provider entity. User must have `NICO_PROVIDER_ADMIN` authorization role.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -867,7 +867,7 @@ func (a *TrayAPIService) PowerControlTraysExecute(r ApiPowerControlTraysRequest)
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/tray/power"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/tray/power"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -919,7 +919,7 @@ func (a *TrayAPIService) PowerControlTraysExecute(r ApiPowerControlTraysRequest)
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 400 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -930,7 +930,7 @@ func (a *TrayAPIService) PowerControlTraysExecute(r ApiPowerControlTraysRequest)
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -979,7 +979,7 @@ Validate a Tray by comparing expected vs actual state.
 
 Compares the expected component configuration against the actual state. Returns a detailed diff report showing missing, extra, and drifted components.
 
-Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` authorization role.
+Org must have an Infrastructure Provider entity. User must have `NICO_PROVIDER_ADMIN` authorization role.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -1011,7 +1011,7 @@ func (a *TrayAPIService) ValidateTrayExecute(r ApiValidateTrayRequest) (*RackVal
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/tray/{id}/validation"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/tray/{id}/validation"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterValueToString(r.id, "id")), -1)
 
@@ -1063,7 +1063,7 @@ func (a *TrayAPIService) ValidateTrayExecute(r ApiValidateTrayRequest) (*RackVal
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 400 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -1074,7 +1074,7 @@ func (a *TrayAPIService) ValidateTrayExecute(r ApiValidateTrayRequest) (*RackVal
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -1166,7 +1166,7 @@ If no filter is specified, validates all trays in the Site. Use rackId/rackName 
 
 Compares the expected component configuration against the actual state. Returns a detailed diff report showing missing, extra, and drifted components.
 
-Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` authorization role.
+Org must have an Infrastructure Provider entity. User must have `NICO_PROVIDER_ADMIN` authorization role.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -1196,7 +1196,7 @@ func (a *TrayAPIService) ValidateTraysExecute(r ApiValidateTraysRequest) (*RackV
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/tray/validation"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/tray/validation"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -1265,7 +1265,7 @@ func (a *TrayAPIService) ValidateTraysExecute(r ApiValidateTraysRequest) (*RackV
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 400 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -1276,7 +1276,7 @@ func (a *TrayAPIService) ValidateTraysExecute(r ApiValidateTraysRequest) (*RackV
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()

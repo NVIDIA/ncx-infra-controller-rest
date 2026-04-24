@@ -20,8 +20,8 @@ package workflows.v1;
 import "google/protobuf/timestamp.proto";
 
 import "workflow.proto";
-import "common_carbide.proto";
-import "forge_carbide.proto";
+import "common_nico.proto";
+import "nico_nico.proto";
 
 option go_package = "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/proto";
 
@@ -35,9 +35,9 @@ message ExpectedSwitchInventory {
   // Reported timestamp of Expected Switch inventory
   google.protobuf.Timestamp timestamp = 3;
   // List of Expected Switches
-  repeated forge.ExpectedSwitch expected_switches = 4;
+  repeated nico.ExpectedSwitch expected_switches = 4;
   // Inventory page information
   InventoryPage inventory_page = 5;
   // Linked Expected Switches (contains Switch ID)
-  repeated forge.LinkedExpectedSwitch linked_switches = 6;
+  repeated nico.LinkedExpectedSwitch linked_switches = 6;
 }

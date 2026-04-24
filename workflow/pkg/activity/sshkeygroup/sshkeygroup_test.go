@@ -75,13 +75,13 @@ func TestManageSSHKeyGroup_SyncSSHKeyGroupViaSiteAgent(t *testing.T) {
 	util.TestSetupSchema(t, dbSession)
 
 	ipOrg := "test-provider-org"
-	ipRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	ipu := util.TestBuildUser(t, dbSession, uuid.NewString(), []string{ipOrg}, ipRoles)
 	ip := util.TestBuildInfrastructureProvider(t, dbSession, "test-provider", ipOrg, ipu)
 
 	tnOrg := "test-tenant-org"
-	tnRoles := []string{"FORGE_TENANT_ADMIN"}
+	tnRoles := []string{"NICO_TENANT_ADMIN"}
 
 	tnu := util.TestBuildUser(t, dbSession, uuid.NewString(), []string{tnOrg}, tnRoles)
 
@@ -611,13 +611,13 @@ func TestManageSSHKeyGroup_UpdateSSHKeyGroupInDB(t *testing.T) {
 	util.TestSetupSchema(t, dbSession)
 
 	ipOrg := "test-provider-org"
-	ipRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	ipu := util.TestBuildUser(t, dbSession, uuid.NewString(), []string{ipOrg}, ipRoles)
 	ip := util.TestBuildInfrastructureProvider(t, dbSession, "test-provider", ipOrg, ipu)
 
 	tnOrg := "test-tenant-org"
-	tnRoles := []string{"FORGE_TENANT_ADMIN"}
+	tnRoles := []string{"NICO_TENANT_ADMIN"}
 
 	tnu := util.TestBuildUser(t, dbSession, uuid.NewString(), []string{tnOrg}, tnRoles)
 
@@ -969,13 +969,13 @@ func TestManageSSHKeyGroup_UpdateSSHKeyGroupStatusInDB(t *testing.T) {
 	util.TestSetupSchema(t, dbSession)
 
 	ipOrg := "test-provider-org"
-	ipRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	ipu := util.TestBuildUser(t, dbSession, uuid.NewString(), []string{ipOrg}, ipRoles)
 	ip := util.TestBuildInfrastructureProvider(t, dbSession, "test-provider", ipOrg, ipu)
 
 	tnOrg := "test-tenant-org"
-	tnRoles := []string{"FORGE_TENANT_ADMIN"}
+	tnRoles := []string{"NICO_TENANT_ADMIN"}
 
 	tnu := util.TestBuildUser(t, dbSession, uuid.NewString(), []string{tnOrg}, tnRoles)
 
@@ -1214,13 +1214,13 @@ func TestManageSSHKeyGroup_UpdateSSHKeyGroupsInDB(t *testing.T) {
 	util.TestSetupSchema(t, dbSession)
 
 	ipOrg := "test-provider-org"
-	ipRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	ipu := util.TestBuildUser(t, dbSession, uuid.NewString(), []string{ipOrg}, ipRoles)
 	ip := util.TestBuildInfrastructureProvider(t, dbSession, "test-provider", ipOrg, ipu)
 
 	tnOrg := "test-tenant-org"
-	tnRoles := []string{"FORGE_TENANT_ADMIN"}
+	tnRoles := []string{"NICO_TENANT_ADMIN"}
 
 	tnu := util.TestBuildUser(t, dbSession, uuid.NewString(), []string{tnOrg}, tnRoles)
 
@@ -1573,13 +1573,13 @@ func TestManageSSHKeyGroup_DeleteSSHKeyGroupViaSiteAgent(t *testing.T) {
 	util.TestSetupSchema(t, dbSession)
 
 	ipOrg := "test-provider-org"
-	ipRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	ipu := util.TestBuildUser(t, dbSession, uuid.NewString(), []string{ipOrg}, ipRoles)
 	ip := util.TestBuildInfrastructureProvider(t, dbSession, "test-provider", ipOrg, ipu)
 
 	tnOrg := "test-tenant-org"
-	tnRoles := []string{"FORGE_TENANT_ADMIN"}
+	tnRoles := []string{"NICO_TENANT_ADMIN"}
 
 	tnu := util.TestBuildUser(t, dbSession, uuid.NewString(), []string{tnOrg}, tnRoles)
 
@@ -1731,13 +1731,13 @@ func TestSSHKeyAssociationNoPaginator(t *testing.T) {
 	util.TestSetupSchema(t, dbSession)
 
 	ipOrg := "test-provider-org"
-	ipRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	ipu := util.TestBuildUser(t, dbSession, uuid.NewString(), []string{ipOrg}, ipRoles)
 	ip := util.TestBuildInfrastructureProvider(t, dbSession, "test-provider", ipOrg, ipu)
 
 	tnOrg := "test-tenant-org"
-	tnRoles := []string{"FORGE_TENANT_ADMIN"}
+	tnRoles := []string{"NICO_TENANT_ADMIN"}
 
 	tnu := util.TestBuildUser(t, dbSession, uuid.NewString(), []string{tnOrg}, tnRoles)
 	assert.NotNil(t, tnu)

@@ -18,21 +18,21 @@ syntax = "proto3";
 import "google/protobuf/timestamp.proto";
 
 import "workflow.proto";
-import "forge_carbide.proto";
-import "machine_discovery_carbide.proto";
+import "nico_nico.proto";
+import "machine_discovery_nico.proto";
 
 option go_package = "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/proto";
 
 package workflows.v1.machine;
 
 message MachineInfo {
-  forge.Machine machine = 1;
+  nico.Machine machine = 1;
   machine_discovery.DiscoveryInfo discovery_info = 2;
 }
 
 message DpuMachine {
-  forge.Machine machine = 1;
-  forge.ManagedHostNetworkConfigResponse dpu_network_config = 2;
+  nico.Machine machine = 1;
+  nico.ManagedHostNetworkConfigResponse dpu_network_config = 2;
 }
 
 message MachineInventory {

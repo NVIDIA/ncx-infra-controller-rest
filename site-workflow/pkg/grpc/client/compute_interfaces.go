@@ -38,10 +38,10 @@ type ComputeInterface interface {
 }
 
 type compute struct {
-	// carbide client
-	carbide wflows.ForgeClient
+	// nico client
+	nico wflows.NicoClient
 }
 
-func newCompute(carbide wflows.ForgeClient) *compute {
-	return &compute{carbide: carbide}
+func newCompute(nico wflows.NicoClient) *compute {
+	return &compute{nico: nico}
 }

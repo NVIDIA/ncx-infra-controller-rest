@@ -36,7 +36,7 @@ func (api *API) RegisterSubscriber() error {
 	ManagerAccess.Data.EB.Log.Info().Msg("Tenant: successfully registered UpdateTenant workflow")
 
 	// Regsiter Activities
-	tenantManager := swa.NewManageTenant(ManagerAccess.Data.EB.Managers.Carbide.Client)
+	tenantManager := swa.NewManageTenant(ManagerAccess.Data.EB.Managers.Nico.Client)
 
 	// Sync workflow activities
 	// Register CreateTenantOnSite

@@ -24,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/carbide"
+	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/nico"
 	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/subnet"
 	wflows "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 	"github.com/google/uuid"
@@ -232,8 +232,8 @@ func TestSubnetWorkflows(t *testing.T) {
 	wflowPubFail = 0
 	wflowPubSucc = 1
 
-	carbide.ManagerAccess.Data.EB.Managers.Carbide.State.GrpcFail.Store(0)
-	carbide.ManagerAccess.Data.EB.Managers.Carbide.State.GrpcSucc.Store(0)
+	nico.ManagerAccess.Data.EB.Managers.Nico.State.GrpcFail.Store(0)
+	nico.ManagerAccess.Data.EB.Managers.Nico.State.GrpcSucc.Store(0)
 	wflowGrpcFail = 0
 	wflowGrpcSucc = 1
 

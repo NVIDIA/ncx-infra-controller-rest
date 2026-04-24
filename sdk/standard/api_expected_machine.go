@@ -44,7 +44,7 @@ BatchCreateExpectedMachines Batch Create Expected Machines
 
 Create multiple Expected Machines in a single request. All machines must belong to the same site.
 
-Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` role.
+Org must have an Infrastructure Provider entity. User must have `NICO_PROVIDER_ADMIN` role.
 
 Alternatively, Tenant Admins with `TargetedInstanceCreation` capability can also create Expected Machines if they have an account with the Site's Infrastructure Provider.
 
@@ -78,7 +78,7 @@ func (a *ExpectedMachineAPIService) BatchCreateExpectedMachinesExecute(r ApiBatc
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/expected-machine/batch"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/expected-machine/batch"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -136,7 +136,7 @@ func (a *ExpectedMachineAPIService) BatchCreateExpectedMachinesExecute(r ApiBatc
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 400 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -147,7 +147,7 @@ func (a *ExpectedMachineAPIService) BatchCreateExpectedMachinesExecute(r ApiBatc
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -193,7 +193,7 @@ BatchUpdateExpectedMachines Batch Update Expected Machines
 
 Update multiple Expected Machines in a single request. All machines must belong to the same site.
 
-Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` role.
+Org must have an Infrastructure Provider entity. User must have `NICO_PROVIDER_ADMIN` role.
 
 Infrastructure Provider must own the Expected Machines.
 
@@ -229,7 +229,7 @@ func (a *ExpectedMachineAPIService) BatchUpdateExpectedMachinesExecute(r ApiBatc
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/expected-machine/batch"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/expected-machine/batch"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -287,7 +287,7 @@ func (a *ExpectedMachineAPIService) BatchUpdateExpectedMachinesExecute(r ApiBatc
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 400 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -298,7 +298,7 @@ func (a *ExpectedMachineAPIService) BatchUpdateExpectedMachinesExecute(r ApiBatc
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -309,7 +309,7 @@ func (a *ExpectedMachineAPIService) BatchUpdateExpectedMachinesExecute(r ApiBatc
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 404 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -355,7 +355,7 @@ CreateExpectedMachine Create Expected Machine
 
 Create an Expected Machine to pre-register Machines expected to be discovered at a Site.
 
-Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` role.
+Org must have an Infrastructure Provider entity. User must have `NICO_PROVIDER_ADMIN` role.
 
 Alternatively, Tenant Admins with `TargetedInstanceCreation` capability can also create Expected Machines if they have an account with the Site's Infrastructure Provider.
 
@@ -387,7 +387,7 @@ func (a *ExpectedMachineAPIService) CreateExpectedMachineExecute(r ApiCreateExpe
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/expected-machine"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/expected-machine"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -439,7 +439,7 @@ func (a *ExpectedMachineAPIService) CreateExpectedMachineExecute(r ApiCreateExpe
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 400 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -450,7 +450,7 @@ func (a *ExpectedMachineAPIService) CreateExpectedMachineExecute(r ApiCreateExpe
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -490,7 +490,7 @@ DeleteExpectedMachine Delete Expected Machine
 
 Delete an existing Expected Machine by ID.
 
-Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` role.
+Org must have an Infrastructure Provider entity. User must have `NICO_PROVIDER_ADMIN` role.
 
 Infrastructure Provider must own the Expected Machine.
 
@@ -523,7 +523,7 @@ func (a *ExpectedMachineAPIService) DeleteExpectedMachineExecute(r ApiDeleteExpe
 		return nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/expected-machine/{expectedMachineId}"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/expected-machine/{expectedMachineId}"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"expectedMachineId"+"}", url.PathEscape(parameterValueToString(r.expectedMachineId, "expectedMachineId")), -1)
 
@@ -571,7 +571,7 @@ func (a *ExpectedMachineAPIService) DeleteExpectedMachineExecute(r ApiDeleteExpe
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 400 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -582,7 +582,7 @@ func (a *ExpectedMachineAPIService) DeleteExpectedMachineExecute(r ApiDeleteExpe
 			return localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -593,7 +593,7 @@ func (a *ExpectedMachineAPIService) DeleteExpectedMachineExecute(r ApiDeleteExpe
 			return localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 404 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -658,7 +658,7 @@ GetAllExpectedMachine Retrieve all Expected Machines
 
 Retrieve all Expected Machines.
 
-Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` or `FORGE_PROVIDER_VIEWER` role.
+Org must have an Infrastructure Provider entity. User must have `NICO_PROVIDER_ADMIN` or `NICO_PROVIDER_VIEWER` role.
 
 Alternatively, Tenant Admins with `TargetedInstanceCreation` capability can also retrieve Expected Machines if they have an account with the Site's Infrastructure Provider (siteId query parameter is required for Tenants).
 
@@ -690,7 +690,7 @@ func (a *ExpectedMachineAPIService) GetAllExpectedMachineExecute(r ApiGetAllExpe
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/expected-machine"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/expected-machine"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -756,7 +756,7 @@ func (a *ExpectedMachineAPIService) GetAllExpectedMachineExecute(r ApiGetAllExpe
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 400 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -767,7 +767,7 @@ func (a *ExpectedMachineAPIService) GetAllExpectedMachineExecute(r ApiGetAllExpe
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -814,7 +814,7 @@ GetExpectedMachine Retrieve Expected Machine
 
 Retrieve a specific Expected Machine by ID.
 
-Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` or `FORGE_PROVIDER_VIEWER` role.
+Org must have an Infrastructure Provider entity. User must have `NICO_PROVIDER_ADMIN` or `NICO_PROVIDER_VIEWER` role.
 
 Alternatively, Tenant Admins with `TargetedInstanceCreation` capability can also retrieve Expected Machines if they have an account with the Site's Infrastructure Provider.
 
@@ -848,7 +848,7 @@ func (a *ExpectedMachineAPIService) GetExpectedMachineExecute(r ApiGetExpectedMa
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/expected-machine/{expectedMachineId}"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/expected-machine/{expectedMachineId}"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"expectedMachineId"+"}", url.PathEscape(parameterValueToString(r.expectedMachineId, "expectedMachineId")), -1)
 
@@ -899,7 +899,7 @@ func (a *ExpectedMachineAPIService) GetExpectedMachineExecute(r ApiGetExpectedMa
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 400 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -910,7 +910,7 @@ func (a *ExpectedMachineAPIService) GetExpectedMachineExecute(r ApiGetExpectedMa
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -921,7 +921,7 @@ func (a *ExpectedMachineAPIService) GetExpectedMachineExecute(r ApiGetExpectedMa
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 404 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -968,7 +968,7 @@ UpdateExpectedMachine Update Expected Machine
 
 Update an existing Expected Machine by ID.
 
-Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` role.
+Org must have an Infrastructure Provider entity. User must have `NICO_PROVIDER_ADMIN` role.
 
 Infrastructure Provider must own the Expected Machine.
 
@@ -1004,7 +1004,7 @@ func (a *ExpectedMachineAPIService) UpdateExpectedMachineExecute(r ApiUpdateExpe
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/expected-machine/{expectedMachineId}"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/expected-machine/{expectedMachineId}"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"expectedMachineId"+"}", url.PathEscape(parameterValueToString(r.expectedMachineId, "expectedMachineId")), -1)
 
@@ -1057,7 +1057,7 @@ func (a *ExpectedMachineAPIService) UpdateExpectedMachineExecute(r ApiUpdateExpe
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 400 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -1068,7 +1068,7 @@ func (a *ExpectedMachineAPIService) UpdateExpectedMachineExecute(r ApiUpdateExpe
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -1079,7 +1079,7 @@ func (a *ExpectedMachineAPIService) UpdateExpectedMachineExecute(r ApiUpdateExpe
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 404 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()

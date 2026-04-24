@@ -257,13 +257,13 @@ func TestManageVpcPrefix_UpdateVpcPrefixesInDB(t *testing.T) {
 	ipamStorage := ipam.NewIpamStorage(dbSession.DB, nil)
 
 	ipOrg := "test-provider-org"
-	ipRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	ipu := testVPCBuildUser(t, dbSession, uuid.NewString(), ipOrg, ipRoles)
 	ip := testVPCSiteBuildInfrastructureProvider(t, dbSession, "test-provider", ipOrg, ipu)
 
 	tnOrg := "test-tenant-org"
-	tnRoles := []string{"FORGE_TENANT_ADMIN"}
+	tnRoles := []string{"NICO_TENANT_ADMIN"}
 
 	tnu := testVPCBuildUser(t, dbSession, uuid.NewString(), tnOrg, tnRoles)
 	tn := testVPCBuildTenant(t, dbSession, "test-tenant", tnOrg, tnu)

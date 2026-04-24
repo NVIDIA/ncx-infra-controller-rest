@@ -26,8 +26,8 @@ import (
 )
 
 const (
-	// InventoryCarbidePageSize is the number of items to be fetched from Carbide API at a time
-	InventoryCarbidePageSize = 100
+	// InventoryNicoPageSize is the number of items to be fetched from Nico API at a time
+	InventoryNicoPageSize = 100
 	// InventoryCloudPageSize is the number of items to be sent to Cloud at a time
 	InventoryCloudPageSize = 25
 	// InventoryDefaultSchedule is the default schedule for inventory discovery

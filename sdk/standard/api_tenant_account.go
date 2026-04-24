@@ -43,7 +43,7 @@ CreateTenantAccount Create Tenant Account
 
 Create a Tenant Account.
 
-Org must have an Infrastructure Provider entity and its ID must match the Infrastructure Provider ID in request data. User must have `FORGE_PROVIDER_ADMIN` authorization role
+Org must have an Infrastructure Provider entity and its ID must match the Infrastructure Provider ID in request data. User must have `NICO_PROVIDER_ADMIN` authorization role
 
 Infrastructure Provider can create a Tenant Account by specifying the Tenant's UUID or Tenant's org name. This will set the status of the Tenant Account to "Invited". Then the Tenant can view this account information and are able to confirm/accept the account by updating the Tenant Account.
 
@@ -75,7 +75,7 @@ func (a *TenantAccountAPIService) CreateTenantAccountExecute(r ApiCreateTenantAc
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/tenant/account"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/tenant/account"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -124,7 +124,7 @@ func (a *TenantAccountAPIService) CreateTenantAccountExecute(r ApiCreateTenantAc
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 400 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -135,7 +135,7 @@ func (a *TenantAccountAPIService) CreateTenantAccountExecute(r ApiCreateTenantAc
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -175,7 +175,7 @@ DeleteTenantAccount Delete Tenant Account
 
 Delete a Tenant Account by ID.
 
-Org must have an Infrastructure Provider entity, specified Tenant Account must be created by said Provider. Requesting user must have `FORGE_PROVIDER_ADMIN` role.
+Org must have an Infrastructure Provider entity, specified Tenant Account must be created by said Provider. Requesting user must have `NICO_PROVIDER_ADMIN` role.
 
 Tenant cannot delete a Tenant Account.
 
@@ -206,7 +206,7 @@ func (a *TenantAccountAPIService) DeleteTenantAccountExecute(r ApiDeleteTenantAc
 		return nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/tenant/account/{accountId}"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/tenant/account/{accountId}"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"accountId"+"}", url.PathEscape(parameterValueToString(r.accountId, "accountId")), -1)
 
@@ -254,7 +254,7 @@ func (a *TenantAccountAPIService) DeleteTenantAccountExecute(r ApiDeleteTenantAc
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -335,9 +335,9 @@ Retrieve all Tenant Accounts.
 
 Either `infrastructureProviderId` or `tenantId` query param must be specified.
 
-If `infrastructureProviderId` query param is provided, then org must have an Infrastructure Provider entity and its ID should match the query param value. User must have `FORGE_PROVIDER_ADMIN` role.
+If `infrastructureProviderId` query param is provided, then org must have an Infrastructure Provider entity and its ID should match the query param value. User must have `NICO_PROVIDER_ADMIN` role.
 
-If `tenantId` query param is provided, then org must have a Tenant entity and its ID should match the query param value. User must have `FORGE_TENANT_ADMIN` role.
+If `tenantId` query param is provided, then org must have a Tenant entity and its ID should match the query param value. User must have `NICO_TENANT_ADMIN` role.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -367,7 +367,7 @@ func (a *TenantAccountAPIService) GetAllTenantAccountExecute(r ApiGetAllTenantAc
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/tenant/account"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/tenant/account"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -439,7 +439,7 @@ func (a *TenantAccountAPIService) GetAllTenantAccountExecute(r ApiGetAllTenantAc
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -502,9 +502,9 @@ GetTenantAccount Retrieve Tenant Account
 
 Either `infrastructureProviderId` or `tenantId` query param must be specified.
 
-If `infrastructureProviderId` query param is provided, then org must have an Infrastructure Provider entity and its ID should match the query param value. User must have `FORGE_PROVIDER_ADMIN` role.
+If `infrastructureProviderId` query param is provided, then org must have an Infrastructure Provider entity and its ID should match the query param value. User must have `NICO_PROVIDER_ADMIN` role.
 
-If `tenantId` query param is provided, then org must have a Tenant entity and its ID should match the query param value. User must have `FORGE_TENANT_ADMIN` role.
+If `tenantId` query param is provided, then org must have a Tenant entity and its ID should match the query param value. User must have `NICO_TENANT_ADMIN` role.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -536,7 +536,7 @@ func (a *TenantAccountAPIService) GetTenantAccountExecute(r ApiGetTenantAccountR
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/tenant/account/{accountId}"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/tenant/account/{accountId}"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"accountId"+"}", url.PathEscape(parameterValueToString(r.accountId, "accountId")), -1)
 
@@ -593,7 +593,7 @@ func (a *TenantAccountAPIService) GetTenantAccountExecute(r ApiGetTenantAccountR
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -642,7 +642,7 @@ Update a Tenant Account.
 
 Can be used to accept an invitation sent by Infrastructure Provider.
 
-Org must have a tenant entity whose ID matches the `tenantId` of the Tenant Account object. User must have `FORGE_TENANT_ADMIN` role. Can only update a TenantAccount that has `Invited` status.
+Org must have a tenant entity whose ID matches the `tenantId` of the Tenant Account object. User must have `NICO_TENANT_ADMIN` role. Can only update a TenantAccount that has `Invited` status.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -674,7 +674,7 @@ func (a *TenantAccountAPIService) UpdateTenantAccountExecute(r ApiUpdateTenantAc
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/tenant/account/{accountId}"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/tenant/account/{accountId}"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"accountId"+"}", url.PathEscape(parameterValueToString(r.accountId, "accountId")), -1)
 
@@ -724,7 +724,7 @@ func (a *TenantAccountAPIService) UpdateTenantAccountExecute(r ApiUpdateTenantAc
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 400 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -735,7 +735,7 @@ func (a *TenantAccountAPIService) UpdateTenantAccountExecute(r ApiUpdateTenantAc
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()

@@ -53,14 +53,14 @@ type InstanceInterface interface {
 
 func (instance *compute) GetAllInstances(ctx context.Context, request *wflows.InstanceSearchFilter, pageSize int) (response *wflows.InstanceList, err error) {
 	log.Info().Interface("request", request).Msg("GetAllInstances: received request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-GetAllInstances")
+	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "NicoClient-GetAllInstances")
 	defer span.End()
 
 	if request == nil {
 		request = &wflows.InstanceSearchFilter{}
 	}
 
-	idList, err := instance.carbide.FindInstanceIds(ctx, request)
+	idList, err := instance.nico.FindInstanceIds(ctx, request)
 	if err != nil {
 		log.Error().Err(err).Msg("FindInstanceIds: error")
 		return nil, err
@@ -68,7 +68,7 @@ func (instance *compute) GetAllInstances(ctx context.Context, request *wflows.In
 	response = &wflows.InstanceList{}
 	idChunks := SliceToChunks(idList.InstanceIds, pageSize)
 	for i, chunk := range idChunks {
-		list, err := instance.carbide.FindInstancesByIds(ctx, &wflows.InstancesByIdsRequest{InstanceIds: chunk})
+		list, err := instance.nico.FindInstancesByIds(ctx, &wflows.InstancesByIdsRequest{InstanceIds: chunk})
 		if err != nil {
 			log.Error().Err(err).Msgf("FindInstancesByIds: error on chunk index %d", i)
 			return nil, err
@@ -81,13 +81,13 @@ func (instance *compute) GetAllInstances(ctx context.Context, request *wflows.In
 
 func (instance *compute) FindInstanceIDs(ctx context.Context, request *wflows.InstanceSearchFilter) (response *wflows.InstanceIdList, err error) {
 	log.Info().Interface("request", request).Msg("FindInstanceIDs: received request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-FindInstanceIDs")
+	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "NicoClient-FindInstanceIDs")
 	defer span.End()
 
 	if request == nil {
 		request = &wflows.InstanceSearchFilter{}
 	}
-	response, err = instance.carbide.FindInstanceIds(ctx, request)
+	response, err = instance.nico.FindInstanceIds(ctx, request)
 	if err != nil {
 		log.Error().Err(err).Msg("FindInstanceIds: error")
 		return nil, err
@@ -97,13 +97,13 @@ func (instance *compute) FindInstanceIDs(ctx context.Context, request *wflows.In
 
 func (instance *compute) FindInstancesByIDs(ctx context.Context, request *wflows.InstancesByIdsRequest) (response *wflows.InstanceList, err error) {
 	log.Info().Interface("request", request).Msg("FindInstancesByIDs: received request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-FindInstancesByIDs")
+	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "NicoClient-FindInstancesByIDs")
 	defer span.End()
 
 	if request == nil {
 		request = &wflows.InstancesByIdsRequest{}
 	}
-	response, err = instance.carbide.FindInstancesByIds(ctx, request)
+	response, err = instance.nico.FindInstancesByIds(ctx, request)
 	if err != nil {
 		log.Error().Err(err).Msgf("FindInstancesByIds: error")
 		return nil, err
@@ -114,7 +114,7 @@ func (instance *compute) FindInstancesByIDs(ctx context.Context, request *wflows
 
 func (instance *compute) CreateInstance(ctx context.Context, request *wflows.CreateInstanceRequest) (response *wflows.Instance, err error) {
 	log.Info().Interface("request", request).Msg("CreateInstance: received request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-CreateInstance")
+	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "NicoClient-CreateInstance")
 	defer span.End()
 
 	// Validations
@@ -124,29 +124,29 @@ func (instance *compute) CreateInstance(ctx context.Context, request *wflows.Cre
 		return response, ErrInvalidMachineID
 	}
 
-	// Carbide request
+	// Nico request
 	// Convert Resource Request to the type needed by Site controller
 	machineID := wflows.MachineId{}
 	machineID.Id = request.MachineId.Id
-	carbideRequest := &wflows.InstanceAllocationRequest{
+	nicoRequest := &wflows.InstanceAllocationRequest{
 		MachineId: &wflows.MachineId{},
 	}
 	if request.InstanceId != nil {
-		carbideRequest.InstanceId = &wflows.InstanceId{Value: request.InstanceId.Value}
+		nicoRequest.InstanceId = &wflows.InstanceId{Value: request.InstanceId.Value}
 	}
-	carbideRequest.MachineId = &machineID
-	carbideRequest.Config = &wflows.InstanceConfig{}
-	carbideRequest.Config.Tenant = &wflows.TenantConfig{
+	nicoRequest.MachineId = &machineID
+	nicoRequest.Config = &wflows.InstanceConfig{}
+	nicoRequest.Config.Tenant = &wflows.TenantConfig{
 		TenantOrganizationId: request.TenantOrg,
 		TenantKeysetIds:      request.TenantKeysetIds,
 	}
 
-	carbideRequest.Config.Os = &wflows.OperatingSystem{
+	nicoRequest.Config.Os = &wflows.OperatingSystem{
 		PhoneHomeEnabled: request.PhoneHomeEnabled,
 	}
 
 	if request.CustomIpxe != nil {
-		carbideRequest.Config.Os.Variant = &wflows.OperatingSystem_Ipxe{
+		nicoRequest.Config.Os.Variant = &wflows.OperatingSystem_Ipxe{
 			Ipxe: &wflows.InlineIpxe{
 				IpxeScript: *request.CustomIpxe,
 			},
@@ -154,38 +154,38 @@ func (instance *compute) CreateInstance(ctx context.Context, request *wflows.Cre
 	}
 
 	if request.UserData != nil {
-		carbideRequest.Config.Os.UserData = request.UserData
+		nicoRequest.Config.Os.UserData = request.UserData
 	}
 
 	if request.AlwaysBootWithCustomIpxe != nil {
-		carbideRequest.Config.Os.RunProvisioningInstructionsOnEveryBoot = *request.AlwaysBootWithCustomIpxe
+		nicoRequest.Config.Os.RunProvisioningInstructionsOnEveryBoot = *request.AlwaysBootWithCustomIpxe
 	}
 
-	carbideRequest.Config.Network = &wflows.InstanceNetworkConfig{}
-	carbideRequest.Config.Network.Interfaces = request.Interfaces
+	nicoRequest.Config.Network = &wflows.InstanceNetworkConfig{}
+	nicoRequest.Config.Network.Interfaces = request.Interfaces
 
 	// InfiniBand Interfaces
 	if request.IbInterfaces != nil {
-		carbideRequest.Config.Infiniband = &wflows.InstanceInfinibandConfig{}
-		carbideRequest.Config.Infiniband.IbInterfaces = request.IbInterfaces
+		nicoRequest.Config.Infiniband = &wflows.InstanceInfinibandConfig{}
+		nicoRequest.Config.Infiniband.IbInterfaces = request.IbInterfaces
 	}
 
 	// Instance labels metadata
 	if request.Metadata != nil {
-		carbideRequest.Metadata = request.Metadata
+		nicoRequest.Metadata = request.Metadata
 	}
 
 	// Lets verify the applicable parameters
-	response, err = instance.carbide.AllocateInstance(ctx, carbideRequest)
-	log.Info().Interface("request", carbideRequest).Msg("CreateInstance: sent gRPC request")
+	response, err = instance.nico.AllocateInstance(ctx, nicoRequest)
+	log.Info().Interface("request", nicoRequest).Msg("CreateInstance: sent gRPC request")
 	return response, err
 }
 
 // CreateInstances creates multiple instances in a single transaction
-// This wraps Carbide's AllocateInstances gRPC method
+// This wraps Nico's AllocateInstances gRPC method
 func (instance *compute) CreateInstances(ctx context.Context, request *wflows.BatchInstanceAllocationRequest) (response *wflows.BatchInstanceAllocationResponse, err error) {
 	log.Info().Interface("request", request).Int("count", len(request.InstanceRequests)).Msg("CreateInstances: received request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-CreateInstances")
+	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "NicoClient-CreateInstances")
 	defer span.End()
 
 	// Validations
@@ -194,8 +194,8 @@ func (instance *compute) CreateInstances(ctx context.Context, request *wflows.Ba
 		return nil, ErrInvalidRequest
 	}
 
-	// Call carbide batch API (AllocateInstances is the name in Carbide layer)
-	response, err = instance.carbide.AllocateInstances(ctx, request)
+	// Call nico batch API (AllocateInstances is the name in Nico layer)
+	response, err = instance.nico.AllocateInstances(ctx, request)
 	if err != nil {
 		log.Err(err).Msg("CreateInstances: failed")
 		return nil, err
@@ -207,7 +207,7 @@ func (instance *compute) CreateInstances(ctx context.Context, request *wflows.Ba
 
 func (instance *compute) DeleteInstance(ctx context.Context, request *wflows.DeleteInstanceRequest) (response *wflows.InstanceReleaseResult, err error) {
 	log.Info().Interface("request", request).Msg("DeleteInstance: received request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-DeleteInstance")
+	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "NicoClient-DeleteInstance")
 	defer span.End()
 
 	// Validations
@@ -216,11 +216,11 @@ func (instance *compute) DeleteInstance(ctx context.Context, request *wflows.Del
 		log.Err(ErrInvalidInstanceID).Msg("DeleteInstance: invalid request")
 		return response, ErrInvalidInstanceID
 	}
-	carbideRequest := &wflows.InstanceReleaseRequest{}
+	nicoRequest := &wflows.InstanceReleaseRequest{}
 	if request.InstanceId != nil {
-		carbideRequest.Id = &wflows.InstanceId{Value: request.InstanceId.Value}
+		nicoRequest.Id = &wflows.InstanceId{Value: request.InstanceId.Value}
 	}
-	response, err = instance.carbide.ReleaseInstance(ctx, carbideRequest)
+	response, err = instance.nico.ReleaseInstance(ctx, nicoRequest)
 	if err != nil {
 		// If site controller don't have Instance, no need to fail the request
 		// Check for grpc error code 'NotFound'
@@ -228,6 +228,6 @@ func (instance *compute) DeleteInstance(ctx context.Context, request *wflows.Del
 			err = nil
 		}
 	}
-	log.Info().Interface("request", carbideRequest).Msg("DeleteInstance: sent gRPC request")
+	log.Info().Interface("request", nicoRequest).Msg("DeleteInstance: sent gRPC request")
 	return response, err
 }

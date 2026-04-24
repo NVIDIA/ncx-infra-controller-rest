@@ -65,7 +65,7 @@ func DiscoverVPCInventory(ctx workflow.Context) error {
 
 // CreateVPCV2 is a workflow to create new VPCs using the CreateVpcOnSite activity
 // V1 (CreateVPC) is found in cloud-workflow and uses a different activity that does not speak
-// to carbide directly.
+// to nico directly.
 func CreateVPCV2(ctx workflow.Context, request *cwssaws.VpcCreationRequest) error {
 	logger := log.With().Str("Workflow", "VPC").Str("Action", "Create").Str("VPC ID", request.GetId().GetValue()).Str("Name", request.Name).Logger()
 
@@ -137,7 +137,7 @@ func UpdateVPC(ctx workflow.Context, request *cwssaws.VpcUpdateRequest) error {
 
 // DeleteVPCV2 is a workflow to Delete VPCs using the DeleteVpcOnSite activity
 // V1 (DeleteVPC) is found in cloud-workflow and uses a different activity that does not speak
-// to carbide directly.
+// to nico directly.
 func DeleteVPCV2(ctx workflow.Context, request *cwssaws.VpcDeletionRequest) error {
 	logger := log.With().Str("Workflow", "VPC").Str("Action", "Delete").Str("VPC ID", request.GetId().GetValue()).Logger()
 

@@ -198,13 +198,13 @@ func TestManageInstanceType_UpdateInstanceTypesInDB(t *testing.T) {
 	macCapDAO := cdbm.NewMachineCapabilityDAO(dbSession)
 
 	ipOrg := "test-provider-org"
-	ipRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	ipu := testInstanceTypeBuildUser(t, dbSession, uuid.NewString(), ipOrg, ipRoles)
 	ip := testInstanceTypeSiteBuildInfrastructureProvider(t, dbSession, "test-provider", ipOrg, ipu)
 
 	tnOrg := "test-tenant-org"
-	tnRoles := []string{"FORGE_TENANT_ADMIN"}
+	tnRoles := []string{"NICO_TENANT_ADMIN"}
 
 	tnu := testInstanceTypeBuildUser(t, dbSession, uuid.NewString(), tnOrg, tnRoles)
 

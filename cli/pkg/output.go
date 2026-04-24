@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package carbidecli
+package nicocli
 
 import (
 	"encoding/json"

@@ -75,10 +75,10 @@ func TestBatchCreateInstanceHandler_Handle(t *testing.T) {
 	common.TestSetupSchema(t, dbSession)
 
 	ipOrg := "test-provider-org"
-	ipOrgRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipOrgRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	tnOrg := "test-tenant-org-1"
-	tnOrgRoles := []string{"FORGE_TENANT_ADMIN"}
+	tnOrgRoles := []string{"NICO_TENANT_ADMIN"}
 
 	// Infrastructure Provider User and Provider
 	ipu := testInstanceBuildUser(t, dbSession, "test-starfleet-id-1", ipOrg, ipOrgRoles)
@@ -228,7 +228,7 @@ func TestBatchCreateInstanceHandler_Handle(t *testing.T) {
 
 	// Tenant 2 for testing OS not owned by tenant
 	tnOrg2 := "test-tenant-org-2"
-	tnOrgRoles2 := []string{"FORGE_TENANT_ADMIN"}
+	tnOrgRoles2 := []string{"NICO_TENANT_ADMIN"}
 	tnu2 := testInstanceBuildUser(t, dbSession, "test-starfleet-id-3", tnOrg2, tnOrgRoles2)
 	tn2 := testInstanceBuildTenant(t, dbSession, "test-tenant-2", tnOrg2, tnu2)
 

@@ -27,7 +27,7 @@ import (
 	"go.opentelemetry.io/otel"
 )
 
-// OperatingSystemInterface is the interface for OsImage related Carbide client operations
+// OperatingSystemInterface is the interface for OsImage related Nico client operations
 type OperatingSystemInterface interface {
 	CreateOsImage(ctx context.Context, request *wflows.OsImageAttributes) (*wflows.OsImage, error)
 	UpdateOsImage(ctx context.Context, request *wflows.OsImageAttributes) (*wflows.OsImage, error)
@@ -39,7 +39,7 @@ type OperatingSystemInterface interface {
 // CreateOsImage creates a new OS image
 func (osi *compute) CreateOsImage(ctx context.Context, request *wflows.OsImageAttributes) (*wflows.OsImage, error) {
 	log.Info().Interface("request", request).Msg("CreateOsImage: received request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-CreateOsImage")
+	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "NicoClient-CreateOsImage")
 	defer span.End()
 
 	// Validate the request
@@ -49,14 +49,14 @@ func (osi *compute) CreateOsImage(ctx context.Context, request *wflows.OsImageAt
 		return nil, err
 	}
 
-	response, err := osi.carbide.CreateOsImage(ctx, request)
+	response, err := osi.nico.CreateOsImage(ctx, request)
 	return response, err
 }
 
 // UpdateOsImage updates an existing OS image
 func (osi *compute) UpdateOsImage(ctx context.Context, request *wflows.OsImageAttributes) (*wflows.OsImage, error) {
 	log.Info().Interface("request", request).Msg("UpdateOsImage: received request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-UpdateOsImage")
+	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "NicoClient-UpdateOsImage")
 	defer span.End()
 
 	// Validate the request
@@ -66,14 +66,14 @@ func (osi *compute) UpdateOsImage(ctx context.Context, request *wflows.OsImageAt
 		return nil, err
 	}
 
-	response, err := osi.carbide.UpdateOsImage(ctx, request)
+	response, err := osi.nico.UpdateOsImage(ctx, request)
 	return response, err
 }
 
 // DeleteOsImage deletes an existing OS image
 func (osi *compute) DeleteOsImage(ctx context.Context, request *wflows.DeleteOsImageRequest) (*wflows.DeleteOsImageResponse, error) {
 	log.Info().Interface("request", request).Msg("DeleteOsImage: received request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-DeleteOsImage")
+	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "NicoClient-DeleteOsImage")
 	defer span.End()
 
 	// Validate the request
@@ -83,14 +83,14 @@ func (osi *compute) DeleteOsImage(ctx context.Context, request *wflows.DeleteOsI
 		return nil, err
 	}
 
-	response, err := osi.carbide.DeleteOsImage(ctx, request)
+	response, err := osi.nico.DeleteOsImage(ctx, request)
 	return response, err
 }
 
 // GetOsImage retrieves an existing OS image
 func (osi *compute) GetOsImage(ctx context.Context, request *wflows.UUID) (response *wflows.OsImage, err error) {
 	log.Info().Interface("request", request).Msg("GetOsImage: received request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-GetOsImage")
+	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "NicoClient-GetOsImage")
 	defer span.End()
 
 	// Validate the request
@@ -100,14 +100,14 @@ func (osi *compute) GetOsImage(ctx context.Context, request *wflows.UUID) (respo
 		return nil, err
 	}
 
-	response, err = osi.carbide.GetOsImage(ctx, request)
+	response, err = osi.nico.GetOsImage(ctx, request)
 	return
 }
 
 // ListOsImage retrieves a list of OS images
 func (osi *compute) ListOsImage(ctx context.Context, request *wflows.ListOsImageRequest) (*wflows.ListOsImageResponse, error) {
 	log.Info().Interface("request", request).Msg("ListOsImage: received request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-ListOsImage")
+	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "NicoClient-ListOsImage")
 	defer span.End()
 
 	// Validate the request
@@ -117,6 +117,6 @@ func (osi *compute) ListOsImage(ctx context.Context, request *wflows.ListOsImage
 		return nil, err
 	}
 
-	response, err := osi.carbide.ListOsImage(ctx, request)
+	response, err := osi.nico.ListOsImage(ctx, request)
 	return response, err
 }

@@ -166,7 +166,7 @@ func TestGetAllSkuHandler_Handle(t *testing.T) {
 					Name:        org,
 					DisplayName: org,
 					OrgType:     "ENTERPRISE",
-					Roles:       []string{"FORGE_PROVIDER_VIEWER"},
+					Roles:       []string{"NICO_PROVIDER_VIEWER"},
 				},
 			},
 		}
@@ -182,7 +182,7 @@ func TestGetAllSkuHandler_Handle(t *testing.T) {
 					Name:        org,
 					DisplayName: org,
 					OrgType:     "ENTERPRISE",
-					Roles:       []string{"FORGE_TENANT_ADMIN"},
+					Roles:       []string{"NICO_TENANT_ADMIN"},
 				},
 			},
 		}
@@ -363,7 +363,7 @@ func TestGetAllSkuHandler_Handle(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			url := "/v2/org/" + org + "/carbide/sku"
+			url := "/v2/org/" + org + "/nico/sku"
 			if tt.siteId != "" {
 				url += "?siteId=" + tt.siteId
 			}
@@ -449,7 +449,7 @@ func TestGetSkuHandler_Handle(t *testing.T) {
 					Name:        org,
 					DisplayName: org,
 					OrgType:     "ENTERPRISE",
-					Roles:       []string{"FORGE_PROVIDER_VIEWER"},
+					Roles:       []string{"NICO_PROVIDER_VIEWER"},
 				},
 			},
 		}
@@ -465,7 +465,7 @@ func TestGetSkuHandler_Handle(t *testing.T) {
 					Name:        org,
 					DisplayName: org,
 					OrgType:     "ENTERPRISE",
-					Roles:       []string{"FORGE_TENANT_ADMIN"},
+					Roles:       []string{"NICO_TENANT_ADMIN"},
 				},
 			},
 		}
@@ -637,7 +637,7 @@ func TestGetSkuHandler_Handle(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			url := "/v2/org/" + org + "/carbide/sku/" + tt.id
+			url := "/v2/org/" + org + "/nico/sku/" + tt.id
 			req := httptest.NewRequest(http.MethodGet, url, nil)
 			req = req.WithContext(context.Background())
 

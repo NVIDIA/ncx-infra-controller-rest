@@ -46,7 +46,7 @@ Create a VPC peering between two VPCs on the same site.
 Tenant Admin can create single-tenant peerings (both VPCs belong to their tenant).
 Provider Admin can create multi-tenant peerings (VPCs from different tenants).
 
-User must have `FORGE_TENANT_ADMIN` or `FORGE_PROVIDER_ADMIN` role.
+User must have `NICO_TENANT_ADMIN` or `NICO_PROVIDER_ADMIN` role.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -76,7 +76,7 @@ func (a *VPCPeeringAPIService) CreateVpcPeeringExecute(r ApiCreateVpcPeeringRequ
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/vpc-peering"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/vpc-peering"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -128,7 +128,7 @@ func (a *VPCPeeringAPIService) CreateVpcPeeringExecute(r ApiCreateVpcPeeringRequ
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 400 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -139,7 +139,7 @@ func (a *VPCPeeringAPIService) CreateVpcPeeringExecute(r ApiCreateVpcPeeringRequ
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -150,7 +150,7 @@ func (a *VPCPeeringAPIService) CreateVpcPeeringExecute(r ApiCreateVpcPeeringRequ
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 404 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -193,7 +193,7 @@ Delete a VPC peering by ID.
 Tenant Admin can delete only peerings where both VPCs belong to their tenant.
 Provider Admin can delete only multi-tenant peerings in sites they provide.
 
-User must have `FORGE_TENANT_ADMIN` or `FORGE_PROVIDER_ADMIN` role.
+User must have `NICO_TENANT_ADMIN` or `NICO_PROVIDER_ADMIN` role.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -222,7 +222,7 @@ func (a *VPCPeeringAPIService) DeleteVpcPeeringExecute(r ApiDeleteVpcPeeringRequ
 		return nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/vpc-peering/{id}"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/vpc-peering/{id}"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterValueToString(r.id, "id")), -1)
 
@@ -270,7 +270,7 @@ func (a *VPCPeeringAPIService) DeleteVpcPeeringExecute(r ApiDeleteVpcPeeringRequ
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 400 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -281,7 +281,7 @@ func (a *VPCPeeringAPIService) DeleteVpcPeeringExecute(r ApiDeleteVpcPeeringRequ
 			return localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -292,7 +292,7 @@ func (a *VPCPeeringAPIService) DeleteVpcPeeringExecute(r ApiDeleteVpcPeeringRequ
 			return localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 404 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -365,7 +365,7 @@ GetAllVpcPeering Retrieve all VPC peerings
 Get all VPC peerings.
 Tenant Admin can get all peerings where the tenant owns at least one VPC.
 Provider Admin can get all peerings in a site.
-User must have `FORGE_TENANT_ADMIN` or `FORGE_PROVIDER_ADMIN` role.
+User must have `NICO_TENANT_ADMIN` or `NICO_PROVIDER_ADMIN` role.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -395,7 +395,7 @@ func (a *VPCPeeringAPIService) GetAllVpcPeeringExecute(r ApiGetAllVpcPeeringRequ
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/vpc-peering"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/vpc-peering"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -464,7 +464,7 @@ func (a *VPCPeeringAPIService) GetAllVpcPeeringExecute(r ApiGetAllVpcPeeringRequ
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 400 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -475,7 +475,7 @@ func (a *VPCPeeringAPIService) GetAllVpcPeeringExecute(r ApiGetAllVpcPeeringRequ
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -525,7 +525,7 @@ Get details of a VPC peering by ID.
 Tenant Admin can get a peering if at least one VPC belongs to their tenant.
 Provider Admin can get a peering if it is in a site provided by their org.
 
-User must have `FORGE_TENANT_ADMIN` or `FORGE_PROVIDER_ADMIN` role.
+User must have `NICO_TENANT_ADMIN` or `NICO_PROVIDER_ADMIN` role.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -557,7 +557,7 @@ func (a *VPCPeeringAPIService) GetVpcPeeringExecute(r ApiGetVpcPeeringRequest) (
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/vpc-peering/{id}"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/vpc-peering/{id}"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterValueToString(r.id, "id")), -1)
 
@@ -608,7 +608,7 @@ func (a *VPCPeeringAPIService) GetVpcPeeringExecute(r ApiGetVpcPeeringRequest) (
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 400 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -619,7 +619,7 @@ func (a *VPCPeeringAPIService) GetVpcPeeringExecute(r ApiGetVpcPeeringRequest) (
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -630,7 +630,7 @@ func (a *VPCPeeringAPIService) GetVpcPeeringExecute(r ApiGetVpcPeeringRequest) (
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 404 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()

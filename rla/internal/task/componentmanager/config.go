@@ -25,7 +25,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/componentmanager/providers/carbide"
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/componentmanager/providers/nico"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/componentmanager/providers/nvswitchmanager"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/componentmanager/providers/psm"
 	"github.com/NVIDIA/ncx-infra-controller-rest/rla/pkg/common/devicetypes"
@@ -34,8 +34,8 @@ import (
 // ProviderConfig holds the configuration for API providers.
 // A nil pointer means the provider is not enabled.
 type ProviderConfig struct {
-	// Carbide holds Carbide-specific configuration. Nil means disabled.
-	Carbide *carbide.Config
+	// Nico holds Nico-specific configuration. Nil means disabled.
+	Nico *nico.Config
 
 	// PSM holds PSM-specific configuration. Nil means disabled.
 	PSM *psm.Config
@@ -61,13 +61,13 @@ type rawConfig struct {
 
 // rawProviderConfig is the raw YAML structure for provider configuration.
 type rawProviderConfig struct {
-	Carbide         *rawCarbideConfig         `yaml:"carbide"`
+	Nico         *rawNicoConfig         `yaml:"nico"`
 	PSM             *rawPSMConfig             `yaml:"psm"`
 	NVSwitchManager *rawNVSwitchManagerConfig `yaml:"nvswitchmanager"`
 }
 
-// rawCarbideConfig is the raw YAML structure for Carbide configuration.
-type rawCarbideConfig struct {
+// rawNicoConfig is the raw YAML structure for Nico configuration.
+type rawNicoConfig struct {
 	Timeout           string `yaml:"timeout"`
 	ComputePowerDelay string `yaml:"compute_power_delay"`
 }
@@ -112,29 +112,29 @@ func ParseConfig(data []byte) (Config, error) {
 		config.ComponentManagers[componentType] = strings.TrimSpace(implName)
 	}
 
-	// Parse Carbide config if present in YAML
-	if raw.Providers.Carbide != nil {
-		carbideConfig := &carbide.Config{
-			Timeout:           carbide.DefaultTimeout,
-			ComputePowerDelay: carbide.DefaultComputePowerDelay,
+	// Parse Nico config if present in YAML
+	if raw.Providers.Nico != nil {
+		nicoConfig := &nico.Config{
+			Timeout:           nico.DefaultTimeout,
+			ComputePowerDelay: nico.DefaultComputePowerDelay,
 		}
-		if raw.Providers.Carbide.Timeout != "" {
-			timeout, err := time.ParseDuration(raw.Providers.Carbide.Timeout)
+		if raw.Providers.Nico.Timeout != "" {
+			timeout, err := time.ParseDuration(raw.Providers.Nico.Timeout)
 			if err != nil {
-				return Config{}, fmt.Errorf("invalid carbide timeout: %w", err)
+				return Config{}, fmt.Errorf("invalid nico timeout: %w", err)
 			}
-			carbideConfig.Timeout = timeout
+			nicoConfig.Timeout = timeout
 		}
-		if raw.Providers.Carbide.ComputePowerDelay != "" {
-			delay, err := time.ParseDuration(raw.Providers.Carbide.ComputePowerDelay)
+		if raw.Providers.Nico.ComputePowerDelay != "" {
+			delay, err := time.ParseDuration(raw.Providers.Nico.ComputePowerDelay)
 			if err != nil {
 				return Config{}, fmt.Errorf(
-					"invalid carbide compute_power_delay: %w", err,
+					"invalid nico compute_power_delay: %w", err,
 				)
 			}
-			carbideConfig.ComputePowerDelay = delay
+			nicoConfig.ComputePowerDelay = delay
 		}
-		config.Providers.Carbide = carbideConfig
+		config.Providers.Nico = nicoConfig
 	}
 
 	// Parse PSM config if present in YAML
@@ -168,7 +168,7 @@ func ParseConfig(data []byte) (Config, error) {
 	}
 
 	// If no providers are explicitly configured, derive from component manager implementations
-	if config.Providers.Carbide == nil && config.Providers.PSM == nil && config.Providers.NVSwitchManager == nil {
+	if config.Providers.Nico == nil && config.Providers.PSM == nil && config.Providers.NVSwitchManager == nil {
 		deriveProviders(&config)
 	}
 
@@ -179,11 +179,11 @@ func ParseConfig(data []byte) (Config, error) {
 func deriveProviders(config *Config) {
 	for _, implName := range config.ComponentManagers {
 		switch implName {
-		case carbide.ProviderName:
-			if config.Providers.Carbide == nil {
-				config.Providers.Carbide = &carbide.Config{
-					Timeout:           carbide.DefaultTimeout,
-					ComputePowerDelay: carbide.DefaultComputePowerDelay,
+		case nico.ProviderName:
+			if config.Providers.Nico == nil {
+				config.Providers.Nico = &nico.Config{
+					Timeout:           nico.DefaultTimeout,
+					ComputePowerDelay: nico.DefaultComputePowerDelay,
 				}
 			}
 		case psm.ProviderName:
@@ -206,8 +206,8 @@ func deriveProviders(config *Config) {
 // HasProvider checks if a provider is enabled in the configuration.
 func (c *Config) HasProvider(name string) bool {
 	switch name {
-	case carbide.ProviderName:
-		return c.Providers.Carbide != nil
+	case nico.ProviderName:
+		return c.Providers.Nico != nil
 	case psm.ProviderName:
 		return c.Providers.PSM != nil
 	case nvswitchmanager.ProviderName:
@@ -238,14 +238,14 @@ func DefaultTestConfig() Config {
 func DefaultProdConfig() Config {
 	return Config{
 		ComponentManagers: map[devicetypes.ComponentType]string{
-			devicetypes.ComponentTypeCompute:    carbide.ProviderName,
-			devicetypes.ComponentTypeNVLSwitch:  carbide.ProviderName,
-			devicetypes.ComponentTypePowerShelf: carbide.ProviderName,
+			devicetypes.ComponentTypeCompute:    nico.ProviderName,
+			devicetypes.ComponentTypeNVLSwitch:  nico.ProviderName,
+			devicetypes.ComponentTypePowerShelf: nico.ProviderName,
 		},
 		Providers: ProviderConfig{
-			Carbide: &carbide.Config{
-				Timeout:           carbide.DefaultTimeout,
-				ComputePowerDelay: carbide.DefaultComputePowerDelay,
+			Nico: &nico.Config{
+				Timeout:           nico.DefaultTimeout,
+				ComputePowerDelay: nico.DefaultComputePowerDelay,
 			},
 			PSM: &psm.Config{
 				Timeout: psm.DefaultTimeout,

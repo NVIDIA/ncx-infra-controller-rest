@@ -74,7 +74,7 @@ func (w *instanceWorkflowMetadata) DoDbOP() (act computils.OpType) {
 
 // DoSiteControllerOP - Do Site Controller OP
 func (w *instanceWorkflowMetadata) DoSiteControllerOP(ctx context.Context, transactionID *wflows.TransactionID, req interface{}) (interface{}, error) {
-	compute := ManagerAccess.Data.EB.Managers.Carbide.GetClient().Compute()
+	compute := ManagerAccess.Data.EB.Managers.Nico.GetClient().Compute()
 	switch w.activity {
 	case activityCreate:
 		return compute.CreateInstance(ctx, req.(*wflows.CreateInstanceRequest))

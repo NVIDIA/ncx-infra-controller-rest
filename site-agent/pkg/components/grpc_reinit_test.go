@@ -22,21 +22,21 @@ import (
 	"time"
 )
 
-func TestCarbideClientReinitializationOnCertRenewal(t *testing.T) {
-	// Initial setup with TestInitElektra which configures the Carbide client with initial certificates
+func TestNicoClientReinitializationOnCertRenewal(t *testing.T) {
+	// Initial setup with TestInitElektra which configures the Nico client with initial certificates
 	TestInitElektra(t)
-	initialVersion := testElektra.manager.API.Carbide.GetGRPCClientVersion()
+	initialVersion := testElektra.manager.API.Nico.GetGRPCClientVersion()
 
 	// Regenerate and replace the certificates to simulate renewal
-	SetupTestCerts(t, testElektraTypes.Conf.Carbide.ClientCertPath, testElektraTypes.Conf.Carbide.ClientKeyPath, testElektraTypes.Conf.Carbide.ServerCAPath)
+	SetupTestCerts(t, testElektraTypes.Conf.Nico.ClientCertPath, testElektraTypes.Conf.Nico.ClientKeyPath, testElektraTypes.Conf.Nico.ServerCAPath)
 
 	// Wait a few seconds to allow any background processes to complete
 	time.Sleep(time.Second * 5)
-	renewedVersion := testElektra.manager.API.Carbide.GetGRPCClientVersion()
+	renewedVersion := testElektra.manager.API.Nico.GetGRPCClientVersion()
 
 	if renewedVersion > initialVersion {
-		t.Logf("The Carbide client was successfully reinitialized from version %d to %d.", initialVersion, renewedVersion)
+		t.Logf("The Nico client was successfully reinitialized from version %d to %d.", initialVersion, renewedVersion)
 	} else {
-		t.Errorf("The Carbide client was not reinitialized as expected. It remains at version %d.", initialVersion)
+		t.Errorf("The Nico client was not reinitialized as expected. It remains at version %d.", initialVersion)
 	}
 }

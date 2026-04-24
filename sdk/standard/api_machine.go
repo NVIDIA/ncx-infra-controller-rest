@@ -36,7 +36,7 @@ func (r ApiDeleteMachineRequest) Execute() (*http.Response, error) {
 /*
 DeleteMachine Delete a Machine from a Site
 
-Org must have an Infrastructure Provider entity. Machine must belong to the Provider. User must have FORGE_PROVIDER_ADMIN authorization role. Machine must meet certain criteria to be eligible for deletion.
+Org must have an Infrastructure Provider entity. Machine must belong to the Provider. User must have NICO_PROVIDER_ADMIN authorization role. Machine must meet certain criteria to be eligible for deletion.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -65,7 +65,7 @@ func (a *MachineAPIService) DeleteMachineExecute(r ApiDeleteMachineRequest) (*ht
 		return nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/machine/{machineId}"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/machine/{machineId}"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"machineId"+"}", url.PathEscape(parameterValueToString(r.machineId, "machineId")), -1)
 
@@ -113,7 +113,7 @@ func (a *MachineAPIService) DeleteMachineExecute(r ApiDeleteMachineRequest) (*ht
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 400 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -124,7 +124,7 @@ func (a *MachineAPIService) DeleteMachineExecute(r ApiDeleteMachineRequest) (*ht
 			return localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -135,7 +135,7 @@ func (a *MachineAPIService) DeleteMachineExecute(r ApiDeleteMachineRequest) (*ht
 			return localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 404 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -146,7 +146,7 @@ func (a *MachineAPIService) DeleteMachineExecute(r ApiDeleteMachineRequest) (*ht
 			return localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 422 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -157,7 +157,7 @@ func (a *MachineAPIService) DeleteMachineExecute(r ApiDeleteMachineRequest) (*ht
 			return localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 500 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -306,7 +306,7 @@ GetAllMachine Retrieve all Machines
 
 Get all Machines for Infrastructure Provider.
 
-Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` authorization role.
+Org must have an Infrastructure Provider entity. User must have `NICO_PROVIDER_ADMIN` authorization role.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -336,7 +336,7 @@ func (a *MachineAPIService) GetAllMachineExecute(r ApiGetAllMachineRequest) ([]M
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/machine"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/machine"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -438,7 +438,7 @@ func (a *MachineAPIService) GetAllMachineExecute(r ApiGetAllMachineRequest) ([]M
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -561,7 +561,7 @@ GetAllMachineCapabilities Retrieve all Machine Capabilities
 
 # Get all distinct Machine Capabilities across all Machines
 
-Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` authorization role.
+Org must have an Infrastructure Provider entity. User must have `NICO_PROVIDER_ADMIN` authorization role.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -591,7 +591,7 @@ func (a *MachineAPIService) GetAllMachineCapabilitiesExecute(r ApiGetAllMachineC
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/machine-capability"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/machine-capability"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -679,7 +679,7 @@ func (a *MachineAPIService) GetAllMachineCapabilitiesExecute(r ApiGetAllMachineC
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -733,9 +733,9 @@ GetMachine Retrieve a Machine
 
 Org must have either an Infrastructure Provider entity or a Tenant entity.
 
-If org has an Infrastructure Provider entity, then a user with `FORGE_PROVIDER_ADMIN` role can request details for any Machine on any Site owned by the Provider.
+If org has an Infrastructure Provider entity, then a user with `NICO_PROVIDER_ADMIN` role can request details for any Machine on any Site owned by the Provider.
 
-If org has a Tenant entity, then a user with `FORGE_TENANT_ADMIN` role can request details for any Machine associated with Tenant's active Instances.
+If org has a Tenant entity, then a user with `NICO_TENANT_ADMIN` role can request details for any Machine associated with Tenant's active Instances.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -767,7 +767,7 @@ func (a *MachineAPIService) GetMachineExecute(r ApiGetMachineRequest) (*Machine,
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/machine/{machineId}"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/machine/{machineId}"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"machineId"+"}", url.PathEscape(parameterValueToString(r.machineId, "machineId")), -1)
 
@@ -821,7 +821,7 @@ func (a *MachineAPIService) GetMachineExecute(r ApiGetMachineRequest) (*Machine,
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -867,7 +867,7 @@ GetMachineGpuStats Retrieve GPU stats for machines at a site
 
 Returns GPU summary stats grouped by GPU name for machines at the specified site.
 
-User must have `FORGE_PROVIDER_ADMIN` authorization role. The specified site must belong to the Provider.
+User must have `NICO_PROVIDER_ADMIN` authorization role. The specified site must belong to the Provider.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -897,7 +897,7 @@ func (a *MachineAPIService) GetMachineGpuStatsExecute(r ApiGetMachineGpuStatsReq
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/machine/gpu/stats"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/machine/gpu/stats"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -948,7 +948,7 @@ func (a *MachineAPIService) GetMachineGpuStatsExecute(r ApiGetMachineGpuStatsReq
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -994,7 +994,7 @@ GetMachineInstanceTypeStats Retrieve detailed per-instance-type machine stats fo
 
 Returns machine stats for each instance type including allocation details and tenant breakdown.
 
-User must have `FORGE_PROVIDER_ADMIN` authorization role. The specified site must belong to the Provider.
+User must have `NICO_PROVIDER_ADMIN` authorization role. The specified site must belong to the Provider.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -1024,7 +1024,7 @@ func (a *MachineAPIService) GetMachineInstanceTypeStatsExecute(r ApiGetMachineIn
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/machine/instance-type/stats"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/machine/instance-type/stats"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -1075,7 +1075,7 @@ func (a *MachineAPIService) GetMachineInstanceTypeStatsExecute(r ApiGetMachineIn
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -1121,7 +1121,7 @@ GetMachineInstanceTypeStatsSummary Retrieve machine instance type assignment sum
 
 Returns machine counts grouped by assigned (has instance type) vs unassigned, broken down by status.
 
-User must have `FORGE_PROVIDER_ADMIN` authorization role. The specified site must belong to the Provider.
+User must have `NICO_PROVIDER_ADMIN` authorization role. The specified site must belong to the Provider.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -1151,7 +1151,7 @@ func (a *MachineAPIService) GetMachineInstanceTypeStatsSummaryExecute(r ApiGetMa
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/machine/instance-type/stats/summary"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/machine/instance-type/stats/summary"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -1202,7 +1202,7 @@ func (a *MachineAPIService) GetMachineInstanceTypeStatsSummaryExecute(r ApiGetMa
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -1263,9 +1263,9 @@ GetMachineStatusHistory Retrieve Machine status history
 
 Org must have either an Infrastructure Provider entity or a Tenant entity.
 
-If org has an Infrastructure Provider entity, then a user with `FORGE_PROVIDER_ADMIN` role can request details for any Machine on any Site owned by the Provider.
+If org has an Infrastructure Provider entity, then a user with `NICO_PROVIDER_ADMIN` role can request details for any Machine on any Site owned by the Provider.
 
-If org has a Tenant entity, then a user with `FORGE_TENANT_ADMIN` role can request details for any Machine associated with Tenant's active Instances.
+If org has a Tenant entity, then a user with `NICO_TENANT_ADMIN` role can request details for any Machine associated with Tenant's active Instances.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -1297,7 +1297,7 @@ func (a *MachineAPIService) GetMachineStatusHistoryExecute(r ApiGetMachineStatus
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/machine/{machineId}/status-history"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/machine/{machineId}/status-history"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"machineId"+"}", url.PathEscape(parameterValueToString(r.machineId, "machineId")), -1)
 
@@ -1354,7 +1354,7 @@ func (a *MachineAPIService) GetMachineStatusHistoryExecute(r ApiGetMachineStatus
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -1434,7 +1434,7 @@ func (a *MachineAPIService) UpdateMachineExecute(r ApiUpdateMachineRequest) (*Ma
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/machine/{machineId}"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/machine/{machineId}"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"machineId"+"}", url.PathEscape(parameterValueToString(r.machineId, "machineId")), -1)
 

@@ -123,9 +123,9 @@ var File_vpcprefix_proto protoreflect.FileDescriptor
 
 const file_vpcprefix_proto_rawDesc = "" +
 	"\n" +
-	"\x0fvpcprefix.proto\x12\fworkflows.v1\x1a\x0eworkflow.proto\x1a\x13forge_carbide.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb0\x02\n" +
+	"\x0fvpcprefix.proto\x12\fworkflows.v1\x1a\x0eworkflow.proto\x1a\x13nico_nico.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb0\x02\n" +
 	"\x12VpcPrefixInventory\x123\n" +
-	"\fvpc_prefixes\x18\x01 \x03(\v2\x10.forge.VpcPrefixR\vvpcPrefixes\x128\n" +
+	"\fvpc_prefixes\x18\x01 \x03(\v2\x10.nico.VpcPrefixR\vvpcPrefixes\x128\n" +
 	"\ttimestamp\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12H\n" +
 	"\x10inventory_status\x18\x03 \x01(\x0e2\x1d.workflows.v1.InventoryStatusR\x0finventoryStatus\x12\x1d\n" +
 	"\n" +
@@ -147,13 +147,13 @@ func file_vpcprefix_proto_rawDescGZIP() []byte {
 var file_vpcprefix_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
 var file_vpcprefix_proto_goTypes = []any{
 	(*VpcPrefixInventory)(nil),    // 0: workflows.v1.VpcPrefixInventory
-	(*VpcPrefix)(nil),             // 1: forge.VpcPrefix
+	(*VpcPrefix)(nil),             // 1: nico.VpcPrefix
 	(*timestamppb.Timestamp)(nil), // 2: google.protobuf.Timestamp
 	(InventoryStatus)(0),          // 3: workflows.v1.InventoryStatus
 	(*InventoryPage)(nil),         // 4: workflows.v1.InventoryPage
 }
 var file_vpcprefix_proto_depIdxs = []int32{
-	1, // 0: workflows.v1.VpcPrefixInventory.vpc_prefixes:type_name -> forge.VpcPrefix
+	1, // 0: workflows.v1.VpcPrefixInventory.vpc_prefixes:type_name -> nico.VpcPrefix
 	2, // 1: workflows.v1.VpcPrefixInventory.timestamp:type_name -> google.protobuf.Timestamp
 	3, // 2: workflows.v1.VpcPrefixInventory.inventory_status:type_name -> workflows.v1.InventoryStatus
 	4, // 3: workflows.v1.VpcPrefixInventory.inventory_page:type_name -> workflows.v1.InventoryPage
@@ -170,7 +170,7 @@ func file_vpcprefix_proto_init() {
 		return
 	}
 	file_workflow_proto_init()
-	file_forge_carbide_proto_init()
+	file_nico_nico_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

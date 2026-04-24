@@ -41,7 +41,7 @@ func (api *API) RegisterSubscriber() error {
 	ManagerAccess.Data.EB.Log.Info().Msg("NVLinkLogicalPartition: successfully registered the DeleteNVLinkLogicalPartition workflow")
 
 	// Register activities
-	nvlinkLogicalPartitionManager := swa.NewManageNVLinkLogicalPartition(ManagerAccess.Data.EB.Managers.Carbide.Client)
+	nvlinkLogicalPartitionManager := swa.NewManageNVLinkLogicalPartition(ManagerAccess.Data.EB.Managers.Nico.Client)
 
 	// Register CreateNVLinkLogicalPartitionOnSite activity
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(nvlinkLogicalPartitionManager.CreateNVLinkLogicalPartitionOnSite)

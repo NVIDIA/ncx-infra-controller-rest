@@ -30,10 +30,10 @@ import (
 )
 
 func TestManageVpcPrefixInventory_DiscoverVpcPrefixInventory(t *testing.T) {
-	mockCarbide := cClient.NewMockCarbideClient()
+	mockNico := cClient.NewMockNicoClient()
 
-	carbideAtomicClient := cClient.NewCarbideAtomicClient(&cClient.CarbideClientConfig{})
-	carbideAtomicClient.SwapClient(mockCarbide)
+	nicoAtomicClient := cClient.NewNicoAtomicClient(&cClient.NicoClientConfig{})
+	nicoAtomicClient.SwapClient(mockNico)
 
 	wid := "test-workflow-id"
 	wrun := &tmocks.WorkflowRun{}
@@ -41,7 +41,7 @@ func TestManageVpcPrefixInventory_DiscoverVpcPrefixInventory(t *testing.T) {
 
 	type fields struct {
 		siteID               uuid.UUID
-		carbideAtomicClient  *cClient.CarbideAtomicClient
+		nicoAtomicClient  *cClient.NicoAtomicClient
 		temporalPublishQueue string
 		sitePageSize         int
 		cloudPageSize        int
@@ -58,7 +58,7 @@ func TestManageVpcPrefixInventory_DiscoverVpcPrefixInventory(t *testing.T) {
 			name: "test collecting and publishing VpcPrefix inventory, empty inventory",
 			fields: fields{
 				siteID:               uuid.New(),
-				carbideAtomicClient:  carbideAtomicClient,
+				nicoAtomicClient:  nicoAtomicClient,
 				temporalPublishQueue: "test-queue",
 				sitePageSize:         100,
 				cloudPageSize:        25,
@@ -71,7 +71,7 @@ func TestManageVpcPrefixInventory_DiscoverVpcPrefixInventory(t *testing.T) {
 			name: "test collecting and publishing VpcPrefix inventory, normal inventory",
 			fields: fields{
 				siteID:               uuid.New(),
-				carbideAtomicClient:  carbideAtomicClient,
+				nicoAtomicClient:  nicoAtomicClient,
 				temporalPublishQueue: "test-queue",
 				sitePageSize:         100,
 				cloudPageSize:        25,
@@ -91,7 +91,7 @@ func TestManageVpcPrefixInventory_DiscoverVpcPrefixInventory(t *testing.T) {
 
 			manageVpcPrefix := NewManageVpcPrefixInventory(ManageInventoryConfig{
 				SiteID:                tt.fields.siteID,
-				CarbideAtomicClient:   tt.fields.carbideAtomicClient,
+				NicoAtomicClient:   tt.fields.nicoAtomicClient,
 				TemporalPublishClient: tc,
 				TemporalPublishQueue:  tt.fields.temporalPublishQueue,
 				SitePageSize:          tt.fields.sitePageSize,
@@ -135,16 +135,16 @@ func TestManageVpcPrefixInventory_DiscoverVpcPrefixInventory(t *testing.T) {
 }
 
 func TestManageVpcPrefix_CreateVpcPrefixOnSite(t *testing.T) {
-	mockCarbide := cClient.NewMockCarbideClient()
+	mockNico := cClient.NewMockNicoClient()
 
-	carbideAtomicClient := cClient.NewCarbideAtomicClient(&cClient.CarbideClientConfig{})
-	carbideAtomicClient.SwapClient(mockCarbide)
+	nicoAtomicClient := cClient.NewNicoAtomicClient(&cClient.NicoClientConfig{})
+	nicoAtomicClient.SwapClient(mockNico)
 
 	name := "best_VpcPrefix_ever"
 	prefix := "192.168.1.0/24"
 
 	type fields struct {
-		CarbideAtomicClient *cClient.CarbideAtomicClient
+		NicoAtomicClient *cClient.NicoAtomicClient
 	}
 	type args struct {
 		ctx     context.Context
@@ -159,7 +159,7 @@ func TestManageVpcPrefix_CreateVpcPrefixOnSite(t *testing.T) {
 		{
 			name: "test create VpcPrefix success",
 			fields: fields{
-				CarbideAtomicClient: carbideAtomicClient,
+				NicoAtomicClient: nicoAtomicClient,
 			},
 			args: args{
 				ctx: context.Background(),
@@ -175,7 +175,7 @@ func TestManageVpcPrefix_CreateVpcPrefixOnSite(t *testing.T) {
 		{
 			name: "test create VpcPrefix fail on missing name",
 			fields: fields{
-				CarbideAtomicClient: carbideAtomicClient,
+				NicoAtomicClient: nicoAtomicClient,
 			},
 			args: args{
 				ctx: context.Background(),
@@ -191,7 +191,7 @@ func TestManageVpcPrefix_CreateVpcPrefixOnSite(t *testing.T) {
 		{
 			name: "test create VpcPrefix fail on missing prefix",
 			fields: fields{
-				CarbideAtomicClient: carbideAtomicClient,
+				NicoAtomicClient: nicoAtomicClient,
 			},
 			args: args{
 				ctx: context.Background(),
@@ -207,7 +207,7 @@ func TestManageVpcPrefix_CreateVpcPrefixOnSite(t *testing.T) {
 		{
 			name: "test create VpcPrefix fail on missing id",
 			fields: fields{
-				CarbideAtomicClient: carbideAtomicClient,
+				NicoAtomicClient: nicoAtomicClient,
 			},
 			args: args{
 				ctx: context.Background(),
@@ -223,7 +223,7 @@ func TestManageVpcPrefix_CreateVpcPrefixOnSite(t *testing.T) {
 		{
 			name: "test create VpcPrefix fail on missing vpc id",
 			fields: fields{
-				CarbideAtomicClient: carbideAtomicClient,
+				NicoAtomicClient: nicoAtomicClient,
 			},
 			args: args{
 				ctx: context.Background(),
@@ -239,7 +239,7 @@ func TestManageVpcPrefix_CreateVpcPrefixOnSite(t *testing.T) {
 		{
 			name: "test create VpcPrefix fail on missing request",
 			fields: fields{
-				CarbideAtomicClient: carbideAtomicClient,
+				NicoAtomicClient: nicoAtomicClient,
 			},
 			args: args{
 				ctx:     context.Background(),
@@ -250,7 +250,7 @@ func TestManageVpcPrefix_CreateVpcPrefixOnSite(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mm := NewManageVpcPrefix(tt.fields.CarbideAtomicClient)
+			mm := NewManageVpcPrefix(tt.fields.NicoAtomicClient)
 			err := mm.CreateVpcPrefixOnSite(tt.args.ctx, tt.args.request)
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -262,13 +262,13 @@ func TestManageVpcPrefix_CreateVpcPrefixOnSite(t *testing.T) {
 }
 
 func TestManageVpcPrefix_UpdateVpcPrefixOnSiteOnSite(t *testing.T) {
-	mockCarbide := cClient.NewMockCarbideClient()
+	mockNico := cClient.NewMockNicoClient()
 
-	carbideAtomicClient := cClient.NewCarbideAtomicClient(&cClient.CarbideClientConfig{})
-	carbideAtomicClient.SwapClient(mockCarbide)
+	nicoAtomicClient := cClient.NewNicoAtomicClient(&cClient.NicoClientConfig{})
+	nicoAtomicClient.SwapClient(mockNico)
 
 	type fields struct {
-		CarbideAtomicClient *cClient.CarbideAtomicClient
+		NicoAtomicClient *cClient.NicoAtomicClient
 	}
 	type args struct {
 		ctx     context.Context
@@ -283,7 +283,7 @@ func TestManageVpcPrefix_UpdateVpcPrefixOnSiteOnSite(t *testing.T) {
 		{
 			name: "test update VpcPrefix success",
 			fields: fields{
-				CarbideAtomicClient: carbideAtomicClient,
+				NicoAtomicClient: nicoAtomicClient,
 			},
 			args: args{
 				ctx: context.Background(),
@@ -296,7 +296,7 @@ func TestManageVpcPrefix_UpdateVpcPrefixOnSiteOnSite(t *testing.T) {
 		{
 			name: "test update VpcPrefix fail on missing id",
 			fields: fields{
-				CarbideAtomicClient: carbideAtomicClient,
+				NicoAtomicClient: nicoAtomicClient,
 			},
 			args: args{
 				ctx: context.Background(),
@@ -309,7 +309,7 @@ func TestManageVpcPrefix_UpdateVpcPrefixOnSiteOnSite(t *testing.T) {
 		{
 			name: "test update VpcPrefix fail on missing request",
 			fields: fields{
-				CarbideAtomicClient: carbideAtomicClient,
+				NicoAtomicClient: nicoAtomicClient,
 			},
 			args: args{
 				ctx:     context.Background(),
@@ -320,7 +320,7 @@ func TestManageVpcPrefix_UpdateVpcPrefixOnSiteOnSite(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mm := NewManageVpcPrefix(tt.fields.CarbideAtomicClient)
+			mm := NewManageVpcPrefix(tt.fields.NicoAtomicClient)
 			err := mm.UpdateVpcPrefixOnSite(tt.args.ctx, tt.args.request)
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -332,13 +332,13 @@ func TestManageVpcPrefix_UpdateVpcPrefixOnSiteOnSite(t *testing.T) {
 }
 
 func TestManageVpcPrefix_DeleteVpcPrefixOnSiteOnSite(t *testing.T) {
-	mockCarbide := cClient.NewMockCarbideClient()
+	mockNico := cClient.NewMockNicoClient()
 
-	carbideAtomicClient := cClient.NewCarbideAtomicClient(&cClient.CarbideClientConfig{})
-	carbideAtomicClient.SwapClient(mockCarbide)
+	nicoAtomicClient := cClient.NewNicoAtomicClient(&cClient.NicoClientConfig{})
+	nicoAtomicClient.SwapClient(mockNico)
 
 	type fields struct {
-		CarbideAtomicClient *cClient.CarbideAtomicClient
+		NicoAtomicClient *cClient.NicoAtomicClient
 	}
 	type args struct {
 		ctx     context.Context
@@ -353,7 +353,7 @@ func TestManageVpcPrefix_DeleteVpcPrefixOnSiteOnSite(t *testing.T) {
 		{
 			name: "test delete VpcPrefix success",
 			fields: fields{
-				CarbideAtomicClient: carbideAtomicClient,
+				NicoAtomicClient: nicoAtomicClient,
 			},
 			args: args{
 				ctx: context.Background(),
@@ -366,7 +366,7 @@ func TestManageVpcPrefix_DeleteVpcPrefixOnSiteOnSite(t *testing.T) {
 		{
 			name: "test delete VpcPrefix fail on blank id",
 			fields: fields{
-				CarbideAtomicClient: carbideAtomicClient,
+				NicoAtomicClient: nicoAtomicClient,
 			},
 			args: args{
 				ctx: context.Background(),
@@ -379,7 +379,7 @@ func TestManageVpcPrefix_DeleteVpcPrefixOnSiteOnSite(t *testing.T) {
 		{
 			name: "test delete VpcPrefix fail on missing request",
 			fields: fields{
-				CarbideAtomicClient: carbideAtomicClient,
+				NicoAtomicClient: nicoAtomicClient,
 			},
 			args: args{
 				ctx:     context.Background(),
@@ -390,7 +390,7 @@ func TestManageVpcPrefix_DeleteVpcPrefixOnSiteOnSite(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mm := NewManageVpcPrefix(tt.fields.CarbideAtomicClient)
+			mm := NewManageVpcPrefix(tt.fields.NicoAtomicClient)
 			err := mm.DeleteVpcPrefixOnSite(tt.args.ctx, tt.args.request)
 			if tt.wantErr {
 				assert.Error(t, err)

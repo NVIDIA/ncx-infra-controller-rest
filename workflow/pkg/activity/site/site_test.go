@@ -93,13 +93,13 @@ func TestManageSite_DeleteSiteComponentsFromDB(t *testing.T) {
 	util.TestSetupSchema(t, dbSession)
 
 	ipOrg := "test-provider-org-1"
-	ipRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	ipu := util.TestBuildUser(t, dbSession, uuid.New().String(), []string{ipOrg}, ipRoles)
 	ip := util.TestBuildInfrastructureProvider(t, dbSession, "testIP", ipOrg, ipu)
 
 	tnOrg := "test-tenant-org-1"
-	tnRoles := []string{"FORGE_TENANT_ADMIN"}
+	tnRoles := []string{"NICO_TENANT_ADMIN"}
 
 	tnu := util.TestBuildUser(t, dbSession, uuid.New().String(), []string{tnOrg}, tnRoles)
 	tncfg := cdbm.TenantConfig{
@@ -444,7 +444,7 @@ func TestManageSite_MonitorInventoryReceiptForAllSites(t *testing.T) {
 	util.TestSetupSchema(t, dbSession)
 
 	ipOrg := "test-provider-org-1"
-	ipRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	ipu := util.TestBuildUser(t, dbSession, uuid.New().String(), []string{ipOrg}, ipRoles)
 	ip := util.TestBuildInfrastructureProvider(t, dbSession, "testIP", ipOrg, ipu)
@@ -545,7 +545,7 @@ func TestManageSite_MonitorInventoryReceiptForAllSites_PagerDutyEnabled(t *testi
 	util.TestSetupSchema(t, dbSession)
 
 	ipOrg := "test-provider-org-1"
-	ipRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	ipu := util.TestBuildUser(t, dbSession, uuid.New().String(), []string{ipOrg}, ipRoles)
 	ip := util.TestBuildInfrastructureProvider(t, dbSession, "testIP", ipOrg, ipu)
@@ -621,7 +621,7 @@ func TestManageSite_MonitorInventoryReceiptForAllSites_PagerDutyDisabled(t *test
 	util.TestSetupSchema(t, dbSession)
 
 	ipOrg := "test-provider-org-1"
-	ipRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	ipu := util.TestBuildUser(t, dbSession, uuid.New().String(), []string{ipOrg}, ipRoles)
 	ip := util.TestBuildInfrastructureProvider(t, dbSession, "testIP", ipOrg, ipu)
@@ -675,7 +675,7 @@ func TestManageSite_CheckHealthForAllSitesViaSiteAgent(t *testing.T) {
 	util.TestSetupSchema(t, dbSession)
 
 	ipOrg := "test-provider-org-1"
-	ipRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	ipu := util.TestBuildUser(t, dbSession, uuid.New().String(), []string{ipOrg}, ipRoles)
 	ip := util.TestBuildInfrastructureProvider(t, dbSession, "testIP", ipOrg, ipu)
@@ -838,7 +838,7 @@ func TestManageSite_CheckHealthForGetAllSites(t *testing.T) {
 	util.TestSetupSchema(t, dbSession)
 
 	ipOrg := "test-provider-org-1"
-	ipRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	ipu := util.TestBuildUser(t, dbSession, uuid.New().String(), []string{ipOrg}, ipRoles)
 	ip := util.TestBuildInfrastructureProvider(t, dbSession, "testIP", ipOrg, ipu)
@@ -893,7 +893,7 @@ func TestManageSite_OnCheckHealthForSiteViaSiteAgentError(t *testing.T) {
 	util.TestSetupSchema(t, dbSession)
 
 	ipOrg := "test-provider-org-1"
-	ipRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	ipu := util.TestBuildUser(t, dbSession, uuid.New().String(), []string{ipOrg}, ipRoles)
 	ip := util.TestBuildInfrastructureProvider(t, dbSession, "testIP", ipOrg, ipu)
@@ -1043,7 +1043,7 @@ func TestManageSite_CheckOTPExpirationAndRenewForAllSites(t *testing.T) {
 	util.TestSetupSchema(t, dbSession)
 
 	ipOrg := "test-provider-org-1"
-	ipRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	ipu := util.TestBuildUser(t, dbSession, uuid.New().String(), []string{ipOrg}, ipRoles)
 	ip := util.TestBuildInfrastructureProvider(t, dbSession, "testIP", ipOrg, ipu)
@@ -1139,7 +1139,7 @@ func TestManageSite_CheckOTPExpirationAndRenewForAllSites_MoreThanDefaultPageSiz
 	util.TestSetupSchema(t, dbSession)
 
 	ipOrg := "test-provider-org-1"
-	ipRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	ipu := util.TestBuildUser(t, dbSession, uuid.New().String(), []string{ipOrg}, ipRoles)
 	ip := util.TestBuildInfrastructureProvider(t, dbSession, "testIP", ipOrg, ipu)
@@ -1212,7 +1212,7 @@ func TestManageSite_UpdateAgentCertExpiry_Activity(t *testing.T) {
 
 	// Create infrastructure provider org and user
 	ipOrg := "test-provider-org-1"
-	ipRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipRoles := []string{"NICO_PROVIDER_ADMIN"}
 	ipu := util.TestBuildUser(t, dbSession, uuid.New().String(), []string{ipOrg}, ipRoles)
 
 	// Create infrastructure provider with a valid user
@@ -1253,7 +1253,7 @@ func TestManageSite_DeleteOrphanedSiteTemporalNamespaces_Activity(t *testing.T) 
 
 	// Create infrastructure provider org and user
 	ipOrg := "test-provider-org-1"
-	ipRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipRoles := []string{"NICO_PROVIDER_ADMIN"}
 	ipu := util.TestBuildUser(t, dbSession, uuid.New().String(), []string{ipOrg}, ipRoles)
 
 	// Create infrastructure provider with a valid user

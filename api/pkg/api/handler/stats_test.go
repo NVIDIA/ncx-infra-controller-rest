@@ -294,8 +294,8 @@ func TestStatsHandlers(t *testing.T) {
 	org := "stats-org"
 
 	// Users
-	providerUser := testStatsBuildUser(t, dbSession, []string{org}, []string{"FORGE_PROVIDER_ADMIN"})
-	tenantUser := testStatsBuildUser(t, dbSession, []string{org}, []string{"FORGE_TENANT_ADMIN"})
+	providerUser := testStatsBuildUser(t, dbSession, []string{org}, []string{"NICO_PROVIDER_ADMIN"})
+	tenantUser := testStatsBuildUser(t, dbSession, []string{org}, []string{"NICO_TENANT_ADMIN"})
 
 	// Infrastructure provider & site
 	ip := testStatsBuildInfrastructureProvider(t, dbSession, org, "stats-provider")

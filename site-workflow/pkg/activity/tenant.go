@@ -36,7 +36,7 @@ import (
 
 // ManageTenant is activity to manage a Tenant on Site
 type ManageTenant struct {
-	CarbideAtomicClient *cClient.CarbideAtomicClient
+	NicoAtomicClient *cClient.NicoAtomicClient
 }
 
 // CreateTenantOnSite creates a Tenant by calling Site Controller gRPC API
@@ -59,11 +59,11 @@ func (mt *ManageTenant) CreateTenantOnSite(ctx context.Context, request *cwssaws
 	}
 
 	// Call Site Controller gRPC endpoint
-	carbideClient := mt.CarbideAtomicClient.GetClient()
-	if carbideClient == nil {
+	nicoClient := mt.NicoAtomicClient.GetClient()
+	if nicoClient == nil {
 		return cClient.ErrClientNotConnected
 	}
-	computeClient := carbideClient.Compute()
+	computeClient := nicoClient.Compute()
 
 	_, err = computeClient.CreateTenant(ctx, request)
 	if err != nil {
@@ -96,11 +96,11 @@ func (mt *ManageTenant) UpdateTenantOnSite(ctx context.Context, request *cwssaws
 	}
 
 	// Call Site Controller gRPC endpoint
-	carbideClient := mt.CarbideAtomicClient.GetClient()
-	if carbideClient == nil {
+	nicoClient := mt.NicoAtomicClient.GetClient()
+	if nicoClient == nil {
 		return cClient.ErrClientNotConnected
 	}
-	computeClient := carbideClient.Compute()
+	computeClient := nicoClient.Compute()
 
 	_, err = computeClient.UpdateTenant(ctx, request)
 	if err != nil {
@@ -114,9 +114,9 @@ func (mt *ManageTenant) UpdateTenantOnSite(ctx context.Context, request *cwssaws
 }
 
 // NewManageTenant returns a new ManageTenant activity
-func NewManageTenant(carbideClient *cClient.CarbideAtomicClient) ManageTenant {
+func NewManageTenant(nicoClient *cClient.NicoAtomicClient) ManageTenant {
 	return ManageTenant{
-		CarbideAtomicClient: carbideClient,
+		NicoAtomicClient: nicoClient,
 	}
 }
 
@@ -146,16 +146,16 @@ func NewManageTenantInventory(config ManageInventoryConfig) ManageTenantInventor
 	}
 }
 
-func tenantFindIDs(ctx context.Context, carbideClient *cClient.CarbideClient) ([]string, error) {
-	idList, err := carbideClient.Compute().FindTenantOrganizationIDs(ctx, &cwssaws.TenantSearchFilter{})
+func tenantFindIDs(ctx context.Context, nicoClient *cClient.NicoClient) ([]string, error) {
+	idList, err := nicoClient.Compute().FindTenantOrganizationIDs(ctx, &cwssaws.TenantSearchFilter{})
 	if err != nil {
 		return nil, err
 	}
 	return idList.GetTenantOrganizationIds(), nil
 }
 
-func tenantFindByIDs(ctx context.Context, carbideClient *cClient.CarbideClient, ids []string) ([]*cwssaws.Tenant, error) {
-	list, err := carbideClient.Compute().FindTenantsByOrganizationIDs(ctx, &cwssaws.TenantByOrganizationIdsRequest{
+func tenantFindByIDs(ctx context.Context, nicoClient *cClient.NicoClient, ids []string) ([]*cwssaws.Tenant, error) {
+	list, err := nicoClient.Compute().FindTenantsByOrganizationIDs(ctx, &cwssaws.TenantByOrganizationIdsRequest{
 		OrganizationIds: ids,
 	})
 	if err != nil {

@@ -35,10 +35,10 @@ func (api *API) RegisterPublisher() error {
 	// Register OsImage activity for discovering and publishing OsImage Inventory
 	OsImageInventoryManager := swa.NewManageOsImageInventory(swa.ManageInventoryConfig{
 		SiteID:                uuid.MustParse(ManagerAccess.Conf.EB.Temporal.ClusterID),
-		CarbideAtomicClient:   ManagerAccess.Data.EB.Managers.Carbide.Client,
+		NicoAtomicClient:   ManagerAccess.Data.EB.Managers.Nico.Client,
 		TemporalPublishClient: ManagerAccess.Data.EB.Managers.Workflow.Temporal.Publisher,
 		TemporalPublishQueue:  ManagerAccess.Conf.EB.Temporal.TemporalPublishQueue,
-		SitePageSize:          InventoryCarbidePageSize,
+		SitePageSize:          InventoryNicoPageSize,
 		CloudPageSize:         InventoryCloudPageSize,
 	})
 

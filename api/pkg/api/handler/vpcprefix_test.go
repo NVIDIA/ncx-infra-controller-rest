@@ -106,14 +106,14 @@ func TestVpcPrefixHandler_Create(t *testing.T) {
 	ipOrg1 := "test-ip-org-1"
 	ipOrg2 := "test-ip-org-2"
 	ipOrg3 := "test-ip-org-3"
-	ipRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	ipu := testMachineBuildUser(t, dbSession, uuid.New().String(), []string{ipOrg1, ipOrg2, ipOrg3}, ipRoles)
 
 	tnOrg1 := "test-tn-org-1"
 	tnOrg2 := "test-tn-org-2"
 	tnOrg3 := "test-tn-org-3"
-	tnRoles := []string{"FORGE_TENANT_ADMIN"}
+	tnRoles := []string{"NICO_TENANT_ADMIN"}
 
 	tnu := testMachineBuildUser(t, dbSession, uuid.New().String(), []string{tnOrg1, tnOrg2, tnOrg3}, tnRoles)
 
@@ -599,14 +599,14 @@ func TestVpcPrefixHandler_GetAll(t *testing.T) {
 	ipOrg1 := "test-ip-org-1"
 	ipOrg2 := "test-ip-org-2"
 	ipOrg3 := "test-ip-org-3"
-	ipRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	ipu := testMachineBuildUser(t, dbSession, uuid.New().String(), []string{ipOrg1, ipOrg2, ipOrg3}, ipRoles)
 
 	tnOrg1 := "test-tn-org-1"
 	tnOrg2 := "test-tn-org-2"
 	tnOrg3 := "test-tn-org-3"
-	tnRoles := []string{"FORGE_TENANT_ADMIN"}
+	tnRoles := []string{"NICO_TENANT_ADMIN"}
 
 	tnu := testMachineBuildUser(t, dbSession, uuid.New().String(), []string{tnOrg1, tnOrg2, tnOrg3}, tnRoles)
 
@@ -937,7 +937,7 @@ func TestVpcPrefixHandler_GetAll(t *testing.T) {
 				q.Add("includeRelation", *tc.queryIncludeRelations4)
 			}
 
-			path := fmt.Sprintf("/v2/org/%s/carbide/vpcprefix?%s", tc.reqOrgName, q.Encode())
+			path := fmt.Sprintf("/v2/org/%s/nico/vpcprefix?%s", tc.reqOrgName, q.Encode())
 
 			req := httptest.NewRequest(http.MethodGet, path, nil)
 			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
@@ -1031,14 +1031,14 @@ func TestVpcPrefixHandler_Get(t *testing.T) {
 	ipOrg1 := "test-ip-org-1"
 	ipOrg2 := "test-ip-org-2"
 	ipOrg3 := "test-ip-org-3"
-	ipRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	ipu := testMachineBuildUser(t, dbSession, uuid.New().String(), []string{ipOrg1, ipOrg2, ipOrg3}, ipRoles)
 
 	tnOrg1 := "test-tn-org-1"
 	tnOrg2 := "test-tn-org-2"
 	tnOrg3 := "test-tn-org-3"
-	tnRoles := []string{"FORGE_TENANT_ADMIN"}
+	tnRoles := []string{"NICO_TENANT_ADMIN"}
 
 	tnu := testMachineBuildUser(t, dbSession, uuid.New().String(), []string{tnOrg1, tnOrg2, tnOrg3}, tnRoles)
 
@@ -1255,14 +1255,14 @@ func TestVpcPrefixHandler_Update(t *testing.T) {
 	ipOrg1 := "test-ip-org-1"
 	ipOrg2 := "test-ip-org-2"
 	ipOrg3 := "test-ip-org-3"
-	ipRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	ipu := testMachineBuildUser(t, dbSession, uuid.New().String(), []string{ipOrg1, ipOrg2, ipOrg3}, ipRoles)
 
 	tnOrg1 := "test-tn-org-1"
 	tnOrg2 := "test-tn-org-2"
 	tnOrg3 := "test-tn-org-3"
-	tnRoles := []string{"FORGE_TENANT_ADMIN"}
+	tnRoles := []string{"NICO_TENANT_ADMIN"}
 
 	tnu := testMachineBuildUser(t, dbSession, uuid.New().String(), []string{tnOrg1, tnOrg2, tnOrg3}, tnRoles)
 
@@ -1517,14 +1517,14 @@ func TestVpcPrefixHandler_Delete(t *testing.T) {
 	ipOrg1 := "test-ip-org-1"
 	ipOrg2 := "test-ip-org-2"
 	ipOrg3 := "test-ip-org-3"
-	ipRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	ipu := testMachineBuildUser(t, dbSession, uuid.New().String(), []string{ipOrg1, ipOrg2, ipOrg3}, ipRoles)
 
 	tnOrg1 := "test-tn-org-1"
 	tnOrg2 := "test-tn-org-2"
 	tnOrg3 := "test-tn-org-3"
-	tnRoles := []string{"FORGE_TENANT_ADMIN"}
+	tnRoles := []string{"NICO_TENANT_ADMIN"}
 
 	tnu := testMachineBuildUser(t, dbSession, uuid.New().String(), []string{tnOrg1, tnOrg2, tnOrg3}, tnRoles)
 
@@ -1589,7 +1589,7 @@ func TestVpcPrefixHandler_Delete(t *testing.T) {
 	wrunWithCoreGRPCError := &tmocks.WorkflowRun{}
 	wrunWithCoreGRPCError.On("GetID").Return("workflow-with-core-grpc-error")
 
-	wrunWithCoreGRPCError.Mock.On("Get", mock.Anything, mock.Anything).Return(tp.NewNonRetryableApplicationError("core gRPC failed precondition", swe.ErrTypeCarbideFailedPrecondition, errors.New("core gRPC failed precondition")))
+	wrunWithCoreGRPCError.Mock.On("Get", mock.Anything, mock.Anything).Return(tp.NewNonRetryableApplicationError("core gRPC failed precondition", swe.ErrTypeNicoFailedPrecondition, errors.New("core gRPC failed precondition")))
 
 	tscWithCoreGRPCError.Mock.On("ExecuteWorkflow", mock.Anything, mock.AnythingOfType("internal.StartWorkflowOptions"),
 		"DeleteVpcPrefix", mock.Anything).Return(wrunWithCoreGRPCError, nil)

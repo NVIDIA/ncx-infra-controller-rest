@@ -29,10 +29,10 @@ var ManagerAccess *Manager.ManagerAccess
 type API struct{}
 
 // NewExpectedMachineManager - returns a new instance of expected machine manager
-func NewExpectedMachineManager(superForge *elektratypes.Elektra, superAPI *Manager.ManagerAPI, superConf *Manager.ManagerConf) *API {
+func NewExpectedMachineManager(superNico *elektratypes.Elektra, superAPI *Manager.ManagerAPI, superConf *Manager.ManagerConf) *API {
 	ManagerAccess = &Manager.ManagerAccess{
 		Data: &Manager.ManagerData{
-			EB: superForge,
+			EB: superNico,
 		},
 		API:  superAPI,
 		Conf: superConf,

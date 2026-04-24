@@ -25,7 +25,7 @@ import (
 // RegisterSubscriber registers the VPCWorkflows with the Temporal client
 func (api *API) RegisterSubscriber() error {
 
-	vpcManager := swa.NewManageVPC(ManagerAccess.Data.EB.Managers.Carbide.Client)
+	vpcManager := swa.NewManageVPC(ManagerAccess.Data.EB.Managers.Nico.Client)
 
 	// Register the subscribers here
 	ManagerAccess.Data.EB.Log.Info().Msg("VPC: Registering the subscribers")

@@ -80,14 +80,14 @@ func TestManageInstance_CreateInstanceViaSiteAgent(t *testing.T) {
 	util.TestSetupSchema(t, dbSession)
 
 	ipOrg := "test-provider-org-1"
-	ipRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	ipu := util.TestBuildUser(t, dbSession, uuid.New().String(), []string{ipOrg}, ipRoles)
 	ip := util.TestBuildInfrastructureProvider(t, dbSession, "testIP", ipOrg, ipu)
 
 	tnOrg := "test-tenant-org-1"
 	tnOrg2 := "test-tenant-org-2"
-	tnRoles := []string{"FORGE_TENANT_ADMIN"}
+	tnRoles := []string{"NICO_TENANT_ADMIN"}
 
 	tnu := util.TestBuildUser(t, dbSession, uuid.New().String(), []string{tnOrg, tnOrg2}, tnRoles)
 	tncfg := cdbm.TenantConfig{
@@ -491,13 +491,13 @@ func TestManageInstance_CreateInstanceError(t *testing.T) {
 	util.TestSetupSchema(t, dbSession)
 
 	ipOrg := "test-provider-org-1"
-	ipRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	ipu := util.TestBuildUser(t, dbSession, uuid.New().String(), []string{ipOrg}, ipRoles)
 	ip := util.TestBuildInfrastructureProvider(t, dbSession, "testIP", ipOrg, ipu)
 
 	tnOrg := "test-tenant-org-1"
-	tnRoles := []string{"FORGE_TENANT_ADMIN"}
+	tnRoles := []string{"NICO_TENANT_ADMIN"}
 
 	tnu := util.TestBuildUser(t, dbSession, uuid.New().String(), []string{tnOrg}, tnRoles)
 	tncfg := cdbm.TenantConfig{
@@ -606,13 +606,13 @@ func TestManageInstance_DeleteInstanceViaSiteAgent(t *testing.T) {
 	util.TestSetupSchema(t, dbSession)
 
 	ipOrg := "test-provider-org-1"
-	ipRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	ipu := util.TestBuildUser(t, dbSession, uuid.New().String(), []string{ipOrg}, ipRoles)
 	ip := util.TestBuildInfrastructureProvider(t, dbSession, "testIP", ipOrg, ipu)
 
 	tnOrg := "test-tenant-org-1"
-	tnRoles := []string{"FORGE_TENANT_ADMIN"}
+	tnRoles := []string{"NICO_TENANT_ADMIN"}
 
 	tnu := util.TestBuildUser(t, dbSession, uuid.New().String(), []string{tnOrg}, tnRoles)
 	tncfg := cdbm.TenantConfig{
@@ -806,13 +806,13 @@ func TestManageInstance_deleteInstanceFromDB_removesIBAndNVLinkInterfaces(t *tes
 	util.TestSetupSchema(t, dbSession)
 
 	ipOrg := "test-provider-org-1"
-	ipRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	ipu := util.TestBuildUser(t, dbSession, uuid.New().String(), []string{ipOrg}, ipRoles)
 	ip := util.TestBuildInfrastructureProvider(t, dbSession, "testIP", ipOrg, ipu)
 
 	tnOrg := "test-tenant-org-1"
-	tnRoles := []string{"FORGE_TENANT_ADMIN"}
+	tnRoles := []string{"NICO_TENANT_ADMIN"}
 
 	tnu := util.TestBuildUser(t, dbSession, uuid.New().String(), []string{tnOrg}, tnRoles)
 	tncfg := cdbm.TenantConfig{
@@ -911,13 +911,13 @@ func TestManageInstance_UpdateInstanceInDB(t *testing.T) {
 	util.TestSetupSchema(t, dbSession)
 
 	ipOrg := "test-provider-org-1"
-	ipRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	ipu := util.TestBuildUser(t, dbSession, uuid.New().String(), []string{ipOrg}, ipRoles)
 	ip := util.TestBuildInfrastructureProvider(t, dbSession, "testIP", ipOrg, ipu)
 
 	tnOrg := "test-tenant-org-1"
-	tnRoles := []string{"FORGE_TENANT_ADMIN"}
+	tnRoles := []string{"NICO_TENANT_ADMIN"}
 
 	tnu := util.TestBuildUser(t, dbSession, uuid.New().String(), []string{tnOrg}, tnRoles)
 	tncfg := cdbm.TenantConfig{
@@ -1253,13 +1253,13 @@ func TestManageInstance_UpdateInstancesInDB(t *testing.T) {
 	util.TestSetupSchema(t, dbSession)
 
 	ipOrg := "test-provider-org-1"
-	ipRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	ipu := util.TestBuildUser(t, dbSession, uuid.New().String(), []string{ipOrg}, ipRoles)
 	ip := util.TestBuildInfrastructureProvider(t, dbSession, "testIP", ipOrg, ipu)
 
 	tnOrg := "test-tenant-org-1"
-	tnRoles := []string{"FORGE_TENANT_ADMIN"}
+	tnRoles := []string{"NICO_TENANT_ADMIN"}
 
 	tnu := util.TestBuildUser(t, dbSession, uuid.New().String(), []string{tnOrg}, tnRoles)
 	tncfg := cdbm.TenantConfig{
@@ -3245,13 +3245,13 @@ func TestManageInstance_RebootInstanceViaSiteAgent(t *testing.T) {
 	util.TestSetupSchema(t, dbSession)
 
 	ipOrg := "test-provider-org-1"
-	ipRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	ipu := util.TestBuildUser(t, dbSession, uuid.New().String(), []string{ipOrg}, ipRoles)
 	ip := util.TestBuildInfrastructureProvider(t, dbSession, "testIP", ipOrg, ipu)
 
 	tnOrg := "test-tenant-org-1"
-	tnRoles := []string{"FORGE_TENANT_ADMIN"}
+	tnRoles := []string{"NICO_TENANT_ADMIN"}
 
 	tnu := util.TestBuildUser(t, dbSession, uuid.New().String(), []string{tnOrg}, tnRoles)
 	tncfg := cdbm.TenantConfig{
@@ -3437,13 +3437,13 @@ func TestManageInstance_UpdateRebootInstanceInDB(t *testing.T) {
 	util.TestSetupSchema(t, dbSession)
 
 	ipOrg := "test-provider-org-1"
-	ipRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	ipu := util.TestBuildUser(t, dbSession, uuid.New().String(), []string{ipOrg}, ipRoles)
 	ip := util.TestBuildInfrastructureProvider(t, dbSession, "testIP", ipOrg, ipu)
 
 	tnOrg := "test-tenant-org-1"
-	tnRoles := []string{"FORGE_TENANT_ADMIN"}
+	tnRoles := []string{"NICO_TENANT_ADMIN"}
 
 	tnu := util.TestBuildUser(t, dbSession, uuid.New().String(), []string{tnOrg}, tnRoles)
 	tncfg := cdbm.TenantConfig{

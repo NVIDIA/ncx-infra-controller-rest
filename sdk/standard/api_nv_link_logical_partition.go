@@ -43,7 +43,7 @@ CreateNvlinkLogicalPartition Create NVLink Logical Partition
 
 Create an NVLink Logical Partition for the org.
 
-Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` NGC role.
+Org must have a Tenant entity. User must have `NICO_TENANT_ADMIN` NGC role.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the NGC Org
@@ -73,7 +73,7 @@ func (a *NVLinkLogicalPartitionAPIService) CreateNvlinkLogicalPartitionExecute(r
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/nvlink-logical-partition"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/nvlink-logical-partition"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -122,7 +122,7 @@ func (a *NVLinkLogicalPartitionAPIService) CreateNvlinkLogicalPartitionExecute(r
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 400 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -133,7 +133,7 @@ func (a *NVLinkLogicalPartitionAPIService) CreateNvlinkLogicalPartitionExecute(r
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -173,7 +173,7 @@ DeleteNvlinkLogicalPartition Delete NVLink Logical Partition
 
 # Delete an NVLink Logical Partition by ID
 
-Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` NGC role.
+Org must have a Tenant entity. User must have `NICO_TENANT_ADMIN` NGC role.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the NGC Org
@@ -202,7 +202,7 @@ func (a *NVLinkLogicalPartitionAPIService) DeleteNvlinkLogicalPartitionExecute(r
 		return nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/nvlink-logical-partition/{nvLinkLogicalPartitionId}"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/nvlink-logical-partition/{nvLinkLogicalPartitionId}"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"nvLinkLogicalPartitionId"+"}", url.PathEscape(parameterValueToString(r.nvLinkLogicalPartitionId, "nvLinkLogicalPartitionId")), -1)
 
@@ -250,7 +250,7 @@ func (a *NVLinkLogicalPartitionAPIService) DeleteNvlinkLogicalPartitionExecute(r
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -343,7 +343,7 @@ GetAllNvlinkInterface Retrieve all NVLink Interfaces
 
 # Get all NVLink Interfaces
 
-Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` NGC role.
+Org must have a Tenant entity. User must have `NICO_TENANT_ADMIN` NGC role.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the NGC Org
@@ -373,7 +373,7 @@ func (a *NVLinkLogicalPartitionAPIService) GetAllNvlinkInterfaceExecute(r ApiGet
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/nvlink-interface"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/nvlink-interface"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -451,7 +451,7 @@ func (a *NVLinkLogicalPartitionAPIService) GetAllNvlinkInterfaceExecute(r ApiGet
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -560,7 +560,7 @@ GetAllNvlinkLogicalPartition Retrieve all NVLink Logical Partitions
 
 # Retrieve all NVLink Logical Partitions for the org
 
-Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` role.
+Org must have a Tenant entity. User must have `NICO_TENANT_ADMIN` role.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the NGC Org
@@ -590,7 +590,7 @@ func (a *NVLinkLogicalPartitionAPIService) GetAllNvlinkLogicalPartitionExecute(r
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/nvlink-logical-partition"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/nvlink-logical-partition"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -671,7 +671,7 @@ func (a *NVLinkLogicalPartitionAPIService) GetAllNvlinkLogicalPartitionExecute(r
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -739,7 +739,7 @@ GetNvlinkLogicalPartition Retrieve NVLink Logical Partition
 
 # Retrieve a specific NVLink Logical Partition by ID
 
-Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` NGC role.
+Org must have a Tenant entity. User must have `NICO_TENANT_ADMIN` NGC role.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the NGC Org
@@ -771,7 +771,7 @@ func (a *NVLinkLogicalPartitionAPIService) GetNvlinkLogicalPartitionExecute(r Ap
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/nvlink-logical-partition/{nvLinkLogicalPartitionId}"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/nvlink-logical-partition/{nvLinkLogicalPartitionId}"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"nvLinkLogicalPartitionId"+"}", url.PathEscape(parameterValueToString(r.nvLinkLogicalPartitionId, "nvLinkLogicalPartitionId")), -1)
 
@@ -831,7 +831,7 @@ func (a *NVLinkLogicalPartitionAPIService) GetNvlinkLogicalPartitionExecute(r Ap
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -877,7 +877,7 @@ UpdateNvlinkLogicalPartition Update NVLink Logical Partition
 
 # Update a specific NVLink Logical Partition
 
-Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` NGC role.
+Org must have a Tenant entity. User must have `NICO_TENANT_ADMIN` NGC role.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the NGC Org
@@ -909,7 +909,7 @@ func (a *NVLinkLogicalPartitionAPIService) UpdateNvlinkLogicalPartitionExecute(r
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/nvlink-logical-partition/{nvLinkLogicalPartitionId}"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/nvlink-logical-partition/{nvLinkLogicalPartitionId}"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"nvLinkLogicalPartitionId"+"}", url.PathEscape(parameterValueToString(r.nvLinkLogicalPartitionId, "nvLinkLogicalPartitionId")), -1)
 
@@ -959,7 +959,7 @@ func (a *NVLinkLogicalPartitionAPIService) UpdateNvlinkLogicalPartitionExecute(r
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 400 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -970,7 +970,7 @@ func (a *NVLinkLogicalPartitionAPIService) UpdateNvlinkLogicalPartitionExecute(r
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()

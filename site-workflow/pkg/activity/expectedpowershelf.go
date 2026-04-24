@@ -40,7 +40,7 @@ import (
 // ManageExpectedPowerShelfInventory is an activity wrapper for Expected Power Shelf inventory collection and publishing
 type ManageExpectedPowerShelfInventory struct {
 	siteID                uuid.UUID
-	carbideAtomicClient   *cclient.CarbideAtomicClient
+	nicoAtomicClient   *cclient.NicoAtomicClient
 	temporalPublishClient tClient.Client
 	temporalPublishQueue  string
 	cloudPageSize         int
@@ -63,11 +63,11 @@ func (mepsi *ManageExpectedPowerShelfInventory) DiscoverExpectedPowerShelfInvent
 	}
 
 	// Get Site Controller gRPC client
-	carbideClient := mepsi.carbideAtomicClient.GetClient()
-	forgeClient := carbideClient.Carbide()
+	nicoClient := mepsi.nicoAtomicClient.GetClient()
+	nicoClient := nicoClient.Nico()
 
 	// Call GetAllExpectedPowerShelves to get full list of ExpectedPowerShelves on Site
-	epsList, err := forgeClient.GetAllExpectedPowerShelves(ctx, &emptypb.Empty{})
+	epsList, err := nicoClient.GetAllExpectedPowerShelves(ctx, &emptypb.Empty{})
 	if err != nil {
 		logger.Warn().Err(err).Msg("Failed to retrieve ExpectedPowerShelves using Site Controller API")
 
@@ -89,7 +89,7 @@ func (mepsi *ManageExpectedPowerShelfInventory) DiscoverExpectedPowerShelfInvent
 	}
 
 	// Call GetAllExpectedPowerShelvesLinked to get linked Power Shelf IDs
-	linkedList, lerr := forgeClient.GetAllExpectedPowerShelvesLinked(ctx, &emptypb.Empty{})
+	linkedList, lerr := nicoClient.GetAllExpectedPowerShelvesLinked(ctx, &emptypb.Empty{})
 	if lerr != nil {
 		logger.Warn().Err(lerr).Msg("Failed to retrieve linked Power Shelf IDs using Site Controller API")
 
@@ -241,10 +241,10 @@ func getPagedExpectedPowerShelfInventory(
 }
 
 // NewManageExpectedPowerShelfInventory returns a ManageInventory implementation for Expected Power Shelf activity
-func NewManageExpectedPowerShelfInventory(siteID uuid.UUID, carbideAtomicClient *cclient.CarbideAtomicClient, temporalPublishClient tClient.Client, temporalPublishQueue string, cloudPageSize int) ManageExpectedPowerShelfInventory {
+func NewManageExpectedPowerShelfInventory(siteID uuid.UUID, nicoAtomicClient *cclient.NicoAtomicClient, temporalPublishClient tClient.Client, temporalPublishQueue string, cloudPageSize int) ManageExpectedPowerShelfInventory {
 	return ManageExpectedPowerShelfInventory{
 		siteID:                siteID,
-		carbideAtomicClient:   carbideAtomicClient,
+		nicoAtomicClient:   nicoAtomicClient,
 		temporalPublishClient: temporalPublishClient,
 		temporalPublishQueue:  temporalPublishQueue,
 		cloudPageSize:         cloudPageSize,
@@ -253,19 +253,19 @@ func NewManageExpectedPowerShelfInventory(siteID uuid.UUID, carbideAtomicClient 
 
 // ManageExpectedPowerShelf is an activity wrapper for Expected Power Shelf management
 type ManageExpectedPowerShelf struct {
-	CarbideAtomicClient *cclient.CarbideAtomicClient
+	NicoAtomicClient *cclient.NicoAtomicClient
 	RlaAtomicClient     *cclient.RlaAtomicClient
 }
 
 // NewManageExpectedPowerShelf returns a new ManageExpectedPowerShelf client
-func NewManageExpectedPowerShelf(carbideClient *cclient.CarbideAtomicClient, rlaClient *cclient.RlaAtomicClient) ManageExpectedPowerShelf {
+func NewManageExpectedPowerShelf(nicoClient *cclient.NicoAtomicClient, rlaClient *cclient.RlaAtomicClient) ManageExpectedPowerShelf {
 	return ManageExpectedPowerShelf{
-		CarbideAtomicClient: carbideClient,
+		NicoAtomicClient: nicoClient,
 		RlaAtomicClient:     rlaClient,
 	}
 }
 
-// CreateExpectedPowerShelfOnSite creates Expected Power Shelf with Carbide
+// CreateExpectedPowerShelfOnSite creates Expected Power Shelf with Nico
 func (meps *ManageExpectedPowerShelf) CreateExpectedPowerShelfOnSite(ctx context.Context, request *cwssaws.ExpectedPowerShelf) error {
 	logger := log.With().Str("Activity", "CreateExpectedPowerShelfOnSite").Logger()
 
@@ -287,11 +287,11 @@ func (meps *ManageExpectedPowerShelf) CreateExpectedPowerShelfOnSite(ctx context
 	}
 
 	// Call Site Controller gRPC endpoint
-	carbideClient := meps.CarbideAtomicClient.GetClient()
-	forgeClient := carbideClient.Carbide()
+	nicoClient := meps.NicoAtomicClient.GetClient()
+	nicoClient := nicoClient.Nico()
 
-	// Call Forge gRPC endpoint
-	_, err = forgeClient.AddExpectedPowerShelf(ctx, request)
+	// Call Nico gRPC endpoint
+	_, err = nicoClient.AddExpectedPowerShelf(ctx, request)
 	if err != nil {
 		logger.Warn().Err(err).Msg("Failed to create Expected Power Shelf using Site Controller API")
 		return swe.WrapErr(err)
@@ -302,7 +302,7 @@ func (meps *ManageExpectedPowerShelf) CreateExpectedPowerShelfOnSite(ctx context
 	return nil
 }
 
-// UpdateExpectedPowerShelfOnSite updates Expected Power Shelf on Carbide
+// UpdateExpectedPowerShelfOnSite updates Expected Power Shelf on Nico
 func (meps *ManageExpectedPowerShelf) UpdateExpectedPowerShelfOnSite(ctx context.Context, request *cwssaws.ExpectedPowerShelf) error {
 	logger := log.With().Str("Activity", "UpdateExpectedPowerShelfOnSite").Logger()
 
@@ -324,10 +324,10 @@ func (meps *ManageExpectedPowerShelf) UpdateExpectedPowerShelfOnSite(ctx context
 	}
 
 	// Call Site Controller gRPC endpoint
-	carbideClient := meps.CarbideAtomicClient.GetClient()
-	forgeClient := carbideClient.Carbide()
+	nicoClient := meps.NicoAtomicClient.GetClient()
+	nicoClient := nicoClient.Nico()
 
-	_, err = forgeClient.UpdateExpectedPowerShelf(ctx, request)
+	_, err = nicoClient.UpdateExpectedPowerShelf(ctx, request)
 	if err != nil {
 		logger.Warn().Err(err).Msg("Failed to update Expected Power Shelf using Site Controller API")
 		return swe.WrapErr(err)
@@ -372,7 +372,7 @@ func (meps *ManageExpectedPowerShelf) CreateExpectedPowerShelfOnRLA(ctx context.
 	return nil
 }
 
-// expectedPowerShelfToRLAComponent converts a Forge ExpectedPowerShelf proto to an RLA Component proto
+// expectedPowerShelfToRLAComponent converts a Nico ExpectedPowerShelf proto to an RLA Component proto
 func expectedPowerShelfToRLAComponent(eps *cwssaws.ExpectedPowerShelf) *rlav1.Component {
 	component := &rlav1.Component{
 		Type: rlav1.ComponentType_COMPONENT_TYPE_POWERSHELF,
@@ -435,7 +435,7 @@ func expectedPowerShelfToRLAComponent(eps *cwssaws.ExpectedPowerShelf) *rlav1.Co
 	return component
 }
 
-// DeleteExpectedPowerShelfOnSite deletes Expected Power Shelf on Carbide
+// DeleteExpectedPowerShelfOnSite deletes Expected Power Shelf on Nico
 func (meps *ManageExpectedPowerShelf) DeleteExpectedPowerShelfOnSite(ctx context.Context, request *cwssaws.ExpectedPowerShelfRequest) error {
 	logger := log.With().Str("Activity", "DeleteExpectedPowerShelfOnSite").Logger()
 
@@ -455,10 +455,10 @@ func (meps *ManageExpectedPowerShelf) DeleteExpectedPowerShelfOnSite(ctx context
 	}
 
 	// Call Site Controller gRPC endpoint
-	carbideClient := meps.CarbideAtomicClient.GetClient()
-	forgeClient := carbideClient.Carbide()
+	nicoClient := meps.NicoAtomicClient.GetClient()
+	nicoClient := nicoClient.Nico()
 
-	_, err = forgeClient.DeleteExpectedPowerShelf(ctx, request)
+	_, err = nicoClient.DeleteExpectedPowerShelf(ctx, request)
 	if err != nil {
 		logger.Warn().Err(err).Msg("Failed to delete Expected Power Shelf using Site Controller API")
 		return swe.WrapErr(err)

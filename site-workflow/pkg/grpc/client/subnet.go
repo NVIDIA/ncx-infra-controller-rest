@@ -61,7 +61,7 @@ type SubnetInterface interface {
 
 func (sub *network) CreateNetworkSegment(ctx context.Context, request *wflows.CreateSubnetRequest) (response *wflows.NetworkSegment, err error) {
 	log.Info().Interface("request", request).Msg("CreateNetworkSegment: received request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-CreateNetworkSegment")
+	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "NicoClient-CreateNetworkSegment")
 	defer span.End()
 
 	// Validations
@@ -84,49 +84,49 @@ func (sub *network) CreateNetworkSegment(ctx context.Context, request *wflows.Cr
 		return response, err
 	}
 
-	// Carbide request
-	carbideRequest := &wflows.NetworkSegmentCreationRequest{
+	// Nico request
+	nicoRequest := &wflows.NetworkSegmentCreationRequest{
 		Name: request.Name,
 	}
 	if request.SubnetId != nil {
-		carbideRequest.Id = &wflows.NetworkSegmentId{Value: request.SubnetId.Value}
+		nicoRequest.Id = &wflows.NetworkSegmentId{Value: request.SubnetId.Value}
 	}
-	carbideRequest.SubdomainId = nil
+	nicoRequest.SubdomainId = nil
 	if request.SubdomainId != nil {
-		carbideRequest.SubdomainId = &wflows.DomainId{Value: request.SubdomainId.Value}
+		nicoRequest.SubdomainId = &wflows.DomainId{Value: request.SubdomainId.Value}
 	}
 	if request.VpcId != nil {
-		carbideRequest.VpcId = &wflows.VpcId{Value: request.VpcId.Value}
+		nicoRequest.VpcId = &wflows.VpcId{Value: request.VpcId.Value}
 	}
 	if request.Mtu != nil {
-		carbideRequest.Mtu = request.Mtu
+		nicoRequest.Mtu = request.Mtu
 	}
 
 	// Lets verify the applicable parameters
 	// We can do policies on these later
 	// For now - just do stateless transitions
 	for index, prefix := range request.NetworkPrefixes {
-		carbideRequest.Prefixes = append(carbideRequest.Prefixes, &wflows.NetworkPrefix{})
-		carbideRequest.Prefixes[index].Gateway = prefix.Gateway
-		carbideRequest.Prefixes[index].Prefix = prefix.Prefix
-		carbideRequest.Prefixes[index].ReserveFirst = prefix.ReserveFirst
+		nicoRequest.Prefixes = append(nicoRequest.Prefixes, &wflows.NetworkPrefix{})
+		nicoRequest.Prefixes[index].Gateway = prefix.Gateway
+		nicoRequest.Prefixes[index].Prefix = prefix.Prefix
+		nicoRequest.Prefixes[index].ReserveFirst = prefix.ReserveFirst
 		// We need to do additional checks on the resource state later
 	}
-	response, err = sub.carbide.CreateNetworkSegment(ctx, carbideRequest)
-	log.Info().Interface("request", carbideRequest).Msg("CreateNetworkSegment: sent gRPC request")
+	response, err = sub.nico.CreateNetworkSegment(ctx, nicoRequest)
+	log.Info().Interface("request", nicoRequest).Msg("CreateNetworkSegment: sent gRPC request")
 	return response, err
 }
 
 func (sub *network) GetAllNetworkSegments(ctx context.Context, request *wflows.NetworkSegmentSearchFilter, pageSize int) (response *wflows.NetworkSegmentList, err error) {
 	log.Info().Interface("request", request).Msg("GetAllNetworkSegments: received request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-GetAllNetworkSegments")
+	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "NicoClient-GetAllNetworkSegments")
 	defer span.End()
 
 	if request == nil {
 		request = &wflows.NetworkSegmentSearchFilter{}
 	}
 
-	idList, err := sub.carbide.FindNetworkSegmentIds(ctx, request)
+	idList, err := sub.nico.FindNetworkSegmentIds(ctx, request)
 	if err != nil {
 		log.Error().Err(err).Msg("FindNetworkSegmentIds: error")
 		return nil, err
@@ -134,7 +134,7 @@ func (sub *network) GetAllNetworkSegments(ctx context.Context, request *wflows.N
 	response = &wflows.NetworkSegmentList{}
 	idChunks := SliceToChunks(idList.NetworkSegmentsIds, pageSize)
 	for i, chunk := range idChunks {
-		list, err := sub.carbide.FindNetworkSegmentsByIds(ctx, &wflows.NetworkSegmentsByIdsRequest{NetworkSegmentsIds: chunk})
+		list, err := sub.nico.FindNetworkSegmentsByIds(ctx, &wflows.NetworkSegmentsByIdsRequest{NetworkSegmentsIds: chunk})
 		if err != nil {
 			log.Error().Err(err).Msgf("FindNetworkSegmentsByIds: error on chunk index %d", i)
 			return nil, err
@@ -147,7 +147,7 @@ func (sub *network) GetAllNetworkSegments(ctx context.Context, request *wflows.N
 
 func (sub *network) GetNetworkSegment(ctx context.Context, request *wflows.UUID) (response *wflows.NetworkSegment, err error) {
 	log.Info().Interface("request", request).Msg("GetAllNetworkSegments: received request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-GetAllNetworkSegments")
+	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "NicoClient-GetAllNetworkSegments")
 	defer span.End()
 
 	if request == nil {
@@ -155,7 +155,7 @@ func (sub *network) GetNetworkSegment(ctx context.Context, request *wflows.UUID)
 	}
 
 	networkSegmentId := &wflows.NetworkSegmentId{Value: request.Value}
-	list, err := sub.carbide.FindNetworkSegmentsByIds(ctx, &wflows.NetworkSegmentsByIdsRequest{NetworkSegmentsIds: []*wflows.NetworkSegmentId{networkSegmentId}})
+	list, err := sub.nico.FindNetworkSegmentsByIds(ctx, &wflows.NetworkSegmentsByIdsRequest{NetworkSegmentsIds: []*wflows.NetworkSegmentId{networkSegmentId}})
 	if err != nil {
 		log.Error().Err(err).Msgf("FindNetworkSegmentsByIds: error")
 		return nil, err
@@ -169,14 +169,14 @@ func (sub *network) GetNetworkSegment(ctx context.Context, request *wflows.UUID)
 
 func (sub *network) FindNetworkSegmentIds(ctx context.Context, request *wflows.NetworkSegmentSearchFilter) (response *wflows.NetworkSegmentIdList, err error) {
 	log.Info().Interface("request", request).Msg("FindNetworkSegmentIDs: received request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-FindNetworkSegmentIDs")
+	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "NicoClient-FindNetworkSegmentIDs")
 	defer span.End()
 
 	if request == nil {
 		request = &wflows.NetworkSegmentSearchFilter{}
 	}
 
-	response, err = sub.carbide.FindNetworkSegmentIds(ctx, request)
+	response, err = sub.nico.FindNetworkSegmentIds(ctx, request)
 	if err != nil {
 		log.Error().Err(err).Msg("FindNetworkSegmentIds: error")
 		return nil, err
@@ -186,14 +186,14 @@ func (sub *network) FindNetworkSegmentIds(ctx context.Context, request *wflows.N
 
 func (sub *network) FindNetworkSegmentsByIds(ctx context.Context, request *wflows.NetworkSegmentsByIdsRequest) (response *wflows.NetworkSegmentList, err error) {
 	log.Info().Interface("request", request).Msg("FindNetworkSegmentsByIDs: received request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-FindNetworkSegmentsByIDs")
+	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "NicoClient-FindNetworkSegmentsByIDs")
 	defer span.End()
 
 	if request == nil {
 		request = &wflows.NetworkSegmentsByIdsRequest{}
 	}
 
-	response, err = sub.carbide.FindNetworkSegmentsByIds(ctx, request)
+	response, err = sub.nico.FindNetworkSegmentsByIds(ctx, request)
 	if err != nil {
 		log.Error().Err(err).Msgf("FindNetworkSegmentsByIds: error")
 		return nil, err
@@ -204,7 +204,7 @@ func (sub *network) FindNetworkSegmentsByIds(ctx context.Context, request *wflow
 // This function is not currently supported
 // func (sub *network) UpdateNetworkSegment(ctx context.Context, TransactionID *wflows.TransactionID, request *wflows.UpdateSubnetRequest) (result *wflows.NetworkSegmentUpdateResult, err error) {
 // 	log.Info().Interface("request", request).Msg("UpdateNetworkSegment: received request")
-// 	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-UpdateNetworkSegment")
+// 	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "NicoClient-UpdateNetworkSegment")
 // 	defer span.End()
 
 // 	// Validations
@@ -214,21 +214,21 @@ func (sub *network) FindNetworkSegmentsByIds(ctx context.Context, request *wflow
 // 		return result, ErrInvalidID
 // 	}
 
-// 	// Carbide request
-// 	carbideRequest := &wflows.NetworkSegmentUpdateRequest{
+// 	// Nico request
+// 	nicoRequest := &wflows.NetworkSegmentUpdateRequest{
 // 		Id: request.NetworkSegmentId,
 // 	}
-// 	carbideRequest.Mtu = request.Mtu
-// 	carbideRequest.Name = request.Name
+// 	nicoRequest.Mtu = request.Mtu
+// 	nicoRequest.Name = request.Name
 
-// 	result, err = sub.carbide.UpdateNetworkSegment(ctx, carbideRequest)
-// 	log.Info().Interface("request", carbideRequest).Msg("UpdateNetworkSegment: sent gRPC request")
+// 	result, err = sub.nico.UpdateNetworkSegment(ctx, nicoRequest)
+// 	log.Info().Interface("request", nicoRequest).Msg("UpdateNetworkSegment: sent gRPC request")
 // 	return result, err
 // }
 
 func (sub *network) DeleteNetworkSegment(ctx context.Context, request *wflows.DeleteSubnetRequest) (response *wflows.NetworkSegmentDeletionResult, err error) {
 	log.Info().Interface("request", request).Msg("DeleteNetworkSegment: received request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-DeleteNetworkSegment")
+	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "NicoClient-DeleteNetworkSegment")
 	defer span.End()
 
 	// Validations
@@ -237,10 +237,10 @@ func (sub *network) DeleteNetworkSegment(ctx context.Context, request *wflows.De
 		log.Err(ErrInvalidID).Msg("DeleteNetworkSegment: invalid request")
 		return response, ErrInvalidID
 	}
-	carbideRequest := &wflows.NetworkSegmentDeletionRequest{}
-	carbideRequest.Id = &wflows.NetworkSegmentId{Value: request.NetworkSegmentId.Value}
-	response, err = sub.carbide.DeleteNetworkSegment(ctx, carbideRequest)
-	log.Info().Interface("request", carbideRequest).Msg("DeleteNetworkSegment: sent gRPC request")
+	nicoRequest := &wflows.NetworkSegmentDeletionRequest{}
+	nicoRequest.Id = &wflows.NetworkSegmentId{Value: request.NetworkSegmentId.Value}
+	response, err = sub.nico.DeleteNetworkSegment(ctx, nicoRequest)
+	log.Info().Interface("request", nicoRequest).Msg("DeleteNetworkSegment: sent gRPC request")
 	return response, err
 }
 

@@ -29,10 +29,10 @@ var ManagerAccess *Manager.ManagerAccess
 type API struct{}
 
 // NewSKUManager - returns a new instance of SKU manager
-func NewSKUManager(superForge *elektratypes.Elektra, superAPI *Manager.ManagerAPI, superConf *Manager.ManagerConf) *API {
+func NewSKUManager(superNico *elektratypes.Elektra, superAPI *Manager.ManagerAPI, superConf *Manager.ManagerConf) *API {
 	ManagerAccess = &Manager.ManagerAccess{
 		Data: &Manager.ManagerData{
-			EB: superForge,
+			EB: superNico,
 		},
 		API:  superAPI,
 		Conf: superConf,

@@ -57,16 +57,16 @@ func NewManageSSHKeyGroupInventory(config ManageInventoryConfig) ManageSSHKeyGro
 	}
 }
 
-func sshKeyGroupFindIDs(ctx context.Context, carbideClient *cClient.CarbideClient) ([]*cwssaws.TenantKeysetIdentifier, error) {
-	idList, err := carbideClient.Compute().FindSSHKeyGroupIDs(ctx, &cwssaws.TenantKeysetSearchFilter{})
+func sshKeyGroupFindIDs(ctx context.Context, nicoClient *cClient.NicoClient) ([]*cwssaws.TenantKeysetIdentifier, error) {
+	idList, err := nicoClient.Compute().FindSSHKeyGroupIDs(ctx, &cwssaws.TenantKeysetSearchFilter{})
 	if err != nil {
 		return nil, err
 	}
 	return idList.GetKeysetIds(), nil
 }
 
-func sshKeyGroupFindByIDs(ctx context.Context, carbideClient *cClient.CarbideClient, ids []*cwssaws.TenantKeysetIdentifier) ([]*cwssaws.TenantKeyset, error) {
-	list, err := carbideClient.Compute().FindSSHKeyGroupsByIDs(ctx, &cwssaws.TenantKeysetsByIdsRequest{
+func sshKeyGroupFindByIDs(ctx context.Context, nicoClient *cClient.NicoClient, ids []*cwssaws.TenantKeysetIdentifier) ([]*cwssaws.TenantKeyset, error) {
+	list, err := nicoClient.Compute().FindSSHKeyGroupsByIDs(ctx, &cwssaws.TenantKeysetsByIdsRequest{
 		KeysetIds: ids,
 	})
 	if err != nil {
@@ -99,17 +99,17 @@ func sshKeyGroupPagedInventory(allItemIDs []*cwssaws.TenantKeysetIdentifier, pag
 
 // ManageSSHKeyGroup is an activity wrapper for SSHKeyGroup management
 type ManageSSHKeyGroup struct {
-	CarbideAtomicClient *client.CarbideAtomicClient
+	NicoAtomicClient *client.NicoAtomicClient
 }
 
 // NewManageSSHKeyGroup returns a new ManageSSHKeyGroup client
-func NewManageSSHKeyGroup(carbideClient *client.CarbideAtomicClient) ManageSSHKeyGroup {
+func NewManageSSHKeyGroup(nicoClient *client.NicoAtomicClient) ManageSSHKeyGroup {
 	return ManageSSHKeyGroup{
-		CarbideAtomicClient: carbideClient,
+		NicoAtomicClient: nicoClient,
 	}
 }
 
-// Function to create SSH Key Group with Carbide
+// Function to create SSH Key Group with Nico
 func (mmi *ManageSSHKeyGroup) CreateSSHKeyGroupOnSite(ctx context.Context, request *cwssaws.CreateTenantKeysetRequest) error {
 	logger := log.With().Str("Activity", "CreateSSHKeyGroupOnSite").Logger()
 
@@ -133,13 +133,13 @@ func (mmi *ManageSSHKeyGroup) CreateSSHKeyGroupOnSite(ctx context.Context, reque
 	}
 
 	// Call Site Controller gRPC endpoint
-	carbideClient := mmi.CarbideAtomicClient.GetClient()
-	if carbideClient == nil {
+	nicoClient := mmi.NicoAtomicClient.GetClient()
+	if nicoClient == nil {
 		return client.ErrClientNotConnected
 	}
-	forgeClient := carbideClient.Carbide()
+	nicoClient := nicoClient.Nico()
 
-	_, err = forgeClient.CreateTenantKeyset(ctx, request)
+	_, err = nicoClient.CreateTenantKeyset(ctx, request)
 	if err != nil {
 		logger.Warn().Err(err).Msg("Failed to create SSH Key Group using Site Controller API")
 		return swe.WrapErr(err)
@@ -150,7 +150,7 @@ func (mmi *ManageSSHKeyGroup) CreateSSHKeyGroupOnSite(ctx context.Context, reque
 	return nil
 }
 
-// Function to Update SSH Key Group with Carbide
+// Function to Update SSH Key Group with Nico
 func (mmi *ManageSSHKeyGroup) UpdateSSHKeyGroupOnSite(ctx context.Context, request *cwssaws.UpdateTenantKeysetRequest) error {
 	logger := log.With().Str("Activity", "UpdateSSHKeyGroupOnSite").Logger()
 
@@ -174,13 +174,13 @@ func (mmi *ManageSSHKeyGroup) UpdateSSHKeyGroupOnSite(ctx context.Context, reque
 	}
 
 	// Call Site Controller gRPC endpoint
-	carbideClient := mmi.CarbideAtomicClient.GetClient()
-	if carbideClient == nil {
+	nicoClient := mmi.NicoAtomicClient.GetClient()
+	if nicoClient == nil {
 		return client.ErrClientNotConnected
 	}
-	forgeClient := carbideClient.Carbide()
+	nicoClient := nicoClient.Nico()
 
-	_, err = forgeClient.UpdateTenantKeyset(ctx, request)
+	_, err = nicoClient.UpdateTenantKeyset(ctx, request)
 	if err != nil {
 		logger.Warn().Err(err).Msg("Failed to update SSH Key Group using Site Controller API")
 		return swe.WrapErr(err)
@@ -191,7 +191,7 @@ func (mmi *ManageSSHKeyGroup) UpdateSSHKeyGroupOnSite(ctx context.Context, reque
 	return nil
 }
 
-// Function to Delete SSH Key Group with Carbide
+// Function to Delete SSH Key Group with Nico
 func (mmi *ManageSSHKeyGroup) DeleteSSHKeyGroupOnSite(ctx context.Context, request *cwssaws.DeleteTenantKeysetRequest) error {
 	logger := log.With().Str("Activity", "DeleteSSHKeyGroupOnSite").Logger()
 
@@ -213,13 +213,13 @@ func (mmi *ManageSSHKeyGroup) DeleteSSHKeyGroupOnSite(ctx context.Context, reque
 	}
 
 	// Call Site Controller gRPC endpoint
-	carbideClient := mmi.CarbideAtomicClient.GetClient()
-	if carbideClient == nil {
+	nicoClient := mmi.NicoAtomicClient.GetClient()
+	if nicoClient == nil {
 		return client.ErrClientNotConnected
 	}
-	forgeClient := carbideClient.Carbide()
+	nicoClient := nicoClient.Nico()
 
-	_, err = forgeClient.DeleteTenantKeyset(ctx, request)
+	_, err = nicoClient.DeleteTenantKeyset(ctx, request)
 	if err != nil {
 		logger.Warn().Err(err).Msg("Failed to delete SSH Key Group using Site Controller API")
 		return swe.WrapErr(err)

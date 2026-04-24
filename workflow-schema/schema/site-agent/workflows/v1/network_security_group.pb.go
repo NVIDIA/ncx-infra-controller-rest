@@ -123,9 +123,9 @@ var File_network_security_group_proto protoreflect.FileDescriptor
 
 const file_network_security_group_proto_rawDesc = "" +
 	"\n" +
-	"\x1cnetwork_security_group.proto\x12\fworkflows.v1\x1a\x0eworkflow.proto\x1a\x13forge_carbide.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xdb\x02\n" +
+	"\x1cnetwork_security_group.proto\x12\fworkflows.v1\x1a\x0eworkflow.proto\x1a\x13nico_nico.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xdb\x02\n" +
 	"\x1dNetworkSecurityGroupInventory\x12S\n" +
-	"\x17network_security_groups\x18\x01 \x03(\v2\x1b.forge.NetworkSecurityGroupR\x15networkSecurityGroups\x128\n" +
+	"\x17network_security_groups\x18\x01 \x03(\v2\x1b.nico.NetworkSecurityGroupR\x15networkSecurityGroups\x128\n" +
 	"\ttimestamp\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12H\n" +
 	"\x10inventory_status\x18\x03 \x01(\x0e2\x1d.workflows.v1.InventoryStatusR\x0finventoryStatus\x12\x1d\n" +
 	"\n" +
@@ -147,13 +147,13 @@ func file_network_security_group_proto_rawDescGZIP() []byte {
 var file_network_security_group_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
 var file_network_security_group_proto_goTypes = []any{
 	(*NetworkSecurityGroupInventory)(nil), // 0: workflows.v1.NetworkSecurityGroupInventory
-	(*NetworkSecurityGroup)(nil),          // 1: forge.NetworkSecurityGroup
+	(*NetworkSecurityGroup)(nil),          // 1: nico.NetworkSecurityGroup
 	(*timestamppb.Timestamp)(nil),         // 2: google.protobuf.Timestamp
 	(InventoryStatus)(0),                  // 3: workflows.v1.InventoryStatus
 	(*InventoryPage)(nil),                 // 4: workflows.v1.InventoryPage
 }
 var file_network_security_group_proto_depIdxs = []int32{
-	1, // 0: workflows.v1.NetworkSecurityGroupInventory.network_security_groups:type_name -> forge.NetworkSecurityGroup
+	1, // 0: workflows.v1.NetworkSecurityGroupInventory.network_security_groups:type_name -> nico.NetworkSecurityGroup
 	2, // 1: workflows.v1.NetworkSecurityGroupInventory.timestamp:type_name -> google.protobuf.Timestamp
 	3, // 2: workflows.v1.NetworkSecurityGroupInventory.inventory_status:type_name -> workflows.v1.InventoryStatus
 	4, // 3: workflows.v1.NetworkSecurityGroupInventory.inventory_page:type_name -> workflows.v1.InventoryPage
@@ -170,7 +170,7 @@ func file_network_security_group_proto_init() {
 		return
 	}
 	file_workflow_proto_init()
-	file_forge_carbide_proto_init()
+	file_nico_nico_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

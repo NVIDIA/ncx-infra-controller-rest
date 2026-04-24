@@ -39,7 +39,7 @@ const (
 )
 
 // TODO: Remove SubnetCreate an any related references.  We've moved to sync workflow (deprecated)
-// TODO: Remove SubnetDelete (deprecated) and any related references after carbide-rest-api and site-agent are updated everywhere.  We're moving to sync workflow.
+// TODO: Remove SubnetDelete (deprecated) and any related references after nico-rest-api and site-agent are updated everywhere.  We're moving to sync workflow.
 var activityStr = []string{"SubnetCreate", "SubnetUpdate", "SubnetDelete", "SubnetGet", "SubnetPublish"}
 
 type subnetWorkflowMetadata struct {
@@ -74,7 +74,7 @@ func (w *subnetWorkflowMetadata) DoDbOP() computils.OpType {
 
 // DoSiteControllerOP - Do Site Controller OP
 func (w *subnetWorkflowMetadata) DoSiteControllerOP(ctx context.Context, TransactionID *wflows.TransactionID, req interface{}) (interface{}, error) {
-	networks := ManagerAccess.Data.EB.Managers.Carbide.GetClient().Networks()
+	networks := ManagerAccess.Data.EB.Managers.Nico.GetClient().Networks()
 	switch w.activity {
 	case activityCreate:
 		return networks.CreateNetworkSegment(ctx, req.(*wflows.CreateSubnetRequest))

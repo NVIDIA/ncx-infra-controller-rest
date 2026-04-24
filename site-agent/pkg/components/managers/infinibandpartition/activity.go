@@ -76,7 +76,7 @@ func (ibpw *Workflows) CreateInfiniBandPartitionActivity(ctx context.Context, Re
 	return ResourceResp, nil
 }
 
-// DeleteInfiniBandPartitionActivity deletes the InfiniBandPartition at carbide
+// DeleteInfiniBandPartitionActivity deletes the InfiniBandPartition at nico
 func (ibpw *Workflows) DeleteInfiniBandPartitionActivity(ctx context.Context, ResourceVer uint64, ResourceID string,
 	ResourceReq *wflows.DeleteInfiniBandPartitionRequest) (*wflows.InfiniBandPartitionInfo, error) {
 	// Initialize logger

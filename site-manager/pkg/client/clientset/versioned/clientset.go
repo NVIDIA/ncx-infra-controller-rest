@@ -27,7 +27,7 @@ import (
 	"fmt"
 	"net/http"
 
-	forgev1 "github.com/NVIDIA/ncx-infra-controller-rest/site-manager/pkg/client/clientset/versioned/typed/crds/v1"
+	nicov1 "github.com/NVIDIA/ncx-infra-controller-rest/site-manager/pkg/client/clientset/versioned/typed/crds/v1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
@@ -35,18 +35,18 @@ import (
 
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
-	ForgeV1() forgev1.ForgeV1Interface
+	NicoV1() nicov1.NicoV1Interface
 }
 
 // Clientset contains the clients for groups.
 type Clientset struct {
 	*discovery.DiscoveryClient
-	forgeV1 *forgev1.ForgeV1Client
+	nicoV1 *nicov1.NicoV1Client
 }
 
-// ForgeV1 retrieves the ForgeV1Client
-func (c *Clientset) ForgeV1() forgev1.ForgeV1Interface {
-	return c.forgeV1
+// NicoV1 retrieves the NicoV1Client
+func (c *Clientset) NicoV1() nicov1.NicoV1Interface {
+	return c.nicoV1
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -93,7 +93,7 @@ func NewForConfigAndClient(c *rest.Config, httpClient *http.Client) (*Clientset,
 
 	var cs Clientset
 	var err error
-	cs.forgeV1, err = forgev1.NewForConfigAndClient(&configShallowCopy, httpClient)
+	cs.nicoV1, err = nicov1.NewForConfigAndClient(&configShallowCopy, httpClient)
 	if err != nil {
 		return nil, err
 	}
@@ -118,7 +118,7 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 // New creates a new Clientset for the given RESTClient.
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
-	cs.forgeV1 = forgev1.New(c)
+	cs.nicoV1 = nicov1.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
 	return &cs

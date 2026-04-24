@@ -64,8 +64,8 @@ func TestGetTaskHandler_Handle(t *testing.T) {
 	_, err := dbSession.DB.NewInsert().Model(siteNoRLA).Exec(context.Background())
 	assert.Nil(t, err)
 
-	providerUser := testRackBuildUser(t, dbSession, "provider-user-task-get", org, []string{"FORGE_PROVIDER_ADMIN"})
-	tenantUser := testRackBuildUser(t, dbSession, "tenant-user-task-get", org, []string{"FORGE_TENANT_ADMIN"})
+	providerUser := testRackBuildUser(t, dbSession, "provider-user-task-get", org, []string{"NICO_PROVIDER_ADMIN"})
+	tenantUser := testRackBuildUser(t, dbSession, "tenant-user-task-get", org, []string{"NICO_TENANT_ADMIN"})
 
 	handler := NewGetTaskHandler(dbSession, nil, scp, cfg)
 
@@ -174,7 +174,7 @@ func TestGetTaskHandler_Handle(t *testing.T) {
 			for k, v := range tt.queryParams {
 				q.Set(k, v)
 			}
-			path := fmt.Sprintf("/v2/org/%s/carbide/rack/task/%s?%s", tt.reqOrg, tt.taskUUID, q.Encode())
+			path := fmt.Sprintf("/v2/org/%s/nico/rack/task/%s?%s", tt.reqOrg, tt.taskUUID, q.Encode())
 
 			req := httptest.NewRequest(http.MethodGet, path, nil)
 			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)

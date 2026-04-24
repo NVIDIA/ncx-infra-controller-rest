@@ -43,7 +43,7 @@ CreateIpblock Create IP Block
 
 Create an IP block for the org.
 
-Only Infrastructure Providers can create a root IP Block. User must have `FORGE_PROVIDER_ADMIN` role.
+Only Infrastructure Providers can create a root IP Block. User must have `NICO_PROVIDER_ADMIN` role.
 
 Tenant IP Blocks are created via Allocation.
 
@@ -75,7 +75,7 @@ func (a *IPBlockAPIService) CreateIpblockExecute(r ApiCreateIpblockRequest) (*Ip
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/ipblock"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/ipblock"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -124,7 +124,7 @@ func (a *IPBlockAPIService) CreateIpblockExecute(r ApiCreateIpblockRequest) (*Ip
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 400 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -135,7 +135,7 @@ func (a *IPBlockAPIService) CreateIpblockExecute(r ApiCreateIpblockRequest) (*Ip
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -175,7 +175,7 @@ DeleteIpblock Delete IP Block
 
 # Delete an IP block
 
-Org must have an Infrastructure Provider entity. User must have `FORGE_PROVIDER_ADMIN` role. Only root IP Blocks can be deleted if there are no allocations associated with it.
+Org must have an Infrastructure Provider entity. User must have `NICO_PROVIDER_ADMIN` role. Only root IP Blocks can be deleted if there are no allocations associated with it.
 
 Tenant IP Blocks are managed via Allocation.
 
@@ -206,7 +206,7 @@ func (a *IPBlockAPIService) DeleteIpblockExecute(r ApiDeleteIpblockRequest) (*ht
 		return nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/ipblock/{ipBlockId}"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/ipblock/{ipBlockId}"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"ipBlockId"+"}", url.PathEscape(parameterValueToString(r.ipBlockId, "ipBlockId")), -1)
 
@@ -254,7 +254,7 @@ func (a *IPBlockAPIService) DeleteIpblockExecute(r ApiDeleteIpblockRequest) (*ht
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 400 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -265,7 +265,7 @@ func (a *IPBlockAPIService) DeleteIpblockExecute(r ApiDeleteIpblockRequest) (*ht
 			return localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -340,7 +340,7 @@ Retrieve all child IP Blocks allocated to Tenants from a specific Provider super
 
 The IP Block in URL must belong to the Infrastructure Provider associated with the Org.
 
-User must have `FORGE_PROVIDER_ADMIN` role.
+User must have `NICO_PROVIDER_ADMIN` role.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -372,7 +372,7 @@ func (a *IPBlockAPIService) GetAllDerivedIpblockExecute(r ApiGetAllDerivedIpbloc
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/ipblock/{ipBlockId}/derived"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/ipblock/{ipBlockId}/derived"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"ipBlockId"+"}", url.PathEscape(parameterValueToString(r.ipBlockId, "ipBlockId")), -1)
 
@@ -442,7 +442,7 @@ func (a *IPBlockAPIService) GetAllDerivedIpblockExecute(r ApiGetAllDerivedIpbloc
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -551,7 +551,7 @@ GetAllIpblock Retrieve all IP Blocks
 
 Retrieve all IP blocks for the org.
 
-User must have `FORGE_PROVIDER_ADMIN` or `FORGE_TENANT_ADMIN` role. `infrastructureProviderId` or `tenantId` query param may be required for older API versions.
+User must have `NICO_PROVIDER_ADMIN` or `NICO_TENANT_ADMIN` role. `infrastructureProviderId` or `tenantId` query param may be required for older API versions.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -581,7 +581,7 @@ func (a *IPBlockAPIService) GetAllIpblockExecute(r ApiGetAllIpblockRequest) ([]I
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/ipblock"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/ipblock"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -662,7 +662,7 @@ func (a *IPBlockAPIService) GetAllIpblockExecute(r ApiGetAllIpblockRequest) ([]I
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -730,7 +730,7 @@ GetIpblock Retrieve IP Block
 
 Retrieve an IP Block by ID.
 
-User must have `FORGE_PROVIDER_ADMIN` or `FORGE_TENANT_ADMIN` role.
+User must have `NICO_PROVIDER_ADMIN` or `NICO_TENANT_ADMIN` role.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -762,7 +762,7 @@ func (a *IPBlockAPIService) GetIpblockExecute(r ApiGetIpblockRequest) (*IpBlock,
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/ipblock/{ipBlockId}"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/ipblock/{ipBlockId}"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"ipBlockId"+"}", url.PathEscape(parameterValueToString(r.ipBlockId, "ipBlockId")), -1)
 
@@ -822,7 +822,7 @@ func (a *IPBlockAPIService) GetIpblockExecute(r ApiGetIpblockRequest) (*IpBlock,
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -868,7 +868,7 @@ UpdateIpblock Update IP Block
 
 # Update an existing IP Block
 
-Org must have an Infrastructure Provider. Specified IP Block must have been created by the Provider and requesting user must have `FORGE_PROVIDER_ADMIN` role. Only root IP Blocks can be patched.
+Org must have an Infrastructure Provider. Specified IP Block must have been created by the Provider and requesting user must have `NICO_PROVIDER_ADMIN` role. Only root IP Blocks can be patched.
 
 Tenant IP Blocks are managed via Allocation.
 
@@ -902,7 +902,7 @@ func (a *IPBlockAPIService) UpdateIpblockExecute(r ApiUpdateIpblockRequest) (*Ip
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/ipblock/{ipBlockId}"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/ipblock/{ipBlockId}"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"ipBlockId"+"}", url.PathEscape(parameterValueToString(r.ipBlockId, "ipBlockId")), -1)
 

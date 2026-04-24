@@ -225,7 +225,7 @@ func TestManageVpcPeering_UpdateVpcPeeringsInDB(t *testing.T) {
 
 	// Setup users, site, tenant, vpcs
 	org := "test-org"
-	roles := []string{"FORGE_PROVIDER_ADMIN"}
+	roles := []string{"NICO_PROVIDER_ADMIN"}
 	user := testVpcPeeringBuildUser(t, dbSession, uuid.NewString(), org, roles)
 	ip := testVpcPeeringSiteBuildInfrastructureProvider(t, dbSession, "test-provider", org, user)
 	site := testVpcPeeringBuildSite(t, dbSession, ip, "test-site", user)

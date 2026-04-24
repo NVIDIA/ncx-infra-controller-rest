@@ -34,7 +34,7 @@ func (api *API) RegisterSubscriber() error {
 		ManagerAccess.Conf.EB,
 	)
 
-	subnetManager := swa.NewManageSubnet(ManagerAccess.Data.EB.Managers.Carbide.Client)
+	subnetManager := swa.NewManageSubnet(ManagerAccess.Data.EB.Managers.Nico.Client)
 
 	//  Register Workflows
 

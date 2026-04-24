@@ -40,8 +40,8 @@ const (
 
 	// Organization names
 	TestOrgName      = "test-org"
-	ForgeDevOrgName  = "forge-tenant-dev"
-	ForgeProviderOrg = "forge-prime-provider"
+	NicoDevOrgName  = "nico-tenant-dev"
+	NicoProviderOrg = "nico-prime-provider"
 	NvidiaOrgName    = "nvidia"
 
 	// User identifiers
@@ -56,17 +56,17 @@ const (
 	TestAudience = "ngc"
 
 	// Keycloak realm and IDP constants
-	TestRealm       = "forge"
+	TestRealm       = "nico"
 	TestIDPAlias    = "testorg-idp"
 	TestIDPProvider = "oidc"
 )
 
 // Test role constants
 const (
-	ForgeProviderAdminRole  = "FORGE_PROVIDER_ADMIN"
-	ForgeTenantAdminRole    = "FORGE_TENANT_ADMIN"
-	ForgeProviderViewerRole = "FORGE_PROVIDER_VIEWER"
-	ForgeTenantViewerRole   = "FORGE_TENANT_VIEWER"
+	NicoProviderAdminRole  = "NICO_PROVIDER_ADMIN"
+	NicoTenantAdminRole    = "NICO_TENANT_ADMIN"
+	NicoProviderViewerRole = "NICO_PROVIDER_VIEWER"
+	NicoTenantViewerRole   = "NICO_TENANT_VIEWER"
 )
 
 // Key generation constants
@@ -138,21 +138,21 @@ var TestRealmRoles = struct {
 	InvalidFormat []string
 }{
 	SingleOrg: []string{
-		TestOrgName + ":" + ForgeProviderAdminRole,
-		TestOrgName + ":" + ForgeTenantAdminRole,
+		TestOrgName + ":" + NicoProviderAdminRole,
+		TestOrgName + ":" + NicoTenantAdminRole,
 	},
 	MultiOrg: []string{
-		TestOrgName + ":" + ForgeProviderAdminRole,
-		ForgeDevOrgName + ":" + ForgeTenantAdminRole,
-		NvidiaOrgName + ":" + ForgeProviderViewerRole,
+		TestOrgName + ":" + NicoProviderAdminRole,
+		NicoDevOrgName + ":" + NicoTenantAdminRole,
+		NvidiaOrgName + ":" + NicoProviderViewerRole,
 	},
 	MixedCase: []string{
-		"TestOrg:" + ForgeProviderAdminRole,
-		"TESTORG:" + ForgeTenantAdminRole,
+		"TestOrg:" + NicoProviderAdminRole,
+		"TESTORG:" + NicoTenantAdminRole,
 	},
 	InvalidFormat: []string{
 		"invalid-role-format",
-		":" + ForgeProviderAdminRole, // Empty org
+		":" + NicoProviderAdminRole, // Empty org
 		TestOrgName + ":",            // Empty role
 		"",                           // Empty string
 	},

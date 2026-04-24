@@ -69,13 +69,13 @@ func TestGetAllNVLinkInterface_Handle(t *testing.T) {
 	testInstanceSetupSchema(t, dbSession)
 
 	ipOrg := "test-provider-org"
-	ipOrgRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipOrgRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	tnOrg1 := "test-tenant-org-1"
-	tnOrgRoles1 := []string{"FORGE_TENANT_ADMIN"}
+	tnOrgRoles1 := []string{"NICO_TENANT_ADMIN"}
 
 	tnOrg2 := "test-tenant-org-2"
-	tnOrgRoles2 := []string{"FORGE_TENANT_ADMIN"}
+	tnOrgRoles2 := []string{"NICO_TENANT_ADMIN"}
 
 	ipu := testInstanceBuildUser(t, dbSession, "test-starfleet-id-1", ipOrg, ipOrgRoles)
 	ip := testInstanceSiteBuildInfrastructureProvider(t, dbSession, "test-infrastructure-provider", ipOrg, ipu)
@@ -549,7 +549,7 @@ func TestGetAllNVLinkInterface_Handle(t *testing.T) {
 			req.URL.RawQuery = q.Encode()
 
 			ec := e.NewContext(req, rec)
-			ec.SetPath(fmt.Sprintf("/v2/org/%v/carbide/nvlink-interface", tt.args.reqOrg))
+			ec.SetPath(fmt.Sprintf("/v2/org/%v/nico/nvlink-interface", tt.args.reqOrg))
 			ec.SetParamNames("orgName")
 			ec.SetParamValues(tt.args.reqOrg)
 			ec.Set("user", tt.args.reqUser)
@@ -726,13 +726,13 @@ func TestGetAllInstanceNVLinkInterfaceHandler_Handle(t *testing.T) {
 	testInstanceSetupSchema(t, dbSession)
 
 	ipOrg := "test-provider-org"
-	ipOrgRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipOrgRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	tnOrg1 := "test-tenant-org-1"
-	tnOrgRoles1 := []string{"FORGE_TENANT_ADMIN"}
+	tnOrgRoles1 := []string{"NICO_TENANT_ADMIN"}
 
 	tnOrg2 := "test-tenant-org-2"
-	tnOrgRoles2 := []string{"FORGE_TENANT_ADMIN"}
+	tnOrgRoles2 := []string{"NICO_TENANT_ADMIN"}
 
 	ipu := testInstanceBuildUser(t, dbSession, "test-starfleet-id-1", ipOrg, ipOrgRoles)
 	ip := testInstanceSiteBuildInfrastructureProvider(t, dbSession, "test-infrastructure-provider", ipOrg, ipu)
@@ -1103,7 +1103,7 @@ func TestGetAllInstanceNVLinkInterfaceHandler_Handle(t *testing.T) {
 			req.URL.RawQuery = q.Encode()
 
 			ec := e.NewContext(req, rec)
-			ec.SetPath(fmt.Sprintf("/v2/org/%v/carbide/instance/%v/nvlinkinterface", tt.args.reqOrg, tt.args.reqInstanceID))
+			ec.SetPath(fmt.Sprintf("/v2/org/%v/nico/instance/%v/nvlinkinterface", tt.args.reqOrg, tt.args.reqInstanceID))
 			ec.SetParamNames("orgName", "instanceId")
 			if tt.args.reqInstanceID != "" {
 				ec.SetParamValues(tt.args.reqOrg, tt.args.reqInstanceID)

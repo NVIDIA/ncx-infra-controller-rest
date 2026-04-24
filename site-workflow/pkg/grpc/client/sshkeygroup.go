@@ -40,7 +40,7 @@ type SSHKeyGroupInterface interface {
 // CreateSSHKeyGroup creates a SSHKeyGroup
 func (skg *compute) CreateSSHKeyGroup(ctx context.Context, request *wflows.CreateSSHKeyGroupRequest) (response *wflows.CreateTenantKeysetResponse, err error) {
 	log.Info().Interface("request", request).Msg("CreateSSHKeyGroup: received request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-CreateSSHKeyGroup")
+	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "NicoClient-CreateSSHKeyGroup")
 	defer span.End()
 
 	// Validate the request
@@ -50,33 +50,33 @@ func (skg *compute) CreateSSHKeyGroup(ctx context.Context, request *wflows.Creat
 		return nil, err
 	}
 
-	// Translate the workflow request to the carbide request
-	carbideRequest := &wflows.CreateTenantKeysetRequest{
+	// Translate the workflow request to the nico request
+	nicoRequest := &wflows.CreateTenantKeysetRequest{
 		KeysetIdentifier: &wflows.TenantKeysetIdentifier{},
 		KeysetContent:    &wflows.TenantKeysetContent{},
 	}
-	// Assign the values to carbide request
-	carbideRequest.Version = request.Version
+	// Assign the values to nico request
+	nicoRequest.Version = request.Version
 	if request.PublicKeys != nil {
-		carbideRequest.KeysetContent.PublicKeys = request.PublicKeys
+		nicoRequest.KeysetContent.PublicKeys = request.PublicKeys
 	}
-	carbideRequest.KeysetIdentifier.KeysetId = request.KeysetId
-	carbideRequest.KeysetIdentifier.OrganizationId = request.TenantOrganizationId
+	nicoRequest.KeysetIdentifier.KeysetId = request.KeysetId
+	nicoRequest.KeysetIdentifier.OrganizationId = request.TenantOrganizationId
 
-	response, err = skg.carbide.CreateTenantKeyset(ctx, carbideRequest)
+	response, err = skg.nico.CreateTenantKeyset(ctx, nicoRequest)
 	return response, err
 }
 
 func (skg *compute) GetAllSSHKeyGroups(ctx context.Context, request *wflows.TenantKeysetSearchFilter, pageSize int) (response *wflows.TenantKeySetList, err error) {
 	log.Info().Interface("request", request).Msg("GetAllSSHKeyGroups: received request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-GetAllSSHKeyGroups")
+	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "NicoClient-GetAllSSHKeyGroups")
 	defer span.End()
 
 	if request == nil {
 		request = &wflows.TenantKeysetSearchFilter{}
 	}
 
-	idList, err := skg.carbide.FindTenantKeysetIds(ctx, request)
+	idList, err := skg.nico.FindTenantKeysetIds(ctx, request)
 	if err != nil {
 		log.Error().Err(err).Msg("FindTenantKeysetIds: error")
 		return nil, err
@@ -84,7 +84,7 @@ func (skg *compute) GetAllSSHKeyGroups(ctx context.Context, request *wflows.Tena
 	response = &wflows.TenantKeySetList{}
 	idChunks := SliceToChunks(idList.KeysetIds, pageSize)
 	for i, chunk := range idChunks {
-		list, err := skg.carbide.FindTenantKeysetsByIds(ctx, &wflows.TenantKeysetsByIdsRequest{KeysetIds: chunk})
+		list, err := skg.nico.FindTenantKeysetsByIds(ctx, &wflows.TenantKeysetsByIdsRequest{KeysetIds: chunk})
 		if err != nil {
 			log.Error().Err(err).Msgf("FindTenantKeysetsByIds: error on chunk index %d", i)
 			return nil, err
@@ -97,14 +97,14 @@ func (skg *compute) GetAllSSHKeyGroups(ctx context.Context, request *wflows.Tena
 
 func (skg *compute) FindSSHKeyGroupIDs(ctx context.Context, request *wflows.TenantKeysetSearchFilter) (response *wflows.TenantKeysetIdList, err error) {
 	log.Info().Interface("request", request).Msg("FindSSHKeyGroupIDs: received request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-FindSSHKeyGroupIDs")
+	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "NicoClient-FindSSHKeyGroupIDs")
 	defer span.End()
 
 	if request == nil {
 		request = &wflows.TenantKeysetSearchFilter{}
 	}
 
-	response, err = skg.carbide.FindTenantKeysetIds(ctx, request)
+	response, err = skg.nico.FindTenantKeysetIds(ctx, request)
 	if err != nil {
 		log.Error().Err(err).Msg("FindTenantKeysetIds: error")
 		return nil, err
@@ -114,14 +114,14 @@ func (skg *compute) FindSSHKeyGroupIDs(ctx context.Context, request *wflows.Tena
 
 func (skg *compute) FindSSHKeyGroupsByIDs(ctx context.Context, request *wflows.TenantKeysetsByIdsRequest) (response *wflows.TenantKeySetList, err error) {
 	log.Info().Interface("request", request).Msg("FindSSHKeyGroupsByIDs: received request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-FindSSHKeyGroupsByIDs")
+	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "NicoClient-FindSSHKeyGroupsByIDs")
 	defer span.End()
 
 	if request == nil {
 		request = &wflows.TenantKeysetsByIdsRequest{}
 	}
 
-	response, err = skg.carbide.FindTenantKeysetsByIds(ctx, request)
+	response, err = skg.nico.FindTenantKeysetsByIds(ctx, request)
 	if err != nil {
 		log.Error().Err(err).Msgf("FindTenantKeysetsByIds: error")
 		return nil, err
@@ -132,7 +132,7 @@ func (skg *compute) FindSSHKeyGroupsByIDs(ctx context.Context, request *wflows.T
 // UpdateSSHKeyGroup updates a SSHKeyGroup
 func (skg *compute) UpdateSSHKeyGroup(ctx context.Context, request *wflows.UpdateSSHKeyGroupRequest) (response *wflows.UpdateTenantKeysetResponse, err error) {
 	log.Info().Interface("request", request).Msg("UpdateSSHKeyGroup: received request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-UpdateSSHKeyGroup")
+	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "NicoClient-UpdateSSHKeyGroup")
 	defer span.End()
 
 	// Validate the request
@@ -163,26 +163,26 @@ func (skg *compute) UpdateSSHKeyGroup(ctx context.Context, request *wflows.Updat
 		return nil, err
 	}
 
-	// Translate the workflow request to the carbide request
-	carbideRequest := &wflows.UpdateTenantKeysetRequest{}
-	carbideRequest.KeysetIdentifier = &wflows.TenantKeysetIdentifier{
+	// Translate the workflow request to the nico request
+	nicoRequest := &wflows.UpdateTenantKeysetRequest{}
+	nicoRequest.KeysetIdentifier = &wflows.TenantKeysetIdentifier{
 		OrganizationId: request.TenantOrganizationId,
 		KeysetId:       request.KeysetId,
 	}
-	carbideRequest.Version = request.Version
-	carbideRequest.KeysetContent = &wflows.TenantKeysetContent{
+	nicoRequest.Version = request.Version
+	nicoRequest.KeysetContent = &wflows.TenantKeysetContent{
 		PublicKeys: request.PublicKeys,
 	}
-	carbideRequest.IfVersionMatch = request.IfVersionMatch
+	nicoRequest.IfVersionMatch = request.IfVersionMatch
 
-	response, err = skg.carbide.UpdateTenantKeyset(ctx, carbideRequest)
+	response, err = skg.nico.UpdateTenantKeyset(ctx, nicoRequest)
 	return response, err
 }
 
 // DeleteSSHKeyGroup deletes a SSHKeyGroup
 func (skg *compute) DeleteSSHKeyGroup(ctx context.Context, request *wflows.DeleteSSHKeyGroupRequest) (response *wflows.DeleteTenantKeysetResponse, err error) {
 	log.Info().Interface("Request", request).Msg("DeleteSSHKeyGroup: received request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-DeleteSSHKeyGroup")
+	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "NicoClient-DeleteSSHKeyGroup")
 	defer span.End()
 
 	// Validate the request
@@ -203,13 +203,13 @@ func (skg *compute) DeleteSSHKeyGroup(ctx context.Context, request *wflows.Delet
 		log.Error().Err(err).Msg("DeleteSSHKeyGroup: invalid request")
 	}
 
-	// Translate the workflow request to the carbide request
-	carbideRequest := &wflows.DeleteTenantKeysetRequest{
+	// Translate the workflow request to the nico request
+	nicoRequest := &wflows.DeleteTenantKeysetRequest{
 		KeysetIdentifier: &wflows.TenantKeysetIdentifier{},
 	}
 
-	carbideRequest.KeysetIdentifier.KeysetId = request.KeysetId
-	carbideRequest.KeysetIdentifier.OrganizationId = request.TenantOrganizationId
-	response, err = skg.carbide.DeleteTenantKeyset(ctx, carbideRequest)
+	nicoRequest.KeysetIdentifier.KeysetId = request.KeysetId
+	nicoRequest.KeysetIdentifier.OrganizationId = request.TenantOrganizationId
+	response, err = skg.nico.DeleteTenantKeyset(ctx, nicoRequest)
 	return response, err
 }

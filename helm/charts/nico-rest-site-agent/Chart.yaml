@@ -1,0 +1,10 @@
+apiVersion: v2
+name: nico-rest-site-agent
+description: Helm chart for the Nico REST site agent
+type: application
+version: 0.1.7
+appVersion: "latest"
+keywords:
+  - nico
+  - rest
+  - site-agent

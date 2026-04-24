@@ -35,7 +35,7 @@ import (
 
 // ManageSubnet is an activity wrapper for Subnet management tasks that allows injecting DB access
 type ManageSubnet struct {
-	CarbideAtomicClient *cClient.CarbideAtomicClient
+	NicoAtomicClient *cClient.NicoAtomicClient
 }
 
 // Function to Create Subnets with the Site Controller
@@ -74,13 +74,13 @@ func (mm *ManageSubnet) CreateSubnetOnSite(ctx context.Context, request *cwssaws
 	}
 
 	// Call Site Controller gRPC endpoint
-	carbideClient := mm.CarbideAtomicClient.GetClient()
-	if carbideClient == nil {
+	nicoClient := mm.NicoAtomicClient.GetClient()
+	if nicoClient == nil {
 		return cClient.ErrClientNotConnected
 	}
-	forgeClient := carbideClient.Carbide()
+	nicoClient := nicoClient.Nico()
 
-	_, err = forgeClient.CreateNetworkSegment(ctx, request)
+	_, err = nicoClient.CreateNetworkSegment(ctx, request)
 	if err != nil {
 		logger.Warn().Err(err).Msg("Failed to create Subnet using Site Controller API")
 		return swe.WrapErr(err)
@@ -114,13 +114,13 @@ func (mm *ManageSubnet) DeleteSubnetOnSite(ctx context.Context, request *cwssaws
 	}
 
 	// Call Site Controller gRPC endpoint
-	carbideClient := mm.CarbideAtomicClient.GetClient()
-	if carbideClient == nil {
+	nicoClient := mm.NicoAtomicClient.GetClient()
+	if nicoClient == nil {
 		return cClient.ErrClientNotConnected
 	}
-	forgeClient := carbideClient.Carbide()
+	nicoClient := nicoClient.Nico()
 
-	_, err = forgeClient.DeleteNetworkSegment(ctx, request)
+	_, err = nicoClient.DeleteNetworkSegment(ctx, request)
 	if err != nil {
 		logger.Warn().Err(err).Msg("Failed to delete Subnet using Site Controller API")
 		return swe.WrapErr(err)
@@ -132,9 +132,9 @@ func (mm *ManageSubnet) DeleteSubnetOnSite(ctx context.Context, request *cwssaws
 }
 
 // NewManageSubnet returns a new ManageSubnet client
-func NewManageSubnet(carbideClient *cClient.CarbideAtomicClient) ManageSubnet {
+func NewManageSubnet(nicoClient *cClient.NicoAtomicClient) ManageSubnet {
 	return ManageSubnet{
-		CarbideAtomicClient: carbideClient,
+		NicoAtomicClient: nicoClient,
 	}
 }
 
@@ -164,16 +164,16 @@ func NewManageSubnetInventory(config ManageInventoryConfig) ManageSubnetInventor
 	}
 }
 
-func subnetFindIDs(ctx context.Context, carbideClient *cClient.CarbideClient) ([]*cwssaws.NetworkSegmentId, error) {
-	idList, err := carbideClient.Networks().FindNetworkSegmentIds(ctx, &cwssaws.NetworkSegmentSearchFilter{})
+func subnetFindIDs(ctx context.Context, nicoClient *cClient.NicoClient) ([]*cwssaws.NetworkSegmentId, error) {
+	idList, err := nicoClient.Networks().FindNetworkSegmentIds(ctx, &cwssaws.NetworkSegmentSearchFilter{})
 	if err != nil {
 		return nil, err
 	}
 	return idList.GetNetworkSegmentsIds(), nil
 }
 
-func subnetFindByIDs(ctx context.Context, carbideClient *cClient.CarbideClient, ids []*cwssaws.NetworkSegmentId) ([]*cwssaws.NetworkSegment, error) {
-	list, err := carbideClient.Networks().FindNetworkSegmentsByIds(ctx, &cwssaws.NetworkSegmentsByIdsRequest{
+func subnetFindByIDs(ctx context.Context, nicoClient *cClient.NicoClient, ids []*cwssaws.NetworkSegmentId) ([]*cwssaws.NetworkSegment, error) {
+	list, err := nicoClient.Networks().FindNetworkSegmentsByIds(ctx, &cwssaws.NetworkSegmentsByIdsRequest{
 		NetworkSegmentsIds: ids,
 	})
 	if err != nil {

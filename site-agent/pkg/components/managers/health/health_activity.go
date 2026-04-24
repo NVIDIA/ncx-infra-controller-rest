@@ -32,7 +32,7 @@ func (ac *HealthWorkflow) GetHealthActivity() (*wflows.HealthStatus, error) {
 			State: ManagerAccess.Data.EB.Managers.Health.Inventory.State,
 		},
 		SiteControllerConnection: &wflows.HealthStatusMsg{
-			State: ManagerAccess.Data.EB.Managers.Health.CarbideInterface.State,
+			State: ManagerAccess.Data.EB.Managers.Health.NicoInterface.State,
 		},
 		SiteAgentHighAvailability: &wflows.HealthStatusMsg{
 			State: ManagerAccess.Data.EB.Managers.Health.Availabilty.State,

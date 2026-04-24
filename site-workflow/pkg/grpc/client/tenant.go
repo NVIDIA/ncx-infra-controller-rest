@@ -45,7 +45,7 @@ type TenantInterface interface {
 
 func (tenant *compute) CreateTenant(ctx context.Context, request *wflows.CreateTenantRequest) (response *wflows.CreateTenantResponse, err error) {
 	log.Info().Interface("request", request).Msg("CreateTenant: received request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-CreateTenant")
+	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "NicoClient-CreateTenant")
 	defer span.End()
 
 	if request == nil {
@@ -63,7 +63,7 @@ func (tenant *compute) CreateTenant(ctx context.Context, request *wflows.CreateT
 		return response, ErrInvalidTenantName
 	}
 
-	response, err = tenant.carbide.CreateTenant(ctx, request)
+	response, err = tenant.nico.CreateTenant(ctx, request)
 	if err != nil {
 		log.Error().Err(err).Msg("CreateTenant: error")
 		return nil, err
@@ -73,7 +73,7 @@ func (tenant *compute) CreateTenant(ctx context.Context, request *wflows.CreateT
 
 func (tenant *compute) UpdateTenant(ctx context.Context, request *wflows.UpdateTenantRequest) (response *wflows.UpdateTenantResponse, err error) {
 	log.Info().Interface("request", request).Msg("UpdateTenant: received request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-UpdateTenant")
+	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "NicoClient-UpdateTenant")
 	defer span.End()
 
 	if request == nil {
@@ -91,7 +91,7 @@ func (tenant *compute) UpdateTenant(ctx context.Context, request *wflows.UpdateT
 		return response, ErrInvalidTenantName
 	}
 
-	response, err = tenant.carbide.UpdateTenant(ctx, request)
+	response, err = tenant.nico.UpdateTenant(ctx, request)
 	if err != nil {
 		log.Error().Err(err).Msg("UpdateTenant: error")
 		return nil, err
@@ -101,13 +101,13 @@ func (tenant *compute) UpdateTenant(ctx context.Context, request *wflows.UpdateT
 
 func (tenant *compute) FindTenantOrganizationIDs(ctx context.Context, request *wflows.TenantSearchFilter) (response *wflows.TenantOrganizationIdList, err error) {
 	log.Info().Interface("request", request).Msg("FindTenantOrganizationIDs: received request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-FindTenantOrganizationIDs")
+	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "NicoClient-FindTenantOrganizationIDs")
 	defer span.End()
 
 	if request == nil {
 		request = &wflows.TenantSearchFilter{}
 	}
-	response, err = tenant.carbide.FindTenantOrganizationIds(ctx, request)
+	response, err = tenant.nico.FindTenantOrganizationIds(ctx, request)
 	if err != nil {
 		log.Error().Err(err).Msg("FindTenantOrganizationIds: error")
 		return nil, err
@@ -117,13 +117,13 @@ func (tenant *compute) FindTenantOrganizationIDs(ctx context.Context, request *w
 
 func (tenant *compute) FindTenantsByOrganizationIDs(ctx context.Context, request *wflows.TenantByOrganizationIdsRequest) (response *wflows.TenantList, err error) {
 	log.Info().Interface("request", request).Msg("FindTenantsByOrganizationIDs: received request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-FindTenantsByOrganizationIDs")
+	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "NicoClient-FindTenantsByOrganizationIDs")
 	defer span.End()
 
 	if request == nil {
 		request = &wflows.TenantByOrganizationIdsRequest{}
 	}
-	response, err = tenant.carbide.FindTenantsByOrganizationIds(ctx, request)
+	response, err = tenant.nico.FindTenantsByOrganizationIds(ctx, request)
 	if err != nil {
 		log.Error().Err(err).Msgf("FindTenantsByOrganizationIds: error")
 		return nil, err

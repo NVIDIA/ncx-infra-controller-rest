@@ -27,7 +27,7 @@ func (api *API) RegisterSubscriber() error {
 	// Register subscriber workflows
 	ManagerAccess.Data.EB.Log.Info().Msg("Machine: Registering the subscribers")
 
-	machineManager := swa.NewManageMachine(ManagerAccess.Data.EB.Managers.Carbide.Client)
+	machineManager := swa.NewManageMachine(ManagerAccess.Data.EB.Managers.Nico.Client)
 
 	// Register workflows
 

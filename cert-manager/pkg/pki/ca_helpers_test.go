@@ -42,7 +42,7 @@ func NewTestCA(opts CAOptions) (*CA, error) {
 		opts.TTL = DefaultCATTL
 	}
 	if opts.CommonName == "" {
-		opts.CommonName = "Carbide Local CA"
+		opts.CommonName = "Nico Local CA"
 	}
 	if opts.Organization == "" {
 		opts.Organization = "NVIDIA"

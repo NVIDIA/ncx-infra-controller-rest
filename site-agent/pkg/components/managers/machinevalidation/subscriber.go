@@ -27,7 +27,7 @@ func (MachineValidation *API) RegisterSubscriber() error {
 	// Register subscriber workflows
 	ManagerAccess.Data.EB.Log.Info().Msg("MachineValidation: Registering the subscribers")
 
-	manager := swa.NewManageMachineValidation(ManagerAccess.Data.EB.Managers.Carbide.Client)
+	manager := swa.NewManageMachineValidation(ManagerAccess.Data.EB.Managers.Nico.Client)
 
 	// Register workflows
 

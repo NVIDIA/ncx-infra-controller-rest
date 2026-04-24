@@ -133,15 +133,15 @@ var File_expectedpowershelf_proto protoreflect.FileDescriptor
 
 const file_expectedpowershelf_proto_rawDesc = "" +
 	"\n" +
-	"\x18expectedpowershelf.proto\x12\fworkflows.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0eworkflow.proto\x1a\x14common_carbide.proto\x1a\x13forge_carbide.proto\"\xa8\x03\n" +
+	"\x18expectedpowershelf.proto\x12\fworkflows.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0eworkflow.proto\x1a\x14common_nico.proto\x1a\x13nico_nico.proto\"\xa8\x03\n" +
 	"\x1bExpectedPowerShelfInventory\x12H\n" +
 	"\x10inventory_status\x18\x01 \x01(\x0e2\x1d.workflows.v1.InventoryStatusR\x0finventoryStatus\x12\x1d\n" +
 	"\n" +
 	"status_msg\x18\x02 \x01(\tR\tstatusMsg\x128\n" +
 	"\ttimestamp\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12O\n" +
-	"\x16expected_power_shelves\x18\x04 \x03(\v2\x19.forge.ExpectedPowerShelfR\x14expectedPowerShelves\x12B\n" +
+	"\x16expected_power_shelves\x18\x04 \x03(\v2\x19.nico.ExpectedPowerShelfR\x14expectedPowerShelves\x12B\n" +
 	"\x0einventory_page\x18\x05 \x01(\v2\x1b.workflows.v1.InventoryPageR\rinventoryPage\x12Q\n" +
-	"\x14linked_power_shelves\x18\x06 \x03(\v2\x1f.forge.LinkedExpectedPowerShelfR\x12linkedPowerShelvesBCZAgithub.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/protob\x06proto3"
+	"\x14linked_power_shelves\x18\x06 \x03(\v2\x1f.nico.LinkedExpectedPowerShelfR\x12linkedPowerShelvesBCZAgithub.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/protob\x06proto3"
 
 var (
 	file_expectedpowershelf_proto_rawDescOnce sync.Once
@@ -160,16 +160,16 @@ var file_expectedpowershelf_proto_goTypes = []any{
 	(*ExpectedPowerShelfInventory)(nil), // 0: workflows.v1.ExpectedPowerShelfInventory
 	(InventoryStatus)(0),                // 1: workflows.v1.InventoryStatus
 	(*timestamppb.Timestamp)(nil),       // 2: google.protobuf.Timestamp
-	(*ExpectedPowerShelf)(nil),          // 3: forge.ExpectedPowerShelf
+	(*ExpectedPowerShelf)(nil),          // 3: nico.ExpectedPowerShelf
 	(*InventoryPage)(nil),               // 4: workflows.v1.InventoryPage
-	(*LinkedExpectedPowerShelf)(nil),    // 5: forge.LinkedExpectedPowerShelf
+	(*LinkedExpectedPowerShelf)(nil),    // 5: nico.LinkedExpectedPowerShelf
 }
 var file_expectedpowershelf_proto_depIdxs = []int32{
 	1, // 0: workflows.v1.ExpectedPowerShelfInventory.inventory_status:type_name -> workflows.v1.InventoryStatus
 	2, // 1: workflows.v1.ExpectedPowerShelfInventory.timestamp:type_name -> google.protobuf.Timestamp
-	3, // 2: workflows.v1.ExpectedPowerShelfInventory.expected_power_shelves:type_name -> forge.ExpectedPowerShelf
+	3, // 2: workflows.v1.ExpectedPowerShelfInventory.expected_power_shelves:type_name -> nico.ExpectedPowerShelf
 	4, // 3: workflows.v1.ExpectedPowerShelfInventory.inventory_page:type_name -> workflows.v1.InventoryPage
-	5, // 4: workflows.v1.ExpectedPowerShelfInventory.linked_power_shelves:type_name -> forge.LinkedExpectedPowerShelf
+	5, // 4: workflows.v1.ExpectedPowerShelfInventory.linked_power_shelves:type_name -> nico.LinkedExpectedPowerShelf
 	5, // [5:5] is the sub-list for method output_type
 	5, // [5:5] is the sub-list for method input_type
 	5, // [5:5] is the sub-list for extension type_name
@@ -183,8 +183,8 @@ func file_expectedpowershelf_proto_init() {
 		return
 	}
 	file_workflow_proto_init()
-	file_common_carbide_proto_init()
-	file_forge_carbide_proto_init()
+	file_common_nico_proto_init()
+	file_nico_nico_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

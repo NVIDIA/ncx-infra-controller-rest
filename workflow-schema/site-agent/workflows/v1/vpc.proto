@@ -18,8 +18,8 @@ syntax = "proto3";
 package workflows.v1;
 
 import "workflow.proto";
-import "common_carbide.proto";
-import "forge_carbide.proto";
+import "common_nico.proto";
+import "nico_nico.proto";
 import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/proto";
@@ -52,7 +52,7 @@ message VPCInfo {
   WorkflowStatus status = 1;
   ObjectStatus object_status = 2;
   string status_msg = 3;
-  forge.Vpc vpc = 4;
+  nico.Vpc vpc = 4;
 }
 
 // GetVPCRequest - request to fetch vpc
@@ -77,16 +77,16 @@ message GetVPCAllRequest {
 message GetVPCResponse {
   WorkflowStatus status = 1;
   string status_msg = 2;
-  forge.VpcList list = 3;
+  nico.VpcList list = 3;
   TransactionID transaction_id = 4;
 }
 
 // VpcInventory - inventory info of all VPCs periodically collected
 message VPCInventory {
   // List of VPCs
-  repeated forge.Vpc vpcs = 1;
+  repeated nico.Vpc vpcs = 1;
   // List of VPC propagation details
-  repeated forge.NetworkSecurityGroupPropagationObjectStatus network_security_group_propagations = 6;
+  repeated nico.NetworkSecurityGroupPropagationObjectStatus network_security_group_propagations = 6;
   // Reported timestamp of VPC inventory
   google.protobuf.Timestamp timestamp = 2;
   // Status of Inventory

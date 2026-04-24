@@ -20,8 +20,8 @@ package workflows.v1;
 import "google/protobuf/timestamp.proto";
 
 import "workflow.proto";
-import "common_carbide.proto";
-import "forge_carbide.proto";
+import "common_nico.proto";
+import "nico_nico.proto";
 
 option go_package = "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/proto";
 
@@ -62,7 +62,7 @@ message InfiniBandPartitionInfo {
   // Status message
   string status_msg = 3;
   // Details of the InfiniBandPartition
-  forge.IBPartition ib_partition = 4;
+  nico.IBPartition ib_partition = 4;
 }
 
 // InfiniBandPartitionInventory - inventory info of all InfiniBandPartitions on Site collected
@@ -75,7 +75,7 @@ message InfiniBandPartitionInventory {
   // Reported timestamp of InfiniBand Partition inventory
   google.protobuf.Timestamp timestamp = 3;
   // List of InfiniBand Partition
-  repeated forge.IBPartition ib_partitions = 4;
+  repeated nico.IBPartition ib_partitions = 4;
   // Inventory page information
   InventoryPage inventory_page = 5;
 }

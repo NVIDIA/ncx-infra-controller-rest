@@ -99,16 +99,16 @@ func doActivity(ctx context.Context, ResourceVer uint64, ResourceID string,
 	withLogger.Info(logMsg)
 
 	// Make sure GRPC client is available
-	if ManagerAccess.Data.EB.Managers.Carbide.GetClient() == nil {
+	if ManagerAccess.Data.EB.Managers.Nico.GetClient() == nil {
 		ManagerAccess.Data.EB.Log.Info().Str("Workflow", activityType).Msgf("%v: GRPC client is not available creating one", resourceType)
-		err := ManagerAccess.API.Carbide.CreateGRPCClient()
+		err := ManagerAccess.API.Nico.CreateGRPCClient()
 		if err != nil {
 			span.SetStatus(codes.Error, err.Error())
 			return nil, err
 		}
 	}
 
-	if ManagerAccess.Data.EB.Managers.Carbide.GetClient() == nil {
+	if ManagerAccess.Data.EB.Managers.Nico.GetClient() == nil {
 		err := fmt.Errorf("%v: Failed to create grpc client connection handle", resourceType)
 		span.SetStatus(codes.Error, err.Error())
 		return nil, err
@@ -117,7 +117,7 @@ func doActivity(ctx context.Context, ResourceVer uint64, ResourceID string,
 	TransactionID := &wflows.TransactionID{ResourceId: ResourceID,
 		Timestamp: nil}
 	response, err := wflowMd.DoSiteControllerOP(ctx, TransactionID, ResourceReq)
-	ManagerAccess.API.Carbide.UpdateGRPCClientState(err)
+	ManagerAccess.API.Nico.UpdateGRPCClientState(err)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 	} else {

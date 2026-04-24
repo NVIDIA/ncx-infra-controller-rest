@@ -18,7 +18,7 @@ syntax = "proto3";
 package workflows.v1;
 
 import "workflow.proto";
-import "forge_carbide.proto";
+import "nico_nico.proto";
 import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/proto";
@@ -26,7 +26,7 @@ option go_package = "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema
 // InstanceTypeInventory - inventory info for all InstanceTypes periodically collected
 message InstanceTypeInventory {
   // List of InstanceTypes
-  repeated forge.InstanceType instance_types = 1;
+  repeated nico.InstanceType instance_types = 1;
   // Reported timestamp of inventory
   google.protobuf.Timestamp timestamp = 2;
   // Status of Inventory

@@ -197,7 +197,7 @@ func GetTenantFromTenantIDOrOrg(ctx context.Context, tx *cdb.Tx, dbSession *cdb.
 // GenerateAccountNumber will generate a unique account number
 // this will be deprecated - for now, use a uuid
 func GenerateAccountNumber() string {
-	return fmt.Sprintf("forge-%s", strings.ReplaceAll(uuid.New().String(), "-", ""))
+	return fmt.Sprintf("nico-%s", strings.ReplaceAll(uuid.New().String(), "-", ""))
 }
 
 // GetSiteFromIDString gets the site DB model from the id string
@@ -1143,19 +1143,19 @@ func UnwrapWorkflowError(err error) (code int, unwrappedError error) {
 	switch tpError.Type() {
 	case swe.ErrTypeInvalidRequest:
 		code = http.StatusBadRequest
-	case swe.ErrTypeCarbideObjectNotFound:
+	case swe.ErrTypeNicoObjectNotFound:
 		code = http.StatusNotFound
-	case swe.ErrTypeCarbideUnimplemented:
+	case swe.ErrTypeNicoUnimplemented:
 		code = http.StatusNotImplemented
-	case swe.ErrTypeCarbideDenied:
+	case swe.ErrTypeNicoDenied:
 		code = http.StatusForbidden
-	case swe.ErrTypeCarbideUnavailable:
+	case swe.ErrTypeNicoUnavailable:
 		code = http.StatusServiceUnavailable
-	case swe.ErrTypeCarbideAlreadyExists:
+	case swe.ErrTypeNicoAlreadyExists:
 		code = http.StatusConflict
-	case swe.ErrTypeCarbideFailedPrecondition:
+	case swe.ErrTypeNicoFailedPrecondition:
 		code = http.StatusPreconditionFailed
-	case swe.ErrTypeCarbideInvalidArgument:
+	case swe.ErrTypeNicoInvalidArgument:
 		code = http.StatusBadRequest
 	}
 

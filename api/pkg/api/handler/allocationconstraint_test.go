@@ -51,13 +51,13 @@ func TestAllocationConstraintHandler_Update(t *testing.T) {
 	ipOrg1 := "test-ip-org-1"
 	ipOrg2 := "test-ip-org-2"
 	ipOrg3 := "test-ip-org-3"
-	ipRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	ipu := testMachineBuildUser(t, dbSession, uuid.New().String(), []string{ipOrg1, ipOrg2, ipOrg3}, ipRoles)
 
 	tnOrg1 := "test-tn-org-1"
 	tnOrg2 := "test-tn-org-2"
-	tnRoles := []string{"FORGE_TENANT_ADMIN"}
+	tnRoles := []string{"NICO_TENANT_ADMIN"}
 
 	tnu := testMachineBuildUser(t, dbSession, uuid.New().String(), []string{tnOrg1, tnOrg2}, tnRoles)
 

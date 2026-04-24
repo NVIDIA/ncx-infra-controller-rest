@@ -18,8 +18,8 @@ syntax = "proto3";
 package workflows.v1;
 
 import "workflow.proto";
-import "common_carbide.proto";
-import "forge_carbide.proto";
+import "common_nico.proto";
+import "nico_nico.proto";
 import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/proto";
@@ -29,7 +29,7 @@ message SubnetInfo {
   WorkflowStatus status = 1;
   ObjectStatus object_status = 2;
   string status_msg = 3;
-  forge.NetworkSegment network_segment = 4;
+  nico.NetworkSegment network_segment = 4;
 }
 
 // NetworkPrefixInfo - request parameters of network prefix
@@ -63,7 +63,7 @@ message DeleteSubnetRequest {
 // periodically collected
 message SubnetInventory {
   // List of Network Segments
-  repeated forge.NetworkSegment segments = 1;
+  repeated nico.NetworkSegment segments = 1;
   // Reported timestamp of Segment inventory
   google.protobuf.Timestamp timestamp = 2;
   // Status of Inventory

@@ -23,9 +23,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-// SchemeGroupVersion for forge types
+// SchemeGroupVersion for nico types
 var SchemeGroupVersion = schema.GroupVersion{
-	Group:   "forge.nvidia.io",
+	Group:   "nico.nvidia.io",
 	Version: "v1",
 }
 

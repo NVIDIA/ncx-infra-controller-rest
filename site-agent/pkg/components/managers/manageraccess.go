@@ -19,7 +19,7 @@ package managers
 
 import (
 	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/bootstrap"
-	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/carbide"
+	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/nico"
 	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/dpuextensionservice"
 	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/expectedmachine"
 	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/expectedpowershelf"
@@ -78,9 +78,9 @@ func (m *Manager) VpcPrefix() *vpcprefix.API {
 	return vpcprefix.NewVpcPrefixManager(m.Data.EB, m.API, m.Conf)
 }
 
-// Carbide manager instance here
-func (m *Manager) Carbide() *carbide.API {
-	return carbide.NewCarbideManager(m.Data.EB, m.API, m.Conf)
+// Nico manager instance here
+func (m *Manager) Nico() *nico.API {
+	return nico.NewNicoManager(m.Data.EB, m.API, m.Conf)
 }
 
 // Machine - Add Machine manager instance here

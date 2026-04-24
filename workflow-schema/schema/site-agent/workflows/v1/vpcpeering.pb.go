@@ -121,9 +121,9 @@ var File_vpcpeering_proto protoreflect.FileDescriptor
 
 const file_vpcpeering_proto_rawDesc = "" +
 	"\n" +
-	"\x10vpcpeering.proto\x12\fworkflows.v1\x1a\x0eworkflow.proto\x1a\x13forge_carbide.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb2\x02\n" +
+	"\x10vpcpeering.proto\x12\fworkflows.v1\x1a\x0eworkflow.proto\x1a\x13nico_nico.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb2\x02\n" +
 	"\x13VPCPeeringInventory\x124\n" +
-	"\fvpc_peerings\x18\x01 \x03(\v2\x11.forge.VpcPeeringR\vvpcPeerings\x128\n" +
+	"\fvpc_peerings\x18\x01 \x03(\v2\x11.nico.VpcPeeringR\vvpcPeerings\x128\n" +
 	"\ttimestamp\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12H\n" +
 	"\x10inventory_status\x18\x03 \x01(\x0e2\x1d.workflows.v1.InventoryStatusR\x0finventoryStatus\x12\x1d\n" +
 	"\n" +
@@ -145,13 +145,13 @@ func file_vpcpeering_proto_rawDescGZIP() []byte {
 var file_vpcpeering_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
 var file_vpcpeering_proto_goTypes = []any{
 	(*VPCPeeringInventory)(nil),   // 0: workflows.v1.VPCPeeringInventory
-	(*VpcPeering)(nil),            // 1: forge.VpcPeering
+	(*VpcPeering)(nil),            // 1: nico.VpcPeering
 	(*timestamppb.Timestamp)(nil), // 2: google.protobuf.Timestamp
 	(InventoryStatus)(0),          // 3: workflows.v1.InventoryStatus
 	(*InventoryPage)(nil),         // 4: workflows.v1.InventoryPage
 }
 var file_vpcpeering_proto_depIdxs = []int32{
-	1, // 0: workflows.v1.VPCPeeringInventory.vpc_peerings:type_name -> forge.VpcPeering
+	1, // 0: workflows.v1.VPCPeeringInventory.vpc_peerings:type_name -> nico.VpcPeering
 	2, // 1: workflows.v1.VPCPeeringInventory.timestamp:type_name -> google.protobuf.Timestamp
 	3, // 2: workflows.v1.VPCPeeringInventory.inventory_status:type_name -> workflows.v1.InventoryStatus
 	4, // 3: workflows.v1.VPCPeeringInventory.inventory_page:type_name -> workflows.v1.InventoryPage
@@ -168,7 +168,7 @@ func file_vpcpeering_proto_init() {
 		return
 	}
 	file_workflow_proto_init()
-	file_forge_carbide_proto_init()
+	file_nico_nico_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

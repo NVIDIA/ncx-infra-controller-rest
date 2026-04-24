@@ -89,8 +89,8 @@ For deploying onto a real Kubernetes cluster alongside NVIDIA Infrastructure Con
 # 1. Build and push images to your registry
 make docker-build IMAGE_REGISTRY=my-registry.example.com/ncx IMAGE_TAG=v1.0.4
 
-for image in carbide-rest-api carbide-rest-workflow carbide-rest-site-manager \
-             carbide-rest-site-agent carbide-rest-db carbide-rest-cert-manager; do
+for image in nico-rest-api nico-rest-workflow nico-rest-site-manager \
+             nico-rest-site-agent nico-rest-db nico-rest-cert-manager; do
     docker push my-registry.example.com/ncx/$image:v1.0.4
 done
 
@@ -124,23 +124,23 @@ See **[Deployment QuickStart Guide](deploy/README.md)** for a concise bring-up g
 
 ## CLI
 
-`carbidecli` is a command-line client that wraps the full REST API. Install it and set up configs for each environment you work with:
+`nicocli` is a command-line client that wraps the full REST API. Install it and set up configs for each environment you work with:
 
 ```bash
-make carbide-cli             # build and install to $GOPATH/bin
-carbidecli init              # generate ~/.carbide/config.yaml
+make nico-cli             # build and install to $GOPATH/bin
+nicocli init              # generate ~/.nico/config.yaml
 ```
 
-Create a config per environment (`~/.carbide/config.yaml`, `~/.carbide/config.staging.yaml`, `~/.carbide/config.prod.yaml`), then launch the interactive TUI which handles environment selection, login, and token refresh automatically:
+Create a config per environment (`~/.nico/config.yaml`, `~/.nico/config.staging.yaml`, `~/.nico/config.prod.yaml`), then launch the interactive TUI which handles environment selection, login, and token refresh automatically:
 
 ```bash
-carbidecli tui
+nicocli tui
 ```
 
 All commands are also available directly for scripting and one-off use:
 
 ```bash
-carbidecli --config ~/.carbide/config.staging.yaml site list
+nicocli --config ~/.nico/config.staging.yaml site list
 ```
 
 See [cli/README.md](cli/README.md) for configuration, authentication, shell completion, and the full command reference.
@@ -150,10 +150,10 @@ See [cli/README.md](cli/README.md) for configuration, authentication, shell comp
 ### Get an Access Token
 
 ```bash
-TOKEN=$(curl -s -X POST "http://localhost:8082/realms/carbide-dev/protocol/openid-connect/token" \
+TOKEN=$(curl -s -X POST "http://localhost:8082/realms/nico-dev/protocol/openid-connect/token" \
   -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "client_id=carbide-api" \
-  -d "client_secret=carbide-local-secret" \
+  -d "client_id=nico-api" \
+  -d "client_secret=nico-local-secret" \
   -d "grant_type=password" \
   -d "username=admin@example.com" \
   -d "password=adminpassword" | jq -r .access_token)
@@ -166,11 +166,11 @@ TOKEN=$(curl -s -X POST "http://localhost:8082/realms/carbide-dev/protocol/openi
 curl -s http://localhost:8388/healthz -H "Authorization: Bearer $TOKEN" | jq .
 
 # Get current tenant (auto-creates on first access)
-curl -s "http://localhost:8388/v2/org/test-org/carbide/tenant/current" \
+curl -s "http://localhost:8388/v2/org/test-org/nico/tenant/current" \
   -H "Authorization: Bearer $TOKEN" | jq .
 
 # List sites
-curl -s "http://localhost:8388/v2/org/test-org/carbide/site" \
+curl -s "http://localhost:8388/v2/org/test-org/nico/site" \
   -H "Authorization: Bearer $TOKEN" | jq .
 ```
 
@@ -178,9 +178,9 @@ curl -s "http://localhost:8388/v2/org/test-org/carbide/site" \
 
 | Email | Password | Roles |
 |-------|----------|-------|
-| `admin@example.com` | `adminpassword` | FORGE_PROVIDER_ADMIN, FORGE_TENANT_ADMIN |
-| `testuser@example.com` | `testpassword` | FORGE_TENANT_ADMIN |
-| `provider@example.com` | `providerpassword` | FORGE_PROVIDER_ADMIN |
+| `admin@example.com` | `adminpassword` | NICO_PROVIDER_ADMIN, NICO_TENANT_ADMIN |
+| `testuser@example.com` | `testpassword` | NICO_TENANT_ADMIN |
+| `provider@example.com` | `providerpassword` | NICO_PROVIDER_ADMIN |
 
 All users have the `test-org` organization assigned.
 
@@ -197,7 +197,7 @@ Images are tagged with `localhost:5000` registry and `latest` tag by default.
 ### Build with Custom Registry and Tag
 
 ```bash
-make docker-build IMAGE_REGISTRY=my-registry.example.com/carbide IMAGE_TAG=v1.0.0
+make docker-build IMAGE_REGISTRY=my-registry.example.com/nico IMAGE_TAG=v1.0.0
 ```
 
 ### Push to Your Registry
@@ -226,7 +226,7 @@ TAG=v1.0.0
 
 make docker-build IMAGE_REGISTRY=$REGISTRY IMAGE_TAG=$TAG
 
-for image in carbide-rest-api carbide-rest-workflow carbide-rest-site-manager carbide-rest-site-agent carbide-rest-db carbide-rest-cert-manager; do
+for image in nico-rest-api nico-rest-workflow nico-rest-site-manager nico-rest-site-agent nico-rest-db nico-rest-cert-manager; do
     docker push "$REGISTRY/$image:$TAG"
 done
 ```
@@ -235,25 +235,25 @@ done
 
 | Image | Description |
 |-------|-------------|
-| `carbide-rest-api` | Main REST API (port 8388) |
-| `carbide-rest-workflow` | Temporal workflow worker |
-| `carbide-rest-site-manager` | Site management worker |
-| `carbide-rest-site-agent` | On-site agent |
-| `carbide-rest-db` | Database migrations (run to completion) |
-| `carbide-rest-cert-manager` | Native PKI certificate manager |
+| `nico-rest-api` | Main REST API (port 8388) |
+| `nico-rest-workflow` | Temporal workflow worker |
+| `nico-rest-site-manager` | Site management worker |
+| `nico-rest-site-agent` | On-site agent |
+| `nico-rest-db` | Database migrations (run to completion) |
+| `nico-rest-cert-manager` | Native PKI certificate manager |
 
 
 ## Architecture
 
 | Service | Binary | Description |
 |---------|--------|-------------|
-| carbide-rest-api | `api` | Main REST API server |
-| carbide-rest-workflow | `workflow` | Temporal workflow service |
-| carbide-rest-db | `migrations` | Database migrations |
-| carbide-rest-site-agent | `site-agent` | On-site agent |
-| carbide-rest-site-manager | `sitemgr` | Site management service |
-| carbide-rest-cert-manager | `credsmgr` | Native PKI certificate manager |
-| carbide-cli | `carbidecli` | [CLI client](cli/README.md) for the REST API |
+| nico-rest-api | `api` | Main REST API server |
+| nico-rest-workflow | `workflow` | Temporal workflow service |
+| nico-rest-db | `migrations` | Database migrations |
+| nico-rest-site-agent | `site-agent` | On-site agent |
+| nico-rest-site-manager | `sitemgr` | Site management service |
+| nico-rest-cert-manager | `credsmgr` | Native PKI certificate manager |
+| nico-cli | `nicocli` | [CLI client](cli/README.md) for the REST API |
 
 Supporting modules:
 - **common** - Shared utilities and configurations

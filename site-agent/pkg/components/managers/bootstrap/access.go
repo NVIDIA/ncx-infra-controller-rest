@@ -30,10 +30,10 @@ var ManagerAccess *Manager.ManagerAccess
 type BoostrapAPI struct{}
 
 // NewBootstrapManager - returns a new instance of helm manager
-func NewBootstrapManager(superForge *elektratypes.Elektra, superAPI *Manager.ManagerAPI, superConf *Manager.ManagerConf) *BoostrapAPI {
+func NewBootstrapManager(superNico *elektratypes.Elektra, superAPI *Manager.ManagerAPI, superConf *Manager.ManagerConf) *BoostrapAPI {
 	ManagerAccess = &Manager.ManagerAccess{
 		Data: &Manager.ManagerData{
-			EB: superForge,
+			EB: superNico,
 		},
 		API:  superAPI,
 		Conf: superConf,

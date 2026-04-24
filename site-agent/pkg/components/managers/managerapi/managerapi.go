@@ -48,7 +48,7 @@ type ManagerAPI struct {
 	Instance               InstanceInterface
 	Machine                MachineInterface
 	Orchestrator           OrchestratorInterface
-	Carbide                CarbideInterface
+	Nico                NicoInterface
 	Health                 HealthInterface
 	SSHKeyGroup            SSHKeyGroupInterface
 	InfiniBandPartition    InfiniBandPartitionInterface

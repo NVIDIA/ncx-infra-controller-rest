@@ -124,14 +124,14 @@ var File_nvlinklogicalpartition_proto protoreflect.FileDescriptor
 
 const file_nvlinklogicalpartition_proto_rawDesc = "" +
 	"\n" +
-	"\x1cnvlinklogicalpartition.proto\x12\fworkflows.v1\x1a\x0eworkflow.proto\x1a\x13forge_carbide.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xc7\x02\n" +
+	"\x1cnvlinklogicalpartition.proto\x12\fworkflows.v1\x1a\x0eworkflow.proto\x1a\x13nico_nico.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xc7\x02\n" +
 	"\x1fNVLinkLogicalPartitionInventory\x12H\n" +
 	"\x10inventory_status\x18\x01 \x01(\x0e2\x1d.workflows.v1.InventoryStatusR\x0finventoryStatus\x12\x1d\n" +
 	"\n" +
 	"status_msg\x18\x02 \x01(\tR\tstatusMsg\x128\n" +
 	"\ttimestamp\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12=\n" +
 	"\n" +
-	"partitions\x18\x04 \x03(\v2\x1d.forge.NVLinkLogicalPartitionR\n" +
+	"partitions\x18\x04 \x03(\v2\x1d.nico.NVLinkLogicalPartitionR\n" +
 	"partitions\x12B\n" +
 	"\x0einventory_page\x18\x05 \x01(\v2\x1b.workflows.v1.InventoryPageR\rinventoryPageBCZAgithub.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/protob\x06proto3"
 
@@ -152,13 +152,13 @@ var file_nvlinklogicalpartition_proto_goTypes = []any{
 	(*NVLinkLogicalPartitionInventory)(nil), // 0: workflows.v1.NVLinkLogicalPartitionInventory
 	(InventoryStatus)(0),                    // 1: workflows.v1.InventoryStatus
 	(*timestamppb.Timestamp)(nil),           // 2: google.protobuf.Timestamp
-	(*NVLinkLogicalPartition)(nil),          // 3: forge.NVLinkLogicalPartition
+	(*NVLinkLogicalPartition)(nil),          // 3: nico.NVLinkLogicalPartition
 	(*InventoryPage)(nil),                   // 4: workflows.v1.InventoryPage
 }
 var file_nvlinklogicalpartition_proto_depIdxs = []int32{
 	1, // 0: workflows.v1.NVLinkLogicalPartitionInventory.inventory_status:type_name -> workflows.v1.InventoryStatus
 	2, // 1: workflows.v1.NVLinkLogicalPartitionInventory.timestamp:type_name -> google.protobuf.Timestamp
-	3, // 2: workflows.v1.NVLinkLogicalPartitionInventory.partitions:type_name -> forge.NVLinkLogicalPartition
+	3, // 2: workflows.v1.NVLinkLogicalPartitionInventory.partitions:type_name -> nico.NVLinkLogicalPartition
 	4, // 3: workflows.v1.NVLinkLogicalPartitionInventory.inventory_page:type_name -> workflows.v1.InventoryPage
 	4, // [4:4] is the sub-list for method output_type
 	4, // [4:4] is the sub-list for method input_type
@@ -173,7 +173,7 @@ func file_nvlinklogicalpartition_proto_init() {
 		return
 	}
 	file_workflow_proto_init()
-	file_forge_carbide_proto_init()
+	file_nico_nico_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

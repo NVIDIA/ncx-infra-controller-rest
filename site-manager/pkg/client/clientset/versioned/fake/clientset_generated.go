@@ -25,8 +25,8 @@ package fake
 
 import (
 	clientset "github.com/NVIDIA/ncx-infra-controller-rest/site-manager/pkg/client/clientset/versioned"
-	forgev1 "github.com/NVIDIA/ncx-infra-controller-rest/site-manager/pkg/client/clientset/versioned/typed/crds/v1"
-	fakeforgev1 "github.com/NVIDIA/ncx-infra-controller-rest/site-manager/pkg/client/clientset/versioned/typed/crds/v1/fake"
+	nicov1 "github.com/NVIDIA/ncx-infra-controller-rest/site-manager/pkg/client/clientset/versioned/typed/crds/v1"
+	fakenicov1 "github.com/NVIDIA/ncx-infra-controller-rest/site-manager/pkg/client/clientset/versioned/typed/crds/v1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -84,7 +84,7 @@ var (
 	_ testing.FakeClient  = &Clientset{}
 )
 
-// ForgeV1 retrieves the ForgeV1Client
-func (c *Clientset) ForgeV1() forgev1.ForgeV1Interface {
-	return &fakeforgev1.FakeForgeV1{Fake: &c.Fake}
+// NicoV1 retrieves the NicoV1Client
+func (c *Clientset) NicoV1() nicov1.NicoV1Interface {
+	return &fakenicov1.FakeNicoV1{Fake: &c.Fake}
 }

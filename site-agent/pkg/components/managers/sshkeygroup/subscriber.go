@@ -38,7 +38,7 @@ func (api *API) RegisterSubscriber() error {
 		ManagerAccess.Conf.EB,
 	)
 
-	sshkeygroupManager := swa.NewManageSSHKeyGroup(ManagerAccess.Data.EB.Managers.Carbide.Client)
+	sshkeygroupManager := swa.NewManageSSHKeyGroup(ManagerAccess.Data.EB.Managers.Nico.Client)
 
 	// Register Site Workflows
 

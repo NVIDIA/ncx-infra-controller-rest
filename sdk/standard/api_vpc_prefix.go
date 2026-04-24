@@ -43,7 +43,7 @@ CreateVpcPrefix Create VPC Prefix
 
 Create a VPC Prefix for the org.
 
-Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` authorization role.
+Org must have a Tenant entity. User must have `NICO_TENANT_ADMIN` authorization role.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -73,7 +73,7 @@ func (a *VPCPrefixAPIService) CreateVpcPrefixExecute(r ApiCreateVpcPrefixRequest
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/vpc-prefix"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/vpc-prefix"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -122,7 +122,7 @@ func (a *VPCPrefixAPIService) CreateVpcPrefixExecute(r ApiCreateVpcPrefixRequest
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 400 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -133,7 +133,7 @@ func (a *VPCPrefixAPIService) CreateVpcPrefixExecute(r ApiCreateVpcPrefixRequest
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -173,7 +173,7 @@ DeleteVpcPrefix Delete VPC Prefix
 
 Delete a specific VPC Prefix by ID.
 
-Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` role.
+Org must have a Tenant entity. User must have `NICO_TENANT_ADMIN` role.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -202,7 +202,7 @@ func (a *VPCPrefixAPIService) DeleteVpcPrefixExecute(r ApiDeleteVpcPrefixRequest
 		return nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/vpc-prefix/{vpcPrefixId}"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/vpc-prefix/{vpcPrefixId}"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"vpcPrefixId"+"}", url.PathEscape(parameterValueToString(r.vpcPrefixId, "vpcPrefixId")), -1)
 
@@ -250,7 +250,7 @@ func (a *VPCPrefixAPIService) DeleteVpcPrefixExecute(r ApiDeleteVpcPrefixRequest
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -336,7 +336,7 @@ GetAllVpcPrefix Retrieve all VPC Prefixes
 
 # Retrieve all VPC Prefixes for the org
 
-Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` role.
+Org must have a Tenant entity. User must have `NICO_TENANT_ADMIN` role.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -366,7 +366,7 @@ func (a *VPCPrefixAPIService) GetAllVpcPrefixExecute(r ApiGetAllVpcPrefixRequest
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/vpc-prefix"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/vpc-prefix"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -441,7 +441,7 @@ func (a *VPCPrefixAPIService) GetAllVpcPrefixExecute(r ApiGetAllVpcPrefixRequest
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -488,7 +488,7 @@ GetVpcPrefix Retrieve VPC Prefix
 
 # Retrieve a specific VPC Prefix
 
-Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` role.
+Org must have a Tenant entity. User must have `NICO_TENANT_ADMIN` role.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -520,7 +520,7 @@ func (a *VPCPrefixAPIService) GetVpcPrefixExecute(r ApiGetVpcPrefixRequest) (*Vp
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/vpc-prefix/{vpcPrefixId}"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/vpc-prefix/{vpcPrefixId}"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"vpcPrefixId"+"}", url.PathEscape(parameterValueToString(r.vpcPrefixId, "vpcPrefixId")), -1)
 
@@ -571,7 +571,7 @@ func (a *VPCPrefixAPIService) GetVpcPrefixExecute(r ApiGetVpcPrefixRequest) (*Vp
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -617,7 +617,7 @@ UpdateVpcPrefix Update VPC Prefix
 
 # Update an existing VPC Prefix
 
-Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` authorization role.
+Org must have a Tenant entity. User must have `NICO_TENANT_ADMIN` authorization role.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -649,7 +649,7 @@ func (a *VPCPrefixAPIService) UpdateVpcPrefixExecute(r ApiUpdateVpcPrefixRequest
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/vpc-prefix/{vpcPrefixId}"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/vpc-prefix/{vpcPrefixId}"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"vpcPrefixId"+"}", url.PathEscape(parameterValueToString(r.vpcPrefixId, "vpcPrefixId")), -1)
 
@@ -699,7 +699,7 @@ func (a *VPCPrefixAPIService) UpdateVpcPrefixExecute(r ApiUpdateVpcPrefixRequest
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 400 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -710,7 +710,7 @@ func (a *VPCPrefixAPIService) UpdateVpcPrefixExecute(r ApiUpdateVpcPrefixRequest
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()

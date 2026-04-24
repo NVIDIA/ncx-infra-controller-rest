@@ -64,7 +64,7 @@ Each release lists pull requests grouped by category, with the most recent versi
 ### Chores
 
 - **Replace hardcoded API name in path in TUI using helper** ([#356](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/356))
-  Replaces all 86 hardcoded `/v2/org/{org}/carbide/...` path strings in the TUI with calls to a new `apiPath` helper, making path construction consistent with the SDK's configurable API name support.
+  Replaces all 86 hardcoded `/v2/org/{org}/nico/...` path strings in the TUI with calls to a new `apiPath` helper, making path construction consistent with the SDK's configurable API name support.
 
 - **Rename Site Agent and mock Core/RLA server binary** ([#365](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/365))
   Renames Site Agent and mock server binaries as part of the Site Agent v2 preparation, and removes residual database references from the stateless agent.
@@ -101,7 +101,7 @@ Each release lists pull requests grouped by category, with the most recent versi
 
 ### Bug Fixes
 
-- **Aggregate NVSwitch sub-component firmware statuses in Carbide path in RLA** ([#355](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/355))
+- **Aggregate NVSwitch sub-component firmware statuses in Nico path in RLA** ([#355](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/355))
   Fixes a map-overwrite bug where only the last sub-component firmware status survived per switch when Core returned multiple statuses (BMC, CPLD, BIOS, NVOS). An aggregation function now correctly reports failure if any sub-component fails, and missing switches are reported as Unknown.
 
 - **Prevent UpdateTaskStatus from overwriting started_at with NULL in RLA task executor** ([#354](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/354))
@@ -197,7 +197,7 @@ Each release lists pull requests grouped by category, with the most recent versi
   Adds the foundational leak detection subsystem for monitoring coolant leaks in rack trays, providing the sensor data pipeline for automated safety responses.
 
 - **Add mTLS support to RLA CLI and refactor cert packages** ([#299](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/299))
-  Enables mutual TLS authentication for RLA CLI commands and consolidates certificate handling into a shared package, aligning with the security posture of other Carbide services.
+  Enables mutual TLS authentication for RLA CLI commands and consolidates certificate handling into a shared package, aligning with the security posture of other Nico services.
 
 - **Add AGENTS.md info file for repo** ([#292](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/292))
   Adds an AGENTS.md file providing comprehensive guidance for AI coding agents working in the repository, covering project structure, build commands, coding conventions, and CI/CD workflows.
@@ -211,8 +211,8 @@ Each release lists pull requests grouped by category, with the most recent versi
 - **Support firmware upgrades in-memory mode for PSM** ([#277](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/277))
   Adds support for in-memory firmware upgrade mode in PowerShelf Manager, providing a faster firmware update path for supported hardware.
 
-- **Implement Carbide provider for NVLSwitch and PowerShelf component managers** ([#256](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/256))
-  Introduces a Carbide-backed provider for managing NVLink Switches and PowerShelves, enabling these component types to be managed through the standard Carbide Core API path.
+- **Implement Nico provider for NVLSwitch and PowerShelf component managers** ([#256](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/256))
+  Introduces a Nico-backed provider for managing NVLink Switches and PowerShelves, enabling these component types to be managed through the standard Nico Core API path.
 
 - **Refactor task workflow and component manager in RLA** ([#269](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/269))
   Restructures the RLA task workflow execution and component manager architecture for better maintainability and extensibility.
@@ -226,7 +226,7 @@ Each release lists pull requests grouped by category, with the most recent versi
 ### Bug Fixes
 
 - **Populate APIError source attribute from API name** ([#287](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/287))
-  Replaces the hardcoded `forge` source in structured API errors with the configured API name, ensuring error responses accurately identify the originating service. This is a breaking change for clients that matched on `source == "forge"`.
+  Replaces the hardcoded `nico` source in structured API errors with the configured API name, ensuring error responses accurately identify the originating service. This is a breaking change for clients that matched on `source == "nico"`.
 
 - **Strip leading comma from Docker image tags in CI** ([#323](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/323))
   Fixes the CI Docker tag generation that produced malformed tags like `,nvcr.io/.../image:tag` due to empty string initialization with comma-prefixed appends.
@@ -321,7 +321,7 @@ Each release lists pull requests grouped by category, with the most recent versi
   Exposes REST API endpoints for initiating rack bringup operations through RLA, enabling orchestrated rack-level provisioning workflows.
 
 - **Port NV-Switch manager into the repository** ([#192](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/192))
-  Integrates the NVSwitch Manager service directly into the carbide-rest repository, consolidating switch management alongside other component managers.
+  Integrates the NVSwitch Manager service directly into the nico-rest repository, consolidating switch management alongside other component managers.
 
 - **Add stale issue or PR check workflow** ([#221](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/221))
   Introduces an automated GitHub workflow that identifies and labels stale issues and pull requests, helping maintain repository hygiene.
@@ -340,7 +340,7 @@ Each release lists pull requests grouped by category, with the most recent versi
 - **Include scope args in CLI interactive mode command printout** ([#248](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/248))
   Scope arguments are now included in the command printout during interactive mode, making it clear which site/VPC context is active.
 
-- **Add mock methods for ExpectedPowerShelf and ExpectedSwitch to ForgeTest** ([#239](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/239))
+- **Add mock methods for ExpectedPowerShelf and ExpectedSwitch to NicoTest** ([#239](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/239))
   Adds the missing mock implementations needed for testing ExpectedPowerShelf and ExpectedSwitch handlers.
 
 - **Unwrap full Temporal error chain in UnwrapWorkflowError** ([#240](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/240))
@@ -363,11 +363,11 @@ Each release lists pull requests grouped by category, with the most recent versi
 - **Rename Bare Metal Manager module/references to NCX Infra Controller** ([#262](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/262))
   Updates the Go module path and all documentation references from "Bare Metal Manager" to "NCX Infra Controller", reflecting the project's official naming.
 
-- **Update Carbide proto in RLA and refactor RLA inventory loop sync** ([#253](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/253))
+- **Update Nico proto in RLA and refactor RLA inventory loop sync** ([#253](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/253))
   Refreshes proto definitions from bare-metal-manager-core and refactors the inventory sync loop to eliminate a redundant `FindMachinesByIds` call. Firmware version syncing is extracted into a dedicated function.
 
 - **Rename ExpectedPowerShelf and ExpectedSwitch IDs** ([#258](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/258))
-  Renames the `id` fields on ExpectedPowerShelf and ExpectedSwitch to more descriptive names aligned with Carbide Core, and adds missing handler tests.
+  Renames the `id` fields on ExpectedPowerShelf and ExpectedSwitch to more descriptive names aligned with Nico Core, and adds missing handler tests.
 
 - **Pass a JSON-safe struct to executor instead of domain Rack** ([#236](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/236))
   Replaces the domain Rack object with a serialization-safe struct when passing data to task executors, preventing JSON marshaling issues in Temporal workflows.
@@ -384,8 +384,8 @@ Each release lists pull requests grouped by category, with the most recent versi
 - **Clean up duplicate package imports** ([#227](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/227))
   Removes redundant package import aliases and consolidates inconsistent import styles across the codebase.
 
-- **Rename legacy cloud-api references to carbide-rest-api** ([#226](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/226))
-  Updates remaining references from the legacy "cloud-api" naming to "carbide-rest-api" for consistency with the current project identity.
+- **Rename legacy cloud-api references to nico-rest-api** ([#226](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/226))
+  Updates remaining references from the legacy "cloud-api" naming to "nico-rest-api" for consistency with the current project identity.
 
 ### Documentation
 
@@ -436,7 +436,7 @@ Each release lists pull requests grouped by category, with the most recent versi
   Introduces a `rla rack create` CLI command that accepts JSON file or raw JSON data input, along with an examples directory containing sample rack configurations for GB200 NVL72 racks.
 
 - **Add RLA IngestRack API for injecting expected components** ([#189](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/189))
-  Implements the rack ingestion feature that reads component data from RLA's database and routes it to the appropriate component manager (Carbide for compute, PSM for power shelves), following the existing task framework pattern.
+  Implements the rack ingestion feature that reads component data from RLA's database and routes it to the appropriate component manager (Nico for compute, PSM for power shelves), following the existing task framework pattern.
 
 - **Add NVSwitch Manager plugin for RLA** ([#172](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/172))
   Adds NVSwitch Manager as a new backend for managing NVLink Switch components within the Rack Level Administration system.
@@ -493,11 +493,11 @@ Each release lists pull requests grouped by category, with the most recent versi
 - **Remove DB references from Site Agent** ([#203](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/203))
   Removes residual database references from the Site Agent, which operates as a stateless service with no direct database access.
 
-- **rename bmmcli to carbidecli** ([#188](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/188))
-  Renames the CLI binary from `bmmcli` to `carbidecli`, updating the package name, Makefile target, shell completion scripts, and documentation.
+- **rename bmmcli to nicocli** ([#188](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/188))
+  Renames the CLI binary from `bmmcli` to `nicocli`, updating the package name, Makefile target, shell completion scripts, and documentation.
 
 - **Add bare metal manager rest helm chart** ([#186](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/186))
-  Introduces the initial Helm chart for deploying the full Carbide REST stack to Kubernetes, including API, workflow, cert-manager, site-agent, and mock-core components.
+  Introduces the initial Helm chart for deploying the full Nico REST stack to Kubernetes, including API, workflow, cert-manager, site-agent, and mock-core components.
 
 - **Update publish chart jobs** ([#199](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/199))
   Updates CI jobs for Helm chart publishing with revised configurations.
@@ -557,7 +557,7 @@ Each release lists pull requests grouped by category, with the most recent versi
   Adds label (key-value metadata) support to Instance Types in both the API and database models, enabling richer categorization and filtering.
 
 - **Relocate RLA code to bare-metal-manager-rest** ([#119](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/119))
-  Transfers the Rack Level Administration codebase from its internal repository into the main carbide-rest repo, consolidating all management services in one place.
+  Transfers the Rack Level Administration codebase from its internal repository into the main nico-rest repo, consolidating all management services in one place.
 
 - **Add generated Golang client for OpenAPI spec** ([#129](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/129))
   Generates and checks in a Go API client from the OpenAPI specification, providing the foundation for the CLI tool implementation.
@@ -565,15 +565,15 @@ Each release lists pull requests grouped by category, with the most recent versi
 ### Bug Fixes
 
 - **Aligned InfiniBand Partition proto snapshot with Core** ([#164](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/164))
-  Synchronizes the InfiniBand Partition protobuf definitions with Carbide Core, fixing an invalid pkey value error caused by proto misalignment.
+  Synchronizes the InfiniBand Partition protobuf definitions with Nico Core, fixing an invalid pkey value error caused by proto misalignment.
 
 - **Unify machine status breakdown into single reusable type** ([#171](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/171))
   Consolidates multiple machine status breakdown representations into a single reusable type, eliminating inconsistencies across different API endpoints.
 
-- **Replace forge with Carbide in Expected Machine/Audit API route prefix** ([#158](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/158))
-  Updates the legacy `/forge/` route prefix to `/carbide/` for Expected Machine and Audit endpoints across the OpenAPI spec, SDK, and handler code.
+- **Replace nico with Nico in Expected Machine/Audit API route prefix** ([#158](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/158))
+  Updates the legacy `/nico/` route prefix to `/nico/` for Expected Machine and Audit endpoints across the OpenAPI spec, SDK, and handler code.
 
-- **Correct binary_name and binary_path for carbide-rla build** ([#153](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/153))
+- **Correct binary_name and binary_path for nico-rla build** ([#153](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/153))
   Fixes a copy-paste error where the RLA build job used the cert-manager binary path, causing CI to fail when extracting the built binary.
 
 - **Verify if VPC Prefixes are present before allowing network Allocation deletion** ([#132](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/132))
@@ -612,8 +612,8 @@ Each release lists pull requests grouped by category, with the most recent versi
 - **Allow privileged Tenants to retrieve all Sites** ([#144](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/144))
   Enables Tenants with targeted Instance creation capability to retrieve all Sites owned by Providers they have Tenant Accounts with.
 
-- **Consolidate kustomize objects into carbide-rest namespace** ([#140](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/140))
-  Consolidates all Kustomize objects into a single `carbide-rest` namespace for cleaner deployment organization.
+- **Consolidate kustomize objects into nico-rest namespace** ([#140](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/140))
+  Consolidates all Kustomize objects into a single `nico-rest` namespace for cleaner deployment organization.
 
 - **Update RLA Dockerfile ldflags to use bare-metal-manager-rest module path** ([#136](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/136))
   Updates Go linker flags in the RLA Dockerfile to use the correct module path after the repository migration.
@@ -625,7 +625,7 @@ Each release lists pull requests grouped by category, with the most recent versi
   Corrects the Provider viewer role name and fixes grammatical errors in the OpenAPI specification.
 
 - **Rename local deployment elements** ([#138](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/138))
-  Renames internal deployment components (elektraserver to mock-core, cluster name to carbide-rest-local) for clearer naming.
+  Renames internal deployment components (elektraserver to mock-core, cluster name to nico-rest-local) for clearer naming.
 
 - **Remove vault references in setup** ([#135](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/135))
   Cleans up remaining Vault references from the local setup scripts after the migration to native Go PKI.
@@ -637,7 +637,7 @@ Each release lists pull requests grouped by category, with the most recent versi
 ### Bug Fixes
 
 - **Aligned InfiniBand Partition proto snapshot with Core** ([#164](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/164))
-  Backport of the InfiniBand Partition proto alignment fix from v1.0.5, resolving pkey value parsing errors caused by proto definition mismatches with Carbide Core.
+  Backport of the InfiniBand Partition proto alignment fix from v1.0.5, resolving pkey value parsing errors caused by proto definition mismatches with Nico Core.
 
 ---
 
@@ -735,8 +735,8 @@ Each release lists pull requests grouped by category, with the most recent versi
 - **Update Github Go module path to bare-metal-manager-rest** ([#108](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/108))
   Migrates the Go module path to the new GitHub repository location.
 
-- **Start renaming Carbide to NVIDIA Metal Manager** ([#99](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/99))
-  Begins the rebranding effort from Carbide to NVIDIA Metal Manager across documentation and configuration.
+- **Start renaming Nico to NVIDIA Metal Manager** ([#99](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/99))
+  Begins the rebranding effort from Nico to NVIDIA Metal Manager across documentation and configuration.
 
 - **Regenerate third party license file** ([#103](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/103))
   Regenerates the third-party license file to reflect current dependency state.
@@ -772,7 +772,7 @@ Each release lists pull requests grouped by category, with the most recent versi
 ### Features
 
 - **Add proto and protobuf for RLA gRPC API** ([#66](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/66))
-  Introduces the protobuf definitions and generated code for the RLA gRPC API, establishing a clear separation between RLA and Carbide Core proto structures.
+  Introduces the protobuf definitions and generated code for the RLA gRPC API, establishing a clear separation between RLA and Nico Core proto structures.
 
 - **Support custom claims for JWT issuers** ([#41](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/41))
   Adds comprehensive custom JWT issuer support with multiple claim mapping strategies: static org with static roles, service accounts, dynamic roles from token attributes, and fully dynamic org/role extraction. Includes parallel JWKS fetching, configurable timeouts, and stricter validation rules.
@@ -851,8 +851,8 @@ Each release lists pull requests grouped by category, with the most recent versi
 - **Fix inconsistent test data for MachineCapability GetAll tests** ([#34](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/34))
   Corrects test fixtures that were producing inconsistent results in MachineCapability GetAll test cases.
 
-- **Wait for mock Carbide server to be up before running site-agent tests** ([#37](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/37))
-  Fixes flaky site-agent tests by ensuring the mock Carbide gRPC server is fully started before test execution begins, resolving ~50% test failure rates on some machines.
+- **Wait for mock Nico server to be up before running site-agent tests** ([#37](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/37))
+  Fixes flaky site-agent tests by ensuring the mock Nico gRPC server is fully started before test execution begins, resolving ~50% test failure rates on some machines.
 
 - **Only run promotion workflow on main branch** ([#42](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/42))
   Restricts the release promotion job to the main branch, preventing unmerged PR branches from showing a perpetually pending "Promote to Release Candidate" check.
@@ -889,5 +889,5 @@ Each release lists pull requests grouped by category, with the most recent versi
 
 ### Features
 
-- **Initial Carbide REST release for GitHub** (no PR)
+- **Initial Nico REST release for GitHub** (no PR)
   The foundational release of NCX Infra Controller REST, establishing the multi-tenant REST API for bare-metal lifecycle management. Includes the core API server, Temporal workflow engine integration, site management, certificate management, authentication via Keycloak/JWT, database layer with PostgreSQL, and the initial OpenAPI specification.

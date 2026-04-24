@@ -33,9 +33,9 @@ import (
 // ManageVPC is an activity wrapper for VPC management
 // TODO: Do we really need a distinction between general management and inventory?
 // The pattern is elsewhere as well, but it seems like we could condense them since
-// Manage*Inventory.config has a property that holds a *client.CarbideAtomicClient.
+// Manage*Inventory.config has a property that holds a *client.NicoAtomicClient.
 type ManageVPC struct {
-	CarbideAtomicClient *cClient.CarbideAtomicClient
+	NicoAtomicClient *cClient.NicoAtomicClient
 }
 
 // ManageVPCInventory is an activity wrapper for VPC inventory collection and publishing
@@ -44,9 +44,9 @@ type ManageVPCInventory struct {
 }
 
 // NewManageVPC returns a new ManageVPC client
-func NewManageVPC(carbideClient *cClient.CarbideAtomicClient) ManageVPC {
+func NewManageVPC(nicoClient *cClient.NicoAtomicClient) ManageVPC {
 	return ManageVPC{
-		CarbideAtomicClient: carbideClient,
+		NicoAtomicClient: nicoClient,
 	}
 }
 
@@ -72,16 +72,16 @@ func NewManageVPCInventory(config ManageInventoryConfig) ManageVPCInventory {
 	}
 }
 
-func vpcFindIDs(ctx context.Context, carbideClient *cClient.CarbideClient) ([]*cwssaws.VpcId, error) {
-	idList, err := carbideClient.Networks().FindVPCIDs(ctx, &cwssaws.VpcSearchFilter{})
+func vpcFindIDs(ctx context.Context, nicoClient *cClient.NicoClient) ([]*cwssaws.VpcId, error) {
+	idList, err := nicoClient.Networks().FindVPCIDs(ctx, &cwssaws.VpcSearchFilter{})
 	if err != nil {
 		return nil, err
 	}
 	return idList.GetVpcIds(), nil
 }
 
-func vpcFindByIDs(ctx context.Context, carbideClient *cClient.CarbideClient, ids []*cwssaws.VpcId) ([]*cwssaws.Vpc, error) {
-	list, err := carbideClient.Networks().FindVPCsByIDs(ctx, &cwssaws.VpcsByIdsRequest{
+func vpcFindByIDs(ctx context.Context, nicoClient *cClient.NicoClient, ids []*cwssaws.VpcId) ([]*cwssaws.Vpc, error) {
+	list, err := nicoClient.Networks().FindVPCsByIDs(ctx, &cwssaws.VpcsByIdsRequest{
 		VpcIds: ids,
 	})
 	if err != nil {
@@ -94,7 +94,7 @@ func vpcFindByIDs(ctx context.Context, carbideClient *cClient.CarbideClient, ids
 // instancePagedInventoryPostProcess will attach NSG propagation
 // information for the inventory page of VPCs.
 // This will only be called for pages with inventory.
-func vpcPagedInventoryPostProcess(ctx context.Context, carbideClient *cClient.CarbideClient, inventory *cwssaws.VPCInventory) (*cwssaws.VPCInventory, error) {
+func vpcPagedInventoryPostProcess(ctx context.Context, nicoClient *cClient.NicoClient, inventory *cwssaws.VPCInventory) (*cwssaws.VPCInventory, error) {
 
 	vpcIds := make([]string, len(inventory.GetVpcs()))
 
@@ -102,7 +102,7 @@ func vpcPagedInventoryPostProcess(ctx context.Context, carbideClient *cClient.Ca
 		vpcIds[i] = vpc.GetId().GetValue()
 	}
 
-	propList, err := carbideClient.Carbide().GetNetworkSecurityGroupPropagationStatus(ctx, &cwssaws.GetNetworkSecurityGroupPropagationStatusRequest{
+	propList, err := nicoClient.Nico().GetNetworkSecurityGroupPropagationStatus(ctx, &cwssaws.GetNetworkSecurityGroupPropagationStatusRequest{
 		VpcIds: vpcIds,
 	})
 
@@ -137,7 +137,7 @@ func vpcPagedInventory(allItemIDs []*cwssaws.VpcId, pagedItems []*cwssaws.Vpc, i
 	return inventory
 }
 
-// Function to create VPCS with Carbide
+// Function to create VPCS with Nico
 func (mv *ManageVPC) CreateVpcOnSite(ctx context.Context, request *cwssaws.VpcCreationRequest) error {
 	logger := log.With().Str("Activity", "CreateVpcOnSite").Logger()
 
@@ -155,7 +155,7 @@ func (mv *ManageVPC) CreateVpcOnSite(ctx context.Context, request *cwssaws.VpcCr
 		err = errors.New("received create VPC request missing TenantOrganizationId")
 	case request.Id == nil || request.Id.Value == "":
 		// Don't let a request come in without a cloud-provided ID
-		// or carbide will generate one and cloud won't know the relationship.
+		// or nico will generate one and cloud won't know the relationship.
 		err = errors.New("received create VPC request missing VPC ID")
 	}
 
@@ -164,13 +164,13 @@ func (mv *ManageVPC) CreateVpcOnSite(ctx context.Context, request *cwssaws.VpcCr
 	}
 
 	// Call Site Controller gRPC endpoint
-	carbideClient := mv.CarbideAtomicClient.GetClient()
-	if carbideClient == nil {
+	nicoClient := mv.NicoAtomicClient.GetClient()
+	if nicoClient == nil {
 		return cClient.ErrClientNotConnected
 	}
-	forgeClient := carbideClient.Carbide()
+	nicoClient := nicoClient.Nico()
 
-	_, err = forgeClient.CreateVpc(ctx, request)
+	_, err = nicoClient.CreateVpc(ctx, request)
 	if err != nil {
 		logger.Warn().Err(err).Msg("Failed to create VPC using Site Controller API")
 		return swe.WrapErr(err)
@@ -181,7 +181,7 @@ func (mv *ManageVPC) CreateVpcOnSite(ctx context.Context, request *cwssaws.VpcCr
 	return nil
 }
 
-// Function to update VPCS with Carbide
+// Function to update VPCS with Nico
 func (mv *ManageVPC) UpdateVpcOnSite(ctx context.Context, request *cwssaws.VpcUpdateRequest) error {
 	logger := log.With().Str("Activity", "UpdateVpcOnSite").Logger()
 
@@ -195,7 +195,7 @@ func (mv *ManageVPC) UpdateVpcOnSite(ctx context.Context, request *cwssaws.VpcUp
 		err = errors.New("received empty update VPC request")
 	case request.Id == nil || request.Id.Value == "":
 		// Don't let a request come in without a cloud-provided ID
-		// or carbide will generate one and cloud won't know the relationship.
+		// or nico will generate one and cloud won't know the relationship.
 		err = errors.New("received update VPC request missing VPC ID")
 	}
 
@@ -204,13 +204,13 @@ func (mv *ManageVPC) UpdateVpcOnSite(ctx context.Context, request *cwssaws.VpcUp
 	}
 
 	// Call Site Controller gRPC endpoint
-	carbideClient := mv.CarbideAtomicClient.GetClient()
-	if carbideClient == nil {
+	nicoClient := mv.NicoAtomicClient.GetClient()
+	if nicoClient == nil {
 		return cClient.ErrClientNotConnected
 	}
-	forgeClient := carbideClient.Carbide()
+	nicoClient := nicoClient.Nico()
 
-	_, err = forgeClient.UpdateVpc(ctx, request)
+	_, err = nicoClient.UpdateVpc(ctx, request)
 	if err != nil {
 		logger.Warn().Err(err).Msg("Failed to update VPC using Site Controller API")
 		return swe.WrapErr(err)
@@ -221,7 +221,7 @@ func (mv *ManageVPC) UpdateVpcOnSite(ctx context.Context, request *cwssaws.VpcUp
 	return nil
 }
 
-// Function to delete VPCS with Carbide
+// Function to delete VPCS with Nico
 func (mv *ManageVPC) DeleteVpcOnSite(ctx context.Context, request *cwssaws.VpcDeletionRequest) error {
 	logger := log.With().Str("Activity", "DeleteVpcOnSite").Logger()
 
@@ -243,13 +243,13 @@ func (mv *ManageVPC) DeleteVpcOnSite(ctx context.Context, request *cwssaws.VpcDe
 	}
 
 	// Call Site Controller gRPC endpoint
-	carbideClient := mv.CarbideAtomicClient.GetClient()
-	if carbideClient == nil {
+	nicoClient := mv.NicoAtomicClient.GetClient()
+	if nicoClient == nil {
 		return cClient.ErrClientNotConnected
 	}
-	forgeClient := carbideClient.Carbide()
+	nicoClient := nicoClient.Nico()
 
-	_, err = forgeClient.DeleteVpc(ctx, request)
+	_, err = nicoClient.DeleteVpc(ctx, request)
 	if err != nil {
 		logger.Warn().Err(err).Msg("Failed to delete VPC using Site Controller API")
 		return swe.WrapErr(err)
@@ -281,13 +281,13 @@ func (mv *ManageVPC) UpdateVpcVirtualizationOnSite(ctx context.Context, request 
 	}
 
 	// Call Site Controller gRPC endpoint
-	carbideClient := mv.CarbideAtomicClient.GetClient()
-	if carbideClient == nil {
+	nicoClient := mv.NicoAtomicClient.GetClient()
+	if nicoClient == nil {
 		return cClient.ErrClientNotConnected
 	}
-	forgeClient := carbideClient.Carbide()
+	nicoClient := nicoClient.Nico()
 
-	_, err = forgeClient.UpdateVpcVirtualization(ctx, request)
+	_, err = nicoClient.UpdateVpcVirtualization(ctx, request)
 	if err != nil {
 		logger.Warn().Err(err).Msg("Failed to update VPC virtualization using Site Controller API")
 		return swe.WrapErr(err)

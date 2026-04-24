@@ -38,10 +38,10 @@ type NetworkInterface interface {
 }
 
 type network struct {
-	// carbide client
-	carbide wflows.ForgeClient
+	// nico client
+	nico wflows.NicoClient
 }
 
-func newNetwork(carbide wflows.ForgeClient) *network {
-	return &network{carbide: carbide}
+func newNetwork(nico wflows.NicoClient) *network {
+	return &network{nico: nico}
 }

@@ -20,7 +20,7 @@ package workflows.v1;
 option go_package = "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/proto";
 
 import "workflow.proto";
-import "forge_carbide.proto";
+import "nico_nico.proto";
 import "google/protobuf/timestamp.proto";
 
 // CreateSSHKeyGroupRequest - request parameters of SSHKeyGroup creation
@@ -33,7 +33,7 @@ message CreateSSHKeyGroupRequest {
   // version of the keyset
   string version = 3;
   // list of public keys associated with the tenant org
-  repeated forge.TenantPublicKey public_keys = 4;
+  repeated nico.TenantPublicKey public_keys = 4;
   optional WorkflowOptions options = 5;
 }
 
@@ -47,7 +47,7 @@ message UpdateSSHKeyGroupRequest {
   // version of the keyset
   string version = 3;
   // list of public keys associated with the tenant org
-  repeated forge.TenantPublicKey public_keys = 4;
+  repeated nico.TenantPublicKey public_keys = 4;
   // optional version string to check before updating
   optional string if_version_match = 5;
   optional WorkflowOptions options = 6;
@@ -81,14 +81,14 @@ message SSHKeyGroupInfo {
   WorkflowStatus status = 1;
   ObjectStatus object_status = 2;
   string status_msg = 3;
-  forge.TenantKeyset tenant_keyset = 4;
+  nico.TenantKeyset tenant_keyset = 4;
 }
 
 // GetSSHKeyGroupResponse - response for SSHKeyGroup Get queries
 message GetSSHKeyGroupResponse {
   WorkflowStatus status = 1;
   string status_msg = 2;
-  forge.TenantKeySetList list = 3;
+  nico.TenantKeySetList list = 3;
   TransactionID transaction_id = 4;
 }
 
@@ -96,7 +96,7 @@ message GetSSHKeyGroupResponse {
 // periodically
 message SSHKeyGroupInventory {
   // List of SSH keysets
-  repeated forge.TenantKeyset tenant_keysets = 1;
+  repeated nico.TenantKeyset tenant_keysets = 1;
   // Reported timestamp of SSH keyset inventory
   google.protobuf.Timestamp timestamp = 2;
   // Status of Inventory

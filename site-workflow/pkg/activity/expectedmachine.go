@@ -40,7 +40,7 @@ import (
 // ManageExpectedMachineInventory is an activity wrapper for Expected Machine inventory collection and publishing
 type ManageExpectedMachineInventory struct {
 	siteID                uuid.UUID
-	carbideAtomicClient   *cclient.CarbideAtomicClient
+	nicoAtomicClient   *cclient.NicoAtomicClient
 	temporalPublishClient tClient.Client
 	temporalPublishQueue  string
 	cloudPageSize         int
@@ -63,14 +63,14 @@ func (memi *ManageExpectedMachineInventory) DiscoverExpectedMachineInventory(ctx
 	}
 
 	// Get Site Controller gRPC client
-	carbideClient := memi.carbideAtomicClient.GetClient()
-	if carbideClient == nil {
+	nicoClient := memi.nicoAtomicClient.GetClient()
+	if nicoClient == nil {
 		return cclient.ErrClientNotConnected
 	}
-	forgeClient := carbideClient.Carbide()
+	nicoClient := nicoClient.Nico()
 
 	// Call GetAllExpectedMachines to get full list of ExpectedMachines on Site
-	emList, err := forgeClient.GetAllExpectedMachines(ctx, &emptypb.Empty{})
+	emList, err := nicoClient.GetAllExpectedMachines(ctx, &emptypb.Empty{})
 	if err != nil {
 		logger.Warn().Err(err).Msg("Failed to retrieve ExpectedMachines using Site Controller API")
 
@@ -92,7 +92,7 @@ func (memi *ManageExpectedMachineInventory) DiscoverExpectedMachineInventory(ctx
 	}
 
 	// Call GetAllExpectedMachinesLinked to get linked Machine IDs
-	linkedList, lerr := forgeClient.GetAllExpectedMachinesLinked(ctx, &emptypb.Empty{})
+	linkedList, lerr := nicoClient.GetAllExpectedMachinesLinked(ctx, &emptypb.Empty{})
 	if lerr != nil {
 		logger.Warn().Err(lerr).Msg("Failed to retrieve linked Machine IDs using Site Controller API")
 
@@ -244,10 +244,10 @@ func getPagedExpectedMachineInventory(
 }
 
 // NewManageExpectedMachineInventory returns a ManageInventory implementation for Expected Machine activity
-func NewManageExpectedMachineInventory(siteID uuid.UUID, carbideAtomicClient *cclient.CarbideAtomicClient, temporalPublishClient tClient.Client, temporalPublishQueue string, cloudPageSize int) ManageExpectedMachineInventory {
+func NewManageExpectedMachineInventory(siteID uuid.UUID, nicoAtomicClient *cclient.NicoAtomicClient, temporalPublishClient tClient.Client, temporalPublishQueue string, cloudPageSize int) ManageExpectedMachineInventory {
 	return ManageExpectedMachineInventory{
 		siteID:                siteID,
-		carbideAtomicClient:   carbideAtomicClient,
+		nicoAtomicClient:   nicoAtomicClient,
 		temporalPublishClient: temporalPublishClient,
 		temporalPublishQueue:  temporalPublishQueue,
 		cloudPageSize:         cloudPageSize,
@@ -256,19 +256,19 @@ func NewManageExpectedMachineInventory(siteID uuid.UUID, carbideAtomicClient *cc
 
 // ManageExpectedMachine is an activity wrapper for Expected Machine management
 type ManageExpectedMachine struct {
-	CarbideAtomicClient *cclient.CarbideAtomicClient
+	NicoAtomicClient *cclient.NicoAtomicClient
 	RlaAtomicClient     *cclient.RlaAtomicClient
 }
 
 // NewManageExpectedMachine returns a new ManageExpectedMachine client
-func NewManageExpectedMachine(carbideClient *cclient.CarbideAtomicClient, rlaClient *cclient.RlaAtomicClient) ManageExpectedMachine {
+func NewManageExpectedMachine(nicoClient *cclient.NicoAtomicClient, rlaClient *cclient.RlaAtomicClient) ManageExpectedMachine {
 	return ManageExpectedMachine{
-		CarbideAtomicClient: carbideClient,
+		NicoAtomicClient: nicoClient,
 		RlaAtomicClient:     rlaClient,
 	}
 }
 
-// CreateExpectedMachineOnSite creates Expected Machine with Carbide
+// CreateExpectedMachineOnSite creates Expected Machine with Nico
 func (mem *ManageExpectedMachine) CreateExpectedMachineOnSite(ctx context.Context, request *cwssaws.ExpectedMachine) error {
 	logger := log.With().Str("Activity", "CreateExpectedMachineOnSite").Logger()
 
@@ -290,14 +290,14 @@ func (mem *ManageExpectedMachine) CreateExpectedMachineOnSite(ctx context.Contex
 	}
 
 	// Call Site Controller gRPC endpoint
-	carbideClient := mem.CarbideAtomicClient.GetClient()
-	if carbideClient == nil {
+	nicoClient := mem.NicoAtomicClient.GetClient()
+	if nicoClient == nil {
 		return cclient.ErrClientNotConnected
 	}
-	forgeClient := carbideClient.Carbide()
+	nicoClient := nicoClient.Nico()
 
-	// Call Forge gRPC endpoint
-	_, err = forgeClient.AddExpectedMachine(ctx, request)
+	// Call Nico gRPC endpoint
+	_, err = nicoClient.AddExpectedMachine(ctx, request)
 	if err != nil {
 		logger.Warn().Err(err).Msg("Failed to create Expected Machine using Site Controller API")
 		return swe.WrapErr(err)
@@ -308,7 +308,7 @@ func (mem *ManageExpectedMachine) CreateExpectedMachineOnSite(ctx context.Contex
 	return nil
 }
 
-// UpdateExpectedMachineOnSite updates Expected Machine on Carbide
+// UpdateExpectedMachineOnSite updates Expected Machine on Nico
 func (mem *ManageExpectedMachine) UpdateExpectedMachineOnSite(ctx context.Context, request *cwssaws.ExpectedMachine) error {
 	logger := log.With().Str("Activity", "UpdateExpectedMachineOnSite").Logger()
 
@@ -330,13 +330,13 @@ func (mem *ManageExpectedMachine) UpdateExpectedMachineOnSite(ctx context.Contex
 	}
 
 	// Call Site Controller gRPC endpoint
-	carbideClient := mem.CarbideAtomicClient.GetClient()
-	if carbideClient == nil {
+	nicoClient := mem.NicoAtomicClient.GetClient()
+	if nicoClient == nil {
 		return cclient.ErrClientNotConnected
 	}
-	forgeClient := carbideClient.Carbide()
+	nicoClient := nicoClient.Nico()
 
-	_, err = forgeClient.UpdateExpectedMachine(ctx, request)
+	_, err = nicoClient.UpdateExpectedMachine(ctx, request)
 	if err != nil {
 		logger.Warn().Err(err).Msg("Failed to update Expected Machine using Site Controller API")
 		return swe.WrapErr(err)
@@ -347,7 +347,7 @@ func (mem *ManageExpectedMachine) UpdateExpectedMachineOnSite(ctx context.Contex
 	return nil
 }
 
-// DeleteExpectedMachineOnSite deletes Expected Machine on Carbide
+// DeleteExpectedMachineOnSite deletes Expected Machine on Nico
 func (mem *ManageExpectedMachine) DeleteExpectedMachineOnSite(ctx context.Context, request *cwssaws.ExpectedMachineRequest) error {
 	logger := log.With().Str("Activity", "DeleteExpectedMachineOnSite").Logger()
 
@@ -367,13 +367,13 @@ func (mem *ManageExpectedMachine) DeleteExpectedMachineOnSite(ctx context.Contex
 	}
 
 	// Call Site Controller gRPC endpoint
-	carbideClient := mem.CarbideAtomicClient.GetClient()
-	if carbideClient == nil {
+	nicoClient := mem.NicoAtomicClient.GetClient()
+	if nicoClient == nil {
 		return cclient.ErrClientNotConnected
 	}
-	forgeClient := carbideClient.Carbide()
+	nicoClient := nicoClient.Nico()
 
-	_, err = forgeClient.DeleteExpectedMachine(ctx, request)
+	_, err = nicoClient.DeleteExpectedMachine(ctx, request)
 	if err != nil {
 		logger.Warn().Err(err).Msg("Failed to delete Expected Machine using Site Controller API")
 		return swe.WrapErr(err)
@@ -384,7 +384,7 @@ func (mem *ManageExpectedMachine) DeleteExpectedMachineOnSite(ctx context.Contex
 	return nil
 }
 
-// CreateExpectedMachinesOnSite creates multiple Expected Machines with Carbide using the carbide batch endpoint
+// CreateExpectedMachinesOnSite creates multiple Expected Machines with Nico using the nico batch endpoint
 func (mem *ManageExpectedMachine) CreateExpectedMachinesOnSite(ctx context.Context, request *cwssaws.BatchExpectedMachineOperationRequest) (*cwssaws.BatchExpectedMachineOperationResponse, error) {
 	logger := log.With().Str("Activity", "CreateExpectedMachinesOnSite").Logger()
 
@@ -404,14 +404,14 @@ func (mem *ManageExpectedMachine) CreateExpectedMachinesOnSite(ctx context.Conte
 	}
 
 	// Call Site Controller gRPC batch endpoint
-	carbideClient := mem.CarbideAtomicClient.GetClient()
-	if carbideClient == nil {
+	nicoClient := mem.NicoAtomicClient.GetClient()
+	if nicoClient == nil {
 		return nil, cclient.ErrClientNotConnected
 	}
-	forgeClient := carbideClient.Carbide()
+	nicoClient := nicoClient.Nico()
 
 	// Call the batch CreateExpectedMachines endpoint
-	response, err := forgeClient.CreateExpectedMachines(ctx, request)
+	response, err := nicoClient.CreateExpectedMachines(ctx, request)
 	if err != nil {
 		logger.Warn().Err(err).Msg("Failed to create Expected Machines using Site Controller API")
 		return nil, swe.WrapErr(err)
@@ -515,7 +515,7 @@ func (mem *ManageExpectedMachine) CreateExpectedMachinesOnRLA(ctx context.Contex
 	return nil
 }
 
-// expectedMachineToRLAComponent converts a Forge ExpectedMachine proto to an RLA Component proto
+// expectedMachineToRLAComponent converts a Nico ExpectedMachine proto to an RLA Component proto
 func expectedMachineToRLAComponent(em *cwssaws.ExpectedMachine) *rlav1.Component {
 	component := &rlav1.Component{
 		Type: rlav1.ComponentType_COMPONENT_TYPE_COMPUTE,
@@ -573,7 +573,7 @@ func expectedMachineToRLAComponent(em *cwssaws.ExpectedMachine) *rlav1.Component
 	return component
 }
 
-// UpdateExpectedMachinesOnSite updates multiple Expected Machines on Carbide using the batch endpoint
+// UpdateExpectedMachinesOnSite updates multiple Expected Machines on Nico using the batch endpoint
 func (mem *ManageExpectedMachine) UpdateExpectedMachinesOnSite(ctx context.Context, request *cwssaws.BatchExpectedMachineOperationRequest) (*cwssaws.BatchExpectedMachineOperationResponse, error) {
 	logger := log.With().Str("Activity", "UpdateExpectedMachinesOnSite").Logger()
 
@@ -593,14 +593,14 @@ func (mem *ManageExpectedMachine) UpdateExpectedMachinesOnSite(ctx context.Conte
 	}
 
 	// Call Site Controller gRPC batch endpoint
-	carbideClient := mem.CarbideAtomicClient.GetClient()
-	if carbideClient == nil {
+	nicoClient := mem.NicoAtomicClient.GetClient()
+	if nicoClient == nil {
 		return nil, cclient.ErrClientNotConnected
 	}
-	forgeClient := carbideClient.Carbide()
+	nicoClient := nicoClient.Nico()
 
 	// Call the batch UpdateExpectedMachines endpoint
-	response, err := forgeClient.UpdateExpectedMachines(ctx, request)
+	response, err := nicoClient.UpdateExpectedMachines(ctx, request)
 	if err != nil {
 		logger.Warn().Err(err).Msg("Failed to update Expected Machines using Site Controller API")
 		return nil, swe.WrapErr(err)

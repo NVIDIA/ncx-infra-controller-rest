@@ -36,14 +36,14 @@ type MachineInterface interface {
 
 func (machine *compute) GetAllMachines(ctx context.Context, request *wflows.MachineSearchConfig, pageSize int) (response *wflows.MachineList, err error) {
 	log.Info().Interface("request", request).Msg("GetAllMachines: received request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-GetAllMachines")
+	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "NicoClient-GetAllMachines")
 	defer span.End()
 
 	if request == nil {
 		request = &wflows.MachineSearchConfig{}
 	}
 
-	idList, err := machine.carbide.FindMachineIds(ctx, request)
+	idList, err := machine.nico.FindMachineIds(ctx, request)
 	if err != nil {
 		log.Error().Err(err).Msg("FindMachineIds: error")
 		return nil, err
@@ -51,7 +51,7 @@ func (machine *compute) GetAllMachines(ctx context.Context, request *wflows.Mach
 	response = &wflows.MachineList{}
 	idChunks := SliceToChunks(idList.MachineIds, pageSize)
 	for i, chunk := range idChunks {
-		list, err := machine.carbide.FindMachinesByIds(ctx, &wflows.MachinesByIdsRequest{MachineIds: chunk})
+		list, err := machine.nico.FindMachinesByIds(ctx, &wflows.MachinesByIdsRequest{MachineIds: chunk})
 		if err != nil {
 			log.Error().Err(err).Msgf("FindMachinesByIds: error on chunk index %d", i)
 			return nil, err
@@ -64,14 +64,14 @@ func (machine *compute) GetAllMachines(ctx context.Context, request *wflows.Mach
 
 func (machine *compute) FindMachineIDs(ctx context.Context, request *wflows.MachineSearchConfig) (response *wflows.MachineIdList, err error) {
 	log.Info().Interface("request", request).Msg("FindMachineIDs: received request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-FindMachineIDs")
+	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "NicoClient-FindMachineIDs")
 	defer span.End()
 
 	if request == nil {
 		request = &wflows.MachineSearchConfig{}
 	}
 
-	response, err = machine.carbide.FindMachineIds(ctx, request)
+	response, err = machine.nico.FindMachineIds(ctx, request)
 	if err != nil {
 		log.Error().Err(err).Msg("FindMachineIds: error")
 		return nil, err
@@ -81,14 +81,14 @@ func (machine *compute) FindMachineIDs(ctx context.Context, request *wflows.Mach
 
 func (machine *compute) FindMachinesByIDs(ctx context.Context, request *wflows.MachinesByIdsRequest) (response *wflows.MachineList, err error) {
 	log.Info().Interface("request", request).Msg("FindMachinesByIDs: received request")
-	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "CarbideClient-FindMachinesByIDs")
+	ctx, span := otel.Tracer(os.Getenv("LS_SERVICE_NAME")).Start(ctx, "NicoClient-FindMachinesByIDs")
 	defer span.End()
 
 	if request == nil {
 		request = &wflows.MachinesByIdsRequest{}
 	}
 
-	response, err = machine.carbide.FindMachinesByIds(ctx, request)
+	response, err = machine.nico.FindMachinesByIds(ctx, request)
 	if err != nil {
 		log.Error().Err(err).Msgf("FindMachinesByIds: error")
 		return nil, err

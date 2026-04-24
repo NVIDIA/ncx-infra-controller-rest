@@ -31,24 +31,24 @@ import (
 	rest "k8s.io/client-go/rest"
 )
 
-type ForgeV1Interface interface {
+type NicoV1Interface interface {
 	RESTClient() rest.Interface
 	SitesGetter
 }
 
-// ForgeV1Client is used to interact with features provided by the forge.nvidia.io group.
-type ForgeV1Client struct {
+// NicoV1Client is used to interact with features provided by the nico.nvidia.io group.
+type NicoV1Client struct {
 	restClient rest.Interface
 }
 
-func (c *ForgeV1Client) Sites(namespace string) SiteInterface {
+func (c *NicoV1Client) Sites(namespace string) SiteInterface {
 	return newSites(c, namespace)
 }
 
-// NewForConfig creates a new ForgeV1Client for the given config.
+// NewForConfig creates a new NicoV1Client for the given config.
 // NewForConfig is equivalent to NewForConfigAndClient(c, httpClient),
 // where httpClient was generated with rest.HTTPClientFor(c).
-func NewForConfig(c *rest.Config) (*ForgeV1Client, error) {
+func NewForConfig(c *rest.Config) (*NicoV1Client, error) {
 	config := *c
 	if err := setConfigDefaults(&config); err != nil {
 		return nil, err
@@ -60,9 +60,9 @@ func NewForConfig(c *rest.Config) (*ForgeV1Client, error) {
 	return NewForConfigAndClient(&config, httpClient)
 }
 
-// NewForConfigAndClient creates a new ForgeV1Client for the given config and http client.
+// NewForConfigAndClient creates a new NicoV1Client for the given config and http client.
 // Note the http client provided takes precedence over the configured transport values.
-func NewForConfigAndClient(c *rest.Config, h *http.Client) (*ForgeV1Client, error) {
+func NewForConfigAndClient(c *rest.Config, h *http.Client) (*NicoV1Client, error) {
 	config := *c
 	if err := setConfigDefaults(&config); err != nil {
 		return nil, err
@@ -71,12 +71,12 @@ func NewForConfigAndClient(c *rest.Config, h *http.Client) (*ForgeV1Client, erro
 	if err != nil {
 		return nil, err
 	}
-	return &ForgeV1Client{client}, nil
+	return &NicoV1Client{client}, nil
 }
 
-// NewForConfigOrDie creates a new ForgeV1Client for the given config and
+// NewForConfigOrDie creates a new NicoV1Client for the given config and
 // panics if there is an error in the config.
-func NewForConfigOrDie(c *rest.Config) *ForgeV1Client {
+func NewForConfigOrDie(c *rest.Config) *NicoV1Client {
 	client, err := NewForConfig(c)
 	if err != nil {
 		panic(err)
@@ -84,9 +84,9 @@ func NewForConfigOrDie(c *rest.Config) *ForgeV1Client {
 	return client
 }
 
-// New creates a new ForgeV1Client for the given RESTClient.
-func New(c rest.Interface) *ForgeV1Client {
-	return &ForgeV1Client{c}
+// New creates a new NicoV1Client for the given RESTClient.
+func New(c rest.Interface) *NicoV1Client {
+	return &NicoV1Client{c}
 }
 
 func setConfigDefaults(config *rest.Config) error {
@@ -104,7 +104,7 @@ func setConfigDefaults(config *rest.Config) error {
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *ForgeV1Client) RESTClient() rest.Interface {
+func (c *NicoV1Client) RESTClient() rest.Interface {
 	if c == nil {
 		return nil
 	}

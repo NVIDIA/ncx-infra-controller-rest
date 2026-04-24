@@ -78,7 +78,7 @@ func TestCreateTenantHandler_Handle(t *testing.T) {
 	testTenantSetupSchema(t, dbSession)
 
 	tnOrg := "test-tenant-org-1"
-	tnRoles := []string{"FORGE_TENANT_ADMIN"}
+	tnRoles := []string{"NICO_TENANT_ADMIN"}
 
 	tnu1 := common.TestBuildUser(t, dbSession, uuid.NewString(), tnOrg, tnRoles)
 
@@ -155,12 +155,12 @@ func TestGetCurrentTenantHandler_Handle(t *testing.T) {
 
 	// Add user entry
 	ipOrg := "test-provider-org"
-	ipRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipRoles := []string{"NICO_PROVIDER_ADMIN"}
 	ipu := common.TestBuildUser(t, dbSession, uuid.NewString(), ipOrg, ipRoles)
 
 	ip := common.TestBuildInfrastructureProvider(t, dbSession, "test-provider", ipOrg, ipu)
 
-	tnRoles := []string{"FORGE_TENANT_ADMIN"}
+	tnRoles := []string{"NICO_TENANT_ADMIN"}
 
 	tnOrg1 := "test-tenant-org-1"
 	tnu1 := common.TestBuildUser(t, dbSession, uuid.NewString(), tnOrg1, tnRoles)
@@ -305,11 +305,11 @@ func TestGetCurrentTenantStatsHandler_Handle(t *testing.T) {
 	common.TestSetupSchema(t, dbSession)
 
 	ipOrg := "test-provider-org"
-	ipOrgRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipOrgRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	tnOrg1 := "test-tenant-org-1"
 	tnOrg2 := "test-tenant-org-2"
-	tnOrgRoles := []string{"FORGE_TENANT_ADMIN"}
+	tnOrgRoles := []string{"NICO_TENANT_ADMIN"}
 
 	ipu := common.TestBuildUser(t, dbSession, uuid.NewString(), ipOrg, ipOrgRoles)
 	ip := testVPCSiteBuildInfrastructureProvider(t, dbSession, "test-infrastructure-provider", ipOrg, ipu)
@@ -540,7 +540,7 @@ func TestUpdateTenantHandler_Handle(t *testing.T) {
 
 	// Add user entry
 	tnOrg := "test-tenant-org"
-	tnRoles := []string{"FORGE_TENANT_ADMIN"}
+	tnRoles := []string{"NICO_TENANT_ADMIN"}
 
 	tnu := testSiteBuildUser(t, dbSession, "test456", tnOrg, tnRoles)
 

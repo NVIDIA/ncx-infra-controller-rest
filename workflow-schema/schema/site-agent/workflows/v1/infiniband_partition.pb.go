@@ -380,7 +380,7 @@ var File_infiniband_partition_proto protoreflect.FileDescriptor
 
 const file_infiniband_partition_proto_rawDesc = "" +
 	"\n" +
-	"\x1ainfiniband_partition.proto\x12\fworkflows.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0eworkflow.proto\x1a\x14common_carbide.proto\x1a\x13forge_carbide.proto\"\xec\x01\n" +
+	"\x1ainfiniband_partition.proto\x12\fworkflows.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0eworkflow.proto\x1a\x14common_nico.proto\x1a\x13nico_nico.proto\"\xec\x01\n" +
 	" CreateInfiniBandPartitionRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x124\n" +
 	"\x16tenant_organization_id\x18\x02 \x01(\tR\x14tenantOrganizationId\x12<\n" +
@@ -403,13 +403,13 @@ const file_infiniband_partition_proto_rawDesc = "" +
 	"\robject_status\x18\x02 \x01(\x0e2\x1a.workflows.v1.ObjectStatusR\fobjectStatus\x12\x1d\n" +
 	"\n" +
 	"status_msg\x18\x03 \x01(\tR\tstatusMsg\x125\n" +
-	"\fib_partition\x18\x04 \x01(\v2\x12.forge.IBPartitionR\vibPartition\"\xbe\x02\n" +
+	"\fib_partition\x18\x04 \x01(\v2\x12.nico.IBPartitionR\vibPartition\"\xbe\x02\n" +
 	"\x1cInfiniBandPartitionInventory\x12H\n" +
 	"\x10inventory_status\x18\x01 \x01(\x0e2\x1d.workflows.v1.InventoryStatusR\x0finventoryStatus\x12\x1d\n" +
 	"\n" +
 	"status_msg\x18\x02 \x01(\tR\tstatusMsg\x128\n" +
 	"\ttimestamp\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x127\n" +
-	"\rib_partitions\x18\x04 \x03(\v2\x12.forge.IBPartitionR\fibPartitions\x12B\n" +
+	"\rib_partitions\x18\x04 \x03(\v2\x12.nico.IBPartitionR\fibPartitions\x12B\n" +
 	"\x0einventory_page\x18\x05 \x01(\v2\x1b.workflows.v1.InventoryPageR\rinventoryPageBCZAgithub.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/protob\x06proto3"
 
 var (
@@ -435,7 +435,7 @@ var file_infiniband_partition_proto_goTypes = []any{
 	(*UUID)(nil),                             // 6: common.UUID
 	(WorkflowStatus)(0),                      // 7: workflows.v1.WorkflowStatus
 	(ObjectStatus)(0),                        // 8: workflows.v1.ObjectStatus
-	(*IBPartition)(nil),                      // 9: forge.IBPartition
+	(*IBPartition)(nil),                      // 9: nico.IBPartition
 	(InventoryStatus)(0),                     // 10: workflows.v1.InventoryStatus
 	(*timestamppb.Timestamp)(nil),            // 11: google.protobuf.Timestamp
 	(*InventoryPage)(nil),                    // 12: workflows.v1.InventoryPage
@@ -449,10 +449,10 @@ var file_infiniband_partition_proto_depIdxs = []int32{
 	5,  // 5: workflows.v1.GetInfiniBandPartitionRequest.options:type_name -> workflows.v1.WorkflowOptions
 	7,  // 6: workflows.v1.InfiniBandPartitionInfo.status:type_name -> workflows.v1.WorkflowStatus
 	8,  // 7: workflows.v1.InfiniBandPartitionInfo.object_status:type_name -> workflows.v1.ObjectStatus
-	9,  // 8: workflows.v1.InfiniBandPartitionInfo.ib_partition:type_name -> forge.IBPartition
+	9,  // 8: workflows.v1.InfiniBandPartitionInfo.ib_partition:type_name -> nico.IBPartition
 	10, // 9: workflows.v1.InfiniBandPartitionInventory.inventory_status:type_name -> workflows.v1.InventoryStatus
 	11, // 10: workflows.v1.InfiniBandPartitionInventory.timestamp:type_name -> google.protobuf.Timestamp
-	9,  // 11: workflows.v1.InfiniBandPartitionInventory.ib_partitions:type_name -> forge.IBPartition
+	9,  // 11: workflows.v1.InfiniBandPartitionInventory.ib_partitions:type_name -> nico.IBPartition
 	12, // 12: workflows.v1.InfiniBandPartitionInventory.inventory_page:type_name -> workflows.v1.InventoryPage
 	13, // [13:13] is the sub-list for method output_type
 	13, // [13:13] is the sub-list for method input_type
@@ -467,8 +467,8 @@ func file_infiniband_partition_proto_init() {
 		return
 	}
 	file_workflow_proto_init()
-	file_common_carbide_proto_init()
-	file_forge_carbide_proto_init()
+	file_common_nico_proto_init()
+	file_nico_nico_proto_init()
 	file_infiniband_partition_proto_msgTypes[0].OneofWrappers = []any{}
 	file_infiniband_partition_proto_msgTypes[1].OneofWrappers = []any{}
 	file_infiniband_partition_proto_msgTypes[2].OneofWrappers = []any{}

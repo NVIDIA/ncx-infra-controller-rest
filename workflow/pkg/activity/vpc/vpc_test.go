@@ -239,7 +239,7 @@ func TestManageVpc_CreateVpcViaSiteAgent(t *testing.T) {
 	testVPCSetupSchema(t, dbSession)
 
 	org := "test-org"
-	orgRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	orgRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	vpu := testVPCBuildUser(t, dbSession, "test123", org, orgRoles)
 	ip := testVPCSiteBuildInfrastructureProvider(t, dbSession, "Test VPC Site Infrastructure Provider", org, vpu)
@@ -355,7 +355,7 @@ func TestManageVpc_DeleteVpcViaSiteAgent(t *testing.T) {
 	testVPCSetupSchema(t, dbSession)
 
 	org := "test-org"
-	orgRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	orgRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	vpu := testVPCBuildUser(t, dbSession, "test123", org, orgRoles)
 	ip := testVPCSiteBuildInfrastructureProvider(t, dbSession, "Test VPC Site Infrastructure Provider", org, vpu)
@@ -477,13 +477,13 @@ func TestManageVpc_UpdateVpcInDB(t *testing.T) {
 	testVPCSetupSchema(t, dbSession)
 
 	ipOrg := "test-provider-org"
-	ipRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	ipu := testVPCBuildUser(t, dbSession, uuid.NewString(), ipOrg, ipRoles)
 	ip := testVPCSiteBuildInfrastructureProvider(t, dbSession, "test-provider", ipOrg, ipu)
 
 	tnOrg := "test-tenant-org"
-	tnRoles := []string{"FORGE_TENANT_ADMIN"}
+	tnRoles := []string{"NICO_TENANT_ADMIN"}
 
 	tnu := testVPCBuildUser(t, dbSession, uuid.NewString(), tnOrg, tnRoles)
 
@@ -670,13 +670,13 @@ func TestManageVpc_UpdateVpcsInDB(t *testing.T) {
 	testVPCSetupSchema(t, dbSession)
 
 	ipOrg := "test-provider-org"
-	ipRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	ipu := testVPCBuildUser(t, dbSession, uuid.NewString(), ipOrg, ipRoles)
 	ip := testVPCSiteBuildInfrastructureProvider(t, dbSession, "test-provider", ipOrg, ipu)
 
 	tnOrg := "test-tenant-org"
-	tnRoles := []string{"FORGE_TENANT_ADMIN"}
+	tnRoles := []string{"NICO_TENANT_ADMIN"}
 
 	tnu := testVPCBuildUser(t, dbSession, uuid.NewString(), tnOrg, tnRoles)
 	tn := testVPCBuildTenant(t, dbSession, "test-tenant", tnOrg, tnu)

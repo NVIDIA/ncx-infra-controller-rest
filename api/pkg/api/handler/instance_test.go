@@ -646,31 +646,31 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 	testInstanceSetupSchema(t, dbSession)
 
 	ipOrg := "test-provider-org"
-	ipOrgRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipOrgRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	tnOrg := "test-tenant-org-1"
-	tnOrgRoles := []string{"FORGE_TENANT_ADMIN"}
+	tnOrgRoles := []string{"NICO_TENANT_ADMIN"}
 
 	tnOrg2 := "test-tenant-org-2"
-	tnOrgRoles2 := []string{"FORGE_TENANT_ADMIN"}
+	tnOrgRoles2 := []string{"NICO_TENANT_ADMIN"}
 
 	tnOrg3 := "test-tenant-org-3"
-	tnOrgRoles3 := []string{"FORGE_TENANT_ADMIN"}
+	tnOrgRoles3 := []string{"NICO_TENANT_ADMIN"}
 
 	tnOrg4 := "test-tenant-org-4"
-	tnOrgRoles4 := []string{"FORGE_TENANT_ADMIN"}
+	tnOrgRoles4 := []string{"NICO_TENANT_ADMIN"}
 
 	tnOrg5 := "test-tenant-org-5"
-	tnOrgRoles5 := []string{"FORGE_TENANT_ADMIN"}
+	tnOrgRoles5 := []string{"NICO_TENANT_ADMIN"}
 
 	tnOrg6 := "test-tenant-org-6"
-	tnOrgRoles6 := []string{"FORGE_TENANT_ADMIN"}
+	tnOrgRoles6 := []string{"NICO_TENANT_ADMIN"}
 
 	tnOrg7 := "test-tenant-org-7"
-	tnOrgRoles7 := []string{"FORGE_TENANT_ADMIN"}
+	tnOrgRoles7 := []string{"NICO_TENANT_ADMIN"}
 
 	tnOrg8 := "test-tenant-org-8"
-	tnOrgRoles8 := []string{"FORGE_TENANT_ADMIN"}
+	tnOrgRoles8 := []string{"NICO_TENANT_ADMIN"}
 
 	ipu := testInstanceBuildUser(t, dbSession, "test-starfleet-id-1", ipOrg, ipOrgRoles)
 	ip := testInstanceSiteBuildInfrastructureProvider(t, dbSession, "test-infrastructure-provider", ipOrg, ipu)
@@ -3600,10 +3600,10 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 	common.TestSetupSchema(t, dbSession)
 
 	ipOrg := "test-provider-org"
-	ipOrgRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipOrgRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	tnOrg1 := "test-tenant-org-1"
-	tnOrgRoles1 := []string{"FORGE_TENANT_ADMIN"}
+	tnOrgRoles1 := []string{"NICO_TENANT_ADMIN"}
 
 	ipu := testInstanceBuildUser(t, dbSession, "test-starfleet-id-1", ipOrg, ipOrgRoles)
 	ip := testInstanceSiteBuildInfrastructureProvider(t, dbSession, "test-infrastructure-provider", ipOrg, ipu)
@@ -5802,7 +5802,7 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 			rec := httptest.NewRecorder()
 
 			ec := e.NewContext(req, rec)
-			ec.SetPath(fmt.Sprintf("/v2/org/%v/carbide/instance/%v", tt.args.reqOrg, tt.args.reqInstance))
+			ec.SetPath(fmt.Sprintf("/v2/org/%v/nico/instance/%v", tt.args.reqOrg, tt.args.reqInstance))
 			ec.SetParamNames("orgName", "id")
 			ec.SetParamValues(tt.args.reqOrg, tt.args.reqInstance)
 			ec.Set("user", tt.args.reqUser)
@@ -6138,7 +6138,7 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 
 					if tt.args.reqData.SSHKeyGroupIDs != nil {
 						// Verify the length of the set of SKGs for the instance match
-						// the length of the set sent to Carbide
+						// the length of the set sent to Nico
 						assert.Equal(t, len(rst.SSHKeyGroups), len(siteReq.Config.Tenant.TenantKeysetIds))
 
 						// Build a map for some lookups
@@ -6147,7 +6147,7 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 							keygroups[skg.ID] = true
 						}
 
-						// Check that each skgID sent to Carbide matches one in
+						// Check that each skgID sent to Nico matches one in
 						// the current set for the Instance.
 						for _, kgSummary := range siteReq.Config.Tenant.TenantKeysetIds {
 							assert.Equal(t, true, keygroups[kgSummary], "%s not found in %+v", kgSummary, keygroups)
@@ -6200,13 +6200,13 @@ func TestGetInstanceHandler_Handle(t *testing.T) {
 	testInstanceSetupSchema(t, dbSession)
 
 	ipOrg := "test-provider-org"
-	ipOrgRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipOrgRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	tnOrg1 := "test-tenant-org-1"
-	tnOrgRoles1 := []string{"FORGE_TENANT_ADMIN"}
+	tnOrgRoles1 := []string{"NICO_TENANT_ADMIN"}
 
 	tnOrg2 := "test-tenant-org-2"
-	tnOrgRoles2 := []string{"FORGE_TENANT_ADMIN"}
+	tnOrgRoles2 := []string{"NICO_TENANT_ADMIN"}
 
 	ipu := testInstanceBuildUser(t, dbSession, "test-starfleet-id-1", ipOrg, ipOrgRoles)
 	ip := testInstanceSiteBuildInfrastructureProvider(t, dbSession, "test-infrastructure-provider", ipOrg, ipu)
@@ -6715,7 +6715,7 @@ func TestGetInstanceHandler_Handle(t *testing.T) {
 			req.URL.RawQuery = q.Encode()
 
 			ec := e.NewContext(req, rec)
-			ec.SetPath(fmt.Sprintf("/v2/org/%v/carbide/instance/%v", tt.args.reqOrg, tt.args.reqInstanceID))
+			ec.SetPath(fmt.Sprintf("/v2/org/%v/nico/instance/%v", tt.args.reqOrg, tt.args.reqInstanceID))
 			ec.SetParamNames("orgName", "id")
 			ec.SetParamValues(tt.args.reqOrg, tt.args.reqInstanceID)
 			ec.Set("user", tt.args.reqUser)
@@ -6853,10 +6853,10 @@ func TestGetAllInstanceHandler_Handle(t *testing.T) {
 	testInstanceSetupSchema(t, dbSession)
 
 	ipOrg := "test-provider-org"
-	ipOrgRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipOrgRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	tnOrg1 := "test-tenant-org-1"
-	tnOrgRoles1 := []string{"FORGE_TENANT_ADMIN"}
+	tnOrgRoles1 := []string{"NICO_TENANT_ADMIN"}
 
 	ipu := testInstanceBuildUser(t, dbSession, "test-starfleet-id-1", ipOrg, ipOrgRoles)
 	ip := testInstanceSiteBuildInfrastructureProvider(t, dbSession, "test-infrastructure-provider", ipOrg, ipu)
@@ -8160,7 +8160,7 @@ func TestGetAllInstanceHandler_Handle(t *testing.T) {
 			if tt.args.reqInfrastructureProviderID != "" {
 				sq.Set("infrastructureProviderId", tt.args.reqInfrastructureProviderID)
 			}
-			instanceIDPath := fmt.Sprintf("/v2/org/%s/carbide/instance?%s", tn1.Org, sq.Encode())
+			instanceIDPath := fmt.Sprintf("/v2/org/%s/nico/instance?%s", tn1.Org, sq.Encode())
 
 			// Setup echo server/context
 			req := httptest.NewRequest(http.MethodGet, instanceIDPath, nil)
@@ -8412,13 +8412,13 @@ func TestDeleteInstanceHandler_Handle(t *testing.T) {
 	testInstanceSetupSchema(t, dbSession)
 
 	ipOrg := "test-provider-org"
-	ipOrgRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipOrgRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	tnOrg1 := "test-tenant-org-1"
-	tnOrgRoles1 := []string{"FORGE_TENANT_ADMIN"}
+	tnOrgRoles1 := []string{"NICO_TENANT_ADMIN"}
 
 	tnOrg2 := "test-tenant-org-2"
-	tnOrgRoles2 := []string{"FORGE_TENANT_ADMIN"}
+	tnOrgRoles2 := []string{"NICO_TENANT_ADMIN"}
 
 	ipu := testInstanceBuildUser(t, dbSession, "test-starfleet-id-1", ipOrg, ipOrgRoles)
 	ip := testInstanceSiteBuildInfrastructureProvider(t, dbSession, "test-infrastructure-provider", ipOrg, ipu)
@@ -8515,22 +8515,22 @@ func TestDeleteInstanceHandler_Handle(t *testing.T) {
 	tscWithTimeout.Mock.On("TerminateWorkflow", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	//
-	// Carbide not-found mocking
+	// Nico not-found mocking
 	//
-	scpWithCarbideNotFound := sc.NewClientPool(tcfg)
-	tscWithCarbideNotFound := &tmocks.Client{}
+	scpWithNicoNotFound := sc.NewClientPool(tcfg)
+	tscWithNicoNotFound := &tmocks.Client{}
 
-	scpWithCarbideNotFound.IDClientMap[st1.ID.String()] = tscWithCarbideNotFound
+	scpWithNicoNotFound.IDClientMap[st1.ID.String()] = tscWithNicoNotFound
 
-	wrunWithCarbideNotFound := &tmocks.WorkflowRun{}
-	wrunWithCarbideNotFound.On("GetID").Return("workflow-WithCarbideNotFound")
+	wrunWithNicoNotFound := &tmocks.WorkflowRun{}
+	wrunWithNicoNotFound.On("GetID").Return("workflow-WithNicoNotFound")
 
-	wrunWithCarbideNotFound.Mock.On("Get", mock.Anything, mock.Anything).Return(tp.NewNonRetryableApplicationError("Carbide went bananas", swe.ErrTypeCarbideObjectNotFound, errors.New("Carbide went bananas")))
+	wrunWithNicoNotFound.Mock.On("Get", mock.Anything, mock.Anything).Return(tp.NewNonRetryableApplicationError("Nico went bananas", swe.ErrTypeNicoObjectNotFound, errors.New("Nico went bananas")))
 
-	tscWithCarbideNotFound.Mock.On("ExecuteWorkflow", mock.Anything, mock.AnythingOfType("internal.StartWorkflowOptions"),
-		"DeleteInstanceV2", mock.Anything).Return(wrunWithCarbideNotFound, nil)
+	tscWithNicoNotFound.Mock.On("ExecuteWorkflow", mock.Anything, mock.AnythingOfType("internal.StartWorkflowOptions"),
+		"DeleteInstanceV2", mock.Anything).Return(wrunWithNicoNotFound, nil)
 
-	tscWithCarbideNotFound.Mock.On("TerminateWorkflow", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	tscWithNicoNotFound.Mock.On("TerminateWorkflow", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	//
 	// Normal mocks
@@ -8612,11 +8612,11 @@ func TestDeleteInstanceHandler_Handle(t *testing.T) {
 			verifyChildSpanner: true,
 		},
 		{
-			name: "test Instance delete API endpoint failure with carbide not-found response",
+			name: "test Instance delete API endpoint failure with nico not-found response",
 			fields: fields{
 				dbSession: dbSession,
-				tc:        tscWithCarbideNotFound,
-				scp:       scpWithCarbideNotFound,
+				tc:        tscWithNicoNotFound,
+				scp:       scpWithNicoNotFound,
 				cfg:       cfg,
 			},
 			args: args{
@@ -8776,7 +8776,7 @@ func TestDeleteInstanceHandler_Handle(t *testing.T) {
 			rec := httptest.NewRecorder()
 
 			ec := e.NewContext(req, rec)
-			ec.SetPath(fmt.Sprintf("/v2/org/%v/carbide/instance/%v", tt.args.reqOrg, tt.args.reqInstance))
+			ec.SetPath(fmt.Sprintf("/v2/org/%v/nico/instance/%v", tt.args.reqOrg, tt.args.reqInstance))
 			ec.SetParamNames("orgName", "id")
 			ec.SetParamValues(tt.args.reqOrg, tt.args.reqInstance)
 			ec.Set("user", tt.args.reqUser)
@@ -9053,13 +9053,13 @@ func TestInstanceHandler_GetStatusDetails(t *testing.T) {
 	testInstanceSetupSchema(t, dbSession)
 
 	ipOrg := "test-provider-org"
-	ipOrgRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipOrgRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	tnOrg1 := "test-tenant-org-1"
-	tnOrgRoles1 := []string{"FORGE_TENANT_ADMIN"}
+	tnOrgRoles1 := []string{"NICO_TENANT_ADMIN"}
 
 	tnOrg2 := "test-tenant-org-2"
-	tnOrgRoles2 := []string{"FORGE_TENANT_ADMIN"}
+	tnOrgRoles2 := []string{"NICO_TENANT_ADMIN"}
 
 	ipu := testInstanceBuildUser(t, dbSession, "test-starfleet-id-1", ipOrg, ipOrgRoles)
 	ip := testInstanceSiteBuildInfrastructureProvider(t, dbSession, "test-infrastructure-provider", ipOrg, ipu)
@@ -9171,7 +9171,7 @@ func TestInstanceHandler_GetStatusDetails(t *testing.T) {
 			req.URL.RawQuery = q.Encode()
 
 			ec := e.NewContext(req, rec)
-			ec.SetPath(fmt.Sprintf("/v2/org/%v/carbide/instance/%v/status-history", tt.reqOrg, tt.reqInstanceID))
+			ec.SetPath(fmt.Sprintf("/v2/org/%v/nico/instance/%v/status-history", tt.reqOrg, tt.reqInstanceID))
 			ec.SetParamNames("orgName", "id")
 			ec.SetParamValues(tt.reqOrg, tt.reqInstanceID)
 			ec.Set("user", tt.reqUser)

@@ -39,7 +39,7 @@ func handleSiteStatusRequest(w http.ResponseWriter, r *http.Request) {
 	for _, v := range siteStatus {
 		fmt.Fprint(w, v)
 	}
-	siteStatus = ManagerAccess.API.Carbide.GetState()
+	siteStatus = ManagerAccess.API.Nico.GetState()
 	for _, v := range siteStatus {
 		fmt.Fprint(w, v)
 	}

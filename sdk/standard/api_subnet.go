@@ -43,7 +43,7 @@ CreateSubnet Create Subnet
 
 Create a Subnet for the org.
 
-Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` authorization role.
+Org must have a Tenant entity. User must have `NICO_TENANT_ADMIN` authorization role.
 
 At least 1 IPv4 IP block or 1 IPv6 IP block must be specified.
 
@@ -75,7 +75,7 @@ func (a *SubnetAPIService) CreateSubnetExecute(r ApiCreateSubnetRequest) (*Subne
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/subnet"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/subnet"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -124,7 +124,7 @@ func (a *SubnetAPIService) CreateSubnetExecute(r ApiCreateSubnetRequest) (*Subne
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 400 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -135,7 +135,7 @@ func (a *SubnetAPIService) CreateSubnetExecute(r ApiCreateSubnetRequest) (*Subne
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -175,7 +175,7 @@ DeleteSubnet Delete Subnet
 
 Delete a specific Subnet by ID.
 
-Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` role.
+Org must have a Tenant entity. User must have `NICO_TENANT_ADMIN` role.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -204,7 +204,7 @@ func (a *SubnetAPIService) DeleteSubnetExecute(r ApiDeleteSubnetRequest) (*http.
 		return nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/subnet/{subnetId}"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/subnet/{subnetId}"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"subnetId"+"}", url.PathEscape(parameterValueToString(r.subnetId, "subnetId")), -1)
 
@@ -252,7 +252,7 @@ func (a *SubnetAPIService) DeleteSubnetExecute(r ApiDeleteSubnetRequest) (*http.
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -338,7 +338,7 @@ GetAllSubnet Retrieve all Subnets
 
 # Retrieve all Subnets for the org
 
-Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` role.
+Org must have a Tenant entity. User must have `NICO_TENANT_ADMIN` role.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -368,7 +368,7 @@ func (a *SubnetAPIService) GetAllSubnetExecute(r ApiGetAllSubnetRequest) ([]Subn
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/subnet"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/subnet"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -443,7 +443,7 @@ func (a *SubnetAPIService) GetAllSubnetExecute(r ApiGetAllSubnetRequest) ([]Subn
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -490,7 +490,7 @@ GetSubnet Retrieve Subnet
 
 # Retrieve a specific Subnet
 
-Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` role.
+Org must have a Tenant entity. User must have `NICO_TENANT_ADMIN` role.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -522,7 +522,7 @@ func (a *SubnetAPIService) GetSubnetExecute(r ApiGetSubnetRequest) (*Subnet, *ht
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/subnet/{subnetId}"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/subnet/{subnetId}"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"subnetId"+"}", url.PathEscape(parameterValueToString(r.subnetId, "subnetId")), -1)
 
@@ -573,7 +573,7 @@ func (a *SubnetAPIService) GetSubnetExecute(r ApiGetSubnetRequest) (*Subnet, *ht
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -619,7 +619,7 @@ UpdateSubnet Update Subnet
 
 # Update an existing Subnet
 
-Org must have a Tenant entity. User must have `FORGE_TENANT_ADMIN` authorization role.
+Org must have a Tenant entity. User must have `NICO_TENANT_ADMIN` authorization role.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -651,7 +651,7 @@ func (a *SubnetAPIService) UpdateSubnetExecute(r ApiUpdateSubnetRequest) (*Subne
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v2/org/{org}/carbide/subnet/{subnetId}"
+	localVarPath := localBasePath + "/v2/org/{org}/nico/subnet/{subnetId}"
 	localVarPath = strings.Replace(localVarPath, "{"+"org"+"}", url.PathEscape(parameterValueToString(r.org, "org")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"subnetId"+"}", url.PathEscape(parameterValueToString(r.subnetId, "subnetId")), -1)
 
@@ -701,7 +701,7 @@ func (a *SubnetAPIService) UpdateSubnetExecute(r ApiUpdateSubnetRequest) (*Subne
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 400 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -712,7 +712,7 @@ func (a *SubnetAPIService) UpdateSubnetExecute(r ApiUpdateSubnetRequest) (*Subne
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v CarbideAPIError
+			var v NicoAPIError
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()

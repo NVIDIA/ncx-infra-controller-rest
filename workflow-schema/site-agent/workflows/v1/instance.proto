@@ -18,8 +18,8 @@ syntax = "proto3";
 package workflows.v1;
 
 import "workflow.proto";
-import "common_carbide.proto";
-import "forge_carbide.proto";
+import "common_nico.proto";
+import "nico_nico.proto";
 import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/proto";
@@ -29,7 +29,7 @@ message InstanceInfo {
   WorkflowStatus status = 1;
   ObjectStatus object_status = 2;
   string status_msg = 3;
-  forge.Instance instance = 4;
+  nico.Instance instance = 4;
 }
 
 // InstanceUserData
@@ -44,7 +44,7 @@ message CreateInstanceRequest {
   // Deprecated
   repeated string ssh_keys = 2;
   string tenant_org = 3;
-  repeated forge.InstanceInterfaceConfig interfaces = 4;
+  repeated nico.InstanceInterfaceConfig interfaces = 4;
 
   // Optionals
   optional string custom_ipxe = 5;
@@ -61,10 +61,10 @@ message CreateInstanceRequest {
   optional bool always_boot_with_custom_ipxe = 10;
 
   // InfiniBand Interfaces
-  repeated forge.InstanceIBInterfaceConfig ib_interfaces = 11;
+  repeated nico.InstanceIBInterfaceConfig ib_interfaces = 11;
 
   // Instance metadata info with labels configuration
-  forge.Metadata metadata = 12;
+  nico.Metadata metadata = 12;
 
   // If this flag is set to true` the instance will not transition to a Ready state until
   // InstancePhoneHomeLastContact is updated
@@ -102,9 +102,9 @@ message InstanceRebootInfo {
 // InstanceInventory - inventory info of all Instances periodically collected
 message InstanceInventory {
   // List of Instances
-  repeated forge.Instance instances = 1;
+  repeated nico.Instance instances = 1;
   // List of Instance propagation details
-  repeated forge.NetworkSecurityGroupPropagationObjectStatus network_security_group_propagations = 6;
+  repeated nico.NetworkSecurityGroupPropagationObjectStatus network_security_group_propagations = 6;
   // Reported timestamp of Instance inventory
   google.protobuf.Timestamp timestamp = 2;
   // Status of Inventory

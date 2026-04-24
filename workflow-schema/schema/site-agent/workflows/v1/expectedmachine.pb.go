@@ -133,15 +133,15 @@ var File_expectedmachine_proto protoreflect.FileDescriptor
 
 const file_expectedmachine_proto_rawDesc = "" +
 	"\n" +
-	"\x15expectedmachine.proto\x12\fworkflows.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0eworkflow.proto\x1a\x14common_carbide.proto\x1a\x13forge_carbide.proto\"\x8d\x03\n" +
+	"\x15expectedmachine.proto\x12\fworkflows.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0eworkflow.proto\x1a\x14common_nico.proto\x1a\x13nico_nico.proto\"\x8d\x03\n" +
 	"\x18ExpectedMachineInventory\x12H\n" +
 	"\x10inventory_status\x18\x01 \x01(\x0e2\x1d.workflows.v1.InventoryStatusR\x0finventoryStatus\x12\x1d\n" +
 	"\n" +
 	"status_msg\x18\x02 \x01(\tR\tstatusMsg\x128\n" +
 	"\ttimestamp\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12C\n" +
-	"\x11expected_machines\x18\x04 \x03(\v2\x16.forge.ExpectedMachineR\x10expectedMachines\x12B\n" +
+	"\x11expected_machines\x18\x04 \x03(\v2\x16.nico.ExpectedMachineR\x10expectedMachines\x12B\n" +
 	"\x0einventory_page\x18\x05 \x01(\v2\x1b.workflows.v1.InventoryPageR\rinventoryPage\x12E\n" +
-	"\x0flinked_machines\x18\x06 \x03(\v2\x1c.forge.LinkedExpectedMachineR\x0elinkedMachinesBCZAgithub.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/protob\x06proto3"
+	"\x0flinked_machines\x18\x06 \x03(\v2\x1c.nico.LinkedExpectedMachineR\x0elinkedMachinesBCZAgithub.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/protob\x06proto3"
 
 var (
 	file_expectedmachine_proto_rawDescOnce sync.Once
@@ -160,16 +160,16 @@ var file_expectedmachine_proto_goTypes = []any{
 	(*ExpectedMachineInventory)(nil), // 0: workflows.v1.ExpectedMachineInventory
 	(InventoryStatus)(0),             // 1: workflows.v1.InventoryStatus
 	(*timestamppb.Timestamp)(nil),    // 2: google.protobuf.Timestamp
-	(*ExpectedMachine)(nil),          // 3: forge.ExpectedMachine
+	(*ExpectedMachine)(nil),          // 3: nico.ExpectedMachine
 	(*InventoryPage)(nil),            // 4: workflows.v1.InventoryPage
-	(*LinkedExpectedMachine)(nil),    // 5: forge.LinkedExpectedMachine
+	(*LinkedExpectedMachine)(nil),    // 5: nico.LinkedExpectedMachine
 }
 var file_expectedmachine_proto_depIdxs = []int32{
 	1, // 0: workflows.v1.ExpectedMachineInventory.inventory_status:type_name -> workflows.v1.InventoryStatus
 	2, // 1: workflows.v1.ExpectedMachineInventory.timestamp:type_name -> google.protobuf.Timestamp
-	3, // 2: workflows.v1.ExpectedMachineInventory.expected_machines:type_name -> forge.ExpectedMachine
+	3, // 2: workflows.v1.ExpectedMachineInventory.expected_machines:type_name -> nico.ExpectedMachine
 	4, // 3: workflows.v1.ExpectedMachineInventory.inventory_page:type_name -> workflows.v1.InventoryPage
-	5, // 4: workflows.v1.ExpectedMachineInventory.linked_machines:type_name -> forge.LinkedExpectedMachine
+	5, // 4: workflows.v1.ExpectedMachineInventory.linked_machines:type_name -> nico.LinkedExpectedMachine
 	5, // [5:5] is the sub-list for method output_type
 	5, // [5:5] is the sub-list for method input_type
 	5, // [5:5] is the sub-list for extension type_name
@@ -183,8 +183,8 @@ func file_expectedmachine_proto_init() {
 		return
 	}
 	file_workflow_proto_init()
-	file_common_carbide_proto_init()
-	file_forge_carbide_proto_init()
+	file_common_nico_proto_init()
+	file_nico_nico_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

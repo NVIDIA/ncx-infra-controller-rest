@@ -217,14 +217,14 @@ func TestTenantAccountHandler_Create(t *testing.T) {
 	ipOrg1 := "test-ip-org-1"
 	ipOrg2 := "test-ip-org-2"
 	ipOrg3 := "test-ip-org-3"
-	ipRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	ipu := testMachineBuildUser(t, dbSession, uuid.New().String(), []string{ipOrg1, ipOrg2, ipOrg3}, ipRoles)
 
 	tnOrg1 := "test-tn-org-1"
 	tnOrg2 := "test-tn-org-2"
 	tnOrg3 := "test-tn-org-3"
-	tnRoles := []string{"FORGE_TENANT_ADMIN"}
+	tnRoles := []string{"NICO_TENANT_ADMIN"}
 
 	tnu := testMachineBuildUser(t, dbSession, uuid.New().String(), []string{tnOrg1, tnOrg2}, tnRoles)
 
@@ -467,8 +467,8 @@ func TestTenantAccountHandler_Update(t *testing.T) {
 	tnOrg3 := "test-tn-org-3"
 	tnOrg4 := "test-tn-org-4"
 
-	ipOrgRoles := []string{"FORGE_PROVIDER_ADMIN"}
-	tnOrgRoles := []string{"FORGE_TENANT_ADMIN"}
+	ipOrgRoles := []string{"NICO_PROVIDER_ADMIN"}
+	tnOrgRoles := []string{"NICO_TENANT_ADMIN"}
 
 	ipUser := testTenantAccountBuildUser(t, dbSession, "test123", []string{ipOrg}, ipOrgRoles, "John", "Doe")
 	tnUser := testTenantAccountBuildUser(t, dbSession, "test456", []string{tnOrg1, tnOrg2, tnOrg3, tnOrg4}, tnOrgRoles, "Jimmy", "Doe")
@@ -718,9 +718,9 @@ func TestTenantAccountHandler_GetByID(t *testing.T) {
 	tnOrg3 := "test-tn-org-3"
 	tnOrg4 := "test-tn-org-4"
 
-	ipRoles := []string{"FORGE_PROVIDER_ADMIN"}
-	ipvRoles := []string{"FORGE_PROVIDER_VIEWER"}
-	tnRoles := []string{"FORGE_TENANT_ADMIN"}
+	ipRoles := []string{"NICO_PROVIDER_ADMIN"}
+	ipvRoles := []string{"NICO_PROVIDER_VIEWER"}
+	tnRoles := []string{"NICO_TENANT_ADMIN"}
 
 	ipUser := testTenantAccountBuildUser(t, dbSession, "test123", []string{ipOrg1, ipOrg2, ipOrg3}, ipRoles, "John", "Doe")
 	ipvUser := testTenantAccountBuildUser(t, dbSession, "test1234", []string{ipOrg1, ipOrg2, ipOrg3}, ipvRoles, "Jimmy", "Doe")
@@ -1082,9 +1082,9 @@ func TestTenantAccountHandler_GetAll(t *testing.T) {
 		tnOrgs = append(tnOrgs, fmt.Sprintf("test-tn-org-%02d", i))
 	}
 
-	ipRoles := []string{"FORGE_PROVIDER_ADMIN"}
-	ipvRoles := []string{"FORGE_PROVIDER_VIEWER"}
-	tnRoles := []string{"FORGE_TENANT_ADMIN"}
+	ipRoles := []string{"NICO_PROVIDER_ADMIN"}
+	ipvRoles := []string{"NICO_PROVIDER_VIEWER"}
+	tnRoles := []string{"NICO_TENANT_ADMIN"}
 
 	ipUser := testTenantAccountBuildUser(t, dbSession, "test123", []string{ipOrg1, ipOrg2, ipOrg3}, ipRoles, "John", "Doe")
 	ipvUser := testTenantAccountBuildUser(t, dbSession, "test1234", []string{ipOrg1, ipOrg2, ipOrg3}, ipvRoles, "Jimmy", "Doe")
@@ -1612,7 +1612,7 @@ func TestTenantAccountHandler_GetAll(t *testing.T) {
 				q.Set("orderBy", *tc.orderBy)
 			}
 
-			path := fmt.Sprintf("/v2/org/%s/carbide/tenant/account?%s", tc.reqOrgName, q.Encode())
+			path := fmt.Sprintf("/v2/org/%s/nico/tenant/account?%s", tc.reqOrgName, q.Encode())
 
 			req := httptest.NewRequest(http.MethodGet, path, nil)
 			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
@@ -1714,7 +1714,7 @@ func TestTenantAccountHandler_Delete(t *testing.T) {
 	tnOrg3 := "test-tn-org-3"
 	tnOrg4 := "test-tn-org-4"
 
-	ipOrgRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipOrgRoles := []string{"NICO_PROVIDER_ADMIN"}
 
 	ipUser := testTenantAccountBuildUser(t, dbSession, "test123", []string{ipOrg1, ipOrg2, ipOrg3}, ipOrgRoles, "John", "Doe")
 
