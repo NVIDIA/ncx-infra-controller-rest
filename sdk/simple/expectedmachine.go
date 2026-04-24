@@ -113,10 +113,10 @@ func toStandardExpectedMachineCreateRequest(request ExpectedMachineCreateRequest
 		Labels:                   request.Labels,
 	}
 	if request.BmcUsername != nil {
-		apiReq.BmcUsername.Set(request.BmcUsername)
+		apiReq.DefaultBmcUsername.Set(request.BmcUsername)
 	}
 	if request.BmcPassword != nil {
-		apiReq.BmcPassword.Set(request.BmcPassword)
+		apiReq.DefaultBmcPassword.Set(request.BmcPassword)
 	}
 	return apiReq
 }
@@ -133,10 +133,10 @@ func toStandardExpectedMachineUpdateRequest(request ExpectedMachineUpdateRequest
 		apiReq.BmcMacAddress.Set(request.BmcMacAddress)
 	}
 	if request.BmcUsername != nil {
-		apiReq.BmcUsername.Set(request.BmcUsername)
+		apiReq.DefaultBmcUsername.Set(request.BmcUsername)
 	}
 	if request.BmcPassword != nil {
-		apiReq.BmcPassword.Set(request.BmcPassword)
+		apiReq.DefaultBmcPassword.Set(request.BmcPassword)
 	}
 	if request.ChassisSerialNumber != nil {
 		apiReq.ChassisSerialNumber.Set(request.ChassisSerialNumber)

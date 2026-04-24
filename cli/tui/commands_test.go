@@ -678,6 +678,121 @@ func TestVPCFilteringDoesNotMutateCachedSlice(t *testing.T) {
 	assert.Equal(t, "m3", cached[2].Name)
 }
 
+func TestBuildIPBlockCreateBody_UsesAPIFieldNames(t *testing.T) {
+	body := buildIPBlockCreateBody(
+		"ip-block-0",
+		"37c3a99c-f5de-4202-8f46-2e1cc24226f6",
+		"7.243.96.128",
+		25,
+		"IPv4",
+		"DatacenterOnly",
+	)
+
+	assert.Equal(t, "ip-block-0", body["name"])
+	assert.Equal(t, "37c3a99c-f5de-4202-8f46-2e1cc24226f6", body["siteId"])
+	assert.Equal(t, "7.243.96.128", body["prefix"])
+	assert.Equal(t, 25, body["prefixLength"])
+	assert.Equal(t, "IPv4", body["protocolVersion"])
+	assert.Equal(t, "DatacenterOnly", body["routingType"])
+
+	_, hasIPVersion := body["ipVersion"]
+	assert.False(t, hasIPVersion, "request must not use the legacy ipVersion field")
+	_, hasUsageType := body["usageType"]
+	assert.False(t, hasUsageType, "request must not use the legacy usageType field")
+}
+
+func TestValidateIPBlockPrefixLength(t *testing.T) {
+	t.Run("IPv4 in range", func(t *testing.T) {
+		require.NoError(t, validateIPBlockPrefixLength("IPv4", 1))
+		require.NoError(t, validateIPBlockPrefixLength("IPv4", 25))
+		require.NoError(t, validateIPBlockPrefixLength("IPv4", 32))
+	})
+	t.Run("IPv4 out of range", func(t *testing.T) {
+		require.Error(t, validateIPBlockPrefixLength("IPv4", 0))
+		require.Error(t, validateIPBlockPrefixLength("IPv4", 33))
+	})
+	t.Run("IPv6 in range", func(t *testing.T) {
+		require.NoError(t, validateIPBlockPrefixLength("IPv6", 1))
+		require.NoError(t, validateIPBlockPrefixLength("IPv6", 64))
+		require.NoError(t, validateIPBlockPrefixLength("IPv6", 128))
+	})
+	t.Run("IPv6 out of range", func(t *testing.T) {
+		require.Error(t, validateIPBlockPrefixLength("IPv6", 0))
+		require.Error(t, validateIPBlockPrefixLength("IPv6", 129))
+	})
+	t.Run("unsupported protocol", func(t *testing.T) {
+		require.Error(t, validateIPBlockPrefixLength("IPv5", 16))
+	})
+}
+
+func TestPromptChoice(t *testing.T) {
+	t.Run("exact match", func(t *testing.T) {
+		got, err := withStdin(t, "IPv6\n", func() (string, error) {
+			return PromptChoice("Protocol", []string{"IPv4", "IPv6"}, "IPv4")
+		})
+		require.NoError(t, err)
+		assert.Equal(t, "IPv6", got)
+	})
+	t.Run("case insensitive returns canonical", func(t *testing.T) {
+		got, err := withStdin(t, "datacenteronly\n", func() (string, error) {
+			return PromptChoice("Routing", []string{"DatacenterOnly", "Public"}, "")
+		})
+		require.NoError(t, err)
+		assert.Equal(t, "DatacenterOnly", got)
+	})
+	t.Run("empty uses default", func(t *testing.T) {
+		got, err := withStdin(t, "\n", func() (string, error) {
+			return PromptChoice("Protocol", []string{"IPv4", "IPv6"}, "IPv4")
+		})
+		require.NoError(t, err)
+		assert.Equal(t, "IPv4", got)
+	})
+	t.Run("retries invalid input then accepts valid", func(t *testing.T) {
+		got, err := withStdin(t, "nope\nIPv4\n", func() (string, error) {
+			return PromptChoice("Protocol", []string{"IPv4", "IPv6"}, "")
+		})
+		require.NoError(t, err)
+		assert.Equal(t, "IPv4", got)
+	})
+	t.Run("rejects default not in options", func(t *testing.T) {
+		_, err := withStdin(t, "\n", func() (string, error) {
+			return PromptChoice("Protocol", []string{"IPv4", "IPv6"}, "IPv5")
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "not in allowed options")
+	})
+}
+
+// withStdin pipes the provided input into os.Stdin for the duration of f,
+// captures stdout so the prompt text does not leak into test output, and
+// restores both when it returns. All four pipe ends are closed before
+// returning so repeated test runs do not accumulate file descriptors.
+func withStdin(t *testing.T, input string, f func() (string, error)) (string, error) {
+	t.Helper()
+	oldStdin := os.Stdin
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	sr, sw, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdin = r
+	os.Stdout = sw
+	defer func() {
+		_ = r.Close()
+		_ = sr.Close()
+		os.Stdin = oldStdin
+		os.Stdout = oldStdout
+	}()
+	go func() {
+		defer w.Close()
+		_, _ = io.WriteString(w, input)
+	}()
+	result, rerr := f()
+	_ = sw.Close()
+	_, _ = io.Copy(io.Discard, sr)
+	return result, rerr
+}
+
 // --- Helpers ---
 
 func captureStdout(f func()) string {

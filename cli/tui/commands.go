@@ -24,6 +24,7 @@ import (
 	"io"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"text/tabwriter"
 )
@@ -1409,12 +1410,63 @@ func cmdIPBlockList(s *Session, _ []string) error {
 	return tw.Flush()
 }
 
+// ipBlockProtocolVersions are the valid values for the protocolVersion field on
+// the ipblock create API. Order matters: the first option is used as the
+// default in interactive prompts.
+var ipBlockProtocolVersions = []string{"IPv4", "IPv6"}
+
+// ipBlockRoutingTypes are the valid values for the routingType field on the
+// ipblock create API. Order matters: the first option is used as the default
+// in interactive prompts.
+var ipBlockRoutingTypes = []string{"DatacenterOnly", "Public"}
+
+// validateIPBlockPrefixLength returns an error when the prefix length is out
+// of range for the selected protocol version. IPv4 allows 1-32, IPv6 allows
+// 1-128.
+func validateIPBlockPrefixLength(protocolVersion string, prefixLength int) error {
+	switch protocolVersion {
+	case "IPv4":
+		if prefixLength < 1 || prefixLength > 32 {
+			return fmt.Errorf("prefix length must be between 1 and 32 for IPv4")
+		}
+	case "IPv6":
+		if prefixLength < 1 || prefixLength > 128 {
+			return fmt.Errorf("prefix length must be between 1 and 128 for IPv6")
+		}
+	default:
+		return fmt.Errorf("unsupported protocol version: %s", protocolVersion)
+	}
+	return nil
+}
+
+// buildIPBlockCreateBody constructs the JSON request body sent to the ipblock
+// create API. The field names must match the API's APIIPBlockCreateRequest
+// struct tags or the server will reject the request with a 400.
+func buildIPBlockCreateBody(name, siteID, prefix string, prefixLength int, protocolVersion, routingType string) map[string]interface{} {
+	return map[string]interface{}{
+		"name":            name,
+		"siteId":          siteID,
+		"prefix":          prefix,
+		"prefixLength":    prefixLength,
+		"protocolVersion": protocolVersion,
+		"routingType":     routingType,
+	}
+}
+
 func cmdIPBlockCreate(s *Session, _ []string) error {
 	site, err := s.Resolver.Resolve(context.Background(), "site", "Site")
 	if err != nil {
 		return err
 	}
 	name, err := PromptText("IP block name", true)
+	if err != nil {
+		return err
+	}
+	protocolVersion, err := PromptChoice("Protocol version", ipBlockProtocolVersions, ipBlockProtocolVersions[0])
+	if err != nil {
+		return err
+	}
+	routingType, err := PromptChoice("Routing type", ipBlockRoutingTypes, ipBlockRoutingTypes[0])
 	if err != nil {
 		return err
 	}
@@ -1426,20 +1478,22 @@ func cmdIPBlockCreate(s *Session, _ []string) error {
 	if err != nil {
 		return err
 	}
-	var pl int
-	fmt.Sscanf(prefixLen, "%d", &pl)
-	if pl < 1 || pl > 32 {
-		return fmt.Errorf("prefix length must be between 1 and 32")
+	pl, err := strconv.Atoi(strings.TrimSpace(prefixLen))
+	if err != nil {
+		return fmt.Errorf("prefix length must be a number, got %q", prefixLen)
 	}
-	LogCmd(s, "ip-block", "create", "--name", name, "--site-id", site.ID, "--prefix", prefix, "--prefix-length", prefixLen)
-	body := map[string]interface{}{
-		"name":         name,
-		"siteId":       site.ID,
-		"ipVersion":    "IPv4",
-		"usageType":    "DatacenterOnly",
-		"prefix":       prefix,
-		"prefixLength": pl,
+	if err := validateIPBlockPrefixLength(protocolVersion, pl); err != nil {
+		return err
 	}
+	LogCmd(s, "ip-block", "create",
+		"--name", name,
+		"--site-id", site.ID,
+		"--protocol-version", protocolVersion,
+		"--routing-type", routingType,
+		"--prefix", prefix,
+		"--prefix-length", prefixLen,
+	)
+	body := buildIPBlockCreateBody(name, site.ID, prefix, pl, protocolVersion, routingType)
 	bodyJSON, _ := json.Marshal(body)
 	resp, _, err := s.Client.Do("POST", apiPath(s, "ipblock"), nil, nil, bodyJSON)
 	if err != nil {
