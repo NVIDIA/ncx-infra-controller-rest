@@ -2039,7 +2039,7 @@ func cmdVPCPrefixCreate(s *Session, _ []string) error {
 		"ipBlockId":    strings.TrimSpace(ipBlockID),
 		"prefixLength": prefixLen,
 	}
-	LogCmd(s, "vpc-prefix", "create", "--name", name, "--vpc-id", vpc.ID, "--prefix-length", prefixLenText)
+	LogCmd(s, "vpc-prefix", "create", "--name", name, "--vpc-id", vpc.ID, "--ip-block-id", strings.TrimSpace(ipBlockID), "--prefix-length", prefixLenText)
 	bodyJSON, _ := json.Marshal(body)
 	resp, _, err := s.Client.Do("POST", apiPath(s, "vpc-prefix"), nil, nil, bodyJSON)
 	if err != nil {
