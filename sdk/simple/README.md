@@ -1,6 +1,6 @@
 # Simple SDK
 
-The Simple SDK provides a simplified, high-level interface to the NCX Infra Controller REST API. It wraps the [standard SDK](../standard) with a cleaner API and automatic metadata management.
+The Simple SDK provides a simplified, high-level interface to the NVIDIA Infrastructure Controller (NICo) REST API. It wraps the [standard SDK](../standard) with a cleaner API and automatic metadata management.
 
 ## Features
 

@@ -15,15 +15,15 @@
 
 openapi: 3.1.0
 info:
-  title: NCX Infra Controller REST API
+  title: NVIDIA Infrastructure Controller (NICo) REST API
   version: 1.3.0
-  summary: NCX Infra Controller REST API is the centralized RESTful gateway to access NCX Infra Controller service
-  description: 'NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.'
+  summary: NVIDIA Infrastructure Controller (NICo) REST API is the centralized RESTful gateway to access NVIDIA Infrastructure Controller service
+  description: 'NVIDIA Infrastructure Controller (NICo) REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Infrastructure Controller datacenters, also referred to as Sites.'
   license:
     name: Apache-2.0
     url: 'https://www.apache.org/licenses/LICENSE-2.0'
   contact:
-    name: NCX Infra Controller Dev Team
+    name: NVIDIA Infrastructure Controller Dev Team
 servers:
   - url: 'https://carbide-rest-api.carbide.svc.cluster.local'
     description: Kubernetes Cluster
@@ -12228,7 +12228,7 @@ components:
     Site:
       title: Site
       type: object
-      description: Site is a datacenter that is running NCX Infra Controller services
+      description: Site is a datacenter that is running NVIDIA Infrastructure Controller (NICo) services
       examples:
         - id: 497f6eca-6276-4993-bfeb-53cbbbba6f08
           name: San Jose Central 4
@@ -19924,7 +19924,7 @@ components:
     Deprecation:
       title: Deprecation
       type: object
-      description: Details of a particular deprecation in NCX Infra Controller API
+      description: Details of a particular deprecation in NVIDIA Infrastructure Controller (NICo) API
       examples:
         - attribute: blockSize
           replacedBy: prefixLength
@@ -19955,7 +19955,7 @@ components:
     CarbideAPIError:
       title: CarbideAPIError
       type: object
-      description: Describes the error response from NCX Infra Controller REST API
+      description: Describes the error response from NVIDIA Infrastructure Controller (NICo) REST API
       properties:
         source:
           type: string
