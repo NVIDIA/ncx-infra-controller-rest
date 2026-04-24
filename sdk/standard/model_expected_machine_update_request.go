@@ -24,9 +24,9 @@ type ExpectedMachineUpdateRequest struct {
 	// MAC address of the Expected Machine's BMC (Baseboard Management Controller)
 	BmcMacAddress NullableString `json:"bmcMacAddress,omitempty" validate:"regexp=^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$"`
 	// Username for accessing the Expected Machine's BMC
-	BmcUsername NullableString `json:"bmcUsername,omitempty"`
+	DefaultBmcUsername NullableString `json:"defaultBmcUsername,omitempty"`
 	// Password for accessing the Expected Machine's BMC
-	BmcPassword NullableString `json:"bmcPassword,omitempty"`
+	DefaultBmcPassword NullableString `json:"defaultBmcPassword,omitempty"`
 	// Serial number of the Expected Machine's chassis
 	ChassisSerialNumber NullableString `json:"chassisSerialNumber,omitempty"`
 	// Serial numbers of the Expected Machine's fallback DPUs (Data Processing Units)
@@ -158,90 +158,90 @@ func (o *ExpectedMachineUpdateRequest) UnsetBmcMacAddress() {
 	o.BmcMacAddress.Unset()
 }
 
-// GetBmcUsername returns the BmcUsername field value if set, zero value otherwise (both if not set or set to explicit null).
-func (o *ExpectedMachineUpdateRequest) GetBmcUsername() string {
-	if o == nil || IsNil(o.BmcUsername.Get()) {
+// GetDefaultBmcUsername returns the DefaultBmcUsername field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *ExpectedMachineUpdateRequest) GetDefaultBmcUsername() string {
+	if o == nil || IsNil(o.DefaultBmcUsername.Get()) {
 		var ret string
 		return ret
 	}
-	return *o.BmcUsername.Get()
+	return *o.DefaultBmcUsername.Get()
 }
 
-// GetBmcUsernameOk returns a tuple with the BmcUsername field value if set, nil otherwise
+// GetDefaultBmcUsernameOk returns a tuple with the DefaultBmcUsername field value if set, nil otherwise
 // and a boolean to check if the value has been set.
 // NOTE: If the value is an explicit nil, `nil, true` will be returned
-func (o *ExpectedMachineUpdateRequest) GetBmcUsernameOk() (*string, bool) {
+func (o *ExpectedMachineUpdateRequest) GetDefaultBmcUsernameOk() (*string, bool) {
 	if o == nil {
 		return nil, false
 	}
-	return o.BmcUsername.Get(), o.BmcUsername.IsSet()
+	return o.DefaultBmcUsername.Get(), o.DefaultBmcUsername.IsSet()
 }
 
-// HasBmcUsername returns a boolean if a field has been set.
-func (o *ExpectedMachineUpdateRequest) HasBmcUsername() bool {
-	if o != nil && o.BmcUsername.IsSet() {
+// HasDefaultBmcUsername returns a boolean if a field has been set.
+func (o *ExpectedMachineUpdateRequest) HasDefaultBmcUsername() bool {
+	if o != nil && o.DefaultBmcUsername.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetBmcUsername gets a reference to the given NullableString and assigns it to the BmcUsername field.
-func (o *ExpectedMachineUpdateRequest) SetBmcUsername(v string) {
-	o.BmcUsername.Set(&v)
+// SetDefaultBmcUsername gets a reference to the given NullableString and assigns it to the DefaultBmcUsername field.
+func (o *ExpectedMachineUpdateRequest) SetDefaultBmcUsername(v string) {
+	o.DefaultBmcUsername.Set(&v)
 }
 
-// SetBmcUsernameNil sets the value for BmcUsername to be an explicit nil
-func (o *ExpectedMachineUpdateRequest) SetBmcUsernameNil() {
-	o.BmcUsername.Set(nil)
+// SetDefaultBmcUsernameNil sets the value for DefaultBmcUsername to be an explicit nil
+func (o *ExpectedMachineUpdateRequest) SetDefaultBmcUsernameNil() {
+	o.DefaultBmcUsername.Set(nil)
 }
 
-// UnsetBmcUsername ensures that no value is present for BmcUsername, not even an explicit nil
-func (o *ExpectedMachineUpdateRequest) UnsetBmcUsername() {
-	o.BmcUsername.Unset()
+// UnsetDefaultBmcUsername ensures that no value is present for DefaultBmcUsername, not even an explicit nil
+func (o *ExpectedMachineUpdateRequest) UnsetDefaultBmcUsername() {
+	o.DefaultBmcUsername.Unset()
 }
 
-// GetBmcPassword returns the BmcPassword field value if set, zero value otherwise (both if not set or set to explicit null).
-func (o *ExpectedMachineUpdateRequest) GetBmcPassword() string {
-	if o == nil || IsNil(o.BmcPassword.Get()) {
+// GetDefaultBmcPassword returns the DefaultBmcPassword field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *ExpectedMachineUpdateRequest) GetDefaultBmcPassword() string {
+	if o == nil || IsNil(o.DefaultBmcPassword.Get()) {
 		var ret string
 		return ret
 	}
-	return *o.BmcPassword.Get()
+	return *o.DefaultBmcPassword.Get()
 }
 
-// GetBmcPasswordOk returns a tuple with the BmcPassword field value if set, nil otherwise
+// GetDefaultBmcPasswordOk returns a tuple with the DefaultBmcPassword field value if set, nil otherwise
 // and a boolean to check if the value has been set.
 // NOTE: If the value is an explicit nil, `nil, true` will be returned
-func (o *ExpectedMachineUpdateRequest) GetBmcPasswordOk() (*string, bool) {
+func (o *ExpectedMachineUpdateRequest) GetDefaultBmcPasswordOk() (*string, bool) {
 	if o == nil {
 		return nil, false
 	}
-	return o.BmcPassword.Get(), o.BmcPassword.IsSet()
+	return o.DefaultBmcPassword.Get(), o.DefaultBmcPassword.IsSet()
 }
 
-// HasBmcPassword returns a boolean if a field has been set.
-func (o *ExpectedMachineUpdateRequest) HasBmcPassword() bool {
-	if o != nil && o.BmcPassword.IsSet() {
+// HasDefaultBmcPassword returns a boolean if a field has been set.
+func (o *ExpectedMachineUpdateRequest) HasDefaultBmcPassword() bool {
+	if o != nil && o.DefaultBmcPassword.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetBmcPassword gets a reference to the given NullableString and assigns it to the BmcPassword field.
-func (o *ExpectedMachineUpdateRequest) SetBmcPassword(v string) {
-	o.BmcPassword.Set(&v)
+// SetDefaultBmcPassword gets a reference to the given NullableString and assigns it to the DefaultBmcPassword field.
+func (o *ExpectedMachineUpdateRequest) SetDefaultBmcPassword(v string) {
+	o.DefaultBmcPassword.Set(&v)
 }
 
-// SetBmcPasswordNil sets the value for BmcPassword to be an explicit nil
-func (o *ExpectedMachineUpdateRequest) SetBmcPasswordNil() {
-	o.BmcPassword.Set(nil)
+// SetDefaultBmcPasswordNil sets the value for DefaultBmcPassword to be an explicit nil
+func (o *ExpectedMachineUpdateRequest) SetDefaultBmcPasswordNil() {
+	o.DefaultBmcPassword.Set(nil)
 }
 
-// UnsetBmcPassword ensures that no value is present for BmcPassword, not even an explicit nil
-func (o *ExpectedMachineUpdateRequest) UnsetBmcPassword() {
-	o.BmcPassword.Unset()
+// UnsetDefaultBmcPassword ensures that no value is present for DefaultBmcPassword, not even an explicit nil
+func (o *ExpectedMachineUpdateRequest) UnsetDefaultBmcPassword() {
+	o.DefaultBmcPassword.Unset()
 }
 
 // GetChassisSerialNumber returns the ChassisSerialNumber field value if set, zero value otherwise (both if not set or set to explicit null).
@@ -798,11 +798,11 @@ func (o ExpectedMachineUpdateRequest) ToMap() (map[string]interface{}, error) {
 	if o.BmcMacAddress.IsSet() {
 		toSerialize["bmcMacAddress"] = o.BmcMacAddress.Get()
 	}
-	if o.BmcUsername.IsSet() {
-		toSerialize["bmcUsername"] = o.BmcUsername.Get()
+	if o.DefaultBmcUsername.IsSet() {
+		toSerialize["defaultBmcUsername"] = o.DefaultBmcUsername.Get()
 	}
-	if o.BmcPassword.IsSet() {
-		toSerialize["bmcPassword"] = o.BmcPassword.Get()
+	if o.DefaultBmcPassword.IsSet() {
+		toSerialize["defaultBmcPassword"] = o.DefaultBmcPassword.Get()
 	}
 	if o.ChassisSerialNumber.IsSet() {
 		toSerialize["chassisSerialNumber"] = o.ChassisSerialNumber.Get()

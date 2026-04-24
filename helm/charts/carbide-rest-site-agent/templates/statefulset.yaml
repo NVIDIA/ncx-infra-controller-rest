@@ -20,6 +20,10 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       serviceAccountName: {{ include "carbide-rest-site-agent.name" . }}
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "1"
       containers:
         - name: site-agent
           image: "{{ include "carbide-rest-site-agent.image" . }}"

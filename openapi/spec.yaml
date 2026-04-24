@@ -3403,8 +3403,8 @@ paths:
                 value:
                   siteId: f97df110-f4de-492e-8849-4a6af68026b0
                   bmcMacAddress: '00:1A:2B:3C:4D:5E'
-                  bmcUsername: admin
-                  bmcPassword: password123
+                  defaultBmcUsername: admin
+                  defaultBmcPassword: password123
                   chassisSerialNumber: CHASSIS-12345
                   fallbackDPUSerialNumbers:
                     - DPU-001
@@ -3569,8 +3569,8 @@ paths:
             examples:
               example-1:
                 value:
-                  bmcUsername: newadmin
-                  bmcPassword: newpassword123
+                  defaultBmcUsername: newadmin
+                  defaultBmcPassword: newpassword123
                   chassisSerialNumber: CHASSIS-54321
                   labels:
                     environment: staging
@@ -3648,8 +3648,8 @@ paths:
                 value:
                   - siteId: f97df110-f4de-492e-8849-4a6af68026b0
                     bmcMacAddress: '00:1A:2B:3C:4D:5E'
-                    bmcUsername: admin
-                    bmcPassword: password123
+                    defaultBmcUsername: admin
+                    defaultBmcPassword: password123
                     chassisSerialNumber: CHASSIS-12345
                     fallbackDPUSerialNumbers:
                       - DPU-001
@@ -3659,8 +3659,8 @@ paths:
                       rack: A1
                   - siteId: f97df110-f4de-492e-8849-4a6af68026b0
                     bmcMacAddress: '00:1A:2B:3C:4D:5F'
-                    bmcUsername: admin
-                    bmcPassword: password456
+                    defaultBmcUsername: admin
+                    defaultBmcPassword: password456
                     chassisSerialNumber: CHASSIS-12346
                     fallbackDPUSerialNumbers:
                       - DPU-003
@@ -3711,15 +3711,15 @@ paths:
               example-1:
                 value:
                   - id: 497f6eca-6276-4993-bfeb-53cbbbba6f08
-                    bmcUsername: newadmin
-                    bmcPassword: newpassword123
+                    defaultBmcUsername: newadmin
+                    defaultBmcPassword: newpassword123
                     chassisSerialNumber: CHASSIS-54321
                     labels:
                       environment: staging
                       rack: B2
                   - id: 597f6eca-6276-4993-bfeb-53cbbbba6f09
-                    bmcUsername: newadmin2
-                    bmcPassword: newpassword456
+                    defaultBmcUsername: newadmin2
+                    defaultBmcPassword: newpassword456
                     chassisSerialNumber: CHASSIS-54322
                     labels:
                       environment: staging
@@ -17480,8 +17480,8 @@ components:
       examples:
         - siteId: f97df110-f4de-492e-8849-4a6af68026b0
           bmcMacAddress: '00:1A:2B:3C:4D:5E'
-          bmcUsername: admin
-          bmcPassword: password123
+          defaultBmcUsername: admin
+          defaultBmcPassword: password123
           chassisSerialNumber: CHASSIS-12345
           fallbackDPUSerialNumbers:
             - DPU-001
@@ -17501,13 +17501,13 @@ components:
           type: string
           pattern: '^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$'
           description: MAC address of the Expected Machine's BMC (Baseboard Management Controller)
-        bmcUsername:
+        defaultBmcUsername:
           type:
             - string
             - 'null'
           maxLength: 20
           description: Username for accessing the Expected Machine's BMC
-        bmcPassword:
+        defaultBmcPassword:
           type:
             - string
             - 'null'
@@ -17597,8 +17597,8 @@ components:
 
         For batch updates (PATCH /expected-machine/batch), the id field is required to identify which Expected Machine to update.
       examples:
-        - bmcUsername: newadmin
-          bmcPassword: newpassword123
+        - defaultBmcUsername: newadmin
+          defaultBmcPassword: newpassword123
           chassisSerialNumber: CHASSIS-54321
           skuId: sku-xyz789
           rackId: rack-02
@@ -17624,13 +17624,13 @@ components:
             - 'null'
           pattern: '^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$'
           description: MAC address of the Expected Machine's BMC (Baseboard Management Controller)
-        bmcUsername:
+        defaultBmcUsername:
           type:
             - string
             - 'null'
           maxLength: 20
           description: Username for accessing the Expected Machine's BMC
-        bmcPassword:
+        defaultBmcPassword:
           type:
             - string
             - 'null'

@@ -50,6 +50,10 @@ certificate:
   privateKey:
     algorithm: ECDSA
     size: 384
+  # -- Override SPIFFE URIs for the certificate. Must match the service identifier
+  # expected by carbide-api's InternalRBACRules (SiteAgent = "elektra-site-agent").
+  # For forge deployments set to: ["spiffe://forge.local/forge-system/sa/elektra-site-agent"]
+  uris: []
 
 rbac:
   create: true
