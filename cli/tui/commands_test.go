@@ -19,6 +19,7 @@ package tui
 
 import (
 	"bytes"
+	"encoding/json"
 	"io"
 	"os"
 	"sort"
@@ -830,4 +831,293 @@ func contains(ss []string, target string) bool {
 		}
 	}
 	return false
+}
+
+// --- Allocation create tests ---
+
+func TestBuildTenantSelectItems_MapsTenantIDAndAppendsManualSentinel(t *testing.T) {
+	accounts := []NamedItem{
+		{
+			Name:   "acme",
+			ID:     "account-1",
+			Status: "Active",
+			Extra:  map[string]string{"tenantId": "tenant-1", "tenantOrg": "acme"},
+		},
+		{
+			Name:  "globex",
+			ID:    "account-2",
+			Extra: map[string]string{"tenantId": "tenant-2"},
+		},
+	}
+
+	items := buildTenantSelectItems(accounts, "", "")
+
+	require.Len(t, items, 3, "two tenants plus the manual-entry sentinel")
+	assert.Equal(t, "tenant-1", items[0].ID, "select ID must be the tenantId, not the tenant-account ID")
+	assert.Contains(t, items[0].Label, "acme")
+	assert.Contains(t, items[0].Label, "Active", "status should be surfaced in the label")
+	assert.Equal(t, "tenant-2", items[1].ID)
+	assert.Equal(t, tenantManualEntrySentinel, items[2].ID)
+}
+
+func TestBuildTenantSelectItems_SkipsAccountsWithoutTenantID(t *testing.T) {
+	accounts := []NamedItem{
+		{Name: "pending-invite", ID: "account-1", Extra: map[string]string{"tenantId": ""}},
+		{Name: "no-extra", ID: "account-2"},
+	}
+
+	items := buildTenantSelectItems(accounts, "", "")
+
+	assert.Nil(t, items, "accounts without a tenantId must be skipped and no sentinel emitted")
+}
+
+func TestBuildTenantSelectItems_EmptyInputReturnsNil(t *testing.T) {
+	assert.Nil(t, buildTenantSelectItems(nil, "", ""))
+	assert.Nil(t, buildTenantSelectItems([]NamedItem{}, "", ""))
+}
+
+func TestBuildTenantSelectItems_FallsBackToTenantIDWhenNameBlank(t *testing.T) {
+	accounts := []NamedItem{
+		{Name: "   ", Extra: map[string]string{"tenantId": "tenant-xyz"}},
+	}
+	items := buildTenantSelectItems(accounts, "", "")
+	require.Len(t, items, 2)
+	assert.Equal(t, "tenant-xyz", items[0].Label)
+}
+
+func TestBuildTenantSelectItems_DisambiguatesDuplicateLabels(t *testing.T) {
+	// Two distinct tenants with the same display name (e.g. "test-org" in
+	// dev envs) must not produce visually identical picker options, because
+	// the user could route the allocation to the wrong tenant.
+	accounts := []NamedItem{
+		{Name: "test-org", Extra: map[string]string{"tenantId": "11111111-aaaa-bbbb-cccc-1111aaaa0001"}},
+		{Name: "test-org", Extra: map[string]string{"tenantId": "22222222-aaaa-bbbb-cccc-2222aaaa0002"}},
+		{Name: "unique", Extra: map[string]string{"tenantId": "33333333-aaaa-bbbb-cccc-3333aaaa0003"}},
+	}
+	items := buildTenantSelectItems(accounts, "", "")
+	require.Len(t, items, 4, "three tenants plus the manual-entry sentinel")
+
+	labels := []string{items[0].Label, items[1].Label, items[2].Label}
+	for _, l := range labels {
+		count := 0
+		for _, l2 := range labels {
+			if l == l2 {
+				count++
+			}
+		}
+		assert.Equal(t, 1, count, "label %q must be unique after disambiguation, got %d copies", l, count)
+	}
+
+	uniqueIdx := -1
+	for i, it := range items[:3] {
+		if it.ID == "33333333-aaaa-bbbb-cccc-3333aaaa0003" {
+			uniqueIdx = i
+		}
+	}
+	require.NotEqual(t, -1, uniqueIdx)
+	assert.Equal(t, "unique", items[uniqueIdx].Label,
+		"items whose label is already unique must NOT get a disambiguating suffix")
+}
+
+func TestShortTenantID(t *testing.T) {
+	assert.Equal(t, "short", shortTenantID("short"))
+	assert.Equal(t, "12345678", shortTenantID("12345678"))
+	assert.Equal(t, "ddccbbaa", shortTenantID("11111111-aaaa-bbbb-cccc-ddddccbbaa"),
+		"long UUID must return last 8 chars only")
+}
+
+func TestBuildTenantSelectItems_SortsAlphabeticallyByLabel(t *testing.T) {
+	accounts := []NamedItem{
+		{Name: "zeta", Extra: map[string]string{"tenantId": "tenant-z"}},
+		{Name: "alpha", Extra: map[string]string{"tenantId": "tenant-a"}},
+		{Name: "mu", Extra: map[string]string{"tenantId": "tenant-m"}},
+	}
+	items := buildTenantSelectItems(accounts, "", "")
+	require.Len(t, items, 4)
+	assert.Equal(t, "alpha", items[0].Label)
+	assert.Equal(t, "mu", items[1].Label)
+	assert.Equal(t, "zeta", items[2].Label)
+	assert.Equal(t, tenantManualEntrySentinel, items[3].ID, "manual-entry sentinel must stay last")
+}
+
+func TestBuildTenantSelectItems_SortTieBreaksByID(t *testing.T) {
+	accounts := []NamedItem{
+		{Name: "acme", Extra: map[string]string{"tenantId": "tenant-b"}},
+		{Name: "acme", Extra: map[string]string{"tenantId": "tenant-a"}},
+	}
+	items := buildTenantSelectItems(accounts, "", "")
+	require.Len(t, items, 3)
+	assert.Equal(t, "tenant-a", items[0].ID, "equal labels must tie-break by ID")
+	assert.Equal(t, "tenant-b", items[1].ID)
+}
+
+func TestBuildTenantSelectItems_DeduplicatesByTenantID(t *testing.T) {
+	accounts := []NamedItem{
+		{Name: "acme-prod", Extra: map[string]string{"tenantId": "tenant-1"}},
+		{Name: "acme-dev", Extra: map[string]string{"tenantId": "tenant-1"}},
+		{Name: "globex", Extra: map[string]string{"tenantId": "tenant-2"}},
+	}
+
+	items := buildTenantSelectItems(accounts, "", "")
+
+	require.Len(t, items, 3, "two unique tenants plus the manual-entry sentinel")
+	assert.Equal(t, "tenant-1", items[0].ID)
+	assert.Equal(t, "acme-prod", items[0].Label, "first occurrence wins on dedupe")
+	assert.Equal(t, "tenant-2", items[1].ID)
+	assert.Equal(t, tenantManualEntrySentinel, items[2].ID)
+}
+
+func TestBuildTenantSelectItems_SelfTenantPinnedFirstWithSuffix(t *testing.T) {
+	// Common dev-cluster case: caller is both Provider Admin and Tenant
+	// Admin for the same org, so there are zero tenant-accounts but their
+	// own tenant id is known. Must appear as the first picker entry with
+	// a "(self)" suffix so the label is unambiguous.
+	items := buildTenantSelectItems(nil, "11111111-2222-3333-4444-555566667777", "ncx")
+	require.Len(t, items, 2, "self entry plus manual-entry sentinel")
+	assert.Equal(t, "11111111-2222-3333-4444-555566667777", items[0].ID)
+	assert.Equal(t, "ncx (self)", items[0].Label)
+	assert.Equal(t, tenantManualEntrySentinel, items[1].ID)
+}
+
+func TestBuildTenantSelectItems_SelfTenantBlankOrgFallsBackToID(t *testing.T) {
+	items := buildTenantSelectItems(nil, "abc-tenant-id", "   ")
+	require.Len(t, items, 2)
+	assert.Equal(t, "abc-tenant-id (self)", items[0].Label,
+		"blank org name must fall back to the tenant id so the label is still non-empty")
+}
+
+func TestBuildTenantSelectItems_SelfTenantStaysFirstWhenAccountsSort(t *testing.T) {
+	accounts := []NamedItem{
+		{Name: "zeta", Extra: map[string]string{"tenantId": "tenant-z"}},
+		{Name: "alpha", Extra: map[string]string{"tenantId": "tenant-a"}},
+	}
+	items := buildTenantSelectItems(accounts, "self-tenant", "ncx")
+	require.Len(t, items, 4, "self + 2 tenant-accounts + sentinel")
+	assert.Equal(t, "ncx (self)", items[0].Label, "self always pinned first even if it sorts after")
+	assert.Equal(t, "alpha", items[1].Label, "remaining items sort alphabetically")
+	assert.Equal(t, "zeta", items[2].Label)
+	assert.Equal(t, tenantManualEntrySentinel, items[3].ID)
+}
+
+func TestBuildTenantSelectItems_SelfTenantDedupesWithAccount(t *testing.T) {
+	// If a tenant-account already references the same tenant id as self,
+	// only the self entry is shown (inserted first, so the account-row
+	// copy is dropped by the dedupe map).
+	accounts := []NamedItem{
+		{Name: "ncx", Extra: map[string]string{"tenantId": "self-tenant"}},
+	}
+	items := buildTenantSelectItems(accounts, "self-tenant", "ncx")
+	require.Len(t, items, 2, "one entry (self) plus manual-entry sentinel")
+	assert.Equal(t, "ncx (self)", items[0].Label)
+	assert.Equal(t, "self-tenant", items[0].ID)
+}
+
+func TestBuildTenantSelectItems_EmptySelfTenantIgnored(t *testing.T) {
+	items := buildTenantSelectItems(nil, "", "ncx")
+	assert.Nil(t, items, "no self id and no accounts means no picker")
+}
+
+func TestAllocationConstraintResourceTypes_MatchAPIValidation(t *testing.T) {
+	items := allocationConstraintResourceTypes()
+	ids := make([]string, len(items))
+	for i, it := range items {
+		ids[i] = it.ID
+	}
+	assert.ElementsMatch(t, []string{"IPBlock", "InstanceType"}, ids,
+		"resource type IDs must match APIAllocationConstraintCreateRequest validation")
+}
+
+func TestAllocationConstraintTypes_OnlyExposesReserved(t *testing.T) {
+	items := allocationConstraintTypes()
+	ids := make([]string, len(items))
+	for i, it := range items {
+		ids[i] = it.ID
+	}
+	assert.Equal(t, []string{"Reserved"}, ids,
+		"only Reserved is offered; OnDemand/Preemptible are accepted by the API validator "+
+			"but are documented as unsupported by the current backend implementation")
+}
+
+func TestResolverResourceForAllocationResourceType(t *testing.T) {
+	cases := []struct {
+		resourceType string
+		wantKey      string
+		wantLabel    string
+		wantOK       bool
+	}{
+		{"IPBlock", "ip-block", "IP Block", true},
+		{"InstanceType", "instance-type", "Instance Type", true},
+		{"Unknown", "", "", false},
+		{"", "", "", false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.resourceType, func(t *testing.T) {
+			key, label, ok := resolverResourceForAllocationResourceType(tc.resourceType)
+			assert.Equal(t, tc.wantKey, key)
+			assert.Equal(t, tc.wantLabel, label)
+			assert.Equal(t, tc.wantOK, ok)
+		})
+	}
+}
+
+func TestBuildAllocationConstraint_ValidInput(t *testing.T) {
+	got, err := buildAllocationConstraint("IPBlock", "block-1", "Reserved", "  28 ")
+	require.NoError(t, err)
+	assert.Equal(t, "IPBlock", got["resourceType"])
+	assert.Equal(t, "block-1", got["resourceTypeId"])
+	assert.Equal(t, "Reserved", got["constraintType"])
+	assert.Equal(t, 28, got["constraintValue"], "value must be an int, not a string")
+}
+
+func TestBuildAllocationConstraint_RejectsNonInteger(t *testing.T) {
+	_, err := buildAllocationConstraint("IPBlock", "block-1", "Reserved", "not-a-number")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "integer")
+}
+
+func TestBuildAllocationConstraint_RejectsOutOfRangeIPBlockPrefix(t *testing.T) {
+	_, err := buildAllocationConstraint("IPBlock", "block-1", "Reserved", "0")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "prefix length")
+
+	_, err = buildAllocationConstraint("IPBlock", "block-1", "Reserved", "33")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "prefix length")
+}
+
+func TestBuildAllocationConstraint_AcceptsBoundaryIPBlockPrefix(t *testing.T) {
+	_, err := buildAllocationConstraint("IPBlock", "block-1", "Reserved", "1")
+	require.NoError(t, err)
+	_, err = buildAllocationConstraint("IPBlock", "block-1", "Reserved", "32")
+	require.NoError(t, err)
+}
+
+func TestBuildAllocationConstraint_RejectsNonPositiveInstanceTypeCount(t *testing.T) {
+	_, err := buildAllocationConstraint("InstanceType", "type-1", "Reserved", "0")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "at least 1")
+
+	_, err = buildAllocationConstraint("InstanceType", "type-1", "Reserved", "-5")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "at least 1")
+}
+
+func TestBuildAllocationConstraint_MarshalShape(t *testing.T) {
+	c, err := buildAllocationConstraint("InstanceType", "type-1", "Reserved", "4")
+	require.NoError(t, err)
+	encoded, err := json.Marshal(c)
+	require.NoError(t, err)
+	var decoded map[string]interface{}
+	require.NoError(t, json.Unmarshal(encoded, &decoded))
+	assert.Equal(t, "InstanceType", decoded["resourceType"])
+	assert.Equal(t, "type-1", decoded["resourceTypeId"])
+	assert.Equal(t, "Reserved", decoded["constraintType"])
+	assert.InDelta(t, 4, decoded["constraintValue"], 0.0001,
+		"constraintValue must round-trip through JSON as a number, not a string")
+}
+
+func TestAllocationConstraintValueHint(t *testing.T) {
+	assert.Contains(t, allocationConstraintValueHint("IPBlock"), "prefix")
+	assert.Contains(t, allocationConstraintValueHint("InstanceType"), "machine")
+	assert.NotEmpty(t, allocationConstraintValueHint("Unknown"), "unknown types still get a generic hint")
 }
