@@ -458,6 +458,39 @@ func (cah CreateAllocationHandler) Handle(c echo.Context) error {
 		} else {
 			logger.Info().Str("Workflow ID", we.GetID()).Msg("triggered workflow to create Tenant")
 		}
+
+		// Auto-associate tenant-owned Global-scoped iPXE OSes (both raw and
+		// Templated) with the new site. This mirrors the provider-side
+		// auto-expansion in the Site create handler.
+		globalTenantOSes, _, goserr := cdbm.NewOperatingSystemDAO(cah.dbSession).GetAll(
+			ctx, tx,
+			cdbm.OperatingSystemFilterInput{
+				TenantIDs: []uuid.UUID{tenant.ID},
+				OsTypes:   []string{cdbm.OperatingSystemTypeIPXE, cdbm.OperatingSystemTypeTemplatedIPXE},
+				Scopes:    []string{cdbm.OperatingSystemScopeGlobal},
+			},
+			cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)},
+			nil,
+		)
+		if goserr != nil {
+			logger.Error().Err(goserr).Msg("error retrieving tenant global-scoped OSes for auto-expansion")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve global-scoped OSes for tenant, DB error", nil)
+		}
+		ossaDAO := cdbm.NewOperatingSystemSiteAssociationDAO(cah.dbSession)
+		for _, gos := range globalTenantOSes {
+			if _, aerr := ossaDAO.Create(ctx, tx, cdbm.OperatingSystemSiteAssociationCreateInput{
+				OperatingSystemID: gos.ID,
+				SiteID:            site.ID,
+				Status:            cdbm.OperatingSystemSiteAssociationStatusSyncing,
+				CreatedBy:         dbUser.ID,
+			}); aerr != nil {
+				logger.Error().Err(aerr).Str("osID", gos.ID.String()).Msg("Failed to auto-associate tenant global OS with new site")
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to associate global-scoped Operating Systems with new Site", nil)
+			}
+		}
+		if len(globalTenantOSes) > 0 {
+			logger.Info().Int("count", len(globalTenantOSes)).Msg("Auto-associated tenant global-scoped OSes with new site")
+		}
 	}
 
 	// Commit transaction

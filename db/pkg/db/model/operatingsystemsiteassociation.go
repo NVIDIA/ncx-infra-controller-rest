@@ -83,6 +83,7 @@ type OperatingSystemSiteAssociation struct {
 	Site              *Site            `bun:"rel:belongs-to,join:site_id=id"`
 	Version           *string          `bun:"version"`
 	Status            string           `bun:"status,notnull"`
+	ControllerState   *string          `bun:"controller_state"`
 	IsMissingOnSite   bool             `bun:"is_missing_on_site,notnull"`
 	Created           time.Time        `bun:"created,nullzero,notnull,default:current_timestamp"`
 	Updated           time.Time        `bun:"updated,nullzero,notnull,default:current_timestamp"`
@@ -106,6 +107,7 @@ type OperatingSystemSiteAssociationUpdateInput struct {
 	SiteID                           *uuid.UUID
 	Version                          *string
 	Status                           *string
+	ControllerState                  *string
 	IsMissingOnSite                  *bool
 }
 
@@ -412,6 +414,11 @@ func (ossasd OperatingSystemSiteAssociationSQLDAO) Update(
 		ossa.IsMissingOnSite = *input.IsMissingOnSite
 		updatedFields = append(updatedFields, "is_missing_on_site")
 		ossasd.tracerSpan.SetAttribute(OperatingSystemSiteAssociationDAOSpan, "is_missing_on_site", *input.IsMissingOnSite)
+	}
+	if input.ControllerState != nil {
+		ossa.ControllerState = input.ControllerState
+		updatedFields = append(updatedFields, "controller_state")
+		ossasd.tracerSpan.SetAttribute(OperatingSystemSiteAssociationDAOSpan, "controller_state", *input.ControllerState)
 	}
 
 	if len(updatedFields) > 0 {

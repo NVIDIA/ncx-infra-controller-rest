@@ -79,7 +79,7 @@ func NewCreateInstanceHandler(dbSession *cdb.Session, tc temporalClient.Client, 
 // apiRequest will be mutated for use in createFromParams.
 // osConfig will hold the struct/data for use with Temporal/Carbide calls.
 // Errors should be returned in the form of cutil.NewAPIErrorResponse
-func (cih CreateInstanceHandler) buildInstanceCreateRequestOsConfig(c echo.Context, logger *zerolog.Logger, apiRequest *model.APIInstanceCreateRequest, site *cdbm.Site) (*cwssaws.OperatingSystem, *uuid.UUID, *cutil.APIError) {
+func (cih CreateInstanceHandler) buildInstanceCreateRequestOsConfig(c echo.Context, logger *zerolog.Logger, apiRequest *model.APIInstanceCreateRequest, site *cdbm.Site, tenant *cdbm.Tenant) (*cwssaws.InstanceOperatingSystemConfig, *uuid.UUID, *cutil.APIError) {
 
 	ctx := c.Request().Context()
 
@@ -91,10 +91,10 @@ func (cih CreateInstanceHandler) buildInstanceCreateRequestOsConfig(c echo.Conte
 			return nil, nil, cutil.NewAPIError(http.StatusBadRequest, "Failed to validate OperatingSystem data", err)
 		}
 
-		return &cwssaws.OperatingSystem{
+		return &cwssaws.InstanceOperatingSystemConfig{
 			RunProvisioningInstructionsOnEveryBoot: *apiRequest.AlwaysBootWithCustomIpxe, // Set by the earlier call to ValidateAndSetOperatingSystemData
 			PhoneHomeEnabled:                       *apiRequest.PhoneHomeEnabled,         // Set by the earlier call to ValidateAndSetOperatingSystemData
-			Variant: &cwssaws.OperatingSystem_Ipxe{
+			Variant: &cwssaws.InstanceOperatingSystemConfig_Ipxe{
 				Ipxe: &cwssaws.InlineIpxe{
 					IpxeScript: *apiRequest.IpxeScript,
 				},
@@ -137,8 +137,8 @@ func (cih CreateInstanceHandler) buildInstanceCreateRequestOsConfig(c echo.Conte
 		return c.Str("OperatingSystem ID", os.ID.String())
 	})
 
-	// Confirm ownership between tenant and OS.
-	if os.TenantID.String() != apiRequest.TenantID {
+	// Tenant can use this OS if they created it or it is offered by Provider
+	if !(os.TenantID == nil || *os.TenantID == tenant.ID) {
 		logger.Error().Msg("OperatingSystem in request is not owned by tenant")
 		return nil, nil, cutil.NewAPIError(http.StatusBadRequest, "OperatingSystem specified in request is not owned by Tenant", nil)
 	}
@@ -148,10 +148,8 @@ func (cih CreateInstanceHandler) buildInstanceCreateRequestOsConfig(c echo.Conte
 			logger.Warn().Str("operatingSystemId", os.ID.String()).Str("siteId", site.ID.String()).Msg("Creation of Instance with Image based Operating System is not supported for Site, ImageBasedOperatingSystem capability is not enabled")
 			return nil, nil, cutil.NewAPIError(http.StatusBadRequest, "Creation of Instance with Image based Operating System is not supported. Site must have ImageBasedOperatingSystem capability enabled.", nil)
 		}
-	}
 
-	// Confirm match between site and OS (only for Image type).
-	if os.Type == cdbm.OperatingSystemTypeImage {
+		// Confirm match between site and OS.
 		ossaDAO := cdbm.NewOperatingSystemSiteAssociationDAO(cih.dbSession)
 		_, ossaCount, err := ossaDAO.GetAll(
 			ctx,
@@ -187,29 +185,27 @@ func (cih CreateInstanceHandler) buildInstanceCreateRequestOsConfig(c echo.Conte
 
 	// Options below should all have been set by the
 	// earlier call to ValidateAndSetOperatingSystemData
-
-	if os.Type == cdbm.OperatingSystemTypeIPXE {
-		return &cwssaws.OperatingSystem{
-			RunProvisioningInstructionsOnEveryBoot: *apiRequest.AlwaysBootWithCustomIpxe,
-			PhoneHomeEnabled:                       *apiRequest.PhoneHomeEnabled,
-			Variant: &cwssaws.OperatingSystem_Ipxe{
-				Ipxe: &cwssaws.InlineIpxe{
-					IpxeScript: *apiRequest.IpxeScript,
-				},
-			},
-			UserData: apiRequest.UserData,
-		}, osID, nil
-	} else {
-		return &cwssaws.OperatingSystem{
-			PhoneHomeEnabled: *apiRequest.PhoneHomeEnabled,
-			Variant: &cwssaws.OperatingSystem_OsImageId{
-				OsImageId: &cwssaws.UUID{
-					Value: os.ID.String(),
-				},
-			},
-			UserData: apiRequest.UserData,
-		}, osID, nil
+	result := cwssaws.InstanceOperatingSystemConfig{
+		PhoneHomeEnabled: *apiRequest.PhoneHomeEnabled,
+		UserData:         apiRequest.UserData,
 	}
+	switch os.Type {
+	case cdbm.OperatingSystemTypeIPXE:
+		result.RunProvisioningInstructionsOnEveryBoot = *apiRequest.AlwaysBootWithCustomIpxe
+		result.Variant = &cwssaws.InstanceOperatingSystemConfig_Ipxe{
+			Ipxe: &cwssaws.InlineIpxe{IpxeScript: *apiRequest.IpxeScript},
+		}
+	case cdbm.OperatingSystemTypeTemplatedIPXE:
+		result.RunProvisioningInstructionsOnEveryBoot = *apiRequest.AlwaysBootWithCustomIpxe
+		result.Variant = &cwssaws.InstanceOperatingSystemConfig_OperatingSystemId{
+			OperatingSystemId: &cwssaws.OperatingSystemId{Value: os.ID.String()},
+		}
+	case cdbm.OperatingSystemTypeImage:
+		result.Variant = &cwssaws.InstanceOperatingSystemConfig_OsImageId{
+			OsImageId: &cwssaws.UUID{Value: os.ID.String()},
+		}
+	}
+	return &result, osID, nil
 }
 
 // Handle godoc
@@ -324,19 +320,18 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve tenant for org", nil)
 	}
 
-	// Deprecated: tenantId in request body. Infer from org when not provided.
-	if apiRequest.TenantID == "" {
-		apiRequest.TenantID = tenant.ID.String()
-	}
-
-	apiTenant, err := common.GetTenantFromIDString(ctx, nil, apiRequest.TenantID, cih.dbSession)
-	if err != nil {
-		logger.Warn().Err(err).Msg("error retrieving tenant from request")
-		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "TenantID in request is not valid", nil)
-	}
-	if apiTenant.ID != tenant.ID {
-		logger.Warn().Msg("tenant id in request does not match tenant in org")
-		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "TenantID in request does not match tenant in org", nil)
+	// If the caller provided an explicit tenantId in the body, validate it matches the org.
+	// TODO: tenantId as parameter is deprecated and will need to be removed by 2026-10-01.
+	if apiRequest.TenantID != "" {
+		apiTenant, terr := common.GetTenantFromIDString(ctx, nil, apiRequest.TenantID, cih.dbSession)
+		if terr != nil {
+			logger.Warn().Err(terr).Msg("error retrieving tenant from request")
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "TenantID in request is not valid", nil)
+		}
+		if apiTenant.ID != tenant.ID {
+			logger.Warn().Msg("tenant id in request does not match tenant in org")
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "TenantID in request does not match tenant in org", nil)
+		}
 	}
 
 	// Validate the VPC state
@@ -750,7 +745,7 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 	// apiRequest will be mutated for use in CreateFromParams.
 	// osConfig will hold the struct/data for use with Temporal/Carbide calls.
 	// Errors will be returned already in the form of cutil.NewAPIErrorResponse
-	osConfig, osID, oserr := cih.buildInstanceCreateRequestOsConfig(c, &logger, &apiRequest, site)
+	osConfig, osID, oserr := cih.buildInstanceCreateRequestOsConfig(c, &logger, &apiRequest, site, tenant)
 	if oserr != nil {
 		// buildInstanceCreateRequestOsConfig already handles logging,
 		// so this is a bit redundant, but this log brings you to the
@@ -1842,7 +1837,7 @@ func (uih UpdateInstanceHandler) handleReboot(c echo.Context, logger *zerolog.Lo
 // apiRequest will be mutated for use in UpdateFromParams.
 // osConfig will hold the struct/data for use with Temporal/Carbide calls.
 // Errors should be returned in the form of cutil.NewAPIErrorResponse
-func (uih UpdateInstanceHandler) buildInstanceUpdateRequestOsConfig(c echo.Context, logger *zerolog.Logger, apiRequest *model.APIInstanceUpdateRequest, instance *cdbm.Instance, site *cdbm.Site) (*cwssaws.OperatingSystem, *uuid.UUID, *cutil.APIError) {
+func (uih UpdateInstanceHandler) buildInstanceUpdateRequestOsConfig(c echo.Context, logger *zerolog.Logger, apiRequest *model.APIInstanceUpdateRequest, instance *cdbm.Instance, site *cdbm.Site) (*cwssaws.InstanceOperatingSystemConfig, *uuid.UUID, *cutil.APIError) {
 
 	var os *cdbm.OperatingSystem
 	var osID *uuid.UUID
@@ -1857,10 +1852,10 @@ func (uih UpdateInstanceHandler) buildInstanceUpdateRequestOsConfig(c echo.Conte
 			return nil, nil, cutil.NewAPIError(http.StatusBadRequest, "Failed to validate OperatingSystem data", err)
 		}
 
-		return &cwssaws.OperatingSystem{
+		return &cwssaws.InstanceOperatingSystemConfig{
 			RunProvisioningInstructionsOnEveryBoot: instance.AlwaysBootWithCustomIpxe,
 			PhoneHomeEnabled:                       *apiRequest.PhoneHomeEnabled, // Set by the earlier call to ValidateAndSetOperatingSystemData
-			Variant: &cwssaws.OperatingSystem_Ipxe{
+			Variant: &cwssaws.InstanceOperatingSystemConfig_Ipxe{
 				Ipxe: &cwssaws.InlineIpxe{
 					IpxeScript: *apiRequest.IpxeScript,
 				},
@@ -1914,7 +1909,8 @@ func (uih UpdateInstanceHandler) buildInstanceUpdateRequestOsConfig(c echo.Conte
 		})
 
 		// Confirm ownership between tenant and OS.
-		if os.TenantID.String() != instance.Tenant.ID.String() {
+		// Provider-owned OS (TenantID is nil) is accessible to any tenant.
+		if os.TenantID != nil && os.TenantID.String() != instance.Tenant.ID.String() {
 			logger.Error().Msg("OperatingSystem in request is not owned by tenant")
 			return nil, nil, cutil.NewAPIError(http.StatusBadRequest, "Operating system specified in request is not owned by Tenant", nil)
 		}
@@ -1925,10 +1921,8 @@ func (uih UpdateInstanceHandler) buildInstanceUpdateRequestOsConfig(c echo.Conte
 				logger.Warn().Str("operatingSystemId", os.ID.String()).Str("siteId", site.ID.String()).Msg("Instance update with Image based Operating System is not supported for Site, ImageBasedOperatingSystem capability is not enabled")
 				return nil, nil, cutil.NewAPIError(http.StatusBadRequest, "Update of Instance with Image based Operating System is not supported. Site must have ImageBasedOperatingSystem capability enabled.", nil)
 			}
-		}
 
-		// Confirm match between site and OS (only for Image type).
-		if os.Type == cdbm.OperatingSystemTypeImage {
+			// Confirm match between site and OS.
 			ossaDAO := cdbm.NewOperatingSystemSiteAssociationDAO(uih.dbSession)
 			_, ossaCount, err := ossaDAO.GetAll(
 				ctx,
@@ -1953,9 +1947,15 @@ func (uih UpdateInstanceHandler) buildInstanceUpdateRequestOsConfig(c echo.Conte
 		}
 	}
 
-	// reject deactivated OS except if OS stays the same:
+	// Reject deactivated OS except when the OS stays the same (caller did not
+	// supply operatingSystemId, or supplied the same id the instance already has).
+	// In particular, if the instance currently has no OS and the caller is now
+	// selecting a deactivated OS, that is treated as an explicit change and rejected.
 	if os != nil && !os.IsActive {
-		if apiRequest.OperatingSystemID != nil && instance.OperatingSystemID != nil && *apiRequest.OperatingSystemID != instance.OperatingSystemID.String() {
+		isExplicitChange := apiRequest.OperatingSystemID != nil &&
+			(instance.OperatingSystemID == nil ||
+				*apiRequest.OperatingSystemID != instance.OperatingSystemID.String())
+		if isExplicitChange {
 			return nil, nil, cutil.NewAPIError(http.StatusBadRequest, "Operating System specified in request has been deactivated and cannot be used to update an instance", nil)
 		}
 	}
@@ -1997,41 +1997,35 @@ func (uih UpdateInstanceHandler) buildInstanceUpdateRequestOsConfig(c echo.Conte
 		phoneHomeEnabled = *apiRequest.PhoneHomeEnabled
 	}
 
+	result := cwssaws.InstanceOperatingSystemConfig{
+		PhoneHomeEnabled: phoneHomeEnabled,
+		UserData:         userData,
+	}
 	if os != nil {
-		if os.Type == cdbm.OperatingSystemTypeIPXE {
-			return &cwssaws.OperatingSystem{
-				RunProvisioningInstructionsOnEveryBoot: alwaysBootWithCustomIpxe,
-				PhoneHomeEnabled:                       phoneHomeEnabled,
-				Variant: &cwssaws.OperatingSystem_Ipxe{
-					Ipxe: &cwssaws.InlineIpxe{
-						IpxeScript: *ipxeScript,
-					},
-				},
-				UserData: userData,
-			}, osID, nil
-		} else if os.Type == cdbm.OperatingSystemTypeImage {
-			return &cwssaws.OperatingSystem{
-				PhoneHomeEnabled: phoneHomeEnabled,
-				Variant: &cwssaws.OperatingSystem_OsImageId{
-					OsImageId: &cwssaws.UUID{
-						Value: os.ID.String(),
-					},
-				},
-				UserData: userData,
-			}, osID, nil
+		switch os.Type {
+		case cdbm.OperatingSystemTypeIPXE:
+			result.RunProvisioningInstructionsOnEveryBoot = alwaysBootWithCustomIpxe
+			result.Variant = &cwssaws.InstanceOperatingSystemConfig_Ipxe{
+				Ipxe: &cwssaws.InlineIpxe{IpxeScript: *ipxeScript},
+			}
+		case cdbm.OperatingSystemTypeTemplatedIPXE:
+			result.RunProvisioningInstructionsOnEveryBoot = alwaysBootWithCustomIpxe
+			result.Variant = &cwssaws.InstanceOperatingSystemConfig_OperatingSystemId{
+				OperatingSystemId: &cwssaws.OperatingSystemId{Value: os.ID.String()},
+			}
+		case cdbm.OperatingSystemTypeImage:
+			result.Variant = &cwssaws.InstanceOperatingSystemConfig_OsImageId{
+				OsImageId: &cwssaws.UUID{Value: os.ID.String()},
+			}
+		}
+	} else {
+		result.RunProvisioningInstructionsOnEveryBoot = alwaysBootWithCustomIpxe
+		result.Variant = &cwssaws.InstanceOperatingSystemConfig_Ipxe{
+			Ipxe: &cwssaws.InlineIpxe{IpxeScript: *ipxeScript},
 		}
 	}
 
-	return &cwssaws.OperatingSystem{
-		RunProvisioningInstructionsOnEveryBoot: alwaysBootWithCustomIpxe,
-		PhoneHomeEnabled:                       phoneHomeEnabled,
-		Variant: &cwssaws.OperatingSystem_Ipxe{
-			Ipxe: &cwssaws.InlineIpxe{
-				IpxeScript: *ipxeScript,
-			},
-		},
-		UserData: userData,
-	}, osID, nil
+	return &result, osID, nil
 }
 
 // Handle godoc

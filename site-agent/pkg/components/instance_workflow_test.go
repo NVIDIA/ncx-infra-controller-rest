@@ -333,9 +333,9 @@ func TestInstanceWorkflows(t *testing.T) {
 					},
 				},
 			},
-			Os: &wflows.OperatingSystem{
+			Os: &wflows.InstanceOperatingSystemConfig{
 				RunProvisioningInstructionsOnEveryBoot: true,
-				Variant: &wflows.OperatingSystem_Ipxe{
+				Variant: &wflows.InstanceOperatingSystemConfig_Ipxe{
 					Ipxe: &wflows.InlineIpxe{
 						IpxeScript: "#!ipxe",
 					},

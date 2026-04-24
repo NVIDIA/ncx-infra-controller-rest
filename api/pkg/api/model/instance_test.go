@@ -1106,6 +1106,38 @@ func TestAPIInstanceCreateRequest_ValidateAndSetOperatingSystemData(t *testing.T
 	imageOSDeactivated.IsActive = false
 	imageOSDeactivated.ID = uuid.New()
 
+	templatedIpxeOs := &cdbm.OperatingSystem{
+		ID:               uuid.New(),
+		Name:             "templated-ipxe-os",
+		IpxeScript:       nil,
+		IpxeTemplateId:   cdb.GetStrPtr("my-template"),
+		UserData:         nil,
+		PhoneHomeEnabled: false,
+		IsActive:         true,
+		Status:           cdbm.OperatingSystemStatusReady,
+		AllowOverride:    false,
+		Type:             cdbm.OperatingSystemTypeTemplatedIPXE,
+		CreatedBy:        uuid.New(),
+	}
+
+	templatedIpxeOsDeactivated := new(cdbm.OperatingSystem)
+	*templatedIpxeOsDeactivated = *templatedIpxeOs
+	templatedIpxeOsDeactivated.IsActive = false
+	templatedIpxeOsDeactivated.ID = uuid.New()
+
+	providerOwnedIpxeOs := &cdbm.OperatingSystem{
+		ID:                       uuid.New(),
+		Name:                     "provider-ipxe-os",
+		IpxeTemplateId:           cdb.GetStrPtr("provider-template"),
+		PhoneHomeEnabled:         false,
+		IsActive:                 true,
+		Status:                   cdbm.OperatingSystemStatusReady,
+		AllowOverride:            false,
+		Type:                     cdbm.OperatingSystemTypeTemplatedIPXE,
+		InfrastructureProviderID: cdb.GetUUIDPtr(uuid.New()),
+		CreatedBy:                uuid.New(),
+	}
+
 	tests := []struct {
 		name         string
 		fields       fields
@@ -1386,6 +1418,97 @@ func TestAPIInstanceCreateRequest_ValidateAndSetOperatingSystemData(t *testing.T
 			wantErr: false,
 			cfg:     cfg1,
 			os:      os,
+		},
+		// ─── Templated iPXE OS instance creation ──────────────────────────
+		{
+			name: "templated iPXE os selected, no override, phone-home enabled, should succeed",
+			fields: fields{
+				Name:              "test-name",
+				Description:       cdb.GetStrPtr("Test description"),
+				TenantID:          uuid.NewString(),
+				InstanceTypeID:    uuid.NewString(),
+				VpcID:             uuid.NewString(),
+				OperatingSystemID: cdb.GetStrPtr(templatedIpxeOs.ID.String()),
+				PhoneHomeEnabled:  cdb.GetBoolPtr(true),
+			},
+			os:      templatedIpxeOs,
+			cfg:     cfg1,
+			wantErr: false,
+		},
+		{
+			name: "templated iPXE os selected, iPXE script specified, should fail",
+			fields: fields{
+				Name:              "test-name",
+				Description:       cdb.GetStrPtr("Test description"),
+				TenantID:          uuid.NewString(),
+				InstanceTypeID:    uuid.NewString(),
+				VpcID:             uuid.NewString(),
+				OperatingSystemID: cdb.GetStrPtr(templatedIpxeOs.ID.String()),
+				IpxeScript:        cdb.GetStrPtr("#!ipxe\nboot"),
+			},
+			os:      templatedIpxeOs,
+			cfg:     cfg1,
+			wantErr: true,
+		},
+		{
+			name: "deactivated templated iPXE os selected, should fail",
+			fields: fields{
+				Name:              "test-name",
+				Description:       cdb.GetStrPtr("Test description"),
+				TenantID:          uuid.NewString(),
+				InstanceTypeID:    uuid.NewString(),
+				VpcID:             uuid.NewString(),
+				OperatingSystemID: cdb.GetStrPtr(templatedIpxeOsDeactivated.ID.String()),
+			},
+			os:      templatedIpxeOsDeactivated,
+			cfg:     cfg1,
+			wantErr: true,
+		},
+		{
+			name: "templated iPXE os, AlwaysBootWithCustomIpxe, should fail",
+			fields: fields{
+				Name:                     "test-name",
+				Description:              cdb.GetStrPtr("Test description"),
+				TenantID:                 uuid.NewString(),
+				InstanceTypeID:           uuid.NewString(),
+				VpcID:                    uuid.NewString(),
+				OperatingSystemID:        cdb.GetStrPtr(templatedIpxeOs.ID.String()),
+				AlwaysBootWithCustomIpxe: cdb.GetBoolPtr(true),
+			},
+			os:      templatedIpxeOs,
+			cfg:     cfg1,
+			wantErr: true,
+		},
+		// ─── Provider-owned OS instance creation ──────────────────────────
+		{
+			name: "provider-owned templated iPXE os, no override, phone-home enabled, should succeed",
+			fields: fields{
+				Name:              "test-name",
+				Description:       cdb.GetStrPtr("Test description"),
+				TenantID:          uuid.NewString(),
+				InstanceTypeID:    uuid.NewString(),
+				VpcID:             uuid.NewString(),
+				OperatingSystemID: cdb.GetStrPtr(providerOwnedIpxeOs.ID.String()),
+				PhoneHomeEnabled:  cdb.GetBoolPtr(true),
+			},
+			os:      providerOwnedIpxeOs,
+			cfg:     cfg1,
+			wantErr: false,
+		},
+		{
+			name: "provider-owned templated iPXE os, user-data specified but no override, should fail",
+			fields: fields{
+				Name:              "test-name",
+				Description:       cdb.GetStrPtr("Test description"),
+				TenantID:          uuid.NewString(),
+				InstanceTypeID:    uuid.NewString(),
+				VpcID:             uuid.NewString(),
+				OperatingSystemID: cdb.GetStrPtr(providerOwnedIpxeOs.ID.String()),
+				UserData:          cdb.GetStrPtr("custom user data"),
+			},
+			os:      providerOwnedIpxeOs,
+			cfg:     cfg1,
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {

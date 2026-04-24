@@ -195,6 +195,277 @@ func TestAPIOperatingSystemCreateRequest_Validate(t *testing.T) {
 			obj:       APIOperatingSystemCreateRequest{Name: "abc", TenantID: cdb.GetStrPtr(uuid.New().String()), ImageURL: cdb.GetStrPtr("http://iso.net/iso"), SiteIDs: []string{uuid.NewString()}, ImageSHA: cdb.GetStrPtr("a1efca12ea51069abb123bf9c77889fcc2a31cc5483fc14d115e44fdf07c7980"), RootFsID: cdb.GetStrPtr("666c2eee-193d-42db-a490-4c444342bd4e"), IsCloudInit: true, AllowOverride: false, ImageDisk: cdb.GetStrPtr(""), ImageAuthType: cdb.GetStrPtr(""), ImageAuthToken: cdb.GetStrPtr("")},
 			expectErr: false,
 		},
+		// ─── Templated iPXE OS validation ─────────────────────────────────
+		{
+			desc: "ok when valid templated iPXE with global scope",
+			obj: APIOperatingSystemCreateRequest{
+				Name:           "tmpl-os-global",
+				IpxeTemplateId: cdb.GetStrPtr("my-template"),
+				Scope:          cdb.GetStrPtr(cdbm.OperatingSystemScopeGlobal),
+				IpxeTemplateParameters: []cdbm.OperatingSystemIpxeParameter{
+					{Name: "kernel_params", Value: "ip=dhcp"},
+				},
+				IpxeTemplateArtifacts: []cdbm.OperatingSystemIpxeArtifact{
+					{Name: "kernel", URL: "http://files.example.com/vmlinuz", CacheStrategy: "CACHE_AS_NEEDED"},
+				},
+			},
+			expectErr: false,
+		},
+		{
+			desc: "ok when valid templated iPXE with limited scope and siteIds",
+			obj: APIOperatingSystemCreateRequest{
+				Name:           "tmpl-os-limited",
+				IpxeTemplateId: cdb.GetStrPtr("my-template"),
+				Scope:          cdb.GetStrPtr(cdbm.OperatingSystemScopeLimited),
+				SiteIDs:        []string{uuid.NewString()},
+			},
+			expectErr: false,
+		},
+		{
+			desc: "error when templated iPXE missing scope",
+			obj: APIOperatingSystemCreateRequest{
+				Name:           "tmpl-os-no-scope",
+				IpxeTemplateId: cdb.GetStrPtr("my-template"),
+			},
+			expectErr: true,
+		},
+		{
+			desc: "error when templated iPXE with scope Local",
+			obj: APIOperatingSystemCreateRequest{
+				Name:           "tmpl-os-local",
+				IpxeTemplateId: cdb.GetStrPtr("my-template"),
+				Scope:          cdb.GetStrPtr(cdbm.OperatingSystemScopeLocal),
+			},
+			expectErr: true,
+		},
+		{
+			desc: "error when templated iPXE with invalid scope",
+			obj: APIOperatingSystemCreateRequest{
+				Name:           "tmpl-os-bad-scope",
+				IpxeTemplateId: cdb.GetStrPtr("my-template"),
+				Scope:          cdb.GetStrPtr("InvalidScope"),
+			},
+			expectErr: true,
+		},
+		{
+			desc: "error when templated iPXE with limited scope but no siteIds",
+			obj: APIOperatingSystemCreateRequest{
+				Name:           "tmpl-os-limited-no-sites",
+				IpxeTemplateId: cdb.GetStrPtr("my-template"),
+				Scope:          cdb.GetStrPtr(cdbm.OperatingSystemScopeLimited),
+			},
+			expectErr: true,
+		},
+		{
+			desc: "error when templated iPXE with global scope and siteIds",
+			obj: APIOperatingSystemCreateRequest{
+				Name:           "tmpl-os-global-with-sites",
+				IpxeTemplateId: cdb.GetStrPtr("my-template"),
+				Scope:          cdb.GetStrPtr(cdbm.OperatingSystemScopeGlobal),
+				SiteIDs:        []string{uuid.NewString()},
+			},
+			expectErr: true,
+		},
+		{
+			desc: "error when both ipxeScript and ipxeTemplateId specified",
+			obj: APIOperatingSystemCreateRequest{
+				Name:           "tmpl-os-conflict",
+				IpxeScript:     cdb.GetStrPtr("ipxe"),
+				IpxeTemplateId: cdb.GetStrPtr("my-template"),
+				Scope:          cdb.GetStrPtr(cdbm.OperatingSystemScopeGlobal),
+			},
+			expectErr: true,
+		},
+		{
+			desc: "error when ipxeTemplateId is empty string",
+			obj: APIOperatingSystemCreateRequest{
+				Name:           "tmpl-os-empty-id",
+				IpxeTemplateId: cdb.GetStrPtr(""),
+				Scope:          cdb.GetStrPtr(cdbm.OperatingSystemScopeGlobal),
+			},
+			expectErr: true,
+		},
+		{
+			desc: "error when ipxeTemplateId is whitespace only",
+			obj: APIOperatingSystemCreateRequest{
+				Name:           "tmpl-os-ws-id",
+				IpxeTemplateId: cdb.GetStrPtr("   "),
+				Scope:          cdb.GetStrPtr(cdbm.OperatingSystemScopeGlobal),
+			},
+			expectErr: true,
+		},
+		{
+			desc: "error when templated iPXE has image fields",
+			obj: APIOperatingSystemCreateRequest{
+				Name:           "tmpl-os-image-fields",
+				IpxeTemplateId: cdb.GetStrPtr("my-template"),
+				Scope:          cdb.GetStrPtr(cdbm.OperatingSystemScopeGlobal),
+				ImageSHA:       cdb.GetStrPtr("abc123"),
+			},
+			expectErr: true,
+		},
+		{
+			desc: "error when template parameter has empty name",
+			obj: APIOperatingSystemCreateRequest{
+				Name:           "tmpl-os-bad-param",
+				IpxeTemplateId: cdb.GetStrPtr("my-template"),
+				Scope:          cdb.GetStrPtr(cdbm.OperatingSystemScopeGlobal),
+				IpxeTemplateParameters: []cdbm.OperatingSystemIpxeParameter{
+					{Name: "", Value: "val"},
+				},
+			},
+			expectErr: true,
+		},
+		{
+			desc: "error when template artifact has empty name",
+			obj: APIOperatingSystemCreateRequest{
+				Name:           "tmpl-os-bad-art-name",
+				IpxeTemplateId: cdb.GetStrPtr("my-template"),
+				Scope:          cdb.GetStrPtr(cdbm.OperatingSystemScopeGlobal),
+				IpxeTemplateArtifacts: []cdbm.OperatingSystemIpxeArtifact{
+					{Name: "", URL: "http://example.com/vmlinuz", CacheStrategy: "CACHE_AS_NEEDED"},
+				},
+			},
+			expectErr: true,
+		},
+		{
+			desc: "error when template artifact has empty URL",
+			obj: APIOperatingSystemCreateRequest{
+				Name:           "tmpl-os-bad-art-url",
+				IpxeTemplateId: cdb.GetStrPtr("my-template"),
+				Scope:          cdb.GetStrPtr(cdbm.OperatingSystemScopeGlobal),
+				IpxeTemplateArtifacts: []cdbm.OperatingSystemIpxeArtifact{
+					{Name: "kernel", URL: "", CacheStrategy: "CACHE_AS_NEEDED"},
+				},
+			},
+			expectErr: true,
+		},
+		{
+			desc: "error when template artifact has invalid cacheStrategy",
+			obj: APIOperatingSystemCreateRequest{
+				Name:           "tmpl-os-bad-art-cache",
+				IpxeTemplateId: cdb.GetStrPtr("my-template"),
+				Scope:          cdb.GetStrPtr(cdbm.OperatingSystemScopeGlobal),
+				IpxeTemplateArtifacts: []cdbm.OperatingSystemIpxeArtifact{
+					{Name: "kernel", URL: "http://example.com/vmlinuz", CacheStrategy: "INVALID_STRATEGY"},
+				},
+			},
+			expectErr: true,
+		},
+		{
+			desc: "error when template artifact has authType without authToken",
+			obj: APIOperatingSystemCreateRequest{
+				Name:           "tmpl-os-art-auth-notoken",
+				IpxeTemplateId: cdb.GetStrPtr("my-template"),
+				Scope:          cdb.GetStrPtr(cdbm.OperatingSystemScopeGlobal),
+				IpxeTemplateArtifacts: []cdbm.OperatingSystemIpxeArtifact{
+					{Name: "kernel", URL: "http://example.com/vmlinuz", CacheStrategy: "CACHE_AS_NEEDED", AuthType: cdb.GetStrPtr("Bearer")},
+				},
+			},
+			expectErr: true,
+		},
+		{
+			desc: "error when template artifact has authToken without authType",
+			obj: APIOperatingSystemCreateRequest{
+				Name:           "tmpl-os-art-token-notype",
+				IpxeTemplateId: cdb.GetStrPtr("my-template"),
+				Scope:          cdb.GetStrPtr(cdbm.OperatingSystemScopeGlobal),
+				IpxeTemplateArtifacts: []cdbm.OperatingSystemIpxeArtifact{
+					{Name: "kernel", URL: "http://example.com/vmlinuz", CacheStrategy: "CACHE_AS_NEEDED", AuthToken: cdb.GetStrPtr("secret")},
+				},
+			},
+			expectErr: true,
+		},
+		{
+			desc: "error when template artifact has invalid authType",
+			obj: APIOperatingSystemCreateRequest{
+				Name:           "tmpl-os-art-bad-authtype",
+				IpxeTemplateId: cdb.GetStrPtr("my-template"),
+				Scope:          cdb.GetStrPtr(cdbm.OperatingSystemScopeGlobal),
+				IpxeTemplateArtifacts: []cdbm.OperatingSystemIpxeArtifact{
+					{Name: "kernel", URL: "http://example.com/vmlinuz", CacheStrategy: "CACHE_AS_NEEDED", AuthType: cdb.GetStrPtr("VAPID"), AuthToken: cdb.GetStrPtr("secret")},
+				},
+			},
+			expectErr: true,
+		},
+		{
+			desc: "ok when template artifact has valid auth pair",
+			obj: APIOperatingSystemCreateRequest{
+				Name:           "tmpl-os-art-valid-auth",
+				IpxeTemplateId: cdb.GetStrPtr("my-template"),
+				Scope:          cdb.GetStrPtr(cdbm.OperatingSystemScopeGlobal),
+				IpxeTemplateArtifacts: []cdbm.OperatingSystemIpxeArtifact{
+					{Name: "kernel", URL: "http://example.com/vmlinuz", CacheStrategy: "CACHE_AS_NEEDED", AuthType: cdb.GetStrPtr("Bearer"), AuthToken: cdb.GetStrPtr("secret")},
+				},
+			},
+			expectErr: false,
+		},
+		{
+			desc: "raw iPXE with explicit Global scope is allowed",
+			obj: APIOperatingSystemCreateRequest{
+				Name:       "raw-ipxe-with-global-scope",
+				IpxeScript: cdb.GetStrPtr("ipxe-script"),
+				Scope:      cdb.GetStrPtr(cdbm.OperatingSystemScopeGlobal),
+			},
+			expectErr: false,
+		},
+		{
+			desc: "error when raw iPXE has non-Global scope specified",
+			obj: APIOperatingSystemCreateRequest{
+				Name:       "raw-ipxe-with-limited-scope",
+				IpxeScript: cdb.GetStrPtr("ipxe-script"),
+				Scope:      cdb.GetStrPtr(cdbm.OperatingSystemScopeLimited),
+			},
+			expectErr: true,
+		},
+		{
+			desc: "error when raw iPXE has template parameters",
+			obj: APIOperatingSystemCreateRequest{
+				Name:       "raw-ipxe-with-params",
+				IpxeScript: cdb.GetStrPtr("ipxe-script"),
+				IpxeTemplateParameters: []cdbm.OperatingSystemIpxeParameter{
+					{Name: "k", Value: "v"},
+				},
+			},
+			expectErr: true,
+		},
+		{
+			desc: "error when raw iPXE has template artifacts",
+			obj: APIOperatingSystemCreateRequest{
+				Name:       "raw-ipxe-with-arts",
+				IpxeScript: cdb.GetStrPtr("ipxe-script"),
+				IpxeTemplateArtifacts: []cdbm.OperatingSystemIpxeArtifact{
+					{Name: "k", URL: "http://example.com", CacheStrategy: "CACHE_AS_NEEDED"},
+				},
+			},
+			expectErr: true,
+		},
+		{
+			desc: "error when image OS has scope specified",
+			obj: APIOperatingSystemCreateRequest{
+				Name:     "image-os-with-scope",
+				ImageURL: cdb.GetStrPtr("http://iso.net/iso"),
+				SiteIDs:  []string{uuid.NewString()},
+				ImageSHA: cdb.GetStrPtr("a1efca12ea51069abb123bf9c77889fcc2a31cc5483fc14d115e44fdf07c7980"),
+				RootFsID: cdb.GetStrPtr("666c2eee-193d-42db-a490-4c444342bd4e"),
+				Scope:    cdb.GetStrPtr(cdbm.OperatingSystemScopeGlobal),
+			},
+			expectErr: true,
+		},
+		{
+			desc: "error when image OS has template parameters",
+			obj: APIOperatingSystemCreateRequest{
+				Name:     "image-os-with-params",
+				ImageURL: cdb.GetStrPtr("http://iso.net/iso"),
+				SiteIDs:  []string{uuid.NewString()},
+				ImageSHA: cdb.GetStrPtr("a1efca12ea51069abb123bf9c77889fcc2a31cc5483fc14d115e44fdf07c7980"),
+				RootFsID: cdb.GetStrPtr("666c2eee-193d-42db-a490-4c444342bd4e"),
+				IpxeTemplateParameters: []cdbm.OperatingSystemIpxeParameter{
+					{Name: "k", Value: "v"},
+				},
+			},
+			expectErr: true,
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.desc, func(t *testing.T) {
@@ -226,6 +497,15 @@ func TestAPIOperatingSystemUpdateRequest_Validate(t *testing.T) {
 		Status:     cdbm.OperatingSystemStatusPending,
 		Type:       cdbm.OperatingSystemTypeIPXE,
 		CreatedBy:  uuid.New(),
+	}
+
+	existingTemplatedIpxeOS := &cdbm.OperatingSystem{
+		ID:        uuid.New(),
+		Name:      "tmpl-os",
+		Status:    cdbm.OperatingSystemStatusReady,
+		Type:      cdbm.OperatingSystemTypeTemplatedIPXE,
+		IsActive:  true,
+		CreatedBy: uuid.New(),
 	}
 
 	existingImageBasedOSWithFSLabel := &cdbm.OperatingSystem{
@@ -352,6 +632,89 @@ func TestAPIOperatingSystemUpdateRequest_Validate(t *testing.T) {
 			desc:      "ok when optional image fields are empty",
 			obj:       APIOperatingSystemUpdateRequest{Name: cdb.GetStrPtr("ab"), ImageURL: cdb.GetStrPtr("http://iso.net/iso"), ImageSHA: cdb.GetStrPtr("a1efca12ea51069abb123bf9c77889fcc2a31cc5483fc14d115e44fdf07c7980"), RootFsID: cdb.GetStrPtr("666c2eee-193d-42db-a490-4c444342bd4e"), ImageDisk: cdb.GetStrPtr(""), ImageAuthType: cdb.GetStrPtr(""), ImageAuthToken: cdb.GetStrPtr("")},
 			expectErr: false,
+		},
+		// ─── Templated iPXE update validation ─────────────────────────────
+		{
+			desc:       "error when scope is specified on update",
+			obj:        APIOperatingSystemUpdateRequest{Name: cdb.GetStrPtr("updated-tmpl"), Scope: cdb.GetStrPtr(cdbm.OperatingSystemScopeGlobal)},
+			existingOS: existingTemplatedIpxeOS,
+			expectErr:  true,
+		},
+		{
+			desc:       "error when ipxeTemplateParameters specified for raw iPXE OS",
+			obj:        APIOperatingSystemUpdateRequest{IpxeTemplateParameters: &[]cdbm.OperatingSystemIpxeParameter{{Name: "k", Value: "v"}}},
+			existingOS: existingIpxeBasedOS,
+			expectErr:  true,
+		},
+		{
+			desc:       "error when ipxeTemplateArtifacts specified for raw iPXE OS",
+			obj:        APIOperatingSystemUpdateRequest{IpxeTemplateArtifacts: &[]cdbm.OperatingSystemIpxeArtifact{{Name: "kernel", URL: "http://example.com/vmlinuz", CacheStrategy: "CACHE_AS_NEEDED"}}},
+			existingOS: existingIpxeBasedOS,
+			expectErr:  true,
+		},
+		{
+			desc:       "error when ipxeTemplateParameters specified for image OS",
+			obj:        APIOperatingSystemUpdateRequest{IpxeTemplateParameters: &[]cdbm.OperatingSystemIpxeParameter{{Name: "k", Value: "v"}}},
+			existingOS: existingImageBasedOS,
+			expectErr:  true,
+		},
+		{
+			desc:       "error when ipxeTemplateArtifacts specified for image OS",
+			obj:        APIOperatingSystemUpdateRequest{IpxeTemplateArtifacts: &[]cdbm.OperatingSystemIpxeArtifact{{Name: "kernel", URL: "http://example.com/vmlinuz", CacheStrategy: "CACHE_AS_NEEDED"}}},
+			existingOS: existingImageBasedOS,
+			expectErr:  true,
+		},
+		{
+			desc:       "ok when ipxeTemplateParameters updated for templated iPXE OS",
+			obj:        APIOperatingSystemUpdateRequest{IpxeTemplateParameters: &[]cdbm.OperatingSystemIpxeParameter{{Name: "kernel_params", Value: "ip=dhcp"}}},
+			existingOS: existingTemplatedIpxeOS,
+			expectErr:  false,
+		},
+		{
+			desc:       "ok when ipxeTemplateArtifacts updated for templated iPXE OS",
+			obj:        APIOperatingSystemUpdateRequest{IpxeTemplateArtifacts: &[]cdbm.OperatingSystemIpxeArtifact{{Name: "kernel", URL: "http://example.com/vmlinuz", CacheStrategy: "CACHE_AS_NEEDED"}}},
+			existingOS: existingTemplatedIpxeOS,
+			expectErr:  false,
+		},
+		{
+			desc:       "error when ipxeTemplateId set on image OS update",
+			obj:        APIOperatingSystemUpdateRequest{IpxeTemplateId: cdb.GetStrPtr("my-template")},
+			existingOS: existingImageBasedOS,
+			expectErr:  true,
+		},
+		{
+			desc:       "error when ipxeTemplateId set on raw iPXE OS update",
+			obj:        APIOperatingSystemUpdateRequest{IpxeTemplateId: cdb.GetStrPtr("my-template")},
+			existingOS: existingIpxeBasedOS,
+			expectErr:  true,
+		},
+		{
+			desc:       "error when ipxeScript set on templated iPXE OS update",
+			obj:        APIOperatingSystemUpdateRequest{IpxeScript: cdb.GetStrPtr("chain --autofree https://boot.example.com")},
+			existingOS: existingTemplatedIpxeOS,
+			expectErr:  true,
+		},
+		{
+			desc:       "error when ipxeScript and ipxeTemplateId both on update",
+			obj:        APIOperatingSystemUpdateRequest{IpxeScript: cdb.GetStrPtr("script"), IpxeTemplateId: cdb.GetStrPtr("tmpl")},
+			existingOS: existingTemplatedIpxeOS,
+			expectErr:  true,
+		},
+		{
+			desc: "error when template parameter has blank name on update",
+			obj: APIOperatingSystemUpdateRequest{
+				IpxeTemplateParameters: &[]cdbm.OperatingSystemIpxeParameter{{Name: "  ", Value: "v"}},
+			},
+			existingOS: existingTemplatedIpxeOS,
+			expectErr:  true,
+		},
+		{
+			desc: "error when template artifact has invalid cacheStrategy on update",
+			obj: APIOperatingSystemUpdateRequest{
+				IpxeTemplateArtifacts: &[]cdbm.OperatingSystemIpxeArtifact{{Name: "k", URL: "http://example.com/k", CacheStrategy: "BAD"}},
+			},
+			existingOS: existingTemplatedIpxeOS,
+			expectErr:  true,
 		},
 	}
 

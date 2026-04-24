@@ -328,7 +328,30 @@ func testInstanceBuildOperatingSystem(t *testing.T, dbSession *cdb.Session, name
 	}
 
 	// If iPXE, the OS should have a script set.
-	if osType == cdbm.OperatingSystemTypeIPXE {
+	if cdbm.IsIPXEType(osType) {
+		operatingSystem.IpxeScript = cdb.GetStrPtr(common.DefaultIpxeScript)
+	}
+
+	_, err := dbSession.DB.NewInsert().Model(operatingSystem).Exec(context.Background())
+	assert.Nil(t, err)
+	return operatingSystem
+}
+
+func testInstanceBuildProviderOperatingSystem(t *testing.T, dbSession *cdb.Session, name string, ip *cdbm.InfrastructureProvider, osType string, allowOverride bool, userData *string, phoneHomeEnabled bool, status string, user *cdbm.User) *cdbm.OperatingSystem {
+	operatingSystem := &cdbm.OperatingSystem{
+		ID:                       uuid.New(),
+		Name:                     name,
+		InfrastructureProviderID: cdb.GetUUIDPtr(ip.ID),
+		Type:                     osType,
+		AllowOverride:            allowOverride,
+		PhoneHomeEnabled:         phoneHomeEnabled,
+		IsActive:                 true,
+		UserData:                 userData,
+		Status:                   status,
+		CreatedBy:                user.ID,
+	}
+
+	if cdbm.IsIPXEType(osType) {
 		operatingSystem.IpxeScript = cdb.GetStrPtr(common.DefaultIpxeScript)
 	}
 
@@ -760,7 +783,7 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 	assert.NotNil(t, mcmissing)
 	testUpdateMachineToMissing(t, dbSession, mcmissing)
 
-	alc1 := testInstanceSiteBuildAllocationContraints(t, dbSession, al1, cdbm.AllocationResourceTypeInstanceType, ist1.ID, cdbm.AllocationConstraintTypeReserved, 9, ipu)
+	alc1 := testInstanceSiteBuildAllocationContraints(t, dbSession, al1, cdbm.AllocationResourceTypeInstanceType, ist1.ID, cdbm.AllocationConstraintTypeReserved, 15, ipu)
 	assert.NotNil(t, alc1)
 
 	mc1 := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
@@ -823,6 +846,18 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 	mcinst20 := testInstanceBuildMachineInstanceType(t, dbSession, mc20, ist1)
 	assert.NotNil(t, mcinst20)
 
+	mc21 := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
+	assert.NotNil(t, mc21)
+	assert.NotNil(t, testInstanceBuildMachineInstanceType(t, dbSession, mc21, ist1))
+
+	mc22 := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
+	assert.NotNil(t, mc22)
+	assert.NotNil(t, testInstanceBuildMachineInstanceType(t, dbSession, mc22, ist1))
+
+	mc23 := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
+	assert.NotNil(t, mc23)
+	assert.NotNil(t, testInstanceBuildMachineInstanceType(t, dbSession, mc23, ist1))
+
 	// Tenant 1
 	os1 := testInstanceBuildOperatingSystem(t, dbSession, "test-operating-system-1", tn1, cdbm.OperatingSystemTypeIPXE, false, nil, true, cdbm.OperatingSystemStatusReady, tnu1)
 	assert.NotNil(t, os1)
@@ -834,6 +869,33 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 
 	osPhoneHome := testInstanceBuildOperatingSystem(t, dbSession, "test-operating-system-phonehome", tn1, cdbm.OperatingSystemTypeIPXE, true, cdb.GetStrPtr(""), true, cdbm.OperatingSystemStatusReady, tnu1)
 	assert.NotNil(t, osPhoneHome)
+
+	// Templated iPXE OS - tenant-owned, no override
+	osTemplated1 := testInstanceBuildOperatingSystem(t, dbSession, "test-operating-system-templated-1", tn1, cdbm.OperatingSystemTypeTemplatedIPXE, false, nil, false, cdbm.OperatingSystemStatusReady, tnu1)
+	assert.NotNil(t, osTemplated1)
+	osTemplated1.IpxeTemplateId = cdb.GetStrPtr("test-template")
+	_, errOsT1 := dbSession.DB.NewUpdate().Model(osTemplated1).Column("ipxe_template_id").WherePK().Exec(context.Background())
+	assert.NoError(t, errOsT1)
+
+	// Templated iPXE OS - tenant-owned, override allowed
+	osTemplated2 := testInstanceBuildOperatingSystem(t, dbSession, "test-operating-system-templated-2", tn1, cdbm.OperatingSystemTypeTemplatedIPXE, true, cdb.GetStrPtr(cdmu.TestCommonCloudInit), false, cdbm.OperatingSystemStatusReady, tnu1)
+	assert.NotNil(t, osTemplated2)
+	osTemplated2.IpxeTemplateId = cdb.GetStrPtr("test-template-2")
+	_, errOsT2 := dbSession.DB.NewUpdate().Model(osTemplated2).Column("ipxe_template_id").WherePK().Exec(context.Background())
+	assert.NoError(t, errOsT2)
+
+	// Templated iPXE OS - deactivated
+	osTemplatedDeactivated := testInstanceBuildOperatingSystem(t, dbSession, "test-operating-system-templated-deactivated", tn1, cdbm.OperatingSystemTypeTemplatedIPXE, false, nil, false, cdbm.OperatingSystemStatusReady, tnu1)
+	assert.NotNil(t, osTemplatedDeactivated)
+	osTemplatedDeactivated.IsActive = false
+	testUpdateOSIsActive(t, dbSession, osTemplatedDeactivated)
+
+	// Provider-owned iPXE OS (Templated)
+	osProviderTemplated := testInstanceBuildProviderOperatingSystem(t, dbSession, "test-operating-system-provider-templated", ip, cdbm.OperatingSystemTypeTemplatedIPXE, false, nil, false, cdbm.OperatingSystemStatusReady, ipu)
+	assert.NotNil(t, osProviderTemplated)
+	osProviderTemplated.IpxeTemplateId = cdb.GetStrPtr("provider-template")
+	_, errOsProv := dbSession.DB.NewUpdate().Model(osProviderTemplated).Column("ipxe_template_id").WherePK().Exec(context.Background())
+	assert.NoError(t, errOsProv)
 
 	// create a default NVLink Logical Partition
 	nvllpDefault := testBuildNVLinkLogicalPartition(t, dbSession, "test-nvllp-default", cdb.GetStrPtr("Test NVLink Logical Partition"), tnOrg, st1, tn1, cdb.GetStrPtr(cdbm.NVLinkLogicalPartitionStatusReady), false)
@@ -2318,6 +2380,211 @@ func TestCreateInstanceHandler_Handle(t *testing.T) {
 				reqUser:     tnu1,
 				respCode:    http.StatusBadRequest,
 				respMessage: "Creation of Instance with Image based Operating System is not supported. Site must have ImageBasedOperatingSystem capability enabled.",
+			},
+			wantErr: false,
+		},
+		// ─── Templated iPXE OS instance creation ──────────────────────────
+		{
+			name: "test Instance create with Templated iPXE OS, no override, should succeed",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIInstanceCreateRequest{
+					Name:              "test-instance-templated-ipxe",
+					TenantID:          tn1.ID.String(),
+					InstanceTypeID:    cdb.GetStrPtr(ist1.ID.String()),
+					VpcID:             vpc1.ID.String(),
+					OperatingSystemID: cdb.GetStrPtr(osTemplated1.ID.String()),
+					Interfaces: []model.APIInterfaceCreateOrUpdateRequest{
+						{
+							SubnetID: cdb.GetStrPtr(subnet1.ID.String()),
+						},
+					},
+					SSHKeyGroupIDs: []string{skg1.ID.String()},
+				},
+				reqMachine:  nil,
+				reqOrg:      tnOrg,
+				reqUser:     tnu1,
+				respCode:    http.StatusCreated,
+				respMessage: "",
+			},
+			wantErr: false,
+		},
+		{
+			name: "test Instance create with Templated iPXE OS, override allowed, user-data specified, should succeed",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIInstanceCreateRequest{
+					Name:              "test-instance-templated-ipxe-override",
+					TenantID:          tn1.ID.String(),
+					InstanceTypeID:    cdb.GetStrPtr(ist1.ID.String()),
+					VpcID:             vpc1.ID.String(),
+					OperatingSystemID: cdb.GetStrPtr(osTemplated2.ID.String()),
+					UserData:          cdb.GetStrPtr(cdmu.TestCommonCloudInit),
+					Interfaces: []model.APIInterfaceCreateOrUpdateRequest{
+						{
+							SubnetID: cdb.GetStrPtr(subnet1.ID.String()),
+						},
+					},
+					SSHKeyGroupIDs: []string{skg1.ID.String()},
+				},
+				reqMachine:  nil,
+				reqOrg:      tnOrg,
+				reqUser:     tnu1,
+				respCode:    http.StatusCreated,
+				respMessage: "",
+			},
+			wantErr: false,
+		},
+		{
+			name: "test Instance create with Templated iPXE OS, iPXE script specified, should fail",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIInstanceCreateRequest{
+					Name:              "test-instance-templated-ipxe-with-script",
+					TenantID:          tn1.ID.String(),
+					InstanceTypeID:    cdb.GetStrPtr(ist1.ID.String()),
+					VpcID:             vpc1.ID.String(),
+					OperatingSystemID: cdb.GetStrPtr(osTemplated1.ID.String()),
+					IpxeScript:        cdb.GetStrPtr("#!ipxe\nboot"),
+					Interfaces: []model.APIInterfaceCreateOrUpdateRequest{
+						{
+							SubnetID: cdb.GetStrPtr(subnet1.ID.String()),
+						},
+					},
+				},
+				reqMachine:  mc14,
+				reqOrg:      tnOrg,
+				reqUser:     tnu1,
+				respCode:    http.StatusBadRequest,
+				respMessage: "cannot be specified with Operating System of type",
+			},
+			wantErr: false,
+		},
+		{
+			name: "test Instance create with deactivated Templated iPXE OS, should fail",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIInstanceCreateRequest{
+					Name:              "test-instance-templated-deactivated",
+					TenantID:          tn1.ID.String(),
+					InstanceTypeID:    cdb.GetStrPtr(ist1.ID.String()),
+					VpcID:             vpc1.ID.String(),
+					OperatingSystemID: cdb.GetStrPtr(osTemplatedDeactivated.ID.String()),
+					Interfaces: []model.APIInterfaceCreateOrUpdateRequest{
+						{
+							SubnetID: cdb.GetStrPtr(subnet1.ID.String()),
+						},
+					},
+				},
+				reqMachine:  mc14,
+				reqOrg:      tnOrg,
+				reqUser:     tnu1,
+				respCode:    http.StatusBadRequest,
+				respMessage: "has been deactivated",
+			},
+			wantErr: false,
+		},
+		{
+			name: "test Instance create with Templated iPXE OS, AlwaysBootWithCustomIpxe, should fail",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIInstanceCreateRequest{
+					Name:                     "test-instance-templated-always-boot",
+					TenantID:                 tn1.ID.String(),
+					InstanceTypeID:           cdb.GetStrPtr(ist1.ID.String()),
+					VpcID:                    vpc1.ID.String(),
+					OperatingSystemID:        cdb.GetStrPtr(osTemplated1.ID.String()),
+					AlwaysBootWithCustomIpxe: cdb.GetBoolPtr(true),
+					Interfaces: []model.APIInterfaceCreateOrUpdateRequest{
+						{
+							SubnetID: cdb.GetStrPtr(subnet1.ID.String()),
+						},
+					},
+				},
+				reqMachine:  mc14,
+				reqOrg:      tnOrg,
+				reqUser:     tnu1,
+				respCode:    http.StatusBadRequest,
+				respMessage: "cannot be set with Operating System of type",
+			},
+			wantErr: false,
+		},
+		// ─── Provider-owned OS instance creation ──────────────────────────
+		{
+			name: "test Instance create with provider-owned Templated iPXE OS, should succeed",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIInstanceCreateRequest{
+					Name:              "test-instance-provider-os",
+					TenantID:          tn1.ID.String(),
+					InstanceTypeID:    cdb.GetStrPtr(ist1.ID.String()),
+					VpcID:             vpc1.ID.String(),
+					OperatingSystemID: cdb.GetStrPtr(osProviderTemplated.ID.String()),
+					Interfaces: []model.APIInterfaceCreateOrUpdateRequest{
+						{
+							SubnetID: cdb.GetStrPtr(subnet1.ID.String()),
+						},
+					},
+					SSHKeyGroupIDs: []string{skg1.ID.String()},
+				},
+				reqMachine:  nil,
+				reqOrg:      tnOrg,
+				reqUser:     tnu1,
+				respCode:    http.StatusCreated,
+				respMessage: "",
+			},
+			wantErr: false,
+		},
+		{
+			name: "test Instance create with provider-owned OS, user-data override not allowed, should fail",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIInstanceCreateRequest{
+					Name:              "test-instance-provider-os-override",
+					TenantID:          tn1.ID.String(),
+					InstanceTypeID:    cdb.GetStrPtr(ist1.ID.String()),
+					VpcID:             vpc1.ID.String(),
+					OperatingSystemID: cdb.GetStrPtr(osProviderTemplated.ID.String()),
+					UserData:          cdb.GetStrPtr("custom user data"),
+					Interfaces: []model.APIInterfaceCreateOrUpdateRequest{
+						{
+							SubnetID: cdb.GetStrPtr(subnet1.ID.String()),
+						},
+					},
+				},
+				reqMachine:  mc14,
+				reqOrg:      tnOrg,
+				reqUser:     tnu1,
+				respCode:    http.StatusBadRequest,
+				respMessage: "does not allow overriding",
 			},
 			wantErr: false,
 		},
@@ -4058,6 +4325,15 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 	desd17 := common.TestBuildDpuExtensionServiceDeployment(t, dbSession, des1, inst17.ID, "1.0.0", cdbm.DpuExtensionServiceDeploymentStatusRunning, tnu1)
 	assert.NotNil(t, desd17)
 
+	// Instance with no OperatingSystem (raw ipxeScript only) to test that an
+	// update setting a deactivated OS on an instance that previously had no OS
+	// is rejected.
+	mcNoOs := testInstanceBuildMachine(t, dbSession, ip.ID, st1.ID, cdb.GetBoolPtr(false), nil)
+	assert.NotNil(t, mcNoOs)
+
+	instNoOs := testInstanceBuildInstance(t, dbSession, "test-instance-no-os", tn1.ID, ip.ID, st1.ID, &ist1.ID, vpc1.ID, cdb.GetStrPtr(mcNoOs.ID), nil, cdb.GetStrPtr(common.DefaultIpxeScript), cdbm.InstanceStatusReady)
+	assert.NotNil(t, instNoOs)
+
 	e := echo.New()
 	cfg := common.GetTestConfig()
 	tc := &tmocks.Client{}
@@ -4914,6 +5190,27 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 				reqOrg:                tnOrg1,
 				reqUser:               tnu1,
 				respCode:              http.StatusBadRequest,
+			},
+			wantErr: false,
+		},
+		{
+			name: "test Instance update API endpoint failure setting deactivated OS on instance with no prior OS",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				scp:       scp,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIInstanceUpdateRequest{
+					OperatingSystemID: cdb.GetStrPtr(os3off.ID.String()),
+				},
+				reqInstance:           instNoOs.ID.String(),
+				cleanInstanceToStatus: instNoOs.Status,
+				reqOrg:                tnOrg1,
+				reqUser:               tnu1,
+				respCode:              http.StatusBadRequest,
+				respMessage:           cdb.GetStrPtr("has been deactivated"),
 			},
 			wantErr: false,
 		},

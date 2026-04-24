@@ -183,6 +183,11 @@ tags:
   - name: Operating System
     description: |-
       Operating Systems in NICo are typically iPXE scripts that are used to boot Machines.
+  - name: iPXE Template
+    description: |-
+      iPXE Templates are boot script templates propagated from bare-metal-manager-core. They are read-only in the REST API.
+
+      Templates define the iPXE boot script structure with variable placeholders for parameters and artifact references. They can be used when creating iPXE template-based Operating System definitions.
   - name: Instance Type
     description: |-
       Instance Types allow grouping Machines into a pool defined by their capabilities. Providers can then allocate a portion of the Instance Type pool to a Tenant.
@@ -7540,6 +7545,10 @@ paths:
                       imageDisk: /dev/sda
                       rootFsId: 6c2ac315-3040-4728-94eb-b66d320206c1
                       ipxeScript: null
+                      ipxeTemplateId: null
+                      ipxeTemplateParameters: []
+                      ipxeTemplateArtifacts: []
+                      scope: null
                       userData: null
                       isCloudInit: true
                       phoneHomeEnabled: false
@@ -7603,6 +7612,10 @@ paths:
                         initrd http://archive.ubuntu.com/ubuntu/dists/xenial/main/installer-amd64/current/images/netboot/ubuntu-installer/amd64/initrd.gz
                         boot || imgfree
                          shell
+                      ipxeTemplateId: null
+                      ipxeTemplateParameters: []
+                      ipxeTemplateArtifacts: []
+                      scope: Global
                       userData: |-
                         #cloud-config
                         autoinstall:
@@ -7624,6 +7637,56 @@ paths:
                       imageUrl: null
                       rootFsId: null
                       rootFsLabel: null
+                      siteAssociations: []
+                      isActive: true
+                      deactivationNote: null
+                      status: Pending
+                      statusHistory:
+                        - status: Pending
+                          message: 'Request received, pending processing'
+                          created: '2019-08-24T14:15:22Z'
+                          updated: '2019-08-24T14:15:22Z'
+                      created: '2019-08-24T14:15:22Z'
+                      updated: '2019-08-24T14:15:22Z'
+                iPXE Template OS (global scope):
+                  value:
+                    - id: 7a1b2c3d-e4f5-6789-abcd-ef0123456789
+                      name: ubuntu-autoinstall-24.04
+                      description: Ubuntu 24.04 via iPXE template autoinstall
+                      infrastructureProviderId: 5f2cc306-76e9-4fca-9186-950c9ef9a74e
+                      tenantId: null
+                      type: Templated iPXE
+                      ipxeScript: null
+                      ipxeTemplateId: <uuid-of-ubuntu-autoinstall-template>
+                      ipxeTemplateParameters:
+                        - name: kernel_args
+                          value: console=ttyS0,115200n8
+                      ipxeTemplateArtifacts:
+                        - name: kernel
+                          url: 'https://releases.ubuntu.com/24.04/netboot/amd64/linux'
+                          sha: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                          cacheStrategy: CACHE_AS_NEEDED
+                        - name: initrd
+                          url: 'https://releases.ubuntu.com/24.04/netboot/amd64/initrd'
+                          sha: d7a8fbb307d7809469ca9abcb0082e4f8d5651e46d3cdb762d02d0bf37c9e592
+                          cacheStrategy: CACHE_AS_NEEDED
+                        - name: autoinstall
+                          url: 'http://install.example.com/autoinstall.yaml'
+                          sha: 3c363836cf4e16666669a25da280a1865c2d2874c6e9e3460c40db9b5a811528
+                          cacheStrategy: REMOTE_ONLY
+                      scope: Global
+                      userData: null
+                      isCloudInit: false
+                      phoneHomeEnabled: false
+                      allowOverride: false
+                      imageAuthToken: null
+                      imageAuthType: null
+                      imageDisk: null
+                      imageSha: null
+                      imageUrl: null
+                      rootFsId: null
+                      rootFsLabel: null
+                      siteAssociations: []
                       isActive: true
                       deactivationNote: null
                       status: Pending
@@ -7658,8 +7721,9 @@ paths:
         - schema:
             type: string
             enum:
-              - Image
               - iPXE
+              - Templated iPXE
+              - Image
           in: query
           name: type
           description: Filter Operating Systems by Type
@@ -7736,6 +7800,10 @@ paths:
                       initrd http://archive.ubuntu.com/ubuntu/dists/xenial/main/installer-amd64/current/images/netboot/ubuntu-installer/amd64/initrd.gz
                       boot || imgfree
                        shell
+                    ipxeTemplateId: null
+                    ipxeTemplateParameters: []
+                    ipxeTemplateArtifacts: []
+                    scope: Global
                     userData: |-
                       #cloud-config
                       autoinstall:
@@ -7768,6 +7836,55 @@ paths:
                         updated: '2019-08-24T14:15:22Z'
                     created: '2019-08-24T14:15:22Z'
                     updated: '2019-08-24T14:15:22Z'
+                iPXE Template OS (global scope):
+                  value:
+                    id: 7a1b2c3d-e4f5-6789-abcd-ef0123456789
+                    name: ubuntu-autoinstall-24.04
+                    description: Ubuntu 24.04 via iPXE template autoinstall
+                    infrastructureProviderId: 5f2cc306-76e9-4fca-9186-950c9ef9a74e
+                    tenantId: null
+                    type: Templated iPXE
+                    ipxeScript: null
+                    ipxeTemplateId: <uuid-of-ubuntu-autoinstall-template>
+                    ipxeTemplateParameters:
+                      - name: kernel_args
+                        value: console=ttyS0,115200n8
+                    ipxeTemplateArtifacts:
+                      - name: kernel
+                        url: 'https://releases.ubuntu.com/24.04/netboot/amd64/linux'
+                        sha: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                        cacheStrategy: CACHE_AS_NEEDED
+                      - name: initrd
+                        url: 'https://releases.ubuntu.com/24.04/netboot/amd64/initrd'
+                        sha: d7a8fbb307d7809469ca9abcb0082e4f8d5651e46d3cdb762d02d0bf37c9e592
+                        cacheStrategy: CACHE_AS_NEEDED
+                      - name: autoinstall
+                        url: 'http://install.example.com/autoinstall.yaml'
+                        sha: 3c363836cf4e16666669a25da280a1865c2d2874c6e9e3460c40db9b5a811528
+                        cacheStrategy: REMOTE_ONLY
+                    scope: Global
+                    userData: null
+                    isCloudInit: false
+                    phoneHomeEnabled: false
+                    allowOverride: false
+                    imageAuthToken: null
+                    imageAuthType: null
+                    imageDisk: null
+                    imageSha: null
+                    imageUrl: null
+                    rootFsId: null
+                    rootFsLabel: null
+                    siteAssociations: []
+                    isActive: true
+                    deactivationNote: null
+                    status: Pending
+                    statusHistory:
+                      - status: Pending
+                        message: 'Request received, pending processing'
+                        created: '2019-08-24T14:15:22Z'
+                        updated: '2019-08-24T14:15:22Z'
+                    created: '2019-08-24T14:15:22Z'
+                    updated: '2019-08-24T14:15:22Z'
         '400':
           $ref: '#/components/responses/ValidationError'
         '403':
@@ -7775,13 +7892,17 @@ paths:
       description: |-
         Create an Operating System for the org.
 
-        Either `infrastructureProviderId` or `tenantId` must be provided in request data. Both cannot be provided at the same time.
+        Either `infrastructureProviderId` or `tenantId` must be provided in request data. Both cannot be provided at the same time. For iPXE template-based OS definitions, Provider Admin may omit `tenantId` and have ownership resolved automatically.
 
         If `infrastructureProviderId` is provided in request data, then org must have an Infrastructure Provider entity and its ID should match the query param value. User must have `FORGE_PROVIDER_ADMIN` role.
 
         If `tenantId` is provided in request data, then org must have a Tenant entity and its ID should match the query param value. User must have `FORGE_TENANT_ADMIN` role.
 
-        Only Tenants are allowed to create Operating System for MVP.
+        Tenants can create iPXE script-based or Image-based Operating Systems. Provider Admins can create iPXE template-based Operating Systems (using `ipxeTemplateId`).
+
+        `ipxeScript`, `ipxeTemplateId`, and `imageUrl` are mutually exclusive — only one may be specified. When `ipxeTemplateId` is used, `ipxeTemplateParameters` and `ipxeTemplateArtifacts` can be provided to configure the template.
+
+        The `scope` field is required for Templated iPXE OSes and controls synchronization direction: `Global` (rest-to-core for all sites) or `Limited` (rest-to-core for sites in `siteIds`). `Local` scope cannot be specified at creation — Local Operating Systems originate in carbide-core and are synced to rest via inventory. Must not be specified for other OS types.
       requestBody:
         content:
           application/json:
@@ -7831,6 +7952,31 @@ paths:
                   isCloudInit: true
                   phoneHomeEnabled: false
                   allowOverride: false
+              iPXE Template OS (global scope):
+                value:
+                  name: ubuntu-autoinstall-24.04
+                  description: Ubuntu 24.04 via iPXE template autoinstall
+                  ipxeTemplateId: <uuid-of-ubuntu-autoinstall-template>
+                  ipxeTemplateParameters:
+                    - name: kernel_args
+                      value: console=ttyS0,115200n8
+                  ipxeTemplateArtifacts:
+                    - name: kernel
+                      url: 'https://releases.ubuntu.com/24.04/netboot/amd64/linux'
+                      sha: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                      cacheStrategy: CACHE_AS_NEEDED
+                    - name: initrd
+                      url: 'https://releases.ubuntu.com/24.04/netboot/amd64/initrd'
+                      sha: d7a8fbb307d7809469ca9abcb0082e4f8d5651e46d3cdb762d02d0bf37c9e592
+                      cacheStrategy: CACHE_AS_NEEDED
+                    - name: autoinstall
+                      url: 'http://install.example.com/autoinstall.yaml'
+                      sha: 3c363836cf4e16666669a25da280a1865c2d2874c6e9e3460c40db9b5a811528
+                      cacheStrategy: REMOTE_ONLY
+                  scope: Global
+                  isCloudInit: false
+                  phoneHomeEnabled: false
+                  allowOverride: false
       tags:
         - Operating System
   '/v2/org/{org}/carbide/operating-system/{operatingSystemId}':
@@ -7875,6 +8021,10 @@ paths:
                     rootFsId: 6c2ac315-3040-4728-94eb-b66d320206c1
                     rootFsLabel: null
                     ipxeScript: null
+                    ipxeTemplateId: null
+                    ipxeTemplateParameters: []
+                    ipxeTemplateArtifacts: []
+                    scope: null
                     userData: null
                     isCloudInit: true
                     phoneHomeEnabled: false
@@ -7938,6 +8088,10 @@ paths:
                       initrd http://archive.ubuntu.com/ubuntu/dists/xenial/main/installer-amd64/current/images/netboot/ubuntu-installer/amd64/initrd.gz
                       boot || imgfree
                        shell
+                    ipxeTemplateId: null
+                    ipxeTemplateParameters: []
+                    ipxeTemplateArtifacts: []
+                    scope: Global
                     userData: |-
                       #cloud-config
                       autoinstall:
@@ -8029,6 +8183,10 @@ paths:
                       initrd http://archive.ubuntu.com/ubuntu/dists/xenial/main/installer-amd64/current/images/netboot/ubuntu-installer/amd64/initrd.gz
                       boot || imgfree
                        shell
+                    ipxeTemplateId: null
+                    ipxeTemplateParameters: []
+                    ipxeTemplateArtifacts: []
+                    scope: Global
                     userData: |-
                       #cloud-config
                       autoinstall:
@@ -8071,6 +8229,8 @@ paths:
         If the Operating System has `infrastructureProviderId` set, then org must have an Infrastructure Provider entity and its ID should match the Operating System Infrastructure Provider ID. User must have `FORGE_PROVIDER_ADMIN` authorization role. Provider must own the Operating System.
 
         If the Operating System has `tenantId` set, then org must have a Tenant entity and its ID should match the Operating System Tenant ID. User must have `FORGE_TENANT_ADMIN` role. Tenant must own the Operating System.
+
+        The `type` and `scope` of an Operating System cannot be changed after creation.
       tags:
         - Operating System
       requestBody:
@@ -8084,6 +8244,166 @@ paths:
                   name: ubuntu-22.04-lts
                   description: Ubuntu 22.04 LTS
                   allowOverride: true
+  '/v2/org/{org}/carbide/ipxe-template':
+    parameters:
+      - schema:
+          type: string
+        name: org
+        in: path
+        required: true
+        description: Name of the Org
+    get:
+      summary: Retrieve all iPXE Templates
+      tags:
+        - iPXE Template
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/IpxeTemplate'
+              examples:
+                example-1:
+                  value:
+                    - id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                      name: ubuntu-autoinstall
+                      template: |-
+                        #!ipxe
+                        kernel {{.kernel}} autoinstall ds=nocloud-net
+                        initrd {{.initrd}}
+                        boot || imgfree
+                        shell
+                      requiredParams:
+                        - hostname
+                      reservedParams:
+                        - kernel
+                        - initrd
+                      requiredArtifacts:
+                        - kernel
+                        - initrd
+                      scope: Public
+                      created: '2025-10-15T10:30:00Z'
+                      updated: '2025-10-15T10:30:00Z'
+          headers:
+            X-Pagination:
+              schema:
+                type: string
+                example: '{"pageNumber":1,"pageSize":20,"total":5,"orderBy": "CREATED_DESC"}'
+              description: Pagination result in JSON format
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+      operationId: get-all-ipxe-template
+      description: |-
+        Retrieve all iPXE templates propagated from bare-metal-manager-core. Templates are global — the `id` is the same UUID used by core across all sites — and are read-only from this service.
+
+        The `siteId` query parameter is optional and may be repeated to restrict results to templates that are currently available at one or more specific sites. When omitted, the caller receives every template available at any site they are authorized to see:
+
+        * Provider Admins/Viewers: templates available at any site owned by their infrastructure provider.
+        * Tenant Admins: templates available at any site the tenant is associated with via a Tenant/Site association.
+
+        When `siteId` is provided, every requested site must be authorized for the caller.
+
+        Only `Public`-scoped templates are ever propagated from bare-metal-manager-core into this service, so no scope filter is offered.
+      parameters:
+        - schema:
+            type: array
+            items:
+              type: string
+              format: uuid
+          in: query
+          name: siteId
+          required: false
+          description: Optional ID(s) of one or more Sites whose templates to retrieve. Repeat the parameter to request multiple sites. When omitted, templates are returned for every site the caller is authorized to see.
+        - schema:
+            type: integer
+            example: 1
+            default: 1
+            minimum: 1
+          in: query
+          name: pageNumber
+          description: Page number for pagination query
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            example: 20
+          in: query
+          name: pageSize
+          description: Page size for pagination query
+        - schema:
+            type: string
+            enum:
+              - NAME_ASC
+              - NAME_DESC
+              - CREATED_ASC
+              - CREATED_DESC
+              - UPDATED_ASC
+              - UPDATED_DESC
+          in: query
+          name: orderBy
+          description: Ordering for pagination query
+  '/v2/org/{org}/carbide/ipxe-template/{id}':
+    parameters:
+      - schema:
+          type: string
+        name: org
+        in: path
+        required: true
+        description: Name of the Org
+      - schema:
+          type: string
+          format: uuid
+        name: id
+        in: path
+        required: true
+        description: ID of the iPXE Template
+    get:
+      summary: Retrieve iPXE Template
+      tags:
+        - iPXE Template
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IpxeTemplate'
+              examples:
+                example-1:
+                  value:
+                    id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                    name: ubuntu-autoinstall
+                    template: |-
+                      #!ipxe
+                      kernel {{.kernel}} autoinstall ds=nocloud-net
+                      initrd {{.initrd}}
+                      boot || imgfree
+                      shell
+                    requiredParams:
+                      - hostname
+                    reservedParams:
+                      - kernel
+                      - initrd
+                    requiredArtifacts:
+                      - kernel
+                      - initrd
+                    scope: Public
+                    created: '2025-10-15T10:30:00Z'
+                    updated: '2025-10-15T10:30:00Z'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+      operationId: get-ipxe-template
+      description: |-
+        Retrieve a global iPXE template by ID. The caller must be authorized at at least one site where this template is currently available (i.e. the caller must be the provider/owner or an authorized tenant at one of the sites the template has been reported from).
+
+        Provider Admins/Viewers can access templates for their provider's sites. Tenant Admins can access templates for sites the tenant is associated with via a Tenant/Site association.
   '/v2/org/{org}/carbide/machine':
     parameters:
       - schema:
@@ -13857,12 +14177,17 @@ components:
           description: Ubuntu 22.04
           infrastructureProviderId: null
           tenantId: f97df110-f4de-492e-8849-4a6af68026b0
+          type: iPXE
           ipxeScript: |-
             #!ipxe
             kernel http://archive.ubuntu.com/ubuntu/dists/xenial/main/installer-amd64/current/images/netboot/ubuntu-installer/amd64/linux initrd=initrd.gz
             initrd http://archive.ubuntu.com/ubuntu/dists/xenial/main/installer-amd64/current/images/netboot/ubuntu-installer/amd64/initrd.gz
             boot || imgfree
              shell
+          ipxeTemplateId: null
+          ipxeTemplateParameters: []
+          ipxeTemplateArtifacts: []
+          scope: Global
           userData: |-
             #cloud-config
             autoinstall:
@@ -13882,6 +14207,14 @@ components:
           isActive: true
           deactivationNote: null
           allowOverride: false
+          imageAuthToken: null
+          imageAuthType: null
+          imageDisk: null
+          imageSha: null
+          imageUrl: null
+          rootFsId: null
+          rootFsLabel: null
+          siteAssociations: []
           status: Pending
           statusHistory:
             - status: Pending
@@ -13904,6 +14237,10 @@ components:
           rootFsId: 6c2ac315-3040-4728-94eb-b66d320206c1
           rootFsLabel: null
           ipxeScript: null
+          ipxeTemplateId: null
+          ipxeTemplateParameters: []
+          ipxeTemplateArtifacts: []
+          scope: null
           userData: null
           isCloudInit: true
           phoneHomeEnabled: false
@@ -13956,12 +14293,17 @@ components:
           description: Ubuntu 22.04
           infrastructureProviderId: null
           tenantId: f97df110-f4de-492e-8849-4a6af68026b0
+          type: iPXE
           ipxeScript: |-
             #!ipxe
             kernel http://archive.ubuntu.com/ubuntu/dists/xenial/main/installer-amd64/current/images/netboot/ubuntu-installer/amd64/linux initrd=initrd.gz
             initrd http://archive.ubuntu.com/ubuntu/dists/xenial/main/installer-amd64/current/images/netboot/ubuntu-installer/amd64/initrd.gz
             boot || imgfree
              shell
+          ipxeTemplateId: null
+          ipxeTemplateParameters: []
+          ipxeTemplateArtifacts: []
+          scope: Global
           userData: |-
             #cloud-config
             autoinstall:
@@ -13981,6 +14323,14 @@ components:
           isActive: false
           deactivationNote: 'iPXE script is referencing a URL that is unreachable, needs to be researched'
           allowOverride: false
+          imageAuthToken: null
+          imageAuthType: null
+          imageDisk: null
+          imageSha: null
+          imageUrl: null
+          rootFsId: null
+          rootFsLabel: null
+          siteAssociations: []
           status: Deactivated
           statusHistory:
             - status: Deactivated
@@ -14028,6 +14378,7 @@ components:
           description: Type of the Operating System
           enum:
             - iPXE
+            - Templated iPXE
             - Image
         imageUrl:
           type:
@@ -14069,7 +14420,31 @@ components:
           type:
             - string
             - 'null'
-          description: 'iPXE script or URL, only applicable for iPXE based Operating System'
+          description: 'iPXE script or URL, only applicable for iPXE based Operating System. Mutually exclusive with ipxeTemplateId'
+        ipxeTemplateId:
+          type:
+            - string
+            - 'null'
+          description: 'Name of the iPXE template used by this Operating System. Mutually exclusive with ipxeScript'
+        ipxeTemplateParameters:
+          type: array
+          description: Parameters passed to the iPXE template for variable substitution
+          items:
+            $ref: '#/components/schemas/IpxeTemplateParameter'
+        ipxeTemplateArtifacts:
+          type: array
+          description: 'Artifacts (kernel, initrd, etc.) for the iPXE OS definition'
+          items:
+            $ref: '#/components/schemas/IpxeTemplateArtifact'
+        scope:
+          type:
+            - string
+            - 'null'
+          description: 'Synchronization scope for iPXE Operating Systems; nil for Image OS. Local: single site, bidirectional sync (provider-owned, originating from carbide-core). Global: rest-to-core for all owner sites. Limited: rest-to-core for specific sites'
+          enum:
+            - Local
+            - Global
+            - Limited
         userData:
           type:
             - string
@@ -14235,12 +14610,35 @@ components:
           items:
             type: string
             format: uuid
-          description: 'Specified only one Site if an Operating System is Image based, more than one Site is not supported"'
+          description: 'For Image-based OS, specify exactly one Site. For limited-scope Templated iPXE OS, specify the target provider sites'
         ipxeScript:
           type:
             - string
             - 'null'
-          description: 'iPXE script or URL, only applicable for iPXE based OS. Cannot be specified if imageUrl is specified'
+          description: 'iPXE script or URL, only applicable for iPXE based OS. Mutually exclusive with ipxeTemplateId and imageUrl'
+        ipxeTemplateId:
+          type:
+            - string
+            - 'null'
+          description: 'Name of an iPXE template to use. Mutually exclusive with ipxeScript and imageUrl. Only Provider Admin can create template-based OSes'
+        ipxeTemplateParameters:
+          type: array
+          description: Parameters to pass to the iPXE template for variable substitution
+          items:
+            $ref: '#/components/schemas/IpxeTemplateParameter'
+        ipxeTemplateArtifacts:
+          type: array
+          description: 'Artifacts (kernel, initrd, etc.) required for the iPXE OS definition'
+          items:
+            $ref: '#/components/schemas/IpxeTemplateArtifact'
+        scope:
+          type:
+            - string
+            - 'null'
+          description: 'Synchronization scope. Required for Templated iPXE OS created by Provider Admin (when ipxeTemplateId is specified). For Raw iPXE OS, only "Global" or unspecified is accepted; the handler always normalizes raw iPXE to Global. Must not be set for Image OS (always nil).'
+          enum:
+            - Global
+            - Limited
         imageUrl:
           type:
             - string
@@ -14333,7 +14731,22 @@ components:
           type:
             - string
             - 'null'
-          description: 'iPXE script or URL, only applicable for iPXE based OS. Cannot be specified if imageUrl is specified'
+          description: 'iPXE script or URL, only applicable for iPXE based OS. Mutually exclusive with ipxeTemplateId and imageUrl'
+        ipxeTemplateId:
+          type:
+            - string
+            - 'null'
+          description: Name of an iPXE template to use. Mutually exclusive with ipxeScript and imageUrl
+        ipxeTemplateParameters:
+          type: array
+          description: Parameters to pass to the iPXE template. If omitted the existing parameters are kept; if set to an empty array the parameters are cleared
+          items:
+            $ref: '#/components/schemas/IpxeTemplateParameter'
+        ipxeTemplateArtifacts:
+          type: array
+          description: 'Artifacts for the iPXE OS definition. If omitted the existing artifacts are kept; if set to an empty array the artifacts are cleared'
+          items:
+            $ref: '#/components/schemas/IpxeTemplateArtifact'
         imageUrl:
           type:
             - string
@@ -14400,6 +14813,106 @@ components:
             - string
             - 'null'
           description: Optional deactivation note if OS is inactive
+    IpxeTemplateParameter:
+      title: IpxeTemplateParameter
+      type: object
+      description: A key-value parameter passed to an iPXE template for variable substitution
+      properties:
+        name:
+          type: string
+          description: Parameter name referenced in the iPXE template
+        value:
+          type: string
+          description: Parameter value substituted into the iPXE template
+      required:
+        - name
+        - value
+    IpxeTemplateArtifact:
+      title: IpxeTemplateArtifact
+      type: object
+      description: 'An artifact (kernel, initrd, ISO, etc.) required by an iPXE OS definition'
+      properties:
+        name:
+          type: string
+          description: 'Artifact identifier referenced by the iPXE template (e.g. kernel, initrd)'
+        url:
+          type: string
+          format: uri
+          description: Remote URL from where the artifact can be retrieved
+        sha:
+          type:
+            - string
+            - 'null'
+          description: SHA hash of the artifact for integrity verification
+        authType:
+          type:
+            - string
+            - 'null'
+          description: 'Authentication type for the artifact URL (e.g. Basic, Bearer)'
+        authToken:
+          type:
+            - string
+            - 'null'
+          description: Auth token to retrieve the artifact from the URL
+        cacheStrategy:
+          type: string
+          description: Strategy for caching the artifact on sites
+          enum:
+            - CACHE_AS_NEEDED
+            - LOCAL_ONLY
+            - CACHED_ONLY
+            - REMOTE_ONLY
+      required:
+        - name
+        - url
+        - cacheStrategy
+    IpxeTemplate:
+      title: IpxeTemplate
+      type: object
+      description: An iPXE boot template that can be used to create template-based Operating System definitions. Templates are global across REST and are propagated (read-only) from bare-metal-manager-core.
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Stable template UUID assigned by core and identical across core and REST
+          readOnly: true
+        name:
+          type: string
+          description: 'Globally unique template name (e.g. ubuntu-autoinstall, kernel-initrd)'
+        template:
+          type: string
+          description: Raw iPXE script content with template variables
+        requiredParams:
+          type: array
+          description: Parameters that must be provided to render the template
+          items:
+            type: string
+        reservedParams:
+          type: array
+          description: Parameters reserved by the template that cannot be user-supplied
+          items:
+            type: string
+        requiredArtifacts:
+          type: array
+          description: 'Artifact names (e.g. kernel, initrd) required for the template'
+          items:
+            type: string
+        scope:
+          type: string
+          description: 'Visibility of this template: Internal or Public'
+          enum:
+            - Internal
+            - Public
+        created:
+          type: string
+          format: date-time
+          description: Date/time when the template was created
+          readOnly: true
+        updated:
+          type: string
+          format: date-time
+          description: Date/time when the template was last updated
+          readOnly: true
     InstanceType:
       title: InstanceType
       type: object
