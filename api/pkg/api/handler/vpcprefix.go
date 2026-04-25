@@ -265,14 +265,18 @@ func (csh CreateVpcPrefixHandler) Handle(c echo.Context) error {
 	}
 
 	createVpcPrefixRequest := &cwssaws.VpcPrefixCreationRequest{
-		Id:     &cwssaws.VpcPrefixId{Value: vpcPrefix.ID.String()},
-		Name:   vpcPrefix.Name,
-		VpcId:  &cwssaws.VpcId{Value: common.GetSiteVpcID(vpc).String()},
-		Prefix: vpcPrefix.Prefix,
+		Id:    &cwssaws.VpcPrefixId{Value: vpcPrefix.ID.String()},
+		VpcId: &cwssaws.VpcId{Value: common.GetSiteVpcID(vpc).String()},
+		Config: &cwssaws.VpcPrefixConfig{
+			Prefix: vpcPrefix.Prefix,
+		},
+		Metadata: &cwssaws.Metadata{
+			Name: vpcPrefix.Name,
+		},
 	}
 
 	workflowOptions := temporalClient.StartWorkflowOptions{
-		ID:                       "vpcprefix-create-" + vpcPrefix.ID.String(),
+		ID:                       "vpc-prefix-create-" + vpcPrefix.ID.String(),
 		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}
@@ -822,12 +826,14 @@ func (ush UpdateVpcPrefixHandler) Handle(c echo.Context) error {
 	}
 
 	updateVpcPrefixRequest := &cwssaws.VpcPrefixUpdateRequest{
-		Id:   &cwssaws.VpcPrefixId{Value: vpcPrefix.ID.String()},
-		Name: &vpcPrefix.Name,
+		Id: &cwssaws.VpcPrefixId{Value: vpcPrefix.ID.String()},
+		Metadata: &cwssaws.Metadata{
+			Name: vpcPrefix.Name,
+		},
 	}
 
 	workflowOptions := temporalClient.StartWorkflowOptions{
-		ID:                       "vpcprefix-update-" + vpcPrefix.ID.String(),
+		ID:                       "vpc-prefix-update-" + vpcPrefix.ID.String(),
 		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
 		TaskQueue:                queue.SiteTaskQueue,
 	}

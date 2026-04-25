@@ -39,6 +39,7 @@ import (
 	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/paginator"
 	cipam "github.com/NVIDIA/ncx-infra-controller-rest/ipam"
 	swe "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/error"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
@@ -463,6 +464,9 @@ func TestVpcPrefixHandler_Create(t *testing.T) {
 			expectedStatus: http.StatusInternalServerError,
 		},
 	}
+
+	tscCallCount := 0
+
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			assert.NotEqual(t, tc.name, "")
@@ -491,40 +495,49 @@ func TestVpcPrefixHandler_Create(t *testing.T) {
 			err := cipbh.Handle(ec)
 			assert.Nil(t, err)
 			assert.Equal(t, tc.expectedErr, rec.Code != http.StatusCreated)
-			assert.Equal(t, tc.expectedStatus, rec.Code)
+			require.Equal(t, tc.expectedStatus, rec.Code, rec.Body.String())
 
-			if tc.expectedStatus != rec.Code {
-				t.Errorf("Response: %v", rec.Body.String())
-			}
-
-			if !tc.expectedErr {
-				rsp := &model.APIVpcPrefix{}
-				err := json.Unmarshal(rec.Body.Bytes(), rsp)
-				assert.Nil(t, err)
-				// validate response fields
-				assert.Equal(t, len(rsp.StatusHistory), 1)
-				// validate prefix
-				assert.NotNil(t, rsp.Prefix)
-				assert.Equal(t, tc.expectedPrefix, *rsp.Prefix)
-
-				// validate ipam exists for vpcprefix
-				if tc.expectedIpam {
-					parentIPBID := rsp.IPBlockID
-					parentIPBUUID, err := uuid.Parse(*parentIPBID)
-					assert.Nil(t, err)
-					ipbDAO := cdbm.NewIPBlockDAO(dbSession)
-					parentIPB, err := ipbDAO.GetByID(ctx, nil, parentIPBUUID, nil)
-					assert.Nil(t, err)
-					ipamer := cipam.NewWithStorage(ipamStorage)
-					ipamer.SetNamespace(ipam.GetIpamNamespaceForIPBlock(ctx, parentIPB.RoutingType, parentIPB.InfrastructureProviderID.String(), parentIPB.SiteID.String()))
-					pref := ipamer.PrefixFrom(ctx, ipam.GetCidrForIPBlock(ctx, *rsp.Prefix, rsp.PrefixLength))
-					assert.NotNil(t, pref)
-				}
-			} else {
+			if tc.expectedErr {
 				if tc.expectedIpamErrMsg != "" {
 					assert.Contains(t, rec.Body.String(), tc.expectedIpamErrMsg)
 				}
+
+				return
 			}
+
+			resp := &model.APIVpcPrefix{}
+			err = json.Unmarshal(rec.Body.Bytes(), resp)
+			assert.Nil(t, err)
+			// Validate response fields
+			assert.Equal(t, len(resp.StatusHistory), 1)
+			// Validate prefix
+			assert.NotNil(t, resp.Prefix)
+			assert.Equal(t, tc.expectedPrefix, *resp.Prefix)
+
+			// Validate ipam exists for vpcprefix
+			if tc.expectedIpam {
+				parentIPBID := resp.IPBlockID
+				parentIPBUUID, err := uuid.Parse(*parentIPBID)
+				assert.Nil(t, err)
+				ipbDAO := cdbm.NewIPBlockDAO(dbSession)
+				parentIPB, err := ipbDAO.GetByID(ctx, nil, parentIPBUUID, nil)
+				assert.Nil(t, err)
+				ipamer := cipam.NewWithStorage(ipamStorage)
+				ipamer.SetNamespace(ipam.GetIpamNamespaceForIPBlock(ctx, parentIPB.RoutingType, parentIPB.InfrastructureProviderID.String(), parentIPB.SiteID.String()))
+				pref := ipamer.PrefixFrom(ctx, ipam.GetCidrForIPBlock(ctx, *resp.Prefix, resp.PrefixLength))
+				assert.NotNil(t, pref)
+			}
+
+			require.Equal(t, tscCallCount+1, len(tsc.Calls))
+			tscCallCount++
+			require.Equal(t, "ExecuteWorkflow", tsc.Calls[len(tsc.Calls)-1].Method)
+			require.Equal(t, 4, len(tsc.Calls[len(tsc.Calls)-1].Arguments))
+
+			// Check Temporal workflow call arguments
+			temporalReq, ok := tsc.Calls[len(tsc.Calls)-1].Arguments[3].(*cwssaws.VpcPrefixCreationRequest)
+			require.True(t, ok)
+			assert.Equal(t, resp.Name, temporalReq.Metadata.Name)
+			assert.Equal(t, *resp.Prefix, temporalReq.Config.Prefix)
 
 			if tc.verifyChildSpanner {
 				span := oteltrace.SpanFromContext(ec.Request().Context())
@@ -1325,10 +1338,13 @@ func TestVpcPrefixHandler_Update(t *testing.T) {
 	vpcprefixBody2, err := json.Marshal(model.APIVpcPrefixCreateRequest{Name: "test-vpcprefix-2", VpcID: vpc1.ID.String(), IPBlockID: cdb.GetStrPtr(ipb1.ID.String()), PrefixLength: prefixLen})
 	assert.Nil(t, err)
 
+	tscCallCount := 0
+
 	vpcprefix := testCreateVpcPrefix(t, dbSession, scp, ipamStorage, tnu, tnOrg1, string(vpcprefixBody))
+	tscCallCount++
 
 	vpcprefix2 := testCreateVpcPrefix(t, dbSession, scp, ipamStorage, tnu, tnOrg1, string(vpcprefixBody2))
-	assert.NotNil(t, vpcprefix2)
+	tscCallCount++
 
 	errBody1, err := json.Marshal(model.APIAllocationUpdateRequest{Name: cdb.GetStrPtr("a")})
 	assert.Nil(t, err)
@@ -1456,6 +1472,7 @@ func TestVpcPrefixHandler_Update(t *testing.T) {
 			expectedName:   "test-vpcprefix-2",
 		},
 	}
+
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			assert.NotEqual(t, tc.name, "")
@@ -1486,17 +1503,30 @@ func TestVpcPrefixHandler_Update(t *testing.T) {
 			err := tah.Handle(ec)
 			assert.Nil(t, err)
 			assert.Equal(t, tc.expectedErr, rec.Code != http.StatusOK)
-			assert.Equal(t, tc.expectedStatus, rec.Code)
-			if !tc.expectedErr {
-				rsp := &model.APIVpcPrefix{}
-				err := json.Unmarshal(rec.Body.Bytes(), rsp)
-				assert.Nil(t, err)
-				// validate response fields
-				assert.Equal(t, 1, len(rsp.StatusHistory))
-				assert.Equal(t, tc.expectedName, rsp.Name)
+			require.Equal(t, tc.expectedStatus, rec.Code, rec.Body.String())
 
-				assert.NotEqual(t, rsp.Updated.String(), vpcprefix.Updated.String())
+			if tc.expectedErr {
+				return
 			}
+
+			resp := &model.APIVpcPrefix{}
+			err = json.Unmarshal(rec.Body.Bytes(), resp)
+			assert.Nil(t, err)
+			// validate response fields
+			assert.Equal(t, 1, len(resp.StatusHistory))
+			assert.Equal(t, tc.expectedName, resp.Name)
+
+			assert.NotEqual(t, resp.Updated.String(), vpcprefix.Updated.String())
+
+			require.Equal(t, tscCallCount+1, len(tsc.Calls))
+			tscCallCount++
+			require.Equal(t, "ExecuteWorkflow", tsc.Calls[len(tsc.Calls)-1].Method)
+			require.Equal(t, 4, len(tsc.Calls[len(tsc.Calls)-1].Arguments))
+
+			// Check Temporal workflow call arguments
+			temporalReq, ok := tsc.Calls[len(tsc.Calls)-1].Arguments[3].(*cwssaws.VpcPrefixUpdateRequest)
+			require.True(t, ok)
+			assert.Equal(t, resp.Name, temporalReq.Metadata.Name)
 
 			if tc.verifyChildSpanner {
 				span := oteltrace.SpanFromContext(ec.Request().Context())

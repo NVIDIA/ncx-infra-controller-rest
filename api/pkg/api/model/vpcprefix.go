@@ -97,7 +97,7 @@ func (vpur APIVpcPrefixUpdateRequest) Validate() error {
 
 	if vpur.IPBlockID != nil || vpur.PrefixLength != nil {
 		return validation.Errors{
-			"prefix": errors.New("update has not been supported yet, only name allowed"),
+			"prefixLength": errors.New("prefix length modification is not supported at this time"),
 		}
 	}
 
