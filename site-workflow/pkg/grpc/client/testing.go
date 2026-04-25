@@ -343,6 +343,14 @@ func (c *MockForgeClient) UpdateMachineMetadata(ctx context.Context, in *wflows.
 	return out, nil
 }
 
+func (c *MockForgeClient) InsertHealthReportOverride(ctx context.Context, in *wflows.InsertHealthReportOverrideRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	return new(emptypb.Empty), nil
+}
+
+func (c *MockForgeClient) RemoveHealthReportOverride(ctx context.Context, in *wflows.RemoveHealthReportOverrideRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	return new(emptypb.Empty), nil
+}
+
 func (c *MockForgeClient) FindMachineIds(ctx context.Context, in *wflows.MachineSearchConfig, opts ...grpc.CallOption) (*wflows.MachineIdList, error) {
 	err, ok := ctx.Value("wantError").(error)
 	if ok {
