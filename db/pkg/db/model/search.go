@@ -15,27 +15,19 @@
  * limitations under the License.
  */
 
-package common
+package model
 
-import (
-	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
-	"github.com/labstack/echo/v4"
-)
+import "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 
-// QueryOverride provides values that override query params when delegating from
-// path-scoped endpoints (e.g. instance/{instanceId}/interface, instance/{instanceId}/nvlink-interface) to more general endpoints.
-// When set, error messages in general endpoints will be modulated
-type QueryOverride struct {
-	InstanceIDs   []string
-	ValueFromPath bool
-}
-
-// GetSearchQuery returns a trimmed search query or nil when the query is blank.
-func GetSearchQuery(c echo.Context) *string {
-	searchQuery, ok := cdb.NormalizeSearchQuery(c.QueryParams().Get("query"))
-	if !ok {
-		return nil
+func normalizeSearchQuery(input *string) (string, *string, bool) {
+	if input == nil {
+		return "", nil, false
 	}
 
-	return &searchQuery
+	searchQuery, ok := db.NormalizeSearchQuery(*input)
+	if !ok {
+		return "", nil, false
+	}
+
+	return searchQuery, db.GetStrPtr(db.GetStringToTsQuery(searchQuery)), true
 }

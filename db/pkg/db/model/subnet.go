@@ -416,16 +416,15 @@ func (ssd SubnetSQLDAO) GetAll(ctx context.Context, tx *db.Tx, filter SubnetFilt
 		query = query.Where("su.status IN (?)", bun.In(filter.Statuses))
 		ssd.tracerSpan.SetAttribute(sbDAOSpan, "status", filter.Statuses)
 	}
-	if filter.SearchQuery != nil {
-		normalizedTokens := db.GetStrPtr(db.GetStringToTsQuery(*filter.SearchQuery))
+	if searchQuery, normalizedTokens, ok := normalizeSearchQuery(filter.SearchQuery); ok {
 		query = query.WhereGroup(" AND ", func(q *bun.SelectQuery) *bun.SelectQuery {
 			return q.
 				Where("to_tsvector('english', (coalesce(su.name, ' ') || ' ' || coalesce(su.description, ' ') || ' ' || coalesce(su.status, ' '))) @@ to_tsquery('english', ?)", *normalizedTokens).
-				WhereOr("su.name ILIKE ?", "%"+*filter.SearchQuery+"%").
-				WhereOr("su.description ILIKE ?", "%"+*filter.SearchQuery+"%").
-				WhereOr("su.status ILIKE ?", "%"+*filter.SearchQuery+"%")
+				WhereOr("su.name ILIKE ?", "%"+searchQuery+"%").
+				WhereOr("su.description ILIKE ?", "%"+searchQuery+"%").
+				WhereOr("su.status ILIKE ?", "%"+searchQuery+"%")
 		})
-		ssd.tracerSpan.SetAttribute(sbDAOSpan, "search_query", *filter.SearchQuery)
+		ssd.tracerSpan.SetAttribute(sbDAOSpan, "search_query", searchQuery)
 	}
 
 	for _, relation := range includeRelations {

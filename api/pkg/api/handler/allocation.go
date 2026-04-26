@@ -574,10 +574,9 @@ func (gaah GetAllAllocationHandler) Handle(c echo.Context) error {
 	}
 
 	// Get query text for full text search from query param
-	var searchQuery *string
-	if searchQueryStr := c.QueryParam("query"); searchQueryStr != "" {
-		searchQuery = &searchQueryStr
-		gaah.tracerSpan.SetAttribute(handlerSpan, attribute.String("query", searchQueryStr), logger)
+	searchQuery := common.GetSearchQuery(c)
+	if searchQuery != nil {
+		gaah.tracerSpan.SetAttribute(handlerSpan, attribute.String("query", *searchQuery), logger)
 	}
 
 	// Get status from query param

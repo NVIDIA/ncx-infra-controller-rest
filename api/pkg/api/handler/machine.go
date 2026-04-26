@@ -488,10 +488,9 @@ func (gamh GetAllMachineHandler) Handle(c echo.Context) error {
 	}
 
 	// Get query text for full text search from query param
-	searchQueryStr := c.QueryParam("query")
-	if searchQueryStr != "" {
-		filterInput.SearchQuery = &searchQueryStr
-		gamh.tracerSpan.SetAttribute(handlerSpan, attribute.String("query", searchQueryStr), logger)
+	if searchQuery := common.GetSearchQuery(c); searchQuery != nil {
+		filterInput.SearchQuery = searchQuery
+		gamh.tracerSpan.SetAttribute(handlerSpan, attribute.String("query", *searchQuery), logger)
 	}
 
 	// Get status from query param
