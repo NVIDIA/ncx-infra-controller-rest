@@ -302,20 +302,19 @@ func (epsd ExpectedPowerShelfSQLDAO) setQueryWithFilter(filter ExpectedPowerShel
 		}
 	}
 
-	if filter.SearchQuery != nil {
-		normalizedTokens := db.GetStrPtr(db.GetStringToTsQuery(*filter.SearchQuery))
+	if searchQuery, normalizedTokens, ok := normalizeSearchQuery(filter.SearchQuery); ok {
 		query = query.WhereGroup(" AND ", func(q *bun.SelectQuery) *bun.SelectQuery {
 			return q.
 				Where("to_tsvector('english', (coalesce(eps.bmc_mac_address, ' ') || ' ' || coalesce(eps.shelf_serial_number, ' ') || ' ' || coalesce(eps.ip_address, ' ') || ' ' || coalesce(eps.labels::text, ' '))) @@ to_tsquery('english', ?)", *normalizedTokens).
-				WhereOr("eps.bmc_mac_address ILIKE ?", "%"+*filter.SearchQuery+"%").
-				WhereOr("eps.shelf_serial_number ILIKE ?", "%"+*filter.SearchQuery+"%").
-				WhereOr("eps.ip_address ILIKE ?", "%"+*filter.SearchQuery+"%").
-				WhereOr("eps.labels::text ILIKE ?", "%"+*filter.SearchQuery+"%").
-				WhereOr("eps.id::text ILIKE ?", "%"+*filter.SearchQuery+"%").
-				WhereOr("eps.site_id::text ILIKE ?", "%"+*filter.SearchQuery+"%")
+				WhereOr("eps.bmc_mac_address ILIKE ?", "%"+searchQuery+"%").
+				WhereOr("eps.shelf_serial_number ILIKE ?", "%"+searchQuery+"%").
+				WhereOr("eps.ip_address ILIKE ?", "%"+searchQuery+"%").
+				WhereOr("eps.labels::text ILIKE ?", "%"+searchQuery+"%").
+				WhereOr("eps.id::text ILIKE ?", "%"+searchQuery+"%").
+				WhereOr("eps.site_id::text ILIKE ?", "%"+searchQuery+"%")
 		})
 		if expectedPowerShelfDAOSpan != nil {
-			epsd.tracerSpan.SetAttribute(expectedPowerShelfDAOSpan, "search_query", *filter.SearchQuery)
+			epsd.tracerSpan.SetAttribute(expectedPowerShelfDAOSpan, "search_query", searchQuery)
 		}
 	}
 

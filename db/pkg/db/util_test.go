@@ -248,7 +248,12 @@ func TestGetStringToTsQuery(t *testing.T) {
 		{
 			name:  "whitespace only",
 			input: "   ",
-			want:  "   ",
+			want:  "",
+		},
+		{
+			name:  "mixed whitespace only",
+			input: "\t \n",
+			want:  "",
 		},
 		{
 			name:  "empty string",
@@ -265,11 +270,148 @@ func TestGetStringToTsQuery(t *testing.T) {
 			input: "hello & world",
 			want:  "hello & world",
 		},
+		{
+			name:  "already has OR operator with surrounding whitespace",
+			input: " foo | bar ",
+			want:  "foo | bar",
+		},
+		{
+			name:  "standalone OR operator",
+			input: "|",
+			want:  "",
+		},
+		{
+			name:  "standalone AND operator",
+			input: "&",
+			want:  "",
+		},
+		{
+			name:  "standalone NOT operator",
+			input: "!",
+			want:  "",
+		},
+		{
+			name:  "leading OR operator",
+			input: "| foo",
+			want:  "",
+		},
+		{
+			name:  "leading AND operator",
+			input: "& foo",
+			want:  "",
+		},
+		{
+			name:  "leading NOT operator",
+			input: "! foo",
+			want:  "",
+		},
+		{
+			name:  "trailing OR operator",
+			input: "foo |",
+			want:  "",
+		},
+		{
+			name:  "trailing AND operator",
+			input: "foo &",
+			want:  "",
+		},
+		{
+			name:  "consecutive OR operators",
+			input: "foo | |",
+			want:  "",
+		},
+		{
+			name:  "consecutive AND operators",
+			input: "foo & &",
+			want:  "",
+		},
+		{
+			name:  "mixed consecutive operators",
+			input: "foo | & bar",
+			want:  "",
+		},
+		{
+			name:  "unsupported NOT operator",
+			input: "foo ! bar",
+			want:  "",
+		},
+		{
+			name:  "embedded OR operator",
+			input: "foo|bar",
+			want:  "",
+		},
+		{
+			name:  "embedded AND operator",
+			input: "foo&bar",
+			want:  "",
+		},
+		{
+			name:  "double OR operator token",
+			input: "foo || bar",
+			want:  "",
+		},
+		{
+			name:  "double AND operator token",
+			input: "foo && bar",
+			want:  "",
+		},
+		{
+			name:  "missing explicit operator between terms",
+			input: "foo | bar baz",
+			want:  "",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := GetStringToTsQuery(tt.input)
 			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestNormalizeSearchQuery(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+		ok    bool
+	}{
+		{
+			name:  "absent equivalent",
+			input: "",
+			want:  "",
+			ok:    false,
+		},
+		{
+			name:  "whitespace only",
+			input: "   ",
+			want:  "",
+			ok:    false,
+		},
+		{
+			name:  "mixed whitespace only",
+			input: "\t \n",
+			want:  "",
+			ok:    false,
+		},
+		{
+			name:  "trimmed",
+			input: " query ",
+			want:  "query",
+			ok:    true,
+		},
+		{
+			name:  "internal whitespace",
+			input: "foo  bar",
+			want:  "foo  bar",
+			ok:    true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, ok := NormalizeSearchQuery(tt.input)
+			assert.Equal(t, tt.want, got)
+			assert.Equal(t, tt.ok, ok)
 		})
 	}
 }
