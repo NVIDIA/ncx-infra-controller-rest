@@ -19,16 +19,12 @@ package db
 
 import (
 	"hash/fnv"
-	"regexp"
 	"slices"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
 )
-
-var queryORRegex = regexp.MustCompile(`.\s\|\s.`)
-var queryANDRegex = regexp.MustCompile(`.\s\&\s.`)
 
 // GetStrPtr returns a pointer for the provided string
 func GetStrPtr(s string) *string {
@@ -86,22 +82,9 @@ func GetStringToUint64Hash(id string) uint64 {
 
 // GetStringToTsQuery returns a string into a to_tsquery format from the input string
 func GetStringToTsQuery(inputQuery string) string {
-
 	inputQuery, ok := NormalizeSearchQuery(inputQuery)
 	if !ok {
 		return ""
-	}
-
-	// make sure it doesn't have already " | " or " & "
-	// becuase to_tsquery uses those format to search queries
-	// by default we formatting " | " for all search text
-
-	alreadyOr := queryORRegex.MatchString(inputQuery)
-	alreadyAnd := queryANDRegex.MatchString(inputQuery)
-
-	// skip if already containts " | " or " & "
-	if alreadyOr || alreadyAnd {
-		return inputQuery
 	}
 
 	tokens := strings.Fields(inputQuery)
@@ -109,7 +92,43 @@ func GetStringToTsQuery(inputQuery string) string {
 		return ""
 	}
 
-	return strings.Join(tokens, " | ")
+	hasOperator := false
+	for _, token := range tokens {
+		switch token {
+		case "|", "&":
+			hasOperator = true
+		case "!":
+			return ""
+		default:
+			if strings.ContainsAny(token, "|&!") {
+				return ""
+			}
+		}
+	}
+	if !hasOperator {
+		return strings.Join(tokens, " | ")
+	}
+
+	expectTerm := true
+	for _, token := range tokens {
+		switch token {
+		case "|", "&":
+			if expectTerm {
+				return ""
+			}
+			expectTerm = true
+		default:
+			if !expectTerm {
+				return ""
+			}
+			expectTerm = false
+		}
+	}
+	if expectTerm {
+		return ""
+	}
+
+	return strings.Join(tokens, " ")
 }
 
 // NormalizeSearchQuery trims a search query and reports whether it is non-blank.

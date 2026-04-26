@@ -275,6 +275,91 @@ func TestGetStringToTsQuery(t *testing.T) {
 			input: " foo | bar ",
 			want:  "foo | bar",
 		},
+		{
+			name:  "standalone OR operator",
+			input: "|",
+			want:  "",
+		},
+		{
+			name:  "standalone AND operator",
+			input: "&",
+			want:  "",
+		},
+		{
+			name:  "standalone NOT operator",
+			input: "!",
+			want:  "",
+		},
+		{
+			name:  "leading OR operator",
+			input: "| foo",
+			want:  "",
+		},
+		{
+			name:  "leading AND operator",
+			input: "& foo",
+			want:  "",
+		},
+		{
+			name:  "leading NOT operator",
+			input: "! foo",
+			want:  "",
+		},
+		{
+			name:  "trailing OR operator",
+			input: "foo |",
+			want:  "",
+		},
+		{
+			name:  "trailing AND operator",
+			input: "foo &",
+			want:  "",
+		},
+		{
+			name:  "consecutive OR operators",
+			input: "foo | |",
+			want:  "",
+		},
+		{
+			name:  "consecutive AND operators",
+			input: "foo & &",
+			want:  "",
+		},
+		{
+			name:  "mixed consecutive operators",
+			input: "foo | & bar",
+			want:  "",
+		},
+		{
+			name:  "unsupported NOT operator",
+			input: "foo ! bar",
+			want:  "",
+		},
+		{
+			name:  "embedded OR operator",
+			input: "foo|bar",
+			want:  "",
+		},
+		{
+			name:  "embedded AND operator",
+			input: "foo&bar",
+			want:  "",
+		},
+		{
+			name:  "double OR operator token",
+			input: "foo || bar",
+			want:  "",
+		},
+		{
+			name:  "double AND operator token",
+			input: "foo && bar",
+			want:  "",
+		},
+		{
+			name:  "missing explicit operator between terms",
+			input: "foo | bar baz",
+			want:  "",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
