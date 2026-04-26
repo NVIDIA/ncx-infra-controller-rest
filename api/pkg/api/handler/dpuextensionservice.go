@@ -469,10 +469,9 @@ func (gadesh GetAllDpuExtensionServiceHandler) Handle(c echo.Context) error {
 	}
 
 	// Get query text for full text search from query param
-	searchQueryStr := c.QueryParam("query")
-	if searchQueryStr != "" {
-		filterInput.SearchQuery = &searchQueryStr
-		gadesh.tracerSpan.SetAttribute(handlerSpan, attribute.String("query", searchQueryStr), logger)
+	if searchQuery := common.GetSearchQuery(c); searchQuery != nil {
+		filterInput.SearchQuery = searchQuery
+		gadesh.tracerSpan.SetAttribute(handlerSpan, attribute.String("query", *searchQuery), logger)
 	}
 
 	// Get and validate includeRelation params

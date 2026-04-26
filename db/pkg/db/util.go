@@ -87,8 +87,9 @@ func GetStringToUint64Hash(id string) uint64 {
 // GetStringToTsQuery returns a string into a to_tsquery format from the input string
 func GetStringToTsQuery(inputQuery string) string {
 
-	if inputQuery == "" {
-		return inputQuery
+	inputQuery, ok := NormalizeSearchQuery(inputQuery)
+	if !ok {
+		return ""
 	}
 
 	// make sure it doesn't have already " | " or " & "
@@ -105,10 +106,16 @@ func GetStringToTsQuery(inputQuery string) string {
 
 	tokens := strings.Fields(inputQuery)
 	if len(tokens) == 0 {
-		return inputQuery
+		return ""
 	}
 
 	return strings.Join(tokens, " | ")
+}
+
+// NormalizeSearchQuery trims a search query and reports whether it is non-blank.
+func NormalizeSearchQuery(input string) (string, bool) {
+	normalized := strings.TrimSpace(input)
+	return normalized, normalized != ""
 }
 
 // CompareStringSlicesIgnoreOrder compares two string slices ignoring order

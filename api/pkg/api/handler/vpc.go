@@ -1450,12 +1450,9 @@ func (gavh GetAllVPCHandler) Handle(c echo.Context) error {
 	}
 
 	// Get query text for full text search from query param
-	var searchQuery *string
-
-	searchQueryStr := c.QueryParam("query")
-	if searchQueryStr != "" {
-		searchQuery = &searchQueryStr
-		gavh.tracerSpan.SetAttribute(handlerSpan, attribute.String("query", searchQueryStr), logger)
+	searchQuery := common.GetSearchQuery(c)
+	if searchQuery != nil {
+		gavh.tracerSpan.SetAttribute(handlerSpan, attribute.String("query", *searchQuery), logger)
 	}
 
 	// Get status from query param
