@@ -29,5 +29,10 @@ func normalizeSearchQuery(input *string) (string, *string, bool) {
 		return "", nil, false
 	}
 
-	return searchQuery, db.GetStrPtr(db.GetStringToTsQuery(searchQuery)), true
+	tsQuery := db.GetStringToTsQuery(searchQuery)
+	if tsQuery == "" {
+		return "", nil, false
+	}
+
+	return searchQuery, db.GetStrPtr(tsQuery), true
 }
