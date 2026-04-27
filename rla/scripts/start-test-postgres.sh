@@ -58,13 +58,20 @@ case "$1" in
         docker rm "$CONTAINER_NAME" 2>/dev/null
 
         echo "Starting PostgreSQL container: $CONTAINER_NAME"
+        # Durability is intentionally disabled: this container is for tests only
+        # and the database is recreated for every test run.
         docker run -d \
             --name "$CONTAINER_NAME" \
             -p "${POSTGRES_PORT}:5432" \
             -e POSTGRES_USER="$POSTGRES_USER" \
             -e POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
             -e POSTGRES_DB="$POSTGRES_DB" \
-            postgres:14.4-alpine
+            postgres:14.4-alpine \
+            -c fsync=off \
+            -c synchronous_commit=off \
+            -c full_page_writes=off \
+            -c wal_level=minimal \
+            -c max_wal_senders=0
 
         echo ""
         echo "PostgreSQL is starting..."

@@ -48,6 +48,8 @@ HELM_SET_KEYCLOAK := --set carbide-rest-api.config.keycloak.enabled=true \
 	--set carbide-rest-api.config.keycloak.clientID=carbide-api \
 	--set carbide-rest-api.config.keycloak.serviceAccount=true
 
+# Tuning flags trade durability for speed. Safe because the container is
+# ephemeral (--rm) and the database is recreated for every test run.
 postgres-up:
 	docker run -d --rm \
 		--name $(POSTGRES_CONTAINER_NAME) \
@@ -55,7 +57,12 @@ postgres-up:
 		-e POSTGRES_USER=$(POSTGRES_USER) \
 		-e POSTGRES_PASSWORD=$(POSTGRES_PASSWORD) \
 		-e POSTGRES_DB=$(POSTGRES_DB) \
-		$(POSTGRES_IMAGE)
+		$(POSTGRES_IMAGE) \
+		-c fsync=off \
+		-c synchronous_commit=off \
+		-c full_page_writes=off \
+		-c wal_level=minimal \
+		-c max_wal_senders=0
 
 postgres-down:
 	-docker rm -f $(POSTGRES_CONTAINER_NAME)

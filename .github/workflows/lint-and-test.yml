@@ -281,6 +281,23 @@ jobs:
       - name: Install go-junit-report
         run: go install github.com/jstemmer/go-junit-report/v2@latest
 
+      # Trade durability for speed in tests. The service container is ephemeral
+      # and recreated per job, so corruption on crash is irrelevant. Only
+      # SIGHUP-reloadable flags are applied here because GitHub Actions
+      # `services:` does not allow overriding the container CMD. Each ALTER
+      # SYSTEM is passed via its own -c flag because ALTER SYSTEM cannot run
+      # inside a transaction block, and a single multi-statement -c string is
+      # wrapped in an implicit transaction by psql.
+      - name: Tune PostgreSQL for faster tests
+        run: |
+          docker exec ${{ job.services.postgres.id }} \
+            psql -U postgres -d forgetest -v ON_ERROR_STOP=1 \
+              -c "ALTER SYSTEM SET fsync = 'off'" \
+              -c "ALTER SYSTEM SET synchronous_commit = 'off'" \
+              -c "ALTER SYSTEM SET full_page_writes = 'off'" \
+              -c "ALTER SYSTEM SET autovacuum = 'off'" \
+              -c "SELECT pg_reload_conf()"
+
       - name: Run unit tests for ${{ matrix.module }}
         run: |
           set -o pipefail
