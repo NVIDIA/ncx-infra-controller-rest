@@ -23,15 +23,15 @@ import (
 	"github.com/google/uuid"
 )
 
-// RegisterPublisher registers the VPC Peering workflows with Temporal client
+// RegisterPublisher registers VPC Peering inventory workflow and activity with Temporal
 func (api *API) RegisterPublisher() error {
-	// Register publisher workflows
-	ManagerAccess.Data.EB.Log.Info().Msg("VpcPeering: Registering the publishers")
+	ManagerAccess.Data.EB.Log.Info().Msg("VpcPeering: Registering inventory workflow and activity")
 
-	// Discover VPC Peering Inventory workflow
+	// Register DiscoverVpcPeeringInventory workflow
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterWorkflow(sww.DiscoverVpcPeeringInventory)
-	ManagerAccess.Data.EB.Log.Info().Msg("VpcPeering: successfully registered DiscoverVpcPeeringInventory workflow")
+	ManagerAccess.Data.EB.Log.Info().Msg("VpcPeering: Successfully registered DiscoverVpcPeeringInventory workflow")
 
+	// Register DiscoverVpcPeeringInventory activity
 	inventoryManager := swa.NewManageVpcPeeringInventory(swa.ManageInventoryConfig{
 		SiteID:                uuid.MustParse(ManagerAccess.Conf.EB.Temporal.ClusterID),
 		CarbideAtomicClient:   ManagerAccess.Data.EB.Managers.Carbide.Client,
@@ -40,8 +40,9 @@ func (api *API) RegisterPublisher() error {
 		SitePageSize:          InventoryCarbidePageSize,
 		CloudPageSize:         InventoryCloudPageSize,
 	})
+
 	ManagerAccess.Data.EB.Managers.Workflow.Temporal.Worker.RegisterActivity(inventoryManager.DiscoverVpcPeeringInventory)
-	ManagerAccess.Data.EB.Log.Info().Msg("VpcPeering: successfully registered DiscoverVpcPeeringInventory activity")
+	ManagerAccess.Data.EB.Log.Info().Msg("VpcPeering: Successfully registered DiscoverVpcPeeringInventory activity")
 
 	api.RegisterCron()
 
