@@ -5,6 +5,131 @@ Each release lists pull requests grouped by category, with the most recent versi
 
 ---
 
+## [v1.4.0](https://github.com/NVIDIA/ncx-infra-controller-rest/releases/tag/v1.4.0)
+
+### Features
+
+- **Add support for filtering VPCs by NVLink Logical Partition** ([#380](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/380))
+  VPCs can now be filtered by their associated default NVLink Logical Partition ID. Other VPC filters have also been enhanced to accept multiple values, and network security group filter validation has been improved. See the updated query parameters on [Retrieve all VPCs](https://nvidia.github.io/ncx-infra-controller-rest/#tag/VPC/operation/get-all-vpc).
+
+- **Allow setting routing profile when creating VPCs** ([#350](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/350))
+  Callers can now include `routingProfile` when creating a VPC with FNN network virtualization. The field is only accepted for FNN-type VPCs and is reflected in the API response accordingly. See the `routingProfile` field on [Create VPC](https://nvidia.github.io/ncx-infra-controller-rest/#tag/VPC/operation/create-vpc).
+
+- **Allow power control to NSM and PSM without registration** ([#368](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/368))
+  NVSwitch Manager and PowerShelf Manager can now receive power control commands (on/off/cycle) without requiring prior component registration, simplifying initial rack bring-up workflows.
+
+- **Update Site Agent Helm chart to adopt Core prereqs for installation** ([#416](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/416))
+  Updates the README and Helm chart to reference the `helm-prereqs` chart from ncx-infra-controller-core as the recommended installation path for bare-metal cluster setup. Also adds username keys to the common DB credentials secret template.
+
+- **Hint at label filter syntax after TUI list output** ([#406](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/406))
+  After running a list command in the TUI, a context-sensitive hint now displays available label keys and the syntax for `--label`, `--sort-label`, and `scope label` filtering. The hint is suppressed once any label filter is active.
+
+- **Add user-defined task schedules** ([#392](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/392))
+  Extends the RLA scheduler to support user-defined task schedules, allowing operators to configure custom recurring jobs beyond the built-in inventory sync and leak detection schedules.
+
+- **Add support for Delta PMC vendor in Powershelf Manager** ([#331](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/331))
+  PSM now supports Delta as a power shelf vendor alongside the existing Liteon support, broadening hardware compatibility for power management.
+
+- **Support explicit rule ID override in RLA sequence requests** ([#404](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/404))
+  Callers can now specify an operation rule by ID when submitting rack operations, bypassing the normal priority chain (rack association, default, hardcoded) and using the requested rule directly.
+
+### Bug Fixes
+
+- **Reject DB connection when no encryption** ([#428](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/428))
+  Restores the PostgreSQL SSL mode from `disable` (introduced accidentally in v1.1.0 during a DSN builder refactor) back to `prefer`, so that the client attempts TLS first and falls back gracefully. This fixes connection failures against Postgres servers that only accept encrypted connections via `hostssl` rules.
+
+- **Add Site Agent manager for VPC Peering and fix workflows** ([#424](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/424))
+  Adds the missing VPC Peering manager to the Site Agent and fixes VPC Peering workflows to correctly require the VPC Peering ID during creation on Site.
+
+- **Mark ipBlockId as required in VPC Prefix create request** ([#414](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/414))
+  Corrects the OpenAPI schema and CLI/TUI to reflect that `ipBlockId` is a required field when creating a VPC Prefix, matching the server-side validation that already enforced this. See [Create VPC Prefix](https://nvidia.github.io/ncx-infra-controller-rest/#tag/VPC-Prefix/operation/create-vpc-prefix).
+
+- **Prompt for allocation constraints in TUI allocation create** ([#413](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/413))
+  Fixes the TUI allocation creation flow to properly prompt for the required constraint (resource type, IP block selection, constraint type, and value), which was previously missing.
+
+- **Send protocolVersion and routingType on IP block create** ([#412](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/412))
+  Fixes IP Block creation in the CLI/TUI by including the `protocolVersion` and `routingType` parameters that were previously omitted from the request, causing creation failures.
+
+- **Fix Expected Machine OpenAPI misnamed fields for BMC default credentials** ([#421](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/421))
+  Corrects field names for BMC default username and password in the Expected Machine OpenAPI schema, resolving mismatches between the spec and the actual API behavior. See [Expected Machine](https://nvidia.github.io/ncx-infra-controller-rest/#tag/Expected-Machine) endpoints.
+
+- **Resolve RLA inventory component manager ID sync issue** ([#409](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/409))
+  Ensures machine IDs are synced on every inventory loop iteration, removing a conditional skip that could leave `external_id` stale and cause leak detection to fail. Also updates default operation timeouts and fixes misleading error messages in component target resolution.
+
+- **Update SSH Key Group status after successful sync to Site** ([#411](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/411))
+  Fixes a bug where the overall SSH Key Group status was not updated after a successful sync to a Site — only the per-site association status was being set, leaving the parent resource in a stale state.
+
+- **Prevent duplicate --data flag panic on carbidecli create commands** ([#401](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/401))
+  Fixes a panic in `carbidecli dpu-extension-service create` (and similar commands) caused by a flag name collision when a request body property is named `data`. Colliding properties are now registered under a `body-` prefix.
+
+- **Resolve required query param for tenant-account list in TUI** ([#408](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/408))
+  Fixes the TUI tenant-account list command that was failing due to a missing required query parameter.
+
+- **Error when flags are placed after a positional argument in carbidecli** ([#400](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/400))
+  Adds detection of misordered flags placed after positional arguments in `carbidecli`, providing a clear error message instead of sending a malformed HTTP request.
+
+- **Remove deprecated Instance/Allocation relationships** ([#371](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/371))
+  Completes the transition from per-instance allocation linkage to aggregate allocation enforcement. Instance creation now validates against total reserved capacity for a tenant's instance type at a site, and allocation constraint updates check against total instance usage. See the updated [Allocation](https://nvidia.github.io/ncx-infra-controller-rest/#tag/Allocation) schema.
+
+- **Move machine ID lock acquisition before record pull** ([#405](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/405))
+  Fixes a race condition in instance creation where the machine record could become stale between initial read and lock acquisition. The lock is now acquired before pulling the record, ensuring all subsequent checks operate on current data.
+
+- **Fix OpenAPI URL for IP Block, SSH Key/Group and Tenant Account in TUI/CLI** ([#397](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/397))
+  Corrects 20 URL path segments in the TUI that were using hyphenated display names instead of the actual API paths (e.g., `ip-block` instead of `ipblock`), fixing silent 404s on list, get, create, update, and delete operations for these four resource types.
+
+- **Revise Allocation status enum and attribute descriptions in OpenAPI spec** ([#395](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/395))
+  Aligns the Allocation status enum values in the OpenAPI schema with database constants (e.g., `Registered` was missing), fixing deserialization errors when listing Allocations. Adds comprehensive attribute descriptions across Allocation models. See the updated [Allocation](https://nvidia.github.io/ncx-infra-controller-rest/#tag/Allocation) schema.
+
+- **Infer Provider/Tenant from org for Site update and Fabric retrieval endpoints** ([#372](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/372))
+  Extends org-based identity inference to Site update and Fabric retrieval endpoints, removing the need to pass `infrastructureProviderId` or `tenantId` query parameters. See updated parameters on [Update Site](https://nvidia.github.io/ncx-infra-controller-rest/#tag/Site/operation/update-site) and [Retrieve all Sites](https://nvidia.github.io/ncx-infra-controller-rest/#tag/Site/operation/get-all-site).
+
+- **Support reflashing the same firmware version in PSM** ([#393](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/393))
+  Allows PowerShelf Manager to re-apply the same firmware version that is already installed, enabling recovery scenarios where a re-flash is needed without a version change.
+
+- **Include IP block flag in VPC prefix create log** ([#426](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/426))
+  Updates the CLI hint text for VPC Prefix creation to include the required IP Block flag.
+
+### Documentation
+
+- **Add Getting Started section in OpenAPI schema** ([#402](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/402))
+  Adds a [Getting Started](https://nvidia.github.io/ncx-infra-controller-rest/#section/Getting-Started) section to the API documentation, providing a clear onboarding path for new users. HTTP 200 and 201 responses are now auto-expanded for better discoverability of response schemas.
+
+### CI/CD
+
+- **Reduce tests duration by up to 36%** ([#431](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/431))
+  Optimizes PostgreSQL test container configuration by trading durability for speed (disabling fsync, full page writes, and synchronous commit), reducing local test runs from ~10:38 to ~6:46.
+
+- **Add Grype container vulnerability scan to build-push-service** ([#418](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/418))
+  Integrates Grype as an additional container vulnerability scanner in the Docker build-and-push workflow, complementing existing security scanning.
+
+- **Add GitHub workflow to ensure Core protobuf is up to date** ([#391](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/391))
+  Adds a CI check that verifies generated protobuf code matches the current proto files, preventing drift between proto definitions and generated Go code.
+
+### Chores
+
+- **Clean up deprecated workflows/activities in Site Agent** ([#375](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/375))
+  Removes legacy workflows and activities from Site Agent that have been superseded by the Site Workflow module. Deletes custom proto objects that had drifted from Core. Retained workflows for Temporal CLI based deletion now have a `ByID` suffix for clarity.
+
+- **Switch from deprecated attributes for VPC Prefix create/update request to Site** ([#423](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/423))
+  Migrates VPC Prefix create and update API handlers from deprecated Core proto attributes to their current replacements.
+
+- **Add back standard SDK module after repo rename** ([#265](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/265))
+  Re-adds the standard SDK Go module that was removed during the repository rename, fixing import paths. SDK consumers should update imports to `github.com/NVIDIA/ncx-infra-controller-rest/sdk/standard`.
+
+- **Configure NSM and PSM to run in-memory mode by default** ([#410](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/410))
+  NVSwitch Manager and PowerShelf Manager now default to in-memory firmware storage mode, eliminating the PostgreSQL dependency for these services in standard deployments.
+
+- **Update Instance creation API test, validate unhealthy Machine flag sent to Core** ([#407](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/407))
+  Strengthens Instance creation tests to verify the `allowUnhealthyMachine` flag is correctly forwarded to Core.
+
+- **Fix idempotency issue for warning comments in Core proto format script** ([#389](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/389))
+  Makes `make core-proto-fmt` fully idempotent by preventing duplicate warning comment and block insertion on repeated runs.
+
+- **Re-generate Core protobuf to align with latest proto files** ([#390](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/390))
+  Runs `make core-protogen` to sync generated Go code with the current `*_carbide.proto` definitions on the main branch.
+
+---
+
 ## [v1.3.0](https://github.com/NVIDIA/ncx-infra-controller-rest/releases/tag/v1.3.0)
 
 ### Features
