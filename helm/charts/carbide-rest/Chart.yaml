@@ -2,7 +2,7 @@ apiVersion: v2
 name: carbide-rest
 description: Umbrella chart for the Carbide REST API platform
 type: application
-version: 0.1.6
+version: 0.1.7
 appVersion: "1.4.0"
 keywords:
   - carbide
