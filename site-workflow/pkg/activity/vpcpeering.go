@@ -168,11 +168,9 @@ func VpcPeeringFindByIDs(ctx context.Context, carbideClient *cClient.CarbideClie
 }
 
 func VpcPeeringPagedInventory(allItemIDs []*cwssaws.VpcPeeringId, pagedItems []*cwssaws.VpcPeering, input *pagedInventoryInput) *cwssaws.VPCPeeringInventory {
-	itemIDs := make([]string, len(allItemIDs))
-	for i, id := range allItemIDs {
-		if id != nil {
-			itemIDs[i] = id.GetValue()
-		}
+	itemIDs := []string{}
+	for _, id := range allItemIDs {
+		itemIDs = append(itemIDs, id.GetValue())
 	}
 
 	// Create an inventory page with the subset of VpcPeerings
