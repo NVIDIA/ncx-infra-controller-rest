@@ -1524,6 +1524,7 @@ func TestInstanceSQLDAO_GetAll(t *testing.T) {
 	}
 }
 
+// TODO: Remove this once the migration to drop allocation_id and allocation_constraint_id columns is complete.
 type InstanceWithAllocation struct {
 	bun.BaseModel `bun:"table:instance,alias:i"`
 
@@ -1586,6 +1587,7 @@ func (iwa *InstanceWithAllocation) BeforeCreateTable(ctx context.Context, query 
 	return nil
 }
 
+// TODO: Remove this once the migration to drop allocation_id and allocation_constraint_id columns is complete.
 func TestInstanceSQLDAO_GetAll_WithUnknownColumns(t *testing.T) {
 	type fields struct {
 		dbSession *db.Session
