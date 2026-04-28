@@ -89,8 +89,9 @@ type APIOperatingSystemCreateRequest struct {
 	IpxeTemplateArtifacts []cdbm.OperatingSystemIpxeArtifact `json:"ipxeTemplateArtifacts"`
 	// Scope controls the synchronization direction between carbide-rest and carbide-core.
 	// Allowed values: "Global" (rest→core, all sites), "Limited" (rest→core, specific sites
-	// listed in siteIds). Required for Templated iPXE OS; rejected for other types
-	// (validateRawIpxeOS / validateImageOS). The handler defaults raw iPXE to "Global".
+	// listed in siteIds). Required for Templated iPXE OS. For raw iPXE OS, only "Global"
+	// or unspecified is accepted; the handler always normalizes raw iPXE to "Global".
+	// Rejected for Image OS (validateImageOS).
 	Scope *string `json:"scope"`
 }
 
@@ -254,9 +255,9 @@ func (oscr APIOperatingSystemCreateRequest) validateRawIpxeOS() error {
 		}
 	}
 
-	if oscr.Scope != nil {
+	if oscr.Scope != nil && *oscr.Scope != cdbm.OperatingSystemScopeGlobal {
 		return validation.Errors{
-			"scope": errors.New("scope can only be specified for Templated iPXE Operating Systems"),
+			"scope": fmt.Errorf("scope must be %q or unspecified for raw iPXE Operating Systems", cdbm.OperatingSystemScopeGlobal),
 		}
 	}
 

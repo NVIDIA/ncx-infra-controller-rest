@@ -190,7 +190,9 @@ func (csh CreateOperatingSystemHandler) Handle(c echo.Context) error {
 	defer common.RollbackTx(ctx, tx, &txCommitted)
 
 	// Determine the effective scope before site-association logic:
-	//   - Raw iPXE:       always Global; validateRawIpxeOS rejects caller-supplied scope.
+	//   - Raw iPXE:       always Global. validateRawIpxeOS accepts only nil
+	//                     or "Global"; the handler then forces it to Global so
+	//                     downstream logic can treat it uniformly.
 	//   - Templated iPXE: scope is provided by the caller (Global or Limited).
 	osScope := apiRequest.Scope
 	if osType == cdbm.OperatingSystemTypeIPXE {
@@ -1302,10 +1304,8 @@ func (dsh DeleteOperatingSystemHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Operating System Site associations from DB", nil)
 	}
 
-	osType := os.Type
-
 	// For image-based OS, verify all associated sites are in Registered state.
-	if osType == cdbm.OperatingSystemTypeImage {
+	if os.Type == cdbm.OperatingSystemTypeImage {
 		for _, dbosa := range ossasToDelete {
 			if dbosa.Site.Status != cdbm.SiteStatusRegistered {
 				logger.Warn().Msg(fmt.Sprintf("unable to delete Operating System. Site: %s. is not in Registered state", dbosa.SiteID.String()))
@@ -1398,7 +1398,7 @@ func (dsh DeleteOperatingSystemHandler) Handle(c echo.Context) error {
 	}
 
 	// Trigger async workflow before committing so a failure to enqueue rolls back the transaction.
-	if len(ossasToDelete) > 0 && cdbm.IsIPXEType(osType) {
+	if len(ossasToDelete) > 0 && cdbm.IsIPXEType(os.Type) {
 		wid, werr := osWorkflow.ExecuteSynchronizeOperatingSystemWorkflow(ctx, dsh.tc, os.ID, osWorkflow.SyncOperationDelete)
 		if werr != nil {
 			logger.Error().Err(werr).Msg("failed to trigger SynchronizeOperatingSystem workflow for delete")
@@ -1416,7 +1416,7 @@ func (dsh DeleteOperatingSystemHandler) Handle(c echo.Context) error {
 	txCommitted = true
 
 	// Image-based OSes still use the synchronous per-site workflow pattern (post-commit).
-	if len(ossasToDelete) > 0 && osType == cdbm.OperatingSystemTypeImage {
+	if len(ossasToDelete) > 0 && os.Type == cdbm.OperatingSystemTypeImage {
 		for _, ossa := range ossasToDelete {
 			if ossa.Status == cdbm.OperatingSystemSiteAssociationStatusDeleting {
 				continue

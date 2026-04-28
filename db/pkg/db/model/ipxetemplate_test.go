@@ -31,16 +31,13 @@ import (
 
 func testIpxeTemplateSetupSchema(t *testing.T, dbSession *db.Session) {
 	ctx := context.Background()
-	require.Nil(t, dbSession.DB.ResetModel(ctx, (*User)(nil)))
-	require.Nil(t, dbSession.DB.ResetModel(ctx, (*InfrastructureProvider)(nil)))
-	require.Nil(t, dbSession.DB.ResetModel(ctx, (*Site)(nil)))
 	require.Nil(t, dbSession.DB.ResetModel(ctx, (*IpxeTemplate)(nil)))
 
-	// Add unique constraint on (site_id, name). This is applied by migration 20260306120000_ipxe_template.go
+	// Add UNIQUE(name). This is applied by migration 20260306120000_ipxe_os_and_templates.go
 	// in production; tests use ResetModel so we add it here to match.
-	_, err := dbSession.DB.Exec("ALTER TABLE ipxe_template DROP CONSTRAINT IF EXISTS ipxe_template_site_id_name_key")
+	_, err := dbSession.DB.Exec("ALTER TABLE ipxe_template DROP CONSTRAINT IF EXISTS ipxe_template_name_key")
 	require.Nil(t, err)
-	_, err = dbSession.DB.Exec("ALTER TABLE ipxe_template ADD CONSTRAINT ipxe_template_site_id_name_key UNIQUE (site_id, name)")
+	_, err = dbSession.DB.Exec("ALTER TABLE ipxe_template ADD CONSTRAINT ipxe_template_name_key UNIQUE (name)")
 	require.Nil(t, err)
 }
 
@@ -48,10 +45,9 @@ func testIpxeTemplateInitDB(t *testing.T) *db.Session {
 	return util.GetTestDBSession(t, false)
 }
 
-func testIpxeTemplateCreate(ctx context.Context, t *testing.T, dao IpxeTemplateDAO, siteID uuid.UUID, name, scope string) *IpxeTemplate {
+func testIpxeTemplateCreate(ctx context.Context, t *testing.T, dao IpxeTemplateDAO, name, scope string) *IpxeTemplate {
 	tmpl, err := dao.Create(ctx, nil, IpxeTemplateCreateInput{
-		TemplateID:        uuid.New(),
-		SiteID:            siteID,
+		ID:                uuid.New(),
 		Name:              name,
 		RequiredParams:    []string{"kernel_params"},
 		ReservedParams:    []string{"base_url", "console"},
@@ -69,10 +65,6 @@ func TestIpxeTemplateSQLDAO_Create(t *testing.T) {
 	defer dbSession.Close()
 	testIpxeTemplateSetupSchema(t, dbSession)
 
-	user := TestBuildUser(t, dbSession, "test-user", "test-org", []string{"admin"})
-	ip := TestBuildInfrastructureProvider(t, dbSession, "test-provider", "test-org", user)
-	site := TestBuildSite(t, dbSession, ip, "test-site", user)
-
 	dao := NewIpxeTemplateDAO(dbSession)
 
 	tests := []struct {
@@ -83,8 +75,7 @@ func TestIpxeTemplateSQLDAO_Create(t *testing.T) {
 		{
 			desc: "create public template",
 			input: IpxeTemplateCreateInput{
-				TemplateID:        uuid.New(),
-				SiteID:            site.ID,
+				ID:                uuid.New(),
 				Name:              "kernel-initrd",
 				RequiredParams:    []string{"kernel_params"},
 				ReservedParams:    []string{"base_url", "console"},
@@ -95,8 +86,7 @@ func TestIpxeTemplateSQLDAO_Create(t *testing.T) {
 		{
 			desc: "create internal template",
 			input: IpxeTemplateCreateInput{
-				TemplateID:        uuid.New(),
-				SiteID:            site.ID,
+				ID:                uuid.New(),
 				Name:              "discovery-scout-x86_64",
 				RequiredParams:    []string{"mac", "cli_cmd", "machine_id", "server_uri"},
 				ReservedParams:    []string{"base_url"},
@@ -112,8 +102,7 @@ func TestIpxeTemplateSQLDAO_Create(t *testing.T) {
 			assert.Equal(t, tc.expectError, err != nil)
 			if !tc.expectError {
 				require.NotNil(t, tmpl)
-				assert.NotEqual(t, uuid.Nil, tmpl.ID)
-				assert.Equal(t, tc.input.SiteID, tmpl.SiteID)
+				assert.Equal(t, tc.input.ID, tmpl.ID)
 				assert.Equal(t, tc.input.Name, tmpl.Name)
 				assert.Equal(t, tc.input.Scope, tmpl.Scope)
 				assert.Equal(t, tc.input.RequiredParams, tmpl.RequiredParams)
@@ -130,12 +119,8 @@ func TestIpxeTemplateSQLDAO_Get(t *testing.T) {
 	defer dbSession.Close()
 	testIpxeTemplateSetupSchema(t, dbSession)
 
-	user := TestBuildUser(t, dbSession, "test-user", "test-org", []string{"admin"})
-	ip := TestBuildInfrastructureProvider(t, dbSession, "test-provider", "test-org", user)
-	site := TestBuildSite(t, dbSession, ip, "test-site", user)
-
 	dao := NewIpxeTemplateDAO(dbSession)
-	created := testIpxeTemplateCreate(ctx, t, dao, site.ID, "kernel-initrd", IpxeTemplateScopePublic)
+	created := testIpxeTemplateCreate(ctx, t, dao, "kernel-initrd", IpxeTemplateScopePublic)
 
 	tests := []struct {
 		desc        string
@@ -165,14 +150,10 @@ func TestIpxeTemplateSQLDAO_GetAll(t *testing.T) {
 	defer dbSession.Close()
 	testIpxeTemplateSetupSchema(t, dbSession)
 
-	user := TestBuildUser(t, dbSession, "test-user", "test-org", []string{"admin"})
-	ip := TestBuildInfrastructureProvider(t, dbSession, "test-provider", "test-org", user)
-	site := TestBuildSite(t, dbSession, ip, "test-site", user)
-
 	dao := NewIpxeTemplateDAO(dbSession)
-	testIpxeTemplateCreate(ctx, t, dao, site.ID, "kernel-initrd", IpxeTemplateScopePublic)
-	testIpxeTemplateCreate(ctx, t, dao, site.ID, "ubuntu-autoinstall", IpxeTemplateScopePublic)
-	testIpxeTemplateCreate(ctx, t, dao, site.ID, "discovery-scout-x86_64", IpxeTemplateScopeInternal)
+	t1 := testIpxeTemplateCreate(ctx, t, dao, "kernel-initrd", IpxeTemplateScopePublic)
+	testIpxeTemplateCreate(ctx, t, dao, "ubuntu-autoinstall", IpxeTemplateScopePublic)
+	testIpxeTemplateCreate(ctx, t, dao, "discovery-scout-x86_64", IpxeTemplateScopeInternal)
 
 	tests := []struct {
 		desc          string
@@ -182,11 +163,11 @@ func TestIpxeTemplateSQLDAO_GetAll(t *testing.T) {
 		expectedTotal *int
 	}{
 		{desc: "no filter returns all", expectedCount: 3, expectedTotal: db.GetIntPtr(3)},
-		{desc: "filter by site", filter: IpxeTemplateFilterInput{SiteIDs: []uuid.UUID{site.ID}}, expectedCount: 3},
+		{desc: "filter by id", filter: IpxeTemplateFilterInput{IDs: []uuid.UUID{t1.ID}}, expectedCount: 1},
 		{desc: "filter by name", filter: IpxeTemplateFilterInput{Names: []string{"kernel-initrd"}}, expectedCount: 1},
 		{desc: "limit applies", page: paginator.PageInput{Offset: db.GetIntPtr(0), Limit: db.GetIntPtr(2)}, expectedCount: 2, expectedTotal: db.GetIntPtr(3)},
 		{desc: "offset applies", page: paginator.PageInput{Offset: db.GetIntPtr(1)}, expectedCount: 2, expectedTotal: db.GetIntPtr(3)},
-		{desc: "unknown site returns empty", filter: IpxeTemplateFilterInput{SiteIDs: []uuid.UUID{uuid.New()}}, expectedCount: 0},
+		{desc: "unknown id returns empty", filter: IpxeTemplateFilterInput{IDs: []uuid.UUID{uuid.New()}}, expectedCount: 0},
 	}
 
 	for _, tc := range tests {
@@ -207,14 +188,9 @@ func TestIpxeTemplateSQLDAO_Update(t *testing.T) {
 	defer dbSession.Close()
 	testIpxeTemplateSetupSchema(t, dbSession)
 
-	user := TestBuildUser(t, dbSession, "test-user", "test-org", []string{"admin"})
-	ip := TestBuildInfrastructureProvider(t, dbSession, "test-provider", "test-org", user)
-	site := TestBuildSite(t, dbSession, ip, "test-site", user)
-
 	dao := NewIpxeTemplateDAO(dbSession)
-	created := testIpxeTemplateCreate(ctx, t, dao, site.ID, "kernel-initrd", IpxeTemplateScopeInternal)
+	created := testIpxeTemplateCreate(ctx, t, dao, "kernel-initrd", IpxeTemplateScopeInternal)
 
-	// Update scope and params
 	updated, err := dao.Update(ctx, nil, IpxeTemplateUpdateInput{
 		IpxeTemplateID:    created.ID,
 		Name:              "kernel-initrd",
@@ -231,9 +207,7 @@ func TestIpxeTemplateSQLDAO_Update(t *testing.T) {
 	assert.Equal(t, []string{"kernel_params", "extra_option"}, updated.RequiredParams)
 	assert.Equal(t, []string{"base_url"}, updated.ReservedParams)
 	assert.Equal(t, []string{"kernel"}, updated.RequiredArtifacts)
-	// Name and SiteID should be unchanged
 	assert.Equal(t, "kernel-initrd", updated.Name)
-	assert.Equal(t, site.ID, updated.SiteID)
 }
 
 func TestIpxeTemplateSQLDAO_Delete(t *testing.T) {
@@ -242,29 +216,21 @@ func TestIpxeTemplateSQLDAO_Delete(t *testing.T) {
 	defer dbSession.Close()
 	testIpxeTemplateSetupSchema(t, dbSession)
 
-	user := TestBuildUser(t, dbSession, "test-user", "test-org", []string{"admin"})
-	ip := TestBuildInfrastructureProvider(t, dbSession, "test-provider", "test-org", user)
-	site := TestBuildSite(t, dbSession, ip, "test-site", user)
-
 	dao := NewIpxeTemplateDAO(dbSession)
-	t1 := testIpxeTemplateCreate(ctx, t, dao, site.ID, "kernel-initrd", IpxeTemplateScopePublic)
-	testIpxeTemplateCreate(ctx, t, dao, site.ID, "ubuntu-autoinstall", IpxeTemplateScopePublic)
+	t1 := testIpxeTemplateCreate(ctx, t, dao, "kernel-initrd", IpxeTemplateScopePublic)
+	testIpxeTemplateCreate(ctx, t, dao, "ubuntu-autoinstall", IpxeTemplateScopePublic)
 
-	// Delete existing
 	err := dao.Delete(ctx, nil, t1.ID)
 	require.NoError(t, err)
 
-	// Verify it's gone
 	_, err = dao.Get(ctx, nil, t1.ID)
 	assert.ErrorIs(t, err, db.ErrDoesNotExist)
 
-	// The other template is unaffected
-	remaining, total, err := dao.GetAll(ctx, nil, IpxeTemplateFilterInput{SiteIDs: []uuid.UUID{site.ID}}, paginator.PageInput{})
+	remaining, total, err := dao.GetAll(ctx, nil, IpxeTemplateFilterInput{}, paginator.PageInput{})
 	require.NoError(t, err)
 	assert.Equal(t, 1, total)
 	assert.Equal(t, "ubuntu-autoinstall", remaining[0].Name)
 
-	// Delete non-existing ID is a no-op (no error)
 	err = dao.Delete(ctx, nil, uuid.New())
 	assert.NoError(t, err)
 }
@@ -275,31 +241,16 @@ func TestIpxeTemplateSQLDAO_UniqueConstraint(t *testing.T) {
 	defer dbSession.Close()
 	testIpxeTemplateSetupSchema(t, dbSession)
 
-	user := TestBuildUser(t, dbSession, "test-user", "test-org", []string{"admin"})
-	ip := TestBuildInfrastructureProvider(t, dbSession, "test-provider", "test-org", user)
-	site := TestBuildSite(t, dbSession, ip, "test-site", user)
-
 	dao := NewIpxeTemplateDAO(dbSession)
-	testIpxeTemplateCreate(ctx, t, dao, site.ID, "kernel-initrd", IpxeTemplateScopePublic)
+	testIpxeTemplateCreate(ctx, t, dao, "kernel-initrd", IpxeTemplateScopePublic)
 
-	// Creating the same (name, site) again should fail
+	// Names are now globally unique.
 	_, err := dao.Create(ctx, nil, IpxeTemplateCreateInput{
-		TemplateID: uuid.New(),
-		SiteID:     site.ID,
-		Name:       "kernel-initrd",
-		Scope:      IpxeTemplateScopePublic,
+		ID:    uuid.New(),
+		Name:  "kernel-initrd",
+		Scope: IpxeTemplateScopePublic,
 	})
 	assert.Error(t, err)
-
-	// Same name for a different site is allowed
-	site2 := TestBuildSite(t, dbSession, ip, "test-site-2", user)
-	_, err = dao.Create(ctx, nil, IpxeTemplateCreateInput{
-		TemplateID: uuid.New(),
-		SiteID:     site2.ID,
-		Name:       "kernel-initrd",
-		Scope:      IpxeTemplateScopePublic,
-	})
-	assert.NoError(t, err)
 }
 
 func TestIpxeTemplateSQLDAO_DefaultArrayFields(t *testing.T) {
@@ -308,22 +259,15 @@ func TestIpxeTemplateSQLDAO_DefaultArrayFields(t *testing.T) {
 	defer dbSession.Close()
 	testIpxeTemplateSetupSchema(t, dbSession)
 
-	user := TestBuildUser(t, dbSession, "test-user", "test-org", []string{"admin"})
-	ip := TestBuildInfrastructureProvider(t, dbSession, "test-provider", "test-org", user)
-	site := TestBuildSite(t, dbSession, ip, "test-site", user)
-
 	dao := NewIpxeTemplateDAO(dbSession)
 
-	// Create with no params/artifacts
 	created, err := dao.Create(ctx, nil, IpxeTemplateCreateInput{
-		TemplateID: uuid.New(),
-		SiteID:     site.ID,
-		Name:       "ipxe-shell",
-		Scope:      IpxeTemplateScopeInternal,
+		ID:    uuid.New(),
+		Name:  "ipxe-shell",
+		Scope: IpxeTemplateScopeInternal,
 	})
 	require.NoError(t, err)
 
-	// Retrieve and verify empty arrays are not nil
 	retrieved, err := dao.Get(ctx, nil, created.ID)
 	require.NoError(t, err)
 	assert.NotNil(t, retrieved.RequiredParams)

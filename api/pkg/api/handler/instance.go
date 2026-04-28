@@ -1941,9 +1941,15 @@ func (uih UpdateInstanceHandler) buildInstanceUpdateRequestOsConfig(c echo.Conte
 		}
 	}
 
-	// reject deactivated OS except if OS stays the same:
+	// Reject deactivated OS except when the OS stays the same (caller did not
+	// supply operatingSystemId, or supplied the same id the instance already has).
+	// In particular, if the instance currently has no OS and the caller is now
+	// selecting a deactivated OS, that is treated as an explicit change and rejected.
 	if os != nil && !os.IsActive {
-		if apiRequest.OperatingSystemID != nil && instance.OperatingSystemID != nil && *apiRequest.OperatingSystemID != instance.OperatingSystemID.String() {
+		isExplicitChange := apiRequest.OperatingSystemID != nil &&
+			(instance.OperatingSystemID == nil ||
+				*apiRequest.OperatingSystemID != instance.OperatingSystemID.String())
+		if isExplicitChange {
 			return nil, nil, cutil.NewAPIError(http.StatusBadRequest, "Operating System specified in request has been deactivated and cannot be used to update an instance", nil)
 		}
 	}

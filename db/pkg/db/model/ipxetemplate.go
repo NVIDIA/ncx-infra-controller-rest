@@ -50,21 +50,19 @@ const (
 var (
 	// IpxeTemplateOrderByFields is a list of valid order by fields for the IpxeTemplate model
 	IpxeTemplateOrderByFields = []string{IpxeTemplateOrderByCreated, ipxeTemplateOrderByUpdated, IpxeTemplateOrderByName}
-	// IpxeTemplateRelatedEntities is a list of valid relation by fields for the IpxeTemplate model
-	IpxeTemplateRelatedEntities = map[string]bool{
-		SiteRelationName: true,
-	}
+	// IpxeTemplateRelatedEntities is a list of valid relation by fields for the IpxeTemplate model.
+	// Per-site availability is tracked via IpxeTemplateSiteAssociation, not via a direct site relation.
+	IpxeTemplateRelatedEntities = map[string]bool{}
 )
 
-// IpxeTemplate represents an iPXE script template propagated from bare-metal-manager-core
+// IpxeTemplate represents an iPXE script template propagated from bare-metal-manager-core.
+// The primary key `ID` is the template UUID assigned by core and is consistent across
+// REST and core. Per-site availability is tracked via IpxeTemplateSiteAssociation rows.
 type IpxeTemplate struct {
 	bun.BaseModel `bun:"table:ipxe_template,alias:ipxet"`
 
 	ID                uuid.UUID `bun:"id,pk,type:uuid"`
-	TemplateID        uuid.UUID `bun:"template_id,type:uuid,notnull"` // Stable UUID from core, consistent across all sites
-	SiteID            uuid.UUID `bun:"site_id,type:uuid,notnull"`
-	Site              *Site     `bun:"rel:belongs-to,join:site_id=id"`
-	Name              string    `bun:"name,notnull"`
+	Name              string    `bun:"name,notnull,unique"`
 	Template          string    `bun:"template,notnull,default:''"`
 	RequiredParams    []string  `bun:"required_params,type:text[],default:'{}'"`
 	ReservedParams    []string  `bun:"reserved_params,type:text[],default:'{}'"`
@@ -74,10 +72,10 @@ type IpxeTemplate struct {
 	Updated           time.Time `bun:"updated,nullzero,notnull,default:current_timestamp"`
 }
 
-// IpxeTemplateCreateInput are input parameters for the Create method
+// IpxeTemplateCreateInput are input parameters for the Create method.
+// `ID` must be supplied (it is the stable template UUID from core).
 type IpxeTemplateCreateInput struct {
-	TemplateID        uuid.UUID
-	SiteID            uuid.UUID
+	ID                uuid.UUID
 	Name              string
 	Template          string
 	RequiredParams    []string
@@ -100,9 +98,12 @@ type IpxeTemplateUpdateInput struct {
 // IpxeTemplateFilterInput are input parameters for the filter/GetAll method.
 // Note: only `Public`-scoped templates are ever propagated into REST (see the
 // workflow activity `UpdateIpxeTemplatesInDB`), so there is no scope filter.
+//
+// IDs filters on the template's primary key (which equals core's TemplateID).
+// Names filters on the unique template name.
 type IpxeTemplateFilterInput struct {
-	SiteIDs []uuid.UUID
-	Names   []string
+	IDs   []uuid.UUID
+	Names []string
 }
 
 var _ bun.BeforeAppendModelHook = (*IpxeTemplate)(nil)
@@ -119,14 +120,6 @@ func (it *IpxeTemplate) BeforeAppendModel(ctx context.Context, query bun.Query) 
 	return nil
 }
 
-var _ bun.BeforeCreateTableHook = (*IpxeTemplate)(nil)
-
-// BeforeCreateTable is a hook called before the table is created
-func (it *IpxeTemplate) BeforeCreateTable(ctx context.Context, query *bun.CreateTableQuery) error {
-	query.ForeignKey(`("site_id") REFERENCES "site" ("id")`)
-	return nil
-}
-
 // IpxeTemplateDAO is an interface for interacting with the IpxeTemplate model
 type IpxeTemplateDAO interface {
 	// Create inserts a new iPXE template row
@@ -137,13 +130,8 @@ type IpxeTemplateDAO interface {
 	Delete(ctx context.Context, tx *db.Tx, id uuid.UUID) error
 	// GetAll returns all rows matching the filter and page inputs
 	GetAll(ctx context.Context, tx *db.Tx, filter IpxeTemplateFilterInput, page paginator.PageInput) ([]IpxeTemplate, int, error)
-	// Get returns the row for the specified ID
+	// Get returns the row for the specified ID (which is the core template UUID)
 	Get(ctx context.Context, tx *db.Tx, id uuid.UUID) (*IpxeTemplate, error)
-	// GetBySiteAndTemplateID returns the row for the specified site and core template ID
-	GetBySiteAndTemplateID(ctx context.Context, tx *db.Tx, siteID uuid.UUID, templateID uuid.UUID) (*IpxeTemplate, error)
-	// GetAnyByTemplateID returns any single row matching the core template ID (across all sites).
-	// Returns db.ErrDoesNotExist if no row exists.
-	GetAnyByTemplateID(ctx context.Context, tx *db.Tx, templateID uuid.UUID) (*IpxeTemplate, error)
 }
 
 // IpxeTemplateSQLDAO is an implementation of the IpxeTemplateDAO interface
@@ -161,9 +149,7 @@ func (itd IpxeTemplateSQLDAO) Create(ctx context.Context, tx *db.Tx, input IpxeT
 	}
 
 	it := &IpxeTemplate{
-		ID:                uuid.New(),
-		TemplateID:        input.TemplateID,
-		SiteID:            input.SiteID,
+		ID:                input.ID,
 		Name:              input.Name,
 		Template:          input.Template,
 		RequiredParams:    input.RequiredParams,
@@ -202,63 +188,12 @@ func (itd IpxeTemplateSQLDAO) Get(ctx context.Context, tx *db.Tx, id uuid.UUID) 
 	return it, nil
 }
 
-// GetBySiteAndTemplateID returns an IpxeTemplate by site ID and core template ID
-// Returns db.ErrDoesNotExist if the record is not found
-func (itd IpxeTemplateSQLDAO) GetBySiteAndTemplateID(ctx context.Context, tx *db.Tx, siteID uuid.UUID, templateID uuid.UUID) (*IpxeTemplate, error) {
-	ctx, span := itd.tracerSpan.CreateChildInCurrentContext(ctx, "IpxeTemplateDAO.GetBySiteAndTemplateID")
-	if span != nil {
-		defer span.End()
-		itd.tracerSpan.SetAttribute(span, "site_id", siteID)
-		itd.tracerSpan.SetAttribute(span, "template_id", templateID)
-	}
-
-	it := &IpxeTemplate{}
-
-	err := db.GetIDB(tx, itd.dbSession).NewSelect().Model(it).
-		Where("ipxet.site_id = ?", siteID).
-		Where("ipxet.template_id = ?", templateID).
-		Scan(ctx)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, db.ErrDoesNotExist
-		}
-		return nil, err
-	}
-
-	return it, nil
-}
-
-// GetAnyByTemplateID returns any single row matching the core template ID across all sites.
-// Returns db.ErrDoesNotExist if no row exists.
-func (itd IpxeTemplateSQLDAO) GetAnyByTemplateID(ctx context.Context, tx *db.Tx, templateID uuid.UUID) (*IpxeTemplate, error) {
-	ctx, span := itd.tracerSpan.CreateChildInCurrentContext(ctx, "IpxeTemplateDAO.GetAnyByTemplateID")
-	if span != nil {
-		defer span.End()
-		itd.tracerSpan.SetAttribute(span, "template_id", templateID)
-	}
-
-	it := &IpxeTemplate{}
-
-	err := db.GetIDB(tx, itd.dbSession).NewSelect().Model(it).
-		Where("ipxet.template_id = ?", templateID).
-		Limit(1).
-		Scan(ctx)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, db.ErrDoesNotExist
-		}
-		return nil, err
-	}
-
-	return it, nil
-}
-
 // setQueryWithFilter populates the lookup query based on the specified filter
 func (itd IpxeTemplateSQLDAO) setQueryWithFilter(filter IpxeTemplateFilterInput, query *bun.SelectQuery, span *stracer.CurrentContextSpan) (*bun.SelectQuery, error) {
-	if len(filter.SiteIDs) > 0 {
-		query = query.Where("ipxet.site_id IN (?)", bun.In(filter.SiteIDs))
+	if len(filter.IDs) > 0 {
+		query = query.Where("ipxet.id IN (?)", bun.In(filter.IDs))
 		if span != nil {
-			itd.tracerSpan.SetAttribute(span, "site_ids", filter.SiteIDs)
+			itd.tracerSpan.SetAttribute(span, "ids", filter.IDs)
 		}
 	}
 

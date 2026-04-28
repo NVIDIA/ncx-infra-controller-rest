@@ -35,13 +35,11 @@ type OperatingSystemCreateRequest struct {
 	SiteIds []string `json:"siteIds,omitempty"`
 	// iPXE script or URL, only applicable for iPXE based OS. Mutually exclusive with ipxeTemplateId and imageUrl
 	IpxeScript NullableString `json:"ipxeScript,omitempty"`
-	// Name of an iPXE template to use. Mutually exclusive with ipxeScript and imageUrl. Only Provider Admin can create template-based OSes
+	// Name of an iPXE template to use. Mutually exclusive with ipxeScript and imageUrl. ipxeTemplateParameters: type: array description: Parameters to pass to the iPXE template for variable substitution items: $ref:
 	IpxeTemplateId NullableString `json:"ipxeTemplateId,omitempty"`
-	// Parameters to pass to the iPXE template for variable substitution
-	IpxeTemplateParameters []IpxeTemplateParameter `json:"ipxeTemplateParameters,omitempty"`
 	// Artifacts (kernel, initrd, etc.) required for the iPXE OS definition
 	IpxeTemplateArtifacts []IpxeTemplateArtifact `json:"ipxeTemplateArtifacts,omitempty"`
-	// Synchronization scope. Required for Templated iPXE OS created by Provider Admin (when ipxeTemplateId is specified); must not be set for other types. Raw iPXE OS scope is auto-set to Global. Image OS scope is always nil
+	// Synchronization scope. Required for Templated iPXE OS created by Provider Admin (when ipxeTemplateId is specified). For Raw iPXE OS, only \"Global\" or unspecified is accepted; the handler always normalizes raw iPXE to Global. Must not be set for Image OS (always nil).
 	Scope NullableString `json:"scope,omitempty"`
 	// Original URL from where the Operating System image can be retreived from, required for image based OS. Cannot be specified if ipxeScript is specified
 	ImageUrl NullableString `json:"imageUrl,omitempty"`
@@ -351,38 +349,6 @@ func (o *OperatingSystemCreateRequest) SetIpxeTemplateIdNil() {
 // UnsetIpxeTemplateId ensures that no value is present for IpxeTemplateId, not even an explicit nil
 func (o *OperatingSystemCreateRequest) UnsetIpxeTemplateId() {
 	o.IpxeTemplateId.Unset()
-}
-
-// GetIpxeTemplateParameters returns the IpxeTemplateParameters field value if set, zero value otherwise.
-func (o *OperatingSystemCreateRequest) GetIpxeTemplateParameters() []IpxeTemplateParameter {
-	if o == nil || IsNil(o.IpxeTemplateParameters) {
-		var ret []IpxeTemplateParameter
-		return ret
-	}
-	return o.IpxeTemplateParameters
-}
-
-// GetIpxeTemplateParametersOk returns a tuple with the IpxeTemplateParameters field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *OperatingSystemCreateRequest) GetIpxeTemplateParametersOk() ([]IpxeTemplateParameter, bool) {
-	if o == nil || IsNil(o.IpxeTemplateParameters) {
-		return nil, false
-	}
-	return o.IpxeTemplateParameters, true
-}
-
-// HasIpxeTemplateParameters returns a boolean if a field has been set.
-func (o *OperatingSystemCreateRequest) HasIpxeTemplateParameters() bool {
-	if o != nil && !IsNil(o.IpxeTemplateParameters) {
-		return true
-	}
-
-	return false
-}
-
-// SetIpxeTemplateParameters gets a reference to the given []IpxeTemplateParameter and assigns it to the IpxeTemplateParameters field.
-func (o *OperatingSystemCreateRequest) SetIpxeTemplateParameters(v []IpxeTemplateParameter) {
-	o.IpxeTemplateParameters = v
 }
 
 // GetIpxeTemplateArtifacts returns the IpxeTemplateArtifacts field value if set, zero value otherwise.
@@ -939,9 +905,6 @@ func (o OperatingSystemCreateRequest) ToMap() (map[string]interface{}, error) {
 	}
 	if o.IpxeTemplateId.IsSet() {
 		toSerialize["ipxeTemplateId"] = o.IpxeTemplateId.Get()
-	}
-	if !IsNil(o.IpxeTemplateParameters) {
-		toSerialize["ipxeTemplateParameters"] = o.IpxeTemplateParameters
 	}
 	if !IsNil(o.IpxeTemplateArtifacts) {
 		toSerialize["ipxeTemplateArtifacts"] = o.IpxeTemplateArtifacts

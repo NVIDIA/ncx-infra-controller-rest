@@ -401,11 +401,20 @@ func TestAPIOperatingSystemCreateRequest_Validate(t *testing.T) {
 			expectErr: false,
 		},
 		{
-			desc: "error when raw iPXE has scope specified",
+			desc: "raw iPXE with explicit Global scope is allowed",
 			obj: APIOperatingSystemCreateRequest{
-				Name:       "raw-ipxe-with-scope",
+				Name:       "raw-ipxe-with-global-scope",
 				IpxeScript: cdb.GetStrPtr("ipxe-script"),
 				Scope:      cdb.GetStrPtr(cdbm.OperatingSystemScopeGlobal),
+			},
+			expectErr: false,
+		},
+		{
+			desc: "error when raw iPXE has non-Global scope specified",
+			obj: APIOperatingSystemCreateRequest{
+				Name:       "raw-ipxe-with-limited-scope",
+				IpxeScript: cdb.GetStrPtr("ipxe-script"),
+				Scope:      cdb.GetStrPtr(cdbm.OperatingSystemScopeLimited),
 			},
 			expectErr: true,
 		},
