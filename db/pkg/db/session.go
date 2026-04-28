@@ -64,6 +64,7 @@ func NewSessionFromConfig(ctx context.Context, c Config) (*Session, error) {
 	}
 
 	db := bun.NewDB(stdlib.OpenDBFromPool(pool), pgdialect.New())
+	// db := bun.NewDB(stdlib.OpenDBFromPool(pool), pgdialect.New(), bun.WithDiscardUnknownColumns())
 
 	// if tracing service name is configured, add otel hooks
 	if os.Getenv("TRACING_SERVICE_NAME") != "" {
