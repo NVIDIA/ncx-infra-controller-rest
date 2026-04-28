@@ -89,6 +89,11 @@ Each release lists pull requests grouped by category, with the most recent versi
 - **Include IP block flag in VPC prefix create log** ([#426](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/426))
   Updates the CLI hint text for VPC Prefix creation to include the required IP Block flag.
 
+### Refactoring
+
+- **Create generic Execute interface and workflow/activity registries in RLA** ([#419](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/419))
+  Introduces a generic `Execute` interface and type-safe workflow/activity registries in the RLA task executor, replacing ad-hoc registration with a structured pattern. Consolidates shared execution logic, adds comprehensive registry tests, and improves discoverability of available actions.
+
 ### Documentation
 
 - **Add Getting Started section in OpenAPI schema** ([#402](https://github.com/NVIDIA/ncx-infra-controller-rest/pull/402))
