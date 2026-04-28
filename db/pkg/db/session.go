@@ -63,8 +63,9 @@ func NewSessionFromConfig(ctx context.Context, c Config) (*Session, error) {
 		return nil, err
 	}
 
-	db := bun.NewDB(stdlib.OpenDBFromPool(pool), pgdialect.New())
-	// db := bun.NewDB(stdlib.OpenDBFromPool(pool), pgdialect.New(), bun.WithDiscardUnknownColumns())
+	// NOTE: WithDiscardUnknownColumns is recommended to be used in production environments.
+	// Reference: https://bun.uptrace.dev/guide/running-bun-in-production.html
+	db := bun.NewDB(stdlib.OpenDBFromPool(pool), pgdialect.New(), bun.WithDiscardUnknownColumns())
 
 	// if tracing service name is configured, add otel hooks
 	if os.Getenv("TRACING_SERVICE_NAME") != "" {
