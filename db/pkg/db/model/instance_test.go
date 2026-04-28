@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	otrace "go.opentelemetry.io/otel/trace"
@@ -32,6 +33,7 @@ import (
 	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/util"
 	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 	"github.com/google/uuid"
+	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/extra/bundebug"
 )
 
@@ -1520,6 +1522,201 @@ func TestInstanceSQLDAO_GetAll(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TODO: Remove this once the migration to drop allocation_id and allocation_constraint_id columns is complete.
+type InstanceWithAllocation struct {
+	bun.BaseModel `bun:"table:instance,alias:i"`
+
+	ID                                     uuid.UUID                               `bun:"type:uuid,pk"`
+	Name                                   string                                  `bun:"name,notnull"`
+	Description                            *string                                 `bun:"description"`
+	AllocationID                           *uuid.UUID                              `bun:"allocation_id,type:uuid"`
+	Allocation                             *Allocation                             `bun:"rel:belongs-to,join:allocation_id=id"`
+	AllocationConstraintID                 *uuid.UUID                              `bun:"allocation_constraint_id,type:uuid"`
+	AllocationConstraint                   *AllocationConstraint                   `bun:"rel:belongs-to,join:allocation_constraint_id=id"`
+	TenantID                               uuid.UUID                               `bun:"tenant_id,type:uuid,notnull"`
+	Tenant                                 *Tenant                                 `bun:"rel:belongs-to,join:tenant_id=id"`
+	InfrastructureProviderID               uuid.UUID                               `bun:"infrastructure_provider_id,type:uuid,notnull"`
+	InfrastructureProvider                 *InfrastructureProvider                 `bun:"rel:belongs-to,join:infrastructure_provider_id=id"`
+	SiteID                                 uuid.UUID                               `bun:"site_id,type:uuid,notnull"`
+	Site                                   *Site                                   `bun:"rel:belongs-to,join:site_id=id"`
+	NetworkSecurityGroupID                 *string                                 `bun:"network_security_group_id"`
+	NetworkSecurityGroup                   *NetworkSecurityGroup                   `bun:"rel:belongs-to,join:network_security_group_id=id"`
+	NetworkSecurityGroupPropagationDetails *NetworkSecurityGroupPropagationDetails `bun:"network_security_group_propagation_details,type:jsonb"`
+	InstanceTypeID                         *uuid.UUID                              `bun:"instance_type_id,type:uuid"`
+	InstanceType                           *InstanceType                           `bun:"rel:belongs-to,join:instance_type_id=id"`
+	VpcID                                  uuid.UUID                               `bun:"vpc_id,type:uuid,notnull"`
+	Vpc                                    *Vpc                                    `bun:"rel:belongs-to,join:vpc_id=id"`
+	MachineID                              *string                                 `bun:"machine_id"`
+	Machine                                *Machine                                `bun:"rel:belongs-to,join:machine_id=id"`
+	ControllerInstanceID                   *uuid.UUID                              `bun:"controller_instance_id,type:uuid"`
+	Hostname                               *string                                 `bun:"hostname"`
+	OperatingSystemID                      *uuid.UUID                              `bun:"operating_system_id,type:uuid"`
+	OperatingSystem                        *OperatingSystem                        `bun:"rel:belongs-to,join:operating_system_id=id"`
+	IpxeScript                             *string                                 `bun:"ipxe_script"`
+	AlwaysBootWithCustomIpxe               bool                                    `bun:"always_boot_with_custom_ipxe,notnull"`
+	PhoneHomeEnabled                       bool                                    `bun:"phone_home_enabled,notnull"`
+	UserData                               *string                                 `bun:"user_data"`
+	Labels                                 map[string]string                       `bun:"labels,type:jsonb"`
+	IsUpdatePending                        bool                                    `bun:"is_update_pending,notnull"`
+	InfinityRCRStatus                      *string                                 `bun:"infinity_rcr_status"`
+	TpmEkCertificate                       *string                                 `bun:"tpm_ek_certificate"`
+	Status                                 string                                  `bun:"status,notnull"`
+	PowerStatus                            *string                                 `bun:"power_status"`
+	IsMissingOnSite                        bool                                    `bun:"is_missing_on_site,notnull"`
+	Created                                time.Time                               `bun:"created,nullzero,notnull,default:current_timestamp"`
+	Updated                                time.Time                               `bun:"updated,nullzero,notnull,default:current_timestamp"`
+	Deleted                                *time.Time                              `bun:"deleted,soft_delete"`
+	CreatedBy                              uuid.UUID                               `bun:"created_by,type:uuid,notnull"`
+	// Not for display, used by the query that sorts on machine capability type, specifically InfiniBand type
+	MCType string `bun:"mc_type,scanonly"`
+}
+
+func (iwa *InstanceWithAllocation) BeforeCreateTable(ctx context.Context, query *bun.CreateTableQuery) error {
+	query.ForeignKey(`("allocation_id") REFERENCES "allocation" ("id")`).
+		ForeignKey(`("allocation_constraint_id") REFERENCES "allocation_constraint" ("id")`).
+		ForeignKey(`("tenant_id") REFERENCES "tenant" ("id")`).
+		ForeignKey(`("infrastructure_provider_id") REFERENCES "infrastructure_provider" ("id")`).
+		ForeignKey(`("site_id") REFERENCES "site" ("id")`).
+		ForeignKey(`("instance_type_id") REFERENCES "instance_type" ("id")`).
+		ForeignKey(`("vpc_id") REFERENCES "vpc" ("id")`).
+		ForeignKey(`("machine_id") REFERENCES "machine" ("id")`).
+		ForeignKey(`("operating_system_id") REFERENCES "operating_system" ("id")`).
+		ForeignKey(`("network_security_group_id") REFERENCES "network_security_group" ("id")`)
+	return nil
+}
+
+// TODO: Remove this once the migration to drop allocation_id and allocation_constraint_id columns is complete.
+func TestInstanceSQLDAO_GetAll_WithUnknownColumns(t *testing.T) {
+	type fields struct {
+		dbSession *db.Session
+	}
+	type args struct {
+		ctx context.Context
+	}
+
+	ctx := context.Background()
+	dbSession := testInstanceInitDB(t)
+	defer dbSession.Close()
+
+	// create Allocation table
+	err := dbSession.DB.ResetModel(context.Background(), (*Allocation)(nil))
+	assert.Nil(t, err)
+	// create Tenant table
+	err = dbSession.DB.ResetModel(context.Background(), (*Tenant)(nil))
+	assert.Nil(t, err)
+	// create Infrastructure Provider table
+	err = dbSession.DB.ResetModel(context.Background(), (*InfrastructureProvider)(nil))
+	assert.Nil(t, err)
+	// create Site table
+	err = dbSession.DB.ResetModel(context.Background(), (*Site)(nil))
+	assert.Nil(t, err)
+	// create InstanceType table
+	err = dbSession.DB.ResetModel(context.Background(), (*InstanceType)(nil))
+	assert.Nil(t, err)
+	// create NetworkSecurityGroup table
+	err = dbSession.DB.ResetModel(context.Background(), (*NetworkSecurityGroup)(nil))
+	assert.Nil(t, err)
+	// create Vpc table
+	err = dbSession.DB.ResetModel(context.Background(), (*Vpc)(nil))
+	assert.Nil(t, err)
+	// create IPBlock table
+	err = dbSession.DB.ResetModel(context.Background(), (*IPBlock)(nil))
+	assert.Nil(t, err)
+	// create VpcPrefix table
+	err = dbSession.DB.ResetModel(context.Background(), (*VpcPrefix)(nil))
+	assert.Nil(t, err)
+	// create Machine table
+	err = dbSession.DB.ResetModel(context.Background(), (*Machine)(nil))
+	assert.Nil(t, err)
+	// create Machine table
+	err = dbSession.DB.ResetModel(context.Background(), (*MachineCapability)(nil))
+	assert.Nil(t, err)
+	// create OperatingSystem table
+	err = dbSession.DB.ResetModel(context.Background(), (*OperatingSystem)(nil))
+	assert.Nil(t, err)
+	// create User table
+	err = dbSession.DB.ResetModel(context.Background(), (*User)(nil))
+	assert.Nil(t, err)
+	// create Instance table
+	err = dbSession.DB.ResetModel(context.Background(), (*InstanceWithAllocation)(nil))
+	assert.Nil(t, err)
+	// create Interface table
+	err = dbSession.DB.ResetModel(context.Background(), (*Interface)(nil))
+	assert.Nil(t, err)
+	// create SSHKey table
+	err = dbSession.DB.ResetModel(context.Background(), (*SSHKey)(nil))
+	assert.Nil(t, err)
+	// create SSHKeyGroup table
+	err = dbSession.DB.ResetModel(context.Background(), (*SSHKeyGroup)(nil))
+	assert.Nil(t, err)
+
+	ip := testInstanceBuildInfrastructureProvider(t, dbSession, "testIP")
+	site := testInstanceBuildSite(t, dbSession, ip, "testSite")
+	tenant1 := testInstanceBuildTenant(t, dbSession, "testTenant1")
+	vpc := testInstanceBuildVpc(t, dbSession, ip, site, tenant1, "testVpc")
+	instanceType := testInstanceBuildInstanceType(t, dbSession, ip, "testInstanceType")
+	networkSecurityGroup := testInstanceBuildNetworkSecurityGroup(t, dbSession, tenant1, site, "testNetworkSecurityGroup")
+	machine := testMachineBuildMachine(t, dbSession, ip.ID, site.ID, &instanceType.ID, db.GetStrPtr("mcTypeTest"))
+	allocation := testInstanceBuildAllocation(t, dbSession, ip, tenant1, site, "testAllocation")
+	_ = testBuildAllocationConstraint(t, dbSession, allocation, AllocationResourceTypeInstanceType, instanceType.ID, AllocationConstraintTypeReserved, 10, uuid.New())
+	operatingSystem := testInstanceBuildOperatingSystem(t, dbSession, "testOS")
+	user := testInstanceBuildUser(t, dbSession, "testUser")
+	isd := NewInstanceDAO(dbSession)
+
+	i1, err := isd.Create(
+		ctx, nil,
+		InstanceCreateInput{
+			Name:                     "test1",
+			Description:              db.GetStrPtr("Test description"),
+			TenantID:                 tenant1.ID,
+			InfrastructureProviderID: ip.ID,
+			SiteID:                   site.ID,
+			InstanceTypeID:           &instanceType.ID,
+			NetworkSecurityGroupID:   &networkSecurityGroup.ID,
+			VpcID:                    vpc.ID,
+			MachineID:                &machine.ID,
+			Hostname:                 db.GetStrPtr("test.com"),
+			OperatingSystemID:        db.GetUUIDPtr(operatingSystem.ID),
+			IpxeScript:               db.GetStrPtr("ipxe"),
+			AlwaysBootWithCustomIpxe: true,
+			PhoneHomeEnabled:         true,
+			UserData:                 db.GetStrPtr("userdata"),
+			Labels:                   map[string]string{},
+			Status:                   InstanceStatusPending,
+			CreatedBy:                user.ID,
+		},
+	)
+	assert.NoError(t, err)
+	assert.NotNil(t, i1)
+
+	i2, err := isd.Create(
+		ctx, nil,
+		InstanceCreateInput{
+			Name:                     "test2",
+			TenantID:                 tenant1.ID,
+			InfrastructureProviderID: ip.ID,
+			SiteID:                   site.ID,
+			InstanceTypeID:           &instanceType.ID,
+			VpcID:                    vpc.ID,
+			MachineID:                &machine.ID,
+			Hostname:                 db.GetStrPtr("test.com"),
+			OperatingSystemID:        db.GetUUIDPtr(operatingSystem.ID),
+			IpxeScript:               db.GetStrPtr("ipxe"),
+			AlwaysBootWithCustomIpxe: true,
+			PhoneHomeEnabled:         true,
+			UserData:                 db.GetStrPtr("userdata"),
+			Labels:                   map[string]string{},
+			Status:                   InstanceStatusPending,
+			CreatedBy:                user.ID,
+		},
+	)
+	assert.NoError(t, err)
+	assert.NotNil(t, i2)
+
+	_, _, err = isd.GetAll(ctx, nil, InstanceFilterInput{}, paginator.PageInput{}, []string{})
+	assert.NoError(t, err)
 }
 
 func TestInstanceSQLDAO_GetCount(t *testing.T) {
