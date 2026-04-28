@@ -143,6 +143,7 @@ var (
 	}
 )
 
+// WARNING: Until migration to drop allocation_id and allocation_constraint_id columns is complete, GetAll will need to be updated whenever a new column is added to the instance table.
 // Instance is a bare-metal machine that has been provisioned for a tenant
 type Instance struct {
 	bun.BaseModel `bun:"table:instance,alias:i"`
@@ -585,7 +586,9 @@ func (isd InstanceSQLDAO) GetAll(ctx context.Context, tx *db.Tx, filter Instance
 
 	var instances []Instance
 
-	query := db.GetIDB(tx, isd.dbSession).NewSelect().Model(&instances).ColumnExpr("i.*")
+	// TODO: Remove the ColumnExpr once the migration to drop allocation_id and allocation_constraint_id columns is complete.
+	query := db.GetIDB(tx, isd.dbSession).NewSelect().Model(&instances).
+		ColumnExpr("i.id, i.name, i.description, i.tenant_id, i.infrastructure_provider_id, i.site_id, i.network_security_group_id, i.network_security_group_propagation_details, i.instance_type_id, i.vpc_id, i.machine_id, i.controller_instance_id, i.hostname, i.operating_system_id, i.ipxe_script, i.always_boot_with_custom_ipxe, i.phone_home_enabled, i.user_data, i.labels, i.is_update_pending, i.infinity_rcr_status, i.tpm_ek_certificate, i.status, i.power_status, i.is_missing_on_site, i.created, i.updated, i.deleted, i.created_by")
 
 	query, err := isd.setQueryWithFilter(filter, query, instanceDAOSpan)
 	if err != nil {
