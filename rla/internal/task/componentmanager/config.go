@@ -107,7 +107,7 @@ func ParseConfig(data []byte) (Config, error) {
 	for typeStr, implName := range raw.ComponentManagers {
 		componentType := devicetypes.ComponentTypeFromString(typeStr)
 		if componentType == devicetypes.ComponentTypeUnknown {
-			return Config{}, fmt.Errorf("unknown component type: %s", typeStr)
+			return Config{}, UnknownComponentTypeError{Name: typeStr}
 		}
 		config.ComponentManagers[componentType] = strings.TrimSpace(implName)
 	}

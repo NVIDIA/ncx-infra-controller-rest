@@ -18,7 +18,6 @@
 package componentmanager
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/rs/zerolog/log"
@@ -78,14 +77,18 @@ func (pr *ProviderRegistry) Get(name string) Provider {
 // Returns an error if the provider is not found or cannot be cast to the expected type.
 func GetTyped[T Provider](pr *ProviderRegistry, name string) (T, error) {
 	var zero T
+	if pr == nil {
+		return zero, ErrProviderRegistryNotConfigured
+	}
+
 	provider := pr.Get(name)
 	if provider == nil {
-		return zero, fmt.Errorf("provider '%s' not found", name)
+		return zero, UnknownProviderError{Name: name}
 	}
 
 	typed, ok := provider.(T)
 	if !ok {
-		return zero, fmt.Errorf("provider '%s' is not of expected type", name)
+		return zero, ProviderTypeMismatchError{Name: name}
 	}
 
 	return typed, nil
