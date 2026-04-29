@@ -3133,19 +3133,37 @@ func (uih UpdateInstanceHandler) Handle(c echo.Context) error {
 
 	nvLinkInterfacesUnchanged := false
 	if apiRequest.NVLinkInterfaces != nil {
-		// Count the number of active NVLink interfaces by NVLink Logical Partition ID and Device Instance
-		existingActiveNvlIfcMap := make(map[string]int)
-		existingActiveNvlIfcCount := 0
+		// Count the number of NVLink interfaces by NVLink Logical Partition ID and Device Instance
+		existingNvlIfcMap := make(map[string]int)
+		existingReadyNvlIfcsCount := 0
+		existingPendingNvlIfcsCount := 0
+		existingDeletingNvlIfcsCount := 0
 		for i := range existingNvlIfcs {
-			if existingNvlIfcs[i].Status == cdbm.NVLinkInterfaceStatusDeleting {
-				continue
-			}
 			key := fmt.Sprintf("%s:%d", existingNvlIfcs[i].NVLinkLogicalPartitionID.String(), existingNvlIfcs[i].DeviceInstance)
-			existingActiveNvlIfcMap[key]++
-			existingActiveNvlIfcCount++
+			existingNvlIfcMap[key]++
+			switch existingNvlIfcs[i].Status {
+			case cdbm.NVLinkInterfaceStatusReady:
+				existingReadyNvlIfcsCount++
+			case cdbm.NVLinkInterfaceStatusPending:
+				existingPendingNvlIfcsCount++
+			case cdbm.NVLinkInterfaceStatusDeleting:
+				existingDeletingNvlIfcsCount++
+			default:
+				// Provisioning, Error, or other statuses are not counted in these buckets.
+			}
 		}
 
-		nvLinkInterfacesUnchanged = len(apiRequest.NVLinkInterfaces) == existingActiveNvlIfcCount
+		// If the number of pending/ready/deeleting NVLink interfaces is unchanged, do nothing
+		// because existing NVLink interfaces includes pending/ready/deleting NVLink interfaces on the same logical partition and device instance
+		// hence we need to verify if incoming request contains the same number of pending/ready/deleting NVLink interfaces
+		if len(apiRequest.NVLinkInterfaces) == existingPendingNvlIfcsCount {
+			nvLinkInterfacesUnchanged = true
+		} else if len(apiRequest.NVLinkInterfaces) == existingReadyNvlIfcsCount {
+			nvLinkInterfacesUnchanged = true
+		} else if len(apiRequest.NVLinkInterfaces) == existingDeletingNvlIfcsCount {
+			nvLinkInterfacesUnchanged = true
+		}
+
 		nvllpIDs := goset.NewSet[uuid.UUID]()
 		for _, apiNvlIfc := range apiRequest.NVLinkInterfaces {
 			// NVLink Logical Partition
@@ -3159,11 +3177,11 @@ func (uih UpdateInstanceHandler) Handle(c echo.Context) error {
 			// If the number of active NVLink interfaces is unchanged, consume matching keys (multiset match).
 			if nvLinkInterfacesUnchanged {
 				key := fmt.Sprintf("%s:%d", nvllPartitionID.String(), apiNvlIfc.DeviceInstance)
-				count := existingActiveNvlIfcMap[key]
+				count := existingNvlIfcMap[key]
 				if count == 0 {
 					nvLinkInterfacesUnchanged = false
 				} else {
-					existingActiveNvlIfcMap[key] = count - 1
+					existingNvlIfcMap[key] = count - 1
 				}
 			}
 		}
