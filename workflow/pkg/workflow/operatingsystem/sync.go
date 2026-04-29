@@ -78,7 +78,7 @@ func SynchronizeOperatingSystem(ctx workflow.Context, osID uuid.UUID, operation 
 // asynchronously on the cloud task queue. The handler does not wait for completion.
 func ExecuteSynchronizeOperatingSystemWorkflow(ctx context.Context, tc client.Client, osID uuid.UUID, operation string) (*string, error) {
 	workflowOptions := client.StartWorkflowOptions{
-		ID:                    "sync-os-" + osID.String() + "-" + operation,
+		ID:                    "synchronize-operating-system-" + osID.String() + "-" + operation,
 		TaskQueue:             queue.CloudTaskQueue,
 		WorkflowIDReusePolicy: temporalEnums.WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE,
 	}

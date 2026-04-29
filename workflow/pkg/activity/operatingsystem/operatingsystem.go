@@ -23,6 +23,7 @@ import (
 	"errors"
 	"time"
 
+	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 
@@ -52,9 +53,9 @@ var (
 	}
 )
 
-// ManageOsImage is an activity wrapper for managing Image based OS lifecycle for a Site and allows
+// ManageOperatingSystem is an activity wrapper for managing Operating System lifecycle for a Site and allows
 // injecting DB access
-type ManageOsImage struct {
+type ManageOperatingSystem struct {
 	dbSession      *cdb.Session
 	siteClientPool *sc.ClientPool
 }
@@ -62,12 +63,12 @@ type ManageOsImage struct {
 // Activity functions
 
 // UpdateOsImagesInDB takes information pushed by Site Agent for a collection of image based OSs associated with the Site and updates the DB
-func (mskg ManageOsImage) UpdateOsImagesInDB(ctx context.Context, siteID uuid.UUID, osImageInventory *cwssaws.OsImageInventory) ([]uuid.UUID, error) {
+func (mos ManageOperatingSystem) UpdateOsImagesInDB(ctx context.Context, siteID uuid.UUID, osImageInventory *cwssaws.OsImageInventory) ([]uuid.UUID, error) {
 	logger := log.With().Str("Activity", "UpdateOsImagesInDB").Str("Site ID", siteID.String()).Logger()
 
 	logger.Info().Msg("starting activity")
 
-	stDAO := cdbm.NewSiteDAO(mskg.dbSession)
+	stDAO := cdbm.NewSiteDAO(mos.dbSession)
 
 	site, err := stDAO.GetByID(ctx, nil, siteID, nil, false)
 	if err != nil {
@@ -84,7 +85,7 @@ func (mskg ManageOsImage) UpdateOsImagesInDB(ctx context.Context, siteID uuid.UU
 		return nil, nil
 	}
 
-	ossaDAO := cdbm.NewOperatingSystemSiteAssociationDAO(mskg.dbSession)
+	ossaDAO := cdbm.NewOperatingSystemSiteAssociationDAO(mos.dbSession)
 
 	existingOssas, _, err := ossaDAO.GetAll(
 		ctx,
@@ -187,7 +188,7 @@ func (mskg ManageOsImage) UpdateOsImagesInDB(ctx context.Context, siteID uuid.UU
 			// if determined status is different that current
 			// only that case update
 			if ossaStatus != ossa.Status {
-				serr := mskg.updateOperatingSystemSiteAssociationStatusInDB(ctx, nil, ossa.ID, cdb.GetStrPtr(ossaStatus), ossaStatusMessage)
+				serr := mos.updateOperatingSystemSiteAssociationStatusInDB(ctx, nil, ossa.ID, cdb.GetStrPtr(ossaStatus), ossaStatusMessage)
 				if serr != nil {
 					slogger.Error().Err(err).Msg("failed to update OS Image Site Association status detail in DB")
 				}
@@ -224,7 +225,7 @@ func (mskg ManageOsImage) UpdateOsImagesInDB(ctx context.Context, siteID uuid.UU
 				continue
 			}
 			// Trigger re-evaluation of Operating System status (delete if no association exists)
-			serr = mskg.UpdateOperatingSystemStatusInDB(ctx, ossa.OperatingSystemID)
+			serr = mos.UpdateOperatingSystemStatusInDB(ctx, ossa.OperatingSystemID)
 			if serr != nil {
 				slogger.Error().Err(err).Msg("failed to trigger Operating System status update in DB")
 			}
@@ -248,7 +249,7 @@ func (mskg ManageOsImage) UpdateOsImagesInDB(ctx context.Context, siteID uuid.UU
 				continue
 			}
 
-			serr = mskg.updateOperatingSystemSiteAssociationStatusInDB(ctx, nil, ossa.ID, cdb.GetStrPtr(cdbm.OperatingSystemSiteAssociationStatusError), cdb.GetStrPtr("Operating System is missing on Site"))
+			serr = mos.updateOperatingSystemSiteAssociationStatusInDB(ctx, nil, ossa.ID, cdb.GetStrPtr(cdbm.OperatingSystemSiteAssociationStatusError), cdb.GetStrPtr("Operating System is missing on Site"))
 			if serr != nil {
 				slogger.Error().Err(err).Msg("failed to update Operating System Site Association status detail in DB")
 			}
@@ -266,9 +267,9 @@ func (mskg ManageOsImage) UpdateOsImagesInDB(ctx context.Context, siteID uuid.UU
 }
 
 // updateOperatingSystemSiteAssociationStatusInDB is helper function to write OperatingSystemSiteAssociation updates to DB
-func (mskg ManageOsImage) updateOperatingSystemSiteAssociationStatusInDB(ctx context.Context, tx *cdb.Tx, ossaID uuid.UUID, status *string, statusMessage *string) error {
+func (mos ManageOperatingSystem) updateOperatingSystemSiteAssociationStatusInDB(ctx context.Context, tx *cdb.Tx, ossaID uuid.UUID, status *string, statusMessage *string) error {
 	if status != nil {
-		ossaDAO := cdbm.NewOperatingSystemSiteAssociationDAO(mskg.dbSession)
+		ossaDAO := cdbm.NewOperatingSystemSiteAssociationDAO(mos.dbSession)
 
 		_, err := ossaDAO.Update(
 			ctx,
@@ -282,7 +283,7 @@ func (mskg ManageOsImage) updateOperatingSystemSiteAssociationStatusInDB(ctx con
 			return err
 		}
 
-		statusDetailDAO := cdbm.NewStatusDetailDAO(mskg.dbSession)
+		statusDetailDAO := cdbm.NewStatusDetailDAO(mos.dbSession)
 		_, err = statusDetailDAO.CreateFromParams(ctx, tx, ossaID.String(), *status, statusMessage)
 		if err != nil {
 			return err
@@ -292,12 +293,12 @@ func (mskg ManageOsImage) updateOperatingSystemSiteAssociationStatusInDB(ctx con
 }
 
 // UpdateOperatingSystemStatusInDB is helper function to write Operating System updates to DB
-func (mskg ManageOsImage) UpdateOperatingSystemStatusInDB(ctx context.Context, osID uuid.UUID) error {
+func (mos ManageOperatingSystem) UpdateOperatingSystemStatusInDB(ctx context.Context, osID uuid.UUID) error {
 	logger := log.With().Str("Activity", "UpdateOperatingSystemStatusInDB").Str("Operating System ID", osID.String()).Logger()
 
 	logger.Info().Msg("starting activity")
 
-	osDAO := cdbm.NewOperatingSystemDAO(mskg.dbSession)
+	osDAO := cdbm.NewOperatingSystemDAO(mos.dbSession)
 
 	os, err := osDAO.GetByID(ctx, nil, osID, nil)
 	if err != nil {
@@ -314,7 +315,7 @@ func (mskg ManageOsImage) UpdateOperatingSystemStatusInDB(ctx context.Context, o
 	var osStatus *string
 	var osMessage *string
 
-	ossaDAO := cdbm.NewOperatingSystemSiteAssociationDAO(mskg.dbSession)
+	ossaDAO := cdbm.NewOperatingSystemSiteAssociationDAO(mos.dbSession)
 	ossas, ossaTotal, err := ossaDAO.GetAll(
 		ctx,
 		nil,
@@ -333,7 +334,7 @@ func (mskg ManageOsImage) UpdateOperatingSystemStatusInDB(ctx context.Context, o
 	if os.Status == cdbm.OperatingSystemStatusDeleting {
 		if ossaTotal == 0 {
 			// Start a db tx
-			tx, err := cdb.BeginTx(ctx, mskg.dbSession, &sql.TxOptions{})
+			tx, err := cdb.BeginTx(ctx, mos.dbSession, &sql.TxOptions{})
 			if err != nil {
 				logger.Error().Err(err).Msg("failed to start transaction")
 				return err
@@ -408,7 +409,7 @@ func (mskg ManageOsImage) UpdateOperatingSystemStatusInDB(ctx context.Context, o
 		return err
 	}
 
-	statusDetailDAO := cdbm.NewStatusDetailDAO(mskg.dbSession)
+	statusDetailDAO := cdbm.NewStatusDetailDAO(mos.dbSession)
 	_, err = statusDetailDAO.CreateFromParams(ctx, nil, osID.String(), *osStatus, osMessage)
 	if err != nil {
 		return err
@@ -419,38 +420,21 @@ func (mskg ManageOsImage) UpdateOperatingSystemStatusInDB(ctx context.Context, o
 	return nil
 }
 
-// NewManageOsImage returns a new ManageOsImage activity
-func NewManageOsImage(dbSession *cdb.Session, siteClientPool *sc.ClientPool) ManageOsImage {
-	return ManageOsImage{
-		dbSession:      dbSession,
-		siteClientPool: siteClientPool,
-	}
-}
-
-// ManageOperatingSystemSync is an activity wrapper for managing carbide-core Operating System inventory.
-// carbide-core and carbide-rest share the same UUID as the primary key (os.id = carbide-core id).
-// Conflict resolution is timestamp-based: the side with the most recent updated (or deleted)
-// timestamp is the source of truth.
-type ManageOperatingSystemSync struct {
-	dbSession      *cdb.Session
-	siteClientPool *sc.ClientPool
-}
-
-// UpdateOperatingSystemsInDB reconciles the operating_system table for a Site based on Operating Systems
-// reported by carbide-core via the inventory workflow.
-func (mod ManageOperatingSystemSync) UpdateOperatingSystemsInDB(ctx context.Context, siteID uuid.UUID, inventory *cwssaws.OperatingSystemInventory) error {
+// UpdateOperatingSystemsInDB reconciles the operating_system table for a Site based on Operating Systems reported from Site
+func (mos ManageOperatingSystem) UpdateOperatingSystemsInDB(ctx context.Context, siteID uuid.UUID, inventory *cwssaws.OperatingSystemInventory) error {
 	logger := log.With().Str("Activity", "UpdateOperatingSystemsInDB").Str("Site ID", siteID.String()).Logger()
 	logger.Info().Msg("Starting activity")
 
 	if inventory == nil {
 		return errors.New("UpdateOperatingSystemsInDB called with nil inventory")
 	}
+
 	if inventory.InventoryStatus == cwssaws.InventoryStatus_INVENTORY_STATUS_FAILED {
 		logger.Warn().Msg("Received failed inventory status from Site Agent, skipping")
 		return nil
 	}
 
-	stDAO := cdbm.NewSiteDAO(mod.dbSession)
+	stDAO := cdbm.NewSiteDAO(mos.dbSession)
 	site, err := stDAO.GetByID(ctx, nil, siteID, nil, false)
 	if err != nil {
 		if errors.Is(err, cdb.ErrDoesNotExist) {
@@ -464,370 +448,374 @@ func (mod ManageOperatingSystemSync) UpdateOperatingSystemsInDB(ctx context.Cont
 	// OSes that originate in carbide-core are owned by the infrastructure provider, not by
 	// any individual tenant. We tag them with the site's InfrastructureProviderID so that
 	// ProviderAdmin can update them and all tenants of that provider can read them.
-	siteProviderID := site.InfrastructureProviderID
-	logger.Debug().Str("infrastructure_provider_id", siteProviderID.String()).Msg("Resolved infrastructure provider from site")
+	logger.Debug().Str("InfrastructureProviderID", site.InfrastructureProviderID.String()).Msg("Resolved Infrastructure Provider from Site")
 
-	osDAO := cdbm.NewOperatingSystemDAO(mod.dbSession)
+	osDAO := cdbm.NewOperatingSystemDAO(mos.dbSession)
+	ossaDAO := cdbm.NewOperatingSystemSiteAssociationDAO(mos.dbSession)
+	itsaDAO := cdbm.NewIpxeTemplateSiteAssociationDAO(mos.dbSession)
 
 	// Collect the UUIDs of all reported OS records (active only — the new Find APIs do not
-	// return deleted records). carbide-core and carbide-rest share the same UUID as PK.
-	reportedIDSet := make(map[uuid.UUID]struct{}, len(inventory.GetOperatingSystems()))
-	reportedIDList := make([]uuid.UUID, 0, len(inventory.GetOperatingSystems()))
-	for _, reported := range inventory.GetOperatingSystems() {
-		if reported == nil || reported.GetId().GetValue() == "" {
+	// return deleted records). Site and REST share the same UUID as PK.
+	reportedOSIDs := mapset.NewSet[uuid.UUID]()
+	for _, reportedOS := range inventory.GetOperatingSystems() {
+		if reportedOS == nil {
+			logger.Error().Msg("Received nil OS record in inventory, skipping")
 			continue
 		}
-		id, parseErr := uuid.Parse(reported.GetId().GetValue())
+
+		controllerOSID := reportedOS.GetId().GetValue()
+		if controllerOSID == "" {
+			logger.Error().Msg("Received OS record with empty ID, skipping")
+			continue
+		}
+
+		reportedOSID, parseErr := uuid.Parse(controllerOSID)
 		if parseErr != nil {
-			logger.Error().Err(parseErr).Str("ID", reported.GetId().GetValue()).Msg("Received OS with invalid UUID, skipping")
+			logger.Error().Err(parseErr).Str("ControllerOperatingSystemID", controllerOSID).Msg("Received OS record with invalid UUID, skipping")
 			continue
 		}
-		if _, dup := reportedIDSet[id]; !dup {
-			reportedIDSet[id] = struct{}{}
-			reportedIDList = append(reportedIDList, id)
-		}
+		reportedOSIDs.Add(reportedOSID)
 	}
 
 	// Fetch DB records matching the reported IDs (including soft-deleted so we can detect
-	// the case where carbide-rest already deleted an OS that carbide-core still reports active).
+	// the case where REST already deleted an OS that Site still reports active).
 	existingOSes, _, err := osDAO.GetAll(ctx, nil, cdbm.OperatingSystemFilterInput{
-		OperatingSystemIds: reportedIDList,
+		OperatingSystemIds: reportedOSIDs.ToSlice(),
 		IncludeDeleted:     true,
 	}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
+
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed to get Operating Systems from DB")
 		return err
 	}
 
-	existingByID := map[uuid.UUID]*cdbm.OperatingSystem{}
+	existingOSByID := map[uuid.UUID]*cdbm.OperatingSystem{}
 	for i := range existingOSes {
-		existingByID[existingOSes[i].ID] = &existingOSes[i]
+		existingOSByID[existingOSes[i].ID] = &existingOSes[i]
 	}
 
 	// Track global/limited OS IDs that need aggregate status recomputation.
-	globalLimitedOSIDs := map[uuid.UUID]struct{}{}
+	globalOrLimitedOSIDs := map[uuid.UUID]struct{}{}
 
-	// Create or update OSes based on the carbide-core inventory.
-	for _, reported := range inventory.GetOperatingSystems() {
-		if reported == nil || reported.GetId().GetValue() == "" {
+	// Create or update OSes based on the Site inventory.
+	for _, reportedOS := range inventory.GetOperatingSystems() {
+		if reportedOS == nil || reportedOS.GetId().GetValue() == "" {
 			continue
 		}
 
-		osID, parseErr := uuid.Parse(reported.GetId().GetValue())
+		reportedOSID, parseErr := uuid.Parse(reportedOS.GetId().GetValue())
 		if parseErr != nil {
 			continue
 		}
 
-		coreUpdated, _ := time.Parse(time.RFC3339, reported.Updated)
-		params := protoParamsToModel(reported.IpxeTemplateParameters)
-		artifacts := protoArtifactsToModel(reported.IpxeTemplateArtifacts)
-		osType := osTypeToString(reported.Type)
+		slogger := logger.With().Str("ControllerOperatingSystemID", reportedOSID.String()).Logger()
 
-		cur, found := existingByID[osID]
+		coreUpdated, _ := time.Parse(time.RFC3339, reportedOS.Updated)
+
+		ipxeTemplateParams := make([]cdbm.OperatingSystemIpxeParameter, 0, len(reportedOS.IpxeTemplateParameters))
+		for _, param := range reportedOS.IpxeTemplateParameters {
+			ipxeTemplateParam := cdbm.OperatingSystemIpxeParameter{}
+			ipxeTemplateParam.FromProto(param)
+			ipxeTemplateParams = append(ipxeTemplateParams, ipxeTemplateParam)
+		}
+
+		ipxeTemplateArtifacts := make([]cdbm.OperatingSystemIpxeArtifact, 0, len(reportedOS.IpxeTemplateArtifacts))
+		for _, artifact := range reportedOS.IpxeTemplateArtifacts {
+			ipxeTemplateArtifact := cdbm.OperatingSystemIpxeArtifact{}
+			ipxeTemplateArtifact.FromProto(artifact)
+			ipxeTemplateArtifacts = append(ipxeTemplateArtifacts, ipxeTemplateArtifact)
+		}
+
+		osType := cdbm.OperatingSystemTypeFromProtoMap[reportedOS.Type]
+		if osType == "" {
+			slogger.Error().Str("Type", reportedOS.Type.String()).Msg("Received unknown OS type from Site, skipping")
+			continue
+		}
+
+		existingOS, found := existingOSByID[reportedOSID]
 		if !found {
 			// Templated iPXE OS: verify the referenced template is available at this site
 			// before creating the OS record. Skip silently if not available.
-			if osType == cdbm.OperatingSystemTypeTemplatedIPXE && reported.IpxeTemplateId != nil {
-				tmplUUID, parseErr := uuid.Parse(reported.IpxeTemplateId.Value)
-				if parseErr != nil {
-					logger.Error().Err(parseErr).Str("ID", osID.String()).Str("TemplateId", reported.IpxeTemplateId.Value).
-						Msg("invalid iPXE template UUID in OS definition")
-					return parseErr
+			if osType == cdbm.OperatingSystemTypeTemplatedIPXE && reportedOS.IpxeTemplateId != nil {
+				ipxeTemplateID, serr := uuid.Parse(reportedOS.IpxeTemplateId.GetValue())
+				if serr != nil {
+					slogger.Error().Err(serr).Str("IpxeTemplateID", reportedOS.IpxeTemplateId.GetValue()).Msg("Invalid iPXE template UUID in Operating System, skipping")
+					continue
 				}
-				itsaDAO := cdbm.NewIpxeTemplateSiteAssociationDAO(mod.dbSession)
-				if _, tmplErr := itsaDAO.GetByIpxeTemplateIDAndSiteID(ctx, nil, tmplUUID, siteID, nil); tmplErr != nil {
-					if errors.Is(tmplErr, cdb.ErrDoesNotExist) {
-						logger.Warn().Str("ID", osID.String()).Str("TemplateId", reported.IpxeTemplateId.Value).
-							Msg("iPXE template not available at site, skipping OS creation")
+
+				_, serr = itsaDAO.GetByIpxeTemplateIDAndSiteID(ctx, nil, ipxeTemplateID, siteID, nil)
+				if serr != nil {
+					if errors.Is(serr, cdb.ErrDoesNotExist) {
+						slogger.Warn().Str("IpxeTemplateID", ipxeTemplateID.String()).Msg("iPXE Template Association does not exist for Site, skipping")
 						continue
 					}
-					logger.Error().Err(tmplErr).Str("ID", osID.String()).Msg("Error checking iPXE template availability at site")
-					return tmplErr
+					slogger.Error().Err(serr).Msg("Failed to retrieve IpxeTemplateSiteAssociation, DB error")
+					continue
 				}
 			}
 
-			// New OS from carbide-core: create it with the site's InfrastructureProviderID.
-			// OSes originating in carbide-core are provider-owned (not tenant-owned): ProviderAdmin
-			// can update them and all tenants of the provider can read them via the OR filter.
-			// Scope is Local: the definition lives at a single site with bidirectional sync.
-			if _, cerr := osDAO.Create(ctx, nil, cdbm.OperatingSystemCreateInput{
-				ID:                       osID,
-				Name:                     reported.Name,
+			// New OS from Site: Create it with Site's InfrastructureProviderID.
+			// OSes originating in Site are provider-owned (not tenant-owned)
+			// ProviderAdmin can update them and all Tenants of the Provider can retrieve them
+			// Scope is Local: the definition lives at a single site with bidirectional sync
+
+			status := cdbm.OperatingSystemStatusFromProtoMap[reportedOS.Status]
+			if status == "" {
+				slogger.Warn().Str("Status", reportedOS.Status.String()).Msg("Received unknown status from Site, using `Syncing` as default")
+				status = cdbm.OperatingSystemStatusSyncing
+			}
+
+			_, serr := osDAO.Create(ctx, nil, cdbm.OperatingSystemCreateInput{
+				ID:                       reportedOSID,
+				Name:                     reportedOS.Name,
 				Org:                      site.Org,
 				TenantID:                 nil,
-				InfrastructureProviderID: &siteProviderID,
+				InfrastructureProviderID: &site.InfrastructureProviderID,
 				OsType:                   osType,
-				Description:              reported.Description,
-				UserData:                 reported.UserData,
-				IpxeScript:               reported.IpxeScript,
-				AllowOverride:            reported.AllowOverride,
-				PhoneHomeEnabled:         reported.PhoneHomeEnabled,
-				IpxeTemplateId:           protoTemplateIdToString(reported.IpxeTemplateId),
-				IpxeTemplateParameters:   params,
-				IpxeTemplateArtifacts:    artifacts,
-				IpxeOSHash:               reported.IpxeTemplateDefinitionHash,
+				Description:              reportedOS.Description,
+				UserData:                 reportedOS.UserData,
+				IpxeScript:               reportedOS.IpxeScript,
+				AllowOverride:            reportedOS.AllowOverride,
+				PhoneHomeEnabled:         reportedOS.PhoneHomeEnabled,
+				IpxeTemplateId:           cdb.GetStrPtr(reportedOS.IpxeTemplateId.GetValue()),
+				IpxeTemplateParameters:   ipxeTemplateParams,
+				IpxeTemplateArtifacts:    ipxeTemplateArtifacts,
+				IpxeOSHash:               reportedOS.IpxeTemplateDefinitionHash,
 				IpxeOsScope:              cdb.GetStrPtr(cdbm.OperatingSystemScopeLocal),
-				Status:                   tenantStateToRestStatus(reported.Status),
-			}); cerr != nil {
-				logger.Error().Err(cerr).Str("ID", reported.GetId().GetValue()).Msg("Failed to create Operating System in DB")
+				Status:                   status,
+			})
+			if serr != nil {
+				slogger.Error().Err(serr).Msg("Failed to create Operating System, DB error")
 				continue
 			}
 
-			if !reported.IsActive {
-				// bun ORM hardcodes is_active=true on INSERT; correct it with an update.
-				inactive := false
-				if _, uerr := osDAO.Update(ctx, nil, cdbm.OperatingSystemUpdateInput{
-					OperatingSystemId: osID,
-					IsActive:          &inactive,
-				}); uerr != nil {
-					logger.Error().Err(uerr).Str("ID", reported.GetId().GetValue()).Msg("Failed to set is_active=false after create")
-					return uerr
+			if !reportedOS.IsActive {
+				// TODO: Allow creation of inactive OSes
+				_, serr := osDAO.Update(ctx, nil, cdbm.OperatingSystemUpdateInput{
+					OperatingSystemId: reportedOSID,
+					IsActive:          cdb.GetBoolPtr(false),
+				})
+				if serr != nil {
+					slogger.Error().Err(serr).Msg("Failed to set Operating System to inactive on creation")
+					continue
 				}
 			}
 
 			// Create site association linking the OS to the reporting site.
-			ossaDAO := cdbm.NewOperatingSystemSiteAssociationDAO(mod.dbSession)
-			if _, ossaErr := ossaDAO.Create(ctx, nil, cdbm.OperatingSystemSiteAssociationCreateInput{
-				OperatingSystemID: osID,
-				SiteID:            siteID,
-				Status:            coreStateToOSSAStatus(reported.Status),
-			}); ossaErr != nil {
-				logger.Error().Err(ossaErr).Str("ID", osID.String()).Msg("Failed to create site association for new OS")
+			ossaStatus := cdbm.OperatingSystemSiteAssociationStatusFromProtoMap[reportedOS.Status]
+			if ossaStatus == "" {
+				slogger.Warn().Str("Status", reportedOS.Status.String()).Msg("Received unknown status from Site, using `Syncing` as default")
+				ossaStatus = cdbm.OperatingSystemSiteAssociationStatusSyncing
 			}
+
+			_, ossaErr := ossaDAO.Create(ctx, nil, cdbm.OperatingSystemSiteAssociationCreateInput{
+				OperatingSystemID: reportedOSID,
+				SiteID:            siteID,
+				Status:            ossaStatus,
+			})
+			if ossaErr != nil {
+				slogger.Error().Err(ossaErr).Msg("Failed to create site association for new OS")
+				continue
+			}
+		}
+
+		// REST layer has already soft-deleted this OS (user-initiated)
+		// Do not restore it even if Site still reports it as active (the delete push to Site may be in-flight)
+		if existingOS.Deleted != nil {
 			continue
 		}
 
-		// carbide-rest has already soft-deleted this OS (user-initiated via subscriber workflow).
-		// Do not restore it even if carbide-core still reports it as active (the delete push
-		// to carbide-core may be in-flight).
-		if cur.Deleted != nil {
-			continue
-		}
-
-		// Update or create the per-site OSSA for every OS type. For
-		// Global/Limited, rest is the source of truth for the definition so we
-		// only record the site's controller state and skip the definition update.
-		// For Local (provider-owned, from core) we also fall through to update
+		// Update or create the per-site association for every OS type. For
+		// Global/Limited, REST is the source of truth for the definition so we
+		// only record the Site's controller state and skip the definition update.
+		// For Local (provider-owned, from Site) we also fall through to update
 		// the definition below. nil scope is treated as Local for safety
-		// (legacy records before the backfill migration).
-		isLocalScope := cur.IpxeOsScope == nil || *cur.IpxeOsScope == cdbm.OperatingSystemScopeLocal
-		controllerState := tenantStateToRestStatus(reported.Status)
-		ossaDAO := cdbm.NewOperatingSystemSiteAssociationDAO(mod.dbSession)
-		ossa, ossaErr := ossaDAO.GetByOperatingSystemIDAndSiteID(ctx, nil, osID, siteID, nil)
-		if ossaErr != nil {
-			if !errors.Is(ossaErr, cdb.ErrDoesNotExist) {
-				logger.Error().Err(ossaErr).Str("osID", osID.String()).Msg("Failed to look up OSSA")
-				return ossaErr
+		// (legacy records before the backfill migration)
+		isLocalScope := existingOS.IpxeOsScope == nil || *existingOS.IpxeOsScope == cdbm.OperatingSystemScopeLocal
+		controllerState := cdbm.OperatingSystemStatusFromProtoMap[reportedOS.Status]
+		if controllerState == "" {
+			slogger.Warn().Str("Status", reportedOS.Status.String()).Msg("Received unknown status from Site, using `Syncing` as default")
+			controllerState = cdbm.OperatingSystemStatusSyncing
+		}
+
+		ossaStatus := cdbm.OperatingSystemSiteAssociationStatusFromProtoMap[reportedOS.Status]
+		if ossaStatus == "" {
+			slogger.Warn().Str("Status", reportedOS.Status.String()).Msg("Received unknown status from Site, using `Syncing` as default")
+			ossaStatus = cdbm.OperatingSystemSiteAssociationStatusSyncing
+		}
+
+		ossa, serr := ossaDAO.GetByOperatingSystemIDAndSiteID(ctx, nil, reportedOSID, siteID, nil)
+		if serr != nil {
+			if !errors.Is(serr, cdb.ErrDoesNotExist) {
+				slogger.Error().Err(serr).Msg("Failed to retrieve Operating System Site Association, DB error")
+				continue
 			}
-			// OSSA missing: backfill for OS created before site associations were tracked.
-			if _, cerr := ossaDAO.Create(ctx, nil, cdbm.OperatingSystemSiteAssociationCreateInput{
-				OperatingSystemID: osID,
+
+			// Operating System Site Association is missing, create it
+			_, serr := ossaDAO.Create(ctx, nil, cdbm.OperatingSystemSiteAssociationCreateInput{
+				OperatingSystemID: reportedOSID,
 				SiteID:            siteID,
-				Status:            coreStateToOSSAStatus(reported.Status),
-			}); cerr != nil {
-				logger.Error().Err(cerr).Str("osID", osID.String()).Msg("Failed to backfill OSSA")
-			}
-		} else if ossa != nil {
-			if _, uerr := ossaDAO.Update(ctx, nil, cdbm.OperatingSystemSiteAssociationUpdateInput{
-				OperatingSystemSiteAssociationID: ossa.ID,
-				ControllerState:                  &controllerState,
-			}); uerr != nil {
-				logger.Error().Err(uerr).Str("osID", osID.String()).Msg("Failed to update OSSA controller_state")
-			} else if !isLocalScope {
-				globalLimitedOSIDs[osID] = struct{}{}
+				Status:            ossaStatus,
+				ControllerState:   &controllerState,
+			})
+			if serr != nil {
+				slogger.Error().Err(serr).Msg("Failed to create Operating System Site Association")
+				continue
 			}
 		}
-		if !isLocalScope {
+
+		// Update existing Operating System Site Association
+		_, uerr := ossaDAO.Update(ctx, nil, cdbm.OperatingSystemSiteAssociationUpdateInput{
+			OperatingSystemSiteAssociationID: ossa.ID,
+			Status:                           &ossaStatus,
+			ControllerState:                  &controllerState,
+		})
+		if uerr != nil {
+			slogger.Error().Err(uerr).Msg("Failed to update Operating System Site Association")
 			continue
 		}
 
-		// Both sides are active — update carbide-rest only when carbide-core is newer.
-		// Backfill: older records may have been created with tenant_id set and no
-		// infrastructure_provider_id (before this ownership model was established).
-		needsProviderBackfill := cur.InfrastructureProviderID == nil
-		needsOrgBackfill := cur.Org == "" && site.Org != ""
-		needsIsActiveCorrection := cur.IsActive != reported.IsActive
-		needsTenantClear := cur.TenantID != nil
-		if coreUpdated.After(cur.Updated) || needsProviderBackfill || needsOrgBackfill || needsIsActiveCorrection || needsTenantClear {
-			controllerState := tenantStateToRestStatus(reported.Status)
+		// TODO: Is this correct?
+		if !isLocalScope {
+			globalOrLimitedOSIDs[reportedOSID] = struct{}{}
+		}
+
+		// Operating System exists in both REST and Site, update the REST record if it is newer
+		// Backfill: older records may have been created with tenant_id set and no infrastructure_provider_id (before this ownership model was established).
+		needsProviderBackfill := existingOS.InfrastructureProviderID == nil
+		needsOrgBackfill := existingOS.Org == "" && site.Org != ""
+		needsIsActiveCorrection := existingOS.IsActive != reportedOS.IsActive
+		needsTenantClear := existingOS.TenantID != nil
+
+		if coreUpdated.After(existingOS.Updated) || needsProviderBackfill || needsOrgBackfill || needsIsActiveCorrection || needsTenantClear {
+			controllerState := cdbm.OperatingSystemStatusFromProtoMap[reportedOS.Status]
+			if controllerState == "" {
+				slogger.Warn().Str("Status", reportedOS.Status.String()).Msg("Received unknown status from Site, using `Syncing` as default")
+				controllerState = cdbm.OperatingSystemStatusSyncing
+			}
+
+			var ipxeTemplateID *string
+			if reportedOS.IpxeTemplateId != nil {
+				ipxeTemplateID = cdb.GetStrPtr(reportedOS.IpxeTemplateId.GetValue())
+			}
+
 			updateInput := cdbm.OperatingSystemUpdateInput{
-				OperatingSystemId:        cur.ID,
-				Name:                     &reported.Name,
+				OperatingSystemId:        existingOS.ID,
+				Name:                     &reportedOS.Name,
 				Org:                      &site.Org,
 				TenantID:                 nil,
-				InfrastructureProviderID: &siteProviderID,
+				InfrastructureProviderID: &site.InfrastructureProviderID,
 				OsType:                   &osType,
-				Description:              reported.Description,
-				UserData:                 reported.UserData,
-				IpxeScript:               reported.IpxeScript,
-				AllowOverride:            &reported.AllowOverride,
-				PhoneHomeEnabled:         &reported.PhoneHomeEnabled,
-				IsActive:                 &reported.IsActive,
-				IpxeTemplateId:           protoTemplateIdToString(reported.IpxeTemplateId),
-				IpxeTemplateParameters:   &params,
-				IpxeTemplateArtifacts:    &artifacts,
-				IpxeOSHash:               reported.IpxeTemplateDefinitionHash,
+				Description:              reportedOS.Description,
+				UserData:                 reportedOS.UserData,
+				IpxeScript:               reportedOS.IpxeScript,
+				AllowOverride:            &reportedOS.AllowOverride,
+				PhoneHomeEnabled:         &reportedOS.PhoneHomeEnabled,
+				IsActive:                 &reportedOS.IsActive,
+				IpxeTemplateId:           ipxeTemplateID,
+				IpxeTemplateParameters:   &ipxeTemplateParams,
+				IpxeTemplateArtifacts:    &ipxeTemplateArtifacts,
+				IpxeOSHash:               reportedOS.IpxeTemplateDefinitionHash,
 				Status:                   &controllerState,
 			}
 			if _, uerr := osDAO.Update(ctx, nil, updateInput); uerr != nil {
-				logger.Error().Err(uerr).Str("ID", reported.GetId().GetValue()).Msg("Failed to update Operating System in DB")
+				slogger.Error().Err(uerr).Msg("Failed to update Operating System, DB error")
 				continue
 			}
 			// Backfill: if the record previously had a tenant_id (old ownership model), clear it.
 			// Provider-owned OSes must not have tenant_id set.
-			if cur.TenantID != nil {
-				if _, cerr := osDAO.Clear(ctx, nil, cdbm.OperatingSystemClearInput{
-					OperatingSystemId: cur.ID,
+			if existingOS.TenantID != nil {
+				_, cerr := osDAO.Clear(ctx, nil, cdbm.OperatingSystemClearInput{
+					OperatingSystemId: existingOS.ID,
 					TenantID:          true,
-				}); cerr != nil {
-					logger.Error().Err(cerr).Str("ID", reported.GetId().GetValue()).Msg("Failed to clear tenant_id from provider-owned OS")
-					return cerr
+				})
+				if cerr != nil {
+					slogger.Error().Err(cerr).Msg("Failed to clear Tenant ID from Provider owned Operating System, DB error")
+					continue
 				}
 			}
 		}
 	}
 
-	// Deletion propagation: carbide-core's Find APIs return only active records, so any iPXE OS
+	// Deletion propagation: Site's Find APIs return only active records, so any iPXE OS
 	// in our DB that is NOT in this inventory was deleted in carbide-core. Soft-delete it here.
 	// Image-based OSes are not managed by this inventory, so we restrict to iPXE types only.
-	// Exception: global- and limited-scoped OSes are owned by carbide-rest and must not be
-	// deleted based on carbide-core's inventory (carbide-core is not their source of truth).
+	// Exception: global- and limited-scoped OSes are owned by REST and must not be
+	// deleted based on Site's inventory (Site is not their source of truth)
 	allIpxeOSes, _, err := osDAO.GetAll(ctx, nil, cdbm.OperatingSystemFilterInput{
 		OsTypes:                  []string{cdbm.OperatingSystemTypeIPXE, cdbm.OperatingSystemTypeTemplatedIPXE},
-		InfrastructureProviderID: &siteProviderID,
+		InfrastructureProviderID: &site.InfrastructureProviderID,
 	}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed to fetch iPXE Operating Systems from DB for deletion reconciliation")
 		return err
 	}
-	for _, dbOS := range allIpxeOSes {
-		if dbOS.IpxeOsScope != nil && *dbOS.IpxeOsScope != cdbm.OperatingSystemScopeLocal {
+
+	for _, ipxeOS := range allIpxeOSes {
+		if ipxeOS.IpxeOsScope != nil && *ipxeOS.IpxeOsScope != cdbm.OperatingSystemScopeLocal {
 			continue
 		}
-		if _, inCore := reportedIDSet[dbOS.ID]; !inCore {
-			logger.Info().Str("ID", dbOS.ID.String()).Msg("Soft-deleting iPXE OS absent from carbide-core inventory")
-			if derr := osDAO.Delete(ctx, nil, dbOS.ID); derr != nil {
-				logger.Error().Err(derr).Str("ID", dbOS.ID.String()).Msg("Failed to soft-delete OS")
+
+		slogger := logger.With().Str("OperatingSystemID", ipxeOS.ID.String()).Logger()
+
+		if !reportedOSIDs.Contains(ipxeOS.ID) {
+			slogger.Info().Msg("Soft-deleting iPXE OS absent from Site inventory")
+			serr := osDAO.Delete(ctx, nil, ipxeOS.ID)
+			if serr != nil {
+				slogger.Error().Err(serr).Msg("Failed to soft-delete OS, DB error")
+				continue
 			}
 		}
 	}
 
 	// Aggregate status for global/limited OSes from their per-site core statuses.
-	// Rule: all sites READY -> OS READY; any site not READY -> OS PROVISIONING.
-	if len(globalLimitedOSIDs) > 0 {
-		ossaDAO := cdbm.NewOperatingSystemSiteAssociationDAO(mod.dbSession)
-		for osID := range globalLimitedOSIDs {
-			ossas, _, gerr := ossaDAO.GetAll(ctx, nil, cdbm.OperatingSystemSiteAssociationFilterInput{
+	// Rule: If all Site Associations have `Ready` status then the Operating System is `Ready`. Otherwise, it is `Syncing`.
+	if len(globalOrLimitedOSIDs) > 0 {
+		ossaDAO := cdbm.NewOperatingSystemSiteAssociationDAO(mos.dbSession)
+		for osID := range globalOrLimitedOSIDs {
+			slogger := logger.With().Str("OperatingSystemID", osID.String()).Logger()
+
+			ossas, _, serr := ossaDAO.GetAll(ctx, nil, cdbm.OperatingSystemSiteAssociationFilterInput{
 				OperatingSystemIDs: []uuid.UUID{osID},
 			}, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
-			if gerr != nil {
-				logger.Error().Err(gerr).Str("osID", osID.String()).Msg("Failed to fetch OSSAs for aggregate status")
+
+			if serr != nil {
+				slogger.Error().Err(serr).Msg("Failed to fetch Site Associations to determine Operating System status, DB error")
 				continue
 			}
+
 			allReady := true
-			for _, o := range ossas {
-				if o.ControllerState == nil || *o.ControllerState != cdbm.OperatingSystemStatusReady {
+			for _, ossa := range ossas {
+				if ossa.Status != cdbm.OperatingSystemSiteAssociationStatusSynced {
 					allReady = false
 					break
 				}
 			}
-			aggregatedStatus := cdbm.OperatingSystemStatusProvisioning
+
+			aggregatedStatus := cdbm.OperatingSystemStatusSyncing
 			if allReady && len(ossas) > 0 {
 				aggregatedStatus = cdbm.OperatingSystemStatusReady
 			}
-			if _, uerr := osDAO.Update(ctx, nil, cdbm.OperatingSystemUpdateInput{
+
+			_, serr = osDAO.Update(ctx, nil, cdbm.OperatingSystemUpdateInput{
 				OperatingSystemId: osID,
 				Status:            &aggregatedStatus,
-			}); uerr != nil {
-				logger.Error().Err(uerr).Str("osID", osID.String()).Msg("Failed to update aggregate OS status")
+			})
+			if serr != nil {
+				slogger.Error().Err(serr).Msg("Failed to update aggregate OS status, DB error")
 			}
 		}
 	}
 
 	logger.Info().Msg("Completed activity")
+
 	return nil
 }
 
-// NewManageOperatingSystemSync returns a new ManageOperatingSystemSync activity
-func NewManageOperatingSystemSync(dbSession *cdb.Session, siteClientPool *sc.ClientPool) ManageOperatingSystemSync {
-	return ManageOperatingSystemSync{
+// NewManageOperatingSystem returns a new ManageOperatingSystem activity
+func NewManageOperatingSystem(dbSession *cdb.Session, siteClientPool *sc.ClientPool) ManageOperatingSystem {
+	return ManageOperatingSystem{
 		dbSession:      dbSession,
 		siteClientPool: siteClientPool,
 	}
-}
-
-// coreStateToOSSAStatus maps carbide-core's TenantState to the OSSA status string.
-func coreStateToOSSAStatus(s cwssaws.TenantState) string {
-	switch s {
-	case cwssaws.TenantState_READY:
-		return cdbm.OperatingSystemSiteAssociationStatusSynced
-	case cwssaws.TenantState_FAILED:
-		return cdbm.OperatingSystemSiteAssociationStatusError
-	default:
-		return cdbm.OperatingSystemSiteAssociationStatusSyncing
-	}
-}
-
-// tenantStateToRestStatus maps carbide-core's TenantState to the REST OperatingSystem status string.
-func tenantStateToRestStatus(s cwssaws.TenantState) string {
-	switch s {
-	case cwssaws.TenantState_READY:
-		return cdbm.OperatingSystemStatusReady
-	case cwssaws.TenantState_FAILED:
-		return cdbm.OperatingSystemStatusError
-	default:
-		return cdbm.OperatingSystemStatusProvisioning
-	}
-}
-
-// osTypeToString maps carbide-core's OperatingSystemType enum to the DB type string.
-func osTypeToString(t cwssaws.OperatingSystemType) string {
-	switch t {
-	case cwssaws.OperatingSystemType_OS_TYPE_IPXE:
-		return cdbm.OperatingSystemTypeIPXE
-	case cwssaws.OperatingSystemType_OS_TYPE_TEMPLATED_IPXE:
-		return cdbm.OperatingSystemTypeTemplatedIPXE
-	default:
-		return cdbm.OperatingSystemTypeIPXE
-	}
-}
-
-// protoTemplateIdToString extracts the UUID string from a proto IpxeTemplateId message, or nil.
-func protoTemplateIdToString(id *cwssaws.IpxeTemplateId) *string {
-	if id == nil {
-		return nil
-	}
-	v := id.Value
-	return &v
-}
-
-// protoParamsToModel converts proto IpxeTemplateParameter slice to DB model slice
-func protoParamsToModel(params []*cwssaws.IpxeTemplateParameter) []cdbm.OperatingSystemIpxeParameter {
-	result := make([]cdbm.OperatingSystemIpxeParameter, 0, len(params))
-	for _, p := range params {
-		if p == nil {
-			continue
-		}
-		result = append(result, cdbm.OperatingSystemIpxeParameter{Name: p.Name, Value: p.Value})
-	}
-	return result
-}
-
-// protoArtifactsToModel converts proto IpxeTemplateArtifact slice to DB model slice
-func protoArtifactsToModel(artifacts []*cwssaws.IpxeTemplateArtifact) []cdbm.OperatingSystemIpxeArtifact {
-	result := make([]cdbm.OperatingSystemIpxeArtifact, 0, len(artifacts))
-	for _, a := range artifacts {
-		if a == nil {
-			continue
-		}
-		result = append(result, cdbm.OperatingSystemIpxeArtifact{
-			Name:          a.Name,
-			URL:           a.Url,
-			SHA:           a.Sha,
-			AuthType:      a.AuthType,
-			AuthToken:     a.AuthToken,
-			CacheStrategy: a.GetCacheStrategy().String(),
-		})
-	}
-	return result
 }

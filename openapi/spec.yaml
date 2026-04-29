@@ -14620,7 +14620,7 @@ components:
           type:
             - string
             - 'null'
-          description: 'Name of an iPXE template to use. Mutually exclusive with ipxeScript and imageUrl.
+          description: 'Name of an iPXE template to use. Mutually exclusive with ipxeScript and imageUrl.'
         ipxeTemplateParameters:
           type: array
           description: Parameters to pass to the iPXE template for variable substitution

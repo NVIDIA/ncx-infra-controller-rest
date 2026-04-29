@@ -29,6 +29,8 @@ import (
 	"github.com/uptrace/bun"
 
 	stracer "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/tracer"
+
+	ws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 )
 
 const (
@@ -96,6 +98,19 @@ var (
 		OperatingSystemTypeTemplatedIPXE: true,
 		OperatingSystemTypeImage:         true,
 	}
+
+	OperatingSystemTypeFromProtoMap = map[ws.OperatingSystemType]string{
+		ws.OperatingSystemType_OS_TYPE_IPXE:           OperatingSystemTypeIPXE,
+		ws.OperatingSystemType_OS_TYPE_TEMPLATED_IPXE: OperatingSystemTypeTemplatedIPXE,
+	}
+
+	OperatingSystemStatusFromProtoMap = map[ws.TenantState]string{
+		ws.TenantState_PROVISIONING: OperatingSystemStatusProvisioning,
+		ws.TenantState_READY:        OperatingSystemStatusReady,
+		ws.TenantState_CONFIGURING:  OperatingSystemStatusSyncing,
+		ws.TenantState_TERMINATING:  OperatingSystemStatusDeleting,
+		ws.TenantState_FAILED:       OperatingSystemStatusError,
+	}
 )
 
 // IsIPXEType returns true if the given OS type is any iPXE variant (raw script or templated).
@@ -110,6 +125,12 @@ type OperatingSystemIpxeParameter struct {
 	Value string `json:"value"`
 }
 
+// FromProto converts a proto IpxeTemplateParameter to an OperatingSystemIpxeParameter
+func (osip *OperatingSystemIpxeParameter) FromProto(protoParam *ws.IpxeTemplateParameter) {
+	osip.Name = protoParam.Name
+	osip.Value = protoParam.Value
+}
+
 // OperatingSystemIpxeArtifact holds a single iPXE artifact descriptor (stored as JSONB).
 // These are only populated for iPXE-based OS definitions synced from carbide-core.
 type OperatingSystemIpxeArtifact struct {
@@ -119,6 +140,16 @@ type OperatingSystemIpxeArtifact struct {
 	AuthType      *string `json:"authType,omitempty"`
 	AuthToken     *string `json:"authToken,omitempty"`
 	CacheStrategy string  `json:"cacheStrategy"`
+}
+
+// FromProto converts a proto IpxeTemplateArtifact to an OperatingSystemIpxeArtifact
+func (osia *OperatingSystemIpxeArtifact) FromProto(protoArtifact *ws.IpxeTemplateArtifact) {
+	osia.Name = protoArtifact.Name
+	osia.URL = protoArtifact.Url
+	osia.SHA = protoArtifact.Sha
+	osia.AuthType = protoArtifact.AuthType
+	osia.AuthToken = protoArtifact.AuthToken
+	osia.CacheStrategy = protoArtifact.CacheStrategy.String()
 }
 
 // OperatingSystem describes the attributes of the operating system

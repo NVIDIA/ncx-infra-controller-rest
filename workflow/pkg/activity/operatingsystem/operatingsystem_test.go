@@ -42,7 +42,7 @@ import (
 	"go.temporal.io/sdk/testsuite"
 )
 
-func TestManageOsImage_UpdateOsImageInDB(t *testing.T) {
+func TestManageOperatingSystem_UpdateOsImageInDB(t *testing.T) {
 	dbSession := util.TestInitDB(t)
 	defer dbSession.Close()
 
@@ -273,7 +273,7 @@ func TestManageOsImage_UpdateOsImageInDB(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mv := ManageOsImage{
+			mv := ManageOperatingSystem{
 				dbSession:      tt.fields.dbSession,
 				siteClientPool: tSiteClientPool,
 			}
@@ -359,10 +359,10 @@ func TestManageOperatingSystemSync_UpdateOperatingSystemsInDB(t *testing.T) {
 	util.TestBuildTenantSiteAssociation(t, dbSession, tnOrg, tn.ID, st.ID, ipu.ID)
 
 	tSiteClientPool := util.TestTemporalSiteClientPool(t)
-	syncManager := NewManageOperatingSystemSync(dbSession, tSiteClientPool)
+	operatingSystemManager := NewManageOperatingSystem(dbSession, tSiteClientPool)
 
 	t.Run("nil inventory returns error", func(t *testing.T) {
-		err := syncManager.UpdateOperatingSystemsInDB(context.Background(), st.ID, nil)
+		err := operatingSystemManager.UpdateOperatingSystemsInDB(context.Background(), st.ID, nil)
 		assert.Error(t, err)
 	})
 
@@ -370,7 +370,7 @@ func TestManageOperatingSystemSync_UpdateOperatingSystemsInDB(t *testing.T) {
 		inv := &cwssaws.OperatingSystemInventory{
 			InventoryStatus: cwssaws.InventoryStatus_INVENTORY_STATUS_FAILED,
 		}
-		err := syncManager.UpdateOperatingSystemsInDB(context.Background(), st.ID, inv)
+		err := operatingSystemManager.UpdateOperatingSystemsInDB(context.Background(), st.ID, inv)
 		assert.NoError(t, err)
 	})
 
@@ -395,7 +395,7 @@ func TestManageOperatingSystemSync_UpdateOperatingSystemsInDB(t *testing.T) {
 				},
 			},
 		}
-		err := syncManager.UpdateOperatingSystemsInDB(context.Background(), st.ID, inv)
+		err := operatingSystemManager.UpdateOperatingSystemsInDB(context.Background(), st.ID, inv)
 		assert.NoError(t, err)
 
 		osDAO := cdbm.NewOperatingSystemDAO(dbSession)
@@ -451,7 +451,7 @@ func TestManageOperatingSystemSync_UpdateOperatingSystemsInDB(t *testing.T) {
 				},
 			},
 		}
-		err = syncManager.UpdateOperatingSystemsInDB(context.Background(), st.ID, inv)
+		err = operatingSystemManager.UpdateOperatingSystemsInDB(context.Background(), st.ID, inv)
 		assert.NoError(t, err)
 
 		osDAO := cdbm.NewOperatingSystemDAO(dbSession)
@@ -512,7 +512,7 @@ func TestManageOperatingSystemSync_UpdateOperatingSystemsInDB(t *testing.T) {
 				},
 			},
 		}
-		err = syncManager.UpdateOperatingSystemsInDB(context.Background(), st.ID, inv)
+		err = operatingSystemManager.UpdateOperatingSystemsInDB(context.Background(), st.ID, inv)
 		assert.NoError(t, err)
 
 		osDAO := cdbm.NewOperatingSystemDAO(dbSession)
@@ -542,7 +542,7 @@ func TestManageOperatingSystemSync_UpdateOperatingSystemsInDB(t *testing.T) {
 			Timestamp:        timestamppb.Now(),
 			OperatingSystems: []*cwssaws.OperatingSystem{},
 		}
-		err = syncManager.UpdateOperatingSystemsInDB(context.Background(), st.ID, inv)
+		err = operatingSystemManager.UpdateOperatingSystemsInDB(context.Background(), st.ID, inv)
 		assert.NoError(t, err)
 
 		osDAO := cdbm.NewOperatingSystemDAO(dbSession)
@@ -572,7 +572,7 @@ func TestManageOperatingSystemSync_UpdateOperatingSystemsInDB(t *testing.T) {
 			Timestamp:        timestamppb.Now(),
 			OperatingSystems: []*cwssaws.OperatingSystem{},
 		}
-		err = syncManager.UpdateOperatingSystemsInDB(context.Background(), st.ID, inv)
+		err = operatingSystemManager.UpdateOperatingSystemsInDB(context.Background(), st.ID, inv)
 		assert.NoError(t, err)
 
 		osDAO := cdbm.NewOperatingSystemDAO(dbSession)
@@ -615,7 +615,7 @@ func TestManageOperatingSystemSync_UpdateOperatingSystemsInDB(t *testing.T) {
 				},
 			},
 		}
-		err = syncManager.UpdateOperatingSystemsInDB(context.Background(), st.ID, inv)
+		err = operatingSystemManager.UpdateOperatingSystemsInDB(context.Background(), st.ID, inv)
 		assert.NoError(t, err)
 
 		osDAO := cdbm.NewOperatingSystemDAO(dbSession)
@@ -624,7 +624,7 @@ func TestManageOperatingSystemSync_UpdateOperatingSystemsInDB(t *testing.T) {
 	})
 }
 
-func TestManageOsImage_UpdateOperatingSystemStatusInDB(t *testing.T) {
+func TestManageOperatingSystem_UpdateOperatingSystemStatusInDB(t *testing.T) {
 	dbSession := util.TestInitDB(t)
 	defer dbSession.Close()
 
@@ -721,7 +721,7 @@ func TestManageOsImage_UpdateOperatingSystemStatusInDB(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mv := ManageOsImage{
+			mv := ManageOperatingSystem{
 				dbSession:      tt.fields.dbSession,
 				siteClientPool: tSiteClientPool,
 			}
@@ -751,7 +751,7 @@ func TestManageOsImage_UpdateOperatingSystemStatusInDB(t *testing.T) {
 		})
 	}
 }
-func TestNewManageOsImage(t *testing.T) {
+func TestNewManageOperatingSystem(t *testing.T) {
 	type args struct {
 		dbSession      *cdb.Session
 		siteClientPool *sc.ClientPool
@@ -773,15 +773,15 @@ func TestNewManageOsImage(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want ManageOsImage
+		want ManageOperatingSystem
 	}{
 		{
-			name: "test new ManageOsImage instantiation",
+			name: "test new ManageOperatingSystem instantiation",
 			args: args{
 				dbSession:      dbSession,
 				siteClientPool: scp,
 			},
-			want: ManageOsImage{
+			want: ManageOperatingSystem{
 				dbSession:      dbSession,
 				siteClientPool: scp,
 			},
@@ -789,8 +789,8 @@ func TestNewManageOsImage(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NewManageOsImage(tt.args.dbSession, tt.args.siteClientPool); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewManageOsImage() = %v, want %v", got, tt.want)
+			if got := NewManageOperatingSystem(tt.args.dbSession, tt.args.siteClientPool); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("NewManageOperatingSystem() = %v, want %v", got, tt.want)
 			}
 		})
 	}

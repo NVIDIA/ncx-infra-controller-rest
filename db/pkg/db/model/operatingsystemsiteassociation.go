@@ -30,6 +30,8 @@ import (
 	"github.com/uptrace/bun"
 
 	stracer "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/tracer"
+
+	ws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 )
 
 var (
@@ -70,6 +72,14 @@ var (
 		OperatingSystemSiteAssociationStatusError:    true,
 		OperatingSystemSiteAssociationStatusDeleting: true,
 	}
+
+	OperatingSystemSiteAssociationStatusFromProtoMap = map[ws.TenantState]string{
+		ws.TenantState_PROVISIONING: OperatingSystemSiteAssociationStatusSyncing,
+		ws.TenantState_READY:        OperatingSystemSiteAssociationStatusSynced,
+		ws.TenantState_CONFIGURING:  OperatingSystemSiteAssociationStatusSyncing,
+		ws.TenantState_TERMINATING:  OperatingSystemSiteAssociationStatusDeleting,
+		ws.TenantState_FAILED:       OperatingSystemSiteAssociationStatusError,
+	}
 )
 
 // OperatingSystemSiteAssociation associates an OperatingSystem with different Sites
@@ -97,6 +107,7 @@ type OperatingSystemSiteAssociationCreateInput struct {
 	SiteID            uuid.UUID
 	Version           *string
 	Status            string
+	ControllerState   *string
 	CreatedBy         uuid.UUID
 }
 
@@ -148,7 +159,7 @@ type OperatingSystemSiteAssociationDAO interface {
 	//
 	GetByID(ctx context.Context, tx *db.Tx, id uuid.UUID, includeRelations []string) (*OperatingSystemSiteAssociation, error)
 	//
-	GetByOperatingSystemIDAndSiteID(ctx context.Context, tx *db.Tx, OperatingSystemID uuid.UUID, siteID uuid.UUID, includeRelations []string) (*OperatingSystemSiteAssociation, error)
+	GetByOperatingSystemIDAndSiteID(ctx context.Context, tx *db.Tx, operatingSystemID uuid.UUID, siteID uuid.UUID, includeRelations []string) (*OperatingSystemSiteAssociation, error)
 	//
 	GetAll(ctx context.Context, tx *db.Tx, filter OperatingSystemSiteAssociationFilterInput, page paginator.PageInput, includeRelations []string) ([]OperatingSystemSiteAssociation, int, error)
 	//
@@ -183,6 +194,7 @@ func (ossasd OperatingSystemSiteAssociationSQLDAO) Create(
 		SiteID:            input.SiteID,
 		Version:           input.Version,
 		Status:            input.Status,
+		ControllerState:   input.ControllerState,
 		CreatedBy:         input.CreatedBy,
 	}
 
@@ -231,19 +243,19 @@ func (ossasd OperatingSystemSiteAssociationSQLDAO) GetByID(ctx context.Context, 
 
 // GetByOperatingSystemIDAndSiteID returns an OperatingSystemSiteAssociation by OperatingSystemID and SiteID
 // returns db.ErrDoesNotExist error if the record is not found
-func (ossasd OperatingSystemSiteAssociationSQLDAO) GetByOperatingSystemIDAndSiteID(ctx context.Context, tx *db.Tx, OperatingSystemID uuid.UUID, siteID uuid.UUID, includeRelations []string) (*OperatingSystemSiteAssociation, error) {
+func (ossasd OperatingSystemSiteAssociationSQLDAO) GetByOperatingSystemIDAndSiteID(ctx context.Context, tx *db.Tx, operatingSystemID uuid.UUID, siteID uuid.UUID, includeRelations []string) (*OperatingSystemSiteAssociation, error) {
 	// Create a child span and set the attributes for current request
 	ctx, OperatingSystemSiteAssociationDAOSpan := ossasd.tracerSpan.CreateChildInCurrentContext(ctx, "OperatingSystemSiteAssociationDAO.GetByOperatingSystemIDAndSiteID")
 	if OperatingSystemSiteAssociationDAOSpan != nil {
 		defer OperatingSystemSiteAssociationDAOSpan.End()
 
-		ossasd.tracerSpan.SetAttribute(OperatingSystemSiteAssociationDAOSpan, "operating_system_id", OperatingSystemID.String())
+		ossasd.tracerSpan.SetAttribute(OperatingSystemSiteAssociationDAOSpan, "operating_system_id", operatingSystemID.String())
 		ossasd.tracerSpan.SetAttribute(OperatingSystemSiteAssociationDAOSpan, "site_id", siteID.String())
 	}
 
 	ossa := &OperatingSystemSiteAssociation{}
 
-	query := db.GetIDB(tx, ossasd.dbSession).NewSelect().Model(ossa).Where("ossa.operating_system_id = ?", OperatingSystemID.String()).Where("ossa.site_id = ?", siteID.String())
+	query := db.GetIDB(tx, ossasd.dbSession).NewSelect().Model(ossa).Where("ossa.operating_system_id = ?", operatingSystemID.String()).Where("ossa.site_id = ?", siteID.String())
 
 	for _, relation := range includeRelations {
 		query = query.Relation(relation)

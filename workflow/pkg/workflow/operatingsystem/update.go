@@ -48,7 +48,7 @@ func UpdateOsImageInventory(ctx workflow.Context, siteID string, osImageInventor
 	}
 
 	// RetryPolicy specifies how to automatically handle retries if an Activity fails.
-	retrypolicy := &temporal.RetryPolicy{
+	retryPolicy := &temporal.RetryPolicy{
 		InitialInterval:    5 * time.Second,
 		BackoffCoefficient: 2.0,
 		MaximumInterval:    30 * time.Second,
@@ -58,22 +58,22 @@ func UpdateOsImageInventory(ctx workflow.Context, siteID string, osImageInventor
 		// Timeout options specify when to automatically timeout Activity functions.
 		StartToCloseTimeout: 30 * time.Second,
 		// Optionally provide a customized RetryPolicy.
-		RetryPolicy: retrypolicy,
+		RetryPolicy: retryPolicy,
 	}
 
 	ctx = workflow.WithActivityOptions(ctx, options)
 
-	var osImageManager osActivity.ManageOsImage
+	var osManager osActivity.ManageOperatingSystem
 
-	var osImageIDs []uuid.UUID
+	var osIDs []uuid.UUID
 
-	err = workflow.ExecuteActivity(ctx, osImageManager.UpdateOsImagesInDB, parsedSiteID, osImageInventory).Get(ctx, &osImageIDs)
+	err = workflow.ExecuteActivity(ctx, osManager.UpdateOsImagesInDB, parsedSiteID, osImageInventory).Get(ctx, &osIDs)
 	if err != nil {
 		logger.Warn().Err(err).Msg("failed execute activity: UpdateOsImagesInDB")
 	} else {
-		// Update the status of the OS images
-		for _, osImageID := range osImageIDs {
-			serr := workflow.ExecuteActivity(ctx, osImageManager.UpdateOperatingSystemStatusInDB, osImageID).Get(ctx, nil)
+		// Update the status of the corresponding Operating Systems
+		for _, osID := range osIDs {
+			serr := workflow.ExecuteActivity(ctx, osManager.UpdateOperatingSystemStatusInDB, osID).Get(ctx, nil)
 			if serr != nil {
 				// Log error but continue as we don't want to interrupt inventory processing
 				logger.Warn().Err(serr).Msg("failed to execute activity: UpdateOperatingSystemStatusInDB")
@@ -91,7 +91,6 @@ func UpdateOsImageInventory(ctx workflow.Context, siteID string, osImageInventor
 
 	logger.Info().Msg("completing workflow")
 
-	// Return original error from inventory activity, if any
 	return err
 }
 
@@ -110,7 +109,7 @@ func UpdateOperatingSystemInventory(ctx workflow.Context, siteID string, invento
 		return err
 	}
 
-	retrypolicy := &temporal.RetryPolicy{
+	retryPolicy := &temporal.RetryPolicy{
 		InitialInterval:    5 * time.Second,
 		BackoffCoefficient: 2.0,
 		MaximumInterval:    30 * time.Second,
@@ -118,22 +117,25 @@ func UpdateOperatingSystemInventory(ctx workflow.Context, siteID string, invento
 	}
 	options := workflow.ActivityOptions{
 		StartToCloseTimeout: 30 * time.Second,
-		RetryPolicy:         retrypolicy,
+		RetryPolicy:         retryPolicy,
 	}
 	ctx = workflow.WithActivityOptions(ctx, options)
 
-	var osSyncManager osActivity.ManageOperatingSystemSync
+	var osManager osActivity.ManageOperatingSystem
 
-	err = workflow.ExecuteActivity(ctx, osSyncManager.UpdateOperatingSystemsInDB, parsedSiteID, inventory).Get(ctx, nil)
+	err = workflow.ExecuteActivity(ctx, osManager.UpdateOperatingSystemsInDB, parsedSiteID, inventory).Get(ctx, nil)
 	if err != nil {
 		logger.Warn().Err(err).Msg("Failed to execute activity: UpdateOperatingSystemsInDB")
 	}
 
 	logger.Info().Msg("Completing workflow")
 
+	// Record latency for this inventory call
 	var inventoryMetricsManager cwm.ManageInventoryMetrics
-	if merr := workflow.ExecuteActivity(ctx, inventoryMetricsManager.RecordLatency, parsedSiteID, "UpdateOperatingSystemInventory", err != nil, workflow.Now(ctx).Sub(startTime)).Get(ctx, nil); merr != nil {
-		logger.Warn().Err(merr).Msg("Failed to execute activity: RecordLatency")
+
+	serr := workflow.ExecuteActivity(ctx, inventoryMetricsManager.RecordLatency, parsedSiteID, "UpdateOperatingSystemInventory", err != nil, workflow.Now(ctx).Sub(startTime)).Get(ctx, nil)
+	if serr != nil {
+		logger.Warn().Err(serr).Msg("Failed to execute activity: RecordLatency")
 	}
 
 	return err
