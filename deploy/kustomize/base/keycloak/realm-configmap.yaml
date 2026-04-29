@@ -26,6 +26,7 @@ data:
       "realm": "carbide-dev",
       "enabled": true,
       "displayName": "Carbide Development",
+      "accessTokenLifespan": 10800,
       "sslRequired": "none",
       "registrationAllowed": false,
       "loginWithEmailAllowed": true,

@@ -16,18 +16,39 @@
 
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
 NAMESPACE="${NAMESPACE:-carbide-rest}"
 API_URL="${API_URL:-http://localhost:8388}"
 KEYCLOAK_URL="${KEYCLOAK_URL:-http://localhost:8082}"
 ORG="${ORG:-test-org}"
 
 usage() {
-    echo "Usage: $0 <command>"
+    echo "Usage: $0 <command> [command-options]"
     echo ""
     echo "Commands:"
     echo "  pki         Setup PKI secrets and CA"
-    echo "  site-agent  Setup site-agent with a real site"
-    echo "  all         Run both pki and site-agent setup"
+    echo "  site-agent  Setup site-agent with a real site (options below)"
+    echo "             Options:"
+    echo "               --with-carbide-api     Require TLS material from carbide-api (Forge default:"
+    echo "                                      secret carbide-api-certificate in namespace forge-system)"
+    echo "                                      and wire site-agent Helm release to use synced bundle."
+    echo "               --without-carbide-api  Skip carbide-api TLS wiring (mock-core / plaintext only)."
+    echo "               --prompt-carbide-tls   Prompt before applying when carbide TLS secret exists"
+    echo "                                      (only if mode is unset or auto)."
+    echo "               --carbide-address=SVC:SVCGRPC  Override CARBIDE_ADDRESS after sync."
+    echo "             Env:"
+    echo "               CARBIDE_API_SOURCE_NS (default forge-system)"
+    echo "               CARBIDE_API_TLS_SECRET (default carbide-api-certificate)"
+    echo "               CARBIDE_API_DEST_SECRET (default carbide-api-grpc-client)"
+    echo "               CARBIDE_ADDRESS_OVERRIDE (defaults to carbide-api.forge-system.svc.cluster.local:1079)"
+    echo "               CARBIDE_SEC_OPT_OVERRIDE (default 2 MutualTLS when using carbide-api bundle)"
+    echo "  delete-site UUID"
+    echo "              Delete Site via Carbide REST API (${API_URL}, org ${ORG}). Removes DB/Temporal/Site CR."
+    echo "              Optional env: PURGE_MACHINES=true (query purgeMachines to API)."
+    echo "              Also: SITE_ID=<uuid> $0 delete-site"
+    echo "  all         Run pki setup, then site-agent (supports same flags as site-agent)"
     echo "  verify      Verify local deployment health"
     exit 1
 }
@@ -233,6 +254,128 @@ create_site() {
     exit 1
 }
 
+# Carbide-api (Forge/Core) gRPC TLS: sync server's TLS bundle into carbide-rest and point Helm site-agent mount.
+CARBIDE_API_SOURCE_NS="${CARBIDE_API_SOURCE_NS:-forge-system}"
+CARBIDE_API_TLS_SECRET="${CARBIDE_API_TLS_SECRET:-carbide-api-certificate}"
+CARBIDE_API_DEST_SECRET="${CARBIDE_API_DEST_SECRET:-carbide-api-grpc-client}"
+
+carbide_api_tls_secret_present() {
+    kubectl get secret "${CARBIDE_API_TLS_SECRET}" -n "${CARBIDE_API_SOURCE_NS}" >/dev/null 2>&1
+}
+
+patch_site_agent_carbide_mount_secret_name() {
+    local secret_name=$1
+    if ! kubectl get sts carbide-rest-site-agent -n "$NAMESPACE" >/dev/null 2>&1; then
+        echo "WARN: StatefulSet carbide-rest-site-agent not found; skipping volume patch"
+        return 1
+    fi
+    if ! command -v jq >/dev/null 2>&1; then
+        echo "WARN: jq required to patch carbide-certs volume deterministically"
+        return 1
+    fi
+    local vol_idx
+    vol_idx=$(kubectl -n "$NAMESPACE" get statefulset carbide-rest-site-agent -o json \
+        | jq -r '.spec.template.spec.volumes | to_entries[] | select(.value.name=="carbide-certs") | .key' 2>/dev/null \
+        || echo "")
+    if [[ -z "$vol_idx" ]]; then
+        echo "WARN: no volume named carbide-certs on carbide-rest-site-agent"
+        return 1
+    fi
+    kubectl -n "$NAMESPACE" patch statefulset carbide-rest-site-agent --type=json \
+        -p="[{\"op\":\"replace\",\"path\":\"/spec/template/spec/volumes/${vol_idx}/secret/secretName\",\"value\":\"${secret_name}\"}]"
+}
+
+helm_site_agent_using_carbide_api_bundle() {
+    local dest_secret=$1
+    if ! command -v helm >/dev/null 2>&1; then
+        patch_site_agent_carbide_mount_secret_name "$dest_secret"
+        echo "WARN: Helm not installed; patched StatefulSet only. Prefer: helm upgrade with secrets.carbideTlsCerts=${dest_secret} certificate.enabled=false"
+        return
+    fi
+    if helm status carbide-rest-site-agent -n "${NAMESPACE}" >/dev/null 2>&1; then
+        helm upgrade carbide-rest-site-agent "${REPO_ROOT}/helm/charts/carbide-rest-site-agent/" \
+            --namespace "${NAMESPACE}" \
+            --reuse-values \
+            --set "secrets.carbideTlsCerts=${dest_secret}" \
+            --set "certificate.enabled=false"
+    else
+        echo "WARN: Helm release carbide-rest-site-agent missing; patching StatefulSet only"
+        patch_site_agent_carbide_mount_secret_name "${dest_secret}" || true
+    fi
+}
+
+apply_carbide_api_grpc_tls_to_site_agent() {
+    echo "Applying carbide-api gRPC TLS bundle for site-agent (source ${CARBIDE_API_SOURCE_NS}/${CARBIDE_API_TLS_SECRET})..."
+    local sync="${REPO_ROOT}/scripts/sync-forge-carbide-api-tls-secret.sh"
+    if [[ ! -x "${sync}" && ! -f "${sync}" ]]; then
+        echo "ERROR: ${sync} not found"
+        return 1
+    fi
+    bash "${sync}" \
+        --source-ns "${CARBIDE_API_SOURCE_NS}" \
+        --source-secret "${CARBIDE_API_TLS_SECRET}" \
+        --dest-ns "${NAMESPACE}" \
+        --dest-secret "${CARBIDE_API_DEST_SECRET}"
+
+    helm_site_agent_using_carbide_api_bundle "${CARBIDE_API_DEST_SECRET}"
+
+    local addr="${CARBIDE_ADDRESS_FROM_FLAG:-}"
+    if [[ -z "$addr" ]]; then
+        addr="${CARBIDE_ADDRESS_OVERRIDE:-carbide-api.forge-system.svc.cluster.local:1079}"
+    fi
+    local sec="${CARBIDE_SEC_OPT_OVERRIDE:-2}"
+
+    kubectl -n "${NAMESPACE}" patch configmap carbide-rest-site-agent-config \
+        --type merge \
+        -p "{\"data\":{\"CARBIDE_ADDRESS\":\"${addr}\",\"CARBIDE_SEC_OPT\":\"${sec}\"}}"
+
+    echo "Patched carbide-rest-site-agent-config: CARBIDE_ADDRESS=${addr} CARBIDE_SEC_OPT=${sec}"
+}
+
+# SITE_AGENT_CARBIDE_TLS_MODE: unset→auto | auto | force | yes | no | never
+maybe_apply_carbide_api_tls_step() {
+    local mode="${SITE_AGENT_CARBIDE_TLS_MODE:-auto}"
+    local prompted="${SITE_AGENT_PROMPT_CARBIDE:-false}"
+
+    case "${mode}" in
+        no|never)
+            echo "Skipping carbide-api TLS wiring (--without-carbide-api)."
+            return 0
+            ;;
+    esac
+
+    if [[ "${mode}" == "yes" ]] || [[ "${mode}" == "force" ]]; then
+        if ! carbide_api_tls_secret_present; then
+            echo "ERROR: carbide TLS secret missing: namespace=${CARBIDE_API_SOURCE_NS} secret=${CARBIDE_API_TLS_SECRET}"
+            echo "Deploy carbide-api (Forge/Core) first or adjust CARBIDE_API_SOURCE_NS / CARBIDE_API_TLS_SECRET."
+            exit 1
+        fi
+        apply_carbide_api_grpc_tls_to_site_agent
+        return 0
+    fi
+
+    if [[ "${mode}" != "auto" ]]; then
+        echo "WARN: Unknown SITE_AGENT_CARBIDE_TLS_MODE=${mode}; expected auto, yes, force, no, never"
+        return 0
+    fi
+
+    if ! carbide_api_tls_secret_present; then
+        echo "No carbide-api TLS secret at ${CARBIDE_API_SOURCE_NS}/${CARBIDE_API_TLS_SECRET}; leaving CARBIDE_* as chart defaults (often mock-core + plaintext)."
+        return 0
+    fi
+
+    if [[ "${prompted}" == "true" ]]; then
+        read -r -p "Use TLS bundle from carbide-api (${CARBIDE_API_SOURCE_NS}/${CARBIDE_API_TLS_SECRET}) for Core gRPC? [y/N] " reply
+        if [[ ! "${reply}" =~ ^[yY]$ ]]; then
+            echo "Skipping carbide-api TLS wiring."
+            return 0
+        fi
+    fi
+
+    echo "Detected ${CARBIDE_API_TLS_SECRET} in ${CARBIDE_API_SOURCE_NS}; syncing carbide-api TLS bundle for Core gRPC."
+    apply_carbide_api_grpc_tls_to_site_agent
+}
+
 configure_site_agent() {
     local site_id=$1
 
@@ -242,6 +385,8 @@ configure_site_agent() {
         --tls-key-path /var/secrets/temporal/certs/server-interservice/tls.key \
         --tls-ca-path /var/secrets/temporal/certs/server-interservice/ca.crt \
         --tls-server-name interservice.server.temporal.local || true
+
+    maybe_apply_carbide_api_tls_step
 
     kubectl -n $NAMESPACE get configmap carbide-rest-site-agent-config -o yaml | \
         sed "s/CLUSTER_ID: .*/CLUSTER_ID: \"$site_id\"/" | \
@@ -265,6 +410,30 @@ configure_site_agent() {
 }
 
 setup_site_agent() {
+    SITE_AGENT_PROMPT_CARBIDE="${SITE_AGENT_PROMPT_CARBIDE:-false}"
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --with-carbide-api)
+                SITE_AGENT_CARBIDE_TLS_MODE="force"
+                ;;
+            --without-carbide-api)
+                SITE_AGENT_CARBIDE_TLS_MODE="no"
+                ;;
+            --prompt-carbide-tls)
+                SITE_AGENT_PROMPT_CARBIDE="true"
+                ;;
+            --carbide-address=*)
+                CARBIDE_ADDRESS_FROM_FLAG="${1#*=}"
+                ;;
+            *)
+                echo "$0 site-agent: unknown option: $1" >&2
+                usage
+                ;;
+        esac
+        shift
+    done
+    export CARBIDE_ADDRESS_FROM_FLAG
+
     echo "Setting up site-agent..."
     wait_for_services
 
@@ -293,6 +462,52 @@ setup_site_agent() {
 
     kubectl -n $NAMESPACE get pods -l app=carbide-rest-site-agent
     echo "Site-agent setup complete."
+}
+
+delete_site_by_api() {
+    local site_id="${1:-}"
+    if [[ -z "$site_id" ]]; then
+        site_id="${SITE_ID:-}"
+    fi
+    if [[ -z "$site_id" ]]; then
+        echo "Usage: $0 delete-site <site-uuid>"
+        echo "       SITE_ID=<uuid> $0 delete-site"
+        echo ""
+        echo "Deletes Site via Carbide API: datastore site row, Temporal namespace, Site Manager Forge CR,"
+        echo "and starts delete-site-components workflow. Requires allocations=0."
+        echo "Env: PURGE_MACHINES=true (optional)."
+        exit 1
+    fi
+
+    echo "Acquiring token..."
+    TOKEN="$(get_token)"
+
+    local q=""
+    if [[ "${PURGE_MACHINES:-false}" == "true" ]]; then
+        q="?purgeMachines=true"
+    fi
+
+    echo "Deleting site ${site_id} (DELETE ${API_URL}/v2/org/${ORG}/carbide/site/${site_id}${q:+...})"
+    RESP=$(curl -sS -w "\n%{http_code}" -X DELETE \
+        "${API_URL}/v2/org/${ORG}/carbide/site/${site_id}${q}" \
+        -H "Authorization: Bearer ${TOKEN}")
+
+    HTTP_BODY=$(echo "$RESP" | sed '$d')
+    HTTP_CODE=$(echo "$RESP" | tail -n1)
+
+    if [[ -n "$HTTP_BODY" ]]; then
+        echo "$HTTP_BODY"
+    fi
+
+    case "$HTTP_CODE" in
+        202|204|200)
+            echo "OK: Site delete accepted (HTTP ${HTTP_CODE})."
+            ;;
+        *)
+            echo "ERROR: DELETE failed (HTTP ${HTTP_CODE})." >&2
+            exit 1
+            ;;
+    esac
 }
 
 # ============================================================================
@@ -336,14 +551,20 @@ case "${1:-}" in
         setup_pki
         ;;
     site-agent)
-        setup_site_agent
+        shift || true
+        setup_site_agent "$@"
         ;;
     all)
+        shift || true
         setup_pki
-        setup_site_agent
+        setup_site_agent "$@"
         ;;
     verify)
         verify
+        ;;
+    delete-site)
+        shift || true
+        delete_site_by_api "${1:-}"
         ;;
     *)
         usage

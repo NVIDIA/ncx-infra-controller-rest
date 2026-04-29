@@ -16,7 +16,7 @@
 .PHONY: test postgres-up postgres-down ensure-postgres postgres-wait clean
 .PHONY: build docker-build docker-build-local
 .PHONY: test-ipam test-site-agent test-site-manager test-workflow test-db test-api test-auth test-common test-cert-manager test-site-workflow migrate carbide-mock-server-build carbide-mock-server-start carbide-mock-server-stop rla-mock-server-build rla-mock-server-start rla-mock-server-stop
-.PHONY: validate-openapi preview-openapi generate-client
+.PHONY: validate-openapi preview-openapi generate-client help-deploy-site-agent-connect-carbide-api helm-deploy-site-agent-connect-carbide-api
 .PHONY: pre-commit-install pre-commit-run pre-commit-update
 
 # Build configuration
@@ -36,6 +36,15 @@ POSTGRES_IMAGE := postgres:14.4-alpine
 # Helm chart configuration (for kind-reset-helm / helm-* targets)
 UMBRELLA_CHART := helm/charts/carbide-rest
 SITE_AGENT_CHART := helm/charts/carbide-rest-site-agent
+
+# Optional flags for scripts/setup-local.sh site-agent (e.g. --with-carbide-api --prompt-carbide-tls).
+SITE_AGENT_SETUP_FLAGS ?=
+
+# Defaults for help text and sync when wiring site-agent to Forge carbide-api gRPC TLS.
+CARBIDE_API_SOURCE_NS ?= forge-system
+CARBIDE_API_TLS_SECRET ?= carbide-api-certificate
+
+export CARBIDE_API_SOURCE_NS CARBIDE_API_TLS_SECRET
 
 HELM_SET := --set global.image.repository=$(IMAGE_REGISTRY) \
 	--set global.image.tag=$(IMAGE_TAG) \
@@ -273,7 +282,7 @@ rla-protogen:
 # Kind Local Deployment Targets
 # =============================================================================
 
-.PHONY: kind-up kind-down kind-deploy kind-load kind-apply kind-redeploy kind-status kind-logs kind-reset kind-reset-infra kind-reset-kustomize kind-reset-helm kind-verify setup-site-agent test-simple-sdk-example
+.PHONY: kind-up kind-down kind-deploy kind-load kind-apply kind-redeploy kind-status kind-logs kind-reset kind-reset-infra kind-reset-kustomize kind-reset-helm kind-verify setup-site-agent delete-site test-simple-sdk-example
 .PHONY: deploy-overlay-api deploy-overlay-cert-manager deploy-overlay-site-manager deploy-overlay-workflow
 .PHONY: helm-lint helm-template helm-deploy helm-deploy-site-agent helm-deploy-all helm-redeploy helm-verify helm-verify-site-agent helm-uninstall
 
@@ -559,6 +568,7 @@ helm-deploy:
 	@echo "================================================================================"
 	@echo "Umbrella chart deployed. To deploy site-agent:"
 	@echo "  make helm-deploy-site-agent"
+	@echo "  Core gRPC TLS from carbide-api (Forge secret): see help-deploy-site-agent-connect-carbide-api"
 	@echo "================================================================================"
 
 # Deploy site-agent: install chart first (will CrashLoop), then bootstrap, then stabilize
@@ -567,7 +577,7 @@ helm-deploy-site-agent:
 	helm upgrade --install carbide-rest-site-agent $(SITE_AGENT_CHART)/ \
 		--namespace carbide-rest $(HELM_SET) --timeout 1m || true
 	@echo "Running site bootstrap (setup-local.sh site-agent)..."
-	./scripts/setup-local.sh site-agent
+	./scripts/setup-local.sh site-agent $(SITE_AGENT_SETUP_FLAGS)
 	@echo "Waiting for site-agent to stabilize..."
 	kubectl -n carbide-rest rollout status statefulset/carbide-rest-site-agent --timeout=120s
 
@@ -594,6 +604,30 @@ helm-verify-site-agent:
 	@echo "Checking Site Agent..."
 	kubectl -n carbide-rest rollout status statefulset/carbide-rest-site-agent --timeout=120s
 
+# Same as helm-deploy-site-agent but bootstrap requires carbide-api TLS secret (Forge/Core) if present or fail.
+helm-deploy-site-agent-connect-carbide-api:
+	$(MAKE) helm-deploy-site-agent SITE_AGENT_SETUP_FLAGS="$(SITE_AGENT_SETUP_FLAGS) --with-carbide-api"
+
+help-deploy-site-agent-connect-carbide-api:
+	@echo "Connect site-agent to carbide-api (NCX Controller Core / Forge) gRPC with TLS:"
+	@echo ""
+	@echo "  Prerequisite: Namespace $(CARBIDE_API_SOURCE_NS) secret $(CARBIDE_API_TLS_SECRET) (defaults below)."
+	@echo "  The script scripts/sync-forge-carbide-api-tls-secret.sh copies tls.crt/key + ca.crt into carbide-rest"
+	@echo "  and helm upgrade reconciles secrets.carbideTlsCerts + certificate.enabled=false."
+	@echo ""
+	@echo "  make helm-deploy-site-agent-connect-carbide-api"
+	@echo "    BOOTSTRAPS with: ./scripts/setup-local.sh site-agent --with-carbide-api"
+	@echo ""
+	@echo "  Customize carbide TLS source (Forge layout):"
+	@echo "    CARBIDE_API_SOURCE_NS=forge-system CARBIDE_API_TLS_SECRET=carbide-api-certificate \\"
+	@echo "      make helm-deploy-site-agent SITE_AGENT_SETUP_FLAGS='--prompt-carbide-tls'"
+	@echo ""
+	@echo "  Explicit address for Core listener (DNS:port):"
+	@echo "    make helm-deploy-site-agent SITE_AGENT_SETUP_FLAGS='--carbide-address=carbide-api.forge-system.svc.cluster.local:1079'"
+	@echo ""
+	@echo "  Defaults: CARBIDE_API_SOURCE_NS=forge-system, CARBIDE_API_TLS_SECRET=carbide-api-certificate,"
+	@echo "    CARBIDE_ADDRESS_OVERRIDE=carbide-api.forge-system.svc.cluster.local:1079, CARBIDE_SEC_OPT_OVERRIDE=2 (MutualTLS)."
+
 helm-uninstall:
 	-helm uninstall carbide-rest-site-agent --namespace carbide-rest
 	-helm uninstall carbide-rest --namespace carbide-rest
@@ -604,7 +638,14 @@ helm-uninstall:
 
 # Setup site-agent with a real site created via the API
 setup-site-agent:
-	./scripts/setup-local.sh site-agent
+	./scripts/setup-local.sh site-agent $(SITE_AGENT_SETUP_FLAGS)
+
+# Delete Site via Carbide REST (database row, Temporal namespace, Forge Site CR in site-manager when enabled).
+# Requires allocations=0 on the site. Uses same defaults as bootstrap (API_URL, ORG=test-org).
+# Usage: SITE_ID=<uuid> make delete-site
+delete-site:
+	@test -n "$(SITE_ID)" || { echo "Usage: SITE_ID=<site-uuid> make delete-site"; exit 1; }
+	./scripts/setup-local.sh delete-site "$(SITE_ID)"
 
 # Verify the local deployment (health checks)
 kind-verify:
