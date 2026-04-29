@@ -30,8 +30,8 @@ type Rack struct {
 	// Serial number of the Rack
 	SerialNumber *string `json:"serialNumber,omitempty"`
 	// Description of the Rack
-	Description *string       `json:"description,omitempty"`
-	Location    *RackLocation `json:"location,omitempty"`
+	Description *string              `json:"description,omitempty"`
+	Location    NullableRackLocation `json:"location,omitempty"`
 	// Components within the Rack. Only returned when includeComponents is true.
 	Components []RackComponent `json:"components,omitempty"`
 }
@@ -245,36 +245,47 @@ func (o *Rack) SetDescription(v string) {
 	o.Description = &v
 }
 
-// GetLocation returns the Location field value if set, zero value otherwise.
+// GetLocation returns the Location field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *Rack) GetLocation() RackLocation {
-	if o == nil || IsNil(o.Location) {
+	if o == nil || IsNil(o.Location.Get()) {
 		var ret RackLocation
 		return ret
 	}
-	return *o.Location
+	return *o.Location.Get()
 }
 
 // GetLocationOk returns a tuple with the Location field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *Rack) GetLocationOk() (*RackLocation, bool) {
-	if o == nil || IsNil(o.Location) {
+	if o == nil {
 		return nil, false
 	}
-	return o.Location, true
+	return o.Location.Get(), o.Location.IsSet()
 }
 
 // HasLocation returns a boolean if a field has been set.
 func (o *Rack) HasLocation() bool {
-	if o != nil && !IsNil(o.Location) {
+	if o != nil && o.Location.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetLocation gets a reference to the given RackLocation and assigns it to the Location field.
+// SetLocation gets a reference to the given NullableRackLocation and assigns it to the Location field.
 func (o *Rack) SetLocation(v RackLocation) {
-	o.Location = &v
+	o.Location.Set(&v)
+}
+
+// SetLocationNil sets the value for Location to be an explicit nil
+func (o *Rack) SetLocationNil() {
+	o.Location.Set(nil)
+}
+
+// UnsetLocation ensures that no value is present for Location, not even an explicit nil
+func (o *Rack) UnsetLocation() {
+	o.Location.Unset()
 }
 
 // GetComponents returns the Components field value if set, zero value otherwise.
@@ -337,8 +348,8 @@ func (o Rack) ToMap() (map[string]interface{}, error) {
 	if !IsNil(o.Description) {
 		toSerialize["description"] = o.Description
 	}
-	if !IsNil(o.Location) {
-		toSerialize["location"] = o.Location
+	if o.Location.IsSet() {
+		toSerialize["location"] = o.Location.Get()
 	}
 	if !IsNil(o.Components) {
 		toSerialize["components"] = o.Components

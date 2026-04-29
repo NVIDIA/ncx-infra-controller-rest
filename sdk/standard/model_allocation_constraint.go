@@ -33,9 +33,9 @@ type AllocationConstraint struct {
 	// Value of the Allocation Constraint. For InstanceType, this value represents number of Machines allocated for Tenant. For IPBlock, this value represents the prefix Length of the IP Block.
 	ConstraintValue *int32 `json:"constraintValue,omitempty"`
 	// ID of the allocated Tenant IP Block when resource type is IPBlock
-	DerivedResourceId NullableString       `json:"derivedResourceId,omitempty"`
-	InstanceType      *InstanceTypeSummary `json:"instanceType,omitempty"`
-	IpBlock           *IpBlockSummary      `json:"ipBlock,omitempty"`
+	DerivedResourceId NullableString              `json:"derivedResourceId,omitempty"`
+	InstanceType      NullableInstanceTypeSummary `json:"instanceType,omitempty"`
+	IpBlock           NullableIpBlockSummary      `json:"ipBlock,omitempty"`
 	// Date/time when the Allocation Constraint was created
 	Created *time.Time `json:"created,omitempty"`
 	// Date/time when the Allocation Constraint was last updated
@@ -294,68 +294,90 @@ func (o *AllocationConstraint) UnsetDerivedResourceId() {
 	o.DerivedResourceId.Unset()
 }
 
-// GetInstanceType returns the InstanceType field value if set, zero value otherwise.
+// GetInstanceType returns the InstanceType field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *AllocationConstraint) GetInstanceType() InstanceTypeSummary {
-	if o == nil || IsNil(o.InstanceType) {
+	if o == nil || IsNil(o.InstanceType.Get()) {
 		var ret InstanceTypeSummary
 		return ret
 	}
-	return *o.InstanceType
+	return *o.InstanceType.Get()
 }
 
 // GetInstanceTypeOk returns a tuple with the InstanceType field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *AllocationConstraint) GetInstanceTypeOk() (*InstanceTypeSummary, bool) {
-	if o == nil || IsNil(o.InstanceType) {
+	if o == nil {
 		return nil, false
 	}
-	return o.InstanceType, true
+	return o.InstanceType.Get(), o.InstanceType.IsSet()
 }
 
 // HasInstanceType returns a boolean if a field has been set.
 func (o *AllocationConstraint) HasInstanceType() bool {
-	if o != nil && !IsNil(o.InstanceType) {
+	if o != nil && o.InstanceType.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetInstanceType gets a reference to the given InstanceTypeSummary and assigns it to the InstanceType field.
+// SetInstanceType gets a reference to the given NullableInstanceTypeSummary and assigns it to the InstanceType field.
 func (o *AllocationConstraint) SetInstanceType(v InstanceTypeSummary) {
-	o.InstanceType = &v
+	o.InstanceType.Set(&v)
 }
 
-// GetIpBlock returns the IpBlock field value if set, zero value otherwise.
+// SetInstanceTypeNil sets the value for InstanceType to be an explicit nil
+func (o *AllocationConstraint) SetInstanceTypeNil() {
+	o.InstanceType.Set(nil)
+}
+
+// UnsetInstanceType ensures that no value is present for InstanceType, not even an explicit nil
+func (o *AllocationConstraint) UnsetInstanceType() {
+	o.InstanceType.Unset()
+}
+
+// GetIpBlock returns the IpBlock field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *AllocationConstraint) GetIpBlock() IpBlockSummary {
-	if o == nil || IsNil(o.IpBlock) {
+	if o == nil || IsNil(o.IpBlock.Get()) {
 		var ret IpBlockSummary
 		return ret
 	}
-	return *o.IpBlock
+	return *o.IpBlock.Get()
 }
 
 // GetIpBlockOk returns a tuple with the IpBlock field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *AllocationConstraint) GetIpBlockOk() (*IpBlockSummary, bool) {
-	if o == nil || IsNil(o.IpBlock) {
+	if o == nil {
 		return nil, false
 	}
-	return o.IpBlock, true
+	return o.IpBlock.Get(), o.IpBlock.IsSet()
 }
 
 // HasIpBlock returns a boolean if a field has been set.
 func (o *AllocationConstraint) HasIpBlock() bool {
-	if o != nil && !IsNil(o.IpBlock) {
+	if o != nil && o.IpBlock.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetIpBlock gets a reference to the given IpBlockSummary and assigns it to the IpBlock field.
+// SetIpBlock gets a reference to the given NullableIpBlockSummary and assigns it to the IpBlock field.
 func (o *AllocationConstraint) SetIpBlock(v IpBlockSummary) {
-	o.IpBlock = &v
+	o.IpBlock.Set(&v)
+}
+
+// SetIpBlockNil sets the value for IpBlock to be an explicit nil
+func (o *AllocationConstraint) SetIpBlockNil() {
+	o.IpBlock.Set(nil)
+}
+
+// UnsetIpBlock ensures that no value is present for IpBlock, not even an explicit nil
+func (o *AllocationConstraint) UnsetIpBlock() {
+	o.IpBlock.Unset()
 }
 
 // GetCreated returns the Created field value if set, zero value otherwise.
@@ -453,11 +475,11 @@ func (o AllocationConstraint) ToMap() (map[string]interface{}, error) {
 	if o.DerivedResourceId.IsSet() {
 		toSerialize["derivedResourceId"] = o.DerivedResourceId.Get()
 	}
-	if !IsNil(o.InstanceType) {
-		toSerialize["instanceType"] = o.InstanceType
+	if o.InstanceType.IsSet() {
+		toSerialize["instanceType"] = o.InstanceType.Get()
 	}
-	if !IsNil(o.IpBlock) {
-		toSerialize["ipBlock"] = o.IpBlock
+	if o.IpBlock.IsSet() {
+		toSerialize["ipBlock"] = o.IpBlock.Get()
 	}
 	if !IsNil(o.Created) {
 		toSerialize["created"] = o.Created

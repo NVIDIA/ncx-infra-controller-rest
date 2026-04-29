@@ -38,8 +38,8 @@ type Tray struct {
 	// Firmware version of the tray
 	FirmwareVersion *string `json:"firmwareVersion,omitempty"`
 	// Current power state of the tray
-	PowerState *string       `json:"powerState,omitempty"`
-	Position   *TrayPosition `json:"position,omitempty"`
+	PowerState *string              `json:"powerState,omitempty"`
+	Position   NullableTrayPosition `json:"position,omitempty"`
 	// BMC (Baseboard Management Controller) entries for the tray
 	Bmcs []BMCInfo `json:"bmcs,omitempty"`
 	// ID of the rack this tray belongs to
@@ -383,36 +383,47 @@ func (o *Tray) SetPowerState(v string) {
 	o.PowerState = &v
 }
 
-// GetPosition returns the Position field value if set, zero value otherwise.
+// GetPosition returns the Position field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *Tray) GetPosition() TrayPosition {
-	if o == nil || IsNil(o.Position) {
+	if o == nil || IsNil(o.Position.Get()) {
 		var ret TrayPosition
 		return ret
 	}
-	return *o.Position
+	return *o.Position.Get()
 }
 
 // GetPositionOk returns a tuple with the Position field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *Tray) GetPositionOk() (*TrayPosition, bool) {
-	if o == nil || IsNil(o.Position) {
+	if o == nil {
 		return nil, false
 	}
-	return o.Position, true
+	return o.Position.Get(), o.Position.IsSet()
 }
 
 // HasPosition returns a boolean if a field has been set.
 func (o *Tray) HasPosition() bool {
-	if o != nil && !IsNil(o.Position) {
+	if o != nil && o.Position.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetPosition gets a reference to the given TrayPosition and assigns it to the Position field.
+// SetPosition gets a reference to the given NullableTrayPosition and assigns it to the Position field.
 func (o *Tray) SetPosition(v TrayPosition) {
-	o.Position = &v
+	o.Position.Set(&v)
+}
+
+// SetPositionNil sets the value for Position to be an explicit nil
+func (o *Tray) SetPositionNil() {
+	o.Position.Set(nil)
+}
+
+// UnsetPosition ensures that no value is present for Position, not even an explicit nil
+func (o *Tray) UnsetPosition() {
+	o.Position.Unset()
 }
 
 // GetBmcs returns the Bmcs field value if set, zero value otherwise.
@@ -519,8 +530,8 @@ func (o Tray) ToMap() (map[string]interface{}, error) {
 	if !IsNil(o.PowerState) {
 		toSerialize["powerState"] = o.PowerState
 	}
-	if !IsNil(o.Position) {
-		toSerialize["position"] = o.Position
+	if o.Position.IsSet() {
+		toSerialize["position"] = o.Position.Get()
 	}
 	if !IsNil(o.Bmcs) {
 		toSerialize["bmcs"] = o.Bmcs

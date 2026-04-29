@@ -47,12 +47,12 @@ type Machine struct {
 	MachineCapabilities []MachineCapability `json:"machineCapabilities,omitempty"`
 	MachineInterfaces   []MachineInterface  `json:"machineInterfaces,omitempty"`
 	// If the Machine is in maintenance mode, this message will typically describe the reason and how long it is expected to be in maintenance
-	MaintenanceMessage NullableString `json:"maintenanceMessage,omitempty"`
-	Health             *MachineHealth `json:"health,omitempty"`
+	MaintenanceMessage NullableString        `json:"maintenanceMessage,omitempty"`
+	Health             NullableMachineHealth `json:"health,omitempty"`
 	// Only available to Providers. Returned if includeMetadata query param is specified. Otherwise attribute is omitted from response.
-	Metadata *MachineMetadata  `json:"metadata,omitempty"`
-	Labels   map[string]string `json:"labels,omitempty"`
-	Status   *MachineStatus    `json:"status,omitempty"`
+	Metadata NullableMachineMetadata `json:"metadata,omitempty"`
+	Labels   map[string]string       `json:"labels,omitempty"`
+	Status   *MachineStatus          `json:"status,omitempty"`
 	// Indicates whether the machine is usable by or currently in use by a tenant.
 	IsUsableByTenant *bool          `json:"isUsableByTenant,omitempty"`
 	StatusHistory    []StatusDetail `json:"statusHistory,omitempty"`
@@ -612,73 +612,95 @@ func (o *Machine) UnsetMaintenanceMessage() {
 	o.MaintenanceMessage.Unset()
 }
 
-// GetHealth returns the Health field value if set, zero value otherwise.
+// GetHealth returns the Health field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *Machine) GetHealth() MachineHealth {
-	if o == nil || IsNil(o.Health) {
+	if o == nil || IsNil(o.Health.Get()) {
 		var ret MachineHealth
 		return ret
 	}
-	return *o.Health
+	return *o.Health.Get()
 }
 
 // GetHealthOk returns a tuple with the Health field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *Machine) GetHealthOk() (*MachineHealth, bool) {
-	if o == nil || IsNil(o.Health) {
+	if o == nil {
 		return nil, false
 	}
-	return o.Health, true
+	return o.Health.Get(), o.Health.IsSet()
 }
 
 // HasHealth returns a boolean if a field has been set.
 func (o *Machine) HasHealth() bool {
-	if o != nil && !IsNil(o.Health) {
+	if o != nil && o.Health.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetHealth gets a reference to the given MachineHealth and assigns it to the Health field.
+// SetHealth gets a reference to the given NullableMachineHealth and assigns it to the Health field.
 func (o *Machine) SetHealth(v MachineHealth) {
-	o.Health = &v
+	o.Health.Set(&v)
 }
 
-// GetMetadata returns the Metadata field value if set, zero value otherwise.
+// SetHealthNil sets the value for Health to be an explicit nil
+func (o *Machine) SetHealthNil() {
+	o.Health.Set(nil)
+}
+
+// UnsetHealth ensures that no value is present for Health, not even an explicit nil
+func (o *Machine) UnsetHealth() {
+	o.Health.Unset()
+}
+
+// GetMetadata returns the Metadata field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *Machine) GetMetadata() MachineMetadata {
-	if o == nil || IsNil(o.Metadata) {
+	if o == nil || IsNil(o.Metadata.Get()) {
 		var ret MachineMetadata
 		return ret
 	}
-	return *o.Metadata
+	return *o.Metadata.Get()
 }
 
 // GetMetadataOk returns a tuple with the Metadata field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *Machine) GetMetadataOk() (*MachineMetadata, bool) {
-	if o == nil || IsNil(o.Metadata) {
+	if o == nil {
 		return nil, false
 	}
-	return o.Metadata, true
+	return o.Metadata.Get(), o.Metadata.IsSet()
 }
 
 // HasMetadata returns a boolean if a field has been set.
 func (o *Machine) HasMetadata() bool {
-	if o != nil && !IsNil(o.Metadata) {
+	if o != nil && o.Metadata.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetMetadata gets a reference to the given MachineMetadata and assigns it to the Metadata field.
+// SetMetadata gets a reference to the given NullableMachineMetadata and assigns it to the Metadata field.
 func (o *Machine) SetMetadata(v MachineMetadata) {
-	o.Metadata = &v
+	o.Metadata.Set(&v)
 }
 
-// GetLabels returns the Labels field value if set, zero value otherwise.
+// SetMetadataNil sets the value for Metadata to be an explicit nil
+func (o *Machine) SetMetadataNil() {
+	o.Metadata.Set(nil)
+}
+
+// UnsetMetadata ensures that no value is present for Metadata, not even an explicit nil
+func (o *Machine) UnsetMetadata() {
+	o.Metadata.Unset()
+}
+
+// GetLabels returns the Labels field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *Machine) GetLabels() map[string]string {
-	if o == nil || IsNil(o.Labels) {
+	if o == nil {
 		var ret map[string]string
 		return ret
 	}
@@ -687,6 +709,7 @@ func (o *Machine) GetLabels() map[string]string {
 
 // GetLabelsOk returns a tuple with the Labels field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *Machine) GetLabelsOk() (map[string]string, bool) {
 	if o == nil || IsNil(o.Labels) {
 		return map[string]string{}, false
@@ -923,13 +946,13 @@ func (o Machine) ToMap() (map[string]interface{}, error) {
 	if o.MaintenanceMessage.IsSet() {
 		toSerialize["maintenanceMessage"] = o.MaintenanceMessage.Get()
 	}
-	if !IsNil(o.Health) {
-		toSerialize["health"] = o.Health
+	if o.Health.IsSet() {
+		toSerialize["health"] = o.Health.Get()
 	}
-	if !IsNil(o.Metadata) {
-		toSerialize["metadata"] = o.Metadata
+	if o.Metadata.IsSet() {
+		toSerialize["metadata"] = o.Metadata.Get()
 	}
-	if !IsNil(o.Labels) {
+	if o.Labels != nil {
 		toSerialize["labels"] = o.Labels
 	}
 	if !IsNil(o.Status) {

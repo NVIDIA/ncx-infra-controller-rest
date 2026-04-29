@@ -19,11 +19,11 @@ var _ MappedNullable = &SiteMachineStats{}
 
 // SiteMachineStats Machine stats for a Site
 type SiteMachineStats struct {
-	Total                  *int32                             `json:"total,omitempty"`
-	TotalByStatus          *SiteMachineStatsByStatus          `json:"totalByStatus,omitempty"`
-	TotalByHealth          *SiteMachineStatsByHealth          `json:"totalByHealth,omitempty"`
-	TotalByStatusAndHealth *SiteMachineStatsByStatusAndHealth `json:"totalByStatusAndHealth,omitempty"`
-	TotalByAllocation      *SiteMachineStatsByAllocation      `json:"totalByAllocation,omitempty"`
+	Total                  *int32                                    `json:"total,omitempty"`
+	TotalByStatus          NullableSiteMachineStatsByStatus          `json:"totalByStatus,omitempty"`
+	TotalByHealth          NullableSiteMachineStatsByHealth          `json:"totalByHealth,omitempty"`
+	TotalByStatusAndHealth NullableSiteMachineStatsByStatusAndHealth `json:"totalByStatusAndHealth,omitempty"`
+	TotalByAllocation      NullableSiteMachineStatsByAllocation      `json:"totalByAllocation,omitempty"`
 }
 
 // NewSiteMachineStats instantiates a new SiteMachineStats object
@@ -75,132 +75,176 @@ func (o *SiteMachineStats) SetTotal(v int32) {
 	o.Total = &v
 }
 
-// GetTotalByStatus returns the TotalByStatus field value if set, zero value otherwise.
+// GetTotalByStatus returns the TotalByStatus field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *SiteMachineStats) GetTotalByStatus() SiteMachineStatsByStatus {
-	if o == nil || IsNil(o.TotalByStatus) {
+	if o == nil || IsNil(o.TotalByStatus.Get()) {
 		var ret SiteMachineStatsByStatus
 		return ret
 	}
-	return *o.TotalByStatus
+	return *o.TotalByStatus.Get()
 }
 
 // GetTotalByStatusOk returns a tuple with the TotalByStatus field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *SiteMachineStats) GetTotalByStatusOk() (*SiteMachineStatsByStatus, bool) {
-	if o == nil || IsNil(o.TotalByStatus) {
+	if o == nil {
 		return nil, false
 	}
-	return o.TotalByStatus, true
+	return o.TotalByStatus.Get(), o.TotalByStatus.IsSet()
 }
 
 // HasTotalByStatus returns a boolean if a field has been set.
 func (o *SiteMachineStats) HasTotalByStatus() bool {
-	if o != nil && !IsNil(o.TotalByStatus) {
+	if o != nil && o.TotalByStatus.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetTotalByStatus gets a reference to the given SiteMachineStatsByStatus and assigns it to the TotalByStatus field.
+// SetTotalByStatus gets a reference to the given NullableSiteMachineStatsByStatus and assigns it to the TotalByStatus field.
 func (o *SiteMachineStats) SetTotalByStatus(v SiteMachineStatsByStatus) {
-	o.TotalByStatus = &v
+	o.TotalByStatus.Set(&v)
 }
 
-// GetTotalByHealth returns the TotalByHealth field value if set, zero value otherwise.
+// SetTotalByStatusNil sets the value for TotalByStatus to be an explicit nil
+func (o *SiteMachineStats) SetTotalByStatusNil() {
+	o.TotalByStatus.Set(nil)
+}
+
+// UnsetTotalByStatus ensures that no value is present for TotalByStatus, not even an explicit nil
+func (o *SiteMachineStats) UnsetTotalByStatus() {
+	o.TotalByStatus.Unset()
+}
+
+// GetTotalByHealth returns the TotalByHealth field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *SiteMachineStats) GetTotalByHealth() SiteMachineStatsByHealth {
-	if o == nil || IsNil(o.TotalByHealth) {
+	if o == nil || IsNil(o.TotalByHealth.Get()) {
 		var ret SiteMachineStatsByHealth
 		return ret
 	}
-	return *o.TotalByHealth
+	return *o.TotalByHealth.Get()
 }
 
 // GetTotalByHealthOk returns a tuple with the TotalByHealth field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *SiteMachineStats) GetTotalByHealthOk() (*SiteMachineStatsByHealth, bool) {
-	if o == nil || IsNil(o.TotalByHealth) {
+	if o == nil {
 		return nil, false
 	}
-	return o.TotalByHealth, true
+	return o.TotalByHealth.Get(), o.TotalByHealth.IsSet()
 }
 
 // HasTotalByHealth returns a boolean if a field has been set.
 func (o *SiteMachineStats) HasTotalByHealth() bool {
-	if o != nil && !IsNil(o.TotalByHealth) {
+	if o != nil && o.TotalByHealth.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetTotalByHealth gets a reference to the given SiteMachineStatsByHealth and assigns it to the TotalByHealth field.
+// SetTotalByHealth gets a reference to the given NullableSiteMachineStatsByHealth and assigns it to the TotalByHealth field.
 func (o *SiteMachineStats) SetTotalByHealth(v SiteMachineStatsByHealth) {
-	o.TotalByHealth = &v
+	o.TotalByHealth.Set(&v)
 }
 
-// GetTotalByStatusAndHealth returns the TotalByStatusAndHealth field value if set, zero value otherwise.
+// SetTotalByHealthNil sets the value for TotalByHealth to be an explicit nil
+func (o *SiteMachineStats) SetTotalByHealthNil() {
+	o.TotalByHealth.Set(nil)
+}
+
+// UnsetTotalByHealth ensures that no value is present for TotalByHealth, not even an explicit nil
+func (o *SiteMachineStats) UnsetTotalByHealth() {
+	o.TotalByHealth.Unset()
+}
+
+// GetTotalByStatusAndHealth returns the TotalByStatusAndHealth field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *SiteMachineStats) GetTotalByStatusAndHealth() SiteMachineStatsByStatusAndHealth {
-	if o == nil || IsNil(o.TotalByStatusAndHealth) {
+	if o == nil || IsNil(o.TotalByStatusAndHealth.Get()) {
 		var ret SiteMachineStatsByStatusAndHealth
 		return ret
 	}
-	return *o.TotalByStatusAndHealth
+	return *o.TotalByStatusAndHealth.Get()
 }
 
 // GetTotalByStatusAndHealthOk returns a tuple with the TotalByStatusAndHealth field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *SiteMachineStats) GetTotalByStatusAndHealthOk() (*SiteMachineStatsByStatusAndHealth, bool) {
-	if o == nil || IsNil(o.TotalByStatusAndHealth) {
+	if o == nil {
 		return nil, false
 	}
-	return o.TotalByStatusAndHealth, true
+	return o.TotalByStatusAndHealth.Get(), o.TotalByStatusAndHealth.IsSet()
 }
 
 // HasTotalByStatusAndHealth returns a boolean if a field has been set.
 func (o *SiteMachineStats) HasTotalByStatusAndHealth() bool {
-	if o != nil && !IsNil(o.TotalByStatusAndHealth) {
+	if o != nil && o.TotalByStatusAndHealth.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetTotalByStatusAndHealth gets a reference to the given SiteMachineStatsByStatusAndHealth and assigns it to the TotalByStatusAndHealth field.
+// SetTotalByStatusAndHealth gets a reference to the given NullableSiteMachineStatsByStatusAndHealth and assigns it to the TotalByStatusAndHealth field.
 func (o *SiteMachineStats) SetTotalByStatusAndHealth(v SiteMachineStatsByStatusAndHealth) {
-	o.TotalByStatusAndHealth = &v
+	o.TotalByStatusAndHealth.Set(&v)
 }
 
-// GetTotalByAllocation returns the TotalByAllocation field value if set, zero value otherwise.
+// SetTotalByStatusAndHealthNil sets the value for TotalByStatusAndHealth to be an explicit nil
+func (o *SiteMachineStats) SetTotalByStatusAndHealthNil() {
+	o.TotalByStatusAndHealth.Set(nil)
+}
+
+// UnsetTotalByStatusAndHealth ensures that no value is present for TotalByStatusAndHealth, not even an explicit nil
+func (o *SiteMachineStats) UnsetTotalByStatusAndHealth() {
+	o.TotalByStatusAndHealth.Unset()
+}
+
+// GetTotalByAllocation returns the TotalByAllocation field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *SiteMachineStats) GetTotalByAllocation() SiteMachineStatsByAllocation {
-	if o == nil || IsNil(o.TotalByAllocation) {
+	if o == nil || IsNil(o.TotalByAllocation.Get()) {
 		var ret SiteMachineStatsByAllocation
 		return ret
 	}
-	return *o.TotalByAllocation
+	return *o.TotalByAllocation.Get()
 }
 
 // GetTotalByAllocationOk returns a tuple with the TotalByAllocation field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *SiteMachineStats) GetTotalByAllocationOk() (*SiteMachineStatsByAllocation, bool) {
-	if o == nil || IsNil(o.TotalByAllocation) {
+	if o == nil {
 		return nil, false
 	}
-	return o.TotalByAllocation, true
+	return o.TotalByAllocation.Get(), o.TotalByAllocation.IsSet()
 }
 
 // HasTotalByAllocation returns a boolean if a field has been set.
 func (o *SiteMachineStats) HasTotalByAllocation() bool {
-	if o != nil && !IsNil(o.TotalByAllocation) {
+	if o != nil && o.TotalByAllocation.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetTotalByAllocation gets a reference to the given SiteMachineStatsByAllocation and assigns it to the TotalByAllocation field.
+// SetTotalByAllocation gets a reference to the given NullableSiteMachineStatsByAllocation and assigns it to the TotalByAllocation field.
 func (o *SiteMachineStats) SetTotalByAllocation(v SiteMachineStatsByAllocation) {
-	o.TotalByAllocation = &v
+	o.TotalByAllocation.Set(&v)
+}
+
+// SetTotalByAllocationNil sets the value for TotalByAllocation to be an explicit nil
+func (o *SiteMachineStats) SetTotalByAllocationNil() {
+	o.TotalByAllocation.Set(nil)
+}
+
+// UnsetTotalByAllocation ensures that no value is present for TotalByAllocation, not even an explicit nil
+func (o *SiteMachineStats) UnsetTotalByAllocation() {
+	o.TotalByAllocation.Unset()
 }
 
 func (o SiteMachineStats) MarshalJSON() ([]byte, error) {
@@ -216,17 +260,17 @@ func (o SiteMachineStats) ToMap() (map[string]interface{}, error) {
 	if !IsNil(o.Total) {
 		toSerialize["total"] = o.Total
 	}
-	if !IsNil(o.TotalByStatus) {
-		toSerialize["totalByStatus"] = o.TotalByStatus
+	if o.TotalByStatus.IsSet() {
+		toSerialize["totalByStatus"] = o.TotalByStatus.Get()
 	}
-	if !IsNil(o.TotalByHealth) {
-		toSerialize["totalByHealth"] = o.TotalByHealth
+	if o.TotalByHealth.IsSet() {
+		toSerialize["totalByHealth"] = o.TotalByHealth.Get()
 	}
-	if !IsNil(o.TotalByStatusAndHealth) {
-		toSerialize["totalByStatusAndHealth"] = o.TotalByStatusAndHealth
+	if o.TotalByStatusAndHealth.IsSet() {
+		toSerialize["totalByStatusAndHealth"] = o.TotalByStatusAndHealth.Get()
 	}
-	if !IsNil(o.TotalByAllocation) {
-		toSerialize["totalByAllocation"] = o.TotalByAllocation
+	if o.TotalByAllocation.IsSet() {
+		toSerialize["totalByAllocation"] = o.TotalByAllocation.Get()
 	}
 	return toSerialize, nil
 }

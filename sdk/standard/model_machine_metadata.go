@@ -19,8 +19,8 @@ var _ MappedNullable = &MachineMetadata{}
 
 // MachineMetadata Describes metadata for various Machine components
 type MachineMetadata struct {
-	DmiData              *MachineDMIData              `json:"dmiData,omitempty"`
-	BmcInfo              *MachineBMCInfo              `json:"bmcInfo,omitempty"`
+	DmiData              NullableMachineDMIData       `json:"dmiData,omitempty"`
+	BmcInfo              NullableMachineBMCInfo       `json:"bmcInfo,omitempty"`
 	Gpus                 []MachineGPUInfo             `json:"gpus,omitempty"`
 	NetworkInterfaces    []MachineNetworkInterface    `json:"networkInterfaces,omitempty"`
 	InfinibandInterfaces []MachineInfiniBandInterface `json:"infinibandInterfaces,omitempty"`
@@ -43,68 +43,90 @@ func NewMachineMetadataWithDefaults() *MachineMetadata {
 	return &this
 }
 
-// GetDmiData returns the DmiData field value if set, zero value otherwise.
+// GetDmiData returns the DmiData field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *MachineMetadata) GetDmiData() MachineDMIData {
-	if o == nil || IsNil(o.DmiData) {
+	if o == nil || IsNil(o.DmiData.Get()) {
 		var ret MachineDMIData
 		return ret
 	}
-	return *o.DmiData
+	return *o.DmiData.Get()
 }
 
 // GetDmiDataOk returns a tuple with the DmiData field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *MachineMetadata) GetDmiDataOk() (*MachineDMIData, bool) {
-	if o == nil || IsNil(o.DmiData) {
+	if o == nil {
 		return nil, false
 	}
-	return o.DmiData, true
+	return o.DmiData.Get(), o.DmiData.IsSet()
 }
 
 // HasDmiData returns a boolean if a field has been set.
 func (o *MachineMetadata) HasDmiData() bool {
-	if o != nil && !IsNil(o.DmiData) {
+	if o != nil && o.DmiData.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetDmiData gets a reference to the given MachineDMIData and assigns it to the DmiData field.
+// SetDmiData gets a reference to the given NullableMachineDMIData and assigns it to the DmiData field.
 func (o *MachineMetadata) SetDmiData(v MachineDMIData) {
-	o.DmiData = &v
+	o.DmiData.Set(&v)
 }
 
-// GetBmcInfo returns the BmcInfo field value if set, zero value otherwise.
+// SetDmiDataNil sets the value for DmiData to be an explicit nil
+func (o *MachineMetadata) SetDmiDataNil() {
+	o.DmiData.Set(nil)
+}
+
+// UnsetDmiData ensures that no value is present for DmiData, not even an explicit nil
+func (o *MachineMetadata) UnsetDmiData() {
+	o.DmiData.Unset()
+}
+
+// GetBmcInfo returns the BmcInfo field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *MachineMetadata) GetBmcInfo() MachineBMCInfo {
-	if o == nil || IsNil(o.BmcInfo) {
+	if o == nil || IsNil(o.BmcInfo.Get()) {
 		var ret MachineBMCInfo
 		return ret
 	}
-	return *o.BmcInfo
+	return *o.BmcInfo.Get()
 }
 
 // GetBmcInfoOk returns a tuple with the BmcInfo field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *MachineMetadata) GetBmcInfoOk() (*MachineBMCInfo, bool) {
-	if o == nil || IsNil(o.BmcInfo) {
+	if o == nil {
 		return nil, false
 	}
-	return o.BmcInfo, true
+	return o.BmcInfo.Get(), o.BmcInfo.IsSet()
 }
 
 // HasBmcInfo returns a boolean if a field has been set.
 func (o *MachineMetadata) HasBmcInfo() bool {
-	if o != nil && !IsNil(o.BmcInfo) {
+	if o != nil && o.BmcInfo.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetBmcInfo gets a reference to the given MachineBMCInfo and assigns it to the BmcInfo field.
+// SetBmcInfo gets a reference to the given NullableMachineBMCInfo and assigns it to the BmcInfo field.
 func (o *MachineMetadata) SetBmcInfo(v MachineBMCInfo) {
-	o.BmcInfo = &v
+	o.BmcInfo.Set(&v)
+}
+
+// SetBmcInfoNil sets the value for BmcInfo to be an explicit nil
+func (o *MachineMetadata) SetBmcInfoNil() {
+	o.BmcInfo.Set(nil)
+}
+
+// UnsetBmcInfo ensures that no value is present for BmcInfo, not even an explicit nil
+func (o *MachineMetadata) UnsetBmcInfo() {
+	o.BmcInfo.Unset()
 }
 
 // GetGpus returns the Gpus field value if set, zero value otherwise.
@@ -213,11 +235,11 @@ func (o MachineMetadata) MarshalJSON() ([]byte, error) {
 
 func (o MachineMetadata) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
-	if !IsNil(o.DmiData) {
-		toSerialize["dmiData"] = o.DmiData
+	if o.DmiData.IsSet() {
+		toSerialize["dmiData"] = o.DmiData.Get()
 	}
-	if !IsNil(o.BmcInfo) {
-		toSerialize["bmcInfo"] = o.BmcInfo
+	if o.BmcInfo.IsSet() {
+		toSerialize["bmcInfo"] = o.BmcInfo.Get()
 	}
 	if !IsNil(o.Gpus) {
 		toSerialize["gpus"] = o.Gpus

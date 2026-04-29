@@ -20,9 +20,9 @@ var _ MappedNullable = &MachineInstanceTypeSummary{}
 // MachineInstanceTypeSummary Summary of machines grouped by assigned vs unassigned instance type
 type MachineInstanceTypeSummary struct {
 	// Machines that have been assigned to an instance type
-	Assigned *MachineStatusBreakdown `json:"assigned,omitempty"`
+	Assigned NullableMachineStatusBreakdown `json:"assigned,omitempty"`
 	// Machines that have not been assigned to any instance type
-	Unassigned *MachineStatusBreakdown `json:"unassigned,omitempty"`
+	Unassigned NullableMachineStatusBreakdown `json:"unassigned,omitempty"`
 }
 
 // NewMachineInstanceTypeSummary instantiates a new MachineInstanceTypeSummary object
@@ -42,68 +42,90 @@ func NewMachineInstanceTypeSummaryWithDefaults() *MachineInstanceTypeSummary {
 	return &this
 }
 
-// GetAssigned returns the Assigned field value if set, zero value otherwise.
+// GetAssigned returns the Assigned field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *MachineInstanceTypeSummary) GetAssigned() MachineStatusBreakdown {
-	if o == nil || IsNil(o.Assigned) {
+	if o == nil || IsNil(o.Assigned.Get()) {
 		var ret MachineStatusBreakdown
 		return ret
 	}
-	return *o.Assigned
+	return *o.Assigned.Get()
 }
 
 // GetAssignedOk returns a tuple with the Assigned field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *MachineInstanceTypeSummary) GetAssignedOk() (*MachineStatusBreakdown, bool) {
-	if o == nil || IsNil(o.Assigned) {
+	if o == nil {
 		return nil, false
 	}
-	return o.Assigned, true
+	return o.Assigned.Get(), o.Assigned.IsSet()
 }
 
 // HasAssigned returns a boolean if a field has been set.
 func (o *MachineInstanceTypeSummary) HasAssigned() bool {
-	if o != nil && !IsNil(o.Assigned) {
+	if o != nil && o.Assigned.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetAssigned gets a reference to the given MachineStatusBreakdown and assigns it to the Assigned field.
+// SetAssigned gets a reference to the given NullableMachineStatusBreakdown and assigns it to the Assigned field.
 func (o *MachineInstanceTypeSummary) SetAssigned(v MachineStatusBreakdown) {
-	o.Assigned = &v
+	o.Assigned.Set(&v)
 }
 
-// GetUnassigned returns the Unassigned field value if set, zero value otherwise.
+// SetAssignedNil sets the value for Assigned to be an explicit nil
+func (o *MachineInstanceTypeSummary) SetAssignedNil() {
+	o.Assigned.Set(nil)
+}
+
+// UnsetAssigned ensures that no value is present for Assigned, not even an explicit nil
+func (o *MachineInstanceTypeSummary) UnsetAssigned() {
+	o.Assigned.Unset()
+}
+
+// GetUnassigned returns the Unassigned field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *MachineInstanceTypeSummary) GetUnassigned() MachineStatusBreakdown {
-	if o == nil || IsNil(o.Unassigned) {
+	if o == nil || IsNil(o.Unassigned.Get()) {
 		var ret MachineStatusBreakdown
 		return ret
 	}
-	return *o.Unassigned
+	return *o.Unassigned.Get()
 }
 
 // GetUnassignedOk returns a tuple with the Unassigned field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *MachineInstanceTypeSummary) GetUnassignedOk() (*MachineStatusBreakdown, bool) {
-	if o == nil || IsNil(o.Unassigned) {
+	if o == nil {
 		return nil, false
 	}
-	return o.Unassigned, true
+	return o.Unassigned.Get(), o.Unassigned.IsSet()
 }
 
 // HasUnassigned returns a boolean if a field has been set.
 func (o *MachineInstanceTypeSummary) HasUnassigned() bool {
-	if o != nil && !IsNil(o.Unassigned) {
+	if o != nil && o.Unassigned.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetUnassigned gets a reference to the given MachineStatusBreakdown and assigns it to the Unassigned field.
+// SetUnassigned gets a reference to the given NullableMachineStatusBreakdown and assigns it to the Unassigned field.
 func (o *MachineInstanceTypeSummary) SetUnassigned(v MachineStatusBreakdown) {
-	o.Unassigned = &v
+	o.Unassigned.Set(&v)
+}
+
+// SetUnassignedNil sets the value for Unassigned to be an explicit nil
+func (o *MachineInstanceTypeSummary) SetUnassignedNil() {
+	o.Unassigned.Set(nil)
+}
+
+// UnsetUnassigned ensures that no value is present for Unassigned, not even an explicit nil
+func (o *MachineInstanceTypeSummary) UnsetUnassigned() {
+	o.Unassigned.Unset()
 }
 
 func (o MachineInstanceTypeSummary) MarshalJSON() ([]byte, error) {
@@ -116,11 +138,11 @@ func (o MachineInstanceTypeSummary) MarshalJSON() ([]byte, error) {
 
 func (o MachineInstanceTypeSummary) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
-	if !IsNil(o.Assigned) {
-		toSerialize["assigned"] = o.Assigned
+	if o.Assigned.IsSet() {
+		toSerialize["assigned"] = o.Assigned.Get()
 	}
-	if !IsNil(o.Unassigned) {
-		toSerialize["unassigned"] = o.Unassigned
+	if o.Unassigned.IsSet() {
+		toSerialize["unassigned"] = o.Unassigned.Get()
 	}
 	return toSerialize, nil
 }

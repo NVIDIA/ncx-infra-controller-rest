@@ -29,7 +29,7 @@ type DpuExtensionServiceVersionInfo struct {
 	// Date/time when this version of the DPU Extension Service was created
 	Created *time.Time `json:"created,omitempty"`
 	// Observability configuration for this DPU Extension Service version
-	Observability *DpuExtensionServiceObservability `json:"observability,omitempty"`
+	Observability NullableDpuExtensionServiceObservability `json:"observability,omitempty"`
 }
 
 // NewDpuExtensionServiceVersionInfo instantiates a new DpuExtensionServiceVersionInfo object
@@ -188,36 +188,47 @@ func (o *DpuExtensionServiceVersionInfo) SetCreated(v time.Time) {
 	o.Created = &v
 }
 
-// GetObservability returns the Observability field value if set, zero value otherwise.
+// GetObservability returns the Observability field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *DpuExtensionServiceVersionInfo) GetObservability() DpuExtensionServiceObservability {
-	if o == nil || IsNil(o.Observability) {
+	if o == nil || IsNil(o.Observability.Get()) {
 		var ret DpuExtensionServiceObservability
 		return ret
 	}
-	return *o.Observability
+	return *o.Observability.Get()
 }
 
 // GetObservabilityOk returns a tuple with the Observability field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *DpuExtensionServiceVersionInfo) GetObservabilityOk() (*DpuExtensionServiceObservability, bool) {
-	if o == nil || IsNil(o.Observability) {
+	if o == nil {
 		return nil, false
 	}
-	return o.Observability, true
+	return o.Observability.Get(), o.Observability.IsSet()
 }
 
 // HasObservability returns a boolean if a field has been set.
 func (o *DpuExtensionServiceVersionInfo) HasObservability() bool {
-	if o != nil && !IsNil(o.Observability) {
+	if o != nil && o.Observability.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetObservability gets a reference to the given DpuExtensionServiceObservability and assigns it to the Observability field.
+// SetObservability gets a reference to the given NullableDpuExtensionServiceObservability and assigns it to the Observability field.
 func (o *DpuExtensionServiceVersionInfo) SetObservability(v DpuExtensionServiceObservability) {
-	o.Observability = &v
+	o.Observability.Set(&v)
+}
+
+// SetObservabilityNil sets the value for Observability to be an explicit nil
+func (o *DpuExtensionServiceVersionInfo) SetObservabilityNil() {
+	o.Observability.Set(nil)
+}
+
+// UnsetObservability ensures that no value is present for Observability, not even an explicit nil
+func (o *DpuExtensionServiceVersionInfo) UnsetObservability() {
+	o.Observability.Unset()
 }
 
 func (o DpuExtensionServiceVersionInfo) MarshalJSON() ([]byte, error) {
@@ -242,8 +253,8 @@ func (o DpuExtensionServiceVersionInfo) ToMap() (map[string]interface{}, error) 
 	if !IsNil(o.Created) {
 		toSerialize["created"] = o.Created
 	}
-	if !IsNil(o.Observability) {
-		toSerialize["observability"] = o.Observability
+	if o.Observability.IsSet() {
+		toSerialize["observability"] = o.Observability.Get()
 	}
 	return toSerialize, nil
 }

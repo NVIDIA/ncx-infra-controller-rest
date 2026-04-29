@@ -11893,11 +11893,17 @@ components:
             error: 0
       properties:
         machine:
-          $ref: '#/components/schemas/MachineCountByStatus'
+          oneOf:
+            - $ref: '#/components/schemas/MachineCountByStatus'
+            - type: 'null'
         ipBlock:
-          $ref: '#/components/schemas/IpBlockCountByStatus'
+          oneOf:
+            - $ref: '#/components/schemas/IpBlockCountByStatus'
+            - type: 'null'
         tenantAccount:
-          $ref: '#/components/schemas/TenantAccountCountByStatus'
+          oneOf:
+            - $ref: '#/components/schemas/TenantAccountCountByStatus'
+            - type: 'null'
     MachineCountByStatus:
       title: MachineCountByStatus
       type: object
@@ -12048,11 +12054,17 @@ components:
             error: 0
       properties:
         instance:
-          $ref: '#/components/schemas/InstanceCountByStatus'
+          oneOf:
+            - $ref: '#/components/schemas/InstanceCountByStatus'
+            - type: 'null'
         vpc:
-          $ref: '#/components/schemas/VpcCountByStatus'
+          oneOf:
+            - $ref: '#/components/schemas/VpcCountByStatus'
+            - type: 'null'
         subnet:
-          $ref: '#/components/schemas/SubnetCountByStatus'
+          oneOf:
+            - $ref: '#/components/schemas/SubnetCountByStatus'
+            - type: 'null'
     InstanceCountByStatus:
       title: InstanceCountByStatus
       type: object
@@ -12171,7 +12183,9 @@ components:
             - string
             - 'null'
         tenantContact:
-          $ref: '#/components/schemas/User'
+          oneOf:
+            - $ref: '#/components/schemas/User'
+            - type: 'null'
         allocationCount:
           type: integer
         status:
@@ -12336,9 +12350,11 @@ components:
           type: string
           description: Token that can be used to register a Site. Value only exposed to Provider
         registrationTokenExpiration:
-          type: string
+          type:
+            - string
+            - 'null'
           format: date-time
-          description: Date/time when registration token  expires. Value only exposed to Provider
+          description: Date/time when registration token expires. Value only exposed to Provider
           readOnly: true
         serialConsoleHostname:
           type: string
@@ -12376,13 +12392,21 @@ components:
           type: string
           format: date-time
         location:
-          $ref: '#/components/schemas/SiteLocation'
+          oneOf:
+            - $ref: '#/components/schemas/SiteLocation'
+            - type: 'null'
         contact:
-          $ref: '#/components/schemas/SiteContact'
+          oneOf:
+            - $ref: '#/components/schemas/SiteContact'
+            - type: 'null'
         capabilities:
-          $ref: '#/components/schemas/SiteCapabilities'
+          oneOf:
+            - $ref: '#/components/schemas/SiteCapabilities'
+            - type: 'null'
         machineStats:
-          $ref: '#/components/schemas/SiteMachineStats'
+          oneOf:
+            - $ref: '#/components/schemas/SiteMachineStats'
+            - type: 'null'
     SiteSummary:
       title: SiteSummary
       type: object
@@ -12420,7 +12444,9 @@ components:
           type: boolean
           description: Indicates if the Site is currently reachable from Cloud
         capabilities:
-          $ref: '#/components/schemas/SiteCapabilities'
+          oneOf:
+            - $ref: '#/components/schemas/SiteCapabilities'
+            - type: 'null'
         status:
           $ref: '#/components/schemas/SiteStatus'
           readOnly: true
@@ -12455,13 +12481,21 @@ components:
         total:
           type: integer
         totalByStatus:
-          $ref: '#/components/schemas/SiteMachineStatsByStatus'
+          oneOf:
+            - $ref: '#/components/schemas/SiteMachineStatsByStatus'
+            - type: 'null'
         totalByHealth:
-          $ref: '#/components/schemas/SiteMachineStatsByHealth'
+          oneOf:
+            - $ref: '#/components/schemas/SiteMachineStatsByHealth'
+            - type: 'null'
         totalByStatusAndHealth:
-          $ref: '#/components/schemas/SiteMachineStatsByStatusAndHealth'
+          oneOf:
+            - $ref: '#/components/schemas/SiteMachineStatsByStatusAndHealth'
+            - type: 'null'
         totalByAllocation:
-          $ref: '#/components/schemas/SiteMachineStatsByAllocation'
+          oneOf:
+            - $ref: '#/components/schemas/SiteMachineStatsByAllocation'
+            - type: 'null'
     SiteMachineStatsByAllocation:
       title: SiteMachineStatsByAllocation
       type: object
@@ -12509,21 +12543,37 @@ components:
       description: Machine stats for a Site by status and health
       properties:
         Decommissioned:
-          $ref: '#/components/schemas/SiteMachineStatsByHealth'
+          oneOf:
+            - $ref: '#/components/schemas/SiteMachineStatsByHealth'
+            - type: 'null'
         Error:
-          $ref: '#/components/schemas/SiteMachineStatsByHealth'
+          oneOf:
+            - $ref: '#/components/schemas/SiteMachineStatsByHealth'
+            - type: 'null'
         Initializing:
-          $ref: '#/components/schemas/SiteMachineStatsByHealth'
+          oneOf:
+            - $ref: '#/components/schemas/SiteMachineStatsByHealth'
+            - type: 'null'
         InUse:
-          $ref: '#/components/schemas/SiteMachineStatsByHealth'
+          oneOf:
+            - $ref: '#/components/schemas/SiteMachineStatsByHealth'
+            - type: 'null'
         Maintenance:
-          $ref: '#/components/schemas/SiteMachineStatsByHealth'
+          oneOf:
+            - $ref: '#/components/schemas/SiteMachineStatsByHealth'
+            - type: 'null'
         Ready:
-          $ref: '#/components/schemas/SiteMachineStatsByHealth'
+          oneOf:
+            - $ref: '#/components/schemas/SiteMachineStatsByHealth'
+            - type: 'null'
         Reset:
-          $ref: '#/components/schemas/SiteMachineStatsByHealth'
+          oneOf:
+            - $ref: '#/components/schemas/SiteMachineStatsByHealth'
+            - type: 'null'
         Unknown:
-          $ref: '#/components/schemas/SiteMachineStatsByHealth'
+          oneOf:
+            - $ref: '#/components/schemas/SiteMachineStatsByHealth'
+            - type: 'null'
     SiteCreateRequest:
       title: SiteCreateRequest
       type: object
@@ -12845,9 +12895,13 @@ components:
             - 'null'
           description: ID of the allocated Tenant IP Block when resource type is IPBlock
         instanceType:
-          $ref: '#/components/schemas/InstanceTypeSummary'
+          oneOf:
+            - $ref: '#/components/schemas/InstanceTypeSummary'
+            - type: 'null'
         ipBlock:
-          $ref: '#/components/schemas/IpBlockSummary'
+          oneOf:
+            - $ref: '#/components/schemas/IpBlockSummary'
+            - type: 'null'
         created:
           type: string
           description: Date/time when the Allocation Constraint was created
@@ -13014,7 +13068,9 @@ components:
             - 'null'
           description: ID of the Network Security Group attached to the VPC
         networkSecurityGroupPropagationDetails:
-          $ref: '#/components/schemas/NetworkSecurityGroupPropagationDetails'
+          oneOf:
+            - $ref: '#/components/schemas/NetworkSecurityGroupPropagationDetails'
+            - type: 'null'
           description: Propagation details for the attached Network Security Group
         nvLinkLogicalPartitionId:
           type:
@@ -13023,7 +13079,9 @@ components:
           format: uuid
           description: ID of the default NVLink Logical Partition that GPUs for all Instances in the VPC will attach to
         labels:
-          $ref: '#/components/schemas/Labels'
+          oneOf:
+            - $ref: '#/components/schemas/Labels'
+            - type: 'null'
           description: String key value pairs describing VPC labels
         status:
           $ref: '#/components/schemas/VpcStatus'
@@ -14462,7 +14520,9 @@ components:
           type: string
           format: uuid
         labels:
-          $ref: '#/components/schemas/Labels'
+          oneOf:
+            - $ref: '#/components/schemas/Labels'
+            - type: 'null'
         machineCapabilities:
           type: array
           items:
@@ -14473,7 +14533,9 @@ components:
           items:
             $ref: '#/components/schemas/MachineInstanceType'
         allocationStats:
-          $ref: '#/components/schemas/InstanceTypeAllocationStats'
+          oneOf:
+            - $ref: '#/components/schemas/InstanceTypeAllocationStats'
+            - type: 'null'
           description: summary of machine counts by allocation status
         status:
           $ref: '#/components/schemas/InstanceTypeStatus'
@@ -14947,7 +15009,9 @@ components:
             - string
             - 'null'
         networkSecurityGroupPropagationDetails:
-          $ref: '#/components/schemas/NetworkSecurityGroupPropagationDetails'
+          oneOf:
+            - $ref: '#/components/schemas/NetworkSecurityGroupPropagationDetails'
+            - type: 'null'
           description: Propagation details for the attached Network Security Group
         networkSecurityGroupInherited:
           type: boolean
@@ -14972,7 +15036,9 @@ components:
             - string
             - 'null'
         labels:
-          $ref: '#/components/schemas/Labels'
+          oneOf:
+            - $ref: '#/components/schemas/Labels'
+            - type: 'null'
         isUpdatePending:
           type: boolean
           description: Indicates whether an update is available for the Instance. Updates can be applied on reboot
@@ -16115,7 +16181,9 @@ components:
           type: string
           description: Description of the Rack
         location:
-          $ref: '#/components/schemas/RackLocation'
+          oneOf:
+            - $ref: '#/components/schemas/RackLocation'
+            - type: 'null'
         components:
           type: array
           description: Components within the Rack. Only returned when includeComponents is true.
@@ -16184,9 +16252,13 @@ components:
           type: string
           description: Component ID assigned by the component manager service
         expected:
-          $ref: '#/components/schemas/RackComponent'
+          oneOf:
+            - $ref: '#/components/schemas/RackComponent'
+            - type: 'null'
         actual:
-          $ref: '#/components/schemas/RackComponent'
+          oneOf:
+            - $ref: '#/components/schemas/RackComponent'
+            - type: 'null'
         fieldDiffs:
           type: array
           description: List of field differences (populated when type is DiffTypeDrift)
@@ -16335,7 +16407,9 @@ components:
           type: string
           description: Current power state of the tray
         position:
-          $ref: '#/components/schemas/TrayPosition'
+          oneOf:
+            - $ref: '#/components/schemas/TrayPosition'
+            - type: 'null'
         bmcs:
           type: array
           description: BMC (Baseboard Management Controller) entries for the tray
@@ -16810,12 +16884,18 @@ components:
             - 'null'
           description: 'If the Machine is in maintenance mode, this message will typically describe the reason and how long it is expected to be in maintenance'
         health:
-          $ref: '#/components/schemas/MachineHealth'
+          oneOf:
+            - $ref: '#/components/schemas/MachineHealth'
+            - type: 'null'
         metadata:
-          $ref: '#/components/schemas/MachineMetadata'
+          oneOf:
+            - $ref: '#/components/schemas/MachineMetadata'
+            - type: 'null'
           description: Only available to Providers. Returned if includeMetadata query param is specified. Otherwise attribute is omitted from response.
         labels:
-          $ref: '#/components/schemas/Labels'
+          oneOf:
+            - $ref: '#/components/schemas/Labels'
+            - type: 'null'
         status:
           $ref: '#/components/schemas/MachineStatus'
           readOnly: true
@@ -17045,9 +17125,13 @@ components:
               slot: '0000:ca:00.0'
       properties:
         dmiData:
-          $ref: '#/components/schemas/MachineDMIData'
+          oneOf:
+            - $ref: '#/components/schemas/MachineDMIData'
+            - type: 'null'
         bmcInfo:
-          $ref: '#/components/schemas/MachineBMCInfo'
+          oneOf:
+            - $ref: '#/components/schemas/MachineBMCInfo'
+            - type: 'null'
         gpus:
           type: array
           items:
@@ -17416,7 +17500,9 @@ components:
             - 'null'
           description: Optional ID of the SKU associated with this Expected Machine
         sku:
-          $ref: '#/components/schemas/Sku'
+          oneOf:
+            - $ref: '#/components/schemas/Sku'
+            - type: 'null'
           description: SKU information for this Expected Machine (populated when includeRelation=Sku is specified)
         machineId:
           type:
@@ -17424,7 +17510,9 @@ components:
             - 'null'
           description: Optional ID of the Machine associated with this Expected Machine
         machine:
-          $ref: '#/components/schemas/MachineSummary'
+          oneOf:
+            - $ref: '#/components/schemas/MachineSummary'
+            - type: 'null'
           description: Machine information for this Expected Machine (populated when includeRelation=Machine is specified)
         rackId:
           type:
@@ -17475,7 +17563,9 @@ components:
           format: int32
           description: Host ID within the tray
         labels:
-          $ref: '#/components/schemas/Labels'
+          oneOf:
+            - $ref: '#/components/schemas/Labels'
+            - type: 'null'
           description: User-defined key-value pairs for organizing and categorizing Expected Machines
         created:
           type: string
@@ -17815,7 +17905,9 @@ components:
           format: int32
           description: Host ID within the tray
         labels:
-          $ref: '#/components/schemas/Labels'
+          oneOf:
+            - $ref: '#/components/schemas/Labels'
+            - type: 'null'
           description: User-defined key-value pairs for organizing and categorizing Expected Power Shelves
         created:
           type: string
@@ -18123,7 +18215,9 @@ components:
           format: int32
           description: Host ID within the tray
         labels:
-          $ref: '#/components/schemas/Labels'
+          oneOf:
+            - $ref: '#/components/schemas/Labels'
+            - type: 'null'
           description: User-defined key-value pairs for organizing and categorizing Expected Switches
         created:
           type: string
@@ -18417,7 +18511,9 @@ components:
             type: string
           readOnly: true
         components:
-          $ref: '#/components/schemas/SkuComponents'
+          oneOf:
+            - $ref: '#/components/schemas/SkuComponents'
+            - type: 'null'
           description: Hardware components of this SKU
         created:
           type: string
@@ -18455,7 +18551,9 @@ components:
           items:
             $ref: '#/components/schemas/SkuStorage'
         chassis:
-          $ref: '#/components/schemas/SkuChassis'
+          oneOf:
+            - $ref: '#/components/schemas/SkuChassis'
+            - type: 'null'
           description: Chassis component
         ethernetDevices:
           type: array
@@ -18663,7 +18761,9 @@ components:
             - IPv4
             - IPv6
         usageStats:
-          $ref: '#/components/schemas/IpBlockUsageStats'
+          oneOf:
+            - $ref: '#/components/schemas/IpBlockUsageStats'
+            - type: 'null'
         status:
           $ref: '#/components/schemas/IpBlockStatus'
         statusHistory:
@@ -19460,7 +19560,9 @@ components:
             - 'null'
           description: Latest version of the DPU Extension Service
         versionInfo:
-          $ref: '#/components/schemas/DpuExtensionServiceVersionInfo'
+          oneOf:
+            - $ref: '#/components/schemas/DpuExtensionServiceVersionInfo'
+            - type: 'null'
           description: Details for the latest version of the DPU Extension Service
         activeVersions:
           type: array
@@ -19559,7 +19661,9 @@ components:
           description: Date/time when this version of the DPU Extension Service was created
           readOnly: true
         observability:
-          $ref: '#/components/schemas/DpuExtensionServiceObservability'
+          oneOf:
+            - $ref: '#/components/schemas/DpuExtensionServiceObservability'
+            - type: 'null'
           description: Observability configuration for this DPU Extension Service version
     DpuExtensionServiceCreateRequest:
       title: DpuExtensionServiceCreateRequest
@@ -19698,9 +19802,13 @@ components:
             - 'null'
           description: Optional name of the service or component being monitored
         prometheus:
-          $ref: '#/components/schemas/DpuExtensionServiceObservabilityPrometheus'
+          oneOf:
+            - $ref: '#/components/schemas/DpuExtensionServiceObservabilityPrometheus'
+            - type: 'null'
         logging:
-          $ref: '#/components/schemas/DpuExtensionServiceObservabilityLogging'
+          oneOf:
+            - $ref: '#/components/schemas/DpuExtensionServiceObservabilityLogging'
+            - type: 'null'
       oneOf:
         - required:
             - prometheus
@@ -19756,7 +19864,9 @@ components:
           description: Unique identifier for the DPU Extension Service Deployment
           readOnly: true
         dpuExtensionService:
-          $ref: '#/components/schemas/DpuExtensionServiceSummary'
+          oneOf:
+            - $ref: '#/components/schemas/DpuExtensionServiceSummary'
+            - type: 'null'
           description: Summary of the DPU Extension Service. Deployed version may be different
         version:
           type: string
@@ -19904,7 +20014,9 @@ components:
           format: uuid
           description: User ID that executed the API call
         user:
-          $ref: '#/components/schemas/User'
+          oneOf:
+            - $ref: '#/components/schemas/User'
+            - type: 'null'
           description: User that executed the API call
         orgName:
           type: string
@@ -20053,10 +20165,14 @@ components:
       properties:
         assigned:
           description: Machines that have been assigned to an instance type
-          $ref: '#/components/schemas/MachineStatusBreakdown'
+          oneOf:
+            - $ref: '#/components/schemas/MachineStatusBreakdown'
+            - type: 'null'
         unassigned:
           description: Machines that have not been assigned to any instance type
-          $ref: '#/components/schemas/MachineStatusBreakdown'
+          oneOf:
+            - $ref: '#/components/schemas/MachineStatusBreakdown'
+            - type: 'null'
     MachineInstanceTypeStats:
       title: MachineInstanceTypeStats
       description: Detailed stats for machines of a specific instance type
@@ -20070,7 +20186,9 @@ components:
           type: string
           description: Name of the InstanceType
         assignedMachineStats:
-          $ref: '#/components/schemas/MachineStatusBreakdown'
+          oneOf:
+            - $ref: '#/components/schemas/MachineStatusBreakdown'
+            - type: 'null'
         allocated:
           type: integer
           description: Number of Machines of this Instance Type allocated to Tenants
@@ -20078,7 +20196,9 @@ components:
           type: integer
           description: Number of Ready Machines of this Instance Type available for additional allocation to Tenants
         usedMachineStats:
-          $ref: '#/components/schemas/MachineStatusBreakdown'
+          oneOf:
+            - $ref: '#/components/schemas/MachineStatusBreakdown'
+            - type: 'null'
         tenants:
           type: array
           items:
@@ -20096,7 +20216,9 @@ components:
         allocated:
           type: integer
         usedMachineStats:
-          $ref: '#/components/schemas/MachineStatusBreakdown'
+          oneOf:
+            - $ref: '#/components/schemas/MachineStatusBreakdown'
+            - type: 'null'
         maxAllocatable:
           type: integer
         allocations:
