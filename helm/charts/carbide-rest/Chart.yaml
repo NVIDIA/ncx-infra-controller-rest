@@ -2,8 +2,8 @@ apiVersion: v2
 name: carbide-rest
 description: Umbrella chart for the Carbide REST API platform
 type: application
-version: 0.1.8
-appVersion: "1.4.1"
+version: 0.1.9
+appVersion: "1.4.2"
 keywords:
   - carbide
   - forge
