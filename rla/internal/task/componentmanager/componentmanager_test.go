@@ -50,7 +50,6 @@ func TestRegistryGetManager(t *testing.T) {
 		require.True(t, errors.As(err, &managerErr))
 		require.Equal(t, devicetypes.ComponentTypeCompute, managerErr.ComponentType)
 	})
-
 }
 
 func TestRegistryInitializeErrors(t *testing.T) {
@@ -141,14 +140,13 @@ func TestRegistryFindManager(t *testing.T) {
 
 		require.Nil(t, manager)
 	})
-
 }
 
 func TestParseConfigUnknownComponentTypeError(t *testing.T) {
-	_, err := ParseConfig([]byte(`
+	_, err := parseConfigWithBuiltins(t, `
 component_managers:
   madeup: mock
-`))
+`)
 
 	require.Error(t, err)
 	require.True(t, errors.Is(err, ErrUnknownComponentType))

@@ -21,14 +21,24 @@ import (
 	"sync"
 
 	"github.com/rs/zerolog/log"
+
+	"github.com/NVIDIA/ncx-infra-controller-rest/rla/internal/task/componentmanager/providerapi"
 )
 
 // Provider is a marker interface for API client providers.
 // Each provider wraps an API client and exposes it to component manager implementations.
-type Provider interface {
-	// Name returns the unique identifier for this provider type.
-	Name() string
-}
+type Provider = providerapi.Provider
+
+// ProviderConfig is a decoded provider-specific configuration that can create
+// its provider.
+type ProviderConfig = providerapi.ProviderConfig
+
+// ProviderConfigDecoder owns provider-specific config defaults and YAML
+// decoding.
+type ProviderConfigDecoder = providerapi.ProviderConfigDecoder
+
+// ProviderConfigDecoderRegistry manages provider config decoders by provider name.
+type ProviderConfigDecoderRegistry = providerapi.ProviderConfigDecoderRegistry
 
 // ProviderRegistry manages API providers for component manager implementations.
 // It allows implementations to request their required providers by name.

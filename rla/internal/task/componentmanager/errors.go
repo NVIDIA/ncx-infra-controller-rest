@@ -52,13 +52,28 @@ var (
 	// available.
 	ErrProviderRegistryNotConfigured = errors.New("provider registry is not configured")
 
-	// ErrUnknownProvider reports that a required provider is missing from the
-	// provider registry.
+	// ErrUnknownProvider reports that a provider name is not known in the
+	// current provider context.
 	ErrUnknownProvider = errors.New("unknown provider")
 
 	// ErrProviderTypeMismatch reports that a provider exists but has a different
 	// concrete type than the caller requested.
 	ErrProviderTypeMismatch = errors.New("provider type mismatch")
+
+	// ErrProviderNameEmpty reports an empty provider name in configuration.
+	ErrProviderNameEmpty = errors.New("provider name is empty")
+
+	// ErrDuplicateProviderConfig reports duplicate provider configuration after
+	// provider names are normalized.
+	ErrDuplicateProviderConfig = errors.New("duplicate provider config")
+
+	// ErrProviderConfigDecoderNotRegistered reports that a provider is required
+	// but no config decoder is registered for it.
+	ErrProviderConfigDecoderNotRegistered = errors.New("provider config decoder is not registered")
+
+	// ErrProviderConfigTypeMismatch reports that a provider config decoder
+	// returned the wrong typed config for the provider.
+	ErrProviderConfigTypeMismatch = errors.New("provider config type mismatch")
 )
 
 // ManagerNotConfiguredError includes the component type that has no active
@@ -159,13 +174,13 @@ func (e UnknownComponentTypeError) Is(target error) bool {
 	return target == ErrUnknownComponentType
 }
 
-// UnknownProviderError includes the missing provider name.
+// UnknownProviderError includes the unknown provider name.
 type UnknownProviderError struct {
 	Name string
 }
 
 func (e UnknownProviderError) Error() string {
-	return fmt.Sprintf("provider '%s' not found", e.Name)
+	return fmt.Sprintf("%s: %s", ErrUnknownProvider, e.Name)
 }
 
 func (e UnknownProviderError) Is(target error) bool {
@@ -184,4 +199,52 @@ func (e ProviderTypeMismatchError) Error() string {
 
 func (e ProviderTypeMismatchError) Is(target error) bool {
 	return target == ErrProviderTypeMismatch
+}
+
+// DuplicateProviderConfigError includes the normalized duplicate provider name.
+type DuplicateProviderConfigError struct {
+	Name string
+}
+
+func (e DuplicateProviderConfigError) Error() string {
+	return fmt.Sprintf("duplicate provider config for %q", e.Name)
+}
+
+func (e DuplicateProviderConfigError) Is(target error) bool {
+	return target == ErrDuplicateProviderConfig
+}
+
+// ProviderConfigDecoderNotRegisteredError includes the provider name with no
+// registered config decoder.
+type ProviderConfigDecoderNotRegisteredError struct {
+	Name string
+}
+
+func (e ProviderConfigDecoderNotRegisteredError) Error() string {
+	return fmt.Sprintf("provider config decoder %q is not registered", e.Name)
+}
+
+func (e ProviderConfigDecoderNotRegisteredError) Is(target error) bool {
+	return target == ErrProviderConfigDecoderNotRegistered
+}
+
+// ProviderConfigTypeMismatchError includes the provider config type returned by
+// a decoder and the type expected by the current bootstrap path.
+type ProviderConfigTypeMismatchError struct {
+	Name string
+	Got  any
+	Want string
+}
+
+func (e ProviderConfigTypeMismatchError) Error() string {
+	return fmt.Sprintf(
+		"provider %q returned config type %T, want %s",
+		e.Name,
+		e.Got,
+		e.Want,
+	)
+}
+
+func (e ProviderConfigTypeMismatchError) Is(target error) bool {
+	return target == ErrProviderConfigTypeMismatch
 }
