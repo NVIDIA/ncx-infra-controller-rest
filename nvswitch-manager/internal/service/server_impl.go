@@ -27,7 +27,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	pb "github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/internal/proto/v1"
-	"github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/pkg/common/credential"
+	"github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/credential"
 	"github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/pkg/common/vendor"
 	"github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/pkg/converter/protobuf"
 	"github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/pkg/firmwaremanager"
@@ -79,13 +79,15 @@ func (s *NVSwitchManagerServerImpl) registerNVSwitch(
 	// Create BMC subsystem
 	var bmcCred *credential.Credential
 	if req.Bmc.Credentials != nil {
-		bmcCred = credential.New(req.Bmc.Credentials.Username, req.Bmc.Credentials.Password)
+		c := credential.New(req.Bmc.Credentials.Username, req.Bmc.Credentials.Password)
+		bmcCred = &c
 	}
 
 	// Create NVOS credential early so we can validate both before proceeding
 	var nvosCred *credential.Credential
 	if req.Nvos.Credentials != nil {
-		nvosCred = credential.New(req.Nvos.Credentials.Username, req.Nvos.Credentials.Password)
+		c := credential.New(req.Nvos.Credentials.Username, req.Nvos.Credentials.Password)
+		nvosCred = &c
 	}
 
 	if s.nsm.DataStoreType == nvswitchmanager.DatastoreTypeInMemory {
@@ -321,7 +323,7 @@ func resetTarget(ctx context.Context, target *pb.PowerTarget, resetType redfish.
 		BMC: &bmc.BMC{
 			IP:         ip,
 			Port:       int(target.BmcPort),
-			Credential: cred,
+			Credential: &cred,
 		},
 	}
 

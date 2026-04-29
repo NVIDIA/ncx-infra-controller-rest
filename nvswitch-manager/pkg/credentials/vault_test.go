@@ -27,7 +27,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/pkg/common/credential"
+	"github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/credential"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -226,7 +226,7 @@ func TestVaultManager_BMCPutGet(t *testing.T) {
 	}{
 		"put and get valid BMC credential": {
 			putMAC:   "00:11:22:33:44:55",
-			putCred:  credential.New("admin", "secret"),
+			putCred:  newCredential("admin", "secret"),
 			getMAC:   "00:11:22:33:44:55",
 			wantErr:  false,
 			wantUser: "admin",
@@ -234,19 +234,19 @@ func TestVaultManager_BMCPutGet(t *testing.T) {
 		},
 		"put invalid credential (empty user) returns error": {
 			putMAC:  "00:11:22:33:44:66",
-			putCred: credential.New("", "nopass"),
+			putCred: newCredential("", "nopass"),
 			getMAC:  "00:11:22:33:44:66",
 			wantErr: true,
 		},
 		"get missing credential returns not found": {
 			putMAC:  "aa:bb:cc:dd:ee:ff",
-			putCred: credential.New("user", "p"),
+			putCred: newCredential("user", "p"),
 			getMAC:  "66:77:88:99:00:11",
 			wantErr: true,
 		},
 		"put with uppercase MAC and get with lowercase resolves correctly": {
 			putMAC:   "AA:BB:CC:DD:EE:FF",
-			putCred:  credential.New("admin", "secret"),
+			putCred:  newCredential("admin", "secret"),
 			getMAC:   "aa:bb:cc:dd:ee:ff",
 			wantErr:  false,
 			wantUser: "admin",
@@ -296,7 +296,7 @@ func TestVaultManager_NVOSPutGet(t *testing.T) {
 	}{
 		"put and get valid NVOS credential": {
 			putMAC:   "00:11:22:33:44:55",
-			putCred:  credential.New("nvos_admin", "nvos_secret"),
+			putCred:  newCredential("nvos_admin", "nvos_secret"),
 			getMAC:   "00:11:22:33:44:55",
 			wantErr:  false,
 			wantUser: "nvos_admin",
@@ -304,13 +304,13 @@ func TestVaultManager_NVOSPutGet(t *testing.T) {
 		},
 		"get missing NVOS credential returns not found": {
 			putMAC:  "aa:bb:cc:dd:ee:ff",
-			putCred: credential.New("user", "p"),
+			putCred: newCredential("user", "p"),
 			getMAC:  "66:77:88:99:00:11",
 			wantErr: true,
 		},
 		"put with uppercase MAC and get with lowercase resolves correctly": {
 			putMAC:   "AA:BB:CC:DD:EE:FF",
-			putCred:  credential.New("nvos_admin", "nvos_secret"),
+			putCred:  newCredential("nvos_admin", "nvos_secret"),
 			getMAC:   "aa:bb:cc:dd:ee:ff",
 			wantErr:  false,
 			wantUser: "nvos_admin",
@@ -360,16 +360,16 @@ func TestVaultManager_PutIdempotentAndConflict(t *testing.T) {
 	mac := parseMAC(t, "00:11:22:33:44:55")
 
 	// First put succeeds
-	assert.NoError(t, mgr.PutBMC(ctx, mac, credential.New("admin", "secret")))
-	assert.NoError(t, mgr.PutNVOS(ctx, mac, credential.New("nvos", "nvos_secret")))
+	assert.NoError(t, mgr.PutBMC(ctx, mac, newCredential("admin", "secret")))
+	assert.NoError(t, mgr.PutNVOS(ctx, mac, newCredential("nvos", "nvos_secret")))
 
 	// Idempotent put with same credentials succeeds (no-op)
-	assert.NoError(t, mgr.PutBMC(ctx, mac, credential.New("admin", "secret")))
-	assert.NoError(t, mgr.PutNVOS(ctx, mac, credential.New("nvos", "nvos_secret")))
+	assert.NoError(t, mgr.PutBMC(ctx, mac, newCredential("admin", "secret")))
+	assert.NoError(t, mgr.PutNVOS(ctx, mac, newCredential("nvos", "nvos_secret")))
 
 	// Put with different credentials returns error
-	assert.Error(t, mgr.PutBMC(ctx, mac, credential.New("admin", "different")))
-	assert.Error(t, mgr.PutNVOS(ctx, mac, credential.New("nvos", "different")))
+	assert.Error(t, mgr.PutBMC(ctx, mac, newCredential("admin", "different")))
+	assert.Error(t, mgr.PutNVOS(ctx, mac, newCredential("nvos", "different")))
 
 	// Original credentials remain unchanged
 	bmcCred, err := mgr.GetBMC(ctx, mac)
@@ -383,8 +383,8 @@ func TestVaultManager_PutIdempotentAndConflict(t *testing.T) {
 	assert.Equal(t, "nvos_secret", nvosCred.Password.Value)
 
 	// PatchBMC/PatchNVOS can still overwrite
-	assert.NoError(t, mgr.PatchBMC(ctx, mac, credential.New("root", "new_pass")))
-	assert.NoError(t, mgr.PatchNVOS(ctx, mac, credential.New("nvos_root", "new_nvos_pass")))
+	assert.NoError(t, mgr.PatchBMC(ctx, mac, newCredential("root", "new_pass")))
+	assert.NoError(t, mgr.PatchNVOS(ctx, mac, newCredential("nvos_root", "new_nvos_pass")))
 
 	bmcCred, err = mgr.GetBMC(ctx, mac)
 	assert.NoError(t, err)
@@ -409,27 +409,27 @@ func TestVaultManager_BMCPatch(t *testing.T) {
 	}{
 		"patch existing replaces value": {
 			setupMAC:  "00:11:22:33:44:55",
-			setupCred: credential.New("admin", "old"),
+			setupCred: newCredential("admin", "old"),
 			patchMAC:  "00:11:22:33:44:55",
-			patchCred: credential.New("root", "new"),
+			patchCred: newCredential("root", "new"),
 			wantErr:   false,
 			wantUser:  "root",
 			wantPass:  "new",
 		},
 		"patch missing creates value (same as Put)": {
 			setupMAC:  "aa:bb:cc:dd:ee:ff",
-			setupCred: credential.New("user", "pass"),
+			setupCred: newCredential("user", "pass"),
 			patchMAC:  "66:77:88:99:00:11",
-			patchCred: credential.New("root", "new"),
+			patchCred: newCredential("root", "new"),
 			wantErr:   false,
 			wantUser:  "root",
 			wantPass:  "new",
 		},
 		"patch with invalid credential returns error": {
 			setupMAC:  "00:11:22:33:44:66",
-			setupCred: credential.New("user", "pass"),
+			setupCred: newCredential("user", "pass"),
 			patchMAC:  "00:11:22:33:44:66",
-			patchCred: credential.New("", "nopass"),
+			patchCred: newCredential("", "nopass"),
 			wantErr:   true,
 		},
 	}
@@ -471,13 +471,13 @@ func TestVaultManager_BMCDelete(t *testing.T) {
 	}{
 		"delete existing removes entry": {
 			putMAC:       "00:11:22:33:44:55",
-			putCred:      credential.New("admin", "secret"),
+			putCred:      newCredential("admin", "secret"),
 			delMAC:       "00:11:22:33:44:55",
 			expectErrGet: true,
 		},
 		"delete missing returns nil and does not affect other entries": {
 			putMAC:       "aa:bb:cc:dd:ee:ff",
-			putCred:      credential.New("user", "p"),
+			putCred:      newCredential("user", "p"),
 			delMAC:       "66:77:88:99:00:11",
 			expectErrGet: false,
 		},
@@ -523,16 +523,16 @@ func TestVaultManager_Keys(t *testing.T) {
 		},
 		"one entry returns that MAC": {
 			putPairs: [][2]interface{}{
-				{"00:11:22:33:44:55", credential.New("admin", "secret")},
+				{"00:11:22:33:44:55", newCredential("admin", "secret")},
 			},
 			expectCount: 1,
 			expectSet:   map[string]bool{"00:11:22:33:44:55": true},
 		},
 		"multiple entries return all MACs": {
 			putPairs: [][2]interface{}{
-				{"00:11:22:33:44:55", credential.New("admin", "a")},
-				{"66:77:88:99:00:11", credential.New("root", "r")},
-				{"aa:bb:cc:dd:ee:ff", credential.New("user", "u")},
+				{"00:11:22:33:44:55", newCredential("admin", "a")},
+				{"66:77:88:99:00:11", newCredential("root", "r")},
+				{"aa:bb:cc:dd:ee:ff", newCredential("user", "u")},
 			},
 			expectCount: 3,
 			expectSet: map[string]bool{

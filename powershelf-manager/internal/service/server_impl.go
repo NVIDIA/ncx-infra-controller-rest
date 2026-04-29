@@ -249,6 +249,13 @@ func (s *PowershelfManagerServerImpl) UpdateFirmware(ctx context.Context, req *p
 func (s *PowershelfManagerServerImpl) upgradeComponents(ctx context.Context, pmcMac string, components []*pb.UpdateComponentFirmwareRequest) []*pb.UpdateComponentFirmwareResponse {
 	results := make([]*pb.UpdateComponentFirmwareResponse, 0, len(components))
 	for _, component := range components {
+		if component.UpgradeTo == nil {
+			results = append(results, &pb.UpdateComponentFirmwareResponse{
+				Status: pb.StatusCode_INVALID_ARGUMENT,
+				Error:  "upgrade_to firmware version is required",
+			})
+			continue
+		}
 		results = append(results, s.updateFirmware(ctx, pmcMac, component.Component, component.UpgradeTo.Version))
 	}
 	return results

@@ -20,8 +20,8 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/pkg/common/credential"
-	"github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/pkg/common/secretstring"
+	"github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/credential"
+	"github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/secretstring"
 	"github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/pkg/objects/nvos"
 	"github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/pkg/sshclient"
 	"strings"

@@ -23,7 +23,7 @@ import (
 	"net"
 	"sync"
 
-	"github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/pkg/common/credential"
+	"github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/credential"
 	log "github.com/sirupsen/logrus"
 )
 

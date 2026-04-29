@@ -26,7 +26,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/pkg/common/credential"
+	"github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/credential"
 
 	vault "github.com/hashicorp/vault/api"
 	log "github.com/sirupsen/logrus"
@@ -165,7 +165,7 @@ func (m *VaultCredentialManager) get(ctx context.Context, key string) (*credenti
 		return nil, fmt.Errorf("unexpected secret data format at vault path %q", key)
 	}
 
-	cred, err := credential.FromMap(credData)
+	cred, err := credentialFromMap(credData)
 	if err != nil {
 		return nil, fmt.Errorf("parsing credential at vault path %q: %w", key, err)
 	}
@@ -183,7 +183,7 @@ func (m *VaultCredentialManager) put(ctx context.Context, key string, cred *cred
 	}
 
 	payload := map[string]any{
-		"data": cred.ToMap(),
+		"data": credentialToMap(cred),
 	}
 
 	_, err := m.client.Logical().Write(key, payload)
@@ -193,6 +193,35 @@ func (m *VaultCredentialManager) put(ctx context.Context, key string, cred *cred
 func (m *VaultCredentialManager) delete(ctx context.Context, key string) error {
 	_, err := m.client.Logical().Delete(key)
 	return err
+}
+
+func credentialToMap(cred *credential.Credential) map[string]interface{} {
+	if cred == nil {
+		return nil
+	}
+	return map[string]interface{}{
+		"UsernamePassword": map[string]interface{}{
+			"username": cred.User,
+			"password": cred.Password.Value,
+		},
+	}
+}
+
+func credentialFromMap(data map[string]interface{}) (*credential.Credential, error) {
+	nested, ok := data["UsernamePassword"].(map[string]interface{})
+	if !ok {
+		return nil, errors.New("missing or invalid UsernamePassword field")
+	}
+	user, ok := nested["username"].(string)
+	if !ok {
+		return nil, errors.New("invalid username value")
+	}
+	password, ok := nested["password"].(string)
+	if !ok {
+		return nil, errors.New("invalid password value")
+	}
+	c := credential.New(user, password)
+	return &c, nil
 }
 
 // GetBMC retrieves and validates BMC credentials for the given MAC from Vault.
