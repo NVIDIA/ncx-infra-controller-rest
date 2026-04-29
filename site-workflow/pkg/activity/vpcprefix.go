@@ -53,17 +53,10 @@ func (mvp *ManageVpcPrefix) CreateVpcPrefixOnSite(ctx context.Context, request *
 
 	// Validate request
 	if request == nil {
-		err = errors.New("received empty create VPC prefix request")
-	} else if request.Name == "" {
-		err = errors.New("received create VPC prefix request missing Name")
-	} else if request.Prefix == "" {
-		err = errors.New("received create VPC prefix request missing Prefix")
+		err = errors.New("received empty create VPC Prefix request")
 	} else if request.Id == nil || request.Id.Value == "" {
-		// Don't let a request come in without a cloud-provided ID
-		// or carbide will generate one and cloud won't know the relationship.
-		err = errors.New("received create VPC prefix request missing ID")
-	} else if request.VpcId == nil || request.VpcId.Value == "" {
-		err = errors.New("received create VPC prefix request missing VPC ID")
+		// Don't let a request come in without an ID or Site will generate one and REST won't know the relationship
+		err = errors.New("received create VPC Prefix request without ID")
 	}
 
 	if err != nil {
@@ -79,7 +72,7 @@ func (mvp *ManageVpcPrefix) CreateVpcPrefixOnSite(ctx context.Context, request *
 
 	_, err = forgeClient.CreateVpcPrefix(ctx, request)
 	if err != nil {
-		logger.Warn().Err(err).Msg("Failed to create VPC prefix using Site Controller API")
+		logger.Warn().Err(err).Msg("Failed to create VPC Prefix using Site Controller API")
 		return swe.WrapErr(err)
 	}
 
@@ -98,9 +91,9 @@ func (mvp *ManageVpcPrefix) UpdateVpcPrefixOnSite(ctx context.Context, request *
 
 	// Validate request
 	if request == nil {
-		err = errors.New("received empty update VPC prefix request")
+		err = errors.New("received empty update VPC Prefix request")
 	} else if request.Id == nil || request.Id.Value == "" {
-		err = errors.New("received update VPC prefix request missing ID")
+		err = errors.New("received update VPC Prefix request without ID")
 	}
 
 	if err != nil {
@@ -116,7 +109,7 @@ func (mvp *ManageVpcPrefix) UpdateVpcPrefixOnSite(ctx context.Context, request *
 
 	_, err = forgeClient.UpdateVpcPrefix(ctx, request)
 	if err != nil {
-		logger.Warn().Err(err).Msg("Failed to update VPC prefix using Site Controller API")
+		logger.Warn().Err(err).Msg("Failed to update VPC Prefix using Site Controller API")
 		return swe.WrapErr(err)
 	}
 
@@ -135,9 +128,9 @@ func (mvp *ManageVpcPrefix) DeleteVpcPrefixOnSite(ctx context.Context, request *
 
 	// Validate request
 	if request == nil {
-		err = errors.New("received empty delete VPC prefix request")
+		err = errors.New("received empty delete VPC Prefix request")
 	} else if request.Id == nil || request.Id.Value == "" {
-		err = errors.New("reveived delete VPC prefix missing VPC Prefix ID")
+		err = errors.New("received delete VPC Prefix request without ID")
 	}
 
 	if err != nil {
@@ -153,7 +146,7 @@ func (mvp *ManageVpcPrefix) DeleteVpcPrefixOnSite(ctx context.Context, request *
 
 	_, err = forgeClient.DeleteVpcPrefix(ctx, request)
 	if err != nil {
-		logger.Warn().Err(err).Msg("Failed to delete VPC prefix using Site Controller API")
+		logger.Warn().Err(err).Msg("Failed to delete VPC Prefix using Site Controller API")
 		return swe.WrapErr(err)
 	}
 
