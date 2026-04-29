@@ -87,14 +87,14 @@ func TestInMemoryBMCPutGet(t *testing.T) {
 			getMAC:     "66:77:88:99:00:11",
 			wantErr:    true,
 		},
-		"put overwrites existing value": {
+		"put same credential is no-op": {
 			initialPut: true,
 			putMAC:     "aa:bb:cc:dd:ee:ff",
 			putCred:    credential.New("user1", "p1"),
 			getMAC:     "aa:bb:cc:dd:ee:ff",
 			wantErr:    false,
-			wantUser:   "user2",
-			wantPass:   "p2",
+			wantUser:   "user1",
+			wantPass:   "p1",
 			samePtr:    true,
 		},
 	}
@@ -104,15 +104,15 @@ func TestInMemoryBMCPutGet(t *testing.T) {
 			ctx := context.Background()
 			mgr := NewInMemoryCredentialManager()
 
-			// Optional initial put
-			if tc.initialPut {
-				mac := parseMAC(t, tc.putMAC)
-				assert.NoError(t, mgr.PutBMC(ctx, mac, tc.putCred))
-				// For the overwrite scenario, put a second credential to same MAC
-				if name == "put overwrites existing value" {
-					assert.NoError(t, mgr.PutBMC(ctx, mac, credential.New("user2", "p2")))
-				}
+		// Optional initial put
+		if tc.initialPut {
+			mac := parseMAC(t, tc.putMAC)
+			assert.NoError(t, mgr.PutBMC(ctx, mac, tc.putCred))
+			// For the idempotent scenario, put the same credential again
+			if name == "put same credential is no-op" {
+				assert.NoError(t, mgr.PutBMC(ctx, mac, credential.New("user1", "p1")))
 			}
+		}
 
 			// Get flow
 			got, err := mgr.GetBMC(ctx, parseMAC(t, tc.getMAC))
@@ -127,12 +127,36 @@ func TestInMemoryBMCPutGet(t *testing.T) {
 			assert.Equal(t, tc.wantUser, got.User)
 			assert.Equal(t, tc.wantPass, got.Password.Value)
 
-			if tc.samePtr && tc.initialPut && name != "put overwrites existing value" {
-				// For non-overwrite cases, ensure returned pointer equals the one stored
-				assert.Same(t, tc.putCred, got)
-			}
+		if tc.samePtr && tc.initialPut {
+			assert.Same(t, tc.putCred, got)
+		}
 		})
 	}
+}
+
+func TestInMemoryPutDifferentCredentialOverwrites(t *testing.T) {
+	ctx := context.Background()
+	mgr := NewInMemoryCredentialManager()
+	mac := parseMAC(t, "00:11:22:33:44:55")
+
+	// Initial put succeeds
+	assert.NoError(t, mgr.PutBMC(ctx, mac, credential.New("admin", "secret")))
+	assert.NoError(t, mgr.PutNVOS(ctx, mac, credential.New("nvos", "nvos_secret")))
+
+	// Put with different credentials overwrites (no error for in-memory)
+	assert.NoError(t, mgr.PutBMC(ctx, mac, credential.New("admin", "different_pass")))
+	assert.NoError(t, mgr.PutNVOS(ctx, mac, credential.New("nvos", "different_pass")))
+
+	// Credentials are now the new values
+	bmcCred, err := mgr.GetBMC(ctx, mac)
+	assert.NoError(t, err)
+	assert.Equal(t, "admin", bmcCred.User)
+	assert.Equal(t, "different_pass", bmcCred.Password.Value)
+
+	nvosCred, err := mgr.GetNVOS(ctx, mac)
+	assert.NoError(t, err)
+	assert.Equal(t, "nvos", nvosCred.User)
+	assert.Equal(t, "different_pass", nvosCred.Password.Value)
 }
 
 func TestInMemoryNVOSPutGet(t *testing.T) {

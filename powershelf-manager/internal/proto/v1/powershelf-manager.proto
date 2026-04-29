@@ -171,6 +171,21 @@ message PowerTarget {
     PMCVendor pmc_vendor = 3;
 }
 
+// FirmwareTarget allows firmware updates against a device without prior registration.
+// PMC MAC, IP, and credentials are required; the device is auto-registered before update.
+message FirmwareTarget {
+    string pmc_mac_address = 1;
+    string pmc_ip_address = 2;
+    Credentials pmc_credentials = 3;
+    PMCVendor pmc_vendor = 4;
+}
+
+// UpdateFirmwareTargetRequest pairs a FirmwareTarget with the components to upgrade.
+message UpdateFirmwareTargetRequest {
+    FirmwareTarget target = 1;
+    repeated UpdateComponentFirmwareRequest components = 2;
+}
+
 message GetPowershelvesResponse {
     repeated PowerShelf powershelves = 1;
 }
@@ -187,6 +202,7 @@ message UpdatePowershelfFirmwareRequest {
 
 message UpdateFirmwareRequest {
     repeated UpdatePowershelfFirmwareRequest upgrades = 1;
+    repeated UpdateFirmwareTargetRequest targets = 2;       // Unregistered devices (auto-registered before update)
 }
 
 message UpdateComponentFirmwareResponse {
@@ -198,6 +214,7 @@ message UpdateComponentFirmwareResponse {
 message UpdatePowershelfFirmwareResponse {
     string pmc_mac_address = 1;
     repeated UpdateComponentFirmwareResponse components = 2;
+    string pmc_ip = 3;  // Set for FirmwareTarget responses; empty for registered shelves
 }
 
 message UpdateFirmwareResponse {

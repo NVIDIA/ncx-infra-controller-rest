@@ -305,3 +305,24 @@ func TestInMemoryKeys(t *testing.T) {
 		})
 	}
 }
+
+func TestInMemoryPutIdempotentAndOverwrite(t *testing.T) {
+	ctx := context.Background()
+	mgr := NewInMemoryCredentialManager()
+	mac := parseMAC(t, "00:11:22:33:44:55")
+
+	// First Put succeeds
+	assert.NoError(t, mgr.Put(ctx, mac, newCred("admin", "secret")))
+
+	// Idempotent Put with same credentials is a no-op
+	assert.NoError(t, mgr.Put(ctx, mac, newCred("admin", "secret")))
+
+	// Put with different credentials overwrites (no error for in-memory)
+	assert.NoError(t, mgr.Put(ctx, mac, newCred("admin", "different")))
+
+	// Credentials are now the new values
+	got, err := mgr.Get(ctx, mac)
+	assert.NoError(t, err)
+	assert.Equal(t, "admin", got.User)
+	assert.Equal(t, "different", got.Password.Value)
+}

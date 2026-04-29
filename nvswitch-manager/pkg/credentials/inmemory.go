@@ -20,10 +20,10 @@ package credentials
 import (
 	"context"
 	"errors"
-	"github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/pkg/common/credential"
 	"net"
 	"sync"
 
+	"github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/pkg/common/credential"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -83,11 +83,19 @@ func (m *InMemoryCredentialManager) GetBMC(ctx context.Context, mac net.Hardware
 	return cred, nil
 }
 
-// PutBMC stores or replaces the BMC credential for mac.
+// PutBMC stores the BMC credential for mac. If an identical entry exists, this is a no-op.
+// If a different entry exists, the new value overwrites (with a warning log).
 func (m *InMemoryCredentialManager) PutBMC(ctx context.Context, mac net.HardwareAddr, cred *credential.Credential) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	key := m.bmcKey(mac)
+	if existing, exists := m.store[key]; exists {
+		if existing.Equal(cred) {
+			log.Infof("BMC credentials for %s already exist and match; skipping write", mac)
+			return nil
+		}
+		log.Warnf("BMC credentials for %s differ from existing; overwriting in-memory entry", mac)
+	}
 	m.store[key] = cred
 	return nil
 }
@@ -133,11 +141,19 @@ func (m *InMemoryCredentialManager) GetNVOS(ctx context.Context, mac net.Hardwar
 	return cred, nil
 }
 
-// PutNVOS stores or replaces the NVOS credential for mac.
+// PutNVOS stores the NVOS credential for mac. If an identical entry exists, this is a no-op.
+// If a different entry exists, the new value overwrites (with a warning log).
 func (m *InMemoryCredentialManager) PutNVOS(ctx context.Context, mac net.HardwareAddr, cred *credential.Credential) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	key := m.nvosKey(mac)
+	if existing, exists := m.store[key]; exists {
+		if existing.Equal(cred) {
+			log.Infof("NVOS credentials for %s already exist and match; skipping write", mac)
+			return nil
+		}
+		log.Warnf("NVOS credentials for %s differ from existing; overwriting in-memory entry", mac)
+	}
 	m.store[key] = cred
 	return nil
 }

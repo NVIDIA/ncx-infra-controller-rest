@@ -58,6 +58,16 @@ func (s *PowershelfManagerServerImpl) registerPowershelf(
 		cred = &pmcCred
 	}
 
+	if cred == nil && s.psm.DataStoreType == powershelfmanager.DatastoreTypeInMemory {
+		return &pb.RegisterPowershelfResponse{
+			PmcMacAddress: req.PmcMacAddress,
+			IsNew:         true,
+			Created:       timestamppb.New(time.Now()),
+			Status:        pb.StatusCode_INVALID_ARGUMENT,
+			Error:         "pmc_credentials are required when running in in-memory mode",
+		}
+	}
+
 	pmc, err := pmc.New(req.PmcMacAddress, req.PmcIpAddress, protobuf.PMCVendorFrom(req.PmcVendor), cred)
 	if err != nil {
 		return &pb.RegisterPowershelfResponse{
@@ -190,23 +200,58 @@ func (s *PowershelfManagerServerImpl) listAvailableFirmware(ctx context.Context,
 }
 
 func (s *PowershelfManagerServerImpl) UpdateFirmware(ctx context.Context, req *pb.UpdateFirmwareRequest) (*pb.UpdateFirmwareResponse, error) {
-	responses := make([]*pb.UpdatePowershelfFirmwareResponse, 0, len(req.Upgrades))
+	responses := make([]*pb.UpdatePowershelfFirmwareResponse, 0, len(req.Upgrades)+len(req.Targets))
+
+	// Registered path: upgrade by MAC
 	for _, powershelf := range req.Upgrades {
-		pmc_mac := powershelf.PmcMacAddress
-		componentUpgradeResponses := make([]*pb.UpdateComponentFirmwareResponse, 0, len(powershelf.Components))
-		for _, component := range powershelf.Components {
-			componentUpgradeResponse := s.updateFirmware(ctx, pmc_mac, component.Component, component.UpgradeTo.Version)
-			componentUpgradeResponses = append(componentUpgradeResponses, componentUpgradeResponse)
-		}
 		responses = append(responses, &pb.UpdatePowershelfFirmwareResponse{
-			PmcMacAddress: pmc_mac,
-			Components:    componentUpgradeResponses,
+			PmcMacAddress: powershelf.PmcMacAddress,
+			Components:    s.upgradeComponents(ctx, powershelf.PmcMacAddress, powershelf.Components),
 		})
+	}
+
+	// Direct path: auto-register unregistered targets, then upgrade
+	for _, targetReq := range req.Targets {
+		target := targetReq.Target
+		resp := &pb.UpdatePowershelfFirmwareResponse{
+			PmcIp: target.GetPmcIpAddress(),
+		}
+
+		if err := validateFirmwareTarget(target); err != nil {
+			resp.Components = []*pb.UpdateComponentFirmwareResponse{{
+				Status: pb.StatusCode_INVALID_ARGUMENT,
+				Error:  err.Error(),
+			}}
+			responses = append(responses, resp)
+			continue
+		}
+
+		regResp := s.registerPowershelf(ctx, firmwareTargetToRegisterRequest(target))
+		if regResp.Status != pb.StatusCode_SUCCESS {
+			resp.Components = []*pb.UpdateComponentFirmwareResponse{{
+				Status: regResp.Status,
+				Error:  fmt.Sprintf("failed to register target: %s", regResp.Error),
+			}}
+			responses = append(responses, resp)
+			continue
+		}
+		resp.PmcMacAddress = regResp.PmcMacAddress
+		resp.Components = s.upgradeComponents(ctx, target.PmcMacAddress, targetReq.Components)
+		responses = append(responses, resp)
 	}
 
 	return &pb.UpdateFirmwareResponse{
 		Responses: responses,
 	}, nil
+}
+
+// upgradeComponents upgrades each requested component for a given PMC MAC and returns per-component results.
+func (s *PowershelfManagerServerImpl) upgradeComponents(ctx context.Context, pmcMac string, components []*pb.UpdateComponentFirmwareRequest) []*pb.UpdateComponentFirmwareResponse {
+	results := make([]*pb.UpdateComponentFirmwareResponse, 0, len(components))
+	for _, component := range components {
+		results = append(results, s.updateFirmware(ctx, pmcMac, component.Component, component.UpgradeTo.Version))
+	}
+	return results
 }
 
 // UpdateFirmware triggers a firmware upgrade for the PMC. If dry_run is true, it resolves artifacts and simulates the update without uploading.
@@ -245,6 +290,36 @@ func (s *PowershelfManagerServerImpl) updateFirmware(ctx context.Context, pmc_ma
 	return &pb.UpdateComponentFirmwareResponse{
 		Status: pb.StatusCode_SUCCESS,
 		Error:  "",
+	}
+}
+
+// validateFirmwareTarget validates all required fields on a FirmwareTarget.
+func validateFirmwareTarget(target *pb.FirmwareTarget) error {
+	if target == nil {
+		return fmt.Errorf("firmware target is required")
+	}
+	if target.PmcMacAddress == "" {
+		return fmt.Errorf("pmc_mac_address is required")
+	}
+	if _, err := net.ParseMAC(target.PmcMacAddress); err != nil {
+		return fmt.Errorf("invalid pmc_mac_address: %s", target.PmcMacAddress)
+	}
+	if net.ParseIP(target.PmcIpAddress) == nil {
+		return fmt.Errorf("invalid pmc_ip_address: %s", target.PmcIpAddress)
+	}
+	if target.PmcCredentials == nil || target.PmcCredentials.Username == "" || target.PmcCredentials.Password == "" {
+		return fmt.Errorf("pmc_credentials with username and password are required")
+	}
+	return nil
+}
+
+// firmwareTargetToRegisterRequest converts a FirmwareTarget to a RegisterPowershelfRequest.
+func firmwareTargetToRegisterRequest(target *pb.FirmwareTarget) *pb.RegisterPowershelfRequest {
+	return &pb.RegisterPowershelfRequest{
+		PmcMacAddress:  target.PmcMacAddress,
+		PmcIpAddress:   target.PmcIpAddress,
+		PmcVendor:      target.PmcVendor,
+		PmcCredentials: target.PmcCredentials,
 	}
 }
 

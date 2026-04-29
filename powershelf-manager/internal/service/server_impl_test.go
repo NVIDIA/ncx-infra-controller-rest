@@ -23,6 +23,7 @@ import (
 	pb "github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/internal/proto/v1"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func newTestServer() *PowershelfManagerServerImpl {
@@ -101,4 +102,123 @@ func TestPowerTarget_EmptyCredentials(t *testing.T) {
 			assert.Contains(t, resp.Error, "must not be empty")
 		})
 	}
+}
+
+func validFirmwareTarget() *pb.FirmwareTarget {
+	return &pb.FirmwareTarget{
+		PmcMacAddress: "00:11:22:33:44:55",
+		PmcIpAddress:  "10.20.30.40",
+		PmcCredentials: &pb.Credentials{
+			Username: "pmcUser",
+			Password: "pmcPass",
+		},
+		PmcVendor: pb.PMCVendor_PMC_TYPE_LITEON,
+	}
+}
+
+func TestValidateFirmwareTarget_Valid(t *testing.T) {
+	err := validateFirmwareTarget(validFirmwareTarget())
+	assert.NoError(t, err)
+}
+
+func TestValidateFirmwareTarget_NilTarget(t *testing.T) {
+	err := validateFirmwareTarget(nil)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "firmware target is required")
+}
+
+func TestValidateFirmwareTarget_InvalidMAC(t *testing.T) {
+	tests := map[string]struct {
+		mac string
+	}{
+		"empty":   {mac: ""},
+		"garbage": {mac: "not-a-mac"},
+		"partial": {mac: "00:11:22"},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			target := validFirmwareTarget()
+			target.PmcMacAddress = tc.mac
+			err := validateFirmwareTarget(target)
+			assert.Error(t, err)
+		})
+	}
+}
+
+func TestValidateFirmwareTarget_InvalidIP(t *testing.T) {
+	tests := map[string]struct {
+		ip string
+	}{
+		"empty":   {ip: ""},
+		"garbage": {ip: "pmc-bad-addr"},
+		"partial": {ip: "10.20.30"},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			target := validFirmwareTarget()
+			target.PmcIpAddress = tc.ip
+			err := validateFirmwareTarget(target)
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "invalid pmc_ip_address")
+		})
+	}
+}
+
+func TestValidateFirmwareTarget_MissingCredentials(t *testing.T) {
+	tests := map[string]struct {
+		creds *pb.Credentials
+	}{
+		"nil credentials":    {creds: nil},
+		"empty username":     {creds: &pb.Credentials{Username: "", Password: "pass"}},
+		"empty password":     {creds: &pb.Credentials{Username: "user", Password: ""}},
+		"both empty strings": {creds: &pb.Credentials{Username: "", Password: ""}},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			target := validFirmwareTarget()
+			target.PmcCredentials = tc.creds
+			err := validateFirmwareTarget(target)
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "pmc_credentials")
+		})
+	}
+}
+
+func TestFirmwareTargetToRegisterRequest(t *testing.T) {
+	target := validFirmwareTarget()
+	req := firmwareTargetToRegisterRequest(target)
+
+	require.NotNil(t, req)
+	assert.Equal(t, target.PmcMacAddress, req.PmcMacAddress)
+	assert.Equal(t, target.PmcIpAddress, req.PmcIpAddress)
+	assert.Equal(t, target.PmcVendor, req.PmcVendor)
+	assert.Equal(t, target.PmcCredentials, req.PmcCredentials)
+}
+
+func TestUpdateFirmware_InvalidTarget(t *testing.T) {
+	s := newTestServer()
+
+	req := &pb.UpdateFirmwareRequest{
+		Targets: []*pb.UpdateFirmwareTargetRequest{
+			{
+				Target: &pb.FirmwareTarget{
+					PmcMacAddress:  "invalid-mac",
+					PmcIpAddress:   "10.20.30.40",
+					PmcCredentials: &pb.Credentials{Username: "u", Password: "p"},
+				},
+				Components: []*pb.UpdateComponentFirmwareRequest{
+					{Component: pb.PowershelfComponent_PMC, UpgradeTo: &pb.FirmwareVersion{Version: "1.0.0"}},
+				},
+			},
+		},
+	}
+
+	resp, err := s.UpdateFirmware(context.Background(), req)
+	assert.NoError(t, err)
+	require.Len(t, resp.Responses, 1)
+	require.Len(t, resp.Responses[0].Components, 1)
+	assert.Equal(t, pb.StatusCode_INVALID_ARGUMENT, resp.Responses[0].Components[0].Status)
 }

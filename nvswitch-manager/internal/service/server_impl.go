@@ -81,6 +81,28 @@ func (s *NVSwitchManagerServerImpl) registerNVSwitch(
 	if req.Bmc.Credentials != nil {
 		bmcCred = credential.New(req.Bmc.Credentials.Username, req.Bmc.Credentials.Password)
 	}
+
+	// Create NVOS credential early so we can validate both before proceeding
+	var nvosCred *credential.Credential
+	if req.Nvos.Credentials != nil {
+		nvosCred = credential.New(req.Nvos.Credentials.Username, req.Nvos.Credentials.Password)
+	}
+
+	if s.nsm.DataStoreType == nvswitchmanager.DatastoreTypeInMemory {
+		if bmcCred == nil {
+			return &pb.RegisterNVSwitchResponse{
+				Status: pb.StatusCode_INVALID_ARGUMENT,
+				Error:  "BMC credentials are required when running in in-memory mode",
+			}
+		}
+		if nvosCred == nil {
+			return &pb.RegisterNVSwitchResponse{
+				Status: pb.StatusCode_INVALID_ARGUMENT,
+				Error:  "NVOS credentials are required when running in in-memory mode",
+			}
+		}
+	}
+
 	bmcObj, err := bmc.New(req.Bmc.MacAddress, req.Bmc.IpAddress, bmcCred)
 	if err != nil {
 		return &pb.RegisterNVSwitchResponse{
@@ -94,10 +116,6 @@ func (s *NVSwitchManagerServerImpl) registerNVSwitch(
 	}
 
 	// Create NVOS subsystem
-	var nvosCred *credential.Credential
-	if req.Nvos.Credentials != nil {
-		nvosCred = credential.New(req.Nvos.Credentials.Username, req.Nvos.Credentials.Password)
-	}
 	nvosObj, err := nvos.New(req.Nvos.MacAddress, req.Nvos.IpAddress, nvosCred)
 	if err != nil {
 		return &pb.RegisterNVSwitchResponse{
@@ -413,6 +431,8 @@ func (s *NVSwitchManagerServerImpl) QueueUpdates(ctx context.Context, req *pb.Qu
 	}
 
 	var results []*pb.QueueUpdateResult
+
+	// Registered path: queue updates by UUID
 	for _, switchUUIDStr := range req.SwitchUuids {
 		result := &pb.QueueUpdateResult{
 			SwitchUuid: switchUUIDStr,
@@ -426,28 +446,113 @@ func (s *NVSwitchManagerServerImpl) QueueUpdates(ctx context.Context, req *pb.Qu
 			continue
 		}
 
-		updates, err := s.fwm.QueueUpdate(ctx, switchUUID, req.BundleVersion, components)
-		if err != nil {
-			result.Status = pb.StatusCode_INTERNAL_ERROR
-			result.Error = fmt.Sprintf("failed to queue update: %v", err)
+		s.queueFirmwareUpdate(ctx, result, switchUUID, req.BundleVersion, components)
+		results = append(results, result)
+	}
+
+	// Direct path: auto-register unregistered targets, then queue updates
+	for _, target := range req.Targets {
+		result := &pb.QueueUpdateResult{
+			BmcIp: target.BmcIp,
+		}
+
+		if err := validateFirmwareTarget(target); err != nil {
+			result.Status = pb.StatusCode_INVALID_ARGUMENT
+			result.Error = err.Error()
 			results = append(results, result)
 			continue
 		}
 
-		// Convert to proto
-		protoUpdates := make([]*pb.FirmwareUpdateInfo, len(updates))
-		for i, u := range updates {
-			protoUpdates[i] = firmwareUpdateToProto(u)
+		regResp := s.registerNVSwitch(ctx, firmwareTargetToRegisterRequest(target))
+		if regResp.Status != pb.StatusCode_SUCCESS {
+			result.Status = regResp.Status
+			result.Error = fmt.Sprintf("failed to register target: %s", regResp.Error)
+			results = append(results, result)
+			continue
+		}
+		result.SwitchUuid = regResp.Uuid
+
+		switchUUID, err := uuid.Parse(regResp.Uuid)
+		if err != nil {
+			result.Status = pb.StatusCode_INTERNAL_ERROR
+			result.Error = fmt.Sprintf("invalid UUID from registration: %v", err)
+			results = append(results, result)
+			continue
 		}
 
-		result.Status = pb.StatusCode_SUCCESS
-		result.Updates = protoUpdates
+		s.queueFirmwareUpdate(ctx, result, switchUUID, req.BundleVersion, components)
 		results = append(results, result)
 	}
 
 	return &pb.QueueUpdatesResponse{
 		Results: results,
 	}, nil
+}
+
+// queueFirmwareUpdate queues a firmware update for the given switch and populates the result.
+func (s *NVSwitchManagerServerImpl) queueFirmwareUpdate(
+	ctx context.Context,
+	result *pb.QueueUpdateResult,
+	switchUUID uuid.UUID,
+	bundleVersion string,
+	components []nvswitch.Component,
+) {
+	updates, err := s.fwm.QueueUpdate(ctx, switchUUID, bundleVersion, components)
+	if err != nil {
+		result.Status = pb.StatusCode_INTERNAL_ERROR
+		result.Error = fmt.Sprintf("failed to queue update: %v", err)
+		return
+	}
+
+	protoUpdates := make([]*pb.FirmwareUpdateInfo, len(updates))
+	for i, u := range updates {
+		protoUpdates[i] = firmwareUpdateToProto(u)
+	}
+
+	result.Status = pb.StatusCode_SUCCESS
+	result.Updates = protoUpdates
+}
+
+// validateFirmwareTarget validates all required fields on a FirmwareTarget.
+func validateFirmwareTarget(target *pb.FirmwareTarget) error {
+	if net.ParseIP(target.BmcIp) == nil {
+		return fmt.Errorf("invalid BMC IP: %s", target.BmcIp)
+	}
+	if target.BmcCredentials == nil || target.BmcCredentials.Username == "" || target.BmcCredentials.Password == "" {
+		return fmt.Errorf("bmc_credentials with username and password are required")
+	}
+	if net.ParseIP(target.NvosIp) == nil {
+		return fmt.Errorf("invalid NVOS IP: %s", target.NvosIp)
+	}
+	if target.NvosCredentials == nil || target.NvosCredentials.Username == "" || target.NvosCredentials.Password == "" {
+		return fmt.Errorf("nvos_credentials with username and password are required")
+	}
+	if target.BmcMac == "" {
+		return fmt.Errorf("bmc_mac is required")
+	}
+	if target.NvosMac == "" {
+		return fmt.Errorf("nvos_mac is required")
+	}
+	return nil
+}
+
+// firmwareTargetToRegisterRequest converts a FirmwareTarget into a RegisterNVSwitchRequest.
+func firmwareTargetToRegisterRequest(target *pb.FirmwareTarget) *pb.RegisterNVSwitchRequest {
+	return &pb.RegisterNVSwitchRequest{
+		Vendor: target.Vendor,
+		Bmc: &pb.Subsystem{
+			MacAddress:  target.BmcMac,
+			IpAddress:   target.BmcIp,
+			Credentials: target.BmcCredentials,
+			Port:        target.BmcPort,
+		},
+		Nvos: &pb.Subsystem{
+			MacAddress:  target.NvosMac,
+			IpAddress:   target.NvosIp,
+			Credentials: target.NvosCredentials,
+			Port:        target.NvosPort,
+		},
+	}
 }
 
 // GetUpdate returns the status of a specific firmware update by ID.

@@ -171,12 +171,33 @@ func (m *VaultCredentialManager) Get(ctx context.Context, mac net.HardwareAddr) 
 	return cred, nil
 }
 
-// Put writes the credentials of a given PMC (specified by MAC) to Vault.
+// Put writes PMC credentials to Vault. If an entry already exists and matches,
+// this is a no-op. If an entry exists but differs, an error is returned (use Patch to overwrite).
 func (m *VaultCredentialManager) Put(ctx context.Context, mac net.HardwareAddr, cred *credential.Credential) error {
 	if cred == nil || !cred.IsValid() {
 		return fmt.Errorf("valid credential not specified to Vault Manager")
 	}
 
+	if existing, err := m.Get(ctx, mac); err == nil && existing != nil {
+		if existing.Equal(cred) {
+			log.Infof("PMC credentials for %s already exist and match; skipping write", mac)
+			return nil
+		}
+		return fmt.Errorf("PMC credentials already exist for %s and differ from provided; use Patch to overwrite", mac)
+	}
+
+	return m.write(ctx, mac, cred)
+}
+
+// Patch unconditionally replaces the PMC credentials in Vault.
+func (m *VaultCredentialManager) Patch(ctx context.Context, mac net.HardwareAddr, cred *credential.Credential) error {
+	if cred == nil || !cred.IsValid() {
+		return fmt.Errorf("valid credential not specified to Vault Manager")
+	}
+	return m.write(ctx, mac, cred)
+}
+
+func (m *VaultCredentialManager) write(ctx context.Context, mac net.HardwareAddr, cred *credential.Credential) error {
 	payload := map[string]any{
 		"data": credentialToMap(cred),
 	}
@@ -184,12 +205,6 @@ func (m *VaultCredentialManager) Put(ctx context.Context, mac net.HardwareAddr, 
 	key := m.getCredentialKey(mac)
 	_, err := m.client.Logical().Write(key, payload)
 	return err
-}
-
-// Patch replaces the PMC's credentials in Vault (equivalent to Put).
-func (m *VaultCredentialManager) Patch(ctx context.Context, mac net.HardwareAddr, cred *credential.Credential) error {
-	// Assuming Patch is similar to Put for simplicity
-	return m.Put(ctx, mac, cred)
 }
 
 // Delete removes the credential specified by the PMC mac (if it exists) from Vault.

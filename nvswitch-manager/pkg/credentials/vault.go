@@ -200,14 +200,23 @@ func (m *VaultCredentialManager) GetBMC(ctx context.Context, mac net.HardwareAdd
 	return m.get(ctx, m.getBMCCredentialKey(mac))
 }
 
-// PutBMC writes the BMC credentials to Vault.
+// PutBMC writes BMC credentials to Vault. If an entry already exists and matches,
+// this is a no-op. If an entry exists but differs, an error is returned (use PatchBMC to overwrite).
 func (m *VaultCredentialManager) PutBMC(ctx context.Context, mac net.HardwareAddr, cred *credential.Credential) error {
-	return m.put(ctx, m.getBMCCredentialKey(mac), cred)
+	key := m.getBMCCredentialKey(mac)
+	if existing, err := m.get(ctx, key); err == nil && existing != nil {
+		if existing.Equal(cred) {
+			log.Infof("BMC credentials for %s already exist and match; skipping write", mac)
+			return nil
+		}
+		return fmt.Errorf("BMC credentials already exist for %s and differ from provided; use PatchBMC to overwrite", mac)
+	}
+	return m.put(ctx, key, cred)
 }
 
-// PatchBMC replaces the BMC's credentials in Vault (equivalent to Put).
+// PatchBMC unconditionally replaces the BMC credentials in Vault.
 func (m *VaultCredentialManager) PatchBMC(ctx context.Context, mac net.HardwareAddr, cred *credential.Credential) error {
-	return m.PutBMC(ctx, mac, cred)
+	return m.put(ctx, m.getBMCCredentialKey(mac), cred)
 }
 
 // DeleteBMC removes the BMC credential from Vault.
@@ -220,14 +229,23 @@ func (m *VaultCredentialManager) GetNVOS(ctx context.Context, mac net.HardwareAd
 	return m.get(ctx, m.getNVOSCredentialKey(mac))
 }
 
-// PutNVOS writes the NVOS credentials to Vault.
+// PutNVOS writes NVOS credentials to Vault. If an entry already exists and matches,
+// this is a no-op. If an entry exists but differs, an error is returned (use PatchNVOS to overwrite).
 func (m *VaultCredentialManager) PutNVOS(ctx context.Context, mac net.HardwareAddr, cred *credential.Credential) error {
-	return m.put(ctx, m.getNVOSCredentialKey(mac), cred)
+	key := m.getNVOSCredentialKey(mac)
+	if existing, err := m.get(ctx, key); err == nil && existing != nil {
+		if existing.Equal(cred) {
+			log.Infof("NVOS credentials for %s already exist and match; skipping write", mac)
+			return nil
+		}
+		return fmt.Errorf("NVOS credentials already exist for %s and differ from provided; use PatchNVOS to overwrite", mac)
+	}
+	return m.put(ctx, key, cred)
 }
 
-// PatchNVOS replaces the NVOS credentials in Vault (equivalent to Put).
+// PatchNVOS unconditionally replaces the NVOS credentials in Vault.
 func (m *VaultCredentialManager) PatchNVOS(ctx context.Context, mac net.HardwareAddr, cred *credential.Credential) error {
-	return m.PutNVOS(ctx, mac, cred)
+	return m.put(ctx, m.getNVOSCredentialKey(mac), cred)
 }
 
 // DeleteNVOS removes the NVOS credential from Vault.

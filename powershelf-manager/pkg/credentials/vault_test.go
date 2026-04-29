@@ -354,6 +354,41 @@ func TestVaultManager_Delete(t *testing.T) {
 	}
 }
 
+func TestVaultManager_PutIdempotentAndConflict(t *testing.T) {
+	fake := newFakeVaultKVServer()
+	fake.mountPresent = true
+	srv := httptest.NewServer(fake.handler())
+	defer srv.Close()
+
+	ctx := context.Background()
+	mgr := newManagerWithServer(t, srv)
+	mac := parseMAC(t, "00:11:22:33:44:55")
+
+	// First Put succeeds
+	assert.NoError(t, mgr.Put(ctx, mac, newCred("admin", "secret")))
+
+	// Idempotent Put with same credentials is a no-op
+	assert.NoError(t, mgr.Put(ctx, mac, newCred("admin", "secret")))
+
+	// Put with different credentials returns error
+	err := mgr.Put(ctx, mac, newCred("admin", "different"))
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "differ from provided")
+
+	// Original credentials remain
+	got, err := mgr.Get(ctx, mac)
+	assert.NoError(t, err)
+	assert.Equal(t, "admin", got.User)
+	assert.Equal(t, "secret", got.Password.Value)
+
+	// Patch with different credentials always succeeds
+	assert.NoError(t, mgr.Patch(ctx, mac, newCred("root", "newpass")))
+	got, err = mgr.Get(ctx, mac)
+	assert.NoError(t, err)
+	assert.Equal(t, "root", got.User)
+	assert.Equal(t, "newpass", got.Password.Value)
+}
+
 func TestVaultManager_Keys(t *testing.T) {
 	testCases := map[string]struct {
 		putPairs    [][2]interface{} // [mac string, *credential.Credential]

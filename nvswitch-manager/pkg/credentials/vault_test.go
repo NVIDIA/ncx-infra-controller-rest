@@ -349,6 +349,54 @@ func TestVaultManager_NVOSPutGet(t *testing.T) {
 	}
 }
 
+func TestVaultManager_PutIdempotentAndConflict(t *testing.T) {
+	fake := newFakeVaultKVServer()
+	fake.mountPresent = true
+	srv := httptest.NewServer(fake.handler())
+	defer srv.Close()
+
+	ctx := context.Background()
+	mgr := newManagerWithServer(t, srv)
+	mac := parseMAC(t, "00:11:22:33:44:55")
+
+	// First put succeeds
+	assert.NoError(t, mgr.PutBMC(ctx, mac, credential.New("admin", "secret")))
+	assert.NoError(t, mgr.PutNVOS(ctx, mac, credential.New("nvos", "nvos_secret")))
+
+	// Idempotent put with same credentials succeeds (no-op)
+	assert.NoError(t, mgr.PutBMC(ctx, mac, credential.New("admin", "secret")))
+	assert.NoError(t, mgr.PutNVOS(ctx, mac, credential.New("nvos", "nvos_secret")))
+
+	// Put with different credentials returns error
+	assert.Error(t, mgr.PutBMC(ctx, mac, credential.New("admin", "different")))
+	assert.Error(t, mgr.PutNVOS(ctx, mac, credential.New("nvos", "different")))
+
+	// Original credentials remain unchanged
+	bmcCred, err := mgr.GetBMC(ctx, mac)
+	assert.NoError(t, err)
+	assert.Equal(t, "admin", bmcCred.User)
+	assert.Equal(t, "secret", bmcCred.Password.Value)
+
+	nvosCred, err := mgr.GetNVOS(ctx, mac)
+	assert.NoError(t, err)
+	assert.Equal(t, "nvos", nvosCred.User)
+	assert.Equal(t, "nvos_secret", nvosCred.Password.Value)
+
+	// PatchBMC/PatchNVOS can still overwrite
+	assert.NoError(t, mgr.PatchBMC(ctx, mac, credential.New("root", "new_pass")))
+	assert.NoError(t, mgr.PatchNVOS(ctx, mac, credential.New("nvos_root", "new_nvos_pass")))
+
+	bmcCred, err = mgr.GetBMC(ctx, mac)
+	assert.NoError(t, err)
+	assert.Equal(t, "root", bmcCred.User)
+	assert.Equal(t, "new_pass", bmcCred.Password.Value)
+
+	nvosCred, err = mgr.GetNVOS(ctx, mac)
+	assert.NoError(t, err)
+	assert.Equal(t, "nvos_root", nvosCred.User)
+	assert.Equal(t, "new_nvos_pass", nvosCred.Password.Value)
+}
+
 func TestVaultManager_BMCPatch(t *testing.T) {
 	testCases := map[string]struct {
 		setupMAC  string

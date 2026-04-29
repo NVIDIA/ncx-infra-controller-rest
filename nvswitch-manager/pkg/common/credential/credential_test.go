@@ -59,3 +59,24 @@ func TestNewCredentialFromEnv(t *testing.T) {
 	assert.Equal(t, "testuser", cred.User)
 	assert.Equal(t, "testpassword", cred.Password.Value)
 }
+
+func TestCredentialEqual(t *testing.T) {
+	tests := map[string]struct {
+		a     *Credential
+		b     *Credential
+		equal bool
+	}{
+		"same values":         {a: New("user", "pass"), b: New("user", "pass"), equal: true},
+		"different user":      {a: New("user1", "pass"), b: New("user2", "pass"), equal: false},
+		"different password":  {a: New("user", "pass1"), b: New("user", "pass2"), equal: false},
+		"both nil":            {a: nil, b: nil, equal: true},
+		"first nil":           {a: nil, b: New("user", "pass"), equal: false},
+		"second nil":          {a: New("user", "pass"), b: nil, equal: false},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tc.equal, tc.a.Equal(tc.b))
+		})
+	}
+}
