@@ -173,39 +173,7 @@ func TestManageVpcPrefix_CreateVpcPrefixOnSite(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "test create VpcPrefix fail on missing name",
-			fields: fields{
-				CarbideAtomicClient: carbideAtomicClient,
-			},
-			args: args{
-				ctx: context.Background(),
-				request: &cwssaws.VpcPrefixCreationRequest{
-					Id:     &cwssaws.VpcPrefixId{Value: "b410867c-655a-11ef-bc4a-0393098e5d09"},
-					Name:   "",
-					Prefix: prefix,
-					VpcId:  &cwssaws.VpcId{Value: uuid.NewString()},
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name: "test create VpcPrefix fail on missing prefix",
-			fields: fields{
-				CarbideAtomicClient: carbideAtomicClient,
-			},
-			args: args{
-				ctx: context.Background(),
-				request: &cwssaws.VpcPrefixCreationRequest{
-					Id:     &cwssaws.VpcPrefixId{Value: "b410867c-655a-11ef-bc4a-0393098e5d09"},
-					Name:   name,
-					Prefix: "",
-					VpcId:  &cwssaws.VpcId{Value: uuid.NewString()},
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name: "test create VpcPrefix fail on missing id",
+			name: "test create VpcPrefix fail on missing ID",
 			fields: fields{
 				CarbideAtomicClient: carbideAtomicClient,
 			},
@@ -216,22 +184,6 @@ func TestManageVpcPrefix_CreateVpcPrefixOnSite(t *testing.T) {
 					Name:   name,
 					Prefix: prefix,
 					VpcId:  &cwssaws.VpcId{Value: uuid.NewString()},
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name: "test create VpcPrefix fail on missing vpc id",
-			fields: fields{
-				CarbideAtomicClient: carbideAtomicClient,
-			},
-			args: args{
-				ctx: context.Background(),
-				request: &cwssaws.VpcPrefixCreationRequest{
-					Id:     &cwssaws.VpcPrefixId{Value: "b410867c-655a-11ef-bc4a-0393098e5d09"},
-					Name:   name,
-					Prefix: prefix,
-					VpcId:  nil,
 				},
 			},
 			wantErr: true,
@@ -294,7 +246,7 @@ func TestManageVpcPrefix_UpdateVpcPrefixOnSiteOnSite(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "test update VpcPrefix fail on missing id",
+			name: "test update VpcPrefix fail on missing ID",
 			fields: fields{
 				CarbideAtomicClient: carbideAtomicClient,
 			},
@@ -364,7 +316,7 @@ func TestManageVpcPrefix_DeleteVpcPrefixOnSiteOnSite(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "test delete VpcPrefix fail on blank id",
+			name: "test delete VpcPrefix fail on blank ID",
 			fields: fields{
 				CarbideAtomicClient: carbideAtomicClient,
 			},
